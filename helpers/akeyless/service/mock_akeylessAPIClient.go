@@ -5,7 +5,7 @@ package service
 import (
 	context "context"
 
-	akeyless "github.com/akeylesslabs/akeyless-go/v3"
+	akeyless "github.com/akeylesslabs/akeyless-go/v4"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -72,23 +72,23 @@ func (_m *mockAkeylessAPIClient) DescribeItem(ctx context.Context, params akeyle
 }
 
 // GetDynamicSecretValue provides a mock function with given fields: ctx, params
-func (_m *mockAkeylessAPIClient) GetDynamicSecretValue(ctx context.Context, params akeyless.GetDynamicSecretValue) (map[string]string, error) {
+func (_m *mockAkeylessAPIClient) GetDynamicSecretValue(ctx context.Context, params akeyless.GetDynamicSecretValue) (map[string]interface{}, error) {
 	ret := _m.Called(ctx, params)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDynamicSecretValue")
 	}
 
-	var r0 map[string]string
+	var r0 map[string]interface{}
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, akeyless.GetDynamicSecretValue) (map[string]string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, akeyless.GetDynamicSecretValue) (map[string]interface{}, error)); ok {
 		return rf(ctx, params)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, akeyless.GetDynamicSecretValue) map[string]string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, akeyless.GetDynamicSecretValue) map[string]interface{}); ok {
 		r0 = rf(ctx, params)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]string)
+			r0 = ret.Get(0).(map[string]interface{})
 		}
 	}
 
@@ -188,23 +188,23 @@ func (_m *mockAkeylessAPIClient) GetSSHCertificate(ctx context.Context, params a
 }
 
 // GetSecretValue provides a mock function with given fields: ctx, body
-func (_m *mockAkeylessAPIClient) GetSecretValue(ctx context.Context, body akeyless.GetSecretValue) (map[string]string, error) {
+func (_m *mockAkeylessAPIClient) GetSecretValue(ctx context.Context, body akeyless.GetSecretValue) (map[string]interface{}, error) {
 	ret := _m.Called(ctx, body)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetSecretValue")
 	}
 
-	var r0 map[string]string
+	var r0 map[string]interface{}
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, akeyless.GetSecretValue) (map[string]string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, akeyless.GetSecretValue) (map[string]interface{}, error)); ok {
 		return rf(ctx, body)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, akeyless.GetSecretValue) map[string]string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, akeyless.GetSecretValue) map[string]interface{}); ok {
 		r0 = rf(ctx, body)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]string)
+			r0 = ret.Get(0).(map[string]interface{})
 		}
 	}
 

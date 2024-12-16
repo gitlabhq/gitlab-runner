@@ -9,16 +9,16 @@ import (
 	"github.com/akeylesslabs/akeyless-go-cloud-id/cloudprovider/aws"
 	"github.com/akeylesslabs/akeyless-go-cloud-id/cloudprovider/azure"
 	"github.com/akeylesslabs/akeyless-go-cloud-id/cloudprovider/gcp"
-	akeyless_api "github.com/akeylesslabs/akeyless-go/v3"
+	akeyless_api "github.com/akeylesslabs/akeyless-go/v4"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 //go:generate mockery --name=akeylessAPIClient --inpackage
 type akeylessAPIClient interface {
-	GetSecretValue(ctx context.Context, body akeyless_api.GetSecretValue) (map[string]string, error)
+	GetSecretValue(ctx context.Context, body akeyless_api.GetSecretValue) (map[string]any, error)
 	Auth(ctx context.Context, params akeyless_api.Auth) (akeyless_api.AuthOutput, error)
 	DescribeItem(ctx context.Context, params akeyless_api.DescribeItem) (akeyless_api.Item, error)
-	GetDynamicSecretValue(ctx context.Context, params akeyless_api.GetDynamicSecretValue) (map[string]string, error)
+	GetDynamicSecretValue(ctx context.Context, params akeyless_api.GetDynamicSecretValue) (map[string]any, error)
 	GetRotatedSecretValue(ctx context.Context, params akeyless_api.GetRotatedSecretValue) (map[string]any, error)
 	GetSSHCertificate(ctx context.Context, params akeyless_api.GetSSHCertificate) (akeyless_api.GetSSHCertificateOutput, error)
 	GetPKICertificate(ctx context.Context, params akeyless_api.GetPKICertificate) (akeyless_api.GetPKICertificateOutput, error)
@@ -39,7 +39,7 @@ func newClient(secret *common.AkeylessSecret) *akeylessClient {
 	}
 }
 
-func (c *akeylessClient) GetSecretValue(ctx context.Context, body akeyless_api.GetSecretValue) (map[string]string, error) {
+func (c *akeylessClient) GetSecretValue(ctx context.Context, body akeyless_api.GetSecretValue) (map[string]any, error) {
 	resp, _, err := c.api.GetSecretValue(ctx).Body(body).Execute()
 	return resp, err
 }
@@ -54,7 +54,7 @@ func (c *akeylessClient) DescribeItem(ctx context.Context, body akeyless_api.Des
 	return out, err
 }
 
-func (c *akeylessClient) GetDynamicSecretValue(ctx context.Context, body akeyless_api.GetDynamicSecretValue) (map[string]string, error) {
+func (c *akeylessClient) GetDynamicSecretValue(ctx context.Context, body akeyless_api.GetDynamicSecretValue) (map[string]any, error) {
 	resp, _, err := c.api.GetDynamicSecretValue(ctx).Body(body).Execute()
 	return resp, err
 }
