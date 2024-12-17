@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/watchers"
 )
 
 type kubeConfigProvider func() (*restclient.Config, error)
@@ -210,31 +211,9 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 		return podPhaseResponse{true, pod.Status.Phase, err}
 	}
 
-	// check status of containers
-	for _, container := range append(pod.Status.ContainerStatuses, pod.Status.InitContainerStatuses...) {
-		if container.Ready {
-			continue
-		}
-
-		waiting := container.State.Waiting
-		if waiting == nil {
-			continue
-		}
-
-		switch waiting.Reason {
-		case "InvalidImageName":
-			return podPhaseResponse{true, api.PodUnknown, &common.BuildError{
-				Inner: fmt.Errorf("image pull failed: %s", waiting.Message),
-			}}
-		case "ErrImagePull", "ImagePullBackOff":
-			msg := fmt.Sprintf("image pull failed: %s", waiting.Message)
-			imagePullErr := &pull.ImagePullError{Message: msg, Container: container.Name, Image: container.Image}
-			return podPhaseResponse{
-				true,
-				api.PodUnknown,
-				&common.BuildError{Inner: imagePullErr, FailureReason: common.ImagePullFailure},
-			}
-		}
+	containerStatuses := slices.Concat(pod.Status.ContainerStatuses, pod.Status.InitContainerStatuses)
+	if err := watchers.CheckTerminalContainerErrors(containerStatuses); err != nil {
+		return podPhaseResponse{true, api.PodUnknown, err}
 	}
 
 	_, _ = fmt.Fprintf(

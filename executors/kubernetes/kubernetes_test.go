@@ -733,8 +733,13 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	mockPullManager := &pull.MockManager{}
 	defer mockPullManager.AssertExpectations(t)
 
+	mockPodWatcher := newMockPodWatcher(t)
+	mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Once()
+
 	ex := newExecutor()
 	ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper))
+	ex.podWatcher = mockPodWatcher
+
 	ex.options = &kubernetesOptions{
 		Image: common.Image{
 			Name:  "test-image",
@@ -2856,6 +2861,11 @@ func TestPrepare(t *testing.T) {
 			testBuild.Runner = test.RunnerConfig
 
 			e := newExecutor()
+			e.newPodWatcher = func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+				mockPodWatcher := newMockPodWatcher(t)
+				mockPodWatcher.On("Start").Return(nil).Maybe()
+				return mockPodWatcher
+			}
 			e.windowsKernelVersion = test.WindowsKernelVersionGetter
 
 			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
@@ -2901,6 +2911,8 @@ func TestPrepare(t *testing.T) {
 			e.newKubeClient = nil
 			e.windowsKernelVersion = nil
 			e.options.Image.PullPolicies = nil
+			e.newPodWatcher = nil
+			e.podWatcher = nil
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
@@ -5696,6 +5708,9 @@ containers:
 			mockPullManager := &pull.MockManager{}
 			defer mockPullManager.AssertExpectations(t)
 
+			mockPodWatcher := newMockPodWatcher(t)
+			mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Maybe()
+
 			ex := newExecutor()
 			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip))
 			ex.options = options
@@ -5711,6 +5726,7 @@ containers:
 			ex.AbstractExecutor.ProxyPool = proxy.NewPool()
 			ex.featureChecker = mockFc
 			ex.pullManager = mockPullManager
+			ex.podWatcher = mockPodWatcher
 
 			if ex.options.Image.Name == "" {
 				// Ensure we have a valid Docker image name in the configuration,
@@ -5758,6 +5774,52 @@ containers:
 			}
 		})
 	}
+}
+
+func TestPodWatcherSetup(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Kubernetes: &common.KubernetesConfig{
+					Image: "some-build-image",
+				},
+			},
+		},
+	}
+
+	fakeKubeClient := testclient.NewSimpleClientset()
+	mockPodWatcher := newMockPodWatcher(t)
+
+	ex := newExecutor()
+	ex.getKubeConfig = func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error) {
+		return nil, nil
+	}
+	ex.newKubeClient = func(config *restclient.Config) (kubernetes.Interface, error) {
+		return fakeKubeClient, nil
+	}
+	ex.newPodWatcher = func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+		return mockPodWatcher
+	}
+
+	mockPodWatcher.On("Start").Return(nil).Once()
+	err := ex.Prepare(common.ExecutorPrepareOptions{
+		Context: ctx,
+		Build:   build,
+		Config:  build.Runner,
+	})
+	assert.NoError(t, err, "preparing the executor")
+	assert.NotNil(t, ex.podWatcher, "expected pod watcher to be set")
+
+	mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Once()
+	err = ex.setupBuildPod(ctx, nil)
+	assert.NoError(t, err, "setting up the  build pod")
+
+	mockPodWatcher.On("Stop").Once()
+	ex.Finish(nil)
 }
 
 func TestProcessLogs(t *testing.T) {
@@ -6278,6 +6340,11 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 			e := newExecutor()
 			e.AbstractExecutor.Build = &common.Build{
 				Runner: &tt.config,
+			}
+			e.newPodWatcher = func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+				mockPodWatcher := newMockPodWatcher(t)
+				mockPodWatcher.On("Start").Return(nil).Once()
+				return mockPodWatcher
 			}
 
 			prepareOptions := common.ExecutorPrepareOptions{
@@ -7468,6 +7535,12 @@ func TestContainerPullPolicies(t *testing.T) {
 			}
 			executor.getKubeConfig = func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
 				return nil, nil
+			}
+			executor.newPodWatcher = func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+				mockPodWatcher := newMockPodWatcher(t)
+				mockPodWatcher.On("Start").Return(nil).Once()
+				mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Once()
+				return mockPodWatcher
 			}
 
 			prepareOptions := common.ExecutorPrepareOptions{

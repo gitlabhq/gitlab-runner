@@ -36,8 +36,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 	v1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -165,6 +167,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesNoAdditionalNewLines":                      testKubernetesNoAdditionalNewLines,
 		"testJobRunningAndPassingWhenServiceStops":                testJobRunningAndPassingWhenServiceStops,
 		"testJobAgainstServiceContainerBehaviour":                 testJobAgainstServiceContainerBehaviour,
+		"testDeletedPodSystemFailureDuringExecution":              testDeletedPodSystemFailureDuringExecution,
 	}
 
 	ffValues := []bool{testFeatureFlagValue}
@@ -2218,46 +2221,106 @@ func TestPrepareIssue2583(t *testing.T) {
 	assert.Equal(t, serviceAccount, runnerConfig.Kubernetes.ServiceAccount)
 }
 
-func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
-	t.Skip("Test is flaky, error is sometimes ... status is Failed, https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/8521362284, second test seems entirely wrong")
-	t.Parallel()
-
+func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	type terminator = func(client k8s.Interface, podName string) error
+
+	deletePod := func(client k8s.Interface, podName string, delOpts metav1.DeleteOptions) error {
+		return client.CoreV1().Pods(ciNamespace).Delete(context.Background(), podName, delOpts)
+	}
+	deletePodGracefully := func(client k8s.Interface, podName string) error {
+		return deletePod(client, podName, metav1.DeleteOptions{})
+	}
+	deletePodNow := func(client k8s.Interface, podName string) error {
+		return deletePod(client, podName, metav1.DeleteOptions{GracePeriodSeconds: common.Int64Ptr(0)})
+	}
+	evictPod := func(client k8s.Interface, podName string, delOpts metav1.DeleteOptions) error {
+		return client.CoreV1().Pods(ciNamespace).EvictV1(context.Background(), &policyv1.Eviction{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: podName,
+			},
+			DeleteOptions: &delOpts,
+		})
+	}
+	evictPodGracefully := func(client k8s.Interface, podName string) error {
+		return evictPod(client, podName, metav1.DeleteOptions{})
+	}
+	evictPodNow := func(client k8s.Interface, podName string) error {
+		return evictPod(client, podName, metav1.DeleteOptions{GracePeriodSeconds: common.Int64Ptr(0)})
+	}
+
+	containsOneOf := func(heystack string, needles ...string) bool {
+		for _, needle := range needles {
+			if strings.Contains(heystack, needle) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	// Currently, with the introduction of the pod watcher, this is a bit racy in regards which actual error we get.
+	// The pod watcher's informer is running concurrently to everything else that might produce an error (on-demand fetching or
+	// polling of the pod's current state, e.g. when execing into or attaching to the pod).
+	//
+	// Therefore, this asserts
+	// - that the error we observe is either one from the pod watcher or from the other checks
+	// - regardless of which one it is, it results in a system failure
+	//
+	// If/once we only rely on the pod watcher and therefore the informer to tell us about the state of the pod instead of
+	// doing on-demand checks / polling, this would go away and we'd receive a distinct error, and don't have to check if
+	// it's either one or the other.
+	assertSystemFailure := func(t *testing.T, err error, out string, errMsgs ...string) {
+		t.Helper()
+		assert.Contains(t, out, "ERROR: Job failed (system failure):")
+		assert.True(t, containsOneOf(err.Error(), errMsgs...), "expected the error to contain one of %q, but didn't", errMsgs)
+		assert.True(t, containsOneOf(out, errMsgs...), "expected the output to contain one of %q, but didn't", errMsgs)
+	}
 
 	tests := []struct {
 		stage            string
-		outputAssertions func(t *testing.T, out string, pod string)
+		terminators      map[string]terminator
+		outputAssertions func(t *testing.T, err error, out string, pod string)
 	}{
 		{
 			stage: "step_", // Any script the user defined
-			outputAssertions: func(t *testing.T, out string, pod string) {
-				assert.Contains(
-					t,
-					out,
-					"ERROR: Job failed (system failure):",
+			terminators: map[string]terminator{
+				"delete gracefully": deletePodGracefully,
+				"delete now":        deletePodNow,
+			},
+			outputAssertions: func(t *testing.T, err error, out string, pod string) {
+				assertSystemFailure(t, err, out,
+					fmt.Sprintf("pod %q is being deleted", ciNamespace+"/"+pod),
+					fmt.Sprintf("pods %q not found", pod),
 				)
-
-				assert.Contains(
-					t,
-					out,
+			},
+		},
+		{
+			stage: "step_", // Any script the user defined
+			terminators: map[string]terminator{
+				"evict gracefully": evictPodGracefully,
+				"evict now":        evictPodNow,
+			},
+			outputAssertions: func(t *testing.T, err error, out string, pod string) {
+				assertSystemFailure(t, err, out,
+					fmt.Sprintf("pod %q is disrupted", ciNamespace+"/"+pod),
 					fmt.Sprintf("pods %q not found", pod),
 				)
 			},
 		},
 		{
 			stage: string(common.BuildStagePrepare),
-			outputAssertions: func(t *testing.T, out string, pod string) {
-				assert.Contains(
-					t,
-					out,
-					"ERROR: Job failed (system failure):",
-				)
-
-				assert.Contains(
-					t,
-					out,
-					fmt.Sprintf("pods %q not found", pod),
-				)
+			terminators: map[string]terminator{
+				"delete gracefully": deletePodGracefully,
+				"delete now":        deletePodNow,
+				"evict gracefully":  evictPodGracefully,
+				"evict now":         evictPodNow,
+			},
+			outputAssertions: func(t *testing.T, err error, out string, pod string) {
+				assert.True(t, kubernetes.IsKubernetesPodNotFoundError(err), "expected err NotFound, but got %T", err)
+				assert.Contains(t, out, "ERROR: Job failed (system failure):")
+				assert.Contains(t, out, fmt.Sprintf("pods %q not found", pod))
 			},
 		},
 	}
@@ -2266,35 +2329,45 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 		t.Run(tt.stage, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, common.GetRemoteLongRunningBuild)
-			// It's not possible to get this kind of information on the legacy execution path.
-			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
+			for name, terminator := range tt.terminators {
+				t.Run(name, func(t *testing.T) {
+					ctx := context.Background()
 
-			deletedPodNameCh := make(chan string)
-			defer buildtest.OnStage(build, tt.stage, func() {
-				client := getTestKubeClusterClient(t)
-				pods, err := client.CoreV1().Pods(ciNamespace).List(
-					context.Background(),
-					metav1.ListOptions{
-						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-					},
-				)
-				require.NoError(t, err)
-				require.NotEmpty(t, pods.Items)
-				pod := pods.Items[0]
-				err = client.
-					CoreV1().
-					Pods(ciNamespace).
-					Delete(context.Background(), pod.Name, metav1.DeleteOptions{})
-				require.NoError(t, err)
+					build := getTestBuild(t, common.GetRemoteLongRunningBuild)
 
-				deletedPodNameCh <- pod.Name
-			})()
+					buildtest.SetBuildFeatureFlag(build, ff, ffValue)
 
-			out, err := buildtest.RunBuildReturningOutput(t, build)
-			assert.True(t, kubernetes.IsKubernetesPodNotFoundError(err), "expected err NotFound, but got %T", err)
+					client := getTestKubeClusterClient(t)
 
-			tt.outputAssertions(t, out, <-deletedPodNameCh)
+					createdPodNameCh := make(chan string)
+					deletedPodNameCh := make(chan string)
+
+					go func() {
+						watcher, err := client.CoreV1().Pods(ciNamespace).Watch(ctx, metav1.ListOptions{
+							LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+						})
+						require.NoError(t, err, "setting up the pod watch")
+						defer watcher.Stop()
+						for event := range watcher.ResultChan() {
+							if pod, ok := event.Object.(*v1.Pod); ok && event.Type == watch.Added {
+								createdPodNameCh <- pod.GetName()
+								break
+							}
+						}
+					}()
+
+					defer buildtest.OnStage(build, tt.stage, func() {
+						podName := <-createdPodNameCh
+						err := terminator(client, podName)
+						require.NoError(t, err)
+						deletedPodNameCh <- podName
+					})()
+
+					out, err := buildtest.RunBuildReturningOutput(t, build)
+
+					tt.outputAssertions(t, err, out, <-deletedPodNameCh)
+				})
+			}
 		})
 	}
 }

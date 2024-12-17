@@ -152,18 +152,17 @@ func checkTerminalPodErrors(pod *v1.Pod) error {
 		return fmt.Errorf("pod %q is being deleted", fullPodName)
 	}
 
-	// TODO: check ephemeral containers?
+	// collect all containers' statuses, except those for ephemeral containers
 	allContainerStatuses := slices.Concat(pod.Status.InitContainerStatuses, pod.Status.ContainerStatuses)
-	if err := checkTerminalContainerErrors(allContainerStatuses); err != nil {
+	if err := CheckTerminalContainerErrors(allContainerStatuses); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// checkTerminalContainerErrors checks indiviual container statuses for errors we can't recover from.
-func checkTerminalContainerErrors(containerStatuses []v1.ContainerStatus) error {
-	// TODO: dedup with ./executors/kubernetes/util.go
+// CheckTerminalContainerErrors checks individual container statuses for errors we can't recover from.
+func CheckTerminalContainerErrors(containerStatuses []v1.ContainerStatus) error {
 	for _, containerStatus := range containerStatuses {
 		if containerStatus.Ready {
 			continue

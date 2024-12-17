@@ -37,6 +37,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/watchers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
@@ -284,6 +285,17 @@ type executor struct {
 	remoteStageStatus      shells.StageCommandStatus
 
 	eventsStream watch.Interface
+
+	podWatcher    podWatcher
+	newPodWatcher func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher
+}
+
+//go:generate mockery --name=podWatcher --inpackage
+type podWatcher interface {
+	Start() error
+	UpdatePodName(string)
+	Stop()
+	Errors() <-chan error
 }
 
 type serviceCreateResponse struct {
@@ -354,6 +366,17 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	if s.BuildShell.PassFile {
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
+
+	podWatcher := s.newPodWatcher(
+		options.Context,
+		s.kubeClient,
+		s.configurationOverwrites.namespace,
+		s.buildLabels(),
+	)
+	if err := podWatcher.Start(); err != nil {
+		return fmt.Errorf("starting the pod watcher: %w", err)
+	}
+	s.podWatcher = podWatcher
 
 	err = s.waitForServices(options.Context)
 	return err
@@ -640,6 +663,10 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 		}
 		return err
 
+	case err := <-s.podWatcher.Errors():
+		// if we observe terminal pod errors via the pod watcher, we can exit immediately
+		return err
+
 	case <-ctx.Done():
 		return fmt.Errorf("build aborted")
 	}
@@ -739,8 +766,12 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodContainerError(err) {
 			return err
 		}
-
 		return &common.BuildError{Inner: err}
+
+	case err := <-s.podWatcher.Errors():
+		// if we observe terminal pod errors via the pod watcher, we can exit immediately
+		return err
+
 	case <-ctx.Done():
 		s.remoteStageStatusMutex.Lock()
 		defer s.remoteStageStatusMutex.Unlock()
@@ -1200,6 +1231,8 @@ func (s *executor) retrieveShell() (common.Shell, error) {
 }
 
 func (s *executor) Finish(err error) {
+	s.podWatcher.Stop()
+
 	if IsKubernetesPodNotFoundError(err) {
 		// Avoid an additional error message when trying to
 		// cleanup a pod that we know no longer exists
@@ -1926,6 +1959,9 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 		}
 	}
 
+	// if we need to retry on pull issues, we need to set the new pod name, so that we don't track terminating pods.
+	s.podWatcher.UpdatePodName(podConfig.GetName())
+
 	s.BuildLogger.Debugln("Creating build pod")
 
 	s.pod, err = retry.WithValueFn(s, func() (*api.Pod, error) {
@@ -1996,12 +2032,7 @@ func (s *executor) checkDependantResources(ctx context.Context) error {
 	return nil
 }
 
-func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (podConfigPrepareOpts, error) {
-	podServices, err := s.preparePodServices()
-	if err != nil {
-		return podConfigPrepareOpts{}, err
-	}
-
+func (s *executor) buildLabels() map[string]string {
 	// We set a default label to the pod. This label will be used later
 	// by the services, to link each service to the pod
 	labels := map[string]string{"pod": s.Build.ProjectUniqueName()}
@@ -2011,6 +2042,16 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 	for key, val := range s.configurationOverwrites.podLabels {
 		labels[key] = sanitizeLabel(s.Build.Variables.ExpandValue(val))
 	}
+	return labels
+}
+
+func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (podConfigPrepareOpts, error) {
+	podServices, err := s.preparePodServices()
+	if err != nil {
+		return podConfigPrepareOpts{}, err
+	}
+
+	labels := s.buildLabels()
 
 	annotations := map[string]string{
 		"job." + k8sAnnotationPrefix + "id":         strconv.FormatInt(s.Build.ID, 10),
@@ -3064,6 +3105,9 @@ func newExecutor() *executor {
 		},
 		getKubeConfig:        getKubeClientConfig,
 		windowsKernelVersion: os_helpers.LocalKernelVersion,
+		newPodWatcher: func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+			return watchers.NewPodWatcher(ctx, kubeClient, namespace, labels)
+		},
 	}
 
 	e.newLogProcessor = func() logProcessor {
