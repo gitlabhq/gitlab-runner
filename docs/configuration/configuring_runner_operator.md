@@ -310,13 +310,13 @@ WARNING:
 Running jobs as root or writing to root filesystems can expose your system to security risks.
 
 To run a CI/CD job as the root user or write to root filesystems,
-set the `anyuid` security context constraints on the `gitlab-runner-sa` service account.
+set the `anyuid` security context constraints on the `gitlab-runner-app-sa` service account.
 The GitLab Runner container uses this service account.
 
 In OpenShift 4.3.8 and earlier:
 
 ```shell
-oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa -n <runner_namespace>
+oc adm policy add-scc-to-user anyuid -z gitlab-runner-app-sa -n <runner_namespace>
 
 # Check that the anyiud SCC is set:
 oc get scc anyuid -o yaml
@@ -350,7 +350,7 @@ metadata:
   namespace: <runner_namespace>
 subjects:
   - kind: ServiceAccount
-    name: gitlab-runner-sa
+    name: gitlab-runner-app-sa
 roleRef:
   kind: Role
   name: scc-anyuid
