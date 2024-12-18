@@ -2176,49 +2176,52 @@ func TestLogDeletionAttach(t *testing.T) {
 }
 
 // This test reproduces the bug reported in https://gitlab.com/gitlab-org/gitlab-runner/issues/2583
+// It checks that config overwrites are not persisted into shared state, and thus don't leak across executor instances.
 func TestPrepareIssue2583(t *testing.T) {
 	t.Parallel()
 
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	namespace := "my_namespace"
-	serviceAccount := "my_account"
+	configuredNamespace := "configured-namespace"
+	configuredServiceAccount := "configured-service-account"
 
-	runnerConfig := &common.RunnerConfig{
+	overwriteNamespace := ciNamespace
+	overwriteServiceAccount := "some-other-service-account"
+
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.JobResponse{
+			Variables: []common.JobVariable{
+				{Key: kubernetes.NamespaceOverwriteVariableName, Value: overwriteNamespace},
+				{Key: kubernetes.ServiceAccountOverwriteVariableName, Value: overwriteServiceAccount},
+			},
+		}, nil
+	})
+	build.Runner = &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
 			Executor: common.ExecutorKubernetes,
 			Kubernetes: &common.KubernetesConfig{
 				Image:                          "an/image:latest",
-				Namespace:                      namespace,
+				Namespace:                      configuredNamespace,
 				NamespaceOverwriteAllowed:      ".*",
-				ServiceAccount:                 serviceAccount,
+				ServiceAccount:                 configuredServiceAccount,
 				ServiceAccountOverwriteAllowed: ".*",
 			},
 		},
 	}
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
-		return common.JobResponse{
-			Variables: []common.JobVariable{
-				{Key: kubernetes.NamespaceOverwriteVariableName, Value: "namespace"},
-				{Key: kubernetes.ServiceAccountOverwriteVariableName, Value: "sa"},
-			},
-		}, nil
-	})
-
-	e := kubernetes.NewDefaultExecutorForTest()
+	e := common.NewExecutor(common.ExecutorKubernetes)
 
 	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 	prepareOptions := common.ExecutorPrepareOptions{
-		Config:  runnerConfig,
+		Config:  build.Runner,
 		Build:   build,
 		Context: context.TODO(),
 	}
 
 	err := e.Prepare(prepareOptions)
 	assert.NoError(t, err)
-	assert.Equal(t, namespace, runnerConfig.Kubernetes.Namespace)
-	assert.Equal(t, serviceAccount, runnerConfig.Kubernetes.ServiceAccount)
+	assert.Equal(t, configuredNamespace, build.Runner.Kubernetes.Namespace)
+	assert.Equal(t, configuredServiceAccount, build.Runner.Kubernetes.ServiceAccount)
 }
 
 func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue bool) {
