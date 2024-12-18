@@ -53,8 +53,7 @@ OPTIONS:
 
 ## Running in debug mode
 
-Debug mode is especially useful when looking for the cause of some undefined
-behavior or error.
+When you're looking for the cause of an undefined behavior or error, use debug mode.
 
 To run a command in debug mode, prepend the command with `--debug`:
 
@@ -114,12 +113,12 @@ the `CONFIG_FILE` environment variable.
 You can use system signals to interact with GitLab Runner. The
 following commands support the following signals:
 
-| Command                     | Signal                  | Action                                                                                                   |
-| --------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- |
-| `register`                  | **SIGINT**              | Cancel runner registration and delete if it was already registered.                                      |
-| `run`, `run-single` | **SIGINT**, **SIGTERM** | Abort all running builds and exit as soon as possible. Use twice to exit now (**forceful shutdown**).    |
-| `run`, `run-single` | **SIGQUIT**             | Stop accepting a new builds. Exit as soon as currently running builds do finish (**graceful shutdown**). |
-| `run`                       | **SIGHUP**              | Force to reload configuration file.                                                                      |
+| Command             | Signal                  | Action                                                                                                |
+|---------------------|-------------------------|-------------------------------------------------------------------------------------------------------|
+| `register`          | **SIGINT**              | Cancel runner registration and delete if it was already registered.                                   |
+| `run`, `run-single` | **SIGINT**, **SIGTERM** | Abort all running builds and exit as soon as possible. Use twice to exit now (**forceful shutdown**). |
+| `run`, `run-single` | **SIGQUIT**             | Stop accepting new builds. Exit as soon as the running builds finish (**graceful shutdown**).       |
+| `run`               | **SIGHUP**              | Force to reload configuration file.                                                                   |
 
 For example, to force a reload of a runner's configuration file, run:
 
@@ -135,10 +134,11 @@ sudo kill -SIGQUIT <main_runner_pid>
 
 WARNING:
 Do **not** use `killall` or `pkill` for graceful shutdowns if you are using `shell`
-or `docker` executors. This can cause improper handling of the signals due to subprocessess
+or `docker` executors. This can cause improper handling of the signals due to sub-processes
 being killed as well. Use it only on the main process handling the jobs.
 
-If your operating system is configured to automatically restart the service if it fails (which is the default on some platforms) it may automatically restart the runner if it's shut down by the signals above.
+Some operating systems are configured to automatically restart services when they fail (which is the default on some platforms).
+If your operating system has this configuration, it might automatically restart the runner if it is shut down by the signals above.
 
 ## Commands overview
 
@@ -219,10 +219,10 @@ You can use multiple configurations in a single installation of GitLab Runner. E
 `gitlab-runner register` adds a new configuration entry. It doesn't remove the
 previous ones.
 
-There are two options to register a runner:
+You can register a runner:
 
-- interactive.
-- non-interactive.
+- interactively.
+- non-interactively.
 
 NOTE:
 Runners can be registered directly by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner) but
@@ -279,7 +279,7 @@ Boolean parameters must be passed in the command line with `--key={true|false}`.
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
 
-Additional options can be easily configured during runner registration using the
+Additional options can be configured during runner registration by using the
 [configuration template file](../register/index.md#register-with-a-configuration-template) feature.
 
 ### `gitlab-runner list`
@@ -289,7 +289,7 @@ This command lists all runners saved in the
 
 ### `gitlab-runner verify`
 
-This command checks if the registered runners can connect to GitLab, but it
+This command verifies that the registered runners can connect to GitLab. But, it
 doesn't verify if the runners are being used by the GitLab Runner service. An
 example output is:
 
@@ -473,7 +473,7 @@ This command allows to fetch and process builds from GitLab.
 
 ### `gitlab-runner run`
 
-This is main command that is executed when GitLab Runner is started as a
+The `gitlab-runner run` command is the main command that is executed when GitLab Runner is started as a
 service. It reads all defined runners from `config.toml` and tries to run all
 of them.
 
@@ -493,7 +493,7 @@ It accepts the following parameters.
 
 > - Ability to use a configuration file [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37670) in GitLab Runner 17.1.
 
-This is a supplementary command that can be used to run only a single build from
+Use this supplementary command to run a single build from
 a single GitLab instance. It can:
 
 - Take all options either as CLI parameters or environment variables, including the GitLab URL
@@ -555,13 +555,13 @@ administrator privileges:
 - On Unix (Linux, macOS, FreeBSD) systems, prefix `gitlab-runner` with `sudo`
 - On Windows systems use the elevated command prompt.
   Run an `Administrator` command prompt.
-  The simplest way is to write `Command Prompt` in the Windows search field,
-  right click and select `Run as administrator`. You are asked to confirm
+  To write `Command Prompt` in the Windows search field,
+  right-click and select `Run as administrator`. Confirm
   that you want to execute the elevated command prompt.
 
 ## `gitlab-runner stop` doesn't shut down gracefully
 
-When a runner is installed on a host and runs local executors, it starts additional processes for some operations,
+When GitLab Runner is installed on a host and runs local executors, it starts additional processes for operations
 like downloading or uploading artifacts, or handling cache.
 These processes are executed as `gitlab-runner` commands, which means that you can use `pkill -QUIT gitlab-runner`
 or `killall QUIT gitlab-runner` to kill them. When you kill them, the operations they are responsible for fail.
