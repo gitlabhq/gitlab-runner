@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	akeyless_api "github.com/akeylesslabs/akeyless-go/v3"
+	akeyless_api "github.com/akeylesslabs/akeyless-go/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -69,7 +69,7 @@ func TestAkeyless(t *testing.T) {
 				m.On("GetSecretValue", mock.Anything, akeyless_api.GetSecretValue{
 					Names: []string{secret.Name},
 					Token: ptr(secret.Server.AkeylessToken),
-				}).Return(map[string]string{
+				}).Return(map[string]any{
 					secret.Name: "value",
 				}, nil).Once()
 			},
@@ -87,7 +87,7 @@ func TestAkeyless(t *testing.T) {
 				m.On("GetSecretValue", mock.Anything, akeyless_api.GetSecretValue{
 					Names: []string{secret.Name},
 					Token: ptr(secret.Server.AkeylessToken),
-				}).Return(map[string]string{
+				}).Return(map[string]any{
 					"invalid": "value",
 				}, nil).Once()
 			},
@@ -121,11 +121,11 @@ func TestAkeyless(t *testing.T) {
 				m.On("GetDynamicSecretValue", mock.Anything, akeyless_api.GetDynamicSecretValue{
 					Name:  secret.Name,
 					Token: ptr(secret.Server.AkeylessToken),
-				}).Return(map[string]string{
+				}).Return(map[string]any{
 					"key": "value",
 				}, nil).Once()
 			},
-			value: map[string]string{
+			value: map[string]any{
 				"key": "value",
 			},
 		},
