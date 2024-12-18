@@ -14,7 +14,7 @@ export IS_LATEST := true
 endif
 
 PACKAGE_CLOUD ?= runner/gitlab-runner
-PACKAGE_CLOUD_URL ?= https://packagecloud.io/
+PACKAGE_CLOUD_URL ?= https://packages.gitlab.com
 BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x' -arch 'ppc64le' -arch 'riscv64'
 BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -osarch 'darwin/arm64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
 S3_UPLOAD_PATH ?= main
