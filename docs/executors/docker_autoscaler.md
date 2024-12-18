@@ -247,3 +247,25 @@ concurrent = 10
       idle_count = 5
       idle_time = "20m0s"
 ```
+
+## Troubleshooting
+
+### `ERROR: error during connect: ssh tunnel: EOF ()`
+
+When instances are removed by an external source (for example, an autoscaling group or automated script),
+jobs fail with the following error:
+
+```plaintext
+ERROR: Job failed (system failure): error during connect: Post "http://internal.tunnel.invalid/v1.43/containers/xyz/wait?condition=not-running": ssh tunnel: EOF ()
+```
+
+And the GitLab Runner logs show an `instance unexpectedly removed` error
+for the instance ID assigned to the job:
+
+```plaintext
+ERROR: instance unexpectedly removed    instance=<instance_id> max-use-count=9999 runner=XYZ slots=map[] subsystem=taskscaler used=45
+```
+
+To resolve this error, check the events related to the instance
+on your cloud provider platform. For example, on AWS, check the
+CloudTrail event history for the event source `ec2.amazonaws.com`.
