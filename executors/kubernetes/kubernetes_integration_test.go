@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -253,13 +254,17 @@ func testKubernetesBuildPassingEnvsMultistep(t *testing.T, featureFlagName strin
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if runtime.GOOS != shells.OSWindows && shell == shells.SNPowershell {
+			t.Skip("Powershell is not supported on non-windows systems")
+		}
+		if shell == shells.SNPwsh {
+			t.Skip("TODO: Fix pwsh fails")
+		}
+
 		build := getTestBuild(t, func() (common.JobResponse, error) {
 			return common.JobResponse{}, nil
 		})
 		build.Runner.RunnerSettings.Shell = shell
-		if shell == "pwsh" {
-			t.Skip("TODO: Fix pwsh fails")
-		}
 
 		buildtest.RunBuildWithPassingEnvsMultistep(
 			t,
