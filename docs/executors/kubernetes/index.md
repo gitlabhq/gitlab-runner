@@ -1680,13 +1680,14 @@ a specified host path in the container.
 
 Use the following options in the `config.toml` file:
 
-| Option       | Type      | Required | Description |
-|--------------|-----------|----------|-------------|
-| `name`       | string    | Yes    | The name of the volume. |
-| `mount_path` | string    | Yes    | Path inside of the container where the volume is mounted. |
-| `sub_path`   | string    | No     | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
-| `host_path`  | string    | No     | Host path to mount as the volume. If not specified, then this is set to the same path as `mount_path`. |
-| `read_only`  | boolean   | No     | Sets the volume in read-only mode (defaults to false). |
+| Option              | Type      | Required | Description                                                                                                               |
+|---------------------|-----------|----------|---------------------------------------------------------------------------------------------------------------------------|
+| `name`              | string    | Yes      | The name of the volume.                                                                                                   |
+| `mount_path`        | string    | Yes      | The path where the volume is mounted in the container.                                                                 |
+| `sub_path`          | string    | No       | The [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) inside the mounted volume instead of its root. |
+| `host_path`         | string    | No       | The path on the host mounted as a volume. If you don't specify a value, it defaults to the same path as `mount_path`.                    |
+| `read_only`         | boolean   | No       | Sets the volume in read-only mode. Defaults to `false`.                                                                    |
+| `mount_propagation` | string    | No       | Share mounted volumes between containers. For more information, see [Mount Propagation](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation).                           |
 
 #### `persistentVolumeClaim` volume
 
