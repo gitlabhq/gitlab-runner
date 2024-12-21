@@ -204,7 +204,7 @@ When you configure the `[session_server]` section:
 - For `listen_address` and `advertise_address`, use the format `host:port`, where `host`
   is the IP address (`127.0.0.1:8093`) or domain (`my-runner.example.com:8093`). The
   runner uses this information to create a TLS certificate for a secure connection.
-- Ensure your web browser can connect to the `advertise_address`. Live sessions are initiated by the web browser.
+- Ensure that GitLab can connect to the IP address and port defined in `listen_address` or `advertise_address`.
 - Ensure that `advertise_address` is a public IP address, unless you have enabled the application setting, [`allow_local_requests_from_web_hooks_and_services`](https://docs.gitlab.com/ee/api/settings.html#list-of-settings-that-can-be-accessed-via-api-calls).
 
 | Setting | Description |
