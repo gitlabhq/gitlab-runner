@@ -32,7 +32,7 @@ type s3Presigner interface {
 		objectName string,
 		expires time.Duration,
 	) (cache.PresignedURL, error)
-	FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string, timeout time.Duration) (map[string]string, error)
+	FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string, upload bool, timeout time.Duration) (map[string]string, error)
 	ServerSideEncryptionType() string
 }
 
@@ -101,15 +101,20 @@ func (c *s3Client) PresignURL(ctx context.Context,
 	return cache.PresignedURL{URL: u, Headers: presignedReq.SignedHeader}, nil
 }
 
-func (c *s3Client) generateSessionPolicy(bucketName, objectName string) string {
+func (c *s3Client) generateSessionPolicy(bucketName, objectName string, upload bool) string {
+	action := "s3:GetObject"
+	if upload {
+		action = "s3:PutObject"
+	}
+
 	policy := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [
 			{
 				"Effect": "Allow",
-				"Action": ["s3:PutObject"],
+				"Action": ["%s"],
 				"Resource": "arn:aws:s3:::%s/%s"
-			}`, bucketName, objectName)
+			}`, action, bucketName, objectName)
 
 	if c.s3Config.EncryptionType() == common.S3EncryptionTypeKms || c.s3Config.EncryptionType() == common.S3EncryptionTypeDsseKms {
 		// Permissions needed for multipart upload: https://repost.aws/knowledge-center/s3-large-file-encryption-kms-key
@@ -131,8 +136,8 @@ func (c *s3Client) generateSessionPolicy(bucketName, objectName string) string {
 	return policy
 }
 
-func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string, timeout time.Duration) (map[string]string, error) {
-	sessionPolicy := c.generateSessionPolicy(bucketName, objectName)
+func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string, upload bool, timeout time.Duration) (map[string]string, error) {
+	sessionPolicy := c.generateSessionPolicy(bucketName, objectName, upload)
 
 	stsClient := sts.NewFromConfig(*c.awsConfig, func(o *sts.Options) {
 		if c.stsEndpoint != "" {
@@ -176,7 +181,11 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 }
 
 func (c *s3Client) ServerSideEncryptionType() string {
-	switch c.s3Config.EncryptionType() {
+	return s3EncryptionType(c.s3Config.EncryptionType())
+}
+
+func s3EncryptionType(encryptionType common.S3EncryptionType) string {
+	switch encryptionType {
 	case common.S3EncryptionTypeAes256:
 		return string(types.ServerSideEncryptionAes256)
 	case common.S3EncryptionTypeKms:

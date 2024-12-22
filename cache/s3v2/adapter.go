@@ -45,11 +45,23 @@ func (a *s3Adapter) GetUploadHeaders() http.Header {
 	return nil
 }
 
-func (a *s3Adapter) GetGoCloudURL(_ context.Context, upload bool) (cache.GoCloudURL, error) {
+func (a *s3Adapter) getARNForGoCloud(upload bool) string {
+	if a.config.RoleARN != "" {
+		return a.config.RoleARN
+	}
+
+	if upload && a.config.UploadRoleARN != "" {
+		return a.config.UploadRoleARN
+	}
+
+	return ""
+}
+
+func (a *s3Adapter) GetGoCloudURL(ctx context.Context, upload bool) (cache.GoCloudURL, error) {
 	goCloudURL := cache.GoCloudURL{}
 
-	// We only use a GoCloud URL for uploading with an ARN.
-	if !upload || a.config.UploadRoleARN == "" {
+	roleARN := a.getARNForGoCloud(upload)
+	if roleARN == "" {
 		return goCloudURL, nil
 	}
 
@@ -100,25 +112,24 @@ func (a *s3Adapter) GetGoCloudURL(_ context.Context, upload bool) (cache.GoCloud
 	u.RawQuery = q.Encode()
 	goCloudURL.URL = &u
 
+	credentials, err := a.client.FetchCredentialsForRole(
+		ctx,
+		roleARN,
+		a.config.BucketName,
+		a.objectName,
+		upload,
+		a.timeout)
+	if err != nil {
+		return goCloudURL, err
+	}
+
+	goCloudURL.Environment = credentials
+
 	return goCloudURL, nil
 }
 
 func (a *s3Adapter) GetUploadEnv(ctx context.Context) (map[string]string, error) {
-	if a.config.UploadRoleARN == "" {
-		return nil, nil
-	}
-
-	credentials, err := a.client.FetchCredentialsForRole(
-		ctx,
-		a.config.UploadRoleARN,
-		a.config.BucketName,
-		a.objectName,
-		a.timeout)
-	if err != nil {
-		return nil, err
-	}
-
-	return credentials, nil
+	return nil, nil
 }
 
 func (a *s3Adapter) presignURL(ctx context.Context, method string) (cache.PresignedURL, error) {

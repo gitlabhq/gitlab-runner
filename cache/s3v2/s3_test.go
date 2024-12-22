@@ -558,7 +558,7 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			s3Client, err := newS3Client(tt.config.S3, withSTSEndpoint(mockServer.URL+"/sts"))
 			require.NoError(t, err)
 
-			creds, err := s3Client.FetchCredentialsForRole(context.Background(), tt.roleARN, bucketName, objectName, tt.duration)
+			creds, err := s3Client.FetchCredentialsForRole(context.Background(), tt.roleARN, bucketName, objectName, true, tt.duration)
 
 			if tt.errMsg != "" {
 				require.Error(t, err)
