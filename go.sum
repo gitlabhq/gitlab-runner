@@ -759,13 +759,8 @@ gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a h1:Y
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a/go.mod h1:pKFT8nwdU5KuJYosKMGgMATMrV4AP6p9jRu4HobZaBA=
 gitlab.com/gitlab-org/labkit v1.17.0 h1:mEkoLzXorLNdt8NkfgYS5xMDhdqCsIJaeEVtSf7d8cU=
 gitlab.com/gitlab-org/labkit v1.17.0/go.mod h1:nlLJvKgXcIclqWMI+rga2TckNBVHOtRCHMxBoVByNoE=
-<<<<<<< HEAD
-gitlab.com/gitlab-org/step-runner v0.0.0-20241010082449-7d05f726386d h1:rIi434AN6EpHfw8ppQMWbemwsIYPi7XmoXNSmjQgpxg=
-gitlab.com/gitlab-org/step-runner v0.0.0-20241010082449-7d05f726386d/go.mod h1:NscYTytXGdJojnUjo68M5SmSJ3LMfvwece2jhJNh3wU=
-=======
 gitlab.com/gitlab-org/step-runner v0.2.0 h1:yLIHpfvF68C+pwPOW+FDzr2u4hWjWsQkUGbU/u+iEEA=
 gitlab.com/gitlab-org/step-runner v0.2.0/go.mod h1:5mKsy8Wep/fZu/oweIVLp5SOLemDfJuUNOxcPwUfVT4=
->>>>>>> ab313a0bf (Actually update step-runner version to 0.2.0)
 go.etcd.io/bbolt v1.3.5/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
