@@ -81,7 +81,7 @@ require (
 	go.uber.org/automaxprocs v1.5.2
 	gocloud.dev v0.40.0
 	golang.org/x/crypto v0.31.0
-	golang.org/x/net v0.32.0
+	golang.org/x/net v0.33.0
 	golang.org/x/oauth2 v0.23.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/sys v0.28.0
