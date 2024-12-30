@@ -28,7 +28,7 @@ HELPER_GO_FILES ?= $(shell find common network -name '*.go')
 
 # Build the Runner Helper binaries for the host platform.
 .PHONY: helper-bin-host
-helper-bin-host: ${BASE_BINARY_PATH}.$(shell uname -m)
+helper-bin-host: ${BASE_BINARY_PATH}.$(shell go env GOOS)-$(shell go env GOARCH)
 
 # Build the Runner Helper binaries for all supported platforms.
 .PHONY: helper-bin
