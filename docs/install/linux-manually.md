@@ -96,7 +96,7 @@ dpkg -i gitlab-runner_<arch>.deb
 For example, for CentOS or Red Hat Enterprise Linux:
 
 ```shell
-rpm -Uvh gitlab-runner_<arch>.rpm
+rpm -Uvh gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
 ```
 
 ## Using binary file
