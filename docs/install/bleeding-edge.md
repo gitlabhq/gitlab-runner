@@ -43,10 +43,20 @@ chmod +x gitlab-runner-linux-amd64
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_arm64.deb>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_aarch64.deb>
 
+### Download the exported runner-helper images package
+
+The runner-helper images package is a required dependency for the GitLab Runner `.deb` package.
+
+Download the package from:
+
+```plaintext
+https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/deb/gitlab-runner-helper-images.deb
+```
+
 You can then install it with:
 
 ```shell
-dpkg -i gitlab-runner_386.deb
+dpkg -i gitlab-runner-helper-images.deb gitlab-runner_<arch>.deb
 ```
 
 ## Download one of the packages for Red Hat or CentOS
@@ -58,10 +68,20 @@ dpkg -i gitlab-runner_386.deb
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_arm64.rpm>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_aarch64.rpm>
 
+### Download the exported runner-helper images package
+
+The runner-helper images package is a required dependency for the GitLab Runner `.rpm` package.
+
+Download the package from:
+
+```plaintext
+https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner-helper-images.rpm
+```
+
 You can then install it with:
 
 ```shell
-rpm -i gitlab-runner_386.rpm
+rpm -i gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
 ```
 
 ## Download any other tagged release
