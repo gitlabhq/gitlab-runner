@@ -1062,7 +1062,7 @@ Docker executor:
   are not supported, because they are still experimental. Read
   [the relevant issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
   more details.
-- Because of a [limitation in Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
+- Because of a [limitation in Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/pull/331),
   if the destination path drive letter is not `c:`, paths are not supported for:
 
   - [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
