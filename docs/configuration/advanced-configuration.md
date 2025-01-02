@@ -1466,7 +1466,7 @@ In GitLab Runner 16.1 to 17.1, the `alpine` flavor is an alias for `alpine3.18`.
 
 The `alpine-latest` flavor uses `alpine:latest` as its base image, which could potentially mean it is more unstable.
 
-When GitLab Runner is installed from the `DEB` or RPM packages, images for the supported architectures are installed on the host.
+When GitLab Runner is installed from the `DEB` or `RPM` packages, images for the supported architectures are installed on the host.
 If Docker Engine can't find the specified image version, the runner automatically downloads it before running the job. Both the
 `docker` and `docker+machine` executors work this way.
 
