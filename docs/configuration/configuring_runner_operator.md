@@ -251,6 +251,21 @@ Job concurrency is dictated by the requirements of the project.
 If you set a high concurrency value, the Kubernetes executor processes the jobs as soon as it can.
 However, the Kubernetes cluster's scheduler capacity determines when the job is scheduled.
 
+## Service account for the GitLab Runner manager
+
+For a fresh installation, GitLab Runner creates a Kubernetes `ServiceAccount` named
+`gitlab-runner-app-sa` for the runner manager pod if these RBAC role binding
+resources don't exist:
+
+- `gitlab-runner-app-rolebinding`
+- `gitlab-runner-rolebinding`
+
+If one of the role bindings exists, GitLab resolves the role and service account
+from the `subjects` and `roleRef` defined in the role binding.
+
+If both role bindings exist, `gitlab-runner-app-rolebinding` takes precedence over
+`gitlab-runner-rolebinding`.
+
 ## Troubleshooting
 
 ### Root vs non-root
