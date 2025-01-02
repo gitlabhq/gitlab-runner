@@ -851,7 +851,6 @@ func testGetPodActiveDeadlineSecondsFeatureFlag(t *testing.T, featureFlagName st
 		timeoutSeconds   int
 		expectedTimeout  func(int) *int64
 	}{
-
 		"FF_USE_POD_ACTIVE_DEADLINE_SECONDS disabled": {
 			timeoutSeconds: 30,
 		},
@@ -895,8 +894,7 @@ func TestCleanup(t *testing.T) {
 	podsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/pods/" + objectMeta.Name
 	servicesEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/services/" + objectMeta.Name
 	secretsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/secrets/" + objectMeta.Name
-	configMapsEndpointURI :=
-		"/api/" + version + "/namespaces/" + objectMeta.Namespace + "/configmaps/" + objectMeta.Name
+	configMapsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/configmaps/" + objectMeta.Name
 
 	tests := []struct {
 		Name        string
@@ -3000,7 +2998,6 @@ func TestSetupCredentials(t *testing.T) {
 			p := new(api.Secret)
 
 			err = json.Unmarshal(podBytes, p)
-
 			if err != nil {
 				t.Errorf("error decoding pod: %s", err.Error())
 				return
@@ -3092,7 +3089,6 @@ func TestSetupBuildNamespace(t *testing.T) {
 			n := new(api.Namespace)
 
 			err = json.Unmarshal(namespaceBytes, n)
-
 			if err != nil {
 				t.Errorf("error decoding namespace: %s", err.Error())
 				return
@@ -4015,7 +4011,6 @@ func TestSetupBuildPod(t *testing.T) {
 						Effect:   api.TaintEffectNoSchedule,
 					},
 					{
-
 						Key:      "empty.value",
 						Operator: api.TolerationOpEqual,
 						Value:    "",
@@ -4062,7 +4057,6 @@ func TestSetupBuildPod(t *testing.T) {
 						Effect:   api.TaintEffectNoSchedule,
 					},
 					{
-
 						Key:      "empty.value",
 						Operator: api.TolerationOpEqual,
 						Value:    "",

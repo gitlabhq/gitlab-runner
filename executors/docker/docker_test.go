@@ -2082,7 +2082,7 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 	assert.Contains(
 		t,
 		err.Error(),
-		"failed to pull image 'alpine'",
+		`invalid pull policy for image "alpine"`,
 	)
 	assert.Contains(
 		t,

@@ -2038,7 +2038,7 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 
 			require.Error(t, gotErr)
 			assert.Contains(t, gotErr.Error(), test.wantErrMsg)
-			assert.Contains(t, gotErr.Error(), "failed to pull image '"+common.TestAlpineImage)
+			assert.Contains(t, gotErr.Error(), `invalid pull policy for image "`+common.TestAlpineImage)
 		})
 	}
 }

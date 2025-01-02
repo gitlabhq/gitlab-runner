@@ -78,7 +78,10 @@ func (m *manager) GetDockerImage(
 	}
 
 	if err := m.verifyPullPolicies(pullPolicies, allowedPullPolicies, imagePullPolicies); err != nil {
-		return nil, fmt.Errorf("failed to pull image '%s': %w", imageName, err)
+		return nil, &common.BuildError{
+			Inner:         fmt.Errorf("invalid pull policy for image %q: %w", imageName, err),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	var imageErr error
