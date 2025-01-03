@@ -505,11 +505,11 @@ func (e *executor) createServiceContainerConfig(
 	service, version, serviceImageID string,
 	definition common.Image,
 ) *container.Config {
-	labels := map[string]string{
+	labels := e.prepareContainerLabels(map[string]string{
 		"type":            labelServiceType,
 		"service":         service,
 		"service.version": version,
-	}
+	})
 
 	config := &container.Config{
 		Image:  serviceImageID,
