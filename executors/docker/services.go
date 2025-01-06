@@ -103,7 +103,7 @@ func (e *executor) waitForServices() {
 		timeout = common.DefaultWaitForServicesTimeout
 	}
 
-	// wait for all services to came up
+	// wait for all services to come up
 	if timeout > 0 && len(e.services) > 0 {
 		e.BuildLogger.Println("Waiting for services to be up and running (timeout", timeout, "seconds)...")
 		wg := sync.WaitGroup{}
