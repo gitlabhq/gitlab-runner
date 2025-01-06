@@ -149,17 +149,15 @@ oc get services --namespace default --field-selector='metadata.name=kubernetes' 
 
 ## Customize `config.toml` with a configuration template
 
-NOTE:
-The use of a configuration template to customize `config.toml` is limited to specifying `[runners.kubernetes.volumes]` settings.
-For details on the support to extend this to other settings, see [issue 49](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/issues/49).
-
 You can customize the runner's `config.toml` file by using the [configuration template](../register/index.md#register-with-a-configuration-template).
 
-1. Create a custom configuration template file. For example, let's instruct our runner to mount an `EmptyDir` volume. Create the `custom-config.toml` file:
+1. Create a custom configuration template file. For example, let's instruct our runner to mount an `EmptyDir` volume and
+   set the `cpu_limit`. Create the `custom-config.toml` file:
 
    ```toml
    [[runners]]
      [runners.kubernetes]
+       cpu_limit = "500m"
        [runners.kubernetes.volumes]
          [[runners.kubernetes.volumes.empty_dir]]
            name = "empty-dir"
@@ -185,6 +183,15 @@ You can customize the runner's `config.toml` file by using the [configuration te
      token: gitlab-runner-secret
      config: custom-config-toml
    ```
+
+Because of a [known issue](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/issues/229), you
+must use environment variables instead of configuration templates to modify the following settings:
+
+| Setting                             | Environment variable             | Default value |
+|-------------------------------------|----------------------------------|---------------|
+| `runners.request_concurrency`       | `RUNNER_REQUEST_CONCURRENCY`     | `1`           |
+| `runners.output_limit`              | `RUNNER_OUTPUT_LIMIT`            | `4096`        |
+| `kubernetes.runner.poll_timeout`    | `KUBERNETES_POLL_TIMEOUT`        | `180`         |
 
 ## Configure a custom TLS cert
 
