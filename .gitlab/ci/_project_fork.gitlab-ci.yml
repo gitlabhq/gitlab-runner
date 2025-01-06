@@ -3,3 +3,9 @@
 
 .instance-2xlarge: gitlab-org-docker
 .instance-medium: gitlab-org-docker
+
+# we don't use windows instances on forks, but these
+# still need to be present because they're referenced,
+# so we just provide a bogus tag name
+.instance-windows-2019: not-intended-for-forks
+.instance-windows-2022: not-intended-for-forks
