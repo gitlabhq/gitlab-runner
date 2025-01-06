@@ -159,6 +159,11 @@ func createHelperImagesPackage(blueprint Blueprint, opts []string) error {
 		"--provides", pkgName,
 	}...)
 
+	// fix https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38394 for deb packages at least...
+	if p.pkgType == Deb {
+		args = append(args, "--replaces", build.AppName)
+	}
+
 	args = append(args, p.prebuiltImages...)
 
 	err := sh.RunV("fpm", args...)
