@@ -168,6 +168,8 @@ func (e *executor) expandAndGetDockerImage(
 		return nil, err
 	}
 
+	dockerOptions.Platform = e.ExpandValue(dockerOptions.Platform)
+
 	image, err := e.pullManager.GetDockerImage(imageName, dockerOptions, imagePullPolicies)
 	if err != nil {
 		return nil, err
