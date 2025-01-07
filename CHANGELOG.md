@@ -138,6 +138,12 @@
 - Add tests for service name empty [!5065](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5065)
 - Fixed Vale issues Runner docs: Part 2 [!5152](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5152)
 
+## v17.5.5 (2024-12-19)
+
+### Bug fixes
+
+- Fix docker network config for Windows [!5182](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5182)
+
 ## v17.5.3 (2024-10-31)
 
 ### Bug fixes
