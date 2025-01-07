@@ -705,6 +705,8 @@ func (b *AbstractShell) writeGitCleanup(w ShellWriter, submoduleStrategy common.
 			w.RmFilesRecursive(path.Join(projectDir, gitDir, "modules"), path.Base(f))
 		}
 	}
+
+	w.RmFilesRecursive(path.Join(projectDir, gitDir, "refs"), "*.lock")
 }
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
