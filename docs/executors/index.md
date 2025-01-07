@@ -57,7 +57,7 @@ you decide which executor to use.
 | Executor                                          | SSH  | Shell   | VirtualBox | Parallels | Docker | Docker Autoscaler | Instance       | Kubernetes | Custom         |
 |:--------------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:-----------------:|---------------:| :--------: | :------------: |
 | Clean build environment for every build           | ✗    | ✗       | ✓          | ✓         | ✓      | ✓                 |conditional (4) | ✓          |conditional (4) |
-| Reuse previous clone if it exists                 | ✓    | ✓       | ✗          | ✗         | ✓      | ✓                 |conditional (4) | ✗          |conditional (4) |
+| Reuse previous clone if it exists                 | ✓    | ✓       | ✗          | ✗         | ✓      | ✓                 |conditional (4) | ✓ (6)      |conditional (4) |
 | Runner file system access protected (5)           | ✓    | ✗       | ✓          | ✓         | ✓      | ✓                 | ✗              | ✓          |conditional     |
 | Migrate runner machine                            | ✗    | ✗       | partial    | partial   | ✓      | ✓                 | ✓              | ✓          |✓               |
 | Zero-configuration support for concurrent builds  | ✗    | ✗ (1)   | ✓          | ✓         | ✓      | ✓                 | ✓              | ✓          |conditional (4) |
@@ -75,6 +75,7 @@ you decide which executor to use.
    Executors marked ✓ don't allow the runner to access the file system by default.
    However, security flaws or certain configurations could allow jobs
    to break out of their container and access the file system hosting the runner.
+1. Requires [persistent per-concurrency build volumes](kubernetes/index.md#persistent-per-concurrency-build-volumes) configuration.
 
 ### Shell executor
 
