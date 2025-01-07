@@ -2076,6 +2076,44 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 	)
 }
 
+func TestDockerImageWithVariablePlatform(t *testing.T) {
+	// Test with and without setting the platform to make sure that variable expansion works in both cases
+	for _, platform := range []string{"linux/amd64", ""} {
+		c := new(docker.MockClient)
+		defer c.AssertExpectations(t)
+
+		p := new(pull.MockManager)
+		defer p.AssertExpectations(t)
+
+		// Ensure that the pull manager gets called with the expanded platform
+		p.On("GetDockerImage", mock.Anything, common.ImageDockerOptions{Platform: platform}, mock.Anything).
+			Return(nil, nil).
+			Once()
+
+		e := executorWithMockClient(c)
+		e.pullManager = p
+
+		e.Config.Docker = &common.DockerConfig{}
+
+		imageConfig := common.Image{
+			Name: "alpine",
+			ExecutorOptions: common.ImageExecutorOptions{
+				Docker: common.ImageDockerOptions{
+					Platform: "${PLATFORM}",
+				},
+			},
+		}
+
+		e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+			Key:   "PLATFORM",
+			Value: platform,
+		})
+
+		_, err := e.expandAndGetDockerImage(imageConfig.Name, []string{}, imageConfig.ExecutorOptions.Docker, imageConfig.PullPolicies)
+		assert.NoError(t, err)
+	}
+}
+
 func TestDockerImageWithUser(t *testing.T) {
 	tests := map[string]struct {
 		runnerUser, jobUser, want string
