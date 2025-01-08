@@ -64,7 +64,8 @@ func createPackage(blueprint Blueprint, opts []string) error {
 	}
 
 	if Type(p.postfix) != "-fips" {
-		opts = append(opts, "--depends", HelperImagesPackage)
+		fullVersion := build.Version() + "-" + blueprint.Env().Value(iteration)
+		opts = append(opts, "--depends", HelperImagesPackage+" = "+fullVersion)
 	}
 
 	pkgName := build.AppName
