@@ -287,7 +287,7 @@ type executor struct {
 	eventsStream watch.Interface
 
 	podWatcher    podWatcher
-	newPodWatcher func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher
+	newPodWatcher func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher
 }
 
 //go:generate mockery --name=podWatcher --inpackage
@@ -369,6 +369,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	podWatcher := s.newPodWatcher(
 		options.Context,
+		&s.BuildLogger,
 		s.kubeClient,
 		s.configurationOverwrites.namespace,
 		s.buildLabels(),
@@ -3105,8 +3106,8 @@ func newExecutor() *executor {
 		},
 		getKubeConfig:        getKubeClientConfig,
 		windowsKernelVersion: os_helpers.LocalKernelVersion,
-		newPodWatcher: func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
-			return watchers.NewPodWatcher(ctx, kubeClient, namespace, labels)
+		newPodWatcher: func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+			return watchers.NewPodWatcher(ctx, logger, kubeClient, namespace, labels)
 		},
 	}
 

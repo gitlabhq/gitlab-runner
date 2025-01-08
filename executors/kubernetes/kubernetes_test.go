@@ -2861,7 +2861,7 @@ func TestPrepare(t *testing.T) {
 			testBuild.Runner = test.RunnerConfig
 
 			e := newExecutor()
-			e.newPodWatcher = func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+			e.newPodWatcher = func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
 				mockPodWatcher := newMockPodWatcher(t)
 				mockPodWatcher.On("Start").Return(nil).Maybe()
 				return mockPodWatcher
@@ -5801,7 +5801,7 @@ func TestPodWatcherSetup(t *testing.T) {
 	ex.newKubeClient = func(config *restclient.Config) (kubernetes.Interface, error) {
 		return fakeKubeClient, nil
 	}
-	ex.newPodWatcher = func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+	ex.newPodWatcher = func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
 		return mockPodWatcher
 	}
 
@@ -6341,7 +6341,7 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 			e.AbstractExecutor.Build = &common.Build{
 				Runner: &tt.config,
 			}
-			e.newPodWatcher = func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+			e.newPodWatcher = func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
 				mockPodWatcher := newMockPodWatcher(t)
 				mockPodWatcher.On("Start").Return(nil).Once()
 				return mockPodWatcher
@@ -7536,7 +7536,7 @@ func TestContainerPullPolicies(t *testing.T) {
 			executor.getKubeConfig = func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
 				return nil, nil
 			}
-			executor.newPodWatcher = func(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+			executor.newPodWatcher = func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
 				mockPodWatcher := newMockPodWatcher(t)
 				mockPodWatcher.On("Start").Return(nil).Once()
 				mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Once()

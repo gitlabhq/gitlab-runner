@@ -4,10 +4,12 @@ package watchers
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	mock "github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -70,9 +72,11 @@ func TestPodWatcher(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			fakeKubeClient := fake.NewSimpleClientset()
 
-			podWatcher := NewPodWatcher(ctx, fakeKubeClient, defaultNamespace, defaultLabels)
+			fakeKubeClient := fake.NewSimpleClientset()
+			fakeLogger := newMockLogger(t)
+
+			podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels)
 
 			err := podWatcher.Start()
 			assert.NoError(t, err, "starting pod watcher")
@@ -101,6 +105,38 @@ func TestPodWatcher(t *testing.T) {
 			// down.
 			assert.Equal(t, context.Canceled, factory.ctx.Err(), "expected factory's context to be canceled")
 		})
+	}
+}
+
+func TestPodWatcherNoConsumer(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	podWithErr := withDeletionTimestamp(defaultPod())
+	fakeKubeClient := fake.NewSimpleClientset()
+	fakeLogger := newMockLogger(t)
+
+	podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels)
+
+	err := podWatcher.Start()
+	assert.NoError(t, err, "starting pod watcher")
+
+	podWatcher.UpdatePodName(podWithErr.GetName())
+
+	expectedLog := fmt.Sprintf(`pod error not consumed in time (%s): pod "%s/%s" is being deleted`, emitErrorTimeout, podWithErr.GetNamespace(), podWithErr.GetName())
+	logObserved := make(chan struct{})
+	fakeLogger.On("Debugln", expectedLog).Run(func(_ mock.Arguments) {
+		close(logObserved)
+	}).Once()
+
+	_, err = fakeKubeClient.CoreV1().Pods(podWithErr.GetNamespace()).Create(ctx, podWithErr, metav1.CreateOptions{})
+	assert.NoError(t, err, "creating pod")
+
+	maxWaitTime := time.Second
+	select {
+	case <-logObserved:
+	case <-time.After(maxWaitTime):
+		assert.Fail(t, "expected issue to be logged", "expected log line to appear within %s", maxWaitTime)
 	}
 }
 

@@ -21,8 +21,14 @@ import (
 // receive (looking at you, windows).
 const emitErrorTimeout = time.Millisecond
 
+//go:generate mockery --name=logger --inpackage
+type logger interface {
+	Debugln(args ...any)
+}
+
 type PodWatcher struct {
 	factory *selfManagedInformerFactory
+	logger  logger
 
 	podName atomic.Value
 
@@ -33,9 +39,10 @@ type PodWatcher struct {
 
 // NewPodWatcher creates a pod watcher based on the kubeclient, namespace, and labels.
 // Internally, it creates a informer factory which can manage itself, so that it can be used and shut down properly.
-func NewPodWatcher(ctx context.Context, kubeClient kubernetes.Interface, namespace string, labels map[string]string) *PodWatcher {
+func NewPodWatcher(ctx context.Context, logger logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) *PodWatcher {
 	return &PodWatcher{
 		factory: newScopedInformerFactory(ctx, kubeClient, namespace, labels),
+		logger:  logger,
 		errors:  make(chan error),
 	}
 }
@@ -88,19 +95,21 @@ func (p *PodWatcher) Errors() <-chan error {
 }
 
 func (p *PodWatcher) onPodChange(pod *v1.Pod) {
-	err := checkTerminalPodErrors(pod)
-	if err != nil {
-		_ = p.emitError(err)
+	podErr := checkTerminalPodErrors(pod)
+	if podErr == nil {
+		return
 	}
+
+	p.emitError(podErr)
 }
 
 // emitError sends out an error in a non-blocking way, so that the informer is not blocked.
-func (p *PodWatcher) emitError(err error) error {
+func (p *PodWatcher) emitError(err error) {
 	select {
 	case p.errors <- err:
-		return nil
+		// nothing to do, we've sent out the pod error
 	case <-time.After(emitErrorTimeout):
-		return fmt.Errorf("timed out")
+		p.logger.Debugln(fmt.Sprintf("pod error not consumed in time (%s): %s", emitErrorTimeout, err))
 	}
 }
 
@@ -121,8 +130,7 @@ func (p *PodWatcher) resourceHandler() cache.ResourceEventHandler {
 			},
 			DeleteFunc: func(obj any) {
 				pod := asPod(obj)
-				err := fmt.Errorf("pod %q is deleted", pod.GetNamespace()+"/"+pod.GetName())
-				_ = p.emitError(err)
+				p.emitError(fmt.Errorf("pod %q is deleted", pod.GetNamespace()+"/"+pod.GetName()))
 			},
 		},
 	}
