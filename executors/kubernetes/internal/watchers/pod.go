@@ -119,9 +119,16 @@ func (p *PodWatcher) resourceHandler() cache.ResourceEventHandler {
 			// We need to filter on the pod name; when the executor retries on pull issues, it starts the machinery from
 			// fresh. While this is happening, the old pod might still be terminating. We don't care about these old pods
 			// anymore in this context, and thus don't want to receive updates thereof.
-			return asPod(obj).GetName() == p.currentPodName()
+			pod := asPod(obj)
+			if pod == nil {
+				p.logger.Debugln("update for unsupported object observed", obj)
+				return false
+			}
+			return pod.GetName() == p.currentPodName()
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
+			// In FilterFunc we already checked, that the obj is indeed a non-nil pod, thus we don't have to check in the
+			// handlers anymore and only have to do the type assertion.
 			AddFunc: func(obj any) {
 				p.onPodChange(asPod(obj))
 			},
@@ -144,8 +151,6 @@ func (p *PodWatcher) currentPodName() string {
 }
 
 // asPod is a convenience helper to type-assert an untyped object to a pod.
-// If the object is not a pod, we plain ignore it.
-// This is mostly to make gocritic happy, by "catching" the assertion error.
 func asPod(obj any) *v1.Pod {
 	pod, _ := obj.(*v1.Pod)
 	return pod

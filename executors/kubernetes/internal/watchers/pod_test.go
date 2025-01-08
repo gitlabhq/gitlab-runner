@@ -140,6 +140,47 @@ func TestPodWatcherNoConsumer(t *testing.T) {
 	}
 }
 
+func TestPodWatcherWrongObject(t *testing.T) {
+	tests := map[string]struct {
+		object               any
+		expectUnsupportedLog bool
+	}{
+		"nil": {
+			expectUnsupportedLog: true,
+		},
+		"pod": {
+			object: defaultPod(),
+		},
+		"random object": {
+			object:               map[string]any{"blupp": "blapp"},
+			expectUnsupportedLog: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			fakeLogger := newMockLogger(t)
+			podWatcher := &PodWatcher{
+				logger: fakeLogger,
+				errors: make(chan error, 10),
+			}
+			podWatcher.UpdatePodName(defaultName)
+
+			if test.expectUnsupportedLog {
+				fakeLogger.On(
+					"Debugln", "update for unsupported object observed", test.object,
+				).Once()
+			}
+
+			handler := podWatcher.resourceHandler()
+
+			assert.NotPanics(t, func() {
+				handler.OnAdd(test.object)
+			})
+		})
+	}
+}
+
 func waitForError(ch <-chan error) error {
 	to := time.After(10 * time.Millisecond)
 	select {
