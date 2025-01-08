@@ -155,7 +155,7 @@ func createHelperImagesPackage(blueprint Blueprint, opts []string) error {
 		"--maintainer", "GitLab Inc. <support@gitlab.com>",
 		"--license", "MIT",
 		"--vendor", "GitLab Inc.",
-		"--architecture", "all",
+		"--architecture", "noarch",
 		"--provides", pkgName,
 	}...)
 
