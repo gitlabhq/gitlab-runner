@@ -25,6 +25,11 @@ func TestVersion(t *testing.T) {
 			expectedErr:     nil,
 		},
 		{
+			kernelVersion:   "10.0 26100 (26100.1.amd64fre.ge_release.240331-1435)",
+			expectedVersion: V24H2,
+			expectedErr:     nil,
+		},
+		{
 			kernelVersion:   "10.0.17763",
 			expectedVersion: V1809,
 			expectedErr:     nil,

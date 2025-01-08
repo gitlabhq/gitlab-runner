@@ -12,6 +12,8 @@ const (
 	V1809 = "1809"
 	// V21H2 is the Windows version that is 21H2 also known as Windows 2022 LTSC.
 	V21H2 = "21H2"
+	// V24H2 is the Windows version that is 24H2 also known as Windows 2025 LTSC.
+	V24H2 = "24H2"
 )
 
 var ErrUnsupportedWindowsVersion = errors.New("unsupported Windows version")
@@ -21,6 +23,7 @@ var supportedWindowsBuilds = map[string]string{
 	// Compatibility: https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility#windows-server-host-os-compatibility
 	"10.0.17763": V1809,
 	"10.0.20348": V21H2,
+	"10.0.26100": V24H2,
 
 	// Windows client versions: https://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions#Personal_computer_versions
 	// Compatibility: https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility#windows-client-host-os-compatibility
