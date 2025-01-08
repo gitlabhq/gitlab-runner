@@ -17,9 +17,9 @@ type mockS3Presigner struct {
 	mock.Mock
 }
 
-// FetchCredentialsForRole provides a mock function with given fields: ctx, roleARN, bucketName, objectName, timeout
-func (_m *mockS3Presigner) FetchCredentialsForRole(ctx context.Context, roleARN string, bucketName string, objectName string, timeout time.Duration) (map[string]string, error) {
-	ret := _m.Called(ctx, roleARN, bucketName, objectName, timeout)
+// FetchCredentialsForRole provides a mock function with given fields: ctx, roleARN, bucketName, objectName, upload, timeout
+func (_m *mockS3Presigner) FetchCredentialsForRole(ctx context.Context, roleARN string, bucketName string, objectName string, upload bool, timeout time.Duration) (map[string]string, error) {
+	ret := _m.Called(ctx, roleARN, bucketName, objectName, upload, timeout)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchCredentialsForRole")
@@ -27,19 +27,19 @@ func (_m *mockS3Presigner) FetchCredentialsForRole(ctx context.Context, roleARN 
 
 	var r0 map[string]string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, time.Duration) (map[string]string, error)); ok {
-		return rf(ctx, roleARN, bucketName, objectName, timeout)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, bool, time.Duration) (map[string]string, error)); ok {
+		return rf(ctx, roleARN, bucketName, objectName, upload, timeout)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, time.Duration) map[string]string); ok {
-		r0 = rf(ctx, roleARN, bucketName, objectName, timeout)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, bool, time.Duration) map[string]string); ok {
+		r0 = rf(ctx, roleARN, bucketName, objectName, upload, timeout)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]string)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, time.Duration) error); ok {
-		r1 = rf(ctx, roleARN, bucketName, objectName, timeout)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, bool, time.Duration) error); ok {
+		r1 = rf(ctx, roleARN, bucketName, objectName, upload, timeout)
 	} else {
 		r1 = ret.Error(1)
 	}

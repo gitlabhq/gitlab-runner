@@ -23,6 +23,7 @@ import (
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/azureblob" // Needed to register the Azure driver
+	_ "gocloud.dev/blob/s3blob"    // Needed to register the AWS S3 driver
 	"gocloud.dev/gcerrors"
 )
 
