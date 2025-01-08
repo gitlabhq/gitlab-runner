@@ -157,12 +157,13 @@ func createHelperImagesPackage(blueprint Blueprint, opts []string) error {
 		"--license", "MIT",
 		"--vendor", "GitLab Inc.",
 		"--architecture", "noarch",
-		"--provides", pkgName,
 	}...)
 
 	// fix https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38394 for deb packages at least...
 	if p.pkgType == Deb {
-		args = append(args, "--replaces", build.AppName)
+		args = append(args,
+			"--provides", pkgName,
+			"--replaces", build.AppName)
 	}
 
 	args = append(args, p.prebuiltImages...)
