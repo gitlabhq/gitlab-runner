@@ -64,7 +64,8 @@ func createPackage(blueprint Blueprint, opts []string) error {
 	}
 
 	if Type(p.postfix) != "-fips" {
-		opts = append(opts, "--depends", HelperImagesPackage)
+		fullVersion := build.Version() + "-" + blueprint.Env().Value(iteration)
+		opts = append(opts, "--depends", HelperImagesPackage+" = "+fullVersion)
 	}
 
 	pkgName := build.AppName
@@ -155,13 +156,14 @@ func createHelperImagesPackage(blueprint Blueprint, opts []string) error {
 		"--maintainer", "GitLab Inc. <support@gitlab.com>",
 		"--license", "MIT",
 		"--vendor", "GitLab Inc.",
-		"--architecture", "all",
-		"--provides", pkgName,
+		"--architecture", "noarch",
 	}...)
 
 	// fix https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38394 for deb packages at least...
 	if p.pkgType == Deb {
-		args = append(args, "--replaces", build.AppName)
+		args = append(args,
+			"--provides", pkgName,
+			"--replaces", build.AppName)
 	}
 
 	args = append(args, p.prebuiltImages...)
