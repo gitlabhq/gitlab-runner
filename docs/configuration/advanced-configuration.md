@@ -1036,6 +1036,7 @@ This table lists `config.toml`, CLI options, and environment variables for `regi
 | `S3.DualStack`                 | `[runners.cache.s3] -> DualStack`                                                                 | `--cache-s3-dual-stack`                                        | `$CACHE_S3_DUAL_STACK`                                                   |
 | `S3.Accelerate`                | `[runners.cache.s3] -> Accelerate`                                                                | `--cache-s3-accelerate`                                        | `$CACHE_S3_ACCELERATE`                                                   |
 | `S3.PathStyle`                 | `[runners.cache.s3] -> PathStyle`                                                                 | `--cache-s3-path-style`                                        | `$CACHE_S3_PATH_STYLE`                                                   |
+| `S3.RoleARN`                   | `[runners.cache.s3] -> RoleARN`                                                                   | `--cache-s3-role-arn`                                          | `$CACHE_S3_ROLE_ARN`                                                     |
 | `S3.UploadRoleARN`             | `[runners.cache.s3] -> UploadRoleARN`                                                             | `--cache-s3-upload-role-arn`                                   | `$CACHE_S3_UPLOAD_ROLE_ARN`                                              |
 | `GCS.AccessID`                 | `[runners.cache.gcs] -> AccessID`                                                                 | `--cache-gcs-access-id`                                        | `$CACHE_GCS_ACCESS_ID`                                                   |
 | `GCS.PrivateKey`               | `[runners.cache.gcs] -> PrivateKey`                                                               | `--cache-gcs-private-key`                                      | `$CACHE_GCS_PRIVATE_KEY`                                                 |
@@ -1065,7 +1066,8 @@ The following parameters define S3 storage for cache.
 | `DualStack`                 | boolean | In GitLab 17.5 and later, enables the use of IPv4 and IPv6 endpoints (default: true). Disable this if you are using AWS S3 Express. GitLab ignores this setting if you set `ServerAddress`.                                                                      |
 | `Accelerate`                | boolean | In GitLab 17.5 and later, enables the use of AWS S3 Transfer Acceleration. GitLab sets this to `true` automatically if `ServerAddress` is configured as an Accelerated endpoint.                                                                                 |
 | `PathStyle`                 | boolean | In GitLab 17.5 and later, enables the use of path-style access. By default, GitLab automatically detects this setting based on the `ServerAddress` value.                                                                                                        |
-| `UploadRoleARN`             | string  | In GitLab 17.5 and later, specifies an AWS role ARN that can be used with `AssumeRole` to generate time-limited `PutObject` S3 requests. This enables the use of S3 multipart uploads.                                                                           |
+| `UploadRoleARN`             | string  | Deprecated. Use `RoleARN` instead. In GitLab 17.5 and later, specifies an AWS role ARN that can be used with `AssumeRole` to generate time-limited `PutObject` S3 requests. This enables the use of S3 multipart uploads.                                        |
+| `RoleARN`                   | string  | In GitLab 17.8 and later, specifies an AWS role ARN that can be used with `AssumeRole` to generate time-limited `GetObject` and `PutObject` S3 requests. This enables the use of S3 multipart transfers.                                                         |
 
 Example:
 
@@ -1141,30 +1143,31 @@ The IAM policy for the role assigned to the ServiceAccount defined in `rbac.serv
 - `kms:DescribeKey`
 - `kms:GenerateDataKey`
 
-#### Enable multipart uploads with `UploadRoleARN`
+#### Enable multipart transfers with `RoleARN`
 
 To limit access to the cache, the runner manager generates
 timed-limited, [pre-signed URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html) for jobs to download from and upload to
 the cache. However, AWS S3 limits a [single PUT request to 5 GB](https://docs.aws.amazon.com/AmazonS3/latest/userguide/upload-objects.html).
 For files larger than 5 GB, you must use the multipart upload API.
 
-Multipart uploads are only supported with AWS S3 and not for other S3
+Multipart transfers are only supported with AWS S3 and not for other S3
 providers. Because the runner manager handles jobs for different
 projects, the runner manager cannot pass around S3 credentials that have
 bucket-wide permissions. Instead, the runner manger uses time-limited
 pre-signed URLs and narrowly-scoped credentials to restrict access to one
 specific object.
 
-To use S3 multipart uploads with AWS, specify an IAM role in
-`UploadRoleARN` in the `arn:aws:iam:::<ACCOUNT ID>:<YOUR ROLE NAME>`
+To use S3 multipart transfers with AWS, specify an IAM role in
+`RoleARN` in the `arn:aws:iam:::<ACCOUNT ID>:<YOUR ROLE NAME>`
 format. This role generates time-limited AWS credentials that are
 narrowly scoped to write to a specific blob in the bucket. Ensure that
 your original S3 credentials can access `AssumeRole` for the
-specified `UploadRoleARN`.
+specified `RoleARN`.
 
-The IAM role specified in `UploadRoleARN` must have the following
+The IAM role specified in `RoleARN` must have the following
 permissions:
 
+- `s3:GetObject` access to the bucket specified in `BucketName`.
 - `s3:PutObject` access to the bucket specified in `BucketName`.
 - `kms:Decrypt` and `kms:GenerateDataKey` if server side encryption with KMS or DSSE-KMS is enabled.
 
@@ -1190,7 +1193,7 @@ the `Trust relationships` might look similar to this:
 }
 ```
 
-You can also reuse `my-instance-role` as the `UploadRoleARN` and avoid
+You can also reuse `my-instance-role` as the `RoleARN` and avoid
 creating a new role. Make sure that `my-instance-role` has the
 `AssumeRole` permission. For example, an IAM profile associated with an
 EC2 instance might have the following `Trust relationships`:
@@ -1218,12 +1221,12 @@ You can use the AWS command-line interface to verify that your instance has the
 aws sts assume-role --role-arn arn:aws:iam::1234567890123:role/my-upload-role --role-session-name gitlab-runner-test1
 ```
 
-##### How uploads work with `UploadRoleARN`
+##### How uploads work with `RoleARN`
 
-If `UploadRoleARN` is present, every time the runner uploads to the cache:
+If `RoleARN` is present, every time the runner uploads to the cache:
 
 1. The runner manager retrieves the original S3 credentials (specified through `AuthenticationType`, `AccessKey`, and `SecretKey`).
-1. With the S3 credentials, the runner manager sends a request to the Amazon Security Token Service (STS) for [`AssumeRole`](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html) with `UploadRoleARN`.
+1. With the S3 credentials, the runner manager sends a request to the Amazon Security Token Service (STS) for [`AssumeRole`](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html) with `RoleARN`.
    The policy request looks similar to this:
 
     ```json
