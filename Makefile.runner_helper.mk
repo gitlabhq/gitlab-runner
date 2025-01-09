@@ -61,13 +61,13 @@ out/helper-images:
 	cd dockerfiles/runner-helper && docker buildx bake --progress plain $(TARGETS)
 
 .PHONY: prebuilt-helper-images
-prebuilt-helper-images: ALPINE_DEFAULT_VERSION=3.18
+prebuilt-helper-images: ALPINE_DEFAULT_VERSION=3.21
 prebuilt-helper-images:
 	@find out/helper-images -maxdepth 1 -name "*.tar" | parallel -j$(shell nproc) './ci/prebuilt_helper_image {}'
 
 	@for file in out/helper-images/prebuilt-alpine$(ALPINE_DEFAULT_VERSION)-*.tar.xz; do \
 		target=$$(echo -n "$${file}" | sed -e 's/'$(ALPINE_DEFAULT_VERSION)'//'); \
-		if [ ! -e $$target ]; then \
-			ln -s $$(basename $$file) $$target; \
+		if [ ! -e "$$target" ]; then \
+			ln -s "$$(basename $$file)" "$$target"; \
 		fi; \
 	done
