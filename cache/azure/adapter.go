@@ -85,10 +85,6 @@ func (a *azureAdapter) getEnv(ctx context.Context, upload bool) (map[string]stri
 	return env, err
 }
 
-func (a *azureAdapter) GetUploadEnv(ctx context.Context) (map[string]string, error) {
-	return nil, nil
-}
-
 func (a *azureAdapter) generateSASToken(ctx context.Context, upload bool) (string, error) {
 	method := http.MethodGet
 	if upload {
