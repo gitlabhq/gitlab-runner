@@ -1090,9 +1090,7 @@ func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey 
 		}
 	}
 
-	env, err := cache.GetCacheUploadEnv(ctx, build, cacheKey)
-
-	return urlArgs, env, err
+	return urlArgs, nil, err
 }
 
 func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScriptInfo, artifact common.Artifact) bool {

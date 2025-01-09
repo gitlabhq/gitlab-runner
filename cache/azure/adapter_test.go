@@ -211,10 +211,6 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 			assert.Nil(t, adapter.GetDownloadURL(ctx).URL)
 			assert.Nil(t, adapter.GetUploadURL(ctx).URL)
 
-			uploadEnv, err := adapter.GetUploadEnv(ctx)
-			assert.NoError(t, err)
-			assert.Nil(t, uploadEnv)
-
 			testGoCloudURLWithInvalidConfig(t, "GetGoCloudURL", tc, adapter, a.GetGoCloudURL, tc.expectedErrorMsg)
 		})
 	}
@@ -322,10 +318,6 @@ func TestAdapterOperation(t *testing.T) {
 			ctx := context.Background()
 			assert.Nil(t, adapter.GetDownloadURL(ctx).URL)
 			assert.Nil(t, adapter.GetUploadURL(ctx).URL)
-
-			env, err := adapter.GetUploadEnv(context.Background())
-			require.NoError(t, err)
-			assert.Empty(t, env)
 		})
 	}
 }
