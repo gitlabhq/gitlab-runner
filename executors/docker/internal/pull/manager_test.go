@@ -581,7 +581,7 @@ func TestPullPolicyPassedAsIfNotPresentButNotAllowedDefault(t *testing.T) {
 	assert.Contains(
 		t,
 		err.Error(),
-		"failed to pull image 'existing'",
+		`invalid pull policy for image "existing"`,
 	)
 	assert.Contains(
 		t,
@@ -606,7 +606,7 @@ func TestPullPolicyPassedAsIfNotPresentButNotAllowed(t *testing.T) {
 	assert.Contains(
 		t,
 		err.Error(),
-		"failed to pull image 'existing'",
+		`invalid pull policy for image "existing"`,
 	)
 	assert.Contains(
 		t,
@@ -631,7 +631,7 @@ func TestPullPolicyWhenConfigIsNotAllowed(t *testing.T) {
 	assert.Contains(
 		t,
 		err.Error(),
-		"failed to pull image 'existing'",
+		`invalid pull policy for image "existing"`,
 	)
 	assert.Contains(
 		t,

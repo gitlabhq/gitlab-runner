@@ -384,7 +384,10 @@ func (s *executor) preparePullManager() (pull.Manager, error) {
 
 		err = s.verifyPullPolicies(k8sPullPolicies, allowedPullPolicies, pullPolicies)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pull policy for container %q: %w", containerName, err)
+			return nil, &common.BuildError{
+				Inner:         fmt.Errorf("invalid pull policy for container %q: %w", containerName, err),
+				FailureReason: common.ConfigurationError,
+			}
 		}
 
 		k8sPullPoliciesPerContainer[containerName] = k8sPullPolicies
@@ -1644,7 +1647,7 @@ func (s *executor) getVolumesForPVCs() []api.Volume {
 		}
 
 		// Resolve the runtime name by injecting variable references.
-		var resolvedName = s.Build.GetAllVariables().ExpandValue(volume.Name)
+		resolvedName := s.Build.GetAllVariables().ExpandValue(volume.Name)
 
 		apiVolume := api.Volume{
 			Name: resolvedName,
@@ -1741,7 +1744,7 @@ func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
 		return *s.requireDefaultBuildsDirVolume
 	}
 
-	var required = true
+	required := true
 	for _, mount := range s.getVolumeMountsForConfig() {
 		if mount.MountPath == s.AbstractExecutor.RootDir() {
 			required = false
@@ -1761,7 +1764,7 @@ func (s *executor) isSharedBuildsDirRequired() bool {
 		return false
 	}
 
-	var required = true
+	required := true
 	if s.requireSharedBuildsDir != nil {
 		return *s.requireSharedBuildsDir
 	}
@@ -1881,6 +1884,7 @@ func (s *executor) setupBuildNamespace(ctx context.Context) error {
 	}
 	return err
 }
+
 func (s *executor) teardownBuildNamespace(ctx context.Context) error {
 	if !s.Config.Kubernetes.NamespacePerJob {
 		return nil
@@ -2238,8 +2242,8 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 }
 
 func (s *executor) buildContainerStartupProbe() *api.Probe {
-	var notUpLog = "gitlab-runner shell not up yet"
-	var startupProbeFile = s.getStartupProbeFile()
+	notUpLog := "gitlab-runner shell not up yet"
+	startupProbeFile := s.getStartupProbeFile()
 	var probeCommand []string
 
 	switch shell := s.Shell().Shell; shell {

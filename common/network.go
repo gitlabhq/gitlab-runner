@@ -40,6 +40,11 @@ const (
 	ImagePullFailure    JobFailureReason = "image_pull_failure"
 	UnknownFailure      JobFailureReason = "unknown_failure"
 
+	// ConfigurationError indicates an error in the CI configuration that can only be determined by runner (and not by
+	// Rails). The typical example incompatible pull policies. Since this failure reason does not exist in rails, we map
+	// it to ScriptFailure below, which is more or less correct in that it's ultimately a user error.
+	ConfigurationError JobFailureReason = "configuration_error"
+
 	// When defining new job failure reasons, consider if its meaning is
 	// extracted from the scope of already existing one. If yes - update
 	// the failureReasonsCompatibilityMap variable below.
@@ -58,6 +63,7 @@ var (
 		JobExecutionTimeout,
 		ImagePullFailure,
 		UnknownFailure,
+		ConfigurationError,
 	}
 
 	// failureReasonsCompatibilityMap contains a mapping of new failure reasons
@@ -68,7 +74,8 @@ var (
 	// category for them (yet we still need to pass the that value through
 	// supported list check).
 	failureReasonsCompatibilityMap = map[JobFailureReason]JobFailureReason{
-		ImagePullFailure: RunnerSystemFailure,
+		ImagePullFailure:   RunnerSystemFailure,
+		ConfigurationError: ScriptFailure,
 	}
 
 	// A small list of failure reasons that are supported by all

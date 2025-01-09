@@ -401,7 +401,7 @@ func TestDockerWithDockerConfigAlwaysButNotAllowedAndWithNoServiceImagePullPolic
 	assert.Contains(
 		t,
 		err.Error(),
-		"failed to pull image 'alpine'",
+		`invalid pull policy for image "alpine"`,
 	)
 	assert.Contains(
 		t,
@@ -440,7 +440,7 @@ func TestDockerWithDockerConfigAlwaysAndWithServiceImagePullPolicyIfNotPresent(t
 	assert.Contains(
 		t,
 		err.Error(),
-		"failed to pull image 'alpine'",
+		`invalid pull policy for image "alpine"`,
 	)
 	assert.Contains(
 		t,
