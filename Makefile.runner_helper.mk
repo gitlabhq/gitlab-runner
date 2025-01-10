@@ -30,6 +30,10 @@ HELPER_GO_FILES ?= $(shell find common network -name '*.go')
 .PHONY: helper-bin-host
 helper-bin-host: ${BASE_BINARY_PATH}.$(shell go env GOOS)-$(shell go env GOARCH)
 
+# Build the Runner Helper binaries for the linux OS and host architecture.
+.PHONY: helper-bin-linux
+helper-bin-linux: ${BASE_BINARY_PATH}.linux-$(shell go env GOARCH)
+
 # Build the Runner Helper binaries for all supported platforms.
 .PHONY: helper-bin
 helper-bin: $(BINARIES)
@@ -40,6 +44,15 @@ helper-bin-fips: ${BASE_BINARY_PATH}.linux-amd64-fips
 .PHONY: helper-images
 helper-images: $(BINARIES)
 helper-images: out/helper-images
+
+.PHONY: helper-image-host
+helper-image-host: export HOST_ARCH ?= $(shell go env GOARCH)
+helper-image-host: export HOST_FLAVOR ?= alpine-3.21
+helper-image-host: export RUNNER_IMAGES_VERSION ?= $(shell grep "RUNNER_IMAGES_VERSION:" .gitlab/ci/_common.gitlab-ci.yml | awk -F': ' '{ print $$2 }' | tr -d '"')
+helper-image-host: helper-bin-linux
+	docker buildx create --name builder --use --driver docker-container default || true
+	mkdir -p out/helper-images
+	cd dockerfiles/runner-helper && docker buildx bake --progress plain host-image
 
 # Make sure the fips target is first since it's less general
 ${BASE_BINARY_PATH}.linux-amd64-fips: GOOS=linux
