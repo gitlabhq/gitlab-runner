@@ -2336,11 +2336,17 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 
 			for name, terminator := range tt.terminators {
 				t.Run(name, func(t *testing.T) {
+					t.Parallel()
+
 					ctx := context.Background()
 
 					build := getTestBuild(t, common.GetRemoteLongRunningBuild)
 
 					buildtest.SetBuildFeatureFlag(build, ff, ffValue)
+
+					// Will only run this test with FF_USE_INFORMERS enabled, else we are not able to catch force deletes,
+					// evictions, ...
+					buildtest.SetBuildFeatureFlag(build, featureflags.UseInformers, true)
 
 					client := getTestKubeClusterClient(t)
 

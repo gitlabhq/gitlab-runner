@@ -110,7 +110,7 @@ You can either:
 |----------|-------------------------------|
 | events | list, watch (`FF_PRINT_POD_EVENTS=true`) |
 | namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`) |
-| pods | create, delete, get, list, watch (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods | create, delete, get, list (`FF_USE_INFORMERS=true`), watch (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_INFORMERS=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/attach | create (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), delete (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), patch (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/exec | create, delete, get, patch |
 | pods/log | get (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false, FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
@@ -146,8 +146,8 @@ rules:
   - "create"
   - "delete"
   - "get"
-  - "list"
-  - "watch" # Required when FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+  - "list" # Required when FF_USE_INFORMERS=true
+  - "watch" # Required when FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_INFORMERS=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
 - apiGroups: [""]
   resources: ["pods/attach"]
   verbs:

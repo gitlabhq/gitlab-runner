@@ -26,6 +26,7 @@ type logger interface {
 	Debugln(args ...any)
 }
 
+// PodWatcher uses an informer to get pod updates and determines if a pod has terminal errors
 type PodWatcher struct {
 	factory *selfManagedInformerFactory
 	logger  logger
@@ -53,7 +54,8 @@ func NewPodWatcher(ctx context.Context, logger logger, kubeClient kubernetes.Int
 func (p *PodWatcher) Start() error {
 	gvr := v1.SchemeGroupVersion.WithResource("pods")
 
-	// kubeAPI: pods, list, watch
+	//nolint:gocritic
+	// kubeAPI: pods, list, watch, FF_USE_INFORMERS=true
 	informer, err := p.factory.ForResource(gvr)
 	if err != nil {
 		return fmt.Errorf("creating informer for pods: %w", err)
@@ -150,6 +152,16 @@ func (p *PodWatcher) currentPodName() string {
 	}
 	return ""
 }
+
+// NoopPodWatcher is an alternative implementation to [PodWatcher] which doesn't do anything.
+// It can be used as a stand-in when we don't actually want to run informers, ie. when the feature flag is not
+// enabled.
+type NoopPodWatcher struct{}
+
+func (NoopPodWatcher) Start() error         { return nil }
+func (NoopPodWatcher) Stop()                {}
+func (NoopPodWatcher) Errors() <-chan error { return make(chan error) }
+func (NoopPodWatcher) UpdatePodName(string) {}
 
 // asPod is a convenience helper to type-assert an untyped object to a pod.
 func asPod(obj any) *v1.Pod {

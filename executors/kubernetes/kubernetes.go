@@ -287,7 +287,7 @@ type executor struct {
 	eventsStream watch.Interface
 
 	podWatcher    podWatcher
-	newPodWatcher func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string, maxSyncDuration time.Duration) podWatcher
+	newPodWatcher func(podWatcherConfig) podWatcher
 }
 
 //go:generate mockery --name=podWatcher --inpackage
@@ -296,6 +296,17 @@ type podWatcher interface {
 	UpdatePodName(string)
 	Stop()
 	Errors() <-chan error
+}
+
+// podWatcherConfig is configuration for setup of a new pod watcher
+type podWatcherConfig struct {
+	useInformers    bool
+	ctx             context.Context
+	logger          *buildlogger.Logger
+	kubeClient      kubernetes.Interface
+	namespace       string
+	labels          map[string]string
+	maxSyncDuration time.Duration
 }
 
 type serviceCreateResponse struct {
@@ -367,21 +378,20 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
-	podWatcher := s.newPodWatcher(
-		options.Context,
-		&s.BuildLogger,
-		s.kubeClient,
-		s.configurationOverwrites.namespace,
-		s.buildLabels(),
-		s.Config.Kubernetes.RequestRetryBackoffMax.Get(),
-	)
-	if err := podWatcher.Start(); err != nil {
-		return fmt.Errorf("starting the pod watcher: %w", err)
+	s.podWatcher = s.newPodWatcher(podWatcherConfig{
+		useInformers:    s.Build.IsFeatureFlagOn(featureflags.UseInformers),
+		ctx:             options.Context,
+		logger:          &s.BuildLogger,
+		kubeClient:      s.kubeClient,
+		namespace:       s.configurationOverwrites.namespace,
+		labels:          s.buildLabels(),
+		maxSyncDuration: s.Config.Kubernetes.RequestRetryBackoffMax.Get(),
+	})
+	if err := s.podWatcher.Start(); err != nil {
+		return fmt.Errorf("starting pod watcher: %w", err)
 	}
-	s.podWatcher = podWatcher
 
-	err = s.waitForServices(options.Context)
-	return err
+	return s.waitForServices(options.Context)
 }
 
 func (s *executor) preparePullManager() (pull.Manager, error) {
@@ -3107,8 +3117,11 @@ func newExecutor() *executor {
 		},
 		getKubeConfig:        getKubeClientConfig,
 		windowsKernelVersion: os_helpers.LocalKernelVersion,
-		newPodWatcher: func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string, maxSyncDuration time.Duration) podWatcher {
-			return watchers.NewPodWatcher(ctx, logger, kubeClient, namespace, labels, maxSyncDuration)
+		newPodWatcher: func(c podWatcherConfig) podWatcher {
+			if !c.useInformers {
+				return watchers.NoopPodWatcher{}
+			}
+			return watchers.NewPodWatcher(c.ctx, c.logger, c.kubeClient, c.namespace, c.labels, c.maxSyncDuration)
 		},
 	}
 
