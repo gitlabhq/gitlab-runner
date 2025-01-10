@@ -2861,7 +2861,7 @@ func TestPrepare(t *testing.T) {
 			testBuild.Runner = test.RunnerConfig
 
 			e := newExecutor()
-			e.newPodWatcher = func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+			e.newPodWatcher = func(context.Context, *buildlogger.Logger, kubernetes.Interface, string, map[string]string, time.Duration) podWatcher {
 				mockPodWatcher := newMockPodWatcher(t)
 				mockPodWatcher.On("Start").Return(nil).Maybe()
 				return mockPodWatcher
@@ -5780,12 +5780,18 @@ func TestPodWatcherSetup(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	podLabels := map[string]string{
+		"foo": "bar",
+	}
 	build := &common.Build{
 		JobResponse: common.JobResponse{},
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Kubernetes: &common.KubernetesConfig{
-					Image: "some-build-image",
+					Image:                  "some-build-image",
+					Namespace:              "some-namespace",
+					RequestRetryBackoffMax: 1234,
+					PodLabels:              podLabels,
 				},
 			},
 		},
@@ -5801,7 +5807,12 @@ func TestPodWatcherSetup(t *testing.T) {
 	ex.newKubeClient = func(config *restclient.Config) (kubernetes.Interface, error) {
 		return fakeKubeClient, nil
 	}
-	ex.newPodWatcher = func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+	ex.newPodWatcher = func(_ context.Context, _ *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string, maxSyncDuration time.Duration) podWatcher {
+		assert.Equal(t, kubeClient, fakeKubeClient)
+		assert.Equal(t, "some-namespace", namespace)
+		assert.Equal(t, maxSyncDuration, time.Millisecond*1234)
+		assert.Subset(t, labels, podLabels)
+		assert.Contains(t, labels, "pod")
 		return mockPodWatcher
 	}
 
@@ -6341,7 +6352,7 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 			e.AbstractExecutor.Build = &common.Build{
 				Runner: &tt.config,
 			}
-			e.newPodWatcher = func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+			e.newPodWatcher = func(context.Context, *buildlogger.Logger, kubernetes.Interface, string, map[string]string, time.Duration) podWatcher {
 				mockPodWatcher := newMockPodWatcher(t)
 				mockPodWatcher.On("Start").Return(nil).Once()
 				return mockPodWatcher
@@ -7536,7 +7547,7 @@ func TestContainerPullPolicies(t *testing.T) {
 			executor.getKubeConfig = func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
 				return nil, nil
 			}
-			executor.newPodWatcher = func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
+			executor.newPodWatcher = func(context.Context, *buildlogger.Logger, kubernetes.Interface, string, map[string]string, time.Duration) podWatcher {
 				mockPodWatcher := newMockPodWatcher(t)
 				mockPodWatcher.On("Start").Return(nil).Once()
 				mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Once()

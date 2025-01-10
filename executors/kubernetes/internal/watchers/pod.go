@@ -37,11 +37,12 @@ type PodWatcher struct {
 	errors chan error
 }
 
-// NewPodWatcher creates a pod watcher based on the kubeclient, namespace, and labels.
+// NewPodWatcher creates a pod watcher based on the kubeclient, namespace, and labels, and with a maximum duration for
+// allowed for the initial cache sync.
 // Internally, it creates a informer factory which can manage itself, so that it can be used and shut down properly.
-func NewPodWatcher(ctx context.Context, logger logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) *PodWatcher {
+func NewPodWatcher(ctx context.Context, logger logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string, maxSyncDuration time.Duration) *PodWatcher {
 	return &PodWatcher{
-		factory: newScopedInformerFactory(ctx, kubeClient, namespace, labels),
+		factory: newScopedInformerFactory(ctx, kubeClient, namespace, labels, maxSyncDuration),
 		logger:  logger,
 		errors:  make(chan error),
 	}

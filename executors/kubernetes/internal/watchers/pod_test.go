@@ -76,7 +76,7 @@ func TestPodWatcher(t *testing.T) {
 			fakeKubeClient := fake.NewSimpleClientset()
 			fakeLogger := newMockLogger(t)
 
-			podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels)
+			podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels, 0)
 
 			err := podWatcher.Start()
 			assert.NoError(t, err, "starting pod watcher")
@@ -116,7 +116,7 @@ func TestPodWatcherNoConsumer(t *testing.T) {
 	fakeKubeClient := fake.NewSimpleClientset()
 	fakeLogger := newMockLogger(t)
 
-	podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels)
+	podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels, 0)
 
 	err := podWatcher.Start()
 	assert.NoError(t, err, "starting pod watcher")

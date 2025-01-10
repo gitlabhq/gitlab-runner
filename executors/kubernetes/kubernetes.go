@@ -287,7 +287,7 @@ type executor struct {
 	eventsStream watch.Interface
 
 	podWatcher    podWatcher
-	newPodWatcher func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher
+	newPodWatcher func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string, maxSyncDuration time.Duration) podWatcher
 }
 
 //go:generate mockery --name=podWatcher --inpackage
@@ -373,6 +373,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		s.kubeClient,
 		s.configurationOverwrites.namespace,
 		s.buildLabels(),
+		s.Config.Kubernetes.RequestRetryBackoffMax.Get(),
 	)
 	if err := podWatcher.Start(); err != nil {
 		return fmt.Errorf("starting the pod watcher: %w", err)
@@ -3106,8 +3107,8 @@ func newExecutor() *executor {
 		},
 		getKubeConfig:        getKubeClientConfig,
 		windowsKernelVersion: os_helpers.LocalKernelVersion,
-		newPodWatcher: func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string) podWatcher {
-			return watchers.NewPodWatcher(ctx, logger, kubeClient, namespace, labels)
+		newPodWatcher: func(ctx context.Context, logger *buildlogger.Logger, kubeClient kubernetes.Interface, namespace string, labels map[string]string, maxSyncDuration time.Duration) podWatcher {
+			return watchers.NewPodWatcher(ctx, logger, kubeClient, namespace, labels, maxSyncDuration)
 		},
 	}
 

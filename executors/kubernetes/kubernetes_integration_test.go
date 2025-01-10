@@ -4,6 +4,7 @@ package kubernetes_test
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -48,7 +49,7 @@ import (
 var (
 	testFeatureFlag      string
 	testFeatureFlagValue bool
-	ciNamespace          = "k8s-runner-integration-tests"
+	ciNamespace          = cmp.Or(os.Getenv("CI_RUNNER_TEST_NAMESPACE"), common.DefaultKubernetesIntegrationTestNamespace)
 )
 
 func init() {
@@ -60,10 +61,6 @@ func init() {
 		if err != nil {
 			panic(err)
 		}
-	}
-
-	if os.Getenv("CI_RUNNER_TEST_NAMESPACE") != "" {
-		ciNamespace = os.Getenv("CI_RUNNER_TEST_NAMESPACE")
 	}
 }
 

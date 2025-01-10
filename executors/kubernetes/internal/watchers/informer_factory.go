@@ -35,15 +35,18 @@ type selfManagedInformerFactory struct {
 
 	ctx    context.Context
 	cancel context.CancelFunc
+
+	maxSyncDuration time.Duration
 }
 
 // newScopedInformerFactory creates an informer factory scoped to a specific namespace and to specific labels.
-func newScopedInformerFactory(ctx context.Context, kubeClient kubernetes.Interface, namespaceScope string, labelScope map[string]string) *selfManagedInformerFactory {
+func newScopedInformerFactory(ctx context.Context, kubeClient kubernetes.Interface, namespaceScope string, labelScope map[string]string, maxSyncDuration time.Duration) *selfManagedInformerFactory {
 	ctx, cancel := context.WithCancel(ctx)
 
 	f := &selfManagedInformerFactory{
-		ctx:    ctx,
-		cancel: cancel,
+		ctx:             ctx,
+		cancel:          cancel,
+		maxSyncDuration: maxSyncDuration,
 		SharedInformerFactory: informers.NewSharedInformerFactoryWithOptions(
 			kubeClient,
 			defaultFactoryResync,
@@ -62,7 +65,17 @@ func (f *selfManagedInformerFactory) Start() {
 }
 
 func (f *selfManagedInformerFactory) WaitForCacheSync() map[reflect.Type]bool {
-	return f.SharedInformerFactory.WaitForCacheSync(f.ctx.Done())
+	ctx := f.ctx
+
+	// If maxSyncDuration is > 0, we abort the sync if it's not successful in time. Else, we wait until the parent ctx is
+	// cancelled.
+	if f.maxSyncDuration > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, f.maxSyncDuration)
+		defer cancel()
+	}
+
+	return f.SharedInformerFactory.WaitForCacheSync(ctx.Done())
 }
 
 func (f *selfManagedInformerFactory) Shutdown() {
