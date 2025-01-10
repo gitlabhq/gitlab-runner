@@ -30,6 +30,13 @@ Alternatively, you can install GitLab Runner and register your own runners on Gi
 on your own instance. To use self-managed runners, you [install](install/index.md) GitLab Runner on infrastructure
 that you own or manage.
 
+### Use Terraform to create and manage a fleet of runners
+
+Many common runner configurations can be created and managed by using the
+[GitLab Runner Infrastructure Toolkit (GRIT)](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit).
+GRIT is a library of Terraform modules used to create and manage many common runner configurations on
+public cloud providers. GRIT is created and maintained by the runner team.
+
 ### Scale a fleet of runners
 
 When your organization scales to having a fleet of runners, you
