@@ -345,6 +345,33 @@ and then paste it in the configuration.
 NOTE:
 To use the debugger, make sure to remove the last two flags (`-s -w`).
 
+### Local docker images for runner and helper
+
+You can build the runner and/or helper as a local docker image with:
+
+```shell
+make runner-image-host              # build only gitlab-runner:local
+make helper-image-host              # build only gitlab-runner-helper:local
+make runner-and-helper-image-host   # build both
+```
+
+```shell
+docker image ls
+REPOSITORY                                TAG        IMAGE ID       CREATED         SIZE
+gitlab-runner-helper                      local      1e0064619625   5 minutes ago   92.2MB
+gitlab-runner                             local      1261a052d4ad   5 minutes ago   195MB
+```
+
+### Helper image with Kubernetes
+
+If you are running a local Kubernetes cluster, and want the images available within that cluster, make sure
+to set your docker context appropriately before building the images. For example, with minikube:
+
+```shell
+eval $(minikube docker-env)
+make runner-and-helper-image-host
+```
+
 ## 9. Install optional tools
 
 - Install `golangci-lint`, used for the `make lint` target.
