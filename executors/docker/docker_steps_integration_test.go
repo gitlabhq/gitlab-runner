@@ -45,7 +45,7 @@ func Test_StepsIntegration(t *testing.T) {
 		},
 		"remote step": {
 			steps: `- name: echo
-  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v4"
+  step: "https://gitlab.com/gitlab-org/ci-cd/runner-tools/echo-step@v5"
   inputs:
     echo: foo bar baz`,
 			wantOut: []string{"foo bar baz"},
