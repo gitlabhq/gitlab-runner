@@ -35,15 +35,15 @@ $(BASE_BINARY_PATH)-%: GOARCH=$(lastword $(subst -, ,$(basename $*)))
 $(BASE_BINARY_PATH)-%:
 	GOOS="$(GOOS)" GOARCH="$(GOARCH)" go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $@
 
-.PHONY: runner-image-host
-runner-image-host: export HOST_ARCH ?= $(shell go env GOARCH)
-runner-image-host: export HOST_FLAVOR ?= alpine-3.21
-runner-image-host: export RUNNER_IMAGES_VERSION ?= $(shell grep "RUNNER_IMAGES_VERSION:" .gitlab/ci/_common.gitlab-ci.yml | awk -F': ' '{ print $$2 }' | tr -d '"')
-runner-image-host: runner-bin-linux
-	cd dockerfiles/runner && docker buildx bake --progress plain host-image
+.PHONY: runner-local-image
+runner-local-image: export LOCAL_ARCH ?= $(shell go env GOARCH)
+runner-local-image: export LOCAL_FLAVOR ?= alpine-3.21
+runner-local-image: export RUNNER_IMAGES_VERSION ?= $(shell grep "RUNNER_IMAGES_VERSION:" .gitlab/ci/_common.gitlab-ci.yml | awk -F': ' '{ print $$2 }' | tr -d '"')
+runner-local-image: runner-bin-linux
+	cd dockerfiles/runner && docker buildx bake --progress plain local-image
 
-.PHONY: runner-and-helper-image-host
-runner-and-helper-image-host: runner-image-host helper-image-host
+.PHONY: runner-and-helper-local-image
+runner-and-helper-local-image: runner-local-image helper-local-image
 
 out/runner-images: TARGETS ?= ubuntu alpine
 out/runner-images:

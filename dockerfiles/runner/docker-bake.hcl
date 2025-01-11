@@ -6,11 +6,11 @@ variable "RUNNER_IMAGES_VERSION" {
   default = "0.0.0"
 }
 
-variable "HOST_ARCH" {
+variable "LOCAL_ARCH" {
   default = "amd64"
 }
 
-variable "HOST_FLAVOR" {
+variable "LOCAL_FLAVOR" {
   default = "alpine-3.21"
 }
 
@@ -63,14 +63,14 @@ target "alpine" {
 }
 
 # Used for local testing, creates the gitlab-runner:local image in the user's current docker context
-target "host-image" {
+target "local-image" {
   inherits = ["base"]
 
   args = {
-    BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner:${RUNNER_IMAGES_VERSION}-${HOST_FLAVOR}"
+    BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner:${RUNNER_IMAGES_VERSION}-${LOCAL_FLAVOR}"
   }
 
-  platforms = ["linux/${HOST_ARCH}"]
+  platforms = ["linux/${LOCAL_ARCH}"]
   output    = ["type=docker"]
   tags      = ["gitlab-runner:local"]
 }

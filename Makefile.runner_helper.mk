@@ -45,12 +45,12 @@ helper-bin-fips: ${BASE_BINARY_PATH}.linux-amd64-fips
 helper-images: $(BINARIES)
 helper-images: out/helper-images
 
-.PHONY: helper-image-host
-helper-image-host: export HOST_ARCH ?= $(shell go env GOARCH)
-helper-image-host: export HOST_FLAVOR ?= alpine-3.21
-helper-image-host: export RUNNER_IMAGES_VERSION ?= $(shell grep "RUNNER_IMAGES_VERSION:" .gitlab/ci/_common.gitlab-ci.yml | awk -F': ' '{ print $$2 }' | tr -d '"')
-helper-image-host: helper-bin-linux
-	cd dockerfiles/runner-helper && docker buildx bake --progress plain host-image
+.PHONY: helper-local-image
+helper-local-image: export LOCAL_ARCH ?= $(shell go env GOARCH)
+helper-local-image: export LOCAL_FLAVOR ?= alpine-3.21
+helper-local-image: export RUNNER_IMAGES_VERSION ?= $(shell grep "RUNNER_IMAGES_VERSION:" .gitlab/ci/_common.gitlab-ci.yml | awk -F': ' '{ print $$2 }' | tr -d '"')
+helper-local-image: helper-bin-linux
+	cd dockerfiles/runner-helper && docker buildx bake --progress plain local-image
 
 # Make sure the fips target is first since it's less general
 ${BASE_BINARY_PATH}.linux-amd64-fips: GOOS=linux

@@ -350,10 +350,12 @@ To use the debugger, make sure to remove the last two flags (`-s -w`).
 You can build the runner and/or helper as a local docker image with:
 
 ```shell
-make runner-image-host              # build only gitlab-runner:local
-make helper-image-host              # build only gitlab-runner-helper:local
-make runner-and-helper-image-host   # build both
+make runner-local-image              # build only gitlab-runner:local
+make helper-local-image              # build only gitlab-runner-helper:local
+make runner-and-helper-local-image   # build both
 ```
+
+After the build completes, the images are ready to be used locally.
 
 ```shell
 docker image ls
@@ -369,7 +371,7 @@ to set your docker context appropriately before building the images. For example
 
 ```shell
 eval $(minikube docker-env)
-make runner-and-helper-image-host
+make runner-and-helper-local-image
 ```
 
 ## 9. Install optional tools
