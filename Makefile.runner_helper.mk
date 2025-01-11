@@ -50,8 +50,6 @@ helper-image-host: export HOST_ARCH ?= $(shell go env GOARCH)
 helper-image-host: export HOST_FLAVOR ?= alpine-3.21
 helper-image-host: export RUNNER_IMAGES_VERSION ?= $(shell grep "RUNNER_IMAGES_VERSION:" .gitlab/ci/_common.gitlab-ci.yml | awk -F': ' '{ print $$2 }' | tr -d '"')
 helper-image-host: helper-bin-linux
-	docker buildx create --name builder --use --driver docker-container $(shell docker context show) || true
-	mkdir -p out/helper-images
 	cd dockerfiles/runner-helper && docker buildx bake --progress plain host-image
 
 # Make sure the fips target is first since it's less general
