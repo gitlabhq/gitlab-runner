@@ -40,7 +40,7 @@ runner-image-host: export HOST_ARCH ?= $(shell go env GOARCH)
 runner-image-host: export HOST_FLAVOR ?= alpine-3.21
 runner-image-host: export RUNNER_IMAGES_VERSION ?= $(shell grep "RUNNER_IMAGES_VERSION:" .gitlab/ci/_common.gitlab-ci.yml | awk -F': ' '{ print $$2 }' | tr -d '"')
 runner-image-host: runner-bin-linux
-	docker buildx create --name builder --use --driver docker-container default || true
+	docker buildx create --name builder --use --driver docker-container $(shell docker context show) || true
 	mkdir -p out/runner-images
 	cd dockerfiles/runner && docker buildx bake --progress plain host-image
 
