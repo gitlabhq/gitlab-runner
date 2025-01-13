@@ -159,7 +159,7 @@ func renderTable(permissions []permissionsRender) (string, error) {
 }
 
 func replace(placeholderStart, placeholderEnd, fileContent, content string) (string, error) {
-	replacer := newBlockLineReplacer(placeholderStart, placeholderEnd, fileContent, content)
+	replacer := NewBlockLineReplacer(placeholderStart, placeholderEnd, fileContent, content)
 
 	newContent, err := replacer.Replace()
 	if err != nil {
