@@ -12,6 +12,8 @@ func ShortenToken(token string) string {
 		// Token is prefixed with CREATED_RUNNER_TOKEN_PREFIX: glrt- (for Gitlab Runner Token).
 		// Let's add some more characters in order to compensate.
 		return token[5:14]
+	case token[:6] == "glcbt-":
+		return token[6:15]
 	case token[:2] == "GR" && len(token) >= 17 && strings.IndexFunc(token[2:9], isInvalidPrefixRune) == -1:
 		// Token is prefixed with RUNNERS_TOKEN_PREFIX: GR (for Gitlab Runner) combined with the rotation
 		// date decimal-to-hex-encoded. Let's add some more characters in order to compensate.

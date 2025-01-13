@@ -7,7 +7,7 @@ import (
 )
 
 func TestShortenToken(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		in  string
 		out string
 	}{
@@ -17,6 +17,7 @@ func TestShortenToken(t *testing.T) {
 		{"GJ1348941Z196cJVywzZpx_Ki_Cn2", "GJ134894"},
 		{"GRveryverylongtoken", "GRveryve"},
 		{"glrt-t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
+		{"glcbt-t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
 	}
 
 	for _, test := range tests {
