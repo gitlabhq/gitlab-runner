@@ -345,9 +345,9 @@ and then paste it in the configuration.
 NOTE:
 To use the debugger, make sure to remove the last two flags (`-s -w`).
 
-### Local docker images for runner and helper
+### Local Docker images for runner and helper
 
-You can build the runner and/or helper as a local docker image with:
+You can build the runner and/or helper as a local Docker image with:
 
 ```shell
 make runner-local-image              # build only gitlab-runner:local
@@ -366,13 +366,38 @@ gitlab-runner                             local      1261a052d4ad   5 minutes ag
 
 ### Helper image with Kubernetes
 
-If you are running a local Kubernetes cluster, and want the images available within that cluster, make sure
-to set your docker context appropriately before building the images. For example, with minikube:
+If you want to use local images in a local Kubernetes cluster, make sure to set your Docker context appropriately.
+For example, with minikube:
 
 ```shell
 eval $(minikube docker-env)
 make runner-and-helper-local-image
 ```
+
+### Customization of the local images
+
+These targets are focused on convenience, not completeness, so not all available runner and helper configurations
+can be created using these make targets. Only Linux image creation is supported. The target architecture
+defaults to the host machine architecture, and the base runner image version defaults to that configured in the
+CI/CD configuration. You can try some variations by supplying environment variables. For guidance on potential values,
+look through the available base images in [the base images container registry](https://gitlab.com/gitlab-org/ci-cd/runner-tools/base-images/container_registry). Some examples:
+
+```shell
+# Make an ubuntu-based runner and helper
+LOCAL_FLAVOR=ubuntu make runner-and-helper-local-image
+
+# Specify a version and flavor
+RUNNER_IMAGES_VERSION=0.0.1 LOCAL_FLAVOR=ubuntu make runner-and-helper-local-image
+
+# make an ubuntu helper image with pwsh
+# NOTE: This flavor is only supported for the helper, not the
+#       runner, and only on amd64
+LOCAL_FLAVOR=ubuntu-pwsh LOCAL_ARCH=amd64 make helper-local-image
+```
+
+While these environment variables provide flexibility, the targets make no attempt to protect you from invalid
+configurations. If interested in an image for any sort of production scenario, it's best to stick to images
+created by the CI/CD pipeline.
 
 ## 9. Install optional tools
 

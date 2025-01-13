@@ -32,7 +32,8 @@ helper-bin-host: ${BASE_BINARY_PATH}.$(shell go env GOOS)-$(shell go env GOARCH)
 
 # Build the Runner Helper binaries for the linux OS and host architecture.
 .PHONY: helper-bin-linux
-helper-bin-linux: ${BASE_BINARY_PATH}.linux-$(shell go env GOARCH)
+helper-bin-linux: LOCAL_ARCH ?= $(shell go env GOARCH)
+helper-bin-linux: ${BASE_BINARY_PATH}.linux-$(LOCAL_ARCH)
 
 # Build the Runner Helper binaries for all supported platforms.
 .PHONY: helper-bin
