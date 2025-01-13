@@ -10,7 +10,7 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed
 
-The GitLab Runner Infrastructure Toolkit (GRIT) is a library of Terraform modules you can use to create and manage many common runner configurations on public cloud providers.
+The [GitLab Runner Infrastructure Toolkit (GRIT)](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit) is a library of Terraform modules you can use to create and manage many common runner configurations on public cloud providers.
 
 ## Create a runner with GRIT
 
@@ -34,7 +34,7 @@ To use GRIT to deploy an autoscaling Linux Docker in AWS:
      gitlab_project_id  = "39258790" # gitlab.com/josephburnett/hello-runner
      runner_description = "Autoscaling Linux Docker runner on AWS deployed with GRIT. "
      runner_tags        = ["aws", "linux"]
-    max_instances      = 5
+     max_instances      = 5
    }
    ```
 
