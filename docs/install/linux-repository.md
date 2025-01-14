@@ -16,6 +16,9 @@ To install GitLab Runner, you can use a package from [the GitLab repository](htt
 
 GitLab provides packages for the following supported versions of Linux distributions with [Packagecloud](https://packages.gitlab.com/runner/gitlab-runner/). New runner `deb` or `rpm` packages for new OS distribution releases are added automatically when supported by Packagecloud.
 
+<!-- supported_os_versions_list_start -->
+<!-- supported_os_versions_list_end -->
+
 Depending on your setup, other Debian or RPM based distributions may also be supported. This refers to distributions that are derivative of a supported GitLab Runner distribution and that have compatible package repositories. For example, Deepin is a Debian derivative. So, the runner `deb` package should install and run on Deepin. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file)
 on other Linux distributions.
 
