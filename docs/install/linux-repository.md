@@ -41,17 +41,6 @@ GitLab provides packages for the following supported versions of Linux distribut
 Depending on your setup, other Debian or RPM based distributions may also be supported. This refers to distributions that are derivative of a supported GitLab Runner distribution and that have compatible package repositories. For example, Deepin is a Debian derivative. So, the runner `deb` package should install and run on Deepin. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file)
 on other Linux distributions.
 
-| Distribution | Support Information |
-|--------------|---------------------|
-| Debian       | <https://wiki.debian.org/LTS> |
-| Ubuntu       | <https://wiki.ubuntu.com/Releases> |
-| LinuxMint    | <https://linuxmint.com/download_all.php> |
-| Raspbian     | |
-| RHEL         | <https://access.redhat.com/product-life-cycles?product=Red%20Hat%20Enterprise%20Linux> |
-| Oracle Linux | <https://endoflife.date/oracle-linux> |
-| Fedora       | <https://docs.fedoraproject.org/en-US/releases/eol/> |
-| Amazon Linux | <https://aws.amazon.com/linux/> |
-
 NOTE:
 Packages for distributions that are not on the list are not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM or DEB package from our S3 bucket.
 
