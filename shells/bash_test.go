@@ -225,6 +225,63 @@ func Test_BashWriter_Variable(t *testing.T) {
 	}
 }
 
+func Test_BashWriter_DotEnvVariables(t *testing.T) {
+	tests := map[string]struct {
+		variables map[string]string
+		writer    BashWriter
+		want      string
+	}{
+		"single key": {
+			variables: map[string]string{
+				"KEY": "the secret",
+			},
+			writer: BashWriter{TemporaryPath: "foo/bar"},
+			want: `cat << EOF > $PWD/foo/bar/test
+KEY="the secret"
+EOF
+
+`,
+		},
+		"multiline key": {
+			variables: map[string]string{
+				"KEY": "one\ntwo",
+				"FOO": "test",
+			},
+			writer: BashWriter{TemporaryPath: "foo/bar"},
+			want: `cat << EOF > $PWD/foo/bar/test
+FOO="test"
+KEY="one\ntwo"
+EOF
+
+`,
+		},
+		"key with special characters": {
+			variables: map[string]string{
+				"BAR":  `the $DOLLAR_STORE`,
+				"BAZ":  "some\t\r\nthing",
+				"FOO":  `the "right" stuff`,
+				"TEST": `some \ / thing`,
+			},
+			writer: BashWriter{TemporaryPath: "foo/bar"},
+			want: `cat << EOF > $PWD/foo/bar/test
+BAR="the $DOLLAR_STORE"
+BAZ="some	\r\nthing"
+FOO="the \"right\" stuff"
+TEST="some \\ / thing"
+EOF
+
+`,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			tt.writer.DotEnvVariables("test", tt.variables)
+			assert.Equal(t, tt.want, tt.writer.String())
+		})
+	}
+}
+
 func TestBashEntrypointCommand(t *testing.T) {
 	tests := map[string]struct {
 		probeFile       string

@@ -32,6 +32,8 @@ var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
 
 const gitlabEnvFileName = "gitlab_runner_env"
 
+const gitlabCacheEnvFileName = "gitlab_runner_cache_env"
+
 type stringQuoter func(string) string
 
 func singleQuote(s string) string {
@@ -215,9 +217,11 @@ func (b *AbstractShell) addExtractCacheCommand(
 	}
 
 	w.Noticef("Checking cache for %s...", cacheKey)
+	cacheEnvFilename := ""
 
-	for key, value := range env {
-		w.Variable(common.JobVariable{Key: key, Value: value})
+	if env != nil {
+		cacheEnvFilename = b.writeCacheExports(w, env)
+		args = append(args, "--env-file", cacheEnvFilename)
 	}
 
 	w.IfCmdWithOutput(info.RunnerCommand, args...)
@@ -246,6 +250,10 @@ func (b *AbstractShell) addExtractCacheCommand(
 		}
 	}
 	w.EndIf()
+
+	if cacheEnvFilename != "" {
+		w.RmFile(cacheEnvFilename)
+	}
 }
 
 // getCacheDownloadURLAndEnv will first try to generate the GoCloud URL if it's
@@ -424,6 +432,10 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 	})
 
 	w.SourceEnv(gitlabEnvFile)
+}
+
+func (b *AbstractShell) writeCacheExports(w ShellWriter, variables map[string]string) string {
+	return w.DotEnvVariables(gitlabCacheEnvFileName, variables)
 }
 
 func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
@@ -1056,9 +1068,11 @@ func (b *AbstractShell) addCacheUploadCommand(
 	// Execute cache-archiver command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
 		w.Noticef("Creating cache %s...", cacheKey)
+		cacheEnvFilename := ""
 
-		for key, value := range env {
-			w.Variable(common.JobVariable{Key: key, Value: value})
+		if env != nil {
+			cacheEnvFilename = b.writeCacheExports(w, env)
+			args = append(args, "--env-file", cacheEnvFilename)
 		}
 
 		w.IfCmdWithOutput(info.RunnerCommand, args...)
@@ -1066,6 +1080,10 @@ func (b *AbstractShell) addCacheUploadCommand(
 		w.Else()
 		w.Warningf("Failed to create cache")
 		w.EndIf()
+
+		if cacheEnvFilename != "" {
+			w.RmFile(cacheEnvFilename)
+		}
 	})
 }
 
