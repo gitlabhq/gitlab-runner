@@ -107,6 +107,13 @@ help:
 	# make package - package project using FPM
 	# make packagecloud - send all packages to packagecloud
 	# make packagecloud-yank - remove specific version from packagecloud
+	#
+	# Local Docker support commands
+	# make runner-bin-linux - build runner linux binary, on any host OS
+	# make helper-bin-linux - build helper linux binary, on any host OS
+	# make runner-local-image - build gitlab-runner:local docker image
+	# make helper-local-image - build gitlab-runner-helper:local docker image
+	# make runner-and-helper-local-image - same as make runner-local-image helper-local-image
 
 .PHONY: version
 version:
