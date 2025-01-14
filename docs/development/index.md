@@ -345,30 +345,6 @@ and then paste it in the configuration.
 NOTE:
 To use the debugger, make sure to remove the last two flags (`-s -w`).
 
-### Helper image
-
-Build the newest version of the helper image with:
-
-```shell
-make helper-dockerarchive-host
-```
-
-Then you'll have the image ready for use:
-
-```shell
-REPOSITORY                                                    TAG                      IMAGE ID            CREATED             SIZE
-gitlab/gitlab-runner-helper                                   x86_64-a6bc0800          f10d9b5bbb41        32 seconds ago      57.2MB
-```
-
-### Helper image with Kubernetes
-
-If you are running a local Kubernetes cluster make sure to reuse the cluster's Docker daemon to build images.
-For example, with minikube:
-
-```shell
-eval $(minikube docker-env)
-```
-
 ## 9. Install optional tools
 
 - Install `golangci-lint`, used for the `make lint` target.

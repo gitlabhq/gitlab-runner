@@ -53,7 +53,7 @@ runner-bin-linux: ARCH := $(shell uname -m | sed $(ARCH_REPLACE))
 runner-bin-linux:
 	$(MAKE) ${BASE_BINARY_PATH}-${OS}-$(ARCH)
 
-runner-and-helper-bin-host: runner-bin-host helper-bin-host helper-dockerarchive-host
+runner-and-helper-bin-host: runner-bin-host helper-bin-host
 
 runner-and-helper-bin-linux: runner-bin-linux helper-images prebuilt-helper-images
 
