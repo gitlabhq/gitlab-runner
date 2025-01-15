@@ -54,24 +54,24 @@ The executors support different platforms and methodologies for building a
 project. The table below shows the key facts for each executor which helps
 you decide which executor to use.
 
-| Executor                                          | SSH  | Shell   | VirtualBox | Parallels | Docker | Docker Autoscaler | Instance       | Kubernetes | Custom         |
-|:--------------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:-----------------:|---------------:| :--------: | :------------: |
-| Clean build environment for every build           | ✗    | ✗       | ✓          | ✓         | ✓      | ✓                 |conditional (4) | ✓          |conditional (4) |
-| Reuse previous clone if it exists                 | ✓    | ✓       | ✗          | ✗         | ✓      | ✓                 |conditional (4) | ✓ (6)      |conditional (4) |
-| Runner file system access protected (5)           | ✓    | ✗       | ✓          | ✓         | ✓      | ✓                 | ✗              | ✓          |conditional     |
-| Migrate runner machine                            | ✗    | ✗       | partial    | partial   | ✓      | ✓                 | ✓              | ✓          |✓               |
-| Zero-configuration support for concurrent builds  | ✗    | ✗ (1)   | ✓          | ✓         | ✓      | ✓                 | ✓              | ✓          |conditional (4) |
-| Complicated build environments                    | ✗    | ✗ (2)   | ✓ (3)      | ✓ (3)     | ✓      | ✓                 | ✗ (2)          | ✓          |✓               |
-| Debugging build problems                          | easy | easy    | hard       | hard      | medium | medium            | medium         | medium     | medium         |
+| Executor                                         | SSH  |     Shell      |   VirtualBox   |   Parallels    | Docker | Docker Autoscaler |                 Instance |   Kubernetes   |          Custom          |
+|:-------------------------------------------------|:----:|:--------------:|:--------------:|:--------------:|:------:|:-----------------:|-------------------------:|:--------------:|:------------------------:|
+| Clean build environment for every build          |  ✗   |       ✗        |       ✓        |       ✓        |   ✓    |         ✓         | conditional <sup>4</sup> |       ✓        | conditional <sup>4</sup> |
+| Reuse previous clone if it exists                |  ✓   |       ✓        |       ✗        |       ✗        |   ✓    |         ✓         | conditional <sup>4</sup> | ✓ <sup>6</sup> | conditional <sup>4</sup> |
+| Runner file system access protected <sup>5</sup> |  ✓   |       ✗        |       ✓        |       ✓        |   ✓    |         ✓         |                        ✗ |       ✓        |       conditional        |
+| Migrate runner machine                           |  ✗   |       ✗        |    partial     |    partial     |   ✓    |         ✓         |                        ✓ |       ✓        |            ✓             |
+| Zero-configuration support for concurrent builds |  ✗   | ✗ <sup>1</sup> |       ✓        |       ✓        |   ✓    |         ✓         |                        ✓ |       ✓        | conditional <sup>4</sup> |
+| Complicated build environments                   |  ✗   | ✗ <sup>2</sup> | ✓ <sup>3</sup> | ✓ <sup>3</sup> |   ✓    |         ✓         |           ✗ <sup>2</sup> |       ✓        |            ✓             |
+| Debugging build problems                         | easy |      easy      |      hard      |      hard      | medium |      medium       |                   medium |     medium     |          medium          |
 
-1. It's possible, but in most cases it is problematic if the build uses services
-   installed on the build machine.
+**Footnotes:**
+
+1. If the builds use services installed on the build machine, selecting executors is possible but problematic.
 1. Requires manual dependency installation.
-1. For example using [Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "Vagrant documentation for VirtualBox").
-1. Dependent on what kind of environment you are provisioning. It can be
-   completely isolated or shared between each build.
-1. When a runner's file system access is not protected, jobs can access the entire
-   system, which includes the runner's token, and the cache and code of other jobs.
+1. For example, using [Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "Vagrant documentation for VirtualBox").
+1. Depends on the environment you are provisioning. Can be completely isolated or shared between builds.
+1. When a runner's file system access is not protected, jobs can access the entire system,
+   including the runner's token and other jobs' cache and code. 
    Executors marked ✓ don't allow the runner to access the file system by default.
    However, security flaws or certain configurations could allow jobs
    to break out of their container and access the file system hosting the runner.
