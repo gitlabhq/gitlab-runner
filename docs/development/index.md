@@ -347,7 +347,7 @@ To use the debugger, make sure to remove the last two flags (`-s -w`).
 
 ### Local Docker images for runner and helper
 
-You can build the runner and/or helper as a local Docker image with:
+You can build runner and helper as a local Docker image using these commands:
 
 ```shell
 make runner-local-image              # build only gitlab-runner:local
@@ -355,7 +355,7 @@ make helper-local-image              # build only gitlab-runner-helper:local
 make runner-and-helper-local-image   # build both
 ```
 
-After the build completes, the images are ready to be used locally.
+After the build completes, you can use the images locally.
 
 ```shell
 docker image ls
@@ -366,7 +366,7 @@ gitlab-runner                             local      1261a052d4ad   5 minutes ag
 
 ### Helper image with Kubernetes
 
-If you want to use local images in a local Kubernetes cluster, make sure to set your Docker context appropriately.
+To use local images in a local Kubernetes cluster, you must set your Docker context appropriately.
 For example, with minikube:
 
 ```shell
@@ -376,11 +376,15 @@ make runner-and-helper-local-image
 
 ### Customization of the local images
 
-These targets are focused on convenience, not completeness, so not all available runner and helper configurations
-can be created using these make targets. Only Linux image creation is supported. The target architecture
-defaults to the host machine architecture, and the base runner image version defaults to that configured in the
-CI/CD configuration. You can try some variations by supplying environment variables. For guidance on potential values,
-look through the available base images in [the base images container registry](https://gitlab.com/gitlab-org/ci-cd/runner-tools/base-images/container_registry). Some examples:
+The targets focus on convenience, not completeness. Not all available runner and helper configurations
+can be created with these `make` targets. The targets support only Linux image creation.
+
+The target architecture defaults to the host machine architecture. The base runner image version defaults
+to the version specified in the CI/CD configuration. You can test variations by setting environment variables.
+For guidance on possible values, check the available base images in
+[the base images container registry](https://gitlab.com/gitlab-org/ci-cd/runner-tools/base-images/container_registry).
+
+Examples:
 
 ```shell
 # Make an ubuntu-based runner and helper
@@ -395,9 +399,8 @@ RUNNER_IMAGES_VERSION=0.0.1 LOCAL_FLAVOR=ubuntu make runner-and-helper-local-ima
 LOCAL_FLAVOR=ubuntu-pwsh LOCAL_ARCH=amd64 make helper-local-image
 ```
 
-While these environment variables provide flexibility, the targets make no attempt to protect you from invalid
-configurations. If interested in an image for any sort of production scenario, it's best to stick to images
-created by the CI/CD pipeline.
+While these environment variables provide flexibility, the targets do not protect you from invalid
+configurations. For production scenarios, use images that the CI/CD pipeline creates.
 
 ## 9. Install optional tools
 
