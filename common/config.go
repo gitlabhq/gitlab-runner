@@ -1222,8 +1222,9 @@ type RunnerConfig struct {
 	OutputLimit        int    `toml:"output_limit,omitzero" long:"output-limit" env:"RUNNER_OUTPUT_LIMIT" description:"Maximum build trace size in kilobytes"`
 	RequestConcurrency int    `toml:"request_concurrency,omitzero" long:"request-concurrency" env:"RUNNER_REQUEST_CONCURRENCY" description:"Maximum concurrency for job requests" jsonschema:"min=1"`
 
-	UnhealthyRequestsLimit int            `toml:"unhealthy_requests_limit,omitzero" long:"unhealthy-requests-limit" env:"RUNNER_UNHEALTHY_REQUESTS_LIMIT" description:"The number of 'unhealthy' responses to new job requests after which a runner worker will be disabled"`
-	UnhealthyInterval      *time.Duration `toml:"unhealthy_interval,omitzero" json:",omitempty" long:"unhealthy-interval" ENV:"RUNNER_UNHEALTHY_INTERVAL" description:"Duration for which a runner worker is disabled after exceeding the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc"`
+	UnhealthyRequestsLimit         int            `toml:"unhealthy_requests_limit,omitzero" long:"unhealthy-requests-limit" env:"RUNNER_UNHEALTHY_REQUESTS_LIMIT" description:"The number of 'unhealthy' responses to new job requests after which a runner worker will be disabled"`
+	UnhealthyInterval              *time.Duration `toml:"unhealthy_interval,omitzero" json:",omitempty" long:"unhealthy-interval" ENV:"RUNNER_UNHEALTHY_INTERVAL" description:"Duration for which a runner worker is disabled after exceeding the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc"`
+	JobStatusFinalUpdateRetryLimit int            `toml:"job_status_final_update_retry_limit,omitzero" json:"job_status_final_update_retry_limit,omitzero" long:"job-status-final-update-retry-limit" env:"RUNNER_job_status_final_update_retry_limit" description:"The maximum number of times GitLab Runner can retry to push the final job status to the GitLab instance."`
 
 	SystemIDState  *SystemIDState `toml:"-" json:",omitempty"`
 	ConfigLoadedAt time.Time      `toml:"-" json:",omitempty"`
@@ -2020,6 +2021,14 @@ func (c *RunnerConfig) GetUnhealthyRequestsLimit() int {
 	}
 
 	return c.UnhealthyRequestsLimit
+}
+
+func (c *RunnerConfig) GetJobStatusFinalUpdateRetryLimit() int {
+	if c.JobStatusFinalUpdateRetryLimit < 1 {
+		return DefaultFinalUpdateRetryLimit
+	}
+
+	return c.JobStatusFinalUpdateRetryLimit
 }
 
 func (c *RunnerConfig) GetUnhealthyInterval() time.Duration {

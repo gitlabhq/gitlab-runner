@@ -12,10 +12,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
-const (
-	defaultFinalUpdateTriesCount = 10
-)
-
 var (
 	ErrInvalidPatchTraceResponse = errors.New("received invalid patch trace response")
 	ErrInvalidUpdateJobResponse  = errors.New("received invalid job update response")
@@ -43,14 +39,15 @@ type clientJobTrace struct {
 	sentTrace int
 	sentTime  time.Time
 
-	updateInterval    time.Duration
-	forceSendInterval time.Duration
-	maxTracePatchSize int
+	updateInterval        time.Duration
+	forceSendInterval     time.Duration
+	finalUpdateBackoffMax time.Duration
+	maxTracePatchSize     int
 
 	failuresCollector common.FailuresCollector
 	exitCode          int
 
-	finalUpdateTriesCount int
+	finalUpdateRetryLimit int
 }
 
 func (c *clientJobTrace) Success() error {
@@ -248,9 +245,12 @@ func (c *clientJobTrace) finalUpdate() error {
 func (c *clientJobTrace) finish() error {
 	c.buffer.Finish()
 	c.finished <- true
-	err := retry.NewNoValue(retry.New().WithMaxTries(c.finalUpdateTriesCount), func() error {
-		return c.finalUpdate()
-	}).Run()
+	err := retry.NewNoValue(
+		retry.New().
+			WithMaxTries(c.finalUpdateRetryLimit).
+			WithBackoff(time.Second, c.finalUpdateBackoffMax),
+		c.finalUpdate,
+	).Run()
 	c.buffer.Close()
 
 	return err
@@ -471,6 +471,7 @@ func newJobTrace(
 		maxTracePatchSize:     common.DefaultTracePatchLimit,
 		updateInterval:        common.DefaultUpdateInterval,
 		forceSendInterval:     common.MinTraceForceSendInterval,
-		finalUpdateTriesCount: defaultFinalUpdateTriesCount,
+		finalUpdateBackoffMax: common.DefaultfinalUpdateBackoffMax,
+		finalUpdateRetryLimit: config.GetJobStatusFinalUpdateRetryLimit(),
 	}, nil
 }

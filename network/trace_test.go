@@ -400,6 +400,7 @@ func TestJobFinishStatusUpdateRetry(t *testing.T) {
 	b, err := newTestJobTrace(mockNetwork, jobConfig)
 	require.NoError(t, err)
 
+	b.finalUpdateBackoffMax = time.Second
 	ignoreOptionalTouchJob(mockNetwork)
 
 	// fail job 5 times
