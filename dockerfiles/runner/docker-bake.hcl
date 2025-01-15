@@ -6,6 +6,14 @@ variable "RUNNER_IMAGES_VERSION" {
   default = "0.0.0"
 }
 
+variable "LOCAL_ARCH" {
+  default = "amd64"
+}
+
+variable "LOCAL_FLAVOR" {
+  default = "alpine-3.21"
+}
+
 target "base" {
   contexts = {
     binary_dir = "../../out/binaries/"
@@ -52,6 +60,19 @@ target "alpine" {
     BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner:${RUNNER_IMAGES_VERSION}-alpine-${version}"
   }
   output = ["type=oci,dest=./../../out/runner-images/alpine-${version}.tar,tar=true"]
+}
+
+# Used for local testing, creates the gitlab-runner:local image in the user's current docker context
+target "local-image" {
+  inherits = ["base"]
+
+  args = {
+    BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner:${RUNNER_IMAGES_VERSION}-${LOCAL_FLAVOR}"
+  }
+
+  platforms = ["linux/${LOCAL_ARCH}"]
+  output    = ["type=docker"]
+  tags      = ["gitlab-runner:local"]
 }
 
 group "all" {

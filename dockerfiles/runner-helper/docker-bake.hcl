@@ -6,6 +6,14 @@ variable "RUNNER_IMAGES_VERSION" {
   default = "0.0.0"
 }
 
+variable "LOCAL_ARCH" {
+  default = "amd64"
+}
+
+variable "LOCAL_FLAVOR" {
+  default = "alpine-3.21"
+}
+
 common-platforms = [
   "linux/amd64",
   "linux/arm",
@@ -124,6 +132,19 @@ target "windows" {
   }
 
   output = ["type=oci,dest=./../../out/helper-images/windows-${replace(version, ":", "-")}.tar,tar=true"]
+}
+
+# Used for local testing, creates the gitlab-runner-helper:local image in the user's current docker context
+target "local-image" {
+  inherits = ["base"]
+
+  args = {
+    BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner-helper:${RUNNER_IMAGES_VERSION}-${LOCAL_FLAVOR}"
+  }
+
+  platforms = ["linux/${LOCAL_ARCH}"]
+  output    = ["type=docker"]
+  tags      = ["gitlab-runner-helper:local"]
 }
 
 group "all" {

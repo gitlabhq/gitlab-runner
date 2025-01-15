@@ -26,9 +26,20 @@ BINARIES += ${BASE_BINARY_PATH}.linux-amd64-fips
 # Go files that are used to create the helper binary.
 HELPER_GO_FILES ?= $(shell find common network -name '*.go')
 
+# Used in the helper-bin-linux target for building a
+# local docker image. If set as a target-specific variable,
+# it isn't in place to impact the name of the prerequisite,
+# which results in a prereq of ${BASE_BINARY_PATH}.linux-
+# which in turn gets interpretted as GOOS=linux, GOARCH=linux
+LOCAL_ARCH ?= $(shell go env GOARCH)
+
 # Build the Runner Helper binaries for the host platform.
 .PHONY: helper-bin-host
 helper-bin-host: ${BASE_BINARY_PATH}.$(shell go env GOOS)-$(shell go env GOARCH)
+
+# Build the Runner Helper binaries for the linux OS and host architecture.
+.PHONY: helper-bin-linux
+helper-bin-linux: ${BASE_BINARY_PATH}.linux-$(LOCAL_ARCH)
 
 # Build the Runner Helper binaries for all supported platforms.
 .PHONY: helper-bin
@@ -40,6 +51,13 @@ helper-bin-fips: ${BASE_BINARY_PATH}.linux-amd64-fips
 .PHONY: helper-images
 helper-images: $(BINARIES)
 helper-images: out/helper-images
+
+.PHONY: helper-local-image
+helper-local-image: export LOCAL_ARCH ?= $(shell go env GOARCH)
+helper-local-image: export LOCAL_FLAVOR ?= alpine-3.21
+helper-local-image: export RUNNER_IMAGES_VERSION ?= $(shell grep "RUNNER_IMAGES_VERSION:" .gitlab/ci/_common.gitlab-ci.yml | awk -F': ' '{ print $$2 }' | tr -d '"')
+helper-local-image: helper-bin-linux
+	cd dockerfiles/runner-helper && docker buildx bake --progress plain local-image
 
 # Make sure the fips target is first since it's less general
 ${BASE_BINARY_PATH}.linux-amd64-fips: GOOS=linux
