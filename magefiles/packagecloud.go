@@ -76,5 +76,5 @@ func supportedOSVersions(dist, branch string) ([]string, error) {
 		return nil, errors.New("required 'PACKAGE_CLOUD_TOKEN' variable missing")
 	}
 
-	return packagecloud.Releases(dist, branch, packageCloudToken, packageCloudURL)
+	return packagecloud.Releases(dist, branch, packageCloudToken, packageCloudURL, true)
 }

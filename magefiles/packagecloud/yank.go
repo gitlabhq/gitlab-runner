@@ -22,7 +22,7 @@ func Yank(opts YankOpts) error {
 	pool := pool.New().WithErrors().WithMaxGoroutines(opts.Concurrency)
 
 	for dist := range opts.PackageBuilds {
-		releases, err := Releases(dist, "stable", opts.Token, opts.URL)
+		releases, err := Releases(dist, "stable", opts.Token, opts.URL, false)
 		if err != nil {
 			return err
 		}
