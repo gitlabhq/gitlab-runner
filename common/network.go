@@ -26,6 +26,10 @@ type (
 	JobFailureReason string
 )
 
+func (r JobFailureReason) String() string {
+	return string(r)
+}
+
 const (
 	Pending JobState = "pending"
 	Running JobState = "running"

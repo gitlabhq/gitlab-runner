@@ -9,6 +9,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"syscall"
@@ -28,6 +29,8 @@ import (
 	prometheus_helper "gitlab.com/gitlab-org/gitlab-runner/helpers/prometheus"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/sentry"
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log/logrotate"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
@@ -105,6 +108,8 @@ type RunCommand struct {
 	apiRequestsCollector prometheus.Collector
 
 	sessionServer *session.Server
+
+	usageLogger *usage_log.Storage
 
 	// abortBuilds is used to abort running builds
 	abortBuilds chan os.Signal
@@ -344,6 +349,8 @@ func (mr *RunCommand) reloadConfig() error {
 		return err
 	}
 
+	mr.reloadUsageLogger()
+
 	// pass user to execute scripts as specific user
 	if mr.User != "" {
 		mr.configMutex.Lock()
@@ -416,6 +423,50 @@ func (mr *RunCommand) updateLoggingConfiguration() error {
 	}
 
 	return nil
+}
+
+func (mr *RunCommand) reloadUsageLogger() {
+	if mr.usageLogger != nil {
+		mr.log().Debug("Closing existing usage logger storage")
+		err := mr.usageLogger.Close()
+		if err != nil {
+			mr.log().WithError(err).Error("Failed to close existing usage logger storage")
+		}
+	}
+
+	if mr.config.Experimental == nil || !mr.config.Experimental.UsageLogger.Enabled {
+		mr.usageLogger = nil
+		mr.log().Info("Usage logger disabled")
+
+		return
+	}
+
+	ulConfig := mr.config.Experimental.UsageLogger
+	logDir := ulConfig.LogDir
+	if logDir == "" {
+		logDir = filepath.Join(filepath.Dir(mr.ConfigFile), "usage-log")
+	}
+
+	options := []logrotate.Option{
+		logrotate.WithLogDirectory(logDir),
+	}
+
+	logFields := logrus.Fields{
+		"log_dir": logDir,
+	}
+
+	if ulConfig.MaxBackupFiles != nil && *ulConfig.MaxBackupFiles > 0 {
+		options = append(options, logrotate.WithMaxBackupFiles(*ulConfig.MaxBackupFiles))
+		logFields["max_backup_files"] = *ulConfig.MaxBackupFiles
+	}
+
+	if ulConfig.MaxRotationAge != nil && ulConfig.MaxRotationAge.Nanoseconds() > 0 {
+		options = append(options, logrotate.WithMaxRotationAge(*ulConfig.MaxRotationAge))
+		logFields["max_rotation_age"] = *ulConfig.MaxRotationAge
+	}
+
+	mr.log().WithFields(logFields).Info("Usage logger enabled")
+	mr.usageLogger = usage_log.NewStorage(logrotate.New(options...))
 }
 
 // run is the main method of RunCommand. It's started asynchronously by services support
@@ -842,6 +893,20 @@ func (mr *RunCommand) processBuildOnRunner(
 	defer func() {
 		if mr.buildsHelper.removeBuild(build) {
 			mr.log().WithFields(fields).Infoln("Removed job from processing list")
+
+			mr.usageLoggerStore(usage_log.Record{
+				Runner: usage_log.Runner{
+					ID:       runner.ShortDescription(),
+					Name:     runner.Name,
+					SystemID: runner.GetSystemID(),
+				},
+				Job: usage_log.Job{
+					URL:             build.JobURL(),
+					DurationSeconds: build.Duration().Seconds(),
+					Status:          build.CurrentState().String(),
+					FailureReason:   build.FailureReason().String(),
+				},
+			})
 		}
 	}()
 
@@ -872,6 +937,20 @@ func (mr *RunCommand) traceOutcome(trace common.JobTrace, err error) {
 func logTerminationError(logger logrus.FieldLogger, name string, err error) {
 	if err != nil {
 		logger.WithError(err).Errorf("Job trace termination %q failed", name)
+	}
+}
+
+func (mr *RunCommand) usageLoggerStore(record usage_log.Record) {
+	if mr.usageLogger == nil {
+		return
+	}
+
+	l := mr.log().WithField("job_url", record.Job.URL)
+	l.Info("Storing usage log information")
+
+	err := mr.usageLogger.Store(record)
+	if err != nil {
+		l.WithError(err).Error("Failed to store usage log information")
 	}
 }
 
@@ -1150,6 +1229,8 @@ func (mr *RunCommand) Stop(_ service.Service) error {
 		WithError(err).
 		Warning("Forceful shutdown not finished properly")
 
+	mr.usageLoggerClose()
+
 	return err
 }
 
@@ -1244,6 +1325,14 @@ func (mr *RunCommand) abortAllBuilds() {
 	// Pump signal to abort all current builds
 	for {
 		mr.abortBuilds <- mr.stopSignal
+	}
+}
+
+func (mr *RunCommand) usageLoggerClose() {
+	if mr.usageLogger != nil {
+		err := mr.usageLogger.Close()
+		mr.usageLogger = nil
+		mr.log().WithError(err).Error("Closing usage logger")
 	}
 }
 

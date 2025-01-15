@@ -30,6 +30,10 @@ import (
 
 type BuildRuntimeState string
 
+func (s BuildRuntimeState) String() string {
+	return string(s)
+}
+
 const (
 	BuildRunStatePending      BuildRuntimeState = "pending"
 	BuildRunRuntimeRunning    BuildRuntimeState = "running"
@@ -125,6 +129,8 @@ type Build struct {
 	currentState          BuildRuntimeState
 	executorStageResolver func() ExecutorStage
 
+	failureReason JobFailureReason
+
 	secretsResolver func(l logger, registry SecretResolverRegistry, featureFlagOn func(string) bool) (SecretsResolver, error)
 
 	Session *session.Session
@@ -164,11 +170,26 @@ func (b *Build) setCurrentState(state BuildRuntimeState) {
 	b.currentState = state
 }
 
+func (b *Build) setCurrentStateIf(existingState BuildRuntimeState, newState BuildRuntimeState) {
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
+
+	if b.currentState != existingState {
+		return
+	}
+
+	b.currentState = newState
+}
+
 func (b *Build) CurrentState() BuildRuntimeState {
 	b.statusLock.Lock()
 	defer b.statusLock.Unlock()
 
 	return b.currentState
+}
+
+func (b *Build) FailureReason() JobFailureReason {
+	return b.failureReason
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -913,8 +934,12 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 		return
 	}
 
+	b.setCurrentStateIf(BuildRunStatePending, BuildRunRuntimeFailed)
+
 	var buildError *BuildError
 	if errors.As(err, &buildError) {
+		b.failureReason = buildError.FailureReason
+
 		msg := fmt.Sprintln("Job failed:", err)
 		if buildError.FailureReason == RunnerSystemFailure {
 			msg = fmt.Sprintln("Job failed (system failure):", err)
