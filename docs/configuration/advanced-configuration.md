@@ -280,7 +280,7 @@ If the `clone_url` is set, the runner constructs a clone URL in the form
 of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 
 NOTE:
-`clone_url` does not affect Git LFS endpoints.
+`clone_url` does not affect Git LFS endpoints or artifact uploads or downloads.
 
 #### Modify Git LFS endpoints
 
