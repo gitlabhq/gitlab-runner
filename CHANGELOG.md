@@ -1,3 +1,49 @@
+## v17.8.0 (2025-01-13)
+
+### New features
+
+- Add mount propagation mode for hostpath mounts on kubernetes [!5157](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5157) (Brinn Joyce @brinn.joyce)
+- Add RoleARN to handle both upload and download S3 transfers [!5246](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5246)
+- Expand variables for the docker platform with unit tests [!5146](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5146) (John Sallay @jasallay)
+- Document RoleARN configuration parameter [!5264](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5264)
+- Add support for Windows 24H2 [!5170](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5170) (Martin Blecker @AdrianDeWinter)
+
+### Bug fixes
+
+- Fix docker network config for Windows [!5182](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5182)
+- Limit UploadARN session duration to 1 hour [!5230](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5230)
+- Incompatible pull policies should not be a retryable error [!5256](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5256)
+- Fix issue #29381: Missing labels from Docker config when starting service containers [!4913](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4913) (Andrew Rifken @arifken)
+- Fix runner deb package upgrade [!5251](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5251)
+
+### Maintenance
+
+- Fix incorrect references to packagecloud.io [!5242](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5242)
+- Fixed Vale issues in Runner docs: Part 9 [!5239](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5239)
+- Upgrade Akeyless SDK to v4 [!5234](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5234) (Amir Maor @amir.m2)
+- Update documentation for manual installation of the new packages [!5247](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5247) (Victor De Jong @victordejong)
+- Note Reuse previous clone if it exists support for k8s [!5248](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5248) (Ben Bodenmiller @bbodenmiller)
+- Add note about being unable to change some settings via config template due to known issue [!5240](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5240)
+- A couple of minor tweaks to the gitlab-runner-helper-images package [!5262](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5262)
+- Correct spelling in comment [!5181](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5181) (MarlinMr @MarlinMr)
+- Clarify docker container support policy [!5232](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5232)
+- Fixed Vale issues in the Configure GitLab Runner on OpenShift doc [!5208](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5208)
+- Remove misleading information about the initiation of the session server [!5238](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5238) (Nicolas @nicoklaus)
+- Use runner base images [!5148](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5148)
+- Update 17-7 changelogs [!5259](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5259)
+- Let Docker site redirect to latest version [!5222](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5222)
+- Improve documentation for Azure workload identities [!5221](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5221)
+- Change anyuid service account to gitlab-runner-app-sa [!5237](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5237)
+- Put `RPM` in backticks [!5255](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5255)
+- Fix a 404 error in the Runner repo [!5254](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5254)
+- Clarify ServiceAccount of the runner manager [!5250](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5250)
+- Add Troubleshooting for docker autoscaler executor [!5220](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5220)
+- Runner cache s3 table cleanup [!5267](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5267)
+- Fix fork pipelines by ensuring windows tag refs exist [!5241](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5241)
+- Update steps version to 0.2.0 [!5219](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5219)
+- Update step-runner library version to 0.3.0 [!5272](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5272)
+- Update golang.org/x/crypto to v0.31.0 [!5253](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5253)
+
 ## v17.7.0 (2024-12-19)
 
 ### New features
