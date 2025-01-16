@@ -334,3 +334,29 @@ images. To resolve this, either:
 
 - Write your `pre_build_script` so that it is distribution-agnostic.
 - Use [tags](https://docs.gitlab.com/ee/ci/yaml/#tags) to ensure runners only pick up jobs with compatible images.
+
+### Error: `self-signed certificate in certificate chain`
+
+CI/CD jobs fail with the following error:
+
+```plaintext
+fatal: unable to access 'https://gitlab.example.com/group/project.git/': SSL certificate problem: self-signed certificate in certificate chain
+```
+
+However, the [OpenSSL debugging commands](https://docs.gitlab.com/omnibus/settings/ssl/ssl_troubleshooting.html#useful-openssl-debugging-commands)
+do not detect any errors.
+
+This error might occur when Git connects through a proxy that `openssl s_client` troubleshooting commands do not use by default.
+To verify if Git uses a proxy to fetch the repository, enable debugging:
+
+```yaml
+variables:
+  GIT_CURL_VERBOSE: 1
+```
+
+To prevent Git from using the proxy, set the `NO_PROXY` variable to include your GitLab hostname:
+
+```yaml
+variables:
+  NO_PROXY: gitlab.example.com
+```
