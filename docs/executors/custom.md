@@ -469,6 +469,26 @@ We strongly suggest using `BUILD_FAILURE_EXIT_CODE` to exit
 instead of a hard coded value since it can change in any release, making
 your binary/script future proof.
 
+### Build failure exit code
+
+You can optionally supply a file that contains the exit code when a build fails.
+The expected path for the file is provided through the `BUILD_EXIT_CODE_FILE` environment
+variable. For example:
+
+```shell
+if [ $exit_code -ne 0 ]; then
+  echo $exit_code > ${BUILD_EXIT_CODE_FILE}
+  exit ${BUILD_FAILURE_EXIT_CODE}
+fi
+```
+
+CI/CD jobs require this method to leverage the
+[`allow_failure`](https://docs.gitlab.com/ee/ci/yaml/#allow_failure) syntax.
+
+NOTE:
+Store only the integer exit code in this file. Additional information might
+result in an `unknown Custom executor executable exit code` error.
+
 ### System Failure
 
 You can send a system failure to GitLab Runner by exiting the process with the

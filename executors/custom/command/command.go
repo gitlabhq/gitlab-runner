@@ -1,10 +1,12 @@
 package command
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
+
 	"strconv"
 	"time"
 
@@ -27,7 +29,8 @@ var newProcessKillWaiter = process.NewOSKillWait
 var newCommander = process.NewOSCmd
 
 type Options struct {
-	JobResponseFile string
+	JobResponseFile   string
+	BuildExitCodeFile string
 }
 
 type command struct {
@@ -40,6 +43,8 @@ type command struct {
 
 	gracefulKillTimeout time.Duration
 	forceKillTimeout    time.Duration
+
+	buildCodeFile string
 }
 
 func New(
@@ -53,6 +58,7 @@ func New(
 		"TMPDIR":                          cmdOpts.Dir,
 		api.BuildFailureExitCodeVariable:  strconv.Itoa(BuildFailureExitCode),
 		api.SystemFailureExitCodeVariable: strconv.Itoa(SystemFailureExitCode),
+		api.BuildCodeFileVariable:         options.BuildExitCodeFile,
 		api.JobResponseFileVariable:       options.JobResponseFile,
 	}
 
@@ -69,6 +75,7 @@ func New(
 		logger:              cmdOpts.Logger,
 		gracefulKillTimeout: cmdOpts.GracefulKillTimeout,
 		forceKillTimeout:    cmdOpts.ForceKillTimeout,
+		buildCodeFile:       options.BuildExitCodeFile,
 	}
 }
 
@@ -102,11 +109,39 @@ func (c *command) waitForCommand() {
 		exitCode := getExitCode(eerr)
 		switch {
 		case exitCode == BuildFailureExitCode:
-			err = &common.BuildError{Inner: eerr, ExitCode: exitCode}
+			err = c.parseBuildFailure(eerr)
 		case exitCode != SystemFailureExitCode:
 			err = &ErrUnknownFailure{Inner: eerr, ExitCode: exitCode}
 		}
 	}
 
 	c.waitCh <- err
+}
+
+func (c *command) parseBuildFailure(eerr *exec.ExitError) error {
+	file, err := os.Open(c.buildCodeFile)
+	if err != nil {
+		// If the driver has not generated a file at the prescribed location
+		// we revert to the default BuildError and exitCode.
+		return &common.BuildError{Inner: eerr, ExitCode: BuildFailureExitCode}
+	}
+	defer file.Close()
+
+	var codeStr string
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		codeStr = scanner.Text()
+		break
+	}
+
+	bErrCode, err := strconv.Atoi(codeStr)
+	if err != nil {
+		return &ErrUnknownFailure{Inner: eerr, ExitCode: SystemFailureExitCode}
+	}
+
+	// We want to modify the exit code found in the error message to reflect the
+	// true error as defined in the file. This aims to prevent confusion users
+	// would like experience when presented with the exit status in the job log.
+	return &common.BuildError{Inner: fmt.Errorf("exit status %s", codeStr), ExitCode: bErrCode}
 }
