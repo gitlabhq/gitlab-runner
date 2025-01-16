@@ -431,6 +431,7 @@ print_test_ldflags:
 
 print_image_tags:
 	@tags="$(REVISION)"; \
+	[ "$(CI_PROJECT_PATH)" = "gitlab-org/gitlab-runner" ] && [ -n "$(CI_COMMIT_TAG)" ] && tags="$$tags $$CI_COMMIT_TAG"; \
 	[ "$(IS_LATEST)" = "true" ] && tags="$$tags latest"; \
 	[ "$(CI_PROJECT_PATH)" = "gitlab-org/gitlab-runner" ] && ( \
 		[ "$(CI_COMMIT_BRANCH)" = "$(CI_DEFAULT_BRANCH)" ] || \
