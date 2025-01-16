@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -27,6 +28,7 @@ const (
 	createdRunnerTokenPrefix = "glrt-"
 	clientError              = -100
 	retryAfterHeader         = "Retry-After"
+	responseBodyPeekMax      = 512
 )
 
 func TokenIsCreatedRunnerToken(token string) bool {
@@ -940,6 +942,10 @@ func (n *GitLabClient) UploadRawArtifacts(
 		"token": helpers.ShortenToken(config.Token),
 	})
 
+	if options.LogResponseDetails {
+		logResponseDetails(log, res, true)
+	}
+
 	if res != nil {
 		log = log.WithField("responseStatus", res.Status)
 	}
@@ -958,6 +964,35 @@ func (n *GitLabClient) UploadRawArtifacts(
 	}
 
 	return n.determineUploadState(res, log, messagePrefix)
+}
+
+func logResponseDetails(logger *logrus.Entry, res *http.Response, withBody bool) {
+	if res == nil {
+		return
+	}
+
+	fields := logrus.Fields{"body": "<nil>"}
+
+	for k, vs := range res.Header {
+		fields["header["+k+"]"] = vs
+	}
+
+	if withBody && res.Body != nil {
+		body := bufio.NewReader(res.Body)
+		res.Body = struct {
+			io.Reader
+			io.Closer
+		}{body, res.Body}
+
+		// We ignore the error here, and let other body consumers handle it, if it persists.
+		b, _ := body.Peek(responseBodyPeekMax)
+		if res.ContentLength > int64(len(b)) {
+			b = append(b, "..."...)
+		}
+		fields["body"] = string(b)
+	}
+
+	logger.WithFields(fields).Info("received response")
 }
 
 func closeWithLogging(log logrus.FieldLogger, c io.Closer, name string) {

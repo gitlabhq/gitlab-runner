@@ -987,10 +987,11 @@ type UpdateJobInfo struct {
 }
 
 type ArtifactsOptions struct {
-	BaseName string
-	ExpireIn string
-	Format   ArtifactFormat
-	Type     string
+	BaseName           string
+	ExpireIn           string
+	Format             ArtifactFormat
+	Type               string
+	LogResponseDetails bool
 }
 
 type FailuresCollector interface {

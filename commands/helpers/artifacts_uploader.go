@@ -45,6 +45,7 @@ type ArtifactsUploaderCommand struct {
 	Format           common.ArtifactFormat `long:"artifact-format" description:"Format of generated artifacts"`
 	Type             string                `long:"artifact-type" description:"Type of generated artifacts"`
 	CompressionLevel string                `long:"compression-level" env:"ARTIFACT_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
+	CiDebugTrace     bool                  `long:"ci-debug-trace" env:"CI_DEBUG_TRACE" description:"enable debug trace logging"`
 }
 
 func (c *ArtifactsUploaderCommand) artifactFilename(name string, format common.ArtifactFormat) string {
@@ -107,10 +108,11 @@ func (c *ArtifactsUploaderCommand) Run() error {
 
 	// Create the archive
 	options := common.ArtifactsOptions{
-		BaseName: artifactsName,
-		ExpireIn: c.ExpireIn,
-		Format:   c.Format,
-		Type:     c.Type,
+		BaseName:           artifactsName,
+		ExpireIn:           c.ExpireIn,
+		Format:             c.Format,
+		Type:               c.Type,
+		LogResponseDetails: c.CiDebugTrace,
 	}
 
 	stream = meter.NewReader(
