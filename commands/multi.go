@@ -451,6 +451,10 @@ func (mr *RunCommand) reloadUsageLogger() {
 		logrotate.WithLogDirectory(logDir),
 	}
 
+	storageOptions := []usage_log.Option{
+		usage_log.WithLabels(ulConfig.Labels),
+	}
+
 	logFields := logrus.Fields{
 		"log_dir": logDir,
 	}
@@ -466,7 +470,7 @@ func (mr *RunCommand) reloadUsageLogger() {
 	}
 
 	mr.log().WithFields(logFields).Info("Usage logger enabled")
-	mr.usageLogger = usage_log.NewStorage(logrotate.New(options...))
+	mr.usageLogger = usage_log.NewStorage(logrotate.New(options...), storageOptions...)
 }
 
 // run is the main method of RunCommand. It's started asynchronously by services support

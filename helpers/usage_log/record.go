@@ -5,9 +5,10 @@ import (
 )
 
 type Record struct {
-	Timestamp time.Time `json:"timestamp"`
-	Runner    Runner    `json:"runner"`
-	Job       Job       `json:"job"`
+	Timestamp time.Time         `json:"timestamp"`
+	Runner    Runner            `json:"runner"`
+	Job       Job               `json:"job"`
+	Labels    map[string]string `json:"labels"`
 }
 
 type Runner struct {

@@ -4,17 +4,20 @@ package usage_log
 
 import (
 	"bytes"
+	"encoding/json"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
-func TestStorage_Write(t *testing.T) {
+func TestStorage_Store(t *testing.T) {
 	tests := map[string]struct {
 		closeBeforeWrite bool
+		labels           map[string]string
 		writeError       error
 		expectedErr      error
 	}{
@@ -27,6 +30,17 @@ func TestStorage_Write(t *testing.T) {
 			expectedErr:      ErrStorageIsClosed,
 		},
 		"successful write": {},
+		"successful write with storage level labels": {
+			labels: map[string]string{
+				"test-const-label": "test-const-value",
+			},
+		},
+		"successful write with storage level label overwrite": {
+			labels: map[string]string{
+				"test-const-label": "test-const-value",
+				"test-label":       "test-enforced-value",
+			},
+		},
 	}
 
 	for tn, tc := range tests {
@@ -35,8 +49,13 @@ func TestStorage_Write(t *testing.T) {
 
 			testTime := time.Date(2024, 12, 5, 22, 11, 00, 00, time.UTC)
 
+			var o []Option
+			if tc.labels != nil {
+				o = append(o, WithLabels(tc.labels))
+			}
+
 			w := newMockDummyWriteCloser(t)
-			s := NewStorage(w)
+			s := NewStorage(w, o...)
 			s.timer = func() time.Time { return testTime }
 
 			if tc.closeBeforeWrite {
@@ -55,6 +74,9 @@ func TestStorage_Write(t *testing.T) {
 				Job: Job{
 					URL: "job-url",
 				},
+				Labels: map[string]string{
+					"test-label": "test-value",
+				},
 			})
 			if tc.expectedErr != nil {
 				assert.ErrorIs(t, err, tc.expectedErr)
@@ -62,10 +84,28 @@ func TestStorage_Write(t *testing.T) {
 			}
 			assert.NoError(t, err)
 
-			line := buf.String()
-			assert.Contains(t, line, `"timestamp":"2024-12-05T22:11:00Z"`)
-			assert.Contains(t, line, `"id":"short_token"`)
-			assert.Contains(t, line, `"url":"job-url"`)
+			var r Record
+
+			decoder := json.NewDecoder(buf)
+			require.NoError(t, decoder.Decode(&r))
+
+			assert.Equal(t, testTime, r.Timestamp)
+			assert.Equal(t, "short_token", r.Runner.ID)
+			assert.Equal(t, "job-url", r.Job.URL)
+
+			require.Contains(t, r.Labels, "test-label")
+
+			expectedTestLabelValue := "test-value"
+			if v, ok := tc.labels["test-label"]; ok {
+				expectedTestLabelValue = v
+			}
+
+			assert.Equal(t, expectedTestLabelValue, r.Labels["test-label"])
+
+			if tc.labels != nil {
+				assert.Contains(t, r.Labels, "test-const-label")
+				assert.Equal(t, "test-const-value", r.Labels["test-const-label"])
+			}
 		})
 	}
 }
