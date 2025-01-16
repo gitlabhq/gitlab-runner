@@ -4,5 +4,5 @@ yq 4.44.3
 mockery 2.43.0
 
 # For linting documentation
-markdownlint-cli2 0.14.0
-vale 3.7.1
+markdownlint-cli2 0.17.1
+vale 3.9.3

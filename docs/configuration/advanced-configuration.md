@@ -34,7 +34,8 @@ Configuration validation is a process that checks the structure of the `config.t
 validator provides only `info` level messages.
 
 The configuration validation process is for informational purposes only. You can use the output to
-to identify potential issues with your runner configuration. The configuration validation might not catch all possible problems, and the absence of messages does not guarantee that the `config.toml` file is flawless.
+identify potential issues with your runner configuration. The configuration validation might not catch all possible problems,
+and the absence of messages does not guarantee that the `config.toml` file is flawless.
 
 ## The global section
 
