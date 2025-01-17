@@ -327,7 +327,21 @@ func TestS3Client_PresignURL(t *testing.T) {
 	}
 }
 
-func newMockSTSHandler(expectedKms bool, expectedDurationSecs int) http.Handler {
+func compareStringSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func newMockSTSHandler(bucket string, expectedActions []string, expectedKms bool, expectedDurationSecs int) http.Handler {
 	roleARN := "arn:aws:iam::123456789012:role/TestRole"
 	expectedStatements := 1
 	if expectedKms {
@@ -396,14 +410,8 @@ func newMockSTSHandler(expectedKms bool, expectedDurationSecs int) http.Handler 
 			return
 		}
 
-		statement := policyJSON.Statement[0]
-		if statement.Action == nil || len(statement.Action) != 1 {
-			http.Error(w, "Statement must contain exactly one Action", http.StatusBadRequest)
-			return
-		}
-
-		if statement.Action[0] != "s3:PutObject" {
-			http.Error(w, "Action should be s3:PutObject", http.StatusBadRequest)
+		if !compareStringSlices(policyJSON.Statement[0].Action, expectedActions) {
+			http.Error(w, "Statement Action does not match", http.StatusBadRequest)
 			return
 		}
 
@@ -419,7 +427,8 @@ func newMockSTSHandler(expectedKms bool, expectedDurationSecs int) http.Handler 
 			}
 		}
 
-		if statement.Resource != fmt.Sprintf("arn:aws:s3:::%s/%s", bucketName, objectName) {
+		statement := policyJSON.Statement[0]
+		if statement.Resource != fmt.Sprintf("arn:aws:s3:::%s/%s", bucket, objectName) {
 			http.Error(w, "Invalid policy statement", http.StatusBadRequest)
 			return
 		}
@@ -469,23 +478,27 @@ func TestFetchCredentialsForRole(t *testing.T) {
 
 	tests := map[string]struct {
 		config           *common.CacheConfig
+		download         bool
 		roleARN          string
 		expected         map[string]string
 		errMsg           string
 		expectedKms      bool
 		duration         time.Duration
+		expectedActions  []string
 		expectedDuration time.Duration
 	}{
 		"successful fetch": {
-			config:   &workingConfig,
-			roleARN:  "arn:aws:iam::123456789012:role/TestRole",
-			expected: mockedCreds,
+			config:          &workingConfig,
+			roleARN:         "arn:aws:iam::123456789012:role/TestRole",
+			expected:        mockedCreds,
+			expectedActions: []string{"s3:PutObject"},
 		},
 		"successful fetch with 12-hour timeout downgraded to 1-hour": {
 			config:           &workingConfig,
 			roleARN:          "arn:aws:iam::123456789012:role/TestRole",
 			duration:         12 * time.Hour,
 			expected:         mockedCreds,
+			expectedActions:  []string{"s3:PutObject"},
 			expectedDuration: 1 * time.Hour,
 		},
 		"successful fetch with 10-minute timeout": {
@@ -493,6 +506,7 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			roleARN:          "arn:aws:iam::123456789012:role/TestRole",
 			duration:         10 * time.Minute,
 			expected:         mockedCreds,
+			expectedActions:  []string{"s3:PutObject"},
 			expectedDuration: 1 * time.Hour,
 		},
 		"successful fetch with 13-hour timeout": {
@@ -500,6 +514,7 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			roleARN:          "arn:aws:iam::123456789012:role/TestRole",
 			duration:         13 * time.Hour,
 			expected:         mockedCreds,
+			expectedActions:  []string{"s3:PutObject"},
 			expectedDuration: 1 * time.Hour,
 		},
 		"successful fetch with encryption": {
@@ -514,9 +529,39 @@ func TestFetchCredentialsForRole(t *testing.T) {
 					ServerSideEncryptionKeyID: "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 				},
 			},
-			roleARN:     "arn:aws:iam::123456789012:role/TestRole",
-			expected:    mockedCreds,
-			expectedKms: true,
+			roleARN:         "arn:aws:iam::123456789012:role/TestRole",
+			expected:        mockedCreds,
+			expectedActions: []string{"s3:PutObject"},
+			expectedKms:     true,
+		},
+		"successful fetch with S3 Express Bucket": {
+			config: &common.CacheConfig{
+				S3: &common.CacheS3Config{
+					AccessKey:          "test-access-key",
+					SecretKey:          "test-secret-key",
+					AuthenticationType: "access-key",
+					BucketName:         "test-s3-express--usw2-az1--x-s3",
+					UploadRoleARN:      "arn:aws:iam::123456789012:role/TestRole",
+				},
+			},
+			roleARN:         "arn:aws:iam::123456789012:role/TestRole",
+			expectedActions: []string{"s3:PutObject", "s3express:CreateSession"},
+			expected:        mockedCreds,
+		},
+		"successful fetch with S3 Express Bucket download": {
+			config: &common.CacheConfig{
+				S3: &common.CacheS3Config{
+					AccessKey:          "test-access-key",
+					SecretKey:          "test-secret-key",
+					AuthenticationType: "access-key",
+					BucketName:         "test-s3-express--usw2-az1--x-s3",
+					UploadRoleARN:      "arn:aws:iam::123456789012:role/TestRole",
+				},
+			},
+			download:        true,
+			roleARN:         "arn:aws:iam::123456789012:role/TestRole",
+			expectedActions: []string{"s3:GetObject", "s3express:CreateSession"},
+			expected:        mockedCreds,
 		},
 		"invalid role ARN": {
 			config: &common.CacheConfig{
@@ -552,13 +597,13 @@ func TestFetchCredentialsForRole(t *testing.T) {
 				duration = int(tt.expectedDuration.Seconds())
 			}
 			// Create s3Client and point STS endpoint to it
-			mockServer := httptest.NewServer(newMockSTSHandler(tt.expectedKms, duration))
+			mockServer := httptest.NewServer(newMockSTSHandler(tt.config.S3.BucketName, tt.expectedActions, tt.expectedKms, duration))
 			defer mockServer.Close()
 
 			s3Client, err := newS3Client(tt.config.S3, withSTSEndpoint(mockServer.URL+"/sts"))
 			require.NoError(t, err)
 
-			creds, err := s3Client.FetchCredentialsForRole(context.Background(), tt.roleARN, bucketName, objectName, true, tt.duration)
+			creds, err := s3Client.FetchCredentialsForRole(context.Background(), tt.roleARN, tt.config.S3.BucketName, objectName, !tt.download, tt.duration)
 
 			if tt.errMsg != "" {
 				require.Error(t, err)
