@@ -35,6 +35,7 @@ out/deb/gitlab-runner_i686.deb out/release/deb/gitlab-runner_i686.deb
 out/deb/gitlab-runner_ppc64el.deb out/release/deb/gitlab-runner_ppc64el.deb
 out/deb/gitlab-runner_riscv64.deb out/release/deb/gitlab-runner_riscv64.deb
 out/deb/gitlab-runner_s390x.deb out/release/deb/gitlab-runner_s390x.deb
+out/deb/gitlab-runner-helper-images.deb out/release/deb/gitlab-runner-helper-images.deb
 out/helper-images/prebuilt-alpine-arm.tar.xz out/release/helper-images/prebuilt-alpine-arm.tar.xz
 out/helper-images/prebuilt-alpine-arm64.tar.xz out/release/helper-images/prebuilt-alpine-arm64.tar.xz
 out/helper-images/prebuilt-alpine-edge-arm.tar.xz out/release/helper-images/prebuilt-alpine-edge-arm.tar.xz
@@ -87,6 +88,7 @@ out/rpm/gitlab-runner_i686.rpm out/release/rpm/gitlab-runner_i686.rpm
 out/rpm/gitlab-runner_ppc64el.rpm out/release/rpm/gitlab-runner_ppc64el.rpm
 out/rpm/gitlab-runner_riscv64.rpm out/release/rpm/gitlab-runner_riscv64.rpm
 out/rpm/gitlab-runner_s390x.rpm out/release/rpm/gitlab-runner_s390x.rpm
+out/rpm/gitlab-runner-helper-images.rpm out/release/rpm/gitlab-runner-helper-images.rpm
 out/zoneinfo.zip out/release/zoneinfo.zip
 "
 
