@@ -1267,10 +1267,11 @@ type Experimental struct {
 }
 
 type UsageLogger struct {
-	Enabled        bool           `toml:"enabled" json:"enabled"`
-	LogDir         string         `toml:"log_dir,omitempty" json:"log_dir,omitempty"`
-	MaxBackupFiles *int64         `toml:"max_backup_files,omitempty" json:"max_backup_files,omitempty"`
-	MaxRotationAge *time.Duration `toml:"max_rotation_age,omitempty" json:"max_rotation_age,omitempty"`
+	Enabled        bool              `toml:"enabled" json:"enabled"`
+	LogDir         string            `toml:"log_dir,omitempty" json:"log_dir,omitempty"`
+	MaxBackupFiles *int64            `toml:"max_backup_files,omitempty" json:"max_backup_files,omitempty"`
+	MaxRotationAge *time.Duration    `toml:"max_rotation_age,omitempty" json:"max_rotation_age,omitempty"`
+	Labels         map[string]string `toml:"labels,omitempty" json:"labels,omitempty"`
 }
 
 //go:generate mockery --name=ConfigSaver --inpackage

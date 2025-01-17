@@ -24,13 +24,16 @@ type Storage struct {
 	close  chan struct{}
 
 	timer func() time.Time
+
+	options options
 }
 
-func NewStorage(writer io.WriteCloser) *Storage {
+func NewStorage(writer io.WriteCloser, o ...Option) *Storage {
 	return &Storage{
-		writer: writer,
-		close:  make(chan struct{}),
-		timer:  time.Now().UTC,
+		writer:  writer,
+		close:   make(chan struct{}),
+		timer:   time.Now().UTC,
+		options: setupOptions(o...),
 	}
 }
 
@@ -41,9 +44,7 @@ func (s *Storage) Store(record Record) error {
 	default:
 	}
 
-	record.Timestamp = s.timer()
-
-	data, err := json.Marshal(record)
+	data, err := json.Marshal(s.setupRecord(record))
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrEncodingJSON, err)
 	}
@@ -54,6 +55,22 @@ func (s *Storage) Store(record Record) error {
 	}
 
 	return nil
+}
+
+func (s *Storage) setupRecord(record Record) Record {
+	record.Timestamp = s.timer()
+
+	if record.Labels == nil {
+		record.Labels = make(map[string]string)
+	}
+
+	if s.options.Labels != nil {
+		for key, value := range s.options.Labels {
+			record.Labels[key] = value
+		}
+	}
+
+	return record
 }
 
 func (s *Storage) Close() error {
