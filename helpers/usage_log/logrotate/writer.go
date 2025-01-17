@@ -58,11 +58,11 @@ func (w *Writer) Write(p []byte) (int, error) {
 		if err != nil {
 			return 0, fmt.Errorf("%w: %v", ErrCreationFailure, err)
 		}
-	}
-
-	err := w.rotate()
-	if err != nil {
-		return 0, fmt.Errorf("%w: %v", ErrRotationFailure, err)
+	} else {
+		err := w.rotate()
+		if err != nil {
+			return 0, fmt.Errorf("%w: %v", ErrRotationFailure, err)
+		}
 	}
 
 	wrote, err := w.f.Write(p)
