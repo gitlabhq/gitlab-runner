@@ -1,3 +1,14 @@
+## v17.7.1 (2025-01-17)
+
+### Bug fixes
+
+- Fix runner deb package upgrade [!5251](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5251)
+
+### Maintenance
+
+- Update step-runner library version to 0.3.0 [!5272](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5272)
+- A couple of minor tweaks to the gitlab-runner-helper-images package [!5262](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5262)
+
 ## v17.7.0 (2024-12-19)
 
 ### New features
