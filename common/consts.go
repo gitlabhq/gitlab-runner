@@ -59,6 +59,8 @@ const (
 
 const (
 	ExecutorKubernetes = "kubernetes"
+
+	DefaultKubernetesIntegrationTestNamespace = "k8s-runner-integration-tests"
 )
 
 var PreparationRetryInterval = 3 * time.Second

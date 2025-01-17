@@ -8,6 +8,7 @@ import (
 	"go/printer"
 	"go/token"
 	"io/fs"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"sort"
@@ -16,7 +17,11 @@ import (
 	"github.com/samber/lo"
 )
 
-var supportedKubernetesClientTypes = []string{"kubernetes.Interface"}
+var supportedKubernetesClientTypes = []string{
+	"kubernetes.Interface",
+
+	"*selfManagedInformerFactory",
+}
 
 type simplePosition struct {
 	fileName string
@@ -60,9 +65,9 @@ type PermissionsGroup map[string][]verb
 
 // Beware, we currently only support the CoreV1 API. If we add resources that require a different API group,
 // for example "rbac.authorization.k8s.io", we will need to update this function to parse the API group too.
-func parsePermissions(path string, filter func(fileInfo fs.FileInfo) bool) (PermissionsGroup, error) {
+func parsePermissions(path string, filter func(fileInfo fs.DirEntry) bool) (PermissionsGroup, error) {
 	fset := token.NewFileSet()
-	f, err := parser.ParseDir(fset, path, filter, parser.ParseComments)
+	parsedFiles, err := parseDirRecursive(path, fset, filter, parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
@@ -70,15 +75,13 @@ func parsePermissions(path string, filter func(fileInfo fs.FileInfo) bool) (Perm
 	positions := map[simplePosition]token.Pos{}
 	permissions := PermissionsGroup{}
 
-	for _, pkg := range f {
-		for _, f := range pkg.Files {
-			ast.Inspect(f, func(node ast.Node) bool {
-				inspectNode(fset, positions, node)
-				return true
-			})
+	for _, f := range parsedFiles {
+		ast.Inspect(f, func(node ast.Node) bool {
+			inspectNode(fset, positions, node)
+			return true
+		})
 
-			processPermissions(fset, f.Comments, positions, permissions)
-		}
+		processPermissions(fset, f.Comments, positions, permissions)
 	}
 
 	var errs []string
@@ -93,8 +96,33 @@ func parsePermissions(path string, filter func(fileInfo fs.FileInfo) bool) (Perm
 	return permissions, fmt.Errorf("%s\n\nAnnotations must be written as comments directly above each Kubernetes Client usage call and in the format of // kubeAPI: <Resource>, <Verb>, <FF=VALUE>(optional)\n", strings.Join(errs, "\n"))
 }
 
-func filterTestFiles(fileInfo fs.FileInfo) bool {
-	return !strings.HasSuffix(fileInfo.Name(), "_test.go")
+func parseDirRecursive(dir string, fset *token.FileSet, fileFilter func(fs.DirEntry) bool, parserMode parser.Mode) ([]*ast.File, error) {
+	var files []*ast.File
+
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("walking dir: %w", err)
+		}
+
+		if d.IsDir() || !fileFilter(d) {
+			return nil
+		}
+
+		f, err := parser.ParseFile(fset, path, nil, parserMode)
+		if err != nil {
+			return fmt.Errorf("parsing file: %w", err)
+		}
+
+		files = append(files, f)
+		return nil
+	})
+
+	return files, err
+}
+
+func filterTestFiles(fileInfo fs.DirEntry) bool {
+	baseName := fileInfo.Name()
+	return !strings.HasSuffix(baseName, "_test.go") && !strings.HasPrefix(baseName, "mock_")
 }
 
 //nolint:gocognit,nestif

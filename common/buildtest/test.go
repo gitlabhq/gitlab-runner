@@ -50,18 +50,28 @@ func RunBuild(t *testing.T, build *common.Build) error {
 func OnStage(build *common.Build, stage string, fn func()) func() {
 	exit := make(chan struct{})
 
+	inStage := func() bool {
+		currentStage := string(build.CurrentStage())
+		if strings.HasPrefix(currentStage, stage) {
+			fn()
+			return true
+		}
+		return false
+	}
+	ticker := time.NewTicker(time.Millisecond * 200)
+
 	go func() {
+		defer ticker.Stop()
+
 		for {
+			if inStage() {
+				return
+			}
+
 			select {
 			case <-exit:
 				return
-
-			case <-time.After(200 * time.Millisecond):
-				currentStage := string(build.CurrentStage())
-				if strings.HasPrefix(currentStage, stage) {
-					fn()
-					return
-				}
+			case <-ticker.C:
 			}
 		}
 	}()
