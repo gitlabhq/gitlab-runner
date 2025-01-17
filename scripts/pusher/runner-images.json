@@ -18,7 +18,8 @@
             "ubi-fips-%"
         ],
         "ubuntu": [
-            "ubuntu-%"
+            "ubuntu-%",
+            "%"
         ]
     },
     "match": {
