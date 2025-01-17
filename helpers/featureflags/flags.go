@@ -45,7 +45,6 @@ const (
 	GitURLsWithoutTokens                 string = "FF_GIT_URLS_WITHOUT_TOKENS"
 	WaitForPodReachable                  string = "FF_WAIT_FOR_POD_TO_BE_REACHABLE"
 	UseNativeSteps                       string = "FF_USE_NATIVE_STEPS"
-	UseInformers                         string = "FF_USE_INFORMERS"
 )
 
 type FeatureFlag struct {
@@ -378,13 +377,6 @@ var flags = []FeatureFlag{
 		Description: "When enabled and when a job is specified using the 'run' keyword, steps are executed using " +
 			"[Native Step Runner Integration](../executors/docker.md#native-step-runner-integration). " +
 			"This applies only to executors that support native steps integration like Docker, Docker Autoscaler, Docker for Windows.",
-	},
-	{
-		Name:         UseInformers,
-		DefaultValue: false,
-		Deprecated:   false,
-		Description: "The Kubernetes executor uses informers to track changes to Kubernetes resources when you enable this feature. " +
-			"This method improves reliability and efficiency when tracking Kubernetes resource updates.",
 	},
 }
 

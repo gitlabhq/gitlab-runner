@@ -300,10 +300,10 @@ type podWatcher interface {
 
 // podWatcherConfig is configuration for setup of a new pod watcher
 type podWatcherConfig struct {
-	useInformers    bool
 	ctx             context.Context
 	logger          *buildlogger.Logger
 	kubeClient      kubernetes.Interface
+	featureChecker  featureChecker
 	namespace       string
 	labels          map[string]string
 	maxSyncDuration time.Duration
@@ -353,7 +353,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	// setup default executor options based on OS type
 	s.setupDefaultExecutorOptions(s.helperImageInfo.OSType)
 
-	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
+	s.featureChecker = &kubeClientFeatureChecker{s.kubeClient}
 
 	imageName := s.options.Image.Name
 
@@ -379,10 +379,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	s.podWatcher = s.newPodWatcher(podWatcherConfig{
-		useInformers:    s.Build.IsFeatureFlagOn(featureflags.UseInformers),
 		ctx:             options.Context,
 		logger:          &s.BuildLogger,
 		kubeClient:      s.kubeClient,
+		featureChecker:  s.featureChecker,
 		namespace:       s.configurationOverwrites.namespace,
 		labels:          s.buildLabels(),
 		maxSyncDuration: s.Config.Kubernetes.RequestRetryBackoffMax.Get(),
@@ -3121,12 +3121,20 @@ func newExecutor() *executor {
 		},
 		getKubeConfig:        getKubeClientConfig,
 		windowsKernelVersion: os_helpers.LocalKernelVersion,
-		newPodWatcher: func(c podWatcherConfig) podWatcher {
-			if !c.useInformers {
-				return watchers.NoopPodWatcher{}
+	}
+
+	e.newPodWatcher = func(c podWatcherConfig) podWatcher {
+		gvr := metav1.GroupVersionResource{Version: "v1", Resource: "pods"}
+		docLink := "https://docs.gitlab.com/runner/executors/kubernetes/#informers"
+		allowed, reason, err := c.featureChecker.AreResourceVerbsAllowed(c.ctx, gvr, c.namespace, "list", "watch")
+		if err != nil || !allowed {
+			if err != nil {
+				reason = err.Error()
 			}
-			return watchers.NewPodWatcher(c.ctx, c.logger, c.kubeClient, c.namespace, c.labels, c.maxSyncDuration)
-		},
+			c.logger.Warningln(fmt.Sprintf("won't use informers: %q, see: %s", reason, docLink))
+			return watchers.NoopPodWatcher{}
+		}
+		return watchers.NewPodWatcher(c.ctx, c.logger, c.kubeClient, c.namespace, c.labels, c.maxSyncDuration)
 	}
 
 	e.newLogProcessor = func() logProcessor {

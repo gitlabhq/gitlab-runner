@@ -1,17 +1,21 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"unicode"
 
 	"github.com/hashicorp/go-version"
+	authzv1 "k8s.io/api/authorization/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 //go:generate mockery --name=featureChecker --inpackage
 type featureChecker interface {
 	IsHostAliasSupported() (bool, error)
+	AreResourceVerbsAllowed(context.Context, metav1.GroupVersionResource, string, ...string) (bool, string, error)
 }
 
 type kubeClientFeatureChecker struct {
@@ -77,4 +81,60 @@ func cleanVersion(version string) string {
 	}
 
 	return version[:nonDigitIndex]
+}
+
+// AreResourceVerbsAllowed checks if the current user has all requested permissions for the resource in a specific
+// namespace.
+// If an error occurred when creating the review for an individual verb, we'll return denied, an empty reason and the
+// first error. No further verbs will be checked.
+// If an evaluation error occurred, we treat this as denied, and return the first evaluation error as the reason. No
+// further verbs will be checked.
+// If either Denied is true or Allowed is false, we treat that as denied and return with a reason, if one is available.
+// No further verbs will be checked.
+// Else, if all verbs are allowed, have no evaluation or creation error, we return allowed.
+func (c *kubeClientFeatureChecker) AreResourceVerbsAllowed(ctx context.Context, gvr metav1.GroupVersionResource, namespace string, verbs ...string) (bool, string, error) {
+	for _, verb := range verbs {
+		if allowed, reason, err := c.isResourceVerbAllowed(ctx, gvr, namespace, verb); err != nil || !allowed {
+			return allowed, reason, err
+		}
+	}
+	return true, "", nil
+}
+
+func (c *kubeClientFeatureChecker) isResourceVerbAllowed(ctx context.Context, gvr metav1.GroupVersionResource, namespace string, verb string) (bool, string, error) {
+	review := &authzv1.SelfSubjectAccessReview{
+		Spec: authzv1.SelfSubjectAccessReviewSpec{
+			ResourceAttributes: &authzv1.ResourceAttributes{
+				Group:     gvr.Group,
+				Version:   gvr.Version,
+				Resource:  gvr.Resource,
+				Namespace: namespace,
+				Verb:      verb,
+			},
+		},
+	}
+
+	// We don't need any RBAC permissions to get our own access review
+	// kubeAPI: ignore
+	res, err := c.kubeClient.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, review, metav1.CreateOptions{})
+	if err != nil {
+		return false, "", fmt.Errorf("SelfSubjectAccessReview creation: %w", err)
+	}
+
+	// EvaluationErrors might not mean denied per se, but we treat it like that, because we can't be sure
+	if ee := res.Status.EvaluationError; ee != "" {
+		return false, "evaluation error: " + ee, nil
+	}
+
+	allowed := res.Status.Allowed && !res.Status.Denied
+
+	if allowed {
+		return true, "", nil
+	}
+
+	reason := fmt.Sprintf("not allowed: %s on %s", verb, gvr.Resource)
+	if r := res.Status.Reason; r != "" {
+		reason += " (reason: " + r + ")"
+	}
+	return false, reason, nil
 }

@@ -55,7 +55,7 @@ func (p *PodWatcher) Start() error {
 	gvr := v1.SchemeGroupVersion.WithResource("pods")
 
 	//nolint:gocritic
-	// kubeAPI: pods, list, watch, FF_USE_INFORMERS=true
+	// kubeAPI: pods, list, watch, useInformers.see=https://docs.gitlab.com/runner/executors/kubernetes/#informers
 	informer, err := p.factory.ForResource(gvr)
 	if err != nil {
 		return fmt.Errorf("creating informer for pods: %w", err)

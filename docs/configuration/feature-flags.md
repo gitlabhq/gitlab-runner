@@ -84,7 +84,6 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_GIT_URLS_WITHOUT_TOKENS` | `false` | **{dotted-circle}** No |  | When enabled, GitLab Runner doesn't embed the job token anywhere during Git configuration or command execution. Instead, it sets up a Git credential helper that uses the environment variable to obtain the job token. This approach limits token storage and reduces the potential for leaks. |
 | `FF_WAIT_FOR_POD_TO_BE_REACHABLE` | `false` | **{dotted-circle}** No |  | When enabled, the runner waits for the Pod status to be 'Running', and for the Pod to be ready with its certificates attached. |
 | `FF_USE_NATIVE_STEPS` | `false` | **{dotted-circle}** No |  | When enabled and when a job is specified using the 'run' keyword, steps are executed using [Native Step Runner Integration](../executors/docker.md#native-step-runner-integration). This applies only to executors that support native steps integration like Docker, Docker Autoscaler, Docker for Windows. |
-| `FF_USE_INFORMERS` | `false` | **{dotted-circle}** No |  | The Kubernetes executor uses informers to track changes to Kubernetes resources when you enable this feature. This method improves reliability and efficiency when tracking Kubernetes resource updates. |
 
 <!-- feature_flags_list_end -->
 

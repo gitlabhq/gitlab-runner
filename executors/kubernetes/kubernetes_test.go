@@ -46,6 +46,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/watchers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -5778,58 +5779,118 @@ func TestPodWatcherSetup(t *testing.T) {
 		"foo": "bar",
 	}
 
-	for _, useInformers := range []bool{true, false} {
-		t.Run(fmt.Sprintf("useInformers:%t", useInformers), func(t *testing.T) {
-			build := &common.Build{
-				JobResponse: common.JobResponse{},
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Kubernetes: &common.KubernetesConfig{
-							Image:                  "some-build-image",
-							Namespace:              "some-namespace",
-							RequestRetryBackoffMax: 1234,
-							PodLabels:              podLabels,
-						},
-					},
+	build := &common.Build{
+		JobResponse: common.JobResponse{},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Kubernetes: &common.KubernetesConfig{
+					Image:                  "some-build-image",
+					Namespace:              "some-namespace",
+					RequestRetryBackoffMax: 1234,
+					PodLabels:              podLabels,
 				},
-			}
+			},
+		},
+	}
 
-			buildtest.SetBuildFeatureFlag(build, featureflags.UseInformers, useInformers)
+	fakeKubeClient := testclient.NewSimpleClientset()
+	mockPodWatcher := newMockPodWatcher(t)
 
-			fakeKubeClient := testclient.NewSimpleClientset()
-			mockPodWatcher := newMockPodWatcher(t)
+	ex := newExecutor()
+	ex.getKubeConfig = func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error) {
+		return nil, nil
+	}
+	ex.newKubeClient = func(config *restclient.Config) (kubernetes.Interface, error) {
+		return fakeKubeClient, nil
+	}
+	ex.newPodWatcher = func(c podWatcherConfig) podWatcher {
+		assert.Equal(t, fakeKubeClient, c.kubeClient)
+		assert.Equal(t, "some-namespace", c.namespace)
+		assert.Equal(t, ex.featureChecker, c.featureChecker)
+		assert.Equal(t, time.Millisecond*1234, c.maxSyncDuration)
+		assert.Subset(t, c.labels, podLabels)
+		assert.Contains(t, c.labels, "pod")
+		return mockPodWatcher
+	}
 
+	mockPodWatcher.On("Start").Return(nil).Once()
+	err := ex.Prepare(common.ExecutorPrepareOptions{
+		Context: ctx,
+		Build:   build,
+		Config:  build.Runner,
+	})
+	assert.NoError(t, err, "preparing the executor")
+	assert.NotNil(t, ex.featureChecker, "expected feature checker to be set")
+	assert.NotNil(t, ex.podWatcher, "expected pod watcher to be set")
+
+	mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Once()
+	err = ex.setupBuildPod(ctx, nil)
+	assert.NoError(t, err, "setting up the  build pod")
+
+	mockPodWatcher.On("Stop").Once()
+	ex.Finish(nil)
+}
+
+func TestPodWatcherGracefulDegrade(t *testing.T) {
+	tests := map[string]struct {
+		allowed            bool
+		reason             string
+		err                error
+		expectedPodWatcher podWatcher
+		expectedLog        string
+	}{
+		"all allowed": {
+			allowed:            true,
+			expectedPodWatcher: &watchers.PodWatcher{},
+		},
+		"some error": {
+			err:                fmt.Errorf("some error when creating the review"),
+			expectedPodWatcher: watchers.NoopPodWatcher{},
+			expectedLog:        `WARNING: won't use informers: "some error when creating the review", see: https://docs.gitlab.com/runner/executors/kubernetes/#informers`,
+		},
+		"not allowed": {
+			expectedPodWatcher: watchers.NoopPodWatcher{},
+			expectedLog:        `WARNING: won't use informers: "", see: https://docs.gitlab.com/runner/executors/kubernetes/#informers`,
+		},
+		"not allowed, with reason": {
+			reason:             "some reason",
+			expectedPodWatcher: watchers.NoopPodWatcher{},
+			expectedLog:        `WARNING: won't use informers: "some reason", see: https://docs.gitlab.com/runner/executors/kubernetes/#informers`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
 			ex := newExecutor()
-			ex.getKubeConfig = func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error) {
-				return nil, nil
-			}
-			ex.newKubeClient = func(config *restclient.Config) (kubernetes.Interface, error) {
-				return fakeKubeClient, nil
-			}
-			ex.newPodWatcher = func(c podWatcherConfig) podWatcher {
-				assert.Equal(t, c.kubeClient, fakeKubeClient)
-				assert.Equal(t, "some-namespace", c.namespace)
-				assert.Equal(t, c.maxSyncDuration, time.Millisecond*1234)
-				assert.Subset(t, c.labels, podLabels)
-				assert.Contains(t, c.labels, "pod")
-				return mockPodWatcher
+
+			ctx := context.TODO()
+			podGvr := metav1.GroupVersionResource{Version: "v1", Resource: "pods"}
+
+			mockTrace := common.NewMockJobTrace(t)
+			mockFeatureChecker := newMockFeatureChecker(t)
+
+			mockTrace.On("IsStdout").Return(false).Once()
+			if test.expectedLog != "" {
+				mockTrace.On("Write", mock.MatchedBy(func(b []byte) bool {
+					return strings.Contains(string(b), test.expectedLog)
+				})).Return(0, nil).Once()
 			}
 
-			mockPodWatcher.On("Start").Return(nil).Once()
-			err := ex.Prepare(common.ExecutorPrepareOptions{
-				Context: ctx,
-				Build:   build,
-				Config:  build.Runner,
+			mockFeatureChecker.
+				On("AreResourceVerbsAllowed", ctx, podGvr, "some-namespace", "list", "watch").
+				Return(test.allowed, test.reason, test.err).
+				Once()
+
+			logger := buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+			podWatcher := ex.newPodWatcher(podWatcherConfig{
+				ctx:            ctx,
+				logger:         &logger,
+				namespace:      "some-namespace",
+				featureChecker: mockFeatureChecker,
 			})
-			assert.NoError(t, err, "preparing the executor")
-			assert.NotNil(t, ex.podWatcher, "expected pod watcher to be set")
 
-			mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Once()
-			err = ex.setupBuildPod(ctx, nil)
-			assert.NoError(t, err, "setting up the  build pod")
-
-			mockPodWatcher.On("Stop").Once()
-			ex.Finish(nil)
+			assert.NotNil(t, podWatcher, "expected pod watcher not to be nil")
+			assert.IsType(t, test.expectedPodWatcher, podWatcher)
 		})
 	}
 }
