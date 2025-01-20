@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"golang.org/x/sync/errgroup"
@@ -135,6 +136,11 @@ func push(ctx context.Context, src, repo string, tags []string) error {
 	}
 	defer os.RemoveAll(dir)
 
+	// fix oci archive
+	if err := fixOCIArchive(dir); err != nil {
+		return fmt.Errorf("fixing archive %v: %w", dir, err)
+	}
+
 	ociLayout, err := layout.FromPath(dir)
 	if err != nil {
 		return fmt.Errorf("opening oci-layout: %w", err)
@@ -224,4 +230,63 @@ func extract(archive string) (dir string, err error) {
 	}
 
 	return tempDir, nil
+}
+
+// fixOCIArchive fixes an oci layout directory for multi-arch images built by
+// buildx.
+//
+// In some scenarios, Buildx incorrectly uses an image index manifest for
+// index.json. Whilst this works for many tools, including Docker, it breaks
+// Podman and Docker Hub struggles with it  (failing to display each arch in
+// the image).
+//
+// This can be easily fixed by copying the references blob to index.json if
+// it is the image manifest we expect.
+func fixOCIArchive(dir string) error {
+	indexPath := filepath.Join(dir, "index.json")
+
+	index, err := os.Open(indexPath)
+	if err != nil {
+		return fmt.Errorf("opening index: %w", err)
+	}
+	defer index.Close()
+
+	indexManifest, err := v1.ParseIndexManifest(index)
+	if err != nil {
+		return err
+	}
+
+	// only proceed if we get one manifest
+	if len(indexManifest.Manifests) > 1 {
+		return nil
+	}
+	if !indexManifest.Manifests[0].MediaType.IsIndex() {
+		return nil
+	}
+
+	digest := indexManifest.Manifests[0].Digest
+	blobPath := filepath.Join(dir, "blobs", digest.Algorithm, digest.Hex)
+	imageIndex, err := os.Open(blobPath)
+	if err != nil {
+		return err
+	}
+
+	indexManifest, err = v1.ParseIndexManifest(imageIndex)
+	if err != nil {
+		return err
+	}
+
+	// only proceed if we get an image manifest
+	if len(indexManifest.Manifests) == 0 || !indexManifest.Manifests[0].MediaType.IsImage() {
+		return nil
+	}
+
+	if err := os.Remove(indexPath); err != nil {
+		return err
+	}
+	if err := os.Rename(blobPath, indexPath); err != nil {
+		return err
+	}
+
+	return nil
 }
