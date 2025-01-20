@@ -92,7 +92,7 @@ mage tests:
 
 # Perform documentation linting and link checking on Markdown files
 docs:lint markdown:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.20-vale-3.7.1-markdownlint2-0.14.0-lychee-0.15.1
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.20-vale-3.9.3-markdownlint2-0.17.1-lychee-0.18.0
   stage: qa
   extends:
   - .rules:merge_request_pipelines
@@ -146,4 +146,3 @@ docs:check Kubernetes API docs:
           echo
           exit 1
         )
- 
