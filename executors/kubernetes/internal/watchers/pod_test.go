@@ -83,6 +83,8 @@ func TestPodWatcher(t *testing.T) {
 
 			factory := podWatcher.factory
 
+			podWatcher.UpdatePodName(defaultName)
+
 			_, err = fakeKubeClient.CoreV1().Pods(test.pod.GetNamespace()).Create(ctx, test.pod, metav1.CreateOptions{})
 			assert.NoError(t, err, "creating pod")
 
@@ -91,13 +93,11 @@ func TestPodWatcher(t *testing.T) {
 				assert.NoError(t, err, "deleting pod")
 			}
 
-			podWatcher.UpdatePodName(defaultName)
-
-			err = waitForError(podWatcher.Errors())
+			podErr := waitForError(podWatcher.Errors())
 			if test.expectedErrMsg == "" {
-				assert.NoError(t, err, "expected not to receive an error from the pod watcher")
+				assert.NoError(t, podErr, "expected not to receive an error from the pod watcher")
 			} else {
-				assert.ErrorContains(t, err, test.expectedErrMsg, "expected a error like %q from the pod watcher", test.expectedErrMsg)
+				assert.ErrorContains(t, podErr, test.expectedErrMsg, "expected a error like %q from the pod watcher", test.expectedErrMsg)
 			}
 
 			podWatcher.Stop()
@@ -182,7 +182,7 @@ func TestPodWatcherWrongObject(t *testing.T) {
 }
 
 func waitForError(ch <-chan error) error {
-	to := time.After(10 * time.Millisecond)
+	to := time.After(emitErrorTimeout * 2)
 	select {
 	case <-to:
 		return nil
