@@ -53,7 +53,7 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("script is not compatible with Docker")
 	}
 
-	_, err = s.getPrebuiltImage()
+	_, err = s.getHelperImage()
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (s *commandExecutor) requestPredefinedContainer() (*types.ContainerJSON, er
 		return s.helperContainer, nil
 	}
 
-	prebuildImage, err := s.getPrebuiltImage()
+	prebuildImage, err := s.getHelperImage()
 	if err != nil {
 		return nil, err
 	}

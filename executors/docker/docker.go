@@ -143,7 +143,7 @@ func (e *executor) expandAndGetDockerImage(
 	return image, nil
 }
 
-func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
+func (e *executor) getHelperImage() (*types.ImageInspect, error) {
 	if imageNameFromConfig := e.ExpandValue(e.Config.Docker.HelperImage); imageNameFromConfig != "" {
 		e.BuildLogger.Debugln(
 			"Pull configured helper_image for predefined container instead of import bundled image",
@@ -1171,7 +1171,7 @@ func (e *executor) setupDefaultExecutorOptions(os string) {
 
 		if e.newVolumePermissionSetter == nil {
 			e.newVolumePermissionSetter = func() (permission.Setter, error) {
-				helperImage, err := e.getPrebuiltImage()
+				helperImage, err := e.getHelperImage()
 				if err != nil {
 					return nil, err
 				}

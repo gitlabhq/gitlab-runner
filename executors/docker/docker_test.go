@@ -238,7 +238,7 @@ func TestHelperImageWithVariable(t *testing.T) {
 		HelperImage: "gitlab/gitlab-runner:${CI_RUNNER_REVISION}",
 	}
 
-	img, err := e.getPrebuiltImage()
+	img, err := e.getHelperImage()
 	assert.NoError(t, err)
 	require.NotNil(t, img)
 	assert.Equal(t, "helper-image", img.ID)

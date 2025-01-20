@@ -187,7 +187,7 @@ func (e *serviceHealthCheckError) Error() string {
 }
 
 func (e *executor) runServiceHealthCheckContainer(service *types.Container, timeout time.Duration) error {
-	waitImage, err := e.getPrebuiltImage()
+	waitImage, err := e.getHelperImage()
 	if err != nil {
 		return fmt.Errorf("getPrebuiltImage: %w", err)
 	}
