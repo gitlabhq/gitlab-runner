@@ -70,15 +70,15 @@ func main() {
 
 		for archive, names := range match(m, tag) {
 			// rewrite names
-			for idx, name := range names {
-				names[idx] = strings.ReplaceAll(name, "%", tag)
-
-				exports = append(exports, Export{Type: "Docker image", Value: repo + ":" + names[idx]})
+			var taggedNames []string
+			for _, name := range names {
+				taggedName := strings.ReplaceAll(name, "%", tag)
+				taggedNames = append(taggedNames, taggedName)
+				exports = append(exports, Export{Type: "Docker image", Value: repo + ":" + taggedName})
 			}
 
 			archive = filepath.Join(m.Dir, archive+".tar")
-
-			images[archive] = append(images[archive], names...)
+			images[archive] = append(images[archive], taggedNames...)
 		}
 	}
 
