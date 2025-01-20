@@ -742,6 +742,12 @@ func TestCreateDependencies(t *testing.T) {
 					binds = append(binds, args.Get(1).(string))
 				}).
 				Once()
+			vm.On("CreateTemporary", mock.Anything, "/opt/step-runner").
+				Return(nil).
+				Run(func(args mock.Arguments) {
+					binds = append(binds, args.Get(1).(string))
+				}).
+				Once()
 			vm.On("Create", mock.Anything, "/volume").
 				Return(nil).
 				Run(func(args mock.Arguments) {
@@ -756,7 +762,7 @@ func TestCreateDependencies(t *testing.T) {
 		},
 		clientAssertions: func(c *docker.MockClient) {
 			hostConfigMatcher := mock.MatchedBy(func(conf *container.HostConfig) bool {
-				return assert.Equal(t, []string{"/volume", "/builds"}, conf.Binds)
+				return assert.Equal(t, []string{"/volume", "/builds", "/opt/step-runner"}, conf.Binds)
 			})
 
 			c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
