@@ -185,7 +185,7 @@ func checkTerminalPodErrors(pod *v1.Pod) error {
 	// collect all containers' statuses, except those for ephemeral containers
 	allContainerStatuses := slices.Concat(pod.Status.InitContainerStatuses, pod.Status.ContainerStatuses)
 	if err := CheckTerminalContainerErrors(allContainerStatuses); err != nil {
-		return err
+		return fmt.Errorf("pod %q failed: %w", fullPodName, err)
 	}
 
 	return nil
