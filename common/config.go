@@ -1214,6 +1214,8 @@ type RunnerSettings struct {
 	Custom     *CustomConfig     `toml:"custom,omitempty" json:"custom,omitempty" group:"custom executor" namespace:"custom"`
 
 	Autoscaler *AutoscalerConfig `toml:"autoscaler,omitempty" json:",omitempty"`
+
+	StepRunnerImage string `toml:"step_runner_image,omitempty" json:"step_runner_image" long:"step-runner-image" env:"STEP_RUNNER_IMAGE" description:"[ADVANCED] Override the default step-runner image used to inject the step-runner binary into the build container"`
 }
 
 type RunnerConfig struct {
