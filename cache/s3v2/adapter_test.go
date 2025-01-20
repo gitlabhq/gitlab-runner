@@ -108,10 +108,6 @@ func testCacheOperation(
 		assert.NoError(t, err)
 		assert.Nil(t, goCloudURL.URL)
 		assert.Empty(t, goCloudURL.Environment)
-
-		env, err := adapter.GetUploadEnv(ctx)
-		assert.Empty(t, env)
-		assert.NoError(t, err)
 	})
 }
 
@@ -559,18 +555,4 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			assert.Empty(t, du.Environment)
 		})
 	}
-}
-
-func TestGetUploadEnv(t *testing.T) {
-	config :=
-		&common.CacheConfig{
-			S3: &common.CacheS3Config{},
-		}
-
-	adapter, err := New(config, defaultTimeout, objectName)
-	require.NoError(t, err)
-
-	env, err := adapter.GetUploadEnv(context.Background())
-	assert.NoError(t, err)
-	assert.Empty(t, env)
 }

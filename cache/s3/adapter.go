@@ -80,10 +80,6 @@ func (a *s3Adapter) GetGoCloudURL(_ context.Context, _ bool) (cache.GoCloudURL, 
 	return cache.GoCloudURL{}, nil
 }
 
-func (a *s3Adapter) GetUploadEnv(_ context.Context) (map[string]string, error) {
-	return nil, nil
-}
-
 func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {
 	s3 := config.S3
 	if s3 == nil {

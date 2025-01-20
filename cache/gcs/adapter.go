@@ -49,10 +49,6 @@ func (a *gcsAdapter) GetGoCloudURL(_ context.Context, _ bool) (cache.GoCloudURL,
 	return cache.GoCloudURL{}, nil
 }
 
-func (a *gcsAdapter) GetUploadEnv(_ context.Context) (map[string]string, error) {
-	return nil, nil
-}
-
 func (a *gcsAdapter) presignURL(ctx context.Context, method string, contentType string) *url.URL {
 	if a.config.BucketName == "" {
 		logrus.Error("BucketName can't be empty")
