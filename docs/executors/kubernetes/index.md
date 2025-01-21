@@ -101,7 +101,7 @@ To configure permissions for the core API group, update the `values.yml` file fo
 You can either:
 
 - Set `rbac.create` to `true`.
-- Specify a service account `rbac.serviceAccountName: <service_account_name>` with the following
+- Specify a service account `serviceAccount.name: <service_account_name>` with the following
   permissions in the `values.yml` file.
 
  <!-- k8s_api_permissions_list_start -->
