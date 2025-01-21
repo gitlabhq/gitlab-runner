@@ -135,6 +135,9 @@ stable gitlab release:
       - name: 'binary: Linux s390x'
         url: '$S3/binaries/gitlab-runner-linux-s390x'
         filepath: '/binaries/gitlab-runner-linux-s390x'
+      - name: 'binary: Linux riscv64'
+        url: '$S3/binaries/gitlab-runner-linux-riscv64'
+        filepath: '/binaries/gitlab-runner-linux-riscv64'
 
       - name: 'binary: macOS amd64'
         url: '$S3/binaries/gitlab-runner-darwin-amd64'
@@ -185,6 +188,9 @@ stable gitlab release:
       - name: 'package: DEB s390x'
         url: '$S3/deb/gitlab-runner_s390x.deb'
         filepath: '/packages/deb/gitlab-runner_s390x.deb'
+      - name: 'package: DEB riscv64'
+        url: '$S3/deb/gitlab-runner_riscv64.deb'
+        filepath: '/packages/deb/gitlab-runner_riscv64.deb'
 
       # RPM packages
       - name: 'package: RPM amd64'
@@ -214,6 +220,9 @@ stable gitlab release:
       - name: 'package: RPM s390x'
         url: '$S3/rpm/gitlab-runner_s390x.rpm'
         filepath: '/packages/rpm/gitlab-runner_s390x.rpm'
+      - name: 'package: RPM riscv64'
+        url: '$S3/rpm/gitlab-runner_riscv64.rpm'
+        filepath: '/packages/rpm/gitlab-runner_riscv64.rpm'
 
       # Other files
       - name: 'checksums'
