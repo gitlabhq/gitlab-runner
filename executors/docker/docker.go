@@ -483,7 +483,7 @@ func (e *executor) getProjectUniqRandomizedName() string {
 // Build and predefined container names are comprised of:
 // - A runner project scoped ID (runner-<description>-project-<project_id>-concurrent-<concurrent>)
 // - A unique randomized ID for each execution
-// - The container's type (build, predefined)
+// - The container's type (build, predefined, step-runner)
 //
 // For example: runner-linux-project-123-concurrent-2-0a1b2c3d-predefined
 //

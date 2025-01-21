@@ -24,6 +24,7 @@ import (
 const (
 	buildContainerType      = "build"
 	predefinedContainerType = "predefined"
+	stepRunnerContainerType = "step-runner"
 )
 
 type commandExecutor struct {
