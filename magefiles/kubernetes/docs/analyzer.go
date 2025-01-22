@@ -8,6 +8,7 @@ import (
 	"go/printer"
 	"go/token"
 	"io/fs"
+	"net/url"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -28,17 +29,43 @@ type simplePosition struct {
 	line     int
 }
 
-type configFlag struct {
+type configFlag interface {
+	valid() bool
+	String() string
+}
+
+type kvFlag struct {
 	Name  string
 	Value string
 }
 
-func (v configFlag) valid() bool {
+func (v kvFlag) valid() bool {
 	return v.Name != "" && v.Value != ""
 }
 
-func (v configFlag) String() string {
-	return fmt.Sprintf("%s=%s", v.Name, v.Value)
+func (v kvFlag) String() string {
+	return fmt.Sprintf("`%s=%s`", v.Name, v.Value)
+}
+
+type docLinkFlag struct {
+	Text string
+	URL  string
+}
+
+func (v docLinkFlag) valid() bool {
+	return v.Text != "" && v.URL != ""
+}
+
+func (v docLinkFlag) String() string {
+	return fmt.Sprintf("%s (%s)", v.Text, v.URL)
+}
+
+func (v docLinkFlag) LocalLink() string {
+	var f string
+	if u, err := url.Parse(v.URL); u != nil && err == nil {
+		f = u.Fragment
+	}
+	return fmt.Sprintf("[%s](#%s)", v.Text, f)
 }
 
 type verb struct {
@@ -53,12 +80,17 @@ func (p verb) String() string {
 		return p.Verb
 	}
 
-	featureFlagsStrings := lo.Map(p.ConfigFlags, func(ff configFlag, _ int) string {
-		return ff.String()
+	featureFlagsStrings := lo.Map(p.ConfigFlags, func(cf configFlag, _ int) string {
+		switch f := cf.(type) {
+		case docLinkFlag:
+			return f.LocalLink()
+		default:
+			return f.String()
+		}
 	})
 	sort.Strings(featureFlagsStrings)
 
-	return fmt.Sprintf("%s (`%s`)", p.Verb, strings.Join(featureFlagsStrings, ", "))
+	return fmt.Sprintf("%s (%s)", p.Verb, strings.Join(featureFlagsStrings, ", "))
 }
 
 type PermissionsGroup map[string][]verb
@@ -332,9 +364,19 @@ func parseComment(comment *ast.Comment) (string, []string, []configFlag) {
 
 	featureFlags := lo.Map(ffs, func(ff string, _ int) configFlag {
 		split := strings.Split(ff, "=")
-		return configFlag{
-			Name:  strings.TrimSpace(split[0]),
-			Value: strings.TrimSpace(split[1]),
+		name := strings.TrimSpace(split[0])
+		data := strings.TrimSpace(split[1])
+
+		if strings.HasPrefix(data, "http") {
+			return docLinkFlag{
+				Text: name,
+				URL:  data,
+			}
+		}
+
+		return kvFlag{
+			Name:  name,
+			Value: data,
 		}
 	})
 
