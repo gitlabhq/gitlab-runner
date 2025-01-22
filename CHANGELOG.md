@@ -1,3 +1,11 @@
+## v17.8.2 (2025-01-22)
+
+### Bug fixes
+
+- Fix Windows image gitlab-runner-helper path [!5302](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5302)
+- Upgrade RUNNER_IMAGES_VERSION to v0.0.3 [!5300](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5300)
+- Image pusher fixes [!5294](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5294)
+
 ## v17.8.1 (2025-01-22)
 
 ### Bug fixes
