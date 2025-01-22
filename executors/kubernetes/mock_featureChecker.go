@@ -14,48 +14,6 @@ type mockFeatureChecker struct {
 	mock.Mock
 }
 
-// AreResourceVerbsAllowed provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *mockFeatureChecker) AreResourceVerbsAllowed(_a0 context.Context, _a1 v1.GroupVersionResource, _a2 string, _a3 ...string) (bool, string, error) {
-	_va := make([]interface{}, len(_a3))
-	for _i := range _a3 {
-		_va[_i] = _a3[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, _a0, _a1, _a2)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AreResourceVerbsAllowed")
-	}
-
-	var r0 bool
-	var r1 string
-	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, v1.GroupVersionResource, string, ...string) (bool, string, error)); ok {
-		return rf(_a0, _a1, _a2, _a3...)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, v1.GroupVersionResource, string, ...string) bool); ok {
-		r0 = rf(_a0, _a1, _a2, _a3...)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, v1.GroupVersionResource, string, ...string) string); ok {
-		r1 = rf(_a0, _a1, _a2, _a3...)
-	} else {
-		r1 = ret.Get(1).(string)
-	}
-
-	if rf, ok := ret.Get(2).(func(context.Context, v1.GroupVersionResource, string, ...string) error); ok {
-		r2 = rf(_a0, _a1, _a2, _a3...)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
-}
-
 // IsHostAliasSupported provides a mock function with given fields:
 func (_m *mockFeatureChecker) IsHostAliasSupported() (bool, error) {
 	ret := _m.Called()
@@ -82,6 +40,41 @@ func (_m *mockFeatureChecker) IsHostAliasSupported() (bool, error) {
 	}
 
 	return r0, r1
+}
+
+// IsResourceVerbAllowed provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *mockFeatureChecker) IsResourceVerbAllowed(_a0 context.Context, _a1 v1.GroupVersionResource, _a2 string, _a3 string) (bool, string, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsResourceVerbAllowed")
+	}
+
+	var r0 bool
+	var r1 string
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, v1.GroupVersionResource, string, string) (bool, string, error)); ok {
+		return rf(_a0, _a1, _a2, _a3)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, v1.GroupVersionResource, string, string) bool); ok {
+		r0 = rf(_a0, _a1, _a2, _a3)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, v1.GroupVersionResource, string, string) string); ok {
+		r1 = rf(_a0, _a1, _a2, _a3)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, v1.GroupVersionResource, string, string) error); ok {
+		r2 = rf(_a0, _a1, _a2, _a3)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // newMockFeatureChecker creates a new instance of mockFeatureChecker. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

@@ -307,6 +307,7 @@ type podWatcherConfig struct {
 	namespace       string
 	labels          map[string]string
 	maxSyncDuration time.Duration
+	retryProvider   retry.Provider
 }
 
 type serviceCreateResponse struct {
@@ -386,6 +387,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		namespace:       s.configurationOverwrites.namespace,
 		labels:          s.buildLabels(),
 		maxSyncDuration: s.Config.Kubernetes.RequestRetryBackoffMax.Get(),
+		retryProvider:   s,
 	})
 	if err := s.podWatcher.Start(); err != nil {
 		return fmt.Errorf("starting pod watcher: %w", err)
@@ -3123,17 +3125,30 @@ func newExecutor() *executor {
 		windowsKernelVersion: os_helpers.LocalKernelVersion,
 	}
 
+	type resourceCheckResult struct {
+		allowed bool
+		reason  string
+	}
 	e.newPodWatcher = func(c podWatcherConfig) podWatcher {
 		gvr := metav1.GroupVersionResource{Version: "v1", Resource: "pods"}
 		docLink := "https://docs.gitlab.com/runner/executors/kubernetes/#informers"
-		allowed, reason, err := c.featureChecker.AreResourceVerbsAllowed(c.ctx, gvr, c.namespace, "list", "watch")
-		if err != nil || !allowed {
+
+		for _, verb := range []string{"list", "watch"} {
+			res, err := retry.WithValueFn(c.retryProvider, func() (resourceCheckResult, error) {
+				allowed, reason, err := c.featureChecker.IsResourceVerbAllowed(c.ctx, gvr, c.namespace, verb)
+				return resourceCheckResult{allowed, reason}, err
+			}).Run()
+			if res.allowed && err == nil {
+				continue
+			}
+			reason := res.reason
 			if err != nil {
 				reason = err.Error()
 			}
 			c.logger.Warningln(fmt.Sprintf("won't use informers: %q, see: %s", reason, docLink))
 			return watchers.NoopPodWatcher{}
 		}
+
 		return watchers.NewPodWatcher(c.ctx, c.logger, c.kubeClient, c.namespace, c.labels, c.maxSyncDuration)
 	}
 

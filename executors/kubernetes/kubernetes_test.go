@@ -5838,24 +5838,29 @@ func TestPodWatcherGracefulDegrade(t *testing.T) {
 		err                error
 		expectedPodWatcher podWatcher
 		expectedLog        string
+		expectedCallCount  int
 	}{
 		"all allowed": {
 			allowed:            true,
 			expectedPodWatcher: &watchers.PodWatcher{},
+			expectedCallCount:  2,
 		},
 		"some error": {
 			err:                fmt.Errorf("some error when creating the review"),
 			expectedPodWatcher: watchers.NoopPodWatcher{},
 			expectedLog:        `WARNING: won't use informers: "some error when creating the review", see: https://docs.gitlab.com/runner/executors/kubernetes/#informers`,
+			expectedCallCount:  1,
 		},
 		"not allowed": {
 			expectedPodWatcher: watchers.NoopPodWatcher{},
 			expectedLog:        `WARNING: won't use informers: "", see: https://docs.gitlab.com/runner/executors/kubernetes/#informers`,
+			expectedCallCount:  1,
 		},
 		"not allowed, with reason": {
 			reason:             "some reason",
 			expectedPodWatcher: watchers.NoopPodWatcher{},
 			expectedLog:        `WARNING: won't use informers: "some reason", see: https://docs.gitlab.com/runner/executors/kubernetes/#informers`,
+			expectedCallCount:  1,
 		},
 	}
 
@@ -5877,9 +5882,11 @@ func TestPodWatcherGracefulDegrade(t *testing.T) {
 			}
 
 			mockFeatureChecker.
-				On("AreResourceVerbsAllowed", ctx, podGvr, "some-namespace", "list", "watch").
+				On("IsResourceVerbAllowed", ctx, podGvr, "some-namespace", mock.MatchedBy(func(verb string) bool {
+					return verb == "list" || verb == "watch"
+				})).
 				Return(test.allowed, test.reason, test.err).
-				Once()
+				Times(test.expectedCallCount)
 
 			logger := buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 			podWatcher := ex.newPodWatcher(podWatcherConfig{
@@ -5887,6 +5894,7 @@ func TestPodWatcherGracefulDegrade(t *testing.T) {
 				logger:         &logger,
 				namespace:      "some-namespace",
 				featureChecker: mockFeatureChecker,
+				retryProvider:  ex,
 			})
 
 			assert.NotNil(t, podWatcher, "expected pod watcher not to be nil")
