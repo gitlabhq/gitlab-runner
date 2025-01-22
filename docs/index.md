@@ -12,23 +12,17 @@ DETAILS:
 
 GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pipeline.
 
-## Use GitLab-hosted runners
-
-If you use GitLab.com or GitLab Dedicated, you can run your CI/CD jobs on [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/index.html).
-These runners are managed by GitLab and fully integrated with GitLab.com.
-By default these runners are enabled for all projects.
-You can [disable the runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-instance-runners) if you have
-the Owner role for the project.
-
 ## Use self-managed runners
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** Self-managed
 
-Alternatively, you can install GitLab Runner and register your own runners on GitLab.com or
-on your own instance. To use self-managed runners, you [install](install/index.md) GitLab Runner on infrastructure
-that you own or manage.
+Self-managed runners are GitLab Runner instances that you install, configure, and manage in your own
+infrastructure. 
+You can [install](install/index.md) and register self-managed runners on all GitLab installations.
+
+Unlike [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/index.html), which are hosted and managed by GitLab, you have complete control over self-managed runners.
 
 ### Use Terraform to create and manage a fleet of runners
 
