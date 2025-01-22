@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, Self-managed
+**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 [GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner) runs the CI/CD jobs defined in GitLab.
 GitLab Runner can run as a single binary and has no language-specific requirements.
