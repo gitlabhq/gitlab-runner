@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, Self-managed
+**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pipeline.
 
@@ -24,7 +24,7 @@ the Owner role for the project.
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
-**Offering:** Self-managed
+**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 Alternatively, you can install GitLab Runner and register your own runners on GitLab.com or
 on your own instance. To use self-managed runners, you [install](install/index.md) GitLab Runner on infrastructure

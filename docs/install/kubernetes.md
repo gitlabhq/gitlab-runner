@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, Self-managed
+**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 The GitLab Runner Helm chart is the official way to deploy a GitLab Runner instance into your Kubernetes cluster.
 This chart configures GitLab Runner to:
