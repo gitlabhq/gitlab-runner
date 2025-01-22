@@ -6,5 +6,6 @@ ARG TARGETOS
 ARG TARGETARCH
 ARG SRC_SUFFIX=""
 ARG DST_SUFFIX=""
+ARG DST_DIR="/usr/bin"
 
-COPY --from=binary_dir gitlab-runner-helper.${TARGETOS}-${TARGETARCH}${SRC_SUFFIX} /usr/bin/gitlab-runner-helper${DST_SUFFIX}
+COPY --from=binary_dir gitlab-runner-helper.${TARGETOS}-${TARGETARCH}${SRC_SUFFIX} ${DST_DIR}/gitlab-runner-helper${DST_SUFFIX}
