@@ -121,6 +121,7 @@ target "windows" {
     BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner-helper:${RUNNER_IMAGES_VERSION}-${replace(version, ":", "-")}"
     SRC_SUFFIX = ".exe"
     DST_SUFFIX = ".exe"
+    DST_DIR = "/Program Files/gitlab-runner-helper"
   }
 
   output = ["type=oci,dest=./../../out/helper-images/windows-${replace(version, ":", "-")}.tar,tar=true"]
