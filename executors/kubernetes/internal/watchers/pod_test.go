@@ -19,6 +19,7 @@ var (
 	defaultName      = "some-pod"
 	defaultNamespace = "some-namespace"
 	defaultLabels    = map[string]string{"some": "label"}
+	executorRetries  = 3
 )
 
 func TestPodWatcher(t *testing.T) {
@@ -83,21 +84,31 @@ func TestPodWatcher(t *testing.T) {
 
 			factory := podWatcher.factory
 
-			_, err = fakeKubeClient.CoreV1().Pods(test.pod.GetNamespace()).Create(ctx, test.pod, metav1.CreateOptions{})
-			assert.NoError(t, err, "creating pod")
+			// This is to mimic the case when we get some error where the executor retries and podWatcher.UpdatePodName should
+			// switch to the new pod name, and ignore any old one.
+			// Currently that is only happening for pull issues.
+			for try := range executorRetries {
+				expectedPodNameForThisTry := fmt.Sprintf("%s-%d", defaultName, try)
+				actualPodNameForThisTry := fmt.Sprintf("%s-%d", test.pod.GetName(), try)
 
-			if test.shouldDelete {
-				err := fakeKubeClient.CoreV1().Pods(test.pod.GetNamespace()).Delete(ctx, test.pod.GetName(), metav1.DeleteOptions{})
-				assert.NoError(t, err, "deleting pod")
-			}
+				testPod := withName(test.pod, actualPodNameForThisTry)
+				podWatcher.UpdatePodName(expectedPodNameForThisTry)
 
-			podWatcher.UpdatePodName(defaultName)
+				_, err = fakeKubeClient.CoreV1().Pods(testPod.GetNamespace()).Create(ctx, testPod, metav1.CreateOptions{})
+				assert.NoError(t, err, "(try %d) creating pod")
 
-			err = waitForError(podWatcher.Errors())
-			if test.expectedErrMsg == "" {
-				assert.NoError(t, err, "expected not to receive an error from the pod watcher")
-			} else {
-				assert.ErrorContains(t, err, test.expectedErrMsg, "expected a error like %q from the pod watcher", test.expectedErrMsg)
+				if test.shouldDelete {
+					err := fakeKubeClient.CoreV1().Pods(testPod.GetNamespace()).Delete(ctx, testPod.GetName(), metav1.DeleteOptions{})
+					assert.NoError(t, err, "(try %d) deleting pod")
+				}
+
+				podErr := waitForError(podWatcher.Errors())
+				if test.expectedErrMsg == "" {
+					assert.NoError(t, podErr, "(try %d) not to receive an error from the pod watcher", try)
+				} else {
+					assert.ErrorContains(t, podErr, expectedPodNameForThisTry, "(try %d) expected the error to be for pod %q", try, expectedPodNameForThisTry)
+					assert.ErrorContains(t, podErr, test.expectedErrMsg, "(try %d) expected an error like %q from the pod watcher", try, test.expectedErrMsg)
+				}
 			}
 
 			podWatcher.Stop()
@@ -182,7 +193,7 @@ func TestPodWatcherWrongObject(t *testing.T) {
 }
 
 func waitForError(ch <-chan error) error {
-	to := time.After(10 * time.Millisecond)
+	to := time.After(emitErrorTimeout * 2)
 	select {
 	case <-to:
 		return nil
@@ -200,38 +211,44 @@ func defaultPod() *v1.Pod {
 }
 
 func withName(pod *v1.Pod, name string) *v1.Pod {
-	pod.SetName(name)
-	return pod
+	p := pod.DeepCopy()
+	p.SetName(name)
+	return p
 }
 
 func withNameSpace(pod *v1.Pod, namespace string) *v1.Pod {
-	pod.SetNamespace(namespace)
-	return pod
+	p := pod.DeepCopy()
+	p.SetNamespace(namespace)
+	return p
 }
 
 func withLabels(pod *v1.Pod, labels map[string]string) *v1.Pod {
-	pod.SetLabels(labels)
-	return pod
+	p := pod.DeepCopy()
+	p.SetLabels(labels)
+	return p
 }
 
 func withDeletionTimestamp(pod *v1.Pod) *v1.Pod {
+	p := pod.DeepCopy()
 	now := metav1.Now()
-	pod.DeletionTimestamp = &now
-	return pod
+	p.DeletionTimestamp = &now
+	return p
 }
 
 func withDisruption(pod *v1.Pod, msg, reason string) *v1.Pod {
-	pod.Status.Conditions = append(pod.Status.Conditions, v1.PodCondition{
+	p := pod.DeepCopy()
+	p.Status.Conditions = append(p.Status.Conditions, v1.PodCondition{
 		Status:  v1.ConditionTrue,
 		Message: msg,
 		Reason:  reason,
 		Type:    v1.DisruptionTarget,
 	})
-	return pod
+	return p
 }
 
 func withContainerWaiting(pod *v1.Pod, containerName, msg, reason string) *v1.Pod {
-	pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, v1.ContainerStatus{
+	p := pod.DeepCopy()
+	p.Status.ContainerStatuses = append(p.Status.ContainerStatuses, v1.ContainerStatus{
 		Name: containerName,
 		State: v1.ContainerState{
 			Waiting: &v1.ContainerStateWaiting{
@@ -240,5 +257,5 @@ func withContainerWaiting(pod *v1.Pod, containerName, msg, reason string) *v1.Po
 			},
 		},
 	})
-	return pod
+	return p
 }
