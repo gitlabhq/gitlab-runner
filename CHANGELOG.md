@@ -6,7 +6,7 @@
 - Upgrade RUNNER_IMAGES_VERSION to v0.0.3 [!5300](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5300)
 - Image pusher fixes [!5294](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5294)
 
-## v17.8.1 (2025-01-22)
+## v17.8.1 (2025-01-17)
 
 ### Bug fixes
 
@@ -22,7 +22,7 @@
 
 - Bump base image version [!5282](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5282)
 
-## v17.8.0 (2025-01-22)
+## v17.8.0 (2025-01-13)
 
 ### New features
 
