@@ -1,11 +1,14 @@
-## v17.8.1 (2025-01-17)
+## v17.8.1 (2025-01-22)
 
 ### Bug fixes
 
+- Upgrade RUNNER_IMAGES_VERSION to v0.0.3 [!5300](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5300)
+- Image pusher fixes [!5294](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5294)
 - Fix runner image missing tag [!5289](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5289)
 - Push the helper image packages to S3 [!5288](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5288)
 - Create copy of aliased helper images, not symlinks [!5287](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5287)
 - Fix runner release bugs [!5286](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5286)
+- Fix Windows image gitlab-runner-helper path [!5302](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5302)
 
 ### Maintenance
 
