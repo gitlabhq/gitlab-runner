@@ -8,11 +8,25 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 // This is that path to which the step-runner binary will be copied in the build container. This path MUST be added
-// to the container's PATH.
+// to the container's PATH. When copying the step-runner binary from the step-runner container to the shared volume,
+// this path can be anything as long the mount-point and destination argument to the bootstrap command are the same.
 const stepRunnerBinaryPath = "/opt/step-runner"
+
+var stepRunnerBootstrapCommand = []string{"/step-runner", "bootstrap", stepRunnerBinaryPath}
+
+func (e *commandExecutor) requestStepRunnerContainer() (*types.ContainerJSON, error) {
+	return e.createContainer(
+		stepRunnerContainerType,
+		common.Image{Name: e.Config.GetStepRunnerImage()},
+		nil,
+		newStepRunnerContainerConfigurator(&e.executor),
+	)
+}
 
 type stepRunnerContainerConfigurator struct {
 	e *executor
