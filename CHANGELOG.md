@@ -9,7 +9,7 @@
 
 - Run ubi images with BUILD_COMMIT_SHA and PARENT_PIPELINE_ID [!5244](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5244)
 
-## v17.8.2 (2025-01-23)
+## v17.8.2 (2025-01-22)
 
 ### Bug fixes
 
@@ -23,7 +23,7 @@
 
 - Run ubi images with BUILD_COMMIT_SHA and PARENT_PIPELINE_ID [!5244](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5244)
 
-## v17.8.1 (2025-01-23)
+## v17.8.1 (2025-01-17)
 
 ### Bug fixes
 
@@ -42,7 +42,7 @@
 - Bump base image version [!5282](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5282)
 - Run ubi images with BUILD_COMMIT_SHA and PARENT_PIPELINE_ID [!5244](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5244)
 
-## v17.8.0 (2025-01-23)
+## v17.8.0 (2025-01-13)
 
 ### New features
 
