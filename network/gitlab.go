@@ -1143,7 +1143,7 @@ func (n *GitLabClient) handleResponse(ctx context.Context, res *http.Response, d
 
 	defer func() {
 		if discardBody {
-			_, _ = io.Copy(io.Discard, res.Body)
+			_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 1025*1025))
 		}
 		_ = res.Body.Close()
 	}()
