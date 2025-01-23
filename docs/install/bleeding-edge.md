@@ -20,6 +20,7 @@ from `main` branch. Use at your own risk.
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-linux-amd64>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-linux-arm>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-linux-s390x>
+- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-linux-riscv64>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-darwin-amd64>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-windows-386.exe>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-windows-amd64.exe>
@@ -42,6 +43,7 @@ chmod +x gitlab-runner-linux-amd64
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_armhf.deb>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_arm64.deb>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_aarch64.deb>
+- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_riscv64.deb>
 
 ### Download the exported runner-helper images package
 
@@ -67,6 +69,7 @@ dpkg -i gitlab-runner-helper-images.deb gitlab-runner_<arch>.deb
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_armhf.rpm>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_arm64.rpm>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_aarch64.rpm>
+- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_riscv64.rpm>
 
 ### Download the exported runner-helper images package
 
