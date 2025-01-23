@@ -1,12 +1,8 @@
-trigger UBI images build:
+.trigger-downstream-pipeline-ref-rules:
   stage: postrelease
-  extends:
-  - .rules:release:all
   variables:
-    BUILD_RELEASE: ${CI_COMMIT_REF_NAME}
-  trigger: gitlab-org/ci-cd/gitlab-runner-ubi-images
-
-trigger runner-incept tests:
+    UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_BRANCH
+    UPSTREAM_CI_COMMIT_SHORT_SHA: $CI_COMMIT_SHORT_SHA
   rules:
     # copy of .rules:merge_request_pipelines:no_docs:only_canonical, slightly modified for variables
     - if: '$CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/'
@@ -29,13 +25,22 @@ trigger runner-incept tests:
       changes: !reference [.code-backstage-patterns]
       variables:
         UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
+
+trigger UBI images build:
+  extends:
+    - .trigger-downstream-pipeline-ref-rules
+  variables:
+    BUILD_RELEASE: $CI_COMMIT_REF_NAME
+    BUILD_RELEASE_SHA: $CI_COMMIT_SHORT_SHA
+  trigger:
+    project: gitlab-org/ci-cd/gitlab-runner-ubi-images
+
+trigger runner-incept tests:
+  extends:
+    - .trigger-downstream-pipeline-ref-rules
   needs:
     - binaries
     - "helper images"
-  stage: postrelease
-  variables:
-    UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_BRANCH
-    UPSTREAM_CI_COMMIT_SHORT_SHA: $CI_COMMIT_SHORT_SHA
   trigger:
     project: gitlab-org/ci-cd/tests/runner-incept
     # strategy: depend
