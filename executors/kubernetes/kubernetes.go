@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -74,7 +75,10 @@ const (
 
 	serviceContainerPrefix = "svc-"
 
-	k8sAnnotationPrefix = "runner.gitlab.com/"
+	// runnerLabelNamespace is used to build the k8s objects' labels and annotations, and for checking if user-defined
+	// labels and label overwrites are allowed; i.e. labels within this namespace cannot be set or overwritten by
+	// users, though other labels can.
+	runnerLabelNamespace = "runner.gitlab.com"
 
 	// The suffix is built using alphanumeric character
 	// that means there is 34^8 possibilities for a resource name using the same pattern
@@ -92,6 +96,8 @@ const (
 )
 
 var (
+	runnerLabelNamespacePattern = regexp.MustCompile(`(?i)(^|.*\.)` + regexp.QuoteMeta(runnerLabelNamespace) + `(\/.*|$)`)
+
 	PropagationPolicy = metav1.DeletePropagationBackground
 
 	executorOptions = executors.ExecutorOptions{
@@ -2049,15 +2055,39 @@ func (s *executor) checkDependantResources(ctx context.Context) error {
 }
 
 func (s *executor) buildLabels() map[string]string {
-	// We set a default label to the pod. This label will be used later
-	// by the services, to link each service to the pod
-	labels := map[string]string{"pod": s.Build.ProjectUniqueName()}
-	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
-		labels[k] = sanitizeLabel(s.Build.Variables.ExpandValue(v))
+	// We set default pod labels. These are not allowed to be overwritten.
+	labels := map[string]string{
+		// Retained for backwards compatibility, may be removed in future release!
+		"pod": sanitizeLabel(s.Build.ProjectUniqueName()),
+
+		"project." + runnerLabelNamespace + "/id":             strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
+		"project." + runnerLabelNamespace + "/namespace-id":   sanitizeLabel(s.Build.Variables.Value("CI_PROJECT_NAMESPACE_ID")),
+		"project." + runnerLabelNamespace + "/name":           sanitizeLabel(s.Build.JobInfo.ProjectName),
+		"project." + runnerLabelNamespace + "/namespace":      sanitizeLabel(s.Build.Variables.Value("CI_PROJECT_NAMESPACE")),
+		"project." + runnerLabelNamespace + "/root-namespace": sanitizeLabel(s.Build.Variables.Value("CI_PROJECT_ROOT_NAMESPACE")),
+
+		// Used for setting up services for the build pod
+		"job." + runnerLabelNamespace + "/pod": sanitizeLabel(s.Build.ProjectUniqueName()),
+
+		"manager." + runnerLabelNamespace + "/name":     sanitizeLabel(s.Config.Name),
+		"manager." + runnerLabelNamespace + "/id-short": sanitizeLabel(s.Config.ShortDescription()),
 	}
-	for key, val := range s.configurationOverwrites.podLabels {
+
+	safeLabelSetter := func(key, val string) {
+		if runnerLabelNamespacePattern.MatchString(key) {
+			s.BuildLogger.Debugln(fmt.Sprintf("not setting pod label %q, overwrite of labels in the %q namespace is not allowed", key, runnerLabelNamespace))
+			return
+		}
 		labels[key] = sanitizeLabel(s.Build.Variables.ExpandValue(val))
 	}
+
+	for key, val := range s.Build.Runner.Kubernetes.PodLabels {
+		safeLabelSetter(key, val)
+	}
+	for key, val := range s.configurationOverwrites.podLabels {
+		safeLabelSetter(key, val)
+	}
+
 	return labels
 }
 
@@ -2070,13 +2100,13 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 	labels := s.buildLabels()
 
 	annotations := map[string]string{
-		"job." + k8sAnnotationPrefix + "id":         strconv.FormatInt(s.Build.ID, 10),
-		"job." + k8sAnnotationPrefix + "url":        s.Build.JobURL(),
-		"job." + k8sAnnotationPrefix + "sha":        s.Build.GitInfo.Sha,
-		"job." + k8sAnnotationPrefix + "before_sha": s.Build.GitInfo.BeforeSha,
-		"job." + k8sAnnotationPrefix + "ref":        s.Build.GitInfo.Ref,
-		"job." + k8sAnnotationPrefix + "name":       s.Build.JobInfo.Name,
-		"project." + k8sAnnotationPrefix + "id":     strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
+		"job." + runnerLabelNamespace + "/id":         strconv.FormatInt(s.Build.ID, 10),
+		"job." + runnerLabelNamespace + "/url":        s.Build.JobURL(),
+		"job." + runnerLabelNamespace + "/sha":        s.Build.GitInfo.Sha,
+		"job." + runnerLabelNamespace + "/before_sha": s.Build.GitInfo.BeforeSha,
+		"job." + runnerLabelNamespace + "/ref":        s.Build.GitInfo.Ref,
+		"job." + runnerLabelNamespace + "/name":       s.Build.JobInfo.Name,
+		"project." + runnerLabelNamespace + "/id":     strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
 	}
 	for key, val := range s.configurationOverwrites.podAnnotations {
 		annotations[key] = s.Build.Variables.ExpandValue(val)
@@ -2583,7 +2613,7 @@ func (s *executor) prepareServiceConfig(
 		},
 		Spec: api.ServiceSpec{
 			Ports:    ports,
-			Selector: map[string]string{"pod": s.Build.ProjectUniqueName()},
+			Selector: map[string]string{"job." + runnerLabelNamespace + "/pod": sanitizeLabel(s.Build.ProjectUniqueName())},
 			Type:     api.ServiceTypeClusterIP,
 		},
 	}
