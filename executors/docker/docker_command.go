@@ -84,6 +84,10 @@ func (s *commandExecutor) isUmaskDisabled() bool {
 }
 
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
+	containerType := buildContainerType
+	if cmd.Predefined {
+		containerType = predefinedContainerType
+	}
 	maxAttempts := s.Build.GetExecutorJobSectionAttempts()
 
 	var runErr error
@@ -92,7 +96,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 			s.BuildLogger.Infoln(fmt.Sprintf("Retrying %s", cmd.Stage))
 		}
 
-		ctr, err := s.requestContainer(cmd)
+		ctr, err := s.requestContainer(containerType)
 		if err != nil {
 			return err
 		}
@@ -115,12 +119,15 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	return runErr
 }
 
-func (s *commandExecutor) requestContainer(cmd common.ExecutorCommand) (*types.ContainerJSON, error) {
-	if cmd.Predefined {
+func (s *commandExecutor) requestContainer(containerType string) (*types.ContainerJSON, error) {
+	switch containerType {
+	case buildContainerType:
+		return s.requestBuildContainer()
+	case predefinedContainerType:
 		return s.requestHelperContainer()
+	default:
+		return nil, fmt.Errorf("invalid container-type %q", containerType)
 	}
-
-	return s.requestBuildContainer()
 }
 
 func (s *commandExecutor) hasExistingContainer(containerType string, container *types.ContainerJSON) bool {
