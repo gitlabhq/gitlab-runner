@@ -117,7 +117,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 
 func (s *commandExecutor) getContainer(cmd common.ExecutorCommand) (*types.ContainerJSON, error) {
 	if cmd.Predefined {
-		return s.requestPredefinedContainer()
+		return s.requestHelperContainer()
 	}
 
 	return s.requestBuildContainer()
@@ -142,7 +142,7 @@ func (s *commandExecutor) hasExistingContainer(containerType string, container *
 	return false
 }
 
-func (s *commandExecutor) requestPredefinedContainer() (*types.ContainerJSON, error) {
+func (s *commandExecutor) requestHelperContainer() (*types.ContainerJSON, error) {
 	if s.hasExistingContainer(predefinedContainerType, s.helperContainer) {
 		return s.helperContainer, nil
 	}
@@ -281,7 +281,7 @@ func getUIDandGID(
 }
 
 func (s *commandExecutor) executeChown(dockerExec exec.Docker, uid int, gid int) error {
-	c, err := s.requestPredefinedContainer()
+	c, err := s.requestHelperContainer()
 	if err != nil {
 		return fmt.Errorf("requesting new predefined container: %w", err)
 	}
