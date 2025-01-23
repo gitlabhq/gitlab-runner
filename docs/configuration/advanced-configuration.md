@@ -1433,6 +1433,7 @@ For more parameters, see the [documentation for the Kubernetes executor](../exec
 | `image_pull_secrets` | array | An array of items containing the Kubernetes `docker-registry` secret names used to authenticate container images pulling from private registries. |
 | `logs_base_dir` | string | Base directory to be prepended to the generated path to store build logs. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37760) in GitLab Runner 17.2. |
 | `scripts_base_dir` | string | Base directory to be prepended to the generated path to store build scripts. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37760) in GitLab Runner 17.2. |
+| `service_account` | string | Default service account that job/executor pods use to communicate with the Kubernetes API. |
 
 Example:
 
