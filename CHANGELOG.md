@@ -6,21 +6,24 @@
 - Upgrade RUNNER_IMAGES_VERSION to v0.0.3 [!5300](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5300)
 - Image pusher fixes [!5294](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5294)
 
-## v17.8.1 (2025-01-17)
+## v17.8.1 (2025-01-23)
 
 ### Bug fixes
 
-- Upgrade RUNNER_IMAGES_VERSION to v0.0.3 [!5300](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5300)
-- Image pusher fixes [!5294](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5294)
-- Fix runner image missing tag [!5289](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5289)
-- Push the helper image packages to S3 [!5288](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5288)
-- Create copy of aliased helper images, not symlinks [!5287](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5287)
 - Fix runner release bugs [!5286](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5286)
 - Fix Windows image gitlab-runner-helper path [!5302](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5302)
+- Image pusher fixes [!5294](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5294)
+- Push the helper image packages to S3 [!5288](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5288)
+- Upgrade RUNNER_IMAGES_VERSION to v0.0.3 [!5300](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5300)
+- Fix runner image missing tag [!5289](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5289)
+- Create copy of aliased helper images, not symlinks [!5287](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5287)
+- Upgrade RUNNER_IMAGES_VERSION to v0.0.4 [!5305](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5305)
+- Fix Role ARN support with S3 Express buckets [!5291](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5291)
 
 ### Maintenance
 
 - Bump base image version [!5282](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5282)
+- Run ubi images with BUILD_COMMIT_SHA and PARENT_PIPELINE_ID [!5244](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5244)
 
 ## v17.8.0 (2025-01-23)
 
