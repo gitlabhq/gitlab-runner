@@ -92,7 +92,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 			s.BuildLogger.Infoln(fmt.Sprintf("Retrying %s", cmd.Stage))
 		}
 
-		ctr, err := s.getContainer(cmd)
+		ctr, err := s.requestContainer(cmd)
 		if err != nil {
 			return err
 		}
@@ -115,7 +115,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	return runErr
 }
 
-func (s *commandExecutor) getContainer(cmd common.ExecutorCommand) (*types.ContainerJSON, error) {
+func (s *commandExecutor) requestContainer(cmd common.ExecutorCommand) (*types.ContainerJSON, error) {
 	if cmd.Predefined {
 		return s.requestHelperContainer()
 	}
