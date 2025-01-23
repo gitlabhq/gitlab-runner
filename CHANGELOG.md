@@ -1,3 +1,14 @@
+## v17.8.3 (2025-01-23)
+
+### Bug fixes
+
+- Upgrade RUNNER_IMAGES_VERSION to v0.0.4 [!5305](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5305)
+- Fix Role ARN support with S3 Express buckets [!5291](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5291)
+
+### Maintenance
+
+- Run ubi images with BUILD_COMMIT_SHA and PARENT_PIPELINE_ID [!5244](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5244)
+
 ## v17.8.2 (2025-01-23)
 
 ### Bug fixes
