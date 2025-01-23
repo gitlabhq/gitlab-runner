@@ -64,6 +64,22 @@ func mustCreateResourceList(t *testing.T, cpu, memory, ephemeralStorage string) 
 	return resources
 }
 
+func containsLabels(t *testing.T, actual, expected map[string]string) {
+	for key, expectedValue := range expected {
+		actualValue, exists := actual[key]
+		if assert.True(t, exists, "Key %q is missing!", key) {
+			assert.Equal(t, expectedValue, actualValue, "Value for key %q does not match expected value!", key)
+		}
+	}
+}
+
+func notContainsLabels(t *testing.T, actual, unexpected map[string]string) {
+	for key, _ := range unexpected {
+		_, exists := actual[key]
+		assert.False(t, exists, "Key %q is present when it should not be!", key)
+	}
+}
+
 func TestRunTestsWithFeatureFlag(t *testing.T) {
 	tests := map[string]featureFlagTest{
 		"testVolumeMounts":                      testVolumeMountsFeatureFlag,
@@ -3868,12 +3884,13 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Equal(t, map[string]string{
-					"test":    "label",
-					"another": "label",
-					"var":     "sometestvar",
-					"pod":     "runner--project-0-concurrent-0",
-				}, pod.ObjectMeta.Labels)
+				expectedLabels := map[string]string{
+					"test":                      "label",
+					"another":                   "label",
+					"var":                       "sometestvar",
+					"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0",
+				}
+				containsLabels(t, pod.ObjectMeta.Labels, expectedLabels)
 			},
 			Variables: []common.JobVariable{
 				{Key: "test", Value: "sometestvar"},
@@ -3893,18 +3910,81 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Equal(t, map[string]string{
-					"test":     "label",
-					"another":  "newlabel",
-					"var":      "sometestvar",
-					"another2": "sometestvar",
-					"pod":      "runner--project-0-concurrent-0",
-				}, pod.ObjectMeta.Labels)
+				expectedLabels := map[string]string{
+					"test":                      "label",
+					"another":                   "newlabel",
+					"var":                       "sometestvar",
+					"another2":                  "sometestvar",
+					"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0",
+				}
+				containsLabels(t, pod.ObjectMeta.Labels, expectedLabels)
 			},
 			Variables: []common.JobVariable{
 				{Key: "test", Value: "sometestvar"},
 				{Key: "KUBERNETES_POD_LABELS_1", Value: "another=newlabel"},
 				{Key: "KUBERNETES_POD_LABELS_2", Value: "another2=$test"},
+			},
+		},
+		"fails to set or overwrite gitlab-internal labels": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						PodLabels: map[string]string{
+							"another":                             "label",
+							"manager.runner.gitlab.com/foo":       "foo",
+							"MANAGER.runner.gitlab.com/uppercase": "foo",
+							"RuNnEr.gitlab.com/MiXeDcAsE":         "quux",
+						},
+						PodLabelsOverwriteAllowed: ".*",
+					},
+				},
+			},
+			Variables: []common.JobVariable{
+				{Key: "KUBERNETES_POD_LABELS_1", Value: "manager.runner.gitlab.com/bar=bar"},
+				{Key: "KUBERNETES_POD_LABELS_2", Value: "manager.runner.gitlab.com=ohno"},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				notExpectedLabels := map[string]string{
+					"manager.runner.gitlab.com/foo":       "foo",
+					"manager.runner.gitlab.com/bar":       "bar",
+					"manager.runner.gitlab.com":           "ohno",
+					"MANAGER.runner.gitlab.com/uppercase": "foo",
+					"RuNnEr.gitlab.com/MiXeDcAsE":         "quux",
+				}
+				notContainsLabels(t, pod.ObjectMeta.Labels, notExpectedLabels)
+			},
+		},
+		"sets default runner labels on the pod": {
+			RunnerConfig: common.RunnerConfig{
+				Name: "some-runner-name",
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{},
+				},
+				RunnerCredentials: common.RunnerCredentials{
+					Token: "glrt-aaa_cccbbbdddooo2222",
+				},
+			},
+			PrepareFn: func(t *testing.T, _ setupBuildPodTestDef, e *executor) {
+				e.Build.JobInfo.ProjectName = "some-project-name"
+				e.Build.JobInfo.ProjectID = 42
+			},
+			Variables: []common.JobVariable{
+				{Key: "CI_PROJECT_NAMESPACE_ID", Value: "123"},
+				{Key: "CI_PROJECT_NAMESPACE", Value: "some-namespace"},
+				{Key: "CI_PROJECT_ROOT_NAMESPACE", Value: "some-root-namespace"},
+			},
+			VerifyFn: func(t *testing.T, _ setupBuildPodTestDef, pod *api.Pod) {
+				expectedLabels := map[string]string{
+					"project.runner.gitlab.com/id":             "42",
+					"project.runner.gitlab.com/namespace-id":   "123",
+					"project.runner.gitlab.com/name":           "some-project-name",
+					"project.runner.gitlab.com/namespace":      "some-namespace",
+					"project.runner.gitlab.com/root-namespace": "some-root-namespace",
+
+					"manager.runner.gitlab.com/name":     "some-runner-name",
+					"manager.runner.gitlab.com/id-short": "aaa_cccbb",
+				}
+				containsLabels(t, pod.ObjectMeta.Labels, expectedLabels)
 			},
 		},
 		"expands variables for pod annotations": {
@@ -4320,7 +4400,7 @@ func TestSetupBuildPod(t *testing.T) {
 									Name:       "build-80",
 								},
 							},
-							Selector: map[string]string{"pod": "runner--project-0-concurrent-0"},
+							Selector: map[string]string{"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0"},
 							Type:     api.ServiceTypeClusterIP,
 						},
 					},
@@ -4343,7 +4423,7 @@ func TestSetupBuildPod(t *testing.T) {
 									Name:       "proxy-svc-0-84",
 								},
 							},
-							Selector: map[string]string{"pod": "runner--project-0-concurrent-0"},
+							Selector: map[string]string{"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0"},
 							Type:     api.ServiceTypeClusterIP,
 						},
 					},
@@ -4361,7 +4441,7 @@ func TestSetupBuildPod(t *testing.T) {
 									Name:       "proxy-svc-1-85",
 								},
 							},
-							Selector: map[string]string{"pod": "runner--project-0-concurrent-0"},
+							Selector: map[string]string{"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0"},
 							Type:     api.ServiceTypeClusterIP,
 						},
 					},
@@ -4404,7 +4484,7 @@ func TestSetupBuildPod(t *testing.T) {
 				)
 			},
 		},
-		"the services have a selector pointing to the 'pod' label in the pod": {
+		"the services have a selector pointing to the pod label in the pod": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -4434,7 +4514,7 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				for _, service := range e.services {
-					assert.Equal(t, map[string]string{"pod": "runner--project-0-concurrent-0"}, service.Spec.Selector)
+					assert.Equal(t, map[string]string{"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0"}, service.Spec.Selector)
 				}
 			},
 		},
