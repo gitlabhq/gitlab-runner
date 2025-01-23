@@ -207,20 +207,16 @@ rules:
 
   - _The [`FF_WAIT_FOR_POD_TO_BE_REACHABLE` feature flag](../../configuration/feature-flags.md) is enabled._
 
-- <a id="informers"></a>
-  _The `watch` & `list` permission on `pods` are only needed when the Kubernetes
-  executor should use informers to track the build pod's status (and no other
-  feature flag needing these permissions is enabled)_:
+#### Informers
 
-  _GitLab Runner 17.9.0 introduced the usage of Kubernetes informers to track
-  the build pod's changes. This is done, so that the executor can observe those
-  changes faster._
+In GitLab Runner 17.9.0 and later, a Kubernetes informer tracks build pod
+changes. This helps the executor detect the changes more quickly.
 
-  _This needs the `list` & `watch` permissions for `pods`. When the executor
-  starts the build, it checks the Kubernetes API for those permissions. Only if
-  all those permissions are granted, informers will be used. If permissions are
-  missing, this fact will be logged as a warning and the build will continue
-  using the previous mechanism to track the build pod's status & changes._
+The informer requires `list` and `watch` permissions for `pods`. When the executor
+starts the build, it checks the Kubernetes API for the permissions.
+If all permissions are granted, the executor uses an informer.
+If any permission is missing, GitLab Runner logs a warning. The build continues
+and uses the previous mechanism to track the build pod's status and changes.
 
 ## Configuration settings
 
