@@ -2344,10 +2344,6 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 
 					buildtest.SetBuildFeatureFlag(build, ff, ffValue)
 
-					// Will only run this test with FF_USE_INFORMERS enabled, else we are not able to catch force deletes,
-					// evictions, ...
-					buildtest.SetBuildFeatureFlag(build, featureflags.UseInformers, true)
-
 					client := getTestKubeClusterClient(t)
 
 					createdPodNameCh := make(chan string)

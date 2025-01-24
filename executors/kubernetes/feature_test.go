@@ -4,16 +4,23 @@ package kubernetes
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	authzv1 "k8s.io/api/authorization/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	k8sversion "k8s.io/apimachinery/pkg/version"
+	testclient "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestKubeClientFeatureChecker(t *testing.T) {
@@ -164,6 +171,78 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			}
 
 			tt.fn(t, &fc)
+		})
+	}
+}
+
+func TestKubeClientFeatureChecker_ResouceVerbAllowed(t *testing.T) {
+	namespace := "some-namespace"
+	gvr := v1.GroupVersionResource{Group: "blipp.blapp.io", Version: "v1delta5", Resource: "thingamajigs"}
+	verb := "blarg"
+
+	tests := map[string]struct {
+		apiResult *authzv1.SelfSubjectAccessReview
+		apiError  error
+
+		expectedErrorMsg string
+		expectedReason   string
+		expectedAllowed  bool
+	}{
+		"allowed": {
+			apiResult:       &authzv1.SelfSubjectAccessReview{Status: authzv1.SubjectAccessReviewStatus{Allowed: true}},
+			expectedAllowed: true,
+		},
+		"not allowed": {
+			apiResult:      &authzv1.SelfSubjectAccessReview{Status: authzv1.SubjectAccessReviewStatus{Allowed: false}},
+			expectedReason: "not allowed: blarg on thingamajigs",
+		},
+		"denied": {
+			apiResult:      &authzv1.SelfSubjectAccessReview{Status: authzv1.SubjectAccessReviewStatus{Denied: false}},
+			expectedReason: "not allowed: blarg on thingamajigs",
+		},
+		"errors": {
+			apiResult:        &authzv1.SelfSubjectAccessReview{},
+			apiError:         fmt.Errorf("some api error"),
+			expectedErrorMsg: "SelfSubjectAccessReview creation: some api error",
+		},
+		"evaluation error": {
+			apiResult:      &authzv1.SelfSubjectAccessReview{Status: authzv1.SubjectAccessReviewStatus{EvaluationError: "some evaluation error"}},
+			expectedReason: "SelfSubjectAccessReview evaluation error: some evaluation error",
+		},
+		"with reason": {
+			apiResult:      &authzv1.SelfSubjectAccessReview{Status: authzv1.SubjectAccessReviewStatus{Allowed: false, Reason: "some reason"}},
+			expectedReason: "not allowed: blarg on thingamajigs (reason: some reason)",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			fakeClient := testclient.NewSimpleClientset()
+			ctx := context.TODO()
+
+			fakeClient.PrependReactor("create", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
+				creatAction := action.(k8stesting.CreateAction)
+				review := creatAction.GetObject().(*authzv1.SelfSubjectAccessReview)
+
+				assert.Equal(t, namespace, review.Spec.ResourceAttributes.Namespace, "create request for wrong namespace")
+				assert.Equal(t, gvr.Group, review.Spec.ResourceAttributes.Group, "create request for wrong apiGroup")
+				assert.Equal(t, gvr.Version, review.Spec.ResourceAttributes.Version, "create request for wrong apiVersion")
+				assert.Equal(t, gvr.Resource, review.Spec.ResourceAttributes.Resource, "create request for wrong resource name")
+				assert.Equal(t, verb, review.Spec.ResourceAttributes.Verb, "create request for wrong verb")
+
+				return true, test.apiResult, test.apiError
+			})
+
+			featureChecker := &kubeClientFeatureChecker{fakeClient}
+			allowed, reason, err := featureChecker.IsResourceVerbAllowed(ctx, gvr, namespace, verb)
+
+			if test.expectedErrorMsg == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, test.expectedErrorMsg)
+			}
+			assert.Equal(t, test.expectedAllowed, allowed, "allowed")
+			assert.Equal(t, test.expectedReason, reason, "reason")
 		})
 	}
 }

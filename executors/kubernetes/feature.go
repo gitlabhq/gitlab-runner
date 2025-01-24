@@ -1,17 +1,21 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"unicode"
 
 	"github.com/hashicorp/go-version"
+	authzv1 "k8s.io/api/authorization/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 //go:generate mockery --name=featureChecker --inpackage
 type featureChecker interface {
 	IsHostAliasSupported() (bool, error)
+	IsResourceVerbAllowed(context.Context, metav1.GroupVersionResource, string, string) (bool, string, error)
 }
 
 type kubeClientFeatureChecker struct {
@@ -77,4 +81,42 @@ func cleanVersion(version string) string {
 	}
 
 	return version[:nonDigitIndex]
+}
+
+func (c *kubeClientFeatureChecker) IsResourceVerbAllowed(ctx context.Context, gvr metav1.GroupVersionResource, namespace string, verb string) (bool, string, error) {
+	review := &authzv1.SelfSubjectAccessReview{
+		Spec: authzv1.SelfSubjectAccessReviewSpec{
+			ResourceAttributes: &authzv1.ResourceAttributes{
+				Group:     gvr.Group,
+				Version:   gvr.Version,
+				Resource:  gvr.Resource,
+				Namespace: namespace,
+				Verb:      verb,
+			},
+		},
+	}
+
+	// We don't need any RBAC permissions to get our own access review
+	// kubeAPI: ignore
+	res, err := c.kubeClient.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, review, metav1.CreateOptions{})
+	if err != nil {
+		return false, "", fmt.Errorf("SelfSubjectAccessReview creation: %w", err)
+	}
+
+	// EvaluationErrors might not mean denied per se, but we treat it like that, because we can't be sure
+	if ee := res.Status.EvaluationError; ee != "" {
+		return false, "SelfSubjectAccessReview evaluation error: " + ee, nil
+	}
+
+	allowed := res.Status.Allowed && !res.Status.Denied
+
+	if allowed {
+		return true, "", nil
+	}
+
+	reason := fmt.Sprintf("not allowed: %s on %s", verb, gvr.Resource)
+	if r := res.Status.Reason; r != "" {
+		reason += " (reason: " + r + ")"
+	}
+	return false, reason, nil
 }

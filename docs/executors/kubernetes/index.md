@@ -110,10 +110,10 @@ You can either:
 |----------|-------------------------------|
 | events | list, watch (`FF_PRINT_POD_EVENTS=true`) |
 | namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`) |
-| pods | create, delete, get, list (`FF_USE_INFORMERS=true`), watch (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_INFORMERS=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods | create, delete, get, list ([using Informers](#informers)), watch ([using Informers](#informers), `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/attach | create (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), delete (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), patch (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/exec | create, delete, get, patch |
-| pods/log | get (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false, FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods/log | get (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | secrets | create, delete, get, update |
 | serviceaccounts | get |
 | services | create, get |
@@ -134,27 +134,27 @@ rules:
   resources: ["events"]
   verbs:
   - "list"
-  - "watch" # Required when FF_PRINT_POD_EVENTS=true
+  - "watch" # Required when `FF_PRINT_POD_EVENTS=true`
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs:
-  - "create" # Required when kubernetes.NamespacePerJob=true
-  - "delete" # Required when kubernetes.NamespacePerJob=true
+  - "create" # Required when `kubernetes.NamespacePerJob=true`
+  - "delete" # Required when `kubernetes.NamespacePerJob=true`
 - apiGroups: [""]
   resources: ["pods"]
   verbs:
   - "create"
   - "delete"
   - "get"
-  - "list" # Required when FF_USE_INFORMERS=true
-  - "watch" # Required when FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_INFORMERS=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+  - "list" # Required when using Informers (https://docs.gitlab.com/runner/executors/kubernetes/#informers)
+  - "watch" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, using Informers (https://docs.gitlab.com/runner/executors/kubernetes/#informers)
 - apiGroups: [""]
   resources: ["pods/attach"]
   verbs:
-  - "create" # Required when FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
-  - "delete" # Required when FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
-  - "get" # Required when FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
-  - "patch" # Required when FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+  - "create" # Required when `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`
+  - "delete" # Required when `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`
+  - "get" # Required when `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`
+  - "patch" # Required when `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`
 - apiGroups: [""]
   resources: ["pods/exec"]
   verbs:
@@ -165,8 +165,8 @@ rules:
 - apiGroups: [""]
   resources: ["pods/log"]
   verbs:
-  - "get" # Required when FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false, FF_WAIT_FOR_POD_TO_BE_REACHABLE=true
-  - "list" # Required when FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+  - "get" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`
+  - "list" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`
 - apiGroups: [""]
   resources: ["secrets"]
   verbs:
@@ -206,6 +206,17 @@ rules:
   - _The [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` feature flag](../../configuration/feature-flags.md) is disabled when the [`CI_DEBUG_SERVICES` variable](https://docs.gitlab.com/ee/ci/services/#capturing-service-container-logs) is set to `true`._
 
   - _The [`FF_WAIT_FOR_POD_TO_BE_REACHABLE` feature flag](../../configuration/feature-flags.md) is enabled._
+
+#### Informers
+
+In GitLab Runner 17.9.0 and later, a Kubernetes informer tracks build pod
+changes. This helps the executor detect the changes more quickly.
+
+The informer requires `list` and `watch` permissions for `pods`. When the executor
+starts the build, it checks the Kubernetes API for the permissions.
+If all permissions are granted, the executor uses an informer.
+If any permission is missing, GitLab Runner logs a warning. The build continues
+and uses the previous mechanism to track the build pod's status and changes.
 
 ## Configuration settings
 
