@@ -443,7 +443,7 @@ spec:
 
 #### Register GitLab Runner by using a self-signed certificate
 
-To use self-signed certificate with GitLab self-managed, create a secret that
+To use self-signed certificate with GitLab Self-Managed, create a secret that
 contains the CA certificate you used to sign the private certificates.
 
 The name of the secret is then provided as the CA in the Runner spec section:
@@ -468,7 +468,7 @@ oc create secret generic mySecret --from-file=tls.crt=myCert.pem -o yaml
 #### Register GitLab Runner with an external URL that points to an IP address
 
 If the runner cannot match the self-signed certificate with the hostname, you might get an error message.
-This issue occurs when you configure GitLab self-managed to use an IP address (like ###.##.##.##) instead of a hostname:
+This issue occurs when you configure GitLab Self-Managed to use an IP address (like ###.##.##.##) instead of a hostname:
 
 ```shell
 [31;1mERROR: Registering runner... failed               [0;m  [31;1mrunner[0;m=A5abcdEF [31;1mstatus[0;m=couldn't execute POST against https://###.##.##.##/api/v4/runners:
@@ -478,7 +478,7 @@ Post https://###.##.##.##/api/v4/runners: x509: cannot validate certificate for 
 
 To fix this issue:
 
-1. On the GitLab self-managed server, modify the `openssl` to add the IP address to the `subjectAltName` parameter:
+1. On the GitLab Self-Managed server, modify the `openssl` to add the IP address to the `subjectAltName` parameter:
 
    ```shell
    # vim /etc/pki/tls/openssl.cnf

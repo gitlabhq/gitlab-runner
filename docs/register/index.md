@@ -106,7 +106,7 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
    ::EndTabs
 
 1. Enter your GitLab URL:
-   - For runners on GitLab self-managed, use the URL for your GitLab instance. For example,
+   - For runners on GitLab Self-Managed, use the URL for your GitLab instance. For example,
      if your project is hosted on `gitlab.example.com/yourname/yourproject`, your GitLab instance URL is `https://gitlab.example.com`.
    - For runners on GitLab.com, the GitLab instance URL is `https://gitlab.com`.
 1. Enter the runner authentication token.
@@ -267,7 +267,7 @@ To register the runner with a [runner registration token](https://docs.gitlab.co
    ::EndTabs
 
 1. Enter your GitLab URL:
-   - For GitLab self-managed runners, use the URL for your GitLab instance. For example,
+   - For runners on GitLab Self-Managed, use the URL for your GitLab instance. For example,
      if your project is hosted on `gitlab.example.com/yourname/yourproject`, your GitLab instance URL is `https://gitlab.example.com`.
    - For GitLab.com, the GitLab instance URL is `https://gitlab.com`.
 1. Enter the token you obtained to register the runner.

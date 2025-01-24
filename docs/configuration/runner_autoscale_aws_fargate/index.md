@@ -171,7 +171,7 @@ Now install GitLab Runner on the Ubuntu instance.
        cleanup_args = ["--config", "/etc/gitlab-runner/fargate.toml", "custom", "cleanup"]
    ```
 
-1. If you have a self-managed instance with a private CA, add this line:
+1. If you have a GitLab Self-Managed instance with a private CA, add this line:
 
    ```toml
           volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]

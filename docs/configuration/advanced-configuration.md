@@ -1528,7 +1528,7 @@ In GitLab 15.1 and later, the helper image is pulled from the GitLab Container R
 
 To retrieve the base `gitlab-runner-helper` image from the GitLab registry, use a `helper-image` value: `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`.
 
-Self-managed instances also pull the helper image from the GitLab Container Registry on GitLab.com.
+GitLab Self-Managed instances also pull the helper image from the GitLab Container Registry on GitLab.com.
 To check the status of the GitLab Container Registry, see the [GitLab System Status](https://status.gitlab.com/).
 
 ### Override the helper image
