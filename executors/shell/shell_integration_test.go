@@ -495,6 +495,29 @@ func TestBuildWithGitLFSHook(t *testing.T) {
 	})
 }
 
+func TestBuildWithRefLock(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build := newBuild(t, successfulBuild, shell)
+
+		err = buildtest.RunBuild(t, build)
+		assert.NoError(t, err)
+
+		refDir := build.BuildDir + "/.git/refs/remotes/origin/"
+		lockfile := "main.lock"
+		build.JobResponse.AllowGitFetch = true
+		err = os.MkdirAll(refDir, 0755)
+		require.NoError(t, err)
+		err = os.WriteFile(refDir+lockfile, []byte{}, os.ModeSticky)
+		require.NoError(t, err)
+
+		err = buildtest.RunBuild(t, build)
+		assert.NoError(t, err)
+		assert.NoFileExists(t, refDir+lockfile)
+	})
+}
+
 func assertLFSFileDownloaded(t *testing.T, build *common.Build) {
 	lfsFilePath := filepath.Join(build.FullProjectDir(), "files", "lfs", "file_1.lfs")
 	info, err := os.Stat(lfsFilePath)

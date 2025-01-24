@@ -5,6 +5,7 @@ package shells
 import (
 	"context"
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -834,6 +835,8 @@ func TestGitFetchFlags(t *testing.T) {
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "init.defaultBranch", "none").Once()
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "transfer.bundleURI", "true").Once()
+
+					mockWriter.EXPECT().RmFilesRecursive(path.Join(dummyProjectDir, ".git", "refs"), "*.lock").Once()
 
 					if expectedObjectFormat != "sha1" {
 						mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", mock.Anything, "--object-format", expectedObjectFormat).Once()
@@ -2593,6 +2596,7 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 					m.EXPECT().Join("git-template-dir", "config").Return("git-template-dir-config").Once()
 					m.EXPECT().Command("git", "config", "-f", "git-template-dir-config", mock.Anything, mock.Anything)
 					m.EXPECT().RmFile(mock.Anything)
+					m.EXPECT().RmFilesRecursive(path.Join("build-dir", ".git", "refs"), "*.lock").Once()
 					m.EXPECT().Command("git", "init", "build-dir", "--template", "git-template-dir").Once()
 					m.EXPECT().Cd("build-dir").Once()
 
