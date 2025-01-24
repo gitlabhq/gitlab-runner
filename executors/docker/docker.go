@@ -654,6 +654,19 @@ func (e *executor) createContainer(
 	return &inspect, err
 }
 
+// addStepRunnerToPath adds the step-runner's path (stepRunnerBinaryPath) to the specific environment's PATH variable.
+func addStepRunnerToPath(env []string) []string {
+	res := []string{}
+	for _, e := range env {
+		if strings.HasPrefix(e, "PATH=") {
+			res = append(res, e+":"+stepRunnerBinaryPath)
+		} else {
+			res = append(res, e)
+		}
+	}
+	return res
+}
+
 func (e *executor) createContainerConfig(
 	containerType string,
 	imageDefinition common.Image,
@@ -690,10 +703,10 @@ func (e *executor) createContainerConfig(
 		config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
 	}
 
-	// Do not add job variables to the build container environment when using native steps integration. The step-runner
-	// will do this.
 	if containerType == buildContainerType && e.Build.UseNativeSteps() {
-		config.Env = nil
+		// Set the build container's environment to the build IMAGE's environment with the step-runner binary path
+		// appended to PATH.
+		config.Env = addStepRunnerToPath(image.Config.Env)
 	}
 
 	// setting a container's mac-address changed in API version 1.44
