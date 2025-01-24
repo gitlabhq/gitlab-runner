@@ -107,8 +107,8 @@ This is basically the same as adding the proxy to the Docker service above:
    Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
    ```
 
-   To connect GitLab Runner to any internal URLs like a self-managed GitLab
-   instance, set a value for the `NO_PROXY` environment variable.
+   To connect GitLab Runner to any internal URLs, like a GitLab Self-Managed instance,
+   set a value for the `NO_PROXY` environment variable.
 
    ```ini
    [Service]
