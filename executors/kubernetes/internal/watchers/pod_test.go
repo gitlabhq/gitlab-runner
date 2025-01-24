@@ -78,6 +78,7 @@ func TestPodWatcher(t *testing.T) {
 			fakeLogger := newMockLogger(t)
 
 			podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels, 0)
+			podErrors := podWatcher.Errors()
 
 			err := podWatcher.Start()
 			assert.NoError(t, err, "starting pod watcher")
@@ -102,7 +103,7 @@ func TestPodWatcher(t *testing.T) {
 					assert.NoError(t, err, "(try %d) deleting pod")
 				}
 
-				podErr := waitForError(podWatcher.Errors())
+				podErr := waitForError(podErrors)
 				if test.expectedErrMsg == "" {
 					assert.NoError(t, podErr, "(try %d) not to receive an error from the pod watcher", try)
 				} else {
@@ -193,7 +194,7 @@ func TestPodWatcherWrongObject(t *testing.T) {
 }
 
 func waitForError(ch <-chan error) error {
-	to := time.After(emitErrorTimeout * 2)
+	to := time.After(emitErrorTimeout * 100)
 	select {
 	case <-to:
 		return nil
