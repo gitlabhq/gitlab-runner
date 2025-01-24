@@ -130,16 +130,16 @@
         "ubuntu-x86_64": [
             "ubuntu-x86_64-%"
         ],
-        "windows-nanoserver-ltsc2019": [
+        "windows-nanoserver-ltsc2019-x86_64": [
             "x86_64-%-nanoserver1809"
         ],
-        "windows-servercore-ltsc2019": [
+        "windows-servercore-ltsc2019-x86_64": [
             "x86_64-%-servercore1809"
         ],
-        "windows-nanoserver-ltsc2022": [
+        "windows-nanoserver-ltsc2022-x86_64": [
             "x86_64-%-nanoserver21H2"
         ],
-        "windows-servercore-ltsc2022": [
+        "windows-servercore-ltsc2022-x86_64": [
             "x86_64-%-servercore21H2"
         ]
     }

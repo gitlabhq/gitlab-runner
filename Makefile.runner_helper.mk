@@ -84,6 +84,8 @@ prebuilt-helper-images:
 	@find out/helper-images -maxdepth 1 -name "*.tar" | parallel -j$(shell nproc) './ci/prebuilt_helper_image {}'
 
 	@for file in out/helper-images/prebuilt-alpine$(ALPINE_DEFAULT_VERSION)-*.tar.xz; do \
-		target=$$(echo "$${file}" | sed -e 's/'$(ALPINE_DEFAULT_VERSION)'//'); \
-		cp "$${file}" "$${target}"; \
+		if [ -e "$${file}" ]; then \
+			target=$$(echo "$${file}" | sed -e 's/'$(ALPINE_DEFAULT_VERSION)'//'); \
+			cp "$${file}" "$${target}"; \
+		fi; \
 	done
