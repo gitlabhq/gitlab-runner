@@ -2,11 +2,9 @@ package s3v2
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
@@ -24,7 +22,6 @@ import (
 )
 
 const DEFAULT_AWS_S3_ENDPOINT = "https://s3.amazonaws.com"
-const EXPRESS_SUFFIX = "--x-s3"
 
 //go:generate mockery --name=s3Presigner --inpackage
 type s3Presigner interface {
@@ -45,10 +42,6 @@ type s3Client struct {
 	client        *s3.Client
 	presignClient *s3.PresignClient
 	stsEndpoint   string
-}
-
-func isExpressBucket(bucketName string) bool {
-	return strings.HasSuffix(bucketName, EXPRESS_SUFFIX)
 }
 
 type s3ClientOption func(*s3Client)
@@ -109,20 +102,9 @@ func (c *s3Client) PresignURL(ctx context.Context,
 }
 
 func (c *s3Client) generateSessionPolicy(bucketName, objectName string, upload bool) string {
-	actions := []string{"s3:GetObject"}
-
+	action := "s3:GetObject"
 	if upload {
-		actions = []string{"s3:PutObject"}
-	}
-
-	if isExpressBucket(bucketName) {
-		actions = append(actions, "s3express:CreateSession")
-	}
-
-	jsonActions, err := json.Marshal(actions)
-	// This should never happen since the strings are fixed
-	if err != nil {
-		return ""
+		action = "s3:PutObject"
 	}
 
 	policy := fmt.Sprintf(`{
@@ -130,9 +112,9 @@ func (c *s3Client) generateSessionPolicy(bucketName, objectName string, upload b
 		"Statement": [
 			{
 				"Effect": "Allow",
-				"Action": %s,
+				"Action": ["%s"],
 				"Resource": "arn:aws:s3:::%s/%s"
-			}`, jsonActions, bucketName, objectName)
+			}`, action, bucketName, objectName)
 
 	if c.s3Config.EncryptionType() == common.S3EncryptionTypeKms || c.s3Config.EncryptionType() == common.S3EncryptionTypeDsseKms {
 		// Permissions needed for multipart upload: https://repost.aws/knowledge-center/s3-large-file-encryption-kms-key
