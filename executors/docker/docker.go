@@ -631,8 +631,8 @@ func (e *executor) createContainerConfig(
 		}
 	}
 
-	// only allow entrypoint overwriting if steps is not enabled and this is not the build container.
-	if containerType != buildContainerType || !e.Build.UseNativeSteps() {
+	// only allow entrypoint overwriting if steps is not enabled OR this is the helper container.
+	if containerType == predefinedContainerType || !e.Build.UseNativeSteps() {
 		config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
 	}
 
