@@ -33,6 +33,7 @@ type commandExecutor struct {
 	buildContainer                  *types.ContainerJSON
 	lock                            sync.Mutex
 	terminalWaitForContainerTimeout time.Duration
+	stepRunnerContainerOnce         sync.Once
 }
 
 func (s *commandExecutor) getBuildContainer() *types.ContainerJSON {
@@ -85,10 +86,23 @@ func (s *commandExecutor) isUmaskDisabled() bool {
 }
 
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
-	containerType := buildContainerType
 	if cmd.Predefined {
-		containerType = predefinedContainerType
+		// if steps is enabled, run the step-runner container with the helper container. Eventually we can remove the
+		// helper execution path.
+		if s.Build.UseNativeSteps() {
+			var err error
+			s.stepRunnerContainerOnce.Do(func() { err = s.runContainer(stepRunnerContainerType, cmd) })
+			if err != nil {
+				return err
+			}
+		}
+		return s.runContainer(predefinedContainerType, cmd)
+	} else {
+		return s.runContainer(buildContainerType, cmd)
 	}
+}
+
+func (s *commandExecutor) runContainer(containerType string, cmd common.ExecutorCommand) error {
 	maxAttempts := s.Build.GetExecutorJobSectionAttempts()
 
 	var runErr error
@@ -126,6 +140,8 @@ func (s *commandExecutor) requestContainer(containerType string) (*types.Contain
 		return s.requestBuildContainer()
 	case predefinedContainerType:
 		return s.requestHelperContainer()
+	case stepRunnerContainerType:
+		return s.requestStepRunnerContainer()
 	default:
 		return nil, fmt.Errorf("invalid container-type %q", containerType)
 	}
