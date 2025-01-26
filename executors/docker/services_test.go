@@ -68,7 +68,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	e.Build.Runner.Token = "abcdef1234567890"
 	e.Context = context.Background()
 
-	e.helperImageInfo, err = helperimage.Get(common.VERSION, helperimage.Config{
+	e.helperImageInfo, err = helperimage.Get(common.AppVersion.Version, helperimage.Config{
 		OSType:        e.info.OSType,
 		Architecture:  e.info.Architecture,
 		KernelVersion: e.info.KernelVersion,

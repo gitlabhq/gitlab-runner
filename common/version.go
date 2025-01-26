@@ -3,18 +3,30 @@ package common
 import (
 	"fmt"
 	"runtime"
+	"runtime/debug"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/urfave/cli"
 )
 
-var NAME = "gitlab-runner"
-var VERSION = "development version"
-var REVISION = "HEAD"
-var BRANCH = "HEAD"
-var BUILT = "unknown"
+var (
+	NAME     = "gitlab-runner"
+	VERSION  = ""
+	REVISION = ""
+	BRANCH   = "HEAD"
+	BUILT    = ""
+)
 
-var AppVersion AppVersionInfo
+var AppVersion = AppVersionInfo{
+	Name:         NAME,
+	Version:      VERSION,
+	Revision:     REVISION,
+	Branch:       BRANCH,
+	GOVersion:    runtime.Version(),
+	BuiltAt:      BUILT,
+	OS:           runtime.GOOS,
+	Architecture: runtime.GOARCH,
+}
 
 type AppVersionInfo struct {
 	Name         string `json:"name"`
@@ -97,14 +109,28 @@ func (v *AppVersionInfo) NewMetricsCollector() *prometheus.GaugeVec {
 }
 
 func init() {
-	AppVersion = AppVersionInfo{
-		Name:         NAME,
-		Version:      VERSION,
-		Revision:     REVISION,
-		Branch:       BRANCH,
-		GOVersion:    runtime.Version(),
-		BuiltAt:      BUILT,
-		OS:           runtime.GOOS,
-		Architecture: runtime.GOARCH,
+	info, ok := debug.ReadBuildInfo()
+	if ok {
+		if AppVersion.Version == "" {
+			AppVersion.Version = info.Main.Version
+		}
+
+		for _, setting := range info.Settings {
+			switch {
+			case setting.Key == "vcs.revision" && AppVersion.Revision == "" && len(setting.Value) >= 8:
+				AppVersion.Revision = setting.Value[:8]
+
+			case setting.Key == "vcs.time" && AppVersion.BuiltAt == "":
+				AppVersion.BuiltAt = setting.Value
+			}
+		}
+	}
+
+	if AppVersion.Version == "" || AppVersion.Version == "(devel)" {
+		AppVersion.Version = "development version"
+	}
+
+	if AppVersion.Revision == "" {
+		AppVersion.Revision = "HEAD"
 	}
 }

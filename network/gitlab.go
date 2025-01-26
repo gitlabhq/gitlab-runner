@@ -94,9 +94,9 @@ func (n *GitLabClient) ExecutorSupportsNativeSteps(config common.RunnerConfig) b
 
 func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.VersionInfo {
 	info := common.VersionInfo{
-		Name:         common.NAME,
-		Version:      common.VERSION,
-		Revision:     common.REVISION,
+		Name:         common.AppVersion.Name,
+		Version:      common.AppVersion.Version,
+		Revision:     common.AppVersion.Revision,
 		Platform:     runtime.GOOS,
 		Architecture: runtime.GOARCH,
 		Executor:     config.Executor,

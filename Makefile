@@ -4,7 +4,6 @@ export PACKAGE_NAME ?= $(NAME)
 export VERSION := $(shell ./ci/version)
 REVISION := $(shell git rev-parse --short=8 HEAD || echo unknown)
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
-BUILT := $(shell date -u +%Y-%m-%dT%H:%M:%S%z)
 export TESTFLAGS ?= -cover
 
 LATEST_STABLE_TAG := $(shell git -c versionsort.prereleaseSuffix="-rc" -c versionsort.prereleaseSuffix="-RC" tag -l "v*.*.*" | sort -rV | awk '!/rc/' | head -n 1)
@@ -33,7 +32,6 @@ TARGET_DIR := $(BUILD_DIR)/out
 export MAIN_PACKAGE ?= gitlab.com/gitlab-org/gitlab-runner
 
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(APP_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
-              -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) \
               -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH) \
               -w
 
