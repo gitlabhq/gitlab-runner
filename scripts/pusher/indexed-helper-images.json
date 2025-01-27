@@ -1,0 +1,72 @@
+{
+    "dir": "../../out/helper-images/",
+    "export": "../../out/release_artifacts/",
+    "indices": [
+        {
+            "tags": [
+                "ubuntu-%"
+            ],
+            "components": [
+                "ubuntu-arm64",
+                "ubuntu-arm",
+                "ubuntu-ppc64le",
+                "ubuntu-riscv64",
+                "ubuntu-s390x",
+                "ubuntu-x86_64"
+            ]
+        },
+        {
+            "tags": [
+                "alpine3.18-%",
+                "%"
+            ],
+            "components": [
+                "alpine3.18-arm64",
+                "alpine3.18-arm",
+                "alpine3.18-ppc64le",
+                "alpine3.18-s390x",
+                "alpine3.18-x86_64"
+            ]
+        }
+    ],
+    "default": {
+        "alpine3.18-arm64": [
+            "alpine3.18-arm64-%",
+            "arm64-%"
+        ],
+        "alpine3.18-arm": [
+            "alpine3.18-arm-%",
+            "arm-%"
+        ],
+        "alpine3.18-ppc64le": [
+            "alpine3.18-ppc64le-%",
+            "ppc64le-%"
+        ],
+        "alpine3.18-s390x": [
+            "alpine3.18-s390x-%",
+            "s390x-%"
+        ],
+        "alpine3.18-x86_64": [
+            "alpine3.18-x86_64-%",
+            "x86_64-%"
+        ],
+        "ubuntu-arm64": [
+            "ubuntu-arm64-%"
+        ],
+        "ubuntu-arm": [
+            "ubuntu-arm-%"
+        ],
+        "ubuntu-ppc64le": [
+            "ubuntu-ppc64le-%"
+        ],
+        "ubuntu-riscv64": [
+            "ubuntu-riscv64-%"
+        ],
+        "ubuntu-s390x": [
+            "ubuntu-s390x-%"
+        ],
+        "ubuntu-x86_64": [
+            "ubuntu-x86_64-%"
+        ]
+    }
+}
