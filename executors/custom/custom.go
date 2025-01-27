@@ -78,9 +78,10 @@ func (c *ConfigExecOutput) InjectInto(executor *executor) {
 type executor struct {
 	executors.AbstractExecutor
 
-	config          *config
-	tempDir         string
-	jobResponseFile string
+	config            *config
+	tempDir           string
+	jobResponseFile   string
+	buildExitCodeFile string
 
 	driverInfo *api.DriverInfo
 
@@ -104,6 +105,8 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	if err != nil {
 		return err
 	}
+
+	e.buildExitCodeFile = filepath.Join(e.tempDir, "build_exit_code")
 
 	err = e.dynamicConfig()
 	if err != nil {
@@ -262,7 +265,8 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 	}
 
 	options := command.Options{
-		JobResponseFile: e.jobResponseFile,
+		JobResponseFile:   e.jobResponseFile,
+		BuildExitCodeFile: e.buildExitCodeFile,
 	}
 
 	return commandFactory(ctx, opts.executable, opts.args, cmdOpts, options)

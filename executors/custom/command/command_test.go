@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
@@ -63,6 +64,7 @@ func TestCommand_Run(t *testing.T) {
 		expectedError     string
 		expectedErrorType interface{}
 		expectedExitCode  int
+		options           Options
 	}{
 		"error on cmd start()": {
 			cmdStartErr:   errors.New("test-error"),
@@ -93,6 +95,45 @@ func TestCommand_Run(t *testing.T) {
 			process:       &os.Process{Pid: 1234},
 			expectedError: testErr.Error(),
 		},
+		"command ends with invalid build failure file": {
+			cmdWaitErr:  &exec.ExitError{ProcessState: &os.ProcessState{}},
+			getExitCode: func(err *exec.ExitError) int { return BuildFailureExitCode },
+			expectedError: "unknown Custom executor executable exit code 2; " +
+				"executable execution terminated with: exit status 0",
+			expectedErrorType: &ErrUnknownFailure{},
+			options: func() Options {
+				filename := t.TempDir() + "/invalid"
+				err := os.WriteFile(filename, []byte("invalid"), 0o600)
+				require.NoError(t, err)
+				return Options{BuildExitCodeFile: filename}
+			}(),
+		},
+		"command ends with build failure file": {
+			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
+			getExitCode:       func(err *exec.ExitError) int { return BuildFailureExitCode },
+			expectedError:     "exit status 42",
+			expectedErrorType: &common.BuildError{},
+			expectedExitCode:  42,
+			options: func() Options {
+				filename := t.TempDir() + "/valid"
+				err := os.WriteFile(filename, []byte("42"), 0o600)
+				require.NoError(t, err)
+				return Options{BuildExitCodeFile: filename}
+			}(),
+		},
+		"additional information ignored": {
+			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
+			getExitCode:       func(err *exec.ExitError) int { return BuildFailureExitCode },
+			expectedError:     "exit status 42",
+			expectedErrorType: &common.BuildError{},
+			expectedExitCode:  42,
+			options: func() Options {
+				filename := t.TempDir() + "/valid"
+				err := os.WriteFile(filename, []byte("42\n\nTesting..."), 0o600)
+				require.NoError(t, err)
+				return Options{BuildExitCodeFile: filename}
+			}(),
+		},
 	}
 
 	for testName, tt := range tests {
@@ -107,7 +148,7 @@ func TestCommand_Run(t *testing.T) {
 				ForceKillTimeout:    100 * time.Millisecond,
 			}
 
-			commanderMock, processKillWaiterMock, c, cleanup := newCommand(ctx, t, "exec", cmdOpts, Options{})
+			commanderMock, processKillWaiterMock, c, cleanup := newCommand(ctx, t, "exec", cmdOpts, tt.options)
 			defer cleanup()
 
 			commanderMock.On("Start").
