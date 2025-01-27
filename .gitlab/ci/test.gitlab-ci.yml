@@ -194,8 +194,6 @@ fuzz variable mask:
   - 'prepare done'
   script:
   # pre-pull windows images before starting tests
-  - docker pull registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.7.1-${WINDOWS_VERSION}
-  - docker tag registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.7.1-${WINDOWS_VERSION} registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest-${WINDOWS_VERSION}
   - docker pull registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0
   - docker network create -d "nat" test-network
   - docker network rm test-network
@@ -248,12 +246,7 @@ windows 1809 integration tests:
   needs:
   - 'clone test repo'
   - 'prepare done'
-  - job: 'development servercore1809 helper docker images'
-    optional: true
-  - job: 'bleeding edge servercore1809 helper docker images'
-    optional: true
-  - job: 'stable servercore1809 helper docker images'
-    optional: true
+  - 'prebuilt helper images windows 2019'
 
 windows 21H2 integration tests:
   extends:
@@ -263,9 +256,4 @@ windows 21H2 integration tests:
   needs:
   - 'clone test repo'
   - 'prepare done'
-  - job: 'development servercore21H2 helper docker images'
-    optional: true
-  - job: 'bleeding edge servercore21H2 helper docker images'
-    optional: true
-  - job: 'stable servercore21H2 helper docker images'
-    optional: true
+  - 'prebuilt helper images windows 2022'

@@ -32,6 +32,8 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 		}
 	}
 
+	prebuilt := fmt.Sprintf("prebuilt-%s-%s", cfg.Flavor, arch)
+
 	// alpine is a special case: we don't add the flavor to the tag name
 	// for backwards compatibility purposes. It existed before flavors were
 	// introduced.
@@ -54,14 +56,15 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 	if shell == shells.SNPwsh {
 		cmd = getPowerShellCmd(shell)
 		tag = fmt.Sprintf("%s-%s", tag, shell)
+		prebuilt += "-" + shell
 	}
 
 	return Info{
-		Architecture:            arch,
-		Name:                    GitLabRegistryName,
-		Tag:                     tag,
-		IsSupportingLocalImport: true,
-		Cmd:                     cmd,
+		Architecture: arch,
+		Name:         GitLabRegistryName,
+		Tag:          tag,
+		Cmd:          cmd,
+		Prebuilt:     prebuilt,
 	}, nil
 }
 

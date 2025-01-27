@@ -9,9 +9,10 @@ import (
 	"io"
 	"net"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -31,6 +32,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/prebuilt"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/user"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
@@ -1715,95 +1717,60 @@ func TestHelperImageRegistry(t *testing.T) {
 }
 
 func TestLocalHelperImage(t *testing.T) {
-	// Docker Windows doesn't support docker import, only docker load which we
-	// do not yet support
-	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26678
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
-
-	helperImage := fmt.Sprintf("%s:%s", helperimage.GitLabRegistryName, "localimageimport")
-	helperImageInfo := helperimage.Info{
-		Architecture:            "x86_64",
-		Name:                    helperimage.GitLabRegistryName,
-		Tag:                     "localimageimport",
-		IsSupportingLocalImport: true,
+	imageName := func(prefix, suffix string) string {
+		return fmt.Sprintf("%s:%s%s%s", helperimage.GitLabRegistryName, prefix, "x86_64-latest", suffix)
 	}
 
-	cleanupFn := createFakePrebuiltImages(t, helperImageInfo.Architecture)
-	defer cleanupFn()
+	createFakePrebuiltImages(t, "x86_64")
 
 	tests := map[string]struct {
 		jobVariables     common.JobVariables
-		helperImageInfo  helperimage.Info
-		imageFlavor      string
-		shell            string
+		config           helperimage.Config
 		clientAssertions func(*docker.MockClient)
 		expectedImage    *types.ImageInspect
 	}{
-		"doesn't support local import": {
-			helperImageInfo: helperimage.Info{
-				Architecture:            "x86_64",
-				Name:                    "nosupport",
-				Tag:                     "localimageimport",
-				IsSupportingLocalImport: false,
+		"docker import using registry.gitlab.com name": {
+			config: helperimage.Config{
+				Architecture: "amd64",
+				OSType:       osTypeLinux,
 			},
-			clientAssertions: func(c *docker.MockClient) {},
-			expectedImage:    nil,
-		},
-		"Docker import using registry.gitlab.com name": {
-			helperImageInfo: helperImageInfo,
 			clientAssertions: func(c *docker.MockClient) {
 				c.On(
 					"ImageImportBlocking",
 					mock.Anything,
 					mock.Anything,
 					helperimage.GitLabRegistryName,
-					mock.Anything,
-				).Return(nil)
-
-				imageInspect := types.ImageInspect{
-					RepoTags: []string{
-						helperImage,
-					},
-				}
-
-				c.On(
-					"ImageInspectWithRaw",
-					mock.Anything,
-					helperImage,
-				).Return(imageInspect, []byte{}, nil)
-			},
-			expectedImage: &types.ImageInspect{
-				RepoTags: []string{
-					helperImage,
-				},
-			},
-		},
-		"entrypoint added": {
-			helperImageInfo: helperImageInfo,
-			clientAssertions: func(c *docker.MockClient) {
-				c.On(
-					"ImageImportBlocking",
-					mock.Anything,
-					mock.Anything,
-					mock.Anything,
 					types.ImageImportOptions{
-						Tag: "localimageimport",
+						Tag: "x86_64-latest",
 						Changes: []string{
 							`ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`,
 						},
 					},
 				).Return(nil)
 
+				imageInspect := types.ImageInspect{
+					RepoTags: []string{
+						imageName("", ""),
+					},
+				}
+
 				c.On(
 					"ImageInspectWithRaw",
 					mock.Anything,
-					mock.Anything,
-				).Return(types.ImageInspect{}, []byte{}, nil)
+					imageName("", ""),
+				).Return(imageInspect, []byte{}, nil)
 			},
-			expectedImage: &types.ImageInspect{},
+			expectedImage: &types.ImageInspect{
+				RepoTags: []string{
+					imageName("", ""),
+				},
+			},
 		},
-		"nil is returned if error on import": {
-			helperImageInfo: helperImageInfo,
+		"docker import nil is returned if error": {
+			config: helperimage.Config{
+				Architecture: "amd64",
+				OSType:       osTypeLinux,
+			},
 			clientAssertions: func(c *docker.MockClient) {
 				c.On(
 					"ImageImportBlocking",
@@ -1815,8 +1782,11 @@ func TestLocalHelperImage(t *testing.T) {
 			},
 			expectedImage: nil,
 		},
-		"nil is returned if error on inspect": {
-			helperImageInfo: helperImageInfo,
+		"docker import nil is returned if error on inspect": {
+			config: helperimage.Config{
+				Architecture: "amd64",
+				OSType:       osTypeLinux,
+			},
 			clientAssertions: func(c *docker.MockClient) {
 				c.On(
 					"ImageImportBlocking",
@@ -1834,9 +1804,12 @@ func TestLocalHelperImage(t *testing.T) {
 			},
 			expectedImage: nil,
 		},
-		"Powershell image is used when shell is pwsh": {
-			helperImageInfo: helperImageInfo,
-			shell:           shells.SNPwsh,
+		"powershell image is used when shell is pwsh": {
+			config: helperimage.Config{
+				Architecture: "amd64",
+				OSType:       osTypeLinux,
+				Shell:        shells.SNPwsh,
+			},
 			clientAssertions: func(c *docker.MockClient) {
 				c.On(
 					"ImageImportBlocking",
@@ -1846,7 +1819,7 @@ func TestLocalHelperImage(t *testing.T) {
 							assert.Equal(
 								t,
 								"prebuilt-alpine-x86_64-pwsh.tar.xz",
-								path.Base((source.Source.(*os.File)).Name()),
+								filepath.Base((source.Source.(*os.File)).Name()),
 							)
 					}),
 					helperimage.GitLabRegistryName,
@@ -1855,26 +1828,29 @@ func TestLocalHelperImage(t *testing.T) {
 
 				imageInspect := types.ImageInspect{
 					RepoTags: []string{
-						helperImage,
+						imageName("", "-pwsh"),
 					},
 				}
 
 				c.On(
 					"ImageInspectWithRaw",
 					mock.Anything,
-					helperImage,
+					imageName("", "-pwsh"),
 				).Return(imageInspect, []byte{}, nil)
 			},
 			expectedImage: &types.ImageInspect{
 				RepoTags: []string{
-					helperImage,
+					imageName("", "-pwsh"),
 				},
 			},
 		},
-		"Powershell image is used when shell is pwsh and flavor ubuntu": {
-			helperImageInfo: helperImageInfo,
-			imageFlavor:     "ubuntu",
-			shell:           shells.SNPwsh,
+		"powershell image is used when shell is pwsh and flavor ubuntu": {
+			config: helperimage.Config{
+				Architecture: "amd64",
+				OSType:       osTypeLinux,
+				Flavor:       "ubuntu",
+				Shell:        shells.SNPwsh,
+			},
 			clientAssertions: func(c *docker.MockClient) {
 				c.On(
 					"ImageImportBlocking",
@@ -1884,7 +1860,7 @@ func TestLocalHelperImage(t *testing.T) {
 							assert.Equal(
 								t,
 								"prebuilt-ubuntu-x86_64-pwsh.tar.xz",
-								path.Base((source.Source.(*os.File)).Name()),
+								filepath.Base((source.Source.(*os.File)).Name()),
 							)
 					}),
 					helperimage.GitLabRegistryName,
@@ -1893,19 +1869,58 @@ func TestLocalHelperImage(t *testing.T) {
 
 				imageInspect := types.ImageInspect{
 					RepoTags: []string{
-						helperImage,
+						imageName("ubuntu-", "-pwsh"),
 					},
 				}
 
 				c.On(
 					"ImageInspectWithRaw",
 					mock.Anything,
-					helperImage,
+					imageName("ubuntu-", "-pwsh"),
 				).Return(imageInspect, []byte{}, nil)
 			},
 			expectedImage: &types.ImageInspect{
 				RepoTags: []string{
-					helperImage,
+					imageName("ubuntu-", "-pwsh"),
+				},
+			},
+		},
+		"docker load docker image": {
+			config: helperimage.Config{
+				Architecture: "amd64",
+				OSType:       osTypeLinux,
+				Flavor:       "ubuntu",
+			},
+			clientAssertions: func(c *docker.MockClient) {
+				c.On(
+					"ImageLoad",
+					mock.Anything,
+					mock.Anything,
+					true,
+				).Return(types.ImageLoadResponse{JSON: true, Body: io.NopCloser(strings.NewReader(`{"stream": "Loaded image ID: 1234"}`))}, nil)
+
+				c.On(
+					"ImageTag",
+					mock.Anything,
+					"1234",
+					imageName("ubuntu-", ""),
+				).Return(nil)
+
+				imageInspect := types.ImageInspect{
+					RepoTags: []string{
+						imageName("ubuntu-", ""),
+					},
+				}
+
+				c.On(
+					"ImageInspectWithRaw",
+					mock.Anything,
+					imageName("ubuntu-", ""),
+				).Return(imageInspect, []byte{}, nil)
+			},
+			expectedImage: &types.ImageInspect{
+				RepoTags: []string{
+					imageName("ubuntu-", ""),
 				},
 			},
 		},
@@ -1915,6 +1930,9 @@ func TestLocalHelperImage(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			c := new(docker.MockClient)
 			defer c.AssertExpectations(t)
+
+			info, err := helperimage.Get("", tt.config)
+			require.NoError(t, err)
 
 			e := &executor{
 				AbstractExecutor: executors.AbstractExecutor{
@@ -1927,15 +1945,15 @@ func TestLocalHelperImage(t *testing.T) {
 
 					Config: common.RunnerConfig{
 						RunnerSettings: common.RunnerSettings{
-							Shell: tt.shell,
+							Shell: tt.config.Shell,
 							Docker: &common.DockerConfig{
-								HelperImageFlavor: tt.imageFlavor,
+								HelperImageFlavor: tt.config.Flavor,
 							},
 						},
 					},
 				},
 				client:          c,
-				helperImageInfo: tt.helperImageInfo,
+				helperImageInfo: info,
 			}
 
 			tt.clientAssertions(c)
@@ -1946,25 +1964,27 @@ func TestLocalHelperImage(t *testing.T) {
 	}
 }
 
-func createFakePrebuiltImages(t *testing.T, architecture string) func() {
+func createFakePrebuiltImages(t *testing.T, architecture string) {
+	t.Helper()
+
 	// Create fake image files so that tests do not need helper images built
 	tempImgDir := t.TempDir()
 
-	prevPrebuiltImagesPaths := PrebuiltImagesPaths
-	PrebuiltImagesPaths = []string{tempImgDir}
+	prevPrebuiltImagesPaths := prebuilt.PrebuiltImagesPaths
+	t.Cleanup(func() {
+		prebuilt.PrebuiltImagesPaths = prevPrebuiltImagesPaths
+	})
+
+	prebuilt.PrebuiltImagesPaths = []string{tempImgDir}
 	for _, fakeImgName := range []string{
 		fmt.Sprintf("prebuilt-alpine-%s.tar.xz", architecture),
 		fmt.Sprintf("prebuilt-alpine-%s-pwsh.tar.xz", architecture),
 		fmt.Sprintf("prebuilt-ubuntu-%s.tar.xz", architecture),
 		fmt.Sprintf("prebuilt-ubuntu-%s-pwsh.tar.xz", architecture),
+		fmt.Sprintf("prebuilt-ubuntu-%s.docker.tar.zst", architecture),
+		fmt.Sprintf("prebuilt-windows-nanoserver-ltsc2019-%s.docker.tar.zst", architecture),
 	} {
-		fakeLocalImage, err := os.Create(path.Join(tempImgDir, fakeImgName))
-		require.NoError(t, err)
-		fakeLocalImage.Close()
-	}
-
-	return func() {
-		PrebuiltImagesPaths = prevPrebuiltImagesPaths
+		require.NoError(t, os.WriteFile(filepath.Join(tempImgDir, fakeImgName), nil, 0666))
 	}
 }
 

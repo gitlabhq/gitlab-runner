@@ -132,7 +132,7 @@ target "windows" {
     DST_DIR = "/Program Files/gitlab-runner-helper"
   }
 
-  output = ["type=oci,dest=./../../out/helper-images/windows-${replace(version, ":", "-")}.tar,tar=true"]
+  output = ["type=oci,dest=./../../out/helper-images/windows-${replace(version, ":", "-")}-x86_64.tar,tar=true"]
 }
 
 # Used for local testing, creates the gitlab-runner-helper:local image in the user's current docker context

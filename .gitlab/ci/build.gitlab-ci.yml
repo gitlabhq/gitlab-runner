@@ -42,6 +42,24 @@ prebuilt helper images:
     - out/helper-images/*.tar.xz
     expire_in: 7d
 
+prebuilt helper images windows 2019:
+  tags:
+    - !reference [.instance-2xlarge]
+  extends:
+  - prebuilt helper images
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
+  needs:
+    - 'helper images: [windows-nanoserver-ltsc2019 windows-servercore-ltsc2019]'
+
+prebuilt helper images windows 2022:
+  tags:
+    - !reference [.instance-2xlarge]
+  extends:
+  - prebuilt helper images
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
+  needs:
+    - 'helper images: [windows-nanoserver-ltsc2022 windows-servercore-ltsc2022]'
+
 runner images:
   tags:
     - !reference [.instance-2xlarge]

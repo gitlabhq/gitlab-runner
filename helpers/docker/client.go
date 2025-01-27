@@ -26,6 +26,8 @@ type Client interface {
 		ref string,
 		options types.ImageImportOptions,
 	) error
+	ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error)
+	ImageTag(ctx context.Context, source string, target string) error
 
 	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
 	ContainerCreate(

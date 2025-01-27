@@ -2,10 +2,6 @@
 
 IMAGE=$1
 
-if echo "$IMAGE" | grep -q "windows"; then
-	exit 0
-fi
-
 if echo "$IMAGE" | grep -q "prebuilt-"; then
 	exit 0
 fi
@@ -24,6 +20,15 @@ prebuilt=$(dirname "$IMAGE")/prebuilt-$(basename "$IMAGE")
 
 rm -f "${archive}"
 skopeo copy oci:"out/helper-images/${dir}" docker-archive:"${archive}"
+
+if echo "$IMAGE" | grep -q "windows"; then
+	prebuilt="$(dirname "$IMAGE")/$(basename "${prebuilt}" .tar).docker.tar.zst"
+	rm -f "${prebuilt}"
+	time 7z a -mx9 -tzstd "${prebuilt}" "${archive}"
+	rm "${archive}"
+
+	exit 0
+fi
 
 docker export -o "$prebuilt" "$(docker create "$(docker load <"${archive}" | grep "Loaded image ID:" | awk '{print $4}')")"
 rm -rf "out/helper-images/${dir}"

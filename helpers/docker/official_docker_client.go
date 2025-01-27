@@ -283,6 +283,17 @@ func (c *officialDockerClient) Info(ctx context.Context) (system.Info, error) {
 	return info, wrapError("Info", err, started)
 }
 
+func (c *officialDockerClient) ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error) {
+	started := time.Now()
+	resp, err := c.client.ImageLoad(ctx, input, quiet)
+	return resp, wrapError("ImageLoad", err, started)
+}
+
+func (c *officialDockerClient) ImageTag(ctx context.Context, source string, target string) error {
+	started := time.Now()
+	return wrapError("ImageTag", c.client.ImageTag(ctx, source, target), started)
+}
+
 func (c *officialDockerClient) ImageImportBlocking(
 	ctx context.Context,
 	source types.ImageImportSource,
