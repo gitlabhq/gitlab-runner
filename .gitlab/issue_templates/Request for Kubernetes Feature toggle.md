@@ -17,4 +17,5 @@
 /label ~"devops::verify"
 /label ~"group::runner"
 /label ~"section::ci"
-/label ~"Runner::Kubernetes Dogfooding"
+/label ~"Runner Kubernetes Dogfooding"
+/label ~"Runner Kubernetes Dogfooding::Feature Toggle"
