@@ -314,7 +314,7 @@ func (e *executor) createService(
 	}
 
 	serviceSlug := strings.ReplaceAll(service, "/", "__")
-	containerName := fmt.Sprintf("%s-%s-%d", e.getProjectUniqRandomizedName(), serviceSlug, serviceIndex)
+	containerName := e.makeContainerName(fmt.Sprintf("%s-%d", serviceSlug, serviceIndex))
 
 	// this will fail potentially some builds if there's name collision
 	_ = e.removeContainer(e.Context, containerName)
@@ -478,6 +478,18 @@ func (e *executor) getProjectUniqRandomizedName() string {
 	return e.projectUniqRandomizedName
 }
 
+// Build and predefined container names are comprised of:
+// - A runner project scoped ID (runner-<description>-project-<project_id>-concurrent-<concurrent>)
+// - A unique randomized ID for each execution
+// - The container's type (build, predefined)
+//
+// For example: runner-linux-project-123-concurrent-2-0a1b2c3d-predefined
+//
+// A container of the same type is created _once_ per execution and re-used.
+func (e *executor) makeContainerName(suffix string) string {
+	return e.getProjectUniqRandomizedName() + "-" + suffix
+}
+
 func (e *executor) createBuildNetwork() error {
 	if e.networksManager == nil {
 		return errNetworksManagerUndefined
@@ -547,15 +559,7 @@ func (e *executor) createContainer(
 		hostname = e.Build.ProjectUniqueName()
 	}
 
-	// Build and predefined container names are comprised of:
-	// - A runner project scoped ID (runner-<description>-project-<project_id>-concurrent-<concurrent>)
-	// - A unique randomized ID for each execution
-	// - The container's type (build, predefined)
-	//
-	// For example: runner-linux-project-123-concurrent-2-0a1b2c3d-predefined
-	//
-	// A container of the same type is created _once_ per execution and re-used.
-	containerName := e.getProjectUniqRandomizedName() + "-" + containerType
+	containerName := e.makeContainerName(containerType)
 
 	config, err := e.createContainerConfig(containerType, imageDefinition, image.ID, hostname, cmd)
 	if err != nil {
