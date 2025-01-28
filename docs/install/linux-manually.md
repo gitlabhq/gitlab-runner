@@ -78,7 +78,7 @@ curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/
    For example, for CentOS or Red Hat Enterprise Linux:
 
    ```shell
-   rpm -i gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
+   dnf install -y gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
    ```
 
 1. [Register a runner](../register/index.md)
@@ -96,7 +96,7 @@ dpkg -i gitlab-runner_<arch>.deb
 For example, for CentOS or Red Hat Enterprise Linux:
 
 ```shell
-rpm -Uvh gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
+dnf install -y gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
 ```
 
 ## Using binary file
