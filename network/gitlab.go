@@ -992,7 +992,7 @@ func logResponseDetails(logger *logrus.Entry, res *http.Response, withBody bool)
 		fields["body"] = string(b)
 	}
 
-	logger.WithFields(fields).Info("received response")
+	logger.WithFields(fields).Warn("received response")
 }
 
 func closeWithLogging(log logrus.FieldLogger, c io.Closer, name string) {

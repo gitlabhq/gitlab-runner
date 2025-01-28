@@ -2383,7 +2383,7 @@ func TestArtifactsUpload(t *testing.T) {
 	}
 
 	isResponseBodyLog := func(t *testing.T, l *logrus.Entry) {
-		isLogMessage(t, l, "received response", logrus.InfoLevel)
+		isLogMessage(t, l, "received response", logrus.WarnLevel)
 		assert.Contains(t, l.Data, "body")
 		assert.Contains(t, l.Data, "header[Content-Length]")
 		assert.Contains(t, l.Data, "header[Date]")
