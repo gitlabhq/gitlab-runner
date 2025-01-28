@@ -89,8 +89,8 @@ func Test_StepsIntegration(t *testing.T) {
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",
 						Docker: &common.DockerConfig{
-							Image:      "registry.gitlab.com/gitlab-org/step-runner:v0",
-							PullPolicy: common.StringOrArray{common.PullPolicyAlways},
+							Image:      "fedora:latest",
+							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 							Privileged: true,
 						},
 					},
