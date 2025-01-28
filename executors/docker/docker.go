@@ -60,8 +60,6 @@ const (
 
 const ServiceLogOutputLimit = 64 * 1024
 
-var useInit = true
-
 const (
 	labelServiceType = "service"
 	labelWaitType    = "wait"
@@ -321,14 +319,9 @@ func (e *executor) createService(
 
 	config := e.createServiceContainerConfig(service, version, serviceImage.ID, definition)
 
-	hostConfig, err := e.createHostConfigForService()
+	hostConfig, err := e.createHostConfigForService(e.isInPrivilegedServiceList(definition))
 	if err != nil {
 		return nil, err
-	}
-
-	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedServiceList(definition)
-	if e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
-		hostConfig.Init = &useInit
 	}
 
 	platform := platformForImage(serviceImage, definition.ExecutorOptions)
@@ -363,15 +356,22 @@ func platformForImage(image *types.ImageInspect, opts common.ImageExecutorOption
 	}
 }
 
-func (e *executor) createHostConfigForService() (*container.HostConfig, error) {
+func (e *executor) createHostConfigForService(imageIsPrivileged bool) (*container.HostConfig, error) {
+	nanoCPUs, err := e.Config.Docker.GetServiceNanoCPUs()
+	if err != nil {
+		return nil, fmt.Errorf("service nano cpus: %w", err)
+	}
+
 	privileged := e.Config.Docker.Privileged
 	if e.Config.Docker.ServicesPrivileged != nil {
 		privileged = *e.Config.Docker.ServicesPrivileged
 	}
+	privileged = privileged && imageIsPrivileged
 
-	nanoCPUs, err := e.Config.Docker.GetServiceNanoCPUs()
-	if err != nil {
-		return nil, fmt.Errorf("service nano cpus: %w", err)
+	var useInit *bool
+	if e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
+		yes := true
+		useInit = &yes
 	}
 
 	return &container.HostConfig{
@@ -399,6 +399,7 @@ func (e *executor) createHostConfigForService() (*container.HostConfig, error) {
 		LogConfig: container.LogConfig{
 			Type: "json-file",
 		},
+		Init: useInit,
 	}, nil
 }
 
@@ -566,14 +567,9 @@ func (e *executor) createContainer(
 		return nil, fmt.Errorf("failed to create container configuration: %w", err)
 	}
 
-	hostConfig, err := e.createHostConfig()
+	hostConfig, err := e.createHostConfig(containerType == buildContainerType, e.isInPrivilegedImageList(imageDefinition))
 	if err != nil {
 		return nil, err
-	}
-	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedImageList(imageDefinition)
-
-	if containerType == buildContainerType && e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
-		hostConfig.Init = &useInit
 	}
 
 	aliases := []string{"build", containerName}
@@ -670,7 +666,7 @@ func (e *executor) getBuildContainerUser(imageDefinition common.Image) (string, 
 	return user, nil
 }
 
-func (e *executor) createHostConfig() (*container.HostConfig, error) {
+func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetNanoCPUs()
 	if err != nil {
 		return nil, err
@@ -685,6 +681,12 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 	ulimits, err := e.Config.Docker.GetUlimits()
 	if err != nil {
 		return nil, err
+	}
+
+	var useInit *bool
+	if isBuildContainer && e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
+		yes := true
+		useInit = &yes
 	}
 
 	return &container.HostConfig{
@@ -706,7 +708,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
 		Runtime:       e.Config.Docker.Runtime,
-		Privileged:    e.Config.Docker.Privileged,
+		Privileged:    e.Config.Docker.Privileged && imageIsPrivileged,
 		GroupAdd:      e.Config.Docker.GroupAdd,
 		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		CapAdd:        e.Config.Docker.CapAdd,
@@ -728,6 +730,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 		},
 		Tmpfs:   e.Config.Docker.Tmpfs,
 		Sysctls: e.Config.Docker.SysCtls,
+		Init:    useInit,
 	}, nil
 }
 

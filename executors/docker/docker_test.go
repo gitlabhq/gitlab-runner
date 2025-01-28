@@ -1008,7 +1008,7 @@ func TestDockerIsolationWithIncorrectValue(t *testing.T) {
 	}
 	_, executor := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	_, err := executor.createHostConfig()
+	_, err := executor.createHostConfig(false, false)
 
 	assert.Contains(t, err.Error(), `the isolation value "someIncorrectValue" is not valid`)
 }
