@@ -1267,6 +1267,28 @@ To use IAM roles for service accounts, an IAM OIDC provider [must exist for your
      |-------------------|----------|-------|
      | `StringEquals`    |`oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>:sub` | `system:serviceaccount:<GITLAB_RUNNER_NAMESPACE>:<GITLAB_RUNNER_SERVICE_ACCOUNT>` |
 
+#### Use S3 Express One Zone buckets
+
+> - Introduced in GitLab Runner 17.5.0.
+
+NOTE:
+[S3 Express One Zone directory buckets do not work with `RoleARN`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38484#note_2313111840) because the runner manager cannot restrict access to one specific object.
+
+1. Set up an S3 Express One Zone bucket by following the [Amazon tutorial](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-getting-started.html).
+1. Configure `config.toml` with `BucketName` and `BucketLocation`.
+1. Set `DualStack` to `false` as S3 Express does not support dual-stack endpoints.
+
+Example `config.toml`:
+
+```toml
+[runners.cache]
+  Type = "s3"
+  [runners.cache.s3]
+    BucketName = "example-express--usw2-az1--x-s3"
+    BucketLocation = "us-west-2"
+    DualStack = false
+```
+
 ### The `[runners.cache.gcs]` section
 
 The following parameters define native support for Google Cloud Storage. For more information
