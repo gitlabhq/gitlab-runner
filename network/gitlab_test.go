@@ -5,6 +5,7 @@ package network
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -2346,6 +2347,7 @@ func uploadArtifacts(
 	artifactsFile,
 	artifactType string,
 	artifactFormat ArtifactFormat,
+	logResponseDetails bool,
 ) (UploadState, string) {
 	file, err := os.Open(artifactsFile)
 	if err != nil {
@@ -2362,98 +2364,221 @@ func uploadArtifacts(
 	}
 
 	options := ArtifactsOptions{
-		BaseName: filepath.Base(artifactsFile),
-		Format:   artifactFormat,
-		Type:     artifactType,
+		BaseName:           filepath.Base(artifactsFile),
+		Format:             artifactFormat,
+		Type:               artifactType,
+		LogResponseDetails: logResponseDetails,
 	}
 	return client.UploadRawArtifacts(config, file, options)
 }
 
 func TestArtifactsUpload(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		testArtifactsUploadHandler(w, r, t)
+	defaultConfig := JobCredentials{ID: 10, Token: "token"}
+	invalidToken := JobCredentials{ID: 10, Token: "invalid-token"}
+	redirectToken := JobCredentials{ID: 10, Token: "redirect"}
+
+	isLogMessage := func(t *testing.T, l *logrus.Entry, msgRE string, level logrus.Level) {
+		assert.Regexp(t, msgRE, l.Message)
+		assert.Equal(t, level, l.Level)
 	}
 
-	s := httptest.NewServer(http.HandlerFunc(handler))
-	defer s.Close()
-
-	config := JobCredentials{
-		ID:    10,
-		URL:   s.URL,
-		Token: "token",
+	isResponseBodyLog := func(t *testing.T, l *logrus.Entry) {
+		isLogMessage(t, l, "received response", logrus.InfoLevel)
+		assert.Contains(t, l.Data, "body")
+		assert.Contains(t, l.Data, "header[Content-Length]")
+		assert.Contains(t, l.Data, "header[Date]")
 	}
 
-	invalidToken := JobCredentials{
-		ID:    10,
-		URL:   s.URL,
-		Token: "invalid-token",
+	tests := map[string]struct {
+		content           []byte
+		config            JobCredentials
+		artifactType      string
+		artifactFormat    ArtifactFormat
+		overwriteFileName string
+
+		expectedUploadState UploadState
+		expectedLocation    string
+		verifyLogs          func(*testing.T, bool, *logHook)
+	}{
+		"default": {
+			content: []byte("content"),
+			config:  defaultConfig,
+			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				i := 0
+				if logResponseDetail {
+					isResponseBodyLog(t, logs.entries[i])
+					i += 1
+				}
+				isLogMessage(t, logs.entries[i], "Uploading artifacts to coordinator... 201 Created", logrus.InfoLevel)
+			},
+		},
+		"too large": {
+			content:             []byte("too-large"),
+			config:              defaultConfig,
+			expectedUploadState: UploadTooLarge,
+			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				i := 0
+				if logResponseDetail {
+					isResponseBodyLog(t, logs.entries[i])
+					i += 1
+				}
+				isLogMessage(t, logs.entries[i], "Uploading artifacts to coordinator... 413 Request Entity Too Large", logrus.ErrorLevel)
+			},
+		},
+		"zip": {
+			content:        []byte("zip"),
+			config:         defaultConfig,
+			artifactFormat: ArtifactFormatZip,
+			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				i := 0
+				if logResponseDetail {
+					isResponseBodyLog(t, logs.entries[i])
+					i += 1
+				}
+				isLogMessage(t, logs.entries[i], "Uploading artifacts to coordinator... 201 Created", logrus.InfoLevel)
+			},
+		},
+		"gzip": {
+			content:        []byte("gzip"),
+			config:         defaultConfig,
+			artifactFormat: ArtifactFormatGzip,
+			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				i := 0
+				if logResponseDetail {
+					isResponseBodyLog(t, logs.entries[i])
+					i += 1
+				}
+				isLogMessage(t, logs.entries[i], "Uploading artifacts to coordinator... 201 Created", logrus.InfoLevel)
+			},
+		},
+		"junit": {
+			content:        []byte("junit"),
+			config:         defaultConfig,
+			artifactType:   "junit",
+			artifactFormat: ArtifactFormatGzip,
+			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				i := 0
+				if logResponseDetail {
+					isResponseBodyLog(t, logs.entries[i])
+					i += 1
+				}
+				isLogMessage(t, logs.entries[i], "Uploading artifacts as \"junit\" to coordinator... 201 Created", logrus.InfoLevel)
+			},
+		},
+		"non-existing-file": {
+			config:              defaultConfig,
+			overwriteFileName:   "not/existing/file",
+			expectedUploadState: UploadFailed,
+			verifyLogs: func(t *testing.T, _ bool, logs *logHook) {
+				// we don't even do a request, thus there is no response
+				assert.Len(t, logs.entries, 0, "expected no logs")
+			},
+		},
+		"invalid-token": {
+			config:              invalidToken,
+			expectedUploadState: UploadForbidden,
+			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				i := 0
+				if logResponseDetail {
+					isResponseBodyLog(t, logs.entries[i])
+					i += 1
+				}
+				isLogMessage(t, logs.entries[i], "Uploading artifacts to coordinator... 403 Forbidden", logrus.ErrorLevel)
+			},
+		},
+		"service-unavailable": {
+			content:             []byte("service-unavailable"),
+			config:              defaultConfig,
+			expectedUploadState: UploadServiceUnavailable,
+			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				i := 0
+				if logResponseDetail {
+					isResponseBodyLog(t, logs.entries[i])
+					i += 1
+				}
+				isLogMessage(t, logs.entries[i], "Uploading artifacts to coordinator... 503 Service Unavailable", logrus.ErrorLevel)
+			},
+		},
+		"bad-request": {
+			content:             []byte("bad-request"),
+			config:              defaultConfig,
+			expectedUploadState: UploadFailed,
+			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				i := 0
+				if logResponseDetail {
+					isResponseBodyLog(t, logs.entries[i])
+					i += 1
+				}
+				isLogMessage(t, logs.entries[i], "Uploading artifacts to coordinator... POST .*: 400 Bad Request \\(duplicate variables\\)", logrus.WarnLevel)
+			},
+		},
+		"bad-request-not-json": {
+			content:             []byte("bad-request-not-json"),
+			config:              defaultConfig,
+			expectedUploadState: UploadFailed,
+			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				i := 0
+				if logResponseDetail {
+					isResponseBodyLog(t, logs.entries[i])
+					i += 1
+				}
+				isLogMessage(t, logs.entries[i], "Uploading artifacts to coordinator... 400 Bad Request", logrus.WarnLevel)
+			},
+		},
+		"redirect": {
+			content:             []byte("content"),
+			config:              redirectToken,
+			expectedUploadState: UploadRedirected,
+			expectedLocation:    "new-location",
+			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				if logResponseDetail {
+					isResponseBodyLog(t, logs.entries[0])
+					return
+				}
+				assert.Len(t, logs.entries, 0, "expected no logs")
+			},
+		},
 	}
 
-	redirectToken := JobCredentials{
-		ID:    10,
-		URL:   s.URL,
-		Token: "redirect",
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			for _, withRespDetails := range []bool{false, true} {
+				t.Run(fmt.Sprintf("withResponseDetails:%t", withRespDetails), func(t *testing.T) {
+					handler := func(w http.ResponseWriter, r *http.Request) {
+						testArtifactsUploadHandler(w, r, t)
+					}
+
+					s := httptest.NewServer(http.HandlerFunc(handler))
+					defer s.Close()
+
+					tempFile, err := os.CreateTemp("", "artifacts")
+					assert.NoError(t, err)
+					tempFile.Close()
+					defer os.Remove(tempFile.Name())
+
+					c := NewGitLabClient()
+
+					logs := newLogHook(logrus.InfoLevel, logrus.WarnLevel, logrus.ErrorLevel)
+					logrus.AddHook(&logs)
+
+					if test.content != nil {
+						require.NoError(t, os.WriteFile(tempFile.Name(), test.content, 0o600))
+					}
+
+					config := test.config
+					config.URL = s.URL
+
+					filename := cmp.Or(test.overwriteFileName, tempFile.Name())
+
+					state, location := uploadArtifacts(c, config, filename, test.artifactType, test.artifactFormat, withRespDetails)
+					assert.Equal(t, test.expectedUploadState, state, "wrong upload state")
+					assert.Equal(t, test.expectedLocation, location, "wrong location")
+
+					test.verifyLogs(t, withRespDetails, &logs)
+				})
+			}
+		})
 	}
-
-	tempFile, err := os.CreateTemp("", "artifacts")
-	assert.NoError(t, err)
-	tempFile.Close()
-	defer os.Remove(tempFile.Name())
-
-	c := NewGitLabClient()
-
-	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("content"), 0o600))
-	state, location := uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
-	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded")
-	assert.Empty(t, location)
-
-	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("too-large"), 0o600))
-	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
-	assert.Equal(t, UploadTooLarge, state, "Artifacts should be not uploaded, because of too large archive")
-	assert.Empty(t, location)
-
-	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("zip"), 0o600))
-	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatZip)
-	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as zip")
-	assert.Empty(t, location)
-
-	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("gzip"), 0o600))
-	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatGzip)
-	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
-	assert.Empty(t, location)
-
-	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("junit"), 0o600))
-	state, location = uploadArtifacts(c, config, tempFile.Name(), "junit", ArtifactFormatGzip)
-	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
-	assert.Empty(t, location)
-
-	state, location = uploadArtifacts(c, config, "not/existing/file", "", ArtifactFormatDefault)
-	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
-	assert.Empty(t, location)
-
-	state, location = uploadArtifacts(c, invalidToken, tempFile.Name(), "", ArtifactFormatDefault)
-	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
-	assert.Empty(t, location)
-
-	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0o600))
-	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
-	assert.Equal(t, UploadServiceUnavailable, state, "Artifacts should get service unavailable")
-	assert.Empty(t, location)
-
-	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("bad-request"), 0o600))
-	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
-	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
-	assert.Empty(t, location)
-
-	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("bad-request-not-json"), 0o600))
-	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
-	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
-	assert.Empty(t, location)
-
-	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("content"), 0o600))
-	state, location = uploadArtifacts(c, redirectToken, tempFile.Name(), "", ArtifactFormatDefault)
-	assert.Equal(t, UploadRedirected, state, "Artifacts upload should be redirected")
-	assert.Equal(t, "new-location", location)
 }
 
 func checkTestArtifactsDownloadHandlerContent(w http.ResponseWriter, token string) {
