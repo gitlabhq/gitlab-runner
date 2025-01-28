@@ -1465,7 +1465,7 @@ a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner
 of available commands, and Git, Git LFS, and SSL certificates store.
 
 The helper image has a few flavors: `alpine`, `alpine3.18`, `alpine3.19`, `alpine3.21`, `alpine-latest`, `ubi-fips` and `ubuntu`. The `alpine` image is the default due to its small
-footprint but can have [DNS issues in some environments](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129).
+footprint.
 Using `helper_image_flavor = "ubuntu"` selects the `ubuntu` flavor of the helper image.
 
 In GitLab Runner 16.1 to 17.1, the `alpine` flavor is an alias for `alpine3.18`. In GitLab Runner 17.2 to 17.6, it's an alias for `alpine3.19`. In GitLab Runner 17.7 and later, it's an alias for `alpine3.21`.
