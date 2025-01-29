@@ -34,12 +34,12 @@ prebuilt helper images:
   needs:
     - 'helper images: [alpine alpine-pwsh ubuntu ubuntu-pwsh ubi-fips]'
   script:
-  - apt-get update -yq && apt-get install -yq parallel time p7zip-full
   - make prebuilt-helper-images
   - ls -alh out/helper-images/
   artifacts:
     paths:
     - out/helper-images/*.tar.xz
+    - out/helper-images/*.tar.zst
     expire_in: 7d
 
 prebuilt helper images windows 2019:

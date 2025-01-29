@@ -24,7 +24,7 @@ skopeo copy oci:"out/helper-images/${dir}" docker-archive:"${archive}"
 if echo "$IMAGE" | grep -q "windows"; then
 	prebuilt="$(dirname "$IMAGE")/$(basename "${prebuilt}" .tar).docker.tar.zst"
 	rm -f "${prebuilt}"
-	time 7z a -mx9 -tzstd "${prebuilt}" "${archive}"
+	time zstd -9 -o "${prebuilt}" "${archive}"
 	rm "${archive}"
 
 	exit 0
