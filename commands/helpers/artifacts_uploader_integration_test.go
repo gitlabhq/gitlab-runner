@@ -3,6 +3,7 @@
 package helpers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/fs"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
@@ -25,10 +27,9 @@ import (
 
 func TestArchiveUploadExpandArgs(t *testing.T) {
 	srv := httptest.NewServer(nil)
-	defer srv.Close()
+	t.Cleanup(srv.Close)
 
-	os.Setenv("expand", "expanded")
-	defer os.Unsetenv("expand")
+	t.Setenv("expand", "expanded")
 
 	cmd := &ArtifactsUploaderCommand{
 		Name: "artifact $expand",
@@ -52,7 +53,7 @@ func TestArchiveUploadRedirect(t *testing.T) {
 	finalRequestReceived := false
 
 	finalServer := httptest.NewServer(
-		assertRequestPathAndMethod(t, "final", finalServerHandler(t, &finalRequestReceived)),
+		assertRequestPathAndMethod(t, "final", finalServerHandler(t, &finalRequestReceived, "")),
 	)
 	defer finalServer.Close()
 
@@ -87,6 +88,76 @@ func TestArchiveUploadRedirect(t *testing.T) {
 	assert.True(t, finalRequestReceived)
 }
 
+func TestArchiveUploadLogging(t *testing.T) {
+	requestReceived := false
+	resBody := `{"message": "some message", "debug": {"some": "data from proxy or elsewhere"}}`
+
+	tests := map[string]struct {
+		ciDebugTrace bool
+		verify       func(t *testing.T, logs string)
+	}{
+		"with response logging": {
+			ciDebugTrace: true,
+			verify: func(t *testing.T, logs string) {
+				assert.Contains(t, logs, resBody, "expected the raw body to be logged")
+				assert.Contains(t, logs, "header[X-Test-Blupp]", "expected the custom response header to be logged")
+				assert.Contains(t, logs, "[Blapp]", "expected the custom response header value to be logged")
+			},
+		},
+		"without response logging": {
+			verify: func(t *testing.T, logs string) {
+				assert.NotContains(t, logs, resBody, "expected the raw body not to be logged")
+				assert.NotContains(t, logs, "header[", "expected no header to be logged")
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			srv := httptest.NewServer(
+				assertRequestPathAndMethod(t, "final", finalServerHandler(t, &requestReceived, resBody)),
+			)
+			t.Cleanup(srv.Close)
+			t.Cleanup(helpers.MakeFatalToPanic())
+
+			logger := logrus.StandardLogger()
+
+			orgLogOutput := logger.Out
+			t.Cleanup(func() {
+				logger.SetOutput(orgLogOutput)
+			})
+
+			logBuffer := &bytes.Buffer{}
+			logger.SetOutput(logBuffer)
+
+			cmd := &ArtifactsUploaderCommand{
+				CiDebugTrace: test.ciDebugTrace,
+				JobCredentials: common.JobCredentials{
+					ID:    12345,
+					Token: "token",
+					URL:   srv.URL,
+				},
+				Name:             "artifacts",
+				Format:           common.ArtifactFormatZip,
+				CompressionLevel: "fastest",
+				network:          network.NewGitLabClient(),
+				fileArchiver: fileArchiver{
+					Paths: []string{
+						filepath.Join(".", "testdata", "test-artifacts"),
+					},
+				},
+			}
+
+			assert.NotPanics(t, func() {
+				cmd.Execute(&cli.Context{})
+			}, "expected command not to log fatal")
+
+			assert.True(t, requestReceived, "expected to receive the upload")
+			test.verify(t, logBuffer.String())
+		})
+	}
+}
+
 func assertRequestPathAndMethod(t *testing.T, handlerName string, handler http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
@@ -105,13 +176,17 @@ func redirectingServerHandler(finalServerURL string) http.HandlerFunc {
 	}
 }
 
-func finalServerHandler(t *testing.T, finalRequestReceived *bool) http.HandlerFunc {
+func finalServerHandler(t *testing.T, finalRequestReceived *bool, resBody string) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		dir := t.TempDir()
 
 		receiveFile(t, r, dir)
 
 		err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
 			if info.IsDir() {
 				return nil
 			}
@@ -130,7 +205,10 @@ func finalServerHandler(t *testing.T, finalRequestReceived *bool) http.HandlerFu
 		assert.NoError(t, err)
 
 		*finalRequestReceived = true
+		rw.Header().Set("Content-Type", "application/json")
+		rw.Header().Set("X-Test-Blupp", "Blapp")
 		rw.WriteHeader(http.StatusCreated)
+		fmt.Fprintf(rw, resBody)
 	}
 }
 

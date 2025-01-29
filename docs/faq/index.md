@@ -198,6 +198,36 @@ This happens due to fact that GitLab Runner uses `Transfer-Encoding: chunked` wh
 
 Upgrade your NGINX to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1031>
 
+## I am seeing other artifact upload errors, how can I further debug this?
+
+Artifacts are uploaded directly from the build environment to the GitLab instance,
+bypassing the GitLab Runner process.
+For example:
+
+- With the Docker executor, uploads occur from the Docker container
+- With the Kubernetes executor, uploads occur from the build container in the build pod
+
+The network route from the build environment to the GitLab instance might be different from the
+GitLab Runner to the GitLab instance route.
+
+To enable artifact uploads, ensure that all components in the upload path allow
+POST requests from the build environment to the GitLab instance.
+
+By default, the artifact uploader logs the upload URL and the HTTP status code
+of the upload response. This information is not enough to understand which system
+caused an error or blocked artifact uploads. To troubleshoot artifact upload issues,
+[enable debug logging](https://docs.gitlab.com/ee/ci/variables/index.html#enable-debug-logging)
+for upload attempts to see upload response's headers and body.
+
+NOTE:
+The response body length for artifact upload debug logging is capped at 512 bytes.
+Enable logging only for debugging because sensitive data can be exposed in logs.
+
+If the debug logs show that uploads reach the GitLab instance but still fail
+(for example, produces a non-successful response status code), investigate the
+GitLab instance itself. For common artifact upload issues, see
+[GitLab documentation](https://docs.gitlab.com/ee/administration/cicd/job_artifacts_troubleshooting.html#job-artifact-upload-fails-with-error-500).
+
 ## `No URL provided, cache will not be download`/`uploaded`
 
 This occurs when caching is configured for the job, but the GitLab Runner helper does not have
