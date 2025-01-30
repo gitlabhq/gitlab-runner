@@ -542,6 +542,58 @@ type containerConfigurator interface {
 	NetworkConfig(aliases []string) *network.NetworkingConfig
 }
 
+type defaultContainerConfigurator struct {
+	e                     *executor
+	containerType         string
+	imageDefinition       common.Image
+	cmd                   []string
+	allowedInternalImages []string
+}
+
+var _ containerConfigurator = &defaultContainerConfigurator{}
+
+func newDefaultContainerConfigurator(
+	e *executor,
+	containerType string,
+	imageDefinition common.Image,
+	cmd,
+	allowedInternalImages []string,
+) *defaultContainerConfigurator {
+	return &defaultContainerConfigurator{
+		e:                     e,
+		containerType:         containerType,
+		imageDefinition:       imageDefinition,
+		cmd:                   cmd,
+		allowedInternalImages: allowedInternalImages,
+	}
+}
+
+func (c *defaultContainerConfigurator) ContainerConfig(image *types.ImageInspect) (*container.Config, error) {
+	hostname := c.e.Config.Docker.Hostname
+	if hostname == "" {
+		hostname = c.e.Build.ProjectUniqueName()
+	}
+
+	return c.e.createContainerConfig(
+		c.containerType,
+		c.imageDefinition,
+		image,
+		hostname,
+		c.cmd,
+	)
+}
+
+func (c *defaultContainerConfigurator) HostConfig() (*container.HostConfig, error) {
+	return c.e.createHostConfig(
+		c.containerType == buildContainerType,
+		c.e.isInPrivilegedImageList(c.imageDefinition),
+	)
+}
+
+func (c *defaultContainerConfigurator) NetworkConfig(aliases []string) *network.NetworkingConfig {
+	return c.e.networkConfig(aliases)
+}
+
 func (e *executor) createContainer(
 	containerType string,
 	imageDefinition common.Image,
