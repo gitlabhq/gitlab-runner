@@ -113,8 +113,8 @@ If the jobs pass as expected, the job log should look like in the following exam
 ...
 
 $ podman build . -t playground-bis:testing
-STEP 1/6: FROM docker.io/library/golang:1.23.1 AS builder
-Trying to pull docker.io/library/golang:1.23.1...
+STEP 1/6: FROM docker.io/library/golang:1.23.6 AS builder
+Trying to pull docker.io/library/golang:1.23.6...
 Getting image source signatures
 Copying blob sha256:6564e0d9b89ebe3e93013c7d7fbf4d560c5831ed61448167899654bf22c6dc59
 Copying blob sha256:2b238499ec52e0d6be479f948c76ba0bc3cc282f612d5a6a4b5ef52ff45f6b2c
@@ -356,8 +356,8 @@ The job runs `podman build`, which should complete successfully.
 $ podman build . -t playground-bis:testing
 time="2024-11-06T16:57:41Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
 time="2024-11-06T16:57:41Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
-STEP 1/6: FROM docker.io/library/golang:1.23.1 AS builder
-Trying to pull docker.io/library/golang:1.23.1...
+STEP 1/6: FROM docker.io/library/golang:1.23.6 AS builder
+Trying to pull docker.io/library/golang:1.23.6...
 Getting image source signatures
 Copying blob sha256:32d3574b34bd65a6cf89a80e5bd939574c7a9bd3efbaa4881292aaca16d3d0dc
 Copying blob sha256:a47cff7f31e941e78bf63ca19f0811b675283e2c00ddea10c57f78d93b2bc343
