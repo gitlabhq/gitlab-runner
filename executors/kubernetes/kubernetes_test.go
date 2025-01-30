@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -7730,6 +7731,73 @@ func TestContainerPullPolicies(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNoContainerEnvDups(t *testing.T) {
+	const (
+		varName        = "duplicateVar"
+		varValRunner   = "runner.toml"
+		varValPipeline = ".gitlab-ci.yaml"
+	)
+
+	fakeKubeClient := testclient.NewSimpleClientset()
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{
+			Variables: common.JobVariables{
+				common.JobVariable{Key: varName, Value: varValPipeline, Public: true},
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Environment: []string{
+					varName + "=" + varValRunner,
+				},
+				Kubernetes: &common.KubernetesConfig{
+					Image: "some-build-image",
+				},
+			},
+		},
+	}
+
+	executor := newExecutor()
+	executor.newKubeClient = func(_ *restclient.Config) (kubernetes.Interface, error) {
+		return fakeKubeClient, nil
+	}
+	executor.getKubeConfig = func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
+		return nil, nil
+	}
+
+	prepareOptions := common.ExecutorPrepareOptions{
+		Config: build.Runner,
+		Build:  build,
+	}
+
+	err := executor.Prepare(prepareOptions)
+	require.NoError(t, err)
+
+	fakeKubeClient.PrependReactor("*", "pods", func(action k8stesting.Action) (handled bool, ret kuberuntime.Object, err error) {
+		pod := action.(k8stesting.CreateAction).GetObject().(*api.Pod)
+
+		for _, container := range slices.Concat(pod.Spec.Containers, pod.Spec.InitContainers, pod.Spec.InitContainers) {
+			seen := map[string]struct{}{}
+			for _, envVar := range container.Env {
+				if _, ok := seen[envVar.Name]; ok {
+					assert.Fail(t, "duplicate env var", "env var %q already set on container %s", envVar.Name, container.Name)
+				}
+				seen[envVar.Name] = struct{}{}
+
+				if envVar.Name == varName {
+					assert.Equal(t, varValPipeline, envVar.Value, "expected for env vars from the pipeline to win over ones from the runner config")
+				}
+			}
+		}
+
+		return false, nil, nil
+	})
+
+	err = executor.setupBuildPod(context.TODO(), []api.Container{})
+	require.NoError(t, err)
 }
 
 func getActionObjects[T kuberuntime.Object](actions []k8stesting.Action, verb string) []T {
