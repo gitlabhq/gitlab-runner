@@ -562,7 +562,7 @@ func (e *executor) createContainer(
 
 	containerName := e.makeContainerName(containerType)
 
-	config, err := e.createContainerConfig(containerType, imageDefinition, image.ID, hostname, cmd)
+	config, err := e.createContainerConfig(containerType, imageDefinition, image, hostname, cmd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container configuration: %w", err)
 	}
@@ -603,13 +603,13 @@ func (e *executor) createContainer(
 func (e *executor) createContainerConfig(
 	containerType string,
 	imageDefinition common.Image,
-	imageID string,
+	image *types.ImageInspect,
 	hostname string,
 	cmd []string,
 ) (*container.Config, error) {
 	labels := e.prepareContainerLabels(map[string]string{"type": containerType})
 	config := &container.Config{
-		Image:        imageID,
+		Image:        image.ID,
 		Hostname:     hostname,
 		Cmd:          cmd,
 		Labels:       labels,
