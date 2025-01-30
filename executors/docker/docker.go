@@ -536,6 +536,12 @@ func (e *executor) isInPrivilegedImageList(imageDefinition common.Image) bool {
 	return isInAllowedPrivilegedImages(imageDefinition.Name, e.Config.Docker.AllowedPrivilegedImages)
 }
 
+type containerConfigurator interface {
+	ContainerConfig(image *types.ImageInspect) (*container.Config, error)
+	HostConfig() (*container.HostConfig, error)
+	NetworkConfig(aliases []string) *network.NetworkingConfig
+}
+
 func (e *executor) createContainer(
 	containerType string,
 	imageDefinition common.Image,
