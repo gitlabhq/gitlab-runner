@@ -93,10 +93,26 @@ To install GitLab Runner:
 
    :::TabTitle Debian/Ubuntu/Mint
 
+   NOTE:
+   As of `gitlab-runner` version `v17.7.1`, when you install a specific version of `gitlab-runner` that is not the latest
+   version, you must explicitly install the required `gitlab-runner-helper-packages` for that version. This requirement
+   exists due to an `apt`/`apt-get` limitation.
+
    ```shell
    apt-cache madison gitlab-runner
-   sudo apt install gitlab-runner=17.2.0-1
+   sudo apt install gitlab-runner=17.7.1-1 gitlab-runner-helper-images=17.7.1-1
    ```
+
+    If you attempt to install a specific version of `gitlab-runner` without installing the same version of
+    `gitlab-runner-helper-images`, you might encounter the following error:
+
+    ```shell
+    sudo apt install gitlab-runner=17.7.1-1
+    ...
+    The following packages have unmet dependencies:
+     gitlab-runner : Depends: gitlab-runner-helper-images (= 17.7.1-1) but 17.8.3-1 is to be installed
+    E: Unable to correct problems, you have held broken packages.
+    ```
 
    :::TabTitle RHEL/CentOS/Fedora/Amazon Linux
 
