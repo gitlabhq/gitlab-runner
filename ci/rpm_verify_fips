@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -e
+set -u
+set -o pipefail
+
+# This script needs to run in the container registry.gitlab.com/gitlab-org/cloud-native/container-dependencies-finder/cdf:main,
+# See: https://gitlab.com/gitlab-org/cloud-native/container-dependencies-finder/-/blob/908117772ed868dd3c30b8621b57def4ef27e0f3/templates/rpm-verify-fips/template.yml
+
+: "${SCRATCH_DIR:=/tmp}"
+: "${LOGS_DIR:=logs}"
+: "${OCI_TARS:=}"
+
+main() {
+  mkdir -p "${SCRATCH_DIR}" "${LOGS_DIR}"
+
+  local desc name ociTar dockerTar tmpDir rootfs log
+
+  for desc in $OCI_TARS ; do
+    name="$( cut -d= -f1 <<< "$desc" )"
+    ociTar="$( cut -d= -f2 <<< "$desc" )"
+    tmpDir="${SCRATCH_DIR}/${name}"
+    dockerTar="${tmpDir}/docker.tar"
+    rootfs="${tmpDir}/rootfs"
+    log="${LOGS_DIR}/${name}-rpm_verify_fips.log"
+
+    echo >&2 "## ---- checking ${name} image (tar: ${ociTar}, log: ${log})"
+
+    mkdir -p "${rootfs}"
+
+    # convert from oci -> docker
+    skopeo ${VERBOSE+--debug} copy --multi-arch=all "oci-archive:${ociTar}" "docker-archive:${dockerTar}"
+    # export the rootfs
+    crane ${VERBOSE+-v} export - - <"${dockerTar}" | tar -x${VERBOSE+v} -C "${rootfs}"
+
+    LOG_FILE="${log}" INSTALL_ROOT="${rootfs}" rpm_verify_fips
+
+    rm -rf "${tmpDir}"
+  done
+}
+
+main "$@"
