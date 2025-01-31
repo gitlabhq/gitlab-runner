@@ -549,8 +549,9 @@ func TestSanitizeLabel(t *testing.T) {
 
 func TestBuildVariables(t *testing.T) {
 	bv := []common.JobVariable{
-		{Key: "k", Value: "v"},
+		{Key: "k", Value: "__nope__"},
 		{Key: "filetype", Value: "secret-stuff", File: true},
+		{Key: "k", Value: "v"},
 		{Key: "RUNNER_TEMP_PROJECT_DIR", Value: "/foo/bar", Public: true, Internal: true},
 	}
 

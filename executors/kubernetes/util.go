@@ -390,20 +390,34 @@ func createResourceList(cpu, memory, ephemeralStorage string) (api.ResourceList,
 
 // buildVariables converts a common.JobVariables into a list of
 // kubernetes EnvVar objects
+// The order of keys is preserved, but duplicate elements (with the same name/key) will be deduped, the last one in
+// the list wins.
 func buildVariables(bv common.JobVariables) []api.EnvVar {
-	e := make([]api.EnvVar, len(bv))
-	for i, b := range bv {
+	idx := map[string]int{}
+	envs := make([]api.EnvVar, 0, len(bv))
+
+	i := 0
+	for _, b := range bv {
 		// For file-type secrets, substitute the path to the secret
 		// for the secret value.
 		if b.File {
 			b.Value = bv.Get(b.Key)
 		}
-		e[i] = api.EnvVar{
+		e := api.EnvVar{
 			Name:  b.Key,
 			Value: b.Value,
 		}
+		if j, ok := idx[e.Name]; ok {
+			envs[j] = e
+			continue
+		}
+
+		envs = append(envs, e)
+		idx[e.Name] = i
+		i++
 	}
-	return e
+
+	return slices.Clip(envs)
 }
 
 // Sanitize labels to match Kubernetes restrictions from https://kubernetes.io/
