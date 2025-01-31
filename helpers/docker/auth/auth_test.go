@@ -423,7 +423,13 @@ func TestConvertToRegistryPath(t *testing.T) {
 	path = convertToRegistryPath("my.hostname/with/tag/image:latest")
 	assert.Equal(t, "my.hostname/with/tag/image", path)
 
+	path = convertToRegistryPath("http://index.docker.io/v1/")
+	assert.Equal(t, "docker.io", path)
+
 	path = convertToRegistryPath("https://index.docker.io/v1/")
+	assert.Equal(t, "docker.io", path)
+
+	path = convertToRegistryPath("HTTP://INDEX.DOCKER.IO/V1/")
 	assert.Equal(t, "docker.io", path)
 
 	path = convertToRegistryPath("HTTPS://INDEX.DOCKER.IO/V1/")

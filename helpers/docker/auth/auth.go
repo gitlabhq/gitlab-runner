@@ -340,7 +340,7 @@ func pathWithLowerCaseHostname(path string) string {
 
 // Returns the normalized path for a docker registry reference for some credentials.
 func convertToRegistryPath(imageRef string) string {
-	protocol := regexp.MustCompile("(?i)^http[s]://")
+	protocol := regexp.MustCompile("(?i)^https?://")
 
 	if protocol.MatchString(imageRef) {
 		// old style with protocol and maybe suffix /v1/
