@@ -166,8 +166,8 @@ func (s *commandExecutor) requestHelperContainer() (*types.ContainerJSON, error)
 	s.helperContainer, err = s.createContainer(
 		predefinedContainerType,
 		buildImage,
-		s.getHelperImageCmd(),
 		[]string{prebuildImage.ID},
+		newDefaultContainerConfigurator(&s.executor, predefinedContainerType, buildImage, s.getHelperImageCmd(), []string{prebuildImage.ID}),
 	)
 	if err != nil {
 		return nil, err
@@ -204,8 +204,8 @@ func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) 
 	s.buildContainer, err = s.createContainer(
 		buildContainerType,
 		s.Build.Image,
-		cmd,
 		[]string{},
+		newDefaultContainerConfigurator(&s.executor, buildContainerType, s.Build.Image, cmd, []string{}),
 	)
 	if err != nil {
 		return nil, err

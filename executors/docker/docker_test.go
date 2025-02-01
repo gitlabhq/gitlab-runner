@@ -891,7 +891,9 @@ func testDockerConfigurationWithJobContainer(
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer(buildContainerType, common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	imageConfig := common.Image{Name: "alpine"}
+	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -912,7 +914,9 @@ func testDockerConfigurationWithPredefinedContainer(
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer(predefinedContainerType, common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	imageConfig := common.Image{Name: "alpine"}
+	cfgTor := newDefaultContainerConfigurator(e, predefinedContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -2070,7 +2074,8 @@ func TestExpandingDockerImageWithImagePullPolicyAlways(t *testing.T) {
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -2098,7 +2103,8 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.Contains(
 		t,
 		err.Error(),
@@ -2200,7 +2206,8 @@ func TestDockerImageWithUser(t *testing.T) {
 			err = e.createPullManager()
 			require.NoError(t, err)
 
-			_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+			cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+			_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 			if !tt.wantErr {
 				require.NoError(t, err)
 			} else {

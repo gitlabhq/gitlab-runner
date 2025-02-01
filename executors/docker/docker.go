@@ -597,7 +597,8 @@ func (c *defaultContainerConfigurator) NetworkConfig(aliases []string) *network.
 func (e *executor) createContainer(
 	containerType string,
 	imageDefinition common.Image,
-	cmd, allowedInternalImages []string,
+	allowedInternalImages []string,
+	cfgTor containerConfigurator,
 ) (*types.ContainerJSON, error) {
 	if e.volumesManager == nil {
 		return nil, errVolumesManagerUndefined
@@ -613,25 +614,19 @@ func (e *executor) createContainer(
 		return nil, err
 	}
 
-	hostname := e.Config.Docker.Hostname
-	if hostname == "" {
-		hostname = e.Build.ProjectUniqueName()
-	}
-
 	containerName := e.makeContainerName(containerType)
 
-	config, err := e.createContainerConfig(containerType, imageDefinition, image, hostname, cmd)
+	config, err := cfgTor.ContainerConfig(image)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container configuration: %w", err)
 	}
 
-	hostConfig, err := e.createHostConfig(containerType == buildContainerType, e.isInPrivilegedImageList(imageDefinition))
+	hostConfig, err := cfgTor.HostConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	aliases := []string{"build", containerName}
-	networkConfig := e.networkConfig(aliases)
+	networkConfig := cfgTor.NetworkConfig([]string{"build", containerName})
 
 	var platform *v1.Platform
 	// predefined/helper container always uses native platform
