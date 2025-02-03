@@ -5,8 +5,8 @@ info: >-
   To determine the technical writer assigned to the Stage/Group associated with
   this page, see
   https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Plan and operate a fleet of instance or group runners
 ---
-# Plan and operate a fleet of instance or group runners
 
 This guide contains best practices for scaling a fleet of runners in a shared service model.
 
@@ -137,7 +137,7 @@ With the [Docker Machine executor](../executors/docker_machine.md):
 
 #### Kubernetes executor
 
-With the [Kubernetes executor](../executors/kubernetes/index.md):
+With the [Kubernetes executor](../executors/kubernetes/_index.md):
 
 - The runner manager provisions pods on the target Kubernetes cluster.
 - The CI/CD jobs are executed on each pod, which is comprised of multiple containers.
@@ -188,7 +188,7 @@ To delete runners and runner managers created with a runner authentication token
 [UI](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#delete-instance-runners) or
 [API](https://docs.gitlab.com/ee/api/runners.html#delete-a-runner).
 Runners created with a runner authentication token are reusable configurations that can be reused in multiple machines.
-If you use the [`gitlab-runner unregister`](../commands/index.md#gitlab-runner-unregister) command, only the
+If you use the [`gitlab-runner unregister`](../commands/_index.md#gitlab-runner-unregister) command, only the
 runner manager is deleted, not the runner.
 
 ## Configure instance runners
@@ -219,10 +219,10 @@ we process millions of jobs per month.
 
 ## Monitoring runners
 
-An essential step in operating a runner fleet at scale is to set up and use the [runner monitoring](../monitoring/index.md) capabilities included with GitLab.
+An essential step in operating a runner fleet at scale is to set up and use the [runner monitoring](../monitoring/_index.md) capabilities included with GitLab.
 
 The following table includes a summary of GitLab Runner metrics. The list does not include the Go-specific process metrics.
-To view those metrics on a runner, execute the command as noted [here](../monitoring/index.md#available-metrics).
+To view those metrics on a runner, execute the command as noted [here](../monitoring/_index.md#available-metrics).
 
 | Metric name | Description |
 | ------ | ------ |

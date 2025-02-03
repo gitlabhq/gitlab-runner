@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Install GitLab Runner manually on GNU/Linux
 ---
-
-# Install GitLab Runner manually on GNU/Linux
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -20,7 +19,7 @@ If you want to use the [Docker executor](../executors/docker.md),
 you must [install Docker](https://docs.docker.com/engine/install/centos/#install-docker-ce)
 before using GitLab Runner.
 
-Make sure that you read the [FAQ](../faq/index.md) section which describes
+Make sure that you read the [FAQ](../faq/_index.md) section which describes
 some of the most common problems with GitLab Runner.
 
 ## Using deb/rpm package
@@ -56,7 +55,7 @@ curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/
 curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner_${arch}.rpm"
 ```
 
-For example, for [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-runner) on RHEL:
+For example, for [FIPS compliant GitLab Runner](_index.md#fips-compliant-gitlab-runner) on RHEL:
 
 ```shell
 # Currently only amd64 is a supported arch
@@ -81,7 +80,7 @@ curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/
    dnf install -y gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
    ```
 
-1. [Register a runner](../register/index.md)
+1. [Register a runner](../register/_index.md)
 
 ### Upgrade
 
@@ -161,7 +160,7 @@ With GitLab Runner 10, the executable was renamed to `gitlab-runner`.
    Ensure you have `/usr/local/bin/` in `$PATH` for root or you might get a `command not found` error.
    Alternately, you can install `gitlab-runner` in a different location, like `/usr/bin/`.
 
-1. [Register a runner](../register/index.md)
+1. [Register a runner](../register/_index.md)
 
 NOTE:
 If `gitlab-runner` is installed and run as a service, it runs as root,

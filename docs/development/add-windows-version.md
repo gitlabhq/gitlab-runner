@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Add Docker executor support for a Windows version
 ---
-
-# Add Docker executor support for a Windows version
 
 GitLab supports [specific versions of Windows](../install/support-policy.md#windows-version-support).
 
@@ -84,7 +83,7 @@ project. The only thing that is left is to set up the Runner Managers.
 
 #### Register
 
-Run [`gitlab-runner register`](../register/index.md)
+Run [`gitlab-runner register`](../register/_index.md)
 to register the two new runners. These should be project-specific runners, so
 we need to use the registration token from the
 [project settings](https://gitlab.com/gitlab-org/gitlab-runner/-/settings/ci_cd).

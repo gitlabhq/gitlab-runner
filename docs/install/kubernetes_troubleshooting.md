@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Troubleshooting GitLab Runner Helm chart
 ---
-
-# Troubleshooting GitLab Runner Helm chart
 
 ## Error: `Job failed (system failure): secrets is forbidden`
 

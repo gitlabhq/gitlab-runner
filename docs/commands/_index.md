@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: GitLab Runner commands
 ---
-
-# GitLab Runner commands
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -280,7 +279,7 @@ Boolean parameters must be passed in the command line with `--key={true|false}`.
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
 
 Additional options can be configured during runner registration by using the
-[configuration template file](../register/index.md#register-with-a-configuration-template) feature.
+[configuration template file](../register/_index.md#register-with-a-configuration-template) feature.
 
 ### `gitlab-runner list`
 

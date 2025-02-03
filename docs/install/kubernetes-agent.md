@@ -2,9 +2,8 @@
 stage: Deploy
 group: Environments
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Use the agent to install GitLab Runner
 ---
-
-# Use the agent to install GitLab Runner
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate

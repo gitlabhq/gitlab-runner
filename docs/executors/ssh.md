@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: SSH
 ---
-
-# SSH
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -18,7 +17,7 @@ This is a simple executor that allows you to execute builds on a remote machine
 by executing commands over SSH.
 
 NOTE:
-Ensure you meet [common prerequisites](index.md#prerequisites-for-non-docker-executors)
+Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
 on any remote systems where GitLab Runner uses the SSH executor.
 
 ## Use the SSH executor

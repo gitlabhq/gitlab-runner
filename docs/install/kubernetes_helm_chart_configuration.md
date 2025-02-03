@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Configure the GitLab Runner Helm chart
 ---
-
-# Configure the GitLab Runner Helm chart
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -202,7 +201,7 @@ To use Docker-in-Docker containers with GitLab Runner:
 
 - To enable it, see [Use privileged containers for the runners](#use-privileged-containers-for-the-runners).
 - For instructions on running Docker-in-Docker, see the
-  [GitLab Runner documentation](../executors/kubernetes/index.md#using-docker-in-builds).
+  [GitLab Runner documentation](../executors/kubernetes/_index.md#using-docker-in-builds).
 
 ## Use privileged containers for the runners
 
@@ -211,7 +210,7 @@ To use the Docker executable in your GitLab CI/CD jobs, configure the runner to 
 Prerequisites:
 
 - You understand the risks, which are described in the
-  [GitLab CI/CD Runner documentation](../executors/kubernetes/index.md#using-docker-in-builds).
+  [GitLab CI/CD Runner documentation](../executors/kubernetes/_index.md#using-docker-in-builds).
 - Your GitLab Runner instance is registered against a specific project in GitLab, and you trust its CI/CD jobs.
 
 To enable privileged mode in `values.yaml`, add these lines:
@@ -422,7 +421,7 @@ It's important that this user ID is part of the root group. Being part of the ro
 
 ## Use a FIPS-compliant GitLab Runner
 
-To use a [FIPS-compliant GitLab Runner](index.md#fips-compliant-gitlab-runner), change the GitLab Runner image
+To use a [FIPS-compliant GitLab Runner](_index.md#fips-compliant-gitlab-runner), change the GitLab Runner image
 and the Helper image in `values.yaml`:
 
 ```yaml
@@ -440,8 +439,8 @@ runners:
 
 ## Use a configuration template
 
-To [configure the behavior of GitLab Runner build pod in Kubernetes](../executors/kubernetes/index.md#configuration-settings),
-use a [configuration template file](../register/index.md#register-with-a-configuration-template).
+To [configure the behavior of GitLab Runner build pod in Kubernetes](../executors/kubernetes/_index.md#configuration-settings),
+use a [configuration template file](../register/_index.md#register-with-a-configuration-template).
 Configuration templates can configure any field on the runner, without sharing specific runner configuration options
 with the Helm chart. For example, these default settings
 [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml) in the `chart` repository:

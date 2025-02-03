@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Autoscaling GitLab Runner on AWS EC2
 ---
-
-# Autoscaling GitLab Runner on AWS EC2
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -110,7 +109,7 @@ Before configuring the GitLab Runner, you need to first register it, so that
 it connects with your GitLab instance:
 
 1. [Obtain a runner token](https://docs.gitlab.com/ee/ci/runners/)
-1. [Register the runner](../../register/index.md)
+1. [Register the runner](../../register/_index.md)
 1. When asked the executor type, enter `docker+machine`
 
 You can now move on to the most important part, configuring the GitLab Runner.

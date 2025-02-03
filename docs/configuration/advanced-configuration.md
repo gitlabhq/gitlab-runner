@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Advanced configuration
 ---
-
-# Advanced configuration
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -50,7 +49,7 @@ These settings are global. They apply to all runners.
 | `sentry_dsn`       | Enables tracking of all system level errors to Sentry. |
 | `connection_max_age` | The maximum duration a TLS keepalive connection to the GitLab server should remain open before reconnecting. The default value is `15m` for 15 minutes. If set to `0` or lower, the connection persists as long as possible. |
 | `listen_address`   | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
-| `shutdown_timeout` | Number of seconds until the [forceful shutdown operation](../commands/index.md#signals) times out and exits the process. The default value is `30`. If set to `0` or lower, the default value is used. |
+| `shutdown_timeout` | Number of seconds until the [forceful shutdown operation](../commands/_index.md#signals) times out and exits the process. The default value is `30`. If set to `0` or lower, the default value is used. |
 
 Here's a configuration example:
 
@@ -235,8 +234,8 @@ Each `[[runners]]` section defines one runner.
 | `tls-cert-file`                       | When using HTTPS, file that contains the certificate to authenticate with the peer.                                                                                                                                                                                                                                                                                                                         |
 | `tls-key-file`                        | When using HTTPS, file that contains the private key to authenticate with the peer.                                                                                                                                                                                                                                                                                                                         |
 | `limit`                               | Limit how many jobs can be handled concurrently by this registered runner. `0` (default) means do not limit. View how this setting works with the [Docker Machine](autoscale.md#limit-the-number-of-vms-created-by-the-docker-machine-executor), [Instance](../executors/instance.md), and [Docker Autoscaler](../executors/docker_autoscaler.md#example-aws-autoscaling-for-1-job-per-instance) executors. |
-| `executor`                            | The environment or command processor on the host operating system that the runner uses to run a CI/CD job. For more information, see [executors](../executors/index.md).                                                                                                                                                                                                                                    |
-| `shell`                               | Name of shell to generate the script. Default value is [platform dependent](../shells/index.md).                                                                                                                                                                                                                                                                                                            |
+| `executor`                            | The environment or command processor on the host operating system that the runner uses to run a CI/CD job. For more information, see [executors](../executors/_index.md).                                                                                                                                                                                                                                    |
+| `shell`                               | Name of shell to generate the script. Default value is [platform dependent](../shells/_index.md).                                                                                                                                                                                                                                                                                                            |
 | `builds_dir`                          | Absolute path to a directory where builds are stored in the context of the selected executor. For example, locally, Docker, or SSH.                                                                                                                                                                                                                                                                         |
 | `cache_dir`                           | Absolute path to a directory where build caches are stored in context of selected executor. For example, locally, Docker, or SSH. If the `docker` executor is used, this directory needs to be included in its `volumes` parameter.                                                                                                                                                                         |
 | `environment`                         | Append or overwrite environment variables.                                                                                                                                                                                                                                                                                                                                                                  |
@@ -361,10 +360,10 @@ The following settings define the Docker container parameters. These settings ar
 
 | Parameter | Description | Example |
 | --------- | ----------- | ------- |
-| `allowed_images` | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/index.md#restrict-docker-images-and-services) executors. | `["ruby:*", "python:*", "php:*"]` |
+| `allowed_images` | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services) executors. | `["ruby:*", "python:*", "php:*"]` |
 | `allowed_privileged_images` | Wildcard subset of `allowed_images` that runs in privileged mode when `privileged` is enabled. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) executors. | |
 | `allowed_pull_policies` | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. If not specified, only the pull policies specified in `pull-policy` are allowed. Use with the [Docker](../executors/docker.md#allow-docker-pull-policies) executor. | |
-| `allowed_services` | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/index.md#restrict-docker-images-and-services) executors. | `["postgres:9", "redis:*", "mysql:*"]` |
+| `allowed_services` | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services) executors. | `["postgres:9", "redis:*", "mysql:*"]` |
 | `allowed_privileged_services` | Wildcard subset of `allowed_services` that is allowed to run in privileged mode, when `privileged` or `services_privileged` is enabled. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) executors. | |
 | `cache_dir` | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. | |
 | `cap_add` | Add additional Linux capabilities to the container. | `["NET_ADMIN"]` |
@@ -550,7 +549,7 @@ with the [CI/CD variable](https://docs.gitlab.com/ee/ci/variables/) `DOCKER_AUTH
 - The `config.toml` file
 
 Using private registries with the `if-not-present` pull policy may introduce
-[security implications](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
+[security implications](../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 For more information about how pull policies work, see [Configure how runners pull images](../executors/docker.md#configure-how-runners-pull-images).
 
 For more information about using private container registries, see:
@@ -1437,7 +1436,7 @@ For more details, see [issue 38330](https://gitlab.com/gitlab-org/gitlab-runner/
 > - Introduced in GitLab Runner v1.6.0.
 
 The following table lists configuration parameters available for the Kubernetes executor.
-For more parameters, see the [documentation for the Kubernetes executor](../executors/kubernetes/index.md).
+For more parameters, see the [documentation for the Kubernetes executor](../executors/kubernetes/_index.md).
 
 | Parameter        | Type    | Description |
 |------------------|---------|-------------|
@@ -1446,8 +1445,8 @@ For more parameters, see the [documentation for the Kubernetes executor](../exec
 | `key_file`       | string  | Optional. Kubernetes auth private key. |
 | `ca_file`        | string  | Optional. Kubernetes auth ca certificate. |
 | `image`          | string  | Default container image to use for jobs when none is specified. |
-| `allowed_images` | array   | Wildcard list of container images that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/index.md#restrict-docker-images-and-services) executors. |
-| `allowed_services` | array | Wildcard list of services that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/index.md#restrict-docker-images-and-services) executors. |
+| `allowed_images` | array   | Wildcard list of container images that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services) executors. |
+| `allowed_services` | array | Wildcard list of services that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services) executors. |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in. |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled. |
 | `allow_privilege_escalation` | boolean | Optional. Runs all containers with the `allowPrivilegeEscalation` flag enabled. |
@@ -1510,7 +1509,7 @@ The GitLab Runner revision and architecture define which tag to download.
 
 ### Helper image configuration for Kubernetes on Arm
 
-To use the `arm64` helper image on `arm64` Kubernetes clusters, set the following values in your [configuration file](../executors/kubernetes/index.md#configuration-settings).
+To use the `arm64` helper image on `arm64` Kubernetes clusters, set the following values in your [configuration file](../executors/kubernetes/_index.md#configuration-settings).
 
 ```toml
 [runners.kubernetes]
@@ -1659,7 +1658,7 @@ GitLab Runner clones the repository to a path that exists under a
 base path better known as the _Builds Directory_. The default location
 of this base directory depends on the executor. For:
 
-- [Kubernetes](../executors/kubernetes/index.md),
+- [Kubernetes](../executors/kubernetes/_index.md),
   [Docker](../executors/docker.md) and [Docker Machine](../executors/docker_machine.md) executors, it is
   `/builds` inside of the container.
 - [Instance](../executors/instance.md), it is

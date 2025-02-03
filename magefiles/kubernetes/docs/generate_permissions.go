@@ -17,7 +17,7 @@ const (
 	endTablePlaceholder      = "<!-- k8s_api_permissions_list_end -->"
 	startRoleYamlPlaceholder = "<!-- k8s_api_permissions_role_yaml_start -->"
 	endRoleYamlPlaceholder   = "<!-- k8s_api_permissions_role_yaml_end -->"
-	docsFilePath             = "docs/executors/kubernetes/index.md"
+	docsFilePath             = "docs/executors/kubernetes/_index.md"
 )
 
 var tableTemplate = fmt.Sprintf(` %s

@@ -2,13 +2,12 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Use Podman with GitLab Runner on Kubernetes
 ---
-
-# Use Podman with GitLab Runner on Kubernetes
 
 Podman is an open-source [Open Container Initiative](https://opencontainers.org/) (OCI) tool for developing, managing, and running containers.
 
-Podman provides configurations that let you build container images in a CI job, without a root user or [privileged](../../security/index.md#usage-of-docker-executor) escalation on the host.
+Podman provides configurations that let you build container images in a CI job, without a root user or [privileged](../../security/_index.md#usage-of-docker-executor) escalation on the host.
 
 This document covers information about how to configure Podman to use it with GitLab Runner on OpenShift and non-OpenShift Kubernetes clusters.
 The configuration applies to container images set as a root and non-root user.
@@ -274,7 +273,7 @@ To achieve this:
        run_as_group = 0
      ```
 
-   - Set a resource limit to the job Pod by using the [`pod_spec` feature](../kubernetes/index.md#overwrite-generated-pod-specifications).
+   - Set a resource limit to the job Pod by using the [`pod_spec` feature](../kubernetes/_index.md#overwrite-generated-pod-specifications).
      To use `pod_spec`, set the `FF_USE_ADVANCED_POD_SPEC_CONFIGURATION` feature flag to `true`.
 
      ```toml

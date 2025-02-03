@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Troubleshooting GitLab Runner
 ---
-
-# Troubleshooting GitLab Runner
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -57,7 +56,7 @@ journalctl --unit=gitlab-runner.service -f # Tail the logs to check for potentia
 
 ## Confirm your GitLab and GitLab Runner versions
 
-GitLab aims to [guarantee backward compatibility](../index.md#gitlab-runner-versions).
+GitLab aims to [guarantee backward compatibility](../_index.md#gitlab-runner-versions).
 However, as a first troubleshooting step, you should ensure your version
 of GitLab Runner is the same as your GitLab version.
 
@@ -349,7 +348,7 @@ one time.
 ## `Job failed (system failure): preparing environment:`
 
 This error is often due to your shell
-[loading your profile](../shells/index.md#shell-profile-loading), and one of the scripts is
+[loading your profile](../shells/_index.md#shell-profile-loading), and one of the scripts is
 causing the failure.
 
 Example of dotfiles that are known to cause failure:

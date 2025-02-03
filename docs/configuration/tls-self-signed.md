@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Self-signed certificates or custom Certification Authorities
 ---
-
-# Self-signed certificates or custom Certification Authorities
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -48,7 +47,7 @@ GitLab Runner supports the following options:
 - **Default - Read the system certificate**: GitLab Runner reads the system certificate store and verifies the
   GitLab server against the certificate authorities (CA) stored in the system.
 
-- **Specify a custom certificate file**: GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/index.md#gitlab-runner-register)
+- **Specify a custom certificate file**: GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/_index.md#gitlab-runner-register)
   (`gitlab-runner register --tls-ca-file=/path`), and in [`config.toml`](advanced-configuration.md)
   under the `[[runners]]` section. This allows you to specify a custom certificate file.
   This file will be read every time the Runner tries to access the GitLab server.
@@ -97,7 +96,7 @@ Notes:
     -----END CERTIFICATE-----
     ```
 
-- If you are updating the certificate for an existing Runner, [restart it](../commands/index.md#gitlab-runner-restart).
+- If you are updating the certificate for an existing Runner, [restart it](../commands/_index.md#gitlab-runner-restart).
 - If you already have a Runner configured through HTTP, update your instance path to the new HTTPS URL of your GitLab instance in your `config.toml`.
 - As a temporary and insecure workaround, to skip the verification of certificates,
 in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.

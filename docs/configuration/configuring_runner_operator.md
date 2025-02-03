@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Configuring GitLab Runner on OpenShift
 ---
-
-# Configuring GitLab Runner on OpenShift
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -59,7 +58,7 @@ Some properties are only available with more recent versions of the Operator.
 | `azure`          | all      | Options used to set up Azure cache. Refer to [Cache properties](#cache-properties).                                               |
 | `ca`             | all      | Name of TLS secret containing the custom certificate authority (CA) certificates.                                                 |
 | `serviceaccount` | all      | Use to override service account used to run the Runner pod.                                                                       |
-| `config`         | all      | Use to provide a custom `ConfigMap` with a [configuration template](../register/index.md#register-with-a-configuration-template). |
+| `config`         | all      | Use to provide a custom `ConfigMap` with a [configuration template](../register/_index.md#register-with-a-configuration-template). |
 
 ## Cache properties
 
@@ -149,7 +148,7 @@ oc get services --namespace default --field-selector='metadata.name=kubernetes' 
 
 ## Customize `config.toml` with a configuration template
 
-You can customize the runner's `config.toml` file by using the [configuration template](../register/index.md#register-with-a-configuration-template).
+You can customize the runner's `config.toml` file by using the [configuration template](../register/_index.md#register-with-a-configuration-template).
 
 1. Create a custom configuration template file. For example, let's instruct our runner to mount an `EmptyDir` volume and
    set the `cpu_limit`. Create the `custom-config.toml` file:
@@ -233,7 +232,7 @@ must use environment variables instead of configuration templates to modify the 
 
 ## Configure the CPU and memory size of runner pods
 
-To set [CPU limits](../executors/kubernetes/index.md#cpu-requests-and-limits) and [memory limits](../executors/kubernetes/index.md#memory-requests-and-limits) in a custom `config.toml` file, follow the instructions in [this topic](#customize-configtoml-with-a-configuration-template).
+To set [CPU limits](../executors/kubernetes/_index.md#cpu-requests-and-limits) and [memory limits](../executors/kubernetes/_index.md#memory-requests-and-limits) in a custom `config.toml` file, follow the instructions in [this topic](#customize-configtoml-with-a-configuration-template).
 
 ## Configure job concurrency per runner based on cluster resources
 
@@ -427,7 +426,7 @@ NOTE:
 For Operator, you can change only the helper image. You can't change the GitLab Runner image yet.
 [Issue 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) tracks this feature.
 
-To use a [FIPS compliant GitLab Runner helper](../install/index.md#fips-compliant-gitlab-runner), change the helper image as follows:
+To use a [FIPS compliant GitLab Runner helper](../install/_index.md#fips-compliant-gitlab-runner), change the helper image as follows:
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2

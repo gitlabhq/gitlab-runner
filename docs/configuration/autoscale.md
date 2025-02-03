@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Docker Machine Executor autoscale configuration
 ---
-
-# Docker Machine Executor autoscale configuration
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -16,7 +15,7 @@ NOTE:
 The Docker Machine executor was deprecated in GitLab 17.5.
 If you're using the Docker Machine executor on Amazon Web Services (AWS) EC2,
 Microsoft Azure Compute, or Google Compute Engine (GCE), migrate to the
-[GitLab Runner Autoscaler](../runner_autoscale/index.md).
+[GitLab Runner Autoscaler](../runner_autoscale/_index.md).
 
 Autoscale provides the ability to use resources in a more elastic and
 dynamic way.
@@ -114,7 +113,7 @@ To limit the number of virtual machines (VMs) created by the Docker Machine exec
 
 The `concurrent` parameter **does not** limit the number of VMs.
 
-As detailed [here](../fleet_scaling/index.md#basic-configuration-one-runner-manager-one-runner), one process can be configured to manage multiple runner workers.
+As detailed [here](../fleet_scaling/_index.md#basic-configuration-one-runner-manager-one-runner), one process can be configured to manage multiple runner workers.
 
 This example illustrates the values set in the `config.toml` file for one runner process:
 

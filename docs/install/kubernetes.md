@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: GitLab Runner Helm chart
 ---
-
-# GitLab Runner Helm chart
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -13,7 +12,7 @@ DETAILS:
 The GitLab Runner Helm chart is the official way to deploy a GitLab Runner instance into your Kubernetes cluster.
 This chart configures GitLab Runner to:
 
-- Run using the [Kubernetes executor](../executors/kubernetes/index.md) for GitLab Runner.
+- Run using the [Kubernetes executor](../executors/kubernetes/_index.md) for GitLab Runner.
 - Provision a new pod in the specified namespace for each new CI/CD job.
 
 ## Configure GitLab Runner with the Helm chart
@@ -32,7 +31,7 @@ For GitLab Runner to run properly, you must set these values in your configurati
   pods to run jobs in.
   - Prefer to use an existing `serviceAccount`? You should also set `rbac: { serviceAccountName: "SERVICE_ACCOUNT_NAME" }`.
   - To learn about the minimal permissions the `serviceAccount` requires, see
-    [Configure runner API permissions](../executors/kubernetes/index.md#configure-runner-api-permissions).
+    [Configure runner API permissions](../executors/kubernetes/_index.md#configure-runner-api-permissions).
 - `runnerToken`: The authentication token obtained when you
   [create a runner in the GitLab UI](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-runner-authentication-token).
   - Set this token directly or store it in a secret.
@@ -122,7 +121,7 @@ Prerequisites:
 
 - You've installed your GitLab Runner chart.
 - You've paused the runner in GitLab. This prevents problems arising with the jobs, such as
-  [authorization errors when they complete](../faq/index.md#helm-chart-error--unauthorized).
+  [authorization errors when they complete](../faq/_index.md#helm-chart-error--unauthorized).
 - You've ensured all jobs have completed.
 
 To change your configuration or update charts, use `helm upgrade`, changing parameters as needed:
@@ -144,7 +143,7 @@ helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitl
 To uninstall GitLab Runner:
 
 1. Pause the runner in GitLab, and ensure any jobs have completed. This prevents job-related problems, such as
-   [authorization errors on completion](../faq/index.md#helm-chart-error--unauthorized).
+   [authorization errors on completion](../faq/_index.md#helm-chart-error--unauthorized).
 1. Run, this command, modifying it as needed:
 
    ```shell

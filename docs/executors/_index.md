@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Executors
 ---
-
-# Executors
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -26,7 +25,7 @@ GitLab Runner provides the following executors:
 - [Docker](docker.md)
 - [Docker Autoscaler](docker_autoscaler.md)
 - [Docker Machine (auto-scaling)](docker_machine.md)
-- [Kubernetes](../executors/kubernetes/index.md)
+- [Kubernetes](../executors/kubernetes/_index.md)
 - [Instance](instance.md)
 - [Custom](custom.md)
 
@@ -75,7 +74,7 @@ you decide which executor to use.
    Executors marked ✓ don't allow the runner to access the file system by default.
    However, security flaws or certain configurations could allow jobs
    to break out of their container and access the file system hosting the runner.
-1. Requires [persistent per-concurrency build volumes](kubernetes/index.md#persistent-per-concurrency-build-volumes) configuration.
+1. Requires [persistent per-concurrency build volumes](kubernetes/_index.md#persistent-per-concurrency-build-volumes) configuration.
 
 ### Shell executor
 

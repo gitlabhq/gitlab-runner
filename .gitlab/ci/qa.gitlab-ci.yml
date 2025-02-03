@@ -127,8 +127,8 @@ docs:check development docs Go version:
   script:
     - export GO_VERSION=$(cat .gitlab/ci/_common.gitlab-ci.yml | yq '.variables.GO_VERSION')
     - export EXIT_CODE=0
-    - grep $GO_VERSION docs/development/index.md || EXIT_CODE=$?
-    - if [ $EXIT_CODE -ne 0 ]; then echo "Make sure to update all Go versions in docs/development/index.md to $GO_VERSION"; exit 1; fi
+    - grep $GO_VERSION docs/development/_index.md || EXIT_CODE=$?
+    - if [ $EXIT_CODE -ne 0 ]; then echo "Make sure to update all Go versions in docs/development/_index.md to $GO_VERSION"; exit 1; fi
 
 docs:check Kubernetes API docs:
   extends:
@@ -136,10 +136,10 @@ docs:check Kubernetes API docs:
   - .no_cache_and_dependencies
   stage: qa
   script:
-    - cp docs/executors/kubernetes/index.md docs/executors/kubernetes/index.md.orig
+    - cp docs/executors/kubernetes/_index.md docs/executors/kubernetes/_index.md.orig
     - mage k8s:generatePermissionsDocs
     - |
-        diff docs/executors/kubernetes/index.md.orig docs/executors/kubernetes/index.md || (
+        diff docs/executors/kubernetes/_index.md.orig docs/executors/kubernetes/_index.md || (
           echo
           echo "Kubernetes API list in documentation is not up-to-date"
           echo "Run 'mage k8s:generatePermissionsDocs' to update it"

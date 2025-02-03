@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Running GitLab Runner behind a proxy
 ---
-
-# Running GitLab Runner behind a proxy
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -14,7 +13,7 @@ This guide aims specifically to making GitLab Runner with Docker executor work b
 
 Before continuing, ensure that you've already
 [installed Docker](https://docs.docker.com/get-docker/) and
-[GitLab Runner](../install/index.md) on the same machine.
+[GitLab Runner](../install/_index.md) on the same machine.
 
 ## Configuring CNTLM
 
@@ -143,7 +142,7 @@ This is basically the same as adding the proxy to the Docker service above:
 
 ## Adding the Proxy to the Docker containers
 
-After you [register your runner](../register/index.md), you may want to
+After you [register your runner](../register/_index.md), you may want to
 propagate your proxy settings to the Docker containers (for example, for `git clone`).
 
 To do this, you need to edit `/etc/gitlab-runner/config.toml` and add the

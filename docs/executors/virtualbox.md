@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: VirtualBox
 ---
-
-# VirtualBox
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -20,7 +19,7 @@ be run on VirtualBox. The only requirement is that the virtual machine exposes
 an SSH server and provides a shell compatible with Bash or PowerShell.
 
 NOTE:
-Ensure you meet [common prerequisites](index.md#prerequisites-for-non-docker-executors)
+Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
 on any virtual machine where GitLab Runner uses the VirtualBox executor.
 
 ## Overview

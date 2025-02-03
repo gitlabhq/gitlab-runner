@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Docker executor
 ---
-
-# Docker executor
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -21,7 +20,7 @@ The Docker executor uses [Docker Engine](https://www.docker.com/products/contain
 to run each job in a separate and isolated container. To connect to Docker Engine, the executor uses:
 
 - The image and services you define in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html).
-- The configurations you define in [`config.toml`](../commands/index.md#configuration-file).
+- The configurations you define in [`config.toml`](../commands/_index.md#configuration-file).
 
 Prerequisites:
 
@@ -120,7 +119,7 @@ Prerequisites:
     - PowerShell (`powershell`)
     - PowerShell Core (`pwsh`). [Introduced in 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/13139).
 
-To configure the Docker executor, you define the Docker images and services in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) and [`config.toml`](../commands/index.md#configuration-file).
+To configure the Docker executor, you define the Docker images and services in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) and [`config.toml`](../commands/_index.md#configuration-file).
 
 Use the following keywords:
 
@@ -638,7 +637,7 @@ Because they run as non-root, it's _almost safe_ to use with privileged mode
 images like Docker-in-Docker rootless or BuildKit rootless.
 
 For more information about security issues,
-see [Security risks for Docker executors](../security/index.md#usage-of-docker-executor).
+see [Security risks for Docker executors](../security/_index.md#usage-of-docker-executor).
 
 ## Configure a Docker ENTRYPOINT
 
@@ -907,7 +906,7 @@ Use the `if-not-present` policy to:
 
 - For instance runners where different users that use the runner may have access to private images.
   For more information about security issues, see
-  [Usage of private Docker images with if-not-present pull policy](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
+  [Usage of private Docker images with if-not-present pull policy](../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 - If jobs are frequently updated and must be run in the most recent image
   version. This may result in a network load reduction that outweighs the value of frequent deletion
   of local images.
@@ -963,7 +962,7 @@ runner uses the `always` pull policy and the registry is not available, you can 
 as a second pull policy. This configuration lets the runner use a locally cached Docker image.
 
 For information about the security implications of this pull policy, see
-[Usage of private Docker images with if-not-present pull policy](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
+[Usage of private Docker images with if-not-present pull policy](../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 
 To set multiple pull policies, add them as a list in the `config.toml`:
 

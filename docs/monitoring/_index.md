@@ -3,9 +3,8 @@ stage: Verify
 group: Runner
 description: Prometheus metrics.
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Monitor GitLab Runner usage
 ---
-
-# Monitor GitLab Runner usage
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -70,7 +69,7 @@ $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 ```
 
 The list includes [Go-specific process metrics](https://github.com/prometheus/client_golang/blob/v1.19.0/prometheus/go_collector.go).
-For a list of available metrics that do not include Go-specific processes, see [Monitoring runners](../fleet_scaling/index.md#monitoring-runners).
+For a list of available metrics that do not include Go-specific processes, see [Monitoring runners](../fleet_scaling/_index.md#monitoring-runners).
 
 ## `pprof` HTTP endpoints
 

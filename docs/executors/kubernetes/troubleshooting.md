@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Troubleshooting the Kubernetes executor
 ---
-
-# Troubleshooting the Kubernetes executor
 
 The following errors are commonly encountered when using the Kubernetes executor.
 
@@ -81,7 +80,7 @@ instance. Ensure they have all of the resources needed to manage the target numb
 of pods that you hope to scale up to on the cluster.
 
 To change the time GitLab Runner waits for a pod to reach its `Ready` status, use the
-[`poll_timeout`](../kubernetes/index.md#other-configtoml-settings) setting.
+[`poll_timeout`](../kubernetes/_index.md#other-configtoml-settings) setting.
 
 To better understand how pods are scheduled or why they might not get scheduled
 on time, [read about the Kubernetes Scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/).
@@ -134,11 +133,11 @@ Using the `helper_image_flavor = "ubuntu"` option should resolve this.
 
 ## `docker: Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon running?`
 
-This error can occur when [using Docker-in-Docker](../kubernetes/index.md#using-dockerdind) if attempts are made to access the DIND service before it has had time to fully start up. For a more detailed explanation, see [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27215).
+This error can occur when [using Docker-in-Docker](../kubernetes/_index.md#using-dockerdind) if attempts are made to access the DIND service before it has had time to fully start up. For a more detailed explanation, see [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27215).
 
 ## `curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to github.com:443`
 
-This error can happen when [using Docker-in-Docker](../kubernetes/index.md#using-dockerdind) if the DIND Maximum Transmission Unit (MTU) is larger than the Kubernetes overlay network. DIND uses a default MTU of 1500, which is too large to route across the default overlay network. The DIND MTU can be changed within the service definition:
+This error can happen when [using Docker-in-Docker](../kubernetes/_index.md#using-dockerdind) if the DIND Maximum Transmission Unit (MTU) is larger than the Kubernetes overlay network. DIND uses a default MTU of 1500, which is too large to route across the default overlay network. The DIND MTU can be changed within the service definition:
 
 ```yaml
 services:
@@ -154,7 +153,7 @@ When you run your CI/CD job, you might receive an error like the following:
 MountVolume.SetUp failed for volume "kube-api-access-xxxxx" : chown c:\var\lib\kubelet\pods\xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\volumes\kubernetes.io~projected\kube-api-access-xxxxx\..2022_07_07_20_52_19.102630072\token: not supported by windows
 ```
 
-This issue occurs when you [use node selectors](../kubernetes/index.md#specify-the-node-to-execute-builds) to run builds on nodes with different operating systems and architectures.
+This issue occurs when you [use node selectors](../kubernetes/_index.md#specify-the-node-to-execute-builds) to run builds on nodes with different operating systems and architectures.
 
 To fix the issue, configure `nodeSelector` so that the runner manager pod is always scheduled on a Linux node. For example, your [`values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml) should contain the following:
 
@@ -181,7 +180,7 @@ This issue happens when the worker node IAM role does not have the permission to
 
 ## `Preparation failed: invalid pull policy for image 'image-name:latest': pull_policy ([Always]) defined in GitLab pipeline config is not one of the allowed_pull_policies ([])`
 
-This issue happens if you specified a `pull_policy` in your `.gitlab-ci.yml` but there is no policy configured in the Runner's config file. To fix this, add `allowed_pull_policies` to your config according to [Restrict Docker pull policies](../kubernetes/index.md#restrict-docker-pull-policies).
+This issue happens if you specified a `pull_policy` in your `.gitlab-ci.yml` but there is no policy configured in the Runner's config file. To fix this, add `allowed_pull_policies` to your config according to [Restrict Docker pull policies](../kubernetes/_index.md#restrict-docker-pull-policies).
 
 <!-- markdownlint-enable line-length -->
 
@@ -362,7 +361,7 @@ runners:
 
 NOTE:
 Instead of `emptyDir`, you can use any other
-[supported volume types](index.md#configure-volume-types).
+[supported volume types](_index.md#configure-volume-types).
 Because all files that are not explicitly handled and stored as build
 artefacts are usually ephemeral, `emptyDir` works for most cases.
 
