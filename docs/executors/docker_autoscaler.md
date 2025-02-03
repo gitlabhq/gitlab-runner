@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Docker Autoscaler executor
 ---
-
-# Docker Autoscaler executor
 
 > - Introduced in GitLab Runner 15.11.0 as an [experiment](https://docs.gitlab.com/ee/policy/development_stages_support.html#experiment).
 > - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [beta](https://docs.gitlab.com/ee/policy/development_stages_support.html#beta) in GitLab Runner 16.6.

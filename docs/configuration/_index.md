@@ -3,9 +3,8 @@ stage: Verify
 group: Runner
 description: Config.toml, certificates, autoscaling, proxy setup.
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Configure GitLab Runner
 ---
-
-# Configure GitLab Runner
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -20,17 +19,17 @@ Learn how to configure GitLab Runner.
   that verify TLS peers when connecting to the GitLab server.
 - [Autoscale with Docker Machine](autoscale.md): Execute jobs on machines
   created automatically by Docker Machine.
-- [Autoscale GitLab Runner on AWS EC2](runner_autoscale_aws/index.md): Execute jobs on auto-scaled AWS EC2 instances.
-- [Autoscale GitLab CI on AWS Fargate](runner_autoscale_aws_fargate/index.md):
+- [Autoscale GitLab Runner on AWS EC2](runner_autoscale_aws/_index.md): Execute jobs on auto-scaled AWS EC2 instances.
+- [Autoscale GitLab CI on AWS Fargate](runner_autoscale_aws_fargate/_index.md):
   Use the AWS Fargate driver with the GitLab custom executor to run jobs in AWS ECS.
 - [Graphical Processing Units](gpus.md): Use GPUs to execute jobs.
 - [The init system](init.md): GitLab Runner installs
   its init service files based on your operating system.
-- [Supported shells](../shells/index.md): Execute builds on different systems by
+- [Supported shells](../shells/_index.md): Execute builds on different systems by
   using shell script generators.
-- [Security considerations](../security/index.md): Be aware of potential
+- [Security considerations](../security/_index.md): Be aware of potential
   security implications when running your jobs with GitLab Runner.
-- [Runner monitoring](../monitoring/index.md): Monitor the behavior of your
+- [Runner monitoring](../monitoring/_index.md): Monitor the behavior of your
   runners.
 - [Clean up Docker cache automatically](../executors/docker.md#clear-the-docker-cache):
   If you are running low on disk space, use a cron job to clean old containers and volumes.

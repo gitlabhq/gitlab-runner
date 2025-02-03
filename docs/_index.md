@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: GitLab Runner
 ---
-
-# GitLab Runner
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -20,7 +19,7 @@ DETAILS:
 
 Self-managed runners are GitLab Runner instances that you install, configure, and manage in your own
 infrastructure. 
-You can [install](install/index.md) and register self-managed runners on all GitLab installations.
+You can [install](install/_index.md) and register self-managed runners on all GitLab installations.
 
 Unlike [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/index.html), which are hosted and managed by GitLab, you have complete control over self-managed runners.
 
@@ -34,7 +33,7 @@ public cloud providers. GRIT is created and maintained by the runner team.
 ### Scale a fleet of runners
 
 When your organization scales to having a fleet of runners, you
-should [plan for how you will monitor and adjust performance for these runners](fleet_scaling/index.md).
+should [plan for how you will monitor and adjust performance for these runners](fleet_scaling/_index.md).
 
 ### GitLab Runner versions
 
@@ -53,12 +52,12 @@ registration API request format. It prevents the GitLab Runner from communicatin
 You must use a Runner version that is appropriate for the GitLab version, or upgrade the GitLab application.
 
 If you host your own runners but host your repositories on GitLab.com,
-keep GitLab Runner [updated](install/index.md) to the latest version, as GitLab.com is
+keep GitLab Runner [updated](install/_index.md) to the latest version, as GitLab.com is
 [updated continuously](https://gitlab.com/gitlab-org/release/tasks/-/issues).
 
 ### Runner registration
 
-After you install the application, you [**register**](register/index.md)
+After you install the application, you [**register**](register/_index.md)
 individual runners. Runners are the agents that run the CI/CD jobs that come from GitLab.
 
 When you register a runner, you are setting up communication between your
@@ -72,7 +71,7 @@ in a Kubernetes cluster, or in auto-scaled instances in the cloud.
 
 When you register a runner, you must choose an executor.
 
-An [**executor**](executors/index.md) determines the environment each job runs in.
+An [**executor**](executors/_index.md) determines the environment each job runs in.
 
 For example:
 
@@ -133,7 +132,7 @@ memory, CPU limits, and more.
 
 ### Monitoring runners
 
-You can use Prometheus to [**monitor**](monitoring/index.md) your runners.
+You can use Prometheus to [**monitor**](monitoring/_index.md) your runners.
 You can view things like the number of currently-running jobs and how
 much CPU your runners are using.
 
@@ -208,12 +207,12 @@ See also the official [GitLab Word List](https://docs.gitlab.com/ee/development/
 
 ## Troubleshooting
 
-Learn how to [troubleshoot](faq/index.md) common issues.
+Learn how to [troubleshoot](faq/_index.md) common issues.
 
 ## Contributing
 
 Contributions are welcome. See [`CONTRIBUTING.md`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CONTRIBUTING.md)
-and the [development documentation](development/index.md) for details.
+and the [development documentation](development/_index.md) for details.
 
 If you're a reviewer of GitLab Runner project, take a moment to read the
 [Reviewing GitLab Runner](development/reviewing-gitlab-runner.md) document.

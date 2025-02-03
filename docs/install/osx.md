@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Install GitLab Runner on macOS
 ---
-
-# Install GitLab Runner on macOS
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -12,7 +11,7 @@ DETAILS:
 
 This page contains instructions about installing GitLab Runner on macOS (Apple Silicon and Intel x86-64).
 
-For information about troubleshooting, see [Troubleshooting GitLab Runner](../faq/index.md).
+For information about troubleshooting, see [Troubleshooting GitLab Runner](../faq/_index.md).
 
 1. Download the binary for your system:
 
@@ -39,9 +38,9 @@ For information about troubleshooting, see [Troubleshooting GitLab Runner](../fa
 
 1. In the user account where you will run the GitLab Runner application:
 
-   1. [Register a runner](../register/index.md) configuration. Choose
+   1. [Register a runner](../register/_index.md) configuration. Choose
       the [shell executor](../executors/shell.md) during the registration process. When you build iOS or macOS applications on macOS, jobs run directly on the host, and use the identity of the authenticated user. The jobs do not run in a container, which is less secure than using container executors.
-      For details, see the [security implications documentation](../security/index.md#usage-of-shell-executor).
+      For details, see the [security implications documentation](../security/_index.md#usage-of-shell-executor).
 
    1. Open a terminal and switch to the current user.
 
@@ -63,7 +62,7 @@ For information about troubleshooting, see [Troubleshooting GitLab Runner](../fa
 
 If you followed these instructions, the GitLab Runner configuration file (`config.toml`) is in `/Users/<username>/.gitlab-runner/`. [Learn more about configuring runners](../configuration/advanced-configuration.md).
 
-For more information, see the [glossary](../index.md#glossary).
+For more information, see the [glossary](../_index.md#glossary).
 
 ## Known issues
 

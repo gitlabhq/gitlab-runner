@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: The Custom executor
 ---
-
-# The Custom executor
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -73,8 +72,8 @@ The user must set up the environment, including the following that must
 be present in the `PATH`:
 
 - [Git](https://git-scm.com/download) and [Git LFS](https://git-lfs.com/):
-  see [common prerequisites](index.md#prerequisites-for-non-docker-executors).
-- [GitLab Runner](../install/index.md): Used to
+  see [common prerequisites](_index.md#prerequisites-for-non-docker-executors).
+- [GitLab Runner](../install/_index.md): Used to
   download/update artifacts and cache.
 
 ## Stages

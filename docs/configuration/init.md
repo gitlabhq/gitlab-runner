@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: The system services of GitLab Runner
 ---
-
-# The system services of GitLab Runner
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -19,7 +18,7 @@ The package `service` installs, un-installs, starts, stops, and runs a program a
 service (daemon). Windows XP+, Linux (systemd, Upstart, and System V),
 and macOS (launchd) are supported.
 
-When GitLab Runner [is installed](../install/index.md), the service file is
+When GitLab Runner [is installed](../install/_index.md), the service file is
 automatically created:
 
 - **systemd:** `/etc/systemd/system/gitlab-runner.service`

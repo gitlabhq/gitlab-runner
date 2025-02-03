@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Install GitLab Runner on Windows
 ---
-
-# Install GitLab Runner on Windows
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -29,7 +28,7 @@ With GitLab Runner 10, the executable was renamed to `gitlab-runner`.
 1. Make sure to restrict the `Write` permissions on the GitLab Runner directory and executable.
    If you do not set these permissions, regular users can replace the executable with their own and run arbitrary code with elevated privileges.
 1. Run an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator):
-1. [Register a runner](../register/index.md).
+1. [Register a runner](../register/_index.md).
 1. Install GitLab Runner as a service and start it. You can either run the service
    using the Built-in System Account (recommended) or using a user account.
 
@@ -96,7 +95,7 @@ rmdir /s GitLab-Runner
 
 ## Windows troubleshooting
 
-Make sure that you read the [FAQ](../faq/index.md) section which describes
+Make sure that you read the [FAQ](../faq/_index.md) section which describes
 some of the most common problems with GitLab Runner.
 
 If you encounter an error like _The account name is invalid_, try:
@@ -290,7 +289,7 @@ functions. While `exit 1` marks a job as failed, `return 1` does not.
 
 ### Job marked as success and terminated midway using Kubernetes executor
 
-For more information, see [Job execution](../executors/kubernetes/index.md#job-execution).
+For more information, see [Job execution](../executors/kubernetes/_index.md#job-execution).
 
 ### Docker executor: `unsupported Windows Version`
 

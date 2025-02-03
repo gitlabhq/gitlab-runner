@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Registering runners
 ---
-
-# Registering runners
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -18,7 +17,7 @@ Runner registration is the process that links the runner with one or more GitLab
 
 Before you register a runner:
 
-- Install [GitLab Runner](../install/index.md) on a server separate to where GitLab
+- Install [GitLab Runner](../install/_index.md) on a server separate to where GitLab
   is installed.
 - For runner registration with Docker, install [GitLab Runner in a Docker container](../install/docker.md).
 
@@ -113,14 +112,14 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
 1. Enter a description for the runner.
 1. Enter the job tags, separated by commas.
 1. Enter an optional maintenance note for the runner.
-1. Enter the type of [executor](../executors/index.md).
+1. Enter the type of [executor](../executors/_index.md).
 
 - To register multiple runners on the same host machine, each with a different configuration,
   repeat the `register` command.
 - To register the same configuration on multiple host machines, use the same runner authentication token
-  for each runner registration. For more information, see [Reusing a runner configuration](../fleet_scaling/index.md#reusing-a-runner-configuration).
+  for each runner registration. For more information, see [Reusing a runner configuration](../fleet_scaling/_index.md#reusing-a-runner-configuration).
 
-You can also use the [non-interactive mode](../commands/index.md#non-interactive-registration) to use additional arguments to register the runner:
+You can also use the [non-interactive mode](../commands/_index.md#non-interactive-registration) to use additional arguments to register the runner:
 
 ::Tabs
 
@@ -274,12 +273,12 @@ To register the runner with a [runner registration token](https://docs.gitlab.co
 1. Enter a description for the runner.
 1. Enter the job tags, separated by commas.
 1. Enter an optional maintenance note for the runner.
-1. Enter the type of [executor](../executors/index.md).
+1. Enter the type of [executor](../executors/_index.md).
 
 To register multiple runners on the same host machine, each with a different configuration,
 repeat the `register` command.
 
-You can also use the [non-interactive mode](../commands/index.md#non-interactive-registration) to use additional arguments to register the runner:
+You can also use the [non-interactive mode](../commands/_index.md#non-interactive-registration) to use additional arguments to register the runner:
 
 ::Tabs
 
@@ -437,7 +436,7 @@ To register a runner:
    ```
 
 1. Add the path to the file. You can use either:
-   - The [non-interactive mode](../commands/index.md#non-interactive-registration) in the command line:
+   - The [non-interactive mode](../commands/_index.md#non-interactive-registration) in the command line:
 
      ```shell
      $ sudo gitlab-runner register \

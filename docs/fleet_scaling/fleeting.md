@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Fleeting
 ---
-
-# Fleeting
 
 [Fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) is a library that GitLab Runner uses to provide a plugin-based abstraction for a cloud provider's instance groups.
 

@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Speed up job execution
 ---
-
-# Speed up job execution
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate

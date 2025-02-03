@@ -125,7 +125,7 @@ var (
 	chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 	// network errors to retry on
-	// make sure to update the documentation in kubernetes/index.md to keep it in sync
+	// make sure to update the documentation in docs/executors/kubernetes/_index.md to keep it in sync
 	retryNetworkErrorsGroup = []string{
 		"error dialing backend",
 		"TLS handshake timeout",

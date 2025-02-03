@@ -3,9 +3,8 @@ stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ignore_in_report: true
+title: Internal Executor Interface
 ---
-
-# Internal Executor Interface
 
 NOTE:
 As this is a documentation of the code internals, it's easier to get it outdated than

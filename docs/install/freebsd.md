@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Install GitLab Runner on FreeBSD
 ---
-
-# Install GitLab Runner on FreeBSD
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -12,7 +11,7 @@ DETAILS:
 
 NOTE:
 The FreeBSD version is also available as a [bleeding edge](bleeding-edge.md)
-release. Make sure that you read the [FAQ](../faq/index.md) section which
+release. Make sure that you read the [FAQ](../faq/_index.md) section which
 describes some of the most common problems with GitLab Runner.
 
 WARNING:
@@ -145,7 +144,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
    sudo chmod +x /usr/local/etc/rc.d/gitlab_runner
    ```
 
-1. [Register a runner](../register/index.md)
+1. [Register a runner](../register/_index.md)
 1. Enable the `gitlab-runner` service and start it:
 
    ```shell

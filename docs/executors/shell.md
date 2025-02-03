@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: The Shell executor
 ---
-
-# The Shell executor
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -16,13 +15,13 @@ which the Runner can be installed. That means that it's possible to use scripts
 generated for Bash, PowerShell Core, Windows PowerShell, and Windows Batch (deprecated).
 
 NOTE:
-Ensure you meet [common prerequisites](index.md#prerequisites-for-non-docker-executors)
+Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
 on the machine where GitLab Runner uses the shell executor.
 
 ## Run scripts as a privileged user
 
 The scripts can be run as unprivileged user if the `--user` is added to the
-[`gitlab-runner run` command](../commands/index.md#gitlab-runner-run). This feature is only supported by Bash.
+[`gitlab-runner run` command](../commands/_index.md#gitlab-runner-run). This feature is only supported by Bash.
 
 The source project is checked out to:
 `<working-directory>/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`.
@@ -68,7 +67,7 @@ usermod -aG vboxusers gitlab-runner
 
 ## Selecting your shell
 
-GitLab Runner [supports certain shells](../shells/index.md). To select a shell, specify it in your `config.toml` file. For example:
+GitLab Runner [supports certain shells](../shells/_index.md). To select a shell, specify it in your `config.toml` file. For example:
 
 ```toml
 ...

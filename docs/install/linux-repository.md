@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Install GitLab Runner using the official GitLab repositories
 ---
-
-# Install GitLab Runner using the official GitLab repositories
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -123,11 +122,11 @@ To install GitLab Runner:
 
    ::EndTabs
 
-1. [Register a runner](../register/index.md).
+1. [Register a runner](../register/_index.md).
 
 After completing the above steps, a runner can be started and can be used with your projects!
 
-Make sure that you read the [FAQ](../faq/index.md) section which describes
+Make sure that you read the [FAQ](../faq/_index.md) section which describes
 some of the most common problems with GitLab Runner.
 
 ## Upgrade GitLab Runner

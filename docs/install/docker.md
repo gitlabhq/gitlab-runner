@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Run GitLab Runner in a container
 ---
-
-# Run GitLab Runner in a container
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -57,7 +56,7 @@ you should always use the latest stable [Docker Engine version](https://docs.doc
 Prerequisites:
 
 - You have [installed Docker](https://docs.docker.com/get-docker/).
-- You have read the [FAQ](../faq/index.md) to learn about common problems in GitLab Runner.
+- You have read the [FAQ](../faq/_index.md) to learn about common problems in GitLab Runner.
 
 1. Download the `gitlab-runner` Docker image by using the `docker pull gitlab/gitlab-runner:<version-tag>` command.
 
@@ -77,13 +76,13 @@ Prerequisites:
    - For system volume mounts, add `-v /srv/gitlab-runner/docker-machine-config:/root/.docker/machine`
    - For Docker named volumes, add `-v docker-machine-config:/root/.docker/machine`
 
-1. [Register a new runner](../register/index.md). The GitLab Runner container must be registered to pick up jobs.
+1. [Register a new runner](../register/_index.md). The GitLab Runner container must be registered to pick up jobs.
 
 Some available configuration options include:
 
 - Set the container's time zone with the flag `--env TZ=<TIMEZONE>`.
   [See a list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
-- For a [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-runner) image, based on
+- For a [FIPS compliant GitLab Runner](_index.md#fips-compliant-gitlab-runner) image, based on
   `redhat/ubi9-micro`, use the `gitlab/gitlab-runner:ubi-fips` tags.
 - [Install trusted SSL server certificates](#install-trusted-ssl-server-certificates).
 

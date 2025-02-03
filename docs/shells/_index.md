@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Types of shells supported by GitLab Runner
 ---
-
-# Types of shells supported by GitLab Runner
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
@@ -63,7 +62,7 @@ which also loads the shell profile. Anything that you have in your `.bashrc`,
 [or any other dotfile](https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_03_01.html#sect_03_01_02),
 is executed in your job.
 
-If a [job fails on the `Prepare environment`](../faq/index.md#job-failed-system-failure-preparing-environment) stage, it
+If a [job fails on the `Prepare environment`](../faq/_index.md#job-failed-system-failure-preparing-environment) stage, it
 is likely that something in the shell profile is causing the failure. A common
 failure is when there is a `.bash_logout` that tries to clear the console.
 

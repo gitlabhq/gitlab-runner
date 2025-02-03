@@ -2,9 +2,8 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+title: Set up macOS runners
 ---
-
-# Set up macOS runners
 
 To run a CI/CD job on a macOS runner, complete the following steps in order.
 
@@ -112,7 +111,7 @@ Now [create and register](https://docs.gitlab.com/ee/ci/runners/runners_scope.ht
 When you create and register the runner:
 
 - In GitLab, add the tag `macos` to ensure macOS jobs run on this macOS machine.
-- In the command-line, select `shell` as the [executor](../executors/index.md).
+- In the command-line, select `shell` as the [executor](../executors/_index.md).
 
 After you register the runner, a success message displays in the command-line:
 
