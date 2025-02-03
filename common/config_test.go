@@ -1766,14 +1766,6 @@ func TestEffectivePrivilege(t *testing.T) {
 }
 
 func TestContainerSecurityContext(t *testing.T) {
-	boolPtr := func(v bool) *bool {
-		return &v
-	}
-
-	int64Ptr := func(v int64) *int64 {
-		return &v
-	}
-
 	tests := map[string]struct {
 		getSecurityContext                  func(c *KubernetesConfig) *api.SecurityContext
 		getExpectedContainerSecurityContext func() *api.SecurityContext
@@ -1789,7 +1781,7 @@ func TestContainerSecurityContext(t *testing.T) {
 		"run as user - container security context": {
 			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
 				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
-					RunAsUser: int64Ptr(1000),
+					RunAsUser: Int64Ptr(1000),
 				})
 			},
 			getExpectedContainerSecurityContext: func() *api.SecurityContext {
@@ -1802,27 +1794,27 @@ func TestContainerSecurityContext(t *testing.T) {
 		"privileged - container security context": {
 			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
 				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
-					Privileged: boolPtr(true),
+					Privileged: ptr(true),
 				})
 			},
 			getExpectedContainerSecurityContext: func() *api.SecurityContext {
 				return &api.SecurityContext{
-					Privileged: boolPtr(true),
+					Privileged: ptr(true),
 				}
 			},
 		},
 		"container privileged override - container security context": {
 			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
-				c.Privileged = boolPtr(true)
+				c.Privileged = ptr(true)
 				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
-					Privileged: boolPtr(false),
-					RunAsUser:  int64Ptr(65535),
+					Privileged: ptr(false),
+					RunAsUser:  Int64Ptr(65535),
 				})
 			},
 			getExpectedContainerSecurityContext: func() *api.SecurityContext {
 				runAsUser := int64(65535)
 				return &api.SecurityContext{
-					Privileged: boolPtr(false),
+					Privileged: ptr(false),
 					RunAsUser:  &runAsUser,
 				}
 			},
@@ -1830,25 +1822,25 @@ func TestContainerSecurityContext(t *testing.T) {
 		"allow privilege escalation - not set on container security context": {
 			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
 				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
-					AllowPrivilegeEscalation: boolPtr(true),
+					AllowPrivilegeEscalation: ptr(true),
 				})
 			},
 			getExpectedContainerSecurityContext: func() *api.SecurityContext {
 				return &api.SecurityContext{
-					AllowPrivilegeEscalation: boolPtr(true),
+					AllowPrivilegeEscalation: ptr(true),
 				}
 			},
 		},
 		"allow privilege escalation - set on container security context": {
 			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
-				c.AllowPrivilegeEscalation = boolPtr(true)
+				c.AllowPrivilegeEscalation = ptr(true)
 				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
-					AllowPrivilegeEscalation: boolPtr(false),
+					AllowPrivilegeEscalation: ptr(false),
 				})
 			},
 			getExpectedContainerSecurityContext: func() *api.SecurityContext {
 				return &api.SecurityContext{
-					AllowPrivilegeEscalation: boolPtr(false),
+					AllowPrivilegeEscalation: ptr(false),
 				}
 			},
 		},
