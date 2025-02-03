@@ -2493,3 +2493,59 @@ func Test_CommandLineFlags(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_SaveConfig_CustomBuildDir(t *testing.T) {
+	tests := map[string]struct {
+		customBuildDir    CustomBuildDir
+		expectedTomlRE    string
+		notExpectedTomlRE string
+	}{
+		"not explicitly set": {
+			customBuildDir:    CustomBuildDir{},
+			notExpectedTomlRE: "custom_build_dir",
+		},
+		"explicitly enabled": {
+			customBuildDir: CustomBuildDir{Enabled: ptr(true)},
+			expectedTomlRE: `(?m)\[runners\.custom_build_dir\]\n\s+enabled = true\n`,
+		},
+		"explicitly disabled": {
+			customBuildDir: CustomBuildDir{Enabled: ptr(false)},
+			expectedTomlRE: `(?m)\[runners\.custom_build_dir\]\n\s+enabled = false\n`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cs := NewMockConfigSaver(t)
+			cs.On("Save", "", mock.MatchedBy(func(b []byte) bool {
+				tomlBlob := string(b)
+				if e := test.expectedTomlRE; e != "" {
+					assert.Regexp(t, e, tomlBlob)
+				}
+				if ne := test.notExpectedTomlRE; ne != "" {
+					assert.NotRegexp(t, ne, tomlBlob)
+				}
+				return true
+			})).Return(nil).Once()
+
+			c := &Config{
+				configSaver: cs,
+				Runners: []*RunnerConfig{
+					{
+						Name: name,
+						RunnerSettings: RunnerSettings{
+							CustomBuildDir: test.customBuildDir,
+						},
+					},
+				},
+			}
+
+			err := c.SaveConfig("")
+			require.NoError(t, err)
+		})
+	}
+}
+
+func ptr[T any](v T) *T {
+	return &v
+}

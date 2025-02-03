@@ -93,8 +93,8 @@ func (e *AbstractExecutor) CacheDir() string {
 }
 
 func (e *AbstractExecutor) CustomBuildEnabled() bool {
-	if e.Config.CustomBuildDir != nil {
-		return e.Config.CustomBuildDir.Enabled
+	if enabled := e.Config.CustomBuildDir.Enabled; enabled != nil {
+		return *enabled
 	}
 
 	return e.DefaultCustomBuildsDirEnabled

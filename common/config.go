@@ -1188,7 +1188,7 @@ type RunnerSettings struct {
 	SafeDirectoryCheckout *bool `toml:"safe_directory_checkout,omitempty" json:"safe_directory_checkout,omitempty" long:"safe-directory-checkout" env:"RUNNER_SAFE_DIRECTORY_CHECKOUT" description:"When set to true, Git global configuration will get a safe.directory directive pointing the job's working directory'"`
 
 	Shell          string           `toml:"shell,omitempty" json:"shell" long:"shell" env:"RUNNER_SHELL" description:"Select bash, sh, cmd, pwsh or powershell" jsonschema:"enum=bash,enum=sh,enum=cmd,enum=pwsh,enum=powershell,enum="`
-	CustomBuildDir *CustomBuildDir  `toml:"custom_build_dir,omitempty" json:"custom_build_dir,omitempty" group:"custom build dir configuration" namespace:"custom_build_dir"`
+	CustomBuildDir CustomBuildDir   `toml:"custom_build_dir,omitempty" json:"custom_build_dir,omitempty" group:"custom build dir configuration" namespace:"custom_build_dir"`
 	Referees       *referees.Config `toml:"referees,omitempty" json:"referees,omitempty" group:"referees configuration" namespace:"referees"`
 	Cache          *CacheConfig     `toml:"cache,omitempty" json:"cache,omitempty" group:"cache configuration" namespace:"cache"`
 
@@ -1298,7 +1298,7 @@ func (s *defaultConfigSaver) Save(filePath string, data []byte) error {
 }
 
 type CustomBuildDir struct {
-	Enabled bool `toml:"enabled,omitempty" json:"enabled" long:"enabled" env:"CUSTOM_BUILD_DIR_ENABLED" description:"Enable job specific build directories"`
+	Enabled *bool `toml:"enabled,omitempty" json:"enabled" long:"enabled" env:"CUSTOM_BUILD_DIR_ENABLED" description:"Enable job specific build directories"`
 }
 
 type S3AuthType string

@@ -2063,7 +2063,8 @@ func TestBuildWithCustomClonePath(t *testing.T) {
 
 				build := newBuild(t, jobResponse, shell)
 
-				build.Runner.CustomBuildDir = &common.CustomBuildDir{Enabled: true}
+				enabled := true
+				build.Runner.CustomBuildDir = common.CustomBuildDir{Enabled: &enabled}
 				build.Runner.BuildsDir = build.Runner.BuildsDir + tt
 
 				build.Variables = append(
