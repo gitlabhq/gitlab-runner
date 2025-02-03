@@ -1183,7 +1183,7 @@ func (e *executor) setupDefaultExecutorOptions(os string) {
 }
 
 func (e *executor) prepareHelperImage() (helperimage.Info, error) {
-	return helperimage.Get(common.VERSION, helperimage.Config{
+	return helperimage.Get(common.AppVersion.Version, helperimage.Config{
 		OSType:        e.info.OSType,
 		Architecture:  e.info.Architecture,
 		KernelVersion: e.info.KernelVersion,

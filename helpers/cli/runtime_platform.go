@@ -16,8 +16,8 @@ func LogRuntimePlatform(app *cli.App) {
 		fields := logrus.Fields{
 			"os":       runtime.GOOS,
 			"arch":     runtime.GOARCH,
-			"version":  common.VERSION,
-			"revision": common.REVISION,
+			"version":  common.AppVersion.Version,
+			"revision": common.AppVersion.Revision,
 			"pid":      os.Getpid(),
 		}
 

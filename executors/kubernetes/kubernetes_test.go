@@ -1131,9 +1131,8 @@ func TestCleanup(t *testing.T) {
 //     "smaller"/"emptier" executor, which makes it easier to compare it with the actual one.
 func TestPrepare(t *testing.T) {
 	helperImageTag := "latest"
-	// common.VERSION is overridden at build time.
-	if common.VERSION != "development version" {
-		helperImageTag = helperimage.Version(common.VERSION)
+	if common.AppVersion.Version != "development version" {
+		helperImageTag = helperimage.Version(common.AppVersion.Version)
 	}
 
 	defaultOverwrites := &overwrites{
@@ -1178,7 +1177,7 @@ func TestPrepare(t *testing.T) {
 			nodeSelectorWindowsBuildLabel: os,
 		}
 	}
-	pwshHelperImage, err := helperimage.Get(common.VERSION, helperimage.Config{
+	pwshHelperImage, err := helperimage.Get(common.AppVersion.Version, helperimage.Config{
 		Architecture:  "x86_64",
 		OSType:        osType,
 		Shell:         shells.SNPwsh,
@@ -4073,7 +4072,7 @@ func TestSetupBuildPod(t *testing.T) {
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				for _, c := range pod.Spec.Containers {
 					if c.Name == "helper" {
-						assert.Equal(t, "custom/helper-image:"+common.REVISION, c.Image)
+						assert.Equal(t, "custom/helper-image:"+common.AppVersion.Revision, c.Image)
 					}
 				}
 			},
@@ -6461,7 +6460,7 @@ func TestCommandTerminatedError_Is(t *testing.T) {
 }
 
 func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
-	gitlabRegistry, err := helperimage.Get(common.VERSION, helperimage.Config{
+	gitlabRegistry, err := helperimage.Get(common.AppVersion.Version, helperimage.Config{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
 	})

@@ -224,7 +224,7 @@ func TestHelperImageWithVariable(t *testing.T) {
 	p := new(pull.MockManager)
 	defer p.AssertExpectations(t)
 
-	runnerImageTag := "gitlab/gitlab-runner:" + common.REVISION
+	runnerImageTag := "gitlab/gitlab-runner:" + common.AppVersion.Revision
 
 	p.On("GetDockerImage", runnerImageTag, common.ImageDockerOptions{}, []common.DockerPullPolicy(nil)).
 		Return(&types.ImageInspect{ID: "helper-image"}, nil).
@@ -840,7 +840,7 @@ func createExecutorForTestDockerConfiguration(
 	e.Build.Token = "abcd123456"
 	e.BuildShell = &common.ShellConfiguration{}
 	var err error
-	e.helperImageInfo, err = helperimage.Get(common.VERSION, helperimage.Config{
+	e.helperImageInfo, err = helperimage.Get(common.AppVersion.Version, helperimage.Config{
 		OSType:        e.info.OSType,
 		Architecture:  e.info.Architecture,
 		KernelVersion: e.info.KernelVersion,

@@ -61,10 +61,10 @@ func (s *LogHook) Fire(entry *logrus.Entry) error {
 
 func NewLogHook(dsn string) (lh LogHook, err error) {
 	tags := make(map[string]string)
-	tags["built"] = common.BUILT
-	tags["version"] = common.VERSION
-	tags["revision"] = common.REVISION
-	tags["branch"] = common.BRANCH
+	tags["built"] = common.AppVersion.BuiltAt
+	tags["version"] = common.AppVersion.Version
+	tags["revision"] = common.AppVersion.Revision
+	tags["branch"] = common.AppVersion.Branch
 	tags["go-version"] = runtime.Version()
 	tags["go-os"] = runtime.GOOS
 	tags["go-arch"] = runtime.GOARCH
