@@ -1,4 +1,4 @@
-package docs
+package docutils
 
 import (
 	"bytes"
@@ -67,7 +67,7 @@ func (r *blockLineReplacer) handleEnd(line string) {
 	r.output.WriteString(r.replaceContent)
 }
 
-func newBlockLineReplacer(startLine, endLine string, input, replaceContent string) *blockLineReplacer {
+func NewBlockLineReplacer(startLine, endLine string, input, replaceContent string) *blockLineReplacer {
 	return &blockLineReplacer{
 		startLine:      startLine,
 		endLine:        endLine,

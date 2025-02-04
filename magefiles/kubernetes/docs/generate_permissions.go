@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	"github.com/samber/lo"
+	"gitlab.com/gitlab-org/gitlab-runner/magefiles/docutils"
 )
 
 const (
@@ -159,7 +160,7 @@ func renderTable(permissions []permissionsRender) (string, error) {
 }
 
 func replace(placeholderStart, placeholderEnd, fileContent, content string) (string, error) {
-	replacer := newBlockLineReplacer(placeholderStart, placeholderEnd, fileContent, content)
+	replacer := docutils.NewBlockLineReplacer(placeholderStart, placeholderEnd, fileContent, content)
 
 	newContent, err := replacer.Replace()
 	if err != nil {

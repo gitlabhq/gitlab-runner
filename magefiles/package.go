@@ -202,3 +202,9 @@ func (p Package) Prepare() error {
 func (Package) VerifyIterationVariable() error {
 	return packages.VerifyIterationVariable()
 }
+
+// Docs generates user documentation listing the linux distribution/versions for which runner packages are published for
+// the stable branch.
+func (p Package) Docs() error {
+	return packages.GenerateSupportedOSDocs(supportedOSVersions)
+}

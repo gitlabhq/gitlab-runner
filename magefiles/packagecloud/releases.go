@@ -44,8 +44,10 @@ const (
 
 type (
 	pkgCloudDistroRelease struct {
-		IndexName string `json:"index_name"`
-		ID        int    `json:"id"`
+		IndexName   string `json:"index_name"`
+		ID          int    `json:"id"`
+		Version     string `json:"version_number"`
+		DisplayName string `json:"display_name"`
 	}
 
 	pkgCloudDistribution struct {
@@ -102,12 +104,17 @@ func (a *args) DistBranchPair() string {
 	return a.dist + "/" + a.branch
 }
 
-func Releases(dist, branch, token, host string) ([]string, error) {
+func Releases(dist, branch, token, host string, verbose bool) ([]string, error) {
 	args := args{
 		branch: branch,
 		dist:   dist,
 		token:  token,
 		host:   host,
+	}
+
+	// RPM distros don't have cute release names, so the release version is the name.
+	if dist == "rpm" {
+		verbose = false
 	}
 
 	if _, ok := supportedDistros[args.DistBranchPair()]; !ok {
@@ -121,7 +128,7 @@ func Releases(dist, branch, token, host string) ([]string, error) {
 
 	distrosToPackage := supportedDistros[args.DistBranchPair()]
 
-	versionsToPackage := getDistroReleasesToPackage(distrosToPackage, allDistroReleases[args.dist])
+	versionsToPackage := getDistroReleasesToPackage(distrosToPackage, allDistroReleases[args.dist], verbose)
 	return versionsToPackage, nil
 }
 
@@ -137,7 +144,9 @@ func Releases(dist, branch, token, host string) ([]string, error) {
 //
 // The resulting list will be formatted as 'distro/release` for each supported
 // distro/release' combination.
-func getDistroReleasesToPackage(supportedDistros []string, pkgCloudDistros []pkgCloudDistribution) []string {
+// verbose controls whether the release version is appended to each entry. This is only relevant for DEB-based distros,
+// which have cute release names like Ubuntu Focal (a.k.a. 20.04).
+func getDistroReleasesToPackage(supportedDistros []string, pkgCloudDistros []pkgCloudDistribution, verbose bool) []string {
 	var versionToPackage []string
 
 	for _, distro := range pkgCloudDistros {
@@ -151,7 +160,12 @@ func getDistroReleasesToPackage(supportedDistros []string, pkgCloudDistros []pkg
 
 		for _, version := range distro.Versions {
 			if !lo.Contains(skipReleases[distro.IndexName], version.IndexName) {
-				versionToPackage = append(versionToPackage, distro.IndexName+"/"+version.IndexName)
+				entry := distro.IndexName + "/" + version.IndexName
+				if verbose {
+					entry = distro.IndexName + "/" + version.DisplayName
+				}
+
+				versionToPackage = append(versionToPackage, entry)
 			}
 			if oldestRelease[distro.IndexName] == version.IndexName {
 				break

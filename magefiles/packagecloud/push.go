@@ -73,7 +73,7 @@ type PushOpts struct {
 }
 
 func Push(opts PushOpts) error {
-	releases, err := Releases(opts.Dist, opts.Branch, opts.Token, opts.URL)
+	releases, err := Releases(opts.Dist, opts.Branch, opts.Token, opts.URL, false)
 	if err != nil {
 		return err
 	}

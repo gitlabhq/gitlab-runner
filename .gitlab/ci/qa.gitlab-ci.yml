@@ -146,3 +146,23 @@ docs:check Kubernetes API docs:
           echo
           exit 1
         )
+
+# This jobs is triggered weekly and needs the PACKAGECLOUD_TOKEN variable scope to the autogen/docs environment to run.
+docs:check supported distros package docs:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
+  stage: qa
+  environment:
+    name: autogen/docs
+    url: https://packages.gitlab.com/runner/gitlab-runner
+  script:
+    - cp docs/install/linux-repository.md docs/install/linux-repository.md.orig
+    - mage package:docs
+    - |
+      diff docs/install/linux-repository.md.orig docs/install/linux-repository.md || (
+        echo
+        echo "Supported distributions documentation is not up-to-date"
+        echo "Run 'mage package:docs' to update it"
+        echo
+        exit 1
+      )
