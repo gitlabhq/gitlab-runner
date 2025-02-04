@@ -233,6 +233,9 @@ To view those metrics on a runner, execute the command as noted [here](../monito
 | `gitlab_runner_errors_total` | The number of caught errors. This metric is a counter that tracks log lines. The metric includes the label `level`. The possible values are `warning` and `error`. If you plan to include this metric, then use `rate()` or `increase()` when observing. In other words, if you notice that the rate of warnings or errors is increasing, then this could suggest an issue that needs further investigation. |
 | `gitlab_runner_jobs` | This shows how many jobs are currently being executed (with different scopes in the labels). |
 | `gitlab_runner_job_duration_seconds` | Histogram of job durations. |
+| `gitlab_runner_job_queue_duration_seconds` | A histogram representing job queue duration. |
+| `gitlab_runner_acceptable_job_queuing_duration_exceeded_total` | Counts how often jobs exceed the configured queuing time threshold. |
+| `gitlab_runner_job_stage_duration_seconds` | A histogram representing job duration across each stage. This is a **high cardinality metric**. For more details, [high cardinality metrics section](#high-cardinality-metrics). |
 | `gitlab_runner_jobs_total` | This displays the total jobs executed. |
 | `gitlab_runner_limit` | The current value of the limit setting. |
 | `gitlab_runner_request_concurrency` | The current number of concurrent requests for a new job. |
@@ -285,3 +288,66 @@ In these cases, you should plan to monitor the runner manager pod and potentiall
 
 - Gauges: Display the aggregate of the same metric from different sources.
 - Counters: Reset the counter when applying `rate` or `increase` functions.
+
+## High cardinality metrics
+
+Some metrics can be resource-intensive to ingest and store due to their high cardinality. High cardinality occurs when a metric includes labels that have many possible values, leading to a large number of unique time series data points.
+
+To optimize performance, such metrics are not enabled by default and can be toggled by using the [FF_EXPORT_HIGH_CARDINALITY_METRICS feature flag](../configuration/feature-flags.md).
+
+### List of high cardinality metrics
+
+- `gitlab_runner_job_stage_duration_seconds`: Measures the duration of individual job stages in seconds.
+  This metric includes the `stage` label, which can have the following predefined values:
+
+  - `resolve_secrets`
+  - `prepare_executor`
+  - `prepare_script`
+  - `get_sources`
+  - `clear_worktree`
+  - `restore_cache`
+  - `download_artifacts`
+  - `after_script`
+  - `step_script`
+  - `archive_cache`
+  - `archive_cache_on_failure`
+  - `upload_artifacts_on_success`
+  - `upload_artifacts_on_failure`
+  - `cleanup_file_variables`
+
+  Additionally, this list may include custom user-defined steps such as `step_run`.
+
+### Managing high cardinality metrics
+
+You can control and reduce cardinality by using [Prometheus relabel configuration](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config)
+to remove unnecessary label values or the entire metrics.
+
+#### Example configuration to remove specific stages
+
+The following configuration removes any metrics with the `prepare_executor` value in the `stage` label:
+
+```yaml
+scrape_configs:
+  - job_name: 'gitlab_runner_metrics'
+    static_configs:
+      - targets: ['localhost:9252']
+    metric_relabel_configs:
+      - source_labels: [__name__, "stage"]
+        regex: "gitlab_runner_job_stage_duration_seconds;prepare_executor"
+        action: drop
+```
+
+#### Example to keep only relevant stages
+
+The following configuration keeps only the metrics for the `step_script` stage and discards other metrics entirely:
+
+```yaml
+scrape_configs:
+  - job_name: 'gitlab_runner_metrics'
+    static_configs:
+      - targets: ['localhost:9252']
+    metric_relabel_configs:
+      - source_labels: [__name__, "stage"]
+        regex: "gitlab_runner_job_stage_duration_seconds;step_script"
+        action: keep
+```

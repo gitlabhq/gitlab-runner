@@ -3047,3 +3047,96 @@ func Test_logUsedImages(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildStageMetrics(t *testing.T) {
+	p, assertFn := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
+	defer assertFn()
+
+	rc := &RunnerConfig{}
+	build := registerExecutorWithSuccessfulBuild(t, p, rc)
+	build.Runner.Environment = append(build.Runner.Environment, fmt.Sprintf("%s=true", featureflags.ExportHighCardinalityMetrics))
+
+	// each expected build stage should be called twice, for start and for end
+	stagesMap := make(map[BuildStage]int)
+
+	stageFn := func(stage BuildStage) {
+		stagesMap[stage]++
+	}
+
+	build.OnBuildStageStartFn = stageFn
+	build.OnBuildStageEndFn = stageFn
+
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+
+	expectedStages := []BuildStage{
+		BuildStagePrepare, BuildStagePrepareExecutor, BuildStageRestoreCache, BuildStageUploadOnSuccessArtifacts,
+		BuildStageGetSources, BuildStageDownloadArtifacts, BuildStageCleanup, BuildStageAfterScript, BuildStageArchiveOnSuccessCache,
+		BuildStage("step_script"),
+	}
+
+	for _, s := range expectedStages {
+		assert.Equal(t, stagesMap[s], 2)
+		delete(stagesMap, s)
+	}
+
+	assert.Len(t, stagesMap, 0)
+}
+
+func TestBuildStageMetricsFailBuild(t *testing.T) {
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
+
+	// Set up a failing a build script
+	thrownErr := &BuildError{Inner: errors.New("test error"), ExitCode: 1}
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", mock.Anything).Return(thrownErr).Times(3)
+	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+	executor.On("Finish", thrownErr).Once()
+
+	RegisterExecutorProvider(t.Name(), provider)
+
+	failedBuild, err := GetFailedBuild()
+	assert.NoError(t, err)
+	build := &Build{
+		JobResponse: failedBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: t.Name(),
+			},
+		},
+	}
+
+	build.Runner.Environment = append(build.Runner.Environment, fmt.Sprintf("%s=true", featureflags.ExportHighCardinalityMetrics))
+
+	// each expected build stage should be called twice, for start and for end
+	stagesMap := make(map[BuildStage]int)
+
+	stageFn := func(stage BuildStage) {
+		stagesMap[stage]++
+	}
+
+	build.OnBuildStageStartFn = stageFn
+	build.OnBuildStageEndFn = stageFn
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	expectedErr := new(BuildError)
+	assert.ErrorIs(t, err, expectedErr)
+
+	expectedStages := []BuildStage{
+		BuildStageArchiveOnFailureCache, BuildStageCleanup, BuildStageGetSources, BuildStagePrepare,
+		BuildStagePrepareExecutor, BuildStageUploadOnFailureArtifacts,
+	}
+
+	for _, s := range expectedStages {
+		assert.Equal(t, stagesMap[s], 2)
+		delete(stagesMap, s)
+	}
+
+	assert.Len(t, stagesMap, 0)
+}

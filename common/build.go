@@ -73,6 +73,14 @@ const (
 	BuildStageCleanup BuildStage = "cleanup_file_variables"
 )
 
+type OnBuildStageFn func(stage BuildStage)
+
+func (fn OnBuildStageFn) Call(stage BuildStage) {
+	if fn != nil {
+		fn(stage)
+	}
+}
+
 // staticBuildStages is a list of BuildStages which are executed on every build
 // and are not dynamically generated from steps.
 var staticBuildStages = []BuildStage{
@@ -147,6 +155,9 @@ type Build struct {
 	ArtifactUploader func(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) (UploadState, string)
 
 	urlHelper urlHelper
+
+	OnBuildStageStartFn OnBuildStageFn
+	OnBuildStageEndFn   OnBuildStageFn
 }
 
 func (b *Build) setCurrentStage(stage BuildStage) {
@@ -350,6 +361,9 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 		return ctx.Err()
 	}
 
+	b.OnBuildStageStartFn.Call(buildStage)
+	defer b.OnBuildStageEndFn.Call(buildStage)
+
 	b.setCurrentStage(buildStage)
 	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
 
@@ -404,6 +418,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 				helpers.ANSI_RESET,
 			)
 			b.logger.Println(msg)
+
 			return executor.Run(cmd)
 		},
 	}
@@ -1107,6 +1122,9 @@ func (b *Build) resolveSecrets(trace JobTrace) error {
 
 	b.Secrets.expandVariables(b.GetAllVariables())
 
+	b.OnBuildStageStartFn.Call(BuildStageResolveSecrets)
+	defer b.OnBuildStageEndFn.Call(BuildStageResolveSecrets)
+
 	section := helpers.BuildSection{
 		Name:        string(BuildStageResolveSecrets),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
@@ -1144,6 +1162,10 @@ func (b *Build) resolveSecrets(trace JobTrace) error {
 func (b *Build) executeBuildSection(options ExecutorPrepareOptions, provider ExecutorProvider) (Executor, error) {
 	var executor Executor
 	var err error
+
+	b.OnBuildStageStartFn.Call(BuildStagePrepareExecutor)
+	defer b.OnBuildStageEndFn.Call(BuildStagePrepareExecutor)
+
 	section := helpers.BuildSection{
 		Name:        string(BuildStagePrepareExecutor),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,

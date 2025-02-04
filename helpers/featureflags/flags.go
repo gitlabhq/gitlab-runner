@@ -46,6 +46,7 @@ const (
 	WaitForPodReachable                  string = "FF_WAIT_FOR_POD_TO_BE_REACHABLE"
 	UseNativeSteps                       string = "FF_USE_NATIVE_STEPS"
 	MaskAllDefaultTokens                 string = "FF_MASK_ALL_DEFAULT_TOKENS"
+	ExportHighCardinalityMetrics         string = "FF_EXPORT_HIGH_CARDINALITY_METRICS"
 )
 
 type FeatureFlag struct {
@@ -384,6 +385,13 @@ var flags = []FeatureFlag{
 		DefaultValue: true,
 		Deprecated:   false,
 		Description:  "When enabled, GitLab Runner automatically masks all default tokens patterns.",
+	},
+	{
+		Name:         ExportHighCardinalityMetrics,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, the runner exports the metrics with high cardinality. Special care should be " +
+			"taken when enabling this feature flag to avoid ingesting large amounts of data. For more information, see [Fleet scaling](../fleet_scaling/_index.md).",
 	},
 }
 

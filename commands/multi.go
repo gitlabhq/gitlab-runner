@@ -632,7 +632,7 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	}
 
 	// restrictHTTPMethods should be used on all promhttp handlers
-	// In this specific instance, the handler is unintrumented, so isn't as
+	// In this specific instance, the handler is uninstrumented, so isn't as
 	// important. But in the future, if any other promhttp handlers are added
 	// they too should be wrapped and restriced.
 	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27194

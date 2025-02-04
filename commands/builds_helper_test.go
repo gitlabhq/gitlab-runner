@@ -3,6 +3,7 @@
 package commands
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +18,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/config/runner"
 	"gitlab.com/gitlab-org/gitlab-runner/common/config/runner/monitoring"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
+)
+
+const (
+	testToken = "testoken" // No typo here! 8 characters to make it equal to the computed ShortDescription()
 )
 
 func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
@@ -238,10 +244,6 @@ func TestRestrictHTTPMethods(t *testing.T) {
 }
 
 func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
-	const (
-		testToken = "testoken" // No typo here! 8 characters to make it equal to the computed ShortDescription()
-	)
-
 	type jobInfo struct {
 		timeInQueueSeconds                       float64
 		projectJobsRunningOnInstanceRunnersCount string
@@ -380,4 +382,70 @@ func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
 			assert.Equal(t, tt.expectedValue, mm.GetCounter().GetValue())
 		})
 	}
+}
+
+func TestPrepareStageMetrics(t *testing.T) {
+	build := &common.Build{
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				Token: testToken,
+			},
+			SystemIDState: &common.SystemIDState{},
+		},
+		JobResponse: common.JobResponse{
+			ID: 1,
+			JobInfo: common.JobInfo{
+				ProjectID: 1,
+			},
+		},
+	}
+
+	build.Runner.Environment = append(build.Runner.Environment, fmt.Sprintf("%s=true", featureflags.ExportHighCardinalityMetrics))
+
+	bh := newBuildsHelper()
+	bh.addBuild(build)
+
+	bh.initializeBuildStageMetrics(build)
+
+	// verify that the FF toggle will work correctly
+	require.NotNil(t, bh.buildStagesStartTimes)
+
+	bh.handleOnBuildStageStart(build, common.BuildStagePrepare)
+	time.Sleep(100 * time.Millisecond)
+	bh.handleOnBuildStageEnd(build, common.BuildStagePrepare)
+
+	ch := make(chan prometheus.Metric, 1)
+	bh.jobStagesDurationHistogram.Collect(ch)
+
+	var mm dto.Metric
+	_ = (<-ch).Write(&mm)
+
+	require.NotEmpty(t, mm.Label)
+	require.NotNil(t, mm.Histogram)
+	require.Equal(t, int(*mm.Histogram.SampleCount), 1)
+	require.GreaterOrEqual(t, *mm.Histogram.SampleSum, float64(0.1))
+}
+
+func TestPrepareStageMetricsNoFF(t *testing.T) {
+	build := &common.Build{
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				Token: testToken,
+			},
+			SystemIDState: &common.SystemIDState{},
+		},
+		JobResponse: common.JobResponse{
+			ID: 1,
+			JobInfo: common.JobInfo{
+				ProjectID: 1,
+			},
+		},
+	}
+
+	bh := newBuildsHelper()
+	bh.addBuild(build)
+
+	bh.initializeBuildStageMetrics(build)
+
+	require.Nil(t, bh.buildStagesStartTimes)
 }
