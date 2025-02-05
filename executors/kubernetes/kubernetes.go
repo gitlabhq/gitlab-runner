@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
@@ -233,17 +235,37 @@ func (p *podContainerError) Error() string {
 
 type kubernetesOptions struct {
 	Image    common.Image
-	Services common.Services
+	Services map[string]*common.Image
+}
+
+func (kOpts kubernetesOptions) servicesList() common.Services {
+	services := make(common.Services, len(kOpts.Services))
+	for _, name := range kOpts.getSortedServiceNames() {
+		services = append(services, *kOpts.Services[name])
+	}
+
+	return services
+}
+
+func (kOpts kubernetesOptions) getSortedServiceNames() []string {
+	names := make([]string, 0)
+	for name := range kOpts.Services {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	return names
 }
 
 type containerBuildOpts struct {
-	name            string
-	image           string
-	imageDefinition common.Image
-	requests        api.ResourceList
-	limits          api.ResourceList
-	securityContext *api.SecurityContext
-	command         []string
+	name               string
+	image              string
+	imageDefinition    common.Image
+	isServiceContainer bool
+	requests           api.ResourceList
+	limits             api.ResourceList
+	securityContext    *api.SecurityContext
+	command            []string
 }
 
 type podConfigPrepareOpts struct {
@@ -328,11 +350,11 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("couldn't prepare overwrites: %w", err)
 	}
 
-	if err = s.prepareServiceOverwrites(options.Build.Services); err != nil {
+	s.prepareOptions(options.Build)
+
+	if err = s.prepareServiceOverwrites(s.options.Services); err != nil {
 		return fmt.Errorf("couldn't prepare explicit service overwrites: %w", err)
 	}
-
-	s.prepareOptions(options.Build)
 
 	// Dynamically configure use of shared build dir allowing
 	// for static build dir when isolated volume is in use.
@@ -413,8 +435,7 @@ func (s *executor) preparePullManager() (pull.Manager, error) {
 		helperContainerName:         s.options.Image.PullPolicies,
 		initPermissionContainerName: s.options.Image.PullPolicies,
 	}
-	for i, service := range s.options.Services {
-		containerName := fmt.Sprintf("%s%d", serviceContainerPrefix, i)
+	for containerName, service := range s.options.Services {
 		dockerPullPoliciesPerContainer[containerName] = service.PullPolicies
 	}
 
@@ -1326,7 +1347,7 @@ func (s *executor) cleanupResources() {
 func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error) {
 	var envVars []common.JobVariable
 
-	if strings.HasPrefix(opts.name, serviceContainerPrefix) {
+	if opts.isServiceContainer {
 		envVars = s.getServiceVariables(opts.imageDefinition)
 	} else if opts.name == buildContainerName {
 		envVars = s.Build.GetAllVariables().PublicOrInternal()
@@ -1396,7 +1417,7 @@ func (s *executor) verifyAllowedImages(opts containerBuildOpts) error {
 		optionName    string
 		allowedImages []string
 	)
-	if strings.HasPrefix(opts.name, serviceContainerPrefix) {
+	if opts.isServiceContainer {
 		optionName = "services"
 		allowedImages = s.Config.Kubernetes.AllowedServices
 	} else if opts.name == buildContainerName {
@@ -1914,7 +1935,7 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 		return nil, nil
 	}
 
-	return createHostAliases(s.options.Services, s.Config.Kubernetes.GetHostAliases())
+	return createHostAliases(s.options.servicesList(), s.Config.Kubernetes.GetHostAliases())
 }
 
 func (s *executor) setupBuildNamespace(ctx context.Context) error {
@@ -2165,14 +2186,15 @@ func (s *executor) preparePodServices() ([]api.Container, error) {
 	var err error
 	podServices := make([]api.Container, len(s.options.Services))
 
-	for i, service := range s.options.Services {
-		name := fmt.Sprintf("%s%d", serviceContainerPrefix, i)
+	for i, name := range s.options.getSortedServiceNames() {
+		service := s.options.Services[name]
 		podServices[i], err = s.buildContainer(containerBuildOpts{
-			name:            name,
-			image:           service.Name,
-			imageDefinition: service,
-			requests:        s.configurationOverwrites.getServiceResourceRequests(name),
-			limits:          s.configurationOverwrites.getServiceResourceLimits(name),
+			name:               name,
+			image:              service.Name,
+			imageDefinition:    *service,
+			isServiceContainer: true,
+			requests:           s.configurationOverwrites.getServiceResourceRequests(name),
+			limits:             s.configurationOverwrites.getServiceResourceLimits(name),
 			securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
 				s.Config.Kubernetes.ServiceContainerSecurityContext,
 				s.defaultCapDrop()...,
@@ -2725,7 +2747,7 @@ func (c *podContainerStatusChecker) check(ctx context.Context, pod *api.Pod) err
 }
 
 func isNotServiceContainer(containerStatus api.ContainerStatus) bool {
-	return !strings.HasPrefix(containerStatus.Name, serviceContainerPrefix)
+	return containerStatus.Name == buildContainerName || containerStatus.Name == helperContainerName
 }
 
 func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck podStatusChecker) error {
@@ -2878,25 +2900,79 @@ func (s *executor) prepareOverwrites(variables common.JobVariables) error {
 	return nil
 }
 
-func (s *executor) prepareServiceOverwrites(services common.Services) error {
-	for index, service := range services {
+func (s *executor) prepareServiceOverwrites(services map[string]*common.Image) error {
+	for name, service := range services {
 		if err := s.configurationOverwrites.evaluateExplicitServiceResourceOverwrite(
 			s.Config.Kubernetes,
-			fmt.Sprintf("%s%d", serviceContainerPrefix, index),
+			name,
 			service.Variables,
 			s.BuildLogger,
 		); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
 func (s *executor) prepareOptions(build *common.Build) {
-	s.options = &kubernetesOptions{}
-	s.options.Image = build.Image
+	index := 0
+	usedAliases := make(map[string]struct{})
+	s.options = &kubernetesOptions{
+		Image:    build.Image,
+		Services: make(map[string]*common.Image),
+	}
 
-	s.getServices(build)
+	for _, svc := range s.Config.Kubernetes.GetExpandedServices(s.Build.GetAllVariables()) {
+		if svc.Name == "" {
+			continue
+		}
+
+		serviceName, service := "", svc.ToImageDefinition()
+		index, serviceName = s.getServiceDefinition(&service, usedAliases, index)
+		s.options.Services[serviceName] = &service
+	}
+
+	for _, service := range build.Services {
+		if service.Name == "" {
+			continue
+		}
+
+		serviceName := ""
+		index, serviceName = s.getServiceDefinition(&service, usedAliases, index)
+		s.options.Services[serviceName] = &service
+	}
+}
+
+func (s *executor) getServiceDefinition(
+	service *common.Image,
+	usedAliases map[string]struct{},
+	serviceIndex int,
+) (int, string) {
+	name := getServiceName(service, usedAliases)
+	if name == "" {
+		name = fmt.Sprintf("%s%d", serviceContainerPrefix, serviceIndex)
+		serviceIndex++
+	}
+
+	return serviceIndex, name
+}
+
+func getServiceName(svc *common.Image, usedAliases map[string]struct{}) string {
+	for _, alias := range svc.Aliases() {
+		if _, ok := usedAliases[alias]; ok {
+			continue
+		}
+		if len(validation.IsDNS1123Label(alias)) != 0 {
+			usedAliases[alias] = struct{}{}
+			continue
+		}
+
+		usedAliases[alias] = struct{}{}
+		return alias
+	}
+
+	return ""
 }
 
 func (s *executor) prepareLifecycleHooks() *api.Lifecycle {
@@ -2916,22 +2992,6 @@ func (s *executor) prepareLifecycleHooks() *api.Lifecycle {
 	}
 
 	return lifecycle
-}
-
-func (s *executor) getServices(build *common.Build) {
-	for _, service := range s.Config.Kubernetes.GetExpandedServices(s.Build.GetAllVariables()) {
-		if service.Name == "" {
-			continue
-		}
-		s.options.Services = append(s.options.Services, service.ToImageDefinition())
-	}
-
-	for _, service := range build.Services {
-		if service.Name == "" {
-			continue
-		}
-		s.options.Services = append(s.options.Services, service)
-	}
 }
 
 func (s *executor) getServiceVariables(serviceDefinition common.Image) common.JobVariables {
@@ -2975,7 +3035,8 @@ func (s *executor) captureServiceContainersLogs(ctx context.Context, containers 
 		return
 	}
 
-	for _, service := range s.options.Services {
+	for _, name := range s.options.getSortedServiceNames() {
+		service := s.options.Services[name]
 		for _, container := range containers {
 			if service.Name != container.Image {
 				continue
@@ -3086,7 +3147,8 @@ func IsKubernetesPodContainerError(err error) bool {
 // Use 'gitlab-runner check-health' to wait until any/all configured services are healthy.
 func (s *executor) waitForServices(ctx context.Context) error {
 	portArgs := ""
-	for _, service := range s.options.Services {
+	for _, name := range s.options.getSortedServiceNames() {
+		service := s.options.Services[name]
 		port := service.Variables.Get("HEALTHCHECK_TCP_PORT")
 		if port == "" {
 			continue

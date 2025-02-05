@@ -166,6 +166,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testJobRunningAndPassingWhenServiceStops":                testJobRunningAndPassingWhenServiceStops,
 		"testJobAgainstServiceContainerBehaviour":                 testJobAgainstServiceContainerBehaviour,
 		"testDeletedPodSystemFailureDuringExecution":              testDeletedPodSystemFailureDuringExecution,
+		"testKubernetesServiceContainerAlias":                     testKubernetesServiceContainerAlias,
 	}
 
 	ffValues := []bool{testFeatureFlagValue}
@@ -3374,6 +3375,144 @@ func testJobRunningAndPassingWhenServiceStops(t *testing.T, featureFlagName stri
 
 	err := buildtest.RunBuild(t, build)
 	require.NoError(t, err)
+}
+
+func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	ctxTimeout := time.Minute
+	client := getTestKubeClusterClient(t)
+
+	tests := map[string]struct {
+		services   common.Services
+		lookupName []string
+	}{
+		"service container without alias": {
+			services: common.Services{
+				{
+					Name: common.TestAlpineImage,
+				},
+			},
+			lookupName: []string{"svc-0"},
+		},
+		"service container with alias": {
+			services: common.Services{
+				{
+					Name:  common.TestAlpineImage,
+					Alias: "alpine-service",
+				},
+			},
+			lookupName: []string{"alpine-service"},
+		},
+		"service container with multiple different aliases": {
+			services: common.Services{
+				{
+					Name:  common.TestAlpineImage,
+					Alias: "alpine-service-1",
+				},
+				{
+					Name:  common.TestAlpineImage,
+					Alias: "alpine-service-2",
+				},
+			},
+			lookupName: []string{"alpine-service-1", "alpine-service-2"},
+		},
+		"service container with multiple similar aliases": {
+			services: common.Services{
+				{
+					Name:  common.TestAlpineImage,
+					Alias: "alpine-service",
+				},
+				{
+					Name:  common.TestAlpineImage,
+					Alias: "alpine-service",
+				},
+			},
+			lookupName: []string{"alpine-service", "svc-0"},
+		},
+		"service container with multiple similar aliases 2": {
+			services: common.Services{
+				{
+					Name:  common.TestAlpineImage,
+					Alias: "alpine,foo,bar",
+				},
+				{
+					Name:  common.TestAlpineImage,
+					Alias: "alpine,foo,bar",
+				},
+				{
+					Name:  common.TestAlpineImage,
+					Alias: "alpine,foo,bar",
+				},
+				{
+					Name:  common.TestAlpineImage,
+					Alias: "alpine,foo,bar",
+				},
+			},
+			lookupName: []string{"alpine", "foo", "bar", "svc-0"},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse(
+					"sleep 60",
+				)
+			})
+			build.Services = tc.services
+			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
+			buildtest.SetBuildFeatureFlag(build, featureflags.PrintPodEvents, true)
+
+			ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+			deletedPodNameCh := make(chan string)
+			defer buildtest.OnUserStage(build, func() {
+				defer cancel()
+				pods, err := client.CoreV1().
+					Pods(ciNamespace).
+					List(
+						ctx,
+						metav1.ListOptions{
+							LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+						},
+					)
+				require.NoError(t, err)
+				require.NotEmpty(t, pods.Items)
+				pod := pods.Items[0]
+
+				names := make([]string, 0)
+				for _, container := range pod.Spec.Containers {
+					names = append(names, container.Name)
+				}
+
+				for _, lookup := range tc.lookupName {
+					assert.Contains(t, names, lookup)
+				}
+
+				err = client.
+					CoreV1().
+					Pods(ciNamespace).
+					Delete(ctx, pod.Name, metav1.DeleteOptions{
+						PropagationPolicy: &kubernetes.PropagationPolicy,
+					})
+				require.NoError(t, err)
+
+				deletedPodNameCh <- pod.Name
+			})()
+
+			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			require.Error(t, err)
+
+			select {
+			case <-deletedPodNameCh:
+				err = nil
+			case <-ctx.Done():
+				err = fmt.Errorf("test terminated through context expiration")
+			}
+
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestEntrypointLogging(t *testing.T) {
