@@ -1103,17 +1103,29 @@ func testKubernetesBuildMaskingFeatureFlag(t *testing.T, featureFlagName string,
 func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
+	const defaultGitClonePath = "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
+	someTrue, someFalse := true, false
+
 	tests := map[string]struct {
-		clonePath   string
-		expectedErr bool
+		customBuildDirConfig  common.CustomBuildDir
+		buildsDirConfig       string
+		gitClonePathOverwrite string
+		expectedErr           string
 	}{
-		"uses custom clone path": {
-			clonePath:   "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
-			expectedErr: false,
+		"defaults": {},
+		"with builds_dir": {
+			buildsDirConfig: "/foo/bar/baz",
 		},
 		"path has to be within CI_BUILDS_DIR": {
-			clonePath:   "/unknown/go/src/gitlab.com/gitlab-org/repo",
-			expectedErr: true,
+			gitClonePathOverwrite: "/nope/go/src/gitlab.com/gitlab-org/repo",
+			expectedErr:           `prepare build and shell: the GIT_CLONE_PATH="/nope/go/src/gitlab.com/gitlab-org/repo" has to be within "/builds"`,
+		},
+		"custom_build_dir explicitly disabled": {
+			customBuildDirConfig: common.CustomBuildDir{Enabled: &someFalse},
+			expectedErr:          "prepare build and shell: setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature",
+		},
+		"custom_build_dir explicitly enabled": {
+			customBuildDirConfig: common.CustomBuildDir{Enabled: &someTrue},
 		},
 	}
 
@@ -1122,23 +1134,24 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 			t.Parallel()
 
 			build := getTestBuild(t, func() (common.JobResponse, error) {
-				return common.GetRemoteBuildResponse(
-					"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
-				)
+				return common.GetRemoteBuildResponse("ls -la " + defaultGitClonePath)
 			})
-			build.Runner.Environment = []string{
-				"GIT_CLONE_PATH=" + test.clonePath,
-			}
+			build.Runner.CustomBuildDir = test.customBuildDirConfig
+			build.Runner.BuildsDir += test.buildsDirConfig
+			build.Variables = append(build.Variables,
+				common.JobVariable{Key: "GIT_CLONE_PATH", Value: cmp.Or(test.gitClonePathOverwrite, defaultGitClonePath)},
+			)
+
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-			if test.expectedErr {
+			err := buildtest.RunBuild(t, build)
+			if test.expectedErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, test.expectedErr)
 				var buildErr *common.BuildError
 				assert.ErrorAs(t, err, &buildErr)
-				return
 			}
-
-			assert.NoError(t, err)
 		})
 	}
 }
