@@ -250,6 +250,7 @@ deduplicated
 deduplicates
 deduplicating
 deduplication
+Deepin
 delegators
 deliverables
 denormalization
@@ -374,6 +375,7 @@ Flutterwave
 Flycheck
 focusable
 Forgerock
+Forky
 formatters
 Fortanix
 Fortinet
@@ -544,6 +546,7 @@ LLMs
 libFuzzer
 Libgcrypt
 Libravatar
+LinuxMint
 liveness
 lockfile
 lockfiles
@@ -560,6 +563,8 @@ Lookbook
 lookups
 loopback
 LSP
+Lts
+Packagecloud
 Lua
 Lucene
 Lucidchart
@@ -1059,6 +1064,7 @@ triaged
 triages
 triaging
 Trivy
+Trixie
 Truststore
 truthy
 Twilio
@@ -1071,6 +1077,10 @@ Udemy
 UI
 UIDs
 ulimit
+Ulyana
+Ulyssa
+Uma
+Una
 unapplied
 unapprove
 unapproved
@@ -1225,7 +1235,9 @@ worktree
 worktrees
 Worldline
 Xcode
+Xenial
 Xeon
+Xerus
 XPath
 Yandex
 YouTrack
