@@ -663,6 +663,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 }
 
 func (b *AbstractShell) configureGitCredHelper(w ShellWriter, info common.ShellScriptInfo, credConfigFile string) error {
+	w.RmFile(credConfigFile)
 	build := info.Build
 	shellName := build.Runner.Shell
 	if shellName == "" {
