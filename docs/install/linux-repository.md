@@ -35,6 +35,7 @@ GitLab provides packages for the following supported versions of Linux distribut
 | Oracle Linux | 9, 8, 7, 6 |
 | openSUSE | 16.0, 15.6, 15.5, 15.4, 15.3, 15.2, 15.1, 15.0 |
 | SUSE Linux Enterprise Server | 15.6, 15.5, 15.4, 15.3, 15.2, 12.5 |
+
 <!-- supported_os_versions_list_end -->
 
 Depending on your setup, other Debian or RPM based distributions may also be supported. This refers to distributions that are derivative of a supported GitLab Runner distribution and that have compatible package repositories. For example, Deepin is a Debian derivative. So, the runner `deb` package should install and run on Deepin. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file)
