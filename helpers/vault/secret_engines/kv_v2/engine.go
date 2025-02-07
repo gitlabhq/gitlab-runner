@@ -41,8 +41,7 @@ func (e *engine) Get(path string) (map[string]interface{}, error) {
 		return nil, nil
 	}
 
-	_, ok := data["data"]
-	if !ok {
+	if raw, ok := data["data"]; !ok || raw == nil {
 		return nil, nil
 	}
 
