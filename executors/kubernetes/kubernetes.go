@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math/rand"
 	"net/http"
 	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -240,7 +240,7 @@ type kubernetesOptions struct {
 
 func (kOpts kubernetesOptions) servicesList() common.Services {
 	services := make(common.Services, len(kOpts.Services))
-	for _, name := range kOpts.getSortedServiceNames() {
+	for _, name := range slices.Sorted(maps.Keys(kOpts.Services)) {
 		services = append(services, *kOpts.Services[name])
 	}
 
@@ -248,13 +248,7 @@ func (kOpts kubernetesOptions) servicesList() common.Services {
 }
 
 func (kOpts kubernetesOptions) getSortedServiceNames() []string {
-	names := make([]string, 0)
-	for name := range kOpts.Services {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	return names
+	return slices.Sorted(maps.Keys(kOpts.Services))
 }
 
 type containerBuildOpts struct {
