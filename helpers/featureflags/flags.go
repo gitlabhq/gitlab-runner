@@ -383,7 +383,7 @@ var flags = []FeatureFlag{
 		Name:         MaskAllDefaultTokens,
 		DefaultValue: true,
 		Deprecated:   false,
-		Description:  "When enabled GitLab Runner will automatically masked all default tokens patterns.",
+		Description:  "When enabled, GitLab Runner automatically masks all default tokens patterns.",
 	},
 }
 
