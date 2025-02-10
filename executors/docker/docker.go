@@ -239,17 +239,24 @@ func (e *executor) parseDeviceString(deviceString string) (device container.Devi
 }
 
 func (e *executor) bindDevices() (err error) {
-	for _, deviceString := range e.Config.Docker.Devices {
+	e.devices, err = e.bindContainerDevices(e.Config.Docker.Devices)
+	return err
+}
+
+func (e *executor) bindContainerDevices(devices []string) ([]container.DeviceMapping, error) {
+	mapping := []container.DeviceMapping{}
+
+	for _, deviceString := range devices {
 		device, err := e.parseDeviceString(deviceString)
 		if err != nil {
-			err = fmt.Errorf("failed to parse device string %q: %w", deviceString, err)
-			return err
+			return nil, fmt.Errorf("failed to parse device string %q: %w", deviceString, err)
 		}
 
-		e.devices = append(e.devices, device)
+		mapping = append(mapping, device)
 	}
-	return nil
+	return mapping, nil
 }
+
 
 func (e *executor) bindDeviceRequests() error {
 	if e.Config.Docker.Gpus == "" {
@@ -447,14 +454,11 @@ func (e *executor) getServicesDevices(image string) ([]container.DeviceMapping, 
 			continue
 		}
 
-		for _, deviceString := range deviceStrings {
-			device, err := e.parseDeviceString(deviceString)
-			if err != nil {
-				return nil, fmt.Errorf("invalid service device string: %s: %w", deviceString, err)
-			}
-
-			devices = append(devices, device)
+		dvs, err := e.bindContainerDevices(deviceStrings)
+		if err != nil {
+			return nil, err
 		}
+		devices = append(devices, dvs...)
 	}
 
 	return devices, nil
