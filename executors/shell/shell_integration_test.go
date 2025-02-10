@@ -1186,39 +1186,67 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitSubmoduleDepth(t *testing.T
 }
 
 func TestBuildWithGitFetchSubmoduleStrategyRecursive(t *testing.T) {
+	tests := map[string]struct {
+		cleanGitConfig         *bool
+		expectFreshRepoMessage bool
+	}{
+		"no git cleanup": {
+			expectFreshRepoMessage: true,
+		},
+		"git cleanup explicitly enabled": {
+			cleanGitConfig:         &[]bool{true}[0],
+			expectFreshRepoMessage: true,
+		},
+		"git cleanup explicitly disabled": {
+			cleanGitConfig:         &[]bool{false}[0],
+			expectFreshRepoMessage: false,
+		},
+	}
+
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		successfulBuild, err := common.GetSuccessfulBuild()
-		assert.NoError(t, err)
-		build := newBuild(t, successfulBuild, shell)
+		for name, test := range tests {
+			t.Run(name, func(t *testing.T) {
+				successfulBuild, err := common.GetSuccessfulBuild()
+				assert.NoError(t, err)
+				build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(
-			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
-		)
+				build.Variables = append(
+					build.Variables,
+					common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+				)
+				build.Runner.RunnerSettings.CleanGitConfig = test.cleanGitConfig
 
-		out, err := buildtest.RunBuildReturningOutput(t, build)
-		assert.NoError(t, err)
-		assert.NotContains(t, out, "Skipping Git submodules setup")
-		assert.NotContains(t, out, "Updating/initializing submodules...")
-		assert.Contains(t, out, "Updating/initializing submodules recursively...")
+				out, err := buildtest.RunBuildReturningOutput(t, build)
+				assert.NoError(t, err)
+				assert.NotContains(t, out, "Skipping Git submodules setup")
+				assert.NotContains(t, out, "Updating/initializing submodules...")
+				assert.Contains(t, out, "Updating/initializing submodules recursively...")
 
-		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
-		assert.NoError(t, err, "Submodule should have been initialized")
+				_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+				assert.NoError(t, err, "Submodule should have been initialized")
 
-		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
-		assert.NoError(t, err, "The submodule's submodule should have been initialized")
+				_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+				assert.NoError(t, err, "The submodule's submodule should have been initialized")
 
-		// Create a file not tracked that should be cleaned in submodule.
-		excludedFilePath := filepath.Join(build.BuildDir, "gitlab-grack", "excluded_file")
-		err = os.WriteFile(excludedFilePath, []byte{}, os.ModePerm)
-		require.NoError(t, err)
+				// Create a file not tracked that should be cleaned in submodule.
+				excludedFilePath := filepath.Join(build.BuildDir, "gitlab-grack", "excluded_file")
+				err = os.WriteFile(excludedFilePath, []byte{}, os.ModePerm)
+				require.NoError(t, err)
 
-		// Run second build, to run fetch.
-		out, err = buildtest.RunBuildReturningOutput(t, build)
-		assert.NoError(t, err)
-		assert.NotContains(t, out, "Created fresh repository")
-		assert.Contains(t, out, "Removing excluded_file")
+				// Run second build, to run fetch.
+				out, err = buildtest.RunBuildReturningOutput(t, build)
+				assert.NoError(t, err)
+
+				checkFreshRepoMessage := assert.NotContains
+				if test.expectFreshRepoMessage {
+					checkFreshRepoMessage = assert.Contains
+				}
+				checkFreshRepoMessage(t, out, "Created fresh repository")
+
+				assert.Contains(t, out, "Removing excluded_file")
+			})
+		}
 	})
 }
 
@@ -1605,45 +1633,72 @@ func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
 }
 
 func TestBuildPowerShellCatchesExceptions(t *testing.T) {
+	tests := map[string]struct {
+		cleanGitConfig         *bool
+		expectFreshRepoMessage bool
+	}{
+		"no git cleanup": {
+			expectFreshRepoMessage: true,
+		},
+		"git cleanup explicitly enabled": {
+			cleanGitConfig:         &[]bool{true}[0],
+			expectFreshRepoMessage: true,
+		},
+		"git cleanup explicitly disabled": {
+			cleanGitConfig:         &[]bool{false}[0],
+			expectFreshRepoMessage: false,
+		},
+	}
+
 	for _, shell := range []string{"powershell", "pwsh"} {
 		t.Run(shell, func(t *testing.T) {
-			helpers.SkipIntegrationTests(t, shell)
+			for name, test := range tests {
+				t.Run(name, func(t *testing.T) {
+					helpers.SkipIntegrationTests(t, shell)
 
-			successfulBuild, err := common.GetRemoteSuccessfulBuild()
-			assert.NoError(t, err)
-			build := newBuild(t, successfulBuild, shell)
-			build.Variables = append(
-				build.Variables,
-				common.JobVariable{Key: "ErrorActionPreference", Value: "Stop"},
-				common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-			)
+					successfulBuild, err := common.GetRemoteSuccessfulBuild()
+					assert.NoError(t, err)
+					build := newBuild(t, successfulBuild, shell)
+					build.Variables = append(
+						build.Variables,
+						common.JobVariable{Key: "ErrorActionPreference", Value: "Stop"},
+						common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+					)
+					build.Runner.RunnerSettings.CleanGitConfig = test.cleanGitConfig
 
-			out, err := buildtest.RunBuildReturningOutput(t, build)
-			assert.NoError(t, err)
-			assert.Contains(t, out, "Created fresh repository")
+					checkFreshRepoMessage := assert.NotContains
+					if test.expectFreshRepoMessage {
+						checkFreshRepoMessage = assert.Contains
+					}
 
-			out, err = buildtest.RunBuildReturningOutput(t, build)
-			assert.NoError(t, err)
-			assert.NotContains(t, out, "Created fresh repository")
-			assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+					out, err := buildtest.RunBuildReturningOutput(t, build)
+					assert.NoError(t, err)
+					assert.Contains(t, out, "Created fresh repository")
 
-			build.Variables = append(
-				build.Variables,
-				common.JobVariable{Key: "ErrorActionPreference", Value: "Continue"},
-			)
-			out, err = buildtest.RunBuildReturningOutput(t, build)
-			assert.NoError(t, err)
-			assert.NotContains(t, out, "Created fresh repository")
-			assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+					out, err = buildtest.RunBuildReturningOutput(t, build)
+					assert.NoError(t, err)
+					checkFreshRepoMessage(t, out, "Created fresh repository")
+					assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 
-			build.Variables = append(
-				build.Variables,
-				common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"},
-			)
-			out, err = buildtest.RunBuildReturningOutput(t, build)
-			assert.NoError(t, err)
-			assert.NotContains(t, out, "Created fresh repository")
-			assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+					build.Variables = append(
+						build.Variables,
+						common.JobVariable{Key: "ErrorActionPreference", Value: "Continue"},
+					)
+					out, err = buildtest.RunBuildReturningOutput(t, build)
+					assert.NoError(t, err)
+					checkFreshRepoMessage(t, out, "Created fresh repository")
+					assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+
+					build.Variables = append(
+						build.Variables,
+						common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"},
+					)
+					out, err = buildtest.RunBuildReturningOutput(t, build)
+					assert.NoError(t, err)
+					checkFreshRepoMessage(t, out, "Created fresh repository")
+					assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+				})
+			}
 		})
 	}
 }

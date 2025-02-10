@@ -19,21 +19,21 @@ import (
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
-// When umask is disabled for the Kubernetes executor,
-// a hidden file, .giltab-build-uid-gid, is created in the `builds_dir` directory to assist the helper container
-// in retrieving the build image's configured `uid:gid`.
-// This information is then applied to the working directories to prevent them from being writable by anyone.
-const BuildUiGidFile = ".giltab-build-uid-gid"
+const (
+	// When umask is disabled for the Kubernetes executor,
+	// a hidden file, .giltab-build-uid-gid, is created in the `builds_dir` directory to assist the helper container
+	// in retrieving the build image's configured `uid:gid`.
+	// This information is then applied to the working directories to prevent them from being writable by anyone.
+	BuildUiGidFile   = ".giltab-build-uid-gid"
+	StartupProbeFile = ".gitlab-startup-marker"
 
-const StartupProbeFile = ".gitlab-startup-marker"
-
-const credHelperConfFile = "cred-helper.conf"
+	gitlabEnvFileName      = "gitlab_runner_env"
+	credHelperConfFile     = "cred-helper.conf"
+	gitlabCacheEnvFileName = "gitlab_runner_cache_env"
+	gitTemplateDir         = "git-template"
+)
 
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
-
-const gitlabEnvFileName = "gitlab_runner_env"
-
-const gitlabCacheEnvFileName = "gitlab_runner_cache_env"
 
 type stringQuoter func(string) string
 
@@ -583,7 +583,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	}
 
 	// initializing
-	templateDir := w.MkTmpDir("git-template")
+	templateDir := w.MkTmpDir(gitTemplateDir)
 	templateFile := w.Join(templateDir, "config")
 	objectFormat := build.GetRepositoryObjectFormat()
 
@@ -1353,11 +1353,25 @@ func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, inf
 		if err := b.writeCleanupBuildDirectoryScript(w, info); err != nil {
 			return err
 		}
-
-		w.RmFile(filepath.Join(info.Build.FullProjectDir(), ".git", "config"))
 	}
 
+	b.cleanGitConfig(w, info)
+
 	return nil
+}
+
+func (b *AbstractShell) cleanGitConfig(sw ShellWriter, info common.ShellScriptInfo) {
+	build := info.Build
+
+	if c := build.Runner.CleanGitConfig; c != nil && !*c {
+		// skip, if explicitly set to false
+		return
+	}
+
+	sw.RmFile(sw.TmpFile(sw.Join(gitTemplateDir, "config")))
+	sw.RmDir(sw.TmpFile(sw.Join(gitTemplateDir, "hooks")))
+	sw.RmFile(sw.Join(build.FullProjectDir(), ".git", "config"))
+	sw.RmDir(sw.Join(build.FullProjectDir(), ".git", "hooks"))
 }
 
 func (b *AbstractShell) writeCleanupBuildDirectoryScript(w ShellWriter, info common.ShellScriptInfo) error {

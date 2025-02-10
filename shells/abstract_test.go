@@ -2273,7 +2273,7 @@ func TestSkipBuildStage(t *testing.T) {
 	}
 }
 
-func TestAbstractShell_writeCleanupFileVariablesScript(t *testing.T) {
+func TestAbstractShell_writeCleanupScript(t *testing.T) {
 	testVar1 := "VAR_1"
 	testVar2 := "VAR_2"
 	testVar3 := "VAR_3"
@@ -2282,38 +2282,80 @@ func TestAbstractShell_writeCleanupFileVariablesScript(t *testing.T) {
 	testPath1 := "path/VAR_1_file"
 	testPath3 := "path/VAR_3_file"
 
-	info := common.ShellScriptInfo{
-		Build: &common.Build{
-			JobResponse: common.JobResponse{
-				Variables: common.JobVariables{
-					{Key: testVar1, Value: "test", File: true},
-					{Key: testVar2, Value: "test", File: false},
-					{Key: testVar3, Value: "test", File: true},
-					{Key: testVar4, Value: "test", File: false},
-				},
-			},
-			Runner: &common.RunnerConfig{},
+	someTrue, someFalse := true, false
+
+	tests := map[string]struct {
+		cleanGitConfig       *bool
+		shouldCleanGitConfig bool
+	}{
+		"no clean-git-config set": {
+			shouldCleanGitConfig: true,
+		},
+		"clean-git-config explicitly enabled": {
+			cleanGitConfig:       &someTrue,
+			shouldCleanGitConfig: true,
+		},
+		"clean-git-config explicitly disabled": {
+			cleanGitConfig:       &someFalse,
+			shouldCleanGitConfig: false,
 		},
 	}
 
-	mockShellWriter := &MockShellWriter{}
-	defer mockShellWriter.AssertExpectations(t)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			info := common.ShellScriptInfo{
+				Build: &common.Build{
+					JobResponse: common.JobResponse{
+						Variables: common.JobVariables{
+							{Key: testVar1, Value: "test", File: true},
+							{Key: testVar2, Value: "test", File: false},
+							{Key: testVar3, Value: "test", File: true},
+							{Key: testVar4, Value: "test", File: false},
+						},
+					},
+					Runner: &common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							CleanGitConfig: test.cleanGitConfig,
+						},
+					},
+				},
+			}
 
-	mockShellWriter.On("TmpFile", "masking.db").Return("masking.db").Once()
-	mockShellWriter.On("RmFile", "masking.db").Once()
+			mockShellWriter := NewMockShellWriter(t)
 
-	mockShellWriter.On("TmpFile", testVar1).Return(testPath1).Once()
-	mockShellWriter.On("RmFile", testPath1).Once()
-	mockShellWriter.On("TmpFile", testVar3).Return(testPath3).Once()
-	mockShellWriter.On("RmFile", testPath3).Once()
+			mockShellWriter.On("TmpFile", "masking.db").Return("masking.db").Once()
+			mockShellWriter.On("RmFile", "masking.db").Once()
 
-	mockShellWriter.On("TmpFile", "gitlab_runner_env").Return("temp_env").Once()
-	mockShellWriter.On("RmFile", "temp_env").Once()
+			mockShellWriter.On("TmpFile", testVar1).Return(testPath1).Once()
+			mockShellWriter.On("RmFile", testPath1).Once()
+			mockShellWriter.On("TmpFile", testVar3).Return(testPath3).Once()
+			mockShellWriter.On("RmFile", testPath3).Once()
 
-	shell := new(AbstractShell)
+			mockShellWriter.On("TmpFile", "gitlab_runner_env").Return("temp_env").Once()
+			mockShellWriter.On("RmFile", "temp_env").Once()
 
-	err := shell.writeCleanupScript(context.Background(), mockShellWriter, info)
-	assert.NoError(t, err)
+			if test.shouldCleanGitConfig {
+				mockShellWriter.On("Join", "git-template", "config").Return("someTemplateBasePath").Once()
+				mockShellWriter.On("TmpFile", "someTemplateBasePath").Return("someTemplateTmpPath").Once()
+				mockShellWriter.On("RmFile", "someTemplateTmpPath").Once()
+
+				mockShellWriter.On("Join", "git-template", "hooks").Return("someTemplateHooksBasePath").Once()
+				mockShellWriter.On("TmpFile", "someTemplateHooksBasePath").Return("someTemplateHooksTmpPath").Once()
+				mockShellWriter.On("RmDir", "someTemplateHooksTmpPath").Once()
+
+				mockShellWriter.On("Join", "", ".git", "config").Return("someGitConfigPath").Once()
+				mockShellWriter.On("RmFile", "someGitConfigPath").Once()
+
+				mockShellWriter.On("Join", "", ".git", "hooks").Return("someGitHooksPath").Once()
+				mockShellWriter.On("RmDir", "someGitHooksPath").Once()
+			}
+
+			shell := new(AbstractShell)
+
+			err := shell.writeCleanupScript(context.Background(), mockShellWriter, info)
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func testGenerateArtifactsMetadataData() (common.ShellScriptInfo, []interface{}) {

@@ -464,27 +464,17 @@ func TestPowershellPathResolveOperations(t *testing.T) {
 }
 
 func TestPowershell_GenerateScript(t *testing.T) {
-	shellInfo := common.ShellScriptInfo{
-		Shell:         "pwsh",
-		Type:          common.NormalShell,
-		RunnerCommand: "/usr/bin/gitlab-runner-helper",
-		Build: &common.Build{
-			Runner: &common.RunnerConfig{RunnerSettings: common.RunnerSettings{ProxyExec: func() *bool { v := false; return &v }()}},
-		},
-	}
-	shellInfo.Build.Runner.Executor = "kubernetes"
-	shellInfo.Build.Hostname = "Test Hostname"
-
+	pwshShell := common.GetShell("pwsh")
 	eol := "\n"
-	switch v := common.GetShell("pwsh").(type) {
+	switch v := pwshShell.(type) {
 	case *PowerShell:
 		eol = v.EOL
 	case *ProxyExecShell:
 		eol = v.Shell.(*PowerShell).EOL
 	}
-
 	shebang := ""
-	rmGitLabEnvScript := `$CurrentDirectory = (Resolve-Path ./).Path` + eol +
+	rmGitLabEnvScript := `` +
+		`$CurrentDirectory = (Resolve-Path ./).Path` + eol +
 		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/gitlab_runner_env" -PathType Leaf) ) {` + eol +
 		`  Remove-Item2 -Force "$CurrentDirectory/.tmp/gitlab_runner_env"` + eol +
 		`} elseif(Test-Path "$CurrentDirectory/.tmp/gitlab_runner_env") {` + eol +
@@ -495,53 +485,129 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`  Remove-Item2 -Force "$CurrentDirectory/.tmp/masking.db"` + eol +
 		`} elseif(Test-Path "$CurrentDirectory/.tmp/masking.db") {` + eol +
 		`  Remove-Item -Force "$CurrentDirectory/.tmp/masking.db"` + eol +
-		`}` + eol + eol + eol + "}" + eol + eol
+		`}`
+	cleanGitConfigScript := `` +
+		`$CurrentDirectory = (Resolve-Path ./).Path` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/git-template/config" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force "$CurrentDirectory/.tmp/git-template/config"` + eol +
+		`} elseif(Test-Path "$CurrentDirectory/.tmp/git-template/config") {` + eol +
+		`  Remove-Item -Force "$CurrentDirectory/.tmp/git-template/config"` + eol +
+		`}` + eol +
+		`` + eol +
+		`$CurrentDirectory = (Resolve-Path ./).Path` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/git-template/hooks" -PathType Container) ) {` + eol +
+		`  Remove-Item2 -Force -Recurse "$CurrentDirectory/.tmp/git-template/hooks"` + eol +
+		`} elseif(Test-Path "$CurrentDirectory/.tmp/git-template/hooks") {` + eol +
+		`  Remove-Item -Force -Recurse "$CurrentDirectory/.tmp/git-template/hooks"` + eol +
+		`}` + eol +
+		`` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/config" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force ".git/config"` + eol +
+		`} elseif(Test-Path ".git/config") {` + eol +
+		`  Remove-Item -Force ".git/config"` + eol +
+		`}` + eol +
+		`` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/hooks" -PathType Container) ) {` + eol +
+		`  Remove-Item2 -Force -Recurse ".git/hooks"` + eol +
+		`} elseif(Test-Path ".git/hooks") {` + eol +
+		`  Remove-Item -Force -Recurse ".git/hooks"` + eol +
+		`}`
 
 	if eol == "\n" {
 		shebang = "#!/usr/bin/env pwsh\n"
 	} else {
 		rmGitLabEnvScript = strings.ReplaceAll(rmGitLabEnvScript, `/`, `\`)
+		cleanGitConfigScript = strings.ReplaceAll(cleanGitConfigScript, `/`, `\`)
 	}
 
 	testCases := map[string]struct {
 		stage           common.BuildStage
-		info            common.ShellScriptInfo
+		updateShellInfo func(*common.ShellScriptInfo)
 		expectedFailure bool
-		expectedScript  string
+		expectedScript  func(common.ShellScriptInfo) string
 	}{
 		"prepare script": {
 			stage:           common.BuildStagePrepare,
-			info:            shellInfo,
 			expectedFailure: false,
-			expectedScript: shebang + "& {" +
-				eol + eol +
-				fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
-				eol + eol +
-				`$ErrorActionPreference = "Stop"` + eol +
-				`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` + eol + rmGitLabEnvScript,
+			expectedScript: func(shellInfo common.ShellScriptInfo) string {
+				return shebang + "& {" +
+					eol + eol +
+					fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
+					eol + eol +
+					`$ErrorActionPreference = "Stop"` + eol +
+					`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` +
+					eol +
+					rmGitLabEnvScript +
+					eol + eol + eol +
+					"}" + eol + eol
+			},
 		},
-		"cleanup variables": {
-			stage:           common.BuildStageCleanup,
-			info:            shellInfo,
+		"cleanup variables but not git config": {
+			stage: common.BuildStageCleanup,
+			updateShellInfo: func(shellInfo *common.ShellScriptInfo) {
+				shellInfo.Build.Runner.RunnerSettings.CleanGitConfig = &[]bool{false}[0]
+			},
 			expectedFailure: false,
-			expectedScript: shebang + "& {" +
-				eol + eol +
-				fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
-				eol + eol +
-				`$ErrorActionPreference = "Stop"` + eol + rmGitLabEnvScript,
+			expectedScript: func(shellInfo common.ShellScriptInfo) string {
+				return shebang + "& {" +
+					eol + eol +
+					fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
+					eol + eol +
+					`$ErrorActionPreference = "Stop"` + eol +
+					rmGitLabEnvScript +
+					eol + eol + eol +
+					"}" + eol + eol
+			},
+		},
+		"cleanup variables and git config": {
+			stage:           common.BuildStageCleanup,
+			expectedFailure: false,
+			expectedScript: func(shellInfo common.ShellScriptInfo) string {
+				return shebang + "& {" +
+					eol + eol +
+					fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
+					eol + eol +
+					`$ErrorActionPreference = "Stop"` + eol +
+					rmGitLabEnvScript +
+					eol + eol +
+					cleanGitConfigScript +
+					eol + eol + eol +
+					"}" + eol + eol
+			},
 		},
 		"no script": {
 			stage:           "no_script",
-			info:            shellInfo,
 			expectedFailure: true,
-			expectedScript:  "",
 		},
 	}
 
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
-			script, err := common.GetShell("pwsh").GenerateScript(context.Background(), tc.stage, tc.info)
-			assert.Equal(t, tc.expectedScript, script)
+			shellInfo := common.ShellScriptInfo{
+				Shell:         "pwsh",
+				Type:          common.NormalShell,
+				RunnerCommand: "/usr/bin/gitlab-runner-helper",
+				Build: &common.Build{
+					Runner: &common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Executor: "kubernetes",
+						},
+					},
+					Hostname: "Test Hostname",
+				},
+			}
+			if u := tc.updateShellInfo; u != nil {
+				u(&shellInfo)
+			}
+
+			var expectedScript string
+			if s := tc.expectedScript; s != nil {
+				expectedScript = s(shellInfo)
+			}
+
+			script, err := pwshShell.GenerateScript(context.Background(), tc.stage, shellInfo)
+			assert.Equal(t, expectedScript, script)
+
 			if tc.expectedFailure {
 				assert.Error(t, err)
 			}
