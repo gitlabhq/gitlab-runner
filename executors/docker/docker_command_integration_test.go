@@ -2395,6 +2395,51 @@ func Test_ServiceLabels(t *testing.T) {
 	wg.Wait()
 }
 
+func Test_ServiceVolumeMounts(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	tests := map[string]struct {
+		devices []string
+		assert  func(string)
+	}{
+		"no device bindings": {
+			assert: func(out string) {
+				assert.Contains(t, out, "ls: /test: No such file or directory")
+			},
+		},
+		"with device bindings": {
+			devices: []string{"/dev/:/test/:ro"},
+			assert: func(out string) {
+				assert.NotContains(t, out, "ls: /test: No such file or directory")
+				assert.Contains(t, out, "tty")
+				assert.Contains(t, out, "cpu")
+			},
+		},
+	}
+
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+	build.Services = append(build.Services, common.Image{
+		Name:       "alpine:latest",
+		Entrypoint: []string{"ls", "/test"},
+	})
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			build.Runner.Docker.ServicesDevices = nil
+			if len(tt.devices) != 0 {
+				build.Runner.Docker.ServicesDevices = map[string][]string{
+					"alpine:*": tt.devices,
+				}
+			}
+
+			out, err := buildtest.RunBuildReturningOutput(t, &build)
+			assert.NoError(t, err)
+			tt.assert(out)
+		})
+	}
+}
+
 func TestDockerCommandWithPlatform(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
