@@ -469,7 +469,7 @@ The following example shows a `config.toml` where the limit that each build can 
 
 ## Using host devices
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6208) in GitLab 15.4.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6208) in GitLab 17.9.
 
 You can expose hardware devices on the GitLab Runner host to the container that's running the job.
 To do this, you configure the runner's `devices` and `services_devices` options.
