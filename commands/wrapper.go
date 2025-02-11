@@ -54,7 +54,7 @@ func (c *RunnerWrapperCommand) Execute(cctx *cli.Context) {
 		log.WithError(err).Fatal("Failed to get executable path")
 	}
 
-	l, err := net.Listen("tcp", c.GRPCListen)
+	l, err := c.createListener()
 	if err != nil {
 		grpcLog.WithError(err).Fatal("Failed to create listener")
 	}
