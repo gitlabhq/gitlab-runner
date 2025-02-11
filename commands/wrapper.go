@@ -16,6 +16,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api/server"
 )
 
 const (
@@ -65,7 +66,7 @@ func (c *RunnerWrapperCommand) Execute(cctx *cli.Context) {
 	w := runner_wrapper.New(log, path, cctx.Args())
 	w.SetTerminationTimeout(c.ProcessTerminationTimeout)
 
-	srv := runner_wrapper.NewServer(grpcLog, w)
+	srv := server.New(grpcLog, w)
 
 	go srv.Listen(l)
 

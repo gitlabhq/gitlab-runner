@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ProcessWrapper_CheckStatus_FullMethodName          = "/gitlab_com.gitlab_runner.runner_wrapper.ProcessWrapper/CheckStatus"
 	ProcessWrapper_InitGracefulShutdown_FullMethodName = "/gitlab_com.gitlab_runner.runner_wrapper.ProcessWrapper/InitGracefulShutdown"
+	ProcessWrapper_InitForcefulShutdown_FullMethodName = "/gitlab_com.gitlab_runner.runner_wrapper.ProcessWrapper/InitForcefulShutdown"
 )
 
 // ProcessWrapperClient is the client API for ProcessWrapper service.
@@ -29,6 +30,7 @@ const (
 type ProcessWrapperClient interface {
 	CheckStatus(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*CheckStatusResponse, error)
 	InitGracefulShutdown(ctx context.Context, in *InitGracefulShutdownRequest, opts ...grpc.CallOption) (*InitGracefulShutdownResponse, error)
+	InitForcefulShutdown(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*InitForcefulShutdownResponse, error)
 }
 
 type processWrapperClient struct {
@@ -59,12 +61,23 @@ func (c *processWrapperClient) InitGracefulShutdown(ctx context.Context, in *Ini
 	return out, nil
 }
 
+func (c *processWrapperClient) InitForcefulShutdown(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*InitForcefulShutdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InitForcefulShutdownResponse)
+	err := c.cc.Invoke(ctx, ProcessWrapper_InitForcefulShutdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProcessWrapperServer is the server API for ProcessWrapper service.
 // All implementations must embed UnimplementedProcessWrapperServer
 // for forward compatibility.
 type ProcessWrapperServer interface {
 	CheckStatus(context.Context, *Empty) (*CheckStatusResponse, error)
 	InitGracefulShutdown(context.Context, *InitGracefulShutdownRequest) (*InitGracefulShutdownResponse, error)
+	InitForcefulShutdown(context.Context, *Empty) (*InitForcefulShutdownResponse, error)
 	mustEmbedUnimplementedProcessWrapperServer()
 }
 
@@ -80,6 +93,9 @@ func (UnimplementedProcessWrapperServer) CheckStatus(context.Context, *Empty) (*
 }
 func (UnimplementedProcessWrapperServer) InitGracefulShutdown(context.Context, *InitGracefulShutdownRequest) (*InitGracefulShutdownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitGracefulShutdown not implemented")
+}
+func (UnimplementedProcessWrapperServer) InitForcefulShutdown(context.Context, *Empty) (*InitForcefulShutdownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitForcefulShutdown not implemented")
 }
 func (UnimplementedProcessWrapperServer) mustEmbedUnimplementedProcessWrapperServer() {}
 func (UnimplementedProcessWrapperServer) testEmbeddedByValue()                        {}
@@ -138,6 +154,24 @@ func _ProcessWrapper_InitGracefulShutdown_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProcessWrapper_InitForcefulShutdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProcessWrapperServer).InitForcefulShutdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProcessWrapper_InitForcefulShutdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProcessWrapperServer).InitForcefulShutdown(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProcessWrapper_ServiceDesc is the grpc.ServiceDesc for ProcessWrapper service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +186,10 @@ var ProcessWrapper_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InitGracefulShutdown",
 			Handler:    _ProcessWrapper_InitGracefulShutdown_Handler,
+		},
+		{
+			MethodName: "InitForcefulShutdown",
+			Handler:    _ProcessWrapper_InitForcefulShutdown_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

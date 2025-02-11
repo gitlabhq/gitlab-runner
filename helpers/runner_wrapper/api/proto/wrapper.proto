@@ -32,7 +32,13 @@ message InitGracefulShutdownResponse {
   string failureReason = 2;
 }
 
+message InitForcefulShutdownResponse {
+  Status status = 1;
+  string failureReason = 2;
+}
+
 service ProcessWrapper {
   rpc CheckStatus(Empty) returns (CheckStatusResponse);
   rpc InitGracefulShutdown(InitGracefulShutdownRequest) returns (InitGracefulShutdownResponse);
+  rpc InitForcefulShutdown(Empty) returns (InitForcefulShutdownResponse);
 }

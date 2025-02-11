@@ -1,4 +1,4 @@
-package runner_wrapper
+package api
 
 import (
 	"context"
@@ -13,16 +13,42 @@ const (
 	defaultShutdownCallbackTimeout = 10 * time.Second
 )
 
-//go:generate mockery --name=shutdownCallbackDef --inpackage --with-expecter
-type shutdownCallbackDef interface {
+//go:generate mockery --name=ShutdownCallbackDef --inpackage --with-expecter
+type ShutdownCallbackDef interface {
 	URL() string
 	Method() string
 	Headers() map[string]string
 }
 
-//go:generate mockery --name=shutdownCallback --inpackage --with-expecter
-type shutdownCallback interface {
+//go:generate mockery --name=ShutdownCallback --inpackage --with-expecter
+type ShutdownCallback interface {
 	Run(ctx context.Context)
+}
+
+type defaultShutdownCallbackDef struct {
+	url     string
+	method  string
+	headers map[string]string
+}
+
+func NewShutdownCallbackDef(url string, method string, headers map[string]string) ShutdownCallbackDef {
+	return &defaultShutdownCallbackDef{
+		url:     url,
+		method:  method,
+		headers: headers,
+	}
+}
+
+func (d *defaultShutdownCallbackDef) URL() string {
+	return d.url
+}
+
+func (d *defaultShutdownCallbackDef) Method() string {
+	return d.method
+}
+
+func (d *defaultShutdownCallbackDef) Headers() map[string]string {
+	return d.headers
 }
 
 type defaultShutdownCallback struct {
@@ -33,13 +59,30 @@ type defaultShutdownCallback struct {
 	headers map[string]string
 }
 
-func newShutdownCallback(log logrus.FieldLogger, def shutdownCallbackDef) shutdownCallback {
+func NewShutdownCallback(log logrus.FieldLogger, def ShutdownCallbackDef) ShutdownCallback {
 	return &defaultShutdownCallback{
 		log:     log,
 		url:     def.URL(),
 		method:  def.Method(),
 		headers: def.Headers(),
 	}
+}
+
+func (s *defaultShutdownCallback) URL() string {
+	return s.url
+}
+
+func (s *defaultShutdownCallback) Method() string {
+	return s.method
+}
+
+func (s *defaultShutdownCallback) Headers() map[string]string {
+	m := make(map[string]string, len(s.headers))
+	for k, v := range s.headers {
+		m[k] = v
+	}
+
+	return m
 }
 
 func (s *defaultShutdownCallback) Run(ctx context.Context) {

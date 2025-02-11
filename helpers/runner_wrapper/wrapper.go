@@ -9,15 +9,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-)
 
-type Status int64
-
-const (
-	StatusUnknown Status = iota
-	StatusRunning
-	StatusInShutdown
-	StatusStopped
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api"
 )
 
 const (
@@ -30,11 +23,6 @@ var (
 	errFailedToTerminateProcess = fmt.Errorf("could not send SIGTERM")
 	errProcessExitTimeout       = fmt.Errorf("timed out waiting for process to exit")
 )
-
-//go:generate mockery --name=initGracefulShutdownRequest --inpackage --with-expecter
-type initGracefulShutdownRequest interface {
-	ShutdownCallbackDef() shutdownCallbackDef
-}
 
 type commanderFactory func(path string, args []string) commander
 
@@ -52,9 +40,9 @@ type Wrapper struct {
 
 	commanderFactory commanderFactory
 
-	status           Status
+	status           api.Status
 	failureReason    error
-	shutdownCallback shutdownCallback
+	shutdownCallback api.ShutdownCallback
 }
 
 func New(log logrus.FieldLogger, path string, args []string) *Wrapper {
@@ -64,7 +52,7 @@ func New(log logrus.FieldLogger, path string, args []string) *Wrapper {
 		args:               args,
 		errCh:              make(chan error),
 		terminationTimeout: DefaultTerminationTimeout,
-		status:             StatusUnknown,
+		status:             api.StatusUnknown,
 		commanderFactory:   newDefaultCommander,
 	}
 }
@@ -94,7 +82,7 @@ func (w *Wrapper) start() {
 	}
 
 	w.setProcess(cmd.Process())
-	w.setStatus(StatusRunning)
+	w.setStatus(api.StatusRunning)
 
 	w.errCh <- cmd.Wait()
 }
@@ -106,7 +94,7 @@ func (w *Wrapper) setProcess(process process) {
 	w.process = process
 }
 
-func (w *Wrapper) setStatus(status Status) {
+func (w *Wrapper) setStatus(status api.Status) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
@@ -131,7 +119,7 @@ func (w *Wrapper) handleWrappedProcessShutdown(ctx context.Context, err error) {
 	}
 
 	w.setProcess(nil)
-	w.setStatus(StatusStopped)
+	w.setStatus(api.StatusStopped)
 
 	go w.sendShutdownCallback(ctx)
 }
@@ -197,11 +185,11 @@ func (w *Wrapper) terminateWrappedProcess() error {
 	return nil
 }
 
-func (w *Wrapper) Status() Status {
+func (w *Wrapper) Status() api.Status {
 	w.lock.RLock()
 	defer w.lock.RUnlock()
 
-	w.log.WithField("status", w.status).Debug("Checking process status")
+	w.log.WithField("status", w.status.String()).Debug("Checking process status")
 
 	return w.status
 }
@@ -219,7 +207,7 @@ func (w *Wrapper) FailureReason() string {
 	return w.failureReason.Error()
 }
 
-func (w *Wrapper) InitiateGracefulShutdown(req initGracefulShutdownRequest) error {
+func (w *Wrapper) InitiateGracefulShutdown(req api.InitGracefulShutdownRequest) error {
 	w.lock.RLock()
 	p := w.process
 	w.lock.RUnlock()
@@ -241,15 +229,15 @@ func (w *Wrapper) InitiateGracefulShutdown(req initGracefulShutdownRequest) erro
 			WithField("method", req.ShutdownCallbackDef().Method()).
 			Debug("Registering shutdown callback")
 
-		w.setShutdownCallback(newShutdownCallback(w.log, req.ShutdownCallbackDef()))
+		w.setShutdownCallback(api.NewShutdownCallback(w.log, req.ShutdownCallbackDef()))
 	}
 
-	w.setStatus(StatusInShutdown)
+	w.setStatus(api.StatusInShutdown)
 
 	return nil
 }
 
-func (w *Wrapper) setShutdownCallback(callback shutdownCallback) {
+func (w *Wrapper) setShutdownCallback(callback api.ShutdownCallback) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 

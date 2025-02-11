@@ -185,6 +185,7 @@ generated_files: $(GENERATED_FILES_TOOLS)
 	find . -type f -name 'mock_*' -delete
 	find . -type f -name '*.pb.go' -delete
 	go generate -v -x ./...
+	cd ./helpers/runner_wrapper/api && go generate -v -x ./...
 
 check_generated_files: generated_files
 	# Checking the differences
@@ -331,6 +332,17 @@ check_modules:
 	@diff -U0 /tmp/gosum-$${CI_JOB_ID}-before /tmp/gosum-$${CI_JOB_ID}-after
 
 	# check dependency resolution
+	@go list -m all >/dev/null
+
+	# check helpers/runner_wrapper/api/ go.sum
+	@cd ./helpers/runner_wrapper/api/
+	@git checkout HEAD -- go.sum
+	@git diff go.sum > /tmp/gosum-$${CI_JOB_ID}-before
+	@go mod tidy
+	@git diff go.sum > /tmp/gosum-$${CI_JOB_ID}-after
+	@diff -U0 /tmp/gosum-$${CI_JOB_ID}-before /tmp/gosum-$${CI_JOB_ID}-after
+
+	# check dependency helpers/runner_wrapper/api/ resolution
 	@go list -m all >/dev/null
 
 # development tools

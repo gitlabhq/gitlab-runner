@@ -74,6 +74,7 @@ require (
 	gitlab.com/gitlab-org/fleeting/nesting v0.1.1-0.20230410214021-ab545632193b
 	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20250219122911-60728b8fa8f7
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20230821135503-23448d122365
+	gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api v0.1.0
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425133101-519a58790bfd
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gitlab.com/gitlab-org/labkit v1.17.0
@@ -88,7 +89,6 @@ require (
 	golang.org/x/text v0.21.0
 	google.golang.org/api v0.191.0
 	google.golang.org/grpc v1.68.1
-	google.golang.org/protobuf v1.35.2
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
@@ -250,6 +250,7 @@ require (
 	google.golang.org/genproto v0.0.0-20240812133136-8ffd90a71988 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240903143218-8af14fe29dc1 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a // indirect
+	google.golang.org/protobuf v1.35.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -260,3 +261,5 @@ require (
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
+
+replace gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api v0.1.0 => ./helpers/runner_wrapper/api

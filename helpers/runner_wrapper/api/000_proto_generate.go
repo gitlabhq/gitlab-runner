@@ -1,4 +1,4 @@
-package runner_wrapper
+package api
 
 // If all generated files are removed - what happens when we run tests in CI/CD - we
 // need to make sure that the protobuf Go files are generated before we will call
