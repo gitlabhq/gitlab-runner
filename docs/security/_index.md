@@ -48,7 +48,7 @@ More granular permissions can be configured in non-privileged mode via the
 WARNING:
 Privileged containers in Docker have all the root capabilities of the host VM.
 For more information, check out the official Docker documentation
-on [Runtime privilege and Linux capabilities](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities)
+on [Runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)
 
 It is **not advised** to run containers in privileged mode.
 

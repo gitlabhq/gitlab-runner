@@ -18,9 +18,10 @@ your cluster is automatically updated.
 
 WARNING:
 Adding an unencrypted GitLab Runner secret to `runner-manifest.yaml`
-can expose the secret in your repository files. If you use a GitOps
-workflow in your public projects, see
-[Managing Kubernetes secrets in a GitOps workflow](https://docs.gitlab.com/ee/user/clusters/agent/gitops/secrets_management.html).
+can expose the secret in your repository files. To manage Kubernetes
+secrets securely in a GitOps workflow, use
+[Sealed Secrets](https://fluxcd.io/flux/guides/sealed-secrets/)
+or [SOPS](https://fluxcd.io/flux/guides/mozilla-sops/).
 
 1. Review the Helm chart values for [GitLab Runner](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 1. Create a `runner-chart-values.yaml` file. For example:

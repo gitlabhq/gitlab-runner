@@ -12,7 +12,7 @@ DETAILS:
 This guide aims specifically to making GitLab Runner with Docker executor work behind a proxy.
 
 Before continuing, ensure that you've already
-[installed Docker](https://docs.docker.com/get-docker/) and
+[installed Docker](https://docs.docker.com/get-started/get-docker/) and
 [GitLab Runner](../install/_index.md) on the same machine.
 
 ## Configuring CNTLM
@@ -73,7 +73,7 @@ world can't.
 NOTE:
 The following apply to OSes with systemd support.
 
-Follow [Docker's documentation](https://docs.docker.com/config/daemon/proxy/)
+Follow [Docker's documentation](https://docs.docker.com/engine/daemon/proxy/)
 how to use a proxy.
 
 The service file should look like this:

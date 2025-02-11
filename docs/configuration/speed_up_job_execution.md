@@ -28,24 +28,24 @@ to proxy container images.
 ### Docker Hub Registry mirror
 
 You can also speed up the time it takes for your jobs to access container images by mirroring Docker Hub.
-This results in the [Registry as a pull through cache](https://docs.docker.com/docker-hub/mirror/).
+This results in the [Registry as a pull through cache](https://docs.docker.com/docker-hub/image-library/mirror/).
 In addition to speeding up job execution, a mirror can make your infrastructure
 more resilient to Docker Hub outages and Docker Hub rate limits.
 
-When the Docker daemon is [configured to use the mirror](https://docs.docker.com/docker-hub/mirror/#configure-the-docker-daemon)
+When the Docker daemon is [configured to use the mirror](https://docs.docker.com/docker-hub/image-library/mirror/#configure-the-docker-daemon)
 it automatically checks for the image on your running instance of the mirror. If it's not available, it
 pulls the image from the public Docker registry and stores it locally before handing it back to you.
 
 The next request for the same image pulls from your local registry.
 
-More detail on how it works can be found [here](https://docs.docker.com/docker-hub/mirror/#how-does-it-work).
+More detail on how it works can be found [here](https://docs.docker.com/docker-hub/image-library/mirror/#configure-the-docker-daemon).
 
 #### Use a Docker Hub Registry mirror
 
 To create a Docker Hub Registry mirror:
 
 1. Log in to a dedicated machine where the proxy container registry will run.
-1. Make sure that [Docker Engine](https://docs.docker.com/get-docker/) is installed
+1. Make sure that [Docker Engine](https://docs.docker.com/get-started/get-docker/) is installed
    on that machine.
 1. Create a new container registry:
 
@@ -116,7 +116,7 @@ If you use a private subnet with a NAT gateway, to save cost on data transfers y
 Instead of using AWS S3, you can create your own cache storage.
 
 1. Log in to a dedicated machine where the cache server will run.
-1. Make sure that [Docker Engine](https://docs.docker.com/get-docker/) is installed
+1. Make sure that [Docker Engine](https://docs.docker.com/get-started/get-docker/) is installed
    on that machine.
 1. Start [MinIO](https://min.io), a simple S3-compatible server written in Go:
 
