@@ -4,6 +4,10 @@ package tokensanitizer
 
 import (
 	"bytes"
+	"fmt"
+	"io"
+	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +15,10 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal"
 )
+
+var words = []string{"Lorem", "ipsum", "odor", "amet", "consectetuer", "adipiscing", "elit",
+	"Ad", "sagittis", "volutpat", "aptent", "augue", "dis", "dui", "primis", "laoreet",
+	"taciti", "fusce", "sapien", "ullamcorper", "ex", "venenatis"}
 
 func TestTokenMasking(t *testing.T) {
 	tests := map[string]struct {
@@ -65,13 +73,13 @@ func TestTokenMasking(t *testing.T) {
 		},
 		"custom prefix with default one multiple packets long input": {
 			prefixes: []string{"tok-"},
-			input:    "Lortok-ipsu dolor sit amt|ok-t, cons-ctg|lpat-tur adipiscing tok-lit, stok-|d do tok-iusmod t|tok-mpor incididunt ut |labortok-=_ tok-t dolortok-=_ magna aliqua. Tglpat-llus orci ac auctor auguglpat-eee mauris auguglpat-wEr_ lorem",
-			expected: "Lortok-[MASKED] dolor sit amtok-[MASKED], cons-ctglpat-[MASKED] adipiscing tok-[MASKED], stok-[MASKED] do tok-[MASKED] ttok-[MASKED] incididunt ut labortok-[MASKED] tok-[MASKED] dolortok-[MASKED] magna aliqua. Tglpat-[MASKED] orci ac auctor auguglpat-[MASKED] mauris auguglpat-[MASKED] lorem",
+			input:    "Lortok-ipsu dolor sit amt|ok-t, cons-ctg|lpat-tur adipiscing tok-lit, stok-|d gltok-test do tok-iusmod t|tok-mpor incididunt ut |labortok-=_ tok-t dolortok-=_ magna aliqua. Tglpat-llus orci ac auctor auguglpat-eee mauris auguglpat-wEr_ lorem",
+			expected: "Lortok-[MASKED] dolor sit amtok-[MASKED], cons-ctglpat-[MASKED] adipiscing tok-[MASKED], stok-[MASKED] gltok-[MASKED] do tok-[MASKED] ttok-[MASKED] incididunt ut labortok-[MASKED] tok-[MASKED] dolortok-[MASKED] magna aliqua. Tglpat-[MASKED] orci ac auctor auguglpat-[MASKED] mauris auguglpat-[MASKED] lorem",
 		},
-		"ignored eleventh prefix and more": {
+		"ignored sixteenth prefix and more": {
 			prefixes: []string{"mask1-", "mask2-", "mask3-", "mask4-", "mask5-", "mask6-", "mask7-", "mask8-", "mask9-", "mask10-", "mask11-"},
 			input:    "Lormask1-ipsu dolor sit amm|ask2-t, cons-ctg|lpat-tur adipiscing mask5-lit, smask11-|d do mask7-iusmod t|glpat-mpor incididunt ut |labormask10-=_ mask9-t",
-			expected: "Lormask1-[MASKED] dolor sit ammask2-[MASKED], cons-ctglpat-[MASKED] adipiscing mask5-[MASKED], smask11-d do mask7-[MASKED] tglpat-[MASKED] incididunt ut labormask10-=_ mask9-[MASKED]",
+			expected: "Lormask1-[MASKED] dolor sit ammask2-[MASKED], cons-ctglpat-[MASKED] adipiscing mask5-[MASKED], smask11-d do mask7-iusmod tglpat-[MASKED] incididunt ut labormask10-=_ mask9-t",
 		},
 	}
 
@@ -79,7 +87,7 @@ func TestTokenMasking(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			buf := new(bytes.Buffer)
 
-			m := New(internal.NewNopCloser(buf), internal.Unique(append(tc.prefixes, DefaultPATPrefix)))
+			m := New(internal.NewNopCloser(buf), internal.Unique(append(tc.prefixes, DefaultTokenPrefixes(true)...)))
 
 			parts := bytes.Split([]byte(tc.input), []byte{'|'})
 			for _, part := range parts {
@@ -93,4 +101,103 @@ func TestTokenMasking(t *testing.T) {
 			assert.Equal(t, tc.expected, buf.String())
 		})
 	}
+}
+
+func BenchmarkTokenMaskingPerformance(b *testing.B) {
+	prefixes := DefaultTokenPrefixes(true)
+	paragraphs := map[string]struct {
+		input string
+	}{
+		"100K words": {
+			input: generateParagraph(100000, prefixes, words),
+		},
+		"300K words": {
+			input: generateParagraph(300000, prefixes, words),
+		},
+		"800K words": {
+			input: generateParagraph(800000, prefixes, words),
+		},
+		"1.5M words": {
+			input: generateParagraph(1500000, prefixes, words),
+		},
+		"5M words": {
+			input: generateParagraph(5000000, prefixes, words),
+		},
+	}
+
+	tests := map[string]struct {
+		defaultToken []string
+		// expected     string
+	}{
+		"one default token": {
+			defaultToken: prefixes[:1],
+		},
+		"two default tokens": {
+			defaultToken: prefixes[:2],
+		},
+		"four default tokens": {
+			defaultToken: prefixes[:4],
+		},
+		"all but one default tokens": {
+			defaultToken: prefixes[:len(prefixes)-1],
+		},
+		"all default tokens": {
+			defaultToken: prefixes,
+		},
+	}
+
+	for pn, pc := range paragraphs {
+		for tn, tc := range tests {
+			b.Run(fmt.Sprintf("%s_%s", pn, tn), func(b *testing.B) {
+				b.ResetTimer()
+				b.ReportAllocs()
+
+				for n := 0; n < b.N; n++ {
+					m := New(internal.NewNopCloser(io.Discard), internal.Unique(tc.defaultToken))
+
+					n, err := m.Write([]byte(pc.input))
+					b.SetBytes(int64(n))
+					require.NoError(b, err)
+					require.NoError(b, m.Close())
+					assert.Equal(b, len([]byte(pc.input)), n)
+				}
+			})
+		}
+	}
+}
+
+func BenchmarkTokenMaskingDuration(b *testing.B) {
+	prefixes := DefaultTokenPrefixes(true)
+	input := generateParagraph(5000000, prefixes, words)
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for n := 0; n < b.N; n++ {
+		m := New(internal.NewNopCloser(io.Discard), internal.Unique(prefixes))
+
+		n, err := m.Write([]byte(input))
+		b.SetBytes(int64(n))
+		require.NoError(b, err)
+		require.NoError(b, m.Close())
+		assert.Equal(b, len([]byte(input)), n)
+	}
+}
+
+func generateParagraph(numberOfWords int, token, wordPool []string) string {
+	words := append([]string{}, wordPool...)
+	sb := strings.Builder{}
+
+	for _, tok := range token {
+		words = append(words, fmt.Sprintf("%slorem", tok))
+	}
+
+	for i := 0; i < numberOfWords; i++ {
+		if i > 0 {
+			sb.WriteString(" ")
+		}
+
+		sb.WriteString(words[rand.Intn(len(words))])
+	}
+
+	return sb.String()
 }

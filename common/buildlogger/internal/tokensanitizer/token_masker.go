@@ -23,7 +23,16 @@ import (
 	"io"
 )
 
-const DefaultPATPrefix = "glpat-"
+// https://docs.gitlab.com/ee/security/token_overview.html#token-prefixes
+func DefaultTokenPrefixes(maskAllDefaultTokens bool) []string {
+	tokenPrefixes := []string{"glpat-"}
+	if maskAllDefaultTokens {
+		tokenPrefixes = append(tokenPrefixes, "gloas-", "gldt-", "glrt-", "glcbt-",
+			"glptt-", "glft-", "glimt-", "glagent-", "glsoat-", "glffct-", "_gitlab_session=", "gltok-")
+	}
+
+	return tokenPrefixes
+}
 
 var (
 	// alphabet is the character set we expect a token to comform to, not all
@@ -63,8 +72,8 @@ func New(w io.WriteCloser, prefixes [][]byte) *TokenSanitizer {
 	m.next = w
 
 	max := len(prefixes)
-	if max > 10 {
-		max = 10
+	if max > 15 {
+		max = 15
 	}
 
 	for i := 0; i < max; i++ {
