@@ -777,6 +777,8 @@ func TestExecute_MergeConfigTemplate(t *testing.T) {
 
 		configTemplateMergeAdditionalConfiguration = `
 [[runners]]
+  [runners.custom_build_dir]
+    enabled = false
   [runners.kubernetes]
     [runners.kubernetes.volumes]
       [[runners.kubernetes.volumes.empty_dir]]
@@ -802,7 +804,6 @@ shutdown_timeout = 0
   token_expires_at = 0001-01-01T00:00:00Z
   executor = "shell"
   shell = "pwsh"
-  [runners.custom_build_dir]
   [runners.cache]
     MaxUploadedArchiveSize = 0
     [runners.cache.s3]
@@ -869,6 +870,7 @@ shutdown_timeout = 0
   executor = "shell"
   shell = "pwsh"
   [runners.custom_build_dir]
+    enabled = false
   [runners.cache]
     MaxUploadedArchiveSize = 0
     [runners.cache.s3]

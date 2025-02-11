@@ -2039,12 +2039,29 @@ func TestBuildCacheHelper(t *testing.T) {
 }
 
 func TestBuildWithCustomClonePath(t *testing.T) {
-	tests := map[string]string{
-		"using configured build dir": "",
-		// For test isolation we always specify a unique builds dir, appending
-		// `/builds` will test the case when builds_dir is not configured and we
-		// automatically append `/builds` to PWD.
-		"appending default /builds when no build dir configured": "/builds",
+	const gitClonePath = "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
+	someTrue, someFalse := true, false
+
+	tests := map[string]struct {
+		customBuildDirConfig common.CustomBuildDir
+		buildsDirConfig      string
+		expectedError        string
+	}{
+		// shell executor defaults to not allowing custom build dirs, except when explicitly enabled
+		"not set": {
+			expectedError: "setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature",
+		},
+		"explicitly disabled": {
+			customBuildDirConfig: common.CustomBuildDir{Enabled: &someFalse},
+			expectedError:        "setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature",
+		},
+		"explicitly enabled, default builds dir": {
+			customBuildDirConfig: common.CustomBuildDir{Enabled: &someTrue},
+		},
+		"explicitly enabled, custom builds dir": {
+			customBuildDirConfig: common.CustomBuildDir{Enabled: &someTrue},
+			buildsDirConfig:      "/foo/bar/baz",
+		},
 	}
 
 	for name, tt := range tests {
@@ -2053,9 +2070,9 @@ func TestBuildWithCustomClonePath(t *testing.T) {
 				var cmd string
 				switch shell {
 				case "powershell", "pwsh":
-					cmd = "Get-Item -Path $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
+					cmd = "Get-Item -Path " + gitClonePath
 				default:
-					cmd = "ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
+					cmd = "ls -al " + gitClonePath
 				}
 
 				jobResponse, err := common.GetRemoteBuildResponse(cmd)
@@ -2063,19 +2080,25 @@ func TestBuildWithCustomClonePath(t *testing.T) {
 
 				build := newBuild(t, jobResponse, shell)
 
-				build.Runner.CustomBuildDir = &common.CustomBuildDir{Enabled: true}
-				build.Runner.BuildsDir = build.Runner.BuildsDir + tt
+				build.Runner.CustomBuildDir = tt.customBuildDirConfig
+				build.Runner.BuildsDir += tt.buildsDirConfig
 
 				build.Variables = append(
 					build.Variables,
 					common.JobVariable{
 						Key:   "GIT_CLONE_PATH",
-						Value: "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
+						Value: gitClonePath,
 					},
 				)
 
 				err = buildtest.RunBuild(t, build)
-				assert.NoError(t, err)
+				if tt.expectedError == "" {
+					assert.NoError(t, err)
+				} else {
+					assert.ErrorContains(t, err, tt.expectedError)
+					var buildErr *common.BuildError
+					assert.ErrorAs(t, err, &buildErr)
+				}
 			})
 		})
 	}
