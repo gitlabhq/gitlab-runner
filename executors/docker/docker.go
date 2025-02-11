@@ -52,15 +52,14 @@ const (
 	ExecutorStageRun     common.ExecutorStage = "docker_run"
 	ExecutorStageCleanup common.ExecutorStage = "docker_cleanup"
 
-	ExecutorStageCreatingBuildVolumes common.ExecutorStage = "docker_creating_build_volumes"
-	ExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
-	ExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
-	ExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
+	ExecutorStageCreatingBuildVolumes     common.ExecutorStage = "docker_creating_build_volumes"
+	ExecutorStageCreatingStepRunnerVolume common.ExecutorStage = "docker_creating_step_runner_volume"
+	ExecutorStageCreatingServices         common.ExecutorStage = "docker_creating_services"
+	ExecutorStageCreatingUserVolumes      common.ExecutorStage = "docker_creating_user_volumes"
+	ExecutorStagePullingImage             common.ExecutorStage = "docker_pulling_image"
 )
 
 const ServiceLogOutputLimit = 64 * 1024
-
-var useInit = true
 
 const (
 	labelServiceType = "service"
@@ -143,7 +142,7 @@ func (e *executor) expandAndGetDockerImage(
 	return image, nil
 }
 
-func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
+func (e *executor) getHelperImage() (*types.ImageInspect, error) {
 	if imageNameFromConfig := e.ExpandValue(e.Config.Docker.HelperImage); imageNameFromConfig != "" {
 		e.BuildLogger.Debugln(
 			"Pull configured helper_image for predefined container instead of import bundled image",
@@ -314,21 +313,16 @@ func (e *executor) createService(
 	}
 
 	serviceSlug := strings.ReplaceAll(service, "/", "__")
-	containerName := fmt.Sprintf("%s-%s-%d", e.getProjectUniqRandomizedName(), serviceSlug, serviceIndex)
+	containerName := e.makeContainerName(fmt.Sprintf("%s-%d", serviceSlug, serviceIndex))
 
 	// this will fail potentially some builds if there's name collision
 	_ = e.removeContainer(e.Context, containerName)
 
 	config := e.createServiceContainerConfig(service, version, serviceImage.ID, definition)
 
-	hostConfig, err := e.createHostConfigForService()
+	hostConfig, err := e.createHostConfigForService(e.isInPrivilegedServiceList(definition))
 	if err != nil {
 		return nil, err
-	}
-
-	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedServiceList(definition)
-	if e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
-		hostConfig.Init = &useInit
 	}
 
 	platform := platformForImage(serviceImage, definition.ExecutorOptions)
@@ -363,15 +357,22 @@ func platformForImage(image *types.ImageInspect, opts common.ImageExecutorOption
 	}
 }
 
-func (e *executor) createHostConfigForService() (*container.HostConfig, error) {
+func (e *executor) createHostConfigForService(imageIsPrivileged bool) (*container.HostConfig, error) {
+	nanoCPUs, err := e.Config.Docker.GetServiceNanoCPUs()
+	if err != nil {
+		return nil, fmt.Errorf("service nano cpus: %w", err)
+	}
+
 	privileged := e.Config.Docker.Privileged
 	if e.Config.Docker.ServicesPrivileged != nil {
 		privileged = *e.Config.Docker.ServicesPrivileged
 	}
+	privileged = privileged && imageIsPrivileged
 
-	nanoCPUs, err := e.Config.Docker.GetServiceNanoCPUs()
-	if err != nil {
-		return nil, fmt.Errorf("service nano cpus: %w", err)
+	var useInit *bool
+	if e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
+		yes := true
+		useInit = &yes
 	}
 
 	return &container.HostConfig{
@@ -399,6 +400,7 @@ func (e *executor) createHostConfigForService() (*container.HostConfig, error) {
 		LogConfig: container.LogConfig{
 			Type: "json-file",
 		},
+		Init: useInit,
 	}, nil
 }
 
@@ -478,6 +480,18 @@ func (e *executor) getProjectUniqRandomizedName() string {
 	return e.projectUniqRandomizedName
 }
 
+// Build and predefined container names are comprised of:
+// - A runner project scoped ID (runner-<description>-project-<project_id>-concurrent-<concurrent>)
+// - A unique randomized ID for each execution
+// - The container's type (build, predefined, step-runner)
+//
+// For example: runner-linux-project-123-concurrent-2-0a1b2c3d-predefined
+//
+// A container of the same type is created _once_ per execution and re-used.
+func (e *executor) makeContainerName(suffix string) string {
+	return e.getProjectUniqRandomizedName() + "-" + suffix
+}
+
 func (e *executor) createBuildNetwork() error {
 	if e.networksManager == nil {
 		return errNetworksManagerUndefined
@@ -523,10 +537,69 @@ func (e *executor) isInPrivilegedImageList(imageDefinition common.Image) bool {
 	return isInAllowedPrivilegedImages(imageDefinition.Name, e.Config.Docker.AllowedPrivilegedImages)
 }
 
+type containerConfigurator interface {
+	ContainerConfig(image *types.ImageInspect) (*container.Config, error)
+	HostConfig() (*container.HostConfig, error)
+	NetworkConfig(aliases []string) *network.NetworkingConfig
+}
+
+type defaultContainerConfigurator struct {
+	e                     *executor
+	containerType         string
+	imageDefinition       common.Image
+	cmd                   []string
+	allowedInternalImages []string
+}
+
+var _ containerConfigurator = &defaultContainerConfigurator{}
+
+func newDefaultContainerConfigurator(
+	e *executor,
+	containerType string,
+	imageDefinition common.Image,
+	cmd,
+	allowedInternalImages []string,
+) *defaultContainerConfigurator {
+	return &defaultContainerConfigurator{
+		e:                     e,
+		containerType:         containerType,
+		imageDefinition:       imageDefinition,
+		cmd:                   cmd,
+		allowedInternalImages: allowedInternalImages,
+	}
+}
+
+func (c *defaultContainerConfigurator) ContainerConfig(image *types.ImageInspect) (*container.Config, error) {
+	hostname := c.e.Config.Docker.Hostname
+	if hostname == "" {
+		hostname = c.e.Build.ProjectUniqueName()
+	}
+
+	return c.e.createContainerConfig(
+		c.containerType,
+		c.imageDefinition,
+		image,
+		hostname,
+		c.cmd,
+	)
+}
+
+func (c *defaultContainerConfigurator) HostConfig() (*container.HostConfig, error) {
+	return c.e.createHostConfig(
+		c.containerType == buildContainerType,
+		c.e.isInPrivilegedImageList(c.imageDefinition),
+	)
+}
+
+func (c *defaultContainerConfigurator) NetworkConfig(aliases []string) *network.NetworkingConfig {
+	return c.e.networkConfig(aliases)
+}
+
 func (e *executor) createContainer(
 	containerType string,
 	imageDefinition common.Image,
-	cmd, allowedInternalImages []string,
+	allowedInternalImages []string,
+	cfgTor containerConfigurator,
 ) (*types.ContainerJSON, error) {
 	if e.volumesManager == nil {
 		return nil, errVolumesManagerUndefined
@@ -542,38 +615,19 @@ func (e *executor) createContainer(
 		return nil, err
 	}
 
-	hostname := e.Config.Docker.Hostname
-	if hostname == "" {
-		hostname = e.Build.ProjectUniqueName()
-	}
+	containerName := e.makeContainerName(containerType)
 
-	// Build and predefined container names are comprised of:
-	// - A runner project scoped ID (runner-<description>-project-<project_id>-concurrent-<concurrent>)
-	// - A unique randomized ID for each execution
-	// - The container's type (build, predefined)
-	//
-	// For example: runner-linux-project-123-concurrent-2-0a1b2c3d-predefined
-	//
-	// A container of the same type is created _once_ per execution and re-used.
-	containerName := e.getProjectUniqRandomizedName() + "-" + containerType
-
-	config, err := e.createContainerConfig(containerType, imageDefinition, image.ID, hostname, cmd)
+	config, err := cfgTor.ContainerConfig(image)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container configuration: %w", err)
 	}
 
-	hostConfig, err := e.createHostConfig()
+	hostConfig, err := cfgTor.HostConfig()
 	if err != nil {
 		return nil, err
 	}
-	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedImageList(imageDefinition)
 
-	if containerType == buildContainerType && e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
-		hostConfig.Init = &useInit
-	}
-
-	aliases := []string{"build", containerName}
-	networkConfig := e.networkConfig(aliases)
+	networkConfig := cfgTor.NetworkConfig([]string{"build", containerName})
 
 	var platform *v1.Platform
 	// predefined/helper container always uses native platform
@@ -600,16 +654,29 @@ func (e *executor) createContainer(
 	return &inspect, err
 }
 
+// addStepRunnerToPath adds the step-runner's path (stepRunnerBinaryPath) to the specific environment's PATH variable.
+func addStepRunnerToPath(env []string) []string {
+	res := []string{}
+	for _, e := range env {
+		if strings.HasPrefix(e, "PATH=") {
+			res = append(res, e+":"+stepRunnerBinaryPath)
+		} else {
+			res = append(res, e)
+		}
+	}
+	return res
+}
+
 func (e *executor) createContainerConfig(
 	containerType string,
 	imageDefinition common.Image,
-	imageID string,
+	image *types.ImageInspect,
 	hostname string,
 	cmd []string,
 ) (*container.Config, error) {
 	labels := e.prepareContainerLabels(map[string]string{"type": containerType})
 	config := &container.Config{
-		Image:        imageID,
+		Image:        image.ID,
 		Hostname:     hostname,
 		Cmd:          cmd,
 		Labels:       labels,
@@ -631,15 +698,15 @@ func (e *executor) createContainerConfig(
 		}
 	}
 
-	// only allow entrypoint overwriting if steps is not enabled and this is not the build container.
-	if containerType != buildContainerType || !e.Build.UseNativeSteps() {
+	// only allow entrypoint overwriting if steps is not enabled OR this is the helper container.
+	if containerType == predefinedContainerType || !e.Build.UseNativeSteps() {
 		config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
 	}
 
-	// Do not add job variables to the build container environment when using native steps integration. The step-runner
-	// will do this.
 	if containerType == buildContainerType && e.Build.UseNativeSteps() {
-		config.Env = nil
+		// Set the build container's environment to the build IMAGE's environment with the step-runner binary path
+		// appended to PATH.
+		config.Env = addStepRunnerToPath(image.Config.Env)
 	}
 
 	// setting a container's mac-address changed in API version 1.44
@@ -666,7 +733,7 @@ func (e *executor) getBuildContainerUser(imageDefinition common.Image) (string, 
 	return user, nil
 }
 
-func (e *executor) createHostConfig() (*container.HostConfig, error) {
+func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetNanoCPUs()
 	if err != nil {
 		return nil, err
@@ -681,6 +748,12 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 	ulimits, err := e.Config.Docker.GetUlimits()
 	if err != nil {
 		return nil, err
+	}
+
+	var useInit *bool
+	if isBuildContainer && e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
+		yes := true
+		useInit = &yes
 	}
 
 	return &container.HostConfig{
@@ -702,7 +775,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
 		Runtime:       e.Config.Docker.Runtime,
-		Privileged:    e.Config.Docker.Privileged,
+		Privileged:    e.Config.Docker.Privileged && imageIsPrivileged,
 		GroupAdd:      e.Config.Docker.GroupAdd,
 		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		CapAdd:        e.Config.Docker.CapAdd,
@@ -724,6 +797,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 		},
 		Tmpfs:   e.Config.Docker.Tmpfs,
 		Sysctls: e.Config.Docker.SysCtls,
+		Init:    useInit,
 	}, nil
 }
 
@@ -1015,6 +1089,7 @@ func (e *executor) createDependencies() error {
 		e.createVolumesManager,
 		e.createVolumes,
 		e.createBuildVolume,
+		e.createStepRunnerVolume,
 		e.createServices,
 	}
 
@@ -1087,6 +1162,17 @@ func (e *executor) createBuildVolume() error {
 	}
 
 	return nil
+}
+
+func (e *executor) createStepRunnerVolume() error {
+	e.SetCurrentStage(ExecutorStageCreatingStepRunnerVolume)
+	e.BuildLogger.Debugln("Creating step-runner volume...")
+
+	if e.volumesManager == nil {
+		return errVolumesManagerUndefined
+	}
+
+	return e.volumesManager.CreateTemporary(e.Context, stepRunnerBinaryPath)
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -1171,7 +1257,7 @@ func (e *executor) setupDefaultExecutorOptions(os string) {
 
 		if e.newVolumePermissionSetter == nil {
 			e.newVolumePermissionSetter = func() (permission.Setter, error) {
-				helperImage, err := e.getPrebuiltImage()
+				helperImage, err := e.getHelperImage()
 				if err != nil {
 					return nil, err
 				}

@@ -238,7 +238,7 @@ func TestHelperImageWithVariable(t *testing.T) {
 		HelperImage: "gitlab/gitlab-runner:${CI_RUNNER_REVISION}",
 	}
 
-	img, err := e.getPrebuiltImage()
+	img, err := e.getHelperImage()
 	assert.NoError(t, err)
 	require.NotNil(t, img)
 	assert.Equal(t, "helper-image", img.ID)
@@ -742,6 +742,12 @@ func TestCreateDependencies(t *testing.T) {
 					binds = append(binds, args.Get(1).(string))
 				}).
 				Once()
+			vm.On("CreateTemporary", mock.Anything, "/opt/step-runner").
+				Return(nil).
+				Run(func(args mock.Arguments) {
+					binds = append(binds, args.Get(1).(string))
+				}).
+				Once()
 			vm.On("Create", mock.Anything, "/volume").
 				Return(nil).
 				Run(func(args mock.Arguments) {
@@ -756,7 +762,7 @@ func TestCreateDependencies(t *testing.T) {
 		},
 		clientAssertions: func(c *docker.MockClient) {
 			hostConfigMatcher := mock.MatchedBy(func(conf *container.HostConfig) bool {
-				return assert.Equal(t, []string{"/volume", "/builds"}, conf.Binds)
+				return assert.Equal(t, []string{"/volume", "/builds", "/opt/step-runner"}, conf.Binds)
 			})
 
 			c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
@@ -891,7 +897,9 @@ func testDockerConfigurationWithJobContainer(
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer(buildContainerType, common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	imageConfig := common.Image{Name: "alpine"}
+	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -912,7 +920,9 @@ func testDockerConfigurationWithPredefinedContainer(
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer(predefinedContainerType, common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	imageConfig := common.Image{Name: "alpine"}
+	cfgTor := newDefaultContainerConfigurator(e, predefinedContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -1008,7 +1018,7 @@ func TestDockerIsolationWithIncorrectValue(t *testing.T) {
 	}
 	_, executor := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	_, err := executor.createHostConfig()
+	_, err := executor.createHostConfig(false, false)
 
 	assert.Contains(t, err.Error(), `the isolation value "someIncorrectValue" is not valid`)
 }
@@ -2070,7 +2080,8 @@ func TestExpandingDockerImageWithImagePullPolicyAlways(t *testing.T) {
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -2098,7 +2109,8 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.Contains(
 		t,
 		err.Error(),
@@ -2200,7 +2212,8 @@ func TestDockerImageWithUser(t *testing.T) {
 			err = e.createPullManager()
 			require.NoError(t, err)
 
-			_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+			cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+			_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 			if !tt.wantErr {
 				require.NoError(t, err)
 			} else {

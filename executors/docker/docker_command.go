@@ -24,6 +24,7 @@ import (
 const (
 	buildContainerType      = "build"
 	predefinedContainerType = "predefined"
+	stepRunnerContainerType = "step-runner"
 )
 
 type commandExecutor struct {
@@ -32,6 +33,7 @@ type commandExecutor struct {
 	buildContainer                  *types.ContainerJSON
 	lock                            sync.Mutex
 	terminalWaitForContainerTimeout time.Duration
+	stepRunnerContainerOnce         sync.Once
 }
 
 func (s *commandExecutor) getBuildContainer() *types.ContainerJSON {
@@ -53,7 +55,7 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("script is not compatible with Docker")
 	}
 
-	_, err = s.getPrebuiltImage()
+	_, err = s.getHelperImage()
 	if err != nil {
 		return err
 	}
@@ -84,6 +86,23 @@ func (s *commandExecutor) isUmaskDisabled() bool {
 }
 
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
+	if cmd.Predefined {
+		// if steps is enabled, run the step-runner container with the helper container. Eventually we can remove the
+		// helper execution path.
+		if s.Build.UseNativeSteps() {
+			var err error
+			s.stepRunnerContainerOnce.Do(func() { err = s.runContainer(stepRunnerContainerType, cmd) })
+			if err != nil {
+				return err
+			}
+		}
+		return s.runContainer(predefinedContainerType, cmd)
+	} else {
+		return s.runContainer(buildContainerType, cmd)
+	}
+}
+
+func (s *commandExecutor) runContainer(containerType string, cmd common.ExecutorCommand) error {
 	maxAttempts := s.Build.GetExecutorJobSectionAttempts()
 
 	var runErr error
@@ -92,7 +111,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 			s.BuildLogger.Infoln(fmt.Sprintf("Retrying %s", cmd.Stage))
 		}
 
-		ctr, err := s.getContainer(cmd)
+		ctr, err := s.requestContainer(containerType)
 		if err != nil {
 			return err
 		}
@@ -115,12 +134,17 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	return runErr
 }
 
-func (s *commandExecutor) getContainer(cmd common.ExecutorCommand) (*types.ContainerJSON, error) {
-	if cmd.Predefined {
-		return s.requestPredefinedContainer()
+func (s *commandExecutor) requestContainer(containerType string) (*types.ContainerJSON, error) {
+	switch containerType {
+	case buildContainerType:
+		return s.requestBuildContainer()
+	case predefinedContainerType:
+		return s.requestHelperContainer()
+	case stepRunnerContainerType:
+		return s.requestStepRunnerContainer()
+	default:
+		return nil, fmt.Errorf("invalid container-type %q", containerType)
 	}
-
-	return s.requestBuildContainer()
 }
 
 func (s *commandExecutor) hasExistingContainer(containerType string, container *types.ContainerJSON) bool {
@@ -142,12 +166,12 @@ func (s *commandExecutor) hasExistingContainer(containerType string, container *
 	return false
 }
 
-func (s *commandExecutor) requestPredefinedContainer() (*types.ContainerJSON, error) {
+func (s *commandExecutor) requestHelperContainer() (*types.ContainerJSON, error) {
 	if s.hasExistingContainer(predefinedContainerType, s.helperContainer) {
 		return s.helperContainer, nil
 	}
 
-	prebuildImage, err := s.getPrebuiltImage()
+	prebuildImage, err := s.getHelperImage()
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +183,8 @@ func (s *commandExecutor) requestPredefinedContainer() (*types.ContainerJSON, er
 	s.helperContainer, err = s.createContainer(
 		predefinedContainerType,
 		buildImage,
-		s.getHelperImageCmd(),
 		[]string{prebuildImage.ID},
+		newDefaultContainerConfigurator(&s.executor, predefinedContainerType, buildImage, s.getHelperImageCmd(), []string{prebuildImage.ID}),
 	)
 	if err != nil {
 		return nil, err
@@ -197,8 +221,8 @@ func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) 
 	s.buildContainer, err = s.createContainer(
 		buildContainerType,
 		s.Build.Image,
-		cmd,
 		[]string{},
+		newDefaultContainerConfigurator(&s.executor, buildContainerType, s.Build.Image, cmd, []string{}),
 	)
 	if err != nil {
 		return nil, err
@@ -281,7 +305,7 @@ func getUIDandGID(
 }
 
 func (s *commandExecutor) executeChown(dockerExec exec.Docker, uid int, gid int) error {
-	c, err := s.requestPredefinedContainer()
+	c, err := s.requestHelperContainer()
 	if err != nil {
 		return fmt.Errorf("requesting new predefined container: %w", err)
 	}
