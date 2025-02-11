@@ -45,6 +45,16 @@ trigger runner-incept tests:
     project: gitlab-org/ci-cd/tests/runner-incept
     # strategy: depend
 
+trigger deploy to kubernetes:
+  extends: .trigger-downstream-pipeline-ref-rules
+  needs:
+    - trigger UBI images build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: never
+  trigger:
+    project: gitlab-org/ci-cd/runner-tools/runner-kubernetes-infra
+
 static QA:
   extends:
   - .rules:merge_request_pipelines:no_docs
