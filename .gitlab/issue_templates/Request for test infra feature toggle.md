@@ -1,6 +1,6 @@
 # Summary
 
-<!-- Describe the feature you would like toggled along with a reason. Example: -->
+<!-- Describe the feature you would like toggled in the gitlab-runner's test infra along with a reason. Example: -->
 
 <!-- Toggle the `FF_PRINT_POD_EVENTS` feature flag to `true`. This will allow us to better track down issues in Kubernetes-powered jobs -->
 
