@@ -521,7 +521,7 @@ set `Path` to separate caches between runners when cache sharing is enabled.
 ## Distributed container registry mirroring
 
 To speed up jobs executed inside of Docker containers, you can use the
-[Docker registry mirroring service](https://docs.docker.com/registry/). This service provides a proxy between your
+[Docker registry mirroring service](https://docs.docker.com/retired/#registry-now-cncf-distribution). This service provides a proxy between your
 Docker machines and all used registries. Images are downloaded one time by the
 registry mirror. On each new host, or on an existing host where the image is
 not available, the image is downloaded from the configured registry mirror.

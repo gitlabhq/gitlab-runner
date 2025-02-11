@@ -55,7 +55,7 @@ you should always use the latest stable [Docker Engine version](https://docs.doc
 
 Prerequisites:
 
-- You have [installed Docker](https://docs.docker.com/get-docker/).
+- You have [installed Docker](https://docs.docker.com/get-started/get-docker/).
 - You have read the [FAQ](../faq/_index.md) to learn about common problems in GitLab Runner.
 
 1. Download the `gitlab-runner` Docker image by using the `docker pull gitlab/gitlab-runner:<version-tag>` command.

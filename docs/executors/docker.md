@@ -66,9 +66,9 @@ These configurations are **not** supported:
 
 NOTE:
 GitLab Runner uses Docker Engine API
-[v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
+[v1.25](https://docs.docker.com/reference/api/engine/version/v1.25/) to talk to the Docker
 Engine. This means the
-[minimum supported version](https://docs.docker.com/engine/api/#api-version-matrix)
+[minimum supported version](https://docs.docker.com/reference/api/engine/#api-version-matrix)
 of Docker on a Linux server is `1.13.0`.
 On Windows Server, [it needs to be more recent](#supported-docker-versions)
 to identify the Windows Server version.
@@ -125,7 +125,7 @@ Use the following keywords:
 
 - `image`: The name of the Docker image that the runner uses to run jobs.
   - Enter an image from the local Docker Engine, or any image in
-  Docker Hub. For more information, see the [Docker documentation](https://docs.docker.com/guides/getting-started/).
+  Docker Hub. For more information, see the [Docker documentation](https://docs.docker.com/get-started/introduction/).
   - To define the image version, use a colon (`:`) to add a tag. If you don't specify a tag,
    Docker uses `latest` as the version.
 - `services`: The additional image that creates another container and links to the `image`. For more information about types of services, see [Services](https://docs.gitlab.com/ee/ci/services/).
@@ -229,7 +229,7 @@ You can configure the runner to create a network for each job.
 When you enable this networking mode, the runner creates and uses a
 user-defined Docker bridge network for each job. Docker environment
 variables are not shared across the containers. For more information
-about user-defined bridge networks, see the [Docker documentation](https://docs.docker.com/network/drivers/bridge/).
+about user-defined bridge networks, see the [Docker documentation](https://docs.docker.com/engine/network/drivers/bridge/).
 
 To use this networking mode, enable `FF_NETWORK_PER_BUILD` in either
 the feature flag or the environment variable in the `config.toml`.
@@ -262,7 +262,7 @@ including other Docker networks.
 
 This feature works only when the Docker daemon is configured with IPv6 enabled.
 To enable IPv6 support, set `enable_ipv6` to `true` in the Docker configuration.
-For more information, see the [Docker documentation](https://docs.docker.com/config/daemon/ipv6/).
+For more information, see the [Docker documentation](https://docs.docker.com/engine/daemon/ipv6/).
 
 The runner uses the `build` alias to resolve the job container.
 
@@ -276,14 +276,14 @@ When a job starts, the runner:
 
 The container running the job and the containers running the service
 resolve each other's hostnames and aliases. This functionality is
-[provided by Docker](https://docs.docker.com/network/drivers/bridge/#differences-between-user-defined-bridges-and-the-default-bridge).
+[provided by Docker](https://docs.docker.com/engine/network/drivers/bridge/#differences-between-user-defined-bridges-and-the-default-bridge).
 
 ### Configure a network with container links
 
-You can configure a network mode that uses Docker [legacy container links](https://docs.docker.com/network/links/) and the default Docker `bridge` to link the job container with the services. This network mode is the default
+You can configure a network mode that uses Docker [legacy container links](https://docs.docker.com/engine/network/links/) and the default Docker `bridge` to link the job container with the services. This network mode is the default
 if [`FF_NETWORK_PER_BUILD`](#create-a-network-for-each-job) is not enabled.
 
-To configure the network, specify the [networking mode](https://docs.docker.com/engine/reference/run/#network-settings) in the `config.toml` file:
+To configure the network, specify the [networking mode](https://docs.docker.com/engine/containers/run/#network-settings) in the `config.toml` file:
 
 - `bridge`: Use the bridge network. Default.
 - `host`: Use the host's network stack inside the container.
@@ -547,12 +547,12 @@ If you make the `/builds` directory a host-bound storage, your builds are stored
 
 The Docker executor supports sharing the IPC namespace of containers with other
 locations. This maps to the `docker run --ipc` flag.
-More details on [IPC settings in Docker documentation](https://docs.docker.com/engine/reference/run/#ipc-settings---ipc)
+More details on [IPC settings in Docker documentation](https://docs.docker.com/engine/containers/run/#ipc-settings---ipc)
 
 ## Privileged mode
 
 The Docker executor supports several options that allows fine-tuning of the
-build container. One of these options is the [`privileged` mode](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
+build container. One of these options is the [`privileged` mode](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities).
 
 ### Use Docker-in-Docker with privileged mode
 
@@ -588,7 +588,7 @@ When your containers run in privileged mode, you disable the
 container security mechanisms and expose your host to privilege escalation.
 Running containers in privileged mode can lead to container breakout. For more information,
 see the Docker documentation about
-[runtime privilege and Linux capabilities](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
+[runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities).
 
 You might need to
 [configure Docker in Docker with TLS, or disable TLS](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-the-docker-executor-with-docker-in-docker)
@@ -641,7 +641,7 @@ see [Security risks for Docker executors](../security/_index.md#usage-of-docker-
 
 ## Configure a Docker ENTRYPOINT
 
-By default the Docker executor doesn't override the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime). It passes `sh` or `bash` as [`COMMAND`](https://docs.docker.com/engine/reference/run/#cmd-default-command-or-options) to start a container that runs the job script.
+By default the Docker executor doesn't override the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/containers/run/#entrypoint-default-command-to-execute-at-runtime). It passes `sh` or `bash` as [`COMMAND`](https://docs.docker.com/engine/containers/run/#cmd-default-command-or-options) to start a container that runs the job script.
 
 To ensure a job can run, its Docker image must:
 
@@ -733,7 +733,7 @@ Prerequisites:
 - [Podman](https://podman.io/) v4.2.0 or later.
 - To run [services](#services) with Podman as an executor, enable the
   [`FF_NETWORK_PER_BUILD` feature flag](#create-a-network-for-each-job).
-  [Docker container links](https://docs.docker.com/network/links/) are legacy
+  [Docker container links](https://docs.docker.com/engine/network/links/) are legacy
   and are not supported by [Podman](https://podman.io/). For services that
   create a network alias, you must install the `podman-plugins` package.
 
@@ -1057,7 +1057,7 @@ Docker executor:
   additional detail.
 - `docker-windows` executor can be run only using GitLab Runner running
   on Windows.
-- [Linux containers on Windows](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
+- [Linux containers on Windows](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/set-up-linux-containers)
   are not supported, because they are still experimental. Read
   [the relevant issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
   more details.
@@ -1089,7 +1089,7 @@ For future Windows Server versions, we have a
 [future version support policy](../install/support-policy.md#windows-version-support).
 
 You can only run containers based on the same OS version that the Docker
-daemon is running on. For example, the following [`Windows Server Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
+daemon is running on. For example, the following [`Windows Server Core`](https://hub.docker.com/r/microsoft/windows-servercore) images can
 be used:
 
 - `mcr.microsoft.com/windows/servercore:ltsc2022`

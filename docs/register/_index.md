@@ -35,7 +35,7 @@ Prerequisites:
 
 After you register the runner, the configuration is saved to the `config.toml`.
 
-To register the runner with a [runner authentication token](https://docs.gitlab.com/ee/security/token_overview.html#runner-authentication-tokens):
+To register the runner with a [runner authentication token](https://docs.gitlab.com/ee/security/tokens/index.html#runner-authentication-tokens):
 
 1. Run the register command:
 

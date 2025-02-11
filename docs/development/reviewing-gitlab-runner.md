@@ -62,7 +62,7 @@ To view a code coverage report for a merge request:
    where the report is stored.
 
 The coverage data should be also
-[visible in the merge request UI](https://docs.gitlab.com/ee/ci/testing/test_coverage_visualization.html).
+[visible in the merge request UI](https://docs.gitlab.com/ee/ci/testing/code_coverage/).
 
 ## Reviewing the merge request title
 
@@ -148,7 +148,7 @@ Having all of that in mind, please follow these few rules when merging the merge
   changelog.
 
 - Please also take a moment to read through
-  [Engineering metrics data classification](https://handbook.gitlab.com/handbook/engineering/metrics/#work-type-classification)
+  [Engineering metrics data classification](https://handbook.gitlab.com/handbook/product/groups/product-analysis/engineering/metrics/#work-type-classification)
   page, which gives some guidance about when certain labels should be used.
 
 ## Summary
