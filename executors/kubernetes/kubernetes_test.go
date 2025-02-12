@@ -76,7 +76,7 @@ func containsLabels(t *testing.T, actual, expected map[string]string) {
 }
 
 func notContainsLabels(t *testing.T, actual, unexpected map[string]string) {
-	for key, _ := range unexpected {
+	for key := range unexpected {
 		_, exists := actual[key]
 		assert.False(t, exists, "Key %q is present when it should not be!", key)
 	}
@@ -763,8 +763,8 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 			Name:  "test-image",
 			Ports: []common.Port{{Number: 80}},
 		},
-		Services: common.Services{
-			{
+		Services: map[string]*common.Image{
+			"test-service": {
 				Name:  "test-service",
 				Alias: "custom_name",
 				Ports: []common.Port{
@@ -788,7 +788,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 
 	buildtest.SetBuildFeatureFlag(ex.Build, featureFlagName, featureFlagValue)
 
-	mockPullManager.On("GetPullPolicyFor", "svc-0").
+	mockPullManager.On("GetPullPolicyFor", "test-service").
 		Return(api.PullAlways, nil).
 		Once()
 	mockPullManager.On("GetPullPolicyFor", buildContainerName).
@@ -833,8 +833,8 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 				Image: common.Image{
 					Name: "test-build",
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name: "test-service",
 					},
 				},
@@ -1145,17 +1145,6 @@ func TestPrepare(t *testing.T) {
 		helperRequests:  api.ResourceList{},
 	}
 
-	getDefaultOverwritesWithNServices := func(n int) *overwrites {
-		overwrites := *defaultOverwrites
-		overwrites.explicitServiceLimits = make(map[string]api.ResourceList, n)
-		overwrites.explicitServiceRequests = make(map[string]api.ResourceList, n)
-		for i := 0; i < n; i++ {
-			overwrites.explicitServiceLimits[fmt.Sprintf("%s%d", serviceContainerPrefix, i)] = api.ResourceList{}
-			overwrites.explicitServiceRequests[fmt.Sprintf("%s%d", serviceContainerPrefix, i)] = api.ResourceList{}
-		}
-		return &overwrites
-	}
-
 	defaultHelperImage := helperimage.Info{
 		Architecture: "x86_64",
 		OSType:       helperimage.OSTypeLinux,
@@ -1215,6 +1204,7 @@ func TestPrepare(t *testing.T) {
 				Image: common.Image{
 					Name: "test-image",
 				},
+				Services: map[string]*common.Image{},
 			},
 			configurationOverwrites: defaultOverwrites,
 			helperImageInfo:         hi,
@@ -1276,6 +1266,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "default",
@@ -1339,6 +1330,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "default",
@@ -1450,6 +1442,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "new-namespace-name",
@@ -1493,6 +1486,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "namespace-0",
@@ -1528,6 +1522,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -1560,6 +1555,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "ci-job-0",
@@ -1597,6 +1593,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "default",
@@ -1644,16 +1641,30 @@ func TestPrepare(t *testing.T) {
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: common.Services{
-						{
+					Services: map[string]*common.Image{
+						"svc-0": {
 							Name:       "test-service",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
 						},
 					},
 				},
-				configurationOverwrites: getDefaultOverwritesWithNServices(1),
-				helperImageInfo:         defaultHelperImage,
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+					explicitServiceLimits: map[string]api.ResourceList{
+						"svc-0": {},
+					},
+					explicitServiceRequests: map[string]api.ResourceList{
+						"svc-0": {},
+					},
+				},
+				helperImageInfo: defaultHelperImage,
 			},
 		},
 		{
@@ -1712,29 +1723,29 @@ func TestPrepare(t *testing.T) {
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: common.Services{
-						{
+					Services: map[string]*common.Image{
+						"alias": {
 							Name:  "test-service-k8s",
 							Alias: "alias",
 						},
-						{
+						"svc-0": {
 							Name: "test-service-k8s2",
 						},
-						{
+						"svc-1": {
 							Name:    "test-service-k8s3",
 							Command: []string{"executable", "param1", "param2"},
 						},
-						{
+						"svc-2": {
 							Name:       "test-service-k8s4",
 							Entrypoint: []string{"executable", "param3", "param4"},
 						},
-						{
+						"alias5": {
 							Name:       "test-service-k8s5",
 							Alias:      "alias5",
 							Command:    []string{"executable", "param1", "param2"},
 							Entrypoint: []string{"executable", "param3", "param4"},
 						},
-						{
+						"test-alias": {
 							Name:       "test-service",
 							Alias:      "test-alias",
 							Entrypoint: []string{"/init", "run"},
@@ -1742,8 +1753,32 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				configurationOverwrites: getDefaultOverwritesWithNServices(2),
-				helperImageInfo:         defaultHelperImage,
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+					explicitServiceLimits: map[string]api.ResourceList{
+						"alias":      {},
+						"svc-0":      {},
+						"svc-1":      {},
+						"svc-2":      {},
+						"alias5":     {},
+						"test-alias": {},
+					},
+					explicitServiceRequests: map[string]api.ResourceList{
+						"alias":      {},
+						"svc-0":      {},
+						"svc-1":      {},
+						"svc-2":      {},
+						"alias5":     {},
+						"test-alias": {},
+					},
+				},
+				helperImageInfo: defaultHelperImage,
 			},
 		},
 		{
@@ -1824,8 +1859,8 @@ func TestPrepare(t *testing.T) {
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: common.Services{
-						{
+					Services: map[string]*common.Image{
+						"test-alias-0": {
 							Name:       "test-service-explicit-overrides",
 							Alias:      "test-alias-0",
 							Entrypoint: []string{"/init", "run"},
@@ -1857,7 +1892,7 @@ func TestPrepare(t *testing.T) {
 								},
 							},
 						},
-						{
+						"test-alias-1": {
 							Name:       "test-service-without-explicit-overrides",
 							Alias:      "test-alias-1",
 							Entrypoint: []string{"/init", "run"},
@@ -1874,12 +1909,12 @@ func TestPrepare(t *testing.T) {
 					buildRequests:   api.ResourceList{},
 					helperRequests:  api.ResourceList{},
 					explicitServiceLimits: map[string]api.ResourceList{
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "200m", "300Mi", "2Gi"),
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
+						"test-alias-0": mustCreateResourceList(t, "200m", "300Mi", "2Gi"),
+						"test-alias-1": mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
 					},
 					explicitServiceRequests: map[string]api.ResourceList{
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "100m", "150Mi", "1Gi"),
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
+						"test-alias-0": mustCreateResourceList(t, "100m", "150Mi", "1Gi"),
+						"test-alias-1": mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
 					},
 				},
 				helperImageInfo: defaultHelperImage,
@@ -1957,8 +1992,8 @@ func TestPrepare(t *testing.T) {
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: common.Services{
-						{
+					Services: map[string]*common.Image{
+						"test-alias-0": {
 							Name:       "test-service-explicit-overrides",
 							Alias:      "test-alias-0",
 							Entrypoint: []string{"/init", "run"},
@@ -1990,7 +2025,7 @@ func TestPrepare(t *testing.T) {
 								},
 							},
 						},
-						{
+						"test-alias-1": {
 							Name:       "test-service-without-explicit-overrides",
 							Alias:      "test-alias-1",
 							Entrypoint: []string{"/init", "run"},
@@ -2009,12 +2044,12 @@ func TestPrepare(t *testing.T) {
 					// Explicit service limits and requests are not set because the max override is not set.
 					// Default is used.
 					explicitServiceLimits: map[string]api.ResourceList{
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
+						"test-alias-0": mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
+						"test-alias-1": mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
 					},
 					explicitServiceRequests: map[string]api.ResourceList{
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
+						"test-alias-0": mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
+						"test-alias-1": mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
 					},
 				},
 				helperImageInfo: defaultHelperImage,
@@ -2086,8 +2121,8 @@ func TestPrepare(t *testing.T) {
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: common.Services{
-						{
+					Services: map[string]*common.Image{
+						"test-alias-0": {
 							Name:       "test-service-explicit-overrides",
 							Alias:      "test-alias-0",
 							Entrypoint: []string{"/init", "run"},
@@ -2119,7 +2154,7 @@ func TestPrepare(t *testing.T) {
 								},
 							},
 						},
-						{
+						"test-alias-1": {
 							Name:       "test-service-without-explicit-overrides",
 							Alias:      "test-alias-1",
 							Entrypoint: []string{"/init", "run"},
@@ -2138,12 +2173,12 @@ func TestPrepare(t *testing.T) {
 					// Explicit service limits and requests are not set because the max override is not set
 					// nil is used since default is not defined
 					explicitServiceLimits: map[string]api.ResourceList{
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "", "", ""),
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "", "", ""),
+						"test-alias-0": mustCreateResourceList(t, "", "", ""),
+						"test-alias-1": mustCreateResourceList(t, "", "", ""),
 					},
 					explicitServiceRequests: map[string]api.ResourceList{
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "", "", ""),
-						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "", "", ""),
+						"test-alias-0": mustCreateResourceList(t, "", "", ""),
+						"test-alias-1": mustCreateResourceList(t, "", "", ""),
 					},
 				},
 				helperImageInfo: defaultHelperImage,
@@ -2170,6 +2205,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				helperImageInfo:         defaultHelperImage,
 				configurationOverwrites: defaultOverwrites,
@@ -2197,6 +2233,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo: helperimage.Info{
@@ -2234,6 +2271,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace: "default",
@@ -2285,6 +2323,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace: "default",
@@ -2348,6 +2387,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         helperimage.Info{},
@@ -2385,6 +2425,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace: "default",
@@ -2424,6 +2465,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2455,6 +2497,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2485,6 +2528,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2514,6 +2558,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2544,6 +2589,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2607,6 +2653,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2675,6 +2722,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2705,6 +2753,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2737,6 +2786,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2773,6 +2823,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2855,6 +2906,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
+					Services: map[string]*common.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -4181,17 +4233,17 @@ func TestSetupBuildPod(t *testing.T) {
 					Name:       "test-image",
 					Entrypoint: []string{"/init", "run"},
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name:       "test-service",
 						Entrypoint: []string{"/init", "run"},
 						Command:    []string{"application", "--debug"},
 					},
-					{
+					"svc-1": {
 						Name:    "test-service-2",
 						Command: []string{"application", "--debug"},
 					},
-					{
+					"svc-2": {
 						Name:    "test-service-3",
 						Command: []string{"application", "--debug"},
 						Variables: []common.JobVariable{
@@ -4269,17 +4321,17 @@ func TestSetupBuildPod(t *testing.T) {
 					Name:       "test-image",
 					Entrypoint: []string{"/init", "run"},
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name:       "test-service",
 						Entrypoint: []string{"/init", "run"},
 						Command:    []string{"application", "--debug"},
 					},
-					{
+					"svc-1": {
 						Name:    "test-service-2",
 						Command: []string{"application", "--debug"},
 					},
-					{
+					"svc-2": {
 						Name:    "test-service-3",
 						Command: []string{"application", "--debug"},
 						Variables: []common.JobVariable{
@@ -4360,8 +4412,8 @@ func TestSetupBuildPod(t *testing.T) {
 						},
 					},
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name: "test-service",
 						Ports: []common.Port{
 							{
@@ -4372,7 +4424,7 @@ func TestSetupBuildPod(t *testing.T) {
 							},
 						},
 					},
-					{
+					"svc-1": {
 						Name: "test-service2",
 						Ports: []common.Port{
 							{
@@ -4380,7 +4432,7 @@ func TestSetupBuildPod(t *testing.T) {
 							},
 						},
 					},
-					{
+					"svc-2": {
 						Name: "test-service3",
 					},
 				},
@@ -4503,8 +4555,8 @@ func TestSetupBuildPod(t *testing.T) {
 						},
 					},
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name: "test-service",
 						Ports: []common.Port{
 							{
@@ -4532,8 +4584,8 @@ func TestSetupBuildPod(t *testing.T) {
 				Image: common.Image{
 					Name: "test-image",
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"custom-name": {
 						Name:  "test-service",
 						Alias: "custom-name",
 						Ports: []common.Port{
@@ -4568,8 +4620,8 @@ func TestSetupBuildPod(t *testing.T) {
 						},
 					},
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name:  "test-service",
 						Alias: "custom_name",
 						Ports: []common.Port{
@@ -4580,7 +4632,7 @@ func TestSetupBuildPod(t *testing.T) {
 							},
 						},
 					},
-					{
+					"svc-1": {
 						Name: "test-service2",
 						Ports: []common.Port{
 							{
@@ -4621,8 +4673,8 @@ func TestSetupBuildPod(t *testing.T) {
 				Image: common.Image{
 					Name: "test-image",
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"service": {
 						Name:  "test-service",
 						Alias: "service,name-.non-compat!ble",
 						Ports: []common.Port{
@@ -4675,16 +4727,16 @@ func TestSetupBuildPod(t *testing.T) {
 				Image: common.Image{
 					Name: "test-image",
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name:    "test-service-0",
 						Command: []string{"application", "--debug"},
 					},
-					{
+					"svc-1": {
 						Name:       "test-service-1",
 						Entrypoint: []string{"application", "--debug"},
 					},
-					{
+					"svc-2": {
 						Name:       "test-service-2",
 						Entrypoint: []string{"application", "--debug"},
 						Command:    []string{"argument1", "argument2"},
@@ -4735,16 +4787,16 @@ func TestSetupBuildPod(t *testing.T) {
 				Image: common.Image{
 					Name: "test-image",
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name:    "test-service-0",
 						Command: []string{"application", "--debug"},
 					},
-					{
+					"svc-1": {
 						Name:       "test-service-1",
 						Entrypoint: []string{"application", "--debug"},
 					},
-					{
+					"svc-2": {
 						Name:       "test-service-2",
 						Entrypoint: []string{"application", "--debug"},
 						Command:    []string{"argument1", "argument2"},
@@ -5069,15 +5121,15 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-alias": {
 						Name:  "test-service",
 						Alias: "svc-alias",
 					},
-					{
+					"svc-0": {
 						Name: "docker:dind",
 					},
-					{
+					"svc-1": {
 						Name: "service-with-port:dind",
 						Ports: []common.Port{{
 							Number:   0,
@@ -5097,7 +5149,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, []api.HostAlias{
 					{
 						IP:        "127.0.0.1",
-						Hostnames: []string{"test-service", "svc-alias", "docker"},
+						Hostnames: []string{"docker", "test-service", "svc-alias"},
 					},
 					{
 						IP:        "127.0.0.1",
@@ -5112,12 +5164,12 @@ func TestSetupBuildPod(t *testing.T) {
 		},
 		"ignores non RFC1123 aliases": {
 			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name:  "test-service",
 						Alias: "INVALID_ALIAS",
 					},
-					{
+					"svc-1": {
 						Name: "docker:dind",
 					},
 				},
@@ -5150,8 +5202,8 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name:  "test-service",
 						Alias: "alias",
 					},
@@ -5169,8 +5221,8 @@ func TestSetupBuildPod(t *testing.T) {
 		},
 		"check host aliases with non kubernetes version error": {
 			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name:  "test-service",
 						Alias: "alias",
 					},
@@ -5187,8 +5239,8 @@ func TestSetupBuildPod(t *testing.T) {
 		},
 		"check host aliases with kubernetes version error": {
 			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name:  "test-service",
 						Alias: "alias",
 					},
@@ -5289,12 +5341,12 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name:    "test-service-0",
 						Command: []string{"application", "--debug"},
 					},
-					{
+					"svc-1": {
 						Name:       "test-service-1",
 						Entrypoint: []string{"application", "--debug"},
 					},
@@ -5468,8 +5520,8 @@ func TestSetupBuildPod(t *testing.T) {
 						},
 					},
 				},
-				Services: common.Services{
-					{
+				Services: map[string]*common.Image{
+					"svc-0": {
 						Name: "test-service",
 						Ports: []common.Port{
 							{
@@ -5480,7 +5532,7 @@ func TestSetupBuildPod(t *testing.T) {
 							},
 						},
 					},
-					{
+					"svc-1": {
 						Name: "test-service2",
 						Ports: []common.Port{
 							{
@@ -5488,7 +5540,7 @@ func TestSetupBuildPod(t *testing.T) {
 							},
 						},
 					},
-					{
+					"svc-2": {
 						Name: "test-service3",
 					},
 				},
@@ -5815,8 +5867,8 @@ containers:
 			}
 
 			if test.Options != nil && test.Options.Services != nil {
-				for i := range test.Options.Services {
-					mockPullManager.On("GetPullPolicyFor", fmt.Sprintf("svc-%d", i)).
+				for name := range test.Options.Services {
+					mockPullManager.On("GetPullPolicyFor", name).
 						Return(api.PullAlways, nil).
 						Once()
 				}
