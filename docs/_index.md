@@ -18,7 +18,7 @@ DETAILS:
 **Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 Self-managed runners are GitLab Runner instances that you install, configure, and manage in your own
-infrastructure. 
+infrastructure.
 You can [install](install/_index.md) and register self-managed runners on all GitLab installations.
 
 Unlike [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/index.html), which are hosted and managed by GitLab, you have complete control over self-managed runners.
