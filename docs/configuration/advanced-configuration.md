@@ -406,7 +406,7 @@ The following settings define the Docker container parameters. These settings ar
 | `tls_cert_path` | A directory where `ca.pem`, `cert.pem` or `key.pem` are stored and used to make a secure TLS connection to Docker. Use this setting with `boot2docker`. | On macOS `/Users/<username>/.boot2docker/certs`. |
 | `tls_verify` | Enable or disable TLS verification of connections to the Docker daemon. Disabled by default. By default, GitLab Runner connects to the Docker Unix socket over SSH. The Unix socket does not support RTLS and communicates over HTTP with SSH to provide encryption and authentication. Enabling `tls_verify` is not typically needed and requires additional configuration. To enable `tls_verify`, the daemon must listen on a port (rather than the default Unix socket) and the GitLab Runner Docker host must use the address the daemon is listening on. | |
 | `user` | Run all commands in the container as the specified user. | |
-| `userns_mode` | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. | |
+| `userns_mode` | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. For details, see [Docker documentation](https://docs.docker.com/engine/security/userns-remap/#disable-namespace-remapping-for-a-container).  | |
 | `ulimit` | Ulimit values that are passed to the container. Uses the same syntax as the Docker `--ulimit` flag. | |
 | `volumes` | Additional volumes that should be mounted. Same syntax as the Docker `-v` flag. | `["/data", "/home/project/cache"]` |
 | `volumes_from` | A list of volumes to inherit from another container in the form `<container name>[:<access_level>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). | `["storage_container:ro"]` |
@@ -460,7 +460,6 @@ Example:
   services_limit = 5
   privileged = false
   group_add = ["docker"]
-  userns_mode = "host"
   cap_add = ["NET_ADMIN"]
   cap_drop = ["DAC_OVERRIDE"]
   devices = ["/dev/net/tun"]
