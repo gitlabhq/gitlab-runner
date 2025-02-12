@@ -92,7 +92,7 @@ mage tests:
 
 # Perform documentation linting and link checking on Markdown files
 docs:lint markdown:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.20-vale-3.9.3-markdownlint2-0.17.1-lychee-0.18.0
+  image: registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/lint-markdown:alpine-3.20-vale-3.9.3-markdownlint2-0.17.1-lychee-0.15.1
   stage: qa
   extends:
   - .rules:merge_request_pipelines
@@ -166,3 +166,24 @@ docs:check supported distros package docs:
         echo
         exit 1
       )
+
+docs:check Hugo build:
+  image: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/hugomods/hugo:exts-0.142.0
+  extends:
+  - .rules:merge_request_pipelines
+  - .no_cache_and_dependencies
+  stage: qa
+  before_script:
+    - apk add --no-cache git make nodejs npm bash
+    - git clone --depth 1 https://gitlab.com/gitlab-org/technical-writing/docs-gitlab-com.git
+    - cd docs-gitlab-com
+    - make add-latest-icons
+    # Copy the current project's docs to the appropriate location in the docs website
+    - mkdir content/runner
+    - cp -r ../docs/* content/runner/
+  script:
+    # Test that Hugo will build
+    - hugo --gc --printPathWarnings --panicOnWarning
+    # Test for invalid index pages
+    # See https://gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/-/blob/main/scripts/check-index-filenames.sh
+    - make check-index-pages SEARCH_DIR="../docs"
