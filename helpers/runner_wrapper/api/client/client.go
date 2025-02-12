@@ -28,11 +28,13 @@ type Client struct {
 func New(target string, opts ...Option) (*Client, error) {
 	o := setupOptions(opts)
 
+	logger := o.logger.WithGroup("client").With("target", target)
+
 	grpcOpts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(_ context.Context, addr string) (net.Conn, error) {
 			network, address := parseDialTarget(addr)
-			o.logger.Debug("dialing gRPC server", "network", network, "address", address)
+			logger.Debug("dialing gRPC server", "network", network, "address", address)
 
 			return net.Dial(network, address)
 		}),
@@ -44,7 +46,7 @@ func New(target string, opts ...Option) (*Client, error) {
 	}
 
 	c := &Client{
-		logger:     o.logger,
+		logger:     logger,
 		grpcConn:   conn,
 		grpcClient: pb.NewProcessWrapperClient(conn),
 	}
@@ -76,7 +78,7 @@ func (c *Client) ConnectWithTimeout(ctx context.Context, timeout time.Duration) 
 		return err
 	}
 
-	c.logger.Info("gRPC connection succeeded")
+	c.logger.Debug("gRPC connection succeeded")
 
 	return nil
 }
@@ -87,6 +89,8 @@ type CheckStatusResponse struct {
 }
 
 func (c *Client) CheckStatus(ctx context.Context) (CheckStatusResponse, error) {
+	c.logger.Info("Checking status")
+
 	var resp CheckStatusResponse
 
 	s, err := c.grpcClient.CheckStatus(ctx, new(pb.Empty))
@@ -106,6 +110,8 @@ type InitGracefulShutdownResponse struct {
 }
 
 func (c *Client) InitGracefulShutdown(ctx context.Context, req api.InitGracefulShutdownRequest) (CheckStatusResponse, error) {
+	c.logger.Info("Initializing graceful shutdown")
+
 	var resp CheckStatusResponse
 
 	var shutdownCallback *pb.ShutdownCallback
@@ -132,6 +138,8 @@ func (c *Client) InitGracefulShutdown(ctx context.Context, req api.InitGracefulS
 }
 
 func (c *Client) InitForcefulShutdown(ctx context.Context) (CheckStatusResponse, error) {
+	c.logger.Info("Initializing forceful shutdown")
+
 	var resp CheckStatusResponse
 
 	s, err := c.grpcClient.InitForcefulShutdown(ctx, new(pb.Empty))
