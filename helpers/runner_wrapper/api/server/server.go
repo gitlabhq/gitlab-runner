@@ -16,6 +16,7 @@ type wrapper interface {
 	Status() api.Status
 	FailureReason() string
 	InitiateGracefulShutdown(req api.InitGracefulShutdownRequest) error
+	InitiateForcefulShutdown() error
 }
 
 type Server struct {
@@ -79,6 +80,19 @@ func (s *Server) InitGracefulShutdown(
 	err := s.wrapper.InitiateGracefulShutdown(r)
 
 	resp := &pb.InitGracefulShutdownResponse{
+		Status:        api.Statuses.Map(s.wrapper.Status()),
+		FailureReason: s.wrapper.FailureReason(),
+	}
+
+	return resp, err
+}
+
+func (s *Server) InitForcefulShutdown(_ context.Context, _ *pb.Empty) (*pb.InitForcefulShutdownResponse, error) {
+	s.log.Debug("Received InitForcefulShutdown request")
+
+	err := s.wrapper.InitiateForcefulShutdown()
+
+	resp := &pb.InitForcefulShutdownResponse{
 		Status:        api.Statuses.Map(s.wrapper.Status()),
 		FailureReason: s.wrapper.FailureReason(),
 	}

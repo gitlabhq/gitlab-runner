@@ -9,3 +9,7 @@ import (
 const (
 	gracefulShutdownSignal = syscall.SIGQUIT
 )
+
+func (w *Wrapper) forcefulShutdown(p process) error {
+	return p.Signal(syscall.SIGTERM)
+}

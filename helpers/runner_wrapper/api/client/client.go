@@ -130,3 +130,17 @@ func (c *Client) InitGracefulShutdown(ctx context.Context, req api.InitGracefulS
 
 	return resp, nil
 }
+
+func (c *Client) InitForcefulShutdown(ctx context.Context) (CheckStatusResponse, error) {
+	var resp CheckStatusResponse
+
+	s, err := c.grpcClient.InitForcefulShutdown(ctx, new(pb.Empty))
+	if err != nil {
+		return resp, err
+	}
+
+	resp.Status = api.Statuses.Reverse(s.Status)
+	resp.FailureReason = s.FailureReason
+
+	return resp, nil
+}

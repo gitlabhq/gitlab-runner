@@ -65,6 +65,51 @@ func (_c *mockWrapper_FailureReason_Call) RunAndReturn(run func() string) *mockW
 	return _c
 }
 
+// InitiateForcefulShutdown provides a mock function with given fields:
+func (_m *mockWrapper) InitiateForcefulShutdown() error {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for InitiateForcefulShutdown")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// mockWrapper_InitiateForcefulShutdown_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InitiateForcefulShutdown'
+type mockWrapper_InitiateForcefulShutdown_Call struct {
+	*mock.Call
+}
+
+// InitiateForcefulShutdown is a helper method to define mock.On call
+func (_e *mockWrapper_Expecter) InitiateForcefulShutdown() *mockWrapper_InitiateForcefulShutdown_Call {
+	return &mockWrapper_InitiateForcefulShutdown_Call{Call: _e.mock.On("InitiateForcefulShutdown")}
+}
+
+func (_c *mockWrapper_InitiateForcefulShutdown_Call) Run(run func()) *mockWrapper_InitiateForcefulShutdown_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *mockWrapper_InitiateForcefulShutdown_Call) Return(_a0 error) *mockWrapper_InitiateForcefulShutdown_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *mockWrapper_InitiateForcefulShutdown_Call) RunAndReturn(run func() error) *mockWrapper_InitiateForcefulShutdown_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InitiateGracefulShutdown provides a mock function with given fields: req
 func (_m *mockWrapper) InitiateGracefulShutdown(req api.InitGracefulShutdownRequest) error {
 	ret := _m.Called(req)

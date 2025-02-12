@@ -237,6 +237,27 @@ func (w *Wrapper) InitiateGracefulShutdown(req api.InitGracefulShutdownRequest) 
 	return nil
 }
 
+func (w *Wrapper) InitiateForcefulShutdown() error {
+	w.lock.RLock()
+	p := w.process
+	w.lock.RUnlock()
+
+	if p == nil {
+		return errProcessNotInitialized
+	}
+
+	w.log.Info("Initiating forceful shutdown of the process")
+
+	err := w.forcefulShutdown(p)
+	if err != nil {
+		return fmt.Errorf("could not send forceful shutdown signal: %w", err)
+	}
+
+	w.setStatus(api.StatusInShutdown)
+
+	return nil
+}
+
 func (w *Wrapper) setShutdownCallback(callback api.ShutdownCallback) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
