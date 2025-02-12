@@ -1735,6 +1735,7 @@ Use the following options in the `config.toml` file:
 | `mount_path` | string    | Yes      | Path in the container where the volume is mounted. |
 | `read_only`  | boolean   | No       | Sets the volume to read-only mode (defaults to false). |
 | `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
+| `mount_propagation` | string    | No       | Set the mount propagation mode for the volume. For more details, see [Kubernetes mount propagation](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation). |
 
 #### `configMap` volume
 
