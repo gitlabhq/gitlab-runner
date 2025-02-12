@@ -248,7 +248,7 @@ func TestWrapper_InitiateGracefulShutdown(t *testing.T) {
 	}{
 		"no process": {
 			assertError: func(t *testing.T, err error) {
-				assert.ErrorIs(t, err, errProcessNotInitialized)
+				assert.ErrorIs(t, err, api.ErrProcessNotInitialized)
 			},
 		},
 		"process killer error": {

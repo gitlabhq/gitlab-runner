@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net"
 
 	"github.com/sirupsen/logrus"
@@ -78,6 +79,11 @@ func (s *Server) InitGracefulShutdown(
 	r := api.NewInitGracefulShutdownRequest(sc)
 
 	err := s.wrapper.InitiateGracefulShutdown(r)
+	if err != nil {
+		if errors.Is(err, api.ErrProcessNotInitialized) {
+			err = nil
+		}
+	}
 
 	resp := &pb.InitGracefulShutdownResponse{
 		Status:        api.Statuses.Map(s.wrapper.Status()),
@@ -91,6 +97,11 @@ func (s *Server) InitForcefulShutdown(_ context.Context, _ *pb.Empty) (*pb.InitF
 	s.log.Debug("Received InitForcefulShutdown request")
 
 	err := s.wrapper.InitiateForcefulShutdown()
+	if err != nil {
+		if errors.Is(err, api.ErrProcessNotInitialized) {
+			err = nil
+		}
+	}
 
 	resp := &pb.InitForcefulShutdownResponse{
 		Status:        api.Statuses.Map(s.wrapper.Status()),

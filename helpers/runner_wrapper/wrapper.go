@@ -18,7 +18,6 @@ const (
 )
 
 var (
-	errProcessNotInitialized    = fmt.Errorf("process not initialized")
 	errFailedToStartProcess     = fmt.Errorf("failed to start process")
 	errFailedToTerminateProcess = fmt.Errorf("could not send SIGTERM")
 	errProcessExitTimeout       = fmt.Errorf("timed out waiting for process to exit")
@@ -149,7 +148,7 @@ func (w *Wrapper) terminateWrapper() error {
 
 	err := w.terminateWrappedProcess()
 	if err != nil {
-		if errors.Is(err, errProcessNotInitialized) {
+		if errors.Is(err, api.ErrProcessNotInitialized) {
 			return nil
 		}
 		return err
@@ -174,7 +173,7 @@ func (w *Wrapper) terminateWrappedProcess() error {
 	if p == nil {
 		w.log.Info("No process to shutdown; exiting")
 
-		return errProcessNotInitialized
+		return api.ErrProcessNotInitialized
 	}
 
 	err := p.Signal(syscall.SIGTERM)
@@ -213,7 +212,7 @@ func (w *Wrapper) InitiateGracefulShutdown(req api.InitGracefulShutdownRequest) 
 	w.lock.RUnlock()
 
 	if p == nil {
-		return errProcessNotInitialized
+		return api.ErrProcessNotInitialized
 	}
 
 	w.log.Info("Initiating graceful shutdown of the process")
@@ -243,7 +242,7 @@ func (w *Wrapper) InitiateForcefulShutdown() error {
 	w.lock.RUnlock()
 
 	if p == nil {
-		return errProcessNotInitialized
+		return api.ErrProcessNotInitialized
 	}
 
 	w.log.Info("Initiating forceful shutdown of the process")
