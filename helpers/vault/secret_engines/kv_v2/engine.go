@@ -41,14 +41,13 @@ func (e *engine) Get(path string) (map[string]interface{}, error) {
 		return nil, nil
 	}
 
-	_, ok := data["data"]
-	if !ok {
+	if raw, ok := data["data"]; !ok || raw == nil {
 		return nil, nil
 	}
 
 	result, ok := data["data"].(map[string]interface{})
 	if !ok {
-		panic("failed to coerce vault data to 'map[string]any'")
+		return nil, fmt.Errorf("data for key %s cannot be coerced to 'map[string]any'", path)
 	}
 	return result, nil
 }

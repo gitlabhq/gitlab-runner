@@ -77,6 +77,51 @@ func TestEngine_Get(t *testing.T) {
 			},
 			expectedData: nil,
 		},
+		"client read succeeded with nil data": {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+				nilData := map[string]interface{}{
+					"test": "test",
+					"data": nil,
+				}
+				result := new(vault.MockResult)
+				result.On("Data").
+					Return(nilData).
+					Once()
+
+				c.On("Read", expectedPath).
+					Return(result, nil).
+					Once()
+
+				return func() {
+					c.AssertExpectations(t)
+					result.AssertExpectations(t)
+				}
+			},
+			expectedData: nil,
+		},
+		"client read succeeded with bogus data": {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+				nilData := map[string]interface{}{
+					"test": "test",
+					"data": "sdfhgskldfhkljshdfljkgh",
+				}
+				result := new(vault.MockResult)
+				result.On("Data").
+					Return(nilData).
+					Once()
+
+				c.On("Read", expectedPath).
+					Return(result, nil).
+					Once()
+
+				return func() {
+					c.AssertExpectations(t)
+					result.AssertExpectations(t)
+				}
+			},
+			expectedData:  nil,
+			expectedError: assert.AnError,
+		},
 		"client read succeeded with missing data key": {
 			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
 				result := new(vault.MockResult)
