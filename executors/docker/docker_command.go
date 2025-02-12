@@ -91,7 +91,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 		// helper execution path.
 		if s.Build.UseNativeSteps() {
 			var err error
-			s.stepRunnerContainerOnce.Do(func() { err = s.runContainer(stepRunnerContainerType, cmd) })
+			s.stepRunnerContainerOnce.Do(func() { err = s.runContainer(stepRunnerContainerType, common.ExecutorCommand{Context: cmd.Context}) })
 			if err != nil {
 				return err
 			}
