@@ -834,13 +834,6 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		return nil
 	}
 
-	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring executor from provider")
-	executorData, err := provider.Acquire(runner)
-	if err != nil {
-		return fmt.Errorf("failed to update executor: %w", err)
-	}
-	defer provider.Release(runner, executorData)
-
 	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring job slot")
 	if !mr.buildsHelper.acquireBuild(runner) {
 		logrus.WithFields(logrus.Fields{
@@ -851,6 +844,26 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		return nil
 	}
 	defer mr.buildsHelper.releaseBuild(runner)
+
+	// Acquire request for job
+	// We must ensure that this is released after the job request, or earlier if there's an
+	// error before the job request is made.
+	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring request slot")
+	if !mr.buildsHelper.acquireRequest(runner) {
+		mr.log().WithField("runner", runner.ShortDescription()).
+			Debugln("Failed to request job: runner requestConcurrency meet")
+		return nil
+	}
+
+	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring executor from provider")
+	executorData, err := provider.Acquire(runner)
+	if err != nil {
+		// Release job request
+		mr.buildsHelper.releaseRequest(runner)
+
+		return fmt.Errorf("failed to update executor: %w", err)
+	}
+	defer provider.Release(runner, executorData)
 
 	return mr.processBuildOnRunner(runner, runners, provider, executorData)
 }
@@ -863,11 +876,15 @@ func (mr *RunCommand) processBuildOnRunner(
 ) error {
 	buildSession, sessionInfo, err := mr.createSession(provider)
 	if err != nil {
+		// Release job request
+		mr.buildsHelper.releaseRequest(runner)
 		return err
 	}
 
 	// Receive a new build
 	trace, jobData, err := mr.requestJob(runner, sessionInfo)
+	// Release job request
+	mr.buildsHelper.releaseRequest(runner)
 	if err != nil || jobData == nil {
 		return err
 	}
@@ -992,14 +1009,6 @@ func (mr *RunCommand) requestJob(
 	runner *common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
 ) (common.JobTrace, *common.JobResponse, error) {
-	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring request slot")
-	if !mr.buildsHelper.acquireRequest(runner) {
-		mr.log().WithField("runner", runner.ShortDescription()).
-			Debugln("Failed to request job: runner requestConcurrency meet")
-		return nil, nil, nil
-	}
-	defer mr.buildsHelper.releaseRequest(runner)
-
 	jobData, healthy := mr.doJobRequest(context.Background(), runner, sessionInfo)
 	mr.healthHelper.markHealth(runner, healthy)
 
