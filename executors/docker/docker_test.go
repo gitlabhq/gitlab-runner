@@ -1403,6 +1403,13 @@ func TestDockerGetServicesDevices(t *testing.T) {
 			expectedDeviceMappings: nil,
 			expectedErrorSubstr:    "too many colons",
 		},
+		"bad glob pattern": {
+			image: "alpine",
+			devices: map[string][]string{
+				"alpin[e": {"/dev/usb:/dev/usb:ro"},
+			},
+			expectedErrorSubstr: "invalid service device image pattern: alpin[e",
+		},
 	}
 
 	for tn, tt := range tests {
