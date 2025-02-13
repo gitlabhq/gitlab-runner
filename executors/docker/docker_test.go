@@ -1337,7 +1337,7 @@ func TestDockerGetServicesDevices(t *testing.T) {
 		"multiple matching images": {
 			image: "alpine:latest",
 			devices: map[string][]string{
-				"alpine:*": {"/dev/null"},
+				"alpine:*":      {"/dev/null"},
 				"alpine:latest": {"/dev/usb"},
 			},
 			expectedDeviceMappings: []container.DeviceMapping{

@@ -257,7 +257,6 @@ func (e *executor) bindContainerDevices(devices []string) ([]container.DeviceMap
 	return mapping, nil
 }
 
-
 func (e *executor) bindDeviceRequests() error {
 	if e.Config.Docker.Gpus == "" {
 		return nil
