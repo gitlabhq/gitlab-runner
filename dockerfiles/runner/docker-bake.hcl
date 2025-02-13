@@ -17,6 +17,7 @@ variable "LOCAL_FLAVOR" {
 target "base" {
   contexts = {
     binary_dir = "../../out/binaries/"
+    packaging_dir = "../../packaging/root/usr/share/gitlab-runner/"
   }
 
   platforms = [
