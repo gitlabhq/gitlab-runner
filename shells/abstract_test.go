@@ -834,6 +834,7 @@ func TestGitFetchFlags(t *testing.T) {
 					mockWriter.EXPECT().Command("git", "config", "--global", "--add", "safe.directory", mock.Anything).Once()
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "init.defaultBranch", "none").Once()
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
+					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "credential.interactive", "never").Once()
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "transfer.bundleURI", "true").Once()
 
 					mockWriter.EXPECT().RmFilesRecursive(path.Join(dummyProjectDir, ".git", "refs"), "*.lock").Once()

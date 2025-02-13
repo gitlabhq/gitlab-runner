@@ -319,6 +319,9 @@ func (b *AbstractShell) writePrepareScript(_ context.Context, w ShellWriter, _ c
 func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	b.writeExports(w, info)
 
+	w.Variable(common.JobVariable{Key: "GIT_TERMINAL_PROMPT", Value: "0"})
+	w.Variable(common.JobVariable{Key: "GCM_INTERACTIVE", Value: "Never"})
+
 	if !info.Build.IsSharedEnv() {
 		b.writeGitSSLConfig(w, info.Build, []string{"--global"})
 	}
@@ -577,6 +580,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	w.Command("git", "config", "-f", templateFile, "init.defaultBranch", "none")
 	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
+	w.Command("git", "config", "-f", templateFile, "credential.interactive", "never")
 
 	if build.IsFeatureFlagOn(featureflags.UseGitBundleURIs) {
 		w.Command("git", "config", "-f", templateFile, "transfer.bundleURI", "true")
