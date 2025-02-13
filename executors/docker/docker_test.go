@@ -865,14 +865,14 @@ func prepareTestDockerConfiguration(
 	t *testing.T,
 	dockerConfig *common.DockerConfig,
 	cce containerConfigExpectations,
+	expectedInspectImage string,
+	expectedPullImage string, //nolint:unparam
 ) (*dockerConfigurationTestFakeDockerClient, *executor) {
 	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	c.On("ImageInspectWithRaw", mock.Anything, mock.MatchedBy(func(image string) bool {
-		return image == "alpine" || image == "alpine:latest"
-	})).
+	c.On("ImageInspectWithRaw", mock.Anything, expectedInspectImage).
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
-	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
+	c.On("ImagePullBlocking", mock.Anything, expectedPullImage, mock.Anything).
 		Return(nil).Once()
 	c.On("NetworkList", mock.Anything, mock.Anything).
 		Return([]types.NetworkResource{}, nil).Once()
@@ -887,7 +887,7 @@ func testDockerConfigurationWithJobContainer(
 	dockerConfig *common.DockerConfig,
 	cce containerConfigExpectations,
 ) {
-	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
 	defer c.AssertExpectations(t)
 
 	c.On("ContainerInspect", mock.Anything, "abc").
@@ -910,7 +910,7 @@ func testDockerConfigurationWithPredefinedContainer(
 	dockerConfig *common.DockerConfig,
 	cce containerConfigExpectations,
 ) {
-	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
 	defer c.AssertExpectations(t)
 
 	c.On("ContainerInspect", mock.Anything, "abc").
@@ -2271,7 +2271,7 @@ func TestExpandingDockerImageWithImagePullPolicyAlways(t *testing.T) {
 		assert.Equal(t, int64(44040192), hostConfig.Memory)
 	}
 
-	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
 	defer c.AssertExpectations(t)
 
 	c.On("ContainerInspect", mock.Anything, "abc").
@@ -2301,7 +2301,7 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 		assert.Equal(t, int64(44040192), hostConfig.Memory)
 	}
 
-	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine:latest", "alpine:latest")
 
 	c.On("ContainerInspect", mock.Anything, "abc").
 		Return(types.ContainerJSON{}, nil).Once()
@@ -2404,7 +2404,7 @@ func TestDockerImageWithUser(t *testing.T) {
 				assert.Equal(t, tt.want, config.User)
 			}
 
-			c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+			c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
 
 			c.On("ContainerInspect", mock.Anything, "abc").
 				Return(types.ContainerJSON{}, nil).Once()

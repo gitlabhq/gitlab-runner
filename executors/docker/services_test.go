@@ -139,7 +139,7 @@ func testDockerConfigurationWithServiceContainer(
 	dockerConfig *common.DockerConfig,
 	cce containerConfigExpectations,
 ) {
-	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine:latest", "alpine:latest")
 	defer c.AssertExpectations(t)
 
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
@@ -303,13 +303,14 @@ func TestDockerServicePrivilegedSetting(t *testing.T) {
 func TestDockerWithNoDockerConfigAndWithServiceImagePullPolicyAlways(t *testing.T) {
 	dockerConfig := &common.DockerConfig{}
 	serviceConfig := common.Image{
+		Name:         "alpine",
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
 	}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 	}
 
-	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine:latest", "alpine:latest")
 	defer c.AssertExpectations(t)
 
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
@@ -323,9 +324,9 @@ func TestDockerWithNoDockerConfigAndWithServiceImagePullPolicyAlways(t *testing.
 
 	_, err = e.createService(
 		0,
-		"build",
-		"latest",
 		"alpine",
+		"latest",
+		"alpine:latest",
 		serviceConfig,
 		nil,
 	)
@@ -337,6 +338,7 @@ func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolic
 		PullPolicy: common.StringOrArray{common.PullPolicyAlways, common.PullPolicyIfNotPresent},
 	}
 	serviceConfig := common.Image{
+		Name:         "alpine",
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
 
@@ -345,7 +347,7 @@ func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolic
 
 	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
+	c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Once()
 	c.On("NetworkList", mock.Anything, mock.Anything).
 		Return([]types.NetworkResource{}, nil).Once()
@@ -364,9 +366,9 @@ func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolic
 
 	_, err = e.createService(
 		0,
-		"build",
-		"latest",
 		"alpine",
+		"latest",
+		"alpine:latest",
 		serviceConfig,
 		nil,
 	)
@@ -378,7 +380,7 @@ func TestDockerWithDockerConfigAlwaysButNotAllowedAndWithNoServiceImagePullPolic
 		PullPolicy:          common.StringOrArray{common.PullPolicyAlways},
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
-	serviceConfig := common.Image{}
+	serviceConfig := common.Image{Name: "alpine"}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 	}
@@ -392,16 +394,16 @@ func TestDockerWithDockerConfigAlwaysButNotAllowedAndWithNoServiceImagePullPolic
 
 	_, err = e.createService(
 		0,
-		"build",
-		"latest",
 		"alpine",
+		"latest",
+		"alpine:latest",
 		serviceConfig,
 		nil,
 	)
 	assert.Contains(
 		t,
 		err.Error(),
-		`invalid pull policy for image "alpine"`,
+		`invalid pull policy for image "alpine:latest"`,
 	)
 	assert.Contains(
 		t,
@@ -416,6 +418,7 @@ func TestDockerWithDockerConfigAlwaysAndWithServiceImagePullPolicyIfNotPresent(t
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
 	}
 	serviceConfig := common.Image{
+		Name:         "alpine",
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
 
@@ -431,16 +434,16 @@ func TestDockerWithDockerConfigAlwaysAndWithServiceImagePullPolicyIfNotPresent(t
 
 	_, err = e.createService(
 		0,
-		"build",
-		"latest",
 		"alpine",
+		"latest",
+		"alpine:latest",
 		serviceConfig,
 		nil,
 	)
 	assert.Contains(
 		t,
 		err.Error(),
-		`invalid pull policy for image "alpine"`,
+		`invalid pull policy for image "alpine:latest"`,
 	)
 	assert.Contains(
 		t,
