@@ -52,6 +52,8 @@ trigger deploy to kubernetes:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
+    - if: $CI_PROJECT_PATH == "gitlab-org/gitlab-runner" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: always
   trigger:
     project: gitlab-org/ci-cd/runner-tools/runner-kubernetes-infra
 
