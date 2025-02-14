@@ -520,6 +520,18 @@ func (p *PsWriter) RmFilesRecursive(path string, name string) {
 	p.EndIf()
 }
 
+func (p *PsWriter) RmDirsRecursive(path string, name string) {
+	resolvedPath := p.resolvePath(path)
+	p.IfDirectory(path)
+	p.Linef(
+		// `Remove-Item -Recurse` has a known issue (see Example 4 in
+		// https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/remove-item)
+		"Get-ChildItem -Path %s -Filter %s -Recurse | ?{ $_.PSIsContainer } | ForEach-Object { Remove-Item -Recurse -Force $_.FullName }",
+		resolvedPath, psQuoteVariable(name),
+	)
+	p.EndIf()
+}
+
 func (p *PsWriter) Printf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...)
 	p.Line("echo " + psQuoteVariable(coloredText))

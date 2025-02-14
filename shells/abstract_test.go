@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -845,8 +846,8 @@ func TestGitFetchFlags(t *testing.T) {
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "credential.interactive", "never").Once()
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "transfer.bundleURI", "true").Once()
 
-					expectFileCleanup(mockWriter, path.Join(dummyProjectDir, ".git"))
-					expectGitConfigCleanup(mockWriter, dummyProjectDir)
+					expectFileCleanup(mockWriter, path.Join(dummyProjectDir, ".git"), false)
+					expectGitConfigCleanup(mockWriter, dummyProjectDir, false)
 
 					if expectedObjectFormat != "sha1" {
 						mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", mock.Anything, "--object-format", expectedObjectFormat).Once()
@@ -891,7 +892,7 @@ func TestGitFetchFlags(t *testing.T) {
 	}
 }
 
-func expectGitConfigCleanup(sw *MockShellWriter, buildDir string) {
+func expectGitConfigCleanup(sw *MockShellWriter, buildDir string, withSubmodules bool) {
 	sw.EXPECT().TmpFile("git-template").Return("someGitTemplateDir").Once()
 	sw.EXPECT().Join(buildDir, ".git").Return("someGitDir").Once()
 
@@ -904,7 +905,11 @@ func expectGitConfigCleanup(sw *MockShellWriter, buildDir string) {
 	sw.EXPECT().Join("someGitDir", "hooks").Return("someGitDir/hooks").Once()
 	sw.EXPECT().RmDir("someGitDir/hooks")
 
-	// TODO submodules
+	if withSubmodules {
+		sw.EXPECT().Join(buildDir, ".git", "modules").Return("someModulesDir").Once()
+		sw.EXPECT().RmFilesRecursive("someModulesDir", "config")
+		sw.EXPECT().RmDirsRecursive("someModulesDir", "hooks")
+	}
 }
 
 func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
@@ -2351,10 +2356,10 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 			mockShellWriter.On("TmpFile", "gitlab_runner_env").Return("temp_env").Once()
 			mockShellWriter.On("RmFile", "temp_env").Once()
 
-			expectFileCleanup(mockShellWriter, ".git")
+			expectFileCleanup(mockShellWriter, ".git", false)
 
 			if test.shouldCleanGitConfig {
-				expectGitConfigCleanup(mockShellWriter, "")
+				expectGitConfigCleanup(mockShellWriter, "", false)
 			}
 
 			shell := new(AbstractShell)
@@ -2688,8 +2693,8 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 					m.EXPECT().Join("git-template-dir", "config").Return("git-template-dir-config").Once()
 					m.EXPECT().Command("git", "config", "-f", "git-template-dir-config", mock.Anything, mock.Anything)
 
-					expectFileCleanup(m, "build-dir/.git")
-					expectGitConfigCleanup(m, "build-dir")
+					expectFileCleanup(m, "build-dir/.git", false)
+					expectGitConfigCleanup(m, "build-dir", false)
 
 					m.EXPECT().Command("git", "init", "build-dir", "--template", "git-template-dir").Once()
 					m.EXPECT().Cd("build-dir").Once()
@@ -2732,10 +2737,19 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 	}
 }
 
-func expectFileCleanup(shellWriter *MockShellWriter, dir string) {
-	for _, f := range []string{"index.lock", "shallow.lock", "HEAD.lock", "hooks/post-checkout", "config.lock"} {
+func expectFileCleanup(shellWriter *MockShellWriter, dir string, withSubmodules bool) {
+	files := []string{"index.lock", "shallow.lock", "HEAD.lock", "hooks/post-checkout", "config.lock"}
+
+	for _, f := range files {
 		shellWriter.EXPECT().RmFile(dir + "/" + f).Once()
 	}
+
+	if withSubmodules {
+		for _, f := range files {
+			shellWriter.EXPECT().RmFilesRecursive(dir+"/modules", filepath.Base(f)).Once()
+		}
+	}
+
 	shellWriter.EXPECT().RmFilesRecursive(dir+"/refs", "*.lock").Once()
 }
 
@@ -2796,6 +2810,118 @@ func TestSanitizeCacheFallbackKey(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			assert.Equal(t, tt.expected, sanitizeCacheFallbackKey(tt.fallbackKey))
+		})
+	}
+}
+
+func TestAbstractShell_writeGitCleanup(t *testing.T) {
+	submoduleStrategies := map[common.SubmoduleStrategy]bool{
+		common.SubmoduleNone:      false,
+		common.SubmoduleNormal:    true,
+		common.SubmoduleRecursive: true,
+		common.SubmoduleInvalid:   false,
+	}
+	cleanGitConfigs := map[string]struct {
+		configValue                 *bool
+		expectGitConfigsToBeCleaned bool
+	}{
+		"<nil>": {
+			expectGitConfigsToBeCleaned: true,
+		},
+		"enabled": {
+			configValue:                 &[]bool{true}[0],
+			expectGitConfigsToBeCleaned: true,
+		},
+		"disabled": {
+			configValue:                 &[]bool{false}[0],
+			expectGitConfigsToBeCleaned: false,
+		},
+	}
+
+	for name, cleanGitConfig := range cleanGitConfigs {
+		t.Run("cleanGitConfig:"+name, func(t *testing.T) {
+			for submoduleStrategy, expectSubmoduleCleanupCalls := range submoduleStrategies {
+				t.Run("submoduleStrategy:"+string(submoduleStrategy), func(t *testing.T) {
+					shell := new(AbstractShell)
+
+					info := common.ShellScriptInfo{
+						Build: &common.Build{
+							JobResponse: common.JobResponse{
+								Variables: common.JobVariables{
+									{Key: "GIT_SUBMODULE_STRATEGY", Value: string(submoduleStrategy)},
+								},
+								GitInfo: common.GitInfo{
+									RepoURL: "https://repo-url/some/repo",
+								},
+							},
+							Runner: &common.RunnerConfig{
+								RunnerSettings: common.RunnerSettings{
+									CleanGitConfig: cleanGitConfig.configValue,
+								},
+							},
+						},
+					}
+
+					// ensure the cleanup is called at the beginning, from writeRefspecFetchCmd
+					t.Run("writeRefspecFetchCmd", func(t *testing.T) {
+						sw := NewMockShellWriter(t)
+
+						sw.EXPECT().Noticef("Fetching changes...").Once()
+						sw.EXPECT().MkTmpDir("git-template").Return("someTmpDir").Once()
+						sw.EXPECT().Join("someTmpDir", "config").Return("someGitTemplateConfig").Once()
+
+						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "init.defaultBranch", "none").Once()
+						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "fetch.recurseSubmodules", "false").Once()
+						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "credential.interactive", "never").Once()
+						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "transfer.bundleURI", "true").Once()
+
+						expectFileCleanup(sw, ".git", expectSubmoduleCleanupCalls)
+						if cleanGitConfig.expectGitConfigsToBeCleaned {
+							expectGitConfigCleanup(sw, "", expectSubmoduleCleanupCalls)
+						}
+
+						sw.EXPECT().Command("git", "init", "", "--template", "someTmpDir").Once()
+						sw.EXPECT().Cd("").Once()
+
+						sw.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url/some/repo")
+						sw.EXPECT().Noticef("Created fresh repository.").Once()
+						sw.EXPECT().Else().Once()
+						sw.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
+						sw.EXPECT().EndIf().Once()
+
+						uaConfRE := regexp.MustCompile(`^http.userAgent=gitlab-runner development version [a-zA-Z0-9]+\/[a-zA-Z0-9]+$`)
+						uaConfMatcher := mock.MatchedBy(uaConfRE.MatchString)
+
+						sw.EXPECT().IfFile(".git/shallow").Once()
+						sw.EXPECT().Command("git", "-c", uaConfMatcher, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
+						sw.EXPECT().Else().Once()
+						sw.EXPECT().Command("git", "-c", uaConfMatcher, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
+						sw.EXPECT().EndIf().Once()
+
+						err := shell.writeRefspecFetchCmd(sw, info)
+						assert.NoError(t, err)
+					})
+
+					// ensure the cleanup is also called at the end, from writeCleanupScript
+					t.Run("writeCleanupScript", func(t *testing.T) {
+						sw := NewMockShellWriter(t)
+
+						sw.EXPECT().TmpFile("masking.db").Return("masking.db").Once()
+						sw.EXPECT().RmFile("masking.db").Once()
+
+						sw.EXPECT().TmpFile("gitlab_runner_env").Return("someRunnerEnv").Once()
+						sw.EXPECT().RmFile("someRunnerEnv").Once()
+
+						expectFileCleanup(sw, ".git", expectSubmoduleCleanupCalls)
+						if cleanGitConfig.expectGitConfigsToBeCleaned {
+							expectGitConfigCleanup(sw, "", expectSubmoduleCleanupCalls)
+						}
+
+						err := shell.writeCleanupScript(context.TODO(), sw, info)
+						assert.NoError(t, err)
+					})
+				})
+			}
 		})
 	}
 }

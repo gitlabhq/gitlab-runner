@@ -1009,6 +1009,40 @@ func (_c *MockShellWriter_RmDir_Call) RunAndReturn(run func(string)) *MockShellW
 	return _c
 }
 
+// RmDirsRecursive provides a mock function with given fields: path, name
+func (_m *MockShellWriter) RmDirsRecursive(path string, name string) {
+	_m.Called(path, name)
+}
+
+// MockShellWriter_RmDirsRecursive_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RmDirsRecursive'
+type MockShellWriter_RmDirsRecursive_Call struct {
+	*mock.Call
+}
+
+// RmDirsRecursive is a helper method to define mock.On call
+//   - path string
+//   - name string
+func (_e *MockShellWriter_Expecter) RmDirsRecursive(path interface{}, name interface{}) *MockShellWriter_RmDirsRecursive_Call {
+	return &MockShellWriter_RmDirsRecursive_Call{Call: _e.mock.On("RmDirsRecursive", path, name)}
+}
+
+func (_c *MockShellWriter_RmDirsRecursive_Call) Run(run func(path string, name string)) *MockShellWriter_RmDirsRecursive_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockShellWriter_RmDirsRecursive_Call) Return() *MockShellWriter_RmDirsRecursive_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockShellWriter_RmDirsRecursive_Call) RunAndReturn(run func(string, string)) *MockShellWriter_RmDirsRecursive_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RmFile provides a mock function with given fields: path
 func (_m *MockShellWriter) RmFile(path string) {
 	_m.Called(path)

@@ -2398,6 +2398,57 @@ func TestSubmoduleAutoBump(t *testing.T) {
 	}
 }
 
+func TestBuildWithCleanGitConfig(t *testing.T) {
+	// only update a couple of submodules, to make the test a bit faster
+	submodules := []string{"private-repo-ssh", "public-repo-relative"}
+	require.GreaterOrEqual(t, len(submodules), 1, "must manage/update at least one submodule")
+
+	assertFilesAreCleaned := func(t *testing.T, buildDir string) {
+		dirs := []string{
+			filepath.Join(buildDir, ".git"),
+			filepath.Join(buildDir, "..", "mixed-submodules-test.tmp", "git-template"),
+		}
+		for _, m := range submodules {
+			dirs = append(dirs, filepath.Join(buildDir, ".git", "modules", m))
+		}
+		for _, d := range dirs {
+			assert.DirExists(t, d)
+			assert.NoFileExists(t, filepath.Join(d, "config"))
+			assert.NoDirExists(t, filepath.Join(d, "hooks"))
+		}
+	}
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		t.Parallel()
+
+		jobResponse, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+
+		jobResponse.Variables = append(jobResponse.Variables,
+			common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " ")},
+			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: string(common.SubmoduleRecursive)},
+			common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+			common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
+		)
+		jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
+		jobResponse.GitInfo.Sha = repoShaWithSubmodules
+		injectJobToken(t, &jobResponse)
+
+		build := newBuild(t, jobResponse, shell)
+		build.Runner.RunnerCredentials.URL = "https://gitlab.com/"
+		build.Runner.RunnerSettings.CleanGitConfig = &[]bool{true}[0]
+
+		_, err = buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assertFilesAreCleaned(t, build.BuildDir)
+
+		// run a second build to ensure submodules still work, even though we blew away their git config.
+		_, err = buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assertFilesAreCleaned(t, build.BuildDir)
+	})
+}
+
 // injectJobToken injects a job token into an existing jobResponse by
 // - setting the jobResponse's token
 // - updating the jobResponse's gitInfo with an URL with the token

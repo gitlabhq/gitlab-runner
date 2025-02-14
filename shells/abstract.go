@@ -757,7 +757,9 @@ func (b *AbstractShell) writeGitCleanupAllConfigs(sw ShellWriter, build *common.
 
 	// clean out configs in the modules' git dirs
 	if cleanForSubmodules {
-		// TODO submodules
+		modulesDir := sw.Join(projectDir, gitDir, "modules")
+		sw.RmFilesRecursive(modulesDir, "config")
+		sw.RmDirsRecursive(modulesDir, "hooks")
 	}
 }
 
