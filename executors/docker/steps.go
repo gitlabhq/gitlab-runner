@@ -40,14 +40,15 @@ func newStepRunnerContainerConfigurator(e *executor) *stepRunnerContainerConfigu
 
 func (c *stepRunnerContainerConfigurator) ContainerConfig(image *types.ImageInspect) (*container.Config, error) {
 	return &container.Config{
-		Image:        image.ID,
-		Cmd:          stepRunnerBootstrapCommand,
-		Tty:          false,
-		AttachStdin:  true,
-		AttachStdout: true,
-		AttachStderr: true,
-		OpenStdin:    true,
-		StdinOnce:    true,
+		Image:           image.ID,
+		Cmd:             stepRunnerBootstrapCommand,
+		Tty:             false,
+		AttachStdin:     false,
+		AttachStdout:    true,
+		AttachStderr:    true,
+		OpenStdin:       false,
+		StdinOnce:       true,
+		NetworkDisabled: true,
 	}, nil
 }
 
@@ -65,6 +66,9 @@ func (c *stepRunnerContainerConfigurator) HostConfig() (*container.HostConfig, e
 		ReadonlyRootfs: true,
 		RestartPolicy:  neverRestartPolicy,
 		Binds:          []string{c.e.volumesManager.Binds()[i]},
+		NetworkMode:    network.NetworkNone,
+		Runtime:        c.e.Config.Docker.Runtime,
+		Isolation:      container.Isolation(c.e.Config.Docker.Isolation),
 	}, nil
 }
 

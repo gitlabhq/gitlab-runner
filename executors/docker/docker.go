@@ -855,9 +855,12 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 	}
 
 	err := e.client.ContainerRemove(ctx, id, options)
+	if docker.IsErrNotFound(err) {
+		return nil
+	}
 	if err != nil {
 		e.BuildLogger.Debugln("Removing container", id, "finished with error", err)
-		return err
+		return fmt.Errorf("removing container: %w", err)
 	}
 
 	e.BuildLogger.Debugln("Removed container", id)

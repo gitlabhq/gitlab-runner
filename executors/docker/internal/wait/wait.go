@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/errdefs"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
@@ -103,7 +105,10 @@ func (d *dockerWaiter) wait(ctx context.Context, containerID string, stopFn func
 			}
 
 		case err := <-errCh:
-			return err
+			if err == nil || errdefs.IsNotFound(err) {
+				return nil
+			}
+			return fmt.Errorf("waiting for container: %w", err)
 
 		case status := <-statusCh:
 			if status.StatusCode != 0 {
