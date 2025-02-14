@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -62,13 +64,15 @@ type runnerCounter struct {
 }
 
 type buildsHelper struct {
-	counters map[string]*runnerCounter
-	builds   []*common.Build
-	lock     sync.Mutex
+	counters              map[string]*runnerCounter
+	buildStagesStartTimes map[*common.Build]map[common.BuildStage]time.Time
+	builds                []*common.Build
+	lock                  sync.Mutex
 
-	jobsTotal                 *prometheus.CounterVec
-	jobDurationHistogram      *prometheus.HistogramVec
-	jobQueueDurationHistogram *prometheus.HistogramVec
+	jobsTotal                  *prometheus.CounterVec
+	jobDurationHistogram       *prometheus.HistogramVec
+	jobQueueDurationHistogram  *prometheus.HistogramVec
+	jobStagesDurationHistogram *prometheus.HistogramVec
 
 	acceptableJobQueuingDurationExceeded *prometheus.CounterVec
 }
@@ -202,6 +206,7 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 		Observe(build.JobInfo.TimeInQueueSeconds)
 
 	b.evaluateJobQueuingDuration(build.Runner, build.JobInfo)
+	b.initializeBuildStageMetrics(build)
 }
 
 func (b *buildsHelper) evaluateJobQueuingDuration(runner *common.RunnerConfig, jobInfo common.JobInfo) {
@@ -263,6 +268,7 @@ func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
 	for idx, build := range b.builds {
 		if build == deleteBuild {
 			b.builds = append(b.builds[0:idx], b.builds[idx+1:]...)
+			delete(b.buildStagesStartTimes, deleteBuild)
 
 			return true
 		}
@@ -317,6 +323,49 @@ func (b *buildsHelper) runnersCounters() map[string]*runnerCounter {
 	return data
 }
 
+func (b *buildsHelper) initializeBuildStageMetrics(build *common.Build) {
+	if !build.IsFeatureFlagOn(featureflags.ExportHighCardinalityMetrics) {
+		return
+	}
+
+	// the receiver lock is held at this point
+	if b.buildStagesStartTimes == nil {
+		b.buildStagesStartTimes = make(map[*common.Build]map[common.BuildStage]time.Time)
+	}
+
+	if b.buildStagesStartTimes[build] == nil {
+		b.buildStagesStartTimes[build] = make(map[common.BuildStage]time.Time)
+	}
+
+	build.OnBuildStageStartFn = func(stage common.BuildStage) {
+		b.handleOnBuildStageStart(build, stage)
+	}
+
+	build.OnBuildStageEndFn = func(stage common.BuildStage) {
+		b.handleOnBuildStageEnd(build, stage)
+	}
+}
+
+func (b *buildsHelper) handleOnBuildStageStart(build *common.Build, stage common.BuildStage) {
+	b.lock.Lock()
+	b.buildStagesStartTimes[build][stage] = time.Now()
+	b.lock.Unlock()
+}
+
+func (b *buildsHelper) handleOnBuildStageEnd(build *common.Build, stage common.BuildStage) {
+	b.lock.Lock()
+	duration := time.Since(b.buildStagesStartTimes[build][stage])
+	b.lock.Unlock()
+
+	b.jobStagesDurationHistogram.
+		With(prometheus.Labels{
+			"runner":    build.Runner.ShortDescription(),
+			"system_id": build.Runner.GetSystemID(),
+			"stage":     string(stage),
+		}).
+		Observe(duration.Seconds())
+}
+
 // Describe implements prometheus.Collector.
 func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	ch <- numBuildsDesc
@@ -327,6 +376,7 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	b.jobDurationHistogram.Describe(ch)
 	b.jobQueueDurationHistogram.Describe(ch)
 	b.acceptableJobQueuingDurationExceeded.Describe(ch)
+	b.jobStagesDurationHistogram.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
@@ -368,6 +418,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	b.jobDurationHistogram.Collect(ch)
 	b.jobQueueDurationHistogram.Collect(ch)
 	b.acceptableJobQueuingDurationExceeded.Collect(ch)
+	b.jobStagesDurationHistogram.Collect(ch)
 }
 
 func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
@@ -411,7 +462,7 @@ func newBuildsHelper() buildsHelper {
 		jobQueueDurationHistogram: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name:    "gitlab_runner_job_queue_duration_seconds",
-				Help:    "Histogram of job queuing durations",
+				Help:    "A histogram representing job queue duration.",
 				Buckets: []float64{1, 3, 10, 30, 60, 120, 300, 900, 1800, 3600},
 			},
 			[]string{"runner", "system_id", "project_jobs_running"},
@@ -419,9 +470,17 @@ func newBuildsHelper() buildsHelper {
 		acceptableJobQueuingDurationExceeded: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "gitlab_runner_acceptable_job_queuing_duration_exceeded_total",
-				Help: "Increased each time when the queuing duration was longer than the configured threshold",
+				Help: "Counts how often jobs exceed the configured queuing time threshold",
 			},
 			[]string{"runner", "system_id"},
+		),
+		jobStagesDurationHistogram: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "gitlab_runner_job_stage_duration_seconds",
+				Help:    "Histogram of each job stage duration",
+				Buckets: []float64{1, 3, 10, 30, 60, 120, 300, 900, 1800, 3600},
+			},
+			[]string{"runner", "system_id", "stage"},
 		),
 	}
 }

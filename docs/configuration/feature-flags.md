@@ -84,6 +84,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_WAIT_FOR_POD_TO_BE_REACHABLE` | `false` | **{dotted-circle}** No |  | When enabled, the runner waits for the Pod status to be 'Running', and for the Pod to be ready with its certificates attached. |
 | `FF_USE_NATIVE_STEPS` | `false` | **{dotted-circle}** No |  | When enabled and when a job is specified using the 'run' keyword, steps are executed using [Native Step Runner Integration](../executors/docker.md#native-step-runner-integration). This applies only to executors that support native steps integration like Docker, Docker Autoscaler, Docker for Windows. |
 | `FF_MASK_ALL_DEFAULT_TOKENS` | `true` | **{dotted-circle}** No |  | When enabled, GitLab Runner automatically masks all default tokens patterns. |
+| `FF_EXPORT_HIGH_CARDINALITY_METRICS` | `false` | **{dotted-circle}** No |  | When enabled, the runner exports the metrics with high cardinality. Special care should be taken when enabling this feature flag to avoid ingesting large amounts of data. For more information, see [Fleet scaling](../fleet_scaling/_index.md). |
 
 <!-- feature_flags_list_end -->
 
