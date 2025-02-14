@@ -486,7 +486,41 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`} elseif(Test-Path "$CurrentDirectory/.tmp/masking.db") {` + eol +
 		`  Remove-Item -Force "$CurrentDirectory/.tmp/masking.db"` + eol +
 		`}`
-	cleanGitConfigScript := `` +
+	cleanGitFiles := `` +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/index.lock" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force ".git/index.lock"` + eol +
+		`} elseif(Test-Path ".git/index.lock") {` + eol +
+		`  Remove-Item -Force ".git/index.lock"` + eol +
+		`}` + eol +
+		`` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/shallow.lock" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force ".git/shallow.lock"` + eol +
+		`} elseif(Test-Path ".git/shallow.lock") {` + eol +
+		`  Remove-Item -Force ".git/shallow.lock"` + eol +
+		`}` + eol +
+		`` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/HEAD.lock" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force ".git/HEAD.lock"` + eol +
+		`} elseif(Test-Path ".git/HEAD.lock") {` + eol +
+		`  Remove-Item -Force ".git/HEAD.lock"` + eol +
+		`}` + eol +
+		`` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/hooks/post-checkout" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force ".git/hooks/post-checkout"` + eol +
+		`} elseif(Test-Path ".git/hooks/post-checkout") {` + eol +
+		`  Remove-Item -Force ".git/hooks/post-checkout"` + eol +
+		`}` + eol +
+		`` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/config.lock" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force ".git/config.lock"` + eol +
+		`} elseif(Test-Path ".git/config.lock") {` + eol +
+		`  Remove-Item -Force ".git/config.lock"` + eol +
+		`}` + eol +
+		`` + eol +
+		`if(Test-Path ".git/refs" -PathType Container) {` + eol +
+		`  Get-ChildItem -Path ".git/refs" -Filter "*.lock" -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }` + eol +
+		`}` + eol
+	cleanGitConfigs := `` +
 		`$CurrentDirectory = (Resolve-Path ./).Path` + eol +
 		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/git-template/config" -PathType Leaf) ) {` + eol +
 		`  Remove-Item2 -Force "$CurrentDirectory/.tmp/git-template/config"` + eol +
@@ -494,7 +528,6 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`  Remove-Item -Force "$CurrentDirectory/.tmp/git-template/config"` + eol +
 		`}` + eol +
 		`` + eol +
-		`$CurrentDirectory = (Resolve-Path ./).Path` + eol +
 		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/git-template/hooks" -PathType Container) ) {` + eol +
 		`  Remove-Item2 -Force -Recurse "$CurrentDirectory/.tmp/git-template/hooks"` + eol +
 		`} elseif(Test-Path "$CurrentDirectory/.tmp/git-template/hooks") {` + eol +
@@ -517,7 +550,8 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		shebang = "#!/usr/bin/env pwsh\n"
 	} else {
 		rmGitLabEnvScript = strings.ReplaceAll(rmGitLabEnvScript, `/`, `\`)
-		cleanGitConfigScript = strings.ReplaceAll(cleanGitConfigScript, `/`, `\`)
+		cleanGitFiles = strings.ReplaceAll(cleanGitFiles, `/`, `\`)
+		cleanGitConfigs = strings.ReplaceAll(cleanGitConfigs, `/`, `\`)
 	}
 
 	testCases := map[string]struct {
@@ -555,7 +589,9 @@ func TestPowershell_GenerateScript(t *testing.T) {
 					eol + eol +
 					`$ErrorActionPreference = "Stop"` + eol +
 					rmGitLabEnvScript +
-					eol + eol + eol +
+					eol + eol +
+					cleanGitFiles +
+					eol +
 					"}" + eol + eol
 			},
 		},
@@ -570,7 +606,8 @@ func TestPowershell_GenerateScript(t *testing.T) {
 					`$ErrorActionPreference = "Stop"` + eol +
 					rmGitLabEnvScript +
 					eol + eol +
-					cleanGitConfigScript +
+					cleanGitFiles +
+					cleanGitConfigs +
 					eol + eol + eol +
 					"}" + eol + eol
 			},

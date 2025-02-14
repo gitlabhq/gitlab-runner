@@ -28,8 +28,9 @@ const (
 	StartupProbeFile = ".gitlab-startup-marker"
 
 	gitlabEnvFileName      = "gitlab_runner_env"
-	credHelperConfFile     = "cred-helper.conf"
 	gitlabCacheEnvFileName = "gitlab_runner_cache_env"
+	credHelperConfFile     = "cred-helper.conf"
+	gitDir                 = ".git"
 	gitTemplateDir         = "git-template"
 )
 
@@ -607,7 +608,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
 	}
 
-	b.writeGitCleanup(w, build.GetSubmoduleStrategy(), projectDir)
+	b.writeGitCleanup(w, build)
 
 	if objectFormat != common.DefaultObjectFormat {
 		w.Command("git", "init", projectDir, "--template", templateDir, "--object-format", objectFormat)
@@ -707,8 +708,10 @@ func (b *AbstractShell) configureGitCredHelper(w ShellWriter, info common.ShellS
 	return nil
 }
 
-func (b *AbstractShell) writeGitCleanup(w ShellWriter, submoduleStrategy common.SubmoduleStrategy, projectDir string) {
-	const gitDir = ".git"
+func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
+	projectDir := build.FullProjectDir()
+	submoduleStrategy := build.GetSubmoduleStrategy()
+	cleanForSubmodules := submoduleStrategy == common.SubmoduleNormal || submoduleStrategy == common.SubmoduleRecursive
 
 	// Remove .git/{index,shallow,HEAD,config}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation.
@@ -724,12 +727,38 @@ func (b *AbstractShell) writeGitCleanup(w ShellWriter, submoduleStrategy common.
 
 	for _, f := range files {
 		w.RmFile(path.Join(projectDir, gitDir, f))
-		if submoduleStrategy == common.SubmoduleNormal || submoduleStrategy == common.SubmoduleRecursive {
+		if cleanForSubmodules {
 			w.RmFilesRecursive(path.Join(projectDir, gitDir, "modules"), path.Base(f))
 		}
 	}
 
 	w.RmFilesRecursive(path.Join(projectDir, gitDir, "refs"), "*.lock")
+
+	b.writeGitCleanupAllConfigs(w, build, cleanForSubmodules)
+}
+
+// writeGitCleanupAllConfigs removes all git configs which are potentially open to malicious code injection:
+// - the main git config & hooks
+// - the template git config & hooks
+// - any submodule's git config & hooks
+func (b *AbstractShell) writeGitCleanupAllConfigs(sw ShellWriter, build *common.Build, cleanForSubmodules bool) {
+	if c := build.Runner.CleanGitConfig; c != nil && !*c {
+		// skip, if explicitly set to false
+		return
+	}
+
+	projectDir := build.FullProjectDir()
+
+	// clean out configs in the main git dir and in the template dir
+	for _, dir := range []string{sw.TmpFile(gitTemplateDir), sw.Join(projectDir, gitDir)} {
+		sw.RmFile(sw.Join(dir, "config"))
+		sw.RmDir(sw.Join(dir, "hooks"))
+	}
+
+	// clean out configs in the modules' git dirs
+	if cleanForSubmodules {
+		// TODO submodules
+	}
 }
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
@@ -1355,23 +1384,9 @@ func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, inf
 		}
 	}
 
-	b.cleanGitConfig(w, info)
+	b.writeGitCleanup(w, info.Build)
 
 	return nil
-}
-
-func (b *AbstractShell) cleanGitConfig(sw ShellWriter, info common.ShellScriptInfo) {
-	build := info.Build
-
-	if c := build.Runner.CleanGitConfig; c != nil && !*c {
-		// skip, if explicitly set to false
-		return
-	}
-
-	sw.RmFile(sw.TmpFile(sw.Join(gitTemplateDir, "config")))
-	sw.RmDir(sw.TmpFile(sw.Join(gitTemplateDir, "hooks")))
-	sw.RmFile(sw.Join(build.FullProjectDir(), ".git", "config"))
-	sw.RmDir(sw.Join(build.FullProjectDir(), ".git", "hooks"))
 }
 
 func (b *AbstractShell) writeCleanupBuildDirectoryScript(w ShellWriter, info common.ShellScriptInfo) error {

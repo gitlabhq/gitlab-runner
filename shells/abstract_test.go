@@ -845,7 +845,8 @@ func TestGitFetchFlags(t *testing.T) {
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "credential.interactive", "never").Once()
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "transfer.bundleURI", "true").Once()
 
-					mockWriter.EXPECT().RmFilesRecursive(path.Join(dummyProjectDir, ".git", "refs"), "*.lock").Once()
+					expectFileCleanup(mockWriter, path.Join(dummyProjectDir, ".git"))
+					expectGitConfigCleanup(mockWriter, dummyProjectDir)
 
 					if expectedObjectFormat != "sha1" {
 						mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", mock.Anything, "--object-format", expectedObjectFormat).Once()
@@ -888,6 +889,22 @@ func TestGitFetchFlags(t *testing.T) {
 			}
 		})
 	}
+}
+
+func expectGitConfigCleanup(sw *MockShellWriter, buildDir string) {
+	sw.EXPECT().TmpFile("git-template").Return("someGitTemplateDir").Once()
+	sw.EXPECT().Join(buildDir, ".git").Return("someGitDir").Once()
+
+	sw.EXPECT().Join("someGitTemplateDir", "config").Return("someGitTemplateDir/config").Once()
+	sw.EXPECT().RmFile("someGitTemplateDir/config")
+	sw.EXPECT().Join("someGitTemplateDir", "hooks").Return("someGitTemplateDir/hooks").Once()
+	sw.EXPECT().RmDir("someGitTemplateDir/hooks")
+	sw.EXPECT().Join("someGitDir", "config").Return("someGitDir/config").Once()
+	sw.EXPECT().RmFile("someGitDir/config")
+	sw.EXPECT().Join("someGitDir", "hooks").Return("someGitDir/hooks").Once()
+	sw.EXPECT().RmDir("someGitDir/hooks")
+
+	// TODO submodules
 }
 
 func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
@@ -2334,20 +2351,10 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 			mockShellWriter.On("TmpFile", "gitlab_runner_env").Return("temp_env").Once()
 			mockShellWriter.On("RmFile", "temp_env").Once()
 
+			expectFileCleanup(mockShellWriter, ".git")
+
 			if test.shouldCleanGitConfig {
-				mockShellWriter.On("Join", "git-template", "config").Return("someTemplateBasePath").Once()
-				mockShellWriter.On("TmpFile", "someTemplateBasePath").Return("someTemplateTmpPath").Once()
-				mockShellWriter.On("RmFile", "someTemplateTmpPath").Once()
-
-				mockShellWriter.On("Join", "git-template", "hooks").Return("someTemplateHooksBasePath").Once()
-				mockShellWriter.On("TmpFile", "someTemplateHooksBasePath").Return("someTemplateHooksTmpPath").Once()
-				mockShellWriter.On("RmDir", "someTemplateHooksTmpPath").Once()
-
-				mockShellWriter.On("Join", "", ".git", "config").Return("someGitConfigPath").Once()
-				mockShellWriter.On("RmFile", "someGitConfigPath").Once()
-
-				mockShellWriter.On("Join", "", ".git", "hooks").Return("someGitHooksPath").Once()
-				mockShellWriter.On("RmDir", "someGitHooksPath").Once()
+				expectGitConfigCleanup(mockShellWriter, "")
 			}
 
 			shell := new(AbstractShell)
@@ -2681,7 +2688,8 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 					m.EXPECT().Join("git-template-dir", "config").Return("git-template-dir-config").Once()
 					m.EXPECT().Command("git", "config", "-f", "git-template-dir-config", mock.Anything, mock.Anything)
 
-					expectFileCleanup(m)
+					expectFileCleanup(m, "build-dir/.git")
+					expectGitConfigCleanup(m, "build-dir")
 
 					m.EXPECT().Command("git", "init", "build-dir", "--template", "git-template-dir").Once()
 					m.EXPECT().Cd("build-dir").Once()
@@ -2724,11 +2732,11 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 	}
 }
 
-func expectFileCleanup(shellWriter *MockShellWriter) {
+func expectFileCleanup(shellWriter *MockShellWriter, dir string) {
 	for _, f := range []string{"index.lock", "shallow.lock", "HEAD.lock", "hooks/post-checkout", "config.lock"} {
-		shellWriter.EXPECT().RmFile("build-dir/.git/" + f).Once()
+		shellWriter.EXPECT().RmFile(dir + "/" + f).Once()
 	}
-	shellWriter.EXPECT().RmFilesRecursive("build-dir/.git/refs", "*.lock").Once()
+	shellWriter.EXPECT().RmFilesRecursive(dir+"/refs", "*.lock").Once()
 }
 
 func expectGitCredHelperSetup(shellWriter *MockShellWriter, remoteURL string) {
