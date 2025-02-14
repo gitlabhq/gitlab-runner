@@ -8,7 +8,7 @@
         ],
         "alpine3.18-arm": [
             "alpine3.18-arm-%",
-            "3.18-arm-%"
+            "arm-%"
         ],
         "alpine3.18-ppc64le": [
             "alpine3.18-ppc64le-%",
@@ -19,7 +19,8 @@
             "s390x-%"
         ],
         "alpine3.18-x86_64-pwsh": [
-            "alpine3.18-x86_64-%-pwsh"
+            "alpine3.18-x86_64-%-pwsh",
+            "x86_64-%-pwsh"
         ],
         "alpine3.18-x86_64": [
             "alpine3.18-x86_64-%",
