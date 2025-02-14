@@ -868,7 +868,9 @@ func prepareTestDockerConfiguration(
 ) (*dockerConfigurationTestFakeDockerClient, *executor) {
 	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
+	c.On("ImageInspectWithRaw", mock.Anything, mock.MatchedBy(func(image string) bool {
+		return image == "alpine" || image == "alpine:latest"
+	})).
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
 	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
 		Return(nil).Once()
@@ -1236,9 +1238,9 @@ func TestDockerServicesDevicesSetting(t *testing.T) {
 	}{
 		"same host and container path": {
 			devices: map[string][]string{
-				"alpine":  {"/dev/usb:/dev/usb:ro"},
-				"alp*":    {"/dev/kvm", "/dev/dri"},
-				"nomatch": {"/dev/null"},
+				"alpine:*": {"/dev/usb:/dev/usb:ro"},
+				"alp*":     {"/dev/kvm", "/dev/dri"},
+				"nomatch":  {"/dev/null"},
 			},
 			expectedDeviceMappings: []container.DeviceMapping{
 				{
@@ -1260,9 +1262,9 @@ func TestDockerServicesDevicesSetting(t *testing.T) {
 		},
 		"different host and container path": {
 			devices: map[string][]string{
-				"alpine":  {"/dev/usb:/dev/xusb:ro"},
-				"alp*":    {"/dev/kvm:/dev/xkvm", "/dev/dri"},
-				"nomatch": {"/dev/null"},
+				"alpine:*": {"/dev/usb:/dev/xusb:ro"},
+				"alp*":     {"/dev/kvm:/dev/xkvm", "/dev/dri"},
+				"nomatch":  {"/dev/null"},
 			},
 			expectedDeviceMappings: []container.DeviceMapping{
 				{
@@ -1306,9 +1308,9 @@ func TestDockerGetServicesDevices(t *testing.T) {
 		expectedErrorSubstr    string
 	}{
 		"matching image": {
-			image: "alpine",
+			image: "alpine:latest",
 			devices: map[string][]string{
-				"alpine": {"/dev/null"},
+				"alpine:*": {"/dev/null"},
 			},
 			expectedDeviceMappings: []container.DeviceMapping{
 				{
@@ -1320,10 +1322,10 @@ func TestDockerGetServicesDevices(t *testing.T) {
 			expectedErrorSubstr: "",
 		},
 		"one matching image": {
-			image: "alpine",
+			image: "alpine:latest",
 			devices: map[string][]string{
-				"alpine": {"/dev/null"},
-				"fedora": {"/dev/usb"},
+				"alpine:*": {"/dev/null"},
+				"fedora:*": {"/dev/usb"},
 			},
 			expectedDeviceMappings: []container.DeviceMapping{
 				{
@@ -1355,15 +1357,15 @@ func TestDockerGetServicesDevices(t *testing.T) {
 			expectedErrorSubstr: "",
 		},
 		"no devices": {
-			image: "alpine",
+			image: "alpine:latest",
 			devices: map[string][]string{
-				"alpine": {},
+				"alpine:*": {},
 			},
 			expectedDeviceMappings: nil,
 			expectedErrorSubstr:    "",
 		},
 		"no matching image": {
-			image: "alpine",
+			image: "alpine:latest",
 			devices: map[string][]string{
 				"ubuntu:*": {"/dev/null"},
 			},
@@ -1371,7 +1373,7 @@ func TestDockerGetServicesDevices(t *testing.T) {
 			expectedErrorSubstr:    "",
 		},
 		"devices is nil": {
-			image:                  "alpine",
+			image:                  "alpine:latest",
 			devices:                nil,
 			expectedDeviceMappings: nil,
 			expectedErrorSubstr:    "",
@@ -1396,17 +1398,17 @@ func TestDockerGetServicesDevices(t *testing.T) {
 			expectedErrorSubstr: "",
 		},
 		"parseDeviceString error": {
-			image: "alpine",
+			image: "alpine:latest",
 			devices: map[string][]string{
-				"alpine": {"/dev/null::::"},
+				"alpine:*": {"/dev/null::::"},
 			},
 			expectedDeviceMappings: nil,
 			expectedErrorSubstr:    "too many colons",
 		},
 		"bad glob pattern": {
-			image: "alpine",
+			image: "alpine:latest",
 			devices: map[string][]string{
-				"alpin[e": {"/dev/usb:/dev/usb:ro"},
+				"alpin[e:*": {"/dev/usb:/dev/usb:ro"},
 			},
 			expectedErrorSubstr: "invalid service device image pattern: alpin[e",
 		},
