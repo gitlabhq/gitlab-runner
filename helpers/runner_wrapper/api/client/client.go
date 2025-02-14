@@ -19,6 +19,8 @@ const (
 	DefaultConnectTimeout = 5 * time.Second
 )
 
+type Dialer func(network string, address string) (net.Conn, error)
+
 type Client struct {
 	logger     *slog.Logger
 	grpcConn   *grpc.ClientConn
@@ -36,7 +38,7 @@ func New(target string, opts ...Option) (*Client, error) {
 			network, address := parseDialTarget(addr)
 			logger.Debug("dialing gRPC server", "network", network, "address", address)
 
-			return net.Dial(network, address)
+			return o.dialer(network, address)
 		}),
 	}
 
