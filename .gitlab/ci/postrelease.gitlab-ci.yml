@@ -33,6 +33,7 @@ trigger UBI images build:
     BUILD_RELEASE: $CI_COMMIT_REF_NAME
     BUILD_RELEASE_SHA: $CI_COMMIT_SHORT_SHA
   trigger:
+    strategy: depend
     project: gitlab-org/ci-cd/gitlab-runner-ubi-images
 
 trigger runner-incept tests:
