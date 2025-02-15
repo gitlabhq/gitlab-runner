@@ -547,6 +547,7 @@ func (s *executor) retrieveHelperImageConfig() helperimage.Config {
 		Architecture: "amd64",
 		Shell:        s.Config.Shell,
 		Flavor:       s.ExpandValue(s.Config.Kubernetes.HelperImageFlavor),
+		ProxyExec:    s.Config.IsProxyExec(),
 	}
 
 	if !s.Config.Kubernetes.HelperImageAutosetArchAndOS {

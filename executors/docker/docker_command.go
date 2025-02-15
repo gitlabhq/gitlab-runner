@@ -195,6 +195,9 @@ func (s *commandExecutor) requestHelperContainer() (*types.ContainerJSON, error)
 
 func (s *commandExecutor) getHelperImageCmd() []string {
 	if s.isUmaskDisabled() {
+		if s.Config.IsProxyExec() {
+			return []string{"gitlab-runner-helper", "proxy-exec", "--bootstrap", "/bin/bash"}
+		}
 		return []string{"/bin/bash"}
 	}
 

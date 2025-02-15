@@ -199,6 +199,7 @@ fuzz variable mask:
   - $output = docker load --input "out/helper-images/prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar" 2>&1
   - $image_id = ($output | Select-String "Loaded image ID:").ToString().Split()[3]
   - docker tag ${image_id} gitlab/gitlab-runner-helper:x86_64-bleeding-${WINDOWS_VERSION}
+  - docker tag ${image_id} registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest-${WINDOWS_VERSION}
   - docker pull registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0
   - docker network create -d "nat" test-network
   - docker network rm test-network

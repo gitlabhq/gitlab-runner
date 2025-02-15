@@ -59,6 +59,10 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 		prebuilt += "-" + shell
 	}
 
+	if cfg.ProxyExec {
+		cmd = append([]string{"gitlab-runner-helper", "proxy-exec", "--bootstrap"}, cmd...)
+	}
+
 	return Info{
 		Architecture: arch,
 		Name:         GitLabRegistryName,

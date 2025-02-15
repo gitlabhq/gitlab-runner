@@ -37,11 +37,16 @@ func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
 		prebuilt = fmt.Sprintf("prebuilt-windows-%s-%s", name, windowsSupportedArchitecture)
 	}
 
+	cmd := getPowerShellCmd(cfg.Shell)
+	if cfg.ProxyExec {
+		cmd = append([]string{"gitlab-runner-helper", "proxy-exec", "--bootstrap"}, cmd...)
+	}
+
 	return Info{
 		Architecture: windowsSupportedArchitecture,
 		Name:         GitLabRegistryName,
 		Tag:          fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage),
-		Cmd:          getPowerShellCmd(cfg.Shell),
+		Cmd:          cmd,
 		Prebuilt:     prebuilt,
 	}, nil
 }

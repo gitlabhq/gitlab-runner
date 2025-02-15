@@ -344,6 +344,9 @@ func getRemoteCustomTLSBuild(chain string) (JobResponse, error) {
 
 func getBuildResponse(repoURL string, commands []string) JobResponse {
 	return JobResponse{
+		Variables: JobVariables{
+			JobVariable{Key: "CI_JOB_TOKEN", Value: "test-job-token"},
+		},
 		GitInfo: GetGitInfo(repoURL),
 		Steps: Steps{
 			Step{

@@ -2982,6 +2982,13 @@ func TestPrepare(t *testing.T) {
 			e.newPodWatcher = nil
 			e.podWatcher = nil
 
+			if test.Expected.Config.IsProxyExec() {
+				test.Expected.helperImageInfo.Cmd = append(
+					[]string{"gitlab-runner-helper", "proxy-exec", "--bootstrap"},
+					test.Expected.helperImageInfo.Cmd...,
+				)
+			}
+
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
 		})

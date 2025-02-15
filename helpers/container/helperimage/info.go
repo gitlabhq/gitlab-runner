@@ -54,6 +54,8 @@ type Config struct {
 	KernelVersion string
 	Shell         string
 	Flavor        string
+
+	ProxyExec bool
 }
 
 type creator interface {
