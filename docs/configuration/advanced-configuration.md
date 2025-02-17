@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Advanced configuration
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 To change the behavior of GitLab Runner and individual registered runners, modify the `config.toml` file.
 
@@ -27,7 +30,11 @@ GitLab Runner also reloads the configuration in response to the `SIGHUP` signal.
 
 ## Configuration validation
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924) in GitLab Runner 15.10
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924) in GitLab Runner 15.10
+
+{{< /history >}}
 
 Configuration validation is a process that checks the structure of the `config.toml` file. The output from the configuration
 validator provides only `info` level messages.
@@ -215,8 +222,11 @@ When you configure the `[session_server]` section:
 
 To disable the session server and terminal support, delete the `[session_server]` section.
 
-NOTE:
+{{< alert type="note" >}}
+
 When your runner instance is already running, you might need to execute `gitlab-runner restart` for the changes in the `[session_server]` section to be take effect.
+
+{{< /alert >}}
 
 If you are using the GitLab Runner Docker image, you must expose port `8093` by
 adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
@@ -278,8 +288,11 @@ If the runner can reach the node on `192.168.1.23`, set the `clone_url` to `http
 If the `clone_url` is set, the runner constructs a clone URL in the form
 of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 
-NOTE:
+{{< alert type="note" >}}
+
 `clone_url` does not affect Git LFS endpoints or artifact uploads or downloads.
+
+{{< /alert >}}
 
 #### Modify Git LFS endpoints
 
@@ -643,7 +656,11 @@ The `start_type` parameter determines the graphical front end used when starting
 
 ## Overriding the base VM image
 
-> - Introduced in GitLab Runner 14.2.
+{{< history >}}
+
+- Introduced in GitLab Runner 14.2.
+
+{{< /history >}}
 
 For both the Parallels and VirtualBox executors, you can override the base VM name specified by `base_name`.
 To do this, use the [image](https://docs.gitlab.com/ee/ci/yaml/#image) parameter in the `.gitlab-ci.yml` file.
@@ -782,7 +799,11 @@ values, ranges, lists, and asterisks. View [a detailed description of the syntax
 
 ## The `[runners.autoscaler]` section
 
-> - Introduced in GitLab Runner v15.10.0.
+{{< history >}}
+
+- Introduced in GitLab Runner v15.10.0.
+
+{{< /history >}}
 
 The following parameters configure the autoscaler feature. You can only use these parameters with the
 [Instance](../executors/instance.md) and [Docker Autoscaler](../executors/docker_autoscaler.md) executors.
@@ -798,14 +819,19 @@ The following parameters configure the autoscaler feature. You can only use thes
 | `update_interval`                       | The interval to check with the fleeting plugin for instance updates. Default: `1m` (1 minute). Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
 | `update_interval_when_expecting`        | The interval to check with the fleeting plugin for instance updates when expecting a state change. For example, when an instance has provisioned an instance and the runner is waiting to transition from `pending` to `running`). Default: `2s` (2 seconds). Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
 
-NOTE:
+{{< alert type="note" >}}
+
 If the `instance_ready_command` frequently fails with idle scale rules, instances might be removed and created
 faster than the runner accepts jobs. To support scale throttling, an exponential backoff was added in
 [GitLab 17.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37497).
 
-NOTE:
+{{< /alert >}}
+
+{{< alert type="note" >}}
+
 Autoscaler configuration options don't reload with configuration changes. However, in
 GitLab 17.5.0 or later, `[[runners.autoscaler.policy]]` entries reload when configurations change.
+{{< /alert >}}
 
 ## The `[runners.autoscaler.plugin_config]` section
 
@@ -816,7 +842,11 @@ the supported configuration.
 
 ## The `[runners.autoscaler.scale_throttle]` section
 
-> - Introduced in GitLab Runner v17.0.0.
+{{< history >}}
+
+- Introduced in GitLab Runner v17.0.0.
+
+{{< /history >}}
 
 | Parameter                | Description |
 |--------------------------|-------------|
@@ -866,10 +896,17 @@ the empty values that the plugin cannot determine.
 
 ## The `[runners.autoscaler.state_storage]` section
 
-DETAILS:
-**Status:** Beta
+{{< details >}}
 
-> - Introduced in GitLab Runner 17.5.0.
+- Status: Beta
+
+{{< /details >}}
+
+{{< history >}}
+
+- Introduced in GitLab Runner 17.5.0.
+
+{{< /history >}}
 
 If GitLab Runner starts when state storage is disabled (default), the existing fleeting instances
 are removed immediately for safety reasons. For example, when `max_use_count` is set to `1`,
@@ -1120,9 +1157,12 @@ If you use `ServerSideEncryption` of type `KMS`, this role must also have permis
 This would mean passing the key material to the job, where the key can't be kept safe. This does have the potential to leak the decryption key.
 A discussion about this issue is in [this merge request](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3295).
 
-NOTE:
+{{< alert type="note" >}}
+
 The maximum size of a single file that can be uploaded to AWS S3 cache is 5 GB.
 A discussion about potential workarounds for this behavior is in [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26921).
+
+{{< /alert >}}
 
 #### Use KMS key encryption in S3 bucket for runner cache
 
@@ -1267,10 +1307,17 @@ To use IAM roles for service accounts, an IAM OIDC provider [must exist for your
 
 #### Use S3 Express One Zone buckets
 
-> - Introduced in GitLab Runner 17.5.0.
+{{< history >}}
 
-NOTE:
+- Introduced in GitLab Runner 17.5.0.
+
+{{< /history >}}
+
+{{< alert type="note" >}}
+
 [S3 Express One Zone directory buckets do not work with `RoleARN`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38484#note_2313111840) because the runner manager cannot restrict access to one specific object.
+
+{{< /alert >}}
 
 1. Set up an S3 Express One Zone bucket by following the [Amazon tutorial](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-getting-started.html).
 1. Configure `config.toml` with `BucketName` and `BucketLocation`.
@@ -1344,7 +1391,11 @@ If you use ADC, be sure that the service account that you use has the `iam.servi
 
 ### The `[runners.cache.azure]` section
 
-> - Introduced in GitLab Runner 13.4.0.
+{{< history >}}
+
+- Introduced in GitLab Runner 13.4.0.
+
+{{< /history >}}
 
 The following parameters define native support for Azure Blob Storage. To learn more, view the
 [Azure Blob Storage documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction).
@@ -1374,7 +1425,11 @@ Example:
 
 #### Azure workload and managed identities
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27303) in GitLab Runner v17.5.0.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27303) in GitLab Runner v17.5.0.
+
+{{< /history >}}
 
 To use Azure workload or managed identities, omit `AccountKey` from the
 configuration. When `AccountKey` is blank, the runner attempts to:
@@ -1432,7 +1487,11 @@ For more details, see [issue 38330](https://gitlab.com/gitlab-org/gitlab-runner/
 
 ## The `[runners.kubernetes]` section
 
-> - Introduced in GitLab Runner v1.6.0.
+{{< history >}}
+
+- Introduced in GitLab Runner v1.6.0.
+
+{{< /history >}}
 
 The following table lists configuration parameters available for the Kubernetes executor.
 For more parameters, see the [documentation for the Kubernetes executor](../executors/kubernetes/_index.md).
@@ -1517,7 +1576,11 @@ To use the `arm64` helper image on `arm64` Kubernetes clusters, set the followin
 
 ### Runner images that use an old version of Alpine Linux
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3122) in GitLab Runner 14.5.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3122) in GitLab Runner 14.5.
+
+{{< /history >}}
 
 Images are built with multiple versions of Alpine Linux. You can use a newer version of Alpine, but at the same time use older versions as well.
 
@@ -1623,7 +1686,11 @@ which contains PowerShell Core, is published with the `registry.gitlab.com/gitla
 
 ## The `[runners.custom_build_dir]` section
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10.
+
+{{< /history >}}
 
 This section defines [custom build directories](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#custom-build-directories) parameters.
 
@@ -1677,11 +1744,14 @@ The used _Builds Directory_ may be defined explicitly by the user with the
 [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
 setting.
 
-NOTE:
+{{< alert type="note" >}}
+
 You can also specify
 [`GIT_CLONE_PATH`](https://docs.gitlab.com/ee/ci/yaml/index.html#custom-build-directories)
 if you want to clone to a custom directory, and the guideline below
 doesn't apply.
+
+{{< /alert >}}
 
 GitLab Runner uses the _Builds Directory_ for all the jobs that it
 runs, but nests them using a specific pattern

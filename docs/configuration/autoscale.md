@@ -5,19 +5,29 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Docker Machine Executor autoscale configuration
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
 
-> - The autoscale feature was introduced in GitLab Runner 1.1.0.
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
-NOTE:
+{{< /details >}}
+
+{{< history >}}
+
+- The autoscale feature was introduced in GitLab Runner 1.1.0.
+
+{{< /history >}}
+
+{{< alert type="note" >}}
+
 The Docker Machine executor was deprecated in GitLab 17.5 and will be removed in GitLab 20.0 (May 2027).
 While we will continue to support the Docker Machine executor till GitLab 20.0, we do not plan to add new features.
 We will address only critical bugs that could prevent CI/CD job execution or affect running costs.
 If you're using the Docker Machine executor on Amazon Web Services (AWS) EC2,
 Microsoft Azure Compute, or Google Compute Engine (GCE), migrate to the
 [GitLab Runner Autoscaler](../runner_autoscale/_index.md).
+
+{{< /alert >}}
 
 Autoscale provides the ability to use resources in a more elastic and
 dynamic way.
@@ -27,11 +37,14 @@ many build instances as are necessary at any time. If you configure GitLab Runne
 only use autoscale, the system on which GitLab Runner is installed acts as a
 bastion for all the machines it creates. This machine is referred to as a "Runner Manager."
 
-NOTE:
+{{< alert type="note" >}}
+
 Docker has deprecated Docker Machine, the underlying technology used to autoscale
 runners on public cloud virtual machines. You can read the issue discussing the
 [strategy in response to the deprecation of Docker Machine](https://gitlab.com/gitlab-org/gitlab/-/issues/341856)
 for more details.
+
+{{< /alert >}}
 
 Docker Machine autoscaler creates one container per VM, regardless of the `limit` and `concurrent` configuration.
 
@@ -189,8 +202,11 @@ In this example:
 - The `first` runner can create a maximum of 80 VMs. Therefore this runner can execute a maximum of 80 jobs at any point in time.
 - The `second` runner can create a maximum of 50 VMs. Therefore this runner can execute a maximum of 50 jobs at any point in time.
 
-NOTE:
+{{< alert type="note" >}}
+
 Even though the sum of the limit value is `130` (`80 + 50 = 130`), the `concurrent` value of `100` at the global level means that this runner process can execute a maximum of 100 jobs concurrently.
+
+{{< /alert >}}
 
 ## Autoscaling algorithm and parameters
 
@@ -207,9 +223,12 @@ We say that each machine that does not run a job is in _Idle_ state. When
 GitLab Runner is in autoscale mode, it monitors all machines and ensures that
 there is always an `IdleCount` of machines in _Idle_ state.
 
-NOTE:
+{{< alert type="note" >}}
+
 In GitLab Runner 14.5 we've added the `IdleScaleFactor` and `IdleCountMin` settings which change this
 behavior a little. Refer to [the dedicated section](#the-idlescalefactor-strategy) for more details.
+
+{{< /alert >}}
 
 If there is an insufficient number of _Idle_ machines, GitLab Runner
 starts provisioning new machines, subject to the `MaxGrowthRate` limit.
@@ -353,7 +372,11 @@ In the worst case scenario, you can't have 10 idle machines, but only 5, because
 
 ## The `IdleScaleFactor` strategy
 
-> - Introduced as experimental feature in [GitLab Runner 14.6](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3179).
+{{< history >}}
+
+- Introduced as experimental feature in [GitLab Runner 14.6](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3179).
+
+{{< /history >}}
 
 The `IdleCount` parameter defines a static number of _Idle_ machines that runner should sustain.
 The value you assign depends on your use case.
@@ -362,11 +385,14 @@ You can start by assigning a reasonable small number of machines in the _Idle_ s
 automatically adjust to a bigger number, depending on the current usage. To do that, use the experimental
 `IdleScaleFactor` setting.
 
-WARNING:
+{{< alert type="warning" >}}
+
 `IdleScaleFactor` internally is an `float64` value and requires the float format to be used,
 for example: `0.0`, or `1.0` or ,`1.5` etc. If an integer format will be used (for example `IdleScaleFactor = 1`),
 Runner's process will fail with the error:
 `FATAL: Service run failed   error=toml: cannot load TOML value of type int64 into a Go float`.
+
+{{< /alert >}}
 
 When you use this setting, GitLab Runner tries to sustain a defined number of
 machines in the _Idle_ state. However, this number is no longer static. Instead of using `IdleCount`,
@@ -459,10 +485,13 @@ For example:
 In this configuration, every weekday between 9 and 16:59 UTC, machines are overprovisioned to handle the large traffic during operating hours. On the weekend, `IdleCount` drops to 5 to account for the drop in traffic.
 The rest of the time, the values are taken from the defaults in the root - `IdleCount = 10` and `IdleTime = 1800`.
 
-NOTE:
+{{< alert type="note" >}}
+
 The 59th second of the last
 minute in any period that you specify is *not* be considered part of the
 period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2170).
+
+{{< /alert >}}
 
 You can specify the `Timezone` of a period, for example `"Australia/Sydney"`. If you don't,
 the system setting of the host machine of every runner is used. This
@@ -473,8 +502,11 @@ in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](ad
 
 ## Distributed runners caching
 
-NOTE:
+{{< alert type="note" >}}
+
 Read how to [use a distributed cache](../configuration/speed_up_job_execution.md#use-a-distributed-cache).
+
+{{< /alert >}}
 
 To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ee/ci/yaml/index.html#cache)
 where selected directories and/or files are saved and shared between subsequent

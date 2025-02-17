@@ -5,17 +5,23 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: GitLab Runner
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pipeline.
 
 ## Use self-managed runners
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 Self-managed runners are GitLab Runner instances that you install, configure, and manage in your own
 infrastructure.
@@ -46,10 +52,13 @@ Backward compatibility is guaranteed between minor version updates. However, som
 version updates of GitLab can introduce new features that require GitLab Runner to be on the same minor
 version.
 
-NOTE:
+{{< alert type="note" >}}
+
 GitLab Runner 15.0 [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3414) a change to the
 registration API request format. It prevents the GitLab Runner from communicating with GitLab versions lower than 14.8.
 You must use a Runner version that is appropriate for the GitLab version, or upgrade the GitLab application.
+
+{{< /alert >}}
 
 If you host your own runners but host your repositories on GitLab.com,
 keep GitLab Runner [updated](install/_index.md) to the latest version, as GitLab.com is

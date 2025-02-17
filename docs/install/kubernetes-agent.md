@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Use the agent to install GitLab Runner
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 After you install and configure the [GitLab agent for Kubernetes](https://docs.gitlab.com/ee/user/clusters/agent/)
 you can use the agent to install GitLab Runner in your cluster.
@@ -16,12 +19,15 @@ With this [GitOps workflow](https://docs.gitlab.com/ee/user/clusters/agent/gitop
 your repository contains the GitLab Runner configuration file and
 your cluster is automatically updated.
 
-WARNING:
+{{< alert type="warning" >}}
+
 Adding an unencrypted GitLab Runner secret to `runner-manifest.yaml`
 can expose the secret in your repository files. To manage Kubernetes
 secrets securely in a GitOps workflow, use
 [Sealed Secrets](https://fluxcd.io/flux/guides/sealed-secrets/)
 or [SOPS](https://fluxcd.io/flux/guides/mozilla-sops/).
+
+{{< /alert >}}
 
 1. Review the Helm chart values for [GitLab Runner](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 1. Create a `runner-chart-values.yaml` file. For example:

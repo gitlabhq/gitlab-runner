@@ -5,17 +5,27 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Install and register GitLab Runner for autoscaling with Docker Machine
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
 
-> - The autoscaling feature was introduced in GitLab Runner 1.1.0.
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
-NOTE:
+{{< /details >}}
+
+{{< history >}}
+
+- The autoscaling feature was introduced in GitLab Runner 1.1.0.
+
+{{< /history >}}
+
+{{< alert type="note" >}}
+
 The Docker Machine executor was deprecated in GitLab 17.5.
 If you're using the Docker Machine executor on Amazon Web Services (AWS) EC2,
 Microsoft Azure Compute, or Google Compute Engine (GCE), migrate to the
 [GitLab Runner Autoscaler](../runner_autoscale/_index.md).
+
+{{< /alert >}}
 
 For an overview of the autoscale architecture, take a look at the
 [comprehensive documentation on autoscaling](../configuration/autoscale.md).
@@ -66,7 +76,8 @@ installed in the same machine:
    validation of the specified options. After this, you can destroy the machine with
    `docker-machine rm [machine_name]` and start the runner.
 
-   NOTE:
+   {{< alert type="note" >}}
+
    Multiple concurrent requests to `docker-machine create` that are done
    **at first usage** are not good. When the `docker+machine` executor is used,
    the runner may spin up few concurrent `docker-machine create` commands. If
@@ -76,13 +87,16 @@ installed in the same machine:
    concurrent processes are disturbing each other. This can end with a non-working
    environment. That's why it's important to create a test machine manually the
    very first time you set up GitLab Runner with Docker Machine.
-1. [Register a runner](../register/_index.md) and select the
-   `docker+machine` executor when asked.
-1. Edit [`config.toml`](../commands/_index.md#configuration-file) and configure
-   the runner to use Docker machine. Visit the dedicated page covering detailed
-   information about [GitLab Runner Autoscaling](../configuration/autoscale.md).
-1. Now, you can try and start a new pipeline in your project. In a few seconds,
-   if you run `docker-machine ls` you should see a new machine being created.
+
+   1. [Register a runner](../register/_index.md) and select the
+      `docker+machine` executor when asked.
+   1. Edit [`config.toml`](../commands/_index.md#configuration-file) and configure
+      the runner to use Docker machine. Visit the dedicated page covering detailed
+      information about [GitLab Runner Autoscaling](../configuration/autoscale.md).
+   1. Now, you can try and start a new pipeline in your project. In a few seconds,
+      if you run `docker-machine ls` you should see a new machine being created.
+
+   {{< /alert >}}
 
 ## Upgrading GitLab Runner
 
@@ -105,10 +119,13 @@ installed in the same machine:
      sudo killall -SIGQUIT gitlab-runner
      ```
 
-   NOTE:
-   Sending the [`SIGQUIT` signal](../commands/_index.md#signals) makes the
+   {{< alert type="note" >}}
+
+Sending the [`SIGQUIT` signal](../commands/_index.md#signals) makes the
    process stop gracefully. The process stops accepting new jobs, and exits
    as soon as the current jobs are finished.
+
+   {{< /alert >}}
 
 1. Wait until GitLab Runner exits. You can check its status with `gitlab-runner status`
    or await a graceful shutdown for up to 30 minutes with:
@@ -138,13 +155,20 @@ executable. For example, to download and install `v0.16.2-gitlab.32`:
 
 ### Using GPUs on Google Compute Engine
 
-> - [Introduced](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/issues/34) in GitLab Docker Machine `0.16.2-gitlab.10` and GitLab Runner 13.9.
+{{< history >}}
 
-NOTE:
+- [Introduced](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/issues/34) in GitLab Docker Machine `0.16.2-gitlab.10` and GitLab Runner 13.9.
+
+{{< /history >}}
+
+{{< alert type="note" >}}
+
 GPUs are [supported on every executor](../configuration/gpus.md). It is
 not necessary to use Docker Machine just for GPU support. The Docker
 Machine executor makes it easy to scale the GPU nodes up and down, but
 this can also be done with the [Kubernetes executor](../executors/kubernetes/_index.md).
+
+{{< /alert >}}
 
 You can use the Docker Machine [fork](#forked-version-of-docker-machine) to create
 [Google Compute Engine instances with graphics processing units (GPUs)](https://cloud.google.com/compute/docs/gpus/).

@@ -5,22 +5,31 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: VirtualBox
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
 
-NOTE:
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
+
+{{< alert type="note" >}}
+
 The Parallels executor works the same as the VirtualBox executor. The
 caching feature is currently not supported.
+
+{{< /alert >}}
 
 VirtualBox allows you to use VirtualBox's virtualization to provide a clean
 build environment for every build. This executor supports all systems that can
 be run on VirtualBox. The only requirement is that the virtual machine exposes
 an SSH server and provides a shell compatible with Bash or PowerShell.
 
-NOTE:
+{{< alert type="note" >}}
+
 Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
 on any virtual machine where GitLab Runner uses the VirtualBox executor.
+
+{{< /alert >}}
 
 ## Overview
 
@@ -100,7 +109,11 @@ To use VirtualBox with Windows, you can install Cygwin or PowerShell.
 
 ### Use native OpenSSH and PowerShell
 
-> - [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3176) GitLab Runner 14.6.
+{{< history >}}
+
+- [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3176) GitLab Runner 14.6.
+
+{{< /history >}}
 
 - Install [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows)
 - Install and configure [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=powershell#install-openssh-for-windows)

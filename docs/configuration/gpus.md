@@ -5,11 +5,18 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Using Graphical Processing Units (GPUs)
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
 
-> - Introduced in GitLab Runner 13.9.
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
+
+{{< history >}}
+
+- Introduced in GitLab Runner 13.9.
+
+{{< /history >}}
 
 GitLab Runner supports the use of Graphical Processing Units (GPUs).
 The following section describes the required configuration to enable GPUs

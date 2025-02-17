@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Security for self-managed runners
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 A GitLab CI/CD pipeline is a workflow automation engine used for simple or complex DevOps automation tasks. Because these pipelines enable a remote code execution service, you should implement the following process to reduce security risks:
 
@@ -45,10 +48,13 @@ containers with disabled `sudo` or dropped `SETUID` and `SETGID` capabilities.
 More granular permissions can be configured in non-privileged mode via the
 `cap_add`/`cap_drop` settings.
 
-WARNING:
+{{< alert type="warning" >}}
+
 Privileged containers in Docker have all the root capabilities of the host VM.
 For more information, check out the official Docker documentation
 on [Runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)
+
+{{< /alert >}}
 
 It is **not advised** to run containers in privileged mode.
 
@@ -98,9 +104,12 @@ for more information.
 
 ## Systems with Docker installed
 
-NOTE:
+{{< alert type="note" >}}
+
 This applies to installations below 0.5.0 or ones that were upgraded to the
 newer version.
+
+{{< /alert >}}
 
 When installing the GitLab Runner package on Linux systems with Docker installed,
 `gitlab-runner` creates a user that has permission to access the `Docker`
@@ -163,11 +172,14 @@ All needs are unique, but for a cloud environment, this could include:
 - Restricting traffic between runner virtual machines
 - Filtering access to cloud provider metadata endpoints
 
-NOTE:
+{{< alert type="note" >}}
+
 All runners will need outbound network connectivity to
 GitLab.com or your GitLab instance.
 Most jobs will also require outbound network connectivity to
 the Internet - for dependency pulling etc.
+
+{{< /alert >}}
 
 ### Secure the runner host
 

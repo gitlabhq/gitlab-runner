@@ -32,7 +32,11 @@ To install a fleeting plugin, use either the:
 
 ## Install with the OCI registry distribution
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4690) OCI registry distribution in GitLab Runner 16.11
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4690) OCI registry distribution in GitLab Runner 16.11
+
+{{< /history >}}
 
 Plugins are installed to `~/.config/fleeting/plugins` on UNIX systems, and `%APPDATA%/fleeting/plugins` on Windows. To override
 where plugins are installed, update the environment variable `FLEETING_PLUGIN_PATH`.
@@ -41,9 +45,9 @@ To install the fleeting plugin:
 
 1. In the `config.toml`, in the `[runners.autoscaler]` section, add the fleeting plugin:
 
-   ::Tabs
+   {{< tabs >}}
 
-   :::TabTitle AWS
+   {{< tab title="AWS" >}}
 
    ```toml
    [[runners]]
@@ -58,7 +62,9 @@ To install the fleeting plugin:
      plugin = "aws:latest"
    ```
 
-   :::TabTitle Google Cloud
+   {{< /tab >}}
+
+   {{< tab title="Google Cloud" >}}
 
    ```toml
    [[runners]]
@@ -73,7 +79,9 @@ To install the fleeting plugin:
      plugin = "googlecloud:latest"
    ```
 
-   :::TabTitle Azure
+   {{< /tab >}}
+
+   {{< tab title="Azure" >}}
 
    ```toml
    [[runners]]
@@ -88,7 +96,9 @@ To install the fleeting plugin:
      plugin = "azure:latest"
    ```
 
-   ::EndTabs
+      {{< /tab >}}
+
+   {{< /tabs >}}
 
 1. Run `gitlab-runner fleeting install`.
 
@@ -137,9 +147,9 @@ To manually install a fleeting plugin:
 1. Ensure the binary can be discovered from `$PATH`. For example, move it to `/usr/local/bin`.
 1. In the `config.toml`, in the `[runners.autoscaler]` section, add the fleeting plugin. For example:
 
-   ::Tabs
+   {{< tabs >}}
 
-   :::TabTitle AWS
+   {{< tab title="AWS" >}}
 
    ```toml
    [[runners]]
@@ -154,7 +164,9 @@ To manually install a fleeting plugin:
      plugin = "fleeting-plugin-aws"
     ```
 
-   :::TabTitle Google Cloud
+   {{< /tab >}}
+
+   {{< tab title="Google Cloud" >}}
 
       ```toml
    [[runners]]
@@ -169,7 +181,9 @@ To manually install a fleeting plugin:
      plugin = "fleeting-plugin-googlecloud"
     ```
 
-   :::TabTitle Azure
+   {{< /tab >}}
+
+   {{< tab title="Azure" >}}
 
      ```toml
    [[runners]]
@@ -184,7 +198,9 @@ To manually install a fleeting plugin:
      plugin = "fleeting-plugin-azure"
     ```
 
-   ::EndTabs
+      {{< /tab >}}
+
+   {{< /tabs >}}
 
 ## Fleeting plugin management
 

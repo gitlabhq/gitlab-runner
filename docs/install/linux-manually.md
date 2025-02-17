@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Install GitLab Runner manually on GNU/Linux
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 You can install GitLab Runner manually by using a `deb` or `rpm` package or a binary file.
 Use this approach as a last resort if:
@@ -104,8 +107,11 @@ You can download and install GitLab Runner by using a binary file.
 
 ### Install
 
-WARNING:
+{{< alert type="warning" >}}
+
 With GitLab Runner 10, the executable was renamed to `gitlab-runner`.
+
+{{< /alert >}}
 
 1. Download one of the binaries for your system:
 
@@ -162,12 +168,15 @@ With GitLab Runner 10, the executable was renamed to `gitlab-runner`.
 
 1. [Register a runner](../register/_index.md)
 
-NOTE:
+{{< alert type="note" >}}
+
 If `gitlab-runner` is installed and run as a service, it runs as root,
 but executes jobs as a user specified by the `install` command.
 This means that some of the job functions like cache and
 artifacts must execute the `/usr/local/bin/gitlab-runner` command.
 Therefore, the user under which jobs are run needs to have access to the executable.
+
+{{< /alert >}}
 
 ### Upgrade
 

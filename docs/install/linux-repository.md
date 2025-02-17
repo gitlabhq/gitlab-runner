@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Install GitLab Runner using the official GitLab repositories
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 To install GitLab Runner, you can use a package from [the GitLab repository](https://packages.gitlab.com/runner/gitlab-runner).
 
@@ -41,8 +44,11 @@ GitLab provides packages for the following supported versions of Linux distribut
 Depending on your setup, other Debian or RPM based distributions may also be supported. This refers to distributions that are derivative of a supported GitLab Runner distribution and that have compatible package repositories. For example, Deepin is a Debian derivative. So, the runner `deb` package should install and run on Deepin. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file)
 on other Linux distributions.
 
-NOTE:
+{{< alert type="note" >}}
+
 Packages for distributions that are not on the list are not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM or DEB package from our S3 bucket.
+
+{{< /alert >}}
 
 ## Install GitLab Runner
 
@@ -50,38 +56,47 @@ To install GitLab Runner:
 
 1. Add the official GitLab repository:
 
-   ::Tabs
+   {{< tabs >}}
 
-   :::TabTitle Debian/Ubuntu/Mint
+   {{< tab title="Debian/Ubuntu/Mint" >}}
 
    ```shell
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
    ```
 
-   :::TabTitle RHEL/CentOS/Fedora/Amazon Linux
+   {{< /tab >}}
+
+   {{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
 
    ```shell
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
    ```
 
-   ::EndTabs
+      {{< /tab >}}
+
+   {{< /tabs >}}
 
 1. Install the latest version of GitLab Runner, or skip to the next step to
    install a specific version:
 
-   NOTE:
-   The `skel` directory usage is disabled by default to prevent
+   {{< alert type="note" >}}
+
+The `skel` directory usage is disabled by default to prevent
    [`No such file or directory` job failures](#error-no-such-file-or-directory-job-failures).
 
-   ::Tabs
+   {{< /alert >}}
 
-   :::TabTitle Debian/Ubuntu/Mint
+   {{< tabs >}}
+
+   {{< tab title="Debian/Ubuntu/Mint" >}}
 
    ```shell
    sudo apt install gitlab-runner
    ```
 
-   :::TabTitle RHEL/CentOS/Fedora/Amazon Linux
+   {{< /tab >}}
+
+   {{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
 
    ```shell
    sudo yum install gitlab-runner
@@ -91,33 +106,41 @@ To install GitLab Runner:
    sudo dnf install gitlab-runner
    ```
 
-   ::EndTabs
+   {{< /tab >}}
 
-   NOTE:
-   A FIPS 140-2 compliant version of GitLab Runner is
+   {{< /tabs >}}
+
+   {{< alert type="note" >}}
+
+A FIPS 140-2 compliant version of GitLab Runner is
    available for RHEL distributions. You can install this version by using
    `gitlab-runner-fips` as the package name, instead of `gitlab-runner`.
 
+   {{< /alert >}}
+
 1. To install a specific version of GitLab Runner:
 
-   ::Tabs
+   {{< tabs >}}
 
-   :::TabTitle Debian/Ubuntu/Mint
+   {{< tab title="Debian/Ubuntu/Mint" >}}
 
-   NOTE:
-   As of `gitlab-runner` version `v17.7.1`, when you install a specific version of `gitlab-runner` that is not the latest
+   {{< alert type="note" >}}
+
+As of `gitlab-runner` version `v17.7.1`, when you install a specific version of `gitlab-runner` that is not the latest
    version, you must explicitly install the required `gitlab-runner-helper-packages` for that version. This requirement
    exists due to an `apt`/`apt-get` limitation.
+
+   {{< /alert >}}
 
    ```shell
    apt-cache madison gitlab-runner
    sudo apt install gitlab-runner=17.7.1-1 gitlab-runner-helper-images=17.7.1-1
    ```
 
-    If you attempt to install a specific version of `gitlab-runner` without installing the same version of
-    `gitlab-runner-helper-images`, you might encounter the following error:
+   If you attempt to install a specific version of `gitlab-runner` without installing the same version of
+   `gitlab-runner-helper-images`, you might encounter the following error:
 
-    ```shell
+   ```shell
     sudo apt install gitlab-runner=17.7.1-1
     ...
     The following packages have unmet dependencies:
@@ -125,14 +148,18 @@ To install GitLab Runner:
     E: Unable to correct problems, you have held broken packages.
     ```
 
-   :::TabTitle RHEL/CentOS/Fedora/Amazon Linux
+   {{< /tab >}}
+
+   {{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
 
    ```shell
    yum list gitlab-runner --showduplicates | sort -r
    sudo yum install gitlab-runner-17.2.0-1
    ```
 
-   ::EndTabs
+   {{< /tab >}}
+
+   {{< /tabs >}}
 
 1. [Register a runner](../register/_index.md).
 
@@ -145,23 +172,27 @@ some of the most common problems with GitLab Runner.
 
 To install the latest version of GitLab Runner:
 
-::Tabs
+{{< tabs >}}
 
-:::TabTitle Debian/Ubuntu/Mint
+{{< tab title="Debian/Ubuntu/Mint" >}}
 
 ```shell
 sudo apt update
 sudo apt install gitlab-runner
 ```
 
-:::TabTitle RHEL/CentOS/Fedora/Amazon Linux
+{{< /tab >}}
+
+{{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
 
 ```shell
 sudo yum update
 sudo yum install gitlab-runner
 ```
 
-::EndTabs
+{{< /tab >}}
+
+{{< /tabs >}}
 
 ## GPG signatures for package installation
 
@@ -282,9 +313,12 @@ Download the current public GPG key used for package signing from
 | Fingerprint   | `931D A69C FA3A FEBB C97D  AA8C 6C57 C29C 6BA7 5A4E` |
 | Expiry        | `2025-04-25`                                         |
 
-NOTE:
+{{< alert type="note" >}}
+
 The same key is used by the GitLab Runner project to sign `release.sha256` files for the S3 releases
 available in the `<https://gitlab-runner-downloads.s3.dualstack.us-east-1.amazonaws.com>` bucket.
+
+{{< /alert >}}
 
 #### Previous GPG public keys
 
@@ -329,18 +363,22 @@ If you need to use the `skel` directory to populate the newly
 created `$HOME` directory, you must set the `GITLAB_RUNNER_DISABLE_SKEL` variable explicitly
 to `false` before you install the runner:
 
-::Tabs
+{{< tabs >}}
 
-:::TabTitle Debian/Ubuntu/Mint
+{{< tab title="Debian/Ubuntu/Mint" >}}
 
 ```shell
 export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E apt-get install gitlab-runner
 ```
 
-:::TabTitle RHEL/CentOS/Fedora/Amazon Linux
+{{< /tab >}}
+
+{{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
 
 ```shell
 export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E yum install gitlab-runner
 ```
 
-::EndTabs
+{{< /tab >}}
+
+{{< /tabs >}}
