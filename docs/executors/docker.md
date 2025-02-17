@@ -471,29 +471,27 @@ The following example shows a `config.toml` where the limit that each build can 
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6208) in GitLab 17.9.
 
-You can expose hardware devices on the GitLab Runner host to the container that's running the job.
-To do this, you configure the runner's `devices` and `services_devices` options.
+You can expose hardware devices on the GitLab Runner host to the container that runs the job.
+To do this, configure the runner's `devices` and `services_devices` options.
 
 - To expose devices to `build` and
-[helper](../configuration/advanced-configuration.md#helper-image) containers, use the `devices` option.
-- To expose devices to services containers, use the `services_devices` option. You can limit a service
-container's device access to images with a matching image name or glob,
-so that users do not have direct access to the host system's devices.
+  [helper](../configuration/advanced-configuration.md#helper-image) containers, use the `devices` option.
+- To expose devices to services containers, use the `services_devices` option.
+  To restrict a service container's device access to specific images, use exact image names or glob patterns.
+  This action prevents direct access to host system devices.
 
-  See the [Docker reference](https://docs.docker.com/engine/reference/commandline/run/#add-host-device-to-container---device)
-  for details on device access.
+For more information on device access, see [Docker documentation](https://docs.docker.com/engine/reference/commandline/run/#add-host-device-to-container---device).
 
 ### Build container example
 
-This example shows a `config.toml` section with `/dev/bus/usb` exposed to build
-containers. This configuration allows pipelines to access any USB device attached to the host
+In this example, the `config.toml` section exposes `/dev/bus/usb` to build containers.
+This configuration allows pipelines to access USB devices attached to the host
 machine, such as Android smartphones controlled over the
-[Android Debug Bridge (adb)](https://developer.android.com/studio/command-line/adb).
+[Android Debug Bridge (`adb`)](https://developer.android.com/studio/command-line/adb).
 
-Because the build job container can execute anything with direct access to the
-host USB, pipelines might conflict when simultaneously
-accessing the same hardware resources. To prevent
-this failure point, you can use [`resource_group`](https://docs.gitlab.com/ee/ci/yaml/index.html#resource_group).
+Since build job containers can directly access host USB devices, simultaneous
+pipeline executions may conflict with each other when accessing the same hardware.
+To prevent these conflicts, use [`resource_group`](https://docs.gitlab.com/ee/ci/yaml/index.html#resource_group).
 
 ```toml
 [[runners]]
@@ -508,10 +506,10 @@ this failure point, you can use [`resource_group`](https://docs.gitlab.com/ee/ci
 
 ### Private registry example
 
-This example exposes `/dev/kvm` and `/dev/dri` to images from a private
-Docker registry, commonly used for hardware accelerated virtualization and rendering.
-You can mitigate some risks involved with providing users direct access to hardware resources
-by restricting access to images in the `myregistry:5000/emulator/*` namespace.
+This example shows how to expose `/dev/kvm` and `/dev/dri` devices to container images from a private
+Docker registry. These devices are commonly used for hardware-accelerated virtualization and rendering.
+To mitigate risks involved with providing users direct access to hardware resources,
+restrict device access to trusted images in the `myregistry:5000/emulator/*` namespace:
 
 ```toml
 [runners.docker]
@@ -520,8 +518,8 @@ by restricting access to images in the `myregistry:5000/emulator/*` namespace.
     "myregistry:5000/emulator/*" = ["/dev/kvm", "/dev/dri"]
 ```
 
-NOTE:
-The image name `**/*` may be used to expose devices to any image.
+WARNING:
+The image name `**/*` might expose devices to any image.
 
 ## Configure directories for the container build and cache
 
