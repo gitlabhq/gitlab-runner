@@ -5,9 +5,13 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Instance executor
 ---
 
-> - Introduced in GitLab Runner 15.11.0 as an [experiment](https://docs.gitlab.com/ee/policy/development_stages_support.html#experiment).
-> - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [beta](https://docs.gitlab.com/ee/policy/development_stages_support.html#beta) in GitLab Runner 16.6.
-> - [Generally available](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29221) in GitLab Runner 17.1.
+{{< history >}}
+
+- Introduced in GitLab Runner 15.11.0 as an [experiment](https://docs.gitlab.com/ee/policy/development_stages_support.html#experiment).
+- [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [beta](https://docs.gitlab.com/ee/policy/development_stages_support.html#beta) in GitLab Runner 16.6.
+- [Generally available](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29221) in GitLab Runner 17.1.
+
+{{< /history >}}
 
 The instance executor is an autoscale-enabled executor that creates instances on demand to accommodate
 the expected volume of jobs that the runner manager processes.
@@ -33,11 +37,14 @@ To prepare the environment for autoscaling:
    - Git
    - GitLab Runner
 
-     NOTE:
-     You must install the GitLab Runner binary on the virtual machine, and keep the
-     runner executable in the default path to process job artifacts and cache.
-     You do not have to configure or start the GitLab Runner service itself on the
-     virtual machine.
+    {{< alert type="note" >}}
+
+    You must install the GitLab Runner binary on the virtual machine, and keep the
+    runner executable in the default path to process job artifacts and cache.
+    You do not have to configure or start the GitLab Runner service itself on the
+    virtual machine.
+
+    {{< /alert >}}
 
    - Dependencies required by the jobs you plan to run
 

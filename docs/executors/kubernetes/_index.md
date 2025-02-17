@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Kubernetes executor
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 Use the Kubernetes executor to use Kubernetes clusters for your builds. The executor calls the Kubernetes
 cluster API and creates a pod for each GitLab CI job.
@@ -383,11 +386,14 @@ You can configure pods and containers to control how jobs are executed.
 
 ### Default labels for job pods
 
-WARNING:
+{{< alert type="warning" >}}
+
 You cannot override these labels through runner configuration or
 `.gitlab-ci.yml` files.
 Any attempts to set or modify labels in the `runner.gitlab.com` namespace
 are ignored and logged as debug messages.
+
+{{< /alert >}}
 
 | Key                                        | Description                                                                                                                                     |
 |--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -402,7 +408,11 @@ are ignored and logged as debug messages.
 
 ### Default annotations for job pods
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3845) in GitLab Runner 15.9.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3845) in GitLab Runner 15.9.
+
+{{< /history >}}
 
 The following annotations are added by default on the Pod running the jobs:
 
@@ -432,11 +442,14 @@ can be affected by:
   failed and all associated containers are killed. To have the job time out on GitLab first,
   `activeDeadlineSeconds` is set to `configured timeout + 1 second`.
 
-NOTE:
+{{< alert type="note" >}}
+
 If you enable the `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` feature flag and set
 `pod_termination_grace_period_seconds` to a non-zero value, the CI/CD job pod
 is not terminated immediately. The pod `terminationGracePeriods`
 ensures the pod is terminated only when it expired.
+
+{{< /alert >}}
 
 ### Overwrite pod tolerations
 
@@ -480,8 +493,11 @@ To overwrite Kubernetes pod labels for each CI/CD job:
       KUBERNETES_POD_LABELS_3: "Key3=Val3"
     ```
    
-WARNING:
+{{< alert type="warning" >}}
+
 Labels in the `runner.gitlab.com` namespace are read-only. GitLab ignores any attempts to add, modify, or remove these GitLab-internal labels.
+   
+{{< /alert >}}
 
 ### Overwrite pod annotations
 
@@ -517,10 +533,17 @@ This configuration allows overwrite of any of the `pod_annotations` configured i
 
 ### Overwrite generated pod specifications
 
-DETAILS:
-**Status:** Beta
+{{< details >}}
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3114) in GitLab Runner 15.10.
+- Status: Beta
+
+{{< /details >}}
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3114) in GitLab Runner 15.10.
+
+{{< /history >}}
 
 This feature is in [beta](https://docs.gitlab.com/ee/policy/development_stages_support.html#beta). We strongly recommend that you use
 this feature on a test Kubernetes cluster before you use it on a production cluster. To use this feature, you must
@@ -818,7 +841,11 @@ check_interval = 30
 
 ### Remove old runner pods
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27870) in GitLab Runner 14.6.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27870) in GitLab Runner 14.6.
+
+{{< /history >}}
 
 Sometimes old runner pods are not cleared. This can happen when the runner manager is incorrectly shut down.
 
@@ -829,7 +856,11 @@ To handle this situation, you can use the GitLab Runner Pod Cleanup application 
 
 ### Set a security policy for the container
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3116) in GitLab Runner 14.5.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3116) in GitLab Runner 14.5.
+
+{{< /history >}}
 
 Configure the [container security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
 in the `config.toml` executor to set a container security policy for the build, helper, or service pods.
@@ -998,7 +1029,11 @@ setting for that resource. If the maximum overwrite has not been set for a resou
 
 ### Define a list of services
 
-> - [Introduced support for `HEALTCHECK_TCP_SERVICES`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27215) in GitLab Runner 16.9.
+{{< history >}}
+
+- [Introduced support for `HEALTCHECK_TCP_SERVICES`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27215) in GitLab Runner 16.9.
+
+{{< /history >}}
 
 Define a list of [services](https://docs.gitlab.com/ee/ci/services/) in the `config.toml`.
 
@@ -1082,7 +1117,11 @@ If you don't set either, the overwrite is disabled.
 
 ### Set the RuntimeClass
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26646) in GitLab Runner 14.9.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26646) in GitLab Runner 14.9.
+
+{{< /history >}}
 
 Use `runtime_class_name` to set the [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/) for each job container.
 
@@ -1102,7 +1141,11 @@ check_interval = 30
 
 ### Change the base directory for build logs and scripts
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37760) in GitLab Runner 17.2.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37760) in GitLab Runner 17.2.
+
+{{< /history >}}
 
 You can change the directory where `emptyDir` volumes are mounted to the pod for build logs and scripts.
 You can use the directory to:
@@ -1300,9 +1343,9 @@ To overwrite the node selector:
 In the following example, to overwrite the Kubernetes node architecture,
 the settings are configured in the `config.toml` and `.gitlab-ci.yml` file:
 
-::Tabs
+{{< tabs >}}
 
-:::TabTitle `config.toml`
+{{< tab title="`config.toml`" >}}
 
 ```toml
 concurrent = 1
@@ -1336,7 +1379,9 @@ listen_address = ':9252'
     node_selector_overwrite_allowed = "kubernetes.io/arch=.*" # <--- allows overwrite of the architecture
 ```
 
-:::TabTitle `.gitlab-ci.yml`
+{{< /tab >}}
+
+{{< tab title="`.gitlab-ci.yml`" >}}
 
 ```yaml
 job:
@@ -1345,16 +1390,21 @@ job:
     KUBERNETES_NODE_SELECTOR_ARCH: 'kubernetes.io/arch=amd64'  # <--- select the architecture
 ```
 
-::EndTabs
+{{< /tab >}}
+
+{{< /tabs >}}
 
 ### Define a list of node affinities
 
 Define a list of [node affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)
 to add to a pod specification at build time.
 
-NOTE:
+{{< alert type="note" >}}
+
 `node_affinities` does not determine which operating system a build should run with, only `node_selectors`. For more information, see [Operating system, architecture, and Windows kernel version](#operating-system-architecture-and-windows-kernel-version).
 Example configuration in the `config.toml`:
+
+{{< /alert >}}
 
 ```toml
 concurrent = 1
@@ -1400,7 +1450,11 @@ concurrent = 1
 
 ### Define nodes where pods are scheduled
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2324) in GitLab Runner 14.3.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2324) in GitLab Runner 14.3.
+
+{{< /history >}}
 
 Use pod affinity and anti-affinity to constrain the nodes
 [your pod is eligible](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity)
@@ -1468,7 +1522,11 @@ concurrent = 1
 
 ### Configure a container lifecycle hook
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3630) in GitLab Runner 14.2.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3630) in GitLab Runner 14.2.
+
+{{< /history >}}
 
 Use [container lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to run
 code configured for a handler when the corresponding lifecycle hook is executed.
@@ -1761,8 +1819,11 @@ Each key from the `configMap` is changed into a file and stored in the mount pat
 To change the default key and value storage, use the `items` option . If you use the `items` option, **only specified keys**
 are added to the volumes and all other keys are skipped.
 
-NOTE:
+{{< alert type="note" >}}
+
 If you use a key that doesn't exist, the job fails on the pod creation stage.
+
+{{< /alert >}}
 
 #### `secret` volume
 
@@ -1788,8 +1849,11 @@ Each key from selected `secret` is changed into a file stored in the selected mo
 To change default key and value storage, use the `items` option. If you use the `items` option, **only specified keys**
 are added to the volumes and all other keys are skipped.
 
-NOTE:
+{{< alert type="note" >}}
+
 If you use a key that doesn't exist, the job fails on the pod creation stage.
+
+{{< /alert >}}
 
 #### `emptyDir` volume
 
@@ -1867,7 +1931,11 @@ concurrent = 4
 
 ### Persistent per-concurrency build volumes
 
-> - Support for variable injection to `pvc.name` [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4256) in GitLab 16.3.
+{{< history >}}
+
+- Support for variable injection to `pvc.name` [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4256) in GitLab 16.3.
+
+{{< /history >}}
 
 The build directories in Kubernetes CI jobs are ephemeral by default.
 If you want to persist your Git clone across jobs (to make `GIT_STRATEGY=fetch` work),
@@ -1899,10 +1967,13 @@ Create as many as the runner's `concurrent` setting dictates.
 After you set the security policy, the [helper image](../../configuration/advanced-configuration.md#helper-image) must conform to the policy.
 The image does not receive privileges from the root group, so you must ensure that the user ID is part of the root group.
 
-NOTE:
+{{< alert type="note" >}}
+
 If you only need the `nonroot` environment, you can use the [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421)
 OpenShift Container Platform images instead of a helper image. You can also use the [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433)
 OpenShift Container Platform images.
+
+{{< /alert >}}
 
 The following example creates a user and group called `nonroot` and sets the helper image to run as that user.
 
@@ -2004,7 +2075,11 @@ For more information, see [issue 30769](https://gitlab.com/gitlab-org/gitlab-run
 
 ### Restrict Docker images and services
 
-> - Added for the Kubernetes executor in GitLab Runner 14.2.
+{{< history >}}
+
+- Added for the Kubernetes executor in GitLab Runner 14.2.
+
+{{< /history >}}
 
 You can restrict the Docker images that are used to run your jobs.
 To do this, you specify wildcard patterns. For example, to allow images
@@ -2034,7 +2109,11 @@ Or, to restrict to a specific list of images from this registry:
 
 ### Restrict Docker pull policies
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
+
+{{< /history >}}
 
 In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how
 a CI/CD job should fetch images.
@@ -2059,8 +2138,12 @@ For example, to allow only the `always` and `if-not-present` pull policies:
 
 ## Job execution
 
-> - [Behind a feature flag `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../../configuration/feature-flags.md#available-feature-flags), enabled by default.
-> - [Using attach by default](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) in GitLab Runner 14.0.
+{{< history >}}
+
+- [Behind a feature flag `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../../configuration/feature-flags.md#available-feature-flags), enabled by default.
+- [Using attach by default](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) in GitLab Runner 14.0.
+
+{{< /history >}}
 
 GitLab Runner uses `kube attach` instead of `kube exec` by default. This should avoid problems like when a [job is marked successful midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)
 in environments with an unstable network.
@@ -2130,12 +2213,19 @@ To retry an entirely different error, such as `exceeded quota` 20 times:
 
 ### Container entrypoint known issues
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3095) in GitLab Runner 14.5.
-> - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3212) in GitLab Runner 15.1.
+{{< history >}}
 
-NOTE:
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3095) in GitLab Runner 14.5.
+- [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3212) in GitLab Runner 15.1.
+
+{{< /history >}}
+
+{{< alert type="note" >}}
+
 In 15.0, GitLab Runner uses the entrypoint defined in a Docker image when used with the Kubernetes executor with `kube attach`.
 In GitLab 15.1 and later, the entrypoint defined in a Docker image is used with the Kubernetes executor when `FF_KUBERNETES_HONOR_ENTRYPOINT` is set.
+
+{{< /alert >}}
 
 The container entry point has the following known issues:
 
@@ -2213,8 +2303,12 @@ rules:
 
 ## Resources check during prepare step
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0.
-> - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29101) in GitLab 15.2.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0.
+- [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29101) in GitLab 15.2.
+
+{{< /history >}}
 
 Prerequisites:
 
@@ -2247,8 +2341,11 @@ variables:
   KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_COMMIT_REF_SLUG}
 ```
 
-NOTE:
+{{< alert type="note" >}}
+
 This variable does not create a namespace on your cluster. Ensure that the namespace exists before you run the job.
+
+{{< /alert >}}
 
 To use only designated namespaces during CI runs, in the `config.toml` file, define a regular expression for `namespace_overwrite_allowed`:
 

@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Autoscaling GitLab CI on AWS Fargate
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 The GitLab [custom executor](../../executors/custom.md) driver for
 [AWS Fargate](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate)
@@ -35,11 +38,16 @@ Additionally, for any non-public container registry your ECS Task will either [n
 
 You can use CloudFormation or Terraform to automate the provisioning and setup of your AWS infrastructure.
 
-WARNING:
+{{< alert type="warning" >}}
+
 CI/CD jobs use the image defined in the ECS task, rather than the value of the `image:` keyword in your `.gitlab-ci.yml` file. This configuration can result in multiple instances of runner manager or in large build containers. AWS is aware of the issue and GitLab is [tracking resolution](https://gitlab.com/gitlab-com/alliances/aws/public-tracker/-/issues/22). You might consider creating an EKS cluster instead by following the official [AWS EKS Blueprints](https://aws-ia.github.io/terraform-aws-eks-blueprints/).
 
-WARNING:
+{{< /alert >}}
+
+{{< alert type="warning" >}}
+
 Fargate abstracts container hosts, which limits configurability for container host properties. This affects runner workloads that require high IO to disk or network, since these properties have limited or no configurability with Fargate. Before you use GitLab Runner on Fargate, ensure runner workloads with high or extreme compute characteristics on CPU, memory, disk IO, or network IO are suitable for Fargate.
+{{< /alert >}}
 
 ## Prerequisites
 
@@ -281,7 +289,8 @@ to the container image that you are going to use for your CI builds.
 1. Click **Create**.
 1. Click **View task definition**.
 
-WARNING:
+{{< alert type="warning" >}}
+
 A single Fargate task may launch one or more containers.
 The Fargate driver injects the `SSH_PUBLIC_KEY` environment variable
 in containers with the `ci-coordinator` name only. You must
@@ -289,6 +298,8 @@ have a container with this name in all task definitions used by the Fargate
 driver. The container with this name should be the one that has the
 SSH server and all GitLab Runner requirements installed, as described
 above.
+
+{{< /alert >}}
 
 Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-task-definition.html)
 for detailed instructions on setting up and working with task definitions.
@@ -317,9 +328,12 @@ Your configuration should now be ready to use.
 1. Click **Run Pipeline**.
 1. Update the branch and any variables and click **Run Pipeline**.
 
-NOTE:
+{{< alert type="note" >}}
+
 The `image` and `service` keywords in your `.gitlab-ci.yml` file are ignored.
 The runner only uses the values specified in the task definition.
+
+{{< /alert >}}
 
 ## Clean up
 
@@ -392,8 +406,11 @@ the private subnet:
    - Select the security group.
    - Remove the exiting inbound rule that allows SSH access from any host.
 
-WARNING:
+{{< alert type="warning" >}}
+
 When you remove the exiting inbound rule, you cannot use SSH to connect to the Amazon Elastic Compute Cloud instance.
+
+{{< /alert >}}
 
 For more information, see the following AWS documentation:
 

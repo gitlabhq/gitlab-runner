@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: GitLab Runner commands
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 GitLab Runner contains a set of commands you use to register, manage, and
 run your builds.
@@ -131,10 +134,13 @@ For [graceful shutdowns](#gitlab-runner-stop-doesnt-shut-down-gracefully):
 sudo kill -SIGQUIT <main_runner_pid>
 ```
 
-WARNING:
+{{< alert type="warning" >}}
+
 Do **not** use `killall` or `pkill` for graceful shutdowns if you are using `shell`
 or `docker` executors. This can cause improper handling of the signals due to sub-processes
 being killed as well. Use it only on the main process handling the jobs.
+
+{{< /alert >}}
 
 Some operating systems are configured to automatically restart services when they fail (which is the default on some platforms).
 If your operating system has this configuration, it might automatically restart the runner if it is shut down by the signals above.
@@ -223,9 +229,12 @@ You can register a runner:
 - interactively.
 - non-interactively.
 
-NOTE:
+{{< alert type="note" >}}
+
 Runners can be registered directly by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner) but
 configuration is not generated automatically.
+
+{{< /alert >}}
 
 #### Interactive registration
 
@@ -271,12 +280,19 @@ export REGISTER_NON_INTERACTIVE=true
 gitlab-runner register
 ```
 
-NOTE:
+{{< alert type="note" >}}
+
 Boolean parameters must be passed in the command line with `--key={true|false}`.
+
+{{< /alert >}}
 
 #### `[[runners]]` configuration template file
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
+
+{{< /history >}}
 
 Additional options can be configured during runner registration by using the
 [configuration template file](../register/_index.md#register-with-a-configuration-template) feature.
@@ -302,9 +318,12 @@ Verifying runner... is alive                        runner=32773c0f
 To remove the old runners that have been removed from GitLab, execute the following
 command.
 
-WARNING:
+{{< alert type="warning" >}}
+
 This operation cannot be undone. It updates the configuration file, so
 make sure to have a backup of `config.toml` before executing it.
+
+{{< /alert >}}
 
 ```shell
 gitlab-runner verify --delete
@@ -321,9 +340,12 @@ It expects either:
 
 With the `--all-runners` option, it unregisters all the attached runners.
 
-NOTE:
+{{< alert type="note" >}}
+
 Runners can be unregistered with the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-runner) but the
 configuration is not modified for the user.
+
+{{< /alert >}}
 
 - If the runner was created with a runner registration token, `gitlab-runner unregister`
   with the runner authentication token deletes the runner.
@@ -341,9 +363,12 @@ test-runner     Executor=shell Token=t0k3n URL=http://gitlab.example.com
 
 Then use this information to unregister it, using one of the following commands.
 
-WARNING:
+{{< alert type="warning" >}}
+
 This operation cannot be undone. It updates the configuration file, so
 make sure to have a backup of `config.toml` before executing it.
+
+{{< /alert >}}
 
 #### By URL and token
 
@@ -357,8 +382,11 @@ gitlab-runner unregister --url "http://gitlab.example.com/" --token t0k3n
 gitlab-runner unregister --name test-runner
 ```
 
-NOTE:
+{{< alert type="note" >}}
+
 If there is more than one runner with the given name, only the first one is removed.
+
+{{< /alert >}}
 
 #### All runners
 
@@ -490,7 +518,11 @@ It accepts the following parameters.
 
 ### `gitlab-runner run-single`
 
-> - Ability to use a configuration file [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37670) in GitLab Runner 17.1.
+{{< history >}}
+
+- Ability to use a configuration file [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37670) in GitLab Runner 17.1.
+
+{{< /history >}}
 
 Use this supplementary command to run a single build from
 a single GitLab instance. It can:

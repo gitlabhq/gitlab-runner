@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Autoscaling GitLab Runner on AWS EC2
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 One of the biggest advantages of GitLab Runner is its ability to automatically
 spin up and down VMs to make sure your builds get processed immediately. It's a
@@ -114,9 +117,12 @@ it connects with your GitLab instance:
 
 You can now move on to the most important part, configuring the GitLab Runner.
 
-NOTE:
+{{< alert type="note" >}}
+
 If you want every user in your instance to be able to use the autoscaled runners,
 register the runner as a shared one.
+
+{{< /alert >}}
 
 ## Configuring the runner
 
@@ -443,13 +449,16 @@ machine to see the Docker Machine's state:
 docker-machine ls -q --filter state=Error --format "{{.NAME}}"
 ```
 
-NOTE:
+{{< alert type="note" >}}
+
 There are some issues regarding making GitLab Runner gracefully handle Spot
 price changes, and there are reports of `docker-machine` attempting to
 continually remove a Docker Machine. GitLab has provided patches for both cases
 in the upstream project. For more information, see issues
 [#2771](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2771) and
 [#2772](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2772).
+
+{{< /alert >}}
 
 The GitLab fork does not support AWS EC2 fleets and their use with spot instances.
 As an alternative, you can use the

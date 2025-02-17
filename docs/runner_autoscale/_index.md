@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: GitLab Runner Autoscaling
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 You can use GitLab Runner autoscaling to automatically scale the runner on public cloud instances.
 When you configure a runner to use an autoscaler, you can manage increases in CI/CD job load by
@@ -36,16 +39,16 @@ The following autoscaling options are supported for public cloud compute instanc
 
 |                   | Next Runner Autoscaler                 | GitLab Runner Docker Machine Autoscaler                |
 |----------------------------|------------------------|------------------------|
-| Amazon Web Services EC2 instances         | **{check-circle}** Yes | **{check-circle}** Yes |
-| Google Compute Engine | **{check-circle}** Yes | **{check-circle}** Yes |
-|Microsoft Azure Virtual Machines|**{check-circle}** Yes|**{check-circle}** Yes|
+| Amazon Web Services EC2 instances         | {{< icon name="check-circle" >}} Yes | {{< icon name="check-circle" >}} Yes |
+| Google Compute Engine | {{< icon name="check-circle" >}} Yes | {{< icon name="check-circle" >}} Yes |
+|Microsoft Azure Virtual Machines|{{< icon name="check-circle" >}} Yes|{{< icon name="check-circle" >}} Yes|
 
 ### GitLab Runner Autoscaler supported platforms
 
 | Executor                   | Linux                  | macOS                  | Windows                |
 |----------------------------|------------------------|------------------------|------------------------|
-| Instance executor          | **{check-circle}** Yes | **{check-circle}** Yes | **{check-circle}** Yes |
-| Docker Autoscaler executor | **{check-circle}** Yes | **{dotted-circle}** No | **{check-circle}** Yes |
+| Instance executor          | {{< icon name="check-circle" >}} Yes | {{< icon name="check-circle" >}} Yes | {{< icon name="check-circle" >}} Yes |
+| Docker Autoscaler executor | {{< icon name="check-circle" >}} Yes | {{< icon name="dotted-circle" >}} No | {{< icon name="check-circle" >}} Yes |
 
 ## Configure the runner manager
 
@@ -62,9 +65,12 @@ Docker and GitLab Runner supports, like Ubuntu, Debian, CentOS, or RHEL.
 1. [Install GitLab Runner](../install/linux-repository.md) on the instance.
 1. Add the cloud provider credentials to the Runner Manager host machine.
 
-NOTE:
+{{< alert type="note" >}}
+
 You can host the runner manager in a container.
 For [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/), the runner manager is hosted on a virtual machine instance.
+
+{{< /alert >}}
 
 ### Example credentials configuration for the GitLab Runner Autoscaler
 
@@ -99,11 +105,14 @@ This snippet is in the runners.machine section of the `config.toml` file.
     ]
 ```
 
-NOTE:
+{{< alert type="note" >}}
+
 The credentials file is optional.
 You can use an [AWS Identity and Access Management](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)
 (IAM) instance profile for the runner manager in the AWS environment.
 If you do not want to host the runner manager in AWS, you can use the credentials file.
+
+{{< /alert >}}
 
 ## Implement a fault-tolerant design
 
@@ -125,6 +134,9 @@ After you configure the runner manager, configure the executors specific to auto
 - [Docker Autoscaling Executor](../executors/docker_autoscaler.md)
 - [Docker Machine Executor](../executors/docker_machine.md)
 
-NOTE:
+{{< alert type="note" >}}
+
 You should use the Instance and Docker Autoscaling executors, as these comprise the
 technology that will replace the Docker Machine autoscaler.
+
+{{< /alert >}}

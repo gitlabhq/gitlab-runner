@@ -5,18 +5,27 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Install GitLab Runner on FreeBSD
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
 
-NOTE:
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
+
+{{< alert type="note" >}}
+
 The FreeBSD version is also available as a [bleeding edge](bleeding-edge.md)
 release. Make sure that you read the [FAQ](../faq/_index.md) section which
 describes some of the most common problems with GitLab Runner.
 
-WARNING:
+{{< /alert >}}
+
+{{< alert type="warning" >}}
+
 If you are using or upgrading from a version prior to GitLab Runner 10, read how
 to [upgrade to the new version](#upgrading-to-gitlab-runner-10).
+
+{{< /alert >}}
 
 ## Installing GitLab Runner
 

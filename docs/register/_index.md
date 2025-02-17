@@ -5,11 +5,18 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Registering runners
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3414) in GitLab Runner 15.0, a change to the registration request format prevents the GitLab Runner from communicating with earlier versions of GitLab. You must use a GitLab Runner version that is appropriate for the GitLab version, or upgrade the GitLab application.
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3414) in GitLab Runner 15.0, a change to the registration request format prevents the GitLab Runner from communicating with earlier versions of GitLab. You must use a GitLab Runner version that is appropriate for the GitLab version, or upgrade the GitLab application.
+
+{{< /history >}}
 
 Runner registration is the process that links the runner with one or more GitLab instances. You must register the runner so that it can pick up jobs from the GitLab instance.
 
@@ -23,7 +30,11 @@ Before you register a runner:
 
 ## Register with a runner authentication token
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613) in GitLab 15.10.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613) in GitLab 15.10.
+
+{{< /history >}}
 
 Prerequisites:
 
@@ -39,9 +50,9 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
 
 1. Run the register command:
 
-   ::Tabs
+   {{< tabs >}}
 
-   :::TabTitle Linux
+   {{< tab title="Linux" >}}
 
    ```shell
    sudo gitlab-runner register
@@ -57,25 +68,33 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
    sudo -E gitlab-runner register
    ```
 
-   :::TabTitle macOS
+   {{< /tab >}}
+
+   {{< tab title="macOS" >}}
 
    ```shell
    gitlab-runner register
    ```
 
-   :::TabTitle Windows
+   {{< /tab >}}
+
+   {{< tab title="Windows" >}}
 
    ```shell
    .\gitlab-runner.exe register
    ```
 
-   :::TabTitle FreeBSD
+   {{< /tab >}}
+
+   {{< tab title="FreeBSD" >}}
 
    ```shell
    sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
    ```
 
-   :::TabTitle Docker
+   {{< /tab >}}
+
+   {{< tab title="Docker" >}}
 
    To register with a container, you can either:
 
@@ -102,7 +121,9 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
      docker exec -it gitlab-runner gitlab-runner register
      ```
 
-   ::EndTabs
+      {{< /tab >}}
+
+   {{< /tabs >}}
 
 1. Enter your GitLab URL:
    - For runners on GitLab Self-Managed, use the URL for your GitLab instance. For example,
@@ -121,9 +142,9 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
 
 You can also use the [non-interactive mode](../commands/_index.md#non-interactive-registration) to use additional arguments to register the runner:
 
-::Tabs
+{{< tabs >}}
 
-:::TabTitle Linux
+{{< tab title="Linux" >}}
 
 ```shell
 sudo gitlab-runner register \
@@ -135,7 +156,9 @@ sudo gitlab-runner register \
   --description "docker-runner"
 ```
 
-:::TabTitle macOS
+{{< /tab >}}
+
+{{< tab title="macOS" >}}
 
 ```shell
 gitlab-runner register \
@@ -147,7 +170,9 @@ gitlab-runner register \
   --description "docker-runner"
 ```
 
-:::TabTitle Windows
+{{< /tab >}}
+
+{{< tab title="Windows" >}}
 
 ```shell
 .\gitlab-runner.exe register \
@@ -159,7 +184,9 @@ gitlab-runner register \
   --description "docker-runner"
 ```
 
-:::TabTitle FreeBSD
+{{< /tab >}}
+
+{{< tab title="FreeBSD" >}}
 
 ```shell
 sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
@@ -171,7 +198,9 @@ sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
   --description "docker-runner"
 ```
 
-:::TabTitle Docker
+{{< /tab >}}
+
+{{< tab title="Docker" >}}
 
 ```shell
 docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
@@ -183,15 +212,20 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --description "docker-runner"
 ```
 
-::EndTabs
+{{< /tab >}}
+
+{{< /tabs >}}
 
 ## Register with a runner registration token (deprecated)
 
-WARNING:
+{{< alert type="warning" >}}
+
 The ability to pass a runner registration token and support for certain configuration arguments was
 [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872) in GitLab 15.6. They are scheduled for removal
 in GitLab 18.0. Use runner authentication tokens instead. For more information, see
 [Migrating to the new runner registration workflow](https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html).
+
+{{< /alert >}}
 
 Prerequisites:
 
@@ -207,9 +241,9 @@ To register the runner with a [runner registration token](https://docs.gitlab.co
 
 1. Run the register command:
 
-   ::Tabs
+   {{< tabs >}}
 
-   :::TabTitle Linux
+   {{< tab title="Linux" >}}
 
    ```shell
    sudo gitlab-runner register
@@ -225,25 +259,33 @@ To register the runner with a [runner registration token](https://docs.gitlab.co
    sudo -E gitlab-runner register
    ```
 
-   :::TabTitle macOS
+   {{< /tab >}}
+
+   {{< tab title="macOS" >}}
 
    ```shell
    gitlab-runner register
    ```
 
-   :::TabTitle Windows
+   {{< /tab >}}
+
+   {{< tab title="Windows" >}}
 
    ```shell
    .\gitlab-runner.exe register
    ```
 
-   :::TabTitle FreeBSD
+   {{< /tab >}}
+
+   {{< tab title="FreeBSD" >}}
 
    ```shell
    sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
    ```
 
-   :::TabTitle Docker
+   {{< /tab >}}
+
+   {{< tab title="Docker" >}}
 
    To launch a short-lived `gitlab-runner` container to register the container
    you created during installation:
@@ -263,7 +305,9 @@ To register the runner with a [runner registration token](https://docs.gitlab.co
      docker run --rm -it -v gitlab-runner-config:/etc/gitlab-runner gitlab/gitlab-runner:latest register
      ```
 
-   ::EndTabs
+      {{< /tab >}}
+
+   {{< /tabs >}}
 
 1. Enter your GitLab URL:
    - For runners on GitLab Self-Managed, use the URL for your GitLab instance. For example,
@@ -280,9 +324,9 @@ repeat the `register` command.
 
 You can also use the [non-interactive mode](../commands/_index.md#non-interactive-registration) to use additional arguments to register the runner:
 
-::Tabs
+{{< tabs >}}
 
-:::TabTitle Linux
+{{< tab title="Linux" >}}
 
 ```shell
 sudo gitlab-runner register \
@@ -299,7 +343,9 @@ sudo gitlab-runner register \
   --access-level="not_protected"
 ```
 
-:::TabTitle macOS
+{{< /tab >}}
+
+{{< tab title="macOS" >}}
 
 ```shell
 gitlab-runner register \
@@ -316,7 +362,9 @@ gitlab-runner register \
   --access-level="not_protected"
 ```
 
-:::TabTitle Windows
+{{< /tab >}}
+
+{{< tab title="Windows" >}}
 
 ```shell
 .\gitlab-runner.exe register \
@@ -333,7 +381,9 @@ gitlab-runner register \
   --access-level="not_protected"
 ```
 
-:::TabTitle FreeBSD
+{{< /tab >}}
+
+{{< tab title="FreeBSD" >}}
 
 ```shell
 sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
@@ -350,7 +400,9 @@ sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
   --access-level="not_protected"
 ```
 
-:::TabTitle Docker
+{{< /tab >}}
+
+{{< tab title="Docker" >}}
 
 ```shell
 docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
@@ -367,7 +419,9 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --access-level="not_protected"
 ```
 
-::EndTabs
+{{< /tab >}}
+
+{{< /tabs >}}
 
 - `--access-level` creates a [protected runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#prevent-runners-from-revealing-sensitive-information).
   - For a protected runner, use the `--access-level="ref_protected"` parameter.
@@ -376,7 +430,11 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 ### Legacy-compatible registration process
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4157) in GitLab 16.2.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4157) in GitLab 16.2.
+
+{{< /history >}}
 
 Runner registration tokens and several runner configuration arguments were [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379743)
 in GitLab 15.6. They are scheduled for removal in GitLab 18.0.
@@ -417,9 +475,12 @@ in the `register` command due to:
 - Size limits on environment variables based on the environment.
 - Command-line options that are not available for executor volumes for Kubernetes.
 
-WARNING:
+{{< alert type="warning" >}}
+
 The configuration template supports only a single [`[[runners]]`](../configuration/advanced-configuration.md#the-runners-section)
 section and does not support global options.
+
+{{< /alert >}}
 
 To register a runner:
 
@@ -525,9 +586,9 @@ with a confined Docker executor.
 
 1. Register the runner:
 
-   ::Tabs
+   {{< tabs >}}
 
-   :::TabTitle Linux
+   {{< tab title="Linux" >}}
 
    ```shell
    sudo gitlab-runner register \
@@ -540,7 +601,9 @@ with a confined Docker executor.
      --docker-image ruby:2.7
    ```
 
-   :::TabTitle macOS
+   {{< /tab >}}
+
+   {{< tab title="macOS" >}}
 
    ```shell
    gitlab-runner register \
@@ -553,7 +616,9 @@ with a confined Docker executor.
      --docker-image ruby:2.7
    ```
 
-   :::TabTitle Windows
+   {{< /tab >}}
+
+   {{< tab title="Windows" >}}
 
    ```shell
    .\gitlab-runner.exe register \
@@ -566,7 +631,9 @@ with a confined Docker executor.
      --docker-image ruby:2.7
    ```
 
-   :::TabTitle FreeBSD
+   {{< /tab >}}
+
+   {{< tab title="FreeBSD" >}}
 
    ```shell
    sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
@@ -579,7 +646,9 @@ with a confined Docker executor.
      --docker-image ruby:2.7
    ```
 
-   :::TabTitle Docker
+   {{< /tab >}}
+
+   {{< tab title="Docker" >}}
 
    ```shell
    docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
@@ -592,7 +661,9 @@ with a confined Docker executor.
      --docker-image ruby:2.7
    ```
 
-   ::EndTabs
+      {{< /tab >}}
+
+   {{< /tabs >}}
 
 For more configuration options, see [Advanced configuration](../configuration/advanced-configuration.md).
 
@@ -603,9 +674,12 @@ After you register the runner with a Docker container:
 - The configuration is written to your configuration volume. For example, `/srv/gitlab-runner/config`.
 - The container uses the configuration volume to load the runner.
 
-NOTE:
+{{< alert type="note" >}}
+
 If `gitlab-runner restart` runs in a Docker container, GitLab Runner starts a new process instead of restarting the existing process.
 To apply configuration changes, restart the Docker container instead.
+
+{{< /alert >}}
 
 ## Troubleshooting
 

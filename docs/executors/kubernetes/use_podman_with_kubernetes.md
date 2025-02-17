@@ -16,8 +16,11 @@ The configuration applies to container images set as a root and non-root user.
 
 ### Run Podman as a non-root user with the `--privileged` flag set to `true`
 
-WARNING:
+{{< alert type="warning" >}}
+
 When you run Podman with the `--privileged` flag set to `true`, the container engine launches the container with or without any additional security controls.
+
+{{< /alert >}}
 
 To run Podman as a non-root user with non-root container processes:
 

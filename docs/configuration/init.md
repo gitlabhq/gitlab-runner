@@ -5,18 +5,24 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: The system services of GitLab Runner
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 GitLab Runner uses the [Go `service` library](https://github.com/kardianos/service)
 to detect the underlying OS and eventually install the service file based on
 the init system.
 
-NOTE:
+{{< alert type="note" >}}
+
 The package `service` installs, un-installs, starts, stops, and runs a program as a
 service (daemon). Windows XP+, Linux (systemd, Upstart, and System V),
 and macOS (launchd) are supported.
+
+{{< /alert >}}
 
 When GitLab Runner [is installed](../install/_index.md), the service file is
 automatically created:

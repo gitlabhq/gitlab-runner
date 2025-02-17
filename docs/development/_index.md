@@ -59,9 +59,9 @@ go work use fleeting-plugin-googlecompute
 The GitLab Runner project uses [`asdf`](https://asdf-vm.com/) to manage dependencies.
 The simplest way to get your development environment setup is to use `asdf`.
 
-::Tabs
+{{< tabs >}}
 
-:::TabTitle asdf
+{{< tab title="asdf" >}}
 
 ```shell
 cd gitlab-runner
@@ -71,7 +71,9 @@ asdf plugin add yq
 asdf install
 ```
 
-:::TabTitle Debian/Ubuntu
+{{< /tab >}}
+
+{{< tab title="Debian/Ubuntu" >}}
 
 ```shell
 sudo apt-get install -y mercurial git-core wget make build-essential
@@ -83,7 +85,9 @@ wget https://github.com/mikefarah/yq/releases/download/latest/${YQ_BINARY}.tar.g
 sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 ```
 
-:::TabTitle CentOS
+{{< /tab >}}
+
+{{< tab title="CentOS" >}}
 
 ```shell
 sudo yum install mercurial wget make
@@ -96,7 +100,9 @@ wget https://github.com/mikefarah/yq/releases/download/latest/${YQ_BINARY}.tar.g
 sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 ```
 
-:::TabTitle macOS
+{{< /tab >}}
+
+{{< tab title="macOS" >}}
 
 Using binary package:
 
@@ -120,7 +126,9 @@ wget https://github.com/mikefarah/yq/releases/download/latest/${YQ_BINARY}.tar.g
 sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 ```
 
-:::TabTitle FreeBSD
+{{< /tab >}}
+
+{{< tab title="FreeBSD" >}}
 
 ```shell
 pkg install go-1.23.2 gmake git mercurial
@@ -130,7 +138,9 @@ wget https://github.com/mikefarah/yq/releases/download/latest/${YQ_BINARY}.tar.g
 sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 ```
 
-::EndTabs
+{{< /tab >}}
+
+{{< /tabs >}}
 
 ## 3. Install Rancher Desktop
 
@@ -341,8 +351,11 @@ go test -ldflags "$(make print_test_ldflags)" -run TestDockerCommandBuildCancel 
 Currently, GoLand doesn't support dynamic Go tool arguments, so you'll need to run `make print_ldflags` first
 and then paste it in the configuration.
 
-NOTE:
+{{< alert type="note" >}}
+
 To use the debugger, make sure to remove the last two flags (`-s -w`).
+
+{{< /alert >}}
 
 ### Local Docker images for runner and helper
 

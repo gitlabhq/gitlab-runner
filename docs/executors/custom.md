@@ -5,11 +5,18 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: The Custom executor
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2885) in GitLab Runner 12.1
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2885) in GitLab Runner 12.1
+
+{{< /history >}}
 
 GitLab Runner provides the Custom executor for environments that it
 doesn't support natively. For example, LXD or Libvirt.
@@ -111,7 +118,11 @@ The stages run in the following sequence:
 
 ### Services
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4358) in GitLab Runner 13.6
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4358) in GitLab Runner 13.6
+
+{{< /history >}}
 
 [Services](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#what-is-a-service) are exposed as a JSON array
 as `CUSTOM_ENV_CI_JOB_SERVICES`.
@@ -298,8 +309,11 @@ order:
 1. `upload_artifacts_on_success` OR `upload_artifacts_on_failure`
 1. `cleanup_file_variables`
 
-NOTE:
+{{< alert type="note" >}}
+
 In GitLab Runner 14.0 and later, `build_script` will be replaced with `step_script`. For more information, see [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426).
+
+{{< /alert >}}
 
 For each stage mentioned above, the `run_exec` executable will be
 executed with:
@@ -463,10 +477,13 @@ If the script that the user defines inside of `.gitlab-ci.yml` file
 exits with a non-zero code, `run_exec` should exit with
 `BUILD_FAILURE_EXIT_CODE` value.
 
-NOTE:
+{{< alert type="note" >}}
+
 We strongly suggest using `BUILD_FAILURE_EXIT_CODE` to exit
 instead of a hard coded value since it can change in any release, making
 your binary/script future proof.
+
+{{< /alert >}}
 
 ### Build failure exit code
 
@@ -484,9 +501,12 @@ fi
 CI/CD jobs require this method to leverage the
 [`allow_failure`](https://docs.gitlab.com/ee/ci/yaml/#allow_failure) syntax.
 
-NOTE:
+{{< alert type="note" >}}
+
 Store only the integer exit code in this file. Additional information might
 result in an `unknown Custom executor executable exit code` error.
+
+{{< /alert >}}
 
 ### System Failure
 
@@ -504,10 +524,13 @@ Below is a table of what stages are retried, and by how many times.
 | `restore_cache`      | Value of `RESTORE_CACHE_ATTEMPTS` variable. (Default 1)     | 0 seconds                           |
 | `download_artifacts` | Value of `ARTIFACT_DOWNLOAD_ATTEMPTS` variable. (Default 1) | 0 seconds                           |
 
-NOTE:
+{{< alert type="note" >}}
+
 We strongly suggest using `SYSTEM_FAILURE_EXIT_CODE` to exit
 instead of a hard coded value since it can change in any release, making
 your binary/script future proof.
+
+{{< /alert >}}
 
 ## Job response
 
