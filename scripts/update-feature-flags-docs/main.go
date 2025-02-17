@@ -74,10 +74,10 @@ func prepareTable() string {
 		},
 		"tick": func(input bool) string {
 			if input {
-				return "**{check-circle}** Yes"
+				return "{{< icon name=\"check-circle\" >}} Yes"
 			}
 
-			return "**{dotted-circle}** No"
+			return "{{< icon name=\"dotted-circle\" >}} No"
 		},
 	})
 
