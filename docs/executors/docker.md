@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Docker executor
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 GitLab Runner uses the Docker executor to run jobs on Docker images.
 
@@ -64,7 +67,8 @@ These configurations are **not** supported:
 | Windows                  | `docker`         | Windows                |
 | Windows                  | `docker-windows` | Linux                  |
 
-NOTE:
+{{< alert type="note" >}}
+
 GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/reference/api/engine/version/v1.25/) to talk to the Docker
 Engine. This means the
@@ -72,6 +76,8 @@ Engine. This means the
 of Docker on a Linux server is `1.13.0`.
 On Windows Server, [it needs to be more recent](#supported-docker-versions)
 to identify the Windows Server version.
+
+{{< /alert >}}
 
 ## Use the Docker executor
 
@@ -434,7 +440,11 @@ For more information about using different services see:
 
 ### How GitLab Runner performs the services health check
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4079) multiple port checks in GitLab 16.0.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4079) multiple port checks in GitLab 16.0.
+
+{{< /history >}}
 
 After the service starts, GitLab Runner waits for the service to
 respond. The Docker executor tries to open a TCP connection to the
@@ -482,7 +492,11 @@ By default, the Docker executor stores builds and caches in the following direct
 
 ## Clear the Docker cache
 
-> - Introduced in GitLab Runner 13.9, [all created runner resources cleaned up](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2310).
+{{< history >}}
+
+- Introduced in GitLab Runner 13.9, [all created runner resources cleaned up](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2310).
+
+{{< /history >}}
 
 Use [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache) to remove unused containers and volumes created by the runner.
 
@@ -582,13 +596,16 @@ build:
   - docker push my-image
 ```
 
-WARNING:
+{{< alert type="warning" >}}
+
 Containers that run in privileged mode have security risks.
 When your containers run in privileged mode, you disable the
 container security mechanisms and expose your host to privilege escalation.
 Running containers in privileged mode can lead to container breakout. For more information,
 see the Docker documentation about
 [runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities).
+
+{{< /alert >}}
 
 You might need to
 [configure Docker in Docker with TLS, or disable TLS](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-the-docker-executor-with-docker-in-docker)
@@ -723,7 +740,11 @@ the build environment of the runner.
 
 ## Use Podman to run Docker commands
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27119) in GitLab 15.3.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27119) in GitLab 15.3.
+
+{{< /history >}}
 
 If you have GitLab Runner installed on Linux, your jobs can use Podman to replace Docker as
 the container runtime in the Docker executor.
@@ -954,7 +975,11 @@ Set the `never` policy in the `config.toml`:
 
 ### Set multiple pull policies
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26558) in GitLab Runner 13.8.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26558) in GitLab Runner 13.8.
+
+{{< /history >}}
 
 You can list multiple pull policies to execute if a pull fails. The runner processes pull policies
 in the order listed until a pull attempt is successful or the list is exhausted. For example, if a
@@ -977,7 +1002,11 @@ To set multiple pull policies, add them as a list in the `config.toml`:
 
 ### Allow Docker pull policies
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
+
+{{< /history >}}
 
 In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how a CI/CD job
 fetches images.
@@ -1028,7 +1057,11 @@ but only takes effect if specifically the Docker pull fails initially.
 
 ## Use Windows containers
 
-> - [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/535) in GitLab Runner 11.11.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/535) in GitLab Runner 11.11.
+
+{{< /history >}}
 
 To use Windows containers with the Docker executor, note the following
 information about limitations, supported Windows versions, and
@@ -1036,7 +1069,11 @@ configuring a Windows Docker executor.
 
 ### Nanoserver support
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2492) in GitLab Runner 13.6.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2492) in GitLab Runner 13.6.
+
+{{< /history >}}
 
 With the support for PowerShell Core introduced in the Windows helper image, it is now possible to leverage
 the `nanoserver` variants for the helper image.
@@ -1115,11 +1152,14 @@ unsupported Windows Version: Windows Server Datacenter
 
 ### Configure a Windows Docker executor
 
-NOTE:
+{{< alert type="note" >}}
+
 When a runner is registered with `c:\\cache`
 as a source directory when passing the `--docker-volumes` or
 `DOCKER_VOLUMES` environment variable, there is a
 [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312).
+
+{{< /alert >}}
 
 Below is an example of the configuration for a Docker
 executor running Windows.

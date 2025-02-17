@@ -5,20 +5,29 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: SSH
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
 
-NOTE:
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
+
+{{< alert type="note" >}}
+
 The SSH executor supports only scripts generated in Bash and the caching feature
 is not supported.
+
+{{< /alert >}}
 
 This is a simple executor that allows you to execute builds on a remote machine
 by executing commands over SSH.
 
-NOTE:
+{{< alert type="note" >}}
+
 Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
 on any remote systems where GitLab Runner uses the SSH executor.
+
+{{< /alert >}}
 
 ## Use the SSH executor
 

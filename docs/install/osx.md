@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Install GitLab Runner on macOS
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 This page contains instructions about installing GitLab Runner on macOS (Apple Silicon and Intel x86-64).
 
@@ -66,9 +69,12 @@ For more information, see the [glossary](../_index.md#glossary).
 
 ## Known issues
 
-NOTE:
+{{< alert type="note" >}}
+
 The service needs to be installed from a Terminal window logged in
 as your current user. Only then can you manage the service.
+
+{{< /alert >}}
 
 To sign in as your current user, run the command `su - <username>` in the terminal. You can obtain your username by running the command `ls /users`.
 

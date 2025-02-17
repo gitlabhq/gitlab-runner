@@ -5,18 +5,24 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: The Shell executor
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 The Shell executor is a simple executor that you use to execute builds
 locally on the machine where GitLab Runner is installed. It supports all systems on
 which the Runner can be installed. That means that it's possible to use scripts
 generated for Bash, PowerShell Core, Windows PowerShell, and Windows Batch (deprecated).
 
-NOTE:
+{{< alert type="note" >}}
+
 Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
 on the machine where GitLab Runner uses the shell executor.
+
+{{< /alert >}}
 
 ## Run scripts as a privileged user
 

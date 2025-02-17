@@ -5,13 +5,19 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: GitLab Runner bleeding edge releases
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
 
-WARNING:
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
+
+{{< alert type="warning" >}}
+
 These are the latest, probably untested releases of GitLab Runner built straight
 from `main` branch. Use at your own risk.
+
+{{< /alert >}}
 
 ## Download the standalone binaries
 

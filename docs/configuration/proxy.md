@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Running GitLab Runner behind a proxy
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 This guide aims specifically to making GitLab Runner with Docker executor work behind a proxy.
 
@@ -17,11 +20,14 @@ Before continuing, ensure that you've already
 
 ## Configuring CNTLM
 
-NOTE:
+{{< alert type="note" >}}
+
 If you already use a proxy without authentication, this section is optional and
 you can skip straight to [configuring Docker](#configuring-docker-for-downloading-images).
 Configuring CNTLM is only needed if you are behind a proxy with authentication,
 but it's recommended to use in any case.
+
+{{< /alert >}}
 
 [CNTLM](https://github.com/Evengard/cntlm) is a Linux proxy which can be used
 as a local proxy and has 2 major advantages compared to adding the proxy details
@@ -70,8 +76,11 @@ world can't.
 
 ## Configuring Docker for downloading images
 
-NOTE:
+{{< alert type="note" >}}
+
 The following apply to OSes with systemd support.
+
+{{< /alert >}}
 
 Follow [Docker's documentation](https://docs.docker.com/engine/daemon/proxy/)
 how to use a proxy.
@@ -155,12 +164,15 @@ environment = ["https_proxy=http://docker0_interface_ip:3128", "http_proxy=http:
 
 Where `docker0_interface_ip` is the IP address of the `docker0` interface.
 
-NOTE:
+{{< alert type="note" >}}
+
 In our examples, we are setting both lower case and upper case variables
 because certain programs expect `HTTP_PROXY` and others `http_proxy`.
 Unfortunately, there is no
 [standard](https://unix.stackexchange.com/questions/212894/whats-the-right-format-for-the-http-proxy-environment-variable-caps-or-no-ca#212972)
 on these kinds of environment variables.
+
+{{< /alert >}}
 
 ## Proxy settings when using dind service
 
@@ -199,10 +211,13 @@ Or alternatively, in the configuration of the `gitlab-runner` (`/etc/gitlab-runn
   pre_build_script = "mkdir -p $HOME/.docker/ && echo \"{ \\\"proxies\\\": { \\\"default\\\": { \\\"httpProxy\\\": \\\"$HTTP_PROXY\\\", \\\"httpsProxy\\\": \\\"$HTTPS_PROXY\\\", \\\"noProxy\\\": \\\"$NO_PROXY\\\" } } }\" > $HOME/.docker/config.json"
 ```
 
-NOTE:
+{{< alert type="note" >}}
+
 An additional level of escaping `"` is needed here because this is the creation of a
 JSON file with a shell specified as a single string inside a TOML file.
 Because this is not YAML, do not escape the `:`.
+
+{{< /alert >}}
 
 Note that if the `NO_PROXY` list needs to be extended, wildcards `*` only work for suffixes,
 but not for prefixes or CIDR notation.
@@ -226,6 +241,9 @@ As a result, GitLab Runner handles rate limited scenarios with the following log
    - If the header is not present, no additional actions are taken, the response error is returned.
 1. The process above is repeated 5 times, then a `gave up due to rate limit` error is returned.
 
-NOTE:
+{{< alert type="note" >}}
+
 The header `RateLimit-ResetTime` is case insensitive since all header keys are run
 through the [`http.CanonicalHeaderKey`](https://pkg.go.dev/net/http#CanonicalHeaderKey) function.
+
+{{< /alert >}}

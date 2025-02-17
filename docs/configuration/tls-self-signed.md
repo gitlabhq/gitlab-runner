@@ -5,11 +5,18 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Self-signed certificates or custom Certification Authorities
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
 
-> - Introduced in GitLab Runner 0.7.0
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
+
+{{< history >}}
+
+- Introduced in GitLab Runner 0.7.0
+
+{{< /history >}}
 
 GitLab Runner provides two options to configure certificates to be used to verify TLS peers:
 

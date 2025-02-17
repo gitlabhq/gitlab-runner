@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Configuring GitLab Runner on OpenShift
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 This document explains how to configure GitLab Runner on OpenShift.
 
@@ -333,8 +336,11 @@ Read more about security context constraints in [Red Hat Container Platform docu
 
 #### Run as `anyuid` security context constraints
 
-WARNING:
+{{< alert type="warning" >}}
+
 Running jobs as root or writing to root filesystems can expose your system to security risks.
+
+{{< /alert >}}
 
 To run a CI/CD job as the root user or write to root filesystems,
 set the `anyuid` security context constraints on the `gitlab-runner-app-sa` service account.
@@ -428,9 +434,12 @@ For more information, see the [Red Hat documentation](https://access.redhat.com/
 
 ### Using FIPS Compliant GitLab Runner
 
-NOTE:
+{{< alert type="note" >}}
+
 For Operator, you can change only the helper image. You can't change the GitLab Runner image yet.
 [Issue 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) tracks this feature.
+
+{{< /alert >}}
 
 To use a [FIPS compliant GitLab Runner helper](../install/_index.md#fips-compliant-gitlab-runner), change the helper image as follows:
 

@@ -5,14 +5,20 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Troubleshooting GitLab Runner
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 This section can assist when troubleshooting GitLab Runner.
 
-NOTE:
+{{< alert type="note" >}}
+
 A [Critical Security release](https://about.gitlab.com/releases/2022/02/25/critical-security-release-gitlab-14-8-2-released/) will reset runner registration tokens for your group and projects. If you use an automated process (scripts that encode the value of the registration token) to register runners, this update will break that process. However, it should have no effect on previously registered runners.
+
+{{< /alert >}}
 
 ## General troubleshooting tips
 
@@ -73,19 +79,25 @@ the `coordinator` (GitLab installation through GitLab API).
 
 ## Enable debug logging mode
 
-WARNING:
+{{< alert type="warning" >}}
+
 Debug logging can be a serious security risk. The output contains the content of
 all variables and other secrets available to the job. You should disable any log aggregation
 that might transmit secrets to third parties. The use of masked variables allows secrets
 to be protected in job log output, but not in container logs.
 
+{{< /alert >}}
+
 ### In the command line
 
 From a terminal, logged in as root, run the following.
 
-WARNING:
+{{< alert type="warning" >}}
+
 This should not be performed on runners with the [Shell executor](../executors/shell.md), because it redefines the `systemd` service
 and runs all jobs as root. This poses security risks and changes to file ownership that makes it difficult to revert to a non privileged account.
+
+{{< /alert >}}
 
 ```shell
 gitlab-runner stop
@@ -165,8 +177,11 @@ To resolve this issue, remove the certificates and restart the runner:
   a 64 character limit for `HOST_NAME_MAX`. The hostname is reported by `docker-machine ls`. Check the `MachineName` in the runner configuration
   and reduce the hostname length if required.
 
-NOTE:
+{{< alert type="note" >}}
+
 This error might have occurred before Docker was installed in the machine.
+
+{{< /alert >}}
 
 ## `dialing environment connection: ssh: rejected: connect failed (open failed)`
 
@@ -218,9 +233,12 @@ caused an error or blocked artifact uploads. To troubleshoot artifact upload iss
 [enable debug logging](https://docs.gitlab.com/ee/ci/variables/index.html#enable-debug-logging)
 for upload attempts to see upload response's headers and body.
 
-NOTE:
+{{< alert type="note" >}}
+
 The response body length for artifact upload debug logging is capped at 512 bytes.
 Enable logging only for debugging because sensitive data can be exposed in logs.
+
+{{< /alert >}}
 
 If the debug logs show that uploads reach the GitLab instance but still fail
 (for example, produces a non-successful response status code), investigate the

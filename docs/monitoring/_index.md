@@ -1,20 +1,27 @@
 ---
 stage: Verify
 group: Runner
-description: Prometheus metrics.
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: Prometheus metrics.
 title: Monitor GitLab Runner usage
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 GitLab Runner can be monitored using [Prometheus](https://prometheus.io).
 
 ## Embedded Prometheus metrics
 
-> - The embedded HTTP Statistics Server with Prometheus metrics was introduced in GitLab Runner 1.8.0.
+{{< history >}}
+
+- The embedded HTTP Statistics Server with Prometheus metrics was introduced in GitLab Runner 1.8.0.
+
+{{< /history >}}
 
 GitLab Runner is instrumented with native Prometheus
 metrics, which can be exposed via an embedded HTTP server on the `/metrics`
@@ -73,7 +80,11 @@ For a list of available metrics that do not include Go-specific processes, see [
 
 ## `pprof` HTTP endpoints
 
-> - `pprof` integration was introduced in GitLab Runner 1.9.0.
+{{< history >}}
+
+- `pprof` integration was introduced in GitLab Runner 1.9.0.
+
+{{< /history >}}
 
 While having metrics about the internal state of the GitLab Runner process is useful,
 we've found that in some cases it would be good to check what is happening
@@ -87,9 +98,12 @@ You can read more about using `pprof` in its [documentation](https://pkg.go.dev/
 
 ## Configuration of the metrics HTTP server
 
-NOTE:
+{{< alert type="note" >}}
+
 The metrics server exports data about the internal state of the
 GitLab Runner process and should not be publicly available!
+
+{{< /alert >}}
 
 Configure the metrics HTTP server by using one of the following methods:
 

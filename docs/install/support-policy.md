@@ -53,11 +53,14 @@ This means that we support:
 This support policy applies to the [Windows binaries](windows.md#installation) that we
 distribute and the [Docker executor](../executors/docker.md#supported-windows-versions).
 
-NOTE:
+{{< alert type="note" >}}
+
 The Docker executor for Windows containers has strict version
 requirements, because containers have to match the version of the host
 OS. See the [list of supported Windows containers](../executors/docker.md#supported-windows-versions)
 for more information.
+
+{{< /alert >}}
 
 As a single source of truth, we use <https://learn.microsoft.com/en-us/lifecycle/products/>,
 which specifies the release, mainstream, and extended support dates.

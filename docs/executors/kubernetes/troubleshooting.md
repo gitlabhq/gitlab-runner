@@ -359,11 +359,14 @@ runners:
    <...>
 ```
 
-NOTE:
+{{< alert type="note" >}}
+
 Instead of `emptyDir`, you can use any other
 [supported volume types](_index.md#configure-volume-types).
 Because all files that are not explicitly handled and stored as build
 artefacts are usually ephemeral, `emptyDir` works for most cases.
+
+{{< /alert >}}
 
 ## AWS EKS: Error cleaning up pod: pods "runner-**" not found or status is "Failed"
 

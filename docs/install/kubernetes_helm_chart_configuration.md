@@ -5,9 +5,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Configure the GitLab Runner Helm chart
 ---
 
-DETAILS:
-**Tier:** Free, Premium, Ultimate
-**Offering:** GitLab.com, GitLab Self-Managed, GitLab Dedicated
+{{< details >}}
+
+- Tier: Free, Premium, Ultimate
+- Offering: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+
+{{< /details >}}
 
 This page describes optional configuration you can add to your GitLab Runner Helm chart.
 
@@ -286,9 +289,12 @@ To use an image from a private registry, configure `imagePullSecrets`.
      imagePullSecrets: [your-image-pull-secret]
    ```
 
-NOTE:
+{{< alert type="note" >}}
+
 The value of `imagePullSecrets` is not prefixed by a `name` tag, as is the convention in Kubernetes resources. This value requires
 an array of one or more secret names, even if you use only one registry credential.
+
+{{< /alert >}}
 
 For more details on how to create `imagePullSecrets`, see
 [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
