@@ -45,7 +45,7 @@ GitLab Runner provides two options to configure certificates to be used to verif
 ## Supported options for self-signed certificates targeting the GitLab server
 
 This section refers to the situation where only the GitLab server requires a custom certificate.
-If other hosts (e.g. object storage service without [proxy download enabled](https://docs.gitlab.com/ee/administration/object_storage.html#proxy-download))
+If other hosts (e.g. object storage service without [proxy download enabled](https://docs.gitlab.com/administration/object_storage/#proxy-download))
 also require a custom certificate authority (CA), please see
 the [next section](#trusting-tls-certificates-for-docker-and-kubernetes-executors).
 
@@ -120,7 +120,7 @@ This approach is secure, but makes the Runner a single point of trust.
 
 There are two contexts that need to be taken into account when we consider registering a certificate on a container:
 
-- The [**user image**](https://docs.gitlab.com/ee/ci/yaml/#image), which is used to run the user script.
+- The [**user image**](https://docs.gitlab.com/ci/yaml/#image), which is used to run the user script.
   For scenarios that involve trusting the certificate for user scripts, the user must take ownership regarding how to install a certificate, since this is
   highly dependent on the image itself, and the Runner has no way of knowing how to install a certificate in each
   possible scenario.
@@ -332,14 +332,14 @@ you might also have to disable the `FF_RESOLVE_FULL_TLS_CHAIN` feature flag.
 The [`pre_build_script`](advanced-configuration.md#the-runners-section) commands are executed
 before every job a runner executes. If you add commands that are specific to certain distributions,
 like `apk` or `apt-get` when you install a certificate for user scripts, your CI jobs might fail
-if they use [images](https://docs.gitlab.com/ee/ci/yaml/#image) based on different distributions.
+if they use [images](https://docs.gitlab.com/ci/yaml/#image) based on different distributions.
 
 For example, if some of your CI jobs run Ubuntu-based images and some run Alpine-based images and you add
 Ubuntu commands, the `apt-get: not found` error occurs in jobs with Alpine-based
 images. To resolve this, either:
 
 - Write your `pre_build_script` so that it is distribution-agnostic.
-- Use [tags](https://docs.gitlab.com/ee/ci/yaml/#tags) to ensure runners only pick up jobs with compatible images.
+- Use [tags](https://docs.gitlab.com/ci/yaml/#tags) to ensure runners only pick up jobs with compatible images.
 
 ### Error: `self-signed certificate in certificate chain`
 

@@ -62,7 +62,7 @@ To view a code coverage report for a merge request:
    where the report is stored.
 
 The coverage data should be also
-[visible in the merge request UI](https://docs.gitlab.com/ee/ci/testing/code_coverage/).
+[visible in the merge request UI](https://docs.gitlab.com/ci/testing/code_coverage/).
 
 ## Reviewing the merge request title
 

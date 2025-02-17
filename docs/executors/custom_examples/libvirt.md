@@ -31,7 +31,7 @@ comes with when installing libvirt so make sure it's running.
 This driver requires bridge networking since each VM needs to have
 it's own dedicated IP address so GitLab Runner can SSH inside of it to
 run commands. An SSH key can be generated
-[using the following commands](https://docs.gitlab.com/ee/user/ssh.html#generate-an-ssh-key-pair).
+[using the following commands](https://docs.gitlab.com/user/ssh/#generate-an-ssh-key-pair).
 
 A base disk VM image is created so that dependencies are not downloaded
 every build. In the following example,

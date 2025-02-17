@@ -64,7 +64,7 @@ The system requirements for GitLab Runner depend on the:
 - Number of developers expected to work in parallel
 
 For more information about the machine types available for GitLab.com,
-see [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/).
+see [GitLab-hosted runners](https://docs.gitlab.com/ci/runners/).
 
 ## FIPS-compliant GitLab Runner
 

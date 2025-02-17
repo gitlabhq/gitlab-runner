@@ -111,7 +111,7 @@ Now that the Runner is installed, it's time to register it.
 Before configuring the GitLab Runner, you need to first register it, so that
 it connects with your GitLab instance:
 
-1. [Obtain a runner token](https://docs.gitlab.com/ee/ci/runners/)
+1. [Obtain a runner token](https://docs.gitlab.com/ci/runners/)
 1. [Register the runner](../../register/_index.md)
 1. When asked the executor type, enter `docker+machine`
 
@@ -179,9 +179,9 @@ under `[[runners]]` are also available.
 ### The `runners.docker` section
 
 In the `[runners.docker]` section you can define the default Docker image to
-be used by the child runners if it's not defined in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/).
+be used by the child runners if it's not defined in [`.gitlab-ci.yml`](https://docs.gitlab.com/ci/yaml/).
 By using `privileged = true`, all runners will be able to run
-[Docker in Docker](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor)
+[Docker in Docker](https://docs.gitlab.com/ci/docker/using_docker_build/#use-docker-in-docker)
 which is useful if you plan to build your own Docker images via GitLab CI/CD.
 
 Next, we use `disable_cache = true` to disable the Docker executor's inner
@@ -227,7 +227,7 @@ Here's some more information to further explore the cache mechanism:
 - [Reference for `runners.cache`](../advanced-configuration.md#the-runnerscache-section)
 - [Reference for `runners.cache.s3`](../advanced-configuration.md#the-runnerscaches3-section)
 - [Deploying and using a cache server for GitLab Runner](../autoscale.md#distributed-runners-caching)
-- [How cache works](https://docs.gitlab.com/ee/ci/yaml/#cache)
+- [How cache works](https://docs.gitlab.com/ci/yaml/#cache)
 
 ### The `runners.machine` section
 

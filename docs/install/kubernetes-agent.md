@@ -12,10 +12,10 @@ title: Use the agent to install GitLab Runner
 
 {{< /details >}}
 
-After you install and configure the [GitLab agent for Kubernetes](https://docs.gitlab.com/ee/user/clusters/agent/)
+After you install and configure the [GitLab agent for Kubernetes](https://docs.gitlab.com/user/clusters/agent/)
 you can use the agent to install GitLab Runner in your cluster.
 
-With this [GitOps workflow](https://docs.gitlab.com/ee/user/clusters/agent/gitops.html),
+With this [GitOps workflow](https://docs.gitlab.com/user/clusters/agent/gitops/),
 your repository contains the GitLab Runner configuration file and
 your cluster is automatically updated.
 
@@ -40,7 +40,7 @@ or [SOPS](https://fluxcd.io/flux/guides/mozilla-sops/).
 
    # The registration token for adding new runners to the GitLab server
    # Retrieve this value from your GitLab instance
-   # For more info: https://docs.gitlab.com/ee/ci/runners/index.html
+   # For more info: https://docs.gitlab.com/ci/runners/
    #
    runnerRegistrationToken: "yrnZW46BrtBFqM7xDzE7dddd"
 
@@ -82,7 +82,7 @@ of `helm template` doesn't include the `ServiceAccount` namespace in the generat
 
 1. Push your `runner-manifest.yaml` to the repository where you keep your Kubernetes manifests.
 1. Configure your agent to sync the runner manifest using
-   [GitOps](https://docs.gitlab.com/ee/user/clusters/agent/gitops.html). For example:
+   [GitOps](https://docs.gitlab.com/user/clusters/agent/gitops/). For example:
 
    ```yaml
    gitops:
@@ -91,8 +91,6 @@ of `helm template` doesn't include the `ServiceAccount` namespace in the generat
        paths:
        - glob: 'path/to/runner-manifest.yaml'
    ```
-
-   For details, see the [GitOps configuration reference](https://docs.gitlab.com/ee/user/clusters/agent/gitops.html#gitops-configuration-reference).
 
 Now each time the agent checks the repository for manifest updates, your
 cluster is updated to include GitLab Runner.

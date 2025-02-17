@@ -36,7 +36,7 @@ For GitLab Runner to run properly, you must set these values in your configurati
   - To learn about the minimal permissions the `serviceAccount` requires, see
     [Configure runner API permissions](../executors/kubernetes/_index.md#configure-runner-api-permissions).
 - `runnerToken`: The authentication token obtained when you
-  [create a runner in the GitLab UI](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-runner-authentication-token).
+  [create a runner in the GitLab UI](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-runner-authentication-token).
   - Set this token directly or store it in a secret.
 
 More [optional configuration settings](kubernetes_helm_chart_configuration.md) are available.

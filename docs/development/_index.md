@@ -197,7 +197,7 @@ If you want to build the Docker images, run `make runner-and-helper-docker-host`
 
 ### New auto-scaling (Taskscaler) in GitLab Runner (since 15.6.0)
 
-The [Next Runner Auto-scaling Architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_scaling/index.html#taskscaler-provider) adds a new mechanism for autoscaling which will work with all environments.
+The [Next Runner Auto-scaling Architecture](https://handbook.gitlab.com/handbook/engineering/architecture/design-documents/runner_scaling/#taskscaler-provider) adds a new mechanism for autoscaling which will work with all environments.
 It will replace all current autoscaling mechanisms (e.g. Docker Machine).
 This new mechanism is in a pre-alpha state and actively being developed.
 There are two new libraries being used in GitLab Runner:

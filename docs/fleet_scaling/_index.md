@@ -182,8 +182,8 @@ To delete runners and runner managers registered with a runner registration toke
 command.
 
 To delete runners and runner managers created with a runner authentication token, use the
-[UI](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#delete-instance-runners) or
-[API](https://docs.gitlab.com/ee/api/runners.html#delete-a-runner).
+[UI](https://docs.gitlab.com/ci/runners/runners_scope/#delete-instance-runners) or
+[API](https://docs.gitlab.com/api/runners/#delete-a-runner).
 Runners created with a runner authentication token are reusable configurations that can be reused in multiple machines.
 If you use the [`gitlab-runner unregister`](../commands/_index.md#gitlab-runner-unregister) command, only the
 runner manager is deleted, not the runner.

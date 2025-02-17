@@ -22,7 +22,7 @@ You can use the Docker executor to:
 The Docker executor uses [Docker Engine](https://www.docker.com/products/container-runtime/)
 to run each job in a separate and isolated container. To connect to Docker Engine, the executor uses:
 
-- The image and services you define in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html).
+- The image and services you define in [`.gitlab-ci.yml`](https://docs.gitlab.com/ci/yaml/).
 - The configurations you define in [`config.toml`](../commands/_index.md#configuration-file).
 
 Prerequisites:
@@ -37,9 +37,9 @@ the special Docker image, see the [GitLab Runner repository](https://gitlab.com/
 
 The Docker executor divides the job into several steps:
 
-1. **Prepare**: Creates and starts the [services](https://docs.gitlab.com/ee/ci/yaml/#services).
-1. **Pre-job**: Clones, restores [cache](https://docs.gitlab.com/ee/ci/yaml/#cache),
-   and downloads [artifacts](https://docs.gitlab.com/ee/ci/yaml/#artifacts) from previous
+1. **Prepare**: Creates and starts the [services](https://docs.gitlab.com/ci/yaml/#services).
+1. **Pre-job**: Clones, restores [cache](https://docs.gitlab.com/ci/yaml/#cache),
+   and downloads [artifacts](https://docs.gitlab.com/ci/yaml/#artifacts) from previous
    stages. Runs on a special Docker image.
 1. **Job**: Runs your build in the Docker image you configure for the runner.
 1. **Post-job**: Create cache, upload artifacts to GitLab. Runs on
@@ -125,7 +125,7 @@ Prerequisites:
     - PowerShell (`powershell`)
     - PowerShell Core (`pwsh`). [Introduced in 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/13139).
 
-To configure the Docker executor, you define the Docker images and services in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) and [`config.toml`](../commands/_index.md#configuration-file).
+To configure the Docker executor, you define the Docker images and services in [`.gitlab-ci.yml`](https://docs.gitlab.com/ci/yaml/) and [`config.toml`](../commands/_index.md#configuration-file).
 
 Use the following keywords:
 
@@ -134,7 +134,7 @@ Use the following keywords:
   Docker Hub. For more information, see the [Docker documentation](https://docs.docker.com/get-started/introduction/).
   - To define the image version, use a colon (`:`) to add a tag. If you don't specify a tag,
    Docker uses `latest` as the version.
-- `services`: The additional image that creates another container and links to the `image`. For more information about types of services, see [Services](https://docs.gitlab.com/ee/ci/services/).
+- `services`: The additional image that creates another container and links to the `image`. For more information about types of services, see [Services](https://docs.gitlab.com/ci/services/).
 
 ### Define images and services in `.gitlab-ci.yml`
 
@@ -206,7 +206,7 @@ This example uses the [array of tables syntax](https://toml.io/en/v0.4.0#array-o
 
 Prerequisites:
 
-- To access images from a private registry, you must [authenticate GitLab Runner](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#access-an-image-from-a-private-container-registry).
+- To access images from a private registry, you must [authenticate GitLab Runner](https://docs.gitlab.com/ci/docker/using_docker_images/#access-an-image-from-a-private-container-registry).
 
 To define an image from a private registry, provide the registry name and the image in `.gitlab-ci.yml`.
 
@@ -435,8 +435,8 @@ GitLab Runner mounts a `/builds` directory to all shared services.
 
 For more information about using different services see:
 
-- [Using PostgreSQL](https://docs.gitlab.com/ee/ci/services/postgres.html)
-- [Using MySQL](https://docs.gitlab.com/ee/ci/services/mysql.html)
+- [Using PostgreSQL](https://docs.gitlab.com/ci/services/postgres/)
+- [Using MySQL](https://docs.gitlab.com/ci/services/mysql/)
 
 ### How GitLab Runner performs the services health check
 
@@ -608,7 +608,7 @@ see the Docker documentation about
 {{< /alert >}}
 
 You might need to
-[configure Docker in Docker with TLS, or disable TLS](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-the-docker-executor-with-docker-in-docker)
+[configure Docker in Docker with TLS, or disable TLS](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker)
 to avoid an error similar to the following:
 
 ```plaintext
@@ -671,7 +671,7 @@ The Docker Executor runs the job's container with an equivalent of the following
 docker run <image> sh -c "echo 'It works!'" # or bash
 ```
 
-If your Docker image doesn't support this mechanism, you can [override the image's ENTRYPOINT](https://docs.gitlab.com/ee/ci/yaml/#imageentrypoint) in the project configuration as follows:
+If your Docker image doesn't support this mechanism, you can [override the image's ENTRYPOINT](https://docs.gitlab.com/ci/yaml/#imageentrypoint) in the project configuration as follows:
 
 ```yaml
 # Equivalent of
@@ -681,7 +681,7 @@ image:
   entrypoint: [""]
 ```
 
-For more information, see [Override the Entrypoint of an image](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#override-the-entrypoint-of-an-image) and [How `CMD` and `ENTRYPOINT` interact in Docker](https://docs.docker.com/reference/dockerfile/#understand-how-cmd-and-entrypoint-interact).
+For more information, see [Override the Entrypoint of an image](https://docs.gitlab.com/ci/docker/using_docker_images/#override-the-entrypoint-of-an-image) and [How `CMD` and `ENTRYPOINT` interact in Docker](https://docs.docker.com/reference/dockerfile/#understand-how-cmd-and-entrypoint-interact).
 
 ### Job script as ENTRYPOINT
 
@@ -1051,7 +1051,7 @@ For example, this configuration retries the pull one time:
   pull_policy = ["always", "always"]
 ```
 
-This setting is similar to [the `retry` directive](https://docs.gitlab.com/ee/ci/yaml/#retry)
+This setting is similar to [the `retry` directive](https://docs.gitlab.com/ci/yaml/#retry)
 in the `.gitlab-ci.yml` files of individual projects,
 but only takes effect if specifically the Docker pull fails initially.
 
@@ -1182,7 +1182,7 @@ section.
 ### Services
 
 In [GitLab Runner 12.9 and later](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042),
-you can use [services](https://docs.gitlab.com/ee/ci/services/) by
+you can use [services](https://docs.gitlab.com/ci/services/) by
 enabling [a network for each job](#create-a-network-for-each-job).
 
 ## Native Step Runner Integration
@@ -1190,7 +1190,7 @@ enabling [a network for each job](#create-a-network-for-each-job).
 - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5069) in GitLab 17.6.0 behind the
 feature-flag `FF_USE_NATIVE_STEPS`, which is disabled by default.
 
-The Docker executor supports running the [CI/CD steps](https://docs.gitlab.com/ee/ci/steps/) natively by using the
+The Docker executor supports running the [CI/CD steps](https://docs.gitlab.com/ci/steps/) natively by using the
 `gRPC` API provided by [`step-runner`](https://gitlab.com/gitlab-org/step-runner).
 
 - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5322) in GitLab 17.9.0. GitLab Runner

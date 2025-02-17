@@ -6,7 +6,7 @@ title: GitLab Runner feature flags
 ---
 
 WARNING:
-Data corruption, stability degradation, performance degradation, and security issues may occur if you enable a feature that's disabled by default. Before you enable feature flags, you should be aware of the risks involved. For more information, see [Risks when enabling features still in development](https://docs.gitlab.com/ee/administration/feature_flags.html#risks-when-enabling-features-still-in-development).
+Data corruption, stability degradation, performance degradation, and security issues may occur if you enable a feature that's disabled by default. Before you enable feature flags, you should be aware of the risks involved. For more information, see [Risks when enabling features still in development](https://docs.gitlab.com/administration/feature_flags/#risks-when-enabling-features-still-in-development).
 
 Feature flags are toggles that allow you to enable or disable specific features. These flags are typically used:
 
@@ -90,7 +90,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 
 ## Enable feature flag in pipeline configuration
 
-You can use [CI variables](https://docs.gitlab.com/ee/ci/variables/) to
+You can use [CI variables](https://docs.gitlab.com/ci/variables/) to
 enable feature flags:
 
 - For all jobs in the pipeline (globally):
