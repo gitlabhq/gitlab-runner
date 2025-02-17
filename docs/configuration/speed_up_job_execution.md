@@ -25,7 +25,7 @@ You can speed up the time it takes to download Docker images by using:
 ### GitLab Dependency Proxy
 
 To more quickly access container images, you can
-[use the Dependency Proxy](https://docs.gitlab.com/ee/user/packages/dependency_proxy/)
+[use the Dependency Proxy](https://docs.gitlab.com/user/packages/dependency_proxy/)
 to proxy container images.
 
 ### Docker Hub Registry mirror
@@ -88,7 +88,7 @@ to use the new registry server.
 ## Use a distributed cache
 
 You can speed up the time it takes to download language dependencies by
-using a distributed [cache](https://docs.gitlab.com/ee/ci/yaml/#cache).
+using a distributed [cache](https://docs.gitlab.com/ci/yaml/#cache).
 
 To specify a distributed cache, you set up the cache server and then
 [configure runner to use that cache server](../configuration/advanced-configuration.md#the-runnerscache-section).
@@ -103,7 +103,7 @@ The following cache servers are supported:
 - [Google Cloud Storage](#use-google-cloud-storage)
 - [Azure Blob storage](#use-azure-blob-storage)
 
-Learn more about GitLab CI/CD [cache dependencies and best practices](https://docs.gitlab.com/ee/ci/caching/index.html).
+Learn more about GitLab CI/CD [cache dependencies and best practices](https://docs.gitlab.com/ci/caching/).
 
 ### Use AWS S3
 

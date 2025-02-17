@@ -69,9 +69,9 @@ Follow the instructions at [OperatorHub.io](https://operatorhub.io/operator/gitl
 #### Install GitLab Runner
 
 1. Obtain a runner authentication token. You can either:
-   - Create a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-runner-authentication-token),
-     [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
-     [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
+   - Create an [instance](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-runner-authentication-token),
+     [group](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-group-runner-with-a-runner-authentication-token), or
+     [project](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-runner-authentication-token) runner.
    - Locate the runner authentication token in the `config.toml` file. Runner authentication tokens have the prefix, `glrt-`.
 1. Create the secret file with your GitLab Runner token:
 

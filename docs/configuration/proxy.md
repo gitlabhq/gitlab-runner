@@ -176,7 +176,7 @@ on these kinds of environment variables.
 
 ## Proxy settings when using dind service
 
-When using the [Docker-in-Docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor) (dind),
+When using the [Docker-in-Docker executor](https://docs.gitlab.com/ci/docker/using_docker_build/#use-docker-in-docker) (dind),
 it may be necessary to specify `docker:2375,docker:2376` in the `NO_PROXY` environment variable. The ports are required, otherwise `docker push` is blocked.
 
 Communication between `dockerd` from dind and the local `docker` client (as described here: <https://hub.docker.com/_/docker/>)

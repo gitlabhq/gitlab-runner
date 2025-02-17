@@ -68,7 +68,7 @@ Docker and GitLab Runner supports, like Ubuntu, Debian, CentOS, or RHEL.
 {{< alert type="note" >}}
 
 You can host the runner manager in a container.
-For [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/), the runner manager is hosted on a virtual machine instance.
+For [GitLab-hosted runners](https://docs.gitlab.com/ci/runners/), the runner manager is hosted on a virtual machine instance.
 
 {{< /alert >}}
 
@@ -120,7 +120,7 @@ To implement a fault-tolerant design and mitigate the risk of a runner manager h
 start with at least two runner managers configured with the same runner tags.
 
 For example, on GitLab.com, multiple runner managers are configured for
-[hosted runners on Linux](https://docs.gitlab.com/ee/ci/runners/hosted_runners/linux.html).
+[hosted runners on Linux](https://docs.gitlab.com/ci/runners/hosted_runners/linux/).
 Each runner manager has the tag `saas-linux-small-amd64`.
 
 With observability and runner fleet metrics, you can adjust the autoscaling parameters to find the

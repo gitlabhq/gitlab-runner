@@ -137,7 +137,7 @@ attack vector to "steal" runner jobs.
 
 ## Security risks when using `GIT_STRATEGY: fetch` on shared environments
 
-When you set [`GIT_STRATEGY`](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#git-strategy)
+When you set [`GIT_STRATEGY`](https://docs.gitlab.com/ci/runners/configure_runners/#git-strategy)
 to `fetch`, the runner attempts to reuse the local working copy of the Git repository.
 
 Using a local copy can improve the performance of CI/CD jobs. However, any user with access to that reusable copy can add code that executes in other users' pipelines.

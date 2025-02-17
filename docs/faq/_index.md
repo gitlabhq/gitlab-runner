@@ -230,7 +230,7 @@ POST requests from the build environment to the GitLab instance.
 By default, the artifact uploader logs the upload URL and the HTTP status code
 of the upload response. This information is not enough to understand which system
 caused an error or blocked artifact uploads. To troubleshoot artifact upload issues,
-[enable debug logging](https://docs.gitlab.com/ee/ci/variables/index.html#enable-debug-logging)
+[enable debug logging](https://docs.gitlab.com/ci/variables/#enable-debug-logging)
 for upload attempts to see upload response's headers and body.
 
 {{< alert type="note" >}}
@@ -243,7 +243,7 @@ Enable logging only for debugging because sensitive data can be exposed in logs.
 If the debug logs show that uploads reach the GitLab instance but still fail
 (for example, produces a non-successful response status code), investigate the
 GitLab instance itself. For common artifact upload issues, see
-[GitLab documentation](https://docs.gitlab.com/ee/administration/cicd/job_artifacts_troubleshooting.html#job-artifact-upload-fails-with-error-500).
+[GitLab documentation](https://docs.gitlab.com/administration/cicd/job_artifacts_troubleshooting/#job-artifact-upload-fails-with-error-500).
 
 ## `No URL provided, cache will not be download`/`uploaded`
 
@@ -447,7 +447,7 @@ In the GitLab UI, you might get a `Response not successful: Received status code
 This issue might affect long-lived instances that have gone through many major upgrades.
 To resolve this issue:
 
-1. In the [Rails console](https://docs.gitlab.com/ee/administration/operations/rails_console.html), consolidate any duplicate tags that
+1. In the [Rails console](https://docs.gitlab.com/administration/operations/rails_console/), consolidate any duplicate tags that
    might exist in the table by running the [`dedupe.rb`](https://gitlab.com/gitlab-org/gitlab/-/snippets/3700665) script.
 1. Create a unique index for the `tags` table:
 

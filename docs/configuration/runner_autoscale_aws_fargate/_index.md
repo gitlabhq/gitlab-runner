@@ -83,7 +83,7 @@ use in the ECS task definition.
   [Amazon ECR Repositories](https://docs.aws.amazon.com/AmazonECR/latest/userguide/Repositories.html) documentation.
 - To use the AWS CLI to push an image to ECR, follow the
   [Getting Started with Amazon ECR using the AWS CLI](https://docs.aws.amazon.com/AmazonECR/latest/userguide/getting-started-cli.html) documentation.
-- To use the [GitLab Container Registry](https://docs.gitlab.com/ee/user/packages/container_registry/), you can use the
+- To use the [GitLab Container Registry](https://docs.gitlab.com/user/packages/container_registry/), you can use the
   [Debian](https://gitlab.com/tmaczukin-test-projects/fargate-driver-debian) or [NodeJS](https://gitlab.com/aws-fargate-driver-demo/docker-nodejs-gitlab-ci-fargate)
   example. The Debian image is published to `registry.gitlab.com/tmaczukin-test-projects/fargate-driver-debian:latest`.
   The NodeJS example image is published to `registry.gitlab.com/aws-fargate-driver-demo/docker-nodejs-gitlab-ci-fargate:latest`.

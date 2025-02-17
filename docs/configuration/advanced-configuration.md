@@ -212,7 +212,7 @@ When you configure the `[session_server]` section:
   is the IP address (`127.0.0.1:8093`) or domain (`my-runner.example.com:8093`). The
   runner uses this information to create a TLS certificate for a secure connection.
 - Ensure that GitLab can connect to the IP address and port defined in `listen_address` or `advertise_address`.
-- Ensure that `advertise_address` is a public IP address, unless you have enabled the application setting, [`allow_local_requests_from_web_hooks_and_services`](https://docs.gitlab.com/ee/api/settings.html#list-of-settings-that-can-be-accessed-via-api-calls).
+- Ensure that `advertise_address` is a public IP address, unless you have enabled the application setting, [`allow_local_requests_from_web_hooks_and_services`](https://docs.gitlab.com/api/settings/#available-settings).
 
 | Setting | Description |
 | ------- | ----------- |
@@ -239,7 +239,7 @@ Each `[[runners]]` section defines one runner.
 |---------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `name`                                | The runner's description. Informational only.                                                                                                                                                                                                                                                                                                                                                               |
 | `url`                                 | GitLab instance URL.                                                                                                                                                                                                                                                                                                                                                                                        |
-| `token`                               | The runner's authentication token, which is obtained during runner registration. [Not the same as the registration token](https://docs.gitlab.com/ee/api/runners.html#registration-and-authentication-tokens).                                                                                                                                                                                              |
+| `token`                               | The runner's authentication token, which is obtained during runner registration. [Not the same as the registration token](https://docs.gitlab.com/api/runners/#registration-and-authentication-tokens).                                                                                                                                                                                              |
 | `tls-ca-file`                         | When using HTTPS, file that contains the certificates to verify the peer. See [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md).                                                                                                                                                                                                                             |
 | `tls-cert-file`                       | When using HTTPS, file that contains the certificate to authenticate with the peer.                                                                                                                                                                                                                                                                                                                         |
 | `tls-key-file`                        | When using HTTPS, file that contains the private key to authenticate with the peer.                                                                                                                                                                                                                                                                                                                         |
@@ -256,7 +256,7 @@ Each `[[runners]]` section defines one runner.
 | `pre_build_script`                    | Commands to be executed on the runner before executing the job. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                                                                                                                                                     |
 | `post_build_script`                   | Commands to be executed on the runner just after executing the job, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                                                                                                            |
 | `clone_url`                           | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL.                                                                                                                                                                                                                                                                                                         |
-| `debug_trace_disabled`                | Disables [debug tracing](https://docs.gitlab.com/ee/ci/variables/#enable-debug-logging). When set to `true`, the debug log (trace) remains disabled even if `CI_DEBUG_TRACE` is set to `true`.                                                                                                                                                                                                              |
+| `debug_trace_disabled`                | Disables [debug tracing](https://docs.gitlab.com/ci/variables/#enable-debug-logging). When set to `true`, the debug log (trace) remains disabled even if `CI_DEBUG_TRACE` is set to `true`.                                                                                                                                                                                                              |
 | `referees`                            | Extra job monitoring workers that pass their results as job artifacts to GitLab.                                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_requests_limit`            | The number of `unhealthy` responses to new job requests after which a runner worker is disabled.                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_interval`                  | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like '3600 s', '1 h 30 min' etc.                                                                                                                                                                                                                                                               |
@@ -296,7 +296,7 @@ of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 
 #### Modify Git LFS endpoints
 
-To modify [Git LFS](https://docs.gitlab.com/ee/topics/git/lfs/) endpoints, set `pre_get_sources_script` in one of the following files:
+To modify [Git LFS](https://docs.gitlab.com/topics/git/lfs/) endpoints, set `pre_get_sources_script` in one of the following files:
 
 - `config.toml`:
 
@@ -369,7 +369,7 @@ which is POSIX-compliant shell escaping mechanism, is used.
 
 The following settings define the Docker container parameters. These settings are applicable when the runner is configured to use the Docker executor.
 
-[Docker-in-Docker](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker) as a service, or any container runtime configured inside a job, does not inherit these parameters.
+[Docker-in-Docker](https://docs.gitlab.com/ci/docker/using_docker_build/#use-docker-in-docker) as a service, or any container runtime configured inside a job, does not inherit these parameters.
 
 | Parameter | Description | Example |
 | --------- | ----------- | ------- |
@@ -436,14 +436,14 @@ The following settings define the Docker container parameters. These settings ar
 
 ### The `[[runners.docker.services]]` section
 
-Specify additional [services](https://docs.gitlab.com/ee/ci/services/) to run with the job. For a list of available images, see the
+Specify additional [services](https://docs.gitlab.com/ci/services/) to run with the job. For a list of available images, see the
 [Docker Registry](https://hub.docker.com).
 Each service runs in a separate container and is linked to the job.
 
 | Parameter | Description | Example |
 | --------- | ----------- | ------- |
 | `name`  | The name of the image to be run as a service. | `"registry.example.com/svc1"` |
-| `alias` | Additional [alias name](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services) that can be used to access the service. | `"svc1"` |
+| `alias` | Additional [alias name](https://docs.gitlab.com/ci/services/#available-settings-for-services) that can be used to access the service. | `"svc1"` |
 | `entrypoint` | Command or script that should be executed as the container's entrypoint. The syntax is similar to the [Dockerfile ENTRYPOINT](https://docs.docker.com/reference/dockerfile/#entrypoint) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). | `["entrypoint.sh"]` |
 | `command` | Command or script that should be used as the container's command. The syntax is similar to the [Dockerfile CMD](https://docs.docker.com/reference/dockerfile/#cmd) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). | `["executable","param1","param2"]` |
 | `environment` | Append or overwrite environment variables for the service container. | `["ENV1=value1", "ENV2=value2"]` |
@@ -549,15 +549,15 @@ This example uses `/path/to/bind/from/host` of the CI/CD host in the container a
 `/path/to/bind/in/container`.
 
 GitLab Runner 11.11 and later [mount the host directory](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1261)
-for the defined [services](https://docs.gitlab.com/ee/ci/services/) as
+for the defined [services](https://docs.gitlab.com/ci/services/) as
 well.
 
 ### Use a private container registry
 
 To use private registries as a source of images for your jobs, configure authorization
-with the [CI/CD variable](https://docs.gitlab.com/ee/ci/variables/) `DOCKER_AUTH_CONFIG`. You can set the variable in one of the following:
+with the [CI/CD variable](https://docs.gitlab.com/ci/variables/) `DOCKER_AUTH_CONFIG`. You can set the variable in one of the following:
 
-- The CI/CD settings of the project as the [`file` type](https://docs.gitlab.com/ee/ci/variables/#use-file-type-cicd-variables)
+- The CI/CD settings of the project as the [`file` type](https://docs.gitlab.com/ci/variables/#use-file-type-cicd-variables)
 - The `config.toml` file
 
 Using private registries with the `if-not-present` pull policy may introduce
@@ -566,8 +566,8 @@ For more information about how pull policies work, see [Configure how runners pu
 
 For more information about using private container registries, see:
 
-- [Access an image from a private container registry](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#access-an-image-from-a-private-container-registry)
-- [`.gitlab-ci.yml` keyword reference](https://docs.gitlab.com/ee/ci/yaml/index.html#image)
+- [Access an image from a private container registry](https://docs.gitlab.com/ci/docker/using_docker_images/#access-an-image-from-a-private-container-registry)
+- [`.gitlab-ci.yml` keyword reference](https://docs.gitlab.com/ci/yaml/#image)
 
 The steps performed by the runner can be summed up as:
 
@@ -588,7 +588,7 @@ configuration added with the `DOCKER_AUTH_CONFIG` variable.
 
 In your jobs, you can use any image from your GitLab integrated
 registry, even if the image is private or protected. For information on the images jobs have access to, read the
-[CI/CD job token documentation](https://docs.gitlab.com/ee/ci/jobs/ci_job_token.html) documentation.
+[CI/CD job token documentation](https://docs.gitlab.com/ci/jobs/ci_job_token/) documentation.
 
 #### Precedence of Docker authorization resolving
 
@@ -663,11 +663,11 @@ The `start_type` parameter determines the graphical front end used when starting
 {{< /history >}}
 
 For both the Parallels and VirtualBox executors, you can override the base VM name specified by `base_name`.
-To do this, use the [image](https://docs.gitlab.com/ee/ci/yaml/#image) parameter in the `.gitlab-ci.yml` file.
+To do this, use the [image](https://docs.gitlab.com/ci/yaml/#image) parameter in the `.gitlab-ci.yml` file.
 
 For backward compatibility, you cannot override this value by default. Only the image specified by `base_name` is allowed.
 
-To allow users to select a VM image by using the `.gitlab-ci.yml` [image](https://docs.gitlab.com/ee/ci/yaml/#image) parameter:
+To allow users to select a VM image by using the `.gitlab-ci.yml` [image](https://docs.gitlab.com/ci/yaml/#image) parameter:
 
 ```toml
 [runners.virtualbox]
@@ -1692,7 +1692,7 @@ which contains PowerShell Core, is published with the `registry.gitlab.com/gitla
 
 {{< /history >}}
 
-This section defines [custom build directories](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#custom-build-directories) parameters.
+This section defines [custom build directories](https://docs.gitlab.com/ci/runners/configure_runners/#custom-build-directories) parameters.
 
 This feature, if not configured explicitly, is
 enabled by default for `kubernetes`, `docker`, `docker+machine`, `docker autoscaler`, and `instance`
@@ -1747,7 +1747,7 @@ setting.
 {{< alert type="note" >}}
 
 You can also specify
-[`GIT_CLONE_PATH`](https://docs.gitlab.com/ee/ci/yaml/index.html#custom-build-directories)
+[`GIT_CLONE_PATH`](https://docs.gitlab.com/ci/runners/configure_runners/#custom-build-directories)
 if you want to clone to a custom directory, and the guideline below
 doesn't apply.
 

@@ -241,7 +241,7 @@ The <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>
 [Least Privilege Container Builds with Kaniko on GitLab](https://www.youtube.com/watch?v=d96ybcELpFs)
 video is a walkthrough of the [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build)
 working example project. It uses the documentation for
-[Building images with Kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
+[Building images with Kaniko and GitLab CI/CD](https://docs.gitlab.com/ci/docker/using_kaniko/).
 <!-- Video published on 2020-04-07 -->
 
 For testing, copy the working example project to your own group or instance. For more details about the other GitLab CI/CD patterns
