@@ -106,7 +106,7 @@ Now install and configure Xcode.
 
 ### Create and register a project runner
 
-Now [create and register](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-an-authentication-token) a project runner.
+Now [create and register](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-runner-authentication-token) a project runner.
 
 When you create and register the runner:
 

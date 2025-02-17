@@ -24,7 +24,7 @@ The shell scripts contain commands to execute all steps of the build:
 1. Generate and upload the build artifacts
 
 The shells don't have any configuration options. The build steps are received
-from the commands defined in the [`script` directive in `.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html#script).
+from the commands defined in the [`script` directive in `.gitlab-ci.yml`](https://docs.gitlab.com/ci/yaml/#script).
 
 The supported shells are:
 
@@ -293,7 +293,7 @@ The [Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/wa
 video is a walkthrough of the [PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/microsoft/powershell/powershell-pipelines-on-gitlab-ci)
 Guided Exploration project. It was tested on:
 
-- Windows PowerShell and PowerShell Core 7 on [hosted runners on Windows for GitLab.com](https://docs.gitlab.com/ee/ci/runners/hosted_runners/windows.html).
+- Windows PowerShell and PowerShell Core 7 on [hosted runners on Windows for GitLab.com](https://docs.gitlab.com/ci/runners/hosted_runners/windows/).
 - PowerShell Core 7 in Linux Containers with the [Docker-Machine runner](../executors/docker_machine.md).
 
 The example can be copied to your own group or instance for testing. More details

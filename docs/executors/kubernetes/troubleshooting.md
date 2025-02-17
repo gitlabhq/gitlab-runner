@@ -205,7 +205,7 @@ you can:
   for example in the job script that creates the cached files.
 - As a workaround, add matching [chown](https://linux.die.net/man/1/chown) and
   [chmod](https://linux.die.net/man/1/chmod) commands.
-  to your [(`before_`/`after_`)`script:` directives](https://docs.gitlab.com/ee/ci/yaml/index.html#default).
+  to your [(`before_`/`after_`)`script:` directives](https://docs.gitlab.com/ci/yaml/#default).
 
 ## Apparently redundant shell process in build container with init system
 

@@ -47,7 +47,7 @@ Be sure to initialize Git LFS for the user that executes GitLab Runner commands 
 
 When you enable [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md), do not cache Git
 credentials across builds, for example, by using Git credential helpers. If you cache credentials,
-the [`CI_JOB_TOKEN`](https://docs.gitlab.com/ee/ci/jobs/ci_job_token.html) might be shared between
+the [`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/) might be shared between
 concurrent or consecutive builds, which might cause authentication errors and failed builds.
 
 ## Selecting the executor
@@ -99,7 +99,7 @@ The Virtual Machine executor can also be used to reduce infrastructure costs.
 You can use **Docker** for a clean build environment. All dependencies for building the
 project can be put in the Docker image, which makes dependency management more
 straight-forward. You can use the Docker executor to create a build environment with dependent
-[services](https://docs.gitlab.com/ee/ci/services/index.html),
+[services](https://docs.gitlab.com/ci/services/),
 like MySQL.
 
 ### Docker Machine executor

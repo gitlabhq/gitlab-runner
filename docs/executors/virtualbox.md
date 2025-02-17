@@ -45,7 +45,7 @@ the `[[runners]]` section in
 [`config.toml`](../configuration/advanced-configuration.md).
 
 You can also define
-[custom build directories](https://docs.gitlab.com/ee/ci/yaml/index.html#custom-build-directories)
+[custom build directories](https://docs.gitlab.com/ci/runners/configure_runners/#custom-build-directories)
 per job using the `GIT_CLONE_PATH`.
 
 ## Create a new base virtual machine

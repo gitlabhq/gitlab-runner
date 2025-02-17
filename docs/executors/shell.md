@@ -43,7 +43,7 @@ Where:
 - `<short-token>` is a shortened version of the Runner's token (first 8 letters)
 - `<concurrent-id>` is a unique number, identifying the local job ID on the
   particular Runner in context of the project (accessible via the
-  `CI_CONCURRENT_PROJECT_ID` [pre-defined variable](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html))
+  `CI_CONCURRENT_PROJECT_ID` [pre-defined variable](https://docs.gitlab.com/ci/variables/predefined_variables/))
 - `<namespace>` is the namespace where the project is stored on GitLab
 - `<project-name>` is the name of the project as it is stored on GitLab
 
@@ -100,7 +100,7 @@ UNIX systems, it sets the main process as a
 
 GitLab Runner terminates processes when:
 
-- A job [times out](https://docs.gitlab.com/ee/ci/pipelines/settings.html#timeout).
+- A job [times out](https://docs.gitlab.com/ci/pipelines/settings/#set-a-limit-for-how-long-jobs-can-run).
 - A job is canceled.
 
 On UNIX system `gitlab-runner` sends `SIGTERM` to the process and its

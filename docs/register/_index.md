@@ -39,14 +39,14 @@ Before you register a runner:
 Prerequisites:
 
 - Obtain a runner authentication token. You can either:
-  - Create an [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-runner-authentication-token),
-    [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
-    [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
+  - Create an [instance](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-runner-authentication-token),
+    [group](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-group-runner-with-a-runner-authentication-token), or
+    [project](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-runner-authentication-token) runner.
   - Locate the runner authentication token in the `config.toml` file. Runner authentication tokens have the prefix, `glrt-`.
 
 After you register the runner, the configuration is saved to the `config.toml`.
 
-To register the runner with a [runner authentication token](https://docs.gitlab.com/ee/security/tokens/index.html#runner-authentication-tokens):
+To register the runner with a [runner authentication token](https://docs.gitlab.com/security/tokens/#runner-authentication-tokens):
 
 1. Run the register command:
 
@@ -223,21 +223,21 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 The ability to pass a runner registration token and support for certain configuration arguments was
 [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872) in GitLab 15.6. They are scheduled for removal
 in GitLab 18.0. Use runner authentication tokens instead. For more information, see
-[Migrating to the new runner registration workflow](https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html).
+[Migrating to the new runner registration workflow](https://docs.gitlab.com/ci/runners/new_creation_workflow/).
 
 {{< /alert >}}
 
 Prerequisites:
 
-- Runner registration tokens must be [enabled](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#enable-runner-registrations-tokens) in the Admin Area.
+- Runner registration tokens must be [enabled](https://docs.gitlab.com/administration/settings/continuous_integration/#allow-runner-registrations-tokens) in the Admin Area.
 - Obtain a runner registration token
-  at the desired [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-registration-token-deprecated),
-  [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-registration-token-deprecated), or
-  [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-registration-token-deprecated).
+  at the desired [instance](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-registration-token-deprecated),
+  [group](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-registration-token-deprecated), or
+  [project](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-group-runner-with-a-registration-token-deprecated).
 
 After you register the runner, the configuration is saved to the `config.toml`.
 
-To register the runner with a [runner registration token](https://docs.gitlab.com/ee/security/token_overview.html#runner-registration-tokens-deprecated):
+To register the runner with a [runner registration token](https://docs.gitlab.com/security/token_overview/#runner-registration-tokens-deprecated):
 
 1. Run the register command:
 
@@ -423,7 +423,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 {{< /tabs >}}
 
-- `--access-level` creates a [protected runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#prevent-runners-from-revealing-sensitive-information).
+- `--access-level` creates a [protected runner](https://docs.gitlab.com/ci/runners/configure_runners/#prevent-runners-from-revealing-sensitive-information).
   - For a protected runner, use the `--access-level="ref_protected"` parameter.
   - For an unprotected runner, use `--access-level="not_protected"` or leave the value undefined.
 - `--maintenance-note` allows adding information you might find helpful for runner maintenance. The maximum length is 255 characters.
@@ -461,13 +461,13 @@ Prerequisites:
 - The volume for the location of the template file must be mounted on the GitLab Runner container.
 - A runner authentication or registration token:
   - Obtain a runner authentication token (recommended). You can either:
-    - Create an [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-runner-authentication-token),
-      [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
-      [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
+    - Create an [instance](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-runner-authentication-token),
+      [group](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-group-runner-with-a-runner-authentication-token), or
+      [project](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-runner-authentication-token) runner.
     - Locate the runner authentication token in the `config.toml` file. Runner authentication tokens have the prefix, `glrt-`.
-  - Obtain a runner registration token (deprecated) for an [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-registration-token-deprecated),
-  [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-registration-token-deprecated), or
-  [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-registration-token-deprecated) runner.
+  - Obtain a runner registration token (deprecated) for an [instance](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-registration-token-deprecated),
+  [group](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-registration-token-deprecated), or
+  [project](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-group-runner-with-a-registration-token-deprecated) runner.
 
 The configuration template can be used for automated environments that do not support some arguments
 in the `register` command due to:
@@ -569,7 +569,7 @@ the configured executor is `shell`.
 To test GitLab Community Edition integrations, use a configuration template to register a runner
 with a confined Docker executor.
 
-1. Create a [project runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token).
+1. Create a [project runner](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-runner-authentication-token).
 1. Create a template with the `[[runners.docker.services]]` section:
 
    ```shell
@@ -694,7 +694,7 @@ the runner registration token entered during registration. This issue can occur 
 When this error occurs, you can ask a GitLab administrator to:
 
 - Verify that the runner registration token is valid.
-- Confirm that runner registration in the project or group is [permitted](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#restrict-runner-registration-by-all-members-in-a-group).
+- Confirm that runner registration in the project or group is [permitted](https://docs.gitlab.com/administration/settings/continuous_integration/#restrict-runner-registration-by-all-members-in-a-group).
 
 ### `410 Gone - runner registration disallowed` error
 
@@ -704,6 +704,6 @@ registration tokens has been disabled.
 When this error occurs, you can ask a GitLab administrator to:
 
 - Verify that the runner registration token is valid.
-- Confirm that runner registration in the instance is [permitted](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#enable-runner-registrations-tokens).
+- Confirm that runner registration in the instance is [permitted](https://docs.gitlab.com/administration/settings/continuous_integration/#allow-runner-registrations-tokens).
 - In the case of a group or project runner registration token, verify that runner registration in the respective group
-  and/or project [is allowed](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#enable-use-of-runner-registration-tokens-in-projects-and-groups).
+  and/or project [is allowed](https://docs.gitlab.com/ci/runners/runners_scope/#enable-use-of-runner-registration-tokens-in-projects-and-groups).

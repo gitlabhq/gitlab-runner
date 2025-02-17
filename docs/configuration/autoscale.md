@@ -508,7 +508,7 @@ Read how to [use a distributed cache](../configuration/speed_up_job_execution.md
 
 {{< /alert >}}
 
-To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ee/ci/yaml/index.html#cache)
+To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ci/yaml/#cache)
 where selected directories and/or files are saved and shared between subsequent
 jobs.
 

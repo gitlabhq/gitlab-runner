@@ -216,7 +216,7 @@ These commands support the following arguments:
 
 ### `gitlab-runner register`
 
-This command registers your runner in GitLab by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner).
+This command registers your runner in GitLab by using the GitLab [Runners API](https://docs.gitlab.com/api/runners/#register-a-new-runner).
 
 The registered runner is
 added to the [configuration file](#configuration-file).
@@ -231,7 +231,7 @@ You can register a runner:
 
 {{< alert type="note" >}}
 
-Runners can be registered directly by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner) but
+Runners can be registered directly by using the GitLab [Runners API](https://docs.gitlab.com/api/runners/#register-a-new-runner) but
 configuration is not generated automatically.
 
 {{< /alert >}}
@@ -331,7 +331,7 @@ gitlab-runner verify --delete
 
 ### `gitlab-runner unregister`
 
-This command unregisters registered runners by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-registered-runner).
+This command unregisters registered runners by using the GitLab [Runners API](https://docs.gitlab.com/api/runners/#delete-a-runner).
 
 It expects either:
 
@@ -342,7 +342,7 @@ With the `--all-runners` option, it unregisters all the attached runners.
 
 {{< alert type="note" >}}
 
-Runners can be unregistered with the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-runner) but the
+Runners can be unregistered with the GitLab [Runners API](https://docs.gitlab.com/api/runners/#delete-a-runner) but the
 configuration is not modified for the user.
 
 {{< /alert >}}
@@ -351,8 +351,8 @@ configuration is not modified for the user.
   with the runner authentication token deletes the runner.
 - If the runner was created in the GitLab UI or with the Runners API, `gitlab-runner unregister`
   with the runner authentication token deletes the runner manager, but not the runner.
-  To completely remove the runner, [delete the runner in the runners administration page](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#delete-shared-runners)
-  or use the [`DELETE /runners`](https://docs.gitlab.com/ee/api/runners.html#delete-a-runner) REST API endpoint.
+  To completely remove the runner, [delete the runner in the runners administration page](https://docs.gitlab.com/ci/runners/runners_scope/#delete-instance-runners)
+  or use the [`DELETE /runners`](https://docs.gitlab.com/api/runners/#delete-a-runner) REST API endpoint.
 
 To unregister a single runner, first get the runner's details by executing
 `gitlab-runner list`:
@@ -397,8 +397,8 @@ gitlab-runner unregister --all-runners
 ### `gitlab-runner reset-token`
 
 This command resets a runner's token by using the GitLab Runners API, with
-either the [runner ID](https://docs.gitlab.com/ee/api/runners.html#reset-runners-authentication-token-by-using-the-runner-id)
-or the [current token](https://docs.gitlab.com/ee/api/runners.html#reset-runners-authentication-token-by-using-the-current-token).
+either the [runner ID](https://docs.gitlab.com/api/runners/#reset-runners-authentication-token-by-using-the-runner-id)
+or the [current token](https://docs.gitlab.com/api/runners/#reset-runners-authentication-token-by-using-the-current-token).
 
 It expects the runner's name (or URL and ID), and an optional PAT if
 resetting by runner ID. The PAT and runner ID are intended to be used if the

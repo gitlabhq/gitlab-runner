@@ -205,7 +205,7 @@ rules:
 
   - _The [`FF_KUBERNETES_HONOR_ENTRYPOINT` feature flag](../../configuration/feature-flags.md) is enabled._
 
-  - _The [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` feature flag](../../configuration/feature-flags.md) is disabled when the [`CI_DEBUG_SERVICES` variable](https://docs.gitlab.com/ee/ci/services/#capturing-service-container-logs) is set to `true`._
+  - _The [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` feature flag](../../configuration/feature-flags.md) is disabled when the [`CI_DEBUG_SERVICES` variable](https://docs.gitlab.com/ci/services/#capturing-service-container-logs) is set to `true`._
 
   - _The [`FF_WAIT_FOR_POD_TO_BE_REACHABLE` feature flag](../../configuration/feature-flags.md) is enabled._
 
@@ -322,7 +322,7 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `scheduler_name` | Scheduler to use for scheduling build pods.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `service_account` | Default service account job/executor pods use to talk to Kubernetes API.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `service_account_overwrite_allowed` | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature.                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `services` | List of [services](https://docs.gitlab.com/ee/ci/services/) attached to the build container using the [sidecar pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#define-a-list-of-services).                                                                                                                                                                                                                                                                                                      |
+| `services` | List of [services](https://docs.gitlab.com/ci/services/) attached to the build container using the [sidecar pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#define-a-list-of-services).                                                                                                                                                                                                                                                                                                      |
 | `use_service_account_image_pull_secrets` | When enabled, the pod created by the executor lacks `imagePullSecrets`. This causes the pod to be created using the [`imagePullSecrets` from the service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-image-pull-secret-to-service-account), if set.                                                                                                                                                                                                                                                           |
 | `terminationGracePeriodSeconds` | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. [Deprecated in favour of `cleanup_grace_period_seconds` and `pod_termination_grace_period_seconds`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165).                                                                                                                                                                                                                                             |
 | `volumes` | Configured through the configuration file, the list of volumes that is mounted in the build container. [Read more about using volumes](#configure-volume-types).                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -545,7 +545,7 @@ This configuration allows overwrite of any of the `pod_annotations` configured i
 
 {{< /history >}}
 
-This feature is in [beta](https://docs.gitlab.com/ee/policy/development_stages_support.html#beta). We strongly recommend that you use
+This feature is in [beta](https://docs.gitlab.com/policy/development_stages_support/#beta). We strongly recommend that you use
 this feature on a test Kubernetes cluster before you use it on a production cluster. To use this feature, you must
 enable the `FF_USE_ADVANCED_POD_SPEC_CONFIGURATION` [feature flag](../../configuration/feature-flags.md).
 
@@ -1035,7 +1035,7 @@ setting for that resource. If the maximum overwrite has not been set for a resou
 
 {{< /history >}}
 
-Define a list of [services](https://docs.gitlab.com/ee/ci/services/) in the `config.toml`.
+Define a list of [services](https://docs.gitlab.com/ci/services/) in the `config.toml`.
 
 ```toml
 concurrent = 1
@@ -2026,7 +2026,7 @@ In Docker 19.03 and later, TLS is enabled by
 default but you must map certificates to your client.
 You can enable non-TLS connection for Docker-in-Docker or
 mount certificates. For more information, see
-[**Use Docker In Docker Workflow with Docker executor**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-workflow-with-docker-executor).
+[**Use Docker In Docker Workflow with Docker executor**](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker).
 
 ### Prevent host kernel exposure
 
@@ -2053,7 +2053,7 @@ You can use [kaniko](https://github.com/GoogleContainerTools/kaniko) to build Do
 
 Kaniko works without the Docker daemon and builds images without privileged access.
 
-For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
+For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ci/docker/using_kaniko/).
 
 There is a known issue when using kaniko to build _multi-stage_ `Dockerfiles`. If a pipeline job includes an
 `after_script` section, when the `after_script` section is executed it fails with the following error message. The job still completes successfully.
@@ -2234,14 +2234,14 @@ The container entry point has the following known issues:
   - To open a shell, the system passes the command as
     [`args`](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#entrypoint)
     for the build container.
-- [File type CI/CD variables](https://docs.gitlab.com/ee/ci/variables/index.html#use-file-type-cicd-variables)
+- [File type CI/CD variables](https://docs.gitlab.com/ci/variables/#use-file-type-cicd-variables)
   are not written to disk when the entrypoint is executed. The file is only accessible
   in the job during script execution.
 - The following CI/CD variables are not accessible in the entrypoint. You can use
-  [`before_script`](https://docs.gitlab.com/ee/ci/yaml/index.html#beforescript) to make
+  [`before_script`](https://docs.gitlab.com/ci/yaml/#beforescript) to make
   any setup changes before running script commands:
-  - [CI/CD variables defined in the settings](https://docs.gitlab.com/ee/ci/variables/#define-a-cicd-variable-in-the-ui).
-  - [Masked CI/CD variables](https://docs.gitlab.com/ee/ci/variables/#mask-a-cicd-variable).
+  - [CI/CD variables defined in the settings](https://docs.gitlab.com/ci/variables/#define-a-cicd-variable-in-the-ui).
+  - [Masked CI/CD variables](https://docs.gitlab.com/ci/variables/#mask-a-cicd-variable).
 
 Before GitLab Runner 17.4:
 

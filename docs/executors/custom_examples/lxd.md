@@ -17,7 +17,7 @@ up afterwards.
 
 This example uses a bash script for each stage. You can specify your
 own image, which is exposed as
-[CI_JOB_IMAGE](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
+[CI_JOB_IMAGE](https://docs.gitlab.com/ci/variables/predefined_variables/).
 This example uses the `ubuntu:18.04` image for simplicity. If you
 want to support multiple images, you would have to modify the executor.
 
@@ -88,7 +88,7 @@ start_container () {
 
     # The container image is hardcoded, but you can use
     # the `CI_JOB_IMAGE` predefined variable
-    # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+    # https://docs.gitlab.com/ci/variables/predefined_variables/
     # which is available under `CUSTOM_ENV_CI_JOB_IMAGE` to allow the
     # user to specify the image. The rest of the script assumes that
     # you are running on an ubuntu image so modifications might be

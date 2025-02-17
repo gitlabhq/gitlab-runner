@@ -27,7 +27,7 @@ Self-managed runners are GitLab Runner instances that you install, configure, an
 infrastructure.
 You can [install](install/_index.md) and register self-managed runners on all GitLab installations.
 
-Unlike [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/index.html), which are hosted and managed by GitLab, you have complete control over self-managed runners.
+Unlike [GitLab-hosted runners](https://docs.gitlab.com/ci/runners/), which are hosted and managed by GitLab, you have complete control over self-managed runners.
 
 ### Use Terraform to create and manage a fleet of runners
 
@@ -94,7 +94,7 @@ These are only a few of the possible configurations. You can install GitLab Runn
 on a virtual machine and have it use another virtual machine as an executor.
 
 When you install GitLab Runner in a Docker container and choose the
-[Docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html)
+[Docker executor](https://docs.gitlab.com/ci/docker/using_docker_images/)
 to run your jobs, it's sometimes referred to as a "Docker-in-Docker" configuration.
 
 ### Who has access to runners in the GitLab UI
@@ -104,16 +104,16 @@ should have access to it, or if you want to limit it to a specific GitLab group 
 
 There are three types of runners, based on who you want to have access:
 
-- [Instance runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#instance-runners) are for use by all projects
-- [Group runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#group-runners) are for all projects and subgroups in a group
-- [Project runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#project-runners) are for individual projects
+- [Instance runners](https://docs.gitlab.com/ci/runners/runners_scope/#instance-runners) are for use by all projects
+- [Group runners](https://docs.gitlab.com/ci/runners/runners_scope/#group-runners) are for all projects and subgroups in a group
+- [Project runners](https://docs.gitlab.com/ci/runners/runners_scope/#project-runners) are for individual projects
 
 The scope of a runner is defined during the registration.
 This is how the runner knows which projects it's available for.
 
 ### Tags
 
-When you register a runner, you can add [**tags**](https://docs.gitlab.com/ee/ci/yaml/index.html#tags) to it.
+When you register a runner, you can add [**tags**](https://docs.gitlab.com/ci/yaml/#tags) to it.
 
 When a CI/CD job runs, it knows which runner to use by looking at the assigned tags.
 Tags are the only way to filter the list of available runners for a job.
@@ -148,7 +148,7 @@ much CPU your runners are using.
 ### Use a runner to run jobs
 
 After a runner is configured and available for your project, your
-[CI/CD](https://docs.gitlab.com/ee/ci/index.html) jobs can use the runner.
+[CI/CD](https://docs.gitlab.com/ci/) jobs can use the runner.
 
 ## Features
 
@@ -176,7 +176,7 @@ GitLab Runner has the following features.
 
 ## Runner execution flow
 
-This diagram shows how runners are registered and how jobs are requested and handled. It also shows which actions use [registration, authentication](https://docs.gitlab.com/ee/api/runners.html#registration-and-authentication-tokens), and [job tokens](https://docs.gitlab.com/ee/ci/jobs/ci_job_token.html).
+This diagram shows how runners are registered and how jobs are requested and handled. It also shows which actions use [registration, authentication](https://docs.gitlab.com/api/runners/#registration-and-authentication-tokens), and [job tokens](https://docs.gitlab.com/ci/jobs/ci_job_token/).
 
 ```mermaid
 sequenceDiagram
@@ -212,7 +212,7 @@ This glossary provides definitions for terms related to GitLab Runner.
 - **machine**: A virtual machine (VM) or pod that the runner operates in.
   GitLab Runner automatically generates a unique, persistent machine ID so that when multiple machines are given the same runner configuration, jobs can be routed separately but the runner configurations are grouped in the UI.
 
-See also the official [GitLab Word List](https://docs.gitlab.com/ee/development/documentation/styleguide/word_list.html#gitlab-runner) and the GitLab Architecture entry for [GitLab Runner](https://docs.gitlab.com/ee/development/architecture.html#gitlab-runner).
+See also the official [GitLab Word List](https://docs.gitlab.com/development/documentation/styleguide/word_list/#gitlab-runner) and the GitLab Architecture entry for [GitLab Runner](https://docs.gitlab.com/development/architecture/#gitlab-runner).
 
 ## Troubleshooting
 

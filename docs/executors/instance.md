@@ -7,8 +7,8 @@ title: Instance executor
 
 {{< history >}}
 
-- Introduced in GitLab Runner 15.11.0 as an [experiment](https://docs.gitlab.com/ee/policy/development_stages_support.html#experiment).
-- [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [beta](https://docs.gitlab.com/ee/policy/development_stages_support.html#beta) in GitLab Runner 16.6.
+- Introduced in GitLab Runner 15.11.0 as an [experiment](https://docs.gitlab.com/policy/development_stages_support/#experiment).
+- [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [beta](https://docs.gitlab.com/policy/development_stages_support/#beta) in GitLab Runner 16.6.
 - [Generally available](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29221) in GitLab Runner 17.1.
 
 {{< /history >}}

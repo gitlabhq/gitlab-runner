@@ -68,4 +68,4 @@ This error happens when you use an authentication token, and
 provide a token through a secret.
 To fix it, review your values YAML file and make sure that you are not using any deprecated values.
 For more information about which values are deprecated, see
-[Installing GitLab Runner with Helm chart](https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html#installing-gitlab-runner-with-helm-chart).
+[Installing GitLab Runner with Helm chart](https://docs.gitlab.com/ci/runners/new_creation_workflow/#installing-gitlab-runner-with-helm-chart).
