@@ -37,7 +37,6 @@ Learn how to configure GitLab Runner.
 - [Clean up Docker cache automatically](../executors/docker.md#clear-the-docker-cache):
   If you are running low on disk space, use a cron job to clean old containers and volumes.
 - [Configure GitLab Runner to run behind a proxy](proxy.md): Set
-  up a Linux proxy and configure GitLab Runner. Useful for the
-  Docker executor.
+  up a Linux proxy and configure GitLab Runner. Useful for the Docker executor.
 - [Handling rate limited requests](proxy.md#handling-rate-limited-requests).
 - [Configure GitLab Runner Operator](configuring_runner_operator.md).

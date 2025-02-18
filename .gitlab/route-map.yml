@@ -1,3 +1,5 @@
 # Documentation
-- source: /docs/(.+?)\.md/
-  public: '\1.html'
+- source: /docs/(.+?/)_index\.md/  # docs/configuration/_index.md
+  public: '\1'                     # configuration/
+- source: /docs/(.+?)\.md/         # docs/configuration/page.md
+  public: '\1/'                    # configuration/page/
