@@ -2104,14 +2104,16 @@ func TestBuildWithCustomClonePath(t *testing.T) {
 	}
 }
 
+const (
+	// a repo with a mixed bag of submodules: relative, private, public
+	repoURLWithSubmodules = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-test"
+	repoShaWithSubmodules = "0a1093ff08de939dbd1625689d86deef18126a74"
+)
+
 func TestCredSetup(t *testing.T) {
 	const (
 		markerForBuild  = "#build# "
 		markerForHelper = "#helper# "
-
-		// a repo with a mixed bag of submodules: relative, private, public
-		repoURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-test"
-		repoSha = "0a1093ff08de939dbd1625689d86deef18126a74"
 	)
 
 	listGitConfig := func(t *testing.T, shell, prefix string) string {
@@ -2175,19 +2177,10 @@ func TestCredSetup(t *testing.T) {
 		},
 	}
 
-	token := getTokenFromEnv(t)
-	repoURLWithToken := func() *url.URL {
-		u, err := url.Parse(repoURL)
-		require.NoError(t, err, "parsing repo URL")
-		u.User = url.UserPassword("gitlab-ci-token", token)
-		return u
-	}()
-	gitInfoWithToken := common.GitInfo{
-		RepoURL: repoURLWithToken.String(),
-		Sha:     repoSha,
-	}
 	setupCachingCredHelper(t)
-	setInvalidGitCreds(t, repoURLWithToken)
+	orgURL, err := url.Parse(repoURLWithSubmodules)
+	require.NoError(t, err, "parsing original repo url")
+	setInvalidGitCreds(t, orgURL)
 
 	for _, test := range tests {
 		name := fmt.Sprintf("gitUrlsWithoutTokens:%t", test.gitUrlsWithoutTokens)
@@ -2204,17 +2197,14 @@ func TestCredSetup(t *testing.T) {
 				jobResponse, err := common.GetRemoteBuildResponse(listGitConfig(t, shell, markerForBuild))
 				require.NoError(t, err)
 
+				jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
+				jobResponse.GitInfo.Sha = repoShaWithSubmodules
+				token, repoURLWithToken := injectJobToken(t, &jobResponse)
+
 				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
 					Name:   common.HookPostGetSourcesScript,
 					Script: common.StepScript{listGitConfig(t, shell, markerForHelper)},
 				})
-
-				// inject token
-				jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
-					Key: "CI_JOB_TOKEN", Value: token, Masked: true,
-				})
-				jobResponse.Token = token
-				jobResponse.GitInfo = gitInfoWithToken
 
 				jobResponse.Variables = append(jobResponse.Variables,
 					common.JobVariable{Key: "GIT_TRACE", Value: "1"},
@@ -2247,6 +2237,30 @@ func TestCredSetup(t *testing.T) {
 			})
 		})
 	}
+}
+
+// injectJobToken injects a job token into an existing jobResponse by
+// - setting the jobResponse's token
+// - updating the jobResponse's gitInfo with an URL with the token
+// - injecting a CI_JOB_TOKEN jobVariable
+// It returns the token and the new gitInfo that were injected.
+func injectJobToken(t *testing.T, jobResponse *common.JobResponse) (string, *url.URL) {
+	token := getTokenFromEnv(t)
+
+	repoURLWithToken := func(orgRepoURL, token string) *url.URL {
+		u, err := url.Parse(orgRepoURL)
+		require.NoError(t, err, "parsing original repo URL")
+		u.User = url.UserPassword("gitlab-ci-token", token)
+		return u
+	}(jobResponse.GitInfo.RepoURL, token)
+
+	jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
+		Key: "CI_JOB_TOKEN", Value: token, Masked: true,
+	})
+	jobResponse.Token = token
+	jobResponse.GitInfo.RepoURL = repoURLWithToken.String()
+
+	return token, repoURLWithToken
 }
 
 // setupCachingCredHelper sets up a (global) caching git credential helper
