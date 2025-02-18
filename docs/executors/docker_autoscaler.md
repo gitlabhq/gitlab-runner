@@ -46,7 +46,7 @@ To configure the Docker Autoscaler, in the `config.toml`:
 Prerequisites:
 
 - An AMI with [Docker Engine](https://docs.docker.com/engine/) installed. To enable Runner Manager's access to the Docker socket on the AMI, the user must be part of the `docker` group.
-- An AWS Autoscaling group. For the scaling policy use "none", as Runner handles the scaling.
+- An AWS Autoscaling group. For the scaling policy use "none", as Runner handles the scaling. Enable instance scale-in protection.
 - An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)
 
 This configuration supports:
