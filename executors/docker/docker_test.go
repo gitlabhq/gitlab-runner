@@ -1427,7 +1427,7 @@ func TestDockerGetServicesDevices(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, tt.expectedDeviceMappings, mappings)
+			assert.ElementsMatch(t, tt.expectedDeviceMappings, mappings)
 		})
 	}
 }
