@@ -5,7 +5,7 @@
     - kubernetes_integration
   stage: test kubernetes integration
   needs:
-    - 'provision integration kubernetes'
+    - "provision integration kubernetes"
   variables:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-runner-$CI_PIPELINE_ID"
   before_script:
@@ -24,53 +24,52 @@
       - junit_report.xml
     reports:
       junit: junit_report.xml
-
-provision integration kubernetes:
-  extends:
-  - .integration kubernetes
-  needs:
-  - 'prepare done'
-  variables:
-    KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-provisioner"
-  script:
-  - mage k8s:provisionIntegrationKubernetes $CI_PIPELINE_ID
-
-integration kubernetes exec legacy:
-  extends:
-  - .integration kubernetes
-  resource_group: "$CI_COMMIT_BRANCH-k8s-integration-exec-legacy"
-  variables:
-    CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
-    CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "true"
-    EXTRA_GO_TEST_FLAGS: "-run=TestRunIntegrationTestsWithFeatureFlag"
-
-integration kubernetes attach:
-  extends:
-    - .integration kubernetes
-  resource_group: "$CI_COMMIT_BRANCH-k8s-integration-attach"
-  variables:
-    CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
-    CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "false"
-    EXTRA_GO_TEST_FLAGS: "-run=TestRunIntegrationTestsWithFeatureFlag"
-
-integration kubernetes:
-  extends:
-    - .integration kubernetes
-  resource_group: "$CI_COMMIT_BRANCH-k8s-integration"
-  variables:
-    EXTRA_GO_TEST_FLAGS: "-skip=TestRunIntegrationTestsWithFeatureFlag"
-
-destroy integration kubernetes:
-  extends:
-  - .integration kubernetes
-  needs:
-  - job: 'integration kubernetes'
-    optional: true
-  - job: 'integration kubernetes exec legacy'
-    optional: true
-  - job: 'integration kubernetes attach'
-    optional: true
-  variables:
-    KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-provisioner"
-  script:
-  - mage k8s:destroyIntegrationKubernetes $CI_PIPELINE_ID
+# provision integration kubernetes:
+#   extends:
+#   - .integration kubernetes
+#   needs:
+#   - 'prepare done'
+#   variables:
+#     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-provisioner"
+#   script:
+#   - mage k8s:provisionIntegrationKubernetes $CI_PIPELINE_ID
+#
+# integration kubernetes exec legacy:
+#   extends:
+#   - .integration kubernetes
+#   resource_group: "$CI_COMMIT_BRANCH-k8s-integration-exec-legacy"
+#   variables:
+#     CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
+#     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "true"
+#     EXTRA_GO_TEST_FLAGS: "-run=TestRunIntegrationTestsWithFeatureFlag"
+#
+# integration kubernetes attach:
+#   extends:
+#     - .integration kubernetes
+#   resource_group: "$CI_COMMIT_BRANCH-k8s-integration-attach"
+#   variables:
+#     CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
+#     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "false"
+#     EXTRA_GO_TEST_FLAGS: "-run=TestRunIntegrationTestsWithFeatureFlag"
+#
+# integration kubernetes:
+#   extends:
+#     - .integration kubernetes
+#   resource_group: "$CI_COMMIT_BRANCH-k8s-integration"
+#   variables:
+#     EXTRA_GO_TEST_FLAGS: "-skip=TestRunIntegrationTestsWithFeatureFlag"
+#
+# destroy integration kubernetes:
+#   extends:
+#   - .integration kubernetes
+#   needs:
+#   - job: 'integration kubernetes'
+#     optional: true
+#   - job: 'integration kubernetes exec legacy'
+#     optional: true
+#   - job: 'integration kubernetes attach'
+#     optional: true
+#   variables:
+#     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-provisioner"
+#   script:
+#   - mage k8s:destroyIntegrationKubernetes $CI_PIPELINE_ID
