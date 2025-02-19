@@ -20,7 +20,7 @@ the init system.
 
 The package `service` installs, un-installs, starts, stops, and runs a program as a
 service (daemon). Windows XP+, Linux (systemd, Upstart, and System V),
-and macOS (launchd) are supported.
+and macOS (`launchd`) are supported.
 
 {{< /alert >}}
 
