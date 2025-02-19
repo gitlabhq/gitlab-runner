@@ -588,6 +588,8 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	templateFile := w.Join(templateDir, "config")
 	objectFormat := build.GetRepositoryObjectFormat()
 
+	b.writeGitCleanup(w, build)
+
 	if build.SafeDirectoryCheckout {
 		// Solves problem with newer Git versions when files existing in the working directory
 		// are owned by different system owners. This may happen for example with Docker executor,
@@ -607,8 +609,6 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	if build.IsSharedEnv() {
 		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
 	}
-
-	b.writeGitCleanup(w, build)
 
 	if objectFormat != common.DefaultObjectFormat {
 		w.Command("git", "init", projectDir, "--template", templateDir, "--object-format", objectFormat)

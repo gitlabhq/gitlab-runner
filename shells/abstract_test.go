@@ -2867,6 +2867,12 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 						sw := NewMockShellWriter(t)
 
 						sw.EXPECT().Noticef("Fetching changes...").Once()
+
+						expectFileCleanup(sw, ".git", expectSubmoduleCleanupCalls)
+						if cleanGitConfig.expectGitConfigsToBeCleaned {
+							expectGitConfigCleanup(sw, "", expectSubmoduleCleanupCalls)
+						}
+
 						sw.EXPECT().MkTmpDir("git-template").Return("someTmpDir").Once()
 						sw.EXPECT().Join("someTmpDir", "config").Return("someGitTemplateConfig").Once()
 
@@ -2874,11 +2880,6 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "fetch.recurseSubmodules", "false").Once()
 						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "credential.interactive", "never").Once()
 						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "transfer.bundleURI", "true").Once()
-
-						expectFileCleanup(sw, ".git", expectSubmoduleCleanupCalls)
-						if cleanGitConfig.expectGitConfigsToBeCleaned {
-							expectGitConfigCleanup(sw, "", expectSubmoduleCleanupCalls)
-						}
 
 						sw.EXPECT().Command("git", "init", "", "--template", "someTmpDir").Once()
 						sw.EXPECT().Cd("").Once()
