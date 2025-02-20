@@ -153,9 +153,9 @@ func testDockerConfigurationWithServiceContainer(
 
 	_, err = e.createService(
 		0,
-		"build",
-		"latest",
 		"alpine",
+		"latest",
+		"alpine:latest",
 		common.Image{Name: "alpine", Command: []string{"/bin/sh"}},
 		nil,
 	)

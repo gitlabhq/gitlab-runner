@@ -868,7 +868,9 @@ func prepareTestDockerConfiguration(
 ) (*dockerConfigurationTestFakeDockerClient, *executor) {
 	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
+	c.On("ImageInspectWithRaw", mock.Anything, mock.MatchedBy(func(image string) bool {
+		return image == "alpine" || image == "alpine:latest"
+	})).
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
 	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
 		Return(nil).Once()
@@ -1227,6 +1229,207 @@ func TestDockerTmpfsSetting(t *testing.T) {
 	}
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
+func TestDockerServicesDevicesSetting(t *testing.T) {
+	tests := map[string]struct {
+		devices                map[string][]string
+		expectedDeviceMappings []container.DeviceMapping
+	}{
+		"same host and container path": {
+			devices: map[string][]string{
+				"alpine:*": {"/dev/usb:/dev/usb:ro"},
+				"alp*":     {"/dev/kvm", "/dev/dri"},
+				"nomatch":  {"/dev/null"},
+			},
+			expectedDeviceMappings: []container.DeviceMapping{
+				{
+					PathOnHost:        "/dev/usb",
+					PathInContainer:   "/dev/usb",
+					CgroupPermissions: "ro",
+				},
+				{
+					PathOnHost:        "/dev/kvm",
+					PathInContainer:   "/dev/kvm",
+					CgroupPermissions: "rwm",
+				},
+				{
+					PathOnHost:        "/dev/dri",
+					PathInContainer:   "/dev/dri",
+					CgroupPermissions: "rwm",
+				},
+			},
+		},
+		"different host and container path": {
+			devices: map[string][]string{
+				"alpine:*": {"/dev/usb:/dev/xusb:ro"},
+				"alp*":     {"/dev/kvm:/dev/xkvm", "/dev/dri"},
+				"nomatch":  {"/dev/null"},
+			},
+			expectedDeviceMappings: []container.DeviceMapping{
+				{
+					PathOnHost:        "/dev/usb",
+					PathInContainer:   "/dev/xusb",
+					CgroupPermissions: "ro",
+				},
+				{
+					PathOnHost:        "/dev/kvm",
+					PathInContainer:   "/dev/xkvm",
+					CgroupPermissions: "rwm",
+				},
+				{
+					PathOnHost:        "/dev/dri",
+					PathInContainer:   "/dev/dri",
+					CgroupPermissions: "rwm",
+				},
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			dockerConfig := &common.DockerConfig{
+				ServicesDevices: tt.devices,
+			}
+			cce := func(ttt *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+				require.NotEmpty(ttt, hostConfig.Resources.Devices)
+				assert.ElementsMatch(ttt, tt.expectedDeviceMappings, hostConfig.Resources.Devices)
+			}
+			testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+		})
+	}
+}
+
+func TestDockerGetServicesDevices(t *testing.T) {
+	tests := map[string]struct {
+		image                  string
+		devices                map[string][]string
+		expectedDeviceMappings []container.DeviceMapping
+		expectedErrorSubstr    string
+	}{
+		"matching image": {
+			image: "alpine:latest",
+			devices: map[string][]string{
+				"alpine:*": {"/dev/null"},
+			},
+			expectedDeviceMappings: []container.DeviceMapping{
+				{
+					PathOnHost:        "/dev/null",
+					PathInContainer:   "/dev/null",
+					CgroupPermissions: "rwm",
+				},
+			},
+			expectedErrorSubstr: "",
+		},
+		"one matching image": {
+			image: "alpine:latest",
+			devices: map[string][]string{
+				"alpine:*": {"/dev/null"},
+				"fedora:*": {"/dev/usb"},
+			},
+			expectedDeviceMappings: []container.DeviceMapping{
+				{
+					PathOnHost:        "/dev/null",
+					PathInContainer:   "/dev/null",
+					CgroupPermissions: "rwm",
+				},
+			},
+			expectedErrorSubstr: "",
+		},
+		"multiple matching images": {
+			image: "alpine:latest",
+			devices: map[string][]string{
+				"alpine:*":      {"/dev/null"},
+				"alpine:latest": {"/dev/usb"},
+			},
+			expectedDeviceMappings: []container.DeviceMapping{
+				{
+					PathOnHost:        "/dev/null",
+					PathInContainer:   "/dev/null",
+					CgroupPermissions: "rwm",
+				},
+				{
+					PathOnHost:        "/dev/usb",
+					PathInContainer:   "/dev/usb",
+					CgroupPermissions: "rwm",
+				},
+			},
+			expectedErrorSubstr: "",
+		},
+		"no devices": {
+			image: "alpine:latest",
+			devices: map[string][]string{
+				"alpine:*": {},
+			},
+			expectedDeviceMappings: nil,
+			expectedErrorSubstr:    "",
+		},
+		"no matching image": {
+			image: "alpine:latest",
+			devices: map[string][]string{
+				"ubuntu:*": {"/dev/null"},
+			},
+			expectedDeviceMappings: nil,
+			expectedErrorSubstr:    "",
+		},
+		"devices is nil": {
+			image:                  "alpine:latest",
+			devices:                nil,
+			expectedDeviceMappings: nil,
+			expectedErrorSubstr:    "",
+		},
+		"multiple devices": {
+			image: "private.registry:5000/emulator/OSv7:26",
+			devices: map[string][]string{
+				"private.registry:5000/emulator/*": {"/dev/kvm", "/dev/dri"},
+			},
+			expectedDeviceMappings: []container.DeviceMapping{
+				{
+					PathOnHost:        "/dev/kvm",
+					PathInContainer:   "/dev/kvm",
+					CgroupPermissions: "rwm",
+				},
+				{
+					PathOnHost:        "/dev/dri",
+					PathInContainer:   "/dev/dri",
+					CgroupPermissions: "rwm",
+				},
+			},
+			expectedErrorSubstr: "",
+		},
+		"parseDeviceString error": {
+			image: "alpine:latest",
+			devices: map[string][]string{
+				"alpine:*": {"/dev/null::::"},
+			},
+			expectedDeviceMappings: nil,
+			expectedErrorSubstr:    "too many colons",
+		},
+		"bad glob pattern": {
+			image: "alpine:latest",
+			devices: map[string][]string{
+				"alpin[e:*": {"/dev/usb:/dev/usb:ro"},
+			},
+			expectedErrorSubstr: "invalid service device image pattern: alpin[e",
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e := &executor{}
+			e.Config.Docker = &common.DockerConfig{
+				ServicesDevices: tt.devices,
+			}
+
+			mappings, err := e.getServicesDevices(tt.image)
+			if tt.expectedErrorSubstr != "" {
+				assert.Contains(t, fmt.Sprintf("%+v", err), tt.expectedErrorSubstr)
+				return
+			}
+
+			assert.ElementsMatch(t, tt.expectedDeviceMappings, mappings)
+		})
+	}
 }
 
 func TestDockerUserSetting(t *testing.T) {
