@@ -7,6 +7,7 @@ stages:
 - package
 - release
 - postrelease
+- deploy
 - docs
 
 include:
@@ -29,6 +30,7 @@ include:
 - local: /.gitlab/ci/package.gitlab-ci.yml
 - local: /.gitlab/ci/release.gitlab-ci.yml
 - local: /.gitlab/ci/postrelease.gitlab-ci.yml
+- local: /.gitlab/ci/deploy.gitlab-ci.yml
 - local: /.gitlab/ci/docs.gitlab-ci.yml
 - component: ${CI_SERVER_FQDN}/gitlab-org/components/danger-review/danger-review@2.0.0
   inputs:
