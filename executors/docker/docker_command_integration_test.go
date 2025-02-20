@@ -2121,7 +2121,6 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 		{Key: "CI_DEBUG_SERVICES", Value: "true", Public: true},
 		{Key: "POSTGRES_PASSWORD", Value: "password", Public: true},
 		{Key: "JOB_IMAGE", Value: "alpine:latest"},
-		{Key: "HELPER_IMAGE", Value: "gitlab/gitlab-runner-helper:x86_64-latest"},
 		{Key: "HELPER_IMAGE_FLAVOR", Value: "alpine"},
 		{Key: "SRVS_IMAGE", Value: "postgres:latest"},
 		{Key: "SRVS_IMAGE_ALIAS", Value: "db"},
@@ -2135,7 +2134,6 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:             "$JOB_IMAGE",
-					HelperImage:       "$HELPER_IMAGE",
 					HelperImageFlavor: "$HELPER_IMAGE_FLAVOR",
 					Services: []common.Service{
 						{Name: "$SRVS_IMAGE", Alias: "$SRVS_IMAGE_ALIAS"},
@@ -2149,7 +2147,6 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, out, "Pulling docker image alpine:latest")
 	assert.Contains(t, out, "Pulling docker image postgres:latest")
-	assert.Contains(t, out, "Pulling docker image gitlab/gitlab-runner-helper:x86_64-latest")
 	assert.Regexp(t, `\[service:(postgres-db|db-postgres)\]`, out)
 }
 
