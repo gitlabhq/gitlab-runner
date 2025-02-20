@@ -444,14 +444,7 @@ This error might occur when you create or update a runner and
 the database does not have a unique index for the `tags` table.
 In the GitLab UI, you might get a `Response not successful: Received status code 500` error.
 
-This issue might affect long-lived instances that have gone through many major upgrades.
-To resolve this issue:
-
-1. In the [Rails console](https://docs.gitlab.com/administration/operations/rails_console/), consolidate any duplicate tags that
-   might exist in the table by running the [`dedupe.rb`](https://gitlab.com/gitlab-org/gitlab/-/snippets/3700665) script.
-1. Create a unique index for the `tags` table:
-
-   ```sql
-   DROP INDEX IF EXISTS index_tags_on_name; -- Drop a potentially invalid index
-   CREATE UNIQUE INDEX index_tags_on_name ON tags USING btree (name);
-   ```
+This issue might affect instances that have undergone multiple major upgrades over an extended period.
+To resolve this issue, consolidate any duplicate tags in the table with the
+[`gitlab:db:deduplicate_tags` Rake task](https://docs.gitlab.com/administration/raketasks/maintenance.html#check-the-database-for-deduplicate-cicd-tags).
+For more information, see [Rake tasks](https://docs.gitlab.com/raketasks/).
