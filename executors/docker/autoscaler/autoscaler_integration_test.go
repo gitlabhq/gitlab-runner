@@ -54,9 +54,6 @@ func newRunnerConfig(t *testing.T, shell string) *common.RunnerConfig {
 			Cache:     &common.CacheConfig{},
 			Docker: &common.DockerConfig{
 				Image: image,
-				// TODO: This is a temporary fix! This test should be able to use the helper image built in the same pipeline as
-				// the test job.
-				HelperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
 			},
 			Autoscaler: &common.AutoscalerConfig{
 				MaxUseCount:         1,

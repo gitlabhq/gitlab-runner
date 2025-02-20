@@ -89,6 +89,7 @@ default:
 .windows1809_variables:
   variables:
     WINDOWS_VERSION: servercore1809
+    WINDOWS_PREBUILT: servercore-ltsc2019
 
 .windows1809:
   extends:
@@ -101,10 +102,12 @@ default:
     - .windows1809
   variables:
     WINDOWS_VERSION: nanoserver1809
+    WINDOWS_PREBUILT: nanoserver-ltsc2019
 
 .windows21H2_variables:
   variables:
     WINDOWS_VERSION: servercore21H2
+    WINDOWS_PREBUILT: servercore-ltsc2022
 
 .windows21H2:
   extends:
@@ -117,6 +120,7 @@ default:
     - .windows21H2
   variables:
     WINDOWS_VERSION: nanoserver21H2
+    WINDOWS_PREBUILT: nanoserver-ltsc2022
 
 # .stage_done is used as a sentinel at stage n for stage n-1 completion, so we can kick off builds in later stages
 # without explicitly waiting for the completion of the n-1 stage
