@@ -24,8 +24,6 @@ and macOS (`launchd`) are supported.
 
 {{< /alert >}}
 
-{{< /alert >}}
-
 When GitLab Runner [is installed](../install/_index.md), the service file is
 automatically created:
 
