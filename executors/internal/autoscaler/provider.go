@@ -27,6 +27,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/internal/autoscaler/logger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 var (
@@ -210,6 +211,10 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		taskscaler.WithUpdateIntervalWhenExpecting(time.Second),
 		taskscaler.WithLogger(logger.Named("taskscaler")),
 		taskscaler.WithScaleThrottle(config.Autoscaler.ScaleThrottle.Limit, config.Autoscaler.ScaleThrottle.Burst),
+	}
+
+	if config.IsFeatureFlagOn(featureflags.UseFleetingAcquireHeartbeats) {
+		options = append(options, taskscaler.WithHeartbeatFunc(instanceHeartbeat(config)))
 	}
 
 	if store != nil {
@@ -451,4 +456,22 @@ func readyNestingHost(ctx context.Context, config *common.RunnerConfig, instance
 	}
 
 	return nil
+}
+
+func instanceHeartbeat(config *common.RunnerConfig) taskscaler.HeartbeatFunc {
+	useExternalAddr := true
+	if config.Autoscaler != nil {
+		useExternalAddr = config.Autoscaler.ConnectorConfig.UseExternalAddr
+	}
+
+	return func(ctx context.Context, info fleetingprovider.ConnectInfo) error {
+		return connector.Run(ctx, info, connector.ConnectorOptions{
+			RunOptions: connector.RunOptions{
+				Command: "exit 0",
+			},
+			DialOptions: connector.DialOptions{
+				UseExternalAddr: useExternalAddr,
+			},
+		})
+	}
 }

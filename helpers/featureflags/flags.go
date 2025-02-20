@@ -47,6 +47,7 @@ const (
 	UseNativeSteps                       string = "FF_USE_NATIVE_STEPS"
 	MaskAllDefaultTokens                 string = "FF_MASK_ALL_DEFAULT_TOKENS"
 	ExportHighCardinalityMetrics         string = "FF_EXPORT_HIGH_CARDINALITY_METRICS"
+	UseFleetingAcquireHeartbeats         string = "FF_USE_FLEETING_ACQUIRE_HEARTBEATS"
 )
 
 type FeatureFlag struct {
@@ -392,6 +393,12 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, the runner exports the metrics with high cardinality. Special care should be " +
 			"taken when enabling this feature flag to avoid ingesting large amounts of data. For more information, see [Fleet scaling](../fleet_scaling/_index.md).",
+	},
+	{
+		Name:         UseFleetingAcquireHeartbeats,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, fleeting instance connectivity is checked before a job is assigned to an instance.",
 	},
 }
 

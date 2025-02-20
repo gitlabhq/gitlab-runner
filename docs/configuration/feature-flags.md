@@ -85,6 +85,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_NATIVE_STEPS` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled and when a job is specified using the 'run' keyword, steps are executed using [Native Step Runner Integration](../executors/docker.md#native-step-runner-integration). This applies only to executors that support native steps integration like Docker, Docker Autoscaler, Docker for Windows. |
 | `FF_MASK_ALL_DEFAULT_TOKENS` | `true` | {{< icon name="dotted-circle" >}} No |  | When enabled, GitLab Runner automatically masks all default tokens patterns. |
 | `FF_EXPORT_HIGH_CARDINALITY_METRICS` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, the runner exports the metrics with high cardinality. Special care should be taken when enabling this feature flag to avoid ingesting large amounts of data. For more information, see [Fleet scaling](../fleet_scaling/_index.md). |
+| `FF_USE_FLEETING_ACQUIRE_HEARTBEATS` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, fleeting instance connectivity is checked before a job is assigned to an instance. |
 
 <!-- feature_flags_list_end -->
 
