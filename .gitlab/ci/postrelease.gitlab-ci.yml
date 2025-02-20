@@ -1,4 +1,4 @@
-.trigger-downstream-pipeline-ref-rules:
+.trigger-downstream-pipeline-ref:
   stage: postrelease
   variables:
     UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_BRANCH
@@ -28,7 +28,7 @@
 
 trigger UBI images build:
   extends:
-    - .trigger-downstream-pipeline-ref-rules
+    - .trigger-downstream-pipeline-ref
   variables:
     BUILD_RELEASE: $CI_COMMIT_REF_NAME
     BUILD_RELEASE_SHA: $CI_COMMIT_SHORT_SHA
@@ -38,7 +38,7 @@ trigger UBI images build:
 
 trigger runner-incept tests:
   extends:
-    - .trigger-downstream-pipeline-ref-rules
+    - .trigger-downstream-pipeline-ref
   needs:
     - binaries
     - "helper images"
@@ -47,14 +47,30 @@ trigger runner-incept tests:
     # strategy: depend
 
 trigger deploy to kubernetes:
-  extends: .trigger-downstream-pipeline-ref-rules
+  extends:
+    - .trigger-downstream-pipeline-ref
   needs:
     - trigger UBI images build
   rules:
+    # Override rules in .trigger-downstream-pipeline-ref to remove MR pipelines
+    - if: '$CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/'
+      when: never
+    - if: $CI_PROJECT_PATH != "gitlab-org/gitlab-runner"
+      when: never
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
-    - if: $CI_PROJECT_PATH == "gitlab-org/gitlab-runner" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when: always
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: !reference [.code-backstage-patterns]
+      variables:
+        UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
+    - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+?\z/
+      changes: !reference [.code-backstage-patterns]
+      variables:
+        UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
+    - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/
+      changes: !reference [.code-backstage-patterns]
+      variables:
+        UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
   trigger:
     project: gitlab-org/ci-cd/runner-tools/runner-kubernetes-infra
 
