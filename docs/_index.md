@@ -113,7 +113,7 @@ This is how the runner knows which projects it's available for.
 
 ### Tags
 
-When you register a runner, you can add [**tags**](https://docs.gitlab.com/ci/yaml/#tags) to it.
+When you register a runner, you can add [tags](https://docs.gitlab.com/ci/yaml/#tags) to it.
 
 When a CI/CD job runs, it knows which runner to use by looking at the assigned tags.
 Tags are the only way to filter the list of available runners for a job.
@@ -148,7 +148,7 @@ much CPU your runners are using.
 ### Use a runner to run jobs
 
 After a runner is configured and available for your project, your
-[CI/CD](https://docs.gitlab.com/ci/) jobs can use the runner.
+[CI/CD jobs](https://docs.gitlab.com/ci/jobs/) can use the runner.
 
 ## Features
 
