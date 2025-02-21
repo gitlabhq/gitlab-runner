@@ -2248,7 +2248,7 @@ func TestConfig_SaveConfig(t *testing.T) {
 
 	c := new(Config)
 	c.ModTime = oldTime
-	c.configSaver = cs
+	c.ConfigSaver = cs
 
 	err := c.SaveConfig(configFileName)
 	require.NoError(t, err)
@@ -2844,7 +2844,7 @@ func TestConfig_SaveConfig_CustomBuildDir(t *testing.T) {
 			})).Return(nil).Once()
 
 			c := &Config{
-				configSaver: cs,
+				ConfigSaver: cs,
 				Runners: []*RunnerConfig{
 					{
 						Name: name,
@@ -2863,4 +2863,286 @@ func TestConfig_SaveConfig_CustomBuildDir(t *testing.T) {
 
 func ptr[T any](v T) *T {
 	return &v
+}
+
+func TestRunnerByName(t *testing.T) {
+	examples := map[string]struct {
+		runners       []*RunnerConfig
+		runnerName    string
+		expectedIndex int
+		expectedError error
+	}{
+		"finds runner by name": {
+			runners: []*RunnerConfig{
+				{
+					Name: "runner1",
+				},
+				{
+					Name: "runner2",
+				},
+			},
+			runnerName:    "runner2",
+			expectedIndex: 1,
+		},
+		"does not find non-existent runner": {
+			runners: []*RunnerConfig{
+				{
+					Name: "runner1",
+				},
+				{
+					Name: "runner2",
+				},
+			},
+			runnerName:    "runner3",
+			expectedIndex: -1,
+			expectedError: fmt.Errorf("could not find a runner with the name 'runner3'"),
+		},
+	}
+
+	for tn, tt := range examples {
+		t.Run(tn, func(t *testing.T) {
+			config := &Config{
+				Runners: tt.runners,
+			}
+
+			runner, err := config.RunnerByName(tt.runnerName)
+			if tt.expectedIndex == -1 {
+				assert.Nil(t, runner)
+			} else {
+				assert.Equal(t, tt.runners[tt.expectedIndex], runner)
+			}
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
+
+func TestRunnerByToken(t *testing.T) {
+	examples := map[string]struct {
+		runners       []*RunnerConfig
+		runnerToken   string
+		expectedIndex int
+		expectedError error
+	}{
+		"finds runner by token": {
+			runners: []*RunnerConfig{
+				{
+					RunnerCredentials: RunnerCredentials{
+						Token: "runner1",
+					},
+				},
+				{
+					RunnerCredentials: RunnerCredentials{
+						Token: "runner2",
+					},
+				},
+			},
+			runnerToken:   "runner2",
+			expectedIndex: 1,
+		},
+		"does not find non-existent runner authentication token": {
+			runners: []*RunnerConfig{
+				{
+					RunnerCredentials: RunnerCredentials{
+						Token: "runner1",
+					},
+				},
+				{
+					RunnerCredentials: RunnerCredentials{
+						Token: "runner2",
+					},
+				},
+			},
+			runnerToken:   "runner3",
+			expectedIndex: -1,
+			expectedError: fmt.Errorf("could not find a runner with the token 'runner3'"),
+		},
+	}
+
+	for tn, tt := range examples {
+		t.Run(tn, func(t *testing.T) {
+			config := &Config{
+				Runners: tt.runners,
+			}
+
+			runner, err := config.RunnerByToken(tt.runnerToken)
+			if tt.expectedIndex == -1 {
+				assert.Nil(t, runner)
+			} else {
+				assert.Equal(t, tt.runners[tt.expectedIndex], runner)
+			}
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
+
+func TestRunnerByURLAndID(t *testing.T) {
+	examples := map[string]struct {
+		runners       []*RunnerConfig
+		runnerURL     string
+		runnerID      int64
+		expectedIndex int
+		expectedError error
+	}{
+		"finds runner by name": {
+			runners: []*RunnerConfig{
+				{
+					RunnerCredentials: RunnerCredentials{
+						ID:  1,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+				{
+					RunnerCredentials: RunnerCredentials{
+						ID:  2,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+			},
+			runnerURL:     "https://gitlab1.example.com/",
+			runnerID:      1,
+			expectedIndex: 0,
+		},
+		"does not find runner with wrong ID": {
+			runners: []*RunnerConfig{
+				{
+					RunnerCredentials: RunnerCredentials{
+						ID:  1,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+				{
+					RunnerCredentials: RunnerCredentials{
+						ID:  2,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+			},
+			runnerURL:     "https://gitlab1.example.com/",
+			runnerID:      3,
+			expectedIndex: -1,
+			expectedError: fmt.Errorf(`could not find a runner with the URL "https://gitlab1.example.com/" and ID 3`),
+		},
+		"does not find runner with wrong URL": {
+			runners: []*RunnerConfig{
+				{
+					RunnerCredentials: RunnerCredentials{
+						ID:  1,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+				{
+					RunnerCredentials: RunnerCredentials{
+						ID:  2,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+			},
+			runnerURL:     "https://gitlab2.example.com/",
+			runnerID:      1,
+			expectedIndex: -1,
+			expectedError: fmt.Errorf(`could not find a runner with the URL "https://gitlab2.example.com/" and ID 1`),
+		},
+	}
+
+	for tn, tt := range examples {
+		t.Run(tn, func(t *testing.T) {
+			config := &Config{
+				Runners: tt.runners,
+			}
+
+			runner, err := config.RunnerByURLAndID(tt.runnerURL, tt.runnerID)
+			if tt.expectedIndex == -1 {
+				assert.Nil(t, runner)
+			} else {
+				assert.Equal(t, tt.runners[tt.expectedIndex], runner)
+			}
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
+
+func TestRunnerByNameAndToken(t *testing.T) {
+	examples := map[string]struct {
+		runners       []*RunnerConfig
+		runnerName    string
+		runnerToken   string
+		expectedIndex int
+		expectedError error
+	}{
+		"finds runner by name and token": {
+			runners: []*RunnerConfig{
+				{
+					Name: "runner1",
+					RunnerCredentials: RunnerCredentials{
+						Token: "token1",
+					},
+				},
+				{
+					Name: "runner2",
+					RunnerCredentials: RunnerCredentials{
+						Token: "token2",
+					},
+				},
+			},
+			runnerName:    "runner1",
+			runnerToken:   "token1",
+			expectedIndex: 0,
+		},
+		"does not find runner with wrong name": {
+			runners: []*RunnerConfig{
+				{
+					Name: "runner1",
+					RunnerCredentials: RunnerCredentials{
+						Token: "token1",
+					},
+				},
+				{
+					Name: "runner2",
+					RunnerCredentials: RunnerCredentials{
+						Token: "token2",
+					},
+				},
+			},
+			runnerName:    "runner3",
+			runnerToken:   "token1",
+			expectedIndex: -1,
+			expectedError: fmt.Errorf(`could not find a runner with the Name 'runner3' and Token 'token1'`),
+		},
+		"does not find runner with wrong token": {
+			runners: []*RunnerConfig{
+				{
+					Name: "runner1",
+					RunnerCredentials: RunnerCredentials{
+						Token: "token1",
+					},
+				},
+				{
+					Name: "runner2",
+					RunnerCredentials: RunnerCredentials{
+						Token: "token2",
+					},
+				},
+			},
+			runnerName:    "runner1",
+			runnerToken:   "token3",
+			expectedIndex: -1,
+			expectedError: fmt.Errorf(`could not find a runner with the Name 'runner1' and Token 'token3'`),
+		},
+	}
+
+	for tn, tt := range examples {
+		t.Run(tn, func(t *testing.T) {
+			config := &Config{
+				Runners: tt.runners,
+			}
+
+			runner, err := config.RunnerByNameAndToken(tt.runnerName, tt.runnerToken)
+			if tt.expectedIndex == -1 {
+				assert.Nil(t, runner)
+			} else {
+				assert.Equal(t, tt.runners[tt.expectedIndex], runner)
+			}
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
 }

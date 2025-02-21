@@ -1,4 +1,4 @@
-package common
+package configfile
 
 import (
 	"crypto/hmac"
@@ -16,19 +16,47 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type SystemIDState struct {
+type systemIDState struct {
 	systemID string
 }
 
-func NewSystemIDState() *SystemIDState {
-	return &SystemIDState{}
+func newSystemIDState(filePath string) (*systemIDState, error) {
+	state := &systemIDState{}
+
+	err := state.loadFromFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// ensure we have a system ID
+	if state.GetSystemID() == "" {
+		err = state.ensureSystemID()
+		if err != nil {
+			return nil, err
+		}
+
+		err = state.saveConfig(filePath)
+		if err != nil {
+			logrus.
+				WithFields(logrus.Fields{
+					"state_file": filePath,
+					"system_id":  state.GetSystemID(),
+				}).
+				Warningf("Couldn't save new system ID on state file. "+
+					"In order to reliably identify this runner in jobs with a known identifier,\n"+
+					"please ensure there is a text file at the location specified in `state_file` "+
+					"with the contents of `system_id`. Example: echo %q > %q\n", state.GetSystemID(), filePath)
+		}
+	}
+
+	return state, nil
 }
 
-func (s *SystemIDState) GetSystemID() string {
+func (s *systemIDState) GetSystemID() string {
 	return s.systemID
 }
 
-func (s *SystemIDState) LoadFromFile(filePath string) error {
+func (s *systemIDState) loadFromFile(filePath string) error {
 	_, err := os.Stat(filePath)
 
 	// permission denied is soft error
@@ -54,7 +82,7 @@ func (s *SystemIDState) LoadFromFile(filePath string) error {
 	return nil
 }
 
-func (s *SystemIDState) SaveConfig(filePath string) error {
+func (s *systemIDState) saveConfig(filePath string) error {
 	// create directory to store configuration
 	err := os.MkdirAll(filepath.Dir(filePath), 0700)
 	if err != nil {
@@ -70,12 +98,12 @@ func (s *SystemIDState) SaveConfig(filePath string) error {
 	return nil
 }
 
-func (s *SystemIDState) EnsureSystemID() error {
+func (s *systemIDState) ensureSystemID() error {
 	if s.systemID != "" {
 		return nil
 	}
 
-	if systemID, err := generateUniqueSystemID(); err == nil {
+	if systemID, err := GenerateUniqueSystemID(); err == nil {
 		logrus.WithField("system_id", systemID).Info("Created missing unique system ID")
 
 		s.systemID = systemID
@@ -86,7 +114,7 @@ func (s *SystemIDState) EnsureSystemID() error {
 	return nil
 }
 
-func generateUniqueSystemID() (string, error) {
+func GenerateUniqueSystemID() (string, error) {
 	const idLength = 12
 
 	systemID, err := machineid.ID()

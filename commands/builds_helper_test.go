@@ -48,10 +48,7 @@ func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
 func TestBuildsHelperAcquireRequestWithAdaptiveLimit(t *testing.T) {
 	runner := common.RunnerConfig{
 		RequestConcurrency: 2,
-		SystemIDState:      common.NewSystemIDState(),
 	}
-
-	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireRequest(&runner)

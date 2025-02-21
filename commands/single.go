@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
@@ -25,10 +26,9 @@ type RunSingleCommand struct {
 	finished         atomic.Bool
 	interruptSignals chan os.Signal
 
-	configOptions
-	RunnerName string `short:"r" long:"runner" description:"Runner name from the config file to use instead of command-line arguments"`
-
-	shutdownTimeout int `long:"shutdown-timeout" description:"Number of seconds after which the forceful shutdown operation will timeout and process will exit"`
+	ConfigFile      string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
+	RunnerName      string `short:"r" long:"runner" description:"Runner name from the config file to use instead of command-line arguments"`
+	shutdownTimeout int    `long:"shutdown-timeout" description:"Number of seconds after which the forceful shutdown operation will timeout and process will exit"`
 }
 
 func waitForInterrupts(
@@ -139,12 +139,11 @@ func (r *RunSingleCommand) checkFinishedConditions() {
 
 func (r *RunSingleCommand) HandleArgs() {
 	if r.RunnerName != "" {
-		fileConfig := &configOptions{ConfigFile: r.ConfigFile}
-		err := fileConfig.loadConfig()
-		if err != nil {
+		cfg := configfile.New(r.ConfigFile)
+		if err := cfg.Load(); err != nil {
 			logrus.Fatalf("Error loading config: %v", err)
 		}
-		runner, err := fileConfig.RunnerByName(r.RunnerName)
+		runner, err := cfg.Config().RunnerByName(r.RunnerName)
 		if err != nil {
 			logrus.Fatalf("Error loading runner by name: %v", err)
 		}
@@ -174,11 +173,13 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 		managedProvider.Init()
 	}
 
-	state := common.NewSystemIDState()
-	if err := state.EnsureSystemID(); err != nil {
-		logrus.WithError(err).Fatal("Failed to generate random system ID")
+	if r.RunnerConfig.SystemID == "" {
+		systemID, err := configfile.GenerateUniqueSystemID()
+		if err != nil {
+			logrus.WithError(err).Fatal("Failed to generate random system ID")
+		}
+		r.RunnerConfig.SystemID = systemID
 	}
-	r.RunnerConfig.SystemID = state.GetSystemID()
 
 	logrus.Println("Starting runner for", r.URL, "with token", r.ShortDescription(), "...")
 

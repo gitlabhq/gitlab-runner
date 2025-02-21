@@ -6,43 +6,60 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 type VerifyCommand struct {
-	configOptions
 	common.RunnerCredentials
-	network           common.Network
+	network common.Network
+
+	ConfigFile        string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 	Name              string `toml:"name" json:"name" short:"n" long:"name" description:"Name of the runner you wish to verify"`
 	DeleteNonExisting bool   `long:"delete" description:"Delete no longer existing runners?"`
 }
 
+//nolint:gocognit
 func (c *VerifyCommand) Execute(context *cli.Context) {
 	userModeWarning(true)
 
-	err := c.loadConfig()
-	if err != nil {
-		logrus.Fatalln(err)
-		return
-	}
+	var hasSelector = c.Name != "" ||
+		c.RunnerCredentials.URL != "" ||
+		c.RunnerCredentials.Token != ""
 
-	// check if there's something to verify
-	toVerify, okRunners, err := c.selectRunners()
-	if err != nil {
-		logrus.Fatalln(err)
-		return
-	}
+	cfg := configfile.New(c.ConfigFile)
 
-	// verify if runner exist
-	for _, runner := range toVerify {
-		if c.network.VerifyRunner(runner.RunnerCredentials, runner.SystemID) != nil {
-			okRunners = append(okRunners, runner)
+	var unverified int
+	if err := cfg.Load(configfile.WithMutateOnLoad(func(cfg *common.Config) error {
+		var ok []*common.RunnerConfig
+		var verified int
+		for _, runner := range cfg.Runners {
+			if !hasSelector || runner.Name == c.Name || runner.RunnerCredentials.SameAs(&c.RunnerCredentials) {
+				verified++
+				if c.network.VerifyRunner(runner.RunnerCredentials, runner.SystemID) == nil {
+					unverified++
+					continue
+				}
+			}
+
+			ok = append(ok, runner)
 		}
+
+		// update config runners
+		cfg.Runners = ok
+
+		if hasSelector && verified == 0 {
+			return errors.New("no runner matches the filtering parameters")
+		}
+
+		return nil
+	})); err != nil {
+		logrus.Fatalln(err)
 	}
 
 	// check if anything changed
-	if len(c.getConfig().Runners) == len(okRunners) {
+	if unverified == 0 {
 		return
 	}
 
@@ -51,35 +68,11 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		return
 	}
 
-	c.configMutex.Lock()
-	c.config.Runners = okRunners
-	c.configMutex.Unlock()
-
 	// save config file
-	err = c.saveConfig()
-	if err != nil {
+	if err := cfg.Save(); err != nil {
 		logrus.Fatalln("Failed to update", c.ConfigFile, err)
 	}
 	logrus.Println("Updated", c.ConfigFile)
-}
-
-func (c *VerifyCommand) selectRunners() (toVerify, okRunners []*common.RunnerConfig, err error) {
-	var selectorPresent = c.Name != "" || c.RunnerCredentials.URL != "" || c.RunnerCredentials.Token != ""
-
-	for _, runner := range c.getConfig().Runners {
-		selected := !selectorPresent || runner.Name == c.Name || runner.RunnerCredentials.SameAs(&c.RunnerCredentials)
-
-		if selected {
-			toVerify = append(toVerify, runner)
-		} else {
-			okRunners = append(okRunners, runner)
-		}
-	}
-
-	if selectorPresent && len(toVerify) == 0 {
-		err = errors.New("no runner matches the filtering parameters")
-	}
-	return
 }
 
 func init() {

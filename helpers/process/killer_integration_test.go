@@ -52,7 +52,6 @@ func newKillerWithLoggerAndCommand(
 	k := process.NewKillerForTest(loggerMock, command)
 
 	cleanup := func() {
-		loggerMock.AssertExpectations(t)
 		err = os.RemoveAll(filepath.Dir(sleepBinary))
 		if err != nil {
 			t.Logf("Failed to cleanup files %q: %v", filepath.Dir(sleepBinary), err)

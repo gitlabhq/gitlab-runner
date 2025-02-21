@@ -235,7 +235,6 @@ func TestListenReadLines(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mockLogStreamer := makeMockLogStreamer(t)
-	defer mockLogStreamer.AssertExpectations(t)
 
 	logs := []log{
 		{line: line1, offset: 10},
@@ -310,7 +309,6 @@ func newTestKubernetesLogProcessor(t *testing.T) *kubernetesLogProcessor {
 
 func TestListenCancelContext(t *testing.T) {
 	mockLogStreamer := makeMockLogStreamer(t)
-	defer mockLogStreamer.AssertExpectations(t)
 
 	ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 
@@ -340,7 +338,6 @@ func TestAttachReconnectLogStream(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mockLogStreamer := makeMockLogStreamer(t)
-	defer mockLogStreamer.AssertExpectations(t)
 
 	var connects int
 	mockLogStreamer.
@@ -374,7 +371,6 @@ func TestAttachReconnectReadLogs(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mockLogStreamer := makeMockLogStreamer(t)
-	defer mockLogStreamer.AssertExpectations(t)
 
 	var connects int
 	mockLogStreamer.
@@ -428,7 +424,6 @@ func TestAttachCorrectOffset(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mockLogStreamer := makeMockLogStreamer(t)
-	defer mockLogStreamer.AssertExpectations(t)
 
 	logs := []log{
 		{line: "line", offset: 10},

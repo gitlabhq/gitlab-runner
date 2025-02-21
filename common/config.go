@@ -1271,7 +1271,7 @@ type Config struct {
 
 	ShutdownTimeout int `toml:"shutdown_timeout,omitempty" json:"shutdown_timeout" description:"Number of seconds until the forceful shutdown operation times out and exits the process"`
 
-	configSaver ConfigSaver
+	ConfigSaver ConfigSaver `toml:"-"`
 }
 
 type Experimental struct {
@@ -2155,7 +2155,7 @@ func (r *RunnerConfig) mask() {
 
 func NewConfigWithSaver(s ConfigSaver) *Config {
 	c := NewConfig()
-	c.configSaver = s
+	c.ConfigSaver = s
 
 	return c
 }
@@ -2259,11 +2259,11 @@ func (c *Config) SaveConfig(configFile string) error {
 		return err
 	}
 
-	if c.configSaver == nil {
-		c.configSaver = new(defaultConfigSaver)
+	if c.ConfigSaver == nil {
+		c.ConfigSaver = new(defaultConfigSaver)
 	}
 
-	if err := c.configSaver.Save(configFile, newConfig.Bytes()); err != nil {
+	if err := c.ConfigSaver.Save(configFile, newConfig.Bytes()); err != nil {
 		return err
 	}
 
@@ -2294,4 +2294,44 @@ func maskField(field *string) {
 	if field != nil && *field != "" {
 		*field = mask
 	}
+}
+
+func (c *Config) RunnerByName(name string) (*RunnerConfig, error) {
+	for _, runner := range c.Runners {
+		if runner.Name == name {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the name '%s'", name)
+}
+
+func (c *Config) RunnerByToken(token string) (*RunnerConfig, error) {
+	for _, runner := range c.Runners {
+		if runner.Token == token {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the token '%s'", helpers.ShortenToken(token))
+}
+
+func (c *Config) RunnerByURLAndID(url string, id int64) (*RunnerConfig, error) {
+	for _, runner := range c.Runners {
+		if runner.URL == url && runner.ID == id {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the URL %q and ID %d", url, id)
+}
+
+func (c *Config) RunnerByNameAndToken(name string, token string) (*RunnerConfig, error) {
+	for _, runner := range c.Runners {
+		if runner.Name == name && runner.Token == token {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the Name '%s' and Token '%s'", name, token)
 }
