@@ -94,7 +94,7 @@ func newRunSingleCommand(executorName string, network common.Network) *RunSingle
 				URL:   "http://example.com",
 				Token: "_test_token_",
 			},
-			SystemIDState: systemIDState,
+			SystemID: systemIDState.GetSystemID(),
 		},
 		interruptSignals: make(chan os.Signal),
 	}

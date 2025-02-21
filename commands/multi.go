@@ -1442,7 +1442,7 @@ func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 			prometheus.GaugeValue,
 			float64(runner.Limit),
 			runner.ShortDescription(),
-			runner.SystemIDState.GetSystemID(),
+			runner.SystemID,
 		)
 	}
 

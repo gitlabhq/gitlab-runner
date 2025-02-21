@@ -1679,7 +1679,7 @@ func (b *Build) printRunningWithHeader(trace JobTrace) {
 			"  on %s %s, system ID: %s",
 			b.Runner.Name,
 			b.Runner.ShortDescription(),
-			b.Runner.SystemIDState.GetSystemID(),
+			b.Runner.SystemID,
 		))
 	}
 	if featureInfo := b.getFeatureFlagInfo(); featureInfo != "" {

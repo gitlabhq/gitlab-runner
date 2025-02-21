@@ -43,7 +43,6 @@ func newRunnerConfig(t *testing.T, shell string) *common.RunnerConfig {
 	image := getImage()
 
 	return &common.RunnerConfig{
-		SystemIDState: common.NewSystemIDState(),
 		RunnerCredentials: common.RunnerCredentials{
 			Token: "runner-token",
 		},

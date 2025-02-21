@@ -383,10 +383,10 @@ func Test_loadConfig(t *testing.T) {
 			assertFn: func(t *testing.T, err error, config *common.Config, systemIDFile string) {
 				assert.NoError(t, err)
 				require.Equal(t, 1, len(config.Runners))
-				assert.NotEmpty(t, config.Runners[0].SystemIDState.GetSystemID())
+				assert.NotEmpty(t, config.Runners[0].SystemID)
 				content, err := os.ReadFile(systemIDFile)
 				require.NoError(t, err)
-				assert.Contains(t, string(content), config.Runners[0].SystemIDState.GetSystemID())
+				assert.Contains(t, string(content), config.Runners[0].SystemID)
 			},
 		},
 		"preserves existing unique system IDs": {
@@ -394,7 +394,7 @@ func Test_loadConfig(t *testing.T) {
 			assertFn: func(t *testing.T, err error, config *common.Config, _ string) {
 				assert.NoError(t, err)
 				require.Equal(t, 1, len(config.Runners))
-				assert.Equal(t, "s_c2d22f638c25", config.Runners[0].SystemIDState.GetSystemID())
+				assert.Equal(t, "s_c2d22f638c25", config.Runners[0].SystemID)
 			},
 		},
 		"regenerates system ID if file is invalid": {
@@ -402,7 +402,7 @@ func Test_loadConfig(t *testing.T) {
 			assertFn: func(t *testing.T, err error, config *common.Config, _ string) {
 				assert.NoError(t, err)
 				require.Equal(t, 1, len(config.Runners))
-				assert.Regexp(t, expectedSystemIDRegexPattern, config.Runners[0].SystemIDState.GetSystemID())
+				assert.Regexp(t, expectedSystemIDRegexPattern, config.Runners[0].SystemID)
 			},
 		},
 		"succeeds if file cannot be created": {
@@ -414,7 +414,7 @@ func Test_loadConfig(t *testing.T) {
 			assertFn: func(t *testing.T, err error, config *common.Config, _ string) {
 				require.NoError(t, err)
 				require.Equal(t, 1, len(config.Runners))
-				assert.Regexp(t, expectedSystemIDRegexPattern, config.Runners[0].SystemIDState.GetSystemID())
+				assert.Regexp(t, expectedSystemIDRegexPattern, config.Runners[0].SystemID)
 			},
 		},
 	}

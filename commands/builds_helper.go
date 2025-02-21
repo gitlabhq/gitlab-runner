@@ -74,7 +74,7 @@ type statePermutation struct {
 func newStatePermutationFromBuild(build *common.Build) statePermutation {
 	return statePermutation{
 		runner:        build.Runner.ShortDescription(),
-		systemID:      build.Runner.SystemIDState.GetSystemID(),
+		systemID:      build.Runner.SystemID,
 		buildState:    build.CurrentState(),
 		buildStage:    build.CurrentStage(),
 		executorStage: build.CurrentExecutorStage(),
@@ -114,7 +114,7 @@ func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCoun
 
 	counter := b.counters[runner.Token]
 	if counter == nil {
-		counter = &runnerCounter{systemID: runner.SystemIDState.GetSystemID()}
+		counter = &runnerCounter{systemID: runner.SystemID}
 		b.counters[runner.Token] = counter
 	}
 	return counter
@@ -261,11 +261,11 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 	}
 
 	b.builds = append(b.builds, build)
-	b.jobsTotal.WithLabelValues(build.Runner.ShortDescription(), build.Runner.SystemIDState.GetSystemID()).Inc()
+	b.jobsTotal.WithLabelValues(build.Runner.ShortDescription(), build.Runner.SystemID).Inc()
 	b.jobQueueDurationHistogram.
 		WithLabelValues(
 			build.Runner.ShortDescription(),
-			build.Runner.SystemIDState.GetSystemID(),
+			build.Runner.SystemID,
 			build.JobInfo.ProjectJobsRunningOnInstanceRunnersCount,
 		).
 		Observe(build.JobInfo.TimeInQueueSeconds)
@@ -278,7 +278,7 @@ func (b *buildsHelper) evaluateJobQueuingDuration(runner *common.RunnerConfig, j
 	counterForRunner := b.acceptableJobQueuingDurationExceeded.
 		WithLabelValues(
 			runner.ShortDescription(),
-			runner.SystemIDState.GetSystemID(),
+			runner.SystemID,
 		)
 
 	// This .Add(0) will not change the value of the metric when threshold was
@@ -327,7 +327,7 @@ func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
 	defer b.lock.Unlock()
 
 	b.jobDurationHistogram.
-		WithLabelValues(deleteBuild.Runner.ShortDescription(), deleteBuild.Runner.SystemIDState.GetSystemID()).
+		WithLabelValues(deleteBuild.Runner.ShortDescription(), deleteBuild.Runner.SystemID).
 		Observe(deleteBuild.FinalDuration().Seconds())
 
 	for idx, build := range b.builds {

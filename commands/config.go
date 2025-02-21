@@ -160,7 +160,7 @@ func (c *configOptions) loadConfig() error {
 
 	c.config = config
 	for _, runnerCfg := range c.config.Runners {
-		runnerCfg.SystemIDState = systemIDState
+		runnerCfg.SystemID = systemIDState.GetSystemID()
 		runnerCfg.ConfigLoadedAt = time.Now()
 		runnerCfg.ConfigDir = filepath.Dir(c.ConfigFile)
 	}

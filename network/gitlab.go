@@ -560,7 +560,7 @@ func (n *GitLabClient) RequestJob(
 	request := common.JobRequest{
 		Info:       n.getRunnerVersion(config),
 		Token:      config.Token,
-		SystemID:   config.SystemIDState.GetSystemID(),
+		SystemID:   config.SystemID,
 		LastUpdate: n.getLastUpdate(&config.RunnerCredentials),
 		Session:    sessionInfo,
 	}
@@ -572,7 +572,7 @@ func (n *GitLabClient) RequestJob(
 		ctx,
 		config.Log(),
 		config.RunnerCredentials.ShortDescription(),
-		config.SystemIDState.GetSystemID(),
+		config.SystemID,
 		apiEndpointRequestJob,
 		doJSONParams{
 			credentials: &config.RunnerCredentials,
@@ -643,7 +643,7 @@ func (n *GitLabClient) UpdateJob(
 		context.Background(),
 		config.Log(),
 		config.RunnerCredentials.ShortDescription(),
-		config.SystemIDState.GetSystemID(),
+		config.SystemID,
 		apiEndpointUpdateJob,
 		doJSONParams{
 			credentials: &config.RunnerCredentials,
@@ -737,7 +737,7 @@ func (n *GitLabClient) PatchTrace(
 		context.Background(),
 		config.Log(),
 		config.RunnerCredentials.ShortDescription(),
-		config.SystemIDState.GetSystemID(),
+		config.SystemID,
 		apiEndpointPatchTrace,
 		doRawParams{
 			credentials: &config.RunnerCredentials,

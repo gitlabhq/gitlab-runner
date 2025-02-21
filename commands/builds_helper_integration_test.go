@@ -30,6 +30,9 @@ func TestBuildsHelperCollect(t *testing.T) {
 		shell = "powershell"
 	}
 
+	systemIDState := common.NewSystemIDState()
+	require.NoError(t, systemIDState.EnsureSystemID())
+
 	build := &common.Build{
 		JobResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
@@ -38,12 +41,10 @@ func TestBuildsHelperCollect(t *testing.T) {
 				Executor:  "shell",
 				Shell:     shell,
 			},
-			SystemIDState: common.NewSystemIDState(),
+			SystemID: systemIDState.GetSystemID(),
 		},
 	}
 	trace := &common.Trace{Writer: io.Discard}
-
-	require.NoError(t, build.Runner.SystemIDState.EnsureSystemID())
 
 	done := make(chan error)
 	go func() {

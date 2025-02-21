@@ -174,10 +174,11 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 		managedProvider.Init()
 	}
 
-	r.RunnerConfig.SystemIDState = common.NewSystemIDState()
-	if err := r.RunnerConfig.SystemIDState.EnsureSystemID(); err != nil {
+	state := common.NewSystemIDState()
+	if err := state.EnsureSystemID(); err != nil {
 		logrus.WithError(err).Fatal("Failed to generate random system ID")
 	}
+	r.RunnerConfig.SystemID = state.GetSystemID()
 
 	logrus.Println("Starting runner for", r.URL, "with token", r.ShortDescription(), "...")
 

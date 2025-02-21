@@ -246,7 +246,7 @@ func (s *RegisterCommand) verifyRunner() {
 	// If a runner authentication token is specified in place of a registration token, let's accept it and process it as
 	// an authentication token. This allows for an easier transition for users by simply replacing the
 	// registration token with the new authentication token.
-	result := s.network.VerifyRunner(s.RunnerCredentials, s.SystemIDState.GetSystemID())
+	result := s.network.VerifyRunner(s.RunnerCredentials, s.SystemID)
 	if result == nil || result.ID == 0 {
 		logrus.Panicln("Failed to verify the runner.")
 	}
@@ -269,7 +269,7 @@ func (s *RegisterCommand) askRunner() {
 	if s.Token != "" && !s.tokenIsRunnerToken() {
 		logrus.Infoln("Token specified trying to verify runner...")
 		logrus.Warningln("If you want to register use the '-r' instead of '-t'.")
-		if s.network.VerifyRunner(s.RunnerCredentials, s.SystemIDState.GetSystemID()) == nil {
+		if s.network.VerifyRunner(s.RunnerCredentials, s.SystemID) == nil {
 			logrus.Panicln("Failed to verify the runner. You may be having network problems.")
 		}
 		return
@@ -423,7 +423,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	if err != nil {
 		logrus.Panicln(err)
 	}
-	s.SystemIDState = s.loadedSystemIDState
+	s.SystemID = s.loadedSystemIDState.GetSystemID()
 
 	validAccessLevels := []AccessLevel{NotProtected, RefProtected}
 	if !accessLevelValid(validAccessLevels, AccessLevel(s.AccessLevel)) {
@@ -497,7 +497,7 @@ func (s *RegisterCommand) unregisterRunnerFunc() func() {
 
 func (s *RegisterCommand) unregisterRunner() {
 	if s.tokenIsRunnerToken() {
-		s.network.UnregisterRunnerManager(s.RunnerCredentials, s.SystemIDState.GetSystemID())
+		s.network.UnregisterRunnerManager(s.RunnerCredentials, s.SystemID)
 	} else {
 		s.network.UnregisterRunner(s.RunnerCredentials)
 	}
