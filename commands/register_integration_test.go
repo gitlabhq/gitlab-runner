@@ -364,6 +364,8 @@ func testRegisterCommandRun(
 	defer func() {
 		output = commands.GetLogrusOutput(t, hook)
 
+		assert.NotContains(t, output, "problem with your config based on jsonschema annotations")
+
 		if r := recover(); r != nil {
 			// log panics forces exit
 			if e, ok := r.(*logrus.Entry); ok {

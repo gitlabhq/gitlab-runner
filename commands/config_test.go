@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -418,6 +419,13 @@ func Test_loadConfig(t *testing.T) {
 		},
 	}
 
+	const config = `
+[[runners]]
+  name = "runner"
+  token = "glrt-some-random-token"
+  url = "https://some.gitlab.instance.tld/"
+`
+
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
 			dir := t.TempDir()
@@ -425,15 +433,21 @@ func Test_loadConfig(t *testing.T) {
 			systemIDFile := filepath.Join(dir, ".runner_system_id")
 
 			require.NoError(t, os.Chmod(dir, 0777))
-			require.NoError(t, os.WriteFile(cfgName, []byte("[[runners]]\n name = \"runner\""), 0777))
+			require.NoError(t, os.WriteFile(cfgName, []byte(config), 0777))
 			require.NoError(t, os.WriteFile(systemIDFile, []byte(tc.runnerSystemID), 0777))
 
 			if tc.prepareFn != nil {
 				tc.prepareFn(t, systemIDFile)
 			}
 
+			logGlobal := test.NewGlobal()
+
 			c := configOptions{ConfigFile: cfgName}
 			err := c.loadConfig()
+
+			for _, entry := range logGlobal.AllEntries() {
+				assert.NotContains(t, entry.Message, "problem with your config based on jsonschema annotations")
+			}
 
 			tc.assertFn(t, err, c.config, systemIDFile)
 
