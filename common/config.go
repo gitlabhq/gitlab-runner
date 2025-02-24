@@ -228,7 +228,7 @@ type DockerConfig struct {
 	Devices                    []string            `toml:"devices" json:"devices,omitempty" long:"devices" env:"DOCKER_DEVICES" description:"Add a host device to the container"`
 	DeviceCgroupRules          []string            `toml:"device_cgroup_rules,omitempty" json:"device_cgroup_rules,omitempty" long:"device-cgroup-rules" env:"DOCKER_DEVICE_CGROUP_RULES" description:"Add a device cgroup rule to the container"`
 	Gpus                       string              `toml:"gpus,omitempty" json:"gpus" long:"gpus" env:"DOCKER_GPUS" description:"Request GPUs to be used by Docker"`
-	ServicesDevices            map[string][]string `toml:"services_devices,omitempty" json:"services_devices" long:"services_devices" env:"DOCKER_SERVICES_DEVICES" description:"A toml table/json object with the format key=values. Expose host devices to services based on image name."`
+	ServicesDevices            map[string][]string `toml:"services_devices,omitempty" json:"services_devices,omitempty" long:"services_devices" env:"DOCKER_SERVICES_DEVICES" description:"A toml table/json object with the format key=values. Expose host devices to services based on image name."`
 	DisableCache               bool                `toml:"disable_cache,omitzero" json:"disable_cache" long:"disable-cache" env:"DOCKER_DISABLE_CACHE" description:"Disable all container caching"`
 	Volumes                    []string            `toml:"volumes,omitempty" json:"volumes,omitempty" long:"volumes" env:"DOCKER_VOLUMES" description:"Bind-mount a volume and create it if it doesn't exist prior to mounting. Can be specified multiple times once per mountpoint, e.g. --docker-volumes 'test0:/test0' --docker-volumes 'test1:/test1'"`
 	VolumeDriver               string              `toml:"volume_driver,omitempty" json:"volume_driver" long:"volume-driver" env:"DOCKER_VOLUME_DRIVER" description:"Volume driver to be used"`
@@ -1301,7 +1301,7 @@ func (s *defaultConfigSaver) Save(filePath string, data []byte) error {
 }
 
 type CustomBuildDir struct {
-	Enabled *bool `toml:"enabled,omitempty" json:"enabled" long:"enabled" env:"CUSTOM_BUILD_DIR_ENABLED" description:"Enable job specific build directories"`
+	Enabled *bool `toml:"enabled,omitempty" json:"enabled,omitempty" long:"enabled" env:"CUSTOM_BUILD_DIR_ENABLED" description:"Enable job specific build directories"`
 }
 
 type S3AuthType string
