@@ -46,34 +46,6 @@ trigger runner-incept tests:
     project: gitlab-org/ci-cd/tests/runner-incept
     # strategy: depend
 
-trigger deploy to kubernetes:
-  extends:
-    - .trigger-downstream-pipeline-ref
-  needs:
-    - trigger UBI images build
-  rules:
-    # Override rules in .trigger-downstream-pipeline-ref to remove MR pipelines
-    - if: '$CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/'
-      when: never
-    - if: $CI_PROJECT_PATH != "gitlab-org/gitlab-runner"
-      when: never
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: never
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      changes: !reference [.code-backstage-patterns]
-      variables:
-        UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
-    - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+?\z/
-      changes: !reference [.code-backstage-patterns]
-      variables:
-        UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
-    - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/
-      changes: !reference [.code-backstage-patterns]
-      variables:
-        UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
-  trigger:
-    project: gitlab-org/ci-cd/runner-tools/runner-kubernetes-infra
-
 static QA:
   extends:
   - .rules:merge_request_pipelines:no_docs
