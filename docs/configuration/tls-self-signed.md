@@ -45,8 +45,8 @@ GitLab Runner provides two options to configure certificates to be used to verif
 ## Supported options for self-signed certificates targeting the GitLab server
 
 This section refers to the situation where only the GitLab server requires a custom certificate.
-If other hosts (e.g. object storage service without [proxy download enabled](https://docs.gitlab.com/administration/object_storage/#proxy-download))
-also require a custom certificate authority (CA), please see
+If other hosts (for example, object storage service without [proxy download enabled](https://docs.gitlab.com/administration/object_storage/#proxy-download))
+also require a custom certificate authority (CA), see
 the [next section](#trusting-tls-certificates-for-docker-and-kubernetes-executors).
 
 GitLab Runner supports the following options:
@@ -57,8 +57,8 @@ GitLab Runner supports the following options:
 - **Specify a custom certificate file**: GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/_index.md#gitlab-runner-register)
   (`gitlab-runner register --tls-ca-file=/path`), and in [`config.toml`](advanced-configuration.md)
   under the `[[runners]]` section. This allows you to specify a custom certificate file.
-  This file will be read every time the Runner tries to access the GitLab server.
-  If you are using GitLab Runner Helm chart, you will need to configure certificates as described in
+  This file is read every time the Runner tries to access the GitLab server.
+  If you are using GitLab Runner Helm chart, you must configure certificates as described in
   [Access GitLab with a custom certificate](../install/kubernetes_helm_chart_configuration.md#access-gitlab-with-a-custom-certificate).
 
 - **Read a PEM certificate**: GitLab Runner reads the PEM certificate (**DER format is not supported**) from a
@@ -82,7 +82,7 @@ GitLab Runner supports the following options:
 
   - `~/.gitlab-runner/certs/gitlab.example.com.crt` on \*nix systems when GitLab Runner is executed as non-`root`.
   - `./certs/gitlab.example.com.crt` on other systems. If running GitLab Runner as a Windows service,
-    this will not work. Specify a custom certificate file instead.
+    this does not work. Specify a custom certificate file instead.
 
 Notes:
 
@@ -118,11 +118,11 @@ This approach is secure, but makes the Runner a single point of trust.
 
 ## Trusting TLS certificates for Docker and Kubernetes executors
 
-There are two contexts that need to be taken into account when we consider registering a certificate on a container:
+Consider the following information when you register a certificate on a container:
 
 - The [**user image**](https://docs.gitlab.com/ci/yaml/#image), which is used to run the user script.
-  For scenarios that involve trusting the certificate for user scripts, the user must take ownership regarding how to install a certificate, since this is
-  highly dependent on the image itself, and the Runner has no way of knowing how to install a certificate in each
+  For scenarios that involve trusting the certificate for user scripts, the user must take ownership regarding how to install a certificate.
+  Certificate installation procedures can vary based on the image. The Runner has no way of knowing how to install a certificate in each
   possible scenario.
 - The [**Runner helper image**](advanced-configuration.md#helper-image), which is used to handle Git, artifacts, and cache operations.
   For scenarios that involve trusting the certificate for other CI/CD stages, the user only needs to make a certificate file
@@ -131,16 +131,14 @@ There are two contexts that need to be taken into account when we consider regis
 
 ### Trusting the certificate for user scripts
 
-If your build script needs to communicate with peers through TLS and needs to rely on
-a self-signed certificate or custom Certificate Authority, you will need to perform the
-certificate installation in the build job, as the Docker container running the user scripts
+If your build uses TLS with a self-signed certificate or custom certificate, install the certificate
+in your build job for peer communication. The Docker container running the user scripts
 doesn't have the certificate files installed by default. This might be required to use
-a custom cache host, perform a secondary `git clone`, or fetch a file through a tool like `wget`,
-for example.
+a custom cache host, perform a secondary `git clone`, or fetch a file through a tool like `wget`.
 
 To install the certificate:
 
-1. Map the necessary files as a Docker volume so that the Docker container that will run
+1. Map the necessary files as a Docker volume so that the Docker container that runs
    the scripts can see them. Do this by adding a volume inside the respective key inside
    the `[runners.docker]` in the `config.toml` file, for example:
 
@@ -160,7 +158,7 @@ To install the certificate:
           volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
      ```
 
-1. **Linux-only**: Use the mapped file (e.g `ca.crt`) in a [`pre_build_script`](advanced-configuration.md#the-runners-section) that:
+1. **Linux-only**: Use the mapped file (for example, `ca.crt`) in a [`pre_build_script`](advanced-configuration.md#the-runners-section) that:
    1. Copies it to `/usr/local/share/ca-certificates/ca.crt` inside the Docker container.
    1. Installs it by running `update-ca-certificates --fresh`. For example (commands
       vary based on the distribution you're using):
@@ -290,8 +288,9 @@ To provide a certificate file to jobs running in Kubernetes:
      - update-ca-certificates
    ```
 
-  Due to a [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28484) in the Kubernetes executor's
-  handling of the helper image's `ENTRYPOINT`, the mapped certificate file isn't automatically installed
+  The Kubernetes executor's handling of the helper image's `ENTRYPOINT` has a
+  [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28484).
+  When a certificate file is mapped, it isn't automatically installed
   to the system certificate store.
 
 ## Troubleshooting
@@ -306,7 +305,7 @@ In addition, you can use the [`tlsctl`](https://gitlab.com/gitlab-org/ci-cd/runn
 ### `x509: certificate signed by unknown authority` while trying to pull executor images from private registry
 
 This error occurs when the Docker host or Kubernetes node where the runner schedules the
-executors does not trust the certificate used by the private registry. To fix the error,
+executors does not trust the private registry's certificate. To fix the error,
 add the relevant root certificate authority or certificate chain to the system's trust store
 and restart the container service.
 
@@ -318,7 +317,7 @@ update-ca-certificates
 systemctl restart docker.service
 ```
 
-If you're using any operating system other than Ubuntu or Alpine, read your
+For operating systems other than Ubuntu or Alpine, see your
 operating system's documentation to find appropriate commands to install
 the trusted certificate.
 
@@ -330,15 +329,15 @@ you might also have to disable the `FF_RESOLVE_FULL_TLS_CHAIN` feature flag.
 ### `apt-get: not found` errors in jobs
 
 The [`pre_build_script`](advanced-configuration.md#the-runners-section) commands are executed
-before every job a runner executes. If you add commands that are specific to certain distributions,
-like `apk` or `apt-get` when you install a certificate for user scripts, your CI jobs might fail
+before every job a runner executes. Distribution-specific commands
+like `apk` or `apt-get` can cause issues. When you install a certificate for user scripts, your CI jobs might fail
 if they use [images](https://docs.gitlab.com/ci/yaml/#image) based on different distributions.
 
-For example, if some of your CI jobs run Ubuntu-based images and some run Alpine-based images and you add
-Ubuntu commands, the `apt-get: not found` error occurs in jobs with Alpine-based
-images. To resolve this, either:
+For example, if your CI jobs run Ubuntu and Alpine images, Ubuntu commands fail on Alpine.
+The `apt-get: not found` error occurs in jobs with Alpine-based images.
+To resolve this issue, do one of the following:
 
-- Write your `pre_build_script` so that it is distribution-agnostic.
+- Write your `pre_build_script` so that it is distribution-independent.
 - Use [tags](https://docs.gitlab.com/ci/yaml/#tags) to ensure runners only pick up jobs with compatible images.
 
 ### Error: `self-signed certificate in certificate chain`
