@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 
@@ -20,11 +21,10 @@ import (
 func TestGitCredHelper(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shellName string) {
 		helpers.SkipIntegrationTests(t, shellName)
+		t.Parallel()
 
 		shell := common.GetShell(shellName)
 		require.NotNil(t, shell, "shell %q not available", shellName)
-
-		os.Unsetenv("CI_JOB_TOKEN")
 
 		tests := map[string]struct {
 			jobToken       string
@@ -51,12 +51,14 @@ func TestGitCredHelper(t *testing.T) {
 
 		for tn, tc := range tests {
 			t.Run(tn, func(t *testing.T) {
+				t.Parallel()
+
 				credHelperCmd := shell.GetGitCredHelperCommand()
 				callArgs := prepCallArgs(t, shellName, credHelperCmd, tc.gitCallArg)
 				stdout := &bytes.Buffer{}
 				stderr := &bytes.Buffer{}
 
-				env := os.Environ()
+				env := testEnv()
 				if jt := tc.jobToken; jt != "" {
 					env = append(env, "CI_JOB_TOKEN="+jt)
 				}
@@ -94,4 +96,11 @@ func prepCallArgs(t *testing.T, shellName, command, arg string) []string {
 	command += " " + arg
 
 	return append(args, command)
+}
+
+// testEnv returns the test's entire environment, except the job token
+func testEnv() []string {
+	return slices.DeleteFunc(os.Environ(), func(e string) bool {
+		return strings.HasPrefix(e, "CI_JOB_TOKEN=")
+	})
 }
