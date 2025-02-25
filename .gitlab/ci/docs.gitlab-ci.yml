@@ -31,9 +31,9 @@ review-docs-deploy:
     url: https://docs.gitlab.com/upstream-review-mr-${DOCS_GITLAB_REPO_SUFFIX}-${CI_MERGE_REQUEST_IID}/${DOCS_GITLAB_REPO_SUFFIX}
     on_stop: review-docs-cleanup
   script:
-  - ./trigger-build.rb docs-hugo deploy
+  - ./trigger-build.rb docs deploy
 
-# Cleanup remote environment of gitlab-docs-hugo
+# Cleanup remote environment of docs-gitlab-com
 review-docs-cleanup:
   extends:
   - .review-docs
@@ -41,4 +41,4 @@ review-docs-cleanup:
     name: review-docs/mr-${CI_MERGE_REQUEST_IID}
     action: stop
   script:
-  - ./trigger-build.rb docs-hugo cleanup
+  - ./trigger-build.rb docs cleanup
