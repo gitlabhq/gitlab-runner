@@ -940,6 +940,8 @@ Consider the following information when enabling the state storage feature:
 
 **Note** - `idle_count` in this context refers to the number of jobs, not the number of autoscaled machines as in the legacy autoscaling method.
 
+| Parameter              | Description |
+|------------------------|-------------|
 | `periods`              | An array of unix-cron formatted strings to denote the period this policy is enabled for. Default: `* * * * *` |
 | `timezone`             | The time zone used when evaluating the unix-cron period. Default: The system's local time zone. |
 | `idle_count`           | The target idle capacity we want to be immediately available for jobs.  |
