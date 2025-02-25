@@ -29,9 +29,9 @@ have `gitlab-runner` installed on `Windows Server Core 2004`.
 
 To do this we must update the
 [windows-containers](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers)
-repository to build a base image. The base image will be used by the
+repository to build a base image. The base image is used by the
 [autoscaler](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/autoscaler)
-for our CI. The new base image will be used to build the GitLab Runner
+for our CI. The new base image is used to build the GitLab Runner
 helper image.
 
 For example, if we want to add support for `Windows Server Core 2004` in
