@@ -41,6 +41,11 @@ type ShellScriptInfo struct {
 	PostGetSourcesScript string
 	PreBuildScript       string
 	PostBuildScript      string
+
+	// RuntimeOS can be used to explicitly set the shell's/build's/job's OS; this is important for situations where the
+	// runner manager runs on a different OS than the job (e.g. k8s executor schedules builds on windows nodes, while the
+	// runner manager runs on a linux node).
+	RuntimeOS string
 }
 
 //go:generate mockery --name=Shell --inpackage
@@ -54,7 +59,7 @@ type Shell interface {
 	GenerateSaveScript(info ShellScriptInfo, scriptPath, script string) (string, error)
 
 	GetEntrypointCommand(info ShellScriptInfo, probeFile string) []string
-	GetGitCredHelperCommand() string
+	GetGitCredHelperCommand(os string) string
 }
 
 var shells map[string]Shell

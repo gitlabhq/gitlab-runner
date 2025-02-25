@@ -2,6 +2,7 @@ package shells
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -650,14 +651,17 @@ const powershellGitCredHelperScript = `function f([string]$cmd){ if ($cmd.equals
 //		helper = "!powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { Write-Host -NoNewline \"password=${env:CI_JOB_TOKEN}`n\" } }; f'"
 //
 // More docs about custom git cred helpers can be found at https://git-scm.com/docs/gitcredentials#_custom_helpers .
-func (b *PowerShell) GetGitCredHelperCommand() string {
+func (b *PowerShell) GetGitCredHelperCommand(os string) string {
 	shell := b.GetName()
 	script := powershellGitCredHelperScript
+
+	// If the OS is not set explicitly, we fallback to the current processes' OS
+	os = cmp.Or(os, runtime.GOOS)
 
 	// Some special case for powershell on windows and weird quoting rules thereof.
 	// To be honest, I have no clue what's going on there, if this is a powershell thing, or if the shell writer
 	// interferes, or both; but it seems to be necessary and to work.
-	if shell == SNPowershell && runtime.GOOS == OSWindows {
+	if shell == SNPowershell && os == OSWindows {
 		script = strings.ReplaceAll(script, `"`, `\"`)
 	}
 

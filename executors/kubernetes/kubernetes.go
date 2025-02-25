@@ -496,6 +496,8 @@ func (s *executor) verifyPullPolicies(
 }
 
 func (s *executor) setupDefaultExecutorOptions(os string) {
+	s.ExecutorOptions.Shell.RuntimeOS = os
+
 	if os == helperimage.OSTypeWindows {
 		s.DefaultBuildsDir = `C:\builds`
 		s.DefaultCacheDir = `C:\cache`
@@ -931,7 +933,7 @@ func (s *executor) buildInitContainers() ([]api.Container, error) {
 
 	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) ||
 		(s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) &&
-			s.helperImageInfo.OSType != helperimage.OSTypeWindows) {
+			!s.isWindowsJob()) {
 		permissionsInitContainer, err := s.buildPermissionsInitContainer(s.helperImageInfo.OSType)
 		if err != nil {
 			return nil, fmt.Errorf("building permissions init container: %w", err)
@@ -2145,10 +2147,12 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 	}, nil
 }
 
+func (s *executor) isWindowsJob() bool {
+	return s.helperImageInfo.OSType == helperimage.OSTypeWindows
+}
+
 func (s *executor) defaultCapDrop() []string {
-	os := s.helperImageInfo.OSType
-	// windows does not support security context capabilities
-	if os == helperimage.OSTypeWindows {
+	if s.isWindowsJob() {
 		return nil
 	}
 

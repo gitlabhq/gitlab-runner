@@ -484,7 +484,7 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 		w.Variable(common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1"})
 	}
 
-	err := b.handleGetSourcesStrategy(w, build)
+	err := b.handleGetSourcesStrategy(w, info)
 	if err != nil {
 		return err
 	}
@@ -532,15 +532,16 @@ func (b *AbstractShell) changeFilesOwnership(w ShellWriter, build *common.Build,
 	w.EndIf()
 }
 
-func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Build) error {
+func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, info common.ShellScriptInfo) error {
+	build := info.Build
 	projectDir := build.FullProjectDir()
 
 	switch build.GetGitStrategy() {
 	case common.GitFetch:
-		return b.writeRefspecFetchCmd(w, build, projectDir)
+		return b.writeRefspecFetchCmd(w, info)
 	case common.GitClone:
 		w.RmDir(projectDir)
-		return b.writeRefspecFetchCmd(w, build, projectDir)
+		return b.writeRefspecFetchCmd(w, info)
 	case common.GitNone:
 		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
@@ -556,7 +557,9 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Bu
 }
 
 //nolint:funlen
-func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string) error {
+func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScriptInfo) error {
+	build := info.Build
+	projectDir := build.FullProjectDir()
 	depth := build.GitInfo.Depth
 
 	if depth > 0 {
@@ -606,7 +609,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	}
 
 	if credConfigFile := b.credConfigFile(build, w); credConfigFile != "" {
-		err := b.configureGitCredHelper(w, build, credConfigFile)
+		err := b.configureGitCredHelper(w, info, credConfigFile)
 		if err != nil {
 			return fmt.Errorf("writing fetch commands: %w", err)
 		}
@@ -645,7 +648,8 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	return nil
 }
 
-func (b *AbstractShell) configureGitCredHelper(w ShellWriter, build *common.Build, credConfigFile string) error {
+func (b *AbstractShell) configureGitCredHelper(w ShellWriter, info common.ShellScriptInfo, credConfigFile string) error {
+	build := info.Build
 	shellName := build.Runner.Shell
 	if shellName == "" {
 		// GetDefaultShell will panic, if it can't find a default shell
@@ -677,7 +681,7 @@ func (b *AbstractShell) configureGitCredHelper(w ShellWriter, build *common.Buil
 	// everywhere.
 	w.CommandWithStdin("url="+remoteHost, "git", "credential", "reject")
 
-	credHelperCommand := "!" + shell.GetGitCredHelperCommand()
+	credHelperCommand := "!" + shell.GetGitCredHelperCommand(info.RuntimeOS)
 	credSection := "credential." + remoteHost
 
 	w.Command("git", "config", "-f", credConfigFile, credSection+".username", "gitlab-ci-token")

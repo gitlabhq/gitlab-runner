@@ -807,17 +807,20 @@ func TestGitFetchFlags(t *testing.T) {
 								},
 							},
 						},
-
 						JobResponse: common.JobResponse{
 							GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: test.depth, RepoObjectFormat: test.objectFormat},
 							Variables: common.JobVariables{
 								{Key: "GIT_FETCH_EXTRA_FLAGS", Value: test.value},
 							},
 						},
+						BuildDir: dummyProjectDir,
 					}
 					build.SafeDirectoryCheckout = true
 
 					mockWriter := NewMockShellWriter(t)
+					shellScriptInfo := common.ShellScriptInfo{
+						Build: build,
+					}
 
 					if test.depth == 0 {
 						mockWriter.EXPECT().Noticef("Fetching changes...").Once()
@@ -874,7 +877,7 @@ func TestGitFetchFlags(t *testing.T) {
 						mockWriter.EXPECT().Command("git", command...).Once()
 					}
 
-					err := shell.writeRefspecFetchCmd(mockWriter, build, dummyProjectDir)
+					err := shell.writeRefspecFetchCmd(mockWriter, shellScriptInfo)
 					assert.NoError(t, err, "calling shell.writeRefspecFetchCmd")
 				})
 			}

@@ -53,7 +53,7 @@ func TestGitCredHelper(t *testing.T) {
 			t.Run(tn, func(t *testing.T) {
 				t.Parallel()
 
-				credHelperCmd := shell.GetGitCredHelperCommand()
+				credHelperCmd := shell.GetGitCredHelperCommand("")
 				callArgs := prepCallArgs(t, shellName, credHelperCmd, tc.gitCallArg)
 				stdout := &bytes.Buffer{}
 				stderr := &bytes.Buffer{}
