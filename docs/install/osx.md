@@ -39,7 +39,7 @@ For information about troubleshooting, see [Troubleshooting GitLab Runner](../fa
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
-1. In the user account where you will run the GitLab Runner application:
+1. In the user account where you run the GitLab Runner application:
 
    1. [Register a runner](../register/_index.md) configuration. Choose
       the [shell executor](../executors/shell.md) during the registration process. When you build iOS or macOS applications on macOS, jobs run directly on the host, and use the identity of the authenticated user. The jobs do not run in a container, which is less secure than using container executors.
@@ -78,7 +78,7 @@ as your current user. Only then can you manage the service.
 
 To sign in as your current user, run the command `su - <username>` in the terminal. You can obtain your username by running the command `ls /users`.
 
-Currently, the only proven way for it to work in macOS is by running the service in user-mode.
+The only proven way for it to work in macOS is by running the service in user-mode.
 
 Because the service runs only when the user is logged in, you should enable auto-login on your macOS machine.
 
@@ -90,7 +90,7 @@ It's worth noting that macOS also has `LaunchDaemons`, services running
 completely in background. `LaunchDaemons` are run on system startup, but they
 don't have the same access to UI interactions as `LaunchAgents`. You can try to
 run the Runner's service as a `LaunchDaemon`, but this mode of operation is not
-currently supported.
+supported.
 
 You can verify that GitLab Runner created the service configuration file after
 executing the `install` command, by checking the
@@ -172,7 +172,7 @@ gitlab-runner install
 gitlab-runner start
 ```
 
-## Using codesign with the GitLab Runner Service
+## Using `codesign` with the GitLab Runner Service
 
 If you installed `gitlab-runner` on macOS with Homebrew and your build calls
 `codesign`, you may have to set `<key>SessionCreate</key><true/>` to have
@@ -180,7 +180,7 @@ access to the user keychains. GitLab does not maintain the Homebrew formula and
 you should use the official binary to install GitLab Runner.
 
 In the following example we run the builds as the `gitlab`
-user and want access to the signing certificates installed by that user for codesigning:
+user and want access to the signing certificates installed by that user for code-signing:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -271,8 +271,8 @@ causes to why this happens:
    the only solution to make Code Signing work. That changed recently with
    **OS X El Capitan** which introduced a lot of new security features that
    altered this behavior.
-   Since GitLab Runner 1.1, when creating a `LaunchAgent`, we don't set
-   `SessionCreate`. However, in order to upgrade, you must manually
+   In GitLab Runner 1.1 and later, when creating a `LaunchAgent`, we don't set
+   `SessionCreate`. However, to upgrade, you must manually
    reinstall the `LaunchAgent` script:
 
    ```shell
@@ -310,8 +310,8 @@ If the error persists, do a graphical login. A graphical login bootstraps the `L
 For more information, see [known issues](osx.md#known-issues).
 
 The macOS instances hosted on AWS must perform [additional steps](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connect-to-mac-instance.html) to connect to the instance's GUI.
-Use the `ssh -L` option mentioned in the steps to enable SSH port forwarding to allow a remote desktop client, like VNC, to connect to the remote instance.
-You must also configure `AllowTcpForwarding yes` in the `/private/etc/ssh/sshd_config` on the AWS hosted macOS instance. Restart the instance to apply the change to the SSHD configuration.
+Use the `ssh -L` option to enable SSH port forwarding to allow a remote desktop client, like `vnc`, to connect to the remote instance.
+You must also configure `AllowTcpForwarding yes` in the `/private/etc/ssh/sshd_config` on the AWS hosted macOS instance. Restart the instance to apply the change to the `sshd` configuration.
 After you sign in to the GUI, repeat the GitLab Runner troubleshooting steps from a terminal in the GUI to resolve the error.
 
 ### `FATAL: Failed to start gitlab-runner: "launchctl" failed with stderr: Load failed: 5: Input/output error` on `gitlab-runner start` command
@@ -354,6 +354,5 @@ If you encounter this error, you may need to:
     FF_RESOLVE_FULL_TLS_CHAIN = false
 ```
 
-Disabling this feature flag may help resolve TLS connectivity issues for
-HTTPS endpoints that use a root certificate signed with a SHA-1
-signature or some other deprecated algorithm.
+Disabling this feature flag might fix TLS connectivity issues for
+HTTPS endpoints that use SHA-1 signature or other deprecated root certificate signatures.

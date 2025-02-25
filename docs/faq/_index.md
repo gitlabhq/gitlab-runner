@@ -16,7 +16,7 @@ This section can assist when troubleshooting GitLab Runner.
 
 {{< alert type="note" >}}
 
-A [Critical Security release](https://about.gitlab.com/releases/2022/02/25/critical-security-release-gitlab-14-8-2-released/) will reset runner registration tokens for your group and projects. If you use an automated process (scripts that encode the value of the registration token) to register runners, this update will break that process. However, it should have no effect on previously registered runners.
+A [Critical Security release](https://about.gitlab.com/releases/2022/02/25/critical-security-release-gitlab-14-8-2-released/) resets runner registration tokens for your group and projects. If you use an automated process (scripts that encode the value of the registration token) to register runners, this update breaks that process. However, it should have no effect on previously registered runners.
 
 {{< /alert >}}
 
@@ -114,7 +114,7 @@ log_level = "debug"
 
 ### In the Helm Chart
 
-If GitLab Runner was installed in a Kubernetes cluster by using the [GitLab Runner Helm Chart](../install/kubernetes.md), you can enable debug logging by setting the `logLevel` option in the [`values.yaml` customization](../install/kubernetes.md#configure-gitlab-runner-with-the-helm-chart):
+If GitLab Runner is installed in a Kubernetes cluster using the [GitLab Runner Helm Chart](../install/kubernetes.md), to enable debug logging, set the `logLevel` option in the [`values.yaml` customization](../install/kubernetes.md#configure-gitlab-runner-with-the-helm-chart):
 
 ```yaml
 ## Configure the GitLab Runner logging level. Available values are: debug, info, warn, error, fatal, panic
@@ -125,11 +125,14 @@ logLevel: debug
 
 ## Configure DNS for a Docker executor runner
 
-When configuring a GitLab Runner with the Docker executor, it is possible to run into a problem where the Runner daemon on the host can access GitLab but the built container cannot. This can happen when DNS is configured in the host but those configurations are not passed to the container.
+When you configure GitLab Runner with the Docker executor, Docker containers might fail to access GitLab, even when the host Runner daemon has access.
+This can happen when DNS is configured in the host but those configurations are not passed to the container.
 
 **Example:**
 
-GitLab service and GitLab Runner exist in two different networks that are bridged in two ways (for example, over the Internet and through a VPN). If the routing mechanism that the Runner uses to find the GitLab service queries DNS, the container's DNS configuration doesn't know to use the DNS service over the VPN and may default to the one provided over the Internet. This configuration would result in the following message:
+GitLab service and GitLab Runner exist in two different networks that are bridged in two ways (for example, over the Internet and through a VPN).
+The runner's routing mechanism might query DNS through the default internet service instead of the DNS service over the VPN.
+This configuration would result in the following message:
 
 ```shell
 Created fresh repository.
@@ -148,7 +151,7 @@ dns = ["192.168.xxx.xxx","192.168.xxx.xxx"]
 
 ## I'm seeing `x509: certificate signed by unknown authority`
 
-Please see [the self-signed certificates](../configuration/tls-self-signed.md).
+For more information, see [the self-signed certificates](../configuration/tls-self-signed.md).
 
 ## I get `Permission Denied` when accessing the `/var/run/docker.sock`
 
@@ -185,8 +188,8 @@ This error might have occurred before Docker was installed in the machine.
 
 ## `dialing environment connection: ssh: rejected: connect failed (open failed)`
 
-This error can be produced when the Docker autoscaler is unable to connect to the Docker daemon on the
-target system, when the connection is tunneled through SSH. Ensure that you can SSH to the target system
+This error occurs when the Docker autoscaler cannot reach the Docker daemon on the
+target system when the connection is tunneled through SSH. Ensure that you can SSH to the target system
 and successfully run Docker commands, for example `docker info`.
 
 ## Adding an AWS Instance Profile to your autoscaled runners
@@ -198,7 +201,7 @@ Add the following value to your `[runners.machine]` section:
 
 ## The Docker executor gets timeout when building Java project
 
-This most likely happens, because of the broken AUFS storage driver:
+This most likely happens, because of the broken `aufs` storage driver:
 [Java process hangs on inside container](https://github.com/moby/moby/issues/18502).
 The best solution is to change the [storage driver](https://docs.docker.com/storage/storagedriver/select-storage-driver/)
 to either OverlayFS (faster) or DeviceMapper (slower).
@@ -240,15 +243,15 @@ Enable logging only for debugging because sensitive data can be exposed in logs.
 
 {{< /alert >}}
 
-If the debug logs show that uploads reach the GitLab instance but still fail
+If uploads reach GitLab but fail with an error status code
 (for example, produces a non-successful response status code), investigate the
 GitLab instance itself. For common artifact upload issues, see
 [GitLab documentation](https://docs.gitlab.com/administration/cicd/job_artifacts_troubleshooting/#job-artifact-upload-fails-with-error-500).
 
 ## `No URL provided, cache will not be download`/`uploaded`
 
-This occurs when caching is configured for the job, but the GitLab Runner helper does not have
-any pre-signed URL to access a remote cache, or an invalid URL.
+This error occurs when the GitLab Runner helper receives an invalid URL or does not have
+any pre-signed URLs to access a remote cache.
 Review each [cache-related `config.toml` entry](../configuration/advanced-configuration.md#the-runnerscache-section)
 and provider-specific keys and values.
 An invalid URL might be constructed from any item that does not follow the URL syntax requirements.
@@ -270,22 +273,22 @@ Cloning into 'repo'...
 warning: You appear to have cloned an empty repository.
 ```
 
-Make sure, that the configuration of the HTTP Proxy in your GitLab server
-installation is done properly. Especially if you are using some HTTP Proxy with
-its own configuration, make sure that GitLab requests are proxied to the
-**GitLab Workhorse socket**, not to the **GitLab Unicorn socket**.
+Make sure that HTTP proxy configuration in your GitLab server
+installation is done properly. When using HTTP proxy with its own configuration, ensure that
+requests are proxied to the
+**GitLab Workhorse socket**, not the **GitLab Unicorn socket**.
 
-Git protocol via HTTP(S) is resolved by the GitLab Workhorse, so this is the
+Git protocol through HTTP(S) is resolved by the GitLab Workhorse, so this is the
 **main entrypoint** of GitLab.
 
 If you are using a Linux package installation, but don't want to use the bundled NGINX
-server, please read [using a non-bundled web-server](https://docs.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server).
+server, see [using a non-bundled web-server](https://docs.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server).
 
 In the GitLab Recipes repository there are
 [web-server configuration examples](https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server) for Apache and NGINX.
 
-If you are using GitLab installed from source, please also read the above
-documentation and examples, and make sure that all HTTP(S) traffic is going
+If you are using GitLab installed from source, see the above
+documentation and examples. Make sure that all HTTP(S) traffic is going
 through the **GitLab Workhorse**.
 
 See [an example of a user issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1105).
@@ -293,9 +296,9 @@ See [an example of a user issue](https://gitlab.com/gitlab-org/gitlab-runner/-/i
 ## Error: `zoneinfo.zip: no such file or directory` error when using `Timezone` or `OffPeakTimezone`
 
 It's possible to configure the time zone in which `[[docker.machine.autoscaling]]` periods
-are described. This feature should work on most Unix systems out of the box. However on some
-Unix systems, and probably on most non-Unix systems (including Windows, for which we're providing
-GitLab Runner binaries), when used, the runner will crash at start with an error similar to:
+are described. This feature should work on most Unix systems out of the box. However, on some
+Unix systems and most non-Unix systems (like Windows, where GitLab Runner binaries are available),
+the runner might crash at start with an error:
 
 ```plaintext
 Failed to load config Invalid OffPeakPeriods value: open /usr/local/go/lib/time/zoneinfo.zip: no such file or directory
@@ -305,7 +308,7 @@ The error is caused by the `time` package in Go. Go uses the IANA Time Zone data
 the configuration of the specified time zone. On most Unix systems, this database is already present on
 one of well-known paths (`/usr/share/zoneinfo`, `/usr/share/lib/zoneinfo`, `/usr/lib/locale/TZ/`).
 Go's `time` package looks for the Time Zone database in all those three paths. If it doesn't find any
-of them, but the machine has a configured Go development environment, then it will fallback to
+of them, but the machine has a configured Go development environment, then it falls back to
 the `$GOROOT/lib/time/zoneinfo.zip` file.
 
 If none of those paths are present (for example on a production Windows host) the above error is thrown.
@@ -328,7 +331,7 @@ If your system doesn't provide this database in a _native_ way, then you can mak
 working by following the steps below:
 
 1. Downloading the [`zoneinfo.zip`](https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip). Starting with version v9.1.0 you can download
-   the file from a tagged path. In that case you should replace `latest` with the tag name (e.g., `v9.1.0`)
+   the file from a tagged path. In that case you should replace `latest` with the tag name (for example, `v9.1.0`)
    in the `zoneinfo.zip` download URL.
 
 1. Store this file in a well known directory. We're suggesting to use the same directory where
@@ -350,10 +353,11 @@ working by following the steps below:
    C:\gitlab-runner> gitlab-runner run <other options ...>
    ```
 
-   If you are starting GitLab Runner as a system service then you will need to update/override
-   the service configuration in a way that is provided by your service manager software
-   (unix systems) or by adding the `ZONEINFO` variable to the list of environment variables
-   available for the GitLab Runner user through System Settings (Windows).
+   If you are starting GitLab Runner as a system service then you must update or override
+   the service configuration:
+
+   - On Unix systems, modify the settings through your service manager software.
+   - On Windows, add the `ZONEINFO` variable to the list of environment variables available for the GitLab Runner user through System Settings.
 
 ## Why can't I run more than one instance of GitLab Runner?
 
@@ -369,7 +373,7 @@ This error is often due to your shell
 [loading your profile](../shells/_index.md#shell-profile-loading), and one of the scripts is
 causing the failure.
 
-Example of dotfiles that are known to cause failure:
+Example of `dotfiles` that are known to cause failure:
 
 - `.bash_logout`
 - `.condarc`
@@ -392,7 +396,7 @@ This error can occur when the system time changes significantly during a job
 that creates artifacts. Due to the change in system time, SSL certificates are expired, which causes an error when the runner attempts to uploads artifacts.
 
 To ensure SSL verification can succeed during artifact upload,
-change the system time back to a valid date and time at the end
+change the system time to a valid date and time at the end
 of the job.
 Because the creation time of the artifacts file has also changed,
 they are automatically archived.
@@ -426,7 +430,7 @@ for details.
 
 Elasticsearch has a `vm.max_map_count` requirement that has to be set on the instance on which Elasticsearch is run.
 
-See the [Elasticsearch Docs](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-prod-prerequisites)
+See the [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-prod-prerequisites)
 for how to set this value correctly depending on the platform.
 
 ## `Preparing the "docker+machine" executor ERROR: Preparation failed: exit status 1 Will be retried in 3s`
