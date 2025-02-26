@@ -17,6 +17,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/custom"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
@@ -33,6 +34,8 @@ var (
 	}
 )
 
+const integrationTestCustomExecutor = "custom-integration-test"
+
 func TestMain(m *testing.M) {
 	code := 1
 	defer func() {
@@ -45,10 +48,13 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("Error on preparing tmp directory for test executor binary")
 	}
+	defer os.RemoveAll(targetDir)
 
 	testExecutorFile = filepath.Join(targetDir, "main")
 	testExecutorFile = buildtest.MustBuildBinary("testdata/test_executor/main.go", testExecutorFile)
-	defer os.RemoveAll(targetDir)
+
+	path := buildtest.MustBuildBinary("../..", filepath.Join(targetDir, "gitlab-runner-integration"))
+	custom.RegisterExecutor(integrationTestCustomExecutor, path)
 
 	code = m.Run()
 }
@@ -66,7 +72,7 @@ func newBuild(t *testing.T, jobResponse common.JobResponse, shell string) *commo
 			RunnerSettings: common.RunnerSettings{
 				BuildsDir: filepath.Join(dir, "builds"),
 				CacheDir:  filepath.Join(dir, "cache"),
-				Executor:  "custom",
+				Executor:  integrationTestCustomExecutor,
 				Shell:     shell,
 				Custom: &common.CustomConfig{
 					ConfigExec:          testExecutorFile,

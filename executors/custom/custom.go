@@ -379,13 +379,17 @@ func (e *executor) Cleanup() {
 }
 
 func init() {
+	RegisterExecutor("custom", "gitlab-runner")
+}
+
+func RegisterExecutor(executorName string, runnerCommandPath string) {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
 		DefaultSafeDirectoryCheckout:  false,
 		Shell: common.ShellScriptInfo{
 			Shell:         common.GetDefaultShell(),
 			Type:          common.NormalShell,
-			RunnerCommand: "gitlab-runner",
+			RunnerCommand: runnerCommandPath,
 		},
 		ShowHostname: false,
 	}
@@ -403,7 +407,7 @@ func init() {
 		features.Shared = true
 	}
 
-	common.RegisterExecutorProvider("custom", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider(executorName, executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,

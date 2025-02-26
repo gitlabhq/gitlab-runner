@@ -4,6 +4,9 @@ package instance_test
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -12,10 +15,34 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/instance"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
+
+const integrationTestInstanceExecutor = "instance-integration-test"
+
+func TestMain(m *testing.M) {
+	code := 1
+	defer func() {
+		os.Exit(code)
+	}()
+
+	fmt.Println("Compiling gitlab-runner binary for tests")
+
+	targetDir, err := os.MkdirTemp("", "test_executor")
+	if err != nil {
+		panic("Error on preparing tmp directory for test executor binary")
+	}
+	defer os.RemoveAll(targetDir)
+
+	path := buildtest.MustBuildBinary("../..", filepath.Join(targetDir, "gitlab-runner-integration"))
+
+	instance.RegisterExecutor(integrationTestInstanceExecutor, path)
+
+	code = m.Run()
+}
 
 func newRunnerConfig(t *testing.T, shell string, opts ...ssh.Option) *common.RunnerConfig {
 	helpers.SkipIntegrationTests(t, "fleeting-plugin-static", "--version")
@@ -44,7 +71,7 @@ func newRunnerConfig(t *testing.T, shell string, opts ...ssh.Option) *common.Run
 		},
 		RunnerSettings: common.RunnerSettings{
 			BuildsDir: dir,
-			Executor:  "instance",
+			Executor:  integrationTestInstanceExecutor,
 			Shell:     shell,
 			Cache:     &common.CacheConfig{},
 			Autoscaler: &common.AutoscalerConfig{
@@ -70,7 +97,7 @@ func newRunnerConfig(t *testing.T, shell string, opts ...ssh.Option) *common.Run
 }
 
 func setupAcquireBuild(t *testing.T, build *common.Build) {
-	provider := common.GetExecutorProvider("instance")
+	provider := common.GetExecutorProvider(integrationTestInstanceExecutor)
 	data, err := provider.Acquire(build.Runner)
 	require.NoError(t, err)
 

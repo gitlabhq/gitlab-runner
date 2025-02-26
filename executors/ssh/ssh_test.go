@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	sshHelpers "gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 )
@@ -30,6 +31,25 @@ var (
 		ShowHostname: true,
 	}
 )
+
+func TestMain(m *testing.M) {
+	code := 1
+	defer func() {
+		os.Exit(code)
+	}()
+
+	fmt.Println("Compiling gitlab-runner binary for tests")
+
+	targetDir, err := os.MkdirTemp("", "test_executor")
+	if err != nil {
+		panic("Error on preparing tmp directory for test executor binary")
+	}
+	defer os.RemoveAll(targetDir)
+
+	executorOptions.Shell.RunnerCommand = buildtest.MustBuildBinary("../..", filepath.Join(targetDir, "gitlab-runner-integration"))
+
+	code = m.Run()
+}
 
 func TestPrepare(t *testing.T) {
 	tempDir := t.TempDir()
