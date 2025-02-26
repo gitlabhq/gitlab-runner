@@ -18,7 +18,7 @@ The configuration applies to container images set as a root and non-root user.
 
 {{< alert type="warning" >}}
 
-When you run Podman with the `--privileged` flag set to `true`, the container engine launches the container with or without any additional security controls.
+When you run Podman with the `--privileged` flag set to `true`, the container engine launches the container with or without any additional security controls.
 
 {{< /alert >}}
 

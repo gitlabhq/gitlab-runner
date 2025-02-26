@@ -6,16 +6,17 @@
 # For a list of all options, see https://vale.sh/docs/topics/styles/
 extends: existence
 message: "Instead of '%s', try starting this sentence with a specific subject and verb."
-link: https://docs.gitlab.com/ee/development/documentation/styleguide/word_list.html#this-these-that-those
+link: https://docs.gitlab.com/development/documentation/styleguide/word_list/#this-these-that-those
+vocab: false
 level: warning
 ignorecase: false
 tokens:
   - 'That is'
   - 'That was'
-  - 'These are'
-  - 'These were'
   - 'There are'
   - 'There were'
+  - 'These are'
+  - 'These were'
   - 'This is'
   - 'This was'
   - 'Those are'

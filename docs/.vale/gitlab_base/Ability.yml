@@ -1,0 +1,17 @@
+---
+# Suggestion: gitlab_base.Ability
+#
+# Focus on the feature, not the user's capabilities.
+#
+# For a list of all options, see https://vale.sh/docs/topics/styles/
+extends: existence
+message: "Try to replace ('%s') with more precise language, unless this content is about security. See the word list for details."
+ignorecase: true
+vocab: false
+level: suggestion
+link: https://docs.gitlab.com/development/documentation/styleguide/word_list/#ability-able
+tokens:
+  - ability to
+  - ability
+  - able to
+  - able

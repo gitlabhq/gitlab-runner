@@ -514,7 +514,7 @@ The following examples show how to specify volumes in the `[runners.docker]` sec
 
 A data volume is a specially-designated directory in one or more containers
 that bypasses the Union File System. Data volumes are designed to persist data,
-independent of the container's life cycle.
+independent of the container's lifecycle.
 
 ```toml
 [runners.docker]

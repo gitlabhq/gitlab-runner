@@ -479,7 +479,11 @@ The following example shows a `config.toml` where the limit that each build can 
 
 ## Using host devices
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6208) in GitLab 17.10.
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6208) in GitLab 17.10.
+
+{{< /history >}}
 
 You can expose hardware devices on the GitLab Runner host to the container that runs the job.
 To do this, configure the runner's `devices` and `services_devices` options.
@@ -528,8 +532,11 @@ restrict device access to trusted images in the `myregistry:5000/emulator/*` nam
     "myregistry:5000/emulator/*" = ["/dev/kvm", "/dev/dri"]
 ```
 
-WARNING:
+{{< alert type="warning" >}}
+
 The image name `**/*` might expose devices to any image.
+
+{{< /alert >}}
 
 ## Configure directories for the container build and cache
 
