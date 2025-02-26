@@ -6,8 +6,9 @@
 # For a list of all options, see https://vale.sh/docs/topics/styles/
 extends: existence
 message: "Remove '%s'. The documentation reflects the current state of the product."
+vocab: false
 level: warning
 ignorecase: true
-link: https://docs.gitlab.com/ee/development/documentation/versions.html#promising-features-in-future-versions
+link: https://docs.gitlab.com/development/documentation/styleguide/#promising-features-in-future-versions
 tokens:
   - currently

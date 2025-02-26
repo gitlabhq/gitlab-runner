@@ -6,9 +6,10 @@
 # For a list of all options, see https://vale.sh/docs/topics/styles/
 extends: existence
 message: "If possible, remove the reference to '%s'."
-link: https://docs.gitlab.com/ee/development/documentation/versions.html
+link: https://docs.gitlab.com/development/documentation/styleguide/availability_details/#removing-versions
+vocab: false
 level: suggestion
 nonword: true
 ignorecase: true
 tokens:
-  - "GitLab v?(2|3|4|5|6|7|8|9|10|11|12|13|14)"
+  - "GitLab v?(2[^[0-9]]|4|5|6|7|8|9|10|11|12|13|14)"

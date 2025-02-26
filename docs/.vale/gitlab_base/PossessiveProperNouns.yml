@@ -1,0 +1,31 @@
+---
+# Error: gitlab_base.PossessiveProperNouns
+#
+# Try to avoid using possessives ('s) for proper nouns, like organization or product names.
+#
+# For a list of all options, see https://vale.sh/docs/topics/styles/
+extends: existence
+message: "Remove 's from %s."
+level: warning
+ignorecase: true
+link: https://docs.gitlab.com/development/documentation/styleguide/#possessives
+vocab: false
+tokens:
+  - Amazon's
+  - Apple's
+  - Atlassian's
+  - AWS's
+  - Azure's
+  - Bundler's
+  - Capybara's
+  - Docker's
+  - Gitaly's
+  - GitHub's
+  - Google Cloud's
+  - Google's
+  - Microsoft's
+  - Nvidia's
+  - Oracle's
+  - Red Hat's
+  - RSpec's
+  - Salesforce's

@@ -184,7 +184,9 @@ colocate
 colocated
 colocating
 Colorama
+Command Palette
 commit's
+committer's
 CommonMark
 compilable
 composable
@@ -222,14 +224,16 @@ CTAs
 CTEs
 CUnit
 customappsso
+CVE
 CVEs
+CVSS
 CWEs
 cybersecurity
 CycloneDX
 Dangerfile
 DAST
-Database Lab Engine
 Database Lab
+Database Lab Engine
 Databricks
 Datadog
 datasource
@@ -329,9 +333,11 @@ enqueued
 enqueues
 enricher
 enrichers
+Entra
 enum
 enums
 Enviroments
+EPSS
 ESLint
 ESXi
 ETag
@@ -410,9 +416,11 @@ globals
 globbing
 globstar
 globstars
+GLQL's
 Gmail
 Godep
 Golang
+Goldmark
 Gollum
 Google
 goroutine
@@ -459,9 +467,9 @@ hyperparameter
 hyperparameters
 iCalendar
 iCloud
+IDE's
 idempotence
 IDEs
-IDE's
 idmapper
 Iglu
 IIFEs
@@ -509,9 +517,11 @@ kanban
 kanbans
 kaniko
 Karma
+Kata
 KCachegrind
 keepalive
 Kerberos
+KEV
 Keycloak
 keyless
 keyset
@@ -532,8 +542,8 @@ kubectl
 Kubernetes
 Kubesec
 Kucoin
-Kustomize
 Kustomization
+Kustomize
 kwargs
 Laravel
 LaunchDarkly
@@ -541,13 +551,13 @@ ldapsearch
 Lefthook
 Leiningen
 Lemmy
-LLM
-LLMs
 libFuzzer
 Libgcrypt
 Libravatar
 LinuxMint
 liveness
+LLM
+LLMs
 lockfile
 lockfiles
 Lodash
@@ -564,7 +574,6 @@ lookups
 loopback
 LSP
 Lts
-Packagecloud
 Lua
 Lucene
 Lucidchart
@@ -663,7 +672,6 @@ offboarding
 offboards
 OIDs
 OKRs
-OKRs
 Okta
 OLM
 OmniAuth
@@ -680,6 +688,7 @@ OSs
 OTel
 outdent
 Overcommit
+Packagecloud
 Packagist
 packfile
 packfiles
@@ -704,8 +713,8 @@ pgvector
 Phabricator
 phaser
 phasers
-phpenv
 Phorge
+phpenv
 PHPUnit
 PIDs
 Pinia
@@ -767,6 +776,7 @@ pseudonymizer
 Pulumi
 Puma
 Pumble
+Pylint
 PyPI
 pytest
 Python
@@ -912,6 +922,8 @@ SHAs
 shfmt
 Shippo
 Shopify
+shortcode
+shortcodes
 Sidekiq
 Sigstore
 Silverlight
@@ -1017,6 +1029,7 @@ swimlane
 swimlanes
 syncable
 Sysbench
+Sysbox
 syscall
 syscalls
 syslog

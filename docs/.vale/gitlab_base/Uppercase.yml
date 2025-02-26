@@ -6,7 +6,8 @@
 # For a list of all options, see https://vale.sh/docs/topics/styles/
 extends: conditional
 message: "Instead of uppercase for '%s', use lowercase or backticks (`) if possible. Otherwise, ask a Technical Writer to add this word or acronym to the rule's exception list."
-link: https://docs.gitlab.com/ee/development/documentation/testing/vale.html#vale-uppercase-acronym-test
+link: https://docs.gitlab.com/development/documentation/testing/vale/#uppercase-acronym-test
+vocab: false
 level: suggestion
 ignorecase: false
 # Ensures that the existence of 'first' implies the existence of 'second'.
@@ -21,8 +22,8 @@ exceptions:
   - ANSI
   - APAC
   - API
-  - ARIA
   - APM
+  - ARIA
   - ARM
   - ARN
   - ASCII
@@ -59,13 +60,13 @@ exceptions:
   - DHCP
   - DML
   - DNS
-  - DSN
   - DOM
   - DORA
   - DSA
   - DSL
-  - DUOPRO
+  - DSN
   - DUOENT
+  - DUOPRO
   - DVCS
   - DVD
   - EBS
@@ -127,6 +128,7 @@ exceptions:
   - JPEG
   - JPG
   - JSON
+  - JSONB
   - JVM
   - JWT
   - KICS
@@ -135,10 +137,12 @@ exceptions:
   - LDAPS
   - LESS
   - LFS
+  - LLM
   - LRU
   - LSIF
   - LTM
   - LTS
+  - LTSS
   - LVM
   - MIME
   - MIT
@@ -169,6 +173,7 @@ exceptions:
   - PHP
   - PID
   - PKCS
+  - PMD
   - PNG
   - POSIX
   - POST
@@ -179,7 +184,6 @@ exceptions:
   - RAM
   - RBAC
   - RDP
-  - RDS
   - RDS
   - REST
   - RFC
@@ -214,6 +218,7 @@ exceptions:
   - SLA
   - SLI
   - SLO
+  - SLSA
   - SMS
   - SMTP
   - SOAP
@@ -225,6 +230,7 @@ exceptions:
   - SQL
   - SRE
   - SSD
+  - SSF
   - SSG
   - SSH
   - SSL
@@ -245,7 +251,6 @@ exceptions:
   - TTL
   - UBI
   - UDP
-  - UID
   - UID
   - UNIX
   - URI
