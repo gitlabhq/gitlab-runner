@@ -2247,16 +2247,34 @@ func TestSubmoduleAutoBump(t *testing.T) {
 		repoURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-branches"
 		repoSha = "b557eadceba20d40c6e10b274a1437e88051a4fd"
 	)
+
 	// We'll just check out a couple of submodules and expect them to be checked out at specific revisions.
 	expectedSubmoduleShas := map[string]string{
-		"private-repo-relative-main-branch-behind":        "c17b10c540ab191766605db226af3d4e02f7c244", // tip of `main`
-		"private-repo-relative-non-default-branch-behind": "86ada27b869b34132b7e9d4f1e0bc732b6e223d3", // tip of `non-default-branch`
+		// tip of `main`
+		"private-repo-relative-main-branch-behind": "c17b10c540ab191766605db226af3d4e02f7c244",
+		// tip of `non-default-branch`
+		"private-repo-relative-non-default-branch-behind": "86ada27b869b34132b7e9d4f1e0bc732b6e223d3",
 	}
-	if runtime.GOOS != shells.OSWindows {
-		// Older git versions default to pulling `master` instead of the default branch. For the windows tests, we still run
-		// such an older version, so we'll exclude that for now.
-		expectedSubmoduleShas["private-repo-relative-default-branch-behind"] = "76be4b4f04c27a186a706908d3e9e884ccded543" // tip of default branch `orphaned-branch`
+
+	if test.CommandVersionIsAtLeast(t, "2.40.0", "git", "version") {
+		// Older git versions default to not pick up the remote's default branch, but default to `origin/master`.
+		// For these versions this just won't work, without explicitly setting the branch in `.gitmodules`.
+		// Unfortunately, on the hosted windows runners we currently have git v2.23.0.windows1, so we need to skip this case
+		// until we run a version we know supports that.
+		//
+		// Tested versions (did not bisect all versions, just some):
+		// - ⚠ defaults to `origin/master`
+		//   - git v2.23.0.windows1
+		// - ✔ uses remote's default branch
+		//   - v2.40.0.windows.1
+		//   - v2.43.0.windows.1
+		//   - v2.48.1.windows.1
+		//   - v2.43.0 (ubuntu)
+
+		// tip of default branch `orphaned-branch`
+		expectedSubmoduleShas["private-repo-relative-default-branch-behind"] = "76be4b4f04c27a186a706908d3e9e884ccded543"
 	}
+
 	submodules := slices.Collect(maps.Keys(expectedSubmoduleShas))
 
 	for _, gitUrlsWithoutTokens := range []bool{true, false} {
@@ -2285,6 +2303,10 @@ func TestSubmoduleAutoBump(t *testing.T) {
 					common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
 					common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
 				)
+				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
+					Name:   "pre_get_sources_script",
+					Script: common.StepScript{"git version"},
+				})
 
 				build := newBuild(t, jobResponse, shell)
 

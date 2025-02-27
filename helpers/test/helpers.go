@@ -3,11 +3,14 @@ package test
 import (
 	"context"
 	"os"
+	"os/exec"
+	"regexp"
 	"runtime"
 	"strconv"
 	"testing"
 
 	"github.com/docker/docker/client"
+	"github.com/hashicorp/go-version"
 )
 
 const (
@@ -85,4 +88,41 @@ func getDockerDaemonAPIVersion() (string, error) {
 		return "", err
 	}
 	return ver.APIVersion, nil
+}
+
+// CommandVersionIsAtLeast runs the getVersionCommand and tries to parse a version string from that output. It will
+// compare then compare that to minVersion.
+// On errors parsing version strings or running the command, the test will be aborted.
+func CommandVersionIsAtLeast(t *testing.T, minVersion string, getVersionCommand ...string) bool {
+	t.Helper()
+
+	vMin, err := version.NewVersion(minVersion)
+	if err != nil {
+		t.Fatalf("error parsing minimal version %q: %v", minVersion, err)
+	}
+
+	bin, args := getVersionCommand[0], getVersionCommand[1:]
+	cmd := exec.Command(bin, args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("error running command %v: %v", getVersionCommand, err)
+	}
+
+	vRE := regexp.MustCompile(`v?(\d+\.)*\d+`)
+	out = vRE.Find(out)
+	vCurrent, err := version.NewVersion(string(out))
+	if err != nil {
+		t.Fatalf("error parsing current version %q: %v", out, err)
+	}
+
+	isAtLeast := vCurrent.GreaterThanOrEqual(vMin)
+
+	msg := "⚠"
+	if isAtLeast {
+		msg = "✔"
+	}
+
+	t.Logf("version for %q: %s (current: %q, minimum: %q)", bin, msg, vCurrent.String(), vMin.String())
+
+	return isAtLeast
 }
