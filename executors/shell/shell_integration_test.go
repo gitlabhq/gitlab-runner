@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -2234,6 +2236,86 @@ func TestCredSetup(t *testing.T) {
 				assert.NoError(t, err, "getting build's remote URL")
 
 				test.validator(t, out, remoteURL)
+			})
+		})
+	}
+}
+
+func TestSubmoduleAutoBump(t *testing.T) {
+	const (
+		// See: https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-branches/-/commit/b557eadceba20d40c6e10b274a1437e88051a4fd
+		repoURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-branches"
+		repoSha = "b557eadceba20d40c6e10b274a1437e88051a4fd"
+	)
+	// We'll just check out a couple of submodules and expect them to be checked out at specific revisions.
+	expectedSubmoduleShas := map[string]string{
+		"private-repo-relative-main-branch-behind":        "c17b10c540ab191766605db226af3d4e02f7c244", // tip of `main`
+		"private-repo-relative-non-default-branch-behind": "86ada27b869b34132b7e9d4f1e0bc732b6e223d3", // tip of `non-default-branch`
+	}
+	if runtime.GOOS != shells.OSWindows {
+		// Older git versions default to pulling `master` instead of the default branch. For the windows tests, we still run
+		// such an older version, so we'll exclude that for now.
+		expectedSubmoduleShas["private-repo-relative-default-branch-behind"] = "76be4b4f04c27a186a706908d3e9e884ccded543" // tip of default branch `orphaned-branch`
+	}
+	submodules := slices.Collect(maps.Keys(expectedSubmoduleShas))
+
+	for _, gitUrlsWithoutTokens := range []bool{true, false} {
+		name := fmt.Sprintf("gitUrlsWithoutTokens:%t", gitUrlsWithoutTokens)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				t.Parallel()
+
+				if runtime.GOOS != shells.OSWindows && shell == shells.SNPowershell {
+					t.Skip("powershell is not supported on non-windows platforms")
+				}
+
+				jobResponse, err := common.GetRemoteSuccessfulBuild()
+				require.NoError(t, err)
+
+				jobResponse.GitInfo.RepoURL = repoURL
+				jobResponse.GitInfo.Sha = repoSha
+				injectJobToken(t, &jobResponse)
+
+				jobResponse.Variables = append(jobResponse.Variables,
+					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+					common.JobVariable{Key: "GIT_SUBMODULE_UPDATE_FLAGS", Value: "--remote"},
+					common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " ")},
+					common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+					common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
+				)
+
+				build := newBuild(t, jobResponse, shell)
+
+				build.Runner.RunnerCredentials.URL = "https://gitlab.com/"
+
+				buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, gitUrlsWithoutTokens)
+
+				_, err = buildtest.RunBuildReturningOutput(t, build)
+				assert.NoError(t, err)
+
+				for submodule, expectedSha := range expectedSubmoduleShas {
+					submoduleDir := filepath.Join(build.BuildDir, submodule)
+					cmd := exec.Command("git", "rev-parse", "HEAD")
+					cmd.Dir = submoduleDir
+
+					actualSha, err := cmd.CombinedOutput()
+					assert.NoError(t, err, "getting HEAD of %s", submodule)
+
+					// this is not important for the test, but just to give more context in the error message and help with
+					// debugging
+					readmeName := "README.md"
+					readmeContent, err := os.ReadFile(filepath.Join(submoduleDir, readmeName))
+					if err != nil {
+						readmeContent = []byte("ReadError: " + err.Error())
+					}
+
+					assert.Equal(t,
+						expectedSha, string(bytes.Trim(actualSha, "\n\r")),
+						"wrong rev for HEAD of %q\n----[ %s content ]----\n%s\n----", submodule, readmeName, readmeContent,
+					)
+				}
 			})
 		})
 	}
