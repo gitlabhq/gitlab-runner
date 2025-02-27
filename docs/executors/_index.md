@@ -81,32 +81,37 @@ you decide which executor to use.
 
 ### Shell executor
 
-**Shell** is the simplest executor to configure. All required dependencies for
-your builds need to be installed manually on the same machine that GitLab Runner is
-installed on.
+The Shell executor is simplest configuration option for GitLab Runner. It executes jobs locally on
+the system where GitLab Runner is installed, requiring all dependencies to be manually installed on the same
+machine.
 
-### Virtual Machine executor (VirtualBox / Parallels)
+This executor supports Bash for Linux, macOS, and FreeBSD operating systems, while offering PowerShell
+support for Windows environments.
 
-You can use this executor to use an already created virtual machine, which
-is cloned and used to run your build. GitLab Runner provides two full system virtualization
-options: **VirtualBox** and **Parallels**. You can use these options to run your
-builds on Windows, Linux, macOS, or FreeBSD operating systems.
-GitLab Runner connects to the virtual machine and runs the build on it.
-The Virtual Machine executor can also be used to reduce infrastructure costs.
+While ideal for builds with minimal dependencies, it only provides limited isolation between jobs.
 
 ### Docker executor
 
-You can use **Docker** for a clean build environment. All dependencies for building the
-project can be put in the Docker image, which makes dependency management more
-straight-forward. You can use the Docker executor to create a build environment with dependent
-[services](https://docs.gitlab.com/ci/services/),
-like MySQL.
+Docker executor provides clean build environments through containers. Dependency management is straightforward,
+with all dependencies packaged in the Docker image. This executor requires Docker installation on the Runner host.
 
-### Docker Machine executor
+This executor supports additional [services](https://docs.gitlab.com/ee/ci/services/index.html) like MySQL.
+It also accommodates Podman as an alternative container runtime.
 
-The **Docker Machine** is a special version of the **Docker** executor
-with support for auto-scaling. It works like the typical **Docker** executor
-but with build hosts created on demand by _Docker Machine_.
+This executor maintains consistent, isolated build environments.
+
+### Docker Machine executor (deprecated)
+
+{{< alert type="warning" >}}
+
+This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/498268) in GitLab 17.5
+and is planned for removal in 20.0. Use [GitLab Runner Autoscaler](../runner_autoscale/_index.md) instead.
+
+{{< /alert >}}
+
+The Docker Machine executor is a special version of the Docker executor with support for auto-scaling. It works like the typical
+Docker executor but with build hosts created on demand by Docker Machine. This capability makes it particularly effective
+in cloud environments like AWS EC2, offering excellent isolation and scalability for variable workloads.
 
 ### Docker Autoscaler executor
 
@@ -116,38 +121,37 @@ Docker executor options and features are supported.
 
 The Docker Autoscaler uses [fleeting plugins](https://gitlab.com/gitlab-org/fleeting/fleeting) to autoscale.
 Fleeting is an abstraction for a group of autoscaled instances, which uses plugins that support cloud providers,
-like Google Cloud, AWS, and Azure.
+like Google Cloud, AWS, and Azure. This executor particularly suits environments with dynamic workload requirements.
 
 ### Instance executor
 
-The instance executor is an autoscale-enabled executor that creates instances on demand to accommodate
+The Instance executor is an autoscale-enabled executor that creates instances on demand to accommodate
 the expected volume of jobs that the runner manager processes.
 
-The instance executor also uses [fleeting plugins](https://gitlab.com/gitlab-org/fleeting/fleeting) to autoscale.
+This executor and the related Docker Autoscale executor are the new autoscaling executors that works in conjunction with the GitLab Runner Fleeting and Taskscaler technologies.
 
-You can use the instance executor when jobs need full access to the host instance, operating system, and
-attached devices. The instance executor can also be configured to accommodate single-tenant and multi-tenant jobs.
+The Instance executor also uses [fleeting plugins](https://gitlab.com/gitlab-org/fleeting/fleeting) to autoscale.
+
+You can use the Instance executor when jobs need full access to the host instance, operating system, and
+attached devices. The Instance executor can also be configured to accommodate single-tenant and multi-tenant jobs.
 
 ### Kubernetes executor
 
-You can use the **Kubernetes** executor to use an existing Kubernetes cluster
-for your builds. The executor calls the Kubernetes cluster API
-and creates a new Pod (with a build container and services containers) for
-each GitLab CI job.
+You can use the Kubernetes executor to use an existing Kubernetes cluster for your builds. The executor calls the
+Kubernetes cluster API and creates a new Pod (with a build container and services containers) for each GitLab CI/CD job.
+This executor particularly suits cloud-native environments, offering superior scalability and resource utilization.
 
 ### SSH executor
 
-The **SSH** executor is added for completeness, but it's the least supported
-executors. When you use the SSH executor, GitLab Runner connects to an external server
-and runs the builds there. We have some success stories from organizations using
-this executor, but usually you should use one of the other types.
+The SSH executor is added for completeness, but it's among the least supported executors.
+When you use the SSH executor, GitLab Runner connects to an external server and runs the builds there.
+We have some success stories from organizations using this executor, but usually you should use one of the other types.
 
 ### Custom executor
 
-You can use the **Custom** executor to specify your own execution
-environments. When GitLab Runner does not provide an executor (for
-example, Linux containers), it allows you to use custom executables
-to provision and clean up environments.
+You can use the Custom executor to specify your own execution environments.
+When GitLab Runner does not provide an executor (for example, Linux containers),
+it allows you to use custom executables to provision and clean up environments.
 
 ## Compatibility chart
 
@@ -191,3 +195,54 @@ Supported systems for interactive web terminals by different shells:
 | Linux   | ✓           | ✗                     | ✗                  | ✗                          |
 | macOS   | ✓           | ✗                     | ✗                  | ✗                          |
 | FreeBSD | ✓           | ✗                     | ✗                  | ✗                          |
+
+The following diagram shows which executor to choose based on your operating system and platform:
+
+```mermaid
+graph TD
+    Start[Which executor to choose?] --> BuildType{Autoscaling or No Autosclaing?}
+
+
+    BuildType -->|No| BuildType2{Container or OS Shell builds?}
+    BuildType-->|Yes| Platform{Platform}
+    BuildType2 -->|Shell| ShellOptions{Operating System}
+    BuildType2 -->|Container| ContainerOptions{Operating System}
+
+
+    Platform -->|Cloud Native| Kubernetes[Kubernetes]
+    Platform -->|Cloud VMs| OSType{Operating System}
+
+    OSType -->|Windows| WinExec{Executor Type}
+    OSType -->|macOS| MacExec{Executor Type}
+    OSType -->|Linux| LinuxExec{Executor Type}
+
+
+    WinExec --> AutoscalerWin[Fleeting: Docker Autoscaler Executor]
+    WinExec --> InstanceWin[Fleeting:Instance Executor]
+
+    MacExec --> AutoscalerMac[Fleeting: Docker Autoscaler Executor]
+    MacExec --> InstanceMac[Fleeting:Instance Executor]
+
+    LinuxExec --> AutoscalerLin[Fleeting: Docker Autoscaler Executor]
+    LinuxExec --> InstanceLin[Fleeting:Instance Executor]
+
+
+    ShellOptions -->|Linux| Linux_Shell[Bash;Zsh]
+    ShellOptions -->|macOS| MacOS[Bash;Zsh]
+    ShellOptions -->|Windows| Windows[Powershell 5.1; PowerShell 7.x]
+    ShellOptions -->|Remote Machine| SSH[SSH]
+
+
+    ContainerOptions -->|Linux| Linux_Shell2[Docker;Podman]
+    ContainerOptions -->|macOS| macOS2[Docker]
+    ContainerOptions -->|Windows| Windows2[Docker]
+
+    %% Styling
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef decision fill:#e1f3fe,stroke:#333,stroke-width:2px;
+    classDef executor fill:#dcffe4,stroke:#333,stroke-width:2px;
+
+    class Start default;
+    class BuildType,BuildType2,Container,Scaling,AutoScale,NoAutoScale,ShellOptions,ContainerOptions,OSType,WinExec,MacExec,Platform,LinuxExec decision;
+    class Kubernetes,Docker,Custom,Shell,Windows,SSH,DockerMachineWin,AutoscalerWin,InstanceWin,DockerMachineMac,AutoscalerMac,InstanceMac,DockerMachineLin,AutoscalerLin,InstanceLin executor;
+```
