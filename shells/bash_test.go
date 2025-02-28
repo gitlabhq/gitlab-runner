@@ -263,6 +263,6 @@ func TestBashEntrypointCommand(t *testing.T) {
 
 func TestBashGetGitCredHelperCommand(t *testing.T) {
 	shell := BashShell{}
-	actualCmd := shell.GetGitCredHelperCommand()
+	actualCmd := shell.GetGitCredHelperCommand("is-ignored-for-bash")
 	assert.Equal(t, bashGitCredHelperScript, actualCmd)
 }

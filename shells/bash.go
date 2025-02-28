@@ -376,7 +376,7 @@ func (b *BashShell) GetName() string {
 // https://git-scm.com/docs/gitcredentials#_custom_helpers
 const bashGitCredHelperScript = `f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
 
-func (b *BashShell) GetGitCredHelperCommand() string {
+func (b *BashShell) GetGitCredHelperCommand(os string) string {
 	return bashGitCredHelperScript
 }
 

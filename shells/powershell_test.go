@@ -805,3 +805,44 @@ func TestPowershellEntrypointCommand(t *testing.T) {
 		})
 	}
 }
+
+// TestGitCredHelperDifferentJobOS asserts that the git cred helper script is rendered differently across OSes and shell
+// types.
+func TestGitCredHelperDifferentJobOS(t *testing.T) {
+	doubleQuotedBlobs := []string{"password=${env:CI_JOB_TOKEN}`n", "get"}
+	expectedInnerDoubleQuotes := map[string]map[string]string{
+		"": {
+			SNPowershell: ternary(runtime.GOOS == "windows", `\"`, `"`),
+			SNPwsh:       `"`,
+		},
+		"linux": {
+			SNPowershell: `"`,
+			SNPwsh:       `"`,
+		},
+		"windows": {
+			SNPowershell: `\"`,
+			SNPwsh:       `"`,
+		},
+	}
+
+	for jobOS, shellQuotes := range expectedInnerDoubleQuotes {
+		t.Run(jobOS, func(t *testing.T) {
+			for shellName, expectedDoubleQuote := range shellQuotes {
+				t.Run(shellName, func(t *testing.T) {
+					shell := common.GetShell(shellName)
+					helper := shell.GetGitCredHelperCommand(jobOS)
+					for _, s := range doubleQuotedBlobs {
+						assert.Contains(t, helper, expectedDoubleQuote+s+expectedDoubleQuote)
+					}
+				})
+			}
+		})
+	}
+}
+
+func ternary[T any](condition bool, whenTrue T, whenFalse T) T {
+	if condition {
+		return whenTrue
+	}
+	return whenFalse
+}
