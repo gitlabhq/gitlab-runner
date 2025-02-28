@@ -575,6 +575,29 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
 	repoURI := "git@example.com:project/repo.git"
 
+	withoutNative := func(m *MockShellWriter) {
+		m.EXPECT().Noticef("Fetching changes...").Once()
+
+		templateDir := expectSetupTemplate(m, "build/dir")
+		expectFileCleanup(m, "build/dir/.git", false)
+		expectGitConfigCleanup(m, "build/dir", false)
+
+		m.EXPECT().Command("git", "init", "build/dir", "--template", templateDir).Once()
+		m.EXPECT().Cd("build/dir").Once()
+
+		m.EXPECT().IfCmd("git", "remote", "add", "origin", repoURI).Once()
+		m.EXPECT().Noticef("Created fresh repository.").Once()
+		m.EXPECT().Else().Once()
+		m.EXPECT().Command("git", "remote", "set-url", "origin", repoURI).Once()
+		m.EXPECT().EndIf().Once()
+
+		m.EXPECT().IfFile(".git/shallow").Once()
+		m.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
+		m.EXPECT().Else().Once()
+		m.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet")
+		m.EXPECT().EndIf().Once()
+	}
+
 	testCases := []struct {
 		name              string
 		buildDir          string
@@ -590,26 +613,8 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 			gitStrategy: "clone",
 			setupExpectations: func(m *MockShellWriter) {
 				m.On("RmDir", "build/dir")
-				m.EXPECT().Noticef("Fetching changes...").Once()
 
-				templateDir := expectSetupTemplate(m, "build/dir")
-				expectFileCleanup(m, "build/dir/.git", false)
-				expectGitConfigCleanup(m, "build/dir", false)
-
-				m.EXPECT().Command("git", "init", "build/dir", "--template", templateDir).Once()
-				m.EXPECT().Cd("build/dir").Once()
-
-				m.EXPECT().IfCmd("git", "remote", "add", "origin", repoURI).Once()
-				m.EXPECT().Noticef("Created fresh repository.").Once()
-				m.EXPECT().Else().Once()
-				m.EXPECT().Command("git", "remote", "set-url", "origin", repoURI).Once()
-				m.EXPECT().EndIf().Once()
-
-				m.EXPECT().IfFile(".git/shallow").Once()
-				m.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
-				m.EXPECT().Else().Once()
-				m.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet")
-				m.EXPECT().EndIf().Once()
+				withoutNative(m)
 			},
 		},
 		{
@@ -620,12 +625,17 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 			setupExpectations: func(m *MockShellWriter) {
 				m.EXPECT().RmDir("build/dir").Once()
 
+				m.EXPECT().IfGitVersionIsAtLeast("2.49").Once()
 				m.EXPECT().Noticef("Cloning repository...").Once()
 
 				templateDir := expectSetupTemplate(m, "build/dir")
 
 				m.EXPECT().Command("git", "-c", userAgent, "clone", "--no-checkout", repoURI, "build/dir", "--template", templateDir).Once()
 				m.EXPECT().Cd("build/dir").Once()
+
+				m.EXPECT().Else().Once()
+				withoutNative(m)
+				m.EXPECT().EndIf().Once()
 			},
 		},
 		{
@@ -637,12 +647,17 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 			setupExpectations: func(m *MockShellWriter) {
 				m.EXPECT().RmDir("build/dir").Once()
 
+				m.EXPECT().IfGitVersionIsAtLeast("2.49").Once()
 				m.EXPECT().Noticef("Cloning repository for %s...", "feature").Once()
 
 				templateDir := expectSetupTemplate(m, "build/dir")
 
 				m.EXPECT().Command("git", "-c", userAgent, "clone", "--no-checkout", repoURI, "build/dir", "--template", templateDir, "--branch", "feature").Once()
 				m.EXPECT().Cd("build/dir").Once()
+
+				m.EXPECT().Else().Once()
+				withoutNative(m)
+				m.EXPECT().EndIf().Once()
 			},
 		},
 		{
@@ -654,12 +669,17 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 			setupExpectations: func(m *MockShellWriter) {
 				m.EXPECT().RmDir("build/dir").Once()
 
+				m.EXPECT().IfGitVersionIsAtLeast("2.49").Once()
 				m.EXPECT().Noticef("Cloning repository for %s...", "refs/some/thing").Once()
 
 				templateDir := expectSetupTemplate(m, "build/dir")
 
 				m.EXPECT().Command("git", "-c", userAgent, "clone", "--no-checkout", repoURI, "build/dir", "--template", templateDir, "--revision", "refs/some/thing").Once()
 				m.EXPECT().Cd("build/dir").Once()
+
+				m.EXPECT().Else().Once()
+				withoutNative(m)
+				m.EXPECT().EndIf().Once()
 			},
 		},
 	}
@@ -962,14 +982,14 @@ func TestGitFetchFlags(t *testing.T) {
 						mockWriter.EXPECT().Noticef("Fetching changes with git depth set to %d...", test.depth).Once()
 					}
 
+					templateDir := expectSetupTemplate(mockWriter, dummyProjectDir)
+					expectFileCleanup(mockWriter, path.Join(dummyProjectDir, ".git"), false)
+					expectGitConfigCleanup(mockWriter, dummyProjectDir, false)
+
 					var expectedObjectFormat = "sha1"
 					if test.objectFormat != "" {
 						expectedObjectFormat = test.objectFormat
 					}
-
-					templateDir := expectSetupTemplate(mockWriter, dummyProjectDir)
-					expectFileCleanup(mockWriter, path.Join(dummyProjectDir, ".git"), false)
-					expectGitConfigCleanup(mockWriter, dummyProjectDir, false)
 
 					if expectedObjectFormat != "sha1" {
 						mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", templateDir, "--object-format", expectedObjectFormat).Once()

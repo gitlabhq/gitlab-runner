@@ -32,9 +32,10 @@ const (
 	credHelperConfFile     = "cred-helper.conf"
 	// The same cred helper is used across all shells & OSs
 	// git always comes (or depends) on a POSIX shell, so any helper can rely on that, regardless of the OS, git distribution, ...
-	credHelperCommand = `!f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
-	gitDir            = ".git"
-	gitTemplateDir    = "git-template"
+	credHelperCommand         = `!f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
+	gitDir                    = ".git"
+	gitTemplateDir            = "git-template"
+	gitMinVersionCloneWithRef = "2.49"
 )
 
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
@@ -590,7 +591,7 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, info common.Shel
 	case common.GitFetch:
 		return b.writeRefspecFetchCmd(w, info)
 	case common.GitClone:
-		return b.writeCloneCmd(w, info)
+		return b.writeCloneCmdIfPossible(w, info)
 	case common.GitNone:
 		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
@@ -676,7 +677,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	return nil
 }
 
-func (b *AbstractShell) writeCloneCmd(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeCloneCmdIfPossible(w ShellWriter, info common.ShellScriptInfo) error {
 	build := info.Build
 	projectDir := build.FullProjectDir()
 
@@ -687,6 +688,25 @@ func (b *AbstractShell) writeCloneCmd(w ShellWriter, info common.ShellScriptInfo
 		return b.writeRefspecFetchCmd(w, info)
 	}
 
+	w.IfGitVersionIsAtLeast(gitMinVersionCloneWithRef)
+	defer w.EndIf()
+
+	if err := b.writeCloneRevisionCmd(w, info); err != nil {
+		return err
+	}
+
+	w.Else()
+
+	if err := b.writeRefspecFetchCmd(w, info); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellScriptInfo) error {
+	build := info.Build
+	projectDir := build.FullProjectDir()
 	depth := build.GitInfo.Depth
 	templateDir := b.setupTemplateDir(w, build, projectDir)
 

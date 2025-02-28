@@ -717,6 +717,39 @@ func (_c *MockShellWriter_IfFile_Call) RunAndReturn(run func(string)) *MockShell
 	return _c
 }
 
+// IfGitVersionIsAtLeast provides a mock function with given fields: version
+func (_m *MockShellWriter) IfGitVersionIsAtLeast(version string) {
+	_m.Called(version)
+}
+
+// MockShellWriter_IfGitVersionIsAtLeast_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IfGitVersionIsAtLeast'
+type MockShellWriter_IfGitVersionIsAtLeast_Call struct {
+	*mock.Call
+}
+
+// IfGitVersionIsAtLeast is a helper method to define mock.On call
+//   - version string
+func (_e *MockShellWriter_Expecter) IfGitVersionIsAtLeast(version interface{}) *MockShellWriter_IfGitVersionIsAtLeast_Call {
+	return &MockShellWriter_IfGitVersionIsAtLeast_Call{Call: _e.mock.On("IfGitVersionIsAtLeast", version)}
+}
+
+func (_c *MockShellWriter_IfGitVersionIsAtLeast_Call) Run(run func(version string)) *MockShellWriter_IfGitVersionIsAtLeast_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockShellWriter_IfGitVersionIsAtLeast_Call) Return() *MockShellWriter_IfGitVersionIsAtLeast_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockShellWriter_IfGitVersionIsAtLeast_Call) RunAndReturn(run func(string)) *MockShellWriter_IfGitVersionIsAtLeast_Call {
+	_c.Run(run)
+	return _c
+}
+
 // Join provides a mock function with given fields: elem
 func (_m *MockShellWriter) Join(elem ...string) string {
 	_va := make([]interface{}, len(elem))
