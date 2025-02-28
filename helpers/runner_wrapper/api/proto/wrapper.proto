@@ -3,14 +3,14 @@ syntax = "proto3";
 package gitlab_com.gitlab_runner.runner_wrapper;
 option go_package = "./proto";
 
-message Empty {}
-
 enum Status {
   unknown = 0;
   running = 1;
   in_shutdown = 2;
   stopped = 3;
 }
+
+message CheckStatusRequest {}
 
 message CheckStatusResponse {
   Status status = 1;
@@ -32,7 +32,15 @@ message InitGracefulShutdownResponse {
   string failureReason = 2;
 }
 
+message InitForcefulShutdownRequest {}
+
+message InitForcefulShutdownResponse {
+  Status status = 1;
+  string failureReason = 2;
+}
+
 service ProcessWrapper {
-  rpc CheckStatus(Empty) returns (CheckStatusResponse);
+  rpc CheckStatus(CheckStatusRequest) returns (CheckStatusResponse);
   rpc InitGracefulShutdown(InitGracefulShutdownRequest) returns (InitGracefulShutdownResponse);
+  rpc InitForcefulShutdown(InitForcefulShutdownRequest) returns (InitForcefulShutdownResponse);
 }

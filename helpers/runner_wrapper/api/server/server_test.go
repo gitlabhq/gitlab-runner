@@ -1,6 +1,6 @@
 //go:build !integration
 
-package runner_wrapper
+package server
 
 import (
 	"context"
@@ -14,7 +14,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	pb "gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/proto"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api"
+	pb "gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api/proto"
 )
 
 func TestServer_Listen(t *testing.T) {
@@ -25,7 +26,7 @@ func TestServer_Listen(t *testing.T) {
 
 func runWithServer(t *testing.T, run func(t *testing.T, w *mockWrapper, s *Server)) {
 	w := newMockWrapper(t)
-	s := NewServer(logrus.StandardLogger(), w)
+	s := New(logrus.StandardLogger(), w)
 	wg := new(sync.WaitGroup)
 
 	go listenServer(t, wg, s)
@@ -53,15 +54,15 @@ func TestServer_CheckStatus(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		status         Status
+		status         api.Status
 		expectedStatus pb.Status
 	}{
 		"mapped status": {
-			status:         StatusRunning,
+			status:         api.StatusRunning,
 			expectedStatus: pb.Status_running,
 		},
 		"unknown status": {
-			status:         Status(-1),
+			status:         api.Status(-1),
 			expectedStatus: pb.Status_unknown,
 		},
 	}
@@ -100,9 +101,6 @@ func TestServer_InitGracefulShutdown(t *testing.T) {
 		assertError  func(t *testing.T, err error)
 	}{
 		"no error": {},
-		"processNotInitialized error": {
-			wrapperError: errProcessNotInitialized,
-		},
 		"other errors": {
 			wrapperError: assert.AnError,
 			assertError: func(t *testing.T, err error) {
@@ -114,7 +112,7 @@ func TestServer_InitGracefulShutdown(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			runWithServer(t, func(t *testing.T, w *mockWrapper, s *Server) {
-				w.EXPECT().Status().Return(StatusInShutdown).Once()
+				w.EXPECT().Status().Return(api.StatusInShutdown).Once()
 				w.EXPECT().FailureReason().Return(testFailureReason).Once()
 
 				w.EXPECT().
@@ -122,7 +120,7 @@ func TestServer_InitGracefulShutdown(t *testing.T) {
 					Return(tc.wrapperError).
 					Once().
 					Run(func(args mock.Arguments) {
-						req, ok := args.Get(0).(initGracefulShutdownRequest)
+						req, ok := args.Get(0).(api.InitGracefulShutdownRequest)
 						require.True(t, ok)
 
 						def := req.ShutdownCallbackDef()

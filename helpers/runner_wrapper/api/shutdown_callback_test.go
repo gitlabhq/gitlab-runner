@@ -1,6 +1,6 @@
 //go:build !integration
 
-package runner_wrapper
+package api
 
 import (
 	"context"
@@ -12,10 +12,9 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
 func TestShutdownCallback(t *testing.T) {
@@ -79,16 +78,13 @@ func TestShutdownCallback(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			hook, logCleanup := test.NewHook()
-			defer logCleanup()
-
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 			defer server.Close()
 
 			serverURL, serverCleanup := tc.prepareTestServer(t)
 			defer serverCleanup()
 
-			def := newMockShutdownCallbackDef(t)
+			def := NewMockShutdownCallbackDef(t)
 			def.EXPECT().URL().Return(serverURL).Once()
 			def.EXPECT().Method().Return(tc.method).Once()
 			def.EXPECT().Headers().Return(map[string]string{testHeader: testHeaderValue}).Once()
@@ -96,7 +92,10 @@ func TestShutdownCallback(t *testing.T) {
 			ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 			defer cancelFn()
 
-			c := newShutdownCallback(logrus.StandardLogger(), def)
+			log := logrus.New()
+			hook := test.NewLocal(log)
+
+			c := NewShutdownCallback(log, def)
 			c.Run(ctx)
 
 			entry := hook.LastEntry()

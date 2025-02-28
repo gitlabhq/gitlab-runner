@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api"
 )
 
 func TestWrapper_Run(t *testing.T) {
@@ -33,7 +35,7 @@ func TestWrapper_Run(t *testing.T) {
 		mockCommander        func(t *testing.T, m *mockCommander, p *mockProcess)
 		mockShutdownCallback func(t *testing.T, w *Wrapper)
 		assertFailureReason  func(t *testing.T, failureReason error)
-		expectedStatus       Status
+		expectedStatus       api.Status
 		assertError          func(t *testing.T, err error)
 	}{
 		"wrapped process start failure": {
@@ -44,7 +46,7 @@ func TestWrapper_Run(t *testing.T) {
 				assert.ErrorIs(t, failureReason, errFailedToStartProcess)
 				assert.Contains(t, failureReason.Error(), assert.AnError.Error())
 			},
-			expectedStatus: StatusStopped,
+			expectedStatus: api.StatusStopped,
 		},
 		"immediate wrapped process failure": {
 			mockCommander: func(t *testing.T, m *mockCommander, p *mockProcess) {
@@ -55,7 +57,7 @@ func TestWrapper_Run(t *testing.T) {
 			assertFailureReason: func(t *testing.T, failureReason error) {
 				assert.ErrorIs(t, failureReason, assert.AnError)
 			},
-			expectedStatus: StatusStopped,
+			expectedStatus: api.StatusStopped,
 		},
 		"wrapped process termination error": {
 			mockProcess: func(t *testing.T) *mockProcess {
@@ -74,7 +76,7 @@ func TestWrapper_Run(t *testing.T) {
 			assertError: func(t *testing.T, err error) {
 				assert.ErrorIs(t, err, errFailedToTerminateProcess)
 			},
-			expectedStatus: StatusRunning,
+			expectedStatus: api.StatusRunning,
 		},
 		"wrapped process terminated properly": {
 			mockProcess: func(t *testing.T) *mockProcess {
@@ -100,7 +102,7 @@ func TestWrapper_Run(t *testing.T) {
 					}
 				})
 			},
-			expectedStatus: StatusRunning,
+			expectedStatus: api.StatusRunning,
 		},
 		"timeout when waiting for wrapped process termination": {
 			mockProcess: func(t *testing.T) *mockProcess {
@@ -119,7 +121,7 @@ func TestWrapper_Run(t *testing.T) {
 			assertError: func(t *testing.T, err error) {
 				assert.ErrorIs(t, err, errProcessExitTimeout)
 			},
-			expectedStatus: StatusRunning,
+			expectedStatus: api.StatusRunning,
 		},
 		"shutdown callback run on process graceful shutdown end": {
 			mockCommander: func(t *testing.T, m *mockCommander, p *mockProcess) {
@@ -130,9 +132,9 @@ func TestWrapper_Run(t *testing.T) {
 			assertFailureReason: func(t *testing.T, failureReason error) {
 				assert.NoError(t, failureReason)
 			},
-			expectedStatus: StatusStopped,
+			expectedStatus: api.StatusStopped,
 			mockShutdownCallback: func(t *testing.T, w *Wrapper) {
-				m := newMockShutdownCallback(t)
+				m := api.NewMockShutdownCallback(t)
 				w.shutdownCallback = m
 
 				m.EXPECT().Run(mock.Anything).Once().Run(func(args mock.Arguments) {
@@ -193,7 +195,7 @@ func TestWrapper_Run(t *testing.T) {
 }
 
 func TestWrapper_Status(t *testing.T) {
-	const testStatus = StatusInShutdown
+	const testStatus = api.StatusInShutdown
 
 	w := &Wrapper{
 		log:    logrus.StandardLogger(),
@@ -246,7 +248,7 @@ func TestWrapper_InitiateGracefulShutdown(t *testing.T) {
 	}{
 		"no process": {
 			assertError: func(t *testing.T, err error) {
-				assert.ErrorIs(t, err, errProcessNotInitialized)
+				assert.ErrorIs(t, err, api.ErrProcessNotInitialized)
 			},
 		},
 		"process killer error": {
@@ -281,11 +283,11 @@ func TestWrapper_InitiateGracefulShutdown(t *testing.T) {
 			},
 			shutdownCallbackURL: testShutdownCallbackURL,
 			assertShutdownCallback: func(t *testing.T, w *Wrapper) {
-				callback, ok := w.shutdownCallback.(*defaultShutdownCallback)
+				callback, ok := w.shutdownCallback.(api.ShutdownCallbackDef)
 				require.True(t, ok)
-				assert.Equal(t, testShutdownCallbackURL, callback.url)
-				assert.Equal(t, testShutdownCallbackMethod, callback.method)
-				assert.Equal(t, testShutdownCallbackHeaders, callback.headers)
+				assert.Equal(t, testShutdownCallbackURL, callback.URL())
+				assert.Equal(t, testShutdownCallbackMethod, callback.Method())
+				assert.Equal(t, testShutdownCallbackHeaders, callback.Headers())
 			},
 		},
 	}
@@ -298,14 +300,14 @@ func TestWrapper_InitiateGracefulShutdown(t *testing.T) {
 				w.process = tc.process(t)
 			}
 
-			assert.Equal(t, StatusUnknown, w.status)
+			assert.Equal(t, api.StatusUnknown, w.status)
 
-			def := newMockShutdownCallbackDef(t)
+			def := api.NewMockShutdownCallbackDef(t)
 			def.EXPECT().URL().Return(tc.shutdownCallbackURL).Maybe()
 			def.EXPECT().Method().Return(testShutdownCallbackMethod).Maybe()
 			def.EXPECT().Headers().Return(testShutdownCallbackHeaders).Maybe()
 
-			req := newMockInitGracefulShutdownRequest(t)
+			req := api.NewMockInitGracefulShutdownRequest(t)
 			req.EXPECT().ShutdownCallbackDef().Return(def).Maybe()
 			err := w.InitiateGracefulShutdown(req)
 
@@ -315,7 +317,7 @@ func TestWrapper_InitiateGracefulShutdown(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, StatusInShutdown, w.status)
+			assert.Equal(t, api.StatusInShutdown, w.status)
 
 			if tc.assertShutdownCallback != nil {
 				tc.assertShutdownCallback(t, w)
