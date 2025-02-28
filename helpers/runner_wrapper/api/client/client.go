@@ -95,7 +95,7 @@ func (c *Client) CheckStatus(ctx context.Context) (CheckStatusResponse, error) {
 
 	var resp CheckStatusResponse
 
-	s, err := c.grpcClient.CheckStatus(ctx, new(pb.Empty))
+	s, err := c.grpcClient.CheckStatus(ctx, new(pb.CheckStatusRequest))
 	if err != nil {
 		return resp, err
 	}
@@ -144,7 +144,7 @@ func (c *Client) InitForcefulShutdown(ctx context.Context) (CheckStatusResponse,
 
 	var resp CheckStatusResponse
 
-	s, err := c.grpcClient.InitForcefulShutdown(ctx, new(pb.Empty))
+	s, err := c.grpcClient.InitForcefulShutdown(ctx, new(pb.InitForcefulShutdownRequest))
 	if err != nil {
 		return resp, err
 	}

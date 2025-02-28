@@ -28,9 +28,9 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ProcessWrapperClient interface {
-	CheckStatus(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*CheckStatusResponse, error)
+	CheckStatus(ctx context.Context, in *CheckStatusRequest, opts ...grpc.CallOption) (*CheckStatusResponse, error)
 	InitGracefulShutdown(ctx context.Context, in *InitGracefulShutdownRequest, opts ...grpc.CallOption) (*InitGracefulShutdownResponse, error)
-	InitForcefulShutdown(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*InitForcefulShutdownResponse, error)
+	InitForcefulShutdown(ctx context.Context, in *InitForcefulShutdownRequest, opts ...grpc.CallOption) (*InitForcefulShutdownResponse, error)
 }
 
 type processWrapperClient struct {
@@ -41,7 +41,7 @@ func NewProcessWrapperClient(cc grpc.ClientConnInterface) ProcessWrapperClient {
 	return &processWrapperClient{cc}
 }
 
-func (c *processWrapperClient) CheckStatus(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*CheckStatusResponse, error) {
+func (c *processWrapperClient) CheckStatus(ctx context.Context, in *CheckStatusRequest, opts ...grpc.CallOption) (*CheckStatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CheckStatusResponse)
 	err := c.cc.Invoke(ctx, ProcessWrapper_CheckStatus_FullMethodName, in, out, cOpts...)
@@ -61,7 +61,7 @@ func (c *processWrapperClient) InitGracefulShutdown(ctx context.Context, in *Ini
 	return out, nil
 }
 
-func (c *processWrapperClient) InitForcefulShutdown(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*InitForcefulShutdownResponse, error) {
+func (c *processWrapperClient) InitForcefulShutdown(ctx context.Context, in *InitForcefulShutdownRequest, opts ...grpc.CallOption) (*InitForcefulShutdownResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(InitForcefulShutdownResponse)
 	err := c.cc.Invoke(ctx, ProcessWrapper_InitForcefulShutdown_FullMethodName, in, out, cOpts...)
@@ -75,9 +75,9 @@ func (c *processWrapperClient) InitForcefulShutdown(ctx context.Context, in *Emp
 // All implementations must embed UnimplementedProcessWrapperServer
 // for forward compatibility.
 type ProcessWrapperServer interface {
-	CheckStatus(context.Context, *Empty) (*CheckStatusResponse, error)
+	CheckStatus(context.Context, *CheckStatusRequest) (*CheckStatusResponse, error)
 	InitGracefulShutdown(context.Context, *InitGracefulShutdownRequest) (*InitGracefulShutdownResponse, error)
-	InitForcefulShutdown(context.Context, *Empty) (*InitForcefulShutdownResponse, error)
+	InitForcefulShutdown(context.Context, *InitForcefulShutdownRequest) (*InitForcefulShutdownResponse, error)
 	mustEmbedUnimplementedProcessWrapperServer()
 }
 
@@ -88,13 +88,13 @@ type ProcessWrapperServer interface {
 // pointer dereference when methods are called.
 type UnimplementedProcessWrapperServer struct{}
 
-func (UnimplementedProcessWrapperServer) CheckStatus(context.Context, *Empty) (*CheckStatusResponse, error) {
+func (UnimplementedProcessWrapperServer) CheckStatus(context.Context, *CheckStatusRequest) (*CheckStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CheckStatus not implemented")
 }
 func (UnimplementedProcessWrapperServer) InitGracefulShutdown(context.Context, *InitGracefulShutdownRequest) (*InitGracefulShutdownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitGracefulShutdown not implemented")
 }
-func (UnimplementedProcessWrapperServer) InitForcefulShutdown(context.Context, *Empty) (*InitForcefulShutdownResponse, error) {
+func (UnimplementedProcessWrapperServer) InitForcefulShutdown(context.Context, *InitForcefulShutdownRequest) (*InitForcefulShutdownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitForcefulShutdown not implemented")
 }
 func (UnimplementedProcessWrapperServer) mustEmbedUnimplementedProcessWrapperServer() {}
@@ -119,7 +119,7 @@ func RegisterProcessWrapperServer(s grpc.ServiceRegistrar, srv ProcessWrapperSer
 }
 
 func _ProcessWrapper_CheckStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+	in := new(CheckStatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func _ProcessWrapper_CheckStatus_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: ProcessWrapper_CheckStatus_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProcessWrapperServer).CheckStatus(ctx, req.(*Empty))
+		return srv.(ProcessWrapperServer).CheckStatus(ctx, req.(*CheckStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -155,7 +155,7 @@ func _ProcessWrapper_InitGracefulShutdown_Handler(srv interface{}, ctx context.C
 }
 
 func _ProcessWrapper_InitForcefulShutdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+	in := new(InitForcefulShutdownRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func _ProcessWrapper_InitForcefulShutdown_Handler(srv interface{}, ctx context.C
 		FullMethod: ProcessWrapper_InitForcefulShutdown_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProcessWrapperServer).InitForcefulShutdown(ctx, req.(*Empty))
+		return srv.(ProcessWrapperServer).InitForcefulShutdown(ctx, req.(*InitForcefulShutdownRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

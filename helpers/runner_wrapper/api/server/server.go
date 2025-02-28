@@ -53,7 +53,7 @@ func (s *Server) Stop() {
 	s.grpcServer.Stop()
 }
 
-func (s *Server) CheckStatus(_ context.Context, _ *pb.Empty) (*pb.CheckStatusResponse, error) {
+func (s *Server) CheckStatus(_ context.Context, _ *pb.CheckStatusRequest) (*pb.CheckStatusResponse, error) {
 	s.log.Debug("Received CheckStatus request")
 
 	resp := &pb.CheckStatusResponse{
@@ -93,7 +93,7 @@ func (s *Server) InitGracefulShutdown(
 	return resp, err
 }
 
-func (s *Server) InitForcefulShutdown(_ context.Context, _ *pb.Empty) (*pb.InitForcefulShutdownResponse, error) {
+func (s *Server) InitForcefulShutdown(_ context.Context, _ *pb.InitForcefulShutdownRequest) (*pb.InitForcefulShutdownResponse, error) {
 	s.log.Debug("Received InitForcefulShutdown request")
 
 	err := s.wrapper.InitiateForcefulShutdown()
