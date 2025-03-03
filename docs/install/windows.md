@@ -119,7 +119,7 @@ use the Built-in System Account.
 
 For Built-in System Account issues, see
 [Configure the Service to Start Up with the Built-in System Account](https://learn.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/service-startup-permissions#resolution-3-configure-the-service-to-start-up-with-the-built-in-system-account)
-on Microsoft's support website.
+on the Microsoft support website.
 
 ### Get runner logs
 
@@ -223,7 +223,7 @@ permission for the chosen user and then try to start the service again.
 1. Select **Add User or Group...**.
 1. Add the user ("by hand" or using **Advanced...**) and apply the settings.
 
-According to [Microsoft's documentation](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/dn221981(v=ws.11))
+According to [Microsoft documentation](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/dn221981(v=ws.11)),
 this should work for:
 
 - Windows Vista

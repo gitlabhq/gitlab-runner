@@ -1248,15 +1248,18 @@ enabling [a network for each job](#create-a-network-for-each-job).
 
 ## Native Step Runner Integration
 
+{{< history >}}
+
 - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5069) in GitLab 17.6.0 behind the
-feature-flag `FF_USE_NATIVE_STEPS`, which is disabled by default.
-
-The Docker executor supports running the [CI/CD steps](https://docs.gitlab.com/ci/steps/) natively by using the
-`gRPC` API provided by [`step-runner`](https://gitlab.com/gitlab-org/step-runner).
-
+  feature-flag `FF_USE_NATIVE_STEPS`, which is disabled by default.
 - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5322) in GitLab 17.9.0. GitLab Runner
   injects the `step-runner` binary into the build container and adjusts the `$PATH` environment variable accordingly.
   This enhancement makes it possible to use any image as the build image.
+
+{{< /history >}}
+
+The Docker executor supports running the [CI/CD steps](https://docs.gitlab.com/ci/steps/) natively by using the
+`gRPC` API provided by [`step-runner`](https://gitlab.com/gitlab-org/step-runner).
 
 To enable this mode of execution, you must specify CI/CD jobs using the `run` keyword instead of the legacy `script`
 keyword. Additionally, you must enable the `FF_USE_NATIVE_STEPS` feature flag. You can enable this feature flag at
