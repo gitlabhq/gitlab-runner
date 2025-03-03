@@ -194,7 +194,7 @@ fuzz variable mask:
   - 'prepare done'
   script:
   # pre-pull windows images before starting tests
-  - choco install -y zstandard
+  - choco install -y zstandard --version=$ZSTD_VERSION --checksum64=$ZSTD_CHECKSUM
   - zstd -d out/helper-images/prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar.zst
   - $output = docker load --input "out/helper-images/prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar" 2>&1
   - $image_id = ($output | Select-String "Loaded image ID:").ToString().Split()[3]
