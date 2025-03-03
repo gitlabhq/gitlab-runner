@@ -68,6 +68,7 @@ func render(debDists, rpmDists []string) string {
 	buf.WriteString("\n### Rpm-based Distributions\n\n")
 	renderTable(rpmDists, &buf)
 
+	buf.WriteString("\n")
 	buf.WriteString(endSupportedOSDocs)
 	buf.WriteString("\n")
 
