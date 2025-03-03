@@ -66,7 +66,7 @@ Here's a configuration example:
 
 concurrent = 100 # A global setting for job concurrency that applies to all runner sections defined in this `config.toml` file
 log_level = "warning"
-log_format = "info"
+log_format = "text"
 check_interval = 3 # Value in seconds
 
 [[runners]]
@@ -158,7 +158,7 @@ Here's a `check_interval` configuration example:
 
 concurrent = 100 # A global setting for job concurrency that applies to all runner sections defined in this `config.toml` file.
 log_level = "warning"
-log_format = "info"
+log_format = "json"
 check_interval = 10 # Value in seconds
 
 [[runners]]
@@ -197,7 +197,7 @@ Configure this section once for all runners, not for each individual runner.
 
 concurrent = 100 # A global setting for job concurrency that applies to all runner sections defined in this `config.toml` file
 log_level = "warning"
-log_format = "info"
+log_format = "runner"
 check_interval = 3 # Value in seconds
 
 [session_server]
