@@ -25,6 +25,8 @@ variables:
   GO111MODULE: "on"
   # renovate: datasource=docker depName=redhat/ubi9-micro versioning=redhat allowedVersions=/9\.4-[0-9]+/
   PACKAGES_ITERATION: "1"
+  ZSTD_VERSION: "1.5.7"
+  ZSTD_CHECKSUM: "a96dc5417943c03fa231bf2d6a586b7ae7254fa52fdc15d302f296b5ff88e1ff0f07120a720149eb82ea0f0c65444393ebf05d2ee1bd1db341b803ff65a2e675"
 
 default:
   image: $CI_IMAGE
