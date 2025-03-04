@@ -742,12 +742,6 @@ func TestCreateDependencies(t *testing.T) {
 					binds = append(binds, args.Get(1).(string))
 				}).
 				Once()
-			vm.On("CreateTemporary", mock.Anything, "/opt/step-runner").
-				Return(nil).
-				Run(func(args mock.Arguments) {
-					binds = append(binds, args.Get(1).(string))
-				}).
-				Once()
 			vm.On("Create", mock.Anything, "/volume").
 				Return(nil).
 				Run(func(args mock.Arguments) {
@@ -762,7 +756,7 @@ func TestCreateDependencies(t *testing.T) {
 		},
 		clientAssertions: func(c *docker.MockClient) {
 			hostConfigMatcher := mock.MatchedBy(func(conf *container.HostConfig) bool {
-				return assert.Equal(t, []string{"/volume", "/builds", "/opt/step-runner"}, conf.Binds)
+				return assert.Equal(t, []string{"/volume", "/builds"}, conf.Binds)
 			})
 
 			c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
@@ -2564,6 +2558,69 @@ func TestTooManyServicesRequestedError(t *testing.T) {
 			})
 		}
 	})
+}
+
+func Test_createStepRunnerVolume(t *testing.T) {
+	type testCase struct {
+		setup         func(*volumes.MockManager, *common.Build) []string
+		expectedBinds []string
+		wantStage     common.ExecutorStage
+	}
+	tests := map[string]map[string]testCase{
+		"linux": {
+			"native steps enabled": {
+				expectedBinds: []string{"/opt/step-runner"},
+				wantStage:     ExecutorStageCreatingStepRunnerVolume,
+				setup: func(vm *volumes.MockManager, b *common.Build) []string {
+					binds := make([]string, 1)
+					b.JobResponse.Run = "blablabla"
+					b.Variables = append(b.Variables, common.JobVariable{
+						Key:   "FF_USE_NATIVE_STEPS",
+						Value: "true",
+					})
+
+					vm.On("CreateTemporary", mock.Anything, "/opt/step-runner").
+						Return(nil).
+						Run(func(args mock.Arguments) {
+							binds[0] = args.Get(1).(string)
+						}).
+						Once()
+					return binds
+				},
+			},
+			"native steps not enabled": {},
+		},
+		"windows": {
+			"native steps enabled":     {},
+			"native steps not enabled": {},
+		},
+	}
+
+	for name, tt := range tests[runtime.GOOS] {
+		t.Run(name, func(t *testing.T) {
+			vm := new(volumes.MockManager)
+			e := executor{
+				volumesManager: vm,
+				AbstractExecutor: executors.AbstractExecutor{
+					Build: &common.Build{
+						ExecutorFeatures: common.FeaturesInfo{
+							NativeStepsIntegration: true,
+						},
+					},
+				},
+			}
+
+			var binds []string
+			if tt.setup != nil {
+				binds = tt.setup(vm, e.Build)
+			}
+
+			assert.NoError(t, e.createStepRunnerVolume())
+			vm.AssertExpectations(t)
+			assert.Equal(t, tt.expectedBinds, binds)
+			assert.Equal(t, tt.wantStage, e.GetCurrentStage())
+		})
+	}
 }
 
 func init() {
