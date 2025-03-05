@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"runtime"
 	"runtime/debug"
 	"strings"
 
@@ -12,8 +13,12 @@ import (
 // - the job uses the run keyword.
 // - the feature flag is enabled.
 // - the executor supports native steps.
+// - we are not running on windows
 func (b *Build) UseNativeSteps() bool {
-	return b.JobResponse.Run != "" && b.IsFeatureFlagOn(featureflags.UseNativeSteps) && b.ExecutorFeatures.NativeStepsIntegration
+	return b.JobResponse.Run != "" &&
+		b.IsFeatureFlagOn(featureflags.UseNativeSteps) &&
+		b.ExecutorFeatures.NativeStepsIntegration &&
+		runtime.GOOS != "windows"
 }
 
 const (
