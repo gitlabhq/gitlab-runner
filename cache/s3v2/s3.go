@@ -22,6 +22,7 @@ import (
 )
 
 const DEFAULT_AWS_S3_ENDPOINT = "https://s3.amazonaws.com"
+const fallbackBucketLocation = "us-east-1"
 
 //go:generate mockery --name=s3Presigner --inpackage
 type s3Presigner interface {
@@ -200,15 +201,9 @@ func s3EncryptionType(encryptionType common.S3EncryptionType) string {
 func newRawS3Client(s3Config *common.CacheS3Config) (*aws.Config, *s3.Client, error) {
 	var cfg aws.Config
 	var err error
+	options := make([]func(*config.LoadOptions) error, 0)
 
 	endpoint := s3Config.GetEndpoint()
-	bucketLocation := s3Config.BucketLocation
-	// The Minio SDK defaults to a us-east-1 region, so use this as default
-	// to preserve backwards compatibility.
-	if bucketLocation == "" {
-		bucketLocation = "us-east-1"
-	}
-	options := []func(*config.LoadOptions) error{config.WithRegion(bucketLocation)}
 
 	switch s3Config.AuthType() {
 	case common.S3AuthTypeIAM:
@@ -218,6 +213,13 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*aws.Config, *s3.Client, er
 			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(s3Config.AccessKey, s3Config.SecretKey, "")),
 		)
 	}
+
+	bucketLocation := s3Config.BucketLocation
+	if bucketLocation == "" {
+		bucketLocation = detectBucketLocation(s3Config.BucketName, options...)
+	}
+
+	options = append(options, config.WithRegion(bucketLocation))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -243,6 +245,40 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*aws.Config, *s3.Client, er
 	})
 
 	return &cfg, client, nil
+}
+
+func detectBucketLocation(bucketName string, optFuncs ...func(*config.LoadOptions) error) string {
+	// The 30 seconds timeout here is arbritrary
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// When s3 is configured with an IAM profile, a default region must be set
+	// We therefore set the default region to us-east-1
+	configOpts := append(
+		[]func(*config.LoadOptions) error{
+			config.WithRegion(fallbackBucketLocation),
+		},
+		optFuncs...,
+	)
+
+	cfg, err := config.LoadDefaultConfig(ctx, configOpts...)
+	if err != nil {
+		return fallbackBucketLocation
+	}
+
+	client := s3.NewFromConfig(cfg)
+	output, err := client.GetBucketLocation(ctx, &s3.GetBucketLocationInput{
+		Bucket: aws.String(bucketName),
+	})
+
+	switch {
+	case err != nil || output.LocationConstraint == "":
+		return fallbackBucketLocation
+	case output.LocationConstraint == types.BucketLocationConstraintEu:
+		return string(types.BucketLocationConstraintEuWest1)
+	}
+
+	return string(output.LocationConstraint)
 }
 
 var newS3Client = func(s3Config *common.CacheS3Config, options ...s3ClientOption) (s3Presigner, error) {
