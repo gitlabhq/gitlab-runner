@@ -5,7 +5,8 @@ import (
 )
 
 type baseParser struct {
-	path Path
+	path        Path
+	varExpander func(string) string
 }
 
 // The way how matchesToVolumeSpecParts parses the volume mount specification and assigns
@@ -38,7 +39,15 @@ func (p *baseParser) matchesToVolumeSpecParts(spec string, specExp *regexp.Regex
 
 	for group := range parts {
 		content, ok := matchgroups[group]
-		if ok {
+		if !ok {
+			continue
+		}
+
+		switch group {
+		case "destination":
+			// We only want to expand destination, and not source or anything else.
+			parts[group] = p.varExpander(content)
+		default:
 			parts[group] = content
 		}
 	}

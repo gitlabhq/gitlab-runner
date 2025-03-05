@@ -9,9 +9,11 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -2108,6 +2110,92 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			tt.assert(out, err)
 		})
 	}
+}
+
+func Test_ExpandingVolumes(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	testScripts := map[string]map[string]string{
+		"non-windows": {
+			"prepare": `
+				set -x
+				testFile='%[1]s'
+				test -e "$testFile" && {
+					echo >&2 "Expected '$testFile' not to exist"
+					exit 1
+				}
+				echo '%[2]s' > "$testFile"
+			`,
+			"check": `
+				set -x
+				testFile='%[1]s'
+				test -e "$testFile" || {
+					echo >&2 "Expected '$testFile' to exist"
+					exit 1
+				}
+				test '%[2]s' == "$(cat "$testFile")"
+			`,
+		},
+		"windows": {
+			"prepare": `
+				Set-PSDebug -Trace 2
+				$testFile = '%[1]s'
+				if ([System.IO.File]::Exists($testFile)) {
+					$host.ui.WriteErrorLine("Expected '$testFile' not to exist")
+					exit 1
+				}
+				echo '%[2]s' > $testFile
+			`,
+			"check": `
+				Set-PSDebug -Trace 2
+				$testFile = '%[1]s'
+				if (-not [System.IO.File]::Exists($testFile)) {
+					$host.ui.WriteErrorLine("Expected '$testFile' to exist")
+					exit 1
+				}
+				if (-not (Get-Content $testFile).equals('%[2]s')) {
+					exit 1
+				}
+			`,
+		},
+	}
+
+	randString := strconv.Itoa(rand.Int())
+	runnerEnv := []string{"FOO=theFoo"}
+	jobVariables := common.JobVariables{
+		{Key: "SOME_VAR", Value: "${FOO}-${BAR}-theBlipp"},
+		{Key: "BAR", Value: "theBar"},
+		{Key: "RANDOM", Value: randString},
+		{Key: "GIT_STRATEGY", Value: string(common.GitNone)},
+	}
+	volumes := []string{"/tmp/${SOME_VAR}/${RANDOM}"}
+	testFile := filepath.Join("/tmp/theFoo-theBar-theBlipp", randString, "testFile")
+	prepareScript := testScripts["non-windows"]["prepare"]
+	checkScript := testScripts["non-windows"]["check"]
+
+	if runtime.GOOS == test.OSWindows {
+		volumes = []string{`c:\tmp\${SOME_VAR}\${RANDOM}`}
+		testFile = filepath.Join(`c:\tmp\theFoo-theBar-theBlipp`, randString, "testFile")
+		prepareScript = testScripts["windows"]["prepare"]
+		checkScript = testScripts["windows"]["check"]
+	}
+
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+	build.JobResponse.Variables = jobVariables
+	build.Runner.Docker.Volumes = volumes
+	build.Runner.Environment = runnerEnv
+
+	// ensures that the volume is mounted and can be written to.
+	build.JobResponse.Steps[0].Script[0] = fmt.Sprintf(prepareScript, testFile, randString)
+	_, err := buildtest.RunBuildReturningOutput(t, &build)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	// ensures that the volume with same vars is cached/kept around, and the same volume is mounted again.
+	build.JobResponse.Steps[0].Script[0] = fmt.Sprintf(checkScript, testFile, randString)
+	_, err = buildtest.RunBuildReturningOutput(t, &build)
+	assert.NoError(t, err)
 }
 
 func Test_ContainerOptionsExpansion(t *testing.T) {

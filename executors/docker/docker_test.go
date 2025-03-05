@@ -19,6 +19,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-units"
 	"github.com/hashicorp/go-version"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -246,54 +247,48 @@ func TestHelperImageWithVariable(t *testing.T) {
 
 func TestPrepareBuildsDir(t *testing.T) {
 	tests := map[string]struct {
-		parser                  parser.Parser
+		dontSetupVolumeParser   bool
 		rootDir                 string
 		volumes                 []string
 		expectedSharedBuildsDir bool
 		expectedError           string
 	}{
 		"rootDir mounted as host based volume": {
-			parser:                  parser.NewLinuxParser(),
 			rootDir:                 "/build",
 			volumes:                 []string{"/build:/build"},
 			expectedSharedBuildsDir: true,
 		},
 		"rootDir mounted as container based volume": {
-			parser:                  parser.NewLinuxParser(),
 			rootDir:                 "/build",
 			volumes:                 []string{"/build"},
 			expectedSharedBuildsDir: false,
 		},
 		"rootDir not mounted as volume": {
-			parser:                  parser.NewLinuxParser(),
 			rootDir:                 "/build",
 			volumes:                 []string{"/folder:/folder"},
 			expectedSharedBuildsDir: false,
 		},
 		"rootDir's parent mounted as volume": {
-			parser:                  parser.NewLinuxParser(),
 			rootDir:                 "/build/other/directory",
 			volumes:                 []string{"/build/:/build"},
 			expectedSharedBuildsDir: true,
 		},
 		"rootDir is not an absolute path": {
-			parser:        parser.NewLinuxParser(),
 			rootDir:       "builds",
 			expectedError: "build directory needs to be an absolute path",
 		},
 		"rootDir is /": {
-			parser:        parser.NewLinuxParser(),
 			rootDir:       "/",
 			expectedError: "build directory needs to be a non-root path",
 		},
 		"error on volume parsing": {
-			parser:        parser.NewLinuxParser(),
 			rootDir:       "/build",
 			volumes:       []string{""},
 			expectedError: "invalid volume specification",
 		},
 		"error on volume parser creation": {
-			expectedError: `missing volume parser`,
+			dontSetupVolumeParser: true,
+			expectedError:         `missing volume parser`,
 		},
 	}
 
@@ -308,15 +303,21 @@ func TestPrepareBuildsDir(t *testing.T) {
 				},
 			}
 
+			build := &common.Build{}
+			build.Variables = common.JobVariables{}
+
 			options := common.ExecutorPrepareOptions{
 				Config: &c,
 			}
 
 			e := &executor{
 				AbstractExecutor: executors.AbstractExecutor{
+					Build:  build,
 					Config: c,
 				},
-				volumeParser: test.parser,
+			}
+			if !test.dontSetupVolumeParser {
+				e.volumeParser = parser.NewLinuxParser(e.ExpandValue)
 			}
 
 			err := e.prepareBuildsDir(options)
@@ -2470,6 +2471,79 @@ func TestDockerImageWithVariablePlatform(t *testing.T) {
 	}
 }
 
+func TestExpandingVolumeDestination(t *testing.T) {
+	dockerClient := new(docker.MockClient)
+	defer dockerClient.AssertExpectations(t)
+
+	executor := executorWithMockClient(dockerClient)
+
+	executor.Build = &common.Build{
+		JobResponse: common.JobResponse{
+			Variables: common.JobVariables{
+				common.JobVariable{Key: "JOB_VAR_1", Value: "1"},
+				common.JobVariable{Key: "JOB_VAR_2", Value: "2"},
+				common.JobVariable{Key: "COMBINED_VAR", Value: "${JOB_VAR_1}-${JOB_VAR_2}-3"},
+			},
+			JobInfo: common.JobInfo{
+				ProjectID: 1234,
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				Token: "theToken",
+			},
+		},
+		ProjectRunnerID: 5678,
+	}
+	executor.Config = common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Docker: &common.DockerConfig{
+				CacheDir: "",
+				Volumes: []string{
+					// source should not be expanded, destination should be expanded
+					"/host/${COMBINED_VAR}:/tmp/${COMBINED_VAR}",
+					// a new volume for the expanded destination should be created
+					"/new/cache/vol-${COMBINED_VAR}-foo",
+					// expected to be passed on as is
+					"/${:/tmp",
+					"/host:/tmp/foo/$",
+				},
+			},
+		},
+	}
+
+	executor.volumeParser = parser.NewLinuxParser(executor.ExpandValue)
+	err := executor.createLabeler()
+	assert.NoError(t, err, "creating labeler")
+	err = executor.createVolumesManager()
+	assert.NoError(t, err, "creating volumes manager")
+
+	// for the cache volume we expect a volume creation call
+	expectedVolume := func(co volume.CreateOptions) bool {
+		// name build from config stuff & the md5sum of the (expanded) destination ("/new/cache/vol-1-2-3-foo")
+		assert.Equal(t, "runner-thetoken-project-1234-concurrent-5678-cache-bffb7fe32becf1f1e4d6c9604d09f9d7", co.Name)
+		return true
+	}
+	dockerClient.On("VolumeCreate", mock.Anything, mock.MatchedBy(expectedVolume)).
+		Return(volume.Volume{}, nil).
+		Once()
+
+	err = executor.createVolumes()
+	assert.NoError(t, err, "creating volumes")
+
+	// the volume manager is expected to have some binds set up
+	expectedBinds := []string{
+		// expansion only in the destination
+		"/host/${COMBINED_VAR}:/tmp/1-2-3",
+		// var ref in the middle of the string
+		"/new/cache/vol-1-2-3-foo",
+		// invalid var refs are passed on (to fail later, if really invalid)
+		"/${:/tmp",
+		"/host:/tmp/foo/$",
+	}
+	assert.ElementsMatch(t, expectedBinds, executor.volumesManager.Binds())
+}
+
 func TestDockerImageWithUser(t *testing.T) {
 	tests := map[string]struct {
 		runnerUser, jobUser, want string
@@ -2602,8 +2676,8 @@ func TestConnectEnvironment(t *testing.T) {
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executors.ExecutorOptions{},
 		},
-		volumeParser: parser.NewLinuxParser(),
 	}
+	e.volumeParser = parser.NewLinuxParser(e.ExpandValue)
 
 	env := &env{}
 

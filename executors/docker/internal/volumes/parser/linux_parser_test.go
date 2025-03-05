@@ -3,6 +3,7 @@
 package parser
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -157,9 +158,11 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 		},
 	}
 
+	var identity = func(s string) string { return s }
+
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			parser := NewLinuxParser()
+			parser := NewLinuxParser(identity)
 			parts, err := parser.ParseVolume(testCase.volumeSpec)
 
 			if testCase.expectedError == nil {
@@ -169,6 +172,35 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 			}
 
 			assert.Equal(t, testCase.expectedParts, parts)
+		})
+	}
+}
+
+func TestLinuxParser_DestinationVarExpansion(t *testing.T) {
+	fakeVarExpander := strings.NewReplacer(
+		"foo", "REPLACED(bar)",
+		"blipp", "REPLACED(zark)",
+	).Replace
+
+	tests := map[string]*Volume{
+		"/source:/foo:ro": &Volume{
+			Source:      "/source",
+			Destination: "/REPLACED(bar)",
+			Mode:        "ro",
+		},
+		"/foo:/foo/some-blipp-ref/blapp": &Volume{
+			Source:      "/foo",                                         // not expanded
+			Destination: "/REPLACED(bar)/some-REPLACED(zark)-ref/blapp", // expanded
+		},
+	}
+
+	for volumeSpec, expectedVolume := range tests {
+		t.Run(volumeSpec, func(t *testing.T) {
+			parser := NewLinuxParser(fakeVarExpander)
+
+			volume, err := parser.ParseVolume(volumeSpec)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedVolume, volume)
 		})
 	}
 }

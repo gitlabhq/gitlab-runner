@@ -3,6 +3,7 @@
 package parser
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -103,9 +104,11 @@ func TestWindowsParser_ParseVolume(t *testing.T) {
 		},
 	}
 
+	var identity = func(s string) string { return s }
+
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			parser := NewWindowsParser()
+			parser := NewWindowsParser(identity)
 			parts, err := parser.ParseVolume(testCase.volumeSpec)
 
 			if testCase.expectedError == nil {
@@ -115,6 +118,35 @@ func TestWindowsParser_ParseVolume(t *testing.T) {
 			}
 
 			assert.Equal(t, testCase.expectedParts, parts)
+		})
+	}
+}
+
+func TestWindowsParser_DestinationVarExpansion(t *testing.T) {
+	fakeVarExpander := strings.NewReplacer(
+		"foo", "REPLACED(bar)",
+		"blipp", "REPLACED(zark)",
+	).Replace
+
+	tests := map[string]*Volume{
+		`volume_name:c:\foo:ro`: &Volume{
+			Source:      `volume_name`,
+			Destination: `c:\REPLACED(bar)`,
+			Mode:        "ro",
+		},
+		`f:\foo:c:\foo\some-blipp-ref\blapp`: &Volume{
+			Source:      `f:\foo`,                                         // not expanded
+			Destination: `c:\REPLACED(bar)\some-REPLACED(zark)-ref\blapp`, // expanded
+		},
+	}
+
+	for volumeSpec, expectedVolume := range tests {
+		t.Run(volumeSpec, func(t *testing.T) {
+			parser := NewWindowsParser(fakeVarExpander)
+
+			volume, err := parser.ParseVolume(volumeSpec)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedVolume, volume)
 		})
 	}
 }

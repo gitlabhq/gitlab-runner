@@ -15,12 +15,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 )
 
-func testCreateVolumesLabels(t *testing.T, p parser.Parser) {
+func TestCreateVolumesLabels(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulJobResponse, err := common.GetRemoteSuccessfulBuild()
@@ -52,7 +52,8 @@ func testCreateVolumesLabels(t *testing.T, p parser.Parser) {
 		DisableCache: false,
 	}
 
-	manager := volumes.NewManager(logger, p, client, cfg, labels.NewLabeler(build))
+	volumeParser := parserCreator(build.GetAllVariables().ExpandValue)
+	manager := volumes.NewManager(logger, volumeParser, client, cfg, labels.NewLabeler(build))
 
 	ctx := context.Background()
 
@@ -83,8 +84,11 @@ func testCreateVolumesLabels(t *testing.T, p parser.Parser) {
 	}, volume.Labels)
 }
 
-func testCreateVolumesDriverOpts(t *testing.T, p parser.Parser) {
+func TestCreateVolumesDriverOpts(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	// Windows local driver does not accept volume driver options.
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
 
 	successfulJobResponse, err := common.GetRemoteSuccessfulBuild()
 	require.NoError(t, err)
@@ -120,7 +124,8 @@ func testCreateVolumesDriverOpts(t *testing.T, p parser.Parser) {
 		},
 	}
 
-	manager := volumes.NewManager(logger, p, client, cfg, labels.NewLabeler(build))
+	volumeParser := parserCreator(build.GetAllVariables().ExpandValue)
+	manager := volumes.NewManager(logger, volumeParser, client, cfg, labels.NewLabeler(build))
 
 	ctx := context.Background()
 

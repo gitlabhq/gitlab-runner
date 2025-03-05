@@ -27,10 +27,11 @@ type linuxParser struct {
 	baseParser
 }
 
-func NewLinuxParser() Parser {
+func NewLinuxParser(varExpander func(string) string) Parser {
 	return &linuxParser{
 		baseParser: baseParser{
-			path: path.NewUnixPath(),
+			path:        path.NewUnixPath(),
+			varExpander: varExpander,
 		},
 	}
 }

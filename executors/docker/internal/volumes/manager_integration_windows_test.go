@@ -3,8 +3,6 @@
 package volumes_test
 
 import (
-	"testing"
-
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 )
 
@@ -13,11 +11,6 @@ var (
 	testCreateVolumesDriverOptsDestinationPath = `C:\test`
 )
 
-func TestCreateVolumesLabels(t *testing.T) {
-	testCreateVolumesLabels(t, parser.NewWindowsParser())
-}
-
-func TestCreateVolumesDriverOpts(t *testing.T) {
-	t.Skip("Windows local driver does not accept volume driver options.")
-	//testCreateVolumesDriverOpts(t, parser.NewWindowsParser())
+func parserCreator(varExpander func(string) string) parser.Parser {
+	return parser.NewWindowsParser(varExpander)
 }
