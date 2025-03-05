@@ -1202,6 +1202,10 @@ func (e *executor) createBuildVolume() error {
 }
 
 func (e *executor) createStepRunnerVolume() error {
+	if !e.Build.UseNativeSteps() {
+		return nil
+	}
+
 	e.SetCurrentStage(ExecutorStageCreatingStepRunnerVolume)
 	e.BuildLogger.Debugln("Creating step-runner volume...")
 
