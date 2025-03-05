@@ -112,6 +112,49 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 				BindPropagation: "rslave",
 			},
 		},
+		"destination not starting with / is not allowed": {
+			volumeSpec:    "/source:blipp",
+			expectedError: NewInvalidVolumeSpecErr("/source:blipp"),
+		},
+
+		"$VAR in destination is a allowed": {
+			volumeSpec: "/source:/some/$VAR/blipp",
+			expectedParts: &Volume{
+				Source:      "/source",
+				Destination: "/some/$VAR/blipp",
+			},
+		},
+		"$VAR at start of destination is not allowed": {
+			volumeSpec:    "/source:$VAR/blipp",
+			expectedError: NewInvalidVolumeSpecErr("/source:$VAR/blipp"),
+		},
+		"${VAR} in destination is a allowed": {
+			volumeSpec: "/source:/some/${VAR}/blipp",
+			expectedParts: &Volume{
+				Source:      "/source",
+				Destination: "/some/${VAR}/blipp",
+			},
+		},
+		"${VAR} at start of destination is not allowed": {
+			volumeSpec:    "/source:${VAR}/blipp",
+			expectedError: NewInvalidVolumeSpecErr("/source:${VAR}/blipp"),
+		},
+		"multiple different var refs in destination are allowed": {
+			volumeSpec: "/source:/${root}/$sub-test/dir",
+			expectedParts: &Volume{
+				Source:      "/source",
+				Destination: "/${root}/$sub-test/dir",
+			},
+		},
+		// Even if the variable refs are syntactically not correct, the REs should not block them, we do the expansion later
+		// and hand it to docker, and either of those will catch these cases.
+		"invalid var refs in destination are allowed": {
+			volumeSpec: "/source:/${r/$$-test/dir",
+			expectedParts: &Volume{
+				Source:      "/source",
+				Destination: "/${r/$$-test/dir",
+			},
+		},
 	}
 
 	for testName, testCase := range testCases {

@@ -62,6 +62,45 @@ func TestWindowsParser_ParseVolume(t *testing.T) {
 			volumeSpec:    `//./pipe/docker_engine1://./pipe/docker_engine2`,
 			expectedParts: &Volume{Source: `//./pipe/docker_engine1`, Destination: `//./pipe/docker_engine2`},
 		},
+
+		"$VAR in destination is a allowed": {
+			volumeSpec: `volume_name:c:\some\$VAR\blipp`,
+			expectedParts: &Volume{
+				Source:      `volume_name`,
+				Destination: `c:\some\$VAR\blipp`,
+			},
+		},
+		"$VAR at start of destination is not allowed": {
+			volumeSpec:    `volume_name:$VAR\blipp`,
+			expectedError: NewInvalidVolumeSpecErr(`volume_name:$VAR\blipp`),
+		},
+		"${VAR} in destination is a allowed": {
+			volumeSpec: `volume_name:c:\some\${VAR}\blipp`,
+			expectedParts: &Volume{
+				Source:      `volume_name`,
+				Destination: `c:\some\${VAR}\blipp`,
+			},
+		},
+		"${VAR} at start of destination is not allowed": {
+			volumeSpec:    `volume_name:${VAR}\blipp`,
+			expectedError: NewInvalidVolumeSpecErr(`volume_name:${VAR}\blipp`),
+		},
+		"multiple different var refs in destination are allowed": {
+			volumeSpec: `volume_name:c:\${root}\$sub-test\dir`,
+			expectedParts: &Volume{
+				Source:      `volume_name`,
+				Destination: `c:\${root}\$sub-test\dir`,
+			},
+		},
+		// Even if the variable refs are syntactically not correct, the REs should not block them, we do the expansion later
+		// and hand it to docker, and either of those will catch these cases.
+		"invalid var refs in destination are allowed": {
+			volumeSpec: `volume_name:c:\${r\$$-test\dir`,
+			expectedParts: &Volume{
+				Source:      `volume_name`,
+				Destination: `c:\${r\$$-test\dir`,
+			},
+		},
 	}
 
 	for testName, testCase := range testCases {
