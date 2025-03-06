@@ -473,6 +473,7 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		eol = v.Shell.(*PowerShell).EOL
 	}
 	shebang := ""
+
 	rmGitLabEnvScript := `` +
 		`$CurrentDirectory = (Resolve-Path ./).Path` + eol +
 		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/gitlab_runner_env" -PathType Leaf) ) {` + eol +
@@ -520,6 +521,7 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`if(Test-Path ".git/refs" -PathType Container) {` + eol +
 		`  Get-ChildItem -Path ".git/refs" -Filter "*.lock" -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }` + eol +
 		`}` + eol
+
 	cleanGitConfigs := `` +
 		`$CurrentDirectory = (Resolve-Path ./).Path` + eol +
 		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/git-template/config" -PathType Leaf) ) {` + eol +
