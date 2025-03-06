@@ -1,6 +1,6 @@
 module gitlab.com/gitlab-org/gitlab-runner
 
-go 1.23
+go 1.23.0
 
 toolchain go1.23.2
 
@@ -81,12 +81,12 @@ require (
 	gitlab.com/gitlab-org/step-runner v0.4.0
 	go.uber.org/automaxprocs v1.5.2
 	gocloud.dev v0.40.0
-	golang.org/x/crypto v0.31.0
-	golang.org/x/net v0.33.0
+	golang.org/x/crypto v0.36.0
+	golang.org/x/net v0.37.0
 	golang.org/x/oauth2 v0.23.0
-	golang.org/x/sync v0.10.0
-	golang.org/x/sys v0.28.0
-	golang.org/x/text v0.21.0
+	golang.org/x/sync v0.12.0
+	golang.org/x/sys v0.31.0
+	golang.org/x/text v0.23.0
 	google.golang.org/api v0.191.0
 	google.golang.org/grpc v1.68.1
 	gopkg.in/yaml.v2 v2.4.0
@@ -243,7 +243,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/mod v0.20.0 // indirect
-	golang.org/x/term v0.27.0 // indirect
+	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
