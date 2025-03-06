@@ -257,21 +257,24 @@ func (e *executor) bindContainerDevices(devices []string) ([]container.DeviceMap
 	return mapping, nil
 }
 
-func (e *executor) bindDeviceRequests() error {
-	if e.Config.Docker.Gpus == "" {
-		return nil
+func (e *executor) bindDeviceRequests() (err error) {
+	e.deviceRequests, err = e.bindContainerDeviceRequests(e.Config.Docker.Gpus)
+	return err
+}
+
+func (e *executor) bindContainerDeviceRequests(gpus string) ([]container.DeviceRequest, error) {
+	if strings.TrimSpace(gpus) == "" {
+		return nil, nil
 	}
 
-	var gpus opts.GpuOpts
+	var gpuOpts opts.GpuOpts
 
-	err := gpus.Set(e.Config.Docker.Gpus)
+	err := gpuOpts.Set(gpus)
 	if err != nil {
-		return fmt.Errorf("parsing deviceRequest string %q: %w", e.Config.Docker.Gpus, err)
+		return nil, fmt.Errorf("parsing gpus string %q: %w", gpus, err)
 	}
 
-	e.deviceRequests = gpus.Value()
-
-	return nil
+	return gpuOpts.Value(), nil
 }
 
 func isInAllowedPrivilegedImages(image string, allowedPrivilegedImages []string) bool {
@@ -331,7 +334,12 @@ func (e *executor) createService(
 		return nil, err
 	}
 
-	hostConfig, err := e.createHostConfigForService(e.isInPrivilegedServiceList(definition), devices)
+	deviceRequests, err := e.getServicesDeviceRequests()
+	if err != nil {
+		return nil, err
+	}
+
+	hostConfig, err := e.createHostConfigForService(e.isInPrivilegedServiceList(definition), devices, deviceRequests)
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +376,7 @@ func platformForImage(image *types.ImageInspect, opts common.ImageExecutorOption
 	}
 }
 
-func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []container.DeviceMapping) (*container.HostConfig, error) {
+func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []container.DeviceMapping, deviceRequests []container.DeviceRequest) (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetServiceNanoCPUs()
 	if err != nil {
 		return nil, fmt.Errorf("service nano cpus: %w", err)
@@ -396,6 +404,7 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 			CPUShares:         e.Config.Docker.ServiceCPUShares,
 			NanoCPUs:          nanoCPUs,
 			Devices:           devices,
+			DeviceRequests:    deviceRequests,
 		},
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
@@ -461,6 +470,10 @@ func (e *executor) getServicesDevices(image string) ([]container.DeviceMapping, 
 	}
 
 	return devices, nil
+}
+
+func (e *executor) getServicesDeviceRequests() ([]container.DeviceRequest, error) {
+	return e.bindContainerDeviceRequests(e.Config.Docker.ServiceGpus)
 }
 
 func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
