@@ -28,12 +28,17 @@ No runner configuration is needed.
 
 ## Docker executor
 
-Use the [`gpus` configuration option in the `runners.docker` section](advanced-configuration.md#the-runnersdocker-section).
-For example:
+Prerequisites:
+
+- Install [NVIDIA Driver](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/index.html).
+- Install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+
+Use the `gpus` or `service_gpus` configuration option in the [`runners.docker` section](advanced-configuration.md#the-runnersdocker-section):
 
 ```toml
 [runners.docker]
     gpus = "all"
+    service_gpus = "all"
 ```
 
 ## Docker Machine executor

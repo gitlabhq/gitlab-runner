@@ -392,7 +392,7 @@ The following settings define the Docker container parameters. These settings ar
 | `dns` | A list of DNS servers for the container to use. | `["8.8.8.8"]` |
 | `dns_search` | A list of DNS search domains. | |
 | `extra_hosts` | Hosts that should be defined in container environment. | `["other-host:127.0.0.1"]` |
-| `gpus` | GPU devices for Docker container. Uses the same format as the `docker` CLI. View details in the [Docker documentation](https://docs.docker.com/engine/containers/resource_constraints/#gpu). | |
+| `gpus` | GPU devices for Docker container. Uses the same format as the `docker` CLI. View details in the [Docker documentation](https://docs.docker.com/engine/containers/resource_constraints/#gpu). Requires [configuration to enable GPUs](gpus.md#docker-executor). | |
 | `group_add` | Add additional groups for the container process to run. | `["docker"]` |
 | `helper_image` | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. | |
 | `helper_image_flavor` | Sets the helper image flavor (`alpine`, `alpine3.18`, `alpine3.19`, `alpine3.21`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.21`. | |
@@ -430,6 +430,7 @@ The following settings define the Docker container parameters. These settings ar
 | `service_cpuset_cpus` | String value containing the `cgroups CpusetCpus` to use for a service. | |
 | `service_cpu_shares` | Number of CPU shares used to set a service's relative CPU usage (default:  [`1024`](https://docs.docker.com/engine/containers/resource_constraints/#cpu)). | |
 | `service_cpus` | String value of the number of CPUs for a service. Available in Docker 1.13 or later. | |
+| `service_gpus` | GPU devices for Docker container. Uses the same format as the `docker` CLI. View details in the [Docker documentation](https://docs.docker.com/engine/containers/resource_constraints/#gpu). Requires [configuration to enable GPUs](gpus.md#docker-executor). | |
 | `service_memory` | String value of the memory limit for a service. | |
 | `service_memory_swap` | String value of the total memory limit for a service. | |
 | `service_memory_reservation` | String value of the memory soft limit for a service. | |

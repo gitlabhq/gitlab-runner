@@ -1426,6 +1426,118 @@ func TestDockerGetServicesDevices(t *testing.T) {
 	}
 }
 
+func TestDockerServicesDeviceRequestsSetting(t *testing.T) {
+	tests := map[string]struct {
+		gpus                   string
+		expectedDeviceRequests []container.DeviceRequest
+	}{
+		"request all GPUs": {
+			gpus: "all",
+			expectedDeviceRequests: []container.DeviceRequest{
+				{
+					Driver:       "",
+					Count:        -1,
+					DeviceIDs:    nil,
+					Capabilities: [][]string{{"gpu"}},
+					Options:      map[string]string{},
+				},
+			},
+		},
+		"gpus is empty string": {
+			gpus:                   "",
+			expectedDeviceRequests: nil,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			dockerConfig := &common.DockerConfig{
+				ServiceGpus: tt.gpus,
+			}
+			cce := func(ttt *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+				assert.ElementsMatch(ttt, tt.expectedDeviceRequests, hostConfig.Resources.DeviceRequests)
+			}
+			testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+		})
+	}
+}
+
+func TestDockerGetServicesDeviceRequests(t *testing.T) {
+	tests := map[string]struct {
+		gpus                   string
+		expectedDeviceRequests []container.DeviceRequest
+		expectedErrorSubstr    string
+	}{
+		"request all GPUs": {
+			gpus: "all",
+			expectedDeviceRequests: []container.DeviceRequest{
+				{
+					Driver:       "",
+					Count:        -1,
+					DeviceIDs:    nil,
+					Capabilities: [][]string{{"gpu"}},
+					Options:      map[string]string{},
+				},
+			},
+			expectedErrorSubstr: "",
+		},
+		"request GPUs by device ID": {
+			gpus: "\"device=1,2\"",
+			expectedDeviceRequests: []container.DeviceRequest{
+				{
+					Driver:       "",
+					Count:        0,
+					DeviceIDs:    []string{"1", "2"},
+					Capabilities: [][]string{{"gpu"}},
+					Options:      map[string]string{},
+				},
+			},
+			expectedErrorSubstr: "",
+		},
+		"request GPUs by count": {
+			gpus: "2",
+			expectedDeviceRequests: []container.DeviceRequest{
+				{
+					Driver:       "",
+					Count:        2,
+					DeviceIDs:    nil,
+					Capabilities: [][]string{{"gpu"}},
+					Options:      map[string]string{},
+				},
+			},
+			expectedErrorSubstr: "",
+		},
+		"gpus is empty string": {
+			gpus:                   "",
+			expectedDeviceRequests: nil,
+			expectedErrorSubstr:    "",
+		},
+		"parse gpus string error": {
+			gpus:                   "somestring=thatshouldtriggeranerror",
+			expectedDeviceRequests: nil,
+			expectedErrorSubstr:    "unexpected key 'somestring' in 'somestring=thatshouldtriggeranerror'",
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e := &executor{}
+			e.Config.Docker = &common.DockerConfig{
+				ServiceGpus: tt.gpus,
+			}
+
+			deviceRequests, err := e.getServicesDeviceRequests()
+			if tt.expectedErrorSubstr != "" {
+				assert.Contains(t, fmt.Sprintf("%+v", err), tt.expectedErrorSubstr)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedDeviceRequests, deviceRequests)
+		})
+	}
+}
+
 func TestDockerUserSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		User: "www",
