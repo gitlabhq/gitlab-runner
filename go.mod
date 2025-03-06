@@ -74,7 +74,7 @@ require (
 	gitlab.com/gitlab-org/fleeting/nesting v0.1.1-0.20230410214021-ab545632193b
 	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20250219122911-60728b8fa8f7
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20230821135503-23448d122365
-	gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api v0.1.0
+	gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api v0.1.1
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425133101-519a58790bfd
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gitlab.com/gitlab-org/labkit v1.17.0
@@ -262,4 +262,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
-replace gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api v0.1.0 => ./helpers/runner_wrapper/api
+replace gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api => ./helpers/runner_wrapper/api

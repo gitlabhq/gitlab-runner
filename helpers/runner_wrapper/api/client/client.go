@@ -28,6 +28,8 @@ type Client struct {
 }
 
 func New(target string, opts ...Option) (*Client, error) {
+	target = formatGRPCCompatible(target)
+
 	o := setupOptions(opts)
 
 	logger := o.logger.WithGroup("client").With("target", target)
@@ -36,9 +38,16 @@ func New(target string, opts ...Option) (*Client, error) {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(_ context.Context, addr string) (net.Conn, error) {
 			network, address := parseDialTarget(addr)
-			logger.Debug("dialing gRPC server", "network", network, "address", address)
+			log := logger.With("network", network, "address", address)
+			log.Debug("dialing gRPC server")
 
-			return o.dialer(network, address)
+			conn, err := o.dialer(network, address)
+			if err != nil {
+				log.Error("gRPC dial failure", "error", err)
+			}
+			log.Debug("dialed gRPC server")
+
+			return conn, err
 		}),
 	}
 
@@ -97,18 +106,17 @@ func (c *Client) CheckStatus(ctx context.Context) (CheckStatusResponse, error) {
 
 	s, err := c.grpcClient.CheckStatus(ctx, new(pb.CheckStatusRequest))
 	if err != nil {
+		c.logger.Warn("gRPC request failure", "error", err)
+
 		return resp, err
 	}
+
+	c.logger.Debug("gRPC request succeeded")
 
 	resp.Status = api.Statuses.Reverse(s.Status)
 	resp.FailureReason = s.FailureReason
 
 	return resp, nil
-}
-
-type InitGracefulShutdownResponse struct {
-	Status        api.Status
-	FailureReason string
 }
 
 func (c *Client) InitGracefulShutdown(ctx context.Context, req api.InitGracefulShutdownRequest) (CheckStatusResponse, error) {
@@ -130,8 +138,12 @@ func (c *Client) InitGracefulShutdown(ctx context.Context, req api.InitGracefulS
 		ShutdownCallback: shutdownCallback,
 	})
 	if err != nil {
+		c.logger.Warn("gRPC request failure", "error", err)
+
 		return resp, err
 	}
+
+	c.logger.Debug("gRPC request succeeded")
 
 	resp.Status = api.Statuses.Reverse(s.Status)
 	resp.FailureReason = s.FailureReason
@@ -146,8 +158,12 @@ func (c *Client) InitForcefulShutdown(ctx context.Context) (CheckStatusResponse,
 
 	s, err := c.grpcClient.InitForcefulShutdown(ctx, new(pb.InitForcefulShutdownRequest))
 	if err != nil {
+		c.logger.Warn("gRPC request failure", "error", err)
+
 		return resp, err
 	}
+
+	c.logger.Debug("gRPC request succeeded")
 
 	resp.Status = api.Statuses.Reverse(s.Status)
 	resp.FailureReason = s.FailureReason
