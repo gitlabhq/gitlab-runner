@@ -91,3 +91,94 @@ func TestPosixShellEscape(t *testing.T) {
 		assert.Equal(t, test.out, actual, "src=%v", test.in)
 	}
 }
+
+func TestDotEnvEscape(t *testing.T) {
+	var tests = []struct {
+		name      string
+		variables map[string]string
+		expected  string
+	}{
+		{
+			name:      "Simple key-value pair",
+			variables: map[string]string{"KEY": "value"},
+			expected:  "KEY=\"value\"\n",
+		},
+		{
+			name:      "Value with spaces",
+			variables: map[string]string{"KEY": "value with spaces"},
+			expected:  "KEY=\"value with spaces\"\n",
+		},
+		{
+			name:      "Value with special characters",
+			variables: map[string]string{"KEY": "value\\with\\special\\characters"},
+			expected:  "KEY=\"value\\\\with\\\\special\\\\characters\"\n",
+		},
+		{
+			name:      "Value with quotes",
+			variables: map[string]string{"KEY": "value \"with\" quotes"},
+			expected:  "KEY=\"value \\\"with\\\" quotes\"\n",
+		},
+		{
+			name:      "Value with newlines",
+			variables: map[string]string{"KEY": "value\nwith\nnewlines"},
+			expected:  "KEY=\"value\\nwith\\nnewlines\"\n",
+		},
+		{
+			name:      "Value with tabs",
+			variables: map[string]string{"KEY": "value\twith\ttabs"},
+			expected:  "KEY=\"value\twith\ttabs\"\n",
+		},
+		{
+			name:      "Empty value",
+			variables: map[string]string{"KEY": ""},
+			expected:  "KEY=\"\"\n",
+		},
+		{
+			name:      "Multiple valid key-value pairs",
+			variables: map[string]string{"KEY1": "value1", "KEY2": "value2"},
+			expected:  "KEY1=\"value1\"\nKEY2=\"value2\"\n",
+		},
+		{
+			name:      "Invalid key is skipped",
+			variables: map[string]string{"INVALID-KEY": "value", "VALID_KEY": "valid_value"},
+			expected:  "VALID_KEY=\"valid_value\"\n",
+		},
+		{
+			name:      "Unicode characters",
+			variables: map[string]string{"UNICODE": "こんにちは世界🌍"},
+			expected:  "UNICODE=\"こんにちは世界🌍\"\n",
+		},
+		{
+			name:      "Value with equals sign",
+			variables: map[string]string{"KEY": "value=with=equals"},
+			expected:  "KEY=\"value=with=equals\"\n",
+		},
+		{
+			name:      "Value starting and ending with spaces",
+			variables: map[string]string{"KEY": " value with spaces "},
+			expected:  "KEY=\" value with spaces \"\n",
+		},
+		{
+			name:      "Value with dollar signs",
+			variables: map[string]string{"KEY": "value with $dollar signs"},
+			expected:  "KEY=\"value with $dollar signs\"\n",
+		},
+		{
+			name:      "Empty map",
+			variables: map[string]string{},
+			expected:  "",
+		},
+		{
+			name:      "Nil map",
+			variables: nil,
+			expected:  "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			output := DotEnvEscape(test.variables)
+			assert.Equal(t, test.expected, output, "variables=%v", test.variables)
+		})
+	}
+}

@@ -205,6 +205,19 @@ func (b *BashWriter) Variable(variable common.JobVariable) {
 	}
 }
 
+func (b *BashWriter) DotEnvVariables(baseFilename string, variables map[string]string) string {
+	dotEnvFile := b.TmpFile(baseFilename)
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("cat << EOF > %s\n", dotEnvFile))
+	sb.WriteString(helpers.DotEnvEscape(variables))
+	sb.WriteString("EOF\n")
+
+	b.Line(sb.String())
+
+	return dotEnvFile
+}
+
 func (b *BashWriter) SourceEnv(pathname string) {
 	b.Linef("mkdir -p %q", helpers.ToSlash(b.TemporaryPath))
 	b.Linef("touch %q", pathname)

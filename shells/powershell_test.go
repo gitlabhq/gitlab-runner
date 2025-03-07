@@ -753,6 +753,47 @@ func Test_PsWriter_Variable(t *testing.T) {
 	}
 }
 
+func Test_PsWriter_DotEnvVariables(t *testing.T) {
+	templateLinux := "New-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null$CurrentDirectory = (Resolve-Path ./).Path[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\test\", @\"\n%s\n\"@)"
+	templateWindows := "New-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null$CurrentDirectory = (Resolve-Path .\\).Path[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\test\", @\"\n%s\n\"@)"
+
+	tests := map[string]struct {
+		variables map[string]string
+		writer    PsWriter
+		want      string
+	}{
+		"single key": {
+			variables: map[string]string{"KEY": "VALUE"},
+			writer:    PsWriter{TemporaryPath: "foo/bar"},
+			want:      "KEY=\"VALUE\"\n",
+		},
+		"multiple keys": {
+			variables: map[string]string{
+				"KEY1": "FOO\nBAR",
+				"KEY2": "TEST",
+			},
+			writer: PsWriter{TemporaryPath: "foo/bar"},
+			want: `KEY1="FOO\nBAR"
+KEY2="TEST"
+`,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			tt.writer.DotEnvVariables("test", tt.variables)
+			expected := ""
+
+			if runtime.GOOS == OSWindows {
+				expected = fmt.Sprintf(templateWindows, tt.want)
+			} else {
+				expected = fmt.Sprintf(templateLinux, tt.want)
+			}
+			assert.Equal(t, expected, tt.writer.String())
+		})
+	}
+}
+
 func TestPowershellEntrypointCommand(t *testing.T) {
 	// utf8 -> utf16 & base64 encoded
 	// 	$OutputEncoding = [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding\r

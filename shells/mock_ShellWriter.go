@@ -276,6 +276,53 @@ func (_c *MockShellWriter_CommandWithStdin_Call) RunAndReturn(run func(string, s
 	return _c
 }
 
+// DotEnvVariables provides a mock function with given fields: baseFilename, variables
+func (_m *MockShellWriter) DotEnvVariables(baseFilename string, variables map[string]string) string {
+	ret := _m.Called(baseFilename, variables)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DotEnvVariables")
+	}
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string, map[string]string) string); ok {
+		r0 = rf(baseFilename, variables)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// MockShellWriter_DotEnvVariables_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DotEnvVariables'
+type MockShellWriter_DotEnvVariables_Call struct {
+	*mock.Call
+}
+
+// DotEnvVariables is a helper method to define mock.On call
+//   - baseFilename string
+//   - variables map[string]string
+func (_e *MockShellWriter_Expecter) DotEnvVariables(baseFilename interface{}, variables interface{}) *MockShellWriter_DotEnvVariables_Call {
+	return &MockShellWriter_DotEnvVariables_Call{Call: _e.mock.On("DotEnvVariables", baseFilename, variables)}
+}
+
+func (_c *MockShellWriter_DotEnvVariables_Call) Run(run func(baseFilename string, variables map[string]string)) *MockShellWriter_DotEnvVariables_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(map[string]string))
+	})
+	return _c
+}
+
+func (_c *MockShellWriter_DotEnvVariables_Call) Return(_a0 string) *MockShellWriter_DotEnvVariables_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockShellWriter_DotEnvVariables_Call) RunAndReturn(run func(string, map[string]string) string) *MockShellWriter_DotEnvVariables_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Else provides a mock function with given fields:
 func (_m *MockShellWriter) Else() {
 	_m.Called()
