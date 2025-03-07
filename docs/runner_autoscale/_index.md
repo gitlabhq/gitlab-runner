@@ -13,8 +13,8 @@ title: GitLab Runner Autoscaling
 {{< /details >}}
 
 You can use GitLab Runner autoscaling to automatically scale the runner on public cloud instances.
-When you configure a runner to use an autoscaler, you can manage increases in CI/CD job load by
-leveraging your cloud infrastructure to run multiple jobs simultaneously.
+When you configure a runner to use autoscaler, you can handle increased CI/CD job loads by
+running multiple jobs simultaneously on your cloud infrastructure.
 
 In addition to the autoscaling options for public cloud instances, you can use
 the following container orchestration solutions for hosting and scaling a runner fleet.
@@ -116,15 +116,15 @@ If you do not want to host the runner manager in AWS, you can use the credential
 
 ## Implement a fault-tolerant design
 
-To implement a fault-tolerant design and mitigate the risk of a runner manager host failure,
-start with at least two runner managers configured with the same runner tags.
+Start with at least two runner managers that use the same runner tags to create a
+fault-tolerant design and prevent runner manager host failures.
 
 For example, on GitLab.com, multiple runner managers are configured for
 [hosted runners on Linux](https://docs.gitlab.com/ci/runners/hosted_runners/linux/).
 Each runner manager has the tag `saas-linux-small-amd64`.
 
-With observability and runner fleet metrics, you can adjust the autoscaling parameters to find the
-right balance between efficiency and performance for your organization's typical CI/CD workloads.
+Use observability and runner fleet metrics when you adjust autoscaling parameters to balance
+efficiency and performance for your organization's CI/CD workloads.
 
 ## Configure runner autoscaling executors
 
@@ -137,6 +137,6 @@ After you configure the runner manager, configure the executors specific to auto
 {{< alert type="note" >}}
 
 You should use the Instance and Docker Autoscaling executors, as these comprise the
-technology that will replace the Docker Machine autoscaler.
+technology that replaces the Docker Machine autoscaler.
 
 {{< /alert >}}
