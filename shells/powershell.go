@@ -393,6 +393,15 @@ func (p *PsWriter) Variable(variable common.JobVariable) {
 	p.Linef("$env:%s=$%s", variable.Key, variable.Key)
 }
 
+func (p *PsWriter) DotEnvVariables(baseFilename string, variables map[string]string) string {
+	p.MkDir(p.TemporaryPath)
+	dotEnvFile := p.TmpFile(baseFilename)
+
+	p.Linef("[System.IO.File]::WriteAllText(%s, @\"\n%s\n\"@)", p.resolvePath(dotEnvFile), helpers.DotEnvEscape(variables))
+
+	return dotEnvFile
+}
+
 func (p *PsWriter) SourceEnv(pathname string) {
 	p.MkDir(p.TemporaryPath)
 	pathname = p.resolvePath(pathname)
