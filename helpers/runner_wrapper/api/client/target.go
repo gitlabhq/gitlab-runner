@@ -23,11 +23,20 @@ func parseDialTarget(target string) (string, string) {
 	}
 
 	// unix:relative-path
-	network, path, found := strings.Cut(target, ":")
-	if found {
-		return network, path
+	scheme, addr, found := strings.Cut(target, ":")
+	if found && scheme == "unix" {
+		return scheme, addr
 	}
 
 	// tcp://target
 	return network, target
+}
+
+func formatGRPCCompatible(target string) string {
+	network, address := parseDialTarget(target)
+	if network == "unix" {
+		return target
+	}
+
+	return address
 }
