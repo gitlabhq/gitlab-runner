@@ -49,6 +49,7 @@ require (
 	github.com/invopop/jsonschema v0.12.0
 	github.com/jedib0t/go-pretty/v6 v6.4.7
 	github.com/johannesboyne/gofakes3 v0.0.0-20240701191259-edd0227ffc37
+	github.com/joho/godotenv v1.5.1
 	github.com/jpillora/backoff v1.0.0
 	github.com/kardianos/service v1.2.2
 	github.com/kelseyhightower/envconfig v1.4.0

@@ -39,6 +39,7 @@ type CacheArchiverCommand struct {
 	CompressionLevel       string   `long:"compression-level" env:"CACHE_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
 	CompressionFormat      string   `long:"compression-format" env:"CACHE_COMPRESSION_FORMAT" description:"Compression format (zip, tarzstd)"`
 	MaxUploadedArchiveSize int64    `long:"max-uploaded-archive-size" env:"CACHE_MAX_UPLOADED_ARCHIVE_SIZE" description:"Limit the size of the cache archive being uploaded to cloud storage, in bytes."`
+	EnvFile                string   `long:"env-file" description:"Filename containing environment variables to read"`
 
 	client *CacheClient
 	mux    *blob.URLMux
@@ -109,6 +110,11 @@ func (c *CacheArchiverCommand) handleGoCloudURL(file io.Reader) error {
 	defer cancelWrite()
 
 	u, err := url.Parse(c.GoCloudURL)
+	if err != nil {
+		return err
+	}
+
+	err = loadEnvFile(c.EnvFile)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,8 @@ import (
 type ShellWriter interface {
 	EnvVariableKey(name string) string
 	Variable(variable common.JobVariable)
+	// Save variables in key=value format to a temporary file
+	DotEnvVariables(baseFilename string, variables map[string]string) string
 	SourceEnv(pathname string)
 	Command(command string, arguments ...string)
 	CommandWithStdin(stdin, command string, arguments ...string)

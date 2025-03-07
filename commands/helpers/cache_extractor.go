@@ -35,6 +35,7 @@ type CacheExtractorCommand struct {
 	URL        string `long:"url" description:"URL of remote cache resource"`
 	GoCloudURL string `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
 	Timeout    int    `long:"timeout" description:"Overall timeout for cache downloading request (in minutes)"`
+	EnvFile    string `long:"env-file" description:"Filename containing environment variables to read"`
 
 	client *CacheClient
 	mux    *blob.URLMux
@@ -121,6 +122,11 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 	defer cancelWrite()
 
 	u, err := url.Parse(c.GoCloudURL)
+	if err != nil {
+		return err
+	}
+
+	err = loadEnvFile(c.EnvFile)
 	if err != nil {
 		return err
 	}
