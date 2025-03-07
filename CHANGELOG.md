@@ -1,3 +1,9 @@
+## v17.9.1 (2025-03-07)
+
+### Security fixes
+
+- Merge branch 'sh-cache-upload-env-file' into 'main' [!5408](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5408)
+
 ## v17.9.0 (2025-03-07)
 
 ### New features
