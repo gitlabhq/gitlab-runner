@@ -347,8 +347,10 @@ func TestFileArchiverCompressionLevel(t *testing.T) {
 				CompressionLevel: expectedLevel,
 			}
 			assert.NoError(t, cmd.enumerate())
-			_, r, err := cmd.createReadStream()
+			_, bodyProvider := cmd.createBodyProvider()
+			r, err := bodyProvider.GetReader()
 			require.NoError(t, err)
+
 			defer r.Close()
 			_, _ = io.Copy(io.Discard, r)
 		})

@@ -152,7 +152,7 @@ type Build struct {
 	createdAt time.Time
 
 	Referees         []referees.Referee
-	ArtifactUploader func(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) (UploadState, string)
+	ArtifactUploader func(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string)
 
 	urlHelper urlHelper
 
@@ -657,8 +657,14 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 			continue
 		}
 
+		bodyProvider := StreamProvider{
+			ReaderFactory: func() (io.ReadCloser, error) {
+				return io.NopCloser(reader), nil
+			},
+		}
+
 		// referee ran successfully, upload its results to GitLab as an artifact
-		b.ArtifactUploader(jobCredentials, io.NopCloser(reader), ArtifactsOptions{
+		b.ArtifactUploader(jobCredentials, bodyProvider, ArtifactsOptions{
 			BaseName: referee.ArtifactBaseName(),
 			Type:     referee.ArtifactType(),
 			Format:   ArtifactFormat(referee.ArtifactFormat()),
