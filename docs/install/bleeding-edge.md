@@ -14,8 +14,8 @@ title: GitLab Runner bleeding edge releases
 
 {{< alert type="warning" >}}
 
-These are the latest, probably untested releases of GitLab Runner built straight
-from `main` branch. Use at your own risk.
+These GitLab Runner releases are latest and built directly from the `main` branch and may be untested.
+Use at your own risk.
 
 {{< /alert >}}
 
@@ -94,7 +94,7 @@ rpm -i gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
 
 ## Download any other tagged release
 
-Simply replace `main` with either `tag` (for example, `v16.5.0`) or `latest` (the latest
+Replace `main` with either `tag` (for example, `v16.5.0`) or `latest` (the latest
 stable). For a list of tags see <https://gitlab.com/gitlab-org/gitlab-runner/-/tags>.
 For example:
 
