@@ -12,7 +12,7 @@ title: The Shell executor
 
 {{< /details >}}
 
-The Shell executor is a simple executor that you use to execute builds
+You can use the Shell executor to execute builds
 locally on the machine where GitLab Runner is installed. It supports all systems on
 which the Runner can be installed. That means that it's possible to use scripts
 generated for Bash, PowerShell Core, Windows PowerShell, and Windows Batch (deprecated).
@@ -42,7 +42,7 @@ Where:
   running
 - `<short-token>` is a shortened version of the Runner's token (first 8 letters)
 - `<concurrent-id>` is a unique number, identifying the local job ID on the
-  particular Runner in context of the project (accessible via the
+  particular Runner in context of the project (accessible through the
   `CI_CONCURRENT_PROJECT_ID` [pre-defined variable](https://docs.gitlab.com/ci/variables/predefined_variables/))
 - `<namespace>` is the namespace where the project is stored on GitLab
 - `<project-name>` is the name of the project as it is stored on GitLab
@@ -55,11 +55,10 @@ in [`config.toml`](../configuration/advanced-configuration.md).
 
 If GitLab Runner is installed on Linux from the
 [official `.deb` or `.rpm` packages](https://packages.gitlab.com/runner/gitlab-runner),
-the installer will try to use the `gitlab_ci_multi_runner`
-user if found. If it is not found, it will create a `gitlab-runner` user and use
-this instead.
+the installer tries to use the `gitlab_ci_multi_runner`
+user if found. If the installer is unable to find the `gitlab_ci_multi_runner` user, it creates a `gitlab-runner` user and uses it instead.
 
-All shell builds will be then executed as either the `gitlab-runner` or
+All shell builds are then executed as either the `gitlab-runner` or
 `gitlab_ci_multi_runner` user.
 
 In some testing scenarios, your builds may need to access some privileged
