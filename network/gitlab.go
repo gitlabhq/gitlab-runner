@@ -126,7 +126,7 @@ type doRawParams struct {
 	credentials requestCredentials
 	method      string
 	uri         string
-	request     io.Reader
+	request     common.ContentProvider
 	requestType string
 	headers     http.Header
 }
@@ -179,7 +179,7 @@ func (n *GitLabClient) doRaw(
 	ctx context.Context,
 	credentials requestCredentials,
 	method, uri string,
-	request io.Reader,
+	bodyProvider common.ContentProvider,
 	requestType string,
 	headers http.Header,
 ) (res *http.Response, err error) {
@@ -188,7 +188,7 @@ func (n *GitLabClient) doRaw(
 		return nil, err
 	}
 
-	return c.do(ctx, uri, method, request, requestType, headers)
+	return c.do(ctx, uri, method, bodyProvider, requestType, headers)
 }
 
 type doJSONParams struct {
@@ -767,6 +767,8 @@ func (n *GitLabClient) PatchTrace(
 	headers.Set("Content-Range", contentRange)
 	headers.Set("JOB-TOKEN", jobCredentials.Token)
 
+	bodyProvider := common.BytesProvider{Data: content}
+
 	response, err := n.doMeasuredRaw(
 		context.Background(),
 		config.Log(),
@@ -777,7 +779,7 @@ func (n *GitLabClient) PatchTrace(
 			credentials: &config.RunnerCredentials,
 			method:      "PATCH",
 			uri:         fmt.Sprintf("jobs/%d/trace?%s", id, patchTraceQuery(debugTraceEnabled)),
-			request:     bytes.NewReader(content),
+			request:     bodyProvider,
 			requestType: "text/plain",
 			headers:     headers,
 		},
@@ -863,30 +865,61 @@ func (n *GitLabClient) createPatchTraceResult(
 	}
 }
 
-func (n *GitLabClient) createArtifactsForm(reader io.Reader, baseName string) (io.ReadCloser, string) {
-	pr, pw := io.Pipe()
+func (n *GitLabClient) createArtifactsContentProvider(originalContentProvider common.ContentProvider, baseName string) (common.ContentProvider, string) {
+	// Create an initial multipart writer with a buffer to get its boundary
+	var buf bytes.Buffer
+	mpw := multipart.NewWriter(&buf)
+	boundary := mpw.Boundary()
+	contentType := mpw.FormDataContentType()
+	mpw.Close()
 
-	mpw := multipart.NewWriter(pw)
+	// Return a body provider function that creates a new pipe each time
+	bodyProvider := common.StreamProvider{
+		ReaderFactory: func() (io.ReadCloser, error) {
+			// Get a fresh reader from the original provider
+			originalBody, err := originalContentProvider.GetReader()
+			if err != nil {
+				return nil, fmt.Errorf("couldn't get original body: %w", err)
+			}
 
-	go func() {
-		defer func() {
-			_ = mpw.Close()
-			_ = pw.Close()
-		}()
+			pr, pw := io.Pipe()
+			mpw := multipart.NewWriter(pw)
 
-		wr, err := mpw.CreateFormFile("file", baseName)
-		if err != nil {
-			_ = pw.CloseWithError(err)
-			return
-		}
+			// Use the same boundary to ensure consistent content type
+			err = mpw.SetBoundary(boundary)
+			if err != nil {
+				originalBody.Close()
+				pr.Close()
+				pw.Close()
+				return nil, fmt.Errorf("couldn't set form boundary: %w", err)
+			}
 
-		_, err = io.Copy(wr, reader)
-		if err != nil {
-			_ = pw.CloseWithError(err)
-		}
-	}()
+			// Use goroutine to write to the pipe
+			go func() {
+				defer func() {
+					originalBody.Close()
+					mpw.Close()
+					pw.Close()
+				}()
 
-	return pr, mpw.FormDataContentType()
+				wr, err := mpw.CreateFormFile("file", baseName)
+				if err != nil {
+					_ = pw.CloseWithError(fmt.Errorf("failed to create form file: %w", err))
+					return
+				}
+
+				// Copy from the fresh reader to the multipart form
+				_, err = io.Copy(wr, originalBody)
+				if err != nil {
+					_ = pw.CloseWithError(fmt.Errorf("failed to copy content to form: %w", err))
+				}
+			}()
+
+			return pr, nil
+		},
+	}
+
+	return bodyProvider, contentType
 }
 
 func uploadRawArtifactsQuery(options common.ArtifactsOptions) url.Values {
@@ -909,17 +942,10 @@ func uploadRawArtifactsQuery(options common.ArtifactsOptions) url.Values {
 
 func (n *GitLabClient) UploadRawArtifacts(
 	config common.JobCredentials,
-	reader io.ReadCloser,
+	originalContentProvider common.ContentProvider,
 	options common.ArtifactsOptions,
 ) (common.UploadState, string) {
-	defer func() {
-		_ = reader.Close()
-	}()
-
-	pr, contentType := n.createArtifactsForm(reader, options.BaseName)
-	defer func() {
-		_ = pr.Close()
-	}()
+	bodyProvider, contentType := n.createArtifactsContentProvider(originalContentProvider, options.BaseName)
 
 	query := uploadRawArtifactsQuery(options)
 
@@ -930,7 +956,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 		&config,
 		http.MethodPost,
 		fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode()),
-		pr,
+		bodyProvider,
 		contentType,
 		headers,
 	)
@@ -949,9 +975,6 @@ func (n *GitLabClient) UploadRawArtifacts(
 	if res != nil {
 		log = log.WithField("responseStatus", res.Status)
 	}
-
-	closeWithLogging(log, pr, "pipe reader")
-	closeWithLogging(log, reader, "archive reader")
 
 	messagePrefix := "Uploading artifacts to coordinator..."
 	if options.Type != "" {

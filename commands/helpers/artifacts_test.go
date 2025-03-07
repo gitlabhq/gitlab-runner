@@ -120,10 +120,19 @@ func (m *testNetwork) consumeRawUpload(reader io.Reader) common.UploadState {
 
 func (m *testNetwork) UploadRawArtifacts(
 	config common.JobCredentials,
-	reader io.ReadCloser,
+	bodyProvider common.ContentProvider,
 	options common.ArtifactsOptions,
 ) (common.UploadState, string) {
 	m.uploadCalled++
+
+	if bodyProvider == nil {
+		return m.uploadState, ""
+	}
+
+	reader, err := bodyProvider.GetReader()
+	if err != nil {
+		return common.UploadFailed, err.Error()
+	}
 
 	if m.uploadState == common.UploadSucceeded {
 		m.uploadType = options.Type

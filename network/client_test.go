@@ -3,7 +3,6 @@
 package network
 
 import (
-	"bytes"
 	"context"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -317,10 +316,33 @@ func TestClientDo(t *testing.T) {
 	assert.Contains(t, statusText, `test/json: 403 Forbidden`)
 }
 
+func TestClientNilBody(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(clientHandler))
+	defer s.Close()
+
+	c, err := newClient(&RunnerCredentials{
+		URL: s.URL,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, c)
+
+	headers := make(http.Header)
+	headers.Set(PrivateToken, "test-me")
+	headers.Set(ContentType, "application/json")
+	headers.Set(Accept, "application/json")
+
+	resp, err := c.do(context.Background(), "/api/v4/test/json", http.MethodGet, nil, "", headers)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
 type testContextKey int
 
 func TestClientDo_Context(t *testing.T) {
-	buf := bytes.NewBufferString("test")
+	bodyProvider := BytesProvider{
+		Data: []byte("test"),
+	}
+
 	ctx := context.WithValue(context.Background(), testContextKey(0), "test")
 	response := &http.Response{
 		Status:     "Not found",
@@ -341,7 +363,7 @@ func TestClientDo_Context(t *testing.T) {
 		return assert.Equal(t, ctx, req.Context())
 	})).Return(response, nil).Once()
 
-	res, err := c.do(ctx, "/test", http.MethodPost, buf, "plain/text", nil)
+	res, err := c.do(ctx, "/test", http.MethodPost, bodyProvider, "plain/text", nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, response, res)
@@ -700,11 +722,10 @@ func TestRequestsBackOff(t *testing.T) {
 			backoff.Reset()
 			assert.Zero(t, backoff.Attempt())
 
-			var body io.Reader
 			headers := make(http.Header)
 			headers.Add("responseStatus", strconv.Itoa(testCase.responseStatus))
 
-			res, err := c.do(context.Background(), "/", http.MethodPost, body, "application/json", headers)
+			res, err := c.do(context.Background(), "/", http.MethodPost, nil, "application/json", headers)
 
 			assert.NoError(t, err)
 			assert.Equal(t, testCase.responseStatus, res.StatusCode)
@@ -752,43 +773,44 @@ func Test307and308Redirections(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		getRequest   func(t *testing.T) io.Reader
+		bodyProvider func(t *testing.T) ContentProvider
 		expectedBody []byte
 		codes        []codes
 	}{
 		"nil body": {
-			getRequest: func(t *testing.T) io.Reader {
+			bodyProvider: func(t *testing.T) ContentProvider {
 				return nil
 			},
 			expectedBody: []byte{},
 			codes:        defaultCodes,
 		},
 		"bytes buffer": {
-			getRequest: func(t *testing.T) io.Reader {
-				return bytes.NewReader(testPayload)
+			bodyProvider: func(t *testing.T) ContentProvider {
+				return BytesProvider{
+					Data: testPayload,
+				}
 			},
 			expectedBody: testPayload,
 			codes:        defaultCodes,
 		},
 		"piped data": {
-			getRequest: func(t *testing.T) io.Reader {
-				pr, pw := io.Pipe()
+			bodyProvider: func(t *testing.T) ContentProvider {
+				return StreamProvider{
+					ReaderFactory: func() (io.ReadCloser, error) {
+						pr, pw := io.Pipe()
 
-				go func() {
-					defer func() {
-						_ = pw.Close()
-					}()
+						go func() {
+							defer pw.Close()
+							_, err := pw.Write(testPayload)
+							assert.NoError(t, err)
+						}()
 
-					_, err := io.Copy(pw, bytes.NewReader(testPayload))
-					assert.NoError(t, err)
-				}()
-
-				return pr
+						return pr, nil
+					},
+				}
 			},
-			codes: []codes{
-				{sent: http.StatusTemporaryRedirect, expected: http.StatusTemporaryRedirect},
-				{sent: http.StatusPermanentRedirect, expected: http.StatusPermanentRedirect},
-			},
+			expectedBody: testPayload,
+			codes:        defaultCodes,
 		},
 	}
 
@@ -829,7 +851,7 @@ func Test307and308Redirections(t *testing.T) {
 				}
 				c.requester = &c.Client
 
-				response, err := c.do(context.Background(), "/", http.MethodPatch, tt.getRequest(t), "", nil)
+				response, err := c.do(context.Background(), "/", http.MethodPatch, tt.bodyProvider(t), "", nil)
 				assert.NoError(t, err)
 				if assert.NotNil(t, response) {
 					assert.Equal(t, code.expected, response.StatusCode)
@@ -841,13 +863,15 @@ func Test307and308Redirections(t *testing.T) {
 
 func TestEnsureUserAgentAlwaysSent(t *testing.T) {
 	tests := map[string]struct {
-		r io.Reader
+		b ContentProvider
 	}{
 		"request reader is present": {
-			r: bytes.NewBufferString("test"),
+			b: BytesProvider{
+				Data: []byte("test"),
+			},
 		},
 		"request reader is empty": {
-			r: nil,
+			b: nil,
 		},
 	}
 
@@ -871,7 +895,7 @@ func TestEnsureUserAgentAlwaysSent(t *testing.T) {
 			headers := http.Header{}
 			headers.Set("Test", "test")
 
-			response, err := c.do(context.Background(), "/", http.MethodGet, tt.r, "", headers)
+			response, err := c.do(context.Background(), "/", http.MethodGet, tt.b, "", headers)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, response.StatusCode)
 		})
