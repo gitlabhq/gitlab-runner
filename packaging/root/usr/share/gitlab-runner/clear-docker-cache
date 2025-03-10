@@ -16,7 +16,7 @@ fi
 DOCKER_API_VERSION=$(docker version --format '{{.Client.APIVersion}}')
 DOCKER_CLIENT_VERSION=$(docker version --format '{{.Client.Version}}')
 REQUIRED_DOCKER_API_VERSION=1.25
-FILTER_FLAG='label=com.gitlab.gitlab-runner.managed=true'
+FILTER_FLAG="${FILTER_FLAG:-label=com.gitlab.gitlab-runner.managed=true}"
 
 usage() {
   echo -e "\nUsage: $0 prune-volumes|prune|space|help\n"
