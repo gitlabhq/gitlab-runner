@@ -67,10 +67,11 @@ type windowsParser struct {
 	baseParser
 }
 
-func NewWindowsParser() Parser {
+func NewWindowsParser(varExpander func(string) string) Parser {
 	return &windowsParser{
 		baseParser: baseParser{
-			path: newWindowsPath(),
+			path:        newWindowsPath(),
+			varExpander: varExpander,
 		},
 	}
 }

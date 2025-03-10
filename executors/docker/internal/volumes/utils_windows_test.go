@@ -37,5 +37,6 @@ func TestIsHostMountedVolume_Windows(t *testing.T) {
 		},
 	}
 
-	testIsHostMountedVolume(t, parser.NewWindowsParser(), testCases)
+	var identity = func(s string) string { return s }
+	testIsHostMountedVolume(t, parser.NewWindowsParser(identity), testCases)
 }

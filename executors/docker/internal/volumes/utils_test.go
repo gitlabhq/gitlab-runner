@@ -64,7 +64,8 @@ func TestIsHostMountedVolume_Linux(t *testing.T) {
 		},
 	}
 
-	testIsHostMountedVolume(t, parser.NewLinuxParser(), testCases)
+	var identity = func(s string) string { return s }
+	testIsHostMountedVolume(t, parser.NewLinuxParser(identity), testCases)
 }
 
 func TestManagedList_Add(t *testing.T) {

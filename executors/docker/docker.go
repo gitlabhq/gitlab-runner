@@ -1289,7 +1289,7 @@ func (e *executor) setupDefaultExecutorOptions(os string) {
 		e.ExecutorOptions.Shell.RunnerCommand = "gitlab-runner-helper"
 
 		if e.volumeParser == nil {
-			e.volumeParser = parser.NewWindowsParser()
+			e.volumeParser = parser.NewWindowsParser(e.ExpandValue)
 		}
 
 		if e.newVolumePermissionSetter == nil {
@@ -1306,7 +1306,7 @@ func (e *executor) setupDefaultExecutorOptions(os string) {
 		e.ExecutorOptions.Shell.RunnerCommand = "/usr/bin/gitlab-runner-helper"
 
 		if e.volumeParser == nil {
-			e.volumeParser = parser.NewLinuxParser()
+			e.volumeParser = parser.NewLinuxParser(e.ExpandValue)
 		}
 
 		if e.newVolumePermissionSetter == nil {
