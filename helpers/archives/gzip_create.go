@@ -3,11 +3,23 @@ package archives
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"strings"
+	"unicode"
 
 	gzip "github.com/klauspost/pgzip"
 	"github.com/sirupsen/logrus"
 )
+
+func sanitizePath(s string) string {
+	if !strings.ContainsFunc(s, func(r rune) bool {
+		return r > unicode.MaxASCII || r == '%'
+	}) {
+		return s
+	}
+	return "e:" + url.PathEscape(s)
+}
 
 func writeGzipFile(w io.Writer, fileName string, fileInfo os.FileInfo) error {
 	if !fileInfo.Mode().IsRegular() {
@@ -16,8 +28,9 @@ func writeGzipFile(w io.Writer, fileName string, fileInfo os.FileInfo) error {
 
 	gz := gzip.NewWriter(w)
 	gz.Header.Name = fileInfo.Name()
-	gz.Header.Comment = fileName
+	gz.Header.Comment = sanitizePath(fileName)
 	gz.Header.ModTime = fileInfo.ModTime()
+
 	defer func() { _ = gz.Close() }()
 
 	file, err := os.Open(fileName)
