@@ -19,7 +19,7 @@ is not supported.
 
 {{< /alert >}}
 
-This is a simple executor that allows you to execute builds on a remote machine
+This executor allows you to execute builds on a remote machine
 by executing commands over SSH.
 
 {{< alert type="note" >}}
@@ -65,7 +65,7 @@ To overwrite the `~/builds` directory, specify the `builds_dir` options under
 `[[runners]]` section in [`config.toml`](../configuration/advanced-configuration.md).
 
 If you want to upload job artifacts, install `gitlab-runner` on the host you are
-connecting to via SSH.
+connecting to through SSH.
 
 ## Configure strict host key checking
 
