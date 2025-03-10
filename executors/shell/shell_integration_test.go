@@ -1191,7 +1191,8 @@ func TestBuildWithGitFetchSubmoduleStrategyRecursive(t *testing.T) {
 		expectFreshRepoMessage bool
 	}{
 		"no git cleanup": {
-			expectFreshRepoMessage: true,
+			// shell executor defaults to not clean up git configs
+			expectFreshRepoMessage: false,
 		},
 		"git cleanup explicitly enabled": {
 			cleanGitConfig:         &[]bool{true}[0],
@@ -1638,7 +1639,8 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 		expectFreshRepoMessage bool
 	}{
 		"no git cleanup": {
-			expectFreshRepoMessage: true,
+			// shell executor defaults to not clean up git configs
+			expectFreshRepoMessage: false,
 		},
 		"git cleanup explicitly enabled": {
 			cleanGitConfig:         &[]bool{true}[0],
@@ -1836,6 +1838,7 @@ func TestSanitizeGitDirectory(t *testing.T) {
 		jobResponse, err := common.GetLocalBuildResponse(
 			"git remote set-url origin /tmp/some/invalid/directory",
 		)
+		require.NoError(t, err, "getting job response")
 
 		build := newBuild(t, jobResponse, shell)
 
@@ -1844,6 +1847,8 @@ func TestSanitizeGitDirectory(t *testing.T) {
 			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
 			common.JobVariable{Key: featureflags.EnableJobCleanup, Value: "true"},
 		)
+
+		build.Runner.RunnerSettings.CleanGitConfig = &[]bool{true}[0]
 
 		err = buildtest.RunBuild(t, build)
 		require.NoError(t, err)

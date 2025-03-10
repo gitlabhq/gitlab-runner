@@ -2305,67 +2305,95 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 	testPath3 := "path/VAR_3_file"
 
 	someTrue, someFalse := true, false
+	type executorName = string
 
-	tests := map[string]struct {
+	tests := map[executorName]map[string]struct {
 		cleanGitConfig       *bool
+		gitStrategy          string
 		shouldCleanGitConfig bool
 	}{
-		"no clean-git-config set": {
-			shouldCleanGitConfig: true,
+		"shell": {
+			"no clean-git-config set": {
+				shouldCleanGitConfig: false,
+			},
+			"clean-git-config explicitly enabled": {
+				cleanGitConfig:       &someTrue,
+				shouldCleanGitConfig: true,
+			},
+			"clean-git-config explicitly disabled": {
+				cleanGitConfig:       &someFalse,
+				shouldCleanGitConfig: false,
+			},
 		},
-		"clean-git-config explicitly enabled": {
-			cleanGitConfig:       &someTrue,
-			shouldCleanGitConfig: true,
-		},
-		"clean-git-config explicitly disabled": {
-			cleanGitConfig:       &someFalse,
-			shouldCleanGitConfig: false,
+		"not-shell": {
+			"no clean-git-config set": {
+				shouldCleanGitConfig: true,
+			},
+			"no clean-git-config set, but git strategy is none": {
+				shouldCleanGitConfig: false,
+				gitStrategy:          "none",
+			},
+			"clean-git-config explicitly enabled": {
+				cleanGitConfig:       &someTrue,
+				gitStrategy:          "none",
+				shouldCleanGitConfig: true,
+			},
+			"clean-git-config explicitly disabled": {
+				cleanGitConfig:       &someFalse,
+				shouldCleanGitConfig: false,
+			},
 		},
 	}
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			info := common.ShellScriptInfo{
-				Build: &common.Build{
-					JobResponse: common.JobResponse{
-						Variables: common.JobVariables{
-							{Key: testVar1, Value: "test", File: true},
-							{Key: testVar2, Value: "test", File: false},
-							{Key: testVar3, Value: "test", File: true},
-							{Key: testVar4, Value: "test", File: false},
+	for executorName, testCases := range tests {
+		t.Run("executor:"+executorName, func(t *testing.T) {
+			for name, test := range testCases {
+				t.Run(name, func(t *testing.T) {
+					info := common.ShellScriptInfo{
+						Build: &common.Build{
+							JobResponse: common.JobResponse{
+								Variables: common.JobVariables{
+									{Key: testVar1, Value: "test", File: true},
+									{Key: testVar2, Value: "test", File: false},
+									{Key: testVar3, Value: "test", File: true},
+									{Key: testVar4, Value: "test", File: false},
+								},
+							},
+							Runner: &common.RunnerConfig{
+								RunnerSettings: common.RunnerSettings{
+									CleanGitConfig: test.cleanGitConfig,
+									Executor:       executorName,
+									Environment:    []string{"GIT_STRATEGY=" + test.gitStrategy},
+								},
+							},
 						},
-					},
-					Runner: &common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							CleanGitConfig: test.cleanGitConfig,
-						},
-					},
-				},
+					}
+
+					mockShellWriter := NewMockShellWriter(t)
+
+					mockShellWriter.On("TmpFile", "masking.db").Return("masking.db").Once()
+					mockShellWriter.On("RmFile", "masking.db").Once()
+
+					mockShellWriter.On("TmpFile", testVar1).Return(testPath1).Once()
+					mockShellWriter.On("RmFile", testPath1).Once()
+					mockShellWriter.On("TmpFile", testVar3).Return(testPath3).Once()
+					mockShellWriter.On("RmFile", testPath3).Once()
+
+					mockShellWriter.On("TmpFile", "gitlab_runner_env").Return("temp_env").Once()
+					mockShellWriter.On("RmFile", "temp_env").Once()
+
+					expectFileCleanup(mockShellWriter, ".git", false)
+
+					if test.shouldCleanGitConfig {
+						expectGitConfigCleanup(mockShellWriter, "", false)
+					}
+
+					shell := new(AbstractShell)
+
+					err := shell.writeCleanupScript(context.Background(), mockShellWriter, info)
+					assert.NoError(t, err)
+				})
 			}
-
-			mockShellWriter := NewMockShellWriter(t)
-
-			mockShellWriter.On("TmpFile", "masking.db").Return("masking.db").Once()
-			mockShellWriter.On("RmFile", "masking.db").Once()
-
-			mockShellWriter.On("TmpFile", testVar1).Return(testPath1).Once()
-			mockShellWriter.On("RmFile", testPath1).Once()
-			mockShellWriter.On("TmpFile", testVar3).Return(testPath3).Once()
-			mockShellWriter.On("RmFile", testPath3).Once()
-
-			mockShellWriter.On("TmpFile", "gitlab_runner_env").Return("temp_env").Once()
-			mockShellWriter.On("RmFile", "temp_env").Once()
-
-			expectFileCleanup(mockShellWriter, ".git", false)
-
-			if test.shouldCleanGitConfig {
-				expectGitConfigCleanup(mockShellWriter, "", false)
-			}
-
-			shell := new(AbstractShell)
-
-			err := shell.writeCleanupScript(context.Background(), mockShellWriter, info)
-			assert.NoError(t, err)
 		})
 	}
 }

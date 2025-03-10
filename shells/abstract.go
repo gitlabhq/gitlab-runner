@@ -741,9 +741,15 @@ func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
 // - the main git config & hooks
 // - the template git config & hooks
 // - any submodule's git config & hooks
+// It's by default disabled for the shell executor or when the git strategy is "none", and enabled otherwise; explicit
+// configuration however always has precedence.
 func (b *AbstractShell) writeGitCleanupAllConfigs(sw ShellWriter, build *common.Build, cleanForSubmodules bool) {
-	if c := build.Runner.CleanGitConfig; c != nil && !*c {
-		// skip, if explicitly set to false
+	executor := build.Runner.Executor
+	shouldCleanUp := (executor != "shell" && executor != "shell-integration-test" && build.GetGitStrategy() != common.GitNone)
+	if config := build.Runner.CleanGitConfig; config != nil {
+		shouldCleanUp = *config
+	}
+	if !shouldCleanUp {
 		return
 	}
 

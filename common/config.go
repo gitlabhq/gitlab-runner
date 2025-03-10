@@ -1190,7 +1190,7 @@ type RunnerSettings struct {
 	DebugTraceDisabled bool `toml:"debug_trace_disabled,omitempty" json:"debug_trace_disabled" long:"debug-trace-disabled" env:"RUNNER_DEBUG_TRACE_DISABLED" description:"When set to true Runner will disable the possibility of using the CI_DEBUG_TRACE feature"`
 
 	SafeDirectoryCheckout *bool `toml:"safe_directory_checkout,omitempty" json:"safe_directory_checkout,omitempty" long:"safe-directory-checkout" env:"RUNNER_SAFE_DIRECTORY_CHECKOUT" description:"When set to true, Git global configuration will get a safe.directory directive pointing the job's working directory'"`
-	CleanGitConfig        *bool `toml:"clean_git_config,omitempty" json:"clean_git_config,omitempty" long:"clean-git-config" env:"RUNNER_CLEAN_GIT_CONFIG" description:"Clean git configuration. Defaults to true"`
+	CleanGitConfig        *bool `toml:"clean_git_config,omitempty" json:"clean_git_config,omitempty" long:"clean-git-config" env:"RUNNER_CLEAN_GIT_CONFIG" description:"Clean git configuration before and after the build. Defaults to true, except the shell executor is used or the git strategy is \"none\""`
 
 	Shell          string           `toml:"shell,omitempty" json:"shell" long:"shell" env:"RUNNER_SHELL" description:"Select bash, sh, cmd, pwsh or powershell" jsonschema:"enum=bash,enum=sh,enum=cmd,enum=pwsh,enum=powershell,enum="`
 	CustomBuildDir CustomBuildDir   `toml:"custom_build_dir,omitempty" json:"custom_build_dir,omitempty" group:"custom build dir configuration" namespace:"custom_build_dir"`
