@@ -42,7 +42,7 @@ USAGE:
    gitlab-runner [global options] command [command options] [arguments...]
 
 VERSION:
-   16.5.0 (853330f9)
+   17.9.1 (bbf75488)
 
 (...)
 ```
@@ -235,7 +235,7 @@ To build a `gitlab-runner` Docker image for the latest Alpine version:
 
    ```shell
    GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner \
-   GITLAB_RUNNER_IMAGE_TAG=alpine-v17.5.0 \
+   GITLAB_RUNNER_IMAGE_TAG=alpine-v17.9.1 \
    docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG \
      --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE \
      --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG \
@@ -246,7 +246,7 @@ To build a `gitlab-runner` Docker image for the latest Alpine version:
 
    ```shell
    GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner-helper \
-   GITLAB_RUNNER_IMAGE_TAG=x86_64-v17.5.0 \
+   GITLAB_RUNNER_IMAGE_TAG=x86_64-v17.9.1 \
    docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG \
      --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE \
      --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG \
