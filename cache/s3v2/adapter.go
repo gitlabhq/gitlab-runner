@@ -128,10 +128,6 @@ func (a *s3Adapter) GetGoCloudURL(ctx context.Context, upload bool) (cache.GoClo
 	return goCloudURL, nil
 }
 
-func (a *s3Adapter) GetUploadEnv(ctx context.Context) (map[string]string, error) {
-	return nil, nil
-}
-
 func (a *s3Adapter) presignURL(ctx context.Context, method string) (cache.PresignedURL, error) {
 	if a.config.BucketName == "" {
 		return cache.PresignedURL{}, fmt.Errorf("config BucketName cannot be empty")

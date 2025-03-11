@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	hook "gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
 type cacheOperationTest struct {
@@ -293,105 +292,6 @@ func TestGenerateObjectName(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.EqualError(t, err, test.expectedError)
-			}
-		})
-	}
-}
-
-func TestCacheUploadEnv(t *testing.T) {
-	tests := map[string]struct {
-		key                   string
-		cacheConfig           *common.CacheConfig
-		createCacheAdapter    bool
-		createCacheAdapterErr error
-		getUploadEnvResult    interface{}
-		expectedEnvs          map[string]string
-		expectedLogEntry      string
-	}{
-		"full map": {
-			key:                "key",
-			cacheConfig:        &common.CacheConfig{Type: "test"},
-			createCacheAdapter: true,
-			getUploadEnvResult: map[string]string{"TEST1": "123", "TEST2": "456"},
-			expectedEnvs:       map[string]string{"TEST1": "123", "TEST2": "456"},
-		},
-		"nil": {
-			key:                "key",
-			cacheConfig:        &common.CacheConfig{},
-			createCacheAdapter: false,
-			getUploadEnvResult: nil,
-			expectedEnvs:       nil,
-		},
-		"no cache config": {
-			key:                "key",
-			cacheConfig:        nil,
-			createCacheAdapter: true,
-			getUploadEnvResult: nil,
-			expectedEnvs:       nil,
-		},
-		"no key": {
-			key:                "",
-			cacheConfig:        &common.CacheConfig{Type: "test"},
-			createCacheAdapter: true,
-			getUploadEnvResult: nil,
-			expectedEnvs:       nil,
-		},
-		"adapter not exists": {
-			cacheConfig:        &common.CacheConfig{Type: "doesnt-exist"},
-			createCacheAdapter: false,
-			getUploadEnvResult: nil,
-			expectedEnvs:       nil,
-		},
-		"adapter creation error": {
-			cacheConfig:           &common.CacheConfig{Type: "test"},
-			createCacheAdapter:    true,
-			createCacheAdapterErr: errors.New("test error"),
-			getUploadEnvResult:    nil,
-			expectedEnvs:          nil,
-			expectedLogEntry:      `Could not create cache adapter" error="test error`,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			cacheAdapter := new(MockAdapter)
-			defer cacheAdapter.AssertExpectations(t)
-
-			logs, cleanUpHooks := hook.NewHook()
-			defer cleanUpHooks()
-
-			build := &common.Build{
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Cache: tc.cacheConfig,
-					},
-				},
-			}
-
-			oldCreateAdapter := createAdapter
-			createAdapter = func(_ *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
-				if tc.createCacheAdapter {
-					return cacheAdapter, tc.createCacheAdapterErr
-				}
-
-				return nil, nil
-			}
-			defer func() {
-				createAdapter = oldCreateAdapter
-			}()
-
-			if tc.cacheConfig != nil && tc.createCacheAdapter {
-				cacheAdapter.On("GetUploadEnv", mock.Anything).Return(tc.getUploadEnvResult, nil)
-			}
-
-			envs, err := GetCacheUploadEnv(context.Background(), build, "key")
-			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedEnvs, envs)
-
-			if tc.expectedLogEntry != "" {
-				lastLogMsg, err := logs.LastEntry().String()
-				require.NoError(t, err)
-				assert.Contains(t, lastLogMsg, tc.expectedLogEntry)
 			}
 		})
 	}

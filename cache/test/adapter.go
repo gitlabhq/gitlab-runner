@@ -37,23 +37,19 @@ func (t *testAdapter) GetGoCloudURL(ctx context.Context, _ bool) (cache.GoCloudU
 	if t.useGoCloud {
 		u, _ := url.Parse(fmt.Sprintf("gocloud://test/%s", t.objectName))
 		goCloudURL.URL = u
+		goCloudURL.Environment = t.getUploadEnv(ctx)
 
-		env, err := t.GetUploadEnv(ctx)
-		if err != nil {
-			return goCloudURL, err
-		}
-		goCloudURL.Environment = env
 		return goCloudURL, nil
 	}
 
 	return goCloudURL, nil
 }
 
-func (t *testAdapter) GetUploadEnv(_ context.Context) (map[string]string, error) {
+func (t *testAdapter) getUploadEnv(_ context.Context) map[string]string {
 	return map[string]string{
 		"FIRST_VAR":  "123",
 		"SECOND_VAR": "456",
-	}, nil
+	}
 }
 
 func (t *testAdapter) getURL(operation string) *url.URL {

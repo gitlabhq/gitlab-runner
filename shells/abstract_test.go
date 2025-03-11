@@ -333,6 +333,7 @@ func getJobResponseWithCachePaths() common.JobResponse {
 
 func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 	gitlabURL := "https://example.com:3443"
+	cacheEnvFile := "/some/path/to/runner-cache-env"
 
 	shell := AbstractShell{}
 
@@ -342,7 +343,6 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 		"pre-signed URL cache": {
 			cacheType: "test",
 		},
-
 		"GoCloud cache": {
 			cacheType: "goCloudTest",
 		},
@@ -411,12 +411,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--header", "Header-1: a value",
 				).Once()
 			} else {
-				mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-					return v.Key == "FIRST_VAR" && v.Value == "123"
-				})).Once()
-				mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-					return v.Key == "SECOND_VAR" && v.Value == "456"
-				})).Once()
+				mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Times(3)
 				mockWriter.On(
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
@@ -424,6 +419,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--path", "vendor/",
 					"--untracked",
 					"--gocloud-url", mock.Anything,
+					"--env-file", cacheEnvFile,
 				).Once()
 				mockWriter.On(
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
@@ -432,6 +428,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--path", "some/path1",
 					"--path", "other/path2",
 					"--gocloud-url", mock.Anything,
+					"--env-file", cacheEnvFile,
 				).Once()
 				mockWriter.On(
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
@@ -439,6 +436,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "when-always",
 					"--gocloud-url", mock.Anything,
+					"--env-file", cacheEnvFile,
 				).Once()
 			}
 			mockWriter.On("Noticef", "Created cache").Times(3)
@@ -448,6 +446,10 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 			mockWriter.On("Else").Times(3)
 			mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(3)
 			mockWriter.On("EndIf").Times(3)
+
+			if tt.cacheType != "test" {
+				mockWriter.On("RmFile", cacheEnvFile).Times(3)
+			}
 			mockWriter.On("Variable", mock.Anything)
 
 			err := shell.writeScript(context.Background(), mockWriter, common.BuildStageArchiveOnSuccessCache, info)
@@ -458,6 +460,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 
 func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 	gitlabURL := "https://example.com:3443"
+	cacheEnvFile := "/some/path/to/runner-cache-env"
 
 	shell := AbstractShell{}
 
@@ -467,7 +470,6 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 		"pre-signed URL cache": {
 			cacheType: "test",
 		},
-
 		"GoCloud cache": {
 			cacheType: "goCloudTest",
 		},
@@ -527,12 +529,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--header", "Header-1: a value",
 				).Once()
 			} else {
-				mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-					return v.Key == "FIRST_VAR" && v.Value == "123"
-				})).Once()
-				mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-					return v.Key == "SECOND_VAR" && v.Value == "456"
-				})).Once()
+				mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Times(2)
 				mockWriter.On(
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
@@ -540,6 +537,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--path", "when-on-failure",
 					"--untracked",
 					"--gocloud-url", mock.Anything,
+					"--env-file", cacheEnvFile,
 				).Once()
 				mockWriter.On(
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
@@ -547,6 +545,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "when-always",
 					"--gocloud-url", mock.Anything,
+					"--env-file", cacheEnvFile,
 				).Once()
 			}
 			mockWriter.On("Noticef", "Created cache").Times(2)
@@ -556,6 +555,11 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 			mockWriter.On("Else").Times(2)
 			mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(2)
 			mockWriter.On("EndIf").Times(2)
+
+			if tt.cacheType != "test" {
+				mockWriter.On("RmFile", cacheEnvFile).Times(2)
+			}
+
 			mockWriter.On("Variable", mock.Anything)
 
 			err := shell.writeScript(context.Background(), mockWriter, common.BuildStageArchiveOnFailureCache, info)
@@ -1007,6 +1011,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 
 func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 	testCacheKey := "test-cache-key"
+	cacheEnvFile := "/some/path/to/runner-cache-env"
 
 	tests := map[string]struct {
 		cacheType                string
@@ -1095,6 +1100,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 					fmt.Sprintf("test://download/project/1000/%s", testCacheKey),
 				).Once()
 			} else {
+				mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Once()
 				mockWriter.On(
 					"IfCmdWithOutput",
 					"runner-command",
@@ -1105,18 +1111,17 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 					"10",
 					"--gocloud-url",
 					fmt.Sprintf("gocloud://test/project/1000/%s", testCacheKey),
+					"--env-file", cacheEnvFile,
 				).Once()
-
-				mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-					return v.Key == "FIRST_VAR" && v.Value == "123"
-				})).Once()
-				mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-					return v.Key == "SECOND_VAR" && v.Value == "456"
-				})).Once()
 			}
 			mockWriter.On("Noticef", "Successfully extracted cache").Once()
 			mockWriter.On("Else").Once()
 			mockWriter.On("Warningf", "Failed to extract cache").Once()
+
+			if tc.cacheType != "test" {
+				mockWriter.On("RmFile", cacheEnvFile).Once()
+			}
+
 			if tc.cacheFallbackKeyVarValue == tc.expectedCacheKey {
 				mockWriter.On("Noticef", "Checking cache for %s...", tc.expectedCacheKey).Once()
 
@@ -1133,6 +1138,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 						fmt.Sprintf("test://download/project/1000/%s", tc.expectedCacheKey),
 					).Once()
 				} else {
+					mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Once()
 					mockWriter.On(
 						"IfCmdWithOutput",
 						"runner-command",
@@ -1143,19 +1149,18 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 						"10",
 						"--gocloud-url",
 						fmt.Sprintf("gocloud://test/project/1000/%s", tc.expectedCacheKey),
+						"--env-file", cacheEnvFile,
 					).Once()
-					mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-						return v.Key == "FIRST_VAR" && v.Value == "123"
-					})).Once()
-					mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-						return v.Key == "SECOND_VAR" && v.Value == "456"
-					})).Once()
 				}
 
 				mockWriter.On("Noticef", "Successfully extracted cache").Once()
 				mockWriter.On("Else").Once()
 				mockWriter.On("Warningf", "Failed to extract cache").Once()
 				mockWriter.On("EndIf").Once()
+
+				if tc.cacheType != "test" {
+					mockWriter.On("RmFile", cacheEnvFile).Once()
+				}
 			}
 			mockWriter.On("EndIf").Once()
 			mockWriter.On("Else").Once()

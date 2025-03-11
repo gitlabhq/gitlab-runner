@@ -1,6 +1,9 @@
 package helpers
 
 import (
+	"fmt"
+	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -117,6 +120,47 @@ func PosixShellEscape(input string) string {
 
 	if escape {
 		return `"` + sb.String() + `"`
+	}
+
+	return sb.String()
+}
+
+// isValidDotEnvKey checks if a key is valid for a .env file
+// (alphanumeric or underscores, starting with a letter or underscore).
+func isValidDotEnvKey(key string) bool {
+	validKeyPattern := `^[A-Za-z_][A-Za-z0-9_]*$`
+	matched, _ := regexp.MatchString(validKeyPattern, key)
+	return matched
+}
+
+// The gotdotenv parser unescapes newlines and other characters:
+// https://github.com/joho/godotenv/blob/3a7a19020151b45a29896c9142723efe5b11a061/parser.go#L193-L206
+// Note that \t is not on the list.
+var escapeDotEnvValue = strings.NewReplacer(
+	"\\", "\\\\", // Escape backslashes
+	"\"", "\\\"", // Escape double quotes
+	"\n", "\\n", // Escape newlines
+	"\r", "\\r", // Escape carriage returns
+).Replace
+
+func DotEnvEscape(variables map[string]string) string {
+	var sb strings.Builder
+
+	// Sort variables to get deterministic output
+	keys := make([]string, 0, len(variables))
+	for key := range variables {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		if !isValidDotEnvKey(key) {
+			// Skip invalid keys
+			continue
+		}
+
+		value := variables[key]
+		sb.WriteString(fmt.Sprintf("%s=\"%s\"\n", key, escapeDotEnvValue(value)))
 	}
 
 	return sb.String()
