@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -807,7 +808,8 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	if depth > 0 {
 		updateArgs = append(updateArgs, "--depth", strconv.Itoa(depth))
 	}
-	updateArgs = append(updateArgs, build.GetGitSubmoduleUpdateFlags()...)
+	submoduleUpdateFlags := build.GetGitSubmoduleUpdateFlags()
+	updateArgs = append(updateArgs, submoduleUpdateFlags...)
 	updateArgs = append(updateArgs, pathArgs...)
 
 	// Clean changed files in submodules
@@ -826,6 +828,27 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Else()
 	// call sync and update again if the initial update fails
 	w.Warningf("Updating submodules failed. Retrying...")
+
+	hasSubmoduleRemoteFlag := slices.ContainsFunc(submoduleUpdateFlags, func(s string) bool {
+		return strings.EqualFold(s, "--remote")
+	})
+	if hasSubmoduleRemoteFlag {
+		// We've observed issues like
+		//	fatal: Unable to find refs/remotes/origin/dev revision in submodule path 'subs-1'
+		// when updating submodule with `--remote` and `branch` was set in `.gitmodules` (which is not the default branch). To
+		// work around that, we explicitly pull in the remote heads.
+		// We only do this as a fallback / on retry *and* when the `--remote` update flag is used, so that we don't
+		// unnecessarily pull in a ton of remote heads.
+		// This renders a command similar to:
+		//	git \
+		//		-c url.https://test.local.insteadOf=ssh://git@test.local \
+		//		-c include.path=blipp/blarp/blarz.conf \
+		//		submodule foreach 'git fetch origin +refs/heads/*:refs/remotes/origin/*'
+		w.Command("git", slices.Concat(
+			gitURLArgs, foreachArgs, []string{"git fetch origin +refs/heads/*:refs/remotes/origin/*"},
+		)...)
+	}
+
 	w.Command("git", syncArgs...)
 	w.Command("git", updateArgs...)
 	w.Command("git", append(foreachArgs, "git reset --hard")...)

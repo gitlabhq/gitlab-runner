@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -2104,14 +2106,16 @@ func TestBuildWithCustomClonePath(t *testing.T) {
 	}
 }
 
+const (
+	// a repo with a mixed bag of submodules: relative, private, public
+	repoURLWithSubmodules = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-test"
+	repoShaWithSubmodules = "0a1093ff08de939dbd1625689d86deef18126a74"
+)
+
 func TestCredSetup(t *testing.T) {
 	const (
 		markerForBuild  = "#build# "
 		markerForHelper = "#helper# "
-
-		// a repo with a mixed bag of submodules: relative, private, public
-		repoURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-test"
-		repoSha = "0a1093ff08de939dbd1625689d86deef18126a74"
 	)
 
 	listGitConfig := func(t *testing.T, shell, prefix string) string {
@@ -2175,19 +2179,10 @@ func TestCredSetup(t *testing.T) {
 		},
 	}
 
-	token := getTokenFromEnv(t)
-	repoURLWithToken := func() *url.URL {
-		u, err := url.Parse(repoURL)
-		require.NoError(t, err, "parsing repo URL")
-		u.User = url.UserPassword("gitlab-ci-token", token)
-		return u
-	}()
-	gitInfoWithToken := common.GitInfo{
-		RepoURL: repoURLWithToken.String(),
-		Sha:     repoSha,
-	}
 	setupCachingCredHelper(t)
-	setInvalidGitCreds(t, repoURLWithToken)
+	orgURL, err := url.Parse(repoURLWithSubmodules)
+	require.NoError(t, err, "parsing original repo url")
+	setInvalidGitCreds(t, orgURL)
 
 	for _, test := range tests {
 		name := fmt.Sprintf("gitUrlsWithoutTokens:%t", test.gitUrlsWithoutTokens)
@@ -2204,17 +2199,14 @@ func TestCredSetup(t *testing.T) {
 				jobResponse, err := common.GetRemoteBuildResponse(listGitConfig(t, shell, markerForBuild))
 				require.NoError(t, err)
 
+				jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
+				jobResponse.GitInfo.Sha = repoShaWithSubmodules
+				token, repoURLWithToken := injectJobToken(t, &jobResponse)
+
 				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
 					Name:   common.HookPostGetSourcesScript,
 					Script: common.StepScript{listGitConfig(t, shell, markerForHelper)},
 				})
-
-				// inject token
-				jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
-					Key: "CI_JOB_TOKEN", Value: token, Masked: true,
-				})
-				jobResponse.Token = token
-				jobResponse.GitInfo = gitInfoWithToken
 
 				jobResponse.Variables = append(jobResponse.Variables,
 					common.JobVariable{Key: "GIT_TRACE", Value: "1"},
@@ -2247,6 +2239,132 @@ func TestCredSetup(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestSubmoduleAutoBump(t *testing.T) {
+	const (
+		// See: https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-branches/-/commit/b557eadceba20d40c6e10b274a1437e88051a4fd
+		repoURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-branches"
+		repoSha = "b557eadceba20d40c6e10b274a1437e88051a4fd"
+	)
+
+	// We'll just check out a couple of submodules and expect them to be checked out at specific revisions.
+	expectedSubmoduleShas := map[string]string{
+		// tip of `main`
+		"private-repo-relative-main-branch-behind": "c17b10c540ab191766605db226af3d4e02f7c244",
+		// tip of `non-default-branch`
+		"private-repo-relative-non-default-branch-behind": "86ada27b869b34132b7e9d4f1e0bc732b6e223d3",
+	}
+
+	if test.CommandVersionIsAtLeast(t, "2.40.0", "git", "version") {
+		// Older git versions default to not pick up the remote's default branch, but default to `origin/master`.
+		// For these versions this just won't work, without explicitly setting the branch in `.gitmodules`.
+		// Unfortunately, on the hosted windows runners we currently have git v2.23.0.windows1, so we need to skip this case
+		// until we run a version we know supports that.
+		//
+		// Tested versions (did not bisect all versions, just some):
+		// - ⚠ defaults to `origin/master`
+		//   - git v2.23.0.windows1
+		// - ✔ uses remote's default branch
+		//   - v2.40.0.windows.1
+		//   - v2.43.0.windows.1
+		//   - v2.48.1.windows.1
+		//   - v2.43.0 (ubuntu)
+
+		// tip of default branch `orphaned-branch`
+		expectedSubmoduleShas["private-repo-relative-default-branch-behind"] = "76be4b4f04c27a186a706908d3e9e884ccded543"
+	}
+
+	submodules := slices.Collect(maps.Keys(expectedSubmoduleShas))
+
+	for _, gitUrlsWithoutTokens := range []bool{true, false} {
+		name := fmt.Sprintf("gitUrlsWithoutTokens:%t", gitUrlsWithoutTokens)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				t.Parallel()
+
+				if runtime.GOOS != shells.OSWindows && shell == shells.SNPowershell {
+					t.Skip("powershell is not supported on non-windows platforms")
+				}
+
+				jobResponse, err := common.GetRemoteSuccessfulBuild()
+				require.NoError(t, err)
+
+				jobResponse.GitInfo.RepoURL = repoURL
+				jobResponse.GitInfo.Sha = repoSha
+				injectJobToken(t, &jobResponse)
+
+				jobResponse.Variables = append(jobResponse.Variables,
+					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+					common.JobVariable{Key: "GIT_SUBMODULE_UPDATE_FLAGS", Value: "--remote"},
+					common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " ")},
+					common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+					common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
+				)
+				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
+					Name:   "pre_get_sources_script",
+					Script: common.StepScript{"git version"},
+				})
+
+				build := newBuild(t, jobResponse, shell)
+
+				build.Runner.RunnerCredentials.URL = "https://gitlab.com/"
+
+				buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, gitUrlsWithoutTokens)
+
+				_, err = buildtest.RunBuildReturningOutput(t, build)
+				assert.NoError(t, err)
+
+				for submodule, expectedSha := range expectedSubmoduleShas {
+					submoduleDir := filepath.Join(build.BuildDir, submodule)
+					cmd := exec.Command("git", "rev-parse", "HEAD")
+					cmd.Dir = submoduleDir
+
+					actualSha, err := cmd.CombinedOutput()
+					assert.NoError(t, err, "getting HEAD of %s", submodule)
+
+					// this is not important for the test, but just to give more context in the error message and help with
+					// debugging
+					readmeName := "README.md"
+					readmeContent, err := os.ReadFile(filepath.Join(submoduleDir, readmeName))
+					if err != nil {
+						readmeContent = []byte("ReadError: " + err.Error())
+					}
+
+					assert.Equal(t,
+						expectedSha, string(bytes.Trim(actualSha, "\n\r")),
+						"wrong rev for HEAD of %q\n----[ %s content ]----\n%s\n----", submodule, readmeName, readmeContent,
+					)
+				}
+			})
+		})
+	}
+}
+
+// injectJobToken injects a job token into an existing jobResponse by
+// - setting the jobResponse's token
+// - updating the jobResponse's gitInfo with an URL with the token
+// - injecting a CI_JOB_TOKEN jobVariable
+// It returns the token and the new gitInfo that were injected.
+func injectJobToken(t *testing.T, jobResponse *common.JobResponse) (string, *url.URL) {
+	token := getTokenFromEnv(t)
+
+	repoURLWithToken := func(orgRepoURL, token string) *url.URL {
+		u, err := url.Parse(orgRepoURL)
+		require.NoError(t, err, "parsing original repo URL")
+		u.User = url.UserPassword("gitlab-ci-token", token)
+		return u
+	}(jobResponse.GitInfo.RepoURL, token)
+
+	jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
+		Key: "CI_JOB_TOKEN", Value: token, Masked: true,
+	})
+	jobResponse.Token = token
+	jobResponse.GitInfo.RepoURL = repoURLWithToken.String()
+
+	return token, repoURLWithToken
 }
 
 // setupCachingCredHelper sets up a (global) caching git credential helper
