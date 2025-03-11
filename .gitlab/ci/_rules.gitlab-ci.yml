@@ -254,3 +254,16 @@
     when: never
   - <<: *if-merge-request-pipeline
     when: manual
+
+
+##############
+# Tags rules #
+##############
+
+.rules:kubernetes:tag:if-not-canonical:
+  rules:
+    - <<: *if-not-canonical-namespace
+      variables:
+        # !reference doesn't work in variables
+        KUBERNETES_RUNNER_TAG: gitlab-org
+    - when: always

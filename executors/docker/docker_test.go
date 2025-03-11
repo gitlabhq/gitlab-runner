@@ -1963,7 +1963,7 @@ func TestCheckOSType(t *testing.T) {
 
 func TestHelperImageRegistry(t *testing.T) {
 	tests := map[string]struct {
-		build *common.Build
+		config *common.DockerConfig
 		// We only validate the name because we only care if the right image is
 		// used. We don't want to end up having this test as a "spellcheck" to
 		// make sure tags and commands are generated correctly since that is
@@ -1972,34 +1972,12 @@ func TestHelperImageRegistry(t *testing.T) {
 		expectedHelperImageName string
 	}{
 		"Default helper image": {
-			build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
-						Name: "test",
-					},
-				},
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Docker: &common.DockerConfig{},
-					},
-				},
-			},
+			config:                  &common.DockerConfig{},
 			expectedHelperImageName: helperimage.GitLabRegistryName,
 		},
 		"helper image overridden still use default helper image in prepare": {
-			build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
-						Name: "test",
-					},
-				},
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Docker: &common.DockerConfig{
-							HelperImage: "private.registry.com/helper",
-						},
-					},
-				},
+			config: &common.DockerConfig{
+				HelperImage: "private.registry.com/helper",
 			},
 			// We expect the default image to still be chosen since the check of
 			// the override happens at a later stage.
@@ -2018,20 +1996,16 @@ func TestHelperImageRegistry(t *testing.T) {
 				},
 			}
 
-			prepareOptions := common.ExecutorPrepareOptions{
-				Config: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Docker: tt.build.Runner.Docker,
-					},
-				},
-				Build:   tt.build,
-				Context: context.Background(),
+			e.Build = &common.Build{}
+			e.info = system.Info{
+				OSType: "linux",
 			}
+			e.Config.Docker = tt.config
 
-			err := e.Prepare(prepareOptions)
+			helperImageInfo, err := e.prepareHelperImage()
 			require.NoError(t, err)
 
-			assert.Equal(t, tt.expectedHelperImageName, e.helperImageInfo.Name)
+			assert.Equal(t, tt.expectedHelperImageName, helperImageInfo.Name)
 		})
 	}
 }

@@ -15,10 +15,25 @@ gemnasium-dependency_scanning:
 gitlab-advanced-sast:
   rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
 
+.kubernetes runner:
+  interruptible: true
+  timeout: 30m
+  tags:
+    - $KUBERNETES_RUNNER_TAG
+
+.unit tests kubernetes limits:
+  variables:
+    # The default limits are defined in https://gitlab.com/gitlab-org/ci-cd/runner-tools/runner-kubernetes-infra
+    # The helper container CPU limit/request is 1, with the build container 3 CPU requests and 4 limit
+    # the scheduler should allocate 4 CPUs for this pod
+    KUBERNETES_CPU_REQUEST: "3"
+    KUBERNETES_CPU_LIMIT: "4"
+    KUBERNETES_MEMORY_REQUEST: "4Gi"
+    KUBERNETES_MEMORY_LIMIT: "4Gi"
+
 .linux test:
   extends:
   - .rules:merge_request_pipelines:no_docs
-  - .docker
   - .go-cache
   stage: test
   artifacts:
@@ -29,49 +44,26 @@ gitlab-advanced-sast:
     reports:
       junit: .splitic/junit_*.xml
 
-compile tests:
-  extends:
-    - .linux test
-  needs:
-    - "clone test repo"
-    - "prepare done"
-  script:
-    - make splitic
-    - make test-compile
-
 unit test:
   extends:
   - .linux test
+  - .kubernetes runner
+  - .unit tests kubernetes limits
   needs:
   - 'clone test repo'
   - 'prepare done'
   script:
   - make splitic
   - >
-    splitic test \
-      -junit-report .splitic/junit_${CI_NODE_INDEX}.xml \
-      -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
-      -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
-      ./... \
+    splitic test -race \
+      -junit-report .splitic/junit_report.xml \
+      -cover-report .splitic/cover_0.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
+      -tags !integration -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env ./... \
       -- -ldflags "$(make print_test_ldflags)"
-  parallel: 2
 
-unit test with race:
+.linux integration test:
   extends:
-  - unit test
-  - .go-cache
-  variables:
-    CGO_ENABLED: "1"
-  script:
-  - make splitic
-  - >
-    splitic test \
-      -race \
-      -junit-report .splitic/junit_${CI_NODE_INDEX}.xml \
-      -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
-      -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
-      ./... \
-      -- -ldflags "$(make print_test_ldflags)" -timeout=90m
+  - .docker
 
 .with outer token:
   variables:
@@ -80,6 +72,7 @@ unit test with race:
 integration test:
   extends:
   - .linux test
+  - .linux integration test
   - .with outer token
   needs:
   - 'clone test repo'
