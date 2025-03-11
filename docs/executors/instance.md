@@ -39,8 +39,8 @@ To prepare the environment for autoscaling:
 
     {{< alert type="note" >}}
 
-    You must install the GitLab Runner binary on the virtual machine, and keep the
-    runner executable in the default path to process job artifacts and cache.
+    To process job artifacts and cache, install the GitLab Runner binary on the virtual machine and keep the
+    runner executable in the default path.
     You do not have to configure or start the GitLab Runner service itself on the
     virtual machine.
 
@@ -70,7 +70,7 @@ With fleeting and taskscaler:
   The runner manager requests new CI/CD jobs regardless of whether idle instances are available to run those jobs.
   The number of jobs is based on `max_instances` and `capacity_per_instance`.
   In this mode, start times for CI/CD jobs are slower.
-  You might also not be able to provision new instances and so CI/CD jobs might not run.
+  You might be unable to provision new instances and so CI/CD jobs might not run.
 
 ## AWS autoscaling group configuration examples
 
@@ -151,12 +151,11 @@ This configuration supports:
 - An idle time of 20 minutes.
 - A maximum instance count of `10`.
 
-When the capacity per instance is set to `5` and the use count is unlimited, each instance concurrently
-executes 5 jobs for the lifetime of the instance.
+When you set the capacity per instance to `5` with unlimited use count, each instance concurrently
+executes five jobs throughout the instance lifetime.
 
-When the idle scale is `5`, 1 idle instance is created to accommodate an idle capacity of 5
-(due to the capacity for each instance) whenever the in-use capacity is lower than 5. Idle
-instances remain for at least 20 minutes.
+When the idle scale is `5` and idle capacity of instance is `5`, one idle instance is created
+whenever the in-use capacity falls below five. Idle instances remain for at least 20 minutes.
 
 Jobs executed in these environments should be **trusted** as there is little isolation between
 them and each job can affect the performance of another.
@@ -226,8 +225,8 @@ for Apple silicon instances with [nesting](https://gitlab.com/gitlab-org/fleetin
 When the capacity for each instance is `2` and the use count is unlimited, each instance concurrently
 executes 2 jobs for the lifetime of the instance.
 
-When the idle scale is `2`, 1 idle instance is created to accommodate an idle capacity of 2
-(due to the capacity per instance) whenever the in use capacity is lower than 2. Idle instances remain for at
+When the idle scale is `2`, one idle instance is created whenever the in-use capacity falls below `2`.
+Idle instances remain for at
 least 24 hours. This time frame is due to the 24 hour minimal allocation period of AWS MacOS instance hosts.
 
 Jobs executed in this environment do not need to be trusted because
@@ -370,9 +369,8 @@ executes 5 jobs for the lifetime of the instance.
 Jobs executed in these environments should be **trusted** as there is little isolation between them and each job
 can affect the performance of another.
 
-When the idle scale is set to `5`, 1 idle instance is created to accommodate an idle capacity of 5
-(due to the capacity per instance) whenever the in-use capacity is lower than 5. Idle instances
-stay for at least 20 minutes.
+When the idle scale is `5`, one idle instance is created whenever the in-use capacity falls below `5`.
+Idle instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 50 (maximum number instances * capacity per instance).
 
@@ -499,9 +497,8 @@ executes 5 jobs for the lifetime of the instance.
 Jobs executed in these environments should be **trusted** as there is little isolation between them and each job
 can affect the performance of another.
 
-When the idle scale is set to `5`, 1 idle instance is created to accommodate an idle capacity of 5
-(due to the capacity per instance) whenever the in-use capacity is lower than 5. Idle instances
-stay for at least 20 minutes.
+When the idle scale is `2`, one idle instance is created whenever the in-use capacity falls below `5`.
+Idle instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 50 (maximum number instances * capacity per instance).
 

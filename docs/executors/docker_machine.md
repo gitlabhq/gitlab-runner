@@ -20,9 +20,9 @@ title: Install and register GitLab Runner for autoscaling with Docker Machine
 
 {{< alert type="note" >}}
 
-The Docker Machine executor was deprecated in GitLab 17.5 and is scheduled to be removed in GitLab 20.0 (May 2027).
-We plan to support the Docker Machine executor until GitLab 20.0, but do not plan to add new features.
-Critical bugs that could prevent CI/CD job execution or affect running costs will still be addressed.
+The Docker Machine executor was deprecated in GitLab 17.5 and is scheduled for removal in GitLab 20.0 (May 2027).
+While we continue to support the Docker Machine executor till GitLab 20.0, we do not plan to add new features.
+We will address only critical bugs that could prevent CI/CD job execution or affect running costs.
 If you're using the Docker Machine executor on Amazon Web Services (AWS) EC2,
 Microsoft Azure Compute, or Google Compute Engine (GCE), you should migrate to the
 [GitLab Runner Autoscaler](../runner_autoscale/_index.md).
@@ -49,15 +49,14 @@ some additional patches for the following bugs:
 - [Support running AWS instances with IMDSv2](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/49)
 
 The intent of the [Docker Machine fork](https://gitlab.com/gitlab-org/ci-cd/docker-machine) is to only fix critical issues and bugs which affect running
-costs. No new features will be added.
+costs. We don't plan to add any new features.
 
 ## Preparing the environment
 
 To use the autoscale feature, Docker and GitLab Runner must be
 installed in the same machine:
 
-1. Log in to a new Linux-based machine that will serve as a bastion server
-   where Docker will spawn new machines from.
+1. Sign in to a new Linux-based machine that can function as a bastion server where Docker creates new machines.
 1. [Install GitLab Runner](../install/_index.md).
 1. Install Docker Machine from the [Docker Machine fork](https://gitlab.com/gitlab-org/ci-cd/docker-machine).
 1. Optionally but recommended, prepare a
@@ -74,19 +73,18 @@ installed in the same machine:
    `docker-machine create ...` command with your [Docker Machine Driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/tree/main/drivers).
    Run this command with the options that you intend to configure in the
    [MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section) under the `[runners.machine]` section.
-   This will set up the Docker Machine environment properly and will also be a good
-   validation of the specified options. After this, you can destroy the machine with
+   This approach sets up the Docker Machine environment properly and validates
+   the specified options. After this, you can destroy the machine with
    `docker-machine rm [machine_name]` and start the runner.
 
    {{< alert type="note" >}}
 
    Multiple concurrent requests to `docker-machine create` that are done
    **at first usage** are not good. When the `docker+machine` executor is used,
-   the runner may spin up few concurrent `docker-machine create` commands. If
-   Docker Machine was not used before in this environment, each started process
-   tries to prepare SSH keys and SSL certificates (for Docker API authentication
-   between GitLab Runner and Docker Engine on the autoscaled spawned machine), and these
-   concurrent processes are disturbing each other. This can end with a non-working
+   the runner may spin up few concurrent `docker-machine create` commands.
+   If Docker Machine is new to this environment, each process tries to create
+   SSH keys and SSL certificates for Docker API authentication. This action causes the
+   concurrent processes to interfere with each other. This can end with a non-working
    environment. That's why it's important to create a test machine manually the
    very first time you set up GitLab Runner with Docker Machine.
 
@@ -167,8 +165,8 @@ executable. For example, to download and install `v0.16.2-gitlab.33`:
 
 GPUs are [supported on every executor](../configuration/gpus.md). It is
 not necessary to use Docker Machine just for GPU support. The Docker
-Machine executor makes it easy to scale the GPU nodes up and down, but
-this can also be done with the [Kubernetes executor](../executors/kubernetes/_index.md).
+Machine executor scales the GPU nodes up and down.
+You can also use the [Kubernetes executor](../executors/kubernetes/_index.md) for this purpose.
 
 {{< /alert >}}
 
@@ -198,11 +196,11 @@ To prepare your system and test that GPUs can be created with Google Compute Eng
 1. [Set up the Google Compute Engine driver credentials](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/gce.md#credentials)
 for Docker Machine. You may need to export environment variables to the
 runner if your VM does not have a default service account. How
-this is done depends on how the runner is launched. For example:
+this is done depends on how the runner is launched. For example, by using:
 
-    - Via `systemd` or `upstart`: See the [documentation on setting custom environment variables](../configuration/init.md#setting-custom-environment-variables).
-    - Via Kubernetes with the Helm Chart: Update [the `values.yaml` entry](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/blob/5e7c5c0d6e1159647d65f04ff2cc1f45bb2d5efc/values.yaml#L431-438).
-    - Via Docker: Use the `-e` option (for example, `docker run -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json gitlab/gitlab-runner`).
+    - `systemd` or `upstart`: See the [documentation on setting custom environment variables](../configuration/init.md#setting-custom-environment-variables).
+    - Kubernetes with the Helm Chart: Update [the `values.yaml` entry](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/blob/5e7c5c0d6e1159647d65f04ff2cc1f45bb2d5efc/values.yaml#L431-438).
+    - Docker: Use the `-e` option (for example, `docker run -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json gitlab/gitlab-runner`).
 
 1. Verify that `docker-machine` can create a virtual machine with your
    desired options. For example, to create an `n1-standard-1` machine
@@ -252,7 +250,7 @@ this is done depends on how the runner is launched. For example:
 
 #### Configuring GitLab Runner
 
-1. Once you have verified these options, configure the Docker executor
+1. After you have verified these options, configure the Docker executor
 to use all available GPUs in the [`runners.docker` configuration](../configuration/advanced-configuration.md#the-runnersdocker-section).
 Then add the Docker Machine options to your [`MachineOptions` settings in the GitLab Runner `runners.machine` configuration](../configuration/advanced-configuration.md#the-runnersmachine-section). For example:
 
@@ -276,7 +274,7 @@ Then add the Docker Machine options to your [`MachineOptions` settings in the Gi
 
 When working with the Docker Machine executor, you might encounter the following issues.
 
-### ERROR: Error creating machine
+### Error: Error creating machine
 
 When installing Docker Machine, you might encounter an error that states
 `ERROR: Error creating machine: Error running provisioning: error installing docker`.
@@ -300,15 +298,15 @@ To troubleshoot this issue, you can enable debugging on Docker
 Machine by setting `MACHINE_DEBUG=true` in the environment
 where GitLab Runner is installed.
 
-### ERROR: Cannot connect to the Docker daemon
+### Error: Cannot connect to the Docker daemon
 
 The job might fail during the prepare stage with an error message:
 
 ```plaintext
-Preparing environment 
+Preparing environment
 ERROR: Job failed (system failure): prepare environment: Cannot connect to the Docker daemon at tcp://10.200.142.223:2376. Is the docker daemon running? (docker.go:650:120s). Check https://docs.gitlab.com/runner/shells/index.html#shell-profile-loading for more information
 ```
 
-This error occurs when the Docker daemon fails to start within the expected time in the VM created
+This error occurs when the Docker daemon fails to start in the expected time in the VM created
 by the Docker Machine executor. To fix this issue, increase the `wait_for_services_timeout` value in
 the [`[runners.docker]`](../configuration/advanced-configuration.md#the-runnersdocker-section) section.
