@@ -20,7 +20,7 @@ execute each GitLab CI job.
 After you complete the tasks in this document, the executor can run jobs initiated from GitLab.
 Each time a commit is made in GitLab, the GitLab instance notifies the runner that a new job is available.
 The runner then starts a new task in the target ECS cluster, based on a task definition that you
-configured in AWS ECS. You can configure an AWS ECS task definition to use any Docker image, so you have
+configured in AWS ECS. You can configure an AWS ECS task definition to use any Docker image. With this approach, you have
 complete flexibility in the type of builds that you can execute on AWS Fargate.
 
 ![GitLab Runner Fargate Driver Architecture](../img/runner_fargate_driver_ssh.png)
@@ -34,7 +34,7 @@ For example, you might want two AWS security groups:
   external IP range (for administrative access).
 - One that applies to the Fargate Tasks and that allows SSH traffic only from the EC2 instance.
 
-Additionally, for any non-public container registry your ECS Task will either [need IAM permissions (for AWS ECR only)](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html) or will require [Private registry authentication for tasks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) for non-ECR private registries.
+For any non-public container registry, your ECS task requires either [IAM permissions (for AWS ECR only)](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html) or [Private registry authentication for tasks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) for non-ECR private registries.
 
 You can use CloudFormation or Terraform to automate the provisioning and setup of your AWS infrastructure.
 
@@ -46,7 +46,8 @@ CI/CD jobs use the image defined in the ECS task, rather than the value of the `
 
 {{< alert type="warning" >}}
 
-Fargate abstracts container hosts, which limits configurability for container host properties. This affects runner workloads that require high IO to disk or network, since these properties have limited or no configurability with Fargate. Before you use GitLab Runner on Fargate, ensure runner workloads with high or extreme compute characteristics on CPU, memory, disk IO, or network IO are suitable for Fargate.
+Fargate abstracts container hosts, which limits configurability for container host properties. This affects runner workloads that require high IO to disk or network, because these properties have limited or no configurability with Fargate. Before you use GitLab Runner on Fargate, ensure runner workloads with high compute characteristics on CPU, memory, disk IO, or network IO are suitable for Fargate.
+
 {{< /alert >}}
 
 ## Prerequisites
@@ -59,13 +60,13 @@ Before you begin, you should have:
 
 ## Step 1: Prepare a container image for the AWS Fargate task
 
-Prepare a container image. You will upload this image to a registry, where it will be used
+Prepare a container image. You can upload this image to a registry, where it can be used
 to create containers when GitLab jobs run.
 
 1. Ensure the image has the tools required to build your CI job. For example, a Java project requires
    a `Java JDK` and build tools like Maven or Gradle. A Node.js project requires `node` and `npm`.
 1. Ensure the image has GitLab Runner, which handles artifacts and caching. Refer to the [Run](../../executors/custom.md#run)
-   stage section of the custom executor docs for additional information.
+   stage section of the custom executor documentation for additional information.
 1. Ensure the container image can accept an SSH connection through public-key authentication.
    The runner uses this connection to send the build commands defined in the `.gitlab-ci.yml` file to the container
    on AWS Fargate. The SSH keys are automatically managed by the Fargate driver. The container must be able
@@ -95,32 +96,32 @@ Now create an AWS EC2 instance. In the next step you will install GitLab Runner 
 1. Go to [https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard](https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard).
 1. For the instance, select the Ubuntu Server 18.04 LTS AMI.
    The name may be different depending on the AWS region you selected.
-1. For the instance type, choose t2.micro. Click **Next: Configure Instance Details**.
+1. For the instance type, choose t2.micro. Select **Next: Configure Instance Details**.
 1. Leave the default for **Number of instances**.
 1. For **Network**, select your VPC.
 1. Set **Auto-assign Public IP** to **Enable**.
-1. Under **IAM role**, click **Create new IAM role**. This role is for test purposes only and is not secure.
-   1. Click **Create role**.
-   1. Choose **AWS service** and under **Common use cases**, click **EC2**. Then click **Next: Permissions**.
-   1. Select the check box for the **AmazonECS_FullAccess** policy. Click **Next: Tags**.
-   1. Click **Next: Review**.
+1. Under **IAM role**, select **Create new IAM role**. This role is for test purposes only and is not secure.
+   1. Select **Create role**.
+   1. Choose **AWS service** and under **Common use cases**, select **EC2**. Then select **Next: Permissions**.
+   1. Select the check box for the **AmazonECS_FullAccess** policy. Select **Next: Tags**.
+   1. Select **Next: Review**.
    1. Type a name for the IAM role, for example `fargate-test-instance`,
-      and click **Create role**.
+      and select **Create role**.
 1. Go back to the browser tab where you are creating the instance.
-1. To the left of **Create new IAM role**, click the refresh button.
-   Choose the `fargate-test-instance` role. Click **Next: Add Storage**.
-1. Click **Next: Add Tags**.
-1. Click **Next: Configure Security Group**.
+1. To the left of **Create new IAM role**, select the refresh button.
+   Choose the `fargate-test-instance` role. Select **Next: Add Storage**.
+1. Select **Next: Add Tags**.
+1. Select **Next: Configure Security Group**.
 1. Select **Create a new security group**, name it `fargate-test`, and
    ensure that a rule for SSH is defined (`Type: SSH, Protocol: TCP, Port Range: 22`). You must
    specify the IP ranges for inbound and outbound rules.
-1. Click **Review and Launch**.
-1. Click **Launch**.
+1. Select **Review and Launch**.
+1. Select **Launch**.
 1. Optional. Select **Create a new key pair**, name it `fargate-runner-manager`
-   and click the **Download Key Pair** button. The private key for SSH is downloaded
+   and select **Download Key Pair**. The private key for SSH is downloaded
    on your computer (check the directory configured in your browser).
-1. Click **Launch Instances**.
-1. Click **View Instances**.
+1. Select **Launch Instances**.
+1. Select **View Instances**.
 1. Wait for the instance to be up. Note the `IPv4 Public IP` address.
 
 ## Step 4: Install and configure GitLab Runner on the EC2 instance
@@ -223,13 +224,13 @@ Now install GitLab Runner on the Ubuntu instance.
      Port = 22
    ```
 
-   - Note the value of `Cluster`, as well as the name of the `TaskDefinition`. This example shows `test-task`
+   - Note the value of `Cluster` and the name of the `TaskDefinition`. This example shows `test-task`
      with `:1` as the revision number. If a revision number is not specified, the latest **active** revision is used.
    - Choose your region. Take the `Subnet` value from the runner manager instance.
    - To find the security group ID:
 
      1. In AWS, in the list of instances, select the EC2 instance you created. The details are displayed.
-     1. Under **Security groups**, click the name of the group you created.
+     1. Under **Security groups**, select the name of the group you created.
      1. Copy the **Security group ID**.
 
      In a production setting,
@@ -238,7 +239,7 @@ Now install GitLab Runner on the Ubuntu instance.
 
    - If `EnablePublicIP` is set to true, the public IP of the task container is gathered to perform the SSH connection.
    - If `EnablePublicIP` is set to false:
-     - The Fargate driver uses the task container's private IP. To set up a connection when set to `false`, the VPC's Security Group must
+     - The Fargate driver uses the task container's private IP. To set up a connection when set to `false`, the VPC Security Group must
      have an inbound rule for Port 22 (SSH), where the source is the VPC CIDR.
      - To fetch external dependencies, provisioned AWS Fargate containers must have access to the public internet. To provide
      public internet access for AWS Fargate containers, you can use a NAT Gateway in the VPC.
@@ -258,36 +259,36 @@ Now install GitLab Runner on the Ubuntu instance.
 An Amazon ECS cluster is a grouping of ECS container instances.
 
 1. Go to [`https://console.aws.amazon.com/ecs/home#/clusters`](https://console.aws.amazon.com/ecs/home#/clusters).
-1. Click **Create Cluster**.
-1. Choose **Networking only** type. Click **Next step**.
+1. Select **Create Cluster**.
+1. Choose **Networking only** type. Select **Next step**.
 1. Name it `test-cluster` (the same as in `fargate.toml`).
-1. Click **Create**.
-1. Click **View cluster**. Note the region and account ID parts from the `Cluster ARN` value.
-1. Click **Update Cluster** button.
-1. Next to `Default capacity provider strategy`, click **Add another provider** and choose `FARGATE`. Click **Update**.
+1. Select **Create**.
+1. Select **View cluster**. Note the region and account ID parts from the `Cluster ARN` value.
+1. Select **Update Cluster**.
+1. Next to `Default capacity provider strategy`, select **Add another provider** and choose `FARGATE`. Select **Update**.
 
 Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/userguide/create_cluster.html)
 for detailed instructions on setting up and working with a cluster on ECS Fargate.
 
 ## Step 6: Create an ECS task definition
 
-In this step you will create a task definition of type `Fargate` with a reference
-to the container image that you are going to use for your CI builds.
+In this step you will create a task definition of type `Fargate` and reference
+the container image that you might use for your CI builds.
 
 1. Go to [`https://console.aws.amazon.com/ecs/home#/taskDefinitions`](https://console.aws.amazon.com/ecs/home#/taskDefinitions).
-1. Click **Create new Task Definition**.
-1. Choose **FARGATE** and click **Next step**.
+1. Select **Create new Task Definition**.
+1. Choose **FARGATE** and select **Next step**.
 1. Name it `test-task`. (Note: The name is the same value defined in
    the `fargate.toml` file but without `:1`).
 1. Select values for **Task memory (GB)** and **Task CPU (vCPU)**.
-1. Click **Add container**. Then:
+1. Select **Add container**. Then:
    1. Name it `ci-coordinator`, so the Fargate driver
       can inject the `SSH_PUBLIC_KEY` environment variable.
    1. Define image (for example `registry.gitlab.com/tmaczukin-test-projects/fargate-driver-debian:latest`).
    1. Define port mapping for 22/TCP.
-   1. Click **Add**.
-1. Click **Create**.
-1. Click **View task definition**.
+   1. Select **Add**.
+1. Select **Create**.
+1. Select **View task definition**.
 
 {{< alert type="warning" >}}
 
@@ -304,9 +305,9 @@ above.
 Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-task-definition.html)
 for detailed instructions on setting up and working with task definitions.
 
-Refer to the AWS documentation [Amazon ECS task execution IAM role](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html) for information on the ECS service permissions required to launch images from an AWS ECR.
+For information about the ECS service permissions required to launch images from an AWS ECR, see [Amazon ECS task execution IAM role](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html).
 
-Refer to the AWS documentation [Private registry authentication for tasks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) for information on having ECS authenticate to private registries including any hosted on a GitLab instance.
+For information about ECS authentication to private registries including any hosted on a GitLab instance, see [Private registry authentication for tasks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html).
 
 At this point the runner manager and Fargate Driver are configured and ready
 to start executing jobs on AWS Fargate.
@@ -315,7 +316,7 @@ to start executing jobs on AWS Fargate.
 
 Your configuration should now be ready to use.
 
-1. In your GitLab project, create a simple `.gitlab-ci.yml` file:
+1. In your GitLab project, create a `.gitlab-ci.yml` file:
 
    ```yaml
    test:
@@ -325,8 +326,8 @@ Your configuration should now be ready to use.
    ```
 
 1. Go to your project's **CI/CD > Pipelines**.
-1. Click **Run Pipeline**.
-1. Update the branch and any variables and click **Run Pipeline**.
+1. Select **Run Pipeline**.
+1. Update the branch and any variables and select **Run Pipeline**.
 
 {{< alert type="note" >}}
 
@@ -339,7 +340,7 @@ The runner only uses the values specified in the task definition.
 
 If you want to perform a cleanup after testing the custom executor with AWS Fargate, remove the following objects:
 
-- EC2 instance, key pair, IAM role and security group created in [step 3](#step-3-create-an-ec2-instance-for-gitlab-runner).
+- EC2 instance, key pair, IAM role, and security group created in [step 3](#step-3-create-an-ec2-instance-for-gitlab-runner).
 - ECS Fargate cluster created in [step 5](#step-5-create-an-ecs-fargate-cluster).
 - ECS task definition created in [step 6](#step-6-create-an-ecs-task-definition).
 
@@ -347,24 +348,24 @@ If you want to perform a cleanup after testing the custom executor with AWS Farg
 
 To ensure a high level of security, configure
 [a private AWS Fargate task](https://repost.aws/knowledge-center/ecs-fargate-tasks-private-subnet).
-In this configuration, executors use only internal AWS IP addresses, and allow
-outbound traffic only from AWS so that CI jobs run on a private AWS Fargate
+In this configuration, executors use only internal AWS IP addresses. They only allow
+outbound traffic from AWS so that CI/CD jobs run on a private AWS Fargate
 instance.
 
 To configure a private AWS Fargate task, complete the following steps to configure AWS and run the AWS Fargate task in
 the private subnet:
 
-1. Ensure the existing public subnet has not reserved all IP addresses in the VPC address range. Inspect the CIRD
-   address ranges of the VPC and subnet. If the subnet CIRD address range is a subset of the VPC's CIRD address range,
+1. Ensure the existing public subnet has not reserved all IP addresses in the VPC address range. Inspect the `cird`
+   address ranges of the VPC and subnet. If the subnet `cird` address range is a subset of the VPC `cird` address range,
    skip steps 2 and 4. Otherwise your VPC has no free address range, so you must delete and
    recreate the VPC and the public subnet:
    1. Delete your existing subnet and VPC.
    1. [Create a VPC](https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html#create-interface-endpoint)
-      with the same configuration as the VPC you deleted and update the CIRD address, for example `10.0.0.0/23`.
-   1. [Create a public subnet](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html) with the same configuration as the subnet you deleted. Use a CIRD address that is a subset
-      of the VPC's address range, for example `10.0.0.0/24`.
+      with the same configuration as the VPC you deleted and update the `cird` address, for example `10.0.0.0/23`.
+   1. [Create a public subnet](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html) with the same configuration as the subnet you deleted. Use a `cird` address that is a subset
+      of the VPC address range, for example `10.0.0.0/24`.
 1. [Create a private subnet](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-subnets.html#create-subnets) with the same
-   configuration as the public subnet. Use a CIRD address range that does not overlap the public subnet range, for
+   configuration as the public subnet. Use a `cird` address range that does not overlap the public subnet range, for
    example `10.0.1.0/24`.
 1. [Create a NAT gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html), and place it inside
    the public subnet.
@@ -377,8 +378,8 @@ the private subnet:
    UsePublicIP = false
    ```
 
-1. Add the following inline policy to the IAM role associated with your fargate task (the IAM role associated with
-   fargate tasks is typically named `ecsTaskExecutionRole` and should already exist.)
+1. Add the following inline policy to the IAM role associated with your Fargate task (the IAM role associated with
+   Fargate tasks is typically named `ecsTaskExecutionRole` and should already exist.)
 
    ```json
    {
@@ -442,7 +443,7 @@ Ensure that your IAM Role policy is configured correctly and can perform write o
 
 `Application execution failed PID=xxxx error="executing the script on the remote host: executing script on container with IP \"172.x.x.x\": connecting to server: connecting to server \"172.x.x.x:22\" as user \"root\": dial tcp 172.x.x.x:22: connect: connection timed out"`
 
-If `EnablePublicIP` is configured to false, ensure that your VPC's Security Group has an inbound rule that allows SSH connectivity. Your AWS Fargate task container must be able to accept SSH traffic from the GitLab Runner EC2 instance.
+If `EnablePublicIP` is configured to false, ensure that your VPC Security Group has an inbound rule that allows SSH connectivity. Your AWS Fargate task container must accept the SSH traffic from the GitLab Runner EC2 instance.
 
 ### `connection refused` when running jobs
 
