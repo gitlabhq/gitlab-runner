@@ -18,33 +18,33 @@ Before continuing, ensure that you've already
 [installed Docker](https://docs.docker.com/get-started/get-docker/) and
 [GitLab Runner](../install/_index.md) on the same machine.
 
-## Configuring CNTLM
+## Configuring `cntlm`
 
 {{< alert type="note" >}}
 
 If you already use a proxy without authentication, this section is optional and
 you can skip straight to [configuring Docker](#configuring-docker-for-downloading-images).
-Configuring CNTLM is only needed if you are behind a proxy with authentication,
+Configuring `cntlm` is only needed if you are behind a proxy with authentication,
 but it's recommended to use in any case.
 
 {{< /alert >}}
 
-[CNTLM](https://github.com/Evengard/cntlm) is a Linux proxy which can be used
+[`cntlm`](https://github.com/Evengard/cntlm) is a Linux proxy which can be used
 as a local proxy and has 2 major advantages compared to adding the proxy details
 everywhere manually:
 
 - One single source where you need to change your credentials
 - The credentials can not be accessed from the Docker runners
 
-Assuming you [have installed CNTLM](https://www.howtoforge.com/linux-ntlm-authentication-proxy-isa-server-with-cntlm),
+Assuming you [have installed `cntlm`](https://www.howtoforge.com/linux-ntlm-authentication-proxy-isa-server-with-cntlm),
 you need to first configure it.
 
-### Make CNTLM listen to the `docker0` interface
+### Make `cntlm` listen to the `docker0` interface
 
-For extra security, and to protect your server from the outside world, you can
-bind CNTLM to listen on the `docker0` interface which has an IP that is reachable
-from inside the containers. If you tell CNTLM on the Docker host to bind only
-to this address, Docker containers are be able to reach it, but the outside
+For added security and protection from the internet, bind `cntlm` to listen on
+`docker0` interface, which has an IP address that containers can reach.
+If you tell `cntlm` on the Docker host to bind only
+to this address, Docker containers can reach it, but the outside
 world can't.
 
 1. Find the IP that Docker is using:
@@ -53,9 +53,9 @@ world can't.
    ip -4 -oneline addr show dev docker0
    ```
 
-   This is usually `172.17.0.1`, let's call it `docker0_interface_ip`.
+   The IP address is usually `172.17.0.1`, let's call it `docker0_interface_ip`.
 
-1. Open the configuration file for CNTLM (`/etc/cntlm.conf`). Enter your username,
+1. Open the configuration file for `cntlm` (`/etc/cntlm.conf`). Enter your username,
    password, domain and proxy hosts, and configure the `Listen` IP address
    which you found from the previous step. It should look like this:
 
@@ -82,8 +82,7 @@ The following apply to OSes with systemd support.
 
 {{< /alert >}}
 
-Follow [Docker's documentation](https://docs.docker.com/engine/daemon/proxy/)
-how to use a proxy.
+For information about how to use proxy, see [Docker documentation](https://docs.docker.com/engine/daemon/proxy/).
 
 The service file should look like this:
 
@@ -98,7 +97,7 @@ Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
 The proxy variables need to also be added to the GitLab Runner configuration, so that it can
 connect to GitLab.com from behind the proxy.
 
-This is basically the same as adding the proxy to the Docker service above:
+This action is the same as adding the proxy to the Docker service above:
 
 1. Create a systemd drop-in directory for the `gitlab-runner` service:
 
@@ -107,7 +106,7 @@ This is basically the same as adding the proxy to the Docker service above:
    ```
 
 1. Create a file called `/etc/systemd/system/gitlab-runner.service.d/http-proxy.conf`
-   that adds the `HTTP_PROXY` environment variable(s):
+   that adds the `HTTP_PROXY` environment variables:
 
    ```ini
    [Service]
@@ -174,12 +173,12 @@ on these kinds of environment variables.
 
 {{< /alert >}}
 
-## Proxy settings when using dind service
+## Proxy settings when using `dind` service
 
-When using the [Docker-in-Docker executor](https://docs.gitlab.com/ci/docker/using_docker_build/#use-docker-in-docker) (dind),
+When using the [Docker-in-Docker executor](https://docs.gitlab.com/ci/docker/using_docker_build/#use-docker-in-docker) (`dind`),
 it may be necessary to specify `docker:2375,docker:2376` in the `NO_PROXY` environment variable. The ports are required, otherwise `docker push` is blocked.
 
-Communication between `dockerd` from dind and the local `docker` client (as described here: <https://hub.docker.com/_/docker/>)
+Communication between `dockerd` from `dind` and the local `docker` client (as described here: <https://hub.docker.com/_/docker/>)
 uses proxy variables held in root's Docker configuration.
 
 To configure this, you need to edit `/root/.docker/config.json` to include your complete proxy configuration, for example:
@@ -196,7 +195,7 @@ To configure this, you need to edit `/root/.docker/config.json` to include your 
 }
 ```
 
-In order to pass on the settings to the container of the Docker executor, a `$HOME/.docker/config.json` also needs to be created inside the container. This may be scripted as a `before_script` in the `.gitlab-ci.yml`, for example:
+To pass on the settings to the container of the Docker executor, a `$HOME/.docker/config.json` also needs to be created inside the container. This may be scripted as a `before_script` in the `.gitlab-ci.yml`, for example:
 
 ```yaml
 before_script:
@@ -213,13 +212,13 @@ Or alternatively, in the configuration of the `gitlab-runner` (`/etc/gitlab-runn
 
 {{< alert type="note" >}}
 
-An additional level of escaping `"` is needed here because this is the creation of a
+An additional level of escaping `"` is required because this creates a
 JSON file with a shell specified as a single string inside a TOML file.
 Because this is not YAML, do not escape the `:`.
 
 {{< /alert >}}
 
-Note that if the `NO_PROXY` list needs to be extended, wildcards `*` only work for suffixes,
+If the `NO_PROXY` list needs to be extended, wildcards `*` only work for suffixes,
 but not for prefixes or CIDR notation.
 For more information, see
 <https://github.com/moby/moby/issues/9145>
@@ -243,7 +242,7 @@ As a result, GitLab Runner handles rate limited scenarios with the following log
 
 {{< alert type="note" >}}
 
-The header `RateLimit-ResetTime` is case insensitive since all header keys are run
+The header `RateLimit-ResetTime` is case-insensitive because all header keys are run
 through the [`http.CanonicalHeaderKey`](https://pkg.go.dev/net/http#CanonicalHeaderKey) function.
 
 {{< /alert >}}

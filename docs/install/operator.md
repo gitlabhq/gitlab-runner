@@ -14,7 +14,7 @@ title: Install GitLab Runner Operator
 
 {{< /details >}}
 
-You can install the GitLab Runner on Red Hat OpenShift v4 and later using the [GitLab Runner Operator](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator) available from the stable channel of OperatorHub embedded in OpenShift's web console. Once installed, you can run your GitLab CI/CD jobs using the newly deployed GitLab Runner instance. Each CI/CD job will run in a separate pod.
+Install GitLab Runner on Red Hat OpenShift v4 and later using the [GitLab Runner Operator](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator) from the stable channel of OperatorHub in OpenShift's web console. Once installed, you can run your GitLab CI/CD jobs using the newly deployed GitLab Runner instance. Each CI/CD job runs in a separate pod.
 
 ### Prerequisites
 
@@ -25,17 +25,17 @@ You can install the GitLab Runner on Red Hat OpenShift v4 and later using the [G
 
 First you must install the OpenShift Operator.
 
-1. Open the OpenShift UI and log in as a user with administrator privileges.
-1. In the left pane, click **Operators**, then **OperatorHub**.
+1. Open the OpenShift UI and sign in as a user with administrator privileges.
+1. In the left pane, select **Operators**, then **OperatorHub**.
 1. In the main pane, below **All Items**, search for the keyword `GitLab Runner`.
 
    ![GitLab Operator](img/openshift_allitems_v13_3.png)
 
-1. To install, click the GitLab Runner Operator.
-1. On the GitLab Runner Operator summary page, click **Install**.
+1. To install, select the GitLab Runner Operator.
+1. On the GitLab Runner Operator summary page, select **Install**.
 1. On the Install Operator page:
    1. Under **Update Channel**, select **stable**.
-   1. Under **Installed Namespace**, select the desired namespace and click **Install**.
+   1. Under **Installed Namespace**, select the desired namespace and select **Install**.
 
    ![GitLab Operator Install Page](img/openshift_installoperator_v13_3.png)
 
@@ -52,7 +52,7 @@ On the Installed Operators page, when the GitLab Operator is ready, the status c
 
 {{< /details >}}
 
-You can install the GitLab Runner on Kubernetes v1.21 and later using the [GitLab Runner Operator](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator) available from the stable channel of [OperatorHub.io](https://operatorhub.io/operator/gitlab-runner-operator). Once installed, you can run your GitLab CI/CD jobs using the newly deployed GitLab Runner instance. Each CI/CD job will run in a separate pod.
+Install GitLab Runner on Kubernetes v1.21 and later using the [GitLab Runner Operator](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator) from the stable channel of [OperatorHub.io](https://operatorhub.io/operator/gitlab-runner-operator). Once installed, you can run your GitLab CI/CD jobs using the newly deployed GitLab Runner instance. Each CI/CD job runs in a separate pod.
 
 ### Prerequisites
 
@@ -64,7 +64,7 @@ You can install the GitLab Runner on Kubernetes v1.21 and later using the [GitLa
 Follow the instructions at [OperatorHub.io](https://operatorhub.io/operator/gitlab-runner-operator).
 
 1. Install the prerequisites.
-1. On the top right, select **Install** and follow the instructions to install OLM and the Operator.
+1. On the top right, select **Install** and follow the instructions to install `olm` and the Operator.
 
 #### Install GitLab Runner
 
@@ -136,9 +136,9 @@ Follow the instructions at [OperatorHub.io](https://operatorhub.io/operator/gitl
 
 #### Install other versions of GitLab Runner Operator for OpenShift
 
-If you do not want to use the version of GitLab Runner Operator that's available in the Red Hat OperatorHub, you can install a different version.
+If you do not want to use the available GitLab Runner Operator version in the Red Hat OperatorHub, you can install a different version.
 
-To find out the official currently-available Operator versions, view the [tags in the `gitlab-runner-operator` repository](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/tags).
+To find out the official available Operator versions, view the [tags in the `gitlab-runner-operator` repository](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/tags).
 To find out which version of GitLab Runner the Operator is running, view the contents of the
 `APP_VERSION` file of the commit or tag you are interested in, for example, [https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/blob/1-17-stable/APP_VERSION](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/blob/1-17-stable/APP_VERSION).
 
@@ -180,7 +180,7 @@ Prerequisites:
 To pull container images during installation,
 the GitLab Runner Operator requires a connection to the public internet on an external
 network. If you have Kubernetes clusters installed
-in an offline environment, you can use local a image registry or a local package repository
+in an offline environment, use a local image registry or package repository
 to pull images or packages during installation.
 
 The local repository must provide the following images:
@@ -200,11 +200,11 @@ The local repository must provide the following images:
 1. For GitLab Runner Operator v1.23.2 and later, download the latest version of `operator.k8s.yaml` file:
 
    ```shell
-   curl -O "https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner- 
+   curl -O "https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-
    operator/-/releases/vGITLAB_RUNNER_OPERATOR_VERSION/downloads/operator.k8s.yaml"
    ```
 
-1. In the `operator.k8s.yaml` file, update the following URLS:
+1. In the `operator.k8s.yaml` file, update the following URLs:
 
    - `GitLab Runner Operator image`
    - `RBAC Proxy image`
