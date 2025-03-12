@@ -1,7 +1,6 @@
 package network
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -257,7 +256,7 @@ func (n *client) checkBackoffRequest(req *http.Request, res *http.Response) {
 func (n *client) do(
 	ctx context.Context,
 	uri, method string,
-	request io.Reader,
+	bodyProvider common.ContentProvider,
 	requestType string,
 	headers http.Header,
 ) (*http.Response, error) {
@@ -266,10 +265,29 @@ func (n *client) do(
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, url.String(), request)
+	var body io.ReadCloser
+	if bodyProvider != nil {
+		body, err = bodyProvider.GetReader()
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get request body: %w", err)
+		}
+		defer body.Close()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, url.String(), body)
 	if err != nil {
 		err = fmt.Errorf("failed to create NewRequest: %w", err)
 		return nil, err
+	}
+
+	if bodyProvider != nil {
+		req.GetBody = func() (io.ReadCloser, error) {
+			return bodyProvider.GetReader()
+		}
+
+		if length, known := bodyProvider.GetContentLength(); known {
+			req.ContentLength = length
+		}
 	}
 
 	if headers != nil {
@@ -277,7 +295,7 @@ func (n *client) do(
 	}
 
 	req.Header.Set("User-Agent", common.AppVersion.UserAgent())
-	if request != nil {
+	if bodyProvider != nil {
 		req.Header.Set(common.ContentType, requestType)
 	}
 
@@ -377,14 +395,14 @@ func (n *client) doJSONWithPAT(
 	request interface{},
 	response interface{},
 ) (int, string, *http.Response) {
-	var body io.Reader
+	var bytesProvider common.ContentProvider
 
 	if request != nil {
 		requestBody, err := json.Marshal(request)
 		if err != nil {
 			return -1, fmt.Sprintf("failed to marshal project object: %v", err), nil
 		}
-		body = bytes.NewReader(requestBody)
+		bytesProvider = common.BytesProvider{Data: requestBody}
 	}
 
 	headers := make(http.Header)
@@ -395,7 +413,7 @@ func (n *client) doJSONWithPAT(
 		headers.Set(common.PrivateToken, pat)
 	}
 
-	res, err := n.do(ctx, uri, method, body, jsonMimeType, headers)
+	res, err := n.do(ctx, uri, method, bytesProvider, jsonMimeType, headers)
 	if err != nil {
 		return -1, err.Error(), nil
 	}
