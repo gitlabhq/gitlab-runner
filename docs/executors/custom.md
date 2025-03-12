@@ -19,19 +19,19 @@ title: The Custom executor
 {{< /history >}}
 
 GitLab Runner provides the Custom executor for environments that it
-doesn't support natively. For example, LXD or Libvirt.
+doesn't support natively. For example, `LXD` or `Libvirt`.
 
-This gives you the control to create your own executor by configuring
+You can create your own executor by configuring
 GitLab Runner to use some executable to provision, run, and clean up
 your environment.
 
 The scripts you configure for the custom executor are called `Drivers`.
-For example, you could create an [LXD driver](custom_examples/lxd.md) or a
-[Libvirt driver](custom_examples/libvirt.md).
+For example, you could create an [`LXD` driver](custom_examples/lxd.md) or a
+[`Libvirt` driver](custom_examples/libvirt.md).
 
 ## Configuration
 
-There are a few configuration keys that you can choose from. Some of them are optional.
+You can choose from a few configuration keys. Some of them are optional.
 
 Below is an example of configuration for the Custom executor using all available
 configuration keys:
@@ -85,17 +85,16 @@ be present in the `PATH`:
 
 ## Stages
 
-The Custom executor provides the stages for you to configure some
-details of the job, prepare and clean up the environment and run the job
-script within it. Each stage is responsible for specific things and has
+The Custom executor provides the stages to configure job details,
+prepare and clean up the environment, and run the job
+script in it. Each stage is responsible for specific things and has
 different things to keep in mind.
 
 Each stage executed by the Custom executor is executed at the time
 a builtin GitLab Runner executor would execute them.
 
-For each step that will be executed, specific environment variables are
-exposed to the executable, which can be used to get information about
-the specific Job that is running. All stages will have the following
+Each executed step has access to specific environment variables
+that provide information about the running job. All stages have the following
 environment variables available to them:
 
 - Standard CI/CD [environment variables](https://docs.gitlab.com/ci/variables/), including
@@ -106,7 +105,7 @@ environment variables available to them:
 
 Both CI/CD environment variables and predefined variables are prefixed
 with `CUSTOM_ENV_` to prevent conflicts with system environment
-variables. For example, `CI_BUILDS_DIR` will be available as
+variables. For example, `CI_BUILDS_DIR` is available as
 `CUSTOM_ENV_CI_BUILDS_DIR`.
 
 The stages run in the following sequence:
@@ -141,7 +140,7 @@ custom:
       command: ["path", "to", "cmd"]
 ```
 
-The example above will set `CUSTOM_ENV_CI_JOB_SERVICES` environment variable with the following value:
+The example above sets the `CUSTOM_ENV_CI_JOB_SERVICES` environment variable with the following value:
 
 ```json
 [{"name":"redis:latest","alias":"","entrypoint":null,"command":null},{"name":"my-postgres:9.4","alias":"pg","entrypoint":["path","to","entrypoint"],"command":["path","to","cmd"]}]
@@ -178,31 +177,30 @@ cat << EOS
 EOS
 ```
 
-Any additional keys inside of the JSON string will be ignored. If it's
-not a valid JSON string the stage will fail and be retried two more
+Any additional keys inside of the JSON string are ignored. If it's
+not a valid JSON string the stage fails and retries two more
 times.
 
 | Parameter | Type | Required | Allowed empty | Description |
 |-----------|------|----------|---------------|-------------|
-| `builds_dir` | string | ✗ | ✗ | The base directory where the working directory of the job will be created. |
-| `cache_dir` | string | ✗ | ✗ | The base directory where local cache will be stored. |
-| `builds_dir_is_shared` | bool | ✗ | n/a | Defines whether the environment is shared between concurrent job or not. |
+| `builds_dir` | string | ✗ | ✗ | The base directory where the working directory of the job is created. |
+| `cache_dir` | string | ✗ | ✗ | The base directory where local cache is stored. |
+| `builds_dir_is_shared` | boolean | ✗ | not applicable | Defines whether the environment is shared between concurrent job or not. |
 | `hostname` | string | ✗ | ✓ | The hostname to associate with job's "metadata" stored by the runner. If undefined, the hostname is not set. |
 | `driver.name` | string | ✗ | ✓ | The user-defined name for the driver. Printed with the `Using custom executor...` line. If undefined, no information about driver is printed. |
 | `driver.version` | string | ✗ | ✓ | The user-defined version for the drive. Printed with the `Using custom executor...` line. If undefined, only the name information is printed. |
 | `job_env` | object | ✗ | ✓ |  Name-value pairs that are available through environment variables to all subsequent stages of the job execution. They are available for the driver, not the job. For details, see [`job_env` usage](#job_env-usage). |
 
-The `STDERR` of the executable will print to the job log.
+The `STDERR` of the executable prints to the job log.
 
-The user can set
+You can configure
 [`config_exec_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)
-if they want to set a deadline for how long GitLab Runner should wait to
+to set a deadline for how long GitLab Runner should wait to
 return the JSON string before terminating the process.
 
-If any of the
-[`config_args`](../configuration/advanced-configuration.md#the-runnerscustom-section)
-are defined, these will be added in order to the executable defined in
-`config_exec`. For example we have the `config.toml` content below:
+If you define any [`config_args`](../configuration/advanced-configuration.md#the-runnerscustom-section),
+they are added to the `config_exec` executable in the same order you define them.
+For example, with this `config.toml` content:
 
 ```toml
 ...
@@ -220,31 +218,30 @@ GitLab Runner would execute it as `/path/to/config Arg1 Arg2`.
 The main purpose of `job_env` configuration is to pass variables **to the context of custom executor driver calls**
 for subsequent stages of the job execution.
 
-Let's consider an example driver, where connection with the job execution environment requires preparing some
-credentials and that this operation is very expensive. Let's say we need to connect to our local credentials
-provider to get a temporary SSH username and password that the custom executor can next use to connect with the
-job execution environment.
+For example, a driver where connection with the job execution environment requires preparing some
+credentials. This operation is expensive. The driver must request temporary SSH credentials
+from a local provider before connecting to the environment.
 
-With Custom Executor execution flow, where each job execution [stage](#stages): `prepare`, multiple `run` calls
-and `cleanup` are separate executions of the driver, the context is separate for each of them. For our credentials
+With Custom Executor execution flow, each job execution [stage](#stages) (`prepare`, multiple `run` calls,
+and `cleanup`) runs as separate executions with its own context. For our credentials
 resolving example, connection to the credentials provider needs to be done each time.
 
-If this operation is expensive, we might want to do it once for a whole job execution, and then re-use the credentials
-for all job execution stages. This is where the `job_env` can help. With this you can connect with the provider once,
-during the `config_exec` call and then pass the received credentials with the `job_env`. They will be next added to the
+If this operation is expensive, do it once for a whole job execution, and then re-use the credentials
+for all job execution stages. The `job_env` can help here. With this you can connect with the provider once,
+during the `config_exec` call and then pass the received credentials with the `job_env`. Next, they are added to the
 list of variables that the custom executor calls for [`prepare_exec`](#prepare), [`run_exec`](#run) and [`cleanup_exec`](#cleanup) are receiving. With
 this, the driver instead of connecting to the credentials provider each time may just read the variables and use the
 credentials that are present.
 
-The important thing to understand is that **the variables are not automaticaly available for the job itself**. It
-fully depends on how the Custom Executor Driver is implemented and in many cases it will be not present there.
+The important thing to understand is that **the variables are not automatically available for the job itself**. It
+fully depends on how the Custom Executor Driver is implemented, and in many cases it is not present there.
 
-If you're considering the `job_env` setting so you can pass a set of variables to every job executed
-by a particular runner, then look at the
+For information about how to pass a set of variables to every job executed
+by a particular runner by using the `job_env` setting, see
 [`environment` setting from `[[runners]]`](../configuration/advanced-configuration.md#the-runners-section).
 
-If the variables are dynamic and it's expected that their values will change between different jobs, then you should
-make sure that your driver is implemented in a way that the variables passed by `job_env` will be added to the job
+If the variables are dynamic with values that might change between jobs,
+ensure your driver implementation adds the variables passed by `job_env` to the
 execution call.
 
 ### Prepare
@@ -252,28 +249,27 @@ execution call.
 The Prepare stage is executed by `prepare_exec`.
 
 At this point, GitLab Runner knows everything about the job (where and
-how it's going to run). The only thing left is for the environment to be
-set up so the job can run. GitLab Runner will execute the executable
-that is specified in `prepare_exec`.
+how it runs). The only thing left is for the environment to be
+set up so the job can run. GitLab Runner runs the executable
+specified in `prepare_exec`.
 
-This is responsible for setting up the environment (for example,
+This action is responsible for setting up the environment (for example,
 creating the virtual machine or container, services or anything else). After
 this is done, we expect that the environment is ready to run the job.
 
 This stage is executed only once, in a job execution.
 
-The user can set
+You can configure
 [`prepare_exec_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)
-if they want to set a deadline for how long GitLab Runner
+to set a deadline for how long GitLab Runner
 should wait to prepare the environment before terminating the process.
 
-The `STDOUT` and `STDERR` returned from this executable will print to
+The `STDOUT` and `STDERR` returned from this executable prints to
 the job log.
 
-If any of the
-[`prepare_exec_args`](../configuration/advanced-configuration.md#the-runnerscustom-section)
-are defined, these will be added in order to the executable defined in
-`prepare_exec`. For example we have the `config.toml` content below:
+If you define any [`prepare_exec_args`](../configuration/advanced-configuration.md#the-runnerscustom-section),
+they are added to the `prepare_exec` executable in the same order you define them.
+For example, with this `config.toml` content:
 
 ```toml
 ...
@@ -290,11 +286,11 @@ GitLab Runner would execute it as `/path/to/bin Arg1 Arg2`.
 
 The Run stage is executed by `run_exec`.
 
-The `STDOUT` and `STDERR` returned from this executable will print to
+The `STDOUT` and `STDERR` returned from this executable prints to
 the job log.
 
 Unlike the other stages, the `run_exec` stage is executed multiple
-times, since it's split into sub stages listed below in sequential
+times, because it's split into sub stages listed below in sequential
 order:
 
 1. `prepare_script`
@@ -311,11 +307,11 @@ order:
 
 {{< alert type="note" >}}
 
-In GitLab Runner 14.0 and later, `build_script` will be replaced with `step_script`. For more information, see [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426).
+In GitLab Runner 14.0 and later, `build_script` is replaced with `step_script`. For more information, see [issue 26426](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426).
 
 {{< /alert >}}
 
-For each stage mentioned above, the `run_exec` executable will be
+For each stage mentioned above, the `run_exec` executable is
 executed with:
 
 - The usual environment variables.
@@ -345,7 +341,7 @@ example, suppose we have the following `config.toml`:
   ...
 ```
 
-GitLab Runner will execute the executable with the following arguments:
+GitLab Runner runs the executable with the following arguments:
 
 ```shell
 /path/to/run_exec.sh Arg1 Arg2 /path/to/tmp/script1 prepare_executor
@@ -355,8 +351,8 @@ GitLab Runner will execute the executable with the following arguments:
 
 This executable should be responsible for executing the scripts that are
 specified in the first argument. They contain all the scripts any GitLab
-Runner executor would run normally to clone, download artifacts, run
-user scripts and all the other steps described below. The scripts can be
+Runner executor would run to clone, download artifacts, run
+user scripts, and all the other steps described below. The scripts can be
 of the following shells:
 
 - Bash
@@ -373,15 +369,15 @@ what the main goal of that script is.
 
 | Script Name | Script Contents |
 |-------------|-----------------|
-| `prepare_script` | Simple debug information which machine the Job is running on. |
-| `get_sources`    | Prepares the Git configuration, and clone/fetch the repository. We suggest you keep this as is since you get all of the benefits of Git strategies that GitLab provides. |
+| `prepare_script` | Debug information which machine the Job is running on. |
+| `get_sources`    | Prepares the Git configuration, and clone/fetch the repository. We suggest you keep this as is because you get all of the benefits of Git strategies that GitLab provides. |
 | `restore_cache` | Extract the cache if any are defined. This expects the `gitlab-runner` binary is available in `$PATH`. |
 | `download_artifacts` | Download artifacts, if any are defined. This expects `gitlab-runner` binary is available in `$PATH`. |
 | `step_*` | Generated by GitLab. A set of scripts to execute. It may never be sent to the custom executor. It may have multiple steps, like `step_release` and `step_accessibility`. This can be a feature from the `.gitlab-ci.yml` file. |
-| `build_script` | A combination of [`before_script`](https://docs.gitlab.com/ci/yaml/#before_script-and-after_script) and [`script`](https://docs.gitlab.com/ci/yaml/#script). In GitLab Runner 14.0 and later, `build_script` will be replaced with `step_script`. For more information, see [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426). |
-| `after_script` | This is the [`after_script`](https://docs.gitlab.com/ci/yaml/#before_script-and-after_script) defined from the job. This is always called even if any of the previous steps failed. |
-| `archive_cache` | Will create an archive of all the cache, if any are defined. Only executed when `build_script` was successful. |
-| `archive_cache_on_failure` | Will create an archive of all the cache, if any are defined. Only executed when `build_script` fails. |
+| `build_script` | A combination of [`before_script`](https://docs.gitlab.com/ci/yaml/#before_script-and-after_script) and [`script`](https://docs.gitlab.com/ci/yaml/#script). In GitLab Runner 14.0 and later, `build_script` is replaced with `step_script`. For more information, see [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426). |
+| `after_script` | [`after_script`](https://docs.gitlab.com/ci/yaml/#before_script-and-after_script) defined from the job. This script is always called even if any of the previous steps failed. |
+| `archive_cache` | Creates an archive of all the cache, if any are defined. Only executed when `build_script` was successful. |
+| `archive_cache_on_failure` | Creates an archive of all the cache, if any are defined. Only executed when `build_script` fails. |
 | `upload_artifacts_on_success` | Upload any artifacts that are defined. Only executed when `build_script` was successful. |
 | `upload_artifacts_on_failure` | Upload any artifacts that are defined. Only executed when `build_script` fails. |
 | `cleanup_file_variables` | Deletes all [file based](https://docs.gitlab.com/ci/variables/#custom-environment-variables-of-type-file) variables from disk. |
@@ -396,24 +392,23 @@ might have been set up. For example, turning off VMs or deleting
 containers.
 
 The result of `cleanup_exec` does not affect job statuses. For example,
-a job will be marked as successful even if the following occurs:
+a job is marked as successful even if the following occurs:
 
 - Both `prepare_exec` and `run_exec` are successful.
 - `cleanup_exec` fails.
 
-The user can set
+You can configure
 [`cleanup_exec_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)
-if they want to set some kind of deadline of how long GitLab Runner
+to set a deadline of how long GitLab Runner
 should wait to clean up the environment before terminating the
 process.
 
-The `STDOUT` of this executable will be printed to GitLab Runner logs at a
-DEBUG level. The `STDERR` will be printed to the logs at a WARN level.
+The `STDOUT` of this executable is printed to GitLab Runner logs at a
+`DEBUG` level. The `STDERR` is printed to the logs at a `WARN` level.
 
-If any of the
-[`cleanup_exec_args`](../configuration/advanced-configuration.md#the-runnerscustom-section)
-are defined, these will be added in order to the executable defined in
-`cleanup_exec`. For example we have the `config.toml` content below:
+If you define any [`cleanup_exec_args`](../configuration/advanced-configuration.md#the-runnerscustom-section),
+they are added to the `cleanup_exec` executable in the same order you define them.
+For example, with this `config.toml` content:
 
 ```toml
 ...
@@ -428,12 +423,12 @@ GitLab Runner would execute it as `/path/to/bin Arg1 Arg2`.
 
 ## Terminating and killing executables
 
-GitLab Runner will try to gracefully terminate an executable under any
+GitLab Runner tries to gracefully terminate an executable under any
 of the following conditions:
 
 - `config_exec_timeout`, `prepare_exec_timeout` or `cleanup_exec_timeout` are met.
 - The job [times out](https://docs.gitlab.com/ci/pipelines/settings/#set-a-limit-for-how-long-jobs-can-run).
-- The job is cancelled.
+- The job is canceled.
 
 When a timeout is reached, a `SIGTERM` is sent to the executable, and
 the countdown for
@@ -442,20 +437,20 @@ starts. The executable should listen to this signal to make sure it
 cleans up any resources. If `exec_terminate_timeout` passes and the
 process is still running, a `SIGKILL` is sent to kill the process and
 [`exec_force_kill_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)
-will start. If the process is still running after
-`exec_force_kill_timeout` has finished, GitLab Runner will abandon the
-process and will not try to stop/kill anymore. If both these timeouts
+starts. If the process is still running after
+`exec_force_kill_timeout` has finished, GitLab Runner abandons the
+process and doesn't try to stop or kill anymore. If both these timeouts
 are reached during `config_exec`, `prepare_exec` or `run_exec` the build
 is marked as failed.
 
-Any child process that is spawned by the driver will also receive the
+Any child process that is spawned by the driver also receives the
 graceful termination process explained above on UNIX based systems. This
 is achieved by having the main process set as a [process group](https://man7.org/linux/man-pages/man2/setpgid.2.html)
 which all the child processes belong too.
 
 ## Error handling
 
-There are two types of errors that GitLab Runner can handle differently.
+GitLab Runner can handle two type of errors differently.
 These errors are only handled when the executable inside of
 `config_exec`, `prepare_exec`, `run_exec`, and `cleanup_exec` exits with
 these codes. If the user exits with a non-zero exit code, it should be
@@ -467,8 +462,8 @@ be propagated to the executable exit code.
 ### Build Failure
 
 GitLab Runner provides `BUILD_FAILURE_EXIT_CODE` environment
-variable which should be used by the executable as an exit code to
-inform GitLab Runner that there is a failure on the users job. If the
+variable that your executable should use as an exit code to
+indicate job failure. If the
 executable exits with the code from
 `BUILD_FAILURE_EXIT_CODE`, the build is marked as a failure
 appropriately in GitLab CI.
@@ -480,7 +475,7 @@ exits with a non-zero code, `run_exec` should exit with
 {{< alert type="note" >}}
 
 We strongly suggest using `BUILD_FAILURE_EXIT_CODE` to exit
-instead of a hard coded value since it can change in any release, making
+instead of a hard coded value because it can change in any release, making
 your binary/script future proof.
 
 {{< /alert >}}
@@ -512,8 +507,8 @@ result in an `unknown Custom executor executable exit code` error.
 
 You can send a system failure to GitLab Runner by exiting the process with the
 error code specified in the `SYSTEM_FAILURE_EXIT_CODE`. If this error
-code is returned, on certain stages GitLab Runner will retry the stage, if none
-of the retries are successful the job will be marked as failed.
+code is returned, GitLab Runner retries certain stages.
+If none of the retries are successful, the job is marked as failed.
 
 Below is a table of what stages are retried, and by how many times.
 
@@ -527,7 +522,7 @@ Below is a table of what stages are retried, and by how many times.
 {{< alert type="note" >}}
 
 We strongly suggest using `SYSTEM_FAILURE_EXIT_CODE` to exit
-instead of a hard coded value since it can change in any release, making
+instead of a hard coded value because it can change in any release, making
 your binary/script future proof.
 
 {{< /alert >}}
