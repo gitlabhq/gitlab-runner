@@ -64,7 +64,7 @@ Prerequisites:
 1. Download the `gitlab-runner` Docker image by using the `docker pull gitlab/gitlab-runner:<version-tag>` command.
 
    For the list of available version tags, see [GitLab Runner tags](https://hub.docker.com/r/gitlab/gitlab-runner/tags).
-1. Run the `gitlab-runner` Docker image by using the `docker run -d []options] <image-uri> <runner-command>` command.
+1. Run the `gitlab-runner` Docker image by using the `docker run -d [options] <image-uri> <runner-command>` command.
 1. When you run `gitlab-runner` in a Docker container, ensure the configuration is not lost when you
    restart the container. Mount a permanent volume to store the configuration. The volume can be mounted in either:
 
