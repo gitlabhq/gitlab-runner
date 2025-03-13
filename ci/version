@@ -15,7 +15,7 @@ if echo "${exact_tag}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"; then
     exit 0
 fi
 
-last_tag=$(git describe --abbrev=0 --exclude='*-rc*')
+last_tag=$(git describe --abbrev=0 --exclude='*-rc*' --exclude='helpers/runner_wrapper/api/v*')
 commits=$(git rev-list --count "${last_tag}..HEAD")
 revision=$(git rev-parse --short=8 HEAD || echo unknown)
 
