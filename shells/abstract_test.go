@@ -2299,6 +2299,9 @@ func TestAbstractShell_writeCleanupFileVariablesScript(t *testing.T) {
 	mockShellWriter := &MockShellWriter{}
 	defer mockShellWriter.AssertExpectations(t)
 
+	mockShellWriter.On("TmpFile", "masking.db").Return("masking.db").Once()
+	mockShellWriter.On("RmFile", "masking.db").Once()
+
 	mockShellWriter.On("TmpFile", testVar1).Return(testPath1).Once()
 	mockShellWriter.On("RmFile", testPath1).Once()
 	mockShellWriter.On("TmpFile", testVar3).Return(testPath3).Once()

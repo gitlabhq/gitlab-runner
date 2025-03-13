@@ -12,7 +12,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"gitlab.com/ajwalker/phrasestream/addmask"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/internal/store"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -27,20 +29,37 @@ type ProxyExecCommand struct {
 }
 
 type Proxy struct {
-	stdout io.Writer
-	stderr io.Writer
+	store   *store.Store
+	addmask *addmask.AddMask
+}
+
+func NewProxy(dir string, stdout, stderr io.Writer) (*Proxy, error) {
+	db, err := store.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	pe := &Proxy{store: db}
+
+	pe.addmask, err = addmask.New(db, stdout, stderr)
+	if err != nil {
+		return nil, err
+	}
+
+	return pe, nil
 }
 
 func (p *Proxy) Stdout() io.Writer {
-	return p.stdout
+	return p.addmask.Get(0)
 }
 
 func (p *Proxy) Stderr() io.Writer {
-	return p.stderr
+	return p.addmask.Get(1)
 }
 
 func (p *Proxy) Close() error {
-	return nil
+	p.store.Close()
+	return p.addmask.Close()
 }
 
 func (c *ProxyExecCommand) Execute(cliContext *cli.Context) {
@@ -59,14 +78,17 @@ func (c *ProxyExecCommand) Execute(cliContext *cli.Context) {
 		}
 	}
 
-	proxy := Proxy{stdout: stdout, stderr: stderr}
+	proxy, err := NewProxy(dst, stdout, stderr)
+	if err != nil {
+		logrus.Fatalln("creating exec proxy", err)
+	}
 
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = proxy.Stdout()
 	cmd.Stderr = proxy.Stderr()
 
-	err := errors.Join(
+	err = errors.Join(
 		cmd.Run(),
 		proxy.Close(),
 	)

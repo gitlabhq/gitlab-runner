@@ -322,6 +322,7 @@ func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScr
 
 func (b *AbstractShell) writePrepareScript(_ context.Context, w ShellWriter, _ common.ShellScriptInfo) error {
 	w.RmFile(w.TmpFile(gitlabEnvFileName))
+	w.RmFile(w.TmpFile("masking.db"))
 	return nil
 }
 
@@ -1338,6 +1339,7 @@ func (b *AbstractShell) writeArchiveCacheOnFailureScript(
 
 func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	w.RmFile(w.TmpFile(gitlabEnvFileName))
+	w.RmFile(w.TmpFile("masking.db"))
 
 	for _, variable := range info.Build.GetAllVariables() {
 		if !variable.File {
