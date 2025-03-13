@@ -1179,6 +1179,8 @@ type RunnerSettings struct {
 
 	Environment []string `toml:"environment,omitempty" json:"environment,omitempty" long:"env" env:"RUNNER_ENV" description:"Custom environment variables injected to build environment"`
 
+	ProxyExec *bool `toml:"proxy_exec,omitempty" json:"proxy_exec,omitempty" long:"proxy-exec" env:"RUNNER_PROXY_EXEC" description:"(Experimental) Proxy execution via helper binary"`
+
 	PreGetSourcesScript  string `toml:"pre_get_sources_script,omitempty" json:"pre_get_sources_script" long:"pre-get-sources-script" env:"RUNNER_PRE_GET_SOURCES_SCRIPT" description:"Runner-specific commands to be executed on the runner before updating the Git repository an updating submodules."`
 	PostGetSourcesScript string `toml:"post_get_sources_script,omitempty" json:"post_get_sources_script" long:"post-get-sources-script" env:"RUNNER_POST_GET_SOURCES_SCRIPT" description:"Runner-specific commands to be executed on the runner after updating the Git repository and updating submodules."`
 
@@ -2077,6 +2079,14 @@ func (c *RunnerConfig) GetVariables() JobVariables {
 	}
 
 	return variables
+}
+
+func (c *RunnerConfig) IsProxyExec() bool {
+	if c.ProxyExec != nil {
+		return *c.ProxyExec
+	}
+
+	return false
 }
 
 // DeepCopy attempts to make a deep clone of the object

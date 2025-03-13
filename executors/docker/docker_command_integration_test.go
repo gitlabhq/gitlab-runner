@@ -1169,13 +1169,12 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 
 			build.Image = common.Image{
 				Name:       common.TestLivenessImage,
-				Entrypoint: []string{"sh", "-c"},
+				Entrypoint: []string{""},
 			}
 
 			if runtime.GOOS == "windows" {
 				build.Runner.Docker.WaitForServicesTimeout = 60
 				build.Runner.RunnerSettings.Shell = shells.SNPwsh
-				build.Image.Entrypoint = []string{""}
 			}
 
 			build.Services = append(build.Services, common.Image{
@@ -1471,6 +1470,9 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 					HelperImage: helperImageConfig,
 					PullPolicy:  common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
+				// Ensure ProxyExec is disabled as the gitlab-runner-helper image above doesn't contain
+				// the proxy_exec subcommand.
+				ProxyExec: func() *bool { v := false; return &v }(),
 			},
 			SystemIDState: systemIDState,
 		},
@@ -1722,6 +1724,9 @@ func TestDockerCommand_WriteToVolumeNonRootImage(t *testing.T) {
 	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
 	build.Runner.Docker.Volumes = append(build.Runner.Docker.Volumes, volumeBind)
 	build.Runner.Docker.HelperImage = helperImage
+	// Ensure ProxyExec is disabled as the gitlab-runner-helper image above doesn't contain
+	// the proxy_exec subcommand.
+	build.Runner.RunnerSettings.ProxyExec = func() *bool { v := false; return &v }()
 	build.JobResponse.Steps = common.Steps{
 		common.Step{
 			Name: common.StepNameScript,
@@ -2407,9 +2412,9 @@ func Test_FF_USE_INIT_WITH_DOCKER_EXECUTOR(t *testing.T) {
 			assert.NoError(t, build.Run(&common.Config{}, &common.Trace{Writer: out}))
 
 			if useInit {
-				assert.Regexp(t, "1 root      0:00 /sbin/docker-init -- sh", out.String())
+				assert.Regexp(t, "1 root      0:00 /sbin/docker-init --", out.String())
 			} else {
-				assert.NotRegexp(t, "1 root      0:00 /sbin/docker-init -- sh", out.String())
+				assert.NotRegexp(t, "1 root      0:00 /sbin/docker-init --", out.String())
 			}
 		})
 	}

@@ -1329,6 +1329,7 @@ func (e *executor) prepareHelperImage() (helperimage.Info, error) {
 		KernelVersion: e.info.KernelVersion,
 		Shell:         e.Config.Shell,
 		Flavor:        e.ExpandValue(e.Config.Docker.HelperImageFlavor),
+		ProxyExec:     e.Config.IsProxyExec(),
 	})
 }
 

@@ -828,6 +828,6 @@ func init() {
 		eol = "\n"
 	}
 
-	common.RegisterShell(&PowerShell{Shell: SNPwsh, EOL: eol})
-	common.RegisterShell(&PowerShell{Shell: SNPowershell, EOL: "\r\n"})
+	common.RegisterShell(WrapShell(&PowerShell{Shell: SNPwsh, EOL: eol}))
+	common.RegisterShell(WrapShell(&PowerShell{Shell: SNPowershell, EOL: "\r\n"}))
 }

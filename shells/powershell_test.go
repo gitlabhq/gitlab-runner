@@ -293,7 +293,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 				Shell: tc.shell,
 				User:  tc.user,
 				Build: &common.Build{
-					Runner: &common.RunnerConfig{},
+					Runner: &common.RunnerConfig{RunnerSettings: common.RunnerSettings{ProxyExec: func() *bool { v := false; return &v }()}},
 				},
 			}
 
@@ -469,22 +469,29 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		Type:          common.NormalShell,
 		RunnerCommand: "/usr/bin/gitlab-runner-helper",
 		Build: &common.Build{
-			Runner: &common.RunnerConfig{},
+			Runner: &common.RunnerConfig{RunnerSettings: common.RunnerSettings{ProxyExec: func() *bool { v := false; return &v }()}},
 		},
 	}
 	shellInfo.Build.Runner.Executor = "kubernetes"
 	shellInfo.Build.Hostname = "Test Hostname"
 
-	pwshShell := common.GetShell("pwsh").(*PowerShell)
-	shebang := ""
-	rmGitLabEnvScript := `$CurrentDirectory = (Resolve-Path ./).Path` + pwshShell.EOL +
-		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/gitlab_runner_env" -PathType Leaf) ) {` + pwshShell.EOL +
-		`  Remove-Item2 -Force "$CurrentDirectory/.tmp/gitlab_runner_env"` + pwshShell.EOL +
-		`} elseif(Test-Path "$CurrentDirectory/.tmp/gitlab_runner_env") {` + pwshShell.EOL +
-		`  Remove-Item -Force "$CurrentDirectory/.tmp/gitlab_runner_env"` + pwshShell.EOL +
-		`}` + pwshShell.EOL + pwshShell.EOL + pwshShell.EOL + "}" + pwshShell.EOL + pwshShell.EOL
+	eol := "\n"
+	switch v := common.GetShell("pwsh").(type) {
+	case *PowerShell:
+		eol = v.EOL
+	case *ProxyExecShell:
+		eol = v.Shell.(*PowerShell).EOL
+	}
 
-	if pwshShell.EOL == "\n" {
+	shebang := ""
+	rmGitLabEnvScript := `$CurrentDirectory = (Resolve-Path ./).Path` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/gitlab_runner_env" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force "$CurrentDirectory/.tmp/gitlab_runner_env"` + eol +
+		`} elseif(Test-Path "$CurrentDirectory/.tmp/gitlab_runner_env") {` + eol +
+		`  Remove-Item -Force "$CurrentDirectory/.tmp/gitlab_runner_env"` + eol +
+		`}` + eol + eol + eol + "}" + eol + eol
+
+	if eol == "\n" {
 		shebang = "#!/usr/bin/env pwsh\n"
 	} else {
 		rmGitLabEnvScript = strings.ReplaceAll(rmGitLabEnvScript, `/`, `\`)
@@ -501,21 +508,21 @@ func TestPowershell_GenerateScript(t *testing.T) {
 			info:            shellInfo,
 			expectedFailure: false,
 			expectedScript: shebang + "& {" +
-				pwshShell.EOL + pwshShell.EOL +
+				eol + eol +
 				fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
-				pwshShell.EOL + pwshShell.EOL +
-				`$ErrorActionPreference = "Stop"` + pwshShell.EOL +
-				`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` + pwshShell.EOL + rmGitLabEnvScript,
+				eol + eol +
+				`$ErrorActionPreference = "Stop"` + eol +
+				`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` + eol + rmGitLabEnvScript,
 		},
 		"cleanup variables": {
 			stage:           common.BuildStageCleanup,
 			info:            shellInfo,
 			expectedFailure: false,
 			expectedScript: shebang + "& {" +
-				pwshShell.EOL + pwshShell.EOL +
+				eol + eol +
 				fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
-				pwshShell.EOL + pwshShell.EOL +
-				`$ErrorActionPreference = "Stop"` + pwshShell.EOL + rmGitLabEnvScript,
+				eol + eol +
+				`$ErrorActionPreference = "Stop"` + eol + rmGitLabEnvScript,
 		},
 		"no script": {
 			stage:           "no_script",
@@ -527,7 +534,7 @@ func TestPowershell_GenerateScript(t *testing.T) {
 
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
-			script, err := pwshShell.GenerateScript(context.Background(), tc.stage, tc.info)
+			script, err := common.GetShell("pwsh").GenerateScript(context.Background(), tc.stage, tc.info)
 			assert.Equal(t, tc.expectedScript, script)
 			if tc.expectedFailure {
 				assert.Error(t, err)
@@ -543,13 +550,19 @@ func TestPowershell_GenerateSaveScript(t *testing.T) {
 		Type:          common.NormalShell,
 		RunnerCommand: "/usr/bin/gitlab-runner-helper",
 		Build: &common.Build{
-			Runner: &common.RunnerConfig{},
+			Runner: &common.RunnerConfig{RunnerSettings: common.RunnerSettings{ProxyExec: func() *bool { v := false; return &v }()}},
 		},
 	}
 	shellInfo.Build.Runner.Executor = "kubernetes"
 	shellInfo.Build.Hostname = "Test Hostname"
 
-	pwshShell := common.GetShell("pwsh").(*PowerShell)
+	eol := "\n"
+	switch v := common.GetShell("pwsh").(type) {
+	case *PowerShell:
+		eol = v.EOL
+	case *ProxyExecShell:
+		eol = v.Shell.(*PowerShell).EOL
+	}
 
 	testCases := map[string]struct {
 		info            common.ShellScriptInfo
@@ -560,41 +573,41 @@ func TestPowershell_GenerateSaveScript(t *testing.T) {
 		"normal script": {
 			info:   shellInfo,
 			script: `&{ echo "Display special characters () {} <> [] \ | ;"}`,
-			expectedScript: "& {" + pwshShell.EOL + pwshShell.EOL +
-				"$in =\"JnsgZWNobyAiRGlzcGxheSBzcGVjaWFsIGNoYXJhY3RlcnMgKCkge30gPD4gW10gXCB8IDsifQ==\"" + pwshShell.EOL +
-				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + pwshShell.EOL +
-				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + pwshShell.EOL +
-				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + pwshShell.EOL +
-				"$sw.Flush()" + pwshShell.EOL + "$sw.Close()" + pwshShell.EOL + pwshShell.EOL + pwshShell.EOL +
-				"}" + pwshShell.EOL + pwshShell.EOL,
+			expectedScript: "& {" + eol + eol +
+				"$in =\"JnsgZWNobyAiRGlzcGxheSBzcGVjaWFsIGNoYXJhY3RlcnMgKCkge30gPD4gW10gXCB8IDsifQ==\"" + eol +
+				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + eol +
+				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + eol +
+				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + eol +
+				"$sw.Flush()" + eol + "$sw.Close()" + eol + eol + eol +
+				"}" + eol + eol,
 		},
 		"echo unicode script": {
 			script: "echo \"`“ `“ `” `” `„ ‘ ’ ‚ ‛ ‘ ’„",
 			info:   shellInfo,
-			expectedScript: "& {" + pwshShell.EOL + pwshShell.EOL +
-				"$in =\"ZWNobyAiYOKAnCBg4oCcIGDigJ0gYOKAnSBg4oCeIOKAmCDigJkg4oCaIOKAmyDigJgg4oCZ4oCe\"" + pwshShell.EOL +
-				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + pwshShell.EOL +
-				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + pwshShell.EOL +
-				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + pwshShell.EOL +
-				"$sw.Flush()" + pwshShell.EOL + "$sw.Close()" + pwshShell.EOL + pwshShell.EOL + pwshShell.EOL +
-				"}" + pwshShell.EOL + pwshShell.EOL,
+			expectedScript: "& {" + eol + eol +
+				"$in =\"ZWNobyAiYOKAnCBg4oCcIGDigJ0gYOKAnSBg4oCeIOKAmCDigJkg4oCaIOKAmyDigJgg4oCZ4oCe\"" + eol +
+				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + eol +
+				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + eol +
+				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + eol +
+				"$sw.Flush()" + eol + "$sw.Close()" + eol + eol + eol +
+				"}" + eol + eol,
 		},
 		"echo script": {
 			script: "echo normal string",
 			info:   shellInfo,
-			expectedScript: "& {" + pwshShell.EOL + pwshShell.EOL +
-				"$in =\"ZWNobyBub3JtYWwgc3RyaW5n\"" + pwshShell.EOL +
-				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + pwshShell.EOL +
-				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + pwshShell.EOL +
-				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + pwshShell.EOL +
-				"$sw.Flush()" + pwshShell.EOL + "$sw.Close()" + pwshShell.EOL + pwshShell.EOL + pwshShell.EOL +
-				"}" + pwshShell.EOL + pwshShell.EOL,
+			expectedScript: "& {" + eol + eol +
+				"$in =\"ZWNobyBub3JtYWwgc3RyaW5n\"" + eol +
+				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + eol +
+				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + eol +
+				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + eol +
+				"$sw.Flush()" + eol + "$sw.Close()" + eol + eol + eol +
+				"}" + eol + eol,
 		},
 	}
 
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
-			script, err := pwshShell.GenerateSaveScript(tc.info, path, tc.script)
+			script, err := common.GetShell("pwsh").GenerateSaveScript(tc.info, path, tc.script)
 			assert.Equal(t, tc.expectedScript, script)
 			if tc.expectedFailure {
 				assert.Error(t, err)
