@@ -338,7 +338,7 @@ Make sure to adjust the value to your specific environment requirements.
 
 ## Restrict Docker images and services
 
-To restrict Docker images and services, specify a wildcard pattern in the `allowed_images` and `allowed_services` parameters.
+To restrict Docker images and services, specify a wildcard pattern in the `allowed_images` and `allowed_services` parameters. For more details on syntax, see [doublestar documentation](https://github.com/bmatcuk/doublestar).
 
 For example, to allow images from your private Docker registry only:
 
@@ -362,6 +362,17 @@ To restrict to a list of images from your private Docker registry:
     (...)
     allowed_images = ["my.registry.tld:5000/ruby:*", "my.registry.tld:5000/node:*"]
     allowed_services = ["postgres:9.4", "postgres:latest"]
+```
+
+To exclude specific images like Kali:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    allowed_images = ["**", "!*/kali*"]  
 ```
 
 ## Access services hostnames
