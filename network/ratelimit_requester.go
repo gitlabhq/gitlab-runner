@@ -60,6 +60,15 @@ func (r *rateLimitRequester) Do(req *http.Request) (*http.Response, error) {
 		// the runner is resource constrained by the time we get the header
 		// it might be in the past, but that's ok since sleep will return immediately
 		time.Sleep(*rateLimitDuration)
+
+		if req.GetBody != nil {
+			body, err := req.GetBody()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get body: %w", err)
+			}
+
+			req.Body = body
+		}
 	}
 
 	return nil, errRateLimitGaveUp

@@ -2308,6 +2308,11 @@ func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Reque
 }
 
 func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path == "/api/v4/jobs/10/new-location" {
+		w.WriteHeader(http.StatusCreated)
+		return
+	}
+
 	if r.URL.Path != "/api/v4/jobs/10/artifacts" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -2363,13 +2368,24 @@ func uploadArtifacts(
 		return UploadFailed, ""
 	}
 
+	bodyProvider := StreamProvider{
+		ReaderFactory: func() (io.ReadCloser, error) {
+			// Open the file again in case there are retries
+			file, err := os.Open(artifactsFile)
+			if err != nil {
+				return nil, err
+			}
+			return file, nil
+		},
+	}
+
 	options := ArtifactsOptions{
 		BaseName:           filepath.Base(artifactsFile),
 		Format:             artifactFormat,
 		Type:               artifactType,
 		LogResponseDetails: logResponseDetails,
 	}
-	return client.UploadRawArtifacts(config, file, options)
+	return client.UploadRawArtifacts(config, bodyProvider, options)
 }
 
 func TestArtifactsUpload(t *testing.T) {
@@ -2525,17 +2541,19 @@ func TestArtifactsUpload(t *testing.T) {
 				isLogMessage(t, logs.entries[i], "Uploading artifacts to coordinator... 400 Bad Request", logrus.WarnLevel)
 			},
 		},
+		// redirects are handled transparently with the use of http.Request's GetBody()
 		"redirect": {
 			content:             []byte("content"),
 			config:              redirectToken,
-			expectedUploadState: UploadRedirected,
-			expectedLocation:    "new-location",
+			expectedUploadState: UploadSucceeded,
+			artifactFormat:      ArtifactFormatZip,
 			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
+				i := 0
 				if logResponseDetail {
-					isResponseBodyLog(t, logs.entries[0])
-					return
+					isResponseBodyLog(t, logs.entries[i])
+					i += 1
 				}
-				assert.Len(t, logs.entries, 0, "expected no logs")
+				isLogMessage(t, logs.entries[i], "Uploading artifacts to coordinator... 201 Created", logrus.InfoLevel)
 			},
 		},
 	}

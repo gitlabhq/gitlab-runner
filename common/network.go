@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -25,6 +26,54 @@ type (
 	JobState         string
 	JobFailureReason string
 )
+
+// ContentProvider interface that can provide both the reader and optionally the content length
+type ContentProvider interface {
+	// GetReader returns a new io.ReadCloser for the content.
+	// The caller is responsible for closing the returned ReadCloser when done.
+	// Each call to GetReader must return a fresh reader starting from the beginning of the content.
+	GetReader() (io.ReadCloser, error)
+
+	// GetContentLength returns the content length and whether it's known.
+	// If the second return value is false, the content length is unknown
+	// and chunked transfer encoding should be used.
+	GetContentLength() (int64, bool)
+}
+
+// BytesProvider implements ContentProvider for fixed, in-memory byte slices
+type BytesProvider struct {
+	Data []byte
+}
+
+// GetReader returns a new reader for the byte slice.
+// Caller must close the returned ReadCloser when done.
+func (p BytesProvider) GetReader() (io.ReadCloser, error) {
+	return io.NopCloser(bytes.NewReader(p.Data)), nil
+}
+
+// GetContentLength returns the exact length of the byte slice.
+func (p BytesProvider) GetContentLength() (int64, bool) {
+	return int64(len(p.Data)), true // Length is known
+}
+
+// StreamProvider implements ContentProvider for streamed data where you don't want to
+// or can't determine the size upfront.
+type StreamProvider struct {
+	// ReaderFactory should return a fresh io.ReadCloser each time it's called.
+	// Each io.ReadCloser should start reading from the beginning of the content.
+	ReaderFactory func() (io.ReadCloser, error)
+}
+
+// GetReader returns a new ReadCloser by calling the ReaderFactory.
+// Caller must close the returned ReadCloser when done.
+func (p StreamProvider) GetReader() (io.ReadCloser, error) {
+	return p.ReaderFactory()
+}
+
+// GetContentLength indicates the content length is unknown.
+func (p StreamProvider) GetContentLength() (int64, bool) {
+	return 0, false // Length is unknown, use chunked encoding
+}
 
 func (r JobFailureReason) String() string {
 	return string(r)
@@ -1052,6 +1101,6 @@ type Network interface {
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte,
 		startOffset int, debugModeEnabled bool) PatchTraceResult
 	DownloadArtifacts(config JobCredentials, artifactsFile io.WriteCloser, directDownload *bool) DownloadState
-	UploadRawArtifacts(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) (UploadState, string)
+	UploadRawArtifacts(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string)
 	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) (JobTrace, error)
 }

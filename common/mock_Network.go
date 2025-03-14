@@ -231,9 +231,9 @@ func (_m *MockNetwork) UpdateJob(config RunnerConfig, jobCredentials *JobCredent
 	return r0
 }
 
-// UploadRawArtifacts provides a mock function with given fields: config, reader, options
-func (_m *MockNetwork) UploadRawArtifacts(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) (UploadState, string) {
-	ret := _m.Called(config, reader, options)
+// UploadRawArtifacts provides a mock function with given fields: config, bodyProvider, options
+func (_m *MockNetwork) UploadRawArtifacts(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string) {
+	ret := _m.Called(config, bodyProvider, options)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UploadRawArtifacts")
@@ -241,17 +241,17 @@ func (_m *MockNetwork) UploadRawArtifacts(config JobCredentials, reader io.ReadC
 
 	var r0 UploadState
 	var r1 string
-	if rf, ok := ret.Get(0).(func(JobCredentials, io.ReadCloser, ArtifactsOptions) (UploadState, string)); ok {
-		return rf(config, reader, options)
+	if rf, ok := ret.Get(0).(func(JobCredentials, ContentProvider, ArtifactsOptions) (UploadState, string)); ok {
+		return rf(config, bodyProvider, options)
 	}
-	if rf, ok := ret.Get(0).(func(JobCredentials, io.ReadCloser, ArtifactsOptions) UploadState); ok {
-		r0 = rf(config, reader, options)
+	if rf, ok := ret.Get(0).(func(JobCredentials, ContentProvider, ArtifactsOptions) UploadState); ok {
+		r0 = rf(config, bodyProvider, options)
 	} else {
 		r0 = ret.Get(0).(UploadState)
 	}
 
-	if rf, ok := ret.Get(1).(func(JobCredentials, io.ReadCloser, ArtifactsOptions) string); ok {
-		r1 = rf(config, reader, options)
+	if rf, ok := ret.Get(1).(func(JobCredentials, ContentProvider, ArtifactsOptions) string); ok {
+		r1 = rf(config, bodyProvider, options)
 	} else {
 		r1 = ret.Get(1).(string)
 	}

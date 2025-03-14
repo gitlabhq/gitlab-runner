@@ -67,9 +67,10 @@ func (c *ArtifactsUploaderCommand) artifactFilename(name string, format common.A
 	return name
 }
 
-func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, error) {
+// createBodyProvider returns the artifact name and the stream provider for the request body.
+func (c *ArtifactsUploaderCommand) createBodyProvider() (string, common.ContentProvider) {
 	if len(c.files) == 0 {
-		return "", nil, nil
+		return "", nil
 	}
 
 	format := c.Format
@@ -78,33 +79,43 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 	}
 
 	filename := c.artifactFilename(c.Name, format)
-	pr, pw := io.Pipe()
 
-	archiver, err := archive.NewArchiver(archive.Format(format), pw, c.wd, GetCompressionLevel(c.CompressionLevel))
-	if err != nil {
-		_ = pr.CloseWithError(err)
-		return filename, nil, err
+	// Create a StreamProvider that doesn't know its content length in advance
+	streamProvider := common.StreamProvider{
+		ReaderFactory: func() (io.ReadCloser, error) {
+			pr, pw := io.Pipe()
+
+			archiver, archiveErr := archive.NewArchiver(archive.Format(format), pw, c.wd, GetCompressionLevel(c.CompressionLevel))
+			if archiveErr != nil {
+				pr.CloseWithError(archiveErr)
+				return nil, archiveErr
+			}
+
+			// Start a new Goroutine to create the archive for this attempt
+			go func() {
+				archiveErr := archiver.Archive(context.Background(), c.files)
+				pw.CloseWithError(archiveErr)
+			}()
+
+			meteredReader := meter.NewReader(
+				pr,
+				c.TransferMeterFrequency,
+				meter.LabelledRateFormat(os.Stdout, "Uploading artifacts", meter.UnknownTotalSize),
+			)
+
+			return meteredReader, nil
+		},
 	}
 
-	go func() {
-		err := archiver.Archive(context.Background(), c.files)
-		_ = pw.CloseWithError(err)
-	}()
-
-	return filename, pr, nil
+	return filename, streamProvider
 }
 
 func (c *ArtifactsUploaderCommand) Run() error {
-	artifactsName, stream, err := c.createReadStream()
-	if err != nil {
-		return err
-	}
-	if stream == nil {
+	artifactsName, bodyProvider := c.createBodyProvider()
+	if bodyProvider == nil {
 		logrus.Errorln("No files to upload")
-
 		return nil
 	}
-	defer func() { _ = stream.Close() }()
 
 	// Create the archive
 	options := common.ArtifactsOptions{
@@ -115,14 +126,8 @@ func (c *ArtifactsUploaderCommand) Run() error {
 		LogResponseDetails: c.CiDebugTrace,
 	}
 
-	stream = meter.NewReader(
-		stream,
-		c.TransferMeterFrequency,
-		meter.LabelledRateFormat(os.Stdout, "Uploading artifacts", meter.UnknownTotalSize),
-	)
-
 	// Upload the data
-	resp, location := c.network.UploadRawArtifacts(c.JobCredentials, stream, options)
+	resp, location := c.network.UploadRawArtifacts(c.JobCredentials, bodyProvider, options)
 	switch resp {
 	case common.UploadSucceeded:
 		return nil
