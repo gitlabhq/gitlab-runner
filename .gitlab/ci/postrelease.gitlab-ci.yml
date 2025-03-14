@@ -39,9 +39,12 @@ trigger UBI images build:
 trigger runner-incept tests:
   extends:
     - .trigger-downstream-pipeline-ref
+    # make sure the needs jobs here match the ones in the downstream pipeline, or jobs in the downstream pipeline will
+    # fail with: "This job could not start because it could not retrieve the needed artifacts."
   needs:
     - binaries
     - "helper images"
+    - "prebuilt helper images"
   trigger:
     project: gitlab-org/ci-cd/tests/runner-incept
     # strategy: depend
