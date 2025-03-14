@@ -1,3 +1,9 @@
+## v17.8.4 (2025-03-14)
+
+### Security fixes
+
+- Use a dotenv file to store cache environment variables [!5414](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5414)
+
 ## v17.8.3 (2025-01-23)
 
 ### Bug fixes
