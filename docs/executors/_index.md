@@ -73,7 +73,7 @@ you decide which executor to use.
 1. For example, using [Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "Vagrant documentation for VirtualBox").
 1. Depends on the environment you are provisioning. Can be completely isolated or shared between builds.
 1. When a runner's file system access is not protected, jobs can access the entire system,
-   including the runner's token and other jobs' cache and code. 
+   including the runner's token and other jobs' cache and code.
    Executors marked ✓ don't allow the runner to access the file system by default.
    However, security flaws or certain configurations could allow jobs
    to break out of their container and access the file system hosting the runner.
