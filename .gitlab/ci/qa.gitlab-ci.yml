@@ -72,7 +72,7 @@ code_quality:
   # Write the code coverage report to gl-code-quality-report.json
   # and print linting issues to stdout in the format: path/to/file:line description
   - make --silent lint | tee ${REPORT_FILE}
-  timeout: 15 minutes
+  timeout: 20 minutes
   artifacts:
     reports:
       codequality: ${REPORT_FILE}

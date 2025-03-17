@@ -534,7 +534,7 @@ func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
 				"--maximum-timeout, --paused, --tag-list, and --maintenance-note. " +
 				"For more information, see https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html#changes-to-the-gitlab-runner-register-command-syntax" +
 				"These parameters and the legacy-compatible registration process will be removed " +
-				"in GitLab Runner 18.0. ",
+				"in a future GitLab Runner release. ",
 		)
 		return
 	}
