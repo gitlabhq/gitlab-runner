@@ -19,21 +19,22 @@ import (
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
-// When umask is disabled for the Kubernetes executor,
-// a hidden file, .giltab-build-uid-gid, is created in the `builds_dir` directory to assist the helper container
-// in retrieving the build image's configured `uid:gid`.
-// This information is then applied to the working directories to prevent them from being writable by anyone.
-const BuildUiGidFile = ".giltab-build-uid-gid"
+const (
+	// When umask is disabled for the Kubernetes executor,
+	// a hidden file, .giltab-build-uid-gid, is created in the `builds_dir` directory to assist the helper container
+	// in retrieving the build image's configured `uid:gid`.
+	// This information is then applied to the working directories to prevent them from being writable by anyone.
+	BuildUiGidFile   = ".giltab-build-uid-gid"
+	StartupProbeFile = ".gitlab-startup-marker"
 
-const StartupProbeFile = ".gitlab-startup-marker"
-
-const credHelperConfFile = "cred-helper.conf"
+	gitlabEnvFileName      = "gitlab_runner_env"
+	gitlabCacheEnvFileName = "gitlab_runner_cache_env"
+	credHelperConfFile     = "cred-helper.conf"
+	gitDir                 = ".git"
+	gitTemplateDir         = "git-template"
+)
 
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
-
-const gitlabEnvFileName = "gitlab_runner_env"
-
-const gitlabCacheEnvFileName = "gitlab_runner_cache_env"
 
 type stringQuoter func(string) string
 
@@ -583,9 +584,11 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	}
 
 	// initializing
-	templateDir := w.MkTmpDir("git-template")
+	templateDir := w.MkTmpDir(gitTemplateDir)
 	templateFile := w.Join(templateDir, "config")
 	objectFormat := build.GetRepositoryObjectFormat()
+
+	b.writeGitCleanup(w, build)
 
 	if build.SafeDirectoryCheckout {
 		// Solves problem with newer Git versions when files existing in the working directory
@@ -606,8 +609,6 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	if build.IsSharedEnv() {
 		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
 	}
-
-	b.writeGitCleanup(w, build.GetSubmoduleStrategy(), projectDir)
 
 	if objectFormat != common.DefaultObjectFormat {
 		w.Command("git", "init", projectDir, "--template", templateDir, "--object-format", objectFormat)
@@ -663,6 +664,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 }
 
 func (b *AbstractShell) configureGitCredHelper(w ShellWriter, info common.ShellScriptInfo, credConfigFile string) error {
+	w.RmFile(credConfigFile)
 	build := info.Build
 	shellName := build.Runner.Shell
 	if shellName == "" {
@@ -706,8 +708,10 @@ func (b *AbstractShell) configureGitCredHelper(w ShellWriter, info common.ShellS
 	return nil
 }
 
-func (b *AbstractShell) writeGitCleanup(w ShellWriter, submoduleStrategy common.SubmoduleStrategy, projectDir string) {
-	const gitDir = ".git"
+func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
+	projectDir := build.FullProjectDir()
+	submoduleStrategy := build.GetSubmoduleStrategy()
+	cleanForSubmodules := submoduleStrategy == common.SubmoduleNormal || submoduleStrategy == common.SubmoduleRecursive
 
 	// Remove .git/{index,shallow,HEAD,config}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation.
@@ -723,12 +727,46 @@ func (b *AbstractShell) writeGitCleanup(w ShellWriter, submoduleStrategy common.
 
 	for _, f := range files {
 		w.RmFile(path.Join(projectDir, gitDir, f))
-		if submoduleStrategy == common.SubmoduleNormal || submoduleStrategy == common.SubmoduleRecursive {
+		if cleanForSubmodules {
 			w.RmFilesRecursive(path.Join(projectDir, gitDir, "modules"), path.Base(f))
 		}
 	}
 
 	w.RmFilesRecursive(path.Join(projectDir, gitDir, "refs"), "*.lock")
+
+	b.writeGitCleanupAllConfigs(w, build, cleanForSubmodules)
+}
+
+// writeGitCleanupAllConfigs removes all git configs which are potentially open to malicious code injection:
+// - the main git config & hooks
+// - the template git config & hooks
+// - any submodule's git config & hooks
+// It's by default disabled for the shell executor or when the git strategy is "none", and enabled otherwise; explicit
+// configuration however always has precedence.
+func (b *AbstractShell) writeGitCleanupAllConfigs(sw ShellWriter, build *common.Build, cleanForSubmodules bool) {
+	executor := build.Runner.Executor
+	shouldCleanUp := (executor != "shell" && executor != "shell-integration-test" && build.GetGitStrategy() != common.GitNone)
+	if config := build.Runner.CleanGitConfig; config != nil {
+		shouldCleanUp = *config
+	}
+	if !shouldCleanUp {
+		return
+	}
+
+	projectDir := build.FullProjectDir()
+
+	// clean out configs in the main git dir and in the template dir
+	for _, dir := range []string{sw.TmpFile(gitTemplateDir), sw.Join(projectDir, gitDir)} {
+		sw.RmFile(sw.Join(dir, "config"))
+		sw.RmDir(sw.Join(dir, "hooks"))
+	}
+
+	// clean out configs in the modules' git dirs
+	if cleanForSubmodules {
+		modulesDir := sw.Join(projectDir, gitDir, "modules")
+		sw.RmFilesRecursive(modulesDir, "config")
+		sw.RmDirsRecursive(modulesDir, "hooks")
+	}
 }
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
@@ -1352,9 +1390,9 @@ func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, inf
 		if err := b.writeCleanupBuildDirectoryScript(w, info); err != nil {
 			return err
 		}
-
-		w.RmFile(filepath.Join(info.Build.FullProjectDir(), ".git", "config"))
 	}
+
+	b.writeGitCleanup(w, info.Build)
 
 	return nil
 }

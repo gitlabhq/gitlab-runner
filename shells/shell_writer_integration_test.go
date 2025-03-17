@@ -121,6 +121,31 @@ func TestRmFilesRecursive(t *testing.T) {
 	})
 }
 
+func TestRmDirsRecursive(t *testing.T) {
+	testFiles := testFileTree{
+		"some/dir2rm/even/nested/dir2rm/file": "should be deleted incl. ancestor dirs",
+		"dir2rm":                              "this is a file and should not be deleted",
+		"not/really_dir2rm":                   "",
+		"random/dir2rm":                       "",
+	}
+
+	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shells.ShellWriter) {
+		tmpDir := t.TempDir()
+		testFiles.Create(t, tmpDir)
+
+		writer.RmDirsRecursive(tmpDir, "dir2rm")
+
+		runShell(t, shell, tmpDir, writer)
+
+		assert.DirExists(t, filepath.Join(tmpDir, "some"))
+		assert.NoDirExists(t, filepath.Join(tmpDir, "some/dir2rm"))
+		assert.FileExists(t, filepath.Join(tmpDir, "dir2rm"))
+		assert.DirExists(t, filepath.Join(tmpDir, "not/really_dir2rm"))
+		assert.DirExists(t, filepath.Join(tmpDir, "random"))
+		assert.NoDirExists(t, filepath.Join(tmpDir, "random/dir2rm"))
+	})
+}
+
 func TestCommandArgumentExpansion(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "runner-test")
 	require.NoError(t, err)
@@ -225,4 +250,22 @@ password=some-pass
 		output := runShell(t, shell, tmpDir, w)
 		assert.Equal(t, expectedOutput, output)
 	})
+}
+
+type testFileTree map[string]string
+
+func (tft testFileTree) Create(t *testing.T, baseDir string) {
+	for path, content := range tft {
+		if content == "" {
+			// on empty content, we don't create a file but a leaf directory
+			err := os.MkdirAll(filepath.Join(baseDir, path), 0750)
+			require.NoError(t, err)
+			continue
+		}
+
+		err := os.MkdirAll(filepath.Join(baseDir, filepath.Dir(path)), 0750)
+		require.NoError(t, err)
+		err = os.WriteFile(filepath.Join(baseDir, path), []byte(content), 0644)
+		require.NoError(t, err)
+	}
 }
