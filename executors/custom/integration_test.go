@@ -462,46 +462,73 @@ func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
 }
 
 func TestBuildPowerShellCatchesExceptions(t *testing.T) {
+	tests := map[string]struct {
+		cleanGitConfig         *bool
+		expectFreshRepoMessage bool
+	}{
+		"no git cleanup": {
+			expectFreshRepoMessage: true,
+		},
+		"git cleanup explicitly enabled": {
+			cleanGitConfig:         &[]bool{true}[0],
+			expectFreshRepoMessage: true,
+		},
+		"git cleanup explicitly disabled": {
+			cleanGitConfig:         &[]bool{false}[0],
+			expectFreshRepoMessage: false,
+		},
+	}
+
 	for _, shell := range []string{"powershell", "pwsh"} {
 		t.Run(shell, func(t *testing.T) {
-			helpers.SkipIntegrationTests(t, shell)
+			for name, test := range tests {
+				t.Run(name, func(t *testing.T) {
+					helpers.SkipIntegrationTests(t, shell)
 
-			successfulBuild, err := common.GetRemoteSuccessfulBuild()
-			require.NoError(t, err)
+					successfulBuild, err := common.GetRemoteSuccessfulBuild()
+					require.NoError(t, err)
 
-			build := newBuild(t, successfulBuild, shell)
-			build.Variables = append(
-				build.Variables,
-				common.JobVariable{Key: "ErrorActionPreference", Value: "Stop"},
-				common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-			)
+					build := newBuild(t, successfulBuild, shell)
+					build.Variables = append(
+						build.Variables,
+						common.JobVariable{Key: "ErrorActionPreference", Value: "Stop"},
+						common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+					)
+					build.Runner.RunnerSettings.CleanGitConfig = test.cleanGitConfig
 
-			out, err := buildtest.RunBuildReturningOutput(t, build)
-			assert.NoError(t, err)
-			assert.Contains(t, out, "Created fresh repository")
+					checkFreshRepoMessage := assert.NotContains
+					if test.expectFreshRepoMessage {
+						checkFreshRepoMessage = assert.Contains
+					}
 
-			out, err = buildtest.RunBuildReturningOutput(t, build)
-			assert.NoError(t, err)
-			assert.NotContains(t, out, "Created fresh repository")
-			assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+					out, err := buildtest.RunBuildReturningOutput(t, build)
+					assert.NoError(t, err)
+					assert.Contains(t, out, "Created fresh repository")
 
-			build.Variables = append(
-				build.Variables,
-				common.JobVariable{Key: "ErrorActionPreference", Value: "Continue"},
-			)
-			out, err = buildtest.RunBuildReturningOutput(t, build)
-			assert.NoError(t, err)
-			assert.NotContains(t, out, "Created fresh repository")
-			assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+					out, err = buildtest.RunBuildReturningOutput(t, build)
+					assert.NoError(t, err)
+					checkFreshRepoMessage(t, out, "Created fresh repository")
+					assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 
-			build.Variables = append(
-				build.Variables,
-				common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"},
-			)
-			out, err = buildtest.RunBuildReturningOutput(t, build)
-			assert.NoError(t, err)
-			assert.NotContains(t, out, "Created fresh repository")
-			assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+					build.Variables = append(
+						build.Variables,
+						common.JobVariable{Key: "ErrorActionPreference", Value: "Continue"},
+					)
+					out, err = buildtest.RunBuildReturningOutput(t, build)
+					assert.NoError(t, err)
+					checkFreshRepoMessage(t, out, "Created fresh repository")
+					assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+
+					build.Variables = append(
+						build.Variables,
+						common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"},
+					)
+					out, err = buildtest.RunBuildReturningOutput(t, build)
+					assert.NoError(t, err)
+					checkFreshRepoMessage(t, out, "Created fresh repository")
+					assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+				})
+			}
 		})
 	}
 }
