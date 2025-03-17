@@ -247,6 +247,7 @@ Each `[[runners]]` section defines one runner.
 | `post_build_script`        | Commands to be executed on the runner just after executing the job, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                                                                                                            |
 | `clone_url`                | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL.                                                                                                                                                                                                                                                                                                         |
 | `debug_trace_disabled`     | Disables [debug tracing](https://docs.gitlab.com/ee/ci/variables/#enable-debug-logging). When set to `true`, the debug log (trace) remains disabled even if `CI_DEBUG_TRACE` is set to `true`.                                                                                                                                                                                                              |
+| `clean_git_config`         | Cleans the Git configuration. For more information, see [Cleaning Git configuration](#cleaning-git-configuration). |
 | `referees`                 | Extra job monitoring workers that pass their results as job artifacts to GitLab.                                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_requests_limit` | The number of `unhealthy` responses to new job requests after which a runner worker is disabled.                                                                                                                                                                                                                                                                                                       |
 | `unhealthy_interval`       | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like '3600 s', '1 h 30 min' etc.                                                                                                                                                                                                                                                                   |
@@ -1673,6 +1674,46 @@ Directory_. GitLab Runner should have total control over it and does not
 provide stability in such cases. If you have dependencies that are
 required for your CI, you must install them in some other
 place.
+
+## Cleaning Git configuration
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5438) in GitLab Runner 17.10.
+
+{{< /history >}}
+
+At the beginning and end of every build, GitLab Runner removes the following
+files from the repository and its submodules:
+
+- Git lock files (`{index,shallow,HEAD,config}.lock`)
+- Post-checkout hooks (`hooks/post-checkout`)
+
+If you enable `clean_git_config`, the following additional files or directories
+are removed from the repository, its submodules, and the Git template directory:
+
+- `.git/config` file
+- `.git/hooks` directory
+
+This cleanup prevents custom, ephemeral, or potentially malicious Git configuration
+from caching between jobs.
+
+Before GitLab Runner 17.10, cleanups behaved differently:
+
+- Git lock files and Post-checkout hooks cleanup only occurred at the
+  beginning of a job and not at the end.
+- Other Git configurations (now controlled by `clean_git_config`) were not removed unless
+  `FF_ENABLE_JOB_CLEANUP` was set. When you set this flag, only the main repository's
+  `.git/config` was deleted but not submodule configurations.
+
+The `clean_git_config` setting defaults to `true`. But, it defaults to `false` when:
+
+- [Shell executor](../executors/shell.md) is used.
+- [Git strategy](https://docs.gitlab.com/ci/runners/configure_runners/#git-strategy)
+  is set to `none`.
+
+Explicit `clean_git_config` configuration takes precedence over the default
+setting.
 
 ## The `[runners.referees]` section
 
