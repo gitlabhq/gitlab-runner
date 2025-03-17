@@ -492,11 +492,11 @@ To overwrite Kubernetes pod labels for each CI/CD job:
       KUBERNETES_POD_LABELS_2: "Key2=Val2"
       KUBERNETES_POD_LABELS_3: "Key3=Val3"
     ```
-   
+
 {{< alert type="warning" >}}
 
 Labels in the `runner.gitlab.com` namespace are read-only. GitLab ignores any attempts to add, modify, or remove these GitLab-internal labels.
-   
+
 {{< /alert >}}
 
 ### Overwrite pod annotations
