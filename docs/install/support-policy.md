@@ -17,7 +17,8 @@ The end-of-publishing dates for the base distributions will not necessarily alig
 
 | Base container                 | Base container version | Vendor EOL date | GitLab EOL date |
 |--------------------------------|------------------------|-----------------|-----------------|
-| Ubuntu                         | 20.04                  | 2030-04-09      | 2030-04-22      |
+| Ubuntu                         | 24.04                  | 2027-04-30      | 2027-05-20      |
+| Ubuntu                         | 20.04                  | 2025-05-31      | 2025-06-19      |
 | Alpine                         | 3.12                   | 2022-05-01      | 2023-05-22      |
 | Alpine                         | 3.13                   | 2022-11-01      | 2023-05-22      |
 | Alpine                         | 3.14                   | 2023-05-01      | 2023-05-22      |
