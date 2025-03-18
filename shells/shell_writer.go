@@ -28,7 +28,12 @@ type ShellWriter interface {
 	MkDir(path string)
 	RmDir(path string)
 	RmFile(path string)
+
+	// RmFilesRecursive deletes all files in path with a basename of name
 	RmFilesRecursive(path string, name string)
+	// RmDirsRecursive deletes all directories and their content in path with a basename of name
+	RmDirsRecursive(path string, name string)
+
 	Absolute(path string) string
 	Join(elem ...string) string
 	TmpFile(name string) string
