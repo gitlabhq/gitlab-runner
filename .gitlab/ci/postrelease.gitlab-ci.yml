@@ -49,6 +49,33 @@ trigger runner-incept tests:
     project: gitlab-org/ci-cd/tests/runner-incept
     # strategy: depend
 
+package test variables:
+  stage: postrelease
+  needs:
+    - "bleeding edge packagecloud"
+  image: alpine:latest
+  artifacts:
+    paths:
+      - package_test_vars.env
+  before_script:
+    - apk add git bash
+  script:
+    - rm -f package_test_vars.env
+    - echo "export RUNNER_FROM_VERSION=\"$(git tag | sort -rV | sed "1q;d" | cut -c2-)\"" >> package_test_vars.env
+    - echo "export RUNNER_FROM_BRANCH=\"gitlab-runner\"" >> package_test_vars.env
+    - echo "export RUNNER_TO_VERSION=\"$(ci/version)\"" >> package_test_vars.env
+    - echo "export RUNNER_TO_BRANCH=\"unstable\"" >> package_test_vars.env
+
+trigger runner package tests:
+  stage: postrelease
+  variables:
+    UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
+  needs:
+    - "package test variables"
+  trigger:
+    project: gitlab-org/ci-cd/runner-tools/gitlab-runner-package-tests
+    # strategy: depend
+
 static QA:
   extends:
   - .rules:merge_request_pipelines:no_docs
