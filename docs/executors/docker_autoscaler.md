@@ -41,6 +41,24 @@ To configure the Docker Autoscaler, in the `config.toml`:
   - [`[runners.docker]`](../configuration/advanced-configuration.md#the-runnersdocker-section)
   - [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 
+### Dedicated autoscaling groups for each runner configuration
+
+Each Docker Autoscaler configuration must have its own dedicated autoscaling resource:
+
+- For AWS, a dedicated Auto Scaling group
+- For GCP, a dedicated instance group
+- For Azure, a dedicated Scale Set
+
+Do not share these autoscaling resources across:
+
+- Multiple runner managers (separate GitLab Runner installations)
+- Multiple `[[runners]]` entries within the same runner manager's `config.toml`
+
+The Docker Autoscaler keeps track of the instance state that must be synchronized with the cloud
+provider's autoscaling resource. When multiple systems attempt to manage the same autoscaling
+resource, they might issue conflicting scaling commands, resulting in unpredictable behavior, job
+failures, and potentially higher costs.
+
 ### Example: AWS autoscaling for 1 job per instance
 
 Prerequisites:
