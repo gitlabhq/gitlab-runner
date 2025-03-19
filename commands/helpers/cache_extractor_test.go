@@ -164,7 +164,7 @@ func testServeCache(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
+	w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
 	archive := zip.NewWriter(w)
 	_, _ = archive.Create(cacheExtractorTestArchivedFile)
 	archive.Close()

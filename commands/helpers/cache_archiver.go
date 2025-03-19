@@ -282,7 +282,7 @@ func (c *CacheArchiverCommand) setHeaders(req *http.Request, fi os.FileInfo) {
 	if req.Header.Get(common.ContentType) == "" {
 		req.Header.Set(common.ContentType, "application/octet-stream")
 	}
-	req.Header.Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
+	req.Header.Set("Last-Modified", fi.ModTime().UTC().Format(http.TimeFormat))
 }
 
 func init() {
