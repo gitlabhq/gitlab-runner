@@ -76,6 +76,16 @@
 - Move trigger deploy to kubernetes to a deploy stage [!5372](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5372)
 - Fixed Vale issues [!5378](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5378)
 
+
+## v17.9.2 (2025-03-20)
+
+### Bug fixes
+
+- [17.9] Downgrade prebuilt runner helper images to Alpine 3.18 [!5431](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5431)
+- Clean git config [!5441](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5441)
+- Clean git config [!5438](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5438)
+- [17.9] Fix HTTP retries not working properly [!5432](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5432)
+
 ## v17.9.1 (2025-03-07)
 
 ### Security fixes
@@ -181,6 +191,62 @@
 - Add a template for kubernetes feature toggle [!5315](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5315)
 - Remove obsolete note regarding Alpine DNS issues [!5320](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5320) (Craig Andrews @candrews)
 
+
+## v17.8.4 (2025-03-20)
+
+### Security fixes
+
+- Use a dotenv file to store cache environment variables [!5414](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5414)
+
+### Bug fixes
+
+- Clean git config [!5440](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5440)
+- Clean git config [!5438](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5438)
+
+## v17.8.3 (2025-01-23)
+
+### Bug fixes
+
+- Upgrade RUNNER_IMAGES_VERSION to v0.0.4 [!5305](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5305)
+- Fix Role ARN support with S3 Express buckets [!5291](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5291)
+
+### Maintenance
+
+- Run ubi images with BUILD_COMMIT_SHA and PARENT_PIPELINE_ID [!5244](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5244)
+
+## v17.8.2 (2025-01-22)
+
+### Bug fixes
+
+- Upgrade RUNNER_IMAGES_VERSION to v0.0.4 [!5305](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5305)
+- Fix Role ARN support with S3 Express buckets [!5291](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5291)
+- Fix Windows image gitlab-runner-helper path [!5302](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5302)
+- Upgrade RUNNER_IMAGES_VERSION to v0.0.3 [!5300](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5300)
+- Image pusher fixes [!5294](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5294)
+
+### Maintenance
+
+- Run ubi images with BUILD_COMMIT_SHA and PARENT_PIPELINE_ID [!5244](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5244)
+
+## v17.8.1 (2025-01-17)
+
+### Bug fixes
+
+- Fix runner release bugs [!5286](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5286)
+- Fix Windows image gitlab-runner-helper path [!5302](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5302)
+- Image pusher fixes [!5294](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5294)
+- Push the helper image packages to S3 [!5288](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5288)
+- Upgrade RUNNER_IMAGES_VERSION to v0.0.3 [!5300](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5300)
+- Fix runner image missing tag [!5289](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5289)
+- Create copy of aliased helper images, not symlinks [!5287](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5287)
+- Upgrade RUNNER_IMAGES_VERSION to v0.0.4 [!5305](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5305)
+- Fix Role ARN support with S3 Express buckets [!5291](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5291)
+
+### Maintenance
+
+- Bump base image version [!5282](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5282)
+- Run ubi images with BUILD_COMMIT_SHA and PARENT_PIPELINE_ID [!5244](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5244)
+
 ## v17.8.0 (2025-01-13)
 
 ### New features
@@ -226,6 +292,17 @@
 - Update steps version to 0.2.0 [!5219](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5219)
 - Update step-runner library version to 0.3.0 [!5272](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5272)
 - Update golang.org/x/crypto to v0.31.0 [!5253](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5253)
+
+## v17.7.1 (2025-01-17)
+
+### Bug fixes
+
+- Fix runner deb package upgrade [!5251](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5251)
+
+### Maintenance
+
+- Update step-runner library version to 0.3.0 [!5272](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5272)
+- A couple of minor tweaks to the gitlab-runner-helper-images package [!5262](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5262)
 
 ## v17.7.0 (2024-12-19)
 
@@ -372,6 +449,12 @@
 ### Bug fixes
 
 - Fix docker network config for Windows [!5182](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5182)
+
+## v17.5.4 (2024-11-19)
+
+### Maintenance
+
+- Fix mage k8s:generatePermissionsDocs intermittent test faliures [!5107](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5107)
 
 ## v17.5.3 (2024-10-31)
 
