@@ -73,8 +73,8 @@ trigger runner package tests:
   needs:
     - "package test variables"
   trigger:
+    strategy: depend
     project: gitlab-org/ci-cd/runner-tools/gitlab-runner-package-tests
-    # strategy: depend
 
 static QA:
   extends:
