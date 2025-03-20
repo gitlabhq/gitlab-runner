@@ -50,7 +50,9 @@ trigger runner-incept tests:
     # strategy: depend
 
 package test variables:
-  stage: postrelease
+  extends:
+    - .trigger-downstream-pipeline-ref
+    - .rules:release:bleeding-edge
   needs:
     - "bleeding edge packagecloud"
   image: alpine:latest
@@ -67,13 +69,13 @@ package test variables:
     - echo "export RUNNER_TO_BRANCH=\"unstable\"" >> package_test_vars.env
 
 trigger runner package tests:
-  stage: postrelease
-  variables:
-    UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
+  extends:
+    - .trigger-downstream-pipeline-ref
+    - .rules:release:bleeding-edge
   needs:
     - "package test variables"
   trigger:
-    strategy: depend
+    # strategy: depend
     project: gitlab-org/ci-cd/runner-tools/gitlab-runner-package-tests
 
 static QA:
