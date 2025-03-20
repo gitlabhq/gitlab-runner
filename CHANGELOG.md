@@ -76,6 +76,16 @@
 - Move trigger deploy to kubernetes to a deploy stage [!5372](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5372)
 - Fixed Vale issues [!5378](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5378)
 
+
+## v17.9.2 (2025-03-20)
+
+### Bug fixes
+
+- [17.9] Downgrade prebuilt runner helper images to Alpine 3.18 [!5431](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5431)
+- Clean git config [!5441](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5441)
+- Clean git config [!5438](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5438)
+- [17.9] Fix HTTP retries not working properly [!5432](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5432)
+
 ## v17.9.1 (2025-03-07)
 
 ### Security fixes
@@ -180,6 +190,18 @@
 - Add a CI job to test the docs website build [!5306](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5306)
 - Add a template for kubernetes feature toggle [!5315](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5315)
 - Remove obsolete note regarding Alpine DNS issues [!5320](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5320) (Craig Andrews @candrews)
+
+
+## v17.8.4 (2025-03-20)
+
+### Security fixes
+
+- Use a dotenv file to store cache environment variables [!5414](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5414)
+
+### Bug fixes
+
+- Clean git config [!5440](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5440)
+- Clean git config [!5438](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5438)
 
 ## v17.8.0 (2025-01-13)
 
