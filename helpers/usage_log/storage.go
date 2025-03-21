@@ -32,7 +32,7 @@ func NewStorage(writer io.WriteCloser, o ...Option) *Storage {
 	return &Storage{
 		writer:  writer,
 		close:   make(chan struct{}),
-		timer:   time.Now().UTC,
+		timer:   time.Now,
 		options: setupOptions(o...),
 	}
 }
@@ -58,7 +58,7 @@ func (s *Storage) Store(record Record) error {
 }
 
 func (s *Storage) setupRecord(record Record) Record {
-	record.Timestamp = s.timer()
+	record.Timestamp = s.timer().UTC()
 
 	if record.Labels == nil {
 		record.Labels = make(map[string]string)
