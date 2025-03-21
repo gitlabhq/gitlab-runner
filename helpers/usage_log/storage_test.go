@@ -153,3 +153,41 @@ func TestStorage_Close(t *testing.T) {
 		})
 	}
 }
+
+func TestStorage_StoreTimeChanges(t *testing.T) {
+	testRecord := Record{
+		Runner: Runner{
+			ID: "short_token",
+		},
+		Job: Job{
+			URL: "job-url",
+		},
+		Labels: map[string]string{
+			"test-label": "test-value",
+		},
+	}
+
+	var receivedRecords []Record
+
+	w := newMockDummyWriteCloser(t)
+	w.EXPECT().Write(mock.Anything).Return(0, nil).Run(func(p []byte) {
+		var r Record
+		err := json.Unmarshal(p, &r)
+		require.NoError(t, err)
+
+		receivedRecords = append(receivedRecords, r)
+	})
+
+	s := NewStorage(w)
+	err := s.Store(testRecord)
+	require.NoError(t, err)
+	time.Sleep(100 * time.Millisecond)
+	err = s.Store(testRecord)
+	require.NoError(t, err)
+
+	assert.Len(t, receivedRecords, 2)
+	r1 := receivedRecords[0]
+	r2 := receivedRecords[1]
+
+	assert.NotEqual(t, r1, r2)
+}
