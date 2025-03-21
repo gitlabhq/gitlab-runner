@@ -403,6 +403,17 @@ func TestPowershellPathResolveOperations(t *testing.T) {
 				`C:\path\file`: templateReplacer(`"C:\path\file"`),
 			},
 		},
+		"rmdirsrecursive": {
+			op: func(path string, w *PsWriter) {
+				w.RmDirsRecursive(path, "test")
+			},
+			template: "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -PathType Container) {\n  Get-ChildItem -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -Filter \"test\" -Recurse | ?{ $_.PSIsContainer } | ForEach-Object { Remove-Item -Recurse -Force $_.FullName }\n}\n",
+			expected: map[string]func(string) string{
+				`path/name`:    templateReplacer(`"path/name"`),
+				`\\unc\file`:   templateReplacer(`"\\unc\file"`),
+				`C:\path\file`: templateReplacer(`"C:\path\file"`),
+			},
+		},
 		"rmdir": {
 			op: func(path string, w *PsWriter) {
 				w.RmDir(path)
