@@ -601,6 +601,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	w.Command("git", "config", "-f", templateFile, "init.defaultBranch", "none")
 	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
 	w.Command("git", "config", "-f", templateFile, "credential.interactive", "never")
+	w.Command("git", "config", "-f", templateFile, "gc.autoDetach", "false")
 
 	if build.IsFeatureFlagOn(featureflags.UseGitBundleURIs) {
 		w.Command("git", "config", "-f", templateFile, "transfer.bundleURI", "true")
