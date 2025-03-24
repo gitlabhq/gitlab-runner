@@ -350,7 +350,7 @@ $(GOCOVER_COBERTURA):
 	go install github.com/boumenot/gocover-cobertura@v1.2.0
 
 $(SPLITIC):
-	go install gitlab.com/ajwalker/splitic@latest
+	go install gitlab.com/gitlab-org/ci-cd/runner-tools/splitic@latest
 
 $(MAGE): .tmp
 	cd .tmp && \
