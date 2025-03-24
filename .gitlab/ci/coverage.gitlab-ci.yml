@@ -1,49 +1,48 @@
 .coverage_job:
   extends:
-  - .rules:merge_request_pipelines:no_docs:always
+    - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
 
 test coverage report:
   extends:
-  - .coverage_job
+    - .coverage_job
   coverage: /regular total:\s+\(statements\)\s+\d+.\d+\%/
   needs:
-  - unit test
-  - integration test
-  - job: windows 1809 integration tests
-    optional: true
-  - job: windows 21H2 integration tests
-    optional: true
-  - job: windows 1809 unit tests
-    optional: true
-  - job: windows 21H2 unit tests
-    optional: true
+    - unit test
+    - integration test
+    - job: windows 1809 integration tests
+      optional: true
+    - job: windows 21H2 integration tests
+      optional: true
+    - job: windows 1809 unit tests
+      optional: true
+    - job: windows 21H2 unit tests
+      optional: true
   script:
-  - make cobertura_report
-  - test -z "$(find .splitic -name 'junit_servercore1809_*.xml' -maxdepth 1 -print -quit)" || splitic junit-check -quarantined ci/.test-failures.servercore1809.txt .splitic/junit_servercore1809_*.xml
-  - test -z "$(find .splitic -name 'junit_servercore21H2_*.xml' -maxdepth 1 -print -quit)" || splitic junit-check -quarantined ci/.test-failures.servercore21H2.txt .splitic/junit_servercore21H2_*.xml
+    - make cobertura_report
+    - test -z "$(find .splitic -name 'junit_servercore1809_*.xml' -maxdepth 1 -print -quit)" || splitic junit-check -quarantined ci/.test-failures.servercore1809.txt .splitic/junit_servercore1809_*.xml
+    - test -z "$(find .splitic -name 'junit_servercore21H2_*.xml' -maxdepth 1 -print -quit)" || splitic junit-check -quarantined ci/.test-failures.servercore21H2.txt .splitic/junit_servercore21H2_*.xml
   artifacts:
     reports:
       coverage_report:
         coverage_format: cobertura
         path: out/cobertura/cobertura-*coverage.xml
     paths:
-    - out/coverage/
+      - out/coverage/
     expire_in: 7d
-    expose_as: 'Code Coverage'
-
+    expose_as: "Code Coverage"
 # Disable this for now since
 # https://gitlab.com/gitlab-org/gitlab/-/issues/365885 block us from upgrading
 # to go 1.18.x. Re-enable this when the above ticket is fixed.
 #code navigation: # See https://docs.gitlab.com/user/project/code_intelligence/#configuration
-  #extends:
-  #- .coverage_job
-  #allow_failure: true # recommended
-  #needs:
-  #- prepare done
-  #image: sourcegraph/lsif-go:v1.9.0
-  #script:
-  #- lsif-go
-  #artifacts:
-    #reports:
-      #lsif: dump.lsif
+#extends:
+#- .coverage_job
+#allow_failure: true # recommended
+#needs:
+#- prepare done
+#image: sourcegraph/lsif-go:v1.9.0
+#script:
+#- lsif-go
+#artifacts:
+#reports:
+#lsif: dump.lsif

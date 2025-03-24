@@ -26,17 +26,17 @@
       junit: junit_report.xml
 provision integration kubernetes:
   extends:
-  - .integration kubernetes
+    - .integration kubernetes
   needs:
-  - 'prepare done'
+    - "prepare done"
   variables:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-provisioner"
   script:
-  - mage k8s:provisionIntegrationKubernetes $CI_PIPELINE_ID
+    - mage k8s:provisionIntegrationKubernetes $CI_PIPELINE_ID
 
 integration kubernetes exec legacy:
   extends:
-  - .integration kubernetes
+    - .integration kubernetes
   resource_group: "$CI_COMMIT_BRANCH-k8s-integration-exec-legacy"
   variables:
     CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
@@ -61,15 +61,15 @@ integration kubernetes:
 
 destroy integration kubernetes:
   extends:
-  - .integration kubernetes
+    - .integration kubernetes
   needs:
-  - job: 'integration kubernetes'
-    optional: true
-  - job: 'integration kubernetes exec legacy'
-    optional: true
-  - job: 'integration kubernetes attach'
-    optional: true
+    - job: "integration kubernetes"
+      optional: true
+    - job: "integration kubernetes exec legacy"
+      optional: true
+    - job: "integration kubernetes attach"
+      optional: true
   variables:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-provisioner"
   script:
-  - mage k8s:destroyIntegrationKubernetes $CI_PIPELINE_ID
+    - mage k8s:destroyIntegrationKubernetes $CI_PIPELINE_ID

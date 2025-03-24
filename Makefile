@@ -140,6 +140,14 @@ lint: $(GOLANGLINT)
 lint-docs:
 	@scripts/lint-docs
 
+.PHONY: format-ci-yaml
+format-ci-yaml:
+	prettier --write ".gitlab/ci/*.{yaml,yml}"
+
+.PHONY: lint-ci-yaml
+lint-ci-yaml:
+	prettier --check ".gitlab/ci/**/*.{yml,yaml}" --log-level warn
+
 .PHONY: test
 test: development_setup simple-test
 
