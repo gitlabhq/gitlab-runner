@@ -851,7 +851,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring request slot")
 	if !mr.buildsHelper.acquireRequest(runner) {
 		mr.log().WithField("runner", runner.ShortDescription()).
-			Debugln("Failed to request job: runner requestConcurrency meet")
+			Debugln("Failed to request job: 'request_concurrency' already reached, see https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section")
 		return nil
 	}
 
@@ -1108,7 +1108,10 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 	concurrentLimit := config.Concurrent
 
 	if concurrentLimit < 1 {
-		mr.log().Fatalln("Concurrent is less than 1 - no jobs will be processed")
+		mr.log().Fatalln(fmt.Printf(
+			"Current configuration 'concurrent = %d' means that no jobs will be processed, see https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-global-section",
+			concurrentLimit,
+		))
 	}
 
 	for mr.currentWorkers > concurrentLimit {
