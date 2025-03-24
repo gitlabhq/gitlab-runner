@@ -288,3 +288,25 @@ func TestCacheExtractorRemoteServerFailOnInvalidServer(t *testing.T) {
 	_, err := os.Stat(cacheExtractorTestArchivedFile)
 	assert.Error(t, err)
 }
+
+func TestIsLocalCacheFileUpToDate(t *testing.T) {
+	tmpDir := t.TempDir()
+	cacheFile := path.Join(tmpDir, "cache-file")
+
+	// Create cache file
+	err := os.WriteFile(cacheFile, []byte("test content"), 0644)
+	require.NoError(t, err)
+
+	// Set a specific modification time
+	modTime := time.Now()
+	err = os.Chtimes(cacheFile, modTime, modTime)
+	require.NoError(t, err)
+
+	// Test when remote file is older (cache is up to date)
+	result := isLocalCacheFileUpToDate(cacheFile, modTime.Add(-1*time.Hour))
+	require.True(t, result, "Cache should be up to date when remote file is older")
+
+	// Test when remote file is newer (cache is outdated)
+	result = isLocalCacheFileUpToDate(cacheFile, modTime.Add(1*time.Hour))
+	require.False(t, result, "Cache should be outdated when remote file is newer")
+}

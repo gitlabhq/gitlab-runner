@@ -50,9 +50,13 @@ func (c *CacheExtractorCommand) getClient() *CacheClient {
 }
 
 func checkIfUpToDate(path string, resp *http.Response) (bool, time.Time) {
-	fi, _ := os.Lstat(path)
 	date, _ := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
-	return fi != nil && !date.After(fi.ModTime()), date
+	return isLocalCacheFileUpToDate(path, date), date
+}
+
+func isLocalCacheFileUpToDate(path string, date time.Time) bool {
+	fi, _ := os.Lstat(path)
+	return fi != nil && !date.After(fi.ModTime())
 }
 
 func getRemoteCacheSize(resp *http.Response) int64 {
@@ -149,6 +153,11 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 			return nil
 		}
 		return err
+	}
+
+	if isLocalCacheFileUpToDate(c.File, attrs.ModTime) {
+		logrus.Infoln(filepath.Base(c.File), "is up to date")
+		return nil
 	}
 
 	reader, err := b.NewReader(ctx, objectName, nil)
