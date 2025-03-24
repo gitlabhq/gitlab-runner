@@ -30,6 +30,7 @@ type ShellWriter interface {
 	RmFile(path string)
 
 	// RmFilesRecursive deletes all files in path with a basename of name
+	// It does not delete directories with a basename of name
 	RmFilesRecursive(path string, name string)
 	// RmDirsRecursive deletes all directories and their content in path with a basename of name
 	RmDirsRecursive(path string, name string)
