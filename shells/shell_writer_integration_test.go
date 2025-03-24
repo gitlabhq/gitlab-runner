@@ -92,32 +92,38 @@ func TestRmFile(t *testing.T) {
 }
 
 func TestRmFilesRecursive(t *testing.T) {
-	const TestPath = "test-path"
+	const baseName = "test-file"
 
-	tmpDir := t.TempDir()
+	testFiles := testFileTree{
+		"subdir-1/" + baseName:       "should be deleted",
+		"subdir-1/someOtherFile":     "should NOT be deleted",
+		"other/subdir-2/" + baseName: "should be deleted",
+		"subdir-3/" + baseName:       "should be deleted",
+		baseName + "_foo":            "should NOT be deleted",
+		baseName:                     "", // is a dir, should not be deleted
+	}
 
 	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shells.ShellWriter) {
-		var tmpFiles []string
+		tmpDir := t.TempDir()
 
-		// lockfiles can be in multiple subdirs
-		for i := 0; i < 3; i++ {
-			tmpSubDir, err := os.MkdirTemp(tmpDir, "subdir")
-			require.NoError(t, err)
+		testFiles.Create(t, tmpDir)
 
-			tmpFile := path.Join(tmpSubDir, TestPath)
-			err = os.WriteFile(tmpFile, []byte{}, 0600)
-			require.NoError(t, err)
-			tmpFiles = append(tmpFiles, tmpFile)
-		}
-
-		writer.RmFilesRecursive(tmpDir, TestPath)
-
+		writer.RmFilesRecursive(tmpDir, baseName)
 		runShell(t, shell, tmpDir, writer)
 
-		for _, file := range tmpFiles {
-			_, err := os.Stat(file)
-			require.True(t, os.IsNotExist(err), "tmpFile not deleted")
-		}
+		assert.DirExists(t, filepath.Join(tmpDir, "subdir-1"))
+		assert.NoFileExists(t, filepath.Join(tmpDir, "subdir-1", baseName))
+		assert.FileExists(t, filepath.Join(tmpDir, "subdir-1", "someOtherFile"))
+
+		assert.DirExists(t, filepath.Join(tmpDir, "other", "subdir-2"))
+		assert.NoFileExists(t, filepath.Join(tmpDir, "other", "subdir-2"))
+
+		assert.DirExists(t, filepath.Join(tmpDir, "subdir-3"))
+		assert.NoFileExists(t, filepath.Join(tmpDir, "subdir-3", baseName))
+
+		assert.FileExists(t, filepath.Join(tmpDir, baseName+"_foo"))
+
+		assert.DirExists(t, filepath.Join(tmpDir, baseName))
 	})
 }
 

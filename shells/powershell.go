@@ -514,7 +514,7 @@ func (p *PsWriter) RmFilesRecursive(path string, name string) {
 	p.Linef(
 		// `Remove-Item -Recurse` has a known issue (see Example 4 in
 		// https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/remove-item)
-		"Get-ChildItem -Path %s -Filter %s -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }",
+		"Get-ChildItem -Path %s -Filter %s -Recurse | ?{ -not $_.PSIsContainer } | ForEach-Object { Remove-Item -Force $_.FullName }",
 		resolvedPath, psQuoteVariable(name),
 	)
 	p.EndIf()
