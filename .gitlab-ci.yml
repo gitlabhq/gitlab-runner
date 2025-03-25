@@ -2,7 +2,7 @@ stages:
 - build
 - qa
 - test
-# - test kubernetes integration
+- test kubernetes integration
 - coverage
 - package
 - release
