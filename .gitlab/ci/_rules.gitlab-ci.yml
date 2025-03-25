@@ -270,17 +270,13 @@
 # Binary signing rules #
 ########################
 
-.rules:sign_binaries:only_canonical:
-  rules:
-    - <<: *if-not-canonical-namespace
-      when: never
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
-      variables:
-        GCLOUD_PROJECT: gitlab-ci-runners-signing
-        SERVICE_ACCOUNT: gitlab-runner-signer@gitlab-ci-runners-signing.iam.gserviceaccount.com
-        WI_POOL_PROVIDER: "//iam.googleapis.com/projects/8522242139/locations/global/workloadIdentityPools/gitlab-pool-oidc-250833/providers/gitlab-jwt-250833"
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
-      variables:
-        GCLOUD_PROJECT: gitlab-ci-runners-signing
-        SERVICE_ACCOUNT: gitlab-runner-signer@gitlab-ci-runners-signing.iam.gserviceaccount.com
-        WI_POOL_PROVIDER: //iam.googleapis.com/projects/8522242139/locations/global/workloadIdentityPools/gitlab-pool-oidc-19047934/providers/gitlab-jwt-19047934
+.rules:sign_binaries:
+  variables:
+    GITLAB_RUNNER_SIGNING_ENABLED: >-
+      $([[ "$CI_SERVER_HOST" == "gitlab.com" &&
+          ("$CI_PROJECT_PATH" == "gitlab-org/gitlab-runner" ||
+           "$CI_PROJECT_PATH" == "gitlab-org/security/gitlab-runner") ]] &&
+        echo "true" || echo "false")
+    GCLOUD_PROJECT: gitlab-ci-runners-signing
+    SERVICE_ACCOUNT: gitlab-runner-signer@gitlab-ci-runners-signing.iam.gserviceaccount.com
+    WI_POOL_PROVIDER: //iam.googleapis.com/projects/8522242139/locations/global/workloadIdentityPools/gitlab-pool-oidc-$CI_PROJECT_ID/providers/gitlab-jwt-$CI_PROJECT_ID

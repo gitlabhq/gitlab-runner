@@ -97,20 +97,20 @@ binaries:
   tags:
     - !reference [.instance-2xlarge]
   extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .rules:sign_binaries:only_canonical
-  - .google-oidc:auth
-  - .go-cache
+    - .rules:merge_request_pipelines:no_docs
+    - .rules:sign_binaries
+    - .google-oidc:auth
+    - .go-cache
   stage: build
   needs: []
   before_script:
-  - !reference [.go-cache, before_script]
-  - !reference [.google-oidc:auth, before_script]
+    - !reference [.go-cache, before_script]
+    - !reference [.google-oidc:auth, before_script]
   script:
     - go mod download
     - make -j$(($(nproc) * 2)) helper-bin helper-bin-fips runner-bin runner-bin-fips
     - |
-      if [ -n "${WI_POOL_PROVIDER}" ]; then
+      if [[ "$GITLAB_RUNNER_SIGNING_ENABLED" == "true" ]]; then
         GITLAB_SIGNING_CERT_PATH="$CI_PROJECT_DIR/certs/gitlab-inc-ssl-com.crt" scripts/sign-binaries
       fi
   artifacts:
