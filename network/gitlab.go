@@ -253,6 +253,15 @@ func PrivateTokenHeader(pat string) http.Header {
 	return headers
 }
 
+// Create a JOB-TOKEN http header for the specified job token.
+func JobTokenHeader(jobToken string) http.Header {
+	headers := http.Header{}
+	if jobToken != "" {
+		headers.Set(common.JobToken, jobToken)
+	}
+	return headers
+}
+
 func (n *GitLabClient) doJSON(
 	ctx context.Context,
 	credentials requestCredentials,
