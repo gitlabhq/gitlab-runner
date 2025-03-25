@@ -37,3 +37,6 @@ include:
     job_stage: qa
   rules:
     - if: '$CI_SERVER_HOST == "gitlab.com"'
+- project: gitlab-com/gl-security/security-operations/infrastructure-security-public/oidc-modules
+  ref: 3.3.0
+  file: templates/gcp_auth.yaml
