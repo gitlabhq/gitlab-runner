@@ -1235,11 +1235,11 @@ The following diagram explains how the system detects these details:
 %%|fig-align: center
 flowchart TB
   init[<b>Initial defaults</b>:<br/>OS: linux</br>Arch: amd64]
-  hasAutoset{Configuration<br/><tt><a href="https://docs.gitlab.com/runner/configuration/advanced-configuration.html">helper_image_autoset_arch_and_os</a> == true</tt>?}
+  hasAutoset{Configuration<br/><tt><a href="https://docs.gitlab.com/runner/configuration/advanced-configuration/">helper_image_autoset_arch_and_os</a> == true</tt>?}
   setArch[<b>Update</b>:<br/>Arch: <i>same as runner</i>]
   isWin{GitLab Runner runs on Windows?}
   setWin[<b>Update</b>:<br/>OS: windows<br/>KernelVersion: <i>same as runner</i>]
-  hasNodeSel{<a href="https://docs.gitlab.com/runner/configuration/advanced-configuration.html"><tt>node_selector</tt></a> configured<br/>in <tt>runners.kubernetes</tt> section?}
+  hasNodeSel{<a href="https://docs.gitlab.com/runner/configuration/advanced-configuration/"><tt>node_selector</tt></a> configured<br/>in <tt>runners.kubernetes</tt> section?}
   hasNodeSelOverride{<tt>node_selector</tt> configured<br/><a href="https://docs.gitlab.com/runner/executors/kubernetes/#overwrite-the-node-selector">as overwrite</a>?}
   updateNodeSel[<b>Update from <tt>node_selector</tt></b> if set:<br/>OS: from <tt>kubernetes.io/os</tt><br/>Arch: from <tt>kubernetes.io/arch</tt><br/>KernelVersion: from <tt>node.kubernetes.io/windows-build</tt>]
   updateNodeSelOverride[<b>Update from <tt>node_selector</tt> overwrites</b> if set:</br>OS: from <tt>kubernetes.io/os</tt><br/>Arch: from <tt>kubernetes.io/arch</tt><br/>KernelVersion: from <tt>node.kubernetes.io/windows-build</tt>]

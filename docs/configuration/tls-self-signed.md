@@ -295,7 +295,7 @@ To provide a certificate file to jobs running in Kubernetes:
 
 ## Troubleshooting
 
-Refer to the general [SSL troubleshooting](https://docs.gitlab.com/omnibus/settings/ssl/ssl_troubleshooting.html)
+Refer to the general [SSL troubleshooting](https://docs.gitlab.com/omnibus/settings/ssl/ssl_troubleshooting/)
 documentation.
 
 In addition, you can use the [`tlsctl`](https://gitlab.com/gitlab-org/ci-cd/runner-tools/tlsctl) tool to debug GitLab certificates from the Runner's end.
@@ -348,7 +348,7 @@ CI/CD jobs fail with the following error:
 fatal: unable to access 'https://gitlab.example.com/group/project.git/': SSL certificate problem: self-signed certificate in certificate chain
 ```
 
-However, the [OpenSSL debugging commands](https://docs.gitlab.com/omnibus/settings/ssl/ssl_troubleshooting.html#useful-openssl-debugging-commands)
+However, the [OpenSSL debugging commands](https://docs.gitlab.com/omnibus/settings/ssl/ssl_troubleshooting/#useful-openssl-debugging-commands)
 do not detect any errors.
 
 This error might occur when Git connects through a proxy that `openssl s_client` troubleshooting commands do not use by default.

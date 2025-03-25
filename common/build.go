@@ -372,7 +372,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 			b.logger.Warningln(
 				string(buildStage) + " could not run to completion because the timeout was exceeded. " +
 					"For more control over job and script timeouts see: " +
-					"https://docs.gitlab.com/ee/ci/runners/configure_runners.html#set-script-and-after_script-timeouts")
+					"https://docs.gitlab.com/ci/runners/configure_runners/#set-script-and-after_script-timeouts")
 		}
 	}()
 
@@ -501,7 +501,7 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	if err != nil {
 		return fmt.Errorf(
 			"prepare environment: %w. "+
-				"Check https://docs.gitlab.com/runner/shells/index.html#shell-profile-loading for more information",
+				"Check https://docs.gitlab.com/runner/shells/#shell-profile-loading for more information",
 			err,
 		)
 	}

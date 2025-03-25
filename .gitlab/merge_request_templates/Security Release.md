@@ -41,9 +41,9 @@ See [the general developer security release guidelines](https://gitlab.com/gitla
 /label ~security ~"Category:Runner" ~"devops::verify" ~"group::runner"
 
 [GitLab Runner Security]: https://gitlab.com/gitlab-org/security/gitlab-runner
-[quick actions]: https://docs.gitlab.com/ee/user/project/quick_actions.html#quick-actions-for-issues-merge-requests-and-epics
-[Code Review process]: https://docs.gitlab.com/ee/development/code_review.html
-[Approval Guidelines]: https://docs.gitlab.com/ee/development/code_review.html#approval-guidelines
+[quick actions]: https://docs.gitlab.com/user/project/quick_actions/#quick-actions-for-issues-merge-requests-and-epics
+[Code Review process]: https://docs.gitlab.com/development/code_review/
+[Approval Guidelines]: https://docs.gitlab.com/development/code_review/#approval-guidelines
 [Canonical repository]: https://gitlab.com/gitlab-org/gitlab-runner
 [security release tracking issue]: https://gitlab.com/gitlab-org/gitlab/-/issues/?scope=all&utf8=%E2%9C%93&state=opened&label_name%5B%5D=upcoming%20security%20release
 

@@ -15,7 +15,7 @@ import (
 // server.
 //
 // This list was extracted from:
-// https://docs.gitlab.com/ee/ci/variables/predefined_variables.html#predefined-environment-variables-reference
+// https://docs.gitlab.com/ci/variables/predefined_variables/#predefined-environment-variables-reference
 //
 // handy console js:
 // console.log(Object.values($("tr td:first-child code").map((_, val) => val.innerText)).join("\n"))

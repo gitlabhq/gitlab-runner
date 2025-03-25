@@ -43,11 +43,6 @@ it clear to the issue author. They should also leave a comment using
 before closing the issue. The issue author has every right to disagree and
 reopen the issue for further discussion.
 
-### Contributing to documentation
-
-If your contribution contains only documentation changes, you can speed up the CI process
-by following some branch naming conventions, as described in <https://docs.gitlab.com/ce/development/documentation/index.html#branch-naming>
-
 ## Documentation
 
 The documentation source files can be found under the [docs/](docs/) directory. You can
@@ -79,7 +74,7 @@ Read the [FAQ](https://docs.gitlab.com/runner/faq/).
 
 ## Advanced Configuration
 
-See [https://docs.gitlab.com/runner/configuration/advanced-configuration.html](https://docs.gitlab.com/runner/configuration/advanced-configuration.html).
+See [https://docs.gitlab.com/runner/configuration/advanced-configuration/](https://docs.gitlab.com/runner/configuration/advanced-configuration/).
 
 ## Building and development
 

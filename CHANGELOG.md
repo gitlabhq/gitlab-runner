@@ -4502,7 +4502,7 @@ All deprecations, with a detailed description, are listed at
 <https://about.gitlab.com/2019/04/22/gitlab-11-10-released/#release-deprecations>
 
 1. With version 11.10 we're deprecating the feature flag
-   [FF_USE_LEGACY_GIT_CLEAN_STRATEGY](https://docs.gitlab.com/runner/configuration/feature-flags.html#available-feature-flags).
+   [FF_USE_LEGACY_GIT_CLEAN_STRATEGY](https://docs.gitlab.com/runner/configuration/feature-flags/#available-feature-flags).
 
 **Release changes:**
 
@@ -4581,7 +4581,7 @@ All deprecations, with a detailed description, are listed at
    configuration structure will be removed.
 
 5. With version 11.4 we've fixed the way how `entrypoint:` and `command:` options of
-   Extended Docker configuration (<https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#extended-docker-configuration-options>)
+   Extended Docker configuration (<https://docs.gitlab.com/ci/docker/using_docker_images/#extended-docker-configuration-options>)
    are being handled by Kubernetes Executor. The previous implementation was wrong and
    was making the configuration unusable in most cases. However some users could relay
    on this wrong behavior. Because of that we've added a feature flag `FF_K8S_USE_ENTRYPOINT_OVER_COMMAND`
@@ -5719,7 +5719,7 @@ that even in edge cases you can always rely on them.
 - Add internal command for uploading artifacts without the system dependencies
 - Use umask in Docker build containers to fix running jobs as specific user
 - Fix problem with `cache` paths never being archived
-- Add support for [`cache:key`](http://doc.gitlab.com/ce/ci/yaml/index.html#cachekey)
+- Add support for [`cache:key`](https://docs.gitlab.com/ci/yaml/#cachekey)
 - Add warnings about using runner in `user-mode`
 - Push packages to all upcoming distributions (Debian/Ubuntu/Fedora)
 - Rewrite the shell support adding all features to all shells (makes possible to use artifacts and caching on Windows)

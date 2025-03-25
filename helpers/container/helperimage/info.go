@@ -19,7 +19,7 @@ const (
 	DockerHubWarningMessage = "Pulling GitLab Runner helper image from Docker Hub. " +
 		"Helper image is migrating to registry.gitlab.com, " +
 		"for more information see " +
-		"https://docs.gitlab.com/runner/configuration/advanced-configuration.html#migrate-helper-image-to-registrygitlabcom"
+		"https://docs.gitlab.com/runner/configuration/advanced-configuration/#helper-image-registry"
 
 	// GitLabRegistryName is the name of the helper image hosted in registry.gitlab.com.
 	GitLabRegistryName = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper"

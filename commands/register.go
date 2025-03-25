@@ -319,7 +319,7 @@ func (s *RegisterCommand) doLegacyRegisterRunner() {
 		logrus.Warningf(
 			"Support for registration tokens and runner parameters in the 'register' command has been deprecated in " +
 				"GitLab Runner 15.6 and will be replaced with support for authentication tokens. " +
-				"For more information, see https://docs.gitlab.com/ee/ci/runners/new_creation_workflow",
+				"For more information, see https://docs.gitlab.com/ci/runners/new_creation_workflow/",
 		)
 	}
 
@@ -532,7 +532,7 @@ func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
 				"This has triggered the 'legacy-compatible registration process' which has resulted in the " +
 				"following command line parameters being ignored: --locked, --access-level, --run-untagged, " +
 				"--maximum-timeout, --paused, --tag-list, and --maintenance-note. " +
-				"For more information, see https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html#changes-to-the-gitlab-runner-register-command-syntax" +
+				"For more information, see https://docs.gitlab.com/ci/runners/new_creation_workflow/#changes-to-the-gitlab-runner-register-command-syntax" +
 				"These parameters and the legacy-compatible registration process will be removed " +
 				"in a future GitLab Runner release. ",
 		)
@@ -545,7 +545,7 @@ func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
 			"and cannot be specified when registering with a runner authentication token. " +
 			"This configuration is specified on the GitLab server. " +
 			"Please try again without specifying any of those arguments. " +
-			"For more information, see https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html#changes-to-the-gitlab-runner-register-command-syntax",
+			"For more information, see https://docs.gitlab.com/ci/runners/new_creation_workflow/#changes-to-the-gitlab-runner-register-command-syntax",
 	)
 }
 

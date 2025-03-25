@@ -1205,7 +1205,7 @@ type RunnerSettings struct {
 	GracefulKillTimeout *int `toml:"-" json:",omitempty"`
 	ForceKillTimeout    *int `toml:"-" json:",omitempty"`
 
-	FeatureFlags map[string]bool `toml:"feature_flags" json:"feature_flags,omitempty" long:"feature-flags" env:"FEATURE_FLAGS" description:"Enable/Disable feature flags https://docs.gitlab.com/runner/configuration/feature-flags.html"`
+	FeatureFlags map[string]bool `toml:"feature_flags" json:"feature_flags,omitempty" long:"feature-flags" env:"FEATURE_FLAGS" description:"Enable/Disable feature flags https://docs.gitlab.com/runner/configuration/feature-flags/"`
 
 	Monitoring *runner.Monitoring `toml:"monitoring,omitempty" json:"monitoring,omitempty" long:"runner-monitoring" description:"(Experimental) Monitoring configuration specific to this runner"`
 
@@ -1974,7 +1974,7 @@ func (c *DockerMachine) logDeprecationWarning() {
 	if len(c.OffPeakPeriods) != 0 {
 		logrus.Warning("OffPeak docker machine configuration is deprecated and has been removed since 14.0. " +
 			"Please convert the setting into a [[docker.machine.autoscaling]] configuration instead: " +
-			"https://docs.gitlab.com/runner/configuration/autoscale.html#off-peak-time-mode-configuration-deprecated")
+			"https://docs.gitlab.com/runner/configuration/autoscale/#off-peak-time-mode-configuration-deprecated")
 	}
 }
 
