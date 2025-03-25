@@ -37,7 +37,7 @@ func init() {
 }
 
 // GetCompressionLevel converts the compression level name to compression level type
-// https://docs.gitlab.com/ee/ci/runners/README.html#artifact-and-cache-settings
+// https://docs.gitlab.com/ci/runners/configure_runners/#artifact-and-cache-settings
 func GetCompressionLevel(name string) archive.CompressionLevel {
 	switch name {
 	case "fastest":

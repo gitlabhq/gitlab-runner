@@ -59,8 +59,8 @@ After your merge request has been approved according to our [approval guidelines
 
 [security process for developers]: https://gitlab.com/gitlab-org/release/docs/blob/master/general/security/developer.md
 [security Release merge request template]: https://gitlab.com/gitlab-org/security/gitlab-runner/blob/main/.gitlab/merge_request_templates/Security%20Release.md
-[approval guidelines]: https://docs.gitlab.com/ee/development/code_review.html#approval-guidelines
-[issue as related]: https://docs.gitlab.com/ee/user/project/issues/related_issues.html#adding-a-related-issue
+[approval guidelines]: https://docs.gitlab.com/development/code_review/#approval-guidelines
+[issue as related]: https://docs.gitlab.com/user/project/issues/related_issues/#add-a-linked-issue
 
 /label ~security ~"Category:Runner" ~"devops::verify" ~"group::runner"
 

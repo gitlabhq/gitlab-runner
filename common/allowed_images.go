@@ -47,7 +47,7 @@ func VerifyAllowedImage(options VerifyAllowedImageOptions, logger buildlogger.Lo
 
 	logger.Println(
 		`Please check runner's allowed_images configuration: ` +
-			`https://docs.gitlab.com/runner/configuration/advanced-configuration.html`,
+			`https://docs.gitlab.com/runner/configuration/advanced-configuration/`,
 	)
 
 	return ErrDisallowedImage

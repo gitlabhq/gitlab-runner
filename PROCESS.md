@@ -42,7 +42,7 @@ sensitive as to how you word things. Use Emoji to express your feelings (heart,
 star, smile, etc.). Some good tips about code reviews can be found in our
 [Code Review Guidelines].
 
-[Code Review Guidelines]: https://docs.gitlab.com/ce/development/code_review.html
+[Code Review Guidelines]: https://docs.gitlab.com/development/code_review/
 
 ## Feature freeze on the 7th for the release on the 22nd
 
@@ -97,11 +97,11 @@ on behalf of the community member.
 
 Every new feature or change should be shipped with its corresponding documentation
 in accordance with the
-[documentation process](https://docs.gitlab.com/ee/development/documentation/feature-change-workflow.html)
-and [structure](https://docs.gitlab.com/ee/development/documentation/structure.html) guides.
+[documentation process](https://docs.gitlab.com/development/documentation/feature-change-workflow/)
+and [structure](https://docs.gitlab.com/development/documentation/topic_types/) guides.
 Note that a technical writer will review all changes to documentation. This can occur
 in the same MR as the feature code, but [if there is not sufficient time or need,
-it can be planned via a follow-up issue for doc review](https://docs.gitlab.com/ee/development/documentation/feature-change-workflow.html#1-product-managers-role),
+it can be planned via a follow-up issue for doc review](https://docs.gitlab.com/development/documentation/workflow/#post-merge-reviews),
 and another MR, if needed. Regardless, complete docs must be merged with code by the freeze.
 
 #### What happens if these deadlines are missed?
@@ -130,7 +130,7 @@ and to prevent any last minute surprises.
 ### On the 7th
 
 Merge requests should still be complete, following the [definition of
-done](https://docs.gitlab.com/ee/development/contributing/merge_request_workflow.html#definition-of-done).
+done](https://docs.gitlab.com/development/contributing/merge_request_workflow/#definition-of-done).
 
 If a merge request is not ready, but the developers and Product Manager
 responsible for the feature think it is essential that it is in the release,
@@ -146,7 +146,7 @@ the stable branch are:
 - Fixes for [regressions](#regressions) where the affected version `xx.x` in `regression:xx.x` is the current release. See [Managing bugs](#managing-bugs) section.
 - Fixes for security issues.
 - Fixes or improvements to automated QA scenarios.
-- [Documentation improvements](https://docs.gitlab.com/ee/development/documentation/workflow.html) for feature changes made in the same release, though initial docs for these features should have already been merged by the freeze, as required.
+- [Documentation improvements](https://docs.gitlab.com/development/documentation/workflow/) for feature changes made in the same release, though initial docs for these features should have already been merged by the freeze, as required.
 - New or updated translations (as long as they do not touch application code).
 - Changes that are behind a feature flag and have the ~"feature flag" label.
 
@@ -187,7 +187,7 @@ A ~bug is a defect, error, failure which causes the system to behave incorrectly
 
 The level of impact of a ~bug can vary from blocking a whole functionality
 or a feature usability bug. A bug should always be linked to a severity level.
-Refer to our [severity levels](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#severity-labels)
+Refer to our [severity levels](https://docs.gitlab.com/development/labels/#severity-labels)
 
 Whether the bug is also a regression or not, the triage process should start as soon as possible.
 Ensure that the Engineering Manager and/or the Product Manager for the relative area is involved to prioritize the work as needed.
@@ -220,10 +220,10 @@ When a bug is found:
 
 1. Create an issue describing the problem in the most detailed way possible.
 1. If possible, provide links to real examples and how to reproduce the problem.
-1. Label the issue properly, using the [team label](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#team-labels),
-   the [subject label](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#subject-labels)
+1. Label the issue properly, using the [team label](https://docs.gitlab.com/development/labels/#team-labels),
+   the [subject label](https://docs.gitlab.com/development/contributing/issue_workflow/#subject-labels)
    and any other label that may apply in the specific case
-1. Notify the respective Engineering Manager to evaluate and apply the [Severity label](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#severity-labels) and [Priority label](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#priority-labels).
+1. Notify the respective Engineering Manager to evaluate and apply the [Severity label](https://docs.gitlab.com/development/labels/#severity-labels) and [Priority label](https://docs.gitlab.com/development/labels/#priority-labels).
 The counterpart Product Manager is included to weigh-in on prioritization as needed.
 1. If the ~bug is **NOT** a regression:
    1. The Engineering Manager decides which milestone the bug will be fixed. The appropriate milestone is applied.
@@ -307,7 +307,7 @@ that documents and automates the process.
 
 ```
 Thank you for the issue report. Please reformat your issue to conform to the
-[contribution guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#issue-tracker-guidelines).
+[contribution guidelines](https://docs.gitlab.com/development/contributing/issue_workflow/#issue-tracker-guidelines).
 ```
 
 ### Issue report for old version
@@ -317,7 +317,7 @@ Thank you for the issue report. We only support issues for the latest stable ver
 I'm closing this issue, however if you still experience this problem in the latest stable version,
 please open a new issue (and please reference the old issue(s)).
 Make sure to also include the necessary debugging information conforming to the issue tracker
-guidelines found in our [contribution guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#issue-tracker-guidelines).
+guidelines found in our [contribution guidelines](https://docs.gitlab.com/development/contributing/issue_workflow/#issue-tracker-guidelines).
 ```
 
 ### Support requests and configuration questions
@@ -326,7 +326,7 @@ guidelines found in our [contribution guidelines](https://docs.gitlab.com/ee/dev
 Thank you for your interest in GitLab. We don't use the issue tracker for support
 requests and configuration questions. Please check our
 [Support](https://about.gitlab.com/support/) page to see all of the available
-support options. Also, have a look at the [contribution guidelines](https://docs.gitlab.com/ee/development/contributing/index.html)
+support options. Also, have a look at the [contribution guidelines](https://docs.gitlab.com/development/contributing/)
 for more information.
 
 You can read more about this policy in our
@@ -338,7 +338,7 @@ You can read more about this policy in our
 ```
 Please enclose console output, logs, and code in backticks (`` ` ``), as it's
 very hard to read otherwise. For more information, read our
-[guide on code and codeblocks in markdown](https://docs.gitlab.com/ee/development/documentation/styleguide/index.html#code-blocks)
+[guide on code and codeblocks in markdown](https://docs.gitlab.com/development/documentation/styleguide/#code-blocks)
 ```
 
 ### Issue fixed in newer version
@@ -346,11 +346,11 @@ very hard to read otherwise. For more information, read our
 ```
 Thank you for the issue report. This issue has already been fixed in newer versions of GitLab.
 Due to the size of this project and our limited resources we are only able to support the
-latest stable release as outlined in our [contribution guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html).
+latest stable release as outlined in our [contribution guidelines](https://docs.gitlab.com/development/contributing/issue_workflow/).
 In order to get this bug fix and enjoy many new features please
 [upgrade](https://gitlab.com/gitlab-org/gitlab-ce/tree/master/doc/update).
 If you still experience issues at that time, please open a new issue following our issue
-tracker guidelines found in the [contribution guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#issue-tracker-guidelines).
+tracker guidelines found in the [contribution guidelines](https://docs.gitlab.com/development/contributing/issue_workflow/#issue-tracker-guidelines).
 ```
 
 ### Improperly formatted merge request
@@ -367,7 +367,7 @@ Is there an issue on the
 [issue tracker](https://gitlab.com/gitlab-org/gitlab-ce/issues) that is
 similar to this? Could you please link it here?
 Please be aware that new functionality that is not marked
-[`Accepting merge requests`](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#label-for-community-contributors)
+[`Accepting merge requests`](https://docs.gitlab.com/development/labels/#label-for-community-contributors)
 might not make it into GitLab.
 ```
 

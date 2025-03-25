@@ -19,11 +19,11 @@ _This notice should stay as the first item in the CONTRIBUTING.md file._
 
 ## Contribute to GitLab Runner
 
-The following content is an extension of the [GitLab contribution guidelines](https://docs.gitlab.com/ce/development/contributing/index.html).
+The following content is an extension of the [GitLab contribution guidelines](https://docs.gitlab.com/development/contributing/).
 
 ### How we prioritize MRs from the wider community
 
-Currently we use a system of [scoped labels](https://docs.gitlab.com/ee/user/project/labels.html#scoped-labels-premium) to help us prioritize which MRs our team will review.
+Currently we use a system of [scoped labels](https://docs.gitlab.com/user/project/labels/#scoped-labels) to help us prioritize which MRs our team will review.
 
 | Label | Meaning | Use Cases |
 | ---- | ----- | ----- |
@@ -31,7 +31,7 @@ Currently we use a system of [scoped labels](https://docs.gitlab.com/ee/user/pro
 | ~"Review::P2" | Important merge requests. | When a merge request is important, but has lower impact to customers when compared to merge requests labelled ~"Review::P1". |
 | ~"Review::P3" | Default priority to review. | All incoming merge requests should default to this. |
 
-### Contributing new features that need new or updated `.gitlab-ci.yml` [keywords](https://docs.gitlab.com/ee/ci/yaml/)
+### Contributing new features that need new or updated `.gitlab-ci.yml` [keywords](https://docs.gitlab.com/ci/yaml/)
 
 To execute a job, the GitLab instance processes the `gitlab-ci.yml` configuration
 and creates a data transfer object, containing only data relevant to a job's
@@ -101,12 +101,12 @@ acceptable, while `Fix timestamp in docker executor job output` would be accepta
 
 ### Workflow labels
 
-We have some additional labels plus those defined in [gitlab-ce workflow labels](https://docs.gitlab.com/ce/development/contributing/issue_workflow.html)
+We have some additional labels plus those defined in [gitlab-ce workflow labels](https://docs.gitlab.com/development/contributing/issue_workflow/)
 
 - Additional subjects: ~cache, ~executors, ~"git operations"
 - OS: ~"os::Linux" ~"os::macOS" ~"os::FreeBSD" ~"os::Windows"
 - executor: ~"executor::docker" ~"executor::kubernetes" ~"executor::docker\-machine" ~"executor::shell" ~"executor::parallels" ~"executor::virtualbox"
 - For any [follow-up
-  issues](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#technical-debt-in-follow-up-issues)
+  issues](https://docs.gitlab.com/development/contributing/issue_workflow/#technical-debt-in-follow-up-issues)
   created during code review the ~"follow-up" label should be added to
   keep track of it.

@@ -5,7 +5,7 @@
 ## Basic setup
 
 1. [ ] Read the [Becoming a maintainer for one of Runner team projects](https://about.gitlab.com/handbook/engineering/development/ci-cd/verify/runner/#becoming-a-maintainer-for-one-of-our-projects).
-1. [ ] Read the [code review page in the handbook](https://about.gitlab.com/handbook/engineering/workflow/code-review/) and the [code review guidelines](https://docs.gitlab.com/ee/development/code_review.html).
+1. [ ] Read the [code review page in the handbook](https://about.gitlab.com/handbook/engineering/workflow/code-review/) and the [code review guidelines](https://docs.gitlab.com/development/code_review/).
 1. [ ] Understand [how to become a maintainer](https://about.gitlab.com/handbook/engineering/workflow/code-review/#how-to-become-a-maintainer).
 1. [ ] Add yourself as a [trainee maintainer](https://about.gitlab.com/handbook/engineering/workflow/code-review/#trainee-maintainer) on the [team page](https://gitlab.com/gitlab-com/www-gitlab-com/blob/master/data/team.yml).
 1. [ ] Ask your manager to set up a check in on this issue every six weeks or so.

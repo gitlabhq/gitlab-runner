@@ -118,7 +118,7 @@ If GitLab Runner is installed in a Kubernetes cluster using the [GitLab Runner H
 
 ```yaml
 ## Configure the GitLab Runner logging level. Available values are: debug, info, warn, error, fatal, panic
-## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-global-section
+## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration/#the-global-section
 ##
 logLevel: debug
 ```
@@ -282,7 +282,7 @@ Git protocol through HTTP(S) is resolved by the GitLab Workhorse, so this is the
 **main entrypoint** of GitLab.
 
 If you are using a Linux package installation, but don't want to use the bundled NGINX
-server, see [using a non-bundled web-server](https://docs.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server).
+server, see [using a non-bundled web-server](https://docs.gitlab.com/omnibus/settings/nginx/#use-a-non-bundled-web-server).
 
 In the GitLab Recipes repository there are
 [web-server configuration examples](https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server) for Apache and NGINX.
@@ -450,5 +450,5 @@ In the GitLab UI, you might get a `Response not successful: Received status code
 
 This issue might affect instances that have undergone multiple major upgrades over an extended period.
 To resolve this issue, consolidate any duplicate tags in the table with the
-[`gitlab:db:deduplicate_tags` Rake task](https://docs.gitlab.com/administration/raketasks/maintenance.html#check-the-database-for-deduplicate-cicd-tags).
+[`gitlab:db:deduplicate_tags` Rake task](https://docs.gitlab.com/administration/raketasks/maintenance/#check-the-database-for-deduplicate-cicd-tags).
 For more information, see [Rake tasks](https://docs.gitlab.com/raketasks/).

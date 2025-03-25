@@ -35,7 +35,7 @@ test coverage report:
 # Disable this for now since
 # https://gitlab.com/gitlab-org/gitlab/-/issues/365885 block us from upgrading
 # to go 1.18.x. Re-enable this when the above ticket is fixed.
-#code navigation: # See https://docs.gitlab.com/ee/user/project/code_intelligence.html#configuration
+#code navigation: # See https://docs.gitlab.com/user/project/code_intelligence/#configuration
   #extends:
   #- .coverage_job
   #allow_failure: true # recommended

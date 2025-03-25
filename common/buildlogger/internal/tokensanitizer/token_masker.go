@@ -23,7 +23,7 @@ import (
 	"io"
 )
 
-// https://docs.gitlab.com/ee/security/token_overview.html#token-prefixes
+// https://docs.gitlab.com/security/token_overview/#token-prefixes
 func DefaultTokenPrefixes(maskAllDefaultTokens bool) []string {
 	tokenPrefixes := []string{"glpat-"}
 	if maskAllDefaultTokens {

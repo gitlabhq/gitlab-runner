@@ -95,7 +95,7 @@ While ideal for builds with minimal dependencies, it only provides limited isola
 Docker executor provides clean build environments through containers. Dependency management is straightforward,
 with all dependencies packaged in the Docker image. This executor requires Docker installation on the Runner host.
 
-This executor supports additional [services](https://docs.gitlab.com/ee/ci/services/index.html) like MySQL.
+This executor supports additional [services](https://docs.gitlab.com/ci/services/) like MySQL.
 It also accommodates Podman as an alternative container runtime.
 
 This executor maintains consistent, isolated build environments.

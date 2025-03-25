@@ -6,7 +6,7 @@
      https://gitlab.com/gitlab-org/gitlab-docs/issues/
 
 * For information about documentation content and process, see
-     https://docs.gitlab.com/ee/development/documentation/ -->
+     https://docs.gitlab.com/development/documentation/ -->
 
 ### Problem to solve
 

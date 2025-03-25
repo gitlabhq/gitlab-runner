@@ -34,7 +34,7 @@ or [SOPS](https://fluxcd.io/flux/guides/mozilla-sops/).
 
    ```yaml
    # The GitLab Server URL (with protocol) that you want to register the runner against
-   # ref: https://docs.gitlab.com/runner/commands/index.html#gitlab-runner-register
+   # ref: https://docs.gitlab.com/runner/commands/#gitlab-runner-register
    #
    gitlabUrl: https://gitlab.my.domain.example.com/
 
@@ -51,7 +51,7 @@ or [SOPS](https://fluxcd.io/flux/guides/mozilla-sops/).
    # Run all containers with the privileged flag enabled
    # This flag allows the docker:dind image to run if you need to run Docker commands
    # Read the docs before turning this on:
-   # https://docs.gitlab.com/runner/executors/kubernetes/index.html#using-dockerdind
+   # https://docs.gitlab.com/runner/executors/kubernetes/#using-dockerdind
    runners:
        privileged: true
    ```

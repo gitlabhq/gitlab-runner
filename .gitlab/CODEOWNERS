@@ -1,6 +1,6 @@
 # When adding a group as a code owner, make sure to invite the group to the
 # project here: https://gitlab.com/gitlab-org/gitlab-runner/-/project_members
-# As described in https://docs.gitlab.com/ee/user/project/code_owners.html
+# As described in https://docs.gitlab.com/user/project/codeowners/
 
 * @gitlab-com/runner-maintainers
 .editorconfig   @gitlab-com/runner-group @gitlab-com/runner-maintainers

@@ -190,7 +190,7 @@ To change the maximum number of pods allowed at one time, edit the
 
 ```yaml
 ## Configure the maximum number of concurrent jobs
-## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-global-section
+## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration/#the-global-section
 ##
 concurrent: 10
 ```
@@ -323,7 +323,7 @@ file content being the value associated with the key:
 ### Create a Kubernetes secret
 
 If you installed GitLab Helm chart using the
-[auto-generated self-signed wildcard certificate](https://docs.gitlab.com/charts/installation/tls.html#option-4-use-auto-generated-self-signed-wildcard-certificate) method, a secret was created for you.
+[auto-generated self-signed wildcard certificate](https://docs.gitlab.com/charts/installation/tls/#option-4-use-auto-generated-self-signed-wildcard-certificate) method, a secret was created for you.
 
 If you did not install GitLab Helm chart with the auto-generated self-signed wildcard certificate, create a secret.
 These commands store your certificate as a secret in Kubernetes, and present it to the GitLab Runner containers as a file.

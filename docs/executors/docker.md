@@ -516,7 +516,7 @@ machine, such as Android smartphones controlled over the
 
 Since build job containers can directly access host USB devices, simultaneous
 pipeline executions may conflict with each other when accessing the same hardware.
-To prevent these conflicts, use [`resource_group`](https://docs.gitlab.com/ee/ci/yaml/index.html#resource_group).
+To prevent these conflicts, use [`resource_group`](https://docs.gitlab.com/ci/yaml/#resource_group).
 
 ```toml
 [[runners]]
