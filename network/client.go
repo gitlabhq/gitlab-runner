@@ -395,6 +395,22 @@ func (n *client) doJSONWithPAT(
 	request interface{},
 	response interface{},
 ) (int, string, *http.Response) {
+	headers := make(http.Header)
+
+	if pat != "" {
+		headers.Set(common.PrivateToken, pat)
+	}
+	return n.doJSON(ctx, uri, method, statusCode, headers, request, response)
+}
+
+func (n *client) doJSON(
+	ctx context.Context,
+	uri, method string,
+	statusCode int,
+	headers http.Header,
+	request interface{},
+	response interface{},
+) (int, string, *http.Response) {
 	var bytesProvider common.ContentProvider
 
 	if request != nil {
@@ -405,12 +421,11 @@ func (n *client) doJSONWithPAT(
 		bytesProvider = common.BytesProvider{Data: requestBody}
 	}
 
-	headers := make(http.Header)
+	if headers == nil {
+		headers = http.Header{}
+	}
 	if response != nil {
 		headers.Set(common.Accept, jsonMimeType)
-	}
-	if pat != "" {
-		headers.Set(common.PrivateToken, pat)
 	}
 
 	res, err := n.do(ctx, uri, method, bytesProvider, jsonMimeType, headers)
