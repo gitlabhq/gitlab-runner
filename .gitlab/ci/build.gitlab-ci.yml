@@ -97,24 +97,11 @@ binaries:
   tags:
     - !reference [.instance-2xlarge]
   extends:
-    - .rules:merge_request_pipelines:no_docs
-    - .google-oidc:auth
-    - .go-cache
+  - .rules:merge_request_pipelines:no_docs
+  - .rules:sign_binaries:only_canonical
+  - .google-oidc:auth
+  - .go-cache
   stage: build
-  id_tokens:
-    GCP_OIDC_JWT:
-      aud: $AUDIENCE
-    VAULT_ID_TOKEN:
-      aud: https://vault.gitlab.net
-  secrets:
-    GITLAB_WINDOWS_SIGNING_CERT:
-      file: true
-      vault: gitlab-runner/signing/ssl-com-hsm/certificate@shared
-      token: $VAULT_ID_TOKEN
-  variables:
-    GCLOUD_PROJECT: gitlab-ci-runners-signing
-    SERVICE_ACCOUNT: gitlab-runner-signer@gitlab-ci-runners-signing.iam.gserviceaccount.com
-    WI_POOL_PROVIDER: //iam.googleapis.com/projects/8522242139/locations/global/workloadIdentityPools/gitlab-pool-oidc-250833/providers/gitlab-jwt-250833
   needs: []
   before_script:
   - !reference [.go-cache, before_script]
@@ -122,7 +109,10 @@ binaries:
   script:
     - go mod download
     - make -j$(($(nproc) * 2)) helper-bin helper-bin-fips runner-bin runner-bin-fips
-    - GITLAB_SIGNING_CERT_PATH=$GITLAB_WINDOWS_SIGNING_CERT scripts/sign-binaries
+    - |
+      if [ -n "${WI_POOL_PROVIDER}" ]; then
+        GITLAB_SIGNING_CERT_PATH="$CI_PROJECT_DIR/certs/gitlab-inc-ssl-com.crt" scripts/sign-binaries
+      fi
   artifacts:
     paths:
       - out/binaries/gitlab-runner*

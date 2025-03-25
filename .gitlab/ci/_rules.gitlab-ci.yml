@@ -265,3 +265,22 @@
         # !reference doesn't work in variables
         KUBERNETES_RUNNER_TAG: gitlab-org
     - when: always
+
+########################
+# Binary signing rules #
+########################
+
+.rules:sign_binaries:only_canonical:
+  rules:
+    - <<: *if-not-canonical-namespace
+      when: never
+    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
+      variables:
+        GCLOUD_PROJECT: gitlab-ci-runners-signing
+        SERVICE_ACCOUNT: gitlab-runner-signer@gitlab-ci-runners-signing.iam.gserviceaccount.com
+        WI_POOL_PROVIDER: "//iam.googleapis.com/projects/8522242139/locations/global/workloadIdentityPools/gitlab-pool-oidc-250833/providers/gitlab-jwt-250833"
+    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+      variables:
+        GCLOUD_PROJECT: gitlab-ci-runners-signing
+        SERVICE_ACCOUNT: gitlab-runner-signer@gitlab-ci-runners-signing.iam.gserviceaccount.com
+        WI_POOL_PROVIDER: //iam.googleapis.com/projects/8522242139/locations/global/workloadIdentityPools/gitlab-pool-oidc-19047934/providers/gitlab-jwt-19047934
