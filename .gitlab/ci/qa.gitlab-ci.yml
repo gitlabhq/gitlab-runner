@@ -194,7 +194,6 @@ yaml:lint:
   extends:
     - .rules:merge_request_pipelines
   script:
-    - apk update && apk add make
     - npm install -g prettier@3.0.3
     - echo "Checking YAML formatting in .gitlab/ci/ directory..."
-    - make lint-ci-yaml
+    - prettier --check ".gitlab/ci/**/*.{yml,yaml}" --log-level warn
