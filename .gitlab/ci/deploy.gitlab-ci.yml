@@ -1,4 +1,4 @@
-# This job should only run if the UBI images downstream pipeline is successful. 
+# This job should only run if the UBI images downstream pipeline is successful.
 # It does not depend on it since the pipeline incorrectly assumes that it has passed
 # when the trigger job is just created. Instead it depends on the whole postreleases stage.
 trigger deploy to kubernetes:
@@ -28,4 +28,3 @@ trigger deploy to kubernetes:
         UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
   trigger:
     project: gitlab-org/ci-cd/runner-tools/runner-kubernetes-infra
-

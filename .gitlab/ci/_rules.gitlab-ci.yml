@@ -21,7 +21,6 @@
   - "docs/**/*"
   - "scripts/lint-docs"
 
-
 ##############
 # Conditions #
 ##############
@@ -30,7 +29,7 @@
   if: '$CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/'
 
 .if-default-branch: &if-default-branch
-  if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
 
 .if-release-candidate-tag: &if-release-candidate-tag
   if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+/'
@@ -77,14 +76,14 @@
 
 .rules:default-branch-only:no_docs:
   rules:
-  - <<: *if-runner-or-security-runner-default-branch
-    changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *code-backstage-patterns
 
 .rules:default-branch-only:no_docs:always:
   rules:
-  - <<: *if-runner-or-security-runner-default-branch
-    changes: *code-backstage-patterns
-    when: always
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *code-backstage-patterns
+      when: always
 
 #######################
 # Merge Request rules #
@@ -92,39 +91,39 @@
 
 .rules:merge_request_pipelines:
   rules:
-  - <<: *if-merge-request-pipeline
-  - <<: *if-runner-or-security-runner-default-branch
-  - <<: *if-runner-or-security-runner-stable-ref
-  - <<: *if-runner-release-ref
-  - <<: *if-security-runner-release-ref
+    - <<: *if-merge-request-pipeline
+    - <<: *if-runner-or-security-runner-default-branch
+    - <<: *if-runner-or-security-runner-stable-ref
+    - <<: *if-runner-release-ref
+    - <<: *if-security-runner-release-ref
 
 .rules:merge_request_pipelines:no_docs:
   rules:
-  - <<: *if-merge-request-pipeline
-    changes: *code-backstage-patterns
-  - <<: *if-runner-or-security-runner-default-branch
-    changes: *code-backstage-patterns
-  - <<: *if-runner-or-security-runner-stable-ref
-    changes: *code-backstage-patterns
-  - <<: *if-runner-release-ref
-    changes: *code-backstage-patterns
-  - <<: *if-security-runner-release-ref
-    changes: *code-backstage-patterns
+    - <<: *if-merge-request-pipeline
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-stable-ref
+      changes: *code-backstage-patterns
+    - <<: *if-runner-release-ref
+      changes: *code-backstage-patterns
+    - <<: *if-security-runner-release-ref
+      changes: *code-backstage-patterns
 
 .rules:merge_request_pipelines:no_docs:no-community-mr:
   rules:
-  - <<: *if-not-canonical-namespace
-    when: never
-  - <<: *if-merge-request-pipeline
-    changes: *code-backstage-patterns
-  - <<: *if-runner-or-security-runner-default-branch
-    changes: *code-backstage-patterns
-  - <<: *if-runner-or-security-runner-stable-ref
-    changes: *code-backstage-patterns
-  - <<: *if-runner-release-ref
-    changes: *code-backstage-patterns
-  - <<: *if-security-runner-release-ref
-    changes: *code-backstage-patterns
+    - <<: *if-not-canonical-namespace
+      when: never
+    - <<: *if-merge-request-pipeline
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-stable-ref
+      changes: *code-backstage-patterns
+    - <<: *if-runner-release-ref
+      changes: *code-backstage-patterns
+    - <<: *if-security-runner-release-ref
+      changes: *code-backstage-patterns
 
 # Rules cannot be merged, instead of opt for creating a new rule like this one
 .rules:merge_request_pipelines:no_docs:only_canonical:
@@ -142,21 +141,21 @@
 
 .rules:merge_request_pipelines:no_docs:always:
   rules:
-  - <<: *if-merge-request-pipeline
-    changes: *code-backstage-patterns
-    when: always
-  - <<: *if-runner-or-security-runner-default-branch
-    changes: *code-backstage-patterns
-    when: always
-  - <<: *if-runner-or-security-runner-stable-ref
-    changes: *code-backstage-patterns
-    when: always
-  - <<: *if-runner-release-ref
-    changes: *code-backstage-patterns
-    when: always
-  - <<: *if-security-runner-release-ref
-    changes: *code-backstage-patterns
-    when: always
+    - <<: *if-merge-request-pipeline
+      changes: *code-backstage-patterns
+      when: always
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *code-backstage-patterns
+      when: always
+    - <<: *if-runner-or-security-runner-stable-ref
+      changes: *code-backstage-patterns
+      when: always
+    - <<: *if-runner-release-ref
+      changes: *code-backstage-patterns
+      when: always
+    - <<: *if-security-runner-release-ref
+      changes: *code-backstage-patterns
+      when: always
 
 #################
 # Release rules #
@@ -164,18 +163,18 @@
 
 .rules:release:all:
   rules:
-  - <<: *if-not-canonical-namespace
-    when: never
-  - <<: *if-default-branch
-  - <<: *if-release-candidate-tag
-  - <<: *if-stable-release-tag
+    - <<: *if-not-canonical-namespace
+      when: never
+    - <<: *if-default-branch
+    - <<: *if-release-candidate-tag
+    - <<: *if-stable-release-tag
 
 .rules:release:bleeding-edge:
   rules:
-  - <<: *if-runner-default-branch
-    changes: *code-backstage-patterns
-  - <<: *if-runner-bleeding-edge-release-ref
-    changes: *code-backstage-patterns
+    - <<: *if-runner-default-branch
+      changes: *code-backstage-patterns
+    - <<: *if-runner-bleeding-edge-release-ref
+      changes: *code-backstage-patterns
 
 .rules:release-or-security:bleeding-edge-or-stable:
   rules:
@@ -188,51 +187,51 @@
 
 .rules:release:stable-or-rc:
   rules:
-  - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/ && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
-    changes: *code-backstage-patterns
-    when: on_success
-  - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/ && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
-    changes: *code-backstage-patterns
-    when: manual
+    - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/ && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
+      changes: *code-backstage-patterns
+      when: on_success
+    - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/ && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+      changes: *code-backstage-patterns
+      when: manual
 
 .rules:release:stable:branch:
   rules:
-  - <<: *if-runner-stable-release-ref
-    changes: *code-backstage-patterns
-  - <<: *if-security-runner-release-ref
-    changes: *code-backstage-patterns
+    - <<: *if-runner-stable-release-ref
+      changes: *code-backstage-patterns
+    - <<: *if-security-runner-release-ref
+      changes: *code-backstage-patterns
 
 .rules:release:stable:branch:ignore-changes:
   rules:
-  - <<: *if-runner-stable-release-ref
-  - <<: *if-security-runner-release-ref
+    - <<: *if-runner-stable-release-ref
+    - <<: *if-security-runner-release-ref
 
 .rules:release:development:merge-requests:
   rules:
-  - <<: *if-runner-merge-request-pipeline
-    changes: *code-backstage-patterns
-  - <<: *if-runner-security-merge-request-pipeline
-    changes: *code-backstage-patterns
+    - <<: *if-runner-merge-request-pipeline
+      changes: *code-backstage-patterns
+    - <<: *if-runner-security-merge-request-pipeline
+      changes: *code-backstage-patterns
 
 .rules:release:development:merge-requests:no-community-mr:
   rules:
-  - <<: *if-not-canonical-namespace
-    when: never
-  - <<: *if-runner-merge-request-pipeline
-    changes: *code-backstage-patterns
-  - <<: *if-runner-security-merge-request-pipeline
-    changes: *code-backstage-patterns
+    - <<: *if-not-canonical-namespace
+      when: never
+    - <<: *if-runner-merge-request-pipeline
+      changes: *code-backstage-patterns
+    - <<: *if-runner-security-merge-request-pipeline
+      changes: *code-backstage-patterns
 
 .rules:runner-only:release:development:merge-requests:
   rules:
-  - <<: *if-runner-merge-request-pipeline
-    changes: *code-backstage-patterns
+    - <<: *if-runner-merge-request-pipeline
+      changes: *code-backstage-patterns
 
 .rules:build:test:images:merge-requests:
   rules:
-  - <<: *if-runner-merge-request-pipeline
-    changes:
-    - tests/dockerfiles/*
+    - <<: *if-runner-merge-request-pipeline
+      changes:
+        - tests/dockerfiles/*
 
 .rules:prepare:test-ci-scripts:merge-requests:
   rules:
@@ -244,17 +243,16 @@
 
 .rules:docs:skip:
   rules:
-  - changes: *docs-patterns
-    when: never
-  - when: on_success
+    - changes: *docs-patterns
+      when: never
+    - when: on_success
 
 .rules:docs:review:
   rules:
-  - <<: *if-not-canonical-namespace
-    when: never
-  - <<: *if-merge-request-pipeline
-    when: manual
-
+    - <<: *if-not-canonical-namespace
+      when: never
+    - <<: *if-merge-request-pipeline
+      when: manual
 
 ##############
 # Tags rules #

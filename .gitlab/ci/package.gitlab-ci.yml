@@ -1,64 +1,64 @@
 .packages:
   extends:
-  - .rules:merge_request_pipelines:no_docs
+    - .rules:merge_request_pipelines:no_docs
   stage: package
   environment:
     name: package/$PKGS/$CI_COMMIT_REF_NAME
   needs:
-  - 'prebuilt helper images'
-  - 'binaries'
+    - "prebuilt helper images"
+    - "binaries"
   before_script:
-  - |
-    # checking GPG signing support
-    if [ -f "$GPG_KEY_PATH" ]; then
-      cat ${GPG_KEY_PATH} | gpg --batch --no-tty --allow-secret-key-import --import -
-      export GPG_KEYID=$(gpg --with-colon --list-secret-keys | head -n1 | cut -d : -f 5)
-      export GPG_PASSPHRASE=$(cat ${GPG_PASSPHRASE_PATH})
-    else
-      echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
-    fi
+    - |
+      # checking GPG signing support
+      if [ -f "$GPG_KEY_PATH" ]; then
+        cat ${GPG_KEY_PATH} | gpg --batch --no-tty --allow-secret-key-import --import -
+        export GPG_KEYID=$(gpg --with-colon --list-secret-keys | head -n1 | cut -d : -f 5)
+        export GPG_PASSPHRASE=$(cat ${GPG_PASSPHRASE_PATH})
+      else
+        echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
+      fi
   script:
-  - mage package:prepare
-  - mage package:verifyIterationVariable
-  - mage package:$PKGS
+    - mage package:prepare
+    - mage package:verifyIterationVariable
+    - mage package:$PKGS
   artifacts:
     paths:
-    - out/deb/
-    - out/rpm/
+      - out/deb/
+      - out/rpm/
     expire_in: 7d
 
 package-deb:
   extends:
-  - .packages
+    - .packages
   parallel:
     matrix:
-    - PKGS:
-      - deb64
-      - debArm64
-      - deb32
-      - debArm32
-      - debIbm
-      - debRiscv64
+      - PKGS:
+          - deb64
+          - debArm64
+          - deb32
+          - debArm32
+          - debIbm
+          - debRiscv64
 
 package-rpm:
   extends:
-  - .packages
+    - .packages
   parallel:
     matrix:
-    - PKGS:
-      - rpm64
-      - rpmArm64
-      - rpm32
-      - rpmArm32
-      - rpmIbm
-      - rpmRiscv64
-      - rpmFips
+      - PKGS:
+          - rpm64
+          - rpmArm64
+          - rpm32
+          - rpmArm32
+          - rpmIbm
+          - rpmRiscv64
+          - rpmFips
 
 package-helpers:
   extends:
-  - .packages
+    - .packages
   script:
-  - mage package:prepare
-  - mage package:verifyIterationVariable
-  - mage package:helpersDeb
-  - mage package:helpersRpm
+    - mage package:prepare
+    - mage package:verifyIterationVariable
+    - mage package:helpersDeb
+    - mage package:helpersRpm

@@ -80,12 +80,12 @@ trigger runner package tests:
 
 static QA:
   extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .no_cache
+    - .rules:merge_request_pipelines:no_docs
+    - .no_cache
   stage: postrelease
   image: alpine:3.14.2
   needs:
-  - code_quality
+    - code_quality
   script: |
     if [ "$(cat gl-code-quality-report.json)" != "[]" ] ; then
       apk add -U --no-cache jq > /dev/null
@@ -103,32 +103,32 @@ static QA:
 
 verify development resources:
   extends:
-  - .verify-resources
-  - .rules:release:development:merge-requests
+    - .verify-resources
+    - .rules:release:development:merge-requests
   needs:
-  - job: "development docker images"
-    artifacts: true
+    - job: "development docker images"
+      artifacts: true
 
 verify bleeding edge resources:
   extends:
-  - .verify-resources
-  - .rules:release:bleeding-edge
+    - .verify-resources
+    - .rules:release:bleeding-edge
   needs:
-  - job: "bleeding edge docker images"
-    artifacts: true
+    - job: "bleeding edge docker images"
+      artifacts: true
 
 verify stable resources:
   extends:
-  - .verify-resources
-  - .rules:release:stable:branch
+    - .verify-resources
+    - .rules:release:stable:branch
   needs:
-  - job: "stable docker images"
-    artifacts: true
+    - job: "stable docker images"
+      artifacts: true
 
 stable gitlab release:
   stage: postrelease
   extends:
-  - .rules:release:stable-or-rc
+    - .rules:release:stable-or-rc
   dependencies: []
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   variables:
@@ -143,132 +143,132 @@ stable gitlab release:
     url: https://gitlab.com/gitlab-org/gitlab-runner/-/releases
   before_script: []
   script:
-  - echo "Releasing to $S3"
+    - echo "Releasing to $S3"
   release:
-    name: '$CI_COMMIT_TAG'
+    name: "$CI_COMMIT_TAG"
     description: |
       See [the changelog]($CHANGELOG) :rocket:
 
       GitLab Runner documentation can be found at https://docs.gitlab.com/runner/.
-    tag_name: '$CI_COMMIT_TAG'
-    ref: '$CI_COMMIT_TAG'
+    tag_name: "$CI_COMMIT_TAG"
+    ref: "$CI_COMMIT_TAG"
     assets:
       links:
-      # binaries
-      - name: 'binary: Linux amd64'
-        url: '$S3/binaries/gitlab-runner-linux-amd64'
-        filepath: '/binaries/gitlab-runner-linux-amd64'
-      - name: 'binary: Linux amd64-fips'
-        url: '$S3/binaries/gitlab-runner-linux-amd64-fips'
-        filepath: '/binaries/gitlab-runner-linux-amd64-fips'
-      - name: 'binary: Linux 386'
-        url: '$S3/binaries/gitlab-runner-linux-386'
-        filepath: '/binaries/gitlab-runner-linux-386'
-      - name: 'binary: Linux arm'
-        url: '$S3/binaries/gitlab-runner-linux-arm'
-        filepath: '/binaries/gitlab-runner-linux-arm'
-      - name: 'binary: Linux ppc64el'
-        url: '$S3/binaries/gitlab-runner-linux-ppc64el'
-        filepath: '/binaries/gitlab-runner-linux-ppc64el'
-      - name: 'binary: Linux s390x'
-        url: '$S3/binaries/gitlab-runner-linux-s390x'
-        filepath: '/binaries/gitlab-runner-linux-s390x'
-      - name: 'binary: Linux riscv64'
-        url: '$S3/binaries/gitlab-runner-linux-riscv64'
-        filepath: '/binaries/gitlab-runner-linux-riscv64'
+        # binaries
+        - name: "binary: Linux amd64"
+          url: "$S3/binaries/gitlab-runner-linux-amd64"
+          filepath: "/binaries/gitlab-runner-linux-amd64"
+        - name: "binary: Linux amd64-fips"
+          url: "$S3/binaries/gitlab-runner-linux-amd64-fips"
+          filepath: "/binaries/gitlab-runner-linux-amd64-fips"
+        - name: "binary: Linux 386"
+          url: "$S3/binaries/gitlab-runner-linux-386"
+          filepath: "/binaries/gitlab-runner-linux-386"
+        - name: "binary: Linux arm"
+          url: "$S3/binaries/gitlab-runner-linux-arm"
+          filepath: "/binaries/gitlab-runner-linux-arm"
+        - name: "binary: Linux ppc64el"
+          url: "$S3/binaries/gitlab-runner-linux-ppc64el"
+          filepath: "/binaries/gitlab-runner-linux-ppc64el"
+        - name: "binary: Linux s390x"
+          url: "$S3/binaries/gitlab-runner-linux-s390x"
+          filepath: "/binaries/gitlab-runner-linux-s390x"
+        - name: "binary: Linux riscv64"
+          url: "$S3/binaries/gitlab-runner-linux-riscv64"
+          filepath: "/binaries/gitlab-runner-linux-riscv64"
 
-      - name: 'binary: macOS amd64'
-        url: '$S3/binaries/gitlab-runner-darwin-amd64'
-        filepath: '/binaries/gitlab-runner-darwin-amd64'
-      - name: 'binary: macOS arm64'
-        url: '$S3/binaries/gitlab-runner-darwin-arm64'
-        filepath: '/binaries/gitlab-runner-darwin-arm64'
+        - name: "binary: macOS amd64"
+          url: "$S3/binaries/gitlab-runner-darwin-amd64"
+          filepath: "/binaries/gitlab-runner-darwin-amd64"
+        - name: "binary: macOS arm64"
+          url: "$S3/binaries/gitlab-runner-darwin-arm64"
+          filepath: "/binaries/gitlab-runner-darwin-arm64"
 
-      - name: 'binary: FreeBSD amd64'
-        url: '$S3/binaries/gitlab-runner-freebsd-amd64'
-        filepath: '/binaries/gitlab-runner-freebsd-amd64'
-      - name: 'binary: FreeBSD arm'
-        url: '$S3/binaries/gitlab-runner-freebsd-arm'
-        filepath: '/binaries/gitlab-runner-freebsd-arm'
-      - name: 'binary: FreeBSD 386'
-        url: '$S3/binaries/gitlab-runner-freebsd-386'
-        filepath: '/binaries/gitlab-runner-freebsd-386'
+        - name: "binary: FreeBSD amd64"
+          url: "$S3/binaries/gitlab-runner-freebsd-amd64"
+          filepath: "/binaries/gitlab-runner-freebsd-amd64"
+        - name: "binary: FreeBSD arm"
+          url: "$S3/binaries/gitlab-runner-freebsd-arm"
+          filepath: "/binaries/gitlab-runner-freebsd-arm"
+        - name: "binary: FreeBSD 386"
+          url: "$S3/binaries/gitlab-runner-freebsd-386"
+          filepath: "/binaries/gitlab-runner-freebsd-386"
 
-      - name: 'binary: Windows amd64'
-        url: '$S3/binaries/gitlab-runner-windows-amd64.zip'
-        filepath: '/binaries/gitlab-runner-windows-amd64.zip'
-      - name: 'binary: Windows i386'
-        url: '$S3/binaries/gitlab-runner-windows-386.zip'
-        filepath: '/binaries/gitlab-runner-windows-386.zip'
+        - name: "binary: Windows amd64"
+          url: "$S3/binaries/gitlab-runner-windows-amd64.zip"
+          filepath: "/binaries/gitlab-runner-windows-amd64.zip"
+        - name: "binary: Windows i386"
+          url: "$S3/binaries/gitlab-runner-windows-386.zip"
+          filepath: "/binaries/gitlab-runner-windows-386.zip"
 
-      # DEB packages
-      - name: 'package: DEB amd64'
-        url: '$S3/deb/gitlab-runner_amd64.deb'
-        filepath: '/packages/deb/gitlab-runner_amd64.deb'
-      - name: 'package: DEB i686'
-        url: '$S3/deb/gitlab-runner_i686.deb'
-        filepath: '/packages/deb/gitlab-runner_i686.deb'
-      - name: 'package: DEB armel'
-        url: '$S3/deb/gitlab-runner_armel.deb'
-        filepath: '/packages/deb/gitlab-runner_armel.deb'
-      - name: 'package: DEB armhf'
-        url: '$S3/deb/gitlab-runner_armhf.deb'
-        filepath: '/packages/deb/gitlab-runner_armhf.deb'
-      - name: 'package: DEB aarch64'
-        url: '$S3/deb/gitlab-runner_aarch64.deb'
-        filepath: '/packages/deb/gitlab-runner_aarch64.deb'
-      - name: 'package: DEB arm64'
-        url: '$S3/deb/gitlab-runner_arm64.deb'
-        filepath: '/packages/deb/gitlab-runner_arm64.deb'
-      - name: 'package: DEB ppc64el'
-        url: '$S3/deb/gitlab-runner_ppc64el.deb'
-        filepath: '/packages/deb/gitlab-runner_ppc64el.deb'
-      - name: 'package: DEB s390x'
-        url: '$S3/deb/gitlab-runner_s390x.deb'
-        filepath: '/packages/deb/gitlab-runner_s390x.deb'
-      - name: 'package: DEB riscv64'
-        url: '$S3/deb/gitlab-runner_riscv64.deb'
-        filepath: '/packages/deb/gitlab-runner_riscv64.deb'
+        # DEB packages
+        - name: "package: DEB amd64"
+          url: "$S3/deb/gitlab-runner_amd64.deb"
+          filepath: "/packages/deb/gitlab-runner_amd64.deb"
+        - name: "package: DEB i686"
+          url: "$S3/deb/gitlab-runner_i686.deb"
+          filepath: "/packages/deb/gitlab-runner_i686.deb"
+        - name: "package: DEB armel"
+          url: "$S3/deb/gitlab-runner_armel.deb"
+          filepath: "/packages/deb/gitlab-runner_armel.deb"
+        - name: "package: DEB armhf"
+          url: "$S3/deb/gitlab-runner_armhf.deb"
+          filepath: "/packages/deb/gitlab-runner_armhf.deb"
+        - name: "package: DEB aarch64"
+          url: "$S3/deb/gitlab-runner_aarch64.deb"
+          filepath: "/packages/deb/gitlab-runner_aarch64.deb"
+        - name: "package: DEB arm64"
+          url: "$S3/deb/gitlab-runner_arm64.deb"
+          filepath: "/packages/deb/gitlab-runner_arm64.deb"
+        - name: "package: DEB ppc64el"
+          url: "$S3/deb/gitlab-runner_ppc64el.deb"
+          filepath: "/packages/deb/gitlab-runner_ppc64el.deb"
+        - name: "package: DEB s390x"
+          url: "$S3/deb/gitlab-runner_s390x.deb"
+          filepath: "/packages/deb/gitlab-runner_s390x.deb"
+        - name: "package: DEB riscv64"
+          url: "$S3/deb/gitlab-runner_riscv64.deb"
+          filepath: "/packages/deb/gitlab-runner_riscv64.deb"
 
-      # RPM packages
-      - name: 'package: RPM amd64'
-        url: '$S3/rpm/gitlab-runner_amd64.rpm'
-        filepath: '/packages/rpm/gitlab-runner_amd64.rpm'
-      - name: 'package: RPM amd64-fips'
-        url: '$S3/rpm/gitlab-runner_amd64-fips.rpm'
-        filepath: '/packages/rpm/gitlab-runner_amd64-fips.rpm'
-      - name: 'package: RPM i686'
-        url: '$S3/rpm/gitlab-runner_i686.rpm'
-        filepath: '/packages/rpm/gitlab-runner_i686.rpm'
-      - name: 'package: RPM arm'
-        url: '$S3/rpm/gitlab-runner_arm.rpm'
-        filepath: '/packages/rpm/gitlab-runner_arm.rpm'
-      - name: 'package: RPM armhf'
-        url: '$S3/rpm/gitlab-runner_armhf.rpm'
-        filepath: '/packages/rpm/gitlab-runner_armhf.rpm'
-      - name: 'package: RPM arm64'
-        url: '$S3/rpm/gitlab-runner_arm64.rpm'
-        filepath: '/packages/rpm/gitlab-runner_arm64.rpm'
-      - name: 'package: RPM aarch64'
-        url: '$S3/rpm/gitlab-runner_aarch64.rpm'
-        filepath: '/packages/rpm/gitlab-runner_aarch64.rpm'
-      - name: 'package: RPM ppc64le'
-        url: '$S3/rpm/gitlab-runner_ppc64le.rpm'
-        filepath: '/packages/rpm/gitlab-runner_ppc64le.rpm'
-      - name: 'package: RPM s390x'
-        url: '$S3/rpm/gitlab-runner_s390x.rpm'
-        filepath: '/packages/rpm/gitlab-runner_s390x.rpm'
-      - name: 'package: RPM riscv64'
-        url: '$S3/rpm/gitlab-runner_riscv64.rpm'
-        filepath: '/packages/rpm/gitlab-runner_riscv64.rpm'
+        # RPM packages
+        - name: "package: RPM amd64"
+          url: "$S3/rpm/gitlab-runner_amd64.rpm"
+          filepath: "/packages/rpm/gitlab-runner_amd64.rpm"
+        - name: "package: RPM amd64-fips"
+          url: "$S3/rpm/gitlab-runner_amd64-fips.rpm"
+          filepath: "/packages/rpm/gitlab-runner_amd64-fips.rpm"
+        - name: "package: RPM i686"
+          url: "$S3/rpm/gitlab-runner_i686.rpm"
+          filepath: "/packages/rpm/gitlab-runner_i686.rpm"
+        - name: "package: RPM arm"
+          url: "$S3/rpm/gitlab-runner_arm.rpm"
+          filepath: "/packages/rpm/gitlab-runner_arm.rpm"
+        - name: "package: RPM armhf"
+          url: "$S3/rpm/gitlab-runner_armhf.rpm"
+          filepath: "/packages/rpm/gitlab-runner_armhf.rpm"
+        - name: "package: RPM arm64"
+          url: "$S3/rpm/gitlab-runner_arm64.rpm"
+          filepath: "/packages/rpm/gitlab-runner_arm64.rpm"
+        - name: "package: RPM aarch64"
+          url: "$S3/rpm/gitlab-runner_aarch64.rpm"
+          filepath: "/packages/rpm/gitlab-runner_aarch64.rpm"
+        - name: "package: RPM ppc64le"
+          url: "$S3/rpm/gitlab-runner_ppc64le.rpm"
+          filepath: "/packages/rpm/gitlab-runner_ppc64le.rpm"
+        - name: "package: RPM s390x"
+          url: "$S3/rpm/gitlab-runner_s390x.rpm"
+          filepath: "/packages/rpm/gitlab-runner_s390x.rpm"
+        - name: "package: RPM riscv64"
+          url: "$S3/rpm/gitlab-runner_riscv64.rpm"
+          filepath: "/packages/rpm/gitlab-runner_riscv64.rpm"
 
-      # Other files
-      - name: 'checksums'
-        url: '$S3/release.sha256'
-        filepath: '/release.sha256'
-      - name: 'checksums GPG signature'
-        url: '$S3/release.sha256.asc'
-        filepath: '/release.sha256.asc'
-      - name: 'other release artifacts'
-        url: '$S3/index.html'
-        filepath: '/index.html'
+        # Other files
+        - name: "checksums"
+          url: "$S3/release.sha256"
+          filepath: "/release.sha256"
+        - name: "checksums GPG signature"
+          url: "$S3/release.sha256.asc"
+          filepath: "/release.sha256.asc"
+        - name: "other release artifacts"
+          url: "$S3/index.html"
+          filepath: "/index.html"

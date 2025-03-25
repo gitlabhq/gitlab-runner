@@ -1,16 +1,16 @@
 .image_builder:
   extends:
-  - .docker
+    - .docker
   stage: prepare
   image: docker:${DOCKER_VERSION}-git
   script:
-  - apk add --no-cache --upgrade curl
-  - source ./ci/build_ci_image
+    - apk add --no-cache --upgrade curl
+    - source ./ci/build_ci_image
 
 prepare ci image:
   extends:
-  - .image_builder
-  - .rules:prepare:ci:image:merge-requests
+    - .image_builder
+    - .rules:prepare:ci:image:merge-requests
   variables:
     BUILD_IMAGE: $CI_IMAGE
     BUILD_DOCKERFILE: ./dockerfiles/ci/Dockerfile
@@ -18,66 +18,66 @@ prepare ci image:
 
 prepare alpine-no-root image:
   extends:
-  - .image_builder
-  - .rules:prepare:alpine-no-root:image:merge-requests
+    - .image_builder
+    - .rules:prepare:alpine-no-root:image:merge-requests
   variables:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-no-root/Dockerfile
 
 prepare alpine-entrypoint image:
   extends:
-  - .image_builder
-  - .rules:prepare:alpine-entrypoint:image:merge-requests
+    - .image_builder
+    - .rules:prepare:alpine-entrypoint:image:merge-requests
   variables:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-entrypoint/Dockerfile
 
 prepare alpine-entrypoint-stderr image:
   extends:
-  - .image_builder
-  - .rules:prepare:alpine-entrypoint:image:merge-requests
+    - .image_builder
+    - .rules:prepare:alpine-entrypoint:image:merge-requests
   variables:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint-stderr:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-entrypoint/Dockerfile.stderr
 
 prepare alpine-entrypoint-pre-post-trap image:
   extends:
-  - .image_builder
-  - .rules:prepare:alpine-entrypoint:image:merge-requests
+    - .image_builder
+    - .rules:prepare:alpine-entrypoint:image:merge-requests
   variables:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint-pre-post-trap:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-entrypoint/Dockerfile.pre-post-trap
 
 prepare powershell-entrypoint-pre-post-trap image:
   extends:
-  - .image_builder
-  - .rules:prepare:powershell-entrypoint:image:merge-requests
+    - .image_builder
+    - .rules:prepare:powershell-entrypoint:image:merge-requests
   variables:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/powershell-entrypoint-pre-post-trap:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/powershell-entrypoint/Dockerfile.pre-post-trap
 
 prepare alpine-id-overflow image:
   extends:
-  - .image_builder
-  - .rules:prepare:alpine-id-overflow:image:merge-requests
+    - .image_builder
+    - .rules:prepare:alpine-id-overflow:image:merge-requests
   variables:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-id-overflow:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-id-overflow/Dockerfile
 
 prepare helper-entrypoint image:
   extends:
-  - .docker
-  - .rules:prepare:gitlab-runner-helper-entrypoint:image:merge-requests
+    - .docker
+    - .rules:prepare:gitlab-runner-helper-entrypoint:image:merge-requests
   stage: prepare
   variables:
     BUILD_DOCKERFILE_BASEDIR: ./tests/dockerfiles/gitlab-runner-helper-entrypoint
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/helper-entrypoint:latest
     BUILD_DOCKERFILE: "$BUILD_DOCKERFILE_BASEDIR/dockerfile"
   script:
-  - make helper-bin-host
-  - mkdir -p "$BUILD_DOCKERFILE_BASEDIR/binaries/"
-  - cp out/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64 "$BUILD_DOCKERFILE_BASEDIR/binaries/gitlab-runner-helper"
-  - source ./ci/build_ci_image
+    - make helper-bin-host
+    - mkdir -p "$BUILD_DOCKERFILE_BASEDIR/binaries/"
+    - cp out/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64 "$BUILD_DOCKERFILE_BASEDIR/binaries/gitlab-runner-helper"
+    - source ./ci/build_ci_image
 
 prepare go fips:
   extends:
