@@ -1,3 +1,9 @@
+## v17.8.5 (2025-03-26)
+
+### Bug fixes
+
+- RmFilesRecursive should not attempt to delete directories [!5454](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5454)
+
 ## v17.8.4 (2025-03-26)
 
 ### Security fixes
