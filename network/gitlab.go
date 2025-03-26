@@ -196,6 +196,7 @@ type doJSONParams struct {
 	method      string
 	uri         string
 	statusCode  int
+	headers     http.Header
 	request     interface{}
 	response    interface{}
 }
@@ -224,6 +225,7 @@ func (n *GitLabClient) doMeasuredJSON(
 			params.method,
 			params.uri,
 			params.statusCode,
+			params.headers,
 			params.request,
 			params.response,
 		)
@@ -256,10 +258,16 @@ func (n *GitLabClient) doJSON(
 	credentials requestCredentials,
 	method, uri string,
 	statusCode int,
+	headers http.Header,
 	request interface{},
 	response interface{},
 ) (int, string, *http.Response) {
-	return n.doJSONWithPAT(ctx, credentials, method, uri, statusCode, "", request, response)
+	c, err := n.getClient(credentials)
+	if err != nil {
+		return clientError, err.Error(), nil
+	}
+
+	return c.doJSON(ctx, uri, method, statusCode, headers, request, response)
 }
 
 type doJSONWithPATParams struct {
