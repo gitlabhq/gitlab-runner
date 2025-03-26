@@ -242,6 +242,15 @@ func (n *GitLabClient) doMeasuredJSON(
 	return result, statusText, httpResponse
 }
 
+// Create a PRIVATE-TOKEN http header for the specified private access token (pat).
+func PrivateTokenHeader(pat string) http.Header {
+	headers := http.Header{}
+	if pat != "" {
+		headers.Set(common.PrivateToken, pat)
+	}
+	return headers
+}
+
 func (n *GitLabClient) doJSON(
 	ctx context.Context,
 	credentials requestCredentials,
