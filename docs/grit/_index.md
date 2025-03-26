@@ -99,3 +99,36 @@ terrafrom destroy
 | AWS          | EC2     | Arm64  | Linux | Docker Autoscaler | Experimental    |
 | Google Cloud | GCE     | x86-64 | Linux | Docker Autoscaler | Experimental    |
 | Google Cloud | GKE     | x86-64 | Linux | Kubernetes        | Experimental    |
+
+## Contributing to GRIT
+
+GRIT welcomes community contributions. Before contributing, review the following resources:
+
+### Developer Certificate of Origin and license
+
+All contributions to GRIT are subject to the [Developer Certificate of Origin and license](https://docs.gitlab.com/ee/legal/developer_certificate_of_origin). By contributing, you accept and agree to these terms and conditions for your present and future contributions submitted to GitLab Inc.
+
+### Code of Conduct
+
+GRIT follows the GitLab Code of Conduct, which is adapted from the [Contributor Covenant](https://contributor-covenant.org). The project is committed to making participation a harassment-free experience for everyone, regardless of background or identity.
+
+### Contribution guidelines
+
+When contributing to GRIT, follow these guidelines:
+
+- Review the [GORP Guidelines](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/blob/main/GORP.md) for overall architectural design.
+- Adhere to [Google's best practices for using Terraform](https://cloud.google.com/docs/terraform/best-practices-for-terraform).
+- Follow the composable module approach to reduce complexity and repetition.
+- Include appropriate Go tests for your contributions.
+
+### Testing and linting
+
+GRIT uses several testing and linting tools to ensure quality:
+
+- Integration tests: Uses [Terratest](https://terratest.gruntwork.io/) to validate Terraform plans.
+- End-to-end tests: Available in the [e2e directory](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/blob/main/e2e/README.md).
+- Terraform linting: Uses `tflint`, `terraform fmt`, and `terraform validate`.
+- Go linting: Uses [golangci-lint](https://golangci-lint.run/) for Go code (primarily tests).
+- Documentation: Follows the [GitLab documentation style guide](https://docs.gitlab.com/ee/development/documentation/styleguide/) and uses `vale` and `markdownlint`.
+
+For detailed instructions on setting up your development environment, running tests, and linting, see [CONTRIBUTING.md](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/blob/main/CONTRIBUTING.md).
