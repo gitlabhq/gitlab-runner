@@ -298,13 +298,13 @@ func (n *GitLabClient) doMeasuredJSONWithPAT(
 		// Response body is handled after doJSONWithPATParams() decorator call
 		// Linting violation here is a false-positive.
 		// nolint:bodyclose
-		result, statusText, httpResponse = n.doJSONWithPAT(
+		result, statusText, httpResponse = n.doJSON(
 			ctx,
 			params.credentials,
 			params.method,
 			params.uri,
 			params.statusCode,
-			params.pat,
+			PrivateTokenHeader(params.pat),
 			params.request,
 			params.response,
 		)
@@ -369,13 +369,13 @@ func (n *GitLabClient) RegisterRunner(
 	}
 
 	var response common.RegisterRunnerResponse
-	result, statusText, resp := n.doJSONWithPAT(
+	result, statusText, resp := n.doJSON(
 		context.Background(),
 		&runner,
 		http.MethodPost,
 		"runners",
 		http.StatusCreated,
-		runner.Token,
+		PrivateTokenHeader(runner.Token),
 		&request,
 		&response,
 	)
@@ -404,25 +404,25 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 	}
 
 	var response common.VerifyRunnerResponse
-	result, statusText, resp := n.doJSONWithPAT(
+	result, statusText, resp := n.doJSON(
 		context.Background(),
 		&runner,
 		http.MethodPost,
 		"runners/verify",
 		http.StatusOK,
-		runner.Token,
+		PrivateTokenHeader(runner.Token),
 		&request,
 		&response,
 	)
 	if result == -1 {
 		// if server is not able to return JSON, let's try plain text (the legacy response format)
-		result, statusText, resp = n.doJSONWithPAT(
+		result, statusText, resp = n.doJSON(
 			context.Background(),
 			&runner,
 			http.MethodPost,
 			"runners/verify",
 			http.StatusOK,
-			runner.Token,
+			PrivateTokenHeader(runner.Token),
 			&request,
 			nil,
 		)
@@ -459,13 +459,13 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, resp := n.doJSONWithPAT(
+	result, statusText, resp := n.doJSON(
 		context.Background(),
 		&runner,
 		http.MethodDelete,
 		"runners",
 		http.StatusNoContent,
-		runner.Token,
+		PrivateTokenHeader(runner.Token),
 		&request,
 		nil,
 	)
@@ -494,13 +494,13 @@ func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, 
 		SystemID: systemID,
 	}
 
-	result, statusText, resp := n.doJSONWithPAT(
+	result, statusText, resp := n.doJSON(
 		context.Background(),
 		&runner,
 		http.MethodDelete,
 		"runners/managers",
 		http.StatusNoContent,
-		runner.Token,
+		PrivateTokenHeader(runner.Token),
 		&request,
 		nil,
 	)
@@ -550,18 +550,18 @@ func (n *GitLabClient) resetToken(
 
 	var response common.ResetTokenResponse
 
-	result, statusText, resp := n.doMeasuredJSONWithPAT(
+	result, statusText, resp := n.doMeasuredJSON(
 		context.Background(),
 		runner.Log(),
 		runner.ShortDescription(),
 		systemID,
 		apiEndpointResetToken,
-		doJSONWithPATParams{
+		doJSONParams{
 			credentials: &runner,
 			method:      http.MethodPost,
 			uri:         uri,
 			statusCode:  http.StatusCreated,
-			pat:         pat,
+			headers:     PrivateTokenHeader(pat),
 			request:     request,
 			response:    &response,
 		},
@@ -620,18 +620,18 @@ func (n *GitLabClient) RequestJob(
 	var response common.JobResponse
 
 	//nolint:bodyclose
-	result, statusText, httpResponse := n.doMeasuredJSONWithPAT(
+	result, statusText, httpResponse := n.doMeasuredJSON(
 		ctx,
 		config.Log(),
 		config.RunnerCredentials.ShortDescription(),
 		config.SystemIDState.GetSystemID(),
 		apiEndpointRequestJob,
-		doJSONWithPATParams{
+		doJSONParams{
 			credentials: &config.RunnerCredentials,
 			method:      http.MethodPost,
 			uri:         "jobs/request",
 			statusCode:  http.StatusCreated,
-			pat:         config.Token,
+			headers:     PrivateTokenHeader(config.Token),
 			request:     &request, response: &response,
 		},
 	)
@@ -691,18 +691,18 @@ func (n *GitLabClient) UpdateJob(
 	log.Info("Updating job...")
 
 	//nolint:bodyclose
-	statusCode, statusText, response := n.doMeasuredJSONWithPAT(
+	statusCode, statusText, response := n.doMeasuredJSON(
 		context.Background(),
 		config.Log(),
 		config.RunnerCredentials.ShortDescription(),
 		config.SystemIDState.GetSystemID(),
 		apiEndpointUpdateJob,
-		doJSONWithPATParams{
+		doJSONParams{
 			credentials: &config.RunnerCredentials,
 			method:      http.MethodPut,
 			uri:         fmt.Sprintf("jobs/%d", jobInfo.ID),
 			statusCode:  http.StatusOK,
-			pat:         jobCredentials.Token,
+			headers:     PrivateTokenHeader(jobCredentials.Token),
 			request:     &request,
 			response:    nil,
 		},
