@@ -178,12 +178,12 @@ func TestServerCertificateChange(t *testing.T) {
 	//
 	var cachedCA []byte
 	for i := 0; i < 10; i++ {
-		statusCode, statusText, resp := c.doJSONWithPAT(
+		statusCode, statusText, resp := c.doJSON(
 			context.Background(),
 			"test/ok",
 			http.MethodGet,
 			http.StatusOK,
-			"",
+			nil,
 			nil,
 			nil,
 		)
@@ -213,12 +213,12 @@ func TestClientDo(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 
-	statusCode, statusText, _ := c.doJSONWithPAT(
+	statusCode, statusText, _ := c.doJSON(
 		context.Background(),
 		"test/auth",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		nil,
 	)
@@ -235,24 +235,24 @@ func TestClientDo(t *testing.T) {
 		PAT *string `json:"pat,omitempty"`
 	}{}
 
-	statusCode, statusText, _ = c.doJSONWithPAT(
+	statusCode, statusText, _ = c.doJSON(
 		context.Background(),
 		"test/json",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		&res,
 	)
 	assert.Equal(t, http.StatusBadRequest, statusCode, statusText)
 	assert.Contains(t, statusText, `test/json: 400 Bad Request (some-key: some error)`)
 
-	statusCode, statusText, _ = c.doJSONWithPAT(
+	statusCode, statusText, _ = c.doJSON(
 		context.Background(),
 		"test/json",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		&req,
 		nil,
 	)
@@ -265,24 +265,24 @@ func TestClientDo(t *testing.T) {
 		"test/json: 406 Not Acceptable",
 	)
 
-	statusCode, statusText, _ = c.doJSONWithPAT(
+	statusCode, statusText, _ = c.doJSON(
 		context.Background(),
 		"test/json",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		nil,
 	)
 	assert.Equal(t, http.StatusBadRequest, statusCode, statusText)
 	assert.Contains(t, statusText, `test/json: 400 Bad Request (some-key: some error)`)
 
-	statusCode, statusText, _ = c.doJSONWithPAT(
+	statusCode, statusText, _ = c.doJSON(
 		context.Background(),
 		"test/json",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		&req,
 		&res,
 	)
@@ -290,12 +290,12 @@ func TestClientDo(t *testing.T) {
 	assert.Equal(t, "value", res.Key, statusText)
 	assert.Equal(t, (*string)(nil), res.PAT, statusText)
 
-	statusCode, statusText, _ = c.doJSONWithPAT(
+	statusCode, statusText, _ = c.doJSON(
 		context.Background(),
 		"test/json",
 		http.MethodGet,
 		http.StatusCreated,
-		"my-pat",
+		PrivateTokenHeader("my-pat"),
 		&req,
 		&res,
 	)
@@ -303,12 +303,12 @@ func TestClientDo(t *testing.T) {
 	assert.Equal(t, "value", res.Key, statusText)
 	assert.Equal(t, "my-pat", *res.PAT, statusText)
 
-	statusCode, statusText, _ = c.doJSONWithPAT(
+	statusCode, statusText, _ = c.doJSON(
 		context.Background(),
 		"test/json",
 		http.MethodGet,
 		http.StatusCreated,
-		"invalid-pat",
+		PrivateTokenHeader("invalid-pat"),
 		&req,
 		&res,
 	)
@@ -376,12 +376,12 @@ func TestClientInvalidSSL(t *testing.T) {
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
-	statusCode, statusText, _ := c.doJSONWithPAT(
+	statusCode, statusText, _ := c.doJSON(
 		context.Background(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		nil,
 	)
@@ -407,12 +407,12 @@ func TestClientTLSCAFile(t *testing.T) {
 		URL:       s.URL,
 		TLSCAFile: file.Name(),
 	})
-	statusCode, statusText, resp := c.doJSONWithPAT(
+	statusCode, statusText, resp := c.doJSON(
 		context.Background(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		nil,
 	)
@@ -441,12 +441,12 @@ func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
-	statusCode, statusText, resp := c.doJSONWithPAT(
+	statusCode, statusText, resp := c.doJSON(
 		context.Background(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		nil,
 	)
@@ -476,12 +476,12 @@ func TestClientInvalidTLSAuth(t *testing.T) {
 		URL:       s.URL,
 		TLSCAFile: ca.Name(),
 	})
-	statusCode, statusText, _ := c.doJSONWithPAT(
+	statusCode, statusText, _ := c.doJSON(
 		context.Background(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		nil,
 	)
@@ -524,12 +524,12 @@ func TestClientTLSAuth(t *testing.T) {
 		TLSKeyFile:  key.Name(),
 	})
 
-	statusCode, statusText, resp := c.doJSONWithPAT(
+	statusCode, statusText, resp := c.doJSON(
 		context.Background(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		nil,
 	)
@@ -570,12 +570,12 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
-	statusCode, statusText, resp := c.doJSONWithPAT(
+	statusCode, statusText, resp := c.doJSON(
 		context.Background(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		nil,
 	)
@@ -636,45 +636,45 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 		Key string `json:"key"`
 	}{}
 
-	statusCode, statusText, _ := c.doJSONWithPAT(
+	statusCode, statusText, _ := c.doJSON(
 		context.Background(),
 		"with-charset",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		&res,
 	)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 
-	statusCode, statusText, _ = c.doJSONWithPAT(
+	statusCode, statusText, _ = c.doJSON(
 		context.Background(),
 		"without-charset",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		&res,
 	)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 
-	statusCode, statusText, _ = c.doJSONWithPAT(
+	statusCode, statusText, _ = c.doJSON(
 		context.Background(),
 		"without-json",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		&res,
 	)
 	assert.Equal(t, -1, statusCode, statusText)
 
-	statusCode, statusText, _ = c.doJSONWithPAT(
+	statusCode, statusText, _ = c.doJSON(
 		context.Background(),
 		"invalid-header",
 		http.MethodGet,
 		http.StatusOK,
-		"",
+		nil,
 		nil,
 		&res,
 	)

@@ -329,7 +329,7 @@ func (n *GitLabClient) doJSONWithPAT(
 		return clientError, err.Error(), nil
 	}
 
-	return c.doJSONWithPAT(ctx, uri, method, statusCode, pat, request, response)
+	return c.doJSON(ctx, uri, method, statusCode, PrivateTokenHeader(pat), request, response)
 }
 
 func (n *GitLabClient) getResponseTLSData(

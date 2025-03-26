@@ -387,22 +387,6 @@ func (e *ErrorResponseMessage) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (n *client) doJSONWithPAT(
-	ctx context.Context,
-	uri, method string,
-	statusCode int,
-	pat string,
-	request interface{},
-	response interface{},
-) (int, string, *http.Response) {
-	headers := make(http.Header)
-
-	if pat != "" {
-		headers.Set(common.PrivateToken, pat)
-	}
-	return n.doJSON(ctx, uri, method, statusCode, headers, request, response)
-}
-
 func (n *client) doJSON(
 	ctx context.Context,
 	uri, method string,
