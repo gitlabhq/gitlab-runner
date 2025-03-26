@@ -1,11 +1,17 @@
-## v17.9.2 (2025-03-20)
+## v17.9.2 (2025-03-26)
 
 ### Bug fixes
 
+- RmFilesRecursive should not attempt to delete directories [!5454](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5454)
+- Fix usage log timestamp generation [!5453](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5453)
 - [17.9] Downgrade prebuilt runner helper images to Alpine 3.18 [!5431](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5431)
 - Clean git config [!5441](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5441)
 - Clean git config [!5438](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5438)
 - [17.9] Fix HTTP retries not working properly [!5432](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5432)
+
+### Maintenance
+
+- Revert "Disable the `test kubernetes integration` stage" [!5455](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5455)
 
 ## v17.9.1 (2025-03-07)
 
