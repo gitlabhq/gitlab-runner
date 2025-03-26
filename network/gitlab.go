@@ -641,7 +641,7 @@ func (n *GitLabClient) UpdateJob(
 			method:      http.MethodPut,
 			uri:         fmt.Sprintf("jobs/%d", jobInfo.ID),
 			statusCode:  http.StatusOK,
-			headers:     PrivateTokenHeader(jobCredentials.Token),
+			headers:     JobTokenHeader(jobCredentials.Token),
 			request:     &request,
 			response:    nil,
 		},

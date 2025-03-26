@@ -1310,8 +1310,8 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	assert.NoError(t, err)
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
-	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+	require.NotEmpty(t, r.Header.Get(JobToken), "job-token header is required")
+	require.Equal(t, token, r.Header.Get("job-token"), "token in header and body must match")
 
 	assert.Equal(t, "token", token)
 
