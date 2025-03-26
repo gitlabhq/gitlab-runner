@@ -1,3 +1,10 @@
+## v17.10.1 (2025-03-26)
+
+### Bug fixes
+
+- RmFilesRecursive should not attempt to delete directories [!5454](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5454)
+- Fix usage log timestamp generation [!5453](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5453)
+
 ## v17.10.0 (2025-03-26)
 
 ### New features
