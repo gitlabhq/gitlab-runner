@@ -37,6 +37,7 @@ To use GRIT to deploy an autoscaling Linux Docker in AWS:
      runner_description = "Autoscaling Linux Docker runner on AWS deployed with GRIT. "
      runner_tags        = ["aws", "linux"]
      max_instances      = 5
+     min_support        = "experimental"
    }
    ```
 
@@ -53,6 +54,25 @@ a new Autoscaling Group (ASG), based on workload. The ASG uses a public AMI owne
 Both the runner manager and the ASG operate in a new VPC. All resources are named based on the provided
 value (`grit-runner`), which lets you create multiple instances of this module with different names in
 a single AWS project.
+
+## Support levels and the `min_support` parameter
+
+You must provide a `min_support` value for all GRIT modules. 
+This parameter specifies the minimum support level that the operator 
+requires for their deployment. GRIT modules are associated with a support 
+designation of `none`, `experimental`, `beta`, or `GA`. The goal is 
+for all modules to reach the `GA` status.
+
+`none` is a special case. Modules with no support guarantees, primarily for testing and development.
+
+`experimental`, `beta`, and `ga` modules conform to the [GitLab definitions of development stages](https://docs.gitlab.com/policy/development_stages_support/). 
+
+### Shared responsibility model
+
+GRIT operates under a shared responsibility model between Authors (module developers) and Operators (those deploying 
+with GRIT). For details on the specific responsibilities of each role and how support levels are determined, see 
+the [Shared responsibility section](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/blob/main/GORP.md#shared-responsibility) 
+in the GORP documentation.
 
 ## Manage runner state
 
