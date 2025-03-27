@@ -55,7 +55,8 @@ type Config struct {
 	Shell         string
 	Flavor        string
 
-	ProxyExec bool
+	ProxyExec    bool
+	DisableUmask bool
 }
 
 type creator interface {

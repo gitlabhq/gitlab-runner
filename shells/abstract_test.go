@@ -1220,6 +1220,14 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 					mockWriter.On("RmFile", cacheEnvFile).Once()
 				}
 			}
+
+			mockWriter.On("IfFile", "/.gitlab-build-uid-gid").Return(true)
+			mockWriter.On("IfDirectory", "/cache").Return(true)
+			mockWriter.On("Line", "chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
+				Return("chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'")
+			mockWriter.On("EndIf").Once()
+			mockWriter.On("EndIf").Once()
+
 			mockWriter.On("EndIf").Once()
 			mockWriter.On("Else").Once()
 			mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
@@ -1377,6 +1385,13 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 
 			mockWriter.On("Else").Once()
 			mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
+			mockWriter.On("EndIf").Once()
+
+			mockWriter.On("IfFile", "/.gitlab-build-uid-gid").Return(true)
+			mockWriter.On("IfDirectory", "/cache").Return(true)
+			mockWriter.On("Line", "chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
+				Return("chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'")
+			mockWriter.On("EndIf").Once()
 			mockWriter.On("EndIf").Once()
 
 			err := shell.cacheExtractor(context.Background(), mockWriter, info)
@@ -1540,6 +1555,13 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 
 			mockWriter.On("Else").Once()
 			mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
+			mockWriter.On("EndIf").Once()
+
+			mockWriter.On("IfFile", "/.gitlab-build-uid-gid").Return(true)
+			mockWriter.On("IfDirectory", "/cache").Return(true)
+			mockWriter.On("Line", "chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
+				Return("chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'")
+			mockWriter.On("EndIf").Once()
 			mockWriter.On("EndIf").Once()
 
 			err := shell.cacheExtractor(context.Background(), mockWriter, info)
@@ -2388,6 +2410,9 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 						expectGitConfigCleanup(mockShellWriter, "", false)
 					}
 
+					mockShellWriter.On("RmFile", "/.gitlab-build-uid-gid").Once()
+					mockShellWriter.On("Join", "", ".gitlab-build-uid-gid").Return("/.gitlab-build-uid-gid").Once()
+
 					shell := new(AbstractShell)
 
 					err := shell.writeCleanupScript(context.Background(), mockShellWriter, info)
@@ -2755,6 +2780,11 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 					m.EXPECT().Noticef("$ %s", "config post_get_sources").Once()
 					m.EXPECT().Line("config post_get_sources").Once()
 
+					if shellName == "bash" {
+						m.EXPECT().IfFile("/.gitlab-build-uid-gid").Once()
+						m.EXPECT().EndIf()
+					}
+
 					shell := new(AbstractShell)
 
 					err := shell.writeGetSourcesScript(context.Background(), m, info)
@@ -2945,6 +2975,9 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 						if cleanGitConfig.expectGitConfigsToBeCleaned {
 							expectGitConfigCleanup(sw, "", expectSubmoduleCleanupCalls)
 						}
+
+						sw.EXPECT().RmFile("/.gitlab-build-uid-gid").Once()
+						sw.EXPECT().Join("", ".gitlab-build-uid-gid").Return("/.gitlab-build-uid-gid").Once()
 
 						err := shell.writeCleanupScript(context.TODO(), sw, info)
 						assert.NoError(t, err)

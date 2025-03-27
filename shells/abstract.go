@@ -21,10 +21,10 @@ import (
 
 const (
 	// When umask is disabled for the Kubernetes executor,
-	// a hidden file, .giltab-build-uid-gid, is created in the `builds_dir` directory to assist the helper container
+	// a hidden file, .gitlab-build-uid-gid, is created in the `builds_dir` directory to assist the helper container
 	// in retrieving the build image's configured `uid:gid`.
 	// This information is then applied to the working directories to prevent them from being writable by anyone.
-	BuildUiGidFile   = ".giltab-build-uid-gid"
+	BuildUidGidFile  = ".gitlab-build-uid-gid"
 	StartupProbeFile = ".gitlab-startup-marker"
 
 	gitlabEnvFileName      = "gitlab_runner_env"
@@ -154,10 +154,17 @@ func (b *AbstractShell) cacheExtractor(ctx context.Context, w ShellWriter, info 
 		return common.ErrSkipBuildStage
 	}
 
-	if info.Build.IsFeatureFlagOn(featureflags.DisableUmaskForKubernetesExecutor) &&
-		info.Build.Runner.Shell == Bash {
-		b.changeFilesOwnership(w, info.Build, info.Build.CacheDir)
-	}
+	// Caches and artifacts are managed in the helper container, thus all files
+	// would be owned by the user of the helper container.
+	// We want all the files to be owned by the user of the build container. Thus we
+	// change the ownership in the helper container (to the uid/gid we discovered via
+	// the `init-build-uid-gid-collector` container) before the build in the build
+	// container runs.
+	// We change the directories
+	// - project root dir, after extracting the cache/artifact files
+	// - the cache dir
+	// so that all dirs/files eventually have the correct ownership.
+	b.changeFilesOwnership(w, info, info.Build.CacheDir, info.Build.RootDir)
 
 	return nil
 }
@@ -313,10 +320,17 @@ func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScr
 		}
 	})
 
-	if info.Build.IsFeatureFlagOn(featureflags.DisableUmaskForKubernetesExecutor) &&
-		info.Build.Runner.Shell == Bash {
-		b.changeFilesOwnership(w, info.Build, info.Build.CacheDir)
-	}
+	// Caches and artifacts are managed in the helper container, thus all files
+	// would be owned by the user of the helper container.
+	// We want all the files to be owned by the user of the build container. Thus we
+	// change the ownership in the helper container (to the uid/gid we discovered via
+	// the `init-build-uid-gid-collector` container) before the build in the build
+	// container runs.
+	// We change the directories
+	// - project root dir, after extracting the cache/artifact files
+	// - the cache dir
+	// so that all dirs/files eventually have the correct ownership.
+	b.changeFilesOwnership(w, info, info.Build.CacheDir, info.Build.RootDir)
 
 	return nil
 }
@@ -360,11 +374,6 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 		return err
 	}
 
-	if info.Build.IsFeatureFlagOn(featureflags.DisableUmaskForKubernetesExecutor) &&
-		info.Build.Runner.Shell == Bash {
-		b.changeFilesOwnership(w, info.Build, info.Build.FullProjectDir(), info.Build.TmpProjectDir())
-	}
-
 	b.guardGetSourcesScriptHooks(w, info, "post_clone_script", func() []string {
 		var s []string
 
@@ -379,6 +388,8 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 
 		return s
 	})
+
+	b.changeFilesOwnership(w, info, info.Build.RootDir)
 
 	return nil
 }
@@ -532,18 +543,39 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 	return nil
 }
 
-func (b *AbstractShell) changeFilesOwnership(w ShellWriter, build *common.Build, dir ...string) {
-	// ensure all parts are quoted with single quotes, so that whitespaces
-	// and all don't trip us up and to ensure no unwanted variable expansion is happening
-	unquotedUidGidFile := fmt.Sprintf(`%s/%s`, build.RootDir, BuildUiGidFile)
-	quotedUidGidFile := fmt.Sprintf(`'%s'`, unquotedUidGidFile)
-	quotedDirs := make([]string, len(dir))
-	for i, d := range dir {
-		quotedDirs[i] = fmt.Sprintf(`'%s'`, d)
+func (b *AbstractShell) changeFilesOwnership(w ShellWriter, info common.ShellScriptInfo, dir ...string) {
+	// The shell is not set the same way depending on the unit test
+	// Some unit tests use info->Build->Runner->Shell while other use info->Shell
+	shellName := info.Shell
+	if shellName == "" {
+		// GetDefaultShell will panic, if it can't find a default shell
+		shellName = info.Build.Runner.Shell
 	}
 
+	// umask 0000 disabling is only support for UNIX-Like shells
+	// We therefore don't do anything for PowerShell/pwsh
+	if slices.Contains([]string{SNPowershell, SNPwsh}, shellName) {
+		return
+	}
+
+	// ensure all parts are quoted with single quotes, so that whitespaces
+	// and all don't trip us up and to ensure no unwanted variable expansion is happening
+	unquotedUidGidFile := fmt.Sprintf(`%s/%s`, info.Build.RootDir, BuildUidGidFile)
+	quotedUidGidFile := fmt.Sprintf(`'%s'`, unquotedUidGidFile)
+
+	// unquotedUidGidFile file is only created when FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR is enabled
 	w.IfFile(unquotedUidGidFile) // IfFIle does use `%q` internally
-	w.Line(fmt.Sprintf(`chown -R "$(stat -c '%%u:%%g' %s)" %s`, quotedUidGidFile, strings.Join(quotedDirs, " ")))
+	for _, d := range dir {
+		if strings.TrimSpace(d) == "" {
+			continue
+		}
+		w.IfDirectory(d)
+		w.Line(fmt.Sprintf(`chown -R "$(stat -c '%%u:%%g' %s)" '%s'`, quotedUidGidFile, d))
+		if info.Build.IsDebugModeEnabled() {
+			w.Line(fmt.Sprintf(`echo "Setting ownership for %s to $(stat -c '%%u:%%g' %s)"`, d, quotedUidGidFile))
+		}
+		w.EndIf()
+	}
 	w.EndIf()
 }
 
@@ -1393,6 +1425,8 @@ func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, inf
 	}
 
 	b.writeGitCleanup(w, info.Build)
+
+	w.RmFile(w.Join(info.Build.RootDir, BuildUidGidFile))
 
 	return nil
 }

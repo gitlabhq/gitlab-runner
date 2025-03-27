@@ -548,6 +548,7 @@ func (s *executor) retrieveHelperImageConfig() helperimage.Config {
 		Shell:        s.Config.Shell,
 		Flavor:       s.ExpandValue(s.Config.Kubernetes.HelperImageFlavor),
 		ProxyExec:    s.Config.IsProxyExec(),
+		DisableUmask: s.Build.IsFeatureFlagOn(featureflags.DisableUmaskForKubernetesExecutor),
 	}
 
 	if !s.Config.Kubernetes.HelperImageAutosetArchAndOS {
@@ -1122,7 +1123,7 @@ func (s *executor) buildUiGidCollector(os string) (api.Container, error) {
 	}
 
 	if os == helperimage.OSTypeLinux {
-		container.Command = []string{"sh", "-c", fmt.Sprintf("> %s/%s", s.RootDir(), shells.BuildUiGidFile)}
+		container.Command = []string{"sh", "-c", fmt.Sprintf("> %s/%s", s.RootDir(), shells.BuildUidGidFile)}
 	}
 
 	return container, nil

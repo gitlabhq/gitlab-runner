@@ -290,10 +290,13 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
 	customBuildDir := "/custom_builds_dir"
+	customCacheDir := "/custom_cache_dir"
 	tests := map[string]struct {
 		image        string
 		shell        string
 		buildDir     string
+		cacheDir     string
+		cache        common.Caches
 		script       string
 		runAsUser    int64
 		runAsGroup   int64
@@ -310,6 +313,8 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			verifyFn: func(t *testing.T, out string) {
 				assert.NotContains(t, out, "1234")
 				assert.NotContains(t, out, "5678")
+				assert.NotContains(t, out, "drwxr-xr-x")
+				assert.NotContains(t, out, "-rw-r--r--")
 				assert.Regexp(t, regexp.MustCompile(`(?m)^.*root\s*root.*gitlab-test.*$`), out)
 			},
 		},
@@ -322,6 +327,21 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			disableUmask: true,
 			verifyFn: func(t *testing.T, out string) {
 				assert.NotContains(t, out, "root")
+				assert.NotContains(t, out, "drwxrwxrwx")
+				assert.NotContains(t, out, "-rw-rw-rw-")
+				assert.Regexp(t, regexp.MustCompile(`(?m)^.*1234\s*5678.*gitlab-test.*$`), out)
+			},
+		},
+		"umask disabled and shell not set": {
+			image:        common.TestAlpineImage,
+			script:       "ls -lR /builds/gitlab-org/ci-cd/gitlab-runner-pipeline-tests",
+			runAsUser:    int64(1234),
+			runAsGroup:   int64(5678),
+			disableUmask: true,
+			verifyFn: func(t *testing.T, out string) {
+				assert.NotContains(t, out, "root")
+				assert.NotContains(t, out, "drwxrwxrwx")
+				assert.NotContains(t, out, "-rw-rw-rw-")
 				assert.Regexp(t, regexp.MustCompile(`(?m)^.*1234\s*5678.*gitlab-test.*$`), out)
 			},
 		},
@@ -338,6 +358,8 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			verifyFn: func(t *testing.T, out string) {
 				assert.NotContains(t, out, "1234")
 				assert.NotContains(t, out, "5678")
+				assert.NotContains(t, out, "drwxr-xr-x")
+				assert.NotContains(t, out, "-rw-r--r--")
 				assert.Regexp(t, regexp.MustCompile(`(?m)^.*root\s*root.*gitlab-test.*$`), out)
 			},
 		},
@@ -354,6 +376,60 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			},
 			verifyFn: func(t *testing.T, out string) {
 				assert.NotContains(t, out, "root")
+				assert.NotContains(t, out, "drwxrwxrwx")
+				assert.NotContains(t, out, "-rw-rw-rw-")
+				assert.Regexp(t, regexp.MustCompile(`(?m)^.*1234\s*5678.*gitlab-test.*$`), out)
+			},
+		},
+		"umask disabled with cache manipulation": {
+			image:    common.TestAlpineImage,
+			buildDir: customBuildDir,
+			script:   "mkdir -p cache_files && touch cache_files/cache && ls -lR $BUILDS_DIRECTORY/",
+			cache: common.Caches{
+				common.Cache{
+					Key:    "key",
+					Paths:  common.ArtifactPaths{"cache_files"},
+					Policy: common.CachePolicyPullPush,
+					When:   common.CacheWhenOnSuccess,
+				},
+			},
+			runAsUser:    int64(1234),
+			runAsGroup:   int64(5678),
+			disableUmask: true,
+			envars: common.JobVariables{
+				common.JobVariable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.NotContains(t, out, "root")
+				assert.NotContains(t, out, "drwxrwxrwx")
+				assert.NotContains(t, out, "-rw-rw-rw-")
+				assert.Regexp(t, regexp.MustCompile(`(?m)^.*1234\s*5678.*gitlab-test.*$`), out)
+			},
+		},
+		"umask disabled with cache manipulation with custom cache_dir": {
+			image:    common.TestAlpineImage,
+			buildDir: customBuildDir,
+			cacheDir: customCacheDir,
+			script:   "mkdir -p cache_files && touch cache_files/cache && ls -lR $BUILDS_DIRECTORY/",
+			cache: common.Caches{
+				common.Cache{
+					Key:    "key",
+					Paths:  common.ArtifactPaths{"cache_files"},
+					Policy: common.CachePolicyPullPush,
+					When:   common.CacheWhenOnSuccess,
+				},
+			},
+			runAsUser:    int64(1234),
+			runAsGroup:   int64(5678),
+			disableUmask: true,
+			envars: common.JobVariables{
+				common.JobVariable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
+				common.JobVariable{Key: "CACHE_DIRECTORY", Value: customCacheDir},
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.NotContains(t, out, "root")
+				assert.NotContains(t, out, "drwxrwxrwx")
+				assert.NotContains(t, out, "-rw-rw-rw-")
 				assert.Regexp(t, regexp.MustCompile(`(?m)^.*1234\s*5678.*gitlab-test.*$`), out)
 			},
 		},
@@ -370,6 +446,7 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			build.Variables = append(build.Variables, tc.envars...)
 			build.Runner.RunnerSettings.Shell = tc.shell
 			build.JobResponse.Image.Name = tc.image
+			build.JobResponse.Cache = tc.cache
 
 			if tc.buildDir != "" {
 				build.Runner.BuildsDir = tc.buildDir
@@ -378,6 +455,18 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 						common.KubernetesEmptyDir{
 							Name:      "repo",
 							MountPath: "$BUILDS_DIRECTORY",
+						},
+					},
+				}
+			}
+
+			if tc.cacheDir != "" {
+				build.Runner.CacheDir = tc.cacheDir
+				build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
+					EmptyDirs: []common.KubernetesEmptyDir{
+						common.KubernetesEmptyDir{
+							Name:      "cache",
+							MountPath: "$CACHE_DIRECTORY",
 						},
 					},
 				}
