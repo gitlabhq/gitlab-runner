@@ -51,7 +51,21 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 		shell = "bash"
 	}
 
+	// When executing commands on the helper image, the `gitlab-runner-build`
+	// is injected (helperImageInfo.Cmd = []string{"gitlab-runner-build"}),
+	// which sets the umask to 0000. This configuration is necessary to allow
+	// the build to have write access to the files & directories created by the helper.
+	// However, when FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR is enabled,
+	// we ensure that the ownership of shared directories are changed to
+	// the build's user on build start, thus the uid/gid match & we don't need
+	// world-writable files anymore and can skip the umask call.
+	// Consequently, the injection of `gitlab-runner-build` is prevented
+	// when FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR is enabled.
 	cmd := bashCmd
+	if cfg.DisableUmask {
+		cmd = []string{"/bin/bash"}
+	}
+
 	tag := fmt.Sprintf("%s%s-%s", prefix, arch, revision)
 	if shell == shells.SNPwsh {
 		cmd = getPowerShellCmd(shell)

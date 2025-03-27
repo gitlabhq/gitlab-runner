@@ -559,6 +559,13 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`  Remove-Item -Force -Recurse ".git/hooks"` + eol +
 		`}`
 
+	cleanUidGidFiles := `` +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".gitlab-build-uid-gid" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force ".gitlab-build-uid-gid"` + eol +
+		`} elseif(Test-Path ".gitlab-build-uid-gid") {` + eol +
+		`  Remove-Item -Force ".gitlab-build-uid-gid"` + eol +
+		`}`
+
 	if eol == "\n" {
 		shebang = "#!/usr/bin/env pwsh\n"
 	} else {
@@ -604,7 +611,8 @@ func TestPowershell_GenerateScript(t *testing.T) {
 					rmGitLabEnvScript +
 					eol + eol +
 					cleanGitFiles +
-					eol +
+					cleanUidGidFiles +
+					eol + eol + eol +
 					"}" + eol + eol
 			},
 		},
@@ -621,6 +629,8 @@ func TestPowershell_GenerateScript(t *testing.T) {
 					eol + eol +
 					cleanGitFiles +
 					cleanGitConfigs +
+					eol + eol +
+					cleanUidGidFiles +
 					eol + eol + eol +
 					"}" + eol + eol
 			},
