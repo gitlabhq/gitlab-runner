@@ -110,8 +110,14 @@ binaries:
     - go mod download
     - make -j$(($(nproc) * 2)) helper-bin helper-bin-fips runner-bin runner-bin-fips
     - |
-      if [[ "$GITLAB_RUNNER_SIGNING_ENABLED" == "true" ]]; then
+      if [[ "$CI_SERVER_HOST" == "gitlab.com" &&
+            ("$CI_PROJECT_PATH" == "gitlab-org/gitlab-runner" ||
+             "$CI_PROJECT_PATH" == "gitlab-org/security/gitlab-runner") &&
+            -n "$CI_COMMIT_TAG" ]]; then
+        echo "Signing binaries..."
         GITLAB_SIGNING_CERT_PATH="$CI_PROJECT_DIR/certs/gitlab-inc-ssl-com.crt" scripts/sign-binaries
+      else
+        echo "Not signing binaries"
       fi
   artifacts:
     paths:
