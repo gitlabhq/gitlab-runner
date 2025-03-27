@@ -406,7 +406,8 @@ func (eo *executorOptions) UnsupportedOptions() error {
 }
 
 var SupportedExecutorOptions = map[string][]string{
-	"docker": {"platform", "user"},
+	"docker":     {"platform", "user"},
+	"kubernetes": {"user"},
 }
 
 type (
@@ -415,9 +416,14 @@ type (
 		Platform string `json:"platform"`
 		User     string `json:"user"`
 	}
+	ImageKubernetesOptions struct {
+		executorOptions
+		User int64 `json:"user"`
+	}
 	ImageExecutorOptions struct {
 		executorOptions
-		Docker ImageDockerOptions `json:"docker,omitempty"`
+		Docker     ImageDockerOptions     `json:"docker,omitempty"`
+		Kubernetes ImageKubernetesOptions `json:"kubernetes,omitempty"`
 	}
 )
 
@@ -442,6 +448,19 @@ func (ido *ImageDockerOptions) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (iko *ImageKubernetesOptions) UnmarshalJSON(data []byte) error {
+	type imageKubernetesOptions ImageKubernetesOptions
+	inner := imageKubernetesOptions{}
+	if err := json.Unmarshal(data, &inner); err != nil {
+		return err
+	}
+	*iko = ImageKubernetesOptions(inner)
+
+	// call validate after json.Unmarshal so the former handles bad json.
+	iko.unsupportedOptions = iko.validate(data, SupportedExecutorOptions["kubernetes"], "kubernetes executor", "image")
+	return nil
+}
+
 func (ieo *ImageExecutorOptions) UnmarshalJSON(data []byte) error {
 	type imageExecutorOptions ImageExecutorOptions
 	inner := imageExecutorOptions{}
@@ -456,7 +475,11 @@ func (ieo *ImageExecutorOptions) UnmarshalJSON(data []byte) error {
 }
 
 func (ieo *ImageExecutorOptions) UnsupportedOptions() error {
-	return errors.Join(ieo.executorOptions.UnsupportedOptions(), ieo.Docker.UnsupportedOptions())
+	return errors.Join(
+		ieo.executorOptions.UnsupportedOptions(),
+		ieo.Docker.UnsupportedOptions(),
+		ieo.Kubernetes.UnsupportedOptions(),
+	)
 }
 
 type Image struct {

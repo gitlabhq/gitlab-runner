@@ -485,23 +485,55 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
 			},
 		},
-		"invalid executor": {
-			json:           `{"executor_opts":{"k8s": {}}}`,
-			expectedErrMsg: []string{`Unsupported "image" options [k8s] for "executor_opts"; supported options are [docker]`},
+		"kubernetes, empty": {
+			json: `{"executor_opts":{"kubernetes": {}}}`,
+			expected: func(t *testing.T, i Image) {
+				assert.Equal(t, int64(0), i.ExecutorOptions.Kubernetes.User)
+			},
+		},
+		"kubernetes, all options": {
+			json: `{"executor_opts":{"kubernetes": {"user": 1000}}}`,
+			expected: func(t *testing.T, i Image) {
+				assert.Equal(t, int64(1000), i.ExecutorOptions.Kubernetes.User)
+			},
+		},
+		"kubernetes, invalid options": {
+			json:           `{"executor_opts":{"kubernetes": {"foobar": 1234}}}`,
+			expectedErrMsg: []string{`Unsupported "image" options [foobar] for "kubernetes executor"; supported options are [user]`},
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
+				assert.Equal(t, int64(0), i.ExecutorOptions.Kubernetes.User)
 			},
 		},
-		"invalid executor, valid executor, invalid option": {
+		"invalid executor": {
+			json:           `{"executor_opts":{"k8s": {}}}`,
+			expectedErrMsg: []string{`Unsupported "image" options [k8s] for "executor_opts"; supported options are [docker kubernetes]`},
+			expected: func(t *testing.T, i Image) {
+				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
+				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
+				assert.Equal(t, int64(0), i.ExecutorOptions.Kubernetes.User)
+			},
+		},
+		"docker, invalid executor, valid executor, invalid option": {
 			json: `{"executor_opts":{"k8s": {}, "docker": {"platform": "amd64", "foobar": 1234}}}`,
 			expectedErrMsg: []string{
-				`Unsupported "image" options [k8s] for "executor_opts"; supported options are [docker]`,
+				`Unsupported "image" options [k8s] for "executor_opts"; supported options are [docker kubernetes]`,
 				`Unsupported "image" options [foobar] for "docker executor"; supported options are [platform user]`,
 			},
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "amd64", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
+			},
+		},
+		"kubernetes, invalid executor, valid executor, invalid option": {
+			json: `{"executor_opts":{"dockers": {}, "kubernetes": {"user": 1000, "foobar": 1234}}}`,
+			expectedErrMsg: []string{
+				`Unsupported "image" options [dockers] for "executor_opts"; supported options are [docker kubernetes]`,
+				`Unsupported "image" options [foobar] for "kubernetes executor"; supported options are [user]`,
+			},
+			expected: func(t *testing.T, i Image) {
+				assert.Equal(t, int64(1000), i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 	}
