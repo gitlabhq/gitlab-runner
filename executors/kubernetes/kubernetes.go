@@ -2194,9 +2194,12 @@ func (s *executor) preparePodServices() ([]api.Container, error) {
 			isServiceContainer: true,
 			requests:           s.configurationOverwrites.getServiceResourceRequests(name),
 			limits:             s.configurationOverwrites.getServiceResourceLimits(name),
-			securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
-				s.Config.Kubernetes.ServiceContainerSecurityContext,
-				s.defaultCapDrop()...,
+			securityContext: s.setSecurityContextUser(
+				service.ExecutorOptions.Kubernetes,
+				s.Config.Kubernetes.GetContainerSecurityContext(
+					s.Config.Kubernetes.ServiceContainerSecurityContext,
+					s.defaultCapDrop()...,
+				),
 			),
 		})
 		if err != nil {
@@ -2311,9 +2314,12 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 		imageDefinition: s.options.Image,
 		requests:        s.configurationOverwrites.buildRequests,
 		limits:          s.configurationOverwrites.buildLimits,
-		securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
-			s.Config.Kubernetes.BuildContainerSecurityContext,
-			s.defaultCapDrop()...,
+		securityContext: s.setSecurityContextUser(
+			s.options.Image.ExecutorOptions.Kubernetes,
+			s.Config.Kubernetes.GetContainerSecurityContext(
+				s.Config.Kubernetes.BuildContainerSecurityContext,
+				s.defaultCapDrop()...,
+			),
 		),
 		command: buildCmd,
 	})
@@ -2345,6 +2351,14 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 	}
 
 	return buildContainer, helperContainer, nil
+}
+
+func (s *executor) setSecurityContextUser(opts common.ImageKubernetesOptions, context *api.SecurityContext) *api.SecurityContext {
+	if opts.User > 0 {
+		context.RunAsUser = &opts.User
+	}
+
+	return context
 }
 
 func (s *executor) buildContainerStartupProbe() *api.Probe {

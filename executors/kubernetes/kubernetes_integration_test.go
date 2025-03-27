@@ -167,6 +167,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testJobAgainstServiceContainerBehaviour":                 testJobAgainstServiceContainerBehaviour,
 		"testDeletedPodSystemFailureDuringExecution":              testDeletedPodSystemFailureDuringExecution,
 		"testKubernetesServiceContainerAlias":                     testKubernetesServiceContainerAlias,
+		"testKubernetesOptionsUserAndGroup":                       testKubernetesOptionsUserAndGroup,
 	}
 
 	ffValues := []bool{testFeatureFlagValue}
@@ -3524,6 +3525,70 @@ func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, f
 			}
 
 			require.NoError(t, err)
+		})
+	}
+}
+
+func testKubernetesOptionsUserAndGroup(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := map[string]struct {
+		ciUserId  int64
+		cfgUserId func() *int64
+		verifyFn  func(t *testing.T, out string)
+	}{
+		"no user set": {
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "User ID is set to: 0")
+			},
+		},
+		"user set to 1002": {
+			ciUserId: 1002,
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "User ID is set to: 1002")
+			},
+		},
+		"user set to 1002 in gitlab-ci and 1003 in config.toml": {
+			ciUserId: 1002,
+			cfgUserId: func() *int64 {
+				id := int64(1003)
+				return &id
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "User ID is set to: 1002")
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				jobResponse, err := common.GetRemoteBuildResponse(`echo "User ID is set to: $(id -u)"`)
+				if err != nil {
+					return common.JobResponse{}, err
+				}
+
+				jobResponse.Image.ExecutorOptions.Kubernetes = common.ImageKubernetesOptions{
+					User: tc.ciUserId,
+				}
+
+				return jobResponse, nil
+			})
+
+			if tc.cfgUserId != nil {
+				build.Runner.Kubernetes.BuildContainerSecurityContext.RunAsUser = tc.cfgUserId()
+			}
+
+			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
+			buildtest.SetBuildFeatureFlag(build, featureflags.PrintPodEvents, true)
+
+			var buf bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			require.NoError(t, err)
+
+			if tc.verifyFn != nil {
+				tc.verifyFn(t, buf.String())
+			}
 		})
 	}
 }
