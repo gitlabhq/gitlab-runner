@@ -719,9 +719,8 @@ func (n *GitLabClient) PatchTrace(
 	endOffset := startOffset + len(content)
 	contentRange := fmt.Sprintf("%d-%d", startOffset, endOffset-1)
 
-	headers := make(http.Header)
+	headers := JobTokenHeader(jobCredentials.Token)
 	headers.Set("Content-Range", contentRange)
-	headers.Set("JOB-TOKEN", jobCredentials.Token)
 
 	bodyProvider := common.BytesProvider{Data: content}
 
@@ -905,8 +904,6 @@ func (n *GitLabClient) UploadRawArtifacts(
 
 	query := uploadRawArtifactsQuery(options)
 
-	headers := make(http.Header)
-	headers.Set("JOB-TOKEN", config.Token)
 	res, err := n.doRaw(
 		context.Background(),
 		&config,
@@ -914,8 +911,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 		fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode()),
 		bodyProvider,
 		contentType,
-		headers,
-	)
+		JobTokenHeader(config.Token))
 
 	defer func() { n.handleResponse(context.TODO(), res, true) }()
 
@@ -1035,11 +1031,16 @@ func (n *GitLabClient) DownloadArtifacts(
 		query.Set("direct_download", strconv.FormatBool(*directDownload))
 	}
 
-	headers := make(http.Header)
-	headers.Set("JOB-TOKEN", config.Token)
 	uri := fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode())
 
-	res, err := n.doRaw(context.Background(), &config, http.MethodGet, uri, nil, "", headers)
+	res, err := n.doRaw(
+		context.Background(),
+		&config,
+		http.MethodGet,
+		uri,
+		nil,
+		"",
+		JobTokenHeader(config.Token))
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,

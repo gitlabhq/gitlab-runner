@@ -1582,7 +1582,7 @@ func getPatchServer(
 			return
 		}
 
-		assert.Equal(t, patchToken, r.Header.Get("JOB-TOKEN"))
+		assert.Equal(t, patchToken, r.Header.Get(JobToken))
 
 		body, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
@@ -2323,13 +2323,13 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 		return
 	}
 
-	if r.Header.Get("JOB-TOKEN") == "redirect" {
+	if r.Header.Get(JobToken) == "redirect" {
 		w.Header().Set("Location", "new-location")
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		return
 	}
 
-	if r.Header.Get("JOB-TOKEN") != "token" {
+	if r.Header.Get(JobToken) != "token" {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -2665,7 +2665,7 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := r.Header.Get("JOB-TOKEN")
+	token := r.Header.Get(JobToken)
 	if token == "invalid-token" {
 		w.WriteHeader(http.StatusForbidden)
 		return
