@@ -17,6 +17,8 @@ To install and run GitLab Runner on Windows you need:
 - Git, which can be installed from the [official site](https://git-scm.com/download/win)
 - A password for your user account, if you want to run it under your user
   account rather than the Built-in System Account.
+- The system locale set to English (United States) to avoid character encoding issues. 
+  For more information, see [issue 38702](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38702).
 
 ## Installation
 
