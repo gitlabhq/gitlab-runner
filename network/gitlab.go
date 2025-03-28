@@ -262,6 +262,15 @@ func JobTokenHeader(jobToken string) http.Header {
 	return headers
 }
 
+// Create a RUNNER-TOKEN http header for the specified job token.
+func RunnerTokenHeader(runnerToken string) http.Header {
+	headers := http.Header{}
+	if runnerToken != "" {
+		headers.Set(common.RunnerToken, runnerToken)
+	}
+	return headers
+}
+
 func (n *GitLabClient) doJSON(
 	ctx context.Context,
 	credentials requestCredentials,
