@@ -323,7 +323,7 @@ func (n *GitLabClient) RegisterRunner(
 		http.MethodPost,
 		"runners",
 		http.StatusCreated,
-		PrivateTokenHeader(runner.Token),
+		RunnerTokenHeader(runner.Token),
 		&request,
 		&response,
 	)
@@ -358,7 +358,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 		http.MethodPost,
 		"runners/verify",
 		http.StatusOK,
-		PrivateTokenHeader(runner.Token),
+		RunnerTokenHeader(runner.Token),
 		&request,
 		&response,
 	)
@@ -370,7 +370,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 			http.MethodPost,
 			"runners/verify",
 			http.StatusOK,
-			PrivateTokenHeader(runner.Token),
+			RunnerTokenHeader(runner.Token),
 			&request,
 			nil,
 		)
@@ -413,7 +413,7 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		http.MethodDelete,
 		"runners",
 		http.StatusNoContent,
-		PrivateTokenHeader(runner.Token),
+		RunnerTokenHeader(runner.Token),
 		&request,
 		nil,
 	)
@@ -448,7 +448,7 @@ func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, 
 		http.MethodDelete,
 		"runners/managers",
 		http.StatusNoContent,
-		PrivateTokenHeader(runner.Token),
+		RunnerTokenHeader(runner.Token),
 		&request,
 		nil,
 	)
@@ -579,7 +579,7 @@ func (n *GitLabClient) RequestJob(
 			method:      http.MethodPost,
 			uri:         "jobs/request",
 			statusCode:  http.StatusCreated,
-			headers:     PrivateTokenHeader(config.Token),
+			headers:     RunnerTokenHeader(config.Token),
 			request:     &request, response: &response,
 		},
 	)
