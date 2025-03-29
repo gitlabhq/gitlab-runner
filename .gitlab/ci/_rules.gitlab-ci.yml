@@ -265,3 +265,13 @@
         # !reference doesn't work in variables
         KUBERNETES_RUNNER_TAG: gitlab-org
     - when: always
+
+########################
+# Binary signing rules #
+########################
+
+.rules:sign_binaries:
+  variables:
+    GCLOUD_PROJECT: gitlab-ci-runners-signing
+    SERVICE_ACCOUNT: gitlab-runner-signer@gitlab-ci-runners-signing.iam.gserviceaccount.com
+    WI_POOL_PROVIDER: //iam.googleapis.com/projects/8522242139/locations/global/workloadIdentityPools/gitlab-pool-oidc-$CI_PROJECT_ID/providers/gitlab-jwt-$CI_PROJECT_ID

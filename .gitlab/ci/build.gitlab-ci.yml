@@ -98,12 +98,27 @@ binaries:
     - !reference [.instance-2xlarge]
   extends:
     - .rules:merge_request_pipelines:no_docs
+    - .rules:sign_binaries
+    - .google-oidc:auth
     - .go-cache
   stage: build
   needs: []
+  before_script:
+    - !reference [.go-cache, before_script]
+    - !reference [.google-oidc:auth, before_script]
   script:
     - go mod download
     - make -j$(($(nproc) * 2)) helper-bin helper-bin-fips runner-bin runner-bin-fips
+    - |
+      if [[ "$CI_SERVER_HOST" == "gitlab.com" &&
+            ("$CI_PROJECT_PATH" == "gitlab-org/gitlab-runner" ||
+             "$CI_PROJECT_PATH" == "gitlab-org/security/gitlab-runner") &&
+            -n "$CI_COMMIT_TAG" ]]; then
+        echo "Signing binaries..."
+        GITLAB_SIGNING_CERT_PATH="$CI_PROJECT_DIR/certs/gitlab-inc-ssl-com.crt" scripts/sign-binaries
+      else
+        echo "Not signing binaries"
+      fi
   artifacts:
     paths:
       - out/binaries/gitlab-runner*
