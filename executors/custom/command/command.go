@@ -20,7 +20,6 @@ const (
 	SystemFailureExitCode = 2
 )
 
-//go:generate mockery --name=Command --inpackage
 type Command interface {
 	Run() error
 }

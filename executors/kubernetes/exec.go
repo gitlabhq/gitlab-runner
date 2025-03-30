@@ -37,8 +37,6 @@ import (
 )
 
 // RemoteExecutor defines the interface accepted by the Exec command - provided for test stubbing
-//
-//go:generate mockery --name=RemoteExecutor --inpackage
 type RemoteExecutor interface {
 	Execute(
 		ctx context.Context,

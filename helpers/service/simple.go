@@ -14,8 +14,8 @@ var (
 	ErrNotSupported = errors.New("not supported")
 )
 
+//
 //nolint:deadcode
-//go:generate mockery --name=stopStarter --inpackage
 type stopStarter interface {
 	Start(service.Service) error
 	Stop(service.Service) error

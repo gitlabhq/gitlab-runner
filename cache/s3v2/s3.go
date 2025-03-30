@@ -24,7 +24,6 @@ import (
 const DEFAULT_AWS_S3_ENDPOINT = "https://s3.amazonaws.com"
 const fallbackBucketLocation = "us-east-1"
 
-//go:generate mockery --name=s3Presigner --inpackage
 type s3Presigner interface {
 	PresignURL(
 		ctx context.Context,

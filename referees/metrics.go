@@ -29,7 +29,6 @@ type MetricsRefereeConfig struct {
 	Queries           []string `toml:"queries" json:"queries" description:"A list of metrics to query (in PromQL)"`
 }
 
-//go:generate mockery --name=MetricsExecutor --inpackage
 type MetricsExecutor interface {
 	GetMetricsSelector() string
 }

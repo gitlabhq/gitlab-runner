@@ -5,12 +5,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//go:generate mockery --name=systemLogger --inpackage
 type systemLogger interface {
 	service.Logger
 }
 
-//go:generate mockery --name=systemService --inpackage
 type systemService interface {
 	service.Service
 }

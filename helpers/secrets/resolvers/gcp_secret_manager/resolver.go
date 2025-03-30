@@ -12,7 +12,6 @@ const (
 	resolverName = "gcp_secret_manager"
 )
 
-//go:generate mockery --name=client --inpackage
 type client interface {
 	GetSecret(ctx context.Context, s *common.GCPSecretManagerSecret) (string, error)
 }

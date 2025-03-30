@@ -1,6 +1,5 @@
 package api
 
-//go:generate mockery --name=InitGracefulShutdownRequest --inpackage --with-expecter
 type InitGracefulShutdownRequest interface {
 	ShutdownCallbackDef() ShutdownCallbackDef
 }

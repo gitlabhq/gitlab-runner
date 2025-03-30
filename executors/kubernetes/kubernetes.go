@@ -312,7 +312,6 @@ type executor struct {
 	newPodWatcher func(podWatcherConfig) podWatcher
 }
 
-//go:generate mockery --name=podWatcher --inpackage
 type podWatcher interface {
 	Start() error
 	UpdatePodName(string)

@@ -28,7 +28,6 @@ type Port struct {
 	Name     string
 }
 
-//go:generate mockery --name=Requester --inpackage
 type Requester interface {
 	ProxyRequest(w http.ResponseWriter, r *http.Request, requestedURI, port string, settings *Settings)
 }

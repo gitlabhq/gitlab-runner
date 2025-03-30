@@ -20,7 +20,6 @@ const GracefulTimeout = 10 * time.Minute
 // to finish.
 const KillTimeout = 10 * time.Second
 
-//go:generate mockery --name=killer --inpackage
 type killer interface {
 	Terminate()
 	ForceKill()
@@ -28,7 +27,6 @@ type killer interface {
 
 var newProcessKiller = newKiller
 
-//go:generate mockery --name=KillWaiter --inpackage
 type KillWaiter interface {
 	KillAndWait(command Commander, waitCh chan error) error
 }

@@ -16,16 +16,12 @@ import (
 
 // conn is an interface wrapper used to generate mocks that are next used for tests
 // nolint:deadcode
-//
-//go:generate mockery --name=conn --inpackage
 type conn interface {
 	net.Conn
 }
 
 // reader is an interface wrapper used to generate mocks that are next used for tests
 // nolint:deadcode
-//
-//go:generate mockery --name=reader --inpackage
 type reader interface {
 	io.Reader
 }
@@ -36,7 +32,6 @@ type IOStreams struct {
 	Stderr io.Writer
 }
 
-//go:generate mockery --name=Docker --inpackage
 type Docker interface {
 	Exec(ctx context.Context, containerID string, streams IOStreams, gracefulExitFunc wait.GracefulExitFunc) error
 }

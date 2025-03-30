@@ -20,7 +20,6 @@ const (
 
 var errIDNoOutput = errors.New("id command returned no output on stdout")
 
-//go:generate mockery --name=Inspect --inpackage
 type Inspect interface {
 	IsRoot(ctx context.Context, imageID string) (bool, error)
 	UID(ctx context.Context, containerID string) (int, error)

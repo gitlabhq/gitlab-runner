@@ -11,8 +11,6 @@ import (
 
 // ExecutorData is an empty interface representing free-form data
 // executor will use. Meant to be casted, e.g. virtual machine details.
-//
-//go:generate mockery --name=ExecutorData --inpackage
 type ExecutorData interface{}
 
 // ExecutorCommand stores the script executor will run on a given stage.
@@ -59,8 +57,6 @@ func (e *NoFreeExecutorError) Error() string {
 // Executor represents entities responsible for build execution.
 // It prepares the environment, runs the build and cleans up resources.
 // See more in https://docs.gitlab.com/runner/executors/
-//
-//go:generate mockery --name=Executor --inpackage
 type Executor interface {
 	// Shell returns data about the shell and scripts this executor is bound to.
 	Shell() *ShellScriptInfo
@@ -106,8 +102,6 @@ type ManagedExecutorProvider interface {
 
 // ExecutorProvider is responsible for managing the lifetime of executors, acquiring resources,
 // retrieving executor metadata, etc.
-//
-//go:generate mockery --name=ExecutorProvider --inpackage
 type ExecutorProvider interface {
 	// CanCreate returns whether the executor provider has the necessary data to create an executor.
 	CanCreate() bool

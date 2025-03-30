@@ -1,0 +1,13 @@
+with-expecter: True
+inpackage: True
+dir: "{{.InterfaceDir}}"
+mockname: "{{.Mock}}{{.InterfaceName | camelcase}}"
+outpkg: "{{.PackageName}}"
+filename: "mock_{{.InterfaceName}}.go"
+all: True
+packages:
+ gitlab.com/gitlab-org/gitlab-runner:
+    config:
+      recursive: True
+      exclude:
+        - executors/internal/autoscaler

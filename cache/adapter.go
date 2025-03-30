@@ -22,7 +22,6 @@ type GoCloudURL struct {
 	Environment map[string]string
 }
 
-//go:generate mockery --name=Adapter --inpackage
 type Adapter interface {
 	GetDownloadURL(context.Context) PresignedURL
 	GetUploadURL(context.Context) PresignedURL

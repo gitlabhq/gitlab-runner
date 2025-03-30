@@ -12,13 +12,11 @@ import (
 )
 
 //nolint:unused // see file header
-//go:generate mockery --name=prometheusAPI --inpackage
 type prometheusAPI interface {
 	prometheusV1.API
 }
 
 //nolint:unused // see file header
-//go:generate mockery --name=prometheusValue --inpackage
 type prometheusValue interface {
 	model.Value
 }

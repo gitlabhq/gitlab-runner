@@ -5,12 +5,10 @@ import (
 	"os/exec"
 )
 
-//go:generate mockery --name=process --inpackage --with-expecter
 type process interface {
 	Signal(sig os.Signal) error
 }
 
-//go:generate mockery --name=commander --inpackage --with-expecter
 type commander interface {
 	Start() error
 	Process() process

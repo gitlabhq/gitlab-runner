@@ -12,7 +12,6 @@ import (
 	pb "gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api/proto"
 )
 
-//go:generate mockery --name=wrapper --inpackage --with-expecter
 type wrapper interface {
 	Status() api.Status
 	FailureReason() string

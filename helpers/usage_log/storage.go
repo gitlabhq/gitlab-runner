@@ -14,7 +14,6 @@ var (
 	ErrStoringLog      = errors.New("storing log")
 )
 
-//go:generate mockery --name=dummyWriteCloser --inpackage --with-expecter
 type dummyWriteCloser interface {
 	io.WriteCloser
 }
