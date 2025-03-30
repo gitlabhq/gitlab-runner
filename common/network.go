@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -390,6 +391,8 @@ func (eo *executorOptions) validate(data []byte, supportedOptions []string, exec
 		}
 	}
 	if len(notSupported) != 0 {
+		sort.Strings(supportedOptions)
+
 		return &UnsuportedExecutorOptionsError{
 			executor:           executor,
 			section:            section,
