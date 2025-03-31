@@ -45,8 +45,6 @@ var (
 )
 
 // Archiver is an interface for the Archive method.
-//
-//go:generate mockery --name=Archiver --inpackage
 type Archiver interface {
 	Archive(ctx context.Context, files map[string]os.FileInfo) error
 }

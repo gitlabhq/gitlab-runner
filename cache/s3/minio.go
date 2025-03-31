@@ -20,7 +20,6 @@ const DefaultAWSS3Server = "s3.amazonaws.com"
 
 var s3AcceleratePattern = regexp.MustCompile(`s3-accelerate.*\.amazonaws\.com$`)
 
-//go:generate mockery --name=minioClient --inpackage
 type minioClient interface {
 	PresignHeader(
 		ctx context.Context,

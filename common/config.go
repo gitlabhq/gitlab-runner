@@ -1283,7 +1283,6 @@ type UsageLogger struct {
 	Labels         map[string]string `toml:"labels,omitempty" json:"labels,omitempty"`
 }
 
-//go:generate mockery --name=ConfigSaver --inpackage
 type ConfigSaver interface {
 	Save(filePath string, data []byte) error
 }

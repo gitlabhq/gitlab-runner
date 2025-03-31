@@ -10,7 +10,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-//go:generate mockery --name=AzureKeyVault --inpackage
 type AzureKeyVault interface {
 	GetSecret(name string, version string) (interface{}, error)
 }

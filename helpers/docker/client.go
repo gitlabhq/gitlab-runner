@@ -12,7 +12,6 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-//go:generate mockery --name=Client --inpackage
 type Client interface {
 	ClientVersion() string
 	ServerVersion(context.Context) (types.Version, error)

@@ -13,7 +13,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-//go:generate mockery --name=akeylessAPIClient --inpackage
 type akeylessAPIClient interface {
 	GetSecretValue(ctx context.Context, body akeyless_api.GetSecretValue) (map[string]any, error)
 	Auth(ctx context.Context, params akeyless_api.Auth) (akeyless_api.AuthOutput, error)
@@ -110,7 +109,6 @@ type Config struct {
 	JWT                    string
 }
 
-//go:generate mockery --name=Akeyless --inpackage
 type Akeyless interface {
 	GetSecret(ctx context.Context) (any, error)
 }

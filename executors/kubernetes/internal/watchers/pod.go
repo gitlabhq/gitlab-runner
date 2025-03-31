@@ -21,7 +21,6 @@ import (
 // receive (looking at you, windows).
 const emitErrorTimeout = time.Millisecond
 
-//go:generate mockery --name=logger --inpackage
 type logger interface {
 	Debugln(args ...any)
 }

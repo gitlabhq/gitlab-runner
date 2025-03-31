@@ -7,7 +7,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-//go:generate mockery --name=credentialsResolver --inpackage
 type credentialsResolver interface {
 	Resolve() error
 	Signer() (sasSigner, error)

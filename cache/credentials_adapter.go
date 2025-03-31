@@ -7,7 +7,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-//go:generate mockery --name=CredentialsAdapter --inpackage
 type CredentialsAdapter interface {
 	GetCredentials() map[string]string
 }

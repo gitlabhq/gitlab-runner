@@ -13,14 +13,12 @@ const (
 	defaultShutdownCallbackTimeout = 10 * time.Second
 )
 
-//go:generate mockery --name=ShutdownCallbackDef --inpackage --with-expecter
 type ShutdownCallbackDef interface {
 	URL() string
 	Method() string
 	Headers() map[string]string
 }
 
-//go:generate mockery --name=ShutdownCallback --inpackage --with-expecter
 type ShutdownCallback interface {
 	Run(ctx context.Context)
 }

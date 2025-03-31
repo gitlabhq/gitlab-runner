@@ -11,26 +11,22 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines/kv_v2"   // register secret engine
 )
 
-//go:generate mockery --name=Auth --inpackage
 type Auth interface {
 	AuthName() string
 	AuthPath() string
 	AuthData() auth_methods.Data
 }
 
-//go:generate mockery --name=Engine --inpackage
 type Engine interface {
 	EngineName() string
 	EnginePath() string
 }
 
-//go:generate mockery --name=Secret --inpackage
 type Secret interface {
 	SecretPath() string
 	SecretField() string
 }
 
-//go:generate mockery --name=Vault --inpackage
 type Vault interface {
 	GetField(engineDetails Engine, secretDetails Secret) (interface{}, error)
 	Put(engineDetails Engine, secretDetails Secret, data map[string]interface{}) error

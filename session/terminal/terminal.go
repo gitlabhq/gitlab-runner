@@ -5,12 +5,10 @@ import (
 	"net/http"
 )
 
-//go:generate mockery --name=InteractiveTerminal --inpackage
 type InteractiveTerminal interface {
 	Connect() (Conn, error)
 }
 
-//go:generate mockery --name=Conn --inpackage
 type Conn interface {
 	Start(w http.ResponseWriter, r *http.Request, timeoutCh, disconnectCh chan error)
 	Close() error

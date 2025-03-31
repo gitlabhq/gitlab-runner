@@ -19,7 +19,6 @@ import (
 const defaultURLResolverLoopLimit = 15
 const defaultURLResolverFetchTimeout = 15 * time.Second
 
-//go:generate mockery --name=fetcher --inpackage
 type fetcher interface {
 	Fetch(url string) ([]byte, error)
 }

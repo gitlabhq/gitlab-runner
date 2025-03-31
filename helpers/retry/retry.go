@@ -20,16 +20,12 @@ type CheckFunc func(tries int, err error) bool
 type checkFuncWithPrevious func(tries int, err error, shouldRetry bool) bool
 
 // used only in tests to mock the run and check functions
-//
-//go:generate mockery --name=retryable --inpackage
 type retryable interface {
 	Run() error
 	ShouldRetry(tries int, err error) bool
 }
 
 // used only in tests to mock the run and check functions
-//
-//go:generate mockery --name=valueRetryable --inpackage
 type valueRetryable[T any] interface {
 	Run() (T, error)
 	ShouldRetry(tries int, err error) bool

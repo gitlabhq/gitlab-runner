@@ -1077,7 +1077,6 @@ type SupportedFailureReasonMapper interface {
 	Map(fr JobFailureReason) JobFailureReason
 }
 
-//go:generate mockery --name=JobTrace --inpackage
 type JobTrace interface {
 	io.Writer
 	Success() error
@@ -1113,7 +1112,6 @@ func NewPatchTraceResult(sentOffset int, state PatchState, newUpdateInterval int
 	}
 }
 
-//go:generate mockery --name=Network --inpackage
 type Network interface {
 	SetConnectionMaxAge(time.Duration)
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse

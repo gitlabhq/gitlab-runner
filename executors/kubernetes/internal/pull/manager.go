@@ -10,8 +10,6 @@ import (
 
 // Manager defines the interface for a state machine which keeps track of the appropriate pull policy to use
 // for each image definition
-//
-//go:generate mockery --name=Manager --inpackage
 type Manager interface {
 	// GetPullPolicyFor returns the pull policy that should be used for the subsequent pull operation
 	// for the specified container
@@ -21,7 +19,6 @@ type Manager interface {
 	UpdatePolicyForContainer(attempt int, imagePullErr *ImagePullError) bool
 }
 
-//go:generate mockery --name=pullLogger --inpackage
 type pullLogger interface {
 	Infoln(args ...interface{})
 	Warningln(args ...interface{})

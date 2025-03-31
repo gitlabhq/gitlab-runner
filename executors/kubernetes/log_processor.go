@@ -17,7 +17,6 @@ import (
 	restclient "k8s.io/client-go/rest"
 )
 
-//go:generate mockery --name=logStreamer --inpackage
 type logStreamer interface {
 	Stream(ctx context.Context, offset int64, output io.Writer) error
 	fmt.Stringer
@@ -76,7 +75,6 @@ func (s *kubernetesLogStreamer) String() string {
 	return fmt.Sprintf("%s/%s/%s:%s", s.namespace, s.pod, s.container, s.logPath)
 }
 
-//go:generate mockery --name=logProcessor --inpackage
 type logProcessor interface {
 	// Process listens for log lines
 	// consumers must read from the channel until it's closed
@@ -86,7 +84,6 @@ type logProcessor interface {
 	Finalize()
 }
 
-//go:generate mockery --name=backoffCalculator --inpackage
 type backoffCalculator interface {
 	ForAttempt(attempt float64) time.Duration
 }
