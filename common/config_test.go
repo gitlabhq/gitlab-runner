@@ -2293,6 +2293,366 @@ func TestConfig_SaveConfig(t *testing.T) {
 	assert.NotEqual(t, oldTime, c.ModTime, "Expected ModTime field of Config struct to be updated")
 }
 
+func TestConfig_Masked(t *testing.T) {
+	tests := map[string]struct {
+		input    *Config
+		expected *Config
+	}{
+		"nil runner": {
+			input: &Config{
+				Runners: nil,
+			},
+			expected: &Config{
+				Runners: nil,
+			},
+		},
+		"runner token": {
+			input: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerCredentials: RunnerCredentials{
+							Token: "some token",
+						},
+					},
+				},
+			},
+			expected: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerCredentials: RunnerCredentials{
+							Token: "[MASKED]",
+						},
+					},
+				},
+			},
+		},
+		"kubernetes bearer token": {
+			input: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Kubernetes: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Kubernetes: &KubernetesConfig{
+								BearerToken: "some bearer token",
+							},
+						},
+					},
+				},
+			},
+			expected: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Kubernetes: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Kubernetes: &KubernetesConfig{
+								BearerToken: "[MASKED]",
+							},
+						},
+					},
+				},
+			},
+		},
+		"cache s3 access key": {
+			input: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: nil,
+							},
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: &CacheS3Config{
+									AccessKey: "some access key",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: nil,
+							},
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: &CacheS3Config{
+									AccessKey: "[MASKED]",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"cache s3 secret key": {
+			input: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: nil,
+							},
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: &CacheS3Config{
+									SecretKey: "some secret key",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: nil,
+							},
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: &CacheS3Config{
+									SecretKey: "[MASKED]",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"cache s3 session token": {
+			input: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: nil,
+							},
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: &CacheS3Config{
+									SessionToken: "some session token",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: nil,
+							},
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: &CacheS3Config{
+									SessionToken: "[MASKED]",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"cache gcs private key": {
+			input: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								GCS: nil,
+							},
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								GCS: &CacheGCSConfig{
+									CacheGCSCredentials: CacheGCSCredentials{
+										PrivateKey: "some private key",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: nil,
+							},
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								GCS: &CacheGCSConfig{
+									CacheGCSCredentials: CacheGCSCredentials{
+										PrivateKey: "[MASKED]",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"cache azure account key": {
+			input: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: nil,
+							},
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								Azure: &CacheAzureConfig{
+									CacheAzureCredentials: CacheAzureCredentials{
+										AccountKey: "some account key",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &Config{
+				Runners: []*RunnerConfig{
+					nil,
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: nil,
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								S3: nil,
+							},
+						},
+					},
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								Azure: &CacheAzureConfig{
+									CacheAzureCredentials: CacheAzureCredentials{
+										AccountKey: "[MASKED]",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := tt.input.Masked()
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
 func TestConfig_GetCleanupResourcesTimeout(t *testing.T) {
 	tests := map[string]struct {
 		config      string

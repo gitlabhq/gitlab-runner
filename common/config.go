@@ -64,6 +64,8 @@ const (
 	DefaultConnectionMaxAge = 15 * time.Minute
 )
 
+const mask = "[MASKED]"
+
 var (
 	errPatchConversion = errors.New("converting patch to json")
 	errPatchAmbiguous  = errors.New("ambiguous patch: both patch path and patch provided")
@@ -2118,6 +2120,32 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 	return &r, err
 }
 
+// mask masks all sensitive fields on a Runner.
+// This should only run against a deep copy of a RunnerConfig.
+func (r *RunnerConfig) mask() {
+	if r == nil {
+		return
+	}
+
+	maskField(&r.Token)
+	if k8s := r.Kubernetes; k8s != nil {
+		maskField(&k8s.BearerToken)
+	}
+	if cache := r.Cache; cache != nil {
+		if s3 := cache.S3; s3 != nil {
+			maskField(&s3.AccessKey)
+			maskField(&s3.SecretKey)
+			maskField(&s3.SessionToken)
+		}
+		if gcs := cache.GCS; gcs != nil {
+			maskField(&gcs.PrivateKey)
+		}
+		if azure := cache.Azure; azure != nil {
+			maskField(&azure.AccountKey)
+		}
+	}
+}
+
 func NewConfigWithSaver(s ConfigSaver) *Config {
 	c := NewConfig()
 	c.configSaver = s
@@ -2132,6 +2160,32 @@ func NewConfig() *Config {
 			SessionTimeout: int(DefaultSessionTimeout.Seconds()),
 		},
 	}
+}
+
+// DeepCopy returns a deep clone of the config struct.
+func (c *Config) DeepCopy() (*Config, error) {
+	var d Config
+	b, err := json.Marshal(c)
+	if err != nil {
+		return nil, fmt.Errorf("serialize config: %w", err)
+	}
+	if err = json.Unmarshal(b, &d); err != nil {
+		return nil, fmt.Errorf("deserialize config: %w", err)
+	}
+	return &d, nil
+}
+
+// Masked returns a copy of the config struct with sensitive fields masked.
+func (c *Config) Masked() (*Config, error) {
+	m, err := c.DeepCopy()
+	if err != nil {
+		return nil, fmt.Errorf("deep copy config: %w", err)
+	}
+
+	for _, r := range m.Runners {
+		r.mask()
+	}
+	return m, nil
 }
 
 func (c *Config) StatConfig(configFile string) error {
@@ -2238,5 +2292,13 @@ func GetPullPolicySource(imagePullPolicies []DockerPullPolicy, pullPolicies Stri
 		return PullPolicySourceRunner
 	default:
 		return PullPolicySourceDefault
+	}
+}
+
+// maskField masks the content of a string field
+// if it is not empty.
+func maskField(field *string) {
+	if field != nil && *field != "" {
+		*field = mask
 	}
 }
