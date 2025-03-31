@@ -951,6 +951,14 @@ Consider the following information when enabling the state storage feature:
 | `scale_factor`         | The target idle capacity we want to be immediately available for jobs, on top of the `idle_count`, as a factor of the current in use capacity. Defaults to `0.0`. |
 | `scale_factor_limit`   | The maximum capacity the `scale_factor` calculation can yield. |
 
+To decide whether to remove an idle instance, the taskscaler compares `idle_time` against the instance's idle duration.
+The idle period of each instance is calculated from the time the instance:
+
+- Last completed a job (if the instance is previously used).
+- Is provisioned (if never used).
+
+This check occurs during scaling events. Instances that exceed the configured `idle_time` are removed, unless needed to maintain the required `idle_count` job capacity.
+
 When `scale_factor` is set, `idle_count` becomes the minimum `idle` capacity and the `scaler_factor_limit` the maximum `idle` capacity.
 
 You can define multiple policies. The last matching policy is the one used.
