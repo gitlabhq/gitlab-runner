@@ -1383,33 +1383,20 @@ func (e *executor) Cleanup() {
 
 	wg.Wait()
 
-	err := e.cleanupVolume(ctx)
-	if err != nil {
-		volumeLogger := e.BuildLogger.WithFields(logrus.Fields{
-			"error": err,
-		})
-
-		volumeLogger.Errorln("Failed to cleanup volumes")
+	if err := e.cleanupVolume(ctx); err != nil {
+		e.BuildLogger.WithFields(logrus.Fields{"error": err}).Errorln("Failed to cleanup volumes")
 	}
 
-	err = e.cleanupNetwork(ctx)
-	if err != nil {
-		networkLogger := e.BuildLogger.WithFields(logrus.Fields{
+	if err := e.cleanupNetwork(ctx); err != nil {
+		e.BuildLogger.WithFields(logrus.Fields{
 			"network": e.networkMode.NetworkName(),
 			"error":   err,
-		})
-
-		networkLogger.Errorln("Failed to remove network for build")
+		}).Errorln("Failed to remove network for build")
 	}
 
 	if e.client != nil {
-		err = e.client.Close()
-		if err != nil {
-			clientCloseLogger := e.BuildLogger.WithFields(logrus.Fields{
-				"error": err,
-			})
-
-			clientCloseLogger.Debugln("Failed to close the client")
+		if err := e.client.Close(); err != nil {
+			e.BuildLogger.WithFields(logrus.Fields{"error": err}).Debugln("Failed to close the client")
 		}
 	}
 
