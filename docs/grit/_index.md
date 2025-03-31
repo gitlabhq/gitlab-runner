@@ -152,3 +152,15 @@ GRIT uses several testing and linting tools to ensure quality:
 - Documentation: Follows the [GitLab documentation style guide](https://docs.gitlab.com/ee/development/documentation/styleguide/) and uses `vale` and `markdownlint`.
 
 For detailed instructions on setting up your development environment, running tests, and linting, see [CONTRIBUTING.md](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/blob/main/CONTRIBUTING.md).
+
+## Who uses GRIT?
+
+GRIT has been adopted by various teams and services within the GitLab ecosystem:
+
+- **[GitLab Dedicated](https://about.gitlab.com/dedicated/)**: [Hosted runners for GitLab Dedicated](https://docs.gitlab.com/administration/dedicated/hosted_runners/) uses GRIT to provision and manage runner infrastructure.
+
+- **GitLab.com**: [Hosted runners for GitLab.com](https://docs.gitlab.com/ci/runners/hosted_runners/) leverage GRIT for consistent and reliable CI/CD runner provisioning.
+
+- **Self-managed**: GRIT is highly requested amongst many self-managed costomers. Some organizations have started to adopt GRIT to manage their runner deployments in a standardize way.
+
+If you're using GRIT in your organization and would like to be featured in this section, open a merge request!
