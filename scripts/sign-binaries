@@ -98,7 +98,10 @@ sign_binary() {
     -ts "http://ts.ssl.com"
 
   # If we're replacing the input file, move the temporary output file to the final destination
+  # and back up the unsigned binary.
   if [ -n "${final_output:-}" ]; then
+    echo "Renaming $input_file to $input_file.unsigned"
+    mv "$input_file" "$input_file.unsigned"
     mv "$output_file" "$final_output"
     output_file="$final_output"
   fi
