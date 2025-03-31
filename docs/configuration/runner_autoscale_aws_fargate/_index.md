@@ -40,9 +40,17 @@ You can use CloudFormation or Terraform to automate the provisioning and setup o
 
 {{< alert type="warning" >}}
 
-CI/CD jobs use the image defined in the ECS task, rather than the value of the `image:` keyword in your `.gitlab-ci.yml` file. This configuration can result in multiple instances of runner manager or in large build containers. AWS is aware of the issue and GitLab is [tracking resolution](https://gitlab.com/gitlab-com/alliances/aws/public-tracker/-/issues/22).
+CI/CD jobs use the image defined in the ECS task, rather than the value of the
+`image:` keyword in your `.gitlab-ci.yml` file. ECS doesn't allow you to
+override the image used for an ECS task.
 
-One solution is to create additional task definitions and specify the ARN in the `FARGATE_TASK_DEFINITION` CI/CD variable. Alternatively, you might consider creating an EKS cluster by following the official [AWS EKS Blueprints](https://aws-ia.github.io/terraform-aws-eks-blueprints/).
+To work around this limitation, you can:
+
+- Create and use an image in the ECS task definition that contains all build dependencies of all projects the runner is used for.
+- Create multiple ECS task definitions with different images and specify the ARN in the `FARGATE_TASK_DEFINITION` CI/CD variable.
+- Consider creating an EKS cluster by following the official [AWS EKS Blueprints](https://aws-ia.github.io/terraform-aws-eks-blueprints/).
+
+For more information, see [Get started with GitLab EKS Fargate runners in 1 hour and zero code](https://about.gitlab.com/blog/2023/05/24/eks-fargate-runner/).
 
 {{< /alert >}}
 
