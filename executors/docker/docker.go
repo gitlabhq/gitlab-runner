@@ -1372,7 +1372,9 @@ func (e *executor) Cleanup() {
 	remove := func(id string) {
 		wg.Add(1)
 		go func() {
-			_ = e.removeContainer(ctx, id)
+			if err := e.removeContainer(ctx, id); err != nil {
+				e.BuildLogger.WithFields(logrus.Fields{"error": err}).Errorln("Failed to remove container", id)
+			}
 			wg.Done()
 		}()
 	}
