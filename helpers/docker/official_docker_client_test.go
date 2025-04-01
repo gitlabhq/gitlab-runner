@@ -228,7 +228,7 @@ func TestClientConfiguration(t *testing.T) {
 			assert.Equal(t, scheme+"://example.org", client.client.DaemonHost())
 
 			//nolint:staticcheck
-			require.NotNil(t, transport.Dial)
+			require.NotNil(t, transport.DialContext)
 			if scheme == "http" {
 				//nolint:staticcheck
 				_, err = transport.Dial("", "")

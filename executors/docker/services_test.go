@@ -98,12 +98,12 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Return(nil).
 		Once()
 
-	networkContainersMap := map[string]types.EndpointResource{
+	networkContainersMap := map[string]network.EndpointResource{
 		"1": {Name: realServiceContainerName},
 	}
 
-	c.On("NetworkList", e.Context, types.NetworkListOptions{}).
-		Return([]types.NetworkResource{{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
+	c.On("NetworkList", e.Context, network.ListOptions{}).
+		Return([]network.Summary{{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
 		Once()
 
 	c.On("NetworkDisconnect", e.Context, networkID, containerNameMatcher, true).
@@ -350,7 +350,7 @@ func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolic
 	c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Once()
 	c.On("NetworkList", mock.Anything, mock.Anything).
-		Return([]types.NetworkResource{}, nil).Once()
+		Return([]network.Summary{}, nil).Once()
 	c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).

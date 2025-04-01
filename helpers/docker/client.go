@@ -26,7 +26,7 @@ type Client interface {
 		ref string,
 		options image.ImportOptions,
 	) error
-	ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error)
+	ImageLoad(ctx context.Context, input io.Reader, quiet bool) (image.LoadResponse, error)
 	ImageTag(ctx context.Context, source string, target string) error
 
 	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
@@ -53,18 +53,18 @@ type Client interface {
 		condition container.WaitCondition,
 	) (<-chan container.WaitResponse, <-chan error)
 	ContainerLogs(ctx context.Context, container string, options container.LogsOptions) (io.ReadCloser, error)
-	ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error)
-	ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error)
+	ContainerExecCreate(ctx context.Context, container string, config container.ExecOptions) (types.IDResponse, error)
+	ContainerExecAttach(ctx context.Context, execID string, config container.ExecStartOptions) (types.HijackedResponse, error)
 
 	NetworkCreate(
 		ctx context.Context,
 		networkName string,
-		options types.NetworkCreate,
+		options network.CreateOptions,
 	) (network.CreateResponse, error)
 	NetworkRemove(ctx context.Context, networkID string) error
 	NetworkDisconnect(ctx context.Context, networkID, containerID string, force bool) error
-	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)
-	NetworkInspect(ctx context.Context, networkID string) (types.NetworkResource, error)
+	NetworkList(ctx context.Context, options network.ListOptions) ([]network.Summary, error)
+	NetworkInspect(ctx context.Context, networkID string) (network.Inspect, error)
 
 	VolumeCreate(ctx context.Context, options volume.CreateOptions) (volume.Volume, error)
 	VolumeRemove(ctx context.Context, volumeID string, force bool) error

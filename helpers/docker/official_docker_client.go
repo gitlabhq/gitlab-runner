@@ -203,7 +203,7 @@ func (c *officialDockerClient) ContainerLogs(
 func (c *officialDockerClient) ContainerExecCreate(
 	ctx context.Context,
 	container string,
-	config types.ExecConfig,
+	config container.ExecOptions,
 ) (types.IDResponse, error) {
 	started := time.Now()
 	resp, err := c.client.ContainerExecCreate(ctx, container, config)
@@ -213,7 +213,7 @@ func (c *officialDockerClient) ContainerExecCreate(
 func (c *officialDockerClient) ContainerExecAttach(
 	ctx context.Context,
 	execID string,
-	config types.ExecStartCheck,
+	config container.ExecStartOptions,
 ) (types.HijackedResponse, error) {
 	started := time.Now()
 	resp, err := c.client.ContainerExecAttach(ctx, execID, config)
@@ -223,7 +223,7 @@ func (c *officialDockerClient) ContainerExecAttach(
 func (c *officialDockerClient) NetworkCreate(
 	ctx context.Context,
 	networkName string,
-	options types.NetworkCreate,
+	options network.CreateOptions,
 ) (network.CreateResponse, error) {
 	started := time.Now()
 	response, err := c.client.NetworkCreate(ctx, networkName, options)
@@ -244,16 +244,16 @@ func (c *officialDockerClient) NetworkDisconnect(ctx context.Context, networkID,
 
 func (c *officialDockerClient) NetworkList(
 	ctx context.Context,
-	options types.NetworkListOptions,
-) ([]types.NetworkResource, error) {
+	options network.ListOptions,
+) ([]network.Summary, error) {
 	started := time.Now()
 	networks, err := c.client.NetworkList(ctx, options)
 	return networks, wrapError("NetworkList", err, started)
 }
 
-func (c *officialDockerClient) NetworkInspect(ctx context.Context, networkID string) (types.NetworkResource, error) {
+func (c *officialDockerClient) NetworkInspect(ctx context.Context, networkID string) (network.Inspect, error) {
 	started := time.Now()
-	resource, err := c.client.NetworkInspect(ctx, networkID, types.NetworkInspectOptions{})
+	resource, err := c.client.NetworkInspect(ctx, networkID, network.InspectOptions{})
 	return resource, wrapError("NetworkInspect", err, started)
 }
 
@@ -284,7 +284,7 @@ func (c *officialDockerClient) Info(ctx context.Context) (system.Info, error) {
 	return info, wrapError("Info", err, started)
 }
 
-func (c *officialDockerClient) ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error) {
+func (c *officialDockerClient) ImageLoad(ctx context.Context, input io.Reader, quiet bool) (image.LoadResponse, error) {
 	started := time.Now()
 	resp, err := c.client.ImageLoad(ctx, input, quiet)
 	return resp, wrapError("ImageLoad", err, started)

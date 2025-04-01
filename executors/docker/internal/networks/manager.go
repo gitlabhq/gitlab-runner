@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	network "github.com/docker/docker/api/types/network"
 
@@ -20,7 +19,7 @@ var errBuildNetworkExists = errors.New("build network is not empty")
 
 type Manager interface {
 	Create(ctx context.Context, networkMode string, enableIPv6 bool) (container.NetworkMode, error)
-	Inspect(ctx context.Context) (types.NetworkResource, error)
+	Inspect(ctx context.Context) (network.Inspect, error)
 	Cleanup(ctx context.Context) error
 }
 
@@ -31,7 +30,7 @@ type manager struct {
 	labeler labels.Labeler
 
 	networkMode  container.NetworkMode
-	buildNetwork types.NetworkResource
+	buildNetwork network.Inspect
 	perBuild     bool
 }
 
@@ -98,9 +97,9 @@ func networkOptionsFromConfig(config *common.DockerConfig) map[string]string {
 	return networkOptions
 }
 
-func (m *manager) Inspect(ctx context.Context) (types.NetworkResource, error) {
+func (m *manager) Inspect(ctx context.Context) (network.Inspect, error) {
 	if !m.perBuild {
-		return types.NetworkResource{}, nil
+		return network.Inspect{}, nil
 	}
 
 	m.logger.Debugln("Inspect docker network: ", m.buildNetwork.ID)
