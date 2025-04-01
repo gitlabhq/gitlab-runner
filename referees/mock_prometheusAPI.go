@@ -403,9 +403,16 @@ func (_c *mockPrometheusAPI_Flags_Call) RunAndReturn(run func(context.Context) (
 	return _c
 }
 
-// LabelNames provides a mock function with given fields: ctx, matches, startTime, endTime
-func (_m *mockPrometheusAPI) LabelNames(ctx context.Context, matches []string, startTime time.Time, endTime time.Time) ([]string, v1.Warnings, error) {
-	ret := _m.Called(ctx, matches, startTime, endTime)
+// LabelNames provides a mock function with given fields: ctx, matches, startTime, endTime, opts
+func (_m *mockPrometheusAPI) LabelNames(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, opts ...v1.Option) ([]string, v1.Warnings, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, matches, startTime, endTime)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LabelNames")
@@ -414,27 +421,27 @@ func (_m *mockPrometheusAPI) LabelNames(ctx context.Context, matches []string, s
 	var r0 []string
 	var r1 v1.Warnings
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time) ([]string, v1.Warnings, error)); ok {
-		return rf(ctx, matches, startTime, endTime)
+	if rf, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) ([]string, v1.Warnings, error)); ok {
+		return rf(ctx, matches, startTime, endTime, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time) []string); ok {
-		r0 = rf(ctx, matches, startTime, endTime)
+	if rf, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) []string); ok {
+		r0 = rf(ctx, matches, startTime, endTime, opts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, []string, time.Time, time.Time) v1.Warnings); ok {
-		r1 = rf(ctx, matches, startTime, endTime)
+	if rf, ok := ret.Get(1).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) v1.Warnings); ok {
+		r1 = rf(ctx, matches, startTime, endTime, opts...)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(v1.Warnings)
 		}
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, []string, time.Time, time.Time) error); ok {
-		r2 = rf(ctx, matches, startTime, endTime)
+	if rf, ok := ret.Get(2).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) error); ok {
+		r2 = rf(ctx, matches, startTime, endTime, opts...)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -452,13 +459,21 @@ type mockPrometheusAPI_LabelNames_Call struct {
 //   - matches []string
 //   - startTime time.Time
 //   - endTime time.Time
-func (_e *mockPrometheusAPI_Expecter) LabelNames(ctx interface{}, matches interface{}, startTime interface{}, endTime interface{}) *mockPrometheusAPI_LabelNames_Call {
-	return &mockPrometheusAPI_LabelNames_Call{Call: _e.mock.On("LabelNames", ctx, matches, startTime, endTime)}
+//   - opts ...v1.Option
+func (_e *mockPrometheusAPI_Expecter) LabelNames(ctx interface{}, matches interface{}, startTime interface{}, endTime interface{}, opts ...interface{}) *mockPrometheusAPI_LabelNames_Call {
+	return &mockPrometheusAPI_LabelNames_Call{Call: _e.mock.On("LabelNames",
+		append([]interface{}{ctx, matches, startTime, endTime}, opts...)...)}
 }
 
-func (_c *mockPrometheusAPI_LabelNames_Call) Run(run func(ctx context.Context, matches []string, startTime time.Time, endTime time.Time)) *mockPrometheusAPI_LabelNames_Call {
+func (_c *mockPrometheusAPI_LabelNames_Call) Run(run func(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, opts ...v1.Option)) *mockPrometheusAPI_LabelNames_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].([]string), args[2].(time.Time), args[3].(time.Time))
+		variadicArgs := make([]v1.Option, len(args)-4)
+		for i, a := range args[4:] {
+			if a != nil {
+				variadicArgs[i] = a.(v1.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].([]string), args[2].(time.Time), args[3].(time.Time), variadicArgs...)
 	})
 	return _c
 }
@@ -468,14 +483,21 @@ func (_c *mockPrometheusAPI_LabelNames_Call) Return(_a0 []string, _a1 v1.Warning
 	return _c
 }
 
-func (_c *mockPrometheusAPI_LabelNames_Call) RunAndReturn(run func(context.Context, []string, time.Time, time.Time) ([]string, v1.Warnings, error)) *mockPrometheusAPI_LabelNames_Call {
+func (_c *mockPrometheusAPI_LabelNames_Call) RunAndReturn(run func(context.Context, []string, time.Time, time.Time, ...v1.Option) ([]string, v1.Warnings, error)) *mockPrometheusAPI_LabelNames_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// LabelValues provides a mock function with given fields: ctx, label, matches, startTime, endTime
-func (_m *mockPrometheusAPI) LabelValues(ctx context.Context, label string, matches []string, startTime time.Time, endTime time.Time) (model.LabelValues, v1.Warnings, error) {
-	ret := _m.Called(ctx, label, matches, startTime, endTime)
+// LabelValues provides a mock function with given fields: ctx, label, matches, startTime, endTime, opts
+func (_m *mockPrometheusAPI) LabelValues(ctx context.Context, label string, matches []string, startTime time.Time, endTime time.Time, opts ...v1.Option) (model.LabelValues, v1.Warnings, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, label, matches, startTime, endTime)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LabelValues")
@@ -484,27 +506,27 @@ func (_m *mockPrometheusAPI) LabelValues(ctx context.Context, label string, matc
 	var r0 model.LabelValues
 	var r1 v1.Warnings
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, []string, time.Time, time.Time) (model.LabelValues, v1.Warnings, error)); ok {
-		return rf(ctx, label, matches, startTime, endTime)
+	if rf, ok := ret.Get(0).(func(context.Context, string, []string, time.Time, time.Time, ...v1.Option) (model.LabelValues, v1.Warnings, error)); ok {
+		return rf(ctx, label, matches, startTime, endTime, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, []string, time.Time, time.Time) model.LabelValues); ok {
-		r0 = rf(ctx, label, matches, startTime, endTime)
+	if rf, ok := ret.Get(0).(func(context.Context, string, []string, time.Time, time.Time, ...v1.Option) model.LabelValues); ok {
+		r0 = rf(ctx, label, matches, startTime, endTime, opts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(model.LabelValues)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, []string, time.Time, time.Time) v1.Warnings); ok {
-		r1 = rf(ctx, label, matches, startTime, endTime)
+	if rf, ok := ret.Get(1).(func(context.Context, string, []string, time.Time, time.Time, ...v1.Option) v1.Warnings); ok {
+		r1 = rf(ctx, label, matches, startTime, endTime, opts...)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(v1.Warnings)
 		}
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, string, []string, time.Time, time.Time) error); ok {
-		r2 = rf(ctx, label, matches, startTime, endTime)
+	if rf, ok := ret.Get(2).(func(context.Context, string, []string, time.Time, time.Time, ...v1.Option) error); ok {
+		r2 = rf(ctx, label, matches, startTime, endTime, opts...)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -523,13 +545,21 @@ type mockPrometheusAPI_LabelValues_Call struct {
 //   - matches []string
 //   - startTime time.Time
 //   - endTime time.Time
-func (_e *mockPrometheusAPI_Expecter) LabelValues(ctx interface{}, label interface{}, matches interface{}, startTime interface{}, endTime interface{}) *mockPrometheusAPI_LabelValues_Call {
-	return &mockPrometheusAPI_LabelValues_Call{Call: _e.mock.On("LabelValues", ctx, label, matches, startTime, endTime)}
+//   - opts ...v1.Option
+func (_e *mockPrometheusAPI_Expecter) LabelValues(ctx interface{}, label interface{}, matches interface{}, startTime interface{}, endTime interface{}, opts ...interface{}) *mockPrometheusAPI_LabelValues_Call {
+	return &mockPrometheusAPI_LabelValues_Call{Call: _e.mock.On("LabelValues",
+		append([]interface{}{ctx, label, matches, startTime, endTime}, opts...)...)}
 }
 
-func (_c *mockPrometheusAPI_LabelValues_Call) Run(run func(ctx context.Context, label string, matches []string, startTime time.Time, endTime time.Time)) *mockPrometheusAPI_LabelValues_Call {
+func (_c *mockPrometheusAPI_LabelValues_Call) Run(run func(ctx context.Context, label string, matches []string, startTime time.Time, endTime time.Time, opts ...v1.Option)) *mockPrometheusAPI_LabelValues_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].([]string), args[3].(time.Time), args[4].(time.Time))
+		variadicArgs := make([]v1.Option, len(args)-5)
+		for i, a := range args[5:] {
+			if a != nil {
+				variadicArgs[i] = a.(v1.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(string), args[2].([]string), args[3].(time.Time), args[4].(time.Time), variadicArgs...)
 	})
 	return _c
 }
@@ -539,7 +569,7 @@ func (_c *mockPrometheusAPI_LabelValues_Call) Return(_a0 model.LabelValues, _a1 
 	return _c
 }
 
-func (_c *mockPrometheusAPI_LabelValues_Call) RunAndReturn(run func(context.Context, string, []string, time.Time, time.Time) (model.LabelValues, v1.Warnings, error)) *mockPrometheusAPI_LabelValues_Call {
+func (_c *mockPrometheusAPI_LabelValues_Call) RunAndReturn(run func(context.Context, string, []string, time.Time, time.Time, ...v1.Option) (model.LabelValues, v1.Warnings, error)) *mockPrometheusAPI_LabelValues_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -945,9 +975,16 @@ func (_c *mockPrometheusAPI_Runtimeinfo_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
-// Series provides a mock function with given fields: ctx, matches, startTime, endTime
-func (_m *mockPrometheusAPI) Series(ctx context.Context, matches []string, startTime time.Time, endTime time.Time) ([]model.LabelSet, v1.Warnings, error) {
-	ret := _m.Called(ctx, matches, startTime, endTime)
+// Series provides a mock function with given fields: ctx, matches, startTime, endTime, opts
+func (_m *mockPrometheusAPI) Series(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, opts ...v1.Option) ([]model.LabelSet, v1.Warnings, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, matches, startTime, endTime)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Series")
@@ -956,27 +993,27 @@ func (_m *mockPrometheusAPI) Series(ctx context.Context, matches []string, start
 	var r0 []model.LabelSet
 	var r1 v1.Warnings
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time) ([]model.LabelSet, v1.Warnings, error)); ok {
-		return rf(ctx, matches, startTime, endTime)
+	if rf, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) ([]model.LabelSet, v1.Warnings, error)); ok {
+		return rf(ctx, matches, startTime, endTime, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time) []model.LabelSet); ok {
-		r0 = rf(ctx, matches, startTime, endTime)
+	if rf, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) []model.LabelSet); ok {
+		r0 = rf(ctx, matches, startTime, endTime, opts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]model.LabelSet)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, []string, time.Time, time.Time) v1.Warnings); ok {
-		r1 = rf(ctx, matches, startTime, endTime)
+	if rf, ok := ret.Get(1).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) v1.Warnings); ok {
+		r1 = rf(ctx, matches, startTime, endTime, opts...)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(v1.Warnings)
 		}
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, []string, time.Time, time.Time) error); ok {
-		r2 = rf(ctx, matches, startTime, endTime)
+	if rf, ok := ret.Get(2).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) error); ok {
+		r2 = rf(ctx, matches, startTime, endTime, opts...)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -994,13 +1031,21 @@ type mockPrometheusAPI_Series_Call struct {
 //   - matches []string
 //   - startTime time.Time
 //   - endTime time.Time
-func (_e *mockPrometheusAPI_Expecter) Series(ctx interface{}, matches interface{}, startTime interface{}, endTime interface{}) *mockPrometheusAPI_Series_Call {
-	return &mockPrometheusAPI_Series_Call{Call: _e.mock.On("Series", ctx, matches, startTime, endTime)}
+//   - opts ...v1.Option
+func (_e *mockPrometheusAPI_Expecter) Series(ctx interface{}, matches interface{}, startTime interface{}, endTime interface{}, opts ...interface{}) *mockPrometheusAPI_Series_Call {
+	return &mockPrometheusAPI_Series_Call{Call: _e.mock.On("Series",
+		append([]interface{}{ctx, matches, startTime, endTime}, opts...)...)}
 }
 
-func (_c *mockPrometheusAPI_Series_Call) Run(run func(ctx context.Context, matches []string, startTime time.Time, endTime time.Time)) *mockPrometheusAPI_Series_Call {
+func (_c *mockPrometheusAPI_Series_Call) Run(run func(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, opts ...v1.Option)) *mockPrometheusAPI_Series_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].([]string), args[2].(time.Time), args[3].(time.Time))
+		variadicArgs := make([]v1.Option, len(args)-4)
+		for i, a := range args[4:] {
+			if a != nil {
+				variadicArgs[i] = a.(v1.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].([]string), args[2].(time.Time), args[3].(time.Time), variadicArgs...)
 	})
 	return _c
 }
@@ -1010,7 +1055,7 @@ func (_c *mockPrometheusAPI_Series_Call) Return(_a0 []model.LabelSet, _a1 v1.War
 	return _c
 }
 
-func (_c *mockPrometheusAPI_Series_Call) RunAndReturn(run func(context.Context, []string, time.Time, time.Time) ([]model.LabelSet, v1.Warnings, error)) *mockPrometheusAPI_Series_Call {
+func (_c *mockPrometheusAPI_Series_Call) RunAndReturn(run func(context.Context, []string, time.Time, time.Time, ...v1.Option) ([]model.LabelSet, v1.Warnings, error)) *mockPrometheusAPI_Series_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1072,9 +1117,16 @@ func (_c *mockPrometheusAPI_Snapshot_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
-// TSDB provides a mock function with given fields: ctx
-func (_m *mockPrometheusAPI) TSDB(ctx context.Context) (v1.TSDBResult, error) {
-	ret := _m.Called(ctx)
+// TSDB provides a mock function with given fields: ctx, opts
+func (_m *mockPrometheusAPI) TSDB(ctx context.Context, opts ...v1.Option) (v1.TSDBResult, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	if len(ret) == 0 {
 		panic("no return value specified for TSDB")
@@ -1082,17 +1134,17 @@ func (_m *mockPrometheusAPI) TSDB(ctx context.Context) (v1.TSDBResult, error) {
 
 	var r0 v1.TSDBResult
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (v1.TSDBResult, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, ...v1.Option) (v1.TSDBResult, error)); ok {
+		return rf(ctx, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) v1.TSDBResult); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, ...v1.Option) v1.TSDBResult); ok {
+		r0 = rf(ctx, opts...)
 	} else {
 		r0 = ret.Get(0).(v1.TSDBResult)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, ...v1.Option) error); ok {
+		r1 = rf(ctx, opts...)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1107,13 +1159,21 @@ type mockPrometheusAPI_TSDB_Call struct {
 
 // TSDB is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *mockPrometheusAPI_Expecter) TSDB(ctx interface{}) *mockPrometheusAPI_TSDB_Call {
-	return &mockPrometheusAPI_TSDB_Call{Call: _e.mock.On("TSDB", ctx)}
+//   - opts ...v1.Option
+func (_e *mockPrometheusAPI_Expecter) TSDB(ctx interface{}, opts ...interface{}) *mockPrometheusAPI_TSDB_Call {
+	return &mockPrometheusAPI_TSDB_Call{Call: _e.mock.On("TSDB",
+		append([]interface{}{ctx}, opts...)...)}
 }
 
-func (_c *mockPrometheusAPI_TSDB_Call) Run(run func(ctx context.Context)) *mockPrometheusAPI_TSDB_Call {
+func (_c *mockPrometheusAPI_TSDB_Call) Run(run func(ctx context.Context, opts ...v1.Option)) *mockPrometheusAPI_TSDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		variadicArgs := make([]v1.Option, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(v1.Option)
+			}
+		}
+		run(args[0].(context.Context), variadicArgs...)
 	})
 	return _c
 }
@@ -1123,7 +1183,7 @@ func (_c *mockPrometheusAPI_TSDB_Call) Return(_a0 v1.TSDBResult, _a1 error) *moc
 	return _c
 }
 
-func (_c *mockPrometheusAPI_TSDB_Call) RunAndReturn(run func(context.Context) (v1.TSDBResult, error)) *mockPrometheusAPI_TSDB_Call {
+func (_c *mockPrometheusAPI_TSDB_Call) RunAndReturn(run func(context.Context, ...v1.Option) (v1.TSDBResult, error)) *mockPrometheusAPI_TSDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
