@@ -263,7 +263,7 @@ func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
 
 	b.jobDurationHistogram.
 		WithLabelValues(deleteBuild.Runner.ShortDescription(), deleteBuild.Runner.SystemIDState.GetSystemID()).
-		Observe(deleteBuild.Duration().Seconds())
+		Observe(deleteBuild.FinalDuration().Seconds())
 
 	for idx, build := range b.builds {
 		if build == deleteBuild {
@@ -437,7 +437,7 @@ func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
 			job.CurrentState(),
 			job.CurrentStage(),
 			job.CurrentExecutorStage(),
-			job.Duration(),
+			job.CurrentDuration(),
 		)
 	}
 }

@@ -3140,3 +3140,45 @@ func TestBuildStageMetricsFailBuild(t *testing.T) {
 
 	assert.Len(t, stagesMap, 0)
 }
+
+func TestBuildDurationsAndBoundaryTimes(t *testing.T) {
+	rc := new(RunnerConfig)
+	rc.RunnerSettings.Executor = t.Name()
+
+	build, err := NewBuild(JobResponse{}, rc, nil, nil)
+	require.NoError(t, err)
+
+	startedAt1 := build.StartedAt()
+
+	assert.False(t, startedAt1.IsZero(), "StartedAt should not be a zero-time")
+	assert.True(t, build.FinishedAt().IsZero(), "FinishedAt should be a zero-time")
+
+	time.Sleep(10 * time.Millisecond)
+	currentDuration1 := build.CurrentDuration()
+	assert.True(t, currentDuration1 >= 10*time.Millisecond, "Current job duration should be greater tha 10ms")
+
+	time.Sleep(10 * time.Millisecond)
+	currentDuration2 := build.CurrentDuration()
+	assert.True(t, currentDuration2 >= 20*time.Millisecond, "Current job duration should be greater tha 20ms")
+	assert.NotEqual(t, currentDuration1, currentDuration2, "Subsequent CurrentDuration() values shouldn't be equal")
+
+	time.Sleep(10 * time.Millisecond)
+	assert.Equal(t, time.Duration(-1), build.FinalDuration(), "If ensureFinishedAt() wasn't called, final duration should be equal to -1")
+
+	// Mark the job as finished!
+	build.ensureFinishedAt()
+
+	finalDuration1 := build.FinalDuration()
+	finishedAt1 := build.FinishedAt()
+	assert.True(t, finalDuration1 >= 30*time.Millisecond, "Final duration should be greater than 30ms")
+	assert.False(t, finishedAt1.IsZero(), "FinishedAt should not be a zero-time")
+
+	time.Sleep(10 * time.Millisecond)
+	startedAt2 := build.StartedAt()
+	finishedAt2 := build.FinishedAt()
+	finalDuration2 := build.FinalDuration()
+
+	assert.Equal(t, finalDuration1, finalDuration2, "Subsequent FinalDuration() values should be equal")
+	assert.Equal(t, finishedAt1, finishedAt2, "FinishedAt() should not change")
+	assert.Equal(t, startedAt1, startedAt2, "StartedAt() should not change")
+}
