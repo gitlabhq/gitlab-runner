@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/stretchr/testify/assert"
@@ -45,7 +45,7 @@ func TestEventStreamError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err := client.ImagePullBlocking(ctx, "test", types.ImagePullOptions{})
+	err := client.ImagePullBlocking(ctx, "test", image.PullOptions{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "stream error")
 	assert.ErrorAs(t, new(jsonmessage.JSONError), &err)

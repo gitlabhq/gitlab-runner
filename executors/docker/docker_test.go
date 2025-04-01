@@ -17,6 +17,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
@@ -2034,7 +2035,7 @@ func TestLocalHelperImage(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					helperimage.GitLabRegistryName,
-					types.ImageImportOptions{
+					image.ImportOptions{
 						Tag: "x86_64-latest",
 						Changes: []string{
 							`ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`,
@@ -2108,7 +2109,7 @@ func TestLocalHelperImage(t *testing.T) {
 				c.On(
 					"ImageImportBlocking",
 					mock.Anything,
-					mock.MatchedBy(func(source types.ImageImportSource) bool {
+					mock.MatchedBy(func(source image.ImportSource) bool {
 						return assert.IsType(t, new(os.File), source.Source) &&
 							assert.Equal(
 								t,
@@ -2149,7 +2150,7 @@ func TestLocalHelperImage(t *testing.T) {
 				c.On(
 					"ImageImportBlocking",
 					mock.Anything,
-					mock.MatchedBy(func(source types.ImageImportSource) bool {
+					mock.MatchedBy(func(source image.ImportSource) bool {
 						return assert.IsType(t, new(os.File), source.Source) &&
 							assert.Equal(
 								t,

@@ -8,6 +8,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	network "github.com/docker/docker/api/types/network"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
@@ -66,9 +67,9 @@ func (m *manager) Create(ctx context.Context, networkMode string, enableIPv6 boo
 	networkResponse, err := m.client.NetworkCreate(
 		ctx,
 		networkName,
-		types.NetworkCreate{
+		network.CreateOptions{
 			Labels:     m.labeler.Labels(map[string]string{}),
-			EnableIPv6: enableIPv6,
+			EnableIPv6: &enableIPv6,
 			Options:    networkOptionsFromConfig(m.build.Runner.Docker),
 		},
 	)

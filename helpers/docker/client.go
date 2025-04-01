@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	system "github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
@@ -18,12 +19,12 @@ type Client interface {
 
 	ImageInspectWithRaw(ctx context.Context, imageID string) (types.ImageInspect, []byte, error)
 
-	ImagePullBlocking(ctx context.Context, ref string, options types.ImagePullOptions) error
+	ImagePullBlocking(ctx context.Context, ref string, options image.PullOptions) error
 	ImageImportBlocking(
 		ctx context.Context,
-		source types.ImageImportSource,
+		source image.ImportSource,
 		ref string,
-		options types.ImageImportOptions,
+		options image.ImportOptions,
 	) error
 	ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error)
 	ImageTag(ctx context.Context, source string, target string) error
@@ -59,7 +60,7 @@ type Client interface {
 		ctx context.Context,
 		networkName string,
 		options types.NetworkCreate,
-	) (types.NetworkCreateResponse, error)
+	) (network.CreateResponse, error)
 	NetworkRemove(ctx context.Context, networkID string) error
 	NetworkDisconnect(ctx context.Context, networkID, containerID string, force bool) error
 	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)

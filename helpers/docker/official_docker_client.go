@@ -12,6 +12,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	system "github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
@@ -223,7 +224,7 @@ func (c *officialDockerClient) NetworkCreate(
 	ctx context.Context,
 	networkName string,
 	options types.NetworkCreate,
-) (types.NetworkCreateResponse, error) {
+) (network.CreateResponse, error) {
 	started := time.Now()
 	response, err := c.client.NetworkCreate(ctx, networkName, options)
 	return response, wrapError("NetworkCreate", err, started)
@@ -296,9 +297,9 @@ func (c *officialDockerClient) ImageTag(ctx context.Context, source string, targ
 
 func (c *officialDockerClient) ImageImportBlocking(
 	ctx context.Context,
-	source types.ImageImportSource,
+	source image.ImportSource,
 	ref string,
-	options types.ImageImportOptions,
+	options image.ImportOptions,
 ) error {
 	started := time.Now()
 	rc, err := c.client.ImageImport(ctx, source, ref, options)
@@ -312,7 +313,7 @@ func (c *officialDockerClient) ImageImportBlocking(
 func (c *officialDockerClient) ImagePullBlocking(
 	ctx context.Context,
 	ref string,
-	options types.ImagePullOptions,
+	options image.PullOptions,
 ) error {
 	started := time.Now()
 	rc, err := c.client.ImagePull(ctx, ref, options)
