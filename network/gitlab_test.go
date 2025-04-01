@@ -113,8 +113,8 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 	res := make(map[string]interface{})
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
-	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
+	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validToken:
@@ -368,8 +368,8 @@ func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 	assert.NoError(t, err)
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
-	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
+	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validGlrtToken, validToken:
@@ -400,8 +400,8 @@ func testUnregisterRunnerManagerHandler(w http.ResponseWriter, r *http.Request, 
 	assert.NoError(t, err)
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
-	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
+	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validGlrtToken:
@@ -527,8 +527,8 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, legacyServe
 	res := make(map[string]interface{})
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
-	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
+	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validToken:
@@ -1036,8 +1036,8 @@ func testRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request,
 	assert.NoError(t, err)
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
-	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
+	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validToken:
@@ -1310,8 +1310,8 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	assert.NoError(t, err)
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
-	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+	require.NotEmpty(t, r.Header.Get(JobToken), "job-token header is required")
+	require.Equal(t, token, r.Header.Get("job-token"), "token in header and body must match")
 
 	assert.Equal(t, "token", token)
 
@@ -1582,7 +1582,7 @@ func getPatchServer(
 			return
 		}
 
-		assert.Equal(t, patchToken, r.Header.Get("JOB-TOKEN"))
+		assert.Equal(t, patchToken, r.Header.Get(JobToken))
 
 		body, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
@@ -2323,13 +2323,13 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 		return
 	}
 
-	if r.Header.Get("JOB-TOKEN") == "redirect" {
+	if r.Header.Get(JobToken) == "redirect" {
 		w.Header().Set("Location", "new-location")
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		return
 	}
 
-	if r.Header.Get("JOB-TOKEN") != "token" {
+	if r.Header.Get(JobToken) != "token" {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -2665,7 +2665,7 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := r.Header.Get("JOB-TOKEN")
+	token := r.Header.Get(JobToken)
 	if token == "invalid-token" {
 		w.WriteHeader(http.StatusForbidden)
 		return

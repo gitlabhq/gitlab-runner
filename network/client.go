@@ -387,11 +387,11 @@ func (e *ErrorResponseMessage) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (n *client) doJSONWithPAT(
+func (n *client) doJSON(
 	ctx context.Context,
 	uri, method string,
 	statusCode int,
-	pat string,
+	headers http.Header,
 	request interface{},
 	response interface{},
 ) (int, string, *http.Response) {
@@ -405,12 +405,11 @@ func (n *client) doJSONWithPAT(
 		bytesProvider = common.BytesProvider{Data: requestBody}
 	}
 
-	headers := make(http.Header)
+	if headers == nil {
+		headers = http.Header{}
+	}
 	if response != nil {
 		headers.Set(common.Accept, jsonMimeType)
-	}
-	if pat != "" {
-		headers.Set(common.PrivateToken, pat)
 	}
 
 	res, err := n.do(ctx, uri, method, bytesProvider, jsonMimeType, headers)

@@ -192,4 +192,6 @@ const (
 	XRatelimitReset        = headers.XRatelimitReset
 
 	PrivateToken = "PRIVATE-TOKEN"
+	JobToken     = "JOB-TOKEN"
+	RunnerToken  = "RUNNER-TOKEN"
 )
