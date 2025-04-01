@@ -55,7 +55,7 @@ func (td *tunnelingDialer) Dial() (*grpc.ClientConn, error) {
 		return proxyConn(ctx, dialerFactory)
 	}
 
-	conn, err := grpc.NewClient("unix:"+api.ListenSocketPath(),
+	conn, err := grpc.NewClient("unix:"+api.DefaultSocketPath(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(ctxDialer))
 	if err != nil {
