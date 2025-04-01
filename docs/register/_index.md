@@ -222,7 +222,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 The ability to pass a runner registration token and support for certain configuration arguments was
 [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872) in GitLab 15.6. They are scheduled for removal
-in GitLab 18.0. Use runner authentication tokens instead. For more information, see
+in GitLab 20.0. Use runner authentication tokens instead. For more information, see
 [Migrating to the new runner registration workflow](https://docs.gitlab.com/ci/runners/new_creation_workflow/).
 
 {{< /alert >}}
@@ -437,7 +437,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 {{< /history >}}
 
 Runner registration tokens and several runner configuration arguments were [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379743)
-in GitLab 15.6. They are scheduled for removal in GitLab 18.0.
+in GitLab 15.6. They are scheduled for removal in GitLab 20.0.
 To ensure minimal disruption to your automation workflow,
 the `legacy-compatible registration process` triggers if a runner authentication token is specified in the legacy parameter `--registration-token`.
 
