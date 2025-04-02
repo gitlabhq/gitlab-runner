@@ -861,7 +861,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	executorData, err := provider.Acquire(runner)
 	if err != nil {
 		// Release job request
-		mr.buildsHelper.releaseRequest(runner)
+		mr.buildsHelper.releaseRequest(runner, false)
 
 		return fmt.Errorf("failed to update executor: %w", err)
 	}
@@ -879,14 +879,14 @@ func (mr *RunCommand) processBuildOnRunner(
 	buildSession, sessionInfo, err := mr.createSession(provider)
 	if err != nil {
 		// Release job request
-		mr.buildsHelper.releaseRequest(runner)
+		mr.buildsHelper.releaseRequest(runner, false)
 		return err
 	}
 
 	// Receive a new build
 	trace, jobData, err := mr.requestJob(runner, sessionInfo)
 	// Release job request
-	mr.buildsHelper.releaseRequest(runner)
+	mr.buildsHelper.releaseRequest(runner, jobData != nil)
 	if err != nil || jobData == nil {
 		return err
 	}
