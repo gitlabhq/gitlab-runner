@@ -23,33 +23,6 @@ the following container orchestration solutions for hosting and scaling a runner
 - Kubernetes clusters: AWS EKS, Azure, on-premise
 - Amazon Elastic Container Services clusters on AWS Fargate
 
-## GitLab Runner Autoscaler
-
-GitLab Runner Autoscaler is the successor to the autoscaling technology based on Docker Machine. The components of the GitLab Runner Autoscaler are:
-
-- Taskscaler: Manages the autoscaling logic, bookkeeping, and creates fleets for runner instances that use cloud provider autoscaling groups of instances.
-- Fleeting: An abstraction for cloud provider virtual machines.
-- Cloud provider plugin: Handles the API calls to the target cloud platform and is implemented using a plugin development framework.
-
-![Overview of GitLab Next Runner Autoscaling](img/next-runner-autoscaling-overview.png)
-
-### GitLab Runner Autoscaler supported public cloud instances
-
-The following autoscaling options are supported for public cloud compute instances.
-
-|                   | Next Runner Autoscaler                 | GitLab Runner Docker Machine Autoscaler                |
-|----------------------------|------------------------|------------------------|
-| Amazon Web Services EC2 instances         | {{< icon name="check-circle" >}} Yes | {{< icon name="check-circle" >}} Yes |
-| Google Compute Engine | {{< icon name="check-circle" >}} Yes | {{< icon name="check-circle" >}} Yes |
-|Microsoft Azure Virtual Machines|{{< icon name="check-circle" >}} Yes|{{< icon name="check-circle" >}} Yes|
-
-### GitLab Runner Autoscaler supported platforms
-
-| Executor                   | Linux                  | macOS                  | Windows                |
-|----------------------------|------------------------|------------------------|------------------------|
-| Instance executor          | {{< icon name="check-circle" >}} Yes | {{< icon name="check-circle" >}} Yes | {{< icon name="check-circle" >}} Yes |
-| Docker Autoscaler executor | {{< icon name="check-circle" >}} Yes | {{< icon name="dotted-circle" >}} No | {{< icon name="check-circle" >}} Yes |
-
 ## Configure the runner manager
 
 You must configure the runner manager to use GitLab Runner Autoscaling, both the Docker Machine Autoscaling solution and the GitLab Runner Autoscaler.
@@ -72,19 +45,9 @@ For [GitLab-hosted runners](https://docs.gitlab.com/ci/runners/), the runner man
 
 {{< /alert >}}
 
-### Example credentials configuration for the GitLab Runner Autoscaler
-
-``` toml
-## credentials_file
-
-[default]
-aws_access_key_id=__REDACTED__
-aws_secret_access_key=__REDACTED__
-```
-
 ### Example credentials configuration for GitLab Runner Docker Machine Autoscaling
 
-This snippet is in the runners.machine section of the `config.toml` file.
+This snippet is in the `runners.machine` section of the `config.toml` file.
 
 ``` toml
   [runners.machine]

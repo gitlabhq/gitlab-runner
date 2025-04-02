@@ -2,7 +2,7 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-title: Autoscaling GitLab Runner on AWS EC2
+title: Configure runner Docker Machine autoscaling on AWS EC2
 ---
 
 {{< details >}}
