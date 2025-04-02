@@ -1,0 +1,34 @@
+# Rebase branches in $REPO_REBASE_BRANCHES, separated by a comma on top of main
+rebase on main:
+  stage: rebase
+  rules:
+    - if: $REPO_REBASE_BRANCHES != "" && $REPO_REBASE_BRANCHES != null && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
+  allow_failure: true
+  script:
+    - |
+      git config --global user.email "gitlab-runner-ci-rebase@gitlab.com"
+      git config --global user.name "GitLab Runner CI Rebase"
+
+      git fetch origin $CI_DEFAULT_BRANCH
+      git checkout -B $CI_DEFAULT_BRANCH origin/$CI_DEFAULT_BRANCH
+
+      git remote add push-remote https://oauth2:${REPO_REBASE_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
+
+      IFS=',' read -ra BRANCHES <<< "$REPO_REBASE_BRANCHES"
+      for BRANCH in "${BRANCHES[@]}"; do
+        echo "Processing branch: $BRANCH"
+
+        git fetch origin $BRANCH
+
+        git checkout $BRANCH
+
+        if ! git rebase $CI_DEFAULT_BRANCH; then
+          echo "Rebase failed for branch $BRANCH"
+          exit 1
+        fi
+
+        # --force-with-lease doesn't work on shallow clones
+        git push push-remote $BRANCH --force
+
+        git checkout $CI_DEFAULT_BRANCH
+      done

@@ -55,6 +55,9 @@
 .if-runner-or-security-runner-stable-ref: &if-runner-or-security-runner-stable-ref
   if: $CI_COMMIT_REF_NAME =~ /\A[0-9]+-[0-9]+-stable\z/ && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
 
+.if-runner-or-security-runner-feature-ref: &if-runner-or-security-runner-feature-ref
+  if: $CI_COMMIT_REF_NAME =~ /feature\/.+/ && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
+
 .if-runner-release-ref: &if-runner-release-ref
   if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/ && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
 
@@ -94,6 +97,7 @@
     - <<: *if-merge-request-pipeline
     - <<: *if-runner-or-security-runner-default-branch
     - <<: *if-runner-or-security-runner-stable-ref
+    - <<: *if-runner-or-security-runner-feature-ref
     - <<: *if-runner-release-ref
     - <<: *if-security-runner-release-ref
 
@@ -104,6 +108,8 @@
     - <<: *if-runner-or-security-runner-default-branch
       changes: *code-backstage-patterns
     - <<: *if-runner-or-security-runner-stable-ref
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-feature-ref
       changes: *code-backstage-patterns
     - <<: *if-runner-release-ref
       changes: *code-backstage-patterns
@@ -119,6 +125,8 @@
     - <<: *if-runner-or-security-runner-default-branch
       changes: *code-backstage-patterns
     - <<: *if-runner-or-security-runner-stable-ref
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-feature-ref
       changes: *code-backstage-patterns
     - <<: *if-runner-release-ref
       changes: *code-backstage-patterns
@@ -175,6 +183,10 @@
       changes: *code-backstage-patterns
     - <<: *if-runner-bleeding-edge-release-ref
       changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-stable-ref
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-feature-ref
+      changes: *code-backstage-patterns
 
 .rules:release-or-security:bleeding-edge-or-stable:
   rules:
@@ -183,6 +195,8 @@
     - <<: *if-runner-or-security-bleeding-edge-release-ref
       changes: *code-backstage-patterns
     - <<: *if-runner-or-security-runner-stable-ref
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-feature-ref
       changes: *code-backstage-patterns
 
 .rules:release:stable-or-rc:
