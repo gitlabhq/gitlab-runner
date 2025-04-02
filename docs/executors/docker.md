@@ -587,6 +587,9 @@ To manage cache storage efficiently, you should:
 - Maintain some recent containers in the cache for performance while you
 reclaim disk space.
 
+The `FILTER_FLAG` environment variable controls which objects are pruned. For example usage, see the
+[Docker image prune](https://docs.docker.com/reference/cli/docker/image/prune/#filter) documentation.
+
 ## Clear Docker build images
 
 The [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache) script does not remove Docker images because they are not tagged by the GitLab Runner.
