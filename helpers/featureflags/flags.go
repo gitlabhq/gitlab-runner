@@ -375,7 +375,7 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:         UseNativeSteps,
-		DefaultValue: false,
+		DefaultValue: true,
 		Deprecated:   false,
 		Description: "When enabled and when a job is specified using the 'run' keyword, steps are executed using " +
 			"[Native Step Runner Integration](../executors/docker.md#native-step-runner-integration). " +
