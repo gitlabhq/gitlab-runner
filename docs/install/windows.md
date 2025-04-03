@@ -17,7 +17,7 @@ To install and run GitLab Runner on Windows you need:
 - Git, which can be installed from the [official site](https://git-scm.com/download/win)
 - A password for your user account, if you want to run it under your user
   account rather than the Built-in System Account.
-- The system locale set to English (United States) to avoid character encoding issues. 
+- The system locale set to English (United States) to avoid character encoding issues.
   For more information, see [issue 38702](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38702).
 
 ## Installation
@@ -163,6 +163,26 @@ following solutions.
   The [NTFSSecurity](https://github.com/raandree/NTFSSecurity) PowerShell module provides
   a "Remove-Item2" method which supports long paths. GitLab Runner
   detects it if it is available and automatically make use of it.
+
+> A regression introduced in GitLab Runner 16.9.1 is fixed in GitLab Runner 17.10.0.
+> If you intend to use the GitLab Runner versions with regressions, use one of the following workarounds:
+>
+> - Use `pre_get_sources_script` to re-enable Git system-level settings (by unsetting `Git_CONFIG_NOSYSTEM`).
+>   This action enables `core.longpaths` by default on Windows.
+>
+>   ```yaml
+>   build:
+>     hooks:
+>       pre_get_sources_script:
+>         - $env:GIT_CONFIG_NOSYSTEM=''
+>   ```
+>
+> - Build a custom `GitLab-runner-helper` image:
+>
+>   ```dockerfile
+>   FROM registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.3-servercore21H2
+>   ENV GIT_CONFIG_NOSYSTEM=
+>   ```
 
 <!-- markdownlint-disable line-length -->
 
