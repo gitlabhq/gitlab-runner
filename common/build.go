@@ -149,7 +149,8 @@ type Build struct {
 	secretsVariables JobVariables
 	buildSettings    *BuildSettings
 
-	createdAt time.Time
+	startedAt  time.Time
+	finishedAt time.Time
 
 	Referees         []referees.Referee
 	ArtifactUploader func(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string)
@@ -823,6 +824,8 @@ func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err
 	runCancel()
 	b.waitForBuildFinish(buildFinish, WaitForBuildFinishTimeout)
 
+	b.ensureFinishedAt()
+
 	return err
 }
 
@@ -945,7 +948,7 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	logger := buildlogger.New(
 		trace, b.Log().WithFields(logrus.Fields{
-			"duration_s": b.Duration().Seconds(),
+			"duration_s": b.FinalDuration().Seconds(),
 		}),
 		buildlogger.Options{
 			Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),
@@ -1553,11 +1556,34 @@ func (b *Build) GetExecutorJobSectionAttempts() int {
 }
 
 func (b *Build) StartedAt() time.Time {
-	return b.createdAt
+	return b.startedAt
 }
 
-func (b *Build) Duration() time.Duration {
-	return time.Since(b.createdAt)
+func (b *Build) FinishedAt() time.Time {
+	return b.finishedAt
+}
+
+// CurrentDuration presents the duration since when the job was started
+// to the moment when CurrentDuration was called. To be used in cases,
+// when we want to check the duration of the job while it's still being
+// executed
+func (b *Build) CurrentDuration() time.Duration {
+	return time.Since(b.startedAt)
+}
+
+// FinalDuration presents the total duration of the job since when it was
+// started to when it was finished. To be used when reporting the final
+// duration through logs or metrics, for example for billing purposes.
+func (b *Build) FinalDuration() time.Duration {
+	if b.finishedAt.IsZero() {
+		return time.Duration(-1)
+	}
+
+	return b.finishedAt.Sub(b.startedAt)
+}
+
+func (b *Build) ensureFinishedAt() {
+	b.finishedAt = time.Now()
 }
 
 type urlHelper interface {
@@ -1582,7 +1608,7 @@ func NewBuild(
 		Runner:          runnerConfigCopy,
 		SystemInterrupt: systemInterrupt,
 		ExecutorData:    executorData,
-		createdAt:       time.Now(),
+		startedAt:       time.Now(),
 		secretsResolver: newSecretsResolver,
 	}, nil
 }

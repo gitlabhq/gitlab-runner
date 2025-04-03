@@ -925,9 +925,11 @@ func (mr *RunCommand) processBuildOnRunner(
 				},
 				Job: usage_log.Job{
 					URL:             build.JobURL(),
-					DurationSeconds: build.Duration().Seconds(),
+					DurationSeconds: build.FinalDuration().Seconds(),
 					Status:          build.CurrentState().String(),
 					FailureReason:   build.FailureReason().String(),
+					StartedAt:       build.StartedAt().UTC(),
+					FinishedAt:      build.FinishedAt().UTC(),
 				},
 			})
 		}

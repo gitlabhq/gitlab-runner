@@ -18,8 +18,10 @@ type Runner struct {
 }
 
 type Job struct {
-	URL             string  `json:"url"`
-	DurationSeconds float64 `json:"duration_seconds"`
-	Status          string  `json:"status"`
-	FailureReason   string  `json:"failure_reason"`
+	URL             string    `json:"url"`
+	DurationSeconds float64   `json:"duration_seconds"`
+	Status          string    `json:"status"`
+	FailureReason   string    `json:"failure_reason"`
+	StartedAt       time.Time `json:"started_at"`
+	FinishedAt      time.Time `json:"finished_at"`
 }
