@@ -18,26 +18,50 @@ import (
 )
 
 func TestGitCredHelper(t *testing.T) {
+	const defaultUser = "fallback-user"
+
+	// `git credential fill` without protocol or host does not work but errors out,
+	// so we don't even test for that.
+
 	tests := map[string]struct {
-		jobToken       string
-		gitCallArg     string
-		expectedStdout string
+		jobToken      string
+		credRequest   string
+		expectedCreds string
+		expectedErr   string
 	}{
-		"no git arg": {
-			gitCallArg:     "",
-			expectedStdout: "",
+		"token set, default user": {
+			jobToken:    "blipp blupp",
+			credRequest: "host=some-host\nprotocol=https",
+			expectedCreds: "" +
+				"protocol=https\n" +
+				"host=some-host\n" +
+				"username=" + defaultUser + "\n" +
+				"password=blipp blupp\n",
 		},
-		"happy path": {
-			jobToken:       "blipp blupp",
-			gitCallArg:     "get",
-			expectedStdout: "password=blipp blupp\n",
+		"token set, explicit user": {
+			jobToken:    "blipp blupp",
+			credRequest: "username=some-user\nhost=some-host\nprotocol=https",
+			expectedCreds: "" +
+				"protocol=https\n" +
+				"host=some-host\n" +
+				"username=some-user\n" +
+				"password=blipp blupp\n",
 		},
-		"env var not set": {
-			gitCallArg:     "get",
-			expectedStdout: "password=\n",
+		"token not set, default user": {
+			credRequest: "host=some-host\nprotocol=https",
+			expectedCreds: "" +
+				"protocol=https\n" +
+				"host=some-host\n" +
+				"username=" + defaultUser + "\n" +
+				"password=\n",
 		},
-		"everything else is a no-op": {
-			gitCallArg: "foobar",
+		"token not set, explicit user": {
+			credRequest: "username=some-user\nhost=some-host\nprotocol=https",
+			expectedCreds: "" +
+				"protocol=https\n" +
+				"host=some-host\n" +
+				"username=some-user\n" +
+				"password=\n",
 		},
 	}
 
@@ -54,13 +78,14 @@ func TestGitCredHelper(t *testing.T) {
 
 				tmpDir := t.TempDir()
 
-				w.Command("git", "init")
+				w.Command("git", "init", "--quiet")
 
+				w.Command("git", "config", "--local", "--add", "credential.username", defaultUser)
 				w.Command("git", "config", "--local", "--replace-all", "credential.helper", shell.GetExternalCommandEmptyArgument(runtime.GOOS))
-				w.Command("git", "config", "--local", "--add", "credential.helper", "!"+shell.GetGitCredHelperCommand(runtime.GOOS))
+				w.Command("git", "config", "--local", "--add", "credential.helper", shell.GetGitCredHelperCommand(runtime.GOOS))
 				w.Command("git", "config", "--local", "--list")
 
-				w.CommandWithStdin("protocol=https\nhost=some-host\nusername=some-user", "git", "credential", "fill")
+				w.CommandWithStdin(tc.credRequest, "git", "credential", "fill")
 
 				env := testEnv()
 				if jt := tc.jobToken; jt != "" {
@@ -70,7 +95,7 @@ func TestGitCredHelper(t *testing.T) {
 				output := runShell(t, shellName, tmpDir, w, env)
 
 				assert.Contains(t, output, "credential.helper=\n", "resets the list of cred helpers")
-				assert.Contains(t, output, tc.expectedStdout, "git credential helper returns the expected password")
+				assert.Contains(t, output, tc.expectedCreds, "git credential helper returns the expected creds")
 			})
 		})
 	}

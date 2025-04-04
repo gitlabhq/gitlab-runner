@@ -30,8 +30,11 @@ const (
 	gitlabEnvFileName      = "gitlab_runner_env"
 	gitlabCacheEnvFileName = "gitlab_runner_cache_env"
 	credHelperConfFile     = "cred-helper.conf"
-	gitDir                 = ".git"
-	gitTemplateDir         = "git-template"
+	// The same cred helper is used across all shells & OSs
+	// git always comes (or depends) on a POSIX shell, so any helper can rely on that, regardless of the OS, git distribution, ...
+	credHelperCommand = `!f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
+	gitDir            = ".git"
+	gitTemplateDir    = "git-template"
 )
 
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
@@ -714,14 +717,13 @@ func (b *AbstractShell) configureGitCredHelper(w ShellWriter, info common.ShellS
 		return fmt.Errorf("getting remote host: %w", err)
 	}
 
-	credHelperCommand := "!" + shell.GetGitCredHelperCommand(info.RuntimeOS)
 	credSection := "credential." + remoteHost
 
 	w.Command("git", "config", "-f", credConfigFile, credSection+".username", "gitlab-ci-token")
 	// To not have global / system-wide cred helpers interfere, we disable all current helpers and set up our own one.
 	// With this any other cred helper (e.g. GCM) will keep their creds as are, we will neither add/update nor delete any creds thereof.
 	w.Command("git", "config", "-f", credConfigFile, "--replace-all", credSection+".helper", shell.GetExternalCommandEmptyArgument(info.RuntimeOS))
-	w.Command("git", "config", "-f", credConfigFile, "--add", credSection+".helper", credHelperCommand)
+	w.Command("git", "config", "-f", credConfigFile, "--add", credSection+".helper", shell.GetGitCredHelperCommand(info.RuntimeOS))
 
 	w.Command("git", "config", "include.path", credConfigFile)
 
