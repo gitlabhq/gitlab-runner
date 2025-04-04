@@ -18,7 +18,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
 
-func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) string {
+func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter, env []string) string {
 	var extension string
 	var cmdArgs []string
 
@@ -42,6 +42,7 @@ func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) string
 
 	cmdArgs = append(cmdArgs, scriptFile)
 	cmd := exec.Command(shell, cmdArgs...)
+	cmd.Env = env
 	cmd.Dir = cwd
 
 	output, err := cmd.CombinedOutput()
@@ -61,7 +62,7 @@ func TestMkDir(t *testing.T) {
 		writer.MkDir(TestPath)
 		writer.MkDir(TestPath)
 
-		assert.Empty(t, runShell(t, shell, tmpDir, writer))
+		assert.Empty(t, runShell(t, shell, tmpDir, writer, os.Environ()))
 
 		createdPath := filepath.Join(tmpDir, testTmpDir, TestPath)
 		_, err := os.ReadDir(createdPath)
@@ -81,13 +82,13 @@ func TestRmFile(t *testing.T) {
 
 		writer.RmFile(TestPath)
 
-		assert.Empty(t, runShell(t, shell, tmpDir, writer))
+		assert.Empty(t, runShell(t, shell, tmpDir, writer, os.Environ()))
 
 		_, err = os.Stat(tmpFile)
 		require.True(t, os.IsNotExist(err), "tmpFile not deleted")
 
 		// check if the file do not exist
-		assert.Empty(t, runShell(t, shell, tmpDir, writer))
+		assert.Empty(t, runShell(t, shell, tmpDir, writer, os.Environ()))
 	})
 }
 
@@ -109,7 +110,7 @@ func TestRmFilesRecursive(t *testing.T) {
 		testFiles.Create(t, tmpDir)
 
 		writer.RmFilesRecursive(tmpDir, baseName)
-		runShell(t, shell, tmpDir, writer)
+		runShell(t, shell, tmpDir, writer, os.Environ())
 
 		assert.DirExists(t, filepath.Join(tmpDir, "subdir-1"))
 		assert.NoFileExists(t, filepath.Join(tmpDir, "subdir-1", baseName))
@@ -141,7 +142,7 @@ func TestRmDirsRecursive(t *testing.T) {
 
 		writer.RmDirsRecursive(tmpDir, "dir2rm")
 
-		runShell(t, shell, tmpDir, writer)
+		runShell(t, shell, tmpDir, writer, os.Environ())
 
 		assert.DirExists(t, filepath.Join(tmpDir, "some"))
 		assert.NoDirExists(t, filepath.Join(tmpDir, "some/dir2rm"))
@@ -199,7 +200,7 @@ func TestCommandArgumentExpansion(t *testing.T) {
 			w.Command("echo", argumentsNoExpand...)
 			w.CommandArgExpand("echo", argumentsExpand...)
 
-			output := runShell(t, shell, tmpDir, w)
+			output := runShell(t, shell, tmpDir, w, os.Environ())
 
 			assert.NotContains(t, output, "ac/dc")
 			assert.NotContains(t, output, "beatles")
@@ -253,7 +254,7 @@ password=some-pass
 
 		w.CommandWithStdin("url="+input, "git", "credential", "fill")
 
-		output := runShell(t, shell, tmpDir, w)
+		output := runShell(t, shell, tmpDir, w, os.Environ())
 		assert.Equal(t, expectedOutput, output)
 	})
 }

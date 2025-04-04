@@ -400,6 +400,10 @@ func (b *BashShell) GetGitCredHelperCommand(os string) string {
 	return bashGitCredHelperScript
 }
 
+func (b *BashShell) GetExternalCommandEmptyArgument(os string) string {
+	return ""
+}
+
 func (b *BashShell) GetEntrypointCommand(info common.ShellScriptInfo, probeFile string) []string {
 	script := b.bashDetectScript(info.Type == common.LoginShell)
 	if probeFile != "" {

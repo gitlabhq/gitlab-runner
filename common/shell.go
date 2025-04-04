@@ -59,6 +59,8 @@ type Shell interface {
 
 	GetEntrypointCommand(info ShellScriptInfo, probeFile string) []string
 	GetGitCredHelperCommand(os string) string
+	// GetExternalCommandEmptyArgument creates an empty argument ("") suitable for the current shell & OS
+	GetExternalCommandEmptyArgument(os string) string
 }
 
 var shells map[string]Shell
