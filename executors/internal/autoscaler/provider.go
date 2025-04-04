@@ -159,6 +159,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		OS:                   config.Autoscaler.ConnectorConfig.OS,
 		Arch:                 config.Autoscaler.ConnectorConfig.Arch,
 		Protocol:             fleetingprovider.Protocol(config.Autoscaler.ConnectorConfig.Protocol),
+		ProtocolPort:         config.Autoscaler.ConnectorConfig.ProtocolPort,
 		Username:             config.Autoscaler.ConnectorConfig.Username,
 		Password:             config.Autoscaler.ConnectorConfig.Password,
 		UseStaticCredentials: config.Autoscaler.ConnectorConfig.UseStaticCredentials,

@@ -84,6 +84,7 @@ func (ref *acquisitionRef) Prepare(
 		"external-address":     info.ExternalAddr,
 		"use-external-address": useExternalAddr,
 		"instance-id":          info.ID,
+		"protocol-port":        options.Config.Autoscaler.ConnectorConfig.ProtocolPort,
 	}).Info("Dialing instance")
 
 	fleetingDialOpts := connector.DialOptions{
@@ -229,6 +230,7 @@ func (ref *acquisitionRef) createTunneledDialer(
 			OS:                   nestingCfg.ConnectorConfig.OS,
 			Arch:                 nestingCfg.ConnectorConfig.Arch,
 			Protocol:             fleetingprovider.Protocol(nestingCfg.ConnectorConfig.Protocol),
+			ProtocolPort:         nestingCfg.ConnectorConfig.ProtocolPort,
 			Username:             nestingCfg.ConnectorConfig.Username,
 			Password:             nestingCfg.ConnectorConfig.Password,
 			UseStaticCredentials: nestingCfg.ConnectorConfig.UseStaticCredentials,

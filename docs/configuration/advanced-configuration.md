@@ -887,7 +887,8 @@ the empty values that the plugin cannot determine.
 |--------------------------|-------------|
 | `os`                     | The operating system of the instance. |
 | `arch`                   | The architecture of the instance. |
-| `protocol`               | The protocol to use: `ssh` or `winrm`. |
+| `protocol`               | `ssh`, `winrm`, or `winrm+https`. `winrm` is used by default if Windows is detected. |
+| `protocol_port`          | The port used to establish connection based on the specified protocol. Defaults to `ssh:220`, `winrm+http:5985`, `winrm+https:5986`. |
 | `username`               | The username used to connect with. |
 | `password`               | The password used to connect with. |
 | `key_path`               | The TLS key used to connect with or dynamically provision credentials with. |
