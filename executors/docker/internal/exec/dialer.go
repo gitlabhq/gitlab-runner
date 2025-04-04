@@ -6,7 +6,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -55,7 +55,7 @@ func (td *tunnelingDialer) Dial() (*grpc.ClientConn, error) {
 		return proxyConn(ctx, dialerFactory)
 	}
 
-	conn, err := grpc.NewClient("unix:"+api.ListenSocketPath(),
+	conn, err := grpc.NewClient("unix:"+api.DefaultSocketPath(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(ctxDialer))
 	if err != nil {
@@ -65,7 +65,7 @@ func (td *tunnelingDialer) Dial() (*grpc.ClientConn, error) {
 }
 
 func (td *tunnelingDialer) containerExec(ctx context.Context, source io.ReadCloser, sink io.Writer) error {
-	execCreateResp, err := td.client.ContainerExecCreate(ctx, td.containerID, types.ExecConfig{
+	execCreateResp, err := td.client.ContainerExecCreate(ctx, td.containerID, container.ExecOptions{
 		Cmd:          []string{"step-runner", "proxy"},
 		AttachStdin:  true,
 		AttachStderr: true,
@@ -75,7 +75,7 @@ func (td *tunnelingDialer) containerExec(ctx context.Context, source io.ReadClos
 		return fmt.Errorf("creating container exec for %q: %w", td.containerID, err)
 	}
 
-	hijacked, err := td.client.ContainerExecAttach(ctx, execCreateResp.ID, types.ExecStartCheck{})
+	hijacked, err := td.client.ContainerExecAttach(ctx, execCreateResp.ID, container.ExecStartOptions{})
 	if err != nil {
 		return fmt.Errorf("attaching to container exec for %q: %w", td.containerID, err)
 	}

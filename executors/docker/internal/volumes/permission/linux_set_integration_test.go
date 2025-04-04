@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,10 +56,10 @@ func TestDockerLinuxSetter(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		_ = client.ContainerRemove(context.Background(), testContainer.ID, types.ContainerRemoveOptions{Force: true})
+		_ = client.ContainerRemove(context.Background(), testContainer.ID, container.RemoveOptions{Force: true})
 	}()
 
-	err = client.ContainerStart(context.Background(), testContainer.ID, types.ContainerStartOptions{})
+	err = client.ContainerStart(context.Background(), testContainer.ID, container.StartOptions{})
 	require.NoError(t, err)
 
 	waiter := wait.NewDockerKillWaiter(client)
@@ -77,21 +77,21 @@ func setupTestDockerLinuxSetter(t *testing.T) (string, permission.Setter, docker
 	err = client.ImagePullBlocking(
 		context.Background(),
 		helperImageRef,
-		types.ImagePullOptions{},
+		image.PullOptions{},
 	)
 	require.NoError(t, err)
 
-	image, _, err := client.ImageInspectWithRaw(context.Background(), helperImageRef)
+	imageInfo, _, err := client.ImageInspectWithRaw(context.Background(), helperImageRef)
 	require.NoError(t, err)
 
 	debugLogger := logrus.New()
 	debugLogger.Level = logrus.DebugLevel
-	setter := permission.NewDockerLinuxSetter(client, debugLogger, &image)
+	setter := permission.NewDockerLinuxSetter(client, debugLogger, &imageInfo)
 
 	err = client.ImagePullBlocking(
 		context.Background(),
 		common.TestAlpineNoRootImage,
-		types.ImagePullOptions{},
+		image.PullOptions{},
 	)
 	require.NoError(t, err)
 

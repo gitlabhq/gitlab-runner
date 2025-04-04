@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
@@ -169,11 +170,11 @@ func imageImport(ctx context.Context, client docker.Client, path, ref, tag strin
 	}
 	defer func() { _ = file.Close() }()
 
-	source := types.ImageImportSource{
+	source := image.ImportSource{
 		Source:     file,
 		SourceName: "-",
 	}
-	options := types.ImageImportOptions{
+	options := image.ImportOptions{
 		Tag: tag,
 		// NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
 		// See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2058#note_388341301

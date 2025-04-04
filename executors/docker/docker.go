@@ -917,7 +917,7 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	e.BuildLogger.Debugln("Disconnecting container", id, "from networks")
 
-	netList, err := e.client.NetworkList(ctx, types.NetworkListOptions{})
+	netList, err := e.client.NetworkList(ctx, network.ListOptions{})
 	if err != nil {
 		e.BuildLogger.Debugln("Can't get network list. ListNetworks exited with", err)
 		return
@@ -1447,7 +1447,7 @@ func shouldIgnoreDockerError(err error, isFuncs ...func(error) bool) bool {
 
 func (e *executor) execScriptOnContainer(ctx context.Context, containerID string, script ...string) (err error) {
 	action := ""
-	execConfig := types.ExecConfig{
+	execConfig := container.ExecOptions{
 		Tty:          false,
 		AttachStderr: true,
 		AttachStdout: true,
@@ -1466,7 +1466,7 @@ func (e *executor) execScriptOnContainer(ctx context.Context, containerID string
 		return err
 	}
 
-	resp, err := e.client.ContainerExecAttach(ctx, exec.ID, types.ExecStartCheck{})
+	resp, err := e.client.ContainerExecAttach(ctx, exec.ID, container.ExecStartOptions{})
 	if err != nil {
 		action = "Failed to exec attach to container:"
 		return err

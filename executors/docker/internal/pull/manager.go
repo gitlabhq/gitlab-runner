@@ -8,6 +8,7 @@ import (
 
 	cli "github.com/docker/cli/cli/config/types"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -240,7 +241,7 @@ func (m *manager) pullDockerImage(imageName string, options common.ImageDockerOp
 		ref += ":latest"
 	}
 
-	opts := types.ImagePullOptions{
+	opts := image.PullOptions{
 		Platform: options.Platform,
 	}
 

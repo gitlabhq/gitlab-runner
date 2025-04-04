@@ -17,6 +17,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
@@ -870,7 +871,7 @@ func prepareTestDockerConfiguration(
 	c.On("ImagePullBlocking", mock.Anything, expectedPullImage, mock.Anything).
 		Return(nil).Once()
 	c.On("NetworkList", mock.Anything, mock.Anything).
-		Return([]types.NetworkResource{}, nil).Once()
+		Return([]network.Summary{}, nil).Once()
 	c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 
@@ -1739,7 +1740,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 					Return(container.NetworkMode("test"), nil).
 					Once()
 				nm.On("Inspect", mock.Anything).
-					Return(types.NetworkResource{}, nil).
+					Return(network.Inspect{}, nil).
 					Once()
 				nm.On("Cleanup", mock.Anything).
 					Return(nil).
@@ -1754,7 +1755,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 					Return(container.NetworkMode("test"), nil).
 					Once()
 				nm.On("Inspect", mock.Anything).
-					Return(types.NetworkResource{}, nil).
+					Return(network.Inspect{}, nil).
 					Once()
 				nm.On("Cleanup", mock.Anything).
 					Return(nil).
@@ -1779,7 +1780,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 					Return(container.NetworkMode("test"), nil).
 					Once()
 				nm.On("Inspect", mock.Anything).
-					Return(types.NetworkResource{}, testErr).
+					Return(network.Inspect{}, testErr).
 					Once()
 			},
 			expectedCleanError: nil,
@@ -1789,7 +1790,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 			networkPerBuild:      "true",
 			clientAssertions: func(c *docker.MockClient) {
 				c.On("NetworkList", mock.Anything, mock.Anything).
-					Return([]types.NetworkResource{}, nil).
+					Return([]network.Summary{}, nil).
 					Once()
 				c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
 					Return(testErr).
@@ -1801,8 +1802,8 @@ func TestDockerCreateNetwork(t *testing.T) {
 					Once()
 				nm.On("Inspect", mock.Anything).
 					Return(
-						types.NetworkResource{
-							Containers: map[string]types.EndpointResource{
+						network.Inspect{
+							Containers: map[string]network.EndpointResource{
 								"abc": {},
 							},
 						},
@@ -1823,7 +1824,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 					Return(container.NetworkMode("test"), nil).
 					Once()
 				nm.On("Inspect", mock.Anything).
-					Return(types.NetworkResource{}, nil).
+					Return(network.Inspect{}, nil).
 					Once()
 				nm.On("Cleanup", mock.Anything).
 					Return(testErr).
@@ -2034,7 +2035,7 @@ func TestLocalHelperImage(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					helperimage.GitLabRegistryName,
-					types.ImageImportOptions{
+					image.ImportOptions{
 						Tag: "x86_64-latest",
 						Changes: []string{
 							`ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`,
@@ -2108,7 +2109,7 @@ func TestLocalHelperImage(t *testing.T) {
 				c.On(
 					"ImageImportBlocking",
 					mock.Anything,
-					mock.MatchedBy(func(source types.ImageImportSource) bool {
+					mock.MatchedBy(func(source image.ImportSource) bool {
 						return assert.IsType(t, new(os.File), source.Source) &&
 							assert.Equal(
 								t,
@@ -2149,7 +2150,7 @@ func TestLocalHelperImage(t *testing.T) {
 				c.On(
 					"ImageImportBlocking",
 					mock.Anything,
-					mock.MatchedBy(func(source types.ImageImportSource) bool {
+					mock.MatchedBy(func(source image.ImportSource) bool {
 						return assert.IsType(t, new(os.File), source.Source) &&
 							assert.Equal(
 								t,
@@ -2191,7 +2192,7 @@ func TestLocalHelperImage(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					true,
-				).Return(types.ImageLoadResponse{JSON: true, Body: io.NopCloser(strings.NewReader(`{"stream": "Loaded image ID: 1234"}`))}, nil)
+				).Return(image.LoadResponse{JSON: true, Body: io.NopCloser(strings.NewReader(`{"stream": "Loaded image ID: 1234"}`))}, nil)
 
 				c.On(
 					"ImageTag",

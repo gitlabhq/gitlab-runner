@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
@@ -89,7 +89,7 @@ type terminalConn struct {
 }
 
 func (t terminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, disconnectCh chan error) {
-	execConfig := types.ExecConfig{
+	execConfig := container.ExecOptions{
 		Tty:          true,
 		AttachStdin:  true,
 		AttachStderr: true,
@@ -104,7 +104,7 @@ func (t terminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, d
 		return
 	}
 
-	execStartCfg := types.ExecStartCheck{Tty: true}
+	execStartCfg := container.ExecStartOptions{Tty: true}
 
 	resp, err := t.client.ContainerExecAttach(t.ctx, exec.ID, execStartCfg)
 	if err != nil {

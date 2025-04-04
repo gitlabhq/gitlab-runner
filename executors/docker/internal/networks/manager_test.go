@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -66,7 +66,7 @@ func TestCreateNetwork(t *testing.T) {
 	testCases := map[string]struct {
 		networkMode         string
 		networkPerBuild     string
-		buildNetwork        types.NetworkResource
+		buildNetwork        network.Inspect
 		enableIPv6          bool
 		expectedNetworkMode container.NetworkMode
 		expectedErr         error
@@ -95,12 +95,12 @@ func TestCreateNetwork(t *testing.T) {
 					"NetworkCreate",
 					mock.Anything,
 					mock.AnythingOfType("string"),
-					mock.AnythingOfType("types.NetworkCreate"),
+					mock.AnythingOfType("network.CreateOptions"),
 				).
-					Return(types.NetworkCreateResponse{ID: "test-network"}, nil).
+					Return(network.CreateResponse{ID: "test-network"}, nil).
 					Once()
 				mc.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
-					Return(types.NetworkResource{
+					Return(network.Inspect{
 						ID:   "test-network",
 						Name: "test-network",
 					}, nil).
@@ -117,9 +117,9 @@ func TestCreateNetwork(t *testing.T) {
 					"NetworkCreate",
 					mock.Anything,
 					mock.AnythingOfType("string"),
-					mock.AnythingOfType("types.NetworkCreate"),
+					mock.AnythingOfType("network.CreateOptions"),
 				).
-					Return(types.NetworkCreateResponse{ID: "test-network"}, errors.New("test-network failed")).
+					Return(network.CreateResponse{ID: "test-network"}, errors.New("test-network failed")).
 					Once()
 			},
 		},
@@ -133,23 +133,23 @@ func TestCreateNetwork(t *testing.T) {
 					"NetworkCreate",
 					mock.Anything,
 					mock.AnythingOfType("string"),
-					mock.AnythingOfType("types.NetworkCreate"),
+					mock.AnythingOfType("network.CreateOptions"),
 				).
-					Return(types.NetworkCreateResponse{ID: "test-network"}, nil).
+					Return(network.CreateResponse{ID: "test-network"}, nil).
 					Once()
 				mc.On(
 					"NetworkInspect",
 					mock.Anything,
 					mock.AnythingOfType("string"),
 				).
-					Return(types.NetworkResource{}, errors.New("network-inspect-failed")).
+					Return(network.Inspect{}, errors.New("network-inspect-failed")).
 					Once()
 			},
 		},
 		"networkID already set": {
 			networkMode:     "",
 			networkPerBuild: "true",
-			buildNetwork: types.NetworkResource{
+			buildNetwork: network.Inspect{
 				ID: "some-id",
 			},
 			expectedNetworkMode: "",
@@ -165,12 +165,12 @@ func TestCreateNetwork(t *testing.T) {
 					"NetworkCreate",
 					mock.Anything,
 					mock.AnythingOfType("string"),
-					mock.AnythingOfType("types.NetworkCreate"),
+					mock.AnythingOfType("network.CreateOptions"),
 				).
-					Return(types.NetworkCreateResponse{ID: "test-network"}, nil).
+					Return(network.CreateResponse{ID: "test-network"}, nil).
 					Once()
 				mc.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
-					Return(types.NetworkResource{
+					Return(network.Inspect{
 						ID:         "test-network",
 						Name:       "test-network",
 						EnableIPv6: true,
@@ -243,9 +243,9 @@ func TestCreateNetworkWithCustomMTU(t *testing.T) {
 					Value: "true",
 				})
 
-				client.On("NetworkCreate", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("types.NetworkCreate")).
+				client.On("NetworkCreate", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("network.CreateOptions")).
 					Run(func(args mock.Arguments) {
-						arg, ok := args.Get(2).(types.NetworkCreate)
+						arg, ok := args.Get(2).(network.CreateOptions)
 						require.True(t, ok)
 
 						if testCase.mtu != 0 {
@@ -259,11 +259,11 @@ func TestCreateNetworkWithCustomMTU(t *testing.T) {
 							require.False(t, ok)
 						}
 					}).
-					Return(types.NetworkCreateResponse{ID: "test-network"}, nil).
+					Return(network.CreateResponse{ID: "test-network"}, nil).
 					Once()
 
 				client.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
-					Return(types.NetworkResource{
+					Return(network.Inspect{
 						ID:   "test-network",
 						Name: "test-network",
 					}, nil).
@@ -285,25 +285,25 @@ func TestInspectNetwork(t *testing.T) {
 	testCases := map[string]struct {
 		perBuild         bool
 		clientAssertions func(client *docker.MockClient)
-		expectedResponse types.NetworkResource
+		expectedResponse network.Inspect
 		expectedErr      error
 	}{
 		"network per build": {
 			perBuild:         false,
-			expectedResponse: types.NetworkResource{},
+			expectedResponse: network.Inspect{},
 			expectedErr:      nil,
 		},
 		"no network per build": {
 			perBuild: true,
 			clientAssertions: func(m *docker.MockClient) {
 				m.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
-					Return(types.NetworkResource{
+					Return(network.Inspect{
 						ID:   networkName,
 						Name: networkName,
 					}, nil).
 					Once()
 			},
-			expectedResponse: types.NetworkResource{
+			expectedResponse: network.Inspect{
 				ID:   networkName,
 				Name: networkName,
 			},
@@ -313,7 +313,7 @@ func TestInspectNetwork(t *testing.T) {
 			perBuild: true,
 			clientAssertions: func(m *docker.MockClient) {
 				m.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
-					Return(types.NetworkResource{}, testError)
+					Return(network.Inspect{}, testError)
 			},
 			expectedErr: testError,
 		},
