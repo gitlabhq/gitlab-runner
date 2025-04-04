@@ -363,6 +363,7 @@ type ConnectorConfig struct {
 	OS                   string        `toml:"os,omitempty"`
 	Arch                 string        `toml:"arch,omitempty"`
 	Protocol             string        `toml:"protocol,omitempty"`
+	ProtocolPort         int           `toml:"protocol_port,omitempty"`
 	Username             string        `toml:"username,omitempty"`
 	Password             string        `toml:"password,omitempty"`
 	KeyPathname          string        `toml:"key_path,omitempty"`
