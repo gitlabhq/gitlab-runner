@@ -4,7 +4,6 @@ package shells_test
 
 import (
 	"os"
-	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -81,8 +80,8 @@ func TestGitCredHelper(t *testing.T) {
 				w.Command("git", "init", "--quiet")
 
 				w.Command("git", "config", "--local", "--add", "credential.username", defaultUser)
-				w.Command("git", "config", "--local", "--replace-all", "credential.helper", shell.GetExternalCommandEmptyArgument(runtime.GOOS))
-				w.Command("git", "config", "--local", "--add", "credential.helper", shell.GetGitCredHelperCommand(runtime.GOOS))
+				w.Command("git", "config", "--local", "--replace-all", "credential.helper", shell.GetExternalCommandEmptyArgument())
+				w.Command("git", "config", "--local", "--add", "credential.helper", shell.GetGitCredHelperCommand())
 				w.Command("git", "config", "--local", "--list")
 
 				w.CommandWithStdin(tc.credRequest, "git", "credential", "fill")

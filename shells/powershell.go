@@ -2,7 +2,6 @@ package shells
 
 import (
 	"bytes"
-	"cmp"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -644,17 +643,14 @@ func (b *PowerShell) GetName() string {
 	return b.Shell
 }
 
-func (b *PowerShell) GetGitCredHelperCommand(os string) string {
+func (b *PowerShell) GetGitCredHelperCommand() string {
 	shell := b.GetName()
 	script := credHelperCommand
 
-	// If the OS is not set explicitly, we fallback to the current processes' OS
-	os = cmp.Or(os, runtime.GOOS)
-
-	// Some special case for powershell on windows and weird quoting rules thereof.
+	// Some special case for PowerShell 5.1 and weird quoting rules thereof.
 	// To be honest, I have no clue what's going on there, if this is a powershell thing, or if the shell writer
 	// interferes, or both; but it seems to be necessary and to work.
-	if shell == SNPowershell && os == OSWindows {
+	if shell == SNPowershell {
 		script = strings.ReplaceAll(script, `"`, `\"`)
 	}
 
@@ -664,11 +660,10 @@ func (b *PowerShell) GetGitCredHelperCommand(os string) string {
 // GetExternalCommandEmptyArgument handles a special case (empty argument) in the quoting rules of PowerShell Desktop (5.1) to run an external process.
 // According to this detailed explanation: https://stackoverflow.com/questions/6714165/powershell-stripping-double-quotes-from-command-line-arguments/59681993#59681993,
 // the issue arises due to automatic quoting by PowerShell Desktop (5.1) and command-line processing by CommandLineToArgvW (Win32 shellapi.h).
-func (b *PowerShell) GetExternalCommandEmptyArgument(os string) string {
+func (b *PowerShell) GetExternalCommandEmptyArgument() string {
 	shell := b.GetName()
-	os = cmp.Or(os, runtime.GOOS)
 
-	if shell == SNPowershell && os == OSWindows {
+	if shell == SNPowershell {
 		return `""`
 	}
 	return ""

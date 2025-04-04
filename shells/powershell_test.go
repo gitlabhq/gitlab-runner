@@ -996,39 +996,16 @@ func TestPowershellEntrypointCommand(t *testing.T) {
 // types.
 func TestGitCredHelperDifferentJobOS(t *testing.T) {
 	doubleQuotedBlobs := []string{"password=${CI_JOB_TOKEN}", "get"}
-	expectedInnerDoubleQuotes := map[string]map[string]string{
-		"": {
-			SNPowershell: ternary(runtime.GOOS == "windows", `\"`, `"`),
-			SNPwsh:       `"`,
-		},
-		"linux": {
-			SNPowershell: `"`,
-			SNPwsh:       `"`,
-		},
-		"windows": {
-			SNPowershell: `\"`,
-			SNPwsh:       `"`,
-		},
+	expectedInnerDoubleQuotes := map[string]string{
+		SNPowershell: `\"`,
+		SNPwsh:       `"`,
 	}
 
-	for jobOS, shellQuotes := range expectedInnerDoubleQuotes {
-		t.Run(jobOS, func(t *testing.T) {
-			for shellName, expectedDoubleQuote := range shellQuotes {
-				t.Run(shellName, func(t *testing.T) {
-					shell := common.GetShell(shellName)
-					helper := shell.GetGitCredHelperCommand(jobOS)
-					for _, s := range doubleQuotedBlobs {
-						assert.Contains(t, helper, expectedDoubleQuote+s+expectedDoubleQuote)
-					}
-				})
-			}
-		})
+	for shellName, expectedDoubleQuote := range expectedInnerDoubleQuotes {
+		shell := common.GetShell(shellName)
+		helper := shell.GetGitCredHelperCommand()
+		for _, s := range doubleQuotedBlobs {
+			assert.Contains(t, helper, expectedDoubleQuote+s+expectedDoubleQuote)
+		}
 	}
-}
-
-func ternary[T any](condition bool, whenTrue T, whenFalse T) T {
-	if condition {
-		return whenTrue
-	}
-	return whenFalse
 }

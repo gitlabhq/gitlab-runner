@@ -244,17 +244,17 @@ func (_c *MockShell_GetEntrypointCommand_Call) RunAndReturn(run func(ShellScript
 	return _c
 }
 
-// GetExternalCommandEmptyArgument provides a mock function with given fields: os
-func (_m *MockShell) GetExternalCommandEmptyArgument(os string) string {
-	ret := _m.Called(os)
+// GetExternalCommandEmptyArgument provides a mock function with no fields
+func (_m *MockShell) GetExternalCommandEmptyArgument() string {
+	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetExternalCommandEmptyArgument")
 	}
 
 	var r0 string
-	if rf, ok := ret.Get(0).(func(string) string); ok {
-		r0 = rf(os)
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Get(0).(string)
 	}
@@ -268,14 +268,13 @@ type MockShell_GetExternalCommandEmptyArgument_Call struct {
 }
 
 // GetExternalCommandEmptyArgument is a helper method to define mock.On call
-//   - os string
-func (_e *MockShell_Expecter) GetExternalCommandEmptyArgument(os interface{}) *MockShell_GetExternalCommandEmptyArgument_Call {
-	return &MockShell_GetExternalCommandEmptyArgument_Call{Call: _e.mock.On("GetExternalCommandEmptyArgument", os)}
+func (_e *MockShell_Expecter) GetExternalCommandEmptyArgument() *MockShell_GetExternalCommandEmptyArgument_Call {
+	return &MockShell_GetExternalCommandEmptyArgument_Call{Call: _e.mock.On("GetExternalCommandEmptyArgument")}
 }
 
-func (_c *MockShell_GetExternalCommandEmptyArgument_Call) Run(run func(os string)) *MockShell_GetExternalCommandEmptyArgument_Call {
+func (_c *MockShell_GetExternalCommandEmptyArgument_Call) Run(run func()) *MockShell_GetExternalCommandEmptyArgument_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		run()
 	})
 	return _c
 }
@@ -285,7 +284,7 @@ func (_c *MockShell_GetExternalCommandEmptyArgument_Call) Return(_a0 string) *Mo
 	return _c
 }
 
-func (_c *MockShell_GetExternalCommandEmptyArgument_Call) RunAndReturn(run func(string) string) *MockShell_GetExternalCommandEmptyArgument_Call {
+func (_c *MockShell_GetExternalCommandEmptyArgument_Call) RunAndReturn(run func() string) *MockShell_GetExternalCommandEmptyArgument_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -323,17 +322,17 @@ func (_c *MockShell_GetFeatures_Call) RunAndReturn(run func(*FeaturesInfo)) *Moc
 	return _c
 }
 
-// GetGitCredHelperCommand provides a mock function with given fields: os
-func (_m *MockShell) GetGitCredHelperCommand(os string) string {
-	ret := _m.Called(os)
+// GetGitCredHelperCommand provides a mock function with no fields
+func (_m *MockShell) GetGitCredHelperCommand() string {
+	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetGitCredHelperCommand")
 	}
 
 	var r0 string
-	if rf, ok := ret.Get(0).(func(string) string); ok {
-		r0 = rf(os)
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Get(0).(string)
 	}
@@ -347,14 +346,13 @@ type MockShell_GetGitCredHelperCommand_Call struct {
 }
 
 // GetGitCredHelperCommand is a helper method to define mock.On call
-//   - os string
-func (_e *MockShell_Expecter) GetGitCredHelperCommand(os interface{}) *MockShell_GetGitCredHelperCommand_Call {
-	return &MockShell_GetGitCredHelperCommand_Call{Call: _e.mock.On("GetGitCredHelperCommand", os)}
+func (_e *MockShell_Expecter) GetGitCredHelperCommand() *MockShell_GetGitCredHelperCommand_Call {
+	return &MockShell_GetGitCredHelperCommand_Call{Call: _e.mock.On("GetGitCredHelperCommand")}
 }
 
-func (_c *MockShell_GetGitCredHelperCommand_Call) Run(run func(os string)) *MockShell_GetGitCredHelperCommand_Call {
+func (_c *MockShell_GetGitCredHelperCommand_Call) Run(run func()) *MockShell_GetGitCredHelperCommand_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		run()
 	})
 	return _c
 }
@@ -364,7 +362,7 @@ func (_c *MockShell_GetGitCredHelperCommand_Call) Return(_a0 string) *MockShell_
 	return _c
 }
 
-func (_c *MockShell_GetGitCredHelperCommand_Call) RunAndReturn(run func(string) string) *MockShell_GetGitCredHelperCommand_Call {
+func (_c *MockShell_GetGitCredHelperCommand_Call) RunAndReturn(run func() string) *MockShell_GetGitCredHelperCommand_Call {
 	_c.Call.Return(run)
 	return _c
 }

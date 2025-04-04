@@ -390,11 +390,11 @@ func (b *BashShell) GetName() string {
 	return b.Shell
 }
 
-func (b *BashShell) GetGitCredHelperCommand(os string) string {
+func (b *BashShell) GetGitCredHelperCommand() string {
 	return credHelperCommand
 }
 
-func (b *BashShell) GetExternalCommandEmptyArgument(os string) string {
+func (b *BashShell) GetExternalCommandEmptyArgument() string {
 	return ""
 }
 
