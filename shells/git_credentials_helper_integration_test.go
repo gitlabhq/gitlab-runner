@@ -3,9 +3,8 @@
 package shells_test
 
 import (
-	"bytes"
 	"os"
-	"os/exec"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -19,83 +18,62 @@ import (
 )
 
 func TestGitCredHelper(t *testing.T) {
-	shellstest.OnEachShell(t, func(t *testing.T, shellName string) {
-		helpers.SkipIntegrationTests(t, shellName)
-		t.Parallel()
+	tests := map[string]struct {
+		jobToken       string
+		gitCallArg     string
+		expectedStdout string
+	}{
+		"no git arg": {
+			gitCallArg:     "",
+			expectedStdout: "",
+		},
+		"happy path": {
+			jobToken:       "blipp blupp",
+			gitCallArg:     "get",
+			expectedStdout: "password=blipp blupp\n",
+		},
+		"env var not set": {
+			gitCallArg:     "get",
+			expectedStdout: "password=\n",
+		},
+		"everything else is a no-op": {
+			gitCallArg: "foobar",
+		},
+	}
 
-		shell := common.GetShell(shellName)
-		require.NotNil(t, shell, "shell %q not available", shellName)
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			t.Parallel()
 
-		tests := map[string]struct {
-			jobToken       string
-			gitCallArg     string
-			expectedStdout string
-		}{
-			"no git arg": {
-				gitCallArg:     "",
-				expectedStdout: "",
-			},
-			"happy path": {
-				jobToken:       "blipp blupp",
-				gitCallArg:     "get",
-				expectedStdout: "password=blipp blupp\n",
-			},
-			"env var not set": {
-				gitCallArg:     "get",
-				expectedStdout: "password=\n",
-			},
-			"everything else is a no-op": {
-				gitCallArg: "foobar",
-			},
-		}
-
-		for tn, tc := range tests {
-			t.Run(tn, func(t *testing.T) {
+			shellstest.OnEachShellWithWriter(t, func(t *testing.T, shellName string, w shells.ShellWriter) {
+				helpers.SkipIntegrationTests(t, shellName)
 				t.Parallel()
 
-				credHelperCmd := shell.GetGitCredHelperCommand("")
-				callArgs := prepCallArgs(t, shellName, credHelperCmd, tc.gitCallArg)
-				stdout := &bytes.Buffer{}
-				stderr := &bytes.Buffer{}
+				shell := common.GetShell(shellName)
+				require.NotNil(t, shell, "shell %q not available", shellName)
+
+				tmpDir := t.TempDir()
+
+				w.Command("git", "init")
+
+				w.Command("git", "config", "--local", "--replace-all", "credential.helper", shell.GetExternalCommandEmptyArgument(runtime.GOOS))
+				w.Command("git", "config", "--local", "--add", "credential.helper", "!"+shell.GetGitCredHelperCommand(runtime.GOOS))
+				w.Command("git", "config", "--local", "--list")
+
+				w.CommandWithStdin("protocol=https\nhost=some-host\nusername=some-user", "git", "credential", "fill")
 
 				env := testEnv()
 				if jt := tc.jobToken; jt != "" {
 					env = append(env, "CI_JOB_TOKEN="+jt)
 				}
 
-				cmd := exec.Command(shellName, callArgs...)
-				cmd.Env = env
-				cmd.Stderr = stderr
-				cmd.Stdout = stdout
+				output := runShell(t, shellName, tmpDir, w, env)
 
-				err := cmd.Run()
-				require.NoError(t, err, "running command failed\n  stdout: %s\n  stderr: %s", stdout, stderr)
-
-				assert.Equal(t, tc.expectedStdout, stdout.String())
-				assert.Empty(t, stderr.String(), "expected no errors on stderr")
+				assert.Contains(t, output, "credential.helper=\n", "resets the list of cred helpers")
+				assert.Contains(t, output, tc.expectedStdout, "git credential helper returns the expected password")
 			})
-		}
-	})
-}
-
-func prepCallArgs(t *testing.T, shellName, command, arg string) []string {
-	// -c works for bash, powershell & pwsh
-	args := []string{"-c"}
-
-	switch shellName {
-	case shells.Bash:
-		// nothing to do here
-	case shells.SNPowershell, shells.SNPwsh:
-		// Why the double single-quotes? Please see the comment on powershell's GetGitCredHelperCommand
-		command = strings.ReplaceAll(command, "''", "'")
-	default:
-		t.Fatalf("not sure how to prep command line args for shell %s", shellName)
+		})
 	}
-
-	// this mimics how git adds args to its helper commands
-	command += " " + arg
-
-	return append(args, command)
 }
 
 // testEnv returns the test's entire environment, except the job token

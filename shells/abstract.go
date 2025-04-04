@@ -714,26 +714,14 @@ func (b *AbstractShell) configureGitCredHelper(w ShellWriter, info common.ShellS
 		return fmt.Errorf("getting remote host: %w", err)
 	}
 
-	// Scenario: shell executor & git-credential-manager aka. GCM
-	//
-	// When GCM is at play, and it's configured in the system scope (default for wingit), then it might cache the
-	// credentials from the last pipeline run, ie. the CI_JOB_TOKEN. This token is not valid anymore. Same might be true
-	// for other globally installed credential helpers.
-	//
-	// Thus we clear the cache here.
-	//
-	// This is, strictly speaking, only needed if some git credential helper caches creds across runs, but should not do
-	// harm if nothing is caching creds or the cache is empty.
-	//
-	// `git credential reject` will call all credential helpers with "erase", and therefor prune the cache for this URL
-	// everywhere.
-	w.CommandWithStdin("url="+remoteHost, "git", "credential", "reject")
-
 	credHelperCommand := "!" + shell.GetGitCredHelperCommand(info.RuntimeOS)
 	credSection := "credential." + remoteHost
 
 	w.Command("git", "config", "-f", credConfigFile, credSection+".username", "gitlab-ci-token")
-	w.Command("git", "config", "-f", credConfigFile, credSection+".helper", credHelperCommand)
+	// To not have global / system-wide cred helpers interfere, we disable all current helpers and set up our own one.
+	// With this any other cred helper (e.g. GCM) will keep their creds as are, we will neither add/update nor delete any creds thereof.
+	w.Command("git", "config", "-f", credConfigFile, "--replace-all", credSection+".helper", shell.GetExternalCommandEmptyArgument(info.RuntimeOS))
+	w.Command("git", "config", "-f", credConfigFile, "--add", credSection+".helper", credHelperCommand)
 
 	w.Command("git", "config", "include.path", credConfigFile)
 

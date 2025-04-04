@@ -2819,15 +2819,18 @@ func expectGitCredHelperSetup(shellWriter *MockShellWriter, remoteURL string) {
 
 	shellWriter.EXPECT().TmpFile(mock.Anything).Return("/some/path/cred-helper.conf").Once()
 
-	shellWriter.EXPECT().CommandWithStdin("url="+remoteURL, "git", "credential", "reject").Once()
-
 	shellWriter.EXPECT().Command("git", "config", "-f", expectedCredHelperPath, expectedCredSection+".username", mock.AnythingOfType("string")).Once()
-	shellWriter.EXPECT().Command("git", "config", "-f", expectedCredHelperPath, expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
+	shellWriter.EXPECT().Command("git", "config", "-f", expectedCredHelperPath, "--replace-all", expectedCredSection+".helper", mock.MatchedBy(isShellEmptyArg)).Once()
+	shellWriter.EXPECT().Command("git", "config", "-f", expectedCredHelperPath, "--add", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
 	shellWriter.EXPECT().Command("git", "config", "include.path", expectedCredHelperPath).Once()
 }
 
 func startWithBang(val string) bool {
 	return strings.HasPrefix(val, "!")
+}
+
+func isShellEmptyArg(s string) bool {
+	return s == "" || s == `""`
 }
 
 func TestSanitizeCacheFallbackKey(t *testing.T) {

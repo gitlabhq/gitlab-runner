@@ -663,12 +663,14 @@ const powershellGitCredHelperScript = `function f([string]$cmd){ if ($cmd.equals
 //
 //	[credential "https://gitlab.com"]
 //		username = gitlab-ci-token
+//		helper =
 //		helper = "!pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { Write-Host -NoNewline \"password=${env:CI_JOB_TOKEN}`n\" } }; f'"
 //
 // or
 //
 //	[credential "https://gitlab.com"]
 //		username = gitlab-ci-token
+//		helper =
 //		helper = "!powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { Write-Host -NoNewline \"password=${env:CI_JOB_TOKEN}`n\" } }; f'"
 //
 // More docs about custom git cred helpers can be found at https://git-scm.com/docs/gitcredentials#_custom_helpers .
@@ -692,6 +694,19 @@ func (b *PowerShell) GetGitCredHelperCommand(os string) string {
 		strings.Join(append(defaultPowershellFlags, "-Command"), " "),
 		script,
 	)
+}
+
+// GetExternalCommandEmptyArgument handles a special case (empty argument) in the quoting rules of PowerShell Desktop (5.1) to run an external process.
+// According to this detailed explanation: https://stackoverflow.com/questions/6714165/powershell-stripping-double-quotes-from-command-line-arguments/59681993#59681993,
+// the issue arises due to automatic quoting by PowerShell Desktop (5.1) and command-line processing by CommandLineToArgvW (Win32 shellapi.h).
+func (b *PowerShell) GetExternalCommandEmptyArgument(os string) string {
+	shell := b.GetName()
+	os = cmp.Or(os, runtime.GOOS)
+
+	if shell == SNPowershell && os == OSWindows {
+		return `""`
+	}
+	return ""
 }
 
 func (b *PowerShell) GetEntrypointCommand(_ common.ShellScriptInfo, probeFile string) []string {

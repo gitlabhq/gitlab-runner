@@ -2174,8 +2174,10 @@ const (
 
 func TestCredSetup(t *testing.T) {
 	const (
-		markerForBuild  = "#build# "
-		markerForHelper = "#helper# "
+		markerForBuild      = "#build# "
+		markerForHelper     = "#helper# "
+		markerPreGetSource  = "pre_get_source"
+		markerPostGetSource = "post_get_source"
 	)
 
 	listGitConfig := func(t *testing.T, shell, prefix string) string {
@@ -2184,6 +2186,42 @@ func TestCredSetup(t *testing.T) {
 			return fmt.Sprintf(`git config -l | sed 's/^/%s/g'`, prefix)
 		case shells.SNPwsh, shells.SNPowershell:
 			return fmt.Sprintf(`(git config -l) -replace '^','%s'`, prefix)
+		default:
+			t.Fatalf("shell %s not supported", shell)
+		}
+		return ""
+	}
+	getGitCred := func(t *testing.T, shell, prefix string) string {
+		const username = "gitlab-ci-token"
+
+		switch shell {
+		case shells.Bash:
+			return fmt.Sprintf(`echo -e "protocol=https\nhost=gitlab.com\nusername=%s" | git -c credential.interactive=never credential fill | sed 's/^/#%s# /g';`, username, prefix)
+		case shells.SNPwsh, shells.SNPowershell:
+			return fmt.Sprintf("$GitStdin = \"protocol=https`nhost=gitlab.com`nusername=%s\"; "+
+				"$GitStdinFile = Join-Path ${CI_BUILDS_DIR} 'git_get_cred_stdin.txt' ; "+
+				"$GitStdoutFile = Join-Path ${CI_BUILDS_DIR} 'git_get_cred_stdout.txt' ; "+
+				"If(Test-Path $GitStdoutFile) { Remove-Item $GitStdoutFile } ; "+
+				"[System.IO.File]::WriteAllText($GitStdinFile, $GitStdin) ; "+
+				"Start-Process -FilePath 'git' -ArgumentList 'credential','fill' -RedirectStandardInput $GitStdinFile -RedirectStandardOutput $GitStdoutFile -NoNewWindow -Wait; "+
+				"(Get-Content -Path $GitStdoutFile) -replace '^','#%s# ';", username, prefix)
+		default:
+			t.Fatalf("shell %s not supported", shell)
+		}
+		return ""
+	}
+	setGitCred := func(t *testing.T, shell string) string {
+		const username = "gitlab-ci-token"
+		const password = "fake_password"
+
+		switch shell {
+		case shells.Bash:
+			return fmt.Sprintf(`echo -e "protocol=https\nhost=gitlab.com\nusername=%s\npassword=%s" | git credential approve;`, username, password)
+		case shells.SNPwsh, shells.SNPowershell:
+			return fmt.Sprintf("$GitStdin = \"protocol=https`nhost=gitlab.com`nusername=%s`npassword=%s\"; "+
+				"$GitStdinFile = Join-Path ${CI_BUILDS_DIR} 'git_set_cred_stdin.txt' ; "+
+				"[System.IO.File]::WriteAllText($GitStdinFile, $GitStdin) ; "+
+				"Start-Process -FilePath 'git' -ArgumentList 'credential','approve' -RedirectStandardInput $GitStdinFile -NoNewWindow -Wait;", username, password)
 		default:
 			t.Fatalf("shell %s not supported", shell)
 		}
@@ -2201,11 +2239,11 @@ func TestCredSetup(t *testing.T) {
 
 	tests := []struct {
 		gitUrlsWithoutTokens bool
-		validator            func(t *testing.T, out string, remoteURL string)
+		validator            func(t *testing.T, out string, remoteURL string, cachedGitCreds string, token string)
 	}{
 		{
 			gitUrlsWithoutTokens: true,
-			validator: func(t *testing.T, out string, remoteURL string) {
+			validator: func(t *testing.T, out string, remoteURL string, cachedGitCreds string, token string) {
 				assert.NotContains(t, remoteURL, "@", "the remote URL should not contain any auth data")
 				assert.NotContains(t, remoteURL, "gitlab-ci-token", "the remote URL should not contain the token user")
 
@@ -2218,11 +2256,19 @@ func TestCredSetup(t *testing.T) {
 					assert.Contains(t, gitConfig, "credential."+remoteHost+".helper=!", "should contain a credential helper")
 					assert.NotContains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "the origin URL should not contain any auth data")
 				}
+
+				// pre get-source: gitlab-ci-token password comes from the 1st global credential helper
+				// post get-source: globally defined credential.helpers should not be run, we can fetch the current token with the local cred helper, but it is not cached
+				assert.Contains(t, out, "#pre_get_source# password=fake_password", "before getting sources (& setting up the local cred helper), previously used creds are used")
+				assert.Contains(t, out, "#post_get_source# password=[MASKED]", "after getting sources (& setting up the local cred helper), only its creds are used")
+				content, err := os.ReadFile(cachedGitCreds)
+				require.NoError(t, err)
+				assert.Contains(t, "https://gitlab-ci-token:fake_password@gitlab.com\n", string(content), "per-build cred helper caches creds from before getting source (& setting up the local cred helper)")
 			},
 		},
 		{
 			gitUrlsWithoutTokens: false,
-			validator: func(t *testing.T, out string, remoteURL string) {
+			validator: func(t *testing.T, out string, remoteURL string, cachedGitCreds string, token string) {
 				assert.Contains(t, remoteURL, "@", "the remote URL should contain auth data")
 				assert.Contains(t, remoteURL, "gitlab-ci-token", "remote URL should contain the token user")
 
@@ -2235,14 +2281,23 @@ func TestCredSetup(t *testing.T) {
 					assert.NotContains(t, gitConfig, "credential."+remoteHost+".helper=!", "should not contain a credential helper")
 					assert.Contains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "should contain the origin URL including auth data")
 				}
+
+				// pre get-source: gitlab-ci-token password comes from the 1st global credential helper
+				// post get-source: we can fetch creds from the global helpers, because we didn't set the local empty cred helper: feature flag is OFF
+				// the CI_JOB_TOKEN is expected to be cached
+				assert.Contains(t, out, "#pre_get_source# password=fake_password", "before getting sources, previously used creds are used")
+				assert.Contains(t, out, "#post_get_source# password=[MASKED]", "after getting sources, the token is cached")
+				content, err := os.ReadFile(cachedGitCreds)
+				require.NoError(t, err)
+				assert.Contains(t, fmt.Sprintf("https://gitlab-ci-token:%s@gitlab.com\n", token), string(content), "per-build cred helper caches the most recently used creds")
 			},
 		},
 	}
 
-	setupCachingCredHelper(t)
+	setupCachingCredHelpers(t)
 	orgURL, err := url.Parse(repoURLWithSubmodules)
 	require.NoError(t, err, "parsing original repo url")
-	setInvalidGitCreds(t, orgURL)
+	setInvalidGitCreds(t, *orgURL)
 
 	for _, test := range tests {
 		name := fmt.Sprintf("gitUrlsWithoutTokens:%t", test.gitUrlsWithoutTokens)
@@ -2252,20 +2307,23 @@ func TestCredSetup(t *testing.T) {
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 				t.Parallel()
 
-				if runtime.GOOS != shells.OSWindows && shell == shells.SNPowershell {
-					t.Skip("powershell is not supported on non-windows platforms")
-				}
+				helpers.SkipIntegrationTests(t, shell)
 
 				jobResponse, err := common.GetRemoteBuildResponse(listGitConfig(t, shell, markerForBuild))
 				require.NoError(t, err)
 
 				jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
 				jobResponse.GitInfo.Sha = repoShaWithSubmodules
-				token, repoURLWithToken := injectJobToken(t, &jobResponse)
+				token, _ := injectJobToken(t, &jobResponse)
+
+				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
+					Name:   common.HookPreGetSourcesScript,
+					Script: common.StepScript{setGitCred(t, shell), getGitCred(t, shell, markerPreGetSource)},
+				})
 
 				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
 					Name:   common.HookPostGetSourcesScript,
-					Script: common.StepScript{listGitConfig(t, shell, markerForHelper)},
+					Script: common.StepScript{listGitConfig(t, shell, markerForHelper), getGitCred(t, shell, markerPostGetSource)},
 				})
 
 				jobResponse.Variables = append(jobResponse.Variables,
@@ -2284,9 +2342,6 @@ func TestCredSetup(t *testing.T) {
 
 				buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, test.gitUrlsWithoutTokens)
 
-				// inject invalid creds into the git cred helper to ensure we try to prune cached creds.
-				setInvalidGitCreds(t, repoURLWithToken)
-
 				out, err := buildtest.RunBuildReturningOutput(t, build)
 				assert.NoError(t, err)
 
@@ -2295,7 +2350,9 @@ func TestCredSetup(t *testing.T) {
 				remoteURL, err := build.GetRemoteURL()
 				assert.NoError(t, err, "getting build's remote URL")
 
-				test.validator(t, out, remoteURL)
+				// cached creds from the 1st helper created in setupTestCredHelpers
+				cachedCreds := filepath.Join(build.Runner.BuildsDir, "git-credentials")
+				test.validator(t, out, remoteURL, cachedCreds, token)
 			})
 		})
 	}
@@ -2478,8 +2535,12 @@ func injectJobToken(t *testing.T, jobResponse *common.JobResponse) (string, *url
 	return token, repoURLWithToken
 }
 
-// setupCachingCredHelper sets up a (global) caching git credential helper
-func setupCachingCredHelper(t *testing.T) {
+// setupCachingCredHelpers sets up a (global) git cred helpers
+//   - the 1st one uses `git-credential-store` to create a file in the build directory
+//   - the 2nd one uses `git-credential-store` with a temporary file
+//
+// After the tests are done, all original cred helpers are restored
+func setupCachingCredHelpers(t *testing.T) {
 	gitCredCache, err := os.CreateTemp("", "")
 	require.NoError(t, err, "creating temp file for cred cache")
 	require.NoError(t, gitCredCache.Close(), "closing the temp file for cred cache")
@@ -2489,41 +2550,62 @@ func setupCachingCredHelper(t *testing.T) {
 	})
 
 	// ignoring error, because unset configs would produce an error too
-	orgCredHelper, _ := exec.Command("git", "config", "--global", "credential.helper").Output()
+	orgCredHelper, _ := exec.Command("git", "config", "--global", "--get-all", "credential.helper").Output()
 	orgCredHelper = bytes.Trim(orgCredHelper, "\n\r")
 
-	err = exec.Command("git", "config", "--global", "credential.helper", "store --file="+gitCredCache.Name()).Run()
+	err = exec.Command("git", "config", "--global", "--replace-all", "credential.helper", "").Run()
+	require.NoError(t, err, "adding empty cred helper")
+
+	// global credential helper with the cache in the build dir, thus caches are separate per test
+	helper := `` +
+		`f(){ ` +
+		`  bd=$(echo "$CI_BUILDS_DIR" | sed "s/\\\/\//g"); ` +
+		`  if [ -z "${bd}" ] || [ ! -d "${bd}" ]; then exit 1; fi; ` +
+		`  git credential-store --file="${bd}/git-credentials" "$1" ;` +
+		`}; f`
+	err = exec.Command("git", "config", "--global", "--add", "credential.helper", "!"+helper).Run()
+	require.NoError(t, err, "adding storing cred helper per build")
+
+	// global credential helper which uses the same cache for all tests
+	helper = "store --file=" + helpers.ToSlash(gitCredCache.Name())
+	err = exec.Command("git", "config", "--global", "--add", "credential.helper", helper).Run()
 	require.NoError(t, err, "adding caching cred helper")
+
 	t.Cleanup(func() {
-		if len(orgCredHelper) > 0 {
-			err := exec.Command("git", "config", "--global", "credential.helper", string(orgCredHelper)).Run()
-			require.NoError(t, err, "setting cred helper back to %s", orgCredHelper)
-		} else {
-			err := exec.Command("git", "config", "--global", "--unset", "credential.helper").Run()
-			require.NoError(t, err, "unsetting cred helper")
+		err := exec.Command("git", "config", "--global", "--unset-all", "credential.helper").Run()
+		require.NoError(t, err, "unsetting cred helper")
+		for _, helper := range bytes.Split(orgCredHelper, []byte{'\n'}) {
+			if len(helper) > 0 {
+				err := exec.Command("git", "config", "--global", "--add", "credential.helper", string(helper)).Run()
+				require.NoError(t, err, "restoring credential.helper: %s", helper)
+			}
 		}
 	})
 }
 
 // setInvalidGitCreds injects invalid creds into git cred helpers
-func setInvalidGitCreds(t *testing.T, orgURL *url.URL) {
-	urlWithFakeCreds := *orgURL
-	urlWithFakeCreds.User = url.UserPassword("some-user", "some-token")
+func setInvalidGitCreds(t *testing.T, orgURL url.URL) {
+	creds := map[string]string{
+		"some-user":       "some-token",
+		"gitlab-ci-token": "old_expired_token",
+	}
 
-	// save the fake / invalid creds
-	cmd := exec.Command("git", "credential", "approve")
-	cmd.Stdin = strings.NewReader(fmt.Sprintf("url=%s\n", urlWithFakeCreds.String()))
-	err := cmd.Run()
-	require.NoError(t, err, "setting up fake creds")
+	for username, password := range creds {
+		// save the fake / invalid creds
+		cmd := exec.Command("git", "credential", "approve")
+		cmd.Stdin = strings.NewReader(fmt.Sprintf("protocol=%s\nhost=%s\nusername=%s\npassword=%s\n", orgURL.Scheme, orgURL.Host, username, password))
+		err := cmd.Run()
+		require.NoError(t, err, "setting up fake creds")
 
-	// ensure the cred helper is set up and returns the fake creds
-	cmd = exec.Command("git", "credential", "fill")
-	cmd.Stdin = strings.NewReader(fmt.Sprintf("protocol=%s\nhost=%s\n", urlWithFakeCreds.Scheme, urlWithFakeCreds.Host))
-	var out []byte
-	out, err = cmd.Output()
-	require.NoError(t, err, "getting cached git creds")
-	require.Contains(t, string(out), "username=some-user", "wrong user for cached cred")
-	require.Contains(t, string(out), "password=some-token", "wrong password for cached cred")
+		// ensure the cred helper is set up and returns the fake creds
+		cmd = exec.Command("git", "credential", "fill")
+		cmd.Stdin = strings.NewReader(fmt.Sprintf("protocol=%s\nhost=%s\nusername=%s\n", orgURL.Scheme, orgURL.Host, username))
+		var out []byte
+		out, err = cmd.Output()
+		require.NoError(t, err, "getting cached git creds")
+		require.Contains(t, string(out), fmt.Sprintf("username=%s", username), "wrong user for cached cred")
+		require.Contains(t, string(out), fmt.Sprintf("password=%s", password), "wrong password for cached cred")
+	}
 }
 
 func onlyHost(t *testing.T, remoteURL string) string {
