@@ -481,4 +481,11 @@ sudo curl -Lo /opt/gitlab-runner/fargate "https://gitlab-runner-custom-fargate-d
 sudo chmod +x /opt/gitlab-runner/fargate
 ```
 
+### `file name too long` when running jobs
+
+The following error occurs on GitLab 18.0 or later, or on GitLab.com after April 28th, 2025 because the
+[job token format is changed to the JWT token format](https://docs.gitlab.com/update/deprecations/#updating-cicd-job-tokens-to-jwt-standard).
+[AWS Fargate custom executor driver](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate/-/tree/master/docs) users must
+upgrade to version 0.5.1 or later. Alternatively, you can use the legacy CI/CD job token format until GitLab 19.0 without upgrading the runner.
+
 <!-- markdownlint-enable line-length -->
