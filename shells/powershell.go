@@ -644,39 +644,9 @@ func (b *PowerShell) GetName() string {
 	return b.Shell
 }
 
-const powershellGitCredHelperScript = `function f([string]$cmd){ if ($cmd.equals("get")) { Write-Host -NoNewline "password=${env:CI_JOB_TOKEN}` + "`n" + `" } }; f`
-
-// GetGitCredHelperCommand returns a command that can be used e.g. in a git config as a credential helper.
-//
-// This returns something like:
-//
-//	pwsh -NoProfile ... -Command ''function f{...}; ...; f''
-//
-// as a single string.
-//
-// Note the double single-quotes: This is deliberate!
-// This command is used with the shellwriter's Command(...), which will quote the whole string in single-quotes. We want
-// this to be a single argument (to `git config`) and not split into multiple arguments. Now that we know that the
-// result will be single-quoted again, we need to escape any "inner" single-quotes, and we do so doubling them here.
-//
-// In the end, for a successful configuration, we need the content of the git config to literally look something like:
-//
-//	[credential "https://gitlab.com"]
-//		username = gitlab-ci-token
-//		helper =
-//		helper = "!pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { Write-Host -NoNewline \"password=${env:CI_JOB_TOKEN}`n\" } }; f'"
-//
-// or
-//
-//	[credential "https://gitlab.com"]
-//		username = gitlab-ci-token
-//		helper =
-//		helper = "!powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { Write-Host -NoNewline \"password=${env:CI_JOB_TOKEN}`n\" } }; f'"
-//
-// More docs about custom git cred helpers can be found at https://git-scm.com/docs/gitcredentials#_custom_helpers .
 func (b *PowerShell) GetGitCredHelperCommand(os string) string {
 	shell := b.GetName()
-	script := powershellGitCredHelperScript
+	script := credHelperCommand
 
 	// If the OS is not set explicitly, we fallback to the current processes' OS
 	os = cmp.Or(os, runtime.GOOS)
@@ -688,12 +658,7 @@ func (b *PowerShell) GetGitCredHelperCommand(os string) string {
 		script = strings.ReplaceAll(script, `"`, `\"`)
 	}
 
-	return fmt.Sprintf(
-		"%s %s ''%s''",
-		shell,
-		strings.Join(append(defaultPowershellFlags, "-Command"), " "),
-		script,
-	)
+	return script
 }
 
 // GetExternalCommandEmptyArgument handles a special case (empty argument) in the quoting rules of PowerShell Desktop (5.1) to run an external process.

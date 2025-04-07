@@ -995,7 +995,7 @@ func TestPowershellEntrypointCommand(t *testing.T) {
 // TestGitCredHelperDifferentJobOS asserts that the git cred helper script is rendered differently across OSes and shell
 // types.
 func TestGitCredHelperDifferentJobOS(t *testing.T) {
-	doubleQuotedBlobs := []string{"password=${env:CI_JOB_TOKEN}`n", "get"}
+	doubleQuotedBlobs := []string{"password=${CI_JOB_TOKEN}", "get"}
 	expectedInnerDoubleQuotes := map[string]map[string]string{
 		"": {
 			SNPowershell: ternary(runtime.GOOS == "windows", `\"`, `"`),

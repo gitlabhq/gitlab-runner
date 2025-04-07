@@ -3,6 +3,7 @@
 package shells_test
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -35,12 +36,17 @@ func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter, env []
 	}
 
 	script := writer.Finish(false)
-	scriptFile := filepath.Join(cwd, shell+"-test-script."+extension)
-	err := os.WriteFile(scriptFile, []byte(script), 0700)
-	require.NoError(t, err)
-	defer os.Remove(scriptFile)
+	// pwsh has issues with `,` in file paths, so we create the script file in a random directory instead of the "test
+	// directory", so that we don't fail on test names with `,`.
+	scriptFile, err := os.CreateTemp("", shell+"-*-test-script."+extension)
+	require.NoError(t, err, "creating temp file")
+	_, err = io.WriteString(scriptFile, script)
+	require.NoError(t, err, "writing to temp file")
+	require.NoError(t, scriptFile.Close(), "closing temp file")
+	require.NoError(t, os.Chmod(scriptFile.Name(), 0700), "chmod'ing temp file")
+	defer os.Remove(scriptFile.Name())
 
-	cmdArgs = append(cmdArgs, scriptFile)
+	cmdArgs = append(cmdArgs, scriptFile.Name())
 	cmd := exec.Command(shell, cmdArgs...)
 	cmd.Env = env
 	cmd.Dir = cwd
