@@ -20,13 +20,6 @@ describes some of the most common problems with GitLab Runner.
 
 {{< /alert >}}
 
-{{< alert type="warning" >}}
-
-If you are using or upgrading from a version prior to GitLab Runner 10, read how
-to [upgrade to the new version](#upgrading-to-gitlab-runner-10).
-
-{{< /alert >}}
-
 ## Installing GitLab Runner
 
 Here are the steps to install and configure GitLab Runner under FreeBSD:
@@ -114,37 +107,37 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
    If you are not using bash, create a file named `/usr/local/etc/rc.d/gitlab_runner` and include the following content:
 
    ```shell
-      #!/bin/sh
-      # PROVIDE: gitlab_runner
-      # REQUIRE: DAEMON NETWORKING
-      # BEFORE:
-      # KEYWORD:
+   #!/bin/sh
+   # PROVIDE: gitlab_runner
+   # REQUIRE: DAEMON NETWORKING
+   # BEFORE:
+   # KEYWORD:
 
-      . /etc/rc.subr
+   . /etc/rc.subr
 
-      name="gitlab_runner"
-      rcvar="gitlab_runner_enable"
+   name="gitlab_runner"
+   rcvar="gitlab_runner_enable"
 
-      user="gitlab-runner"
-      user_home="/home/gitlab-runner"
-      command="/usr/local/bin/gitlab-runner"
-      command_args="run"
-      pidfile="/var/run/${name}.pid"
+   user="gitlab-runner"
+   user_home="/home/gitlab-runner"
+   command="/usr/local/bin/gitlab-runner"
+   command_args="run"
+   pidfile="/var/run/${name}.pid"
 
-      start_cmd="gitlab_runner_start"
+   start_cmd="gitlab_runner_start"
 
-      gitlab_runner_start()
-      {
-         export USER=${user}
-         export HOME=${user_home}
-         if checkyesno ${rcvar}; then
-            cd ${user_home}
-            /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} ${command_args} > /var/log/gitlab_runner.log 2>&1
-         fi
-      }
+   gitlab_runner_start()
+   {
+      export USER=${user}
+      export HOME=${user_home}
+      if checkyesno ${rcvar}; then
+         cd ${user_home}
+         /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} ${command_args} > /var/log/gitlab_runner.log 2>&1
+      fi
+   }
 
-      load_rc_config $name
-      run_rc_command $1
+   load_rc_config $name
+   run_rc_command $1
    ```
 
 1. Make the `gitlab_runner` script executable:
@@ -166,56 +159,4 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
    ```shell
    sudo service gitlab_runner onestart
-   ```
-
-## Upgrading to GitLab Runner 10
-
-To upgrade GitLab Runner from a version prior to 10.0:
-
-1. Stop GitLab Runner:
-
-   ```shell
-   sudo service gitlab_runner stop
-   ```
-
-1. Optionally, preserve the previous version of GitLab Runner just in case:
-
-   ```shell
-   sudo mv /usr/local/bin/gitlab-ci-multi-runner{,.$(/usr/local/bin/gitlab-ci-multi-runner --version| grep Version | cut -d ':' -f 2 | sed 's/ //g')}
-   ```
-
-1. Download the new GitLab Runner and make it executable:
-
-   ```shell
-   # For amd64
-   sudo fetch -o /usr/local/bin/gitlab-runner https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-freebsd-amd64
-
-   # For i386
-   sudo fetch -o /usr/local/bin/gitlab-runner https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-freebsd-386
-
-   sudo chmod +x /usr/local/bin/gitlab-runner
-   ```
-
-1. Edit `/usr/local/etc/rc.d/gitlab_runner` and change:
-
-   ```shell
-   command="/usr/local/bin/gitlab-ci-multi-runner run"
-   ```
-
-   to:
-
-   ```shell
-   command="/usr/local/bin/gitlab-runner run"
-   ```
-
-1. Start GitLab Runner:
-
-   ```shell
-   sudo service gitlab_runner start
-   ```
-
-1. After you confirm all is working correctly, you can remove the old binary:
-
-   ```shell
-   sudo rm /usr/local/bin/gitlab-ci-multi-runner.*
    ```

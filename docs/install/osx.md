@@ -345,7 +345,7 @@ If you encounter this error, you may need to:
 1. Set `FF_RESOLVE_FULL_TLS_CHAIN` to `false` in the [`[runners.feature_flags]` configuration](../configuration/feature-flags.md#enable-feature-flag-in-runner-configuration). For example:
 
 ```toml
-    [[runners]]
+[[runners]]
   name = "ruby-2.7-docker"
   url = "https://CI/"
   token = "TOKEN"
