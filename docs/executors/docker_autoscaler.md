@@ -20,13 +20,14 @@ The Docker Autoscaler executor is an autoscale-enabled Docker executor that crea
 accommodate the jobs that the runner manager processes. It wraps the [Docker executor](docker.md) so that all
 Docker executor options and features are supported.
 
-The Docker Autoscaler uses [fleeting plugins](https://gitlab.com/gitlab-org/fleeting/fleeting) to autoscale.
+The Docker Autoscaler uses [fleeting plugins](https://gitlab.com/gitlab-org/fleeting/plugins) to autoscale.
 Fleeting is an abstraction for a group of autoscaled instances, which uses plugins that support cloud providers,
 like Google Cloud, AWS, and Azure.
 
 ## Install a fleeting plugin
 
 To install a plugin for your target platform, see [Install the fleeting plugin](../fleet_scaling/fleeting.md#install-a-fleeting-plugin).
+For specific configuration details, see the [respective plugin project documentation](https://gitlab.com/gitlab-org/fleeting/plugins).
 
 ## Configure Docker Autoscaler
 
@@ -45,9 +46,9 @@ To configure the Docker Autoscaler, in the `config.toml`:
 
 Each Docker Autoscaler configuration must have its own dedicated autoscaling resource:
 
-- For AWS, a dedicated Auto Scaling group
+- For AWS, a dedicated auto scaling group
 - For GCP, a dedicated instance group
-- For Azure, a dedicated Scale Set
+- For Azure, a dedicated scale set
 
 Do not share these autoscaling resources across:
 
@@ -64,8 +65,15 @@ failures, and potentially higher costs.
 Prerequisites:
 
 - An AMI with [Docker Engine](https://docs.docker.com/engine/) installed. To enable Runner Manager's access to the Docker socket on the AMI, the user must be part of the `docker` group.
-- An AWS Autoscaling group. For the scaling policy use "none", as Runner handles the scaling. Enable instance scale-in protection.
-- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)
+
+  {{< alert type="note" >}}
+
+  The AMI does not require GitLab Runner to be installed. The instances launched using the AMI must not register themselves as runners in GitLab.
+    
+  {{< /alert >}}
+
+- An AWS autoscaling group. For the scaling policy use "none", as runner handles the scaling. Enable instance scale-in protection.
+- An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy).
 
 This configuration supports:
 
@@ -132,8 +140,23 @@ concurrent = 10
 Prerequisites:
 
 - A VM image with [Docker Engine](https://docs.docker.com/engine/) installed, such as [`COS`](https://cloud.google.com/container-optimized-os/docs).
-- A Google Cloud instance group. For **Autoscaling mode**, select **Do not autoscale**. The runner handles autoscaling, not
-the Google Cloud instance group.
+
+  {{< alert type="note" >}}
+
+  The VM image does not require GitLab Runner to be installed. The instances launched using the VM image must not register themselves as runners in GitLab.
+  
+  {{< /alert >}}
+
+- A single-zone Google Cloud instance group. For **Autoscaling mode**, select **Do not autoscale**. The runner handles autoscaling, not
+  the Google Cloud instance group.
+
+  {{< alert type="note" >}}
+
+  Multi-zone instance groups are not currently supported. An [issue](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud/-/issues/20)
+  exists to support multi-zone instance groups in the future.
+
+  {{< /alert >}}
+
 - An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions).
   If you're deploying your runner in a GKE cluster, you can add an IAM binding
   between the Kubernetes service account and the GCP service account.
@@ -204,7 +227,14 @@ concurrent = 10
 
 Prerequisites:
 
-- An Azure VM Image with [Docker Engine](https://docs.docker.com/engine/) installed.
+- An Azure VM image with [Docker Engine](https://docs.docker.com/engine/) installed.
+
+  {{< alert type="note" >}}
+
+  The VM image does not require GitLab Runner to be installed. The instances launched using the VM image must not register themselves as runners in GitLab.
+
+  {{< /alert >}}
+
 - An Azure scale set where the autoscaling policy is set to `manual`. The runner handles the scaling.
 
 This configuration supports:
