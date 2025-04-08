@@ -14,7 +14,10 @@ trigger deploy to kubernetes:
       when: never
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    # The KUBERNETES_DEPLOY_BRANCH variable would usually be "main"
+    # but in some cases we might want to deploy from a different branch
+    # For example, a feature branch.
+    - if: $CI_COMMIT_BRANCH == $KUBERNETES_DEPLOY_BRANCH || ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $KUBERNETES_DEPLOY_BRANCH == "")
       changes: !reference [.code-backstage-patterns]
       variables:
         UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
