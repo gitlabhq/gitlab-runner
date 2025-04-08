@@ -10,8 +10,12 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed
 
-WARNING:
-The Fargate driver is community supported. GitLab Support will make a best effort attempt to help debug any problems, but no guarantees are made.
+{{< alert type="warning" >}}
+
+The Fargate driver is community supported. GitLab Support will try to help debug problems, but offers no guarantees.
+
+{{< /alert >}}
+
 
 The GitLab [custom executor](../../executors/custom.md) driver for
 [AWS Fargate](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate)
