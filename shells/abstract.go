@@ -722,8 +722,8 @@ func (b *AbstractShell) configureGitCredHelper(w ShellWriter, info common.ShellS
 	w.Command("git", "config", "-f", credConfigFile, credSection+".username", "gitlab-ci-token")
 	// To not have global / system-wide cred helpers interfere, we disable all current helpers and set up our own one.
 	// With this any other cred helper (e.g. GCM) will keep their creds as are, we will neither add/update nor delete any creds thereof.
-	w.Command("git", "config", "-f", credConfigFile, "--replace-all", credSection+".helper", shell.GetExternalCommandEmptyArgument(info.RuntimeOS))
-	w.Command("git", "config", "-f", credConfigFile, "--add", credSection+".helper", shell.GetGitCredHelperCommand(info.RuntimeOS))
+	w.Command("git", "config", "-f", credConfigFile, "--replace-all", credSection+".helper", shell.GetExternalCommandEmptyArgument())
+	w.Command("git", "config", "-f", credConfigFile, "--add", credSection+".helper", shell.GetGitCredHelperCommand())
 
 	w.Command("git", "config", "include.path", credConfigFile)
 

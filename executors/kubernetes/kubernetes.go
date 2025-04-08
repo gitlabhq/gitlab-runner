@@ -495,8 +495,6 @@ func (s *executor) verifyPullPolicies(
 }
 
 func (s *executor) setupDefaultExecutorOptions(os string) {
-	s.ExecutorOptions.Shell.RuntimeOS = os
-
 	if os == helperimage.OSTypeWindows {
 		s.DefaultBuildsDir = `C:\builds`
 		s.DefaultCacheDir = `C:\cache`
