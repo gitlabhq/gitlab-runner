@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -2877,6 +2876,8 @@ func TestSanitizeCacheFallbackKey(t *testing.T) {
 }
 
 func TestAbstractShell_writeGitCleanup(t *testing.T) {
+	v := common.AppVersion
+	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
 	submoduleStrategies := map[common.SubmoduleStrategy]bool{
 		common.SubmoduleNone:      false,
 		common.SubmoduleNormal:    true,
@@ -2953,13 +2954,10 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 						sw.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
 						sw.EXPECT().EndIf().Once()
 
-						uaConfRE := regexp.MustCompile(`^http.userAgent=gitlab-runner development version [a-zA-Z0-9]+\/[a-zA-Z0-9]+$`)
-						uaConfMatcher := mock.MatchedBy(uaConfRE.MatchString)
-
 						sw.EXPECT().IfFile(".git/shallow").Once()
-						sw.EXPECT().Command("git", "-c", uaConfMatcher, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
+						sw.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
 						sw.EXPECT().Else().Once()
-						sw.EXPECT().Command("git", "-c", uaConfMatcher, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
+						sw.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
 						sw.EXPECT().EndIf().Once()
 
 						err := shell.writeRefspecFetchCmd(sw, info)
