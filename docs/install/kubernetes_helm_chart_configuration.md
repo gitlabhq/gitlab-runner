@@ -174,12 +174,14 @@ its own service account, or you can
     create: true
   ```
 
-- To use an existing service account, set a `serviceAccountName`:
+- To use an existing service account, set a `serviceAccount.name`:
 
   ```yaml
   rbac:
     create: false
-    serviceAccountName: your-service-account
+  serviceAccount:
+    create: false
+    name: your-service-account
   ```
 
 ## Control maximum runner concurrency
