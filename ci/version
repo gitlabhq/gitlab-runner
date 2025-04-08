@@ -5,12 +5,7 @@ set -eo pipefail
 version=$(cat VERSION || echo dev | sed -e 's/^v//g')
 exact_tag=$(git describe --exact-match 2>/dev/null | sed -e 's/^v//g' || echo "")
 
-if echo "${exact_tag}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+$"; then
-    echo "$exact_tag"
-    exit 0
-fi
-
-if echo "${exact_tag}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"; then
+if echo "${exact_tag}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$"; then
     echo "$exact_tag"
     exit 0
 fi
