@@ -180,6 +180,13 @@ func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan logLineD
 			return
 		case <-time.After(backoffDuration):
 			err := l.processStream(ctx, outCh)
+			// prevent printing an error that the container exited
+			// when the context is already cancelled
+			if errors.Is(ctx.Err(), context.Canceled) {
+				l.logger.Debug("processStream exited with Context.Cancelled error")
+				return
+			}
+
 			exitCode := getExitCode(err)
 			switch {
 			case exitCode == outputLogFileNotExistsExitCode:
@@ -198,15 +205,16 @@ func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan logLineD
 }
 
 func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan logLineData) error {
-	reader, writer := io.Pipe()
-	defer func() {
-		_ = reader.Close()
-		_ = writer.Close()
-	}()
-
 	// Using errgroup.WithContext doesn't work here since if either one of the goroutines
 	// exits with a nil error, we can't signal the other one to exit
 	ctx, cancel := context.WithCancel(ctx)
+
+	reader, writer := io.Pipe()
+	go func() {
+		<-ctx.Done()
+		_ = reader.Close()
+		_ = writer.Close()
+	}()
 
 	var gr errgroup.Group
 
@@ -215,12 +223,6 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan l
 		defer cancel()
 
 		err := l.logStreamer.Stream(ctx, logsOffset, writer)
-		// prevent printing an error that the container exited
-		// when the context is already cancelled
-		if errors.Is(ctx.Err(), context.Canceled) {
-			return nil
-		}
-
 		if err != nil {
 			err = fmt.Errorf("streaming logs %s: %w", l.logStreamer, err)
 		}
@@ -246,38 +248,31 @@ func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, o
 	var previousLogsOffset int64 = -1
 	logsScanner, linesCh := l.scan(ctx, logs)
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case line, more := <-linesCh:
-			if !more {
-				l.logger.Debug("No more data in linesCh")
-				return logsScanner.Err()
-			}
+	for line := range linesCh {
+		newLogsOffset, logLine := l.parseLogLine(line)
+		if newLogsOffset != -1 {
+			l.logsOffset = newLogsOffset
+		}
 
-			newLogsOffset, logLine := l.parseLogLine(line)
-			if newLogsOffset != -1 {
-				l.logsOffset = newLogsOffset
-			}
+		// Helper when reading the log add a new line when the buffer doesn't end with a new line
+		// This makes the buffer size greater than the log offset shift
+		// When the buffer size is greater than the log offset shift and the additional character is a \n
+		// it can then be safely removed as it is likely the addition character added by helper
+		if l := len(logLine); previousLogsOffset != -1 &&
+			l > int(newLogsOffset-previousLogsOffset) && logLine[l-1] == '\n' {
+			logLine = logLine[:l-1]
+		}
 
-			// Helper when reading the log add a new line when the buffer doesn't end with a new line
-			// This makes the buffer size greater than the log offset shift
-			// When the buffer size is greater than the log offset shift and the additional character is a \n
-			// it can then be safely removed as it is likely the addition character added by helper
-			if l := len(logLine); previousLogsOffset != -1 &&
-				l > int(newLogsOffset-previousLogsOffset) && logLine[l-1] == '\n' {
-				logLine = logLine[:l-1]
-			}
+		previousLogsOffset = newLogsOffset
 
-			previousLogsOffset = newLogsOffset
-
-			outCh <- logLineData{
-				line:   logLine,
-				offset: l.logsOffset,
-			}
+		outCh <- logLineData{
+			line:   logLine,
+			offset: l.logsOffset,
 		}
 	}
+
+	l.logger.Debug("No more data in linesCh")
+	return logsScanner.Err()
 }
 
 func (l *kubernetesLogProcessor) scan(ctx context.Context, logs io.Reader) (*logScanner, <-chan string) {

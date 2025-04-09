@@ -785,6 +785,11 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		// if we observe terminal pod errors via the pod watcher, we can exit immediately
 		return err
 	case <-ctx.Done():
+		if common.ContextCancelledWithInterruptSignal(ctx) && s.canRestore() {
+			s.BuildLogger.Debugln("Terminating Kubernetes executor job without cancellation...")
+			return nil
+		}
+
 		s.remoteStageStatusMutex.Lock()
 		defer s.remoteStageStatusMutex.Unlock()
 		script := s.stageCancellationScript(string(cmd.Stage))
