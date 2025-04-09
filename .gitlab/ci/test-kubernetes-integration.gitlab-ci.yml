@@ -37,7 +37,7 @@ provision integration kubernetes:
 integration kubernetes exec legacy:
   extends:
     - .integration kubernetes
-  resource_group: "$CI_COMMIT_BRANCH-k8s-integration-exec-legacy"
+  resource_group: "$CI_COMMIT_REF_SLUG-k8s-integration-exec-legacy"
   variables:
     CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "true"
@@ -46,7 +46,7 @@ integration kubernetes exec legacy:
 integration kubernetes attach:
   extends:
     - .integration kubernetes
-  resource_group: "$CI_COMMIT_BRANCH-k8s-integration-attach"
+  resource_group: "$CI_COMMIT_REF_SLUG-k8s-integration-attach"
   variables:
     CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "false"
@@ -55,7 +55,7 @@ integration kubernetes attach:
 integration kubernetes:
   extends:
     - .integration kubernetes
-  resource_group: "$CI_COMMIT_BRANCH-k8s-integration"
+  resource_group: "$CI_COMMIT_REF_SLUG-k8s-integration"
   variables:
     EXTRA_GO_TEST_FLAGS: "-skip=TestRunIntegrationTestsWithFeatureFlag"
 
