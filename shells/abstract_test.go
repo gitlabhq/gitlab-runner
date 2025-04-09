@@ -844,6 +844,7 @@ func TestGitFetchFlags(t *testing.T) {
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "init.defaultBranch", "none").Once()
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "credential.interactive", "never").Once()
+					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "gc.autoDetach", "false").Once()
 					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "transfer.bundleURI", "true").Once()
 
 					expectFileCleanup(mockWriter, path.Join(dummyProjectDir, ".git"), false)
@@ -2940,6 +2941,7 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "init.defaultBranch", "none").Once()
 						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "fetch.recurseSubmodules", "false").Once()
 						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "credential.interactive", "never").Once()
+						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "gc.autoDetach", "false").Once()
 						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "transfer.bundleURI", "true").Once()
 
 						sw.EXPECT().Command("git", "init", "", "--template", "someTmpDir").Once()
