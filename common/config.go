@@ -1237,6 +1237,10 @@ type StoreConfig struct {
 	File *FileStore `toml:"file,omitempty" json:"file,omitempty" group:"file store" namespace:"file"`
 }
 
+func (s *StoreConfig) IsConfigured() bool {
+	return s.Name == "file" && s.File.Path != nil
+}
+
 type FileStore struct {
 	Path *string `toml:"path" json:"path" long:"path" env:"STORE_FILE_PATH" description:"Path to the file store" jsonschema:"oneof_type=string;null"`
 }

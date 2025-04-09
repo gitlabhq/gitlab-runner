@@ -149,12 +149,12 @@ func (s *executor) SetState(state any) bool {
 }
 
 func (s *executor) canRestore() bool {
-	return !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy)
+	return !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) && s.Config.Store.IsConfigured()
 }
 
 func (s *executor) restore(ctx context.Context) error {
 	if !s.canRestore() {
-		return errors.New("cannot restore state with legacy kubernetes execution strategy")
+		return errors.New("cannot restore state with legacy kubernetes execution strategy or store is not configured properly")
 	}
 
 	s.Build.Log().Println("Restoring state from a previous run...")

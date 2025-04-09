@@ -1080,6 +1080,7 @@ type SupportedFailureReasonMapper interface {
 type JobTrace interface {
 	io.Writer
 	Success() error
+	Stop() error
 	Fail(err error, failureData JobFailureData) error
 	SetCancelFunc(cancelFunc context.CancelFunc)
 	Cancel() bool

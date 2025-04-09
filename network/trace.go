@@ -50,6 +50,7 @@ type clientJobTrace struct {
 
 	finalUpdateRetryLimit int
 
+	stopped atomic.Bool
 	enabled atomic.Bool
 }
 
@@ -57,7 +58,16 @@ func (c *clientJobTrace) Success() error {
 	return c.complete(nil, common.JobFailureData{})
 }
 
+func (c *clientJobTrace) Stop() error {
+	c.stopped.Store(true)
+	return c.finish()
+}
+
 func (c *clientJobTrace) complete(err error, failureData common.JobFailureData) error {
+	if c.stopped.Load() {
+		return nil
+	}
+
 	c.lock.Lock()
 
 	if c.state != common.Running {

@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -98,7 +99,12 @@ var staticBuildStages = []BuildStage{
 var (
 	ErrJobCanceled      = errors.New("canceled")
 	ErrJobScriptTimeout = errors.New("script timeout")
+	ErrInterruptSignal  = errors.New("interrupt signal received")
 )
+
+func ContextCancelledWithInterruptSignal(ctx context.Context) bool {
+	return context.Cause(ctx) == ErrInterruptSignal
+}
 
 const (
 	ExecutorJobSectionAttempts = "EXECUTOR_JOB_SECTION_ATTEMPTS"
@@ -566,7 +572,7 @@ func (b *Build) executeScript(ctx context.Context) error {
 		if afterScriptErr := b.executeAfterScript(afterScriptCtx, err); afterScriptErr != nil {
 			// the parent deadline being exceeded is reported at a later stage, so we
 			// only focus on errors specific to after_script here.
-			if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			if !errors.Is(ctx.Err(), context.DeadlineExceeded) && !ContextCancelledWithInterruptSignal(ctx) && !b.isResumable() {
 				// By default after-script ignores errors, but this can
 				// be disabled via the AFTER_SCRIPT_IGNORE_ERRORS variable.
 
@@ -759,14 +765,15 @@ func (b *Build) runtimeStateAndError(err error) (BuildRuntimeState, error) {
 	}
 }
 
-func (b *Build) run(ctx context.Context) (err error) {
+//nolint:gocognit
+func (b *Build) run(ctx context.Context) (err error, cleanup bool) {
 	b.setCurrentState(BuildRunRuntimeRunning)
 
 	buildFinish := make(chan error, 1)
 	buildPanic := make(chan error, 1)
 
-	runContext, runCancel := context.WithCancel(ctx)
-	defer runCancel()
+	runContext, runCancel := context.WithCancelCause(ctx)
+	defer runCancel(nil)
 
 	if term, ok := b.executor.(terminal.InteractiveTerminal); b.Session != nil && ok {
 		b.Session.SetInteractiveTerminal(term)
@@ -799,14 +806,22 @@ func (b *Build) run(ctx context.Context) (err error) {
 	select {
 	case <-ctx.Done():
 		err = b.handleError(context.Cause(ctx))
-
 	case signal := <-b.SystemInterrupt:
-		err = &BuildError{
-			Inner:         fmt.Errorf("aborted: %v", signal),
-			FailureReason: RunnerSystemFailure,
-		}
-		b.setCurrentState(BuildRunRuntimeTerminated)
+		if signal == syscall.SIGTERM && b.isResumable() {
+			runCancel(ErrInterruptSignal)
+			b.waitForBuildFinish(buildFinish, WaitForBuildFinishTimeout)
+			if err := b.JobStore.Update(b.Job); err != nil {
+				b.Log().Warnln("Error doing final job update", err)
+			}
 
+			return nil, false
+		} else {
+			err = &BuildError{
+				Inner:         fmt.Errorf("aborted: %v", signal),
+				FailureReason: RunnerSystemFailure,
+			}
+			b.setCurrentState(BuildRunRuntimeTerminated)
+		}
 	case err = <-buildFinish:
 		// It's possible that the parent context being cancelled will
 		// terminate the build early, bringing us here, and although we handle
@@ -815,7 +830,7 @@ func (b *Build) run(ctx context.Context) (err error) {
 		// return early because we're no longer waiting for the build
 		// to finish.
 		if ctx.Err() != nil {
-			return b.handleError(context.Cause(ctx))
+			return b.handleError(context.Cause(ctx)), true
 		}
 
 		if err != nil {
@@ -823,22 +838,21 @@ func (b *Build) run(ctx context.Context) (err error) {
 		} else {
 			b.setCurrentState(BuildRunRuntimeSuccess)
 		}
-		return err
-
+		return err, true
 	case err = <-buildPanic:
 		b.setCurrentState(BuildRunRuntimeTerminated)
-		return err
+		return err, true
 	}
 
 	b.Log().WithError(err).Debugln("Waiting for build to finish...")
 
 	// Wait till we receive that build did finish
-	runCancel()
+	runCancel(nil)
 	b.waitForBuildFinish(buildFinish, WaitForBuildFinishTimeout)
 
 	b.ensureFinishedAt()
 
-	return err
+	return err, true
 }
 
 // waitForBuildFinish will wait for the build to finish or timeout, whichever
@@ -975,7 +989,7 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 //
 // If an error cannot be unwrapped to `BuildError`, `SystemFailure`
 // is used as the failure reason.
-func (b *Build) setTraceStatus(err error) {
+func (b *Build) setTraceStatus(err error, cleanup bool) {
 	logger := buildlogger.New(
 		b.trace, b.Log().WithFields(logrus.Fields{
 			"duration_s": b.FinalDuration().Seconds(),
@@ -986,6 +1000,14 @@ func (b *Build) setTraceStatus(err error) {
 		},
 	)
 	defer logger.Close()
+
+	if err == nil && !cleanup {
+		if err := b.trace.Stop(); err != nil {
+			logger.Debugln("Error stopping and flushing trace", err)
+		}
+
+		return
+	}
 
 	if err == nil {
 		logger.Infoln("Job succeeded")
@@ -1048,6 +1070,15 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 	return b.executorStageResolver()
 }
 
+func (b *Build) isResumable() bool {
+	if b.executor == nil || b.Runner == nil || b.Runner.Store == nil {
+		return false
+	}
+
+	_, isStateful := b.executor.(StatefulExecutor)
+	return isStateful && b.Runner.Store.IsConfigured()
+}
+
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildContextTimeout())
 	defer cancel()
@@ -1066,9 +1097,10 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.executor = executor
 	b.trace = trace
 
+	var cleanup bool
 	// These defers are ordered because runBuild could panic and the recover needs to handle that panic.
 	// setTraceStatus needs to be last since it needs a correct error value to report the job's status
-	defer func() { b.setTraceStatus(err) }()
+	defer func() { b.setTraceStatus(err, cleanup) }()
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -1111,7 +1143,11 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		return err
 	}
 
-	defer b.executor.Cleanup()
+	defer func() {
+		if cleanup {
+			b.executor.Cleanup()
+		}
+	}()
 
 	// override context that can be canceled by the executor if supported
 	if withContext, ok := b.ExecutorData.(WithContext); ok {
@@ -1119,7 +1155,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		defer cancel()
 	}
 
-	err = b.run(ctx)
+	err, cleanup = b.run(ctx)
 	if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
 		b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
 	}

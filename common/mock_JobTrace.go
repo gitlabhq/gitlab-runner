@@ -511,6 +511,51 @@ func (_c *MockJobTrace_Start_Call) RunAndReturn(run func()) *MockJobTrace_Start_
 	return _c
 }
 
+// Stop provides a mock function with no fields
+func (_m *MockJobTrace) Stop() error {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Stop")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockJobTrace_Stop_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Stop'
+type MockJobTrace_Stop_Call struct {
+	*mock.Call
+}
+
+// Stop is a helper method to define mock.On call
+func (_e *MockJobTrace_Expecter) Stop() *MockJobTrace_Stop_Call {
+	return &MockJobTrace_Stop_Call{Call: _e.mock.On("Stop")}
+}
+
+func (_c *MockJobTrace_Stop_Call) Run(run func()) *MockJobTrace_Stop_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockJobTrace_Stop_Call) Return(_a0 error) *MockJobTrace_Stop_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockJobTrace_Stop_Call) RunAndReturn(run func() error) *MockJobTrace_Stop_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Success provides a mock function with no fields
 func (_m *MockJobTrace) Success() error {
 	ret := _m.Called()
