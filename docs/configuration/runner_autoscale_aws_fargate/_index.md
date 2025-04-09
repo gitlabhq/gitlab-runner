@@ -12,6 +12,12 @@ title: Autoscaling GitLab CI on AWS Fargate
 
 {{< /details >}}
 
+{{< alert type="warning" >}}
+
+The Fargate driver is community supported. GitLab Support will try to help debug problems, but offers no guarantees.
+
+{{< /alert >}}
+
 The GitLab [custom executor](../../executors/custom.md) driver for
 [AWS Fargate](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate)
 automatically launches a container on the Amazon Elastic Container Service (ECS) to
