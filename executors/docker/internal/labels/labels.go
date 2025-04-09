@@ -34,6 +34,7 @@ func (l *labeler) Labels(otherLabels map[string]string) map[string]string {
 		dockerLabelPrefix + ".job.sha":         l.build.GitInfo.Sha,
 		dockerLabelPrefix + ".job.before_sha":  l.build.GitInfo.BeforeSha,
 		dockerLabelPrefix + ".job.ref":         l.build.GitInfo.Ref,
+		dockerLabelPrefix + ".job.timeout":     l.build.GetBuildTimeout().String(),
 		dockerLabelPrefix + ".project.id":      strconv.FormatInt(l.build.JobInfo.ProjectID, 10),
 		dockerLabelPrefix + ".pipeline.id":     l.build.GetAllVariables().Value("CI_PIPELINE_ID"),
 		dockerLabelPrefix + ".runner.id":       l.build.Runner.ShortDescription(),

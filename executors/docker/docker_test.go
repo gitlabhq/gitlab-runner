@@ -1198,6 +1198,7 @@ func TestDockerContainerLabelsSetting(t *testing.T) {
 			"com.gitlab.gitlab-runner.job.ref":         "",
 			"com.gitlab.gitlab-runner.job.sha":         "",
 			"com.gitlab.gitlab-runner.job.url":         "/-/jobs/0",
+			"com.gitlab.gitlab-runner.job.timeout":     "2h0m0s",
 			"com.gitlab.gitlab-runner.managed":         "true",
 			"com.gitlab.gitlab-runner.pipeline.id":     "",
 			"com.gitlab.gitlab-runner.project.id":      "0",

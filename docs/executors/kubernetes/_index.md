@@ -424,6 +424,7 @@ The following annotations are added by default on the Pod running the jobs:
 | `job.runner.gitlab.com/before_sha` | The previous latest commit present on a branch or tag.            |
 | `job.runner.gitlab.com/ref`        | The branch or tag name for which the project is built.            |
 | `job.runner.gitlab.com/name`       | The name of the job.                                              |
+| `job.runner.gitlab.com/timeout`    | The job execution timeout in the time duration format. For example, '2h3m0.5s'.                  |
 | `project.runner.gitlab.com/id`     | The project ID of the job.                                        |
 
 To overwrite default annotations, use the `pod_annotations` in the GitLab Runner configuration.

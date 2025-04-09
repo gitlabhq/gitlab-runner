@@ -46,6 +46,7 @@ func TestLabels(t *testing.T) {
 		"com.gitlab.gitlab-runner.job.sha":         "sha",
 		"com.gitlab.gitlab-runner.job.before_sha":  "before-sha",
 		"com.gitlab.gitlab-runner.job.ref":         "ref",
+		"com.gitlab.gitlab-runner.job.timeout":     "2h0m0s",
 		"com.gitlab.gitlab-runner.project.id":      "123456",
 		"com.gitlab.gitlab-runner.pipeline.id":     "",
 		"com.gitlab.gitlab-runner.runner.id":       "test-tok",
