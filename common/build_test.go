@@ -2625,7 +2625,7 @@ func TestSetTraceStatus(t *testing.T) {
 			}
 
 			tc.assert(t, trace, tc.err)
-			b.setTraceStatus(tc.err)
+			b.setTraceStatus(tc.err, true)
 		})
 	}
 }

@@ -43,6 +43,10 @@ func (s *Trace) Success() error {
 	return nil
 }
 
+func (s *Trace) Stop() error {
+	return nil
+}
+
 func (s *Trace) Fail(err error, failureData JobFailureData) error {
 	return nil
 }
