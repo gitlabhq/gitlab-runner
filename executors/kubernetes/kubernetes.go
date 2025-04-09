@@ -2124,6 +2124,7 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 		"job." + runnerLabelNamespace + "/before_sha": s.Build.GitInfo.BeforeSha,
 		"job." + runnerLabelNamespace + "/ref":        s.Build.GitInfo.Ref,
 		"job." + runnerLabelNamespace + "/name":       s.Build.JobInfo.Name,
+		"job." + runnerLabelNamespace + "/timeout":    s.Build.GetBuildTimeout().String(),
 		"project." + runnerLabelNamespace + "/id":     strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
 	}
 	for key, val := range s.configurationOverwrites.podAnnotations {

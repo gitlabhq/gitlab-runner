@@ -4072,6 +4072,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"job.runner.gitlab.com/before_sha": "",
 					"job.runner.gitlab.com/ref":        "",
 					"job.runner.gitlab.com/name":       "",
+					"job.runner.gitlab.com/timeout":    "2h0m0s",
 					"project.runner.gitlab.com/id":     "0",
 				}, pod.ObjectMeta.Annotations)
 			},
@@ -4088,6 +4089,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"job.runner.gitlab.com/before_sha": "",
 					"job.runner.gitlab.com/ref":        "",
 					"job.runner.gitlab.com/name":       "",
+					"job.runner.gitlab.com/timeout":    "2h0m0s",
 					"project.runner.gitlab.com/id":     "0",
 				}, pod.ObjectMeta.Annotations)
 			},
@@ -4103,6 +4105,7 @@ func TestSetupBuildPod(t *testing.T) {
 							"job.runner.gitlab.com/before_sha": "overwriteJobBeforeSHA",
 							"job.runner.gitlab.com/ref":        "overwriteJobRef",
 							"job.runner.gitlab.com/name":       "overwriteJobName",
+							"job.runner.gitlab.com/timeout":    "overwriteJobTimeout",
 							"project.runner.gitlab.com/id":     "overwriteProjectID",
 						},
 					},
@@ -4116,6 +4119,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"job.runner.gitlab.com/before_sha": "overwriteJobBeforeSHA",
 					"job.runner.gitlab.com/ref":        "overwriteJobRef",
 					"job.runner.gitlab.com/name":       "overwriteJobName",
+					"job.runner.gitlab.com/timeout":    "overwriteJobTimeout",
 					"project.runner.gitlab.com/id":     "overwriteProjectID",
 				}, pod.ObjectMeta.Annotations)
 			},
