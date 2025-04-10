@@ -857,7 +857,6 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 			Debugln("Failed to request job: 'request_concurrency' already reached, see https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section")
 		return nil
 	}
-	defer mr.buildsHelper.releaseRequest(runner)
 
 	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring executor from provider")
 	executorData, err := provider.Acquire(runner)
@@ -880,11 +879,13 @@ func (mr *RunCommand) processBuildOnRunner(
 ) error {
 	buildSession, sessionInfo, err := mr.createSession(executorProvider)
 	if err != nil {
+		mr.buildsHelper.releaseRequest(runnerConfig)
 		return err
 	}
 
 	store, err := executorProvider.GetStore(runnerConfig)
 	if err != nil {
+		mr.buildsHelper.releaseRequest(runnerConfig)
 		return err
 	}
 
@@ -897,6 +898,7 @@ func (mr *RunCommand) processBuildOnRunner(
 
 	// Receive a new job
 	trace, job, err := mr.requestJob(runnerConfig, sessionInfo, manager)
+	mr.buildsHelper.releaseRequest(runnerConfig)
 	if err != nil || job == nil {
 		return err
 	}
