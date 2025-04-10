@@ -120,6 +120,56 @@ terrafrom destroy
 | Google Cloud | GCE     | x86-64 | Linux | Docker Autoscaler | Experimental    |
 | Google Cloud | GKE     | x86-64 | Linux | Kubernetes        | Experimental    |
 
+## Advanced Configuration
+
+### Top-Level Modules
+
+Top-level modules in a provider represent highly-decoupled or
+optional configuration aspects of runner. For example, `fleeting` and
+`runner` are separate modules because they share only access credentials
+and instance group names. The `vpc` is a separate module because some users
+provide their own VPC. Users with existing VPCs need only create a matching
+input structure to connect with other GRIT modules.
+
+For example, the top-level VPC module can be used to create a VPC for modules that require a VPC:
+
+   ```hcl
+   module "runner" {
+      source = ".local/grit/modules/aws/runner"
+      
+      vpc = {
+         id         = module.vpc.id
+         subnet_ids = module.vpc.subnet_ids
+      }
+   
+      # ...additional config omitted
+   }
+
+   module "vpc" {
+      source   = ".local/grit/modules/aws/vpc"
+      
+      zone = "us-east-1b"
+      
+      cidr        = "10.0.0.0/16"
+      subnet_cidr = "10.0.0.0/24"
+   }
+   ```
+
+User can provide their own VPC and not use GRIT's VPC module:
+
+   ```hcl
+   module "runner" {
+      source = ".local/grit/modules/aws/runner"
+      
+      vpc = {
+         id         = PREEXISTING_VPC_ID
+         subnet_ids = [PREEXISTING_SUBNET_ID]
+      }
+   
+      # ...additional config omitted
+   }
+   ```
+
 ## Contributing to GRIT
 
 GRIT welcomes community contributions. Before contributing, review the following resources:
