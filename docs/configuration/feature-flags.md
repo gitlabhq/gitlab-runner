@@ -124,8 +124,8 @@ in the [Runner configuration](advanced-configuration.md):
 
 ```toml
 [[runners]]
-  name = "ruby-2.7-docker"
-  url = "https://CI/"
+  name = "example-runner"
+  url = "https://gitlab.example.com/"
   token = "TOKEN"
   limit = 0
   executor = "docker"
@@ -136,12 +136,6 @@ in the [Runner configuration](advanced-configuration.md):
 
 ## Enable feature flag in runner configuration
 
-{{< history >}}
-
-- [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2811) GitLab Runner 13.11.
-
-{{< /history >}}
-
 You can enable feature flags by specifying them under `[runners.feature_flags]`. This
 setting prevents any job from overriding the feature flag values.
 
@@ -150,8 +144,8 @@ they don't deal with how the job is executed.
 
 ```toml
 [[runners]]
-  name = "ruby-2.7-docker"
-  url = "https://CI/"
+  name = "example-runner"
+  url = "https://gitlab.example.com/"
   token = "TOKEN"
   executor = "docker"
   [runners.feature_flags]
