@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/pull_policies"
 )
 
 type Manager interface {
@@ -76,12 +77,16 @@ func (m *manager) GetDockerImage(
 		return nil, err
 	}
 
-	if err := m.verifyPullPolicies(pullPolicies, allowedPullPolicies, imagePullPolicies); err != nil {
+	pullPolicies, err = pull_policies.ComputeEffectivePullPolicies(
+		pullPolicies, allowedPullPolicies, imagePullPolicies, m.config.DockerConfig.PullPolicy)
+	if err != nil {
 		return nil, &common.BuildError{
 			Inner:         fmt.Errorf("invalid pull policy for image %q: %w", imageName, err),
 			FailureReason: common.ConfigurationError,
 		}
 	}
+
+	m.logger.Println(fmt.Sprintf("Using effective pull policy of %s for container %s", pullPolicies, imageName))
 
 	var imageErr error
 	for idx, pullPolicy := range pullPolicies {
@@ -107,26 +112,6 @@ func (m *manager) GetDockerImage(
 		imageName,
 		pullPolicies,
 		imageErr,
-	)
-}
-
-func (m *manager) verifyPullPolicies(
-	pullPolicies,
-	allowedPullPolicies,
-	imagePullPolicies []common.DockerPullPolicy,
-) error {
-	for _, policy := range pullPolicies {
-		for _, allowedPolicy := range allowedPullPolicies {
-			if policy == allowedPolicy {
-				return nil
-			}
-		}
-	}
-
-	return common.IncompatiblePullPolicyError(
-		pullPolicies,
-		allowedPullPolicies,
-		common.GetPullPolicySource(imagePullPolicies, m.config.DockerConfig.PullPolicy),
 	)
 }
 

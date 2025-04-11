@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -583,11 +584,7 @@ func TestPullPolicyPassedAsIfNotPresentButNotAllowedDefault(t *testing.T) {
 		err.Error(),
 		`invalid pull policy for image "existing"`,
 	)
-	assert.Contains(
-		t,
-		err.Error(),
-		fmt.Sprintf(common.IncompatiblePullPolicy, "[if-not-present]", "GitLab pipeline config", "[always]"),
-	)
+	assert.Regexp(t, regexp.MustCompile(`if-not-present.* GitLab pipeline config .*always`), err.Error())
 }
 
 func TestPullPolicyPassedAsIfNotPresentButNotAllowed(t *testing.T) {
@@ -608,11 +605,7 @@ func TestPullPolicyPassedAsIfNotPresentButNotAllowed(t *testing.T) {
 		err.Error(),
 		`invalid pull policy for image "existing"`,
 	)
-	assert.Contains(
-		t,
-		err.Error(),
-		fmt.Sprintf(common.IncompatiblePullPolicy, "[if-not-present]", "GitLab pipeline config", "[never]"),
-	)
+	assert.Regexp(t, regexp.MustCompile(`if-not-present.* GitLab pipeline config .*never`), err.Error())
 }
 
 func TestPullPolicyWhenConfigIsNotAllowed(t *testing.T) {
@@ -633,11 +626,7 @@ func TestPullPolicyWhenConfigIsNotAllowed(t *testing.T) {
 		err.Error(),
 		`invalid pull policy for image "existing"`,
 	)
-	assert.Contains(
-		t,
-		err.Error(),
-		fmt.Sprintf(common.IncompatiblePullPolicy, "[never if-not-present]", "Runner config", "[always]"),
-	)
+	assert.Regexp(t, regexp.MustCompile(`never if-not-present.* Runner config .*always`), err.Error())
 }
 
 func TestPullPolicyWhenConfigIsAllowed(t *testing.T) {
@@ -711,6 +700,7 @@ func newLoggerMock() *mockPullLogger {
 	).Maybe()
 	loggerMock.On("Infoln", mock.AnythingOfType("string")).Maybe()
 	loggerMock.On("Warningln", mock.AnythingOfType("string")).Maybe()
+	loggerMock.On("Println", mock.AnythingOfType("string"), mock.Anything).Maybe()
 	loggerMock.On(
 		"Println",
 		mock.AnythingOfType("string"),

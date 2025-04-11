@@ -1074,7 +1074,7 @@ To set multiple pull policies, add them as a list in the `config.toml`:
 In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how a CI/CD job
 fetches images.
 
-To restrict which pull policies can be used in the `.gitlab-ci.yml` file, use `allowed_pull_policies`.
+To restrict which pull policies can be used from those specified in the `.gitlab-ci.yml` file, use `allowed_pull_policies`.
 
 For example, to allow only the `always` and `if-not-present` pull policies, add them to the `config.toml`:
 
@@ -1089,8 +1089,15 @@ For example, to allow only the `always` and `if-not-present` pull policies, add 
 
 - If you don't specify `allowed_pull_policies`, the list matches the values specified in the `pull_policy` keyword.
 - If you don't specify `pull_policy`, the default is `always`.
-- The existing [`pull_policy` keyword](../executors/docker.md#configure-how-runners-pull-images) must not
-  include a pull policy that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
+- The job uses only the pull policies that are listed in both `pull_policy` and `allowed_pull_policies`.
+  The effective pull policy is determined by comparing the policies specified in
+  [`pull_policy` keyword](#configure-how-runners-pull-images)
+  and `allowed_pull_policies`. GitLab uses the [intersection](https://en.wikipedia.org/wiki/Intersection_(set_theory))
+  of these two policy lists.
+  For example, if `pull_policy` is `["always", "if-not-present"]` and `allowed_pull_policies`
+  is `["if-not-present"]`, then the job uses only `if-not-present` because it's the only pull policy defined in both lists.
+- The existing `pull_policy` keyword must include at least one pull policy specified in `allowed_pull_policies`.
+  The job fails if none of the `pull_policy` values match `allowed_pull_policies`.
 
 ### Image pull error messages
 

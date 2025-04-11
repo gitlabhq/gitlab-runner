@@ -453,7 +453,7 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 				build.Runner.BuildsDir = tc.buildDir
 				build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
 					EmptyDirs: []common.KubernetesEmptyDir{
-						common.KubernetesEmptyDir{
+						{
 							Name:      "repo",
 							MountPath: "$BUILDS_DIRECTORY",
 						},
@@ -3167,33 +3167,35 @@ func TestConflictingPullPolicies(t *testing.T) {
 		imagePullPolicies   []common.DockerPullPolicy
 		pullPolicy          common.StringOrArray
 		allowedPullPolicies []common.DockerPullPolicy
-		wantErrMsg          string
+		wantErrRegexp       string
 	}{
 		"allowed_pull_policies configured, default pull_policy": {
 			imagePullPolicies:   nil,
 			pullPolicy:          nil,
 			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
-			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[]", "Runner config (default)", "[IfNotPresent]"),
+			wantErrRegexp:       `Runner config \(default\) .*IfNotPresent`,
 		},
 		"allowed_pull_policies and pull_policy configured": {
 			imagePullPolicies:   nil,
 			pullPolicy:          common.StringOrArray{common.PullPolicyNever},
 			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
-			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[Never]", "Runner config", "[IfNotPresent]"),
+			wantErrRegexp:       `Never.* Runner config .*IfNotPresent`,
 		},
 		"allowed_pull_policies and image pull_policy configured": {
 			imagePullPolicies:   []common.DockerPullPolicy{common.PullPolicyAlways},
 			pullPolicy:          nil,
 			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
-			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[Always]", "GitLab pipeline config", "[IfNotPresent]"),
+			wantErrRegexp:       `Always.* GitLab pipeline config .*IfNotPresent`,
 		},
 		"all configured": {
 			imagePullPolicies:   []common.DockerPullPolicy{common.PullPolicyAlways},
 			pullPolicy:          common.StringOrArray{common.PullPolicyNever},
 			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
-			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[Always]", "GitLab pipeline config", "[IfNotPresent]"),
+			wantErrRegexp:       `Always.* GitLab pipeline config .*IfNotPresent`,
 		},
 	}
+
+	errorRE := regexp.MustCompile(`invalid pull policy for container "(build|helper|init-permissions)"`)
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -3207,8 +3209,8 @@ func TestConflictingPullPolicies(t *testing.T) {
 			gotErr := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 
 			require.Error(t, gotErr)
-			assert.Contains(t, gotErr.Error(), test.wantErrMsg)
-			assert.Contains(t, gotErr.Error(), "invalid pull policy for container")
+			assert.Regexp(t, regexp.MustCompile(test.wantErrRegexp), gotErr.Error())
+			assert.Regexp(t, errorRE, gotErr.Error())
 		})
 	}
 }

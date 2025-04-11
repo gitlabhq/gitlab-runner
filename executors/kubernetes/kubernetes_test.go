@@ -2623,8 +2623,8 @@ func TestPrepare(t *testing.T) {
 				helperImageInfo:         defaultHelperImage,
 			},
 			ErrorRE: regexp.MustCompile(
-				`invalid pull policy for container "(build|helper|init-permissions)": ` +
-					regexp.QuoteMeta(fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "Runner config", "[Always Never]")),
+				`invalid pull policy for container "(build|helper|init-permissions)": pull_policy ` +
+					regexp.QuoteMeta("([IfNotPresent]) defined in Runner config is not one of the allowed_pull_policies ([Always Never])"),
 			),
 		},
 		{
@@ -2687,8 +2687,8 @@ func TestPrepare(t *testing.T) {
 				helperImageInfo:         defaultHelperImage,
 			},
 			ErrorRE: regexp.MustCompile(
-				`invalid pull policy for container "(build|helper|init-permissions)": ` +
-					regexp.QuoteMeta(fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "GitLab pipeline config", "[Always Never]")),
+				`invalid pull policy for container "(build|helper|init-permissions)": pull_policy ` +
+					regexp.QuoteMeta("([IfNotPresent]) defined in GitLab pipeline config is not one of the allowed_pull_policies ([Always Never])"),
 			),
 		},
 		{

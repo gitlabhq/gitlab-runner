@@ -46,6 +46,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	os_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/os"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/pull_policies"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
@@ -439,13 +440,16 @@ func (s *executor) preparePullManager() (pull.Manager, error) {
 			return nil, fmt.Errorf("converting pull policy for container %q: %w", containerName, err)
 		}
 
-		err = s.verifyPullPolicies(k8sPullPolicies, allowedPullPolicies, pullPolicies)
+		k8sPullPolicies, err = pull_policies.ComputeEffectivePullPolicies(
+			k8sPullPolicies, allowedPullPolicies, pullPolicies, s.Config.Kubernetes.PullPolicy)
 		if err != nil {
 			return nil, &common.BuildError{
 				Inner:         fmt.Errorf("invalid pull policy for container %q: %w", containerName, err),
 				FailureReason: common.ConfigurationError,
 			}
 		}
+
+		s.BuildLogger.Println(fmt.Sprintf("Using effective pull policy of %s for container %s", k8sPullPolicies, containerName))
 
 		k8sPullPoliciesPerContainer[containerName] = k8sPullPolicies
 	}
@@ -467,31 +471,6 @@ func (s *executor) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) 
 	}
 
 	return s.Config.Kubernetes.GetPullPolicies()
-}
-
-func (s *executor) verifyPullPolicies(
-	pullPolicies,
-	allowedPullPolicies []api.PullPolicy,
-	imagePullPolicies []common.DockerPullPolicy,
-) error {
-	// Allow an empty pull_policy since it will result in the kubernetes cluster’s default pull_policy being used.
-	if len(pullPolicies) == 0 {
-		return nil
-	}
-
-	for _, policy := range pullPolicies {
-		for _, allowedPolicy := range allowedPullPolicies {
-			if policy == allowedPolicy {
-				return nil
-			}
-		}
-	}
-
-	return common.IncompatiblePullPolicyError(
-		pullPolicies,
-		allowedPullPolicies,
-		common.GetPullPolicySource(imagePullPolicies, s.Config.Kubernetes.PullPolicy),
-	)
 }
 
 func (s *executor) setupDefaultExecutorOptions(os string) {

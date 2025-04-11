@@ -2405,7 +2405,7 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 	assert.Contains(
 		t,
 		err.Error(),
-		fmt.Sprintf(common.IncompatiblePullPolicy, "[never]", "GitLab pipeline config", "[always]"),
+		fmt.Sprintf("pull_policy (%v) defined in %s is not one of the allowed_pull_policies (%v)", "[never]", "GitLab pipeline config", "[always]"),
 	)
 }
 

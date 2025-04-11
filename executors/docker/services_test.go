@@ -405,11 +405,7 @@ func TestDockerWithDockerConfigAlwaysButNotAllowedAndWithNoServiceImagePullPolic
 		err.Error(),
 		`invalid pull policy for image "alpine:latest"`,
 	)
-	assert.Contains(
-		t,
-		err.Error(),
-		fmt.Sprintf(common.IncompatiblePullPolicy, "[always]", "Runner config", "[if-not-present]"),
-	)
+	assert.Regexp(t, regexp.MustCompile(`always.* Runner config .*if-not-present`), err.Error())
 }
 
 func TestDockerWithDockerConfigAlwaysAndWithServiceImagePullPolicyIfNotPresent(t *testing.T) {
@@ -445,11 +441,7 @@ func TestDockerWithDockerConfigAlwaysAndWithServiceImagePullPolicyIfNotPresent(t
 		err.Error(),
 		`invalid pull policy for image "alpine:latest"`,
 	)
-	assert.Contains(
-		t,
-		err.Error(),
-		fmt.Sprintf(common.IncompatiblePullPolicy, "[if-not-present]", "GitLab pipeline config", "[always]"),
-	)
+	assert.Regexp(t, regexp.MustCompile(`if-not-present.* GitLab pipeline config .*always`), err.Error())
 }
 
 func TestGetServiceDefinitions(t *testing.T) {
