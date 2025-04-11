@@ -13,7 +13,7 @@
       changes: !reference [.code-backstage-patterns]
       variables:
         UPSTREAM_CI_COMMIT_REF: "refs/merge-requests/${CI_MERGE_REQUEST_IID}/merge"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /feature\/.+/
       changes: !reference [.code-backstage-patterns]
       variables:
         UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
