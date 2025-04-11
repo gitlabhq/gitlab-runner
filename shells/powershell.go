@@ -110,8 +110,6 @@ func NewPsWriter(b *PowerShell, info common.ShellScriptInfo) *PsWriter {
 	}
 }
 
-var encoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
-
 func stdinCmdArgs(shell string, preCmds ...string) []string {
 	if shell == SNPwsh {
 		return pwshStdinCmdArgs(shell, preCmds...)
@@ -146,7 +144,7 @@ func pwshStdinCmdArgs(shell string, preCmds ...string) []string {
 	sb.WriteString("$OutputEncoding = [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding\r\n")
 	sb.WriteString(shell + " -NoProfile -NonInteractive -Command -\r\n")
 	sb.WriteString("if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }")
-	encoded, _ := encoder.String(sb.String())
+	encoded, _ := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder().String(sb.String())
 
 	return append(
 		defaultPowershellFlags,
