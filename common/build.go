@@ -99,11 +99,11 @@ var staticBuildStages = []BuildStage{
 var (
 	ErrJobCanceled      = errors.New("canceled")
 	ErrJobScriptTimeout = errors.New("script timeout")
-	ErrInterruptSignal  = errors.New("interrupt signal received")
+	ErrQuitSignal       = errors.New("quit signal received")
 )
 
-func ContextCancelledWithInterruptSignal(ctx context.Context) bool {
-	return context.Cause(ctx) == ErrInterruptSignal
+func ContextCancelledWithQuitSignal(ctx context.Context) bool {
+	return context.Cause(ctx) == ErrQuitSignal
 }
 
 const (
@@ -572,7 +572,7 @@ func (b *Build) executeScript(ctx context.Context) error {
 		if afterScriptErr := b.executeAfterScript(afterScriptCtx, err); afterScriptErr != nil {
 			// the parent deadline being exceeded is reported at a later stage, so we
 			// only focus on errors specific to after_script here.
-			if !errors.Is(ctx.Err(), context.DeadlineExceeded) && !ContextCancelledWithInterruptSignal(ctx) && !b.isResumable() {
+			if !errors.Is(ctx.Err(), context.DeadlineExceeded) && !ContextCancelledWithQuitSignal(ctx) && !b.isResumable() {
 				// By default after-script ignores errors, but this can
 				// be disabled via the AFTER_SCRIPT_IGNORE_ERRORS variable.
 
@@ -807,8 +807,8 @@ func (b *Build) run(ctx context.Context) (err error, cleanup bool) {
 	case <-ctx.Done():
 		err = b.handleError(context.Cause(ctx))
 	case signal := <-b.SystemInterrupt:
-		if signal == syscall.SIGTERM && b.isResumable() {
-			runCancel(ErrInterruptSignal)
+		if signal == syscall.SIGQUIT && b.isResumable() {
+			runCancel(ErrQuitSignal)
 			b.waitForBuildFinish(buildFinish, WaitForBuildFinishTimeout)
 			if err := b.JobStore.Update(b.Job); err != nil {
 				b.Log().Warnln("Error doing final job update", err)
