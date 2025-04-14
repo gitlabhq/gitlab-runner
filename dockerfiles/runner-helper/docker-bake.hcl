@@ -95,12 +95,18 @@ target "ubuntu" {
 target "ubuntu-pwsh" {
   inherits = ["base"]
 
-  platforms = ["linux/amd64"]
+  name = "ubuntu-${replace(platform, "/", "-")}-pwsh"
+
+  matrix = {
+    platform = ["linux/amd64", "linux/arm64"]
+  }
+
+  platforms = [platform]
   args = {
     BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner-helper:${RUNNER_IMAGES_VERSION}-ubuntu-pwsh"
   }
 
-  output = ["type=oci,dest=./../../out/helper-images/ubuntu-x86_64-pwsh.tar,tar=true"]
+  output = ["type=oci,dest=./../../out/helper-images/ubuntu-${split("/", platform)[1] == "amd64" ? "x86_64" : split("/", platform)[1]}-pwsh.tar,tar=true"]
 }
 
 target "ubi-fips" {
