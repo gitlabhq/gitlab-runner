@@ -91,7 +91,7 @@ func (c *clientJobTrace) Fail(err error, failureData common.JobFailureData) erro
 
 func (c *clientJobTrace) Write(data []byte) (int, error) {
 	if !c.enabled.Load() {
-		return 0, nil
+		return len(data), nil
 	}
 
 	return c.buffer.Write(data)
