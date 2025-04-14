@@ -1306,12 +1306,10 @@ func (mr *RunCommand) interruptRun() {
 // all workers terminated. It may however exit if another signal - other than the gracefulShutdown
 // signal - is received.
 func (mr *RunCommand) handleGracefulShutdown() error {
-	if mr.stopSignal == syscall.SIGTERM {
-		go mr.abortAllBuilds()
-	}
+	go mr.abortAllBuilds()
 
 	// We wait till we have a SIGQUIT
-	for mr.stopSignal == syscall.SIGQUIT || mr.stopSignal == syscall.SIGTERM {
+	for mr.stopSignal == syscall.SIGQUIT {
 		mr.log().
 			WithField("StopSignal", mr.stopSignal).
 			Warning("Starting graceful shutdown, waiting for builds to finish")
