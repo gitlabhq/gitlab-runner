@@ -23,6 +23,7 @@ var (
 
 	retryPackageCloudErrors = []string{
 		"502 Bad Gateway",
+		"504 Gateway Timeout",
 		"HTTP status code 520",
 	}
 
