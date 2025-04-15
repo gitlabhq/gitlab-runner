@@ -10,9 +10,9 @@ GitLab Runner is a Go binary which can operate in two modes:
 1. GitLab Runner executing jobs locally ("instance" executor).
 1. Runner manager delegating jobs to an autoscaled environment which uses GitLab Runner Helper to pull artifacts.
 
-For developing GitLab Runner in instance executor mode (1) the only setup required is a working Go environment.
-For developing GitLab Runner in Manager and Helper mode (2) setup also requires a Docker build environment.
-Additionally running the Manager or Helper in Kubernetes will require a working cluster.
+For developing GitLab Runner in instance executor mode (1), the only setup required is a working Go environment.
+For developing GitLab Runner in Manager and Helper mode (2), setup also requires a Docker build environment.
+Additionally, running the Manager or Helper in Kubernetes requires a working cluster.
 
 The following instructions setup your Go environment using `asdf` to manage the Go version. If you already have this or otherwise know what you're doing, you can skip step 2 ("Install dependencies and Go runtime").
 
