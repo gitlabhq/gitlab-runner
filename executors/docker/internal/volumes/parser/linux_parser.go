@@ -13,7 +13,7 @@ const (
 	linuxSource = `((?P<source>((` + linuxDir + `)|(` + linuxVolumeName + `))):)?`
 
 	linuxDestination     = `(?P<destination>(?:` + linuxDir + `))`
-	linuxMode            = `(:(?P<mode>(?i)ro|rw))?`
+	linuxMode            = `(:(?P<mode>(?i)(ro|rw|O)))?`
 	linuxLabel           = `((:|,)(?P<label>(?i)z))?`
 	linuxBindPropagation = `((:|,)(?P<bindPropagation>(?i)shared|slave|private|rshared|rslave|rprivate))?`
 )
