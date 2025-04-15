@@ -125,7 +125,7 @@ in the [Runner configuration](advanced-configuration.md):
 ```toml
 [[runners]]
   name = "example-runner"
-  url = "https://gitlab.example.com/"
+  url = "https://gitlab.com/"
   token = "TOKEN"
   limit = 0
   executor = "docker"
@@ -145,7 +145,7 @@ they don't deal with how the job is executed.
 ```toml
 [[runners]]
   name = "example-runner"
-  url = "https://gitlab.example.com/"
+  url = "https://gitlab.com/"
   token = "TOKEN"
   executor = "docker"
   [runners.feature_flags]

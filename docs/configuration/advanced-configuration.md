@@ -267,8 +267,8 @@ Example:
 
 ```toml
 [[runners]]
-  name = "ruby-3.3-docker"
-  url = "https://CI/"
+  name = "example-runner"
+  url = "http://gitlab.example.com/"
   token = "TOKEN"
   limit = 0
   executor = "docker"
@@ -353,8 +353,8 @@ CI/CD jobs run locally on the host machine when configured to use the shell exec
 | ----- | ----------- |
 | `bash`        | Generate Bash (Bourne-shell) script. All commands executed in Bash context. Default for all Unix systems. |
 | `sh`          | Generate Sh (Bourne-shell) script. All commands executed in Sh context. The fallback for `bash` for all Unix systems. |
-| `powershell`  | Generate PowerShell script. All commands are executed in PowerShell Desktop context. In GitLab Runner 12.0-13.12, this is the default for Windows. |
-| `pwsh`        | Generate PowerShell script. All commands are executed in PowerShell Core context. In GitLab Runner 14.0 and later, this is the default for Windows. |
+| `powershell`  | Generate PowerShell script. All commands are executed in PowerShell Desktop context. |
+| `pwsh`        | Generate PowerShell script. All commands are executed in PowerShell Core context. This is the default shell for Windows. |
 
 When the `shell` option is set to `bash` or `sh`, Bash's [ANSI-C quoting](https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html) is used
 to shell escape job scripts.
@@ -657,12 +657,6 @@ Example:
 The `start_type` parameter determines the graphical front end used when starting the virtual image. Valid values are `headless` (default), `gui` or `separate` as supported by the host and guest combination.
 
 ## Overriding the base VM image
-
-{{< history >}}
-
-- Introduced in GitLab Runner 14.2.
-
-{{< /history >}}
 
 For both the Parallels and VirtualBox executors, you can override the base VM name specified by `base_name`.
 To do this, use the [image](https://docs.gitlab.com/ci/yaml/#image) parameter in the `.gitlab-ci.yml` file.
@@ -1404,12 +1398,6 @@ If you use ADC, be sure that the service account that you use has the `iam.servi
 
 ### The `[runners.cache.azure]` section
 
-{{< history >}}
-
-- Introduced in GitLab Runner 13.4.0.
-
-{{< /history >}}
-
 The following parameters define native support for Azure Blob Storage. To learn more, view the
 [Azure Blob Storage documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction).
 While S3 and GCS use the word `bucket` for a collection of objects, Azure uses the word
@@ -1499,12 +1487,6 @@ For cache uploads, credentials are retrieved from the pod that runs the [helper 
 For more details, see [issue 38330](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38330).
 
 ## The `[runners.kubernetes]` section
-
-{{< history >}}
-
-- Introduced in GitLab Runner v1.6.0.
-
-{{< /history >}}
 
 The following table lists configuration parameters available for the Kubernetes executor.
 For more parameters, see the [documentation for the Kubernetes executor](../executors/kubernetes/_index.md).
@@ -1661,7 +1643,7 @@ One of the main reasons for providing these images is that GitLab Runner is usin
 API that is expected to be the same in both binaries.
 
 By default, GitLab Runner references a `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:XYZ` image, where `XYZ` is based
-on the GitLab Runner architecture and Git revision. In GitLab Runner 11.3 and later, you can define the
+on the GitLab Runner architecture and Git revision. You can define the
 image version by using one of the
 [version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/common/version.go#L48-49):
 
@@ -1679,8 +1661,7 @@ which is based on its compilation data. After updating GitLab Runner to a new ve
 Runner tries to download the proper image. The image should be uploaded to the registry
 before upgrading GitLab Runner, otherwise the jobs start failing with a "No such image" error.
 
-In GitLab Runner 13.2 and later, the helper image is tagged by
-`$CI_RUNNER_VERSION` in addition to `$CI_RUNNER_REVISION`. Both tags are
+The helper image is tagged by `$CI_RUNNER_VERSION` in addition to `$CI_RUNNER_REVISION`. Both tags are
 valid and point to the same image.
 
 ```toml

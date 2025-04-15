@@ -101,7 +101,7 @@ containing:
 
 ```ini
 [credential]
-        helper = osxkeychain
+  helper = osxkeychain
 ```
 
 This tells Git to cache user credentials in the keychain, which may not be what you want
@@ -271,7 +271,7 @@ causes to why this happens:
    the only solution to make Code Signing work. That changed recently with
    **OS X El Capitan** which introduced a lot of new security features that
    altered this behavior.
-   In GitLab Runner 1.1 and later, when creating a `LaunchAgent`, we don't set
+
    `SessionCreate`. However, to upgrade, you must manually
    reinstall the `LaunchAgent` script:
 
@@ -346,8 +346,8 @@ If you encounter this error, you may need to:
 
 ```toml
 [[runners]]
-  name = "ruby-2.7-docker"
-  url = "https://CI/"
+  name = "example-runner"
+  url = "https://gitlab.com/"
   token = "TOKEN"
   executor = "docker"
   [runners.feature_flags]

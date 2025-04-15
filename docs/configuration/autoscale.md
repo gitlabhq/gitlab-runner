@@ -12,12 +12,6 @@ title: Docker Machine Executor autoscale configuration
 
 {{< /details >}}
 
-{{< history >}}
-
-- The autoscale feature was introduced in GitLab Runner 1.1.0.
-
-{{< /history >}}
-
 {{< alert type="note" >}}
 
 The Docker Machine executor was deprecated in GitLab 17.5 and is scheduled for removal in GitLab 20.0 (May 2027).
@@ -222,12 +216,7 @@ We say that each machine that does not run a job is in idle state. When
 GitLab Runner is in autoscale mode, it monitors all machines and ensures that
 there is always an `IdleCount` of machines in idle state.
 
-{{< alert type="note" >}}
-
-In GitLab Runner 14.5 we've added the `IdleScaleFactor` and `IdleCountMin` settings which change this
-behavior a little. Refer to [the dedicated section](#the-idlescalefactor-strategy) for more details.
-
-{{< /alert >}}
+For more information, see [the dedicated section](#the-idlescalefactor-strategy).
 
 If there is an insufficient number of idle machines, GitLab Runner
 starts provisioning new machines, subject to the `MaxGrowthRate` limit.
@@ -370,12 +359,6 @@ In this example, you can have a maximum of 20 concurrent jobs and 25 machines.
 In the worst case scenario, you can't have 10 idle machines, but only 5, because the `limit` is 25.
 
 ## The `IdleScaleFactor` strategy
-
-{{< history >}}
-
-- Introduced as experimental feature in [GitLab Runner 14.6](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3179).
-
-{{< /history >}}
 
 The `IdleCount` parameter defines a static number of idle machines that runner should sustain.
 The value you assign depends on your use case.

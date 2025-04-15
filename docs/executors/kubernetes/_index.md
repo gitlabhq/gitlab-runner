@@ -38,7 +38,7 @@ The pod consists of the following containers for each `service` defined in the `
 Services and containers run in the same Kubernetes
 pod and share the same localhost address. The following restrictions apply:
 
-- In GitLab Runner 12.8 and Kubernetes 1.7 and later, the services are accessible through their DNS names. If you
+- The services are accessible through their DNS names. If you
 use an older version, you must use `localhost`.
 - You cannot use several services that use the same port. For example, you cannot have two
   `mysql` services at the same time.
@@ -842,12 +842,6 @@ check_interval = 30
 
 ### Remove old runner pods
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27870) in GitLab Runner 14.6.
-
-{{< /history >}}
-
 Sometimes old runner pods are not cleared. This can happen when the runner manager is incorrectly shut down.
 
 To handle this situation, you can use the GitLab Runner Pod Cleanup application to schedule cleanup of old pods. For more information, see:
@@ -856,12 +850,6 @@ To handle this situation, you can use the GitLab Runner Pod Cleanup application 
 - GitLab Runner Pod Cleanup [documentation](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pod-cleanup/-/blob/main/docs/README.md).
 
 ### Set a security policy for the container
-
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3116) in GitLab Runner 14.5.
-
-{{< /history >}}
 
 Configure the [container security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
 in the `config.toml` executor to set a container security policy for the build, helper, or service pods.
@@ -1117,12 +1105,6 @@ for either:
 If you don't set either, the overwrite is disabled.
 
 ### Set the RuntimeClass
-
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26646) in GitLab Runner 14.9.
-
-{{< /history >}}
 
 Use `runtime_class_name` to set the [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/) for each job container.
 
@@ -1451,12 +1433,6 @@ concurrent = 1
 
 ### Define nodes where pods are scheduled
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2324) in GitLab Runner 14.3.
-
-{{< /history >}}
-
 Use pod affinity and anti-affinity to constrain the nodes
 [your pod is eligible](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity)
 to be scheduled on, based on labels on other pods.
@@ -1522,12 +1498,6 @@ concurrent = 1
 ## Networking
 
 ### Configure a container lifecycle hook
-
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3630) in GitLab Runner 14.2.
-
-{{< /history >}}
 
 Use [container lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to run
 code configured for a handler when the corresponding lifecycle hook is executed.
@@ -2015,13 +1985,8 @@ To configure the client use TCP to contact the Docker daemon,
 in the other container, include the environment variables of
 the build container:
 
-- `DOCKER_HOST=tcp://<hostname>:2375` for no TLS connection.
-- `DOCKER_HOST=tcp://<hostname>:2376` for TLS connection.
-
-For `hostname` set the value to:
-
-- `localhost` for GitLab Runner 12.7 and earlier, and Kubernetes 1.6 and earlier.
-- `docker` for GitLab Runner 12.8 and later, and Kubernetes 1.7 and later.
+- `DOCKER_HOST=tcp://docker:2375` for no TLS connection.
+- `DOCKER_HOST=tcp://docker:2376` for TLS connection.
 
 In Docker 19.03 and later, TLS is enabled by
 default but you must map certificates to your client.
@@ -2075,12 +2040,6 @@ Two workarounds exists for this issue:
 For more information, see [issue 30769](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/30769#note_1452088669).
 
 ### Restrict Docker images and services
-
-{{< history >}}
-
-- Added for the Kubernetes executor in GitLab Runner 14.2.
-
-{{< /history >}}
 
 You can restrict the Docker images that are used to run your jobs.
 To do this, you specify wildcard patterns. For example, to allow images
@@ -2139,18 +2098,8 @@ For example, to allow only the `always` and `if-not-present` pull policies:
 
 ## Job execution
 
-{{< history >}}
-
-- [Behind a feature flag `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../../configuration/feature-flags.md#available-feature-flags), enabled by default.
-- [Using attach by default](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) in GitLab Runner 14.0.
-
-{{< /history >}}
-
 GitLab Runner uses `kube attach` instead of `kube exec` by default. This should avoid problems like when a [job is marked successful midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)
 in environments with an unstable network.
-
-If you experience problems after updating to GitLab Runner 14.0, toggle the feature flag [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../../configuration/feature-flags.md#available-feature-flags)
-to `true` and [submit an issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/new).
 
 Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976) for progress on legacy execution strategy removal.
 
