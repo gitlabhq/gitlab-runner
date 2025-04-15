@@ -157,7 +157,7 @@ USAGE:
    gitlab-runner [global options] command [command options] [arguments...]
 
 VERSION:
-   16.5.0 (853330f9)
+   17.10.1 (ef334dcc)
 
 AUTHOR:
    GitLab Inc. <support@gitlab.com>
@@ -176,12 +176,15 @@ COMMANDS:
    run-single            start single runner
    unregister            unregister specific runner
    verify                verify all registered runners
+   wrapper               start multi runner service wrapped with gRPC manager server
+   fleeting              manage fleeting plugins
    artifacts-downloader  download and extract build artifacts (internal)
    artifacts-uploader    create and upload build artifacts (internal)
    cache-archiver        create and upload cache artifacts (internal)
    cache-extractor       download and extract cache artifacts (internal)
    cache-init            changed permissions for cache paths (internal)
    health-check          check health for a specific address
+   proxy-exec            execute internal commands (internal)
    read-logs             reads job logs from a file, used by kubernetes executor (internal)
    help, h               Shows a list of commands or help for one command
 

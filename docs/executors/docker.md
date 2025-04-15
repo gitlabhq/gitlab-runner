@@ -564,12 +564,6 @@ By default, the Docker executor stores builds and caches in the following direct
 
 ## Clear the Docker cache
 
-{{< history >}}
-
-- Introduced in GitLab Runner 13.9, [all created runner resources cleaned up](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2310).
-
-{{< /history >}}
-
 Use [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache) to remove unused containers and volumes created by the runner.
 
 For a list of options, run the script with the `help` option:
@@ -1050,12 +1044,6 @@ Set the `never` policy in the `config.toml`:
 
 ### Set multiple pull policies
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26558) in GitLab Runner 13.8.
-
-{{< /history >}}
-
 You can list multiple pull policies to execute if a pull fails. The runner processes pull policies
 in the order listed until a pull attempt is successful or the list is exhausted. For example, if a
 runner uses the `always` pull policy and the registry is not available, you can add the `if-not-present`
@@ -1110,7 +1098,7 @@ For example, to allow only the `always` and `if-not-present` pull policies, add 
 |-----------------------------|------------------------------|
 | `Pulling docker image registry.tld/my/image:latest ... ERROR: Build failed: Error: image registry.tld/my/image:latest not found`  |  The runner cannot find the image. Displays when the `always` pull policy is set  |
 | `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found`   | The image was built locally and doesn't exist in any public or default Docker registry. Displays when the `always` pull policy is set.   |
-| `Pulling docker image registry.tld/my/image:latest ... WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found WARNING: Locally found image will be used instead.` | The runner has used a local image instead of pulling an image. Displays when the `always` pull policy is set in only [GitLab Runner 1.8 and earlier](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1905).  |
+| `Pulling docker image registry.tld/my/image:latest ... WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found WARNING: Locally found image will be used instead.` | The runner has used a local image instead of pulling an image. |
 | `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found` | The image cannot be found locally. Displays when the `never` pull policy is set. |
 | `WARNING: Failed to pull image with policy "always": Error response from daemon: received unexpected HTTP status: 502 Bad Gateway (docker.go:143:0s) Attempt #2: Trying "if-not-present" pull policy Using locally found image version due to "if-not-present" pull policy`| The runner failed to pull an image and attempts to pull an image by using the next listed pull policy. Displays when multiple pull policies are set. |
 
@@ -1132,23 +1120,11 @@ but only takes effect if specifically the Docker pull fails initially.
 
 ## Use Windows containers
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/535) in GitLab Runner 11.11.
-
-{{< /history >}}
-
 To use Windows containers with the Docker executor, note the following
 information about limitations, supported Windows versions, and
 configuring a Windows Docker executor.
 
 ### Nanoserver support
-
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2492) in GitLab Runner 13.6.
-
-{{< /history >}}
 
 With the support for PowerShell Core introduced in the Windows helper image, it is now possible to leverage
 the `nanoserver` variants for the helper image.
@@ -1256,8 +1232,7 @@ section.
 
 ### Services
 
-In [GitLab Runner 12.9 and later](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042),
-you can use [services](https://docs.gitlab.com/ci/services/) by
+You can use [services](https://docs.gitlab.com/ci/services/) by
 enabling [a network for each job](#create-a-network-for-each-job).
 
 ## Native Step Runner Integration

@@ -109,12 +109,6 @@ To use VirtualBox with Windows, you can install Cygwin or PowerShell.
 
 ### Use native OpenSSH and PowerShell
 
-{{< history >}}
-
-- [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3176) GitLab Runner 14.6.
-
-{{< /history >}}
-
 - Install [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows)
 - Install and configure [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=powershell#install-openssh-for-windows)
 - Install [Git for Windows](https://git-scm.com/)

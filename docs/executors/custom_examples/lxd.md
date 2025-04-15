@@ -18,7 +18,7 @@ up afterwards.
 This example uses a bash script for each stage. You can specify your
 own image, which is exposed as
 [CI_JOB_IMAGE](https://docs.gitlab.com/ci/variables/predefined_variables/).
-This example uses the `ubuntu:18.04` image for simplicity. If you
+This example uses the `ubuntu:22.04` image for simplicity. If you
 want to support multiple images, you would have to modify the executor.
 
 These scripts have the following prerequisites:
@@ -31,7 +31,7 @@ These scripts have the following prerequisites:
 ```toml
 [[runners]]
   name = "lxd-driver"
-  url = "https://www.gitlab.com"
+  url = "https://gitlab.example.com"
   token = "xxxxxxxxxxx"
   executor = "custom"
   builds_dir = "/builds"
@@ -93,7 +93,7 @@ start_container () {
     # user to specify the image. The rest of the script assumes that
     # you are running on an ubuntu image so modifications might be
     # required.
-    lxc launch ubuntu:18.04 "$CONTAINER_ID"
+    lxc launch ubuntu:22.04 "$CONTAINER_ID"
 
     # Wait for container to start, we are using systemd to check this,
     # for the sake of brevity.

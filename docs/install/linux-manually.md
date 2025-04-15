@@ -107,12 +107,6 @@ You can download and install GitLab Runner by using a binary file.
 
 ### Install
 
-{{< alert type="warning" >}}
-
-With GitLab Runner 10, the executable was renamed to `gitlab-runner`.
-
-{{< /alert >}}
-
 1. Download one of the binaries for your system:
 
    ```shell

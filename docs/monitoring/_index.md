@@ -17,12 +17,6 @@ GitLab Runner can be monitored using [Prometheus](https://prometheus.io).
 
 ## Embedded Prometheus metrics
 
-{{< history >}}
-
-- The embedded HTTP Statistics Server with Prometheus metrics was introduced in GitLab Runner 1.8.0.
-
-{{< /history >}}
-
 GitLab Runner is instrumented with native Prometheus
 metrics, which can be exposed by using an embedded HTTP server on the `/metrics`
 path. The server - if enabled - can be scraped by the Prometheus monitoring
@@ -78,12 +72,6 @@ The list includes [Go-specific process metrics](https://github.com/prometheus/cl
 For a list of available metrics that do not include Go-specific processes, see [Monitoring runners](../fleet_scaling/_index.md#monitoring-runners).
 
 ## `pprof` HTTP endpoints
-
-{{< history >}}
-
-- `pprof` integration was introduced in GitLab Runner 1.9.0.
-
-{{< /history >}}
 
 The internal state of the GitLab Runner process through metrics is valuable,
 but in some cases you must examine the Running process in real time.

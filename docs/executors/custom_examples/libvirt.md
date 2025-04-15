@@ -16,10 +16,6 @@ Using [libvirt](https://libvirt.org/), the Custom executor driver will
 create a new disk and VM for every job it executes, after which the disk
 and VM will be deleted.
 
-This example is inspired by a Community Contribution
-[!464](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/464)
-to add libvirt as a GitLab Runner executor.
-
 This document does not try to explain how to set up libvirt, since it's
 out of scope. However, this driver was tested using
 [GCP Nested Virtualization](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview),
@@ -39,11 +35,11 @@ every build. In the following example,
 create a disk VM image.
 
 ```shell
-virt-builder debian-11 \
+virt-builder debian-12 \
     --size 8G \
     --output /var/lib/libvirt/images/gitlab-runner-base.qcow2 \
     --format qcow2 \
-    --hostname gitlab-runner-bullseye \
+    --hostname gitlab-runner-bookworm \
     --network \
     --install curl \
     --run-command 'curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | bash' \

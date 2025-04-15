@@ -12,12 +12,6 @@ title: Install and register GitLab Runner for autoscaling with Docker Machine
 
 {{< /details >}}
 
-{{< history >}}
-
-- The autoscaling feature was introduced in GitLab Runner 1.1.0.
-
-{{< /history >}}
-
 {{< alert type="note" >}}
 
 The Docker Machine executor was deprecated in GitLab 17.5 and is scheduled for removal in GitLab 20.0 (May 2027).
@@ -155,12 +149,6 @@ executable. For example, to download and install `v0.16.2-gitlab.35`:
 
 ### Using GPUs on Google Compute Engine
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/issues/34) in GitLab Docker Machine `0.16.2-gitlab.10` and GitLab Runner 13.9.
-
-{{< /history >}}
-
 {{< alert type="note" >}}
 
 GPUs are [supported on every executor](../configuration/gpus.md). It is
@@ -172,7 +160,6 @@ You can also use the [Kubernetes executor](../executors/kubernetes/_index.md) fo
 
 You can use the Docker Machine [fork](#forked-version-of-docker-machine) to create
 [Google Compute Engine instances with graphics processing units (GPUs)](https://cloud.google.com/compute/docs/gpus/).
-GitLab Runner 13.9 is [required for GPUs to work in a Docker executor](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4585).
 
 #### Docker Machine GPU options
 

@@ -2,7 +2,7 @@ concurrent = 4
 
 [[runners]]
   name = "shell"
-  url = "https://CI/"
+  url = "https://gitlab.com/"
   token = "TOKEN"
   limit = 2
   executor = "shell"
@@ -10,15 +10,15 @@ concurrent = 4
   shell = "bash"
 
 [[runners]]
-  name = "ruby-2.7-docker"
-  url = "https://CI/"
+  name = "ruby-3.1-docker"
+  url = "https://gitlab.com/"
   token = "TOKEN"
   limit = 0
   executor = "docker"
   builds_dir = ""
   [runners.docker]
     host = ""
-    image = "ruby:2.7"
+    image = "ruby:3.1"
     privileged = false
     disable_cache = false
     cache_dir = ""
@@ -26,7 +26,7 @@ concurrent = 4
 
 [[runners]]
   name = "production-server"
-  url = "https://CI/"
+  url = "https://gitlab.com/"
   token = "TOKEN"
   limit = 0
   executor = "ssh"
