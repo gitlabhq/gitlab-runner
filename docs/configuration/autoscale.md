@@ -212,11 +212,8 @@ The autoscaling algorithm is based on these parameters:
 - `MaxGrowthRate`
 - `limit`
 
-We say that each machine that does not run a job is in idle state. When
-GitLab Runner is in autoscale mode, it monitors all machines and ensures that
-there is always an `IdleCount` of machines in idle state.
-
-For more information, see [the dedicated section](#the-idlescalefactor-strategy).
+Any machine not running a job is considered to be idle. When GitLab Runner is in autoscale mode,
+it monitors all machines and ensures that there is always an `IdleCount` of idle machines.
 
 If there is an insufficient number of idle machines, GitLab Runner
 starts provisioning new machines, subject to the `MaxGrowthRate` limit.
@@ -227,11 +224,9 @@ At the same time, GitLab Runner is checking the duration of the idle state of
 each machine. If the time exceeds the `IdleTime` value, the machine is
 automatically removed.
 
----
+### Example configuration
 
-**Example:**
-Let's suppose, that we have configured GitLab Runner with the following
-autoscale parameters:
+Consider a GitLab Runner configured with the following autoscale parameters:
 
 ```toml
 [[runners]]
@@ -245,72 +240,64 @@ autoscale parameters:
     # (...)
 ```
 
-At the beginning, when no jobs are queued, GitLab Runner starts two machines
-(`IdleCount = 2`), and sets them in idle state. Notice that we have also set
-`IdleTime` to 30 minutes (`IdleTime = 1800`).
+In the beginning, when no jobs are queued, GitLab Runner starts two machines
+(`IdleCount = 2`), and sets them in idle state. Also, the `IdleTime` is set
+to 30 minutes (`IdleTime = 1800`).
 
-Now, let's assume that 5 jobs are queued in GitLab CI. The first 2 jobs are
-sent to the idle machines of which we have two. GitLab Runner now notices that
-the number of idle is less than `IdleCount` (`0 < 2`), so it starts new
-machines. These machines are provisioned sequentially, to prevent exceeding the
-`MaxGrowthRate`.
+Now, assume that five jobs are queued in GitLab CI/CD. The first two jobs are
+sent to the idle machines of which we have two. GitLab Runner starts new machines as it now notices that
+the number of idle is less than `IdleCount` (`0 < 2`). These machines are provisioned sequentially,
+to prevent exceeding the `MaxGrowthRate`.
 
-The remaining 3 jobs are assigned to the first machine that is ready. As an
+The remaining three jobs are assigned to the first machine that is ready. As an
 optimization, this can be a machine that was busy, but has now completed its job,
 or it can be a newly provisioned machine. For this example,
 assume that provisioning is fast and the new machines are ready
 before any earlier jobs complete.
 
-We now have 1 idle machine, so GitLab Runner starts another 1 new machine to
+We now have one idle machine, so GitLab Runner starts one new machine to
 satisfy `IdleCount`. Because there are no new jobs in queue, those two
 machines stay in idle state and GitLab Runner is satisfied.
 
----
-
 **What happened:**
-We had 2 machines, waiting in idle state for new jobs. After the 5 jobs
-where queued, new machines were created, so in total we had 7 machines. Five of
-them were running jobs, and 2 were in idle state, waiting for the next
+
+In the example, there are two machines waiting in idle state for new jobs. After the five jobs
+are queued, new machines are created. So, in total there are seven machines:
+five running jobs and two in idle state waiting for the next
 jobs.
 
-The algorithm still works the same way; GitLab Runner creates a new
-idle machine for each machine used for the job execution until `IdleCount`
-is satisfied. Those machines are created up to the number defined by
-`limit` parameter. If GitLab Runner notices that there is a `limit` number of
-total created machines, it stops autoscaling. The new jobs must
-wait in the job queue until machines start returning to idle state.
+GitLab Runner creates a new
+idle machine for each machine used for the job execution, until `IdleCount`
+is satisfied. Machines are created up to the number defined by the
+`limit` parameter. When GitLab Runner detects that this `limit` has been reached,
+it stops autoscaling. The new jobs must wait in the job queue until machines
+start returning to idle state.
 
-In the above example we always have two idle machines. The `IdleTime`
-applies only when we are over the `IdleCount`. Then we try to reduce the number
-of machines to `IdleCount`.
-
----
+In the above example, two idle machines are always available. The `IdleTime` parameter
+applies only when the number exceeds `IdleCount`. At this point, GitLab Runner reduces
+the number of machines to match `IdleCount`.
 
 **Scaling down:**
-After the job is finished, the machine is set to idle state and is waiting
-for the next jobs to be executed. Let's suppose that we have no new jobs in
-the queue. After the time designated by `IdleTime` passes, the idle machines
-are removed. In this example, after 30 minutes, all machines are removed
-(each machine after 30 minutes from when last job execution ended). GitLab
-Runner starts to keep an `IdleCount` of idle machines running, just like
+
+After the job finishes, the machine is set to idle state and waits
+for new jobs to be executed. If no new jobs appear in the queue,
+idle machines are removed after the time specified by `IdleTime`.
+In this example, all machines are removed after 30 minutes of inactivity
+(measured from when each machine's last job execution ended). GitLab
+Runner maintains an `IdleCount` of idle machines running, just like
 at the beginning of the example.
 
----
+The autoscaling algorithm works as follows:
 
-So, to sum up:
+1. GitLab Runner starts.
+1. GitLab Runner creates two idle machines.
+1. GitLab Runner picks one job.
+1. GitLab Runner creates one more machine to maintain two idle machines.
+1. The picked job finishes, resulting in three idle machines.
+1. When one of the three idle machines exceeds `IdleTime` from the time after it picked the last job, it is removed.
+1. GitLab Runner always maintains at least two idle machines for quick job processing.
 
-1. We start GitLab Runner
-1. GitLab Runner creates 2 idle machines
-1. GitLab Runner picks one job
-1. GitLab Runner creates one more machine to fulfill the strong requirement of always
-   having the two idle machines
-1. Job finishes, we have 3 idle machines
-1. When one of the three idle machines goes over `IdleTime` from the time when
-   last time it picked the job it is removed
-1. GitLab Runner always has at least 2 idle machines waiting for fast
-   picking of the jobs
-
-Below you can see a comparison chart of jobs statuses and machines statuses
+The following chart illustrates the states of machines and builds (jobs)
 in time:
 
 ![Autoscale state chart](img/autoscale-state-chart.png)
