@@ -162,6 +162,52 @@ You can download and install GitLab Runner by using a binary file.
 
 1. [Register a runner](../register/_index.md)
 
+   The runner binary does not include pre-built helper images. To use pre-built helper images, download the corresponding version of the helper image archive and copy it to the appropriate location:
+   
+   ```shell
+   mkdir -p /usr/local/bin/out/helper-images
+   cd /usr/local/bin/out/helper-images
+
+   # Linux x86-64 ubuntu
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-x86_64.tar.xz
+
+   # Linux x86-64 ubuntu pwsh
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-x86_64-pwsh.tar.xz
+
+   # Linux s390x ubuntu
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-s390x.tar.xz
+
+   # Linux ppc64le ubuntu
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-ppc64le.tar.xz
+
+   # Linux arm64 ubuntu
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-arm64.tar.xz
+
+   # Linux arm ubuntu
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-arm.tar.xz
+
+   # Linux x86-64 alpine
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-x86_64.tar.xz
+   
+   # Linux x86-64 alpine pwsh
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-x86_64-pwsh.tar.xz
+
+   # Linux s390x alpine
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-s390x.tar.xz
+
+   # Linux riscv64 alpine edge
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-edge-riscv64.tar.xz
+
+   # Linux arm64 alpine
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-arm64.tar.xz
+
+   # Linux arm alpine
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-arm.tar.xz
+
+   # Linux x86-64 ubuntu specific version - v17.10.0
+   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/v17.10.0/helper-images/prebuilt-ubuntu-x86_64.tar.xz
+   ```
+
 {{< alert type="note" >}}
 
 If `gitlab-runner` is installed and run as a service, it runs as root,
