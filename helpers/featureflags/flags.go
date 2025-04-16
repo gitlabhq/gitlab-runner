@@ -360,11 +360,11 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:         GitURLsWithoutTokens,
-		DefaultValue: false,
+		DefaultValue: true,
 		Deprecated:   false,
 		Description: "When enabled, GitLab Runner doesn't embed the job token anywhere during Git configuration or command " +
 			"execution. Instead, it sets up a Git credential helper that uses the environment variable to obtain the job token. " +
-			"This approach limits token storage and reduces the potential for leaks.",
+			"This approach limits token storage and reduces the risk of token leaks.",
 	},
 	{
 		Name:         WaitForPodReachable,
