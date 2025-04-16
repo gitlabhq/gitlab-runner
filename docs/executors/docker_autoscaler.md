@@ -320,3 +320,23 @@ ERROR: instance unexpectedly removed    instance=<instance_id> max-use-count=999
 To resolve this error, check the events related to the instance
 on your cloud provider platform. For example, on AWS, check the
 CloudTrail event history for the event source `ec2.amazonaws.com`.
+
+### `ERROR: Preparation failed: unable to acquire instance: context deadline exceeded`
+
+When you use the [AWS fleeting plugin](https://gitlab.com/gitlab-org/fleeting/plugins/aws), jobs might fail intermittently
+with the following error:
+
+```plaintext
+ERROR: Preparation failed: unable to acquire instance: context deadline exceeded
+```
+
+This often shows up in the AWS CloudWatch logs because the `reserved` instance count oscillates up and down:
+
+```plaintext
+"2024-07-23T18:10:24Z","instance_count:1,max_instance_count:1000,acquired:0,unavailable_capacity:0,pending:0,reserved:0,idle_count:0,scale_factor:0,scale_factor_limit:0,capacity_per_instance:1","required scaling change",
+"2024-07-23T18:10:25Z","instance_count:1,max_instance_count:1000,acquired:0,unavailable_capacity:0,pending:0,reserved:1,idle_count:0,scale_factor:0,scale_factor_limit:0,capacity_per_instance:1","required scaling change",
+"2024-07-23T18:11:15Z","instance_count:1,max_instance_count:1000,acquired:0,unavailable_capacity:0,pending:0,reserved:0,idle_count:0,scale_factor:0,scale_factor_limit:0,capacity_per_instance:1","required scaling change",
+"2024-07-23T18:11:16Z","instance_count:1,max_instance_count:1000,acquired:0,unavailable_capacity:0,pending:0,reserved:1,idle_count:0,scale_factor:0,scale_factor_limit:0,capacity_per_instance:1","required scaling change",
+```
+
+To resolve this error, ensure that the `AZRebalance` process is disabled for your autoscaling group in AWS.
