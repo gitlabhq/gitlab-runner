@@ -2008,31 +2008,31 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 		imagePullPolicies   []common.DockerPullPolicy
 		pullPolicy          common.StringOrArray
 		allowedPullPolicies []common.DockerPullPolicy
-		wantErrMsg          string
+		wantErrRegex        string
 	}{
 		"allowed_pull_policies configured, default pull_policy": {
 			imagePullPolicies:   nil,
 			pullPolicy:          nil,
 			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
-			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[always]", "Runner config (default)", "[if-not-present]"),
+			wantErrRegex:        `always.* Runner config \(default\) .*if-not-present`,
 		},
 		"allowed_pull_policies and pull_policy configured": {
 			imagePullPolicies:   nil,
 			pullPolicy:          common.StringOrArray{common.PullPolicyNever},
 			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
-			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[never]", "Runner config", "[if-not-present]"),
+			wantErrRegex:        `never.* Runner config .*if-not-present`,
 		},
 		"allowed_pull_policies and image pull_policy configured": {
 			imagePullPolicies:   []common.DockerPullPolicy{common.PullPolicyAlways},
 			pullPolicy:          nil,
 			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
-			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[always]", "GitLab pipeline config", "[if-not-present]"),
+			wantErrRegex:        `always.* GitLab pipeline config .*if-not-present`,
 		},
 		"all configured": {
 			imagePullPolicies:   []common.DockerPullPolicy{common.PullPolicyAlways},
 			pullPolicy:          common.StringOrArray{common.PullPolicyNever},
 			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
-			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[always]", "GitLab pipeline config", "[if-not-present]"),
+			wantErrRegex:        `always.* GitLab pipeline config .*if-not-present`,
 		},
 	}
 
@@ -2045,7 +2045,7 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 			gotErr := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 
 			require.Error(t, gotErr)
-			assert.Contains(t, gotErr.Error(), test.wantErrMsg)
+			assert.Regexp(t, regexp.MustCompile(test.wantErrRegex), gotErr.Error())
 			assert.Contains(t, gotErr.Error(), `invalid pull policy for image "`+common.TestAlpineImage)
 		})
 	}

@@ -2236,41 +2236,6 @@ func TestKubernetesTerminationPeriod(t *testing.T) {
 	}
 }
 
-func Test_GetPullPolicySource(t *testing.T) {
-	tests := map[string]struct {
-		want              PullPolicySource
-		imagePullPolicies []DockerPullPolicy
-		pullPolicy        StringOrArray
-	}{
-		"gitlab-ci.yaml only": {
-			imagePullPolicies: []DockerPullPolicy{PullPolicyIfNotPresent},
-			pullPolicy:        StringOrArray{},
-			want:              PullPolicySourceGitLabCI,
-		},
-		"config.toml only": {
-			imagePullPolicies: []DockerPullPolicy{},
-			pullPolicy:        StringOrArray{PullPolicyIfNotPresent},
-			want:              PullPolicySourceRunner,
-		},
-		"both": {
-			imagePullPolicies: []DockerPullPolicy{PullPolicyIfNotPresent},
-			pullPolicy:        StringOrArray{PullPolicyNever},
-			want:              PullPolicySourceGitLabCI,
-		},
-		"not configured": {
-			imagePullPolicies: []DockerPullPolicy{},
-			pullPolicy:        StringOrArray{},
-			want:              PullPolicySourceDefault,
-		},
-	}
-
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tt.want, GetPullPolicySource(tt.imagePullPolicies, tt.pullPolicy))
-		})
-	}
-}
-
 func TestConfig_SaveConfig(t *testing.T) {
 	const (
 		configFileName = "config-file"

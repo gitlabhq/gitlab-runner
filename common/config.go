@@ -2281,20 +2281,6 @@ func (c *Config) GetShutdownTimeout() time.Duration {
 	return DefaultShutdownTimeout
 }
 
-// GetPullPolicySource returns the source (i.e. file) of the pull_policy
-// configuration used by this runner. This is used to produce a more detailed
-// error message. See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29115
-func GetPullPolicySource(imagePullPolicies []DockerPullPolicy, pullPolicies StringOrArray) PullPolicySource {
-	switch {
-	case len(imagePullPolicies) != 0:
-		return PullPolicySourceGitLabCI
-	case len(pullPolicies) != 0:
-		return PullPolicySourceRunner
-	default:
-		return PullPolicySourceDefault
-	}
-}
-
 // maskField masks the content of a string field
 // if it is not empty.
 func maskField(field *string) {
