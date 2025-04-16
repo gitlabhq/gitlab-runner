@@ -14,7 +14,7 @@ type Trace struct {
 	mutex      sync.Mutex
 }
 
-const ExitCodeUnsupportedOptions = 3
+const ExitCodeInvalidConfiguration = 3
 
 type JobFailureData struct {
 	Reason   JobFailureReason
