@@ -53,9 +53,6 @@ type Shell interface {
 	GenerateSaveScript(info ShellScriptInfo, scriptPath, script string) (string, error)
 
 	GetEntrypointCommand(info ShellScriptInfo, probeFile string) []string
-	GetGitCredHelperCommand() string
-	// GetExternalCommandEmptyArgument creates an empty argument ("") suitable for the current shell & OS
-	GetExternalCommandEmptyArgument() string
 }
 
 var shells map[string]Shell

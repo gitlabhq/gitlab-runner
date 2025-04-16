@@ -1211,6 +1211,41 @@ func (_c *MockShellWriter_SectionStart_Call) RunAndReturn(run func(string, strin
 	return _c
 }
 
+// SetupGitCredHelper provides a mock function with given fields: confFile, section, user
+func (_m *MockShellWriter) SetupGitCredHelper(confFile string, section string, user string) {
+	_m.Called(confFile, section, user)
+}
+
+// MockShellWriter_SetupGitCredHelper_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetupGitCredHelper'
+type MockShellWriter_SetupGitCredHelper_Call struct {
+	*mock.Call
+}
+
+// SetupGitCredHelper is a helper method to define mock.On call
+//   - confFile string
+//   - section string
+//   - user string
+func (_e *MockShellWriter_Expecter) SetupGitCredHelper(confFile interface{}, section interface{}, user interface{}) *MockShellWriter_SetupGitCredHelper_Call {
+	return &MockShellWriter_SetupGitCredHelper_Call{Call: _e.mock.On("SetupGitCredHelper", confFile, section, user)}
+}
+
+func (_c *MockShellWriter_SetupGitCredHelper_Call) Run(run func(confFile string, section string, user string)) *MockShellWriter_SetupGitCredHelper_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockShellWriter_SetupGitCredHelper_Call) Return() *MockShellWriter_SetupGitCredHelper_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockShellWriter_SetupGitCredHelper_Call) RunAndReturn(run func(string, string, string)) *MockShellWriter_SetupGitCredHelper_Call {
+	_c.Run(run)
+	return _c
+}
+
 // SourceEnv provides a mock function with given fields: pathname
 func (_m *MockShellWriter) SourceEnv(pathname string) {
 	_m.Called(pathname)

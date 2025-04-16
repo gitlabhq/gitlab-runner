@@ -2299,61 +2299,84 @@ func TestCredSetup(t *testing.T) {
 	require.NoError(t, err, "parsing original repo url")
 	setInvalidGitCreds(t, *orgURL)
 
+	gitStrategies := map[string]struct {
+		featureFlags map[string]bool
+		jobVariables common.JobVariables
+	}{
+		"fetch": {},
+		"clone": {
+			jobVariables: common.JobVariables{{Key: "GIT_STRATEGY", Value: "clone"}},
+		},
+		"nativeClone": {
+			featureFlags: map[string]bool{featureflags.UseGitNativeClone: true},
+			jobVariables: common.JobVariables{{Key: "GIT_STRATEGY", Value: "clone"}},
+		},
+	}
+
 	for _, test := range tests {
-		name := fmt.Sprintf("gitUrlsWithoutTokens:%t", test.gitUrlsWithoutTokens)
-		t.Run(name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s:%t", featureflags.GitURLsWithoutTokens, test.gitUrlsWithoutTokens), func(t *testing.T) {
 			t.Parallel()
 
-			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-				t.Parallel()
+			for gitStrategyName, gitStrategy := range gitStrategies {
+				t.Run("GIT_STRATEGY:"+gitStrategyName, func(t *testing.T) {
+					t.Parallel()
 
-				helpers.SkipIntegrationTests(t, shell)
+					shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+						t.Parallel()
 
-				jobResponse, err := common.GetRemoteBuildResponse(listGitConfig(t, shell, markerForBuild))
-				require.NoError(t, err)
+						helpers.SkipIntegrationTests(t, shell)
 
-				jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
-				jobResponse.GitInfo.Sha = repoShaWithSubmodules
-				token, _ := injectJobToken(t, &jobResponse)
+						jobResponse, err := common.GetRemoteBuildResponse(listGitConfig(t, shell, markerForBuild))
+						require.NoError(t, err)
 
-				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
-					Name:   common.HookPreGetSourcesScript,
-					Script: common.StepScript{setGitCred(t, shell), getGitCred(t, shell, markerPreGetSource)},
+						jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
+						jobResponse.GitInfo.Sha = repoShaWithSubmodules
+						token, _ := injectJobToken(t, &jobResponse)
+
+						jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
+							Name:   common.HookPreGetSourcesScript,
+							Script: common.StepScript{setGitCred(t, shell), getGitCred(t, shell, markerPreGetSource)},
+						})
+
+						jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
+							Name:   common.HookPostGetSourcesScript,
+							Script: common.StepScript{listGitConfig(t, shell, markerForHelper), getGitCred(t, shell, markerPostGetSource)},
+						})
+
+						jobResponse.Variables = append(jobResponse.Variables,
+							common.JobVariable{Key: "GIT_TRACE", Value: "1"},
+							common.JobVariable{Key: "GIT_CURL_VERBOSE", Value: "1"},
+							common.JobVariable{Key: "GIT_TRANSFER_TRACE", Value: "1"},
+							common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "1"},
+							common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+							common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+							common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
+						)
+						jobResponse.Variables = append(jobResponse.Variables, gitStrategy.jobVariables...)
+
+						build := newBuild(t, jobResponse, shell)
+
+						build.Runner.RunnerCredentials.URL = "https://gitlab.com/"
+
+						buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, test.gitUrlsWithoutTokens)
+						for k, v := range gitStrategy.featureFlags {
+							buildtest.SetBuildFeatureFlag(build, k, v)
+						}
+
+						out, err := buildtest.RunBuildReturningOutput(t, build)
+						assert.NoError(t, err)
+
+						assert.NotContains(t, out, token, "should not contain the token")
+
+						remoteURL, err := build.GetRemoteURL()
+						assert.NoError(t, err, "getting build's remote URL")
+
+						// cached creds from the 1st helper created in setupTestCredHelpers
+						cachedCreds := filepath.Join(build.Runner.BuildsDir, "git-credentials")
+						test.validator(t, out, remoteURL, cachedCreds, token)
+					})
 				})
-
-				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
-					Name:   common.HookPostGetSourcesScript,
-					Script: common.StepScript{listGitConfig(t, shell, markerForHelper), getGitCred(t, shell, markerPostGetSource)},
-				})
-
-				jobResponse.Variables = append(jobResponse.Variables,
-					common.JobVariable{Key: "GIT_TRACE", Value: "1"},
-					common.JobVariable{Key: "GIT_CURL_VERBOSE", Value: "1"},
-					common.JobVariable{Key: "GIT_TRANSFER_TRACE", Value: "1"},
-					common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "1"},
-					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
-					common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
-					common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
-				)
-
-				build := newBuild(t, jobResponse, shell)
-
-				build.Runner.RunnerCredentials.URL = "https://gitlab.com/"
-
-				buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, test.gitUrlsWithoutTokens)
-
-				out, err := buildtest.RunBuildReturningOutput(t, build)
-				assert.NoError(t, err)
-
-				assert.NotContains(t, out, token, "should not contain the token")
-
-				remoteURL, err := build.GetRemoteURL()
-				assert.NoError(t, err, "getting build's remote URL")
-
-				// cached creds from the 1st helper created in setupTestCredHelpers
-				cachedCreds := filepath.Join(build.Runner.BuildsDir, "git-credentials")
-				test.validator(t, out, remoteURL, cachedCreds, token)
-			})
+			}
 		})
 	}
 }

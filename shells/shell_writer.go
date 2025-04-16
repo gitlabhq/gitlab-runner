@@ -16,6 +16,11 @@ type ShellWriter interface {
 	Line(text string)
 	CheckForErrors()
 
+	// SetupGitCredHelper sets up a credential helper in the confFile.
+	// This helper pulls out the job token from the environment.
+	// It disables any other helper, by replacing all with "", thus global or system helpers won't run.
+	SetupGitCredHelper(confFile, section, user string)
+
 	IfDirectory(path string)
 	IfFile(file string)
 	IfCmd(cmd string, arguments ...string)

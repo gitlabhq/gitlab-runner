@@ -317,9 +317,3 @@ func TestBashEntrypointCommand(t *testing.T) {
 		})
 	}
 }
-
-func TestBashGetGitCredHelperCommand(t *testing.T) {
-	shell := BashShell{}
-	actualCmd := shell.GetGitCredHelperCommand()
-	assert.Equal(t, credHelperCommand, actualCmd)
-}

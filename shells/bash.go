@@ -148,6 +148,29 @@ func (b *BashWriter) Command(command string, arguments ...string) {
 	b.CheckForErrors()
 }
 
+// SetupGitCredHelper is the bash implementation of setting up the runner's default cred helper, which pulls out the job
+// token from the environment.
+func (b *BashWriter) SetupGitCredHelper(confFile, section, user string) {
+	helperSection := b.escape(section + ".helper")
+	userSection := b.escape(section + ".username")
+	emptyArg := `""`
+
+	b.Line(
+		fmt.Sprintf(
+			`git config -f %[1]s --replace-all %[2]s %[3]s && `+
+				`git config -f %[1]s --add %[2]s %[4]s && `+
+				`git config -f %[1]s %[5]s %[6]s`,
+			b.escape(confFile),
+			helperSection,
+			emptyArg,
+			b.escape(credHelperCommand),
+			userSection,
+			user,
+		),
+	)
+	b.CheckForErrors()
+}
+
 func (b *BashWriter) CommandWithStdin(stdin, command string, arguments ...string) {
 	producer := b.buildCommand(b.escape, "echo", stdin)
 	consumer := b.buildCommand(b.escape, command, arguments...)
@@ -397,14 +420,6 @@ func (b *BashWriter) escape(input string) string {
 
 func (b *BashShell) GetName() string {
 	return b.Shell
-}
-
-func (b *BashShell) GetGitCredHelperCommand() string {
-	return credHelperCommand
-}
-
-func (b *BashShell) GetExternalCommandEmptyArgument() string {
-	return ""
 }
 
 func (b *BashShell) GetEntrypointCommand(info common.ShellScriptInfo, probeFile string) []string {

@@ -571,19 +571,26 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 }
 
 func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
+	const (
+		// The jobResponse is always a http(s) URL. If it were a `git@example.com/...` URL, go's url.Parse() would fail. To
+		// make the runner pull via SSH, `clone_url` would need to be used, to change from a http(s) URL to an SSH URL.
+		repoURI        = "https://user:pass@example.com/project/repo.git"
+		cleanedRepoURI = "https://example.com/project/repo.git"
+		repoHostURI    = "https://example.com"
+	)
+
 	v := common.AppVersion
 	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
-	repoURI := "git@example.com:project/repo.git"
 
-	withoutNative := func(m *MockShellWriter) {
+	withoutNative := func(m *MockShellWriter, repoURI, templateDir, credHelperPath string) {
 		m.EXPECT().Noticef("Fetching changes...").Once()
-
-		templateDir := expectSetupTemplate(m, "build/dir")
-		expectFileCleanup(m, "build/dir/.git", false)
-		expectGitConfigCleanup(m, "build/dir", false)
 
 		m.EXPECT().Command("git", "init", "build/dir", "--template", templateDir).Once()
 		m.EXPECT().Cd("build/dir").Once()
+
+		if credHelperPath != "" {
+			m.EXPECT().Command("git", "config", "include.path", credHelperPath).Once()
+		}
 
 		m.EXPECT().IfCmd("git", "remote", "add", "origin", repoURI).Once()
 		m.EXPECT().Noticef("Created fresh repository.").Once()
@@ -594,7 +601,7 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 		m.EXPECT().IfFile(".git/shallow").Once()
 		m.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
 		m.EXPECT().Else().Once()
-		m.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet")
+		m.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
 		m.EXPECT().EndIf().Once()
 	}
 
@@ -605,36 +612,37 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 		ref               string
 		gitStrategy       string
 		nativeClone       bool
-		setupExpectations func(*MockShellWriter)
+		setupExpectations func(*MockShellWriter, string, string, string)
 	}{
 		{
-			name:        "clone strategy without native",
-			buildDir:    "build/dir",
-			gitStrategy: "clone",
-			setupExpectations: func(m *MockShellWriter) {
-				m.On("RmDir", "build/dir")
-
-				withoutNative(m)
-			},
+			name:              "clone strategy without native",
+			buildDir:          "build/dir",
+			gitStrategy:       "clone",
+			setupExpectations: withoutNative,
 		},
 		{
 			name:        "clone strategy with native",
 			buildDir:    "build/dir",
 			gitStrategy: "clone",
 			nativeClone: true,
-			setupExpectations: func(m *MockShellWriter) {
-				m.EXPECT().RmDir("build/dir").Once()
-
+			setupExpectations: func(m *MockShellWriter, repoURI, templateDir, credHelperPath string) {
 				m.EXPECT().IfGitVersionIsAtLeast("2.49").Once()
 				m.EXPECT().Noticef("Cloning repository...").Once()
 
-				templateDir := expectSetupTemplate(m, "build/dir")
+				gitArgs := []any{"-c", userAgent, "clone", "--no-checkout", repoURI, "build/dir", "--template", templateDir}
+				if credHelperPath != "" {
+					gitArgs = append(gitArgs, "-c", "include.path="+credHelperPath)
+				}
 
-				m.EXPECT().Command("git", "-c", userAgent, "clone", "--no-checkout", repoURI, "build/dir", "--template", templateDir).Once()
+				m.EXPECT().Command("git", gitArgs...).Once()
 				m.EXPECT().Cd("build/dir").Once()
 
+				if credHelperPath != "" {
+					m.EXPECT().Command("git", "config", "include.path", credHelperPath).Once()
+				}
+
 				m.EXPECT().Else().Once()
-				withoutNative(m)
+				withoutNative(m, repoURI, templateDir, credHelperPath)
 				m.EXPECT().EndIf().Once()
 			},
 		},
@@ -644,19 +652,24 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 			gitStrategy: "clone",
 			nativeClone: true,
 			ref:         "feature",
-			setupExpectations: func(m *MockShellWriter) {
-				m.EXPECT().RmDir("build/dir").Once()
-
+			setupExpectations: func(m *MockShellWriter, repoURI, templateDir, credHelperPath string) {
 				m.EXPECT().IfGitVersionIsAtLeast("2.49").Once()
 				m.EXPECT().Noticef("Cloning repository for %s...", "feature").Once()
 
-				templateDir := expectSetupTemplate(m, "build/dir")
+				gitArgs := []any{"-c", userAgent, "clone", "--no-checkout", repoURI, "build/dir", "--template", templateDir, "--branch", "feature"}
+				if credHelperPath != "" {
+					gitArgs = append(gitArgs, "-c", "include.path="+credHelperPath)
+				}
 
-				m.EXPECT().Command("git", "-c", userAgent, "clone", "--no-checkout", repoURI, "build/dir", "--template", templateDir, "--branch", "feature").Once()
+				m.EXPECT().Command("git", gitArgs...).Once()
 				m.EXPECT().Cd("build/dir").Once()
 
+				if credHelperPath != "" {
+					m.EXPECT().Command("git", "config", "include.path", credHelperPath).Once()
+				}
+
 				m.EXPECT().Else().Once()
-				withoutNative(m)
+				withoutNative(m, repoURI, templateDir, credHelperPath)
 				m.EXPECT().EndIf().Once()
 			},
 		},
@@ -666,19 +679,24 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 			gitStrategy: "clone",
 			nativeClone: true,
 			ref:         "refs/some/thing",
-			setupExpectations: func(m *MockShellWriter) {
-				m.EXPECT().RmDir("build/dir").Once()
-
+			setupExpectations: func(m *MockShellWriter, repoURI, templateDir, credHelperPath string) {
 				m.EXPECT().IfGitVersionIsAtLeast("2.49").Once()
 				m.EXPECT().Noticef("Cloning repository for %s...", "refs/some/thing").Once()
 
-				templateDir := expectSetupTemplate(m, "build/dir")
+				gitArgs := []any{"-c", userAgent, "clone", "--no-checkout", repoURI, "build/dir", "--template", templateDir, "--revision", "refs/some/thing"}
+				if credHelperPath != "" {
+					gitArgs = append(gitArgs, "-c", "include.path="+credHelperPath)
+				}
 
-				m.EXPECT().Command("git", "-c", userAgent, "clone", "--no-checkout", repoURI, "build/dir", "--template", templateDir, "--revision", "refs/some/thing").Once()
+				m.EXPECT().Command("git", gitArgs...).Once()
 				m.EXPECT().Cd("build/dir").Once()
 
+				if credHelperPath != "" {
+					m.EXPECT().Command("git", "config", "include.path", credHelperPath).Once()
+				}
+
 				m.EXPECT().Else().Once()
-				withoutNative(m)
+				withoutNative(m, repoURI, templateDir, credHelperPath)
 				m.EXPECT().EndIf().Once()
 			},
 		},
@@ -686,39 +704,57 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			build := &common.Build{
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						FeatureFlags: map[string]bool{
-							featureflags.UseGitNativeClone: tc.nativeClone,
+			for _, jobTokenFromEnv := range []bool{true, false} {
+				t.Run(fmt.Sprintf("%s:%t", featureflags.GitURLsWithoutTokens, jobTokenFromEnv), func(t *testing.T) {
+					build := &common.Build{
+						Runner: &common.RunnerConfig{
+							RunnerSettings: common.RunnerSettings{
+								FeatureFlags: map[string]bool{
+									featureflags.UseGitNativeClone:    tc.nativeClone,
+									featureflags.GitURLsWithoutTokens: jobTokenFromEnv,
+								},
+							},
 						},
-					},
-				},
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
-						Depth:   tc.depth,
-						Ref:     tc.ref,
-						RepoURL: repoURI,
-					},
-					Variables: common.JobVariables{
-						{Key: "GIT_STRATEGY", Value: tc.gitStrategy},
-					},
-				},
-				BuildDir: tc.buildDir,
+						JobResponse: common.JobResponse{
+							GitInfo: common.GitInfo{
+								Depth:   tc.depth,
+								Ref:     tc.ref,
+								RepoURL: repoURI,
+							},
+							Variables: common.JobVariables{
+								{Key: "GIT_STRATEGY", Value: tc.gitStrategy},
+							},
+						},
+						BuildDir: tc.buildDir,
+					}
+
+					info := common.ShellScriptInfo{
+						RunnerCommand: "gitlab-runner-helper",
+						Build:         build,
+					}
+
+					mockShellWriter := NewMockShellWriter(t)
+
+					// common expectations across all test cases
+					mockShellWriter.EXPECT().RmDir("build/dir").Once()
+					templateDir := expectSetupTemplate(mockShellWriter, "build/dir")
+					expectFileCleanup(mockShellWriter, "build/dir/.git", false)
+					expectGitConfigCleanup(mockShellWriter, "build/dir", false)
+					expectedRepoURI := repoURI
+					credHelperPath := ""
+					if build.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
+						expectedRepoURI = cleanedRepoURI
+						credHelperPath = expectGitCredHelperSetup(mockShellWriter, repoHostURI)
+					}
+
+					// additional specific expectations per test case
+					tc.setupExpectations(mockShellWriter, expectedRepoURI, templateDir, credHelperPath)
+
+					shell := AbstractShell{}
+
+					assert.NoError(t, shell.handleGetSourcesStrategy(mockShellWriter, info))
+				})
 			}
-
-			info := common.ShellScriptInfo{
-				RunnerCommand: "gitlab-runner-helper",
-				Build:         build,
-			}
-
-			mockShellWriter := &MockShellWriter{}
-			defer mockShellWriter.AssertExpectations(t)
-
-			tc.setupExpectations(mockShellWriter)
-			shell := AbstractShell{}
-
-			assert.NoError(t, shell.handleGetSourcesStrategy(mockShellWriter, info))
 		})
 	}
 }
@@ -912,6 +948,12 @@ func TestGitCleanFlags(t *testing.T) {
 }
 
 func TestGitFetchFlags(t *testing.T) {
+	const (
+		dummySha        = "01234567abcdef"
+		dummyRef        = "main"
+		dummyProjectDir = "./"
+	)
+
 	tests := map[string]struct {
 		value        string
 		depth        int
@@ -942,25 +984,14 @@ func TestGitFetchFlags(t *testing.T) {
 		},
 	}
 
-	for _, useJobTokenFromEnv := range []bool{true, false} {
-		name := fmt.Sprintf("%s:%t", featureflags.GitURLsWithoutTokens, useJobTokenFromEnv)
-		t.Run(name, func(t *testing.T) {
+	for _, credConfigFile := range []string{"some/cred-helper.conf", ""} {
+		t.Run("credConfigFile:"+credConfigFile, func(t *testing.T) {
 			for name, test := range tests {
 				t.Run(name, func(t *testing.T) {
 					shell := AbstractShell{}
 
-					const dummySha = "01234567abcdef"
-					const dummyRef = "main"
-					const dummyProjectDir = "./"
-
 					build := &common.Build{
-						Runner: &common.RunnerConfig{
-							RunnerSettings: common.RunnerSettings{
-								FeatureFlags: map[string]bool{
-									featureflags.GitURLsWithoutTokens: useJobTokenFromEnv,
-								},
-							},
-						},
+						Runner: &common.RunnerConfig{},
 						JobResponse: common.JobResponse{
 							GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: test.depth, RepoObjectFormat: test.objectFormat},
 							Variables: common.JobVariables{
@@ -982,7 +1013,7 @@ func TestGitFetchFlags(t *testing.T) {
 						mockWriter.EXPECT().Noticef("Fetching changes with git depth set to %d...", test.depth).Once()
 					}
 
-					templateDir := expectSetupTemplate(mockWriter, dummyProjectDir)
+					templateDir := "/some/template/dir"
 					expectFileCleanup(mockWriter, path.Join(dummyProjectDir, ".git"), false)
 					expectGitConfigCleanup(mockWriter, dummyProjectDir, false)
 
@@ -995,10 +1026,6 @@ func TestGitFetchFlags(t *testing.T) {
 						mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", templateDir, "--object-format", expectedObjectFormat).Once()
 					} else {
 						mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", templateDir).Once()
-					}
-
-					if useJobTokenFromEnv {
-						expectGitCredHelperSetup(mockWriter, "")
 					}
 
 					mockWriter.EXPECT().Cd(mock.Anything).Once()
@@ -1025,7 +1052,11 @@ func TestGitFetchFlags(t *testing.T) {
 						mockWriter.EXPECT().Command("git", command...).Once()
 					}
 
-					err := shell.writeRefspecFetchCmd(mockWriter, shellScriptInfo)
+					if credConfigFile != "" {
+						mockWriter.EXPECT().Command("git", "config", "include.path", credConfigFile)
+					}
+
+					err := shell.writeRefspecFetchCmd(mockWriter, shellScriptInfo, templateDir, credConfigFile)
 					assert.NoError(t, err, "calling shell.writeRefspecFetchCmd")
 				})
 			}
@@ -1126,6 +1157,8 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					shell := AbstractShell{}
 					mockWriter := NewMockShellWriter(t)
 
+					someCredHelperPath := "/some/helper/path"
+
 					expectedGitForEachArgsFn := func() []any {
 						return append(
 							[]any{"submodule", "foreach"},
@@ -1134,7 +1167,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					}
 					gitSubArgs := []any{"-c", insteadOf}
 					if useJobTokenFromEnv {
-						gitSubArgs = []any{"-c", "include.path=/some/path/cred-helper.conf"}
+						gitSubArgs = []any{"-c", "include.path=" + someCredHelperPath}
 					}
 
 					expectSubmoduleCleanCommand := func() {
@@ -1148,7 +1181,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					mockWriter.EXPECT().Command("git", "submodule", "init").Once()
 					expectSubmoduleSyncCommand()
 					if useJobTokenFromEnv {
-						mockWriter.EXPECT().TmpFile(mock.Anything).Return("/some/path/cred-helper.conf").Once()
+						mockWriter.EXPECT().TmpFile(mock.Anything).Return(someCredHelperPath).Once()
 					}
 
 					expectSubmoduleCleanCommand()
@@ -2831,6 +2864,7 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 			for _, shellName := range shells {
 				t.Run(shellName, func(t *testing.T) {
 					info := common.ShellScriptInfo{
+						Shell: shellName,
 						Build: &common.Build{
 							JobResponse: common.JobResponse{
 								Token: "some-token",
@@ -2854,7 +2888,6 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 							},
 							Runner: &common.RunnerConfig{
 								RunnerSettings: common.RunnerSettings{
-									Shell: shellName,
 									FeatureFlags: map[string]bool{
 										featureflags.GitURLsWithoutTokens: useJobTokenFromEnv,
 									},
@@ -2892,7 +2925,8 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 					m.EXPECT().Cd("build-dir").Once()
 
 					if useJobTokenFromEnv {
-						expectGitCredHelperSetup(m, "https://repo-url")
+						helperPath := expectGitCredHelperSetup(m, "https://repo-url")
+						m.EXPECT().Command("git", "config", "include.path", helperPath)
 					}
 
 					m.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url/some/repo").Once()
@@ -2966,26 +3000,18 @@ func expectFileCleanup(shellWriter *MockShellWriter, dir string, withSubmodules 
 	shellWriter.EXPECT().RmFilesRecursive(dir+"/refs", "*.lock").Once()
 }
 
-func expectGitCredHelperSetup(shellWriter *MockShellWriter, remoteURL string) {
-	expectedCredHelperPath := "/some/path/cred-helper.conf"
+func expectGitCredHelperSetup(shellWriter *MockShellWriter, remoteURL string) string {
+	someHelperPath := "/some/path/cred-helper.conf"
+
 	expectedCredSection := "credential." + remoteURL
+	expectedUsername := "gitlab-ci-token"
 
-	shellWriter.EXPECT().RmFile(expectedCredHelperPath).Once()
+	shellWriter.EXPECT().TmpFile(mock.Anything).Return(someHelperPath).Once()
 
-	shellWriter.EXPECT().TmpFile(mock.Anything).Return("/some/path/cred-helper.conf").Once()
+	shellWriter.EXPECT().RmFile(someHelperPath).Once()
+	shellWriter.EXPECT().SetupGitCredHelper(someHelperPath, expectedCredSection, expectedUsername).Once()
 
-	shellWriter.EXPECT().Command("git", "config", "-f", expectedCredHelperPath, expectedCredSection+".username", mock.AnythingOfType("string")).Once()
-	shellWriter.EXPECT().Command("git", "config", "-f", expectedCredHelperPath, "--replace-all", expectedCredSection+".helper", mock.MatchedBy(isShellEmptyArg)).Once()
-	shellWriter.EXPECT().Command("git", "config", "-f", expectedCredHelperPath, "--add", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
-	shellWriter.EXPECT().Command("git", "config", "include.path", expectedCredHelperPath).Once()
-}
-
-func startWithBang(val string) bool {
-	return strings.HasPrefix(val, "!")
-}
-
-func isShellEmptyArg(s string) bool {
-	return s == "" || s == `""`
+	return someHelperPath
 }
 
 func TestSanitizeCacheFallbackKey(t *testing.T) {
@@ -3060,79 +3086,87 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 		t.Run("cleanGitConfig:"+name, func(t *testing.T) {
 			for submoduleStrategy, expectSubmoduleCleanupCalls := range submoduleStrategies {
 				t.Run("submoduleStrategy:"+string(submoduleStrategy), func(t *testing.T) {
-					shell := new(AbstractShell)
+					for _, credConfigFile := range []string{"some/cred-helper.conf", ""} {
+						t.Run("credConfigFile:"+credConfigFile, func(t *testing.T) {
+							shell := new(AbstractShell)
 
-					info := common.ShellScriptInfo{
-						Build: &common.Build{
-							JobResponse: common.JobResponse{
-								Variables: common.JobVariables{
-									{Key: "GIT_SUBMODULE_STRATEGY", Value: string(submoduleStrategy)},
+							info := common.ShellScriptInfo{
+								Build: &common.Build{
+									JobResponse: common.JobResponse{
+										Variables: common.JobVariables{
+											{Key: "GIT_SUBMODULE_STRATEGY", Value: string(submoduleStrategy)},
+										},
+										GitInfo: common.GitInfo{
+											RepoURL: "https://repo-url/some/repo",
+										},
+									},
+									Runner: &common.RunnerConfig{
+										RunnerSettings: common.RunnerSettings{
+											CleanGitConfig: cleanGitConfig.configValue,
+										},
+									},
 								},
-								GitInfo: common.GitInfo{
-									RepoURL: "https://repo-url/some/repo",
-								},
-							},
-							Runner: &common.RunnerConfig{
-								RunnerSettings: common.RunnerSettings{
-									CleanGitConfig: cleanGitConfig.configValue,
-								},
-							},
-						},
+							}
+
+							// ensure the cleanup is called at the beginning, from writeRefspecFetchCmd
+							t.Run("writeRefspecFetchCmd", func(t *testing.T) {
+								sw := NewMockShellWriter(t)
+
+								sw.EXPECT().Noticef("Fetching changes...").Once()
+
+								expectFileCleanup(sw, ".git", expectSubmoduleCleanupCalls)
+								if cleanGitConfig.expectGitConfigsToBeCleaned {
+									expectGitConfigCleanup(sw, "", expectSubmoduleCleanupCalls)
+								}
+
+								templateDir := "/some/template/dir"
+
+								sw.EXPECT().Command("git", "init", "", "--template", templateDir).Once()
+								sw.EXPECT().Cd("").Once()
+
+								if credConfigFile != "" {
+									sw.EXPECT().Command("git", "config", "include.path", credConfigFile)
+								}
+
+								sw.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url/some/repo")
+								sw.EXPECT().Noticef("Created fresh repository.").Once()
+								sw.EXPECT().Else().Once()
+								sw.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
+								sw.EXPECT().EndIf().Once()
+
+								sw.EXPECT().IfFile(".git/shallow").Once()
+								sw.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
+								sw.EXPECT().Else().Once()
+								sw.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
+								sw.EXPECT().EndIf().Once()
+
+								err := shell.writeRefspecFetchCmd(sw, info, templateDir, credConfigFile)
+								assert.NoError(t, err)
+							})
+
+							// ensure the cleanup is also called at the end, from writeCleanupScript
+							t.Run("writeCleanupScript", func(t *testing.T) {
+								sw := NewMockShellWriter(t)
+
+								sw.EXPECT().TmpFile("masking.db").Return("masking.db").Once()
+								sw.EXPECT().RmFile("masking.db").Once()
+
+								sw.EXPECT().TmpFile("gitlab_runner_env").Return("someRunnerEnv").Once()
+								sw.EXPECT().RmFile("someRunnerEnv").Once()
+
+								expectFileCleanup(sw, ".git", expectSubmoduleCleanupCalls)
+								if cleanGitConfig.expectGitConfigsToBeCleaned {
+									expectGitConfigCleanup(sw, "", expectSubmoduleCleanupCalls)
+								}
+
+								sw.EXPECT().RmFile("/.gitlab-build-uid-gid").Once()
+								sw.EXPECT().Join("", ".gitlab-build-uid-gid").Return("/.gitlab-build-uid-gid").Once()
+
+								err := shell.writeCleanupScript(context.TODO(), sw, info)
+								assert.NoError(t, err)
+							})
+						})
 					}
-
-					// ensure the cleanup is called at the beginning, from writeRefspecFetchCmd
-					t.Run("writeRefspecFetchCmd", func(t *testing.T) {
-						sw := NewMockShellWriter(t)
-
-						sw.EXPECT().Noticef("Fetching changes...").Once()
-
-						expectFileCleanup(sw, ".git", expectSubmoduleCleanupCalls)
-						if cleanGitConfig.expectGitConfigsToBeCleaned {
-							expectGitConfigCleanup(sw, "", expectSubmoduleCleanupCalls)
-						}
-
-						templateDir := expectSetupTemplate(sw, "")
-
-						sw.EXPECT().Command("git", "init", "", "--template", templateDir).Once()
-						sw.EXPECT().Cd("").Once()
-
-						sw.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url/some/repo")
-						sw.EXPECT().Noticef("Created fresh repository.").Once()
-						sw.EXPECT().Else().Once()
-						sw.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
-						sw.EXPECT().EndIf().Once()
-
-						sw.EXPECT().IfFile(".git/shallow").Once()
-						sw.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
-						sw.EXPECT().Else().Once()
-						sw.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
-						sw.EXPECT().EndIf().Once()
-
-						err := shell.writeRefspecFetchCmd(sw, info)
-						assert.NoError(t, err)
-					})
-
-					// ensure the cleanup is also called at the end, from writeCleanupScript
-					t.Run("writeCleanupScript", func(t *testing.T) {
-						sw := NewMockShellWriter(t)
-
-						sw.EXPECT().TmpFile("masking.db").Return("masking.db").Once()
-						sw.EXPECT().RmFile("masking.db").Once()
-
-						sw.EXPECT().TmpFile("gitlab_runner_env").Return("someRunnerEnv").Once()
-						sw.EXPECT().RmFile("someRunnerEnv").Once()
-
-						expectFileCleanup(sw, ".git", expectSubmoduleCleanupCalls)
-						if cleanGitConfig.expectGitConfigsToBeCleaned {
-							expectGitConfigCleanup(sw, "", expectSubmoduleCleanupCalls)
-						}
-
-						sw.EXPECT().RmFile("/.gitlab-build-uid-gid").Once()
-						sw.EXPECT().Join("", ".gitlab-build-uid-gid").Return("/.gitlab-build-uid-gid").Once()
-
-						err := shell.writeCleanupScript(context.TODO(), sw, info)
-						assert.NoError(t, err)
-					})
 				})
 			}
 		})

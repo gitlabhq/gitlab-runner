@@ -4,6 +4,7 @@ package shells_test
 
 import (
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -78,10 +79,9 @@ func TestGitCredHelper(t *testing.T) {
 				tmpDir := t.TempDir()
 
 				w.Command("git", "init", "--quiet")
+				conf := filepath.Join(tmpDir, ".git", "config")
 
-				w.Command("git", "config", "--local", "--add", "credential.username", defaultUser)
-				w.Command("git", "config", "--local", "--replace-all", "credential.helper", shell.GetExternalCommandEmptyArgument())
-				w.Command("git", "config", "--local", "--add", "credential.helper", shell.GetGitCredHelperCommand())
+				w.SetupGitCredHelper(conf, "credential", defaultUser)
 				w.Command("git", "config", "--local", "--list")
 
 				w.CommandWithStdin(tc.credRequest, "git", "credential", "fill")
@@ -92,6 +92,10 @@ func TestGitCredHelper(t *testing.T) {
 				}
 
 				output := runShell(t, shellName, tmpDir, w, env)
+
+				b, err := os.ReadFile(conf)
+				require.NoError(t, err, "reading generated git config")
+				t.Logf("git config:\n----\n%s\n----\n", b)
 
 				assert.Contains(t, output, "credential.helper=\n", "resets the list of cred helpers")
 				assert.Contains(t, output, tc.expectedCreds, "git credential helper returns the expected creds")
