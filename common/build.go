@@ -491,6 +491,26 @@ func (b *Build) executeArchiveCache(ctx context.Context, state error, executor E
 	return b.executeStage(ctx, BuildStageArchiveOnFailureCache, executor)
 }
 
+func asRunnerSystemFailure(inner error) error { return asBuildError(inner, RunnerSystemFailure) }
+
+func asBuildError(inner error, reason JobFailureReason) error {
+	if inner == nil {
+		return nil
+	}
+
+	// If there's already a BuildError in the chain, leave it as it is...
+	var be *BuildError
+	if errors.As(inner, &be) {
+		return inner
+	}
+
+	return &BuildError{
+		Inner:         inner,
+		FailureReason: reason,
+		ExitCode:      1,
+	}
+}
+
 //nolint:gocognit
 func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Executor) error {
 	// track job start and create referees
@@ -500,20 +520,18 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	// Prepare stage
 	err := b.executeStage(ctx, BuildStagePrepare, executor)
 	if err != nil {
-		return fmt.Errorf(
+		return asRunnerSystemFailure(fmt.Errorf(
 			"prepare environment: %w. "+
-				"Check https://docs.gitlab.com/runner/shells/#shell-profile-loading for more information",
-			err,
-		)
+				"Check https://docs.gitlab.com/runner/shells/#shell-profile-loading for more information", err))
 	}
 
-	err = b.attemptGetSourcesStage(ctx, executor, b.GetGetSourcesAttempts())
+	err = asRunnerSystemFailure(b.attemptGetSourcesStage(ctx, executor, b.GetGetSourcesAttempts()))
 
 	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts())
+		err = asRunnerSystemFailure(b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts()))
 	}
 	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts())
+		err = asRunnerSystemFailure(b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts()))
 	}
 
 	//nolint:nestif
@@ -581,9 +599,9 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		}
 	}
 
-	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
+	archiveCacheErr := asRunnerSystemFailure(b.executeArchiveCache(ctx, err, executor))
 
-	artifactUploadErr := b.executeUploadArtifacts(ctx, err, executor)
+	artifactUploadErr := asRunnerSystemFailure(b.executeUploadArtifacts(ctx, err, executor))
 
 	// track job end and execute referees
 	endTime := time.Now()
