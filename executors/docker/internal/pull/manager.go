@@ -236,11 +236,26 @@ func (m *manager) pullDockerImage(imageName string, options common.ImageDockerOp
 	}
 
 	if err := m.client.ImagePullBlocking(m.context, ref, opts); err != nil {
-		return nil, &common.BuildError{Inner: err, FailureReason: common.ImagePullFailure}
+		return nil, &common.BuildError{Inner: err, FailureReason: getImagePullFailureReason(err)}
 	}
 
 	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName)
 	return &image, err
+}
+
+// Return a JobFailureReason for an image pull failure. The reason can be a ConfigurationError if the image
+// specification was invalid, otherwise it's an ImagePullFailure.
+func getImagePullFailureReason(err error) common.JobFailureReason {
+	if err == nil {
+		return ""
+	}
+
+	// These error messages indicate an invalid image specification.
+	if strings.Contains(err.Error(), "repository does not exist") ||
+		strings.Contains(err.Error(), "manifest unknown") {
+		return common.ConfigurationError
+	}
+	return common.ImagePullFailure
 }
 
 // getPullPolicies selects the pull_policy configurations originating from
