@@ -143,7 +143,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 func (e *executor) prepareConfig() error {
 	if e.Config.Custom == nil {
-		return common.MakeBuildError("custom executor not configured")
+		return common.MakeBuildError("custom executor not configured").WithFailureReason(common.ConfigurationError)
 	}
 
 	e.config = &config{
@@ -151,7 +151,7 @@ func (e *executor) prepareConfig() error {
 	}
 
 	if e.config.RunExec == "" {
-		return common.MakeBuildError("custom executor is missing RunExec")
+		return common.MakeBuildError("custom executor is missing RunExec").WithFailureReason(common.ConfigurationError)
 	}
 
 	return nil
