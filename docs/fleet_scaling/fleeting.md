@@ -14,14 +14,20 @@ The following executors use fleeting to scale runners:
 
 GitLab maintains these official plugins:
 
-| Cloud provider                                                             | Release status      | Notes |
-|----------------------------------------------------------------------------|---------------------|-------|
-| [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud) | Generally available | Uses [Google Cloud instance groups](https://cloud.google.com/compute/docs/instance-groups) |
-| [AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws)                  |Generally available  | Uses [AWS Auto Scaling groups](https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html) |
-| [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure)              | Generally available                | Uses Azure [Virtual Machine Scale Sets](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview). Only [Uniform orchestration](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration) mode is supported. |
+| Cloud provider                                                             | Notes |
+|----------------------------------------------------------------------------|-------|
+| [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud) | Uses [Google Cloud instance groups](https://cloud.google.com/compute/docs/instance-groups) |
+| [AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws)                  | Uses [AWS Auto Scaling groups](https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html) |
+| [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure)              | Uses Azure [Virtual Machine Scale Sets](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview). Only [Uniform orchestration](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration) mode is supported. |
 
 To configure fleeting, in the `config.toml`, use the [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 configuration section.
+
+{{< alert type="note" >}}
+
+The README.md file for each plugin contains important information regarding installation and configuration.
+
+{{< /alert >}}
 
 ## Install a fleeting plugin
 
