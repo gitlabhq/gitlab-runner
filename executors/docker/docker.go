@@ -1335,7 +1335,7 @@ func (e *executor) prepareHelperImage() (helperimage.Info, error) {
 
 func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error {
 	if e.volumeParser == nil {
-		return common.MakeBuildError("missing volume parser")
+		return common.MakeBuildError("missing volume parser").WithFailureReason(common.RunnerSystemFailure)
 	}
 
 	isHostMounted, err := volumes.IsHostMountedVolume(e.volumeParser, e.RootDir(), options.Config.Docker.Volumes...)
