@@ -310,7 +310,8 @@ func (b *Build) getCustomBuildDir(rootDir, dir string, customBuildDirEnabled, sh
 	}
 
 	if !customBuildDirEnabled {
-		return "", MakeBuildError("setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature")
+		return "", MakeBuildError("setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature").
+			WithFailureReason(ConfigurationError)
 	}
 
 	// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25913
@@ -319,7 +320,8 @@ func (b *Build) getCustomBuildDir(rootDir, dir string, customBuildDirEnabled, sh
 		return "", &BuildError{Inner: err}
 	}
 	if strings.HasPrefix(relDir, "..") {
-		return "", MakeBuildError("the GIT_CLONE_PATH=%q has to be within %q", dir, rootDir)
+		return "", MakeBuildError("the GIT_CLONE_PATH=%q has to be within %q", dir, rootDir).
+			WithFailureReason(ConfigurationError)
 	}
 
 	return path.Clean(dir), nil
@@ -330,11 +332,11 @@ func (b *Build) StartBuild(
 	customBuildDirEnabled, sharedDir, safeDirectoryCheckout bool,
 ) error {
 	if rootDir == "" {
-		return MakeBuildError("the builds_dir is not configured")
+		return MakeBuildError("the builds_dir is not configured").WithFailureReason(ConfigurationError)
 	}
 
 	if cacheDir == "" {
-		return MakeBuildError("the cache_dir is not configured")
+		return MakeBuildError("the cache_dir is not configured").WithFailureReason(ConfigurationError)
 	}
 
 	b.SafeDirectoryCheckout = safeDirectoryCheckout
