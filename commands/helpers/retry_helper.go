@@ -1,12 +1,48 @@
 package helpers
 
 import (
+	"encoding/xml"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/sirupsen/logrus"
 )
+
+// Cloud Providers supported currently send error in case of HTTP API request failure in XML Format
+// The Format spec is the same for:
+// GCS: https://cloud.google.com/storage/docs/xml-api/reference-status
+// AWS S3: https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#RESTErrorResponses
+// and Azure Blob Storage: https://learn.microsoft.com/en-us/rest/api/storageservices/status-and-error-codes2
+// storageErrorResponse is used to deserialize such error responses and provide better error failures message in the log.
+type storageErrorResponse struct {
+	XMLName xml.Name `xml:"Error"`
+	Code    string   `xml:"Code"`
+	Message string   `xml:"Message"`
+}
+
+func (ser *storageErrorResponse) isValid() bool {
+	return ser.Code != "" || ser.Message != ""
+}
+
+func (ser *storageErrorResponse) String() string {
+	if !ser.isValid() {
+		return ""
+	}
+
+	msg := ""
+	if ser.Code != "" {
+		msg = "code: " + ser.Code
+	}
+
+	if ser.Message != "" {
+		msg += ", message: " + ser.Message
+	}
+
+	return msg
+}
 
 type retryHelper struct {
 	Retry     int           `long:"retry" description:"How many times to retry upload"`
@@ -54,9 +90,17 @@ func retryOnServerError(resp *http.Response) error {
 		return nil
 	}
 
+	errResp := &storageErrorResponse{}
+	bodyBytes, _ := io.ReadAll(resp.Body)
 	_ = resp.Body.Close()
 
-	err := fmt.Errorf("received: %s", resp.Status)
+	errMsg := fmt.Sprintf("received: %s", resp.Status)
+
+	if err := xml.Unmarshal(bodyBytes, errResp); err == nil && errResp.isValid() {
+		errMsg = fmt.Sprintf("%s. Request failed with %s", errMsg, errResp.String())
+	}
+
+	err := errors.New(errMsg)
 
 	if resp.StatusCode/100 == 5 {
 		err = retryableErr{err: err}
