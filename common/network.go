@@ -118,6 +118,7 @@ var (
 		ImagePullFailure,
 		UnknownFailure,
 		ConfigurationError,
+		JobCanceled,
 	}
 
 	// failureReasonsCompatibilityMap contains a mapping of new failure reasons

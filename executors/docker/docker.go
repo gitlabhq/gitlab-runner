@@ -301,7 +301,7 @@ func (e *executor) createService(
 	linkNames []string,
 ) (*types.Container, error) {
 	if service == "" {
-		return nil, common.MakeBuildError("invalid service image name: %s", definition.Name)
+		return nil, common.MakeBuildError("invalid service image name: %s", definition.Name).WithFailureReason(common.ConfigurationError)
 	}
 
 	if e.volumesManager == nil {
@@ -855,7 +855,7 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 	if id == e.buildContainerID && e.Build.UseNativeSteps() {
 		request, err := steps.NewRequest(e.Build)
 		if err != nil {
-			return common.MakeBuildError("creating steps request: %w", err)
+			return common.MakeBuildError("creating steps request: %w", err).WithFailureReason(common.ConfigurationError)
 		}
 		dockerExec = exec.NewStepsDocker(e.Context, e.client, e.waiter, e.Build.Log(), request)
 	}
@@ -1335,7 +1335,7 @@ func (e *executor) prepareHelperImage() (helperimage.Info, error) {
 
 func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error {
 	if e.volumeParser == nil {
-		return common.MakeBuildError("missing volume parser")
+		return common.MakeBuildError("missing volume parser").WithFailureReason(common.RunnerSystemFailure)
 	}
 
 	isHostMounted, err := volumes.IsHostMountedVolume(e.volumeParser, e.RootDir(), options.Config.Docker.Volumes...)

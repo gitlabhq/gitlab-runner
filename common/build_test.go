@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -396,7 +397,7 @@ func TestJobFailure(t *testing.T) {
 	executor.On("Cleanup").Once()
 
 	// Set up a failing a build script
-	thrownErr := &BuildError{Inner: errors.New("test error"), ExitCode: 1}
+	thrownErr := errors.Join(&BuildError{Inner: errors.New("test error"), ExitCode: 1})
 	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
 	executor.On("Run", mock.Anything).Return(thrownErr).Times(3)
@@ -525,7 +526,11 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
-	executor.On("Finish", errors.New("build fail")).Once()
+	executor.On("Finish",
+		mock.MatchedBy(func(err error) bool {
+			return errors.Is(err, &BuildError{FailureReason: RunnerSystemFailure}) &&
+				strings.Contains(err.Error(), "build fail")
+		})).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
@@ -550,7 +555,11 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
-	executor.On("Finish", errors.New("build fail")).Once()
+	executor.On("Finish",
+		mock.MatchedBy(func(err error) bool {
+			return errors.Is(err, &BuildError{FailureReason: RunnerSystemFailure}) &&
+				strings.Contains(err.Error(), "build fail")
+		})).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, JobVariable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
@@ -577,7 +586,11 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(errors.New("upload fail")).Once()
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
-	executor.On("Finish", errors.New("upload fail")).Once()
+	executor.On("Finish",
+		mock.MatchedBy(func(err error) bool {
+			return errors.Is(err, &BuildError{FailureReason: RunnerSystemFailure}) &&
+				strings.Contains(err.Error(), "upload fail")
+		})).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	successfulBuild := build.JobResponse
@@ -637,7 +650,11 @@ func TestUploadArtifactsOnArchiveCacheFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(errors.New("cache failure")).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
-	executor.On("Finish", errors.New("cache failure")).Once()
+	executor.On("Finish",
+		mock.MatchedBy(func(err error) bool {
+			return errors.Is(err, &BuildError{FailureReason: RunnerSystemFailure}) &&
+				strings.Contains(err.Error(), "cache failure")
+		})).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
@@ -660,7 +677,11 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
-	executor.On("Finish", errors.New("build fail")).Once()
+	executor.On("Finish",
+		mock.MatchedBy(func(err error) bool {
+			return errors.Is(err, &BuildError{FailureReason: RunnerSystemFailure}) &&
+				strings.Contains(err.Error(), "build fail")
+		})).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, JobVariable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
@@ -684,7 +705,10 @@ func TestRunWrongAttempts(t *testing.T) {
 		Return(errors.New("number of attempts out of the range [1, 10] for stage: get_sources"))
 	executor.On(
 		"Finish",
-		errors.New("number of attempts out of the range [1, 10] for stage: get_sources"),
+		mock.MatchedBy(func(err error) bool {
+			return errors.Is(err, &BuildError{FailureReason: RunnerSystemFailure}) &&
+				strings.Contains(err.Error(), "number of attempts out of the range [1, 10] for stage: get_sources")
+		}),
 	)
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))

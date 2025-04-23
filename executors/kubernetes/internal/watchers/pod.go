@@ -204,7 +204,7 @@ func CheckTerminalContainerErrors(containerStatuses []v1.ContainerStatus) error 
 
 		switch waiting.Reason {
 		case "InvalidImageName":
-			return &common.BuildError{Inner: fmt.Errorf("image pull failed: %s", waiting.Message)}
+			return &common.BuildError{Inner: fmt.Errorf("image pull failed: %s", waiting.Message), FailureReason: common.ConfigurationError}
 		case "ErrImagePull", "ImagePullBackOff":
 			msg := fmt.Sprintf("image pull failed: %s", waiting.Message)
 			imagePullErr := &pull.ImagePullError{Message: msg, Container: containerStatus.Name, Image: containerStatus.Image}

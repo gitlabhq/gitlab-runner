@@ -87,7 +87,7 @@ func errFromStatus(status client.Status) error {
 	case client.StateRunning:
 		// this should not happen!!!
 	case client.StateCancelled:
-		// nothing to do here since there is no common.CancelledFailure
+		berr.FailureReason = common.JobCanceled
 	}
 
 	// TODO: also set berr.ExitCode if we add an exit-code to client.Status
