@@ -20,6 +20,7 @@ type ShellWriter interface {
 	IfFile(file string)
 	IfCmd(cmd string, arguments ...string)
 	IfCmdWithOutput(cmd string, arguments ...string)
+	IfGitVersionIsAtLeast(version string)
 	Else()
 	EndIf()
 

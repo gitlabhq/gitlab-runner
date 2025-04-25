@@ -31,6 +31,7 @@ const (
 	RetrievePodWarningEvents             string = "FF_RETRIEVE_POD_WARNING_EVENTS"
 	PrintPodEvents                       string = "FF_PRINT_POD_EVENTS"
 	UseGitBundleURIs                     string = "FF_USE_GIT_BUNDLE_URIS"
+	UseGitNativeClone                    string = "FF_USE_GIT_NATIVE_CLONE"
 	UseDumbInitWithKubernetesExecutor    string = "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR"
 	UseInitWithDockerExecutor            string = "FF_USE_INIT_WITH_DOCKER_EXECUTOR"
 	LogImagesConfiguredForJob            string = "FF_LOG_IMAGES_CONFIGURED_FOR_JOB"
@@ -281,6 +282,14 @@ var flags = []FeatureFlag{
 		Description: "When enabled, the Git `transfer.bundleURI` configuration option is set to `true`. This FF is enabled by default. " +
 			"Set to `false` to disable Git bundle support.",
 	},
+	{
+		Name:         UseGitNativeClone,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled and `GIT_STRATEGY=clone`, the `git-clone(1)` command is used instead of `git-init(1)` + `git-fetch(1)` to clone the project. " +
+			"This requires Git version 2.49 and later, and falls back to `init` + `fetch` if not available.",
+	},
+
 	{
 		Name:         UseDumbInitWithKubernetesExecutor,
 		DefaultValue: false,

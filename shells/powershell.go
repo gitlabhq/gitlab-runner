@@ -428,6 +428,12 @@ func (p *PsWriter) IfCmdWithOutput(cmd string, arguments ...string) {
 	p.ifInTryCatch(p.buildCommand(psSingleQuote, cmd, arguments...))
 }
 
+func (p *PsWriter) IfGitVersionIsAtLeast(version string) {
+	p.Printf("Powershell does not support Git version detection")
+	p.Linef("if($false) {")
+	p.Indent()
+}
+
 func (p *PsWriter) ifInTryCatch(cmd string) {
 	p.Line("Set-Variable -Name cmdErr -Value $false")
 	p.Line("Try {")
