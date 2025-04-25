@@ -712,8 +712,8 @@ github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452 h1:ZIGEFZTBq5+/3xCDOmgY7j/x+P3bDqwuM/dN7yHxLBU=
 gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452/go.mod h1:VavCDRKaiqpuBytdiBVNw0+y7j3dw8Trt+96cj1A6uw=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20250331223446-30f1dda488b1 h1:xwDj9H3qQlwEW3EijTXcodfzh1kqYQuFUgbtYj1FmJw=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20250331223446-30f1dda488b1/go.mod h1:OsXzbzavwzLlPVwNEhPHtMnd4qCMABf2jDH3JGVQifA=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20250425145049-7f673e7c5598 h1:9c2gbWnmHhYu7cK5M3MRnn9Loi/KpqxrW+8L1JJLpy4=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20250425145049-7f673e7c5598/go.mod h1:OsXzbzavwzLlPVwNEhPHtMnd4qCMABf2jDH3JGVQifA=
 gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c h1:ID20OmwvHB4e/563Vqko57tgkp14yUw3aNs/C9WqBao=
 gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c/go.mod h1:e7QnK+35jxOk0FJPfS5oVupY20h3oxnfZV2ZfBEseVY=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20240911165028-a0ce7d6c3260 h1:lnrk1fcZkHEd1+Dq/1pvpBHUN5nOXWi21A/1F24LSJ4=
