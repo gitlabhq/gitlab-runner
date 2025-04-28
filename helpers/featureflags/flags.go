@@ -28,7 +28,6 @@ const (
 	UseAdvancedPodSpecConfiguration      string = "FF_USE_ADVANCED_POD_SPEC_CONFIGURATION"
 	SetPermissionsBeforeCleanup          string = "FF_SET_PERMISSIONS_BEFORE_CLEANUP"
 	EnableSecretResolvingFailsIfMissing  string = "FF_SECRET_RESOLVING_FAILS_IF_MISSING"
-	RetrievePodWarningEvents             string = "FF_RETRIEVE_POD_WARNING_EVENTS"
 	PrintPodEvents                       string = "FF_PRINT_POD_EVENTS"
 	UseGitBundleURIs                     string = "FF_USE_GIT_BUNDLE_URIS"
 	UseDumbInitWithKubernetesExecutor    string = "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR"
@@ -258,15 +257,6 @@ var flags = []FeatureFlag{
 		DefaultValue: true,
 		Deprecated:   false,
 		Description:  "When enabled, secret resolving fails if the value cannot be found.",
-	},
-	{
-		Name:         RetrievePodWarningEvents,
-		DefaultValue: true,
-		Deprecated:   true,
-		Description: "When enabled, all warning events associated with the pod are retrieved when the job fails. " +
-			"This flag was deprecated in GitLab Runner 17.2 and is planned for removal in 18.0. " +
-			"In GitLab Runner 17.2 and later, pod warning events are retrieved and logged unconditionally. " +
-			"However, no failure occurs even if RBAC permissions are missing.",
 	},
 	{
 		Name:         PrintPodEvents,

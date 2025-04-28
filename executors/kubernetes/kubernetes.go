@@ -573,7 +573,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 			err = s.runWithAttach(cmd)
 		}
 
-		if err != nil {
+		if err != nil && s.Config.Kubernetes.GetPrintPodWarningEvents() {
 			s.logPodWarningEvents(cmd.Context, k8sEventWarningType)
 		}
 
@@ -649,7 +649,8 @@ func (s *executor) logPodWarningEvents(ctx context.Context, eventType string) {
 	}
 
 	events, err := retry.WithValueFn(s, func() (*api.EventList, error) {
-		// kubeAPI: events, list
+		//nolint:gocritic
+		// kubeAPI: events, list, print_pod_warning_events=true
 		return s.kubeClient.CoreV1().Events(s.pod.Namespace).
 			List(ctx, metav1.ListOptions{
 				FieldSelector: fmt.Sprintf("involvedObject.name=%s,type=%s", s.pod.Name, eventType),
