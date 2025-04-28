@@ -45,7 +45,12 @@ trigger runner-incept tests:
     - binaries
     - "helper images"
     - "prebuilt helper images"
-    - "development docker images"
+    - job: "development docker images"
+      optional: true
+    - job: "bleeding edge docker images"
+      optional: true
+    - job: "stable docker images"
+      optional: true
   trigger:
     project: gitlab-org/ci-cd/tests/runner-incept
     # strategy: depend
