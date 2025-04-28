@@ -21,6 +21,12 @@
   - "docs/**/*"
   - "scripts/lint-docs"
 
+.docs-i18n-patterns: &docs-patterns
+  - ".vale.ini"
+  - ".markdownlint.yml"
+  - "docs-locale/**/*"
+  - "scripts/lint-i18n-docs"
+
 ##############
 # Conditions #
 ##############

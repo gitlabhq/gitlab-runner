@@ -104,6 +104,19 @@ docs:lint markdown:
     # Lint content and Markdown, and check links
     - make lint-docs VALE_MIN_ALERT_LEVEL=error
 
+docs:lint i18n markdown:
+  image: $DOCS_LINT_IMAGE
+  stage: qa
+  extends:
+    - .rules:merge_request_pipelines
+    - .no_cache_and_dependencies
+  needs: []
+  script:
+    # Makefiles in this project expect Go to be available
+    - apk add --quiet go
+    # Lint i18n content and Markdown
+    - make lint-i18n-docs VALE_MIN_ALERT_LEVEL=error
+
 docs:check feature flags:
   stage: qa
   extends:
