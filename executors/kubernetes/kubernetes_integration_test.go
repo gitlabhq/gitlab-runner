@@ -2135,7 +2135,6 @@ func testKubernetesWaitResources(t *testing.T, featureFlagName string, featureFl
 }
 
 func testKubernetesClusterWarningEvent(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	t.Skip("TODO: Fix test doesn't seem to wait for all events sometimes, https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/8532408889")
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
 	tests := map[string]struct {
@@ -2148,26 +2147,14 @@ func testKubernetesClusterWarningEvent(t *testing.T, featureFlagName string, fea
 			retrieveWarning: true,
 			verifyFn: func(t *testing.T, out string, err error) {
 				assert.Error(t, err)
-				assert.Contains(
-					t,
-					out,
-					"WARNING: Event retrieved from the cluster: Failed to pull image \"alpine:invalid-tag\"",
-				)
-				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ErrImagePull")
-				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ImagePullBackOff")
+				assert.Contains(t, out, "WARNING: Event retrieved from the cluster:")
 			},
 		},
-		"invalid image with feature flag disabled": {
+		"invalid image with configuration disabled": {
 			image: "alpine:invalid-tag",
 			verifyFn: func(t *testing.T, out string, err error) {
 				assert.Error(t, err)
-				assert.Contains(
-					t,
-					out,
-					"WARNING: Event retrieved from the cluster: Failed to pull image \"alpine:invalid-tag\"",
-				)
-				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ErrImagePull")
-				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ImagePullBackOff")
+				assert.NotContains(t, out, "WARNING: Event retrieved from the cluster:")
 			},
 		},
 	}
@@ -2185,8 +2172,8 @@ func testKubernetesClusterWarningEvent(t *testing.T, featureFlagName string, fea
 				return jobResponse, nil
 			})
 			build.Runner.Kubernetes.Image = tc.image
+			build.Runner.Kubernetes.PrintPodWarningEvents = &tc.retrieveWarning
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-			buildtest.SetBuildFeatureFlag(build, "FF_RETRIEVE_POD_WARNING_EVENTS", tc.retrieveWarning)
 			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
