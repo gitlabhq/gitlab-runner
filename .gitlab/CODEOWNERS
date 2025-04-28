@@ -10,3 +10,7 @@
 [Documentation]
 .markdownlint.yml @gitlab-com/runner-docs-maintainers
 /docs/ @gitlab-com/runner-docs-maintainers
+
+## Localization
+[Localization Team] @gitlab-com/localization/maintainers
+/docs-locale/**

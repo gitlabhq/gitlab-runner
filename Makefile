@@ -140,6 +140,10 @@ lint: $(GOLANGLINT)
 lint-docs:
 	@scripts/lint-docs
 
+.PHONY: lint-i18n-docs
+lint-i18n-docs:
+	@scripts/lint-i18n-docs
+
 .PHONY: format-ci-yaml
 format-ci-yaml:
 	prettier --write ".gitlab/ci/*.{yaml,yml}"
