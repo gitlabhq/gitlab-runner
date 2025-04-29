@@ -311,7 +311,7 @@ Download the current public GPG key used for package signing from
 | Name          | `GitLab, Inc.`                                       |
 | EMail         | `support@gitlab.com`                                 |
 | Fingerprint   | `931D A69C FA3A FEBB C97D  AA8C 6C57 C29C 6BA7 5A4E` |
-| Expiry        | `2025-04-25`                                         |
+| Expiry        | `2026-04-28`                                         |
 
 {{< alert type="note" >}}
 
