@@ -9,6 +9,7 @@ import (
 	"io"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -422,7 +423,7 @@ type (
 	}
 	ImageKubernetesOptions struct {
 		executorOptions
-		User int64 `json:"user"`
+		User string `json:"user"`
 	}
 	ImageExecutorOptions struct {
 		executorOptions
@@ -463,6 +464,25 @@ func (iko *ImageKubernetesOptions) UnmarshalJSON(data []byte) error {
 	// call validate after json.Unmarshal so the former handles bad json.
 	iko.unsupportedOptions = iko.validate(data, SupportedExecutorOptions["kubernetes"], "kubernetes executor", "image")
 	return nil
+}
+
+func (iko *ImageKubernetesOptions) GetUIDGID() (int64, int64, error) {
+	user, group, ok := strings.Cut(iko.User, ":")
+
+	uid, err := strconv.ParseInt(user, 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse UID %w", err)
+	}
+
+	var gid int64
+	if ok {
+		gid, err = strconv.ParseInt(group, 10, 64)
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to parse GID %w", err)
+		}
+	}
+
+	return uid, gid, err
 }
 
 func (ieo *ImageExecutorOptions) UnmarshalJSON(data []byte) error {
