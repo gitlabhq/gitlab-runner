@@ -488,13 +488,13 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 		"kubernetes, empty": {
 			json: `{"executor_opts":{"kubernetes": {}}}`,
 			expected: func(t *testing.T, i Image) {
-				assert.Equal(t, int64(0), i.ExecutorOptions.Kubernetes.User)
+				assert.Equal(t, "", i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"kubernetes, all options": {
-			json: `{"executor_opts":{"kubernetes": {"user": 1000}}}`,
+			json: `{"executor_opts":{"kubernetes": {"user": "1000"}}}`,
 			expected: func(t *testing.T, i Image) {
-				assert.Equal(t, int64(1000), i.ExecutorOptions.Kubernetes.User)
+				assert.Equal(t, "1000", i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"kubernetes, invalid options": {
@@ -503,7 +503,7 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
-				assert.Equal(t, int64(0), i.ExecutorOptions.Kubernetes.User)
+				assert.Equal(t, "", i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"invalid executor": {
@@ -512,7 +512,7 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
-				assert.Equal(t, int64(0), i.ExecutorOptions.Kubernetes.User)
+				assert.Equal(t, "", i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"docker, invalid executor, valid executor, invalid option": {
@@ -527,13 +527,13 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 			},
 		},
 		"kubernetes, invalid executor, valid executor, invalid option": {
-			json: `{"executor_opts":{"dockers": {}, "kubernetes": {"user": 1000, "foobar": 1234}}}`,
+			json: `{"executor_opts":{"dockers": {}, "kubernetes": {"user": "1000", "foobar": 1234}}}`,
 			expectedErrMsg: []string{
 				`Unsupported "image" options [dockers] for "executor_opts"; supported options are [docker kubernetes]`,
 				`Unsupported "image" options [foobar] for "kubernetes executor"; supported options are [user]`,
 			},
 			expected: func(t *testing.T, i Image) {
-				assert.Equal(t, int64(1000), i.ExecutorOptions.Kubernetes.User)
+				assert.Equal(t, "1000", i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 	}

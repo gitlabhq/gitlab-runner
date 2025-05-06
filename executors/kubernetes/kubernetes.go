@@ -2333,8 +2333,24 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 }
 
 func (s *executor) setSecurityContextUser(opts common.ImageKubernetesOptions, context *api.SecurityContext) *api.SecurityContext {
-	if opts.User > 0 {
-		context.RunAsUser = &opts.User
+	uid, gid, err := opts.GetUIDGID()
+
+	if err != nil {
+		s.BuildLogger.Warningln(
+			fmt.Sprintf(
+				"Error parsing 'uid' or 'gid' from image options, using the configured security context: %v",
+				err,
+			),
+		)
+		return context
+	}
+
+	if uid > 0 {
+		context.RunAsUser = &uid
+	}
+
+	if gid > 0 {
+		context.RunAsGroup = &gid
 	}
 
 	return context

@@ -3611,29 +3611,35 @@ func testKubernetesOptionsUserAndGroup(t *testing.T, featureFlagName string, fea
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
 	tests := map[string]struct {
-		ciUserId  int64
+		ciUserId  string
 		cfgUserId func() *int64
 		verifyFn  func(t *testing.T, out string)
 	}{
 		"no user set": {
 			verifyFn: func(t *testing.T, out string) {
-				assert.Contains(t, out, "User ID is set to: 0")
+				assert.Contains(t, out, "uid and gid is set to: 0:0")
 			},
 		},
 		"user set to 1002": {
-			ciUserId: 1002,
+			ciUserId: "1002",
 			verifyFn: func(t *testing.T, out string) {
-				assert.Contains(t, out, "User ID is set to: 1002")
+				assert.Contains(t, out, "uid and gid is set to: 1002:0")
+			},
+		},
+		"uid set to 1002 and gid set to 1002": {
+			ciUserId: "1002:1002",
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "uid and gid is set to: 1002:1002")
 			},
 		},
 		"user set to 1002 in gitlab-ci and 1003 in config.toml": {
-			ciUserId: 1002,
+			ciUserId: "1002",
 			cfgUserId: func() *int64 {
 				id := int64(1003)
 				return &id
 			},
 			verifyFn: func(t *testing.T, out string) {
-				assert.Contains(t, out, "User ID is set to: 1002")
+				assert.Contains(t, out, "uid and gid is set to: 1002:0")
 			},
 		},
 	}
@@ -3641,7 +3647,7 @@ func testKubernetesOptionsUserAndGroup(t *testing.T, featureFlagName string, fea
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			build := getTestBuild(t, func() (common.JobResponse, error) {
-				jobResponse, err := common.GetRemoteBuildResponse(`echo "User ID is set to: $(id -u)"`)
+				jobResponse, err := common.GetRemoteBuildResponse(`echo "uid and gid is set to: $(id -u):$(id -g)"`)
 				if err != nil {
 					return common.JobResponse{}, err
 				}
