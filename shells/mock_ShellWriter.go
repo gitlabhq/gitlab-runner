@@ -227,55 +227,6 @@ func (_c *MockShellWriter_CommandArgExpand_Call) RunAndReturn(run func(string, .
 	return _c
 }
 
-// CommandWithStdin provides a mock function with given fields: stdin, command, arguments
-func (_m *MockShellWriter) CommandWithStdin(stdin string, command string, arguments ...string) {
-	_va := make([]interface{}, len(arguments))
-	for _i := range arguments {
-		_va[_i] = arguments[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, stdin, command)
-	_ca = append(_ca, _va...)
-	_m.Called(_ca...)
-}
-
-// MockShellWriter_CommandWithStdin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CommandWithStdin'
-type MockShellWriter_CommandWithStdin_Call struct {
-	*mock.Call
-}
-
-// CommandWithStdin is a helper method to define mock.On call
-//   - stdin string
-//   - command string
-//   - arguments ...string
-func (_e *MockShellWriter_Expecter) CommandWithStdin(stdin interface{}, command interface{}, arguments ...interface{}) *MockShellWriter_CommandWithStdin_Call {
-	return &MockShellWriter_CommandWithStdin_Call{Call: _e.mock.On("CommandWithStdin",
-		append([]interface{}{stdin, command}, arguments...)...)}
-}
-
-func (_c *MockShellWriter_CommandWithStdin_Call) Run(run func(stdin string, command string, arguments ...string)) *MockShellWriter_CommandWithStdin_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]string, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(string)
-			}
-		}
-		run(args[0].(string), args[1].(string), variadicArgs...)
-	})
-	return _c
-}
-
-func (_c *MockShellWriter_CommandWithStdin_Call) Return() *MockShellWriter_CommandWithStdin_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *MockShellWriter_CommandWithStdin_Call) RunAndReturn(run func(string, string, ...string)) *MockShellWriter_CommandWithStdin_Call {
-	_c.Run(run)
-	return _c
-}
-
 // DotEnvVariables provides a mock function with given fields: baseFilename, variables
 func (_m *MockShellWriter) DotEnvVariables(baseFilename string, variables map[string]string) string {
 	ret := _m.Called(baseFilename, variables)

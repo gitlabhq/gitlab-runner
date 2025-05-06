@@ -11,7 +11,6 @@ type ShellWriter interface {
 	DotEnvVariables(baseFilename string, variables map[string]string) string
 	SourceEnv(pathname string)
 	Command(command string, arguments ...string)
-	CommandWithStdin(stdin, command string, arguments ...string)
 	CommandArgExpand(command string, arguments ...string)
 	Line(text string)
 	CheckForErrors()
