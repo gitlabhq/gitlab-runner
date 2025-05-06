@@ -161,6 +161,33 @@ To [configure Azure Blob Storage](../configuration/advanced-configuration.md#the
 
 To learn more about Helm chart caching, see [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 
+### Persistent volume claim
+
+  You can use persistent volume claims (PVCs) for caching if none of the object storage options work for you.
+
+  To configure your cache to use a PVC:
+  
+  1. [Create a PVC](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) in the namespace where job pods will run.
+  
+     {{< alert type="note" >}}
+
+     If you want multiple job pods to access the same cache PVC, it must have the `ReadWriteMany` access mode.
+
+     {{< /alert >}}
+
+  1. Mount the PVC to the `/cache` directory:
+  
+     ```yaml
+     runners:
+       config: |
+         [[runners]]            
+           [runners.kubernetes]
+             image = "ubuntu:22.04"
+           [[runners.kubernetes.volumes.pvc]]
+             name = "cache-pvc"
+             mount_path = "/cache"
+     ```
+
 ## Enable RBAC support
 
 If your cluster has RBAC (role-based access controls) enabled, the chart can create
