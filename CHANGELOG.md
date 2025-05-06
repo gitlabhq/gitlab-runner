@@ -1,3 +1,9 @@
+## v17.11.1 (2025-05-05)
+
+### Bug fixes
+
+- Update fleeting dependency [!5535](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5535)
+
 ## v17.11.0 (2025-04-14)
 
 ### New features
