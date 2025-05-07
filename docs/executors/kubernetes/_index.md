@@ -1788,7 +1788,7 @@ Each key from the `configMap` is changed into a file and stored in the mount pat
 - The `configMap` key is used as the filename.
 - The value is stored in the file contents.
 
-To change the default key and value storage, use the `items` option . If you use the `items` option, **only specified keys**
+To change the default key and value storage, use the `items` option. If you use the `items` option, **only specified keys**
 are added to the volumes and all other keys are skipped.
 
 {{< alert type="note" >}}
