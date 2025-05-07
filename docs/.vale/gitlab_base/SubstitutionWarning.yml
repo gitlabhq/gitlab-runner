@@ -1,10 +1,7 @@
 ---
-# Warning: gitlab_base.SubstitutionWarning
-#
-# Checks for misused terms or common shorthand that should not be used at GitLab, but can't be flagged as errors.
-# Substitutions.yml also exists.
-#
-# For a list of all options, see https://vale.sh/docs/topics/styles/
+name: gitlab_base.SubstitutionWarning
+description: |
+  Checks for misused terms or common shorthand that should not be used at GitLab, but can't be flagged as errors. Substitutions.yml also exists.
 extends: substitution
 message: "Use '%s' instead of '%s' when possible."
 link: https://docs.gitlab.com/development/documentation/styleguide/word_list/
@@ -48,6 +45,8 @@ swap:
   log-in: "sign in"
   logged in user: "authenticated user"
   logged-in user: "authenticated user"
+  lower case: "lowercase"
+  lower-case: "lowercase"
   machine-learning: "machine learning"
   modal dialog: "dialog"
   modal window: "dialog"
@@ -69,6 +68,7 @@ swap:
   pop-up window: "dialog"
   pop-up: "dialog"
   popup: "dialog"
+  re-index: "reindex"
   repo: "repository"
   root group: "top-level group"
   signed in user: "authenticated user"
@@ -76,6 +76,10 @@ swap:
   since: "because' or 'after"
   source (?:install|installation): self-compiled installation
   source (?:installs|installations): self-compiled installations
+  sub directories: "subdirectories"
+  sub-directories: "subdirectories"
+  sub directory: "subdirectory"
+  sub-directory: "subdirectory"
   sub group: "subgroup"
   sub-group: "subgroup"
   sub-groups: "subgroups"
