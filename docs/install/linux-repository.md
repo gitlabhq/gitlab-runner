@@ -22,21 +22,21 @@ GitLab provides packages for the following supported versions of Linux distribut
 ### Deb-based Distributions
 
 | Distribution | Supported Versions |
-|-|-|
-| Debian | 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
-| LinuxMint | 22.1 Xia, 22 Wilma, 21.3 Virginia, 21.2 Victoria, 21.1 Vera, 21 Vanessa, 20.3 Una, 20.2 Uma, 20.1 Ulyssa, 20 Ulyana |
-| Raspbian | 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
-| Ubuntu | 24.10 Oracular Oriole, 24.04 Lts Noble Numbat, 22.04 Jammy Jellyfish, 20.04 Focal Fossa, 18.04 Lts Bionic Beaver, 16.04 Lts Xenial Xerus |
+|--------------|--------------------|
+| Debian       | 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
+| LinuxMint    | 22.1 Xia, 22 Wilma, 21.3 Virginia, 21.2 Victoria, 21.1 Vera, 21 Vanessa, 20.3 Una, 20.2 Uma, 20.1 Ulyssa, 20 Ulyana |
+| Raspbian     | 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
+| Ubuntu       | 24.10 Oracular Oriole, 24.04 Lts Noble Numbat, 22.04 Jammy Jellyfish, 20.04 Focal Fossa, 18.04 Lts Bionic Beaver, 16.04 Lts Xenial Xerus |
 
 ### Rpm-based Distributions
 
-| Distribution | Supported Versions |
-|-|-|
-| Amazon Linux | 2025, 2023, 2022, 2 |
-| Red Hat Enterprise Linux | 9, 8, 7 |
-| Fedora | 43, 42, 41, 40 |
-| Oracle Linux | 9, 8, 7, 6 |
-| openSUSE | 16.0, 15.6, 15.5, 15.4, 15.3, 15.2, 15.1, 15.0 |
+| Distribution                 | Supported Versions |
+|------------------------------|--------------------|
+| Amazon Linux                 | 2025, 2023, 2022, 2 |
+| Red Hat Enterprise Linux     | 9, 8, 7            |
+| Fedora                       | 43, 42, 41, 40     |
+| Oracle Linux                 | 9, 8, 7, 6         |
+| openSUSE                     | 16.0, 15.6, 15.5, 15.4, 15.3, 15.2, 15.1, 15.0 |
 | SUSE Linux Enterprise Server | 15.6, 15.5, 15.4, 15.3, 15.2, 12.5 |
 
 <!-- supported_os_versions_list_end -->
@@ -306,12 +306,12 @@ To verify a `deb` package:
 Download the current public GPG key used for package signing from
 <https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg>.
 
-| Key Attribute | Value                                                |
-|---------------|------------------------------------------------------|
-| Name          | `GitLab, Inc.`                                       |
-| EMail         | `support@gitlab.com`                                 |
+| Key Attribute | Value |
+|---------------|-------|
+| Name          | `GitLab, Inc.` |
+| EMail         | `support@gitlab.com` |
 | Fingerprint   | `931D A69C FA3A FEBB C97D  AA8C 6C57 C29C 6BA7 5A4E` |
-| Expiry        | `2026-04-28`                                         |
+| Expiry        | `2026-04-28` |
 
 {{< alert type="note" >}}
 
@@ -329,8 +329,8 @@ verification configuration.
 
 Signatures made by the following keys should not be trusted anymore.
 
-| Sl. No. | Key Fingerprint                                      | Status    | Expiry Date  | Download (revoked keys only)                     |
-|---------|------------------------------------------------------|-----------|--------------|--------------------------------------------------|
+| Sl. No. | Key Fingerprint                                      | Status    | Expiry Date  | Download (revoked keys only) |
+|---------|------------------------------------------------------|-----------|--------------|------------------------------|
 | 1       | `3018 3AC2 C4E2 3A40 9EFB  E705 9CE4 5ABC 8807 21D4` | `revoked` | `2021-06-08` | [revoked key](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/docs/install/gpg-keys/9CE45ABC880721D4.pub.gpg) |
 | 2       | `09E5 7083 F34C CA94 D541  BC58 A674 BF81 35DF A027` | `revoked` | `2023-04-26` | [revoked key](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/docs/install/gpg-keys/A674BF8135DFA027.pub.gpg) |
 
