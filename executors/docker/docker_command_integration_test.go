@@ -46,9 +46,9 @@ import (
 const minDockerDaemonVersion = "1.41"
 
 var (
-	getWindowsImageOnce sync.Once
-	windowsImage        string
-	systemIDState       = common.NewSystemIDState()
+	getDefaultWindowsImageOnce sync.Once
+	defaultWindowsImage        string
+	systemIDState              = common.NewSystemIDState()
 )
 
 var windowsDockerImageTagMappings = map[string]string{
@@ -185,7 +185,7 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 
 	if runtime.GOOS == "windows" {
 		shell = shells.SNPowershell
-		image = getWindowsImage(t)
+		image = getDefaultWindowsImage(t)
 	}
 
 	require.NoError(t, systemIDState.EnsureSystemID())
@@ -211,13 +211,13 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 // supported Windows version. If true, it maps a compatible mcr.microsoft.com Docker image tag.
 // UnsupportedWindowsVersionError is returned when no supported Windows version
 // is found in the string.
-func windowsDockerImageTag(version string) (string, error) {
+func windowsDockerImageTag(version string, tagMap map[string]string) (string, error) {
 	version, err := windows.Version(version)
 	if err != nil {
 		return "", err
 	}
 
-	dockerTag, ok := windowsDockerImageTagMappings[version]
+	dockerTag, ok := tagMap[version]
 	if !ok {
 		dockerTag = version
 	}
@@ -225,22 +225,26 @@ func windowsDockerImageTag(version string) (string, error) {
 	return dockerTag, nil
 }
 
-func getWindowsImage(t *testing.T) string {
-	getWindowsImageOnce.Do(func() {
-		client, err := docker.New(docker.Credentials{})
-		require.NoError(t, err, "creating docker client")
-		defer client.Close()
-
-		info, err := client.Info(context.Background())
-		require.NoError(t, err, "docker info")
-
-		dockerImageTag, err := windowsDockerImageTag(info.KernelVersion)
-		require.NoError(t, err)
-
-		windowsImage = fmt.Sprintf(common.TestWindowsImage, dockerImageTag)
+func getDefaultWindowsImage(t *testing.T) string {
+	getDefaultWindowsImageOnce.Do(func() {
+		defaultWindowsImage = getWindowsImage(t, common.TestWindowsImage, windowsDockerImageTagMappings)
 	})
 
-	return windowsImage
+	return defaultWindowsImage
+}
+
+func getWindowsImage(t *testing.T, imageRef string, tagMap map[string]string) string {
+	client, err := docker.New(docker.Credentials{})
+	require.NoError(t, err, "creating docker client")
+	defer client.Close()
+
+	info, err := client.Info(context.Background())
+	require.NoError(t, err, "docker info")
+
+	dockerImageTag, err := windowsDockerImageTag(info.KernelVersion, tagMap)
+	require.NoError(t, err)
+
+	return fmt.Sprintf(imageRef, dockerImageTag)
 }
 
 func TestBuildPassingEnvsMultistep(t *testing.T) {
@@ -2615,6 +2619,122 @@ func TestDockerCommandWithUser(t *testing.T) {
 	require.NoError(t, build.Run(&common.Config{}, &common.Trace{Writer: &buffer}))
 
 	assert.Regexp(t, "whoami.*\nsquid", buffer.String())
+}
+
+// TestPwshGitCredHelper ensures that the git credential helper, rendered by the shellwriter, works correctly across
+// different versions of pwsh, specifically the ones we have special implementation for.
+// We use the plain upstream powershell images. This has the side effect, that we have to install git as part of the
+// build.
+func TestPwshGitCredHelper(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	const (
+		// run the "main" test script with debugging enabled
+		debug = false
+		// for windows: where to get MinGit
+		minGitURL = "https://github.com/git-for-windows/git/releases/download/v2.49.0.windows.1/MinGit-2.49.0-64-bit.zip"
+	)
+
+	tests := map[string]struct {
+		image                string
+		withNativeArgPassing bool
+	}{
+		"7.1":                  {image: "mcr.microsoft.com/powershell:7.1.5-%s"},
+		"7.2":                  {image: "mcr.microsoft.com/powershell:7.2-%s"},
+		"7.2-nativeArgPassing": {image: "mcr.microsoft.com/powershell:7.2-%s", withNativeArgPassing: true},
+		"7.3":                  {image: "mcr.microsoft.com/powershell:7.3-%s"},
+	}
+	gitInstaller := "&{ apt-get update -y ; apt-get install -y git } | Out-Null"
+	basePath := `/tmp/foo`
+	imageMapper := func(i string) string {
+		return fmt.Sprintf(i, "debian-11")
+	}
+
+	if runtime.GOOS == test.OSWindows {
+		gitInstaller = `&{` +
+			`$dest = "C:\Program Files\Git"; $ProgressPreference = 'SilentlyContinue'; ` +
+			`Invoke-WebRequest -Uri "${minGitURL}" -OutFile "$env:TEMP\mingit.zip"; ` +
+			`Expand-Archive -Path "$env:TEMP\mingit.zip" -DestinationPath "$dest" -Force; ` +
+			`$env:Path += ";${dest}\cmd"; ` +
+			`[Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User); ` +
+			`$env:GIT_CONFIG_NOSYSTEM=1; git config --system --unset-all include.path; ` +
+			`}`
+		basePath = `c:\tmp\foo`
+		imageMapper = func(i string) string {
+			return getWindowsImage(t, i, map[string]string{
+				windows.V1809: "nanoserver-1809",
+				windows.V21H2: "windowsservercore-ltsc2022",
+			})
+		}
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var w shells.ShellWriter = &shells.PsWriter{Shell: shells.SNPwsh, EOL: "\n"}
+
+			confFile := w.Join(basePath, "cred.conf")
+
+			// setup empty repo
+			w.MkDir(basePath)
+			w.Cd(basePath)
+			w.Command("git", "init", "--quiet")
+
+			// setup global caching git cred helper
+			w.Command("git", "config", "--global", "credential.helper", "store")
+
+			// inject invalid creds into global cred helper
+			w.Line(`echo "url=https://invalidUser:invalidPass@foo.bar/repo" | git credential approve`)
+
+			// configure the custom cred helper and include it locally
+			w.SetupGitCredHelper(confFile, "credential", "some-user")
+			w.Command("git", "config", "include.path", confFile)
+
+			// dump out the creds
+			w.Line(`echo "url=https://foo.bar/repo" | git credential fill`)
+
+			script := w.Finish(debug)
+
+			build := getBuildForOS(t, func() (common.JobResponse, error) {
+				cmds := []string{gitInstaller}
+				if debug {
+					cmds = append(cmds, "Set-PSDebug -Trace 2", "$env:GIT_TRACE=2")
+				}
+				cmds = append(cmds, script)
+				return common.GetRemoteBuildResponse(cmds...)
+			})
+
+			build.Runner.Docker.Image = imageMapper(tc.image)
+			build.Runner.Docker.DisableCache = true
+			build.Runner.Shell = shells.SNPwsh
+			build.Variables = append(build.Variables,
+				common.JobVariable{Key: "GIT_STRATEGY", Value: "none"},
+				common.JobVariable{Key: "minGitURL", Value: minGitURL},
+			)
+
+			// with native arg passing, we need to enable the experimental feature in a separate shell session,
+			// thus we prepend a step enabling the feature and run the actual script in a separate step
+			if tc.withNativeArgPassing {
+				build.Steps = append([]common.Step{{
+					Name:   "enable_experimental_feature",
+					Script: common.StepScript{`Enable-ExperimentalFeature -Name PSNativeCommandArgumentPassing`},
+				}}, build.Steps...)
+			}
+
+			out, err := buildtest.RunBuildReturningOutput(t, &build)
+			require.NoError(t, err)
+			assert.Contains(t, out, "\nusername=some-user\n", "expected to get user via custom cred helper")
+			assert.Contains(t, out, "\npassword=test-job-token\n", "expected to get token via custom cred helper")
+
+			if tc.withNativeArgPassing {
+				assert.Contains(t, out,
+					"WARNING: Enabling and disabling experimental features do not take effect until next start of PowerShell.",
+					"expected the experimental feature 'PSNativeCommandArgumentPassing' to be enabled",
+				)
+			}
+		})
+	}
 }
 
 func TestDockerCommand_MacAddressConfig(t *testing.T) {
