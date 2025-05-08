@@ -467,6 +467,10 @@ func (iko *ImageKubernetesOptions) UnmarshalJSON(data []byte) error {
 }
 
 func (iko *ImageKubernetesOptions) GetUIDGID() (int64, int64, error) {
+	if iko.User == "" {
+		return 0, 0, nil
+	}
+
 	user, group, ok := strings.Cut(iko.User, ":")
 
 	uid, err := strconv.ParseInt(user, 10, 64)
