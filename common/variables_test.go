@@ -442,3 +442,36 @@ func TestBoolVariables(t *testing.T) {
 		})
 	}
 }
+
+func TestSet(t *testing.T) {
+	tests := map[string]struct {
+		jobVars  JobVariables
+		set      JobVariables
+		expected []string
+	}{
+		"noop": {},
+		"add one": {
+			set:      JobVariables{{Key: "foo", Value: "bar"}},
+			expected: []string{"foo=bar"},
+		},
+		"overwrite one": {
+			jobVars:  JobVariables{{Key: "foo", Value: "old foo"}},
+			set:      JobVariables{{Key: "foo", Value: "new foo"}},
+			expected: []string{"foo=new foo"},
+		},
+		"overwrite and add": {
+			jobVars:  JobVariables{{Key: "org", Value: "the org"}, {Key: "foo", Value: "old foo"}},
+			set:      JobVariables{{Key: "foo", Value: "new foo"}, {Key: "bar", Value: "new bar"}},
+			expected: []string{"foo=new foo", "bar=new bar", "org=the org"},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			jv := test.jobVars
+			jv.Set(test.set...)
+			actual := jv.StringList()
+			assert.ElementsMatch(t, actual, test.expected)
+		})
+	}
+}

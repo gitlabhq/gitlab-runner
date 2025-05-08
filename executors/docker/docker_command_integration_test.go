@@ -2621,6 +2621,41 @@ func TestDockerCommandWithUser(t *testing.T) {
 	assert.Regexp(t, "whoami.*\nsquid", buffer.String())
 }
 
+// TestGitCredHelper assert that the git cred helper works with the docker executor, with the container images we ship
+// with.
+func TestGitCredHelper(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	const (
+		repoURLWithSubmodules = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-test"
+		repoShaWithSubmodules = "0a1093ff08de939dbd1625689d86deef18126a74"
+	)
+
+	submodules := []string{"private-repo-relative", "public-repo-ssh"}
+
+	build := getBuildForOS(t, func() (common.JobResponse, error) {
+		jobResponse, err := common.GetRemoteSuccessfulBuild()
+
+		jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
+		jobResponse.GitInfo.Sha = repoShaWithSubmodules
+		jobResponse.Variables.Set(
+			common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " ")},
+			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: string(common.SubmoduleRecursive)},
+			common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+			common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
+		)
+
+		buildtest.InjectJobTokenFromEnv(t, &jobResponse)
+		return jobResponse, err
+	})
+
+	buildtest.SetBuildFeatureFlag(&build, featureflags.GitURLsWithoutTokens, true)
+	build.Runner.RunnerCredentials.URL = "https://gitlab.com/"
+
+	_, err := buildtest.RunBuildReturningOutput(t, &build)
+	assert.NoError(t, err)
+}
+
 // TestPwshGitCredHelper ensures that the git credential helper, rendered by the shellwriter, works correctly across
 // different versions of pwsh, specifically the ones we have special implementation for.
 // We use the plain upstream powershell images. This has the side effect, that we have to install git as part of the

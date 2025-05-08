@@ -3,6 +3,7 @@ package buildtest
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -133,4 +134,48 @@ func WithEachFeatureFlag(t *testing.T, f func(t *testing.T, setup BuildSetupFn),
 			})
 		}
 	}
+}
+
+// injectJobToken injects a job token into an existing jobResponse by
+// - setting the jobResponse's token
+// - updating the jobResponse's gitInfo with an URL with the token
+// - injecting a CI_JOB_TOKEN jobVariable
+// It returns the new repo URL with the injected token.
+func injectJobToken(t *testing.T, jobResponse *common.JobResponse, token string) *url.URL {
+	repoURLWithToken := func(orgRepoURL, token string) *url.URL {
+		u, err := url.Parse(orgRepoURL)
+		require.NoError(t, err, "parsing original repo URL")
+		u.User = url.UserPassword("gitlab-ci-token", token)
+		return u
+	}(jobResponse.GitInfo.RepoURL, token)
+
+	jobResponse.Variables.Set(common.JobVariable{Key: "CI_JOB_TOKEN", Value: token, Masked: true})
+
+	jobResponse.Token = token
+	jobResponse.GitInfo.RepoURL = repoURLWithToken.String()
+
+	return repoURLWithToken
+}
+
+// InjectJobTokenFromEnv injects a job token from the environment into an existing jobResponse.
+// It returns the token value and the new repo URL with the injected token.
+func InjectJobTokenFromEnv(t *testing.T, jobResponse *common.JobResponse, envVars ...string) (string, *url.URL) {
+	if len(envVars) == 0 {
+		envVars = []string{"GITLAB_TOKEN", "CI_JOB_TOKEN", "OUTER_CI_JOB_TOKEN"}
+	}
+
+	var token string
+	for _, envVar := range envVars {
+		if tok, ok := os.LookupEnv(envVar); ok {
+			t.Log("using token from env var", envVar)
+			token = tok
+			break
+		}
+	}
+	if token == "" {
+		t.Fatalf("no token available, considered env vars: %q", envVars)
+	}
+
+	u := injectJobToken(t, jobResponse, token)
+	return token, u
 }

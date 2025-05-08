@@ -2331,7 +2331,7 @@ func TestCredSetup(t *testing.T) {
 
 						jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
 						jobResponse.GitInfo.Sha = repoShaWithSubmodules
-						token, _ := injectJobToken(t, &jobResponse)
+						token, _ := buildtest.InjectJobTokenFromEnv(t, &jobResponse)
 
 						jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
 							Name:   common.HookPreGetSourcesScript,
@@ -2434,7 +2434,7 @@ func TestSubmoduleAutoBump(t *testing.T) {
 
 				jobResponse.GitInfo.RepoURL = repoURL
 				jobResponse.GitInfo.Sha = repoSha
-				injectJobToken(t, &jobResponse)
+				buildtest.InjectJobTokenFromEnv(t, &jobResponse)
 
 				jobResponse.Variables = append(jobResponse.Variables,
 					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
@@ -2517,7 +2517,7 @@ func TestBuildWithCleanGitConfig(t *testing.T) {
 		)
 		jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
 		jobResponse.GitInfo.Sha = repoShaWithSubmodules
-		injectJobToken(t, &jobResponse)
+		buildtest.InjectJobTokenFromEnv(t, &jobResponse)
 
 		build := newBuild(t, jobResponse, shell)
 		build.Runner.RunnerCredentials.URL = "https://gitlab.com/"
@@ -2532,30 +2532,6 @@ func TestBuildWithCleanGitConfig(t *testing.T) {
 		assert.NoError(t, err)
 		assertFilesAreCleaned(t, build.BuildDir)
 	})
-}
-
-// injectJobToken injects a job token into an existing jobResponse by
-// - setting the jobResponse's token
-// - updating the jobResponse's gitInfo with an URL with the token
-// - injecting a CI_JOB_TOKEN jobVariable
-// It returns the token and the new gitInfo that were injected.
-func injectJobToken(t *testing.T, jobResponse *common.JobResponse) (string, *url.URL) {
-	token := getTokenFromEnv(t)
-
-	repoURLWithToken := func(orgRepoURL, token string) *url.URL {
-		u, err := url.Parse(orgRepoURL)
-		require.NoError(t, err, "parsing original repo URL")
-		u.User = url.UserPassword("gitlab-ci-token", token)
-		return u
-	}(jobResponse.GitInfo.RepoURL, token)
-
-	jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
-		Key: "CI_JOB_TOKEN", Value: token, Masked: true,
-	})
-	jobResponse.Token = token
-	jobResponse.GitInfo.RepoURL = repoURLWithToken.String()
-
-	return token, repoURLWithToken
 }
 
 // setupCachingCredHelpers sets up a (global) git cred helpers
@@ -2638,17 +2614,4 @@ func onlyHost(t *testing.T, remoteURL string) string {
 	require.NoError(t, err, "parsing URL")
 
 	return url_helpers.OnlySchemeAndHost(u).String()
-}
-
-var tokenEnvVars = []string{"GITLAB_TOKEN", "CI_JOB_TOKEN", "OUTER_CI_JOB_TOKEN"}
-
-func getTokenFromEnv(t *testing.T) string {
-	for _, envVar := range tokenEnvVars {
-		if token, ok := os.LookupEnv(envVar); ok {
-			t.Log("using token from env var", envVar)
-			return token
-		}
-	}
-	require.Fail(t, "no token available", "considered env vars: %q", tokenEnvVars)
-	return ""
 }
