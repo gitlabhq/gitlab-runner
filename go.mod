@@ -29,7 +29,6 @@ require (
 	github.com/docker/docker v27.5.0+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/docker/go-units v0.5.0
-	github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844
 	github.com/evanphx/json-patch v4.12.0+incompatible
 	github.com/fatih/color v1.18.0
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
