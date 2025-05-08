@@ -29,7 +29,7 @@ but it's recommended to use in any case.
 
 {{< /alert >}}
 
-[`cntlm`](https://github.com/Evengard/cntlm) is a Linux proxy which can be used
+[`cntlm`](https://github.com/versat/cntlm) is a Linux proxy which can be used
 as a local proxy and has 2 major advantages compared to adding the proxy details
 everywhere manually:
 
