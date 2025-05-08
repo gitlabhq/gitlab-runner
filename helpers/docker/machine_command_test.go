@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/docker/machine/commands/mcndirs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,17 +22,13 @@ func guardMachineOperationTest(t *testing.T, name string, callback func(t *testi
 	err := os.MkdirAll(machineDir, 0755)
 	require.NoError(t, err)
 
-	mcndirs.BaseDir = machineDir
-	defer func() {
-		mcndirs.BaseDir = ""
-	}()
-
+	t.Setenv("MACHINE_STORAGE_PATH", machineDir)
 	t.Run(name, callback)
 }
 
 func TestList(t *testing.T) {
 	guardMachineOperationTest(t, "no machines", func(t *testing.T) {
-		err := os.MkdirAll(mcndirs.GetMachineDir(), 0755)
+		err := os.MkdirAll(getMachineDir(), 0755)
 		require.NoError(t, err)
 
 		mc := NewMachineCommand()
@@ -43,10 +38,10 @@ func TestList(t *testing.T) {
 	})
 
 	guardMachineOperationTest(t, "one machine", func(t *testing.T) {
-		err := os.MkdirAll(mcndirs.GetMachineDir(), 0755)
+		err := os.MkdirAll(getMachineDir(), 0755)
 		require.NoError(t, err)
 
-		machineDir := path.Join(mcndirs.GetMachineDir(), "machine-1")
+		machineDir := path.Join(getMachineDir(), "machine-1")
 		err = os.MkdirAll(machineDir, 0755)
 		require.NoError(t, err)
 
@@ -65,10 +60,10 @@ func TestList(t *testing.T) {
 	})
 
 	guardMachineOperationTest(t, "machines directory is invalid", func(t *testing.T) {
-		err := os.MkdirAll(mcndirs.GetBaseDir(), 0755)
+		err := os.MkdirAll(getBaseDir(), 0755)
 		require.NoError(t, err)
 
-		err = os.WriteFile(mcndirs.GetMachineDir(), []byte{}, 0o600)
+		err = os.WriteFile(getMachineDir(), []byte{}, 0o600)
 		require.NoError(t, err)
 
 		mc := NewMachineCommand()
