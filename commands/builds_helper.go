@@ -42,6 +42,27 @@ var requestConcurrencyExceededDesc = prometheus.NewDesc(
 	nil,
 )
 
+var requestConcurrencyHardLimitDesc = prometheus.NewDesc(
+	"gitlab_runner_request_concurrency_hard_limit",
+	"Configured request_concurrency limit",
+	[]string{"runner", "system_id"},
+	nil,
+)
+
+var requestConcurrencyAdaptiveLimitDesc = prometheus.NewDesc(
+	"gitlab_runner_request_concurrency_adaptive_limit",
+	"Computed adaptive request concurrency limit",
+	[]string{"runner", "system_id"},
+	nil,
+)
+
+var requestConcurrencyUsedLimitDesc = prometheus.NewDesc(
+	"gitlab_runner_request_concurrency_used_limit",
+	"Used request concurrency limit",
+	[]string{"runner", "system_id"},
+	nil,
+)
+
 type statePermutation struct {
 	runner        string
 	systemID      string
@@ -66,8 +87,9 @@ type runnerCounter struct {
 	builds   int
 	requests int
 
-	adaptiveConcurrency float64
-
+	hardConcurrencyLimit       int
+	adaptiveConcurrencyLimit   float64
+	usedConcurrencyLimit       int
 	requestConcurrencyExceeded int
 }
 
@@ -145,12 +167,14 @@ func (b *buildsHelper) acquireRequest(runner *common.RunnerConfig) bool {
 	counter := b.getRunnerCounter(runner)
 
 	concurrency := runner.GetRequestConcurrency()
+	counter.hardConcurrencyLimit = concurrency
 
 	if runner.IsFeatureFlagOn(featureflags.UseAdaptiveRequestConcurrency) {
 		// concurrency is the adaptive concurrency value rounded up, between 1 and the max request concurrency
-		concurrency = min(max(1, int(math.Ceil(counter.adaptiveConcurrency))), runner.GetRequestConcurrency())
+		concurrency = min(max(1, int(math.Ceil(counter.adaptiveConcurrencyLimit))), runner.GetRequestConcurrency())
 	}
 
+	counter.usedConcurrencyLimit = concurrency
 	if counter.requests >= concurrency {
 		counter.requestConcurrencyExceeded++
 
@@ -170,12 +194,12 @@ func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig, hasJob bool) 
 	if runner.IsFeatureFlagOn(featureflags.UseAdaptiveRequestConcurrency) {
 		// if the request returned a job, increase the concurrency by 10%, if not, decrease by 5%
 		if hasJob {
-			counter.adaptiveConcurrency *= concurrencyIncreaseFactor
+			counter.adaptiveConcurrencyLimit *= concurrencyIncreaseFactor
 		} else {
-			counter.adaptiveConcurrency *= concurrencyDecreaseFactor
+			counter.adaptiveConcurrencyLimit *= concurrencyDecreaseFactor
 		}
 		// adjust adaptive concurrency between 1 and max request concurrency
-		counter.adaptiveConcurrency = min(max(1, counter.adaptiveConcurrency), float64(runner.GetRequestConcurrency()))
+		counter.adaptiveConcurrencyLimit = min(max(1, counter.adaptiveConcurrencyLimit), float64(runner.GetRequestConcurrency()))
 	}
 
 	if counter.requests > 0 {
@@ -398,6 +422,9 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	ch <- numBuildsDesc
 	ch <- requestConcurrencyDesc
 	ch <- requestConcurrencyExceededDesc
+	ch <- requestConcurrencyHardLimitDesc
+	ch <- requestConcurrencyAdaptiveLimitDesc
+	ch <- requestConcurrencyUsedLimitDesc
 
 	b.jobsTotal.Describe(ch)
 	b.jobDurationHistogram.Describe(ch)
@@ -436,6 +463,30 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 			requestConcurrencyExceededDesc,
 			prometheus.CounterValue,
 			float64(counter.requestConcurrencyExceeded),
+			runner,
+			counter.systemID,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			requestConcurrencyHardLimitDesc,
+			prometheus.GaugeValue,
+			float64(counter.hardConcurrencyLimit),
+			runner,
+			counter.systemID,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			requestConcurrencyAdaptiveLimitDesc,
+			prometheus.GaugeValue,
+			counter.adaptiveConcurrencyLimit,
+			runner,
+			counter.systemID,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			requestConcurrencyUsedLimitDesc,
+			prometheus.GaugeValue,
+			float64(counter.usedConcurrencyLimit),
 			runner,
 			counter.systemID,
 		)
