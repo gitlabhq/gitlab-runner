@@ -2072,10 +2072,7 @@ func (c *RunnerConfig) GetUnhealthyInterval() time.Duration {
 }
 
 func (c *RunnerConfig) GetRequestConcurrency() int {
-	if c.RequestConcurrency <= 0 {
-		return 1
-	}
-	return c.RequestConcurrency
+	return max(1, c.RequestConcurrency)
 }
 
 func (c *RunnerConfig) GetVariables() JobVariables {

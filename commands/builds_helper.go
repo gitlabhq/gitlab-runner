@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"strings"
 	"sync"
@@ -13,6 +14,11 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 
 	"github.com/prometheus/client_golang/prometheus"
+)
+
+const (
+	concurrencyIncreaseFactor = 1.1  // +10%
+	concurrencyDecreaseFactor = 0.95 // -5%
 )
 
 var numBuildsDesc = prometheus.NewDesc(
@@ -59,6 +65,8 @@ type runnerCounter struct {
 
 	builds   int
 	requests int
+
+	adaptiveConcurrency float64
 
 	requestConcurrencyExceeded int
 }
@@ -136,7 +144,14 @@ func (b *buildsHelper) acquireRequest(runner *common.RunnerConfig) bool {
 
 	counter := b.getRunnerCounter(runner)
 
-	if counter.requests >= runner.GetRequestConcurrency() {
+	concurrency := runner.GetRequestConcurrency()
+
+	if runner.IsFeatureFlagOn(featureflags.UseAdaptiveRequestConcurrency) {
+		// concurrency is the adaptive concurrency value rounded up, between 1 and the max request concurrency
+		concurrency = min(max(1, int(math.Ceil(counter.adaptiveConcurrency))), runner.GetRequestConcurrency())
+	}
+
+	if counter.requests >= concurrency {
 		counter.requestConcurrencyExceeded++
 
 		return false
@@ -146,11 +161,23 @@ func (b *buildsHelper) acquireRequest(runner *common.RunnerConfig) bool {
 	return true
 }
 
-func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig) bool {
+func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig, hasJob bool) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	counter := b.getRunnerCounter(runner)
+
+	if runner.IsFeatureFlagOn(featureflags.UseAdaptiveRequestConcurrency) {
+		// if the request returned a job, increase the concurrency by 10%, if not, decrease by 5%
+		if hasJob {
+			counter.adaptiveConcurrency *= concurrencyIncreaseFactor
+		} else {
+			counter.adaptiveConcurrency *= concurrencyDecreaseFactor
+		}
+		// adjust adaptive concurrency between 1 and max request concurrency
+		counter.adaptiveConcurrency = min(max(1, counter.adaptiveConcurrency), float64(runner.GetRequestConcurrency()))
+	}
+
 	if counter.requests > 0 {
 		counter.requests--
 		return true

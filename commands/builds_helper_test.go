@@ -39,18 +39,40 @@ func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
 	require.True(t, result)
 
 	result = b.acquireRequest(&runner)
+	require.False(t, result, "allow only one requests (adaptive limit)")
+
+	result = b.releaseRequest(&runner, false)
+	require.True(t, result)
+
+	result = b.releaseRequest(&runner, false)
+	require.False(t, result, "release only two requests")
+}
+
+func TestBuildsHelperAcquireRequestWithAdaptiveLimit(t *testing.T) {
+	runner := common.RunnerConfig{
+		RequestConcurrency: 2,
+		SystemIDState:      common.NewSystemIDState(),
+	}
+
+	require.NoError(t, runner.SystemIDState.EnsureSystemID())
+
+	b := newBuildsHelper()
+	result := b.acquireRequest(&runner)
+	require.True(t, result)
+
+	result = b.releaseRequest(&runner, true)
+	require.True(t, result)
+
+	result = b.acquireRequest(&runner)
 	require.True(t, result)
 
 	result = b.acquireRequest(&runner)
 	require.False(t, result, "allow only two requests")
 
-	result = b.releaseRequest(&runner)
+	result = b.releaseRequest(&runner, false)
 	require.True(t, result)
 
-	result = b.releaseRequest(&runner)
-	require.True(t, result)
-
-	result = b.releaseRequest(&runner)
+	result = b.releaseRequest(&runner, false)
 	require.False(t, result, "release only two requests")
 }
 
@@ -69,19 +91,19 @@ func TestBuildsHelperAcquireRequestWithDefault(t *testing.T) {
 	result = b.acquireRequest(&runner)
 	require.False(t, result, "allow only one request")
 
-	result = b.releaseRequest(&runner)
+	result = b.releaseRequest(&runner, false)
 	require.True(t, result)
 
-	result = b.releaseRequest(&runner)
+	result = b.releaseRequest(&runner, false)
 	require.False(t, result, "release only one request")
 
 	result = b.acquireRequest(&runner)
 	require.True(t, result)
 
-	result = b.releaseRequest(&runner)
+	result = b.releaseRequest(&runner, false)
 	require.True(t, result)
 
-	result = b.releaseRequest(&runner)
+	result = b.releaseRequest(&runner, false)
 	require.False(t, result, "nothing to release")
 }
 
