@@ -48,6 +48,7 @@ const (
 	MaskAllDefaultTokens                 string = "FF_MASK_ALL_DEFAULT_TOKENS"
 	ExportHighCardinalityMetrics         string = "FF_EXPORT_HIGH_CARDINALITY_METRICS"
 	UseFleetingAcquireHeartbeats         string = "FF_USE_FLEETING_ACQUIRE_HEARTBEATS"
+	UseExponentialBackoffStageRetry      string = "FF_USE_EXPONENTIAL_BACKOFF_STAGE_RETRY"
 )
 
 type FeatureFlag struct {
@@ -398,6 +399,13 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, fleeting instance connectivity is checked before a job is assigned to an instance.",
+	},
+	{
+		Name:         UseExponentialBackoffStageRetry,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description: "When enabled, the retries for GET_SOURCES_ATTEMPTS, ARTIFACT_DOWNLOAD_ATTEMPTS, RESTORE_CACHE_ATTEMPTS, EXECUTOR_JOB_SECTION_ATTEMPTS have " +
+			"an exponential backoff (5s - 5m)",
 	},
 }
 

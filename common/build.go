@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
@@ -527,13 +528,22 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 				"Check https://docs.gitlab.com/runner/shells/#shell-profile-loading for more information", err))
 	}
 
-	err = asRunnerSystemFailure(b.attemptGetSourcesStage(ctx, executor, b.GetGetSourcesAttempts()))
+	err = asRunnerSystemFailure(b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts(), func(attempt int) error {
+		if attempt == 1 {
+			// If GetSources fails we delete all tracked and untracked files. This is
+			// because Git's submodule support has various bugs that cause fetches to
+			// fail if submodules have changed.
+			return b.executeStage(ctx, BuildStageClearWorktree, executor)
+		}
+
+		return nil
+	}))
 
 	if err == nil {
-		err = asRunnerSystemFailure(b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts()))
+		err = asRunnerSystemFailure(b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts(), nil))
 	}
 	if err == nil {
-		err = asRunnerSystemFailure(b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts()))
+		err = asRunnerSystemFailure(b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts(), nil))
 	}
 
 	//nolint:nestif
@@ -693,45 +703,44 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 	}
 }
 
-func (b *Build) attemptGetSourcesStage(
-	ctx context.Context,
-	executor Executor,
-	attempts int,
-) (err error) {
-	if attempts < 1 || attempts > 10 {
-		return fmt.Errorf("number of attempts out of the range [1, 10] for stage: %s", BuildStageGetSources)
-	}
-	for attempt := 0; attempt < attempts; attempt++ {
-		if attempt == 1 {
-			// If GetSources fails we delete all tracked and untracked files. This is
-			// because Git's submodule support has various bugs that cause fetches to
-			// fail if submodules have changed.
-			if err = b.executeStage(ctx, BuildStageClearWorktree, executor); err != nil {
-				continue
-			}
-		}
-		if err = b.executeStage(ctx, BuildStageGetSources, executor); err == nil {
-			return
-		}
-	}
-	return
-}
-
 func (b *Build) attemptExecuteStage(
 	ctx context.Context,
 	buildStage BuildStage,
 	executor Executor,
 	attempts int,
-) (err error) {
+	retryCallback func(attempt int) error,
+) error {
 	if attempts < 1 || attempts > 10 {
 		return fmt.Errorf("number of attempts out of the range [1, 10] for stage: %s", buildStage)
 	}
+
+	retry := backoff.Backoff{
+		Min:    5 * time.Second,
+		Max:    5 * time.Minute,
+		Jitter: true,
+		Factor: 1.5,
+	}
+
+	var err error
 	for attempt := 0; attempt < attempts; attempt++ {
+		if retryCallback != nil {
+			if err = retryCallback(attempt); err != nil {
+				continue
+			}
+		}
+
 		if err = b.executeStage(ctx, buildStage, executor); err == nil {
-			return
+			return nil
+		}
+
+		if b.IsFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry) {
+			duration := retry.Duration()
+			b.logger.Infoln(fmt.Sprintf("Retrying in %v", duration))
+			time.Sleep(duration)
 		}
 	}
-	return
+
+	return err
 }
 
 func (b *Build) GetBuildTimeout() time.Duration {
