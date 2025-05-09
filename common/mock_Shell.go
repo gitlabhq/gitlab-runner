@@ -244,51 +244,6 @@ func (_c *MockShell_GetEntrypointCommand_Call) RunAndReturn(run func(ShellScript
 	return _c
 }
 
-// GetExternalCommandEmptyArgument provides a mock function with no fields
-func (_m *MockShell) GetExternalCommandEmptyArgument() string {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetExternalCommandEmptyArgument")
-	}
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func() string); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
-// MockShell_GetExternalCommandEmptyArgument_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetExternalCommandEmptyArgument'
-type MockShell_GetExternalCommandEmptyArgument_Call struct {
-	*mock.Call
-}
-
-// GetExternalCommandEmptyArgument is a helper method to define mock.On call
-func (_e *MockShell_Expecter) GetExternalCommandEmptyArgument() *MockShell_GetExternalCommandEmptyArgument_Call {
-	return &MockShell_GetExternalCommandEmptyArgument_Call{Call: _e.mock.On("GetExternalCommandEmptyArgument")}
-}
-
-func (_c *MockShell_GetExternalCommandEmptyArgument_Call) Run(run func()) *MockShell_GetExternalCommandEmptyArgument_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockShell_GetExternalCommandEmptyArgument_Call) Return(_a0 string) *MockShell_GetExternalCommandEmptyArgument_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockShell_GetExternalCommandEmptyArgument_Call) RunAndReturn(run func() string) *MockShell_GetExternalCommandEmptyArgument_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetFeatures provides a mock function with given fields: features
 func (_m *MockShell) GetFeatures(features *FeaturesInfo) {
 	_m.Called(features)
@@ -319,51 +274,6 @@ func (_c *MockShell_GetFeatures_Call) Return() *MockShell_GetFeatures_Call {
 
 func (_c *MockShell_GetFeatures_Call) RunAndReturn(run func(*FeaturesInfo)) *MockShell_GetFeatures_Call {
 	_c.Run(run)
-	return _c
-}
-
-// GetGitCredHelperCommand provides a mock function with no fields
-func (_m *MockShell) GetGitCredHelperCommand() string {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetGitCredHelperCommand")
-	}
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func() string); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
-// MockShell_GetGitCredHelperCommand_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetGitCredHelperCommand'
-type MockShell_GetGitCredHelperCommand_Call struct {
-	*mock.Call
-}
-
-// GetGitCredHelperCommand is a helper method to define mock.On call
-func (_e *MockShell_Expecter) GetGitCredHelperCommand() *MockShell_GetGitCredHelperCommand_Call {
-	return &MockShell_GetGitCredHelperCommand_Call{Call: _e.mock.On("GetGitCredHelperCommand")}
-}
-
-func (_c *MockShell_GetGitCredHelperCommand_Call) Run(run func()) *MockShell_GetGitCredHelperCommand_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockShell_GetGitCredHelperCommand_Call) Return(_a0 string) *MockShell_GetGitCredHelperCommand_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockShell_GetGitCredHelperCommand_Call) RunAndReturn(run func() string) *MockShell_GetGitCredHelperCommand_Call {
-	_c.Call.Return(run)
 	return _c
 }
 

@@ -65,6 +65,23 @@ func (b JobVariables) Get(key string) string {
 	return b.value(key, true)
 }
 
+// Set sets newJobVars on the JobVariables, replacing an original variable if one exists with the same key.
+func (b *JobVariables) Set(newJobVars ...JobVariable) {
+	for _, newJobVar := range newJobVars {
+		b.set(newJobVar)
+	}
+}
+
+func (b *JobVariables) set(newJobVar JobVariable) {
+	for i, v := range *b {
+		if v.Key == newJobVar.Key {
+			(*b)[i] = newJobVar
+			return
+		}
+	}
+	*b = append(*b, newJobVar)
+}
+
 // Value is similar to Get(), but always returns the key value, regardless
 // of the variable type. File variables therefore return the file contents
 // and not the path name of the file.

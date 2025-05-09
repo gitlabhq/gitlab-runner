@@ -24,13 +24,13 @@ const (
 	// a hidden file, .gitlab-build-uid-gid, is created in the `builds_dir` directory to assist the helper container
 	// in retrieving the build image's configured `uid:gid`.
 	// This information is then applied to the working directories to prevent them from being writable by anyone.
-	BuildUidGidFile  = ".gitlab-build-uid-gid"
-	StartupProbeFile = ".gitlab-startup-marker"
-
+	BuildUidGidFile        = ".gitlab-build-uid-gid"
+	StartupProbeFile       = ".gitlab-startup-marker"
 	gitlabEnvFileName      = "gitlab_runner_env"
 	gitlabCacheEnvFileName = "gitlab_runner_cache_env"
-	credHelperConfFile     = "cred-helper.conf"
-	// The same cred helper is used across all shells & OSs
+	// credHelperConfFile is the base path used for the cred helper config file within the jobs temp directory
+	credHelperConfFile = "cred-helper.conf"
+	// credHelperCommand is the command to use as a git credential helper to pull credentials from the environment.
 	// git always comes (or depends) on a POSIX shell, so any helper can rely on that, regardless of the OS, git distribution, ...
 	credHelperCommand         = `!f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
 	gitDir                    = ".git"
@@ -587,11 +587,26 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, info common.Shel
 	build := info.Build
 	projectDir := build.FullProjectDir()
 
-	switch build.GetGitStrategy() {
-	case common.GitFetch:
-		return b.writeRefspecFetchCmd(w, info)
-	case common.GitClone:
-		return b.writeCloneCmdIfPossible(w, info)
+	switch strategy := build.GetGitStrategy(); strategy {
+	case common.GitFetch, common.GitClone:
+		templateDir := b.setupTemplateDir(w, build, projectDir)
+
+		credConfigFile := b.credConfigFile(build, w)
+		if credConfigFile != "" {
+			remoteHost, err := b.getRemoteHost(build)
+			if err != nil {
+				return fmt.Errorf("getting remote host: %w", err)
+			}
+			w.RmFile(credConfigFile)
+			w.SetupGitCredHelper(credConfigFile, "credential."+remoteHost, "gitlab-ci-token")
+		}
+
+		getCmdWriter := b.writeRefspecFetchCmd
+		if strategy == common.GitClone {
+			getCmdWriter = b.writeCloneCmdIfPossible
+		}
+
+		return getCmdWriter(w, info, templateDir, credConfigFile)
 	case common.GitNone:
 		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
@@ -607,7 +622,7 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, info common.Shel
 }
 
 //nolint:funlen
-func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScriptInfo, templateDir, credConfigFile string) error {
 	build := info.Build
 	projectDir := build.FullProjectDir()
 	depth := build.GitInfo.Depth
@@ -618,8 +633,6 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 		w.Noticef("Fetching changes...")
 	}
 
-	// initializing
-	templateDir := b.setupTemplateDir(w, build, projectDir)
 	objectFormat := build.GetRepositoryObjectFormat()
 
 	b.writeGitCleanup(w, build)
@@ -637,11 +650,8 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 		return fmt.Errorf("writing fetch commands: %w", err)
 	}
 
-	if credConfigFile := b.credConfigFile(build, w); credConfigFile != "" {
-		err := b.configureGitCredHelper(w, info, credConfigFile)
-		if err != nil {
-			return fmt.Errorf("writing fetch commands: %w", err)
-		}
+	if credConfigFile != "" {
+		w.Command("git", "config", "include.path", credConfigFile)
 	}
 
 	// Add `git remote` or update existing
@@ -677,7 +687,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	return nil
 }
 
-func (b *AbstractShell) writeCloneCmdIfPossible(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeCloneCmdIfPossible(w ShellWriter, info common.ShellScriptInfo, templateDir, credConfigFile string) error {
 	build := info.Build
 	projectDir := build.FullProjectDir()
 
@@ -685,30 +695,29 @@ func (b *AbstractShell) writeCloneCmdIfPossible(w ShellWriter, info common.Shell
 	w.RmDir(projectDir)
 
 	if !build.IsFeatureFlagOn(featureflags.UseGitNativeClone) {
-		return b.writeRefspecFetchCmd(w, info)
+		return b.writeRefspecFetchCmd(w, info, templateDir, credConfigFile)
 	}
 
 	w.IfGitVersionIsAtLeast(gitMinVersionCloneWithRef)
 	defer w.EndIf()
 
-	if err := b.writeCloneRevisionCmd(w, info); err != nil {
+	if err := b.writeCloneRevisionCmd(w, info, templateDir, credConfigFile); err != nil {
 		return err
 	}
 
 	w.Else()
 
-	if err := b.writeRefspecFetchCmd(w, info); err != nil {
+	if err := b.writeRefspecFetchCmd(w, info, templateDir, credConfigFile); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellScriptInfo, templateDir, credConfigFile string) error {
 	build := info.Build
 	projectDir := build.FullProjectDir()
 	depth := build.GitInfo.Depth
-	templateDir := b.setupTemplateDir(w, build, projectDir)
 
 	switch {
 	case depth > 0:
@@ -739,8 +748,18 @@ func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellSc
 		cloneArgs = append(cloneArgs, "--branch", build.GitInfo.Ref)
 	}
 
+	if credConfigFile != "" {
+		// we don't have a git repo / config yet, thus adding cred helper explicitly as an arg.
+		cloneArgs = append(cloneArgs, "-c", "include.path="+credConfigFile)
+	}
+
 	w.Command("git", cloneArgs...)
 	w.Cd(projectDir)
+
+	if credConfigFile != "" {
+		// now that we have a git repo / config, we persist the cred helper.
+		w.Command("git", "config", "include.path", credConfigFile)
+	}
 
 	return nil
 }
@@ -771,38 +790,6 @@ func (b *AbstractShell) setupTemplateDir(w ShellWriter, build *common.Build, pro
 	}
 
 	return templateDir
-}
-
-func (b *AbstractShell) configureGitCredHelper(w ShellWriter, info common.ShellScriptInfo, credConfigFile string) error {
-	w.RmFile(credConfigFile)
-	build := info.Build
-	shellName := build.Runner.Shell
-	if shellName == "" {
-		// GetDefaultShell will panic, if it can't find a default shell
-		shellName = common.GetDefaultShell()
-	}
-
-	shell := common.GetShell(shellName)
-	if shell == nil {
-		return fmt.Errorf("unknown shell %q", shellName)
-	}
-
-	remoteHost, err := b.getRemoteHost(build)
-	if err != nil {
-		return fmt.Errorf("getting remote host: %w", err)
-	}
-
-	credSection := "credential." + remoteHost
-
-	w.Command("git", "config", "-f", credConfigFile, credSection+".username", "gitlab-ci-token")
-	// To not have global / system-wide cred helpers interfere, we disable all current helpers and set up our own one.
-	// With this any other cred helper (e.g. GCM) will keep their creds as are, we will neither add/update nor delete any creds thereof.
-	w.Command("git", "config", "-f", credConfigFile, "--replace-all", credSection+".helper", shell.GetExternalCommandEmptyArgument())
-	w.Command("git", "config", "-f", credConfigFile, "--add", credSection+".helper", shell.GetGitCredHelperCommand())
-
-	w.Command("git", "config", "include.path", credConfigFile)
-
-	return nil
 }
 
 func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {

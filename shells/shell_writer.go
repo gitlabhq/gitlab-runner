@@ -11,10 +11,14 @@ type ShellWriter interface {
 	DotEnvVariables(baseFilename string, variables map[string]string) string
 	SourceEnv(pathname string)
 	Command(command string, arguments ...string)
-	CommandWithStdin(stdin, command string, arguments ...string)
 	CommandArgExpand(command string, arguments ...string)
 	Line(text string)
 	CheckForErrors()
+
+	// SetupGitCredHelper sets up a credential helper in the confFile.
+	// This helper pulls out the job token from the environment.
+	// It disables any other helper, by replacing all with "", thus global or system helpers won't run.
+	SetupGitCredHelper(confFile, section, user string)
 
 	IfDirectory(path string)
 	IfFile(file string)

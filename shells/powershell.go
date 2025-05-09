@@ -272,31 +272,45 @@ func (p *PsWriter) Command(command string, arguments ...string) {
 	p.checkErrorLevel()
 }
 
-// CommandWithStdin runs command with arguments and provides stdin to standard input stream of the command
-func (p *PsWriter) CommandWithStdin(stdin, command string, arguments ...string) {
-	// This mimics something like `echo "foobar" | blipp.exe` for pwsh/powershell, passing in stdin _as is_ to the
-	// command. It does not mess with the encoding, BOM, ...
-	// The unfortunate side-effect is, that we use a temporary file for this.
+// SetupGitCredHelper is the powershell implementation of setting up the runner's default cred helper, which pulls out
+// the job token from the environment.
+// For different editions/versions of powershell, we need to pass args differently, however we only have the version
+// information at runtime.
+func (p *PsWriter) SetupGitCredHelper(confFile, section, user string) {
+	helperSection := psSingleQuote(section + ".helper")
+	userSection := psSingleQuote(section + ".username")
+	confFile = p.resolvePath(confFile)
 
-	mainCommand := `Start-Process -NoNewWindow -RedirectStandardInput $tmpFile -Wait -FilePath ` + psSingleQuote(command)
-	if len(arguments) > 0 {
-		for i, arg := range arguments {
-			arguments[i] = psSingleQuote(arg)
-		}
-		mainCommand += " -ArgumentList " + strings.Join(arguments, ",")
-	}
+	clearCmd := fmt.Sprintf(`git config -f %s --replace-all %s`, confFile, helperSection)
+	setCmd := fmt.Sprintf(`git config -f %s --add %s`, confFile, helperSection)
+	userCmd := fmt.Sprintf(`git config -f %s %s %s`, confFile, userSection, psSingleQuote(user))
 
-	block := strings.Join([]string{
-		`try {`,
-		`$tmpFile = Get-Item ([System.IO.Path]::GetTempFilename())`,
-		fmt.Sprintf(`[System.IO.File]::WriteAllText($tmpFile, %s)`, psSingleQuote(stdin)),
-		mainCommand,
-		`} finally {`,
-		`if ($tmpFile) { Remove-Item -Force -Path $tmpFile }`,
+	// Specialities re. "special arguments" to external commands (empty args, args with `"`, ...):
+	//	- Starting from 7.3 we can pass on args without any special handling
+	//	- Before 7.3 we need to handle "special arguments" explicitly, ie. ensure we escape special stuff
+	//	- For 7.2.x it depends on the experimental feature PSNativeCommandArgumentPassing:
+	//		- if it's not enabled, we have to handle "special arguments" explicitly
+	//		- if it's enabled, we need to accept that; we can control exact behavior but we have to use it
+	// We run all that in a script block, so that setting PSNativeCommandArgumentPassing only effects this (and child)
+	// scopes.
+	p.Line(strings.Join([]string{
+		`& {`,
+		`$psVer = [Version]$PSVersionTable.PSVersion`,
+		`$needsSpecialArgQuoting = ($psVer -lt [Version]"7.3")`,
+		`if ( ($psVer -ge [Version]"7.2") -and ($psVer -lt [Version]"7.3") -and ((Get-ExperimentalFeature -Name PSNativeCommandArgumentPassing).Enabled) ) {`,
+		`  $PSNativeCommandArgumentPassing = 'Standard'`,
+		`  $needsSpecialArgQuoting = $False`,
 		`}`,
-	}, p.EOL)
-
-	p.Line(block)
+		`if ($needsSpecialArgQuoting) {`,
+		clearCmd + " " + `'""'`,
+		setCmd + " " + psSingleQuote(strings.ReplaceAll(credHelperCommand, `"`, `\"`)),
+		`} else {`,
+		clearCmd + " " + `''`,
+		setCmd + " " + psSingleQuote(credHelperCommand),
+		`}`,
+		userCmd,
+		`}`,
+	}, p.EOL))
 	p.CheckForErrors()
 }
 
@@ -645,32 +659,6 @@ func (p *PsWriter) finishPowerShell(buf *strings.Builder, trace bool) {
 
 func (b *PowerShell) GetName() string {
 	return b.Shell
-}
-
-func (b *PowerShell) GetGitCredHelperCommand() string {
-	shell := b.GetName()
-	script := credHelperCommand
-
-	// Some special case for PowerShell 5.1 and weird quoting rules thereof.
-	// To be honest, I have no clue what's going on there, if this is a powershell thing, or if the shell writer
-	// interferes, or both; but it seems to be necessary and to work.
-	if shell == SNPowershell {
-		script = strings.ReplaceAll(script, `"`, `\"`)
-	}
-
-	return script
-}
-
-// GetExternalCommandEmptyArgument handles a special case (empty argument) in the quoting rules of PowerShell Desktop (5.1) to run an external process.
-// According to this detailed explanation: https://stackoverflow.com/questions/6714165/powershell-stripping-double-quotes-from-command-line-arguments/59681993#59681993,
-// the issue arises due to automatic quoting by PowerShell Desktop (5.1) and command-line processing by CommandLineToArgvW (Win32 shellapi.h).
-func (b *PowerShell) GetExternalCommandEmptyArgument() string {
-	shell := b.GetName()
-
-	if shell == SNPowershell {
-		return `""`
-	}
-	return ""
 }
 
 func (b *PowerShell) GetEntrypointCommand(_ common.ShellScriptInfo, probeFile string) []string {
