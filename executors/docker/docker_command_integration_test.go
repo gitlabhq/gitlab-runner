@@ -2686,6 +2686,12 @@ func TestPwshGitCredHelper(t *testing.T) {
 	}
 
 	if runtime.GOOS == test.OSWindows {
+		// The tests on windows take ages, because of the huge images, see:
+		//	https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5525#note_2493164643
+		// As a middle ground we only run the windows tests across those pwsh versions.
+		// Code still left in, in case we want to enable those eventually.
+		t.Skip("Windows tests disabled in favour of pipeline performance, see: https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5525#note_2493487328")
+
 		gitInstaller = `&{` +
 			`$dest = "C:\Program Files\Git"; $ProgressPreference = 'SilentlyContinue'; ` +
 			`Invoke-WebRequest -Uri "${minGitURL}" -OutFile "$env:TEMP\mingit.zip"; ` +
