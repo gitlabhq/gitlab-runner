@@ -49,6 +49,7 @@ const (
 	ExportHighCardinalityMetrics         string = "FF_EXPORT_HIGH_CARDINALITY_METRICS"
 	UseFleetingAcquireHeartbeats         string = "FF_USE_FLEETING_ACQUIRE_HEARTBEATS"
 	UseExponentialBackoffStageRetry      string = "FF_USE_EXPONENTIAL_BACKOFF_STAGE_RETRY"
+	UseAdaptiveRequestConcurrency        string = "FF_USE_ADAPTIVE_REQUEST_CONCURRENCY"
 )
 
 type FeatureFlag struct {
@@ -404,8 +405,15 @@ var flags = []FeatureFlag{
 		Name:         UseExponentialBackoffStageRetry,
 		DefaultValue: true,
 		Deprecated:   false,
-		Description: "When enabled, the retries for GET_SOURCES_ATTEMPTS, ARTIFACT_DOWNLOAD_ATTEMPTS, RESTORE_CACHE_ATTEMPTS, EXECUTOR_JOB_SECTION_ATTEMPTS have " +
-			"an exponential backoff (5s - 5m)",
+		Description: "When enabled, the retries for `GET_SOURCES_ATTEMPTS`, `ARTIFACT_DOWNLOAD_ATTEMPTS`, `RESTORE_CACHE_ATTEMPTS`, and `EXECUTOR_JOB_SECTION_ATTEMPTS` " +
+			"use exponential backoff (5 sec - 5 min).",
+	},
+	{
+		Name:         UseAdaptiveRequestConcurrency,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description: "When enabled, the `request_concurrency` setting becomes the maximum concurrency value, and the number of concurrent requests adjusts based on the " +
+			"rate of successful job requests.",
 	},
 }
 
