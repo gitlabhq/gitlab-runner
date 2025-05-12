@@ -51,6 +51,18 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 			volumeSpec:    "/Source:/Destination:rw",
 			expectedParts: &Volume{Source: "/Source", Destination: "/Destination", Mode: "rw"},
 		},
+		"overlay mount": {
+			volumeSpec:    "/source:/destination:O",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "O"},
+		},
+		"overlay mount with SELinux label shared among multiple containers": {
+			volumeSpec:    "/source:/destination:O,z",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "O", Label: "z"},
+		},
+		"overlay mount with SELinux label private": {
+			volumeSpec:    "/source:/destination:O,Z",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "O", Label: "Z"},
+		},
 		"support SELinux label bind mount content is shared among multiple containers": {
 			volumeSpec:    "/source:/destination:z",
 			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "", Label: "z"},
