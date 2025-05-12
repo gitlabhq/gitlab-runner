@@ -190,8 +190,21 @@ docs:check Hugo build:
     - .rules:merge_request_pipelines
     - .no_cache_and_dependencies
   stage: qa
+  variables:
+    DOCS_BRANCH: "main"
   before_script:
-    - git clone --depth 1 https://gitlab.com/gitlab-org/technical-writing/docs-gitlab-com.git
+    # Check if the job is running against a stable branch. If running against a stable branch, check out the
+    # corresponding version of the GitLab Docs project instead of using the 'main' branch.
+    - |
+      if [[ $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ [0-9]+-[0-9]+-stable ]]; then
+        MAJOR=$(echo "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" | cut -d '-' -f 1)
+        MINOR=$(echo "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" | cut -d '-' -f 2)
+        # Convert GitLab Runner style (17-9-stable) to GitLab Docs style (17.9)
+        DOCS_BRANCH=$MAJOR.$MINOR
+        echo "Using docs-gitlab-com branch $DOCS_BRANCH instead of main"
+      fi
+    # Clone the GitLab Docs project
+    - git clone --depth 1 --filter=tree:0 --branch $DOCS_BRANCH https://gitlab.com/gitlab-org/technical-writing/docs-gitlab-com.git
     - cd docs-gitlab-com
     - make add-latest-icons
     # Copy the current project's docs to the appropriate location in the docs website
