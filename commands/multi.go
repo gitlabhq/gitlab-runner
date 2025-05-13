@@ -684,6 +684,16 @@ func (mr *RunCommand) setupSessionServer() {
 		return
 	}
 
+	// Create a wrapper function that handles the error from findSessionByURL
+	findSessionWrapper := func(url string) *session.Session {
+		sess, err := mr.buildsHelper.findSessionByURL(url)
+		if err != nil {
+			mr.log().WithError(err).WithField("url", url).Warn("Failed to find session by URL")
+			return nil
+		}
+		return sess
+	}
+
 	var err error
 	mr.sessionServer, err = session.NewServer(
 		session.ServerConfig{
@@ -693,7 +703,7 @@ func (mr *RunCommand) setupSessionServer() {
 		},
 		mr.log(),
 		certificate.X509Generator{},
-		mr.buildsHelper.findSessionByURL,
+		findSessionWrapper,
 	)
 	if err != nil {
 		mr.log().WithError(err).Fatal("Failed to create session server")

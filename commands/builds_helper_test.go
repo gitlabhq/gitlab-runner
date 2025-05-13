@@ -169,11 +169,28 @@ func TestBuildsHelperFindSessionByURL(t *testing.T) {
 	h := newBuildsHelper()
 	h.addBuild(&build)
 
-	foundSession := h.findSessionByURL(sess.Endpoint + "/action")
+	foundSession, err := h.findSessionByURL(sess.Endpoint + "/action")
+	require.NoError(t, err)
 	assert.Equal(t, sess, foundSession)
 
-	foundSession = h.findSessionByURL("/session/hash/action")
+	foundSession, err = h.findSessionByURL("/session/hash/action")
 	assert.Nil(t, foundSession)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "no session found matching URL")
+
+	// Test empty URL
+	foundSession, err = h.findSessionByURL("")
+	assert.Nil(t, foundSession)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "empty URL provided")
+
+	// Test with no builds
+	h = newBuildsHelper()
+	foundSession, err = h.findSessionByURL(sess.Endpoint + "/action")
+	assert.Nil(t, foundSession)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "no active builds found")
 }
 
 func TestBuildsHelper_ListJobsHandler(t *testing.T) {
