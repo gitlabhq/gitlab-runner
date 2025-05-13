@@ -260,22 +260,6 @@ runners:
 For more information, see the advanced configuration information about the
 [`[runners.kubernetes]`](../configuration/advanced-configuration.md#the-runnerskubernetes-section) section.
 
-### Best practices for building containers without privileged mode
-
-Building containers within containers with Docker-in-Docker requires Docker privileged
-mode. Google's [Kaniko](https://github.com/GoogleContainerTools/kaniko) is an alternative
-that works without privileged mode, and it has been tested on the Kubernetes GitLab Runner.
-
-The <i class="fa fa-youtube-play youtube" aria-hidden="true"></i>
-[Least Privilege Container Builds with Kaniko on GitLab](https://www.youtube.com/watch?v=d96ybcELpFs)
-video is a walkthrough of the [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build)
-working example project. It uses the documentation for
-[Building images with Kaniko and GitLab CI/CD](https://docs.gitlab.com/ci/docker/using_kaniko/).
-<!-- Video published on 2020-04-07 -->
-
-For testing, copy the working example project to your own group or instance. For more details about the other GitLab CI/CD patterns
-available, see [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build).
-
 ## Use an image from a private registry
 
 To use an image from a private registry, configure `imagePullSecrets`.
