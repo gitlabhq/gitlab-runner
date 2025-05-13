@@ -120,17 +120,31 @@ func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCoun
 	return counter
 }
 
-func (b *buildsHelper) findSessionByURL(url string) *session.Session {
+func (b *buildsHelper) findSessionByURL(url string) (*session.Session, error) {
+	if url == "" {
+		return nil, fmt.Errorf("empty URL provided")
+	}
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	if len(b.builds) == 0 {
+		return nil, fmt.Errorf("no active builds found")
+	}
 	for _, build := range b.builds {
+		if build.Session == nil {
+			continue
+		}
+
+		if build.Session.Endpoint == "" {
+			continue
+		}
 		if strings.HasPrefix(url, build.Session.Endpoint+"/") {
-			return build.Session
+			return build.Session, nil
 		}
 	}
 
-	return nil
+	return nil, fmt.Errorf("no session found matching URL: %s", url)
 }
 
 func (b *buildsHelper) acquireBuild(runner *common.RunnerConfig) bool {
