@@ -2014,32 +2014,6 @@ To further separate build containers, you can use node
 Taints prevent other pods from scheduling on the same nodes as the
 build pods, without extra configuration for the other pods.
 
-### Use kaniko to build Docker images
-
-You can use [kaniko](https://github.com/GoogleContainerTools/kaniko) to build Docker images inside a Kubernetes cluster.
-
-Kaniko works without the Docker daemon and builds images without privileged access.
-
-For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ci/docker/using_kaniko/).
-
-There is a known issue when using kaniko to build _multi-stage_ `Dockerfiles`. If a pipeline job includes an
-`after_script` section, when the `after_script` section is executed it fails with the following error message. The job still completes successfully.
-
-```shell
-OCI runtime exec failed: exec failed: container_linux.go:380: starting container process caused: chdir to cwd
-("/workspace") set in config.json failed: no such file or directory: unknown
-```
-
-The section fails because kaniko deletes its container's `WORKDIR` when building multi-stage `Dockerfile`s. This prevents
-`kubectl exec` (and the analogous SDK API) from attaching to the container.
-
-Two workarounds exists for this issue:
-
-- Add `--ignore-path /workspace` to the kaniko executor invocation.
-- Add `mkdir -p /workspace` to the job's `script` _after_ the kaniko executor invocation.
-
-For more information, see [issue 30769](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/30769#note_1452088669).
-
 ### Restrict Docker images and services
 
 You can restrict the Docker images that are used to run your jobs.
