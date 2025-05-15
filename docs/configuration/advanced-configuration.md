@@ -946,6 +946,7 @@ Consider the following information when enabling the state storage feature:
 | `idle_time`          | The amount of time that an instance can be idle before it is terminated. |
 | `scale_factor`       | The target idle capacity we want to be immediately available for jobs, on top of the `idle_count`, as a factor of the current in use capacity. Defaults to `0.0`. |
 | `scale_factor_limit` | The maximum capacity the `scale_factor` calculation can yield. |
+| `preemptive_mode`    | With preemptive mode turned on, jobs are requested only when an instance is confirmed to be available. This action allows jobs to start almost immediately without provisioning delays. When preemptive mode is turned off, jobs are requested first, and then the system attempts to find or provision the necessary capacity. |
 
 To decide whether to remove an idle instance, the taskscaler compares `idle_time` against the instance's idle duration.
 The idle period of each instance is calculated from the time the instance:

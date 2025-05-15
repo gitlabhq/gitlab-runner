@@ -149,6 +149,7 @@ func TestAcquire(t *testing.T) {
 
 	tests := map[string]struct {
 		idleCount          int
+		PreemptiveMode     bool
 		canReserve         bool
 		wantEarlyReturn    string
 		wantAcquisitionRef bool
@@ -165,6 +166,16 @@ func TestAcquire(t *testing.T) {
 		"has capacity, no idle count": {
 			idleCount:          0,
 			canReserve:         true,
+			wantAcquisitionRef: true,
+		},
+		"preemptiveMode false": {
+			canReserve:         true,
+			PreemptiveMode:     false,
+			wantAcquisitionRef: true,
+		},
+		"preemptiveMode true": {
+			canReserve:         true,
+			PreemptiveMode:     true,
 			wantAcquisitionRef: true,
 		},
 		"no capacity, no idle count": {
@@ -195,13 +206,14 @@ func TestAcquire(t *testing.T) {
 					common.NewTestAutoscalerConfig().
 						WithPolicies(
 							common.AutoscalerPolicyConfig{
-								IdleCount: tt.idleCount,
+								IdleCount:      tt.idleCount,
+								PreemptiveMode: &tt.PreemptiveMode,
 							},
 						).AutoscalerConfig,
 				).RunnerConfig
 			schedule := taskscaler.Schedule{
 				IdleCount:      tt.idleCount,
-				PreemptiveMode: tt.idleCount > 0,
+				PreemptiveMode: tt.PreemptiveMode,
 			}
 			ts := mocks.NewTaskscaler(t)
 			ep := common.NewMockExecutorProvider(t)

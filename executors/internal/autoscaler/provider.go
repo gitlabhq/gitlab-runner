@@ -278,7 +278,7 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 				IdleTime:         schedule.IdleTime,
 				ScaleFactor:      schedule.ScaleFactor,
 				ScaleFactorLimit: schedule.ScaleFactorLimit,
-				PreemptiveMode:   schedule.IdleCount > 0,
+				PreemptiveMode:   schedule.PreemptiveModeEnabled(),
 			})
 		}
 		if err := scaler.ConfigureSchedule(schedules...); err != nil {
