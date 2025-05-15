@@ -2,6 +2,7 @@ package autoscaler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,16 +33,25 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return e.Executor.Prepare(options)
 	}
 
-	// todo: allow configuration of how long we're willing to wait for.
-	// This is currently set to 15minutes knowing that cloud providers
-	// can sometimes exceed 6 minutes provisioning a Windows instance.
-	// This is far more relevant when we're provisioning instances on demand,
-	// rather than waiting for idle instances.
-	ctx, cancel := context.WithTimeout(options.Context, 15*time.Minute)
+	// The acqTimeout defines how long we are willing to wait for an instance to be acquired.
+	// It defaults to 15 minutes, as cloud providers can take several minutes to provision instances,
+	// especially for certain operating systems like Windows. This value can be configured
+	// through the Autoscaler configuration (InstanceAcquireTimeout) to better suit the user's environment.
+	acqTimeout := 15 * time.Minute
+	if options.Config.Autoscaler != nil && options.Config.Autoscaler.InstanceAcquireTimeout > 0 {
+		acqTimeout = options.Config.Autoscaler.InstanceAcquireTimeout
+	}
+
+	ctx, cancel := context.WithTimeout(options.Context, acqTimeout)
 	defer cancel()
 
 	acq, err := e.provider.getRunnerTaskscaler(options.Config).Acquire(ctx, acqRef.key)
 	if err != nil {
+		// Check if the error is due to the context timeout
+		if errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("unable to acquire instance within the configured timeout of %s: %w", acqTimeout, err)
+		}
+
 		return fmt.Errorf("unable to acquire instance: %w", err)
 	}
 

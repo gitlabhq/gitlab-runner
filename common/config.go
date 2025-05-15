@@ -287,6 +287,7 @@ type AutoscalerConfig struct {
 	Policy              []AutoscalerPolicyConfig `toml:"policy,omitempty" json:",omitempty"`
 
 	InstanceReadyCommand        string                  `toml:"instance_ready_command,omitempty" json:",omitempty"`
+	InstanceAcquireTimeout      time.Duration           `toml:"instance_acquire_timeout,omitempty" json:",omitempty"`
 	UpdateInterval              time.Duration           `toml:"update_interval,omitempty" json:",omitempty"`
 	UpdateIntervalWhenExpecting time.Duration           `toml:"update_interval_when_expecting,omitempty" json:",omitempty"`
 	ScaleThrottle               AutoscalerScaleThrottle `toml:"scale_throttle,omitempty" json:",omitempty"`
