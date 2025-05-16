@@ -1,3 +1,9 @@
+## v18.0.1 (2025-05-16)
+
+### Bug fixes
+
+- Switch the default for FF_GIT_URLS_WITHOUT_TOKENS back to false [!5572](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5572)
+
 ## v18.0.0 (2025-05-16)
 
 ### Bug fixes
