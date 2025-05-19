@@ -190,7 +190,7 @@ If you don't define an `image` in `.gitlab-ci.yml`, the runner uses the `image` 
 
 To add images and services to all jobs run by a runner, update `[runners.docker]` in the `config.toml`.
 
-By default the Docker executer uses the `image` defined in `.gitlab-ci.yml`. If you don't define one in `.gitlab-ci.yml`, the runner uses the image defined in `config.toml`.
+By default, the Docker executer uses the `image` defined in `.gitlab-ci.yml`. If you don't define one in `.gitlab-ci.yml`, the runner uses the image defined in `config.toml`.
 
 Example:
 
@@ -734,7 +734,7 @@ see [Security risks for Docker executors](../security/_index.md#usage-of-docker-
 
 ## Configure a Docker ENTRYPOINT
 
-By default the Docker executor doesn't override the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/containers/run/#entrypoint-default-command-to-execute-at-runtime). It passes `sh` or `bash` as [`COMMAND`](https://docs.docker.com/engine/containers/run/#cmd-default-command-or-options) to start a container that runs the job script.
+By default, the Docker executor doesn't override the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/containers/run/#entrypoint-default-command-to-execute-at-runtime). It passes `sh` or `bash` as [`COMMAND`](https://docs.docker.com/engine/containers/run/#cmd-default-command-or-options) to start a container that runs the job script.
 
 To ensure a job can run, its Docker image must:
 
