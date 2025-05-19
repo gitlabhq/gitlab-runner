@@ -25,6 +25,10 @@ to run each job in a separate and isolated container. To connect to Docker Engin
 - The image and services you define in [`.gitlab-ci.yml`](https://docs.gitlab.com/ci/yaml/).
 - The configurations you define in [`config.toml`](../commands/_index.md#configuration-file).
 
+You can't register a runner and its Docker executor without defining a default image in `config.toml`.
+The image defined in `config.toml` can be used when none is defined in `.gitlab-ci.yml`.
+If an image is defined in `.gitlab-ci.yml`, it overrides the one defined in `config.toml`.
+
 Prerequisites:
 
 - [Install Docker](https://docs.docker.com/engine/install/).
@@ -51,21 +55,22 @@ The Docker executor supports the following configurations.
 
 For known issues and additional requirements of Windows configurations, see [Use Windows containers](#use-windows-containers).
 
-| Runner is installed on:  | Executor is:     | Container is running: |
-|--------------------------|------------------|------------------------|
-| Windows                  | `docker-windows` | Windows                |
-| Windows                  | `docker`         | Linux                  |
-| Linux                    | `docker`         | Linux                  |
+| Runner is installed on: | Executor is:     | Container is running: |
+| ----------------------- | ---------------- | --------------------- |
+| Windows                 | `docker-windows` | Windows               |
+| Windows                 | `docker`         | Linux                 |
+| Linux                   | `docker`         | Linux                 |
+| macOS                   | `docker`         | Linux                 |
 
 These configurations are **not** supported:
 
-| Runner is installed on:  | Executor is:     | Container is running: |
-|--------------------------|------------------|------------------------|
-| Linux                    | `docker-windows` | Linux                  |
-| Linux                    | `docker`         | Windows                |
-| Linux                    | `docker-windows` | Windows                |
-| Windows                  | `docker`         | Windows                |
-| Windows                  | `docker-windows` | Linux                  |
+| Runner is installed on: | Executor is:     | Container is running: |
+| ----------------------- | ---------------- | --------------------- |
+| Linux                   | `docker-windows` | Linux                 |
+| Linux                   | `docker`         | Windows               |
+| Linux                   | `docker-windows` | Windows               |
+| Windows                 | `docker`         | Windows               |
+| Windows                 | `docker-windows` | Linux                 |
 
 {{< alert type="note" >}}
 
@@ -81,10 +86,11 @@ to identify the Windows Server version.
 
 ## Use the Docker executor
 
-To use the Docker executor, define Docker as the executor in `config.toml`.
+To use the Docker executor, manually define Docker as the executor in `config.toml` or use the
+[`gitlab-runner register --executor "docker"`](../register/_index.md#register-with-a-runner-authentication-token)
+command to automatically define it.
 
-The following sample shows Docker defined as the executor and example
-configurations. For more information about these values, see [Advanced configuration](../configuration/advanced-configuration.md)
+The following sample configuration shows Docker defined as the executor. For more information about these values, see [Advanced configuration](../configuration/advanced-configuration.md)
 
 ```toml
 concurrent = 4
@@ -183,7 +189,8 @@ If you don't define an `image` in `.gitlab-ci.yml`, the runner uses the `image` 
 ### Define images and services in `config.toml`
 
 To add images and services to all jobs run by a runner, update `[runners.docker]` in the `config.toml`.
-If you don't define an `image` in `.gitlab-ci.yml`, the runner uses the image defined in `config.toml`.
+
+By default the Docker executer uses the `image` defined in `.gitlab-ci.yml`. If you don't define one in `.gitlab-ci.yml`, the runner uses the image defined in `config.toml`.
 
 Example:
 
@@ -1101,13 +1108,13 @@ For example, to allow only the `always` and `if-not-present` pull policies, add 
 
 ### Image pull error messages
 
-| Error message               | Description                  |
-|-----------------------------|------------------------------|
-| `Pulling docker image registry.tld/my/image:latest ... ERROR: Build failed: Error: image registry.tld/my/image:latest not found`  |  The runner cannot find the image. Displays when the `always` pull policy is set  |
-| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found`   | The image was built locally and doesn't exist in any public or default Docker registry. Displays when the `always` pull policy is set.   |
-| `Pulling docker image registry.tld/my/image:latest ... WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found WARNING: Locally found image will be used instead.` | The runner has used a local image instead of pulling an image. |
-| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found` | The image cannot be found locally. Displays when the `never` pull policy is set. |
-| `WARNING: Failed to pull image with policy "always": Error response from daemon: received unexpected HTTP status: 502 Bad Gateway (docker.go:143:0s) Attempt #2: Trying "if-not-present" pull policy Using locally found image version due to "if-not-present" pull policy`| The runner failed to pull an image and attempts to pull an image by using the next listed pull policy. Displays when multiple pull policies are set. |
+| Error message                                                                                                                                                                                                                                                               | Description                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Pulling docker image registry.tld/my/image:latest ... ERROR: Build failed: Error: image registry.tld/my/image:latest not found`                                                                                                                                            | The runner cannot find the image. Displays when the `always` pull policy is set                                                                      |
+| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found`                                                                                                                                                                | The image was built locally and doesn't exist in any public or default Docker registry. Displays when the `always` pull policy is set.               |
+| `Pulling docker image registry.tld/my/image:latest ... WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found WARNING: Locally found image will be used instead.`                              | The runner has used a local image instead of pulling an image.                                                                                       |
+| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found`                                                                                                                                                                | The image cannot be found locally. Displays when the `never` pull policy is set.                                                                     |
+| `WARNING: Failed to pull image with policy "always": Error response from daemon: received unexpected HTTP status: 502 Bad Gateway (docker.go:143:0s) Attempt #2: Trying "if-not-present" pull policy Using locally found image version due to "if-not-present" pull policy` | The runner failed to pull an image and attempts to pull an image by using the next listed pull policy. Displays when multiple pull policies are set. |
 
 ## Retry a failed pull
 
