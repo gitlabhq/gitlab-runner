@@ -14,7 +14,13 @@ title: Install GitLab Runner on macOS
 
 This page contains instructions about installing GitLab Runner on macOS (Apple Silicon and Intel x86-64).
 
-For information about troubleshooting, see [Troubleshooting GitLab Runner](../faq/_index.md).
+{{< alert type="note" >}}
+
+macOS users who install GitLab Runner typically
+[install GitLab](https://docs.gitlab.com/install/install_methods/)
+on a container or virtual machine that runs locally or remotely.
+
+{{< /alert >}}
 
 1. Download the binary for your system:
 
@@ -224,7 +230,7 @@ user and want access to the signing certificates installed by that user for code
 
 ## macOS troubleshooting
 
-The following relate to troubleshooting on macOS.
+The following relate to troubleshooting on macOS. For more information about general troubleshooting, see [Troubleshooting GitLab Runner](../faq/_index.md).
 
 ### `killed: 9`
 
