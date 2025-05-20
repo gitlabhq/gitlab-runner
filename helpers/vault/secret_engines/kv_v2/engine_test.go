@@ -31,37 +31,29 @@ func TestEngine_Get(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		setupClientMock func(*testing.T, *vault.MockClient) func()
+		setupClientMock func(*testing.T, *vault.MockClient)
 		expectedError   error
 		expectedData    map[string]interface{}
 	}{
 		"client read error": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
 				c.On("Read", expectedPath).
 					Return(nil, assert.AnError).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-				}
 			},
 			expectedError: assert.AnError,
 		},
 		"client read succeeded with nil result": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
 				c.On("Read", expectedPath).
 					Return(nil, nil).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-				}
 			},
 			expectedData: nil,
 		},
 		"client read succeeded with no data": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
-				result := new(vault.MockResult)
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
+				result := vault.NewMockResult(t)
 				result.On("Data").
 					Return(nil).
 					Once()
@@ -69,21 +61,16 @@ func TestEngine_Get(t *testing.T) {
 				c.On("Read", expectedPath).
 					Return(result, nil).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-					result.AssertExpectations(t)
-				}
 			},
 			expectedData: nil,
 		},
 		"client read succeeded with nil data": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
 				nilData := map[string]interface{}{
 					"test": "test",
 					"data": nil,
 				}
-				result := new(vault.MockResult)
+				result := vault.NewMockResult(t)
 				result.On("Data").
 					Return(nilData).
 					Once()
@@ -91,21 +78,16 @@ func TestEngine_Get(t *testing.T) {
 				c.On("Read", expectedPath).
 					Return(result, nil).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-					result.AssertExpectations(t)
-				}
 			},
 			expectedData: nil,
 		},
 		"client read succeeded with bogus data": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
 				nilData := map[string]interface{}{
 					"test": "test",
 					"data": "sdfhgskldfhkljshdfljkgh",
 				}
-				result := new(vault.MockResult)
+				result := vault.NewMockResult(t)
 				result.On("Data").
 					Return(nilData).
 					Once()
@@ -113,18 +95,13 @@ func TestEngine_Get(t *testing.T) {
 				c.On("Read", expectedPath).
 					Return(result, nil).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-					result.AssertExpectations(t)
-				}
 			},
 			expectedData:  nil,
 			expectedError: assert.AnError,
 		},
 		"client read succeeded with missing data key": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
-				result := new(vault.MockResult)
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
+				result := vault.NewMockResult(t)
 				result.On("Data").
 					Return(missingData).
 					Once()
@@ -132,16 +109,11 @@ func TestEngine_Get(t *testing.T) {
 				c.On("Read", expectedPath).
 					Return(result, nil).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-					result.AssertExpectations(t)
-				}
 			},
 		},
 		"client read succeeded with data": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
-				result := new(vault.MockResult)
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
+				result := vault.NewMockResult(t)
 				result.On("Data").
 					Return(data).
 					Once()
@@ -149,11 +121,6 @@ func TestEngine_Get(t *testing.T) {
 				c.On("Read", expectedPath).
 					Return(result, nil).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-					result.AssertExpectations(t)
-				}
 			},
 			expectedData: expectedData,
 		},
@@ -161,9 +128,8 @@ func TestEngine_Get(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(vault.MockClient)
-			assertions := tt.setupClientMock(t, clientMock)
-			defer assertions()
+			clientMock := vault.NewMockClient(t)
+			tt.setupClientMock(t, clientMock)
 
 			e := NewEngine(clientMock, enginePath)
 			result, err := e.Get(path)
@@ -189,39 +155,30 @@ func TestEngine_Put(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		setupClientMock func(*testing.T, *vault.MockClient) func()
+		setupClientMock func(*testing.T, *vault.MockClient)
 		expectedError   error
 	}{
 		"client write error": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
 				c.On("Write", expectedPath, expectedData).
 					Return(nil, assert.AnError).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-				}
 			},
 			expectedError: assert.AnError,
 		},
 		"client write succeeded": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
 				c.On("Write", expectedPath, expectedData).
 					Return(nil, nil).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-				}
 			},
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(vault.MockClient)
-			assertions := tt.setupClientMock(t, clientMock)
-			defer assertions()
+			clientMock := vault.NewMockClient(t)
+			tt.setupClientMock(t, clientMock)
 
 			e := NewEngine(clientMock, enginePath)
 			err := e.Put(path, data)
@@ -240,39 +197,30 @@ func TestEngine_Delete(t *testing.T) {
 	expectedPath := "engine/metadata/secret"
 
 	tests := map[string]struct {
-		setupClientMock func(*testing.T, *vault.MockClient) func()
+		setupClientMock func(*testing.T, *vault.MockClient)
 		expectedError   error
 	}{
 		"client delete error": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
 				c.On("Delete", expectedPath).
 					Return(assert.AnError).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-				}
 			},
 			expectedError: assert.AnError,
 		},
 		"client delete succeeded": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
 				c.On("Delete", expectedPath).
 					Return(nil).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-				}
 			},
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(vault.MockClient)
-			assertions := tt.setupClientMock(t, clientMock)
-			defer assertions()
+			clientMock := vault.NewMockClient(t)
+			tt.setupClientMock(t, clientMock)
 
 			e := NewEngine(clientMock, enginePath)
 			err := e.Delete(path)

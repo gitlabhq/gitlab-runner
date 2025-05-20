@@ -90,8 +90,7 @@ func TestResolver_Resolve(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			serviceMock := new(service.MockVault)
-			defer serviceMock.AssertExpectations(t)
+			serviceMock := service.NewMockVault(t)
 
 			if tt.assertVaultServiceMock != nil {
 				tt.assertVaultServiceMock(serviceMock)

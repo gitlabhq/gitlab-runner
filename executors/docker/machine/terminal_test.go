@@ -12,7 +12,7 @@ import (
 
 func TestMachineExecutor_Connect_NoTerminal(t *testing.T) {
 	e := machineExecutor{
-		executor: &common.MockExecutor{},
+		executor: common.NewMockExecutor(t),
 	}
 
 	conn, err := e.Connect()
@@ -21,19 +21,21 @@ func TestMachineExecutor_Connect_NoTerminal(t *testing.T) {
 }
 
 type mockTerminalExecutor struct {
-	common.MockExecutor
-	terminal.MockInteractiveTerminal
+	*common.MockExecutor
+	*terminal.MockInteractiveTerminal
 }
 
 func TestMachineExecutor_Connect_Terminal(t *testing.T) {
-	mock := mockTerminalExecutor{}
+	mock := mockTerminalExecutor{
+		MockExecutor:            common.NewMockExecutor(t),
+		MockInteractiveTerminal: terminal.NewMockInteractiveTerminal(t),
+	}
 	e := machineExecutor{
 		executor: &mock,
 	}
-	mock.MockInteractiveTerminal.On("Connect").Return(&terminal.MockConn{}, nil).Once()
+	mock.MockInteractiveTerminal.On("Connect").Return(terminal.NewMockConn(t), nil).Once()
 
 	conn, err := e.Connect()
 	assert.NoError(t, err)
 	assert.NotNil(t, conn)
-	mock.MockInteractiveTerminal.AssertCalled(t, "Connect")
 }

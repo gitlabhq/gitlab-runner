@@ -93,7 +93,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 				cl, ok := c.(*client)
 				require.True(t, ok, "expected to be %T, got %T", &client{}, c)
 
-				assert.IsType(t, &fleetingmocks.Client{}, cl.client)
+				assert.IsType(t, fleetingmocks.NewClient(t), cl.client)
 				assert.Nil(t, cl.cleanup)
 			}),
 		},

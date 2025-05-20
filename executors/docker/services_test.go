@@ -36,11 +36,8 @@ import (
 )
 
 func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName string) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	p := new(pull.MockManager)
-	defer p.AssertExpectations(t)
+	c := docker.NewMockClient(t)
+	p := pull.NewMockManager(t)
 
 	servicePart := fmt.Sprintf("-%s-0", strings.ReplaceAll(serviceName, "/", "__"))
 	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+" + servicePart)
@@ -140,7 +137,6 @@ func testDockerConfigurationWithServiceContainer(
 	cce containerConfigExpectations,
 ) {
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine:latest", "alpine:latest")
-	defer c.AssertExpectations(t)
 
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
 		Return(nil).Once()
@@ -311,7 +307,6 @@ func TestDockerWithNoDockerConfigAndWithServiceImagePullPolicyAlways(t *testing.
 	}
 
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine:latest", "alpine:latest")
-	defer c.AssertExpectations(t)
 
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
 		Return(nil).Once()
@@ -355,8 +350,6 @@ func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolic
 		Return(nil).Once()
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
 		Return(nil).Once()
-
-	defer c.AssertExpectations(t)
 
 	err := e.createVolumesManager()
 	require.NoError(t, err)
@@ -811,12 +804,11 @@ func TestAddServiceHealthCheck(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			client := new(docker.MockClient)
+			client := docker.NewMockClient(t)
 
 			if test.dockerClientAssertions != nil {
 				test.dockerClientAssertions(client)
 			}
-			defer client.AssertExpectations(t)
 
 			executor := &executor{
 				networkMode: container.NetworkMode(test.networkMode),
@@ -865,9 +857,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			c := new(docker.MockClient)
-			defer c.AssertExpectations(t)
-
+			c := docker.NewMockClient(t)
 			e := &executor{}
 			e.client = c
 
@@ -937,8 +927,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 	lentry.Out = &logs
 
 	stop := errors.New("don't actually try to stream the container's logs")
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
+	c := docker.NewMockClient(t)
 
 	e := &executor{services: containers}
 	e.client = c

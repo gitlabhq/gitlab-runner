@@ -77,7 +77,7 @@ type adapterOperationInvalidConfigTestCase struct {
 	expectedError string
 }
 
-func prepareMockedCredentialsResolverInitializer(tc adapterOperationInvalidConfigTestCase) func() {
+func prepareMockedCredentialsResolverInitializer(t *testing.T, tc adapterOperationInvalidConfigTestCase) {
 	oldCredentialsResolverInitializer := credentialsResolverInitializer
 	credentialsResolverInitializer = func(config *common.CacheGCSConfig) (*defaultCredentialsResolver, error) {
 		if tc.errorOnCredentialsResolverInitialization {
@@ -87,15 +87,15 @@ func prepareMockedCredentialsResolverInitializer(tc adapterOperationInvalidConfi
 		return newDefaultCredentialsResolver(config)
 	}
 
-	return func() {
+	t.Cleanup(func() {
 		credentialsResolverInitializer = oldCredentialsResolverInitializer
-	}
+	})
 }
 
-func prepareMockedCredentialsResolverForInvalidConfig(adapter *gcsAdapter, tc adapterOperationInvalidConfigTestCase) {
-	cr := &mockCredentialsResolver{}
+func prepareMockedCredentialsResolverForInvalidConfig(t *testing.T, adapter *gcsAdapter, tc adapterOperationInvalidConfigTestCase) {
+	cr := newMockCredentialsResolver(t)
 
-	resolveCall := cr.On("Resolve")
+	resolveCall := cr.On("Resolve").Maybe()
 	if tc.credentialsResolverResolveError {
 		resolveCall.Return(fmt.Errorf("test error"))
 	} else {
@@ -105,11 +105,11 @@ func prepareMockedCredentialsResolverForInvalidConfig(adapter *gcsAdapter, tc ad
 	cr.On("Credentials").Return(&common.CacheGCSCredentials{
 		AccessID:   tc.accessID,
 		PrivateKey: tc.privateKey,
-	})
+	}).Maybe()
 
 	cr.On("SignBytesFunc", mock.Anything).Return(func(payload []byte) ([]byte, error) {
 		return []byte("output"), nil
-	})
+	}).Maybe()
 
 	adapter.credentialsResolver = cr
 }
@@ -122,7 +122,7 @@ func testAdapterOperationWithInvalidConfig(
 	operation func(context.Context) cache.PresignedURL,
 ) {
 	t.Run(name, func(t *testing.T) {
-		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
+		prepareMockedCredentialsResolverForInvalidConfig(t, adapter, tc)
 		hook := test.NewGlobal()
 
 		u := operation(context.Background())
@@ -167,8 +167,7 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanupCredentialsResolverInitializerMock := prepareMockedCredentialsResolverInitializer(tc)
-			defer cleanupCredentialsResolverInitializerMock()
+			prepareMockedCredentialsResolverInitializer(t, tc)
 
 			config := defaultGCSCache()
 			if tc.noGCSConfig {
@@ -217,8 +216,8 @@ func mockSignBytesFunc(_ context.Context) func([]byte) ([]byte, error) {
 	}
 }
 
-func prepareMockedCredentialsResolver(adapter *gcsAdapter, tc adapterOperationTestCase) func(t *testing.T) {
-	cr := &mockCredentialsResolver{}
+func prepareMockedCredentialsResolver(t *testing.T, adapter *gcsAdapter, tc adapterOperationTestCase) {
+	cr := newMockCredentialsResolver(t)
 	cr.On("Resolve").Return(nil)
 
 	pk := privateKey
@@ -232,10 +231,6 @@ func prepareMockedCredentialsResolver(adapter *gcsAdapter, tc adapterOperationTe
 	})
 
 	adapter.credentialsResolver = cr
-
-	return func(t *testing.T) {
-		cr.AssertExpectations(t)
-	}
 }
 
 func prepareMockedSignedURLGenerator(
@@ -271,9 +266,7 @@ func testAdapterOperation(
 	operation func(context.Context) cache.PresignedURL,
 ) {
 	t.Run(name, func(t *testing.T) {
-		cleanupCredentialsResolverMock := prepareMockedCredentialsResolver(adapter, tc)
-		defer cleanupCredentialsResolverMock(t)
-
+		prepareMockedCredentialsResolver(t, adapter, tc)
 		prepareMockedSignedURLGenerator(t, tc, expectedMethod, expectedContentType, adapter)
 		hook := test.NewGlobal()
 

@@ -12,22 +12,22 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func mockKillerFactory(t *testing.T) (*mockKiller, func()) {
+func mockKillerFactory(t *testing.T) *mockKiller {
 	t.Helper()
 
-	killerMock := new(mockKiller)
+	killerMock := newMockKiller(t)
 
 	oldNewProcessKiller := newProcessKiller
-	cleanup := func() {
+
+	t.Cleanup(func() {
 		newProcessKiller = oldNewProcessKiller
-		killerMock.AssertExpectations(t)
-	}
+	})
 
 	newProcessKiller = func(logger Logger, cmd Commander) killer {
 		return killerMock
 	}
 
-	return killerMock, cleanup
+	return killerMock
 }
 
 func TestOSKillWait_KillAndWait(t *testing.T) {
@@ -65,14 +65,9 @@ func TestOSKillWait_KillAndWait(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			waitCh := make(chan error, 1)
 
-			killerMock, cleanup := mockKillerFactory(t)
-			defer cleanup()
-
-			loggerMock := new(MockLogger)
-			defer loggerMock.AssertExpectations(t)
-
-			commanderMock := new(MockCommander)
-			defer commanderMock.AssertExpectations(t)
+			killerMock := mockKillerFactory(t)
+			loggerMock := NewMockLogger(t)
+			commanderMock := NewMockCommander(t)
 
 			commanderMock.On("Process").Return(testCase.process)
 

@@ -355,8 +355,7 @@ func TestClientDo_Context(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, c)
 
-	requesterMock := new(mockRequester)
-	defer requesterMock.AssertExpectations(t)
+	requesterMock := newMockRequester(t)
 	c.requester = requesterMock
 
 	requesterMock.On("Do", mock.MatchedBy(func(req *http.Request) bool {
@@ -744,8 +743,7 @@ func TestRequesterCalled(t *testing.T) {
 		URL: "http://localhost:1000/",
 	})
 
-	rl := &mockRequester{}
-	defer rl.AssertExpectations(t)
+	rl := newMockRequester(t)
 
 	resReturn := &http.Response{
 		StatusCode: http.StatusOK,

@@ -54,8 +54,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		},
 	}
 
-	mJobTrace := common.MockJobTrace{}
-	defer mJobTrace.AssertExpectations(t)
+	mJobTrace := common.NewMockJobTrace(t)
 	mJobTrace.On("SetFailuresCollector", mock.Anything)
 	mJobTrace.On("Write", mock.Anything).Return(0, nil)
 	mJobTrace.On("IsStdout").Return(false)
@@ -64,14 +63,12 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	mJobTrace.On("SetDebugModeEnabled", mock.Anything)
 	mJobTrace.On("Success").Return(nil)
 
-	mNetwork := common.MockNetwork{}
-	defer mNetwork.AssertExpectations(t)
+	mNetwork := common.NewMockNetwork(t)
 	mNetwork.On("RequestJob", mock.Anything, mock.Anything, mock.Anything).Return(&jobData, true)
-	mNetwork.On("ProcessJob", mock.Anything, mock.Anything).Return(&mJobTrace, nil)
+	mNetwork.On("ProcessJob", mock.Anything, mock.Anything).Return(mJobTrace, nil)
 
 	var runningBuilds uint32
-	e := common.MockExecutor{}
-	defer e.AssertExpectations(t)
+	e := common.NewMockExecutor(t)
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Maybe()
 	e.On("Shell").Return(&common.ShellScriptInfo{Shell: "script-shell"})
@@ -83,19 +80,18 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}).Return(nil)
 
-	p := common.MockExecutorProvider{}
-	defer p.AssertExpectations(t)
+	p := common.NewMockExecutorProvider(t)
 	p.On("Acquire", mock.Anything).Return(nil, nil)
 	p.On("Release", mock.Anything, mock.Anything).Return(nil).Maybe()
 	p.On("CanCreate").Return(true).Once()
 	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil)
-	p.On("Create").Return(&e)
+	p.On("Create").Return(e)
 
-	common.RegisterExecutorProvider("multi-runner-build-limit", &p)
+	common.RegisterExecutorProviderForTest(t, "multi-runner-build-limit", p)
 
 	cmd := RunCommand{
-		network:      &mNetwork,
+		network:      mNetwork,
 		buildsHelper: newBuildsHelper(),
 		configOptionsWithListenAddress: configOptionsWithListenAddress{
 			configOptions: configOptions{
@@ -108,11 +104,12 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 
 	runners := make(chan *common.RunnerConfig)
 
+	cmd.buildsHelper.getRunnerCounter(&cfg).adaptiveConcurrencyLimit = 100
+
 	// Start concurrent jobs
-	jobsNumber := 10
 	wg := sync.WaitGroup{}
-	wg.Add(jobsNumber)
-	for i := 0; i < jobsNumber; i++ {
+	wg.Add(3)
+	for i := 0; i < 3; i++ {
 		go func(i int) {
 			defer wg.Done()
 
@@ -136,7 +133,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		}
 	}
 
-	assert.True(t, limitMetCount > 0)
+	assert.Equal(t, 1, limitMetCount)
 }
 
 func TestRunCommand_doJobRequest(t *testing.T) {
@@ -181,9 +178,7 @@ func TestRunCommand_doJobRequest(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			runner := new(common.RunnerConfig)
 
-			network := new(common.MockNetwork)
-			defer network.AssertExpectations(t)
-
+			network := common.NewMockNetwork(t)
 			network.On("RequestJob", mock.Anything, *runner, mock.Anything).
 				Run(func(args mock.Arguments) {
 					ctx, ok := args.Get(0).(context.Context)
@@ -355,9 +350,9 @@ func (t *runAtTaskMock) cancel() {
 	t.cancelled = true
 }
 
-func newResetRunnerTokenTestController() *resetRunnerTokenTestController {
-	networkMock := new(common.MockNetwork)
-	configSaverMock := new(common.MockConfigSaver)
+func newResetRunnerTokenTestController(t *testing.T) *resetRunnerTokenTestController {
+	networkMock := common.NewMockNetwork(t)
+	configSaverMock := common.NewMockConfigSaver(t)
 
 	data := &resetRunnerTokenTestController{
 		runCommand: RunCommand{
@@ -525,14 +520,6 @@ func (c *resetRunnerTokenTestController) wait() {
 // finish ensures that channels used by the controller are closed
 func (c *resetRunnerTokenTestController) finish() {
 	close(c.eventChan)
-}
-
-// assertExpectations should be run in defer after creating the controller. If the
-// tracked mocks have any command call expectations set, this will ensure to check
-// if they were called
-func (c *resetRunnerTokenTestController) assertExpectations(t *testing.T) {
-	c.networkMock.AssertExpectations(t)
-	c.configSaverMock.AssertExpectations(t)
 }
 
 // assertConfigSaveNotCalled should be run after the tested method call to ensure
@@ -917,8 +904,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			d := newResetRunnerTokenTestController()
-			defer d.assertExpectations(t)
+			d := newResetRunnerTokenTestController(t)
 
 			d.setRunners(tc.runners)
 			tc.testProcedure(t, d)
@@ -1053,8 +1039,7 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			d := newResetRunnerTokenTestController()
-			defer d.assertExpectations(t)
+			d := newResetRunnerTokenTestController(t)
 
 			d.setRunners(tc.runners)
 			tc.testProcedure(t, d)

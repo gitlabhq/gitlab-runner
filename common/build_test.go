@@ -182,13 +182,11 @@ func TestBuildPanic(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			executor, provider := setupMockExecutorAndProvider()
-			defer executor.AssertExpectations(t)
-			defer provider.AssertExpectations(t)
+			executor, provider := setupMockExecutorAndProvider(t)
 
 			tt.setupMockExecutor(executor)
 
-			RegisterExecutorProvider(t.Name(), provider)
+			RegisterExecutorProviderForTest(t, t.Name(), provider)
 
 			res, err := GetSuccessfulBuild()
 			require.NoError(t, err)
@@ -256,11 +254,10 @@ func TestJobImageExposed(t *testing.T) {
 
 func TestBuildRunNoModifyConfig(t *testing.T) {
 	expectHostAddr := "10.0.0.1"
-	p, assertFn := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error {
+	p := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error {
 		options.Config.Docker.Credentials.Host = "10.0.0.2"
 		return nil
 	})
-	defer assertFn()
 
 	rc := &RunnerConfig{
 		RunnerSettings: RunnerSettings{
@@ -281,18 +278,15 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 func TestRetryPrepare(t *testing.T) {
 	PreparationRetryInterval = 0
 
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
-
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
+	e := NewMockExecutor(t)
+	p := NewMockExecutorProvider(t)
 
 	// Create executor
 	p.On("CanCreate").Return(true).Once()
 	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
 
-	p.On("Create").Return(&e).Times(3)
+	p.On("Create").Return(e).Times(3)
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -306,7 +300,7 @@ func TestRetryPrepare(t *testing.T) {
 	e.On("Run", mock.Anything).Return(nil)
 	e.On("Finish", nil).Once()
 
-	build := registerExecutorWithSuccessfulBuild(t, &p, new(RunnerConfig))
+	build := registerExecutorWithSuccessfulBuild(t, p, new(RunnerConfig))
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
@@ -314,33 +308,28 @@ func TestRetryPrepare(t *testing.T) {
 func TestPrepareFailure(t *testing.T) {
 	PreparationRetryInterval = 0
 
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
-
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
+	e := NewMockExecutor(t)
+	p := NewMockExecutorProvider(t)
 
 	// Create executor
 	p.On("CanCreate").Return(true).Once()
 	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
 
-	p.On("Create").Return(&e).Times(3)
+	p.On("Create").Return(e).Times(3)
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.New("prepare failed")).Times(3)
 	e.On("Cleanup").Times(3)
 
-	build := registerExecutorWithSuccessfulBuild(t, &p, new(RunnerConfig))
+	build := registerExecutorWithSuccessfulBuild(t, p, new(RunnerConfig))
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "prepare failed")
 }
 
 func TestPrepareFailureOnBuildError(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(&BuildError{}).Once()
 	executor.On("Cleanup").Once()
@@ -355,11 +344,8 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 func TestPrepareEnvironmentFailure(t *testing.T) {
 	testErr := errors.New("test-err")
 
-	e := new(MockExecutor)
-	defer e.AssertExpectations(t)
-
-	p := new(MockExecutorProvider)
-	defer p.AssertExpectations(t)
+	e := NewMockExecutor(t)
+	p := NewMockExecutorProvider(t)
 
 	p.On("CanCreate").Return(true).Once()
 	p.On("GetDefaultShell").Return("bash").Once()
@@ -372,7 +358,7 @@ func TestPrepareEnvironmentFailure(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(testErr).Once()
 	e.On("Finish", mock.Anything).Once()
 
-	RegisterExecutorProvider("build-run-prepare-environment-failure-on-build-error", p)
+	RegisterExecutorProviderForTest(t, "build-run-prepare-environment-failure-on-build-error", p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -390,9 +376,7 @@ func TestPrepareEnvironmentFailure(t *testing.T) {
 }
 
 func TestJobFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -405,7 +389,7 @@ func TestJobFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", thrownErr).Once()
 
-	RegisterExecutorProvider("build-run-job-failure", provider)
+	RegisterExecutorProviderForTest(t, "build-run-job-failure", provider)
 
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
@@ -418,8 +402,7 @@ func TestJobFailure(t *testing.T) {
 		},
 	}
 
-	trace := new(MockJobTrace)
-	defer trace.AssertExpectations(t)
+	trace := NewMockJobTrace(t)
 	trace.On("Write", mock.Anything).Return(0, nil)
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Once()
@@ -434,10 +417,7 @@ func TestJobFailure(t *testing.T) {
 }
 
 func TestJobFailureOnExecutionTimeout(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
-
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -453,8 +433,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.JobResponse.RunnerInfo.Timeout = 1
 
-	trace := new(MockJobTrace)
-	defer trace.AssertExpectations(t)
+	trace := NewMockJobTrace(t)
 	trace.On("Write", mock.Anything).Return(0, nil)
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Twice()
@@ -471,9 +450,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 }
 
 func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -491,7 +468,7 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", errors.New("build fail")).Once()
 
-	RegisterExecutorProvider("build-run-run-failure", provider)
+	RegisterExecutorProviderForTest(t, "build-run-run-failure", provider)
 
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
@@ -508,9 +485,7 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 }
 
 func TestGetSourcesRunFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -540,9 +515,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 }
 
 func TestArtifactDownloadRunFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -569,9 +542,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 }
 
 func TestArtifactUploadRunFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -607,9 +578,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 }
 
 func TestArchiveCacheOnScriptFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -633,9 +602,7 @@ func TestArchiveCacheOnScriptFailure(t *testing.T) {
 }
 
 func TestUploadArtifactsOnArchiveCacheFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -663,9 +630,7 @@ func TestUploadArtifactsOnArchiveCacheFailure(t *testing.T) {
 }
 
 func TestRestoreCacheRunFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -691,9 +656,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 }
 
 func TestRunWrongAttempts(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer provider.AssertExpectations(t)
-	defer executor.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -719,25 +682,32 @@ func TestRunWrongAttempts(t *testing.T) {
 }
 
 func TestRunSuccessOnSecondAttempt(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 
 	// We run everything once
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	executor.On("Finish", mock.Anything).Twice()
-	executor.On("Cleanup").Twice()
+	executor.On("Finish", mock.Anything).Once()
+	executor.On("Cleanup").Once()
 
 	// Run script successfully
 	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 
-	executor.On("Run", mock.Anything).Return(nil)
-	executor.On("Run", mock.Anything).Return(errors.New("build fail")).Once()
-	executor.On("Run", mock.Anything).Return(nil)
+	var getSourcesRunAttempts int
+	executor.On("Run", mock.Anything).Return(func(cmd ExecutorCommand) error {
+		if cmd.Stage == BuildStageGetSources {
+			getSourcesRunAttempts++
+			if getSourcesRunAttempts == 1 {
+				return errors.New("build fail")
+			}
+		}
+		return nil
+	})
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+	assert.Equal(t, 2, getSourcesRunAttempts)
 }
 
 func TestDebugTrace(t *testing.T) {
@@ -1636,8 +1606,7 @@ func TestSkipBuildStageFeatureFlag(t *testing.T) {
 		"false",
 	}
 
-	s := new(MockShell)
-	defer s.AssertExpectations(t)
+	s := NewMockShell(t)
 
 	s.On("GetName").Return("skip-build-stage-shell")
 	RegisterShell(s)
@@ -1656,9 +1625,7 @@ func TestSkipBuildStageFeatureFlag(t *testing.T) {
 				},
 			}
 
-			e := &MockExecutor{}
-			defer e.AssertExpectations(t)
-
+			e := NewMockExecutor(t)
 			s.On("GenerateScript", mock.Anything, mock.Anything, mock.Anything).Return("script", ErrSkipBuildStage)
 			e.On("Shell").Return(&ShellScriptInfo{Shell: "skip-build-stage-shell"})
 
@@ -1743,8 +1710,7 @@ func TestWaitForTerminal(t *testing.T) {
 			srv := httptest.NewServer(build.Session.Handler())
 			defer srv.Close()
 
-			mockConn := terminal.MockConn{}
-			defer mockConn.AssertExpectations(t)
+			mockConn := terminal.NewMockConn(t)
 			mockConn.On("Close").Maybe().Return(nil)
 			// On Start upgrade the web socket connection and wait for the
 			// timeoutCh to exit, to mock real work made on the websocket.
@@ -1761,10 +1727,9 @@ func TestWaitForTerminal(t *testing.T) {
 					<-timeoutCh
 				}).Once()
 
-			mockTerminal := terminal.MockInteractiveTerminal{}
-			defer mockTerminal.AssertExpectations(t)
-			mockTerminal.On("Connect").Return(&mockConn, nil)
-			sess.SetInteractiveTerminal(&mockTerminal)
+			mockTerminal := terminal.NewMockInteractiveTerminal(t)
+			mockTerminal.On("Connect").Return(mockConn, nil)
+			sess.SetInteractiveTerminal(mockTerminal)
 
 			u := url.URL{
 				Scheme: "ws",
@@ -2410,12 +2375,8 @@ func TestBuild_getFeatureFlagInfo(t *testing.T) {
 func setupSuccessfulMockExecutor(
 	t *testing.T,
 	prepareFn func(options ExecutorPrepareOptions) error,
-) (*MockExecutorProvider, func()) {
-	executor, provider := setupMockExecutorAndProvider()
-	assertFn := func() {
-		executor.AssertExpectations(t)
-		provider.AssertExpectations(t)
-	}
+) *MockExecutorProvider {
+	executor, provider := setupMockExecutorAndProvider(t)
 
 	// We run everything once
 	executor.On("Prepare", mock.Anything).Return(prepareFn).Once()
@@ -2438,12 +2399,12 @@ func setupSuccessfulMockExecutor(
 		Return(nil).
 		Once()
 
-	return provider, assertFn
+	return provider
 }
 
-func setupMockExecutorAndProvider() (*MockExecutor, *MockExecutorProvider) {
-	e := new(MockExecutor)
-	p := new(MockExecutorProvider)
+func setupMockExecutorAndProvider(t *testing.T) (*MockExecutor, *MockExecutorProvider) {
+	e := NewMockExecutor(t)
+	p := NewMockExecutorProvider(t)
 
 	p.On("CanCreate").Return(true).Once()
 	p.On("GetDefaultShell").Return("bash").Once()
@@ -2456,7 +2417,7 @@ func setupMockExecutorAndProvider() (*MockExecutor, *MockExecutorProvider) {
 func registerExecutorWithSuccessfulBuild(t *testing.T, p *MockExecutorProvider, rc *RunnerConfig) *Build {
 	require.NotNil(t, rc)
 
-	RegisterExecutorProvider(t.Name(), p)
+	RegisterExecutorProviderForTest(t, t.Name(), p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	require.NoError(t, err)
@@ -2470,8 +2431,7 @@ func registerExecutorWithSuccessfulBuild(t *testing.T, p *MockExecutorProvider, 
 }
 
 func runSuccessfulMockBuild(t *testing.T, prepareFn func(options ExecutorPrepareOptions) error) *Build {
-	p, assertFn := setupSuccessfulMockExecutor(t, prepareFn)
-	defer assertFn()
+	p := setupSuccessfulMockExecutor(t, prepareFn)
 
 	build := registerExecutorWithSuccessfulBuild(t, p, new(RunnerConfig))
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
@@ -2485,20 +2445,14 @@ func TestSecretsResolving(t *testing.T) {
 		{Key: "key", Value: "value"},
 	}
 
-	setupFailureExecutorMocks := func(t *testing.T) (*MockExecutorProvider, func()) {
-		e := new(MockExecutor)
-		p := new(MockExecutorProvider)
+	setupFailureExecutorMocks := func(t *testing.T) *MockExecutorProvider {
+		p := NewMockExecutorProvider(t)
 
 		p.On("CanCreate").Return(true).Once()
 		p.On("GetDefaultShell").Return("bash").Once()
 		p.On("GetFeatures", mock.Anything).Return(nil).Once()
 
-		assertFn := func() {
-			e.AssertExpectations(t)
-			p.AssertExpectations(t)
-		}
-
-		return p, assertFn
+		return p
 	}
 
 	secrets := Secrets{
@@ -2510,14 +2464,14 @@ func TestSecretsResolving(t *testing.T) {
 	tests := map[string]struct {
 		secrets                 Secrets
 		resolverCreationError   error
-		prepareExecutorProvider func(t *testing.T) (*MockExecutorProvider, func())
+		prepareExecutorProvider func(t *testing.T) *MockExecutorProvider
 		returnVariables         JobVariables
 		resolvingError          error
 		expectedVariables       JobVariables
 		expectedError           error
 	}{
 		"secrets not present": {
-			prepareExecutorProvider: func(t *testing.T) (*MockExecutorProvider, func()) {
+			prepareExecutorProvider: func(t *testing.T) *MockExecutorProvider {
 				return setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
 			},
 			expectedError: nil,
@@ -2538,7 +2492,7 @@ func TestSecretsResolving(t *testing.T) {
 		},
 		"secrets resolved": {
 			secrets: secrets,
-			prepareExecutorProvider: func(t *testing.T) (*MockExecutorProvider, func()) {
+			prepareExecutorProvider: func(t *testing.T) *MockExecutorProvider {
 				return setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
 			},
 			returnVariables:   exampleVariables,
@@ -2558,13 +2512,10 @@ func TestSecretsResolving(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			secretsResolverMock := new(MockSecretsResolver)
-			defer secretsResolverMock.AssertExpectations(t)
+			secretsResolverMock := NewMockSecretsResolver(t)
+			p := tt.prepareExecutorProvider(t)
 
-			p, assertFn := tt.prepareExecutorProvider(t)
-			defer assertFn()
-
-			RegisterExecutorProvider(t.Name(), p)
+			RegisterExecutorProviderForTest(t, t.Name(), p)
 
 			successfulBuild, err := GetSuccessfulBuild()
 			require.NoError(t, err)
@@ -2637,9 +2588,7 @@ func TestSetTraceStatus(t *testing.T) {
 				Runner: &RunnerConfig{},
 			}
 
-			trace := new(MockJobTrace)
-			defer trace.AssertExpectations(t)
-
+			trace := NewMockJobTrace(t)
 			trace.On("IsStdout").Return(true)
 			trace.On("Write", mock.Anything).Return(0, nil)
 
@@ -3074,8 +3023,7 @@ func Test_logUsedImages(t *testing.T) {
 }
 
 func TestBuildStageMetrics(t *testing.T) {
-	p, assertFn := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
-	defer assertFn()
+	p := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
 
 	rc := &RunnerConfig{}
 	build := registerExecutorWithSuccessfulBuild(t, p, rc)
@@ -3109,9 +3057,7 @@ func TestBuildStageMetrics(t *testing.T) {
 }
 
 func TestBuildStageMetricsFailBuild(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider()
-	defer executor.AssertExpectations(t)
-	defer provider.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
 	executor.On("Cleanup").Once()
@@ -3124,7 +3070,7 @@ func TestBuildStageMetricsFailBuild(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", thrownErr).Once()
 
-	RegisterExecutorProvider(t.Name(), provider)
+	RegisterExecutorProviderForTest(t, t.Name(), provider)
 
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)

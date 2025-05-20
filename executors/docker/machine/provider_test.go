@@ -353,8 +353,7 @@ func TestMachineReuse(t *testing.T) {
 
 	p := newMachineProvider()
 
-	machineMock := &docker.MockMachine{}
-	defer machineMock.AssertExpectations(t)
+	machineMock := docker.NewMockMachine(t)
 	p.machine = machineMock
 
 	var blockCreatingMachineWg sync.WaitGroup
@@ -412,8 +411,7 @@ func TestMachineReuseWithContention(t *testing.T) {
 
 	p := newMachineProvider()
 
-	machineMock := &docker.MockMachine{}
-	defer machineMock.AssertExpectations(t)
+	machineMock := docker.NewMockMachine(t)
 	p.machine = machineMock
 
 	var listLock sync.Mutex
@@ -500,9 +498,8 @@ func TestMachineAcquireGrowthCapacity(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			machineMock := docker.MockMachine{}
-			defer machineMock.AssertExpectations(t)
-			p.machine = &machineMock
+			machineMock := docker.NewMockMachine(t)
+			p.machine = machineMock
 
 			var wg sync.WaitGroup
 			var concurrentCalls, maxConcurrentCalls int32

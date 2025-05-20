@@ -28,11 +28,8 @@ func TestGetPullPolicyFor(t *testing.T) {
 
 func TestMarkPullFailureFor(t *testing.T) {
 	t.Run("fails on fallback with no pull policies", func(t *testing.T) {
-		l := new(mockPullLogger)
-		defer l.AssertExpectations(t)
-
+		l := newMockPullLogger(t)
 		m := NewPullManager(map[string][]api.PullPolicy{}, l)
-		require.NotNil(t, m)
 
 		pullPolicy, err := m.GetPullPolicyFor(buildContainer)
 		assert.NoError(t, err)
@@ -50,9 +47,7 @@ func TestMarkPullFailureFor(t *testing.T) {
 	})
 
 	t.Run("succeeds on fallback with two pull policies", func(t *testing.T) {
-		l := new(mockPullLogger)
-		defer l.AssertExpectations(t)
-
+		l := newMockPullLogger(t)
 		m := newPullManagerForTest(t, l)
 
 		pullPolicy, err := m.GetPullPolicyFor(buildContainer)
@@ -76,7 +71,7 @@ func TestMarkPullFailureFor(t *testing.T) {
 	})
 
 	t.Run("succeeds on fallback with multiple images", func(t *testing.T) {
-		l := new(mockPullLogger)
+		l := newMockPullLogger(t)
 		m := newPullManagerForTest(t, l)
 
 		pullPolicy, err := m.GetPullPolicyFor(buildContainer)
@@ -119,7 +114,7 @@ func TestMarkPullFailureFor(t *testing.T) {
 	})
 
 	t.Run("fails after second fallback", func(t *testing.T) {
-		l := new(mockPullLogger)
+		l := newMockPullLogger(t)
 		m := newPullManagerForTest(t, l)
 
 		pullPolicy, err := m.GetPullPolicyFor(buildContainer)
@@ -154,8 +149,7 @@ func TestMarkPullFailureFor(t *testing.T) {
 }
 
 func TestMultipleImagesConcurrently(t *testing.T) {
-	l := new(mockPullLogger)
-	defer l.AssertExpectations(t)
+	l := newMockPullLogger(t)
 
 	imagePolicies := map[string][]api.PullPolicy{
 		"svc-0": {api.PullAlways, api.PullIfNotPresent, "", api.PullNever},
@@ -164,6 +158,11 @@ func TestMultipleImagesConcurrently(t *testing.T) {
 
 	m := NewPullManager(imagePolicies, l)
 	require.NotNil(t, m)
+
+	l.On("Infoln", `Attempt #1: Trying "IfNotPresent" pull policy for "some image" image for container "svc-0"`)
+	l.On("Infoln", `Attempt #2: Trying "" pull policy for "some image" image for container "svc-0"`)
+	l.On("Infoln", `Attempt #3: Trying "Never" pull policy for "some image" image for container "svc-0"`)
+	l.On("Infoln", `Attempt #1: Trying "Never" pull policy for "some image" image for container "svc-1"`)
 
 	for container, policies := range imagePolicies {
 		t.Run(container, func(t *testing.T) {
@@ -176,12 +175,6 @@ func TestMultipleImagesConcurrently(t *testing.T) {
 				curPolicy, err := m.GetPullPolicyFor(container)
 				assert.NoError(t, err)
 				assert.Equal(t, policy, curPolicy, "expected image %q to currently have the policy %q, but has %q", container, policy, curPolicy)
-
-				nextPolicy := policies[nrOfPolicies-1]
-				if i < nrOfPolicies-1 {
-					nextPolicy = imagePolicies[container][i+1]
-				}
-				l.On("Infoln", fmt.Sprintf("Attempt #%d: Trying %q pull policy for %q image for container %q", i+1, nextPolicy, "some image", container)).Once()
 
 				hasAnotherPolicy := m.UpdatePolicyForContainer(i, &ImagePullError{Image: "some image", Container: container, Message: "server down"})
 				if i == nrOfPolicies-1 {

@@ -13,8 +13,9 @@ import (
 )
 
 func TestMustRegisterFactory(t *testing.T) {
+	//nolint:unparam
 	factory := func(path string, data Data) (vault.AuthMethod, error) {
-		return new(vault.MockAuthMethod), nil
+		return vault.NewMockAuthMethod(t), nil
 	}
 
 	tests := map[string]struct {
@@ -62,7 +63,7 @@ func TestGetFactory(t *testing.T) {
 
 	require.NotPanics(t, func() {
 		newMockedAuthMethodFactory := func(path string, data Data) (vault.AuthMethod, error) {
-			return new(vault.MockAuthMethod), nil
+			return vault.NewMockAuthMethod(t), nil
 		}
 
 		MustRegisterFactory("test-auth", newMockedAuthMethodFactory)

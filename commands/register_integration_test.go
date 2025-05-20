@@ -58,8 +58,7 @@ func TestAccessLevelSetting(t *testing.T) {
 
 	for testName, testCase := range tests {
 		t.Run(testName, func(t *testing.T) {
-			network := new(common.MockNetwork)
-			defer network.AssertExpectations(t)
+			network := common.NewMockNetwork(t)
 
 			if !testCase.failureExpected {
 				parametersMocker := mock.MatchedBy(func(parameters common.RegisterRunnerParameters) bool {
@@ -184,8 +183,7 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			network := new(common.MockNetwork)
-			defer network.AssertExpectations(t)
+			network := common.NewMockNetwork(t)
 
 			network.On("VerifyRunner", mock.MatchedBy(tc.expectedParams), mock.MatchedBy(isValidToken)).
 				Return(&common.VerifyRunnerResponse{
@@ -234,7 +232,7 @@ func TestAskRunnerUsingRunnerTokenOnRegistrationTokenOverridingForbiddenDefaults
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			network := new(common.MockNetwork)
+			network := common.NewMockNetwork(t)
 			network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
 				Return(&common.VerifyRunnerResponse{
 					ID:    1,
@@ -291,10 +289,7 @@ func TestAskRunnerUsingRunnerTokenOverridingForbiddenDefaults(t *testing.T) {
 			removeHooksFn := helpers.MakeFatalToPanic()
 			defer removeHooksFn()
 
-			network := new(common.MockNetwork)
-			network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
-				Panic("VerifyRunner should not be called")
-
+			network := common.NewMockNetwork(t)
 			answers := make([]string, 4)
 			arguments := append(
 				executorCmdLineArgs(t, "shell"),
@@ -561,8 +556,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			network := new(common.MockNetwork)
-			defer network.AssertExpectations(t)
+			network := common.NewMockNetwork(t)
 
 			network.On("RegisterRunner", mock.Anything, mock.MatchedBy(tc.expectedParams)).
 				Return(&common.RegisterRunnerResponse{
@@ -898,8 +892,7 @@ shutdown_timeout = 0
 			cfgTpl, cleanup := commands.PrepareConfigurationTemplateFile(t, tt.configTemplate)
 			defer cleanup()
 
-			network := new(common.MockNetwork)
-			defer network.AssertExpectations(t)
+			network := common.NewMockNetwork(t)
 
 			args := []string{
 				"--shell", shells.SNPwsh,
@@ -974,8 +967,7 @@ func TestUnregisterOnFailure(t *testing.T) {
 	for testName, testCase := range tests {
 		t.Run(testName, func(t *testing.T) {
 			runnerUICreated := strings.HasPrefix(testCase.token, "glrt-")
-			network := new(common.MockNetwork)
-			defer network.AssertExpectations(t)
+			network := common.NewMockNetwork(t)
 
 			if runnerUICreated {
 				network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
@@ -1056,8 +1048,7 @@ func useTempConfigFile(t *testing.T, arguments []string) ([]string, func()) {
 }
 
 func TestNameIsNotRequestedOnServerFailureRegisterCommandWithAuthToken(t *testing.T) {
-	network := new(common.MockNetwork)
-	defer network.AssertExpectations(t)
+	network := common.NewMockNetwork(t)
 
 	network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).Return(nil).Once()
 
@@ -1261,8 +1252,7 @@ func TestRegisterCommand(t *testing.T) {
 				t.Skip()
 			}
 
-			network := new(common.MockNetwork)
-			defer network.AssertExpectations(t)
+			network := common.NewMockNetwork(t)
 
 			if strings.HasPrefix(tc.token, "glrt-") {
 				network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
@@ -1297,15 +1287,14 @@ func TestRegisterWithAuthenticationTokenTwice(t *testing.T) {
 		"--name", "test-runner",
 	}
 
-	network := new(common.MockNetwork)
-	defer network.AssertExpectations(t)
+	network := common.NewMockNetwork(t)
 
 	network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
 		Return(&common.VerifyRunnerResponse{
 			ID:    12345,
 			Token: token,
 		}).
-		Once()
+		Times(2)
 
 	config, output, err := testRegisterCommandRun(t, network, []kv{}, "", arguments...)
 	require.NoError(t, err)
@@ -1355,8 +1344,7 @@ func TestRegisterTokenExpiresAt(t *testing.T) {
 
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
-			network := new(common.MockNetwork)
-			defer network.AssertExpectations(t)
+			network := common.NewMockNetwork(t)
 
 			if strings.HasPrefix(tc.token, "glrt-") {
 				network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).

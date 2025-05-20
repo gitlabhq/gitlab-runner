@@ -94,9 +94,7 @@ func TestResolver_Resolve(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			serviceMock := new(service.MockAzureKeyVault)
-			defer serviceMock.AssertExpectations(t)
-
+			serviceMock := service.NewMockAzureKeyVault(t)
 			if tt.assertVaultServiceMock != nil {
 				tt.assertVaultServiceMock(serviceMock)
 			}

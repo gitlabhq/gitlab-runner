@@ -20,32 +20,28 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/path"
 )
 
-func newDebugLoggerMock() *mockDebugLogger {
-	loggerMock := new(mockDebugLogger)
-	loggerMock.On("Debugln", mock.Anything)
-
-	return loggerMock
-}
-
 func TestErrVolumeAlreadyDefined(t *testing.T) {
 	err := NewErrVolumeAlreadyDefined("test-path")
 	assert.EqualError(t, err, `volume for container path "test-path" is already defined`)
 }
 
 func TestNewDefaultManager(t *testing.T) {
-	logger := newDebugLoggerMock()
+	logger := newMockDebugLogger(t)
 
 	m := NewManager(logger, nil, nil, ManagerConfig{}, nil)
 	assert.IsType(t, &manager{}, m)
 }
 
-func newDefaultManager(config ManagerConfig) *manager {
+func newDefaultManager(t *testing.T, config ManagerConfig) *manager {
 	b := &common.Build{
 		Runner: &common.RunnerConfig{},
 	}
 
+	loggerMock := newMockDebugLogger(t)
+	loggerMock.On("Debugln", mock.Anything).Maybe()
+
 	m := &manager{
-		logger:         newDebugLoggerMock(),
+		logger:         loggerMock,
 		config:         config,
 		managedVolumes: make(map[string]bool),
 		labeler:        labels.NewLabeler(b),
@@ -54,12 +50,12 @@ func newDefaultManager(config ManagerConfig) *manager {
 	return m
 }
 
-func addUnixParser(manager *manager) *parser.MockParser {
-	return addParser(manager, path.NewUnixPath())
+func addUnixParser(t *testing.T, manager *manager) *parser.MockParser {
+	return addParser(t, manager, path.NewUnixPath())
 }
 
-func addParser(manager *manager, p parser.Path) *parser.MockParser {
-	parserMock := new(parser.MockParser)
+func addParser(t *testing.T, manager *manager, p parser.Path) *parser.MockParser {
+	parserMock := parser.NewMockParser(t)
 	parserMock.On("Path").Return(p)
 
 	manager.parser = parserMock
@@ -127,10 +123,9 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 				BasePath: testCase.basePath,
 			}
 
-			m := newDefaultManager(config)
+			m := newDefaultManager(t, config)
 
-			volumeParser := addUnixParser(m)
-			defer volumeParser.AssertExpectations(t)
+			volumeParser := addUnixParser(t, m)
 
 			volumeParser.On("ParseVolume", existingBinding).
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
@@ -203,10 +198,9 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 				DisableCache: true,
 			}
 
-			m := newDefaultManager(config)
+			m := newDefaultManager(t, config)
 
-			volumeParser := addUnixParser(m)
-			defer volumeParser.AssertExpectations(t)
+			volumeParser := addUnixParser(t, m)
 
 			volumeParser.On("ParseVolume", "/host:/duplicated").
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
@@ -295,10 +289,9 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 				UniqueName:   testCase.uniqueName,
 			}
 
-			m := newDefaultManager(config)
+			m := newDefaultManager(t, config)
 
-			volumeParser := addUnixParser(m)
-			defer volumeParser.AssertExpectations(t)
+			volumeParser := addUnixParser(t, m)
 
 			volumeParser.On("ParseVolume", existingBinding).
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
@@ -371,15 +364,10 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 				DisableCache: false,
 			}
 
-			m := newDefaultManager(config)
-			volumeParser := addUnixParser(m)
-			mClient := new(docker.MockClient)
+			m := newDefaultManager(t, config)
+			volumeParser := addUnixParser(t, m)
+			mClient := docker.NewMockClient(t)
 			m.client = mClient
-
-			defer func() {
-				mClient.AssertExpectations(t)
-				volumeParser.AssertExpectations(t)
-			}()
 
 			volumeParser.On("ParseVolume", existingBinding).
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
@@ -422,15 +410,10 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_WithError(t *t
 		UniqueName: "unique",
 	}
 
-	m := newDefaultManager(config)
-	volumeParser := addUnixParser(m)
-	mClient := new(docker.MockClient)
+	m := newDefaultManager(t, config)
+	volumeParser := addUnixParser(t, m)
+	mClient := docker.NewMockClient(t)
 	m.client = mClient
-
-	defer func() {
-		mClient.AssertExpectations(t)
-		volumeParser.AssertExpectations(t)
-	}()
 
 	mClient.On(
 		"VolumeCreate",
@@ -452,10 +435,9 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_WithError(t *t
 
 func TestDefaultManager_CreateUserVolumes_ParserError(t *testing.T) {
 	testErr := errors.New("parser-test-error")
-	m := newDefaultManager(ManagerConfig{})
+	m := newDefaultManager(t, ManagerConfig{})
 
-	volumeParser := new(parser.MockParser)
-	defer volumeParser.AssertExpectations(t)
+	volumeParser := parser.NewMockParser(t)
 	m.parser = volumeParser
 
 	volumeParser.On("ParseVolume", "volume").
@@ -510,15 +492,10 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 				TemporaryName: "temporary",
 			}
 
-			m := newDefaultManager(config)
-			volumeParser := addUnixParser(m)
-			mClient := new(docker.MockClient)
+			m := newDefaultManager(t, config)
+			volumeParser := addUnixParser(t, m)
+			mClient := docker.NewMockClient(t)
 			m.client = mClient
-
-			defer func() {
-				mClient.AssertExpectations(t)
-				volumeParser.AssertExpectations(t)
-			}()
 
 			volumeParser.On("ParseVolume", existingBinding).
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
@@ -592,12 +569,11 @@ func TestDefaultManager_RemoveTemporary(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			mClient := new(docker.MockClient)
-			defer mClient.AssertExpectations(t)
+			mClient := docker.NewMockClient(t)
 
 			testCase.clientAssertions(mClient)
 
-			m := newDefaultManager(ManagerConfig{})
+			m := newDefaultManager(t, ManagerConfig{})
 			m.client = mClient
 			m.temporaryVolumes = testCase.temporaryVolumes
 

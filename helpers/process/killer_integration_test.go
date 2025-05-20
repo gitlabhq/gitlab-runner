@@ -30,7 +30,7 @@ func newKillerWithLoggerAndCommand(
 ) (process.Killer, *process.MockLogger, process.Commander, func(), *dumbTestLogger) {
 	t.Helper()
 
-	loggerMock := new(process.MockLogger)
+	loggerMock := process.NewMockLogger(t)
 	sleepBinary := prepareTestBinary(t)
 
 	args := []string{duration}

@@ -69,8 +69,7 @@ func TestNewVault(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			authMethodMock := new(vault.MockAuthMethod)
-			defer authMethodMock.AssertExpectations(t)
+			authMethodMock := vault.NewMockAuthMethod(t)
 
 			authMethodFactory := func(path string, data auth_methods.Data) (vault.AuthMethod, error) {
 				assert.Equal(t, authPath, path)
@@ -82,8 +81,7 @@ func TestNewVault(t *testing.T) {
 				auth_methods.MustRegisterFactory(t.Name(), authMethodFactory)
 			})
 
-			clientMock := new(vault.MockClient)
-			defer clientMock.AssertExpectations(t)
+			clientMock := vault.NewMockClient(t)
 
 			oldNewVaultClient := newVaultClient
 			defer func() {
@@ -96,9 +94,7 @@ func TestNewVault(t *testing.T) {
 				return clientMock, tt.vaultClientCreationError
 			}
 
-			authMock := new(MockAuth)
-			defer authMock.AssertExpectations(t)
-
+			authMock := NewMockAuth(t)
 			tt.assertAuthMock(t.Name(), authMock)
 			tt.assertClientMock(clientMock, authMethodMock)
 
@@ -186,11 +182,8 @@ func TestDefaultVault_GetField(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(vault.MockClient)
-			defer clientMock.AssertExpectations(t)
-
-			secretEngineMock := new(vault.MockSecretEngine)
-			defer secretEngineMock.AssertExpectations(t)
+			clientMock := vault.NewMockClient(t)
+			secretEngineMock := vault.NewMockSecretEngine(t)
 
 			tt.assertSecretEngineMock(secretEngineMock)
 
@@ -204,14 +197,10 @@ func TestDefaultVault_GetField(t *testing.T) {
 				secret_engines.MustRegisterFactory(t.Name(), secretEngineFactory)
 			})
 
-			engineMock := new(MockEngine)
-			defer engineMock.AssertExpectations(t)
-
+			engineMock := NewMockEngine(t)
 			tt.assertEngineMock(t.Name(), engineMock)
 
-			secretMock := new(MockSecret)
-			defer secretMock.AssertExpectations(t)
-
+			secretMock := NewMockSecret(t)
 			tt.assertSecretMock(secretMock)
 
 			service := &defaultVault{
@@ -281,11 +270,8 @@ func TestDefaultVault_Put(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(vault.MockClient)
-			defer clientMock.AssertExpectations(t)
-
-			secretEngineMock := new(vault.MockSecretEngine)
-			defer secretEngineMock.AssertExpectations(t)
+			clientMock := vault.NewMockClient(t)
+			secretEngineMock := vault.NewMockSecretEngine(t)
 
 			tt.assertSecretEngineMock(secretEngineMock)
 
@@ -299,14 +285,10 @@ func TestDefaultVault_Put(t *testing.T) {
 				secret_engines.MustRegisterFactory(t.Name(), secretEngineFactory)
 			})
 
-			engineMock := new(MockEngine)
-			defer engineMock.AssertExpectations(t)
-
+			engineMock := NewMockEngine(t)
 			tt.assertEngineMock(t.Name(), engineMock)
 
-			secretMock := new(MockSecret)
-			defer secretMock.AssertExpectations(t)
-
+			secretMock := NewMockSecret(t)
 			tt.assertSecretMock(secretMock)
 
 			service := &defaultVault{
@@ -371,11 +353,8 @@ func TestDefaultVault_Delete(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(vault.MockClient)
-			defer clientMock.AssertExpectations(t)
-
-			secretEngineMock := new(vault.MockSecretEngine)
-			defer secretEngineMock.AssertExpectations(t)
+			clientMock := vault.NewMockClient(t)
+			secretEngineMock := vault.NewMockSecretEngine(t)
 
 			tt.assertSecretEngineMock(secretEngineMock)
 
@@ -389,14 +368,10 @@ func TestDefaultVault_Delete(t *testing.T) {
 				secret_engines.MustRegisterFactory(t.Name(), secretEngineFactory)
 			})
 
-			engineMock := new(MockEngine)
-			defer engineMock.AssertExpectations(t)
-
+			engineMock := NewMockEngine(t)
 			tt.assertEngineMock(t.Name(), engineMock)
 
-			secretMock := new(MockSecret)
-			defer secretMock.AssertExpectations(t)
-
+			secretMock := NewMockSecret(t)
 			tt.assertSecretMock(secretMock)
 
 			service := &defaultVault{

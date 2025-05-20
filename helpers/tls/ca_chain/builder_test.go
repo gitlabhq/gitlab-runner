@@ -130,7 +130,7 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 
 	tests := map[string]struct {
 		chains              [][]*x509.Certificate
-		setupResolverMock   func(t *testing.T) (resolver, func())
+		setupResolverMock   func(t *testing.T) resolver
 		resolveFullChain    bool
 		expectedError       string
 		expectedChainLength int
@@ -147,18 +147,14 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 		},
 		"error on chain resolving": {
 			chains: [][]*x509.Certificate{{testCertificate}},
-			setupResolverMock: func(t *testing.T) (resolver, func()) {
-				mock := new(mockResolver)
-				cleanup := func() {
-					mock.AssertExpectations(t)
-				}
-
+			setupResolverMock: func(t *testing.T) resolver {
+				mock := newMockResolver(t)
 				mock.
 					On("Resolve", []*x509.Certificate{testCertificate}).
 					Return(nil, testError).
 					Once()
 
-				return mock, cleanup
+				return mock
 			},
 			resolveFullChain: true,
 			expectedError: "error while fetching certificates into the CA Chain: couldn't resolve certificates " +
@@ -167,18 +163,14 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 		},
 		"certificates chain prepared properly": {
 			chains: [][]*x509.Certificate{{testCertificate}},
-			setupResolverMock: func(t *testing.T) (resolver, func()) {
-				mock := new(mockResolver)
-				cleanup := func() {
-					mock.AssertExpectations(t)
-				}
-
+			setupResolverMock: func(t *testing.T) resolver {
+				mock := newMockResolver(t)
 				mock.
 					On("Resolve", []*x509.Certificate{testCertificate}).
 					Return([]*x509.Certificate{testCertificate, testCACertificate}, nil).
 					Once()
 
-				return mock, cleanup
+				return mock
 			},
 			resolveFullChain:    true,
 			expectedChainLength: 2,
@@ -197,10 +189,7 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 			builder := NewBuilder(logrus.StandardLogger(), tc.resolveFullChain).(*defaultBuilder)
 
 			if tc.setupResolverMock != nil {
-				resolverMock, cleanup := tc.setupResolverMock(t)
-				defer cleanup()
-
-				builder.resolver = resolverMock
+				builder.resolver = tc.setupResolverMock(t)
 			}
 
 			TLS := new(tls.ConnectionState)

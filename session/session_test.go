@@ -23,14 +23,12 @@ func TestExecSuccessful(t *testing.T) {
 
 	session.Token = validToken
 
-	mockTerminalConn := new(terminal.MockConn)
-	defer mockTerminalConn.AssertExpectations(t)
+	mockTerminalConn := terminal.NewMockConn(t)
 
 	mockTerminalConn.On("Start", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Once()
 	mockTerminalConn.On("Close").Return(nil).Once()
 
-	mockTerminal := new(terminal.MockInteractiveTerminal)
-	defer mockTerminal.AssertExpectations(t)
+	mockTerminal := terminal.NewMockInteractiveTerminal(t)
 
 	mockTerminal.On("Connect").Return(mockTerminalConn, nil).Once()
 
@@ -100,11 +98,8 @@ func TestExecFailedRequest(t *testing.T) {
 			require.NoError(t, err)
 			session.Token = validToken
 
-			mockTerminalConn := new(terminal.MockConn)
-			defer mockTerminalConn.AssertExpectations(t)
-
-			mockTerminal := new(terminal.MockInteractiveTerminal)
-			defer mockTerminal.AssertExpectations(t)
+			mockTerminalConn := terminal.NewMockConn(t)
+			mockTerminal := terminal.NewMockInteractiveTerminal(t)
 
 			if c.authorization == validToken && c.isWebsocketUpgrade && c.attachTerminal {
 				mockTerminal.On("Connect").Return(mockTerminalConn, c.connectionErr).Once()
@@ -140,11 +135,8 @@ func TestDoNotAllowMultipleConnections(t *testing.T) {
 	require.NoError(t, err)
 	session.Token = validToken
 
-	mockTerminalConn := new(terminal.MockConn)
-	defer mockTerminalConn.AssertExpectations(t)
-
-	mockTerminal := new(terminal.MockInteractiveTerminal)
-	defer mockTerminal.AssertExpectations(t)
+	mockTerminalConn := terminal.NewMockConn(t)
+	mockTerminal := terminal.NewMockInteractiveTerminal(t)
 	mockTerminal.On("Connect").Return(mockTerminalConn, nil).Once()
 
 	session.SetInteractiveTerminal(mockTerminal)
@@ -171,7 +163,7 @@ func TestConnected(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.False(t, sess.Connected())
-	sess.terminalConn = &terminal.MockConn{}
+	sess.terminalConn = terminal.NewMockConn(t)
 	assert.True(t, sess.Connected())
 }
 
@@ -183,8 +175,7 @@ func TestKill(t *testing.T) {
 	err = sess.Kill()
 	assert.NoError(t, err)
 
-	mockConn := new(terminal.MockConn)
-	defer mockConn.AssertExpectations(t)
+	mockConn := terminal.NewMockConn(t)
 	mockConn.On("Close").Return(nil).Once()
 
 	sess.terminalConn = mockConn
@@ -198,8 +189,7 @@ func TestKillFailedToClose(t *testing.T) {
 	sess, err := NewSession(nil)
 	require.NoError(t, err)
 
-	mockConn := new(terminal.MockConn)
-	defer mockConn.AssertExpectations(t)
+	mockConn := terminal.NewMockConn(t)
 	mockConn.On("Close").Return(errors.New("some error")).Once()
 
 	sess.terminalConn = mockConn
@@ -227,8 +217,7 @@ func TestCloseTerminalConn(t *testing.T) {
 		commands: []string{"command", "-c", "random"},
 	}
 
-	mockConn := new(terminal.MockConn)
-	defer mockConn.AssertExpectations(t)
+	mockConn := terminal.NewMockConn(t)
 	mockConn.On("Close").Return(nil).Once()
 
 	sess, err := NewSession(nil)
@@ -281,8 +270,7 @@ func TestProxy(t *testing.T) {
 			session, err := NewSession(nil)
 			require.NoError(t, err)
 			session.Token = validToken
-			mockConn := new(proxy.MockRequester)
-			defer mockConn.AssertExpectations(t)
+			mockConn := proxy.NewMockRequester(t)
 
 			var connectionHandler proxy.Requester
 			if c.defineConnectionHandler {

@@ -197,6 +197,15 @@ func RegisterExecutorProvider(executor string, provider ExecutorProvider) {
 	executorProviders[executor] = provider
 }
 
+// RegisterExecutorProviderForTest is like RegisterExecutorProvider, but unregisters the provider on test cleanup.
+func RegisterExecutorProviderForTest(t interface{ Cleanup(func()) }, executor string, provider ExecutorProvider) {
+	RegisterExecutorProvider(executor, provider)
+
+	t.Cleanup(func() {
+		delete(executorProviders, executor)
+	})
+}
+
 // GetExecutorProvider returns an ExecutorProvider by name from the registered ones.
 func GetExecutorProvider(executor string) ExecutorProvider {
 	if executorProviders == nil {

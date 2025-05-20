@@ -20,7 +20,7 @@ import (
 )
 
 func TestNewDockerLinuxSetter(t *testing.T) {
-	got := NewDockerLinuxSetter(&docker.MockClient{}, logrus.New(), &types.ImageInspect{})
+	got := NewDockerLinuxSetter(docker.NewMockClient(t), logrus.New(), &types.ImageInspect{})
 	assert.IsType(t, &dockerLinuxSetter{}, got)
 }
 
@@ -144,11 +144,8 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			mClient := new(docker.MockClient)
-			defer mClient.AssertExpectations(t)
-
-			mWaiter := new(wait.MockWaiter)
-			defer mWaiter.AssertExpectations(t)
+			mClient := docker.NewMockClient(t)
+			mWaiter := wait.NewMockWaiter(t)
 
 			tt.clientAssertions(mClient)
 			tt.waitAssertions(mWaiter)

@@ -328,8 +328,7 @@ func TestAkeyless(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			m := &mockAkeylessAPIClient{}
-			defer m.AssertExpectations(t)
+			m := newMockAkeylessAPIClient(t)
 
 			if tt.itemType != "" {
 				m.

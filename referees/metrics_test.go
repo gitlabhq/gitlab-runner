@@ -24,7 +24,7 @@ import (
 )
 
 func TestNewMetricsRefereeNoConfig(t *testing.T) {
-	mockExecutor := new(MockMetricsExecutor)
+	mockExecutor := NewMockMetricsExecutor(t)
 	config := &Config{}
 	log := logrus.WithField("test", 1)
 	mr := newMetricsReferee(mockExecutor, config, log)
@@ -47,7 +47,7 @@ func TestNewMetricsRefereeImproperExecutor(t *testing.T) {
 }
 
 func TestNewMetricsRefereeBadPrometheusAddress(t *testing.T) {
-	mockExecutor := new(MockMetricsExecutor)
+	mockExecutor := NewMockMetricsExecutor(t)
 	config := &Config{
 		Metrics: &MetricsRefereeConfig{
 			PrometheusAddress: "*(^&*^*(34f34f34fg3rfg3rgfY&*^^%*&^*(^(*",
@@ -62,8 +62,7 @@ func TestNewMetricsRefereeBadPrometheusAddress(t *testing.T) {
 }
 
 func TestNewMetricsReferee(t *testing.T) {
-	mockExecutor := new(MockMetricsExecutor)
-	defer mockExecutor.AssertExpectations(t)
+	mockExecutor := NewMockMetricsExecutor(t)
 
 	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
@@ -106,8 +105,7 @@ func newTestMetricsRefereeWithConfig(
 }
 
 func TestMetricsRefereeExecuteParseError(t *testing.T) {
-	mockExecutor := new(MockMetricsExecutor)
-	defer mockExecutor.AssertExpectations(t)
+	mockExecutor := NewMockMetricsExecutor(t)
 
 	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
@@ -125,8 +123,7 @@ func TestMetricsRefereeExecuteParseError(t *testing.T) {
 }
 
 func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
-	mockExecutor := new(MockMetricsExecutor)
-	defer mockExecutor.AssertExpectations(t)
+	mockExecutor := NewMockMetricsExecutor(t)
 
 	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
@@ -134,7 +131,7 @@ func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
 	require.NotNil(t, mr)
 
 	ctx := context.Background()
-	prometheusAPI := new(mockPrometheusAPI)
+	prometheusAPI := newMockPrometheusAPI(t)
 	matrix := model.Matrix([]*model.SampleStream{})
 	prometheusAPI.
 		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
@@ -146,19 +143,17 @@ func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
 }
 
 func TestMetricsRefereeExecuteQueryRangeNonMatrixReturn(t *testing.T) {
-	mockExecutor := new(MockMetricsExecutor)
-	defer mockExecutor.AssertExpectations(t)
-
+	mockExecutor := NewMockMetricsExecutor(t)
 	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
 	mr := newDefaultTestMetricsReferee(t, mockExecutor)
 	require.NotNil(t, mr)
 
 	ctx := context.Background()
-	prometheusAPI := new(mockPrometheusAPI)
+	prometheusAPI := newMockPrometheusAPI(t)
 	prometheusAPI.
 		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
-		Return(new(mockPrometheusValue), prometheusV1.Warnings([]string{}), nil)
+		Return(newMockPrometheusValue(t), prometheusV1.Warnings([]string{}), nil)
 
 	mr.prometheusAPI = prometheusAPI
 	_, err := mr.Execute(ctx, time.Now(), time.Now())
@@ -166,9 +161,7 @@ func TestMetricsRefereeExecuteQueryRangeNonMatrixReturn(t *testing.T) {
 }
 
 func TestMetricsRefereeExecuteQueryRangeResultEmpty(t *testing.T) {
-	mockExecutor := new(MockMetricsExecutor)
-	defer mockExecutor.AssertExpectations(t)
-
+	mockExecutor := NewMockMetricsExecutor(t)
 	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
 	mr := newDefaultTestMetricsReferee(t, mockExecutor)
@@ -176,7 +169,7 @@ func TestMetricsRefereeExecuteQueryRangeResultEmpty(t *testing.T) {
 
 	matrix := model.Matrix([]*model.SampleStream{})
 	ctx := context.Background()
-	prometheusAPI := new(mockPrometheusAPI)
+	prometheusAPI := newMockPrometheusAPI(t)
 	prometheusAPI.
 		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
 		Return(matrix, prometheusV1.Warnings([]string{}), nil)
@@ -245,9 +238,7 @@ func TestMetricsRefereeExecute(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	mockExecutor := new(MockMetricsExecutor)
-	defer mockExecutor.AssertExpectations(t)
-
+	mockExecutor := NewMockMetricsExecutor(t)
 	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
 	config := &Config{

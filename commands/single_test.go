@@ -35,8 +35,7 @@ func TestSingleRunnerSigquit(t *testing.T) {
 		time.Sleep(time.Second)
 	}
 
-	single, cleanup := mockingExecutionStack(t, "test-sigquit", 1, job)
-	defer cleanup()
+	single := mockingExecutionStack(t, "test-sigquit", 1, job)
 
 	sendQuitSignal = func() {
 		single.interruptSignals <- syscall.SIGQUIT
@@ -48,8 +47,7 @@ func TestSingleRunnerSigquit(t *testing.T) {
 func TestSingleRunnerMaxBuilds(t *testing.T) {
 	maxBuilds := 7
 
-	single, cleanup := mockingExecutionStack(t, "test-max-build", maxBuilds, nil)
-	defer cleanup()
+	single := mockingExecutionStack(t, "test-max-build", maxBuilds, nil)
 
 	single.Execute(nil)
 }
@@ -107,11 +105,11 @@ func mockingExecutionStack(
 	executorName string,
 	maxBuilds int,
 	job jobSimulation,
-) (*RunSingleCommand, func()) {
+) *RunSingleCommand {
 	// mocking the whole stack
-	e := common.MockExecutor{}
-	p := common.MockExecutorProvider{}
-	mockNetwork := common.MockNetwork{}
+	e := common.NewMockExecutor(t)
+	p := common.NewMockExecutorProvider(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	// Network
 	jobData := common.JobResponse{}
@@ -130,8 +128,8 @@ func mockingExecutionStack(
 	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil).Times(maxBuilds + 1)
 
-	p.On("Create").Return(&e).Times(maxBuilds)
-	p.On("Acquire", mock.Anything).Return(&common.MockExecutorData{}, nil).Times(maxBuilds)
+	p.On("Create").Return(e).Times(maxBuilds)
+	p.On("Acquire", mock.Anything).Return(common.NewMockExecutorData(t), nil).Times(maxBuilds)
 	p.On("Release", mock.Anything, mock.Anything).Return(nil).Times(maxBuilds)
 
 	// Executor
@@ -143,16 +141,12 @@ func mockingExecutionStack(
 	e.On("Shell").Return(&common.ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", mock.Anything).Return(nil)
 
-	common.RegisterExecutorProvider(executorName, &p)
+	common.RegisterExecutorProviderForTest(t, executorName, p)
 
-	single := newRunSingleCommand(executorName, &mockNetwork)
+	single := newRunSingleCommand(executorName, mockNetwork)
 	single.MaxBuilds = maxBuilds
-	cleanup := func() {
-		e.AssertExpectations(t)
-		p.AssertExpectations(t)
-		mockNetwork.AssertExpectations(t)
-		cancel()
-	}
 
-	return single, cleanup
+	t.Cleanup(cancel)
+
+	return single
 }

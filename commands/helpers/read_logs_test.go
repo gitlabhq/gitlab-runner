@@ -87,13 +87,11 @@ func TestNewReadLogsCommandLines(t *testing.T) {
 
 	cmd := newReadLogsCommand()
 
-	mockLogOutputWriter := new(mockLogOutputWriter)
-	defer mockLogOutputWriter.AssertExpectations(t)
+	mockLogOutputWriter := newMockLogOutputWriter(t)
 	_, wg := setupMockLogOutputWriterFromLines(mockLogOutputWriter, lines, 0)
 	cmd.logOutputWriter = mockLogOutputWriter
 
-	mockLogStreamProvider := new(mockLogStreamProvider)
-	defer mockLogStreamProvider.AssertExpectations(t)
+	mockLogStreamProvider := newMockLogStreamProvider(t)
 	mockLogStreamProvider.On("Open").Return(f, nil)
 	cmd.logStreamProvider = mockLogStreamProvider
 
@@ -144,13 +142,11 @@ func TestNewReadLogsCommandWriteLinesWithDelay(t *testing.T) {
 
 	cmd := newReadLogsCommand()
 
-	mockLogOutputWriter := new(mockLogOutputWriter)
-	defer mockLogOutputWriter.AssertExpectations(t)
+	mockLogOutputWriter := newMockLogOutputWriter(t)
 	offset, wg := setupMockLogOutputWriterFromLines(mockLogOutputWriter, lines1, 0)
 	cmd.logOutputWriter = mockLogOutputWriter
 
-	mockLogStreamProvider := new(mockLogStreamProvider)
-	defer mockLogStreamProvider.AssertExpectations(t)
+	mockLogStreamProvider := newMockLogStreamProvider(t)
 	mockLogStreamProvider.On("Open").Return(f, nil)
 	cmd.logStreamProvider = mockLogStreamProvider
 
@@ -181,8 +177,7 @@ func TestSplitLinesAccordingToBufferSize(t *testing.T) {
 	cmd := newReadLogsCommand()
 	cmd.readerBufferSize = 16 // this is the minimum allowed buffer size by bufio.NewReader
 
-	mockLogOutputWriter := new(mockLogOutputWriter)
-	defer mockLogOutputWriter.AssertExpectations(t)
+	mockLogOutputWriter := newMockLogOutputWriter(t)
 
 	var wg sync.WaitGroup
 	wg.Add(5)
@@ -196,8 +191,7 @@ func TestSplitLinesAccordingToBufferSize(t *testing.T) {
 
 	cmd.logOutputWriter = mockLogOutputWriter
 
-	mockLogStreamProvider := new(mockLogStreamProvider)
-	defer mockLogStreamProvider.AssertExpectations(t)
+	mockLogStreamProvider := newMockLogStreamProvider(t)
 	mockLogStreamProvider.On("Open").Return(f, nil)
 	cmd.logStreamProvider = mockLogStreamProvider
 
@@ -222,8 +216,7 @@ func TestSeek(t *testing.T) {
 	cmd.Offset = 16
 	cmd.readerBufferSize = 16 // this is the minimum allowed buffer size by bufio.NewReader
 
-	mockLogOutputWriter := new(mockLogOutputWriter)
-	defer mockLogOutputWriter.AssertExpectations(t)
+	mockLogOutputWriter := newMockLogOutputWriter(t)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -232,8 +225,7 @@ func TestSeek(t *testing.T) {
 	mockLogOutputWriter.On("Write", fmt.Sprintf("32 %s\n", strings.Repeat("1", 16))).Run(wgDone)
 	cmd.logOutputWriter = mockLogOutputWriter
 
-	mockLogStreamProvider := new(mockLogStreamProvider)
-	defer mockLogStreamProvider.AssertExpectations(t)
+	mockLogStreamProvider := newMockLogStreamProvider(t)
 	mockLogStreamProvider.On("Open").Return(f, nil)
 	cmd.logStreamProvider = mockLogStreamProvider
 

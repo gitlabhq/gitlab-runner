@@ -10,10 +10,8 @@ import (
 )
 
 func Test_unixKiller_getPID(t *testing.T) {
-	mCmd := new(MockCommander)
-	defer mCmd.AssertExpectations(t)
-	mLogger := new(MockLogger)
-	defer mLogger.AssertExpectations(t)
+	mCmd := NewMockCommander(t)
+	mLogger := NewMockLogger(t)
 
 	killer := unixKiller{logger: mLogger, cmd: mCmd}
 

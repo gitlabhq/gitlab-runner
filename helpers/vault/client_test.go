@@ -15,9 +15,9 @@ func TestNewClient(t *testing.T) {
 	namespace := "test_namespace"
 
 	assertAPIClient :=
-		func(healthResponse *api.HealthResponse, healthCheckError error) func(t *testing.T, c *mockApiClient) func() {
-			return func(t *testing.T, c *mockApiClient) func() {
-				sysMock := new(mockApiClientSys)
+		func(healthResponse *api.HealthResponse, healthCheckError error) func(t *testing.T, c *mockApiClient) {
+			return func(t *testing.T, c *mockApiClient) {
+				sysMock := newMockApiClientSys(t)
 				sysMock.On("Health").Return(healthResponse, healthCheckError).Once()
 
 				c.On("Sys").Return(sysMock).Once()
@@ -25,21 +25,17 @@ func TestNewClient(t *testing.T) {
 				if healthResponse != nil && healthResponse.Initialized {
 					c.On("SetNamespace", namespace).Return(nil).Once()
 				}
-
-				return func() {
-					sysMock.AssertExpectations(t)
-				}
 			}
 		}
 
 	tests := map[string]struct {
 		clientCreationError error
-		assertAPIClient     func(t *testing.T, c *mockApiClient) func()
+		assertAPIClient     func(t *testing.T, c *mockApiClient)
 		expectedError       error
 	}{
 		"error on client creation": {
 			clientCreationError: assert.AnError,
-			assertAPIClient:     func(t *testing.T, c *mockApiClient) func() { return func() {} },
+			assertAPIClient:     func(t *testing.T, c *mockApiClient) {},
 			expectedError:       assert.AnError,
 		},
 		"vault health check error": {
@@ -61,20 +57,19 @@ func TestNewClient(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			apiClientMock := new(mockApiClient)
-			defer apiClientMock.AssertExpectations(t)
+			apiClientMock := newMockApiClient(t)
 
 			oldNewAPIClient := newAPIClient
-			defer func() {
+			t.Cleanup(func() {
 				newAPIClient = oldNewAPIClient
-			}()
+			})
 			newAPIClient = func(config *api.Config) (apiClient, error) {
 				assert.Equal(t, serverURL, config.Address)
 
 				return apiClientMock, tt.clientCreationError
 			}
 
-			defer tt.assertAPIClient(t, apiClientMock)()
+			tt.assertAPIClient(t, apiClientMock)
 
 			c, err := NewClient(serverURL, namespace)
 
@@ -118,15 +113,13 @@ func TestDefaultClient_Authenticate(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			apiClientMock := new(mockApiClient)
-			defer apiClientMock.AssertExpectations(t)
+			apiClientMock := newMockApiClient(t)
 
 			c := &defaultClient{
 				internal: apiClientMock,
 			}
 
-			authMethodMock := new(MockAuthMethod)
-			defer authMethodMock.AssertExpectations(t)
+			authMethodMock := NewMockAuthMethod(t)
 
 			tt.assertAuthMethodMock(authMethodMock, c, apiClientMock)
 
@@ -167,11 +160,8 @@ func TestDefaultClient_Write(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			apiClientMock := new(mockApiClient)
-			defer apiClientMock.AssertExpectations(t)
-
-			apiClientLogicalMock := new(mockApiClientLogical)
-			defer apiClientLogicalMock.AssertExpectations(t)
+			apiClientMock := newMockApiClient(t)
+			apiClientLogicalMock := newMockApiClientLogical(t)
 
 			apiClientMock.On("Logical").Return(apiClientLogicalMock).Once()
 
@@ -221,11 +211,8 @@ func TestDefaultClient_Read(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			apiClientMock := new(mockApiClient)
-			defer apiClientMock.AssertExpectations(t)
-
-			apiClientLogicalMock := new(mockApiClientLogical)
-			defer apiClientLogicalMock.AssertExpectations(t)
+			apiClientMock := newMockApiClient(t)
+			apiClientLogicalMock := newMockApiClientLogical(t)
 
 			apiClientMock.On("Logical").Return(apiClientLogicalMock).Once()
 
@@ -275,11 +262,8 @@ func TestDefaultClient_Delete(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			apiClientMock := new(mockApiClient)
-			defer apiClientMock.AssertExpectations(t)
-
-			apiClientLogicalMock := new(mockApiClientLogical)
-			defer apiClientLogicalMock.AssertExpectations(t)
+			apiClientMock := newMockApiClient(t)
+			apiClientLogicalMock := newMockApiClientLogical(t)
 
 			apiClientMock.On("Logical").Return(apiClientLogicalMock).Once()
 
