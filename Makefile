@@ -402,7 +402,8 @@ $(MOCKERY):
 	go install github.com/vektra/mockery/v2@v$(MOCKERY_VERSION)
 
 $(PROTOC): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')
-$(PROTOC): DOWNLOAD_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(OS_TYPE)-x86_64.zip
+$(PROTOC): ARCH_SUFFIX = $(if $(findstring osx,$(OS_TYPE)),universal_binary,x86_64)
+$(PROTOC): DOWNLOAD_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(OS_TYPE)-$(ARCH_SUFFIX).zip
 $(PROTOC): TOOL_BUILD_DIR = $(local)/build
 $(PROTOC):
 	# Installing $(DOWNLOAD_URL) as $(PROTOC)
