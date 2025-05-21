@@ -5,21 +5,58 @@
 - Handle the new glrtr- prefix [!5580](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5580)
 - Fix final job duration handling [!5583](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5583)
 
-## v18.0.1 (2025-05-21)
+## v18.0.1 (2025-05-16)
 
 ### Bug fixes
 
-- Handle the new glrtr- prefix [!5580](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5580)
-- Fix final job duration handling [!5583](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5583)
-- Switch the default for FF_GIT_URLS_WITHOUT_TOKENS back to false [!5572](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5572)
+- Switch the default for FF_Git_URLS_WITHOUT_TOKENS back to false [!5572](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5572)
 
-## v18.0.0 (2025-05-21)
+## v18.0.0 (2025-05-15)
+
+### New features
+
+- Add exponential backoff to execute stage retries [!4517](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4517)
+- Add support for uid:gid format for Kubernetes executor options [!5540](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5540)
+- Add adaptive request concurrency [!5546](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5546)
+- Add more request_concurrency related metrics [!5558](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5558)
+- Suppress unnecessary warnings when Kubernetes user values are empty [!5551](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5551)
+- Shells: Implement the use of Git-clone(1) again [!5010](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5010)
+- Adding How To Configure PVC Cache [!5536](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5536)
+- Improve runner build failure reasons [!5531](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5531)
 
 ### Bug fixes
 
-- Handle the new glrtr- prefix [!5580](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5580)
-- Fix final job duration handling [!5583](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5583)
-- Switch the default for FF_GIT_URLS_WITHOUT_TOKENS back to false [!5572](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5572)
+- Add support for submodules in the exec command [!75](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/75) (Lucas @fresskoma)
+- Reimplement pull-policy validation [!5514](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5514)
+- Update fleeting dependency [!5535](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5535)
+- Add Cloud provider error message details for cache upload failures to cloud storage targets [!5527](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5527)
+
+### Maintenance
+
+- FF_Git_URLS_WITHOUT_TOKENS defaults to true [!5525](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5525)
+- Wait for MR image before starting runner incept [!5528](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5528)
+- Remove outdated mentions [!5510](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5510)
+- Update markdownlint for JP Docs & Push Translations [!5547](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5547)
+- Remove GitHub.com/Docker/machine library dependency [!5554](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5554)
+- Promote FF_RETRIEVE_POD_WARNING_EVENTS to a config print_pod_warning_events [!5377](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5377)
+- Deprecate ServiceAccountName [!5523](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5523)
+- Create Japanese documentation directory [!5513](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5513)
+- Bump base images to address CVE-2024-8176 [!5518](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5518)
+- Retry packagecloud 504 errors [!5520](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5520)
+- Remove outdated registration in test script [!5511](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5511)
+- Use Hugo 0.145.0 for docs builds [!5521](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5521)
+- Sync vale rules from main repo [!5549](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5549)
+- Remove section referring to unapplied breaking change [!5529](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5529)
+- Add recommendation to read Readme for plugin before installing [!5530](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5530)
+- Add troubleshooting section for AZRebalance issue [!5494](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5494)
+- Upgrade taskscaler dependency with updated heartbeat functionality [!5553](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5553)
+- Update GPG key expiry date [!5539](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5539)
+- Add instructions for installing prebuilt images while using binaries [!5508](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5508)
+- Add note regarding support for only Azure VMSS Uniform Orchestration mode [!5526](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5526)
+- Remove "Autoscaler algorithm and parameters" from the GitLab Runner instance group autoscaler page [!5517](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5517)
+- Add argo_translation.yml for continuous translation process [!5541](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5541)
+- Clean up tables in runner docs [!5548](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5548)
+- Make dependant Docker images optional for runner incept [!5538](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5538)
 
 ## v17.11.1 (2025-05-05)
 
