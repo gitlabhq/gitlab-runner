@@ -1,3 +1,10 @@
+## v18.0.2 (2025-05-21)
+
+### Bug fixes
+
+- Handle the new glrtr- prefix [!5580](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5580)
+- Fix final job duration handling [!5583](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5583)
+
 ## v18.0.1 (2025-05-21)
 
 ### Bug fixes
