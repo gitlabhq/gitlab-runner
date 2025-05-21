@@ -17,6 +17,7 @@ func TestShortenToken(t *testing.T) {
 		{"GJ1348941Z196cJVywzZpx_Ki_Cn2", "GJ134894"},
 		{"GRveryverylongtoken", "GRveryve"},
 		{"glrt-t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
+		{"glrtr-t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
 		{"glcbt-t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
 	}
 
