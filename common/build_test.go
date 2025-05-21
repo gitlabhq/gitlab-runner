@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -3205,4 +3206,103 @@ func TestBuildDurationsAndBoundaryTimes(t *testing.T) {
 	assert.Equal(t, finalDuration1, finalDuration2, "Subsequent FinalDuration() values should be equal")
 	assert.Equal(t, finishedAt1, finishedAt2, "FinishedAt() should not change")
 	assert.Equal(t, startedAt1, startedAt2, "StartedAt() should not change")
+}
+
+func TestBuild_runCallsEnsureFinishedAt(t *testing.T) {
+	tests := map[string]struct {
+		mockRun     func(t *testing.T, cancelFn func(error), interrupt chan os.Signal, executor *MockExecutor)
+		assertError func(t *testing.T, err error)
+	}{
+		"succeeded job": {
+			mockRun: func(t *testing.T, _ func(error), _ chan os.Signal, executor *MockExecutor) {
+				executor.EXPECT().Run(mock.Anything).Return(nil)
+			},
+		},
+		"failed job": {
+			mockRun: func(t *testing.T, _ func(error), _ chan os.Signal, executor *MockExecutor) {
+				executor.EXPECT().Run(mock.Anything).Return(assert.AnError)
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, assert.AnError)
+			},
+		},
+		"canceled job": {
+			mockRun: func(t *testing.T, cancelFn func(error), _ chan os.Signal, executor *MockExecutor) {
+				executor.EXPECT().Run(mock.Anything).RunAndReturn(func(command ExecutorCommand) error {
+					cancelFn(assert.AnError)
+					time.Sleep(10 * time.Millisecond)
+					return nil
+				}).Once()
+				executor.EXPECT().Run(mock.Anything).Return(nil)
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, assert.AnError)
+			},
+		},
+		"interrupted runner process": {
+			mockRun: func(t *testing.T, _ func(error), interrupt chan os.Signal, executor *MockExecutor) {
+				executor.EXPECT().Run(matchBuildStage(BuildStagePrepare)).RunAndReturn(func(command ExecutorCommand) error {
+					interrupt <- syscall.SIGHUP
+					time.Sleep(10 * time.Millisecond)
+					return nil
+				}).Once()
+				executor.EXPECT().Run(mock.Anything).Return(nil)
+			},
+			assertError: func(t *testing.T, err error) {
+				var eerr *BuildError
+				if assert.ErrorAs(t, err, &eerr) {
+					assert.Equal(t, RunnerSystemFailure, eerr.FailureReason)
+					assert.Contains(t, eerr.Inner.Error(), "aborted: hangup")
+				}
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			rc := new(RunnerConfig)
+			rc.RunnerSettings.Executor = t.Name()
+
+			interrupt := make(chan os.Signal, 1)
+
+			build, err := NewBuild(JobResponse{}, rc, interrupt, nil)
+			require.NoError(t, err)
+
+			// Some of the job execution steps use the configurable number of attempts
+			// before they report failure. That includes, for example, the predefined
+			// get_sources step.
+			// For these steps, the loop that handles subsequent attempts may use
+			// the exponential backoff delay, when the FF is set to true, which is true.
+			// That is done, unfortunately, even when there is only one attempt to be
+			// executed.
+			// As the tests here are returning error early (which includes also context
+			// cancel caused by simulating job cancel or runner process interrupt), this
+			// backoff causes an additional 5 seconds delay, that we don't need here.
+			// By disabling the feature flag, we speed up the tests.
+			build.initSettings()
+			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = false
+
+			ctx, cancelFn := context.WithCancelCause(context.Background())
+			defer cancelFn(nil)
+
+			require.Zero(t, build.finishedAt)
+
+			executor := NewMockExecutor(t)
+			executor.EXPECT().Shell().Return(&ShellScriptInfo{Shell: "script-shell"})
+			require.NotNil(t, tt.mockRun)
+			tt.mockRun(t, cancelFn, interrupt, executor)
+
+			trace := NewMockJobTrace(t)
+			trace.EXPECT().SetCancelFunc(mock.AnythingOfType("context.CancelFunc")).Maybe()
+
+			err = build.run(ctx, trace, executor)
+			if tt.assertError != nil {
+				tt.assertError(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.NotZero(t, build.finishedAt)
+		})
+	}
 }
