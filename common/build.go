@@ -782,6 +782,8 @@ func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err
 		buildFinish <- b.executeScript(runContext, trace, executor)
 	}()
 
+	defer b.ensureFinishedAt()
+
 	// Wait for signals: cancel, timeout, abort or finish
 	b.Log().Debugln("Waiting for signals...")
 	select {
@@ -823,8 +825,6 @@ func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err
 	// Wait till we receive that build did finish
 	runCancel()
 	b.waitForBuildFinish(buildFinish, WaitForBuildFinishTimeout)
-
-	b.ensureFinishedAt()
 
 	return err
 }
