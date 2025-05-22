@@ -115,12 +115,12 @@ the `CONFIG_FILE` environment variable.
 You can use system signals to interact with GitLab Runner. The
 following commands support the following signals:
 
-| Command             | Signal                  | Action                                                                                                |
-|---------------------|-------------------------|-------------------------------------------------------------------------------------------------------|
-| `register`          | **SIGINT**              | Cancel runner registration and delete if it was already registered.                                   |
-| `run`, `run-single` | **SIGINT**, **SIGTERM** | Abort all running builds and exit as soon as possible. Use twice to exit now (**forceful shutdown**). |
-| `run`, `run-single` | **SIGQUIT**             | Stop accepting new builds. Exit as soon as the running builds finish (**graceful shutdown**).       |
-| `run`               | **SIGHUP**              | Force to reload configuration file.                                                                   |
+| Command             | Signal              | Action |
+|---------------------|---------------------|--------|
+| `register`          | `SIGINT`            | Cancel runner registration and delete if it was already registered. |
+| `run`, `run-single` | `SIGINT`, `SIGTERM` | Abort all running builds and exit as soon as possible. Use twice to exit now (**forceful shutdown**). |
+| `run`, `run-single` | `SIGQUIT`           | Stop accepting new builds. Exit as soon as the running builds finish (**graceful shutdown**). |
+| `run`               | `SIGHUP`            | Force to reload configuration file. |
 
 For example, to force a reload of a runner's configuration file, run:
 
@@ -213,8 +213,8 @@ them if they are still registered.
 
 These commands support the following arguments:
 
-| Parameter  | Default                                                   | Description                                    |
-| ---------- | --------------------------------------------------------- | ---------------------------------------------- |
+| Parameter  | Default                                                   | Description |
+|------------|-----------------------------------------------------------|-------------|
 | `--config` | See the [configuration file section](#configuration-file) | Specify a custom configuration file to be used |
 
 ### `gitlab-runner register`
@@ -449,9 +449,9 @@ service. Use them to install, uninstall, start, and stop the runner service.
 
 All service related commands accept these arguments:
 
-| Parameter   | Default                                           | Description                                |
-| ----------- | ------------------------------------------------- | ------------------------------------------ |
-| `--service` | `gitlab-runner`                                   | Specify custom service name                |
+| Parameter   | Default                                           | Description |
+|-------------|---------------------------------------------------|-------------|
+| `--service` | `gitlab-runner`                                   | Specify custom service name |
 | `--config`  | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
 
 ### `gitlab-runner install`
@@ -462,14 +462,14 @@ arguments depending on which system it's run on.
 When run on **Windows** or as super-user, it accepts the `--user` flag which
 allows you to drop privileges of builds run with the **shell** executor.
 
-| Parameter             | Default                                           | Description                                                                                         |
-| --------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `--service`           | `gitlab-runner`                                   | Specify service name to use                                                                         |
-| `--config`            | See the [configuration file](#configuration-file) | Specify a custom configuration file to use                                                          |
-| `--syslog`            | `true` (for non systemd systems)                  | Specify if the service should integrate with system logging service                                 |
+| Parameter             | Default                                           | Description |
+|-----------------------|---------------------------------------------------|-------------|
+| `--service`           | `gitlab-runner`                                   | Specify service name to use |
+| `--config`            | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
+| `--syslog`            | `true` (for non systemd systems)                  | Specify if the service should integrate with system logging service |
 | `--working-directory` | the current directory                             | Specify the root directory where all data is stored when builds are run with the **shell** executor |
-| `--user`              | `root`                                            | Specify the user that executes the builds                                                           |
-| `--password`          | none                                              | Specify the password for the user that executes the builds                                          |
+| `--user`              | `root`                                            | Specify the user that executes the builds |
+| `--password`          | none                                              | Specify the password for the user that executes the builds |
 
 ### `gitlab-runner uninstall`
 
@@ -511,13 +511,13 @@ The command is executed and works until it [receives a signal](#signals).
 
 It accepts the following parameters.
 
-| Parameter             | Default                                       | Description                                                                                     |
-| --------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `--config`            | See [configuration-file](#configuration-file) | Specify a custom configuration file to be used                                                  |
+| Parameter             | Default                                       | Description |
+|-----------------------|-----------------------------------------------|-------------|
+| `--config`            | See [configuration-file](#configuration-file) | Specify a custom configuration file to be used |
 | `--working-directory` | the current directory                         | Specify the root directory where all data is stored when builds run with the **shell** executor |
-| `--user`              | the current user                              | Specify the user that executes builds                                                           |
-| `--syslog`            | `false`                                       | Send all logs to SysLog (Unix) or EventLog (Windows)                                            |
-| `--listen-address`    | empty                                         | Address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening       |
+| `--user`              | the current user                              | Specify the user that executes builds |
+| `--syslog`            | `false`                                       | Send all logs to SysLog (Unix) or EventLog (Windows) |
+| `--listen-address`    | empty                                         | Address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
 
 ### `gitlab-runner run-single`
 

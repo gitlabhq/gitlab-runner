@@ -114,7 +114,7 @@ terrafrom destroy
 ## Supported configurations
 
 | Provider     | Service | Arch   | OS    | Executors         | Feature Support |
-| ------------ | ------- | ------ | ----- | ----------------- | --------------- |
+|--------------|---------|--------|-------|-------------------|-----------------|
 | AWS          | EC2     | x86-64 | Linux | Docker Autoscaler | Experimental    |
 | AWS          | EC2     | Arm64  | Linux | Docker Autoscaler | Experimental    |
 | Google Cloud | GCE     | x86-64 | Linux | Docker Autoscaler | Experimental    |

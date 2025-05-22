@@ -185,11 +185,11 @@ to pull images or packages during installation.
 
 The local repository must provide the following images:
 
-| Image                                                 | Default value                                                                                                               |
-|-------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| Image                                                 | Default value |
+|-------------------------------------------------------|---------------|
 | **GitLab Runner Operator** image                      | `registry.gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/gitlab-runner-operator:vGITLAB_RUNNER_OPERATOR_VERSION` |
 | **GitLab Runner** and **GitLab Runner Helper** images | These images are downloaded from the GitLab Runner UBI Images registry and are used when installing the Runner Custom Resources. The version used depends on your requirements. |
-| **RBAC Proxy** image                                  |`registry.gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/openshift4/ose-kube-rbac-proxy:v4.13.0`|
+| **RBAC Proxy** image                                  | `registry.gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/openshift4/ose-kube-rbac-proxy:v4.13.0` |
 
 1. Set up local repositories or registries in the disconnected network environment
    to host the downloaded software packages and container images. You can use:
