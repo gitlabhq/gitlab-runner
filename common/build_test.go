@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -3244,20 +3243,6 @@ func TestBuild_runCallsEnsureFinishedAt(t *testing.T) {
 
 			build, err := NewBuild(JobResponse{}, rc, interrupt, nil)
 			require.NoError(t, err)
-
-			// Some of the job execution steps use the configurable number of attempts
-			// before they report failure. That includes, for example, the predefined
-			// get_sources step.
-			// For these steps, the loop that handles subsequent attempts may use
-			// the exponential backoff delay, when the FF is set to true, which is true.
-			// That is done, unfortunately, even when there is only one attempt to be
-			// executed.
-			// As the tests here are returning error early (which includes also context
-			// cancel caused by simulating job cancel or runner process interrupt), this
-			// backoff causes an additional 5 seconds delay, that we don't need here.
-			// By disabling the feature flag, we speed up the tests.
-			build.initSettings()
-			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = false
 
 			ctx, cancelFn := context.WithCancelCause(context.Background())
 			defer cancelFn(nil)
