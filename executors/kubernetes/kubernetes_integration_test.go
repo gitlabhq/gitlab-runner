@@ -3653,7 +3653,7 @@ func testKubernetesOptionsUserAndGroup(t *testing.T, featureFlagName string, fea
 				}
 
 				jobResponse.Image.ExecutorOptions.Kubernetes = common.ImageKubernetesOptions{
-					User: tc.ciUserId,
+					User: common.StringOrInt64(tc.ciUserId),
 				}
 
 				return jobResponse, nil

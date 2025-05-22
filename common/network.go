@@ -418,12 +418,15 @@ var SupportedExecutorOptions = map[string][]string{
 type (
 	ImageDockerOptions struct {
 		executorOptions
-		Platform string `json:"platform"`
-		User     string `json:"user"`
+		Platform string        `json:"platform"`
+		User     StringOrInt64 `json:"user"`
 	}
+
+	StringOrInt64 string
+
 	ImageKubernetesOptions struct {
 		executorOptions
-		User string `json:"user"`
+		User StringOrInt64 `json:"user"`
 	}
 	ImageExecutorOptions struct {
 		executorOptions
@@ -471,7 +474,7 @@ func (iko *ImageKubernetesOptions) GetUIDGID() (int64, int64, error) {
 		return 0, 0, nil
 	}
 
-	user, group, ok := strings.Cut(iko.User, ":")
+	user, group, ok := strings.Cut(string(iko.User), ":")
 
 	uid, err := strconv.ParseInt(user, 10, 64)
 	if err != nil {
@@ -487,6 +490,22 @@ func (iko *ImageKubernetesOptions) GetUIDGID() (int64, int64, error) {
 	}
 
 	return uid, gid, err
+}
+
+func (si *StringOrInt64) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		*si = StringOrInt64(s)
+		return nil
+	}
+
+	var i int64
+	if err := json.Unmarshal(data, &i); err == nil {
+		*si = StringOrInt64(strconv.FormatInt(i, 10))
+		return nil
+	}
+
+	return fmt.Errorf("StringOrInt: input not string or integer")
 }
 
 func (ieo *ImageExecutorOptions) UnmarshalJSON(data []byte) error {
