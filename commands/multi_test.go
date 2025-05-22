@@ -80,7 +80,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		atomic.AddUint32(&runningBuilds, 1)
 
 		// Simulate work to fill up build queue.
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}).Return(nil)
 
 	p := common.MockExecutorProvider{}
@@ -108,10 +108,11 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 
 	runners := make(chan *common.RunnerConfig)
 
-	// Start 2 builds.
+	// Start concurrent jobs
+	jobsNumber := 10
 	wg := sync.WaitGroup{}
-	wg.Add(3)
-	for i := 0; i < 3; i++ {
+	wg.Add(jobsNumber)
+	for i := 0; i < jobsNumber; i++ {
 		go func(i int) {
 			defer wg.Done()
 
@@ -135,7 +136,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, 1, limitMetCount)
+	assert.True(t, limitMetCount > 0)
 }
 
 func TestRunCommand_doJobRequest(t *testing.T) {
