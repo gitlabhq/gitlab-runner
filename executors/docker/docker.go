@@ -1073,10 +1073,12 @@ func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 	return err
 }
 
+type contextDialerFunc = func(ctx context.Context, network, addr string) (net.Conn, error)
+
 func (e *executor) environmentDialContext(
 	executorClient executors.Client,
 	host string,
-) (string, func(ctx context.Context, network, addr string) (net.Conn, error), error) {
+) (string, contextDialerFunc, error) {
 	systemHost := host == ""
 	if host == "" {
 		host = os.Getenv("DOCKER_HOST")
