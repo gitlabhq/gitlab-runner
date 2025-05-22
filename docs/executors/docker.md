@@ -56,7 +56,7 @@ The Docker executor supports the following configurations.
 For known issues and additional requirements of Windows configurations, see [Use Windows containers](#use-windows-containers).
 
 | Runner is installed on: | Executor is:     | Container is running: |
-| ----------------------- | ---------------- | --------------------- |
+|-------------------------|------------------|-----------------------|
 | Windows                 | `docker-windows` | Windows               |
 | Windows                 | `docker`         | Linux                 |
 | Linux                   | `docker`         | Linux                 |
@@ -65,7 +65,7 @@ For known issues and additional requirements of Windows configurations, see [Use
 These configurations are **not** supported:
 
 | Runner is installed on: | Executor is:     | Container is running: |
-| ----------------------- | ---------------- | --------------------- |
+|-------------------------|------------------|-----------------------|
 | Linux                   | `docker-windows` | Linux                 |
 | Linux                   | `docker`         | Windows               |
 | Linux                   | `docker-windows` | Windows               |
@@ -1108,12 +1108,12 @@ For example, to allow only the `always` and `if-not-present` pull policies, add 
 
 ### Image pull error messages
 
-| Error message                                                                                                                                                                                                                                                               | Description                                                                                                                                          |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Pulling docker image registry.tld/my/image:latest ... ERROR: Build failed: Error: image registry.tld/my/image:latest not found`                                                                                                                                            | The runner cannot find the image. Displays when the `always` pull policy is set                                                                      |
-| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found`                                                                                                                                                                | The image was built locally and doesn't exist in any public or default Docker registry. Displays when the `always` pull policy is set.               |
-| `Pulling docker image registry.tld/my/image:latest ... WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found WARNING: Locally found image will be used instead.`                              | The runner has used a local image instead of pulling an image.                                                                                       |
-| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found`                                                                                                                                                                | The image cannot be found locally. Displays when the `never` pull policy is set.                                                                     |
+| Error message                                                                                                                                                                                                                                                               | Description |
+|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
+| `Pulling docker image registry.tld/my/image:latest ... ERROR: Build failed: Error: image registry.tld/my/image:latest not found`                                                                                                                                            | The runner cannot find the image. Displays when the `always` pull policy is set |
+| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found`                                                                                                                                                                | The image was built locally and doesn't exist in any public or default Docker registry. Displays when the `always` pull policy is set. |
+| `Pulling docker image registry.tld/my/image:latest ... WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found WARNING: Locally found image will be used instead.`                              | The runner has used a local image instead of pulling an image. |
+| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found`                                                                                                                                                                | The image cannot be found locally. Displays when the `never` pull policy is set. |
 | `WARNING: Failed to pull image with policy "always": Error response from daemon: received unexpected HTTP status: 502 Bad Gateway (docker.go:143:0s) Attempt #2: Trying "if-not-present" pull policy Using locally found image version due to "if-not-present" pull policy` | The runner failed to pull an image and attempts to pull an image by using the next listed pull policy. Displays when multiple pull policies are set. |
 
 ## Retry a failed pull
