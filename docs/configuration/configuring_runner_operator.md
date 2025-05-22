@@ -38,29 +38,29 @@ The following properties can be passed to the Operator.
 
 Some properties are only available with more recent versions of the Operator.
 
-| Setting            | Operator | Description                                                                                                                       |
-|--------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------|
-| `gitlabUrl`        | all      | The fully qualified domain name for the GitLab instance, for example, `https://gitlab.example.com`.                               |
-| `token`            | all      | Name of `Secret` containing the `runner-registration-token` key used to register the runner.                                      |
-| `tags`             | all      | List of comma-separated tags to be applied to the runner.                                                                         |
+| Setting            | Operator | Description |
+|--------------------|----------|-------------|
+| `gitlabUrl`        | all      | The fully qualified domain name for the GitLab instance, for example, `https://gitlab.example.com`. |
+| `token`            | all      | Name of `Secret` containing the `runner-registration-token` key used to register the runner. |
+| `tags`             | all      | List of comma-separated tags to be applied to the runner. |
 | `concurrent`       | all      | Limits how many jobs can run concurrently. The maximum number is all defined runners. 0 does not mean unlimited. Default is `10`. |
-| `interval`         | all      | Defines the number of seconds between checks for new jobs. Default is `30`.                                                       |
-| `locked`           | 1.8      | Defines if the runner should be locked to a project. Default is `false`.                                                          |
-| `runUntagged`      | 1.8      | Defines if jobs without tags should be run. Default is `true` if no tags were specified. Otherwise, it's `false`.                 |
-| `protected`        | 1.8      | Defines if the runner should run jobs on protected branches only. Default is `false`.                                             |
-| `cloneURL`         | all      | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL.                               |
-| `env`              | all      | Name of `ConfigMap` containing key-value pairs that are injected as environment variables in the Runner pod.                      |
-| `runnerImage`      | 1.7      | Overwrites the default GitLab Runner image. Default is the Runner image the operator was bundled with.                            |
-| `helperImage`      | all      | Overwrites the default GitLab Runner helper image.                                                                                |
-| `buildImage`       | all      | The default Docker image to use for builds when none is specified.                                                                |
-| `cacheType`        | all      | Type of cache used for Runner artifacts. One of: `gcs`, `s3`, `azure`.                                                            |
-| `cachePath`        | all      | Defines the cache path on the file system.                                                                                        |
-| `cacheShared`      | all      | Enable sharing of cache between runners.                                                                                          |
-| `s3`               | all      | Options used to set up S3 cache. Refer to [Cache properties](#cache-properties).                                                  |
-| `gcs`              | all      | Options used to set up `gcs` cache. Refer to [Cache properties](#cache-properties).                                               |
-| `azure`            | all      | Options used to set up Azure cache. Refer to [Cache properties](#cache-properties).                                               |
-| `ca`               | all      | Name of TLS secret containing the custom certificate authority (CA) certificates.                                                 |
-| `serviceaccount`   | all      | Use to override service account used to run the Runner pod.                                                                       |
+| `interval`         | all      | Defines the number of seconds between checks for new jobs. Default is `30`. |
+| `locked`           | 1.8      | Defines if the runner should be locked to a project. Default is `false`. |
+| `runUntagged`      | 1.8      | Defines if jobs without tags should be run. Default is `true` if no tags were specified. Otherwise, it's `false`. |
+| `protected`        | 1.8      | Defines if the runner should run jobs on protected branches only. Default is `false`. |
+| `cloneURL`         | all      | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL. |
+| `env`              | all      | Name of `ConfigMap` containing key-value pairs that are injected as environment variables in the Runner pod. |
+| `runnerImage`      | 1.7      | Overwrites the default GitLab Runner image. Default is the Runner image the operator was bundled with. |
+| `helperImage`      | all      | Overwrites the default GitLab Runner helper image. |
+| `buildImage`       | all      | The default Docker image to use for builds when none is specified. |
+| `cacheType`        | all      | Type of cache used for Runner artifacts. One of: `gcs`, `s3`, `azure`. |
+| `cachePath`        | all      | Defines the cache path on the file system. |
+| `cacheShared`      | all      | Enable sharing of cache between runners. |
+| `s3`               | all      | Options used to set up S3 cache. Refer to [Cache properties](#cache-properties). |
+| `gcs`              | all      | Options used to set up `gcs` cache. Refer to [Cache properties](#cache-properties). |
+| `azure`            | all      | Options used to set up Azure cache. Refer to [Cache properties](#cache-properties). |
+| `ca`               | all      | Name of TLS secret containing the custom certificate authority (CA) certificates. |
+| `serviceaccount`   | all      | Use to override service account used to run the Runner pod. |
 | `config`           | all      | Use to provide a custom `ConfigMap` with a [configuration template](../register/_index.md#register-with-a-configuration-template). |
 | `shutdownTimeout`  | 1.34     | Number of seconds until the [forceful shutdown operation](../commands/_index.md#signals) times out and exits the process. The default value is `30`. If set to `0` or lower, the default value is used. |
 | `logLevel`         | 1.34     | Defines the log level. Options are `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. |
@@ -73,29 +73,29 @@ Some properties are only available with more recent versions of the Operator.
 
 ### S3 cache
 
-| Setting       | Operator | Description                                                                                                   |
-|---------------|----------|---------------------------------------------------------------------------------------------------------------|
-| `server`      | all      | The S3 server address.                                                                                        |
+| Setting       | Operator | Description |
+|---------------|----------|-------------|
+| `server`      | all      | The S3 server address. |
 | `credentials` | all      | Name of the `Secret` containing the `accesskey` and `secretkey` properties used to access the object storage. |
-| `bucket`      | all      | Name of the bucket in which the cache is stored.                                                              |
-| `location`    | all      | Name of the S3 region in which the cache is stored.                                                              |
-| `insecure`    | all      | Use insecure connections or `HTTP`.                                                                           |
+| `bucket`      | all      | Name of the bucket in which the cache is stored. |
+| `location`    | all      | Name of the S3 region in which the cache is stored. |
+| `insecure`    | all      | Use insecure connections or `HTTP`. |
 
 ### `gcs` cache
 
-| Setting           | Operator | Description                                                                                                     |
-|-------------------|----------|-----------------------------------------------------------------------------------------------------------------|
+| Setting           | Operator | Description |
+|-------------------|----------|-------------|
 | `credentials`     | all      | Name of the `Secret` containing the `access-id` and `private-key` properties used to access the object storage. |
-| `bucket`          | all      | Name of the bucket in which the cache is stored.                                                                |
-| `credentialsFile` | all      | Takes the `gcs` credentials file, `keys.json`.                                                                  |
+| `bucket`          | all      | Name of the bucket in which the cache is stored. |
+| `credentialsFile` | all      | Takes the `gcs` credentials file, `keys.json`. |
 
 ### Azure cache
 
-| Setting         | Operator | Description                                                                                                      |
-|-----------------|----------|------------------------------------------------------------------------------------------------------------------|
+| Setting         | Operator | Description |
+|-----------------|----------|-------------|
 | `credentials`   | all      | Name of the `Secret` containing the `accountName` and `privateKey` properties used to access the object storage. |
-| `container`     | all      | Name of the Azure container in which the cache is stored.                                                        |
-| `storageDomain` | all      | The domain name of the Azure blob storage.                                                                       |
+| `container`     | all      | Name of the Azure container in which the cache is stored. |
+| `storageDomain` | all      | The domain name of the Azure blob storage. |
 
 ## Configure a proxy environment
 
@@ -195,11 +195,11 @@ You can customize the runner's `config.toml` file by using the [configuration te
 Because of a [known issue](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/issues/229), you
 must use environment variables instead of configuration templates to modify the following settings:
 
-| Setting                             | Environment variable             | Default value |
-|-------------------------------------|----------------------------------|---------------|
-| `runners.request_concurrency`       | `RUNNER_REQUEST_CONCURRENCY`     | `1`           |
-| `runners.output_limit`              | `RUNNER_OUTPUT_LIMIT`            | `4096`        |
-| `kubernetes.runner.poll_timeout`    | `KUBERNETES_POLL_TIMEOUT`        | `180`         |
+| Setting                          | Environment variable         | Default value |
+|----------------------------------|------------------------------|---------------|
+| `runners.request_concurrency`    | `RUNNER_REQUEST_CONCURRENCY` | `1`           |
+| `runners.output_limit`           | `RUNNER_OUTPUT_LIMIT`        | `4096`        |
+| `kubernetes.runner.poll_timeout` | `KUBERNETES_POLL_TIMEOUT`    | `180`         |
 
 ## Configure a custom TLS cert
 

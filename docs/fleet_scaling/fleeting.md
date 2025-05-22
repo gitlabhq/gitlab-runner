@@ -134,12 +134,12 @@ When GitLab Runner runs, it uses the version constraint to find the latest match
 
 Use the following version constraint formats:
 
-| Format                    | Description                                                                                              |
-| ------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `latest`                  | Latest version.                                                                                          |
-| `<MAJOR>`                 | Selects the major version. For example, `1` selects the version that matches `1.*.*`.                    |
+| Format                    | Description |
+|---------------------------|-------------|
+| `latest`                  | Latest version. |
+| `<MAJOR>`                 | Selects the major version. For example, `1` selects the version that matches `1.*.*`. |
 | `<MAJOR>.<MINOR>`         | Selects the major and minor version. For example, `1.5` selects the latest version that matches `1.5.*`. |
-| `<MAJOR>.<MINOR>.<PATCH>` | Selects the major and minor version, and patch. For example, `1.5.1` selects the version `1.5.1`.        |
+| `<MAJOR>.<MINOR>.<PATCH>` | Selects the major and minor version, and patch. For example, `1.5.1` selects the version `1.5.1`. |
 
 ## Install binary manually
 
@@ -212,8 +212,8 @@ To manually install a fleeting plugin:
 
 Use the following `fleeting` subcommands to manage fleeting plugins:
 
-| Command                          | Description                                                     |
-|----------------------------------|-----------------------------------------------------------------|
+| Command                          | Description |
+|----------------------------------|-------------|
 | `gitlab-runner fleeting install` | Install the fleeting plugin from the OCI registry distribution. |
-| `gitlab-runner fleeting list`    | List referenced plugins and the version used.                   |
-| `gitlab-runner fleeting login`   | Sign in to private registries.                                  |
+| `gitlab-runner fleeting list`    | List referenced plugins and the version used. |
+| `gitlab-runner fleeting login`   | Sign in to private registries. |

@@ -221,30 +221,30 @@ An essential step in operating a runner fleet at scale is to set up and use the 
 The following table includes a summary of GitLab Runner metrics. The list does not include the Go-specific process metrics.
 To view those metrics on a runner, execute the command as noted in [available metrics](../monitoring/_index.md#available-metrics).
 
-| Metric name | Description |
-| ------ | ------ |
-| `gitlab_runner_api_request_statuses_total` | The total number of API requests, partitioned by runner, endpoint, and status. |
-| `gitlab_runner_autoscaling_machine_creation_duration_seconds` | Histogram of machine creation time.|
-| `gitlab_runner_autoscaling_machine_states`  | The number of machines per state in this provider. |
-| `gitlab_runner_concurrent` | The value of concurrent setting. |
-| `gitlab_runner_errors_total` | The number of caught errors. This metric is a counter that tracks log lines. The metric includes the label `level`. The possible values are `warning` and `error`. If you plan to include this metric, then use `rate()` or `increase()` when observing. In other words, if you notice that the rate of warnings or errors is increasing, then this could suggest an issue that needs further investigation. |
-| `gitlab_runner_jobs` | This shows how many jobs are being executed (with different scopes in the labels). |
-| `gitlab_runner_job_duration_seconds` | Histogram of job durations. |
-| `gitlab_runner_job_queue_duration_seconds` | A histogram representing job queue duration. |
+| Metric name                                                    | Description |
+|----------------------------------------------------------------|-------------|
+| `gitlab_runner_api_request_statuses_total`                     | The total number of API requests, partitioned by runner, endpoint, and status. |
+| `gitlab_runner_autoscaling_machine_creation_duration_seconds`  | Histogram of machine creation time. |
+| `gitlab_runner_autoscaling_machine_states`                     | The number of machines per state in this provider. |
+| `gitlab_runner_concurrent`                                     | The value of concurrent setting. |
+| `gitlab_runner_errors_total`                                   | The number of caught errors. This metric is a counter that tracks log lines. The metric includes the label `level`. The possible values are `warning` and `error`. If you plan to include this metric, then use `rate()` or `increase()` when observing. In other words, if you notice that the rate of warnings or errors is increasing, then this could suggest an issue that needs further investigation. |
+| `gitlab_runner_jobs`                                           | This shows how many jobs are being executed (with different scopes in the labels). |
+| `gitlab_runner_job_duration_seconds`                           | Histogram of job durations. |
+| `gitlab_runner_job_queue_duration_seconds`                     | A histogram representing job queue duration. |
 | `gitlab_runner_acceptable_job_queuing_duration_exceeded_total` | Counts how often jobs exceed the configured queuing time threshold. |
-| `gitlab_runner_job_stage_duration_seconds` | A histogram representing job duration across each stage. This metric is a **high cardinality metric**. For more information, see [high cardinality metrics section](#high-cardinality-metrics). |
-| `gitlab_runner_jobs_total` | This displays the total jobs executed. |
-| `gitlab_runner_limit` | The current value of the limit setting. |
-| `gitlab_runner_request_concurrency` | The current number of concurrent requests for a new job. |
-| `gitlab_runner_request_concurrency_exceeded_total` | Count of excess requests above the configured `request_concurrency` limit. |
-| `gitlab_runner_version_info` | A metric with a constant `1` value labeled by different build stats fields. |
-| `process_cpu_seconds_total` | Total user and system CPU time spent in seconds. |
-| `process_max_fds`  | Maximum number of open file descriptors. |
-| `process_open_fds` | Number of open file descriptors. |
-| `process_resident_memory_bytes`  | Resident memory size in bytes. |
-| `process_start_time_seconds` | Start time of the process, measured in seconds from the Unix epoch. |
-| `process_virtual_memory_bytes` | Virtual memory size in bytes. |
-| `process_virtual_memory_max_bytes` | Maximum amount of virtual memory available in bytes. |
+| `gitlab_runner_job_stage_duration_seconds`                     | A histogram representing job duration across each stage. This metric is a **high cardinality metric**. For more information, see [high cardinality metrics section](#high-cardinality-metrics). |
+| `gitlab_runner_jobs_total`                                     | This displays the total jobs executed. |
+| `gitlab_runner_limit`                                          | The current value of the limit setting. |
+| `gitlab_runner_request_concurrency`                            | The current number of concurrent requests for a new job. |
+| `gitlab_runner_request_concurrency_exceeded_total`             | Count of excess requests above the configured `request_concurrency` limit. |
+| `gitlab_runner_version_info`                                   | A metric with a constant `1` value labeled by different build stats fields. |
+| `process_cpu_seconds_total`                                    | Total user and system CPU time spent in seconds. |
+| `process_max_fds`                                              | Maximum number of open file descriptors. |
+| `process_open_fds`                                             | Number of open file descriptors. |
+| `process_resident_memory_bytes`                                | Resident memory size in bytes. |
+| `process_start_time_seconds`                                   | Start time of the process, measured in seconds from the Unix epoch. |
+| `process_virtual_memory_bytes`                                 | Virtual memory size in bytes. |
+| `process_virtual_memory_max_bytes`                             | Maximum amount of virtual memory available in bytes. |
 
 ### Grafana dashboard configuration tips
 

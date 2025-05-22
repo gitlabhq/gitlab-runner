@@ -281,26 +281,26 @@ child runner: `gitlab-docker-machine-%s`.
 Now, depending on your AWS infrastructure, there are many options you can set up
 under `MachineOptions`. Below you can see the most common ones.
 
-| Machine option | Description |
-| -------------- | ----------- |
-| `amazonec2-access-key=XXXX` | The AWS access key of the user that has permissions to create EC2 instances, see [AWS credentials](#aws-credentials). |
-| `amazonec2-secret-key=XXXX` | The AWS secret key of the user that has permissions to create EC2 instances, see [AWS credentials](#aws-credentials). |
-| `amazonec2-region=eu-central-1` | The region to use when launching the instance. You can omit this entirely and the default `us-east-1` will be used. |
-| `amazonec2-vpc-id=vpc-xxxxx` | Your [VPC ID](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#vpc-id) to launch the instance in. |
-| `amazonec2-subnet-id=subnet-xxxx` | The AWS VPC subnet ID. |
-| `amazonec2-zone=x` | If not specified, the [availability zone is `a`](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#environment-variables-and-default-values), it needs to be set to the same availability zone as the specified subnet, for example when the zone is `eu-west-1b` it has to be `amazonec2-zone=b` |
-| `amazonec2-use-private-address=true` | Use the private IP address of Docker Machines, but still create a public IP address. Useful to keep the traffic internal and avoid extra costs.|
+| Machine option                                                         | Description |
+|------------------------------------------------------------------------|-------------|
+| `amazonec2-access-key=XXXX`                                            | The AWS access key of the user that has permissions to create EC2 instances, see [AWS credentials](#aws-credentials). |
+| `amazonec2-secret-key=XXXX`                                            | The AWS secret key of the user that has permissions to create EC2 instances, see [AWS credentials](#aws-credentials). |
+| `amazonec2-region=eu-central-1`                                        | The region to use when launching the instance. You can omit this entirely and the default `us-east-1` will be used. |
+| `amazonec2-vpc-id=vpc-xxxxx`                                           | Your [VPC ID](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#vpc-id) to launch the instance in. |
+| `amazonec2-subnet-id=subnet-xxxx`                                      | The AWS VPC subnet ID. |
+| `amazonec2-zone=x`                                                     | If not specified, the [availability zone is `a`](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#environment-variables-and-default-values), it needs to be set to the same availability zone as the specified subnet, for example when the zone is `eu-west-1b` it has to be `amazonec2-zone=b` |
+| `amazonec2-use-private-address=true`                                   | Use the private IP address of Docker Machines, but still create a public IP address. Useful to keep the traffic internal and avoid extra costs. |
 | `amazonec2-tags=runner-manager-name,gitlab-aws-autoscaler,gitlab,true,gitlab-runner-autoscale,true` | AWS extra tag key-value pairs, useful to identify the instances on the AWS console. The "Name" [tag](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html) is set to the machine name by default. We set the "runner-manager-name" to match the runner name set in `[[runners]]`, so that we can filter all the EC2 instances created by a specific manager setup. |
-| `amazonec2-security-group=xxxx` | AWS VPC security group name, not the security group ID. See [AWS security groups](#aws-security-groups). |
-| `amazonec2-instance-type=m4.2xlarge` | The instance type that the child runners will run on. |
-| `amazonec2-ssh-user=xxxx` | The user that will have SSH access to the instance. |
+| `amazonec2-security-group=xxxx`                                        | AWS VPC security group name, not the security group ID. See [AWS security groups](#aws-security-groups). |
+| `amazonec2-instance-type=m4.2xlarge`                                   | The instance type that the child runners will run on. |
+| `amazonec2-ssh-user=xxxx`                                              | The user that will have SSH access to the instance. |
 | `amazonec2-iam-instance-profile=xxxx_runner_machine_inst_profile_name` | The IAM instance profile to use for the runner machine. |
-| `amazonec2-ami=xxxx_runner_machine_ami_id` | The GitLab Runner AMI ID for a specific image. |
-| `amazonec2-request-spot-instance=true` | Use spare EC2 capacity that is available for less than the on-demand price. |
-| `amazonec2-spot-price=xxxx_runner_machine_spot_price=x.xx` | Spot instance bid price (in US dollars). Requires the `--amazonec2-request-spot-instance flag` set to `true`. If you omit the `amazonec2-spot-price`, Docker Machine sets the maximum price to a default value of `$0.50` per hour. |
-| `amazonec2-security-group-readonly=true` | Set the security group to read-only.|
-| `amazonec2-userdata=xxxx_runner_machine_userdata_path` | Specify the runner machine `userdata` path. |
-| `amazonec2-root-size=XX` | The root disk size of the instance (in GB). |
+| `amazonec2-ami=xxxx_runner_machine_ami_id`                             | The GitLab Runner AMI ID for a specific image. |
+| `amazonec2-request-spot-instance=true`                                 | Use spare EC2 capacity that is available for less than the on-demand price. |
+| `amazonec2-spot-price=xxxx_runner_machine_spot_price=x.xx`             | Spot instance bid price (in US dollars). Requires the `--amazonec2-request-spot-instance flag` set to `true`. If you omit the `amazonec2-spot-price`, Docker Machine sets the maximum price to a default value of `$0.50` per hour. |
+| `amazonec2-security-group-readonly=true`                               | Set the security group to read-only. |
+| `amazonec2-userdata=xxxx_runner_machine_userdata_path`                 | Specify the runner machine `userdata` path. |
+| `amazonec2-root-size=XX`                                               | The root disk size of the instance (in GB). |
 
 Notes:
 
