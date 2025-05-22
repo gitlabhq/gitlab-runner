@@ -437,6 +437,10 @@ func TestJobResponse_JobURL(t *testing.T) {
 }
 
 func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
+	emptyUser := StringOrInt64("")
+	uid1000 := StringOrInt64("1000")
+	ubuntuUser := StringOrInt64("ubuntu")
+
 	tests := map[string]struct {
 		json           string
 		expected       func(*testing.T, Image)
@@ -446,35 +450,35 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 			json: `{"executor_opts":{}}`,
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
-				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
+				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"docker, empty": {
 			json: `{"executor_opts":{"docker": {}}}`,
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
-				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
+				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"docker, only user": {
 			json: `{"executor_opts":{"docker": {"user": "ubuntu"}}}`,
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
-				assert.Equal(t, "ubuntu", i.ExecutorOptions.Docker.User)
+				assert.Equal(t, ubuntuUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"docker, only platform": {
 			json: `{"executor_opts":{"docker": {"platform": "amd64"}}}`,
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "amd64", i.ExecutorOptions.Docker.Platform)
-				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
+				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"docker, all options": {
 			json: `{"executor_opts":{"docker": {"platform": "arm64", "user": "ubuntu"}}}`,
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "arm64", i.ExecutorOptions.Docker.Platform)
-				assert.Equal(t, "ubuntu", i.ExecutorOptions.Docker.User)
+				assert.Equal(t, ubuntuUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"docker, invalid options": {
@@ -482,19 +486,25 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 			expectedErrMsg: []string{`Unsupported "image" options [foobar] for "docker executor"; supported options are [platform user]`},
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
-				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
+				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"kubernetes, empty": {
 			json: `{"executor_opts":{"kubernetes": {}}}`,
 			expected: func(t *testing.T, i Image) {
-				assert.Equal(t, "", i.ExecutorOptions.Kubernetes.User)
+				assert.Equal(t, emptyUser, i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"kubernetes, all options": {
 			json: `{"executor_opts":{"kubernetes": {"user": "1000"}}}`,
 			expected: func(t *testing.T, i Image) {
-				assert.Equal(t, "1000", i.ExecutorOptions.Kubernetes.User)
+				assert.Equal(t, uid1000, i.ExecutorOptions.Kubernetes.User)
+			},
+		},
+		"kubernetes, user as int64": {
+			json: `{"executor_opts":{"kubernetes": {"user": 1000}}}`,
+			expected: func(t *testing.T, i Image) {
+				assert.Equal(t, uid1000, i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"kubernetes, invalid options": {
@@ -502,8 +512,8 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 			expectedErrMsg: []string{`Unsupported "image" options [foobar] for "kubernetes executor"; supported options are [user]`},
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
-				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
-				assert.Equal(t, "", i.ExecutorOptions.Kubernetes.User)
+				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
+				assert.Equal(t, emptyUser, i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"invalid executor": {
@@ -511,8 +521,8 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 			expectedErrMsg: []string{`Unsupported "image" options [k8s] for "executor_opts"; supported options are [docker kubernetes]`},
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
-				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
-				assert.Equal(t, "", i.ExecutorOptions.Kubernetes.User)
+				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
+				assert.Equal(t, emptyUser, i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"docker, invalid executor, valid executor, invalid option": {
@@ -523,7 +533,7 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 			},
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "amd64", i.ExecutorOptions.Docker.Platform)
-				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
+				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"kubernetes, invalid executor, valid executor, invalid option": {
@@ -533,7 +543,7 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 				`Unsupported "image" options [foobar] for "kubernetes executor"; supported options are [user]`,
 			},
 			expected: func(t *testing.T, i Image) {
-				assert.Equal(t, "1000", i.ExecutorOptions.Kubernetes.User)
+				assert.Equal(t, uid1000, i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 	}

@@ -445,7 +445,7 @@ func (e *executor) createServiceContainerConfig(
 		config.Cmd = definition.Command
 	}
 	config.Entrypoint = e.overwriteEntrypoint(&definition)
-	config.User = definition.ExecutorOptions.Docker.User
+	config.User = string(definition.ExecutorOptions.Docker.User)
 
 	return config
 }
@@ -769,7 +769,7 @@ func (e *executor) getBuildContainerUser(imageDefinition common.Image) (string, 
 	// runner config takes precedence
 	user := e.Config.Docker.User
 	if user == "" {
-		user = imageDefinition.ExecutorOptions.Docker.User
+		user = string(imageDefinition.ExecutorOptions.Docker.User)
 	}
 
 	if !e.Config.Docker.IsUserAllowed(user) {

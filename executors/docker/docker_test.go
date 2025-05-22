@@ -2522,9 +2522,10 @@ func TestExpandingVolumeDestination(t *testing.T) {
 
 func TestDockerImageWithUser(t *testing.T) {
 	tests := map[string]struct {
-		runnerUser, jobUser, want string
-		allowedUsers              []string
-		wantErr                   bool
+		jobUser          common.StringOrInt64
+		runnerUser, want string
+		allowedUsers     []string
+		wantErr          bool
 	}{
 		"no allowed users, neither specified":     {},
 		"no allowed users, runner user specified": {runnerUser: "baba", want: "baba"},
