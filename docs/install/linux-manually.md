@@ -163,7 +163,7 @@ You can download and install GitLab Runner by using a binary file.
 1. [Register a runner](../register/_index.md)
 
    The runner binary does not include pre-built helper images. To use pre-built helper images, download the corresponding version of the helper image archive and copy it to the appropriate location:
-   
+
    ```shell
    mkdir -p /usr/local/bin/out/helper-images
    cd /usr/local/bin/out/helper-images

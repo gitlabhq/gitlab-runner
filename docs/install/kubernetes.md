@@ -41,7 +41,7 @@ For GitLab Runner to run properly, you must set these values in your configurati
       create: false
       name: your-service-account
     ```
-    
+
   - To learn about the minimal permissions the `serviceAccount` requires, see
     [Configure runner API permissions](../executors/kubernetes/_index.md#configure-runner-api-permissions).
 - `runnerToken`: The authentication token obtained when you

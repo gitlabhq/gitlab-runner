@@ -57,21 +57,21 @@ a single AWS project.
 
 ## Support levels and the `min_support` parameter
 
-You must provide a `min_support` value for all GRIT modules. 
-This parameter specifies the minimum support level that the operator 
-requires for their deployment. GRIT modules are associated with a support 
-designation of `none`, `experimental`, `beta`, or `GA`. The goal is 
+You must provide a `min_support` value for all GRIT modules.
+This parameter specifies the minimum support level that the operator
+requires for their deployment. GRIT modules are associated with a support
+designation of `none`, `experimental`, `beta`, or `GA`. The goal is
 for all modules to reach the `GA` status.
 
 `none` is a special case. Modules with no support guarantees, primarily for testing and development.
 
-`experimental`, `beta`, and `ga` modules conform to the [GitLab definitions of development stages](https://docs.gitlab.com/policy/development_stages_support/). 
+`experimental`, `beta`, and `ga` modules conform to the [GitLab definitions of development stages](https://docs.gitlab.com/policy/development_stages_support/).
 
 ### Shared responsibility model
 
-GRIT operates under a shared responsibility model between Authors (module developers) and Operators (those deploying 
-with GRIT). For details on the specific responsibilities of each role and how support levels are determined, see 
-the [Shared responsibility section](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/blob/main/GORP.md#shared-responsibility) 
+GRIT operates under a shared responsibility model between Authors (module developers) and Operators (those deploying
+with GRIT). For details on the specific responsibilities of each role and how support levels are determined, see
+the [Shared responsibility section](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/blob/main/GORP.md#shared-responsibility)
 in the GORP documentation.
 
 ## Manage runner state
