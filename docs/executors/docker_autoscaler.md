@@ -69,7 +69,7 @@ Prerequisites:
   {{< alert type="note" >}}
 
   The AMI does not require GitLab Runner to be installed. The instances launched using the AMI must not register themselves as runners in GitLab.
-    
+
   {{< /alert >}}
 
 - An AWS autoscaling group. For the scaling policy use "none", as runner handles the scaling. Enable instance scale-in protection.

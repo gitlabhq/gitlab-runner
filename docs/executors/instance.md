@@ -41,7 +41,7 @@ To prepare the environment for autoscaling:
 
     To process job artifacts and cache, install the GitLab Runner binary on the virtual machine and keep the
     runner executable in the default path.
-    The VM image does not require GitLab Runner to run. The instances launched using the VM image must not register themselves as runners in GitLab.    
+    The VM image does not require GitLab Runner to run. The instances launched using the VM image must not register themselves as runners in GitLab.
 
     {{< /alert >}}
 
