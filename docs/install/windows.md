@@ -196,12 +196,12 @@ For more information, see [issue 1025](https://gitlab.com/gitlab-org/gitlab-runn
 
 ### How can I get colored output on the web terminal?
 
-**Short answer:**
+**Short answer**:
 
 Make sure that you have the ANSI color codes in your program's output. For the purposes of text formatting, assume that you're
 running in a UNIX ANSI terminal emulator (because it is the web interface output).
 
-**Long Answer:**
+**Long Answer**:
 
 The web interface for GitLab CI emulates a UNIX ANSI terminal (at least partially). The `gitlab-runner` pipes any output from the build
 directly to the web interface. That means that any ANSI color codes that are present are honored.

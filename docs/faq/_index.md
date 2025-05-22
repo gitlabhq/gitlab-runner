@@ -128,7 +128,7 @@ logLevel: debug
 When you configure GitLab Runner with the Docker executor, Docker containers might fail to access GitLab, even when the host Runner daemon has access.
 This can happen when DNS is configured in the host but those configurations are not passed to the container.
 
-**Example:**
+**Example**:
 
 GitLab service and GitLab Runner exist in two different networks that are bridged in two ways (for example, over the Internet and through a VPN).
 The runner's routing mechanism might query DNS through the default internet service instead of the DNS service over the VPN.

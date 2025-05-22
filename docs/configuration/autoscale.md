@@ -259,7 +259,7 @@ We now have one idle machine, so GitLab Runner starts one new machine to
 satisfy `IdleCount`. Because there are no new jobs in queue, those two
 machines stay in idle state and GitLab Runner is satisfied.
 
-**What happened:**
+**What happened**:
 
 In the example, there are two machines waiting in idle state for new jobs. After the five jobs
 are queued, new machines are created. So, in total there are seven machines:
@@ -277,7 +277,7 @@ In the above example, two idle machines are always available. The `IdleTime` par
 applies only when the number exceeds `IdleCount`. At this point, GitLab Runner reduces
 the number of machines to match `IdleCount`.
 
-**Scaling down:**
+**Scaling down**:
 
 After the job finishes, the machine is set to idle state and waits
 for new jobs to be executed. If no new jobs appear in the queue,
@@ -376,7 +376,7 @@ to `0`. And this would block the Runner in unusable state.
 
 Therefore, we've introduced the second setting: `IdleCountMin`. It defines the minimum number of idle machines
 that need to be sustained no matter what `IdleScaleFactor` evaluates to. **The setting can't be set to less than
-one if `IdleScaleFactor` is used. Runner automatically sets `IdleCountMin` it one.**
+one if `IdleScaleFactor` is used. Runner automatically sets `IdleCountMin` it one**.
 
 You can also use `IdleCountMin` to define the minimum number of idle machines that should always be available.
 This allows new jobs entering the queue to start quickly. As with `IdleCount`, the value you assign
