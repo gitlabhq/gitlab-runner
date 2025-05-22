@@ -992,14 +992,14 @@ func (e *executor) overwriteEntrypoint(image *common.Image) []string {
 }
 
 //nolint:nestif
-func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
+func (e *executor) connectDocker(ctx context.Context, options common.ExecutorPrepareOptions) error {
 	var opts []client.Opt
 
 	creds := e.Config.Docker.Credentials
 
 	environment, ok := e.Build.ExecutorData.(executors.Environment)
 	if ok {
-		c, err := environment.Prepare(e.Context, e.BuildLogger, options)
+		c, err := environment.Prepare(ctx, e.BuildLogger, options)
 		if err != nil {
 			return fmt.Errorf("preparing environment: %w", err)
 		}
@@ -1015,7 +1015,7 @@ func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 		// also overridding the daemon hostname it would typically use (if it were to use
 		// its own dialer).
 		host := creds.Host
-		scheme, dialer, err := e.environmentDialContext(c, host)
+		scheme, dialer, err := e.environmentDialContext(ctx, c, host)
 		if err != nil {
 			return fmt.Errorf("creating env dialer: %w", err)
 		}
@@ -1038,12 +1038,12 @@ func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 	}
 	e.client = dockerClient
 
-	e.info, err = e.client.Info(e.Context)
+	e.info, err = e.client.Info(ctx)
 	if err != nil {
 		return err
 	}
 
-	serverVersion, err := e.client.ServerVersion(e.Context)
+	serverVersion, err := e.client.ServerVersion(ctx)
 	if err != nil {
 		return fmt.Errorf("getting server version info: %w", err)
 	}
@@ -1076,6 +1076,7 @@ func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 type contextDialerFunc = func(ctx context.Context, network, addr string) (net.Conn, error)
 
 func (e *executor) environmentDialContext(
+	ctx context.Context,
 	executorClient executors.Client,
 	host string,
 ) (string, contextDialerFunc, error) {
@@ -1104,9 +1105,9 @@ func (e *executor) environmentDialContext(
 	}
 
 	return "dial-stdio", func(_ context.Context, network, addr string) (net.Conn, error) {
-		// DialRun doesn't want just a context for dialing, but one for a long-lived connection,
-		// so here we're ensuring that we use the executor's context, so that it is only cancelled
-		// when the job is cancelled.
+		// DialRun doesn't want just a context for dialing, but one for a long-lived connection, including cleanup.
+		// We don't want this context to be cancelled when the job is cancelled or times out since that would prevent
+		// cleanup.
 
 		// if the host was explicit, we try to use this even with dial-stdio
 		cmd := fmt.Sprintf("docker -H %s system dial-stdio", host)
@@ -1115,7 +1116,7 @@ func (e *executor) environmentDialContext(
 		if systemHost {
 			cmd = "docker system dial-stdio"
 		}
-		return executorClient.DialRun(e.Context, cmd)
+		return executorClient.DialRun(ctx, cmd)
 	}, nil
 }
 
@@ -1240,7 +1241,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	e.AbstractExecutor.PrepareConfiguration(options)
 
-	err := e.connectDocker(options)
+	err := e.connectDocker(e.Context, options)
 	if err != nil {
 		return err
 	}
