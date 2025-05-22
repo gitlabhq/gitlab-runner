@@ -70,12 +70,12 @@ solutions hosted on the major public cloud providers, or self-managed Kubernetes
 Use the following options to connect to the Kubernetes API. The user account provided must have
 permission to create, list, and attach to Pods in the specified namespace.
 
-| Option      | Description                                                                          |
-|-------------|--------------------------------------------------------------------------------------|
+| Option      | Description |
+|-------------|-------------|
 | `host`      | Optional Kubernetes API server host URL (auto-discovery attempted if not specified). |
-| `cert_file` | Optional Kubernetes API server user auth certificate.                                |
-| `key_file`  | Optional Kubernetes API server user auth private key.                                |
-| `ca_file`   | Optional Kubernetes API server ca certificate.                                       |
+| `cert_file` | Optional Kubernetes API server user auth certificate. |
+| `key_file`  | Optional Kubernetes API server user auth private key. |
+| `ca_file`   | Optional Kubernetes API server ca certificate. |
 
 If you're running GitLab Runner in the Kubernetes cluster, omit
 these fields so that the GitLab Runner auto-discovers the Kubernetes API.
@@ -226,113 +226,113 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 
 ### CPU requests and limits
 
-| Setting                                     | Description                                                                                                                                             |
-|---------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `cpu_limit`                                 | The CPU allocation given to build containers.                                                                                                           |
-| `cpu_limit_overwrite_max_allowed`           | The maximum amount that the CPU allocation can be written to for build containers. When empty, it disables the CPU limit overwrite feature.             |
-| `cpu_request`                               | The CPU allocation requested for build containers.                                                                                                      |
-| `cpu_request_overwrite_max_allowed`         | The maximum amount that the CPU allocation request can be written to for build containers. When empty, it disables the CPU request overwrite feature.   |
-| `helper_cpu_limit`                          | The CPU allocation given to build helper containers.                                                                                                    |
-| `helper_cpu_limit_overwrite_max_allowed`    | The maximum amount that the CPU allocation can be written to for helper containers. When empty, it disables the CPU limit overwrite feature.            |
-| `helper_cpu_request`                        | The CPU allocation requested for build helper containers.                                                                                               |
-| `helper_cpu_request_overwrite_max_allowed`  | The maximum amount that the CPU allocation request can be written to for helper containers. When empty, it disables the CPU request overwrite feature.  |
-| `service_cpu_limit`                         | The CPU allocation given to build service containers.                                                                                                   |
-| `service_cpu_limit_overwrite_max_allowed`   | The maximum amount that the CPU allocation can be written to for service containers. When empty, it disables the CPU limit overwrite feature.           |
-| `service_cpu_request`                       | The CPU allocation requested for build service containers.                                                                                              |
+| Setting                                     | Description |
+|---------------------------------------------|-------------|
+| `cpu_limit`                                 | The CPU allocation given to build containers. |
+| `cpu_limit_overwrite_max_allowed`           | The maximum amount that the CPU allocation can be written to for build containers. When empty, it disables the CPU limit overwrite feature. |
+| `cpu_request`                               | The CPU allocation requested for build containers. |
+| `cpu_request_overwrite_max_allowed`         | The maximum amount that the CPU allocation request can be written to for build containers. When empty, it disables the CPU request overwrite feature. |
+| `helper_cpu_limit`                          | The CPU allocation given to build helper containers. |
+| `helper_cpu_limit_overwrite_max_allowed`    | The maximum amount that the CPU allocation can be written to for helper containers. When empty, it disables the CPU limit overwrite feature. |
+| `helper_cpu_request`                        | The CPU allocation requested for build helper containers. |
+| `helper_cpu_request_overwrite_max_allowed`  | The maximum amount that the CPU allocation request can be written to for helper containers. When empty, it disables the CPU request overwrite feature. |
+| `service_cpu_limit`                         | The CPU allocation given to build service containers. |
+| `service_cpu_limit_overwrite_max_allowed`   | The maximum amount that the CPU allocation can be written to for service containers. When empty, it disables the CPU limit overwrite feature. |
+| `service_cpu_request`                       | The CPU allocation requested for build service containers. |
 | `service_cpu_request_overwrite_max_allowed` | The maximum amount that the CPU allocation request can be written to for service containers. When empty, it disables the CPU request overwrite feature. |
 
 ### Memory requests and limits
 
-| Setting | Description |
-|---------|-------------|
-| `memory_limit` | The amount of memory allocated to build containers. |
-| `memory_limit_overwrite_max_allowed` | The maximum amount that the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature. |
-| `memory_request` | The amount of memory requested from build containers. |
-| `memory_request_overwrite_max_allowed` | The maximum amount that the memory allocation request can be written to for build containers. When empty, it disables the memory request overwrite feature. |
-| `helper_memory_limit` | The amount of memory allocated to build helper containers. |
-| `helper_memory_limit_overwrite_max_allowed` | The maximum amount that the memory allocation can be written to for helper containers. When empty, it disables the memory limit overwrite feature. |
-| `helper_memory_request` | The amount of memory requested for build helper containers. |
-| `helper_memory_request_overwrite_max_allowed` | The maximum amount that the memory allocation request can be written to for helper containers. When empty, it disables the memory request overwrite feature. |
-| `service_memory_limit` | The amount of memory allocated to build service containers. |
-| `service_memory_limit_overwrite_max_allowed` | The maximum amount that the memory allocation can be written to for service containers. When empty, it disables the memory limit overwrite feature. |
-| `service_memory_request` | The amount of memory requested for build service containers. |
+| Setting                                        | Description |
+|------------------------------------------------|-------------|
+| `memory_limit`                                 | The amount of memory allocated to build containers. |
+| `memory_limit_overwrite_max_allowed`           | The maximum amount that the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature. |
+| `memory_request`                               | The amount of memory requested from build containers. |
+| `memory_request_overwrite_max_allowed`         | The maximum amount that the memory allocation request can be written to for build containers. When empty, it disables the memory request overwrite feature. |
+| `helper_memory_limit`                          | The amount of memory allocated to build helper containers. |
+| `helper_memory_limit_overwrite_max_allowed`    | The maximum amount that the memory allocation can be written to for helper containers. When empty, it disables the memory limit overwrite feature. |
+| `helper_memory_request`                        | The amount of memory requested for build helper containers. |
+| `helper_memory_request_overwrite_max_allowed`  | The maximum amount that the memory allocation request can be written to for helper containers. When empty, it disables the memory request overwrite feature. |
+| `service_memory_limit`                         | The amount of memory allocated to build service containers. |
+| `service_memory_limit_overwrite_max_allowed`   | The maximum amount that the memory allocation can be written to for service containers. When empty, it disables the memory limit overwrite feature. |
+| `service_memory_request`                       | The amount of memory requested for build service containers. |
 | `service_memory_request_overwrite_max_allowed` | The maximum amount that the memory allocation request can be written to for service containers. When empty, it disables the memory request overwrite feature. |
 
 ### Storage requests and limits
 
-| Setting | Description |
-|---------|-------------|
-| `ephemeral_storage_limit` | The ephemeral storage limit for build containers. |
-| `ephemeral_storage_limit_overwrite_max_allowed` | The maximum amount that the ephemeral storage limit for build containers can be overwritten. When empty, it disables the ephemeral storage limit overwrite feature. |
-| `ephemeral_storage_request` | The ephemeral storage request given to build containers. |
-| `ephemeral_storage_request_overwrite_max_allowed` | The maximum amount that the ephemeral storage request can be overwritten by for build containers. When empty, it disables the ephemeral storage request overwrite feature. |
-| `helper_ephemeral_storage_limit` | The ephemeral storage limit given to helper containers. |
-| `helper_ephemeral_storage_limit_overwrite_max_allowed` | The maximum amount that the ephemeral storage limit can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature. |
-| `helper_ephemeral_storage_request` | The ephemeral storage request given to helper containers. |
-| `helper_ephemeral_storage_request_overwrite_max_allowed` | The maximum amount that the ephemeral storage request can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature. |
-| `service_ephemeral_storage_limit` | The ephemeral storage limit given to service containers. |
-| `service_ephemeral_storage_limit_overwrite_max_allowed` | The maximum amount that the ephemeral storage limit can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
-| `service_ephemeral_storage_request` | The ephemeral storage request given to service containers. |
+| Setting                                                   | Description |
+|-----------------------------------------------------------|-------------|
+| `ephemeral_storage_limit`                                 | The ephemeral storage limit for build containers. |
+| `ephemeral_storage_limit_overwrite_max_allowed`           | The maximum amount that the ephemeral storage limit for build containers can be overwritten. When empty, it disables the ephemeral storage limit overwrite feature. |
+| `ephemeral_storage_request`                               | The ephemeral storage request given to build containers. |
+| `ephemeral_storage_request_overwrite_max_allowed`         | The maximum amount that the ephemeral storage request can be overwritten by for build containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `helper_ephemeral_storage_limit`                          | The ephemeral storage limit given to helper containers. |
+| `helper_ephemeral_storage_limit_overwrite_max_allowed`    | The maximum amount that the ephemeral storage limit can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `helper_ephemeral_storage_request`                        | The ephemeral storage request given to helper containers. |
+| `helper_ephemeral_storage_request_overwrite_max_allowed`  | The maximum amount that the ephemeral storage request can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `service_ephemeral_storage_limit`                         | The ephemeral storage limit given to service containers. |
+| `service_ephemeral_storage_limit_overwrite_max_allowed`   | The maximum amount that the ephemeral storage limit can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `service_ephemeral_storage_request`                       | The ephemeral storage request given to service containers. |
 | `service_ephemeral_storage_request_overwrite_max_allowed` | The maximum amount that the ephemeral storage request can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
 
 ### Other `config.toml` settings
 
-| Setting | Description|
-|---------|------------|
-| `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#define-a-list-of-node-affinities).|
-| `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) behavior.|
-| `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restrict-docker-images-and-services).|
-| `allowed_pull_policies` | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file.|
-| `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restrict-docker-images-and-services).|
-| `automount_service_account_token` | Boolean to control whether the service account token automatically mounts in the build pod.|
-| `bearer_token` | Default bearer token used to launch build pods.|
-| `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token used to create the build pod.|
-| `build_container_security_context` | Sets a container security context for the build container. [Read more about security context](#set-a-security-policy-for-the-pod).|
-| `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#specify-container-capabilities).|
-| `cap_drop` | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#specify-container-capabilities).|
-| `cleanup_grace_period_seconds` | When a job completes, the duration in seconds that the pod has to terminate gracefully. After this period, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified.|
-| `dns_policy` | Specify the DNS policy that should be used when constructing the pod: `none`, `default`, `cluster-first`, `cluster-first-with-host-net`. The Kubernetes default (`cluster-first`) is used if not set.|
-| `dns_config` | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#configure-pod-dns-settings).|
-| `helper_container_security_context` | Sets a container security context for the helper container. [Read more about security context](#set-a-security-policy-for-the-pod).|
-| `helper_image` | (Advanced) [Override the default helper image](../../configuration/advanced-configuration.md#helper-image) used to clone repositories and upload artifacts.|
-| `helper_image_flavor` | Sets the helper image flavor (`alpine`, `alpine3.18`, `alpine3.19`, `alpine3.21`, or `ubuntu`). Defaults to `alpine`. Using `alpine` is the same as `alpine3.19`.|
-| `host_aliases` | List of additional host name aliases that are added to all containers. [Read more about using extra host aliases](#add-extra-host-aliases).|
-| `image_pull_secrets` | An array of items containing the Kubernetes `docker-registry` secret names used to authenticate Docker image pulling from private registries.|
-| `init_permissions_container_security_context` | Sets a container security context for the init-permissions container. [Read more about security context](#set-a-security-policy-for-the-pod).|
-| `namespace` | Namespace in which to run Kubernetes Pods.|
-| `namespace_per_job` | Isolate jobs in separate namespaces. If enabled, `namespace` and `namespace_overwrite_allowed` are ignored.|
-| `namespace_overwrite_allowed` | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature.|
-| `node_selector` | A `table` of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables). Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. [Read more about using node selectors](#specify-the-node-to-execute-builds).|
-| `node_tolerations` | A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration.|
-| `pod_annotations` | A `table` of `key=value` pairs in the format of `string=string`. The `table` contains a list of annotations to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build.|
-| `pod_annotations_overwrite_allowed` | Regular expression to validate the contents of the pod annotations overwrite environment variable. When empty, it disables the pod annotations overwrite feature.|
-| `pod_labels` | A `table` of `key=value` pairs in the format of `string=string`. The `table` contains a list of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod labels can be overwritten in each build by using `pod_labels_overwrite_allowed`.|
-| `pod_labels_overwrite_allowed` | Regular expression to validate the contents of the pod labels overwrite environment variable. When empty, it disables the pod labels overwrite feature. Note that pod labels in the `runner.gitlab.com` label namespace cannot be overwritten.|
-| `pod_security_context` | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#set-a-security-policy-for-the-pod).|
-| `pod_termination_grace_period_seconds` | Pod-level setting which determines the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified.|
-| `poll_interval` | How frequently, in seconds, the runner polls the Kubernetes pod it has just created to check its status (default = 3).|
-| `poll_timeout` | The amount of time, in seconds, that needs to pass before the runner times out attempting to connect to the container it has just created. Use this setting for queueing more builds than the cluster can handle at a time (default = 180).|
-| `cleanup_resources_timeout` | The total amount of time for Kubernetes resources to be cleaned up after the job completes. Supported syntax: `1h30m`, `300s`, `10m`. Default is 5 minutes (`5m`).|
-| `priority_class_name` | Specify the Priority Class to be set to the pod. The default one is used if not set.|
-| `privileged` | Run containers with the privileged flag.|
-| `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#set-a-pull-policy). See also [`if-not-present`, `never` security considerations](../../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). You can also [restrict pull policies](#restrict-docker-pull-policies).|
-| `resource_availability_check_max_attempts` | The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0. [Read more about resources check during prepare step](#resources-check-during-prepare-step).|
-| `runtime_class_name` | A Runtime class to use for all created pods. If the feature is unsupported by the cluster, jobs exit or fail.|
-| `service_container_security_context` | Sets a container security context for the service containers. [Read more about security context](#set-a-security-policy-for-the-pod).|
-| `scheduler_name` | Scheduler to use for scheduling build pods.|
-| `service_account` | Default service account job/executor pods use to talk to Kubernetes API.|
-| `service_account_overwrite_allowed` | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature.|
-| `services` | List of [services](https://docs.gitlab.com/ci/services/) attached to the build container using the [sidecar pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#define-a-list-of-services).|
-| `use_service_account_image_pull_secrets` | When enabled, the pod created by the executor lacks `imagePullSecrets`. This causes the pod to be created using the [`imagePullSecrets` from the service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-image-pull-secret-to-service-account), if set.|
-| `terminationGracePeriodSeconds` | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. [Deprecated in favour of `cleanup_grace_period_seconds` and `pod_termination_grace_period_seconds`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165).|
-| `volumes` | Configured through the configuration file, the list of volumes that is mounted in the build container. [Read more about using volumes](#configure-volume-types).|
-| `pod_spec` | This setting is an experiment. Overwrites the pod specification generated by the runner manager with a list of configurations set on the pod used to run the CI Job. All the properties listed `Kubernetes Pod Specification` can be set. For more information, see [Overwrite generated pod specifications (experiment)](#overwrite-generated-pod-specifications).|
-| `retry_limit` | The maximum number of attempts to communicate with Kubernetes API. The retry interval between each attempt is based on a backoff algorithm starting at 500 ms.|
-| `retry_backoff_max` | Custom maximum backoff value in milliseconds for the retry interval to reach for each attempt. The default value is 2000 ms and it can not be lower than 500 ms. The default maximum retry interval to reach for each attempt is 2 seconds and can be customized with `retry_backoff_max`.|
-| `retry_limits` | How many times each request error is to be retried.|
-| `logs_base_dir` | Base directory to be prepended to the generated path to store build logs. For more information, see [Change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts).|
-| `scripts_base_dir` | Base directory to be prepended to the generated path to store build scripts. For more information, see [Change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts).|
-| `print_pod_warning_events` | When enabled, this feature retrieves all warning events associated with the pod when jobs fail. This functionality is enabled by default and requires a service account with at least [`events: list` permissions](#configure-runner-api-permissions).|
+| Setting                                       | Description |
+|-----------------------------------------------|-------------|
+| `affinity`                                    | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#define-a-list-of-node-affinities). |
+| `allow_privilege_escalation`                  | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) behavior. |
+| `allowed_images`                              | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restrict-docker-images-and-services). |
+| `allowed_pull_policies`                       | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. |
+| `allowed_services`                            | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restrict-docker-images-and-services). |
+| `automount_service_account_token`             | Boolean to control whether the service account token automatically mounts in the build pod. |
+| `bearer_token`                                | Default bearer token used to launch build pods. |
+| `bearer_token_overwrite_allowed`              | Boolean to allow projects to specify a bearer token used to create the build pod. |
+| `build_container_security_context`            | Sets a container security context for the build container. [Read more about security context](#set-a-security-policy-for-the-pod). |
+| `cap_add`                                     | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#specify-container-capabilities). |
+| `cap_drop`                                    | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#specify-container-capabilities). |
+| `cleanup_grace_period_seconds`                | When a job completes, the duration in seconds that the pod has to terminate gracefully. After this period, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified. |
+| `dns_policy`                                  | Specify the DNS policy that should be used when constructing the pod: `none`, `default`, `cluster-first`, `cluster-first-with-host-net`. The Kubernetes default (`cluster-first`) is used if not set. |
+| `dns_config`                                  | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#configure-pod-dns-settings). |
+| `helper_container_security_context`           | Sets a container security context for the helper container. [Read more about security context](#set-a-security-policy-for-the-pod). |
+| `helper_image`                                | (Advanced) [Override the default helper image](../../configuration/advanced-configuration.md#helper-image) used to clone repositories and upload artifacts. |
+| `helper_image_flavor`                         | Sets the helper image flavor (`alpine`, `alpine3.18`, `alpine3.19`, `alpine3.21`, or `ubuntu`). Defaults to `alpine`. Using `alpine` is the same as `alpine3.19`. |
+| `host_aliases`                                | List of additional host name aliases that are added to all containers. [Read more about using extra host aliases](#add-extra-host-aliases). |
+| `image_pull_secrets`                          | An array of items containing the Kubernetes `docker-registry` secret names used to authenticate Docker image pulling from private registries. |
+| `init_permissions_container_security_context` | Sets a container security context for the init-permissions container. [Read more about security context](#set-a-security-policy-for-the-pod). |
+| `namespace`                                   | Namespace in which to run Kubernetes Pods. |
+| `namespace_per_job`                           | Isolate jobs in separate namespaces. If enabled, `namespace` and `namespace_overwrite_allowed` are ignored. |
+| `namespace_overwrite_allowed`                 | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature. |
+| `node_selector`                               | A `table` of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables). Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. [Read more about using node selectors](#specify-the-node-to-execute-builds). |
+| `node_tolerations`                            | A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration. |
+| `pod_annotations`                             | A `table` of `key=value` pairs in the format of `string=string`. The `table` contains a list of annotations to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build. |
+| `pod_annotations_overwrite_allowed`           | Regular expression to validate the contents of the pod annotations overwrite environment variable. When empty, it disables the pod annotations overwrite feature. |
+| `pod_labels`                                  | A `table` of `key=value` pairs in the format of `string=string`. The `table` contains a list of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod labels can be overwritten in each build by using `pod_labels_overwrite_allowed`. |
+| `pod_labels_overwrite_allowed`                | Regular expression to validate the contents of the pod labels overwrite environment variable. When empty, it disables the pod labels overwrite feature. Note that pod labels in the `runner.gitlab.com` label namespace cannot be overwritten. |
+| `pod_security_context`                        | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#set-a-security-policy-for-the-pod). |
+| `pod_termination_grace_period_seconds`        | Pod-level setting which determines the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified. |
+| `poll_interval`                               | How frequently, in seconds, the runner polls the Kubernetes pod it has just created to check its status (default = 3). |
+| `poll_timeout`                                | The amount of time, in seconds, that needs to pass before the runner times out attempting to connect to the container it has just created. Use this setting for queueing more builds than the cluster can handle at a time (default = 180). |
+| `cleanup_resources_timeout`                   | The total amount of time for Kubernetes resources to be cleaned up after the job completes. Supported syntax: `1h30m`, `300s`, `10m`. Default is 5 minutes (`5m`). |
+| `priority_class_name`                         | Specify the Priority Class to be set to the pod. The default one is used if not set. |
+| `privileged`                                  | Run containers with the privileged flag. |
+| `pull_policy`                                 | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#set-a-pull-policy). See also [`if-not-present`, `never` security considerations](../../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). You can also [restrict pull policies](#restrict-docker-pull-policies). |
+| `resource_availability_check_max_attempts`    | The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0. [Read more about resources check during prepare step](#resources-check-during-prepare-step). |
+| `runtime_class_name`                          | A Runtime class to use for all created pods. If the feature is unsupported by the cluster, jobs exit or fail. |
+| `service_container_security_context`          | Sets a container security context for the service containers. [Read more about security context](#set-a-security-policy-for-the-pod). |
+| `scheduler_name`                              | Scheduler to use for scheduling build pods. |
+| `service_account`                             | Default service account job/executor pods use to talk to Kubernetes API. |
+| `service_account_overwrite_allowed`           | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature. |
+| `services`                                    | List of [services](https://docs.gitlab.com/ci/services/) attached to the build container using the [sidecar pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#define-a-list-of-services). |
+| `use_service_account_image_pull_secrets`      | When enabled, the pod created by the executor lacks `imagePullSecrets`. This causes the pod to be created using the [`imagePullSecrets` from the service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-image-pull-secret-to-service-account), if set. |
+| `terminationGracePeriodSeconds`               | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. [Deprecated in favour of `cleanup_grace_period_seconds` and `pod_termination_grace_period_seconds`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165). |
+| `volumes`                                     | Configured through the configuration file, the list of volumes that is mounted in the build container. [Read more about using volumes](#configure-volume-types). |
+| `pod_spec`                                    | This setting is an experiment. Overwrites the pod specification generated by the runner manager with a list of configurations set on the pod used to run the CI Job. All the properties listed `Kubernetes Pod Specification` can be set. For more information, see [Overwrite generated pod specifications (experiment)](#overwrite-generated-pod-specifications). |
+| `retry_limit`                                 | The maximum number of attempts to communicate with Kubernetes API. The retry interval between each attempt is based on a backoff algorithm starting at 500 ms. |
+| `retry_backoff_max`                           | Custom maximum backoff value in milliseconds for the retry interval to reach for each attempt. The default value is 2000 ms and it can not be lower than 500 ms. The default maximum retry interval to reach for each attempt is 2 seconds and can be customized with `retry_backoff_max`. |
+| `retry_limits`                                | How many times each request error is to be retried. |
+| `logs_base_dir`                               | Base directory to be prepended to the generated path to store build logs. For more information, see [Change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts). |
+| `scripts_base_dir`                            | Base directory to be prepended to the generated path to store build scripts. For more information, see [Change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts). |
+| `print_pod_warning_events`                    | When enabled, this feature retrieves all warning events associated with the pod when jobs fail. This functionality is enabled by default and requires a service account with at least [`events: list` permissions](#configure-runner-api-permissions). |
 
 ### Configuration example
 
@@ -396,16 +396,16 @@ are ignored and logged as debug messages.
 
 {{< /alert >}}
 
-| Key                                        | Description                                                                                                                                     |
-|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| `project.runner.gitlab.com/id`             | The ID of the project, unique across projects in the GitLab instance.                     |
-| `project.runner.gitlab.com/name`           | The name of the project.                                                    |
-| `project.runner.gitlab.com/namespace-id`   | The ID of the project's namespace.                                                      |
-| `project.runner.gitlab.com/namespace`      | The name of the project's namespace.                                                         |
+| Key                                        | Description |
+|--------------------------------------------|-------------|
+| `project.runner.gitlab.com/id`             | The ID of the project, unique across projects in the GitLab instance. |
+| `project.runner.gitlab.com/name`           | The name of the project. |
+| `project.runner.gitlab.com/namespace-id`   | The ID of the project's namespace. |
+| `project.runner.gitlab.com/namespace`      | The name of the project's namespace. |
 | `project.runner.gitlab.com/root-namespace` | The ID of the project's root namespace. For example, `/gitlab-org/group-a/subgroup-a/project`, where the root namespace is `gitlab-org` |
-| `manager.runner.gitlab.com/name`           | The name of the runner configuration that launched this job.                                                                          |
-| `manager.runner.gitlab.com/id-short`       | The ID of the runner configuration that launched the job.                                                                            |
-| `job.runner.gitlab.com/pod`                | Internal label used by the Kubernetes executor.                                                                                                      |
+| `manager.runner.gitlab.com/name`           | The name of the runner configuration that launched this job. |
+| `manager.runner.gitlab.com/id-short`       | The ID of the runner configuration that launched the job. |
+| `job.runner.gitlab.com/pod`                | Internal label used by the Kubernetes executor. |
 
 ### Default annotations for job pods
 
@@ -417,16 +417,16 @@ are ignored and logged as debug messages.
 
 The following annotations are added by default on the Pod running the jobs:
 
-| Key                                | Description                                                       |
-|------------------------------------|-------------------------------------------------------------------|
+| Key                                | Description |
+|------------------------------------|-------------|
 | `job.runner.gitlab.com/id`         | The ID of the job, unique across all jobs in the GitLab instance. |
-| `job.runner.gitlab.com/url`        | The URL for the job details.                                      |
-| `job.runner.gitlab.com/sha`        | The commit revision the project is built for.                     |
-| `job.runner.gitlab.com/before_sha` | The previous latest commit present on a branch or tag.            |
-| `job.runner.gitlab.com/ref`        | The branch or tag name for which the project is built.            |
-| `job.runner.gitlab.com/name`       | The name of the job.                                              |
-| `job.runner.gitlab.com/timeout`    | The job execution timeout in the time duration format. For example, '2h3m0.5s'.                  |
-| `project.runner.gitlab.com/id`     | The project ID of the job.                                        |
+| `job.runner.gitlab.com/url`        | The URL for the job details. |
+| `job.runner.gitlab.com/sha`        | The commit revision the project is built for. |
+| `job.runner.gitlab.com/before_sha` | The previous latest commit present on a branch or tag. |
+| `job.runner.gitlab.com/ref`        | The branch or tag name for which the project is built. |
+| `job.runner.gitlab.com/name`       | The name of the job. |
+| `job.runner.gitlab.com/timeout`    | The job execution timeout in the time duration format. For example, `2h3m0.5s`. |
+| `project.runner.gitlab.com/id`     | The project ID of the job. |
 
 To overwrite default annotations, use the `pod_annotations` in the GitLab Runner configuration.
 You can also overwrite annotations for each CI/CD job in the [`.gitlab-ci.yml` file](#overwrite-pod-annotations).
@@ -562,11 +562,11 @@ The `pod_spec` setting:
 
 You can configure multiple `pod_spec` settings.
 
-| Setting | Description |
-|---------|-------------|
-| `name` | Name given to the custom `pod_spec`. |
+| Setting      | Description |
+|--------------|-------------|
+| `name`       | Name given to the custom `pod_spec`. |
 | `patch_path` | Path to the file that defines the changes to apply to the final `PodSpec` object before it is generated. The file must be a JSON or YAML file. |
-| `patch` | A JSON or YAML format string that describes the changes which must be applied to the final `PodSpec` object before it is generated. |
+| `patch`      | A JSON or YAML format string that describes the changes which must be applied to the final `PodSpec` object before it is generated. |
 | `patch_type` | The strategy the runner uses to apply the specified changes to the `PodSpec` object generated by GitLab Runner. The accepted values are `merge`, `json`, and `strategic`. |
 
 You cannot set the `patch_path` and `patch` in the same `pod_spec` configuration, otherwise an error occurs.
@@ -814,14 +814,14 @@ in the `config.toml` to set a security policy for the build pod.
 
 Use the following options:
 
-| Option                | Type       | Required | Description                                                                                                      |
-|-----------------------|------------|----------|------------------------------------------------------------------------------------------------------------------|
-| `fs_group`            | `int`      | No       | A special supplemental group that applies to all containers in a pod.                                            |
-| `run_as_group`        | `int`      | No       | The GID to run the entry point of the container process.                                                         |
-| `run_as_non_root`     | boolean    | No       | Indicates that the container must run as a non-root user.                                                        |
-| `run_as_user`         | `int`      | No       | The UID to run the entry point of the container process.                                                         |
+| Option                | Type       | Required | Description |
+|-----------------------|------------|----------|-------------|
+| `fs_group`            | `int`      | No       | A special supplemental group that applies to all containers in a pod. |
+| `run_as_group`        | `int`      | No       | The GID to run the entry point of the container process. |
+| `run_as_non_root`     | boolean    | No       | Indicates that the container must run as a non-root user. |
+| `run_as_user`         | `int`      | No       | The UID to run the entry point of the container process. |
 | `supplemental_groups` | `int` list | No       | A list of groups applied to the first process run in each container, in addition to the container's primary GID. |
-| `selinux_type`        | `string`   | No       | The SELinux type label that applies to all containers in a pod.                                                  |
+| `selinux_type`        | `string`   | No       | The SELinux type label that applies to all containers in a pod. |
 
 Example of a pod security context in the `config.toml`:
 
@@ -857,14 +857,14 @@ in the `config.toml` executor to set a container security policy for the build, 
 
 Use the following options:
 
-| Option                | Type        | Required | Description |
-|-----------------------|-------------|----------|-------------|
-| `run_as_group`        | int         | No       | The GID to run the entry point of the container process. |
-| `run_as_non_root`     | boolean     | No       | Indicates that the container must run as a non-root user. |
-| `run_as_user`         | int         | No       | The UID to run the entry point of the container process. |
-| `capabilities.add`    | string list | No       | The capabilities to add when running the container. |
-| `capabilities.drop`   | string list | No       | The capabilities to drop when running the container. |
-| `selinux_type`        | string      | No       | The SELinux type label that is associated with the container process. |
+| Option              | Type        | Required | Description |
+|---------------------|-------------|----------|-------------|
+| `run_as_group`      | int         | No       | The GID to run the entry point of the container process. |
+| `run_as_non_root`   | boolean     | No       | Indicates that the container must run as a non-root user. |
+| `run_as_user`       | int         | No       | The UID to run the entry point of the container process. |
+| `capabilities.add`  | string list | No       | The capabilities to add when running the container. |
+| `capabilities.drop` | string list | No       | The capabilities to drop when running the container. |
+| `selinux_type`      | string      | No       | The SELinux type label that is associated with the container process. |
 
 In the following example in the `config.toml`, the security context configuration:
 
@@ -937,12 +937,12 @@ To retry a failed pull:
 
 The GitLab naming convention is different to the Kubernetes one.
 
-| Runner pull policy | Kubernetes pull policy | Description                                                                                                                                                                                                                                  |
-|--------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| _blank_            | _blank_                | Uses the default policy, as specified by Kubernetes.                                                                                                                                                                                         |
+| Runner pull policy | Kubernetes pull policy | Description |
+|--------------------|------------------------|-------------|
+| _blank_            | _blank_                | Uses the default policy, as specified by Kubernetes. |
 | `if-not-present`   | `IfNotPresent`         | The image is pulled only if it is not already present on the node that executes the job. Review the [security considerations](../../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) before you use this pull policy. |
-| `always`           | `Always`               | The image is pulled every time the job is executed.                                                                                                                                                                                          |
-| `never`            | `Never`                | The image is never pulled and requires the node to already have it.                                                                                                                                                                          |
+| `always`           | `Always`               | The image is pulled every time the job is executed. |
+| `never`            | `Never`                | The image is never pulled and requires the node to already have it. |
 
 ### Specify container capabilities
 
@@ -1533,52 +1533,52 @@ Example configuration in the `config.toml` file:
 
 Use the following settings to configure each lifecycle hook:
 
-| Option       | Type                           | Required | Description |
-|--------------|--------------------------------|----------|-------------|
-| `exec`       | `KubernetesLifecycleExecAction`| No       | `Exec` specifies the action to take. |
-| `http_get`   | `KubernetesLifecycleHTTPGet`   | No       | `HTTPGet` specifies the http request to perform. |
-| `tcp_socket` | `KubernetesLifecycleTcpSocket` | No       | `TCPsocket` specifies an action involving a TCP port. |
+| Option       | Type                            | Required | Description |
+|--------------|---------------------------------|----------|-------------|
+| `exec`       | `KubernetesLifecycleExecAction` | No       | `Exec` specifies the action to take. |
+| `http_get`   | `KubernetesLifecycleHTTPGet`    | No       | `HTTPGet` specifies the http request to perform. |
+| `tcp_socket` | `KubernetesLifecycleTcpSocket`  | No       | `TCPsocket` specifies an action involving a TCP port. |
 
 #### KubernetesLifecycleExecAction
 
-| Option       | Type          | Required | Description |
-|--------------|---------------|----------|-------------|
-| `command`    | `string` list | Yes      | The command line to execute inside the container. |
+| Option    | Type          | Required | Description |
+|-----------|---------------|----------|-------------|
+| `command` | `string` list | Yes      | The command line to execute inside the container. |
 
 #### KubernetesLifecycleHTTPGet
 
-| Option         | Type                                     | Required | Description |
-|----------------|------------------------------------------|----------|-------------|
-| `port`         | `int`                                    | Yes      | The number of the port to access on the container. |
-| `host`         | string                                   | No       | The host name to connect to, defaults to the pod IP (optional). |
-| `path`         | string                                   | No       | The path to access on the HTTP server (optional). |
-| `scheme`       | string                                   | No       | The scheme used for connecting to the host. Defaults to HTTP (optional). |
-| `http_headers` | `KubernetesLifecycleHTTPGetHeader` list  | No       | Custom headers to set in the request (optional). |
+| Option         | Type                                    | Required | Description |
+|----------------|-----------------------------------------|----------|-------------|
+| `port`         | `int`                                   | Yes      | The number of the port to access on the container. |
+| `host`         | string                                  | No       | The host name to connect to, defaults to the pod IP (optional). |
+| `path`         | string                                  | No       | The path to access on the HTTP server (optional). |
+| `scheme`       | string                                  | No       | The scheme used for connecting to the host. Defaults to HTTP (optional). |
+| `http_headers` | `KubernetesLifecycleHTTPGetHeader` list | No       | Custom headers to set in the request (optional). |
 
 #### KubernetesLifecycleHTTPGetHeader
 
-| Option       | Type      | Required | Description |
-|--------------|-----------|----------|-------------|
-| `name`       | string    | Yes      | HTTP header name.  |
-| `value`      | string    | Yes      | HTTP header value. |
+| Option  | Type   | Required | Description |
+|---------|--------|----------|-------------|
+| `name`  | string | Yes      | HTTP header name. |
+| `value` | string | Yes      | HTTP header value. |
 
 #### KubernetesLifecycleTcpSocket
 
-| Option       | Type      | Required | Description |
-|--------------|-----------|----------|-------------|
-| `port`       | `int`     | Yes      | The number of the port to access on the container. |
-| `host`       | string    | No       | The host name to connect to, defaults to the pod IP (optional). |
+| Option | Type   | Required | Description |
+|--------|--------|----------|-------------|
+| `port` | `int`  | Yes      | The number of the port to access on the container. |
+| `host` | string | No       | The host name to connect to, defaults to the pod IP (optional). |
 
 ### Configure pod DNS settings
 
 Use the following options to configure the [DNS settings](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config)
 of the pods.
 
-| Option       | Type                        | Required | Description |
-|--------------|-----------------------------|----------|-------------|
-| `nameservers`| `string` list               | No       | A list of IP addresses that are used as DNS servers for the pod. |
-| `options`    | `KubernetesDNSConfigOption` | No       | A optional list of objects where each object may have a name property (required) and a value property (optional). |
-| `searches`   | `string` lists               | No       | A list of DNS search domains for hostname lookup in the pod. |
+| Option        | Type                        | Required | Description |
+|---------------|-----------------------------|----------|-------------|
+| `nameservers` | `string` list               | No       | A list of IP addresses that are used as DNS servers for the pod. |
+| `options`     | `KubernetesDNSConfigOption` | No       | A optional list of objects where each object may have a name property (required) and a value property (optional). |
+| `searches`    | `string` lists              | No       | A list of DNS search domains for hostname lookup in the pod. |
 
 Example configuration in the `config.toml` file:
 
@@ -1611,10 +1611,10 @@ check_interval = 30
 
 #### KubernetesDNSConfigOption
 
-| Option       | Type      | Required | Description |
-|--------------|-----------|----------|-------------|
-| `name`       | string    | Yes      | Configuration option name.  |
-| `value`      | `*string` | No       | Configuration option value. |
+| Option  | Type      | Required | Description |
+|---------|-----------|----------|-------------|
+| `name`  | string    | Yes      | Configuration option name. |
+| `value` | `*string` | No       | Configuration option value. |
 
 #### Default list of dropped capabilities
 
@@ -1637,10 +1637,10 @@ instruct Kubernetes to add entries to `/etc/hosts` file in the container.
 
 Use the following options:
 
-| Option       | Type          | Required | Description |
-|--------------|---------------|----------|-------------|
-| `IP`         | string        | Yes      | The IP address you want to attach hosts to. |
-| `Hostnames`  | `string` list | Yes      | A list of host name aliases that are attached to the IP. |
+| Option      | Type          | Required | Description |
+|-------------|---------------|----------|-------------|
+| `IP`        | string        | Yes      | The IP address you want to attach hosts to. |
+| `Hostnames` | `string` list | Yes      | A list of host name aliases that are attached to the IP. |
 
 Example configuration in the `config.toml` file:
 
@@ -1743,14 +1743,14 @@ a specified host path in the container.
 
 Use the following options in the `config.toml` file:
 
-| Option              | Type      | Required | Description                                                                                                               |
-|---------------------|-----------|----------|---------------------------------------------------------------------------------------------------------------------------|
-| `name`              | string    | Yes      | The name of the volume.                                                                                                   |
-| `mount_path`        | string    | Yes      | The path where the volume is mounted in the container.                                                                 |
-| `sub_path`          | string    | No       | The [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) inside the mounted volume instead of its root. |
-| `host_path`         | string    | No       | The path on the host mounted as a volume. If you don't specify a value, it defaults to the same path as `mount_path`.                    |
-| `read_only`         | boolean   | No       | Sets the volume in read-only mode. Defaults to `false`.                                                                    |
-| `mount_propagation` | string    | No       | Share mounted volumes between containers. For more information, see [Mount Propagation](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation).                           |
+| Option              | Type    | Required | Description |
+|---------------------|---------|----------|-------------|
+| `name`              | string  | Yes      | The name of the volume. |
+| `mount_path`        | string  | Yes      | The path where the volume is mounted in the container. |
+| `sub_path`          | string  | No       | The [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) inside the mounted volume instead of its root. |
+| `host_path`         | string  | No       | The path on the host mounted as a volume. If you don't specify a value, it defaults to the same path as `mount_path`. |
+| `read_only`         | boolean | No       | Sets the volume in read-only mode. Defaults to `false`. |
+| `mount_propagation` | string  | No       | Share mounted volumes between containers. For more information, see [Mount Propagation](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation). |
 
 #### `persistentVolumeClaim` volume
 
@@ -1759,13 +1759,13 @@ instruct Kubernetes to use a `persistentVolumeClaim` defined in a Kubernetes clu
 
 Use the following options in the `config.toml` file:
 
-| Option       | Type      | Required | Description |
-|--------------|-----------|----------|-------------|
-| `name`       | string    | Yes      | The name of the volume and at the same time the name of `PersistentVolumeClaim` that should be used. Supports variables. For more information, see [Persistent per-concurrency build volumes](#persistent-per-concurrency-build-volumes). |
-| `mount_path` | string    | Yes      | Path in the container where the volume is mounted. |
-| `read_only`  | boolean   | No       | Sets the volume to read-only mode (defaults to false). |
-| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
-| `mount_propagation` | string    | No       | Set the mount propagation mode for the volume. For more details, see [Kubernetes mount propagation](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation). |
+| Option              | Type    | Required | Description |
+|---------------------|---------|----------|-------------|
+| `name`              | string  | Yes      | The name of the volume and at the same time the name of `PersistentVolumeClaim` that should be used. Supports variables. For more information, see [Persistent per-concurrency build volumes](#persistent-per-concurrency-build-volumes). |
+| `mount_path`        | string  | Yes      | Path in the container where the volume is mounted. |
+| `read_only`         | boolean | No       | Sets the volume to read-only mode (defaults to false). |
+| `sub_path`          | string  | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
+| `mount_propagation` | string  | No       | Set the mount propagation mode for the volume. For more details, see [Kubernetes mount propagation](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation). |
 
 #### `configMap` volume
 
@@ -1774,13 +1774,13 @@ defined in a Kubernetes cluster and mount it in the container.
 
 Use the following options in the `config.toml`:
 
-| Option       | Type                | Required | Description                                                                                                               |
-|--------------|---------------------|----------|---------------------------------------------------------------------------------------------------------------------------|
-| `name`       | string              | Yes      | The name of the volume and at the same time the name of `configMap` that should be used.                                  |
-| `mount_path` | string              | Yes      | Path in the container where the volume is mounted.                                                                        |
-| `read_only`  | boolean             | No       | Sets the volume to read-only mode (defaults to false).                                                                    |
+| Option       | Type                | Required | Description |
+|--------------|---------------------|----------|-------------|
+| `name`       | string              | Yes      | The name of the volume and at the same time the name of `configMap` that should be used. |
+| `mount_path` | string              | Yes      | Path in the container where the volume is mounted. |
+| `read_only`  | boolean             | No       | Sets the volume to read-only mode (defaults to false). |
 | `sub_path`   | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
-| `items`      | `map[string]string` | no       | Key-to-path mapping for keys from the `configMap` that should be used.                                                    |
+| `items`      | `map[string]string` | no       | Key-to-path mapping for keys from the `configMap` that should be used. |
 
 Each key from the `configMap` is changed into a file and stored in the mount path. By default:
 
@@ -1804,13 +1804,13 @@ a `secret` defined in a Kubernetes cluster and mount it in the container.
 
 Use the following options in the `config.toml` file:
 
-| Option       | Type      | Required | Description |
-|--------------|-----------|----------|-------------|
-| `name`       | string    | Yes      | The name of the volume and at the same time the name of _secret_ that should be used. |
-| `mount_path` | string    | Yes      | Path inside of container where the volume should be mounted. |
-| `read_only`  | boolean   | No       | Sets the volume in read-only mode (defaults to false). |
-| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
-| `items`      | `map[string]string` | No   | Key-to-path mapping for keys from the configMap that should be used. |
+| Option       | Type                | Required | Description |
+|--------------|---------------------|----------|-------------|
+| `name`       | string              | Yes      | The name of the volume and at the same time the name of _secret_ that should be used. |
+| `mount_path` | string              | Yes      | Path inside of container where the volume should be mounted. |
+| `read_only`  | boolean             | No       | Sets the volume in read-only mode (defaults to false). |
+| `sub_path`   | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
+| `items`      | `map[string]string` | No       | Key-to-path mapping for keys from the configMap that should be used. |
 
 Each key from selected `secret` is changed into a file stored in the selected mount path. By default:
 
@@ -1834,13 +1834,13 @@ to instruct Kubernetes to mount an empty directory in the container.
 
 Use the following options in the `config.toml` file:
 
-| Option       | Type    | Required | Description |
-|--------------|---------|----------|-------------|
-| `name`       | string  | Yes      | The name of the volume. |
-| `mount_path` | string  | Yes      | Path inside of container where the volume should be mounted. |
-| `sub_path`   | string  | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
-| `medium`     | string  | No       | "Memory" provides a `tmpfs`, otherwise it defaults to the node disk storage (defaults to ""). |
-| `size_limit` | string  | No       | The total amount of local storage required for the `emptyDir` volume. |
+| Option       | Type   | Required | Description |
+|--------------|--------|----------|-------------|
+| `name`       | string | Yes      | The name of the volume. |
+| `mount_path` | string | Yes      | Path inside of container where the volume should be mounted. |
+| `sub_path`   | string | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
+| `medium`     | string | No       | "Memory" provides a `tmpfs`, otherwise it defaults to the node disk storage (defaults to ""). |
+| `size_limit` | string | No       | The total amount of local storage required for the `emptyDir` volume. |
 
 #### `csi` volume
 
