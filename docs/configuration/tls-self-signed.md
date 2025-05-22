@@ -23,7 +23,7 @@ GitLab Runner provides two options to configure certificates to be used to verif
 - **For connections to the GitLab server**: the certificate file can be specified as detailed in the
   [Supported options for self-signed certificates targeting the GitLab server](#supported-options-for-self-signed-certificates-targeting-the-gitlab-server) section.
 
-    **This solves the `x509: certificate signed by unknown authority` problem when registering a runner.**
+    **This solves the `x509: certificate signed by unknown authority` problem when registering a runner**.
 
     For existing Runners, the same error can be seen in Runner logs when trying to check the jobs:
 

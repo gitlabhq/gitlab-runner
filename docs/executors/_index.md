@@ -75,7 +75,7 @@ you decide which executor to use.
 | Complicated build environments                   |  ✗   | ✗ <sup>2</sup> | ✓ <sup>3</sup> | ✓ <sup>3</sup> |   ✓    |         ✓         |           ✗ <sup>2</sup> |       ✓        |            ✓             |
 | Debugging build problems                         | easy |      easy      |      hard      |      hard      | medium |      medium       |                   medium |     medium     |          medium          |
 
-**Footnotes:**
+**Footnotes**:
 
 1. If the builds use services installed on the build machine, selecting executors is possible but problematic.
 1. Requires manual dependency installation.

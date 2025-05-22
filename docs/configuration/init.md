@@ -27,8 +27,8 @@ and macOS (`launchd`) are supported.
 When GitLab Runner [is installed](../install/_index.md), the service file is
 automatically created:
 
-- **systemd:** `/etc/systemd/system/gitlab-runner.service`
-- **Upstart:** `/etc/init/gitlab-runner`
+- **systemd**: `/etc/systemd/system/gitlab-runner.service`
+- **Upstart**: `/etc/init/gitlab-runner`
 
 ## Setting custom environment variables
 

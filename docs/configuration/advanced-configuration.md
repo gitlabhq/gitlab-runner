@@ -1029,7 +1029,7 @@ The following parameters define configuration for the [custom executor](../execu
 | `prepare_exec`          | string       | Path to an executable to prepare the environment. |
 | `prepare_args`          | string array | First set of arguments passed to the `prepare_exec` executable. |
 | `prepare_exec_timeout`  | integer      | Timeout, in seconds, for `prepare_exec` to finish execution. Default is 3600 seconds (1 hour). |
-| `run_exec`              | string       | **Required.** Path to an executable to run scripts in the environments. For example, the clone and build script. |
+| `run_exec`              | string       | **Required**. Path to an executable to run scripts in the environments. For example, the clone and build script. |
 | `run_args`              | string array | First set of arguments passed to the `run_exec` executable. |
 | `cleanup_exec`          | string       | Path to an executable to clean up the environment. |
 | `cleanup_args`          | string array | First set of arguments passed to the `cleanup_exec` executable. |
@@ -1357,7 +1357,7 @@ about these values, see the
 
 Examples:
 
-**Credentials configured directly in `config.toml` file:**
+**Credentials configured directly in `config.toml` file**:
 
 ```toml
 [runners.cache]
@@ -1370,7 +1370,7 @@ Examples:
     BucketName = "runners-cache"
 ```
 
-**Credentials in JSON file downloaded from GCP:**
+**Credentials in JSON file downloaded from GCP**:
 
 ```toml
 [runners.cache]
@@ -1382,7 +1382,7 @@ Examples:
     BucketName = "runners-cache"
 ```
 
-**Application Default Credentials (ADC) from the metadata server in GCP:**
+**Application Default Credentials (ADC) from the metadata server in GCP**:
 
 When you use GitLab Runner with Google Cloud ADC, you typically use the default service account. Then you don't need to supply credentials for the instance:
 

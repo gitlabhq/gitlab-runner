@@ -35,13 +35,13 @@ Depending on the executor you are using, you can face different security risks.
 
 ### Usage of Shell executor
 
-**High-security risks exist to your runner host and network when running builds with the `shell` executor.** The jobs are run
+**High-security risks exist to your runner host and network when running builds with the `shell` executor**. The jobs are run
 with the permissions of the GitLab Runner's user and can steal code from other
 projects that are run on this server. Use it only for running trusted builds.
 
 ### Usage of Docker executor
 
-**Docker can be considered safe when running in non-privileged mode.** To make
+**Docker can be considered safe when running in non-privileged mode**. To make
 such a configuration more secure, run jobs as a non-root user in Docker
 containers with disabled `sudo` or dropped `SETUID` and `SETGID` capabilities.
 

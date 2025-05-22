@@ -1144,7 +1144,7 @@ To change the directory:
 - For build scripts, set `scripts_base_dir`.
 
 The expected value is a string that represents a base directory without the trailing slash
-(for example, `/tmp` or `/mydir/example`). **The directory must already exist.**
+(for example, `/tmp` or `/mydir/example`). **The directory must already exist**.
 
 This value is prepended to the generated path for build logs and scripts.
 For example:
