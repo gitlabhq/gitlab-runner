@@ -46,8 +46,8 @@ type cacheOperationTest struct {
 	expectedURL  *url.URL
 }
 
-func onFakeS3URLGenerator(tc cacheOperationTest) func() {
-	client := new(mockS3Presigner)
+func onFakeS3URLGenerator(t *testing.T, tc cacheOperationTest) {
+	client := newMockS3Presigner(t)
 
 	var err error
 	if tc.errorOnURLPresigning {
@@ -59,7 +59,7 @@ func onFakeS3URLGenerator(tc cacheOperationTest) func() {
 			"PresignURL", mock.Anything, mock.Anything, mock.Anything,
 			mock.Anything, mock.Anything,
 		).
-		Return(cache.PresignedURL{URL: tc.presignedURL}, err)
+		Return(cache.PresignedURL{URL: tc.presignedURL}, err).Maybe()
 
 	oldS3URLGenerator := newS3Client
 	newS3Client = func(s3 *common.CacheS3Config, opts ...s3ClientOption) (s3Presigner, error) {
@@ -69,9 +69,9 @@ func onFakeS3URLGenerator(tc cacheOperationTest) func() {
 		return client, nil
 	}
 
-	return func() {
+	t.Cleanup(func() {
 		newS3Client = oldS3URLGenerator
-	}
+	})
 }
 
 func testCacheOperation(
@@ -82,8 +82,7 @@ func testCacheOperation(
 	cacheConfig *common.CacheConfig,
 ) {
 	t.Run(operationName, func(t *testing.T) {
-		cleanupS3URLGeneratorMock := onFakeS3URLGenerator(tc)
-		defer cleanupS3URLGeneratorMock()
+		onFakeS3URLGenerator(t, tc)
 
 		adapter, err := New(cacheConfig, defaultTimeout, objectName)
 
@@ -309,8 +308,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 	for tn, tt := range tests {
 		for _, uploadMode := range []bool{true, false} {
 			t.Run(fmt.Sprintf("%s upload=%v", tn, uploadMode), func(t *testing.T) {
-				cleanupS3URLGeneratorMock := onFakeS3URLGenerator(cacheOperationTest{})
-				defer cleanupS3URLGeneratorMock()
+				onFakeS3URLGenerator(t, cacheOperationTest{})
 
 				s3Cache := defaultCacheFactory()
 				s3Cache.S3 = tt.config
@@ -323,14 +321,14 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 				require.NoError(t, err)
 
 				mockClient := adapter.(*s3Adapter).client.(*mockS3Presigner)
-				mockClient.On("ServerSideEncryptionType").Return(s3EncryptionType(tt.config.EncryptionType()))
+				mockClient.On("ServerSideEncryptionType").Return(s3EncryptionType(tt.config.EncryptionType())).Maybe()
 
 				if tt.failedFetch {
 					mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.RoleARN, tt.config.BucketName, mock.Anything, uploadMode, mock.Anything).
 						Return(nil, errors.New("error fetching credentials"))
 				} else {
 					mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.RoleARN, tt.config.BucketName, mock.Anything, uploadMode, mock.Anything).
-						Return(expectedCredentials, nil)
+						Return(expectedCredentials, nil).Maybe()
 				}
 
 				u, err := adapter.GetGoCloudURL(context.Background(), uploadMode)
@@ -505,8 +503,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			cleanupS3URLGeneratorMock := onFakeS3URLGenerator(cacheOperationTest{})
-			defer cleanupS3URLGeneratorMock()
+			onFakeS3URLGenerator(t, cacheOperationTest{})
 
 			s3Cache := defaultCacheFactory()
 			s3Cache.S3 = tt.config
@@ -519,14 +516,17 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			require.NoError(t, err)
 
 			mockClient := adapter.(*s3Adapter).client.(*mockS3Presigner)
-			mockClient.On("ServerSideEncryptionType").Return(s3EncryptionType(tt.config.EncryptionType()))
 
-			if tt.failedFetch {
-				mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.UploadRoleARN, tt.config.BucketName, mock.Anything, true, mock.Anything).
-					Return(nil, errors.New("error fetching credentials"))
-			} else {
-				mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.UploadRoleARN, tt.config.BucketName, mock.Anything, true, mock.Anything).
-					Return(expectedCredentials, nil)
+			if !tt.noCredentials {
+				mockClient.On("ServerSideEncryptionType").Return(s3EncryptionType(tt.config.EncryptionType()))
+
+				if tt.failedFetch {
+					mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.UploadRoleARN, tt.config.BucketName, mock.Anything, true, mock.Anything).
+						Return(nil, errors.New("error fetching credentials"))
+				} else {
+					mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.UploadRoleARN, tt.config.BucketName, mock.Anything, true, mock.Anything).
+						Return(expectedCredentials, nil)
+				}
 			}
 
 			u, err := adapter.GetGoCloudURL(context.Background(), true)

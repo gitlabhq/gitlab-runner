@@ -20,21 +20,14 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
-func newDebugLoggerMock() *mockDebugLogger {
-	loggerMock := new(mockDebugLogger)
-	loggerMock.On("Debugln", mock.Anything, mock.Anything)
-
-	return loggerMock
-}
-
 func TestNewDefaultManager(t *testing.T) {
-	logger := newDebugLoggerMock()
+	logger := newMockDebugLogger(t)
 
 	m := NewManager(logger, nil, nil, nil)
 	assert.IsType(t, &manager{}, m)
 }
 
-func newDefaultManager() *manager {
+func newDefaultManager(t *testing.T) *manager {
 	b := &common.Build{
 		ProjectRunnerID: 0,
 		Runner: &common.RunnerConfig{
@@ -46,17 +39,20 @@ func newDefaultManager() *manager {
 			},
 		},
 	}
+
+	loggerMock := newMockDebugLogger(t)
+	loggerMock.On("Debugln", mock.Anything, mock.Anything).Maybe()
+
 	m := &manager{
-		logger:  newDebugLoggerMock(),
+		logger:  loggerMock,
 		build:   b,
 		labeler: labels.NewLabeler(b),
 	}
 	return m
 }
 
-func addClient(manager *manager) *docker.MockClient {
-	client := new(docker.MockClient)
-
+func addClient(t *testing.T, manager *manager) *docker.MockClient {
+	client := docker.NewMockClient(t)
 	manager.client = client
 
 	return client
@@ -182,12 +178,11 @@ func TestCreateNetwork(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			m := newDefaultManager()
+			m := newDefaultManager(t)
 			m.build.ID = 0
 			m.buildNetwork = testCase.buildNetwork
 
-			client := addClient(m)
-			defer client.AssertExpectations(t)
+			client := addClient(t, m)
 
 			m.build.Variables = append(m.build.Variables, common.JobVariable{
 				Key:   featureflags.NetworkPerBuild,
@@ -227,11 +222,10 @@ func TestCreateNetworkWithCustomMTU(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			m := newDefaultManager()
+			m := newDefaultManager(t)
 			m.build.ID = 0
 
-			client := addClient(m)
-			defer client.AssertExpectations(t)
+			client := addClient(t, m)
 
 			m.build.Runner.Docker = &common.DockerConfig{NetworkMTU: testCase.mtu}
 
@@ -321,10 +315,9 @@ func TestInspectNetwork(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			m := newDefaultManager()
+			m := newDefaultManager(t)
 			m.perBuild = testCase.perBuild
-			client := addClient(m)
-			defer client.AssertExpectations(t)
+			client := addClient(t, m)
 
 			if testCase.clientAssertions != nil {
 				testCase.clientAssertions(client)
@@ -375,11 +368,10 @@ func TestCleanupNetwork(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			m := newDefaultManager()
+			m := newDefaultManager(t)
 			m.build.ID = 0
 
-			client := addClient(m)
-			defer client.AssertExpectations(t)
+			client := addClient(t, m)
 
 			m.build.Variables = append(m.build.Variables, common.JobVariable{
 				Key:   featureflags.NetworkPerBuild,

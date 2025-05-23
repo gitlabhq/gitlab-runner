@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"cloud.google.com/go/iam/credentials/apiv1/credentialspb"
@@ -29,43 +30,6 @@ type credentialsResolverTestCase struct {
 	errorExpectedOnInitialization  bool
 	errorExpectedOnResolve         bool
 	expectedCredentials            *common.CacheGCSCredentials
-}
-
-func prepareStubbedCredentialsFile(t *testing.T, testCase credentialsResolverTestCase) func() {
-	cleanup := func() {}
-
-	if testCase.credentialsFileContent != nil {
-		file, err := os.CreateTemp("", "gcp-credentials-file")
-		require.NoError(t, err)
-
-		cleanup = func() {
-			os.Remove(file.Name())
-		}
-
-		testCase.config.CredentialsFile = file.Name()
-
-		switch {
-		case testCase.credentialsFileDoesNotExist:
-			os.Remove(file.Name())
-		case testCase.credentialsFileWithInvalidJSON:
-			_, err = file.Write([]byte("a"))
-			require.NoError(t, err)
-
-			err = file.Close()
-			require.NoError(t, err)
-		default:
-			data, err := json.Marshal(testCase.credentialsFileContent)
-			require.NoError(t, err)
-
-			_, err = file.Write(data)
-			require.NoError(t, err)
-
-			err = file.Close()
-			require.NoError(t, err)
-		}
-	}
-
-	return cleanup
 }
 
 func getCredentialsConfig(accessID string, privateKey string) *common.CacheGCSConfig {
@@ -155,11 +119,25 @@ func TestDefaultCredentialsResolver(t *testing.T) {
 
 	for name, testCase := range cases {
 		t.Run(name, func(t *testing.T) {
-			cleanupCredentialsFileMock := prepareStubbedCredentialsFile(t, testCase)
-			defer cleanupCredentialsFileMock()
+			if testCase.credentialsFileContent != nil {
+				pathname := filepath.Join(t.TempDir(), "gcp-credentials-file")
 
-			mc := &MockMetadataClient{}
-			metadataCall := mc.On("Email", mock.Anything)
+				testCase.config.CredentialsFile = pathname
+
+				switch {
+				case testCase.credentialsFileDoesNotExist:
+					// no-op
+				case testCase.credentialsFileWithInvalidJSON:
+					require.NoError(t, os.WriteFile(pathname, []byte("a"), 0o600))
+				default:
+					data, err := json.Marshal(testCase.credentialsFileContent)
+					require.NoError(t, err)
+					require.NoError(t, os.WriteFile(pathname, data, 0o600))
+				}
+			}
+
+			mc := NewMockMetadataClient(t)
+			metadataCall := mc.On("Email", mock.Anything).Maybe()
 			if testCase.metadataServerError {
 				metadataCall.Return("", fmt.Errorf("test error"))
 			} else {
@@ -211,8 +189,8 @@ func TestSignBytesOperation(t *testing.T) {
 
 			sbr := credentialspb.SignBlobResponse{SignedBlob: tc.output}
 
-			icc := &MockIamCredentialsClient{}
-			signBlobCall := icc.On("SignBlob", mock.Anything, mock.Anything)
+			icc := NewMockIamCredentialsClient(t)
+			signBlobCall := icc.On("SignBlob", mock.Anything, mock.Anything).Maybe()
 			cr, _ := newDefaultCredentialsResolver(config)
 			if tc.returnError == nil {
 				cr.credentialsClient = icc

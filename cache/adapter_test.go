@@ -41,7 +41,7 @@ func makeTestFactory(test factorizeTestCase) Factory {
 }
 
 func TestCreateAdapter(t *testing.T) {
-	adapterMock := new(MockAdapter)
+	adapterMock := NewMockAdapter(t)
 
 	tests := map[string]factorizeTestCase{
 		"adapter doesn't exist": {
@@ -79,7 +79,7 @@ func TestCreateAdapter(t *testing.T) {
 			_ = factories.Register(
 				"additional-adapter",
 				func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
-					return new(MockAdapter), nil
+					return NewMockAdapter(t), nil
 				})
 
 			config := &common.CacheConfig{

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -27,23 +28,24 @@ import (
 func TestDefaultDocker_Exec(t *testing.T) {
 	id := "container-id"
 
-	input := func(err error) io.Reader {
-		r := new(mockReader)
+	input := func(t *testing.T, err error) io.Reader {
+		r := newMockReader(t)
 		r.On("Read", mock.Anything).
 			Return(0, err).
-			Once()
+			Maybe()
 
 		return r
 	}
 
 	mockWorkingClient := func(
+		t *testing.T,
 		clientMock *docker.MockClient,
 		reader io.Reader,
 		expectedCtx context.Context,
 	) {
-		conn := new(mockConn)
-		conn.On("Close").Return(nil).Twice()
-		conn.On("Write", mock.Anything).Return(0, nil)
+		conn := newMockConn(t)
+		conn.On("Close").Return(nil).Maybe()
+		conn.On("Write", mock.Anything).Return(0, nil).Maybe()
 
 		hijacked := types.HijackedResponse{
 			Conn:   conn,
@@ -82,9 +84,8 @@ func TestDefaultDocker_Exec(t *testing.T) {
 		"ContainerStart error": {
 			cancelContext: false,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				conn := new(mockConn)
-				conn.On("Close").Return(nil).Twice()
-				conn.On("Write", mock.Anything).Return(0, nil)
+				conn := newMockConn(t)
+				conn.On("Close").Return(nil).Once()
 
 				hijacked := types.HijackedResponse{
 					Conn: conn,
@@ -102,14 +103,14 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			expectedError:   assert.AnError,
 		},
 		"context done": {
-			input:         input(io.EOF),
+			input:         input(t, io.EOF),
 			cancelContext: true,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				reader := new(mockReader)
+				reader := newMockReader(t)
 				reader.On("Read", mock.Anything).
-					Return(0, nil)
+					Return(0, nil).Maybe()
 
-				mockWorkingClient(clientMock, reader, expectedCtx)
+				mockWorkingClient(t, clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
 				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(nil).Once()
@@ -120,14 +121,14 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			expectedError: nil,
 		},
 		"input error": {
-			input:         input(errors.New("input error")),
+			input:         input(t, errors.New("input error")),
 			cancelContext: false,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				reader := new(mockReader)
+				reader := newMockReader(t)
 				reader.On("Read", mock.Anything).
 					Return(0, nil)
 
-				mockWorkingClient(clientMock, reader, expectedCtx)
+				mockWorkingClient(t, clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
 				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(nil).Once()
@@ -138,14 +139,14 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			expectedError: nil,
 		},
 		"output error": {
-			input:         input(io.EOF),
+			input:         input(t, io.EOF),
 			cancelContext: false,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				reader := new(mockReader)
+				reader := newMockReader(t)
 				reader.On("Read", mock.Anything).
 					Return(0, errors.New("output error"))
 
-				mockWorkingClient(clientMock, reader, expectedCtx)
+				mockWorkingClient(t, clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
 				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(nil).Once()
@@ -156,15 +157,15 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			expectedError: nil,
 		},
 		"killWaiter error": {
-			input:         input(io.EOF),
+			input:         input(t, io.EOF),
 			cancelContext: false,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				reader := new(mockReader)
+				reader := newMockReader(t)
 				reader.On("Read", mock.Anything).
 					Return(0, io.EOF).
 					Once()
 
-				mockWorkingClient(clientMock, reader, expectedCtx)
+				mockWorkingClient(t, clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
 				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(assert.AnError).Once()
@@ -173,7 +174,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			expectedError:   assert.AnError,
 		},
 		"output passed to the writers": {
-			input:         input(io.EOF),
+			input:         input(t, io.EOF),
 			cancelContext: false,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
 				pr, pw := io.Pipe()
@@ -181,7 +182,12 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				outWriter := stdcopy.NewStdWriter(pw, stdcopy.Stdout)
 				errWriter := stdcopy.NewStdWriter(pw, stdcopy.Stderr)
 
+				var wg sync.WaitGroup
+				t.Cleanup(wg.Wait)
+				wg.Add(1)
 				go func() {
+					defer wg.Done()
+
 					var err error
 					_, err = fmt.Fprintln(outWriter, "out line 1")
 					require.NoError(t, err)
@@ -195,7 +201,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 					require.NoError(t, err)
 				}()
 
-				mockWorkingClient(clientMock, pr, expectedCtx)
+				mockWorkingClient(t, clientMock, pr, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
 				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(nil).Once()
@@ -209,11 +215,8 @@ func TestDefaultDocker_Exec(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(docker.MockClient)
-			defer clientMock.AssertExpectations(t)
-
-			waiterMock := new(wait.MockKillWaiter)
-			defer waiterMock.AssertExpectations(t)
+			clientMock := docker.NewMockClient(t)
+			waiterMock := wait.NewMockKillWaiter(t)
 
 			logger, hook := test.NewNullLogger()
 			logger.SetLevel(logrus.DebugLevel)

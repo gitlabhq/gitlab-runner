@@ -2871,8 +2871,7 @@ func TestRunnerVersion(t *testing.T) {
 }
 
 func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testing.T) {
-	executorProvider := MockExecutorProvider{}
-	defer executorProvider.AssertExpectations(t)
+	executorProvider := NewMockExecutorProvider(t)
 	executorProvider.On("GetDefaultShell").Return("my-default-executor-shell").Twice()
 	executorProvider.On("CanCreate").Return(true).Once()
 	executorProvider.On("GetFeatures", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
@@ -2883,16 +2882,15 @@ func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testin
 		info := args[1].(*ConfigInfo)
 		info.Gpus = "all"
 	})
-	RegisterExecutorProvider("my-test-executor", &executorProvider)
+	RegisterExecutorProviderForTest(t, "my-test-executor", executorProvider)
 
-	shell := MockShell{}
-	defer shell.AssertExpectations(t)
+	shell := NewMockShell(t)
 	shell.On("GetName").Return("my-default-executor-shell")
 	shell.On("GetFeatures", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		features := args[0].(*FeaturesInfo)
 		features.Variables = true
 	})
-	RegisterShell(&shell)
+	RegisterShell(shell)
 
 	c := NewGitLabClient()
 	info := c.getRunnerVersion(RunnerConfig{

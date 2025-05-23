@@ -54,8 +54,8 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_Windows(t *tes
 				DisableCache: false,
 			}
 
-			m := newDefaultManager(config)
-			volumeParser := addParser(m, path.NewWindowsPath())
+			m := newDefaultManager(t, config)
+			volumeParser := addParser(t, m, path.NewWindowsPath())
 			mClient := new(docker.MockClient)
 			m.client = mClient
 

@@ -42,15 +42,14 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 		return Secrets{variableKey: secret}
 	}
 
-	getLogger := func(t *testing.T) (logger, func()) {
-		logger := new(mockLogger)
+	getLogger := func(t *testing.T) logger {
+		logger := newMockLogger(t)
 		logger.On("Println", mock.Anything).Maybe()
-
-		return logger, func() { logger.AssertExpectations(t) }
+		return logger
 	}
 
 	tests := map[string]struct {
-		getLogger                     func(t *testing.T) (logger, func())
+		getLogger                     func(t *testing.T) logger
 		supportedResolverPresent      bool
 		secrets                       Secrets
 		resolvedVariable              *JobVariable
@@ -61,8 +60,8 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 		expectedError                 error
 	}{
 		"resolver creation error": {
-			getLogger: func(t *testing.T) (logger, func()) {
-				return nil, func() {}
+			getLogger: func(t *testing.T) logger {
+				return nil
 			},
 			expectedResolverCreationError: ErrMissingLogger,
 		},
@@ -127,12 +126,12 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			expectedError: nil,
 		},
 		"no supported resolvers present": {
-			getLogger: func(t *testing.T) (logger, func()) {
-				logger := new(mockLogger)
+			getLogger: func(t *testing.T) logger {
+				logger := newMockLogger(t)
 				logger.On("Println", mock.Anything).Maybe()
 				logger.On("Warningln", mock.Anything).Maybe()
 
-				return logger, func() { logger.AssertExpectations(t) }
+				return logger
 			},
 			supportedResolverPresent: false,
 			secrets:                  secrets,
@@ -169,10 +168,8 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			unsupportedResolver := new(MockSecretResolver)
-			defer unsupportedResolver.AssertExpectations(t)
-			supportedResolver := new(MockSecretResolver)
-			defer supportedResolver.AssertExpectations(t)
+			unsupportedResolver := NewMockSecretResolver(t)
+			supportedResolver := NewMockSecretResolver(t)
 
 			if tt.secrets != nil {
 				unsupportedResolver.On("IsSupported").
@@ -196,9 +193,7 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			registry.Register(func(secret Secret) SecretResolver { return unsupportedResolver })
 			registry.Register(func(secret Secret) SecretResolver { return supportedResolver })
 
-			logger, loggerCleanup := tt.getLogger(t)
-			defer loggerCleanup()
-
+			logger := tt.getLogger(t)
 			r, err := newSecretsResolver(logger, registry, func(s string) bool {
 				if s == featureflags.EnableSecretResolvingFailsIfMissing {
 					return tt.failIfSecretMissing

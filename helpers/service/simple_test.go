@@ -16,12 +16,11 @@ func TestStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mi := &mockStopStarter{}
+	mi := newMockStopStarter(t)
 	s := &SimpleService{i: mi}
 
 	mi.On("Start", s).Return(errExample)
 
 	err := s.Run()
 	assert.Equal(t, errExample, err)
-	mi.AssertExpectations(t)
 }

@@ -61,8 +61,8 @@ type cacheOperationTest struct {
 	expectedUploadHeaders http.Header
 }
 
-func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
-	client := new(mockMinioClient)
+func onFakeMinioURLGenerator(t *testing.T, tc cacheOperationTest) {
+	client := newMockMinioClient(t)
 
 	var err error
 	if tc.errorOnURLPresigning {
@@ -74,7 +74,7 @@ func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
 			"PresignHeader", mock.Anything, mock.Anything, mock.Anything,
 			mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		).
-		Return(tc.presignedURL, err)
+		Return(tc.presignedURL, err).Maybe()
 
 	oldNewMinioURLGenerator := newMinioClient
 	newMinioClient = func(s3 *common.CacheS3Config) (minioClient, error) {
@@ -84,9 +84,9 @@ func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
 		return client, nil
 	}
 
-	return func() {
+	t.Cleanup(func() {
 		newMinioClient = oldNewMinioURLGenerator
-	}
+	})
 }
 
 func testCacheOperation(
@@ -97,8 +97,7 @@ func testCacheOperation(
 	cacheConfig *common.CacheConfig,
 ) {
 	t.Run(operationName, func(t *testing.T) {
-		cleanupMinioURLGeneratorMock := onFakeMinioURLGenerator(tc)
-		defer cleanupMinioURLGeneratorMock()
+		onFakeMinioURLGenerator(t, tc)
 
 		adapter, err := New(cacheConfig, defaultTimeout, objectName)
 

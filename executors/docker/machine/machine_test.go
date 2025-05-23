@@ -89,16 +89,14 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 			},
 		}
 
-		machine := new(docker.MockMachine)
-		defer machine.AssertExpectations(t)
+		machine := docker.NewMockMachine(t)
 
 		machine.On("CanConnect", machineName, true).
 			Return(true).Once()
 		machine.On("Credentials", machineName).
 			Return(machineCredentials, nil).Once()
 
-		executorProvider := &common.MockExecutorProvider{}
-		defer executorProvider.AssertExpectations(t)
+		executorProvider := common.NewMockExecutorProvider(t)
 
 		fakeExecutor := &machineCredentialsUsageFakeExecutor{
 			t:                          t,

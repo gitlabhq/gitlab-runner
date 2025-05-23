@@ -2243,9 +2243,7 @@ func TestConfig_SaveConfig(t *testing.T) {
 
 	oldTime := time.Now().Add(-1 * time.Hour)
 
-	cs := new(MockConfigSaver)
-	defer cs.AssertExpectations(t)
-
+	cs := NewMockConfigSaver(t)
 	cs.On("Save", configFileName, mock.Anything).Return(nil).Once()
 
 	c := new(Config)

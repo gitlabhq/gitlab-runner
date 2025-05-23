@@ -21,8 +21,10 @@ const (
 	artifactsTestArchivedFile2 = "archive_file2"
 )
 
+var _ common.Network = (*testNetwork)(nil)
+
 type testNetwork struct {
-	common.MockNetwork
+	common.Network
 	downloadState        common.DownloadState
 	downloadCalled       int
 	directDownloadCalled int

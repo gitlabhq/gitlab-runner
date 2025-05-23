@@ -27,12 +27,10 @@ type cacheOperationTest struct {
 	expectedOutput         []string
 }
 
-func prepareFakeCreateAdapter(t *testing.T, operationName string, tc cacheOperationTest) func() {
-	assertAdapterExpectations := func(t mock.TestingT) bool { return true }
-
+func prepareFakeCreateAdapter(t *testing.T, operationName string, tc cacheOperationTest) {
 	var cacheAdapter Adapter
 	if tc.adapterExists {
-		a := new(MockAdapter)
+		a := NewMockAdapter(t)
 
 		if tc.adapterURL.URL != nil {
 			if operationName == "GetGoCloudURL" {
@@ -41,8 +39,6 @@ func prepareFakeCreateAdapter(t *testing.T, operationName string, tc cacheOperat
 				a.On(operationName, mock.Anything).Return(tc.adapterURL)
 			}
 		}
-
-		assertAdapterExpectations = a.AssertExpectations
 		cacheAdapter = a
 	}
 
@@ -56,10 +52,9 @@ func prepareFakeCreateAdapter(t *testing.T, operationName string, tc cacheOperat
 		return cacheAdapter, cacheAdapterCreationError
 	}
 
-	return func() {
+	t.Cleanup(func() {
 		createAdapter = oldCreateAdapter
-		assertAdapterExpectations(t)
-	}
+	})
 }
 
 func prepareFakeBuild(tc cacheOperationTest) *common.Build {
@@ -95,8 +90,7 @@ func testCacheOperation(
 		ctx := context.Background()
 		hook := test.NewGlobal()
 
-		cleanupCreateAdapter := prepareFakeCreateAdapter(t, operationName, tc)
-		defer cleanupCreateAdapter()
+		prepareFakeCreateAdapter(t, operationName, tc)
 
 		build := prepareFakeBuild(tc)
 		generatedURL := operation(ctx, build, tc.key)

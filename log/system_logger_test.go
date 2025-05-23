@@ -41,11 +41,8 @@ func TestServiceLogHook(t *testing.T) {
 				_ = recover()
 			}()
 
-			sysLogger := new(mockSystemLogger)
-			defer sysLogger.AssertExpectations(t)
-
-			sysService := new(mockSystemService)
-			defer sysService.AssertExpectations(t)
+			sysLogger := newMockSystemLogger(t)
+			sysService := newMockSystemService(t)
 			sysService.On("SystemLogger", mock.Anything).Return(sysLogger, nil).Once()
 
 			logger := logrus.New()
@@ -85,9 +82,7 @@ func TestServiceLogHookWithSpecifiedLevel(t *testing.T) {
 	entry := logrus.NewEntry(logger)
 	entry.Message = "test message"
 
-	sysLogger := new(mockSystemLogger)
-	defer sysLogger.AssertExpectations(t)
-
+	sysLogger := newMockSystemLogger(t)
 	assertSysLoggerMethod := func(args mock.Arguments) {
 		msg := args.Get(0)
 		assert.Contains(t, msg, `msg="test message"`)
@@ -115,8 +110,7 @@ func TestServiceLogHookWithSpecifiedLevel(t *testing.T) {
 func TestSetSystemLogger_ErrorOnInitialization(t *testing.T) {
 	logger, hook := test.NewNullLogger()
 
-	sysService := new(mockSystemService)
-	defer sysService.AssertExpectations(t)
+	sysService := newMockSystemService(t)
 	sysService.On("SystemLogger", mock.Anything).Return(nil, fmt.Errorf("test error")).Once()
 
 	SetSystemLogger(logger, sysService)

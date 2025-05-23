@@ -69,10 +69,10 @@ func prepareMockedCredentialsResolverInitializer(tc adapterOperationInvalidConfi
 	}
 }
 
-func prepareMockedCredentialsResolverForInvalidConfig(adapter *azureAdapter, tc adapterOperationInvalidConfigTestCase) {
-	cr := &mockCredentialsResolver{}
+func prepareMockedCredentialsResolverForInvalidConfig(t *testing.T, adapter *azureAdapter, tc adapterOperationInvalidConfigTestCase) {
+	cr := newMockCredentialsResolver(t)
 
-	resolveCall := cr.On("Resolve")
+	resolveCall := cr.On("Resolve").Maybe()
 	if tc.credentialsResolverResolveError {
 		resolveCall.Return(fmt.Errorf("test error"))
 	} else {
@@ -86,7 +86,7 @@ func prepareMockedCredentialsResolverForInvalidConfig(adapter *azureAdapter, tc 
 
 	// Always return an account key signer to avoid metadata lookups
 	signer, err := newAccountKeySigner(config.Azure)
-	cr.On("Signer").Return(signer, err)
+	cr.On("Signer").Return(signer, err).Maybe()
 
 	adapter.credentialsResolver = cr
 }
@@ -100,7 +100,7 @@ func testGoCloudURLWithInvalidConfig(
 	expectedErrorMessage string,
 ) {
 	t.Run(name, func(t *testing.T) {
-		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
+		prepareMockedCredentialsResolverForInvalidConfig(t, adapter, tc)
 
 		u, err := operation(context.Background(), true)
 
@@ -126,7 +126,7 @@ func testUploadEnvWithInvalidConfig(
 	operation func(context.Context) (map[string]string, error),
 ) {
 	t.Run(name, func(t *testing.T) {
-		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
+		prepareMockedCredentialsResolverForInvalidConfig(t, adapter, tc)
 
 		u, err := operation(context.Background())
 		assert.NoError(t, err)
@@ -221,21 +221,6 @@ type adapterOperationTestCase struct {
 	returnedURL   string
 	returnedError error
 	expectedError string
-}
-
-func prepareMockedCredentialsResolver(adapter *azureAdapter) func(t *testing.T) {
-	config := defaultAzureCache()
-	signer, err := newAccountKeySigner(config.Azure)
-
-	cr := &mockCredentialsResolver{}
-	cr.On("Resolve").Return(nil)
-	cr.On("Signer").Return(signer, err)
-
-	adapter.credentialsResolver = cr
-
-	return func(t *testing.T) {
-		cr.AssertExpectations(t)
-	}
 }
 
 func prepareMockedSignedURLGenerator(

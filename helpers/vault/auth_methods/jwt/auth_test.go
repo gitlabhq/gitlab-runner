@@ -82,25 +82,21 @@ func TestJWTAuth_Authenticate_Token(t *testing.T) {
 	vaultToken := "some.vault.token"
 
 	tests := map[string]struct {
-		setupClientMock func(*testing.T, *vault.MockClient) func()
+		setupClientMock func(*testing.T, *vault.MockClient)
 		expectedError   error
 		expectedToken   string
 	}{
 		"client write failure": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
 				c.On("Write", expectedPath, expectedPayload).
 					Return(nil, assert.AnError).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-				}
 			},
 			expectedError: assert.AnError,
 		},
 		"client write succeeded but token failure": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
-				result := new(vault.MockResult)
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
+				result := vault.NewMockResult(t)
 				result.On("TokenID").
 					Return("", assert.AnError).
 					Once()
@@ -108,17 +104,12 @@ func TestJWTAuth_Authenticate_Token(t *testing.T) {
 				c.On("Write", expectedPath, expectedPayload).
 					Return(result, nil).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-					result.AssertExpectations(t)
-				}
 			},
 			expectedError: assert.AnError,
 		},
 		"authentication succeeded": {
-			setupClientMock: func(t *testing.T, c *vault.MockClient) func() {
-				result := new(vault.MockResult)
+			setupClientMock: func(t *testing.T, c *vault.MockClient) {
+				result := vault.NewMockResult(t)
 				result.On("TokenID").
 					Return(vaultToken, nil).
 					Once()
@@ -126,11 +117,6 @@ func TestJWTAuth_Authenticate_Token(t *testing.T) {
 				c.On("Write", expectedPath, expectedPayload).
 					Return(result, nil).
 					Once()
-
-				return func() {
-					c.AssertExpectations(t)
-					result.AssertExpectations(t)
-				}
 			},
 			expectedToken: vaultToken,
 		},
@@ -138,10 +124,9 @@ func TestJWTAuth_Authenticate_Token(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(vault.MockClient)
+			clientMock := vault.NewMockClient(t)
 
-			assertions := tt.setupClientMock(t, clientMock)
-			defer assertions()
+			tt.setupClientMock(t, clientMock)
 
 			data := map[string]interface{}{
 				jwtKey:  jwt,

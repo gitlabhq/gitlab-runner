@@ -70,8 +70,7 @@ func newTestJobTrace(network *common.MockNetwork, config common.RunnerConfig) (*
 func TestIgnoreStatusChange(t *testing.T) {
 	jobInfoMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	// expect to receive just one status
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, jobInfoMatcher).
@@ -95,8 +94,7 @@ func TestTouchJobAbort(t *testing.T) {
 	keepAliveUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	// abort while running
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, keepAliveUpdateMatcher).
@@ -129,8 +127,7 @@ func TestTouchJobCancel(t *testing.T) {
 	keepAliveUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	// cancel while running
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, keepAliveUpdateMatcher).
@@ -159,8 +156,7 @@ func TestSendPatchAbort(t *testing.T) {
 
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	// abort while running
 	// 1. on `incrementalUpdate() -> sendPatch()`
@@ -190,8 +186,7 @@ func TestJobOutputLimit(t *testing.T) {
 	traceMessage := "abcde"
 	traceMessageSize := 1024
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	b, err := newTestJobTrace(mockNetwork, jobOutputLimit)
 	require.NoError(t, err)
@@ -235,8 +230,7 @@ func TestJobOutputLimit(t *testing.T) {
 func TestJobFinishTraceUpdateRetry(t *testing.T) {
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	ignoreOptionalTouchJob(mockNetwork)
 
@@ -284,8 +278,7 @@ func TestJobFinishTraceUpdateRetry(t *testing.T) {
 func TestJobDelayedTraceProcessingWithRejection(t *testing.T) {
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	ignoreOptionalTouchJob(mockNetwork)
 
@@ -360,8 +353,7 @@ func TestJobDelayedTraceProcessingWithRejection(t *testing.T) {
 func TestJobMaxTracePatchSize(t *testing.T) {
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	ignoreOptionalTouchJob(mockNetwork)
 
@@ -394,8 +386,7 @@ func TestJobMaxTracePatchSize(t *testing.T) {
 func TestJobFinishStatusUpdateRetry(t *testing.T) {
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	b, err := newTestJobTrace(mockNetwork, jobConfig)
 	require.NoError(t, err)
@@ -425,8 +416,7 @@ func TestJobIncrementalPatchSend(t *testing.T) {
 
 	finalUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	ignoreOptionalTouchJob(mockNetwork)
 
@@ -458,8 +448,7 @@ func TestJobIncrementalStatusRefresh(t *testing.T) {
 	incrementalUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
 	finalUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	// ensure that incremental UpdateJob gets executed first
 	wg.Add(1)
@@ -508,8 +497,7 @@ func TestCancelingJobIncrementalUpdate(t *testing.T) {
 
 			finalUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-			mockNetwork := new(common.MockNetwork)
-			defer mockNetwork.AssertExpectations(t)
+			mockNetwork := common.NewMockNetwork(t)
 
 			wg.Add(4)
 
@@ -632,8 +620,7 @@ func TestUpdateIntervalChanges(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			t.Run("sendPatch", func(t *testing.T) {
-				client := new(common.MockNetwork)
-				defer client.AssertExpectations(t)
+				client := common.NewMockNetwork(t)
 
 				waitForPatch := new(sync.WaitGroup)
 				waitForPatch.Add(1)
@@ -691,8 +678,7 @@ func TestUpdateIntervalChanges(t *testing.T) {
 			})
 
 			t.Run("touchJob", func(t *testing.T) {
-				client := new(common.MockNetwork)
-				defer client.AssertExpectations(t)
+				client := common.NewMockNetwork(t)
 
 				waitForTouchJob := new(sync.WaitGroup)
 				waitForTouchJob.Add(1)
@@ -733,8 +719,7 @@ func TestUpdateIntervalChanges(t *testing.T) {
 			})
 
 			t.Run("finalStatusUpdate", func(t *testing.T) {
-				client := new(common.MockNetwork)
-				defer client.AssertExpectations(t)
+				client := common.NewMockNetwork(t)
 
 				waitForFinalUpdate := new(sync.WaitGroup)
 				waitForFinalUpdate.Add(1)
@@ -780,8 +765,7 @@ func TestJobChecksum(t *testing.T) {
 		},
 	}
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMessage[:maxTraceSize]), 0, false).
 		Return(common.NewPatchTraceResult(24, common.PatchSucceeded, 0)).Once()
@@ -812,8 +796,7 @@ func TestJobBytesize(t *testing.T) {
 		},
 	}
 
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
+	mockNetwork := common.NewMockNetwork(t)
 
 	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMessage), 0, false).
 		Return(common.NewPatchTraceResult(len(traceMessage), common.PatchSucceeded, 0)).Once()

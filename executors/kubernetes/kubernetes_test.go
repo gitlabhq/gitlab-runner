@@ -746,10 +746,9 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 		return resp, nil
 	}
 
-	mockFc := &mockFeatureChecker{}
+	mockFc := newMockFeatureChecker(t)
 	mockFc.On("IsHostAliasSupported").Return(true, nil)
-	mockPullManager := &pull.MockManager{}
-	defer mockPullManager.AssertExpectations(t)
+	mockPullManager := pull.NewMockManager(t)
 
 	mockPodWatcher := newMockPodWatcher(t)
 	mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Once()
@@ -821,12 +820,10 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 				},
 			}
 
-			mockFc := &mockFeatureChecker{}
-			defer mockFc.AssertExpectations(t)
+			mockFc := newMockFeatureChecker(t)
 			mockFc.On("IsHostAliasSupported").Return(true, nil).Maybe()
 
-			mockPullManager := &pull.MockManager{}
-			defer mockPullManager.AssertExpectations(t)
+			mockPullManager := pull.NewMockManager(t)
 
 			e := newExecutor()
 			e.options = &kubernetesOptions{
@@ -5221,7 +5218,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			PrepareFn: func(t *testing.T, def setupBuildPodTestDef, e *executor) {
-				mockFc := &mockFeatureChecker{}
+				mockFc := newMockFeatureChecker(t)
 				mockFc.On("IsHostAliasSupported").Return(false, nil)
 				e.featureChecker = mockFc
 			},
@@ -5240,7 +5237,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			PrepareFn: func(t *testing.T, def setupBuildPodTestDef, e *executor) {
-				mockFc := &mockFeatureChecker{}
+				mockFc := newMockFeatureChecker(t)
 				mockFc.On("IsHostAliasSupported").Return(false, testErr)
 				e.featureChecker = mockFc
 			},
@@ -5258,7 +5255,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			PrepareFn: func(t *testing.T, def setupBuildPodTestDef, e *executor) {
-				mockFc := &mockFeatureChecker{}
+				mockFc := newMockFeatureChecker(t)
 				mockFc.On("IsHostAliasSupported").Return(false, &badVersionError{})
 				e.featureChecker = mockFc
 			},
@@ -5841,11 +5838,10 @@ containers:
 				test: test,
 			}
 
-			mockFc := &mockFeatureChecker{}
-			mockFc.On("IsHostAliasSupported").Return(true, nil)
+			mockFc := newMockFeatureChecker(t)
+			mockFc.On("IsHostAliasSupported").Return(true, nil).Maybe()
 
-			mockPullManager := &pull.MockManager{}
-			defer mockPullManager.AssertExpectations(t)
+			mockPullManager := pull.NewMockManager(t)
 
 			mockPodWatcher := newMockPodWatcher(t)
 			mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Maybe()
@@ -6114,8 +6110,7 @@ func TestProcessLogs(t *testing.T) {
 
 			waitForLineWritten := make(chan struct{})
 
-			mockTrace := &common.MockJobTrace{}
-			defer mockTrace.AssertExpectations(t)
+			mockTrace := common.NewMockJobTrace(t)
 			mockTrace.On("Write", []byte("line\n")).
 				Run(func(args mock.Arguments) {
 					close(waitForLineWritten)
@@ -6128,8 +6123,7 @@ func TestProcessLogs(t *testing.T) {
 				Return(0, nil).
 				Maybe()
 
-			mockLogProcessor := new(mockLogProcessor)
-			defer mockLogProcessor.AssertExpectations(t)
+			mockLogProcessor := newMockLogProcessor(t)
 
 			tc.lineCh <- "line\n"
 			mockLogProcessor.On("Process", mock.Anything).
@@ -6424,7 +6418,7 @@ func TestNewLogStreamerStream(t *testing.T) {
 		Runner: new(common.RunnerConfig),
 	}
 
-	remoteExecutor := new(MockRemoteExecutor)
+	remoteExecutor := NewMockRemoteExecutor(t)
 	urlMatcher := mock.MatchedBy(func(url *url.URL) bool {
 		query := url.Query()
 		assert.Equal(t, helperContainerName, query.Get("container"))
@@ -6592,8 +6586,7 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 }
 
 func TestExecutor_buildPermissionsInitContainer_FailPullPolicy(t *testing.T) {
-	mockPullManager := &pull.MockManager{}
-	defer mockPullManager.AssertExpectations(t)
+	mockPullManager := pull.NewMockManager(t)
 
 	e := newExecutor()
 	e.pullManager = mockPullManager
@@ -6607,7 +6600,7 @@ func TestExecutor_buildPermissionsInitContainer_FailPullPolicy(t *testing.T) {
 }
 
 func TestExecutor_buildPermissionsInitContainer_CheckResources(t *testing.T) {
-	mockPullManager := &pull.MockManager{}
+	mockPullManager := pull.NewMockManager(t)
 	cpu := resource.MustParse("1")
 	memory := resource.MustParse("1Gi")
 
@@ -6956,12 +6949,10 @@ func TestScriptsBaseDir(t *testing.T) {
 			expected_path: "/tmp/scripts-0-0",
 		},
 	}
-	mockPullManager := &pull.MockManager{}
+	mockPullManager := pull.NewMockManager(t)
 	mockPullManager.On("GetPullPolicyFor", mock.Anything).
 		Return(api.PullAlways, nil).
 		Times(4)
-
-	defer mockPullManager.AssertExpectations(t)
 
 	executor := newExecutor()
 	executor.pullManager = mockPullManager
@@ -7011,12 +7002,10 @@ func TestLogsBaseDir(t *testing.T) {
 			expected_path: "/tmp/logs-0-0",
 		},
 	}
-	mockPullManager := &pull.MockManager{}
+	mockPullManager := pull.NewMockManager(t)
 	mockPullManager.On("GetPullPolicyFor", mock.Anything).
 		Return(api.PullAlways, nil).
 		Times(4)
-
-	defer mockPullManager.AssertExpectations(t)
 
 	executor := newExecutor()
 	executor.pullManager = mockPullManager
@@ -7076,12 +7065,10 @@ func TestBuildContainerSecurityContext(t *testing.T) {
 		},
 	}
 
-	mockPullManager := &pull.MockManager{}
+	mockPullManager := pull.NewMockManager(t)
 	mockPullManager.On("GetPullPolicyFor", mock.Anything).
 		Return(api.PullAlways, nil).
 		Times(2)
-
-	defer mockPullManager.AssertExpectations(t)
 
 	executor := newExecutor()
 	executor.pullManager = mockPullManager
@@ -7165,12 +7152,10 @@ func TestInitPermissionContainerSecurityContext(t *testing.T) {
 		},
 	}
 
-	mockPullManager := &pull.MockManager{}
+	mockPullManager := pull.NewMockManager(t)
 	mockPullManager.On("GetPullPolicyFor", mock.Anything).
 		Return(api.PullAlways, nil).
 		Times(len(tests))
-
-	defer mockPullManager.AssertExpectations(t)
 
 	executor := newExecutor()
 	executor.pullManager = mockPullManager

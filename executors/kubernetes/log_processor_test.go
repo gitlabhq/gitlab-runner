@@ -97,7 +97,7 @@ func TestKubernetesLogStreamProviderLogStream(t *testing.T) {
 	offset := 15
 	waitFileTimeout := time.Minute
 
-	executor := new(MockRemoteExecutor)
+	executor := NewMockRemoteExecutor(t)
 	urlMatcher := mock.MatchedBy(func(url *url.URL) bool {
 		query := url.Query()
 		assert.Equal(t, container, query.Get("container"))
@@ -267,7 +267,7 @@ func TestListenReadLines(t *testing.T) {
 		Return(nil).
 		Maybe()
 
-	processor := newTestKubernetesLogProcessor()
+	processor := newTestKubernetesLogProcessor(t)
 	processor.logStreamer = mockLogStreamer
 
 	ch, errCh := processor.Process(ctx)
@@ -295,21 +295,17 @@ func writeLogs(to io.Writer, logs ...log) {
 	}
 }
 
-func newTestKubernetesLogProcessor() *kubernetesLogProcessor {
+func newTestKubernetesLogProcessor(t *testing.T) *kubernetesLogProcessor {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	return &kubernetesLogProcessor{
-		logger:  logger,
-		backoff: newDefaultMockBackoffCalculator(),
-	}
-}
-
-func newDefaultMockBackoffCalculator() *mockBackoffCalculator {
-	c := new(mockBackoffCalculator)
+	c := newMockBackoffCalculator(t)
 	c.On("ForAttempt", mock.Anything).Return(50 * time.Millisecond).Maybe()
 
-	return c
+	return &kubernetesLogProcessor{
+		logger:  logger,
+		backoff: c,
+	}
 }
 
 func TestListenCancelContext(t *testing.T) {
@@ -331,7 +327,7 @@ func TestListenCancelContext(t *testing.T) {
 		Return(nil).
 		Maybe()
 
-	processor := newTestKubernetesLogProcessor()
+	processor := newTestKubernetesLogProcessor(t)
 	processor.logStreamer = mockLogStreamer
 
 	ch, errCh := processor.Process(ctx)
@@ -365,7 +361,7 @@ func TestAttachReconnectLogStream(t *testing.T) {
 		Return(nil).
 		Maybe()
 
-	processor := newTestKubernetesLogProcessor()
+	processor := newTestKubernetesLogProcessor(t)
 	processor.logStreamer = mockLogStreamer
 
 	ch, errCh := processor.Process(ctx)
@@ -401,7 +397,7 @@ func TestAttachReconnectReadLogs(t *testing.T) {
 		Return(nil).
 		Maybe()
 
-	processor := newTestKubernetesLogProcessor()
+	processor := newTestKubernetesLogProcessor(t)
 	processor.logStreamer = mockLogStreamer
 
 	ch, errCh := processor.Process(ctx)
@@ -473,7 +469,7 @@ func TestAttachCorrectOffset(t *testing.T) {
 		Return(nil).
 		Maybe()
 
-	processor := newTestKubernetesLogProcessor()
+	processor := newTestKubernetesLogProcessor(t)
 	processor.logStreamer = mockLogStreamer
 
 	ch, errCh := processor.Process(ctx)

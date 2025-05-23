@@ -76,11 +76,8 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(docker.MockClient)
-			defer clientMock.AssertExpectations(t)
-
-			execMock := new(exec.MockDocker)
-			defer execMock.AssertExpectations(t)
+			clientMock := docker.NewMockClient(t)
+			execMock := exec.NewMockDocker(t)
 
 			ctx := context.Background()
 
@@ -229,11 +226,8 @@ func testDefaultInspectUIDandGID(
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(docker.MockClient)
-			defer clientMock.AssertExpectations(t)
-
-			execMock := new(exec.MockDocker)
-			defer execMock.AssertExpectations(t)
+			clientMock := docker.NewMockClient(t)
+			execMock := exec.NewMockDocker(t)
 
 			ctx := context.Background()
 

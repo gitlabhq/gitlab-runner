@@ -106,7 +106,7 @@ func TestInit(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			ep := &common.MockExecutorProvider{}
+			ep := common.NewMockExecutorProvider(t)
 			p := New(ep, Config{}).(*provider)
 			p.taskscalerNew = mockTaskscalerNew(tokenTaskscaler, tt.newTaskscalerErr)
 			p.fleetingRunPlugin = mockFleetingRunPlugin(tt.fleetingRunPluginErr)
@@ -204,7 +204,7 @@ func TestAcquire(t *testing.T) {
 				PreemptiveMode: tt.idleCount > 0,
 			}
 			ts := mocks.NewTaskscaler(t)
-			ep := &common.MockExecutorProvider{}
+			ep := common.NewMockExecutorProvider(t)
 			p := New(ep, Config{}).(*provider)
 			p.taskscalerNew = mockTaskscalerNew(ts /* wantErr */, false)
 			p.fleetingRunPlugin = mockFleetingRunPlugin( /* wantErr */ false)

@@ -38,7 +38,7 @@ func TestWriteGitSSLConfig(t *testing.T) {
 		},
 	}
 
-	mockWriter := new(MockShellWriter)
+	mockWriter := NewMockShellWriter(t)
 	mockWriter.On("EnvVariableKey", tls.VariableCAFile).Return("VariableCAFile").Once()
 	mockWriter.On("EnvVariableKey", tls.VariableCertFile).Return("VariableCertFile").Once()
 	mockWriter.On("EnvVariableKey", tls.VariableKeyFile).Return("VariableKeyFile").Once()
@@ -123,8 +123,7 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 		Build:         build,
 	}
 
-	mockWriter := new(MockShellWriter)
-	defer mockWriter.AssertExpectations(t)
+	mockWriter := NewMockShellWriter(t)
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
 	mockWriter.On("SourceEnv", "path/to/env/file").Once()
@@ -195,8 +194,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 		Build:         build,
 	}
 
-	mockWriter := new(MockShellWriter)
-	defer mockWriter.AssertExpectations(t)
+	mockWriter := NewMockShellWriter(t)
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
 	mockWriter.On("SourceEnv", "path/to/env/file").Once()
@@ -272,8 +270,7 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 		Build:         build,
 	}
 
-	mockWriter := new(MockShellWriter)
-	defer mockWriter.AssertExpectations(t)
+	mockWriter := NewMockShellWriter(t)
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
 	mockWriter.On("SourceEnv", "path/to/env/file").Once()
@@ -374,8 +371,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 				Build:         build,
 			}
 
-			mockWriter := new(MockShellWriter)
-			defer mockWriter.AssertExpectations(t)
+			mockWriter := NewMockShellWriter(t)
 			mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
 				return v.Key == "GITLAB_ENV"
 			})).Once()
@@ -501,8 +497,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 				Build:         build,
 			}
 
-			mockWriter := new(MockShellWriter)
-			defer mockWriter.AssertExpectations(t)
+			mockWriter := NewMockShellWriter(t)
 			mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
 				return v.Key == "GITLAB_ENV"
 			})).Once()
@@ -874,9 +869,7 @@ func TestAbstractShell_writeCleanupBuildDirectoryScript(t *testing.T) {
 					BuildDir: tc.buildDir,
 				},
 			}
-			mockShellWriter := &MockShellWriter{}
-			defer mockShellWriter.AssertExpectations(t)
-
+			mockShellWriter := NewMockShellWriter(t)
 			tc.setupExpectations(mockShellWriter)
 			shell := AbstractShell{}
 
@@ -930,9 +923,7 @@ func TestGitCleanFlags(t *testing.T) {
 				},
 			}
 
-			mockWriter := new(MockShellWriter)
-			defer mockWriter.AssertExpectations(t)
-
+			mockWriter := NewMockShellWriter(t)
 			mockWriter.On("Noticef", "Checking out %s as detached HEAD (ref is %s)...", dummySha[0:8], dummyRef).Once()
 			mockWriter.On("Command", "git", "-c", "submodule.recurse=false", "checkout", "-f", "-q", dummySha).Once()
 
@@ -1313,9 +1304,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 				Build:         build,
 			}
 
-			mockWriter := new(MockShellWriter)
-			defer mockWriter.AssertExpectations(t)
-
+			mockWriter := NewMockShellWriter(t)
 			mockWriter.On("IfCmd", "runner-command", "--version").Once()
 			mockWriter.On("Noticef", "Checking cache for %s...", testCacheKey).Once()
 
@@ -1530,9 +1519,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 				Build:         build,
 			}
 
-			mockWriter := new(MockShellWriter)
-			defer mockWriter.AssertExpectations(t)
-
+			mockWriter := NewMockShellWriter(t)
 			mockWriter.On("IfCmd", "runner-command", "--version").Once()
 
 			for _, cacheKey := range tc.allowedCacheKeys {
@@ -1696,9 +1683,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 				Build:         build,
 			}
 
-			mockWriter := new(MockShellWriter)
-			defer mockWriter.AssertExpectations(t)
-
+			mockWriter := NewMockShellWriter(t)
 			mockWriter.On("IfCmd", "runner-command", "--version").Once()
 
 			for _, cacheKey := range tc.allowedCacheKeys {
@@ -2063,9 +2048,7 @@ func TestWriteUserScript(t *testing.T) {
 				},
 				PostBuildScript: tt.postBuildScript,
 			}
-			mockShellWriter := &MockShellWriter{}
-			defer mockShellWriter.AssertExpectations(t)
-
+			mockShellWriter := NewMockShellWriter(t)
 			tt.setupExpectations(mockShellWriter)
 			shell := AbstractShell{}
 
@@ -2259,8 +2242,7 @@ func TestScriptSections(t *testing.T) {
 					},
 					PostBuildScript: "echo postbuild",
 				}
-				mockShellWriter := &MockShellWriter{}
-				defer mockShellWriter.AssertExpectations(t)
+				mockShellWriter := NewMockShellWriter(t)
 
 				tt.setupExpectations(mockShellWriter)
 				shell := AbstractShell{}
@@ -2566,7 +2548,6 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 					}
 
 					mockShellWriter := NewMockShellWriter(t)
-
 					mockShellWriter.On("TmpFile", "masking.db").Return("masking.db").Once()
 					mockShellWriter.On("RmFile", "masking.db").Once()
 
@@ -2703,7 +2684,7 @@ func TestWriteUploadArtifactIncludesGenerateArtifactsMetadataArgs(t *testing.T) 
 				args = append(args, "--artifact-format", string(f))
 			}
 
-			shellWriter := &MockShellWriter{}
+			shellWriter := NewMockShellWriter(t)
 			shellWriter.On("IfCmd", mock.Anything, mock.Anything).Once()
 			shellWriter.On("Noticef", "Uploading artifacts...").Once()
 			shellWriter.On("Command", args...).Once()

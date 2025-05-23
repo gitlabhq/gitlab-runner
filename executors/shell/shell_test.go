@@ -60,14 +60,9 @@ func TestExecutor_Run(t *testing.T) {
 					close(waitCalled)
 				}).Return(testErr).Once()
 			},
-			processKillerAssertions: func(mProcessKillWaiter *process.MockKillWaiter, waitCalled chan time.Time) {
-				mProcessKillWaiter.
-					On("KillAndWait", mock.Anything, mock.Anything).
-					Return(nil).
-					WaitUntil(waitCalled)
-			},
-			cancelJob:   false,
-			expectedErr: testErr,
+			processKillerAssertions: func(mProcessKillWaiter *process.MockKillWaiter, waitCalled chan time.Time) {},
+			cancelJob:               false,
+			expectedErr:             testErr,
 		},
 		"wait returns exit error": {
 			commanderAssertions: func(mCmd *process.MockCommander, waitCalled chan time.Time) {
@@ -76,14 +71,9 @@ func TestExecutor_Run(t *testing.T) {
 					close(waitCalled)
 				}).Return(exitErr).Once()
 			},
-			processKillerAssertions: func(mProcessKillWaiter *process.MockKillWaiter, waitCalled chan time.Time) {
-				mProcessKillWaiter.
-					On("KillAndWait", mock.Anything, mock.Anything).
-					Return(nil).
-					WaitUntil(waitCalled)
-			},
-			cancelJob:   false,
-			expectedErr: &common.BuildError{},
+			processKillerAssertions: func(mProcessKillWaiter *process.MockKillWaiter, waitCalled chan time.Time) {},
+			cancelJob:               false,
+			expectedErr:             &common.BuildError{},
 		},
 	}
 
@@ -130,10 +120,8 @@ func TestExecutor_Run(t *testing.T) {
 }
 
 func setupProcessMocks(t *testing.T) (*process.MockKillWaiter, *process.MockCommander, func()) {
-	mProcessKillWaiter := new(process.MockKillWaiter)
-	defer mProcessKillWaiter.AssertExpectations(t)
-	mCmd := new(process.MockCommander)
-	defer mCmd.AssertExpectations(t)
+	mProcessKillWaiter := process.NewMockKillWaiter(t)
+	mCmd := process.NewMockCommander(t)
 
 	oldNewProcessKillWaiter := newProcessKillWaiter
 	oldCmd := newCommander

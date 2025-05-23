@@ -24,20 +24,17 @@ func newCommand(
 	executable string,
 	cmdOpts process.CommandOptions,
 	options Options,
-) (*process.MockCommander, *process.MockKillWaiter, Command, func()) {
-	commanderMock := new(process.MockCommander)
-	processKillWaiterMock := new(process.MockKillWaiter)
+) (*process.MockCommander, *process.MockKillWaiter, Command) {
+	commanderMock := process.NewMockCommander(t)
+	processKillWaiterMock := process.NewMockKillWaiter(t)
 
 	oldNewCmd := newCommander
 	oldNewProcessKillWaiter := newProcessKillWaiter
 
-	cleanup := func() {
+	t.Cleanup(func() {
 		newCommander = oldNewCmd
 		newProcessKillWaiter = oldNewProcessKillWaiter
-
-		commanderMock.AssertExpectations(t)
-		processKillWaiterMock.AssertExpectations(t)
-	}
+	})
 
 	newCommander = func(string, []string, process.CommandOptions) process.Commander {
 		return commanderMock
@@ -49,7 +46,7 @@ func newCommand(
 
 	c := New(ctx, executable, []string{}, cmdOpts, options)
 
-	return commanderMock, processKillWaiterMock, c, cleanup
+	return commanderMock, processKillWaiterMock, c
 }
 
 func TestCommand_Run(t *testing.T) {
@@ -143,14 +140,12 @@ func TestCommand_Run(t *testing.T) {
 			defer ctxCancel()
 
 			cmdOpts := process.CommandOptions{
-				Logger:              new(process.MockLogger),
+				Logger:              process.NewMockLogger(t),
 				GracefulKillTimeout: 100 * time.Millisecond,
 				ForceKillTimeout:    100 * time.Millisecond,
 			}
 
-			commanderMock, processKillWaiterMock, c, cleanup := newCommand(ctx, t, "exec", cmdOpts, tt.options)
-			defer cleanup()
-
+			commanderMock, processKillWaiterMock, c := newCommand(ctx, t, "exec", cmdOpts, tt.options)
 			commanderMock.On("Start").
 				Return(tt.cmdStartErr)
 			commanderMock.On("Wait").

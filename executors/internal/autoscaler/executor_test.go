@@ -98,7 +98,7 @@ func TestPrepare(t *testing.T) {
 			}
 
 			ts := mocks.NewTaskscaler(t)
-			ep := &common.MockExecutorProvider{}
+			ep := common.NewMockExecutorProvider(t)
 			me := common.NewMockExecutor(t)
 
 			p := New(ep, Config{}).(*provider)

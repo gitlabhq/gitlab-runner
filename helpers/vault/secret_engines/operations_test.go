@@ -11,7 +11,7 @@ import (
 )
 
 func TestOperationNotSupportedError_Error(t *testing.T) {
-	e := new(vault.MockSecretEngine)
+	e := vault.NewMockSecretEngine(t)
 	e.On("EngineName").
 		Return("test-engine").
 		Times(3)
@@ -34,7 +34,7 @@ func TestOperationNotSupportedError_Error(t *testing.T) {
 }
 
 func TestOperationNotSupportedError_Is(t *testing.T) {
-	e := new(vault.MockSecretEngine)
+	e := vault.NewMockSecretEngine(t)
 	e.On("EngineName").Return("test-engine")
 
 	assert.ErrorIs(t, NewUnsupportedGetOperationErr(e), NewUnsupportedGetOperationErr(e))

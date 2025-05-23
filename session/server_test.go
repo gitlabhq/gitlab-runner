@@ -142,8 +142,7 @@ func TestFailedToGenerateCertificate(t *testing.T) {
 		ListenAddress: "127.0.0.1:0",
 	}
 
-	m := new(certificate.MockGenerator)
-	defer m.AssertExpectations(t)
+	m := certificate.NewMockGenerator(t)
 	m.On("Generate", mock.Anything).Return(tls.Certificate{}, []byte{}, errors.New("something went wrong"))
 
 	_, err := NewServer(cfg, nil, m, fakeSessionFinder)

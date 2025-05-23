@@ -45,9 +45,7 @@ func TestRetry_Run(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			m := &mockRetryable{}
-			defer m.AssertExpectations(t)
-
+			m := newMockRetryable(t)
 			for _, e := range tt.calls {
 				m.On("Run").Return(e).Once()
 			}
@@ -63,9 +61,7 @@ func TestRunBackoff(t *testing.T) {
 	sleepTime := 2 * time.Second
 	runErr := errors.New("err")
 
-	m := &mockRetryable{}
-	defer m.AssertExpectations(t)
-
+	m := newMockRetryable(t)
 	m.On("Run").Return(runErr).Times(2)
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Once()
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
@@ -86,9 +82,7 @@ func TestRunBackoff(t *testing.T) {
 func TestRunOnceNoRetry(t *testing.T) {
 	err := errors.New("err")
 
-	m := &mockRetryable{}
-	defer m.AssertExpectations(t)
-
+	m := newMockRetryable(t)
 	m.On("Run").Return(err).Once()
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
 
@@ -98,9 +92,7 @@ func TestRunOnceNoRetry(t *testing.T) {
 func TestRetryableLogrusDecorator(t *testing.T) {
 	err := errors.New("err")
 
-	m := &mockRetryable{}
-	defer m.AssertExpectations(t)
-
+	m := newMockRetryable(t)
 	m.On("Run").Return(err).Twice()
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Once()
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
@@ -118,9 +110,7 @@ func TestRetryableLogrusDecorator(t *testing.T) {
 func TestRetryableBuildLoggerDecorator(t *testing.T) {
 	err := errors.New("err")
 
-	m := &mockRetryable{}
-	defer m.AssertExpectations(t)
-
+	m := newMockRetryable(t)
 	m.On("Run").Return(err).Twice()
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Once()
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
@@ -139,9 +129,7 @@ func TestRetryableBuildLoggerDecorator(t *testing.T) {
 func TestMaxTries(t *testing.T) {
 	err := errors.New("err")
 
-	m := &mockRetryable{}
-	defer m.AssertExpectations(t)
-
+	m := newMockRetryable(t)
 	m.On("Run").Return(err).Times(6)
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Times(5)
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
@@ -156,9 +144,7 @@ func TestMaxTries(t *testing.T) {
 func TestMaxTriesFunc(t *testing.T) {
 	err := errors.New("err")
 
-	m := &mockRetryable{}
-	defer m.AssertExpectations(t)
-
+	m := newMockRetryable(t)
 	m.On("Run").Return(err).Times(6)
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Times(5)
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
@@ -173,9 +159,7 @@ func TestMaxTriesFunc(t *testing.T) {
 }
 
 func TestRunValue(t *testing.T) {
-	m := &mockValueRetryable[int]{}
-	defer m.AssertExpectations(t)
-
+	m := newMockValueRetryable[int](t)
 	m.On("Run").Return(1, errors.New("err")).Times(5)
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Times(5)
 	m.On("Run").Return(5, nil).Once()

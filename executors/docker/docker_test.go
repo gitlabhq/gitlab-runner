@@ -220,11 +220,8 @@ func executorWithMockClient(c *docker.MockClient) *executor {
 }
 
 func TestHelperImageWithVariable(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	p := new(pull.MockManager)
-	defer p.AssertExpectations(t)
+	c := docker.NewMockClient(t)
+	p := pull.NewMockManager(t)
 
 	runnerImageTag := "gitlab/gitlab-runner:" + common.AppVersion.Revision
 
@@ -350,27 +347,24 @@ var (
 	volumesTestsDefaultCacheDir  = "/default-cache-dir"
 )
 
-func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, func()) {
+func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) *executor {
 	e := &executor{}
 	e.serverAPIVersion = version.Must(version.NewVersion("1.43"))
 
-	clientMock := new(docker.MockClient)
+	clientMock := docker.NewMockClient(t)
 	clientMock.On("Close").Return(nil).Once()
 
-	volumesManagerMock := new(volumes.MockManager)
+	volumesManagerMock := volumes.NewMockManager(t)
 	if !errors.Is(test.expectedError, errVolumesManagerUndefined) {
 		volumesManagerMock.On("RemoveTemporary", mock.Anything).Return(nil).Once()
 	}
 
 	oldCreateVolumesManager := createVolumesManager
-	closureFn := func() {
+	t.Cleanup(func() {
 		e.Cleanup()
 
 		createVolumesManager = oldCreateVolumesManager
-
-		volumesManagerMock.AssertExpectations(t)
-		clientMock.AssertExpectations(t)
-	}
+	})
 
 	createVolumesManager = func(_ *executor) (volumes.Manager, error) {
 		return volumesManagerMock, nil
@@ -445,7 +439,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 		require.NoError(t, err)
 	}
 
-	return e, closureFn
+	return e
 }
 
 func TestCreateVolumes(t *testing.T) {
@@ -523,9 +517,7 @@ func TestCreateVolumes(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			e, closureFn := getExecutorForVolumesTests(t, test)
-			defer closureFn()
-
+			e := getExecutorForVolumesTests(t, test)
 			err := e.createVolumes()
 			assert.Equal(t, test.expectedError, err)
 		})
@@ -708,9 +700,7 @@ func TestCreateBuildVolume(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			e, closureFn := getExecutorForVolumesTests(t, test)
-			defer closureFn()
-
+			e := getExecutorForVolumesTests(t, test)
 			err := e.createBuildVolume()
 			assert.Equal(t, test.expectedError, err)
 		})
@@ -790,9 +780,7 @@ func TestCreateDependencies(t *testing.T) {
 		},
 	}
 
-	e, closureFn := getExecutorForVolumesTests(t, testCase)
-	defer closureFn()
-
+	e := getExecutorForVolumesTests(t, testCase)
 	err = e.createDependencies()
 	assert.Equal(t, testError, err)
 }
@@ -800,7 +788,7 @@ func TestCreateDependencies(t *testing.T) {
 type containerConfigExpectations func(*testing.T, *container.Config, *container.HostConfig, *network.NetworkingConfig)
 
 type dockerConfigurationTestFakeDockerClient struct {
-	docker.MockClient
+	*docker.MockClient
 
 	cce containerConfigExpectations
 	t   *testing.T
@@ -827,6 +815,7 @@ func createExecutorForTestDockerConfiguration(
 		cce: cce,
 		t:   t,
 	}
+	c.MockClient = docker.NewMockClient(t)
 
 	e := new(executor)
 	e.client = c
@@ -884,8 +873,6 @@ func testDockerConfigurationWithJobContainer(
 	cce containerConfigExpectations,
 ) {
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
-	defer c.AssertExpectations(t)
-
 	c.On("ContainerInspect", mock.Anything, "abc").
 		Return(types.ContainerJSON{}, nil).Once()
 
@@ -907,7 +894,6 @@ func testDockerConfigurationWithPredefinedContainer(
 	cce containerConfigExpectations,
 ) {
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
-	defer c.AssertExpectations(t)
 
 	c.On("ContainerInspect", mock.Anything, "abc").
 		Return(types.ContainerJSON{}, nil).Once()
@@ -1837,8 +1823,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			e, closureFn := getExecutorForNetworksTests(t, test)
-			defer closureFn()
+			e := getExecutorForNetworksTests(t, test)
 
 			err := e.createBuildNetwork()
 			assert.ErrorIs(t, err, test.expectedBuildError)
@@ -1849,19 +1834,16 @@ func TestDockerCreateNetwork(t *testing.T) {
 	}
 }
 
-func getExecutorForNetworksTests(t *testing.T, test networksTestCase) (*executor, func()) {
+func getExecutorForNetworksTests(t *testing.T, test networksTestCase) *executor {
 	t.Helper()
 
-	clientMock := new(docker.MockClient)
-	networksManagerMock := new(networks.MockManager)
+	clientMock := docker.NewMockClient(t)
+	networksManagerMock := networks.NewMockManager(t)
 
 	oldCreateNetworksManager := createNetworksManager
-	closureFn := func() {
+	t.Cleanup(func() {
 		createNetworksManager = oldCreateNetworksManager
-
-		networksManagerMock.AssertExpectations(t)
-		clientMock.AssertExpectations(t)
-	}
+	})
 
 	createNetworksManager = func(_ *executor) (networks.Manager, error) {
 		return networksManagerMock, nil
@@ -1921,7 +1903,7 @@ func getExecutorForNetworksTests(t *testing.T, test networksTestCase) (*executor
 		require.NoError(t, err)
 	}
 
-	return e, closureFn
+	return e
 }
 
 func TestCheckOSType(t *testing.T) {
@@ -2224,8 +2206,7 @@ func TestLocalHelperImage(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			c := new(docker.MockClient)
-			defer c.AssertExpectations(t)
+			c := docker.NewMockClient(t)
 
 			info, err := helperimage.Get("", tt.config)
 			require.NoError(t, err)
@@ -2319,8 +2300,7 @@ func TestGetUIDandGID(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			inspectMock := new(user.MockInspect)
-			defer inspectMock.AssertExpectations(t)
+			inspectMock := user.NewMockInspect(t)
 
 			tt.mockInspect(t, inspectMock)
 
@@ -2355,7 +2335,6 @@ func TestExpandingDockerImageWithImagePullPolicyAlways(t *testing.T) {
 	}
 
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
-	defer c.AssertExpectations(t)
 
 	c.On("ContainerInspect", mock.Anything, "abc").
 		Return(types.ContainerJSON{}, nil).Once()
@@ -2384,10 +2363,7 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 		assert.Equal(t, int64(44040192), hostConfig.Memory)
 	}
 
-	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine:latest", "alpine:latest")
-
-	c.On("ContainerInspect", mock.Anything, "abc").
-		Return(types.ContainerJSON{}, nil).Once()
+	_, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
 	err := e.createVolumesManager()
 	require.NoError(t, err)
@@ -2412,11 +2388,8 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 func TestDockerImageWithVariablePlatform(t *testing.T) {
 	// Test with and without setting the platform to make sure that variable expansion works in both cases
 	for _, platform := range []string{"linux/amd64", ""} {
-		c := new(docker.MockClient)
-		defer c.AssertExpectations(t)
-
-		p := new(pull.MockManager)
-		defer p.AssertExpectations(t)
+		c := docker.NewMockClient(t)
+		p := pull.NewMockManager(t)
 
 		// Ensure that the pull manager gets called with the expanded platform
 		p.On("GetDockerImage", mock.Anything, common.ImageDockerOptions{Platform: platform}, mock.Anything).
@@ -2448,9 +2421,7 @@ func TestDockerImageWithVariablePlatform(t *testing.T) {
 }
 
 func TestExpandingVolumeDestination(t *testing.T) {
-	dockerClient := new(docker.MockClient)
-	defer dockerClient.AssertExpectations(t)
-
+	dockerClient := docker.NewMockClient(t)
 	executor := executorWithMockClient(dockerClient)
 
 	executor.Build = &common.Build{
@@ -2561,10 +2532,17 @@ func TestDockerImageWithUser(t *testing.T) {
 				assert.Equal(t, tt.want, config.User)
 			}
 
-			c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
-
+			c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
+			c.On("ImageInspectWithRaw", mock.Anything, mock.Anything).
+				Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Maybe()
+			c.On("ImagePullBlocking", mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Maybe()
+			c.On("NetworkList", mock.Anything, mock.Anything).
+				Return([]network.Summary{}, nil).Maybe()
+			c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Maybe()
 			c.On("ContainerInspect", mock.Anything, "abc").
-				Return(types.ContainerJSON{}, nil).Once()
+				Return(types.ContainerJSON{}, nil).Maybe()
 
 			err := e.createVolumesManager()
 			require.NoError(t, err)
@@ -2761,7 +2739,7 @@ func Test_createStepRunnerVolume(t *testing.T) {
 
 	for name, tt := range tests[runtime.GOOS] {
 		t.Run(name, func(t *testing.T) {
-			vm := new(volumes.MockManager)
+			vm := volumes.NewMockManager(t)
 			e := executor{
 				volumesManager: vm,
 				AbstractExecutor: executors.AbstractExecutor{
@@ -2779,7 +2757,6 @@ func Test_createStepRunnerVolume(t *testing.T) {
 			}
 
 			assert.NoError(t, e.createStepRunnerVolume())
-			vm.AssertExpectations(t)
 			assert.Equal(t, tt.expectedBinds, binds)
 			assert.Equal(t, tt.wantStage, e.GetCurrentStage())
 		})

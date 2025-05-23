@@ -193,8 +193,7 @@ func TestAttach(t *testing.T) {
 	client := testKubernetesClient(version, fakeClient)
 	clientConfig := &restclient.Config{}
 
-	mockExecutor := &MockRemoteExecutor{}
-	defer mockExecutor.AssertExpectations(t)
+	mockExecutor := NewMockRemoteExecutor(t)
 
 	urlMatcher := mock.MatchedBy(func(url *url.URL) bool {
 		return url.Path == "/api/v1/namespaces/test/pods/foo/attach"

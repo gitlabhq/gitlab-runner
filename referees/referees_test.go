@@ -7,24 +7,21 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func Test_CreateReferees(t *testing.T) {
-	fakeMockMetricsExecutor := func(t *testing.T) (interface{}, func(t mock.TestingT) bool) {
-		return struct{}{}, func(t mock.TestingT) bool { return false }
+	fakeMockMetricsExecutor := func(t *testing.T) interface{} {
+		return struct{}{}
 	}
 
-	mockMetricsExecutor := func(t *testing.T) (interface{}, func(t mock.TestingT) bool) {
-		m := new(MockMetricsExecutor)
-
+	mockMetricsExecutor := func(t *testing.T) interface{} {
+		m := NewMockMetricsExecutor(t)
 		m.On("GetMetricsSelector").Return(`name="value"`).Maybe()
-
-		return m, m.AssertExpectations
+		return m
 	}
 
 	testCases := map[string]struct {
-		mockExecutor     func(t *testing.T) (interface{}, func(t mock.TestingT) bool)
+		mockExecutor     func(t *testing.T) interface{}
 		config           *Config
 		expectedReferees []Referee
 	}{
@@ -49,8 +46,7 @@ func Test_CreateReferees(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			logger := logrus.WithField("test", t.Name())
 
-			executor, assertExpectations := test.mockExecutor(t)
-			defer assertExpectations(t)
+			executor := test.mockExecutor(t)
 
 			referees := CreateReferees(executor, test.config, logger)
 

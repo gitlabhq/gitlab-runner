@@ -38,7 +38,7 @@ func makeTestCredentialsFactory(test credentialsFactoryTestCase) CredentialsFact
 }
 
 func TestCreateCredentialsAdapter(t *testing.T) {
-	adapterMock := new(MockCredentialsAdapter)
+	adapterMock := NewMockCredentialsAdapter(t)
 
 	tests := map[string]credentialsFactoryTestCase{
 		"adapter doesn't exist": {
@@ -76,7 +76,7 @@ func TestCreateCredentialsAdapter(t *testing.T) {
 			_ = credentialsFactories.Register(
 				"additional-adapter",
 				func(config *common.CacheConfig) (CredentialsAdapter, error) {
-					return new(MockCredentialsAdapter), nil
+					return NewMockCredentialsAdapter(t), nil
 				})
 
 			config := &common.CacheConfig{

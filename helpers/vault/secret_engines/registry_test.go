@@ -13,8 +13,9 @@ import (
 )
 
 func TestMustRegisterFactory(t *testing.T) {
+	//nolint:unparam
 	factory := func(client vault.Client, path string) vault.SecretEngine {
-		return new(vault.MockSecretEngine)
+		return vault.NewMockSecretEngine(t)
 	}
 
 	tests := map[string]struct {
@@ -62,7 +63,7 @@ func TestGetFactory(t *testing.T) {
 
 	require.NotPanics(t, func() {
 		MustRegisterFactory("test-engine", func(client vault.Client, path string) vault.SecretEngine {
-			return new(vault.MockSecretEngine)
+			return vault.NewMockSecretEngine(t)
 		})
 	})
 

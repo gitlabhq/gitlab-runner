@@ -210,8 +210,7 @@ func TestCacheArchiverCompressionLevel(t *testing.T) {
 
 	for _, expectedLevel := range []string{"fastest", "fast", "default", "slow", "slowest"} {
 		t.Run(expectedLevel, func(t *testing.T) {
-			mockArchiver := new(archive.MockArchiver)
-			defer mockArchiver.AssertExpectations(t)
+			mockArchiver := archive.NewMockArchiver(t)
 
 			prevArchiver, _ := archive.Register(
 				"zip",

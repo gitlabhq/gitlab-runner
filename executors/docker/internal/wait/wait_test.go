@@ -50,9 +50,7 @@ func TestDockerWaiter_Wait(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			mClient := new(docker.MockClient)
-			defer mClient.AssertExpectations(t)
-
+			mClient := docker.NewMockClient(t)
 			bodyCh := make(chan container.WaitResponse, 1)
 			errCh := make(chan error, tt.attempts)
 
@@ -77,8 +75,7 @@ func TestDockerWaiter_Wait(t *testing.T) {
 }
 
 func TestDockerWaiter_StopKillWait(t *testing.T) {
-	mClient := new(docker.MockClient)
-	defer mClient.AssertExpectations(t)
+	mClient := docker.NewMockClient(t)
 
 	bodyCh := make(chan container.WaitResponse)
 	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
@@ -109,8 +106,7 @@ func TestDockerWaiter_StopKillWait(t *testing.T) {
 }
 
 func TestDockerWaiter_WaitContextCanceled(t *testing.T) {
-	mClient := new(docker.MockClient)
-	defer mClient.AssertExpectations(t)
+	mClient := docker.NewMockClient(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -127,8 +123,7 @@ func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
 		StatusCode: int64(exitCode),
 	}
 
-	mClient := new(docker.MockClient)
-	defer mClient.AssertExpectations(t)
+	mClient := docker.NewMockClient(t)
 
 	bodyCh := make(chan container.WaitResponse, 1)
 	bodyCh <- failedContainer

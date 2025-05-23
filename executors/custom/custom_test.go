@@ -90,9 +90,7 @@ func prepareExecutor(t *testing.T, tt executorTestCase) (*executor, common.Execu
 
 	successfulBuild.ID = jobID()
 
-	trace := new(common.MockJobTrace)
-	defer trace.AssertExpectations(t)
-
+	trace := common.NewMockJobTrace(t)
 	trace.On("Write", mock.Anything).
 		Run(func(args mock.Arguments) {
 			_, err := io.Copy(out, bytes.NewReader(args.Get(0).([]byte)))
@@ -136,9 +134,9 @@ func assertOutput(t *testing.T, tt executorTestCase, out *bytes.Buffer) {
 	tt.assertOutput(t, out.String())
 }
 
-func mockCommandFactory(t *testing.T, tt executorTestCase) func() {
+func mockCommandFactory(t *testing.T, tt executorTestCase) {
 	if tt.doNotMockCommandFactory {
-		return func() {}
+		return
 	}
 
 	outputs := commandOutputs{
@@ -146,7 +144,7 @@ func mockCommandFactory(t *testing.T, tt executorTestCase) func() {
 		stderr: nil,
 	}
 
-	cmd := new(command.MockCommand)
+	cmd := command.NewMockCommand(t)
 	cmd.On("Run").
 		Run(func(_ mock.Arguments) {
 			if outputs.stdout != nil {
@@ -186,10 +184,9 @@ func mockCommandFactory(t *testing.T, tt executorTestCase) func() {
 			return cmd
 		}
 
-	return func() {
-		cmd.AssertExpectations(t)
+	t.Cleanup(func() {
 		commandFactory = oldFactory
-	}
+	})
 }
 
 func TestExecutor_Prepare(t *testing.T) {
@@ -579,7 +576,7 @@ func TestExecutor_Prepare(t *testing.T) {
 
 	for testName, tt := range tests {
 		t.Run(testName, func(t *testing.T) {
-			defer mockCommandFactory(t, tt)()
+			mockCommandFactory(t, tt)
 
 			e, options, out := prepareExecutor(t, tt)
 			if tt.adjustOptions != nil {
@@ -707,7 +704,7 @@ func TestExecutor_Cleanup(t *testing.T) {
 
 	for testName, tt := range tests {
 		t.Run(testName, func(t *testing.T) {
-			defer mockCommandFactory(t, tt)()
+			mockCommandFactory(t, tt)
 
 			e, out := prepareExecutorForCleanup(t, tt)
 
@@ -808,7 +805,7 @@ func TestExecutor_Run(t *testing.T) {
 
 	for testName, tt := range tests {
 		t.Run(testName, func(t *testing.T) {
-			defer mockCommandFactory(t, tt)()
+			mockCommandFactory(t, tt)
 
 			e, options, out := prepareExecutor(t, tt)
 
@@ -913,7 +910,7 @@ func TestExecutor_Env(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			defer mockCommandFactory(t, tt)()
+			mockCommandFactory(t, tt)
 
 			e, options, _ := prepareExecutor(t, tt)
 			e.Config = *options.Config
@@ -1088,7 +1085,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			defer mockCommandFactory(t, tt)()
+			mockCommandFactory(t, tt)
 
 			e, options, _ := prepareExecutor(t, tt)
 			e.Config = *options.Config

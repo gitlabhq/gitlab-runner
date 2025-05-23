@@ -21,10 +21,10 @@ type fetcherMockFactory func(t *testing.T) fetcher
 //nolint:unparam
 func newFetcherMock(expectedURL string, data []byte, err error) fetcherMockFactory {
 	return func(t *testing.T) fetcher {
-		m := mockFetcher{}
+		m := newMockFetcher(t)
 		m.On("Fetch", expectedURL).Return(data, err)
 
-		return &m
+		return m
 	}
 }
 

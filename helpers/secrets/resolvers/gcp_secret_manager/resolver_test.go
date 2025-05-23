@@ -91,11 +91,10 @@ func TestResolver_Resolve(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			clientMock := new(mockClient)
+			clientMock := newMockClient(t)
 			if tt.setupMock != nil {
 				tt.setupMock(clientMock)
 			}
-			defer clientMock.AssertExpectations(t)
 
 			r := &resolver{
 				secret: tt.secret,

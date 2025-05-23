@@ -11,21 +11,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type resolverMockFactory func(t *testing.T) (resolver, func())
+type resolverMockFactory func(t *testing.T) resolver
 
 func newResolverMock(inputCerts, returnCerts []*x509.Certificate, returnErr error) resolverMockFactory {
-	return func(t *testing.T) (resolver, func()) {
-		mock := new(mockResolver)
-		cleanup := func() {
-			mock.AssertExpectations(t)
-		}
-
+	return func(t *testing.T) resolver {
+		mock := newMockResolver(t)
 		mock.
 			On("Resolve", inputCerts).
 			Return(returnCerts, returnErr).
 			Once()
 
-		return mock, cleanup
+		return mock
 	}
 }
 
@@ -36,7 +32,7 @@ func TestChainResolver_Resolve(t *testing.T) {
 	urlCerts := []*x509.Certificate{{SerialNumber: big.NewInt(2)}}
 	verifyCerts := []*x509.Certificate{{SerialNumber: big.NewInt(3)}}
 
-	noopMock := func(t *testing.T) (resolver, func()) { return nil, func() {} }
+	noopMock := func(t *testing.T) resolver { return nil }
 
 	tests := map[string]struct {
 		urlResolver    resolverMockFactory
@@ -66,11 +62,8 @@ func TestChainResolver_Resolve(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			urlResolver, cleanupURLResolver := tc.urlResolver(t)
-			defer cleanupURLResolver()
-
-			verifyResolver, cleanupVerifyResolver := tc.verifyResolver(t)
-			defer cleanupVerifyResolver()
+			urlResolver := tc.urlResolver(t)
+			verifyResolver := tc.verifyResolver(t)
 
 			r := newChainResolver(urlResolver, verifyResolver)
 			newCerts, err := r.Resolve(certs)
