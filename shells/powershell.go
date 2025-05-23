@@ -443,9 +443,9 @@ func (p *PsWriter) IfCmdWithOutput(cmd string, arguments ...string) {
 }
 
 func (p *PsWriter) IfGitVersionIsAtLeast(version string) {
-	p.Printf("Powershell does not support Git version detection")
-	p.Linef("if($false) {")
+	p.Line(`if ([Version]((git version | Select-String "git version (\d+(?:\.\d+)*)").Matches.Groups[1].Value) -ge [Version]"` + version + `") {`)
 	p.Indent()
+	p.Printf("Git version at least %q", version)
 }
 
 func (p *PsWriter) ifInTryCatch(cmd string) {
