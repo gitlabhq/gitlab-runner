@@ -1027,8 +1027,7 @@ func logTerminationError(logger buildlogger.Logger, name string, err error) {
 		return
 	}
 
-	logger = logger.WithFields(logrus.Fields{"error": err})
-	logger.Errorln(fmt.Sprintf("Job trace termination %q failed", name))
+	logger.WithFields(logrus.Fields{"error": err}).Errorln(fmt.Sprintf("Job trace termination %q failed", name))
 }
 
 func (b *Build) setExecutorStageResolver(resolver func() ExecutorStage) {
