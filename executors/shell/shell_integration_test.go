@@ -1951,6 +1951,85 @@ func TestBuildInvokeBinaryHelper(t *testing.T) {
 	})
 }
 
+func TestGitCloneOrFetch(t *testing.T) {
+	if !test.CommandVersionIsAtLeast(t, "2.49.0", "git", "version") {
+		t.Skip("git version is not 2.49.0")
+	}
+
+	tests := map[string]struct {
+		revision    string
+		sha         string
+		depth       int
+		assertError bool
+	}{
+		"main branch matching sha": {
+			revision: "main",
+			sha:      "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
+		},
+		"main refs matching sha": {
+			revision: "refs/heads/main",
+			sha:      "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
+		},
+		"main refs matching sha with depth 1": {
+			revision: "refs/heads/main",
+			sha:      "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
+			depth:    1,
+		},
+		"main refs previous sha with depth 1": {
+			revision:    "refs/heads/main",
+			sha:         "035c3a26fadbc7bd2f4101c84812a8b6e722f562",
+			depth:       1,
+			assertError: true,
+		},
+		"main refs wrong sha": {
+			revision:    "refs/heads/main",
+			sha:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			assertError: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			t.Parallel()
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				t.Parallel()
+				buildtest.WithEachFeatureFlag(t, func(t *testing.T, setup buildtest.BuildSetupFn) {
+					t.Parallel()
+
+					jobResponse, err := common.GetRemoteBuildResponse(`echo "Hello World"`)
+
+					assert.NoError(t, err)
+					build := newBuild(t, jobResponse, shell)
+
+					setup(t, build)
+
+					build.GitInfo.Ref = tt.revision
+					build.GitInfo.Sha = tt.sha
+					if tt.depth > 0 {
+						build.GitInfo.Depth = tt.depth
+					}
+
+					out, err := buildtest.RunBuildReturningOutput(t, build)
+					if tt.assertError {
+						assert.Error(t, err)
+						return
+					}
+
+					assert.NoError(t, err)
+
+					if build.IsFeatureFlagOn(featureflags.UseGitNativeClone) {
+						assert.Contains(t, out, "Cloning into")
+					} else {
+						assert.Contains(t, out, "Fetching changes")
+					}
+					checkingOutHEAD := fmt.Sprintf("Checking out %s as detached HEAD", tt.sha[:8])
+					assert.Contains(t, out, checkingOutHEAD)
+				}, featureflags.UseGitNativeClone)
+			})
+		})
+	}
+}
+
 func TestBuildPwshHandlesSyntaxErrors(t *testing.T) {
 	helpers.SkipIntegrationTests(t, shells.SNPwsh)
 
