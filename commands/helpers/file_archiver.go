@@ -156,7 +156,8 @@ func (c *fileArchiver) processPath(path string) {
 		return
 	}
 
-	matches, err := doublestar.FilepathGlob(rel)
+	// Use WithNoFollow option to prevent symlink cycles during the initial glob
+	matches, err := doublestar.FilepathGlob(rel, doublestar.WithNoFollow())
 	if err != nil {
 		logrus.Warningf("%s: %v", path, err)
 		return
