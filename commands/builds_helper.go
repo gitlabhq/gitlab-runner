@@ -74,7 +74,7 @@ type statePermutation struct {
 func newStatePermutationFromBuild(build *common.Build) statePermutation {
 	return statePermutation{
 		runner:        build.Runner.ShortDescription(),
-		systemID:      build.Runner.SystemID,
+		systemID:      build.Runner.GetSystemID(),
 		buildState:    build.CurrentState(),
 		buildStage:    build.CurrentStage(),
 		executorStage: build.CurrentExecutorStage(),
@@ -101,8 +101,10 @@ type buildsHelper struct {
 
 	jobsTotal                  *prometheus.CounterVec
 	jobDurationHistogram       *prometheus.HistogramVec
-	jobQueueDurationHistogram  *prometheus.HistogramVec
 	jobStagesDurationHistogram *prometheus.HistogramVec
+	jobQueueDurationHistogram  *prometheus.HistogramVec
+	jobQueueSize               *prometheus.GaugeVec
+	jobQueueDepth              *prometheus.GaugeVec
 
 	acceptableJobQueuingDurationExceeded *prometheus.CounterVec
 }
@@ -114,7 +116,7 @@ func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCoun
 
 	counter := b.counters[runner.Token]
 	if counter == nil {
-		counter = &runnerCounter{systemID: runner.SystemID}
+		counter = &runnerCounter{systemID: runner.GetSystemID()}
 		b.counters[runner.Token] = counter
 	}
 	return counter
@@ -261,14 +263,26 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 	}
 
 	b.builds = append(b.builds, build)
-	b.jobsTotal.WithLabelValues(build.Runner.ShortDescription(), build.Runner.SystemID).Inc()
+	b.jobsTotal.WithLabelValues(build.Runner.ShortDescription(), build.Runner.GetSystemID()).Inc()
 	b.jobQueueDurationHistogram.
 		WithLabelValues(
 			build.Runner.ShortDescription(),
-			build.Runner.SystemID,
+			build.Runner.GetSystemID(),
 			build.JobInfo.ProjectJobsRunningOnInstanceRunnersCount,
 		).
 		Observe(build.JobInfo.TimeInQueueSeconds)
+	b.jobQueueSize.
+		WithLabelValues(
+			build.Runner.ShortDescription(),
+			build.Runner.GetSystemID(),
+		).
+		Set(float64(build.JobInfo.QueueSize))
+	b.jobQueueDepth.
+		WithLabelValues(
+			build.Runner.ShortDescription(),
+			build.Runner.GetSystemID(),
+		).
+		Set(float64(build.JobInfo.QueueDepth))
 
 	b.evaluateJobQueuingDuration(build.Runner, build.JobInfo)
 	b.initializeBuildStageMetrics(build)
@@ -278,7 +292,7 @@ func (b *buildsHelper) evaluateJobQueuingDuration(runner *common.RunnerConfig, j
 	counterForRunner := b.acceptableJobQueuingDurationExceeded.
 		WithLabelValues(
 			runner.ShortDescription(),
-			runner.SystemID,
+			runner.GetSystemID(),
 		)
 
 	// This .Add(0) will not change the value of the metric when threshold was
@@ -327,7 +341,7 @@ func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
 	defer b.lock.Unlock()
 
 	b.jobDurationHistogram.
-		WithLabelValues(deleteBuild.Runner.ShortDescription(), deleteBuild.Runner.SystemID).
+		WithLabelValues(deleteBuild.Runner.ShortDescription(), deleteBuild.Runner.GetSystemID()).
 		Observe(deleteBuild.FinalDuration().Seconds())
 
 	for idx, build := range b.builds {
@@ -443,6 +457,8 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	b.jobsTotal.Describe(ch)
 	b.jobDurationHistogram.Describe(ch)
 	b.jobQueueDurationHistogram.Describe(ch)
+	b.jobQueueSize.Describe(ch)
+	b.jobQueueDepth.Describe(ch)
 	b.acceptableJobQueuingDurationExceeded.Describe(ch)
 	b.jobStagesDurationHistogram.Describe(ch)
 }
@@ -509,6 +525,8 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	b.jobsTotal.Collect(ch)
 	b.jobDurationHistogram.Collect(ch)
 	b.jobQueueDurationHistogram.Collect(ch)
+	b.jobQueueSize.Collect(ch)
+	b.jobQueueDepth.Collect(ch)
 	b.acceptableJobQueuingDurationExceeded.Collect(ch)
 	b.jobStagesDurationHistogram.Collect(ch)
 }
@@ -558,6 +576,20 @@ func newBuildsHelper() buildsHelper {
 				Buckets: []float64{1, 3, 10, 30, 60, 120, 300, 900, 1800, 3600},
 			},
 			[]string{"runner", "system_id", "project_jobs_running"},
+		),
+		jobQueueSize: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "gitlab_runner_job_queue_size",
+				Help: "A gauge representing the size of the queue for the runner",
+			},
+			[]string{"runner", "system_id"},
+		),
+		jobQueueDepth: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "gitlab_runner_job_queue_depth",
+				Help: "A gauge representing the search depth in the queue for the runner",
+			},
+			[]string{"runner", "system_id"},
 		),
 		acceptableJobQueuingDurationExceeded: prometheus.NewCounterVec(
 			prometheus.CounterOpts{

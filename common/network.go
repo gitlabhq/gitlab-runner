@@ -300,6 +300,8 @@ type JobInfo struct {
 
 	TimeInQueueSeconds                       float64 `json:"time_in_queue_seconds"`
 	ProjectJobsRunningOnInstanceRunnersCount string  `json:"project_jobs_running_on_instance_runners_count"`
+	QueueSize                                int64   `json:"queue_size"`
+	QueueDepth                               int64   `json:"queue_depth"`
 }
 
 type GitInfoRefType string
