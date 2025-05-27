@@ -4,15 +4,22 @@ package autoscaler_test
 
 import (
 	"context"
+	"math/rand"
 	"os"
+	"strconv"
 	"testing"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
@@ -102,6 +109,56 @@ func TestBuildSuccess(t *testing.T) {
 		setupAcquireBuild(t, build)
 
 		require.NoError(t, buildtest.RunBuild(t, build))
+	})
+}
+
+func TestBuildTimeout(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		require.NoError(t, err)
+		successfulBuild.Steps[0].Script = []string{"sleep 60"}
+		successfulBuild.RunnerInfo.Timeout = 15
+
+		build := &common.Build{
+			JobResponse: successfulBuild,
+			Runner:      newRunnerConfig(t, shell),
+		}
+		setupAcquireBuild(t, build)
+
+		runnerID := rand.Intn(999999999)
+		build.ProjectRunnerID = runnerID
+		build.Variables = append(successfulBuild.Variables, common.JobVariable{
+			Key:   featureflags.NetworkPerBuild,
+			Value: "true",
+		})
+
+		// run a job that times out
+		err = buildtest.RunBuild(t, build)
+		require.ErrorContains(t, err, "execution took longer than 15s seconds")
+
+		// new docker client
+		client, err := docker.New(docker.Credentials{})
+		require.NoError(t, err, "creating docker client")
+		defer client.Close()
+
+		nameFilter := filters.Arg("name", "-"+strconv.Itoa(runnerID)+"-")
+
+		// ensure no build/predefine containers for this job were left behind
+		containers, err := client.ContainerList(context.Background(), container.ListOptions{
+			Filters: filters.NewArgs(nameFilter),
+		})
+		require.NoError(t, err)
+		assert.Empty(t, containers)
+
+		// ensure no networks for this job were left behind
+		networks, err := client.NetworkList(context.Background(), network.ListOptions{
+			Filters: filters.NewArgs(nameFilter),
+		})
+		require.NoError(t, err)
+		assert.Empty(t, networks)
+
+		// ensure no volumes for this job were left behind
+		// unfortunately there isn't an API to list volumes...
 	})
 }
 
