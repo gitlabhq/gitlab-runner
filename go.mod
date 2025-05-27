@@ -21,7 +21,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.30
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.61.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.5
-	github.com/bmatcuk/doublestar/v4 v4.4.0
+	github.com/bmatcuk/doublestar/v4 v4.8.1
 	github.com/creack/pty v1.1.21
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/distribution/reference v0.6.0

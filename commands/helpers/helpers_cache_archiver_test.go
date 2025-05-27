@@ -3,6 +3,7 @@
 package helpers
 
 import (
+	"os"
 	"time"
 
 	"gocloud.dev/blob"
@@ -14,6 +15,10 @@ func NewCacheArchiverCommandForTest(file string, fileArchiverPaths []string) Cac
 		File:         file,
 		fileArchiver: fileArchiver{Paths: fileArchiverPaths},
 	}
+}
+
+func GetMatches(cmd *CacheArchiverCommand) map[string]os.FileInfo {
+	return cmd.files
 }
 
 // SetCacheArchiverCommandMux allows integration tests to set mux
