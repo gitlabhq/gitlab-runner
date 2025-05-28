@@ -589,6 +589,8 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, info common.Shel
 
 	switch strategy := build.GetGitStrategy(); strategy {
 	case common.GitFetch, common.GitClone:
+		b.writeGitCleanup(w, build)
+
 		templateDir := b.setupTemplateDir(w, build, projectDir)
 
 		credConfigFile := b.credConfigFile(build, w)
@@ -634,8 +636,6 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	}
 
 	objectFormat := build.GetRepositoryObjectFormat()
-
-	b.writeGitCleanup(w, build)
 
 	if objectFormat != common.DefaultObjectFormat {
 		w.Command("git", "init", projectDir, "--template", templateDir, "--object-format", objectFormat)
