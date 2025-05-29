@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
@@ -77,10 +78,9 @@ type RegisterCommand struct {
 	registered bool
 	timeNowFn  func() time.Time
 
-	configOptions
-
 	ConfigTemplate configTemplate `namespace:"template"`
 
+	ConfigFile        string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 	TagList           string `long:"tag-list" env:"RUNNER_TAG_LIST" description:"Tag list"`
 	NonInteractive    bool   `short:"n" long:"non-interactive" env:"REGISTER_NON_INTERACTIVE" description:"Run registration unattended"`
 	LeaveRunner       bool   `long:"leave-runner" env:"REGISTER_LEAVE_RUNNER" description:"Don't remove runner if registration fails"`
@@ -246,7 +246,7 @@ func (s *RegisterCommand) verifyRunner() {
 	// If a runner authentication token is specified in place of a registration token, let's accept it and process it as
 	// an authentication token. This allows for an easier transition for users by simply replacing the
 	// registration token with the new authentication token.
-	result := s.network.VerifyRunner(s.RunnerCredentials, s.SystemIDState.GetSystemID())
+	result := s.network.VerifyRunner(s.RunnerCredentials, s.SystemID)
 	if result == nil || result.ID == 0 {
 		logrus.Panicln("Failed to verify the runner.")
 	}
@@ -256,20 +256,13 @@ func (s *RegisterCommand) verifyRunner() {
 	s.registered = true
 }
 
-func (s *RegisterCommand) addRunner(runner *common.RunnerConfig) {
-	s.configMutex.Lock()
-	defer s.configMutex.Unlock()
-
-	s.config.Runners = append(s.config.Runners, runner)
-}
-
-func (s *RegisterCommand) askRunner() {
+func (s *RegisterCommand) askRunner(cfg *common.Config) {
 	s.URL = s.ask("url", "Enter the GitLab instance URL (for example, https://gitlab.com/):")
 
 	if s.Token != "" && !s.tokenIsRunnerToken() {
 		logrus.Infoln("Token specified trying to verify runner...")
 		logrus.Warningln("If you want to register use the '-r' instead of '-t'.")
-		if s.network.VerifyRunner(s.RunnerCredentials, s.SystemIDState.GetSystemID()) == nil {
+		if s.network.VerifyRunner(s.RunnerCredentials, s.SystemID) == nil {
 			logrus.Panicln("Failed to verify the runner. You may be having network problems.")
 		}
 		return
@@ -285,7 +278,7 @@ func (s *RegisterCommand) askRunner() {
 		return
 	}
 
-	if r, err := s.RunnerByToken(s.Token); err == nil && r != nil {
+	if r, err := cfg.RunnerByToken(s.Token); err == nil && r != nil {
 		logrus.Warningln("A runner with this system ID and token has already been registered.")
 	}
 
@@ -419,12 +412,6 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	userModeWarning(true)
 
 	s.context = context
-	err := s.loadConfig()
-	if err != nil {
-		logrus.Panicln(err)
-	}
-	s.SystemIDState = s.loadedSystemIDState
-
 	validAccessLevels := []AccessLevel{NotProtected, RefProtected}
 	if !accessLevelValid(validAccessLevels, AccessLevel(s.AccessLevel)) {
 		logrus.Panicln("Given access-level is not valid. " +
@@ -433,13 +420,29 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 
 	s.mergeTemplate()
 
-	s.askRunner()
+	cfg := configfile.New(s.ConfigFile)
+	if err := cfg.Load(configfile.WithMutateOnLoad(func(config *common.Config) error {
+		s.SystemID = cfg.SystemID()
+		s.askRunner(config)
 
-	if !s.LeaveRunner {
-		defer s.unregisterRunnerFunc()()
+		if !s.LeaveRunner {
+			defer s.unregisterRunnerFunc()()
+		}
+
+		s.askExecutor()
+		s.askExecutorOptions()
+
+		config.Runners = append(config.Runners, &s.RunnerConfig)
+		return nil
+	})); err != nil {
+		logrus.Panicln(err)
 	}
 
-	config := s.getConfig()
+	if err := cfg.Save(); err != nil {
+		logrus.Panicln(err)
+	}
+
+	config := cfg.Config()
 	if config.Concurrent < s.Limit {
 		logrus.Warningf(
 			"The specified runner job concurrency limit (%d) is larger than current global concurrency limit (%d). "+
@@ -455,15 +458,6 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 			s.RequestConcurrency,
 			config.Concurrent,
 		)
-	}
-
-	s.askExecutor()
-	s.askExecutorOptions()
-
-	s.addRunner(&s.RunnerConfig)
-	err = s.saveConfig()
-	if err != nil {
-		logrus.Panicln(err)
 	}
 
 	logrus.Printf(
@@ -497,7 +491,7 @@ func (s *RegisterCommand) unregisterRunnerFunc() func() {
 
 func (s *RegisterCommand) unregisterRunner() {
 	if s.tokenIsRunnerToken() {
-		s.network.UnregisterRunnerManager(s.RunnerCredentials, s.SystemIDState.GetSystemID())
+		s.network.UnregisterRunnerManager(s.RunnerCredentials, s.SystemID)
 	} else {
 		s.network.UnregisterRunner(s.RunnerCredentials)
 	}

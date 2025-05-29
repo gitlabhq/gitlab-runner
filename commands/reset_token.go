@@ -1,17 +1,21 @@
 package commands
 
 import (
+	"log"
+
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 type ResetTokenCommand struct {
-	configOptions
 	*common.RunnerCredentials
-	network    common.Network
+	network common.Network
+
+	ConfigFile string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 	Name       string `short:"n" long:"name" description:"Name of the runner whose token you wish to reset (as defined in the configuration file)"`
 	URL        string `short:"u" long:"url" description:"URL of the runner whose token you wish to reset (as defined in the configuration file)"`
 	ID         int64  `short:"i" long:"id" description:"ID of the runner whose token you wish to reset (as defined in the configuration file)"`
@@ -19,17 +23,17 @@ type ResetTokenCommand struct {
 	PAT        string `long:"pat" description:"Personal access token to use in lieu of runner's old authentication token"`
 }
 
-func (c *ResetTokenCommand) resetAllRunnerTokens() {
+func (c *ResetTokenCommand) resetAllRunnerTokens(cfg *common.Config) {
 	logrus.Warningln("Resetting all runner authentication tokens")
-	for _, r := range c.config.Runners {
+	for _, r := range cfg.Runners {
 		if !common.ResetToken(c.network, &r.RunnerCredentials, "", c.PAT) {
 			logrus.WithField("name", r.Name).Errorln("Failed to reset runner authentication token")
 		}
 	}
 }
 
-func (c *ResetTokenCommand) resetSingleRunnerToken() bool {
-	runnerCredentials, err := c.getRunnerCredentials()
+func (c *ResetTokenCommand) resetSingleRunnerToken(cfg *common.Config) bool {
+	runnerCredentials, err := c.getRunnerCredentials(cfg)
 	if err != nil {
 		logrus.WithError(err).Fatalln("Couldn't get runner credentials")
 	}
@@ -51,9 +55,9 @@ func (c *ResetTokenCommand) resetSingleRunnerToken() bool {
 	return true
 }
 
-func (c *ResetTokenCommand) getRunnerCredentials() (*common.RunnerCredentials, error) {
+func (c *ResetTokenCommand) getRunnerCredentials(cfg *common.Config) (*common.RunnerCredentials, error) {
 	if c.Name != "" {
-		runnerConfig, err := c.RunnerByName(c.Name)
+		runnerConfig, err := cfg.RunnerByName(c.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -61,7 +65,7 @@ func (c *ResetTokenCommand) getRunnerCredentials() (*common.RunnerCredentials, e
 		return &runnerConfig.RunnerCredentials, nil
 	}
 
-	runnerConfig, err := c.RunnerByURLAndID(c.URL, c.ID)
+	runnerConfig, err := cfg.RunnerByURLAndID(c.URL, c.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -72,24 +76,23 @@ func (c *ResetTokenCommand) getRunnerCredentials() (*common.RunnerCredentials, e
 func (c *ResetTokenCommand) Execute(_context *cli.Context) {
 	userModeWarning(true)
 
-	log := logrus.WithField("config-file", c.config)
+	cfg := configfile.New(c.ConfigFile)
+	if err := cfg.Load(configfile.WithMutateOnLoad(func(cfg *common.Config) error {
+		if c.AllRunners {
+			c.resetAllRunnerTokens(cfg)
+		} else {
+			c.resetSingleRunnerToken(cfg)
+		}
 
-	err := c.loadConfig()
-	if err != nil {
-		log.WithError(err).Fatalln("Failed to load configuration")
+		return nil
+	})); err != nil {
+		logrus.WithError(err).Fatalln("Failed to load configuration")
 	}
 
-	if c.AllRunners {
-		c.resetAllRunnerTokens()
-	} else {
-		c.resetSingleRunnerToken()
+	if err := cfg.Save(); err != nil {
+		logrus.WithError(err).Fatalln("Failed to update configuration")
 	}
 
-	// save config file
-	err = c.saveConfig()
-	if err != nil {
-		log.WithError(err).Fatalln("Failed to update configuration")
-	}
 	log.Println("Updated")
 }
 

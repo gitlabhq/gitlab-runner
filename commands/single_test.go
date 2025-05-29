@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -73,7 +74,7 @@ func TestConfigFile(t *testing.T) {
 	err = config_file.Close()
 	require.NoError(t, err)
 	// create command config for runner2
-	config := RunSingleCommand{configOptions: configOptions{ConfigFile: filename}, RunnerName: "runner2"}
+	config := RunSingleCommand{ConfigFile: filename, RunnerName: "runner2"}
 
 	config.HandleArgs()
 
@@ -81,8 +82,7 @@ func TestConfigFile(t *testing.T) {
 }
 
 func newRunSingleCommand(executorName string, network common.Network) *RunSingleCommand {
-	systemIDState := common.NewSystemIDState()
-	_ = systemIDState.EnsureSystemID()
+	systemID, _ := configfile.GenerateUniqueSystemID()
 
 	return &RunSingleCommand{
 		network: network,
@@ -94,7 +94,7 @@ func newRunSingleCommand(executorName string, network common.Network) *RunSingle
 				URL:   "http://example.com",
 				Token: "_test_token_",
 			},
-			SystemIDState: systemIDState,
+			SystemID: systemID,
 		},
 		interruptSignals: make(chan os.Signal),
 	}

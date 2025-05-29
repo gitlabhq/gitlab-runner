@@ -29,10 +29,7 @@ const (
 func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
 	runner := common.RunnerConfig{
 		RequestConcurrency: 2,
-		SystemIDState:      common.NewSystemIDState(),
 	}
-
-	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireRequest(&runner)
@@ -51,10 +48,7 @@ func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
 func TestBuildsHelperAcquireRequestWithAdaptiveLimit(t *testing.T) {
 	runner := common.RunnerConfig{
 		RequestConcurrency: 2,
-		SystemIDState:      common.NewSystemIDState(),
 	}
-
-	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireRequest(&runner)
@@ -79,10 +73,7 @@ func TestBuildsHelperAcquireRequestWithAdaptiveLimit(t *testing.T) {
 func TestBuildsHelperAcquireRequestWithDefault(t *testing.T) {
 	runner := common.RunnerConfig{
 		RequestConcurrency: 0,
-		SystemIDState:      common.NewSystemIDState(),
 	}
-
-	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireRequest(&runner)
@@ -109,11 +100,8 @@ func TestBuildsHelperAcquireRequestWithDefault(t *testing.T) {
 
 func TestBuildsHelperAcquireBuildWithLimit(t *testing.T) {
 	runner := common.RunnerConfig{
-		Limit:         1,
-		SystemIDState: common.NewSystemIDState(),
+		Limit: 1,
 	}
-
-	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireBuild(&runner)
@@ -131,11 +119,8 @@ func TestBuildsHelperAcquireBuildWithLimit(t *testing.T) {
 
 func TestBuildsHelperAcquireBuildUnlimited(t *testing.T) {
 	runner := common.RunnerConfig{
-		Limit:         0,
-		SystemIDState: common.NewSystemIDState(),
+		Limit: 0,
 	}
-
-	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireBuild(&runner)
@@ -160,11 +145,8 @@ func TestBuildsHelperFindSessionByURL(t *testing.T) {
 			RunnerCredentials: common.RunnerCredentials{
 				Token: "abcd1234",
 			},
-			SystemIDState: common.NewSystemIDState(),
 		},
 	}
-
-	require.NoError(t, build.Runner.SystemIDState.EnsureSystemID())
 
 	h := newBuildsHelper()
 	h.addBuild(&build)
@@ -203,9 +185,7 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 		},
 		"job exists": {
 			build: &common.Build{
-				Runner: &common.RunnerConfig{
-					SystemIDState: common.NewSystemIDState(),
-				},
+				Runner: &common.RunnerConfig{},
 				JobResponse: common.JobResponse{
 					ID:      1,
 					JobInfo: common.JobInfo{ProjectID: 1},
@@ -228,10 +208,6 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 			b := newBuildsHelper()
 			b.addBuild(test.build)
 			b.ListJobsHandler(writer, req)
-
-			if test.build != nil {
-				require.NoError(t, test.build.Runner.SystemIDState.EnsureSystemID())
-			}
 
 			resp := writer.Result()
 			defer resp.Body.Close()
@@ -358,7 +334,6 @@ func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
 					RunnerCredentials: common.RunnerCredentials{
 						Token: testToken,
 					},
-					SystemIDState: &common.SystemIDState{},
 				},
 				JobResponse: common.JobResponse{
 					ID: 1,
@@ -369,8 +344,6 @@ func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
 					},
 				},
 			}
-
-			require.NoError(t, build.Runner.SystemIDState.EnsureSystemID())
 
 			if !tt.monitoringSectionMissing {
 				build.Runner.Monitoring = &runner.Monitoring{}
@@ -416,7 +389,7 @@ func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
 			require.Contains(t, labels, "runner")
 			assert.Equal(t, testToken, labels["runner"])
 			require.Contains(t, labels, "system_id")
-			assert.Equal(t, build.Runner.SystemIDState.GetSystemID(), labels["system_id"])
+			assert.Equal(t, build.Runner.SystemID, labels["system_id"])
 
 			assert.Equal(t, tt.expectedValue, mm.GetCounter().GetValue())
 		})
@@ -429,7 +402,6 @@ func TestPrepareStageMetrics(t *testing.T) {
 			RunnerCredentials: common.RunnerCredentials{
 				Token: testToken,
 			},
-			SystemIDState: &common.SystemIDState{},
 		},
 		JobResponse: common.JobResponse{
 			ID: 1,
@@ -471,7 +443,6 @@ func TestPrepareStageMetricsNoFF(t *testing.T) {
 			RunnerCredentials: common.RunnerCredentials{
 				Token: testToken,
 			},
-			SystemIDState: &common.SystemIDState{},
 		},
 		JobResponse: common.JobResponse{
 			ID: 1,

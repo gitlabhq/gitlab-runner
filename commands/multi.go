@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
@@ -84,12 +86,15 @@ func runAt(t time.Time, f func()) runAtTask {
 }
 
 type RunCommand struct {
-	configOptionsWithListenAddress
 	network common.Network
 
 	healthHelper healthHelper
 	buildsHelper buildsHelper
 
+	configfile *configfile.ConfigFile
+
+	ListenAddress    string `long:"listen-address" env:"LISTEN_ADDRESS" description:"Metrics / pprof server listening address"`
+	ConfigFile       string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 	ServiceName      string `short:"n" long:"service" description:"Use different names for different services"`
 	WorkingDirectory string `short:"d" long:"working-directory" description:"Specify custom working directory"`
 	User             string `short:"u" long:"user" description:"Use specific user to execute shell scripts"`
@@ -147,7 +152,7 @@ type RunCommand struct {
 }
 
 func (mr *RunCommand) log() *logrus.Entry {
-	config := mr.getConfig()
+	config := mr.configfile.Config()
 	concurrent := 0
 	if config != nil {
 		concurrent = config.Concurrent
@@ -189,7 +194,7 @@ func (mr *RunCommand) Start(_ service.Service) error {
 		return err
 	}
 
-	config := mr.getConfig()
+	config := mr.configfile.Config()
 	for _, runner := range config.Runners {
 		mr.runnerWorkersFeeds.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).Add(0)
 		mr.runnerWorkersFeedFailures.
@@ -292,11 +297,12 @@ func (mr *RunCommand) resetRunnerTokens() {
 	}
 }
 
+//nolint:gocognit
 func (mr *RunCommand) resetOneRunnerToken() bool {
 	var task runAtTask
 	runnerResetCh := make(chan *common.RunnerConfig)
 
-	config := mr.getConfig()
+	config := mr.configfile.Config()
 	runnerToReset, runnerResetTime := nextRunnerToReset(config)
 	if runnerToReset != nil {
 		task = mr.runAt(runnerResetTime, func() {
@@ -316,9 +322,22 @@ func (mr *RunCommand) resetOneRunnerToken() bool {
 			))
 			return false
 		}
-		if common.ResetToken(mr.network, &runner.RunnerCredentials, runner.GetSystemID(), "") {
-			err := mr.saveConfig()
+
+		var updated bool
+		if err := mr.configfile.Load(configfile.WithMutateOnLoad(func(cfg *common.Config) error {
+			runnerCfg, err := cfg.RunnerByToken(runner.Token)
 			if err != nil {
+				return fmt.Errorf("resetting token for runner: %w", err)
+			}
+
+			updated = common.ResetToken(mr.network, &runnerCfg.RunnerCredentials, runnerCfg.GetSystemID(), "")
+			return nil
+		})); err != nil {
+			mr.log().WithError(err).Errorln("Failed to load config (token reset)")
+		}
+
+		if updated {
+			if err := mr.configfile.Save(); err != nil {
 				mr.log().WithError(err).Errorln("Failed to save config")
 			}
 		}
@@ -338,27 +357,21 @@ func (mr *RunCommand) resetOneRunnerToken() bool {
 }
 
 func (mr *RunCommand) reloadConfig() error {
-	err := mr.loadConfig()
-	if err != nil {
+	if err := mr.configfile.Load(configfile.WithMutateOnLoad(func(cfg *common.Config) error {
+		cfg.User = mr.User
+		return nil
+	})); err != nil {
 		return err
 	}
 
 	// Set log level
-	err = mr.updateLoggingConfiguration()
-	if err != nil {
+	if err := mr.updateLoggingConfiguration(); err != nil {
 		return err
 	}
 
 	mr.reloadUsageLogger()
 
-	// pass user to execute scripts as specific user
-	if mr.User != "" {
-		mr.configMutex.Lock()
-		mr.config.User = mr.User
-		mr.configMutex.Unlock()
-	}
-
-	config := mr.getConfig()
+	config := mr.configfile.Config()
 	mr.healthHelper.healthy = nil
 	mr.log().Println("Configuration loaded")
 	if c, err := config.Masked(); err == nil {
@@ -392,7 +405,7 @@ func (mr *RunCommand) reloadConfig() error {
 func (mr *RunCommand) updateLoggingConfiguration() error {
 	reloadNeeded := false
 
-	config := mr.getConfig()
+	config := mr.configfile.Config()
 
 	level := "info"
 	if config.LogLevel != nil {
@@ -436,14 +449,15 @@ func (mr *RunCommand) reloadUsageLogger() {
 		}
 	}
 
-	if mr.config.Experimental == nil || !mr.config.Experimental.UsageLogger.Enabled {
+	config := mr.configfile.Config()
+	if config.Experimental == nil || !config.Experimental.UsageLogger.Enabled {
 		mr.usageLogger = nil
 		mr.log().Info("Usage logger disabled")
 
 		return
 	}
 
-	ulConfig := mr.config.Experimental.UsageLogger
+	ulConfig := config.Experimental.UsageLogger
 	logDir := ulConfig.LogDir
 	if logDir == "" {
 		logDir = filepath.Join(filepath.Dir(mr.ConfigFile), "usage-log")
@@ -540,7 +554,7 @@ func (mr *RunCommand) initUsedExecutorProviders() {
 }
 
 func (mr *RunCommand) shutdownUsedExecutorProviders() {
-	shutdownTimeout := mr.config.GetShutdownTimeout()
+	shutdownTimeout := mr.configfile.Config().GetShutdownTimeout()
 
 	logger := mr.log().WithField("shutdown-timeout", shutdownTimeout)
 	logger.Info("Shutting down executor providers")
@@ -567,8 +581,27 @@ func (mr *RunCommand) shutdownUsedExecutorProviders() {
 	}
 }
 
+func listenAddress(cfg *common.Config, address string) (string, error) {
+	if address == "" {
+		address = cfg.ListenAddress
+	}
+	if address == "" {
+		return "", nil
+	}
+
+	_, port, err := net.SplitHostPort(address)
+	if err != nil && !strings.Contains(err.Error(), "missing port in address") {
+		return "", err
+	}
+
+	if port == "" {
+		return fmt.Sprintf("%s:%d", address, common.DefaultMetricsServerPort), nil
+	}
+	return address, nil
+}
+
 func (mr *RunCommand) setupMetricsAndDebugServer() {
-	listenAddress, err := mr.listenAddress()
+	listenAddress, err := listenAddress(mr.configfile.Config(), mr.ListenAddress)
 	if err != nil {
 		mr.log().Errorf("invalid listen address: %s", err.Error())
 		return
@@ -611,7 +644,7 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	// Metrics about runner workers health
 	registry.MustRegister(&mr.healthHelper)
 	// Metrics about configuration file accessing
-	registry.MustRegister(mr.configAccessCollector)
+	registry.MustRegister(mr.configfile.AccessCollector())
 	registry.MustRegister(mr)
 	// Metrics about API connections
 	registry.MustRegister(mr.apiRequestsCollector)
@@ -678,7 +711,7 @@ func restrictHTTPMethods(handler http.Handler, methods ...string) http.Handler {
 }
 
 func (mr *RunCommand) setupSessionServer() {
-	config := mr.getConfig()
+	config := mr.configfile.Config()
 	if config.SessionServer.ListenAddress == "" {
 		mr.log().Info("[session_server].listen_address not defined, session endpoints disabled")
 		return
@@ -699,7 +732,7 @@ func (mr *RunCommand) setupSessionServer() {
 		session.ServerConfig{
 			AdvertiseAddress: config.SessionServer.AdvertiseAddress,
 			ListenAddress:    config.SessionServer.ListenAddress,
-			ShutdownTimeout:  mr.config.GetShutdownTimeout(),
+			ShutdownTimeout:  config.GetShutdownTimeout(),
 		},
 		mr.log(),
 		certificate.X509Generator{},
@@ -730,7 +763,7 @@ func (mr *RunCommand) setupSessionServer() {
 func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 	for mr.stopSignal == nil {
 		mr.log().Debugln("Feeding runners to channel")
-		config := mr.getConfig()
+		config := mr.configfile.Config()
 
 		// If no runners wait full interval to test again
 		if len(config.Runners) == 0 {
@@ -950,7 +983,7 @@ func (mr *RunCommand) processBuildOnRunner(
 	mr.requeueRunner(runner, runners)
 
 	// Process a build
-	return build.Run(mr.getConfig(), trace)
+	return build.Run(mr.configfile.Config(), trace)
 }
 
 func (mr *RunCommand) traceOutcome(trace common.JobTrace, err error) {
@@ -1118,7 +1151,7 @@ func (mr *RunCommand) requeueRunner(runner *common.RunnerConfig, runners chan *c
 // for the fact that `concurrent` defines the upper number of jobs that can be concurrently handled
 // by GitLab Runner process.
 func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stopWorker chan bool) os.Signal {
-	config := mr.getConfig()
+	config := mr.configfile.Config()
 	concurrentLimit := config.Concurrent
 
 	if concurrentLimit < 1 {
@@ -1192,7 +1225,7 @@ func (mr *RunCommand) checkConfig() (err error) {
 		return err
 	}
 
-	config := mr.getConfig()
+	config := mr.configfile.Config()
 	if !config.ModTime.Before(info.ModTime()) {
 		return nil
 	}
@@ -1324,7 +1357,7 @@ func (mr *RunCommand) handleGracefulShutdown() error {
 // process execution.
 func (mr *RunCommand) handleForcefulShutdown() error {
 	mr.log().
-		WithField("shutdown-timeout", mr.config.GetShutdownTimeout()).
+		WithField("shutdown-timeout", mr.configfile.Config().GetShutdownTimeout()).
 		WithField("StopSignal", mr.stopSignal).
 		Warning("Starting forceful shutdown")
 
@@ -1337,7 +1370,7 @@ func (mr *RunCommand) handleForcefulShutdown() error {
 			mr.log().WithField("stop-signal", mr.stopSignal).Warning("[handleForcefulShutdown] received stop signal")
 			return fmt.Errorf("forced exit with stop signal: %v", mr.stopSignal)
 
-		case <-time.After(mr.config.GetShutdownTimeout()):
+		case <-time.After(mr.configfile.Config().GetShutdownTimeout()):
 			return errors.New("shutdown timed out")
 
 		case <-mr.runFinished:
@@ -1367,6 +1400,8 @@ func (mr *RunCommand) usageLoggerClose() {
 }
 
 func (mr *RunCommand) Execute(_ *cli.Context) {
+	mr.configfile = configfile.New(mr.ConfigFile, configfile.WithAccessCollector())
+
 	svcConfig := &service.Config{
 		Name:        mr.ServiceName,
 		DisplayName: mr.ServiceName,
@@ -1428,7 +1463,7 @@ func (mr *RunCommand) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements prometheus.Collector.
 func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
-	config := mr.getConfig()
+	config := mr.configfile.Config()
 
 	ch <- prometheus.MustNewConstMetric(
 		concurrentDesc,
@@ -1442,7 +1477,7 @@ func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 			prometheus.GaugeValue,
 			float64(runner.Limit),
 			runner.ShortDescription(),
-			runner.SystemIDState.GetSystemID(),
+			runner.SystemID,
 		)
 	}
 
@@ -1467,7 +1502,6 @@ func init() {
 		runAt:                runAt,
 		reloadConfigInterval: common.ReloadConfigInterval,
 	}
-	cmd.configAccessCollector = newConfigAccessCollector()
 
 	common.RegisterCommand2("run", "run multi runner service", cmd)
 }

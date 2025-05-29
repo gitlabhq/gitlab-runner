@@ -66,8 +66,6 @@ func TestWriteGitSSLConfig(t *testing.T) {
 	).Once()
 
 	shell.writeGitSSLConfig(mockWriter, build, nil)
-
-	mockWriter.AssertExpectations(t)
 }
 
 func getJobResponseWithMultipleArtifacts() common.JobResponse {
@@ -2691,7 +2689,6 @@ func TestWriteUploadArtifactIncludesGenerateArtifactsMetadataArgs(t *testing.T) 
 			shellWriter.On("Else").Once()
 			shellWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
 			shellWriter.On("EndIf").Once()
-			defer shellWriter.AssertExpectations(t)
 
 			shell := &AbstractShell{}
 			shell.writeUploadArtifact(shellWriter, info, common.Artifact{

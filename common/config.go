@@ -1238,9 +1238,9 @@ type RunnerConfig struct {
 	UnhealthyInterval              *time.Duration `toml:"unhealthy_interval,omitzero" json:",omitempty" long:"unhealthy-interval" ENV:"RUNNER_UNHEALTHY_INTERVAL" description:"Duration for which a runner worker is disabled after exceeding the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc"`
 	JobStatusFinalUpdateRetryLimit int            `toml:"job_status_final_update_retry_limit,omitzero" json:"job_status_final_update_retry_limit,omitzero" long:"job-status-final-update-retry-limit" env:"RUNNER_job_status_final_update_retry_limit" description:"The maximum number of times GitLab Runner can retry to push the final job status to the GitLab instance."`
 
-	SystemIDState  *SystemIDState `toml:"-" json:",omitempty"`
-	ConfigLoadedAt time.Time      `toml:"-" json:",omitempty"`
-	ConfigDir      string         `toml:"-" json:",omitempty"`
+	SystemID       string    `toml:"-" json:",omitempty"`
+	ConfigLoadedAt time.Time `toml:"-" json:",omitempty"`
+	ConfigDir      string    `toml:"-" json:",omitempty"`
 
 	RunnerCredentials
 	RunnerSettings
@@ -1271,7 +1271,7 @@ type Config struct {
 
 	ShutdownTimeout int `toml:"shutdown_timeout,omitempty" json:"shutdown_timeout" description:"Number of seconds until the forceful shutdown operation times out and exits the process"`
 
-	configSaver ConfigSaver
+	ConfigSaver ConfigSaver `toml:"-"`
 }
 
 type Experimental struct {
@@ -2041,11 +2041,11 @@ func (c *RunnerConfig) String() string {
 }
 
 func (c *RunnerConfig) GetSystemID() string {
-	if c.SystemIDState == nil {
+	if c.SystemID == "" {
 		return UnknownSystemID
 	}
 
-	return c.SystemIDState.GetSystemID()
+	return c.SystemID
 }
 
 func (c *RunnerConfig) GetUnhealthyRequestsLimit() int {
@@ -2113,7 +2113,7 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 		return nil, fmt.Errorf("deserialization of runner config failed: %w", err)
 	}
 
-	r.SystemIDState = c.SystemIDState
+	r.SystemID = c.SystemID
 	r.ConfigLoadedAt = c.ConfigLoadedAt
 	r.ConfigDir = c.ConfigDir
 
@@ -2155,7 +2155,7 @@ func (r *RunnerConfig) mask() {
 
 func NewConfigWithSaver(s ConfigSaver) *Config {
 	c := NewConfig()
-	c.configSaver = s
+	c.ConfigSaver = s
 
 	return c
 }
@@ -2259,11 +2259,11 @@ func (c *Config) SaveConfig(configFile string) error {
 		return err
 	}
 
-	if c.configSaver == nil {
-		c.configSaver = new(defaultConfigSaver)
+	if c.ConfigSaver == nil {
+		c.ConfigSaver = new(defaultConfigSaver)
 	}
 
-	if err := c.configSaver.Save(configFile, newConfig.Bytes()); err != nil {
+	if err := c.ConfigSaver.Save(configFile, newConfig.Bytes()); err != nil {
 		return err
 	}
 
@@ -2294,4 +2294,44 @@ func maskField(field *string) {
 	if field != nil && *field != "" {
 		*field = mask
 	}
+}
+
+func (c *Config) RunnerByName(name string) (*RunnerConfig, error) {
+	for _, runner := range c.Runners {
+		if runner.Name == name {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the name '%s'", name)
+}
+
+func (c *Config) RunnerByToken(token string) (*RunnerConfig, error) {
+	for _, runner := range c.Runners {
+		if runner.Token == token {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the token '%s'", helpers.ShortenToken(token))
+}
+
+func (c *Config) RunnerByURLAndID(url string, id int64) (*RunnerConfig, error) {
+	for _, runner := range c.Runners {
+		if runner.URL == url && runner.ID == id {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the URL %q and ID %d", url, id)
+}
+
+func (c *Config) RunnerByNameAndToken(name string, token string) (*RunnerConfig, error) {
+	for _, runner := range c.Runners {
+		if runner.Name == name && runner.Token == token {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the Name '%s' and Token '%s'", name, token)
 }

@@ -56,13 +56,8 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_Windows(t *tes
 
 			m := newDefaultManager(t, config)
 			volumeParser := addParser(t, m, path.NewWindowsPath())
-			mClient := new(docker.MockClient)
+			mClient := docker.NewMockClient(t)
 			m.client = mClient
-
-			defer func() {
-				mClient.AssertExpectations(t)
-				volumeParser.AssertExpectations(t)
-			}()
 
 			existingBindingParts := strings.Split(existingBinding, ":")
 			volumeParser.On("ParseVolume", existingBinding).

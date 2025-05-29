@@ -1,4 +1,4 @@
-package common
+package configfile
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	jsonschema_generator "github.com/invopop/jsonschema"
 	jsonschema_validator "github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 var configSchema *jsonschema_validator.Schema
@@ -21,14 +22,14 @@ func init() {
 	r := &jsonschema_generator.Reflector{
 		RequiredFromJSONSchemaTags: true,
 	}
-	schema, err := json.Marshal(r.Reflect(&Config{}))
+	schema, err := json.Marshal(r.Reflect(&common.Config{}))
 	if err != nil {
 		panic(err)
 	}
 	configSchema = jsonschema_validator.MustCompileString("config_schema.json", string(schema))
 }
 
-func Validate(config *Config) error {
+func validate(config *common.Config) error {
 	defer func() {
 		if r := recover(); r != nil {
 			// Config validation is best-effort

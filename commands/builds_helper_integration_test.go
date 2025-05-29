@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 )
@@ -30,6 +31,9 @@ func TestBuildsHelperCollect(t *testing.T) {
 		shell = "powershell"
 	}
 
+	systemID, err := configfile.GenerateUniqueSystemID()
+	require.NoError(t, err)
+
 	build := &common.Build{
 		JobResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
@@ -38,12 +42,10 @@ func TestBuildsHelperCollect(t *testing.T) {
 				Executor:  "shell",
 				Shell:     shell,
 			},
-			SystemIDState: common.NewSystemIDState(),
+			SystemID: systemID,
 		},
 	}
 	trace := &common.Trace{Writer: io.Discard}
-
-	require.NoError(t, build.Runner.SystemIDState.EnsureSystemID())
 
 	done := make(chan error)
 	go func() {

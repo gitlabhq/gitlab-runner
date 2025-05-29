@@ -65,7 +65,6 @@ func newRunnerConfig(t *testing.T, shell string, opts ...ssh.Option) *common.Run
 	}
 
 	return &common.RunnerConfig{
-		SystemIDState: common.NewSystemIDState(),
 		RunnerCredentials: common.RunnerCredentials{
 			Token: "runner-token",
 		},

@@ -4,15 +4,18 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type ListCommand struct {
-	configOptions
+	ConfigFile string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 }
 
 func (c *ListCommand) Execute(context *cli.Context) {
-	err := c.loadConfig()
+	cfg := configfile.New(c.ConfigFile)
+
+	err := cfg.Load()
 	if err != nil {
 		logrus.Warningln(err)
 		return
@@ -22,7 +25,7 @@ func (c *ListCommand) Execute(context *cli.Context) {
 		"ConfigFile": c.ConfigFile,
 	}).Println("Listing configured runners")
 
-	for _, runner := range c.getConfig().Runners {
+	for _, runner := range cfg.Config().Runners {
 		logrus.WithFields(logrus.Fields{
 			"Executor": runner.RunnerSettings.Executor,
 			"Token":    runner.RunnerCredentials.Token,

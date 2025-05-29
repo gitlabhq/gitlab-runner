@@ -4,6 +4,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -18,6 +19,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	helper_test "gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
@@ -36,10 +38,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		RunnerSettings: common.RunnerSettings{
 			Executor: "multi-runner-build-limit",
 		},
-		SystemIDState: common.NewSystemIDState(),
 	}
-
-	require.NoError(t, cfg.SystemIDState.EnsureSystemID())
 
 	jobData := common.JobResponse{
 		ID: 1,
@@ -93,13 +92,9 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	cmd := RunCommand{
 		network:      mNetwork,
 		buildsHelper: newBuildsHelper(),
-		configOptionsWithListenAddress: configOptionsWithListenAddress{
-			configOptions: configOptions{
-				config: &common.Config{
-					User: "git",
-				},
-			},
-		},
+		configfile: configfile.New("", configfile.WithExistingConfig(
+			&common.Config{User: "git"},
+		), configfile.WithSystemID(common.UnknownSystemID)),
 	}
 
 	runners := make(chan *common.RunnerConfig)
@@ -354,13 +349,13 @@ func newResetRunnerTokenTestController(t *testing.T) *resetRunnerTokenTestContro
 	networkMock := common.NewMockNetwork(t)
 	configSaverMock := common.NewMockConfigSaver(t)
 
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+
 	data := &resetRunnerTokenTestController{
 		runCommand: RunCommand{
-			configOptionsWithListenAddress: configOptionsWithListenAddress{
-				configOptions: configOptions{
-					config: common.NewConfigWithSaver(configSaverMock),
-				},
-			},
+			configfile: configfile.New(configPath, configfile.WithExistingConfig(
+				common.NewConfigWithSaver(configSaverMock),
+			), configfile.WithSystemID(common.UnknownSystemID)),
 			runAt:          runAt,
 			runFinished:    make(chan bool),
 			configReloaded: make(chan int),
@@ -421,7 +416,9 @@ func (c *resetRunnerTokenTestController) mockResetToken(runnerID int64, response
 //
 // Use only when save is expected. Otherwise - check assertConfigSaveNotCalled
 func (c *resetRunnerTokenTestController) mockConfigSave() {
-	c.configSaverMock.On("Save", "", mock.Anything).Return(nil).Once()
+	c.configSaverMock.On("Save", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		_ = os.WriteFile(args.Get(0).(string), args.Get(1).([]byte), 0o600)
+	}).Return(nil).Once()
 }
 
 // awaitRunAtCall blocks on waiting for the RunCommand.runAt call (in context of token
@@ -496,19 +493,27 @@ func (c *resetRunnerTokenTestController) reloadConfig() {
 // It should be used as the test case initialisation and may be used to simulate
 // config change after reloading
 func (c *resetRunnerTokenTestController) setRunners(runners []common.RunnerCredentials) {
-	c.runCommand.configMutex.Lock()
-	defer c.runCommand.configMutex.Unlock()
+	_ = c.runCommand.configfile.Load(configfile.WithMutateOnLoad(func(cfg *common.Config) error {
+		var set []*common.RunnerConfig
 
-	configs := make([]*common.RunnerConfig, 0)
-
-	for _, runner := range runners {
-		configs = append(
-			configs,
-			&common.RunnerConfig{
+		for _, runner := range runners {
+			set = append(set, &common.RunnerConfig{
 				RunnerCredentials: runner,
 			})
-	}
-	c.runCommand.config.Runners = configs
+		}
+
+		cfg.Runners = set
+
+		return nil
+	}))
+
+	// silently save changes to disk without going via mock
+	saver := c.runCommand.configfile.Config().ConfigSaver
+	c.runCommand.configfile.Config().ConfigSaver = nil
+	defer func() {
+		c.runCommand.configfile.Config().ConfigSaver = saver
+	}()
+	_ = c.runCommand.configfile.Save()
 }
 
 // wait stops execution until callbacks added currently to the WaitGroup
@@ -592,7 +597,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 				d.handleResetTokenRequest(t, 1, common.UnknownSystemID)
 				d.wait()
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 11, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -661,12 +666,12 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 				d.handleResetTokenRequest(t, 2, common.UnknownSystemID)
 				d.wait()
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token1_2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 11, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
 
-				runner = d.runCommand.config.Runners[1]
+				runner = d.runCommand.configfile.Config().Runners[1]
 				assert.Equal(t, "token2_2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 12, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -703,12 +708,12 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 				d.handleResetTokenRequest(t, 2, common.UnknownSystemID)
 				d.wait()
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token1_1", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
 
-				runner = d.runCommand.config.Runners[1]
+				runner = d.runCommand.configfile.Config().Runners[1]
 				assert.Equal(t, "token2_2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 12, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -740,7 +745,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 				assert.True(t, event.task.cancelled)
 				assert.False(t, event.task.finished)
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token1", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -772,7 +777,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 				assert.True(t, event.task.cancelled)
 				assert.False(t, event.task.finished)
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token1", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -812,7 +817,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 				assert.True(t, event.task.cancelled)
 				assert.False(t, event.task.finished)
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 16, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -830,7 +835,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 				d.handleResetTokenRequest(t, 1, common.UnknownSystemID)
 				d.wait()
 
-				runner = d.runCommand.config.Runners[0]
+				runner = d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token3", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 14, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 22, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -869,7 +874,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 				assert.True(t, event.task.cancelled)
 				assert.False(t, event.task.finished)
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 16, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -894,7 +899,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 				d.handleResetTokenRequest(t, 1, common.UnknownSystemID)
 				d.wait()
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token1", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -961,7 +966,7 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 				assert.True(t, event.task.cancelled)
 				assert.False(t, event.task.finished)
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token1", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 17, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -992,7 +997,7 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 				d.handleResetTokenRequest(t, 1, common.UnknownSystemID)
 				d.wait()
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -1029,7 +1034,7 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 				assert.True(t, event.task.cancelled)
 				assert.False(t, event.task.finished)
 
-				runner := d.runCommand.config.Runners[0]
+				runner := d.runCommand.configfile.Config().Runners[0]
 				assert.Equal(t, "token2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 17, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -1042,6 +1047,7 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 			d := newResetRunnerTokenTestController(t)
 
 			d.setRunners(tc.runners)
+
 			tc.testProcedure(t, d)
 			d.finish()
 		})
@@ -1054,11 +1060,8 @@ func TestRunCommand_configReloadingRegression(t *testing.T) {
 	require.NoError(t, os.WriteFile(configName, nil, 0o777))
 
 	c := &RunCommand{
-		configOptionsWithListenAddress: configOptionsWithListenAddress{
-			configOptions: configOptions{
-				ConfigFile: configName,
-			},
-		},
+		ConfigFile:           configName,
+		configfile:           configfile.New(configName),
 		runInterruptSignal:   make(chan os.Signal, 1),
 		reloadSignal:         make(chan os.Signal, 1),
 		configReloaded:       make(chan int, 1),
@@ -1128,11 +1131,8 @@ shutdown_timeout = 0`
 	require.NoError(t, os.WriteFile(configName, []byte(config), 0o777))
 
 	c := &RunCommand{
-		configOptionsWithListenAddress: configOptionsWithListenAddress{
-			configOptions: configOptions{
-				ConfigFile: configName,
-			},
-		},
+		ConfigFile:           configName,
+		configfile:           configfile.New(configName),
 		runInterruptSignal:   make(chan os.Signal, 1),
 		reloadSignal:         make(chan os.Signal, 1),
 		configReloaded:       make(chan int, 1),
@@ -1186,4 +1186,52 @@ shutdown_timeout = 0`
 
 	assert.Equal(t, "info", logrus.GetLevel().String())
 	assert.Equal(t, int64(3), configReloadedCount.Load())
+}
+
+func TestListenAddress(t *testing.T) {
+	type source string
+
+	const (
+		configurationFromCli    source = "from-cli"
+		configurationFromConfig source = "from-config"
+	)
+
+	examples := map[string]struct {
+		address         string
+		setAddress      bool
+		expectedAddress string
+		errorIsExpected bool
+	}{
+		"address-set-without-port": {"localhost", true, "localhost:9252", false},
+		"port-set-without-address": {":1234", true, ":1234", false},
+		"address-set-with-port":    {"localhost:1234", true, "localhost:1234", false},
+		"address-is-empty":         {"", true, "", false},
+		"address-is-invalid":       {"localhost::1234", true, "", true},
+		"address-not-set":          {"", false, "", false},
+	}
+
+	for exampleName, example := range examples {
+		for _, testType := range []source{configurationFromCli, configurationFromConfig} {
+			t.Run(fmt.Sprintf("%s-%s", exampleName, testType), func(t *testing.T) {
+				cfg := &common.Config{}
+				var address string
+
+				if example.setAddress {
+					if testType == configurationFromCli {
+						address = example.address
+					} else {
+						cfg.ListenAddress = example.address
+					}
+				}
+
+				address, err := listenAddress(cfg, address)
+				assert.Equal(t, example.expectedAddress, address)
+				if example.errorIsExpected {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		}
+	}
 }
