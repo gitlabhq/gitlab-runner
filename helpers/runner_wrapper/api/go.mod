@@ -1,6 +1,6 @@
 module gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api
 
-go 1.23.0
+go 1.24.3
 
 toolchain go1.24.3
 
