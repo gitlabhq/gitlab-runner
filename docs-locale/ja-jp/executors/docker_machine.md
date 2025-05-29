@@ -106,10 +106,10 @@ Dockerでは[Docker Machineが非推奨になりました](https://gitlab.com/gi
 
 ### インストール
 
-1. [適切な`docker-machine`バイナリ](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases)をダウンロードします。`PATH`がアクセスできる場所にバイナリをコピーし、実行可能にします。たとえば、`v0.16.2-gitlab.34`をダウンロードしてインストールするには、次のようにします。
+1. [適切な`docker-machine`バイナリ](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases)をダウンロードします。`PATH`がアクセスできる場所にバイナリをコピーし、実行可能にします。たとえば、`v0.16.2-gitlab.36`をダウンロードしてインストールするには、次のようにします。
 
    ```shell
-   curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.34/docker-machine-Linux-x86_64"
+   curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.36/docker-machine-Linux-x86_64"
    cp docker-machine-Linux-x86_64 /usr/local/bin/docker-machine
    chmod +x /usr/local/bin/docker-machine
    ```
