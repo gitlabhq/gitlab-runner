@@ -14,12 +14,6 @@ title: Troubleshooting GitLab Runner
 
 This section can assist when troubleshooting GitLab Runner.
 
-{{< alert type="note" >}}
-
-A [Critical Security release](https://about.gitlab.com/releases/2022/02/25/critical-security-release-gitlab-14-8-2-released/) resets runner registration tokens for your group and projects. If you use an automated process (scripts that encode the value of the registration token) to register runners, this update breaks that process. However, it should have no effect on previously registered runners.
-
-{{< /alert >}}
-
 ## General troubleshooting tips
 
 ### View the logs
