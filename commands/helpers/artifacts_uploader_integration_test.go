@@ -208,7 +208,7 @@ func finalServerHandler(t *testing.T, finalRequestReceived *bool, resBody string
 		rw.Header().Set("Content-Type", "application/json")
 		rw.Header().Set("X-Test-Blupp", "Blapp")
 		rw.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(rw, resBody)
+		fmt.Fprint(rw, resBody)
 	}
 }
 

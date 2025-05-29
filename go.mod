@@ -1,6 +1,6 @@
 module gitlab.com/gitlab-org/gitlab-runner
 
-go 1.23.6
+go 1.24.3
 
 require (
 	cloud.google.com/go/compute/metadata v0.6.0

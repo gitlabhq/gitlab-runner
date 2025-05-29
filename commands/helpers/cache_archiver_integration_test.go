@@ -134,7 +134,7 @@ func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
 	defer os.Remove(cacheArchiverArchive)
 	cmd := helpers.CacheArchiverCommand{
 		File:       cacheArchiverArchive,
-		GoCloudURL: fmt.Sprintf("testblob://bucket/" + objectName),
+		GoCloudURL: fmt.Sprintf("%s", "testblob://bucket/"+objectName),
 		Timeout:    0,
 	}
 	helpers.SetCacheArchiverCommandMux(&cmd, mux)
