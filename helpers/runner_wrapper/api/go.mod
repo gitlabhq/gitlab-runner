@@ -2,8 +2,6 @@ module gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api
 
 go 1.24.3
 
-toolchain go1.24.3
-
 require (
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/sirupsen/logrus v1.9.3
