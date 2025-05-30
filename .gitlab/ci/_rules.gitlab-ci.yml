@@ -21,7 +21,7 @@
   - "docs/**/*"
   - "scripts/lint-docs"
 
-.docs-i18n-patterns: &docs-patterns
+.docs-i18n-patterns: &docs-i18n-patterns
   - ".vale.ini"
   - ".markdownlint.yml"
   - "docs-locale/**/*"
@@ -122,6 +122,36 @@
     - <<: *if-security-runner-release-ref
       changes: *code-backstage-patterns
 
+.rules:merge_request_pipelines:docs:
+  rules:
+    - <<: *if-merge-request-pipeline
+      changes: *docs-patterns
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *docs-patterns
+    - <<: *if-runner-or-security-runner-stable-ref
+      changes: *docs-patterns
+    - <<: *if-runner-or-security-runner-feature-ref
+      changes: *docs-patterns
+    - <<: *if-runner-release-ref
+      changes: *docs-patterns
+    - <<: *if-security-runner-release-ref
+      changes: *docs-patterns
+
+.rules:merge_request_pipelines:docs-i18n:
+  rules:
+    - <<: *if-merge-request-pipeline
+      changes: *docs-i18n-patterns
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *docs-i18n-patterns
+    - <<: *if-runner-or-security-runner-stable-ref
+      changes: *docs-i18n-patterns
+    - <<: *if-runner-or-security-runner-feature-ref
+      changes: *docs-i18n-patterns
+    - <<: *if-runner-release-ref
+      changes: *docs-i18n-patterns
+    - <<: *if-security-runner-release-ref
+      changes: *docs-i18n-patterns
+
 .rules:merge_request_pipelines:no_docs:no-community-mr:
   rules:
     - <<: *if-not-canonical-namespace
@@ -144,6 +174,19 @@
   rules:
     - <<: *if-not-canonical-namespace
       when: never
+    - <<: *if-runner-merge-request-pipeline
+      changes: *code-backstage-patterns
+    - <<: *if-runner-default-branch
+      changes: *code-backstage-patterns
+    - <<: *if-runner-stable-release-ref
+      changes: *code-backstage-patterns
+    - <<: *if-runner-release-ref
+      changes: *code-backstage-patterns
+
+.rules:merge_request_pipelines:no_docs:unit_test:
+  rules:
+    - <<: *if-not-canonical-namespace
+      allow_failure: true
     - <<: *if-runner-merge-request-pipeline
       changes: *code-backstage-patterns
     - <<: *if-runner-default-branch
