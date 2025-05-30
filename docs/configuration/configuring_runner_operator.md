@@ -309,7 +309,7 @@ You could create a directory under `/home` for example `/home/ci` and set `ENV H
 
 For the runner pods [it's expected that `HOME` would be set to `/home/gitlab-runner`](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/e265820a00a6a1b9a271dc132de2618ced43cf92/runner/Dockerfile.OCP#L14).
 If this variable is changed, the new location must have the [proper permissions](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/e265820a00a6a1b9a271dc132de2618ced43cf92/runner/Dockerfile.OCP#L38).
-These guidelines are also documented in the [Red Hat Container Platform documentation](https://docs.openshift.com/container-platform/4.7/openshift_images/create-images.html#support-arbitrary-user-ids).
+These guidelines are also documented in the [Red Hat Container Platform documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/images/creating-images#images-create-guide-openshift_create-images).
 
 ### Overriding `locked` variable
 
@@ -332,7 +332,7 @@ For more information, see [issue 472](https://gitlab.com/gitlab-org/charts/gitla
 By default, when installed in a new OpenShift project, the GitLab Runner Operator runs as non-root.
 Some projects, like the `default` project, are exceptions where all service accounts have `anyuid` access.
 In that case, the user of the image is `root`. You can check this by running the `whoami` inside any container shell, for example, a job.
-Read more about security context constraints in [Red Hat Container Platform documentation](https://docs.openshift.com/container-platform/4.7/authentication/managing-security-context-constraints.html).
+Read more about security context constraints in [Red Hat Container Platform documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/managing-pod-security-policies).
 
 #### Run as `anyuid` security context constraints
 

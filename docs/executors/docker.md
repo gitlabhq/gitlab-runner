@@ -512,14 +512,14 @@ To do this, configure the runner's `devices` and `services_devices` options.
   To restrict a service container's device access to specific images, use exact image names or glob patterns.
   This action prevents direct access to host system devices.
 
-For more information on device access, see [Docker documentation](https://docs.docker.com/engine/reference/commandline/run/#add-host-device-to-container---device).
+For more information on device access, see [Docker documentation](https://docs.docker.com/reference/cli/docker/container/run/#add-host-device-to-container---device).
 
 ### Build container example
 
 In this example, the `config.toml` section exposes `/dev/bus/usb` to build containers.
 This configuration allows pipelines to access USB devices attached to the host
 machine, such as Android smartphones controlled over the
-[Android Debug Bridge (`adb`)](https://developer.android.com/studio/command-line/adb).
+[Android Debug Bridge (`adb`)](https://developer.android.com/tools/adb).
 
 Since build job containers can directly access host USB devices, simultaneous
 pipeline executions may conflict with each other when accessing the same hardware.

@@ -232,7 +232,7 @@ The local repository must provide the following images:
    kubectl delete -f gitlab-runner-secret.yml
    ```
 
-1. Follow the instructions at the Red Hat documentation for [Deleting Operators from a cluster using the web console](https://docs.openshift.com/container-platform/4.7/operators/admin/olm-deleting-operators-from-cluster.html#olm-deleting-operators-from-a-cluster-using-web-console_olm-deleting-operators-from-a-cluster).
+1. Follow the instructions at the Red Hat documentation for [Deleting Operators from a cluster using the web console](https://docs.redhat.com/en/documentation/openshift_container_platform/4.7/html/operators/administrator-tasks#olm-deleting-operators-from-a-cluster-using-web-console_olm-deleting-operators-from-a-cluster).
 
 ### Uninstall on Kubernetes
 

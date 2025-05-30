@@ -94,8 +94,7 @@ Use it only for running builds from users you trust on a server you trust and ow
 ## Terminating and killing processes
 
 The shell executor starts the script for each job in a new process. On
-UNIX systems, it sets the main process as a
-[process group](https://www.informit.com/articles/article.aspx?p=397655&seqNum=6).
+UNIX systems, it sets the main process as a process group.
 
 GitLab Runner terminates processes when:
 

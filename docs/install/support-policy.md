@@ -86,5 +86,5 @@ is released in the
 GitLab aims to test and release new GitLab Runner helper images that
 include the latest Windows Server version (Semi-Annual Channel) within 1
 month of the official Microsoft release date on the Google Cloud Platform. Refer to the
-[Windows Server current versions by servicing option list](https://learn.microsoft.com/en-us/windows-server/get-started/windows-server-release-info#windows-server-current-versions-by-servicing-option)
+[Windows Server current versions by servicing option list](https://learn.microsoft.com/en-us/windows/release-health/windows-server-release-info#windows-server-current-versions-by-servicing-option)
 for availability dates.

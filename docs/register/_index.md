@@ -237,7 +237,7 @@ Prerequisites:
 
 After you register the runner, the configuration is saved to the `config.toml`.
 
-To register the runner with a [runner registration token](https://docs.gitlab.com/security/token_overview/#runner-registration-tokens-deprecated):
+To register the runner with a [runner registration token](https://docs.gitlab.com/security/tokens/#runner-registration-tokens-deprecated):
 
 1. Run the register command:
 

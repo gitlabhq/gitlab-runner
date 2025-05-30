@@ -429,7 +429,7 @@ If you need an IDE to edit and debug code, there are a few free suggestions you 
 
 - [JetBrains GoLand IDE](https://www.jetbrains.com/go/).
 - Visual Studio Code using the
-  [workspace recommended extensions](https://code.visualstudio.com/docs/editor/extension-marketplace#_workspace-recommended-extensions),
+  [workspace recommended extensions](https://code.visualstudio.com/docs/configure/extensions/extension-marketplace#_workspace-recommended-extensions),
   located in `.vscode/extensions.json`.
 
 ## Managing build dependencies
@@ -470,7 +470,7 @@ are using [multiple machines](https://developer.hashicorp.com/vagrant/docs/multi
 
 The following are required:
 
-- [Vagrant](https://www.vagrantup.com) installed.
+- [Vagrant](https://developer.hashicorp.com/vagrant) installed.
 - [Virtualbox](https://www.virtualbox.org/) installed.
 - Around 30GB of free hard disk space on your computer.
 
@@ -502,4 +502,4 @@ you can use `cd $Env:RUNNER_SRC`.
 
 1. [Reviewing GitLab Runner merge requests](reviewing-gitlab-runner.md)
 1. [Add support for new Windows Version](add-windows-version.md)
-1. [Runner Group - Team Resources](https://handbook.gitlab.com/handbook/engineering/development/ops/verify/runner/team-resources/#overview)
+1. [Runner Group - Team Resources](https://handbook.gitlab.com/handbook/engineering/devops/ops/verify/runner/team-resources/#overview)
