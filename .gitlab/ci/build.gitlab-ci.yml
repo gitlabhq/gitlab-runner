@@ -3,7 +3,7 @@ helper images:
     - saas-linux-2xlarge-amd64
   extends:
     - .docker
-    - .rules:merge_request_pipelines:no_docs
+    - .rules:merge_request_pipelines:no_docs:no-community-mr
   stage: build
   needs:
     - "binaries"
@@ -28,7 +28,7 @@ prebuilt helper images:
     - !reference [.instance-2xlarge]
   extends:
     - .docker
-    - .rules:merge_request_pipelines:no_docs
+    - .rules:merge_request_pipelines:no_docs:no-community-mr
   stage: build
   image: "${RUNNER_IMAGES_REGISTRY}/ci:${RUNNER_IMAGES_VERSION}-prebuilt-images"
   needs:
@@ -65,7 +65,7 @@ runner images:
     - !reference [.instance-2xlarge]
   extends:
     - .docker
-    - .rules:merge_request_pipelines:no_docs
+    - .rules:merge_request_pipelines:no_docs:no-community-mr
   stage: build
   needs:
     - "binaries"
@@ -97,7 +97,7 @@ binaries:
   tags:
     - !reference [.instance-2xlarge]
   extends:
-    - .rules:merge_request_pipelines:no_docs
+    - .rules:merge_request_pipelines:no_docs:no-community-mr
     - .rules:sign_binaries
     - .google-oidc:auth
     - .go-cache
@@ -147,7 +147,7 @@ clone test repo:
 rpm verify fips:
   stage: build
   extends:
-    - .rules:merge_request_pipelines:no_docs
+    - .rules:merge_request_pipelines:no_docs:no-community-mr
   image: "registry.gitlab.com/gitlab-org/cloud-native/container-dependencies-finder/cdf:main"
   needs:
     - "runner images"

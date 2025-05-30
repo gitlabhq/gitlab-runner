@@ -33,7 +33,6 @@ gitlab-advanced-sast:
 
 .linux test:
   extends:
-    - .rules:merge_request_pipelines:no_docs
     - .go-cache
   stage: test
   artifacts:
@@ -47,6 +46,7 @@ gitlab-advanced-sast:
 unit test:
   extends:
     - .linux test
+    - .rules:merge_request_pipelines:no_docs:unit_test
     - .kubernetes runner
     - .unit tests kubernetes limits
   needs:
@@ -72,6 +72,7 @@ unit test:
 integration test:
   extends:
     - .linux test
+    - .rules:merge_request_pipelines:no_docs:no-community-mr
     - .linux integration test
     - .with outer token
   needs:

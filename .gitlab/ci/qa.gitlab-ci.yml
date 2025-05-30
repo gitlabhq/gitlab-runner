@@ -95,7 +95,7 @@ docs:lint markdown:
   image: $DOCS_LINT_IMAGE
   stage: qa
   extends:
-    - .rules:merge_request_pipelines
+    - .rules:merge_request_pipelines:docs
     - .no_cache_and_dependencies
   needs: []
   script:
@@ -108,7 +108,7 @@ docs:lint i18n markdown:
   image: $DOCS_LINT_IMAGE
   stage: qa
   extends:
-    - .rules:merge_request_pipelines
+    - .rules:merge_request_pipelines:docs-i18n
     - .no_cache_and_dependencies
   needs: []
   script:
@@ -124,6 +124,7 @@ docs:check feature flags:
   extends:
     - .rules:merge_request_pipelines
     - .no_cache_and_dependencies
+  needs: []
   script:
     - cp docs/configuration/feature-flags.md docs/configuration/feature-flags.md.orig
     - make update_feature_flags_docs
@@ -138,8 +139,9 @@ docs:check feature flags:
 
 docs:check development docs Go version:
   extends:
-    - .rules:merge_request_pipelines
+    - .rules:merge_request_pipelines:docs
     - .no_cache_and_dependencies
+  needs: []
   stage: qa
   script:
     - export GO_VERSION=$(cat .gitlab/ci/_common.gitlab-ci.yml | yq '.variables.GO_VERSION')
@@ -149,8 +151,9 @@ docs:check development docs Go version:
 
 docs:check Kubernetes API docs:
   extends:
-    - .rules:merge_request_pipelines
+    - .rules:merge_request_pipelines:docs
     - .no_cache_and_dependencies
+  needs: []
   stage: qa
   script:
     - cp docs/executors/kubernetes/_index.md docs/executors/kubernetes/_index.md.orig
@@ -187,8 +190,9 @@ docs:check supported distros package docs:
 docs:check Hugo build:
   image: registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/docs-gitlab-com-builder:hugo-0.145.0
   extends:
-    - .rules:merge_request_pipelines
+    - .rules:merge_request_pipelines:docs
     - .no_cache_and_dependencies
+  needs: []
   stage: qa
   variables:
     DOCS_BRANCH: "main"
