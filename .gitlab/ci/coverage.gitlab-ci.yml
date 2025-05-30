@@ -9,6 +9,7 @@ test coverage report:
   coverage: /regular total:\s+\(statements\)\s+\d+.\d+\%/
   needs:
     - job: unit test
+      optional: true
     - job: integration test
       optional: true
     - job: windows 1809 integration tests
