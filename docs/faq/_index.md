@@ -197,10 +197,10 @@ Add the following value to your `[runners.machine]` section:
 
 This most likely happens, because of the broken `aufs` storage driver:
 [Java process hangs on inside container](https://github.com/moby/moby/issues/18502).
-The best solution is to change the [storage driver](https://docs.docker.com/storage/storagedriver/select-storage-driver/)
+The best solution is to change the [storage driver](https://docs.docker.com/engine/storage/drivers/select-storage-driver/)
 to either OverlayFS (faster) or DeviceMapper (slower).
 
-Check this article about [configuring and running Docker](https://docs.docker.com/config/daemon/)
+Check this article about [configuring and running Docker](https://docs.docker.com/engine/daemon/)
 or this article about [control and configure with systemd](https://docs.docker.com/engine/daemon/proxy/#systemd-unit-file).
 
 ## I get 411 when uploading artifacts
@@ -424,7 +424,7 @@ for details.
 
 Elasticsearch has a `vm.max_map_count` requirement that has to be set on the instance on which Elasticsearch is run.
 
-See the [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-prod-prerequisites)
+See the [Elasticsearch documentation](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-prod)
 for how to set this value correctly depending on the platform.
 
 ## `Preparing the "docker+machine" executor ERROR: Preparation failed: exit status 1 Will be retried in 3s`

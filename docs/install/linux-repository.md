@@ -218,9 +218,9 @@ on first installation done with the instructions above. For key updates in the f
 existing users need to manually download and install the new keys.
 
 We use one key for all our projects hosted under <https://packages.gitlab.com>. You can find
-the details about the key used in the [Linux package documentation](https://docs.gitlab.com/omnibus/update/package_signatures#package-repository-metadata-signing-keys).
+the details about the key used in the [Linux package documentation](https://docs.gitlab.com/omnibus/update/package_signatures/#package-repository-metadata-signing-keys).
 This documentation page lists also
-[all keys used in the past](https://docs.gitlab.com/omnibus/update/package_signatures#previous-keys).
+[all keys used in the past](https://docs.gitlab.com/omnibus/update/package_signatures/#previous-keys).
 
 ### Package signing
 
@@ -246,14 +246,14 @@ The RPM format contains a full implementation of GPG signing functionality, and 
 integrated with the package management systems based upon that format.
 
 You can find the technical description of how to configure package signature
-verification for RPM-based distributions in the [Linux package documentation](https://docs.gitlab.com/omnibus/update/package_signatures#rpm-based-distributions).
+verification for RPM-based distributions in the [Linux package documentation](https://docs.gitlab.com/omnibus/update/package_signatures/#rpm-based-distributions).
 The GitLab Runner differences are:
 
 - The public key package that should be installed is named `gpg-pubkey-35dfa027-60ba0235`.
 - The repository file for RPM-based distributions is named `/etc/yum.repos.d/runner_gitlab-runner.repo`
   (for the stable release) or `/etc/yum.repos.d/runner_unstable.repo` (for the unstable releases).
 - The [package signing public key](#current-gpg-public-key) can be imported from
-  <https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg>.
+  `https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg`.
 
 #### Debian-based distributions
 
@@ -304,7 +304,7 @@ To verify a `deb` package:
 #### Current GPG public key
 
 Download the current public GPG key used for package signing from
-<https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg>.
+`https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg`.
 
 | Key Attribute | Value |
 |---------------|-------|
