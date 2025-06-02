@@ -51,6 +51,7 @@ const (
 	UseExponentialBackoffStageRetry      string = "FF_USE_EXPONENTIAL_BACKOFF_STAGE_RETRY"
 	UseAdaptiveRequestConcurrency        string = "FF_USE_ADAPTIVE_REQUEST_CONCURRENCY"
 	UseGitalyCorrelationId               string = "FF_USE_GITALY_CORRELATION_ID"
+	HashCacheKeys                        string = "FF_HASH_CACHE_KEYS"
 )
 
 type FeatureFlag struct {
@@ -422,6 +423,13 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, the `X-Gitaly-Correlation-ID` header is added to all Git HTTP requests. " +
 			"When disabled, the Git operations execute without Gitaly Correlation ID headers.",
+	},
+	{
+		Name:         HashCacheKeys,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description: "When creating or extracting caches, the cache keys are hashed (sha256) before being used, both for local caches " +
+			"as well as for distributed caches (e.g. S3).",
 	},
 }
 
