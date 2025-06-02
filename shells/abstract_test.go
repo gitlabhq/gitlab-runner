@@ -407,6 +407,9 @@ func getJobResponseWithCachePaths() common.JobResponse {
 	}
 }
 
+var cacheKeyMetadataArgRE = regexp.MustCompile("^cacheKey:.+")
+var expectCacheKeyMetadataArg = mock.MatchedBy(cacheKeyMetadataArgRE.MatchString)
+
 func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 	gitlabURL := "https://example.com:3443"
 	cacheEnvFile := "/some/path/to/runner-cache-env"
@@ -467,6 +470,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
 					"--timeout", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--path", "vendor/",
 					"--untracked",
 					"--url", mock.Anything,
@@ -476,6 +480,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
 					"--timeout", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--path", "some/path1",
 					"--path", "other/path2",
 					"--url", mock.Anything,
@@ -485,6 +490,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
 					"--timeout", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--path", "when-always",
 					"--url", mock.Anything,
 					"--header", "Header-1: a value",
@@ -503,6 +509,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
 					"--timeout", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--path", "vendor/",
 					"--untracked",
 					"--gocloud-url", mock.Anything,
@@ -512,6 +519,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
 					"--timeout", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--path", "some/path1",
 					"--path", "other/path2",
 					"--gocloud-url", mock.Anything,
@@ -521,6 +529,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
 					"--timeout", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--path", "when-always",
 					"--gocloud-url", mock.Anything,
 					"--env-file", cacheEnvFile,
@@ -613,6 +622,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
 					"--timeout", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--path", "when-on-failure",
 					"--untracked",
 					"--url", mock.Anything,
@@ -622,6 +632,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
 					"--timeout", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--path", "when-always",
 					"--url", mock.Anything,
 					"--header", "Header-1: a value",
@@ -640,6 +651,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
 					"--timeout", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--path", "when-on-failure",
 					"--untracked",
 					"--gocloud-url", mock.Anything,
@@ -649,6 +661,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 					"--file", mock.Anything,
 					"--timeout", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--path", "when-always",
 					"--gocloud-url", mock.Anything,
 					"--env-file", cacheEnvFile,

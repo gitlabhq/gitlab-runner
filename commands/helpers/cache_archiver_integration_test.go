@@ -30,17 +30,72 @@ import (
 
 const (
 	cacheArchiverArchive           = "archive.zip"
+	cacheArchiverMetadata          = "archive.zip.metadata.json"
 	cacheArchiverTestArchivedFile  = "archive_file"
 	cacheExtractorTestArchivedFile = "archive_file"
 )
+
+func TestCacheArchiveLocalMetadata(t *testing.T) {
+	tests := map[string]struct {
+		metaArgs              []string
+		expectedLocalMetadata string
+	}{
+		"no metadata": {
+			expectedLocalMetadata: "{}",
+		},
+		"single metadata": {
+			metaArgs:              []string{"foo:bar:baz"},
+			expectedLocalMetadata: `{"foo":"bar:baz"}`,
+		},
+		"multiple metadata": {
+			metaArgs:              []string{"foo:some foo", "bar:some bar"},
+			expectedLocalMetadata: `{"bar":"some bar","foo":"some foo"}`,
+		},
+		"weird metadata": {
+			metaArgs: []string{`foo:
+- bla
+- bla
+- some: {random: thing}
+- \x63\xb3
+- bla`},
+			expectedLocalMetadata: `{"foo":"\n- bla\n- bla\n- some: {random: thing}\n- \\x63\\xb3\n- bla"}`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
+			t.Cleanup(func() {
+				srv.Close()
+				require.NoError(t, os.Remove(cacheArchiverArchive))
+				require.NoError(t, os.Remove(cacheArchiverMetadata))
+			})
+
+			cmd := helpers.CacheArchiverCommand{
+				File:     cacheArchiverArchive,
+				URL:      srv.URL + "/cache.zip",
+				Metadata: test.metaArgs,
+				Timeout:  0,
+			}
+
+			cmd.Execute(&cli.Context{})
+
+			require.FileExists(t, cacheArchiverMetadata)
+
+			content, err := os.ReadFile(cacheArchiverMetadata)
+			require.NoError(t, err, "reading local metadata file")
+			require.Equal(t, test.expectedLocalMetadata, string(content), "wrong local metadata")
+		})
+	}
+}
 
 func TestCacheArchiverUploadExpandArgs(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
 	defer srv.Close()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 
-	os.Setenv("expand", "expanded")
-	defer os.Unsetenv("expand")
+	t.Setenv("expand", "expanded")
 
 	cmd := helpers.CacheArchiverCommand{
 		File:    cacheArchiverArchive,
@@ -97,6 +152,7 @@ func TestCacheArchiverRemoteServerNotFound(t *testing.T) {
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:    cacheArchiverArchive,
 		URL:     ts.URL + "/invalid-file.zip",
@@ -114,6 +170,7 @@ func TestCacheArchiverRemoteServer(t *testing.T) {
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:    cacheArchiverArchive,
 		URL:     ts.URL + "/cache.zip",
@@ -132,6 +189,7 @@ func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:       cacheArchiverArchive,
 		GoCloudURL: fmt.Sprintf("%s", "testblob://bucket/"+objectName),
@@ -152,6 +210,7 @@ func TestCacheArchiverRemoteServerWithHeaders(t *testing.T) {
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:    cacheArchiverArchive,
 		URL:     ts.URL + "/cache.zip",
@@ -175,6 +234,7 @@ func TestCacheArchiverRemoteServerTimedOut(t *testing.T) {
 	defer removeHook()
 
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File: cacheArchiverArchive,
 		URL:  ts.URL + "/timeout",
@@ -191,6 +251,7 @@ func TestCacheArchiverRemoteServerFailOnInvalidServer(t *testing.T) {
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:    cacheArchiverArchive,
 		URL:     "http://localhost:65333/cache.zip",
@@ -229,6 +290,7 @@ func TestCacheArchiverCompressionLevel(t *testing.T) {
 			mockArchiver.On("Archive", mock.Anything, mock.Anything).Return(nil)
 
 			defer os.Remove(cacheArchiverArchive)
+			defer os.Remove(cacheArchiverMetadata)
 			cmd := helpers.NewCacheArchiverCommandForTest(cacheArchiverArchive, []string{cacheArchiverTestArchivedFile})
 			cmd.CompressionLevel = expectedLevel
 			cmd.Execute(nil)
@@ -337,6 +399,7 @@ func TestCacheArchiverUploadedSize(t *testing.T) {
 			defer ts.Close()
 
 			defer os.Remove(cacheArchiverArchive)
+			defer os.Remove(cacheArchiverMetadata)
 			cmd := helpers.CacheArchiverCommand{
 				File:                   cacheArchiverArchive,
 				MaxUploadedArchiveSize: int64(tc.limit),

@@ -1361,6 +1361,7 @@ func (b *AbstractShell) addCacheUploadCommand(
 		"cache-archiver",
 		"--file", cacheFile.ArchiveFile(),
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
+		"--metadata", "cacheKey:" + cacheFile.cacheKey.Human,
 	}
 
 	if info.Build.Runner.Cache != nil && info.Build.Runner.Cache.MaxUploadedArchiveSize > 0 {
