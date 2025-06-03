@@ -34,9 +34,13 @@ func prepareFakeCreateAdapter(t *testing.T, operationName string, tc cacheOperat
 
 		if tc.adapterURL.URL != nil {
 			if operationName == "GetGoCloudURL" {
-				a.On(operationName, mock.Anything, true).Return(GoCloudURL{URL: tc.adapterURL.URL}, nil)
+				a.On(operationName, mock.Anything, true).Return(GoCloudURL{URL: tc.adapterURL.URL}, nil).Once()
 			} else {
-				a.On(operationName, mock.Anything).Return(tc.adapterURL)
+				a.On(operationName, mock.Anything).Return(tc.adapterURL).Once()
+			}
+
+			if operationName == "GetUploadURL" {
+				a.On("WithMetadata", mock.Anything).Once()
 			}
 		}
 		cacheAdapter = a
@@ -78,6 +82,12 @@ func prepareFakeBuild(tc cacheOperationTest) *common.Build {
 func getCacheGoCloudURLAdapter(ctx context.Context, build *common.Build, key string) PresignedURL {
 	u, _ := GetCacheGoCloudURL(ctx, build, key, true)
 	return PresignedURL{URL: u.URL}
+}
+
+func getCachUploadURLWithMetadata(metadata map[string]string) func(ctx context.Context, build *common.Build, key string) PresignedURL {
+	return func(ctx context.Context, build *common.Build, key string) PresignedURL {
+		return GetCacheUploadURL(ctx, build, key, metadata)
+	}
 }
 
 func testCacheOperation(
@@ -157,7 +167,7 @@ func TestCacheOperations(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			testCacheOperation(t, "GetDownloadURL", GetCacheDownloadURL, tc)
-			testCacheOperation(t, "GetUploadURL", GetCacheUploadURL, tc)
+			testCacheOperation(t, "GetUploadURL", getCachUploadURLWithMetadata(nil), tc)
 			testCacheOperation(t, "GetGoCloudURL", getCacheGoCloudURLAdapter, tc)
 		})
 	}

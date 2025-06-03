@@ -45,6 +45,10 @@ func (t *testAdapter) GetGoCloudURL(ctx context.Context, _ bool) (cache.GoCloudU
 	return goCloudURL, nil
 }
 
+func (a *testAdapter) WithMetadata(metadata map[string]string) {
+	// TODO
+}
+
 func (t *testAdapter) getUploadEnv(_ context.Context) map[string]string {
 	return map[string]string{
 		"FIRST_VAR":  "123",

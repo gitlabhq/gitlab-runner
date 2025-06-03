@@ -205,6 +205,46 @@ func (_c *MockAdapter_GetUploadURL_Call) RunAndReturn(run func(context1 context.
 	return _c
 }
 
+// WithMetadata provides a mock function for the type MockAdapter
+func (_mock *MockAdapter) WithMetadata(stringToString map[string]string) {
+	_mock.Called(stringToString)
+	return
+}
+
+// MockAdapter_WithMetadata_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WithMetadata'
+type MockAdapter_WithMetadata_Call struct {
+	*mock.Call
+}
+
+// WithMetadata is a helper method to define mock.On call
+//   - stringToString map[string]string
+func (_e *MockAdapter_Expecter) WithMetadata(stringToString interface{}) *MockAdapter_WithMetadata_Call {
+	return &MockAdapter_WithMetadata_Call{Call: _e.mock.On("WithMetadata", stringToString)}
+}
+
+func (_c *MockAdapter_WithMetadata_Call) Run(run func(stringToString map[string]string)) *MockAdapter_WithMetadata_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 map[string]string
+		if args[0] != nil {
+			arg0 = args[0].(map[string]string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAdapter_WithMetadata_Call) Return() *MockAdapter_WithMetadata_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockAdapter_WithMetadata_Call) RunAndReturn(run func(stringToString map[string]string)) *MockAdapter_WithMetadata_Call {
+	_c.Run(run)
+	return _c
+}
+
 // NewMockCredentialsAdapter creates a new instance of MockCredentialsAdapter. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockCredentialsAdapter(t interface {

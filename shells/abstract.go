@@ -1361,7 +1361,6 @@ func (b *AbstractShell) addCacheUploadCommand(
 		"cache-archiver",
 		"--file", cacheFile.ArchiveFile(),
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
-		"--metadata", "cacheKey:" + cacheFile.cacheKey.Human,
 	}
 
 	if info.Build.Runner.Cache != nil && info.Build.Runner.Cache.MaxUploadedArchiveSize > 0 {
@@ -1375,7 +1374,7 @@ func (b *AbstractShell) addCacheUploadCommand(
 	args = append(args, archiverArgs...)
 
 	// Generate cache upload address
-	extraArgs, env, err := getCacheUploadURLAndEnv(ctx, info.Build, cacheFile.Key().Hashed)
+	extraArgs, env, err := getCacheUploadURLAndEnv(ctx, info.Build, cacheFile.Key())
 	args = append(args, extraArgs...)
 
 	if err != nil {
@@ -1404,16 +1403,32 @@ func (b *AbstractShell) addCacheUploadCommand(
 	})
 }
 
+type metadata map[string]string
+
+func (m metadata) AsArgs(flag string) []string {
+	args := make([]string, 0, len(m)*2)
+	for k, v := range m {
+		args = append(args, flag, k+":"+v)
+	}
+	return args
+}
+
 // getCacheUploadURLAndEnv will first try to generate the GoCloud URL if it's
 // available then fallback to a pre-signed URL.
-func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey string) ([]string, map[string]string, error) {
-	// Prefer Go Cloud URL if supported
-	goCloudURL, err := cache.GetCacheGoCloudURL(ctx, build, cacheKey, true)
-	if goCloudURL.URL != nil {
-		return []string{"--gocloud-url", goCloudURL.URL.String()}, goCloudURL.Environment, err
+func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey cacheKey) ([]string, map[string]string, error) {
+	metadata := metadata{
+		"cacheKey": cacheKey.Human,
 	}
 
-	uploadURL := cache.GetCacheUploadURL(ctx, build, cacheKey)
+	// Prefer Go Cloud URL if supported
+	goCloudURL, err := cache.GetCacheGoCloudURL(ctx, build, cacheKey.Hashed, true)
+	if goCloudURL.URL != nil {
+		uploadArgs := []string{"--gocloud-url", goCloudURL.URL.String()}
+		uploadArgs = append(uploadArgs, metadata.AsArgs("--metadata")...)
+		return uploadArgs, goCloudURL.Environment, err
+	}
+
+	uploadURL := cache.GetCacheUploadURL(ctx, build, cacheKey.Hashed, metadata)
 	if uploadURL.URL == nil {
 		return []string{}, nil, nil
 	}

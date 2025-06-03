@@ -39,6 +39,10 @@ func (a *azureAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	return cache.PresignedURL{}
 }
 
+// WithMetadata for Azure is a no-op. We use GoCloud and metadata is directly managed at upload time in the
+// cache-archiver.
+func (a *azureAdapter) WithMetadata(metadata map[string]string) {}
+
 func (a *azureAdapter) GetGoCloudURL(ctx context.Context, upload bool) (cache.GoCloudURL, error) {
 	goCloudURL := cache.GoCloudURL{}
 

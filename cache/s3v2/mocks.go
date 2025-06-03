@@ -132,8 +132,8 @@ func (_c *mockS3Presigner_FetchCredentialsForRole_Call) RunAndReturn(run func(ct
 }
 
 // PresignURL provides a mock function for the type mockS3Presigner
-func (_mock *mockS3Presigner) PresignURL(ctx context.Context, method string, bucketName string, objectName string, expires time.Duration) (cache.PresignedURL, error) {
-	ret := _mock.Called(ctx, method, bucketName, objectName, expires)
+func (_mock *mockS3Presigner) PresignURL(ctx context.Context, method string, bucketName string, objectName string, metadata map[string]string, expires time.Duration) (cache.PresignedURL, error) {
+	ret := _mock.Called(ctx, method, bucketName, objectName, metadata, expires)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PresignURL")
@@ -141,16 +141,16 @@ func (_mock *mockS3Presigner) PresignURL(ctx context.Context, method string, buc
 
 	var r0 cache.PresignedURL
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, time.Duration) (cache.PresignedURL, error)); ok {
-		return returnFunc(ctx, method, bucketName, objectName, expires)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, map[string]string, time.Duration) (cache.PresignedURL, error)); ok {
+		return returnFunc(ctx, method, bucketName, objectName, metadata, expires)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, time.Duration) cache.PresignedURL); ok {
-		r0 = returnFunc(ctx, method, bucketName, objectName, expires)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, map[string]string, time.Duration) cache.PresignedURL); ok {
+		r0 = returnFunc(ctx, method, bucketName, objectName, metadata, expires)
 	} else {
 		r0 = ret.Get(0).(cache.PresignedURL)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string, time.Duration) error); ok {
-		r1 = returnFunc(ctx, method, bucketName, objectName, expires)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string, map[string]string, time.Duration) error); ok {
+		r1 = returnFunc(ctx, method, bucketName, objectName, metadata, expires)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -167,12 +167,13 @@ type mockS3Presigner_PresignURL_Call struct {
 //   - method string
 //   - bucketName string
 //   - objectName string
+//   - metadata map[string]string
 //   - expires time.Duration
-func (_e *mockS3Presigner_Expecter) PresignURL(ctx interface{}, method interface{}, bucketName interface{}, objectName interface{}, expires interface{}) *mockS3Presigner_PresignURL_Call {
-	return &mockS3Presigner_PresignURL_Call{Call: _e.mock.On("PresignURL", ctx, method, bucketName, objectName, expires)}
+func (_e *mockS3Presigner_Expecter) PresignURL(ctx interface{}, method interface{}, bucketName interface{}, objectName interface{}, metadata interface{}, expires interface{}) *mockS3Presigner_PresignURL_Call {
+	return &mockS3Presigner_PresignURL_Call{Call: _e.mock.On("PresignURL", ctx, method, bucketName, objectName, metadata, expires)}
 }
 
-func (_c *mockS3Presigner_PresignURL_Call) Run(run func(ctx context.Context, method string, bucketName string, objectName string, expires time.Duration)) *mockS3Presigner_PresignURL_Call {
+func (_c *mockS3Presigner_PresignURL_Call) Run(run func(ctx context.Context, method string, bucketName string, objectName string, metadata map[string]string, expires time.Duration)) *mockS3Presigner_PresignURL_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -190,9 +191,13 @@ func (_c *mockS3Presigner_PresignURL_Call) Run(run func(ctx context.Context, met
 		if args[3] != nil {
 			arg3 = args[3].(string)
 		}
-		var arg4 time.Duration
+		var arg4 map[string]string
 		if args[4] != nil {
-			arg4 = args[4].(time.Duration)
+			arg4 = args[4].(map[string]string)
+		}
+		var arg5 time.Duration
+		if args[5] != nil {
+			arg5 = args[5].(time.Duration)
 		}
 		run(
 			arg0,
@@ -200,6 +205,7 @@ func (_c *mockS3Presigner_PresignURL_Call) Run(run func(ctx context.Context, met
 			arg2,
 			arg3,
 			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -210,7 +216,7 @@ func (_c *mockS3Presigner_PresignURL_Call) Return(presignedURL cache.PresignedUR
 	return _c
 }
 
-func (_c *mockS3Presigner_PresignURL_Call) RunAndReturn(run func(ctx context.Context, method string, bucketName string, objectName string, expires time.Duration) (cache.PresignedURL, error)) *mockS3Presigner_PresignURL_Call {
+func (_c *mockS3Presigner_PresignURL_Call) RunAndReturn(run func(ctx context.Context, method string, bucketName string, objectName string, metadata map[string]string, expires time.Duration) (cache.PresignedURL, error)) *mockS3Presigner_PresignURL_Call {
 	_c.Call.Return(run)
 	return _c
 }

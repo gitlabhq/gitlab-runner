@@ -59,6 +59,7 @@ type cacheOperationTest struct {
 	presignedURL          *url.URL
 	expectedURL           *url.URL
 	expectedUploadHeaders http.Header
+	metadata              map[string]string
 }
 
 func onFakeMinioURLGenerator(t *testing.T, tc cacheOperationTest) {
@@ -108,6 +109,8 @@ func testCacheOperation(
 		}
 		require.NoError(t, err)
 
+		adapter.WithMetadata(tc.metadata)
+
 		u := operation(adapter)
 		assert.Equal(t, tc.expectedURL, u.URL)
 
@@ -118,7 +121,10 @@ func testCacheOperation(
 			if tc.expectedUploadHeaders != nil {
 				expectedUploadHeaders := tc.expectedUploadHeaders
 				assert.Len(t, uploadHeaders, len(expectedUploadHeaders))
-				assert.True(t, reflect.DeepEqual(expectedUploadHeaders, uploadHeaders))
+				assert.True(
+					t, reflect.DeepEqual(expectedUploadHeaders, uploadHeaders),
+					"headers are not equal:\nexpected %q\nactual: %q", expectedUploadHeaders, uploadHeaders,
+				)
 			} else {
 				assert.Empty(t, uploadHeaders)
 			}
@@ -152,6 +158,14 @@ func TestCacheOperation(t *testing.T) {
 		"presigned-url": {
 			presignedURL: URL,
 			expectedURL:  URL,
+		},
+		"presigned-url-with-metadata": {
+			presignedURL: URL,
+			expectedURL:  URL,
+			metadata:     map[string]string{"foo": "some foo"},
+			expectedUploadHeaders: http.Header{
+				"X-Amz-Meta-Foo": []string{"some foo"},
+			},
 		},
 	}
 
@@ -197,6 +211,16 @@ func TestCacheOperationEncryptionAES(t *testing.T) {
 			expectedURL:           URL,
 			expectedUploadHeaders: headers,
 		},
+		"presigned-url-aes-with-metdata": {
+			presignedURL: URL,
+			expectedURL:  URL,
+			metadata:     map[string]string{"foo": "some foo"},
+			expectedUploadHeaders: func() http.Header {
+				h := headers.Clone()
+				h["X-Amz-Meta-Foo"] = []string{"some foo"}
+				return h
+			}(),
+		},
 	}
 
 	for testName, test := range tests {
@@ -241,6 +265,16 @@ func TestCacheOperationEncryptionKMS(t *testing.T) {
 			presignedURL:          URL,
 			expectedURL:           URL,
 			expectedUploadHeaders: headers,
+		},
+		"presigned-url-kms-with-metadata": {
+			presignedURL: URL,
+			expectedURL:  URL,
+			metadata:     map[string]string{"foo": "some foo"},
+			expectedUploadHeaders: func() http.Header {
+				h := headers.Clone()
+				h["X-Amz-Meta-Foo"] = []string{"some foo"}
+				return h
+			}(),
 		},
 	}
 
