@@ -192,7 +192,8 @@ func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
 	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:       cacheArchiverArchive,
-		GoCloudURL: fmt.Sprintf("%s", "testblob://bucket/"+objectName),
+		GoCloudURL: fmt.Sprintf("testblob://bucket/%s", objectName),
+		Metadata:   []string{"foo:some foo", "bar:some bar"},
 		Timeout:    0,
 	}
 	helpers.SetCacheArchiverCommandMux(&cmd, mux)
@@ -200,7 +201,11 @@ func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
 		cmd.Execute(nil)
 	})
 
-	goCloudObjectExists(t, bucketDir, objectName)
+	attrs := goCloudObjectAttributes(t, bucketDir, objectName)
+	assert.Equal(t, map[string]string{
+		"foo": "some foo",
+		"bar": "some bar",
+	}, attrs.Metadata, "wrong blob metadata")
 }
 
 func TestCacheArchiverRemoteServerWithHeaders(t *testing.T) {
@@ -316,16 +321,23 @@ func setupGoCloudFileBucket(t *testing.T, scheme string) (m *blob.URLMux, bucket
 	return mux, tmpDir
 }
 
-func goCloudObjectExists(t *testing.T, bucketDir string, objectName string) {
+// goCloudObjectAttributes pulls the attributes of a blob. It fails the test if the blob does not exist or the
+// attributes can't be retrieved
+func goCloudObjectAttributes(t *testing.T, bucketDir string, objectName string) *blob.Attributes {
 	bucket, err := fileblob.OpenBucket(bucketDir, nil)
-	require.NoError(t, err)
+	require.NoError(t, err, "opening bucket")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	exists, err := bucket.Exists(ctx, objectName)
-	require.NoError(t, err)
-	assert.True(t, exists)
+	require.NoError(t, err, "querying blob existence")
+	require.True(t, exists, "blob does not exist")
+
+	attr, err := bucket.Attributes(ctx, objectName)
+	require.NoError(t, err, "getting blob attributes")
+
+	return attr
 }
 
 func testCacheBaseUploadHandler(w http.ResponseWriter, r *http.Request) {

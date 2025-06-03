@@ -136,7 +136,11 @@ func (c *CacheArchiverCommand) handleGoCloudURL(file io.Reader) error {
 	}
 	defer b.Close()
 
-	writer, err := b.NewWriter(ctx, objectName, nil)
+	opts := &blob.WriterOptions{
+		Metadata: split(c.Metadata),
+	}
+
+	writer, err := b.NewWriter(ctx, objectName, opts)
 	if err != nil {
 		return err
 	}
