@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,10 +24,6 @@ import (
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/azureblob" // Needed to register the Azure driver
 	_ "gocloud.dev/blob/s3blob"    // Needed to register the AWS S3 driver
-)
-
-const (
-	metadataFile = "metadata.json"
 )
 
 type CacheArchiverCommand struct {
@@ -230,30 +225,12 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 		logrus.Fatalln(err)
 	}
 
-	// Create local metadata file
-	err = c.createLocalMetadataFile()
+	err = writeCacheMetadataFile(c.File, split(c.Metadata))
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
 	c.uploadArchiveIfNeeded(size)
-}
-
-func (c *CacheArchiverCommand) createLocalMetadataFile() error {
-	meta := split(c.Metadata)
-
-	jsonBlob, err := json.Marshal(meta)
-	if err != nil {
-		return fmt.Errorf("encoding metadata: %w", err)
-	}
-
-	filePath := filepath.Join(filepath.Dir(c.File), metadataFile)
-	err = os.WriteFile(filePath, jsonBlob, 0640)
-	if err != nil {
-		return fmt.Errorf("writing local metadata file: %w", err)
-	}
-
-	return nil
 }
 
 func (c *CacheArchiverCommand) normalizeArgs() {

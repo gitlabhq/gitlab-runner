@@ -48,8 +48,8 @@ func TestCacheArchiveLocalMetadata(t *testing.T) {
 			expectedLocalMetadata: `{"foo":"bar:baz"}`,
 		},
 		"multiple metadata": {
-			metaArgs:              []string{"foo:some foo", "bar:some bar"},
-			expectedLocalMetadata: `{"bar":"some bar","foo":"some foo"}`,
+			metaArgs:              []string{"Foo:some Foo", "bAr:some Bar"},
+			expectedLocalMetadata: `{"bar":"some Bar","foo":"some Foo"}`,
 		},
 		"weird metadata": {
 			metaArgs: []string{`foo:

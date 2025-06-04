@@ -114,7 +114,7 @@ func (c *CacheExtractorCommand) handlePresignedURL() error {
 	cleanedURL := url_helpers.CleanURL(c.URL)
 	contentLength := getRemoteCacheSize(resp)
 
-	return c.downloadAndSaveCache(resp.Body, date, etag, cleanedURL, contentLength)
+	return c.downloadAndSaveCache(resp.Body, date, etag, cleanedURL, contentLength, headersToCacheMetadata(resp.Header))
 }
 
 func (c *CacheExtractorCommand) handleGoCloudURL() error {
@@ -168,10 +168,10 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 
 	cleanedURL := url_helpers.CleanURL(c.GoCloudURL)
 
-	return c.downloadAndSaveCache(reader, attrs.ModTime, attrs.ETag, cleanedURL, attrs.Size)
+	return c.downloadAndSaveCache(reader, attrs.ModTime, attrs.ETag, cleanedURL, attrs.Size, attrs.Metadata)
 }
 
-func (c *CacheExtractorCommand) downloadAndSaveCache(reader io.Reader, date time.Time, etag, cleanedURL string, contentLength int64) error {
+func (c *CacheExtractorCommand) downloadAndSaveCache(reader io.Reader, date time.Time, etag, cleanedURL string, contentLength int64, metadata map[string]string) error {
 	file, err := os.CreateTemp(filepath.Dir(c.File), "cache")
 	if err != nil {
 		return err
@@ -216,7 +216,11 @@ func (c *CacheExtractorCommand) downloadAndSaveCache(reader io.Reader, date time
 		return err
 	}
 
-	return os.Rename(file.Name(), c.File)
+	if err := os.Rename(file.Name(), c.File); err != nil {
+		return fmt.Errorf("renaming: %w", err)
+	}
+
+	return writeCacheMetadataFile(c.File, metadata)
 }
 
 func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
