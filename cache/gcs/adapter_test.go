@@ -207,6 +207,7 @@ type adapterOperationTestCase struct {
 	assertErrorMessage     func(t *testing.T, message string)
 	signBlobAPITest        bool
 	maxUploadedArchiveSize int64
+	metadata               map[string]string
 	expectedHeaders        http.Header
 }
 
@@ -218,17 +219,17 @@ func mockSignBytesFunc(_ context.Context) func([]byte) ([]byte, error) {
 
 func prepareMockedCredentialsResolver(t *testing.T, adapter *gcsAdapter, tc adapterOperationTestCase) {
 	cr := newMockCredentialsResolver(t)
-	cr.On("Resolve").Return(nil)
+	cr.On("Resolve").Return(nil).Once()
 
 	pk := privateKey
 	if tc.signBlobAPITest {
 		pk = ""
-		cr.On("SignBytesFunc", mock.Anything).Return(mockSignBytesFunc)
+		cr.On("SignBytesFunc", mock.Anything).Return(mockSignBytesFunc).Once()
 	}
 	cr.On("Credentials").Return(&common.CacheGCSCredentials{
 		AccessID:   accessID,
 		PrivateKey: pk,
-	})
+	}).Once()
 
 	adapter.credentialsResolver = cr
 }
@@ -267,6 +268,7 @@ func testAdapterOperation(
 ) {
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolver(t, adapter, tc)
+
 		prepareMockedSignedURLGenerator(t, tc, expectedMethod, expectedContentType, adapter)
 		hook := test.NewGlobal()
 
@@ -311,6 +313,11 @@ func TestAdapterOperation(t *testing.T) {
 			assertErrorMessage: nil,
 			signBlobAPITest:    false,
 		},
+		"valid-configuration-with-metadata": {
+			returnedURL:     "https://storage.googleapis.com/test/key?Expires=123456789&GoogleAccessId=test-access-id%40X.iam.gserviceaccount.com&Signature=XYZ",
+			metadata:        map[string]string{"foo": "some foo"},
+			expectedHeaders: http.Header{"X-Goog-Meta-Foo": []string{"some foo"}},
+		},
 		"sign-blob-api-valid-configuration": {
 			returnedURL:        "https://storage.googleapis.com/test/key?Expires=123456789&GoogleAccessId=test-access-id%40X.iam.gserviceaccount.com&Signature=XYZ",
 			returnedError:      nil,
@@ -336,6 +343,8 @@ func TestAdapterOperation(t *testing.T) {
 			a, err := New(config, defaultTimeout, objectName)
 			require.NoError(t, err)
 
+			a.WithMetadata(tc.metadata)
+
 			adapter, ok := a.(*gcsAdapter)
 			require.True(t, ok, "Adapter should be properly casted to *adapter type")
 
@@ -359,7 +368,11 @@ func TestAdapterOperation(t *testing.T) {
 			)
 
 			headers := adapter.GetUploadHeaders()
-			assert.Equal(t, headers, tc.expectedHeaders)
+			if len(tc.expectedHeaders) < 1 {
+				assert.Empty(t, headers, "expected headers to be empty")
+			} else {
+				assert.Equal(t, tc.expectedHeaders, headers, "headers do not match")
+			}
 
 			goCloudURL, err := adapter.GetGoCloudURL(context.Background(), true)
 			assert.Nil(t, goCloudURL.URL)
