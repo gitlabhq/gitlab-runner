@@ -327,7 +327,7 @@ func TestS3Client_PresignURL(t *testing.T) {
 	}
 }
 
-func newMockSTSHandler(expectedKms bool, expectedDurationSecs int) http.Handler {
+func newMockSTSHandler(expectedKms bool, expectedDurationSecs int, s3Partition string) http.Handler {
 	roleARN := "arn:aws:iam::123456789012:role/TestRole"
 	expectedStatements := 1
 	if expectedKms {
@@ -419,7 +419,10 @@ func newMockSTSHandler(expectedKms bool, expectedDurationSecs int) http.Handler 
 			}
 		}
 
-		if statement.Resource != fmt.Sprintf("arn:aws:s3:::%s/%s", bucketName, objectName) {
+		if s3Partition == "" {
+			s3Partition = "aws"
+		}
+		if statement.Resource != fmt.Sprintf("arn:%s:s3:::%s/%s", s3Partition, bucketName, objectName) {
 			http.Error(w, "Invalid policy statement", http.StatusBadRequest)
 			return
 		}
@@ -466,6 +469,26 @@ func TestFetchCredentialsForRole(t *testing.T) {
 		"AWS_SECRET_ACCESS_KEY": "mock-secret-key",
 		"AWS_SESSION_TOKEN":     "mock-session-token",
 	}
+	govCloudConfig := common.CacheConfig{
+		S3: &common.CacheS3Config{
+			AccessKey:          "test-access-key",
+			BucketLocation:     "us-gov-west-1",
+			SecretKey:          "test-secret-key",
+			AuthenticationType: "access-key",
+			BucketName:         "test-bucket",
+			UploadRoleARN:      "arn:aws:iam::123456789012:role/TestRole",
+		},
+	}
+	chinaConfig := common.CacheConfig{
+		S3: &common.CacheS3Config{
+			AccessKey:          "test-access-key",
+			BucketLocation:     "cn-north-1",
+			SecretKey:          "test-secret-key",
+			AuthenticationType: "access-key",
+			BucketName:         "test-bucket",
+			UploadRoleARN:      "arn:aws:iam::123456789012:role/TestRole",
+		},
+	}
 
 	tests := map[string]struct {
 		config           *common.CacheConfig
@@ -475,11 +498,24 @@ func TestFetchCredentialsForRole(t *testing.T) {
 		expectedKms      bool
 		duration         time.Duration
 		expectedDuration time.Duration
+		s3Partition      string
 	}{
 		"successful fetch": {
 			config:   &workingConfig,
 			roleARN:  "arn:aws:iam::123456789012:role/TestRole",
 			expected: mockedCreds,
+		},
+		"successful fetch with GovCloud config": {
+			config:      &govCloudConfig,
+			roleARN:     "arn:aws:iam::123456789012:role/TestRole",
+			expected:    mockedCreds,
+			s3Partition: "aws-us-gov",
+		},
+		"successful fetch with China config": {
+			config:      &chinaConfig,
+			roleARN:     "arn:aws:iam::123456789012:role/TestRole",
+			expected:    mockedCreds,
+			s3Partition: "aws-cn",
 		},
 		"successful fetch with 12-hour timeout downgraded to 1-hour": {
 			config:           &workingConfig,
@@ -552,7 +588,7 @@ func TestFetchCredentialsForRole(t *testing.T) {
 				duration = int(tt.expectedDuration.Seconds())
 			}
 			// Create s3Client and point STS endpoint to it
-			mockServer := httptest.NewServer(newMockSTSHandler(tt.expectedKms, duration))
+			mockServer := httptest.NewServer(newMockSTSHandler(tt.expectedKms, duration, tt.s3Partition))
 			defer mockServer.Close()
 
 			s3Client, err := newS3Client(tt.config.S3, withSTSEndpoint(mockServer.URL+"/sts"))

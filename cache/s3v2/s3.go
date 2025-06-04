@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
@@ -108,14 +109,24 @@ func (c *s3Client) generateSessionPolicy(bucketName, objectName string, upload b
 		action = "s3:PutObject"
 	}
 
+	// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html
+	s3Partition := "aws"
+	// https://docs.aws.amazon.com/govcloud-us/latest/UserGuide/using-govcloud-arns.html
+	switch {
+	case strings.HasPrefix(c.awsConfig.Region, "us-gov-"):
+		s3Partition = "aws-us-gov"
+	case strings.HasPrefix(c.awsConfig.Region, "cn-"):
+		s3Partition = "aws-cn"
+	}
+
 	policy := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [
 			{
 				"Effect": "Allow",
 				"Action": ["%s"],
-				"Resource": "arn:aws:s3:::%s/%s"
-			}`, action, bucketName, objectName)
+				"Resource": "arn:%s:s3:::%s/%s"
+			}`, action, s3Partition, bucketName, objectName)
 
 	if c.s3Config.EncryptionType() == common.S3EncryptionTypeKms || c.s3Config.EncryptionType() == common.S3EncryptionTypeDsseKms {
 		// Permissions needed for multipart upload: https://repost.aws/knowledge-center/s3-large-file-encryption-kms-key
