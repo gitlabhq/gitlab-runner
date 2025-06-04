@@ -408,7 +408,7 @@ func getJobResponseWithCachePaths() common.JobResponse {
 	}
 }
 
-var cacheKeyMetadataArgRE = regexp.MustCompile("^cacheKey:.+")
+var cacheKeyMetadataArgRE = regexp.MustCompile("^cachekey:.+")
 var expectCacheKeyMetadataArg = mock.MatchedBy(cacheKeyMetadataArgRE.MatchString)
 
 func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
@@ -474,6 +474,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--path", "vendor/",
 					"--untracked",
 					"--url", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--header", "Header-1: a value",
 				).Once()
 				mockWriter.On(
@@ -483,6 +484,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--path", "some/path1",
 					"--path", "other/path2",
 					"--url", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--header", "Header-1: a value",
 				).Once()
 				mockWriter.On(
@@ -491,6 +493,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "when-always",
 					"--url", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--header", "Header-1: a value",
 				).Once()
 				mockWriter.On(
@@ -499,6 +502,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "unset-cache-key",
 					"--url", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--header", "Header-1: a value",
 				).Once()
 			} else {
@@ -624,6 +628,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--path", "when-on-failure",
 					"--untracked",
 					"--url", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--header", "Header-1: a value",
 				).Once()
 				mockWriter.On(
@@ -632,6 +637,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "when-always",
 					"--url", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--header", "Header-1: a value",
 				).Once()
 				mockWriter.On(
@@ -640,6 +646,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "unset-cache-key",
 					"--url", mock.Anything,
+					"--metadata", expectCacheKeyMetadataArg,
 					"--header", "Header-1: a value",
 				).Once()
 			} else {

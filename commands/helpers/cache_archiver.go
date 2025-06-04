@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	metadataFileSuffix = "metadata.json"
+	metadataFile = "metadata.json"
 )
 
 type CacheArchiverCommand struct {
@@ -41,7 +41,7 @@ type CacheArchiverCommand struct {
 	GoCloudURL             string   `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
 	Timeout                int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
 	Headers                []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
-	Metadata               []string `long:"metadata" description:"Metadata for the cache artifact when gocloud-url is used (in form of 'key:value')"`
+	Metadata               []string `long:"metadata" description:"Metadata for the cache artifact (in form of 'key:value')"`
 	CompressionLevel       string   `long:"compression-level" env:"CACHE_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
 	CompressionFormat      string   `long:"compression-format" env:"CACHE_COMPRESSION_FORMAT" description:"Compression format (zip, tarzstd)"`
 	MaxUploadedArchiveSize int64    `long:"max-uploaded-archive-size" env:"CACHE_MAX_UPLOADED_ARCHIVE_SIZE" description:"Limit the size of the cache archive being uploaded to cloud storage, in bytes."`
@@ -247,8 +247,8 @@ func (c *CacheArchiverCommand) createLocalMetadataFile() error {
 		return fmt.Errorf("encoding metadata: %w", err)
 	}
 
-	fileName := c.File + "." + metadataFileSuffix
-	err = os.WriteFile(fileName, jsonBlob, 0640)
+	filePath := filepath.Join(filepath.Dir(c.File), metadataFile)
+	err = os.WriteFile(filePath, jsonBlob, 0640)
 	if err != nil {
 		return fmt.Errorf("writing local metadata file: %w", err)
 	}

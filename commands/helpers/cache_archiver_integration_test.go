@@ -30,7 +30,7 @@ import (
 
 const (
 	cacheArchiverArchive           = "archive.zip"
-	cacheArchiverMetadata          = "archive.zip.metadata.json"
+	cacheArchiverMetadata          = "metadata.json"
 	cacheArchiverTestArchivedFile  = "archive_file"
 	cacheExtractorTestArchivedFile = "archive_file"
 )

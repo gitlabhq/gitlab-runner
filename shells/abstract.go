@@ -1417,7 +1417,7 @@ func (m metadata) AsArgs(flag string) []string {
 // available then fallback to a pre-signed URL.
 func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey cacheKey) ([]string, map[string]string, error) {
 	metadata := metadata{
-		"cacheKey": cacheKey.Human,
+		"cachekey": cacheKey.Human,
 	}
 
 	// Prefer Go Cloud URL if supported
@@ -1433,14 +1433,15 @@ func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey 
 		return []string{}, nil, nil
 	}
 
-	urlArgs := []string{"--url", uploadURL.URL.String()}
+	uploadArgs := []string{"--url", uploadURL.URL.String()}
+	uploadArgs = append(uploadArgs, metadata.AsArgs("--metadata")...)
 	for key, values := range uploadURL.Headers {
 		for _, value := range values {
-			urlArgs = append(urlArgs, "--header", fmt.Sprintf("%s: %s", key, value))
+			uploadArgs = append(uploadArgs, "--header", fmt.Sprintf("%s: %s", key, value))
 		}
 	}
 
-	return urlArgs, nil, err
+	return uploadArgs, nil, err
 }
 
 func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScriptInfo, artifact common.Artifact) bool {
