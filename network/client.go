@@ -425,13 +425,13 @@ func (n *client) doJSON(
 	if res.StatusCode == statusCode && response != nil {
 		isApplicationJSON, err := isResponseApplicationJSON(res)
 		if !isApplicationJSON {
-			return -1, err.Error(), nil
+			return -1, err.Error(), res
 		}
 
 		d := json.NewDecoder(res.Body)
 		err = d.Decode(response)
 		if err != nil {
-			return -1, fmt.Sprintf("Error decoding json payload %v", err), nil
+			return -1, fmt.Sprintf("Error decoding json payload %v", err), res
 		}
 	}
 
