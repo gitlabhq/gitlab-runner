@@ -279,6 +279,22 @@ For more information, see the [Docker documentation](https://docs.docker.com/eng
 
 The runner uses the `build` alias to resolve the job container.
 
+> DNS might not work correctly with a Docker-in-Docker (`dind`) service when you use this feature.
+>
+> This behavior is due to an issue with [Docker/Moby](https://github.com/moby/moby/issues/20037#issuecomment-181659049),
+> where `dind` containers don't inherit custom DNS entries when you specify a network.
+>
+> As a workaround, manually provide the custom DNS settings to the `dind` service. For example,
+> if your custom DNS server is `1.1.1.1`, you can use `127.0.0.11`, which is Docker's internal DNS service:
+> 
+> ```yaml
+>   services:
+>     - name: docker:dind
+>       command: [--dns=127.0.0.11, --dns=1.1.1.1]
+> ```
+> 
+> This approach also allows containers to resolve services on the same network.
+
 #### How the runner creates a network for each job
 
 When a job starts, the runner:
