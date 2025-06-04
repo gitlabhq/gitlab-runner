@@ -52,6 +52,9 @@
 .if-runner-security-merge-request-pipeline: &if-runner-security-merge-request-pipeline
   if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
 
+.if-not-canonical-namespace-merge-request-pipeline: &if-not-canonical-namespace-merge-request-pipeline
+  if: $CI_PIPELINE_SOURCE == "merge_request_event" && '$CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/'
+
 .if-runner-default-branch: &if-runner-default-branch
   if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
 
@@ -185,7 +188,7 @@
 
 .rules:merge_request_pipelines:no_docs:unit_test:
   rules:
-    - <<: *if-not-canonical-namespace
+    - <<: *if-not-canonical-namespace-merge-request-pipeline
       allow_failure: true
     - <<: *if-runner-merge-request-pipeline
       changes: *code-backstage-patterns
