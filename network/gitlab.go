@@ -29,6 +29,8 @@ const (
 	clientError              = -100
 	retryAfterHeader         = "Retry-After"
 	responseBodyPeekMax      = 512
+
+	correlationIDHeader = "X-Request-Id"
 )
 
 func TokenIsCreatedRunnerToken(token string) bool {
@@ -329,18 +331,20 @@ func (n *GitLabClient) RegisterRunner(
 	)
 	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
+	logger := runner.Log().WithField("correlation_id", getCorrelationId(resp))
+
 	switch result {
 	case http.StatusCreated:
-		runner.Log().Println("Registering runner...", "succeeded")
+		logger.Println("Registering runner...", "succeeded")
 		return &response
 	case http.StatusForbidden:
-		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "forbidden (check registration token)")
+		logger.WithField("status", statusText).Errorln("Registering runner...", "forbidden (check registration token)")
 		return nil
 	case clientError:
-		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "client error")
+		logger.WithField("status", statusText).Errorln("Registering runner...", "client error")
 		return nil
 	default:
-		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "failed")
+		logger.WithField("status", statusText).Errorln("Registering runner...", "failed")
 		return nil
 	}
 }
@@ -377,27 +381,29 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 	}
 	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
+	logger := runner.Log().WithField("correlation_id", getCorrelationId(resp))
+
 	switch result {
 	case http.StatusOK:
 		// this is expected due to fact that we ask for non-existing job
 		if TokenIsCreatedRunnerToken(runner.Token) {
-			runner.Log().Println("Verifying runner...", "is valid")
+			logger.Println("Verifying runner...", "is valid")
 		} else {
-			runner.Log().Println("Verifying runner...", "is alive")
+			logger.Println("Verifying runner...", "is alive")
 		}
 		return &response
 	case http.StatusForbidden:
 		if TokenIsCreatedRunnerToken(runner.Token) {
-			runner.Log().Println("Verifying runner...", "is not valid")
+			logger.Println("Verifying runner...", "is not valid")
 		} else {
-			runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "is removed")
+			logger.WithField("status", statusText).Errorln("Verifying runner...", "is removed")
 		}
 		return nil
 	case clientError:
-		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "client error")
+		logger.WithField("status", statusText).Errorln("Verifying runner...", "client error")
 		return &response
 	default:
-		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "failed")
+		logger.WithField("status", statusText).Errorln("Verifying runner...", "failed")
 		return &response
 	}
 }
@@ -419,19 +425,21 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 	)
 	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
+	logger := runner.Log().WithField("correlation_id", getCorrelationId(resp))
+
 	const baseLogText = "Unregistering runner from GitLab"
 	switch result {
 	case http.StatusNoContent:
-		runner.Log().Println(baseLogText, "succeeded")
+		logger.Println(baseLogText, "succeeded")
 		return true
 	case http.StatusForbidden:
-		runner.Log().WithField("status", statusText).Errorln(baseLogText, "forbidden")
+		logger.WithField("status", statusText).Errorln(baseLogText, "forbidden")
 		return false
 	case clientError:
-		runner.Log().WithField("status", statusText).Errorln(baseLogText, "client error")
+		logger.WithField("status", statusText).Errorln(baseLogText, "client error")
 		return false
 	default:
-		runner.Log().WithField("status", statusText).Errorln(baseLogText, "failed")
+		logger.WithField("status", statusText).Errorln(baseLogText, "failed")
 		return false
 	}
 }
@@ -454,19 +462,21 @@ func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, 
 	)
 	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
+	logger := runner.Log().WithField("correlation_id", getCorrelationId(resp))
+
 	const baseLogText = "Unregistering runner manager from GitLab"
 	switch result {
 	case http.StatusNoContent:
-		runner.Log().Println(baseLogText, "succeeded")
+		logger.Println(baseLogText, "succeeded")
 		return true
 	case http.StatusForbidden:
-		runner.Log().WithField("status", statusText).Errorln(baseLogText, "forbidden")
+		logger.WithField("status", statusText).Errorln(baseLogText, "forbidden")
 		return false
 	case clientError:
-		runner.Log().WithField("status", statusText).Errorln(baseLogText, "client error")
+		logger.WithField("status", statusText).Errorln(baseLogText, "client error")
 		return false
 	default:
-		runner.Log().WithField("status", statusText).Errorln(baseLogText, "failed")
+		logger.WithField("status", statusText).Errorln(baseLogText, "failed")
 		return false
 	}
 }
@@ -517,20 +527,22 @@ func (n *GitLabClient) resetToken(
 
 	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
+	logger := runner.Log().WithField("correlation_id", getCorrelationId(resp))
+
 	const baseLogText = "Resetting runner authentication token..."
 	switch result {
 	case http.StatusCreated:
-		runner.Log().Println(baseLogText, "succeeded")
+		logger.Println(baseLogText, "succeeded")
 		response.TokenObtainedAt = time.Now().UTC()
 		return &response
 	case http.StatusForbidden:
-		runner.Log().WithField("status", statusText).Errorln(baseLogText, "failed (check used token)")
+		logger.WithField("status", statusText).Errorln(baseLogText, "failed (check used token)")
 		return nil
 	case clientError:
-		runner.Log().WithField("status", statusText).Errorln(baseLogText, "client error")
+		logger.WithField("status", statusText).Errorln(baseLogText, "client error")
 		return nil
 	default:
-		runner.Log().WithField("status", statusText).Errorln(baseLogText, "failed")
+		logger.WithField("status", statusText).Errorln(baseLogText, "failed")
 		return nil
 	}
 }
@@ -585,9 +597,11 @@ func (n *GitLabClient) RequestJob(
 	)
 	defer func() { n.handleResponse(ctx, httpResponse, false) }()
 
+	logger := config.Log().WithField("correlation_id", getCorrelationId(httpResponse))
+
 	switch result {
 	case http.StatusCreated:
-		config.Log().WithFields(logrus.Fields{
+		logger.WithFields(logrus.Fields{
 			"job":      response.ID,
 			"repo_url": response.RepoCleanURL(),
 		}).Println("Checking for jobs...", "received")
@@ -595,23 +609,22 @@ func (n *GitLabClient) RequestJob(
 		resolveFullChain := config.IsFeatureFlagOn(featureflags.ResolveFullTLSChain)
 		tlsData, err := n.getResponseTLSData(&config.RunnerCredentials, resolveFullChain, httpResponse)
 		if err != nil {
-			config.Log().
-				WithError(err).Errorln("Error on fetching TLS Data from API response...", "error")
+			logger.WithError(err).Errorln("Error on fetching TLS Data from API response...", "error")
 		}
 		addTLSData(&response, tlsData)
 
 		return &response, true
 	case http.StatusForbidden:
-		config.Log().WithField("status", statusText).Errorln("Checking for jobs...", "forbidden")
+		logger.WithField("status", statusText).Errorln("Checking for jobs...", "forbidden")
 		return nil, false
 	case http.StatusNoContent:
-		config.Log().WithField("status", statusText).Debug("Checking for jobs...", "no content")
+		logger.WithField("status", statusText).Debug("Checking for jobs...", "no content")
 		return nil, true
 	case clientError:
-		config.Log().WithField("status", statusText).Errorln("Checking for jobs...", "client error")
+		logger.WithField("status", statusText).Errorln("Checking for jobs...", "client error")
 		return nil, false
 	default:
-		config.Log().WithField("status", statusText).Warningln("Checking for jobs...", "failed")
+		logger.WithField("status", statusText).Warningln("Checking for jobs...", "failed")
 		return nil, true
 	}
 }
@@ -631,10 +644,11 @@ func (n *GitLabClient) UpdateJob(
 		ExitCode:      jobInfo.ExitCode,
 	}
 
-	log := config.Log().
-		WithField("job", jobInfo.ID).
-		WithField("checksum", request.Output.Checksum).
-		WithField("bytesize", request.Output.Bytesize)
+	log := config.Log().WithFields(logrus.Fields{
+		"job":      jobInfo.ID,
+		"checksum": request.Output.Checksum,
+		"bytesize": request.Output.Bytesize,
+	})
 
 	log.Info("Updating job...")
 
@@ -678,6 +692,7 @@ func (n *GitLabClient) createUpdateJobResult(
 		"code":            statusCode,
 		"job-status":      remoteJobStateResponse.RemoteState,
 		"update-interval": remoteJobStateResponse.RemoteUpdateInterval,
+		"correlation_id":  getCorrelationId(response),
 	})
 
 	switch {
@@ -763,6 +778,7 @@ func (n *GitLabClient) PatchTrace(
 		"code":            response.StatusCode,
 		"status":          response.Status,
 		"update-interval": tracePatchResponse.RemoteUpdateInterval,
+		"correlation_id":  getCorrelationId(response),
 	})
 
 	return n.createPatchTraceResult(startOffset, tracePatchResponse, response, endOffset, log)
@@ -925,8 +941,9 @@ func (n *GitLabClient) UploadRawArtifacts(
 	defer func() { n.handleResponse(context.TODO(), res, true) }()
 
 	log := logrus.WithFields(logrus.Fields{
-		"id":    config.ID,
-		"token": helpers.ShortenToken(config.Token),
+		"id":             config.ID,
+		"token":          helpers.ShortenToken(config.Token),
+		"correlation_id": getCorrelationId(res),
 	})
 
 	if options.LogResponseDetails {
@@ -1052,8 +1069,9 @@ func (n *GitLabClient) DownloadArtifacts(
 		JobTokenHeader(config.Token))
 
 	log := logrus.WithFields(logrus.Fields{
-		"id":    config.ID,
-		"token": helpers.ShortenToken(config.Token),
+		"id":             config.ID,
+		"token":          helpers.ShortenToken(config.Token),
+		"correlation_id": getCorrelationId(res),
 	})
 
 	if res != nil {
@@ -1157,4 +1175,12 @@ func NewGitLabClientWithAPIRequestsCollector(c *APIRequestsCollector) *GitLabCli
 
 func NewGitLabClient() *GitLabClient {
 	return NewGitLabClientWithAPIRequestsCollector(NewAPIRequestsCollector())
+}
+
+func getCorrelationId(resp *http.Response) string {
+	if resp == nil {
+		return ""
+	}
+
+	return resp.Header.Get(correlationIDHeader)
 }

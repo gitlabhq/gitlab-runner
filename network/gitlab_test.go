@@ -93,6 +93,8 @@ func TestClients(t *testing.T) {
 }
 
 func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response registerRunnerResponse, t *testing.T) {
+	w.Header().Add(correlationIDHeader, "foobar")
+
 	if r.URL.Path != "/api/v4/runners" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -326,6 +328,7 @@ func TestRegisterRunnerOnRunnerLimitHit(t *testing.T) {
 			assert.Nil(t, res)
 			require.Len(t, h.entries, 1)
 			assert.Equal(t, "Registering runner... failed", h.entries[0].Message)
+			assert.Equal(t, "foobar", h.entries[0].Data["correlation_id"])
 			assert.Contains(t, h.entries[0].Data["status"], tc.expectedMessage)
 		})
 	}
@@ -1018,6 +1021,8 @@ func getRequestJobResponse() map[string]interface{} {
 }
 
 func testRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request, jobResponse map[string]any) {
+	w.Header().Add(correlationIDHeader, "foobar")
+
 	if r.URL.Path != "/api/v4/jobs/request" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -1181,14 +1186,29 @@ func TestRequestJob(t *testing.T) {
 		{
 			Level:   logrus.InfoLevel,
 			Message: "Checking for jobs... received",
+			Data: logrus.Fields{
+				"correlation_id": "foobar",
+				"job":            int64(10),
+				"repo_url":       "https://gitlab.example.com/test/test-project.git",
+				"runner":         "valid",
+			},
 		},
 		{
 			Level:   logrus.ErrorLevel,
 			Message: "Checking for jobs... forbidden",
+			Data: logrus.Fields{
+				"correlation_id": "foobar",
+				"runner":         "invalid",
+				"status":         "403 Forbidden",
+			},
 		},
 		{
 			Level:   logrus.ErrorLevel,
 			Message: "Checking for jobs... client error",
+			Data: logrus.Fields{
+				"correlation_id": "",
+				"status":         "only http or https scheme supported",
+			},
 		},
 	}
 
@@ -1196,6 +1216,7 @@ func TestRequestJob(t *testing.T) {
 	for i, l := range expectedLogs {
 		assert.Equal(t, l.Level, h.entries[i].Level)
 		assert.Equal(t, l.Message, h.entries[i].Message)
+		assert.Equal(t, l.Data, h.entries[i].Data)
 	}
 }
 
@@ -1271,6 +1292,8 @@ func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]i
 }
 
 func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	w.Header().Add(correlationIDHeader, "foobar")
+
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
@@ -1407,12 +1430,15 @@ func TestUpdateJob(t *testing.T) {
 			assert.Equal(t, tc.updateJobInfo.Output.Checksum, h.entries[0].Data["checksum"])
 			if tc.additionalLog != nil {
 				assert.Equal(t, tc.additionalLog.Message, h.entries[1].Message)
+				assert.Equal(t, "foobar", h.entries[1].Data["correlation_id"])
 			}
 		})
 	}
 }
 
 func testUpdateJobKeepAliveHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	w.Header().Add(correlationIDHeader, "foobar")
+
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
@@ -1482,6 +1508,15 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 				{
 					Level:   logrus.InfoLevel,
 					Message: "Submitting job to coordinator...ok",
+					Data: logrus.Fields{
+						"bytesize":        0,
+						"checksum":        "",
+						"code":            200,
+						"correlation_id":  "foobar",
+						"job":             int64(10),
+						"job-status":      "",
+						"update-interval": time.Duration(0),
+					},
 				},
 			},
 		},
@@ -1496,6 +1531,16 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 				{
 					Level:   logrus.WarnLevel,
 					Message: "Submitting job to coordinator... job failed",
+					Data: logrus.Fields{
+						"bytesize":        0,
+						"checksum":        "",
+						"code":            200,
+						"correlation_id":  "foobar",
+						"job":             int64(11),
+						"job-status":      "canceled",
+						"status":          "200 OK",
+						"update-interval": time.Duration(0),
+					},
 				},
 			},
 		},
@@ -1510,6 +1555,16 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 				{
 					Level:   logrus.WarnLevel,
 					Message: "Submitting job to coordinator... job failed",
+					Data: logrus.Fields{
+						"bytesize":        0,
+						"checksum":        "",
+						"code":            200,
+						"correlation_id":  "foobar",
+						"job":             int64(12),
+						"job-status":      "failed",
+						"status":          "200 OK",
+						"update-interval": time.Duration(0),
+					},
 				},
 			},
 		},
@@ -1524,6 +1579,15 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 				{
 					Level:   logrus.InfoLevel,
 					Message: "Submitting job to coordinator...ok",
+					Data: logrus.Fields{
+						"bytesize":        0,
+						"checksum":        "",
+						"code":            200,
+						"correlation_id":  "foobar",
+						"job":             int64(13),
+						"job-status":      "canceling",
+						"update-interval": time.Duration(0),
+					},
 				},
 			},
 		},
@@ -1540,6 +1604,10 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 			for i, l := range tc.expectedLogs {
 				assert.Equal(t, l.Level, h.entries[i].Level)
 				assert.Equal(t, l.Message, h.entries[i].Message)
+
+				if l.Data != nil {
+					assert.Equal(t, l.Data, h.entries[i].Data)
+				}
 			}
 		})
 	}
@@ -1648,6 +1716,7 @@ func TestPatchTrace(t *testing.T) {
 				assert.Equal(t, patchTraceContent[offset:limit+1], body)
 
 				w.Header().Add(remoteStateHeader, tt.remoteState)
+				w.Header().Add(correlationIDHeader, "foobar")
 				w.WriteHeader(http.StatusAccepted)
 			}
 
@@ -1681,6 +1750,7 @@ func TestPatchTrace(t *testing.T) {
 			require.Len(t, h.entries, 3)
 			for _, entry := range h.entries {
 				assert.Equal(t, entry.Message, "Appending trace to coordinator...ok")
+				assert.Equal(t, "foobar", entry.Data["correlation_id"])
 			}
 		})
 	}
