@@ -2701,6 +2701,97 @@ func Test_expandContainerOptions(t *testing.T) {
 	}
 }
 
+func TestPrintPolicyOptions(t *testing.T) {
+	testCases := []struct {
+		desc          string
+		policyOptions PolicyOptions
+		contains      []string
+	}{
+		{
+			desc: "without policy options",
+		},
+		{
+			desc: "not a policy job",
+			policyOptions: PolicyOptions{
+				PolicyJob: false,
+			},
+		},
+		{
+			desc: "policy job without override",
+			policyOptions: PolicyOptions{
+				PolicyJob: true,
+				Name:      "Test Policy",
+			},
+			contains: []string{`Job triggered by policy \"Test Policy\".`},
+		},
+		{
+			desc: "policy job with override allowed",
+			policyOptions: PolicyOptions{
+				PolicyJob:               true,
+				Name:                    "Test Policy",
+				VariableOverrideAllowed: true,
+			},
+			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are allowed in this job according to the pipeline execution policy."},
+		},
+		{
+			desc: "policy job with override allowed with exceptions",
+			policyOptions: PolicyOptions{
+				PolicyJob:                  true,
+				Name:                       "Test Policy",
+				VariableOverrideAllowed:    true,
+				VariableOverrideExceptions: []string{"EXCEPTION_VAR1", "EXCEPTION_VAR2"},
+			},
+			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are allowed in this job (except for EXCEPTION_VAR1, EXCEPTION_VAR2) according to the pipeline execution policy."},
+		},
+		{
+			desc: "policy job with override denied",
+			policyOptions: PolicyOptions{
+				PolicyJob:               true,
+				Name:                    "Test Policy",
+				VariableOverrideAllowed: false,
+			},
+			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are ignored in this job according to the pipeline execution policy."},
+		},
+		{
+			desc: "policy job with override denied with exceptions",
+			policyOptions: PolicyOptions{
+				PolicyJob:                  true,
+				Name:                       "Test Policy",
+				VariableOverrideAllowed:    false,
+				VariableOverrideExceptions: []string{"EXCEPTION_VAR1", "EXCEPTION_VAR2"},
+			},
+			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are ignored in this job (except for EXCEPTION_VAR1, EXCEPTION_VAR2) according to the pipeline execution policy."},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			logs := bytes.Buffer{}
+			lentry := logrus.New()
+			lentry.Out = &logs
+			logger := buildlogger.New(nil, logrus.NewEntry(lentry), buildlogger.Options{})
+
+			b := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					PolicyOptions: tc.policyOptions,
+				},
+				logger: logger,
+			}
+
+			b.printPolicyOptions()
+
+			if len(tc.contains) == 0 {
+				assert.Empty(t, logs.String())
+			} else {
+				for i := range tc.contains {
+					assert.Contains(t, logs.String(), tc.contains[i])
+				}
+			}
+		})
+	}
+}
+
 func TestGetStageTimeoutContexts(t *testing.T) {
 	defaultTimeouts := []stageTimeout{
 		{configName: "RUNNER_SCRIPT_TIMEOUT", defaultTimeout: 0},

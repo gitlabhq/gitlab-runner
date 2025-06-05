@@ -559,6 +559,8 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		// with after_script and later stages to still complete.
 		trace.SetCancelFunc(cancel)
 
+		b.printPolicyOptions()
+
 		for _, s := range b.Steps {
 			// after_script has a separate BuildStage. See common.BuildStageAfterScript
 			if s.Name == StepNameAfterScript {
@@ -1691,6 +1693,28 @@ func (b *Build) printSettingErrors() {
 	if len(b.Settings().Errors) > 0 {
 		b.logger.Warningln(errors.Join(b.Settings().Errors...))
 	}
+}
+
+func (b *Build) printPolicyOptions() {
+	if !b.JobResponse.PolicyOptions.PolicyJob {
+		return
+	}
+
+	b.logger.Infoln(fmt.Sprintf(`Job triggered by policy "%s".`, b.JobResponse.PolicyOptions.Name))
+
+	var message = "User-defined CI/CD variables are "
+	if b.JobResponse.PolicyOptions.VariableOverrideAllowed {
+		message += "allowed in this job"
+	} else {
+		message += "ignored in this job"
+	}
+	// VariableOverrideExceptions acts as an allowlist when VariableOverrideExceptions is false
+	// and a denylist when it's true.
+	if b.JobResponse.PolicyOptions.VariableOverrideExceptions != nil {
+		message += fmt.Sprintf(" (except for %s)", strings.Join(b.JobResponse.PolicyOptions.VariableOverrideExceptions, ", "))
+	}
+	message += " according to the pipeline execution policy."
+	b.logger.Infoln(message)
 }
 
 func (b *Build) IsLFSSmudgeDisabled() bool {

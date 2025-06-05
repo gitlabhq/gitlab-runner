@@ -625,6 +625,13 @@ type Artifact struct {
 
 type Artifacts []Artifact
 
+type PolicyOptions struct {
+	PolicyJob                  bool     `json:"execution_policy_job"`
+	Name                       string   `json:"policy_name"`
+	VariableOverrideAllowed    bool     `json:"policy_variables_override_allowed,omitempty"`
+	VariableOverrideExceptions []string `json:"policy_variables_override_exceptions,omitempty"`
+}
+
 type Cache struct {
 	Key          string            `json:"key"`
 	Untracked    bool              `json:"untracked"`
@@ -744,6 +751,7 @@ type JobResponse struct {
 	Secrets       Secrets        `json:"secrets,omitempty"`
 	Hooks         Hooks          `json:"hooks,omitempty"`
 	Run           string         `json:"run"`
+	PolicyOptions PolicyOptions  `json:"policy_options,omitempty"`
 
 	TLSCAChain  string `json:"-"`
 	TLSAuthCert string `json:"-"`
