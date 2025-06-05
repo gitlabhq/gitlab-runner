@@ -153,13 +153,22 @@ func RunServiceControl(c *cli.Context) {
 }
 
 func GetFlags() []cli.Flag {
-	return []cli.Flag{
+	flags := []cli.Flag{
 		cli.StringFlag{
 			Name:  "service, n",
 			Value: defaultServiceName,
 			Usage: "Specify service name to use",
 		},
 	}
+	if os.Getuid() > 0 {
+		flags = append(flags,
+			cli.BoolFlag{
+				Name:  "user-service",
+				Usage: "Manage gitlab-runner as a user service (systemd only)",
+			},
+		)
+	}
+	return flags
 }
 
 func GetInstallFlags() []cli.Flag {

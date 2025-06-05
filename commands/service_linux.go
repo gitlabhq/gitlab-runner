@@ -16,7 +16,8 @@ func setupOSServiceConfig(c *cli.Context, config *service.Config) {
 			"After=network.target",
 		}
 		config.Option = service.KeyValue{
-			"Restart": "always",
+			"Restart":     "always",
+			"UserService": c.IsSet("user-service"),
 		}
 	case "unix-systemv":
 		script := service_helpers.SysvScript()
