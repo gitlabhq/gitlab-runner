@@ -53,7 +53,7 @@
   if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
 
 .if-not-canonical-namespace-merge-request-pipeline: &if-not-canonical-namespace-merge-request-pipeline
-  if: $CI_PIPELINE_SOURCE == "merge_request_event" && '$CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/'
+  if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/
 
 .if-runner-default-branch: &if-runner-default-branch
   if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
@@ -190,13 +190,17 @@
   rules:
     - <<: *if-not-canonical-namespace-merge-request-pipeline
       allow_failure: true
-    - <<: *if-runner-merge-request-pipeline
+    - <<: *if-merge-request-pipeline
       changes: *code-backstage-patterns
-    - <<: *if-runner-default-branch
+    - <<: *if-runner-or-security-runner-default-branch
       changes: *code-backstage-patterns
-    - <<: *if-runner-stable-release-ref
+    - <<: *if-runner-or-security-runner-stable-ref
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-feature-ref
       changes: *code-backstage-patterns
     - <<: *if-runner-release-ref
+      changes: *code-backstage-patterns
+    - <<: *if-security-runner-release-ref
       changes: *code-backstage-patterns
 
 .rules:merge_request_pipelines:no_docs:always:
