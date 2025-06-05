@@ -408,8 +408,11 @@ func getJobResponseWithCachePaths() common.JobResponse {
 	}
 }
 
-var cacheKeyMetadataArgRE = regexp.MustCompile("^cachekey:.+")
-var expectCacheKeyMetadataArg = mock.MatchedBy(cacheKeyMetadataArgRE.MatchString)
+var headerMatcher = mock.MatchedBy(func(arg string) bool {
+	return regexp.
+		MustCompile(`^(Header-1: a value|X-Fakecloud-Meta-Cachekey: (cache-key1|some-job-name\/some-git-ref))$`).
+		MatchString(arg)
+})
 
 func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 	gitlabURL := "https://example.com:3443"
@@ -474,8 +477,9 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--path", "vendor/",
 					"--untracked",
 					"--url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
-					"--header", "Header-1: a value",
+					"--metadata", "cachekey:cache-key1",
+					"--header", headerMatcher,
+					"--header", headerMatcher,
 				).Once()
 				mockWriter.On(
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
@@ -484,8 +488,9 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--path", "some/path1",
 					"--path", "other/path2",
 					"--url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
-					"--header", "Header-1: a value",
+					"--metadata", "cachekey:cache-key1",
+					"--header", headerMatcher,
+					"--header", headerMatcher,
 				).Once()
 				mockWriter.On(
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
@@ -493,8 +498,9 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "when-always",
 					"--url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
-					"--header", "Header-1: a value",
+					"--metadata", "cachekey:cache-key1",
+					"--header", headerMatcher,
+					"--header", headerMatcher,
 				).Once()
 				mockWriter.On(
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
@@ -502,8 +508,9 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "unset-cache-key",
 					"--url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
-					"--header", "Header-1: a value",
+					"--metadata", "cachekey:some-job-name/some-git-ref",
+					"--header", headerMatcher,
+					"--header", headerMatcher,
 				).Once()
 			} else {
 				mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Times(nrOfCaches)
@@ -514,7 +521,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--path", "vendor/",
 					"--untracked",
 					"--gocloud-url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
+					"--metadata", "cachekey:cache-key1",
 					"--env-file", cacheEnvFile,
 				).Once()
 				mockWriter.On(
@@ -524,7 +531,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--path", "some/path1",
 					"--path", "other/path2",
 					"--gocloud-url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
+					"--metadata", "cachekey:cache-key1",
 					"--env-file", cacheEnvFile,
 				).Once()
 				mockWriter.On(
@@ -533,7 +540,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "when-always",
 					"--gocloud-url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
+					"--metadata", "cachekey:cache-key1",
 					"--env-file", cacheEnvFile,
 				).Once()
 				mockWriter.On(
@@ -542,7 +549,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "unset-cache-key",
 					"--gocloud-url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
+					"--metadata", "cachekey:some-job-name/some-git-ref",
 					"--env-file", cacheEnvFile,
 				).Once()
 			}
@@ -628,8 +635,9 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--path", "when-on-failure",
 					"--untracked",
 					"--url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
-					"--header", "Header-1: a value",
+					"--metadata", "cachekey:cache-key1",
+					"--header", headerMatcher,
+					"--header", headerMatcher,
 				).Once()
 				mockWriter.On(
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
@@ -637,8 +645,9 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "when-always",
 					"--url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
-					"--header", "Header-1: a value",
+					"--metadata", "cachekey:cache-key1",
+					"--header", headerMatcher,
+					"--header", headerMatcher,
 				).Once()
 				mockWriter.On(
 					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
@@ -646,8 +655,9 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "unset-cache-key",
 					"--url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
-					"--header", "Header-1: a value",
+					"--metadata", "cachekey:some-job-name/some-git-ref",
+					"--header", headerMatcher,
+					"--header", headerMatcher,
 				).Once()
 			} else {
 				mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Times(nrOfCaches)
@@ -658,7 +668,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--path", "when-on-failure",
 					"--untracked",
 					"--gocloud-url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
+					"--metadata", "cachekey:cache-key1",
 					"--env-file", cacheEnvFile,
 				).Once()
 				mockWriter.On(
@@ -667,7 +677,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "when-always",
 					"--gocloud-url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
+					"--metadata", "cachekey:cache-key1",
 					"--env-file", cacheEnvFile,
 				).Once()
 				mockWriter.On(
@@ -676,7 +686,7 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 					"--timeout", mock.Anything,
 					"--path", "unset-cache-key",
 					"--gocloud-url", mock.Anything,
-					"--metadata", expectCacheKeyMetadataArg,
+					"--metadata", "cachekey:some-job-name/some-git-ref",
 					"--env-file", cacheEnvFile,
 				).Once()
 			}

@@ -14,6 +14,7 @@ import (
 type testAdapter struct {
 	objectName string
 	useGoCloud bool
+	metadata   map[string]string
 }
 
 func (t *testAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
@@ -28,6 +29,10 @@ func (t *testAdapter) GetUploadHeaders() http.Header {
 	headers := http.Header{}
 	headers.Set("header-1", "a value")
 
+	for k, v := range t.metadata {
+		headers.Set("x-fakecloud-meta-"+k, v)
+	}
+
 	return headers
 }
 
@@ -36,6 +41,13 @@ func (t *testAdapter) GetGoCloudURL(ctx context.Context, _ bool) (cache.GoCloudU
 
 	if t.useGoCloud {
 		u, _ := url.Parse(fmt.Sprintf("gocloud://test/%s", t.objectName))
+
+		q := url.Values{}
+		for k, v := range t.metadata {
+			q.Add("x-fakecloud-meta-"+k, v)
+		}
+		u.RawQuery = q.Encode()
+
 		goCloudURL.URL = u
 		goCloudURL.Environment = t.getUploadEnv(ctx)
 
@@ -45,8 +57,8 @@ func (t *testAdapter) GetGoCloudURL(ctx context.Context, _ bool) (cache.GoCloudU
 	return goCloudURL, nil
 }
 
-func (a *testAdapter) WithMetadata(metadata map[string]string) {
-	// TODO
+func (t *testAdapter) WithMetadata(metadata map[string]string) {
+	t.metadata = metadata
 }
 
 func (t *testAdapter) getUploadEnv(_ context.Context) map[string]string {
