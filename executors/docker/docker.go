@@ -109,8 +109,7 @@ type executor struct {
 
 	projectUniqRandomizedName string
 
-	tunnelClient executors.Client
-	dockerConn   *dockerConnection
+	dockerConn *dockerConnection
 }
 
 type dockerTunnel struct {
@@ -1153,7 +1152,6 @@ func (e *executor) connectDocker(ctx context.Context, options common.ExecutorPre
 	))
 
 	e.dockerConn = dockerConnection
-	e.tunnelClient = dockerConnection.tunnelClient
 	e.info = info
 	e.serverAPIVersion = serverAPIVersion
 	e.waiter = wait.NewDockerKillWaiter(dockerConnection)
@@ -1458,8 +1456,15 @@ func (e *executor) Cleanup() {
 
 	var wg sync.WaitGroup
 
+	// create a new context for cleanup in case the main context has expired or been cancelled.
 	ctx, cancel := context.WithTimeout(context.Background(), dockerCleanupTimeout)
 	defer cancel()
+
+	defer func() {
+		if err := e.dockerConn.Close(); err != nil {
+			e.BuildLogger.WithFields(logrus.Fields{"error": err}).Debugln("Failed to close the client")
+		}
+	}()
 
 	remove := func(id string) {
 		wg.Add(1)
@@ -1486,14 +1491,6 @@ func (e *executor) Cleanup() {
 			"network": e.networkMode.NetworkName(),
 			"error":   err,
 		}).Errorln("Failed to remove network for build")
-	}
-
-	if err := e.dockerConn.Close(); err != nil {
-		e.BuildLogger.WithFields(logrus.Fields{"error": err}).Debugln("Failed to close the client")
-	}
-
-	if e.tunnelClient != nil {
-		e.tunnelClient.Close()
 	}
 
 	e.AbstractExecutor.Cleanup()

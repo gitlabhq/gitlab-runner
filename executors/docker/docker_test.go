@@ -353,6 +353,8 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) *executor {
 
 	clientMock := docker.NewMockClient(t)
 	clientMock.On("Close").Return(nil).Once()
+	dockerConn := &dockerConnection{Client: clientMock}
+	e.dockerConn = dockerConn
 
 	volumesManagerMock := volumes.NewMockManager(t)
 	if !errors.Is(test.expectedError, errVolumesManagerUndefined) {
@@ -360,6 +362,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) *executor {
 	}
 
 	oldCreateVolumesManager := createVolumesManager
+
 	t.Cleanup(func() {
 		e.Cleanup()
 
