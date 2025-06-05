@@ -1063,7 +1063,7 @@ func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 		e.info.Architecture,
 	))
 
-	err = e.validateOSType()
+	err = validateOSType(e.info)
 	if err != nil {
 		return err
 	}
@@ -1121,13 +1121,13 @@ func (e *executor) environmentDialContext(
 
 // validateOSType checks if the ExecutorOptions metadata matches with the docker
 // info response.
-func (e *executor) validateOSType() error {
-	switch e.info.OSType {
+func validateOSType(info system.Info) error {
+	switch info.OSType {
 	case osTypeLinux, osTypeWindows, osTypeFreeBSD:
 		return nil
 	}
 
-	return fmt.Errorf("unsupported os type: %s", e.info.OSType)
+	return fmt.Errorf("unsupported os type: %s", info.OSType)
 }
 
 func (e *executor) createDependencies() error {

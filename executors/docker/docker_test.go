@@ -1935,7 +1935,7 @@ func TestCheckOSType(t *testing.T) {
 				AbstractExecutor: executors.AbstractExecutor{},
 			}
 
-			err := e.validateOSType()
+			err := validateOSType(e.info)
 			if c.expectedErr == "" {
 				assert.NoError(t, err)
 				return
