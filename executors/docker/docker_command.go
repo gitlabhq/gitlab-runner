@@ -152,7 +152,7 @@ func (s *commandExecutor) hasExistingContainer(containerType string, container *
 		return false
 	}
 
-	_, err := s.client.ContainerInspect(s.Context, container.ID)
+	_, err := s.dockerConn.ContainerInspect(s.Context, container.ID)
 	if err == nil {
 		return true
 	}
@@ -244,8 +244,8 @@ func (s *commandExecutor) changeFilesOwnership() error {
 		return nil
 	}
 
-	dockerExec := exec.NewDocker(s.Context, s.client, s.waiter, s.Build.Log())
-	inspect := user.NewInspect(s.client, dockerExec)
+	dockerExec := exec.NewDocker(s.Context, s.dockerConn, s.waiter, s.Build.Log())
+	inspect := user.NewInspect(s.dockerConn, dockerExec)
 	imageSHA := s.buildContainer.Image
 	imageName := s.Build.Image.Name
 

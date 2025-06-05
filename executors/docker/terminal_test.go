@@ -74,7 +74,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 							DockerCommand: []string{"/bin/sh"},
 						},
 					},
-					client: c,
+					dockerConn: &dockerConnection{Client: c},
 				},
 				terminalWaitForContainerTimeout: 1 * time.Second,
 			}
@@ -140,7 +140,7 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 							DockerCommand: []string{"/bin/sh"},
 						},
 					},
-					client: c,
+					dockerConn: &dockerConnection{Client: c},
 				},
 				buildContainer: &types.ContainerJSON{
 					ContainerJSONBase: &types.ContainerJSONBase{
@@ -238,8 +238,8 @@ func TestTerminalConn_Start(t *testing.T) {
 					DockerCommand: []string{"/bin/sh"},
 				},
 			},
-			client: c,
-			waiter: wait.NewDockerKillWaiter(c),
+			dockerConn: &dockerConnection{Client: c},
+			waiter:     wait.NewDockerKillWaiter(c),
 		},
 		buildContainer: &types.ContainerJSON{
 			ContainerJSONBase: &types.ContainerJSONBase{

@@ -82,7 +82,6 @@ var (
 
 type executor struct {
 	executors.AbstractExecutor
-	client                    docker.Client
 	volumeParser              parser.Parser
 	newVolumePermissionSetter func() (permission.Setter, error)
 	info                      system.Info
@@ -281,7 +280,7 @@ func (e *executor) getHelperImage() (*types.ImageInspect, error) {
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
-	image, _, err := e.client.ImageInspectWithRaw(e.Context, e.helperImageInfo.String())
+	image, _, err := e.dockerConn.ImageInspectWithRaw(e.Context, e.helperImageInfo.String())
 	if err == nil {
 		return &image, nil
 	}
@@ -304,7 +303,7 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 		return nil
 	}
 
-	image, err := prebuilt.Get(e.Context, e.client, e.helperImageInfo)
+	image, err := prebuilt.Get(e.Context, e.dockerConn, e.helperImageInfo)
 	if err != nil {
 		e.BuildLogger.Debugln("Failed to load prebuilt:", err)
 	}
@@ -473,13 +472,13 @@ func (e *executor) createService(
 	networkConfig := e.networkConfig(linkNames)
 
 	e.BuildLogger.Debugln("Creating service container", containerName, "...")
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
+	resp, err := e.dockerConn.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
 	if err != nil {
 		return nil, err
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Starting service container %s (%s)...", containerName, resp.ID))
-	err = e.client.ContainerStart(e.Context, resp.ID, container.StartOptions{})
+	err = e.dockerConn.ContainerStart(e.Context, resp.ID, container.StartOptions{})
 	if err != nil {
 		e.temporary = append(e.temporary, resp.ID)
 		return nil, err
@@ -811,7 +810,7 @@ func (e *executor) createContainer(
 	_ = e.removeContainer(e.Context, containerName)
 
 	e.BuildLogger.Debugln("Creating container", containerName, "...")
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
+	resp, err := e.dockerConn.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
 	if resp.ID != "" {
 		e.temporary = append(e.temporary, resp.ID)
 		if containerType == buildContainerType {
@@ -822,7 +821,7 @@ func (e *executor) createContainer(
 		return nil, err
 	}
 
-	inspect, err := e.client.ContainerInspect(e.Context, resp.ID)
+	inspect, err := e.dockerConn.ContainerInspect(e.Context, resp.ID)
 	return &inspect, err
 }
 
@@ -974,7 +973,7 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 }
 
 func (e *executor) startAndWatchContainer(ctx context.Context, id string, input io.Reader) error {
-	dockerExec := exec.NewDocker(e.Context, e.client, e.waiter, e.Build.Log())
+	dockerExec := exec.NewDocker(e.Context, e.dockerConn, e.waiter, e.Build.Log())
 
 	// Use stepsDocker exec implementation if steps is enabled and this is the build container.
 	if id == e.buildContainerID && e.Build.UseNativeSteps() {
@@ -982,7 +981,7 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 		if err != nil {
 			return common.MakeBuildError("creating steps request: %w", err).WithFailureReason(common.ConfigurationError)
 		}
-		dockerExec = exec.NewStepsDocker(e.Context, e.client, e.waiter, e.Build.Log(), request)
+		dockerExec = exec.NewStepsDocker(e.Context, e.dockerConn, e.waiter, e.Build.Log(), request)
 	}
 
 	stdout := e.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
@@ -1026,7 +1025,7 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 		Force:         true,
 	}
 
-	err := e.client.ContainerRemove(ctx, id, options)
+	err := e.dockerConn.ContainerRemove(ctx, id, options)
 	if docker.IsErrNotFound(err) {
 		return nil
 	}
@@ -1042,7 +1041,7 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	e.BuildLogger.Debugln("Disconnecting container", id, "from networks")
 
-	netList, err := e.client.NetworkList(ctx, network.ListOptions{})
+	netList, err := e.dockerConn.NetworkList(ctx, network.ListOptions{})
 	if err != nil {
 		e.BuildLogger.Debugln("Can't get network list. ListNetworks exited with", err)
 		return
@@ -1051,7 +1050,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	for _, network := range netList {
 		for _, pluggedContainer := range network.Containers {
 			if id == pluggedContainer.Name {
-				err = e.client.NetworkDisconnect(ctx, network.ID, id, true)
+				err = e.dockerConn.NetworkDisconnect(ctx, network.ID, id, true)
 				if err != nil {
 					e.BuildLogger.Warningln(
 						"Can't disconnect possibly zombie container",
@@ -1155,7 +1154,6 @@ func (e *executor) connectDocker(ctx context.Context, options common.ExecutorPre
 
 	e.dockerConn = dockerConnection
 	e.tunnelClient = dockerConnection.tunnelClient
-	e.client = dockerConnection.Client
 	e.info = info
 	e.serverAPIVersion = serverAPIVersion
 	e.waiter = wait.NewDockerKillWaiter(dockerConnection)
@@ -1410,7 +1408,7 @@ func (e *executor) setupDefaultExecutorOptions(os string) {
 					return nil, err
 				}
 
-				return permission.NewDockerLinuxSetter(e.client, e.Build.Log(), helperImage), nil
+				return permission.NewDockerLinuxSetter(e.dockerConn, e.Build.Log(), helperImage), nil
 			}
 		}
 	}
@@ -1490,10 +1488,8 @@ func (e *executor) Cleanup() {
 		}).Errorln("Failed to remove network for build")
 	}
 
-	if e.client != nil {
-		if err := e.client.Close(); err != nil {
-			e.BuildLogger.WithFields(logrus.Fields{"error": err}).Debugln("Failed to close the client")
-		}
+	if err := e.dockerConn.Close(); err != nil {
+		e.BuildLogger.WithFields(logrus.Fields{"error": err}).Debugln("Failed to close the client")
 	}
 
 	if e.tunnelClient != nil {
@@ -1543,13 +1539,13 @@ func (e *executor) execScriptOnContainer(ctx context.Context, containerID string
 		}
 	}()
 
-	exec, err := e.client.ContainerExecCreate(ctx, containerID, execConfig)
+	exec, err := e.dockerConn.ContainerExecCreate(ctx, containerID, execConfig)
 	if err != nil {
 		action = "Failed to exec create to container:"
 		return err
 	}
 
-	resp, err := e.client.ContainerExecAttach(ctx, exec.ID, container.ExecStartOptions{})
+	resp, err := e.dockerConn.ContainerExecAttach(ctx, exec.ID, container.ExecStartOptions{})
 	if err != nil {
 		action = "Failed to exec attach to container:"
 		return err
@@ -1640,7 +1636,7 @@ func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([
 
 //nolint:gocognit
 func (e *executor) getContainerExposedPorts(container *types.Container) ([]int, error) {
-	inspect, err := e.client.ContainerInspect(e.Context, container.ID)
+	inspect, err := e.dockerConn.ContainerInspect(e.Context, container.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -1689,7 +1685,7 @@ func (e *executor) readContainerLogs(containerID string) string {
 		Timestamps: true,
 	}
 
-	hijacked, err := e.client.ContainerLogs(e.Context, containerID, options)
+	hijacked, err := e.dockerConn.ContainerLogs(e.Context, containerID, options)
 	if err != nil {
 		return strings.TrimSpace(err.Error())
 	}

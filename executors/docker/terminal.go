@@ -17,8 +17,7 @@ import (
 // buildContainerTerminalTimeout is the error used when the build container is
 // not running yet an we have a terminal request waiting for the container to
 // start and a certain amount of time is exceeded.
-type buildContainerTerminalTimeout struct {
-}
+type buildContainerTerminalTimeout struct{}
 
 func (buildContainerTerminalTimeout) Error() string {
 	return "timeout for waiting for build container"
@@ -33,7 +32,7 @@ func (s *commandExecutor) watchForRunningBuildContainer(deadline time.Time) (str
 		}
 
 		containerID := buildContainer.ID
-		container, err := s.client.ContainerInspect(s.Context, containerID)
+		container, err := s.dockerConn.ContainerInspect(s.Context, containerID)
 		if err != nil {
 			return "", err
 		}
@@ -71,7 +70,7 @@ func (s *commandExecutor) Connect() (terminalsession.Conn, error) {
 		ctx:         ctx,
 		cancelFn:    cancelFn,
 		executor:    s,
-		client:      s.client,
+		client:      s.dockerConn,
 		containerID: containerID,
 		shell:       s.BuildShell.DockerCommand,
 	}, nil

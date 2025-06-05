@@ -213,7 +213,7 @@ func TestIsInAllowedPrivilegedImages(t *testing.T) {
 }
 
 func executorWithMockClient(c *docker.MockClient) *executor {
-	e := &executor{client: c}
+	e := &executor{dockerConn: &dockerConnection{Client: c}}
 	e.Context = context.Background()
 	e.Build = new(common.Build)
 	return e
@@ -411,7 +411,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) *executor {
 			DefaultCacheDir:  volumesTestsDefaultCacheDir,
 		},
 	}
-	e.client = clientMock
+	e.dockerConn = &dockerConnection{Client: clientMock}
 	e.info = system.Info{
 		OSType: helperimage.OSTypeLinux,
 	}
@@ -818,7 +818,7 @@ func createExecutorForTestDockerConfiguration(
 	c.MockClient = docker.NewMockClient(t)
 
 	e := new(executor)
-	e.client = c
+	e.dockerConn = &dockerConnection{Client: c}
 	e.info = system.Info{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
@@ -1886,7 +1886,7 @@ func getExecutorForNetworksTests(t *testing.T, test networksTestCase) *executor 
 				DefaultCacheDir:  volumesTestsDefaultCacheDir,
 			},
 		},
-		client: clientMock,
+		dockerConn: &dockerConnection{Client: clientMock},
 		info: system.Info{
 			OSType: helperimage.OSTypeLinux,
 		},
@@ -2229,7 +2229,7 @@ func TestLocalHelperImage(t *testing.T) {
 						},
 					},
 				},
-				client:          c,
+				dockerConn:      &dockerConnection{Client: c},
 				helperImageInfo: info,
 			}
 

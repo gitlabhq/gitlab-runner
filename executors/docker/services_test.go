@@ -47,7 +47,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	networkID := "network-id"
 
 	e := &executor{
-		client: c,
+		dockerConn: &dockerConnection{Client: c},
 		info: system.Info{
 			OSType:       helperimage.OSTypeLinux,
 			Architecture: "amd64",
@@ -812,7 +812,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 
 			executor := &executor{
 				networkMode: container.NetworkMode(test.networkMode),
-				client:      client,
+				dockerConn:  &dockerConnection{Client: client},
 			}
 
 			service := &types.Container{
@@ -859,7 +859,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			c := docker.NewMockClient(t)
 			e := &executor{}
-			e.client = c
+			e.dockerConn = &dockerConnection{Client: c}
 
 			buf, err := trace.New()
 			require.NoError(t, err)
@@ -930,7 +930,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 	c := docker.NewMockClient(t)
 
 	e := &executor{services: containers}
-	e.client = c
+	e.dockerConn = &dockerConnection{Client: c}
 	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry), buildlogger.Options{})
 	e.Build = &common.Build{}
 

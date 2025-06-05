@@ -12,7 +12,7 @@ var createPullManager = func(e *executor) (pull.Manager, error) {
 		Credentials:  e.Build.Credentials,
 	}
 
-	pullManager := pull.NewManager(e.Context, &e.BuildLogger, config, e.client, func() {
+	pullManager := pull.NewManager(e.Context, &e.BuildLogger, config, e.dockerConn, func() {
 		e.SetCurrentStage(ExecutorStagePullingImage)
 	})
 
