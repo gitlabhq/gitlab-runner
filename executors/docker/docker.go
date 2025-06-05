@@ -112,6 +112,61 @@ type executor struct {
 	tunnelClient executors.Client
 }
 
+type dockerTunnel struct {
+	client executors.Client
+	opts   []client.Opt
+	creds  docker.Credentials
+}
+
+// newDockerTunnel returns a new dockerTunnel instance. IF the specified common.ExecutorData is of type executors.Environment,
+// this indicates we will be connecting to a remote docker daemon instance and should tunnel docker commands though a
+// executors.Client instance. In this case, the returned dockerTunnel will include a valid and initialized executors.Client
+// instance, with corresponding []client.Opt and docker.Credentials to initialize a docker.Client.
+//
+// Otherwise the returned dockerTunnel will have a nil executor.Client and []client.Opt, and a default docker.Credentials.
+func newDockerTunnel(
+	ctx context.Context,
+	options common.ExecutorPrepareOptions,
+	build *common.Build,
+	creds docker.Credentials,
+	env common.ExecutorData,
+	logger buildlogger.Logger,
+) (*dockerTunnel, error) {
+	if environment, ok := env.(executors.Environment); ok {
+		tc, err := environment.Prepare(ctx, logger, options)
+		if err != nil {
+			return nil, fmt.Errorf("preparing environment: %w", err)
+		}
+
+		// We tunnel the docker connection for remote environments.
+		//
+		// To do this, we create a new dial context for Docker's client, whilst
+		// also overridding the daemon hostname it would typically use (if it were to use
+		// its own dialer).
+		scheme, dialer, err := environmentDialContext(ctx, tc, creds.Host, build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio))
+		if err != nil {
+			return nil, fmt.Errorf("creating env dialer: %w", err)
+		}
+
+		// If the scheme (docker uses it to define the protocol used) is "npipe" or "unix", we
+		// need to use a "fake" host, otherwise when dialing from Linux to Windows or vice-versa
+		// docker will complain because it doesn't think Linux can support "npipe" and doesn't
+		// think Windows can support "unix".
+		switch scheme {
+		case "unix", "npipe", "dial-stdio":
+			creds.Host = internalFakeTunnelHostname
+		}
+
+		return &dockerTunnel{
+			client: tc,
+			opts:   []client.Opt{client.WithDialContext(dialer)},
+			creds:  creds,
+		}, nil
+	}
+
+	return &dockerTunnel{client: nil, opts: nil, creds: creds}, nil
+}
+
 var version1_44 = version.Must(version.NewVersion("1.44"))
 
 func (e *executor) getServiceVariables(serviceDefinition common.Image) []string {
