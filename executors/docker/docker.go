@@ -111,6 +111,7 @@ type executor struct {
 	projectUniqRandomizedName string
 
 	tunnelClient executors.Client
+	dockerConn   *dockerConnection
 }
 
 type dockerTunnel struct {
@@ -1115,86 +1116,51 @@ func (e *executor) overwriteEntrypoint(image *common.Image) []string {
 	return nil
 }
 
-//nolint:nestif
 func (e *executor) connectDocker(ctx context.Context, options common.ExecutorPrepareOptions) error {
-	var opts []client.Opt
+	_ = e.dockerConn.Close()
 
-	creds := e.Config.Docker.Credentials
-
-	environment, ok := e.Build.ExecutorData.(executors.Environment)
-	if ok {
-		c, err := environment.Prepare(ctx, e.BuildLogger, options)
-		if err != nil {
-			return fmt.Errorf("preparing environment: %w", err)
-		}
-
-		if e.tunnelClient != nil {
-			e.tunnelClient.Close()
-		}
-		e.tunnelClient = c
-
-		// We tunnel the docker connection for remote environments.
-		//
-		// To do this, we create a new dial context for Docker's client, whilst
-		// also overridding the daemon hostname it would typically use (if it were to use
-		// its own dialer).
-		host := creds.Host
-		scheme, dialer, err := environmentDialContext(ctx, c, host, e.Build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio))
-		if err != nil {
-			return fmt.Errorf("creating env dialer: %w", err)
-		}
-
-		// If the scheme (docker uses it to define the protocol used) is "npipe" or "unix", we
-		// need to use a "fake" host, otherwise when dialing from Linux to Windows or vice-versa
-		// docker will complain because it doesn't think Linux can support "npipe" and doesn't
-		// think Windows can support "unix".
-		switch scheme {
-		case "unix", "npipe", "dial-stdio":
-			creds.Host = internalFakeTunnelHostname
-		}
-
-		opts = append(opts, client.WithDialContext(dialer))
-	}
-
-	dockerClient, err := docker.New(creds, opts...)
+	dockerConnection, err := createDockerConnection(ctx, options, e)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating docker connection: %w", err)
 	}
-	e.client = dockerClient
 
-	e.info, err = e.client.Info(ctx)
+	info, err := dockerConnection.Info(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting docker info: %w", err)
 	}
 
-	serverVersion, err := e.client.ServerVersion(ctx)
+	serverVersion, err := dockerConnection.ServerVersion(ctx)
 	if err != nil {
 		return fmt.Errorf("getting server version info: %w", err)
 	}
 
-	e.serverAPIVersion, err = version.NewVersion(serverVersion.APIVersion)
+	serverAPIVersion, err := version.NewVersion(serverVersion.APIVersion)
 	if err != nil {
 		return fmt.Errorf("parsing server API version %q: %w", serverVersion.APIVersion, err)
 	}
 
-	e.BuildLogger.Debugln(fmt.Sprintf(
-		"Connected to docker daemon (client version: %s, server version: %s, api version: %s, kernel: %s, os: %s/%s)",
-		e.client.ClientVersion(),
-		e.info.ServerVersion,
-		serverVersion.APIVersion,
-		e.info.KernelVersion,
-		e.info.OSType,
-		e.info.Architecture,
-	))
-
-	err = validateOSType(e.info)
-	if err != nil {
+	if err := validateOSType(info); err != nil {
 		return err
 	}
 
-	e.waiter = wait.NewDockerKillWaiter(e.client)
+	e.BuildLogger.Debugln(fmt.Sprintf(
+		"Connected to docker daemon (client version: %s, server version: %s, api version: %s, kernel: %s, os: %s/%s)",
+		dockerConnection.ClientVersion(),
+		info.ServerVersion,
+		serverVersion.APIVersion,
+		info.KernelVersion,
+		info.OSType,
+		info.Architecture,
+	))
 
-	return err
+	e.dockerConn = dockerConnection
+	e.tunnelClient = dockerConnection.tunnelClient
+	e.client = dockerConnection.Client
+	e.info = info
+	e.serverAPIVersion = serverAPIVersion
+	e.waiter = wait.NewDockerKillWaiter(dockerConnection)
+
+	return nil
 }
 
 type contextDialerFunc = func(ctx context.Context, network, addr string) (net.Conn, error)
