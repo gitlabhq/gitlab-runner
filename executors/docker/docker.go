@@ -1015,7 +1015,7 @@ func (e *executor) connectDocker(ctx context.Context, options common.ExecutorPre
 		// also overridding the daemon hostname it would typically use (if it were to use
 		// its own dialer).
 		host := creds.Host
-		scheme, dialer, err := e.environmentDialContext(ctx, c, host)
+		scheme, dialer, err := environmentDialContext(ctx, c, host, e.Build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio))
 		if err != nil {
 			return fmt.Errorf("creating env dialer: %w", err)
 		}
@@ -1075,10 +1075,11 @@ func (e *executor) connectDocker(ctx context.Context, options common.ExecutorPre
 
 type contextDialerFunc = func(ctx context.Context, network, addr string) (net.Conn, error)
 
-func (e *executor) environmentDialContext(
+func environmentDialContext(
 	ctx context.Context,
 	executorClient executors.Client,
 	host string,
+	useDockerAutoscalerDialStdio bool,
 ) (string, contextDialerFunc, error) {
 	systemHost := host == ""
 	if host == "" {
@@ -1093,7 +1094,7 @@ func (e *executor) environmentDialContext(
 		return "", nil, fmt.Errorf("parsing docker host: %w", err)
 	}
 
-	if !e.Build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio) {
+	if !useDockerAutoscalerDialStdio {
 		return u.Scheme, func(ctx context.Context, network, addr string) (net.Conn, error) {
 			conn, err := executorClient.Dial(u.Scheme, u.Host)
 			if err != nil {
