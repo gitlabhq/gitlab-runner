@@ -122,15 +122,15 @@ INFO[0000] [session_server].listen_address not defined, session endpoints disabl
 #### `json`
 
 ```shell
-{"arch":"amd64","level":"info","msg":"Runtime platform","os":"darwin","pid":38229,"revision":"HEAD","time":"2020-06-05T15:57:35+02:00","version":"development version"}
-{"builds":0,"level":"info","msg":"Starting multi-runner from /etc/gitlab-runner/config.toml...","time":"2020-06-05T15:57:35+02:00"}
-{"level":"warning","msg":"Running in user-mode.","time":"2020-06-05T15:57:35+02:00"}
-{"level":"warning","msg":"Use sudo for system-mode:","time":"2020-06-05T15:57:35+02:00"}
-{"level":"warning","msg":"$ sudo gitlab-runner...","time":"2020-06-05T15:57:35+02:00"}
-{"level":"info","msg":"","time":"2020-06-05T15:57:35+02:00"}
-{"builds":0,"level":"info","msg":"Configuration loaded","time":"2020-06-05T15:57:35+02:00"}
-{"builds":0,"level":"info","msg":"listen_address not defined, metrics \u0026 debug endpoints disabled","time":"2020-06-05T15:57:35+02:00"}
-{"builds":0,"level":"info","msg":"[session_server].listen_address not defined, session endpoints disabled","time":"2020-06-05T15:57:35+02:00"}
+{"arch":"amd64","level":"info","msg":"Runtime platform","os":"darwin","pid":38229,"revision":"HEAD","time":"2025-06-05T15:57:35+02:00","version":"development version"}
+{"builds":0,"level":"info","msg":"Starting multi-runner from /etc/gitlab-runner/config.toml...","time":"2025-06-05T15:57:35+02:00"}
+{"level":"warning","msg":"Running in user-mode.","time":"2025-06-05T15:57:35+02:00"}
+{"level":"warning","msg":"Use sudo for system-mode:","time":"2025-06-05T15:57:35+02:00"}
+{"level":"warning","msg":"$ sudo gitlab-runner...","time":"2025-06-05T15:57:35+02:00"}
+{"level":"info","msg":"","time":"2025-06-05T15:57:35+02:00"}
+{"builds":0,"level":"info","msg":"Configuration loaded","time":"2025-06-05T15:57:35+02:00"}
+{"builds":0,"level":"info","msg":"listen_address not defined, metrics \u0026 debug endpoints disabled","time":"2025-06-05T15:57:35+02:00"}
+{"builds":0,"level":"info","msg":"[session_server].listen_address not defined, session endpoints disabled","time":"2025-06-05T15:57:35+02:00"}
 ```
 
 ### How `check_interval` works

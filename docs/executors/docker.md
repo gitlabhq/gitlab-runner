@@ -884,9 +884,9 @@ Prerequisites:
 
    ```toml
    [[runners]]
-     name = "podman-test-runner-2022-06-07"
+     name = "podman-test-runner-2025-06-07"
      url = "https://gitlab.com"
-     token = "x-XxXXXXX-xxXxXxxxxx"
+     token = "TOKEN"
      executor = "docker"
      [runners.docker]
        host = "unix:///run/user/1012/podman/podman.sock"
