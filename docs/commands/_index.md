@@ -449,10 +449,11 @@ service. Use them to install, uninstall, start, and stop the runner service.
 
 All service related commands accept these arguments:
 
-| Parameter   | Default                                           | Description |
-|-------------|---------------------------------------------------|-------------|
-| `--service` | `gitlab-runner`                                   | Specify custom service name |
-| `--config`  | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
+| Parameter        | Default                                           | Description |
+|------------------|---------------------------------------------------|-------------|
+| `--service`      | `gitlab-runner`                                   | Specify custom service name |
+| `--config`       | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
+| `--user-service` | See [user service](#user-service)                 | Configure GitLab Runner to run as a user service (systemd) |
 
 ### `gitlab-runner install`
 
@@ -496,6 +497,12 @@ This command prints the status of the GitLab Runner service. The exit code is ze
 
 By specifying the `--service` flag, it is possible to have multiple GitLab
 Runner services installed, with multiple separate configurations.
+
+### User service
+
+You can use some init systems (like `systemd`) to manage services as [user services](https://wiki.archlinux.org/title/Systemd/User).
+If your init system provides this feature and you want to manage the `gitlab-runner` service as
+a user service, specify the `--user-service` flag when you run service-related commands.
 
 ## Run-related commands
 
