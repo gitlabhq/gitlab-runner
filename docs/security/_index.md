@@ -25,7 +25,7 @@ This risk is even more acute if your self-managed runners are non-ephemeral and 
 
 - A job from a repository embedded with malicious code can compromise the security of other repositories serviced by the non-ephemeral runner.
 - Depending on the executor, a job can install malicious code on the virtual machine where the runner is hosted.
-- Secret variables exposed to jobs running in a compromised environment can be stolen, including but not limited to the CI_JOB_TOKEN.
+- Secret variables exposed to jobs running in a compromised environment can be stolen, including but not limited to the `CI_JOB_TOKEN`.
 - Users with the Developer role have access to submodules associated with the project, even if they don't have access to
   the upstream projects of the submodule.
 
@@ -101,20 +101,6 @@ used by trusted builds and users.
 
 Read the [pull policies documentation](../executors/docker.md#configure-how-runners-pull-images)
 for more information.
-
-## Systems with Docker installed
-
-{{< alert type="note" >}}
-
-This applies to installations below 0.5.0 or ones that were upgraded to the
-newer version.
-
-{{< /alert >}}
-
-When installing the GitLab Runner package on Linux systems with Docker installed,
-`gitlab-runner` creates a user that has permission to access the `Docker`
-daemon. This makes the jobs that run with the `shell` executor able to access `docker`
-with full permissions and potentially allows root access to the server.
 
 ### Usage of SSH executor
 
