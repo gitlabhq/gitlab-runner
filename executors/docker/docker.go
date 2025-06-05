@@ -167,6 +167,44 @@ func newDockerTunnel(
 	return &dockerTunnel{client: nil, opts: nil, creds: creds}, nil
 }
 
+type dockerConnection struct {
+	docker.Client
+	tunnelClient executors.Client
+	cancel       func()
+}
+
+func (dc *dockerConnection) Close() error {
+	if dc == nil {
+		return nil
+	}
+	var err error
+	if dc.Client != nil {
+		err = dc.Client.Close()
+		dc.Client = nil
+	}
+	if dc.tunnelClient != nil {
+		err = errors.Join(err, dc.tunnelClient.Close())
+		dc.tunnelClient = nil
+	}
+	if dc.cancel != nil {
+		dc.cancel()
+		dc.cancel = nil
+	}
+	return err
+}
+
+// newDockerConnection returns a new dockerConnection instance using the executor.Client instance and connection info
+// embedded in the dockerTunnel instance returned by the factory function. If we're connecting to the local docker
+// daemon, the executor.Client instance will be nil (and that's OK).
+func newDockerConnection(dockerTunnel *dockerTunnel, cancel func()) (*dockerConnection, error) {
+	dockerClient, err := docker.New(dockerTunnel.creds, dockerTunnel.opts...)
+	if err != nil {
+		return nil, fmt.Errorf("creating docker client: %w", err)
+	}
+
+	return &dockerConnection{Client: dockerClient, tunnelClient: dockerTunnel.client, cancel: cancel}, nil
+}
+
 var version1_44 = version.Must(version.NewVersion("1.44"))
 
 func (e *executor) getServiceVariables(serviceDefinition common.Image) []string {
