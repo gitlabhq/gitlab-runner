@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/docker/cli/opts"
@@ -203,6 +204,36 @@ func newDockerConnection(dockerTunnel *dockerTunnel, cancel func()) (*dockerConn
 	}
 
 	return &dockerConnection{Client: dockerClient, tunnelClient: dockerTunnel.client, cancel: cancel}, nil
+}
+
+// createDockerConnection creates a connection to a potentially remote docker daemon. The connection is encapsulated in
+// a dockerConnection object which includes a docker.Client instance and, if connecting to a remote docker daemon, an
+// executors.Client instance.
+//
+// Note that in the case of a remote docker daemon, we want to maintain a long-lived connection for the duration of the
+// job (including during the Cleanup stage). To achieve this, we don't want the context to be cancelled when the job is
+// cancelled or times out, so we create a new context here with a timeout of job-timeout + dockerCleanupTimeout. This
+// fixes https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38725.
+func createDockerConnection(ctx context.Context, opts common.ExecutorPrepareOptions, e *executor) (*dockerConnection, error) {
+	deadline, hasDeadline := ctx.Deadline()
+	if !hasDeadline {
+		deadline = time.Now().Add(e.Build.GetBuildTimeout())
+	}
+	ctx, cancel := context.WithDeadline(context.Background(), deadline.Add(dockerCleanupTimeout))
+
+	dockerTunnel, err := newDockerTunnel(
+		ctx,
+		opts,
+		e.Build,
+		e.Config.Docker.Credentials,
+		e.Build.ExecutorData,
+		e.BuildLogger)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("creating docker tunnel: %w", err)
+	}
+
+	return newDockerConnection(dockerTunnel, cancel)
 }
 
 var version1_44 = version.Must(version.NewVersion("1.44"))
