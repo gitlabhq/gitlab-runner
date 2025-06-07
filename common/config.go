@@ -387,6 +387,14 @@ type AutoscalerPolicyConfig struct {
 	IdleTime         time.Duration `toml:"idle_time,omitempty" json:",omitempty" jsonschema:"minimum=1000000000"`
 	ScaleFactor      float64       `toml:"scale_factor,omitempty"`
 	ScaleFactorLimit int           `toml:"scale_factor_limit,omitempty"`
+	PreemptiveMode   *bool         `toml:"preemptive_mode,omitempty"`
+}
+
+func (policy *AutoscalerPolicyConfig) PreemptiveModeEnabled() bool {
+	if policy.PreemptiveMode == nil {
+		return policy.IdleCount > 0
+	}
+	return *policy.PreemptiveMode
 }
 
 type DockerMachine struct {

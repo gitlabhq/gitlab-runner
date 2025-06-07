@@ -1682,6 +1682,50 @@ func TestStringOrArray_UnmarshalTOML(t *testing.T) {
 	}
 }
 
+func TestAutoscalerPolicyConfig_PreemptiveModeEnabled(t *testing.T) {
+	tests := map[string]struct {
+		internalValue *bool
+		idleCount     int
+		expectedValue bool
+	}{
+		"should return enabled when flag is true": {
+			internalValue: ptr(true),
+			expectedValue: true,
+		},
+		"should return turned off when flag is false": {
+			internalValue: ptr(false),
+			expectedValue: false,
+		},
+		"should return turned off when flag is false and idle count is greater than zero": {
+			idleCount:     10,
+			internalValue: ptr(false),
+			expectedValue: false,
+		},
+		"should return turned off when value is not set and the idle count is zero": {
+			idleCount:     0,
+			internalValue: nil,
+			expectedValue: false,
+		},
+		"should return enabled when value is not set and the idle count is greater than zero": {
+			idleCount:     10,
+			internalValue: nil,
+			expectedValue: true,
+		},
+	}
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			config := AutoscalerPolicyConfig{
+				PreemptiveMode: tt.internalValue,
+				IdleCount:      tt.idleCount,
+			}
+
+			result := config.PreemptiveModeEnabled()
+
+			assert.Equal(t, tt.expectedValue, result)
+		})
+	}
+}
+
 func TestRunnerSettings_IsFeatureFlagOn(t *testing.T) {
 	tests := map[string]struct {
 		featureFlags  map[string]bool
