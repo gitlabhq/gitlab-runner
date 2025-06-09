@@ -128,6 +128,7 @@ clone test repo:
   extends:
     - .rules:merge_request_pipelines:no_docs
     - .no_cache_and_dependencies
+    - .kubernetes runner
   stage: build
   image: alpine:latest
   needs: []
@@ -148,6 +149,7 @@ rpm verify fips:
   stage: build
   extends:
     - .rules:merge_request_pipelines:no_docs:no-community-mr
+    - .kubernetes runner
   image: "registry.gitlab.com/gitlab-org/cloud-native/container-dependencies-finder/cdf:main"
   needs:
     - "runner images"

@@ -1,6 +1,7 @@
 .packages:
   extends:
     - .rules:merge_request_pipelines:no_docs:no-community-mr
+    - .kubernetes runner
   stage: package
   environment:
     name: package/$PKGS/$CI_COMMIT_REF_NAME

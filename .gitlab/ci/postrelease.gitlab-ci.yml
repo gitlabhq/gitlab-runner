@@ -59,6 +59,7 @@ package test variables:
   extends:
     - .trigger-downstream-pipeline-ref
     - .rules:release:bleeding-edge
+    - .kubernetes runner
   needs:
     - "bleeding edge packagecloud"
   image: alpine:latest
@@ -88,6 +89,7 @@ static QA:
   extends:
     - .rules:merge_request_pipelines:no_docs
     - .no_cache
+    - .kubernetes runner
   stage: postrelease
   image: alpine:3.14.2
   needs:
@@ -135,6 +137,7 @@ stable gitlab release:
   stage: postrelease
   extends:
     - .rules:release:stable-or-rc
+    - .kubernetes runner
   dependencies: []
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   variables:

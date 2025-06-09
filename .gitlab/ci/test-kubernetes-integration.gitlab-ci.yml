@@ -2,7 +2,7 @@
   extends:
     - .rules:merge_request_pipelines:no_docs:no-community-mr
   tags:
-    - kubernetes_integration
+    - $KUBERNETES_RUNNER_INTEGRATION_TAG
   stage: test kubernetes integration
   needs:
     - "provision integration kubernetes"
@@ -24,6 +24,7 @@
       - junit_report.xml
     reports:
       junit: junit_report.xml
+
 provision integration kubernetes:
   extends:
     - .integration kubernetes
