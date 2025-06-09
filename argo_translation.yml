@@ -10,3 +10,4 @@ components:
         target: "docs-locale/{{language}}/"
     ignored_paths:
       - "docs/.*/**"
+      - 'docs/development/**'
