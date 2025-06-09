@@ -1,0 +1,19 @@
+.kubernetes runner:
+  interruptible: true
+  timeout: 30m
+  tags:
+    - $KUBERNETES_RUNNER_TAG
+
+.unit tests kubernetes limits:
+  variables:
+    # The default limits are defined in https://gitlab.com/gitlab-org/ci-cd/runner-tools/runner-kubernetes-infra
+    # The helper container CPU request is 1, with the build container 3 CPU requests
+    # the scheduler should allocate 4 CPUs for this pod
+    KUBERNETES_CPU_REQUEST: "3"
+    KUBERNETES_MEMORY_REQUEST: "6Gi"
+    KUBERNETES_MEMORY_LIMIT: "6Gi"
+
+.check generated files kubernetes limits:
+  variables:
+    KUBERNETES_MEMORY_REQUEST: "6Gi"
+    KUBERNETES_MEMORY_LIMIT: "6Gi"

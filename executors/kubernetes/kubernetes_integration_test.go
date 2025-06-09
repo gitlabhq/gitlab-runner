@@ -2679,7 +2679,7 @@ func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (co
 	nodeTolerations := map[string]string{}
 	if os.Getenv("GITLAB_CI") == "true" {
 		nodeSelector["runner.gitlab.com/workload-type"] = "job"
-		nodeTolerations["runner.gitlab.com/job"] = "NoExecute"
+		nodeTolerations["runner.gitlab.com/job="] = "NoExecute"
 	}
 
 	return &common.Build{

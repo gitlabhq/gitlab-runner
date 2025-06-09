@@ -1,17 +1,18 @@
 stages:
-- build
-- qa
-- test
-- test kubernetes integration
-- coverage
-- package
-- release
-- postrelease
-- deploy
-- rebase
-- docs
+  - build
+  - qa
+  - test
+  - test kubernetes integration
+  - coverage
+  - package
+  - release
+  - postrelease
+  - deploy
+  - rebase
+  - docs
 
 include:
+<<<<<<< HEAD
 - local: /.gitlab/ci/_project_canonical.gitlab-ci.yml
   rules:
     - if: $CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
@@ -42,3 +43,36 @@ include:
 - project: gitlab-com/gl-security/security-operations/infrastructure-security-public/oidc-modules
   ref: 3.3.0
   file: templates/gcp_auth.yaml
+=======
+  - local: /.gitlab/ci/_project_canonical.gitlab-ci.yml
+    rules:
+      - if: $CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+        when: always
+  - local: /.gitlab/ci/_project_fork.gitlab-ci.yml
+    rules:
+      - if: $CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+        when: never
+      - if: $CI_PROJECT_PATH
+  - local: /.gitlab/ci/_common.gitlab-ci.yml
+  - local: /.gitlab/ci/_rules.gitlab-ci.yml
+  - local: /.gitlab/ci/_kubernetes.gitlab-ci.yml
+  - local: /.gitlab/ci/build.gitlab-ci.yml
+  - local: /.gitlab/ci/qa.gitlab-ci.yml
+  - local: /.gitlab/ci/test.gitlab-ci.yml
+  - local: /.gitlab/ci/test-kubernetes-integration.gitlab-ci.yml
+  - local: /.gitlab/ci/coverage.gitlab-ci.yml
+  - local: /.gitlab/ci/package.gitlab-ci.yml
+  - local: /.gitlab/ci/release.gitlab-ci.yml
+  - local: /.gitlab/ci/postrelease.gitlab-ci.yml
+  - local: /.gitlab/ci/deploy.gitlab-ci.yml
+  - local: /.gitlab/ci/docs.gitlab-ci.yml
+  - local: /.gitlab/ci/rebase.gitlab-ci.yml
+  - component: ${CI_SERVER_FQDN}/gitlab-org/components/danger-review/danger-review@2.0.0
+    inputs:
+      job_stage: qa
+    rules:
+      - if: '$CI_SERVER_HOST == "gitlab.com" && ($CI_MERGE_REQUEST_SOURCE_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH == "gitlab-org/security/gitlab-runner" || $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH == "gitlab-community/gitlab-org/gitlab-runner")'
+  - project: gitlab-com/gl-security/security-operations/infrastructure-security-public/oidc-modules
+    ref: 3.3.0
+    file: templates/gcp_auth.yaml
+>>>>>>> 00b525daf (Migrate more jobs to Kubernetes)

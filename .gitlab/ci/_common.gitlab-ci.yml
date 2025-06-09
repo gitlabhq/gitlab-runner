@@ -28,7 +28,15 @@ variables:
   PACKAGES_ITERATION: "1"
   ZSTD_VERSION: "1.5.7.20250308"
   ZSTD_CHECKSUM: "a96dc5417943c03fa231bf2d6a586b7ae7254fa52fdc15d302f296b5ff88e1ff0f07120a720149eb82ea0f0c65444393ebf05d2ee1bd1db341b803ff65a2e675"
+  # This is the runner tag that will be used for Kubernetes jobs. The "kubernetes_runner" tags picks uses the general runner kubernetes
+  # runner. There are two deployments for the kubernetes runners - blue and green. Use either "kubernetes_runner_blue" or
+  # "kubernetes_runner_green" if a specific one is desired. Usually one of the two colors will be paused in the CI/CD UI
+  # and the general "kubernetes_runner" tag will pickup whichever isn't.
+  # To not run tests inside kubernetes change the tag with gitlab-org.
   KUBERNETES_RUNNER_TAG: kubernetes_runner
+  # The integration tag cannot be changed as easily as it uses the cluster to run the integration tests as pods.
+  # If required the jobs can be skipped
+  KUBERNETES_RUNNER_INTEGRATION_TAG: kubernetes_integration
 
 workflow:
   rules: !reference [".rules:kubernetes:tag:if-not-canonical", rules]

@@ -15,22 +15,6 @@ gemnasium-dependency_scanning:
 gitlab-advanced-sast:
   rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
 
-.kubernetes runner:
-  interruptible: true
-  timeout: 30m
-  tags:
-    - $KUBERNETES_RUNNER_TAG
-
-.unit tests kubernetes limits:
-  variables:
-    # The default limits are defined in https://gitlab.com/gitlab-org/ci-cd/runner-tools/runner-kubernetes-infra
-    # The helper container CPU limit/request is 1, with the build container 3 CPU requests and 4 limit
-    # the scheduler should allocate 4 CPUs for this pod
-    KUBERNETES_CPU_REQUEST: "3"
-    KUBERNETES_CPU_LIMIT: "4"
-    KUBERNETES_MEMORY_REQUEST: "4Gi"
-    KUBERNETES_MEMORY_LIMIT: "4Gi"
-
 .linux test:
   extends:
     - .rules:merge_request_pipelines:no_docs
@@ -115,6 +99,7 @@ fuzz variable mask:
     - .fuzz_base
     - .no_dependencies
     - .rules:merge_request_pipelines:no_docs
+    - .kubernetes runner
   image: golang:$GO_VERSION
   stage: test
   variables:
