@@ -55,7 +55,7 @@ unit test:
   script:
     - make splitic
     - >
-      splitic test -race \
+      .tmp/bin/splitic test -race \
         -junit-report .splitic/junit_report.xml \
         -cover-report .splitic/cover_0.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
         -tags !integration -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env ./... \
@@ -84,7 +84,7 @@ integration test:
     - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest
     - make splitic
     - >
-      splitic test \
+      .tmp/bin/splitic test \
         -junit-report .splitic/junit_${CI_NODE_INDEX}.xml \
         -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
         -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
@@ -102,7 +102,7 @@ integration test with race:
   script:
     - make splitic
     - >
-      splitic test \
+      .tmp/bin/splitic test \
         -race \
         -junit-report .splitic/junit_${CI_NODE_INDEX}.xml \
         -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \

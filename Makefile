@@ -198,7 +198,7 @@ generated_files: $(GENERATED_FILES_TOOLS)
 	find . -type f -name '*.pb.go' -delete
 	go generate -v -x ./...
 	cd ./helpers/runner_wrapper/api && go generate -v -x ./...
-	mockery
+	$(localBin)/$(MOCKERY)
 
 check_generated_files: generated_files
 	# Checking the differences
@@ -360,17 +360,19 @@ check_modules:
 
 # development tools
 $(GOCOVER_COBERTURA):
-	go install github.com/boumenot/gocover-cobertura@v1.2.0
+	@GOBIN=$(localBin) go install github.com/boumenot/gocover-cobertura@v1.2.0
 
 $(SPLITIC):
-	go install gitlab.com/gitlab-org/ci-cd/runner-tools/splitic@latest
+	@GOBIN=$(localBin) go install gitlab.com/gitlab-org/ci-cd/runner-tools/splitic@latest
 
 $(MAGE): .tmp
 	cd .tmp && \
 	rm -rf mage && \
 	git clone https://github.com/magefile/mage && \
 	cd mage && \
-	go run bootstrap.go
+	GOPATH=$(local) go run bootstrap.go
+	# Remove the source code once binary built
+	rm -rf .tmp/mage .tmp/pkg
 
 ifneq ($(GOLANGLINT_VERSION),)
 $(GOLANGLINT): CHECKOUT_REF := -b "$(GOLANGLINT_VERSION)"
@@ -399,7 +401,7 @@ $(GOLANGLINT_GOARGS):
 
 .PHONY: $(MOCKERY)
 $(MOCKERY):
-	go install github.com/vektra/mockery/v2@v$(MOCKERY_VERSION)
+	GOBIN=$(localBin) go install github.com/vektra/mockery/v2@v$(MOCKERY_VERSION)
 
 $(PROTOC): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')
 $(PROTOC): ARCH_SUFFIX = $(if $(findstring osx,$(OS_TYPE)),universal_binary,x86_64)
@@ -419,11 +421,11 @@ $(PROTOC):
 
 .PHONY: $(PROTOC_GEN_GO)
 $(PROTOC_GEN_GO):
-	@go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
+	@GOBIN=$(localBin) go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
 
 .PHONY: $(PROTOC_GEN_GO_GRPC)
 $(PROTOC_GEN_GO_GRPC):
-	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GEN_GO_GRPC_VERSION)
+	@GOBIN=$(localBin) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GEN_GO_GRPC_VERSION)
 
 
 $(RELEASE_INDEX_GENERATOR): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
