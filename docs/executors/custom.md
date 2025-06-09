@@ -38,6 +38,7 @@ configuration keys:
   executor = "custom"
   builds_dir = "/builds"
   cache_dir = "/cache"
+  shell = "bash"
   [runners.custom]
     config_exec = "/path/to/config.sh"
     config_args = [ "SomeArg" ]
@@ -160,7 +161,8 @@ cat << EOS
   },
   "job_env" : {
     "CUSTOM_ENVIRONMENT": "example"
-  }
+  },
+  "shell": "bash"
 }
 EOS
 ```
@@ -178,6 +180,7 @@ times.
 | `driver.name`          | string  | ✗        | ✓              | The user-defined name for the driver. Printed with the `Using custom executor...` line. If undefined, no information about driver is printed. |
 | `driver.version`       | string  | ✗        | ✓              | The user-defined version for the drive. Printed with the `Using custom executor...` line. If undefined, only the name information is printed. |
 | `job_env`              | object  | ✗        | ✓              | Name-value pairs that are available through environment variables to all subsequent stages of the job execution. They are available for the driver, not the job. For details, see [`job_env` usage](#job_env-usage). |
+| `shell`                | string  | ✗        | ✓              | The shell used to execute job scripts. |
 
 The `STDERR` of the executable prints to the job log.
 
