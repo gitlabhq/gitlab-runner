@@ -64,10 +64,10 @@ code_quality:
     GOLANGLINT_VERSION: "" # Don't add version suffix to Makefile's GOLANGLINT (use plain golangci-lint from image)
   before_script:
     - !reference [.go-cache, before_script]
-    # Ensure the goargs linter plugin is available at .tmp/goargs.so to suit .golangci.yml
-    - mkdir .tmp && ln -s /usr/lib/goargs.so .tmp/goargs.so
+    # Ensure the goargs linter plugin is available at .tmp/bin/goargs.so to suit .golangci.yml
+    - mkdir -p .tmp/bin && ln -s /usr/lib/goargs.so .tmp/bin/goargs.so
     # Copy the Docker image's golangci-lint to the location expected by `make lint` so that it is not built
-    - cp $(which golangci-lint) .tmp/golangci-lint
+    - cp $(which golangci-lint) .tmp/bin/golangci-lint
   script:
     # Write the code coverage report to gl-code-quality-report.json
     # and print linting issues to stdout in the format: path/to/file:line description

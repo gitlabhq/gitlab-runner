@@ -43,6 +43,7 @@ export CGO_ENABLED ?= 0
 local := $(PWD)/.tmp
 localBin := $(local)/bin
 
+export GOBIN=$(localBin)
 export PATH := $(localBin):$(PATH)
 
 # Development Tools
@@ -61,19 +62,19 @@ PROTOC_GEN_GO_GRPC := protoc-gen-go-grpc
 PROTOC_GEN_GO_GRPC_VERSION := v1.5.1
 
 SPLITIC = splitic
-MAGE = mage
+MAGE = $(localBin)/mage
 
 GOLANGLINT_VERSION ?= v1.62.0
-GOLANGLINT ?= .tmp/golangci-lint$(GOLANGLINT_VERSION)
-GOLANGLINT_GOARGS ?= .tmp/goargs.so
+GOLANGLINT ?= $(localBin)/golangci-lint$(GOLANGLINT_VERSION)
+GOLANGLINT_GOARGS ?= $(localBin)/goargs.so
 
 GENERATED_FILES_TOOLS = $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
 DEVELOPMENT_TOOLS = $(MOCKERY) $(MAGE)
 
 RELEASE_INDEX_GEN_VERSION ?= latest
-RELEASE_INDEX_GENERATOR ?= .tmp/release-index-gen-$(RELEASE_INDEX_GEN_VERSION)
+RELEASE_INDEX_GENERATOR ?= $(localBin)/release-index-gen-$(RELEASE_INDEX_GEN_VERSION)
 GITLAB_CHANGELOG_VERSION ?= latest
-GITLAB_CHANGELOG = .tmp/gitlab-changelog-$(GITLAB_CHANGELOG_VERSION)
+GITLAB_CHANGELOG = $(localBin)/gitlab-changelog-$(GITLAB_CHANGELOG_VERSION)
 
 .PHONY: all
 all: deps runner-and-helper-bin
@@ -93,6 +94,7 @@ help:
 	# make runner-and-helper-bin-host - build executable for your arch and OS, including docker dependencies
 	# make runner-and-helper-bin-linux - build executable for all supported architectures for linux OS, including docker dependencies
 	# make runner-and-helper-bin - build executable for all supported platforms, including docker dependencies
+	# make tools - install all dev tools and dependency binaries for local development
 	#
 	# Testing commands:
 	# make test - run project tests
@@ -360,11 +362,14 @@ check_modules:
 
 # development tools
 $(GOCOVER_COBERTURA):
-	@GOBIN=$(localBin) go install github.com/boumenot/gocover-cobertura@v1.2.0
+	@go install github.com/boumenot/gocover-cobertura@v1.2.0
 
 $(SPLITIC):
-	@GOBIN=$(localBin) go install gitlab.com/gitlab-org/ci-cd/runner-tools/splitic@latest
+	@go install gitlab.com/gitlab-org/ci-cd/runner-tools/splitic@latest
 
+.PHONY: mage
+mage: $(MAGE)
+	@:
 $(MAGE): .tmp
 	cd .tmp && \
 	rm -rf mage && \
@@ -385,7 +390,7 @@ $(GOLANGLINT):
 	cd $(TOOL_BUILD_DIR) && \
 	export COMMIT=$(shell git rev-parse --short HEAD) && \
 	export DATE=$(shell date -u '+%FT%TZ') && \
-	CGO_ENABLED=1 go build --trimpath -o $(BUILD_DIR)/$(GOLANGLINT) \
+	CGO_ENABLED=1 go build --trimpath -o $(GOLANGLINT) \
 		-ldflags "-s -w -X main.version=$(GOLANGLINT_VERSION) -X main.commit=$${COMMIT} -X main.date=$${DATE}" \
 		./cmd/golangci-lint/
 	$(GOLANGLINT) --version
@@ -396,12 +401,12 @@ $(GOLANGLINT_GOARGS):
 	rm -rf $(TOOL_BUILD_DIR)
 	git clone https://gitlab.com/gitlab-org/language-tools/go/linters/goargs.git --no-tags --depth 1 $(TOOL_BUILD_DIR)
 	cd $(TOOL_BUILD_DIR) && \
-	CGO_ENABLED=1 go build --trimpath --buildmode=plugin -o $(BUILD_DIR)/$(GOLANGLINT_GOARGS) plugin/analyzer.go
+	CGO_ENABLED=1 go build --trimpath --buildmode=plugin -o $(GOLANGLINT_GOARGS) plugin/analyzer.go
 	rm -rf $(TOOL_BUILD_DIR)
 
 .PHONY: $(MOCKERY)
 $(MOCKERY):
-	GOBIN=$(localBin) go install github.com/vektra/mockery/v2@v$(MOCKERY_VERSION)
+	@go install github.com/vektra/mockery/v2@v$(MOCKERY_VERSION)
 
 $(PROTOC): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')
 $(PROTOC): ARCH_SUFFIX = $(if $(findstring osx,$(OS_TYPE)),universal_binary,x86_64)
@@ -421,11 +426,11 @@ $(PROTOC):
 
 .PHONY: $(PROTOC_GEN_GO)
 $(PROTOC_GEN_GO):
-	@GOBIN=$(localBin) go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
 
 .PHONY: $(PROTOC_GEN_GO_GRPC)
 $(PROTOC_GEN_GO_GRPC):
-	@GOBIN=$(localBin) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GEN_GO_GRPC_VERSION)
+	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GEN_GO_GRPC_VERSION)
 
 
 $(RELEASE_INDEX_GENERATOR): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -464,3 +469,6 @@ print_image_tags:
 		echo "$(CI_COMMIT_REF_NAME)" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$$' \
 	) && tags="$$tags bleeding"; \
 	echo "$$tags"
+
+.PHONY: tools # Install dev tool and dependency binaries for local development.
+tools: $(GITLAB_CHANGELOG) $(GOCOVER_COBERTURA) $(GOLANGLINT) $(GOLANGLINT_GOARGS) $(MAGE) $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(RELEASE_INDEX_GENERATOR)
