@@ -17,7 +17,7 @@ func NewProcessLoggerAdapter(buildlogger buildlogger.Logger) *ProcessLoggerAdapt
 }
 
 func (l *ProcessLoggerAdapter) WithFields(fields logrus.Fields) process.Logger {
-	l.buildLogger = l.buildLogger.WithFields(fields)
+	l.buildLogger = *l.buildLogger.WithFields(fields)
 
 	return l
 }

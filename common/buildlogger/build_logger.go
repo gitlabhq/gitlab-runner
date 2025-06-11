@@ -115,8 +115,8 @@ func (l *Logger) wrap(w io.WriteCloser, streamID int, streamType StreamType) io.
 	return w
 }
 
-func (l *Logger) WithFields(fields logrus.Fields) Logger {
-	return Logger{
+func (l *Logger) WithFields(fields logrus.Fields) *Logger {
+	return &Logger{
 		Tee:               l.Tee.WithFields(fields),
 		base:              l.base,
 		mu:                l.mu,

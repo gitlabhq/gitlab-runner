@@ -213,7 +213,7 @@ func TestIsInAllowedPrivilegedImages(t *testing.T) {
 }
 
 func executorWithMockClient(c *docker.MockClient) *executor {
-	e := &executor{client: c}
+	e := &executor{dockerConn: &dockerConnection{Client: c}}
 	e.Context = context.Background()
 	e.Build = new(common.Build)
 	return e
@@ -353,6 +353,8 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) *executor {
 
 	clientMock := docker.NewMockClient(t)
 	clientMock.On("Close").Return(nil).Once()
+	dockerConn := &dockerConnection{Client: clientMock}
+	e.dockerConn = dockerConn
 
 	volumesManagerMock := volumes.NewMockManager(t)
 	if !errors.Is(test.expectedError, errVolumesManagerUndefined) {
@@ -360,6 +362,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) *executor {
 	}
 
 	oldCreateVolumesManager := createVolumesManager
+
 	t.Cleanup(func() {
 		e.Cleanup()
 
@@ -411,7 +414,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) *executor {
 			DefaultCacheDir:  volumesTestsDefaultCacheDir,
 		},
 	}
-	e.client = clientMock
+	e.dockerConn = &dockerConnection{Client: clientMock}
 	e.info = system.Info{
 		OSType: helperimage.OSTypeLinux,
 	}
@@ -818,7 +821,7 @@ func createExecutorForTestDockerConfiguration(
 	c.MockClient = docker.NewMockClient(t)
 
 	e := new(executor)
-	e.client = c
+	e.dockerConn = &dockerConnection{Client: c}
 	e.info = system.Info{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
@@ -1886,7 +1889,7 @@ func getExecutorForNetworksTests(t *testing.T, test networksTestCase) *executor 
 				DefaultCacheDir:  volumesTestsDefaultCacheDir,
 			},
 		},
-		client: clientMock,
+		dockerConn: &dockerConnection{Client: clientMock},
 		info: system.Info{
 			OSType: helperimage.OSTypeLinux,
 		},
@@ -1935,7 +1938,7 @@ func TestCheckOSType(t *testing.T) {
 				AbstractExecutor: executors.AbstractExecutor{},
 			}
 
-			err := e.validateOSType()
+			err := validateOSType(e.info)
 			if c.expectedErr == "" {
 				assert.NoError(t, err)
 				return
@@ -2229,7 +2232,7 @@ func TestLocalHelperImage(t *testing.T) {
 						},
 					},
 				},
-				client:          c,
+				dockerConn:      &dockerConnection{Client: c},
 				helperImageInfo: info,
 			}
 

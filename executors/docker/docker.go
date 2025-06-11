@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/docker/cli/opts"
@@ -81,7 +82,6 @@ var (
 
 type executor struct {
 	executors.AbstractExecutor
-	client                    docker.Client
 	volumeParser              parser.Parser
 	newVolumePermissionSetter func() (permission.Setter, error)
 	info                      system.Info
@@ -109,7 +109,130 @@ type executor struct {
 
 	projectUniqRandomizedName string
 
+	dockerConn *dockerConnection
+}
+
+type dockerTunnel struct {
+	client executors.Client
+	opts   []client.Opt
+	creds  docker.Credentials
+}
+
+// newDockerTunnel returns a new dockerTunnel instance. IF the specified common.ExecutorData is of type executors.Environment,
+// this indicates we will be connecting to a remote docker daemon instance and should tunnel docker commands though a
+// executors.Client instance. In this case, the returned dockerTunnel will include a valid and initialized executors.Client
+// instance, with corresponding []client.Opt and docker.Credentials to initialize a docker.Client.
+//
+// Otherwise the returned dockerTunnel will have a nil executor.Client and []client.Opt, and a default docker.Credentials.
+func newDockerTunnel(
+	ctx context.Context,
+	options common.ExecutorPrepareOptions,
+	build *common.Build,
+	creds docker.Credentials,
+	env common.ExecutorData,
+	logger buildlogger.Logger,
+) (*dockerTunnel, error) {
+	if environment, ok := env.(executors.Environment); ok {
+		tc, err := environment.Prepare(ctx, logger, options)
+		if err != nil {
+			return nil, fmt.Errorf("preparing environment: %w", err)
+		}
+
+		// We tunnel the docker connection for remote environments.
+		//
+		// To do this, we create a new dial context for Docker's client, whilst
+		// also overridding the daemon hostname it would typically use (if it were to use
+		// its own dialer).
+		scheme, dialer, err := environmentDialContext(ctx, tc, creds.Host, build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio))
+		if err != nil {
+			return nil, fmt.Errorf("creating env dialer: %w", err)
+		}
+
+		// If the scheme (docker uses it to define the protocol used) is "npipe" or "unix", we
+		// need to use a "fake" host, otherwise when dialing from Linux to Windows or vice-versa
+		// docker will complain because it doesn't think Linux can support "npipe" and doesn't
+		// think Windows can support "unix".
+		switch scheme {
+		case "unix", "npipe", "dial-stdio":
+			creds.Host = internalFakeTunnelHostname
+		}
+
+		return &dockerTunnel{
+			client: tc,
+			opts:   []client.Opt{client.WithDialContext(dialer)},
+			creds:  creds,
+		}, nil
+	}
+
+	return &dockerTunnel{client: nil, opts: nil, creds: creds}, nil
+}
+
+type dockerConnection struct {
+	docker.Client
 	tunnelClient executors.Client
+	cancel       func()
+}
+
+func (dc *dockerConnection) Close() error {
+	if dc == nil {
+		return nil
+	}
+	var err error
+	if dc.Client != nil {
+		err = dc.Client.Close()
+		dc.Client = nil
+	}
+	if dc.tunnelClient != nil {
+		err = errors.Join(err, dc.tunnelClient.Close())
+		dc.tunnelClient = nil
+	}
+	if dc.cancel != nil {
+		dc.cancel()
+		dc.cancel = nil
+	}
+	return err
+}
+
+// newDockerConnection returns a new dockerConnection instance using the executor.Client instance and connection info
+// embedded in the dockerTunnel instance returned by the factory function. If we're connecting to the local docker
+// daemon, the executor.Client instance will be nil (and that's OK).
+func newDockerConnection(dockerTunnel *dockerTunnel, cancel func()) (*dockerConnection, error) {
+	dockerClient, err := docker.New(dockerTunnel.creds, dockerTunnel.opts...)
+	if err != nil {
+		return nil, fmt.Errorf("creating docker client: %w", err)
+	}
+
+	return &dockerConnection{Client: dockerClient, tunnelClient: dockerTunnel.client, cancel: cancel}, nil
+}
+
+// createDockerConnection creates a connection to a potentially remote docker daemon. The connection is encapsulated in
+// a dockerConnection object which includes a docker.Client instance and, if connecting to a remote docker daemon, an
+// executors.Client instance.
+//
+// Note that in the case of a remote docker daemon, we want to maintain a long-lived connection for the duration of the
+// job (including during the Cleanup stage). To achieve this, we don't want the context to be cancelled when the job is
+// cancelled or times out, so we create a new context here with a timeout of job-timeout + dockerCleanupTimeout. This
+// fixes https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38725.
+func createDockerConnection(ctx context.Context, opts common.ExecutorPrepareOptions, e *executor) (*dockerConnection, error) {
+	deadline, hasDeadline := ctx.Deadline()
+	if !hasDeadline {
+		deadline = time.Now().Add(e.Build.GetBuildTimeout())
+	}
+	ctx, cancel := context.WithDeadline(context.Background(), deadline.Add(dockerCleanupTimeout))
+
+	dockerTunnel, err := newDockerTunnel(
+		ctx,
+		opts,
+		e.Build,
+		e.Config.Docker.Credentials,
+		e.Build.ExecutorData,
+		e.BuildLogger)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("creating docker tunnel: %w", err)
+	}
+
+	return newDockerConnection(dockerTunnel, cancel)
 }
 
 var version1_44 = version.Must(version.NewVersion("1.44"))
@@ -156,7 +279,7 @@ func (e *executor) getHelperImage() (*types.ImageInspect, error) {
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
-	image, _, err := e.client.ImageInspectWithRaw(e.Context, e.helperImageInfo.String())
+	image, _, err := e.dockerConn.ImageInspectWithRaw(e.Context, e.helperImageInfo.String())
 	if err == nil {
 		return &image, nil
 	}
@@ -179,7 +302,7 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 		return nil
 	}
 
-	image, err := prebuilt.Get(e.Context, e.client, e.helperImageInfo)
+	image, err := prebuilt.Get(e.Context, e.dockerConn, e.helperImageInfo)
 	if err != nil {
 		e.BuildLogger.Debugln("Failed to load prebuilt:", err)
 	}
@@ -348,13 +471,13 @@ func (e *executor) createService(
 	networkConfig := e.networkConfig(linkNames)
 
 	e.BuildLogger.Debugln("Creating service container", containerName, "...")
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
+	resp, err := e.dockerConn.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
 	if err != nil {
 		return nil, err
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Starting service container %s (%s)...", containerName, resp.ID))
-	err = e.client.ContainerStart(e.Context, resp.ID, container.StartOptions{})
+	err = e.dockerConn.ContainerStart(e.Context, resp.ID, container.StartOptions{})
 	if err != nil {
 		e.temporary = append(e.temporary, resp.ID)
 		return nil, err
@@ -686,7 +809,7 @@ func (e *executor) createContainer(
 	_ = e.removeContainer(e.Context, containerName)
 
 	e.BuildLogger.Debugln("Creating container", containerName, "...")
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
+	resp, err := e.dockerConn.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
 	if resp.ID != "" {
 		e.temporary = append(e.temporary, resp.ID)
 		if containerType == buildContainerType {
@@ -697,7 +820,7 @@ func (e *executor) createContainer(
 		return nil, err
 	}
 
-	inspect, err := e.client.ContainerInspect(e.Context, resp.ID)
+	inspect, err := e.dockerConn.ContainerInspect(e.Context, resp.ID)
 	return &inspect, err
 }
 
@@ -849,7 +972,7 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 }
 
 func (e *executor) startAndWatchContainer(ctx context.Context, id string, input io.Reader) error {
-	dockerExec := exec.NewDocker(e.Context, e.client, e.waiter, e.Build.Log())
+	dockerExec := exec.NewDocker(e.Context, e.dockerConn, e.waiter, e.Build.Log())
 
 	// Use stepsDocker exec implementation if steps is enabled and this is the build container.
 	if id == e.buildContainerID && e.Build.UseNativeSteps() {
@@ -857,7 +980,7 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 		if err != nil {
 			return common.MakeBuildError("creating steps request: %w", err).WithFailureReason(common.ConfigurationError)
 		}
-		dockerExec = exec.NewStepsDocker(e.Context, e.client, e.waiter, e.Build.Log(), request)
+		dockerExec = exec.NewStepsDocker(e.Context, e.dockerConn, e.waiter, e.Build.Log(), request)
 	}
 
 	stdout := e.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
@@ -901,7 +1024,7 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 		Force:         true,
 	}
 
-	err := e.client.ContainerRemove(ctx, id, options)
+	err := e.dockerConn.ContainerRemove(ctx, id, options)
 	if docker.IsErrNotFound(err) {
 		return nil
 	}
@@ -917,7 +1040,7 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	e.BuildLogger.Debugln("Disconnecting container", id, "from networks")
 
-	netList, err := e.client.NetworkList(ctx, network.ListOptions{})
+	netList, err := e.dockerConn.NetworkList(ctx, network.ListOptions{})
 	if err != nil {
 		e.BuildLogger.Debugln("Can't get network list. ListNetworks exited with", err)
 		return
@@ -926,7 +1049,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	for _, network := range netList {
 		for _, pluggedContainer := range network.Containers {
 			if id == pluggedContainer.Name {
-				err = e.client.NetworkDisconnect(ctx, network.ID, id, true)
+				err = e.dockerConn.NetworkDisconnect(ctx, network.ID, id, true)
 				if err != nil {
 					e.BuildLogger.Warningln(
 						"Can't disconnect possibly zombie container",
@@ -991,92 +1114,59 @@ func (e *executor) overwriteEntrypoint(image *common.Image) []string {
 	return nil
 }
 
-//nolint:nestif
-func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
-	var opts []client.Opt
+func (e *executor) connectDocker(ctx context.Context, options common.ExecutorPrepareOptions) error {
+	_ = e.dockerConn.Close()
 
-	creds := e.Config.Docker.Credentials
-
-	environment, ok := e.Build.ExecutorData.(executors.Environment)
-	if ok {
-		c, err := environment.Prepare(e.Context, e.BuildLogger, options)
-		if err != nil {
-			return fmt.Errorf("preparing environment: %w", err)
-		}
-
-		if e.tunnelClient != nil {
-			e.tunnelClient.Close()
-		}
-		e.tunnelClient = c
-
-		// We tunnel the docker connection for remote environments.
-		//
-		// To do this, we create a new dial context for Docker's client, whilst
-		// also overridding the daemon hostname it would typically use (if it were to use
-		// its own dialer).
-		host := creds.Host
-		scheme, dialer, err := e.environmentDialContext(c, host)
-		if err != nil {
-			return fmt.Errorf("creating env dialer: %w", err)
-		}
-
-		// If the scheme (docker uses it to define the protocol used) is "npipe" or "unix", we
-		// need to use a "fake" host, otherwise when dialing from Linux to Windows or vice-versa
-		// docker will complain because it doesn't think Linux can support "npipe" and doesn't
-		// think Windows can support "unix".
-		switch scheme {
-		case "unix", "npipe", "dial-stdio":
-			creds.Host = internalFakeTunnelHostname
-		}
-
-		opts = append(opts, client.WithDialContext(dialer))
-	}
-
-	dockerClient, err := docker.New(creds, opts...)
+	dockerConnection, err := createDockerConnection(ctx, options, e)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating docker connection: %w", err)
 	}
-	e.client = dockerClient
 
-	e.info, err = e.client.Info(e.Context)
+	info, err := dockerConnection.Info(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting docker info: %w", err)
 	}
 
-	serverVersion, err := e.client.ServerVersion(e.Context)
+	serverVersion, err := dockerConnection.ServerVersion(ctx)
 	if err != nil {
 		return fmt.Errorf("getting server version info: %w", err)
 	}
 
-	e.serverAPIVersion, err = version.NewVersion(serverVersion.APIVersion)
+	serverAPIVersion, err := version.NewVersion(serverVersion.APIVersion)
 	if err != nil {
 		return fmt.Errorf("parsing server API version %q: %w", serverVersion.APIVersion, err)
 	}
 
-	e.BuildLogger.Debugln(fmt.Sprintf(
-		"Connected to docker daemon (client version: %s, server version: %s, api version: %s, kernel: %s, os: %s/%s)",
-		e.client.ClientVersion(),
-		e.info.ServerVersion,
-		serverVersion.APIVersion,
-		e.info.KernelVersion,
-		e.info.OSType,
-		e.info.Architecture,
-	))
-
-	err = e.validateOSType()
-	if err != nil {
+	if err := validateOSType(info); err != nil {
 		return err
 	}
 
-	e.waiter = wait.NewDockerKillWaiter(e.client)
+	e.BuildLogger.Debugln(fmt.Sprintf(
+		"Connected to docker daemon (client version: %s, server version: %s, api version: %s, kernel: %s, os: %s/%s)",
+		dockerConnection.ClientVersion(),
+		info.ServerVersion,
+		serverVersion.APIVersion,
+		info.KernelVersion,
+		info.OSType,
+		info.Architecture,
+	))
 
-	return err
+	e.dockerConn = dockerConnection
+	e.info = info
+	e.serverAPIVersion = serverAPIVersion
+	e.waiter = wait.NewDockerKillWaiter(dockerConnection)
+
+	return nil
 }
 
-func (e *executor) environmentDialContext(
+type contextDialerFunc = func(ctx context.Context, network, addr string) (net.Conn, error)
+
+func environmentDialContext(
+	ctx context.Context,
 	executorClient executors.Client,
 	host string,
-) (string, func(ctx context.Context, network, addr string) (net.Conn, error), error) {
+	useDockerAutoscalerDialStdio bool,
+) (string, contextDialerFunc, error) {
 	systemHost := host == ""
 	if host == "" {
 		host = os.Getenv("DOCKER_HOST")
@@ -1090,7 +1180,7 @@ func (e *executor) environmentDialContext(
 		return "", nil, fmt.Errorf("parsing docker host: %w", err)
 	}
 
-	if !e.Build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio) {
+	if !useDockerAutoscalerDialStdio {
 		return u.Scheme, func(ctx context.Context, network, addr string) (net.Conn, error) {
 			conn, err := executorClient.Dial(u.Scheme, u.Host)
 			if err != nil {
@@ -1102,9 +1192,9 @@ func (e *executor) environmentDialContext(
 	}
 
 	return "dial-stdio", func(_ context.Context, network, addr string) (net.Conn, error) {
-		// DialRun doesn't want just a context for dialing, but one for a long-lived connection,
-		// so here we're ensuring that we use the executor's context, so that it is only cancelled
-		// when the job is cancelled.
+		// DialRun doesn't want just a context for dialing, but one for a long-lived connection, including cleanup.
+		// We don't want this context to be cancelled when the job is cancelled or times out since that would prevent
+		// cleanup.
 
 		// if the host was explicit, we try to use this even with dial-stdio
 		cmd := fmt.Sprintf("docker -H %s system dial-stdio", host)
@@ -1113,19 +1203,19 @@ func (e *executor) environmentDialContext(
 		if systemHost {
 			cmd = "docker system dial-stdio"
 		}
-		return executorClient.DialRun(e.Context, cmd)
+		return executorClient.DialRun(ctx, cmd)
 	}, nil
 }
 
 // validateOSType checks if the ExecutorOptions metadata matches with the docker
 // info response.
-func (e *executor) validateOSType() error {
-	switch e.info.OSType {
+func validateOSType(info system.Info) error {
+	switch info.OSType {
 	case osTypeLinux, osTypeWindows, osTypeFreeBSD:
 		return nil
 	}
 
-	return fmt.Errorf("unsupported os type: %s", e.info.OSType)
+	return fmt.Errorf("unsupported os type: %s", info.OSType)
 }
 
 func (e *executor) createDependencies() error {
@@ -1238,7 +1328,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	e.AbstractExecutor.PrepareConfiguration(options)
 
-	err := e.connectDocker(options)
+	err := e.connectDocker(e.Context, options)
 	if err != nil {
 		return err
 	}
@@ -1316,7 +1406,7 @@ func (e *executor) setupDefaultExecutorOptions(os string) {
 					return nil, err
 				}
 
-				return permission.NewDockerLinuxSetter(e.client, e.Build.Log(), helperImage), nil
+				return permission.NewDockerLinuxSetter(e.dockerConn, e.Build.Log(), helperImage), nil
 			}
 		}
 	}
@@ -1366,13 +1456,22 @@ func (e *executor) Cleanup() {
 
 	var wg sync.WaitGroup
 
+	// create a new context for cleanup in case the main context has expired or been cancelled.
 	ctx, cancel := context.WithTimeout(context.Background(), dockerCleanupTimeout)
 	defer cancel()
+
+	defer func() {
+		if err := e.dockerConn.Close(); err != nil {
+			e.BuildLogger.WithFields(logrus.Fields{"error": err}).Debugln("Failed to close the client")
+		}
+	}()
 
 	remove := func(id string) {
 		wg.Add(1)
 		go func() {
-			_ = e.removeContainer(ctx, id)
+			if err := e.removeContainer(ctx, id); err != nil {
+				e.BuildLogger.WithFields(logrus.Fields{"error": err}).Errorln("Failed to remove container", id)
+			}
 			wg.Done()
 		}()
 	}
@@ -1383,38 +1482,15 @@ func (e *executor) Cleanup() {
 
 	wg.Wait()
 
-	err := e.cleanupVolume(ctx)
-	if err != nil {
-		volumeLogger := e.BuildLogger.WithFields(logrus.Fields{
-			"error": err,
-		})
-
-		volumeLogger.Errorln("Failed to cleanup volumes")
+	if err := e.cleanupVolume(ctx); err != nil {
+		e.BuildLogger.WithFields(logrus.Fields{"error": err}).Errorln("Failed to cleanup volumes")
 	}
 
-	err = e.cleanupNetwork(ctx)
-	if err != nil {
-		networkLogger := e.BuildLogger.WithFields(logrus.Fields{
+	if err := e.cleanupNetwork(ctx); err != nil {
+		e.BuildLogger.WithFields(logrus.Fields{
 			"network": e.networkMode.NetworkName(),
 			"error":   err,
-		})
-
-		networkLogger.Errorln("Failed to remove network for build")
-	}
-
-	if e.client != nil {
-		err = e.client.Close()
-		if err != nil {
-			clientCloseLogger := e.BuildLogger.WithFields(logrus.Fields{
-				"error": err,
-			})
-
-			clientCloseLogger.Debugln("Failed to close the client")
-		}
-	}
-
-	if e.tunnelClient != nil {
-		e.tunnelClient.Close()
+		}).Errorln("Failed to remove network for build")
 	}
 
 	e.AbstractExecutor.Cleanup()
@@ -1460,13 +1536,13 @@ func (e *executor) execScriptOnContainer(ctx context.Context, containerID string
 		}
 	}()
 
-	exec, err := e.client.ContainerExecCreate(ctx, containerID, execConfig)
+	exec, err := e.dockerConn.ContainerExecCreate(ctx, containerID, execConfig)
 	if err != nil {
 		action = "Failed to exec create to container:"
 		return err
 	}
 
-	resp, err := e.client.ContainerExecAttach(ctx, exec.ID, container.ExecStartOptions{})
+	resp, err := e.dockerConn.ContainerExecAttach(ctx, exec.ID, container.ExecStartOptions{})
 	if err != nil {
 		action = "Failed to exec attach to container:"
 		return err
@@ -1557,7 +1633,7 @@ func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([
 
 //nolint:gocognit
 func (e *executor) getContainerExposedPorts(container *types.Container) ([]int, error) {
-	inspect, err := e.client.ContainerInspect(e.Context, container.ID)
+	inspect, err := e.dockerConn.ContainerInspect(e.Context, container.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -1606,7 +1682,7 @@ func (e *executor) readContainerLogs(containerID string) string {
 		Timestamps: true,
 	}
 
-	hijacked, err := e.client.ContainerLogs(e.Context, containerID, options)
+	hijacked, err := e.dockerConn.ContainerLogs(e.Context, containerID, options)
 	if err != nil {
 		return strings.TrimSpace(err.Error())
 	}

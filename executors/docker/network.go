@@ -5,7 +5,7 @@ import (
 )
 
 var createNetworksManager = func(e *executor) (networks.Manager, error) {
-	networksManager := networks.NewManager(&e.BuildLogger, e.client, e.Build, e.labeler)
+	networksManager := networks.NewManager(&e.BuildLogger, e.dockerConn, e.Build, e.labeler)
 
 	return networksManager, nil
 }
