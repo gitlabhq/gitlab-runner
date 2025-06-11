@@ -1,3 +1,14 @@
+## v18.0.3 (2025-06-11)
+
+### Bug fixes
+
+- Fix AWS GovCloud with AWS S3 cache [!5613](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5613)
+- Run git config cleanup before creating the template dir [!5598](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5598)
+
+### Maintenance
+
+- Remove randomness of TestProcessRunner_BuildLimit failures [!5588](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5588)
+
 ## v18.0.2 (2025-06-11)
 
 ### Bug fixes
