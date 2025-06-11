@@ -630,7 +630,7 @@ type Artifacts []Artifact
 type PolicyOptions struct {
 	PolicyJob                  bool     `json:"execution_policy_job"`
 	Name                       string   `json:"policy_name"`
-	VariableOverrideAllowed    bool     `json:"policy_variables_override_allowed,omitempty"`
+	VariableOverrideAllowed    *bool    `json:"policy_variables_override_allowed,omitempty"`
 	VariableOverrideExceptions []string `json:"policy_variables_override_exceptions,omitempty"`
 }
 

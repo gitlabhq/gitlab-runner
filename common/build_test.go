@@ -2702,6 +2702,8 @@ func Test_expandContainerOptions(t *testing.T) {
 }
 
 func TestPrintPolicyOptions(t *testing.T) {
+	var falseValue = false
+	var trueValue = true
 	testCases := []struct {
 		desc          string
 		policyOptions PolicyOptions
@@ -2722,14 +2724,14 @@ func TestPrintPolicyOptions(t *testing.T) {
 				PolicyJob: true,
 				Name:      "Test Policy",
 			},
-			contains: []string{`Job triggered by policy \"Test Policy\".`},
+			contains: []string{`Job triggered by policy \"Test Policy\".`, "Variables defined in the policy take precedence over matching user-defined CI/CD variables for this job."},
 		},
 		{
 			desc: "policy job with override allowed",
 			policyOptions: PolicyOptions{
 				PolicyJob:               true,
 				Name:                    "Test Policy",
-				VariableOverrideAllowed: true,
+				VariableOverrideAllowed: &trueValue,
 			},
 			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are allowed in this job according to the pipeline execution policy."},
 		},
@@ -2738,7 +2740,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 			policyOptions: PolicyOptions{
 				PolicyJob:                  true,
 				Name:                       "Test Policy",
-				VariableOverrideAllowed:    true,
+				VariableOverrideAllowed:    &trueValue,
 				VariableOverrideExceptions: []string{"EXCEPTION_VAR1", "EXCEPTION_VAR2"},
 			},
 			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are allowed in this job (except for EXCEPTION_VAR1, EXCEPTION_VAR2) according to the pipeline execution policy."},
@@ -2748,7 +2750,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 			policyOptions: PolicyOptions{
 				PolicyJob:               true,
 				Name:                    "Test Policy",
-				VariableOverrideAllowed: false,
+				VariableOverrideAllowed: &falseValue,
 			},
 			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are ignored in this job according to the pipeline execution policy."},
 		},
@@ -2757,7 +2759,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 			policyOptions: PolicyOptions{
 				PolicyJob:                  true,
 				Name:                       "Test Policy",
-				VariableOverrideAllowed:    false,
+				VariableOverrideAllowed:    &falseValue,
 				VariableOverrideExceptions: []string{"EXCEPTION_VAR1", "EXCEPTION_VAR2"},
 			},
 			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are ignored in this job (except for EXCEPTION_VAR1, EXCEPTION_VAR2) according to the pipeline execution policy."},
