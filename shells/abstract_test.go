@@ -414,298 +414,139 @@ var headerMatcher = mock.MatchedBy(func(arg string) bool {
 		MatchString(arg)
 })
 
-func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
-	gitlabURL := "https://example.com:3443"
-	cacheEnvFile := "/some/path/to/runner-cache-env"
-
-	shell := AbstractShell{}
-
-	tests := map[string]struct {
-		cacheType string
-	}{
-		"pre-signed URL cache": {
-			cacheType: "test",
-		},
-		"GoCloud cache": {
-			cacheType: "goCloudTest",
-		},
-	}
-
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			runnerConfig := &common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Cache: &common.CacheConfig{
-						Type:   tt.cacheType,
-						Shared: true,
-					},
-				},
-				RunnerCredentials: common.RunnerCredentials{
-					URL: gitlabURL,
-				},
-			}
-
-			build := &common.Build{
-				CacheDir:    "cache_dir",
-				JobResponse: getJobResponseWithCachePaths(),
-				Runner:      runnerConfig,
-			}
-			info := common.ShellScriptInfo{
-				RunnerCommand: "gitlab-runner-helper",
-				Build:         build,
-			}
-
-			nrOfCaches := len(slices.DeleteFunc(build.Cache, func(e common.Cache) bool {
-				return !e.When.OnSuccess()
-			}))
-
-			mockWriter := NewMockShellWriter(t)
-			mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-				return v.Key == "GITLAB_ENV"
-			})).Once()
-			mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
-			mockWriter.On("SourceEnv", "path/to/env/file").Once()
-			mockWriter.On("Cd", mock.Anything).Once()
-			mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Times(nrOfCaches)
-			mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(nrOfCaches)
-
-			if tt.cacheType == "test" {
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "vendor/",
-					"--untracked",
-					"--url", mock.Anything,
-					"--metadata", "cachekey:cache-key1",
-					"--header", headerMatcher,
-					"--header", headerMatcher,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "some/path1",
-					"--path", "other/path2",
-					"--url", mock.Anything,
-					"--metadata", "cachekey:cache-key1",
-					"--header", headerMatcher,
-					"--header", headerMatcher,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-always",
-					"--url", mock.Anything,
-					"--metadata", "cachekey:cache-key1",
-					"--header", headerMatcher,
-					"--header", headerMatcher,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "unset-cache-key",
-					"--url", mock.Anything,
-					"--metadata", "cachekey:some-job-name/some-git-ref",
-					"--header", headerMatcher,
-					"--header", headerMatcher,
-				).Once()
-			} else {
-				mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Times(nrOfCaches)
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "vendor/",
-					"--untracked",
-					"--gocloud-url", mock.Anything,
-					"--metadata", "cachekey:cache-key1",
-					"--env-file", cacheEnvFile,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "some/path1",
-					"--path", "other/path2",
-					"--gocloud-url", mock.Anything,
-					"--metadata", "cachekey:cache-key1",
-					"--env-file", cacheEnvFile,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-always",
-					"--gocloud-url", mock.Anything,
-					"--metadata", "cachekey:cache-key1",
-					"--env-file", cacheEnvFile,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "unset-cache-key",
-					"--gocloud-url", mock.Anything,
-					"--metadata", "cachekey:some-job-name/some-git-ref",
-					"--env-file", cacheEnvFile,
-				).Once()
-			}
-			mockWriter.On("Noticef", "Created cache").Times(nrOfCaches)
-			mockWriter.On("Else").Times(nrOfCaches)
-			mockWriter.On("Warningf", "Failed to create cache").Times(nrOfCaches)
-			mockWriter.On("EndIf").Times(nrOfCaches)
-			mockWriter.On("Else").Times(nrOfCaches)
-			mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(nrOfCaches)
-			mockWriter.On("EndIf").Times(nrOfCaches)
-
-			if tt.cacheType != "test" {
-				mockWriter.On("RmFile", cacheEnvFile).Times(nrOfCaches)
-			}
-			mockWriter.On("Variable", mock.Anything)
-
-			err := shell.writeScript(context.Background(), mockWriter, common.BuildStageArchiveOnSuccessCache, info)
-			require.NoError(t, err)
-		})
-	}
+func localCacheFileMatcher(t *testing.T, expectedCacheDir string) any {
+	expectedCacheDir = regexp.QuoteMeta(expectedCacheDir)
+	sep := regexp.QuoteMeta(string(filepath.Separator))
+	cacheKey := ".+" // can be different for hashed & unhashed cache keys
+	re := regexp.MustCompile("^" + expectedCacheDir + sep + cacheKey + sep + "cache.zip" + "$")
+	return mock.MatchedBy(func(actualCacheFile string) bool {
+		return assert.Regexp(t, re, actualCacheFile, "local cache file path")
+	})
 }
 
-func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
-	gitlabURL := "https://example.com:3443"
-	cacheEnvFile := "/some/path/to/runner-cache-env"
+func TestWriteWritingArchiveCache(t *testing.T) {
+	const (
+		gitlabURL    = "https://example.com:3443"
+		cacheEnvFile = "/some/path/to/runner-cache-env"
+	)
 
 	shell := AbstractShell{}
 
-	tests := map[string]struct {
-		cacheType string
-	}{
-		"pre-signed URL cache": {
-			cacheType: "test",
+	// for caches on the build see: getJobResponseWithCachePaths
+	buildStages := map[common.BuildStage][][]any{
+		common.BuildStageArchiveOnSuccessCache: [][]any{
+			{"--path", "vendor/", "--untracked"},
+			{"--path", "some/path1", "--path", "other/path2"},
+			{"--path", "when-always"},
+			{"--path", "unset-cache-key"},
 		},
-		"GoCloud cache": {
-			cacheType: "goCloudTest",
+		common.BuildStageArchiveOnFailureCache: [][]any{
+			{"--path", "when-on-failure", "--untracked"},
+			{"--path", "when-always"},
+			{"--path", "unset-cache-key"},
 		},
 	}
 
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			runnerConfig := &common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Cache: &common.CacheConfig{
-						Type:   tt.cacheType,
-						Shared: true,
-					},
-				},
-				RunnerCredentials: common.RunnerCredentials{
-					URL: gitlabURL,
-				},
-			}
-
-			build := &common.Build{
-				CacheDir:    "cache_dir",
-				JobResponse: getJobResponseWithCachePaths(),
-				Runner:      runnerConfig,
-			}
-			info := common.ShellScriptInfo{
-				RunnerCommand: "gitlab-runner-helper",
-				Build:         build,
-			}
-
-			nrOfCaches := len(slices.DeleteFunc(build.Cache, func(e common.Cache) bool {
-				return !e.When.OnFailure()
-			}))
-
-			mockWriter := NewMockShellWriter(t)
-			mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-				return v.Key == "GITLAB_ENV"
-			})).Once()
-			mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
-			mockWriter.On("SourceEnv", "path/to/env/file").Once()
-			mockWriter.On("Cd", mock.Anything)
-			mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Times(nrOfCaches)
-			mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(nrOfCaches)
-
-			if tt.cacheType == "test" {
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-on-failure",
-					"--untracked",
-					"--url", mock.Anything,
-					"--metadata", "cachekey:cache-key1",
-					"--header", headerMatcher,
-					"--header", headerMatcher,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-always",
-					"--url", mock.Anything,
-					"--metadata", "cachekey:cache-key1",
-					"--header", headerMatcher,
-					"--header", headerMatcher,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "unset-cache-key",
-					"--url", mock.Anything,
-					"--metadata", "cachekey:some-job-name/some-git-ref",
-					"--header", headerMatcher,
-					"--header", headerMatcher,
-				).Once()
-			} else {
+	tests := map[string]struct {
+		cacheType                    string
+		uploadArgs                   []any
+		additionalExpectedAssertions func(shellWriter *MockShellWriter, nrOfCaches int)
+	}{
+		"no cache upload": {},
+		"pre-signed URL cache": {
+			cacheType: "test",
+			uploadArgs: []any{
+				"--url", mock.Anything,
+				"--header", headerMatcher,
+				"--header", headerMatcher,
+			},
+		},
+		"GoCloud cache": {
+			cacheType: "goCloudTest",
+			uploadArgs: []any{
+				"--gocloud-url", mock.Anything,
+				"--env-file", cacheEnvFile,
+			},
+			additionalExpectedAssertions: func(mockWriter *MockShellWriter, nrOfCaches int) {
 				mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Times(nrOfCaches)
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-on-failure",
-					"--untracked",
-					"--gocloud-url", mock.Anything,
-					"--metadata", "cachekey:cache-key1",
-					"--env-file", cacheEnvFile,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-always",
-					"--gocloud-url", mock.Anything,
-					"--metadata", "cachekey:cache-key1",
-					"--env-file", cacheEnvFile,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "unset-cache-key",
-					"--gocloud-url", mock.Anything,
-					"--metadata", "cachekey:some-job-name/some-git-ref",
-					"--env-file", cacheEnvFile,
-				).Once()
-			}
-			mockWriter.On("Noticef", "Created cache").Times(nrOfCaches)
-			mockWriter.On("Else").Times(nrOfCaches)
-			mockWriter.On("Warningf", "Failed to create cache").Times(nrOfCaches)
-			mockWriter.On("EndIf").Times(nrOfCaches)
-			mockWriter.On("Else").Times(nrOfCaches)
-			mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(nrOfCaches)
-			mockWriter.On("EndIf").Times(nrOfCaches)
-
-			if tt.cacheType != "test" {
 				mockWriter.On("RmFile", cacheEnvFile).Times(nrOfCaches)
+			},
+		},
+	}
+
+	for buildStage, expectedArgsPerCache := range buildStages {
+		t.Run(string(buildStage), func(t *testing.T) {
+			for tn, tt := range tests {
+				t.Run(tn, func(t *testing.T) {
+					info := common.ShellScriptInfo{
+						RunnerCommand: "gitlab-runner-helper",
+						Build: &common.Build{
+							CacheDir:    "cache_dir",
+							JobResponse: getJobResponseWithCachePaths(),
+							Runner: &common.RunnerConfig{
+								RunnerSettings: common.RunnerSettings{
+									Cache: &common.CacheConfig{
+										Type:   tt.cacheType,
+										Shared: true,
+									},
+								},
+								RunnerCredentials: common.RunnerCredentials{
+									URL: gitlabURL,
+								},
+							},
+						},
+					}
+
+					nrOfCaches := len(expectedArgsPerCache)
+
+					mockWriter := NewMockShellWriter(t)
+					mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
+						return v.Key == "GITLAB_ENV"
+					})).Once()
+					mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+					mockWriter.On("SourceEnv", "path/to/env/file").Once()
+					mockWriter.On("Cd", mock.Anything).Once()
+					mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Times(nrOfCaches)
+					mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(nrOfCaches)
+
+					for _, perCacheCommandArgs := range expectedArgsPerCache {
+						allArgs := slices.Concat(
+							// we expect this cmd & args, even if we don't upload
+							[]any{
+								"gitlab-runner-helper",
+								"cache-archiver",
+								"--file", localCacheFileMatcher(t, info.Build.CacheDir),
+								"--timeout", mock.Anything,
+								"--metadata", mock.MatchedBy(func(s string) bool {
+									return strings.HasPrefix(s, "cachekey:")
+								}),
+							},
+							// args per cache, e.g. paths of to-be-cached files
+							perCacheCommandArgs,
+							// args for the upload, e.g. URL, headers, env file
+							tt.uploadArgs,
+						)
+						mockWriter.On("IfCmdWithOutput", allArgs...).Once()
+					}
+					if tt.additionalExpectedAssertions != nil {
+						tt.additionalExpectedAssertions(mockWriter, nrOfCaches)
+					}
+
+					mockWriter.On("Noticef", "Created cache").Times(nrOfCaches)
+					mockWriter.On("Else").Times(nrOfCaches)
+					mockWriter.On("Warningf", "Failed to create cache").Times(nrOfCaches)
+					mockWriter.On("EndIf").Times(nrOfCaches)
+					mockWriter.On("Else").Times(nrOfCaches)
+					mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(nrOfCaches)
+					mockWriter.On("EndIf").Times(nrOfCaches)
+
+					varCount := len(info.Build.GetAllVariables())
+					mockWriter.On("Variable", mock.Anything).Times(varCount)
+
+					err := shell.writeScript(context.Background(), mockWriter, buildStage, info)
+					require.NoError(t, err)
+				})
 			}
-
-			mockWriter.On("Variable", mock.Anything)
-
-			err := shell.writeScript(context.Background(), mockWriter, common.BuildStageArchiveOnFailureCache, info)
-			require.NoError(t, err)
 		})
 	}
 }

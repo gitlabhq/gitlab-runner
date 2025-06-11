@@ -1363,6 +1363,13 @@ func (b *AbstractShell) addCacheUploadCommand(
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
+	metadata := metadata{
+		"cachekey": cacheFile.Key().Human,
+	}
+
+	// add metadata to the local metadata file and for GoCloud uploads
+	args = append(args, metadata.AsArgs("--metadata")...)
+
 	if info.Build.Runner.Cache != nil && info.Build.Runner.Cache.MaxUploadedArchiveSize > 0 {
 		args = append(
 			args,
@@ -1374,7 +1381,7 @@ func (b *AbstractShell) addCacheUploadCommand(
 	args = append(args, archiverArgs...)
 
 	// Generate cache upload address
-	extraArgs, env, err := getCacheUploadURLAndEnv(ctx, info.Build, cacheFile.Key())
+	extraArgs, env, err := getCacheUploadURLAndEnv(ctx, info.Build, cacheFile.Key().Hashed, metadata)
 	args = append(args, extraArgs...)
 
 	if err != nil {
@@ -1415,26 +1422,20 @@ func (m metadata) AsArgs(flag string) []string {
 
 // getCacheUploadURLAndEnv will first try to generate the GoCloud URL if it's
 // available then fallback to a pre-signed URL.
-func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey cacheKey) ([]string, map[string]string, error) {
-	metadata := metadata{
-		"cachekey": cacheKey.Human,
-	}
-
+func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, hashedCacheKey string, metadata map[string]string) ([]string, map[string]string, error) {
 	// Prefer Go Cloud URL if supported
-	goCloudURL, err := cache.GetCacheGoCloudURL(ctx, build, cacheKey.Hashed, true)
+	goCloudURL, err := cache.GetCacheGoCloudURL(ctx, build, hashedCacheKey, true)
 	if goCloudURL.URL != nil {
 		uploadArgs := []string{"--gocloud-url", goCloudURL.URL.String()}
-		uploadArgs = append(uploadArgs, metadata.AsArgs("--metadata")...)
 		return uploadArgs, goCloudURL.Environment, err
 	}
 
-	uploadURL := cache.GetCacheUploadURL(ctx, build, cacheKey.Hashed, metadata)
+	uploadURL := cache.GetCacheUploadURL(ctx, build, hashedCacheKey, metadata)
 	if uploadURL.URL == nil {
 		return []string{}, nil, nil
 	}
 
 	uploadArgs := []string{"--url", uploadURL.URL.String()}
-	uploadArgs = append(uploadArgs, metadata.AsArgs("--metadata")...)
 	for key, values := range uploadURL.Headers {
 		for _, value := range values {
 			uploadArgs = append(uploadArgs, "--header", fmt.Sprintf("%s: %s", key, value))
