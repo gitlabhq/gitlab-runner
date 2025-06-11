@@ -953,6 +953,8 @@ func (mr *RunCommand) processBuildOnRunner(
 		"project":               build.JobInfo.ProjectID,
 		"repo_url":              build.RepoCleanURL(),
 		"time_in_queue_seconds": build.JobInfo.TimeInQueueSeconds,
+		"queue_size":            build.JobInfo.QueueSize,
+		"queue_depth":           build.JobInfo.QueueDepth,
 	}
 
 	mr.log().WithFields(fields).Infoln("Added job to processing list")

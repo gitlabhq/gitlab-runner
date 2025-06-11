@@ -334,6 +334,7 @@ func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
 					RunnerCredentials: common.RunnerCredentials{
 						Token: testToken,
 					},
+					SystemID: "testSystemID",
 				},
 				JobResponse: common.JobResponse{
 					ID: 1,
