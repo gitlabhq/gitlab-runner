@@ -1,9 +1,10 @@
-## v17.11.2 (2025-05-22)
+## v17.11.2 (2025-06-11)
 
 ### Bug fixes
 
-- Handle the new glrtr- prefix [!5580](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5580)
+- Fix AWS GovCloud with AWS S3 cache [!5613](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5613)
 - Fix final job duration handling [!5583](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5583)
+- Handle the new glrtr- prefix [!5580](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5580)
 
 ## v17.11.1 (2025-05-05)
 
