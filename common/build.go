@@ -1702,8 +1702,15 @@ func (b *Build) printPolicyOptions() {
 
 	b.logger.Infoln(fmt.Sprintf(`Job triggered by policy "%s".`, b.JobResponse.PolicyOptions.Name))
 
+	// VariableOverrideAllowed is optional.
+	// If not set, YAML variables defined in the policy are enforced with the highest precedence.
+	if b.JobResponse.PolicyOptions.VariableOverrideAllowed == nil {
+		b.logger.Infoln("Variables defined in the policy take precedence over matching user-defined CI/CD variables for this job.")
+		return
+	}
+
 	var message = "User-defined CI/CD variables are "
-	if b.JobResponse.PolicyOptions.VariableOverrideAllowed {
+	if *b.JobResponse.PolicyOptions.VariableOverrideAllowed {
 		message += "allowed in this job"
 	} else {
 		message += "ignored in this job"
