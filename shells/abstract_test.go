@@ -3,12 +3,14 @@
 package shells
 
 import (
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"fmt"
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -2262,6 +2264,7 @@ func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
 							"some-runner-command", "cache-archiver",
 							"--file", expectedLocalFile,
 							"--timeout", "10",
+							"--metadata", "cachekey:"+test.expectedCacheKey,
 							"--path", "foo/bar",
 							"--path", "foo/barz",
 						).Once()
@@ -3538,6 +3541,169 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 					}
 				})
 			}
+		})
+	}
+}
+
+func TestNewCacheConfig(t *testing.T) {
+	const (
+		fallback = "__fallback__"
+		windows  = "windows"
+	)
+
+	tests := map[string]struct {
+		userKey  string
+		buildDir string
+		cacheDir string
+		ffs      map[string]bool
+		jobName  string
+		gitRef   string
+		vars     common.JobVariables
+
+		expectedErrorMsg    string
+		expectedCacheConfig map[string]cacheConfig
+	}{
+		"no cache dir": {
+			expectedErrorMsg: "unset cache directory",
+		},
+		"empty cache key": {
+			cacheDir:         "/some/cache/dir",
+			expectedErrorMsg: "empty cache key",
+		},
+		"not able to resolve cache dir": {
+			cacheDir:         "/caches",
+			jobName:          "some-job-name",
+			expectedErrorMsg: "inability to make the cache file path relative to the build directory",
+		},
+		"key from job": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			jobName:  "some-job",
+			gitRef:   "some-ref",
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "some-job/some-ref",
+					HashedKey:   "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+					ArchiveFile: "../../cache/dir/d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed/cache.zip",
+				},
+				windows: {
+					HumanKey:    "some-job/some-ref",
+					HashedKey:   "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+					ArchiveFile: "..\\..\\cache\\dir\\d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed\\cache.zip",
+				},
+			},
+		},
+		"key from user": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "some/user/key",
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
+					ArchiveFile: "../../cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
+				},
+				windows: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
+					ArchiveFile: "..\\..\\cache\\dir\\7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917\\cache.zip",
+				},
+			},
+		},
+		"with powershell path resolver enabeld": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "some/user/key",
+			ffs: map[string]bool{
+				featureflags.UsePowershellPathResolver: true,
+			},
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
+					ArchiveFile: "/some/cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
+				},
+			},
+		},
+		"with hashing disabled": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "some/user/key",
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: false,
+			},
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "some/user/key",
+					ArchiveFile: "../../cache/dir/some/user/key/cache.zip",
+				},
+				windows: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "some/user/key",
+					ArchiveFile: "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
+				},
+			},
+		},
+		"user key is expanded": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "${foo}/${bar}/baz",
+			vars: common.JobVariables{
+				{Key: "foo", Value: "someFoo"},
+				{Key: "bar", Value: "someBar"},
+			},
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "someFoo/someBar/baz",
+					HashedKey:   "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
+					ArchiveFile: "../../cache/dir/78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb/cache.zip",
+				},
+				windows: {
+					HumanKey:    "someFoo/someBar/baz",
+					HashedKey:   "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
+					ArchiveFile: "..\\..\\cache\\dir\\78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb\\cache.zip",
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &common.Build{
+				JobResponse: common.JobResponse{
+					Variables: test.vars,
+					JobInfo: common.JobInfo{
+						Name: test.jobName,
+					},
+					GitInfo: common.GitInfo{
+						Ref: test.gitRef,
+					},
+				},
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						FeatureFlags: test.ffs,
+					},
+				},
+				CacheDir: test.cacheDir,
+				BuildDir: test.buildDir,
+			}
+
+			actualCacheConfig, err := newCacheConfig(build, test.userKey)
+
+			if e := test.expectedErrorMsg; e != "" {
+				require.ErrorContains(t, err, e)
+				return
+			}
+
+			require.NoError(t, err)
+
+			expectedCacheConfig := cmp.Or(
+				test.expectedCacheConfig[runtime.GOOS],
+				test.expectedCacheConfig[fallback],
+			)
+
+			assert.Equal(t, expectedCacheConfig, actualCacheConfig)
 		})
 	}
 }

@@ -73,82 +73,48 @@ func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptIn
 	w.Cd(info.Build.FullProjectDir())
 }
 
-type cacheKey struct {
-	Human  string
-	Hashed string
+type cacheConfig struct {
+	HumanKey    string
+	HashedKey   string
+	ArchiveFile string
 }
 
-type cacheFileOptions struct {
-	shouldHash          bool
-	usePwshPathResolver bool
-	cacheDir            string
-	buildDir            string
-
-	archiveFile string
-	cacheKey    cacheKey
+func (cc cacheConfig) isHashed() bool {
+	return cc.HumanKey != cc.HashedKey
 }
 
-func (c *cacheFileOptions) Hash(human string) string {
-	if !c.shouldHash {
-		return human
-	}
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(human)))
-}
+func newCacheConfig(build *common.Build, userKey string) (cacheConfig, error) {
+	config := cacheConfig{}
 
-func (c *cacheFileOptions) SetKey(humanKey string) error {
-	if c.cacheDir == "" {
-		return fmt.Errorf("unset cache directory")
+	if build.CacheDir == "" {
+		return config, fmt.Errorf("unset cache directory")
 	}
 
-	cacheKey := cacheKey{
-		Human:  humanKey,
-		Hashed: c.Hash(humanKey),
+	if userKey != "" {
+		config.HumanKey = build.GetAllVariables().ExpandValue(userKey)
+	} else {
+		path := path.Join("/", build.JobInfo.Name, build.GitInfo.Ref)
+		config.HumanKey = path[1:]
+	}
+	if config.HumanKey == "" {
+		return config, fmt.Errorf("empty cache key")
 	}
 
-	if cacheKey.Human == "" || cacheKey.Hashed == "" {
-		return fmt.Errorf("empty cache key")
+	config.HashedKey = config.HumanKey
+	if build.IsFeatureFlagOn(featureflags.HashCacheKeys) {
+		config.HashedKey = fmt.Sprintf("%x", sha256.Sum256([]byte(config.HumanKey)))
 	}
 
-	file := path.Join(c.cacheDir, cacheKey.Hashed, "cache.zip")
-	if !c.usePwshPathResolver {
+	config.ArchiveFile = path.Join(build.CacheDir, config.HashedKey, "cache.zip")
+	if !build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver) {
 		var err error
-		file, err = filepath.Rel(c.buildDir, file)
+		config.ArchiveFile, err = filepath.Rel(build.BuildDir, config.ArchiveFile)
 		if err != nil {
-			return fmt.Errorf("inability to make the cache file path relative to the build directory (is the build directory absolute?)")
+			return config, fmt.Errorf("inability to make the cache file path relative to the build directory (is the build directory absolute?)")
 		}
 	}
 
-	c.archiveFile = file
-	c.cacheKey = cacheKey
-
-	return nil
-}
-
-func (c *cacheFileOptions) Key() cacheKey {
-	return c.cacheKey
-}
-
-func (c *cacheFileOptions) ArchiveFile() string {
-	return c.archiveFile
-}
-
-func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (*cacheFileOptions, error) {
-	cacheFile := &cacheFileOptions{
-		shouldHash:          build.IsFeatureFlagOn(featureflags.HashCacheKeys),
-		cacheDir:            build.CacheDir,
-		buildDir:            build.BuildDir,
-		usePwshPathResolver: build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver),
-	}
-	var key string
-	if userKey != "" {
-		key = build.GetAllVariables().ExpandValue(userKey)
-	} else {
-		// we root the path, to not have path traversal issues
-		path := path.Join("/", build.JobInfo.Name, build.GitInfo.Ref)
-		key = path[1:]
-	}
-	err := cacheFile.SetKey(key)
-	return cacheFile, err
+	return config, nil
 }
 
 func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, action string, f func()) {
@@ -186,7 +152,7 @@ func (b *AbstractShell) cacheExtractor(ctx context.Context, w ShellWriter, info 
 		skipRestoreCache = false
 
 		// Skip extraction if no cache is defined
-		cacheFile, err := b.cacheFile(info.Build, cacheOptions.Key)
+		cacheConfig, err := newCacheConfig(info.Build, cacheOptions.Key)
 		if err != nil {
 			w.Noticef("Skipping cache extraction due to %v", err)
 			continue
@@ -195,13 +161,13 @@ func (b *AbstractShell) cacheExtractor(ctx context.Context, w ShellWriter, info 
 		cacheOptions.Policy = common.CachePolicy(info.Build.GetAllVariables().ExpandValue(string(cacheOptions.Policy)))
 
 		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPull); err != nil {
-			return fmt.Errorf("%w for %s", err, cacheFile.Key().Human)
+			return fmt.Errorf("%w for %s", err, cacheConfig.HumanKey)
 		} else if !ok {
-			w.Noticef("Not downloading cache %s due to policy", cacheFile.Key().Human)
+			w.Noticef("Not downloading cache %s due to policy", cacheConfig.HumanKey)
 			continue
 		}
 
-		b.extractCacheOrFallbackCachesWrapper(ctx, w, info, cacheFile, cacheOptions)
+		b.extractCacheOrFallbackCachesWrapper(ctx, w, info, cacheConfig.HumanKey, cacheOptions)
 	}
 
 	if skipRestoreCache {
@@ -227,12 +193,13 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	ctx context.Context,
 	w ShellWriter,
 	info common.ShellScriptInfo,
-	cacheFile *cacheFileOptions,
+	humanCacheKey string,
 	cacheOptions common.Cache,
 ) {
 	allowedCacheKeys := []string{}
 
-	buildVars := info.Build.GetAllVariables()
+	build := info.Build
+	buildVars := build.GetAllVariables()
 	addCacheKey := func(key string, err error) {
 		if key != "" {
 			allowedCacheKeys = append(allowedCacheKeys, key)
@@ -244,12 +211,7 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 
 	// the "default" cache key
 	// TODO
-	rawCacheKey := cacheFile.Key().Human
-	sanCacheKey, err := sanitizeCacheKey(rawCacheKey)
-	if sanCacheKey != rawCacheKey {
-		cacheFile.SetKey(sanCacheKey)
-	}
-	addCacheKey(sanCacheKey, err)
+	addCacheKey(sanitizeCacheKey(humanCacheKey))
 
 	// the fallback cache keys from the cache config
 	for _, cacheKey := range cacheOptions.FallbackKeys {
@@ -270,14 +232,19 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 		return
 	}
 
-	cacheKeys := make([]cacheKey, len(allowedCacheKeys))
-	for i, k := range allowedCacheKeys {
-		cacheKeys[i] = cacheKey{Human: k, Hashed: cacheFile.Hash(k)}
+	cacheConfigs := make([]cacheConfig, 0, len(allowedCacheKeys))
+	for _, k := range allowedCacheKeys {
+		cacheConfig, err := newCacheConfig(build, k)
+		if err != nil {
+			w.Noticef("Skipping cache extraction due to %v", err)
+			continue
+		}
+		cacheConfigs = append(cacheConfigs, cacheConfig)
 	}
 
 	// Execute cache-extractor command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-		b.addExtractCacheCommand(ctx, w, info, cacheFile.ArchiveFile(), cacheKeys, cacheOptions.Paths)
+		b.addExtractCacheCommand(ctx, w, info, cacheConfigs, cacheOptions.Paths)
 	})
 }
 
@@ -351,31 +318,28 @@ func (b *AbstractShell) addExtractCacheCommand(
 	ctx context.Context,
 	w ShellWriter,
 	info common.ShellScriptInfo,
-	cacheFile string,
-	cacheKeys []cacheKey,
+	cacheConfigs []cacheConfig,
 	cachePaths []string,
 ) {
-	cacheKey := cacheKeys[0]
+	cacheConfig := cacheConfigs[0]
 
 	args := []string{
 		"cache-extractor",
-		"--file", cacheFile,
+		"--file", cacheConfig.ArchiveFile,
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
-	extraArgs, env, err := getCacheDownloadURLAndEnv(ctx, info.Build, cacheKey.Hashed)
+	w.Noticef("Checking cache for %s...", cacheConfig.HumanKey)
+
+	extraArgs, env, err := getCacheDownloadURLAndEnv(ctx, info.Build, cacheConfig.HashedKey)
 	args = append(args, extraArgs...)
-
 	if err != nil {
-		w.Warningf("Failed to obtain environment for cache %s: %v", cacheKey.Human, err)
+		w.Warningf("Failed to obtain environment for cache %s: %v", cacheConfig.HumanKey, err)
 	}
-
-	w.Noticef("Checking cache for %s...", cacheKey.Human)
-	cacheEnvFilename := ""
-
 	if env != nil {
-		cacheEnvFilename = b.writeCacheExports(w, env)
+		cacheEnvFilename := b.writeCacheExports(w, env)
 		args = append(args, "--env-file", cacheEnvFilename)
+		defer w.RmFile(cacheEnvFilename)
 	}
 
 	w.IfCmdWithOutput(info.RunnerCommand, args...)
@@ -395,19 +359,10 @@ func (b *AbstractShell) addExtractCacheCommand(
 	}
 
 	// We check that there is another key than the one we just used
-	if len(cacheKeys) > 1 {
-		nextCacheFile, err := b.cacheFile(info.Build, cacheKeys[1].Human)
-		if err != nil {
-			w.Noticef("Skipping cache extraction due to %v", err)
-		} else {
-			b.addExtractCacheCommand(ctx, w, info, nextCacheFile.ArchiveFile(), cacheKeys[1:], cachePaths)
-		}
+	if len(cacheConfigs) > 1 {
+		b.addExtractCacheCommand(ctx, w, info, cacheConfigs[1:], cachePaths)
 	}
 	w.EndIf()
-
-	if cacheEnvFilename != "" {
-		w.RmFile(cacheEnvFilename)
-	}
 }
 
 // getCacheDownloadURLAndEnv will first try to generate the GoCloud URL if it's
@@ -1300,38 +1255,40 @@ func (b *AbstractShell) archiveCache(
 
 		skipArchiveCache = false
 
+		cacheConfig, err := newCacheConfig(info.Build, cacheOptions.Key)
 		// Skip archiving if no cache is defined
-		cacheFile, err := b.cacheFile(info.Build, cacheOptions.Key)
 		if err != nil {
 			w.Noticef("Skipping cache archiving due to %v", err)
 			continue
 		}
 
-		//TODO
-		// we also want to sanitize the cache key on upload, so that we actually use the same keys on up and download, ie.
-		// it round-trips
-		rawCacheKey := cacheFile.Key().Human
-		sanCacheKey, err := sanitizeCacheKey(rawCacheKey)
+		// TODO -- if the cache key is defaulted (jobName/gitRef) we need to get a new cacheConfig again.
+		sanitizedKey, err := sanitizeCacheKey(cacheConfig.HumanKey)
 		if err != nil {
 			w.Warningf(err.Error())
 		}
-		if rawCacheKey != sanCacheKey {
-			cacheFile.SetKey(sanCacheKey)
-		}
-		if sanCacheKey == "" {
+		if sanitizedKey == "" {
 			continue
+		}
+		if sanitizedKey != cacheConfig.HumanKey {
+			cacheConfig, err = newCacheConfig(info.Build, sanitizedKey)
+			// Skip archiving if no cache is defined
+			if err != nil {
+				w.Noticef("Skipping cache archiving due to %v", err)
+				continue
+			}
 		}
 
 		cacheOptions.Policy = common.CachePolicy(info.Build.GetAllVariables().ExpandValue(string(cacheOptions.Policy)))
 
 		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPush); err != nil {
-			return false, fmt.Errorf("%w for %s", err, cacheFile.Key().Human)
+			return false, fmt.Errorf("%w for %s", err, cacheConfig.HumanKey)
 		} else if !ok {
-			w.Noticef("Not uploading cache %s due to policy", cacheFile.Key().Human)
+			w.Noticef("Not uploading cache %s due to policy", cacheConfig.HumanKey)
 			continue
 		}
 
-		b.addCacheUploadCommand(ctx, w, info, cacheFile, archiverArgs)
+		b.addCacheUploadCommand(ctx, w, info, cacheConfig, archiverArgs)
 	}
 
 	return skipArchiveCache, nil
@@ -1354,20 +1311,20 @@ func (b *AbstractShell) addCacheUploadCommand(
 	ctx context.Context,
 	w ShellWriter,
 	info common.ShellScriptInfo,
-	cacheFile *cacheFileOptions,
+	cacheConfig cacheConfig,
 	archiverArgs []string,
 ) {
+	// add metadata to the local metadata file and for GoCloud uploads
 	args := []string{
 		"cache-archiver",
-		"--file", cacheFile.ArchiveFile(),
+		"--file", cacheConfig.ArchiveFile,
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
 	metadata := metadata{
-		"cachekey": cacheFile.Key().Human,
+		"cachekey": cacheConfig.HumanKey,
 	}
 
-	// add metadata to the local metadata file and for GoCloud uploads
 	args = append(args, metadata.AsArgs("--metadata")...)
 
 	if info.Build.Runner.Cache != nil && info.Build.Runner.Cache.MaxUploadedArchiveSize > 0 {
@@ -1381,7 +1338,7 @@ func (b *AbstractShell) addCacheUploadCommand(
 	args = append(args, archiverArgs...)
 
 	// Generate cache upload address
-	extraArgs, env, err := getCacheUploadURLAndEnv(ctx, info.Build, cacheFile.Key().Hashed, metadata)
+	extraArgs, env, err := getCacheUploadURLAndEnv(ctx, info.Build, cacheConfig.HashedKey, metadata)
 	args = append(args, extraArgs...)
 
 	if err != nil {
@@ -1390,12 +1347,12 @@ func (b *AbstractShell) addCacheUploadCommand(
 
 	// Execute cache-archiver command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
-		w.Noticef("Creating cache %s...", cacheFile.Key().Human)
-		cacheEnvFilename := ""
+		w.Noticef("Creating cache %s...", cacheConfig.HumanKey)
 
 		if env != nil {
-			cacheEnvFilename = b.writeCacheExports(w, env)
+			cacheEnvFilename := b.writeCacheExports(w, env)
 			args = append(args, "--env-file", cacheEnvFilename)
+			defer w.RmFile(cacheEnvFilename)
 		}
 
 		w.IfCmdWithOutput(info.RunnerCommand, args...)
@@ -1403,10 +1360,6 @@ func (b *AbstractShell) addCacheUploadCommand(
 		w.Else()
 		w.Warningf("Failed to create cache")
 		w.EndIf()
-
-		if cacheEnvFilename != "" {
-			w.RmFile(cacheEnvFilename)
-		}
 	})
 }
 
