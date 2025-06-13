@@ -48,7 +48,7 @@ func TestBufferHandlingWithExceededFDIssue(t *testing.T) {
 
 	var closeAtFinish []io.Closer
 
-	defer setNewRLimitNOFILE(t, maxFDsCount)()
+	setNewRLimitNOFILE(t, maxFDsCount)
 	defer closeClosers(t, closeAtFinish)
 
 	assertFileDescriptors(t, proc, initialFDCount)
@@ -133,16 +133,11 @@ func assertFileDescriptors(t *testing.T, proc procfs.Proc, expectedLen int) {
 	assert.Equal(t, "/dev/null", targets[0], "Checking what is FD=0")
 }
 
-func setNewRLimitNOFILE(t *testing.T, maxFDsCount int) func() {
+func setNewRLimitNOFILE(t *testing.T, maxFDsCount int) {
 	var originalRLimit syscall.Rlimit
 
 	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &originalRLimit)
 	require.NoError(t, err, "Requesting current RLIMIT_NOFILE")
-
-	cleanup := func() {
-		err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &originalRLimit)
-		require.NoError(t, err, "Restoring original RLIMIT_NOFILE")
-	}
 
 	t.Logf("Setting max FD limit to %d (%v)", maxFDsCount, uint64(maxFDsCount))
 
@@ -152,8 +147,6 @@ func setNewRLimitNOFILE(t *testing.T, maxFDsCount int) func() {
 
 	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &newRLimit)
 	require.NoError(t, err, "Updating RLIMIT_NOFILE")
-
-	return cleanup
 }
 
 func createNewLogFile(t *testing.T) (*os.File, error) {
