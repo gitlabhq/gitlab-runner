@@ -38,7 +38,7 @@ include:
   inputs:
     job_stage: qa
   rules:
-    - if: '$CI_SERVER_HOST == "gitlab.com"'
+    - if: '$CI_SERVER_HOST == "gitlab.com" && ($CI_MERGE_REQUEST_SOURCE_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH == "gitlab-org/security/gitlab-runner" || $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH == "gitlab-community/gitlab-org/gitlab-runner")'
 - project: gitlab-com/gl-security/security-operations/infrastructure-security-public/oidc-modules
   ref: 3.3.0
   file: templates/gcp_auth.yaml
