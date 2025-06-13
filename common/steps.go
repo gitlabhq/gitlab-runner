@@ -24,7 +24,7 @@ func (b *Build) UseNativeSteps() bool {
 const (
 	defaultStepRunnerImage   = "registry.gitlab.com/gitlab-org/step-runner"
 	stepRunnerModule         = "gitlab.com/gitlab-org/step-runner"
-	defaultStepRunnerVersion = "0.4" // only necessary in unit tests in Go versions < 1.24
+	defaultStepRunnerVersion = "0.11" // only necessary in unit tests in Go versions < 1.24
 )
 
 // getModuleDependencyVersion returns the version of the specific module dependency against which the running binary was
