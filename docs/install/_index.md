@@ -27,6 +27,7 @@ You can install GitLab Runner on:
 - [FreeBSD](freebsd.md)
 - [macOS](osx.md)
 - [Windows](windows.md)
+- [z/OS](z-os.md)
 
 [Bleeding-edge binaries](bleeding-edge.md) are also available.
 
