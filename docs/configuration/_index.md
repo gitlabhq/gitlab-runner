@@ -38,5 +38,6 @@ Learn how to configure GitLab Runner.
   If you are running low on disk space, use a cron job to clean old containers and volumes.
 - [Configure GitLab Runner to run behind a proxy](proxy.md): Set
   up a Linux proxy and configure GitLab Runner. This setup works well with the Docker executor.
+- [Configure GitLab Runner for Oracle Cloud Infrastructure (OCI)](oracle_cloud_performance.md): Optimize your GitLab Runner performance in OCI.
 - [Handling rate limited requests](proxy.md#handling-rate-limited-requests).
 - [Configure GitLab Runner Operator](configuring_runner_operator.md).
