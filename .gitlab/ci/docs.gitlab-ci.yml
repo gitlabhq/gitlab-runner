@@ -3,6 +3,7 @@
   extends:
     - .rules:docs:review
     - .no_cache_and_dependencies
+    - .kubernetes runner
   image: ruby:3.3-alpine
   needs: []
   before_script:
