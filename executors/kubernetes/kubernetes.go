@@ -391,7 +391,11 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return err
 	}
 
-	s.BuildLogger.Debugln(fmt.Sprintf("Using helper image: %s:%s", s.helperImageInfo.Name, s.helperImageInfo.Tag))
+	if imageNameFromConfig := s.ExpandValue(s.Config.Kubernetes.HelperImage); imageNameFromConfig != "" {
+		s.BuildLogger.Debugln(fmt.Sprintf("Using helper image: %s (overridden, default would be %s:%s)", imageNameFromConfig, s.helperImageInfo.Name, s.helperImageInfo.Tag))
+	} else {
+		s.BuildLogger.Debugln(fmt.Sprintf("Using helper image: %s:%s", s.helperImageInfo.Name, s.helperImageInfo.Tag))
+	}
 
 	if err = s.AbstractExecutor.PrepareBuildAndShell(); err != nil {
 		return fmt.Errorf("prepare build and shell: %w", err)
