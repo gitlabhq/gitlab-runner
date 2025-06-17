@@ -1433,6 +1433,32 @@ When you use GitLab Runner with Google Cloud ADC, you typically use the default 
 
 If you use ADC, be sure that the service account that you use has the `iam.serviceAccounts.signBlob` permission. Typically this is done by granting the [Service Account Token Creator role](https://cloud.google.com/iam/docs/service-account-permissions#token-creator-role) to the service account.
 
+#### Workload Identity Federation for GKE
+
+Workload Identity Federation for GKE is supported with application default credentials (ADC).
+If you have issues getting workload identities to work:
+
+- Check the runner pod logs (not the build log) for the message `ERROR: generating signed URL`.
+  This error might indicate a permission issue, such as:
+
+  ```plaintext
+  IAM returned 403 Forbidden: Permission 'iam.serviceAccounts.getAccessToken' denied on resource (or it may not exist).
+  ```
+
+- Try the following `curl` commands from within the runner pod:
+
+  ```shell
+  curl -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/email
+  ```
+
+   This command should return the correct Kubernetes service account. Next, try to obtain an access token:
+
+  ```shell
+  curl -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token?scopes=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform
+  ```
+
+   If the command succeeds, the result returns a JSON payload with an access token. If it fails, check the service account permissions.
+
 ### The `[runners.cache.azure]` section
 
 The following parameters define native support for Azure Blob Storage. To learn more, view the
