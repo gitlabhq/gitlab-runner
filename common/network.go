@@ -758,6 +758,8 @@ type JobResponse struct {
 	TLSCAChain  string `json:"-"`
 	TLSAuthCert string `json:"-"`
 	TLSAuthKey  string `json:"-"`
+
+	JobRequestCorrelationID string `json:"-"`
 }
 
 // ValidateStepsJobRequest does the following:

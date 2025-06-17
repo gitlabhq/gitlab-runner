@@ -50,6 +50,7 @@ const (
 	UseFleetingAcquireHeartbeats         string = "FF_USE_FLEETING_ACQUIRE_HEARTBEATS"
 	UseExponentialBackoffStageRetry      string = "FF_USE_EXPONENTIAL_BACKOFF_STAGE_RETRY"
 	UseAdaptiveRequestConcurrency        string = "FF_USE_ADAPTIVE_REQUEST_CONCURRENCY"
+	UseGitalyCorrelationId               string = "FF_USE_GITALY_CORRELATION_ID"
 )
 
 type FeatureFlag struct {
@@ -414,6 +415,13 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, the `request_concurrency` setting becomes the maximum concurrency value, and the number of concurrent requests adjusts based on the " +
 			"rate of successful job requests.",
+	},
+	{
+		Name:         UseGitalyCorrelationId,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description: "When enabled, the `X-Gitaly-Correlation-ID` header is added to all Git HTTP requests. " +
+			"When disabled, the Git operations execute without Gitaly Correlation ID headers.",
 	},
 }
 

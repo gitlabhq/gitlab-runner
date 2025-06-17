@@ -613,6 +613,8 @@ func (n *GitLabClient) RequestJob(
 		}
 		addTLSData(&response, tlsData)
 
+		response.JobRequestCorrelationID = getCorrelationId(httpResponse)
+
 		return &response, true
 	case http.StatusForbidden:
 		logger.WithField("status", statusText).Errorln("Checking for jobs...", "forbidden")
