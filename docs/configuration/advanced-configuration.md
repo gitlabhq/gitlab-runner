@@ -1133,13 +1133,46 @@ Example:
     ServerSideEncryptionKeyID = "alias/my-key"
 ```
 
-If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified and `AuthenticationType` is not provided, the S3 client uses the
-IAM instance profile available to the `gitlab-runner` instance. In an [autoscale](autoscale.md) configuration, this is not the on-demand machine
-that jobs are executed on. If `ServerAddress`, `AccessKey` and `SecretKey` are all specified but `AuthenticationType` is not provided,
-`access-key` is used as the authentication type.
+## Authentication
 
-When you use Helm charts to install GitLab Runner, and `rbac.create` is set to true
-in the `values.yaml` file, a ServiceAccount is created. This ServiceAccount's annotations are retrieved from the
+GitLab Runner uses different authentication methods for S3 based on
+your configuration.
+
+### Static credentials
+
+The runner uses static access key authentication when:
+
+- `ServerAddress`, `AccessKey`, and `SecretKey` parameters are specified but `AuthenticationType` is not provided.
+- `AuthenticationType = "access-key"` is explicitly set.
+
+### AWS SDK default credential chain
+
+The runner uses the [AWS SDK default credential chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials) when:
+
+- Any of `ServerAddress`, `AccessKey`, or `SecretKey` are omitted and `AuthenticationType` is not provided.
+- `AuthenticationType = "iam"` is explicitly set.
+
+The credential chain attempts authentication in the following order:
+
+1. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
+1. Shared credentials file (`~/.aws/credentials`)
+1. IAM instance profile (for EC2 instances)
+1. Other AWS credential sources supported by the SDK
+
+If `RoleARN` is not specified, the default credential chain is executed
+by the runner manager, which is often not necessarily on the same
+machine where the build runs. For example, in an
+[autoscale](autoscale.md) configuration, the job runs on a different
+machine. Similarly, with the Kubernetes executor, the build pod can also
+run on a different node than the runner manager. This behavior makes it possible
+to grant bucket-level access only to the runner manager.
+
+If `RoleARN` is specified, the credentials are resolved within the
+execution context of the helper image. For more information, see
+[RoleARN](#enable-multipart-transfers-with-rolearn).
+
+When you use Helm charts to install GitLab Runner, and `rbac.create` is set to `true`
+in the `values.yaml` file, a service account is created. The service account's annotations are retrieved from the
 `rbac.serviceAccountAnnotations` section.
 
 For runners on Amazon EKS, you can specify an IAM role to
