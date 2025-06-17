@@ -50,15 +50,15 @@ linters:
   - goconst
   - gocritic
   - goimports
-  - revive
   - goprintffuncname
   - gosimple
   - govet
   - ineffassign
   - misspell
   - nakedret
-  - staticcheck
   - nestif
+  - revive
+  - staticcheck
   - typecheck
   - unconvert
   - unparam
