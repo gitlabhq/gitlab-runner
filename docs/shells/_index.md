@@ -30,10 +30,10 @@ The supported shells are:
 
 | Shell        | Status          | Description |
 |--------------|-----------------|-------------|
-| `bash`       | Fully Supported | Bash (Bourne Again Shell). All commands executed in Bash context (default for all Unix systems) |
-| `sh`         | Fully Supported | Sh (Bourne shell). All commands executed in Sh context (fallback for `bash` for all Unix systems) |
+| `bash`       | Fully Supported | Bash (Bourne Again Shell). All commands executed in Bash context (default for all Unix systems). |
+| `sh`         | Fully Supported | Sh (Bourne shell). All commands executed in Sh context (fallback for `bash` for all Unix systems). |
 | `powershell` | Fully Supported | PowerShell script. All commands are executed in PowerShell Desktop context. |
-| `pwsh`       | Fully Supported | PowerShell script. All commands are executed in PowerShell Core context. In GitLab Runner 14.0 and later, this is the default when registering a new runner on Windows. |
+| `pwsh`       | Fully Supported | PowerShell script. All commands are executed in PowerShell Core context. This is the default when registering a new runner on Windows. |
 
 If you want to select a particular shell to use other than the default, you must [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
 
