@@ -717,6 +717,7 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 							Variables: common.JobVariables{
 								{Key: "GIT_STRATEGY", Value: tc.gitStrategy},
 							},
+							JobRequestCorrelationID: "foobar",
 						},
 						BuildDir: tc.buildDir,
 					}
@@ -2867,6 +2868,7 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 										Script: common.StepScript{"job payload", "post_get_sources"},
 									},
 								},
+								JobRequestCorrelationID: "foobar",
 							},
 							Runner: &common.RunnerConfig{
 								RunnerSettings: common.RunnerSettings{
@@ -2966,6 +2968,8 @@ func expectSetupTemplate(shellWriter *MockShellWriter, dir string) (string, []*m
 		shellWriter.EXPECT().Command("git", "config", "-f", config, "credential.interactive", "never").Once(),
 		shellWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "gc.autoDetach", "false").Once(),
 		shellWriter.EXPECT().Command("git", "config", "-f", config, "transfer.bundleURI", "true").Maybe(),
+		shellWriter.EXPECT().Command("git", "config", "-f", config, "http.extraHeader", "X-Gitaly-Correlation-ID: foobar").Maybe(),
+		shellWriter.EXPECT().Noticef("Gitaly correlation ID: %s", "foobar").Maybe(),
 	}
 	mock.InOrder(calls...)
 
@@ -3089,6 +3093,7 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 										GitInfo: common.GitInfo{
 											RepoURL: "https://repo-url/some/repo",
 										},
+										JobRequestCorrelationID: "foobar",
 									},
 									Runner: &common.RunnerConfig{
 										RunnerSettings: common.RunnerSettings{
