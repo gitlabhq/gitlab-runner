@@ -781,6 +781,11 @@ func (b *AbstractShell) setupTemplateDir(w ShellWriter, build *common.Build, pro
 	w.Command("git", "config", "-f", templateFile, "credential.interactive", "never")
 	w.Command("git", "config", "-f", templateFile, "gc.autoDetach", "false")
 
+	if build.IsFeatureFlagOn(featureflags.UseGitalyCorrelationId) {
+		w.Command("git", "config", "-f", templateFile, "http.extraHeader", "X-Gitaly-Correlation-ID: "+build.JobRequestCorrelationID)
+		w.Noticef("Gitaly correlation ID: %s", build.JobRequestCorrelationID)
+	}
+
 	if build.IsFeatureFlagOn(featureflags.UseGitBundleURIs) {
 		w.Command("git", "config", "-f", templateFile, "transfer.bundleURI", "true")
 	}

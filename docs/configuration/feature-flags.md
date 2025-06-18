@@ -91,6 +91,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_FLEETING_ACQUIRE_HEARTBEATS` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, fleeting instance connectivity is checked before a job is assigned to an instance. |
 | `FF_USE_EXPONENTIAL_BACKOFF_STAGE_RETRY` | `true` | {{< icon name="dotted-circle" >}} No |  | When enabled, the retries for `GET_SOURCES_ATTEMPTS`, `ARTIFACT_DOWNLOAD_ATTEMPTS`, `RESTORE_CACHE_ATTEMPTS`, and `EXECUTOR_JOB_SECTION_ATTEMPTS` use exponential backoff (5 sec - 5 min). |
 | `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` | `true` | {{< icon name="dotted-circle" >}} No |  | When enabled, the `request_concurrency` setting becomes the maximum concurrency value, and the number of concurrent requests adjusts based on the rate of successful job requests. |
+| `FF_USE_GITALY_CORRELATION_ID` | `true` | {{< icon name="dotted-circle" >}} No |  | When enabled, the `X-Gitaly-Correlation-ID` header is added to all Git HTTP requests. When disabled, the Git operations execute without Gitaly Correlation ID headers. |
 
 <!-- feature_flags_list_end -->
 
