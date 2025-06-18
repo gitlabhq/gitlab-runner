@@ -292,6 +292,9 @@ type AutoscalerConfig struct {
 	UpdateIntervalWhenExpecting time.Duration           `toml:"update_interval_when_expecting,omitempty" json:",omitempty"`
 	ScaleThrottle               AutoscalerScaleThrottle `toml:"scale_throttle,omitempty" json:",omitempty"`
 
+	LogInternalIP bool `toml:"log_internal_ip,omitempty" json:",omitempty"`
+	LogExternalIP bool `toml:"log_external_ip,omitempty" json:",omitempty"`
+
 	DeleteInstancesOnShutdown bool `toml:"delete_instances_on_shutdown,omitempty" json:",omitempty"`
 
 	VMIsolation VMIsolation `toml:"vm_isolation,omitempty"`
