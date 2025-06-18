@@ -411,12 +411,12 @@ concurrent = 50
 
 ## Azure scale set configuration examples
 
-### One job per instance using a Azure scale set
+### One job per instance using an Azure scale set
 
 Prerequisites:
 
 - A custom image with at least `git` and GitLab Runner installed.
-- An Azure scale set where the autoscaling mode is set to `manual`. The runner handles the scaling.
+- An Azure scale set where the autoscaling mode is set to `manual` and overprovisioning is turned off. The runner handles the scaling.
 
 This configuration supports:
 
@@ -473,12 +473,12 @@ concurrent = 10
       idle_time  = "20m0s"
 ```
 
-### Five jobs per instance, unlimited uses, using Google Cloud Instance group
+### Five jobs per instance, unlimited uses, using an Azure scale set
 
 Prerequisites:
 
 - A custom image with at least `git` and GitLab Runner installed.
-- An Azure scale set where the autoscaling mode is set to `manual`. The runner handles the scaling.
+- An Azure scale set where the autoscaling mode is set to `manual` and overprovisioning is turned off. The runner handles the scaling.
 
 This configuration supports:
 
