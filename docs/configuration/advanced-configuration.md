@@ -815,6 +815,8 @@ The following parameters configure the autoscaler feature. You can only use thes
 | `instance_acquire_timeout`       | The maximum duration the runner waits to acquire an instance before it times out. Default: `15m` (15 minutes). You can adjust this value to better suit your environment. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5563). |
 | `update_interval`                | The interval to check with the fleeting plugin for instance updates. Default: `1m` (1 minute). Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
 | `update_interval_when_expecting` | The interval to check with the fleeting plugin for instance updates when expecting a state change. For example, when an instance has provisioned an instance and the runner is waiting to transition from `pending` to `running`). Default: `2s` (2 seconds). Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
+| `log_internal_ip` | Specifies whether the CI/CD output logs the internal IP address of the VM. Default: `false`. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
+| `log_external_ip` | Specifies whether the CI/CD output logs the external IP address of the VM. Default: `false`. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
 
 {{< alert type="note" >}}
 

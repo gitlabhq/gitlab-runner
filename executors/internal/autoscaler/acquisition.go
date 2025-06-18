@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -91,7 +92,15 @@ func (ref *acquisitionRef) Prepare(
 		UseExternalAddr: useExternalAddr,
 	}
 
-	logger.Println(fmt.Sprintf("Dialing instance %s...", info.ID))
+	ident := []string{info.ID}
+	if options.Config.Autoscaler.LogInternalIP && info.InternalAddr != "" {
+		ident = append(ident, info.InternalAddr)
+	}
+	if options.Config.Autoscaler.LogExternalIP && info.ExternalAddr != "" {
+		ident = append(ident, info.ExternalAddr)
+	}
+
+	logger.Println(fmt.Sprintf("Dialing instance %s...", strings.Join(ident, ", ")))
 	fleetingDialer, err := ref.dialAcquisitionInstance(dialCtx, info, fleetingDialOpts)
 	if cause := context.Cause(dialCtx); cause != nil {
 		return nil, &common.BuildError{Inner: cause, FailureReason: reasonFromCause(cause)}
