@@ -937,6 +937,51 @@ oci-container-build:
   when: manual
 ```
 
+### Known issues
+
+Unlike Docker, Podman enforces SELinux policies by default. While many pipelines run without issues, some may fail due to SELinux context inheritance when tools use temporary directories.
+
+For example, the following pipeline fails under Podman:
+
+```yaml
+testing:
+  image: alpine:3.20
+  script:
+    - apk add --no-cache python3 py3-pip
+    - pip3 install --target $CI_PROJECT_DIR requests==2.28.2
+```
+
+The failure occurs because pip uses `/tmp` as a working directory. Files created in `/tmp` inherit its SELinux context, which prevents the container from modifying these files when they're moved to `$CI_PROJECT_DIR`.
+
+**Solution:** Add `/tmp` to the volumes in the runner's `config.toml` under the `runners.docker` section:
+
+```toml
+[[runners]]
+  [runners.docker]
+    volumes = ["/cache", "/tmp"]
+```
+
+This addition ensures consistent SELinux contexts across the mounted directories.
+
+#### Troubleshooting SELinux Issues
+
+Other Podman/SELinux issues may require additional troubleshooting to identify the necessary configuration changes.
+
+To test whether a Podman runner issue is SELinux-related, temporarily add the following directive to the runner's `config.toml` under the `runners.docker` section:
+
+```toml
+[[runners]]
+  [runners.docker]
+    security_opt = ["label:disable"]
+```
+
+{{< alert type="warning" >}}
+
+This addition turns off SELinux enforcement in the container (which is Docker's default behavior).
+Use this configuration only for testing purposes and not as a permanent solution because it can have security implications.
+
+{{< /alert >}}
+
 ## Specify which user runs the job
 
 By default, the runner runs jobs as the `root` user in the container. To specify a different, non-root user to run the job, use the `USER` directive in the Dockerfile of the Docker image.
