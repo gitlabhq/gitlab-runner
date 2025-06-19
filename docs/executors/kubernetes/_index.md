@@ -680,7 +680,7 @@ shutdown_timeout = 0
     [[runners.kubernetes.pod_spec]]
       name = "val1 node"
       patch = '''
-        { "op": "add", "path": "/nodeSelector", "value": { key1: "val1" } }
+        [{ "op": "add", "path": "/nodeSelector", "value": { key1: "val1" } }]
       '''
       patch_type = "json"
 ```
