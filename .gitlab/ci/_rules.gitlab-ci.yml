@@ -189,6 +189,7 @@
 .rules:merge_request_pipelines:no_docs:unit_test:
   rules:
     - <<: *if-not-canonical-namespace-merge-request-pipeline
+      changes: *code-backstage-patterns
       allow_failure: true
     - <<: *if-merge-request-pipeline
       changes: *code-backstage-patterns
