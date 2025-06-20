@@ -81,7 +81,7 @@ check_interval = 3 # Value in seconds
   executor = "docker"
   (...)
 
-  [[runners]]
+[[runners]]
   name = "third"
   url = "Your Gitlab instance URL (for example, `https://gitlab.com`)"
   executor = "docker-autoscaler"
