@@ -33,6 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	testclient "k8s.io/client-go/kubernetes/fake"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
 
@@ -249,25 +250,21 @@ func TestAttachErrorGettingPod(t *testing.T) {
 }
 
 func TestAttachPodNotRunning(t *testing.T) {
-	version, codec := testVersionAndCodec()
-
-	fakeClient := fake.CreateHTTPClient(func(*http.Request) (*http.Response, error) {
-		body := objBody(codec, execPodWithPhase(api.PodUnknown))
-		return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
-			common.ContentType: {"application/json"},
-		}}, nil
-	})
-
-	client := testKubernetesClient(version, fakeClient)
-	clientConfig := &restclient.Config{}
-
+	pod := &api.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-resource",
+			Namespace: "test-resource",
+		},
+		Status: api.PodStatus{
+			Phase: api.PodUnknown,
+		},
+	}
+	fakeClient := testclient.NewSimpleClientset(pod)
 	opts := &AttachOptions{
-		Namespace:     "test-resource",
-		PodName:       "test-resource",
-		ContainerName: "test-resource",
-		KubeClient:    client,
-		Config:        clientConfig,
-		Context:       context.TODO(),
+		Namespace:  pod.GetNamespace(),
+		PodName:    pod.GetName(),
+		KubeClient: fakeClient,
+		Context:    context.TODO(),
 	}
 
 	err := opts.Run()
