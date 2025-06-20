@@ -258,6 +258,37 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `service_memory_request`                       | The amount of memory requested for build service containers. |
 | `service_memory_request_overwrite_max_allowed` | The maximum amount that the memory allocation request can be written to for service containers. When empty, it disables the memory request overwrite feature. |
 
+#### Helper container memory sizing recommendations
+
+For optimal performance, set helper container memory limits based on your workload requirements:
+
+- **Workloads with caching and artifact generation**: Minimum 250 MiB
+- **Basic workloads without cache/artifacts**: Might work with lower limits (128-200 MiB)
+
+**Basic configuration example:**
+
+```toml
+[[runners]]
+  executor = "kubernetes"
+  [runners.kubernetes]
+    helper_memory_limit = "250Mi"
+    helper_memory_request = "250Mi"
+    helper_memory_limit_overwrite_max_allowed = "1Gi"
+```
+
+**Job-specific memory overrides:**
+
+Use the `KUBERNETES_HELPER_MEMORY_LIMIT` variable to adjust memory for specific jobs without requiring administrator changes:
+
+```yaml
+job_with_higher_helper_memory_limit:
+  variables:
+    KUBERNETES_HELPER_MEMORY_LIMIT: "512Mi"
+  script:
+```
+
+This approach allows developers to optimize resource usage per job while maintaining cluster-wide limits through `helper_memory_limit_overwrite_max_allowed`.
+
 ### Storage requests and limits
 
 | Setting                                                   | Description |
