@@ -1,33 +1,33 @@
 package helpers
 
 import (
-	"strings"
+	"math"
+	"regexp"
 )
 
-func ShortenToken(token string) string {
-	switch {
-	case len(token) < 8:
-		return token
-	case token[:5] == "glrt-":
-		// Token is prefixed with CREATED_RUNNER_TOKEN_PREFIX: glrt- (for GitLab Runner Token).
-		// Let's add some more characters in order to compensate.
-		return token[5:14]
-	case token[:6] == "glrtr-":
-		// Token is prefixed with REGISTRATION_RUNNER_TOKEN_PREFIX: glrtr- (for GitLab Runner Token).
-		// This prefix will only be used for runners registered via the registration token.
-		// Let's add some more characters in order to compensate.
-		return token[6:15]
-	case token[:6] == "glcbt-":
-		return token[6:15]
-	case token[:2] == "GR" && len(token) >= 17 && strings.IndexFunc(token[2:9], isInvalidPrefixRune) == -1:
-		// Token is prefixed with RUNNERS_TOKEN_PREFIX: GR (for GitLab Runner) combined with the rotation
-		// date decimal-to-hex-encoded. Let's add some more characters in order to compensate.
-		return token[:17]
-	default:
-		return token[:8]
-	}
+// Known prefixes to strip from tokens:
+// - glrt- and glrtr- are registration tokens
+// - glcbt- is a ci job token
+// - GR* is an old runner registration token
+// - t[123]_ is a partition prefix which can appear with a glrt- registration token, or by itself.
+//
+// Any token prefixed added here should probably also be added to allTokenPrefixes in tokensanitizer package.
+
+var prefixRes = []*regexp.Regexp{
+	regexp.MustCompile(`^glrt-(t[123]_)?|^t[123]_|^glrtr-`), // runner authentication token
+	regexp.MustCompile(`^glcbt-`),                           // job token
+	regexp.MustCompile(`^GR[0-9A-Fa-f]{7}`),                 // runner registration token. These should no longer appear, but just in case...
 }
 
-func isInvalidPrefixRune(r rune) bool {
-	return (r < '0' || r > '9') && (r < 'A' || r > 'F') && (r < 'a' || r > 'f')
+const shortTokenLen = 9
+
+func ShortenToken(in string) string {
+	// Strip known prefixes
+	for _, re := range prefixRes {
+		in = re.ReplaceAllString(in, "")
+	}
+
+	// take the first 9 characters
+	end := math.Min(shortTokenLen, float64(len(in)))
+	return in[:int(end)]
 }
