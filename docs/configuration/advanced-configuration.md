@@ -1052,6 +1052,26 @@ in the [runner autoscale documentation](autoscale.md#distributed-runners-caching
 | `Shared`                 | boolean | Enables cache sharing between runners. Default is `false`. |
 | `MaxUploadedArchiveSize` | int64   | Limit, in bytes, of the cache archive being uploaded to cloud storage. A malicious actor can work around this limit so the GCS adapter enforces it through the X-Goog-Content-Length-Range header in the signed URL. You should also set the limit on your cloud storage provider. |
 
+You can use the following environment variables to configure cache compression:
+
+| Variable                   | Description                           | Default   | Values                                          |
+|----------------------------|---------------------------------------|-----------|-------------------------------------------------|
+| `CACHE_COMPRESSION_FORMAT` | Compression format for cache archives | `zip`     | `zip`, `tarzstd`                                |
+| `CACHE_COMPRESSION_LEVEL`  | Compression level for cache archives  | `default` | `fastest`, `fast`, `default`, `slow`, `slowest` |
+
+The `tarzstd` format uses TAR with Zstandard compression, which provides better compression ratios than `zip`.
+The compression levels range from `fastest` (minimal compression for maximum speed) to `slowest` (maximum compression for smallest file size).
+The `default` level provides a balanced trade-off between compression ratio and speed.
+
+Example:
+
+```yaml
+job:
+  variables:
+    CACHE_COMPRESSION_FORMAT: tarzstd
+    CACHE_COMPRESSION_LEVEL: fast
+```
+
 The cache mechanism uses pre-signed URLs to upload and download cache. URLs are signed by GitLab Runner on its own instance.
 It does not matter if the job's script (including the cache upload/download script) are executed on local or external
 machines. For example, `shell` or `docker` executors run their scripts on the same
