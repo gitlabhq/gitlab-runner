@@ -1064,7 +1064,14 @@ an IAM instance profile, the adapter uses the profile attached to the GitLab Run
 Similarly for [GCS cache adapter](#the-runnerscachegcs-section), if configured to
 use the `CredentialsFile`. The file needs to be present on the GitLab Runner machine.
 
-This table lists `config.toml`, CLI options, and environment variables for `register`.
+This table lists `config.toml`, CLI options, and environment variables
+for `register`. When you define these environment variables, the values
+are saved in `config.toml` after you register a new GitLab Runner.
+
+If you want to omit S3 credentials from `config.toml` and load static
+credentials from the environment, you can define `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY`. For more information, see
+[AWS SDK default credential chain section](#aws-sdk-default-credential-chain).
 
 | Setting                        | TOML field                                        | CLI option for `register`                  | Environment variable for `register` |
 |--------------------------------|---------------------------------------------------|--------------------------------------------|-------------------------------------|
