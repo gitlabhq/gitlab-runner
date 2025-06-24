@@ -496,14 +496,20 @@ func (b *Build) executeArchiveCache(ctx context.Context, state error, executor E
 
 func asRunnerSystemFailure(inner error) error { return asBuildError(inner, RunnerSystemFailure) }
 
+// asBuildError will wrap the specified error in a BuildError with the specified JobFailureReason. If the specified
+// error is already a BuildError, it will not be wrapped. If the specified error is a BuildError with no
+// FailureReason, the FailureReason will be set to the specified JobFailureReason.
 func asBuildError(inner error, reason JobFailureReason) error {
 	if inner == nil {
 		return nil
 	}
 
-	// If there's already a BuildError in the chain, leave it as it is...
+	// If there's already a BuildError with a FailureReason in the chain, leave it as it is...
 	var be *BuildError
 	if errors.As(inner, &be) {
+		if be.FailureReason == "" {
+			be.FailureReason = reason
+		}
 		return inner
 	}
 

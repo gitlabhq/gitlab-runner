@@ -408,11 +408,11 @@ func TestJobFailure(t *testing.T) {
 	trace.On("SetCancelFunc", mock.Anything).Once()
 	trace.On("SetAbortFunc", mock.Anything).Once()
 	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Once()
-	trace.On("Fail", thrownErr, JobFailureData{Reason: "", ExitCode: 1}).Return(nil).Once()
+	trace.On("Fail", thrownErr, JobFailureData{Reason: RunnerSystemFailure, ExitCode: 1}).Return(nil).Once()
 
 	err = build.Run(&Config{}, trace)
 
-	expectedErr := new(BuildError)
+	expectedErr := &BuildError{Inner: errors.New("test error"), ExitCode: 1, FailureReason: RunnerSystemFailure}
 	assert.ErrorIs(t, err, expectedErr)
 }
 
@@ -3189,7 +3189,7 @@ func TestBuildStageMetricsFailBuild(t *testing.T) {
 	build.OnBuildStageEndFn = stageFn
 
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
-	expectedErr := new(BuildError)
+	expectedErr := &BuildError{Inner: errors.New("test error"), ExitCode: 1, FailureReason: RunnerSystemFailure}
 	assert.ErrorIs(t, err, expectedErr)
 
 	expectedStages := []BuildStage{
