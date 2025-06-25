@@ -42,6 +42,7 @@ target "ubi-fips" {
 
   args = {
     BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner:${RUNNER_IMAGES_VERSION}-ubi-fips"
+    SRC_SUFFIX = "-fips"
   }
 
   platforms = ["linux/amd64"]
