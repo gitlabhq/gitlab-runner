@@ -408,11 +408,11 @@ func TestJobFailure(t *testing.T) {
 	trace.On("SetCancelFunc", mock.Anything).Once()
 	trace.On("SetAbortFunc", mock.Anything).Once()
 	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Once()
-	trace.On("Fail", thrownErr, JobFailureData{Reason: "", ExitCode: 1}).Return(nil).Once()
+	trace.On("Fail", thrownErr, JobFailureData{Reason: RunnerSystemFailure, ExitCode: 1}).Return(nil).Once()
 
 	err = build.Run(&Config{}, trace)
 
-	expectedErr := new(BuildError)
+	expectedErr := &BuildError{Inner: errors.New("test error"), ExitCode: 1, FailureReason: RunnerSystemFailure}
 	assert.ErrorIs(t, err, expectedErr)
 }
 
@@ -3189,7 +3189,7 @@ func TestBuildStageMetricsFailBuild(t *testing.T) {
 	build.OnBuildStageEndFn = stageFn
 
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
-	expectedErr := new(BuildError)
+	expectedErr := &BuildError{Inner: errors.New("test error"), ExitCode: 1, FailureReason: RunnerSystemFailure}
 	assert.ErrorIs(t, err, expectedErr)
 
 	expectedStages := []BuildStage{
@@ -3342,6 +3342,83 @@ func TestBuild_runCallsEnsureFinishedAt(t *testing.T) {
 			}
 
 			assert.NotZero(t, build.finishedAt)
+		})
+	}
+}
+
+func Test_asBuildError(t *testing.T) {
+	inner := errors.New("inner")
+
+	tests := map[string]struct {
+		inner          error
+		reason         JobFailureReason
+		expectedReason JobFailureReason
+		expectedCode   int
+	}{
+		"nil error returns nil": {
+			inner: nil,
+		},
+		"regular error gets wrapped": {
+			inner:          inner,
+			reason:         ScriptFailure,
+			expectedReason: ScriptFailure,
+			expectedCode:   1,
+		},
+		"BuildError with empty FailureReason gets reason set": {
+			inner:          &BuildError{Inner: inner, FailureReason: "", ExitCode: 2},
+			reason:         RunnerSystemFailure,
+			expectedReason: RunnerSystemFailure,
+			expectedCode:   2,
+		},
+		"BuildError with empty typed FailureReason gets reason set": {
+			inner:          &BuildError{Inner: inner, FailureReason: JobFailureReason(""), ExitCode: 2},
+			reason:         RunnerSystemFailure,
+			expectedReason: RunnerSystemFailure,
+			expectedCode:   2,
+		},
+		"BuildError with existing FailureReason is unchanged": {
+			inner:          &BuildError{Inner: inner, FailureReason: ConfigurationError, ExitCode: 3},
+			reason:         ScriptFailure,
+			expectedReason: ConfigurationError,
+			expectedCode:   3,
+		},
+		"wrapped BuildError with empty FailureReason gets reason set": {
+			inner:          fmt.Errorf("wrapped: %w", &BuildError{Inner: inner, FailureReason: "", ExitCode: 4}),
+			reason:         JobExecutionTimeout,
+			expectedReason: JobExecutionTimeout,
+			expectedCode:   4,
+		},
+		"wrapped BuildError with existing FailureReason is unchanged": {
+			inner:          fmt.Errorf("wrapped: %w", &BuildError{Inner: inner, FailureReason: UnknownFailure, ExitCode: 5}),
+			reason:         ScriptFailure,
+			expectedReason: UnknownFailure,
+			expectedCode:   5,
+		},
+		"errors,join wrapped BuildError with existing FailureReason is unchanged": {
+			inner:          errors.Join(errors.New("foo!"), &BuildError{Inner: inner, FailureReason: UnknownFailure, ExitCode: 5}),
+			reason:         ScriptFailure,
+			expectedReason: UnknownFailure,
+			expectedCode:   5,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			result := asBuildError(tt.inner, tt.reason)
+
+			if tt.inner == nil {
+				assert.Nil(t, result)
+				return
+			}
+
+			require.NotNil(t, result)
+
+			var buildErr *BuildError
+			require.True(t, errors.As(result, &buildErr), "result should be or contain a BuildError")
+
+			assert.Equal(t, tt.expectedReason, buildErr.FailureReason)
+			assert.Equal(t, tt.expectedCode, buildErr.ExitCode)
+			assert.Equal(t, inner, buildErr.Inner)
 		})
 	}
 }
