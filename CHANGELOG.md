@@ -1,3 +1,13 @@
+## v18.1.1 (2025-06-26)
+
+### Bug fixes
+
+- Put the fips binary in the fips runner image [!5669](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5669)
+
+### Maintenance
+
+- Bump golang to 1.24.4 [!5668](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5668)
+
 ## v18.1.0 (2025-06-26)
 
 ### New features
