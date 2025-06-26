@@ -79,7 +79,7 @@ func TestCreateVolumesLabels(t *testing.T) {
 		"com.gitlab.gitlab-runner.managed":         "true",
 		"com.gitlab.gitlab-runner.pipeline.id":     "1",
 		"com.gitlab.gitlab-runner.project.id":      "0",
-		"com.gitlab.gitlab-runner.runner.id":       "test-tok",
+		"com.gitlab.gitlab-runner.runner.id":       "test-toke",
 		"com.gitlab.gitlab-runner.runner.local_id": "0",
 		"com.gitlab.gitlab-runner.type":            "cache",
 	}, volume.Labels)

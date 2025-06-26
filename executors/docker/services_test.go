@@ -40,7 +40,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	p := pull.NewMockManager(t)
 
 	servicePart := fmt.Sprintf("-%s-0", strings.ReplaceAll(serviceName, "/", "__"))
-	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+" + servicePart)
+	containerNameRegex, err := regexp.Compile("runner-abcdef123-project-0-concurrent-0-[^-]+" + servicePart)
 	require.NoError(t, err)
 
 	containerNameMatcher := mock.MatchedBy(containerNameRegex.MatchString)

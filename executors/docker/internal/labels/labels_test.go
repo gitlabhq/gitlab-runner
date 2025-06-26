@@ -49,7 +49,7 @@ func TestLabels(t *testing.T) {
 		"com.gitlab.gitlab-runner.job.timeout":     "2h0m0s",
 		"com.gitlab.gitlab-runner.project.id":      "123456",
 		"com.gitlab.gitlab-runner.pipeline.id":     "",
-		"com.gitlab.gitlab-runner.runner.id":       "test-tok",
+		"com.gitlab.gitlab-runner.runner.id":       "test-toke",
 		"com.gitlab.gitlab-runner.runner.local_id": "123",
 		"com.gitlab.gitlab-runner.managed":         "true",
 		"com.gitlab.gitlab-runner.other.label1":    "1",

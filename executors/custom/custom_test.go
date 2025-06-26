@@ -399,7 +399,7 @@ func TestExecutor_Prepare(t *testing.T) {
 			},
 			assertBuild: func(t *testing.T, b *common.Build) {
 				assert.Equal(t, "custom-hostname", b.Hostname)
-				assert.Equal(t, "/some/build/directory/RuNnErTo/0/project-0", b.BuildDir)
+				assert.Equal(t, "/some/build/directory/RuNnErToK/0/project-0", b.BuildDir)
 				assert.Equal(t, "/some/cache/directory/project-0", b.CacheDir)
 			},
 			assertExecutor: func(t *testing.T, e *executor) {
