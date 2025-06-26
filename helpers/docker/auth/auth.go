@@ -67,7 +67,7 @@ func ResolveConfigForImage(
 		return nil, err
 	}
 
-	path := dockerImageNamePath(imageName)
+	path := normalizeImageRef(imageName)
 	for p := path; p != ""; p = parentPath(p) {
 		info, ok := authConfigs[p]
 		if ok {
@@ -185,8 +185,11 @@ func getBuildConfiguration(credentials []common.Credentials) (string, map[string
 	return authConfigSourceNameJobPayload, authConfigs, nil
 }
 
-// Given a docker image reference get the path to lookup the authentication credentials
-func dockerImageNamePath(imageName string) string {
+// normalizeImageRef takes a raw image reference and normalizes it:
+//   - cuts off the tag
+//   - normalizes docker.io image refs (nginx -> docker.io/nginx, index.docker.io/nginx -> docker.io/nginx)
+//   - lower-cases the hostname
+func normalizeImageRef(imageName string) string {
 	imageIndex := strings.LastIndex(imageName, "/")
 	image := imageName
 	if imageIndex != -1 {
