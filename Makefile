@@ -64,7 +64,7 @@ PROTOC_GEN_GO_GRPC_VERSION := v1.5.1
 SPLITIC = splitic
 MAGE = $(localBin)/mage
 
-GOLANGLINT_VERSION ?= v1.62.0
+GOLANGLINT_VERSION ?= v1.64.8
 GOLANGLINT ?= $(localBin)/golangci-lint$(GOLANGLINT_VERSION)
 GOLANGLINT_GOARGS ?= $(localBin)/goargs.so
 
