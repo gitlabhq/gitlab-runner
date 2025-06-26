@@ -45,6 +45,8 @@ func runServiceInstall(s service.Service, c *cli.Context) error {
 			return err
 		}
 
+		// if fips, add helper_image_flavour
+
 		// save config for the first time
 		if !config.Loaded {
 			err = config.SaveConfig(configFile)
