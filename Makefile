@@ -49,7 +49,7 @@ export PATH := $(localBin):$(PATH)
 # Development Tools
 GOCOVER_COBERTURA = gocover-cobertura
 
-MOCKERY_VERSION ?= 2.53.3
+MOCKERY_VERSION ?= 3.4.0
 MOCKERY = mockery
 
 PROTOC := $(localBin)/protoc
@@ -406,7 +406,7 @@ $(GOLANGLINT_GOARGS):
 
 .PHONY: $(MOCKERY)
 $(MOCKERY):
-	@go install github.com/vektra/mockery/v2@v$(MOCKERY_VERSION)
+	@go install github.com/vektra/mockery/v3@v$(MOCKERY_VERSION)
 
 $(PROTOC): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')
 $(PROTOC): ARCH_SUFFIX = $(if $(findstring osx,$(OS_TYPE)),universal_binary,x86_64)
