@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -190,28 +191,34 @@ func getBuildConfiguration(credentials []common.Credentials) (string, map[string
 //   - normalizes docker.io image refs (nginx -> docker.io/nginx, index.docker.io/nginx -> docker.io/nginx)
 //   - lower-cases the hostname
 func normalizeImageRef(imageName string) string {
-	imageIndex := strings.LastIndex(imageName, "/")
-	image := imageName
-	if imageIndex != -1 {
-		image = imageName[imageIndex+1:]
-	}
+	// foo.bar.tld/blipo/blupp:latest -> [ foo.bar.tld/blipp/, blupp:latest ]
+	dir, image := path.Split(imageName)
 
-	// remove tag
+	// remove tag: blupp:latest -> blupp
 	image, _, _ = strings.Cut(image, ":")
 
-	path := imageName[:imageIndex+1] + image
+	// reconstruct again -> foo.bar.tld/blipo/blupp
+	normalized := path.Join(dir, image)
 
-	nameParts := strings.SplitN(imageName, "/", 2)
-	if len(nameParts) == 1 || (!strings.Contains(nameParts[0], ".") &&
-		!strings.Contains(nameParts[0], ":") && nameParts[0] != "localhost") {
-		// This is a Docker Index repos (ex: samalba/hipache or ubuntu)
-		// 'docker.io'
-		path = DefaultDockerRegistry + "/" + path
-	} else if nameParts[0] == "index."+DefaultDockerRegistry {
-		path, _ = strings.CutPrefix(path, "index.")
+	// foo.bar.tld/blipo/blupp -> [ foo.bar.tld, blipo/blupp ]
+	nameParts := strings.SplitN(normalized, "/", 2)
+
+	// is this an image from docker hub, like "nginx"?
+	isDockerIO := len(nameParts) == 1 ||
+		(!strings.Contains(nameParts[0], ".") &&
+			!strings.Contains(nameParts[0], ":") &&
+			!strings.EqualFold(nameParts[0], "localhost"))
+
+	switch {
+	case isDockerIO:
+		// for docker.io images, explicitly prepend 'docker.io'
+		normalized = path.Join(DefaultDockerRegistry, normalized)
+	case strings.EqualFold(nameParts[0], "index."+DefaultDockerRegistry):
+		// for 'index.docker.io' images, explicitly cut of the 'index.' part
+		_, normalized, _ = strings.Cut(normalized, ".")
 	}
 
-	return pathWithLowerCaseHostname(path)
+	return pathWithLowerCaseHostname(normalized)
 }
 
 // readDockerConfigsFromHomeDir reads known docker config from home
