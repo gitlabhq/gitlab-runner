@@ -1,13 +1,14 @@
-with-expecter: True
-inpackage: True
-dir: "{{.InterfaceDir}}"
-mockname: "{{.Mock}}{{.InterfaceName | camelcase}}"
-outpkg: "{{.PackageName}}"
-filename: "mock_{{.InterfaceName}}.go"
-all: True
+all: true
+dir: '{{.InterfaceDir}}'
+filename: 'mocks.go'
+structname: "{{.Mock}}{{.InterfaceName | firstUpper}}"
+pkgname: '{{.SrcPackageName}}'
+template: testify
+template-data:
+  unroll-variadic: true
 packages:
- gitlab.com/gitlab-org/gitlab-runner:
+  gitlab.com/gitlab-org/gitlab-runner:
     config:
-      recursive: True
-      exclude:
+      exclude-subpkg-regex:
         - executors/internal/autoscaler
+      recursive: true
