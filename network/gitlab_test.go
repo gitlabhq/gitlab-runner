@@ -29,10 +29,11 @@ import (
 )
 
 const (
-	validToken     = "valid"
-	validGlrtToken = "glrt-valid-token"
 	expiringToken  = "expiring"
 	invalidToken   = "invalid"
+	testSystemID   = "test-system-id"
+	validGlrtToken = "glrt-valid-token"
+	validToken     = "valid"
 )
 
 type registerRunnerResponse int
@@ -43,15 +44,8 @@ const (
 	registerRunnerResponseRunnerProjectsLimitHit
 )
 
-const testSystemID = "test-system-id"
-
 var brokenCredentials = RunnerCredentials{
 	URL: "broken",
-}
-
-var brokenConfig = RunnerConfig{
-	RunnerCredentials: brokenCredentials,
-	SystemID:          testSystemID,
 }
 
 func TestClients(t *testing.T) {
@@ -911,116 +905,138 @@ func TestResetTokenWithPAT(t *testing.T) {
 	assert.Nil(t, res)
 }
 
-func getRequestJobResponse() map[string]interface{} {
-	jobToken := "job-token"
+func getRequestJobResponse(tb testing.TB, validResponse bool) string {
+	tb.Helper()
 
-	res := make(map[string]interface{})
-	res["id"] = 10
-	res["token"] = jobToken
-	res["allow_git_fetch"] = false
+	imageExecutorOptsKey := "platform"
+	imageExecutorOptsValue := "arm64/v8"
+	svcExecutorOptsKey := "platform"
+	svcExecutorOptsValue := "amd64/linux"
 
-	jobInfo := make(map[string]interface{})
-	jobInfo["name"] = "test-job"
-	jobInfo["stage"] = "test"
-	jobInfo["project_id"] = 123
-	jobInfo["project_name"] = "test-project"
-	res["job_info"] = jobInfo
+	if !validResponse {
+		imageExecutorOptsKey = "blammo"
+		imageExecutorOptsValue = "invalid"
+		svcExecutorOptsKey = "powpow"
+		svcExecutorOptsValue = "invalid"
+	}
 
-	gitInfo := make(map[string]interface{})
-	gitInfo["repo_url"] = "https://gitlab-ci-token:testTokenHere1234@gitlab.example.com/test/test-project.git"
-	gitInfo["ref"] = "main"
-	gitInfo["sha"] = "abcdef123456"
-	gitInfo["before_sha"] = "654321fedcba"
-	gitInfo["ref_type"] = "branch"
-	res["git_info"] = gitInfo
-
-	runnerInfo := make(map[string]interface{})
-	runnerInfo["timeout"] = 3600
-	res["runner_info"] = runnerInfo
-
-	variables := make([]map[string]interface{}, 1)
-	variables[0] = make(map[string]interface{})
-	variables[0]["key"] = "CI_REF_NAME"
-	variables[0]["value"] = "main"
-	variables[0]["public"] = true
-	variables[0]["file"] = true
-	variables[0]["raw"] = true
-	res["variables"] = variables
-
-	steps := make([]map[string]interface{}, 2)
-	steps[0] = make(map[string]interface{})
-	steps[0]["name"] = "script"
-	steps[0]["script"] = []string{"date", "ls -ls"}
-	steps[0]["timeout"] = 3600
-	steps[0]["when"] = "on_success"
-	steps[0]["allow_failure"] = false
-	steps[1] = make(map[string]interface{})
-	steps[1]["name"] = "after_script"
-	steps[1]["script"] = []string{"ls -ls"}
-	steps[1]["timeout"] = 3600
-	steps[1]["when"] = "always"
-	steps[1]["allow_failure"] = true
-	res["steps"] = steps
-
-	image := make(map[string]interface{})
-	image["name"] = "ruby:2.7"
-	image["entrypoint"] = []string{"/bin/sh"}
-	res["image"] = image
-	image["executor_opts"] = map[string]any{"docker": map[string]any{"platform": "arm64/v8"}}
-
-	services := make([]map[string]interface{}, 2)
-	services[0] = make(map[string]interface{})
-	services[0]["name"] = "postgresql:9.5"
-	services[0]["entrypoint"] = []string{"/bin/sh"}
-	services[0]["command"] = []string{"sleep", "30"}
-	services[0]["alias"] = "db-pg"
-	services[0]["executor_opts"] = map[string]any{"docker": map[string]any{"platform": "amd64/linux"}}
-	services[1] = make(map[string]interface{})
-	services[1]["name"] = "mysql:5.6"
-	services[1]["alias"] = "db-mysql"
-	services[1]["executor_opts"] = map[string]any{"docker": map[string]any{"platform": "arm"}}
-	res["services"] = services
-
-	artifacts := make([]map[string]interface{}, 1)
-	artifacts[0] = make(map[string]interface{})
-	artifacts[0]["name"] = "artifact.zip"
-	artifacts[0]["untracked"] = false
-	artifacts[0]["paths"] = []string{"out/*"}
-	artifacts[0]["when"] = "always"
-	artifacts[0]["expire_in"] = "7d"
-	res["artifacts"] = artifacts
-
-	cache := make([]map[string]interface{}, 1)
-	cache[0] = make(map[string]interface{})
-	cache[0]["key"] = "$CI_COMMIT_SHA"
-	cache[0]["untracked"] = false
-	cache[0]["paths"] = []string{"vendor/*"}
-	cache[0]["policy"] = "push"
-	res["cache"] = cache
-
-	credentials := make([]map[string]interface{}, 1)
-	credentials[0] = make(map[string]interface{})
-	credentials[0]["type"] = "Registry"
-	credentials[0]["url"] = "http://registry.gitlab.example.com/"
-	credentials[0]["username"] = "gitlab-ci-token"
-	credentials[0]["password"] = jobToken
-	res["credentials"] = credentials
-
-	dependencies := make([]map[string]interface{}, 1)
-	dependencies[0] = make(map[string]interface{})
-	dependencies[0]["id"] = 9
-	dependencies[0]["name"] = "other-job"
-	dependencies[0]["token"] = "other-job-token"
-	artifactsFile0 := make(map[string]interface{})
-	artifactsFile0["filename"] = "binaries.zip"
-	artifactsFile0["size"] = 13631488
-	dependencies[0]["artifacts_file"] = artifactsFile0
-	res["dependencies"] = dependencies
-
-	return res
+	return fmt.Sprintf(`{
+  "id": 10,
+  "token": "job-token",
+  "allow_git_fetch": false,
+  "job_info": {
+	"name": "test-job",
+	"stage": "test",
+	"project_id": 123,
+	"project_name": "test-project"
+  },
+  "git_info": {
+	"repo_url": "https://gitlab-ci-token:testTokenHere1234@gitlab.example.com/test/test-project.git",
+	"ref": "main",
+	"sha": "abcdef123456",
+	"before_sha": "654321fedcba",
+	"ref_type": "branch"
+  },
+  "runner_info": {
+	"timeout": 3600
+  },
+  "variables": [
+	{
+	  "key": "CI_REF_NAME",
+	  "value": "main",
+	  "public": true,
+	  "file": true,
+	  "raw": true
+	}
+  ],
+  "steps": [
+	{
+	  "name": "script",
+	  "script": ["date", "ls -ls"],
+	  "timeout": 3600,
+	  "when": "on_success",
+	  "allow_failure": false
+	},
+	{
+	  "name": "after_script",
+	  "script": ["ls -ls"],
+	  "timeout": 3600,
+	  "when": "always",
+	  "allow_failure": true
+	}
+  ],
+  "image": {
+	"name": "ruby:2.7",
+	"entrypoint": ["/bin/sh"],
+	"executor_opts": {
+	  "docker": {
+		"%s": "%s"
+	  }
+	}
+  },
+  "services": [
+	{
+	  "name": "postgresql:9.5",
+	  "entrypoint": ["/bin/sh"],
+	  "command": ["sleep", "30"],
+	  "alias": "db-pg",
+	  "executor_opts": {
+		"docker": {
+		  "%s": "%s"
+		}
+	  }
+	},
+	{
+	  "name": "mysql:5.6",
+	  "alias": "db-mysql",
+	  "executor_opts": {
+		"docker": {
+		  "platform": "arm"
+		}
+	  }
+	}
+  ],
+  "artifacts": [
+	{
+	  "name": "artifact.zip",
+	  "untracked": false,
+	  "paths": ["out/*"],
+	  "when": "always",
+	  "expire_in": "7d"
+	}
+  ],
+  "cache": [
+	{
+	  "key": "$CI_COMMIT_SHA",
+	  "untracked": false,
+	  "paths": ["vendor/*"],
+	  "policy": "push"
+	}
+  ],
+  "credentials": [
+	{
+	  "type": "Registry",
+	  "url": "http://registry.gitlab.example.com/",
+	  "username": "gitlab-ci-token",
+	  "password": "job-token"
+	}
+  ],
+  "dependencies": [
+	{
+	  "id": 9,
+	  "name": "other-job",
+	  "token": "other-job-token",
+	  "artifacts_file": {
+		"filename": "binaries.zip",
+		"size": 13631488
+	  }
+	}
+  ]
+}`, imageExecutorOptsKey, imageExecutorOptsValue, svcExecutorOptsKey, svcExecutorOptsValue)
 }
 
-func testRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request, jobResponse map[string]any) {
+func mockRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request, jobResponse string) {
+	t.Helper()
 	w.Header().Add(correlationIDHeader, "foobar")
 
 	if r.URL.Path != "/api/v4/jobs/request" {
@@ -1039,6 +1055,8 @@ func testRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request,
 	var req map[string]interface{}
 	err = json.Unmarshal(body, &req)
 	assert.NoError(t, err)
+
+	assert.Equal(t, testSystemID, req["system_id"])
 
 	token := req["token"].(string)
 	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
@@ -1065,122 +1083,115 @@ func testRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	output, err := json.Marshal(jobResponse)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set(ContentType, "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_, _ = w.Write(output)
-	t.Logf("JobRequest response: %s\n", output)
+	_, err = w.Write([]byte(jobResponse))
+	require.NoError(t, err, "failed to write job response")
 }
 
-func TestRequestJobWithUnsupportedOptions(t *testing.T) {
+func TestGitLabClient_RequestJob(t *testing.T) {
+	t.Parallel()
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		jobResp := getRequestJobResponse()
-		jobResp["image"].(map[string]any)["executor_opts"].(map[string]any)["docker"].(map[string]any)["blammo"] = "powpow"
-		jobResp["services"].([]map[string]any)[0]["executor_opts"].(map[string]any)["docker"].(map[string]any)["foobarbaz"] = "flinflanflon"
-		testRequestJobHandler(t, w, r, jobResp)
+		response := getRequestJobResponse(t, true)
+		if strings.Contains(r.URL.Path, "/unsupported") {
+			// Downstream handler performs a check on path. Unsupported is only
+			// need to trigger the response with invalid options.
+			r.URL.Path = strings.TrimPrefix(r.URL.Path, "/unsupported")
+			response = getRequestJobResponse(t, false)
+		}
+		mockRequestJobHandler(t, w, r, response)
 	}))
 	defer s.Close()
 
-	validToken := RunnerConfig{
-		RunnerCredentials: RunnerCredentials{
-			URL:   s.URL,
-			Token: validToken,
+	logHook := newLogHook(logrus.InfoLevel, logrus.ErrorLevel)
+	logrus.AddHook(&logHook)
+
+	type expected struct {
+		responseOK  bool
+		responseNil bool
+	}
+
+	testCases := []struct {
+		name                  string
+		token                 string
+		gitlabURL             string
+		assertUnsupportedOpts bool
+		expected              expected
+	}{
+		{
+			name:      "valid token",
+			token:     validToken,
+			gitlabURL: s.URL,
+			expected: expected{
+				responseOK: true,
+			},
 		},
-		SystemID: testSystemID,
-	}
-
-	c := NewGitLabClient()
-
-	h := newLogHook(logrus.InfoLevel, logrus.ErrorLevel)
-	logrus.AddHook(&h)
-
-	res, ok := c.RequestJob(context.Background(), validToken, nil)
-	assert.True(t, ok)
-	assert.NotNil(t, res)
-	assert.NotNil(t, res.UnsupportedOptions())
-	assert.Contains(t, res.UnsupportedOptions().Error(), "blammo")
-	assert.Contains(t, res.UnsupportedOptions().Error(), "foobarbaz")
-}
-
-func TestRequestJob(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testRequestJobHandler(t, w, r, getRequestJobResponse())
-	}))
-	defer s.Close()
-
-	validToken := RunnerConfig{
-		RunnerCredentials: RunnerCredentials{
-			URL:   s.URL,
-			Token: validToken,
+		{
+			name:      "no jobs token",
+			token:     "no-jobs",
+			gitlabURL: s.URL,
+			expected: expected{
+				responseOK:  true,
+				responseNil: true,
+			},
 		},
-		SystemID: testSystemID,
-	}
-
-	noJobsToken := RunnerConfig{
-		RunnerCredentials: RunnerCredentials{
-			URL:   s.URL,
-			Token: "no-jobs",
+		{
+			name:      "invalid token",
+			token:     invalidToken,
+			gitlabURL: s.URL,
+			expected: expected{
+				responseNil: true,
+			},
 		},
-		SystemID: testSystemID,
-	}
-
-	invalidToken := RunnerConfig{
-		RunnerCredentials: RunnerCredentials{
-			URL:   s.URL,
-			Token: invalidToken,
+		{
+			name:      "invalid url",
+			token:     validToken,
+			gitlabURL: "invalid",
+			expected: expected{
+				responseNil: true,
+			},
 		},
-		SystemID: testSystemID,
+		{
+			name:                  "unsupported executor options",
+			token:                 validToken,
+			gitlabURL:             s.URL + "/unsupported",
+			assertUnsupportedOpts: true,
+			expected: expected{
+				responseOK: true,
+			},
+		},
 	}
 
-	c := NewGitLabClient()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			glc := NewGitLabClient()
+			rc := RunnerConfig{
+				RunnerCredentials: RunnerCredentials{
+					URL:   tc.gitlabURL,
+					Token: tc.token,
+				},
+				SystemID: testSystemID,
+			}
 
-	h := newLogHook(logrus.InfoLevel, logrus.ErrorLevel)
-	logrus.AddHook(&h)
+			// Act
+			res, ok := glc.RequestJob(t.Context(), rc, nil)
 
-	res, ok := c.RequestJob(context.Background(), validToken, nil)
-	assert.True(t, ok)
-	if assert.NotNil(t, res) {
-		assert.NotEmpty(t, res.ID)
+			// Assert
+			assert.Equal(t, tc.expected.responseOK, ok)
+			if tc.expected.responseNil {
+				assert.Nil(t, res)
+			} else {
+				assertOnJobResponse(t, res, tc.assertUnsupportedOpts)
+			}
+
+			if tc.token == "no-jobs" {
+				assert.Nil(t, res)
+				assert.True(t, ok, "If no jobs, runner is healthy")
+				assert.Equal(t, "a nice timestamp", glc.getLastUpdate(&rc.RunnerCredentials), "Last-Update should be set")
+			}
+		})
 	}
-
-	assert.Equal(t, "ruby:2.7", res.Image.Name)
-	assert.Equal(t, []string{"/bin/sh"}, res.Image.Entrypoint)
-	require.Equal(t, "arm64/v8", res.Image.ExecutorOptions.Docker.Platform)
-	require.Len(t, res.Services, 2)
-	assert.Equal(t, "postgresql:9.5", res.Services[0].Name)
-	assert.Equal(t, []string{"/bin/sh"}, res.Services[0].Entrypoint)
-	assert.Equal(t, []string{"sleep", "30"}, res.Services[0].Command)
-	assert.Equal(t, "db-pg", res.Services[0].Alias)
-	assert.Equal(t, "amd64/linux", res.Services[0].ExecutorOptions.Docker.Platform)
-	assert.Equal(t, "mysql:5.6", res.Services[1].Name)
-	assert.Equal(t, "db-mysql", res.Services[1].Alias)
-	assert.Equal(t, "arm", res.Services[1].ExecutorOptions.Docker.Platform)
-
-	require.Len(t, res.Variables, 1)
-	assert.Equal(t, "CI_REF_NAME", res.Variables[0].Key)
-	assert.Equal(t, "main", res.Variables[0].Value)
-	assert.True(t, res.Variables[0].Public)
-	assert.True(t, res.Variables[0].File)
-	assert.True(t, res.Variables[0].Raw)
-
-	assert.Empty(t, c.getLastUpdate(&noJobsToken.RunnerCredentials), "Last-Update should not be set")
-	res, ok = c.RequestJob(context.Background(), noJobsToken, nil)
-	assert.Nil(t, res)
-	assert.True(t, ok, "If no jobs, runner is healthy")
-	assert.Equal(t, "a nice timestamp", c.getLastUpdate(&noJobsToken.RunnerCredentials), "Last-Update should be set")
-
-	res, ok = c.RequestJob(context.Background(), invalidToken, nil)
-	assert.Nil(t, res)
-	assert.False(t, ok, "If token is invalid, the runner is unhealthy")
-
-	res, ok = c.RequestJob(context.Background(), brokenConfig, nil)
-	assert.Nil(t, res)
-	assert.False(t, ok)
 
 	expectedLogs := []logrus.Entry{
 		{
@@ -1207,48 +1218,66 @@ func TestRequestJob(t *testing.T) {
 			Message: "Checking for jobs... client error",
 			Data: logrus.Fields{
 				"correlation_id": "",
+				"runner":         "valid",
 				"status":         "only http or https scheme supported",
+			},
+		},
+		{
+			Level:   logrus.InfoLevel,
+			Message: "Checking for jobs... received",
+			Data: logrus.Fields{
+				"correlation_id": "foobar",
+				"job":            int64(10),
+				"repo_url":       "https://gitlab.example.com/test/test-project.git",
+				"runner":         "valid",
 			},
 		},
 	}
 
-	require.Len(t, h.entries, len(expectedLogs))
+	require.Len(t, logHook.entries, len(expectedLogs))
 	for i, l := range expectedLogs {
-		assert.Equal(t, l.Level, h.entries[i].Level)
-		assert.Equal(t, l.Message, h.entries[i].Message)
-		assert.Equal(t, l.Data, h.entries[i].Data)
+		assert.Equal(t, l.Level, logHook.entries[i].Level)
+		assert.Equal(t, l.Message, logHook.entries[i].Message)
+		assert.Equal(t, l.Data, logHook.entries[i].Data)
 	}
 }
 
-func TestRequestJobWithSystemID(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(r.Body)
-		assert.NoError(t, err)
+func assertOnJobResponse(tb testing.TB, res *JobResponse, assertUnsupportedOpts bool) {
+	tb.Helper()
+	assert.NotNil(tb, res)
+	assert.NotEmpty(tb, res.ID)
+	assert.Equal(tb, "ruby:2.7", res.Image.Name)
+	assert.Equal(tb, []string{"/bin/sh"}, res.Image.Entrypoint)
 
-		var req map[string]interface{}
-		err = json.Unmarshal(body, &req)
-		assert.NoError(t, err)
+	require.Len(tb, res.Services, 2)
+	assert.Equal(tb, "postgresql:9.5", res.Services[0].Name)
+	assert.Equal(tb, []string{"/bin/sh"}, res.Services[0].Entrypoint)
+	assert.Equal(tb, []string{"sleep", "30"}, res.Services[0].Command)
+	assert.Equal(tb, "db-pg", res.Services[0].Alias)
 
-		assert.NotEmpty(t, req["system_id"])
-		assert.Equal(t, testSystemID, req["system_id"])
-	}))
-	defer s.Close()
+	assert.Equal(tb, "mysql:5.6", res.Services[1].Name)
+	assert.Equal(tb, "db-mysql", res.Services[1].Alias)
+	assert.Equal(tb, "arm", res.Services[1].ExecutorOptions.Docker.Platform)
 
-	validToken := RunnerConfig{
-		RunnerCredentials: RunnerCredentials{
-			URL:   s.URL,
-			Token: validToken,
-		},
-		SystemID: testSystemID,
+	require.Len(tb, res.Variables, 1)
+	assert.Equal(tb, "CI_REF_NAME", res.Variables[0].Key)
+	assert.Equal(tb, "main", res.Variables[0].Value)
+	assert.True(tb, res.Variables[0].Public)
+	assert.True(tb, res.Variables[0].File)
+	assert.True(tb, res.Variables[0].Raw)
+
+	if assertUnsupportedOpts {
+		assert.NotNil(tb, res.UnsupportedOptions())
+		assert.Contains(tb, res.UnsupportedOptions().Error(), "blammo")
+		assert.Contains(tb, res.UnsupportedOptions().Error(), "powpow")
+	} else {
+		require.Equal(tb, "arm64/v8", res.Image.ExecutorOptions.Docker.Platform)
+		assert.Equal(tb, "amd64/linux", res.Services[0].ExecutorOptions.Docker.Platform)
 	}
-
-	c := NewGitLabClient()
-
-	_, ok := c.RequestJob(context.Background(), validToken, nil)
-	assert.True(t, ok)
 }
 
-func TestRequestJobAfterTooManyRequests(t *testing.T) {
+func TestGitLabClient_RequestJob_TooManyRequests(t *testing.T) {
+	t.Parallel()
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set(retryAfterHeader, "60")
 		w.WriteHeader(http.StatusTooManyRequests)
