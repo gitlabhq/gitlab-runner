@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/user"
 	"path"
@@ -239,46 +240,49 @@ func readDockerConfigsFromHomeDir(userName string) (string, map[string]types.Aut
 		return "", nil, errNoHomeDir
 	}
 
-	configFile := filepath.Join(homeDir, ".docker", "config.json")
+	configFiles := []string{
+		filepath.Join(homeDir, ".docker", "config.json"),
+		filepath.Join(homeDir, ".dockercfg"),
+	}
 
-	r, err := os.Open(configFile)
-	if err != nil {
-		configFile = filepath.Join(homeDir, ".dockercfg")
-		r, err = os.Open(configFile)
-		if err != nil && !os.IsNotExist(err) {
-			return "", nil, err
+	var f *os.File
+	var err error
+	for _, fn := range configFiles {
+		f, err = os.Open(fn)
+		if err == nil {
+			break
 		}
 	}
-	defer r.Close()
-
-	if r == nil {
-		return "", make(map[string]types.AuthConfig), nil
+	if err != nil && !os.IsNotExist(err) {
+		return "", nil, err
 	}
+	if f == nil {
+		return "", map[string]types.AuthConfig{}, nil
+	}
+	defer f.Close()
 
-	authConfigs, err := readConfigsFromReader(r)
-
-	return configFile, authConfigs, err
+	authConfigs, err := readConfigsFromReader(f)
+	return f.Name(), authConfigs, err
 }
 
 func readConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
 	config := &configfile.ConfigFile{}
-
 	if err := config.LoadFromReader(r); err != nil {
-		if errors.Is(err, io.EOF) {
-			err = nil
-		}
 		return nil, err
 	}
+	if !config.ContainsAuth() {
+		// we can bail out early when there is no auth configured at all
+		return nil, nil
+	}
 
-	auths := make(map[string]types.AuthConfig)
-	addAll(auths, config.AuthConfigs)
+	auths := config.GetAuthConfigs()
 
 	if config.CredentialsStore != "" {
 		authsFromCredentialsStore, err := readConfigsFromCredentialsStore(config)
 		if err != nil {
 			return nil, err
 		}
-		addAll(auths, authsFromCredentialsStore)
+		maps.Copy(auths, authsFromCredentialsStore)
 	}
 
 	if config.CredentialHelpers != nil {
@@ -286,7 +290,7 @@ func readConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
 		if err != nil {
 			return nil, err
 		}
-		addAll(auths, authsFromCredentialsHelpers)
+		maps.Copy(auths, authsFromCredentialsHelpers)
 	}
 
 	return auths, nil
@@ -327,12 +331,6 @@ func readConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string
 	}
 
 	return helpersAuths, nil
-}
-
-func addAll(to, from map[string]types.AuthConfig) {
-	for reg, ac := range from {
-		to[reg] = ac
-	}
 }
 
 // convert hostname part to lower case.
