@@ -1847,7 +1847,7 @@ func (s *executor) isSharedBuildsDirRequired() bool {
 func (s *executor) setupCredentials(ctx context.Context) error {
 	s.BuildLogger.Debugln("Setting up secrets")
 
-	authConfigs, err := auth.ResolveConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials, &s.BuildLogger)
+	authConfigs, err := auth.NewResolver().AllConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials, &s.BuildLogger)
 	if err != nil {
 		return err
 	}
@@ -1857,8 +1857,8 @@ func (s *executor) setupCredentials(ctx context.Context) error {
 	}
 
 	dockerCfgs := make(map[string]types.AuthConfig)
-	for registry, registryInfo := range authConfigs {
-		dockerCfgs[registry] = registryInfo.AuthConfig
+	for _, config := range authConfigs {
+		dockerCfgs[config.AuthConfig.ServerAddress] = config.AuthConfig
 	}
 
 	dockerCfgContent, err := json.Marshal(dockerCfgs)

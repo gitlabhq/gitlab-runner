@@ -181,7 +181,7 @@ func (m *manager) getImageUsingPullPolicy(
 }
 
 func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, error) {
-	registryInfo, err := auth.ResolveConfigForImage(
+	registryInfo, err := auth.NewResolver().ConfigForImage(
 		imageName,
 		m.config.AuthConfig,
 		m.config.ShellUser,
