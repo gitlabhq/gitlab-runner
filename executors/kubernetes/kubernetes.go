@@ -23,6 +23,7 @@ import (
 	"github.com/docker/cli/cli/config/types"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/jpillora/backoff"
+	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -3016,6 +3017,14 @@ func (s *executor) checkDefaults() error {
 		if k8sConfigImageName == "" {
 			return fmt.Errorf("no image specified and no default set in config")
 		}
+
+		s.BuildLogger.
+			WithFields(logrus.Fields{
+				"executor": "kubernetes",
+				"image":    k8sConfigImageName,
+			}).
+			Infoln("Using default image")
+
 		s.options.Image.Name = k8sConfigImageName
 	}
 

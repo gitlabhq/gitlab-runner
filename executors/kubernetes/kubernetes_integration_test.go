@@ -24,9 +24,20 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
@@ -37,13 +48,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
-	v1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	k8s "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 var (
@@ -2304,11 +2308,16 @@ func TestPrepareIssue2583(t *testing.T) {
 
 	e := common.NewExecutor(common.ExecutorKubernetes)
 
+	mockTrace := buildlogger.NewMockTrace(t)
+	mockTrace.EXPECT().IsStdout().Return(true).Once()
+	mockTrace.EXPECT().Write(mock.Anything).Return(0, nil)
+
 	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 	prepareOptions := common.ExecutorPrepareOptions{
-		Config:  build.Runner,
-		Build:   build,
-		Context: context.TODO(),
+		Config:      build.Runner,
+		Build:       build,
+		Context:     context.TODO(),
+		BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 	}
 
 	err := e.Prepare(prepareOptions)
