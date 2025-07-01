@@ -676,11 +676,6 @@ func setupTestHomeDirectoryConfig(t *testing.T, configFileContents string) strin
 	return fakeHome
 }
 
-type configLocation struct {
-	subfolder string
-	filename  string
-}
-
 func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 	expectedUsername := "test_username"
 	expectedPassword := "test_password"
@@ -693,7 +688,7 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 	tests := map[string]struct {
 		homeDirProvided     bool
 		configContent       []byte
-		configLocation      configLocation
+		configLocation      []string
 		expectedAuthConfigs []types.AuthConfig
 		expectedError       error
 	}{
@@ -702,16 +697,12 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 		},
 		"No configs": {
 			homeDirProvided:     true,
-			configLocation:      configLocation{},
 			expectedAuthConfigs: []types.AuthConfig{},
 		},
 		"Config: $HOME/.dockercfg": {
 			homeDirProvided: true,
 			configContent:   config,
-			configLocation: configLocation{
-				subfolder: "",
-				filename:  ".dockercfg",
-			},
+			configLocation:  []string{".dockercfg"},
 			expectedAuthConfigs: []types.AuthConfig{
 				{
 					Username:      expectedUsername,
@@ -723,10 +714,7 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 		"Config: $HOME/.docker/config.json": {
 			homeDirProvided: true,
 			configContent:   config,
-			configLocation: configLocation{
-				subfolder: ".docker",
-				filename:  "config.json",
-			},
+			configLocation:  []string{".docker", "config.json"},
 			expectedAuthConfigs: []types.AuthConfig{
 				{
 					Username:      expectedUsername,
@@ -739,27 +727,18 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			homeDirGetter := func() string { return "" }
+			fakeHome := ""
+			homeDirGetter := func() string { return fakeHome }
 			expectedConfigFile := ""
 
 			if test.homeDirProvided {
-				fakeHome := t.TempDir()
+				fakeHome = t.TempDir()
 
-				homeDirGetter = func() string { return fakeHome }
-				configDir := fakeHome
-
-				if test.configLocation.subfolder != "" {
-					configDir = filepath.Join(fakeHome, test.configLocation.subfolder)
-					err := os.MkdirAll(configDir, 0o777)
-					require.NoErrorf(t, err, "failed to create docker config subfolder: %s", err)
-				}
-
-				if test.configLocation.filename != "" {
-					f := filepath.Join(configDir, test.configLocation.filename)
-					err := os.WriteFile(f, test.configContent, 0o666)
-					require.NoError(t, err, "failed to write test docker config: %s", err)
-
-					expectedConfigFile = f
+				if len(test.configLocation) > 0 {
+					file := filepath.Join(slices.Concat([]string{fakeHome}, test.configLocation)...)
+					require.NoError(t, os.MkdirAll(filepath.Dir(file), 0o777), "creating config directory")
+					require.NoError(t, os.WriteFile(file, test.configContent, 0o666), "writing config file")
+					expectedConfigFile = file
 				}
 			}
 
