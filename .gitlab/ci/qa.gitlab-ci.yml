@@ -122,8 +122,6 @@ docs:lint i18n markdown:
   script:
     # Makefiles in this project expect Go to be available
     - apk add --quiet go
-    # Do not lint link-fragments, which are currently invalid in translations
-    - 'echo "  link-fragments: false" >> .markdownlint-cli2.yaml'
     # Lint i18n content and Markdown
     - make lint-i18n-docs VALE_MIN_ALERT_LEVEL=error
 
