@@ -4,7 +4,7 @@
 //
 // The allowed characters in the alphabet part of the token are:
 // * Alphanumeric characters: 0-9, a-z, A-Z
-// * Specia characters: -, ., _, =
+// * Special characters: -, ., _, =
 //
 // To achieve masking over Write() boundaries, each prefix has its own writer.
 // These writers are stacked, with each one calling the next, in length order,
@@ -23,12 +23,16 @@ import (
 	"io"
 )
 
+var allTokenPrefixes = []string{
+	"gloas-", "gldt-", "glrt-", "glcbt-", "glrtr-",
+	"glptt-", "glft-", "glimt-", "glagent-", "glsoat-", "glffct-", "_gitlab_session=", "gltok-",
+}
+
 // https://docs.gitlab.com/security/token_overview/#token-prefixes
 func DefaultTokenPrefixes(maskAllDefaultTokens bool) []string {
 	tokenPrefixes := []string{"glpat-"}
 	if maskAllDefaultTokens {
-		tokenPrefixes = append(tokenPrefixes, "gloas-", "gldt-", "glrt-", "glcbt-",
-			"glptt-", "glft-", "glimt-", "glagent-", "glsoat-", "glffct-", "_gitlab_session=", "gltok-")
+		tokenPrefixes = append(tokenPrefixes, allTokenPrefixes...)
 	}
 
 	return tokenPrefixes
