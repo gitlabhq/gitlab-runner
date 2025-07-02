@@ -19,7 +19,7 @@ fi
 
 echo "Lint Markdown"
 if command -v markdownlint-cli2 >/dev/null 2>&1; then
-    markdownlint-cli2 'docs-locale/**/*.md' || ((ERROR_RESULTS++))
+    cd "${GIT_ROOT}/docs-locale" && markdownlint-cli2 --config .markdownlint/.markdownlint-cli2.yaml '**/*.md' || ((ERROR_RESULTS++))
 else
     echo "markdownlint-cli2 is missing, please install it from https://github.com/DavidAnson/markdownlint-cli2#install"
 fi
