@@ -679,6 +679,6 @@ func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
 		require.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		buildtest.RunBuildWithCleanupNormalSubmoduleStrategy(t, build, untrackedFile, untrackedSubmoduleFile)
+		buildtest.RunBuildWithCleanupRecursiveSubmoduleStrategy(t, build, untrackedFile, untrackedSubmoduleFile, untrackedSubSubmoduleFile)
 	})
 }
