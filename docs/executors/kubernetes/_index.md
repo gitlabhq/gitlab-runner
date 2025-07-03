@@ -188,11 +188,6 @@ rules:
 ```
 <!-- k8s_api_permissions_role_yaml_end -->
 
-- _For GitLab 15.0 and 15.1._
-- _For GitLab 15.0.1, 15.1.1, and 15.2 when `resource_availability_check_max_attempts` is set to a value higher than 0._
-
-- _As of GitLab Runner 15.8 the `configmaps` permission is no longer needed._
-
 - _The `event` permission is needed only:_
 
   - _For GitLab 16.2.1 and later._
@@ -347,7 +342,7 @@ This approach allows developers to optimize resource usage per job while maintai
 | `priority_class_name`                         | Specify the Priority Class to be set to the pod. The default one is used if not set. |
 | `privileged`                                  | Run containers with the privileged flag. |
 | `pull_policy`                                 | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#set-a-pull-policy). See also [`if-not-present`, `never` security considerations](../../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). You can also [restrict pull policies](#restrict-docker-pull-policies). |
-| `resource_availability_check_max_attempts`    | The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0. [Read more about resources check during prepare step](#resources-check-during-prepare-step). |
+| `resource_availability_check_max_attempts`    | The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt. [Read more about resources check during prepare step](#resources-check-during-prepare-step). |
 | `runtime_class_name`                          | A Runtime class to use for all created pods. If the feature is unsupported by the cluster, jobs exit or fail. |
 | `service_container_security_context`          | Sets a container security context for the service containers. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `scheduler_name`                              | Scheduler to use for scheduling build pods. |
@@ -439,12 +434,6 @@ are ignored and logged as debug messages.
 | `job.runner.gitlab.com/pod`                | Internal label used by the Kubernetes executor. |
 
 ### Default annotations for job pods
-
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3845) in GitLab Runner 15.9.
-
-{{< /history >}}
 
 The following annotations are added by default on the Pod running the jobs:
 
@@ -571,12 +560,6 @@ This configuration allows overwrite of any of the `pod_annotations` configured i
 - Status: Beta
 
 {{< /details >}}
-
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3114) in GitLab Runner 15.10.
-
-{{< /history >}}
 
 This feature is in [beta](https://docs.gitlab.com/policy/development_stages_support/#beta). We strongly recommend that you use
 this feature on a test Kubernetes cluster before you use it on a production cluster. To use this feature, you must
@@ -2075,12 +2058,6 @@ Or, to restrict to a specific list of images from this registry:
 
 ### Restrict Docker pull policies
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
-
-{{< /history >}}
-
 In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how
 a CI/CD job should fetch images.
 
@@ -2176,16 +2153,8 @@ To retry an entirely different error, such as `exceeded quota` 20 times:
 
 ### Container entrypoint known issues
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3095) in GitLab Runner 14.5.
-- [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3212) in GitLab Runner 15.1.
-
-{{< /history >}}
-
 {{< alert type="note" >}}
 
-In 15.0, GitLab Runner uses the entrypoint defined in a Docker image when used with the Kubernetes executor with `kube attach`.
 In GitLab 15.1 and later, the entrypoint defined in a Docker image is used with the Kubernetes executor when `FF_KUBERNETES_HONOR_ENTRYPOINT` is set.
 
 {{< /alert >}}
@@ -2266,13 +2235,6 @@ rules:
 
 ## Resources check during prepare step
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0.
-- [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29101) in GitLab 15.2.
-
-{{< /history >}}
-
 Prerequisites:
 
 - `image_pull_secrets` or `service_account` is set.
@@ -2281,8 +2243,7 @@ Prerequisites:
 
 GitLab Runner checks if the new service accounts or secrets are available with a 5-second interval between each try.
 
-- In GitLab 15.0 and 15.1, you cannot disable this feature and it defaults to `5` when a negative value is set.
-- In GitLab 15.0.1, 15.1.1, 15.2 and later, this feature is disabled by default. To enable this feature, set `resource_availability_check_max_attempts` to any value other than `0`.
+- This feature is disabled by default. To enable this feature, set `resource_availability_check_max_attempts` to any value other than `0`.
 The value you set defines the amount of times the runner checks for service accounts or secrets.
 
 ### Overwrite the Kubernetes namespace
