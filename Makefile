@@ -131,6 +131,10 @@ version:
 .PHONY: deps
 deps: $(DEVELOPMENT_TOOLS)
 
+.PHONY: format
+format: $(GOLANGLINT)
+	@$(GOLANGLINT) run --fix ./... --out-format colored-line-number
+
 .PHONY: lint
 lint: OUT_FORMAT ?= colored-line-number
 lint: LINT_FLAGS ?=
