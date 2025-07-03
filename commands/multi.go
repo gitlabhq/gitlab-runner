@@ -60,7 +60,7 @@ var (
 	limitDesc = prometheus.NewDesc(
 		"gitlab_runner_limit",
 		"The current value of concurrent setting",
-		[]string{"runner", "system_id"},
+		[]string{"runner", "runner_name", "system_id"},
 		nil,
 	)
 )
@@ -1479,6 +1479,7 @@ func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 			prometheus.GaugeValue,
 			float64(runner.Limit),
 			runner.ShortDescription(),
+			runner.Name,
 			runner.SystemID,
 		)
 	}
