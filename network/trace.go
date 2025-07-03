@@ -161,7 +161,7 @@ func (c *clientJobTrace) setFailure(data common.JobFailureData) {
 	c.failureReason = c.ensureSupportedFailureReason(data.Reason)
 
 	if c.failuresCollector != nil {
-		c.failuresCollector.RecordFailure(c.ensureNonEmptyFailureReason(data.Reason), c.config.ShortDescription())
+		c.failuresCollector.RecordFailure(c.ensureNonEmptyFailureReason(data.Reason), c.config)
 	}
 }
 

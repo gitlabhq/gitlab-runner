@@ -1126,7 +1126,7 @@ type ArtifactsOptions struct {
 }
 
 type FailuresCollector interface {
-	RecordFailure(reason JobFailureReason, runnerDescription string)
+	RecordFailure(reason JobFailureReason, runnerConfig RunnerConfig)
 }
 
 type SupportedFailureReasonMapper interface {

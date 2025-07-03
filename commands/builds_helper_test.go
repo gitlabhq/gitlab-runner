@@ -24,6 +24,7 @@ import (
 
 const (
 	testToken = "testoken" // No typo here! 8 characters to make it equal to the computed ShortDescription()
+	testName  = "qwerty123"
 )
 
 func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
@@ -331,6 +332,7 @@ func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			build := &common.Build{
 				Runner: &common.RunnerConfig{
+					Name: testName,
 					RunnerCredentials: common.RunnerCredentials{
 						Token: testToken,
 					},
@@ -386,9 +388,11 @@ func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
 				labels[*l.Name] = *l.Value
 			}
 
-			assert.Len(t, labels, 2)
+			assert.Len(t, labels, 3)
 			require.Contains(t, labels, "runner")
 			assert.Equal(t, testToken, labels["runner"])
+			require.Contains(t, labels, "runner_name")
+			assert.Equal(t, testName, labels["runner_name"])
 			require.Contains(t, labels, "system_id")
 			assert.Equal(t, build.Runner.SystemID, labels["system_id"])
 
