@@ -21,8 +21,7 @@ const (
 	defaultDescription = "GitLab Runner"
 )
 
-type NullService struct {
-}
+type NullService struct{}
 
 func (n *NullService) Start(s service.Service) error {
 	return nil
@@ -44,8 +43,6 @@ func runServiceInstall(s service.Service, c *cli.Context) error {
 		if err != nil {
 			return err
 		}
-
-		// if fips, add helper_image_flavour
 
 		// save config for the first time
 		if !config.Loaded {
