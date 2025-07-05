@@ -319,7 +319,7 @@ func (b *BashWriter) RmFilesRecursive(path string, name string) {
 func (b *BashWriter) RmDirsRecursive(path string, name string) {
 	b.IfDirectory(path)
 	// `find -delete` is not portable; https://unix.stackexchange.com/a/194348
-	b.Linef("find %q -name %q -type d -exec rm -rf -- {} +", path, name)
+	b.Linef("find %q -name %q -type d -depth -exec rm -rf -- {} +", path, name)
 	b.EndIf()
 }
 
