@@ -850,6 +850,15 @@ Prerequisites:
   and are not supported by [Podman](https://podman.io/). For services that
   create a network alias, you must install the `podman-plugins` package.
 
+{{< alert type="note" >}}
+
+Podman uses `aardvark-dns` as the DNS server for containers.
+The `aardvark-dns` versions 1.10.0 and earlier cause sporadic DNS resolution failures in CI/CD jobs.
+Make sure that you have installed a newer version.
+For more information, see [GitHub issue 389](https://github.com/containers/aardvark-dns/issues/389).
+
+{{< /alert >}}
+
 1. On your Linux host, install GitLab Runner. If you installed GitLab Runner
    by using your system's package manager, it automatically creates a `gitlab-runner` user.
 1. Sign in as the user who runs GitLab Runner. You must do so in a way that
