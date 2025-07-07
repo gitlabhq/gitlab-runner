@@ -12,7 +12,7 @@ if command -v vale >/dev/null 2>&1; then
     if [ -n "${VALE_MIN_ALERT_LEVEL}" ]; then
         args+=("--minAlertLevel" "${VALE_MIN_ALERT_LEVEL}")
     fi
-    vale --config "${GIT_ROOT}/.vale.ini" "${args[@]}" "${GIT_ROOT}/docs-locale" || ((ERROR_RESULTS++))
+    vale --config "${GIT_ROOT}/.vale.ini" --filter='.Name matches "gitlab_docs"' "${args[@]}" "${GIT_ROOT}/docs-locale" || ((ERROR_RESULTS++))
 else
     echo "Vale is missing, please install it from https://vale.sh/docs/vale-cli/installation/"
 fi
