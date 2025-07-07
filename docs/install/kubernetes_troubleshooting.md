@@ -35,7 +35,7 @@ runners:
 
 For more information, see [issue 28393](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28393#note_722733798).
 
-## `PANIC: creating directory: mkdir /nonexistent: permission denied`
+## Error: `PANIC: creating directory: mkdir /nonexistent: permission denied`
 
 To resolve this error, switch to the
 [Ubuntu-based GitLab Runner Docker image](kubernetes_helm_chart_configuration.md#switch-to-the-ubuntu-based-gitlab-runner-docker-image).
@@ -53,7 +53,7 @@ net/http: invalid header field for "Private-Token"
 To resolve this issue, ensure a newline (`\n`) is not appended to the token value.
 For example: `echo -n glrt-A5sFGybkt0pY8AdVLnx4 | base64`.
 
-## FATAL: Runner configuration is reserved
+## Error: `FATAL: Runner configuration is reserved`
 
 You might get the following error in the pod logs after installing the GitLab Runner Helm chart:
 

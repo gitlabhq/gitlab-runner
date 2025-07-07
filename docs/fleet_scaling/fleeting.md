@@ -102,7 +102,7 @@ To install the fleeting plugin:
      plugin = "azure:latest"
    ```
 
-      {{< /tab >}}
+   {{< /tab >}}
 
    {{< /tabs >}}
 
@@ -168,13 +168,13 @@ To manually install a fleeting plugin:
 
    [runners.autoscaler]
      plugin = "fleeting-plugin-aws"
-    ```
+   ```
 
    {{< /tab >}}
 
    {{< tab title="Google Cloud" >}}
 
-      ```toml
+   ```toml
    [[runners]]
      name = "my runner"
      url = "https://gitlab.com"
@@ -185,13 +185,13 @@ To manually install a fleeting plugin:
 
    [runners.autoscaler]
      plugin = "fleeting-plugin-googlecloud"
-    ```
+   ```
 
    {{< /tab >}}
 
    {{< tab title="Azure" >}}
 
-     ```toml
+   ```toml
    [[runners]]
      name = "my runner"
      url = "https://gitlab.com"
@@ -202,9 +202,9 @@ To manually install a fleeting plugin:
 
    [runners.autoscaler]
      plugin = "fleeting-plugin-azure"
-    ```
+   ```
 
-      {{< /tab >}}
+   {{< /tab >}}
 
    {{< /tabs >}}
 

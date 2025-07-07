@@ -61,8 +61,8 @@ installed in the same machine:
 
 1. Familiarize yourself with the core concepts of using `docker-machine`
    with `gitlab-runner`:
-      - Read [GitLab Runner Autoscaling](../configuration/autoscale.md)
-      - Read [GitLab Runner MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section)
+   - Read [GitLab Runner Autoscaling](../configuration/autoscale.md)
+   - Read [GitLab Runner MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section)
 1. The **first time** you're using Docker Machine, it is best to manually execute the
    `docker-machine create ...` command with your [Docker Machine Driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/tree/main/drivers).
    Run this command with the options that you intend to configure in the
@@ -115,7 +115,7 @@ installed in the same machine:
 
    {{< alert type="note" >}}
 
-Sending the [`SIGQUIT` signal](../commands/_index.md#signals) makes the
+   Sending the [`SIGQUIT` signal](../commands/_index.md#signals) makes the
    process stop gracefully. The process stops accepting new jobs, and exits
    as soon as the current jobs are finished.
 
@@ -138,14 +138,14 @@ Sending the [`SIGQUIT` signal](../commands/_index.md#signals) makes the
 ### Install
 
 1. Download the [appropriate `docker-machine` binary](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases).
-Copy the binary to a location accessible to `PATH` and make it
-executable. For example, to download and install `v0.16.2-gitlab.38`:
+   Copy the binary to a location accessible to `PATH` and make it
+   executable. For example, to download and install `v0.16.2-gitlab.38`:
 
-    ```shell
-    curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.38/docker-machine-Linux-x86_64"
-    cp docker-machine-Linux-x86_64 /usr/local/bin/docker-machine
-    chmod +x /usr/local/bin/docker-machine
-    ```
+   ```shell
+   curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.38/docker-machine-Linux-x86_64"
+   cp docker-machine-Linux-x86_64 /usr/local/bin/docker-machine
+   chmod +x /usr/local/bin/docker-machine
+   ```
 
 ### Using GPUs on Google Compute Engine
 
@@ -181,13 +181,13 @@ for more details.
 To prepare your system and test that GPUs can be created with Google Compute Engine:
 
 1. [Set up the Google Compute Engine driver credentials](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/gce.md#credentials)
-for Docker Machine. You may need to export environment variables to the
-runner if your VM does not have a default service account. How
-this is done depends on how the runner is launched. For example, by using:
+   for Docker Machine. You may need to export environment variables to the
+   runner if your VM does not have a default service account. How
+   this is done depends on how the runner is launched. For example, by using:
 
-    - `systemd` or `upstart`: See the [documentation on setting custom environment variables](../configuration/init.md#setting-custom-environment-variables).
-    - Kubernetes with the Helm Chart: Update [the `values.yaml` entry](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/blob/5e7c5c0d6e1159647d65f04ff2cc1f45bb2d5efc/values.yaml#L431-438).
-    - Docker: Use the `-e` option (for example, `docker run -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json gitlab/gitlab-runner`).
+   - `systemd` or `upstart`: See the [documentation on setting custom environment variables](../configuration/init.md#setting-custom-environment-variables).
+   - Kubernetes with the Helm Chart: Update [the `values.yaml` entry](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/blob/5e7c5c0d6e1159647d65f04ff2cc1f45bb2d5efc/values.yaml#L431-438).
+   - Docker: Use the `-e` option (for example, `docker run -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json gitlab/gitlab-runner`).
 
 1. Verify that `docker-machine` can create a virtual machine with your
    desired options. For example, to create an `n1-standard-1` machine
@@ -238,8 +238,8 @@ this is done depends on how the runner is launched. For example, by using:
 #### Configuring GitLab Runner
 
 1. After you have verified these options, configure the Docker executor
-to use all available GPUs in the [`runners.docker` configuration](../configuration/advanced-configuration.md#the-runnersdocker-section).
-Then add the Docker Machine options to your [`MachineOptions` settings in the GitLab Runner `runners.machine` configuration](../configuration/advanced-configuration.md#the-runnersmachine-section). For example:
+   to use all available GPUs in the [`runners.docker` configuration](../configuration/advanced-configuration.md#the-runnersdocker-section).
+   Then add the Docker Machine options to your [`MachineOptions` settings in the GitLab Runner `runners.machine` configuration](../configuration/advanced-configuration.md#the-runnersmachine-section). For example:
 
    ```toml
    [runners.docker]

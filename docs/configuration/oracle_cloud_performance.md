@@ -150,11 +150,11 @@ DOCKER_DRIVER: ""
 The following example shows Code Quality job configuration in your `.gitlab-ci.yml` file:
 
 ```yaml
-code_quality: 
-  services: 
-    - name: $CODE_QUALITY_DIND_IMAGE 
-      command: ['--tls=false', '--host=tcp://0.0.0.0:2375'] 
-  variables: 
+code_quality:
+  services:
+    - name: $CODE_QUALITY_DIND_IMAGE
+      command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
+  variables:
     CODECLIMATE_PREFIX: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/
     CODECLIMATE_REGISTRY_USERNAME: $CI_DEPENDENCY_PROXY_USER
     CODECLIMATE_REGISTRY_PASSWORD: $CI_DEPENDENCY_PROXY_PASSWORD

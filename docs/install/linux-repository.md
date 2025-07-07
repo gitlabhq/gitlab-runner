@@ -72,7 +72,7 @@ To install GitLab Runner:
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
    ```
 
-      {{< /tab >}}
+   {{< /tab >}}
 
    {{< /tabs >}}
 
@@ -81,7 +81,7 @@ To install GitLab Runner:
 
    {{< alert type="note" >}}
 
-The `skel` directory usage is disabled by default to prevent
+   The `skel` directory usage is disabled by default to prevent
    [`No such file or directory` job failures](#error-no-such-file-or-directory-job-failures).
 
    {{< /alert >}}
@@ -112,7 +112,7 @@ The `skel` directory usage is disabled by default to prevent
 
    {{< alert type="note" >}}
 
-A FIPS 140-2 compliant version of GitLab Runner is
+   A FIPS 140-2 compliant version of GitLab Runner is
    available for RHEL distributions. You can install this version by using
    `gitlab-runner-fips` as the package name, instead of `gitlab-runner`.
 
@@ -126,7 +126,7 @@ A FIPS 140-2 compliant version of GitLab Runner is
 
    {{< alert type="note" >}}
 
-As of `gitlab-runner` version `v17.7.1`, when you install a specific version of `gitlab-runner` that is not the latest
+   As of `gitlab-runner` version `v17.7.1`, when you install a specific version of `gitlab-runner` that is not the latest
    version, you must explicitly install the required `gitlab-runner-helper-packages` for that version. This requirement
    exists due to an `apt`/`apt-get` limitation.
 
@@ -141,12 +141,12 @@ As of `gitlab-runner` version `v17.7.1`, when you install a specific version of 
    `gitlab-runner-helper-images`, you might encounter the following error:
 
    ```shell
-    sudo apt install gitlab-runner=17.7.1-1
-    ...
-    The following packages have unmet dependencies:
-     gitlab-runner : Depends: gitlab-runner-helper-images (= 17.7.1-1) but 17.8.3-1 is to be installed
-    E: Unable to correct problems, you have held broken packages.
-    ```
+   sudo apt install gitlab-runner=17.7.1-1
+   ...
+   The following packages have unmet dependencies:
+    gitlab-runner : Depends: gitlab-runner-helper-images (= 17.7.1-1) but 17.8.3-1 is to be installed
+   E: Unable to correct problems, you have held broken packages.
+   ```
 
    {{< /tab >}}
 

@@ -39,7 +39,7 @@ Services and containers run in the same Kubernetes
 pod and share the same localhost address. The following restrictions apply:
 
 - The services are accessible through their DNS names. If you
-use an older version, you must use `localhost`.
+  use an older version, you must use `localhost`.
 - You cannot use several services that use the same port. For example, you cannot have two
   `mysql` services at the same time.
 
@@ -2244,7 +2244,7 @@ Prerequisites:
 GitLab Runner checks if the new service accounts or secrets are available with a 5-second interval between each try.
 
 - This feature is disabled by default. To enable this feature, set `resource_availability_check_max_attempts` to any value other than `0`.
-The value you set defines the amount of times the runner checks for service accounts or secrets.
+  The value you set defines the amount of times the runner checks for service accounts or secrets.
 
 ### Overwrite the Kubernetes namespace
 
