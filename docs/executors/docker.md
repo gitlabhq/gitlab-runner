@@ -137,9 +137,9 @@ Use the following keywords:
 
 - `image`: The name of the Docker image that the runner uses to run jobs.
   - Enter an image from the local Docker Engine, or any image in
-  Docker Hub. For more information, see the [Docker documentation](https://docs.docker.com/get-started/introduction/).
+    Docker Hub. For more information, see the [Docker documentation](https://docs.docker.com/get-started/introduction/).
   - To define the image version, use a colon (`:`) to add a tag. If you don't specify a tag,
-   Docker uses `latest` as the version.
+    Docker uses `latest` as the version.
 - `services`: The additional image that creates another container and links to the `image`. For more information about types of services, see [Services](https://docs.gitlab.com/ci/services/).
 
 ### Define images and services in `.gitlab-ci.yml`
@@ -286,13 +286,13 @@ The runner uses the `build` alias to resolve the job container.
 >
 > As a workaround, manually provide the custom DNS settings to the `dind` service. For example,
 > if your custom DNS server is `1.1.1.1`, you can use `127.0.0.11`, which is Docker's internal DNS service:
-> 
+>
 > ```yaml
 >   services:
 >     - name: docker:dind
 >       command: [--dns=127.0.0.11, --dns=1.1.1.1]
 > ```
-> 
+>
 > This approach also allows containers to resolve services on the same network.
 
 #### How the runner creates a network for each job
@@ -395,7 +395,7 @@ To exclude specific images like Kali:
   executor = "docker"
   [runners.docker]
     (...)
-    allowed_images = ["**", "!*/kali*"]  
+    allowed_images = ["**", "!*/kali*"]
 ```
 
 ## Access services hostnames
@@ -602,7 +602,7 @@ To manage cache storage efficiently, you should:
 
 - Run `clear-docker-cache` with `cron` regularly (for example, once a week).
 - Maintain some recent containers in the cache for performance while you
-reclaim disk space.
+  reclaim disk space.
 
 The `FILTER_FLAG` environment variable controls which objects are pruned. For example usage, see the
 [Docker image prune](https://docs.docker.com/reference/cli/docker/image/prune/#filter) documentation.
@@ -1093,7 +1093,7 @@ Use the `never` pull policy:
 
 - To control the images used by runner users.
 - For private runners that are dedicated to a project that can only use specific images
-that are not publicly available on any registries.
+  that are not publicly available on any registries.
 
 **Do not use** the `never` pull policy for [auto-scaled](../configuration/autoscale.md)
 Docker executors. The `never` pull policy is usable only when using a pre-defined cloud instance

@@ -160,7 +160,7 @@ Check your SELinux policy on your system for possible denials.
 This error relates to machine provisioning and might be due to the following reasons:
 
 - There is a TLS failure. When `docker-machine` is installed, some certificates might be invalid.
-To resolve this issue, remove the certificates and restart the runner:
+  To resolve this issue, remove the certificates and restart the runner:
 
   ```shell
   sudo su -
@@ -427,7 +427,7 @@ Elasticsearch has a `vm.max_map_count` requirement that has to be set on the ins
 See the [Elasticsearch documentation](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-prod)
 for how to set this value correctly depending on the platform.
 
-## `Preparing the "docker+machine" executor ERROR: Preparation failed: exit status 1 Will be retried in 3s`
+## Error: `Preparing the "docker+machine" executor ERROR: Preparation failed: exit status 1 Will be retried in 3s`
 
 This error can occur when the Docker machine is not able to successfully create the executor virtual machines. To get more information
 about the error, manually create the virtual machine with the same `MachineOptions` that you have defined in your `config.toml`.
@@ -436,7 +436,7 @@ For example: `docker-machine create --driver=google --google-project=GOOGLE-PROJ
 
 <!-- markdownlint-enable line-length -->
 
-## `No unique index found for name`
+## Error: `No unique index found for name`
 
 This error might occur when you create or update a runner and
 the database does not have a unique index for the `tags` table.

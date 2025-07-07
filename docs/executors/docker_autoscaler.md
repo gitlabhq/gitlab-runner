@@ -144,7 +144,7 @@ Prerequisites:
   {{< alert type="note" >}}
 
   The VM image does not require GitLab Runner to be installed. The instances launched using the VM image must not register themselves as runners in GitLab.
-  
+
   {{< /alert >}}
 
 - A single-zone Google Cloud instance group. For **Autoscaling mode**, select **Do not autoscale**. The runner handles autoscaling, not

@@ -12,35 +12,31 @@ title: Self-signed certificates or custom Certification Authorities
 
 {{< /details >}}
 
-{{< history >}}
-
-- Introduced in GitLab Runner 0.7.0
-
-{{< /history >}}
-
 GitLab Runner provides two options to configure certificates to be used to verify TLS peers:
 
-- **For connections to the GitLab server**: the certificate file can be specified as detailed in the
-  [Supported options for self-signed certificates targeting the GitLab server](#supported-options-for-self-signed-certificates-targeting-the-gitlab-server) section.
+- **For connections to the GitLab server**: The certificate file can be specified as detailed in the
+  [Supported options for self-signed certificates targeting the GitLab server](#supported-options-for-self-signed-certificates-targeting-the-gitlab-server)
+  section.
 
-    **This solves the `x509: certificate signed by unknown authority` problem when registering a runner**.
+  This solves the `x509: certificate signed by unknown authority` problem when registering a runner.
 
-    For existing Runners, the same error can be seen in Runner logs when trying to check the jobs:
+  For existing Runners, the same error can be seen in Runner logs when trying to check the jobs:
 
-    ```plaintext
-    Couldn't execute POST against https://hostname.tld/api/v4/jobs/request:
-    Post https://hostname.tld/api/v4/jobs/request: x509: certificate signed by unknown authority
-    ```
+  ```plaintext
+  Couldn't execute POST against https://hostname.tld/api/v4/jobs/request:
+  Post https://hostname.tld/api/v4/jobs/request: x509: certificate signed by unknown authority
+  ```
 
-- **A more generic approach which also covers other scenarios such as user scripts, connecting to a cache server or an external Git LFS store**:
-  a certificate can be specified and installed on the container as detailed in the
-  [Trusting TLS certificates for Docker and Kubernetes executors](#trusting-tls-certificates-for-docker-and-kubernetes-executors) section.
+- **Connecting to a cache server or an external Git LFS store**: A more generic approach
+  which also covers other scenarios such as user scripts, a certificate can be specified and
+  installed on the container as detailed in the [Trusting TLS certificates for Docker and Kubernetes executors](#trusting-tls-certificates-for-docker-and-kubernetes-executors)
+  section.
 
-    An example job log error concerning a Git LFS operation that is missing a certificate:
+  An example job log error concerning a Git LFS operation that is missing a certificate:
 
-    ```plaintext
-    LFS: Get https://object.hostname.tld/lfs-dev/c8/95/a34909dce385b85cee1a943788044859d685e66c002dbf7b28e10abeef20?X-Amz-Expires=600&X-Amz-Date=20201006T043010Z&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=svcgitlabstoragedev%2F20201006%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-SignedHeaders=host&X-Amz-Signature=012211eb0ff0e374086e8c2d37556f2d8ca4cc948763e90896f8f5774a100b55: x509: certificate signed by unknown authority
-    ```
+  ```plaintext
+  LFS: Get https://object.hostname.tld/lfs-dev/c8/95/a34909dce385b85cee1a943788044859d685e66c002dbf7b28e10abeef20?X-Amz-Expires=600&X-Amz-Date=20201006T043010Z&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=svcgitlabstoragedev%2F20201006%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-SignedHeaders=host&X-Amz-Signature=012211eb0ff0e374086e8c2d37556f2d8ca4cc948763e90896f8f5774a100b55: x509: certificate signed by unknown authority
+  ```
 
 ## Supported options for self-signed certificates targeting the GitLab server
 
@@ -87,26 +83,26 @@ GitLab Runner supports the following options:
 Notes:
 
 - If your GitLab server certificate is signed by your CA, use your CA certificate
-(not your GitLab server signed certificate). You might need to add the intermediates to the chain as well.
+  (not your GitLab server signed certificate). You might need to add the intermediates to the chain as well.
   For example, if you have a primary, intermediate, and root certificate,
   you can put all of them into one file:
 
-    ```plaintext
-    -----BEGIN CERTIFICATE-----
-    (Your primary SSL certificate: your_domain_name.crt)
-    -----END CERTIFICATE-----
-    -----BEGIN CERTIFICATE-----
-    (Your intermediate certificate)
-    -----END CERTIFICATE-----
-    -----BEGIN CERTIFICATE-----
-    (Your root certificate)
-    -----END CERTIFICATE-----
-    ```
+  ```plaintext
+  -----BEGIN CERTIFICATE-----
+  (Your primary SSL certificate: your_domain_name.crt)
+  -----END CERTIFICATE-----
+  -----BEGIN CERTIFICATE-----
+  (Your intermediate certificate)
+  -----END CERTIFICATE-----
+  -----BEGIN CERTIFICATE-----
+  (Your root certificate)
+  -----END CERTIFICATE-----
+  ```
 
 - If you are updating the certificate for an existing Runner, [restart it](../commands/_index.md#gitlab-runner-restart).
 - If you already have a Runner configured through HTTP, update your instance path to the new HTTPS URL of your GitLab instance in your `config.toml`.
 - As a temporary and insecure workaround, to skip the verification of certificates,
-in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.
+  in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.
 
 ### Git cloning
 

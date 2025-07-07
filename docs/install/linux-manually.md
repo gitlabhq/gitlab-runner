@@ -188,7 +188,7 @@ You can download and install GitLab Runner by using a binary file.
 
    # Linux x86-64 alpine
    wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-x86_64.tar.xz
-   
+
    # Linux x86-64 alpine pwsh
    wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-x86_64-pwsh.tar.xz
 

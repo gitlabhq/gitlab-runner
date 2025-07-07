@@ -249,13 +249,13 @@ In the following example, the `/Users/USERNAME/Library/LaunchAgents/gitlab-runne
 
 ```
 
-### `"launchctl" failed: exit status 112, Could not find domain for`
+### Error: `"launchctl" failed: exit status 112, Could not find domain for`
 
 This message may occur when you try to install GitLab Runner on macOS. Make sure
 that you manage GitLab Runner service from the GUI Terminal application, not
 the SSH connection.
 
-### `Failed to authorize rights (0x1) with status: -60007.`
+### Message: `Failed to authorize rights (0x1) with status: -60007.`
 
 If GitLab Runner is stuck on the above message when using macOS, there are two
 causes to why this happens:
@@ -292,7 +292,7 @@ causes to why this happens:
 
 <!-- markdownlint-disable line-length -->
 
-### `fatal: unable to access 'https://path:3000/user/repo.git/': Failed to connect to path port 3000: Operation timed out` error in the job
+### Job error: `fatal: unable to access 'https://path:3000/user/repo.git/': Failed to connect to path port 3000: Operation timed out`
 
 If one of the jobs fails with this error, make sure the runner can connect to your GitLab instance. The connection could be blocked by things like:
 
@@ -335,7 +335,7 @@ If the directories do not exist, create them and ensure that the runner service 
 
 <!-- markdownlint-enable line-length -->
 
-### `ERROR: Error on fetching TLS Data from API response... error  error=couldn't build CA Chain`
+### Error: `Error on fetching TLS Data from API response... error  error=couldn't build CA Chain`
 
 The following error may occur if you upgrade to GitLab Runner v15.5.0 or later:
 

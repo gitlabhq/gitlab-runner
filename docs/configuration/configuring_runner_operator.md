@@ -24,10 +24,10 @@ or the name of the secret that contains the registration token:
 apiVersion: apps.gitlab.com/v1beta2
 kind: Runner
 metadata:
- name: dev
+  name: dev
 spec:
- gitlabUrl: https://gitlab.example.com
- token: gitlab-runner-secret # Name of the secret containing the Runner token
+  gitlabUrl: https://gitlab.example.com
+  token: gitlab-runner-secret # Name of the secret containing the Runner token
 ```
 
 Read about all the available properties in [Operator properties](#operator-properties).
@@ -477,12 +477,12 @@ To use a [FIPS compliant GitLab Runner helper](../install/_index.md#fips-complia
 apiVersion: apps.gitlab.com/v1beta2
 kind: Runner
 metadata:
- name: dev
+  name: dev
 spec:
- gitlabUrl: https://gitlab.example.com
- token: gitlab-runner-secret
- helperImage: gitlab/gitlab-runner-helper:ubi-fips
- concurrent: 2
+  gitlabUrl: https://gitlab.example.com
+  token: gitlab-runner-secret
+  helperImage: gitlab/gitlab-runner-helper:ubi-fips
+  concurrent: 2
 ```
 
 #### Register GitLab Runner by using a self-signed certificate

@@ -369,7 +369,7 @@ GitLab Runner counts the machines in use and defines the desired idle capacity a
 a factor of that number.
 
 If there aren't any used machines, `IdleScaleFactor` evaluates to no idle machines
-to maintain. If `IdleCount`  is greater than `0` (and only then
+to maintain. If `IdleCount` is greater than `0` (and only then
 the `IdleScaleFactor` is applicable), runner doesn't ask for jobs if there are no idle machines that can handle
 them. Without new jobs the number of used machines would not rise, so `IdleScaleFactor` would constantly evaluate
 to `0`. And this would block the Runner in unusable state.

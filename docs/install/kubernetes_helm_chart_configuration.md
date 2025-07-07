@@ -163,30 +163,30 @@ To learn more about Helm chart caching, see [`values.yaml`](https://gitlab.com/g
 
 ### Persistent volume claim
 
-  You can use persistent volume claims (PVCs) for caching if none of the object storage options work for you.
+You can use persistent volume claims (PVCs) for caching if none of the object storage options work for you.
 
-  To configure your cache to use a PVC:
-  
-  1. [Create a PVC](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) in the namespace where job pods will run.
-  
-     {{< alert type="note" >}}
+To configure your cache to use a PVC:
 
-     If you want multiple job pods to access the same cache PVC, it must have the `ReadWriteMany` access mode.
+1. [Create a PVC](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) in the namespace where job pods will run.
 
-     {{< /alert >}}
+   {{< alert type="note" >}}
 
-  1. Mount the PVC to the `/cache` directory:
-  
-     ```yaml
-     runners:
-       config: |
-         [[runners]]            
-           [runners.kubernetes]
-             image = "ubuntu:22.04"
-           [[runners.kubernetes.volumes.pvc]]
-             name = "cache-pvc"
-             mount_path = "/cache"
-     ```
+   If you want multiple job pods to access the same cache PVC, it must have the `ReadWriteMany` access mode.
+
+   {{< /alert >}}
+
+1. Mount the PVC to the `/cache` directory:
+
+   ```yaml
+   runners:
+     config: |
+       [[runners]]
+         [runners.kubernetes]
+           image = "ubuntu:22.04"
+         [[runners.kubernetes.volumes.pvc]]
+           name = "cache-pvc"
+           mount_path = "/cache"
+   ```
 
 ## Enable RBAC support
 
@@ -390,9 +390,9 @@ In `values.yaml`, set `certsSecretName` to the resource name of a Kubernetes sec
 This enables you to pass your custom certificate for GitLab Runner to use. In the previous example, the resource
 name was `gitlab-domain-cert`:
 
- ```yaml
- certsSecretName: <SECRET NAME>
- ```
+```yaml
+certsSecretName: <SECRET NAME>
+```
 
 For more information, see the
 [supported options for self-signed certificates](../configuration/tls-self-signed.md#supported-options-for-self-signed-certificates-targeting-the-gitlab-server)

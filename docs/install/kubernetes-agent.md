@@ -65,7 +65,7 @@ or [SOPS](https://fluxcd.io/flux/guides/mozilla-sops/).
    Replace `GITLAB-NAMESPACE` with your namespace. [View an example](#example-runner-manifest).
 
 1. Edit the `runner-manifest.yaml` file to include the `namespace` of your `ServiceAccount`. The output
-of `helm template` doesn't include the `ServiceAccount` namespace in the generated resources.
+   of `helm template` doesn't include the `ServiceAccount` namespace in the generated resources.
 
    ```yaml
    ---
@@ -500,7 +500,7 @@ spec:
 
 ## Troubleshooting
 
-### `associative list with keys has an element that omits key field "protocol"`
+### Error: `associative list with keys has an element that omits key field "protocol"`
 
 Due to [the bug in Kubernetes v1.19](https://github.com/kubernetes-sigs/structured-merge-diff/issues/130), you may see this error when installing GitLab Runner or any other application with the GitLab agent for Kubernetes. To fix it, either:
 

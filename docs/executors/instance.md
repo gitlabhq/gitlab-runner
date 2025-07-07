@@ -214,7 +214,7 @@ This configuration supports:
 - A capacity of `2` for each instance.
 - An unlimited use count.
 - Nested virtualization to support isolated jobs. Nested virtualization is only available
-for Apple silicon instances with [nesting](https://gitlab.com/gitlab-org/fleeting/nesting) installed.
+  for Apple silicon instances with [nesting](https://gitlab.com/gitlab-org/fleeting/nesting) installed.
 - An idle scale of `5`.
 - An idle time of 20 minutes.
 - A maximum instance count of `10`.

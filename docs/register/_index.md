@@ -121,7 +121,7 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
      docker exec -it gitlab-runner gitlab-runner register
      ```
 
-      {{< /tab >}}
+   {{< /tab >}}
 
    {{< /tabs >}}
 
@@ -305,7 +305,7 @@ To register the runner with a [runner registration token](https://docs.gitlab.co
      docker run --rm -it -v gitlab-runner-config:/etc/gitlab-runner gitlab/gitlab-runner:latest register
      ```
 
-      {{< /tab >}}
+   {{< /tab >}}
 
    {{< /tabs >}}
 
@@ -661,7 +661,7 @@ with a confined Docker executor.
      --docker-image ruby:3.1
    ```
 
-      {{< /tab >}}
+   {{< /tab >}}
 
    {{< /tabs >}}
 
@@ -683,7 +683,7 @@ To apply configuration changes, restart the Docker container instead.
 
 ## Troubleshooting
 
-### `Check registration token` error
+### Error: `Check registration token`
 
 The `check registration token` error message displays when the GitLab instance does not recognize
 the runner registration token entered during registration. This issue can occur when either:
@@ -696,7 +696,7 @@ When this error occurs, you can ask a GitLab administrator to:
 - Verify that the runner registration token is valid.
 - Confirm that runner registration in the project or group is [permitted](https://docs.gitlab.com/administration/settings/continuous_integration/#restrict-runner-registration-by-all-members-in-a-group).
 
-### `410 Gone - runner registration disallowed` error
+### Error: `410 Gone - runner registration disallowed`
 
 The `410 Gone - runner registration disallowed` error message displays when runner registration through
 registration tokens has been disabled.

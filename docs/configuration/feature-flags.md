@@ -97,7 +97,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 
 ## Enable feature flag in pipeline configuration
 
-You can use [CI variables](https://docs.gitlab.com/ci/variables/) to
+You can use [CI/CD variables](https://docs.gitlab.com/ci/variables/) to
 enable feature flags:
 
 - For all jobs in the pipeline (globally):

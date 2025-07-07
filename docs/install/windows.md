@@ -108,7 +108,7 @@ If you encounter an error like _The account name is invalid_, try:
 ```
 
 If you encounter a `The service did not start due to a logon failure` error
-while starting the service, see the [FAQ section](#the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service) to check how to resolve the problem.
+while starting the service, see the [FAQ section](#error-the-service-did-not-start-due-to-a-logon-failure) to check how to resolve the problem.
 
 If you don't have a Windows Password, you cannot start the GitLab Runner service but you can
 use the Built-in System Account.
@@ -155,7 +155,7 @@ following solutions.
 - Use NTFSSecurity tools for PowerShell:
 
   The [NTFSSecurity](https://github.com/raandree/NTFSSecurity) PowerShell module provides
-  a "Remove-Item2" method which supports long paths. GitLab Runner
+  a `Remove-Item2` method which supports long paths. GitLab Runner
   detects it if it is available and automatically make use of it.
 
 > A regression introduced in GitLab Runner 16.9.1 is fixed in GitLab Runner 17.10.0.
@@ -216,7 +216,7 @@ If your program is doing the above, you must disable that conversion for the CI 
 For more information, see [GitLab CI YAML documentation](https://docs.gitlab.com/ci/yaml/#coloring-script-output)
 for an example using PowerShell and [issue 332](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/332).
 
-### `The service did not start due to a logon failure` error when starting service
+### Error: `The service did not start due to a logon failure`
 
 When installing and starting the GitLab Runner service on Windows you can
 meet with such error:
