@@ -65,7 +65,7 @@ Some properties are only available with more recent versions of the Operator.
 | `shutdownTimeout`  | 1.34     | Number of seconds until the [forceful shutdown operation](../commands/_index.md#signals) times out and exits the process. The default value is `30`. If set to `0` or lower, the default value is used. |
 | `logLevel`         | 1.34     | Defines the log level. Options are `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. |
 | `logFormat`        | 1.34     | Specifies the log format. Options are `runner`, `text`, and `json`. The default value is `runner`, which contains ANSI escape codes for coloring. |
-| `listenAddr`       | 1.34     | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
+| `listenAddr`       | 1.34     | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. For information about configuration, see [Monitor GitLab Runner Operator](../monitoring/_index.md#monitor-operator-managed-gitlab-runners). |
 | `sentryDsn`        | 1.34     | Enables tracking of all system level errors to Sentry. |
 | `connectionMaxAge` | 1.34     | The maximum duration a TLS keepalive connection to the GitLab server should remain open before reconnecting. The default value is `15m` for 15 minutes. If set to `0` or lower, the connection persists as long as possible. |
 

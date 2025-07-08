@@ -5,7 +5,6 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 description: Prometheus metrics.
 title: Monitor GitLab Runner usage
 ---
-
 {{< details >}}
 
 - Tier: Free, Premium, Ultimate
@@ -17,8 +16,8 @@ GitLab Runner can be monitored using [Prometheus](https://prometheus.io).
 
 ## Embedded Prometheus metrics
 
-GitLab Runner is instrumented with native Prometheus
-metrics, which can be exposed by using an embedded HTTP server on the `/metrics`
+GitLab Runner includes native Prometheus metrics,
+which you can expose using an embedded HTTP server on the `/metrics`
 path. The server - if enabled - can be scraped by the Prometheus monitoring
 system or accessed with any other HTTP client.
 
@@ -115,7 +114,7 @@ Configure the metrics HTTP server by using one of the following methods:
        ##
        port: 9252
 
-       ## Configure a prometheus-operator serviceMonitor to allow autodetection of
+       ## Configure a prometheus-operator serviceMonitor to allow automatic detection of
        ## the scraping target. Requires enabling the service resource below.
        ##
        serviceMonitor:
@@ -127,16 +126,16 @@ Configure the metrics HTTP server by using one of the following methods:
   1. Configure the `service` monitor to retrieve the configured `metrics`:
 
      ```yaml
-     ## Configure a service resource to allow scraping metrics by uisng
+     ## Configure a service resource to allow scraping metrics by using
      ## prometheus-operator serviceMonitor
      service:
        enabled: true
 
-       ## Provide additonal labels for the service
+       ## Provide additional labels for the service
        ##
        labels: {}
 
-       ## Provide additonal annotations for the service
+       ## Provide additional annotations for the service
        ##
        annotations: {}
 
@@ -157,13 +156,242 @@ If the listen address does not contain a port, it defaults to `9252`.
 Examples of addresses:
 
 - `:9252` listens on all interfaces on port `9252`.
-- `localhost:9252`listens on the loopback interface on port `9252`.
+- `localhost:9252` listens on the loopback interface on port `9252`.
 - `[2001:db8::1]:http` listens on IPv6 address `[2001:db8::1]` on the HTTP port `80`.
 
 Remember that for listening on ports below `1024` - at least on Linux/Unix
-systems - you need to have root/administrator rights.
+systems - you need to have root/administrator privileges.
 
 The HTTP server is opened on the selected `host:port`
 **without any authorization**. If you bind the metrics
-server to a public interface, use your firewall limit access
+server to a public interface, use your firewall to limit access
 or add an HTTP proxy for authorization and access control.
+
+## Monitor Operator managed GitLab Runners
+
+GitLab Runners managed by the GitLab Runner Operator use the same embedded Prometheus
+metrics server as standalone GitLab Runner instances. The metrics server is preconfigured
+with `listenAddr` set to `[::]:9252`, which listens on all IPv6 and IPv4 interfaces on port `9252`.
+
+### Expose metrics port
+
+To enable monitoring and metrics collection for GitLab Runners managed by the GitLab Runner Operator,
+see [Monitor Operator managed GitLab Runners](../monitoring/_index.md#monitor-operator-managed-gitlab-runners).
+
+#### Configure the metrics port
+
+Add the following patch to the `podSpec` field in your runner configuration:
+
+```yaml
+apiVersion: apps.gitlab.com/v1beta2
+kind: Runner
+metadata:
+  name: gitlab-runner
+spec:
+  gitlabUrl: https://gitlab.example.com
+  token: gitlab-runner-secret
+  buildImage: alpine
+  podSpec:
+    name: "metrics-config"
+    patch: |
+      {
+        "containers": [
+          {
+            "name": "runner",
+            "ports": [
+              {
+                "name": "metrics",
+                "containerPort": 9252,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      }
+    patchType: "strategic"
+```
+
+This configuration:
+
+- `name`: Assigns a name to the custom `PodSpec` for identification.
+- `patch`: Defines the JSON patch to apply to the `PodSpec`, exposes port `9252` on the runner container.
+- `patchType`: Uses the `strategic` merge strategy (default) to apply the patch.
+- `port`: Named as `metrics` for easy identification in Kubernetes services.
+
+#### Configure Prometheus scraping
+
+For environments using Prometheus Operator, create a `PodMonitor` resource to directly scrape metrics from runner pods:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: gitlab-runner-metrics
+  namespace: kube-prometheus-stack
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: runner
+  namespaceSelector:
+    matchNames:
+      - gitlab-runner-system
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 10s
+      path: /metrics
+```
+
+Apply the `PodMonitor` configuration:
+
+```shell
+kubectl apply -f gitlab-runner-podmonitor.yaml
+```
+
+The `PodMonitor` configuration:
+
+- `selector`: Matches pods with the `app.kubernetes.io/component: runner` label.
+- `namespaceSelector`: Limits scraping to the `gitlab-runner-system` namespace.
+- `podMetricsEndpoints`: Defines the metrics port, scrape interval, and path.
+
+#### Add runner identification to metrics
+
+To add runner identification to all exported metrics, include relabel configuration in the `PodMonitor`:
+
+```yaml
+podMetricsEndpoints:
+  - port: metrics
+    interval: 10s
+    path: /metrics
+    relabelings:
+      - sourceLabels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+        targetLabel: runner_name
+```
+
+The relabel configuration:
+
+- Extracts the `app.kubernetes.io/name` label from each runner pod (automatically set by GitLab Runner Operator).
+- Adds it as a `runner_name` label to all metrics from that pod.
+- Enables filter and aggregation metrics by specific runner instances.
+
+The following is an example metrics with runner identification:
+
+```prometheus
+gitlab_runner_concurrent{runner_name="my-gitlab-runner"} 10
+gitlab_runner_jobs_running_total{runner_name="my-gitlab-runner"} 3
+```
+
+#### Direct Prometheus scrape configuration
+
+If you're not using Prometheus Operator, you can add the relabel configuration
+directly in the Prometheus scrape configuration:
+
+```yaml
+scrape_configs:
+  - job_name: 'gitlab-runner-operator'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - gitlab-runner-system
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+        target_label: runner_name
+    metrics_path: /metrics
+    scrape_interval: 10s
+```
+
+This configuration:
+
+- Uses Kubernetes service discovery to find pods in the `gitlab-runner-system` namespace.
+- Extracts the `app.kubernetes.io/name` label and adds it as `runner_name` to metrics.
+
+## Monitor GitLab Runner with executors other than Kubernetes
+
+For GitLab Runner deployments with executors other than Kubernetes, you can add runner identification
+through external labels in your Prometheus configuration.
+
+### Static configuration with external labels
+
+Configure Prometheus to scrape your GitLab Runner instances and add identifying labels:
+
+```yaml
+scrape_configs:
+  - job_name: 'gitlab-runner'
+    static_configs:
+      - targets: ['runner1.example.com:9252']
+        labels:
+          runner_name: 'production-runner-1'
+      - targets: ['runner2.example.com:9252']
+        labels:
+          runner_name: 'staging-runner-1'
+    metrics_path: /metrics
+    scrape_interval: 30s
+```
+
+This configuration adds runner identification to your metrics:
+
+```prometheus
+gitlab_runner_concurrent{runner_name="production-runner-1"} 10
+gitlab_runner_jobs_running_total{runner_name="staging-runner-1"} 3
+```
+
+This configuration enables you to:
+
+- Filter metrics by specific runner instances.
+- Create runner-specific dashboards and alerts.
+- Track performance across different runner deployments.
+
+### Available metrics for Operator managed GitLab Runners
+
+GitLab Runners managed by the GitLab Runner Operator expose the same metrics as standalone GitLab Runner deployments. To view all available metrics, use `kubectl` to access the metrics endpoint:
+
+```shell
+kubectl port-forward pod/<gitlab-runner-pod-name> 9252:9252
+curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
+```
+
+For a complete list of available metrics, see [Available metrics](#available-metrics).
+
+### Security considerations for Operator managed GitLab Runners
+
+When you configure the metrics collection for GitLab Runners managed by the GitLab Runner Operator:
+
+- Use Kubernetes `NetworkPolicies` to restrict access to authorized monitoring systems.
+- Consider using `mutal` TLS encryption for metric scraping in production environments.
+
+### Troubleshooting Operator managed GitLab Runner monitoring
+
+#### Metrics endpoint not accessible
+
+If you cannot access the metrics endpoint:
+
+1. Verify that the pod specification includes the metrics port configuration.
+1. Ensure that the runner pod is running and healthy:
+
+   ```shell
+   kubectl get pods -l app.kubernetes.io/component=runner -n gitlab-runner-system
+   kubectl describe pod <runner-pod-name> -n gitlab-runner-system
+   ```
+
+1. Test the connectivity to the metrics endpoint:
+
+   ```shell
+   kubectl port-forward pod/<runner-pod-name> 9252:9252 -n gitlab-runner-system
+   curl "http://localhost:9252/metrics"
+   ```
+
+#### Missing metrics in Prometheus
+
+If metrics are not appearing in Prometheus:
+
+1. Verify that the `PodMonitor` is correctly configured and applied.
+1. Check that the namespace and label selectors match your runner pods.
+1. Review Prometheus logs for scraping errors.
+1. Validate that the `PodMonitor` is discoverable by Prometheus Operator:
+
+   ```shell
+   kubectl get podmonitor gitlab-runner-metrics -n kube-prometheus-stack
+   kubectl describe podmonitor gitlab-runner-metrics -n kube-prometheus-stack
+   ```
