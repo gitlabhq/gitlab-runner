@@ -220,3 +220,70 @@ func TestConfigTemplate_MergeTo(t *testing.T) {
 		})
 	}
 }
+
+func TestSetFipsHelperImageFlavor(t *testing.T) {
+	tests := map[string]struct {
+		fipsEnabled          bool
+		dockerConfig         *common.DockerConfig
+		k8sConfig            *common.KubernetesConfig
+		expectedDockerFlavor string
+		expectedK8sFlavor    string
+	}{
+		"Docker, fips disabled, no flavor, no changes": {
+			dockerConfig: &common.DockerConfig{},
+		},
+		"Docker, fips disabled, existing flavor, no changes": {
+			dockerConfig:         &common.DockerConfig{HelperImageFlavor: "blammo"},
+			expectedDockerFlavor: "blammo",
+		},
+		"Docker, fips enabled, no flavor, update config": {
+			fipsEnabled:          true,
+			dockerConfig:         &common.DockerConfig{},
+			expectedDockerFlavor: "ubi-fips",
+		},
+		"Docker, fips enabled, existing flavor, no changes": {
+			fipsEnabled:          true,
+			dockerConfig:         &common.DockerConfig{HelperImageFlavor: "blammo"},
+			expectedDockerFlavor: "blammo",
+		},
+
+		"Kubernetes, fips disabled, no flavor, no changes": {
+			k8sConfig: &common.KubernetesConfig{},
+		},
+		"Kubernetes, fips disabled, existing flavor, no changes": {
+			k8sConfig:         &common.KubernetesConfig{HelperImageFlavor: "blammo"},
+			expectedK8sFlavor: "blammo",
+		},
+		"Kubernetes, fips enabled, no flavor, update config": {
+			fipsEnabled:       true,
+			k8sConfig:         &common.KubernetesConfig{},
+			expectedK8sFlavor: "ubi-fips",
+		},
+		"Kubernetes, fips enabled, existing flavor, no changes": {
+			fipsEnabled:       true,
+			k8sConfig:         &common.KubernetesConfig{HelperImageFlavor: "blammo"},
+			expectedK8sFlavor: "blammo",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Create a test runner config
+			cfg := &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Docker:     tt.dockerConfig,
+					Kubernetes: tt.k8sConfig,
+				},
+			}
+
+			setFipsHelperImageFlavor(cfg, func() bool { return tt.fipsEnabled })
+
+			if cfg.Docker != nil {
+				assert.Equal(t, tt.expectedDockerFlavor, cfg.Docker.HelperImageFlavor)
+			}
+			if cfg.Kubernetes != nil {
+				assert.Equal(t, tt.expectedK8sFlavor, cfg.Kubernetes.HelperImageFlavor)
+			}
+		})
+	}
+}

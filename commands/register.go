@@ -19,6 +19,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
+	"gitlab.com/gitlab-org/labkit/fips"
 
 	// Force to load shell executor, executes init() on them
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/custom"
@@ -408,6 +409,20 @@ func (s *RegisterCommand) askExecutorOptions() {
 	}
 }
 
+// Set helper_image_flavor to ubi-fips if fips is enabled. See
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38273
+func setFipsHelperImageFlavor(cfg *common.RunnerConfig, fipsEnabled func() bool) {
+	if cfg == nil || !fipsEnabled() {
+		return
+	}
+	if cfg.Docker != nil && cfg.Docker.HelperImageFlavor == "" {
+		cfg.Docker.HelperImageFlavor = "ubi-fips"
+	}
+	if cfg.Kubernetes != nil && cfg.Kubernetes.HelperImageFlavor == "" {
+		cfg.Kubernetes.HelperImageFlavor = "ubi-fips"
+	}
+}
+
 func (s *RegisterCommand) Execute(context *cli.Context) {
 	userModeWarning(true)
 
@@ -431,6 +446,8 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 
 		s.askExecutor()
 		s.askExecutorOptions()
+
+		setFipsHelperImageFlavor(&s.RunnerConfig, fips.Enabled)
 
 		config.Runners = append(config.Runners, &s.RunnerConfig)
 		return nil

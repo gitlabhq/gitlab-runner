@@ -21,8 +21,7 @@ const (
 	defaultDescription = "GitLab Runner"
 )
 
-type NullService struct {
-}
+type NullService struct{}
 
 func (n *NullService) Start(s service.Service) error {
 	return nil
