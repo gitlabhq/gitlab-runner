@@ -1018,7 +1018,7 @@ Configure the pull policy in the `config.toml` to define how runners pull Docker
 
 Use the following values for the `pull_policy`:
 
-- [`always`](#set-the-always-pull-policy): Pull an image even if a local image exists. Default.
+- [`always`](#set-the-always-pull-policy): Default. Pull an image even if a local image exists. This pull policy does not apply to images specified by their `SHA256` that already exist on disk.
 - [`if-not-present`](#set-the-if-not-present-pull-policy): Pull an image only when a local version does not exist.
 - [`never`](#set-the-never-pull-policy): Never pull an image and use only local images.
 
