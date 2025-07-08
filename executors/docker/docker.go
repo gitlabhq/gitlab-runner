@@ -1099,6 +1099,13 @@ func (e *executor) expandImageName(imageName string, allowedInternalImages []str
 		return "", errors.New("no Docker image specified to run the build in")
 	}
 
+	e.BuildLogger.
+		WithFields(logrus.Fields{
+			"executor": "docker",
+			"image":    defaultDockerImage,
+		}).
+		Infoln("Using default image")
+
 	return defaultDockerImage, nil
 }
 

@@ -28,7 +28,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -41,6 +40,8 @@ import (
 	"k8s.io/client-go/rest/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/util/exec"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
@@ -2933,11 +2934,16 @@ func TestPrepare(t *testing.T) {
 			}
 			e.windowsKernelVersion = test.WindowsKernelVersionGetter
 
+			mockTrace := buildlogger.NewMockTrace(t)
+			mockTrace.EXPECT().IsStdout().Return(true).Once()
+			mockTrace.EXPECT().Write(mock.Anything).Return(0, nil).Maybe()
+
 			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 			prepareOptions := common.ExecutorPrepareOptions{
-				Config:  testBuild.Runner,
-				Build:   testBuild,
-				Context: context.TODO(),
+				Config:      testBuild.Runner,
+				Build:       testBuild,
+				Context:     context.TODO(),
+				BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 			}
 
 			err := e.Prepare(prepareOptions)
@@ -3203,6 +3209,11 @@ func TestSetupBuildNamespace(t *testing.T) {
 			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.NamespacePerJob = test.NamespaceIsolation
 			ex.AbstractExecutor.Build = &common.Build{}
 
+			mockTrace := buildlogger.NewMockTrace(t)
+			mockTrace.EXPECT().IsStdout().Return(true).Once()
+			mockTrace.EXPECT().Write(mock.Anything).Return(0, nil)
+			ex.AbstractExecutor.BuildLogger = buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+
 			executed = false
 
 			err := ex.prepareOverwrites(common.JobVariables{})
@@ -3271,6 +3282,11 @@ func TestTeardownBuildNamespace(t *testing.T) {
 			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Image = "default-image"
 			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.NamespacePerJob = test.NamespaceIsolation
 			ex.AbstractExecutor.Build = &common.Build{}
+
+			mockTrace := buildlogger.NewMockTrace(t)
+			mockTrace.EXPECT().IsStdout().Return(true).Once()
+			mockTrace.EXPECT().Write(mock.Anything).Return(0, nil)
+			ex.AbstractExecutor.BuildLogger = buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
 			executed = false
 
@@ -5954,10 +5970,16 @@ func TestPodWatcherSetup(t *testing.T) {
 	}
 
 	mockPodWatcher.On("Start").Return(nil).Once()
+
+	mockTrace := buildlogger.NewMockTrace(t)
+	mockTrace.EXPECT().IsStdout().Return(true).Once()
+	mockTrace.EXPECT().Write(mock.Anything).Return(0, nil)
+
 	err := ex.Prepare(common.ExecutorPrepareOptions{
-		Context: ctx,
-		Build:   build,
-		Config:  build.Runner,
+		Context:     ctx,
+		Build:       build,
+		Config:      build.Runner,
+		BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 	})
 	assert.NoError(t, err, "preparing the executor")
 	assert.NotNil(t, ex.featureChecker, "expected feature checker to be set")
@@ -6566,10 +6588,15 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 				return mockPodWatcher
 			}
 
+			mockTrace := buildlogger.NewMockTrace(t)
+			mockTrace.EXPECT().IsStdout().Return(true).Once()
+			mockTrace.EXPECT().Write(mock.Anything).Return(0, nil)
+
 			prepareOptions := common.ExecutorPrepareOptions{
-				Config:  &tt.config,
-				Build:   e.Build,
-				Context: context.Background(),
+				Config:      &tt.config,
+				Build:       e.Build,
+				Context:     context.Background(),
+				BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 			}
 
 			err := e.Prepare(prepareOptions)
@@ -7753,9 +7780,14 @@ func TestContainerPullPolicies(t *testing.T) {
 				return mockPodWatcher
 			}
 
+			mockTrace := buildlogger.NewMockTrace(t)
+			mockTrace.EXPECT().IsStdout().Return(true).Once()
+			mockTrace.EXPECT().Write(mock.Anything).Return(0, nil)
+
 			prepareOptions := common.ExecutorPrepareOptions{
-				Config: runnerConfig,
-				Build:  build,
+				Config:      runnerConfig,
+				Build:       build,
+				BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 			}
 
 			err := executor.Prepare(prepareOptions)
@@ -7815,9 +7847,14 @@ func TestNoContainerEnvDups(t *testing.T) {
 		return nil, nil
 	}
 
+	mockTrace := buildlogger.NewMockTrace(t)
+	mockTrace.EXPECT().IsStdout().Return(true).Once()
+	mockTrace.EXPECT().Write(mock.Anything).Return(0, nil)
+
 	prepareOptions := common.ExecutorPrepareOptions{
-		Config: build.Runner,
-		Build:  build,
+		Config:      build.Runner,
+		Build:       build,
+		BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 	}
 
 	err := executor.Prepare(prepareOptions)
