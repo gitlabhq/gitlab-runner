@@ -22,21 +22,21 @@ GitLab provides packages for the following supported versions of Linux distribut
 ### Deb-based Distributions
 
 | Distribution | Supported Versions |
-|--------------|--------------------|
-| Debian       | 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
-| LinuxMint    | 22.1 Xia, 22 Wilma, 21.3 Virginia, 21.2 Victoria, 21.1 Vera, 21 Vanessa, 20.3 Una, 20.2 Uma, 20.1 Ulyssa, 20 Ulyana |
-| Raspbian     | 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
-| Ubuntu       | 24.10 Oracular Oriole, 24.04 Lts Noble Numbat, 22.04 Jammy Jellyfish, 20.04 Focal Fossa, 18.04 Lts Bionic Beaver, 16.04 Lts Xenial Xerus |
+|-|-|
+| Debian | 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
+| LinuxMint | 22.1 Xia, 22 Wilma, 21.3 Virginia, 21.2 Victoria, 21.1 Vera, 21 Vanessa, 20.3 Una, 20.2 Uma, 20.1 Ulyssa, 20 Ulyana |
+| Raspbian | 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
+| Ubuntu | 24.10 Oracular Oriole, 24.04 Lts Noble Numbat, 22.04 Jammy Jellyfish, 20.04 Focal Fossa, 18.04 Lts Bionic Beaver, 16.04 Lts Xenial Xerus |
 
 ### Rpm-based Distributions
 
-| Distribution                 | Supported Versions |
-|------------------------------|--------------------|
-| Amazon Linux                 | 2025, 2023, 2022, 2 |
-| Red Hat Enterprise Linux     | 9, 8, 7            |
-| Fedora                       | 43, 42, 41, 40     |
-| Oracle Linux                 | 9, 8, 7, 6         |
-| openSUSE                     | 16.0, 15.6, 15.5, 15.4, 15.3, 15.2, 15.1, 15.0 |
+| Distribution | Supported Versions |
+|-|-|
+| Amazon Linux | 2025, 2023, 2022, 2 |
+| Red Hat Enterprise Linux | 9, 8, 7 |
+| Fedora | 43, 42, 41, 40 |
+| Oracle Linux | 9, 8, 7, 6 |
+| openSUSE | 16.0, 15.6, 15.5, 15.4, 15.3, 15.2, 15.1, 15.0 |
 | SUSE Linux Enterprise Server | 15.6, 15.5, 15.4, 15.3, 15.2, 12.5 |
 
 <!-- supported_os_versions_list_end -->
