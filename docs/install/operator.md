@@ -271,3 +271,8 @@ The local repository must provide the following images:
 #### Configuration
 
 To configure GitLab Runner in OpenShift, see the [Configuring GitLab Runner on OpenShift](../configuration/configuring_runner_operator.md) page.
+
+#### Monitoring
+
+To enable monitoring and metrics collection for GitLab Runner Operator deployments, see
+[Monitor GitLab Runner Operator](../monitoring/_index.md#monitor-operator-managed-gitlab-runners).
