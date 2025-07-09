@@ -829,11 +829,12 @@ func (j *JobResponse) NativeStepsRequested() bool {
 type Secrets map[string]Secret
 
 type Secret struct {
-	Vault            *VaultSecret            `json:"vault,omitempty"`
-	GCPSecretManager *GCPSecretManagerSecret `json:"gcp_secret_manager,omitempty"`
-	AzureKeyVault    *AzureKeyVaultSecret    `json:"azure_key_vault,omitempty"`
-	Akeyless         *AkeylessSecret         `json:"akeyless,omitempty"`
-	File             *bool                   `json:"file,omitempty"`
+	Vault             *VaultSecret            `json:"vault,omitempty"`
+	GCPSecretManager  *GCPSecretManagerSecret `json:"gcp_secret_manager,omitempty"`
+	AzureKeyVault     *AzureKeyVaultSecret    `json:"azure_key_vault,omitempty"`
+	Akeyless          *AkeylessSecret         `json:"akeyless,omitempty"`
+	AWSSecretsManager *AWSSecret              `json:"aws_secrets_manager,omitempty"`
+	File              *bool                   `json:"file,omitempty"`
 }
 
 func (s Secrets) expandVariables(vars JobVariables) {
@@ -854,6 +855,9 @@ func (s Secret) expandVariables(vars JobVariables) {
 	}
 	if s.Akeyless != nil {
 		s.Akeyless.expandVariables(vars)
+	}
+	if s.AWSSecretsManager != nil {
+		s.AWSSecretsManager.expandVariables(vars)
 	}
 }
 
@@ -880,6 +884,48 @@ type GCPSecretManagerServer struct {
 	WorkloadIdentityFederationPoolId     string `json:"workload_identity_federation_pool_id"`
 	WorkloadIdentityFederationProviderID string `json:"workload_identity_federation_provider_id"`
 	JWT                                  string `json:"jwt"`
+}
+
+type AWSSecret struct {
+	SecretId        string    `json:"secret_id"`
+	VersionId       string    `json:"version_id,omitempty"`
+	VersionStage    string    `json:"version_stage,omitempty"`
+	Field           string    `json:"field,omitempty"`
+	Region          string    `json:"region,omitempty"`
+	RoleARN         string    `json:"role_arn,omitempty"`
+	RoleSessionName string    `json:"role_session_name,omitempty"`
+	Server          AWSServer `json:"server,omitempty"`
+}
+
+type AWSServer struct {
+	Region          string `json:"region"`
+	JWT             string `json:"jwt,omitempty"`
+	RoleArn         string `json:"role_arn,omitempty"`
+	RoleSessionName string `json:"role_session_name,omitempty"`
+}
+
+func (s *AWSSecret) expandVariables(vars JobVariables) {
+	s.SecretId = vars.ExpandValue(s.SecretId)
+	s.VersionId = vars.ExpandValue(s.VersionId)
+	s.VersionStage = vars.ExpandValue(s.VersionStage)
+	s.Field = vars.ExpandValue(s.Field)
+	s.Region = vars.ExpandValue(s.Region)
+	s.RoleARN = vars.ExpandValue(s.RoleARN)
+	s.RoleSessionName = vars.ExpandValue(s.RoleSessionName)
+	s.Server.expandVariables(vars)
+}
+
+func (s *AWSServer) expandVariables(vars JobVariables) {
+	s.JWT = vars.ExpandValue(s.JWT)
+	s.Region = vars.ExpandValue(s.Region)
+	s.RoleArn = vars.ExpandValue(s.RoleArn)
+	if s.RoleSessionName == "" {
+		s.RoleSessionName = "${CI_JOB_ID}-${CI_PROJECT_ID}-${CI_SERVER_HOST}"
+	}
+	s.RoleSessionName = vars.ExpandValue(s.RoleSessionName)
+	if len(s.RoleSessionName) > 64 {
+		s.RoleSessionName = s.RoleSessionName[:64]
+	}
 }
 
 func (s *GCPSecretManagerSecret) expandVariables(vars JobVariables) {

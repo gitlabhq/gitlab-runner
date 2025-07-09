@@ -33,6 +33,7 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/akeyless"
+	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/aws"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/azure_key_vault"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/gcp_secret_manager"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/vault"

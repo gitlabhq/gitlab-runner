@@ -1378,8 +1378,8 @@ func (_m *MockFailuresCollector) EXPECT() *MockFailuresCollector_Expecter {
 }
 
 // RecordFailure provides a mock function for the type MockFailuresCollector
-func (_mock *MockFailuresCollector) RecordFailure(reason JobFailureReason, runnerDescription string) {
-	_mock.Called(reason, runnerDescription)
+func (_mock *MockFailuresCollector) RecordFailure(reason JobFailureReason, runnerConfig RunnerConfig) {
+	_mock.Called(reason, runnerConfig)
 	return
 }
 
@@ -1390,20 +1390,20 @@ type MockFailuresCollector_RecordFailure_Call struct {
 
 // RecordFailure is a helper method to define mock.On call
 //   - reason JobFailureReason
-//   - runnerDescription string
-func (_e *MockFailuresCollector_Expecter) RecordFailure(reason interface{}, runnerDescription interface{}) *MockFailuresCollector_RecordFailure_Call {
-	return &MockFailuresCollector_RecordFailure_Call{Call: _e.mock.On("RecordFailure", reason, runnerDescription)}
+//   - runnerConfig RunnerConfig
+func (_e *MockFailuresCollector_Expecter) RecordFailure(reason interface{}, runnerConfig interface{}) *MockFailuresCollector_RecordFailure_Call {
+	return &MockFailuresCollector_RecordFailure_Call{Call: _e.mock.On("RecordFailure", reason, runnerConfig)}
 }
 
-func (_c *MockFailuresCollector_RecordFailure_Call) Run(run func(reason JobFailureReason, runnerDescription string)) *MockFailuresCollector_RecordFailure_Call {
+func (_c *MockFailuresCollector_RecordFailure_Call) Run(run func(reason JobFailureReason, runnerConfig RunnerConfig)) *MockFailuresCollector_RecordFailure_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 JobFailureReason
 		if args[0] != nil {
 			arg0 = args[0].(JobFailureReason)
 		}
-		var arg1 string
+		var arg1 RunnerConfig
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(RunnerConfig)
 		}
 		run(
 			arg0,
@@ -1418,7 +1418,7 @@ func (_c *MockFailuresCollector_RecordFailure_Call) Return() *MockFailuresCollec
 	return _c
 }
 
-func (_c *MockFailuresCollector_RecordFailure_Call) RunAndReturn(run func(reason JobFailureReason, runnerDescription string)) *MockFailuresCollector_RecordFailure_Call {
+func (_c *MockFailuresCollector_RecordFailure_Call) RunAndReturn(run func(reason JobFailureReason, runnerConfig RunnerConfig)) *MockFailuresCollector_RecordFailure_Call {
 	_c.Run(run)
 	return _c
 }
