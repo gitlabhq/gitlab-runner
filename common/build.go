@@ -793,8 +793,6 @@ func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err
 		buildFinish <- b.executeScript(runContext, trace, executor)
 	}()
 
-	defer b.ensureFinishedAt()
-
 	// Wait for signals: cancel, timeout, abort or finish
 	b.Log().Debugln("Waiting for signals...")
 	select {
@@ -1033,7 +1031,10 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	// These defers are ordered because runBuild could panic and the recover needs to handle that panic.
 	// setTraceStatus needs to be last since it needs a correct error value to report the job's status
-	defer func() { b.setTraceStatus(trace, err) }()
+	defer func() {
+		b.setTraceStatus(trace, err)
+		b.ensureFinishedAt()
+	}()
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -1586,7 +1587,7 @@ func (b *Build) CurrentDuration() time.Duration {
 // duration through logs or metrics, for example for billing purposes.
 func (b *Build) FinalDuration() time.Duration {
 	if b.finishedAt.IsZero() {
-		return time.Duration(-1)
+		return time.Duration(0)
 	}
 
 	return b.finishedAt.Sub(b.startedAt)

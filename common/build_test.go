@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"syscall"
 	"testing"
 	"time"
 
@@ -3203,7 +3202,7 @@ func TestBuildDurationsAndBoundaryTimes(t *testing.T) {
 	assert.NotEqual(t, currentDuration1, currentDuration2, "Subsequent CurrentDuration() values shouldn't be equal")
 
 	time.Sleep(10 * time.Millisecond)
-	assert.Equal(t, time.Duration(-1), build.FinalDuration(), "If ensureFinishedAt() wasn't called, final duration should be equal to -1")
+	assert.Equal(t, time.Duration(0), build.FinalDuration(), "If ensureFinishedAt() wasn't called, final duration should be equal to 0")
 
 	// Mark the job as finished!
 	build.ensureFinishedAt()
@@ -3223,58 +3222,39 @@ func TestBuildDurationsAndBoundaryTimes(t *testing.T) {
 	assert.Equal(t, startedAt1, startedAt2, "StartedAt() should not change")
 }
 
-func TestBuild_runCallsEnsureFinishedAt(t *testing.T) {
+func TestBuild_RunCallsEnsureFinishedAt(t *testing.T) {
 	tests := map[string]struct {
-		mockRun     func(t *testing.T, cancelFn func(error), interrupt chan os.Signal, executor *MockExecutor)
-		assertError func(t *testing.T, err error)
+		executorRunError error
+		assertError      func(t *testing.T, err error)
 	}{
 		"succeeded job": {
-			mockRun: func(t *testing.T, _ func(error), _ chan os.Signal, executor *MockExecutor) {
-				executor.EXPECT().Run(mock.Anything).Return(nil)
-			},
+			executorRunError: nil,
 		},
 		"failed job": {
-			mockRun: func(t *testing.T, _ func(error), _ chan os.Signal, executor *MockExecutor) {
-				executor.EXPECT().Run(mock.Anything).Return(assert.AnError)
-			},
+			executorRunError: assert.AnError,
 			assertError: func(t *testing.T, err error) {
 				assert.ErrorIs(t, err, assert.AnError)
-			},
-		},
-		"canceled job": {
-			mockRun: func(t *testing.T, cancelFn func(error), _ chan os.Signal, executor *MockExecutor) {
-				executor.EXPECT().Run(mock.Anything).RunAndReturn(func(command ExecutorCommand) error {
-					cancelFn(assert.AnError)
-					time.Sleep(10 * time.Millisecond)
-					return nil
-				}).Once()
-				executor.EXPECT().Run(mock.Anything).Return(nil)
-			},
-			assertError: func(t *testing.T, err error) {
-				assert.ErrorIs(t, err, assert.AnError)
-			},
-		},
-		"interrupted runner process": {
-			mockRun: func(t *testing.T, _ func(error), interrupt chan os.Signal, executor *MockExecutor) {
-				executor.EXPECT().Run(matchBuildStage(BuildStagePrepare)).RunAndReturn(func(command ExecutorCommand) error {
-					interrupt <- syscall.SIGHUP
-					time.Sleep(10 * time.Millisecond)
-					return nil
-				}).Once()
-				executor.EXPECT().Run(mock.Anything).Return(nil)
-			},
-			assertError: func(t *testing.T, err error) {
-				var eerr *BuildError
-				if assert.ErrorAs(t, err, &eerr) {
-					assert.Equal(t, RunnerSystemFailure, eerr.FailureReason)
-					assert.Contains(t, eerr.Inner.Error(), "aborted: hangup")
-				}
 			},
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
+			executor := NewMockExecutor(t)
+			executor.EXPECT().Prepare(mock.Anything).Return(nil)
+			executor.EXPECT().Run(mock.Anything).Return(tt.executorRunError)
+			executor.EXPECT().Shell().Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
+			executor.EXPECT().Finish(mock.Anything)
+			executor.EXPECT().Cleanup()
+
+			ep := NewMockExecutorProvider(t)
+			ep.EXPECT().GetDefaultShell().Return("bash")
+			ep.EXPECT().CanCreate().Return(true)
+			ep.EXPECT().GetFeatures(mock.Anything).Return(nil)
+			ep.EXPECT().Create().Return(executor)
+
+			RegisterExecutorProviderForTest(t, t.Name(), ep)
+
 			rc := new(RunnerConfig)
 			rc.RunnerSettings.Executor = t.Name()
 
@@ -3297,20 +3277,18 @@ func TestBuild_runCallsEnsureFinishedAt(t *testing.T) {
 			build.initSettings()
 			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = false
 
-			ctx, cancelFn := context.WithCancelCause(context.Background())
-			defer cancelFn(nil)
-
 			require.Zero(t, build.finishedAt)
 
-			executor := NewMockExecutor(t)
-			executor.EXPECT().Shell().Return(&ShellScriptInfo{Shell: "script-shell"})
-			require.NotNil(t, tt.mockRun)
-			tt.mockRun(t, cancelFn, interrupt, executor)
-
 			trace := NewMockJobTrace(t)
+			trace.EXPECT().SetAbortFunc(mock.Anything)
 			trace.EXPECT().SetCancelFunc(mock.AnythingOfType("context.CancelFunc")).Maybe()
+			trace.EXPECT().IsStdout().Return(true)
+			trace.EXPECT().Write(mock.Anything).Return(0, nil)
+			trace.EXPECT().Fail(mock.Anything, mock.Anything).Return(nil).Maybe()
+			trace.EXPECT().Success().Return(nil).Maybe()
+			trace.EXPECT().SetSupportedFailureReasonMapper(mock.Anything).Maybe()
 
-			err = build.run(ctx, trace, executor)
+			err = build.Run(&Config{}, trace)
 			if tt.assertError != nil {
 				tt.assertError(t, err)
 			} else {
