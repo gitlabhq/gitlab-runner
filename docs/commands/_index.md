@@ -541,7 +541,7 @@ a single GitLab instance. It can:
   and Runner token. For example, a single job with all parameters specified explicitly:
 
   ```shell
-  gitlab-runner run-single -u http://gitlab.example.com -t my-runner-token --executor docker --docker-image ruby:2.7
+  gitlab-runner run-single -u http://gitlab.example.com -t my-runner-token --executor docker --docker-image ruby:3.3
   ```
 
 - Read from a configuration file to use a specific runner's configuration. For example,

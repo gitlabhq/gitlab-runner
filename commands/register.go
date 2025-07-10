@@ -179,7 +179,7 @@ func (s *RegisterCommand) askExecutor() {
 }
 
 func (s *RegisterCommand) askDocker() {
-	s.askBasicDocker("ruby:2.7")
+	s.askBasicDocker("ruby:3.3")
 
 	for _, volume := range s.Docker.Volumes {
 		parts := strings.Split(volume, ":")
