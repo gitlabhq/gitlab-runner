@@ -566,7 +566,7 @@ concurrent = 50   # All registered runners can run up to 50 concurrent jobs
   executor = "docker+machine"        # This runner is using the 'docker+machine' executor
   limit = 10                         # This runner can execute up to 10 jobs (created machines)
   [runners.docker]
-    image = "ruby:2.7"               # The default image used for jobs is 'ruby:2.7'
+    image = "ruby:3.3"               # The default image used for jobs is 'ruby:3.3'
   [runners.machine]
     IdleCount = 5                    # There must be 5 machines in Idle state - when Off Peak time mode is off
     IdleTime = 600                   # Each machine can be in Idle state up to 600 seconds (after this it will be removed) - when Off Peak time mode is off

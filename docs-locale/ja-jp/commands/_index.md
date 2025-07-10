@@ -481,7 +481,7 @@ gitlab-runners reset-token --all-runners
 - GitLab URLやRunnerトークンなど、すべてのオプションをCLIパラメーターまたは環境変数として取ります。たとえば、すべてのパラメーターが明示的に指定されたシングルジョブの場合は次のようになります。
 
   ```shell
-  gitlab-runner run-single -u http://gitlab.example.com -t my-runner-token --executor docker --docker-image ruby:2.7
+  gitlab-runner run-single -u http://gitlab.example.com -t my-runner-token --executor docker --docker-image ruby:3.3
   ```
 
 - 設定ファイルを読み取って、特定のRunnerの設定を使用します。たとえば、設定ファイルが指定されたシングルジョブの場合は次のようになります。

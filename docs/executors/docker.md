@@ -150,7 +150,7 @@ services to use during build time.
 Example:
 
 ```yaml
-image: ruby:2.7
+image: ruby:3.3
 
 services:
   - postgres:9.3
@@ -169,15 +169,15 @@ To define different images and services per job:
 before_script:
   - bundle install
 
-test:2.6:
-  image: ruby:2.6
+test:3.3:
+  image: ruby:3.3
   services:
   - postgres:9.3
   script:
   - bundle exec rake spec
 
-test:2.7:
-  image: ruby:2.7
+test:3.4:
+  image: ruby:3.4
   services:
   - postgres:9.4
   script:
@@ -196,7 +196,7 @@ Example:
 
 ```toml
 [runners.docker]
-  image = "ruby:2.7"
+  image = "ruby:3.3"
 
 [[runners.docker.services]]
   name = "mysql:latest"

@@ -966,7 +966,7 @@ func getRequestJobResponse(tb testing.TB, validResponse bool) string {
 	}
   ],
   "image": {
-	"name": "ruby:2.7",
+	"name": "ruby:3.3",
 	"entrypoint": ["/bin/sh"],
 	"executor_opts": {
 	  "docker": {
@@ -1246,7 +1246,7 @@ func assertOnJobResponse(tb testing.TB, res *JobResponse, assertUnsupportedOpts 
 	tb.Helper()
 	assert.NotNil(tb, res)
 	assert.NotEmpty(tb, res.ID)
-	assert.Equal(tb, "ruby:2.7", res.Image.Name)
+	assert.Equal(tb, "ruby:3.3", res.Image.Name)
 	assert.Equal(tb, []string{"/bin/sh"}, res.Image.Entrypoint)
 
 	require.Len(tb, res.Services, 2)

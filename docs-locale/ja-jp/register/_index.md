@@ -561,9 +561,9 @@ GitLab Community Edition（CE）インテグレーションをテストするに
      --url "https://gitlab.com" \
      --token "$RUNNER_AUTHENTICATION_TOKEN" \
      --template-config /tmp/test-config.template.toml \
-     --description "gitlab-ce-ruby-2.7" \
+     --description "gitlab-ce-ruby-3.3" \
      --executor "docker" \
-     --docker-image ruby:2.7
+     --docker-image ruby:3.3
    ```
 
    {{< /tab >}}
@@ -576,9 +576,9 @@ GitLab Community Edition（CE）インテグレーションをテストするに
      --url "https://gitlab.com" \
      --token "$RUNNER_AUTHENTICATION_TOKEN" \
      --template-config /tmp/test-config.template.toml \
-     --description "gitlab-ce-ruby-2.7" \
+     --description "gitlab-ce-ruby-3.3" \
      --executor "docker" \
-     --docker-image ruby:2.7
+     --docker-image ruby:3.3
    ```
 
    {{< /tab >}}
@@ -591,9 +591,9 @@ GitLab Community Edition（CE）インテグレーションをテストするに
      --url "https://gitlab.com" \
      --token "$RUNNER_AUTHENTICATION_TOKEN" \
      --template-config /tmp/test-config.template.toml \
-     --description "gitlab-ce-ruby-2.7" \
+     --description "gitlab-ce-ruby-3.3" \
      --executor "docker" \
-     --docker-image ruby:2.7
+     --docker-image ruby:3.3
    ```
 
    {{< /tab >}}
@@ -606,9 +606,9 @@ GitLab Community Edition（CE）インテグレーションをテストするに
      --url "https://gitlab.com" \
      --token "$RUNNER_AUTHENTICATION_TOKEN" \
      --template-config /tmp/test-config.template.toml \
-     --description "gitlab-ce-ruby-2.7" \
+     --description "gitlab-ce-ruby-3.3" \
      --executor "docker" \
-     --docker-image ruby:2.7
+     --docker-image ruby:3.3
    ```
 
    {{< /tab >}}
@@ -621,9 +621,9 @@ GitLab Community Edition（CE）インテグレーションをテストするに
      --url "https://gitlab.com" \
      --token "$RUNNER_AUTHENTICATION_TOKEN" \
      --template-config /tmp/test-config.template.toml \
-     --description "gitlab-ce-ruby-2.7" \
+     --description "gitlab-ce-ruby-3.3" \
      --executor "docker" \
-     --docker-image ruby:2.7
+     --docker-image ruby:3.3
    ```
 
       {{< /tab >}}

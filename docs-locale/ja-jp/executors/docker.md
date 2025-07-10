@@ -128,7 +128,7 @@ Runnerがすべてのジョブに使用するイメージと、ビルド時に�
 次に例を示します。
 
 ```yaml
-image: ruby:2.7
+image: ruby:3.3
 
 services:
   - postgres:9.3
@@ -147,15 +147,15 @@ test:
 before_script:
   - bundle install
 
-test:2.6:
-  image: ruby:2.6
+test:3.3:
+  image: ruby:3.3
   services:
   - postgres:9.3
   script:
   - bundle exec rake spec
 
-test:2.7:
-  image: ruby:2.7
+test:3.4:
+  image: ruby:3.4
   services:
   - postgres:9.4
   script:
@@ -172,7 +172,7 @@ Runnerが実行するすべてのジョブにイメージとサービスを追�
 
 ```toml
 [runners.docker]
-  image = "ruby:2.7"
+  image = "ruby:3.3"
 
 [[runners.docker.services]]
   name = "mysql:latest"

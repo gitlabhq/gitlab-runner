@@ -113,7 +113,7 @@ Runnerが実行するすべてのジョブで機能を有効にするには、[R
 
 ```toml
 [[runners]]
-  name = "ruby-2.7-docker"
+  name = "ruby-3.3-docker"
   url = "https://CI/"
   token = "TOKEN"
   limit = 0
@@ -137,7 +137,7 @@ Runnerが実行するすべてのジョブで機能を有効にするには、[R
 
 ```toml
 [[runners]]
-  name = "ruby-2.7-docker"
+  name = "ruby-3.3-docker"
   url = "https://CI/"
   token = "TOKEN"
   executor = "docker"
