@@ -52,7 +52,7 @@ func TestCreateNetworkLabels(t *testing.T) {
 
 	networkMode, err := manager.Create(ctx, "", false)
 	assert.NoError(t, err)
-	assert.Equal(t, container.NetworkMode("runner-test-tok-0-0-0"), networkMode)
+	assert.Equal(t, container.NetworkMode("runner-test-toke-0-0-0"), networkMode)
 
 	network, err := manager.Inspect(ctx)
 	assert.NoError(t, err)
@@ -66,7 +66,7 @@ func TestCreateNetworkLabels(t *testing.T) {
 		"com.gitlab.gitlab-runner.managed":         "true",
 		"com.gitlab.gitlab-runner.pipeline.id":     "1",
 		"com.gitlab.gitlab-runner.project.id":      "0",
-		"com.gitlab.gitlab-runner.runner.id":       "test-tok",
+		"com.gitlab.gitlab-runner.runner.id":       "test-toke",
 		"com.gitlab.gitlab-runner.runner.local_id": "0",
 	}, network.Labels)
 

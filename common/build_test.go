@@ -2163,7 +2163,7 @@ func TestProjectUniqueName(t *testing.T) {
 				},
 				ProjectRunnerID: 0,
 			},
-			expectedName: "runner-zen8e6e-project-1234567890-concurrent-0",
+			expectedName: "runner-zen8e6en-project-1234567890-concurrent-0",
 		},
 		"project normal unique name": {
 			build: &Build{
@@ -2179,7 +2179,7 @@ func TestProjectUniqueName(t *testing.T) {
 				},
 				ProjectRunnerID: 0,
 			},
-			expectedName: "runner-xyzwabc--project-1234567890-concurrent-0",
+			expectedName: "runner-xyzwabc-i-project-1234567890-concurrent-0",
 		},
 	}
 
@@ -2209,7 +2209,7 @@ func TestProjectUniqueShortName(t *testing.T) {
 				},
 				ProjectRunnerID: 0,
 			},
-			expectedName: "runner-zen8e6e-1234567890-0-0",
+			expectedName: "runner-zen8e6en-1234567890-0-0",
 		},
 		"project normal unique name without build id": {
 			build: &Build{
@@ -2225,7 +2225,7 @@ func TestProjectUniqueShortName(t *testing.T) {
 				},
 				ProjectRunnerID: 0,
 			},
-			expectedName: "runner-xyzwabc--1234567890-0-0",
+			expectedName: "runner-xyzwabc-i-1234567890-0-0",
 		},
 		"project normal unique name with build id": {
 			build: &Build{
@@ -2242,7 +2242,7 @@ func TestProjectUniqueShortName(t *testing.T) {
 				},
 				ProjectRunnerID: 222222,
 			},
-			expectedName: "runner-xyzwabc--1234567890-222222-12345",
+			expectedName: "runner-xyzwabc-i-1234567890-222222-12345",
 		},
 	}
 
@@ -2702,8 +2702,8 @@ func Test_expandContainerOptions(t *testing.T) {
 }
 
 func TestPrintPolicyOptions(t *testing.T) {
-	var falseValue = false
-	var trueValue = true
+	falseValue := false
+	trueValue := true
 	testCases := []struct {
 		desc          string
 		policyOptions PolicyOptions

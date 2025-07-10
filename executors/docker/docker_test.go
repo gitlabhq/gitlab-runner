@@ -712,7 +712,7 @@ func TestCreateBuildVolume(t *testing.T) {
 
 func TestCreateDependencies(t *testing.T) {
 	const containerID = "container-ID"
-	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+-alpine-0")
+	containerNameRegex, err := regexp.Compile("runner-abcdef123-project-0-concurrent-0-[^-]+-alpine-0")
 	require.NoError(t, err)
 
 	containerNameMatcher := mock.MatchedBy(containerNameRegex.MatchString)
