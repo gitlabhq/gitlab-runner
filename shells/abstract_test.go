@@ -753,6 +753,230 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 	}
 }
 
+func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
+	t.Parallel()
+	const (
+		bash       = "bash"
+		pwsh       = "pwsh"
+		powershell = "powershell"
+	)
+
+	for _, shell := range []string{bash, pwsh, powershell} {
+		for _, useJobTokenFromEnv := range []bool{true, false} {
+			testCases := []struct {
+				name     string
+				strategy common.GitStrategy
+				setup    func(t *testing.T) ShellWriter
+			}{
+				{
+					name:     "strategy none",
+					strategy: common.GitNone,
+					setup: func(t *testing.T) ShellWriter {
+						msw := NewMockShellWriter(t)
+						msw.EXPECT().Variable(mock.Anything)
+						msw.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
+						msw.EXPECT().SourceEnv("path/to/env/file").Once()
+						msw.EXPECT().Noticef("Skipping Git repository setup").Once()
+						msw.EXPECT().MkDir("build-dir").Once()
+						msw.EXPECT().Noticef("Skipping Git checkout").Once()
+						msw.EXPECT().Noticef("Skipping Git submodules setup").Once()
+						if shell == bash {
+							msw.EXPECT().IfFile("/.gitlab-build-uid-gid").Once()
+							msw.EXPECT().EndIf().Once()
+						}
+						return msw
+					},
+				},
+				{
+					name:     "strategy empty",
+					strategy: common.GitEmpty,
+					setup: func(t *testing.T) ShellWriter {
+						msw := NewMockShellWriter(t)
+						msw.EXPECT().Variable(mock.Anything)
+						msw.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
+						msw.EXPECT().SourceEnv("path/to/env/file").Once()
+						msw.EXPECT().Noticef("Skipping Git repository setup and creating an empty build directory").Once()
+						msw.EXPECT().RmDir("build-dir").Once()
+						msw.EXPECT().MkDir("build-dir").Once()
+						msw.EXPECT().Noticef("Skipping Git checkout").Once()
+						msw.EXPECT().Noticef("Skipping Git submodules setup").Once()
+						if shell == bash {
+							msw.EXPECT().IfFile("/.gitlab-build-uid-gid").Once()
+							msw.EXPECT().EndIf().Once()
+						}
+						return msw
+					},
+				},
+				{
+					name:     "strategy clone",
+					strategy: common.GitClone,
+					setup: func(t *testing.T) ShellWriter {
+						msw := NewMockShellWriter(t)
+						msw.EXPECT().Variable(mock.Anything)
+						msw.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
+						msw.EXPECT().SourceEnv("path/to/env/file").Once()
+						msw.EXPECT().Noticef("$ %s", "config pre_get_sources").Once()
+						msw.EXPECT().Line("config pre_get_sources").Once()
+						msw.EXPECT().Noticef("$ %s", "job payload").Once()
+						msw.EXPECT().Line("job payload").Once()
+						msw.EXPECT().Noticef("$ %s", "pre_get_sources").Once()
+						msw.EXPECT().Line("pre_get_sources").Once()
+						msw.EXPECT().CheckForErrors()
+						msw.EXPECT().Noticef("Fetching changes...").Once()
+						msw.EXPECT().RmDir("build-dir").Once()
+
+						templateDir, templateSetupCommands := expectSetupTemplate(msw, "build-dir")
+						expectFileCleanup(msw, "build-dir/.git", false)
+						gitCleanupCommands := expectGitConfigCleanup(msw, "build-dir", false)
+						// Ensure, cleanup happens before template dir setup
+						mock.InOrder(slices.Concat(gitCleanupCommands, templateSetupCommands)...)
+
+						msw.EXPECT().Command("git", "init", "build-dir", "--template", templateDir).Once()
+						msw.EXPECT().Cd("build-dir").Once()
+
+						msw.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url/some/repo").Once()
+						msw.EXPECT().Noticef("Created fresh repository.").Once()
+						msw.EXPECT().Else().Once()
+						msw.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
+						msw.EXPECT().EndIf().Once()
+
+						msw.EXPECT().IfFile(".git/shallow").Once()
+						msw.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
+						msw.EXPECT().Else().Once()
+						msw.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
+						msw.EXPECT().EndIf().Once()
+
+						msw.EXPECT().Noticef("Skipping Git checkout").Once()
+						msw.EXPECT().Noticef("Skipping Git submodules setup").Once()
+
+						msw.EXPECT().Noticef("$ %s", "job payload").Once()
+						msw.EXPECT().Line("job payload").Once()
+						msw.EXPECT().Noticef("$ %s", "post_get_sources").Once()
+						msw.EXPECT().Line("post_get_sources").Once()
+						msw.EXPECT().Noticef("$ %s", "config post_get_sources").Once()
+						msw.EXPECT().Line("config post_get_sources").Once()
+
+						if shell == bash {
+							msw.EXPECT().IfFile("/.gitlab-build-uid-gid").Once()
+							msw.EXPECT().EndIf().Once()
+						}
+						if useJobTokenFromEnv {
+							helperPath := expectGitCredHelperSetup(msw, "https://repo-url")
+							msw.EXPECT().Command("git", "config", "include.path", helperPath)
+						}
+						return msw
+					},
+				},
+				{
+					name:     "strategy fetch",
+					strategy: common.GitFetch,
+					setup: func(t *testing.T) ShellWriter {
+						msw := NewMockShellWriter(t)
+						msw.EXPECT().Variable(mock.Anything)
+						msw.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
+						msw.EXPECT().SourceEnv("path/to/env/file").Once()
+						msw.EXPECT().Noticef("$ %s", "config pre_get_sources").Once()
+						msw.EXPECT().Line("config pre_get_sources").Once()
+						msw.EXPECT().Noticef("$ %s", "job payload").Once()
+						msw.EXPECT().Line("job payload").Once()
+						msw.EXPECT().Noticef("$ %s", "pre_get_sources").Once()
+						msw.EXPECT().Line("pre_get_sources").Once()
+						msw.EXPECT().CheckForErrors()
+						msw.EXPECT().Noticef("Fetching changes...").Once()
+						templateDir, templateSetupCommands := expectSetupTemplate(msw, "build-dir")
+						expectFileCleanup(msw, "build-dir/.git", false)
+						gitCleanupCommands := expectGitConfigCleanup(msw, "build-dir", false)
+						// Ensure, cleanup happens before template dir setup
+						mock.InOrder(slices.Concat(gitCleanupCommands, templateSetupCommands)...)
+
+						msw.EXPECT().Command("git", "init", "build-dir", "--template", templateDir).Once()
+						msw.EXPECT().Cd("build-dir").Once()
+						msw.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url/some/repo").Once()
+						msw.EXPECT().Noticef("Created fresh repository.").Once()
+						msw.EXPECT().Else().Once()
+						msw.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
+						msw.EXPECT().EndIf().Once()
+						msw.EXPECT().IfFile(".git/shallow").Once()
+						msw.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
+						msw.EXPECT().Else().Once()
+						msw.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
+						msw.EXPECT().EndIf().Once()
+						msw.EXPECT().Noticef("Skipping Git checkout").Once()
+						msw.EXPECT().Noticef("Skipping Git submodules setup").Once()
+
+						msw.EXPECT().Noticef("$ %s", "job payload").Once()
+						msw.EXPECT().Line("job payload").Once()
+						msw.EXPECT().Noticef("$ %s", "post_get_sources").Once()
+						msw.EXPECT().Line("post_get_sources").Once()
+
+						msw.EXPECT().Noticef("$ %s", "config post_get_sources").Once()
+						msw.EXPECT().Line("config post_get_sources").Once()
+						if shell == bash {
+							msw.EXPECT().IfFile("/.gitlab-build-uid-gid").Once()
+							msw.EXPECT().EndIf().Once()
+						}
+						if useJobTokenFromEnv {
+							helperPath := expectGitCredHelperSetup(msw, "https://repo-url")
+							msw.EXPECT().Command("git", "config", "include.path", helperPath)
+						}
+						return msw
+					},
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name+" with shell "+shell+" use job token from env "+fmt.Sprintf("%t", useJobTokenFromEnv), func(t *testing.T) {
+					// Arrange
+					info := common.ShellScriptInfo{
+						Shell: shell,
+						Build: &common.Build{
+							JobResponse: common.JobResponse{
+								Token: "some-token",
+								Variables: common.JobVariables{
+									{Key: "GIT_STRATEGY", Value: string(tc.strategy)},
+									{Key: "GIT_CHECKOUT", Value: "false"},
+								},
+								GitInfo: common.GitInfo{
+									RepoURL: "https://repo-url/some/repo",
+								},
+								Hooks: common.Hooks{
+									{
+										Name:   common.HookPreGetSourcesScript,
+										Script: common.StepScript{"job payload", "pre_get_sources"},
+									},
+									{
+										Name:   common.HookPostGetSourcesScript,
+										Script: common.StepScript{"job payload", "post_get_sources"},
+									},
+								},
+								JobRequestCorrelationID: "foobar",
+							},
+							Runner: &common.RunnerConfig{
+								RunnerSettings: common.RunnerSettings{
+									FeatureFlags: map[string]bool{
+										featureflags.GitURLsWithoutTokens: useJobTokenFromEnv,
+									},
+								},
+							},
+							BuildDir: "build-dir",
+						},
+						PreGetSourcesScript:  "config pre_get_sources",
+						PostGetSourcesScript: "config post_get_sources",
+					}
+					msw := tc.setup(t)
+					shell := new(AbstractShell)
+
+					// Act
+					err := shell.writeGetSourcesScript(context.Background(), msw, info)
+					assert.NoError(t, err)
+
+					// Assert: assertion on shell wrtier performed in the setup of each test case.
+				})
+			}
+		}
+	}
+}
+
 func TestAbstractShell_writeCleanupBuildDirectoryScript(t *testing.T) {
 	testCases := []struct {
 		name                 string
@@ -2835,123 +3059,6 @@ func benchmarkScriptStage(b *testing.B, shell common.Shell, stage common.BuildSt
 		script, err := shell.GenerateScript(ctx, stage, info)
 		b.SetBytes(int64(len(script)))
 		assert.NoError(b, err, stage)
-	}
-}
-
-func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
-	shells := []string{"bash", "pwsh", "powershell"}
-
-	for _, useJobTokenFromEnv := range []bool{true, false} {
-		name := fmt.Sprintf("%s:%t", featureflags.GitURLsWithoutTokens, useJobTokenFromEnv)
-		t.Run(name, func(t *testing.T) {
-			for _, shellName := range shells {
-				t.Run(shellName, func(t *testing.T) {
-					info := common.ShellScriptInfo{
-						Shell: shellName,
-						Build: &common.Build{
-							JobResponse: common.JobResponse{
-								Token: "some-token",
-								Variables: common.JobVariables{
-									{Key: "GIT_STRATEGY", Value: "fetch"},
-									{Key: "GIT_CHECKOUT", Value: "false"},
-								},
-								GitInfo: common.GitInfo{
-									RepoURL: "https://repo-url/some/repo",
-								},
-								Hooks: common.Hooks{
-									{
-										Name:   common.HookPreGetSourcesScript,
-										Script: common.StepScript{"job payload", "pre_get_sources"},
-									},
-									{
-										Name:   common.HookPostGetSourcesScript,
-										Script: common.StepScript{"job payload", "post_get_sources"},
-									},
-								},
-								JobRequestCorrelationID: "foobar",
-							},
-							Runner: &common.RunnerConfig{
-								RunnerSettings: common.RunnerSettings{
-									FeatureFlags: map[string]bool{
-										featureflags.GitURLsWithoutTokens: useJobTokenFromEnv,
-									},
-								},
-							},
-							BuildDir: "build-dir",
-						},
-						PreGetSourcesScript:  "config pre_get_sources",
-						PostGetSourcesScript: "config post_get_sources",
-					}
-
-					m := NewMockShellWriter(t)
-
-					m.EXPECT().Variable(mock.Anything)
-					m.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
-					m.EXPECT().SourceEnv("path/to/env/file").Once()
-
-					// Pre get sources from configuration file
-					m.EXPECT().Noticef("$ %s", "config pre_get_sources").Once()
-					m.EXPECT().Line("config pre_get_sources").Once()
-					// Pre get sources from job payload
-					m.EXPECT().Noticef("$ %s", "job payload").Once()
-					m.EXPECT().Line("job payload").Once()
-					m.EXPECT().Noticef("$ %s", "pre_get_sources").Once()
-					m.EXPECT().Line("pre_get_sources").Once()
-
-					m.EXPECT().CheckForErrors()
-					m.EXPECT().Noticef("Fetching changes...").Once()
-
-					templateDir, templateSetupCommands := expectSetupTemplate(m, "build-dir")
-					expectFileCleanup(m, "build-dir/.git", false)
-					gitCleanupCommands := expectGitConfigCleanup(m, "build-dir", false)
-
-					// Ensure, cleanup happens before template dir setup
-					mock.InOrder(slices.Concat(gitCleanupCommands, templateSetupCommands)...)
-
-					m.EXPECT().Command("git", "init", "build-dir", "--template", templateDir).Once()
-					m.EXPECT().Cd("build-dir").Once()
-
-					if useJobTokenFromEnv {
-						helperPath := expectGitCredHelperSetup(m, "https://repo-url")
-						m.EXPECT().Command("git", "config", "include.path", helperPath)
-					}
-
-					m.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url/some/repo").Once()
-					m.EXPECT().Noticef("Created fresh repository.").Once()
-					m.EXPECT().Else().Once()
-					m.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
-					m.EXPECT().EndIf().Once()
-
-					m.EXPECT().IfFile(".git/shallow").Once()
-					m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
-					m.EXPECT().Else().Once()
-					m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
-					m.EXPECT().EndIf().Once()
-
-					m.EXPECT().Noticef("Skipping Git checkout").Once()
-					m.EXPECT().Noticef("Skipping Git submodules setup").Once()
-
-					// Post get sources from job payload
-					m.EXPECT().Noticef("$ %s", "job payload").Once()
-					m.EXPECT().Line("job payload").Once()
-					m.EXPECT().Noticef("$ %s", "post_get_sources").Once()
-					m.EXPECT().Line("post_get_sources").Once()
-					// Post get sources from configuration file
-					m.EXPECT().Noticef("$ %s", "config post_get_sources").Once()
-					m.EXPECT().Line("config post_get_sources").Once()
-
-					if shellName == "bash" {
-						m.EXPECT().IfFile("/.gitlab-build-uid-gid").Once()
-						m.EXPECT().EndIf()
-					}
-
-					shell := new(AbstractShell)
-
-					err := shell.writeGetSourcesScript(context.Background(), m, info)
-					assert.NoError(t, err)
-				})
-			}
-		})
 	}
 }
 
