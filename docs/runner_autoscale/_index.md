@@ -59,7 +59,7 @@ This snippet is in the `runners.machine` section of the `config.toml` file.
     MachineOptions = [
       "amazonec2-access-key=XXXX",
       "amazonec2-secret-key=XXXX",
-      "amazonec2-region=us-central-1",
+      "amazonec2-region=eu-central-1",
       "amazonec2-vpc-id=vpc-xxxxx",
       "amazonec2-subnet-id=subnet-xxxxx",
       "amazonec2-zone=x",

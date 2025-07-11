@@ -253,7 +253,7 @@ Here's an example of the `runners.machine` section:
     MachineOptions = [
       "amazonec2-access-key=XXXX",
       "amazonec2-secret-key=XXXX",
-      "amazonec2-region=us-central-1",
+      "amazonec2-region=eu-central-1",
       "amazonec2-vpc-id=vpc-xxxxx",
       "amazonec2-subnet-id=subnet-xxxxx",
       "amazonec2-zone=x",
@@ -356,7 +356,7 @@ check_interval = 0
     MachineOptions = [
       "amazonec2-access-key=XXXX",
       "amazonec2-secret-key=XXXX",
-      "amazonec2-region=us-central-1",
+      "amazonec2-region=eu-central-1",
       "amazonec2-vpc-id=vpc-xxxxx",
       "amazonec2-subnet-id=subnet-xxxxx",
       "amazonec2-use-private-address=true",
