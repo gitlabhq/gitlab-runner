@@ -433,7 +433,7 @@ func (b *AbstractShell) guardGetSourcesScriptHooks(
 	script func() []string,
 ) {
 	s := script()
-	if len(s) == 0 || info.Build.GetGitStrategy() == common.GitNone {
+	if len(s) == 0 || info.Build.GetGitStrategy() == common.GitNone || info.Build.GetGitStrategy() == common.GitEmpty {
 		return
 	}
 

@@ -595,9 +595,9 @@ func TestBuildWithGitStrategyEmptyWithoutLFS(t *testing.T) {
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
 		assert.NotContains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Fetching changes")
-		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
 
 		testFilePath := filepath.Join(build.BuildDir, "test.txt")
 		err = os.WriteFile(testFilePath, []byte{}, os.ModePerm)
@@ -605,11 +605,11 @@ func TestBuildWithGitStrategyEmptyWithoutLFS(t *testing.T) {
 
 		out, err = buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
 		assert.NotContains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Fetching changes")
-		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
-		assert.Contains(t, out, "pre-clone-script")
-		assert.Contains(t, out, "post-clone-script")
+		assert.NotContains(t, out, "pre-clone-script")
+		assert.NotContains(t, out, "post-clone-script")
 
 		_, err = os.Stat(testFilePath)
 		assert.Error(t, err)
@@ -627,9 +627,9 @@ func TestBuildWithGitStrategyEmptyWithLFS(t *testing.T) {
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
 		assert.NotContains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Fetching changes")
-		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
 		assertLFSFileNotPresent(t, build)
 
 		testFilePath := filepath.Join(build.BuildDir, "test.txt")
@@ -638,9 +638,11 @@ func TestBuildWithGitStrategyEmptyWithLFS(t *testing.T) {
 
 		out, err = buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
 		assert.NotContains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Fetching changes")
-		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
+		assert.NotContains(t, out, "pre-clone-script")
+		assert.NotContains(t, out, "post-clone-script")
 		assertLFSFileNotPresent(t, build)
 
 		_, err = os.Stat(testFilePath)
