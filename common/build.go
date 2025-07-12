@@ -311,8 +311,7 @@ func (b *Build) getCustomBuildDir(rootDir, dir string, customBuildDirEnabled, sh
 	}
 
 	if !customBuildDirEnabled {
-		return "", MakeBuildError("setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature").
-			WithFailureReason(ConfigurationError)
+		return "", MakeBuildError("setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature")
 	}
 
 	// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25913
@@ -321,8 +320,7 @@ func (b *Build) getCustomBuildDir(rootDir, dir string, customBuildDirEnabled, sh
 		return "", &BuildError{Inner: err}
 	}
 	if strings.HasPrefix(relDir, "..") {
-		return "", MakeBuildError("the GIT_CLONE_PATH=%q has to be within %q", dir, rootDir).
-			WithFailureReason(ConfigurationError)
+		return "", MakeBuildError("the GIT_CLONE_PATH=%q has to be within %q", dir, rootDir)
 	}
 
 	return path.Clean(dir), nil
@@ -333,11 +331,11 @@ func (b *Build) StartBuild(
 	customBuildDirEnabled, sharedDir, safeDirectoryCheckout bool,
 ) error {
 	if rootDir == "" {
-		return MakeBuildError("the builds_dir is not configured").WithFailureReason(ConfigurationError)
+		return MakeBuildError("the builds_dir is not configured")
 	}
 
 	if cacheDir == "" {
-		return MakeBuildError("the cache_dir is not configured").WithFailureReason(ConfigurationError)
+		return MakeBuildError("the cache_dir is not configured")
 	}
 
 	b.SafeDirectoryCheckout = safeDirectoryCheckout
@@ -494,32 +492,6 @@ func (b *Build) executeArchiveCache(ctx context.Context, state error, executor E
 	return b.executeStage(ctx, BuildStageArchiveOnFailureCache, executor)
 }
 
-func asRunnerSystemFailure(inner error) error { return asBuildError(inner, RunnerSystemFailure) }
-
-// asBuildError will wrap the specified error in a BuildError with the specified JobFailureReason. If the specified
-// error is already a BuildError, it will not be wrapped. If the specified error is a BuildError with no
-// FailureReason, the FailureReason will be set to the specified JobFailureReason.
-func asBuildError(inner error, reason JobFailureReason) error {
-	if inner == nil {
-		return nil
-	}
-
-	// If there's already a BuildError with a FailureReason in the chain, leave it as it is...
-	var be *BuildError
-	if errors.As(inner, &be) {
-		if be.FailureReason == "" {
-			be.FailureReason = reason
-		}
-		return inner
-	}
-
-	return &BuildError{
-		Inner:         inner,
-		FailureReason: reason,
-		ExitCode:      1,
-	}
-}
-
 //nolint:gocognit
 func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Executor) error {
 	// track job start and create referees
@@ -529,12 +501,14 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	// Prepare stage
 	err := b.executeStage(ctx, BuildStagePrepare, executor)
 	if err != nil {
-		return asRunnerSystemFailure(fmt.Errorf(
+		return fmt.Errorf(
 			"prepare environment: %w. "+
-				"Check https://docs.gitlab.com/runner/shells/#shell-profile-loading for more information", err))
+				"Check https://docs.gitlab.com/runner/shells/#shell-profile-loading for more information",
+			err,
+		)
 	}
 
-	err = asRunnerSystemFailure(b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts(), func(attempt int) error {
+	err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts(), func(attempt int) error {
 		if attempt == 1 {
 			// If GetSources fails we delete all tracked and untracked files. This is
 			// because Git's submodule support has various bugs that cause fetches to
@@ -543,13 +517,13 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		}
 
 		return nil
-	}))
+	})
 
 	if err == nil {
-		err = asRunnerSystemFailure(b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts(), nil))
+		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts(), nil)
 	}
 	if err == nil {
-		err = asRunnerSystemFailure(b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts(), nil))
+		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts(), nil)
 	}
 
 	//nolint:nestif
@@ -619,9 +593,9 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		}
 	}
 
-	archiveCacheErr := asRunnerSystemFailure(b.executeArchiveCache(ctx, err, executor))
+	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
 
-	artifactUploadErr := asRunnerSystemFailure(b.executeUploadArtifacts(ctx, err, executor))
+	artifactUploadErr := b.executeUploadArtifacts(ctx, err, executor)
 
 	// track job end and execute referees
 	endTime := time.Now()

@@ -568,7 +568,7 @@ func TestDockerCommandMissingImage(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ImagePullFailure})
 	assert.Regexp(t, regexp.MustCompile("not found|repository does not exist|invalid repository name"), err.Error())
 }
 
@@ -580,7 +580,7 @@ func TestDockerCommandMissingTag(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ImagePullFailure})
 	assert.Contains(t, err.Error(), "not found")
 }
 
@@ -596,7 +596,7 @@ func TestDockerCommandMissingServiceImage(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ImagePullFailure})
 	assert.Regexp(t, regexp.MustCompile("not found|repository does not exist|invalid repository name"), err.Error())
 }
 

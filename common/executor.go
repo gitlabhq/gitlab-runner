@@ -150,13 +150,8 @@ func (b *BuildError) Unwrap() error {
 	return b.Inner
 }
 
-func (b *BuildError) WithFailureReason(reason JobFailureReason) *BuildError {
-	b.FailureReason = reason
-	return b
-}
-
 // MakeBuildError returns an new instance of BuildError.
-func MakeBuildError(format string, args ...interface{}) *BuildError {
+func MakeBuildError(format string, args ...interface{}) error {
 	return &BuildError{
 		Inner: fmt.Errorf(format, args...),
 	}
