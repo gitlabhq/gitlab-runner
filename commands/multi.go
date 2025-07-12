@@ -1089,8 +1089,8 @@ func (mr *RunCommand) requestJob(
 		_, _ = trace.Write([]byte(err.Error() + "\n"))
 
 		err = trace.Fail(err, common.JobFailureData{
-			Reason:   common.ConfigurationError,
-			ExitCode: common.ExitCodeInvalidConfiguration,
+			Reason:   common.RunnerSystemFailure,
+			ExitCode: common.ExitCodeUnsupportedOptions,
 		})
 		logTerminationError(mr.log(), "Fail", err)
 

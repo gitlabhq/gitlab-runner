@@ -69,7 +69,7 @@ func (ref *acquisitionRef) Prepare(
 
 	info, err := ref.acq.InstanceConnectInfo(dialCtx)
 	if cause := context.Cause(dialCtx); cause != nil {
-		return nil, &common.BuildError{Inner: cause, FailureReason: reasonFromCause(cause)}
+		return nil, &common.BuildError{Inner: cause, FailureReason: common.RunnerSystemFailure}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("getting instance connect info: %w", err)
@@ -103,9 +103,8 @@ func (ref *acquisitionRef) Prepare(
 	logger.Println(fmt.Sprintf("Dialing instance %s...", strings.Join(ident, ", ")))
 	fleetingDialer, err := ref.dialAcquisitionInstance(dialCtx, info, fleetingDialOpts)
 	if cause := context.Cause(dialCtx); cause != nil {
-		return nil, &common.BuildError{Inner: cause, FailureReason: reasonFromCause(cause)}
+		return nil, &common.BuildError{Inner: cause, FailureReason: common.RunnerSystemFailure}
 	}
-
 	if err != nil {
 		return nil, err
 	}
@@ -135,17 +134,6 @@ func (ref *acquisitionRef) Prepare(
 	}
 
 	return client, nil
-}
-
-func reasonFromCause(cause error) common.JobFailureReason {
-	switch {
-	case errors.Is(cause, context.DeadlineExceeded):
-		return common.JobExecutionTimeout
-	case errors.Is(cause, context.Canceled):
-		return common.JobCanceled
-	default:
-		return common.RunnerSystemFailure
-	}
 }
 
 func (ref *acquisitionRef) WithContext(ctx context.Context) (context.Context, context.CancelFunc) {
@@ -272,7 +260,7 @@ func (ref *acquisitionRef) createTunneledDialer(
 
 	client, err := ref.dialTunnel(ctx, info, options)
 	if cause := context.Cause(ctx); cause != nil {
-		return nil, &common.BuildError{Inner: cause, FailureReason: reasonFromCause(cause)}
+		return nil, &common.BuildError{Inner: cause, FailureReason: common.RunnerSystemFailure}
 	}
 
 	return client, err
