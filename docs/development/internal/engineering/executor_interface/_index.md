@@ -33,7 +33,7 @@ All of these _executors_ are orchestrated internally by GitLab Runner process. A
 Runner is using a set of Go interfaces that need to be implemented by the executor
 to work.
 
-Te two main interfaces (part of the `common` package) that manage an executor's lifetime
+The two main interfaces (part of the `common` package) that manage an executor's lifetime
 and job execution are:
 
 - `Executor`
@@ -88,7 +88,7 @@ Docker Machine executor).
 
 What's important, because both `Executor` and `ExecutorProvider` are interfaces, the implementation
 allows to "stack" different structs. The usage of this possibility will be shown with one of the
-examples.s
+examples.
 
 ### `Executor` interface
 
@@ -108,7 +108,7 @@ some different way. Hopefully - in a way that will enforce usage of `AbstractExe
 
 Usage of the interface, in very simplification, goes as follows:
 
-1. The instance of an _executor_ was provided and assigned to a received job,
+1. The instance of an _executor_ was provided and assigned to a received job.
 1. `Shell()` is called to get the configuration of a shell. It's used to prepare all the scripts
    that will be executed for the job.
 1. `Prepare()` is called to prepare the job environment (for example creating a Kubernetes Pod,
@@ -150,12 +150,12 @@ Usage of the interface, in very simplification, goes as follows:
    to check and do a reservation of provider resources for the job. This is a place where the provider
    may control its capacity and return information about some preallocated resources.
 1. `GetFeatures()` is called several times to ensure that information about features supported
-   by Runner can be sent back with different API requests to GitLab. On of the calls is made when
+   by Runner can be sent back with different API requests to GitLab. One of the calls is made when
    preparing the initial request for a job.
 1. Same goes for the `GetConfigInfo()` which is called only once, when preparing the initial request
-   for a job. It allows to sent some information about used configuration to GitLab.
-1. Same goes for the `GetDefaultShall()` which is called also onl once, when preparing the initial
-   request for a job. It allows to sent information about used shell to GitLab.
+   for a job. It allows to send some information about used configuration to GitLab.
+1. Same goes for the `GetDefaultShall()` which is also called only once, when preparing the initial
+   request for a job. It allows to send information about used shell to GitLab.
 1. If the job was received, it's preparation is started and at some moment `Create()` is called
    to create a new instance of the executor.
 1. When the job execution is fully done, `Release()` is called. This is a place where the provider
@@ -188,7 +188,7 @@ provider's `Create()` is proxied to the `Creator` function.
 `FeaturesUpdater` and `ConfigUpdater` are functions that allow to request the feature
 and config information. All executors are using these functions to expose information
 about supported features or config details. The `FeaturesUpdater` is optional and every
-executor have to report which features from the list are supported. `ConfiguUpdater` is
+executor have to report which features from the list are supported. `ConfigUpdater` is
 optional and can be skipped. `DefaultShellName` must be set by every executor.
 
 Provider's `GetFeatures()`, `GetConfigInfo()`, `GetDefaultShell()` calls will use the
@@ -252,7 +252,7 @@ image provided by Runner. This container will be used to execute scripts handlin
 like updating the Git and Git LFS sources, operating with cache and operating with artifacts.
 
 Depending on the job configuration Runner may create more containers for the defined `services`.
-These will be linked by the networking to the main container, so that the job script can utilise
+These will be linked by the networking to the main container, so that the job script can utilize
 network available services exposed by them.
 
 #### ExecutorProvider
@@ -265,7 +265,7 @@ of Docker executor, it's configured as a non-login shell.
 
 #### Executor
 
-`Prepare()` is highly utilised in this executor. During that step Runner will prepare different
+`Prepare()` is highly utilized in this executor. During that step Runner will prepare different
 internal tools (like volumes manager or network manager) and set up the basic configuration that
 will be next used by the containers for job execution. It's also the step when all the images
 defined for the job are pulled. Creation of volumes, device binding and service containers
@@ -296,7 +296,7 @@ by running an `os/exec.Cmd` calls to it.
 Management of the VMs may be done in "on-demand" or "autoscaled in background" modes. Chosen mode
 depends on configuration provided by the user. In the first mode the VMs will be created for each
 received job, until the limit of jobs is reached. In the second mode it will maintain a configurable
-set of `Idle` s that await for jobs. Jobs are then requested only when there is at least one
+set of `Idle` VMs that await for jobs. Jobs are then requested only when there is at least one
 `Idle` VM. When one `Idle` VM is taken for a received job, another is created to replace it. When the
 VM is returned to the pool (if configured to do so) and the number of `Idle` exceeds the defined limit,
 the provider starts to remove some of them. This loop that tries to maintain the desired number of `Idle`
@@ -342,7 +342,7 @@ cloud provider errors, Docker Engine availability problems - it will cause a fai
 In the "autoscaled in background" mode, it will check if there is any `Idle` VM that is available.
 If it is, it will reserve it and allow Runner to send a request for new job. If job is received,
 it will get information about the acquired VM. If there is no available `Idle` VMs, then the call to
-`Acuire()` will wail, which will prevent Runner from sending a request for a job (and in Runner logs
+`Acquire()` will fail, which will prevent Runner from sending a request for a job (and in Runner logs
 will be logged as the `no free machines that can process builds` warning).
 
 `Release()` behaves in the same in both modes. It will check if the VM that was used for the job
