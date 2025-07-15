@@ -1,9 +1,9 @@
 package network
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -15,19 +15,17 @@ import (
 const (
 	// RateLimit-ResetTime: Wed, 21 Oct 2015 07:28:00 GMT
 	rateLimitResetTimeHeader = "RateLimit-ResetTime"
+	retryAfterHeader         = "Retry-After"
 	// The fallback is used if the reset header's value is present but cannot be parsed
 	defaultRateLimitFallbackDelay = time.Minute
 	defaultRateLimitRetriesCount  = 5
-)
-
-var (
-	errRateLimitGaveUp = errors.New("gave up due to rate limit")
 )
 
 type rateLimitRequester struct {
 	client        requester
 	fallbackDelay time.Duration
 	retriesCount  int
+	logger        *logrus.Logger
 }
 
 func newRateLimitRequester(client requester) *rateLimitRequester {
@@ -35,11 +33,12 @@ func newRateLimitRequester(client requester) *rateLimitRequester {
 		client:        client,
 		fallbackDelay: defaultRateLimitFallbackDelay,
 		retriesCount:  defaultRateLimitRetriesCount,
+		logger:        logrus.StandardLogger(),
 	}
 }
 
-func (r *rateLimitRequester) Do(req *http.Request) (*http.Response, error) {
-	logger := logrus.
+func (r *rateLimitRequester) Do(req *http.Request) (res *http.Response, err error) {
+	logger := r.logger.
 		WithFields(logrus.Fields{
 			"context": "ratelimit-requester-gitlab-request",
 			"url":     req.URL.String(),
@@ -48,18 +47,24 @@ func (r *rateLimitRequester) Do(req *http.Request) (*http.Response, error) {
 
 	// Worst case would be the configured timeout from reverse proxy * retriesCount
 	for i := 0; i < r.retriesCount; i++ {
-		res, rateLimitDuration, err := r.do(req, logger)
-		if rateLimitDuration == nil {
-			return res, err
+		res, err = r.client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't execute %s against %s: %w", req.Method, req.URL, err)
+		}
+		waitTime := calculateWaitTime(r.fallbackDelay, res, logger.Logger)
+		if waitTime <= 0 {
+			return res, nil
 		}
 
 		logger.
-			WithField("duration", *rateLimitDuration).
-			Infoln("Sleeping due to rate limit")
-		// In some rare cases where the network is slow or the machine hosting
-		// the runner is resource constrained by the time we get the header
-		// it might be in the past, but that's ok since sleep will return immediately
-		time.Sleep(*rateLimitDuration)
+			WithField("duration", waitTime).
+			Infoln("Waiting before making the next call")
+
+		select {
+		case <-time.After(waitTime):
+		case <-req.Context().Done():
+			return nil, req.Context().Err()
+		}
 
 		if req.GetBody != nil {
 			body, err := req.GetBody()
@@ -71,45 +76,63 @@ func (r *rateLimitRequester) Do(req *http.Request) (*http.Response, error) {
 		}
 	}
 
-	return nil, errRateLimitGaveUp
+	return res, err
 }
 
-// If this method returns a non-nil duration this means that we got a rate limited response
-// and the called should sleep for the duration. If the duration is nil, return the response and the error
-// meaning that we got a non rate limited response
-func (r *rateLimitRequester) do(req *http.Request, logger *logrus.Entry) (*http.Response, *time.Duration, error) {
-	res, err := r.client.Do(req)
+func calculateWaitTime(fallbackDelay time.Duration, resp *http.Response, logger *logrus.Logger) time.Duration {
+	if resp.StatusCode != http.StatusTooManyRequests && resp.StatusCode != http.StatusServiceUnavailable {
+		return 0
+	}
+
+	if waitTime := parseResetTime(resp, logger); waitTime > 0 {
+		return waitTime
+	}
+
+	if waitTime := parseRetryAfter(resp, logger); waitTime > 0 {
+		return waitTime
+	}
+
+	return fallbackDelay
+}
+
+func parseResetTime(resp *http.Response, logger *logrus.Logger) time.Duration {
+	resetTimeStr := resp.Header.Get(rateLimitResetTimeHeader)
+	if resetTimeStr == "" {
+		return 0
+	}
+
+	resetTime, err := time.Parse(time.RFC1123, resetTimeStr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("couldn't execute %s against %s: %w", req.Method, req.URL, err)
-	}
-
-	// The request passed and we got some non rate limited response
-	if res.StatusCode != http.StatusTooManyRequests {
-		return res, nil, nil
-	}
-
-	rateLimitResetTimeValue := res.Header.Get(rateLimitResetTimeHeader)
-	if rateLimitResetTimeValue == "" {
-		// if we get a 429 but don't have a rate limit reset header we just return the response
-		// since we can't know how much to wait for the rate limit to reset
-		return res, nil, nil
-	}
-
-	resetTime, err := time.Parse(time.RFC1123, rateLimitResetTimeValue)
-	if err != nil {
-		// If we can't parse the rate limit reset header there's something wrong with it
-		// we shouldn't fail, to avoid a case where a misconfiguration in the reverse proxy can cause
-		// all runners to stop working. Wait for the configured fallback instead
 		logger.
 			WithError(err).
 			WithFields(logrus.Fields{
 				"header":      rateLimitResetTimeHeader,
-				"headerValue": rateLimitResetTimeValue,
+				"headerValue": resetTimeStr,
 			}).
-			Warnln("Couldn't parse rate limit header, falling back")
-		return res, &r.fallbackDelay, nil
+			Warnln("Couldn't parse rate limit header")
+		return 0
 	}
 
-	resetDuration := time.Until(resetTime)
-	return res, &resetDuration, nil
+	return time.Until(resetTime)
+}
+
+func parseRetryAfter(resp *http.Response, logger *logrus.Logger) time.Duration {
+	retryAfter := resp.Header.Get(retryAfterHeader)
+	if retryAfter == "" {
+		return 0
+	}
+
+	retrySeconds, err := strconv.Atoi(retryAfter)
+	if err != nil {
+		logger.
+			WithError(err).
+			WithFields(logrus.Fields{
+				"header":      retryAfterHeader,
+				"headerValue": retryAfter,
+			}).
+			Warnln("Couldn't parse retry after header")
+		return 0
+	}
+
+	return time.Duration(retrySeconds) * time.Second
 }
