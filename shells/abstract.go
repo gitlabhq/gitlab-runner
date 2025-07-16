@@ -77,7 +77,9 @@ func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (string, 
 	}
 
 	// Deduce cache key
-	key := path.Join(build.JobInfo.Name, build.GitInfo.Ref)
+	// We deliberately don't use path.Join, to not have path traversal issues with e.g. a job nome like
+	// `some/../../job/name` and a git ref like `foo/../bar` would result in `../job/name/bar`.
+	key := build.JobInfo.Name + "/" + build.GitInfo.Ref
 	if userKey != "" {
 		key = build.GetAllVariables().ExpandValue(userKey)
 	}
@@ -181,20 +183,39 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	cacheKey string,
 	cacheOptions common.Cache,
 ) {
-	allowedCacheKeys := []string{cacheKey}
+	allowedCacheKeys := []string{}
 
-	for _, cacheKey := range cacheOptions.FallbackKeys {
-		if cacheKey != "" {
-			allowedCacheKeys = append(allowedCacheKeys, info.Build.GetAllVariables().ExpandValue(cacheKey))
+	build := info.Build
+	buildVars := build.GetAllVariables()
+	addCacheKey := func(key string, err error) {
+		if key != "" {
+			allowedCacheKeys = append(allowedCacheKeys, key)
+		}
+		if err != nil {
+			w.Warningf(err.Error())
 		}
 	}
 
-	// We make sure that the CACHE_FALLBACK_KEY doesn't end with characters like space, slash and backslash
-	// TrimRight remove all occurrences of those character at the end of the fallback key
-	defaultFallbackCacheKey := sanitizeCacheFallbackKey(info.Build.GetAllVariables().Value("CACHE_FALLBACK_KEY"))
-	if defaultFallbackCacheKey != "" && !strings.HasSuffix(defaultFallbackCacheKey, "-protected") {
-		// The `-protected` suffix is reserved for protected refs, so we disallow it in the global variable.
-		allowedCacheKeys = append(allowedCacheKeys, defaultFallbackCacheKey)
+	// the "default" cache key
+	addCacheKey(sanitizeCacheKey(build, cacheKey))
+
+	// the fallback cache keys from the cache config
+	for _, cacheKey := range cacheOptions.FallbackKeys {
+		addCacheKey(sanitizeCacheKey(build, buildVars.ExpandValue(cacheKey)))
+	}
+
+	// the fallback key from CACHE_FALLBACK_KEY
+	// we sanitize it and check if it's not pointing to a protected cache.
+	fallbackCacheKey, err := sanitizeCacheKey(build, buildVars.Value("CACHE_FALLBACK_KEY"))
+	blockedSuffix := "-protected"
+	if !strings.HasSuffix(fallbackCacheKey, blockedSuffix) {
+		addCacheKey(fallbackCacheKey, err)
+	} else {
+		w.Warningf("CACHE_FALLBACK_KEY %q not allowed to end in %q", fallbackCacheKey, blockedSuffix)
+	}
+
+	if len(allowedCacheKeys) < 1 {
+		return
 	}
 
 	// Execute cache-extractor command. Failure is not fatal.
@@ -203,8 +224,94 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	})
 }
 
-func sanitizeCacheFallbackKey(fallbackKey string) string {
-	return strings.TrimRight(fallbackKey, " /\\")
+// sanitizeCacheKey replicates some cache key rules from GitLab and adds additional validations for known-bad cache
+// keys.
+// Special care is taken for the defaulted key (ie. `jobName/gitRef`, when no user key is provided): we sanitize both
+// parts and validate them individually.
+//
+// Accepting the added complexity by in-lining some helper funcs in favor of not polluting the global namespace.
+//
+//nolint:gocognit
+func sanitizeCacheKey(build *common.Build, cacheKey string) (sanitizedKey string, err error) {
+	if cacheKey == "" {
+		return "", nil
+	}
+
+	const slashReplace = "__"
+
+	key := strings.TrimSpace(cacheKey)
+
+	blockDots := func(key string, isPartial bool) error {
+		if !slices.Contains([]string{".", "..", "%2e", "%2e%2e", ".%2e", "%2e."}, strings.ToLower(key)) {
+			return nil
+		}
+		return &cacheKeyError{key, "must not be '.', '..' or their URL-encoded equivalent", isPartial}
+	}
+	replaceAllSlashes := func(key string) string {
+		for _, slash := range []string{"/", "%2f", "%2F"} {
+			key = strings.ReplaceAll(key, slash, slashReplace)
+		}
+		return key
+	}
+
+	if err := blockDots(key, false); err != nil {
+		return "", err
+	}
+
+	isDefaultedKey := cacheKey == build.JobInfo.Name+"/"+build.GitInfo.Ref
+	if isDefaultedKey {
+		// For the defaulted key we need to sanitize the two parts of the key individually.
+		// We rebuild the key here with the raw data from the build and sanitize & validate both parts before joining them
+		// together and rebuild the key.
+		jobName := strings.TrimSpace(replaceAllSlashes(build.JobInfo.Name))
+		gitRef := strings.TrimSpace(replaceAllSlashes(build.GitInfo.Ref))
+		for _, part := range []string{jobName, gitRef} {
+			if part == "" {
+				return "", &cacheKeyError{part, "could not be sanitized", true}
+			}
+			if err := blockDots(part, true); err != nil {
+				return "", err
+			}
+		}
+		key = jobName + "/" + gitRef
+	} else if strings.Contains(cacheKey, "/") || strings.Contains(strings.ToLower(cacheKey), "%2f") {
+		// for non-defaulted keys, we don't allow `/` at all
+		return "", &cacheKeyError{cacheKey, "must not contain '/' or its URL-encoded equivalent", false}
+	}
+
+	// If the build environment is Windows, then `\` is a path separator, which we're not allowing, so for backwards
+	// compatibility we convert them to __.
+	//
+	// This does mean that "cache__key" and "cache\key" collide and that we're going to immediately invalidate any
+	// existing cache that uses `\`: the hope is that this is unlikely. However, we at least print a warning to the user,
+	// that we've changed the cache key.
+	//
+	// We could disallow `\` entirely, but the problem is that we've never documented that this is a disallowed character.
+	// For `/`, it's documented that this isn't allowed, and any use of it is just circumvention.
+	key = strings.ReplaceAll(key, `\`, slashReplace)
+
+	if key == "" {
+		return "", &cacheKeyError{cacheKey, "could not be sanitized", false}
+	}
+	if key != cacheKey {
+		return key, &cacheKeyError{cacheKey, fmt.Sprintf("sanitized to %q", key), false}
+	}
+
+	return key, nil
+}
+
+type cacheKeyError struct {
+	rawKey    string
+	err       string
+	isPartial bool
+}
+
+func (cke *cacheKeyError) Error() string {
+	target := "cache key"
+	if cke.isPartial {
+		target += " part"
+	}
+	return fmt.Sprintf("%s %q %s", target, cke.rawKey, cke.err)
 }
 
 func (b *AbstractShell) addExtractCacheCommand(
