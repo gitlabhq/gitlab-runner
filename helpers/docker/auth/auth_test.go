@@ -80,9 +80,9 @@ func TestGetConfigForImage(t *testing.T) {
 			image:              imageRegistryDomain1,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
-					RegistryPath: "registry.domain.tld:5005",
-					Source:       filepath.Join(homeDir, ".dockercfg"),
-					AuthConfig:   registryDomain1Config,
+					Path:       "registry.domain.tld:5005",
+					Source:     filepath.Join(homeDir, ".dockercfg"),
+					AuthConfig: registryDomain1Config,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
@@ -98,9 +98,9 @@ func TestGetConfigForImage(t *testing.T) {
 			image:              imageRegistryDomain2,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
-					RegistryPath: "registry2.domain.tld:5005",
-					Source:       filepath.Join(homeDir, ".dockercfg"),
-					AuthConfig:   registryDomain2Config,
+					Path:       "registry2.domain.tld:5005",
+					Source:     filepath.Join(homeDir, ".dockercfg"),
+					AuthConfig: registryDomain2Config,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
@@ -157,9 +157,9 @@ func TestGetConfigForImage(t *testing.T) {
 			image:          imageGitlabDomain,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
-					RegistryPath: "registry.gitlab.tld:1234",
-					Source:       authConfigSourceNameJobPayload,
-					AuthConfig:   registryGitlabConfig,
+					Path:       "registry.gitlab.tld:1234",
+					Source:     authConfigSourceNameJobPayload,
+					AuthConfig: registryGitlabConfig,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
@@ -175,9 +175,9 @@ func TestGetConfigForImage(t *testing.T) {
 			image:              imageGitlabDomain,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
-					RegistryPath: "registry.gitlab.tld:1234",
-					Source:       authConfigSourceNameJobPayload,
-					AuthConfig:   registryGitlabConfig,
+					Path:       "registry.gitlab.tld:1234",
+					Source:     authConfigSourceNameJobPayload,
+					AuthConfig: registryGitlabConfig,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
@@ -194,9 +194,9 @@ func TestGetConfigForImage(t *testing.T) {
 			image:           imageRegistryDomain1,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
-					RegistryPath: "registry.domain.tld:5005",
-					Source:       authConfigSourceNameUserVariable,
-					AuthConfig:   registryDomain1Config,
+					Path:       "registry.domain.tld:5005",
+					Source:     authConfigSourceNameUserVariable,
+					AuthConfig: registryDomain1Config,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
@@ -212,9 +212,9 @@ func TestGetConfigForImage(t *testing.T) {
 			image:              imageRegistryDomain1,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
-					RegistryPath: "registry.domain.tld:5005",
-					Source:       authConfigSourceNameUserVariable,
-					AuthConfig:   registryDomain1Config,
+					Path:       "registry.domain.tld:5005",
+					Source:     authConfigSourceNameUserVariable,
+					AuthConfig: registryDomain1Config,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
@@ -235,9 +235,9 @@ func TestGetConfigForImage(t *testing.T) {
 				authConfig.ServerAddress = "https://registry2.domain.tld:5005/v1/"
 
 				expectedResult := &RegistryInfo{
-					RegistryPath: "registry2.domain.tld:5005",
-					Source:       authConfigSourceNameUserVariable,
-					AuthConfig:   authConfig,
+					Path:       "registry2.domain.tld:5005",
+					Source:     authConfigSourceNameUserVariable,
+					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
@@ -254,9 +254,9 @@ func TestGetConfigForImage(t *testing.T) {
 				authConfig := registryScriptConfig
 				authConfig.ServerAddress = "registry2.domain.tld:5005/image/name:version"
 				expectedResult := &RegistryInfo{
-					RegistryPath: "registry2.domain.tld:5005/image/name",
-					Source:       authConfigSourceNameUserVariable,
-					AuthConfig:   authConfig,
+					Path:       "registry2.domain.tld:5005/image/name",
+					Source:     authConfigSourceNameUserVariable,
+					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
@@ -328,8 +328,9 @@ func TestGetConfigForImage(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			home := setupTestHomeDirectoryConfig(t, tt.configFileContents)
-			resolver := NewResolver()
-			resolver.HomeDirGetter = func() string { return home }
+			resolver := Resolver{
+				homeDir: func() string { return home },
+			}
 			logger := &fakeLogger{}
 
 			regInfo, err := resolver.ConfigForImage(tt.image, tt.dockerAuthValue, "", tt.jobCredentials, logger)
@@ -444,8 +445,9 @@ func TestCredsForImagesWithDifferentPaths(t *testing.T) {
 	for imageRef, test := range tests {
 		t.Run(imageRef, func(t *testing.T) {
 			logger := &fakeLogger{}
-			resolver := NewResolver()
-			resolver.HomeDirGetter = func() string { return "" }
+			resolver := Resolver{
+				homeDir: func() string { return "" },
+			}
 
 			resolved, err := resolver.ConfigForImage(imageRef, testDockerAuthConfigs, "", test.jobCreds, logger)
 			require.NoError(t, err, "resolving creds for image ref")
@@ -463,10 +465,11 @@ func TestCredsForImagesWithDifferentPaths(t *testing.T) {
 	}
 }
 
-func TestGetConfigs(t *testing.T) {
+func TestResolver_AllConfigs(t *testing.T) {
 	home := setupTestHomeDirectoryConfig(t, testFileAuthConfigs)
-	resolver := NewResolver()
-	resolver.HomeDirGetter = func() string { return home }
+	resolver := Resolver{
+		homeDir: func() string { return home },
+	}
 	logger := &fakeLogger{}
 
 	result, err := resolver.AllConfigs(testDockerAuthConfigs, "", gitlabRegistryCredentials, logger)
@@ -474,8 +477,8 @@ func TestGetConfigs(t *testing.T) {
 
 	assert.Equal(t, RegistryInfos{
 		{
-			RegistryPath: "registry.domain.tld:5005",
-			Source:       authConfigSourceNameUserVariable,
+			Path:   "registry.domain.tld:5005",
+			Source: authConfigSourceNameUserVariable,
 			AuthConfig: types.AuthConfig{
 				Username:      "test_user_1",
 				Password:      "test_password_1",
@@ -483,8 +486,8 @@ func TestGetConfigs(t *testing.T) {
 			},
 		},
 		{
-			RegistryPath: "registry2.domain.tld:5005",
-			Source:       filepath.Join(home, ".dockercfg"),
+			Path:   "registry2.domain.tld:5005",
+			Source: filepath.Join(home, ".dockercfg"),
 			AuthConfig: types.AuthConfig{
 				Username:      "test_user_2",
 				Password:      "test_password_2",
@@ -492,8 +495,8 @@ func TestGetConfigs(t *testing.T) {
 			},
 		},
 		{
-			RegistryPath: "registry.gitlab.tld:1234",
-			Source:       authConfigSourceNameJobPayload,
+			Path:   "registry.gitlab.tld:1234",
+			Source: authConfigSourceNameJobPayload,
 			AuthConfig: types.AuthConfig{
 				Username:      "test_user_3",
 				Password:      "test_password_3",
@@ -522,8 +525,9 @@ func TestGetConfigs_DuplicatedRegistryCredentials(t *testing.T) {
 	}
 
 	home := setupTestHomeDirectoryConfig(t, testFileAuthConfigs)
-	resolver := NewResolver()
-	resolver.HomeDirGetter = func() string { return home }
+	resolver := Resolver{
+		homeDir: func() string { return home },
+	}
 	logger := &fakeLogger{}
 
 	result, err := resolver.AllConfigs("", "", registryCredentials, logger)
@@ -531,8 +535,8 @@ func TestGetConfigs_DuplicatedRegistryCredentials(t *testing.T) {
 
 	expectedResult := RegistryInfos{
 		{
-			RegistryPath: "registry.domain.tld:5005",
-			Source:       filepath.Join(home, ".dockercfg"),
+			Path:   "registry.domain.tld:5005",
+			Source: filepath.Join(home, ".dockercfg"),
 			AuthConfig: types.AuthConfig{
 				Username:      "test_user_1",
 				Password:      "test_password_1",
@@ -540,8 +544,8 @@ func TestGetConfigs_DuplicatedRegistryCredentials(t *testing.T) {
 			},
 		},
 		{
-			RegistryPath: "registry2.domain.tld:5005",
-			Source:       filepath.Join(home, ".dockercfg"),
+			Path:   "registry2.domain.tld:5005",
+			Source: filepath.Join(home, ".dockercfg"),
 			AuthConfig: types.AuthConfig{
 				Username:      "test_user_2",
 				Password:      "test_password_2",
@@ -728,7 +732,6 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			fakeHome := ""
-			homeDirGetter := func() string { return fakeHome }
 			expectedConfigFile := ""
 
 			if test.homeDirProvided {
@@ -742,8 +745,9 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 				}
 			}
 
-			resolver := NewResolver()
-			resolver.HomeDirGetter = homeDirGetter
+			resolver := Resolver{
+				homeDir: func() string { return fakeHome },
+			}
 
 			configFile, authConfigs, err := resolver.readDockerConfigsFromHomeDir("")
 

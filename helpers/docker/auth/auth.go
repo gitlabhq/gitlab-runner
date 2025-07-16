@@ -19,8 +19,7 @@ import (
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/config/credentials"
 	"github.com/docker/cli/cli/config/types"
-	"github.com/docker/docker/pkg/homedir"
-
+	dockerHomeDir "github.com/docker/docker/pkg/homedir"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -38,33 +37,33 @@ var (
 
 // RegistryInfo represents the source, normalized registry path and authentication for a registry.
 type RegistryInfo struct {
-	RegistryPath string
-	Source       string
-	AuthConfig   types.AuthConfig
+	Path       string
+	Source     string
+	AuthConfig types.AuthConfig
 }
 
 // RegistryInfos is a list of RegistryInfo, with a stable order
 type RegistryInfos []RegistryInfo
 
 // Get returns a RegistryInfo, matching the registry path.
-func (r RegistryInfos) Get(path string) (RegistryInfo, bool) {
-	for _, i := range r {
-		if i.RegistryPath == path {
+func (ri RegistryInfos) Get(path string) (RegistryInfo, bool) {
+	for _, i := range ri {
+		if i.Path == path {
 			return i, true
 		}
 	}
 	return RegistryInfo{}, false
 }
 
-// Add adds a RegistryInfo to the list of known registries. If a RegistryInfo for the same registry path exists already,
+// Append adds a RegistryInfo to the list of known registries. If a RegistryInfo for the same registry path exists already,
 // an error is returned and the RegistryInfo is not appended.
-func (r *RegistryInfos) Add(newInfo RegistryInfo) error {
-	for _, existingInfo := range *r {
-		if existingInfo.RegistryPath == newInfo.RegistryPath {
-			return fmt.Errorf("credentials for %q already set from %q, ignoring credentials from %q", existingInfo.RegistryPath, existingInfo.Source, newInfo.Source)
+func (ri *RegistryInfos) Append(newInfo RegistryInfo) error {
+	for _, existingInfo := range *ri {
+		if existingInfo.Path == newInfo.Path {
+			return fmt.Errorf("credentials for %q already set from %q, ignoring credentials from %q", existingInfo.Path, existingInfo.Source, newInfo.Source)
 		}
 	}
-	*r = append(*r, newInfo)
+	*ri = append(*ri, newInfo)
 	return nil
 }
 
@@ -81,25 +80,29 @@ func parentPath(path string) string {
 	return path[:index]
 }
 
-// Resolver provides mechanisms to get all known registry's and their auth, and specific ones for specific images.
-type Resolver struct {
-	HomeDirGetter func() string
+// homeDir wraps around docker's home dir getter while still allowing the implementation to be switched out
+type homeDir func() string
+
+func (hd homeDir) Get() string {
+	if hd == nil {
+		hd = dockerHomeDir.Get
+	}
+	return hd()
 }
 
-func NewResolver() Resolver {
-	return Resolver{
-		HomeDirGetter: homedir.Get,
-	}
+// Resolver provides mechanisms to get all known registries and their auth, and specific ones for specific images.
+type Resolver struct {
+	homeDir homeDir
 }
 
 // ConfigForImage returns the auth configuration for a particular image.
 // It gets all configs via [AllConfigs] and returns the one with the longest match for imageName <-> RegistryInfo.RegistryPath
 // It returns nil when no matching config can be found.
-func (ar Resolver) ConfigForImage(
+func (r Resolver) ConfigForImage(
 	imageName, dockerAuthConfig, username string,
 	credentials []common.Credentials, logger DebugLogger,
 ) (*RegistryInfo, error) {
-	authConfigs, err := ar.AllConfigs(dockerAuthConfig, username, credentials, logger)
+	authConfigs, err := r.AllConfigs(dockerAuthConfig, username, credentials, logger)
 	if len(authConfigs) == 0 || err != nil {
 		return nil, err
 	}
@@ -120,7 +123,7 @@ func (ar Resolver) ConfigForImage(
 // 2. ~/.docker/config.json or .dockercfg
 // 3. Build credentials
 // Returns a list of RegistryInfos, in the order of discovery.
-func (ar Resolver) AllConfigs(
+func (r Resolver) AllConfigs(
 	dockerAuthConfig, username string,
 	credentials []common.Credentials, logger DebugLogger,
 ) (RegistryInfos, error) {
@@ -129,7 +132,7 @@ func (ar Resolver) AllConfigs(
 			return getUserConfiguration(dockerAuthConfig)
 		},
 		func() (string, []types.AuthConfig, error) {
-			return ar.getHomeDirConfiguration(username)
+			return r.getHomeDirConfiguration(username)
 		},
 		func() (string, []types.AuthConfig, error) {
 			return getBuildConfiguration(credentials)
@@ -154,12 +157,12 @@ func (ar Resolver) AllConfigs(
 			hostnames = append(hostnames, registryPath)
 
 			newRegistryInfo := RegistryInfo{
-				RegistryPath: registryPath,
-				Source:       source,
-				AuthConfig:   conf,
+				Path:       registryPath,
+				Source:     source,
+				AuthConfig: conf,
 			}
 
-			if err := res.Add(newRegistryInfo); err != nil {
+			if err := res.Append(newRegistryInfo); err != nil {
 				logger.Debugln(fmt.Sprintf("Not adding Docker credentials: %s", err.Error()))
 			}
 		}
@@ -185,8 +188,8 @@ func getUserConfiguration(dockerAuthConfig string) (string, []types.AuthConfig, 
 	return authConfigSourceNameUserVariable, authConfigs, nil
 }
 
-func (ar Resolver) getHomeDirConfiguration(username string) (string, []types.AuthConfig, error) {
-	sourceFile, authConfigs, err := ar.readDockerConfigsFromHomeDir(username)
+func (r Resolver) getHomeDirConfiguration(username string) (string, []types.AuthConfig, error) {
+	sourceFile, authConfigs, err := r.readDockerConfigsFromHomeDir(username)
 	if errors.Is(err, errPathTraversal) {
 		return "", nil, err
 	}
@@ -268,8 +271,8 @@ func normalizeImageRef(imageName string) string {
 // readDockerConfigsFromHomeDir reads known docker config from home
 // directory. If no username is provided it will get the home directory for the
 // current user.
-func (ar Resolver) readDockerConfigsFromHomeDir(userName string) (string, []types.AuthConfig, error) {
-	homeDir := ar.HomeDirGetter()
+func (r Resolver) readDockerConfigsFromHomeDir(userName string) (string, []types.AuthConfig, error) {
+	homeDir := r.homeDir.Get()
 
 	if userName != "" {
 		u, err := user.Lookup(userName)
