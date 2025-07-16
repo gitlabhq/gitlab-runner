@@ -22,6 +22,73 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
 
+func TestAbstractShell_guardGetSourcesScriptHooks(t *testing.T) {
+	testCases := []struct {
+		name     string
+		strategy common.GitStrategy
+		script   []string
+		setup    func(t *testing.T) ShellWriter
+	}{
+		{
+			name:   "no scripts",
+			script: []string{},
+			setup: func(t *testing.T) ShellWriter {
+				return NewMockShellWriter(t)
+			},
+		},
+		{
+			name:     "git strategy none",
+			strategy: common.GitNone,
+			script:   []string{"test"},
+			setup: func(t *testing.T) ShellWriter {
+				return NewMockShellWriter(t)
+			},
+		},
+		{
+			name:     "git strategy empty",
+			strategy: common.GitEmpty,
+			script:   []string{"test"},
+			setup: func(t *testing.T) ShellWriter {
+				return NewMockShellWriter(t)
+			},
+		},
+		{
+			name:   "writes command",
+			script: []string{"test"},
+			setup: func(t *testing.T) ShellWriter {
+				msw := NewMockShellWriter(t)
+				msw.On("Noticef", "$ %s", "test").Once().Return()
+				msw.On("Line", "test").Once().Return()
+				msw.On("CheckForErrors").Once().Return()
+				return msw
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockShellWriter := tc.setup(t)
+			shell := AbstractShell{}
+
+			shell.guardGetSourcesScriptHooks(
+				mockShellWriter,
+				common.ShellScriptInfo{
+					Build: &common.Build{
+						JobResponse: common.JobResponse{
+							Variables: common.JobVariables{
+								{Key: "GIT_STRATEGY", Value: string(tc.strategy)},
+								{Key: "GIT_CHECKOUT", Value: "false"},
+							},
+						},
+					},
+				},
+				"",
+				func() []string { return tc.script },
+			)
+		})
+	}
+}
+
 func TestWriteGitSSLConfig(t *testing.T) {
 	expectedURL := "https://example.com:3443"
 
