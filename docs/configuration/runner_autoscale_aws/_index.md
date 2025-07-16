@@ -219,7 +219,7 @@ In the following example, we use Amazon S3:
       AccessKey = "<your AWS Access Key ID>"
       SecretKey = "<your AWS Secret Access Key>"
       BucketName = "<the bucket where your cache should be kept>"
-      BucketLocation = "us-east-1"
+      BucketLocation = "us-west-2"
 ```
 
 Here's some more information to further explore the cache mechanism:
@@ -285,7 +285,7 @@ under `MachineOptions`. Below you can see the most common ones.
 |------------------------------------------------------------------------|-------------|
 | `amazonec2-access-key=XXXX`                                            | The AWS access key of the user that has permissions to create EC2 instances, see [AWS credentials](#aws-credentials). |
 | `amazonec2-secret-key=XXXX`                                            | The AWS secret key of the user that has permissions to create EC2 instances, see [AWS credentials](#aws-credentials). |
-| `amazonec2-region=eu-central-1`                                        | The region to use when launching the instance. You can omit this entirely and the default `us-east-1` will be used. |
+| `amazonec2-region=eu-central-2`                                        | The region to use when launching the instance. You can omit this entirely and the default `us-east-1` will be used. |
 | `amazonec2-vpc-id=vpc-xxxxx`                                           | Your [VPC ID](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#vpc-id) to launch the instance in. |
 | `amazonec2-subnet-id=subnet-xxxx`                                      | The AWS VPC subnet ID. |
 | `amazonec2-zone=x`                                                     | If not specified, the [availability zone is `a`](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#environment-variables-and-default-values), it needs to be set to the same availability zone as the specified subnet, for example when the zone is `eu-west-1b` it has to be `amazonec2-zone=b` |
@@ -346,7 +346,7 @@ check_interval = 0
       AccessKey = "<your AWS Access Key ID>"
       SecretKey = "<your AWS Secret Access Key>"
       BucketName = "<the bucket where your cache should be kept>"
-      BucketLocation = "us-east-1"
+      BucketLocation = "us-west-2"
   [runners.machine]
     IdleCount = 1
     IdleTime = 1800
