@@ -11,6 +11,7 @@
 
 ### Bug fixes
 
+- Tighten cache key sanitation [!5719](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5719)
 - Add troubleshooting guide for GCS workload identity [!5651](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5651)
 - Skip pre and post checkout hooks for empty [!5677](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5677)
 - Docs: Fix protocol_port default for SSH [!5701](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5701)
