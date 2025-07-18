@@ -1,3 +1,9 @@
+## v18.1.2 (2025-07-18)
+
+### Bug fixes
+
+- Tighten cache key sanitation [!5719](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5719)
+
 ## v18.1.1 (2025-06-26)
 
 ### Bug fixes
