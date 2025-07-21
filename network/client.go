@@ -262,22 +262,21 @@ func (n *client) do(
 ) (*http.Response, error) {
 	url, err := n.url.Parse(uri)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse URL %s: %w", uri, err)
 	}
 
 	var body io.ReadCloser
 	if bodyProvider != nil {
 		body, err = bodyProvider.GetReader()
 		if err != nil {
-			return nil, fmt.Errorf("couldn't get request body: %w", err)
+			return nil, fmt.Errorf("get reader: %w", err)
 		}
 		defer body.Close()
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url.String(), body)
 	if err != nil {
-		err = fmt.Errorf("failed to create NewRequest: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("create NewRequest: %w", err)
 	}
 
 	if bodyProvider != nil {
@@ -304,7 +303,7 @@ func (n *client) do(
 
 	res, err := n.requester.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("execute request: %w", err)
 	}
 
 	n.checkBackoffRequest(req, res)
@@ -400,7 +399,7 @@ func (n *client) doJSON(
 	if request != nil {
 		requestBody, err := json.Marshal(request)
 		if err != nil {
-			return -1, fmt.Sprintf("failed to marshal project object: %v", err), nil
+			return -1, fmt.Sprintf("marshal project object: %v", err), nil
 		}
 		bytesProvider = common.BytesProvider{Data: requestBody}
 	}
@@ -414,7 +413,7 @@ func (n *client) doJSON(
 
 	res, err := n.do(ctx, uri, method, bytesProvider, jsonMimeType, headers)
 	if err != nil {
-		return -1, err.Error(), nil
+		return -1, fmt.Errorf("execute JSON request: %w", err).Error(), nil
 	}
 	defer func() {
 		_, _ = io.Copy(io.Discard, res.Body)
@@ -425,13 +424,13 @@ func (n *client) doJSON(
 	if res.StatusCode == statusCode && response != nil {
 		isApplicationJSON, err := isResponseApplicationJSON(res)
 		if !isApplicationJSON {
-			return -1, err.Error(), res
+			return -1, fmt.Errorf("response is not application/json: %w", err).Error(), res
 		}
 
 		d := json.NewDecoder(res.Body)
 		err = d.Decode(response)
 		if err != nil {
-			return -1, fmt.Sprintf("Error decoding json payload %v", err), res
+			return -1, fmt.Sprintf("decoding json payload %v", err), res
 		}
 	}
 
@@ -456,10 +455,10 @@ func getMessageFromJSONResponse(res *http.Response) string {
 	return res.Status
 }
 
-func getMimeAndContentType(res *http.Response) (mimeType, contentType string, e error) {
+func getMimeAndContentType(res *http.Response) (mimeType, contentType string, err error) {
 	contentType = res.Header.Get(common.ContentType)
 
-	mimeType, _, err := mime.ParseMediaType(contentType)
+	mimeType, _, err = mime.ParseMediaType(contentType)
 	if err != nil {
 		return "", contentType, fmt.Errorf("parsing Content-Type: %w", err)
 	}
@@ -474,7 +473,7 @@ func decodeJSONResponse(res *http.Response) (string, error) {
 		return errResp.Error(), nil
 	}
 
-	return "", err
+	return "", fmt.Errorf("decode JSON response: %w", err)
 }
 
 func decodeXMLResponse(res *http.Response) (string, error) {
@@ -484,7 +483,7 @@ func decodeXMLResponse(res *http.Response) (string, error) {
 		return xmlResp.Error(), nil
 	}
 
-	return "", err
+	return "", fmt.Errorf("decode XML response: %w", err)
 }
 
 func getMessageFromJSONOrXMLResponse(res *http.Response) string {
@@ -553,7 +552,7 @@ func (n *client) buildCAChain(tls *tls.ConnectionState, resolveFullChain bool) (
 func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
 	mimeType, contentType, err := getMimeAndContentType(res)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("get MIME type: %w", err)
 	}
 
 	if mimeType != jsonMimeType {
@@ -589,7 +588,7 @@ func WithMaxAge(connectionMaxAge time.Duration) Option {
 func newClient(requestCredentials requestCredentials, options ...Option) (*client, error) {
 	url, err := url.Parse(fixCIURL(requestCredentials.GetURL()) + "/api/v4/")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse URL: %w", err)
 	}
 
 	if url.Scheme != "http" && url.Scheme != "https" {
@@ -615,7 +614,7 @@ func newClient(requestCredentials requestCredentials, options ...Option) (*clien
 	for _, o := range options {
 		err := o(c)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply option: %w", err)
 		}
 	}
 

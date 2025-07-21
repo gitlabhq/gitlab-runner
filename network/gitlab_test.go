@@ -1161,7 +1161,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseNil: true,
 			},
-			expectedLog: `level=error msg="Checking for jobs... client error" correlation_id= runner=valid status="only http or https scheme supported"`,
+			expectedLog: `level=error msg="Checking for jobs... client error" correlation_id= runner=valid status="get client: new client: only http or https scheme supported`,
 		},
 		{
 			name:                  "unsupported executor options",
