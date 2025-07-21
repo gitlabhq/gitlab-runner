@@ -622,6 +622,9 @@ func (n *GitLabClient) RequestJob(
 	case http.StatusNoContent:
 		logger.WithField("status", statusText).Debug("Checking for jobs...", "no content")
 		return nil, true
+	case http.StatusServiceUnavailable:
+		logger.WithField("status", statusText).Warningln("Checking for jobs...", "GitLab instance currently unavailable")
+		return nil, true
 	case clientError:
 		logger.WithField("status", statusText).Errorln("Checking for jobs...", "client error")
 		return nil, false
@@ -1157,7 +1160,7 @@ func (n *GitLabClient) handleResponse(ctx context.Context, res *http.Response, d
 		_ = res.Body.Close()
 	}()
 
-	if res.StatusCode != http.StatusTooManyRequests {
+	if res.StatusCode != http.StatusTooManyRequests && res.StatusCode != http.StatusServiceUnavailable {
 		return
 	}
 
