@@ -1099,12 +1099,19 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			r.URL.Path = strings.TrimPrefix(r.URL.Path, "/unsupported")
 			response = getRequestJobResponse(t, false)
 		}
+		if strings.Contains(r.URL.Path, "/unavailable") {
+			w.Header().Set(retryAfterHeader, "1")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		if strings.Contains(r.URL.Path, "/too-many") {
+			w.Header().Set(retryAfterHeader, "1")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
 		mockRequestJobHandler(t, w, r, response)
 	}))
 	defer s.Close()
-
-	logHook := newLogHook(logrus.InfoLevel, logrus.ErrorLevel)
-	logrus.AddHook(&logHook)
 
 	type expected struct {
 		responseOK  bool
@@ -1117,6 +1124,8 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 		gitlabURL             string
 		assertUnsupportedOpts bool
 		expected              expected
+		assertLogs            func(t *testing.T, output string)
+		expectedLog           string
 	}{
 		{
 			name:      "valid token",
@@ -1125,6 +1134,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseOK: true,
 			},
+			expectedLog: `level=info msg="Checking for jobs... received" correlation_id=foobar job=10 repo_url="https://gitlab.example.com/test/test-project.git" runner=valid`,
 		},
 		{
 			name:      "no jobs token",
@@ -1142,6 +1152,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseNil: true,
 			},
+			expectedLog: `level=error msg="Checking for jobs... forbidden" correlation_id=foobar runner=invalid status="403 Forbidden"`,
 		},
 		{
 			name:      "invalid url",
@@ -1150,6 +1161,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseNil: true,
 			},
+			expectedLog: `level=error msg="Checking for jobs... client error" correlation_id= runner=valid status="only http or https scheme supported"`,
 		},
 		{
 			name:                  "unsupported executor options",
@@ -1159,17 +1171,44 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseOK: true,
 			},
+			expectedLog: `level=info msg="Checking for jobs... received" correlation_id=foobar job=10 repo_url="https://gitlab.example.com/test/test-project.git" runner=valid`,
+		},
+		{
+			name:      "service unavailable",
+			token:     validToken,
+			gitlabURL: s.URL + "/unavailable",
+			expected: expected{
+				responseOK:  true,
+				responseNil: true,
+			},
+			expectedLog: `level=warning msg="Checking for jobs... GitLab instance currently unavailable" correlation_id= runner=valid status="503 Service Unavailable"`,
+		},
+		{
+			name:      "too many requests",
+			token:     validToken,
+			gitlabURL: s.URL + "/too-many",
+			expected: expected{
+				responseOK:  true,
+				responseNil: true,
+			},
+			expectedLog: `level=warning msg="Checking for jobs... failed" correlation_id= runner=valid status="429 Too Many Requests"`,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			outBuffer := new(bytes.Buffer)
+			logger := logrus.StandardLogger()
+			logger.SetLevel(logrus.InfoLevel)
+			logger.SetOutput(outBuffer)
+
 			// Arrange
 			glc := NewGitLabClient()
 			rc := RunnerConfig{
 				RunnerCredentials: RunnerCredentials{
-					URL:   tc.gitlabURL,
-					Token: tc.token,
+					URL:    tc.gitlabURL,
+					Token:  tc.token,
+					Logger: logger,
 				},
 				SystemID: testSystemID,
 			}
@@ -1190,55 +1229,11 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 				assert.True(t, ok, "If no jobs, runner is healthy")
 				assert.Equal(t, "a nice timestamp", glc.getLastUpdate(&rc.RunnerCredentials), "Last-Update should be set")
 			}
+
+			if tc.expectedLog != "" {
+				require.Contains(t, outBuffer.String(), tc.expectedLog)
+			}
 		})
-	}
-
-	expectedLogs := []logrus.Entry{
-		{
-			Level:   logrus.InfoLevel,
-			Message: "Checking for jobs... received",
-			Data: logrus.Fields{
-				"correlation_id": "foobar",
-				"job":            int64(10),
-				"repo_url":       "https://gitlab.example.com/test/test-project.git",
-				"runner":         "valid",
-			},
-		},
-		{
-			Level:   logrus.ErrorLevel,
-			Message: "Checking for jobs... forbidden",
-			Data: logrus.Fields{
-				"correlation_id": "foobar",
-				"runner":         "invalid",
-				"status":         "403 Forbidden",
-			},
-		},
-		{
-			Level:   logrus.ErrorLevel,
-			Message: "Checking for jobs... client error",
-			Data: logrus.Fields{
-				"correlation_id": "",
-				"runner":         "valid",
-				"status":         "only http or https scheme supported",
-			},
-		},
-		{
-			Level:   logrus.InfoLevel,
-			Message: "Checking for jobs... received",
-			Data: logrus.Fields{
-				"correlation_id": "foobar",
-				"job":            int64(10),
-				"repo_url":       "https://gitlab.example.com/test/test-project.git",
-				"runner":         "valid",
-			},
-		},
-	}
-
-	require.Len(t, logHook.entries, len(expectedLogs))
-	for i, l := range expectedLogs {
-		assert.Equal(t, l.Level, logHook.entries[i].Level)
-		assert.Equal(t, l.Message, logHook.entries[i].Message)
-		assert.Equal(t, l.Data, logHook.entries[i].Data)
 	}
 }
 
