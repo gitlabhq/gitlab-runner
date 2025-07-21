@@ -45,7 +45,7 @@ type GitLabClient struct {
 	connectionMaxAge     time.Duration
 }
 
-func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err error) {
+func (n *GitLabClient) getClient(credentials requestCredentials) (*client, error) {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
@@ -59,18 +59,19 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err
 		credentials.GetTLSCAFile(),
 		credentials.GetTLSCertFile(),
 	)
-	c = n.clients[key]
-	if c == nil {
-		c, err = newClient(
-			credentials,
-			WithMaxAge(n.connectionMaxAge))
-		if err != nil {
-			return
-		}
-		n.clients[key] = c
+	c, ok := n.clients[key]
+	if ok {
+		return c, nil
 	}
 
-	return
+	c, err := newClient(credentials, WithMaxAge(n.connectionMaxAge))
+	if err != nil {
+		return nil, fmt.Errorf("new client: %w", err)
+	}
+
+	n.clients[key] = c
+
+	return c, nil
 }
 
 func (n *GitLabClient) getLastUpdate(credentials requestCredentials) (lu string) {
@@ -174,7 +175,11 @@ func (n *GitLabClient) doMeasuredRaw(
 		fn,
 	)
 
-	return response, err
+	if err != nil {
+		return nil, fmt.Errorf("measured raw request: %w", err)
+	}
+
+	return response, nil
 }
 
 func (n *GitLabClient) doRaw(
@@ -187,10 +192,15 @@ func (n *GitLabClient) doRaw(
 ) (res *http.Response, err error) {
 	c, err := n.getClient(credentials)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get client: %w", err)
 	}
 
-	return c.do(ctx, uri, method, bodyProvider, requestType, headers)
+	response, err := c.do(ctx, uri, method, bodyProvider, requestType, headers)
+	if err != nil {
+		return nil, fmt.Errorf("execute raw request: %w", err)
+	}
+
+	return response, nil
 }
 
 type doJSONParams struct {
@@ -284,7 +294,7 @@ func (n *GitLabClient) doJSON(
 ) (int, string, *http.Response) {
 	c, err := n.getClient(credentials)
 	if err != nil {
-		return clientError, err.Error(), nil
+		return clientError, fmt.Errorf("get client: %w", err).Error(), nil
 	}
 
 	return c.doJSON(ctx, uri, method, statusCode, headers, request, response)
@@ -1141,7 +1151,7 @@ func (n *GitLabClient) ProcessJob(
 ) (common.JobTrace, error) {
 	trace, err := newJobTrace(n, config, jobCredentials)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create job trace: %w", err)
 	}
 
 	trace.start()
