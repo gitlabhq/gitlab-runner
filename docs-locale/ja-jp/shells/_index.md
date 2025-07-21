@@ -7,8 +7,8 @@ title: GitLab RunnerでサポートされているShellの種類
 
 {{< details >}}
 
-- プラン:Free、Premium、Ultimate
-- 製品:GitLab.com、GitLab Self-Managed、GitLab Dedicated
+- プラン: Free、Premium、Ultimate
+- 提供形態: GitLab.com、GitLab Self-Managed、GitLab Dedicated
 
 {{< /details >}}
 
@@ -24,18 +24,18 @@ Shellスクリプトには、ビルドのすべてのステップを実行する
 
 Shellには設定オプションはありません。[`script`の`.gitlab-ci.yml`ディレクティブ](https://docs.gitlab.com/ci/yaml/#script)で定義されたコマンドからビルドのステップを受信します。
 
-サポートされているShellは次のとおりです:
+サポートされているShellは次のとおりです。
 
-| Shell         | 状態             |  説明 |
-| --------------| ------------------ |  ----------- |
-| `bash`        | 完全にサポート    | Bash（Bourne Again Shell）。すべてのコマンドはBashコンテキストで実行されます（すべてのUnixシステムのデフォルト）。 |
-| `sh`          | 完全にサポート    | Sh（Bourne shell）。すべてのコマンドはShコンテキストで実行されます（すべてのUnixシステムの`bash`のフォールバック） |
-| `powershell`  | 完全にサポート    | PowerShellスクリプト。すべてのコマンドはPowerShell Desktopのコンテキストで実行されます。 |
-| `pwsh`        | 完全にサポート    | PowerShellスクリプト。すべてのコマンドはPowerShell Coreのコンテキストで実行されます。GitLab Runner 14.0以降では、これはWindowsで新しいRunnerを登録する場合のデフォルトです。 |
+| Shell        | 状態          | 説明 |
+|--------------|-----------------|-------------|
+| `bash`       | 完全にサポート | Bash（Bourne Again Shell）。すべてのコマンドはBashコンテキストで実行されます（すべてのUnixシステムのデフォルト）。 |
+| `sh`         | 完全にサポート | Sh（Bourne shell）。すべてのコマンドはShコンテキストで実行されます（すべてのUnixシステムの`bash`のフォールバック） |
+| `powershell` | 完全にサポート | PowerShellスクリプト。すべてのコマンドはPowerShell Desktopのコンテキストで実行されます。 |
+| `pwsh`       | 完全にサポート | PowerShellスクリプト。すべてのコマンドはPowerShell Coreのコンテキストで実行されます。GitLab Runner 14.0以降では、これはWindowsで新しいRunnerを登録する場合のデフォルトです。 |
 
 デフォルト以外の特定のShellを使用する場合は、`config.toml`ファイルで[Shellを指定する](../executors/shell.md#selecting-your-shell)必要があります。
 
-## Sh/Bash Shell
+## Sh/Bash Shell {#shbash-shells}
 
 Sh/Bashは、すべてのUnixベースのシステムで使用されるデフォルトのShellです。`.gitlab-ci.yml`で使用されているbashスクリプトは、Shellスクリプトを次のいずれかのコマンドにパイプすることで実行されます。
 
@@ -53,7 +53,7 @@ cat generated-bash-script | /bin/bash --login
 cat generated-bash-script | /bin/bash
 ```
 
-### Shellプロファイルの読み込み
+### Shellプロファイルの読み込み {#shell-profile-loading}
 
 特定のexecutorでは、Runnerは前述のように`--login`フラグを渡します。これによりShellプロファイルも読み込みまれます。`.bashrc`、`.bash_logout`、または[その他のドットファイル](https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_03_01.html#sect_03_01_02)に含まれている内容はすべてジョブで実行されます。
 
@@ -74,7 +74,7 @@ Shellプロファイルを読み込むexecutor:
 - [`virtualbox`](../executors/virtualbox.md)（*ターゲット*仮想マシンのShellプロファイルが読み込みまれます）
 - [`ssh`](../executors/ssh.md)（*ターゲット*マシンのShellプロファイルが読み込みまれます）
 
-## PowerShell
+## PowerShell {#powershell}
 
 PowerShell Desktop Editionは、GitLab Runner 12.0〜13.12を使用してWindowsに新しいRunnerを登録するときのデフォルトShellです。14.0以降では、デフォルトはPowerShell Core Editionです。
 
@@ -264,20 +264,20 @@ if(!$?) { Exit $LASTEXITCODE }
 if(!$?) { Exit $LASTEXITCODE }
 ```
 
-### Windows Batchの実行
+### Windows Batchの実行 {#running-windows-batch}
 
 PowerShellに移植されていない古いBatchスクリプトの場合は、`Start-Process
 "cmd.exe" "/c C:\Path\file.bat"`を使用してPowerShellからそのBatchスクリプトを実行できます。
 
-### PowerShellがデフォルトの場合の`CMD` Shellへのアクセス
+### PowerShellがデフォルトの場合の`CMD` Shellへのアクセス {#access-cmd-shell-when-powershell-is-the-default}
 
 [Call `CMD` From Default PowerShell in GitLab CI](https://gitlab.com/guided-explorations/microsoft/windows/call-cmd-from-powershell)プロジェクトは、`CMD` Shellへのアクセス権を取得する方法を示しています。このアプローチは、PowerShellがRunnerのデフォルトShellである場合に機能します。
 
-### PowerShellのサンプルの使い方を紹介するビデオチュートリアル
+### PowerShellのサンプルの使い方を紹介するビデオチュートリアル {#video-walkthrough-of-working-powershell-examples}
 
 [Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/watch?v=UZvtAYwruFc)は、[PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/microsoft/powershell/powershell-pipelines-on-gitlab-ci) Guided Explorationプロジェクトのチュートリアル動画です。これは以下の環境でテストされています。
 
 - [GitLab.com向けにWindows上でホストされるrunner](https://docs.gitlab.com/ci/runners/hosted_runners/windows/)のWindows PowerShellおよびPowerShell Core 7。
-- [Docker-Machine runner](../executors/docker_machine.md)を使用したLinux ContainersのPowerShell Core 7。
+- [Docker-Machine Runner](../executors/docker_machine.md)を使用したLinux ContainersのPowerShell Core 7。
 
-このサンプルを各自のグループまたはインスタンスにコピーしてテストできます。他に実証されているGitLab CIパターンの詳細については、プロジェクトページを参照してください。
+この例は、テスト用に自分のグループまたはインスタンスにコピーできます。他のGitLab CIパターンのデモの詳細は、プロジェクトページで入手できます。
