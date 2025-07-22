@@ -100,15 +100,15 @@ func Test_linuxInfo_create(t *testing.T) {
 					Cmd:          expectedCmd,
 				},
 			},
-			"Docker runs on riscv64, with a default of alpine-edge": {
+			"Docker runs on riscv64": {
 				shell:      shell,
 				dockerArch: "riscv64",
 				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture: "riscv64",
 					Name:         GitLabRegistryName,
-					Tag:          "alpine-edge-riscv64-2923a43" + expectedTagSuffix,
-					Prebuilt:     "prebuilt-alpine-edge-riscv64" + expectedTagSuffix,
+					Tag:          "riscv64-2923a43" + expectedTagSuffix,
+					Prebuilt:     "prebuilt-alpine-riscv64" + expectedTagSuffix,
 					Cmd:          expectedCmd,
 				},
 			},

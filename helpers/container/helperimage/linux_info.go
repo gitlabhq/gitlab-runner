@@ -25,11 +25,7 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 	arch := l.architecture(cfg.Architecture)
 
 	if cfg.Flavor == "" {
-		if arch == "riscv64" {
-			cfg.Flavor = DefaultEdgeFlavor
-		} else {
-			cfg.Flavor = DefaultFlavor
-		}
+		cfg.Flavor = DefaultFlavor
 	}
 
 	prebuilt := fmt.Sprintf("prebuilt-%s-%s", cfg.Flavor, arch)

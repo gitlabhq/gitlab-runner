@@ -155,7 +155,7 @@ var (
 	defaultHelperPrebuiltImages []string = lo.Map([]string{
 		"alpine-arm.tar.xz",
 		"alpine-arm64.tar.xz",
-		"alpine-edge-riscv64.tar.xz",
+		"alpine-riscv64.tar.xz",
 		"alpine-s390x.tar.xz",
 		"alpine-x86_64-pwsh.tar.xz",
 		"alpine-x86_64.tar.xz",
