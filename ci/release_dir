@@ -47,9 +47,11 @@ out/helper-images/prebuilt-alpine-edge-x86_64.tar.xz out/release/helper-images/p
 out/helper-images/prebuilt-alpine-latest-arm.tar.xz out/release/helper-images/prebuilt-alpine-latest-arm.tar.xz
 out/helper-images/prebuilt-alpine-latest-arm64.tar.xz out/release/helper-images/prebuilt-alpine-latest-arm64.tar.xz
 out/helper-images/prebuilt-alpine-latest-ppc64le.tar.xz out/release/helper-images/prebuilt-alpine-latest-ppc64le.tar.xz
+out/helper-images/prebuilt-alpine-latest-riscv64.tar.xz out/release/helper-images/prebuilt-alpine-latest-riscv64.tar.xz
 out/helper-images/prebuilt-alpine-latest-s390x.tar.xz out/release/helper-images/prebuilt-alpine-latest-s390x.tar.xz
 out/helper-images/prebuilt-alpine-latest-x86_64.tar.xz out/release/helper-images/prebuilt-alpine-latest-x86_64.tar.xz
 out/helper-images/prebuilt-alpine-ppc64le.tar.xz out/release/helper-images/prebuilt-alpine-ppc64le.tar.xz
+out/helper-images/prebuilt-alpine-riscv64.tar.xz out/release/helper-images/prebuilt-alpine-riscv64.tar.xz
 out/helper-images/prebuilt-alpine-s390x.tar.xz out/release/helper-images/prebuilt-alpine-s390x.tar.xz
 out/helper-images/prebuilt-alpine-x86_64-pwsh.tar.xz out/release/helper-images/prebuilt-alpine-x86_64-pwsh.tar.xz
 out/helper-images/prebuilt-alpine-x86_64.tar.xz out/release/helper-images/prebuilt-alpine-x86_64.tar.xz

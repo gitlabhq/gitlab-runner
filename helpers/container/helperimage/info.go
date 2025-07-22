@@ -27,9 +27,6 @@ const (
 	// DefaultFlavor is the default flavor of image we use for the helper.
 	DefaultFlavor = "alpine"
 
-	// DefaultEdgeFlavor is the default flavor for architectures where there is no stable base distro available, like riscv64.
-	DefaultEdgeFlavor = "alpine-edge"
-
 	latestImageVersion = "latest"
 )
 
