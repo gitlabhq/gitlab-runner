@@ -176,7 +176,7 @@ with `listenAddr` set to `[::]:9252`, which listens on all IPv6 and IPv4 interfa
 ### Expose metrics port
 
 To enable monitoring and metrics collection for GitLab Runners managed by the GitLab Runner Operator,
-see [Monitor Operator managed GitLab Runners](../monitoring/_index.md#monitor-operator-managed-gitlab-runners).
+see [Monitor Operator managed GitLab Runners](#monitor-operator-managed-gitlab-runners).
 
 #### Configure the metrics port
 

@@ -29,7 +29,7 @@ Instance group autoscaling in GitLab Runner works as follows:
 
 ## Configure the runner manager
 
-You must [configure the runner manager](../runner_autoscale/_index.md#configure-the-runner-manager) to use the GitLab Runner instance group autoscaler.
+You must [configure the runner manager](_index.md#configure-the-runner-manager) to use the GitLab Runner instance group autoscaler.
 
 1. Create an instance to host the runner manager. This **must not** be a spot instance (AWS), or spot virtual machine (GCP or Azure).
 1. [Install GitLab Runner](../install/linux-repository.md) on the instance.

@@ -276,7 +276,7 @@ To achieve this:
        run_as_group = 0
      ```
 
-   - Set a resource limit to the job Pod by using the [`pod_spec` feature](../kubernetes/_index.md#overwrite-generated-pod-specifications).
+   - Set a resource limit to the job Pod by using the [`pod_spec` feature](_index.md#overwrite-generated-pod-specifications).
      To use `pod_spec`, set the `FF_USE_ADVANCED_POD_SPEC_CONFIGURATION` feature flag to `true`.
 
      ```toml
