@@ -154,7 +154,7 @@ installed in the same machine:
 GPUs are [supported on every executor](../configuration/gpus.md). It is
 not necessary to use Docker Machine just for GPU support. The Docker
 Machine executor scales the GPU nodes up and down.
-You can also use the [Kubernetes executor](../executors/kubernetes/_index.md) for this purpose.
+You can also use the [Kubernetes executor](kubernetes/_index.md) for this purpose.
 
 {{< /alert >}}
 

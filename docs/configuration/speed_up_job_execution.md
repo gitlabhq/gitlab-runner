@@ -78,7 +78,7 @@ To create a Docker Hub Registry mirror:
 
 The Docker Hub registry is accessible under `MY_REGISTRY_IP:6000`.
 
-You can now [configure `config.toml`](../configuration/autoscale.md#distributed-container-registry-mirroring)
+You can now [configure `config.toml`](autoscale.md#distributed-container-registry-mirroring)
 to use the new registry server.
 
 ### Other open source solutions
@@ -91,10 +91,10 @@ You can speed up the time it takes to download language dependencies by
 using a distributed [cache](https://docs.gitlab.com/ci/yaml/#cache).
 
 To specify a distributed cache, you set up the cache server and then
-[configure runner to use that cache server](../configuration/advanced-configuration.md#the-runnerscache-section).
+[configure runner to use that cache server](advanced-configuration.md#the-runnerscache-section).
 
 If you are using autoscaling, learn more about the distributed runners
-[cache feature](../configuration/autoscale.md#distributed-runners-caching).
+[cache feature](autoscale.md#distributed-runners-caching).
 
 The following cache servers are supported:
 
@@ -108,7 +108,7 @@ Learn more about GitLab CI/CD [cache dependencies and best practices](https://do
 ### Use AWS S3
 
 To use AWS S3 as a distributed cache,
-[edit runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnerscaches3-section) to point
+[edit runner's `config.toml` file](advanced-configuration.md#the-runnerscaches3-section) to point
 to the S3 location and provide credentials for connecting.
 Make sure the runner has a network path to the S3 endpoint.
 
@@ -156,19 +156,19 @@ Instead of using AWS S3, you can create your own cache storage.
    Access and Secret Keys when configuring your runner.
 
 You can now
-[configure `config.toml`](../configuration/autoscale.md#distributed-runners-caching)
+[configure `config.toml`](autoscale.md#distributed-runners-caching)
 to use the new cache server.
 
 ### Use Google Cloud Storage
 
 To use Google Cloud Platform as a distributed cache,
-[edit runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnerscachegcs-section) to point
+[edit runner's `config.toml` file](advanced-configuration.md#the-runnerscachegcs-section) to point
 to the GCP location and provide credentials for connecting.
 Make sure the runner has a network path to the GCS endpoint.
 
 ### Use Azure Blob storage
 
 To use Azure Blob storage as a distributed cache,
-[edit runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnerscacheazure-section) to point
+[edit runner's `config.toml` file](advanced-configuration.md#the-runnerscacheazure-section) to point
 to the Azure location and provide credentials for connecting.
 Make sure the runner has a network path to the Azure endpoint.

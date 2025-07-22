@@ -28,7 +28,7 @@ GitLab Runner provides the following executors:
 - [Docker](docker.md)
 - [Docker Autoscaler](docker_autoscaler.md)
 - [Docker Machine (auto-scaling)](docker_machine.md)
-- [Kubernetes](../executors/kubernetes/_index.md)
+- [Kubernetes](kubernetes/_index.md)
 - [Instance](instance.md)
 - [Custom](custom.md)
 

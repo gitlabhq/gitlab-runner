@@ -472,7 +472,7 @@ in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](ad
 
 {{< alert type="note" >}}
 
-Read how to [use a distributed cache](../configuration/speed_up_job_execution.md#use-a-distributed-cache).
+Read how to [use a distributed cache](speed_up_job_execution.md#use-a-distributed-cache).
 
 {{< /alert >}}
 
@@ -550,7 +550,7 @@ Where `10.11.12.13:12345` is the IP address and port where your registry mirror
 is listening for connections from the Docker service. It must be accessible for
 each host created by Docker Machine.
 
-Read more about how to [use a proxy for containers](../configuration/speed_up_job_execution.md#use-a-proxy-for-containers).
+Read more about how to [use a proxy for containers](speed_up_job_execution.md#use-a-proxy-for-containers).
 
 ## A complete example of `config.toml`
 

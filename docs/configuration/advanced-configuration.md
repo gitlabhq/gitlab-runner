@@ -1825,7 +1825,7 @@ of this base directory depends on the executor. For:
   it must be explicitly configured, otherwise, the job fails.
 
 The used _Builds Directory_ may be defined explicitly by the user with the
-[`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
+[`builds_dir`](#the-runners-section)
 setting.
 
 {{< alert type="note" >}}
