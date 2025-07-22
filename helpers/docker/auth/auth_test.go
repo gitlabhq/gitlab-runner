@@ -4,16 +4,17 @@ package auth
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/docker/cli/cli/config/types"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -27,14 +28,16 @@ const (
 )
 
 var (
-	testFileAuthConfigs = `{"auths":{` +
-		`"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"},` +
-		`"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyXzI6dGVzdF9wYXNzd29yZF8y"}}}`
+	testFileAuthConfigs = createTestDockerConfig([]testRegistryConfig{
+		{registry: "https://registry.domain.tld:5005/v1/", user: "test_user_1", pass: "test_password_1"},
+		{registry: "registry2.domain.tld:5005", user: "test_user_2", pass: "test_password_2"},
+	})
+	testDockerAuthConfigs = createTestDockerConfig([]testRegistryConfig{
+		{registry: "https://registry.domain.tld:5005/v1/", user: "test_user_1", pass: "test_password_1"},
+	})
 	testFileAuthConfigsWithPathTraversalFormat = `{"auths":{` +
 		`"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"},` +
 		`"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyXzI6dGVzdF9wYXNzd29yZF8y"}},%s}`
-	testDockerAuthConfigs = `{"auths":{` +
-		`"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"}}}`
 	gitlabRegistryCredentials = []common.Credentials{
 		{
 			Type:     "registry",
@@ -62,43 +65,50 @@ var (
 		Password:      "test_password_3",
 		ServerAddress: "registry.gitlab.tld:1234",
 	}
-	emptyCredentials []common.Credentials
 )
 
 func TestGetConfigForImage(t *testing.T) {
 	tests := map[string]struct {
 		configFileContents string
 		dockerAuthValue    string
-		credentials        []common.Credentials
+		jobCredentials     []common.Credentials
 		image              string
-		assertResult       func(*RegistryInfo, error)
+		checks             func(*testing.T, *RegistryInfo, error, string, *fakeLogger)
 	}{
 		"registry1 from file only": {
 			configFileContents: testFileAuthConfigs,
-			dockerAuthValue:    "",
-			credentials:        emptyCredentials,
 			image:              imageRegistryDomain1,
-			assertResult: func(result *RegistryInfo, err error) {
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
-					Source:     filepath.Join(HomeDirectory, ".dockercfg"),
+					Path:       "registry.domain.tld:5005",
+					Source:     filepath.Join(homeDir, ".dockercfg"),
 					AuthConfig: registryDomain1Config,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
+
+				dockerConf := filepath.Join(homeDir, ".dockercfg")
+				logger.ExpectLogs(t, [][]any{
+					{fmt.Sprintf(`Loaded Docker credentials, source = %q, hostnames = [registry.domain.tld:5005 registry2.domain.tld:5005], error = <nil>`, dockerConf)},
+				})
 			},
 		},
 		"registry2 from file only": {
 			configFileContents: testFileAuthConfigs,
-			dockerAuthValue:    "",
-			credentials:        emptyCredentials,
 			image:              imageRegistryDomain2,
-			assertResult: func(result *RegistryInfo, err error) {
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
-					Source:     filepath.Join(HomeDirectory, ".dockercfg"),
+					Path:       "registry2.domain.tld:5005",
+					Source:     filepath.Join(homeDir, ".dockercfg"),
 					AuthConfig: registryDomain2Config,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
+
+				dockerConf := filepath.Join(homeDir, ".dockercfg")
+				logger.ExpectLogs(t, [][]any{
+					{fmt.Sprintf(`Loaded Docker credentials, source = %q, hostnames = [registry.domain.tld:5005 registry2.domain.tld:5005], error = <nil>`, dockerConf)},
+				})
 			},
 		},
 		"registry2 from file only overrides credential store with path traversal attempt": {
@@ -106,13 +116,13 @@ func TestGetConfigForImage(t *testing.T) {
 				testFileAuthConfigsWithPathTraversalFormat,
 				fmt.Sprintf(`"credsStore" : "%s"`, getPathWithPathTraversalAttempt(t)),
 			),
-			dockerAuthValue: "",
-			credentials:     emptyCredentials,
-			image:           imageRegistryDomain2,
-			assertResult: func(result *RegistryInfo, err error) {
+			image: imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
 				assert.ErrorIs(t, err, errPathTraversal)
+
+				logger.ExpectLogs(t, nil)
 			},
 		},
 		"registry2 from file only overrides credential helper with path traversal attempt": {
@@ -120,137 +130,165 @@ func TestGetConfigForImage(t *testing.T) {
 				testFileAuthConfigsWithPathTraversalFormat,
 				fmt.Sprintf(`"credHelpers" : {"%s" : "%s"}`, imageRegistryDomain2, getPathWithPathTraversalAttempt(t)),
 			),
-			dockerAuthValue: "",
-			credentials:     emptyCredentials,
-			image:           imageRegistryDomain2,
-			assertResult: func(result *RegistryInfo, err error) {
+			image: imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
 				assert.ErrorIs(t, err, errPathTraversal)
+
+				logger.ExpectLogs(t, nil)
 			},
 		},
 		"missing credentials, file only": {
 			configFileContents: testFileAuthConfigs,
-			dockerAuthValue:    "",
-			credentials:        emptyCredentials,
 			image:              imageGitlabDomain,
-			assertResult: func(result *RegistryInfo, err error) {
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				assert.NoError(t, err)
 				assert.Nil(t, result)
+
+				dockerConf := filepath.Join(homeDir, ".dockercfg")
+				logger.ExpectLogs(t, [][]any{
+					{fmt.Sprintf(`Loaded Docker credentials, source = %q, hostnames = [registry.domain.tld:5005 registry2.domain.tld:5005], error = <nil>`, dockerConf)},
+				})
 			},
 		},
 		"no file and gitlab credentials, image in gitlab credentials": {
-			configFileContents: "",
-			dockerAuthValue:    "",
-			credentials:        gitlabRegistryCredentials,
-			image:              imageGitlabDomain,
-			assertResult: func(result *RegistryInfo, err error) {
+			jobCredentials: gitlabRegistryCredentials,
+			image:          imageGitlabDomain,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
+					Path:       "registry.gitlab.tld:1234",
 					Source:     authConfigSourceNameJobPayload,
 					AuthConfig: registryGitlabConfig,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
+
+				logger.ExpectLogs(t, [][]any{
+					{`Loaded Docker credentials, source = "job payload (GitLab Registry)", hostnames = [registry.gitlab.tld:1234], error = <nil>`},
+				})
 			},
 		},
 		"both file and gitlab credentials, image in gitlab credentials": {
 			configFileContents: testFileAuthConfigs,
-			dockerAuthValue:    "",
-			credentials:        gitlabRegistryCredentials,
+			jobCredentials:     gitlabRegistryCredentials,
 			image:              imageGitlabDomain,
-			assertResult: func(result *RegistryInfo, err error) {
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
+					Path:       "registry.gitlab.tld:1234",
 					Source:     authConfigSourceNameJobPayload,
 					AuthConfig: registryGitlabConfig,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
+
+				dockerConf := filepath.Join(homeDir, ".dockercfg")
+				logger.ExpectLogs(t, [][]any{
+					{fmt.Sprintf(`Loaded Docker credentials, source = %q, hostnames = [registry.domain.tld:5005 registry2.domain.tld:5005], error = <nil>`, dockerConf)},
+					{`Loaded Docker credentials, source = "job payload (GitLab Registry)", hostnames = [registry.gitlab.tld:1234], error = <nil>`},
+				})
 			},
 		},
 		"DOCKER_AUTH_CONFIG only": {
-			configFileContents: "",
-			dockerAuthValue:    testDockerAuthConfigs,
-			credentials:        emptyCredentials,
-			image:              imageRegistryDomain1,
-			assertResult: func(result *RegistryInfo, err error) {
+			dockerAuthValue: testDockerAuthConfigs,
+			image:           imageRegistryDomain1,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
+					Path:       "registry.domain.tld:5005",
 					Source:     authConfigSourceNameUserVariable,
 					AuthConfig: registryDomain1Config,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
+
+				logger.ExpectLogs(t, [][]any{
+					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.domain.tld:5005], error = <nil>`},
+				})
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides home dir": {
 			configFileContents: testFileAuthConfigs,
 			dockerAuthValue:    testDockerAuthConfigs,
-			credentials:        emptyCredentials,
 			image:              imageRegistryDomain1,
-			assertResult: func(result *RegistryInfo, err error) {
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
+					Path:       "registry.domain.tld:5005",
 					Source:     authConfigSourceNameUserVariable,
 					AuthConfig: registryDomain1Config,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
+
+				dockerConf := filepath.Join(homeDir, ".dockercfg")
+				logger.ExpectLogs(t, [][]any{
+					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.domain.tld:5005], error = <nil>`},
+					{fmt.Sprintf(`Not adding Docker credentials: credentials for "registry.domain.tld:5005" already set from "$DOCKER_AUTH_CONFIG", ignoring credentials from %q`, dockerConf)},
+					{fmt.Sprintf(`Loaded Docker credentials, source = %q, hostnames = [registry.domain.tld:5005 registry2.domain.tld:5005], error = <nil>`, dockerConf)},
+				})
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credential store": {
-			configFileContents: "",
-			dockerAuthValue:    fmt.Sprintf(`{"credsStore" : "%s"}`, getValidCredentialHelperSuffix(t)),
-			credentials:        emptyCredentials,
-			image:              imageRegistryDomain2,
-			assertResult: func(result *RegistryInfo, err error) {
+			dockerAuthValue: fmt.Sprintf(`{"credsStore" : "%s"}`, getValidCredentialHelperSuffix(t)),
+			image:           imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				authConfig := registryScriptConfig
 				authConfig.ServerAddress = "https://registry2.domain.tld:5005/v1/"
 
 				expectedResult := &RegistryInfo{
+					Path:       "registry2.domain.tld:5005",
 					Source:     authConfigSourceNameUserVariable,
 					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
+
+				logger.ExpectLogs(t, [][]any{
+					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry2.domain.tld:5005], error = <nil>`},
+				})
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credential helper path": {
-			configFileContents: "",
-			dockerAuthValue:    getDockerAuthForCredentialHelperPathPath(t, imageRegistryDomain2),
-			credentials:        emptyCredentials,
-			image:              imageRegistryDomain2,
-			assertResult: func(result *RegistryInfo, err error) {
+			dockerAuthValue: getDockerAuthForCredentialHelperPathPath(t, imageRegistryDomain2),
+			image:           imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				authConfig := registryScriptConfig
 				authConfig.ServerAddress = "registry2.domain.tld:5005/image/name:version"
 				expectedResult := &RegistryInfo{
+					Path:       "registry2.domain.tld:5005/image/name",
 					Source:     authConfigSourceNameUserVariable,
 					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
+
+				logger.ExpectLogs(t, [][]any{
+					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry2.domain.tld:5005/image/name], error = <nil>`},
+				})
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credential store with path traversal": {
-			configFileContents: "",
-			dockerAuthValue:    getDockerAuthForCredentialStorePathWithPathTraversal(t),
-			credentials:        emptyCredentials,
-			image:              imageRegistryDomain2,
-			assertResult: func(result *RegistryInfo, err error) {
+			dockerAuthValue: getDockerAuthForCredentialStorePathWithPathTraversal(t),
+			image:           imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
 				assert.ErrorIs(t, err, errPathTraversal)
+
+				logger.ExpectLogs(t, nil)
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credentials helper with path traversal entry": {
-			configFileContents: "",
 			dockerAuthValue: getDockerAuthForCredentialHelperPathWithPathTraversal(
 				t,
 				registryDomain2Config.ServerAddress,
 			),
-			credentials: emptyCredentials,
-			image:       imageRegistryDomain2,
-			assertResult: func(result *RegistryInfo, err error) {
+			image: imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
 				assert.ErrorIs(t, err, errPathTraversal)
+
+				logger.ExpectLogs(t, nil)
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credentials helper with path traversal entry and falls back to config file": {
@@ -259,23 +297,24 @@ func TestGetConfigForImage(t *testing.T) {
 				t,
 				"registry.domain.tld:5005",
 			),
-			credentials: emptyCredentials,
-			image:       imageRegistryDomain1,
-			assertResult: func(result *RegistryInfo, err error) {
+			image: imageRegistryDomain1,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
 				assert.ErrorIs(t, err, errPathTraversal)
+
+				logger.ExpectLogs(t, nil)
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credentials helper with path traversal entry and another valid entry": {
-			configFileContents: "",
-			dockerAuthValue:    getDockerAuthForCredentialHelperPathWithPathTraversalAndGoodFallback(t),
-			credentials:        emptyCredentials,
-			image:              imageRegistryDomain2,
-			assertResult: func(result *RegistryInfo, err error) {
+			dockerAuthValue: getDockerAuthForCredentialHelperPathWithPathTraversalAndGoodFallback(t),
+			image:           imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
 				assert.ErrorIs(t, err, errPathTraversal)
+
+				logger.ExpectLogs(t, nil)
 			},
 		},
 	}
@@ -283,30 +322,277 @@ func TestGetConfigForImage(t *testing.T) {
 	dir, err := os.Getwd()
 	require.NoError(t, err)
 
-	// Add testdata directory to PATH so that docker-credential-* scripts are picked up
-	pathSep := ":"
-	if runtime.GOOS == "windows" {
-		pathSep = ";"
-	}
-	originalPATH := os.Getenv("PATH")
-	err = os.Setenv("PATH", filepath.Join(dir, "testdata")+pathSep+originalPATH)
-	require.NoError(t, err)
-
-	logger, _ := test.NewNullLogger()
+	// Prepend testdata directory to PATH so that docker-credential-* scripts are picked up
+	prependToPath(t, filepath.Join(dir, "testdata"))
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			cleanup := setupTestHomeDirectoryConfig(t, tt.configFileContents)
-			defer cleanup()
+			home := setupTestHomeDirectoryConfig(t, tt.configFileContents)
+			resolver := Resolver{
+				homeDir: func() string { return home },
+			}
+			logger := &fakeLogger{}
 
-			result, err := ResolveConfigForImage(tt.image, tt.dockerAuthValue, "", tt.credentials, logger)
-			tt.assertResult(result, err)
+			regInfo, err := resolver.ConfigForImage(tt.image, tt.dockerAuthValue, "", tt.jobCredentials, logger)
+			tt.checks(t, regInfo, err, home, logger)
 		})
 	}
+}
 
-	// Reset PATH
-	err = os.Setenv("PATH", originalPATH)
+func TestConvertToRegistryPath(t *testing.T) {
+	tests := map[string]string{
+		"my.hostname":                            "my.hostname",
+		"my.hostname/with/path":                  "my.hostname/with/path",
+		"my.HOSTNAME/With/Path/CASE":             "my.hostname/With/Path/CASE",
+		"my.hostname/with/tag/image:latest":      "my.hostname/with/tag/image",
+		"my.hostname:5000/with/tag/image:latest": "my.hostname:5000/with/tag/image",
+		"http://index.docker.io/v1/":             "docker.io",
+		"https://index.docker.io/v1/":            "docker.io",
+		"HTTP://INDEX.DOCKER.IO/V1/":             "docker.io",
+		"HTTPS://INDEX.DOCKER.IO/V1/":            "docker.io",
+		"HTTPS://INDEX.DOCKER.IO/V1/blibb":       "docker.io",
+		"https://my.hostname/v1/something":       "my.hostname",
+	}
+
+	for imageRef, expected := range tests {
+		t.Run(imageRef, func(t *testing.T) {
+			actual := convertToRegistryPath(imageRef)
+			assert.Equal(t, expected, actual)
+		})
+	}
+}
+
+func TestCredsForImagesWithDifferentPaths(t *testing.T) {
+	testDockerAuthConfigs := createTestDockerConfig([]testRegistryConfig{
+		{registry: "registry.local", user: "test_user_1", pass: "test_password_1"},
+		{registry: "registry.local/ns", user: "test_user_2", pass: "test_password_2"},
+		{registry: "registry.local/ns/some/image", user: "test_user_3", pass: "test_password_3"},
+	})
+
+	tests := map[string]struct {
+		jobCreds         []common.Credentials
+		expectNoResult   bool
+		expectedSource   string
+		expectedUsername string
+		expectedPassword string
+		expectedLogs     [][]any
+	}{
+		"registry.local/foo/image:3": {
+			expectedSource:   "$DOCKER_AUTH_CONFIG",
+			expectedUsername: "test_user_1",
+			expectedPassword: "test_password_1",
+			expectedLogs: [][]any{
+				{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.local registry.local/ns registry.local/ns/some/image], error = <nil>`},
+			},
+		},
+		"registry.local/ns/image:5": {
+			expectedSource:   "$DOCKER_AUTH_CONFIG",
+			expectedUsername: "test_user_2",
+			expectedPassword: "test_password_2",
+			expectedLogs: [][]any{
+				{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.local registry.local/ns registry.local/ns/some/image], error = <nil>`},
+			},
+		},
+		"registry.local/ns/some/image:l": {
+			expectedSource:   "$DOCKER_AUTH_CONFIG",
+			expectedUsername: "test_user_3",
+			expectedPassword: "test_password_3",
+			expectedLogs: [][]any{
+				{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.local registry.local/ns registry.local/ns/some/image], error = <nil>`},
+			},
+		},
+		"no_auth_configured/image:l": {
+			expectNoResult: true,
+			expectedLogs: [][]any{
+				{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.local registry.local/ns registry.local/ns/some/image], error = <nil>`},
+			},
+		},
+		"registry.local/ns/blipp/image:foo": {
+			// there are job creds, but for the same path we already have a $DOCKER_AUTH_CONFIG, $DOCKER_AUTH_CONFIG wins
+			jobCreds: []common.Credentials{{
+				Type:     "registry",
+				Username: "job-cred-user",
+				Password: "job-cred-pass",
+				URL:      "registry.local/ns",
+			}},
+			expectedSource:   "$DOCKER_AUTH_CONFIG",
+			expectedUsername: "test_user_2",
+			expectedPassword: "test_password_2",
+			expectedLogs: [][]any{
+				{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.local registry.local/ns registry.local/ns/some/image], error = <nil>`},
+				{`Not adding Docker credentials: credentials for "registry.local/ns" already set from "$DOCKER_AUTH_CONFIG", ignoring credentials from "job payload (GitLab Registry)"`},
+				{`Loaded Docker credentials, source = "job payload (GitLab Registry)", hostnames = [registry.local/ns], error = <nil>`},
+			},
+		},
+		"registry.local/ns/blipp/image:bar": {
+			// there are job creds which have a more specific match for the image ref than auths in $DOCKER_AUTH_CONFIG
+			jobCreds: []common.Credentials{{
+				Type:     "registry",
+				Username: "job-cred-user",
+				Password: "job-cred-pass",
+				URL:      "registry.local/ns/blipp",
+			}},
+			expectedSource:   "job payload (GitLab Registry)",
+			expectedUsername: "job-cred-user",
+			expectedPassword: "job-cred-pass",
+			expectedLogs: [][]any{
+				{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.local registry.local/ns registry.local/ns/some/image], error = <nil>`},
+				{`Loaded Docker credentials, source = "job payload (GitLab Registry)", hostnames = [registry.local/ns/blipp], error = <nil>`},
+			},
+		},
+	}
+
+	for imageRef, test := range tests {
+		t.Run(imageRef, func(t *testing.T) {
+			logger := &fakeLogger{}
+			resolver := Resolver{
+				homeDir: func() string { return "" },
+			}
+
+			resolved, err := resolver.ConfigForImage(imageRef, testDockerAuthConfigs, "", test.jobCreds, logger)
+			require.NoError(t, err, "resolving creds for image ref")
+
+			if test.expectNoResult {
+				assert.Nil(t, resolved)
+			} else {
+				assert.Equal(t, test.expectedSource, resolved.Source)
+				assert.Equal(t, test.expectedUsername, resolved.AuthConfig.Username)
+				assert.Equal(t, test.expectedPassword, resolved.AuthConfig.Password)
+			}
+
+			logger.ExpectLogs(t, test.expectedLogs)
+		})
+	}
+}
+
+func TestResolver_AllConfigs(t *testing.T) {
+	home := setupTestHomeDirectoryConfig(t, testFileAuthConfigs)
+	resolver := Resolver{
+		homeDir: func() string { return home },
+	}
+	logger := &fakeLogger{}
+
+	result, err := resolver.AllConfigs(testDockerAuthConfigs, "", gitlabRegistryCredentials, logger)
 	assert.NoError(t, err)
+
+	assert.Equal(t, RegistryInfos{
+		{
+			Path:   "registry.domain.tld:5005",
+			Source: authConfigSourceNameUserVariable,
+			AuthConfig: types.AuthConfig{
+				Username:      "test_user_1",
+				Password:      "test_password_1",
+				ServerAddress: "https://registry.domain.tld:5005/v1/",
+			},
+		},
+		{
+			Path:   "registry2.domain.tld:5005",
+			Source: filepath.Join(home, ".dockercfg"),
+			AuthConfig: types.AuthConfig{
+				Username:      "test_user_2",
+				Password:      "test_password_2",
+				ServerAddress: "registry2.domain.tld:5005",
+			},
+		},
+		{
+			Path:   "registry.gitlab.tld:1234",
+			Source: authConfigSourceNameJobPayload,
+			AuthConfig: types.AuthConfig{
+				Username:      "test_user_3",
+				Password:      "test_password_3",
+				ServerAddress: "registry.gitlab.tld:1234",
+			},
+		},
+	}, result)
+
+	dockerConf := filepath.Join(home, ".dockercfg")
+	logger.ExpectLogs(t, [][]any{
+		{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.domain.tld:5005], error = <nil>`},
+		{fmt.Sprintf(`Not adding Docker credentials: credentials for "registry.domain.tld:5005" already set from "$DOCKER_AUTH_CONFIG", ignoring credentials from %q`, dockerConf)},
+		{fmt.Sprintf(`Loaded Docker credentials, source = %q, hostnames = [registry.domain.tld:5005 registry2.domain.tld:5005], error = <nil>`, dockerConf)},
+		{`Loaded Docker credentials, source = "job payload (GitLab Registry)", hostnames = [registry.gitlab.tld:1234], error = <nil>`},
+	})
+}
+
+func TestGetConfigs_DuplicatedRegistryCredentials(t *testing.T) {
+	registryCredentials := []common.Credentials{
+		{
+			Type:     "registry",
+			URL:      "registry.domain.tld:5005",
+			Username: "test_user_1",
+			Password: "test_password_1",
+		},
+	}
+
+	home := setupTestHomeDirectoryConfig(t, testFileAuthConfigs)
+	resolver := Resolver{
+		homeDir: func() string { return home },
+	}
+	logger := &fakeLogger{}
+
+	result, err := resolver.AllConfigs("", "", registryCredentials, logger)
+	assert.NoError(t, err)
+
+	expectedResult := RegistryInfos{
+		{
+			Path:   "registry.domain.tld:5005",
+			Source: filepath.Join(home, ".dockercfg"),
+			AuthConfig: types.AuthConfig{
+				Username:      "test_user_1",
+				Password:      "test_password_1",
+				ServerAddress: "https://registry.domain.tld:5005/v1/",
+			},
+		},
+		{
+			Path:   "registry2.domain.tld:5005",
+			Source: filepath.Join(home, ".dockercfg"),
+			AuthConfig: types.AuthConfig{
+				Username:      "test_user_2",
+				Password:      "test_password_2",
+				ServerAddress: "registry2.domain.tld:5005",
+			},
+		},
+	}
+
+	assert.Equal(t, expectedResult, result)
+
+	dockerConf := filepath.Join(home, ".dockercfg")
+	logger.ExpectLogs(t, [][]any{
+		{fmt.Sprintf(`Loaded Docker credentials, source = %q, hostnames = [registry.domain.tld:5005 registry2.domain.tld:5005], error = <nil>`, dockerConf)},
+		{fmt.Sprintf(`Not adding Docker credentials: credentials for "registry.domain.tld:5005" already set from %q, ignoring credentials from "job payload (GitLab Registry)"`, dockerConf)},
+		{`Loaded Docker credentials, source = "job payload (GitLab Registry)", hostnames = [registry.domain.tld:5005], error = <nil>`},
+	})
+}
+
+func TestDockerImagePathNormalization(t *testing.T) {
+	tests := map[string]string{
+		"tutum.co/user/ubuntu":         "tutum.co/user/ubuntu",
+		"tutum.co/user/ubuntu:latest":  "tutum.co/user/ubuntu",
+		"cr.internal:5000/user/ubuntu": "cr.internal:5000/user/ubuntu",
+		"user/ubuntu":                  "docker.io/user/ubuntu",
+		"index.docker.io/user/ubuntu":  "docker.io/user/ubuntu",
+		"docker.io/user/ubuntu":        "docker.io/user/ubuntu",
+
+		"foo.bar:123/asdf/baz:latest": "foo.bar:123/asdf/baz",
+		"foo.bar/asdf/baz:latest":     "foo.bar/asdf/baz",
+		"foo.bar/asdf/baz":            "foo.bar/asdf/baz",
+		"registry.local/ns/image":     "registry.local/ns/image",
+		"foo.bar:123/asdf/baz":        "foo.bar:123/asdf/baz",
+		"FOO.BAR:123/With/Case":       "foo.bar:123/With/Case",
+
+		"DOCKER.io/user/ubuntu":       "docker.io/user/ubuntu",
+		"index.DOCKER.io/user/ubuntu": "docker.io/user/ubuntu",
+		"InDex.DOCKER.io/user/ubuntu": "docker.io/user/ubuntu",
+		"localhost/test:xxx":          "localhost/test",
+		"LOCALHOST/test:xxx":          "localhost/test",
+		"notLocalhost/test":           "docker.io/notLocalhost/test",
+		"localhost:1234/test":         "localhost:1234/test",
+	}
+
+	for imageRef, expected := range tests {
+		actual := normalizeImageRef(imageRef)
+		assert.Equal(t, expected, actual)
+	}
 }
 
 // getDockerAuthForCredentialStorePathWithPathTraversal returns a DOCKER_AUTH_VALUE
@@ -372,210 +658,26 @@ func getValidCredentialHelperSuffix(t *testing.T) string {
 	return ""
 }
 
-func setupTestHomeDirectoryConfig(t *testing.T, configFileContents string) func() {
-	oldHomeDirectory := HomeDirectory
+// prependToPath sets a new PATH, prepending paths to the currently set PATH. PATH is set via t.Setenv, thus it's
+// automatically reverted after the test.
+func prependToPath(t *testing.T, paths ...string) {
+	newPath := slices.Clone(paths)
+	if path, ok := os.LookupEnv("PATH"); ok {
+		newPath = append(newPath, path)
+	}
+	t.Setenv("PATH", strings.Join(newPath, string(filepath.ListSeparator)))
+}
+
+func setupTestHomeDirectoryConfig(t *testing.T, configFileContents string) string {
+	fakeHome := t.TempDir()
 
 	if configFileContents != "" {
-		tempHomeDir := t.TempDir()
-		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
+		dockerConfigFile := path.Join(fakeHome, ".dockercfg")
 		err := os.WriteFile(dockerConfigFile, []byte(configFileContents), 0o600)
 		require.NoError(t, err)
-		HomeDirectory = tempHomeDir
-	} else {
-		HomeDirectory = ""
 	}
 
-	return func() {
-		HomeDirectory = oldHomeDirectory
-	}
-}
-
-func TestDockerImage(t *testing.T) {
-	path := dockerImageNamePath("foo.bar:123/asdf/baz:latest")
-	assert.Equal(t, "foo.bar:123/asdf/baz", path)
-
-	path = dockerImageNamePath("foo.bar/asdf/baz:latest")
-	assert.Equal(t, "foo.bar/asdf/baz", path)
-
-	path = dockerImageNamePath("foo.bar/asdf/baz")
-	assert.Equal(t, "foo.bar/asdf/baz", path)
-
-	path = dockerImageNamePath("registry.local/ns/image")
-	assert.Equal(t, "registry.local/ns/image", path)
-
-	path = dockerImageNamePath("foo.bar:123/asdf/baz")
-	assert.Equal(t, "foo.bar:123/asdf/baz", path)
-
-	path = dockerImageNamePath("FOO.BAR:123/With/Case")
-	assert.Equal(t, "foo.bar:123/With/Case", path)
-}
-
-func TestConvertToRegistryPath(t *testing.T) {
-	path := convertToRegistryPath("my.hostname")
-	assert.Equal(t, "my.hostname", path)
-
-	path = convertToRegistryPath("my.hostname/with/path")
-	assert.Equal(t, "my.hostname/with/path", path)
-
-	path = convertToRegistryPath("MY.HOSTNAME/With/Path/CASE")
-	assert.Equal(t, "my.hostname/With/Path/CASE", path)
-
-	path = convertToRegistryPath("my.hostname/with/tag/image:latest")
-	assert.Equal(t, "my.hostname/with/tag/image", path)
-
-	path = convertToRegistryPath("http://index.docker.io/v1/")
-	assert.Equal(t, "docker.io", path)
-
-	path = convertToRegistryPath("https://index.docker.io/v1/")
-	assert.Equal(t, "docker.io", path)
-
-	path = convertToRegistryPath("HTTP://INDEX.DOCKER.IO/V1/")
-	assert.Equal(t, "docker.io", path)
-
-	path = convertToRegistryPath("HTTPS://INDEX.DOCKER.IO/V1/")
-	assert.Equal(t, "docker.io", path)
-}
-
-func TestPaths(t *testing.T) {
-	testDockerAuthConfigsPaths := `{"auths":{` +
-		`"registry.local":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"},` +
-		`"registry.local/ns":{"auth":"dGVzdF91c2VyXzI6dGVzdF9wYXNzd29yZF8y"},` +
-		`"registry.local/ns/some/image":{"auth":"dGVzdF91c2VyXzM6dGVzdF9wYXNzd29yZF8z"}` +
-		`}}`
-
-	logger, _ := test.NewNullLogger()
-
-	result, err := ResolveConfigForImage("registry.local/foo/image:3",
-		testDockerAuthConfigsPaths, "", nil, logger)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, result)
-	assert.Equal(t, "$DOCKER_AUTH_CONFIG", result.Source)
-	assert.Equal(t, "test_user_1", result.AuthConfig.Username)
-	assert.Equal(t, "test_password_1", result.AuthConfig.Password)
-
-	result, err = ResolveConfigForImage("registry.local/ns/image:5",
-		testDockerAuthConfigsPaths, "", nil, logger)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, result)
-	assert.Equal(t, "$DOCKER_AUTH_CONFIG", result.Source)
-	assert.Equal(t, "test_user_2", result.AuthConfig.Username)
-	assert.Equal(t, "test_password_2", result.AuthConfig.Password)
-
-	result, err = ResolveConfigForImage("registry.local/ns/some/image:l",
-		testDockerAuthConfigsPaths, "", nil, logger)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, result)
-	assert.Equal(t, "test_user_3", result.AuthConfig.Username)
-	assert.Equal(t, "test_password_3", result.AuthConfig.Password)
-
-	result, err = ResolveConfigForImage("no_auth_configured/image:l",
-		testDockerAuthConfigsPaths, "", nil, logger)
-	assert.NoError(t, err)
-	assert.Nil(t, result)
-}
-
-func TestGetConfigs(t *testing.T) {
-	cleanup := setupTestHomeDirectoryConfig(t, testFileAuthConfigs)
-	defer cleanup()
-	logger, _ := test.NewNullLogger()
-	result, err := ResolveConfigs(testDockerAuthConfigs, "", gitlabRegistryCredentials, logger)
-	assert.NoError(t, err)
-
-	assert.Equal(t, map[string]RegistryInfo{
-		"registry.domain.tld:5005": {
-			Source: authConfigSourceNameUserVariable,
-			AuthConfig: types.AuthConfig{
-				Username:      "test_user_1",
-				Password:      "test_password_1",
-				ServerAddress: "https://registry.domain.tld:5005/v1/",
-			},
-		},
-		"registry.gitlab.tld:1234": {
-			Source: authConfigSourceNameJobPayload,
-			AuthConfig: types.AuthConfig{
-				Username:      "test_user_3",
-				Password:      "test_password_3",
-				ServerAddress: "registry.gitlab.tld:1234",
-			},
-		},
-		"registry2.domain.tld:5005": {
-			Source: filepath.Join(HomeDirectory, ".dockercfg"),
-			AuthConfig: types.AuthConfig{
-				Username:      "test_user_2",
-				Password:      "test_password_2",
-				ServerAddress: "registry2.domain.tld:5005",
-			},
-		},
-	}, result)
-}
-
-func TestGetConfigs_DuplicatedRegistryCredentials(t *testing.T) {
-	registryCredentials := []common.Credentials{
-		{
-			Type:     "registry",
-			URL:      "registry.domain.tld:5005",
-			Username: "test_user_1",
-			Password: "test_password_1",
-		},
-	}
-
-	cleanup := setupTestHomeDirectoryConfig(t, testFileAuthConfigs)
-	defer cleanup()
-
-	logger, _ := test.NewNullLogger()
-	result, err := ResolveConfigs("", "", registryCredentials, logger)
-	assert.NoError(t, err)
-
-	expectedResult := map[string]RegistryInfo{
-		"registry.domain.tld:5005": {
-			Source: filepath.Join(HomeDirectory, ".dockercfg"),
-			AuthConfig: types.AuthConfig{
-				Username:      "test_user_1",
-				Password:      "test_password_1",
-				ServerAddress: "https://registry.domain.tld:5005/v1/",
-			},
-		},
-		"registry2.domain.tld:5005": {
-			Source: filepath.Join(HomeDirectory, ".dockercfg"),
-			AuthConfig: types.AuthConfig{
-				Username:      "test_user_2",
-				Password:      "test_password_2",
-				ServerAddress: "registry2.domain.tld:5005",
-			},
-		},
-	}
-
-	assert.Equal(t, expectedResult, result)
-}
-
-func TestDockerImageNamePath(t *testing.T) {
-	path := dockerImageNamePath("tutum.co/user/ubuntu")
-	assert.Equal(t, "tutum.co/user/ubuntu", path)
-}
-
-func TestDockerImageNamePathTag(t *testing.T) {
-	path := dockerImageNamePath("tutum.co/user/ubuntu:latest")
-	assert.Equal(t, "tutum.co/user/ubuntu", path)
-}
-
-func TestDockerImageNamePathPort(t *testing.T) {
-	path := dockerImageNamePath("cr.internal:5000/user/ubuntu")
-	assert.Equal(t, "cr.internal:5000/user/ubuntu", path)
-}
-
-func TestDefaultDockerImageNamePath(t *testing.T) {
-	path := dockerImageNamePath("user/ubuntu")
-	assert.Equal(t, "docker.io/user/ubuntu", path)
-}
-
-func TestDefaultIndexDockerImageNamePath(t *testing.T) {
-	path := dockerImageNamePath("index.docker.io/user/ubuntu")
-	assert.Equal(t, "docker.io/user/ubuntu", path)
-}
-
-type configLocation struct {
-	subfolder string
-	filename  string
+	return fakeHome
 }
 
 func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
@@ -590,86 +692,113 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 	tests := map[string]struct {
 		homeDirProvided     bool
 		configContent       []byte
-		configLocation      configLocation
-		expectedAuthConfigs map[string]types.AuthConfig
+		configLocation      []string
+		expectedAuthConfigs []types.AuthConfig
 		expectedError       error
 	}{
 		"Home dir value is blank": {
-			homeDirProvided:     false,
-			expectedAuthConfigs: nil,
-			expectedError:       errNoHomeDir,
+			expectedError: errNoHomeDir,
 		},
 		"No configs": {
 			homeDirProvided:     true,
-			configLocation:      configLocation{},
-			expectedAuthConfigs: map[string]types.AuthConfig{},
-			expectedError:       nil,
+			expectedAuthConfigs: []types.AuthConfig{},
 		},
 		"Config: $HOME/.dockercfg": {
 			homeDirProvided: true,
 			configContent:   config,
-			configLocation: configLocation{
-				subfolder: "",
-				filename:  ".dockercfg",
-			},
-			expectedAuthConfigs: map[string]types.AuthConfig{
-				expectedServerAddr: {
+			configLocation:  []string{".dockercfg"},
+			expectedAuthConfigs: []types.AuthConfig{
+				{
 					Username:      expectedUsername,
 					Password:      expectedPassword,
 					ServerAddress: expectedServerAddr,
 				},
 			},
-			expectedError: nil,
 		},
 		"Config: $HOME/.docker/config.json": {
 			homeDirProvided: true,
 			configContent:   config,
-			configLocation: configLocation{
-				subfolder: ".docker",
-				filename:  "config.json",
-			},
-			expectedAuthConfigs: map[string]types.AuthConfig{
-				expectedServerAddr: {
+			configLocation:  []string{".docker", "config.json"},
+			expectedAuthConfigs: []types.AuthConfig{
+				{
 					Username:      expectedUsername,
 					Password:      expectedPassword,
 					ServerAddress: expectedServerAddr,
 				},
 			},
-			expectedError: nil,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			fakeHome := ""
 			expectedConfigFile := ""
-			HomeDirectory = ""
 
 			if test.homeDirProvided {
-				dir := t.TempDir()
+				fakeHome = t.TempDir()
 
-				HomeDirectory = dir
-				configDir := HomeDirectory
-
-				if test.configLocation.subfolder != "" {
-					configDir = filepath.Join(dir, test.configLocation.subfolder)
-					err := os.MkdirAll(configDir, 0o777)
-					require.NoErrorf(t, err, "failed to create docker config subfolder: %s", err)
-				}
-
-				if test.configLocation.filename != "" {
-					f := filepath.Join(configDir, test.configLocation.filename)
-					err := os.WriteFile(f, test.configContent, 0o666)
-					require.NoError(t, err, "failed to write test docker config: %s", err)
-
-					expectedConfigFile = f
+				if len(test.configLocation) > 0 {
+					file := filepath.Join(slices.Concat([]string{fakeHome}, test.configLocation)...)
+					require.NoError(t, os.MkdirAll(filepath.Dir(file), 0o777), "creating config directory")
+					require.NoError(t, os.WriteFile(file, test.configContent, 0o666), "writing config file")
+					expectedConfigFile = file
 				}
 			}
 
-			configFile, authConfigs, err := readDockerConfigsFromHomeDir("")
+			resolver := Resolver{
+				homeDir: func() string { return fakeHome },
+			}
+
+			configFile, authConfigs, err := resolver.readDockerConfigsFromHomeDir("")
 
 			assert.ErrorIs(t, err, test.expectedError)
 			assert.Equal(t, expectedConfigFile, configFile)
 			assert.Equal(t, test.expectedAuthConfigs, authConfigs, "Configs should be equal")
 		})
+	}
+}
+
+type testRegistryConfig struct {
+	registry string
+	user     string
+	pass     string
+}
+
+func createTestDockerConfig(regs []testRegistryConfig) string {
+	config := map[string]map[string]map[string]string{
+		"auths": map[string]map[string]string{},
+	}
+
+	for _, creds := range regs {
+		config["auths"][creds.registry] = map[string]string{
+			"auth": base64.StdEncoding.EncodeToString([]byte(creds.user + ":" + creds.pass)),
+		}
+	}
+
+	json, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		// this should never happen, as map[string]string can always be marshalled
+		panic("cannot marshal docker config: " + err.Error())
+	}
+
+	return string(json)
+}
+
+type fakeLogger [][]any
+
+func (l *fakeLogger) Debugln(args ...any) {
+	*l = append(*l, args)
+}
+
+func (l fakeLogger) ExpectLogs(t *testing.T, expectedLogs [][]any) {
+	t.Helper()
+
+	le := len(expectedLogs)
+	la := len(l)
+
+	assert.Len(t, l, le, "expected %d logs, got %d", le, la)
+
+	for i := 0; i < min(le, la); i++ {
+		assert.Equal(t, expectedLogs[i], l[i], "log line %d", i)
 	}
 }

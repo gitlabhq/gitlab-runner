@@ -42,7 +42,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
@@ -2764,8 +2763,4 @@ func Test_createStepRunnerVolume(t *testing.T) {
 			assert.Equal(t, tt.wantStage, e.GetCurrentStage())
 		})
 	}
-}
-
-func init() {
-	auth.HomeDirectory = ""
 }

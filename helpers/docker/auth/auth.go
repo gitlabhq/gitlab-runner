@@ -7,17 +7,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/config/credentials"
 	"github.com/docker/cli/cli/config/types"
-	"github.com/docker/docker/pkg/homedir"
-
+	dockerHomeDir "github.com/docker/docker/pkg/homedir"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -29,18 +31,41 @@ const (
 )
 
 var (
-	HomeDirectory    = homedir.Get()
 	errNoHomeDir     = errors.New("no home directory found")
 	errPathTraversal = errors.New("path traversal is not allowed")
 )
 
-// RegistryInfo represents the source and authentication for a given registry.
+// RegistryInfo represents the source, normalized registry path and authentication for a registry.
 type RegistryInfo struct {
+	Path       string
 	Source     string
 	AuthConfig types.AuthConfig
 }
 
-type authConfigResolver func() (string, map[string]types.AuthConfig, error)
+// RegistryInfos is a list of RegistryInfo, with a stable order
+type RegistryInfos []RegistryInfo
+
+// Get returns a RegistryInfo, matching the registry path.
+func (ri RegistryInfos) Get(path string) (RegistryInfo, bool) {
+	for _, i := range ri {
+		if i.Path == path {
+			return i, true
+		}
+	}
+	return RegistryInfo{}, false
+}
+
+// Append adds a RegistryInfo to the list of known registries. If a RegistryInfo for the same registry path exists already,
+// an error is returned and the RegistryInfo is not appended.
+func (ri *RegistryInfos) Append(newInfo RegistryInfo) error {
+	for _, existingInfo := range *ri {
+		if existingInfo.Path == newInfo.Path {
+			return fmt.Errorf("credentials for %q already set from %q, ignoring credentials from %q", existingInfo.Path, existingInfo.Source, newInfo.Source)
+		}
+	}
+	*ri = append(*ri, newInfo)
+	return nil
+}
 
 type DebugLogger interface {
 	Debugln(args ...interface{})
@@ -55,22 +80,36 @@ func parentPath(path string) string {
 	return path[:index]
 }
 
-// ResolveConfigForImage returns the auth configuration for a particular image.
-// Returns nil on no config found.
-// See ResolveConfigs for source information.
-func ResolveConfigForImage(
+// homeDir wraps around docker's home dir getter while still allowing the implementation to be switched out
+type homeDir func() string
+
+func (hd homeDir) Get() string {
+	if hd == nil {
+		hd = dockerHomeDir.Get
+	}
+	return hd()
+}
+
+// Resolver provides mechanisms to get all known registries and their auth, and specific ones for specific images.
+type Resolver struct {
+	homeDir homeDir
+}
+
+// ConfigForImage returns the auth configuration for a particular image.
+// It gets all configs via [AllConfigs] and returns the one with the longest match for imageName <-> RegistryInfo.RegistryPath
+// It returns nil when no matching config can be found.
+func (r Resolver) ConfigForImage(
 	imageName, dockerAuthConfig, username string,
 	credentials []common.Credentials, logger DebugLogger,
 ) (*RegistryInfo, error) {
-	authConfigs, err := ResolveConfigs(dockerAuthConfig, username, credentials, logger)
+	authConfigs, err := r.AllConfigs(dockerAuthConfig, username, credentials, logger)
 	if len(authConfigs) == 0 || err != nil {
 		return nil, err
 	}
 
-	path := dockerImageNamePath(imageName)
+	path := normalizeImageRef(imageName)
 	for p := path; p != ""; p = parentPath(p) {
-		info, ok := authConfigs[p]
-		if ok {
+		if info, ok := authConfigs.Get(p); ok {
 			return &info, nil
 		}
 	}
@@ -78,28 +117,28 @@ func ResolveConfigForImage(
 	return nil, nil
 }
 
-// ResolveConfigs returns the authentication configuration for docker registries.
+// AllConfigs returns the authentication configuration for docker registries.
 // Goes through several sources in this order:
 // 1. DOCKER_AUTH_CONFIG
 // 2. ~/.docker/config.json or .dockercfg
 // 3. Build credentials
-// Returns a map of registry hostname to RegistryInfo
-func ResolveConfigs(
+// Returns a list of RegistryInfos, in the order of discovery.
+func (r Resolver) AllConfigs(
 	dockerAuthConfig, username string,
 	credentials []common.Credentials, logger DebugLogger,
-) (map[string]RegistryInfo, error) {
-	resolvers := []authConfigResolver{
-		func() (string, map[string]types.AuthConfig, error) {
+) (RegistryInfos, error) {
+	resolvers := []func() (string, []types.AuthConfig, error){
+		func() (string, []types.AuthConfig, error) {
 			return getUserConfiguration(dockerAuthConfig)
 		},
-		func() (string, map[string]types.AuthConfig, error) {
-			return getHomeDirConfiguration(username)
+		func() (string, []types.AuthConfig, error) {
+			return r.getHomeDirConfiguration(username)
 		},
-		func() (string, map[string]types.AuthConfig, error) {
+		func() (string, []types.AuthConfig, error) {
 			return getBuildConfiguration(credentials)
 		},
 	}
-	res := make(map[string]RegistryInfo)
+	res := RegistryInfos{}
 
 	for _, r := range resolvers {
 		source, configs, err := r()
@@ -107,15 +146,24 @@ func ResolveConfigs(
 			return nil, err
 		}
 
-		var hostnames []string
-		for registry, conf := range configs {
-			registryPath := convertToRegistryPath(registry)
+		if len(configs) == 0 {
+			continue
+		}
+
+		hostnames := []string{} // used only for logging
+
+		for _, conf := range configs {
+			registryPath := convertToRegistryPath(conf.ServerAddress)
 			hostnames = append(hostnames, registryPath)
-			if _, ok := res[registryPath]; !ok {
-				res[registryPath] = RegistryInfo{
-					Source:     source,
-					AuthConfig: conf,
-				}
+
+			newRegistryInfo := RegistryInfo{
+				Path:       registryPath,
+				Source:     source,
+				AuthConfig: conf,
+			}
+
+			if err := res.Append(newRegistryInfo); err != nil {
+				logger.Debugln(fmt.Sprintf("Not adding Docker credentials: %s", err.Error()))
 			}
 		}
 
@@ -128,7 +176,7 @@ func ResolveConfigs(
 	return res, nil
 }
 
-func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.AuthConfig, error) {
+func getUserConfiguration(dockerAuthConfig string) (string, []types.AuthConfig, error) {
 	authConfigs, err := readConfigsFromReader(bytes.NewBufferString(dockerAuthConfig))
 	if errors.Is(err, errPathTraversal) {
 		return "", nil, err
@@ -140,8 +188,8 @@ func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.Aut
 	return authConfigSourceNameUserVariable, authConfigs, nil
 }
 
-func getHomeDirConfiguration(username string) (string, map[string]types.AuthConfig, error) {
-	sourceFile, authConfigs, err := readDockerConfigsFromHomeDir(username)
+func (r Resolver) getHomeDirConfiguration(username string) (string, []types.AuthConfig, error) {
+	sourceFile, authConfigs, err := r.readDockerConfigsFromHomeDir(username)
 	if errors.Is(err, errPathTraversal) {
 		return "", nil, err
 	}
@@ -167,55 +215,64 @@ func EncodeConfig(authConfig *types.AuthConfig) (string, error) {
 	return base64.URLEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-func getBuildConfiguration(credentials []common.Credentials) (string, map[string]types.AuthConfig, error) {
-	authConfigs := make(map[string]types.AuthConfig)
+func getBuildConfiguration(credentials []common.Credentials) (string, []types.AuthConfig, error) {
+	authConfigs := make([]types.AuthConfig, 0, len(credentials))
 
 	for _, credentials := range credentials {
 		if credentials.Type != "registry" {
 			continue
 		}
 
-		authConfigs[credentials.URL] = types.AuthConfig{
+		authConfigs = append(authConfigs, types.AuthConfig{
 			Username:      credentials.Username,
 			Password:      credentials.Password,
 			ServerAddress: credentials.URL,
-		}
+		})
 	}
 
 	return authConfigSourceNameJobPayload, authConfigs, nil
 }
 
-// Given a docker image reference get the path to lookup the authentication credentials
-func dockerImageNamePath(imageName string) string {
-	imageIndex := strings.LastIndex(imageName, "/")
-	image := imageName
-	if imageIndex != -1 {
-		image = imageName[imageIndex+1:]
-	}
+// normalizeImageRef takes a raw image reference and normalizes it:
+//   - cuts off the tag
+//   - normalizes docker.io image refs (nginx -> docker.io/nginx, index.docker.io/nginx -> docker.io/nginx)
+//   - lower-cases the hostname
+func normalizeImageRef(imageName string) string {
+	// foo.bar.tld/blipo/blupp:latest -> [ foo.bar.tld/blipp/, blupp:latest ]
+	dir, image := path.Split(imageName)
 
-	// remove tag
+	// remove tag: blupp:latest -> blupp
 	image, _, _ = strings.Cut(image, ":")
 
-	path := imageName[:imageIndex+1] + image
+	// reconstruct again -> foo.bar.tld/blipo/blupp
+	normalized := path.Join(dir, image)
 
-	nameParts := strings.SplitN(imageName, "/", 2)
-	if len(nameParts) == 1 || (!strings.Contains(nameParts[0], ".") &&
-		!strings.Contains(nameParts[0], ":") && nameParts[0] != "localhost") {
-		// This is a Docker Index repos (ex: samalba/hipache or ubuntu)
-		// 'docker.io'
-		path = DefaultDockerRegistry + "/" + path
-	} else if nameParts[0] == "index."+DefaultDockerRegistry {
-		path, _ = strings.CutPrefix(path, "index.")
+	// foo.bar.tld/blipo/blupp -> [ foo.bar.tld, blipo/blupp ]
+	nameParts := strings.SplitN(normalized, "/", 2)
+
+	// is this an image from docker hub, like "nginx"?
+	isDockerIO := len(nameParts) == 1 ||
+		(!strings.Contains(nameParts[0], ".") &&
+			!strings.Contains(nameParts[0], ":") &&
+			!strings.EqualFold(nameParts[0], "localhost"))
+
+	switch {
+	case isDockerIO:
+		// for docker.io images, explicitly prepend 'docker.io'
+		normalized = path.Join(DefaultDockerRegistry, normalized)
+	case strings.EqualFold(nameParts[0], "index."+DefaultDockerRegistry):
+		// for 'index.docker.io' images, explicitly cut of the 'index.' part
+		_, normalized, _ = strings.Cut(normalized, ".")
 	}
 
-	return pathWithLowerCaseHostname(path)
+	return pathWithLowerCaseHostname(normalized)
 }
 
 // readDockerConfigsFromHomeDir reads known docker config from home
 // directory. If no username is provided it will get the home directory for the
 // current user.
-func readDockerConfigsFromHomeDir(userName string) (string, map[string]types.AuthConfig, error) {
-	homeDir := HomeDirectory
+func (r Resolver) readDockerConfigsFromHomeDir(userName string) (string, []types.AuthConfig, error) {
+	homeDir := r.homeDir.Get()
 
 	if userName != "" {
 		u, err := user.Lookup(userName)
@@ -229,46 +286,49 @@ func readDockerConfigsFromHomeDir(userName string) (string, map[string]types.Aut
 		return "", nil, errNoHomeDir
 	}
 
-	configFile := filepath.Join(homeDir, ".docker", "config.json")
+	configFiles := []string{
+		filepath.Join(homeDir, ".docker", "config.json"),
+		filepath.Join(homeDir, ".dockercfg"),
+	}
 
-	r, err := os.Open(configFile)
-	if err != nil {
-		configFile = filepath.Join(homeDir, ".dockercfg")
-		r, err = os.Open(configFile)
-		if err != nil && !os.IsNotExist(err) {
-			return "", nil, err
+	var f *os.File
+	var err error
+	for _, fn := range configFiles {
+		f, err = os.Open(fn)
+		if err == nil {
+			break
 		}
 	}
-	defer r.Close()
-
-	if r == nil {
-		return "", make(map[string]types.AuthConfig), nil
+	if err != nil && !os.IsNotExist(err) {
+		return "", nil, err
 	}
+	if f == nil {
+		return "", []types.AuthConfig{}, nil
+	}
+	defer f.Close()
 
-	authConfigs, err := readConfigsFromReader(r)
-
-	return configFile, authConfigs, err
+	authConfigs, err := readConfigsFromReader(f)
+	return f.Name(), authConfigs, err
 }
 
-func readConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
+func readConfigsFromReader(r io.Reader) ([]types.AuthConfig, error) {
 	config := &configfile.ConfigFile{}
-
 	if err := config.LoadFromReader(r); err != nil {
-		if errors.Is(err, io.EOF) {
-			err = nil
-		}
 		return nil, err
 	}
+	if !config.ContainsAuth() {
+		// we can bail out early when there is no auth configured at all
+		return nil, nil
+	}
 
-	auths := make(map[string]types.AuthConfig)
-	addAll(auths, config.AuthConfigs)
+	auths := config.GetAuthConfigs()
 
 	if config.CredentialsStore != "" {
 		authsFromCredentialsStore, err := readConfigsFromCredentialsStore(config)
 		if err != nil {
 			return nil, err
 		}
-		addAll(auths, authsFromCredentialsStore)
+		maps.Copy(auths, authsFromCredentialsStore)
 	}
 
 	if config.CredentialHelpers != nil {
@@ -276,10 +336,25 @@ func readConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
 		if err != nil {
 			return nil, err
 		}
-		addAll(auths, authsFromCredentialsHelpers)
+		maps.Copy(auths, authsFromCredentialsHelpers)
 	}
 
-	return auths, nil
+	return withStableOrder(auths), nil
+}
+
+// withStableOrder converts the map of AuthConfigs to a slice of AuthConfigs, ordered by the map's key.
+// When parsing AuthConfigs from docker config files, the AuthConfig's ServerAddress is set to the same value as the
+// map's key explicitly, so we can rely on that rather than the map's key.
+func withStableOrder(acs map[string]types.AuthConfig) []types.AuthConfig {
+	s := slices.Collect(maps.Keys(acs))
+	slices.Sort(s)
+
+	res := make([]types.AuthConfig, 0, len(s))
+	for _, server := range s {
+		res = append(res, acs[server])
+	}
+
+	return res
 }
 
 func readConfigsFromCredentialsStore(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
@@ -317,12 +392,6 @@ func readConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string
 	}
 
 	return helpersAuths, nil
-}
-
-func addAll(to, from map[string]types.AuthConfig) {
-	for reg, ac := range from {
-		to[reg] = ac
-	}
 }
 
 // convert hostname part to lower case.

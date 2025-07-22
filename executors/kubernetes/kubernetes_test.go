@@ -3020,14 +3020,11 @@ func TestSetupDefaultExecutorOptions(t *testing.T) {
 }
 
 func TestSetupCredentials(t *testing.T) {
-	version, _ := testVersionAndCodec()
-
-	type testDef struct {
+	tests := map[string]struct {
 		RunnerCredentials *common.RunnerCredentials
 		Credentials       []common.Credentials
-		VerifyFn          func(*testing.T, testDef, *api.Secret)
-	}
-	tests := map[string]testDef{
+		VerifyFn          func(*testing.T, *api.Secret)
+	}{
 		"no credentials": {
 			// don't execute VerifyFn
 			VerifyFn: nil,
@@ -3041,7 +3038,7 @@ func TestSetupCredentials(t *testing.T) {
 					Password: "password",
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, secret *api.Secret) {
+			VerifyFn: func(t *testing.T, secret *api.Secret) {
 				assert.Equal(t, api.SecretTypeDockercfg, secret.Type)
 				assert.NotEmpty(t, secret.Data[api.DockerConfigKey])
 			},
@@ -3070,53 +3067,39 @@ func TestSetupCredentials(t *testing.T) {
 					Password: "password",
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, secret *api.Secret) {
+			VerifyFn: func(t *testing.T, secret *api.Secret) {
 				dns_test.AssertRFC1123Compatibility(t, secret.GetName())
 			},
 		},
 	}
 
-	executed := false
-	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
-		return func(req *http.Request) (resp *http.Response, err error) {
-			podBytes, err := io.ReadAll(req.Body)
-			executed = true
-
-			if err != nil {
-				t.Errorf("failed to read request body: %s", err.Error())
-				return
-			}
-
-			p := new(api.Secret)
-
-			err = json.Unmarshal(podBytes, p)
-			if err != nil {
-				t.Errorf("error decoding pod: %s", err.Error())
-				return
-			}
-
-			if test.VerifyFn != nil {
-				test.VerifyFn(t, test, p)
-			}
-
-			resp = &http.Response{StatusCode: http.StatusOK, Body: FakeReadCloser{
-				Reader: bytes.NewBuffer(podBytes),
-			}}
-			resp.Header = make(http.Header)
-			resp.Header.Add(common.ContentType, "application/json")
-
-			return
-		}
-	}
-
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
+			fakeKubeClient := testclient.NewSimpleClientset()
+
+			createCount := 0
+			fakeKubeClient.PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret kuberuntime.Object, err error) {
+				createCount += 1
+
+				createAction, ok := action.(k8stesting.CreateAction)
+				require.True(t, ok, "expected action %v to be a create action", action)
+
+				obj := createAction.GetObject()
+				secret, ok := obj.(*api.Secret)
+				require.True(t, ok, "expected object %v to be a secret", obj)
+
+				if verify := test.VerifyFn; verify != nil {
+					verify(t, secret)
+				}
+
+				return true, nil, nil
+			})
+
 			ex := newExecutor()
-			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test)))
+			ex.kubeClient = fakeKubeClient
 			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = "default"
 			ex.AbstractExecutor.Build = &common.Build{
 				JobResponse: common.JobResponse{
-					// Variables:   []common.JobVariable{},
 					Credentials: test.Credentials,
 				},
 				Runner: &common.RunnerConfig{},
@@ -3128,18 +3111,16 @@ func TestSetupCredentials(t *testing.T) {
 				}
 			}
 
-			executed = false
-
-			err := ex.prepareOverwrites(make(common.JobVariables, 0))
-			assert.NoError(t, err)
+			err := ex.prepareOverwrites(nil)
+			assert.NoError(t, err, "error on prepareOverwrites")
 
 			err = ex.setupCredentials(context.Background())
-			assert.NoError(t, err)
+			assert.NoError(t, err, "error on setupCredentials")
 
 			if test.VerifyFn != nil {
-				assert.True(t, executed)
+				assert.Equal(t, 1, createCount, "expected %d secret creations, got: %d", 1, createCount)
 			} else {
-				assert.False(t, executed)
+				assert.Equal(t, 0, createCount, "expected %d secret creations, got: %d", 0, createCount)
 			}
 		})
 	}
