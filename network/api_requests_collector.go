@@ -3,6 +3,7 @@ package network
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,7 +44,7 @@ func newAPIRequestCollectorWithBuckets(buckets []float64) *APIRequestsCollector 
 				Name: "gitlab_runner_api_request_statuses_total",
 				Help: "The total number of api requests, partitioned by runner, system_id, endpoint and status.",
 			},
-			[]string{"runner", "system_id", "endpoint", "status"},
+			[]string{"runner", "system_id", "endpoint", "status", "method"},
 		),
 		durations: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
@@ -61,10 +62,10 @@ func (rc *APIRequestsCollector) Observe(
 	runnerID string,
 	systemID string,
 	endpoint apiEndpoint,
-	fn func() int,
+	fn func() (int, string),
 ) {
 	requestStart := time.Now()
-	status := fn()
+	status, method := fn()
 
 	if status == clientError {
 		return
@@ -75,6 +76,7 @@ func (rc *APIRequestsCollector) Observe(
 		systemID,
 		endpoint,
 		status,
+		method,
 		time.Since(requestStart).Seconds(),
 	)
 	if err != nil {
@@ -87,6 +89,7 @@ func (rc *APIRequestsCollector) observe(
 	systemID string,
 	endpoint apiEndpoint,
 	status int,
+	method string,
 	duration float64,
 ) error {
 	rc.lock.Lock()
@@ -97,6 +100,7 @@ func (rc *APIRequestsCollector) observe(
 		"system_id": systemID,
 		"endpoint":  string(endpoint),
 		"status":    strconv.Itoa(status),
+		"method":    strings.ToLower(method),
 	})
 	if err != nil {
 		return fmt.Errorf("requesting status counter: %w", err)

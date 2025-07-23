@@ -36,22 +36,22 @@ func TestAPIRequestsCollector_Collect(t *testing.T) {
 	c := newAPIRequestCollectorWithBuckets([]float64{0.1, 1, 10})
 
 	// data for one metric entry
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusOK, 0.05))
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusOK, 0.05))
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusOK, 0.5))
+	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusOK, http.MethodPost, 0.05))
+	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusOK, http.MethodPost, 0.05))
+	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusOK, http.MethodPost, 0.5))
 
 	// data for one metric entry
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusNotFound, 1.5))
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusNotFound, 15))
+	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusNotFound, http.MethodPost, 1.5))
+	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusNotFound, http.MethodPost, 15))
 
 	// data for one metric entry
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointRequestJob, http.StatusOK, 0.05))
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointRequestJob, http.StatusOK, 1.5))
+	assert.NoError(t, c.observe("runner1", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 0.05))
+	assert.NoError(t, c.observe("runner1", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 1.5))
 
 	// data for one metric entry
-	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, 0.05))
-	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, 0.05))
-	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, 1.5))
+	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 0.05))
+	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 0.05))
+	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 1.5))
 
 	c.Collect(ch)
 	close(ch)
@@ -96,10 +96,10 @@ func assertStatusMetrics(t *testing.T, list []prometheus.Metric) {
 	}
 
 	expected := map[string]float64{
-		"endpoint-update_job-runner-runner1-status-200-system_id-system1":  3,
-		"endpoint-update_job-runner-runner1-status-404-system_id-system1":  2,
-		"endpoint-request_job-runner-runner1-status-200-system_id-system1": 2,
-		"endpoint-request_job-runner-runner2-status-200-system_id-system1": 3,
+		"endpoint-update_job-method-post-runner-runner1-status-200-system_id-system1":  3,
+		"endpoint-update_job-method-post-runner-runner1-status-404-system_id-system1":  2,
+		"endpoint-request_job-method-post-runner-runner1-status-200-system_id-system1": 2,
+		"endpoint-request_job-method-post-runner-runner2-status-200-system_id-system1": 3,
 	}
 
 	assert.Equal(t, expected, metrics)
