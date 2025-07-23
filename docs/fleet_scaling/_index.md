@@ -5,7 +5,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Plan and operate a fleet of instance or group runners
 ---
 
-This guide contains best practices for scaling a fleet of runners in a shared service model.
+Apply these best practices and recommendations when scaling a fleet of runners in a shared service model.
 
 When you host a fleet of instance runners, you need a well-planned infrastructure that takes
 into consideration your:
@@ -15,11 +15,7 @@ into consideration your:
 - Network bandwidth and throughput.
 - Type of jobs (including programming language, OS platform, and dependent libraries).
 
-Use this guide to develop a GitLab Runner deployment strategy based on your organization's requirements.
-
-The guide does not make specific recommendations about the type of infrastructure you should use.
-However, it provides insights from the experience of operating the runner fleet on GitLab.com,
-which processes millions of CI/CD jobs each month.
+Use these recommendations to develop a GitLab Runner deployment strategy based on your organization's requirements.
 
 ## Consider your workload and environment
 
