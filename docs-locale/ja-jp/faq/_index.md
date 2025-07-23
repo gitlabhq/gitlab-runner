@@ -7,22 +7,16 @@ title: GitLab Runnerのトラブルシューティング
 
 {{< details >}}
 
-- プラン:Free、Premium、Ultimate
-- 製品:GitLab.com、GitLab Self-Managed、GitLab Dedicated
+- プラン: Free、Premium、Ultimate
+- 提供形態: GitLab.com、GitLab Self-Managed、GitLab Dedicated
 
 {{< /details >}}
 
 このセクションは、GitLab Runnerの問題を解決する際に役立ちます。
 
-{{< alert type="note" >}}
+## 一般的なトラブルシューティングのヒント {#general-troubleshooting-tips}
 
-[Critical Security Release](https://about.gitlab.com/releases/2022/02/25/critical-security-release-gitlab-14-8-2-released/)は、グループとプロジェクトのRunner登録トークンをリセットします。自動プロセス（登録トークンの値をエンコードするスクリプト）を使用してRunnerを登録する場合、この更新によってプロセスが中断されます。ただし、以前に登録されたRunnerには影響はないはずです。
-
-{{< /alert >}}
-
-## 一般的なトラブルシューティングのヒント
-
-### ログを表示する
+### ログを表示する {#view-the-logs}
 
 GitLab Runnerサービスはログをsyslogに送信します。ログを表示するには、ディストリビューションのドキュメントを参照してください。ディストリビューションに`journalctl`コマンドが含まれている場合は、そのコマンドを使用してログを表示できます。
 
@@ -32,26 +26,26 @@ docker logs gitlab-runner-container # Docker
 kubectl logs gitlab-runner-pod # Kubernetes
 ```
 
-### サービスを再起動する
+### サービスを再起動する {#restart-the-service}
 
 ```shell
 systemctl restart gitlab-runner.service
 ```
 
-### Docker Machineを表示する
+### Docker Machineを表示する {#view-the-docker-machines}
 
 ```shell
 sudo docker-machine ls
 sudo su - && docker-machine ls
 ```
 
-### すべてのDocker Machineを削除する
+### すべてのDocker Machineを削除する {#delete-all-docker-machines}
 
 ```shell
 docker-machine rm $(docker-machine ls -q)
 ```
 
-### `config.toml`に変更を適用する
+### `config.toml`に変更を適用する {#apply-changes-to-configtoml}
 
 ```shell
 systemctl restart gitlab-runner.service
@@ -59,21 +53,21 @@ docker-machine rm $(docker-machine ls -q) # Docker machine
 journalctl --unit=gitlab-runner.service -f # Tail the logs to check for potential errors
 ```
 
-## GitLabおよびGitLab Runnerのバージョンを確認する
+## GitLabおよびGitLab Runnerのバージョンを確認する {#confirm-your-gitlab-and-gitlab-runner-versions}
 
-GitLabは[後方互換性を保証](../_index.md#gitlab-runner-versions)することを目標としています。ただし、最初のトラブルシューティング手順として、GitLab RunnerのバージョンがGitLabのバージョンと同じであることを確認する必要があります。
+GitLabは[下位互換性を保証](../_index.md#gitlab-runner-versions)することを目標としています。ただし、最初のトラブルシューティング手順として、GitLab RunnerのバージョンがGitLabのバージョンと同じであることを確認する必要があります。
 
-## `coordinator`について
+## `coordinator`について {#what-does-coordinator-mean}
 
 `coordinator`は、ジョブのリクエスト元であるGitLabインストールのことです。
 
 つまりRunnerは、`coordinator`（GitLab APIを介したGitLabインストール）からジョブをリクエストする、分離されたエージェントです。
 
-## Windowsでサービスとして実行する場合にログはどこに保存されますか？
+## Windowsでサービスとして実行する場合にログはどこに保存されますか？ {#where-are-logs-stored-when-run-as-a-service-on-windows}
 
-- GitLab RunnerがWindowsでサービスとして実行されている場合、システムイベントログが作成されます。これらを表示するには、イベントビューアーを開きます（「ファイル名を指定して実行」メニューで`eventvwr.msc`と入力するか、「イベントビューアー」を検索します）。次に、**Windows ログ > Application**に移動します。Runnerログの**ソース**は`gitlab-runner`です。Windows Server Coreを使用している場合は、PowerShellコマンド`get-eventlog Application -Source gitlab-runner -Newest 20 | format-table -wrap -auto`を実行して、最後の20件のログエントリを取得します。
+- GitLab RunnerがWindowsでサービスとして実行されている場合、システムイベントログが作成されます。これらを表示するには、イベントビューアーを開きます（「ファイル名を指定して実行」メニューで`eventvwr.msc`と入力するか、「イベントビューアー」を検索します）。次に、**Windows Logs > Application**に移動します。Runnerログの**ソース**は`gitlab-runner`です。Windows Server Coreを使用している場合は、PowerShellコマンド`get-eventlog Application -Source gitlab-runner -Newest 20 | format-table -wrap -auto`を実行して、最後の20件のログエントリを取得します。
 
-## デバッグログ生成モードを有効にする
+## デバッグログ生成モードを有効にする {#enable-debug-logging-mode}
 
 {{< alert type="warning" >}}
 
@@ -81,7 +75,7 @@ GitLabは[後方互換性を保証](../_index.md#gitlab-runner-versions)する�
 
 {{< /alert >}}
 
-### コマンドライン
+### コマンドライン {#in-the-command-line}
 
 rootとしてログインしたターミナルから、以下を実行します。
 
@@ -96,7 +90,7 @@ gitlab-runner stop
 gitlab-runner --debug run
 ```
 
-### GitLab Runner `config.toml`内
+### GitLab Runner `config.toml`内 {#in-the-gitlab-runner-configtoml}
 
 デバッグログ生成を有効にするには、[`config.toml`のグローバルセクション](../configuration/advanced-configuration.md#the-global-section)で`log_level`を`debug`に設定します。`config.toml`の最上部で、concurrent行の前または後に次の行を追加します。
 
@@ -104,7 +98,7 @@ gitlab-runner --debug run
 log_level = "debug"
 ```
 
-### Helmチャート内
+### Helmチャート内 {#in-the-helm-chart}
 
 [GitLab Runner Helmチャート](../install/kubernetes.md)を使用してKubernetesクラスターにGitLab Runnerがインストールされている場合、デバッグログ生成を有効にするには、[`values.yaml`のカスタマイズ](../install/kubernetes.md#configure-gitlab-runner-with-the-helm-chart)で`logLevel`オプションを設定します。
 
@@ -115,11 +109,11 @@ log_level = "debug"
 logLevel: debug
 ```
 
-## Docker executor RunnerのDNSを設定する
+## Docker executor RunnerのDNSを設定する {#configure-dns-for-a-docker-executor-runner}
 
 Docker executorでGitLab Runnerを設定すると、ホストRunnerデーモンがGitLabにアクセスできてもDockerコンテナがアクセスできない場合があります。これは、ホストでDNSが設定されていても、その設定がコンテナに渡されない場合に発生する可能性があります。
 
-**例:**
+**例**: 
 
 GitLabサービスとGitLab Runnerが、2種類の方法（インターネット経由とVPN経由など）でブリッジされる2つの異なるネットワークに存在しています。Runnerのルーティングメカニズムでは、VPN経由のDNSサービスではなく、デフォルトのインターネットサービスを介してDNSをクエリする可能性があります。この設定を使用すると、次のメッセージが表示されます。
 
@@ -130,7 +124,7 @@ Created fresh repository.
 fatal: Authentication failed for 'https://gitlab.example.com/group/example-project.git/'
 ```
 
-この場合の認証失敗の原因は、インターネットとGitLabサービスの間にあるサービスにあります。このサービスは個別の認証情報を使用しており、RunnerがVPN経由でDNSサービスを使用した場合は、Runnerがそれらの認証情報を回避している可能性があります。
+この場合の認証の失敗の原因は、インターネットとGitLabサービスの間にあるサービスにあります。このサービスは個別の認証情報を使用しており、RunnerがVPN経由でDNSサービスを使用した場合は、Runnerがそれらの認証情報を回避している可能性があります。
 
 使用するDNSサーバーをDockerに指示するには、[Runnerの`config.toml`ファイル](../configuration/advanced-configuration.md#the-runnersdocker-section)の`[runners.docker]`セクションで`dns`設定を使用します。
 
@@ -138,15 +132,15 @@ fatal: Authentication failed for 'https://gitlab.example.com/group/example-proje
 dns = ["192.168.xxx.xxx","192.168.xxx.xxx"]
 ```
 
-## `x509: certificate signed by unknown authority`が表示される
+## `x509: certificate signed by unknown authority`が表示される {#im-seeing-x509-certificate-signed-by-unknown-authority}
 
 詳細については、[自己署名証明書](../configuration/tls-self-signed.md)を参照してください。
 
-## `/var/run/docker.sock`へアクセスするときに`Permission Denied`が表示される
+## `/var/run/docker.sock`へアクセスするときに`Permission Denied`が表示される {#i-get-permission-denied-when-accessing-the-varrundockersock}
 
 Docker executorを使用する場合に、サーバーにインストールされているDocker Engineに接続しているとします。この場合には`Permission Denied`エラーが表示されることがあります。最も可能性が高い原因は、システムがSELinuxを使用していることです（CentOS、Fedora、RHELではデフォルトで有効になっています）。システムでSELinuxポリシーを調べて、拒否がないか確認してください。
 
-## Docker-machineエラー: `Unable to query docker version: Cannot connect to the docker engine endpoint.`
+## Docker-machineエラー: `Unable to query docker version: Cannot connect to the docker engine endpoint.` {#docker-machine-error-unable-to-query-docker-version-cannot-connect-to-the-docker-engine-endpoint}
 
 このエラーはマシンのプロビジョニングに関連しており、次の原因が考えられます。
 
@@ -168,31 +162,31 @@ Docker executorを使用する場合に、サーバーにインストールさ�
 
 {{< /alert >}}
 
-## `dialing environment connection: ssh: rejected: connect failed (open failed)`
+## `dialing environment connection: ssh: rejected: connect failed (open failed)` {#dialing-environment-connection-ssh-rejected-connect-failed-open-failed}
 
 このエラーは、SSH経由で接続をトンネルしているときに、Docker autoscalerがターゲットシステムのDockerデーモンに到達できない場合に発生します。ターゲットシステムにSSHで接続し、`docker info`などのDockerコマンドを正常に実行できることを確認します。
 
-## 自動スケールされたRunnerにAWSインスタンスプロファイルを追加する
+## オートスケールされたRunnerにAWSインスタンスプロファイルを追加する {#adding-an-aws-instance-profile-to-your-autoscaled-runners}
 
 AWS IAMロールを作成した後、IAMコンソールではそのロールに**ロールARN**と**インスタンスプロファイルARN**があります。**ロール名****ではなく****インスタンスプロファイル**名を使用する必要があります。
 
 `[runners.machine]`セクションに値`"amazonec2-iam-instance-profile=<instance-profile-name>",`を追加します。
 
-## Javaプロジェクトのビルド時にDocker executorがタイムアウトになる
+## Javaプロジェクトのビルド時にDocker executorがタイムアウトになる {#the-docker-executor-gets-timeout-when-building-java-project}
 
-最も可能性が高い原因は、破損した`aufs`ストレージドライバーです。[Javaプロセスがコンテナ内でハングアップ](https://github.com/moby/moby/issues/18502)します。最適な解決策は、[ストレージドライバー](https://docs.docker.com/storage/storagedriver/select-storage-driver/)をOverlayFS（高速）またはDeviceMapper（低速）のいずれかに変更することです。
+最も可能性が高い原因は、破損した`aufs`ストレージドライバーです。[Javaプロセスがコンテナ内でハングアップ](https://github.com/moby/moby/issues/18502)します。最適な解決策は、[ストレージドライバー](https://docs.docker.com/engine/storage/drivers/select-storage-driver/)をOverlayFS（高速）またはDeviceMapper（低速）のいずれかに変更することです。
 
-[Dockerの設定と実行に関する記事](https://docs.docker.com/config/daemon/)、または[systemdによる制御と設定に関する記事](https://docs.docker.com/engine/daemon/proxy/#systemd-unit-file)を確認してください。
+[Dockerの設定と実行に関する記事](https://docs.docker.com/engine/daemon/)、または[systemdによる制御と設定に関する記事](https://docs.docker.com/engine/daemon/proxy/#systemd-unit-file)を確認してください。
 
-## アーティファクトのアップロード時に411が表示される
+## アーティファクトのアップロード時に411が表示される {#i-get-411-when-uploading-artifacts}
 
 GitLab Runnerが`Transfer-Encoding: chunked`を使用していることが原因で発生します。これは、以前のバージョンのNGINXで破損しています（<https://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors>）。
 
 NGINXを新しいバージョンにアップグレードしてください。詳細については、イシュー<https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1031>を参照してください。
 
-## 他のアーティファクトのアップロードエラーが発生しています。このエラーを詳しくデバッグするにはどうすればよいですか？
+## 他のアーティファクトのアップロードエラーが発生しています。このエラーを詳しくデバッグするにはどうすればよいですか？ {#i-am-seeing-other-artifact-upload-errors-how-can-i-further-debug-this}
 
-アーティファクトは、GitLab Runnerプロセスをバイパスして、ビルド環境からGitLabインスタンスに直接アップロードされます。次に例を示します:
+アーティファクトは、GitLab Runnerプロセスを回避して、ビルド環境からGitLabインスタンスに直接アップロードされます。次に例を示します。
 
 - Docker executorの場合、アップロードはDockerコンテナから行われます
 - Kubernetes executorの場合、アップロードはビルドポッドのビルドコンテナから行われます
@@ -209,9 +203,9 @@ NGINXを新しいバージョンにアップグレードしてください。詳
 
 {{< /alert >}}
 
-アップロードがGitLabに到達してもエラーステータスコードで失敗する場合（たとえば、成功以外の応答ステータスコードが生成される場合）は、GitLabインスタンス自体を調べます。一般的なアーティファクトのアップロードのイシューについては、[GitLabドキュメント](https://docs.gitlab.com/administration/cicd/job_artifacts_troubleshooting/#job-artifact-upload-fails-with-error-500)を参照してください。
+アップロードがGitLabに到達してもエラー状態コードで失敗する場合（たとえば、成功以外の応答ステータスコードが生成される場合）は、GitLabインスタンス自体を調べます。一般的なアーティファクトのアップロードのイシューについては、[GitLabドキュメント](https://docs.gitlab.com/administration/cicd/job_artifacts_troubleshooting/#job-artifact-upload-fails-with-error-500)を参照してください。
 
-## `No URL provided, cache will not be download`/`uploaded`
+## `No URL provided, cache will not be download`/`uploaded` {#no-url-provided-cache-will-not-be-downloaduploaded}
 
 このエラーは、GitLab Runnerヘルパーが無効なURLを受信するか、リモートキャッシュにアクセスするための事前署名付きURLがない場合に発生します。[`config.toml`のキャッシュ関連のエントリ](../configuration/advanced-configuration.md#the-runnerscache-section)と、プロバイダー固有のキーと値を確認します。URL構文の要件に従っていないアイテムから無効なURLが作成される可能性があります。
 
@@ -219,7 +213,7 @@ NGINXを新しいバージョンにアップグレードしてください。詳
 
 認証情報の設定に問題がある場合は、診断エラーメッセージがGitLab Runnerプロセスログに追加されます。
 
-## エラー: `warning: You appear to have cloned an empty repository.`
+## エラー: `warning: You appear to have cloned an empty repository.` {#error-warning-you-appear-to-have-cloned-an-empty-repository}（ヘルプページドキュメントのべースURLがブロックされています: 実行が期限切れです）
 
 HTTP(S)を使用して`git clone`を実行すると（GitLab Runnerを使用するか、テスト用に手動で実行）、次の出力が表示されます。
 
@@ -242,7 +236,7 @@ GitLabレシピリポジトリには、ApacheとNGINXの[Webサーバー設定�
 
 [ユーザーイシューの例](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1105)を参照してください。
 
-## エラー: `Timezone`または`OffPeakTimezone`の使用時に`zoneinfo.zip: no such file or directory`エラーが発生する
+## エラー: `Timezone`または`OffPeakTimezone`の使用時に`zoneinfo.zip: no such file or directory`エラーが発生する {#error-zoneinfozip-no-such-file-or-directory-error-when-using-timezone-or-offpeaktimezone}
 
 `[[docker.machine.autoscaling]]`の期間が記述されているタイムゾーンを設定できます。この機能は、ほとんどのUnixシステムですぐに動作するはずです。ただし、一部のUnixシステムとほとんどの非Unixシステム（GitLab Runnerバイナリが利用可能なWindowsなど）では、Runnerが起動時に次のエラーでクラッシュする可能性があります。
 
@@ -267,11 +261,11 @@ sudo yum install tzdata
 sudo apk add -U tzdata
 ```
 
-システムがこのデータベースを_ネイティブ_な方法で提供していない場合は、次の手順に従って`OffPeakTimezone`を動作させることができます:
+システムがこのデータベースを_ネイティブ_な方法で提供していない場合は、次の手順に従って`OffPeakTimezone`を動作させることができます。
 
 1. [`zoneinfo.zip`](https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip)をダウンロードします。バージョンv9.1.0以降では、タグ付けされたパスからファイルをダウンロードできます。この場合は、`zoneinfo.zip`ダウンロードURLで`latest`をタグ名（`v9.1.0`など）に置き換える必要があります。
 
-1. このファイルを既知のディレクトリに保存します。`config.toml`ファイルが存在するディレクトリを使用することをお勧めします。たとえば、WindowsマシンでRunnerをホストしていて、設定ファイルが`C:\gitlab-runner\config.toml`に保存されている場合は、`zoneinfo.zip`を`C:\gitlab-runner\zoneinfo.zip`に保存します。
+1. このファイルを既知のディレクトリに保存します。`config.toml`ファイルが存在するディレクトリを使用することをお勧めします。たとえば、WindowsマシンでRunnerをホスティングしていて、設定ファイルが`C:\gitlab-runner\config.toml`に保存されている場合は、`zoneinfo.zip`を`C:\gitlab-runner\zoneinfo.zip`に保存します。
 
 1. `zoneinfo.zip`ファイルのフルパスを含む`ZONEINFO`環境変数を設定します。`run`コマンドを使用してRunnerを起動する場合は、次のようにします。
 
@@ -291,13 +285,13 @@ sudo apk add -U tzdata
    - Unixシステムでは、サービスマネージャーソフトウェアで設定を変更します。
    - Windowsでは、システム設定でGitLab Runnerユーザーが利用できる環境変数のリストに`ZONEINFO`変数を追加します。
 
-## 複数のGitLab Runnerインスタンスを実行できないのはなぜですか？
+## 複数のGitLab Runnerインスタンスを実行できないのはなぜですか？ {#why-cant-i-run-more-than-one-instance-of-gitlab-runner}
 
 同じ`config.toml`ファイルを共有していなければ実行できます。
 
 同じ設定ファイルを使用する複数のGitLab Runnerインスタンスを実行すると、デバッグが難しい予期しない動作が発生する可能性があります。一度に1つのGitLab Runnerインスタンスのみが特定の`config.toml`ファイルを使用できます。
 
-## `Job failed (system failure): preparing environment:`
+## `Job failed (system failure): preparing environment:` {#job-failed-system-failure-preparing-environment}
 
 このエラーは多くの場合、Shellによる[プロファイルの読み込み](../shells/_index.md#shell-profile-loading)が原因で発生します。スクリプトの1つが失敗の原因となっています。
 
@@ -307,23 +301,23 @@ sudo apk add -U tzdata
 - `.condarc`
 - `.rvmrc`
 
-SELinuxもこのエラーの原因となる可能性があります。これは、SELinux監査ログを調べることで確認できます:
+SELinuxもこのエラーの原因となる可能性があります。これは、SELinux監査ログを調べることで確認できます。
 
 ```shell
 sealert -a /var/log/audit/audit.log
 ```
 
-## Runnerが`Cleaning up`ステージの後に突然終了する
+## Runnerが`Cleaning up`ステージの後に突然終了する {#runner-abruptly-terminates-after-cleaning-up-stage}
 
 「コンテナドリフト検出」設定が有効になっている場合に、ジョブの`Cleaning up files`ステージの後でCrowdStrike Falcon Sensorがポッドを強制終了することが報告されています。ジョブを確実に完了できるようにするには、この設定を無効にする必要があります。
 
-## ジョブが`remote error: tls: bad certificate (exec.go:71:0s)`で失敗する
+## ジョブが`remote error: tls: bad certificate (exec.go:71:0s)`で失敗する {#job-fails-with-remote-error-tls-bad-certificate-execgo710s}
 
 このエラーは、アーティファクトを作成するジョブの実行中にシステム時刻が大幅に変更された場合に発生する可能性があります。システム時刻が変更されたため、SSL証明書の有効期限が切れ、Runnerがアーティファクトをアップロードしようとするとエラーが発生します。
 
 アーティファクトのアップロード中にSSL検証が確実に成功するようにするには、ジョブの終わりにシステム時刻を有効な日付と時刻に変更します。アーティファクトファイルの作成時刻も変更されているため、アーティファクトファイルは自動的にアーカイブされます。
 
-## Helmチャート: `ERROR .. Unauthorized`
+## Helmチャート: `ERROR .. Unauthorized` {#helm-chart-error--unauthorized}
 
 HelmでデプロイされたRunnerをアンインストールまたはアップグレードする前に、GitLabでRunnerを一時停止し、ジョブが完了するまで待ちます。
 
@@ -341,13 +335,13 @@ ERROR: Job failed (system failure): Unauthorized
 
 <!-- markdownlint-disable line-length -->
 
-## Elasticsearchサービスコンテナの起動エラー `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
+## Elasticsearchサービスコンテナの起動エラー `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]` {#elasticsearch-service-container-startup-error-max-virtual-memory-areas-vmmax_map_count-65530-is-too-low-increase-to-at-least-262144}
 
-Elasticsearchには、Elasticsearchが実行されるインスタンスで設定する必要がある`vm.max_map_count`要件があります。
+Elasticsearchには、Elasticsearchが実行されるインスタンスで設定する必要がある`vm.max_map_count`要求事項があります。
 
-プラットフォームに応じてこの値を正しく設定する方法については、[Elasticsearchドキュメント](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-prod-prerequisites)を参照してください。
+プラットフォームに応じてこの値を正しく設定する方法については、[Elasticsearchドキュメント](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-prod)を参照してください。
 
-## `Preparing the "docker+machine" executor ERROR: Preparation failed: exit status 1 Will be retried in 3s`
+## `Preparing the "docker+machine" executor ERROR: Preparation failed: exit status 1 Will be retried in 3s` {#preparing-the-dockermachine-executor-error-preparation-failed-exit-status-1-will-be-retried-in-3s}
 
 このエラーは、Docker Machineがexecutor仮想マシンを正常に作成できない場合に発生する可能性があります。このエラーに関する詳細情報を取得するには、`config.toml`で定義した`MachineOptions`を使用して、仮想マシンを手動で作成します。
 
@@ -355,7 +349,7 @@ Elasticsearchには、Elasticsearchが実行されるインスタンスで設定
 
 <!-- markdownlint-enable line-length -->
 
-## `No unique index found for name`
+## `No unique index found for name` {#no-unique-index-found-for-name}
 
 このエラーは、Runnerを作成または更新するときに、データベースに`tags`テーブルの一意のインデックスがない場合に発生する可能性があります。GitLab UIで`Response not successful: Received status code 500`エラーが発生する場合があります。
 
