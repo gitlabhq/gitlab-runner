@@ -1,0 +1,22 @@
+concurrent = 2
+check_interval = 3
+log_level = "info"
+
+[[runners]]
+  name = "test-docker-runner"
+  url = "https://gitlab.example.com/"
+  token = "test-token1"
+  executor = "docker"
+  environment = ["ENV=test"]
+[[runners]]
+  name = "test-shell-runner-1"
+  url = "https://gitlab.example.com/"
+  token = "test-token2"
+  executor = "shell"
+  environment = ["ENV=test-local"]
+[[runners]]
+  name = "test-shell-runner-2"
+  url = "https://gitlab.example.com/"
+  token = "test-token3"
+  executor = "shell"
+  environment = ["ENV=test-local"]
