@@ -48,7 +48,7 @@ Error cleaning up pod: etcdserver: request timed out
 Error cleaning up pod: context deadline exceeded
 ```
 
-## Dial tcp xxx.xx.x.x:xxx: i/o timeout
+## `Dial tcp xxx.xx.x.x:xxx: i/o timeout`
 
 This is a Kubernetes error that generally indicates the Kubernetes API server is unreachable by the runner manager.
 To resolve this issue:
@@ -229,7 +229,7 @@ This shell process, which might be `sh`, `bash` or `busybox`, with a `PPID` of 1
 started by the shell detection script run by the init system (`PID` 1 above). The process is not redundant, and is the typical
 operation when the build container runs with an init system.
 
-## Runner pod fails to run job results and timesout despite successful registration
+## Runner pod fails to run job results and times out despite successful registration
 
 After the runner pod registers with GitLab, it attempts to run a job but does not and the job eventually times out. The following errors are reported:
 
@@ -272,7 +272,7 @@ To resolve this issue:
   `securityContext.readOnlyRootFilesystem` to `true` for their containers so the
   admission controller does not block the pod.
 - The containers must run successfully and be able to write to the filesystem
-  even though the root filesystem is mounted read-only.
+  even though the root file system is mounted read-only.
 
 ### For GitLab Runner
 
@@ -288,7 +288,7 @@ you must update the GitLab chart configuration to have:
   <...>
   ```
 
-- A writable filesystem mounted where the pod can write:
+- A writable file system mounted where the pod can write:
 
   ```yaml
   <...>
@@ -304,7 +304,7 @@ you must update the GitLab chart configuration to have:
 
 ### For the build pod
 
-To make the build pod run on a read-only root filesystem,
+To make the build pod run on a read-only root file system,
 configure the different containers' security contexts in `config.toml`.
 You can set the GitLab chart variable `runners.config`, which is passed to the build pod:
 
@@ -326,7 +326,7 @@ runners:
 ```
 
 To make the build pod and its containers run successfully on a read-only
-filesystem, you must have writable filesystems in locations where the build pod can write.
+file system, you must have writable filesystems in locations where the build pod can write.
 At a minimum, these locations are the build and home directories.
 Ensure the build process has write access to other locations if necessary.
 

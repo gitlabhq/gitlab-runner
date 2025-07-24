@@ -260,7 +260,7 @@ Each `[[runners]]` section defines one runner.
 | `clean_git_config`                    | Cleans the Git configuration. For more information, see [Cleaning Git configuration](#cleaning-git-configuration). |
 | `referees`                            | Extra job monitoring workers that pass their results as job artifacts to GitLab. |
 | `unhealthy_requests_limit`            | The number of `unhealthy` responses to new job requests after which a runner worker is disabled. |
-| `unhealthy_interval`                  | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like '3600 s', '1 h 30 min' etc. |
+| `unhealthy_interval`                  | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like `3600 s`, `1 h 30 min`, and similar. |
 | `job_status_final_update_retry_limit` | The maximum number of times GitLab Runner can retry to push the final job status to the GitLab instance. |
 
 Example:
@@ -429,7 +429,7 @@ The following settings define the Docker container parameters. These settings ar
 | `container_labels`                 |                                                  | A set of labels to add to each container created by the runner. The label value can include environment variables for expansion. |
 | `services_limit`                   |                                                  | Set the maximum allowed services per job. `-1` (default) means there is no limit. |
 | `service_cpuset_cpus`              |                                                  | String value containing the `cgroups CpusetCpus` to use for a service. |
-| `service_cpu_shares`               |                                                  | Number of CPU shares used to set a service's relative CPU usage (default:  [`1024`](https://docs.docker.com/engine/containers/resource_constraints/#cpu)). |
+| `service_cpu_shares`               |                                                  | Number of CPU shares used to set a service's relative CPU usage (default: [`1024`](https://docs.docker.com/engine/containers/resource_constraints/#cpu)). |
 | `service_cpus`                     |                                                  | String value of the number of CPUs for a service. Available in Docker 1.13 or later. |
 | `service_gpus`                     |                                                  | GPU devices for Docker container. Uses the same format as the `docker` CLI. View details in the [Docker documentation](https://docs.docker.com/engine/containers/resource_constraints/#gpu). Requires [configuration to enable GPUs](gpus.md#docker-executor). |
 | `service_memory`                   |                                                  | String value of the memory limit for a service. |
@@ -814,9 +814,9 @@ The following parameters configure the autoscaler feature. You can only use thes
 | `instance_ready_command`         | Executes this command on each instance provisioned by the autoscaler to ensure that it is ready for use. A failure results in the instance being removed. Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37473). |
 | `instance_acquire_timeout`       | The maximum duration the runner waits to acquire an instance before it times out. Default: `15m` (15 minutes). You can adjust this value to better suit your environment. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5563). |
 | `update_interval`                | The interval to check with the fleeting plugin for instance updates. Default: `1m` (1 minute). Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
-| `update_interval_when_expecting` | The interval to check with the fleeting plugin for instance updates when expecting a state change. For example, when an instance has provisioned an instance and the runner is waiting to transition from `pending` to `running`). Default: `2s` (2 seconds). Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
-| `log_internal_ip` | Specifies whether the CI/CD output logs the internal IP address of the VM. Default: `false`. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
-| `log_external_ip` | Specifies whether the CI/CD output logs the external IP address of the VM. Default: `false`. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
+| `update_interval_when_expecting` | The interval to check with the fleeting plugin for instance updates when expecting a state change. For example, when an instance has provisioned an instance and the runner is waiting to transition from `pending` to `running`. Default: `2s` (2 seconds). Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
+| `log_internal_ip`                | Specifies whether the CI/CD output logs the internal IP address of the VM. Default: `false`. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
+| `log_external_ip`                | Specifies whether the CI/CD output logs the external IP address of the VM. Default: `false`. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
 
 {{< alert type="note" >}}
 
@@ -830,6 +830,7 @@ faster than the runner accepts jobs. To support scale throttling, an exponential
 
 Autoscaler configuration options don't reload with configuration changes. However, in
 GitLab 17.5.0 or later, `[[runners.autoscaler.policy]]` entries reload when configurations change.
+
 {{< /alert >}}
 
 ## The `[runners.autoscaler.plugin_config]` section
@@ -1340,18 +1341,18 @@ If `RoleARN` is present, every time the runner uploads to the cache:
 1. With the S3 credentials, the runner manager sends a request to the Amazon Security Token Service (STS) for [`AssumeRole`](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html) with `RoleARN`.
    The policy request looks similar to this:
 
-    ```json
-    {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Action": ["s3:PutObject"],
-                "Resource": "arn:aws:s3:::<YOUR-BUCKET-NAME>/<CACHE-FILENAME>"
-            }
-        ]
-    }
-    ```
+   ```json
+   {
+       "Version": "2012-10-17",
+       "Statement": [
+           {
+               "Effect": "Allow",
+               "Action": ["s3:PutObject"],
+               "Resource": "arn:aws:s3:::<YOUR-BUCKET-NAME>/<CACHE-FILENAME>"
+           }
+       ]
+   }
+   ```
 
 1. If the request is successful, the runner manager obtains temporary AWS credentials with a restricted session.
 1. The runner manager passes these credentials and URL in the `s3://<bucket name>/<filename>` format to

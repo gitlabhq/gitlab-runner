@@ -188,21 +188,16 @@ rules:
 ```
 <!-- k8s_api_permissions_role_yaml_end -->
 
-- _The `event` permission is needed only:_
+Additional details:
 
-  - _For GitLab 16.2.1 and later._
-
-- _The `namespace` permission is needed only:_
-
-  - _When enabling namespace isolation by using `namespace_per_job`._
-
-- _The `pods/log` permission is only needed when one of the following scenarios are true:_
-
-  - _The [`FF_KUBERNETES_HONOR_ENTRYPOINT` feature flag](../../configuration/feature-flags.md) is enabled._
-
-  - _The [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` feature flag](../../configuration/feature-flags.md) is disabled when the [`CI_DEBUG_SERVICES` variable](https://docs.gitlab.com/ci/services/#capturing-service-container-logs) is set to `true`._
-
-  - _The [`FF_WAIT_FOR_POD_TO_BE_REACHABLE` feature flag](../../configuration/feature-flags.md) is enabled._
+- The `event` permission is needed only for GitLab 16.2.1 and later.
+- The `namespace` permission is needed only when enabling namespace isolation by using `namespace_per_job`.
+- The `pods/log` permission is only needed when one of the following scenarios are true:
+  - The [`FF_KUBERNETES_HONOR_ENTRYPOINT` feature flag](../../configuration/feature-flags.md) is enabled.
+  - The [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` feature flag](../../configuration/feature-flags.md)
+    is disabled when the [`CI_DEBUG_SERVICES` variable](https://docs.gitlab.com/ci/services/#capturing-service-container-logs)
+    is set to `true`.
+  - The [`FF_WAIT_FOR_POD_TO_BE_REACHABLE` feature flag](../../configuration/feature-flags.md) is enabled.
 
 #### Informers
 
@@ -953,7 +948,7 @@ The GitLab naming convention is different to the Kubernetes one.
 
 | Runner pull policy | Kubernetes pull policy | Description |
 |--------------------|------------------------|-------------|
-| _blank_            | _blank_                | Uses the default policy, as specified by Kubernetes. |
+| none               | none                   | Uses the default policy, as specified by Kubernetes. |
 | `if-not-present`   | `IfNotPresent`         | The image is pulled only if it is not already present on the node that executes the job. Review the [security considerations](../../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) before you use this pull policy. |
 | `always`           | `Always`               | The image is pulled every time the job is executed. |
 | `never`            | `Never`                | The image is never pulled and requires the node to already have it. |
@@ -1119,11 +1114,11 @@ for either:
 
 If you don't set either, the overwrite is disabled.
 
-### Set the RuntimeClass
+### Set the `RuntimeClass`
 
-Use `runtime_class_name` to set the [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/) for each job container.
+Use `runtime_class_name` to set the [`RuntimeClass`](https://kubernetes.io/docs/concepts/containers/runtime-class/) for each job container.
 
-If you specify a RuntimeClass name but did not configure it in the cluster, or the feature is not supported,
+If you specify a `RuntimeClass` name but did not configure it in the cluster, or the feature is not supported,
 the executor fails to create jobs.
 
 ```toml
@@ -1553,13 +1548,13 @@ Use the following settings to configure each lifecycle hook:
 | `http_get`   | `KubernetesLifecycleHTTPGet`    | No       | `HTTPGet` specifies the http request to perform. |
 | `tcp_socket` | `KubernetesLifecycleTcpSocket`  | No       | `TCPsocket` specifies an action involving a TCP port. |
 
-#### KubernetesLifecycleExecAction
+#### `KubernetesLifecycleExecAction`
 
 | Option    | Type          | Required | Description |
 |-----------|---------------|----------|-------------|
 | `command` | `string` list | Yes      | The command line to execute inside the container. |
 
-#### KubernetesLifecycleHTTPGet
+#### `KubernetesLifecycleHTTPGet`
 
 | Option         | Type                                    | Required | Description |
 |----------------|-----------------------------------------|----------|-------------|
@@ -1569,14 +1564,14 @@ Use the following settings to configure each lifecycle hook:
 | `scheme`       | string                                  | No       | The scheme used for connecting to the host. Defaults to HTTP (optional). |
 | `http_headers` | `KubernetesLifecycleHTTPGetHeader` list | No       | Custom headers to set in the request (optional). |
 
-#### KubernetesLifecycleHTTPGetHeader
+#### `KubernetesLifecycleHTTPGetHeader`
 
 | Option  | Type   | Required | Description |
 |---------|--------|----------|-------------|
 | `name`  | string | Yes      | HTTP header name. |
 | `value` | string | Yes      | HTTP header value. |
 
-#### KubernetesLifecycleTcpSocket
+#### `KubernetesLifecycleTcpSocket`
 
 | Option | Type   | Required | Description |
 |--------|--------|----------|-------------|
@@ -1623,7 +1618,7 @@ check_interval = 30
         name = "edns0"
 ```
 
-#### KubernetesDNSConfigOption
+#### `KubernetesDNSConfigOption`
 
 | Option  | Type      | Required | Description |
 |---------|-----------|----------|-------------|
@@ -2007,7 +2002,7 @@ In Docker 19.03 and later, TLS is enabled by
 default but you must map certificates to your client.
 You can enable non-TLS connection for Docker-in-Docker or
 mount certificates. For more information, see
-[**Use Docker In Docker Workflow with Docker executor**](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker).
+[Use the Docker executor with Docker-in-Docker](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker).
 
 ### Prevent host kernel exposure
 
