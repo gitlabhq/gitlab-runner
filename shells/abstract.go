@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -77,11 +78,13 @@ func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (string, 
 	}
 
 	// Deduce cache key
-	// We deliberately don't use path.Join, to not have path traversal issues with e.g. a job nome like
-	// `some/../../job/name` and a git ref like `foo/../bar` would result in `../job/name/bar`.
-	key := build.JobInfo.Name + "/" + build.GitInfo.Ref
+	var key string
 	if userKey != "" {
 		key = build.GetAllVariables().ExpandValue(userKey)
+	} else {
+		// we root the path, to not have path traversal issues
+		path := path.Join("/", build.JobInfo.Name, build.GitInfo.Ref)
+		key = path[1:]
 	}
 
 	// Ignore cache without the key
@@ -185,8 +188,7 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 ) {
 	allowedCacheKeys := []string{}
 
-	build := info.Build
-	buildVars := build.GetAllVariables()
+	buildVars := info.Build.GetAllVariables()
 	addCacheKey := func(key string, err error) {
 		if key != "" {
 			allowedCacheKeys = append(allowedCacheKeys, key)
@@ -197,16 +199,16 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	}
 
 	// the "default" cache key
-	addCacheKey(sanitizeCacheKey(build, cacheKey))
+	addCacheKey(sanitizeCacheKey(cacheKey))
 
 	// the fallback cache keys from the cache config
 	for _, cacheKey := range cacheOptions.FallbackKeys {
-		addCacheKey(sanitizeCacheKey(build, buildVars.ExpandValue(cacheKey)))
+		addCacheKey(sanitizeCacheKey(buildVars.ExpandValue(cacheKey)))
 	}
 
 	// the fallback key from CACHE_FALLBACK_KEY
 	// we sanitize it and check if it's not pointing to a protected cache.
-	fallbackCacheKey, err := sanitizeCacheKey(build, buildVars.Value("CACHE_FALLBACK_KEY"))
+	fallbackCacheKey, err := sanitizeCacheKey(buildVars.Value("CACHE_FALLBACK_KEY"))
 	blockedSuffix := "-protected"
 	if !strings.HasSuffix(fallbackCacheKey, blockedSuffix) {
 		addCacheKey(fallbackCacheKey, err)
@@ -226,92 +228,68 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 
 // sanitizeCacheKey replicates some cache key rules from GitLab and adds additional validations for known-bad cache
 // keys.
-// Special care is taken for the defaulted key (ie. `jobName/gitRef`, when no user key is provided): we sanitize both
-// parts and validate them individually.
-//
-// Accepting the added complexity by in-lining some helper funcs in favor of not polluting the global namespace.
-//
-//nolint:gocognit
-func sanitizeCacheKey(build *common.Build, cacheKey string) (sanitizedKey string, err error) {
+// It accepts that the cache keys can be paths and:
+//   - replaces the URL encoded version of `/` & `.` with their ASCII ones
+//   - replaces all `\` with `/`
+//   - ensures there are no path traversals possible "outside of the base path"
+//   - ensures the last path element is not empty or ends in a space
+func sanitizeCacheKey(cacheKey string) (sanitizedKey string, err error) {
 	if cacheKey == "" {
 		return "", nil
 	}
 
-	const slashReplace = "__"
-
-	key := strings.TrimSpace(cacheKey)
-
-	blockDots := func(key string, isPartial bool) error {
-		if !slices.Contains([]string{".", "..", "%2e", "%2e%2e", ".%2e", "%2e."}, strings.ToLower(key)) {
-			return nil
+	replaceEncodedSlashes := func(s string) string {
+		for _, slash := range []string{"%2f", "%2F"} {
+			s = strings.ReplaceAll(s, slash, "/")
 		}
-		return &cacheKeyError{key, "must not be '.', '..' or their URL-encoded equivalent", isPartial}
+		return s
 	}
-	replaceAllSlashes := func(key string) string {
-		for _, slash := range []string{"/", "%2f", "%2F"} {
-			key = strings.ReplaceAll(key, slash, slashReplace)
+	replaceEncodedDots := func(s string) string {
+		for _, dot := range []string{"%2e", "%2E"} {
+			s = strings.ReplaceAll(s, dot, ".")
 		}
-		return key
+		return s
+	}
+	toSlash := func(s string) string {
+		return strings.ReplaceAll(s, `\`, `/`)
+	}
+	trimSpaceRight := func(s string) string {
+		return strings.TrimRightFunc(s, unicode.IsSpace)
 	}
 
-	if err := blockDots(key, false); err != nil {
-		return "", err
-	}
+	// We root the path, so that path traversals outside of the base path, e.g. resulting in a key like `../../foo/bar`,
+	// aren't possible
+	// Note: path.Join calls path.Clean internally
+	cleaned := path.Join(
+		"/", toSlash(replaceEncodedSlashes(replaceEncodedDots(cacheKey))),
+	)
 
-	isDefaultedKey := cacheKey == build.JobInfo.Name+"/"+build.GitInfo.Ref
-	if isDefaultedKey {
-		// For the defaulted key we need to sanitize the two parts of the key individually.
-		// We rebuild the key here with the raw data from the build and sanitize & validate both parts before joining them
-		// together and rebuild the key.
-		jobName := strings.TrimSpace(replaceAllSlashes(build.JobInfo.Name))
-		gitRef := strings.TrimSpace(replaceAllSlashes(build.GitInfo.Ref))
-		for _, part := range []string{jobName, gitRef} {
-			if part == "" {
-				return "", &cacheKeyError{part, "could not be sanitized", true}
-			}
-			if err := blockDots(part, true); err != nil {
-				return "", err
-			}
+	var key string
+	for {
+		if cleaned == "" {
+			break
 		}
-		key = jobName + "/" + gitRef
-	} else if strings.Contains(cacheKey, "/") || strings.Contains(strings.ToLower(cacheKey), "%2f") {
-		// for non-defaulted keys, we don't allow `/` at all
-		return "", &cacheKeyError{cacheKey, "must not contain '/' or its URL-encoded equivalent", false}
-	}
 
-	// If the build environment is Windows, then `\` is a path separator, which we're not allowing, so for backwards
-	// compatibility we convert them to __.
-	//
-	// This does mean that "cache__key" and "cache\key" collide and that we're going to immediately invalidate any
-	// existing cache that uses `\`: the hope is that this is unlikely. However, we at least print a warning to the user,
-	// that we've changed the cache key.
-	//
-	// We could disallow `\` entirely, but the problem is that we've never documented that this is a disallowed character.
-	// For `/`, it's documented that this isn't allowed, and any use of it is just circumvention.
-	key = strings.ReplaceAll(key, `\`, slashReplace)
+		dir, file := path.Split(cleaned)
+		file = trimSpaceRight(file)
+
+		if file == "" {
+			cleaned = dir[:len(dir)-1] // cut off the trailing `/` from dir and continue with that
+			continue
+		}
+
+		key = path.Join(dir[1:], file) // cut off the leading `/` from dir, because we rooted the path initially
+		break
+	}
 
 	if key == "" {
-		return "", &cacheKeyError{cacheKey, "could not be sanitized", false}
+		return "", fmt.Errorf("cache key %q could not be sanitized", cacheKey)
 	}
 	if key != cacheKey {
-		return key, &cacheKeyError{cacheKey, fmt.Sprintf("sanitized to %q", key), false}
+		return key, fmt.Errorf("cache key %q sanitized to %q", cacheKey, key)
 	}
 
 	return key, nil
-}
-
-type cacheKeyError struct {
-	rawKey    string
-	err       string
-	isPartial bool
-}
-
-func (cke *cacheKeyError) Error() string {
-	target := "cache key"
-	if cke.isPartial {
-		target += " part"
-	}
-	return fmt.Sprintf("%s %q %s", target, cke.rawKey, cke.err)
 }
 
 func (b *AbstractShell) addExtractCacheCommand(
@@ -1265,6 +1243,15 @@ func (b *AbstractShell) archiveCache(
 		cacheKey, cacheFile, err := b.cacheFile(info.Build, cacheOptions.Key)
 		if err != nil {
 			w.Noticef("Skipping cache archiving due to %v", err)
+			continue
+		}
+		// we also want to sanitize the cache key on upload, so that we actually use the same keys on up and download, ie.
+		// it round-trips
+		cacheKey, err = sanitizeCacheKey(cacheKey)
+		if err != nil {
+			w.Warningf(err.Error())
+		}
+		if cacheKey == "" {
 			continue
 		}
 

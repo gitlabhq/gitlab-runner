@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -1313,30 +1314,29 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 		"using sanitized fallback key": {
 			cacheType:                 "test",
 			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  `  hello....there  `,
+			cacheFallbackKeyVarValue:  `hello.%2e..there  `,
 			expectedCacheKeys:         []string{"test-cache-key", "hello....there"},
-			expectedAdditionalWarning: []any{`cache key "  hello....there  " sanitized to "hello....there"`},
+			expectedAdditionalWarning: []any{`cache key "hello.%2e..there  " sanitized to "hello....there"`},
 		},
 		"using something that looks like a windows path": {
 			cacheType:                 "test",
 			cacheKey:                  "test-cache-key",
 			cacheFallbackKeyVarValue:  `looks\like\a\win\path`,
-			expectedCacheKeys:         []string{"test-cache-key", "looks__like__a__win__path"},
-			expectedAdditionalWarning: []any{`cache key "looks\\like\\a\\win\\path" sanitized to "looks__like__a__win__path"`},
+			expectedCacheKeys:         []string{"test-cache-key", "looks/like/a/win/path"},
+			expectedAdditionalWarning: []any{`cache key "looks\\like\\a\\win\\path" sanitized to "looks/like/a/win/path"`},
 		},
 		"using path-like fallback cache key": {
-			cacheType:                 "test",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  `foo/bar/baz`,
-			expectedCacheKeys:         []string{"test-cache-key"},
-			expectedAdditionalWarning: []any{`cache key "foo/bar/baz" must not contain '/' or its URL-encoded equivalent`},
+			cacheType:                "test",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: `foo/bar/baz`,
+			expectedCacheKeys:        []string{"foo/bar/baz", "test-cache-key"},
 		},
 		"using invalid fallback cache key": {
 			cacheType:                 "test",
 			cacheKey:                  "test-cache-key",
 			cacheFallbackKeyVarValue:  `..`,
 			expectedCacheKeys:         []string{"test-cache-key"},
-			expectedAdditionalWarning: []any{`cache key ".." must not be '.', '..' or their URL-encoded equivalent`},
+			expectedAdditionalWarning: []any{`cache key ".." could not be sanitized`},
 		},
 		"using reserved suffix": {
 			cacheType:                 "test",
@@ -1356,9 +1356,9 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 		},
 		"empty cache key, with invalid falback": {
 			cacheType:                 "test",
-			cacheFallbackKeyVarValue:  "some-fallback/invalid",
+			cacheFallbackKeyVarValue:  ".",
 			expectedCacheKeys:         []string{"some-job-name/some-ref-name"},
-			expectedAdditionalWarning: []any{`cache key "some-fallback/invalid" must not contain '/' or its URL-encoded equivalent`},
+			expectedAdditionalWarning: []any{`cache key "." could not be sanitized`},
 		},
 		"GoCloud cache with allowed key value": {
 			cacheType:                "goCloudTest",
@@ -1384,9 +1384,20 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 		},
 		"GoCloud empty cache key, with invalid falback": {
 			cacheType:                 "goCloudTest",
-			cacheFallbackKeyVarValue:  "some-fallback/invalid",
+			cacheFallbackKeyVarValue:  " /  ",
 			expectedCacheKeys:         []string{"some-job-name/some-ref-name"},
-			expectedAdditionalWarning: []any{`cache key "some-fallback/invalid" must not contain '/' or its URL-encoded equivalent`},
+			expectedAdditionalWarning: []any{`cache key " /  " could not be sanitized`},
+		},
+		"cache:key:files": {
+			cacheType:         "test",
+			cacheKey:          "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected",
+			expectedCacheKeys: []string{"0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"},
+		},
+		"cache:key:files sanitized": {
+			cacheType:                 "test",
+			cacheKey:                  "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected",
+			expectedCacheKeys:         []string{"0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"},
+			expectedAdditionalWarning: []any{`cache key "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected" sanitized to "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"`},
 		},
 	}
 
@@ -1977,6 +1988,113 @@ func TestAbstractShell_cachePolicy(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
+	tests := map[string]struct {
+		rawCacheKey               string
+		jobName                   string
+		gitRef                    string
+		expectedToSkipUpload      bool
+		expectedSanitationWarning string
+		expectedLocalFile         map[string]string
+		expectedCacheKey          string
+	}{
+		"defaulted cache key": {
+			jobName: "some-job-name",
+			gitRef:  "some-git-ref",
+			expectedLocalFile: map[string]string{
+				"linux":   "../cacheDir/some-job-name/some-git-ref/cache.zip",
+				"windows": `..\cacheDir\some-job-name\some-git-ref\cache.zip`,
+			},
+			expectedCacheKey: "some-job-name/some-git-ref",
+		},
+		"defaulted cache key sanitized": {
+			jobName: `some\job\name`,
+			gitRef:  "some/git/ref",
+			expectedLocalFile: map[string]string{
+				"linux":   `../cacheDir/some\job\name/some/git/ref/cache.zip`,
+				"windows": `..\cacheDir\some\job\name\some\git\ref\cache.zip`,
+			},
+			expectedCacheKey:          "some/job/name/some/git/ref",
+			expectedSanitationWarning: `cache key "some\\job\\name/some/git/ref" sanitized to "some/job/name/some/git/ref"`,
+		},
+		"cache key": {
+			rawCacheKey: "hola",
+			expectedLocalFile: map[string]string{
+				"windows": `..\cacheDir\hola\cache.zip`,
+				"linux":   "../cacheDir/hola/cache.zip",
+			},
+			expectedCacheKey: "hola",
+		},
+		"cache key sanitized": {
+			rawCacheKey: `this/../key/will/be\sanitized\  `,
+			expectedLocalFile: map[string]string{
+				"linux":   `../cacheDir/key/will/be\sanitized\  /cache.zip`,
+				"windows": `..\cacheDir\key\will\be\sanitized\  \cache.zip`,
+			},
+			expectedCacheKey:          "key/will/be/sanitized",
+			expectedSanitationWarning: `cache key "this/../key/will/be\\sanitized\\  " sanitized to "key/will/be/sanitized"`,
+		},
+		"cannot be sanitized": {
+			rawCacheKey:               "/",
+			expectedToSkipUpload:      true,
+			expectedSanitationWarning: `cache key "/" could not be sanitized`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			info := common.ShellScriptInfo{
+				RunnerCommand: "some-runner-command",
+				Build: &common.Build{
+					CacheDir: "/some/cacheDir",
+					BuildDir: "/some/buildDir",
+					Runner:   &common.RunnerConfig{},
+					JobResponse: common.JobResponse{
+						JobInfo: common.JobInfo{Name: test.jobName},
+						GitInfo: common.GitInfo{Ref: test.gitRef},
+						Cache: common.Caches{
+							{
+								When:  common.CacheWhenAlways,
+								Paths: common.ArtifactPaths{"foo/bar", "foo/barz"},
+								Key:   test.rawCacheKey,
+							},
+						},
+					},
+				},
+			}
+			shell := AbstractShell{}
+			w := NewMockShellWriter(t)
+
+			if warning := test.expectedSanitationWarning; warning != "" {
+				w.On("Warningf", warning)
+			}
+
+			if !test.expectedToSkipUpload {
+				w.On("IfCmd", "some-runner-command", "--version").Once()
+				w.On("Noticef", "Creating cache %s...", test.expectedCacheKey).Once()
+				w.On("IfCmdWithOutput",
+					"some-runner-command", "cache-archiver",
+					"--file", test.expectedLocalFile[runtime.GOOS],
+					"--timeout", "10",
+					"--path", "foo/bar",
+					"--path", "foo/barz",
+				).Once()
+				w.On("Noticef", "Created cache").Once()
+				w.On("Else").Once()
+				w.On("Warningf", "Failed to create cache").Once()
+				w.On("EndIf").Once()
+				w.On("Else").Once()
+				w.On("Warningf", "Missing %s. %s is disabled.", "some-runner-command", "Creating cache").Once()
+				w.On("EndIf")
+			}
+
+			_, err := shell.archiveCache(context.TODO(), w, info, true)
+
+			assert.NoError(t, err, "expected achiveCache to succeed")
+		})
 	}
 }
 
@@ -3151,137 +3269,77 @@ func TestSanitizeCacheKey(t *testing.T) {
 		errMsg          string
 	}{
 		{rawKey: "fallback_key", expectedKey: "fallback_key"},
-		{rawKey: "fallback_key/", errMsg: "must not contain"},
+		{rawKey: "fallback_key/", expectedKey: "fallback_key", errMsg: "sanitized to"},
 		{rawKey: "fallback_key ", expectedKey: "fallback_key", errMsg: "sanitized to"},
-		{rawKey: "fallback_key\\", expectedKey: "fallback_key__", errMsg: "sanitized to"},
-		{rawKey: "fallback_key/ \\", errMsg: "must not contain"},
-		{rawKey: "fallback_key/ / \\  \\", errMsg: "must not contain"},
-		{rawKey: "fallback_key/o", errMsg: "must not contain"},
-		{rawKey: "fallback_key / \\o", errMsg: "must not contain"},
+		{rawKey: "fallback_key\\", expectedKey: "fallback_key", errMsg: "sanitized to"},
+		{rawKey: "fallback_key/ \\", expectedKey: "fallback_key", errMsg: "sanitized to"},
+		{rawKey: "fallback_key/ / \\  \\", expectedKey: "fallback_key", errMsg: "sanitized to"},
+		{rawKey: "fallback_key/o", expectedKey: "fallback_key/o"},
+		{rawKey: "fallback_key / \\o", expectedKey: "fallback_key / /o", errMsg: "sanitized to"},
 
 		{rawKey: ""},
-		{rawKey: "\\", expectedKey: "__", errMsg: "sanitized to"},
-		{rawKey: "\\.", expectedKey: "__.", errMsg: "sanitized to"},
-		{rawKey: "/", errMsg: "must not contain"},
+		{rawKey: "\\", errMsg: "could not be sanitized"},
+		{rawKey: "\\.", errMsg: "could not be sanitized"},
+		{rawKey: "/", errMsg: "could not be sanitized"},
 		{rawKey: " ", errMsg: "could not be sanitized"},
-		{rawKey: ".", errMsg: "must not be"},
-		{rawKey: "..", errMsg: "must not be"},
+		{rawKey: ".", errMsg: "could not be sanitized"},
+		{rawKey: "..", errMsg: "could not be sanitized"},
 		{rawKey: "...", expectedKey: "..."},
 
 		// %2F == '/', %2E == '.', %5C == `\`
-		{rawKey: "something %2F something", errMsg: "must not contain"},
-		{rawKey: "%2E", errMsg: "must not be"},
-		{rawKey: "%2E%2E", errMsg: "must not be"},
-		{rawKey: "%2E%2E%2E", expectedKey: "%2E%2E%2E"},
-		{rawKey: "something %2f something", errMsg: "must not contain"},
-		{rawKey: "%2e", errMsg: "must not be"},
-		{rawKey: "%2e%2E", errMsg: "must not be"},
-		{rawKey: ".%2E", errMsg: "must not be"},
-		{rawKey: "%2e.", errMsg: "must not be"},
-		{rawKey: "%2E%2e%2E", expectedKey: "%2E%2e%2E"},
+		{rawKey: "something %2F something", expectedKey: "something / something", errMsg: "sanitized to"},
+		{rawKey: "something %2f something", expectedKey: "something / something", errMsg: "sanitized to"},
+		{rawKey: "%2E", errMsg: "could not be sanitized"},
+		{rawKey: "%2E%2E", errMsg: "could not be sanitized"},
+		{rawKey: "%2E%2E%2E", expectedKey: "...", errMsg: "sanitized to"},
+		{rawKey: "%2e", errMsg: "could not be sanitized"},
+		{rawKey: "%2e%2E", errMsg: "could not be sanitized"},
+		{rawKey: ".%2E", errMsg: "could not be sanitized"},
+		{rawKey: "%2e.", errMsg: "could not be sanitized"},
+		{rawKey: "%2E%2e%2E", expectedKey: "...", errMsg: "sanitized to"},
 		// This is allowed, we don't know of any problem with this neither on local storage nor on remote/cloud.
 		{rawKey: "%5C", expectedKey: "%5C"},
 		{rawKey: "%5c", expectedKey: "%5c"},
 
-		{rawKey: "\n foo bar \t\r", expectedKey: "foo bar", errMsg: "sanitized to"},
+		{rawKey: "\t foo bar \t\r", expectedKey: "\t foo bar", errMsg: "sanitized to"},
 
-		// For the defaulted cache key
-		// Some tests are quite contrived, but after all the job name and the git ref are user provided data, so we need to
-		// be careful.
-		{
-			rawKey:          "some-job/some-ref",
-			jobNameOverride: ptr("some-job"),
-			gitRefOverride:  ptr("some-ref"),
-			expectedKey:     "some-job/some-ref",
-		},
-		{
-			rawKey:          "some%2f../job/some/ref/.",
-			jobNameOverride: ptr("some%2f../job"),
-			gitRefOverride:  ptr("some/ref/."),
-			expectedKey:     "some__..__job/some__ref__.",
-			errMsg:          "sanitized to",
-		},
-		{
-			rawKey:          ".../....",
-			jobNameOverride: ptr("..."),
-			gitRefOverride:  ptr("...."),
-			expectedKey:     ".../....",
-		},
-		{
-			rawKey:          "../.",
-			jobNameOverride: ptr(".."),
-			gitRefOverride:  ptr("."),
-			errMsg:          "must not be",
-		},
-		{
-			rawKey:          `job\name/git\ref`,
-			jobNameOverride: ptr(`job\name`),
-			gitRefOverride:  ptr(`git\ref`),
-			expectedKey:     "job__name/git__ref",
-			errMsg:          "sanitized to",
-		},
-		{
-			rawKey:          `/`,
-			jobNameOverride: ptr(``),
-			gitRefOverride:  ptr(``),
-			errMsg:          "could not be sanitized",
-		},
-		{
-			rawKey:          ` / `,
-			jobNameOverride: ptr(` `),
-			gitRefOverride:  ptr(` `),
-			errMsg:          "could not be sanitized",
-		},
-		{
-			rawKey:          ` foo / bar `,
-			jobNameOverride: ptr(` foo `),
-			gitRefOverride:  ptr(` bar `),
-			expectedKey:     "foo/bar",
-			errMsg:          "sanitized to",
-		},
+		{rawKey: "some-job/some-ref", expectedKey: "some-job/some-ref"},
+		{rawKey: "some%2f../job/some/ref/.", expectedKey: "job/some/ref", errMsg: "sanitized to"},
+		{rawKey: ".../....", expectedKey: ".../...."},
+		{rawKey: "../.", errMsg: "could not be sanitized"},
+		{rawKey: `job\name/git\ref`, expectedKey: "job/name/git/ref", errMsg: "sanitized to"},
+		{rawKey: ` / `, errMsg: "could not be sanitized"},
+		{rawKey: ` foo / bar `, expectedKey: " foo / bar", errMsg: "sanitized to"},
+		{rawKey: `//`, errMsg: "could not be sanitized"},
+		{rawKey: `//\`, errMsg: "could not be sanitized"},
 
-		{
-			rawKey:          `//`,
-			jobNameOverride: ptr(``),
-			gitRefOverride:  ptr(`/`),
-			errMsg:          "could not be sanitized",
-		},
-		{
-			rawKey:          `//`,
-			jobNameOverride: ptr(`/`),
-			gitRefOverride:  ptr(``),
-			errMsg:          "could not be sanitized",
-		},
-		{
-			rawKey:          `//\`,
-			jobNameOverride: ptr(`/`),
-			gitRefOverride:  ptr(`\`),
-			expectedKey:     "__/__",
-			errMsg:          "sanitized to",
-		},
+		{rawKey: "foo/./bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: "foo/blipp/../bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: "/foo/bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: "//foo/bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: "./foo/bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: "../foo/bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: ".../foo/bar", expectedKey: ".../foo/bar"},
+		{rawKey: "foo/bar/..", expectedKey: "foo", errMsg: "sanitized to"},
+		{rawKey: "foo/bar/../..", errMsg: "could not be sanitized"},
+		{rawKey: "foo/bar/../../../.././blerp", expectedKey: "blerp", errMsg: "sanitized to"},
+
+		{rawKey: "foo\\.\\bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: "foo\\blipp\\..\\bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: "\\foo\\bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: "\\\\foo\\bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: ".\\foo\\bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: "..\\foo\\bar", expectedKey: "foo/bar", errMsg: "sanitized to"},
+		{rawKey: "...\\foo\\bar", expectedKey: ".../foo/bar", errMsg: "sanitized to"},
+		{rawKey: "foo\\bar\\..", expectedKey: "foo", errMsg: "sanitized to"},
+		{rawKey: "foo\\bar\\..\\..", errMsg: "could not be sanitized"},
+		{rawKey: "foo\\bar\\..\\..\\..\\..\\.\\blerp", expectedKey: "blerp", errMsg: "sanitized to"},
 	}
 
 	for i, test := range tests {
 		name := fmt.Sprintf("%d: %s", i, test.rawKey)
 		t.Run(name, func(t *testing.T) {
-			build := &common.Build{
-				JobResponse: common.JobResponse{
-					JobInfo: common.JobInfo{
-						Name: "some-default-job-name",
-					},
-					GitInfo: common.GitInfo{
-						Ref: "some-default-git-ref",
-					},
-				},
-			}
-			if test.jobNameOverride != nil {
-				build.JobResponse.JobInfo.Name = *test.jobNameOverride
-			}
-			if test.gitRefOverride != nil {
-				build.JobResponse.GitInfo.Ref = *test.gitRefOverride
-			}
-
-			actual, err := sanitizeCacheKey(build, test.rawKey)
+			actual, err := sanitizeCacheKey(test.rawKey)
 			if test.errMsg == "" {
 				assert.NoError(t, err)
 			} else {
@@ -3290,10 +3348,6 @@ func TestSanitizeCacheKey(t *testing.T) {
 			assert.Equal(t, test.expectedKey, actual)
 		})
 	}
-}
-
-func ptr[T any](v T) *T {
-	return &v
 }
 
 func TestAbstractShell_writeGitCleanup(t *testing.T) {
