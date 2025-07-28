@@ -3285,17 +3285,17 @@ func newExecutor() *executor {
 }
 
 func featuresFn(features *common.FeaturesInfo) {
-	features.Variables = true
-	features.Image = true
-	features.Services = true
 	features.Artifacts = true
 	features.Cache = true
 	features.FallbackCacheKeys = true
+	features.Image = true
+	features.Proxy = true
+	features.ServiceMultipleAliases = true
+	features.ServiceVariables = true
+	features.Services = true
 	features.Session = true
 	features.Terminal = true
-	features.Proxy = true
-	features.ServiceVariables = true
-	features.ServiceMultipleAliases = true
+	features.Variables = true
 }
 
 func init() {

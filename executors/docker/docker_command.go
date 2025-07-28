@@ -390,16 +390,16 @@ func init() {
 	}
 
 	featuresUpdater := func(features *common.FeaturesInfo) {
-		features.Variables = true
 		features.Image = true
+		features.ImageExecutorOpts = true
+		features.NativeStepsIntegration = true
+		features.ServiceExecutorOpts = true
+		features.ServiceMultipleAliases = true
+		features.ServiceVariables = true
 		features.Services = true
 		features.Session = true
 		features.Terminal = true
-		features.ServiceVariables = true
-		features.ServiceMultipleAliases = true
-		features.ImageExecutorOpts = true
-		features.ServiceExecutorOpts = true
-		features.NativeStepsIntegration = true
+		features.Variables = true
 	}
 
 	common.RegisterExecutorProvider("docker", executors.DefaultExecutorProvider{
