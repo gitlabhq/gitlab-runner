@@ -3289,6 +3289,7 @@ func featuresFn(features *common.FeaturesInfo) {
 	features.Cache = true
 	features.FallbackCacheKeys = true
 	features.Image = true
+	features.ImageExecutorOpts = true
 	features.Proxy = true
 	features.ServiceMultipleAliases = true
 	features.ServiceVariables = true
