@@ -1,7 +1,8 @@
-## v18.0.4 (2025-07-18)
+## v18.0.4 (2025-07-28)
 
 ### Bug fixes
 
+- Fix cache key sanitation issues, esp. re. "cache key files" [!5741](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5741)
 - Tighten cache key sanitation [!5719](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5719)
 
 ## v18.0.3 (2025-06-11)
