@@ -55,7 +55,7 @@ target "alpine" {
   name = "alpine-${replace(version, ".", "-")}"
 
   matrix = {
-    version = ["latest", "3.18", "3.19", "3.21"]
+    version = ["latest", "3.19", "3.21"]
   }
 
   args = {

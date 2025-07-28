@@ -24,7 +24,6 @@ common-platforms = [
 ]
 
 alpine-platforms = {
-  "3.18" : setsubtract(common-platforms, ["linux/riscv64"]),
   "3.19" : setsubtract(common-platforms, ["linux/riscv64"]),
   "3.21" : common-platforms,
   "latest" : common-platforms,
@@ -40,7 +39,7 @@ target "base" {
 
 target "alpine" {
   inherits = ["base"]
-  
+
   name = "alpine-${replace(v.version, ".", "-")}-${v.arch}"
 
   matrix = {
