@@ -74,47 +74,87 @@ func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptIn
 }
 
 type cacheConfig struct {
-	HumanKey    string
-	HashedKey   string
+	// the human readable key, which can be used for logging. It might be sanitized, if not running in hasehd mode.
+	HumanKey string
+	// the hashed key, which can be used to build URLs. It might be the same as the human-readable key, if not running in
+	// hashed mode.
+	HashedKey string
+	// the archive file path, where the local cache is (to be) stored.
 	ArchiveFile string
 }
 
-func (cc cacheConfig) isHashed() bool {
-	return cc.HumanKey != cc.HashedKey
-}
-
-func newCacheConfig(build *common.Build, userKey string) (cacheConfig, error) {
-	config := cacheConfig{}
-
+// newCacheConfig creates a cacheConfig for a provided build and userKey.
+// If the userKey is empty, it is defaulted to `${jobName}/${gitRef}`.
+// Based on the build configuration (ie. FFs), the cacheConfig provides either a sanitized/human-readable cache
+// key, or raw/hashed cache key.
+// Additionally, keyChecks can be provided, which validate cache keys just after sanitation.
+func newCacheConfig(build *common.Build, userKey string, keyChecks ...func(string) bool) (*cacheConfig, string, error) {
 	if build.CacheDir == "" {
-		return config, fmt.Errorf("unset cache directory")
+		return nil, "", fmt.Errorf("unset cache directory")
 	}
 
+	rawKey := path.Join("/", build.JobInfo.Name, build.GitInfo.Ref)[1:]
 	if userKey != "" {
-		config.HumanKey = build.GetAllVariables().ExpandValue(userKey)
-	} else {
-		path := path.Join("/", build.JobInfo.Name, build.GitInfo.Ref)
-		config.HumanKey = path[1:]
-	}
-	if config.HumanKey == "" {
-		return config, fmt.Errorf("empty cache key")
+		rawKey = build.GetAllVariables().ExpandValue(userKey)
 	}
 
-	config.HashedKey = config.HumanKey
-	if build.IsFeatureFlagOn(featureflags.HashCacheKeys) {
-		config.HashedKey = fmt.Sprintf("%x", sha256.Sum256([]byte(config.HumanKey)))
+	// hashers per mode: nop in unhashed mode, sha256sum in hashed mode
+	hashers := map[bool]func(string) string{
+		false: func(s string) string { return s },
+		true:  func(s string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(s))) },
+	}
+	// sanitizers per mode: real sanitizer in unhashed mode, nop sanitizer in hashed mode
+	sanitizers := map[bool]func(string) (string, error){
+		false: sanitizeCacheKey,
+		true:  func(s string) (string, error) { return s, nil },
 	}
 
-	config.ArchiveFile = path.Join(build.CacheDir, config.HashedKey, "cache.zip")
-	if !build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver) {
-		var err error
-		config.ArchiveFile, err = filepath.Rel(build.BuildDir, config.ArchiveFile)
-		if err != nil {
-			return config, fmt.Errorf("inability to make the cache file path relative to the build directory (is the build directory absolute?)")
+	hashCacheKeys := build.IsFeatureFlagOn(featureflags.HashCacheKeys)
+	hasher, sanitizer := hashers[hashCacheKeys], sanitizers[hashCacheKeys]
+
+	var warning string
+	humanKey, err := sanitizer(rawKey)
+	if err != nil {
+		warning = err.Error()
+	}
+
+	for _, check := range keyChecks {
+		if !check(humanKey) {
+			// if a key check does not succeed, we drop out immediately
+			return nil, warning, nil
 		}
 	}
 
-	return config, nil
+	if humanKey == "" {
+		return nil, warning, fmt.Errorf("empty cache key")
+	}
+
+	hashedKey := hasher(humanKey)
+
+	getArchivePath := func(key string) (string, error) {
+		var err error
+		file := path.Join(build.CacheDir, key, "cache.zip")
+		if !build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver) {
+			file, err = filepath.Rel(build.BuildDir, file)
+			if err != nil {
+				return "", fmt.Errorf("inability to make the cache file path relative to the build directory (is the build directory absolute?)")
+			}
+		}
+		return file, err
+	}
+
+	archiveFile, err := getArchivePath(hashedKey)
+	if err != nil {
+		return nil, warning, err
+	}
+
+	cacheConfig := &cacheConfig{
+		HumanKey:    humanKey,
+		HashedKey:   hashedKey,
+		ArchiveFile: archiveFile,
+	}
+
+	return cacheConfig, warning, nil
 }
 
 func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, action string, f func()) {
@@ -152,7 +192,10 @@ func (b *AbstractShell) cacheExtractor(ctx context.Context, w ShellWriter, info 
 		skipRestoreCache = false
 
 		// Skip extraction if no cache is defined
-		cacheConfig, err := newCacheConfig(info.Build, cacheOptions.Key)
+		cacheConfig, warning, err := newCacheConfig(info.Build, cacheOptions.Key)
+		if warning != "" {
+			w.Warningf(warning)
+		}
 		if err != nil {
 			w.Noticef("Skipping cache extraction due to %v", err)
 			continue
@@ -167,7 +210,7 @@ func (b *AbstractShell) cacheExtractor(ctx context.Context, w ShellWriter, info 
 			continue
 		}
 
-		b.extractCacheOrFallbackCachesWrapper(ctx, w, info, cacheConfig.HumanKey, cacheOptions)
+		b.extractCacheOrFallbackCachesWrapper(ctx, w, info, *cacheConfig, cacheOptions)
 	}
 
 	if skipRestoreCache {
@@ -193,54 +236,46 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	ctx context.Context,
 	w ShellWriter,
 	info common.ShellScriptInfo,
-	humanCacheKey string,
+	initialCacheConfig cacheConfig,
 	cacheOptions common.Cache,
 ) {
-	allowedCacheKeys := []string{}
+	// the "default" cache key
+	cacheConfigs := []cacheConfig{initialCacheConfig}
 
 	build := info.Build
 	buildVars := build.GetAllVariables()
-	addCacheKey := func(key string, err error) {
-		if key != "" {
-			allowedCacheKeys = append(allowedCacheKeys, key)
+	addCacheConfig := func(key string, keyChecks ...func(s string) bool) {
+		if key == "" {
+			return
+		}
+		cc, warning, err := newCacheConfig(build, key, keyChecks...)
+		if warning != "" {
+			w.Warningf(warning)
 		}
 		if err != nil {
-			w.Warningf(err.Error())
+			w.Noticef("Skipping cache extraction due to %v", err)
+			return
+		}
+		if cc != nil {
+			cacheConfigs = append(cacheConfigs, *cc)
 		}
 	}
-
-	// the "default" cache key
-	// TODO
-	addCacheKey(sanitizeCacheKey(humanCacheKey))
 
 	// the fallback cache keys from the cache config
 	for _, cacheKey := range cacheOptions.FallbackKeys {
-		addCacheKey(sanitizeCacheKey(buildVars.ExpandValue(cacheKey)))
+		addCacheConfig(buildVars.ExpandValue(cacheKey))
 	}
 
 	// the fallback key from CACHE_FALLBACK_KEY
-	// we sanitize it and check if it's not pointing to a protected cache.
-	fallbackCacheKey, err := sanitizeCacheKey(buildVars.Value("CACHE_FALLBACK_KEY"))
-	blockedSuffix := "-protected"
-	if !strings.HasSuffix(fallbackCacheKey, blockedSuffix) {
-		addCacheKey(fallbackCacheKey, err)
-	} else {
-		w.Warningf("CACHE_FALLBACK_KEY %q not allowed to end in %q", fallbackCacheKey, blockedSuffix)
-	}
-
-	if len(allowedCacheKeys) < 1 {
-		return
-	}
-
-	cacheConfigs := make([]cacheConfig, 0, len(allowedCacheKeys))
-	for _, k := range allowedCacheKeys {
-		cacheConfig, err := newCacheConfig(build, k)
-		if err != nil {
-			w.Noticef("Skipping cache extraction due to %v", err)
-			continue
+	blockProtectedFallback := func(key string) bool {
+		const blockedSuffix = "-protected"
+		allowed := !strings.HasSuffix(key, blockedSuffix)
+		if !allowed {
+			w.Warningf("CACHE_FALLBACK_KEY %q not allowed to end in %q", key, blockedSuffix)
 		}
-		cacheConfigs = append(cacheConfigs, cacheConfig)
+		return allowed
 	}
+	addCacheConfig(buildVars.Value("CACHE_FALLBACK_KEY"), blockProtectedFallback)
 
 	// Execute cache-extractor command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
@@ -1255,28 +1290,14 @@ func (b *AbstractShell) archiveCache(
 
 		skipArchiveCache = false
 
-		cacheConfig, err := newCacheConfig(info.Build, cacheOptions.Key)
+		cacheConfig, warning, err := newCacheConfig(info.Build, cacheOptions.Key)
+		if warning != "" {
+			w.Warningf(warning)
+		}
 		// Skip archiving if no cache is defined
 		if err != nil {
 			w.Noticef("Skipping cache archiving due to %v", err)
 			continue
-		}
-
-		// TODO -- if the cache key is defaulted (jobName/gitRef) we need to get a new cacheConfig again.
-		sanitizedKey, err := sanitizeCacheKey(cacheConfig.HumanKey)
-		if err != nil {
-			w.Warningf(err.Error())
-		}
-		if sanitizedKey == "" {
-			continue
-		}
-		if sanitizedKey != cacheConfig.HumanKey {
-			cacheConfig, err = newCacheConfig(info.Build, sanitizedKey)
-			// Skip archiving if no cache is defined
-			if err != nil {
-				w.Noticef("Skipping cache archiving due to %v", err)
-				continue
-			}
 		}
 
 		cacheOptions.Policy = common.CachePolicy(info.Build.GetAllVariables().ExpandValue(string(cacheOptions.Policy)))
@@ -1288,7 +1309,7 @@ func (b *AbstractShell) archiveCache(
 			continue
 		}
 
-		b.addCacheUploadCommand(ctx, w, info, cacheConfig, archiverArgs)
+		b.addCacheUploadCommand(ctx, w, info, *cacheConfig, archiverArgs)
 	}
 
 	return skipArchiveCache, nil

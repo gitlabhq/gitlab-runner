@@ -1461,113 +1461,217 @@ func getCacheKeyHasher(hash bool) func(string) string {
 func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 	const cacheEnvFile = "/some/path/to/runner-cache-env"
 
+	type expectations struct {
+		cacheKeys   []string
+		usesEnvFile []bool
+		warning     []any
+		notices     [][]any
+	}
+	type hashMode uint8
+	const (
+		withOrWithoutHashing hashMode = iota
+		withoutHashing
+		withHashing
+	)
+
 	tests := map[string]struct {
-		cacheType                 string
-		cacheKey                  string
-		cacheFallbackKeyVarValue  string
-		expectedCacheKeys         []string
-		expectedAdditionalWarning []any
+		cacheType                string
+		cacheKey                 string
+		cacheFallbackKeyVarValue string
+		expectations             map[hashMode]expectations
 	}{
 		"using allowed key value": {
 			cacheType:                "test",
 			cacheKey:                 "test-cache-key",
 			cacheFallbackKeyVarValue: "test-fallback-cache-key",
-			expectedCacheKeys:        []string{"test-cache-key", "test-fallback-cache-key"},
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"test-cache-key", "test-fallback-cache-key"},
+				},
+			},
 		},
 		"using sanitized fallback key": {
-			cacheType:                 "test",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  `hello.%2e..there  `,
-			expectedCacheKeys:         []string{"test-cache-key", "hello....there"},
-			expectedAdditionalWarning: []any{`cache key "hello.%2e..there  " sanitized to "hello....there"`},
+			cacheType:                "test",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: `hello.%2e..there  `,
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"test-cache-key", "hello....there"},
+					warning:   []any{`cache key "hello.%2e..there  " sanitized to "hello....there"`},
+				},
+				withHashing: {
+					cacheKeys: []string{"test-cache-key", "hello.%2e..there  "},
+				},
+			},
 		},
 		"using something that looks like a windows path": {
-			cacheType:                 "test",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  `looks\like\a\win\path`,
-			expectedCacheKeys:         []string{"test-cache-key", "looks/like/a/win/path"},
-			expectedAdditionalWarning: []any{`cache key "looks\\like\\a\\win\\path" sanitized to "looks/like/a/win/path"`},
+			cacheType:                "test",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: `looks\like\a\win\path`,
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"test-cache-key", "looks/like/a/win/path"},
+					warning:   []any{`cache key "looks\\like\\a\\win\\path" sanitized to "looks/like/a/win/path"`},
+				},
+				withHashing: {
+					cacheKeys: []string{"test-cache-key", "looks\\like\\a\\win\\path"},
+				},
+			},
 		},
 		"using path-like fallback cache key": {
 			cacheType:                "test",
 			cacheKey:                 "test-cache-key",
 			cacheFallbackKeyVarValue: `foo/bar/baz`,
-			expectedCacheKeys:        []string{"foo/bar/baz", "test-cache-key"},
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"foo/bar/baz", "test-cache-key"},
+				},
+			},
 		},
 		"using invalid fallback cache key": {
-			cacheType:                 "test",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  `..`,
-			expectedCacheKeys:         []string{"test-cache-key"},
-			expectedAdditionalWarning: []any{`cache key ".." could not be sanitized`},
+			cacheType:                "test",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: `..`,
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"test-cache-key"},
+					warning:   []any{`cache key ".." could not be sanitized`},
+					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
+				},
+				withHashing: {
+					cacheKeys:   []string{"test-cache-key", ".."},
+					usesEnvFile: []bool{true, false},
+				},
+			},
 		},
 		"using reserved suffix": {
-			cacheType:                 "test",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  "main-protected",
-			expectedCacheKeys:         []string{"test-cache-key"},
-			expectedAdditionalWarning: []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+			cacheType:                "test",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: "main-protected",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"test-cache-key"},
+					warning:   []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+				},
+				withHashing: {
+					cacheKeys:   []string{"test-cache-key"},
+					warning:     []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+					usesEnvFile: []bool{true},
+				},
+			},
 		},
 		"empty cache key": {
-			cacheType:         "test",
-			expectedCacheKeys: []string{"some-job-name/some-ref-name"},
+			cacheType: "test",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name"},
+				},
+			},
 		},
-		"empty cache key, with falback": {
+		"empty cache key, with fallback": {
 			cacheType:                "test",
 			cacheFallbackKeyVarValue: "some-fallback",
-			expectedCacheKeys:        []string{"some-job-name/some-ref-name", "some-fallback"},
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name", "some-fallback"},
+				},
+			},
 		},
-		"empty cache key, with invalid falback": {
-			cacheType:                 "test",
-			cacheFallbackKeyVarValue:  ".",
-			expectedCacheKeys:         []string{"some-job-name/some-ref-name"},
-			expectedAdditionalWarning: []any{`cache key "." could not be sanitized`},
+		"empty cache key, with invalid fallback": {
+			cacheType:                "test",
+			cacheFallbackKeyVarValue: ".",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name"},
+					warning:   []any{`cache key "." could not be sanitized`},
+					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
+				},
+				withHashing: {
+					cacheKeys:   []string{"some-job-name/some-ref-name", "."},
+					usesEnvFile: []bool{true, false},
+				},
+			},
 		},
 		"GoCloud cache with allowed key value": {
 			cacheType:                "goCloudTest",
 			cacheKey:                 "test-cache-key",
 			cacheFallbackKeyVarValue: "test-fallback-cache-key",
-			expectedCacheKeys:        []string{"test-cache-key", "test-fallback-cache-key"},
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"test-cache-key", "test-fallback-cache-key"},
+				},
+			},
 		},
 		"GoCloud cache with reserved suffix": {
-			cacheType:                 "goCloudTest",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  "main-protected",
-			expectedCacheKeys:         []string{"test-cache-key"},
-			expectedAdditionalWarning: []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+			cacheType:                "goCloudTest",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: "main-protected",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"test-cache-key"},
+					warning:   []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+				},
+			},
 		},
 		"GoCloud empty cache key": {
-			cacheType:         "goCloudTest",
-			expectedCacheKeys: []string{"some-job-name/some-ref-name"},
+			cacheType: "goCloudTest",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name"},
+				},
+			},
 		},
-		"GoCloud empty cache key, with falback": {
+		"GoCloud empty cache key, with fallback": {
 			cacheType:                "goCloudTest",
 			cacheFallbackKeyVarValue: "some-fallback",
-			expectedCacheKeys:        []string{"some-job-name/some-ref-name", "some-fallback"},
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name", "some-fallback"},
+				},
+			},
 		},
-		"GoCloud empty cache key, with invalid falback": {
-			cacheType:                 "goCloudTest",
-			cacheFallbackKeyVarValue:  " /  ",
-			expectedCacheKeys:         []string{"some-job-name/some-ref-name"},
-			expectedAdditionalWarning: []any{`cache key " /  " could not be sanitized`},
+		"GoCloud empty cache key, with invalid fallback": {
+			cacheType:                "goCloudTest",
+			cacheFallbackKeyVarValue: " /  ",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name"},
+					warning:   []any{`cache key " /  " could not be sanitized`},
+					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
+				},
+				withHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name", " /  "},
+				},
+			},
 		},
 		"cache:key:files": {
-			cacheType:         "test",
-			cacheKey:          "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected",
-			expectedCacheKeys: []string{"0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"},
+			cacheType: "test",
+			cacheKey:  "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{`0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected`},
+				},
+			},
 		},
 		"cache:key:files sanitized": {
-			cacheType:                 "test",
-			cacheKey:                  "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected",
-			expectedCacheKeys:         []string{"0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"},
-			expectedAdditionalWarning: []any{`cache key "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected" sanitized to "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"`},
+			cacheType: "test",
+			cacheKey:  "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{`0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected`},
+					warning:   []any{`cache key "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected" sanitized to "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"`},
+				},
+				withHashing: {
+					cacheKeys: []string{`0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected`},
+				},
+			},
 		},
 	}
 
-	for _, hashedCacheKey := range []bool{false, true} {
-		hashed := getCacheKeyHasher(hashedCacheKey)
+	for _, hashCacheKeys := range []bool{false, true} {
+		hashed := getCacheKeyHasher(hashCacheKeys)
 
-		t.Run(fmt.Sprintf("%s:%t", featureflags.HashCacheKeys, hashedCacheKey), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s:%t", featureflags.HashCacheKeys, hashCacheKeys), func(t *testing.T) {
 			for tn, tc := range tests {
 				t.Run(tn, func(t *testing.T) {
 					runnerConfig := &common.RunnerConfig{
@@ -1577,7 +1681,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 								Shared: true,
 							},
 							FeatureFlags: map[string]bool{
-								featureflags.HashCacheKeys: hashedCacheKey,
+								featureflags.HashCacheKeys: hashCacheKeys,
 							},
 						},
 					}
@@ -1619,7 +1723,18 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 					mockWriter := NewMockShellWriter(t)
 					mockWriter.On("IfCmd", "runner-command", "--version").Once()
 
-					for _, expectedCacheKey := range tc.expectedCacheKeys {
+					var expectations expectations
+					if e, ok := tc.expectations[withOrWithoutHashing]; ok {
+						expectations = e
+					}
+					if e, ok := tc.expectations[withHashing]; ok && hashCacheKeys {
+						expectations = e
+					}
+					if e, ok := tc.expectations[withoutHashing]; ok && !hashCacheKeys {
+						expectations = e
+					}
+
+					for _, expectedCacheKey := range expectations.cacheKeys {
 						expectedHashedCacheKey := hashed(expectedCacheKey)
 
 						mockWriter.On("Noticef", "Checking cache for %s...", expectedCacheKey).Once()
@@ -1660,8 +1775,11 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 						}
 					}
 
-					if w := tc.expectedAdditionalWarning; len(w) > 0 {
+					if w := expectations.warning; len(w) > 0 {
 						mockWriter.On("Warningf", w...).Once()
+					}
+					for _, e := range expectations.notices {
+						mockWriter.On("Noticef", e...)
 					}
 
 					mockWriter.On("Else").Once()
@@ -2182,38 +2300,79 @@ func TestAbstractShell_cachePolicy(t *testing.T) {
 }
 
 func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
+	type expectations struct {
+		skipUpload        bool
+		sanitationWarning string
+		cacheKey          string
+		notice            []any
+	}
+	type hashMode uint8
+	const (
+		withOrWithoutHashing hashMode = iota
+		withoutHashing
+		withHashing
+	)
+
 	tests := map[string]struct {
-		rawCacheKey               string
-		jobName                   string
-		gitRef                    string
-		expectedToSkipUpload      bool
-		expectedSanitationWarning string
-		expectedCacheKey          string
+		rawCacheKey  string
+		jobName      string
+		gitRef       string
+		expectations map[hashMode]expectations
 	}{
 		"defaulted cache key": {
-			jobName:          "some-job-name",
-			gitRef:           "some-git-ref",
-			expectedCacheKey: "some-job-name/some-git-ref",
+			jobName: "some-job-name",
+			gitRef:  "some-git-ref",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKey: "some-job-name/some-git-ref",
+				},
+			},
 		},
 		"defaulted cache key sanitized": {
-			jobName:                   `some\job\name`,
-			gitRef:                    "some/git/ref",
-			expectedCacheKey:          "some/job/name/some/git/ref",
-			expectedSanitationWarning: `cache key "some\\job\\name/some/git/ref" sanitized to "some/job/name/some/git/ref"`,
+			jobName: `some\job\name`,
+			gitRef:  "some/git/ref",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKey:          "some/job/name/some/git/ref",
+					sanitationWarning: `cache key "some\\job\\name/some/git/ref" sanitized to "some/job/name/some/git/ref"`,
+				},
+				withHashing: {
+					cacheKey: "some\\job\\name/some/git/ref",
+				},
+			},
 		},
 		"cache key": {
-			rawCacheKey:      "hola",
-			expectedCacheKey: "hola",
+			rawCacheKey: "hola",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKey: "hola",
+				},
+			},
 		},
 		"cache key sanitized": {
-			rawCacheKey:               `this/../key/will/be\sanitized\  `,
-			expectedCacheKey:          "key/will/be/sanitized",
-			expectedSanitationWarning: `cache key "this/../key/will/be\\sanitized\\  " sanitized to "key/will/be/sanitized"`,
+			rawCacheKey: `this/../key/will/be\sanitized\  `,
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKey:          "key/will/be/sanitized",
+					sanitationWarning: `cache key "this/../key/will/be\\sanitized\\  " sanitized to "key/will/be/sanitized"`,
+				},
+				withHashing: {
+					cacheKey: `this/../key/will/be\sanitized\  `,
+				},
+			},
 		},
 		"cannot be sanitized": {
-			rawCacheKey:               "/",
-			expectedToSkipUpload:      true,
-			expectedSanitationWarning: `cache key "/" could not be sanitized`,
+			rawCacheKey: "/",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					skipUpload:        true,
+					sanitationWarning: `cache key "/" could not be sanitized`,
+					notice:            []any{`Skipping cache archiving due to %v`, fmt.Errorf("empty cache key")},
+				},
+				withHashing: {
+					cacheKey: `/`,
+				},
+			},
 		},
 	}
 
@@ -2249,22 +2408,37 @@ func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
 					shell := AbstractShell{}
 					w := NewMockShellWriter(t)
 
-					if warning := test.expectedSanitationWarning; warning != "" {
-						w.On("Warningf", warning)
+					var expectations expectations
+					if e, ok := test.expectations[withOrWithoutHashing]; ok {
+						expectations = e
+					}
+					if e, ok := test.expectations[withHashing]; hashCacheKeys && ok {
+						expectations = e
+					}
+					if e, ok := test.expectations[withoutHashing]; !hashCacheKeys && ok {
+						expectations = e
 					}
 
-					if !test.expectedToSkipUpload {
+					if warning := expectations.sanitationWarning; warning != "" {
+						w.On("Warningf", warning).Once()
+					}
+
+					if notice := expectations.notice; len(notice) > 0 {
+						w.On("Noticef", notice...).Once()
+					}
+
+					if !expectations.skipUpload {
 						expectedLocalFile := filepath.Join(
-							"../cacheDir", hashed(test.expectedCacheKey), "cache.zip",
+							"../cacheDir", hashed(expectations.cacheKey), "cache.zip",
 						)
 
 						w.On("IfCmd", "some-runner-command", "--version").Once()
-						w.On("Noticef", "Creating cache %s...", test.expectedCacheKey).Once()
+						w.On("Noticef", "Creating cache %s...", expectations.cacheKey).Once()
 						w.On("IfCmdWithOutput",
 							"some-runner-command", "cache-archiver",
 							"--file", expectedLocalFile,
 							"--timeout", "10",
-							"--metadata", "cachekey:"+test.expectedCacheKey,
+							"--metadata", "cachekey:"+expectations.cacheKey,
 							"--path", "foo/bar",
 							"--path", "foo/barz",
 						).Once()
@@ -3562,6 +3736,7 @@ func TestNewCacheConfig(t *testing.T) {
 
 		expectedErrorMsg    string
 		expectedCacheConfig map[string]cacheConfig
+		expectedWarning     string
 	}{
 		"no cache dir": {
 			expectedErrorMsg: "unset cache directory",
@@ -3575,11 +3750,14 @@ func TestNewCacheConfig(t *testing.T) {
 			jobName:          "some-job-name",
 			expectedErrorMsg: "inability to make the cache file path relative to the build directory",
 		},
-		"key from job": {
+		"hashed, key from job": {
 			cacheDir: "/some/cache/dir",
 			buildDir: "/some/build/dir",
 			jobName:  "some-job",
 			gitRef:   "some-ref",
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: true,
+			},
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
 					HumanKey:    "some-job/some-ref",
@@ -3593,10 +3771,13 @@ func TestNewCacheConfig(t *testing.T) {
 				},
 			},
 		},
-		"key from user": {
+		"hashed, key from user": {
 			cacheDir: "/some/cache/dir",
 			buildDir: "/some/build/dir",
 			userKey:  "some/user/key",
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: true,
+			},
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
 					HumanKey:    "some/user/key",
@@ -3610,12 +3791,13 @@ func TestNewCacheConfig(t *testing.T) {
 				},
 			},
 		},
-		"with powershell path resolver enabeld": {
+		"hasehd, with powershell path resolver enabled": {
 			cacheDir: "/some/cache/dir",
 			buildDir: "/some/build/dir",
 			userKey:  "some/user/key",
 			ffs: map[string]bool{
 				featureflags.UsePowershellPathResolver: true,
+				featureflags.HashCacheKeys:             true,
 			},
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
@@ -3625,7 +3807,7 @@ func TestNewCacheConfig(t *testing.T) {
 				},
 			},
 		},
-		"with hashing disabled": {
+		"unhashed": {
 			cacheDir: "/some/cache/dir",
 			buildDir: "/some/build/dir",
 			userKey:  "some/user/key",
@@ -3645,13 +3827,47 @@ func TestNewCacheConfig(t *testing.T) {
 				},
 			},
 		},
-		"user key is expanded": {
+		"unhashed, and key sanitized": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "some%2fuser%2Fkey",
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: false,
+			},
+			expectedWarning: `cache key "some%2fuser%2Fkey" sanitized to "some/user/key"`,
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "some/user/key",
+					ArchiveFile: "../../cache/dir/some/user/key/cache.zip",
+				},
+				windows: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "some/user/key",
+					ArchiveFile: "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
+				},
+			},
+		},
+		"unhashed, and sanitizing failure": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "/",
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: false,
+			},
+			expectedWarning:  `cache key "/" could not be sanitized`,
+			expectedErrorMsg: "empty cache key",
+		},
+		"hashed, user key is expanded": {
 			cacheDir: "/some/cache/dir",
 			buildDir: "/some/build/dir",
 			userKey:  "${foo}/${bar}/baz",
 			vars: common.JobVariables{
 				{Key: "foo", Value: "someFoo"},
 				{Key: "bar", Value: "someBar"},
+			},
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: true,
 			},
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
@@ -3663,6 +3879,30 @@ func TestNewCacheConfig(t *testing.T) {
 					HumanKey:    "someFoo/someBar/baz",
 					HashedKey:   "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
 					ArchiveFile: "..\\..\\cache\\dir\\78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb\\cache.zip",
+				},
+			},
+		},
+		"unhashed, user key is expanded": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "${foo}/${bar}/baz",
+			vars: common.JobVariables{
+				{Key: "foo", Value: "someFoo"},
+				{Key: "bar", Value: "someBar"},
+			},
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: false,
+			},
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "someFoo/someBar/baz",
+					HashedKey:   "someFoo/someBar/baz",
+					ArchiveFile: "../../cache/dir/someFoo/someBar/baz/cache.zip",
+				},
+				windows: {
+					HumanKey:    "someFoo/someBar/baz",
+					HashedKey:   "someFoo/someBar/baz",
+					ArchiveFile: "..\\..\\cache\\dir\\someFoo\\someBar\\baz\\cache.zip",
 				},
 			},
 		},
@@ -3689,7 +3929,9 @@ func TestNewCacheConfig(t *testing.T) {
 				BuildDir: test.buildDir,
 			}
 
-			actualCacheConfig, err := newCacheConfig(build, test.userKey)
+			actualCacheConfig, warning, err := newCacheConfig(build, test.userKey)
+
+			assert.Equal(t, test.expectedWarning, warning)
 
 			if e := test.expectedErrorMsg; e != "" {
 				require.ErrorContains(t, err, e)
@@ -3703,7 +3945,7 @@ func TestNewCacheConfig(t *testing.T) {
 				test.expectedCacheConfig[fallback],
 			)
 
-			assert.Equal(t, expectedCacheConfig, actualCacheConfig)
+			assert.Equal(t, expectedCacheConfig, *actualCacheConfig)
 		})
 	}
 }
