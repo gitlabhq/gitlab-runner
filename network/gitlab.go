@@ -147,7 +147,7 @@ func (n *GitLabClient) doMeasuredRaw(
 	var response *http.Response
 	var err error
 
-	fn := func() int {
+	fn := func() (int, string) {
 		// Response body is handled after doMeasuredJSON() decorator call
 		// Linting violation here is a false-positive.
 		// nolint:bodyclose
@@ -161,10 +161,10 @@ func (n *GitLabClient) doMeasuredRaw(
 			params.headers,
 		)
 		if err != nil {
-			return clientError
+			return clientError, ""
 		}
 
-		return response.StatusCode
+		return response.StatusCode, params.method
 	}
 
 	n.apiRequestsCollector.Observe(
@@ -227,7 +227,7 @@ func (n *GitLabClient) doMeasuredJSON(
 	var statusText string
 	var httpResponse *http.Response
 
-	fn := func() int {
+	fn := func() (int, string) {
 		// Response body is handled after doMeasuredJSON() decorator call
 		// Linting violation here is a false-positive.
 		// nolint:bodyclose
@@ -242,7 +242,7 @@ func (n *GitLabClient) doMeasuredJSON(
 			params.response,
 		)
 
-		return result
+		return result, params.method
 	}
 
 	n.apiRequestsCollector.Observe(
