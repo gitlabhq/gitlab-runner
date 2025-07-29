@@ -19,6 +19,7 @@ To install GitLab Runner, you can use a package from [the GitLab repository](htt
 GitLab provides packages for the following supported versions of Linux distributions with [Packagecloud](https://packages.gitlab.com/runner/gitlab-runner/). New runner `deb` or `rpm` packages for new OS distribution releases are added automatically when supported by Packagecloud.
 
 <!-- supported_os_versions_list_start -->
+
 ### Deb-based Distributions
 
 | Distribution | Supported Versions |

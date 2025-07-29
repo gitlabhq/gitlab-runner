@@ -35,6 +35,7 @@ include:
   - local: /.gitlab/ci/deploy.gitlab-ci.yml
   - local: /.gitlab/ci/docs.gitlab-ci.yml
   - local: /.gitlab/ci/rebase.gitlab-ci.yml
+  - local: /.gitlab/ci/hosted-runners-bridge.gitlab-ci.yml
   - component: ${CI_SERVER_FQDN}/gitlab-org/components/danger-review/danger-review@2.0.0
     inputs:
       job_stage: qa

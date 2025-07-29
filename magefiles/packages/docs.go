@@ -1,6 +1,7 @@
 package packages
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -9,15 +10,15 @@ import (
 	"slices"
 	"strings"
 
-	"gitlab.com/gitlab-org/gitlab-runner/magefiles/docutils"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"gitlab.com/gitlab-org/gitlab-runner/magefiles/docutils"
 )
 
 const (
-	startSupportedOSDocs = "<!-- supported_os_versions_list_start -->"
-	endSupportedOSDocs   = "<!-- supported_os_versions_list_end -->"
-	docsFilePath         = "docs/install/linux-repository.md"
+	supportedOSPlaceholderName = "supported_os_versions_list"
+	docsFilePath               = "docs/install/linux-repository.md"
 )
 
 // This type is to reuse existing code that would otherwise cause a circular dependency.
@@ -36,11 +37,7 @@ func GenerateSupportedOSDocs(f distListFunc) error {
 		return err
 	}
 
-	newContent, err := replace(
-		startSupportedOSDocs,
-		endSupportedOSDocs,
-		string(origContent),
-		rendered)
+	newContent, err := replace(supportedOSPlaceholderName, string(origContent), rendered)
 	if err != nil {
 		return err
 	}
@@ -60,7 +57,6 @@ func getDistributionLists(f distListFunc) ([]string, []string, error) {
 
 func render(debDists, rpmDists []string) string {
 	buf := strings.Builder{}
-	buf.WriteString(startSupportedOSDocs)
 
 	buf.WriteString("\n### Deb-based Distributions\n\n")
 	renderTable(debDists, &buf)
@@ -68,8 +64,6 @@ func render(debDists, rpmDists []string) string {
 	buf.WriteString("\n### Rpm-based Distributions\n\n")
 	renderTable(rpmDists, &buf)
 
-	buf.WriteString("\n")
-	buf.WriteString(endSupportedOSDocs)
 	buf.WriteString("\n")
 
 	return buf.String()
@@ -113,13 +107,15 @@ func renderTable(dists []string, dest io.StringWriter) {
 	}
 }
 
-func replace(placeholderStart, placeholderEnd, fileContent, content string) (string, error) {
-	replacer := docutils.NewBlockLineReplacer(placeholderStart, placeholderEnd, fileContent, content)
+func replace(placeholderName string, input string, replacement string) (string, error) {
+	replacer := docutils.NewSectionReplacer(placeholderName, bytes.NewBufferString(input))
 
-	newContent, err := replacer.Replace()
+	err := replacer.Replace(func(_ io.Reader) (string, error) {
+		return replacement, nil
+	})
 	if err != nil {
 		return "", fmt.Errorf("error while replacing the content: %w", err)
 	}
 
-	return newContent, nil
+	return replacer.Output(), nil
 }
