@@ -86,7 +86,8 @@ func TestClients(t *testing.T) {
 	assert.Error(t, c8err)
 }
 
-func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response registerRunnerResponse, t *testing.T) {
+func mockRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response registerRunnerResponse, t *testing.T) {
+	t.Helper()
 	w.Header().Add(correlationIDHeader, "foobar")
 
 	if r.URL.Path != "/api/v4/runners" {
@@ -102,19 +103,18 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 	body, err := io.ReadAll(r.Body)
 	assert.NoError(t, err)
 
-	var req map[string]interface{}
+	var req RegisterRunnerRequest
 	err = json.Unmarshal(body, &req)
 	assert.NoError(t, err)
 
-	res := make(map[string]interface{})
-
-	token := req["token"].(string)
+	res := RegisterRunnerResponse{}
+	token := req.Token
 	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
 	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validToken:
-		if req["description"].(string) != "test" {
+		if req.Description != "test" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -132,15 +132,14 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		res["id"] = 12345
-		res["token"] = req["token"].(string)
-		res["token_expires_at"] = nil
+		res.ID = 12345
+		res.Token = token
 	case expiringToken:
 		w.Header().Set(ContentType, "application/json")
 		w.WriteHeader(http.StatusCreated)
-		res["id"] = 54321
-		res["token"] = req["token"].(string)
-		res["token_expires_at"] = "2684-10-16T13:25:59Z"
+		res.ID = 54321
+		res.Token = token
+		res.TokenExpiresAt = time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC)
 	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -155,127 +154,117 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 	}
 
 	output, err := json.Marshal(res)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	require.NoError(t, err)
 
 	w.Header().Set(ContentType, "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_, _ = w.Write(output)
+	_, err = w.Write(output)
+	require.NoError(t, err)
 }
 
-func TestRegisterRunner(t *testing.T) {
+func TestGitLabClient_RegisterRunner(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testRegisterRunnerHandler(w, r, registerRunnerResponseOK, t)
+		mockRegisterRunnerHandler(w, r, registerRunnerResponseOK, t)
 	}))
 	defer s.Close()
 
-	validToken := RunnerCredentials{
-		ID:    12345,
-		URL:   s.URL,
-		Token: validToken,
+	testCases := []struct {
+		name              string
+		token             string
+		tokenID           int64
+		tokenExpiresAt    time.Time
+		gitlabURL         string
+		runnerAccessLevel string
+		runnerDescription string
+		expectedRes       *RegisterRunnerResponse
+	}{
+		{
+			name:              "valid token",
+			token:             validToken,
+			tokenID:           12345,
+			gitlabURL:         s.URL,
+			runnerDescription: "test",
+			expectedRes: &RegisterRunnerResponse{
+				ID:    12345,
+				Token: validToken,
+			},
+		},
+		{
+			name:              "expiring token",
+			token:             expiringToken,
+			tokenID:           54321,
+			tokenExpiresAt:    time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+			gitlabURL:         s.URL,
+			runnerDescription: "test",
+			expectedRes: &RegisterRunnerResponse{
+				ID:             54321,
+				Token:          expiringToken,
+				TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+			},
+		},
+		{
+			name:              "invalid description",
+			token:             validToken,
+			tokenID:           12345,
+			gitlabURL:         s.URL,
+			runnerDescription: "invalid description",
+			runnerAccessLevel: "not_protected",
+		},
+		{
+			name:              "invalid token",
+			token:             invalidToken,
+			tokenID:           99999,
+			gitlabURL:         s.URL,
+			runnerDescription: "test",
+			runnerAccessLevel: "not_protected",
+		},
+		{
+			name:              "other token",
+			token:             "other",
+			tokenID:           99999,
+			gitlabURL:         s.URL,
+			runnerDescription: "test",
+			runnerAccessLevel: "not_protected",
+		},
+		{
+			name:              "broken credentials",
+			token:             validToken,
+			tokenID:           12345,
+			gitlabURL:         "broken",
+			runnerDescription: "test",
+			runnerAccessLevel: "not_protected",
+		},
 	}
 
-	expiringToken := RunnerCredentials{
-		ID:             54321,
-		URL:            s.URL,
-		Token:          expiringToken,
-		TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			glc := NewGitLabClient()
+
+			// Act
+			res := glc.RegisterRunner(
+				RunnerCredentials{
+					URL:            tc.gitlabURL,
+					Token:          tc.token,
+					TokenExpiresAt: tc.tokenExpiresAt,
+				},
+				RegisterRunnerParameters{
+					AccessLevel: tc.runnerAccessLevel,
+					Description: tc.runnerDescription,
+					Locked:      true,
+					Paused:      false,
+					RunUntagged: true,
+					Tags:        "tags",
+				},
+			)
+
+			// Assert
+			assert.Equal(t, tc.expectedRes, res)
+		})
 	}
-
-	invalidToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: invalidToken,
-	}
-
-	otherToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "other",
-	}
-
-	c := NewGitLabClient()
-
-	res := c.RegisterRunner(
-		validToken,
-		RegisterRunnerParameters{
-			Description: "test",
-			Tags:        "tags",
-			RunUntagged: true,
-			Locked:      true,
-			Paused:      false,
-		})
-	if assert.NotNil(t, res) {
-		assert.Equal(t, validToken.ID, res.ID)
-		assert.Equal(t, validToken.Token, res.Token)
-		assert.True(t, res.TokenExpiresAt.IsZero())
-	}
-
-	res = c.RegisterRunner(
-		expiringToken,
-		RegisterRunnerParameters{
-			Description: "test",
-			Tags:        "tags",
-			RunUntagged: true,
-			Locked:      true,
-			Paused:      false,
-		})
-	if assert.NotNil(t, res) {
-		assert.Equal(t, expiringToken.ID, res.ID)
-		assert.Equal(t, expiringToken.Token, res.Token)
-		assert.Equal(t, expiringToken.TokenExpiresAt, res.TokenExpiresAt)
-	}
-
-	res = c.RegisterRunner(
-		validToken,
-		RegisterRunnerParameters{
-			Description: "invalid description",
-			Tags:        "tags",
-			RunUntagged: true,
-			Locked:      true,
-			AccessLevel: "not_protected",
-			Paused:      false,
-		})
-	assert.Nil(t, res)
-
-	res = c.RegisterRunner(
-		invalidToken,
-		RegisterRunnerParameters{
-			Description: "test",
-			Tags:        "tags",
-			RunUntagged: true,
-			Locked:      true,
-			AccessLevel: "not_protected",
-			Paused:      false,
-		})
-	assert.Nil(t, res)
-
-	res = c.RegisterRunner(
-		otherToken,
-		RegisterRunnerParameters{
-			Description: "test",
-			Tags:        "tags",
-			RunUntagged: true,
-			Locked:      true,
-			AccessLevel: "not_protected",
-			Paused:      false,
-		})
-	assert.Nil(t, res)
-
-	res = c.RegisterRunner(
-		brokenCredentials,
-		RegisterRunnerParameters{
-			Description: "test",
-			Tags:        "tags",
-			RunUntagged: true,
-			Locked:      true,
-			AccessLevel: "not_protected",
-			Paused:      false,
-		})
-	assert.Nil(t, res)
 }
 
-func TestRegisterRunnerOnRunnerLimitHit(t *testing.T) {
+func TestGitLabClient_RegisterRunner_OnRunnerLimitHit(t *testing.T) {
 	type testCase struct {
 		response registerRunnerResponse
 
@@ -297,8 +286,9 @@ func TestRegisterRunnerOnRunnerLimitHit(t *testing.T) {
 
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
+			// Arrange
 			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				testRegisterRunnerHandler(w, r, tc.response, t)
+				mockRegisterRunnerHandler(w, r, tc.response, t)
 			}))
 			defer s.Close()
 
@@ -310,6 +300,7 @@ func TestRegisterRunnerOnRunnerLimitHit(t *testing.T) {
 			h := newLogHook(logrus.ErrorLevel)
 			logrus.AddHook(&h)
 
+			// Act
 			res := c.RegisterRunner(
 				validToken,
 				RegisterRunnerParameters{
@@ -319,6 +310,8 @@ func TestRegisterRunnerOnRunnerLimitHit(t *testing.T) {
 					Locked:      true,
 					Paused:      false,
 				})
+
+			// Assert
 			assert.Nil(t, res)
 			require.Len(t, h.entries, 1)
 			assert.Equal(t, "Registering runner... failed", h.entries[0].Message)
@@ -346,7 +339,8 @@ func (s *logHook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func mockUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	t.Helper()
 	if r.URL.Path != "/api/v4/runners" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -378,7 +372,65 @@ func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 	}
 }
 
-func testUnregisterRunnerManagerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func TestGitLabClient_UnregisterRunner(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mockUnregisterRunnerHandler(w, r, t)
+	}))
+	defer s.Close()
+
+	testCases := []struct {
+		name          string
+		token         string
+		gitlabURL     string
+		expectedState bool
+	}{
+		{
+			name:          "valid token",
+			token:         validToken,
+			gitlabURL:     s.URL,
+			expectedState: true,
+		},
+		{
+			name:      "invalid token",
+			token:     invalidToken,
+			gitlabURL: s.URL,
+		},
+		{
+			name:      "other token",
+			token:     "other",
+			gitlabURL: s.URL,
+		},
+		{
+			name:      "empty token",
+			token:     "",
+			gitlabURL: s.URL,
+		},
+		{
+			name:      "broken credentials",
+			token:     validToken,
+			gitlabURL: "broken",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			glc := NewGitLabClient()
+
+			// Act
+			state := glc.UnregisterRunner(RunnerCredentials{
+				URL:   tc.gitlabURL,
+				Token: tc.token,
+			})
+
+			// Assert
+			assert.Equal(t, tc.expectedState, state)
+		})
+	}
+}
+
+func mockUnregisterRunnerManagerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	t.Helper()
 	if r.URL.Path != "/api/v4/runners/managers" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -416,91 +468,62 @@ func testUnregisterRunnerManagerHandler(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-func TestUnregisterRunner(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		testUnregisterRunnerHandler(w, r, t)
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
-	defer s.Close()
-
-	validToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: validToken,
-	}
-
-	invalidToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: invalidToken,
-	}
-
-	otherToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "other",
-	}
-
-	c := NewGitLabClient()
-
-	state := c.UnregisterRunner(validToken)
-	assert.True(t, state)
-
-	state = c.UnregisterRunner(invalidToken)
-	assert.False(t, state)
-
-	state = c.UnregisterRunner(otherToken)
-	assert.False(t, state)
-
-	state = c.UnregisterRunner(brokenCredentials)
-	assert.False(t, state)
-}
-
 func TestUnregisterRunnerManager(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		testUnregisterRunnerManagerHandler(w, r, t)
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mockUnregisterRunnerManagerHandler(w, r, t)
+	}))
 	defer s.Close()
 
-	validGlrtToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: validGlrtToken,
+	testCases := []struct {
+		name          string
+		token         string
+		gitlabURL     string
+		expectedState bool
+	}{
+		{
+			name:          "valid token",
+			token:         validToken,
+			gitlabURL:     s.URL,
+			expectedState: true,
+		},
+		{
+			name:          "valid glrt token",
+			token:         validGlrtToken,
+			gitlabURL:     s.URL,
+			expectedState: true,
+		},
+		{
+			name:      "invalid token",
+			token:     invalidToken,
+			gitlabURL: s.URL,
+		},
+		{
+			name:      "other token",
+			token:     "other token",
+			gitlabURL: s.URL,
+		},
+		{
+			name:      "broken credentials",
+			token:     validToken,
+			gitlabURL: "broken",
+		},
 	}
 
-	validToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: validToken,
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			glc := NewGitLabClient()
+
+			// Act
+			state := glc.UnregisterRunnerManager(RunnerCredentials{
+				URL:   tc.gitlabURL,
+				Token: tc.token,
+			}, "s_some_system_id")
+
+			// Assert
+			assert.Equal(t, tc.expectedState, state)
+		})
 	}
-
-	invalidToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: invalidToken,
-	}
-
-	otherToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "other",
-	}
-
-	c := NewGitLabClient()
-
-	state := c.UnregisterRunnerManager(validGlrtToken, "s_some_system_id")
-	assert.True(t, state)
-
-	state = c.UnregisterRunnerManager(validGlrtToken, "s_unknown_system_id")
-	assert.False(t, state)
-
-	state = c.UnregisterRunnerManager(validToken, "s_some_system_id")
-	assert.True(t, state)
-
-	state = c.UnregisterRunnerManager(invalidToken, "s_some_system_id")
-	assert.False(t, state)
-
-	state = c.UnregisterRunnerManager(otherToken, "s_some_system_id")
-	assert.False(t, state)
-
-	state = c.UnregisterRunnerManager(brokenCredentials, "s_some_system_id")
-	assert.False(t, state)
 }
 
 func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, legacyServer bool, t *testing.T) {
