@@ -143,20 +143,20 @@ For example, the top-level VPC module can be used to create a VPC for modules th
    ```hcl
    module "runner" {
       source = ".local/grit/modules/aws/runner"
-      
+
       vpc = {
          id         = module.vpc.id
          subnet_ids = module.vpc.subnet_ids
       }
-   
+
       # ...additional config omitted
    }
 
    module "vpc" {
       source   = ".local/grit/modules/aws/vpc"
-      
+
       zone = "us-east-1b"
-      
+
       cidr        = "10.0.0.0/16"
       subnet_cidr = "10.0.0.0/24"
    }
@@ -167,12 +167,12 @@ User can provide their own VPC and not use GRIT's VPC module:
    ```hcl
    module "runner" {
       source = ".local/grit/modules/aws/runner"
-      
+
       vpc = {
          id         = PREEXISTING_VPC_ID
          subnet_ids = [PREEXISTING_SUBNET_ID]
       }
-   
+
       # ...additional config omitted
    }
    ```
