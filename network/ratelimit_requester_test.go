@@ -3,20 +3,19 @@
 package network
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
-	"sync/atomic"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestNewRateLimitRequester(t *testing.T) {
@@ -27,172 +26,323 @@ func TestNewRateLimitRequester(t *testing.T) {
 	assert.Equal(t, rl.retriesCount, defaultRateLimitRetriesCount)
 }
 
-func TestRateLimitRequestExecutor(t *testing.T) {
-	var callsCount int32
-	var bodyReadCount int32
-	testPayload := []byte("test payload")
+func TestRateLimitRequester_Do(t *testing.T) {
+	cancelledCtx, cancel := context.WithCancel(t.Context())
+	cancel()
 
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rateLimitedCalls, _ := strconv.Atoi(r.Header.Get("rateLimitedCalls"))
-		provideRateLimitResetHeader, _ := strconv.ParseBool(r.Header.Get("provideRateLimitResetHeader"))
-		rateLimitResetHeaderValue := r.Header.Get("rateLimitResetHeaderValue")
+	type expectations struct {
+		err        error
+		duration   time.Duration
+		statusCode int
+	}
 
-		if r.Body != nil {
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			if len(body) > 0 {
-				atomic.AddInt32(&bodyReadCount, 1)
-
-				if !bytes.Equal(body, testPayload) {
-					w.WriteHeader(http.StatusBadRequest)
-					return
-				}
-			}
-		}
-
-		if atomic.AddInt32(&callsCount, 1) > int32(rateLimitedCalls) {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		if provideRateLimitResetHeader {
-			w.Header().Add(rateLimitResetTimeHeader, rateLimitResetHeaderValue)
-		}
-		w.WriteHeader(http.StatusTooManyRequests)
-	}))
-	defer s.Close()
-
-	tests := map[string]struct {
-		rateLimitedCalls            int
-		provideRateLimitResetHeader bool
-		rateLimitResetHeaderValue   string
-		fallbackDelay               time.Duration
-		useRequestBody              bool
-
-		expectedCallsCount    int
-		expectedBodyReadCount int
-		expectedStatusCode    int
-		expectedError         error
+	testCases := []struct {
+		name         string
+		request      *http.Request
+		setup        func(tb testing.TB) requester
+		expectations expectations
 	}{
-		"no rate limit": {
-			rateLimitedCalls:            0,
-			provideRateLimitResetHeader: true,
-
-			expectedCallsCount: 1,
-			expectedStatusCode: http.StatusOK,
+		{
+			name:    "success",
+			request: httptest.NewRequest(http.MethodGet, "http://example.com", nil),
+			setup: func(tb testing.TB) requester {
+				tb.Helper()
+				mr := newMockRequester(t)
+				mr.On("Do", mock.Anything).Once().Return(&http.Response{StatusCode: http.StatusOK}, nil)
+				return mr
+			},
+			expectations: expectations{
+				statusCode: http.StatusOK,
+			},
 		},
-		"rate limit 2 requests": {
-			rateLimitedCalls:            2,
-			provideRateLimitResetHeader: true,
-
-			expectedCallsCount: 3,
-			expectedStatusCode: http.StatusOK,
+		{
+			name:    "not 409 or 503",
+			request: httptest.NewRequest(http.MethodGet, "http://example.com", nil),
+			setup: func(tb testing.TB) requester {
+				tb.Helper()
+				mr := newMockRequester(t)
+				mr.On("Do", mock.Anything).Once().Return(&http.Response{StatusCode: http.StatusBadRequest}, nil)
+				return mr
+			},
+			expectations: expectations{
+				statusCode: http.StatusBadRequest,
+			},
 		},
-		"too many requests but missing rate limit reset header": {
-			rateLimitedCalls:            1,
-			provideRateLimitResetHeader: false,
-
-			expectedCallsCount: 1,
-			expectedStatusCode: http.StatusTooManyRequests,
+		{
+			name:    "client error",
+			request: httptest.NewRequest(http.MethodGet, "http://example.com", nil),
+			setup: func(tb testing.TB) requester {
+				tb.Helper()
+				mr := newMockRequester(t)
+				mr.On("Do", mock.Anything).Once().Return(nil, errors.New("client error"))
+				return mr
+			},
+			expectations: expectations{
+				err: fmt.Errorf("couldn't execute %s against %s: %w", http.MethodGet, "http://example.com", errors.New("client error")),
+			},
 		},
-		"invalid rate limit header value": {
-			rateLimitedCalls:            1,
-			provideRateLimitResetHeader: true,
-			rateLimitResetHeaderValue:   "invalid",
-			fallbackDelay:               time.Millisecond,
-
-			expectedCallsCount: 2,
-			expectedStatusCode: http.StatusOK,
+		{
+			name:    "with reset header",
+			request: httptest.NewRequest(http.MethodPost, "http://example.com", strings.NewReader("somebody")),
+			setup: func(tb testing.TB) requester {
+				tb.Helper()
+				mr := newMockRequester(t)
+				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}}
+				res.Header.Set(rateLimitResetTimeHeader, time.Now().Add(time.Second).Format(time.RFC1123))
+				call1 := mr.On("Do", mock.Anything).Twice().Return(res, nil)
+				call2 := mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
+					rawBytes, _ := io.ReadAll(req.Body)
+					return string(rawBytes) == "somebody"
+				})).Once().Return(&http.Response{StatusCode: http.StatusOK}, nil)
+				call2.NotBefore(call1)
+				return mr
+			},
+			expectations: expectations{
+				duration:   2 * time.Second,
+				statusCode: http.StatusOK,
+			},
 		},
-		"try more than max retries count": {
-			rateLimitedCalls:            defaultRateLimitRetriesCount + 1,
-			provideRateLimitResetHeader: true,
-
-			expectedCallsCount: defaultRateLimitRetriesCount,
-			expectedError:      errRateLimitGaveUp,
-			expectedStatusCode: http.StatusOK,
+		{
+			name:    "invalid reset header",
+			request: httptest.NewRequest(http.MethodPost, "http://example.com", strings.NewReader("somebody")),
+			setup: func(tb testing.TB) requester {
+				tb.Helper()
+				mr := newMockRequester(t)
+				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}}
+				res.Header.Set(rateLimitResetTimeHeader, "invalid")
+				call1 := mr.On("Do", mock.Anything).Twice().Return(res, nil)
+				call2 := mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
+					rawBytes, _ := io.ReadAll(req.Body)
+					return string(rawBytes) == "somebody"
+				})).Once().Return(&http.Response{StatusCode: http.StatusOK}, nil)
+				call2.NotBefore(call1)
+				return mr
+			},
+			expectations: expectations{
+				duration:   2 * time.Second,
+				statusCode: http.StatusOK,
+			},
 		},
-		"rate limit 2 requests with body": {
-			rateLimitedCalls:            2,
-			provideRateLimitResetHeader: true,
-			useRequestBody:              true,
-
-			expectedCallsCount:    3,
-			expectedBodyReadCount: 3, // Body should be read in each request
-			expectedStatusCode:    http.StatusOK,
+		{
+			name:    "with retry header",
+			request: httptest.NewRequest(http.MethodPost, "http://example.com", strings.NewReader("somebody")),
+			setup: func(tb testing.TB) requester {
+				tb.Helper()
+				mr := newMockRequester(t)
+				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}}
+				res.Header.Set(rateLimitResetTimeHeader, "1")
+				call1 := mr.On("Do", mock.Anything).Twice().Return(res, nil)
+				call2 := mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
+					rawBytes, _ := io.ReadAll(req.Body)
+					return string(rawBytes) == "somebody"
+				})).Once().Return(&http.Response{StatusCode: http.StatusOK}, nil)
+				call2.NotBefore(call1)
+				return mr
+			},
+			expectations: expectations{
+				duration:   2 * time.Second,
+				statusCode: http.StatusOK,
+			},
+		},
+		{
+			name:    "with invalid retry header",
+			request: httptest.NewRequest(http.MethodPost, "http://example.com", strings.NewReader("somebody")),
+			setup: func(tb testing.TB) requester {
+				tb.Helper()
+				mr := newMockRequester(t)
+				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}}
+				res.Header.Set(rateLimitResetTimeHeader, "invalid")
+				call1 := mr.On("Do", mock.Anything).Twice().Return(res, nil)
+				call2 := mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
+					rawBytes, _ := io.ReadAll(req.Body)
+					return string(rawBytes) == "somebody"
+				})).Once().Return(&http.Response{StatusCode: http.StatusOK}, nil)
+				call2.NotBefore(call1)
+				return mr
+			},
+			expectations: expectations{
+				duration:   2 * time.Second,
+				statusCode: http.StatusOK,
+			},
+		},
+		{
+			name:    "request ctx cancellation",
+			request: httptest.NewRequestWithContext(cancelledCtx, http.MethodPost, "http://example.com", strings.NewReader("somebody")),
+			setup: func(tb testing.TB) requester {
+				tb.Helper()
+				mr := newMockRequester(t)
+				res := &http.Response{StatusCode: http.StatusTooManyRequests}
+				mr.On("Do", mock.Anything).Once().Return(res, nil)
+				return mr
+			},
+			expectations: expectations{
+				err: context.Canceled,
+			},
+		},
+		{
+			name:    "retries exhausted",
+			request: httptest.NewRequest(http.MethodPost, "http://example.com", strings.NewReader("somebody")),
+			setup: func(tb testing.TB) requester {
+				mr := newMockRequester(t)
+				res := &http.Response{StatusCode: http.StatusTooManyRequests}
+				mr.On("Do", mock.Anything).Times(3).Return(res, nil)
+				return mr
+			},
+			expectations: expectations{
+				statusCode: http.StatusTooManyRequests,
+			},
 		},
 	}
 
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			defer atomic.StoreInt32(&callsCount, 0)
-			defer atomic.StoreInt32(&bodyReadCount, 0)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			mr := tc.setup(t)
+			rlr := newRateLimitRequester(mr)
+			rlr.fallbackDelay = time.Second
+			rlr.retriesCount = 3
+			logger, _ := test.NewNullLogger()
+			rlr.logger = logger
 
-			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-			go func() {
-				defer cancel()
-				if tt.rateLimitResetHeaderValue == "" {
-					tt.rateLimitResetHeaderValue = fmt.Sprint(time.Now().Format(time.RFC1123))
-				}
+			start := time.Now()
+			res, err := rlr.Do(tc.request)
+			timeTaken := time.Since(start)
 
-				if tt.fallbackDelay == 0 {
-					// set the delay to something large so the test can timeout if we hit the fallback
-					// without expecting to
-					tt.fallbackDelay = 30 * time.Second
-				}
+			if tc.expectations.duration != 0 {
+				assert.InDelta(t, tc.expectations.duration, timeTaken, float64(time.Second))
+			}
 
-				rl := rateLimitRequester{
-					client:        http.DefaultClient,
-					retriesCount:  defaultRateLimitRetriesCount,
-					fallbackDelay: tt.fallbackDelay,
-				}
-
-				var req *http.Request
-				var err error
-
-				if tt.useRequestBody {
-					bodyProvider := func() (io.ReadCloser, error) {
-						return io.NopCloser(bytes.NewReader(testPayload)), nil
-					}
-
-					body, err := bodyProvider()
-					require.NoError(t, err)
-
-					req, err = http.NewRequest(http.MethodPost, s.URL, body)
-					require.NoError(t, err)
-
-					req.GetBody = bodyProvider
-				} else {
-					req, err = http.NewRequest(http.MethodGet, s.URL, nil)
-					require.NoError(t, err)
-				}
-
-				req.Header.Set("rateLimitedCalls", fmt.Sprint(tt.rateLimitedCalls))
-				req.Header.Set("provideRateLimitResetHeader", fmt.Sprint(tt.provideRateLimitResetHeader))
-				req.Header.Set("rateLimitResetHeaderValue", tt.rateLimitResetHeaderValue)
-
-				res, err := rl.Do(req)
-				if tt.expectedError != nil {
-					assert.EqualError(t, err, tt.expectedError.Error())
-					return
-				}
-
-				require.NoError(t, err)
-				assert.Equal(t, tt.expectedCallsCount, int(atomic.LoadInt32(&callsCount)))
-				if tt.useRequestBody {
-					assert.Equal(t, tt.expectedBodyReadCount, int(atomic.LoadInt32(&bodyReadCount)))
-				}
-				assert.Equal(t, tt.expectedStatusCode, res.StatusCode)
-			}()
-
-			<-ctx.Done()
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				t.Fatal("timeout, hit fallback delay when shouldn't")
+			if tc.expectations.err != nil {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, tc.expectations.err.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, res)
+				assert.Equal(t, tc.expectations.statusCode, res.StatusCode)
 			}
 		})
+	}
+}
+
+func TestRateLimitRequester_Do_BodyCopiedBetweenRequests(t *testing.T) {
+	requestCount := 0
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			requestCount++
+			r.Body.Close()
+		}()
+
+		if requestCount <= 2 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "somebody", string(body))
+
+		_, err = w.Write(body)
+		assert.NoError(t, err)
+	}))
+	defer testServer.Close()
+
+	rlr := newRateLimitRequester(http.DefaultClient)
+	rlr.fallbackDelay = time.Millisecond
+	rlr.retriesCount = 5
+
+	req, err := http.NewRequest(http.MethodPost, testServer.URL, strings.NewReader("somebody"))
+	assert.NoError(t, err)
+
+	res, err := rlr.Do(req)
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	body, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "somebody", string(body))
+	assert.Equal(t, 4, requestCount)
+}
+
+func TestCalculateWaitTime(t *testing.T) {
+	testCases := []struct {
+		name             string
+		setup            func(tb testing.TB, status int) *http.Response
+		expectedDuration time.Duration
+	}{
+		{
+			name: "status code not 429 or 503",
+			setup: func(tb testing.TB, status int) *http.Response {
+				res := &http.Response{
+					StatusCode: http.StatusBadRequest,
+				}
+				return res
+			},
+			expectedDuration: 0,
+		},
+		{
+			name: "valid reset time",
+			setup: func(tb testing.TB, status int) *http.Response {
+				res := &http.Response{
+					Header:     http.Header{},
+					StatusCode: status,
+				}
+				res.Header.Set(rateLimitResetTimeHeader, time.Now().Add(2*time.Minute).Format(time.RFC1123))
+				return res
+			},
+			expectedDuration: 2 * time.Minute,
+		},
+		{
+			name: "fallback to retry time",
+			setup: func(tb testing.TB, status int) *http.Response {
+				res := &http.Response{
+					Header:     http.Header{},
+					StatusCode: status,
+				}
+				res.Header.Set(rateLimitResetTimeHeader, "invalid time")
+				res.Header.Set(retryAfterHeader, "120")
+				return res
+			},
+			expectedDuration: 2 * time.Minute,
+		},
+		{
+			name: "valid retry time",
+			setup: func(tb testing.TB, status int) *http.Response {
+				res := &http.Response{
+					Header:     http.Header{},
+					StatusCode: status,
+				}
+				res.Header.Set(retryAfterHeader, "120")
+				return res
+			},
+			expectedDuration: 2 * time.Minute,
+		},
+		{
+			name: "fallback to default",
+			setup: func(tb testing.TB, status int) *http.Response {
+				res := &http.Response{
+					Header:     http.Header{},
+					StatusCode: status,
+				}
+				res.Header.Set(rateLimitResetTimeHeader, "invalid time")
+				res.Header.Set(retryAfterHeader, "invalid time")
+				return res
+			},
+			expectedDuration: time.Minute,
+		},
+	}
+
+	for _, tc := range testCases {
+		for _, status := range []int{http.StatusTooManyRequests, http.StatusServiceUnavailable} {
+			t.Run(fmt.Sprintf("status %d %s", status, tc.name), func(t *testing.T) {
+				t.Parallel()
+				logger, _ := test.NewNullLogger()
+				duration := calculateWaitTime(time.Minute, tc.setup(t, status), logger)
+
+				assert.InDelta(t, tc.expectedDuration, duration, float64(time.Second))
+			})
+		}
 	}
 }

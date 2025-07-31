@@ -706,10 +706,8 @@ func TestRequestsBackOff(t *testing.T) {
 		{http.StatusCreated, false},
 		{http.StatusInternalServerError, true},
 		{http.StatusBadGateway, true},
-		{http.StatusServiceUnavailable, true},
 		{http.StatusOK, false},
 		{http.StatusConflict, true},
-		{http.StatusTooManyRequests, false}, // Backoff handled by caller based on header value
 		{http.StatusCreated, false},
 		{599, true},
 		{499, true},

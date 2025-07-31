@@ -237,8 +237,9 @@ func (n *client) ensureBackoff(method, uri string) *backoff.Backoff {
 }
 
 func (n *client) backoffRequired(res *http.Response) bool {
-	if res.StatusCode == http.StatusTooManyRequests {
-		// StatusTooManyRequests is handled by the caller, to allow for early logging
+	if res.StatusCode == http.StatusTooManyRequests || res.StatusCode == http.StatusServiceUnavailable {
+		// StatusTooManyRequests and StatusServiceUnavailable retry logic is
+		// performed by the underlying rate limit requester.
 		return false
 	}
 	return res.StatusCode >= 400 && res.StatusCode < 600

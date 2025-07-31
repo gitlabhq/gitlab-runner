@@ -27,7 +27,6 @@ const (
 	// createdRunnerTokenPrefix is the token prefix used for GitLab UI-created runner authentication tokens
 	createdRunnerTokenPrefix = "glrt-"
 	clientError              = -100
-	retryAfterHeader         = "Retry-After"
 	responseBodyPeekMax      = 512
 
 	correlationIDHeader = "X-Request-Id"
@@ -339,7 +338,7 @@ func (n *GitLabClient) RegisterRunner(
 		&request,
 		&response,
 	)
-	defer func() { n.handleResponse(context.TODO(), resp, false) }()
+	defer closeResponseBody(resp, false)
 
 	logger := runner.Log().WithField("correlation_id", getCorrelationId(resp))
 
@@ -366,6 +365,8 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 	}
 
 	var response common.VerifyRunnerResponse
+	//nolint:bodyclose
+	// body is closed with closeResponseBody function call
 	result, statusText, resp := n.doJSON(
 		context.Background(),
 		&runner,
@@ -378,6 +379,8 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 	)
 	if result == -1 {
 		// if server is not able to return JSON, let's try plain text (the legacy response format)
+		//nolint:bodyclose
+		// body is closed with closeResponseBody function call
 		result, statusText, resp = n.doJSON(
 			context.Background(),
 			&runner,
@@ -389,7 +392,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 			nil,
 		)
 	}
-	defer func() { n.handleResponse(context.TODO(), resp, false) }()
+	defer closeResponseBody(resp, false)
 
 	logger := runner.Log().WithField("correlation_id", getCorrelationId(resp))
 
@@ -433,7 +436,7 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		&request,
 		nil,
 	)
-	defer func() { n.handleResponse(context.TODO(), resp, false) }()
+	defer closeResponseBody(resp, false)
 
 	logger := runner.Log().WithField("correlation_id", getCorrelationId(resp))
 
@@ -470,7 +473,7 @@ func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, 
 		&request,
 		nil,
 	)
-	defer func() { n.handleResponse(context.TODO(), resp, false) }()
+	defer closeResponseBody(resp, false)
 
 	logger := runner.Log().WithField("correlation_id", getCorrelationId(resp))
 
@@ -535,7 +538,7 @@ func (n *GitLabClient) resetToken(
 		},
 	)
 
-	defer func() { n.handleResponse(context.TODO(), resp, false) }()
+	defer closeResponseBody(resp, false)
 
 	logger := runner.Log().WithField("correlation_id", getCorrelationId(resp))
 
@@ -605,7 +608,7 @@ func (n *GitLabClient) RequestJob(
 			request:     &request, response: &response,
 		},
 	)
-	defer func() { n.handleResponse(ctx, httpResponse, false) }()
+	defer closeResponseBody(httpResponse, false)
 
 	logger := config.Log().WithField("correlation_id", getCorrelationId(httpResponse))
 
@@ -694,7 +697,7 @@ func (n *GitLabClient) createUpdateJobResult(
 	statusText string,
 	response *http.Response,
 ) common.UpdateJobResult {
-	defer func() { n.handleResponse(context.TODO(), response, false) }()
+	defer closeResponseBody(response, false)
 
 	remoteJobStateResponse := NewRemoteJobStateResponse(response, log)
 
@@ -783,7 +786,7 @@ func (n *GitLabClient) PatchTrace(
 		return common.NewPatchTraceResult(startOffset, common.PatchFailed, 0)
 	}
 
-	defer func() { n.handleResponse(context.TODO(), response, true) }()
+	defer closeResponseBody(response, true)
 
 	tracePatchResponse := NewTracePatchResponse(response, baseLog)
 	log := baseLog.WithFields(logrus.Fields{
@@ -953,7 +956,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 		contentType,
 		JobTokenHeader(config.Token))
 
-	defer func() { n.handleResponse(context.TODO(), res, true) }()
+	defer closeResponseBody(res, true)
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":             config.ID,
@@ -1101,7 +1104,7 @@ func (n *GitLabClient) DownloadArtifacts(
 		log.Errorln("Downloading artifacts from coordinator...", "error", err.Error())
 		return common.DownloadFailed
 	}
-	defer func() { n.handleResponse(context.TODO(), res, true) }()
+	defer closeResponseBody(res, true)
 
 	switch res.StatusCode {
 	case http.StatusOK:
@@ -1158,28 +1161,14 @@ func (n *GitLabClient) ProcessJob(
 	return trace, nil
 }
 
-func (n *GitLabClient) handleResponse(ctx context.Context, res *http.Response, discardBody bool) {
+func closeResponseBody(res *http.Response, discardBody bool) {
 	if res == nil {
 		return
 	}
-
-	defer func() {
-		if discardBody {
-			_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 1025*1025))
-		}
-		_ = res.Body.Close()
-	}()
-
-	if res.StatusCode != http.StatusTooManyRequests && res.StatusCode != http.StatusServiceUnavailable {
-		return
+	if discardBody {
+		_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 1025*1025))
 	}
-
-	if retryAfter, err := strconv.Atoi(res.Header.Get(retryAfterHeader)); err == nil {
-		select {
-		case <-ctx.Done():
-		case <-time.After(time.Duration(retryAfter) * time.Second):
-		}
-	}
+	_ = res.Body.Close()
 }
 
 func NewGitLabClientWithAPIRequestsCollector(c *APIRequestsCollector) *GitLabClient {

@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"bytes"
 	"cmp"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -1294,33 +1293,6 @@ func assertOnJobResponse(tb testing.TB, res *JobResponse, assertUnsupportedOpts 
 	}
 }
 
-func TestGitLabClient_RequestJob_TooManyRequests(t *testing.T) {
-	t.Parallel()
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set(retryAfterHeader, "60")
-		w.WriteHeader(http.StatusTooManyRequests)
-	}))
-	defer s.Close()
-
-	validToken := RunnerConfig{
-		RunnerCredentials: RunnerCredentials{
-			URL:   s.URL,
-			Token: validToken,
-		},
-		SystemID: testSystemID,
-	}
-
-	c := NewGitLabClient()
-
-	testStart := time.Now()
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancelFunc()
-
-	_, ok := c.RequestJob(ctx, validToken, nil)
-	assert.True(t, ok)
-	assert.WithinDuration(t, testStart, time.Now(), 1500*time.Millisecond)
-}
-
 func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]interface{}) {
 	switch req["state"].(string) {
 	case statusRunning, statusCanceling:
@@ -2396,6 +2368,10 @@ func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set(ContentType, "application/json")
 
+	if testCase.statusCode == http.StatusServiceUnavailable {
+		w.Header().Set("Retry-After", "1")
+	}
+
 	if testCase.formValueKey != "" {
 		if r.FormValue(testCase.formValueKey) != body {
 			return
@@ -2606,7 +2582,8 @@ func TestArtifactsUpload(t *testing.T) {
 			config:              defaultConfig,
 			expectedUploadState: UploadServiceUnavailable,
 			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
-				i := 0
+				// Prior log entries are part of retry logic.
+				i := 5
 				if logResponseDetail {
 					isResponseBodyLog(t, logs.entries[i])
 					i += 1

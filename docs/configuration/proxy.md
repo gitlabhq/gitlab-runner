@@ -231,14 +231,28 @@ A GitLab instance may be behind a reverse proxy that has rate-limiting on API re
 to prevent abuse. GitLab Runner sends multiple requests to the API and could go over these
 rate limits.
 
-As a result, GitLab Runner handles rate limited scenarios with the following logic:
+As a result, GitLab Runner handles rate limited scenarios by using the following [retry logic](#retry-logic):
 
-1. A response code of **429 - TooManyRequests** is received.
-1. The response headers are checked for a `RateLimit-ResetTime` header. The `RateLimit-ResetTime` header should have a value which is a valid **HTTP Date (RFC1123)**, like `Wed, 21 Oct 2015 07:28:00 GMT`.
-   - If the header is present and has a valid value the runner waits until the specified time and issues another request.
-   - If the header is present, but isn't a valid date, a fallback of **1 minute** is used.
-   - If the header is not present, no additional actions are taken, the response error is returned.
-1. The process above is repeated 5 times, then a `gave up due to rate limit` error is returned.
+### Retry logic
+
+When GitLab Runner receives a `429 Too Many Requests` response, it follows this retry sequence:
+
+1. The runner checks the response headers for a `RateLimit-ResetTime` header.
+   - The `RateLimit-ResetTime` header should have a value which is a valid HTTP date (RFC1123), like `Wed, 21 Oct 2015 07:28:00 GMT`.
+   - If the header is present and has a valid value, the runner waits until the specified time and issues another request.
+1. If the `RateLimit-ResetTime` header is invalid or missing, the runner checks the response headers for a `Retry-After` header.
+   - The `Retry-After` header should have a value in seconds format, like `Retry-After: 30`.
+   - If the header format is present and has a valid value, the runner waits until the specified time and issues another request.
+1. If both headers are missing or invalid, the runner waits for the default interval and issues another request.
+
+The runner retries failed requests up to 5 times. If all retries fail, the runner logs the error from the final response.
+
+### Supported header formats
+
+| Header                | Format              | Example                         |
+|-----------------------|---------------------|---------------------------------|
+| `RateLimit-ResetTime` | HTTP Date (RFC1123) | `Wed, 21 Oct 2015 07:28:00 GMT` |
+| `Retry-After`         | Seconds             | `30`                            |
 
 {{< alert type="note" >}}
 
