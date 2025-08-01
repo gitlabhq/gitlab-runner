@@ -115,7 +115,7 @@ development docker images:
     - .docker
     - .go-cache
     - .rules:release:development:merge-requests
-  dependencies:
+  needs:
     - "helper images"
     - "runner images"
   artifacts:
@@ -138,7 +138,7 @@ bleeding edge docker images:
   environment:
     name: bleeding_edge/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
-  dependencies:
+  needs:
     - "helper images"
     - "runner images"
   artifacts:
@@ -171,7 +171,7 @@ stable docker images:
   environment:
     name: stable/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
-  dependencies:
+  needs:
     - "helper images"
     - "runner images"
   artifacts:
