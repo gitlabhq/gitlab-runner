@@ -1123,6 +1123,44 @@ credentials from the environment, you can define `AWS_ACCESS_KEY_ID` and
 | `Azure.ContainerName`          | `[runners.cache.azure] -> ContainerName`          | `--cache-azure-container-name`             | `$CACHE_AZURE_CONTAINER_NAME`       |
 | `Azure.StorageDomain`          | `[runners.cache.azure] -> StorageDomain`          | `--cache-azure-storage-domain`             | `$CACHE_AZURE_STORAGE_DOMAIN`       |
 
+### Cache key handling
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5751) in GitLab Runner v18.3.0.
+
+{{< /history >}}
+
+Starting from GitLab Runner 18.3.0 the cache keys are hashed, except this is
+turned off with [the feature flag](feature-flags.md) `FF_HASH_CACHE_KEYS`.
+
+With this feature flag enabled, the cache key will be hashed before it is used
+to build the path for the local cache artefact and the object in remote storage
+bucket. To still give users a way to understand which cache key was used to
+create a specific cache artefact we attach metadata to it:
+
+- For cache artefacts kept locally, we'll place a `metadata.json` file next to
+  the cache artefact `cache.zip`, with the following content:
+
+  ```json
+  {"cachekey": "the human readable cache key"}
+  ```
+
+- For cache artefacts on distributed caches, we attach the metadata directly to
+  the storage object / blob, with the key `cachekey`. It can be queried by the
+  cloud provider's mechanisms, e.g. see [User-defined object metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#UserMetadata)
+  for AWS/S3.
+
+If we find a local cache artefact with the unhashed name, we try to "upgrade"
+this artefact by renaming it to the new form, with the hashed cache key. We only
+do that for local cache artefact, not for artefacts in distributed caches.
+
+When `FF_HASH_CACHE_KEYS` is disabled, before we use the cache key to build up
+the path for both the local cache file and the object in the storage
+bucket, we sanitize the cache key. If that sanitation changes the cache key,
+this is logged to the user. If the cache key cannot be sanitized, this is also
+logged to the user, and this specific cache won't be used.
+
 ### The `[runners.cache.s3]` section
 
 The following parameters define S3 storage for cache.
