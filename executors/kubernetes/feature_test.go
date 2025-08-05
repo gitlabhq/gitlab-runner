@@ -3,41 +3,36 @@
 package kubernetes
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	authzv1 "k8s.io/api/authorization/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	k8sversion "k8s.io/apimachinery/pkg/version"
-	testclient "k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest/fake"
+	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 )
 
-func TestKubeClientFeatureChecker(t *testing.T) {
+func TestKubeClientFeatureChecker_IsHostAliasSupported(t *testing.T) {
+	t.Parallel()
+
 	kubeClientErr := errors.New("clientErr")
 
-	version, _ := testVersionAndCodec()
 	tests := map[string]struct {
-		version   k8sversion.Info
+		version   *version.Info
 		clientErr error
 		fn        func(*testing.T, featureChecker)
 	}{
 		"host aliases supported version 1.7": {
-			version: k8sversion.Info{
+			version: &version.Info{
 				Major: "1",
 				Minor: "7",
 			},
-			clientErr: nil,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
 				require.NoError(t, err)
@@ -45,11 +40,10 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			},
 		},
 		"host aliases supported version 1.11": {
-			version: k8sversion.Info{
+			version: &version.Info{
 				Major: "1",
 				Minor: "11",
 			},
-			clientErr: nil,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
 				require.NoError(t, err)
@@ -57,11 +51,10 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			},
 		},
 		"host aliases not supported version 1.6": {
-			version: k8sversion.Info{
+			version: &version.Info{
 				Major: "1",
 				Minor: "6",
 			},
-			clientErr: nil,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
 				require.NoError(t, err)
@@ -69,11 +62,10 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			},
 		},
 		"host aliases cleanup version 1.6 not supported": {
-			version: k8sversion.Info{
+			version: &version.Info{
 				Major: "1+535111",
 				Minor: "6.^&5151111",
 			},
-			clientErr: nil,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
 				require.NoError(t, err)
@@ -81,11 +73,10 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			},
 		},
 		"host aliases cleanup version 1.14 supported": {
-			version: k8sversion.Info{
+			version: &version.Info{
 				Major: "1*)(535111",
 				Minor: "14^^%&5151111",
 			},
-			clientErr: nil,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
 				require.NoError(t, err)
@@ -93,11 +84,10 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			},
 		},
 		"host aliases cleanup invalid version with leading characters not supported": {
-			version: k8sversion.Info{
+			version: &version.Info{
 				Major: "+1",
 				Minor: "-14",
 			},
-			clientErr: nil,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
 				require.Error(t, err)
@@ -107,11 +97,10 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			},
 		},
 		"host aliases invalid version": {
-			version: k8sversion.Info{
+			version: &version.Info{
 				Major: "aaa",
 				Minor: "bbb",
 			},
-			clientErr: nil,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
 				require.Error(t, err)
@@ -120,11 +109,10 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			},
 		},
 		"host aliases empty version": {
-			version: k8sversion.Info{
+			version: &version.Info{
 				Major: "",
 				Minor: "",
 			},
-			clientErr: nil,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
 				require.Error(t, err)
@@ -133,10 +121,6 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			},
 		},
 		"host aliases kube client error": {
-			version: k8sversion.Info{
-				Major: "",
-				Minor: "",
-			},
 			clientErr: kubeClientErr,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
@@ -149,33 +133,26 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			rt := func(request *http.Request) (response *http.Response, err error) {
-				if tt.clientErr != nil {
-					return nil, tt.clientErr
-				}
+			t.Parallel()
 
-				ver, _ := json.Marshal(tt.version)
-				resp := &http.Response{
-					StatusCode: http.StatusOK,
-					Body: FakeReadCloser{
-						Reader: bytes.NewReader(ver),
-					},
-				}
-				resp.Header = make(http.Header)
-				resp.Header.Add(common.ContentType, "application/json")
-
-				return resp, nil
-			}
-			fc := kubeClientFeatureChecker{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt)),
+			fakeClient := &FakeClient{
+				Interface: nil, // explicitly setting the inner client to nil, to show we only call Discovery() and nothing else
+				FakeDiscovery: &FakeDiscovery{
+					FakeVersion:    tt.version,
+					FakeVersionErr: tt.clientErr,
+				},
 			}
 
-			tt.fn(t, &fc)
+			featureChecker := &kubeClientFeatureChecker{kubeClient: fakeClient}
+
+			tt.fn(t, featureChecker)
 		})
 	}
 }
 
 func TestKubeClientFeatureChecker_ResouceVerbAllowed(t *testing.T) {
+	t.Parallel()
+
 	namespace := "some-namespace"
 	gvr := v1.GroupVersionResource{Group: "blipp.blapp.io", Version: "v1delta5", Resource: "thingamajigs"}
 	verb := "blarg"
@@ -217,7 +194,9 @@ func TestKubeClientFeatureChecker_ResouceVerbAllowed(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			fakeClient := testclient.NewSimpleClientset()
+			t.Parallel()
+
+			fakeClient := fake.NewSimpleClientset()
 			ctx := context.TODO()
 
 			fakeClient.PrependReactor("create", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
