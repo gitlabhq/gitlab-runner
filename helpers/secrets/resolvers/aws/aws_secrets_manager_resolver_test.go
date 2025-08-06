@@ -215,6 +215,25 @@ func TestResolver_Resolve(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("key 'field' in aws secrets manager response for secret 'test' is not a string, number or boolean"),
 		},
+		"uses default credentials when roleArn is empty and no JWT": {
+			secret: common.Secret{
+				AWSSecretsManager: &common.AWSSecret{
+					SecretId: "test-secret",
+					Server: common.AWSServer{
+						Region: "us-east-1",
+						// No JWT and no RoleArn - should use default credentials
+					},
+				},
+			},
+			setupMock: func(m *MockAWSSecretsManager) {
+				m.EXPECT().
+					GetSecretString(mock.Anything, "test-secret", mock.Anything, mock.Anything).
+					Return("secret-value-with-default-creds", nil).
+					Once()
+			},
+			expectedValue: "secret-value-with-default-creds",
+			expectedError: nil,
+		},
 	}
 
 	for tn, tt := range tests {

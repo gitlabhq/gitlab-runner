@@ -93,7 +93,10 @@ func (v *resolver) Resolve() (string, error) {
 		return "", fmt.Errorf("Role ARN is required when using JWT for AWS authentication")
 	}
 
-	identity := service.NewWebIdentityRoleProvider(region, roleArn, v.secret.AWSSecretsManager.Server.JWT, roleSessionName)
+	var identity *stscreds.WebIdentityRoleProvider
+	if roleArn != "" {
+		identity = service.NewWebIdentityRoleProvider(region, roleArn, v.secret.AWSSecretsManager.Server.JWT, roleSessionName)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 	defer cancel()
