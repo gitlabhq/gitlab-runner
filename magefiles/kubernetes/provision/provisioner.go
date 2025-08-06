@@ -25,7 +25,8 @@ func ProvisionIntegrationKubernetes(id string) error {
 	name := baseName + "-" + id
 
 	role, err := docs.GeneratePermissionsDocsRoleYaml(name, namespace, map[string]string{
-		"test.k8s.gitlab.com/name": name,
+		"test.k8s.gitlab.com/name":    name,
+		"test.k8s.gitlab.com/max-age": "24h",
 	}, permissions)
 	if err != nil {
 		return err
