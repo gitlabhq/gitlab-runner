@@ -23,7 +23,7 @@ GitLab provides packages for the following supported versions of Linux distribut
 ### Deb-based Distributions
 
 | Distribution | Supported Versions |
-|-|-|
+|--------------|--------------------|
 | Debian | 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
 | LinuxMint | 22.1 Xia, 22 Wilma, 21.3 Virginia, 21.2 Victoria, 21.1 Vera, 21 Vanessa, 20.3 Una, 20.2 Uma, 20.1 Ulyssa, 20 Ulyana |
 | Raspbian | 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
@@ -32,7 +32,7 @@ GitLab provides packages for the following supported versions of Linux distribut
 ### Rpm-based Distributions
 
 | Distribution | Supported Versions |
-|-|-|
+|--------------|--------------------|
 | Amazon Linux | 2025, 2023, 2022, 2 |
 | Red Hat Enterprise Linux | 9, 8, 7 |
 | Fedora | 43, 42, 41, 40 |

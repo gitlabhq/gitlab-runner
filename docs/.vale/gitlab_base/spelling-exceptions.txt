@@ -2,6 +2,7 @@ accessor
 accessors
 ACLs
 Adafruit
+Agentic
 Airbnb
 Airtable
 Akismet
@@ -114,6 +115,7 @@ Buildah
 Buildkite
 buildpack
 buildpacks
+Buildx
 bundler
 bundlers
 burndown
@@ -172,6 +174,7 @@ CMKs
 CNAs
 CNs
 Cobertura
+Codeberg
 Codeception
 Codecov
 codenames
@@ -311,6 +314,7 @@ dogfooding
 dogfoods
 DOMPurify
 dotenv
+dotfiles
 doublestar
 downvoted
 downvotes
@@ -549,6 +553,9 @@ Kucoin
 Kustomization
 Kustomize
 kwargs
+LangChain
+LangGraph
+LangSmith
 Laravel
 LaunchDarkly
 ldapsearch
@@ -600,6 +607,7 @@ Mattermost
 mbox
 mebibyte
 mebibytes
+megarepo
 memoization
 memoize
 memoized
@@ -1196,6 +1204,7 @@ unstashing
 unsynced
 unsynchronized
 untarred
+untrack
 untracked
 untrusted
 unverified
