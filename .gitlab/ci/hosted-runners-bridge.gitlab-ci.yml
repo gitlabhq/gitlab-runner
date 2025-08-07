@@ -1,0 +1,46 @@
+.hosted-runners-bridge:
+  stage: postrelease
+  extends:
+    - .kubernetes runner
+  variables:
+    GITLAB_TOKEN: $HOSTED_RUNNERS_BRIDGE_TOKEN
+  script:
+    - mage hostedRunners:bridge
+
+hosted runners bridge bleeding edge:
+  extends:
+    - .hosted-runners-bridge
+  rules:
+    - if: !reference [.if-not-canonical-namespace, if]
+      when: never
+    - if: !reference [.if-not-web-or-push-pipeline, if]
+      when: never
+    - if: !reference [.if-runner-default-branch, if]
+      changes: !reference [.code-backstage-patterns]
+    - if: !reference [.if-security-runner-default-branch, if]
+      changes: !reference [.code-backstage-patterns]
+      when: manual
+  needs:
+    - job: bleeding edge packagecloud
+      artifacts: false
+    - job: bleeding edge docker images
+      artifacts: false
+
+hosted runners bridge stable:
+  extends:
+    - .hosted-runners-bridge
+  rules:
+    - if: !reference [.if-not-canonical-namespace, if]
+      when: never
+    - if: !reference [.if-not-web-or-push-pipeline, if]
+      when: never
+    - if: !reference [.if-runner-stable-release-ref, if]
+      changes: !reference [.code-backstage-patterns]
+    - if: !reference [.if-security-runner-release-ref, if]
+      changes: !reference [.code-backstage-patterns]
+      when: manual
+  needs:
+    - job: stable packagecloud
+      artifacts: false
+    - job: stable docker images
+      artifacts: false

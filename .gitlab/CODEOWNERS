@@ -7,6 +7,11 @@
 .gitattributes  @gitlab-com/runner-group @gitlab-com/runner-maintainers
 .gitignore      @gitlab-com/runner-group @gitlab-com/runner-maintainers
 
+[Hosted Runners] @gitlab-org/production-engineering/runners-platform
+.gitlab/ci/hosted-runners-bridge.gitlab-ci.yml
+magefiles/hosted_runners.go
+magefiles/hosted_runners/
+
 [Documentation]
 .markdownlint.yml @gitlab-com/runner-docs-maintainers
 /docs/ @gitlab-com/runner-docs-maintainers

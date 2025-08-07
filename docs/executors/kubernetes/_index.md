@@ -106,7 +106,7 @@ You can either:
 - Specify a service account `serviceAccount.name: <service_account_name>` with the following
   permissions in the `values.yml` file.
 
- <!-- k8s_api_permissions_list_start -->
+<!-- k8s_api_permissions_list_start -->
 
 | Resource | Verb (Optional Feature/Config Flags) |
 |----------|-------------------------------|

@@ -3,6 +3,7 @@ package docs
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"slices"
 	"sort"
@@ -10,26 +11,24 @@ import (
 	"text/template"
 
 	"github.com/samber/lo"
+
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/docutils"
 )
 
 const (
-	startTablePlaceholder    = "<!-- k8s_api_permissions_list_start -->"
-	endTablePlaceholder      = "<!-- k8s_api_permissions_list_end -->"
-	startRoleYamlPlaceholder = "<!-- k8s_api_permissions_role_yaml_start -->"
-	endRoleYamlPlaceholder   = "<!-- k8s_api_permissions_role_yaml_end -->"
-	docsFilePath             = "docs/executors/kubernetes/_index.md"
+	tablePlaceholderName    = "k8s_api_permissions_list"
+	roleYamlPlaceholderName = "k8s_api_permissions_role_yaml"
+
+	docsFilePath = "docs/executors/kubernetes/_index.md"
 )
 
-var tableTemplate = fmt.Sprintf(` %s
-
+var tableTemplate = `
 | Resource | Verb (Optional Feature/Config Flags) |
 |----------|-------------------------------|
 {{ range $_, $permissions := . -}}
 | {{ $permissions.Resource }} | {{ $permissions.Verbs | joinVerbs }} |
 {{ end }}
-%s
-`, startTablePlaceholder, endTablePlaceholder)
+`
 
 type permissionsRender struct {
 	Resource string
@@ -51,7 +50,7 @@ func GeneratePermissionsDocs(roleName, roleNamespace string, permissions Permiss
 		return err
 	}
 
-	newDocsFile, err := replace(startTablePlaceholder, endTablePlaceholder, string(docsFile), table)
+	newDocsFile, err := replace(tablePlaceholderName, string(docsFile), table)
 	if err != nil {
 		return err
 	}
@@ -65,9 +64,9 @@ func GeneratePermissionsDocs(roleName, roleNamespace string, permissions Permiss
 		return err
 	}
 
-	roleYamlContent := fmt.Sprintf("%s\n```yaml\n%s\n```\n%s\n", startRoleYamlPlaceholder, strings.TrimSpace(roleYaml), endRoleYamlPlaceholder)
+	roleYamlContent := fmt.Sprintf("```yaml\n%s\n```\n", strings.TrimSpace(roleYaml))
 
-	newDocsFile, err = replace(startRoleYamlPlaceholder, endRoleYamlPlaceholder, newDocsFile, roleYamlContent)
+	newDocsFile, err = replace(roleYamlPlaceholderName, newDocsFile, roleYamlContent)
 	if err != nil {
 		return err
 	}
@@ -159,13 +158,15 @@ func renderTable(permissions []permissionsRender) (string, error) {
 	return buffer.String(), nil
 }
 
-func replace(placeholderStart, placeholderEnd, fileContent, content string) (string, error) {
-	replacer := docutils.NewBlockLineReplacer(placeholderStart, placeholderEnd, fileContent, content)
+func replace(placeholderName string, input string, replacement string) (string, error) {
+	replacer := docutils.NewSectionReplacer(placeholderName, bytes.NewBufferString(input))
 
-	newContent, err := replacer.Replace()
+	err := replacer.Replace(func(_ io.Reader) (string, error) {
+		return replacement, nil
+	})
 	if err != nil {
 		return "", fmt.Errorf("error while replacing the content: %w", err)
 	}
 
-	return newContent, nil
+	return replacer.Output(), nil
 }
