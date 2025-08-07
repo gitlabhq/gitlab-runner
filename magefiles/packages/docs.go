@@ -100,7 +100,7 @@ func renderTable(dists []string, dest io.StringWriter) {
 	}
 
 	dest.WriteString("| Distribution | Supported Versions |\n")
-	dest.WriteString("|-|-|\n")
+	dest.WriteString("|--------------|--------------------|\n")
 
 	for _, dist := range slices.Sorted(maps.Keys(versByOS)) {
 		vers := versByOS[dist]
