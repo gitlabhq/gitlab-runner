@@ -103,7 +103,7 @@ func createPackage(blueprint Blueprint, opts []string) error {
 
 	err := sh.RunV("fpm", args...)
 	if err != nil {
-		return fmt.Errorf("failed to create %s package: %v", p.pkgType, err)
+		return fmt.Errorf("failed to create %s package: %w", p.pkgType, err)
 	}
 
 	return nil
@@ -170,7 +170,7 @@ func createHelperImagesPackage(blueprint Blueprint, opts []string) error {
 
 	err := sh.RunV("fpm", args...)
 	if err != nil {
-		return fmt.Errorf("failed to create %s package: %v", p.pkgType, err)
+		return fmt.Errorf("failed to create %s package: %w", p.pkgType, err)
 	}
 
 	return nil
@@ -211,7 +211,7 @@ func signPackage(blueprint Blueprint) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to sign %s package: %v", blueprint.Data().pkgType, err)
+		return fmt.Errorf("failed to sign %s package: %w", blueprint.Data().pkgType, err)
 	}
 
 	return nil

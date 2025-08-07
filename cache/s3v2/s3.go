@@ -157,7 +157,7 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 	})
 	uuid, err := helpers.GenerateRandomUUID(8)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate random UUID: %v", err)
+		return nil, fmt.Errorf("failed to generate random UUID: %w", err)
 	}
 	sessionName := fmt.Sprintf("gitlab-runner-cache-upload-%s", uuid)
 

@@ -76,7 +76,7 @@ func (w *Wrapper) start() {
 
 	err := cmd.Start()
 	if err != nil {
-		w.errCh <- fmt.Errorf("%w: %v", errFailedToStartProcess, err)
+		w.errCh <- fmt.Errorf("%w: %w", errFailedToStartProcess, err)
 		return
 	}
 
@@ -178,7 +178,7 @@ func (w *Wrapper) terminateWrappedProcess() error {
 
 	err := p.Signal(syscall.SIGTERM)
 	if err != nil {
-		return fmt.Errorf("%w: %v", errFailedToTerminateProcess, err)
+		return fmt.Errorf("%w: %w", errFailedToTerminateProcess, err)
 	}
 
 	return nil

@@ -720,13 +720,13 @@ func (s *KubernetesPodSpec) PodSpecPatch() ([]byte, KubernetesPodSpecPatchType, 
 		var err error
 		patchBytes, err = os.ReadFile(s.PatchPath)
 		if err != nil {
-			return nil, "", fmt.Errorf("%w (%s): %v", errPatchFileFail, s.Name, err)
+			return nil, "", fmt.Errorf("%w (%s): %w", errPatchFileFail, s.Name, err)
 		}
 	}
 
 	patchBytes, err := yaml.YAMLToJSON(patchBytes)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w (%s): %v", errPatchConversion, s.Name, err)
+		return nil, "", fmt.Errorf("%w (%s): %w", errPatchConversion, s.Name, err)
 	}
 
 	return patchBytes, patchType, nil
@@ -2225,7 +2225,7 @@ func (c *Config) LoadConfig(configFile string) error {
 	}
 
 	if _, err = toml.DecodeFile(configFile, c); err != nil {
-		return fmt.Errorf("decoding configuration file: %v", err)
+		return fmt.Errorf("decoding configuration file: %w", err)
 	}
 
 	for _, runner := range c.Runners {

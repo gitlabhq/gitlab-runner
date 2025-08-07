@@ -81,7 +81,7 @@ func extractKeyFromJSON(data any, key string) (string, error) {
 	var obj map[string]any
 	err := json.Unmarshal([]byte(dataStr), &obj)
 	if err != nil {
-		return "", fmt.Errorf("failed to extract a key out of the json data: %v", err)
+		return "", fmt.Errorf("failed to extract a key out of the json data: %w", err)
 	}
 
 	val, ok := obj[key]

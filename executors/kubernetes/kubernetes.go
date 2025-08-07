@@ -944,7 +944,7 @@ func (s *executor) waitForPod(ctx context.Context, writer io.WriteCloser) error 
 	}
 
 	if err := WaitForPodReachable(ctx, s.kubeClient, s.pod, s.Config.Kubernetes); err != nil {
-		return fmt.Errorf("pod failed to become attachable %v", err)
+		return fmt.Errorf("pod failed to become attachable %w", err)
 	}
 
 	return nil

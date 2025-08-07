@@ -6081,7 +6081,7 @@ func TestProcessLogs(t *testing.T) {
 			expectedExitCode: unknownLogProcessorExitCode,
 			expectedScript:   "",
 			run: func(ch chan string, errCh chan error) {
-				errCh <- fmt.Errorf("Custom error for test with EOF %s", io.EOF)
+				errCh <- fmt.Errorf("Custom error for test with EOF %w", io.EOF)
 			},
 		},
 		"Reattach failure with custom error": {

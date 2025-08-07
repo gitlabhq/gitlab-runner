@@ -297,7 +297,7 @@ func getPodLog(ctx context.Context, client kubernetes.Interface, pod *api.Pod) e
 	req := client.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOptions)
 	podLogs, err := req.Stream(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to open log stream for %s: %v", pod.Name, err)
+		return fmt.Errorf("failed to open log stream for %s: %w", pod.Name, err)
 	}
 	defer podLogs.Close()
 

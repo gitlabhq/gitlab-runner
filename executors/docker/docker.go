@@ -1624,7 +1624,7 @@ func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([
 		environment = append(environment, "WAIT_FOR_SERVICE_TCP_ADDR="+service.ID[:12])
 		ports, err := e.getContainerExposedPorts(service)
 		if err != nil {
-			return nil, fmt.Errorf("get container exposed ports: %v", err)
+			return nil, fmt.Errorf("get container exposed ports: %w", err)
 		}
 		if len(ports) == 0 {
 			return nil, fmt.Errorf("service %q has no exposed ports", service.Names[0])

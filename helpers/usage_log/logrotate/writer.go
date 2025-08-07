@@ -56,12 +56,12 @@ func (w *Writer) Write(p []byte) (int, error) {
 	if w.f == nil {
 		err := w.reCreateFile()
 		if err != nil {
-			return 0, fmt.Errorf("%w: %v", ErrCreationFailure, err)
+			return 0, fmt.Errorf("%w: %w", ErrCreationFailure, err)
 		}
 	} else {
 		err := w.rotate()
 		if err != nil {
-			return 0, fmt.Errorf("%w: %v", ErrRotationFailure, err)
+			return 0, fmt.Errorf("%w: %w", ErrRotationFailure, err)
 		}
 	}
 

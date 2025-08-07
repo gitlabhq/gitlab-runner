@@ -4,6 +4,9 @@ run:
 linters-settings:
   errcheck:
     check-type-assertions: true
+  errorlint:
+    asserts: false
+    comparison: false
   gocognit:
     min-complexity: 15
   gocritic:
@@ -46,6 +49,7 @@ linters:
   - bodyclose
   - dogsled
   - errcheck
+  - errorlint
   - gocognit
   - goconst
   - gocritic
