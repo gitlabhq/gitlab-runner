@@ -14,8 +14,6 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.3.2
 	github.com/BurntSushi/toml v1.4.0
 	github.com/KimMachineGun/automemlimit v0.3.0
-	github.com/akeylesslabs/akeyless-go-cloud-id v0.3.5
-	github.com/akeylesslabs/akeyless-go/v4 v4.3.0
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.27.31
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.67

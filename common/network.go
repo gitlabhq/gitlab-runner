@@ -831,7 +831,6 @@ type Secret struct {
 	Vault             *VaultSecret            `json:"vault,omitempty"`
 	GCPSecretManager  *GCPSecretManagerSecret `json:"gcp_secret_manager,omitempty"`
 	AzureKeyVault     *AzureKeyVaultSecret    `json:"azure_key_vault,omitempty"`
-	Akeyless          *AkeylessSecret         `json:"akeyless,omitempty"`
 	AWSSecretsManager *AWSSecret              `json:"aws_secrets_manager,omitempty"`
 	File              *bool                   `json:"file,omitempty"`
 }
@@ -851,9 +850,6 @@ func (s Secret) expandVariables(vars JobVariables) {
 	}
 	if s.AzureKeyVault != nil {
 		s.AzureKeyVault.expandVariables(vars)
-	}
-	if s.Akeyless != nil {
-		s.Akeyless.expandVariables(vars)
 	}
 	if s.AWSSecretsManager != nil {
 		s.AWSSecretsManager.expandVariables(vars)
@@ -963,51 +959,6 @@ func (s *AzureKeyVaultSecret) expandVariables(vars JobVariables) {
 
 func (s *AzureKeyVaultServer) expandVariables(vars JobVariables) {
 	s.JWT = vars.ExpandValue(s.JWT)
-}
-
-type AkeylessSecret struct {
-	Name          string         `json:"name"`
-	DataKey       string         `json:"data_key"`
-	CertUserName  string         `json:"cert_user_name"`
-	PublicKeyData string         `json:"public_key_data"`
-	CsrData       string         `json:"csr_data"`
-	Server        AkeylessServer `json:"server"`
-}
-
-type AkeylessServer struct {
-	AccessId               string `json:"access_id"`
-	AccessKey              string `json:"access_key"`
-	AkeylessApiUrl         string `json:"akeyless_api_url"`
-	AkeylessAccessType     string `json:"akeyless_access_type"`
-	AkeylessToken          string `json:"akeyless_token"`
-	JWT                    string `json:"jwt"`
-	UidToken               string `json:"uid_token"`
-	GcpAudience            string `json:"gcp_audience"`
-	AzureObjectId          string `json:"azure_object_id"`
-	K8SServiceAccountToken string `json:"k8s_service_account_token"`
-	K8SAuthConfigName      string `json:"k8s_auth_config_name"`
-	GatewayCaCert          string `json:"gateway_ca_certificate"`
-}
-
-func (s *AkeylessSecret) expandVariables(vars JobVariables) {
-	s.Name = vars.ExpandValue(s.Name)
-	s.DataKey = vars.ExpandValue(s.DataKey)
-	s.CertUserName = vars.ExpandValue(s.CertUserName)
-	s.PublicKeyData = vars.ExpandValue(s.PublicKeyData)
-	s.CsrData = vars.ExpandValue(s.CsrData)
-	s.Server.expandVariables(vars)
-}
-
-func (s *AkeylessServer) expandVariables(vars JobVariables) {
-	s.JWT = vars.ExpandValue(s.JWT)
-	s.AkeylessApiUrl = vars.ExpandValue(s.AkeylessApiUrl)
-	s.AkeylessAccessType = vars.ExpandValue(s.AkeylessAccessType)
-	s.AkeylessToken = vars.ExpandValue(s.AkeylessToken)
-	s.UidToken = vars.ExpandValue(s.UidToken)
-	s.GcpAudience = vars.ExpandValue(s.GcpAudience)
-	s.AzureObjectId = vars.ExpandValue(s.AzureObjectId)
-	s.K8SServiceAccountToken = vars.ExpandValue(s.K8SServiceAccountToken)
-	s.K8SAuthConfigName = vars.ExpandValue(s.K8SAuthConfigName)
 }
 
 type VaultSecret struct {
