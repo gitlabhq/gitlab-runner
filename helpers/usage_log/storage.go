@@ -45,12 +45,12 @@ func (s *Storage) Store(record Record) error {
 
 	data, err := json.Marshal(s.setupRecord(record))
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrEncodingJSON, err)
+		return fmt.Errorf("%w: %w", ErrEncodingJSON, err)
 	}
 
 	_, err = fmt.Fprintf(s.writer, "%s\n", data)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrStoringLog, err)
+		return fmt.Errorf("%w: %w", ErrStoringLog, err)
 	}
 
 	return nil

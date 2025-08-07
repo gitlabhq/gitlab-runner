@@ -202,12 +202,12 @@ func (c *fileArchiver) findRelativePathInProject(path string) (string, error) {
 
 	abs, err := filepath.Abs(base)
 	if err != nil {
-		return "", fmt.Errorf("could not resolve artifact absolute path %s: %v", path, err)
+		return "", fmt.Errorf("could not resolve artifact absolute path %s: %w", path, err)
 	}
 
 	rel, err := filepath.Rel(c.wd, abs)
 	if err != nil {
-		return "", fmt.Errorf("could not resolve artifact relative path %s: %v", path, err)
+		return "", fmt.Errorf("could not resolve artifact relative path %s: %w", path, err)
 	}
 
 	// If fully resolved relative path begins with ".." it is not a subpath of our working directory

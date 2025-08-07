@@ -82,7 +82,7 @@ func (c *RunnerWrapperCommand) Execute(cctx *cli.Context) {
 func (c *RunnerWrapperCommand) createListener() (net.Listener, error) {
 	uri, err := url.ParseRequestURI(c.GRPCListen)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", errFailedToParseGRPCAddress, err)
+		return nil, fmt.Errorf("%w: %w", errFailedToParseGRPCAddress, err)
 	}
 
 	switch uri.Scheme {

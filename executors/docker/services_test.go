@@ -625,7 +625,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 		networkMode            string
 		dockerClientAssertions func(*docker.MockClient)
 		expectedEnvironment    []string
-		expectedErr            error
+		expectedErr            string
 	}{
 		"network mode not defined": {
 			expectedEnvironment: []string{},
@@ -776,7 +776,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 					}, nil).
 					Once()
 			},
-			expectedErr: fmt.Errorf("get container exposed ports: invalid health check tcp port: %v", "hello"),
+			expectedErr: fmt.Sprintf("get container exposed ports: invalid health check tcp port: %v", "hello"),
 		},
 		"no ports defined": {
 			networkMode: "test",
@@ -789,7 +789,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 					}, nil).
 					Once()
 			},
-			expectedErr: fmt.Errorf("service %q has no exposed ports", "default"),
+			expectedErr: fmt.Sprintf("service %q has no exposed ports", "default"),
 		},
 		"container inspect error": {
 			networkMode: "test",
@@ -798,7 +798,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 					Return(types.ContainerJSON{}, fmt.Errorf("%v", "test error")).
 					Once()
 			},
-			expectedErr: fmt.Errorf("get container exposed ports: %v", "test error"),
+			expectedErr: fmt.Sprintf("get container exposed ports: %v", "test error"),
 		},
 	}
 
@@ -822,9 +822,13 @@ func TestAddServiceHealthCheck(t *testing.T) {
 
 			environment, err := executor.addServiceHealthCheckEnvironment(service)
 
-			assert.Equal(t, test.expectedEnvironment, environment)
-
-			assert.Equal(t, test.expectedErr, err)
+			if test.expectedErr != "" {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, test.expectedErr)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.expectedEnvironment, environment)
+			}
 		})
 	}
 }

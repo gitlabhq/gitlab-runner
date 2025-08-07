@@ -88,7 +88,7 @@ func (d *dockerLinuxSetter) createContainer(
 
 	uuid, err := helpers.GenerateRandomUUID(8)
 	if err != nil {
-		return "", fmt.Errorf("generting uuid for permission container: %v", err)
+		return "", fmt.Errorf("generting uuid for permission container: %w", err)
 	}
 
 	containerName := fmt.Sprintf("%s-set-permission-%s", volumeName, uuid)
