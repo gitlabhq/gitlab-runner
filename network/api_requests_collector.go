@@ -52,7 +52,7 @@ func newAPIRequestCollectorWithBuckets(buckets []float64) *APIRequestsCollector 
 				Help:    "Latency histogram of API requests made by GitLab Runner",
 				Buckets: buckets,
 			},
-			[]string{"runner", "system_id", "endpoint"},
+			[]string{"runner", "system_id", "endpoint", "status_class", "method"},
 		),
 	}
 }
@@ -95,12 +95,16 @@ func (rc *APIRequestsCollector) observe(
 	rc.lock.Lock()
 	defer rc.lock.Unlock()
 
+	ep := string(endpoint)
+	st := strconv.Itoa(status)
+	md := strings.ToLower(method)
+
 	statusCounter, err := rc.statuses.GetMetricWith(prometheus.Labels{
 		"runner":    runnerID,
 		"system_id": systemID,
-		"endpoint":  string(endpoint),
-		"status":    strconv.Itoa(status),
-		"method":    strings.ToLower(method),
+		"endpoint":  ep,
+		"status":    st,
+		"method":    md,
 	})
 	if err != nil {
 		return fmt.Errorf("requesting status counter: %w", err)
@@ -108,9 +112,11 @@ func (rc *APIRequestsCollector) observe(
 	statusCounter.Inc()
 
 	durationHist, err := rc.durations.GetMetricWith(prometheus.Labels{
-		"runner":    runnerID,
-		"system_id": systemID,
-		"endpoint":  string(endpoint),
+		"runner":       runnerID,
+		"system_id":    systemID,
+		"endpoint":     ep,
+		"status_class": statusClass(status),
+		"method":       md,
 	})
 	if err != nil {
 		return fmt.Errorf("requesting durations histogram: %w", err)
@@ -134,4 +140,21 @@ func (rc *APIRequestsCollector) Collect(ch chan<- prometheus.Metric) {
 
 	rc.statuses.Collect(ch)
 	rc.durations.Collect(ch)
+}
+
+func statusClass(status int) string {
+	switch {
+	case status >= 500:
+		return "5xx"
+	case status >= 400:
+		return "4xx"
+	case status >= 300:
+		return "3xx"
+	case status >= 200:
+		return "2xx"
+	case status >= 100:
+		return "1xx"
+	default:
+		return "unknown"
+	}
 }

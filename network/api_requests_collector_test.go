@@ -58,7 +58,7 @@ func TestAPIRequestsCollector_Collect(t *testing.T) {
 
 	wg.Wait()
 
-	require.Len(t, metrics, 7)
+	require.Len(t, metrics, 8)
 
 	assertStatusMetrics(t, metrics)
 	assertDurationMetrics(t, metrics)
@@ -154,16 +154,7 @@ func assertDurationMetrics(t *testing.T, list []prometheus.Metric) {
 	}
 
 	expected := map[string]hMetric{
-		"endpoint-update_job-runner-runner1-system_id-system1": {
-			count: 5,
-			sum:   17.1,
-			buckets: map[float64]uint64{
-				0.1: 2,
-				1:   3,
-				10:  4,
-			},
-		},
-		"endpoint-request_job-runner-runner1-system_id-system1": {
+		"endpoint-request_job-method-post-runner-runner1-status_class-2xx-system_id-system1": {
 			count: 2,
 			sum:   1.55,
 			buckets: map[float64]uint64{
@@ -172,7 +163,25 @@ func assertDurationMetrics(t *testing.T, list []prometheus.Metric) {
 				10:  2,
 			},
 		},
-		"endpoint-request_job-runner-runner2-system_id-system1": {
+		"endpoint-update_job-method-post-runner-runner1-status_class-2xx-system_id-system1": {
+			count: 3,
+			sum:   0.6,
+			buckets: map[float64]uint64{
+				0.1: 2,
+				1:   3,
+				10:  3,
+			},
+		},
+		"endpoint-update_job-method-post-runner-runner1-status_class-4xx-system_id-system1": {
+			count: 2,
+			sum:   16.5,
+			buckets: map[float64]uint64{
+				0.1: 0,
+				1:   0,
+				10:  1,
+			},
+		},
+		"endpoint-request_job-method-post-runner-runner2-status_class-2xx-system_id-system1": {
 			count: 3,
 			sum:   1.6,
 			buckets: map[float64]uint64{
@@ -209,4 +218,63 @@ func TestAPIRequestsCollector_Describe(t *testing.T) {
 	wg.Wait()
 
 	require.Len(t, descriptions, 2)
+}
+
+func TestStatusClass(t *testing.T) {
+	testCases := []struct {
+		status   int
+		expected string
+	}{
+		{
+			status:   99,
+			expected: "unknown",
+		},
+		{
+			status:   100,
+			expected: "1xx",
+		},
+		{
+			status:   150,
+			expected: "1xx",
+		},
+		{
+			status:   200,
+			expected: "2xx",
+		},
+		{
+			status:   250,
+			expected: "2xx",
+		},
+		{
+			status:   300,
+			expected: "3xx",
+		},
+		{
+			status:   350,
+			expected: "3xx",
+		},
+		{
+			status:   400,
+			expected: "4xx",
+		},
+		{
+			status:   450,
+			expected: "4xx",
+		},
+		{
+			status:   500,
+			expected: "5xx",
+		},
+		{
+			status:   550,
+			expected: "5xx",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("status %d mapped to %s", tc.status, tc.expected), func(t *testing.T) {
+			result := statusClass(tc.status)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
 }
