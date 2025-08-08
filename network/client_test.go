@@ -19,12 +19,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -680,62 +678,6 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 	assert.Equal(t, -1, statusCode, statusText)
 }
 
-type backoffTestCase struct {
-	responseStatus int
-	mustBackoff    bool
-}
-
-func tooManyRequestsHandler(w http.ResponseWriter, r *http.Request) {
-	status, err := strconv.Atoi(r.Header.Get("responseStatus"))
-	if err != nil {
-		w.WriteHeader(599)
-	} else {
-		w.WriteHeader(status)
-	}
-}
-
-func TestRequestsBackOff(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(tooManyRequestsHandler))
-	defer s.Close()
-
-	c, _ := newClient(&RunnerCredentials{
-		URL: s.URL,
-	})
-
-	testCases := []backoffTestCase{
-		{http.StatusCreated, false},
-		{http.StatusInternalServerError, true},
-		{http.StatusBadGateway, true},
-		{http.StatusOK, false},
-		{http.StatusConflict, true},
-		{http.StatusCreated, false},
-		{599, true},
-		{499, true},
-	}
-
-	backoff := c.ensureBackoff(http.MethodPost, "")
-	for id, testCase := range testCases {
-		t.Run(fmt.Sprintf("%d-%d", id, testCase.responseStatus), func(t *testing.T) {
-			backoff.Reset()
-			assert.Zero(t, backoff.Attempt())
-
-			headers := make(http.Header)
-			headers.Add("responseStatus", strconv.Itoa(testCase.responseStatus))
-
-			res, err := c.do(context.Background(), "/", http.MethodPost, nil, "application/json", headers)
-
-			assert.NoError(t, err)
-			assert.Equal(t, testCase.responseStatus, res.StatusCode)
-
-			var expected float64
-			if testCase.mustBackoff {
-				expected = 1.0
-			}
-			assert.Equal(t, expected, backoff.Attempt())
-		})
-	}
-}
-
 func TestRequesterCalled(t *testing.T) {
 	c, _ := newClient(&RunnerCredentials{
 		URL: "http://localhost:1000/",
@@ -842,8 +784,7 @@ func Test307and308Redirections(t *testing.T) {
 				require.NoError(t, err)
 
 				c := &client{
-					url:             u,
-					requestBackOffs: make(map[string]*backoff.Backoff),
+					url: u,
 				}
 				c.requester = &c.Client
 
@@ -883,8 +824,7 @@ func TestEnsureUserAgentAlwaysSent(t *testing.T) {
 			require.NoError(t, err)
 
 			c := &client{
-				url:             url,
-				requestBackOffs: make(map[string]*backoff.Backoff),
+				url: url,
 			}
 			c.requester = &c.Client
 
