@@ -20,19 +20,16 @@ import (
 )
 
 var (
-	preVersionRx   = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+~pre.[0-9]+.g[a-f0-9]+$`)
-	securityPathRx = regexp.MustCompile(`gitlab-org/security/gitlab-runner`)
+	preVersionRx = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+~pre.[0-9]+.g[a-f0-9]+$`)
 
 	errNothingToUpdate = errors.New("nothing to update")
 )
 
 type BridgeInfo struct {
-	Timestamp   string `json:"timestamp"`
-	Version     string `json:"version"`
-	CommitSHA   string `json:"commit_sha"`
-	IsPre       bool   `json:"is_pre"`
-	IsSecurity  bool   `json:"is_security"`
-	PipelineURL string `json:"pipeline_url"`
+	Version   string `json:"version"`
+	CommitSHA string `json:"commit_sha"`
+	Flavor    string `json:"flavor"`
+	Timestamp string `json:"timestamp"`
 }
 
 func Bridge(ctx context.Context, log *slog.Logger, wikiClient *GitLabWikiClient) error {
@@ -82,26 +79,20 @@ func prepareBridgeInfo(log *slog.Logger) (BridgeInfo, error) {
 		return info, fmt.Errorf("computing runner version: %w", err)
 	}
 
-	isPre := preVersionRx.MatchString(version)
-	log.Info("Runner version", "version", version, "is-pre", isPre)
+	flavor := "tagged"
+	if preVersionRx.MatchString(version) {
+		flavor = "pre"
+	}
+	log.Info("Runner version", "version", version, "flavor", flavor)
 
 	commitSHA := os.Getenv("CI_COMMIT_SHA")
 	log.Info("Runner commit SHA", "SHA", commitSHA)
 
-	projectPath := os.Getenv("CI_PROJECT_PATH")
-	isSecurityPath := securityPathRx.MatchString(projectPath)
-	log.Info("Project path", "path", projectPath, "is-security-path", isSecurityPath)
-
-	pipelineURL := os.Getenv("CI_PIPELINE_URL")
-	log.Info("Pipeline URL", "url", pipelineURL)
-
 	info = BridgeInfo{
-		Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		Version:     version,
-		CommitSHA:   commitSHA,
-		IsPre:       isPre,
-		IsSecurity:  isSecurityPath,
-		PipelineURL: pipelineURL,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Version:   version,
+		CommitSHA: commitSHA,
+		Flavor:    flavor,
 	}
 
 	return info, nil

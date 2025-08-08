@@ -2,10 +2,6 @@
 {
   "fields": [
     {
-      "key": "timestamp",
-      "label": "Published at"
-    },
-    {
       "key": "version",
       "label": "GitLab Runner version"
     },
@@ -14,30 +10,26 @@
       "label": "Commit SHA"
     },
     {
-      "key": "is_pre",
-      "label": "Pre version?"
+      "key": "flavor",
+      "label": "Flavor"
     },
     {
-      "key": "is_security",
-      "label": "Security release?"
+      "key": "timestamp",
+      "label": "Published at"
     }
   ],
   "items": [
     {
-      "timestamp": "TEST",
       "version": "TEST",
       "commit_sha": "TEST",
-      "is_pre": false,
-      "is_security": false,
-      "pipeline_url": "TEST"
+      "flavor": "TEST",
+      "timestamp": "TEST"
     },
     {
-      "timestamp": "2025-07-29T16:14:56Z",
       "version": "18.3.0~pre.53.g54f6123c",
       "commit_sha": "54f6123ca33f657ea25578faffd4a2286adbc308",
-      "is_pre": true,
-      "is_security": false,
-      "pipeline_url": "https://gitlab.com/gitlab-org/gitlab-runner/-/pipelines/1952852740"
+      "flavor": "pre",
+      "timestamp": "2025-07-29T16:14:56Z"
     }
   ],
   "markdown": true
