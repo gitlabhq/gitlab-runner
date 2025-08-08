@@ -79,7 +79,7 @@ out/helper-images:
 	cd dockerfiles/runner-helper && docker buildx bake --progress plain $(TARGETS)
 
 .PHONY: prebuilt-helper-images
-prebuilt-helper-images: ALPINE_DEFAULT_VERSION=3.21
+prebuilt-helper-images: ALPINE_DEFAULT_VERSION="-latest"
 prebuilt-helper-images:
 	@find out/helper-images -maxdepth 1 -name "*.tar" | parallel -j$(shell nproc) './ci/prebuilt_helper_image {}'
 
