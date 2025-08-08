@@ -19,7 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -46,13 +45,6 @@ var dialer = net.Dialer{
 	KeepAlive: 30 * time.Second,
 }
 
-const (
-	backOffMinDelay    = 100 * time.Millisecond
-	backOffMaxDelay    = 60 * time.Second
-	backOffDelayFactor = 2.0
-	backOffDelayJitter = true
-)
-
 type Option = func(c *client) error
 
 type client struct {
@@ -65,7 +57,6 @@ type client struct {
 	updateTime       time.Time
 	lastIdleRefresh  time.Time
 	lastUpdate       string
-	requestBackOffs  map[string]*backoff.Backoff
 	connectionMaxAge time.Duration
 	lock             sync.Mutex
 
@@ -219,41 +210,6 @@ func (n *client) createTransport() {
 	n.Timeout = common.DefaultNetworkClientTimeout
 }
 
-func (n *client) ensureBackoff(method, uri string) *backoff.Backoff {
-	n.lock.Lock()
-	defer n.lock.Unlock()
-
-	key := fmt.Sprintf("%s_%s", method, uri)
-	if n.requestBackOffs[key] == nil {
-		n.requestBackOffs[key] = &backoff.Backoff{
-			Min:    backOffMinDelay,
-			Max:    backOffMaxDelay,
-			Factor: backOffDelayFactor,
-			Jitter: backOffDelayJitter,
-		}
-	}
-
-	return n.requestBackOffs[key]
-}
-
-func (n *client) backoffRequired(res *http.Response) bool {
-	if res.StatusCode == http.StatusTooManyRequests || res.StatusCode == http.StatusServiceUnavailable {
-		// StatusTooManyRequests and StatusServiceUnavailable retry logic is
-		// performed by the underlying rate limit requester.
-		return false
-	}
-	return res.StatusCode >= 400 && res.StatusCode < 600
-}
-
-func (n *client) checkBackoffRequest(req *http.Request, res *http.Response) {
-	backoffDelay := n.ensureBackoff(req.Method, req.RequestURI)
-	if n.backoffRequired(res) {
-		time.Sleep(backoffDelay.Duration())
-	} else {
-		backoffDelay.Reset()
-	}
-}
-
 func (n *client) do(
 	ctx context.Context,
 	uri, method string,
@@ -306,8 +262,6 @@ func (n *client) do(
 	if err != nil {
 		return nil, fmt.Errorf("execute request: %w", err)
 	}
-
-	n.checkBackoffRequest(req, res)
 
 	return res, nil
 }
@@ -597,13 +551,12 @@ func newClient(requestCredentials requestCredentials, options ...Option) (*clien
 	}
 
 	c := &client{
-		url:             url,
-		caFile:          requestCredentials.GetTLSCAFile(),
-		certFile:        requestCredentials.GetTLSCertFile(),
-		keyFile:         requestCredentials.GetTLSKeyFile(),
-		requestBackOffs: make(map[string]*backoff.Backoff),
+		url:      url,
+		caFile:   requestCredentials.GetTLSCAFile(),
+		certFile: requestCredentials.GetTLSCertFile(),
+		keyFile:  requestCredentials.GetTLSKeyFile(),
 	}
-	c.requester = newRateLimitRequester(&c.Client)
+	c.requester = newRetryRequester(&c.Client)
 
 	host := strings.Split(url.Host, ":")[0]
 	if CertificateDirectory != "" {

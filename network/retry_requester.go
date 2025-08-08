@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 )
 
@@ -13,31 +14,40 @@ import (
 // are documented in `docs/configuration/proxy.md#handling-rate-limited-requests`
 
 const (
+	backOffMinDelay              = 100 * time.Millisecond
+	backOffMaxDelay              = 60 * time.Second
+	backOffDelayFactor           = 2.0
+	backOffDelayJitter           = true
+	defaultRateLimitRetriesCount = 5
 	// RateLimit-ResetTime: Wed, 21 Oct 2015 07:28:00 GMT
 	rateLimitResetTimeHeader = "RateLimit-ResetTime"
 	retryAfterHeader         = "Retry-After"
-	// The fallback is used if the reset header's value is present but cannot be parsed
-	defaultRateLimitFallbackDelay = time.Minute
-	defaultRateLimitRetriesCount  = 5
 )
 
-type rateLimitRequester struct {
-	client        requester
-	fallbackDelay time.Duration
-	retriesCount  int
-	logger        *logrus.Logger
+var retryStatuses = map[int]struct{}{
+	http.StatusRequestTimeout:      {},
+	http.StatusTooManyRequests:     {},
+	http.StatusInternalServerError: {},
+	http.StatusBadGateway:          {},
+	http.StatusServiceUnavailable:  {},
+	http.StatusGatewayTimeout:      {},
 }
 
-func newRateLimitRequester(client requester) *rateLimitRequester {
-	return &rateLimitRequester{
-		client:        client,
-		fallbackDelay: defaultRateLimitFallbackDelay,
-		retriesCount:  defaultRateLimitRetriesCount,
-		logger:        logrus.StandardLogger(),
+type retryRequester struct {
+	client       requester
+	retriesCount int
+	logger       *logrus.Logger
+}
+
+func newRetryRequester(client requester) *retryRequester {
+	return &retryRequester{
+		client:       client,
+		retriesCount: defaultRateLimitRetriesCount,
+		logger:       logrus.StandardLogger(),
 	}
 }
 
-func (r *rateLimitRequester) Do(req *http.Request) (res *http.Response, err error) {
+func (r *retryRequester) Do(req *http.Request) (res *http.Response, err error) {
 	logger := r.logger.
 		WithFields(logrus.Fields{
 			"context": "ratelimit-requester-gitlab-request",
@@ -45,17 +55,25 @@ func (r *rateLimitRequester) Do(req *http.Request) (res *http.Response, err erro
 			"method":  req.Method,
 		})
 
+	bo := &backoff.Backoff{
+		Min:    backOffMinDelay,
+		Max:    backOffMaxDelay,
+		Factor: backOffDelayFactor,
+		Jitter: backOffDelayJitter,
+	}
+
 	// Worst case would be the configured timeout from reverse proxy * retriesCount
 	for i := 0; i < r.retriesCount; i++ {
 		res, err = r.client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't execute %s against %s: %w", req.Method, req.URL, err)
 		}
-		waitTime := calculateWaitTime(r.fallbackDelay, res, logger.Logger)
-		if waitTime <= 0 {
+
+		if !shouldRetryRequest(res) {
 			return res, nil
 		}
 
+		waitTime := r.calculateWaitTime(res, bo)
 		logger.
 			WithField("duration", waitTime).
 			Infoln("Waiting before making the next call")
@@ -79,20 +97,21 @@ func (r *rateLimitRequester) Do(req *http.Request) (res *http.Response, err erro
 	return res, err
 }
 
-func calculateWaitTime(fallbackDelay time.Duration, resp *http.Response, logger *logrus.Logger) time.Duration {
-	if resp.StatusCode != http.StatusTooManyRequests && resp.StatusCode != http.StatusServiceUnavailable {
-		return 0
-	}
+func shouldRetryRequest(res *http.Response) bool {
+	_, ok := retryStatuses[res.StatusCode]
+	return ok || res.StatusCode >= 512
+}
 
-	if waitTime := parseResetTime(resp, logger); waitTime > 0 {
+func (r *retryRequester) calculateWaitTime(resp *http.Response, bo *backoff.Backoff) time.Duration {
+	if waitTime := parseResetTime(resp, r.logger); waitTime > 0 {
 		return waitTime
 	}
 
-	if waitTime := parseRetryAfter(resp, logger); waitTime > 0 {
+	if waitTime := parseRetryAfter(resp, r.logger); waitTime > 0 {
 		return waitTime
 	}
 
-	return fallbackDelay
+	return bo.Duration()
 }
 
 func parseResetTime(resp *http.Response, logger *logrus.Logger) time.Duration {
