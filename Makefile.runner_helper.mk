@@ -54,7 +54,7 @@ helper-images: out/helper-images
 
 .PHONY: helper-local-image
 helper-local-image: export LOCAL_ARCH ?= $(shell go env GOARCH)
-helper-local-image: export LOCAL_FLAVOR ?= alpine-3.21
+helper-local-image: export LOCAL_FLAVOR ?= alpine-latest
 helper-local-image: export RUNNER_IMAGES_VERSION ?= $(shell grep "RUNNER_IMAGES_VERSION:" .gitlab/ci/_common.gitlab-ci.yml | awk -F': ' '{ print $$2 }' | tr -d '"')
 helper-local-image: helper-bin-linux
 	cd dockerfiles/runner-helper && docker buildx bake --progress plain local-image

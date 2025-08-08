@@ -11,7 +11,7 @@ variable "LOCAL_ARCH" {
 }
 
 variable "LOCAL_FLAVOR" {
-  default = "alpine-3.21"
+  default = "alpine-latest"
 }
 
 target "base" {
