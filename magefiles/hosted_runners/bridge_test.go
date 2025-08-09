@@ -14,12 +14,10 @@ import (
 
 func TestJSONTableReplacement(t *testing.T) {
 	newRow := BridgeInfo{
-		Timestamp:   "TEST",
-		Version:     "TEST",
-		CommitSHA:   "TEST",
-		IsPre:       false,
-		IsSecurity:  false,
-		PipelineURL: "TEST",
+		Timestamp: "TEST",
+		Version:   "TEST",
+		CommitSHA: "TEST",
+		Flavor:    "TEST",
 	}
 
 	input, err := os.Open(filepath.Join("testdata", "table.md"))
