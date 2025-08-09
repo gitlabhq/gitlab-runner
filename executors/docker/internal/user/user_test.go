@@ -222,6 +222,49 @@ func testDefaultInspectUIDandGID(
 			expectedID:  123,
 			assertError: nil,
 		},
+		"blank lines": {
+			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).
+					Run(func(args mock.Arguments) {
+						assertCommand(t, args)
+						mockOutput(t, args, "  \n  \n  ", "")
+					}).
+					Return(nil).
+					Once()
+			},
+			expectedID: 0,
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, errIDNoOutput)
+			},
+		},
+		"empty lines received at the end of the output": {
+			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).
+					Run(func(args mock.Arguments) {
+						assertCommand(t, args)
+						mockOutput(t, args, "1000 \n \n", "")
+					}).
+					Return(nil).
+					Once()
+			},
+			expectedID:  1000,
+			assertError: nil,
+		},
+		"ID received at the end of the output": {
+			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).
+					Run(func(args mock.Arguments) {
+						assertCommand(t, args)
+						mockOutput(t, args, `
+Hello world
+1000`, "")
+					}).
+					Return(nil).
+					Once()
+			},
+			expectedID:  1000,
+			assertError: nil,
+		},
 	}
 
 	for tn, tt := range tests {

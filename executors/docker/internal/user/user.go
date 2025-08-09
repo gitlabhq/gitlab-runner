@@ -59,6 +59,12 @@ func (i *defaultInspect) GID(ctx context.Context, containerID string) (int, erro
 	return i.executeCommand(ctx, containerID, commandIDG)
 }
 
+func retrieveLastLine(s string) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+
+	return lines[len(lines)-1]
+}
+
 func (i *defaultInspect) executeCommand(ctx context.Context, containerID string, command string) (int, error) {
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
@@ -73,7 +79,7 @@ func (i *defaultInspect) executeCommand(ctx context.Context, containerID string,
 		return 0, fmt.Errorf("executing %q on container %q: %w", command, containerID, err)
 	}
 
-	stdoutContent := strings.TrimSpace(stdout.String())
+	stdoutContent := retrieveLastLine(stdout.String())
 	stderrContent := strings.TrimSpace(stderr.String())
 	if len(stdoutContent) < 1 {
 		return 0, fmt.Errorf("%w (stderr: %s)", errIDNoOutput, stderrContent)
