@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -351,13 +352,22 @@ func (b *Build) StartBuild(
 }
 
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage) error {
-	if b.GetJob().State.GetResumedFromStage() != "" && b.GetJob().State.GetResumedFromStage() != buildStage {
-		return nil
+	resumedFromStage := b.GetJob().State.GetResumedFromStage()
+	if resumedFromStage != "" {
+		if resumedFromStage != buildStage {
+			b.Log().WithFields(logrus.Fields{
+				"current_stage": buildStage,
+				"resumed_from": resumedFromStage,
+			}).Debugln("[FT-DEBUG] executeStage: Skipping stage - already executed before resume")
+			return nil
+		}
+		b.Log().WithField("stage", buildStage).Infoln("[FT-DEBUG] executeStage: Resuming from this stage")
 	}
 
 	defer b.GetJob().State.UnsetResumedFromStage()
 
 	if ctx.Err() != nil {
+		b.Log().WithError(ctx.Err()).Debugln("[FT-DEBUG] executeStage: Context cancelled")
 		return ctx.Err()
 	}
 
@@ -365,7 +375,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage) error {
 	defer b.OnBuildStageEndFn.Call(buildStage)
 
 	b.setCurrentStage(buildStage)
-	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
+	b.Log().WithField("build_stage", buildStage).Debug("[FT-DEBUG] executeStage: Executing build stage")
 
 	defer func() {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
@@ -423,9 +433,15 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage) error {
 			})
 
 			if statefulExecutor, ok := b.executor.(StatefulExecutor); ok && b.GetJob().State.IsResumed() {
+				b.Log().WithFields(logrus.Fields{
+					"stage": buildStage,
+					"is_resumed": b.GetJob().State.IsResumed(),
+					"retries": b.GetJob().State.GetRetries(),
+				}).Infoln("[FT-DEBUG] executeStage: Calling executor.Resume() for resumed job")
 				return statefulExecutor.Resume(cmd)
 			}
 
+			b.Log().WithField("stage", buildStage).Debugln("[FT-DEBUG] executeStage: Calling executor.Run() for normal execution")
 			return b.executor.Run(cmd)
 		},
 	}
@@ -784,7 +800,13 @@ func (b *Build) run(ctx context.Context) (err error, cleanup bool) {
 	}
 
 	if _, ok := b.executor.(StatefulExecutor); ok {
-		b.logger.Println("This executor supports stateful job execution")
+		b.Log().WithFields(logrus.Fields{
+			"executor_type": reflect.TypeOf(b.executor),
+			"is_resumed": b.GetJob().State.IsResumed(),
+			"store_configured": b.Runner.Store.IsConfigured(),
+		}).Infoln("[FT-DEBUG] run: This executor supports stateful job execution")
+	} else {
+		b.Log().Debugln("[FT-DEBUG] run: Executor does not support stateful execution")
 	}
 
 	// Run build script
@@ -807,15 +829,27 @@ func (b *Build) run(ctx context.Context) (err error, cleanup bool) {
 	case <-ctx.Done():
 		err = b.handleError(context.Cause(ctx))
 	case signal := <-b.SystemInterrupt:
+		b.Log().WithField("signal", signal).Infoln("[FT-DEBUG] SystemInterrupt: Received system signal")
 		if signal == syscall.SIGQUIT && b.isResumable() {
+			b.Log().WithFields(logrus.Fields{
+				"job_id": b.ID,
+				"stage": b.CurrentStage(),
+				"state": b.CurrentState(),
+			}).Infoln("[FT-DEBUG] SystemInterrupt: SIGQUIT received - saving job state for resume")
+			
 			runCancel(ErrQuitSignal)
 			b.waitForBuildFinish(buildFinish, WaitForBuildFinishTimeout)
+			
+			b.Log().Debugln("[FT-DEBUG] SystemInterrupt: Doing final job update before exit")
 			if err := b.JobStore.Update(b.Job); err != nil {
-				b.Log().Warnln("Error doing final job update", err)
+				b.Log().WithError(err).Errorln("[FT-DEBUG] SystemInterrupt: Error doing final job update")
+			} else {
+				b.Log().Infoln("[FT-DEBUG] SystemInterrupt: Job state saved successfully for resume")
 			}
 
 			return nil, false
 		} else {
+			b.Log().WithField("signal", signal).Infoln("[FT-DEBUG] SystemInterrupt: Non-resumable signal or build not resumable")
 			err = &BuildError{
 				Inner:         fmt.Errorf("aborted: %v", signal),
 				FailureReason: RunnerSystemFailure,
@@ -906,19 +940,28 @@ func (b *Build) initializeJobExecutorState() error {
 	var statefulExecutor StatefulExecutor
 	var ok bool
 	if statefulExecutor, ok = b.executor.(StatefulExecutor); !ok {
+		b.Log().Debugln("[FT-DEBUG] initializeJobExecutorState: Executor is not stateful")
 		return nil
 	}
 
+	b.Log().Debugln("[FT-DEBUG] initializeJobExecutorState: Executor is stateful, checking for saved state")
+	
 	executorState := b.GetJob().State.GetExecutorState()
 	if executorState == nil {
-		b.GetJob().State.SetExecutorState(statefulExecutor.GetState())
+		b.Log().Debugln("[FT-DEBUG] initializeJobExecutorState: No saved executor state, creating new state")
+		newState := statefulExecutor.GetState()
+		b.GetJob().State.SetExecutorState(newState)
+		b.Log().WithField("state_type", reflect.TypeOf(newState)).Debugln("[FT-DEBUG] initializeJobExecutorState: New executor state created")
 		return nil
 	}
 
+	b.Log().WithField("state_type", reflect.TypeOf(executorState)).Infoln("[FT-DEBUG] initializeJobExecutorState: Restoring executor state")
 	if !statefulExecutor.SetState(executorState) {
+		b.Log().Errorln("[FT-DEBUG] initializeJobExecutorState: Failed to restore executor state")
 		return errors.New("failed to restore executor state")
 	}
 
+	b.Log().Infoln("[FT-DEBUG] initializeJobExecutorState: Executor state restored successfully")
 	return nil
 }
 
@@ -1072,11 +1115,21 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 
 func (b *Build) isResumable() bool {
 	if b.executor == nil || b.Runner == nil || b.Runner.Store == nil {
+		b.Log().Debugln("[FT-DEBUG] isResumable: Not resumable - missing executor/runner/store")
 		return false
 	}
 
 	_, isStateful := b.executor.(StatefulExecutor)
-	return isStateful && b.Runner.Store.IsConfigured()
+	storeConfigured := b.Runner.Store.IsConfigured()
+	
+	resumable := isStateful && storeConfigured
+	b.Log().WithFields(logrus.Fields{
+		"is_stateful": isStateful,
+		"store_configured": storeConfigured,
+		"resumable": resumable,
+	}).Debugln("[FT-DEBUG] isResumable: Checking if build is resumable")
+	
+	return resumable
 }
 
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {

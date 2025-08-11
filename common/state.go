@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type StatefulExecutor interface {
@@ -126,11 +128,21 @@ func (s *JobRuntimeState) SetBuildState(state BuildRuntimeState) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	oldState := s.buildState
+	
 	// If the state is already set we don't want to go back to pending
 	if state == BuildRunStatePending && s.buildState != "" {
+		logrus.Debugf("[FT-DEBUG] SetBuildState: Ignoring transition to pending from %s", s.buildState)
 		return
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"old_state": oldState,
+		"new_state": state,
+		"stage": s.stage,
+		"retries": s.retries,
+	}).Infof("[FT-DEBUG] SetBuildState: Build state transition")
+	
 	s.buildState = state
 }
 
@@ -144,6 +156,15 @@ func (s *JobRuntimeState) GetBuildState() BuildRuntimeState {
 func (s *JobRuntimeState) SetStage(stage BuildStage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	oldStage := s.stage
+	logrus.WithFields(logrus.Fields{
+		"old_stage": oldStage,
+		"new_stage": stage,
+		"build_state": s.buildState,
+		"retries": s.retries,
+		"resumed_from": s.resumedFromStage,
+	}).Infof("[FT-DEBUG] SetStage: Stage transition")
 
 	s.stage = stage
 }
@@ -165,6 +186,11 @@ func (s *JobRuntimeState) GetResumedFromStage() BuildStage {
 func (s *JobRuntimeState) UnsetResumedFromStage() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	logrus.WithFields(logrus.Fields{
+		"resumed_from_stage": s.resumedFromStage,
+		"current_stage": s.stage,
+	}).Debugln("[FT-DEBUG] UnsetResumedFromStage: Clearing resumed stage marker")
 
 	s.resumedFromStage = ""
 }
@@ -193,6 +219,15 @@ func (s *JobRuntimeState) Resume() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	logrus.WithFields(logrus.Fields{
+		"retries_before": s.retries,
+		"retries_after": s.retries + 1,
+		"stage": s.stage,
+		"build_state": s.buildState,
+		"started_at": s.startedAt,
+		"sent_trace": s.sentTrace,
+	}).Infoln("[FT-DEBUG] Resume: Resuming job")
+
 	s.retries++
 	s.resumedFromStage = s.stage
 }
@@ -207,6 +242,10 @@ func (s *JobRuntimeState) GetRetries() int {
 func (s *JobRuntimeState) SetSentTrace(offset int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	oldSentTrace := s.sentTrace
+	logrus.Debugf("[FT-DEBUG] SetSentTrace: Updating sent trace offset from %d to %d (delta: %d)", 
+		oldSentTrace, offset, offset-oldSentTrace)
 
 	s.sentTrace = offset
 }
@@ -226,12 +265,22 @@ func (s *JobRuntimeState) SetExecutorState(state any) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	logrus.WithFields(logrus.Fields{
+		"state_type": reflect.TypeOf(state),
+		"state_nil": state == nil,
+	}).Debugln("[FT-DEBUG] SetExecutorState: Updating executor state metadata")
+
 	s.executorStateMetadata = state
 }
 
 func (s *JobRuntimeState) GetExecutorState() any {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
+	logrus.WithFields(logrus.Fields{
+		"state_type": reflect.TypeOf(s.executorStateMetadata),
+		"state_nil": s.executorStateMetadata == nil,
+	}).Debugln("[FT-DEBUG] GetExecutorState: Retrieving executor state metadata")
 
 	return s.executorStateMetadata
 }

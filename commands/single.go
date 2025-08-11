@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"reflect"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -84,10 +85,15 @@ func (r *RunSingleCommand) postBuild() {
 }
 
 func (r *RunSingleCommand) processBuild(data common.ExecutorData, provider common.ExecutorProvider, abortSignal chan os.Signal) error {
+	logrus.Debugln("[FT-DEBUG] processBuild: Starting build processing")
+	
 	store, err := provider.GetStore(&r.RunnerConfig)
 	if err != nil {
+		logrus.WithError(err).Errorln("[FT-DEBUG] processBuild: Failed to get store from provider")
 		return err
 	}
+	
+	logrus.WithField("store_type", reflect.TypeOf(store)).Debugln("[FT-DEBUG] processBuild: Got store from provider")
 
 	manager := common.NewStatefulJobManager(
 		r.network,
@@ -95,9 +101,12 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, provider commo
 		r.traceProvider,
 		&r.RunnerConfig,
 	)
+	
+	logrus.Debugln("[FT-DEBUG] processBuild: Created StatefulJobManager, requesting job")
+	
 	job, healthy := manager.RequestJob(context.Background(), nil)
 	if !healthy {
-		logrus.Println("Runner is not healthy!")
+		logrus.Println("[FT-DEBUG] processBuild: Runner is not healthy!")
 		select {
 		case <-time.After(common.NotHealthyCheckInterval * time.Second):
 		case <-abortSignal:
@@ -107,6 +116,7 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, provider commo
 	}
 
 	if job == nil {
+		logrus.Debugln("[FT-DEBUG] processBuild: No job available")
 		select {
 		case <-time.After(common.CheckInterval):
 		case <-abortSignal:
@@ -115,10 +125,18 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, provider commo
 		return nil
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"job_id": job.ID,
+		"is_resumed": job.State.IsResumed(),
+		"stage": job.State.GetStage(),
+		"retries": job.State.GetRetries(),
+	}).Infoln("[FT-DEBUG] processBuild: Got job")
+
 	config := common.NewConfig()
 	// Attempt to perform a deep copy of the RunnerConfig
 	runnerConfigCopy, err := r.RunnerConfig.DeepCopy()
 	if err != nil {
+		logrus.WithError(err).Errorln("[FT-DEBUG] processBuild: Failed to deep copy runner config")
 		return fmt.Errorf("deep copy of runner config failed: %w", err)
 	}
 
@@ -126,6 +144,11 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, provider commo
 	build.JobStore = store
 	build.SystemInterrupt = abortSignal
 	build.ExecutorData = data
+	
+	logrus.WithFields(logrus.Fields{
+		"job_id": build.ID,
+		"store_type": reflect.TypeOf(store),
+	}).Debugln("[FT-DEBUG] processBuild: Created build with job store")
 
 	jobCredentials := &common.JobCredentials{
 		ID:    job.ID,
