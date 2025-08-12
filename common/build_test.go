@@ -3299,3 +3299,71 @@ func TestBuild_RunCallsEnsureFinishedAt(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildIsProtected(t *testing.T) {
+	const protectedVarName = "CI_COMMIT_REF_PROTECTED"
+
+	someFalse, someTrue := false, true
+
+	tests := []struct {
+		name             string
+		gitInfoProtected *bool
+		variables        JobVariables
+		expected         bool
+	}{
+		{
+			name: "no config",
+		},
+		{
+			name:             "non-protected via GitInfo",
+			gitInfoProtected: &someFalse,
+			variables:        JobVariables{{Key: protectedVarName, Value: "true"}},
+		},
+		{
+			name:             "protected via GitInfo",
+			gitInfoProtected: &someTrue,
+			variables:        JobVariables{{Key: protectedVarName, Value: "false"}},
+			expected:         true,
+		},
+		{
+			name:      "non-protected via JobVariables",
+			variables: JobVariables{{Key: protectedVarName, Value: "false"}},
+		},
+		{
+			name:      "protected via JobVariables",
+			variables: JobVariables{{Key: protectedVarName, Value: "true"}},
+			expected:  true,
+		},
+		{
+			name: "non-protected via JobVariables, multiple vars",
+			variables: JobVariables{
+				{Key: protectedVarName, Value: "false"},
+				{Key: protectedVarName, Value: "true"},
+			},
+		},
+		{
+			name: "protected via JobVariables, multiple vars",
+			variables: JobVariables{
+				{Key: protectedVarName, Value: "true"},
+				{Key: protectedVarName, Value: "false"},
+			},
+			expected: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			build := &Build{
+				JobResponse: JobResponse{
+					Variables: test.variables,
+					GitInfo: GitInfo{
+						Protected: test.gitInfoProtected,
+					},
+				},
+			}
+
+			actual := build.IsProtected()
+			assert.Equal(t, test.expected, actual)
+		})
+	}
+}

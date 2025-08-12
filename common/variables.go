@@ -1,10 +1,12 @@
 package common
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -162,6 +164,29 @@ func (b JobVariables) Masked() (masked []string) {
 		}
 	}
 	return
+}
+
+// Dedup returns a clone of the JobVariables, where variables with the same key get de-duplicated.
+// If keepOriginal is true, the first duplicate JobVariable (ie. the original value) is kept, else the last one (ie. the
+// final overridden value).
+// The order of variables is not preserved.
+func (b JobVariables) Dedup(keepOriginal bool) JobVariables {
+	clone := slices.Clone(b)
+
+	if !keepOriginal {
+		// GitLab might give us multiple vars with the same key, with the last one being the final overridden one. In order
+		// to get the original value, we thus reverse the vars, and therefore get the first/original value after doing "sort
+		// | uniq".
+		slices.Reverse(clone)
+	}
+
+	slices.SortStableFunc(clone, func(a, b JobVariable) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+
+	return slices.Clip(slices.CompactFunc(clone, func(a, b JobVariable) bool {
+		return a.Key == b.Key
+	}))
 }
 
 func ParseVariable(text string) (variable JobVariable, err error) {

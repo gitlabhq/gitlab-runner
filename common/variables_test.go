@@ -475,3 +475,49 @@ func TestSet(t *testing.T) {
 		})
 	}
 }
+
+func Test_JobVariables_Dedup(t *testing.T) {
+	vars := JobVariables{
+		{Key: "foo-key", Value: "foo"},
+		{Key: "some-key", Value: "this is the original"},
+		{Key: "bar-key", Value: "bar"},
+		{Key: "some-key", Value: "this is unused"},
+		{Key: "baz-key", Value: "baz"},
+		{Key: "some-key", Value: "this is overridden"},
+		{Key: "blerp-key", Value: "blerp"},
+	}
+
+	tests := []struct {
+		name         string
+		keepOriginal bool
+		expectedVars JobVariables
+	}{
+		{
+			name: "keep overridden",
+			expectedVars: JobVariables{
+				{Key: "bar-key", Value: "bar"},
+				{Key: "baz-key", Value: "baz"},
+				{Key: "blerp-key", Value: "blerp"},
+				{Key: "foo-key", Value: "foo"},
+				{Key: "some-key", Value: "this is overridden"},
+			},
+		},
+		{
+			name:         "keep original",
+			keepOriginal: true,
+			expectedVars: JobVariables{
+				{Key: "bar-key", Value: "bar"},
+				{Key: "baz-key", Value: "baz"},
+				{Key: "blerp-key", Value: "blerp"},
+				{Key: "foo-key", Value: "foo"},
+				{Key: "some-key", Value: "this is the original"},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedVars, vars.Dedup(tc.keepOriginal))
+		})
+	}
+}

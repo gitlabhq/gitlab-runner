@@ -82,6 +82,8 @@ func TestCreateVolumesLabels(t *testing.T) {
 		"com.gitlab.gitlab-runner.runner.id":       "test-toke",
 		"com.gitlab.gitlab-runner.runner.local_id": "0",
 		"com.gitlab.gitlab-runner.type":            "cache",
+		"com.gitlab.gitlab-runner.destination":     testCreateVolumesDriverOptsDestinationPath,
+		"com.gitlab.gitlab-runner.protected":       "false",
 	}, volume.Labels)
 }
 
