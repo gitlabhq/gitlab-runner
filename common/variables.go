@@ -67,21 +67,28 @@ func (b JobVariables) Get(key string) string {
 	return b.value(key, true)
 }
 
-// Set sets newJobVars on the JobVariables, replacing an original variable if one exists with the same key.
+// Set sets newJobVars on the JobVariables, replacing all existing variables with the same key.
+// If newJobVars holds variables with the same key, only the last one is set.
 func (b *JobVariables) Set(newJobVars ...JobVariable) {
-	for _, newJobVar := range newJobVars {
-		b.set(newJobVar)
+	if len(newJobVars) < 1 {
+		return
 	}
-}
 
-func (b *JobVariables) set(newJobVar JobVariable) {
-	for i, v := range *b {
-		if v.Key == newJobVar.Key {
-			(*b)[i] = newJobVar
-			return
-		}
+	newVarsByKey := make(map[string]JobVariable, len(newJobVars))
+
+	for _, v := range newJobVars {
+		// for multiple newJobVars with the same key, only keep the last one
+		newVarsByKey[v.Key] = v
 	}
-	*b = append(*b, newJobVar)
+
+	*b = slices.DeleteFunc(*b, func(v JobVariable) bool {
+		_, exists := newVarsByKey[v.Key]
+		return exists
+	})
+
+	for _, v := range newVarsByKey {
+		*b = append(*b, v)
+	}
 }
 
 // Value is similar to Get(), but always returns the key value, regardless

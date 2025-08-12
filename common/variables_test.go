@@ -443,7 +443,7 @@ func TestBoolVariables(t *testing.T) {
 	}
 }
 
-func TestSet(t *testing.T) {
+func Test_JobVariables_Set(t *testing.T) {
 	tests := map[string]struct {
 		jobVars  JobVariables
 		set      JobVariables
@@ -451,18 +451,47 @@ func TestSet(t *testing.T) {
 	}{
 		"noop": {},
 		"add one": {
-			set:      JobVariables{{Key: "foo", Value: "bar"}},
-			expected: []string{"foo=bar"},
+			set: JobVariables{
+				{Key: "foo", Value: "don't use that foo"},
+				{Key: "foo", Value: "the new foo"},
+			},
+			expected: []string{"foo=the new foo"},
 		},
 		"overwrite one": {
-			jobVars:  JobVariables{{Key: "foo", Value: "old foo"}},
-			set:      JobVariables{{Key: "foo", Value: "new foo"}},
+			jobVars: JobVariables{
+				{Key: "foo", Value: "this foo gets overridden"},
+				{Key: "foo", Value: "this one too"},
+			},
+			set: JobVariables{
+				{Key: "foo", Value: "new foo"},
+			},
+
 			expected: []string{"foo=new foo"},
 		},
 		"overwrite and add": {
-			jobVars:  JobVariables{{Key: "org", Value: "the org"}, {Key: "foo", Value: "old foo"}},
-			set:      JobVariables{{Key: "foo", Value: "new foo"}, {Key: "bar", Value: "new bar"}},
-			expected: []string{"foo=new foo", "bar=new bar", "org=the org"},
+			jobVars: JobVariables{
+				{Key: "foo", Value: "this foo gets overridden"},
+				{Key: "org", Value: "the org keeps as is"},
+				{Key: "foo", Value: "this one too"},
+			},
+			set: JobVariables{
+				{Key: "bar", Value: "don't use that bar"},
+				{Key: "foo", Value: "new foo"},
+				{Key: "bar", Value: "new bar"},
+			},
+			expected: []string{"foo=new foo", "bar=new bar", "org=the org keeps as is"},
+		},
+		"duplicates are preserved if not set": {
+			jobVars: JobVariables{
+				{Key: "foo", Value: "1st foo"},
+				{Key: "blerp", Value: "nope"},
+				{Key: "foo", Value: "2nd foo"},
+				{Key: "foo", Value: "3rd foo"},
+			},
+			set: JobVariables{
+				{Key: "blerp", Value: "blerp!"},
+			},
+			expected: []string{"blerp=blerp!", "foo=1st foo", "foo=2nd foo", "foo=3rd foo"},
 		},
 	}
 
