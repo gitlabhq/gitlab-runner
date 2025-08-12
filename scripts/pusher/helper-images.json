@@ -2,24 +2,6 @@
     "dir": "../../out/helper-images/",
     "export": "../../out/release_artifacts/",
     "default": {
-        "alpine3.18-arm64": [
-            "alpine3.18-arm64-%"
-        ],
-        "alpine3.18-arm": [
-            "alpine3.18-arm-%"
-        ],
-        "alpine3.18-ppc64le": [
-            "alpine3.18-ppc64le-%"
-        ],
-        "alpine3.18-s390x": [
-            "alpine3.18-s390x-%"
-        ],
-        "alpine3.18-x86_64-pwsh": [
-            "alpine3.18-x86_64-%-pwsh"
-        ],
-        "alpine3.18-x86_64": [
-            "alpine3.18-x86_64-%"
-        ],
         "alpine3.19-arm64": [
             "alpine3.19-arm64-%",
             "arm64-%"
