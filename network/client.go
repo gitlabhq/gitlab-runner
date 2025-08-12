@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -58,9 +57,7 @@ type client struct {
 	lastIdleRefresh  time.Time
 	lastUpdate       string
 	connectionMaxAge time.Duration
-	lock             sync.Mutex
-
-	requester requester
+	requester        requester
 }
 
 type ResponseTLSData struct {
