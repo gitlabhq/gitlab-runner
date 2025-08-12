@@ -396,7 +396,7 @@ The following settings define the Docker container parameters. These settings ar
 | `gpus`                             |                                                  | GPU devices for Docker container. Uses the same format as the `docker` CLI. View details in the [Docker documentation](https://docs.docker.com/engine/containers/resource_constraints/#gpu). Requires [configuration to enable GPUs](gpus.md#docker-executor). |
 | `group_add`                        | `["docker"]`                                     | Add additional groups for the container process to run. |
 | `helper_image`                     |                                                  | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
-| `helper_image_flavor`              |                                                  | Sets the helper image flavor (`alpine`, `alpine3.19`, `alpine3.21`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.21`. |
+| `helper_image_flavor`              |                                                  | Sets the helper image flavor (`alpine`, `alpine3.21`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine-latest`. |
 | `helper_image_autoset_arch_and_os` |                                                  | Uses the underlying OS to set the Helper Image architecture and OS. |
 | `host`                             |                                                  | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
 | `hostname`                         |                                                  | Custom hostname for the Docker container. |
@@ -1638,8 +1638,10 @@ The `alpine` image is the default due to its small footprint.
 Using `helper_image_flavor = "ubuntu"` selects the `ubuntu` flavor of the helper image.
 
 In GitLab Runner 16.1 to 17.1, the `alpine` flavor is an alias for `alpine3.18`. In GitLab Runner 17.2 to 17.6, it's an alias for `alpine3.19`. In GitLab Runner 17.7 and later, it's an alias for `alpine3.21`.
+In GitLab Runner 18.4 and later, it's an alias for `alpine-latest`.
 
-The `alpine-latest` flavor uses `alpine:latest` as its base image, which could potentially mean it is more unstable.
+The `alpine-latest` flavor uses `alpine:latest` as its base image, and will naturally increment versions as new upstream
+versions are released.
 
 When GitLab Runner is installed from the `DEB` or `RPM` packages, images for the supported architectures are installed on the host.
 If Docker Engine can't find the specified image version, the runner automatically downloads it before running the job. Both the
