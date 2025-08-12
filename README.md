@@ -1,7 +1,8 @@
 # GitLab Runner
 
 This is the repository of the official GitLab Runner written in Go.
-It runs tests and sends the results to GitLab.
+It executes tests and sends the results to GitLab.
+
 [GitLab CI](https://about.gitlab.com/gitlab-ci) is the open-source
 continuous integration service included with GitLab that coordinates the testing.
 The old name of this project was GitLab CI Multi Runner but please use "GitLab Runner" (without CI) from now on.
@@ -16,7 +17,7 @@ the [compatibility section](https://docs.gitlab.com/runner/#gitlab-runner-versio
 
 ## Release process
 
-The description of release process of GitLab Runner project can be found inside of [`PROCESS.md`](PROCESS.md).
+The description of the release process for the GitLab Runner project can be found in [`PROCESS.md`](PROCESS.md).
 
 ## Contributing
 
