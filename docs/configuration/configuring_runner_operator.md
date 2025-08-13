@@ -68,6 +68,8 @@ Some properties are only available with more recent versions of the Operator.
 | `listenAddr`       | 1.34     | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. For information about configuration, see [Monitor GitLab Runner Operator](../monitoring/_index.md#monitor-operator-managed-gitlab-runners). |
 | `sentryDsn`        | 1.34     | Enables tracking of all system level errors to Sentry. |
 | `connectionMaxAge` | 1.34     | The maximum duration a TLS keepalive connection to the GitLab server should remain open before reconnecting. The default value is `15m` for 15 minutes. If set to `0` or lower, the connection persists as long as possible. |
+| `podSpec`          | 1.23     | List of patches to apply to the GitLab Runner pod (template). For more information, see [Patching the runner pod template](#patching-the-runner-pod-template). |
+| `deploymentSpec`   | 1.40     | List of patches to apply to the GitLab Runner deployment. For more information, see [Patching the runner deployment template](#patching-the-runner-deployment-template). |
 
 ## Cache properties
 
@@ -541,3 +543,113 @@ To fix this issue:
    ```
 
 1. Use this new certificate to generate a new secret.
+
+## Patch structure
+
+Each specification patch consists of the following properties:
+
+| Setting     | Description                                                                                                                                     |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`      | Name of the custom specification patch.                                                                                                     |
+| `patchFile` | Path to the file that defines the changes to apply to the final specification before it is generated. The file must be a JSON or YAML file. |
+| `patch`     | A JSON or YAML format string that describes the changes to apply to the final specification before it is generated.                         |
+| `patchType` | The strategy used to apply the specified changes to the specification. The accepted values are `merge`, `json`, and `strategic` (default).  |
+
+You cannot set both `patchFile` and `patch` in the same specification configuration.
+
+## Patching the runner pod template
+
+[Pod specification](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-template-v1/#PodTemplateSpec)
+patching lets you customize how GitLab Runner is deployed by applying patches to the operator-generated Kubernetes deployment.
+Patches are applied to the pod template's specification (`deployment.spec.template.spec`).
+
+You can control pod-level settings such as:
+
+- Resource requests and limits
+- Security contexts
+- Volume mounts and volumes
+- Environment variables
+- Node selectors and affinity rules
+- Tolerations
+- Hostname and DNS configuration
+
+## Patching the runner deployment template
+
+[Deployment specification](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/#Deployment)
+patching lets you customize how GitLab Runner is deployed by applying patches to the operator-generated Kubernetes deployment.
+Patches are applied to the deployment specification (`deployment.spec`).
+
+You can control deployment-level settings such as:
+
+- Replica count
+- Deployment strategy (RollingUpdate, Recreate)
+- Revision history limits
+- Progress deadline seconds
+- Labels and annotations
+
+## Patch order
+
+Deployment specification patches are applied before pod specification patches. This means that if both deployment and pod specifications modify the same field, the pod specification takes precedence.
+
+## Examples
+
+### Pod specification patching example
+
+```yaml
+apiVersion: apps.gitlab.com/v1beta2
+kind: Runner
+metadata:
+  name: dev
+spec:
+  gitlabUrl: https://gitlab.example.com
+  token: gitlab-runner-secret
+  podSpec:
+    - name: "set-hostname"
+      patch: |
+        hostname: "custom-hostname"
+      patchType: "merge"
+    - name: "add-resource-requests"
+      patch: |
+        containers:
+        - name: build
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+      patchType: "strategic"
+```
+
+### Deployment specification patching example
+
+```yaml
+apiVersion: apps.gitlab.com/v1beta2
+kind: Runner
+metadata:
+  name: dev
+spec:
+  gitlabUrl: https://gitlab.example.com
+  token: gitlab-runner-secret
+  deploymentSpec:
+    - name: "set-replicas"
+      patch: |
+        replicas: 3
+      patchType: "strategic"
+    - name: "configure-strategy"
+      patch: |
+        strategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxUnavailable: 25%
+            maxSurge: 50%
+      patchType: "strategic"
+    - name: "set-revision-history"
+      patch: |
+        [{"op": "add", "path": "/revisionHistoryLimit", "value": 10}]
+      patchType: "json"
+```
+
+## Best practices
+
+- Test patches in a non-production environment before applying them to production deployments.
+- Use deployment-level patches for settings that affect the deployment behavior rather than individual pod settings.
+- Remember that pod specification patches override deployment specification patches for conflicting fields.
