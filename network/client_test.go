@@ -121,7 +121,7 @@ func writeTLSKeyPair(s *httptest.Server, certFile, keyFile string) error {
 func TestNewClient(t *testing.T) {
 	c, err := newClient(&RunnerCredentials{
 		URL: "http://test.example.com/ci///",
-	})
+	}, NewAPIRequestsCollector())
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 	assert.Equal(t, "http://test.example.com/api/v4/", c.url.String())
@@ -130,7 +130,7 @@ func TestNewClient(t *testing.T) {
 func TestInvalidUrl(t *testing.T) {
 	_, err := newClient(&RunnerCredentials{
 		URL: "address.com/ci///",
-	})
+	}, NewAPIRequestsCollector())
 	assert.Error(t, err)
 }
 
@@ -164,7 +164,7 @@ func TestServerCertificateChange(t *testing.T) {
 	// create runner client
 	c, err := newClient(&RunnerCredentials{
 		URL: "https://" + ln.Addr().String(),
-	})
+	}, NewAPIRequestsCollector())
 	require.NoError(t, err)
 	require.NotNil(t, c)
 
@@ -207,7 +207,7 @@ func TestClientDo(t *testing.T) {
 
 	c, err := newClient(&RunnerCredentials{
 		URL: s.URL,
-	})
+	}, NewAPIRequestsCollector())
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 
@@ -320,7 +320,7 @@ func TestClientNilBody(t *testing.T) {
 
 	c, err := newClient(&RunnerCredentials{
 		URL: s.URL,
-	})
+	}, NewAPIRequestsCollector())
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 
@@ -349,7 +349,7 @@ func TestClientDo_Context(t *testing.T) {
 
 	c, err := newClient(&RunnerCredentials{
 		URL: "http://gitlab.example.com",
-	})
+	}, NewAPIRequestsCollector())
 	require.NoError(t, err)
 	require.NotNil(t, c)
 
@@ -372,7 +372,7 @@ func TestClientInvalidSSL(t *testing.T) {
 
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
-	})
+	}, NewAPIRequestsCollector())
 	statusCode, statusText, _ := c.doJSON(
 		context.Background(),
 		"test/ok",
@@ -403,7 +403,7 @@ func TestClientTLSCAFile(t *testing.T) {
 	c, _ := newClient(&RunnerCredentials{
 		URL:       s.URL,
 		TLSCAFile: file.Name(),
-	})
+	}, NewAPIRequestsCollector())
 	statusCode, statusText, resp := c.doJSON(
 		context.Background(),
 		"test/ok",
@@ -437,7 +437,7 @@ func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
-	})
+	}, NewAPIRequestsCollector())
 	statusCode, statusText, resp := c.doJSON(
 		context.Background(),
 		"test/ok",
@@ -472,7 +472,7 @@ func TestClientInvalidTLSAuth(t *testing.T) {
 	c, _ := newClient(&RunnerCredentials{
 		URL:       s.URL,
 		TLSCAFile: ca.Name(),
-	})
+	}, NewAPIRequestsCollector())
 	statusCode, statusText, _ := c.doJSON(
 		context.Background(),
 		"test/ok",
@@ -519,7 +519,7 @@ func TestClientTLSAuth(t *testing.T) {
 		TLSCAFile:   ca.Name(),
 		TLSCertFile: cert.Name(),
 		TLSKeyFile:  key.Name(),
-	})
+	}, NewAPIRequestsCollector())
 
 	statusCode, statusText, resp := c.doJSON(
 		context.Background(),
@@ -566,7 +566,7 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
-	})
+	}, NewAPIRequestsCollector())
 	statusCode, statusText, resp := c.doJSON(
 		context.Background(),
 		"test/ok",
@@ -627,7 +627,7 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
-	})
+	}, NewAPIRequestsCollector())
 
 	res := struct {
 		Key string `json:"key"`
@@ -681,7 +681,7 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 func TestRequesterCalled(t *testing.T) {
 	c, _ := newClient(&RunnerCredentials{
 		URL: "http://localhost:1000/",
-	})
+	}, NewAPIRequestsCollector())
 
 	rl := newMockRequester(t)
 

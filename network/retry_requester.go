@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jpillora/backoff"
@@ -34,16 +35,18 @@ var retryStatuses = map[int]struct{}{
 }
 
 type retryRequester struct {
-	client       requester
-	retriesCount int
-	logger       *logrus.Logger
+	apiRequestCollector *APIRequestsCollector
+	client              requester
+	retriesCount        int
+	logger              *logrus.Logger
 }
 
-func newRetryRequester(client requester) *retryRequester {
+func newRetryRequester(client requester, apiRequestCollector *APIRequestsCollector) *retryRequester {
 	return &retryRequester{
-		client:       client,
-		retriesCount: defaultRateLimitRetriesCount,
-		logger:       logrus.StandardLogger(),
+		apiRequestCollector: apiRequestCollector,
+		client:              client,
+		retriesCount:        defaultRateLimitRetriesCount,
+		logger:              logrus.StandardLogger(),
 	}
 }
 
@@ -55,6 +58,13 @@ func (r *retryRequester) Do(req *http.Request) (res *http.Response, err error) {
 			"method":  req.Method,
 		})
 
+	var retries int
+	defer func() {
+		if retries != 0 {
+			r.apiRequestCollector.AddRetries(logger, normalizedURI(req.URL.Path), req.Method, float64(retries))
+		}
+	}()
+
 	bo := &backoff.Backoff{
 		Min:    backOffMinDelay,
 		Max:    backOffMaxDelay,
@@ -64,6 +74,7 @@ func (r *retryRequester) Do(req *http.Request) (res *http.Response, err error) {
 
 	// Worst case would be the configured timeout from reverse proxy * retriesCount
 	for i := 0; i < r.retriesCount; i++ {
+		retries = i
 		res, err = r.client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't execute %s against %s: %w", req.Method, req.URL, err)
@@ -154,4 +165,24 @@ func parseRetryAfter(resp *http.Response, logger *logrus.Logger) time.Duration {
 	}
 
 	return time.Duration(retrySeconds) * time.Second
+}
+
+func normalizedURI(path string) string {
+	if path == "" || path == "/" {
+		return path
+	}
+
+	// Split path into segments
+	segments := strings.Split(path, "/")
+
+	for i, segment := range segments {
+		if segment == "" {
+			continue
+		}
+		if _, err := strconv.ParseInt(segment, 10, 64); err == nil {
+			segments[i] = "{id}"
+		}
+	}
+
+	return strings.Join(segments, "/")
 }

@@ -20,14 +20,19 @@ import (
 )
 
 func TestNewRetryRequester(t *testing.T) {
-	rl := newRetryRequester(http.DefaultClient)
+	t.Parallel()
+	apiRequestCollector := NewAPIRequestsCollector()
+	rl := newRetryRequester(http.DefaultClient, apiRequestCollector)
 
+	assert.Equal(t, apiRequestCollector, rl.apiRequestCollector)
 	assert.Equal(t, rl.client, http.DefaultClient)
 	assert.Equal(t, rl.retriesCount, defaultRateLimitRetriesCount)
 	assert.NotNil(t, rl.logger)
 }
 
 func TestRetryRequester_Do(t *testing.T) {
+	t.Parallel()
+
 	cancelledCtx, cancel := context.WithCancel(t.Context())
 	cancel()
 
@@ -219,7 +224,7 @@ func TestRetryRequester_Do(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			mr := tc.setup(t)
-			rlr := newRetryRequester(mr)
+			rlr := newRetryRequester(mr, NewAPIRequestsCollector())
 			rlr.retriesCount = 3
 			logger, _ := test.NewNullLogger()
 			rlr.logger = logger
@@ -269,7 +274,7 @@ func TestRetryRequester_Do_BodyCopiedBetweenRequests(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	rlr := newRetryRequester(http.DefaultClient)
+	rlr := newRetryRequester(http.DefaultClient, NewAPIRequestsCollector())
 	rlr.retriesCount = 5
 
 	req, err := http.NewRequest(http.MethodPost, testServer.URL, strings.NewReader("somebody"))
@@ -288,6 +293,8 @@ func TestRetryRequester_Do_BodyCopiedBetweenRequests(t *testing.T) {
 }
 
 func TestRetryRequester_calculateWaitTime(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name             string
 		setup            func(tb testing.TB) *http.Response
@@ -346,7 +353,7 @@ func TestRetryRequester_calculateWaitTime(t *testing.T) {
 			t.Parallel()
 
 			logger, _ := test.NewNullLogger()
-			rtr := newRetryRequester(nil)
+			rtr := newRetryRequester(nil, NewAPIRequestsCollector())
 			rtr.logger = logger
 			duration := rtr.calculateWaitTime(tc.setup(t), &backoff.Backoff{})
 
@@ -356,6 +363,8 @@ func TestRetryRequester_calculateWaitTime(t *testing.T) {
 }
 
 func TestShouldRetryRequest(t *testing.T) {
+	t.Parallel()
+
 	for status, shouldRetry := range map[int]bool{
 		http.StatusRequestTimeout:      true,
 		http.StatusTooManyRequests:     true,
@@ -371,6 +380,58 @@ func TestShouldRetryRequest(t *testing.T) {
 			t.Parallel()
 
 			assert.Equal(t, shouldRetryRequest(&http.Response{StatusCode: status}), shouldRetry)
+		})
+	}
+}
+
+func TestNormalizedURI(t *testing.T) {
+	t.Parallel()
+
+	normalizeURItestCases := []struct {
+		requestPath string
+		expect      string
+	}{
+		{
+			requestPath: "/",
+			expect:      "/",
+		},
+		{
+			requestPath: "/runners",
+			expect:      "/runners",
+		},
+		{
+			requestPath: "/runners/verify",
+			expect:      "/runners/verify",
+		},
+		{
+			requestPath: "/jobs/12345",
+			expect:      "/jobs/{id}",
+		},
+		{
+			requestPath: "/jobs/12345/trace",
+			expect:      "/jobs/{id}/trace",
+		},
+		{
+			requestPath: "/1",
+			expect:      "/{id}",
+		},
+		{
+			requestPath: "/1/2/3",
+			expect:      "/{id}/{id}/{id}",
+		},
+		{
+			requestPath: "/1/",
+			expect:      "/{id}/",
+		},
+	}
+
+	for _, tc := range normalizeURItestCases {
+		t.Run(fmt.Sprintf("%s from %s", tc.requestPath, tc.expect), func(t *testing.T) {
+			t.Parallel()
+
+			res := normalizedURI(tc.requestPath)
+
+			assert.Equal(t, tc.expect, res)
 		})
 	}
 }
