@@ -85,8 +85,9 @@ func TestClients(t *testing.T) {
 	assert.Error(t, c8err)
 }
 
-func mockRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response registerRunnerResponse, t *testing.T) {
-	t.Helper()
+func mockRegisterRunnerHandler(tb testing.TB, w http.ResponseWriter, r *http.Request, response registerRunnerResponse) {
+	tb.Helper()
+	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 	w.Header().Add(correlationIDHeader, "foobar")
 
 	if r.URL.Path != "/api/v4/runners" {
@@ -100,16 +101,16 @@ func mockRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 	}
 
 	body, err := io.ReadAll(r.Body)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	var req RegisterRunnerRequest
 	err = json.Unmarshal(body, &req)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	res := RegisterRunnerResponse{}
 	token := req.Token
-	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
-	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
+	require.NotEmpty(tb, r.Header.Get(RunnerToken), "runner-token header is required")
+	require.Equal(tb, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validToken:
@@ -153,17 +154,17 @@ func mockRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 	}
 
 	output, err := json.Marshal(res)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	w.Header().Set(ContentType, "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write(output)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 }
 
 func TestGitLabClient_RegisterRunner(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mockRegisterRunnerHandler(w, r, registerRunnerResponseOK, t)
+		mockRegisterRunnerHandler(t, w, r, registerRunnerResponseOK)
 	}))
 	defer s.Close()
 
@@ -287,7 +288,7 @@ func TestGitLabClient_RegisterRunner_OnRunnerLimitHit(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			// Arrange
 			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				mockRegisterRunnerHandler(w, r, tc.response, t)
+				mockRegisterRunnerHandler(t, w, r, tc.response)
 			}))
 			defer s.Close()
 
@@ -338,8 +339,9 @@ func (s *logHook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-func mockUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
-	t.Helper()
+func mockUnregisterRunnerHandler(tb testing.TB, w http.ResponseWriter, r *http.Request) {
+	tb.Helper()
+	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 	if r.URL.Path != "/api/v4/runners" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -351,15 +353,15 @@ func mockUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 	}
 
 	body, err := io.ReadAll(r.Body)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	var req map[string]interface{}
 	err = json.Unmarshal(body, &req)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
-	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
+	require.NotEmpty(tb, r.Header.Get(RunnerToken), "runner-token header is required")
+	require.Equal(tb, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validGlrtToken, validToken:
@@ -373,7 +375,7 @@ func mockUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 
 func TestGitLabClient_UnregisterRunner(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mockUnregisterRunnerHandler(w, r, t)
+		mockUnregisterRunnerHandler(t, w, r)
 	}))
 	defer s.Close()
 
@@ -428,8 +430,9 @@ func TestGitLabClient_UnregisterRunner(t *testing.T) {
 	}
 }
 
-func mockUnregisterRunnerManagerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
-	t.Helper()
+func mockUnregisterRunnerManagerHandler(tb testing.TB, w http.ResponseWriter, r *http.Request) {
+	tb.Helper()
+	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 	if r.URL.Path != "/api/v4/runners/managers" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -441,15 +444,15 @@ func mockUnregisterRunnerManagerHandler(w http.ResponseWriter, r *http.Request, 
 	}
 
 	body, err := io.ReadAll(r.Body)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	var req map[string]interface{}
 	err = json.Unmarshal(body, &req)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
-	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
+	require.NotEmpty(tb, r.Header.Get(RunnerToken), "runner-token header is required")
+	require.Equal(tb, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validGlrtToken:
@@ -468,9 +471,11 @@ func mockUnregisterRunnerManagerHandler(w http.ResponseWriter, r *http.Request, 
 }
 
 func TestUnregisterRunnerManager(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mockUnregisterRunnerManagerHandler(w, r, t)
-	}))
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		mockUnregisterRunnerManagerHandler(t, w, r)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
 	defer s.Close()
 
 	testCases := []struct {
@@ -525,7 +530,8 @@ func TestUnregisterRunnerManager(t *testing.T) {
 	}
 }
 
-func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, legacyServer bool, t *testing.T) {
+func testVerifyRunnerHandler(tb testing.TB, w http.ResponseWriter, r *http.Request, legacyServer bool) {
+	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 	if r.URL.Path != "/api/v4/runners/verify" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -537,17 +543,17 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, legacyServe
 	}
 
 	body, err := io.ReadAll(r.Body)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	var req map[string]interface{}
 	err = json.Unmarshal(body, &req)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	res := make(map[string]interface{})
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
-	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
+	require.NotEmpty(tb, r.Header.Get(RunnerToken), "runner-token header is required")
+	require.Equal(tb, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validToken:
@@ -587,7 +593,7 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, legacyServe
 
 func TestVerifyRunnerOnLegacyServer(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		testVerifyRunnerHandler(w, r, true, t)
+		testVerifyRunnerHandler(t, w, r, true)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))
@@ -642,7 +648,7 @@ func TestVerifyRunnerOnLegacyServer(t *testing.T) {
 
 func TestVerifyRunner(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		testVerifyRunnerHandler(w, r, false, t)
+		testVerifyRunnerHandler(t, w, r, false)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))
@@ -708,7 +714,8 @@ func TestVerifyRunner(t *testing.T) {
 	)
 }
 
-func testResetTokenHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func testResetTokenHandler(tb testing.TB, w http.ResponseWriter, r *http.Request) {
+	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 	if r.URL.Path != "/api/v4/runners/reset_authentication_token" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -725,11 +732,11 @@ func testResetTokenHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 	}
 
 	body, err := io.ReadAll(r.Body)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	var req map[string]interface{}
 	err = json.Unmarshal(body, &req)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	res := make(map[string]interface{})
 
@@ -761,7 +768,7 @@ func testResetTokenHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 
 func TestResetToken(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		testResetTokenHandler(w, r, t)
+		testResetTokenHandler(t, w, r)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))
@@ -809,7 +816,8 @@ func TestResetToken(t *testing.T) {
 	assert.Nil(t, res)
 }
 
-func testResetTokenWithPATHandler(w http.ResponseWriter, r *http.Request) {
+func testResetTokenWithPATHandler(tb testing.TB, w http.ResponseWriter, r *http.Request) {
+	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 	regex := regexp.MustCompilePOSIX("^/api/v4/runners/(.*)/reset_authentication_token$")
 	matches := regex.FindStringSubmatch(r.URL.Path)
 	if len(matches) != 2 {
@@ -869,7 +877,7 @@ func testResetTokenWithPATHandler(w http.ResponseWriter, r *http.Request) {
 
 func TestResetTokenWithPAT(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		testResetTokenWithPATHandler(w, r)
+		testResetTokenWithPATHandler(t, w, r)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))
@@ -1057,8 +1065,8 @@ func getRequestJobResponse(tb testing.TB, validResponse bool) string {
 }`, imageExecutorOptsKey, imageExecutorOptsValue, svcExecutorOptsKey, svcExecutorOptsValue)
 }
 
-func mockRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request, jobResponse string) {
-	t.Helper()
+func mockRequestJobHandler(tb testing.TB, w http.ResponseWriter, r *http.Request, jobResponse string) {
+	tb.Helper()
 	w.Header().Add(correlationIDHeader, "foobar")
 
 	if r.URL.Path != "/api/v4/jobs/request" {
@@ -1072,17 +1080,17 @@ func mockRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request,
 	}
 
 	body, err := io.ReadAll(r.Body)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	var req map[string]interface{}
 	err = json.Unmarshal(body, &req)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
-	assert.Equal(t, testSystemID, req["system_id"])
+	assert.Equal(tb, testSystemID, req["system_id"])
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(RunnerToken), "runner-token header is required")
-	require.Equal(t, token, r.Header.Get("runner-token"), "token in header and body must match")
+	require.NotEmpty(tb, r.Header.Get(RunnerToken), "runner-token header is required")
+	require.Equal(tb, token, r.Header.Get("runner-token"), "token in header and body must match")
 
 	switch token {
 	case validToken:
@@ -1098,7 +1106,7 @@ func mockRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	assert.Equal(t, testSystemID, req["system_id"])
+	assert.Equal(tb, testSystemID, req["system_id"])
 
 	if r.Header.Get(Accept) != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -1108,7 +1116,7 @@ func mockRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request,
 	w.Header().Set(ContentType, "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(jobResponse))
-	require.NoError(t, err, "failed to write job response")
+	require.NoError(tb, err, "failed to write job response")
 }
 
 func TestGitLabClient_RequestJob(t *testing.T) {
@@ -1183,7 +1191,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseNil: true,
 			},
-			expectedLog: `level=error msg="Checking for jobs... client error" correlation_id= runner=valid status="get client: new client: only http or https scheme supported`,
+			expectedLog: `level=error msg="Checking for jobs\.\.\. client error" correlation_id=\S* runner=valid status="get client: new client: only http or https scheme supported"`,
 		},
 		{
 			name:                  "unsupported executor options",
@@ -1203,7 +1211,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 				responseOK:  true,
 				responseNil: true,
 			},
-			expectedLog: `level=warning msg="Checking for jobs... GitLab instance currently unavailable" correlation_id= runner=valid status="503 Service Unavailable"`,
+			expectedLog: `level=warning msg="Checking for jobs\.\.\. GitLab instance currently unavailable" correlation_id=\S* runner=valid status="503 Service Unavailable"`,
 		},
 		{
 			name:      "too many requests",
@@ -1213,7 +1221,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 				responseOK:  true,
 				responseNil: true,
 			},
-			expectedLog: `level=warning msg="Checking for jobs... failed" correlation_id= runner=valid status="429 Too Many Requests"`,
+			expectedLog: `level=warning msg="Checking for jobs\.\.\. failed" correlation_id=\S* runner=valid status="429 Too Many Requests"`,
 		},
 	}
 
@@ -1253,7 +1261,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			}
 
 			if tc.expectedLog != "" {
-				require.Contains(t, outBuffer.String(), tc.expectedLog)
+				assert.Regexp(t, tc.expectedLog, outBuffer.String())
 			}
 		})
 	}
@@ -1310,7 +1318,8 @@ func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]i
 	}
 }
 
-func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func testUpdateJobHandler(tb testing.TB, w http.ResponseWriter, r *http.Request) {
+	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 	w.Header().Add(correlationIDHeader, "foobar")
 
 	if r.Method != http.MethodPut {
@@ -1335,17 +1344,17 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	}
 
 	body, err := io.ReadAll(r.Body)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	var req map[string]interface{}
 	err = json.Unmarshal(body, &req)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	token := req["token"].(string)
-	require.NotEmpty(t, r.Header.Get(JobToken), "job-token header is required")
-	require.Equal(t, token, r.Header.Get("job-token"), "token in header and body must match")
+	require.NotEmpty(tb, r.Header.Get(JobToken), "job-token header is required")
+	require.Equal(tb, token, r.Header.Get("job-token"), "token in header and body must match")
 
-	assert.Equal(t, "token", token)
+	assert.Equal(tb, "token", token)
 
 	setStateForUpdateJobHandlerResponse(w, req)
 }
@@ -1411,7 +1420,7 @@ func TestUpdateJob(t *testing.T) {
 	}
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		testUpdateJobHandler(w, r, t)
+		testUpdateJobHandler(t, w, r)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))
@@ -1455,7 +1464,8 @@ func TestUpdateJob(t *testing.T) {
 	}
 }
 
-func testUpdateJobKeepAliveHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func testUpdateJobKeepAliveHandler(tb testing.TB, w http.ResponseWriter, r *http.Request) {
+	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 	w.Header().Add(correlationIDHeader, "foobar")
 
 	if r.Method != http.MethodPut {
@@ -1477,20 +1487,20 @@ func testUpdateJobKeepAliveHandler(w http.ResponseWriter, r *http.Request, t *te
 	}
 
 	body, err := io.ReadAll(r.Body)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
 	var req map[string]interface{}
 	err = json.Unmarshal(body, &req)
-	assert.NoError(t, err)
+	assert.NoError(tb, err)
 
-	assert.Equal(t, "token", req["token"])
+	assert.Equal(tb, "token", req["token"])
 
 	w.WriteHeader(http.StatusOK)
 }
 
 func TestUpdateJobAsKeepAlive(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		testUpdateJobKeepAliveHandler(w, r, t)
+		testUpdateJobKeepAliveHandler(t, w, r)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))
@@ -1637,7 +1647,7 @@ const patchToken = "token"
 var patchTraceContent = []byte("trace trace trace")
 
 func getPatchServer(
-	t *testing.T,
+	tb testing.TB,
 	handler func(
 		w http.ResponseWriter,
 		r *http.Request,
@@ -1645,6 +1655,7 @@ func getPatchServer(
 		offset, limit int),
 ) (*httptest.Server, *GitLabClient, RunnerConfig) {
 	patchHandler := func(w http.ResponseWriter, r *http.Request) {
+		assert.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 		if r.URL.Path != "/api/v4/jobs/1/trace" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -1655,19 +1666,19 @@ func getPatchServer(
 			return
 		}
 
-		assert.Equal(t, patchToken, r.Header.Get(JobToken))
+		assert.Equal(tb, patchToken, r.Header.Get(JobToken))
 
 		body, err := io.ReadAll(r.Body)
-		assert.NoError(t, err)
+		assert.NoError(tb, err)
 
 		contentRange := r.Header.Get("Content-Range")
 		ranges := strings.Split(contentRange, "-")
 
 		offset, err := strconv.Atoi(ranges[0])
-		assert.NoError(t, err)
+		assert.NoError(tb, err)
 
 		limit, err := strconv.Atoi(ranges[1])
-		assert.NoError(t, err)
+		assert.NoError(tb, err)
 
 		handler(w, r, body, offset, limit)
 	}
@@ -1732,6 +1743,7 @@ func TestPatchTrace(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.remoteState, func(t *testing.T) {
 			handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
+				assert.NotEmpty(t, r.Header.Get(correlationIDHeader))
 				assert.Equal(t, patchTraceContent[offset:limit+1], body)
 
 				w.Header().Add(remoteStateHeader, tt.remoteState)
@@ -2207,7 +2219,7 @@ func TestUpdateIntervalHeaderHandling(t *testing.T) {
 						w.Header().Add(updateIntervalHeader, tc.updateIntervalHeaderValue)
 					}
 
-					testUpdateJobHandler(w, r, t)
+					testUpdateJobHandler(t, w, r)
 				}
 
 				server := httptest.NewServer(http.HandlerFunc(handler))
@@ -2639,6 +2651,7 @@ func TestArtifactsUpload(t *testing.T) {
 			for _, withRespDetails := range []bool{false, true} {
 				t.Run(fmt.Sprintf("withResponseDetails:%t", withRespDetails), func(t *testing.T) {
 					handler := func(w http.ResponseWriter, r *http.Request) {
+						assert.NotEmpty(t, r.Header.Get(correlationIDHeader))
 						testArtifactsUploadHandler(w, r, t)
 					}
 
@@ -2982,4 +2995,75 @@ func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testin
 	assert.True(t, info.Features.Shared, "feature is enabled by executor")
 	assert.True(t, info.Features.Variables, "feature is enabled by shell")
 	assert.Equal(t, "all", info.Config.Gpus)
+}
+
+func TestAddCorrelationIDHeader(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		header                http.Header
+		preservesHeaderValues map[string]string
+	}{
+		{
+			name: "header nil",
+		},
+		{
+			name: "existing header",
+			header: http.Header{
+				"Content-Type": []string{"application/json"},
+			},
+			preservesHeaderValues: map[string]string{
+				"Content-Type": "application/json",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			headers, correlationID := addCorrelationID(tc.header)
+
+			assert.NotNil(t, headers)
+			assert.NotEmpty(t, correlationID)
+			assert.NotEmpty(t, headers.Get(correlationIDHeader))
+
+			for k, v := range tc.preservesHeaderValues {
+				assert.Equal(t, v, headers.Get(k))
+			}
+		})
+	}
+}
+
+func TestGetCorrelationID(t *testing.T) {
+	testFallbackValue := "test-fallback-value"
+	testCases := []struct {
+		name          string
+		resp          *http.Response
+		expectedValue string
+	}{
+		{
+			name:          "nil response",
+			expectedValue: testFallbackValue,
+		},
+		{
+			name: "missing correlation id header",
+			resp: &http.Response{
+				Header: http.Header{},
+			},
+			expectedValue: testFallbackValue,
+		},
+		{
+			name: "correlation id from header",
+			resp: &http.Response{
+				Header: http.Header{
+					correlationIDHeader: []string{"test"},
+				},
+			},
+			expectedValue: "test",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedValue, getCorrelationID(tc.resp, testFallbackValue))
+		})
+	}
 }
