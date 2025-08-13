@@ -87,7 +87,7 @@ func TestNewVault(t *testing.T) {
 			defer func() {
 				newVaultClient = oldNewVaultClient
 			}()
-			newVaultClient = func(URL string, ns string) (vault.Client, error) {
+			newVaultClient = func(URL string, ns string, opts ...vault.ClientOption) (vault.Client, error) {
 				assert.Equal(t, testURL, URL)
 				assert.Equal(t, testNamespace, ns)
 

@@ -828,11 +828,12 @@ func (j *JobResponse) NativeStepsRequested() bool {
 type Secrets map[string]Secret
 
 type Secret struct {
-	Vault             *VaultSecret            `json:"vault,omitempty"`
-	GCPSecretManager  *GCPSecretManagerSecret `json:"gcp_secret_manager,omitempty"`
-	AzureKeyVault     *AzureKeyVaultSecret    `json:"azure_key_vault,omitempty"`
-	AWSSecretsManager *AWSSecret              `json:"aws_secrets_manager,omitempty"`
-	File              *bool                   `json:"file,omitempty"`
+	Vault                *VaultSecret                `json:"vault,omitempty"`
+	GCPSecretManager     *GCPSecretManagerSecret     `json:"gcp_secret_manager,omitempty"`
+	AzureKeyVault        *AzureKeyVaultSecret        `json:"azure_key_vault,omitempty"`
+	AWSSecretsManager    *AWSSecret                  `json:"aws_secrets_manager,omitempty"`
+	GitLabSecretsManager *GitLabSecretsManagerSecret `json:"gitlab_secrets_manager,omitempty"`
+	File                 *bool                       `json:"file,omitempty"`
 }
 
 func (s Secrets) expandVariables(vars JobVariables) {
@@ -854,6 +855,9 @@ func (s Secret) expandVariables(vars JobVariables) {
 	if s.AWSSecretsManager != nil {
 		s.AWSSecretsManager.expandVariables(vars)
 	}
+	// NOTE: GitLab Secrets Manager doesn't support variable expansion
+	// The only user input from the CI config is the secret name which Rails
+	// transforms into the path. Everything else is generated internally by Rails.
 }
 
 // IsFile defines whether the variable should be of type FILE or no.
@@ -1042,6 +1046,38 @@ func (a *VaultAuth) expandVariables(vars JobVariables) {
 func (e *VaultEngine) expandVariables(vars JobVariables) {
 	e.Name = vars.ExpandValue(e.Name)
 	e.Path = vars.ExpandValue(e.Path)
+}
+
+// GitLabSecretsManagerSecret represents a secret configuration for GitLab's native
+// secrets management system using OpenBao as the backend.
+type GitLabSecretsManagerSecret struct {
+	Server GitLabSecretsManagerServer `json:"server"`
+	Engine GitLabSecretsManagerEngine `json:"engine"`
+	Path   string                     `json:"path"`
+	Field  string                     `json:"field"`
+}
+
+// GitLabSecretsManagerServer contains the configuration for connecting to the
+// OpenBao server and authenticating via JWT.
+type GitLabSecretsManagerServer struct {
+	URL        string                               `json:"url"`
+	InlineAuth GitLabSecretsManagerServerInlineAuth `json:"inline_auth"`
+}
+
+// GitLabSecretsManagerServerInlineAuth holds the inline authentication configuration
+// for OpenBao JWT authentication. This allows the runner to authenticate on each
+// request without storing tokens.
+type GitLabSecretsManagerServerInlineAuth struct {
+	AuthMount string `json:"auth_mount"`
+	JWT       string `json:"jwt"`
+	Role      string `json:"role"`
+}
+
+// GitLabSecretsManagerEngine specifies the secret engine configuration in OpenBao,
+// including the engine type and mount path.
+type GitLabSecretsManagerEngine struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 func (j *JobResponse) RepoCleanURL() string {

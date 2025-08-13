@@ -3,7 +3,7 @@ package vault
 import (
 	"errors"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/openbao/openbao/api/v2"
 )
 
 type Result interface {
