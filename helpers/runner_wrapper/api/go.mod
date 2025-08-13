@@ -3,7 +3,7 @@ module gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api
 go 1.24.4
 
 require (
-	github.com/cenkalti/backoff/v3 v3.2.2
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/grpc v1.68.1

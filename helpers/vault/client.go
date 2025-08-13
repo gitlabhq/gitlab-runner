@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/openbao/openbao/api/v2"
 )
 
 type Client interface {
@@ -15,65 +15,55 @@ type Client interface {
 }
 
 type defaultClient struct {
-	internal apiClient
+	internal *api.Client
 }
 
-type apiClient interface {
-	Sys() apiClientSys
-	Logical() apiClientLogical
-	SetToken(v string)
-	SetNamespace(ns string)
+type InlineAuth struct {
+	Path string
+	JWT  string
+	Role string
 }
 
-type apiClientSys interface {
-	Health() (*api.HealthResponse, error)
-}
+type ClientOption func(*api.Client) (*api.Client, error)
 
-type apiClientLogical interface {
-	Write(path string, data map[string]interface{}) (*api.Secret, error)
-	Read(path string) (*api.Secret, error)
-	Delete(path string) (*api.Secret, error)
-}
-
-type apiClientAdapter struct {
-	c *api.Client
-}
-
-func (c *apiClientAdapter) Sys() apiClientSys {
-	return c.c.Sys()
-}
-
-func (c *apiClientAdapter) Logical() apiClientLogical {
-	return c.c.Logical()
-}
-
-func (c *apiClientAdapter) SetToken(v string) {
-	c.c.SetToken(v)
-}
-
-func (c *apiClientAdapter) SetNamespace(ns string) {
-	c.c.SetNamespace(ns)
-}
-
-var (
-	ErrVaultServerNotReady = errors.New("not initialized or sealed Vault server")
-
-	newAPIClient = func(config *api.Config) (apiClient, error) {
-		c, err := api.NewClient(config)
-		if err != nil {
-			return nil, err
+func WithInlineAuth(auth *InlineAuth) ClientOption {
+	return func(c *api.Client) (*api.Client, error) {
+		var errs error
+		if auth == nil {
+			errs = errors.Join(errs, errors.New("inline auth is required"))
+		} else {
+			if auth.Path == "" {
+				errs = errors.Join(errs, errors.New("inline auth path is required"))
+			}
+			if auth.JWT == "" {
+				errs = errors.Join(errs, errors.New("inline auth JWT is required"))
+			}
+			if auth.Role == "" {
+				errs = errors.Join(errs, errors.New("inline auth role is required"))
+			}
 		}
 
-		return &apiClientAdapter{c: c}, nil
-	}
-)
+		if errs != nil {
+			return nil, fmt.Errorf("configuring inline auth: %w", errs)
+		}
 
-func NewClient(apiURL string, namespace string) (Client, error) {
-	config := &api.Config{
-		Address: apiURL,
-	}
+		data := map[string]interface{}{
+			"jwt":  auth.JWT,
+			"role": auth.Role,
+		}
 
-	client, err := newAPIClient(config)
+		var err error
+		c, err = c.WithInlineAuth(auth.Path, data)
+		if err != nil {
+			return nil, fmt.Errorf("configuring inline auth: %w", unwrapAPIResponseError(err))
+		}
+
+		return c, nil
+	}
+}
+
+func NewClient(apiURL string, namespace string, opts ...ClientOption) (Client, error) {
+	client, err := api.NewClient(&api.Config{Address: apiURL})
 	if err != nil {
 		return nil, fmt.Errorf("creating new Vault client: %w", unwrapAPIResponseError(err))
 	}
@@ -84,16 +74,21 @@ func NewClient(apiURL string, namespace string) (Client, error) {
 	}
 
 	if !healthResp.Initialized || healthResp.Sealed {
-		return nil, ErrVaultServerNotReady
+		return nil, errors.New("not initialized or sealed Vault server")
 	}
 
 	client.SetNamespace(namespace)
 
-	c := &defaultClient{
-		internal: client,
+	for _, opt := range opts {
+		client, err = opt(client)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return c, nil
+	return &defaultClient{
+		internal: client,
+	}, nil
 }
 
 func (c *defaultClient) Authenticate(auth AuthMethod) error {
@@ -109,18 +104,15 @@ func (c *defaultClient) Authenticate(auth AuthMethod) error {
 
 func (c *defaultClient) Write(path string, data map[string]interface{}) (Result, error) {
 	secret, err := c.internal.Logical().Write(path, data)
-
 	return newResult(secret), unwrapAPIResponseError(err)
 }
 
 func (c *defaultClient) Read(path string) (Result, error) {
 	secret, err := c.internal.Logical().Read(path)
-
 	return newResult(secret), unwrapAPIResponseError(err)
 }
 
 func (c *defaultClient) Delete(path string) error {
 	_, err := c.internal.Logical().Delete(path)
-
 	return unwrapAPIResponseError(err)
 }
