@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
@@ -18,19 +21,22 @@ type UnregisterCommand struct {
 	AllRunners bool   `toml:"all_runners" json:"all-runners" long:"all-runners" description:"Unregister all runners"`
 }
 
-func (c *UnregisterCommand) unregisterAllRunners(cfg *common.Config) (runners []*common.RunnerConfig) {
+func (c *UnregisterCommand) unregisterAllRunners(cfg *common.Config) ([]*common.RunnerConfig, error) {
 	logrus.Warningln("Unregistering all runners")
+	var errs error
+	var runners []*common.RunnerConfig
+
 	for _, r := range cfg.Runners {
 		if !c.unregisterRunner(r.RunnerCredentials, r.SystemID) {
-			logrus.Errorln("Failed to unregister runner", r.Name)
+			errs = errors.Join(errs, fmt.Errorf("failed to unregister runner %q", r.Name))
 			// If unregister fails, leave the runner in the config
 			runners = append(runners, r)
 		}
 	}
-	return
+	return runners, errs
 }
 
-func (c *UnregisterCommand) unregisterSingleRunner(cfg *common.Config) []*common.RunnerConfig {
+func (c *UnregisterCommand) unregisterSingleRunner(cfg *common.Config) ([]*common.RunnerConfig, error) {
 	var runnerConfig *common.RunnerConfig
 	var err error
 	switch {
@@ -41,17 +47,17 @@ func (c *UnregisterCommand) unregisterSingleRunner(cfg *common.Config) []*common
 	case c.Name != "":
 		runnerConfig, err = cfg.RunnerByName(c.Name)
 	default:
-		logrus.Fatalln("at least one of --name or --token must be specified")
+		return nil, errors.New("at least one of --name or --token must be specified")
 	}
 	if err != nil {
-		logrus.Fatalln(err)
+		return nil, fmt.Errorf("get runner by token or name: %w", err)
 	}
 
 	c.RunnerCredentials = runnerConfig.RunnerCredentials
 
 	// Unregister given Token and URL of the runner
 	if !c.unregisterRunner(c.RunnerCredentials, runnerConfig.SystemID) {
-		logrus.Fatalln("Failed to unregister runner", c.Name)
+		return nil, fmt.Errorf("failed to unregister runner %q", c.Name)
 	}
 
 	var runners []*common.RunnerConfig
@@ -60,7 +66,7 @@ func (c *UnregisterCommand) unregisterSingleRunner(cfg *common.Config) []*common
 			runners = append(runners, otherRunner)
 		}
 	}
-	return runners
+	return runners, nil
 }
 
 func (c *UnregisterCommand) unregisterRunner(r common.RunnerCredentials, systemID string) bool {
@@ -79,10 +85,17 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 	var changed bool
 	if err := cfg.Load(configfile.WithMutateOnLoad(func(cfg *common.Config) error {
 		var runners []*common.RunnerConfig
+		var err error
 		if c.AllRunners {
-			runners = c.unregisterAllRunners(cfg)
+			runners, err = c.unregisterAllRunners(cfg)
+			if err != nil {
+				logrus.WithError(err).Errorln("Failed to unregister runners")
+			}
 		} else {
-			runners = c.unregisterSingleRunner(cfg)
+			runners, err = c.unregisterSingleRunner(cfg)
+			if err != nil {
+				return fmt.Errorf("unregister runner: %w", err)
+			}
 		}
 
 		changed = len(cfg.Runners) != len(runners)
@@ -92,7 +105,7 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 
 		return nil
 	})); err != nil {
-		logrus.Fatalln(err)
+		logrus.WithError(err).Fatalln("failed to unregister runner")
 	}
 
 	// check if anything changed
