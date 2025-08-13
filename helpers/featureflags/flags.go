@@ -426,10 +426,10 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:         HashCacheKeys,
-		DefaultValue: true,
+		DefaultValue: false,
 		Deprecated:   false,
 		Description: "When creating or extracting caches, the cache keys are hashed (sha256) before being used, both for local caches " +
-			"as well as for distributed caches (e.g. S3).",
+			"as well as for distributed caches (e.g. S3). For more information, see [Cache key handling](advanced-configuration.md#cache-key-handling).",
 	},
 }
 
