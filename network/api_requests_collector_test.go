@@ -13,6 +13,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	prometheus_go "github.com/prometheus/client_model/go"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -53,15 +54,22 @@ func TestAPIRequestsCollector_Collect(t *testing.T) {
 	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 0.05))
 	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 1.5))
 
+	// data for retry counter
+	c.AddRetries(logrus.StandardLogger(), "test-path", http.MethodGet, 1)
+	c.AddRetries(logrus.StandardLogger(), "test-path", http.MethodGet, 1)
+	c.AddRetries(logrus.StandardLogger(), "test-path", http.MethodPost, 1)
+	c.AddRetries(logrus.StandardLogger(), "test-path", http.MethodPost, 1)
+
 	c.Collect(ch)
 	close(ch)
 
 	wg.Wait()
 
-	require.Len(t, metrics, 8)
+	require.Len(t, metrics, 10)
 
 	assertStatusMetrics(t, metrics)
 	assertDurationMetrics(t, metrics)
+	assertRetriesMetrics(t, metrics)
 }
 
 func assertStatusMetrics(t *testing.T, list []prometheus.Metric) {
@@ -100,6 +108,45 @@ func assertStatusMetrics(t *testing.T, list []prometheus.Metric) {
 		"endpoint-update_job-method-post-runner-runner1-status-404-system_id-system1":  2,
 		"endpoint-request_job-method-post-runner-runner1-status-200-system_id-system1": 2,
 		"endpoint-request_job-method-post-runner-runner2-status-200-system_id-system1": 3,
+	}
+
+	assert.Equal(t, expected, metrics)
+}
+
+func assertRetriesMetrics(t *testing.T, list []prometheus.Metric) {
+	rx, err := regexp.Compile("fqName: \"gitlab_runner_api_request_retries_total\"")
+	require.NoError(t, err)
+
+	metrics := make(map[string]float64)
+	for _, m := range list {
+		desc := m.Desc()
+		require.NotNil(t, desc)
+
+		if !rx.MatchString(desc.String()) {
+			continue
+		}
+
+		var d prometheus_go.Metric
+
+		err := m.Write(&d)
+		require.NoError(t, err)
+
+		var labels []string
+		for _, label := range d.Label {
+			require.NotNil(t, label)
+			labels = append(labels, fmt.Sprintf("%s-%s", label.GetName(), label.GetValue()))
+		}
+		sort.Strings(labels)
+
+		counter := d.GetCounter()
+		require.NotNil(t, counter)
+
+		metrics[strings.Join(labels, "-")] = d.GetCounter().GetValue()
+	}
+
+	expected := map[string]float64{
+		"method-get-path-test-path":  2,
+		"method-post-path-test-path": 2,
 	}
 
 	assert.Equal(t, expected, metrics)
@@ -217,7 +264,7 @@ func TestAPIRequestsCollector_Describe(t *testing.T) {
 
 	wg.Wait()
 
-	require.Len(t, descriptions, 2)
+	require.Len(t, descriptions, 3)
 }
 
 func TestStatusClass(t *testing.T) {

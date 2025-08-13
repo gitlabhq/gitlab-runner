@@ -31,6 +31,7 @@ type APIRequestsCollector struct {
 
 	statuses  *prometheus.CounterVec
 	durations *prometheus.HistogramVec
+	retries   *prometheus.CounterVec
 }
 
 func NewAPIRequestsCollector() *APIRequestsCollector {
@@ -53,6 +54,13 @@ func newAPIRequestCollectorWithBuckets(buckets []float64) *APIRequestsCollector 
 				Buckets: buckets,
 			},
 			[]string{"runner", "system_id", "endpoint", "status_class", "method"},
+		),
+		retries: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "gitlab_runner_api_request_retries_total",
+				Help: "Total number of retries per endpoint",
+			},
+			[]string{"path", "method"},
 		),
 	}
 }
@@ -127,10 +135,28 @@ func (rc *APIRequestsCollector) observe(
 	return nil
 }
 
+// AddRetries adds to the retries counter with the given path
+// and method the passed in value.
+func (rc *APIRequestsCollector) AddRetries(logger logrus.FieldLogger, path string, method string, val float64) {
+	rc.lock.Lock()
+	defer rc.lock.Unlock()
+
+	retriesCounter, err := rc.retries.GetMetricWith(prometheus.Labels{
+		"path":   path,
+		"method": strings.ToLower(method),
+	})
+	if err != nil {
+		logger.WithError(err).Warning("Updating apiRequestsCollector")
+		return
+	}
+	retriesCounter.Add(val)
+}
+
 // Describe implements prometheus.Collector.
 func (rc *APIRequestsCollector) Describe(ch chan<- *prometheus.Desc) {
 	rc.statuses.Describe(ch)
 	rc.durations.Describe(ch)
+	rc.retries.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
@@ -140,6 +166,7 @@ func (rc *APIRequestsCollector) Collect(ch chan<- prometheus.Metric) {
 
 	rc.statuses.Collect(ch)
 	rc.durations.Collect(ch)
+	rc.retries.Collect(ch)
 }
 
 func statusClass(status int) string {

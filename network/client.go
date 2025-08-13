@@ -537,7 +537,7 @@ func WithMaxAge(connectionMaxAge time.Duration) Option {
 	}
 }
 
-func newClient(requestCredentials requestCredentials, options ...Option) (*client, error) {
+func newClient(requestCredentials requestCredentials, collector *APIRequestsCollector, options ...Option) (*client, error) {
 	url, err := url.Parse(fixCIURL(requestCredentials.GetURL()) + "/api/v4/")
 	if err != nil {
 		return nil, fmt.Errorf("parse URL: %w", err)
@@ -553,7 +553,7 @@ func newClient(requestCredentials requestCredentials, options ...Option) (*clien
 		certFile: requestCredentials.GetTLSCertFile(),
 		keyFile:  requestCredentials.GetTLSKeyFile(),
 	}
-	c.requester = newRetryRequester(&c.Client)
+	c.requester = newRetryRequester(&c.Client, collector)
 
 	host := strings.Split(url.Host, ":")[0]
 	if CertificateDirectory != "" {
