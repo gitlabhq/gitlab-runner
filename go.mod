@@ -49,7 +49,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kardianos/service v1.2.2
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/klauspost/compress v1.17.11
+	github.com/klauspost/compress v1.18.0
 	github.com/klauspost/pgzip v1.2.5
 	github.com/magefile/mage v1.15.0
 	github.com/minio/minio-go/v7 v7.0.70
@@ -61,7 +61,7 @@ require (
 	github.com/prometheus/procfs v0.15.1
 	github.com/samber/lo v1.38.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
-	github.com/saracen/fastzip v0.1.11
+	github.com/saracen/fastzip v0.2.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.10.0
@@ -222,7 +222,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46 // indirect
-	github.com/saracen/zipextra v0.0.0-20220303013732-0187cb0159ea // indirect
+	github.com/saracen/zipextra v0.0.0-20250129175152-f1aa42d25216 // indirect
 	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.6.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
