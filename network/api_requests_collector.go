@@ -43,14 +43,14 @@ func newAPIRequestCollectorWithBuckets(buckets []float64) *APIRequestsCollector 
 		statuses: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "gitlab_runner_api_request_statuses_total",
-				Help: "The total number of api requests, partitioned by runner, system_id, endpoint and status.",
+				Help: "The total number of API requests made by GitLab Runner, partitioned by runner, system_id, endpoint, status and method.",
 			},
 			[]string{"runner", "system_id", "endpoint", "status", "method"},
 		),
 		durations: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name:    "gitlab_runner_api_request_duration_seconds",
-				Help:    "Latency histogram of API requests made by GitLab Runner",
+				Help:    "Latency histogram of API requests made by GitLab Runner, partitioned by runner, system_id, endpoint, status_class and method.",
 				Buckets: buckets,
 			},
 			[]string{"runner", "system_id", "endpoint", "status_class", "method"},
@@ -58,7 +58,7 @@ func newAPIRequestCollectorWithBuckets(buckets []float64) *APIRequestsCollector 
 		retries: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "gitlab_runner_api_request_retries_total",
-				Help: "Total number of retries per endpoint",
+				Help: "The total number of retries made by GitLab Runner in process of completing a request, partitioned by path and method.",
 			},
 			[]string{"path", "method"},
 		),
