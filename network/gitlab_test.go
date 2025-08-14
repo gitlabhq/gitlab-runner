@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -471,11 +472,9 @@ func mockUnregisterRunnerManagerHandler(tb testing.TB, w http.ResponseWriter, r 
 }
 
 func TestUnregisterRunnerManager(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mockUnregisterRunnerManagerHandler(t, w, r)
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
+	}))
 	defer s.Close()
 
 	testCases := []struct {
@@ -530,7 +529,8 @@ func TestUnregisterRunnerManager(t *testing.T) {
 	}
 }
 
-func testVerifyRunnerHandler(tb testing.TB, w http.ResponseWriter, r *http.Request, legacyServer bool) {
+func mockVerifyRunnerHandler(tb testing.TB, w http.ResponseWriter, r *http.Request, legacyServer bool) {
+	tb.Helper()
 	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 	if r.URL.Path != "/api/v4/runners/verify" {
 		w.WriteHeader(http.StatusNotFound)
@@ -592,126 +592,155 @@ func testVerifyRunnerHandler(tb testing.TB, w http.ResponseWriter, r *http.Reque
 }
 
 func TestVerifyRunnerOnLegacyServer(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		testVerifyRunnerHandler(t, w, r, true)
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
+	t.Parallel()
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mockVerifyRunnerHandler(t, w, r, true)
+	}))
 	defer s.Close()
 
-	validToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: validToken,
-	}
+	testCases := []struct {
+		name        string
+		token       string
+		url         string
+		expectedNil bool
+		expectedLog string
+	}{
+		{
+			name:        "valid token",
+			token:       validToken,
+			url:         s.URL,
+			expectedLog: `level=info msg="Verifying runner... is alive"`,
+		},
+		{
+			name:        "valid glrt token",
+			token:       validGlrtToken,
+			url:         s.URL,
+			expectedLog: `level=info msg="Verifying runner... is valid"`,
+		},
+		{
+			name:  "invalid token",
+			token: invalidToken,
+			url:   s.URL,
 
-	validGlrtToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: validGlrtToken,
-	}
+			expectedNil: true,
+			expectedLog: `level=error msg="Verifying runner... is removed"`,
+		},
+		{
+			name:  "other token",
+			token: "other",
+			url:   s.URL,
 
-	invalidToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: invalidToken,
-	}
-
-	otherToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "other",
+			expectedLog: `level=error msg="Verifying runner... failed"`,
+		},
+		{
+			name:        "broken credentials",
+			token:       "broken",
+			url:         "broken",
+			expectedLog: `level=error msg="Verifying runner... client error"`,
+		},
 	}
 
 	c := NewGitLabClient()
 
-	res := c.VerifyRunner(validToken, "")
-	require.NotNil(t, res)
-	assert.Equal(t, int64(0), res.ID)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logger, hook := test.NewNullLogger()
+			logger.SetLevel(logrus.InfoLevel)
 
-	res = c.VerifyRunner(validGlrtToken, "")
-	require.NotNil(t, res)
+			res := c.VerifyRunner(RunnerCredentials{URL: tc.url, Token: tc.token, Logger: logger}, "")
 
-	res = c.VerifyRunner(invalidToken, "")
-	assert.Nil(t, res)
+			if tc.expectedNil {
+				assert.Nil(t, res)
+			} else {
+				assert.NotNil(t, res)
+				assert.Equal(t, int64(0), res.ID)
+			}
 
-	res = c.VerifyRunner(otherToken, "")
-	assert.NotNil(
-		t,
-		res,
-		"in other cases where we can't explicitly say that runner is valid we say that it is",
-	)
-
-	res = c.VerifyRunner(brokenCredentials, "")
-	assert.NotNil(
-		t,
-		res,
-		"in other cases where we can't explicitly say that runner is valid we say that it is",
-	)
+			logMsg, err := hook.LastEntry().String()
+			require.NoError(t, err)
+			assert.Contains(t, logMsg, tc.expectedLog)
+		})
+	}
 }
 
 func TestVerifyRunner(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		testVerifyRunnerHandler(t, w, r, false)
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
+	t.Parallel()
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mockVerifyRunnerHandler(t, w, r, false)
+	}))
 	defer s.Close()
 
-	validToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: validToken,
-	}
+	testCases := []struct {
+		name              string
+		token             string
+		url               string
+		expectedNil       bool
+		expectedID        int64
+		expectedExpiresAt time.Time
+		expectedToken     string
+		expectedLog       string
+	}{
+		{
+			name:              "valid token",
+			token:             validToken,
+			url:               s.URL,
+			expectedID:        54321,
+			expectedExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+			expectedLog:       `level=info msg="Verifying runner... is alive"`,
+		},
+		{
+			name:              "valid glrt token",
+			token:             validGlrtToken,
+			url:               s.URL,
+			expectedID:        54321,
+			expectedExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+			expectedLog:       `level=info msg="Verifying runner... is valid"`,
+		},
+		{
+			name:  "invalid token",
+			token: invalidToken,
+			url:   s.URL,
 
-	validGlrtToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: validGlrtToken,
-	}
+			expectedNil: true,
+			expectedLog: `level=error msg="Verifying runner... is removed"`,
+		},
+		{
+			name:  "other token",
+			token: "other",
+			url:   s.URL,
 
-	invalidToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: invalidToken,
-	}
-
-	otherToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "other",
+			expectedLog: `level=error msg="Verifying runner... failed"`,
+		},
+		{
+			name:        "broken credentials",
+			token:       "broken",
+			url:         "broken",
+			expectedLog: `level=error msg="Verifying runner... client error"`,
+		},
 	}
 
 	c := NewGitLabClient()
 
-	res := c.VerifyRunner(validToken, "")
-	require.NotNil(t, res)
-	assert.Equal(t, int64(54321), res.ID)
-	assert.Equal(t, validToken.Token, res.Token)
-	assert.Equal(
-		t,
-		time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
-		res.TokenExpiresAt,
-	)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logger, hook := test.NewNullLogger()
+			logger.SetLevel(logrus.InfoLevel)
 
-	res = c.VerifyRunner(validGlrtToken, "")
-	require.NotNil(t, res)
-	assert.Equal(t, int64(54321), res.ID)
-	assert.Equal(t, validGlrtToken.Token, res.Token)
-	assert.Equal(
-		t,
-		time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
-		res.TokenExpiresAt,
-	)
+			res := c.VerifyRunner(RunnerCredentials{URL: tc.url, Token: tc.token, Logger: logger}, "")
 
-	res = c.VerifyRunner(invalidToken, "")
-	assert.Nil(t, res)
+			if tc.expectedNil {
+				assert.Nil(t, res)
+			} else {
+				assert.NotNil(t, res)
+				assert.Equal(t, res.ID, tc.expectedID)
+				assert.Equal(t, res.TokenExpiresAt, tc.expectedExpiresAt)
+			}
 
-	res = c.VerifyRunner(otherToken, "")
-	assert.NotNil(
-		t,
-		res,
-		"in other cases where we can't explicitly say that runner is valid we say that it is",
-	)
-
-	res = c.VerifyRunner(brokenCredentials, "")
-	assert.NotNil(
-		t,
-		res,
-		"in other cases where we can't explicitly say that runner is valid we say that it is",
-	)
+			logMsg, err := hook.LastEntry().String()
+			require.NoError(t, err)
+			assert.Contains(t, logMsg, tc.expectedLog)
+		})
+	}
 }
 
 func testResetTokenHandler(tb testing.TB, w http.ResponseWriter, r *http.Request) {
@@ -766,58 +795,93 @@ func testResetTokenHandler(tb testing.TB, w http.ResponseWriter, r *http.Request
 	_, _ = w.Write(output)
 }
 
-func TestResetToken(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
+func TestGitlabClient_ResetToken(t *testing.T) {
+	t.Parallel()
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		testResetTokenHandler(t, w, r)
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
+	}))
 	defer s.Close()
 
-	validToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: validToken,
+	type expectations struct {
+		token  string
+		expiry time.Time
+		isNil  bool
+		log    string
 	}
 
-	expiringToken := RunnerCredentials{
-		URL:            s.URL,
-		Token:          expiringToken,
-		TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
-	}
-
-	invalidToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: invalidToken,
-	}
-
-	otherToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "other",
+	tests := []struct {
+		name         string
+		token        string
+		expiresAt    time.Time
+		expectations expectations
+	}{
+		{
+			name:  "valid token",
+			token: validToken,
+			expectations: expectations{
+				token: "reset-token",
+				log:   `level=info msg="Resetting runner authentication token... succeeded"`,
+			},
+		},
+		{
+			name:      "expiring token",
+			token:     expiringToken,
+			expiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+			expectations: expectations{
+				token:  "reset-expiring-token",
+				expiry: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+				log:    `level=info msg="Resetting runner authentication token... succeeded"`,
+			},
+		},
+		{
+			name:  "invalid token",
+			token: invalidToken,
+			expectations: expectations{
+				isNil: true,
+				log:   `level=error msg="Resetting runner authentication token... failed (check used token)"`,
+			},
+		},
+		{
+			name:  "other token",
+			token: "other",
+			expectations: expectations{
+				isNil: true,
+				log:   `level=error msg="Resetting runner authentication token... failed"`,
+			},
+		},
 	}
 
 	c := NewGitLabClient()
 
-	res := c.ResetToken(validToken, "system-id-1")
-	if assert.NotNil(t, res) {
-		assert.Equal(t, "reset-token", res.Token)
-		assert.True(t, res.TokenExpiresAt.IsZero())
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			logger, hook := test.NewNullLogger()
+			logger.SetLevel(logrus.InfoLevel)
+			res := c.ResetToken(RunnerCredentials{
+				Token:          tc.token,
+				URL:            s.URL,
+				TokenExpiresAt: tc.expiresAt,
+				Logger:         logger,
+			}, "system-id-1")
+
+			if tc.expectations.isNil {
+				assert.Nil(t, res)
+			} else {
+				assert.Equal(t, tc.expectations.token, res.Token)
+				assert.Equal(t, tc.expectations.expiry, res.TokenExpiresAt)
+			}
+
+			logMsg, err := hook.LastEntry().String()
+			require.NoError(t, err)
+			assert.Contains(t, logMsg, tc.expectations.log)
+		})
 	}
-
-	res = c.ResetToken(expiringToken, "system-id-1")
-	if assert.NotNil(t, res) {
-		assert.Equal(t, "reset-expiring-token", res.Token)
-		assert.Equal(t, expiringToken.TokenExpiresAt, res.TokenExpiresAt)
-	}
-
-	res = c.ResetToken(invalidToken, "system-id-1")
-	assert.Nil(t, res)
-
-	res = c.ResetToken(otherToken, "system-id-1")
-	assert.Nil(t, res)
 }
 
-func testResetTokenWithPATHandler(tb testing.TB, w http.ResponseWriter, r *http.Request) {
+func mockResetTokenWithPATHandler(tb testing.TB, w http.ResponseWriter, r *http.Request) {
+	tb.Helper()
 	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
+
 	regex := regexp.MustCompilePOSIX("^/api/v4/runners/(.*)/reset_authentication_token$")
 	matches := regex.FindStringSubmatch(r.URL.Path)
 	if len(matches) != 2 {
@@ -875,64 +939,118 @@ func testResetTokenWithPATHandler(tb testing.TB, w http.ResponseWriter, r *http.
 	_, _ = w.Write(output)
 }
 
-func TestResetTokenWithPAT(t *testing.T) {
+func TestGitLabClient_ResetTokenWithPAT(t *testing.T) {
+	t.Parallel()
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		testResetTokenWithPATHandler(t, w, r)
+		mockResetTokenWithPATHandler(t, w, r)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))
 	defer s.Close()
 
-	validToken := RunnerCredentials{
-		ID:    12345,
-		URL:   s.URL,
-		Token: validToken,
-	}
-
-	expiringToken := RunnerCredentials{
-		ID:             54321,
-		URL:            s.URL,
-		Token:          expiringToken,
-		TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
-	}
-
-	invalidToken := RunnerCredentials{
-		ID:    77777,
-		URL:   s.URL,
-		Token: invalidToken,
-	}
-
-	otherToken := RunnerCredentials{
-		ID:    88888,
-		URL:   s.URL,
-		Token: "other",
+	testCases := []struct {
+		name        string
+		runnerCreds RunnerCredentials
+		pat         string
+		expectedRes *ResetTokenResponse
+		expectedLog string
+	}{
+		{
+			name: "valid token with valid PAT",
+			runnerCreds: RunnerCredentials{
+				ID:    12345,
+				URL:   s.URL,
+				Token: validToken,
+			},
+			pat: "valid-pat",
+			expectedRes: &ResetTokenResponse{
+				Token: validToken,
+			},
+			expectedLog: `level=info msg="Resetting runner authentication token... succeeded"`,
+		},
+		{
+			name: "expiring token with valid PAT",
+			runnerCreds: RunnerCredentials{
+				ID:             54321,
+				URL:            s.URL,
+				Token:          expiringToken,
+				TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+			},
+			pat: "valid-pat",
+			expectedRes: &ResetTokenResponse{
+				Token:          expiringToken,
+				TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+			},
+			expectedLog: `level=info msg="Resetting runner authentication token... succeeded"`,
+		},
+		{
+			name: "valid token with empty PAT",
+			runnerCreds: RunnerCredentials{
+				ID:    12345,
+				URL:   s.URL,
+				Token: validToken,
+			},
+			expectedLog: `level=error msg="Resetting runner authentication token... failed"`,
+		},
+		{
+			name: "valid token with invalid PAT",
+			runnerCreds: RunnerCredentials{
+				ID:    12345,
+				URL:   s.URL,
+				Token: validToken,
+			},
+			pat:         "invalid-pat",
+			expectedLog: `level=error msg="Resetting runner authentication token... failed (check used token)"`,
+		},
+		{
+			name: "invalid token with valid PAT",
+			runnerCreds: RunnerCredentials{
+				ID:    77777,
+				URL:   s.URL,
+				Token: "invalidToken",
+			},
+			pat:         "valid-pat",
+			expectedLog: `level=error msg="Resetting runner authentication token... failed"`,
+		},
+		{
+			name: "other token with valid PAT",
+			runnerCreds: RunnerCredentials{
+				ID:    88888,
+				URL:   s.URL,
+				Token: "other",
+			},
+			pat:         "valid-pat",
+			expectedLog: `level=error msg="Resetting runner authentication token... failed"`,
+		},
 	}
 
 	c := NewGitLabClient()
 
-	res := c.ResetTokenWithPAT(validToken, "system-id-1", "valid-pat")
-	if assert.NotNil(t, res) {
-		assert.Equal(t, validToken.Token, res.Token)
-		assert.True(t, res.TokenExpiresAt.IsZero())
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logger, hook := test.NewNullLogger()
+			logger.SetLevel(logrus.InfoLevel)
+
+			res := c.ResetTokenWithPAT(RunnerCredentials{
+				ID:             tc.runnerCreds.ID,
+				URL:            tc.runnerCreds.URL,
+				Token:          tc.runnerCreds.Token,
+				TokenExpiresAt: tc.runnerCreds.TokenExpiresAt,
+				Logger:         logger,
+			}, "system-id-1", tc.pat)
+
+			if tc.expectedRes != nil {
+				assert.Equal(t, tc.expectedRes.Token, res.Token)
+				assert.Equal(t, tc.expectedRes.TokenExpiresAt, res.TokenExpiresAt)
+			} else {
+				assert.Nil(t, res)
+			}
+
+			logMsg, err := hook.LastEntry().String()
+			require.NoError(t, err)
+			assert.Contains(t, logMsg, tc.expectedLog)
+		})
 	}
-
-	res = c.ResetTokenWithPAT(expiringToken, "system-id-1", "valid-pat")
-	if assert.NotNil(t, res) {
-		assert.Equal(t, expiringToken.Token, res.Token)
-		assert.Equal(t, expiringToken.TokenExpiresAt, res.TokenExpiresAt)
-	}
-
-	res = c.ResetTokenWithPAT(validToken, "system-id-1", "")
-	assert.Nil(t, res)
-
-	res = c.ResetTokenWithPAT(validToken, "system-id-1", "invalid-pat")
-	assert.Nil(t, res)
-
-	res = c.ResetTokenWithPAT(invalidToken, "system-id-1", "valid-pat")
-	assert.Nil(t, res)
-
-	res = c.ResetTokenWithPAT(otherToken, "system-id-1", "valid-pat")
-	assert.Nil(t, res)
 }
 
 func getRequestJobResponse(tb testing.TB, validResponse bool) string {
