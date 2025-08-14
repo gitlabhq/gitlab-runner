@@ -627,6 +627,12 @@ func TestBuildMasking(t *testing.T) {
 	buildtest.RunBuildWithMasking(t, getRunnerConfigForOS(t), nil)
 }
 
+func TestBuildMaskingProxyExec(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	buildtest.RunBuildWithMaskingProxyExec(t, getRunnerConfigForOS(t), nil)
+}
+
 func TestBuildExpandedFileVariable(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
