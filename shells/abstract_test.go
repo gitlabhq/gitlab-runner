@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -467,11 +468,6 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 			cacheType: "goCloudTest",
 			uploadArgs: []any{
 				"--gocloud-url", mock.Anything,
-				"--env-file", cacheEnvFile,
-			},
-			additionalExpectedAssertions: func(mockWriter *MockShellWriter, nrOfCaches int) {
-				mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Times(nrOfCaches)
-				mockWriter.On("RmFile", cacheEnvFile).Times(nrOfCaches)
 			},
 		},
 	}
@@ -499,8 +495,6 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 						},
 					}
 
-					nrOfCaches := len(expectedArgsPerCache)
-
 					mockWriter := NewMockShellWriter(t)
 					mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
 						return v.Key == "GITLAB_ENV"
@@ -508,8 +502,6 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 					mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
 					mockWriter.On("SourceEnv", "path/to/env/file").Once()
 					mockWriter.On("Cd", mock.Anything).Once()
-					mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Times(nrOfCaches)
-					mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(nrOfCaches)
 
 					for _, perCacheCommandArgs := range expectedArgsPerCache {
 						allArgs := slices.Concat(
@@ -519,28 +511,33 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 								"cache-archiver",
 								"--file", localCacheFileMatcher(t, info.Build.CacheDir),
 								"--timeout", mock.Anything,
-								"--metadata", mock.MatchedBy(func(s string) bool {
-									return strings.HasPrefix(s, "cachekey:")
-								}),
 							},
 							// args per cache, e.g. paths of to-be-cached files
 							perCacheCommandArgs,
 							// args for the upload, e.g. URL, headers, env file
 							tt.uploadArgs,
+							// lastly, we expect the env file arg
+							[]any{
+								"--env-file", cacheEnvFile,
+							},
 						)
-						mockWriter.On("IfCmdWithOutput", allArgs...).Once()
-					}
-					if tt.additionalExpectedAssertions != nil {
-						tt.additionalExpectedAssertions(mockWriter, nrOfCaches)
-					}
 
-					mockWriter.On("Noticef", "Created cache").Times(nrOfCaches)
-					mockWriter.On("Else").Times(nrOfCaches)
-					mockWriter.On("Warningf", "Failed to create cache").Times(nrOfCaches)
-					mockWriter.On("EndIf").Times(nrOfCaches)
-					mockWriter.On("Else").Times(nrOfCaches)
-					mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(nrOfCaches)
-					mockWriter.On("EndIf").Times(nrOfCaches)
+						mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Once()
+						mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Once()
+
+						mockWriter.On("IfCmdWithOutput", allArgs...).Once()
+
+						mockWriter.On("Noticef", "Created cache").Once()
+						mockWriter.On("Else").Once()
+						mockWriter.On("Warningf", "Failed to create cache").Once()
+						mockWriter.On("EndIf").Once()
+						mockWriter.On("Else").Once()
+						mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
+						mockWriter.On("EndIf").Once()
+
+						mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Once()
+						mockWriter.On("RmFile", cacheEnvFile).Once()
+					}
 
 					varCount := len(info.Build.GetAllVariables())
 					mockWriter.On("Variable", mock.Anything).Times(varCount)
@@ -2311,6 +2308,8 @@ func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
 		withOrWithoutHashing hashMode = iota
 		withoutHashing
 		withHashing
+
+		cacheEnvFile = "/some/path/to/runner-cache-env"
 	)
 
 	tests := map[string]struct {
@@ -2434,13 +2433,27 @@ func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
 
 						w.On("IfCmd", "some-runner-command", "--version").Once()
 						w.On("Noticef", "Creating cache %s...", expectations.cacheKey).Once()
+
+						{ // cache metadata passing
+							expectedMetadata := map[string]string{
+								"cachekey": expectations.cacheKey,
+							}
+							metadataBlob, err := json.Marshal(expectedMetadata)
+							require.NoError(t, err, "marshalling expected cache metadata")
+							expectedEnvs := map[string]string{
+								"CACHE_METADATA": string(metadataBlob),
+							}
+							w.On("DotEnvVariables", "gitlab_runner_cache_env", expectedEnvs).Return(cacheEnvFile).Once()
+							w.On("RmFile", cacheEnvFile).Once()
+						}
+
 						w.On("IfCmdWithOutput",
 							"some-runner-command", "cache-archiver",
 							"--file", expectedLocalFile,
 							"--timeout", "10",
-							"--metadata", "cachekey:"+expectations.cacheKey,
 							"--path", "foo/bar",
 							"--path", "foo/barz",
+							"--env-file", cacheEnvFile,
 						).Once()
 						w.On("Noticef", "Created cache").Once()
 						w.On("Else").Once()

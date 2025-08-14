@@ -3,8 +3,10 @@ package shells
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"path"
 	"path/filepath"
@@ -1342,11 +1344,9 @@ func (b *AbstractShell) addCacheUploadCommand(
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
-	metadata := metadata{
+	metadata := map[string]string{
 		"cachekey": cacheConfig.HumanKey,
 	}
-
-	args = append(args, metadata.AsArgs("--metadata")...)
 
 	if info.Build.Runner.Cache != nil && info.Build.Runner.Cache.MaxUploadedArchiveSize > 0 {
 		args = append(
@@ -1356,11 +1356,20 @@ func (b *AbstractShell) addCacheUploadCommand(
 		)
 	}
 
+	env := map[string]string{}
+
+	// We pass the metadata via environment rather than via CLI flags, so that we are backwards compatible, e.g. for
+	// user who have pinned the helper image / helper binary to an older version.
+	// Note: Marshaling map[string]string wont error ever, thus we ignore the error here.
+	metaJsonBlob, _ := json.Marshal(metadata)
+	env["CACHE_METADATA"] = string(metaJsonBlob)
+
 	args = append(args, archiverArgs...)
 
 	// Generate cache upload address
-	extraArgs, env, err := getCacheUploadURLAndEnv(ctx, info.Build, cacheConfig.HashedKey, metadata)
+	extraArgs, extraEnv, err := getCacheUploadURLAndEnv(ctx, info.Build, cacheConfig.HashedKey, metadata)
 	args = append(args, extraArgs...)
+	maps.Copy(env, extraEnv)
 
 	if err != nil {
 		w.Warningf("Unable to generate cache upload environment: %v", err)
@@ -1382,16 +1391,6 @@ func (b *AbstractShell) addCacheUploadCommand(
 		w.Warningf("Failed to create cache")
 		w.EndIf()
 	})
-}
-
-type metadata map[string]string
-
-func (m metadata) AsArgs(flag string) []string {
-	args := make([]string, 0, len(m)*2)
-	for k, v := range m {
-		args = append(args, flag, k+":"+v)
-	}
-	return args
 }
 
 // getCacheUploadURLAndEnv will first try to generate the GoCloud URL if it's

@@ -37,22 +37,22 @@ const (
 
 func TestCacheArchiveLocalMetadata(t *testing.T) {
 	tests := map[string]struct {
-		metaArgs              []string
+		metaArgs              map[string]string
 		expectedLocalMetadata string
 	}{
 		"no metadata": {
 			expectedLocalMetadata: "{}",
 		},
 		"single metadata": {
-			metaArgs:              []string{"foo:bar:baz"},
+			metaArgs:              map[string]string{"foo": "bar:baz"},
 			expectedLocalMetadata: `{"foo":"bar:baz"}`,
 		},
 		"multiple metadata": {
-			metaArgs:              []string{"Foo:some Foo", "bAr:some Bar"},
+			metaArgs:              map[string]string{"Foo": "some Foo", "bAr": "some Bar"},
 			expectedLocalMetadata: `{"bar":"some Bar","foo":"some Foo"}`,
 		},
 		"weird metadata": {
-			metaArgs: []string{`foo:
+			metaArgs: map[string]string{"foo": `
 - bla
 - bla
 - some: {random: thing}
@@ -193,7 +193,7 @@ func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
 	cmd := helpers.CacheArchiverCommand{
 		File:       cacheArchiverArchive,
 		GoCloudURL: fmt.Sprintf("testblob://bucket/%s", objectName),
-		Metadata:   []string{"foo:some foo", "bar:some bar"},
+		Metadata:   map[string]string{"foo": "some foo", "bar": "some bar"},
 		Timeout:    0,
 	}
 	helpers.SetCacheArchiverCommandMux(&cmd, mux)

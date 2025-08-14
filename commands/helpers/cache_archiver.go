@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,7 +37,7 @@ type CacheArchiverCommand struct {
 	GoCloudURL             string   `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
 	Timeout                int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
 	Headers                []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
-	Metadata               []string `long:"metadata" description:"Metadata for the cache artifact (in form of 'key:value')"`
+	Metadata               metadata `long:"metadata" env:"CACHE_METADATA" description:"Metadata for the cache artifact (JSON encoded key-value-pairs, e.g. '{\"foo\":\"bar\",\"blerp\":\"blip\"}')"`
 	CompressionLevel       string   `long:"compression-level" env:"CACHE_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
 	CompressionFormat      string   `long:"compression-format" env:"CACHE_COMPRESSION_FORMAT" description:"Compression format (zip, tarzstd)"`
 	MaxUploadedArchiveSize int64    `long:"max-uploaded-archive-size" env:"CACHE_MAX_UPLOADED_ARCHIVE_SIZE" description:"Limit the size of the cache archive being uploaded to cloud storage, in bytes."`
@@ -44,6 +45,12 @@ type CacheArchiverCommand struct {
 
 	client *CacheClient
 	mux    *blob.URLMux
+}
+
+type metadata map[string]string
+
+func (m *metadata) UnmarshalFlag(raw string) error {
+	return json.Unmarshal([]byte(raw), m)
 }
 
 func (c *CacheArchiverCommand) getClient() *CacheClient {
@@ -132,7 +139,7 @@ func (c *CacheArchiverCommand) handleGoCloudURL(file io.Reader) error {
 	defer b.Close()
 
 	opts := &blob.WriterOptions{
-		Metadata: split(c.Metadata),
+		Metadata: c.Metadata,
 	}
 
 	writer, err := b.NewWriter(ctx, objectName, opts)
@@ -225,7 +232,7 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 		logrus.Fatalln(err)
 	}
 
-	err = writeCacheMetadataFile(c.File, split(c.Metadata))
+	err = writeCacheMetadataFile(c.File, c.Metadata)
 	if err != nil {
 		logrus.Fatalln(err)
 	}

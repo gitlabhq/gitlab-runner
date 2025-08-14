@@ -1171,11 +1171,20 @@ either.
 
 Therefore, best practice is:
 
-- Keep `FF_HASH_CACHE_KEYS`` in sync across runners which share distributed
+- Keep `FF_HASH_CACHE_KEYS` in sync across runners which share distributed
   caches.
 
 - Expect cache misses, rebuild of cache artifacts, and therefore prolonged
   first job runs after switching `FF_HASH_CACHE_KEYS`.
+
+{{< /alert >}}
+
+{{< alert type="warning" >}}
+
+If you enable `FF_HASH_CACHE_KEYS` but run an older version of the helper
+binary, e.g. because you pinned the helper image to an older version, hashing
+the cache key and up-/downloading caches will still work. However, the metadata
+of cache artifacts won't be maintained.
 
 {{< /alert >}}
 
