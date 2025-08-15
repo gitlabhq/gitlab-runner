@@ -290,6 +290,10 @@ type AutoscalerConfig struct {
 	InstanceAcquireTimeout      time.Duration           `toml:"instance_acquire_timeout,omitempty" json:",omitempty"`
 	UpdateInterval              time.Duration           `toml:"update_interval,omitempty" json:",omitempty"`
 	UpdateIntervalWhenExpecting time.Duration           `toml:"update_interval_when_expecting,omitempty" json:",omitempty"`
+	DeletionRetryInterval       time.Duration           `toml:"deletion_retry_interval,omitempty" json:",omitempty"`
+	ShutdownDeletionInterval    time.Duration           `toml:"shutdown_deletion_interval,omitempty" json:",omitempty"`
+	ShutdownDeletionRetries     int                     `toml:"shutdown_deletion_retries,omitempty" json:",omitempty"`
+	FailureThreshold            int                     `toml:"failure_threshold,omitempty" json:",omitempty"`
 	ScaleThrottle               AutoscalerScaleThrottle `toml:"scale_throttle,omitempty" json:",omitempty"`
 
 	LogInternalIP bool `toml:"log_internal_ip,omitempty" json:",omitempty"`
