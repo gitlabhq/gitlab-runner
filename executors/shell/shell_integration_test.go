@@ -392,6 +392,16 @@ func TestBuildMasking(t *testing.T) {
 	})
 }
 
+func TestBuildMaskingProxyExec(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build := newBuild(t, common.JobResponse{}, shell)
+
+		buildtest.RunBuildWithMaskingProxyExec(t, build.Runner, nil)
+	})
+}
+
 func TestBuildExpandedFileVariable(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, common.JobResponse{}, shell)

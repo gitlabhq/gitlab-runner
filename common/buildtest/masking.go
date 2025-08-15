@@ -12,6 +12,16 @@ import (
 )
 
 func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
+	testBuildWithMasking(t, config, setup, false)
+}
+
+func RunBuildWithMaskingProxyExec(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
+	testBuildWithMasking(t, config, setup, true)
+}
+
+func testBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn, proxy bool) {
+	config.ProxyExec = &proxy
+
 	resp, err := common.GetRemoteSuccessfulBuildPrintVars(
 		config.Shell,
 		"MASKED_KEY",
@@ -19,10 +29,21 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 		"MASKED_KEY_OTHER",
 		"URL_MASKED_PARAM",
 		"TOKEN_REVEALS",
+		"ADD_MASK_SECRET",
 	)
 	require.NoError(t, err)
 
 	resp.Features.TokenMaskPrefixes = []string{"glpat-", "mytoken:", "foobar-"}
+
+	if proxy {
+		resp.Steps = append([]common.Step{
+			{
+				Name:   "before_script",
+				Script: []string{`echo "::add-mask::ADD_MASK_SECRET_VALUE"`},
+				When:   common.StepWhenAlways,
+			},
+		}, resp.Steps...)
+	}
 
 	build := &common.Build{
 		JobResponse: resp,
@@ -37,6 +58,9 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 		common.JobVariable{Key: "URL_MASKED_PARAM", Value: "https://example.com/?x-amz-credential=foobar"},
 
 		common.JobVariable{Key: "TOKEN_REVEALS", Value: "glpat-abcdef mytoken:ghijklmno foobar-pqrstuvwxyz"},
+
+		// proxy exec masking
+		common.JobVariable{Key: "ADD_MASK_SECRET", Value: "ADD_MASK_SECRET_VALUE"},
 	)
 
 	if setup != nil {
@@ -74,4 +98,10 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 	assert.Contains(t, string(contents), "glpat-[MASKED]")
 	assert.Contains(t, string(contents), "mytoken:[MASKED]")
 	assert.Contains(t, string(contents), "foobar-[MASKED]")
+
+	if proxy {
+		assert.Contains(t, string(contents), "ADD_MASK_SECRET=[MASKED]")
+	} else {
+		assert.Contains(t, string(contents), "ADD_MASK_SECRET=ADD_MASK_SECRET_VALUE")
+	}
 }

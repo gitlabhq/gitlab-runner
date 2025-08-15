@@ -29,7 +29,7 @@ type Store struct {
 func Open(dir string) (*Store, error) {
 	pathname := filepath.Join(dir, "masking.db")
 	sum := sha256.Sum256([]byte(pathname))
-	keyPath := filepath.Join(os.TempDir(), "runner"+hex.EncodeToString(sum[:]))
+	keyPath := filepath.Join(dir, "runner"+hex.EncodeToString(sum[:]))
 
 	_ = os.MkdirAll(filepath.Dir(pathname), 0o750)
 	_, err := os.Stat(pathname)
