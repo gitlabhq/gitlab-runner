@@ -1,3 +1,68 @@
+## v18.3.0 (2025-08-15)
+
+### New features
+
+- Add method label to status counter metrics [!5739](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5739)
+- Update step-runner version to 0.15.0 [!5757](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5757)
+- Add status_class and method label to request duration metrics [!5752](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5752)
+- Add native GitLab Secrets Manager support to GitLab Runner [!5733](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5733)
+- Record request retries. [!5758](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5758)
+
+### Bug fixes
+
+- Tighten cache key sanitation [!5719](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5719)
+- Fix cache key sanitation issues, esp. re. "cache key files" [!5741](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5741)
+- Update fleeting plugin dependency [!5776](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5776)
+- Fix proxy-exec store temporary directory [!5780](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5780)
+- Consume docker auth info in order [!5686](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5686)
+- Add correlation id header to outgoing requests [!5743](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5743)
+- Enable image executor opts in the kubernetes executor [!5745](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5745)
+- Fix identity for aws_secrets_manager_resolver [!5747](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5747)
+- Add support for 503 http code when the GitLab instance is in maintenance mode [!5685](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5685)
+- Fix job duration reporting [!5711](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5711)
+- Parse the last line of stdout for UID/GID [!5765](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5765)
+- Update fastzip to v0.2.0 [!5778](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5778)
+
+### Maintenance
+
+- Cleanup dead code related to disabled Akeyless secrets integration feature [!5762](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5762)
+- Drop Alpine Version 3.18 [!5744](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5744)
+- Bridge releases with Hosted Runners [!5746](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5746)
+- Minor improvements to runner fleet scaling best practices doc [!5737](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5737)
+- Introduce unnecessary-traversal Markdownlint rule to Runner docs [!5735](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5735)
+- Refactor errors to wrap errors [!5731](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5731)
+- Add test for abstract shell guardGetSourcesScriptHooks method [!5702](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5702)
+- Docker machine AMI update [!5718](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5718)
+- Refactor verify runner tests to table tests and better assertions [!5763](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5763)
+- Upgrade prebuilt runner images back to Alpine 3.21 [!5730](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5730) (Aaron Dewes @AaronDewes)
+- Lbhardwaj/refactor/unregister command methods [!5742](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5742)
+- Minor grammar updates in GitLab Runner README [!5756](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5756) (Anshi Mehta @anshikmehtaa)
+- Unregister command unit tests [!5738](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5738)
+- Remove EOL spaces in docs [!5749](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5749)
+- Change link to GA issue for the overwrite pod spec feature [!5732](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5732)
+- Add a max age of 24h for Kubernetes integration RBAC resources [!5760](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5760)
+- Correct erroneous compatibility chart features for docker-autoscaler [!5755](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5755)
+- Move backoff retry logic to retry requester [!5754](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5754)
+- Refactor move retry 429 status code logic to one place [!5727](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5727)
+- Add a note about the experiment status of GRIT [!5729](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5729)
+- Remove line length rule for markdownlint for i18n files [!5723](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5723)
+- Update index file for getting started [!5722](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5722)
+- Remove unused lock from client struct [!5770](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5770)
+- Sync vale rules from main project - Runner [!5753](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5753)
+- Chore: Use stable alpine for RISC-V [!5714](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5714) (Aaron Dewes @AaronDewes)
+- Fix localization codeowners [!5712](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5712)
+- A bit of general copy edit cleanup [!5740](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5740)
+- Update a few region/zone IDs in examples [!5720](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5720)
+- Allow customization of taskscaler and fleeting parameters in config.toml [!5777](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5777) (Sven Geisler @sge70)
+- Update hosted runners bridge wiki entry [!5767](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5767)
+- Upstream batch push 2025-07-21 [!5734](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5734)
+- Refactor kubernetes feature checker tests [!5774](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5774)
+- Refactor gitlab client unregister runner to table tests [!5670](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5670)
+- Fix minor typos with executor interface docs [!5717](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5717)
+- Add errorlint linter to golangci-lint settings [!5750](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5750)
+- Add operator pod_spec and deployment_spec docs [!5766](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5766)
+- Mention that systempaths security_opt is not supported [!5769](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5769) (Andrés Delfino @andresdelfino)
+
 ## v18.2.0 (2025-07-12)
 
 ### New features
