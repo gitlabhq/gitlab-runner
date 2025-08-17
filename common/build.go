@@ -1343,13 +1343,10 @@ func (b *Build) RefreshAllVariables() {
 	b.buildSettings = nil
 }
 
-func (b *Build) GetAllVariables() JobVariables {
-	if b.allVariables != nil {
-		return b.allVariables
-	}
-
+// getBaseVariablesBeforeJob returns the base variables that come before job variables.
+func (b *Build) getBaseVariablesBeforeJob() JobVariables {
 	variables := make(JobVariables, 0)
-	variables = append(variables, b.GetDefaultFeatureFlagsVariables()...)
+
 	if b.Image.Name != "" {
 		variables = append(
 			variables,
@@ -1361,7 +1358,14 @@ func (b *Build) GetAllVariables() JobVariables {
 	}
 	variables = append(variables, b.GetDefaultVariables()...)
 	variables = append(variables, b.GetCITLSVariables()...)
-	variables = append(variables, b.Variables...)
+
+	return variables
+}
+
+// getBaseVariablesAfterJob returns the base variables that come after job variables.
+func (b *Build) getBaseVariablesAfterJob() JobVariables {
+	variables := make(JobVariables, 0)
+
 	variables = append(variables, b.GetSharedEnvVariable())
 	variables = append(variables, AppVersion.Variables()...)
 	variables = append(variables, b.secretsVariables...)
@@ -1369,6 +1373,89 @@ func (b *Build) GetAllVariables() JobVariables {
 	variables = append(variables, JobVariable{
 		Key: tempProjectDirVariableKey, Value: b.TmpProjectDir(), Public: true, Internal: true,
 	})
+
+	return variables
+}
+
+// getVariablesForFeatureFlagResolution returns an initial set of variables that will be used
+// to resolve feature flag settings. This is used only during initSettings.
+func (b *Build) getVariablesForFeatureFlagResolution() JobVariables {
+	variables := make(JobVariables, 0)
+
+	variables = append(variables, b.GetDefaultFeatureFlagsVariables()...)
+	variables = append(variables, b.getBaseVariablesBeforeJob()...)
+	variables = append(variables, b.Variables...)
+	variables = append(variables, b.getBaseVariablesAfterJob()...)
+
+	return variables.Expand()
+}
+
+// getResolvedFeatureFlags returns resolved feature flags with TOML precedence.
+// This assumes build settings have been initialized. This is
+// part of the two-phase feature flag resolution process that ensures
+// TOML settings take precedence over job variables.
+func (b *Build) getResolvedFeatureFlags() JobVariables {
+	variables := make(JobVariables, 0)
+
+	if b.buildSettings == nil {
+		logrus.Warn("build settings are not initialized")
+		return variables
+	}
+
+	for _, featureFlag := range featureflags.GetAll() {
+		resolvedValue := b.buildSettings.FeatureFlags[featureFlag.Name]
+		variables = append(variables, JobVariable{
+			Key:      featureFlag.Name,
+			Value:    strconv.FormatBool(resolvedValue),
+			Public:   true,
+			Internal: true,
+			File:     false,
+		})
+	}
+
+	return variables
+}
+
+// getNonFeatureFlagJobVariables gets job variables, excluding feature flags to prevent double inclusion
+// and to maintain the precedence of TOML-configured feature flags over job variables.
+func (b *Build) getNonFeatureFlagJobVariables() JobVariables {
+	featureFlagNames := make(map[string]bool)
+	for _, ff := range featureflags.GetAll() {
+		featureFlagNames[ff.Name] = true
+	}
+
+	filtered := make(JobVariables, 0, len(b.Variables))
+	for _, variable := range b.Variables {
+		if !featureFlagNames[variable.Key] {
+			filtered = append(filtered, variable)
+		}
+	}
+
+	return filtered
+}
+
+// GetAllVariables() returns final variables with a consistent precedence order:
+// 1. Resolved feature flags (TOML takes precedence over job variables)
+// 2. Base variables that come before job variables
+// 3. Job variables (excluding feature flags to prevent overriding resolved values)
+// 4. Base variables that come after job variables
+func (b *Build) GetAllVariables() JobVariables {
+	if b.allVariables != nil {
+		return b.allVariables
+	}
+
+	// Phase 1: Ensure feature flags have been resolved.
+	if b.buildSettings == nil {
+		b.Settings()
+	}
+
+	variables := make(JobVariables, 0)
+
+	// Phase 2: Add resolved feature flags first (maintains original precedence order)
+	variables = append(variables, b.getResolvedFeatureFlags()...)
+	variables = append(variables, b.getBaseVariablesBeforeJob()...)
+	variables = append(variables, b.getNonFeatureFlagJobVariables()...)
+	variables = append(variables, b.getBaseVariablesAfterJob()...)
 
 	b.allVariables = variables.Expand()
 

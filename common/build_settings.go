@@ -82,14 +82,15 @@ func (b *Build) initSettings() {
 
 	b.buildSettings = &BuildSettings{}
 
-	variables := b.GetAllVariables()
+	// PHASE 1: Use explicit method for feature flag resolution
+	variablesForResolution := b.getVariablesForFeatureFlagResolution()
 
-	defaultGitStategy := GitClone
+	defaultGitStrategy := GitClone
 	if b.AllowGitFetch {
-		defaultGitStategy = GitFetch
+		defaultGitStrategy = GitFetch
 	}
 
-	errs := validateVariables(variables, b, defaultGitStategy)
+	errs := validateVariables(variablesForResolution, b, defaultGitStrategy)
 
 	if b.Runner != nil && b.Runner.DebugTraceDisabled {
 		if b.buildSettings.CIDebugTrace {
@@ -107,7 +108,7 @@ func (b *Build) initSettings() {
 		b.buildSettings.ExecutorJobSectionAttempts = DefaultExecutorStageAttempts
 	}
 
-	errs = append(errs, populateFeatureFlags(b, variables)...)
+	errs = append(errs, populateFeatureFlags(b, variablesForResolution)...)
 
 	b.buildSettings.Errors = slices.DeleteFunc(errs, func(err error) bool {
 		return err == nil
