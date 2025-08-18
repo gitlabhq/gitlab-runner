@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/docker/docker/api/types/volume"
 
@@ -14,6 +15,8 @@ import (
 )
 
 var ErrCacheVolumesDisabled = errors.New("cache volumes feature disabled")
+
+const protectedPostfix = "-protected"
 
 type Manager interface {
 	Create(ctx context.Context, volume string) error
@@ -31,6 +34,7 @@ type ManagerConfig struct {
 	PermissionSetter permission.Setter
 	Driver           string
 	DriverOpts       map[string]string
+	Protected        bool
 }
 
 type manager struct {
@@ -146,7 +150,7 @@ func (m *manager) addCacheVolume(ctx context.Context, volume *parser.Volume) err
 		return m.createHostBasedCacheVolume(volume.Destination)
 	}
 
-	_, err := m.createCacheVolume(ctx, volume.Destination, true, &m.config)
+	_, err := m.createCacheVolume(ctx, volume.Destination, true)
 
 	return err
 }
@@ -162,7 +166,11 @@ func (m *manager) createHostBasedCacheVolume(destination string) error {
 		return fmt.Errorf("updating managed volumes list: %w", err)
 	}
 
-	hostPath := m.parser.Path().Join(m.config.CacheDir, m.config.UniqueName, hashPath(destination))
+	// The leaf directory dir has a name with a length of:
+	//	- 42 chars when protected
+	//	- 32 chars when not protected (the length of the md5sum only)
+	dir := m.withProtected(hashPath(destination))
+	hostPath := m.parser.Path().Join(m.config.CacheDir, m.config.UniqueName, dir)
 
 	m.appendVolumeBind(&parser.Volume{
 		Source:      hostPath,
@@ -176,7 +184,6 @@ func (m *manager) createCacheVolume(
 	ctx context.Context,
 	destination string,
 	reusable bool,
-	config *ManagerConfig,
 ) (string, error) {
 	destination, err := m.absolutePath(destination)
 	if err != nil {
@@ -188,17 +195,26 @@ func (m *manager) createCacheVolume(
 		return "", fmt.Errorf("updating managed volumes list: %w", err)
 	}
 
+	hashedDestination := hashPath(destination)
 	name := m.config.TemporaryName
 	if reusable {
 		name = m.config.UniqueName
 	}
 
-	volumeName := fmt.Sprintf("%s-cache-%s", name, hashPath(destination))
+	// volumeName might get quite long. Docker is however happy to create volumes with long names. There is the "myth"
+	// that volume names are treated like DNS labels, and thus only allow a length of 63 chars, however that does not hold
+	// true. In fact, we already create way longer names, and would catch those issues in various integration tests.
+	volumeName := m.withProtected(fmt.Sprintf("%s-cache-%s", name, hashedDestination))
+
 	vBody := volume.CreateOptions{
 		Name:       volumeName,
-		Driver:     config.Driver,
-		DriverOpts: config.DriverOpts,
-		Labels:     m.labeler.Labels(map[string]string{"type": "cache"}),
+		Driver:     m.config.Driver,
+		DriverOpts: m.config.DriverOpts,
+		Labels: m.labeler.Labels(map[string]string{
+			"destination": destination,
+			"protected":   strconv.FormatBool(m.config.Protected),
+			"type":        "cache",
+		}),
 	}
 
 	v, err := m.client.VolumeCreate(ctx, vBody)
@@ -227,7 +243,7 @@ func (m *manager) createCacheVolume(
 // It's up to the caller to clean up the temporary volumes by calling
 // `RemoveTemporary`.
 func (m *manager) CreateTemporary(ctx context.Context, destination string) error {
-	volumeName, err := m.createCacheVolume(ctx, destination, false, &m.config)
+	volumeName, err := m.createCacheVolume(ctx, destination, false)
 	if err != nil {
 		return fmt.Errorf("creating cache volume: %w", err)
 	}
@@ -258,4 +274,14 @@ func (m *manager) RemoveTemporary(ctx context.Context) error {
 // Binds returns all the bindings that the volume manager is aware of.
 func (m *manager) Binds() []string {
 	return m.volumeBindings
+}
+
+// withProtected returns a string with a specific postfix when the config states, we are running against a protected
+// ref. Main use is to build up volume names / mount sources, to keep cache volumes for protected & unprotected
+// separated.
+func (m *manager) withProtected(s string) string {
+	if !m.config.Protected {
+		return s
+	}
+	return s + protectedPostfix
 }

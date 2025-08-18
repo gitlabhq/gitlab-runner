@@ -13,6 +13,7 @@ var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 		DisableCache:  e.Config.Docker.DisableCache,
 		Driver:        e.Config.Docker.VolumeDriver,
 		DriverOpts:    e.Config.Docker.VolumeDriverOps,
+		Protected:     e.Build.IsProtected(),
 	}
 
 	if e.newVolumePermissionSetter != nil {
