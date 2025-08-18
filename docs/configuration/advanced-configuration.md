@@ -1127,64 +1127,62 @@ credentials from the environment, you can define `AWS_ACCESS_KEY_ID` and
 
 {{< history >}}
 
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5751) in GitLab Runner v18.3.0.
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5751) in GitLab Runner v18.4.0.
 
 {{< /history >}}
 
-Starting with GitLab Runner 18.3.0 users can opt in to hash cache keys with the
-[feature flag](feature-flags.md) `FF_HASH_CACHE_KEYS`.
+In GitLab Runner 18.4.0 and later, you can hash cache keys with the
+`FF_HASH_CACHE_KEYS` [feature flag](feature-flags.md).
 
-When `FF_HASH_CACHE_KEYS` is disabled (default), before we use the cache key to
-build up the path for both the local cache file and the object in the storage
-bucket, we sanitize the cache key. If that sanitation changes the cache key,
-this is logged to the user. If the cache key cannot be sanitized, this is also
-logged to the user, and this specific cache won't be used.
+When `FF_HASH_CACHE_KEYS` is turned off (default), GitLab Runner sanitizes the
+cache key before using it to build the path for both the local cache file and
+the object in the storage bucket. If the sanitization changes the cache key,
+GitLab Runner logs this change. If GitLab Runner cannot sanitize the cache key,
+it also logs this, and does not use this specific cache.
 
-With this feature flag enabled, the cache key will be hashed before it is used
-to build the path for the local cache artefact and the object in remote storage
-bucket. The cache key will not be sanitized. To still give users a way to
-understand which cache key was used to create a specific cache artefact we
-attach metadata to it:
+When you turn on this feature flag, GitLab Runner hashes the cache key before using
+it to build the path for the local cache artifact and the object in the remote storage
+bucket. GitLab Runner does not sanitize the cache key. To help you understand which
+cache key created a specific cache artifact, GitLab Runner attaches metadata to it:
 
-- For cache artifacts kept locally, we'll place a `metadata.json` file next to
-  the cache artefact `cache.zip`, with the following content:
+- For local cache artifacts, GitLab Runner places a `metadata.json` file next to
+  the cache artifact `cache.zip`, with the following content:
 
   ```json
   {"cachekey": "the human readable cache key"}
   ```
 
-- For cache artifacts on distributed caches, we attach this metadata directly to
-  the storage object / blob, with the key `cachekey`. It can be queried by the
-  cloud provider's mechanisms, e.g. see [User-defined object metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#UserMetadata)
-  for AWS/S3.
+- For cache artifacts on distributed caches, GitLab Runner attaches the metadata directly to the storage object blob,
+  with the key `cachekey`. You can query it using the cloud provider's mechanisms. For an example, see the
+  [user-defined object metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#UserMetadata)
+  for AWS S3.
 
 {{< alert type="warning" >}}
 
-When `FF_HASH_CACHE_KEYS` is changed, existing cache artifacts will be ignored,
-because by hashing the cache key the cache artifact's name / location has
-changed. This is true for both directions, going from `FF_HASH_CACHE_KEYS=true`
-to `FF_HASH_CACHE_KEYS=false` and vice-versa.
+When you change `FF_HASH_CACHE_KEYS`, GitLab Runner ignores existing cache artifacts
+because hashing the cache key changes the cache artifact's name and location.
+This change applies in both directions, from `FF_HASH_CACHE_KEYS=true` to
+`FF_HASH_CACHE_KEYS=false` and vice versa.
 
-Also, if you run multiple runners sharing a distributed cache, but with
-different settings for `FF_HASH_CACHE_KEYS`, they won't share cache artifacts,
-either.
+If you run multiple runners that share a distributed cache but have different
+settings for `FF_HASH_CACHE_KEYS`, they do not share cache artifacts.
 
 Therefore, best practice is:
 
 - Keep `FF_HASH_CACHE_KEYS` in sync across runners which share distributed
   caches.
 
-- Expect cache misses, rebuild of cache artifacts, and therefore prolonged
-  first job runs after switching `FF_HASH_CACHE_KEYS`.
+- Expect cache misses, cache artifacts rebuild, and longer first job runs after
+  you change `FF_HASH_CACHE_KEYS`.
 
 {{< /alert >}}
 
 {{< alert type="warning" >}}
 
-If you enable `FF_HASH_CACHE_KEYS` but run an older version of the helper
-binary, e.g. because you pinned the helper image to an older version, hashing
-the cache key and up-/downloading caches will still work. However, the metadata
-of cache artifacts won't be maintained.
+If you turn on `FF_HASH_CACHE_KEYS` but run an older version of the helper binary
+(for example, because you pinned the helper image to an older version), hashing the
+cache key and uploading or downloading caches still works. However, GitLab Runner
+does not maintain the metadata of cache artifacts.
 
 {{< /alert >}}
 
