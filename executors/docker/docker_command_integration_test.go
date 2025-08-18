@@ -2041,7 +2041,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 
 	tests := map[string]struct {
 		buildVars []common.JobVariable
-		assert    func(string, error)
+		assert    func(*testing.T, string, error)
 	}{
 		"enabled": {
 			buildVars: []common.JobVariable{
@@ -2055,7 +2055,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 					Public: true,
 				},
 			},
-			assert: func(out string, err error) {
+			assert: func(t *testing.T, out string, err error) {
 				assert.NoError(t, err)
 				assert.NotContains(t, out, "WARNING: CI_DEBUG_SERVICES: expected bool got \"blammo\", using default value: false")
 				assert.Regexp(t, `\[service:(postgres-db|db-postgres)\] .* The files belonging to this database system will be owned by user "postgres"`, out)
@@ -2065,7 +2065,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			},
 		},
 		"not enabled": {
-			assert: func(out string, err error) {
+			assert: func(t *testing.T, out string, err error) {
 				assert.NoError(t, err)
 				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\] .* Error: Database is uninitialized and superuser password is not specified`, out)
 				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
@@ -2078,7 +2078,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 				Value:  "blammo",
 				Public: true,
 			}},
-			assert: func(out string, err error) {
+			assert: func(t *testing.T, out string, err error) {
 				assert.NoError(t, err)
 				assert.Contains(t, out, "WARNING: CI_DEBUG_SERVICES: expected bool got \"blammo\", using default value: false")
 				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\] .* Error: Database is uninitialized and superuser password is not specified`, out)
@@ -2096,7 +2096,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 
 			build.Variables = tt.buildVars
 			out, err := buildtest.RunBuildReturningOutput(t, &build)
-			tt.assert(out, err)
+			tt.assert(t, out, err)
 		})
 	}
 }
