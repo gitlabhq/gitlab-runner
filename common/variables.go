@@ -1,10 +1,12 @@
 package common
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -65,21 +67,28 @@ func (b JobVariables) Get(key string) string {
 	return b.value(key, true)
 }
 
-// Set sets newJobVars on the JobVariables, replacing an original variable if one exists with the same key.
+// Set sets newJobVars on the JobVariables, replacing all existing variables with the same key.
+// If newJobVars holds variables with the same key, only the last one is set.
 func (b *JobVariables) Set(newJobVars ...JobVariable) {
-	for _, newJobVar := range newJobVars {
-		b.set(newJobVar)
+	if len(newJobVars) < 1 {
+		return
 	}
-}
 
-func (b *JobVariables) set(newJobVar JobVariable) {
-	for i, v := range *b {
-		if v.Key == newJobVar.Key {
-			(*b)[i] = newJobVar
-			return
-		}
+	newVarsByKey := make(map[string]JobVariable, len(newJobVars))
+
+	for _, v := range newJobVars {
+		// for multiple newJobVars with the same key, only keep the last one
+		newVarsByKey[v.Key] = v
 	}
-	*b = append(*b, newJobVar)
+
+	*b = slices.DeleteFunc(*b, func(v JobVariable) bool {
+		_, exists := newVarsByKey[v.Key]
+		return exists
+	})
+
+	for _, v := range newVarsByKey {
+		*b = append(*b, v)
+	}
 }
 
 // Value is similar to Get(), but always returns the key value, regardless
@@ -162,6 +171,29 @@ func (b JobVariables) Masked() (masked []string) {
 		}
 	}
 	return
+}
+
+// Dedup returns a clone of the JobVariables, where variables with the same key get de-duplicated.
+// If keepOriginal is true, the first duplicate JobVariable (ie. the original value) is kept, else the last one (ie. the
+// final overridden value).
+// The order of variables is not preserved.
+func (b JobVariables) Dedup(keepOriginal bool) JobVariables {
+	clone := slices.Clone(b)
+
+	if !keepOriginal {
+		// GitLab might give us multiple vars with the same key, with the last one being the final overridden one. In order
+		// to get the original value, we thus reverse the vars, and therefore get the first/original value after doing "sort
+		// | uniq".
+		slices.Reverse(clone)
+	}
+
+	slices.SortStableFunc(clone, func(a, b JobVariable) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+
+	return slices.Clip(slices.CompactFunc(clone, func(a, b JobVariable) bool {
+		return a.Key == b.Key
+	}))
 }
 
 func ParseVariable(text string) (variable JobVariable, err error) {

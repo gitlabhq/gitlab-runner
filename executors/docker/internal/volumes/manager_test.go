@@ -229,6 +229,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 		volume     string
 		basePath   string
 		uniqueName string
+		protected  bool
 
 		expectedBinding []string
 		expectedError   error
@@ -278,6 +279,16 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 			expectedBinding: []string{existingBinding},
 			expectedError:   errDirectoryIsRootPath,
 		},
+		"protected": {
+			volume:     "some-volume",
+			basePath:   "/some/base/path",
+			uniqueName: "some-unique-name",
+			protected:  true,
+			expectedBinding: []string{
+				existingBinding,
+				"/cache/some-unique-name/804b0f6b0d757899a37145f9d7f3848e-protected:/some/base/path/some-volume",
+			},
+		},
 	}
 
 	for testName, testCase := range testCases {
@@ -287,6 +298,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 				DisableCache: false,
 				CacheDir:     "/cache",
 				UniqueName:   testCase.uniqueName,
+				Protected:    testCase.protected,
 			}
 
 			m := newDefaultManager(t, config)
@@ -318,26 +330,31 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 		volume     string
 		basePath   string
 		uniqueName string
+		protected  bool
 
-		expectedVolumeName string
-		expectedBindings   []string
-		expectedError      error
+		expectedVolumeCreateOpts *volume.CreateOptions
+		expectedBindings         []string
+		expectedError            error
 	}{
 		"volume with absolute path, without basePath and with existing volume": {
-			volume:             "/volume",
-			basePath:           "",
-			uniqueName:         "uniq",
-			expectedVolumeName: "uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa",
+			volume:     "/volume",
+			basePath:   "",
+			uniqueName: "uniq",
+			expectedVolumeCreateOpts: testVolumeCreatOpts("uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa", map[string]string{
+				"destination": "/volume",
+			}),
 			expectedBindings: []string{
 				existingBinding,
 				"uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa:/volume",
 			},
 		},
 		"volume without absolute path, with basePath": {
-			volume:             "volume",
-			basePath:           "/builds/project",
-			uniqueName:         "uniq",
-			expectedVolumeName: "uniq-cache-f69aef9fb01e88e6213362a04877452d",
+			volume:     "volume",
+			basePath:   "/builds/project",
+			uniqueName: "uniq",
+			expectedVolumeCreateOpts: testVolumeCreatOpts("uniq-cache-f69aef9fb01e88e6213362a04877452d", map[string]string{
+				"destination": "/builds/project/volume",
+			}),
 			expectedBindings: []string{
 				existingBinding,
 				"uniq-cache-f69aef9fb01e88e6213362a04877452d:/builds/project/volume",
@@ -354,6 +371,20 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 			uniqueName:    "uniq",
 			expectedError: NewErrVolumeAlreadyDefined("/duplicated"),
 		},
+		"protected": {
+			volume:     "some/volume",
+			basePath:   "/some/base/path",
+			uniqueName: "some-unique-name",
+			protected:  true,
+			expectedVolumeCreateOpts: testVolumeCreatOpts("some-unique-name-cache-7ee4ee58453a23f50e3e88641d9e4690-protected", map[string]string{
+				"destination": "/some/base/path/some/volume",
+				"protected":   "true",
+			}),
+			expectedBindings: []string{
+				existingBinding,
+				"some-unique-name-cache-7ee4ee58453a23f50e3e88641d9e4690-protected:/some/base/path/some/volume",
+			},
+		},
 	}
 
 	for testName, testCase := range testCases {
@@ -362,6 +393,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 				BasePath:     testCase.basePath,
 				UniqueName:   testCase.uniqueName,
 				DisableCache: false,
+				Protected:    testCase.protected,
 			}
 
 			m := newDefaultManager(t, config)
@@ -376,15 +408,10 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 				Return(&parser.Volume{Destination: testCase.volume}, nil).
 				Once()
 
-			if testCase.expectedError == nil {
-				mClient.On(
-					"VolumeCreate",
-					mock.Anything,
-					mock.MatchedBy(func(v volume.CreateOptions) bool {
-						return testCreateOptionsContent(v, testCase.expectedVolumeName)
-					}),
-				).
-					Return(volume.Volume{Name: testCase.expectedVolumeName}, nil).
+			if createOpts := testCase.expectedVolumeCreateOpts; createOpts != nil {
+				mClient.
+					On("VolumeCreate", mock.Anything, *createOpts).
+					Return(volume.Volume{Name: createOpts.Name}, nil).
 					Once()
 			}
 
@@ -415,13 +442,11 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_WithError(t *t
 	mClient := docker.NewMockClient(t)
 	m.client = mClient
 
-	mClient.On(
-		"VolumeCreate",
-		mock.Anything,
-		mock.MatchedBy(func(v volume.CreateOptions) bool {
-			return testCreateOptionsContent(v, "unique-cache-f69aef9fb01e88e6213362a04877452d")
-		}),
-	).
+	expectedCreateOpts := testVolumeCreatOpts("unique-cache-f69aef9fb01e88e6213362a04877452d", map[string]string{
+		"destination": "/builds/project/volume",
+	})
+	mClient.
+		On("VolumeCreate", mock.Anything, *expectedCreateOpts).
 		Return(volume.Volume{}, testErr).
 		Once()
 
@@ -455,15 +480,18 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 	testCases := map[string]struct {
 		volume          string
 		volumeCreateErr error
+		protected       bool
 
-		expectedVolumeName string
-		expectedBindings   []string
-		expectedTemporary  []string
-		expectedError      error
+		expectedVolumeCreateOpts *volume.CreateOptions
+		expectedBindings         []string
+		expectedTemporary        []string
+		expectedError            error
 	}{
 		"volume created": {
-			volume:             "volume",
-			expectedVolumeName: "temporary-cache-f69aef9fb01e88e6213362a04877452d",
+			volume: "volume",
+			expectedVolumeCreateOpts: testVolumeCreatOpts("temporary-cache-f69aef9fb01e88e6213362a04877452d", map[string]string{
+				"destination": "/builds/project/volume",
+			}),
 			expectedBindings: []string{
 				existingBinding,
 				"temporary-cache-f69aef9fb01e88e6213362a04877452d:/builds/project/volume",
@@ -474,14 +502,28 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 			expectedError: errDirectoryIsRootPath,
 		},
 		"volume creation error": {
-			volume:             "volume",
-			expectedVolumeName: "temporary-cache-f69aef9fb01e88e6213362a04877452d",
-			volumeCreateErr:    volumeCreateErr,
-			expectedError:      volumeCreateErr,
+			volume: "volume",
+			expectedVolumeCreateOpts: testVolumeCreatOpts("temporary-cache-f69aef9fb01e88e6213362a04877452d", map[string]string{
+				"destination": "/builds/project/volume",
+			}),
+			volumeCreateErr: volumeCreateErr,
+			expectedError:   volumeCreateErr,
 		},
 		"duplicated volume definition": {
 			volume:        "/duplicated",
 			expectedError: &ErrVolumeAlreadyDefined{},
+		},
+		"protected": {
+			volume:    "some/volume",
+			protected: true,
+			expectedVolumeCreateOpts: testVolumeCreatOpts("temporary-cache-12b6275e06323d2d4872c0c352d0c7dd-protected", map[string]string{
+				"destination": "/builds/project/some/volume",
+				"protected":   "true",
+			}),
+			expectedBindings: []string{
+				existingBinding,
+				"temporary-cache-12b6275e06323d2d4872c0c352d0c7dd-protected:/builds/project/some/volume",
+			},
 		},
 	}
 
@@ -490,6 +532,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 			config := ManagerConfig{
 				BasePath:      "/builds/project",
 				TemporaryName: "temporary",
+				Protected:     testCase.protected,
 			}
 
 			m := newDefaultManager(t, config)
@@ -501,15 +544,12 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
 				Once()
 
-			if testCase.expectedVolumeName != "" {
-				mClient.On(
-					"VolumeCreate",
-					mock.Anything,
-					mock.MatchedBy(func(v volume.CreateOptions) bool {
-						return testCreateOptionsContent(v, testCase.expectedVolumeName)
-					}),
-				).
-					Return(volume.Volume{Name: testCase.expectedVolumeName}, testCase.volumeCreateErr).
+			var expectedVolumeName string
+			if createOpts := testCase.expectedVolumeCreateOpts; createOpts != nil {
+				expectedVolumeName = createOpts.Name
+				mClient.
+					On("VolumeCreate", mock.Anything, *createOpts).
+					Return(volume.Volume{Name: createOpts.Name}, testCase.volumeCreateErr).
 					Once()
 			}
 
@@ -523,7 +563,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 			}
 
 			require.Len(t, m.temporaryVolumes, 1)
-			assert.Equal(t, m.temporaryVolumes[0], testCase.expectedVolumeName)
+			assert.Equal(t, m.temporaryVolumes[0], expectedVolumeName)
 			assert.ErrorIs(t, err, testCase.expectedError)
 			assert.Equal(t, testCase.expectedBindings, m.Binds())
 		})
@@ -592,9 +632,31 @@ func TestDefaultManager_Binds(t *testing.T) {
 	assert.Equal(t, expectedElements, m.Binds())
 }
 
-func testCreateOptionsContent(v volume.CreateOptions, expectedVolumeName string) bool {
-	return v.Name == expectedVolumeName &&
-		// ensure labeler has been used
-		// test for the full list of labels is part of the labels package.
-		len(v.Labels) > 0 && v.Labels["com.gitlab.gitlab-runner.type"] == "cache"
+func testVolumeCreatOpts(name string, additionalLabels map[string]string) *volume.CreateOptions {
+	const pre = "com.gitlab.gitlab-runner"
+	labels := map[string]string{
+		pre + ".type":            "cache",
+		pre + ".job.before_sha":  "",
+		pre + ".job.id":          "0",
+		pre + ".job.ref":         "",
+		pre + ".job.sha":         "",
+		pre + ".job.url":         "/-/jobs/0",
+		pre + ".job.timeout":     "2h0m0s",
+		pre + ".managed":         "true",
+		pre + ".pipeline.id":     "",
+		pre + ".project.id":      "0",
+		pre + ".protected":       "false",
+		pre + ".runner.id":       "",
+		pre + ".runner.local_id": "0",
+		pre + ".destination":     "",
+	}
+
+	for k, v := range additionalLabels {
+		labels[pre+"."+k] = v
+	}
+
+	return &volume.CreateOptions{
+		Name:   name,
+		Labels: labels,
+	}
 }

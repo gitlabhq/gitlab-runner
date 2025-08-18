@@ -319,6 +319,7 @@ type GitInfo struct {
 	RefType          GitInfoRefType `json:"ref_type"`
 	Refspecs         []string       `json:"refspecs"`
 	Depth            int            `json:"depth"`
+	Protected        *bool          `json:"protected"`
 }
 
 type RunnerInfo struct {

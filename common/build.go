@@ -1375,6 +1375,18 @@ func (b *Build) GetAllVariables() JobVariables {
 	return b.allVariables
 }
 
+// IsProtected states if the git ref this build is for is protected.
+// GitLab 18.3+ provides the `protected` property in GitInfo to check if a branch is protected.
+// For older GitLab versions, we fall back to the CI_COMMIT_REF_PROTECTED predefined variable.
+func (b *Build) IsProtected() bool {
+	if p := b.GitInfo.Protected; p != nil {
+		return *p
+	}
+
+	// we dedup the vars here, keeping the original, so that we don't consider an override by the user.
+	return b.GetAllVariables().Dedup(true).Bool("CI_COMMIT_REF_PROTECTED")
+}
+
 // Users might specify image and service-image name and aliases as Variables, so we must expand them before they are
 // used.
 func (b *Build) expandContainerOptions() {
