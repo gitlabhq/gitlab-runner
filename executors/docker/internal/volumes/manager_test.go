@@ -635,20 +635,22 @@ func TestDefaultManager_Binds(t *testing.T) {
 func testVolumeCreatOpts(name string, additionalLabels map[string]string) *volume.CreateOptions {
 	const pre = "com.gitlab.gitlab-runner"
 	labels := map[string]string{
-		pre + ".type":            "cache",
-		pre + ".job.before_sha":  "",
-		pre + ".job.id":          "0",
-		pre + ".job.ref":         "",
-		pre + ".job.sha":         "",
-		pre + ".job.url":         "/-/jobs/0",
-		pre + ".job.timeout":     "2h0m0s",
-		pre + ".managed":         "true",
-		pre + ".pipeline.id":     "",
-		pre + ".project.id":      "0",
-		pre + ".protected":       "false",
-		pre + ".runner.id":       "",
-		pre + ".runner.local_id": "0",
-		pre + ".destination":     "",
+		pre + ".type":              "cache",
+		pre + ".job.before_sha":    "",
+		pre + ".job.id":            "0",
+		pre + ".job.ref":           "",
+		pre + ".job.sha":           "",
+		pre + ".job.url":           "/-/jobs/0",
+		pre + ".job.timeout":       "2h0m0s",
+		pre + ".managed":           "true",
+		pre + ".pipeline.id":       "",
+		pre + ".project.id":        "0",
+		pre + ".project.runner_id": "0",
+		pre + ".protected":         "false",
+		pre + ".runner.id":         "",
+		pre + ".runner.local_id":   "0",
+		pre + ".runner.system_id":  "",
+		pre + ".destination":       "",
 	}
 
 	for k, v := range additionalLabels {

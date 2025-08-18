@@ -1181,19 +1181,21 @@ func TestDockerContainerLabelsSetting(t *testing.T) {
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		expected := map[string]string{
-			"com.gitlab.gitlab-runner.job.before_sha":  "",
-			"com.gitlab.gitlab-runner.job.id":          "0",
-			"com.gitlab.gitlab-runner.job.ref":         "",
-			"com.gitlab.gitlab-runner.job.sha":         "",
-			"com.gitlab.gitlab-runner.job.url":         "/-/jobs/0",
-			"com.gitlab.gitlab-runner.job.timeout":     "2h0m0s",
-			"com.gitlab.gitlab-runner.managed":         "true",
-			"com.gitlab.gitlab-runner.pipeline.id":     "",
-			"com.gitlab.gitlab-runner.project.id":      "0",
-			"com.gitlab.gitlab-runner.runner.id":       "",
-			"com.gitlab.gitlab-runner.runner.local_id": "0",
-			"com.gitlab.gitlab-runner.type":            "build",
-			"my.custom.label":                          "my.custom.value",
+			"com.gitlab.gitlab-runner.job.before_sha":    "",
+			"com.gitlab.gitlab-runner.job.id":            "0",
+			"com.gitlab.gitlab-runner.job.ref":           "",
+			"com.gitlab.gitlab-runner.job.sha":           "",
+			"com.gitlab.gitlab-runner.job.url":           "/-/jobs/0",
+			"com.gitlab.gitlab-runner.job.timeout":       "2h0m0s",
+			"com.gitlab.gitlab-runner.managed":           "true",
+			"com.gitlab.gitlab-runner.pipeline.id":       "",
+			"com.gitlab.gitlab-runner.project.id":        "0",
+			"com.gitlab.gitlab-runner.project.runner_id": "0",
+			"com.gitlab.gitlab-runner.runner.id":         "",
+			"com.gitlab.gitlab-runner.runner.local_id":   "0",
+			"com.gitlab.gitlab-runner.runner.system_id":  "",
+			"com.gitlab.gitlab-runner.type":              "build",
+			"my.custom.label":                            "my.custom.value",
 		}
 
 		assert.Equal(t, expected, config.Labels)
@@ -2441,6 +2443,7 @@ func TestExpandingVolumeDestination(t *testing.T) {
 			RunnerCredentials: common.RunnerCredentials{
 				Token: "theToken",
 			},
+			SystemID: "some-system-id",
 		},
 		ProjectRunnerID: 5678,
 	}
@@ -2469,9 +2472,24 @@ func TestExpandingVolumeDestination(t *testing.T) {
 
 	// for the cache volume we expect a volume creation call
 	expectedVolume := func(co volume.CreateOptions) bool {
-		// name build from config stuff & the md5sum of the (expanded) destination ("/new/cache/vol-1-2-3-foo")
-		assert.Equal(t, "runner-thetoken-project-1234-concurrent-5678-cache-bffb7fe32becf1f1e4d6c9604d09f9d7", co.Name)
-		return true
+		// name build from hashed runner/build stuff & the md5sum of the (expanded) destination ("/new/cache/vol-1-2-3-foo")
+		isExpected := assert.Equal(t, "runner-cb27ac1df55ad5c5857ef343b03639cf-cache-bffb7fe32becf1f1e4d6c9604d09f9d7", co.Name)
+
+		// check for some labels, specifically the ones that moved from the volume name to metadata
+		expectedLabels := map[string]string{
+			"com.gitlab.gitlab-runner.project.id":        "1234",
+			"com.gitlab.gitlab-runner.project.runner_id": "5678",
+			"com.gitlab.gitlab-runner.runner.id":         "theToken",
+			"com.gitlab.gitlab-runner.runner.system_id":  "some-system-id",
+		}
+		for expectedKey, expectedValue := range expectedLabels {
+			actualValue, exists := co.Labels[expectedKey]
+			isExpected = isExpected &&
+				assert.True(t, exists, "expected volume label %q, but got none", expectedKey) &&
+				assert.Equal(t, expectedValue, actualValue, "volume label %q", expectedKey)
+		}
+
+		return isExpected
 	}
 	dockerClient.On("VolumeCreate", mock.Anything, mock.MatchedBy(expectedVolume)).
 		Return(volume.Volume{}, nil).

@@ -57,17 +57,19 @@ func TestCreateNetworkLabels(t *testing.T) {
 	network, err := manager.Inspect(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]string{
-		"com.gitlab.gitlab-runner.job.before_sha":  "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
-		"com.gitlab.gitlab-runner.job.id":          "0",
-		"com.gitlab.gitlab-runner.job.url":         "https://gitlab.example.com/namespace/project/-/jobs/0",
-		"com.gitlab.gitlab-runner.job.ref":         "main",
-		"com.gitlab.gitlab-runner.job.sha":         "69b18e5ed3610cf646119c3e38f462c64ec462b7",
-		"com.gitlab.gitlab-runner.job.timeout":     "2h0m0s",
-		"com.gitlab.gitlab-runner.managed":         "true",
-		"com.gitlab.gitlab-runner.pipeline.id":     "1",
-		"com.gitlab.gitlab-runner.project.id":      "0",
-		"com.gitlab.gitlab-runner.runner.id":       "test-toke",
-		"com.gitlab.gitlab-runner.runner.local_id": "0",
+		"com.gitlab.gitlab-runner.job.before_sha":    "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
+		"com.gitlab.gitlab-runner.job.id":            "0",
+		"com.gitlab.gitlab-runner.job.url":           "https://gitlab.example.com/namespace/project/-/jobs/0",
+		"com.gitlab.gitlab-runner.job.ref":           "main",
+		"com.gitlab.gitlab-runner.job.sha":           "69b18e5ed3610cf646119c3e38f462c64ec462b7",
+		"com.gitlab.gitlab-runner.job.timeout":       "2h0m0s",
+		"com.gitlab.gitlab-runner.managed":           "true",
+		"com.gitlab.gitlab-runner.pipeline.id":       "1",
+		"com.gitlab.gitlab-runner.project.id":        "0",
+		"com.gitlab.gitlab-runner.project.runner_id": "0",
+		"com.gitlab.gitlab-runner.runner.id":         "test-toke",
+		"com.gitlab.gitlab-runner.runner.local_id":   "0",
+		"com.gitlab.gitlab-runner.runner.system_id":  "",
 	}, network.Labels)
 
 	err = manager.Cleanup(ctx)

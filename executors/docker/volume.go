@@ -8,7 +8,7 @@ var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 	config := volumes.ManagerConfig{
 		CacheDir:      e.Config.Docker.CacheDir,
 		BasePath:      e.Build.FullProjectDir(),
-		UniqueName:    e.Build.ProjectUniqueName(),
+		UniqueName:    e.Build.ProjectRealUniqueName(),
 		TemporaryName: e.getProjectUniqRandomizedName(),
 		DisableCache:  e.Config.Docker.DisableCache,
 		Driver:        e.Config.Docker.VolumeDriver,
