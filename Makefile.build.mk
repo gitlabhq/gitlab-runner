@@ -37,7 +37,7 @@ $(BASE_BINARY_PATH)-%:
 
 .PHONY: runner-local-image
 runner-local-image: export LOCAL_ARCH ?= $(shell go env GOARCH)
-runner-local-image: export LOCAL_FLAVOR ?= alpine-3.21
+runner-local-image: export LOCAL_FLAVOR ?= alpine-latest
 runner-local-image: export RUNNER_IMAGES_VERSION ?= $(shell grep "RUNNER_IMAGES_VERSION:" .gitlab/ci/_common.gitlab-ci.yml | awk -F': ' '{ print $$2 }' | tr -d '"')
 runner-local-image: runner-bin-linux
 	cd dockerfiles/runner && docker buildx bake --progress plain local-image
