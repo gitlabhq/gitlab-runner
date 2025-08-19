@@ -657,7 +657,6 @@ type KubernetesConfig struct {
 	PodSpec                                           []KubernetesPodSpec                `toml:"pod_spec" json:",omitempty"`
 	LogsBaseDir                                       string                             `toml:"logs_base_dir,omitempty" json:"logs_base_dir" long:"logs-base-dir" env:"KUBERNETES_LOGS_BASE_DIR" description:"Base directory for the path where build logs are stored. This directory is prepended to the final generated path. For example, <logs_base_dir>/logs-<project_id>-<job_id>."`
 	ScriptsBaseDir                                    string                             `toml:"scripts_base_dir,omitempty" json:"scripts_base_dir" long:"scripts-base-dir" env:"KUBERNETES_SCRIPTS_BASE_DIR" description:"Base directory for the path where build scripts are stored. This directory is prepended to the final generated path. For example, <scripts_base_dir>/scripts-<project_id>-<job_id>."`
-	PrintPodWarningEvents                             *bool                              `toml:"print_pod_warning_events,omitempty" json:"print_pod_warning_events,omitempty" long:"print-pod-warning-events" env:"KUBERNETES_PRINT_POD_WARNING_EVENTS" description:"When enabled, all warning events associated with the pod are retrieved when the job fails. Enabled by default."`
 }
 
 type RequestRetryLimit int
@@ -1895,14 +1894,6 @@ func (c *KubernetesConfig) GetHostAliases() []api.HostAlias {
 // See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29499
 func (c *KubernetesConfig) GetExpandedServices(vars JobVariables) []Service {
 	return getExpandedServices(c.Services, vars)
-}
-
-func (c *KubernetesConfig) GetPrintPodWarningEvents() bool {
-	if c.PrintPodWarningEvents == nil {
-		return true
-	}
-
-	return *c.PrintPodWarningEvents
 }
 
 func (c *DockerMachine) GetIdleCount() int {
