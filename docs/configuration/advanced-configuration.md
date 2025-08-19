@@ -58,6 +58,109 @@ These settings are global. They apply to all runners.
 | `listen_address`     | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
 | `shutdown_timeout`   | Number of seconds until the [forceful shutdown operation](../commands/_index.md#signals) times out and exits the process. The default value is `30`. If set to `0` or lower, the default value is used. |
 
+### Configuration warnings
+
+#### Long polling issues
+
+GitLab Runner can experience long polling issues in several configuration scenarios when GitLab
+long polling is turned on through GitLab Workhorse. These range from performance bottlenecks to severe processing delays, depending on the configuration. GitLab Runner workers can get stuck in long polling requests for extended periods (matches the GitLab Workhorse configuration `-apiCiLongPollingDuration`, which defaults to 50 seconds), preventing other jobs from being processed promptly.
+
+This issue is related to GitLab CI/CD long polling feature, which is controlled by
+the GitLab Workhorse `-apiCiLongPollingDuration` setting. When turned on, job requests
+can block for up to the configured duration while they wait for jobs to become available.
+
+The default GitLab Workhorse long polling configuration value is 50 seconds (turned on by default in recent GitLab versions).
+
+The following are some configuration examples:
+
+- Omnibus: `gitlab_workhorse['api_ci_long_polling_duration'] = "50s"` in `/etc/gitlab/gitlab.rb`
+- Helm chart: Use the `gitlab.webservice.workhorse.extraArgs` setting
+- CLI: `gitlab-workhorse -apiCiLongPollingDuration 50s`
+
+For more information, see:
+
+- [Long polling for runners](https://docs.gitlab.com/ee/ci/runners/long_polling.html)
+- [Workhorse configuration](https://docs.gitlab.com/development/workhorse/configuration/)
+
+**Symptoms:**
+
+- Jobs from some projects experience delays before starting (duration matches your GitLab instance long polling timeout)
+- Jobs from other projects run immediately  
+- Warning message in runner logs: `CONFIGURATION: Long polling issues detected`
+
+**Common problematic scenarios:**
+
+- Worker starvation bottleneck: The `concurrent` setting is less than the number of runners (severe bottleneck)
+- Request bottleneck: Runners with `request_concurrency=1` cause job delays during long polling
+- Build limit bottleneck: Runners with low `limit` settings (≤2) combined with `request_concurrency=1`
+
+**Solution options:**
+
+GitLab Runner automatically detects the problem scenarios and provides tailored solutions in the warning messages.
+Common solutions include:
+
+- Increase the `concurrent` setting to exceed the number of runners.
+- Set the `request_concurrency` value for high-volume runners to a value higher than 1 (default is 1).
+  Consider turning on [runner monitoring](../monitoring/_index.md) to understand the state of your system and find the best
+  value for the setting. Consider using the `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` feature flag to automatically
+  adjust `request_concurrency` based on workload. For information about adaptive concurrency,
+  see the [feature flags documentation](feature-flags.md).
+- Balance `limit` settings with expected job volume.
+
+**Example problematic configurations:**
+
+**Scenario 1: Worker starvation bottleneck**
+
+```toml
+concurrent = 2  # Only 2 concurrent workers
+
+[[runners]]
+  name = "runner-1"
+[[runners]]  
+  name = "runner-2"  
+[[runners]]
+  name = "runner-3"  # 3 runners, only 2 workers - severe bottleneck
+```
+
+**Scenario 2: Request bottleneck**
+
+```toml
+concurrent = 4  # 4 workers available
+
+[[runners]]
+  name = "high-volume-runner"
+  request_concurrency = 1  # Default: only 1 request at a time
+  limit = 10               # Can handle 10 jobs, but only 1 request slot
+```
+
+**Scenario 3: Build limit bottleneck**
+
+```toml
+concurrent = 4
+
+[[runners]]
+  name = "limited-runner"  
+  limit = 2                # Only 2 builds allowed
+  request_concurrency = 1  # Only 1 request at a time
+  # Creates severe bottleneck: builds at capacity + request slot blocked by long polling
+```
+
+**Example corrected configuration:**
+
+```toml
+concurrent = 4  # Adequate worker capacity
+
+[[runners]]
+  name = "high-volume-runner"
+  request_concurrency = 3  # Allow multiple simultaneous requests  
+  limit = 10
+  
+[[runners]]
+  name = "balanced-runner"
+  request_concurrency = 2
+  limit = 5
+```
+
 Here's a configuration example:
 
 ```toml
