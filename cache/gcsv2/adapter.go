@@ -21,6 +21,7 @@ type gcsAdapter struct {
 	config                 *common.CacheGCSConfig
 	objectName             string
 	maxUploadedArchiveSize int64
+	metadata               map[string]string
 }
 
 func (a *gcsAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
@@ -42,14 +43,25 @@ func (a *gcsAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 }
 
 func (a *gcsAdapter) GetUploadHeaders() http.Header {
+	headers := http.Header{}
+
 	if a.maxUploadedArchiveSize > 0 {
-		return http.Header{"X-Goog-Content-Length-Range": []string{fmt.Sprintf("0,%d", a.maxUploadedArchiveSize)}}
+		headers.Set("X-Goog-Content-Length-Range", fmt.Sprintf("0,%d", a.maxUploadedArchiveSize))
 	}
-	return nil
+
+	for k, v := range a.metadata {
+		headers.Set("x-goog-meta-"+k, v)
+	}
+
+	return headers
 }
 
 func (a *gcsAdapter) GetGoCloudURL(_ context.Context, _ bool) (cache.GoCloudURL, error) {
 	return cache.GoCloudURL{}, nil
+}
+
+func (a *gcsAdapter) WithMetadata(metadata map[string]string) {
+	a.metadata = metadata
 }
 
 func (a *gcsAdapter) presignURL(ctx context.Context, method string, contentType string) (*url.URL, error) {

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"testing"
 	"time"
@@ -42,8 +43,11 @@ type cacheOperationTest struct {
 	errorOnS3ClientInitialization bool
 	errorOnURLPresigning          bool
 
-	presignedURL *url.URL
-	expectedURL  *url.URL
+	metadata                map[string]string
+	presignedURL            *url.URL
+	expectedURL             *url.URL
+	expectedUploadHeaders   http.Header
+	expectedDownloadHeaders http.Header
 }
 
 func onFakeS3URLGenerator(t *testing.T, tc cacheOperationTest) {
@@ -56,8 +60,13 @@ func onFakeS3URLGenerator(t *testing.T, tc cacheOperationTest) {
 
 	client.
 		On(
-			"PresignURL", mock.Anything, mock.Anything, mock.Anything,
-			mock.Anything, mock.Anything,
+			"PresignURL",
+			mock.Anything, // context
+			mock.Anything, // http method
+			mock.Anything, // bucket name
+			mock.Anything, // object name
+			mock.Anything, // metadata
+			mock.Anything, // valid time
 		).
 		Return(cache.PresignedURL{URL: tc.presignedURL}, err).Maybe()
 
@@ -93,8 +102,19 @@ func testCacheOperation(
 		}
 		require.NoError(t, err)
 
+		adapter.WithMetadata(tc.metadata)
+
 		URL := operation(adapter)
 		assert.Equal(t, tc.expectedURL, URL.URL)
+
+		switch operationName {
+		case "GetUploadURL":
+			assert.Equal(t, tc.expectedUploadHeaders, URL.Headers, "upload headers")
+		case "GetDownloadURL":
+			assert.Equal(t, tc.expectedDownloadHeaders, URL.Headers, "download headers")
+		default:
+			// nothing to do (yet)
+		}
 
 		ctx := context.Background()
 
@@ -126,6 +146,12 @@ func TestCacheOperation(t *testing.T) {
 		"presigned-url": {
 			presignedURL: URL,
 			expectedURL:  URL,
+		},
+		"presigned-url-with-metadata": {
+			presignedURL:          URL,
+			metadata:              map[string]string{"foo": "some foo"},
+			expectedURL:           URL,
+			expectedUploadHeaders: http.Header{"X-Amz-Meta-Foo": []string{"some foo"}},
 		},
 	}
 

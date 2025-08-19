@@ -24,6 +24,7 @@ type GoCloudURL struct {
 
 type Adapter interface {
 	GetDownloadURL(context.Context) PresignedURL
+	WithMetadata(map[string]string)
 	GetUploadURL(context.Context) PresignedURL
 	GetGoCloudURL(ctx context.Context, upload bool) (GoCloudURL, error)
 }

@@ -4,7 +4,6 @@ package gcsv2
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -61,12 +60,14 @@ func TestNew(t *testing.T) {
 
 func TestAdapter(t *testing.T) {
 	tests := map[string]struct {
-		config         *common.CacheConfig
-		timeout        time.Duration
-		objectName     string
-		newExpectedErr string
-		getExpectedErr string
-		putExpectedErr string
+		config                *common.CacheConfig
+		timeout               time.Duration
+		objectName            string
+		metadata              map[string]string
+		newExpectedErr        string
+		getExpectedErr        string
+		putExpectedErr        string
+		expectedUploadHeaders http.Header
 	}{
 		"missing config": {
 			config:         &common.CacheConfig{},
@@ -84,8 +85,15 @@ func TestAdapter(t *testing.T) {
 			objectName: "object-key",
 		},
 		"valid with max upload size": {
-			config:     &common.CacheConfig{MaxUploadedArchiveSize: 100, GCS: &common.CacheGCSConfig{BucketName: "test", CacheGCSCredentials: common.CacheGCSCredentials{AccessID: accessID, PrivateKey: privateKey}}},
-			objectName: "object-key",
+			config:                &common.CacheConfig{MaxUploadedArchiveSize: 100, GCS: &common.CacheGCSConfig{BucketName: "test", CacheGCSCredentials: common.CacheGCSCredentials{AccessID: accessID, PrivateKey: privateKey}}},
+			objectName:            "object-key",
+			expectedUploadHeaders: http.Header{"X-Goog-Content-Length-Range": []string{"0,100"}},
+		},
+		"with metadata": {
+			config:                &common.CacheConfig{GCS: &common.CacheGCSConfig{BucketName: "test", CacheGCSCredentials: common.CacheGCSCredentials{AccessID: accessID, PrivateKey: privateKey}}},
+			objectName:            "object-key",
+			metadata:              map[string]string{"foo": "some foo"},
+			expectedUploadHeaders: http.Header{"X-Goog-Meta-Foo": []string{"some foo"}},
 		},
 	}
 
@@ -94,14 +102,17 @@ func TestAdapter(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			adapter, err := New(tc.config, tc.timeout, tc.objectName)
+
 			if tc.newExpectedErr != "" {
 				require.EqualError(t, err, tc.newExpectedErr)
 				require.Nil(t, adapter)
 				return
-			} else {
-				require.NoError(t, err)
-				require.NotNil(t, adapter)
 			}
+
+			require.NoError(t, err)
+			require.NotNil(t, adapter)
+
+			adapter.WithMetadata(tc.metadata)
 
 			getURL, err := adapter.(*gcsAdapter).presignURL(context.Background(), http.MethodGet, "")
 			if tc.getExpectedErr != "" {
@@ -132,10 +143,12 @@ func TestAdapter(t *testing.T) {
 				require.NotNil(t, u)
 				assert.Contains(t, u.URL.String(), expectedURL)
 
-				if tc.config.MaxUploadedArchiveSize != 0 {
-					assert.Equal(t, u.Headers, http.Header{"X-Goog-Content-Length-Range": []string{fmt.Sprintf("0,%d", tc.config.MaxUploadedArchiveSize)}})
+				headers := u.Headers
+
+				if len(tc.expectedUploadHeaders) < 1 {
+					assert.Empty(t, headers, "expected upload header to be empty")
 				} else {
-					assert.Nil(t, u.Headers)
+					assert.Equal(t, tc.expectedUploadHeaders, headers, "upload headers mismatch")
 				}
 			}
 

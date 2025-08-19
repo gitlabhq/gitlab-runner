@@ -19,6 +19,7 @@ type s3Adapter struct {
 	config     *common.CacheS3Config
 	objectName string
 	client     s3Presigner
+	metadata   map[string]string
 }
 
 func (a *s3Adapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
@@ -38,11 +39,20 @@ func (a *s3Adapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 		return cache.PresignedURL{}
 	}
 
+	if len(a.metadata) > 0 {
+		if presignedURL.Headers == nil {
+			presignedURL.Headers = http.Header{}
+		}
+		for k, v := range a.metadata {
+			presignedURL.Headers.Set("x-amz-meta-"+k, v)
+		}
+	}
+
 	return presignedURL
 }
 
-func (a *s3Adapter) GetUploadHeaders() http.Header {
-	return nil
+func (a *s3Adapter) WithMetadata(metadata map[string]string) {
+	a.metadata = metadata
 }
 
 func (a *s3Adapter) getARNForGoCloud(upload bool) string {
@@ -137,7 +147,7 @@ func (a *s3Adapter) presignURL(ctx context.Context, method string) (cache.Presig
 		return cache.PresignedURL{}, fmt.Errorf("object name cannot be empty")
 	}
 
-	return a.client.PresignURL(ctx, method, a.config.BucketName, a.objectName, a.timeout)
+	return a.client.PresignURL(ctx, method, a.config.BucketName, a.objectName, a.metadata, a.timeout)
 }
 
 func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {

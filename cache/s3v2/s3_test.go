@@ -283,7 +283,7 @@ func TestS3Client_PresignURL(t *testing.T) {
 
 			// Presign a PUT request to upload an object
 			objectName := "test-object"
-			url, err := s3Client.PresignURL(context.Background(), http.MethodPut, s3Config.BucketName, objectName, 5*time.Minute)
+			url, err := s3Client.PresignURL(context.Background(), http.MethodPut, s3Config.BucketName, objectName, nil, 5*time.Minute)
 			require.NoError(t, err)
 
 			// Verify encryption headers
@@ -308,7 +308,7 @@ func TestS3Client_PresignURL(t *testing.T) {
 			resp.Body.Close()
 
 			// Presign a GET request to download the object
-			url, err = s3Client.PresignURL(context.Background(), http.MethodGet, s3Config.BucketName, objectName, 5*time.Minute)
+			url, err = s3Client.PresignURL(context.Background(), http.MethodGet, s3Config.BucketName, objectName, nil, 5*time.Minute)
 			require.NoError(t, err)
 
 			req, err = http.NewRequest(http.MethodGet, url.URL.String(), bytes.NewReader(content))

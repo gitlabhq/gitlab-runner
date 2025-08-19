@@ -6,6 +6,12 @@
   stage: test kubernetes integration
   needs:
     - "provision integration kubernetes"
+    - job: "development docker images"
+      optional: true
+    - job: "bleeding edge docker images"
+      optional: true
+    - job: "stable docker images"
+      optional: true
   variables:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-runner-$CI_PIPELINE_ID"
   before_script:

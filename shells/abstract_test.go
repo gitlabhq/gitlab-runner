@@ -3,10 +3,14 @@
 package shells
 
 import (
+	"cmp"
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -407,277 +411,141 @@ func getJobResponseWithCachePaths() common.JobResponse {
 	}
 }
 
-func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
-	gitlabURL := "https://example.com:3443"
-	cacheEnvFile := "/some/path/to/runner-cache-env"
+var headerMatcher = mock.MatchedBy(func(arg string) bool {
+	return regexp.
+		MustCompile(`^(Header-1: a value|X-Fakecloud-Meta-Cachekey: (cache-key1|some-job-name\/some-git-ref))$`).
+		MatchString(arg)
+})
 
-	shell := AbstractShell{}
-
-	tests := map[string]struct {
-		cacheType string
-	}{
-		"pre-signed URL cache": {
-			cacheType: "test",
-		},
-		"GoCloud cache": {
-			cacheType: "goCloudTest",
-		},
-	}
-
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			runnerConfig := &common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Cache: &common.CacheConfig{
-						Type:   tt.cacheType,
-						Shared: true,
-					},
-				},
-				RunnerCredentials: common.RunnerCredentials{
-					URL: gitlabURL,
-				},
-			}
-
-			build := &common.Build{
-				CacheDir:    "cache_dir",
-				JobResponse: getJobResponseWithCachePaths(),
-				Runner:      runnerConfig,
-			}
-			info := common.ShellScriptInfo{
-				RunnerCommand: "gitlab-runner-helper",
-				Build:         build,
-			}
-
-			nrOfCaches := len(slices.DeleteFunc(build.Cache, func(e common.Cache) bool {
-				return !e.When.OnSuccess()
-			}))
-
-			mockWriter := NewMockShellWriter(t)
-			mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-				return v.Key == "GITLAB_ENV"
-			})).Once()
-			mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
-			mockWriter.On("SourceEnv", "path/to/env/file").Once()
-			mockWriter.On("Cd", mock.Anything).Once()
-			mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Times(nrOfCaches)
-			mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(nrOfCaches)
-
-			if tt.cacheType == "test" {
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "vendor/",
-					"--untracked",
-					"--url", mock.Anything,
-					"--header", "Header-1: a value",
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "some/path1",
-					"--path", "other/path2",
-					"--url", mock.Anything,
-					"--header", "Header-1: a value",
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-always",
-					"--url", mock.Anything,
-					"--header", "Header-1: a value",
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "unset-cache-key",
-					"--url", mock.Anything,
-					"--header", "Header-1: a value",
-				).Once()
-			} else {
-				mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Times(nrOfCaches)
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "vendor/",
-					"--untracked",
-					"--gocloud-url", mock.Anything,
-					"--env-file", cacheEnvFile,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "some/path1",
-					"--path", "other/path2",
-					"--gocloud-url", mock.Anything,
-					"--env-file", cacheEnvFile,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-always",
-					"--gocloud-url", mock.Anything,
-					"--env-file", cacheEnvFile,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "unset-cache-key",
-					"--gocloud-url", mock.Anything,
-					"--env-file", cacheEnvFile,
-				).Once()
-			}
-			mockWriter.On("Noticef", "Created cache").Times(nrOfCaches)
-			mockWriter.On("Else").Times(nrOfCaches)
-			mockWriter.On("Warningf", "Failed to create cache").Times(nrOfCaches)
-			mockWriter.On("EndIf").Times(nrOfCaches)
-			mockWriter.On("Else").Times(nrOfCaches)
-			mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(nrOfCaches)
-			mockWriter.On("EndIf").Times(nrOfCaches)
-
-			if tt.cacheType != "test" {
-				mockWriter.On("RmFile", cacheEnvFile).Times(nrOfCaches)
-			}
-			mockWriter.On("Variable", mock.Anything)
-
-			err := shell.writeScript(context.Background(), mockWriter, common.BuildStageArchiveOnSuccessCache, info)
-			require.NoError(t, err)
-		})
-	}
+func localCacheFileMatcher(t *testing.T, expectedCacheDir string) any {
+	expectedCacheDir = regexp.QuoteMeta(expectedCacheDir)
+	sep := regexp.QuoteMeta(string(filepath.Separator))
+	cacheKey := ".+" // can be different for hashed & unhashed cache keys
+	re := regexp.MustCompile("^" + expectedCacheDir + sep + cacheKey + sep + "cache.zip" + "$")
+	return mock.MatchedBy(func(actualCacheFile string) bool {
+		return assert.Regexp(t, re, actualCacheFile, "local cache file path")
+	})
 }
 
-func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
-	gitlabURL := "https://example.com:3443"
-	cacheEnvFile := "/some/path/to/runner-cache-env"
+func TestWriteWritingArchiveCache(t *testing.T) {
+	const (
+		gitlabURL    = "https://example.com:3443"
+		cacheEnvFile = "/some/path/to/runner-cache-env"
+	)
 
 	shell := AbstractShell{}
 
-	tests := map[string]struct {
-		cacheType string
-	}{
-		"pre-signed URL cache": {
-			cacheType: "test",
+	// for caches on the build see: getJobResponseWithCachePaths
+	buildStages := map[common.BuildStage][][]any{
+		common.BuildStageArchiveOnSuccessCache: [][]any{
+			{"--path", "vendor/", "--untracked"},
+			{"--path", "some/path1", "--path", "other/path2"},
+			{"--path", "when-always"},
+			{"--path", "unset-cache-key"},
 		},
-		"GoCloud cache": {
-			cacheType: "goCloudTest",
+		common.BuildStageArchiveOnFailureCache: [][]any{
+			{"--path", "when-on-failure", "--untracked"},
+			{"--path", "when-always"},
+			{"--path", "unset-cache-key"},
 		},
 	}
 
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			runnerConfig := &common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Cache: &common.CacheConfig{
-						Type:   tt.cacheType,
-						Shared: true,
-					},
-				},
-				RunnerCredentials: common.RunnerCredentials{
-					URL: gitlabURL,
-				},
+	tests := map[string]struct {
+		cacheType                    string
+		uploadArgs                   []any
+		additionalExpectedAssertions func(shellWriter *MockShellWriter, nrOfCaches int)
+	}{
+		"no cache upload": {},
+		"pre-signed URL cache": {
+			cacheType: "test",
+			uploadArgs: []any{
+				"--url", mock.Anything,
+				"--header", headerMatcher,
+				"--header", headerMatcher,
+			},
+		},
+		"GoCloud cache": {
+			cacheType: "goCloudTest",
+			uploadArgs: []any{
+				"--gocloud-url", mock.Anything,
+			},
+		},
+	}
+
+	for buildStage, expectedArgsPerCache := range buildStages {
+		t.Run(string(buildStage), func(t *testing.T) {
+			for tn, tt := range tests {
+				t.Run(tn, func(t *testing.T) {
+					info := common.ShellScriptInfo{
+						RunnerCommand: "gitlab-runner-helper",
+						Build: &common.Build{
+							CacheDir:    "cache_dir",
+							JobResponse: getJobResponseWithCachePaths(),
+							Runner: &common.RunnerConfig{
+								RunnerSettings: common.RunnerSettings{
+									Cache: &common.CacheConfig{
+										Type:   tt.cacheType,
+										Shared: true,
+									},
+								},
+								RunnerCredentials: common.RunnerCredentials{
+									URL: gitlabURL,
+								},
+							},
+						},
+					}
+
+					mockWriter := NewMockShellWriter(t)
+					mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
+						return v.Key == "GITLAB_ENV"
+					})).Once()
+					mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+					mockWriter.On("SourceEnv", "path/to/env/file").Once()
+					mockWriter.On("Cd", mock.Anything).Once()
+
+					for _, perCacheCommandArgs := range expectedArgsPerCache {
+						allArgs := slices.Concat(
+							// we expect this cmd & args, even if we don't upload
+							[]any{
+								"gitlab-runner-helper",
+								"cache-archiver",
+								"--file", localCacheFileMatcher(t, info.Build.CacheDir),
+								"--timeout", mock.Anything,
+							},
+							// args per cache, e.g. paths of to-be-cached files
+							perCacheCommandArgs,
+							// args for the upload, e.g. URL, headers, env file
+							tt.uploadArgs,
+							// lastly, we expect the env file arg
+							[]any{
+								"--env-file", cacheEnvFile,
+							},
+						)
+
+						mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Once()
+						mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Once()
+
+						mockWriter.On("IfCmdWithOutput", allArgs...).Once()
+
+						mockWriter.On("Noticef", "Created cache").Once()
+						mockWriter.On("Else").Once()
+						mockWriter.On("Warningf", "Failed to create cache").Once()
+						mockWriter.On("EndIf").Once()
+						mockWriter.On("Else").Once()
+						mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
+						mockWriter.On("EndIf").Once()
+
+						mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Once()
+						mockWriter.On("RmFile", cacheEnvFile).Once()
+					}
+
+					varCount := len(info.Build.GetAllVariables())
+					mockWriter.On("Variable", mock.Anything).Times(varCount)
+
+					err := shell.writeScript(context.Background(), mockWriter, buildStage, info)
+					require.NoError(t, err)
+				})
 			}
-
-			build := &common.Build{
-				CacheDir:    "cache_dir",
-				JobResponse: getJobResponseWithCachePaths(),
-				Runner:      runnerConfig,
-			}
-			info := common.ShellScriptInfo{
-				RunnerCommand: "gitlab-runner-helper",
-				Build:         build,
-			}
-
-			nrOfCaches := len(slices.DeleteFunc(build.Cache, func(e common.Cache) bool {
-				return !e.When.OnFailure()
-			}))
-
-			mockWriter := NewMockShellWriter(t)
-			mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
-				return v.Key == "GITLAB_ENV"
-			})).Once()
-			mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
-			mockWriter.On("SourceEnv", "path/to/env/file").Once()
-			mockWriter.On("Cd", mock.Anything)
-			mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Times(nrOfCaches)
-			mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(nrOfCaches)
-
-			if tt.cacheType == "test" {
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-on-failure",
-					"--untracked",
-					"--url", mock.Anything,
-					"--header", "Header-1: a value",
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-always",
-					"--url", mock.Anything,
-					"--header", "Header-1: a value",
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "unset-cache-key",
-					"--url", mock.Anything,
-					"--header", "Header-1: a value",
-				).Once()
-			} else {
-				mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Times(nrOfCaches)
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-on-failure",
-					"--untracked",
-					"--gocloud-url", mock.Anything,
-					"--env-file", cacheEnvFile,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "when-always",
-					"--gocloud-url", mock.Anything,
-					"--env-file", cacheEnvFile,
-				).Once()
-				mockWriter.On(
-					"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
-					"--file", mock.Anything,
-					"--timeout", mock.Anything,
-					"--path", "unset-cache-key",
-					"--gocloud-url", mock.Anything,
-					"--env-file", cacheEnvFile,
-				).Once()
-			}
-			mockWriter.On("Noticef", "Created cache").Times(nrOfCaches)
-			mockWriter.On("Else").Times(nrOfCaches)
-			mockWriter.On("Warningf", "Failed to create cache").Times(nrOfCaches)
-			mockWriter.On("EndIf").Times(nrOfCaches)
-			mockWriter.On("Else").Times(nrOfCaches)
-			mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(nrOfCaches)
-			mockWriter.On("EndIf").Times(nrOfCaches)
-
-			if tt.cacheType != "test" {
-				mockWriter.On("RmFile", cacheEnvFile).Times(nrOfCaches)
-			}
-
-			mockWriter.On("Variable", mock.Anything)
-
-			err := shell.writeScript(context.Background(), mockWriter, common.BuildStageArchiveOnFailureCache, info)
-			require.NoError(t, err)
 		})
 	}
 }
@@ -1578,217 +1446,355 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	}
 }
 
+func getCacheKeyHasher(hash bool) func(string) string {
+	if !hash {
+		return func(s string) string { return s }
+	}
+	return func(s string) string {
+		return fmt.Sprintf("%x", sha256.Sum256([]byte(s)))
+	}
+}
+
 func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
-	cacheEnvFile := "/some/path/to/runner-cache-env"
+	const cacheEnvFile = "/some/path/to/runner-cache-env"
+
+	type expectations struct {
+		cacheKeys   []string
+		usesEnvFile []bool
+		warning     []any
+		notices     [][]any
+	}
+	type hashMode uint8
+	const (
+		withOrWithoutHashing hashMode = iota
+		withoutHashing
+		withHashing
+	)
 
 	tests := map[string]struct {
-		cacheType                 string
-		cacheKey                  string
-		cacheFallbackKeyVarValue  string
-		expectedCacheKeys         []string
-		expectedAdditionalWarning []any
+		cacheType                string
+		cacheKey                 string
+		cacheFallbackKeyVarValue string
+		expectations             map[hashMode]expectations
 	}{
 		"using allowed key value": {
 			cacheType:                "test",
 			cacheKey:                 "test-cache-key",
 			cacheFallbackKeyVarValue: "test-fallback-cache-key",
-			expectedCacheKeys:        []string{"test-cache-key", "test-fallback-cache-key"},
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"test-cache-key", "test-fallback-cache-key"},
+				},
+			},
 		},
 		"using sanitized fallback key": {
-			cacheType:                 "test",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  `hello.%2e..there  `,
-			expectedCacheKeys:         []string{"test-cache-key", "hello....there"},
-			expectedAdditionalWarning: []any{`cache key "hello.%2e..there  " sanitized to "hello....there"`},
+			cacheType:                "test",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: `hello.%2e..there  `,
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"test-cache-key", "hello....there"},
+					warning:   []any{`cache key "hello.%2e..there  " sanitized to "hello....there"`},
+				},
+				withHashing: {
+					cacheKeys: []string{"test-cache-key", "hello.%2e..there  "},
+				},
+			},
 		},
 		"using something that looks like a windows path": {
-			cacheType:                 "test",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  `looks\like\a\win\path`,
-			expectedCacheKeys:         []string{"test-cache-key", "looks/like/a/win/path"},
-			expectedAdditionalWarning: []any{`cache key "looks\\like\\a\\win\\path" sanitized to "looks/like/a/win/path"`},
+			cacheType:                "test",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: `looks\like\a\win\path`,
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"test-cache-key", "looks/like/a/win/path"},
+					warning:   []any{`cache key "looks\\like\\a\\win\\path" sanitized to "looks/like/a/win/path"`},
+				},
+				withHashing: {
+					cacheKeys: []string{"test-cache-key", "looks\\like\\a\\win\\path"},
+				},
+			},
 		},
 		"using path-like fallback cache key": {
 			cacheType:                "test",
 			cacheKey:                 "test-cache-key",
 			cacheFallbackKeyVarValue: `foo/bar/baz`,
-			expectedCacheKeys:        []string{"foo/bar/baz", "test-cache-key"},
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"foo/bar/baz", "test-cache-key"},
+				},
+			},
 		},
 		"using invalid fallback cache key": {
-			cacheType:                 "test",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  `..`,
-			expectedCacheKeys:         []string{"test-cache-key"},
-			expectedAdditionalWarning: []any{`cache key ".." could not be sanitized`},
+			cacheType:                "test",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: `..`,
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"test-cache-key"},
+					warning:   []any{`cache key ".." could not be sanitized`},
+					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
+				},
+				withHashing: {
+					cacheKeys:   []string{"test-cache-key", ".."},
+					usesEnvFile: []bool{true, false},
+				},
+			},
 		},
 		"using reserved suffix": {
-			cacheType:                 "test",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  "main-protected",
-			expectedCacheKeys:         []string{"test-cache-key"},
-			expectedAdditionalWarning: []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+			cacheType:                "test",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: "main-protected",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"test-cache-key"},
+					warning:   []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+				},
+				withHashing: {
+					cacheKeys:   []string{"test-cache-key"},
+					warning:     []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+					usesEnvFile: []bool{true},
+				},
+			},
 		},
 		"empty cache key": {
-			cacheType:         "test",
-			expectedCacheKeys: []string{"some-job-name/some-ref-name"},
+			cacheType: "test",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name"},
+				},
+			},
 		},
-		"empty cache key, with falback": {
+		"empty cache key, with fallback": {
 			cacheType:                "test",
 			cacheFallbackKeyVarValue: "some-fallback",
-			expectedCacheKeys:        []string{"some-job-name/some-ref-name", "some-fallback"},
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name", "some-fallback"},
+				},
+			},
 		},
-		"empty cache key, with invalid falback": {
-			cacheType:                 "test",
-			cacheFallbackKeyVarValue:  ".",
-			expectedCacheKeys:         []string{"some-job-name/some-ref-name"},
-			expectedAdditionalWarning: []any{`cache key "." could not be sanitized`},
+		"empty cache key, with invalid fallback": {
+			cacheType:                "test",
+			cacheFallbackKeyVarValue: ".",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name"},
+					warning:   []any{`cache key "." could not be sanitized`},
+					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
+				},
+				withHashing: {
+					cacheKeys:   []string{"some-job-name/some-ref-name", "."},
+					usesEnvFile: []bool{true, false},
+				},
+			},
 		},
 		"GoCloud cache with allowed key value": {
 			cacheType:                "goCloudTest",
 			cacheKey:                 "test-cache-key",
 			cacheFallbackKeyVarValue: "test-fallback-cache-key",
-			expectedCacheKeys:        []string{"test-cache-key", "test-fallback-cache-key"},
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"test-cache-key", "test-fallback-cache-key"},
+				},
+			},
 		},
 		"GoCloud cache with reserved suffix": {
-			cacheType:                 "goCloudTest",
-			cacheKey:                  "test-cache-key",
-			cacheFallbackKeyVarValue:  "main-protected",
-			expectedCacheKeys:         []string{"test-cache-key"},
-			expectedAdditionalWarning: []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+			cacheType:                "goCloudTest",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: "main-protected",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"test-cache-key"},
+					warning:   []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+				},
+			},
 		},
 		"GoCloud empty cache key": {
-			cacheType:         "goCloudTest",
-			expectedCacheKeys: []string{"some-job-name/some-ref-name"},
+			cacheType: "goCloudTest",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name"},
+				},
+			},
 		},
-		"GoCloud empty cache key, with falback": {
+		"GoCloud empty cache key, with fallback": {
 			cacheType:                "goCloudTest",
 			cacheFallbackKeyVarValue: "some-fallback",
-			expectedCacheKeys:        []string{"some-job-name/some-ref-name", "some-fallback"},
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name", "some-fallback"},
+				},
+			},
 		},
-		"GoCloud empty cache key, with invalid falback": {
-			cacheType:                 "goCloudTest",
-			cacheFallbackKeyVarValue:  " /  ",
-			expectedCacheKeys:         []string{"some-job-name/some-ref-name"},
-			expectedAdditionalWarning: []any{`cache key " /  " could not be sanitized`},
+		"GoCloud empty cache key, with invalid fallback": {
+			cacheType:                "goCloudTest",
+			cacheFallbackKeyVarValue: " /  ",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name"},
+					warning:   []any{`cache key " /  " could not be sanitized`},
+					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
+				},
+				withHashing: {
+					cacheKeys: []string{"some-job-name/some-ref-name", " /  "},
+				},
+			},
 		},
 		"cache:key:files": {
-			cacheType:         "test",
-			cacheKey:          "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected",
-			expectedCacheKeys: []string{"0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"},
+			cacheType: "test",
+			cacheKey:  "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKeys: []string{`0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected`},
+				},
+			},
 		},
 		"cache:key:files sanitized": {
-			cacheType:                 "test",
-			cacheKey:                  "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected",
-			expectedCacheKeys:         []string{"0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"},
-			expectedAdditionalWarning: []any{`cache key "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected" sanitized to "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"`},
+			cacheType: "test",
+			cacheKey:  "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{`0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected`},
+					warning:   []any{`cache key "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected" sanitized to "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"`},
+				},
+				withHashing: {
+					cacheKeys: []string{`0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected`},
+				},
+			},
 		},
 	}
 
-	for tn, tc := range tests {
-		runnerConfig := &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Cache: &common.CacheConfig{
-					Type:   tc.cacheType,
-					Shared: true,
-				},
-			},
-		}
-		shell := AbstractShell{}
+	for _, hashCacheKeys := range []bool{false, true} {
+		hashed := getCacheKeyHasher(hashCacheKeys)
 
-		t.Run(tn, func(t *testing.T) {
-			build := &common.Build{
-				BuildDir: "/builds",
-				CacheDir: "/cache",
-				Runner:   runnerConfig,
-				JobResponse: common.JobResponse{
-					ID: 1000,
-					JobInfo: common.JobInfo{
-						ProjectID: 1000,
-						Name:      "some-job-name",
-					},
-					GitInfo: common.GitInfo{
-						Ref: "some-ref-name",
-					},
-					Cache: common.Caches{
-						{
-							Key:    tc.cacheKey,
-							Policy: common.CachePolicyPullPush,
-							Paths:  []string{"path1", "path2"},
+		t.Run(fmt.Sprintf("%s:%t", featureflags.HashCacheKeys, hashCacheKeys), func(t *testing.T) {
+			for tn, tc := range tests {
+				t.Run(tn, func(t *testing.T) {
+					runnerConfig := &common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Cache: &common.CacheConfig{
+								Type:   tc.cacheType,
+								Shared: true,
+							},
+							FeatureFlags: map[string]bool{
+								featureflags.HashCacheKeys: hashCacheKeys,
+							},
 						},
-					},
-					Variables: common.JobVariables{
-						{
-							Key:   "CACHE_FALLBACK_KEY",
-							Value: tc.cacheFallbackKeyVarValue,
+					}
+					shell := AbstractShell{}
+
+					build := &common.Build{
+						BuildDir: "/builds",
+						CacheDir: "/cache",
+						Runner:   runnerConfig,
+						JobResponse: common.JobResponse{
+							ID: 1000,
+							JobInfo: common.JobInfo{
+								ProjectID: 1000,
+								Name:      "some-job-name",
+							},
+							GitInfo: common.GitInfo{
+								Ref: "some-ref-name",
+							},
+							Cache: common.Caches{
+								{
+									Key:    tc.cacheKey,
+									Policy: common.CachePolicyPullPush,
+									Paths:  []string{"path1", "path2"},
+								},
+							},
+							Variables: common.JobVariables{
+								{
+									Key:   "CACHE_FALLBACK_KEY",
+									Value: tc.cacheFallbackKeyVarValue,
+								},
+							},
 						},
-					},
-				},
+					}
+					info := common.ShellScriptInfo{
+						RunnerCommand: "runner-command",
+						Build:         build,
+					}
+
+					mockWriter := NewMockShellWriter(t)
+					mockWriter.On("IfCmd", "runner-command", "--version").Once()
+
+					var expectations expectations
+					if e, ok := tc.expectations[withOrWithoutHashing]; ok {
+						expectations = e
+					}
+					if e, ok := tc.expectations[withHashing]; ok && hashCacheKeys {
+						expectations = e
+					}
+					if e, ok := tc.expectations[withoutHashing]; ok && !hashCacheKeys {
+						expectations = e
+					}
+
+					for _, expectedCacheKey := range expectations.cacheKeys {
+						expectedHashedCacheKey := hashed(expectedCacheKey)
+
+						mockWriter.On("Noticef", "Checking cache for %s...", expectedCacheKey).Once()
+
+						if tc.cacheType == "test" {
+							mockWriter.On("IfCmdWithOutput",
+								"runner-command",
+								"cache-extractor",
+								"--file",
+								filepath.Join("..", build.CacheDir, expectedHashedCacheKey, "cache.zip"),
+								"--timeout",
+								"10",
+								"--url",
+								fmt.Sprintf("test://download/project/1000/%s", expectedHashedCacheKey),
+							).Once()
+						} else {
+							mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Once()
+							mockWriter.On("IfCmdWithOutput",
+								"runner-command",
+								"cache-extractor",
+								"--file",
+								filepath.Join("..", build.CacheDir, expectedHashedCacheKey, "cache.zip"),
+								"--timeout",
+								"10",
+								"--gocloud-url",
+								fmt.Sprintf("gocloud://test/project/1000/%s", expectedHashedCacheKey),
+								"--env-file", cacheEnvFile,
+							).Once()
+						}
+
+						mockWriter.On("Noticef", "Successfully extracted cache").Once()
+						mockWriter.On("Else").Once()
+						mockWriter.On("Warningf", "Failed to extract cache").Once()
+						mockWriter.On("EndIf").Once()
+
+						if tc.cacheType != "test" {
+							mockWriter.On("RmFile", cacheEnvFile).Once()
+						}
+					}
+
+					if w := expectations.warning; len(w) > 0 {
+						mockWriter.On("Warningf", w...).Once()
+					}
+					for _, e := range expectations.notices {
+						mockWriter.On("Noticef", e...)
+					}
+
+					mockWriter.On("Else").Once()
+					mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
+					mockWriter.On("EndIf").Once()
+
+					mockWriter.On("IfFile", "/.gitlab-build-uid-gid").Return(true).Once()
+					mockWriter.On("IfDirectory", "/cache").Return(true).Once()
+					mockWriter.On("Line", "chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
+						Return("chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
+						Once()
+					mockWriter.On("EndIf").Once()
+					mockWriter.On("EndIf").Once()
+
+					err := shell.cacheExtractor(context.Background(), mockWriter, info)
+					assert.NoError(t, err)
+				})
 			}
-			info := common.ShellScriptInfo{
-				RunnerCommand: "runner-command",
-				Build:         build,
-			}
-
-			mockWriter := NewMockShellWriter(t)
-			mockWriter.On("IfCmd", "runner-command", "--version").Once()
-
-			for _, expectedCacheKey := range tc.expectedCacheKeys {
-				mockWriter.On("Noticef", "Checking cache for %s...", expectedCacheKey).Once()
-
-				if tc.cacheType == "test" {
-					mockWriter.On("IfCmdWithOutput",
-						"runner-command",
-						"cache-extractor",
-						"--file",
-						filepath.Join("..", build.CacheDir, expectedCacheKey, "cache.zip"),
-						"--timeout",
-						"10",
-						"--url",
-						fmt.Sprintf("test://download/project/1000/%s", expectedCacheKey),
-					).Once()
-				} else {
-					mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Once()
-					mockWriter.On("IfCmdWithOutput",
-						"runner-command",
-						"cache-extractor",
-						"--file",
-						filepath.Join("..", build.CacheDir, expectedCacheKey, "cache.zip"),
-						"--timeout",
-						"10",
-						"--gocloud-url",
-						fmt.Sprintf("gocloud://test/project/1000/%s", expectedCacheKey),
-						"--env-file", cacheEnvFile,
-					).Once()
-				}
-
-				mockWriter.On("Noticef", "Successfully extracted cache").Once()
-				mockWriter.On("Else").Once()
-				mockWriter.On("Warningf", "Failed to extract cache").Once()
-				mockWriter.On("EndIf").Once()
-
-				if tc.cacheType != "test" {
-					mockWriter.On("RmFile", cacheEnvFile).Once()
-				}
-			}
-
-			if w := tc.expectedAdditionalWarning; len(w) > 0 {
-				mockWriter.On("Warningf", w...).Once()
-			}
-
-			mockWriter.On("Else").Once()
-			mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
-			mockWriter.On("EndIf").Once()
-
-			mockWriter.On("IfFile", "/.gitlab-build-uid-gid").Return(true).Once()
-			mockWriter.On("IfDirectory", "/cache").Return(true).Once()
-			mockWriter.On("Line", "chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
-				Return("chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
-				Once()
-			mockWriter.On("EndIf").Once()
-			mockWriter.On("EndIf").Once()
-
-			err := shell.cacheExtractor(context.Background(), mockWriter, info)
-			assert.NoError(t, err)
 		})
 	}
 }
@@ -1875,92 +1881,103 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 		},
 	}
 
-	runnerConfig := &common.RunnerConfig{
-		RunnerSettings: common.RunnerSettings{
-			Cache: &common.CacheConfig{
-				Type:   "test",
-				Shared: true,
-			},
-		},
-	}
-	shell := AbstractShell{}
+	for _, hashedCacheKey := range []bool{false, true} {
+		hashed := getCacheKeyHasher(hashedCacheKey)
 
-	for tn, tc := range tests {
-		t.Run(tn, func(t *testing.T) {
-			variables := common.JobVariables{
-				{
-					Key:   "CACHE_FALLBACK_KEY",
-					Value: tc.cacheFallbackKeyVarValue,
-				},
-			}
-			build := &common.Build{
-				BuildDir: "/builds",
-				CacheDir: "/cache",
-				Runner:   runnerConfig,
-				JobResponse: common.JobResponse{
-					ID: 1000,
-					JobInfo: common.JobInfo{
-						ProjectID: 1000,
-						Name:      "some-job-name",
-					},
-					GitInfo: common.GitInfo{
-						Ref: "some-ref-name",
-					},
-					Cache: common.Caches{
-						{
-							Key:          tc.cacheKey,
-							Policy:       common.CachePolicyPullPush,
-							Paths:        []string{"path1", "path2"},
-							FallbackKeys: tc.cacheFallbackKeysValues,
+		t.Run(fmt.Sprintf("%s:%t", featureflags.HashCacheKeys, hashedCacheKey), func(t *testing.T) {
+			for tn, tc := range tests {
+				t.Run(tn, func(t *testing.T) {
+					runnerConfig := &common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Cache: &common.CacheConfig{
+								Type:   "test",
+								Shared: true,
+							},
+							FeatureFlags: map[string]bool{
+								featureflags.HashCacheKeys: hashedCacheKey,
+							},
 						},
-					},
-					Variables: append(variables, tc.variables...),
-				},
+					}
+					shell := AbstractShell{}
+
+					variables := common.JobVariables{
+						{
+							Key:   "CACHE_FALLBACK_KEY",
+							Value: tc.cacheFallbackKeyVarValue,
+						},
+					}
+					build := &common.Build{
+						BuildDir: "/builds",
+						CacheDir: "/cache",
+						Runner:   runnerConfig,
+						JobResponse: common.JobResponse{
+							ID: 1000,
+							JobInfo: common.JobInfo{
+								ProjectID: 1000,
+								Name:      "some-job-name",
+							},
+							GitInfo: common.GitInfo{
+								Ref: "some-ref-name",
+							},
+							Cache: common.Caches{
+								{
+									Key:          tc.cacheKey,
+									Policy:       common.CachePolicyPullPush,
+									Paths:        []string{"path1", "path2"},
+									FallbackKeys: tc.cacheFallbackKeysValues,
+								},
+							},
+							Variables: append(variables, tc.variables...),
+						},
+					}
+					info := common.ShellScriptInfo{
+						RunnerCommand: "runner-command",
+						Build:         build,
+					}
+
+					mockWriter := NewMockShellWriter(t)
+					mockWriter.On("IfCmd", "runner-command", "--version").Once()
+
+					for _, cacheKey := range tc.allowedCacheKeys {
+						hashedCacheKey := hashed(cacheKey)
+
+						mockWriter.On("Noticef", "Checking cache for %s...", cacheKey).Once()
+						mockWriter.On(
+							"IfCmdWithOutput",
+							"runner-command",
+							"cache-extractor",
+							"--file",
+							filepath.Join("..", build.CacheDir, hashedCacheKey, "cache.zip"),
+							"--timeout",
+							"10",
+							"--url",
+							fmt.Sprintf("test://download/project/1000/%s", hashedCacheKey),
+						).Once()
+						mockWriter.On("Noticef", "Successfully extracted cache").Once()
+						mockWriter.On("Else").Once()
+						mockWriter.On("Warningf", "Failed to extract cache").Once()
+						mockWriter.On("EndIf").Once()
+					}
+
+					mockWriter.On("Else").Once()
+					mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
+					mockWriter.On("EndIf").Once()
+
+					mockWriter.On("IfFile", "/.gitlab-build-uid-gid").Return(true)
+					mockWriter.On("IfDirectory", "/cache").Return(true)
+					mockWriter.On("Line", "chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
+						Return("chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'")
+					mockWriter.On("EndIf").Once()
+					mockWriter.On("EndIf").Once()
+
+					if w := tc.expectedAdditionalWarning; len(w) > 0 {
+						mockWriter.On("Warningf", w...).Once()
+					}
+
+					err := shell.cacheExtractor(context.Background(), mockWriter, info)
+					assert.NoError(t, err)
+				})
 			}
-			info := common.ShellScriptInfo{
-				RunnerCommand: "runner-command",
-				Build:         build,
-			}
-
-			mockWriter := NewMockShellWriter(t)
-			mockWriter.On("IfCmd", "runner-command", "--version").Once()
-
-			for _, cacheKey := range tc.allowedCacheKeys {
-				mockWriter.On("Noticef", "Checking cache for %s...", cacheKey).Once()
-				mockWriter.On(
-					"IfCmdWithOutput",
-					"runner-command",
-					"cache-extractor",
-					"--file",
-					filepath.Join("..", build.CacheDir, cacheKey, "cache.zip"),
-					"--timeout",
-					"10",
-					"--url",
-					fmt.Sprintf("test://download/project/1000/%s", cacheKey),
-				).Once()
-				mockWriter.On("Noticef", "Successfully extracted cache").Once()
-				mockWriter.On("Else").Once()
-				mockWriter.On("Warningf", "Failed to extract cache").Once()
-				mockWriter.On("EndIf").Once()
-			}
-
-			mockWriter.On("Else").Once()
-			mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
-			mockWriter.On("EndIf").Once()
-
-			mockWriter.On("IfFile", "/.gitlab-build-uid-gid").Return(true)
-			mockWriter.On("IfDirectory", "/cache").Return(true)
-			mockWriter.On("Line", "chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
-				Return("chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'")
-			mockWriter.On("EndIf").Once()
-			mockWriter.On("EndIf").Once()
-
-			if w := tc.expectedAdditionalWarning; len(w) > 0 {
-				mockWriter.On("Warningf", w...).Once()
-			}
-
-			err := shell.cacheExtractor(context.Background(), mockWriter, info)
-			assert.NoError(t, err)
 		})
 	}
 }
@@ -2048,103 +2065,114 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 		},
 	}
 
-	runnerConfig := &common.RunnerConfig{
-		RunnerSettings: common.RunnerSettings{
-			Cache: &common.CacheConfig{
-				Type:   "test",
-				Shared: true,
-			},
-		},
-	}
-	shell := AbstractShell{}
+	for _, hashedCacheKey := range []bool{false, true} {
+		hashed := getCacheKeyHasher(hashedCacheKey)
 
-	for tn, tc := range tests {
-		t.Run(tn, func(t *testing.T) {
-			variables := common.JobVariables{
-				{
-					Key:   "CACHE_FALLBACK_KEY",
-					Value: tc.cacheFallbackKeyVarValue,
-				},
-				{
-					Key:   "FF_CLEAN_UP_FAILED_CACHE_EXTRACT",
-					Value: "true",
-				},
-			}
-			build := &common.Build{
-				BuildDir: "/builds",
-				CacheDir: "/cache",
-				Runner:   runnerConfig,
-				JobResponse: common.JobResponse{
-					ID: 1000,
-					JobInfo: common.JobInfo{
-						ProjectID: 1000,
-						Name:      "some-job-name",
-					},
-					GitInfo: common.GitInfo{
-						Ref: "some-ref-name",
-					},
-					Cache: common.Caches{
-						{
-							Key:          tc.cacheKey,
-							Policy:       common.CachePolicyPullPush,
-							Paths:        []string{"path1", "path2"},
-							FallbackKeys: tc.cacheFallbackKeysValues,
+		t.Run(fmt.Sprintf("%s:%t", featureflags.HashCacheKeys, hashedCacheKey), func(t *testing.T) {
+			for tn, tc := range tests {
+				t.Run(tn, func(t *testing.T) {
+					runnerConfig := &common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Cache: &common.CacheConfig{
+								Type:   "test",
+								Shared: true,
+							},
+							FeatureFlags: map[string]bool{
+								featureflags.HashCacheKeys: hashedCacheKey,
+							},
 						},
-					},
-					Variables: append(variables, tc.variables...),
-				},
+					}
+					shell := AbstractShell{}
+
+					variables := common.JobVariables{
+						{
+							Key:   "CACHE_FALLBACK_KEY",
+							Value: tc.cacheFallbackKeyVarValue,
+						},
+						{
+							Key:   "FF_CLEAN_UP_FAILED_CACHE_EXTRACT",
+							Value: "true",
+						},
+					}
+					build := &common.Build{
+						BuildDir: "/builds",
+						CacheDir: "/cache",
+						Runner:   runnerConfig,
+						JobResponse: common.JobResponse{
+							ID: 1000,
+							JobInfo: common.JobInfo{
+								ProjectID: 1000,
+								Name:      "some-job-name",
+							},
+							GitInfo: common.GitInfo{
+								Ref: "some-ref-name",
+							},
+							Cache: common.Caches{
+								{
+									Key:          tc.cacheKey,
+									Policy:       common.CachePolicyPullPush,
+									Paths:        []string{"path1", "path2"},
+									FallbackKeys: tc.cacheFallbackKeysValues,
+								},
+							},
+							Variables: append(variables, tc.variables...),
+						},
+					}
+					info := common.ShellScriptInfo{
+						RunnerCommand: "runner-command",
+						Build:         build,
+					}
+
+					mockWriter := NewMockShellWriter(t)
+					mockWriter.On("IfCmd", "runner-command", "--version").Once()
+
+					for _, cacheKey := range tc.allowedCacheKeys {
+						hashedCacheKey := hashed(cacheKey)
+
+						mockWriter.On("Noticef", "Checking cache for %s...", cacheKey).Once()
+						mockWriter.On(
+							"IfCmdWithOutput",
+							"runner-command",
+							"cache-extractor",
+							"--file",
+							filepath.Join("..", build.CacheDir, hashedCacheKey, "cache.zip"),
+							"--timeout",
+							"10",
+							"--url",
+							fmt.Sprintf("test://download/project/1000/%s", hashedCacheKey),
+						).Once()
+						mockWriter.On("Noticef", "Successfully extracted cache").Once()
+						mockWriter.On("Else").Once()
+						mockWriter.On("Warningf", "Failed to extract cache").Once()
+						mockWriter.On("Printf", "Removing %s", "path1").Once()
+						mockWriter.On("RmDir", "path1").Once()
+						mockWriter.On("Printf", "Removing %s", "path2").Once()
+						mockWriter.On("RmDir", "path2").Once()
+					}
+
+					for range tc.allowedCacheKeys {
+						mockWriter.On("EndIf").Once()
+					}
+
+					if w := tc.expectedAdditionalWarning; len(w) > 0 {
+						mockWriter.On("Warningf", w...).Once()
+					}
+
+					mockWriter.On("Else").Once()
+					mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
+					mockWriter.On("EndIf").Once()
+
+					mockWriter.On("IfFile", "/.gitlab-build-uid-gid").Return(true)
+					mockWriter.On("IfDirectory", "/cache").Return(true)
+					mockWriter.On("Line", "chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
+						Return("chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'")
+					mockWriter.On("EndIf").Once()
+					mockWriter.On("EndIf").Once()
+
+					err := shell.cacheExtractor(context.Background(), mockWriter, info)
+					assert.NoError(t, err)
+				})
 			}
-			info := common.ShellScriptInfo{
-				RunnerCommand: "runner-command",
-				Build:         build,
-			}
-
-			mockWriter := NewMockShellWriter(t)
-			mockWriter.On("IfCmd", "runner-command", "--version").Once()
-
-			for _, cacheKey := range tc.allowedCacheKeys {
-				mockWriter.On("Noticef", "Checking cache for %s...", cacheKey).Once()
-				mockWriter.On(
-					"IfCmdWithOutput",
-					"runner-command",
-					"cache-extractor",
-					"--file",
-					filepath.Join("..", build.CacheDir, cacheKey, "cache.zip"),
-					"--timeout",
-					"10",
-					"--url",
-					fmt.Sprintf("test://download/project/1000/%s", cacheKey),
-				).Once()
-				mockWriter.On("Noticef", "Successfully extracted cache").Once()
-				mockWriter.On("Else").Once()
-				mockWriter.On("Warningf", "Failed to extract cache").Once()
-				mockWriter.On("Printf", "Removing %s", "path1").Once()
-				mockWriter.On("RmDir", "path1").Once()
-				mockWriter.On("Printf", "Removing %s", "path2").Once()
-				mockWriter.On("RmDir", "path2").Once()
-			}
-
-			for range tc.allowedCacheKeys {
-				mockWriter.On("EndIf").Once()
-			}
-
-			if w := tc.expectedAdditionalWarning; len(w) > 0 {
-				mockWriter.On("Warningf", w...).Once()
-			}
-
-			mockWriter.On("Else").Once()
-			mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
-			mockWriter.On("EndIf").Once()
-
-			mockWriter.On("IfFile", "/.gitlab-build-uid-gid").Return(true)
-			mockWriter.On("IfDirectory", "/cache").Return(true)
-			mockWriter.On("Line", "chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'").
-				Return("chown -R \"$(stat -c '%u:%g' '/.gitlab-build-uid-gid')\" '/cache'")
-			mockWriter.On("EndIf").Once()
-			mockWriter.On("EndIf").Once()
-
-			err := shell.cacheExtractor(context.Background(), mockWriter, info)
-			assert.NoError(t, err)
 		})
 	}
 }
@@ -2269,108 +2297,178 @@ func TestAbstractShell_cachePolicy(t *testing.T) {
 }
 
 func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
+	type expectations struct {
+		skipUpload        bool
+		sanitationWarning string
+		cacheKey          string
+		notice            []any
+	}
+	type hashMode uint8
+	const (
+		withOrWithoutHashing hashMode = iota
+		withoutHashing
+		withHashing
+
+		cacheEnvFile = "/some/path/to/runner-cache-env"
+	)
+
 	tests := map[string]struct {
-		rawCacheKey               string
-		jobName                   string
-		gitRef                    string
-		expectedToSkipUpload      bool
-		expectedSanitationWarning string
-		expectedLocalFile         map[string]string
-		expectedCacheKey          string
+		rawCacheKey  string
+		jobName      string
+		gitRef       string
+		expectations map[hashMode]expectations
 	}{
 		"defaulted cache key": {
 			jobName: "some-job-name",
 			gitRef:  "some-git-ref",
-			expectedLocalFile: map[string]string{
-				"linux":   "../cacheDir/some-job-name/some-git-ref/cache.zip",
-				"windows": `..\cacheDir\some-job-name\some-git-ref\cache.zip`,
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKey: "some-job-name/some-git-ref",
+				},
 			},
-			expectedCacheKey: "some-job-name/some-git-ref",
 		},
 		"defaulted cache key sanitized": {
 			jobName: `some\job\name`,
 			gitRef:  "some/git/ref",
-			expectedLocalFile: map[string]string{
-				"linux":   `../cacheDir/some\job\name/some/git/ref/cache.zip`,
-				"windows": `..\cacheDir\some\job\name\some\git\ref\cache.zip`,
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKey:          "some/job/name/some/git/ref",
+					sanitationWarning: `cache key "some\\job\\name/some/git/ref" sanitized to "some/job/name/some/git/ref"`,
+				},
+				withHashing: {
+					cacheKey: "some\\job\\name/some/git/ref",
+				},
 			},
-			expectedCacheKey:          "some/job/name/some/git/ref",
-			expectedSanitationWarning: `cache key "some\\job\\name/some/git/ref" sanitized to "some/job/name/some/git/ref"`,
 		},
 		"cache key": {
 			rawCacheKey: "hola",
-			expectedLocalFile: map[string]string{
-				"windows": `..\cacheDir\hola\cache.zip`,
-				"linux":   "../cacheDir/hola/cache.zip",
+			expectations: map[hashMode]expectations{
+				withOrWithoutHashing: {
+					cacheKey: "hola",
+				},
 			},
-			expectedCacheKey: "hola",
 		},
 		"cache key sanitized": {
 			rawCacheKey: `this/../key/will/be\sanitized\  `,
-			expectedLocalFile: map[string]string{
-				"linux":   `../cacheDir/key/will/be\sanitized\  /cache.zip`,
-				"windows": `..\cacheDir\key\will\be\sanitized\  \cache.zip`,
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKey:          "key/will/be/sanitized",
+					sanitationWarning: `cache key "this/../key/will/be\\sanitized\\  " sanitized to "key/will/be/sanitized"`,
+				},
+				withHashing: {
+					cacheKey: `this/../key/will/be\sanitized\  `,
+				},
 			},
-			expectedCacheKey:          "key/will/be/sanitized",
-			expectedSanitationWarning: `cache key "this/../key/will/be\\sanitized\\  " sanitized to "key/will/be/sanitized"`,
 		},
 		"cannot be sanitized": {
-			rawCacheKey:               "/",
-			expectedToSkipUpload:      true,
-			expectedSanitationWarning: `cache key "/" could not be sanitized`,
+			rawCacheKey: "/",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					skipUpload:        true,
+					sanitationWarning: `cache key "/" could not be sanitized`,
+					notice:            []any{`Skipping cache archiving due to %v`, fmt.Errorf("empty cache key")},
+				},
+				withHashing: {
+					cacheKey: `/`,
+				},
+			},
 		},
 	}
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			info := common.ShellScriptInfo{
-				RunnerCommand: "some-runner-command",
-				Build: &common.Build{
-					CacheDir: "/some/cacheDir",
-					BuildDir: "/some/buildDir",
-					Runner:   &common.RunnerConfig{},
-					JobResponse: common.JobResponse{
-						JobInfo: common.JobInfo{Name: test.jobName},
-						GitInfo: common.GitInfo{Ref: test.gitRef},
-						Cache: common.Caches{
-							{
-								When:  common.CacheWhenAlways,
-								Paths: common.ArtifactPaths{"foo/bar", "foo/barz"},
-								Key:   test.rawCacheKey,
+	for _, hashCacheKeys := range []bool{false, true} {
+		hashed := getCacheKeyHasher(hashCacheKeys)
+
+		t.Run(fmt.Sprintf("%s:%t", featureflags.HashCacheKeys, hashCacheKeys), func(t *testing.T) {
+			for name, test := range tests {
+				t.Run(name, func(t *testing.T) {
+					info := common.ShellScriptInfo{
+						RunnerCommand: "some-runner-command",
+						Build: &common.Build{
+							CacheDir: "/some/cacheDir",
+							BuildDir: "/some/buildDir",
+							Runner: &common.RunnerConfig{
+								RunnerSettings: common.RunnerSettings{
+									FeatureFlags: map[string]bool{featureflags.HashCacheKeys: hashCacheKeys},
+								},
+							},
+							JobResponse: common.JobResponse{
+								JobInfo: common.JobInfo{Name: test.jobName},
+								GitInfo: common.GitInfo{Ref: test.gitRef},
+								Cache: common.Caches{
+									{
+										When:  common.CacheWhenAlways,
+										Paths: common.ArtifactPaths{"foo/bar", "foo/barz"},
+										Key:   test.rawCacheKey,
+									},
+								},
 							},
 						},
-					},
-				},
+					}
+					shell := AbstractShell{}
+					w := NewMockShellWriter(t)
+
+					var expectations expectations
+					if e, ok := test.expectations[withOrWithoutHashing]; ok {
+						expectations = e
+					}
+					if e, ok := test.expectations[withHashing]; hashCacheKeys && ok {
+						expectations = e
+					}
+					if e, ok := test.expectations[withoutHashing]; !hashCacheKeys && ok {
+						expectations = e
+					}
+
+					if warning := expectations.sanitationWarning; warning != "" {
+						w.On("Warningf", warning).Once()
+					}
+
+					if notice := expectations.notice; len(notice) > 0 {
+						w.On("Noticef", notice...).Once()
+					}
+
+					if !expectations.skipUpload {
+						expectedLocalFile := filepath.Join(
+							"../cacheDir", hashed(expectations.cacheKey), "cache.zip",
+						)
+
+						w.On("IfCmd", "some-runner-command", "--version").Once()
+						w.On("Noticef", "Creating cache %s...", expectations.cacheKey).Once()
+
+						{ // cache metadata passing
+							expectedMetadata := map[string]string{
+								"cachekey": expectations.cacheKey,
+							}
+							metadataBlob, err := json.Marshal(expectedMetadata)
+							require.NoError(t, err, "marshalling expected cache metadata")
+							expectedEnvs := map[string]string{
+								"CACHE_METADATA": string(metadataBlob),
+							}
+							w.On("DotEnvVariables", "gitlab_runner_cache_env", expectedEnvs).Return(cacheEnvFile).Once()
+							w.On("RmFile", cacheEnvFile).Once()
+						}
+
+						w.On("IfCmdWithOutput",
+							"some-runner-command", "cache-archiver",
+							"--file", expectedLocalFile,
+							"--timeout", "10",
+							"--path", "foo/bar",
+							"--path", "foo/barz",
+							"--env-file", cacheEnvFile,
+						).Once()
+						w.On("Noticef", "Created cache").Once()
+						w.On("Else").Once()
+						w.On("Warningf", "Failed to create cache").Once()
+						w.On("EndIf").Once()
+						w.On("Else").Once()
+						w.On("Warningf", "Missing %s. %s is disabled.", "some-runner-command", "Creating cache").Once()
+						w.On("EndIf")
+					}
+
+					_, err := shell.archiveCache(context.TODO(), w, info, true)
+
+					assert.NoError(t, err, "expected achiveCache to succeed")
+				})
 			}
-			shell := AbstractShell{}
-			w := NewMockShellWriter(t)
-
-			if warning := test.expectedSanitationWarning; warning != "" {
-				w.On("Warningf", warning)
-			}
-
-			if !test.expectedToSkipUpload {
-				w.On("IfCmd", "some-runner-command", "--version").Once()
-				w.On("Noticef", "Creating cache %s...", test.expectedCacheKey).Once()
-				w.On("IfCmdWithOutput",
-					"some-runner-command", "cache-archiver",
-					"--file", test.expectedLocalFile[runtime.GOOS],
-					"--timeout", "10",
-					"--path", "foo/bar",
-					"--path", "foo/barz",
-				).Once()
-				w.On("Noticef", "Created cache").Once()
-				w.On("Else").Once()
-				w.On("Warningf", "Failed to create cache").Once()
-				w.On("EndIf").Once()
-				w.On("Else").Once()
-				w.On("Warningf", "Missing %s. %s is disabled.", "some-runner-command", "Creating cache").Once()
-				w.On("EndIf")
-			}
-
-			_, err := shell.archiveCache(context.TODO(), w, info, true)
-
-			assert.NoError(t, err, "expected achiveCache to succeed")
 		})
 	}
 }
@@ -3630,6 +3728,237 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 					}
 				})
 			}
+		})
+	}
+}
+
+func TestNewCacheConfig(t *testing.T) {
+	const (
+		fallback = "__fallback__"
+		windows  = "windows"
+	)
+
+	tests := map[string]struct {
+		userKey  string
+		buildDir string
+		cacheDir string
+		ffs      map[string]bool
+		jobName  string
+		gitRef   string
+		vars     common.JobVariables
+
+		expectedErrorMsg    string
+		expectedCacheConfig map[string]cacheConfig
+		expectedWarning     string
+	}{
+		"no cache dir": {
+			expectedErrorMsg: "unset cache directory",
+		},
+		"empty cache key": {
+			cacheDir:         "/some/cache/dir",
+			expectedErrorMsg: "empty cache key",
+		},
+		"not able to resolve cache dir": {
+			cacheDir:         "/caches",
+			jobName:          "some-job-name",
+			expectedErrorMsg: "inability to make the cache file path relative to the build directory",
+		},
+		"hashed, key from job": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			jobName:  "some-job",
+			gitRef:   "some-ref",
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: true,
+			},
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "some-job/some-ref",
+					HashedKey:   "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+					ArchiveFile: "../../cache/dir/d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed/cache.zip",
+				},
+				windows: {
+					HumanKey:    "some-job/some-ref",
+					HashedKey:   "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+					ArchiveFile: "..\\..\\cache\\dir\\d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed\\cache.zip",
+				},
+			},
+		},
+		"hashed, key from user": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "some/user/key",
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: true,
+			},
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
+					ArchiveFile: "../../cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
+				},
+				windows: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
+					ArchiveFile: "..\\..\\cache\\dir\\7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917\\cache.zip",
+				},
+			},
+		},
+		"hasehd, with powershell path resolver enabled": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "some/user/key",
+			ffs: map[string]bool{
+				featureflags.UsePowershellPathResolver: true,
+				featureflags.HashCacheKeys:             true,
+			},
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
+					ArchiveFile: "/some/cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
+				},
+			},
+		},
+		"unhashed": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "some/user/key",
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: false,
+			},
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "some/user/key",
+					ArchiveFile: "../../cache/dir/some/user/key/cache.zip",
+				},
+				windows: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "some/user/key",
+					ArchiveFile: "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
+				},
+			},
+		},
+		"unhashed, and key sanitized": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "some%2fuser%2Fkey",
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: false,
+			},
+			expectedWarning: `cache key "some%2fuser%2Fkey" sanitized to "some/user/key"`,
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "some/user/key",
+					ArchiveFile: "../../cache/dir/some/user/key/cache.zip",
+				},
+				windows: {
+					HumanKey:    "some/user/key",
+					HashedKey:   "some/user/key",
+					ArchiveFile: "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
+				},
+			},
+		},
+		"unhashed, and sanitizing failure": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "/",
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: false,
+			},
+			expectedWarning:  `cache key "/" could not be sanitized`,
+			expectedErrorMsg: "empty cache key",
+		},
+		"hashed, user key is expanded": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "${foo}/${bar}/baz",
+			vars: common.JobVariables{
+				{Key: "foo", Value: "someFoo"},
+				{Key: "bar", Value: "someBar"},
+			},
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: true,
+			},
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "someFoo/someBar/baz",
+					HashedKey:   "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
+					ArchiveFile: "../../cache/dir/78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb/cache.zip",
+				},
+				windows: {
+					HumanKey:    "someFoo/someBar/baz",
+					HashedKey:   "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
+					ArchiveFile: "..\\..\\cache\\dir\\78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb\\cache.zip",
+				},
+			},
+		},
+		"unhashed, user key is expanded": {
+			cacheDir: "/some/cache/dir",
+			buildDir: "/some/build/dir",
+			userKey:  "${foo}/${bar}/baz",
+			vars: common.JobVariables{
+				{Key: "foo", Value: "someFoo"},
+				{Key: "bar", Value: "someBar"},
+			},
+			ffs: map[string]bool{
+				featureflags.HashCacheKeys: false,
+			},
+			expectedCacheConfig: map[string]cacheConfig{
+				fallback: {
+					HumanKey:    "someFoo/someBar/baz",
+					HashedKey:   "someFoo/someBar/baz",
+					ArchiveFile: "../../cache/dir/someFoo/someBar/baz/cache.zip",
+				},
+				windows: {
+					HumanKey:    "someFoo/someBar/baz",
+					HashedKey:   "someFoo/someBar/baz",
+					ArchiveFile: "..\\..\\cache\\dir\\someFoo\\someBar\\baz\\cache.zip",
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &common.Build{
+				JobResponse: common.JobResponse{
+					Variables: test.vars,
+					JobInfo: common.JobInfo{
+						Name: test.jobName,
+					},
+					GitInfo: common.GitInfo{
+						Ref: test.gitRef,
+					},
+				},
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						FeatureFlags: test.ffs,
+					},
+				},
+				CacheDir: test.cacheDir,
+				BuildDir: test.buildDir,
+			}
+
+			actualCacheConfig, warning, err := newCacheConfig(build, test.userKey)
+
+			assert.Equal(t, test.expectedWarning, warning)
+
+			if e := test.expectedErrorMsg; e != "" {
+				require.ErrorContains(t, err, e)
+				return
+			}
+
+			require.NoError(t, err)
+
+			expectedCacheConfig := cmp.Or(
+				test.expectedCacheConfig[runtime.GOOS],
+				test.expectedCacheConfig[fallback],
+			)
+
+			assert.Equal(t, expectedCacheConfig, *actualCacheConfig)
 		})
 	}
 }

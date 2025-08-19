@@ -6,6 +6,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,9 +26,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
-const cacheExtractorArchive = "archive.zip"
-const cacheExtractorTestArchivedFile = "archive_file"
-const cacheExtractorTestFile = "test_file"
+const (
+	cacheExtractorArchive          = "archive.zip"
+	cacheExtractorMetadata         = "metadata.json"
+	cacheExtractorTestArchivedFile = "archive_file"
+	cacheExtractorTestFile         = "test_file"
+)
 
 type dirOpener struct {
 	tmpDir string
@@ -68,6 +72,23 @@ func writeZipFile(t *testing.T, filename string) {
 	if err != nil {
 		require.NoError(t, err)
 	}
+}
+
+func writeZipFileAndMetadata(t *testing.T, filename string) {
+	writeZipFile(t, filename)
+
+	attrFile := filename + ".attrs"
+
+	json, err := json.Marshal(map[string]any{
+		"user.metadata": map[string]string{
+			"foo":   "some foo",
+			"blank": "",
+		},
+	})
+	require.NoError(t, err, "marshaling blob attributes")
+
+	err = os.WriteFile(attrFile, json, 0640)
+	require.NoError(t, err, "writing blob attributes sidecar file")
 }
 
 func TestCacheExtractorValidArchive(t *testing.T) {
@@ -165,6 +186,9 @@ func testServeCache(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+	w.Header().Set("x-fakeCloud-meta-foo", "some foo")
+	w.Header().Set("x-random", "ignored")
+	w.Header().Set("x-fakeClound-meta-blank", "")
 	archive := zip.NewWriter(w)
 	_, _ = archive.Create(cacheExtractorTestArchivedFile)
 	archive.Close()
@@ -226,56 +250,57 @@ func TestCacheExtractorRemoteServer(t *testing.T) {
 			handler: http.HandlerFunc(testServeCacheWithETag),
 		},
 		"GoCloud URL": {
-			handler:    http.HandlerFunc(testServeCache),
 			goCloudURL: true,
 		},
 	}
 
-	for _, tc := range testCases {
-		ts := httptest.NewServer(tc.handler)
-		defer ts.Close()
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			cdTempDir(t)
 
-		defer os.Remove(cacheExtractorArchive)
-		defer os.Remove(cacheExtractorTestArchivedFile)
-		os.Remove(cacheExtractorArchive)
-		os.Remove(cacheExtractorTestArchivedFile)
+			removeHook := helpers.MakeWarningToPanic()
+			t.Cleanup(removeHook)
 
-		removeHook := helpers.MakeWarningToPanic()
-		defer removeHook()
-		cmd := CacheExtractorCommand{
-			File:    cacheExtractorArchive,
-			Timeout: 0,
-		}
-		if tc.goCloudURL {
-			mux, tmpDir := setupGoCloudFileBucket(t, "testblob")
-			cmd.mux = mux
-			cmd.GoCloudURL = fmt.Sprintf("testblob://bucket/%s", cacheExtractorArchive)
+			cmd := CacheExtractorCommand{
+				File:    cacheExtractorArchive,
+				Timeout: 0,
+			}
 
-			testFile := path.Join(tmpDir, cacheExtractorArchive)
-			writeZipFile(t, testFile)
-			defer os.Remove(testFile)
-		} else {
-			cmd.URL = ts.URL + "/cache.zip"
-		}
+			if tc.goCloudURL {
+				mux, tmpDir := setupGoCloudFileBucket(t, "testblob")
+				cmd.mux = mux
+				cmd.GoCloudURL = fmt.Sprintf("testblob://bucket/%s", cacheExtractorArchive)
 
-		assert.NotPanics(t, func() {
-			cmd.Execute(nil)
+				testFile := path.Join(tmpDir, cacheExtractorArchive)
+				writeZipFileAndMetadata(t, testFile)
+			} else {
+				ts := httptest.NewServer(tc.handler)
+				t.Cleanup(ts.Close)
+				cmd.URL = ts.URL + "/cache.zip"
+			}
+
+			assert.NotPanics(t, func() {
+				cmd.Execute(nil)
+			})
+
+			assert.FileExists(t, cacheExtractorTestArchivedFile, "cache file does not exist")
+			err := os.Chtimes(cacheExtractorArchive, time.Now().Add(time.Hour), time.Now().Add(time.Hour))
+			assert.NoError(t, err)
+
+			assert.FileExists(t, cacheExtractorMetadata, "cache metadata does not exist")
+			data, err := os.ReadFile(cacheExtractorMetadata)
+			assert.NoError(t, err, "reading cache metadata content")
+			assert.Equal(t, `{"blank":"","foo":"some foo"}`, string(data), "unexpected cache metadata content")
+
+			assert.NotPanics(t, func() { cmd.Execute(nil) }, "archive is up to date")
 		})
-
-		_, err := os.Stat(cacheExtractorTestArchivedFile)
-		assert.NoError(t, err)
-
-		err = os.Chtimes(cacheExtractorArchive, time.Now().Add(time.Hour), time.Now().Add(time.Hour))
-		assert.NoError(t, err)
-
-		assert.NotPanics(t, func() { cmd.Execute(nil) }, "archive is up to date")
 	}
 }
 
 func TestCacheExtractorRemoteServerFailOnInvalidServer(t *testing.T) {
 	removeHook := helpers.MakeWarningToPanic()
-	defer removeHook()
-	os.Remove(cacheExtractorArchive)
+	t.Cleanup(removeHook)
+
 	cmd := CacheExtractorCommand{
 		File:    cacheExtractorArchive,
 		URL:     "http://localhost:65333/cache.zip",
@@ -309,4 +334,21 @@ func TestIsLocalCacheFileUpToDate(t *testing.T) {
 	// Test when remote file is newer (cache is outdated)
 	result = isLocalCacheFileUpToDate(cacheFile, modTime.Add(1*time.Hour))
 	require.False(t, result, "Cache should be outdated when remote file is newer")
+}
+
+// cdTempDir creates a temp dir and changes into it; after the test this directory is cleaned up automatically.
+func cdTempDir(t *testing.T) string {
+	t.Helper()
+
+	pwd, err := os.Getwd()
+	require.NoError(t, err, "getting current PWD")
+
+	d := t.TempDir()
+	require.NoError(t, os.Chdir(d), "changing into temp dir")
+
+	t.Cleanup(func() {
+		require.NoError(t, os.Chdir(pwd), "changing back into previous PWD")
+	})
+
+	return d
 }

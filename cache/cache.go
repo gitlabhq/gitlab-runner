@@ -89,11 +89,12 @@ func GetCacheDownloadURL(ctx context.Context, build *common.Build, key string) P
 	return adaptor.GetDownloadURL(ctx)
 }
 
-func GetCacheUploadURL(ctx context.Context, build *common.Build, key string) PresignedURL {
+func GetCacheUploadURL(ctx context.Context, build *common.Build, key string, metadata map[string]string) PresignedURL {
 	adaptor := getAdaptorForBuild(build, key)
 	if adaptor == nil {
 		return PresignedURL{}
 	}
+	adaptor.WithMetadata(metadata)
 
 	return adaptor.GetUploadURL(ctx)
 }

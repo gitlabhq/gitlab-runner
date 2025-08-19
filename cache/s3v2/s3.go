@@ -31,6 +31,7 @@ type s3Presigner interface {
 		method string,
 		bucketName string,
 		objectName string,
+		metadata map[string]string,
 		expires time.Duration,
 	) (cache.PresignedURL, error)
 	FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string, upload bool, timeout time.Duration) (map[string]string, error)
@@ -57,6 +58,7 @@ func (c *s3Client) PresignURL(ctx context.Context,
 	method string,
 	bucketName string,
 	objectName string,
+	metadata map[string]string,
 	expires time.Duration) (cache.PresignedURL, error) {
 	var presignedReq *v4.PresignedHTTPRequest
 	var err error
@@ -72,6 +74,9 @@ func (c *s3Client) PresignURL(ctx context.Context,
 		putObjectInput := &s3.PutObjectInput{
 			Bucket: aws.String(bucketName),
 			Key:    aws.String(objectName),
+		}
+		if len(metadata) > 0 {
+			putObjectInput.Metadata = metadata
 		}
 		switch c.s3Config.EncryptionType() {
 		case common.S3EncryptionTypeAes256:

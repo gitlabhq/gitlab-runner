@@ -1230,6 +1230,69 @@ credentials from the environment, you can define `AWS_ACCESS_KEY_ID` and
 | `Azure.ContainerName`          | `[runners.cache.azure] -> ContainerName`          | `--cache-azure-container-name`             | `$CACHE_AZURE_CONTAINER_NAME`       |
 | `Azure.StorageDomain`          | `[runners.cache.azure] -> StorageDomain`          | `--cache-azure-storage-domain`             | `$CACHE_AZURE_STORAGE_DOMAIN`       |
 
+### Cache key handling
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5751) in GitLab Runner v18.4.0.
+
+{{< /history >}}
+
+In GitLab Runner 18.4.0 and later, you can hash cache keys with the
+`FF_HASH_CACHE_KEYS` [feature flag](feature-flags.md).
+
+When `FF_HASH_CACHE_KEYS` is turned off (default), GitLab Runner sanitizes the
+cache key before using it to build the path for both the local cache file and
+the object in the storage bucket. If the sanitization changes the cache key,
+GitLab Runner logs this change. If GitLab Runner cannot sanitize the cache key,
+it also logs this, and does not use this specific cache.
+
+When you turn on this feature flag, GitLab Runner hashes the cache key before using
+it to build the path for the local cache artifact and the object in the remote storage
+bucket. GitLab Runner does not sanitize the cache key. To help you understand which
+cache key created a specific cache artifact, GitLab Runner attaches metadata to it:
+
+- For local cache artifacts, GitLab Runner places a `metadata.json` file next to
+  the cache artifact `cache.zip`, with the following content:
+
+  ```json
+  {"cachekey": "the human readable cache key"}
+  ```
+
+- For cache artifacts on distributed caches, GitLab Runner attaches the metadata directly to the storage object blob,
+  with the key `cachekey`. You can query it using the cloud provider's mechanisms. For an example, see the
+  [user-defined object metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#UserMetadata)
+  for AWS S3.
+
+{{< alert type="warning" >}}
+
+When you change `FF_HASH_CACHE_KEYS`, GitLab Runner ignores existing cache artifacts
+because hashing the cache key changes the cache artifact's name and location.
+This change applies in both directions, from `FF_HASH_CACHE_KEYS=true` to
+`FF_HASH_CACHE_KEYS=false` and vice versa.
+
+If you run multiple runners that share a distributed cache but have different
+settings for `FF_HASH_CACHE_KEYS`, they do not share cache artifacts.
+
+Therefore, best practice is:
+
+- Keep `FF_HASH_CACHE_KEYS` in sync across runners which share distributed
+  caches.
+
+- Expect cache misses, cache artifacts rebuild, and longer first job runs after
+  you change `FF_HASH_CACHE_KEYS`.
+
+{{< /alert >}}
+
+{{< alert type="warning" >}}
+
+If you turn on `FF_HASH_CACHE_KEYS` but run an older version of the helper binary
+(for example, because you pinned the helper image to an older version), hashing the
+cache key and uploading or downloading caches still works. However, GitLab Runner
+does not maintain the metadata of cache artifacts.
+
+{{< /alert >}}
+
 ### The `[runners.cache.s3]` section
 
 The following parameters define S3 storage for cache.

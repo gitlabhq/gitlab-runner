@@ -6,15 +6,18 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"slices"
@@ -268,6 +271,8 @@ func testKubernetesBuildPassingEnvsMultistep(t *testing.T, featureFlagName strin
 			return common.JobResponse{}, nil
 		})
 		build.Runner.RunnerSettings.Shell = shell
+
+		withDevHelperImage(t, build, "")
 
 		buildtest.RunBuildWithPassingEnvsMultistep(
 			t,
@@ -4052,4 +4057,92 @@ allocate_memory
 			tc.verifyFn(t, buf.String(), err)
 		})
 	}
+}
+
+// withDevHelperImage reads the artifacts from the "(development|bleeding|stable) docker images" job, extracts the
+// helper image ref from there, and sets it as the build's helper image.
+func withDevHelperImage(t *testing.T, build *common.Build, imageRefRE string) {
+	t.Helper()
+
+	const (
+		artifactType    = "Docker image"
+		artifactBaseDir = "out"
+		// out/release_artifacts/helper-images_json-registry_gitlab_com_gitlab-org_gitlab-runner_gitlab-runner-helper-dev-dfb8eda29.json
+		//	-> registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper-dev:x86_64-dfb8ed29
+		// out/release_artifacts/helper-images_json-registry_gitlab_com_gitlab-org_gitlab-runner_gitlab-runner-helper-a2f2305f-v18_1_3.json
+		//	-> registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-a2f2305f
+		artifactGlob = "release_artifacts/helper-images_json-registry_gitlab_com_gitlab-org_gitlab-runner_gitlab-runner-helper-*.json"
+	)
+
+	projectDir, ok := os.LookupEnv("CI_PROJECT_DIR")
+	if !ok {
+		// for local runs, don't fail but warn.
+		t.Logf(
+			`You asked me to set the helper image based on references in %q, to an image matching %q.\n`+
+				`But I am not running in CI (CI_PROJECT_DIR env var is not set), so I can't do that, sorry.\n`+
+				`I will still continue, but without setting a helper image.`,
+			artifactGlob, imageRefRE,
+		)
+		return
+	}
+
+	if imageRefRE == "" {
+		imageRefRE = ":x86_64-[a-f0-9]+$"
+	}
+
+	re, err := regexp.Compile(imageRefRE)
+	require.NoError(t, err, "compiling imageRefRE %q", imageRefRE)
+
+	t.Logf("trying to find helper image with RE %q", imageRefRE)
+
+	searchPath := filepath.Join(projectDir, artifactBaseDir)
+	fullGlob := filepath.Join(searchPath, artifactGlob)
+
+	matches, err := filepath.Glob(fullGlob)
+	require.NoError(t, err, "globbing for artifact file")
+
+	if l := len(matches); l != 1 {
+		var files []string
+		err := filepath.WalkDir(searchPath, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			rel, err := filepath.Rel(searchPath, path)
+			if err != nil {
+				return err
+			}
+			files = append(files, rel)
+			return nil
+		})
+		assert.NoError(t, err, "walking dir %q", searchPath)
+
+		t.Errorf(
+			"expected to find 1 file for glob %q, but found: %d\navailable files in %q:\n%q",
+			fullGlob, l, searchPath, files,
+		)
+		t.FailNow()
+	}
+
+	f := matches[0]
+	b, err := os.ReadFile(f)
+	require.NoError(t, err, "reading %q", f)
+
+	var artifacts []struct {
+		Type  string
+		Value string
+	}
+	err = json.Unmarshal(b, &artifacts)
+	require.NoError(t, err, "parsing %q", f)
+
+	for _, artifact := range artifacts {
+		if artifact.Type != artifactType {
+			continue
+		}
+		if re.MatchString(artifact.Value) {
+			build.Runner.Kubernetes.HelperImage = artifact.Value
+			return
+		}
+	}
+
+	require.FailNow(t, "helper image not found", "could not find image ref matching %q in %q", imageRefRE, f)
 }

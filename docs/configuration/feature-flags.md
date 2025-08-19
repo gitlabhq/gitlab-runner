@@ -92,6 +92,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_EXPONENTIAL_BACKOFF_STAGE_RETRY` | `true` | {{< icon name="dotted-circle" >}} No |  | When enabled, the retries for `GET_SOURCES_ATTEMPTS`, `ARTIFACT_DOWNLOAD_ATTEMPTS`, `RESTORE_CACHE_ATTEMPTS`, and `EXECUTOR_JOB_SECTION_ATTEMPTS` use exponential backoff (5 sec - 5 min). |
 | `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` | `true` | {{< icon name="dotted-circle" >}} No |  | When enabled, the `request_concurrency` setting becomes the maximum concurrency value, and the number of concurrent requests adjusts based on the rate of successful job requests. |
 | `FF_USE_GITALY_CORRELATION_ID` | `true` | {{< icon name="dotted-circle" >}} No |  | When enabled, the `X-Gitaly-Correlation-ID` header is added to all Git HTTP requests. When disabled, the Git operations execute without Gitaly Correlation ID headers. |
+| `FF_HASH_CACHE_KEYS` | `false` | {{< icon name="dotted-circle" >}} No |  | When GitLab Runner creates or extracts caches, it hashes the cache keys (SHA256) before using them, both for local and distributed caches (for example, S3). For more information, see [cache key handling](advanced-configuration.md#cache-key-handling). |
 
 <!-- feature_flags_list_end -->
 

@@ -4,7 +4,7 @@ package cache
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"net/url"
 	"testing"
 	"time"
@@ -18,43 +18,51 @@ import (
 )
 
 type cacheOperationTest struct {
-	key                    string
-	configExists           bool
-	adapterExists          bool
-	errorOnAdapterCreation bool
-	adapterURL             PresignedURL
-	expectedURL            *url.URL
-	expectedOutput         []string
+	key                string
+	configExists       bool
+	adapterExists      bool
+	adapterCreateError error
+	adapterURL         PresignedURL
+	metadata           map[string]string
+	expectedURL        *url.URL
+	expectedOutput     []string
 }
 
 func prepareFakeCreateAdapter(t *testing.T, operationName string, tc cacheOperationTest) {
-	var cacheAdapter Adapter
-	if tc.adapterExists {
-		a := NewMockAdapter(t)
+	var adapter *MockAdapter = nil
 
-		if tc.adapterURL.URL != nil {
-			if operationName == "GetGoCloudURL" {
-				a.On(operationName, mock.Anything, true).Return(GoCloudURL{URL: tc.adapterURL.URL}, nil)
-			} else {
-				a.On(operationName, mock.Anything).Return(tc.adapterURL)
-			}
-		}
-		cacheAdapter = a
-	}
-
-	var cacheAdapterCreationError error
-	if tc.errorOnAdapterCreation {
-		cacheAdapterCreationError = errors.New("test error")
-	}
-
+	// override the adapter creator, reset after test run
 	oldCreateAdapter := createAdapter
-	createAdapter = func(cacheConfig *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
-		return cacheAdapter, cacheAdapterCreationError
+	createAdapter = func(_ *common.CacheConfig, _ time.Duration, _ string) (Adapter, error) {
+		return adapter, tc.adapterCreateError
 	}
-
 	t.Cleanup(func() {
 		createAdapter = oldCreateAdapter
 	})
+
+	// for tests where we don't want the adapter to exist, we can return
+	if !tc.adapterExists {
+		return
+	}
+
+	// for all other tests, we set up a "real" mock
+	adapter = NewMockAdapter(t)
+
+	// for tests that are not supposed to produce a URL, we can leave the adapter mock without any assertions and return
+	if tc.adapterURL.URL == nil {
+		return
+	}
+
+	// for any other tests, we set up the assertions based on the test case at hand
+	if operationName == "GetGoCloudURL" {
+		adapter.On(operationName, mock.Anything, true).Return(GoCloudURL{URL: tc.adapterURL.URL}, nil).Once()
+	} else {
+		adapter.On(operationName, mock.Anything).Return(tc.adapterURL).Once()
+	}
+
+	if operationName == "GetUploadURL" {
+		adapter.On("WithMetadata", tc.metadata).Once()
+	}
 }
 
 func prepareFakeBuild(tc cacheOperationTest) *common.Build {
@@ -78,6 +86,12 @@ func prepareFakeBuild(tc cacheOperationTest) *common.Build {
 func getCacheGoCloudURLAdapter(ctx context.Context, build *common.Build, key string) PresignedURL {
 	u, _ := GetCacheGoCloudURL(ctx, build, key, true)
 	return PresignedURL{URL: u.URL}
+}
+
+func getCachUploadURLWithMetadata(metadata map[string]string) func(ctx context.Context, build *common.Build, key string) PresignedURL {
+	return func(ctx context.Context, build *common.Build, key string) PresignedURL {
+		return GetCacheUploadURL(ctx, build, key, metadata)
+	}
 }
 
 func testCacheOperation(
@@ -135,15 +149,13 @@ func TestCacheOperations(t *testing.T) {
 			expectedURL:   nil,
 		},
 		"adapter-error-on-factorization": {
-			key:                    "key",
-			configExists:           true,
-			adapterExists:          true,
-			errorOnAdapterCreation: true,
-			adapterURL:             PresignedURL{URL: exampleURL},
-			expectedURL:            exampleURL,
-			expectedOutput: []string{
-				"test error",
-			},
+			key:                "key",
+			configExists:       true,
+			adapterExists:      true,
+			adapterCreateError: fmt.Errorf("some creation error"),
+			adapterURL:         PresignedURL{URL: exampleURL},
+			expectedURL:        exampleURL,
+			expectedOutput:     []string{`error="some creation error"`},
 		},
 		"adapter-exists": {
 			key:           "key",
@@ -152,12 +164,20 @@ func TestCacheOperations(t *testing.T) {
 			adapterURL:    PresignedURL{URL: exampleURL},
 			expectedURL:   exampleURL,
 		},
+		"adapter-exists-with-metadata": {
+			key:           "key",
+			configExists:  true,
+			adapterExists: true,
+			metadata:      map[string]string{"foo": "some foo"},
+			adapterURL:    PresignedURL{URL: exampleURL},
+			expectedURL:   exampleURL,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			testCacheOperation(t, "GetDownloadURL", GetCacheDownloadURL, tc)
-			testCacheOperation(t, "GetUploadURL", GetCacheUploadURL, tc)
+			testCacheOperation(t, "GetUploadURL", getCachUploadURLWithMetadata(tc.metadata), tc)
 			testCacheOperation(t, "GetGoCloudURL", getCacheGoCloudURLAdapter, tc)
 		})
 	}

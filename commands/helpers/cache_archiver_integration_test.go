@@ -30,17 +30,72 @@ import (
 
 const (
 	cacheArchiverArchive           = "archive.zip"
+	cacheArchiverMetadata          = "metadata.json"
 	cacheArchiverTestArchivedFile  = "archive_file"
 	cacheExtractorTestArchivedFile = "archive_file"
 )
+
+func TestCacheArchiveLocalMetadata(t *testing.T) {
+	tests := map[string]struct {
+		metaArgs              map[string]string
+		expectedLocalMetadata string
+	}{
+		"no metadata": {
+			expectedLocalMetadata: "{}",
+		},
+		"single metadata": {
+			metaArgs:              map[string]string{"foo": "bar:baz"},
+			expectedLocalMetadata: `{"foo":"bar:baz"}`,
+		},
+		"multiple metadata": {
+			metaArgs:              map[string]string{"Foo": "some Foo", "bAr": "some Bar"},
+			expectedLocalMetadata: `{"bar":"some Bar","foo":"some Foo"}`,
+		},
+		"weird metadata": {
+			metaArgs: map[string]string{"foo": `
+- bla
+- bla
+- some: {random: thing}
+- \x63\xb3
+- bla`},
+			expectedLocalMetadata: `{"foo":"\n- bla\n- bla\n- some: {random: thing}\n- \\x63\\xb3\n- bla"}`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
+			t.Cleanup(func() {
+				srv.Close()
+				require.NoError(t, os.Remove(cacheArchiverArchive))
+				require.NoError(t, os.Remove(cacheArchiverMetadata))
+			})
+
+			cmd := helpers.CacheArchiverCommand{
+				File:     cacheArchiverArchive,
+				URL:      srv.URL + "/cache.zip",
+				Metadata: test.metaArgs,
+				Timeout:  0,
+			}
+
+			cmd.Execute(&cli.Context{})
+
+			require.FileExists(t, cacheArchiverMetadata)
+
+			content, err := os.ReadFile(cacheArchiverMetadata)
+			require.NoError(t, err, "reading local metadata file")
+			require.Equal(t, test.expectedLocalMetadata, string(content), "wrong local metadata")
+		})
+	}
+}
 
 func TestCacheArchiverUploadExpandArgs(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
 	defer srv.Close()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 
-	os.Setenv("expand", "expanded")
-	defer os.Unsetenv("expand")
+	t.Setenv("expand", "expanded")
 
 	cmd := helpers.CacheArchiverCommand{
 		File:    cacheArchiverArchive,
@@ -97,6 +152,7 @@ func TestCacheArchiverRemoteServerNotFound(t *testing.T) {
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:    cacheArchiverArchive,
 		URL:     ts.URL + "/invalid-file.zip",
@@ -114,6 +170,7 @@ func TestCacheArchiverRemoteServer(t *testing.T) {
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:    cacheArchiverArchive,
 		URL:     ts.URL + "/cache.zip",
@@ -132,9 +189,11 @@ func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:       cacheArchiverArchive,
-		GoCloudURL: fmt.Sprintf("%s", "testblob://bucket/"+objectName),
+		GoCloudURL: fmt.Sprintf("testblob://bucket/%s", objectName),
+		Metadata:   map[string]string{"foo": "some foo", "bar": "some bar"},
 		Timeout:    0,
 	}
 	helpers.SetCacheArchiverCommandMux(&cmd, mux)
@@ -142,7 +201,11 @@ func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
 		cmd.Execute(nil)
 	})
 
-	goCloudObjectExists(t, bucketDir, objectName)
+	attrs := goCloudObjectAttributes(t, bucketDir, objectName)
+	assert.Equal(t, map[string]string{
+		"foo": "some foo",
+		"bar": "some bar",
+	}, attrs.Metadata, "wrong blob metadata")
 }
 
 func TestCacheArchiverRemoteServerWithHeaders(t *testing.T) {
@@ -152,6 +215,7 @@ func TestCacheArchiverRemoteServerWithHeaders(t *testing.T) {
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:    cacheArchiverArchive,
 		URL:     ts.URL + "/cache.zip",
@@ -175,6 +239,7 @@ func TestCacheArchiverRemoteServerTimedOut(t *testing.T) {
 	defer removeHook()
 
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File: cacheArchiverArchive,
 		URL:  ts.URL + "/timeout",
@@ -191,6 +256,7 @@ func TestCacheArchiverRemoteServerFailOnInvalidServer(t *testing.T) {
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
 	cmd := helpers.CacheArchiverCommand{
 		File:    cacheArchiverArchive,
 		URL:     "http://localhost:65333/cache.zip",
@@ -229,6 +295,7 @@ func TestCacheArchiverCompressionLevel(t *testing.T) {
 			mockArchiver.On("Archive", mock.Anything, mock.Anything).Return(nil)
 
 			defer os.Remove(cacheArchiverArchive)
+			defer os.Remove(cacheArchiverMetadata)
 			cmd := helpers.NewCacheArchiverCommandForTest(cacheArchiverArchive, []string{cacheArchiverTestArchivedFile})
 			cmd.CompressionLevel = expectedLevel
 			cmd.Execute(nil)
@@ -254,16 +321,23 @@ func setupGoCloudFileBucket(t *testing.T, scheme string) (m *blob.URLMux, bucket
 	return mux, tmpDir
 }
 
-func goCloudObjectExists(t *testing.T, bucketDir string, objectName string) {
+// goCloudObjectAttributes pulls the attributes of a blob. It fails the test if the blob does not exist or the
+// attributes can't be retrieved
+func goCloudObjectAttributes(t *testing.T, bucketDir string, objectName string) *blob.Attributes {
 	bucket, err := fileblob.OpenBucket(bucketDir, nil)
-	require.NoError(t, err)
+	require.NoError(t, err, "opening bucket")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	exists, err := bucket.Exists(ctx, objectName)
-	require.NoError(t, err)
-	assert.True(t, exists)
+	require.NoError(t, err, "querying blob existence")
+	require.True(t, exists, "blob does not exist")
+
+	attr, err := bucket.Attributes(ctx, objectName)
+	require.NoError(t, err, "getting blob attributes")
+
+	return attr
 }
 
 func testCacheBaseUploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -337,6 +411,7 @@ func TestCacheArchiverUploadedSize(t *testing.T) {
 			defer ts.Close()
 
 			defer os.Remove(cacheArchiverArchive)
+			defer os.Remove(cacheArchiverMetadata)
 			cmd := helpers.CacheArchiverCommand{
 				File:                   cacheArchiverArchive,
 				MaxUploadedArchiveSize: int64(tc.limit),
