@@ -94,7 +94,7 @@ type machineInfo struct {
 	canConnect bool
 }
 
-func (m *machineCommand) Create(driver, name string, opts ...string) error {
+func (m *machineCommand) Create(ctx context.Context, driver, name string, opts ...string) error {
 	args := []string{
 		"create",
 		"--driver", driver,
@@ -104,7 +104,7 @@ func (m *machineCommand) Create(driver, name string, opts ...string) error {
 	}
 	args = append(args, name)
 
-	cmd := newDockerMachineCommand(args...)
+	cmd := newDockerMachineCommand(ctx, args...)
 
 	fields := logrus.Fields{
 		"operation": "create",
@@ -118,8 +118,8 @@ func (m *machineCommand) Create(driver, name string, opts ...string) error {
 	return cmd.Run()
 }
 
-func (m *machineCommand) Provision(name string) error {
-	cmd := newDockerMachineCommand("provision", name)
+func (m *machineCommand) Provision(ctx context.Context, name string) error {
+	cmd := newDockerMachineCommand(ctx, "provision", name)
 
 	fields := logrus.Fields{
 		"operation": "provision",
@@ -131,11 +131,8 @@ func (m *machineCommand) Provision(name string) error {
 	return cmd.Run()
 }
 
-func (m *machineCommand) Stop(name string, timeout time.Duration) error {
-	ctx, ctxCancelFn := context.WithTimeout(context.Background(), timeout)
-	defer ctxCancelFn()
-
-	cmd := newDockerMachineCommandCtx(ctx, "stop", name)
+func (m *machineCommand) Stop(ctx context.Context, name string) error {
+	cmd := newDockerMachineCommand(ctx, "stop", name)
 
 	fields := logrus.Fields{
 		"operation": "stop",
@@ -147,8 +144,8 @@ func (m *machineCommand) Stop(name string, timeout time.Duration) error {
 	return cmd.Run()
 }
 
-func (m *machineCommand) Remove(name string) error {
-	cmd := newDockerMachineCommand("rm", "-y", name)
+func (m *machineCommand) Remove(ctx context.Context, name string) error {
+	cmd := newDockerMachineCommand(ctx, "rm", "-y", name)
 
 	fields := logrus.Fields{
 		"operation": "remove",
@@ -196,9 +193,9 @@ func (m *machineCommand) List() (hostNames []string, err error) {
 	return
 }
 
-func (m *machineCommand) get(args ...string) (out string, err error) {
+func (m *machineCommand) get(ctx context.Context, args ...string) (out string, err error) {
 	// Execute docker-machine to fetch IP
-	cmd := newDockerMachineCommand(args...)
+	cmd := newDockerMachineCommand(ctx, args...)
 
 	data, err := cmd.Output()
 	if err != nil {
@@ -213,30 +210,30 @@ func (m *machineCommand) get(args ...string) (out string, err error) {
 	return
 }
 
-func (m *machineCommand) IP(name string) (string, error) {
-	return m.get("ip", name)
+func (m *machineCommand) IP(ctx context.Context, name string) (string, error) {
+	return m.get(ctx, "ip", name)
 }
 
-func (m *machineCommand) URL(name string) (string, error) {
-	return m.get("url", name)
+func (m *machineCommand) URL(ctx context.Context, name string) (string, error) {
+	return m.get(ctx, "url", name)
 }
 
-func (m *machineCommand) CertPath(name string) (string, error) {
-	return m.get("inspect", name, "-f", "{{.HostOptions.AuthOptions.StorePath}}")
+func (m *machineCommand) CertPath(ctx context.Context, name string) (string, error) {
+	return m.get(ctx, "inspect", name, "-f", "{{.HostOptions.AuthOptions.StorePath}}")
 }
 
-func (m *machineCommand) Status(name string) (string, error) {
-	return m.get("status", name)
+func (m *machineCommand) Status(ctx context.Context, name string) (string, error) {
+	return m.get(ctx, "status", name)
 }
 
-func (m *machineCommand) Exist(name string) bool {
+func (m *machineCommand) Exist(ctx context.Context, name string) bool {
 	configPath := filepath.Join(getMachineDir(), name, "config.json")
 	_, err := os.Stat(configPath)
 	if err != nil {
 		return false
 	}
 
-	cmd := newDockerMachineCommand("inspect", name)
+	cmd := newDockerMachineCommand(ctx, "inspect", name)
 
 	fields := logrus.Fields{
 		"operation": "exists",
@@ -247,7 +244,7 @@ func (m *machineCommand) Exist(name string) bool {
 	return cmd.Run() == nil
 }
 
-func (m *machineCommand) CanConnect(name string, skipCache bool) bool {
+func (m *machineCommand) CanConnect(ctx context.Context, name string, skipCache bool) bool {
 	m.cacheLock.RLock()
 	cachedInfo, ok := m.cache[name]
 	m.cacheLock.RUnlock()
@@ -256,7 +253,7 @@ func (m *machineCommand) CanConnect(name string, skipCache bool) bool {
 		return cachedInfo.canConnect
 	}
 
-	canConnect := m.canConnect(name)
+	canConnect := m.canConnect(ctx, name)
 	if !canConnect {
 		return false // we only cache positive hits. Machines usually do not disconnect.
 	}
@@ -270,29 +267,29 @@ func (m *machineCommand) CanConnect(name string, skipCache bool) bool {
 	return true
 }
 
-func (m *machineCommand) canConnect(name string) bool {
+func (m *machineCommand) canConnect(ctx context.Context, name string) bool {
 	// Execute docker-machine config which actively ask the machine if it is up and online
-	cmd := newDockerMachineCommand("config", name)
+	cmd := newDockerMachineCommand(ctx, "config", name)
 
 	err := cmd.Run()
 	return err == nil
 }
 
-func (m *machineCommand) Credentials(name string) (dc Credentials, err error) {
-	if !m.CanConnect(name, true) {
+func (m *machineCommand) Credentials(ctx context.Context, name string) (dc Credentials, err error) {
+	if !m.CanConnect(ctx, name, true) {
 		err = errors.New("can't connect")
 		return
 	}
 
 	dc.TLSVerify = true
-	dc.Host, err = m.URL(name)
+	dc.Host, err = m.URL(ctx, name)
 	if err == nil {
-		dc.CertPath, err = m.CertPath(name)
+		dc.CertPath, err = m.CertPath(ctx, name)
 	}
 	return
 }
 
-func newDockerMachineCommandCtx(ctx context.Context, args ...string) *exec.Cmd {
+func newDockerMachineCommand(ctx context.Context, args ...string) *exec.Cmd {
 	token := os.Getenv("MACHINE_BUGSNAG_API_TOKEN")
 	if token == "" {
 		token = crashreportToken
@@ -325,10 +322,6 @@ func getBaseDir() string {
 
 func getMachineDir() string {
 	return filepath.Join(getBaseDir(), "machines")
-}
-
-func newDockerMachineCommand(args ...string) *exec.Cmd {
-	return newDockerMachineCommandCtx(context.Background(), args...)
 }
 
 func NewMachineCommand() Machine {

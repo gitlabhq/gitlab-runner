@@ -3,6 +3,7 @@
 package machine
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -95,7 +96,7 @@ type testMachine struct {
 	mutex sync.Mutex
 }
 
-func (m *testMachine) Create(driver, name string, opts ...string) error {
+func (m *testMachine) Create(ctx context.Context, driver, name string, opts ...string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -113,7 +114,7 @@ func (m *testMachine) Create(driver, name string, opts ...string) error {
 	return nil
 }
 
-func (m *testMachine) Provision(name string) error {
+func (m *testMachine) Provision(ctx context.Context, name string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -124,13 +125,13 @@ func (m *testMachine) Provision(name string) error {
 	return nil
 }
 
-func (m *testMachine) Stop(name string, timeout time.Duration) error {
+func (m *testMachine) Stop(ctx context.Context, name string) error {
 	m.Stopped <- true
 
 	return nil
 }
 
-func (m *testMachine) Remove(name string) error {
+func (m *testMachine) Remove(ctx context.Context, name string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -149,7 +150,7 @@ func (m *testMachine) Remove(name string) error {
 	return nil
 }
 
-func (m *testMachine) Exist(name string) bool {
+func (m *testMachine) Exist(ctx context.Context, name string) bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -168,11 +169,11 @@ func (m *testMachine) List() (machines []string, err error) {
 	return m.machines, nil
 }
 
-func (m *testMachine) CanConnect(name string, skipCache bool) bool {
+func (m *testMachine) CanConnect(ctx context.Context, name string, skipCache bool) bool {
 	return !strings.Contains(name, "no-can-connect")
 }
 
-func (m *testMachine) Credentials(name string) (dc docker.Credentials, err error) {
+func (m *testMachine) Credentials(ctx context.Context, name string) (dc docker.Credentials, err error) {
 	if strings.Contains(name, "no-connect") {
 		err = errors.New("failed to connect")
 	}
@@ -361,11 +362,11 @@ func TestMachineReuse(t *testing.T) {
 
 	var createdMachineDetails *machineDetails
 
-	machineMock.On("Create", mock.Anything, mock.Anything).
+	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).
 		Once()
 
-	machineMock.On("Create", mock.Anything, mock.Anything).
+	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			// Free the previously created machine after the useMachine call has already happened.
 			// The useMachine call tries to create a new machine at first because a free one doesn't exist
@@ -380,7 +381,7 @@ func TestMachineReuse(t *testing.T) {
 		Return(nil).
 		Once()
 
-	machineMock.On("CanConnect", mock.Anything, mock.Anything).
+	machineMock.On("CanConnect", mock.Anything, mock.Anything, mock.Anything).
 		Return(true).
 		Once()
 
@@ -418,9 +419,9 @@ func TestMachineReuseWithContention(t *testing.T) {
 	list := make([]string, 0)
 
 	listCall := machineMock.On("List").Return([]string{}, nil)
-	machineMock.On("Create", mock.Anything, mock.Anything).
+	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
-			name := args.String(1)
+			name := args.String(2)
 
 			listLock.Lock()
 			list = append(list, name)
@@ -431,7 +432,7 @@ func TestMachineReuseWithContention(t *testing.T) {
 		}).
 		Return(nil)
 
-	machineMock.On("CanConnect", mock.Anything, mock.Anything).
+	machineMock.On("CanConnect", mock.Anything, mock.Anything, mock.Anything).
 		Return(true).
 		Maybe()
 
@@ -505,7 +506,7 @@ func TestMachineAcquireGrowthCapacity(t *testing.T) {
 			var concurrentCalls, maxConcurrentCalls int32
 			var maxConcurrentCallsLock sync.Mutex
 
-			machineMock.On("Create", mock.Anything, mock.Anything).
+			machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything).
 				Run(func(mock.Arguments) {
 					defer atomic.AddInt32(&concurrentCalls, -1)
 					cc := atomic.AddInt32(&concurrentCalls, 1)

@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -118,7 +119,10 @@ func (m *machineProvider) createWithGrowthCapacity(
 	logger := logrus.WithField("name", details.Name)
 	started := time.Now()
 
-	err := m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
+	ctx, ctxCancelFn := context.WithTimeout(context.Background(), machineCreateCommandTimeout)
+	defer ctxCancelFn()
+
+	err := m.machine.Create(ctx, config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
 	if err != nil {
 		logger.WithField("time", time.Since(started)).
 			WithError(err).
@@ -158,8 +162,11 @@ func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (d
 			continue
 		}
 
+		ctx, ctxCancelFn := context.WithTimeout(context.Background(), machineCanConnectCommandTimeout)
+		defer ctxCancelFn()
+
 		// Check if node is running
-		canConnect := m.machine.CanConnect(name, skipCache)
+		canConnect := m.machine.CanConnect(ctx, name, skipCache)
 		if !canConnect {
 			_ = m.remove(name, "machine is unavailable")
 			continue
@@ -264,7 +271,10 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 	info := details.info()
 	details.Unlock()
 
-	if !m.machine.Exist(details.Name) {
+	ctx, ctxCancelFn := context.WithTimeout(context.Background(), machineExistCommandTimeout)
+	defer ctxCancelFn()
+
+	if !m.machine.Exist(ctx, details.Name) {
 		logger.Warningln("Skipping machine removal, because it doesn't exist")
 		return nil
 	}
@@ -276,8 +286,11 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 	}
 
 	logger.Warningln("Stopping machine")
+	stopCtx, stopCtxCancelFn := context.WithTimeout(context.Background(), machineStopCommandTimeout)
+	defer stopCtxCancelFn()
+
 	err = runHistogramCountedOperation(m.stoppingHistogram, func() error {
-		return m.machine.Stop(details.Name, machineStopCommandTimeout)
+		return m.machine.Stop(stopCtx, details.Name)
 	})
 	if err != nil {
 		logger.
@@ -287,7 +300,10 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 
 	logger.Warningln("Removing machine")
 	err = runHistogramCountedOperation(m.removalHistogram, func() error {
-		return m.machine.Remove(details.Name)
+		removeCtx, removeCtxCancelFn := context.WithTimeout(context.Background(), machineRemoveCommandTimeout)
+		defer removeCtxCancelFn()
+
+		return m.machine.Remove(removeCtx, details.Name)
 	})
 	if err != nil {
 		details.Lock()
@@ -517,7 +533,10 @@ func (m *machineProvider) Use(
 		details.Unlock()
 	}
 
-	if !canBeUsed || !m.machine.CanConnect(details.Name, true) {
+	ctx, ctxCancelFn := context.WithTimeout(context.Background(), machineCanConnectCommandTimeout)
+	defer ctxCancelFn()
+
+	if !canBeUsed || !m.machine.CanConnect(ctx, details.Name, true) {
 		details, err = m.retryUseMachine(config)
 		if err != nil {
 			return
@@ -527,8 +546,11 @@ func (m *machineProvider) Use(
 		newData = details
 	}
 
+	credCtx, credCtxCancelFn := context.WithTimeout(context.Background(), machineCredentialsCommandTimeout)
+	defer credCtxCancelFn()
+
 	// Get machine credentials
-	dc, err := m.machine.Credentials(details.Name)
+	dc, err := m.machine.Credentials(credCtx, details.Name)
 	if err != nil {
 		if newData != nil {
 			m.Release(config, newData)
