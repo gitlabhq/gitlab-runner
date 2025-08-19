@@ -374,6 +374,7 @@ func (mr *RunCommand) reloadConfig() error {
 	config := mr.configfile.Config()
 	mr.healthHelper.healthy = nil
 	mr.log().Println("Configuration loaded")
+	mr.checkConfigConcurrency(config)
 	if c, err := config.Masked(); err == nil {
 		mr.log().Debugln(helpers.ToYAML(c))
 	}
@@ -1507,4 +1508,67 @@ func init() {
 	}
 
 	common.RegisterCommand2("run", "run multi runner service", cmd)
+}
+
+func (mr *RunCommand) checkConfigConcurrency(config *common.Config) {
+	var warnings []string
+	var solutions []string
+
+	if config.Concurrent < len(config.Runners) {
+		warnings = append(warnings, fmt.Sprintf(
+			"Worker starvation bottleneck: 'concurrent' setting (%d) is less than number of runners (%d)",
+			config.Concurrent, len(config.Runners)))
+		solutions = append(solutions, fmt.Sprintf(
+			"Increase 'concurrent' to at least %d (current: %d)",
+			len(config.Runners)+1, config.Concurrent))
+	}
+
+	var lowRequestConcurrencyRunners int
+	var restrictiveRunners int
+
+	for _, runner := range config.Runners {
+		if runner.GetRequestConcurrency() == 1 {
+			lowRequestConcurrencyRunners++
+		}
+
+		if runner.Limit > 0 && runner.Limit <= 2 && runner.GetRequestConcurrency() == 1 {
+			restrictiveRunners++
+		}
+	}
+
+	if lowRequestConcurrencyRunners > 0 {
+		warnings = append(warnings, fmt.Sprintf(
+			"Request bottleneck: %d runners have request_concurrency=1, causing job delays during long polling",
+			lowRequestConcurrencyRunners))
+		solutions = append(solutions, fmt.Sprintf(
+			"Increase 'request_concurrency' to 2-4 for %d runners currently using request_concurrency=1",
+			lowRequestConcurrencyRunners))
+	}
+
+	if restrictiveRunners > 0 {
+		warnings = append(warnings, fmt.Sprintf(
+			"Build limit bottleneck: %d runners have low 'limit' settings (≤2) with request_concurrency=1",
+			restrictiveRunners))
+		solutions = append(solutions, fmt.Sprintf(
+			"For %d runners with low limits: either increase 'limit' to 5+ or increase 'request_concurrency' to 2+",
+			restrictiveRunners))
+	}
+
+	if len(warnings) > 0 {
+		warningMsg := "CONFIGURATION: Long polling issues detected.\n"
+		warningMsg += "Issues found:\n"
+		for _, warning := range warnings {
+			warningMsg += "  - " + warning + "\n"
+		}
+		warningMsg += "This can cause job delays matching your GitLab instance's long polling timeout.\n"
+		warningMsg += "Recommended solutions:\n"
+		for i, solution := range solutions {
+			warningMsg += fmt.Sprintf("  %d. %s\n", i+1, solution)
+		}
+		warningMsg += "Note: The 'FF_USE_ADAPTIVE_REQUEST_CONCURRENCY' feature flag can help automatically adjust request_concurrency based on workload.\n"
+		warningMsg += "This message will be printed each time the configuration is reloaded if the issues persist.\n"
+		warningMsg += "See documentation: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#long-polling-issues"
+
+		mr.log().Warning(warningMsg)
+	}
 }

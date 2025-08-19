@@ -1235,3 +1235,184 @@ func TestListenAddress(t *testing.T) {
 		}
 	}
 }
+
+func TestRequestBottleneckWarning(t *testing.T) {
+	tests := []struct {
+		name             string
+		config           *common.Config
+		expectWarning    bool
+		expectedWarnings []string // Specific warning messages to look for
+		description      string
+	}{
+		{
+			name: "worker_starvation",
+			config: &common.Config{
+				Concurrent: 2,
+				Runners: []*common.RunnerConfig{
+					{RunnerCredentials: common.RunnerCredentials{Token: "runner1"}},
+					{RunnerCredentials: common.RunnerCredentials{Token: "runner2"}},
+					{RunnerCredentials: common.RunnerCredentials{Token: "runner3"}},
+				},
+			},
+			expectWarning:    true,
+			expectedWarnings: []string{"Worker starvation bottleneck"},
+			description:      "Should warn when concurrent < runners",
+		},
+		{
+			name: "request_bottleneck",
+			config: &common.Config{
+				Concurrent: 4,
+				Runners: []*common.RunnerConfig{
+					{
+						RequestConcurrency: 1,
+						Limit:              10,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+					},
+					{
+						RequestConcurrency: 1,
+						Limit:              8,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner2"},
+					},
+				},
+			},
+			expectWarning:    true,
+			expectedWarnings: []string{"Request bottleneck"},
+			description:      "Should warn about request bottleneck",
+		},
+		{
+			name: "build_limit_saturation",
+			config: &common.Config{
+				Concurrent: 4,
+				Runners: []*common.RunnerConfig{
+					{
+						Limit:              2,
+						RequestConcurrency: 1,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+					},
+					{
+						Limit:              1,
+						RequestConcurrency: 1,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner2"},
+					},
+				},
+			},
+			expectWarning:    true,
+			expectedWarnings: []string{"Build limit bottleneck"},
+			description:      "Should warn about build limit saturation",
+		},
+		{
+			name: "multiple_scenarios",
+			config: &common.Config{
+				Concurrent: 4,
+				Runners: []*common.RunnerConfig{
+					{
+						RequestConcurrency: 1,
+						Limit:              2,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+					},
+					{
+						RequestConcurrency: 1,
+						Limit:              1,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner2"},
+					},
+					{
+						RequestConcurrency: 2,
+						Limit:              5,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner3"},
+					},
+				},
+			},
+			expectWarning:    true,
+			expectedWarnings: []string{"Request bottleneck", "Build limit bottleneck"},
+			description:      "Should warn about multiple issues",
+		},
+		{
+			name: "healthy_configuration",
+			config: &common.Config{
+				Concurrent: 6,
+				Runners: []*common.RunnerConfig{
+					{
+						RequestConcurrency: 3,
+						Limit:              10,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+					},
+					{
+						RequestConcurrency: 2,
+						Limit:              5,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner2"},
+					},
+				},
+			},
+			expectWarning:    false,
+			expectedWarnings: nil,
+			description:      "Should not warn for healthy configuration",
+		},
+		{
+			name: "adequate_concurrent",
+			config: &common.Config{
+				Concurrent: 3,
+				Runners: []*common.RunnerConfig{
+					{
+						RequestConcurrency: 2,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+					},
+					{
+						RequestConcurrency: 2,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner2"},
+					},
+					{
+						RequestConcurrency: 2,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner3"},
+					},
+				},
+			},
+			expectWarning:    false,
+			expectedWarnings: nil,
+			description:      "Should not warn when concurrent >= runners",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hook, cleanup := test.NewHook()
+			defer cleanup()
+
+			logrus.SetLevel(logrus.WarnLevel)
+			logrus.SetOutput(io.Discard)
+
+			cmd := RunCommand{
+				configfile: configfile.New("", configfile.WithExistingConfig(tt.config),
+					configfile.WithSystemID(common.UnknownSystemID)),
+			}
+
+			cmd.checkConfigConcurrency(tt.config)
+
+			foundMainWarning := false
+			for _, entry := range hook.AllEntries() {
+				if strings.Contains(entry.Message, "CONFIGURATION:") &&
+					strings.Contains(entry.Message, "Long polling issues detected") {
+					foundMainWarning = true
+					break
+				}
+			}
+
+			if !tt.expectWarning {
+				assert.False(t, foundMainWarning, tt.description)
+				return
+			}
+
+			assert.True(t, foundMainWarning, tt.description)
+
+			for _, expectedWarning := range tt.expectedWarnings {
+				foundSpecificWarning := false
+				for _, entry := range hook.AllEntries() {
+					if strings.Contains(entry.Message, expectedWarning) {
+						foundSpecificWarning = true
+						break
+					}
+				}
+				assert.True(t, foundSpecificWarning, fmt.Sprintf("Should contain warning: %s", expectedWarning))
+			}
+		})
+	}
+}

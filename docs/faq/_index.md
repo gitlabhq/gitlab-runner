@@ -361,6 +361,29 @@ Running multiple instances of GitLab Runner using the same configuration file ca
 unexpected and hard-to-debug behavior. Only a single instance of GitLab Runner can use a specific `config.toml` file at
 one time.
 
+## Jobs experience delays before starting
+
+If jobs from some projects experience significant delays before starting while jobs from other projects run immediately,
+you might be experiencing long polling issues.
+
+**Symptoms:**
+
+- Jobs are queued but take an unusually long time to start execution (typically matching your GitLab instance long polling timeout).
+- Some runners appear to be stuck while others process jobs normally.
+- GitLab Runner logs show `CONFIGURATION: Long polling issues detected`.
+
+**Cause:**
+
+This issue occurs when GitLab Runner workers get stuck in long polling requests to GitLab,
+which prevents other jobs from being processed promptly. These issues range from performance
+bottlenecks to complete deadlocks, depending on the configuration. The issue is related to the
+GitLab CI/CD long polling feature controlled by the GitLab Workhorse `apiCiLongPollingDuration`
+setting (default: 50s).
+
+**Solution:**
+
+These issues can occur in several configuration scenarios. For comprehensive information about the causes, configuration examples, and solutions, see the [Long polling issues](../configuration/advanced-configuration.md#long-polling-issues) section in the advanced configuration documentation.
+
 ## `Job failed (system failure): preparing environment:`
 
 This error is often due to your shell
