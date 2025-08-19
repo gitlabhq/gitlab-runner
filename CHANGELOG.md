@@ -1,3 +1,9 @@
+## v18.2.2 (2025-08-19)
+
+### Bug fixes
+
+- Update fleeting plugin dependency [!5784](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5784)
+
 ## v18.2.1 (2025-07-28)
 
 ### Bug fixes
