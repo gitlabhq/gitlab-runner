@@ -56,6 +56,9 @@ The limit is different for autoscaling runners (like Docker Machine and Kubernet
 - On runners that do not autoscale, `limit` defines the capacity of the runner on a host system.
 - On autoscaling runners, `limit` is the number of runners you want to run in total.
 
+For more information about how `concurrency` , `limit`, and `request_concurrency` interact to control job flow,
+see the [KB article on GitLab Runner concurrency tuning](https://support.gitlab.com/hc/en-us/articles/21324350882076-GitLab-Runner-Concurrency-Tuning-Understanding-request-concurrency).
+
 ### Basic configuration: one runner manager, one runner
 
 For the most basic configuration, you install the GitLab Runner software on a supported compute architecture and operating system.
