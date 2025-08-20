@@ -923,9 +923,6 @@ func TestGetRemoteURL(t *testing.T) {
 						Runner: &RunnerConfig{
 							RunnerSettings: tc.runner,
 						},
-						allVariables: JobVariables{
-							{Key: "CI_PROJECT_PATH", Value: exampleProjectPath},
-						},
 						JobResponse: JobResponse{
 							Token: exampleJobToken,
 							GitInfo: GitInfo{
@@ -938,12 +935,18 @@ func TestGetRemoteURL(t *testing.T) {
 						ff: ffState,
 					}
 
+					variables := JobVariables{
+						{Key: "CI_PROJECT_PATH", Value: exampleProjectPath},
+					}
+
 					if tc.jobTokenVariableOverwrite != "" {
-						build.allVariables = append(build.allVariables, JobVariable{
+						variables = append(variables, JobVariable{
 							Key:   "CI_JOB_TOKEN",
 							Value: tc.jobTokenVariableOverwrite,
 						})
 					}
+
+					build.JobResponse.Variables = variables
 
 					remoteURL, err := build.GetRemoteURL()
 					assert.NoError(t, err, "getting remote URL")
@@ -1131,9 +1134,6 @@ func TestGetURLInsteadOfArgs(t *testing.T) {
 								CloneURL: tc.cloneURL,
 							},
 						},
-						allVariables: JobVariables{
-							{Key: "CI_SERVER_SHELL_SSH_HOST", Value: exampleServerHost},
-						},
 						JobResponse: JobResponse{
 							Token: exampleJobToken,
 						},
@@ -1147,19 +1147,25 @@ func TestGetURLInsteadOfArgs(t *testing.T) {
 						build.Runner.RunnerCredentials.URL = tc.serverURL
 					}
 
+					variables := JobVariables{
+						{Key: "CI_SERVER_SHELL_SSH_HOST", Value: exampleServerHost},
+					}
+
 					if tc.forceHTTPS {
-						build.allVariables = append(build.allVariables, JobVariable{
+						variables = append(variables, JobVariable{
 							Key:   "GIT_SUBMODULE_FORCE_HTTPS",
 							Value: "true",
 						})
 					}
 
 					if tc.serverPort != "" {
-						build.allVariables = append(build.allVariables, JobVariable{
+						variables = append(variables, JobVariable{
 							Key:   "CI_SERVER_SHELL_SSH_PORT",
 							Value: tc.serverPort,
 						})
 					}
+
+					build.JobResponse.Variables = variables
 
 					gitURLArgs, err := build.GetURLInsteadOfArgs()
 					assert.NoError(t, err, "getting git insteadOf URLs")
@@ -1316,6 +1322,74 @@ func TestIsFeatureFlagOn_Precedence(t *testing.T) {
 
 		assert.True(t, b.IsFeatureFlagOn(testFF))
 	})
+}
+
+func TestGetAllVariables_FeatureFlagResolution(t *testing.T) {
+	testFF := featureflags.UseFastzip
+
+	tests := map[string]struct {
+		runnerFeatureFlags map[string]bool
+		jobVariables       JobVariables
+		expectedFFValue    string
+		description        string
+	}{
+		"TOML feature flag appears in GetAllVariables": {
+			runnerFeatureFlags: map[string]bool{
+				testFF: true,
+			},
+			expectedFFValue: "true",
+			description:     "TOML-configured feature flag should appear in GetAllVariables",
+		},
+		"TOML overrides job variable in GetAllVariables": {
+			runnerFeatureFlags: map[string]bool{
+				testFF: true,
+			},
+			jobVariables: JobVariables{
+				{Key: testFF, Value: "false"},
+			},
+			expectedFFValue: "true",
+			description:     "TOML setting should override job variable in GetAllVariables",
+		},
+		"job variable appears when no TOML setting": {
+			jobVariables: JobVariables{
+				{Key: testFF, Value: "true"},
+			},
+			expectedFFValue: "true",
+			description:     "Job variable should appear when no TOML setting exists",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						FeatureFlags: tc.runnerFeatureFlags,
+					},
+				},
+				JobResponse: JobResponse{
+					Variables: tc.jobVariables,
+				},
+			}
+
+			// GetAllVariables should now contain the resolved feature flag values
+			allVars := build.GetAllVariables()
+			actualValue := allVars.Value(testFF)
+
+			assert.Equal(t, tc.expectedFFValue, actualValue, tc.description)
+
+			// Verify IsFeatureFlagOn matches GetAllVariables
+			expectedBool := tc.expectedFFValue == "true"
+			assert.Equal(t, expectedBool, build.IsFeatureFlagOn(testFF),
+				"IsFeatureFlagOn should match the value in GetAllVariables")
+
+			// Explicitly verify that TOML settings take precedence in both methods
+			if tc.runnerFeatureFlags != nil && tc.jobVariables != nil {
+				assert.Equal(t, tc.runnerFeatureFlags[testFF], build.IsFeatureFlagOn(testFF),
+					"TOML settings should take precedence over job variables")
+			}
+		})
+	}
 }
 
 func TestStartBuild(t *testing.T) {
