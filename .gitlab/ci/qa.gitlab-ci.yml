@@ -2,6 +2,7 @@ check version definition:
   stage: qa
   extends:
     - .rules:merge_request_pipelines
+    - .kubernetes runner
   needs: []
   script:
     - grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' VERSION
@@ -11,6 +12,7 @@ check modules:
   extends:
     - .rules:merge_request_pipelines:no_docs
     - .no_cache_and_dependencies
+    - .kubernetes runner
   needs:
     - "prepare done"
   script:
@@ -21,6 +23,8 @@ check generated files:
   extends:
     - .rules:merge_request_pipelines:no_docs
     - .no_cache_and_dependencies
+    - .kubernetes runner
+    - .check generated files kubernetes limits
   needs:
     - "prepare done"
   script:
@@ -31,6 +35,7 @@ check magefiles:
   extends:
     - .rules:merge_request_pipelines:no_docs
     - .no_cache_and_dependencies
+    - .kubernetes runner
   needs:
     - "prepare done"
   script:
@@ -41,6 +46,7 @@ check test directives:
   extends:
     - .rules:merge_request_pipelines:no_docs
     - .no_cache_and_dependencies
+    - .kubernetes runner
   needs:
     - "prepare done"
   script:
@@ -84,6 +90,7 @@ code_quality:
 mage tests:
   extends:
     - .rules:merge_request_pipelines:no_docs
+    - .kubernetes runner
   stage: qa
   needs:
     - "prepare done"
@@ -97,6 +104,7 @@ docs:lint markdown:
   extends:
     - .rules:merge_request_pipelines
     - .no_cache_and_dependencies
+    - .kubernetes runner
   needs: []
   script:
     # Makefiles in this project expect Go to be available
@@ -109,6 +117,8 @@ docs:check feature flags:
   extends:
     - .rules:merge_request_pipelines
     - .no_cache_and_dependencies
+    - .kubernetes runner
+  needs: []
   script:
     - cp docs/configuration/feature-flags.md docs/configuration/feature-flags.md.orig
     - make update_feature_flags_docs
@@ -125,6 +135,8 @@ docs:check development docs Go version:
   extends:
     - .rules:merge_request_pipelines
     - .no_cache_and_dependencies
+    - .kubernetes runner
+  needs: []
   stage: qa
   script:
     - export GO_VERSION=$(cat .gitlab/ci/_common.gitlab-ci.yml | yq '.variables.GO_VERSION')
@@ -136,6 +148,8 @@ docs:check Kubernetes API docs:
   extends:
     - .rules:merge_request_pipelines
     - .no_cache_and_dependencies
+    - .kubernetes runner
+  needs: []
   stage: qa
   script:
     - cp docs/executors/kubernetes/_index.md docs/executors/kubernetes/_index.md.orig
@@ -174,6 +188,8 @@ docs:check Hugo build:
   extends:
     - .rules:merge_request_pipelines
     - .no_cache_and_dependencies
+    - .kubernetes runner
+  needs: []
   stage: qa
   before_script:
     - git clone --depth 1 https://gitlab.com/gitlab-org/technical-writing/docs-gitlab-com.git
@@ -195,6 +211,7 @@ yaml:lint:
   needs: []
   extends:
     - .rules:merge_request_pipelines
+    - .kubernetes runner
   script:
     - npm install -g prettier@3.0.3
     - echo "Checking YAML formatting in .gitlab/ci/ directory..."
