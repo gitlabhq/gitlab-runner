@@ -1,3 +1,13 @@
+## v17.11.4 (2025-08-22)
+
+### Bug fixes
+
+- Backport PrintPodWarningEvents config [!5788](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5788)
+
+### Maintenance
+
+- Promote FF_RETRIEVE_POD_WARNING_EVENTS to a config print_pod_warning_events [!5377](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5377)
+
 ## v17.11.3 (2025-06-11)
 
 ### Bug fixes
