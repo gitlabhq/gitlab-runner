@@ -2,126 +2,276 @@
 
 set -euo pipefail
 
-# Global configuration
-KEY_RING="gitlab-ci-runners-signing"
-KEY_NAME="gitlab-runner-ssl-com"
-KEY_LOCATION="us-east1"
-CERT_PATH="$GITLAB_SIGNING_CERT_PATH"
-P11_ENGINE="/usr/lib64/engines-1.1/pkcs11.so"
-# You'll need to download this from: https://github.com/GoogleCloudPlatform/kms-integrations/releases
-GOOGLE_CLOUD_PKCS11_PROVIDER="${GOOGLE_CLOUD_PKCS11_PROVIDER:-/usr/local/lib/libkmsp11.so}"
+# Platform detection
+PLATFORM="${1:-}"
+if [ -z "$PLATFORM" ]; then
+        echo "Usage: $0 <platform> [binary_files...]"
+        echo "Platforms: windows, macos"
+        exit 1
+fi
 
 # Global temp directory for artifacts
 TEMP_DIR=$(mktemp -d)
 # Ensure temp directory gets cleaned up when script exits
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
+# Set platform-specific and common configuration
+set_platform_config() {
+        # Common configuration
+        KEY_LOCATION="us-east1"
+        CERT_PATH="$GITLAB_SIGNING_CERT_PATH"
+        P11_ENGINE="/usr/lib64/engines-1.1/pkcs11.so"
+        GOOGLE_CLOUD_PKCS11_PROVIDER="${GOOGLE_CLOUD_PKCS11_PROVIDER:-/usr/local/lib/libkmsp11.so}"
+
+        # Platform-specific configuration
+        case "$PLATFORM" in
+        "windows")
+                KEY_RING="gitlab-ci-runners-signing"
+                KEY_NAME="gitlab-runner-ssl-com"
+                TIMESTAMP_URL="http://ts.ssl.com"
+                BINARY_PATTERN=("out/binaries/gitlab-runner-windows*.exe" "out/binaries/gitlab-runner-helper/gitlab-runner-helper.windows*.exe")
+                ;;
+        "macos")
+                KEY_RING="gitlab-rsa-ci-runners-signing"
+                KEY_NAME="gitlab-runner-rsa-macos-apple-com"
+                BINARY_PATTERN=("out/binaries/gitlab-runner-darwin-*")
+                ;;
+        *)
+                echo "Error: Unsupported platform '$PLATFORM'"
+                echo "Supported platforms: windows, macos"
+                return 1
+                ;;
+        esac
+}
+
+# Function to check platform-specific environment
+check_environment() {
+        case "$PLATFORM" in
+        "windows")
+                if ! command -v osslsigncode &>/dev/null; then
+                        echo "Error: osslsigncode not found. Please install it first."
+                        return 1
+                fi
+                ;;
+        "macos")
+                if ! command -v rcodesign &>/dev/null; then
+                        echo "Error: rcodesign not found. Please install it first."
+                        echo "See: https://github.com/indygreg/apple-platform-rs"
+                        return 1
+                fi
+
+                if [ ! -f "${APPSTORE_CONNECT_API_KEY_FILE:-}" ]; then
+                        echo "Error: APPSTORE_CONNECT_API_KEY_FILE file not found at: ${APPSTORE_CONNECT_API_KEY_FILE:-}"
+                        echo "This file should contain the App Store Connect API key in JSON format."
+                        echo "See: https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api"
+                        return 1
+                fi
+                ;;
+        esac
+
+        if [ ! -f "${GITLAB_SIGNING_CERT_PATH}" ]; then
+                echo "Error: GITLAB_SIGNING_CERT_PATH file not found at: ${GITLAB_SIGNING_CERT_PATH:-}"
+                return 1
+        fi
+}
+
 # Function to set up the PKCS#11 environment
 setup_signing_environment() {
-  # Check for required files
-  if [ ! -f "$P11_ENGINE" ]; then
-      echo "$P11_ENGINE not found."
-      echo "On RedHat systems: dnf install openssl-pkcs11"
-      echo "On Debian/Ubuntu systems: apt install libengine-pkcs11-openssl"
-    return 1
-  fi
+        # Check for required files
+        if [ ! -f "$P11_ENGINE" ]; then
+                echo "$P11_ENGINE not found."
+                echo "On RedHat systems: dnf install openssl-pkcs11"
+                echo "On Debian/Ubuntu systems: apt install libengine-pkcs11-openssl"
+                return 1
+        fi
 
-  if [ ! -f "$GOOGLE_CLOUD_PKCS11_PROVIDER" ]; then
-    echo "Error: Google Cloud PKCS#11 provider not found at $GOOGLE_CLOUD_PKCS11_PROVIDER"
-    echo "Please install it according to: https://cloud.google.com/kms/docs/reference/pkcs11-openssl"
-    echo "Or set GOOGLE_CLOUD_PKCS11_PROVIDER environment variable to its location"
-    return 1
-  fi
+        if [ ! -f "$GOOGLE_CLOUD_PKCS11_PROVIDER" ]; then
+                echo "Error: Google Cloud PKCS#11 provider not found at $GOOGLE_CLOUD_PKCS11_PROVIDER"
+                echo "Please install it according to: https://cloud.google.com/kms/docs/reference/pkcs11-openssl"
+                echo "Or set GOOGLE_CLOUD_PKCS11_PROVIDER environment variable to its location"
+                return 1
+        fi
 
-  if [ ! -f "$CERT_PATH" ]; then
-    echo "Error: Certificate file not found at $CERT_PATH"
-    echo "Please set the GITLAB_SIGNING_CERT_PATH environment variable to your certificate location"
-    return 1
-  fi
+        if [ ! -f "$CERT_PATH" ]; then
+                echo "Error: Certificate file not found at $CERT_PATH"
+                echo "Please set the GITLAB_SIGNING_CERT_PATH environment variable to your certificate location"
+                return 1
+        fi
 
-  # Create a YAML configuration file for the Google Cloud KMS PKCS#11 provider
-  local kms_p11_config_file="$TEMP_DIR/kms_pkcs11.yaml"
-  cat >"$kms_p11_config_file" <<EOF
+        # Create a YAML configuration file for the Google Cloud KMS PKCS#11 provider
+        local kms_p11_config_file="$TEMP_DIR/kms_pkcs11.yaml"
+        cat >"$kms_p11_config_file" <<EOF
 ---
 tokens:
   - key_ring: "projects/$GCLOUD_PROJECT/locations/$KEY_LOCATION/keyRings/$KEY_RING"
 EOF
-  export KMS_PKCS11_CONFIG="$kms_p11_config_file"
-  echo "Signing environment setup completed."
+        export KMS_PKCS11_CONFIG="$kms_p11_config_file"
+        echo "Signing environment setup completed."
+}
+
+# Platform-specific signing function
+sign_binary_platform() {
+        local input_file="$1"
+        local output_file="$2"
+
+        case "$PLATFORM" in
+        "windows")
+                echo "Signing Windows binary with Google Cloud HSM via PKCS#11..."
+                local key_uri="pkcs11:object=$KEY_NAME"
+
+                osslsigncode sign \
+                        -h sha256 \
+                        -pkcs11engine "$P11_ENGINE" \
+                        -pkcs11module "$GOOGLE_CLOUD_PKCS11_PROVIDER" \
+                        -key "$key_uri" \
+                        -certs "$CERT_PATH" \
+                        -in "$input_file" \
+                        -out "$output_file" \
+                        -ts "$TIMESTAMP_URL"
+                ;;
+        "macos")
+                echo "Signing macOS binary with Google Cloud HSM via PKCS#11..."
+
+                rcodesign sign \
+                        --pkcs11-library "$GOOGLE_CLOUD_PKCS11_PROVIDER" \
+                        --pkcs11-certificate-file "$CERT_PATH" \
+                        --pkcs11-key-label "$KEY_NAME" \
+                        --code-signature-flags runtime \
+                        "$input_file" \
+                        "$output_file"
+                ;;
+        esac
 }
 
 # Function to sign a binary file using Google Cloud HSM
 sign_binary() {
-  local input_file="$1"
-  local output_file="${2:-$input_file}"
+        local input_file="$1"
+        local output_file="${2:-$input_file}"
 
-  # Validate input
-  if [ -z "$input_file" ]; then
-    echo "Error: Input filename is required"
-    echo "Usage: sign_binary input_file [output_file]"
-    return 1
-  fi
+        # Validate input
+        if [ -z "$input_file" ]; then
+                echo "Error: Input filename is required"
+                echo "Usage: sign_binary input_file [output_file]"
+                return 1
+        fi
 
-  if [ ! -f "$input_file" ]; then
-    echo "Error: Input file '$input_file' not found"
-    return 1
-  fi
+        if [ ! -f "$input_file" ]; then
+                echo "Error: Input file '$input_file' not found"
+                return 1
+        fi
 
-  echo "Signing file: $input_file"
+        echo "Signing file: $input_file"
 
-  # Check if we're overwriting the input file
-  if [ "$input_file" = "$output_file" ]; then
-    echo "Signed binary will replace the input file"
-    # Create temporary output file path
-    local final_output="$output_file"
-    output_file="$TEMP_DIR/$(basename "$input_file").signed"
-  else
-    echo "Output will be saved to: $output_file"
-  fi
+        # Check if we're overwriting the input file
+        if [ "$input_file" = "$output_file" ]; then
+                echo "Signed binary will replace the input file"
+                # Create temporary output file path
+                local final_output="$output_file"
+                output_file="$TEMP_DIR/$(basename "$input_file").signed"
+        else
+                echo "Output will be saved to: $output_file"
+        fi
 
-  echo "Signing binary with Google Cloud HSM via PKCS#11..."
+        # Create output directory if it doesn't exist
+        mkdir -p "$(dirname "$output_file")"
 
-  # Create output directory if it doesn't exist
-  mkdir -p "$(dirname "$output_file")"
+        # Platform-specific signing
+        sign_binary_platform "$input_file" "$output_file"
 
-  local key_uri="pkcs11:object=$KEY_NAME"
+        # If we're replacing the input file, move the temporary output file to the final destination
+        # and back up the unsigned binary.
+        if [ -n "${final_output:-}" ]; then
+                echo "Renaming $input_file to $input_file.unsigned"
+                mv "$input_file" "$input_file.unsigned"
+                mv "$output_file" "$final_output"
+                output_file="$final_output"
+        fi
 
-  # Sign the binary using osslsigncode with PKCS#11
-  osslsigncode sign \
-    -h sha256 \
-    -pkcs11engine "$P11_ENGINE" \
-    -pkcs11module "$GOOGLE_CLOUD_PKCS11_PROVIDER" \
-    -key "$key_uri" \
-    -certs "$CERT_PATH" \
-    -in "$input_file" \
-    -out "$output_file" \
-    -ts "http://ts.ssl.com"
-
-  # If we're replacing the input file, move the temporary output file to the final destination
-  # and back up the unsigned binary.
-  if [ -n "${final_output:-}" ]; then
-    echo "Renaming $input_file to $input_file.unsigned"
-    mv "$input_file" "$input_file.unsigned"
-    mv "$output_file" "$final_output"
-    output_file="$final_output"
-  fi
-
-  echo "Signing completed successfully!"
-  echo "Signed file: $output_file"
+        echo "Signing completed successfully!"
+        echo "Signed file: $output_file"
 }
 
-# Sign multiple binaries
-sign_binaries() {
-  # Setup the environment once
-  setup_signing_environment || return 1
+# macOS-specific notarization function
+notarize_binary() {
+        local binary_path="$1"
+        local binary_name
 
-  # Sign each binary in the arguments
-  local binary
-  for binary in "$@"; do
-    sign_binary "$binary"
-  done
+        binary_name="$(basename "$binary_path")"
 
-  echo "All binaries signed successfully!"
+        # Create ZIP for notarization
+        echo "Creating ZIP for notarization..."
+        local zip_file="$TEMP_DIR/${binary_name}.zip"
+        # -j to remove the `out/binaries` prefix
+        # -X to avoid extended attributes that might cause notarization to fail
+        zip -jX "$zip_file" "${binary_path}"
+
+        # Submit for notarization
+        echo "Submitting for notarization..."
+        # We could use --wait to wait up to 10 minutes to notarize, but we would have
+        # to check the output and manage the error codes carefully as done in
+        # https://gitlab.com/gitlab-org/rust/knowledge-graph/-/blob/c79376e1bdf1bbfe4ff360abe59ec96f04e98362/scripts/macos-sign-notarize.sh#L125-177.
+        #
+        # For now, we're submitting for notarization but not waiting for completion.
+        # Note: If submission fails, the script will exit due to set -e.
+        rcodesign notary-submit --api-key-path "$APPSTORE_CONNECT_API_KEY_FILE" "$zip_file"
 }
 
-sign_binaries out/binaries/gitlab-runner-windows*.exe out/binaries/gitlab-runner-helper/gitlab-runner-helper.windows*.exe
+# Set platform configuration
+set_platform_config || exit 1
+
+# Extract binaries to process (skip the platform argument)
+shift
+
+# Determine binaries to process
+if [ $# -eq 0 ]; then
+        # No specific binaries provided, use defaults
+        echo "No specific binaries provided, using default patterns for ${PLATFORM}..."
+        found_files=()
+        for pattern in "${BINARY_PATTERN[@]}"; do
+                if ls $pattern 1>/dev/null 2>&1; then
+                        for file in $pattern; do
+                                found_files+=("$file")
+                        done
+                fi
+        done
+
+        if [ ${#found_files[@]} -eq 0 ]; then
+                echo "Error: No ${PLATFORM} binary files found using patterns: ${BINARY_PATTERN[*]}"
+                exit 1
+        fi
+
+        set -- "${found_files[@]}"
+else
+        # Specific binaries provided, validate they exist
+        echo "Processing specified binary files..."
+        for file in "$@"; do
+                if [ ! -f "$file" ]; then
+                        echo "Error: Specified file '$file' not found"
+                        exit 1
+                fi
+        done
+fi
+
+echo "Found ${#} binary file(s) to sign: $*"
+
+# Check platform-specific environment
+check_environment || exit 1
+
+# Setup the environment once
+setup_signing_environment || exit 1
+
+# Sign each binary
+for binary in "$@"; do
+        sign_binary "$binary"
+
+        # Notarize for macOS
+        if [ "$PLATFORM" = "macos" ]; then
+                notarize_binary "$binary"
+        fi
+done
+
+if [ "$PLATFORM" = "macos" ]; then
+        echo "All binaries signed and notarized successfully!"
+else
+        echo "All binaries signed successfully!"
+fi
