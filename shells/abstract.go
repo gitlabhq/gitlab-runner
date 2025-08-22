@@ -95,14 +95,9 @@ func newCacheConfig(build *common.Build, userKey string, keyChecks ...func(strin
 		return nil, "", fmt.Errorf("unset cache directory")
 	}
 
-	// Deduce cache key
-	var key string
+	rawKey := path.Join("/", build.JobInfo.Name, build.GitInfo.Ref)[1:]
 	if userKey != "" {
-		key = build.GetAllVariables().ExpandValue(userKey)
-	} else {
-		// we root the path, to not have path traversal issues
-		path := path.Join("/", build.JobInfo.Name, build.GitInfo.Ref)
-		key = path[1:]
+		rawKey = build.GetAllVariables().ExpandValue(userKey)
 	}
 
 	// hashers per mode: nop in unhashed mode, sha256sum in hashed mode
@@ -249,10 +244,15 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	// the "default" cache key
 	cacheConfigs := []cacheConfig{initialCacheConfig}
 
-	buildVars := info.Build.GetAllVariables()
-	addCacheKey := func(key string, err error) {
-		if key != "" {
-			allowedCacheKeys = append(allowedCacheKeys, key)
+	build := info.Build
+	buildVars := build.GetAllVariables()
+	addCacheConfig := func(key string, keyChecks ...func(s string) bool) {
+		if key == "" {
+			return
+		}
+		cc, warning, err := newCacheConfig(build, key, keyChecks...)
+		if warning != "" {
+			w.Warningf(warning)
 		}
 		if err != nil {
 			w.Noticef("Skipping cache extraction due to %v", err)
@@ -263,26 +263,19 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 		}
 	}
 
-	// the "default" cache key
-	addCacheKey(sanitizeCacheKey(cacheKey))
-
 	// the fallback cache keys from the cache config
 	for _, cacheKey := range cacheOptions.FallbackKeys {
-		addCacheKey(sanitizeCacheKey(buildVars.ExpandValue(cacheKey)))
+		addCacheConfig(buildVars.ExpandValue(cacheKey))
 	}
 
 	// the fallback key from CACHE_FALLBACK_KEY
-	// we sanitize it and check if it's not pointing to a protected cache.
-	fallbackCacheKey, err := sanitizeCacheKey(buildVars.Value("CACHE_FALLBACK_KEY"))
-	blockedSuffix := "-protected"
-	if !strings.HasSuffix(fallbackCacheKey, blockedSuffix) {
-		addCacheKey(fallbackCacheKey, err)
-	} else {
-		w.Warningf("CACHE_FALLBACK_KEY %q not allowed to end in %q", fallbackCacheKey, blockedSuffix)
-	}
-
-	if len(allowedCacheKeys) < 1 {
-		return
+	blockProtectedFallback := func(key string) bool {
+		const blockedSuffix = "-protected"
+		allowed := !strings.HasSuffix(key, blockedSuffix)
+		if !allowed {
+			w.Warningf("CACHE_FALLBACK_KEY %q not allowed to end in %q", key, blockedSuffix)
+		}
+		return allowed
 	}
 	addCacheConfig(buildVars.Value("CACHE_FALLBACK_KEY"), blockProtectedFallback)
 
@@ -1306,15 +1299,6 @@ func (b *AbstractShell) archiveCache(
 		// Skip archiving if no cache is defined
 		if err != nil {
 			w.Noticef("Skipping cache archiving due to %v", err)
-			continue
-		}
-		// we also want to sanitize the cache key on upload, so that we actually use the same keys on up and download, ie.
-		// it round-trips
-		cacheKey, err = sanitizeCacheKey(cacheKey)
-		if err != nil {
-			w.Warningf(err.Error())
-		}
-		if cacheKey == "" {
 			continue
 		}
 
