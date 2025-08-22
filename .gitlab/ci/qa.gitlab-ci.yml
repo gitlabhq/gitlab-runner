@@ -60,13 +60,13 @@ code_quality:
     # Use GOCACHE instead of GOLANGCI_LINT_CACHE
     # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
     - .go-cache
-  image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:1.64.8-go${GO_VERSION}
+  image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:2.3.1-go${GO_VERSION}
   needs: []
   allow_failure: true
   variables:
     REPORT_FILE: gl-code-quality-report.json
-    LINT_FLAGS: "--color never --timeout 15m"
-    OUT_FORMAT: code-climate
+    LINT_FLAGS: "--color=never --timeout=15m"
+    OUT_FORMAT: "--output.code-climate.path=gl-code-quality-report.json"
     GOLANGLINT_VERSION: "" # Don't add version suffix to Makefile's GOLANGLINT (use plain golangci-lint from image)
   before_script:
     - !reference [.go-cache, before_script]
@@ -75,9 +75,7 @@ code_quality:
     # Copy the Docker image's golangci-lint to the location expected by `make lint` so that it is not built
     - cp $(which golangci-lint) .tmp/bin/golangci-lint
   script:
-    # Write the code coverage report to gl-code-quality-report.json
-    # and print linting issues to stdout in the format: path/to/file:line description
-    - make --silent lint | tee ${REPORT_FILE}
+    - make --silent lint
   timeout: 20 minutes
   artifacts:
     reports:

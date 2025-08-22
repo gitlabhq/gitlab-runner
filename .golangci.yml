@@ -1,121 +1,135 @@
+version: "2"
 run:
   concurrency: 8
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-  errorlint:
-    asserts: false
-    comparison: false
-  gocognit:
-    min-complexity: 15
-  gocritic:
-    enabled-checks:
-    - appendCombine
-    - boolExprSimplify
-    - commentedOutCode
-    - dupImport
-    - emptyFallthrough
-    - emptyStringTest
-    - equalFold
-    - evalOrder
-    - hexLiteral
-    - indexAlloc
-    - initClause
-    - methodExprCall
-    - nestingReduce
-    - nilValReturn
-    - ptrToRefParam
-    - rangeExprCopy
-    - regexpPattern
-    - sloppyReassign
-    - stringXbytes
-    - truncateCmp
-    - typeAssertChain
-    - typeUnparen
-    - unnecessaryBlock
-    - weakCond
-    - yodaStyleExpr
-  gocyclo:
-    min-complexity: 10
-  revive:
-    rules:
-      - name: unused-parameter
-        disabled: true
-
 linters:
-  disable-all: true
+  default: none
   enable:
-  - bodyclose
-  - dogsled
-  - errcheck
-  - errorlint
-  - gocognit
-  - goconst
-  - gocritic
-  - goimports
-  - goprintffuncname
-  - gosimple
-  - govet
-  - ineffassign
-  - misspell
-  - nakedret
-  - nestif
-  - revive
-  - staticcheck
-  - typecheck
-  - unconvert
-  - unparam
-  - whitespace
-  fast: false
-
-issues:
-  exclude-files:
-  - mock_*.go
-  # Excluding configuration per-path, per-linter, per-text and per-source
-  exclude-rules:
-  - path: helpers/shell_escape.go
-    linters:
-    - gocyclo
-  - path: executors/kubernetes/kubernetes_test.go
-    linters:
-    - gocyclo
-  - path: executors/kubernetes/util_test.go
-    linters:
-    - gocyclo
-  - path: executors/kubernetes/exec_test.go
-    linters:
-    - gocyclo
-  - path: executors/parallels/
-    linters:
-    - gocyclo
-  - path: executors/virtualbox/
-    linters:
-    - gocyclo
-  - linters:
-    - revive
-    text: "don't use ALL_CAPS in Go names; use CamelCase"
-  - linters:
-    - revive
-    text: "don't use an underscore in package name"
-  - path: ".*_test.go"
-    linters:
     - bodyclose
+    - dogsled
+    - errcheck
+    - errorlint
     - gocognit
     - goconst
-  - path: ".*_test.go"
-    text: "Error return value is not checked"
-    linters:
-    - errcheck
-  - path: ".*_test.go"
-    text: "regexpMust"
-    linters:
-    - errcheck
     - gocritic
-  - path: ".*_test.go"
-    text: "typeUnparen"
-    linters:
-    - gocritic
-  - path: executors/docker/docker_command_test.go # Ignore until https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25385 is solved
-    linters:
-    - unused
+    - goprintffuncname
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - nestif
+    - revive
+    - staticcheck
+    - unconvert
+    - unparam
+    - whitespace
+  settings:
+    errcheck:
+      check-type-assertions: true
+    errorlint:
+      asserts: false
+      comparison: false
+    gocognit:
+      min-complexity: 15
+    gocritic:
+      enabled-checks:
+        - appendCombine
+        - boolExprSimplify
+        - commentedOutCode
+        - dupImport
+        - emptyFallthrough
+        - emptyStringTest
+        - equalFold
+        - evalOrder
+        - hexLiteral
+        - indexAlloc
+        - initClause
+        - methodExprCall
+        - nestingReduce
+        - nilValReturn
+        - ptrToRefParam
+        - rangeExprCopy
+        - regexpPattern
+        - sloppyReassign
+        - stringXbytes
+        - truncateCmp
+        - typeAssertChain
+        - typeUnparen
+        - unnecessaryBlock
+        - weakCond
+        - yodaStyleExpr
+    gocyclo:
+      min-complexity: 10
+    revive:
+      rules:
+        - name: unused-parameter
+          disabled: true
+    staticcheck:
+      checks: ["all", "-ST1000", "-ST1003", "-ST1005", "-ST1012", "-ST1016", "-ST1020", "-ST1021", "-ST1022", "-QF1001", "-QF1006", "-QF1008", "-QF1011", "-QF1012", "-QF1003"]
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - gocyclo
+        path: helpers/shell_escape.go
+      - linters:
+          - gocyclo
+        path: executors/kubernetes/kubernetes_test.go
+      - linters:
+          - gocyclo
+        path: executors/kubernetes/util_test.go
+      - linters:
+          - gocyclo
+        path: executors/kubernetes/exec_test.go
+      - linters:
+          - gocyclo
+        path: executors/parallels/
+      - linters:
+          - gocyclo
+        path: executors/virtualbox/
+      - linters:
+          - revive
+        text: don't use ALL_CAPS in Go names; use CamelCase
+      - linters:
+          - revive
+        text: don't use an underscore in package name
+      - linters:
+          - bodyclose
+          - gocognit
+          - goconst
+        path: .*_test.go
+      - linters:
+          - errcheck
+        path: .*_test.go
+        text: Error return value is not checked
+      - linters:
+          - errcheck
+          - gocritic
+        path: .*_test.go
+        text: regexpMust
+      - linters:
+          - gocritic
+        path: .*_test.go
+        text: typeUnparen
+      - linters:
+          - unused
+        path: executors/docker/docker_command_test.go # Ignore until https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25385 is solved
+    paths:
+      - mock_*.go
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - mock_*.go
+      - third_party$
+      - builtin$
+      - examples$
