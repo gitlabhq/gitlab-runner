@@ -64,7 +64,7 @@ PROTOC_GEN_GO_GRPC_VERSION := v1.5.1
 SPLITIC = splitic
 MAGE = $(localBin)/mage
 
-GOLANGLINT_VERSION ?= v1.64.8
+GOLANGLINT_VERSION ?= v2.3.1
 GOLANGLINT ?= $(localBin)/golangci-lint$(GOLANGLINT_VERSION)
 GOLANGLINT_GOARGS ?= $(localBin)/goargs.so
 
@@ -133,14 +133,14 @@ deps: $(DEVELOPMENT_TOOLS)
 
 .PHONY: format
 format: $(GOLANGLINT)
-	@$(GOLANGLINT) run --fix ./... --out-format colored-line-number
+	@$(GOLANGLINT) run --fix --output.text.path=stdout --output.text.colors=true ./...
 
 .PHONY: lint
-lint: OUT_FORMAT ?= colored-line-number
+lint: OUT_FORMAT ?= --output.text.path=stdout --output.text.colors=true
 lint: LINT_FLAGS ?=
 lint: $(GOLANGLINT)
 	@$(MAKE) check_test_directives >/dev/stderr
-	@$(GOLANGLINT) run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
+	@$(GOLANGLINT) run $(OUT_FORMAT) $(LINT_FLAGS) ./...
 
 .PHONY: lint-docs
 lint-docs:
