@@ -637,8 +637,53 @@ All directories defined in `volumes =` are persistent between builds.
 
 The `volumes` directive supports the following types of storage:
 
-- For dynamic storage, use `<path>`. The `<path>` is persistent between subsequent runs of the same concurrent job for that project. The data is attached to a custom cache volume: `runner-<short-token>-project-<id>-concurrent-<concurrency-id>-cache-<md5-of-path>`.
-- For host-bound storage, use `<host-path>:<path>[:<mode>]`. The `<path>` is bound to `<host-path>` on the host system. The optional `<mode>` specifies that this storage is read-only or read-write (default).
+- For dynamic storage, use `<path>`. The `<path>` is persistent between
+  subsequent runs of the same concurrent job for that project. If you
+  don't set `runners.docker.cache_dir`, the data persists in Docker volumes.
+  Otherwise, it persists in the configured directory on the host (mounted into
+  the build container).
+
+  Volume names for volume-based persistent storage:
+
+  - For GitLab Runner before 18.4.0: `runner-<short-token>-project-<project-id>-concurrent-<concurrency-id>-cache-<md5-of-path>`
+  - For GitLab Runner 18.4.0 and later: `runner-<runner-id-hash>-cache-<md5-of-path><protection>`
+
+    Data that is no longer human readable in the volume name is moved to the volume's labels.
+
+  Host directories for host-based persistent storage:
+
+  - For GitLab Runner before 18.4.0: `<cache-dir>/runner-<short-token>-project-<project-id>-concurrent-<concurrency-id>/<md5-of-path>`
+  - For GitLab Runner 18.4.0 and later: `<cache-dir>/runner-<runner-id-hash>/<md5-of-path><protection>`
+
+  Description of the variable parts:
+
+  - `<short-token>`: The shortened version of the runner's token (first 8 letters)
+  - `<project-id>`: The ID of the GitLab project
+  - `<concurrency-id>`: The index of the runner (from the list of all runners running a build for the same project concurrently)
+  - `<md5-of-path>`: The MD5 sum of the path within the container
+  - `<runner-id-hash>`: The hash for the following data:
+    - Runner's token
+    - Runner's system ID
+    - `<project-id>`
+    - `<concurrency-id>`
+  - `<protection>`: The value is empty for builds on unprotected branches, and `-protected` for protected branch builds
+  - `<cache-dir>`: The configuration in `runners.docker.cache_dir`
+
+- For host-bound storage, use `<host-path>:<path>[:<mode>]`. GitLab Runner binds the `<path>`
+  to `<host-path>` on the host system. The optional `<mode>` specifies whether this storage
+  is read-only or read-write (default).
+
+{{< alert type="warning" >}}
+
+With GitLab Runner 18.4.0, the naming of sources for dynamic storage (see above) changed
+for both Docker volume-based and host directory-based persistent storage. When you upgrade
+to 18.4.0, GitLab Runner ignores the cached data from previous runner versions and creates
+new dynamic storage on-demand, either through new Docker volumes or new host directories.
+
+Host-bound storage (with a `<host-path>` configuration), in contrast to dynamic
+storage, is not affected.
+
+{{< /alert >}}
 
 ### Persistent storage for builds
 
