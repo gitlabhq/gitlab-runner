@@ -126,7 +126,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
 				reader := newMockReader(t)
 				reader.On("Read", mock.Anything).
-					Return(0, nil)
+					Return(0, nil).Maybe()
 
 				mockWorkingClient(t, clientMock, reader, expectedCtx)
 			},
