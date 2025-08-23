@@ -1,6 +1,6 @@
 module gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api
 
-go 1.24.4
+go 1.24.6
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
