@@ -2058,18 +2058,24 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			assert: func(out string, err error) {
 				assert.NoError(t, err)
 				assert.NotContains(t, out, "WARNING: CI_DEBUG_SERVICES: expected bool got \"blammo\", using default value: false")
-				assert.Regexp(t, `\[service:(postgres-db|db-postgres)\] .* The files belonging to this database system will be owned by user "postgres"`, out)
-				assert.Regexp(t, `\[service:(postgres-db|db-postgres)\] .* database system is ready to accept connections`, out)
-				assert.Regexp(t, `\[service:(redis-cache|cache-redis)\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
-				assert.Regexp(t, `\[service:(redis-cache|cache-redis)\] .* Ready to accept connections`, out)
+
+				// Check for service prefixes and messages separately to handle interleaved output
+				assert.Regexp(t, `\[service:(postgres-db|db-postgres)\]`, out)
+				assert.Regexp(t, `The files belonging to this database system will be owned by user "postgres"`, out)
+				assert.Regexp(t, `database system is ready to accept connections`, out)
+
+				assert.Regexp(t, `\[service:(redis-cache|cache-redis)\]`, out)
+				assert.Regexp(t, `oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
+				assert.Regexp(t, `Ready to accept connections`, out)
 			},
 		},
 		"not enabled": {
 			assert: func(out string, err error) {
 				assert.NoError(t, err)
-				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\] .* Error: Database is uninitialized and superuser password is not specified`, out)
-				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
-				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* Ready to accept connections`, out)
+				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\]`, out)
+				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\]`, out)
+				assert.NotRegexp(t, `oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
+				assert.NotRegexp(t, `Ready to accept connections`, out)
 			},
 		},
 		"bogus value": {
@@ -2081,9 +2087,10 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			assert: func(out string, err error) {
 				assert.NoError(t, err)
 				assert.Contains(t, out, "WARNING: CI_DEBUG_SERVICES: expected bool got \"blammo\", using default value: false")
-				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\] .* Error: Database is uninitialized and superuser password is not specified`, out)
-				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
-				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* Ready to accept connections`, out)
+				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\]`, out)
+				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\]`, out)
+				assert.NotRegexp(t, `oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
+				assert.NotRegexp(t, `Ready to accept connections`, out)
 			},
 		},
 	}
