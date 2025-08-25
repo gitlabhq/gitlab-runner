@@ -1,17 +1,17 @@
 package docker
 
 import (
-	"time"
+	"context"
 )
 
 type Machine interface {
-	Create(driver, name string, opts ...string) error
-	Provision(name string) error
-	Remove(name string) error
-	Stop(name string, timeout time.Duration) error
+	Create(ctx context.Context, driver, name string, opts ...string) error
+	Provision(ctx context.Context, name string) error
+	Remove(ctx context.Context, name string) error
+	Stop(ctx context.Context, name string) error
 	List() (machines []string, err error)
-	Exist(name string) bool
+	Exist(ctx context.Context, name string) bool
 
-	CanConnect(name string, skipCache bool) bool
-	Credentials(name string) (Credentials, error)
+	CanConnect(ctx context.Context, name string, skipCache bool) bool
+	Credentials(ctx context.Context, name string) (Credentials, error)
 }

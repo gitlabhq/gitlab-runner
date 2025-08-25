@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -122,31 +123,13 @@ func TestNewDockerMachineCommand(t *testing.T) {
 			err := os.Setenv("MACHINE_BUGSNAG_API_TOKEN", tc.tokenEnvValue)
 			require.NoError(t, err)
 
-			cmd := newDockerMachineCommand(dockerMachineCommandArgs...)
+			ctx, ctxCancelFn := context.WithTimeout(context.Background(), 1*time.Hour)
+			defer ctxCancelFn()
+
+			cmd := newDockerMachineCommand(ctx, dockerMachineCommandArgs...)
+
 			assert.Equal(t, tc.expectedArgs(), cmd.Args)
 			assert.NotEmpty(t, cmd.Env)
-		})
-	}
-}
-
-func TestNewDockerMachineCommandCtx(t *testing.T) {
-	for tn, tc := range dockerMachineCommandTests {
-		t.Run(tn, func(t *testing.T) {
-			defer mockDockerMachineExecutable(t)()
-
-			err := os.Setenv("MACHINE_BUGSNAG_API_TOKEN", tc.tokenEnvValue)
-			require.NoError(t, err)
-
-			ctx, cancelFn := context.WithCancel(context.Background())
-
-			cmd := newDockerMachineCommandCtx(ctx, dockerMachineCommandArgs...)
-			assert.Equal(t, tc.expectedArgs(), cmd.Args)
-			assert.NotEmpty(t, cmd.Env)
-
-			cancelFn()
-
-			err = cmd.Start()
-			assert.Equal(t, context.Canceled, err)
 		})
 	}
 }

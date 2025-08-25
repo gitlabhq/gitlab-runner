@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -91,9 +92,9 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 
 		machine := docker.NewMockMachine(t)
 
-		machine.On("CanConnect", machineName, true).
+		machine.On("CanConnect", mock.Anything, machineName, true).
 			Return(true).Once()
-		machine.On("Credentials", machineName).
+		machine.On("Credentials", mock.Anything, machineName).
 			Return(machineCredentials, nil).Once()
 
 		executorProvider := common.NewMockExecutorProvider(t)

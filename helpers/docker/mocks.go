@@ -7,7 +7,6 @@ package docker
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -1992,16 +1991,16 @@ func (_m *MockMachine) EXPECT() *MockMachine_Expecter {
 }
 
 // CanConnect provides a mock function for the type MockMachine
-func (_mock *MockMachine) CanConnect(name string, skipCache bool) bool {
-	ret := _mock.Called(name, skipCache)
+func (_mock *MockMachine) CanConnect(ctx context.Context, name string, skipCache bool) bool {
+	ret := _mock.Called(ctx, name, skipCache)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CanConnect")
 	}
 
 	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(string, bool) bool); ok {
-		r0 = returnFunc(name, skipCache)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, bool) bool); ok {
+		r0 = returnFunc(ctx, name, skipCache)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
@@ -2014,25 +2013,31 @@ type MockMachine_CanConnect_Call struct {
 }
 
 // CanConnect is a helper method to define mock.On call
+//   - ctx context.Context
 //   - name string
 //   - skipCache bool
-func (_e *MockMachine_Expecter) CanConnect(name interface{}, skipCache interface{}) *MockMachine_CanConnect_Call {
-	return &MockMachine_CanConnect_Call{Call: _e.mock.On("CanConnect", name, skipCache)}
+func (_e *MockMachine_Expecter) CanConnect(ctx interface{}, name interface{}, skipCache interface{}) *MockMachine_CanConnect_Call {
+	return &MockMachine_CanConnect_Call{Call: _e.mock.On("CanConnect", ctx, name, skipCache)}
 }
 
-func (_c *MockMachine_CanConnect_Call) Run(run func(name string, skipCache bool)) *MockMachine_CanConnect_Call {
+func (_c *MockMachine_CanConnect_Call) Run(run func(ctx context.Context, name string, skipCache bool)) *MockMachine_CanConnect_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 bool
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(bool)
+			arg1 = args[1].(string)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -2043,20 +2048,20 @@ func (_c *MockMachine_CanConnect_Call) Return(b bool) *MockMachine_CanConnect_Ca
 	return _c
 }
 
-func (_c *MockMachine_CanConnect_Call) RunAndReturn(run func(name string, skipCache bool) bool) *MockMachine_CanConnect_Call {
+func (_c *MockMachine_CanConnect_Call) RunAndReturn(run func(ctx context.Context, name string, skipCache bool) bool) *MockMachine_CanConnect_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type MockMachine
-func (_mock *MockMachine) Create(driver string, name string, opts ...string) error {
+func (_mock *MockMachine) Create(ctx context.Context, driver string, name string, opts ...string) error {
 	// string
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
 	}
 	var _ca []interface{}
-	_ca = append(_ca, driver, name)
+	_ca = append(_ca, ctx, driver, name)
 	_ca = append(_ca, _va...)
 	ret := _mock.Called(_ca...)
 
@@ -2065,8 +2070,8 @@ func (_mock *MockMachine) Create(driver string, name string, opts ...string) err
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, ...string) error); ok {
-		r0 = returnFunc(driver, name, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...string) error); ok {
+		r0 = returnFunc(ctx, driver, name, opts...)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -2079,36 +2084,42 @@ type MockMachine_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - driver string
 //   - name string
 //   - opts ...string
-func (_e *MockMachine_Expecter) Create(driver interface{}, name interface{}, opts ...interface{}) *MockMachine_Create_Call {
+func (_e *MockMachine_Expecter) Create(ctx interface{}, driver interface{}, name interface{}, opts ...interface{}) *MockMachine_Create_Call {
 	return &MockMachine_Create_Call{Call: _e.mock.On("Create",
-		append([]interface{}{driver, name}, opts...)...)}
+		append([]interface{}{ctx, driver, name}, opts...)...)}
 }
 
-func (_c *MockMachine_Create_Call) Run(run func(driver string, name string, opts ...string)) *MockMachine_Create_Call {
+func (_c *MockMachine_Create_Call) Run(run func(ctx context.Context, driver string, name string, opts ...string)) *MockMachine_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
 		var arg1 string
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 []string
-		variadicArgs := make([]string, len(args)-2)
-		for i, a := range args[2:] {
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []string
+		variadicArgs := make([]string, len(args)-3)
+		for i, a := range args[3:] {
 			if a != nil {
 				variadicArgs[i] = a.(string)
 			}
 		}
-		arg2 = variadicArgs
+		arg3 = variadicArgs
 		run(
 			arg0,
 			arg1,
-			arg2...,
+			arg2,
+			arg3...,
 		)
 	})
 	return _c
@@ -2119,14 +2130,14 @@ func (_c *MockMachine_Create_Call) Return(err error) *MockMachine_Create_Call {
 	return _c
 }
 
-func (_c *MockMachine_Create_Call) RunAndReturn(run func(driver string, name string, opts ...string) error) *MockMachine_Create_Call {
+func (_c *MockMachine_Create_Call) RunAndReturn(run func(ctx context.Context, driver string, name string, opts ...string) error) *MockMachine_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Credentials provides a mock function for the type MockMachine
-func (_mock *MockMachine) Credentials(name string) (Credentials, error) {
-	ret := _mock.Called(name)
+func (_mock *MockMachine) Credentials(ctx context.Context, name string) (Credentials, error) {
+	ret := _mock.Called(ctx, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Credentials")
@@ -2134,16 +2145,16 @@ func (_mock *MockMachine) Credentials(name string) (Credentials, error) {
 
 	var r0 Credentials
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (Credentials, error)); ok {
-		return returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (Credentials, error)); ok {
+		return returnFunc(ctx, name)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) Credentials); ok {
-		r0 = returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) Credentials); ok {
+		r0 = returnFunc(ctx, name)
 	} else {
 		r0 = ret.Get(0).(Credentials)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(name)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, name)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -2156,19 +2167,25 @@ type MockMachine_Credentials_Call struct {
 }
 
 // Credentials is a helper method to define mock.On call
+//   - ctx context.Context
 //   - name string
-func (_e *MockMachine_Expecter) Credentials(name interface{}) *MockMachine_Credentials_Call {
-	return &MockMachine_Credentials_Call{Call: _e.mock.On("Credentials", name)}
+func (_e *MockMachine_Expecter) Credentials(ctx interface{}, name interface{}) *MockMachine_Credentials_Call {
+	return &MockMachine_Credentials_Call{Call: _e.mock.On("Credentials", ctx, name)}
 }
 
-func (_c *MockMachine_Credentials_Call) Run(run func(name string)) *MockMachine_Credentials_Call {
+func (_c *MockMachine_Credentials_Call) Run(run func(ctx context.Context, name string)) *MockMachine_Credentials_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -2179,22 +2196,22 @@ func (_c *MockMachine_Credentials_Call) Return(credentials Credentials, err erro
 	return _c
 }
 
-func (_c *MockMachine_Credentials_Call) RunAndReturn(run func(name string) (Credentials, error)) *MockMachine_Credentials_Call {
+func (_c *MockMachine_Credentials_Call) RunAndReturn(run func(ctx context.Context, name string) (Credentials, error)) *MockMachine_Credentials_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Exist provides a mock function for the type MockMachine
-func (_mock *MockMachine) Exist(name string) bool {
-	ret := _mock.Called(name)
+func (_mock *MockMachine) Exist(ctx context.Context, name string) bool {
+	ret := _mock.Called(ctx, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exist")
 	}
 
 	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(string) bool); ok {
-		r0 = returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = returnFunc(ctx, name)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
@@ -2207,19 +2224,25 @@ type MockMachine_Exist_Call struct {
 }
 
 // Exist is a helper method to define mock.On call
+//   - ctx context.Context
 //   - name string
-func (_e *MockMachine_Expecter) Exist(name interface{}) *MockMachine_Exist_Call {
-	return &MockMachine_Exist_Call{Call: _e.mock.On("Exist", name)}
+func (_e *MockMachine_Expecter) Exist(ctx interface{}, name interface{}) *MockMachine_Exist_Call {
+	return &MockMachine_Exist_Call{Call: _e.mock.On("Exist", ctx, name)}
 }
 
-func (_c *MockMachine_Exist_Call) Run(run func(name string)) *MockMachine_Exist_Call {
+func (_c *MockMachine_Exist_Call) Run(run func(ctx context.Context, name string)) *MockMachine_Exist_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -2230,7 +2253,7 @@ func (_c *MockMachine_Exist_Call) Return(b bool) *MockMachine_Exist_Call {
 	return _c
 }
 
-func (_c *MockMachine_Exist_Call) RunAndReturn(run func(name string) bool) *MockMachine_Exist_Call {
+func (_c *MockMachine_Exist_Call) RunAndReturn(run func(ctx context.Context, name string) bool) *MockMachine_Exist_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2291,16 +2314,16 @@ func (_c *MockMachine_List_Call) RunAndReturn(run func() ([]string, error)) *Moc
 }
 
 // Provision provides a mock function for the type MockMachine
-func (_mock *MockMachine) Provision(name string) error {
-	ret := _mock.Called(name)
+func (_mock *MockMachine) Provision(ctx context.Context, name string) error {
+	ret := _mock.Called(ctx, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Provision")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string) error); ok {
-		r0 = returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, name)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -2313,19 +2336,25 @@ type MockMachine_Provision_Call struct {
 }
 
 // Provision is a helper method to define mock.On call
+//   - ctx context.Context
 //   - name string
-func (_e *MockMachine_Expecter) Provision(name interface{}) *MockMachine_Provision_Call {
-	return &MockMachine_Provision_Call{Call: _e.mock.On("Provision", name)}
+func (_e *MockMachine_Expecter) Provision(ctx interface{}, name interface{}) *MockMachine_Provision_Call {
+	return &MockMachine_Provision_Call{Call: _e.mock.On("Provision", ctx, name)}
 }
 
-func (_c *MockMachine_Provision_Call) Run(run func(name string)) *MockMachine_Provision_Call {
+func (_c *MockMachine_Provision_Call) Run(run func(ctx context.Context, name string)) *MockMachine_Provision_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -2336,22 +2365,22 @@ func (_c *MockMachine_Provision_Call) Return(err error) *MockMachine_Provision_C
 	return _c
 }
 
-func (_c *MockMachine_Provision_Call) RunAndReturn(run func(name string) error) *MockMachine_Provision_Call {
+func (_c *MockMachine_Provision_Call) RunAndReturn(run func(ctx context.Context, name string) error) *MockMachine_Provision_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Remove provides a mock function for the type MockMachine
-func (_mock *MockMachine) Remove(name string) error {
-	ret := _mock.Called(name)
+func (_mock *MockMachine) Remove(ctx context.Context, name string) error {
+	ret := _mock.Called(ctx, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Remove")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string) error); ok {
-		r0 = returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, name)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -2364,19 +2393,25 @@ type MockMachine_Remove_Call struct {
 }
 
 // Remove is a helper method to define mock.On call
+//   - ctx context.Context
 //   - name string
-func (_e *MockMachine_Expecter) Remove(name interface{}) *MockMachine_Remove_Call {
-	return &MockMachine_Remove_Call{Call: _e.mock.On("Remove", name)}
+func (_e *MockMachine_Expecter) Remove(ctx interface{}, name interface{}) *MockMachine_Remove_Call {
+	return &MockMachine_Remove_Call{Call: _e.mock.On("Remove", ctx, name)}
 }
 
-func (_c *MockMachine_Remove_Call) Run(run func(name string)) *MockMachine_Remove_Call {
+func (_c *MockMachine_Remove_Call) Run(run func(ctx context.Context, name string)) *MockMachine_Remove_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -2387,22 +2422,22 @@ func (_c *MockMachine_Remove_Call) Return(err error) *MockMachine_Remove_Call {
 	return _c
 }
 
-func (_c *MockMachine_Remove_Call) RunAndReturn(run func(name string) error) *MockMachine_Remove_Call {
+func (_c *MockMachine_Remove_Call) RunAndReturn(run func(ctx context.Context, name string) error) *MockMachine_Remove_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Stop provides a mock function for the type MockMachine
-func (_mock *MockMachine) Stop(name string, timeout time.Duration) error {
-	ret := _mock.Called(name, timeout)
+func (_mock *MockMachine) Stop(ctx context.Context, name string) error {
+	ret := _mock.Called(ctx, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Stop")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, time.Duration) error); ok {
-		r0 = returnFunc(name, timeout)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, name)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -2415,21 +2450,21 @@ type MockMachine_Stop_Call struct {
 }
 
 // Stop is a helper method to define mock.On call
+//   - ctx context.Context
 //   - name string
-//   - timeout time.Duration
-func (_e *MockMachine_Expecter) Stop(name interface{}, timeout interface{}) *MockMachine_Stop_Call {
-	return &MockMachine_Stop_Call{Call: _e.mock.On("Stop", name, timeout)}
+func (_e *MockMachine_Expecter) Stop(ctx interface{}, name interface{}) *MockMachine_Stop_Call {
+	return &MockMachine_Stop_Call{Call: _e.mock.On("Stop", ctx, name)}
 }
 
-func (_c *MockMachine_Stop_Call) Run(run func(name string, timeout time.Duration)) *MockMachine_Stop_Call {
+func (_c *MockMachine_Stop_Call) Run(run func(ctx context.Context, name string)) *MockMachine_Stop_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 time.Duration
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(time.Duration)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -2444,7 +2479,7 @@ func (_c *MockMachine_Stop_Call) Return(err error) *MockMachine_Stop_Call {
 	return _c
 }
 
-func (_c *MockMachine_Stop_Call) RunAndReturn(run func(name string, timeout time.Duration) error) *MockMachine_Stop_Call {
+func (_c *MockMachine_Stop_Call) RunAndReturn(run func(ctx context.Context, name string) error) *MockMachine_Stop_Call {
 	_c.Call.Return(run)
 	return _c
 }
