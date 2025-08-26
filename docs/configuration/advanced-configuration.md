@@ -85,7 +85,7 @@ For more information, see:
 **Symptoms:**
 
 - Jobs from some projects experience delays before starting (duration matches your GitLab instance long polling timeout)
-- Jobs from other projects run immediately  
+- Jobs from other projects run immediately
 - Warning message in runner logs: `CONFIGURATION: Long polling issues detected`
 
 **Common problematic scenarios:**
@@ -116,8 +116,8 @@ concurrent = 2  # Only 2 concurrent workers
 
 [[runners]]
   name = "runner-1"
-[[runners]]  
-  name = "runner-2"  
+[[runners]]
+  name = "runner-2"
 [[runners]]
   name = "runner-3"  # 3 runners, only 2 workers - severe bottleneck
 ```
@@ -139,7 +139,7 @@ concurrent = 4  # 4 workers available
 concurrent = 4
 
 [[runners]]
-  name = "limited-runner"  
+  name = "limited-runner"
   limit = 2                # Only 2 builds allowed
   request_concurrency = 1  # Only 1 request at a time
   # Creates severe bottleneck: builds at capacity + request slot blocked by long polling
@@ -152,9 +152,9 @@ concurrent = 4  # Adequate worker capacity
 
 [[runners]]
   name = "high-volume-runner"
-  request_concurrency = 3  # Allow multiple simultaneous requests  
+  request_concurrency = 3  # Allow multiple simultaneous requests
   limit = 10
-  
+
 [[runners]]
   name = "balanced-runner"
   request_concurrency = 2
