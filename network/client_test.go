@@ -8,10 +8,12 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -119,19 +121,52 @@ func writeTLSKeyPair(s *httptest.Server, certFile, keyFile string) error {
 }
 
 func TestNewClient(t *testing.T) {
-	c, err := newClient(&RunnerCredentials{
-		URL: "http://test.example.com/ci///",
-	}, NewAPIRequestsCollector())
-	assert.NoError(t, err)
-	assert.NotNil(t, c)
-	assert.Equal(t, "http://test.example.com/api/v4/", c.url.String())
-}
+	t.Parallel()
 
-func TestInvalidUrl(t *testing.T) {
-	_, err := newClient(&RunnerCredentials{
-		URL: "address.com/ci///",
-	}, NewAPIRequestsCollector())
-	assert.Error(t, err)
+	testCases := []struct {
+		name            string
+		creds           *RunnerCredentials
+		expectedErr     string
+		expectedBaseURL string
+	}{
+		{
+			name: "success",
+			creds: &RunnerCredentials{
+				URL: "http://test.example.com/ci///",
+			},
+			expectedBaseURL: "http://test.example.com/api/v4/",
+		},
+		{
+			name: "failed to parse url",
+			creds: &RunnerCredentials{
+				URL: "\n",
+			},
+			expectedErr: "parse URL",
+		},
+		{
+			name: "not http or https",
+			creds: &RunnerCredentials{
+				URL: "example.com",
+			},
+			expectedErr: "only http or https scheme supported",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			c, err := newClient(tc.creds, NewAPIRequestsCollector())
+
+			if tc.expectedErr != "" {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, tc.expectedErr)
+				assert.Nil(t, c)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, c)
+				assert.Equal(t, c.url.String(), tc.expectedBaseURL)
+			}
+		})
+	}
 }
 
 func TestServerCertificateChange(t *testing.T) {
@@ -201,169 +236,336 @@ func TestServerCertificateChange(t *testing.T) {
 	}
 }
 
-func TestClientDo(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(clientHandler))
-	defer s.Close()
+func TestClient_Do(t *testing.T) {
+	t.Parallel()
 
-	c, err := newClient(&RunnerCredentials{
-		URL: s.URL,
-	}, NewAPIRequestsCollector())
-	assert.NoError(t, err)
-	assert.NotNil(t, c)
-
-	statusCode, statusText, _ := c.doJSON(
-		context.Background(),
-		"test/auth",
-		http.MethodGet,
-		http.StatusOK,
-		nil,
-		nil,
-		nil,
-	)
-	assert.Equal(t, http.StatusForbidden, statusCode, statusText)
-
-	req := struct {
-		Query bool `json:"query"`
+	testCases := []struct {
+		name        string
+		ctx         context.Context
+		uri         string
+		url         string
+		method      string
+		setup       func(tb testing.TB) (ContentProvider, requester)
+		requestType string
+		headers     http.Header
+		expectedErr string
+		expectedRes *http.Response
 	}{
-		true,
+		{
+			name: "failed to parse url",
+			ctx:  t.Context(),
+			uri:  "\n",
+			setup: func(tb testing.TB) (ContentProvider, requester) {
+				return NewMockContentProvider(t), newMockRequester(tb)
+			},
+			expectedErr: "parse URL",
+		},
+		{
+			name: "get reader error",
+			ctx:  t.Context(),
+			uri:  "/test",
+			setup: func(tb testing.TB) (ContentProvider, requester) {
+				mcp := NewMockContentProvider(t)
+				mcp.On("GetReader").Return(nil, errors.New("computer said no"))
+				return mcp, newMockRequester(tb)
+			},
+			expectedErr: "get reader",
+		},
+		{
+			name: "create request error",
+			ctx:  nil,
+			uri:  "/test",
+			setup: func(tb testing.TB) (ContentProvider, requester) {
+				mcp := NewMockContentProvider(t)
+				mcp.On("GetReader").Return(io.NopCloser(strings.NewReader("test")), nil)
+				return mcp, newMockRequester(tb)
+			},
+			expectedErr: "create NewRequest",
+		},
+		{
+			name:        "execute request error",
+			ctx:         t.Context(),
+			uri:         "/test",
+			url:         "http://invalid.com",
+			method:      http.MethodPost,
+			requestType: "application/json",
+			headers: http.Header{
+				"Custom-Header": {"test-custom-header"},
+			},
+			setup: func(tb testing.TB) (ContentProvider, requester) {
+				mcp := NewMockContentProvider(t)
+				testRequestBody := "test"
+				mcp.On("GetReader").Return(io.NopCloser(strings.NewReader(testRequestBody)), nil)
+				mcp.On("GetContentLength").Return(int64(len(testRequestBody)), true)
+
+				mr := newMockRequester(tb)
+				mr.On("Do", mock.Anything).Return(nil, errors.New("request error")).Once()
+
+				return mcp, mr
+			},
+			expectedErr: "execute request",
+		},
+		{
+			name:        "success",
+			ctx:         t.Context(),
+			uri:         "/test",
+			method:      http.MethodPost,
+			requestType: "application/json",
+			headers: http.Header{
+				"Custom-Header": {"test-custom-header"},
+			},
+			setup: func(tb testing.TB) (ContentProvider, requester) {
+				mcp := NewMockContentProvider(t)
+				testRequestBody := "test"
+				mcp.On("GetReader").Return(io.NopCloser(strings.NewReader(testRequestBody)), nil)
+				mcp.On("GetContentLength").Return(int64(len(testRequestBody)), true)
+
+				mr := newMockRequester(tb)
+				mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
+					require.Equal(tb, t.Context(), req.Context())
+					require.Equal(tb, req.Method, http.MethodPost)
+					require.Equal(tb, req.Header.Get("Custom-Header"), "test-custom-header")
+					require.Equal(tb, req.Header.Get("Content-Type"), "application/json")
+					require.Equal(tb, req.ContentLength, int64(4))
+					return true
+				})).Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil).Once()
+
+				return mcp, mr
+			},
+			expectedRes: &http.Response{StatusCode: http.StatusOK},
+		},
+		{
+			name:        "success nil body",
+			ctx:         t.Context(),
+			uri:         "/test",
+			method:      http.MethodPost,
+			requestType: "application/json",
+			headers: http.Header{
+				"Custom-Header": {"test-custom-header"},
+			},
+			setup: func(tb testing.TB) (ContentProvider, requester) {
+				mcp := NewMockContentProvider(t)
+				testRequestBody := "test"
+				mcp.On("GetReader").Return(io.NopCloser(strings.NewReader(testRequestBody)), nil)
+				mcp.On("GetContentLength").Return(int64(len(testRequestBody)), true)
+
+				mr := newMockRequester(tb)
+				mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
+					require.Equal(tb, t.Context(), req.Context())
+					require.Equal(tb, req.Method, http.MethodPost)
+					require.Equal(tb, req.Header.Get("Custom-Header"), "test-custom-header")
+					require.Equal(tb, req.Header.Get("Content-Type"), "application/json")
+					require.Equal(tb, req.ContentLength, int64(4))
+					return true
+				})).Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil).Once()
+
+				return mcp, mr
+			},
+			expectedRes: &http.Response{StatusCode: http.StatusOK},
+		},
 	}
 
-	res := struct {
-		Key string  `json:"key"`
-		PAT *string `json:"pat,omitempty"`
-	}{}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			c, err := newClient(&RunnerCredentials{
+				URL: "http://example.com",
+			}, NewAPIRequestsCollector())
+			require.NoError(t, err)
+			require.NotNil(t, c)
 
-	statusCode, statusText, _ = c.doJSON(
-		context.Background(),
-		"test/json",
-		http.MethodGet,
-		http.StatusOK,
-		nil,
-		nil,
-		&res,
-	)
-	assert.Equal(t, http.StatusBadRequest, statusCode, statusText)
-	assert.Contains(t, statusText, `test/json: 400 Bad Request (some-key: some error)`)
+			mcp, mr := tc.setup(t)
 
-	statusCode, statusText, _ = c.doJSON(
-		context.Background(),
-		"test/json",
-		http.MethodGet,
-		http.StatusOK,
-		nil,
-		&req,
-		nil,
-	)
-	assert.Equal(t, http.StatusNotAcceptable, statusCode, statusText)
-	assert.True(
-		t,
-		strings.HasSuffix(statusText, "test/json: 406 Not Acceptable"),
-		"%q should contain %q suffix",
-		statusText,
-		"test/json: 406 Not Acceptable",
-	)
+			c.requester = mr
 
-	statusCode, statusText, _ = c.doJSON(
-		context.Background(),
-		"test/json",
-		http.MethodGet,
-		http.StatusOK,
-		nil,
-		nil,
-		nil,
-	)
-	assert.Equal(t, http.StatusBadRequest, statusCode, statusText)
-	assert.Contains(t, statusText, `test/json: 400 Bad Request (some-key: some error)`)
+			res, err := c.do(tc.ctx, tc.uri, tc.method, mcp, tc.requestType, tc.headers)
 
-	statusCode, statusText, _ = c.doJSON(
-		context.Background(),
-		"test/json",
-		http.MethodGet,
-		http.StatusOK,
-		nil,
-		&req,
-		&res,
-	)
-	assert.Equal(t, http.StatusOK, statusCode, statusText)
-	assert.Equal(t, "value", res.Key, statusText)
-	assert.Equal(t, (*string)(nil), res.PAT, statusText)
-
-	statusCode, statusText, _ = c.doJSON(
-		context.Background(),
-		"test/json",
-		http.MethodGet,
-		http.StatusCreated,
-		PrivateTokenHeader("my-pat"),
-		&req,
-		&res,
-	)
-	assert.Equal(t, http.StatusCreated, statusCode, statusText)
-	assert.Equal(t, "value", res.Key, statusText)
-	assert.Equal(t, "my-pat", *res.PAT, statusText)
-
-	statusCode, statusText, _ = c.doJSON(
-		context.Background(),
-		"test/json",
-		http.MethodGet,
-		http.StatusCreated,
-		PrivateTokenHeader("invalid-pat"),
-		&req,
-		&res,
-	)
-	assert.Equal(t, http.StatusForbidden, statusCode, statusText)
-	assert.Contains(t, statusText, `test/json: 403 Forbidden`)
+			if tc.expectedErr != "" {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, tc.expectedErr)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, res)
+				assert.Equal(t, tc.expectedRes, res)
+			}
+		})
+	}
 }
 
-func TestClientNilBody(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(clientHandler))
-	defer s.Close()
+func TestClient_DoJSON(t *testing.T) {
+	t.Parallel()
 
-	c, err := newClient(&RunnerCredentials{
-		URL: s.URL,
-	}, NewAPIRequestsCollector())
-	assert.NoError(t, err)
-	assert.NotNil(t, c)
+	type (
+		Request struct {
+			FirstName string `json:"firstName"`
+		}
+		Response struct {
+			LastName string `json:"lastName"`
+		}
+	)
+	testCases := []struct {
+		name               string
+		uri                string
+		method             string
+		statusCode         int
+		headers            http.Header
+		request            any
+		response           *Response
+		success            bool
+		mockHandler        func(tb testing.TB) func(w http.ResponseWriter, r *http.Request)
+		expectedStatusCode int
+		expectedStatusText string
+	}{
+		{
+			name:    "failed to marshal request",
+			request: math.NaN(),
+			mockHandler: func(tb testing.TB) func(w http.ResponseWriter, r *http.Request) {
+				tb.Helper()
+				return func(w http.ResponseWriter, r *http.Request) {}
+			},
+			expectedStatusCode: -1,
+			expectedStatusText: "marshal request object: json: unsupported value: NaN",
+		},
+		{
+			name:   "execute json request",
+			uri:    "\n",
+			method: http.MethodPost,
+			mockHandler: func(tb testing.TB) func(w http.ResponseWriter, r *http.Request) {
+				tb.Helper()
+				return func(w http.ResponseWriter, r *http.Request) {}
+			},
+			expectedStatusCode: -1,
+			expectedStatusText: "execute JSON request",
+		},
+		{
+			name:       "response is not application/json",
+			uri:        "/test/uri",
+			method:     http.MethodPost,
+			statusCode: http.StatusOK,
+			mockHandler: func(tb testing.TB) func(w http.ResponseWriter, r *http.Request) {
+				tb.Helper()
+				return func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "application/test")
+				}
+			},
+			response:           &Response{},
+			expectedStatusCode: -1,
+			expectedStatusText: "response is not application/json",
+		},
+		{
+			name:       "error decoding json payload",
+			uri:        "test/uri",
+			method:     http.MethodPost,
+			statusCode: http.StatusOK,
+			mockHandler: func(tb testing.TB) func(w http.ResponseWriter, r *http.Request) {
+				tb.Helper()
+				return func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, err := w.Write([]byte("\n"))
+					require.NoError(t, err)
+				}
+			},
+			response:           &Response{},
+			expectedStatusCode: -1,
+			expectedStatusText: "decoding json payload",
+		},
+		{
+			name:       "status forbidden",
+			uri:        "test/uri",
+			method:     http.MethodPost,
+			statusCode: http.StatusOK,
+			headers: http.Header{
+				"Content-Type": {"application/json"},
+				"Custom":       {"custom/header"},
+			},
+			request: &Request{FirstName: "test-first-name"},
+			mockHandler: func(tb testing.TB) func(w http.ResponseWriter, r *http.Request) {
+				tb.Helper()
+				return func(w http.ResponseWriter, r *http.Request) {
+					assert.Equal(tb, r.Method, http.MethodPost)
+					assert.Equal(tb, r.Header.Get("Content-Type"), "application/json")
+					assert.Equal(tb, r.Header.Get("Custom"), "custom/header")
 
-	headers := make(http.Header)
-	headers.Set(PrivateToken, "test-me")
-	headers.Set(ContentType, "application/json")
-	headers.Set(Accept, "application/json")
+					var reqBody Request
+					err := json.NewDecoder(r.Body).Decode(&reqBody)
+					require.NoError(t, err)
 
-	resp, err := c.do(context.Background(), "/api/v4/test/json", http.MethodGet, nil, "", headers)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
-}
+					assert.Equal(tb, reqBody.FirstName, "test-first-name")
 
-type testContextKey int
+					w.Header().Set("Content-Type", "application/json")
+					w.Header().Set("X-GitLab-Last-Update", "gitlab-last-update")
+					w.WriteHeader(http.StatusBadRequest)
 
-func TestClientDo_Context(t *testing.T) {
-	bodyProvider := BytesProvider{
-		Data: []byte("test"),
+					err = json.NewEncoder(w).Encode(Response{LastName: "test-last-name"})
+					require.NoError(tb, err)
+				}
+			},
+			response:           &Response{},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedStatusText: http.StatusText(http.StatusBadRequest),
+		},
+		{
+			name:       "success status ok",
+			uri:        "test/uri",
+			method:     http.MethodPost,
+			statusCode: http.StatusOK,
+			headers: http.Header{
+				"Content-Type": {"application/json"},
+				"Custom":       {"custom/header"},
+			},
+			request: &Request{FirstName: "test-first-name"},
+			mockHandler: func(tb testing.TB) func(w http.ResponseWriter, r *http.Request) {
+				tb.Helper()
+				return func(w http.ResponseWriter, r *http.Request) {
+					assert.Equal(tb, r.Method, http.MethodPost)
+					assert.Equal(tb, r.Header.Get("Content-Type"), "application/json")
+					assert.Equal(tb, r.Header.Get("Custom"), "custom/header")
+
+					var reqBody Request
+					err := json.NewDecoder(r.Body).Decode(&reqBody)
+					require.NoError(t, err)
+
+					assert.Equal(tb, reqBody.FirstName, "test-first-name")
+
+					w.Header().Set("Content-Type", "application/json")
+					w.Header().Set("X-GitLab-Last-Update", "gitlab-last-update")
+
+					err = json.NewEncoder(w).Encode(Response{LastName: "test-last-name"})
+					require.NoError(tb, err)
+				}
+			},
+			response:           &Response{},
+			success:            true,
+			expectedStatusCode: http.StatusOK,
+			expectedStatusText: http.StatusText(http.StatusOK),
+		},
 	}
 
-	ctx := context.WithValue(context.Background(), testContextKey(0), "test")
-	response := &http.Response{
-		Status:     "Not found",
-		StatusCode: http.StatusNotFound,
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := httptest.NewServer(http.HandlerFunc(tc.mockHandler(t)))
+			defer s.Close()
+
+			c, err := newClient(&RunnerCredentials{
+				URL: s.URL,
+			}, NewAPIRequestsCollector())
+			require.NoError(t, err)
+			require.NotNil(t, c)
+
+			statusCode, statusText, _ := c.doJSON(t.Context(), tc.uri, tc.method, tc.statusCode, tc.headers, tc.request, tc.response)
+
+			assert.Equal(t, tc.expectedStatusCode, statusCode)
+			assert.Contains(t, statusText, tc.expectedStatusText)
+
+			if tc.success {
+				assert.NotEmpty(t, tc.response.LastName)
+				assert.Equal(t, c.getLastUpdate(), "gitlab-last-update")
+			}
+		})
 	}
-
-	c, err := newClient(&RunnerCredentials{
-		URL: "http://gitlab.example.com",
-	}, NewAPIRequestsCollector())
-	require.NoError(t, err)
-	require.NotNil(t, c)
-
-	requesterMock := newMockRequester(t)
-	c.requester = requesterMock
-
-	requesterMock.On("Do", mock.MatchedBy(func(req *http.Request) bool {
-		return assert.Equal(t, ctx, req.Context())
-	})).Return(response, nil).Once()
-
-	res, err := c.do(ctx, "/test", http.MethodPost, bodyProvider, "plain/text", nil)
-
-	assert.NoError(t, err)
-	assert.Equal(t, response, res)
 }
 
 func TestClientInvalidSSL(t *testing.T) {
@@ -835,5 +1037,30 @@ func TestEnsureUserAgentAlwaysSent(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, response.StatusCode)
 		})
+	}
+}
+
+func TestWithMaxAge(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		age  time.Duration
+	}{
+		{
+			name: "set age",
+			age:  10 * time.Second,
+		},
+		{
+			name: "no value",
+		},
+	}
+
+	for _, tc := range testCases {
+		c := &client{}
+
+		WithMaxAge(tc.age)(c)
+
+		assert.Equal(t, c.connectionMaxAge, tc.age)
 	}
 }
