@@ -44,7 +44,7 @@ var dialer = net.Dialer{
 	KeepAlive: 30 * time.Second,
 }
 
-type Option = func(c *client) error
+type Option = func(c *client)
 
 type client struct {
 	http.Client
@@ -351,7 +351,7 @@ func (n *client) doJSON(
 	if request != nil {
 		requestBody, err := json.Marshal(request)
 		if err != nil {
-			return -1, fmt.Sprintf("marshal project object: %v", err), nil
+			return -1, fmt.Sprintf("marshal request object: %v", err), nil
 		}
 		bytesProvider = common.BytesProvider{Data: requestBody}
 	}
@@ -372,7 +372,6 @@ func (n *client) doJSON(
 		_ = res.Body.Close()
 	}()
 
-	status := getMessageFromJSONResponse(res)
 	if res.StatusCode == statusCode && response != nil {
 		isApplicationJSON, err := isResponseApplicationJSON(res)
 		if !isApplicationJSON {
@@ -388,7 +387,7 @@ func (n *client) doJSON(
 
 	n.setLastUpdate(res.Header)
 
-	return res.StatusCode, status, res
+	return res.StatusCode, getMessageFromJSONResponse(res), res
 }
 
 func getMessageFromJSONResponse(res *http.Response) string {
@@ -531,9 +530,8 @@ func (n *client) findCertificate(certificate *string, base string, name string) 
 }
 
 func WithMaxAge(connectionMaxAge time.Duration) Option {
-	return func(c *client) error {
+	return func(c *client) {
 		c.connectionMaxAge = connectionMaxAge
-		return nil
 	}
 }
 
@@ -563,10 +561,7 @@ func newClient(requestCredentials requestCredentials, collector *APIRequestsColl
 	}
 
 	for _, o := range options {
-		err := o(c)
-		if err != nil {
-			return nil, fmt.Errorf("apply option: %w", err)
-		}
+		o(c)
 	}
 
 	return c, nil
