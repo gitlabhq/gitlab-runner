@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# macOS-specific signing script for GitLab CI Runner binaries
+# Uses rcodesign (Rust implementation) with Google Cloud HSM via PKCS#11
+
+set -euo pipefail
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Export variables for common script
+export CERT_PATH="${SCRIPT_DIR}/../certs/apple-developer-id-app-cert.cer"
+export KEY_RING="gitlab-rsa-ci-runners-signing"
+export KEY_NAME="gitlab-runner-rsa-macos-apple-com"
+
+# Source the common PKCS#11 functionality
+# shellcheck source=common-pkcs11.sh
+source "$SCRIPT_DIR/common-pkcs11.sh"
+
+check_appstore_key_file() {
+        # Check for App Store Connect API key file for notarization
+        if [ ! -f "${APPSTORE_CONNECT_API_KEY_FILE:-}" ]; then
+                echo "Error: APPSTORE_CONNECT_API_KEY_FILE file not found at: ${APPSTORE_CONNECT_API_KEY_FILE:-}"
+                echo "This file should contain the App Store Connect API key in JSON format."
+                echo "See: https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api"
+                return 1
+        fi
+}
+
+# Function to check if rcodesign is available and environment is set up
+check_rcodesign() {
+        if ! command -v rcodesign &>/dev/null; then
+                echo "Error: rcodesign is not installed"
+                echo "Please install rcodesign:"
+                echo "  Install Rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+                echo "  Install rcodesign: cargo install apple-codesign --features pkcs11"
+                echo "  Or download from: https://github.com/indygreg/apple-platform-rs/releases"
+                echo "  NOTE: rcodesign PKCS#11 support has been submitted in https://github.com/indygreg/apple-platform-rs/pull/198."
+                return 1
+        fi
+}
+
+# Function to sign a macOS binary using rcodesign
+sign_macos_binary() {
+        local input_file="$1"
+        local output_file="${2:-$input_file}"
+
+        # Validate input
+        validate_input_file "$input_file" || return 1
+
+        # Check if rcodesign is available
+        check_rcodesign || return 1
+        check_appstore_key_file || return 1
+
+        echo "Signing file: $input_file"
+
+        # Prepare output path
+        local temp_output
+        temp_output=$(prepare_output_path "$input_file" "$output_file")
+
+        echo "Signing binary with Google Cloud HSM via PKCS#11..."
+
+        # Sign the binary using rcodesign with PKCS#11 (equivalent to osslsigncode)
+        rcodesign sign \
+                --pkcs11-library "$GOOGLE_CLOUD_PKCS11_PROVIDER" \
+                --pkcs11-certificate-file "$CERT_PATH" \
+                --pkcs11-key-label "$KEY_NAME" \
+                --code-signature-flags runtime \
+                "$input_file" \
+                "$temp_output"
+
+        # Handle file replacement if needed
+        finalize_signed_file "$input_file" "$temp_output" "$output_file"
+
+        echo "Signing completed successfully!"
+}
+
+# Function to notarize a signed macOS binary (for distribution)
+notarize_macos_binary() {
+        local binary_path="$1"
+        local binary_name
+
+        if [ ! -f "$binary_path" ]; then
+                echo "Error: Signed file '$binary_path' not found"
+                return 1
+        fi
+
+        check_appstore_key_file
+
+        binary_name="$(basename "$binary_path")"
+
+        # Create ZIP for notarization
+        echo "Creating ZIP for notarization..."
+        local zip_file="$TEMP_DIR/${binary_name}.zip"
+        # -j to remove the `out/binaries` prefix
+        # -X to avoid extended attributes that might cause notarization to fail
+        zip -jX "$zip_file" "${binary_path}"
+
+        # Submit for notarization
+        echo "Submitting for notarization..."
+        # We could use --wait to wait up to 10 minutes to notarize, but we would have
+        # to check the output and manage the error codes carefully as done in
+        # https://gitlab.com/gitlab-org/rust/knowledge-graph/-/blob/c79376e1bdf1bbfe4ff360abe59ec96f04e98362/scripts/macos-sign-notarize.sh#L125-177.
+        #
+        # For now, we're submitting for notarization but not waiting for completion.
+        # Note: If submission fails, the script will exit due to set -e.
+        rcodesign notary-submit --api-key-path "$APPSTORE_CONNECT_API_KEY_FILE" "$zip_file"
+}
+
+# Function to sign and notarize multiple macOS binaries
+sign_and_notarize_macos_binaries() {
+        # Setup the environment once
+        setup_pkcs11_environment || return 1
+
+        # Sign each binary in the arguments
+        local binary
+        for binary in "$@"; do
+                sign_macos_binary "$binary"
+                notarize_macos_binary "$binary"
+        done
+
+        echo "All macOS binaries signed successfully!"
+}
+
+# Main execution if script is run directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+        # Default macOS binaries to sign if no arguments provided
+        if [ $# -eq 0 ]; then
+                # Look for GitLab Runner macOS binaries
+                default_binaries=(
+                        out/binaries/gitlab-runner-darwin*
+                        out/binaries/gitlab-runner-helper/gitlab-runner-helper.darwin*
+                )
+
+                # Expand globs and filter existing files
+                binaries_to_sign=()
+                for pattern in "${default_binaries[@]}"; do
+                        # shellcheck disable=SC2086
+                        for file in $pattern; do
+                                if [ -f "$file" ]; then
+                                        binaries_to_sign+=("$file")
+                                fi
+                        done
+                done
+
+                if [ ${#binaries_to_sign[@]} -eq 0 ]; then
+                        echo "No macOS binaries found to sign in default locations"
+                        echo "Usage: $0 [binary1] [binary2] ..."
+                        exit 1
+                fi
+
+                sign_and_notarize_macos_binaries "${binaries_to_sign[@]}"
+        else
+                sign_and_notarize_macos_binaries "$@"
+        fi
+fi

@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# Windows-specific signing script for GitLab CI Runner binaries
+# Uses Authenticode signing via osslsigncode and Google Cloud HSM
+
+set -euo pipefail
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CERT_PATH="${SCRIPT_DIR}/../certs/gitlab-inc-ssl-com.crt"
+
+# PKCS#11 engine for OpenSSL
+P11_ENGINE="${P11_ENGINE:-/usr/lib64/engines-1.1/pkcs11.so}"
+
+# Installation instructions for PKCS#11 engine
+P11_INSTALL_INSTRUCTIONS="On RedHat/CentOS/Fedora systems: dnf install openssl-pkcs11
+On Debian/Ubuntu systems: apt install libengine-pkcs11-openssl"
+
+# Export variables for common script
+export P11_ENGINE
+export P11_INSTALL_INSTRUCTIONS
+export CERT_PATH
+
+# Source the common PKCS#11 functionality
+# shellcheck source=common-pkcs11.sh
+source "$SCRIPT_DIR/common-pkcs11.sh"
+
+# Windows-specific timestamp server
+TIMESTAMP_SERVER="${TIMESTAMP_SERVER:-http://ts.ssl.com}"
+
+# Function to check if osslsigncode is available
+check_osslsigncode() {
+        if ! command -v osslsigncode &>/dev/null; then
+                echo "Error: osslsigncode is not installed"
+                echo "Please install osslsigncode:"
+                echo "  On RedHat/CentOS/Fedora: dnf install osslsigncode"
+                echo "  On Debian/Ubuntu: apt install osslsigncode"
+                echo "  Or build from source: https://github.com/mtrojnar/osslsigncode"
+                return 1
+        fi
+}
+
+# Function to sign a Windows binary using Authenticode
+sign_windows_binary() {
+        local input_file="$1"
+        local output_file="${2:-$input_file}"
+
+        echo "Signing Windows binary: $input_file"
+
+        # Validate input
+        validate_input_file "$input_file" || return 1
+
+        # Check if osslsigncode is available
+        check_osslsigncode || return 1
+
+        # Prepare output path
+        local temp_output
+        temp_output=$(prepare_output_path "$input_file" "$output_file")
+
+        # Get PKCS#11 key URI
+        local key_uri
+        key_uri=$(get_pkcs11_key_uri)
+
+        echo "Signing with Authenticode using Google Cloud HSM via PKCS#11..."
+
+        # Sign the binary using osslsigncode with PKCS#11
+        osslsigncode sign \
+                -h sha256 \
+                -pkcs11engine "$P11_ENGINE" \
+                -pkcs11module "$GOOGLE_CLOUD_PKCS11_PROVIDER" \
+                -key "$key_uri" \
+                -certs "$CERT_PATH" \
+                -in "$input_file" \
+                -out "$temp_output" \
+                -ts "$TIMESTAMP_SERVER"
+
+        # Handle file replacement if needed
+        finalize_signed_file "$input_file" "$temp_output" "$output_file"
+
+        echo "Windows binary signing completed successfully!"
+}
+
+# Function to verify a signed Windows binary
+verify_windows_signature() {
+        local signed_file="$1"
+
+        if [ ! -f "$signed_file" ]; then
+                echo "Error: Signed file '$signed_file' not found"
+                return 1
+        fi
+
+        echo "Verifying signature for: $signed_file"
+        osslsigncode verify -in "$signed_file"
+}
+
+# Function to sign multiple Windows binaries
+sign_windows_binaries() {
+        # Setup the environment once
+        setup_pkcs11_environment || return 1
+
+        # Sign each binary in the arguments
+        local binary
+        for binary in "$@"; do
+                sign_windows_binary "$binary"
+        done
+
+        echo "All Windows binaries signed successfully!"
+}
+
+# Main execution if script is run directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+        # Default Windows binaries to sign if no arguments provided
+        if [ $# -eq 0 ]; then
+                # Look for GitLab Runner Windows binaries
+                default_binaries=(
+                        out/binaries/gitlab-runner-windows*.exe
+                        out/binaries/gitlab-runner-helper/gitlab-runner-helper.windows*.exe
+                )
+
+                # Expand globs and filter existing files
+                binaries_to_sign=()
+                for pattern in "${default_binaries[@]}"; do
+                        # shellcheck disable=SC2086
+                        for file in $pattern; do
+                                if [ -f "$file" ]; then
+                                        binaries_to_sign+=("$file")
+                                fi
+                        done
+                done
+
+                if [ ${#binaries_to_sign[@]} -eq 0 ]; then
+                        echo "No Windows binaries found to sign in default locations"
+                        echo "Usage: $0 [binary1.exe] [binary2.exe] ..."
+                        exit 1
+                fi
+
+                sign_windows_binaries "${binaries_to_sign[@]}"
+        else
+                sign_windows_binaries "$@"
+        fi
+fi
