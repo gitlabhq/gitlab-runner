@@ -1,5 +1,7 @@
 # Rebase branches in $REPO_REBASE_BRANCHES, separated by a comma on top of main
 rebase on main:
+  extends:
+    - .no_cache_and_dependencies
   stage: rebase
   rules:
     - if: $REPO_REBASE_BRANCHES != "" && $REPO_REBASE_BRANCHES != null && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
