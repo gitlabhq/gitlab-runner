@@ -41,7 +41,8 @@ pulls the image from the public Docker registry and stores it locally before han
 
 The next request for the same image pulls from your local registry.
 
-More detail on how it works can be found [here](https://docs.docker.com/docker-hub/image-library/mirror/#configure-the-docker-daemon).
+For more information on how it works, see
+[Docker daemon configuration documentation](https://docs.docker.com/docker-hub/image-library/mirror/#configure-the-docker-daemon).
 
 #### Use a Docker Hub Registry mirror
 
