@@ -12,6 +12,8 @@ The following executors use fleeting to scale runners:
 - [Docker Autoscaler](../executors/docker_autoscaler.md)
 - [Instance](../executors/instance.md)
 
+## Find a fleeting plugin
+
 GitLab maintains these official plugins:
 
 | Cloud provider                                                             | Notes |
@@ -19,6 +21,19 @@ GitLab maintains these official plugins:
 | [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud) | Uses [Google Cloud instance groups](https://cloud.google.com/compute/docs/instance-groups) |
 | [AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws)                  | Uses [AWS Auto Scaling groups](https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html) |
 | [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure)              | Uses Azure [Virtual Machine Scale Sets](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview). Only [Uniform orchestration](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration) mode is supported. |
+
+The following plugins are community maintained:
+
+| Cloud provider | OCI Reference | Notes |
+|----------------|---------------|-------|
+
+Community maintained plugins are owned, built, hosted and maintained by contributors outside of GitLab (the community).
+GitLab owns and maintains the Fleeting library and API to provide static code review.
+GitLab cannot test community plugins because we don't have access to all the necessary computing environments.
+Community members should build, test, and publish plugins to an OCI repository and provide the reference on this page through merge requests.
+The OCI reference should be accompanied by notes on the where to report issues, the support and stability level of the plugin, and where to find documentation.
+
+## Configure a fleeting plugin
 
 To configure fleeting, in the `config.toml`, use the [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 configuration section.
