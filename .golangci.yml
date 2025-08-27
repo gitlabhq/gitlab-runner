@@ -64,7 +64,7 @@ linters:
         - name: unused-parameter
           disabled: true
     staticcheck:
-      checks: ["all", "-ST1000", "-ST1003", "-ST1005", "-ST1012", "-ST1016", "-ST1020", "-ST1021", "-ST1022", "-QF1001", "-QF1006", "-QF1008", "-QF1011", "-QF1012", "-QF1003"]
+      checks: ["all", "-ST1000", "-ST1003", "-ST1005", "-ST1012", "-ST1016", "-ST1020", "-ST1021", "-ST1022", "-QF1001", "-QF1008", "-QF1011"]
   exclusions:
     generated: lax
     presets:

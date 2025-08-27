@@ -324,11 +324,7 @@ func sanitizeCacheKey(cacheKey string) (sanitizedKey string, err error) {
 	)
 
 	var key string
-	for {
-		if cleaned == "" {
-			break
-		}
-
+	for cleaned != "" {
 		dir, file := path.Split(cleaned)
 		file = trimSpaceRight(file)
 

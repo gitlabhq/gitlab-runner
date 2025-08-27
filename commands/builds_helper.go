@@ -251,17 +251,11 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 		projectRunners[otherBuild.ProjectRunnerID] = true
 	}
 
-	for {
-		if !runners[build.RunnerID] {
-			break
-		}
+	for runners[build.RunnerID] {
 		build.RunnerID++
 	}
 
-	for {
-		if !projectRunners[build.ProjectRunnerID] {
-			break
-		}
+	for projectRunners[build.ProjectRunnerID] {
 		build.ProjectRunnerID++
 	}
 

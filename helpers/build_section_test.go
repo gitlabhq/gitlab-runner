@@ -22,7 +22,7 @@ func (b *testBuffer) SendRawLog(args ...interface{}) {
 		return
 	}
 
-	_, b.Error = b.WriteString(fmt.Sprintln(args...))
+	_, b.Error = fmt.Fprintln(b, args...)
 }
 
 func TestBuildSection(t *testing.T) {
