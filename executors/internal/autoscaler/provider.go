@@ -208,12 +208,12 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		taskscaler.WithMetricsCollector(tsMC),
 		taskscaler.WithFleetingMetricsCollector(flMC),
 		taskscaler.WithInstanceUpFunc(instanceReadyUp(shutdownCtx, config)),
-		taskscaler.WithUpdateInterval(fleeting.DefaultUpdateInterval),
-		taskscaler.WithUpdateIntervalWhenExpecting(fleeting.DefaultUpdateIntervalWhenExpecting),
-		taskscaler.WithDeletionRetryInterval(fleeting.DefaultDeletionRetryInterval),
-		taskscaler.WithShutdownDeletionInterval(fleeting.DefaultShutdownDeletionInterval),
-		taskscaler.WithShutdownDeletionRetries(fleeting.DefaultShutdownDeletionRetries),
-		taskscaler.WithFailureThreshold(3),
+		taskscaler.WithUpdateInterval(config.Autoscaler.UpdateInterval),
+		taskscaler.WithUpdateIntervalWhenExpecting(config.Autoscaler.UpdateIntervalWhenExpecting),
+		taskscaler.WithDeletionRetryInterval(config.Autoscaler.DeletionRetryInterval),
+		taskscaler.WithShutdownDeletionInterval(config.Autoscaler.ShutdownDeletionInterval),
+		taskscaler.WithShutdownDeletionRetries(config.Autoscaler.ShutdownDeletionRetries),
+		taskscaler.WithFailureThreshold(config.Autoscaler.FailureThreshold),
 		taskscaler.WithLogger(logger.Named("taskscaler")),
 		taskscaler.WithScaleThrottle(config.Autoscaler.ScaleThrottle.Limit, config.Autoscaler.ScaleThrottle.Burst),
 	}
@@ -224,30 +224,6 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 
 	if store != nil {
 		options = append(options, taskscaler.WithStorage(store))
-	}
-
-	if config.Autoscaler.UpdateInterval > 0 {
-		options = append(options, taskscaler.WithUpdateInterval(config.Autoscaler.UpdateInterval))
-	}
-
-	if config.Autoscaler.UpdateIntervalWhenExpecting > 0 {
-		options = append(options, taskscaler.WithUpdateIntervalWhenExpecting(config.Autoscaler.UpdateIntervalWhenExpecting))
-	}
-
-	if config.Autoscaler.DeletionRetryInterval > 0 {
-		options = append(options, taskscaler.WithDeletionRetryInterval(config.Autoscaler.DeletionRetryInterval))
-	}
-
-	if config.Autoscaler.ShutdownDeletionInterval > 0 {
-		options = append(options, taskscaler.WithShutdownDeletionInterval(config.Autoscaler.ShutdownDeletionInterval))
-	}
-
-	if config.Autoscaler.ShutdownDeletionRetries > 0 {
-		options = append(options, taskscaler.WithShutdownDeletionRetries(config.Autoscaler.ShutdownDeletionRetries))
-	}
-
-	if config.Autoscaler.FailureThreshold > 0 {
-		options = append(options, taskscaler.WithFailureThreshold(config.Autoscaler.FailureThreshold))
 	}
 
 	if config.Autoscaler.DeleteInstancesOnShutdown {
