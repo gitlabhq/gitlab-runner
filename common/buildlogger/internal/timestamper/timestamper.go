@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"math"
-	"strconv"
 	"time"
 )
 
@@ -25,10 +24,7 @@ const (
 	// fracs is the nanosecond length we append
 	fracs = 6
 
-	// additional bytes added to the format:
-	// - nanosecond separator ('.')
-	// - single byte for append flag
-	additionalBytes = 2
+	format = "YYYY-mm-ddTHH:MM:SS.123456Z "
 )
 
 type (
@@ -81,7 +77,7 @@ func New(w io.Writer, streamType StreamType, streamNumber uint8, timestamp bool)
 	}
 
 	if timestamp {
-		l.timeLen = len(time.Now().UTC().Format(time.RFC3339)) + fracs + additionalBytes
+		l.timeLen = len(format)
 	}
 	l.bufStream = make([]byte, l.timeLen+4)
 	if timestamp {
@@ -243,31 +239,28 @@ func (l *Logger) writeHeader(w io.Writer) error {
 	if l.timestamp {
 		t := now()
 
-		// time.RFC3339 doesn't add nanosecond precision, and time.RFC3339Nano doesn't
-		// use a fixed length of precision. Whilst we could use a custom format, this
+		// time.RFC3339 doesn't add nanosecond precision, and time.RFC3339Nano strips
+		// trailing zeros. Whilst we could use a custom format, this
 		// is slower, as Go as built-in optimizations for RFC3339. So here we use the
 		// non-nano version, and then add nanoseconds to a fixed length. Fixed length
 		// is important because it makes the logs easier for both a human and machine
 		// to read.
 		t.AppendFormat(l.bufStream[:0], time.RFC3339)
 
-		// remove the 'Z'
-		l.bufStream = l.bufStream[:l.timeLen-fracs-additionalBytes]
-		l.bufStream[len(l.bufStream)-1] = '.' // replace 'Z' for '.'
+		// replace 'Z' for '.'
+		l.bufStream[l.timeLen-3-fracs] = '.'
 
 		// ensure nanoseconds doesn't exceed our fracs precision
 		nanos := t.Nanosecond() / int(math.Pow10(9-fracs))
 
 		// add nanoseconds and append leading zeros
-		leadingZeros := len(l.bufStream)
-		l.bufStream = strconv.AppendInt(l.bufStream, int64(nanos), 10)
-		leadingZeros = fracs - (len(l.bufStream) - leadingZeros)
-		for i := 0; i < leadingZeros; i++ {
-			l.bufStream = append(l.bufStream, '0')
+		for i := 0; i < fracs; i++ {
+			l.bufStream[l.timeLen-3-i] = hextable[nanos%10]
+			nanos /= 10
 		}
 
 		// add 'Z' back
-		l.bufStream = append(l.bufStream, 'Z')
+		l.bufStream[l.timeLen-2] = 'Z'
 
 		// expand back to full header size
 		l.bufStream = l.bufStream[:l.timeLen+4]
