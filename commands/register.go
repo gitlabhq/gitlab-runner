@@ -151,10 +151,7 @@ func (s *RegisterCommand) ask(key, prompt string, allowEmptyOptional ...bool) st
 		return result
 	}
 
-	for {
-		if s.askOnce(prompt, &result, allowEmpty) {
-			break
-		}
+	for !s.askOnce(prompt, &result, allowEmpty) {
 	}
 
 	return result

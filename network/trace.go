@@ -402,11 +402,12 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 
 	c.setUpdateInterval(result.NewUpdateInterval)
 
-	if result.State == common.UpdateSucceeded {
+	switch result.State {
+	case common.UpdateSucceeded:
 		c.lock.Lock()
 		c.sentTime = time.Now()
 		c.lock.Unlock()
-	} else if result.State == common.UpdateTraceValidationFailed {
+	case common.UpdateTraceValidationFailed:
 		c.lock.Lock()
 		c.sentTime = time.Now()
 		c.sentTrace = 0

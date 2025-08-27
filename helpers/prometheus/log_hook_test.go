@@ -32,11 +32,7 @@ func TestConcurrentFireCall(t *testing.T) {
 	}
 
 	finished := 0
-	for {
-		if finished >= total {
-			break
-		}
-
+	for finished < total {
 		<-finish
 		finished++
 	}
@@ -72,11 +68,7 @@ func TestCouncurrentFireCallWithCollect(t *testing.T) {
 	}
 
 	finished := 0
-	for {
-		if finished >= total {
-			break
-		}
-
+	for finished < total {
 		<-finish
 		finished++
 	}
