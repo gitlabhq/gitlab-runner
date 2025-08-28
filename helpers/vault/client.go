@@ -68,15 +68,6 @@ func NewClient(apiURL string, namespace string, opts ...ClientOption) (Client, e
 		return nil, fmt.Errorf("creating new Vault client: %w", unwrapAPIResponseError(err))
 	}
 
-	healthResp, err := client.Sys().Health()
-	if err != nil {
-		return nil, fmt.Errorf("checking Vault server health: %w", unwrapAPIResponseError(err))
-	}
-
-	if !healthResp.Initialized || healthResp.Sealed {
-		return nil, errors.New("not initialized or sealed Vault server")
-	}
-
 	client.SetNamespace(namespace)
 
 	for _, opt := range opts {

@@ -16,38 +16,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func mockHealthCheckServer(tb testing.TB, initialized, sealed bool, healthErr error) func(w http.ResponseWriter, r *http.Request) {
-	tb.Helper()
-	return func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/v1/sys/health":
-			if healthErr != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				require.NoError(tb, json.NewEncoder(w).Encode(map[string]interface{}{
-					"error": healthErr.Error(),
-				}))
-				return
-			}
-			require.NoError(tb, json.NewEncoder(w).Encode(api.HealthResponse{
-				Initialized: initialized,
-				Sealed:      sealed,
-			}))
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}
-}
-
 func mockOperationServer(tb testing.TB, operationPath string, operationHandler func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	tb.Helper()
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/v1/sys/health":
-			// Health check always succeeds
-			require.NoError(tb, json.NewEncoder(w).Encode(api.HealthResponse{
-				Initialized: true,
-				Sealed:      false,
-			}))
 		case "/v1/" + operationPath:
 			operationHandler(w, r)
 		default:
@@ -59,14 +31,6 @@ func mockOperationServer(tb testing.TB, operationPath string, operationHandler f
 func mockServerWithNonAPIError(tb testing.TB) func(w http.ResponseWriter, r *http.Request) {
 	tb.Helper()
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/v1/sys/health" {
-			require.NoError(tb, json.NewEncoder(w).Encode(api.HealthResponse{
-				Initialized: true,
-				Sealed:      false,
-			}))
-			return
-		}
-
 		// For subsequent calls, close the connection to simulate network error
 		hj, ok := w.(http.Hijacker)
 		if ok {
@@ -79,14 +43,6 @@ func mockServerWithNonAPIError(tb testing.TB) func(w http.ResponseWriter, r *htt
 func mockServerWithAPIError(tb testing.TB) func(w http.ResponseWriter, r *http.Request) {
 	tb.Helper()
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/v1/sys/health" {
-			require.NoError(tb, json.NewEncoder(w).Encode(api.HealthResponse{
-				Initialized: true,
-				Sealed:      false,
-			}))
-			return
-		}
-
 		w.WriteHeader(http.StatusForbidden)
 		require.NoError(tb, json.NewEncoder(w).Encode(map[string]interface{}{
 			"errors": []string{"permission denied"},
@@ -102,25 +58,13 @@ func TestNewClient(t *testing.T) {
 		clientURL     string
 		expectedError error
 	}{
-		"vault health check error": {
-			mockHandler:   mockHealthCheckServer(t, false, false, errors.New("health check failed")),
-			expectedError: errors.New("checking Vault server health"),
-		},
-		"vault server not initialized": {
-			mockHandler:   mockHealthCheckServer(t, false, false, nil),
-			expectedError: errors.New("not initialized or sealed Vault server"),
-		},
-		"vault server sealed": {
-			mockHandler:   mockHealthCheckServer(t, true, true, nil),
-			expectedError: errors.New("not initialized or sealed Vault server"),
-		},
 		"vault client creation error": {
-			mockHandler:   mockHealthCheckServer(t, true, false, nil),
+			mockHandler:   mockOperationServer(t, "/some/path", nil),
 			clientURL:     "://invalid-url",
 			expectedError: errors.New("creating new Vault client"),
 		},
 		"vault client initialized": {
-			mockHandler: mockHealthCheckServer(t, true, false, nil),
+			mockHandler: mockOperationServer(t, "/some/path", nil),
 		},
 	}
 
@@ -166,7 +110,7 @@ func TestNewClient_WithInlineAuth(t *testing.T) {
 
 	tests := map[string]testCase{
 		"valid configuration": {
-			mockHandler: mockHealthCheckServer(t, true, false, nil),
+			mockHandler: mockOperationServer(t, "/some/path", nil),
 			namespace:   "test-namespace",
 			inlineAuth: &InlineAuth{
 				Path: "auth/jwt/login",
@@ -175,13 +119,13 @@ func TestNewClient_WithInlineAuth(t *testing.T) {
 			},
 		},
 		"nil inline auth passed to WithInlineAuth": {
-			mockHandler:   mockHealthCheckServer(t, true, false, nil),
+			mockHandler:   mockOperationServer(t, "/some/path", nil),
 			namespace:     "test-namespace",
 			inlineAuth:    nil,
 			expectedError: "inline auth is required",
 		},
 		"missing auth path": {
-			mockHandler: mockHealthCheckServer(t, true, false, nil),
+			mockHandler: mockOperationServer(t, "/some/path", nil),
 			namespace:   "test-namespace",
 			inlineAuth: &InlineAuth{
 				JWT:  "test-jwt",
@@ -190,7 +134,7 @@ func TestNewClient_WithInlineAuth(t *testing.T) {
 			expectedError: "inline auth path is required",
 		},
 		"missing JWT": {
-			mockHandler: mockHealthCheckServer(t, true, false, nil),
+			mockHandler: mockOperationServer(t, "/some/path", nil),
 			namespace:   "test-namespace",
 			inlineAuth: &InlineAuth{
 				Path: "auth/jwt/login",
@@ -199,7 +143,7 @@ func TestNewClient_WithInlineAuth(t *testing.T) {
 			expectedError: "inline auth JWT is required",
 		},
 		"missing role": {
-			mockHandler: mockHealthCheckServer(t, true, false, nil),
+			mockHandler: mockOperationServer(t, "/some/path", nil),
 			namespace:   "test-namespace",
 			inlineAuth: &InlineAuth{
 				Path: "auth/jwt/login",
@@ -268,6 +212,22 @@ func TestDefaultClient_Authenticate(t *testing.T) {
 		setupAuthMock func(t *testing.T, c *defaultClient) *MockAuthMethod
 		expectedError string
 	}{
+		"sealed error": {
+			setupAuthMock: func(t *testing.T, c *defaultClient) *MockAuthMethod {
+				mockAuthMethod := NewMockAuthMethod(t)
+				mockAuthMethod.On("Authenticate", c).Return(errors.New("Vault is sealed")).Once()
+				return mockAuthMethod
+			},
+			expectedError: "Vault is sealed",
+		},
+		"uninitialized error": {
+			setupAuthMock: func(t *testing.T, c *defaultClient) *MockAuthMethod {
+				mockAuthMethod := NewMockAuthMethod(t)
+				mockAuthMethod.On("Authenticate", c).Return(errors.New("Vault is not initialized")).Once()
+				return mockAuthMethod
+			},
+			expectedError: "Vault is not initialized",
+		},
 		"authentication error": {
 			setupAuthMock: func(t *testing.T, c *defaultClient) *MockAuthMethod {
 				mockAuthMethod := NewMockAuthMethod(t)
@@ -288,7 +248,7 @@ func TestDefaultClient_Authenticate(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			handler := mockHealthCheckServer(t, true, false, nil)
+			handler := mockOperationServer(t, "/some/path", nil)
 			server := httptest.NewServer(http.HandlerFunc(handler))
 			defer server.Close()
 
