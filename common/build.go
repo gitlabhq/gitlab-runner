@@ -1629,6 +1629,10 @@ func (b *Build) GetGitCleanFlags() []string {
 	return b.Settings().GitCleanFlags
 }
 
+func (b *Build) GetGitCloneFlags() []string {
+	return b.Settings().GitCloneExtraFlags
+}
+
 func (b *Build) GetGitFetchFlags() []string {
 	return b.Settings().GitFetchExtraFlags
 }

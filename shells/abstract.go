@@ -877,6 +877,8 @@ func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellSc
 		cloneArgs = append(cloneArgs, "--branch", build.GitInfo.Ref)
 	}
 
+	cloneArgs = append(cloneArgs, build.GetGitCloneFlags()...)
+
 	if credConfigFile != "" {
 		// we don't have a git repo / config yet, thus adding cred helper explicitly as an arg.
 		cloneArgs = append(cloneArgs, "-c", "include.path="+credConfigFile)

@@ -47,6 +47,7 @@ type BuildSettings struct {
 	GitSubmodulePaths       []string
 	GitSubmoduleDepth       int
 	GitCleanFlags           cmdFlags
+	GitCloneExtraFlags      cmdFlags
 	GitFetchExtraFlags      cmdFlags
 	GitSubmoduleUpdateFlags cmdFlags
 	GitLFSSkipSmudge        bool
@@ -127,6 +128,7 @@ func validateVariables(variables JobVariables, b *Build, defaultGitStategy GitSt
 		validate(variables, "GIT_SUBMODULE_PATHS", &b.buildSettings.GitSubmodulePaths, nil),
 		validate(variables, "GIT_SUBMODULE_DEPTH", &b.buildSettings.GitSubmoduleDepth, b.GitInfo.Depth),
 		validate(variables, "GIT_CLEAN_FLAGS", &b.buildSettings.GitCleanFlags, gitCleanFlagsDefault),
+		validate(variables, "GIT_CLONE_EXTRA_FLAGS", &b.buildSettings.GitCloneExtraFlags, cmdFlags{}),
 		validate(variables, "GIT_FETCH_EXTRA_FLAGS", &b.buildSettings.GitFetchExtraFlags, gitFetchFlagsDefault),
 		validate(variables, "GIT_SUBMODULE_UPDATE_FLAGS", &b.buildSettings.GitSubmoduleUpdateFlags, nil),
 		validate(variables, "GIT_LFS_SKIP_SMUDGE", &b.buildSettings.GitLFSSkipSmudge, false),

@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -591,6 +592,7 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 		depth             int
 		ref               string
 		gitStrategy       string
+		cloneExtraArgs    string
 		nativeClone       bool
 		setupExpectations func(*MockShellWriter, string, string, string)
 	}{
@@ -680,6 +682,34 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 				m.EXPECT().EndIf().Once()
 			},
 		},
+		{
+			name:           "clone strategy with native and ref",
+			buildDir:       "build/dir",
+			gitStrategy:    "clone",
+			cloneExtraArgs: "--reference-if-available /tmp/test",
+			nativeClone:    true,
+			ref:            "refs/some/thing",
+			setupExpectations: func(m *MockShellWriter, repoURI, templateDir, credHelperPath string) {
+				m.EXPECT().IfGitVersionIsAtLeast("2.49").Once()
+				m.EXPECT().Noticef("Cloning repository for %s...", "refs/some/thing").Once()
+
+				gitArgs := []any{"-c", userAgent, "clone", "--no-checkout", repoURI, "build/dir", "--template", templateDir, "--revision", "refs/some/thing", "--reference-if-available", "/tmp/test"}
+				if credHelperPath != "" {
+					gitArgs = append(gitArgs, "-c", "include.path="+credHelperPath)
+				}
+
+				m.EXPECT().Command("git", gitArgs...).Once()
+				m.EXPECT().Cd("build/dir").Once()
+
+				if credHelperPath != "" {
+					m.EXPECT().Command("git", "config", "include.path", credHelperPath).Once()
+				}
+
+				m.EXPECT().Else().Once()
+				withoutNative(m, repoURI, templateDir, credHelperPath)
+				m.EXPECT().EndIf().Once()
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -703,6 +733,7 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 							},
 							Variables: common.JobVariables{
 								{Key: "GIT_STRATEGY", Value: tc.gitStrategy},
+								{Key: "GIT_CLONE_EXTRA_FLAGS", Value: tc.cloneExtraArgs},
 							},
 							JobRequestCorrelationID: "foobar",
 						},
@@ -1144,6 +1175,97 @@ func TestGitCleanFlags(t *testing.T) {
 			}
 
 			shell.writeCheckoutCmd(mockWriter, build)
+		})
+	}
+}
+
+func TestGitCloneFlags(t *testing.T) {
+	const (
+		dummySha        = "01234567abcdef"
+		dummyRef        = "main"
+		dummyProjectDir = "./"
+		dummyRepoUrl    = "https://gitlab.com/my/repo.git"
+		templateDir     = "/some/template/dir"
+	)
+
+	tests := map[string]struct {
+		value                 string
+		depth                 int
+		expectedGitCloneFlags []interface{}
+	}{
+		"empty clone flags": {
+			value:                 "",
+			depth:                 0,
+			expectedGitCloneFlags: []interface{}{},
+		},
+		"use custom flags": {
+			value:                 "custom-flags",
+			depth:                 1,
+			expectedGitCloneFlags: []interface{}{"custom-flags"},
+		},
+		"use custom flags with multiple arguments": {
+			value:                 "--no-tags --filter=blob:none",
+			depth:                 2,
+			expectedGitCloneFlags: []interface{}{"--no-tags", "--filter=blob:none"},
+		},
+		"disabled": {
+			value: "none",
+			depth: 0,
+		},
+	}
+
+	for _, credConfigFile := range []string{"some/cred-helper.conf", ""} {
+		t.Run("credConfigFile:"+credConfigFile, func(t *testing.T) {
+			for name, test := range tests {
+				t.Run(name, func(t *testing.T) {
+					shell := AbstractShell{}
+
+					build := &common.Build{
+						Runner: &common.RunnerConfig{},
+						JobResponse: common.JobResponse{
+							GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: test.depth, RepoURL: dummyRepoUrl},
+							Variables: common.JobVariables{
+								{Key: "GIT_CLONE_EXTRA_FLAGS", Value: test.value},
+							},
+						},
+						BuildDir: dummyProjectDir,
+					}
+					build.SafeDirectoryCheckout = true
+
+					mockWriter := NewMockShellWriter(t)
+					shellScriptInfo := common.ShellScriptInfo{
+						Build: build,
+					}
+
+					if test.depth == 0 {
+						mockWriter.EXPECT().Noticef("Cloning repository for %s...", dummyRef).Once()
+					} else {
+						mockWriter.EXPECT().Noticef("Cloning repository for %s with git depth set to %d...", dummyRef, test.depth).Once()
+					}
+
+					v := common.AppVersion
+					userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
+					command := []interface{}{"-c", userAgent, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir}
+
+					if test.depth > 0 {
+						command = append(command, "--depth", strconv.Itoa(test.depth))
+					}
+
+					command = append(command, "--branch", dummyRef)
+					command = append(command, test.expectedGitCloneFlags...)
+
+					if credConfigFile != "" {
+						command = append(command, "-c", "include.path="+credConfigFile)
+						mockWriter.EXPECT().Command("git", "config", "include.path", credConfigFile)
+					}
+
+					mockWriter.EXPECT().Cd(mock.Anything).Once()
+					mockWriter.EXPECT().Command("git", command...).Once()
+
+					err := shell.writeCloneRevisionCmd(mockWriter, shellScriptInfo, templateDir, credConfigFile)
+					assert.NoError(t, err, "calling shell.writeCloneRevisionCmd")
+				})
+			}
 		})
 	}
 }
