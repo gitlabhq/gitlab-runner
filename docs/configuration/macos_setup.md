@@ -87,7 +87,7 @@ Now install and configure Xcode.
 1. Go to one of these locations and install Xcode:
 
    - The Apple App Store.
-   - The [Apple Developer Portal](https://developer.apple.com/download/all/?q=xcode).
+   - The [Apple Developer Portal](https://developer.apple.com/).
    - [`xcode-install`](https://github.com/xcpretty/xcode-install). This project aims to make it easier to download various
      Apple dependencies from the command line.
 

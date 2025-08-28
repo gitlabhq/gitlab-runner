@@ -122,7 +122,7 @@ Instead of using AWS S3, you can create your own cache storage.
 1. Log in to a dedicated machine where the cache server will run.
 1. Make sure that [Docker Engine](https://docs.docker.com/get-started/get-docker/) is installed
    on that machine.
-1. Start [MinIO](https://min.io), a simple S3-compatible server written in Go:
+1. Start [MinIO](https://www.min.io), a simple S3-compatible server written in Go:
 
    ```shell
    docker run -d --restart always -p 9005:9000 \

@@ -468,4 +468,4 @@ In the GitLab UI, you might get a `Response not successful: Received status code
 This issue might affect instances that have undergone multiple major upgrades over an extended period.
 To resolve this issue, consolidate any duplicate tags in the table with the
 [`gitlab:db:deduplicate_tags` Rake task](https://docs.gitlab.com/administration/raketasks/maintenance/#check-the-database-for-deduplicate-cicd-tags).
-For more information, see [Rake tasks](https://docs.gitlab.com/raketasks/).
+For more information, see [Rake tasks](https://docs.gitlab.com/administration/raketasks/).
