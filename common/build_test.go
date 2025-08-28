@@ -1994,6 +1994,50 @@ func TestGitCleanFlags(t *testing.T) {
 	}
 }
 
+func TestGitCloneFlags(t *testing.T) {
+	tests := map[string]struct {
+		value          string
+		expectedResult []string
+	}{
+		"empty clone flags": {
+			value:          "",
+			expectedResult: []string{},
+		},
+		"use single custom flag": {
+			value:          "--bare",
+			expectedResult: []string{"--bare"},
+		},
+		"use custom flags with multiple arguments": {
+			value:          "--no-tags --filter=blob:none",
+			expectedResult: []string{"--no-tags", "--filter=blob:none"},
+		},
+		"use another custom flag": {
+			value:          "--reference-if-available /tmp/test --no-tags",
+			expectedResult: []string{"--reference-if-available", "/tmp/test", "--no-tags"},
+		},
+		"disabled": {
+			value:          "none",
+			expectedResult: []string{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					Variables: JobVariables{
+						{Key: "GIT_CLONE_EXTRA_FLAGS", Value: test.value},
+					},
+				},
+			}
+
+			result := build.GetGitCloneFlags()
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
 func TestGitFetchFlags(t *testing.T) {
 	tests := map[string]struct {
 		value          string
