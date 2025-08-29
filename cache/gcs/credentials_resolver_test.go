@@ -3,7 +3,6 @@
 package gcs
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -199,7 +198,7 @@ func TestSignBytesOperation(t *testing.T) {
 				signBlobCall.Return(nil, tc.returnError)
 			}
 
-			signed, err := cr.SignBytesFunc(context.Background())([]byte("input"))
+			signed, err := cr.SignBytesFunc(t.Context())([]byte("input"))
 
 			if tc.returnError == nil {
 				assert.Nil(t, err)

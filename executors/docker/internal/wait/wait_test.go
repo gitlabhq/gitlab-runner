@@ -68,7 +68,7 @@ func TestDockerWaiter_Wait(t *testing.T) {
 
 			waiter := NewDockerKillWaiter(mClient)
 
-			err := waiter.Wait(context.Background(), "id")
+			err := waiter.Wait(t.Context(), "id")
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
@@ -101,14 +101,14 @@ func TestDockerWaiter_StopKillWait(t *testing.T) {
 		}
 	}()
 
-	err := waiter.StopKillWait(context.Background(), "id", nil, nil)
+	err := waiter.StopKillWait(t.Context(), "id", nil, nil)
 	assert.NoError(t, err)
 }
 
 func TestDockerWaiter_WaitContextCanceled(t *testing.T) {
 	mClient := docker.NewMockClient(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
 	waiter := NewDockerKillWaiter(mClient)
@@ -132,7 +132,7 @@ func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
 
 	waiter := NewDockerKillWaiter(mClient)
 
-	err := waiter.Wait(context.Background(), "id")
+	err := waiter.Wait(t.Context(), "id")
 
 	var buildError *common.BuildError
 	assert.ErrorAs(t, err, &buildError)

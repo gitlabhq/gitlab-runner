@@ -4,7 +4,6 @@ package helpers
 
 import (
 	"bytes"
-	"context"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -61,7 +60,7 @@ func TestArchiver(t *testing.T) {
 		})
 
 		assert.Equal(t, 2, len(files))
-		require.NoError(t, archiver.Archive(context.Background(), files))
+		require.NoError(t, archiver.Archive(t.Context(), files))
 
 		input := buf.Bytes()
 		out := t.TempDir()
@@ -74,7 +73,7 @@ func TestArchiver(t *testing.T) {
 
 		extractor, err := archive.NewExtractor(format, bytes.NewReader(input), int64(len(input)), out)
 		require.NoError(t, err)
-		require.NoError(t, extractor.Extract(context.Background()))
+		require.NoError(t, extractor.Extract(t.Context()))
 
 		smallEq, err := os.ReadFile(filepath.Join(out, "small"))
 		require.NoError(t, err)
@@ -110,7 +109,7 @@ func TestZipArchiveExtract(t *testing.T) {
 		})
 
 		assert.Equal(t, 2, len(files))
-		require.NoError(t, archiver.Archive(context.Background(), files))
+		require.NoError(t, archiver.Archive(t.Context(), files))
 
 		input := buf.Bytes()
 		OnEachZipExtractor(t, func(t *testing.T) {
@@ -118,7 +117,7 @@ func TestZipArchiveExtract(t *testing.T) {
 
 			extractor, err := archive.NewExtractor(archive.Zip, bytes.NewReader(input), int64(len(input)), out)
 			require.NoError(t, err)
-			require.NoError(t, extractor.Extract(context.Background()))
+			require.NoError(t, extractor.Extract(t.Context()))
 
 			smallEq, err := os.ReadFile(filepath.Join(out, "small"))
 			require.NoError(t, err)

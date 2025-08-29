@@ -1682,7 +1682,7 @@ func TestSkipBuildStageFeatureFlag(t *testing.T) {
 				e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
 			}
 
-			err := build.executeStage(context.Background(), BuildStageAfterScript, e)
+			err := build.executeStage(t.Context(), BuildStageAfterScript, e)
 			assert.NoError(t, err)
 		})
 	}
@@ -1797,7 +1797,7 @@ func TestWaitForTerminal(t *testing.T) {
 				conn.Close()
 			}()
 
-			ctx, cancel := context.WithTimeout(context.Background(), build.GetBuildTimeout())
+			ctx, cancel := context.WithTimeout(t.Context(), build.GetBuildTimeout())
 
 			errCh := make(chan error)
 			go func() {
@@ -3004,7 +3004,7 @@ func TestGetStageTimeoutContexts(t *testing.T) {
 				})
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			if tc.jobTimeout > 0 {
 				var cancel func()
 				ctx, cancel = context.WithTimeout(ctx, tc.jobTimeout)

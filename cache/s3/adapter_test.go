@@ -3,7 +3,6 @@
 package s3
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -130,12 +129,12 @@ func testCacheOperation(
 			}
 		}
 
-		goCloudURL, err := adapter.GetGoCloudURL(context.Background(), true)
+		goCloudURL, err := adapter.GetGoCloudURL(t.Context(), true)
 		assert.NoError(t, err)
 		assert.Nil(t, goCloudURL.URL)
 		assert.Empty(t, goCloudURL.Environment)
 
-		goCloudURL, err = adapter.GetGoCloudURL(context.Background(), false)
+		goCloudURL, err = adapter.GetGoCloudURL(t.Context(), false)
 		assert.NoError(t, err)
 		assert.Nil(t, goCloudURL.URL)
 		assert.Empty(t, goCloudURL.Environment)
@@ -174,14 +173,14 @@ func TestCacheOperation(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(t.Context()) },
 				test,
 				defaultCacheFactory(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(t.Context()) },
 				test,
 				defaultCacheFactory(),
 			)
@@ -228,14 +227,14 @@ func TestCacheOperationEncryptionAES(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(t.Context()) },
 				test,
 				defaultCacheFactoryEncryptionAES(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(t.Context()) },
 				test,
 				defaultCacheFactoryEncryptionAES(),
 			)
@@ -283,14 +282,14 @@ func TestCacheOperationEncryptionKMS(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(t.Context()) },
 				test,
 				defaultCacheFactoryEncryptionKMS(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(t.Context()) },
 				test,
 				defaultCacheFactoryEncryptionKMS(),
 			)

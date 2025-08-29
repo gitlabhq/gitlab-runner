@@ -3,7 +3,6 @@
 package kubernetes
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -197,7 +196,7 @@ func TestKubeClientFeatureChecker_ResouceVerbAllowed(t *testing.T) {
 			t.Parallel()
 
 			fakeClient := fake.NewSimpleClientset()
-			ctx := context.TODO()
+			ctx := t.Context()
 
 			fakeClient.PrependReactor("create", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
 				creatAction := action.(k8stesting.CreateAction)

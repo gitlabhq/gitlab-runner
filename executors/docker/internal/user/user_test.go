@@ -79,7 +79,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 			clientMock := docker.NewMockClient(t)
 			execMock := exec.NewMockDocker(t)
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			tt.setupDockerClientMock(t, clientMock, ctx)
 
@@ -272,7 +272,7 @@ Hello world
 			clientMock := docker.NewMockClient(t)
 			execMock := exec.NewMockDocker(t)
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			tt.assertExecMock(t, execMock, ctx)
 

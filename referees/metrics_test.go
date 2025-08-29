@@ -4,7 +4,6 @@ package referees
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -117,7 +116,7 @@ func TestMetricsRefereeExecuteParseError(t *testing.T) {
 
 	mr := newTestMetricsRefereeWithConfig(t, config, mockExecutor)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, err := mr.Execute(ctx, time.Now(), time.Now())
 	require.Error(t, err)
 }
@@ -130,7 +129,7 @@ func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
 	mr := newDefaultTestMetricsReferee(t, mockExecutor)
 	require.NotNil(t, mr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	prometheusAPI := newMockPrometheusAPI(t)
 	matrix := model.Matrix([]*model.SampleStream{})
 	prometheusAPI.
@@ -149,7 +148,7 @@ func TestMetricsRefereeExecuteQueryRangeNonMatrixReturn(t *testing.T) {
 	mr := newDefaultTestMetricsReferee(t, mockExecutor)
 	require.NotNil(t, mr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	prometheusAPI := newMockPrometheusAPI(t)
 	prometheusAPI.
 		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
@@ -168,7 +167,7 @@ func TestMetricsRefereeExecuteQueryRangeResultEmpty(t *testing.T) {
 	require.NotNil(t, mr)
 
 	matrix := model.Matrix([]*model.SampleStream{})
-	ctx := context.Background()
+	ctx := t.Context()
 	prometheusAPI := newMockPrometheusAPI(t)
 	prometheusAPI.
 		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
@@ -253,7 +252,7 @@ func TestMetricsRefereeExecute(t *testing.T) {
 	mr := newMetricsReferee(mockExecutor, config, log)
 	require.NotNil(t, mr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	reader, err := mr.Execute(ctx, startTime, endTime)
 	require.NoError(t, err)
 

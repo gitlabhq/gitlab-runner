@@ -3,7 +3,6 @@
 package fastzip
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -80,7 +79,7 @@ func TestExtractorOptionFromEnv(t *testing.T) {
 				extractor, err := NewExtractor(f, fi.Size(), dir)
 				require.NoError(t, err)
 
-				err = extractor.Extract(context.Background())
+				err = extractor.Extract(t.Context())
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.err)
 			})
@@ -103,7 +102,7 @@ func archiveTestDir(t *testing.T, fn func(string, string, error)) {
 	archiver, err := NewArchiver(f, dir, archive.DefaultCompression)
 	require.NoError(t, err)
 
-	err = archiver.Archive(context.Background(), map[string]os.FileInfo{pathname: fi})
+	err = archiver.Archive(t.Context(), map[string]os.FileInfo{pathname: fi})
 	require.NoError(t, f.Close())
 
 	fn(f.Name(), dir, err)

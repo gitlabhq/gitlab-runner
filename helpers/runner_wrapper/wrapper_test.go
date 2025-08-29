@@ -160,7 +160,7 @@ func TestWrapper_Run(t *testing.T) {
 			}
 
 			ctx, cancelFn := context.WithTimeout(
-				context.WithValue(context.Background(), testCtxKey, testCtxVal),
+				context.WithValue(t.Context(), testCtxKey, testCtxVal),
 				testTimeout,
 			)
 			defer cancelFn()

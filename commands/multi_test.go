@@ -190,7 +190,7 @@ func TestRunCommand_doJobRequest(t *testing.T) {
 				runFinished:        make(chan bool),
 			}
 
-			ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Second)
+			ctx, cancelFn := context.WithTimeout(t.Context(), 1*time.Second)
 			defer cancelFn()
 
 			go tt.passSignal(c)
@@ -1068,7 +1068,7 @@ func TestRunCommand_configReloadingRegression(t *testing.T) {
 		reloadConfigInterval: 10 * time.Millisecond,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	// Counting discovered configuration reloads
@@ -1139,7 +1139,7 @@ shutdown_timeout = 0`
 		reloadConfigInterval: 10 * time.Millisecond,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	// Counting discovered configuration reloads

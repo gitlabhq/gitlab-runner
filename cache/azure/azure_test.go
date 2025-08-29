@@ -4,7 +4,6 @@ package azure
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -130,7 +129,7 @@ func TestAccountKeySigning(t *testing.T) {
 			assert.Equal(t, tt.expectedServiceURL, signer.ServiceURL())
 
 			opts.Signer = signer
-			token, err := getSASToken(context.Background(), objectName, opts)
+			token, err := getSASToken(t.Context(), objectName, opts)
 			require.NoError(t, err)
 
 			q, err := url.ParseQuery(token)
@@ -234,7 +233,7 @@ func TestUserDelegationSigning(t *testing.T) {
 			assert.Equal(t, server.URL, signer.ServiceURL())
 
 			opts.Signer = signer
-			token, err := getSASToken(context.Background(), objectName, opts)
+			token, err := getSASToken(t.Context(), objectName, opts)
 			require.NoError(t, err)
 
 			q, err := url.ParseQuery(token)

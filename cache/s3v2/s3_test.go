@@ -39,7 +39,7 @@ func setupMockS3Server(t *testing.T) *common.CacheS3Config {
 	backend := s3mem.New()
 	server := gofakes3.New(backend)
 	ts := httptest.NewServer(server.Server())
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 	defer cancel()
 
 	url, err := url.Parse(ts.URL)
@@ -283,7 +283,7 @@ func TestS3Client_PresignURL(t *testing.T) {
 
 			// Presign a PUT request to upload an object
 			objectName := "test-object"
-			url, err := s3Client.PresignURL(context.Background(), http.MethodPut, s3Config.BucketName, objectName, nil, 5*time.Minute)
+			url, err := s3Client.PresignURL(t.Context(), http.MethodPut, s3Config.BucketName, objectName, nil, 5*time.Minute)
 			require.NoError(t, err)
 
 			// Verify encryption headers
@@ -308,7 +308,7 @@ func TestS3Client_PresignURL(t *testing.T) {
 			resp.Body.Close()
 
 			// Presign a GET request to download the object
-			url, err = s3Client.PresignURL(context.Background(), http.MethodGet, s3Config.BucketName, objectName, nil, 5*time.Minute)
+			url, err = s3Client.PresignURL(t.Context(), http.MethodGet, s3Config.BucketName, objectName, nil, 5*time.Minute)
 			require.NoError(t, err)
 
 			req, err = http.NewRequest(http.MethodGet, url.URL.String(), bytes.NewReader(content))
@@ -594,7 +594,7 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			s3Client, err := newS3Client(tt.config.S3, withSTSEndpoint(mockServer.URL+"/sts"))
 			require.NoError(t, err)
 
-			creds, err := s3Client.FetchCredentialsForRole(context.Background(), tt.roleARN, bucketName, objectName, true, tt.duration)
+			creds, err := s3Client.FetchCredentialsForRole(t.Context(), tt.roleARN, bucketName, objectName, true, tt.duration)
 
 			if tt.errMsg != "" {
 				require.Error(t, err)

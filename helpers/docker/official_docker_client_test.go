@@ -42,7 +42,7 @@ func TestEventStreamError(t *testing.T) {
 	})
 	defer server.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	err := client.ImagePullBlocking(ctx, "test", image.PullOptions{})
@@ -57,7 +57,7 @@ func TestWrapError(t *testing.T) {
 	})
 	defer server.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	_, err := client.Info(ctx)
@@ -83,7 +83,7 @@ func TestRedirectsNotAllowed(t *testing.T) {
 	client, err := New(credentials)
 	require.NoError(t, err)
 
-	_, err = client.Info(context.Background())
+	_, err = client.Info(t.Context())
 	require.Error(t, err)
 	// The latest version of github.com/pkg/errors still doesn't provide the
 	// Unwrap method for withStack and withMessage types, so we can't leverage

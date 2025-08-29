@@ -4,7 +4,6 @@ package shells
 
 import (
 	"cmp"
-	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -243,7 +242,7 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything)
 	mockWriter.On("EndIf")
 
-	err := shell.writeScript(context.Background(), mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
+	err := shell.writeScript(t.Context(), mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
 	require.NoError(t, err)
 }
 
@@ -307,7 +306,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything)
 	mockWriter.On("EndIf")
 
-	err := shell.writeScript(context.Background(), mockWriter, common.BuildStageUploadOnFailureArtifacts, info)
+	err := shell.writeScript(t.Context(), mockWriter, common.BuildStageUploadOnFailureArtifacts, info)
 	require.NoError(t, err)
 }
 
@@ -361,7 +360,7 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
 	mockWriter.On("EndIf").Once()
 
-	err := shell.writeScript(context.Background(), mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
+	err := shell.writeScript(t.Context(), mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
 	require.NoError(t, err)
 }
 
@@ -542,7 +541,7 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 					varCount := len(info.Build.GetAllVariables())
 					mockWriter.On("Variable", mock.Anything).Times(varCount)
 
-					err := shell.writeScript(context.Background(), mockWriter, buildStage, info)
+					err := shell.writeScript(t.Context(), mockWriter, buildStage, info)
 					require.NoError(t, err)
 				})
 			}
@@ -954,7 +953,7 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 					shell := new(AbstractShell)
 
 					// Act
-					err := shell.writeGetSourcesScript(context.Background(), msw, info)
+					err := shell.writeGetSourcesScript(t.Context(), msw, info)
 					assert.NoError(t, err)
 
 					// Assert: assertion on shell wrtier performed in the setup of each test case.
@@ -1791,7 +1790,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 					mockWriter.On("EndIf").Once()
 					mockWriter.On("EndIf").Once()
 
-					err := shell.cacheExtractor(context.Background(), mockWriter, info)
+					err := shell.cacheExtractor(t.Context(), mockWriter, info)
 					assert.NoError(t, err)
 				})
 			}
@@ -1974,7 +1973,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 						mockWriter.On("Warningf", w...).Once()
 					}
 
-					err := shell.cacheExtractor(context.Background(), mockWriter, info)
+					err := shell.cacheExtractor(t.Context(), mockWriter, info)
 					assert.NoError(t, err)
 				})
 			}
@@ -2169,7 +2168,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 					mockWriter.On("EndIf").Once()
 					mockWriter.On("EndIf").Once()
 
-					err := shell.cacheExtractor(context.Background(), mockWriter, info)
+					err := shell.cacheExtractor(t.Context(), mockWriter, info)
 					assert.NoError(t, err)
 				})
 			}
@@ -2240,10 +2239,10 @@ func TestAbstractShell_cachePolicy(t *testing.T) {
 
 	functions := map[string]cacheFunc{
 		"cacheExtractor": func(shell AbstractShell, info common.ShellScriptInfo) error {
-			return shell.cacheExtractor(context.Background(), &BashWriter{}, info)
+			return shell.cacheExtractor(t.Context(), &BashWriter{}, info)
 		},
 		"cacheArchiver": func(shell AbstractShell, info common.ShellScriptInfo) error {
-			return shell.cacheArchiver(context.Background(), &BashWriter{}, info, true)
+			return shell.cacheArchiver(t.Context(), &BashWriter{}, info, true)
 		},
 	}
 
@@ -2464,7 +2463,7 @@ func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
 						w.On("EndIf")
 					}
 
-					_, err := shell.archiveCache(context.TODO(), w, info, true)
+					_, err := shell.archiveCache(t.Context(), w, info, true)
 
 					assert.NoError(t, err, "expected achiveCache to succeed")
 				})
@@ -3083,7 +3082,7 @@ func TestSkipBuildStage(t *testing.T) {
 					}
 
 					// empty stages should always be skipped
-					err := shell.writeScript(context.Background(), &BashWriter{}, stage, info)
+					err := shell.writeScript(t.Context(), &BashWriter{}, stage, info)
 					assert.ErrorIs(t, err, common.ErrSkipBuildStage)
 
 					// stages with bare minimum requirements should not be skipped.
@@ -3095,7 +3094,7 @@ func TestSkipBuildStage(t *testing.T) {
 						RunnerCommand: "gitlab-runner-helper",
 						Build:         build,
 					}
-					err = shell.writeScript(context.Background(), &BashWriter{}, stage, info)
+					err = shell.writeScript(t.Context(), &BashWriter{}, stage, info)
 					assert.NoError(t, err, "stage %v should not have been skipped", stage)
 				})
 			}
@@ -3200,7 +3199,7 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 
 					shell := new(AbstractShell)
 
-					err := shell.writeCleanupScript(context.Background(), mockShellWriter, info)
+					err := shell.writeCleanupScript(t.Context(), mockShellWriter, info)
 					assert.NoError(t, err)
 				})
 			}
@@ -3456,7 +3455,7 @@ func benchmarkScriptStage(b *testing.B, shell common.Shell, stage common.BuildSt
 
 	b.ResetTimer()
 	b.ReportAllocs()
-	ctx := context.Background()
+	ctx := b.Context()
 
 	for i := 0; i < b.N; i++ {
 		script, err := shell.GenerateScript(ctx, stage, info)
@@ -3721,7 +3720,7 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 								sw.EXPECT().RmFile("/.gitlab-build-uid-gid").Once()
 								sw.EXPECT().Join("", ".gitlab-build-uid-gid").Return("/.gitlab-build-uid-gid").Once()
 
-								err := shell.writeCleanupScript(context.TODO(), sw, info)
+								err := shell.writeCleanupScript(t.Context(), sw, info)
 								assert.NoError(t, err)
 							})
 						})

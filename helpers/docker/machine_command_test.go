@@ -123,7 +123,7 @@ func TestNewDockerMachineCommand(t *testing.T) {
 			err := os.Setenv("MACHINE_BUGSNAG_API_TOKEN", tc.tokenEnvValue)
 			require.NoError(t, err)
 
-			ctx, ctxCancelFn := context.WithTimeout(context.Background(), 1*time.Hour)
+			ctx, ctxCancelFn := context.WithTimeout(t.Context(), 1*time.Hour)
 			defer ctxCancelFn()
 
 			cmd := newDockerMachineCommand(ctx, dockerMachineCommandArgs...)

@@ -102,7 +102,7 @@ func testGoCloudURLWithInvalidConfig(
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(t, adapter, tc)
 
-		u, err := operation(context.Background(), true)
+		u, err := operation(t.Context(), true)
 
 		if expectedErrorMessage != "" {
 			assert.ErrorContains(t, err, expectedErrorMessage)
@@ -128,7 +128,7 @@ func testUploadEnvWithInvalidConfig(
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(t, adapter, tc)
 
-		u, err := operation(context.Background())
+		u, err := operation(t.Context())
 		assert.NoError(t, err)
 		assert.Equal(t, accountName, u["AZURE_STORAGE_ACCOUNT"])
 		assert.Equal(t, storageDomain, u["AZURE_STORAGE_DOMAIN"])
@@ -207,7 +207,7 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 			adapter, ok := a.(*azureAdapter)
 			require.True(t, ok, "Adapter should be properly casted to *adapter type")
 
-			ctx := context.Background()
+			ctx := t.Context()
 			assert.Nil(t, adapter.GetDownloadURL(ctx).URL)
 			assert.Nil(t, adapter.GetUploadURL(ctx).URL)
 
@@ -280,7 +280,7 @@ func TestAdapterOperation(t *testing.T) {
 			adapter, ok := a.(*azureAdapter)
 			require.True(t, ok, "Adapter should be properly casted to *adapter type")
 
-			u, err := adapter.GetGoCloudURL(context.Background(), true)
+			u, err := adapter.GetGoCloudURL(t.Context(), true)
 			assert.NoError(t, err)
 			assert.Equal(t, "azblob://test/key", u.URL.String())
 
@@ -290,7 +290,7 @@ func TestAdapterOperation(t *testing.T) {
 			assert.Empty(t, u.Environment["AZURE_STORAGE_KEY"])
 			assert.Equal(t, storageDomain, u.Environment["AZURE_STORAGE_DOMAIN"])
 
-			du, err := adapter.GetGoCloudURL(context.Background(), false)
+			du, err := adapter.GetGoCloudURL(t.Context(), false)
 			assert.NoError(t, err)
 			assert.Equal(t, "azblob://test/key", du.URL.String())
 
@@ -300,7 +300,7 @@ func TestAdapterOperation(t *testing.T) {
 			assert.Empty(t, du.Environment["AZURE_STORAGE_KEY"])
 			assert.Equal(t, storageDomain, du.Environment["AZURE_STORAGE_DOMAIN"])
 
-			ctx := context.Background()
+			ctx := t.Context()
 			assert.Nil(t, adapter.GetDownloadURL(ctx).URL)
 			assert.Nil(t, adapter.GetUploadURL(ctx).URL)
 		})

@@ -1830,7 +1830,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 			err := e.createBuildNetwork()
 			assert.ErrorIs(t, err, test.expectedBuildError)
 
-			err = e.cleanupNetwork(context.Background())
+			err = e.cleanupNetwork(t.Context())
 			assert.ErrorIs(t, err, test.expectedCleanError)
 		})
 	}
@@ -1894,7 +1894,7 @@ func getExecutorForNetworksTests(t *testing.T, test networksTestCase) *executor 
 		},
 	}
 
-	e.Context = context.Background()
+	e.Context = t.Context()
 	e.Build.Variables = append(e.Build.Variables, common.JobVariable{
 		Key:   featureflags.NetworkPerBuild,
 		Value: test.networkPerBuild,
@@ -2268,7 +2268,7 @@ func createFakePrebuiltImages(t *testing.T, architecture string) {
 }
 
 func TestGetUIDandGID(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testContainerID := "test-ID"
 	testImageSHA := "test-SHA"
 	testUID := 456
@@ -2662,7 +2662,7 @@ func TestConnectEnvironment(t *testing.T) {
 			},
 		},
 		Build:   build,
-		Context: context.Background(),
+		Context: t.Context(),
 	})
 	require.ErrorIs(t, err, assert.AnError)
 	require.NotNil(t, env.client)

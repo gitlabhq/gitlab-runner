@@ -4,7 +4,6 @@ package kubernetes
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -72,7 +71,7 @@ func TestProxyRequestError(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			ex := newExecutor()
-			ex.AbstractExecutor.Context = context.Background()
+			ex.AbstractExecutor.Context = t.Context()
 			ex.pod = &api.Pod{ObjectMeta: objectInfo}
 			ex.kubeClient = testKubernetesClient(
 				version,
@@ -141,7 +140,7 @@ func TestProxyRequestHTTP(t *testing.T) {
 	}
 
 	ex := newExecutor()
-	ex.AbstractExecutor.Context = context.Background()
+	ex.AbstractExecutor.Context = t.Context()
 	ex.pod = &api.Pod{ObjectMeta: objectInfo}
 
 	tests := map[string]struct {
@@ -247,7 +246,7 @@ func TestProxyRequestHTTPError(t *testing.T) {
 	objectInfo := metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}
 
 	ex := newExecutor()
-	ex.AbstractExecutor.Context = context.Background()
+	ex.AbstractExecutor.Context = t.Context()
 	ex.pod = &api.Pod{ObjectMeta: objectInfo}
 
 	proxySettings := proxy.Settings{
@@ -361,7 +360,7 @@ func TestProxyRequestWebsockets(t *testing.T) {
 	}
 
 	ex := newExecutor()
-	ex.AbstractExecutor.Context = context.Background()
+	ex.AbstractExecutor.Context = t.Context()
 	ex.AbstractExecutor.Config.RunnerSettings.Kubernetes = &common.KubernetesConfig{
 		Host: "localhost",
 	}

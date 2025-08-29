@@ -3,7 +3,6 @@
 package ssh
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -101,7 +100,7 @@ func TestPrepare(t *testing.T) {
 	prepareOptions := common.ExecutorPrepareOptions{
 		Config:  runnerConfig,
 		Build:   build,
-		Context: context.TODO(),
+		Context: t.Context(),
 	}
 
 	err = e.Prepare(prepareOptions)

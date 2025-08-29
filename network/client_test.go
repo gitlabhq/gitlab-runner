@@ -212,7 +212,7 @@ func TestServerCertificateChange(t *testing.T) {
 	var cachedCA []byte
 	for i := 0; i < 10; i++ {
 		statusCode, statusText, resp := c.doJSON(
-			context.Background(),
+			t.Context(),
 			"test/ok",
 			http.MethodGet,
 			http.StatusOK,
@@ -576,7 +576,7 @@ func TestClientInvalidSSL(t *testing.T) {
 		URL: s.URL,
 	}, NewAPIRequestsCollector())
 	statusCode, statusText, _ := c.doJSON(
-		context.Background(),
+		t.Context(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
@@ -607,7 +607,7 @@ func TestClientTLSCAFile(t *testing.T) {
 		TLSCAFile: file.Name(),
 	}, NewAPIRequestsCollector())
 	statusCode, statusText, resp := c.doJSON(
-		context.Background(),
+		t.Context(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
@@ -641,7 +641,7 @@ func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 		URL: s.URL,
 	}, NewAPIRequestsCollector())
 	statusCode, statusText, resp := c.doJSON(
-		context.Background(),
+		t.Context(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
@@ -676,7 +676,7 @@ func TestClientInvalidTLSAuth(t *testing.T) {
 		TLSCAFile: ca.Name(),
 	}, NewAPIRequestsCollector())
 	statusCode, statusText, _ := c.doJSON(
-		context.Background(),
+		t.Context(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
@@ -724,7 +724,7 @@ func TestClientTLSAuth(t *testing.T) {
 	}, NewAPIRequestsCollector())
 
 	statusCode, statusText, resp := c.doJSON(
-		context.Background(),
+		t.Context(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
@@ -770,7 +770,7 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 		URL: s.URL,
 	}, NewAPIRequestsCollector())
 	statusCode, statusText, resp := c.doJSON(
-		context.Background(),
+		t.Context(),
 		"test/ok",
 		http.MethodGet,
 		http.StatusOK,
@@ -836,7 +836,7 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 	}{}
 
 	statusCode, statusText, _ := c.doJSON(
-		context.Background(),
+		t.Context(),
 		"with-charset",
 		http.MethodGet,
 		http.StatusOK,
@@ -847,7 +847,7 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 
 	statusCode, statusText, _ = c.doJSON(
-		context.Background(),
+		t.Context(),
 		"without-charset",
 		http.MethodGet,
 		http.StatusOK,
@@ -858,7 +858,7 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 
 	statusCode, statusText, _ = c.doJSON(
-		context.Background(),
+		t.Context(),
 		"without-json",
 		http.MethodGet,
 		http.StatusOK,
@@ -869,7 +869,7 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 	assert.Equal(t, -1, statusCode, statusText)
 
 	statusCode, statusText, _ = c.doJSON(
-		context.Background(),
+		t.Context(),
 		"invalid-header",
 		http.MethodGet,
 		http.StatusOK,
@@ -895,7 +895,7 @@ func TestRequesterCalled(t *testing.T) {
 	})).Return(resReturn, nil)
 	c.requester = rl
 
-	res, _ := c.do(context.Background(), "http://mockURL", http.MethodGet, nil, "", nil)
+	res, _ := c.do(t.Context(), "http://mockURL", http.MethodGet, nil, "", nil)
 	assert.Equal(t, resReturn, res)
 }
 
@@ -990,7 +990,7 @@ func Test307and308Redirections(t *testing.T) {
 				}
 				c.requester = &c.Client
 
-				response, err := c.do(context.Background(), "/", http.MethodPatch, tt.bodyProvider(t), "", nil)
+				response, err := c.do(t.Context(), "/", http.MethodPatch, tt.bodyProvider(t), "", nil)
 				assert.NoError(t, err)
 				if assert.NotNil(t, response) {
 					assert.Equal(t, code.expected, response.StatusCode)
@@ -1033,7 +1033,7 @@ func TestEnsureUserAgentAlwaysSent(t *testing.T) {
 			headers := http.Header{}
 			headers.Set("Test", "test")
 
-			response, err := c.do(context.Background(), "/", http.MethodGet, tt.b, "", headers)
+			response, err := c.do(t.Context(), "/", http.MethodGet, tt.b, "", headers)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, response.StatusCode)
 		})

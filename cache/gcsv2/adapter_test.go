@@ -3,7 +3,6 @@
 package gcsv2
 
 import (
-	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -114,14 +113,14 @@ func TestAdapter(t *testing.T) {
 
 			adapter.WithMetadata(tc.metadata)
 
-			getURL, err := adapter.(*gcsAdapter).presignURL(context.Background(), http.MethodGet, "")
+			getURL, err := adapter.(*gcsAdapter).presignURL(t.Context(), http.MethodGet, "")
 			if tc.getExpectedErr != "" {
 				assert.EqualError(t, err, tc.getExpectedErr)
 			} else {
 				assert.NoError(t, err)
 			}
 
-			putURL, err := adapter.(*gcsAdapter).presignURL(context.Background(), http.MethodPut, "application/octet-stream")
+			putURL, err := adapter.(*gcsAdapter).presignURL(t.Context(), http.MethodPut, "application/octet-stream")
 			if tc.putExpectedErr != "" {
 				assert.EqualError(t, err, tc.putExpectedErr)
 			} else {
@@ -131,7 +130,7 @@ func TestAdapter(t *testing.T) {
 			if getURL != nil {
 				assert.Contains(t, getURL.String(), expectedURL)
 
-				u := adapter.GetDownloadURL(context.Background())
+				u := adapter.GetDownloadURL(t.Context())
 				require.NotNil(t, u)
 				assert.Contains(t, u.URL.String(), expectedURL)
 			}
@@ -139,7 +138,7 @@ func TestAdapter(t *testing.T) {
 			if putURL != nil {
 				assert.Contains(t, putURL.String(), expectedURL)
 
-				u := adapter.GetUploadURL(context.Background())
+				u := adapter.GetUploadURL(t.Context())
 				require.NotNil(t, u)
 				assert.Contains(t, u.URL.String(), expectedURL)
 
@@ -152,11 +151,11 @@ func TestAdapter(t *testing.T) {
 				}
 			}
 
-			u, err := adapter.GetGoCloudURL(context.Background(), false)
+			u, err := adapter.GetGoCloudURL(t.Context(), false)
 			assert.NoError(t, err)
 			assert.Nil(t, u.URL)
 
-			u, err = adapter.GetGoCloudURL(context.Background(), true)
+			u, err = adapter.GetGoCloudURL(t.Context(), true)
 			assert.NoError(t, err)
 			assert.Nil(t, u.URL)
 		})

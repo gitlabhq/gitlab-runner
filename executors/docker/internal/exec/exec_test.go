@@ -221,7 +221,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			logger, hook := test.NewNullLogger()
 			logger.SetLevel(logrus.DebugLevel)
 
-			executorCtx, executorCancelFn := context.WithCancel(context.Background())
+			executorCtx, executorCancelFn := context.WithCancel(t.Context())
 			defer executorCancelFn()
 
 			ctx, cancelFn := context.WithCancel(executorCtx)

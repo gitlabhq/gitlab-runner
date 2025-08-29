@@ -3,7 +3,6 @@
 package autoscaler
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -75,7 +74,7 @@ func TestWithInit(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.TODO()
+			ctx := t.Context()
 			config := &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Autoscaler: &common.AutoscalerConfig{},

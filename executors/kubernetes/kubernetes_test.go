@@ -801,7 +801,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	err := ex.prepareOverwrites(make(common.JobVariables, 0))
 	assert.NoError(t, err)
 
-	err = ex.setupBuildPod(context.Background(), nil)
+	err = ex.setupBuildPod(t.Context(), nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "error creating the proxy service")
 }
@@ -859,7 +859,7 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 			err := e.prepareOverwrites(make(common.JobVariables, 0))
 			assert.NoError(t, err)
 
-			err = e.setupBuildPod(context.Background(), nil)
+			err = e.setupBuildPod(t.Context(), nil)
 			assert.ErrorIs(t, err, assert.AnError)
 			assert.Error(t, err)
 		})
@@ -1069,7 +1069,7 @@ func TestCleanup(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			ex := newExecutor()
-			ex.AbstractExecutor.Context = context.Background()
+			ex.AbstractExecutor.Context = t.Context()
 			ex.kubeClient = testKubernetesClient(
 				version,
 				fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
@@ -2942,7 +2942,7 @@ func TestPrepare(t *testing.T) {
 			prepareOptions := common.ExecutorPrepareOptions{
 				Config:      testBuild.Runner,
 				Build:       testBuild,
-				Context:     context.TODO(),
+				Context:     t.Context(),
 				BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 			}
 
@@ -3114,7 +3114,7 @@ func TestSetupCredentials(t *testing.T) {
 			err := ex.prepareOverwrites(nil)
 			assert.NoError(t, err, "error on prepareOverwrites")
 
-			err = ex.setupCredentials(context.Background())
+			err = ex.setupCredentials(t.Context())
 			assert.NoError(t, err, "error on setupCredentials")
 
 			if test.VerifyFn != nil {
@@ -3202,7 +3202,7 @@ func TestSetupBuildNamespace(t *testing.T) {
 			err = ex.checkDefaults()
 			assert.NoError(t, err)
 
-			err = ex.setupBuildNamespace(context.Background())
+			err = ex.setupBuildNamespace(t.Context())
 			assert.NoError(t, err)
 
 			if test.VerifyFn != nil {
@@ -3276,7 +3276,7 @@ func TestTeardownBuildNamespace(t *testing.T) {
 			err = ex.checkDefaults()
 			assert.NoError(t, err)
 
-			err = ex.teardownBuildNamespace(context.Background())
+			err = ex.teardownBuildNamespace(t.Context())
 			assert.NoError(t, err)
 
 			if test.VerifyFn != nil {
@@ -3344,7 +3344,7 @@ func TestServiceAccountExists(t *testing.T) {
 			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
 			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = namespace
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*30)
 			defer cancel()
 
 			err := ex.prepareOverwrites(make(common.JobVariables, 0))
@@ -3409,7 +3409,7 @@ func TestSecretExists(t *testing.T) {
 			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
 			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = DefaultResourceIdentifier
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*30)
 			defer cancel()
 
 			err := ex.prepareOverwrites(make(common.JobVariables, 0))
@@ -3621,7 +3621,7 @@ func TestWaitForResources(t *testing.T) {
 
 			var err error
 
-			ctx, cancel := context.WithTimeout(context.Background(), tc.ctxTimeout)
+			ctx, cancel := context.WithTimeout(t.Context(), tc.ctxTimeout)
 			defer cancel()
 
 			err = ex.prepareOverwrites(make(common.JobVariables, 0))
@@ -5805,7 +5805,7 @@ containers:
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			vars := test.Variables
 			if vars == nil {
@@ -5909,7 +5909,7 @@ containers:
 }
 
 func TestPodWatcherSetup(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	podLabels := map[string]string{
@@ -6011,7 +6011,7 @@ func TestPodWatcherGracefulDegrade(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ex := newExecutor()
 
-			ctx := context.TODO()
+			ctx := t.Context()
 			podGvr := metav1.GroupVersionResource{Version: "v1", Resource: "pods"}
 
 			mockTrace := common.NewMockJobTrace(t)
@@ -6108,7 +6108,7 @@ func TestProcessLogs(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 			defer cancel()
 
 			waitForLineWritten := make(chan struct{})
@@ -6144,7 +6144,7 @@ func TestProcessLogs(t *testing.T) {
 				return mockLogProcessor
 			}
 
-			go e.processLogs(context.Background())
+			go e.processLogs(t.Context())
 
 			exitStatus := <-e.remoteProcessTerminated
 			assert.Equal(t, tc.expectedExitCode, *exitStatus.CommandExitCode)
@@ -6348,7 +6348,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
 			i := 0
@@ -6457,7 +6457,7 @@ func TestNewLogStreamerStream(t *testing.T) {
 	assert.Equal(t, pod.Name, s.pod)
 	assert.Equal(t, pod.Namespace, s.namespace)
 
-	err := s.Stream(context.Background(), int64(offset), output)
+	err := s.Stream(t.Context(), int64(offset), output)
 	assert.ErrorIs(t, err, abortErr)
 }
 
@@ -6576,7 +6576,7 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 			prepareOptions := common.ExecutorPrepareOptions{
 				Config:      &tt.config,
 				Build:       e.Build,
-				Context:     context.Background(),
+				Context:     t.Context(),
 				BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 			}
 
@@ -7260,7 +7260,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 			httpClient := fake.CreateHTTPClient(fakeRoundTripper(tt.readCloser(pr), tt.wantErr))
 			e.kubeClient = testKubernetesClient(version, httpClient)
 
-			err = e.captureContainerLogs(context.Background(), cName, isw)
+			err = e.captureContainerLogs(t.Context(), cName, isw)
 
 			if tt.wantErr != nil {
 				require.Error(t, err)
@@ -7328,7 +7328,7 @@ func Test_Executor_captureServiceContainersLogs(t *testing.T) {
 	e.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper))
 	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry), buildlogger.Options{})
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := map[string]struct {
 		debugServicePolicy string
@@ -7774,7 +7774,7 @@ func TestContainerPullPolicies(t *testing.T) {
 			err := executor.Prepare(prepareOptions)
 			require.NoError(t, err)
 
-			err = executor.setupBuildPod(context.TODO(), []api.Container{})
+			err = executor.setupBuildPod(t.Context(), []api.Container{})
 			require.NoError(t, err)
 
 			// get all pods we've observed create requests for
@@ -7861,7 +7861,7 @@ func TestNoContainerEnvDups(t *testing.T) {
 		return false, nil, nil
 	})
 
-	err = executor.setupBuildPod(context.TODO(), []api.Container{})
+	err = executor.setupBuildPod(t.Context(), []api.Container{})
 	require.NoError(t, err)
 }
 

@@ -172,7 +172,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			setAcq := !tc.doNotSetAcq
 
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Minute))
+			ctx, cancel := context.WithDeadline(t.Context(), time.Now().Add(time.Minute))
 			defer cancel()
 
 			acq := mocks.NewAcquisition(t)

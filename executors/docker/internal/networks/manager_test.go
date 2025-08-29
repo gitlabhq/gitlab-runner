@@ -3,7 +3,6 @@
 package networks
 
 import (
-	"context"
 	"errors"
 	"strconv"
 	"testing"
@@ -193,7 +192,7 @@ func TestCreateNetwork(t *testing.T) {
 				testCase.clientAssertions(client)
 			}
 
-			networkMode, err := m.Create(context.Background(), testCase.networkMode, testCase.enableIPv6)
+			networkMode, err := m.Create(t.Context(), testCase.networkMode, testCase.enableIPv6)
 
 			assert.Equal(t, testCase.expectedNetworkMode, networkMode)
 			assert.Equal(t, testCase.expectedErr, err)
@@ -264,7 +263,7 @@ func TestCreateNetworkWithCustomMTU(t *testing.T) {
 					Once()
 			}
 
-			_, err := m.Create(context.Background(), "", false)
+			_, err := m.Create(t.Context(), "", false)
 
 			assert.Equal(t, testCase.expectedMTU, receivedMTU)
 			assert.NoError(t, err)
@@ -323,7 +322,7 @@ func TestInspectNetwork(t *testing.T) {
 				testCase.clientAssertions(client)
 			}
 
-			inspectResponse, err := m.Inspect(context.Background())
+			inspectResponse, err := m.Inspect(t.Context())
 
 			assert.Equal(t, testCase.expectedResponse, inspectResponse)
 			assert.ErrorIs(t, err, testCase.expectedErr)
@@ -388,7 +387,7 @@ func TestCleanupNetwork(t *testing.T) {
 				testCase.clientAssertions(client)
 			}
 
-			err := m.Cleanup(context.Background())
+			err := m.Cleanup(t.Context())
 			assert.ErrorIs(t, err, testCase.expectErr)
 		})
 	}

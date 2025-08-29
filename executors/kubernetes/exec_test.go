@@ -129,7 +129,7 @@ func TestExec(t *testing.T) {
 			Stdin:         true,
 			Executor:      ex,
 			KubeClient:    c,
-			Context:       context.TODO(),
+			Context:       t.Context(),
 		}
 		err := params.Run()
 		if test.execErr && err != ex.execErr {
@@ -204,7 +204,7 @@ func TestAttach(t *testing.T) {
 		return string(b) == "sleep 1\n"
 	})
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	mockExecutor.
 		On("Execute", ctx, http.MethodPost, urlMatcher, clientConfig, stdinMatcher, nil, nil, false).
@@ -243,7 +243,7 @@ func TestAttachErrorGettingPod(t *testing.T) {
 		ContainerName: "test-resource",
 		KubeClient:    client,
 		Config:        clientConfig,
-		Context:       context.TODO(),
+		Context:       t.Context(),
 	}
 
 	assert.ErrorIs(t, opts.Run(), err)
@@ -264,7 +264,7 @@ func TestAttachPodNotRunning(t *testing.T) {
 		Namespace:  pod.GetNamespace(),
 		PodName:    pod.GetName(),
 		KubeClient: fakeClient,
-		Context:    context.TODO(),
+		Context:    t.Context(),
 	}
 
 	err := opts.Run()

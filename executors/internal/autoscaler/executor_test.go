@@ -123,7 +123,7 @@ func TestPrepare(t *testing.T) {
 
 			err := e.Prepare(common.ExecutorPrepareOptions{
 				Config:  runnerCfg,
-				Context: context.Background(),
+				Context: t.Context(),
 				Build:   e.build,
 			})
 
@@ -132,7 +132,7 @@ func TestPrepare(t *testing.T) {
 			} else {
 				err := e.Prepare(common.ExecutorPrepareOptions{
 					Config:  runnerCfg,
-					Context: context.Background(),
+					Context: t.Context(),
 					Build:   e.build,
 				})
 
