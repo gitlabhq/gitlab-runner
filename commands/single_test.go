@@ -113,7 +113,7 @@ func mockingExecutionStack(
 
 	// Network
 	jobData := common.JobResponse{}
-	_, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(t.Context())
 	jobTrace := common.Trace{Writer: io.Discard}
 	jobTrace.SetCancelFunc(cancel)
 	jobTrace.SetAbortFunc(cancel)

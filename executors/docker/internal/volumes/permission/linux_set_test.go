@@ -3,7 +3,6 @@
 package permission
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -159,7 +158,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 				},
 			}
 
-			err := setter.Set(context.Background(), volume, map[string]string{"foo": "bar"})
+			err := setter.Set(t.Context(), volume, map[string]string{"foo": "bar"})
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}

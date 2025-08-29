@@ -24,7 +24,7 @@ import (
 )
 
 func TestNewDefaultManager(t *testing.T) {
-	m := NewManager(context.Background(), newLoggerMock(t), ManagerConfig{}, docker.NewMockClient(t), nil)
+	m := NewManager(t.Context(), newLoggerMock(t), ManagerConfig{}, docker.NewMockClient(t), nil)
 	assert.IsType(t, &manager{}, m)
 }
 
@@ -701,7 +701,7 @@ func newLoggerMock(t *testing.T) *mockPullLogger {
 func newDefaultTestManager(t *testing.T, client *docker.MockClient, dockerConfig *common.DockerConfig) *manager {
 	// Create a unique context value that can be later compared with to ensure
 	// that the production code is passing it to the mocks
-	ctx := context.WithValue(context.Background(), new(struct{}), "unique context")
+	ctx := context.WithValue(t.Context(), new(struct{}), "unique context")
 
 	return &manager{
 		context: ctx,

@@ -66,7 +66,7 @@ func TestBufferHandlingWithExceededFDIssue(t *testing.T) {
 
 	assertFileDescriptors(t, proc, initialFDCount+filesToCreate)
 
-	ctx, cancelFn := context.WithCancel(context.Background())
+	ctx, cancelFn := context.WithCancel(t.Context())
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 

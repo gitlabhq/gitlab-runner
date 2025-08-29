@@ -4,7 +4,6 @@ package docker
 
 import (
 	"bufio"
-	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -69,7 +68,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 			s := commandExecutor{
 				executor: executor{
 					AbstractExecutor: executors.AbstractExecutor{
-						Context: context.Background(),
+						Context: t.Context(),
 						BuildShell: &common.ShellConfiguration{
 							DockerCommand: []string{"/bin/sh"},
 						},
@@ -135,7 +134,7 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 			s := commandExecutor{
 				executor: executor{
 					AbstractExecutor: executors.AbstractExecutor{
-						Context: context.Background(),
+						Context: t.Context(),
 						BuildShell: &common.ShellConfiguration{
 							DockerCommand: []string{"/bin/sh"},
 						},
@@ -233,7 +232,7 @@ func TestTerminalConn_Start(t *testing.T) {
 	s := commandExecutor{
 		executor: executor{
 			AbstractExecutor: executors.AbstractExecutor{
-				Context: context.Background(),
+				Context: t.Context(),
 				BuildShell: &common.ShellConfiguration{
 					DockerCommand: []string{"/bin/sh"},
 				},

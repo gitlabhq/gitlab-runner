@@ -3,7 +3,6 @@
 package volumes
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -131,7 +130,7 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
 				Once()
 
-			err := m.Create(context.Background(), existingBinding)
+			err := m.Create(t.Context(), existingBinding)
 			require.NoError(t, err)
 
 			if testCase.volume != "" {
@@ -140,7 +139,7 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 					Once()
 			}
 
-			err = m.Create(context.Background(), testCase.volume)
+			err = m.Create(t.Context(), testCase.volume)
 			assert.ErrorIs(t, err, testCase.expectedError)
 			assert.Equal(t, testCase.expectedBinding, m.volumeBindings)
 		})
@@ -206,7 +205,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
 				Once()
 
-			err := m.Create(context.Background(), "/host:/duplicated")
+			err := m.Create(t.Context(), "/host:/duplicated")
 			require.NoError(t, err)
 
 			if testCase.volume != "" {
@@ -215,7 +214,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 					Once()
 			}
 
-			err = m.Create(context.Background(), testCase.volume)
+			err = m.Create(t.Context(), testCase.volume)
 			assert.ErrorIs(t, err, testCase.expectedError)
 			assert.Equal(t, expectedBinding, m.volumeBindings)
 		})
@@ -309,14 +308,14 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
 				Once()
 
-			err := m.Create(context.Background(), existingBinding)
+			err := m.Create(t.Context(), existingBinding)
 			require.NoError(t, err)
 
 			volumeParser.On("ParseVolume", testCase.volume).
 				Return(&parser.Volume{Destination: testCase.volume}, nil).
 				Once()
 
-			err = m.Create(context.Background(), testCase.volume)
+			err = m.Create(t.Context(), testCase.volume)
 			assert.ErrorIs(t, err, testCase.expectedError)
 			assert.Equal(t, testCase.expectedBinding, m.volumeBindings)
 		})
@@ -415,10 +414,10 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 					Once()
 			}
 
-			err := m.Create(context.Background(), existingBinding)
+			err := m.Create(t.Context(), existingBinding)
 			require.NoError(t, err)
 
-			err = m.Create(context.Background(), testCase.volume)
+			err = m.Create(t.Context(), testCase.volume)
 			if testCase.expectedError != nil {
 				assert.ErrorIs(t, err, testCase.expectedError)
 				return
@@ -454,7 +453,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_WithError(t *t
 		Return(&parser.Volume{Destination: "volume"}, nil).
 		Once()
 
-	err := m.Create(context.Background(), "volume")
+	err := m.Create(t.Context(), "volume")
 	assert.ErrorIs(t, err, testErr)
 }
 
@@ -469,7 +468,7 @@ func TestDefaultManager_CreateUserVolumes_ParserError(t *testing.T) {
 		Return(nil, testErr).
 		Once()
 
-	err := m.Create(context.Background(), "volume")
+	err := m.Create(t.Context(), "volume")
 	assert.ErrorIs(t, err, testErr)
 }
 
@@ -553,10 +552,10 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 					Once()
 			}
 
-			err := m.Create(context.Background(), existingBinding)
+			err := m.Create(t.Context(), existingBinding)
 			require.NoError(t, err)
 
-			err = m.CreateTemporary(context.Background(), testCase.volume)
+			err = m.CreateTemporary(t.Context(), testCase.volume)
 			if testCase.expectedError != nil {
 				assert.ErrorIs(t, err, testCase.expectedError)
 				return
@@ -617,7 +616,7 @@ func TestDefaultManager_RemoveTemporary(t *testing.T) {
 			m.client = mClient
 			m.temporaryVolumes = testCase.temporaryVolumes
 
-			err := m.RemoveTemporary(context.Background())
+			err := m.RemoveTemporary(t.Context())
 			assert.ErrorIs(t, err, testCase.expectedError)
 		})
 	}

@@ -3,7 +3,6 @@
 package service
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -77,7 +76,7 @@ func TestAWSSecretsManager_GetSecretString(t *testing.T) {
 				Return(tt.mockResponse, tt.mockError)
 
 			manager := &awsSecretsManager{client: mockClient}
-			val, err := manager.GetSecretString(context.Background(), "id", nil, nil)
+			val, err := manager.GetSecretString(t.Context(), "id", nil, nil)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -94,7 +93,7 @@ func TestAWSSecretsManager_GetSecretString(t *testing.T) {
 }
 
 func TestNewAWSSecretsManager(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	manager, err := NewAWSSecretsManager(ctx, "some-region", nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, manager)

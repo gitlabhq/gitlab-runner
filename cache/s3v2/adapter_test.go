@@ -3,7 +3,6 @@
 package s3v2
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -116,7 +115,7 @@ func testCacheOperation(
 			// nothing to do (yet)
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 
 		goCloudURL, err := adapter.GetGoCloudURL(ctx, true)
 		assert.NoError(t, err)
@@ -160,14 +159,14 @@ func TestCacheOperation(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(t.Context()) },
 				test,
 				defaultCacheFactory(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(t.Context()) },
 				test,
 				defaultCacheFactory(),
 			)
@@ -357,7 +356,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 						Return(expectedCredentials, nil).Maybe()
 				}
 
-				u, err := adapter.GetGoCloudURL(context.Background(), uploadMode)
+				u, err := adapter.GetGoCloudURL(t.Context(), uploadMode)
 
 				if tt.failedFetch {
 					assert.Error(t, err)
@@ -555,7 +554,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 				}
 			}
 
-			u, err := adapter.GetGoCloudURL(context.Background(), true)
+			u, err := adapter.GetGoCloudURL(t.Context(), true)
 
 			if tt.failedFetch {
 				assert.Error(t, err)
@@ -575,7 +574,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 				assert.Nil(t, u.URL)
 			}
 
-			du, err := adapter.GetGoCloudURL(context.Background(), false)
+			du, err := adapter.GetGoCloudURL(t.Context(), false)
 			require.NoError(t, err)
 			assert.Nil(t, du.URL)
 			assert.Empty(t, du.Environment)

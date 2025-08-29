@@ -3,7 +3,6 @@
 package retry
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -99,7 +98,7 @@ func TestRetryableLogrusDecorator(t *testing.T) {
 
 	logger, hook := test.NewNullLogger()
 	r := NewNoValue(
-		New().WithCheck(m.ShouldRetry).WithLogrus(logger.WithContext(context.Background())),
+		New().WithCheck(m.ShouldRetry).WithLogrus(logger.WithContext(t.Context())),
 		m.Run,
 	)
 
@@ -116,7 +115,7 @@ func TestRetryableBuildLoggerDecorator(t *testing.T) {
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
 
 	logger, hook := test.NewNullLogger()
-	buildLogger := buildlogger.New(nil, logger.WithContext(context.Background()), buildlogger.Options{})
+	buildLogger := buildlogger.New(nil, logger.WithContext(t.Context()), buildlogger.Options{})
 	r := NewNoValue(
 		New().WithCheck(m.ShouldRetry).WithBuildLog(&buildLogger),
 		m.Run,

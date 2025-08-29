@@ -101,7 +101,7 @@ func testCacheOperation(
 	tc cacheOperationTest,
 ) {
 	t.Run(operationName, func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		hook := test.NewGlobal()
 
 		prepareFakeCreateAdapter(t, operationName, tc)

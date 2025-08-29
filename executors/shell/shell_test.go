@@ -99,7 +99,7 @@ func TestExecutor_Run(t *testing.T) {
 					},
 				}
 
-				ctx, cancelJob := context.WithCancel(context.Background())
+				ctx, cancelJob := context.WithCancel(t.Context())
 				defer cancelJob()
 
 				cmd := common.ExecutorCommand{

@@ -190,7 +190,7 @@ func TestClient_GetSecret(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			c := &Client{}
 			defer tt.verifyGetToken(c)(t)

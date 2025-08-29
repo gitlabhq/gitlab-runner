@@ -3,7 +3,6 @@
 package shells
 
 import (
-	"context"
 	"fmt"
 	"path"
 	"runtime"
@@ -665,7 +664,7 @@ func TestPowershell_GenerateScript(t *testing.T) {
 				expectedScript = s(shellInfo)
 			}
 
-			script, err := pwshShell.GenerateScript(context.Background(), tc.stage, shellInfo)
+			script, err := pwshShell.GenerateScript(t.Context(), tc.stage, shellInfo)
 			assert.Equal(t, expectedScript, script)
 
 			if tc.expectedFailure {

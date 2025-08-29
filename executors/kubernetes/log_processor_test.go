@@ -129,7 +129,7 @@ func TestKubernetesLogStreamProviderLogStream(t *testing.T) {
 	s.logPath = logPath
 	s.waitLogFileTimeout = waitFileTimeout
 
-	err := s.Stream(context.Background(), int64(offset), output)
+	err := s.Stream(t.Context(), int64(offset), output)
 	assert.ErrorIs(t, err, abortErr)
 }
 
@@ -141,7 +141,7 @@ func TestReadLogsBrokenReader(t *testing.T) {
 	proc.logger = logger
 
 	output := make(chan string)
-	err := proc.readLogs(context.Background(), newBrokenReader(new(brokenReaderError)), output)
+	err := proc.readLogs(t.Context(), newBrokenReader(new(brokenReaderError)), output)
 
 	assert.ErrorIs(t, err, new(brokenReaderError))
 }
@@ -163,7 +163,7 @@ func TestProcessedOffsetSet(t *testing.T) {
 		log{line: "line 1", offset: 10},
 		log{line: "line 1", offset: 20},
 	)
-	err := proc.readLogs(context.Background(), logs, ch)
+	err := proc.readLogs(t.Context(), logs, ch)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(20), proc.logsOffset)
 }
@@ -232,7 +232,7 @@ func TestListenReadLines(t *testing.T) {
 	line2 := "line 2"
 	expectedLines := []string{line1 + "\n", line2 + "\n"}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	mockLogStreamer := makeMockLogStreamer(t)
 
@@ -310,7 +310,7 @@ func newTestKubernetesLogProcessor(t *testing.T) *kubernetesLogProcessor {
 func TestListenCancelContext(t *testing.T) {
 	mockLogStreamer := makeMockLogStreamer(t)
 
-	ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	ctx, _ := context.WithTimeout(t.Context(), 200*time.Millisecond)
 
 	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
 		Run(func(mock.Arguments) {
@@ -335,7 +335,7 @@ func TestListenCancelContext(t *testing.T) {
 
 func TestAttachReconnectLogStream(t *testing.T) {
 	const expectedConnectCount = 5
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	mockLogStreamer := makeMockLogStreamer(t)
 
@@ -368,7 +368,7 @@ func TestAttachReconnectLogStream(t *testing.T) {
 
 func TestAttachReconnectReadLogs(t *testing.T) {
 	const expectedConnectCount = 5
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	mockLogStreamer := makeMockLogStreamer(t)
 
@@ -421,7 +421,7 @@ func drainProcessLogsChannels(ch <-chan string, errCh <-chan error) error {
 }
 
 func TestAttachCorrectOffset(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	mockLogStreamer := makeMockLogStreamer(t)
 
@@ -498,7 +498,7 @@ func TestScanHandlesStreamError(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
 			scanner, ch := processor.scan(ctx, newBrokenReader(tt.readerError))
@@ -513,7 +513,7 @@ func TestScanHandlesStreamError(t *testing.T) {
 func TestScanHandlesCancelledContext(t *testing.T) {
 	processor := new(kubernetesLogProcessor)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	var wg sync.WaitGroup
 	scanner, ch := processor.scan(ctx, logsToReader(log{}))

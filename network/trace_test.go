@@ -85,10 +85,10 @@ func TestIgnoreStatusChange(t *testing.T) {
 }
 
 func TestTouchJobAbort(t *testing.T) {
-	abortCtx, abort := context.WithCancel(context.Background())
+	abortCtx, abort := context.WithCancel(t.Context())
 	defer abort()
 
-	cancelCtx, cancel := context.WithCancel(context.Background())
+	cancelCtx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	keepAliveUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
@@ -118,10 +118,10 @@ func TestTouchJobAbort(t *testing.T) {
 }
 
 func TestTouchJobCancel(t *testing.T) {
-	cancelCtx, cancel := context.WithCancel(context.Background())
+	cancelCtx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	abortCtx, abort := context.WithCancel(context.Background())
+	abortCtx, abort := context.WithCancel(t.Context())
 	defer abort()
 
 	keepAliveUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
@@ -151,7 +151,7 @@ func TestTouchJobCancel(t *testing.T) {
 }
 
 func TestSendPatchAbort(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")

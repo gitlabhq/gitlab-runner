@@ -108,7 +108,7 @@ func prepareExecutor(t *testing.T, tt executorTestCase) (*executor, common.Execu
 			Runner:      &tt.config,
 		},
 		Config:      &tt.config,
-		Context:     context.Background(),
+		Context:     t.Context(),
 		BuildLogger: buildlogger.New(trace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 	}
 
@@ -817,7 +817,7 @@ func TestExecutor_Run(t *testing.T) {
 			}
 
 			err = e.Run(common.ExecutorCommand{
-				Context: context.Background(),
+				Context: t.Context(),
 				Stage:   "step_script",
 			})
 
@@ -924,7 +924,7 @@ func TestExecutor_Env(t *testing.T) {
 			assert.NoError(t, err)
 
 			err = e.Run(common.ExecutorCommand{
-				Context: context.Background(),
+				Context: t.Context(),
 			})
 			assert.NoError(t, err)
 
@@ -1099,7 +1099,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 			assert.NoError(t, err)
 
 			err = e.Run(common.ExecutorCommand{
-				Context: context.Background(),
+				Context: t.Context(),
 			})
 			assert.NoError(t, err)
 

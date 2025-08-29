@@ -125,7 +125,7 @@ func testAdapterOperationWithInvalidConfig(
 		prepareMockedCredentialsResolverForInvalidConfig(t, adapter, tc)
 		hook := test.NewGlobal()
 
-		u := operation(context.Background())
+		u := operation(t.Context())
 		assert.Nil(t, u.URL)
 
 		message, err := hook.LastEntry().String()
@@ -272,7 +272,7 @@ func testAdapterOperation(
 		prepareMockedSignedURLGenerator(t, tc, expectedMethod, expectedContentType, adapter)
 		hook := test.NewGlobal()
 
-		u := operation(context.Background())
+		u := operation(t.Context())
 
 		if tc.assertErrorMessage != nil {
 			message, err := hook.LastEntry().String()
@@ -374,7 +374,7 @@ func TestAdapterOperation(t *testing.T) {
 				assert.Equal(t, tc.expectedHeaders, headers, "headers do not match")
 			}
 
-			goCloudURL, err := adapter.GetGoCloudURL(context.Background(), true)
+			goCloudURL, err := adapter.GetGoCloudURL(t.Context(), true)
 			assert.Nil(t, goCloudURL.URL)
 			assert.NoError(t, err)
 			assert.Empty(t, goCloudURL.Environment)

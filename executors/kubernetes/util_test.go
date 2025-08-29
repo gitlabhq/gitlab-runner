@@ -349,7 +349,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					return len(b), nil
 				},
 			}
-			phase, err := waitForPodRunning(context.Background(), c, test.Pod, fw, test.Config)
+			phase, err := waitForPodRunning(t.Context(), c, test.Pod, fw, test.Config)
 
 			if err != nil && !test.Error {
 				t.Errorf("[%s] Expected success. Got: %s", test.Name, err.Error())
@@ -621,7 +621,7 @@ func TestWaitForRunningContainer(t *testing.T) {
 		}
 	}
 	gvr := schema.GroupVersionResource{Version: "v1", Resource: "pods"}
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	tests := map[string]struct {
 		waiter     func(*testing.T, context.Context, kubernetes.Interface, chan struct{})

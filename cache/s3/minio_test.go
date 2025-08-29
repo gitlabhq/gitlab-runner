@@ -3,7 +3,6 @@
 package s3
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -147,7 +146,7 @@ func TestMinioClientInitializationWithAccelerate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, client)
 
-			url, err := client.PresignHeader(context.Background(), "GET", "foo", "bar", time.Hour, url.Values{}, http.Header{})
+			url, err := client.PresignHeader(t.Context(), "GET", "foo", "bar", time.Hour, url.Values{}, http.Header{})
 			require.NoError(t, err)
 			assert.Equal(t, test.targetURL, url.Host)
 

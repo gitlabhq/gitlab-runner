@@ -4,7 +4,6 @@ package docker
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -63,7 +62,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	}
 	e.Build.JobInfo.ProjectID = 0
 	e.Build.Runner.Token = "abcdef1234567890"
-	e.Context = context.Background()
+	e.Context = t.Context()
 
 	e.helperImageInfo, err = helperimage.Get(common.AppVersion.Version, helperimage.Config{
 		OSType:        e.info.OSType,
@@ -879,7 +878,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 			pr, pw := io.Pipe()
 			defer pw.Close() // ... for the failure case
 
-			ctx := context.Background()
+			ctx := t.Context()
 			c.On("ContainerLogs", ctx, cID, mock.Anything).Return(pr, tt.wantErr).Once()
 			err = e.captureContainerLogs(ctx, cID, cName, isw)
 
@@ -938,7 +937,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry), buildlogger.Options{})
 	e.Build = &common.Build{}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := map[string]struct {
 		debugServicePolicy string

@@ -39,7 +39,7 @@ func TestDefaultCommander_Wait(t *testing.T) {
 		_ = os.Remove(testBinary)
 	}()
 
-	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancelFn := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancelFn()
 
 	t.Log("building test binary", testBinary)

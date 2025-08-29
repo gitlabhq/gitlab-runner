@@ -3,12 +3,12 @@
 package gcp_secret_manager
 
 import (
-	"context"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -72,7 +72,7 @@ func TestResolver_Resolve(t *testing.T) {
 		"error on accessing secret": {
 			secret: secret,
 			setupMock: func(c *mockClient) {
-				c.On("GetSecret", context.Background(), secret.GCPSecretManager).
+				c.On("GetSecret", mock.Anything, secret.GCPSecretManager).
 					Return("", assert.AnError).
 					Once()
 			},
@@ -81,7 +81,7 @@ func TestResolver_Resolve(t *testing.T) {
 		"secret resolved successfully": {
 			secret: secret,
 			setupMock: func(c *mockClient) {
-				c.On("GetSecret", context.Background(), secret.GCPSecretManager).
+				c.On("GetSecret", mock.Anything, secret.GCPSecretManager).
 					Return("p@assword", nil).
 					Once()
 			},
