@@ -180,7 +180,7 @@ func (c *ReadLogsCommand) openFileReader() (readSeekCloser, *bufio.Reader, error
 }
 
 func init() {
-	common.RegisterCommand2(
+	common.RegisterCommand(
 		"read-logs",
 		"reads job logs from a file, used by kubernetes executor (internal)",
 		newReadLogsCommand(),

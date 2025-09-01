@@ -272,7 +272,7 @@ func warningln(args interface{}) {
 }
 
 func init() {
-	common.RegisterCommand2(
+	common.RegisterCommand(
 		"cache-extractor",
 		"download and extract cache artifacts (internal)",
 		&CacheExtractorCommand{

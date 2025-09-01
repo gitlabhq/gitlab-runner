@@ -96,7 +96,7 @@ func (c *RunnerWrapperCommand) createListener() (net.Listener, error) {
 }
 
 func init() {
-	common.RegisterCommand2(
+	common.RegisterCommand(
 		"wrapper", "start multi runner service wrapped with gRPC manager server",
 		&RunnerWrapperCommand{
 			GRPCListen:                defaultWrapperGRPCListen,

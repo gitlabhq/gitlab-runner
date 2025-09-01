@@ -29,5 +29,5 @@ func (c *CacheInitCommand) Execute(ctx *cli.Context) {
 }
 
 func init() {
-	common.RegisterCommand2("cache-init", "changed permissions for cache paths (internal)", &CacheInitCommand{})
+	common.RegisterCommand("cache-init", "changed permissions for cache paths (internal)", &CacheInitCommand{})
 }

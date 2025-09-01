@@ -224,42 +224,12 @@ func init() {
 	flags := GetFlags()
 	installFlags := GetInstallFlags()
 
-	common.RegisterCommand(cli.Command{
-		Name:   "install",
-		Usage:  "install service",
-		Action: RunServiceControl,
-		Flags:  installFlags,
-	})
-	common.RegisterCommand(cli.Command{
-		Name:   "uninstall",
-		Usage:  "uninstall service",
-		Action: RunServiceControl,
-		Flags:  flags,
-	})
-	common.RegisterCommand(cli.Command{
-		Name:   "start",
-		Usage:  "start service",
-		Action: RunServiceControl,
-		Flags:  flags,
-	})
-	common.RegisterCommand(cli.Command{
-		Name:   "stop",
-		Usage:  "stop service",
-		Action: RunServiceControl,
-		Flags:  flags,
-	})
-	common.RegisterCommand(cli.Command{
-		Name:   "restart",
-		Usage:  "restart service",
-		Action: RunServiceControl,
-		Flags:  flags,
-	})
-	common.RegisterCommand(cli.Command{
-		Name:   "status",
-		Usage:  "get status of a service",
-		Action: RunServiceControl,
-		Flags:  flags,
-	})
+	common.RegisterCommand("install", "install service", common.CommanderFunc(RunServiceControl), installFlags...)
+	common.RegisterCommand("uninstall", "uninstall service", common.CommanderFunc(RunServiceControl), flags...)
+	common.RegisterCommand("start", "start service", common.CommanderFunc(RunServiceControl), flags...)
+	common.RegisterCommand("stop", "stop service", common.CommanderFunc(RunServiceControl), flags...)
+	common.RegisterCommand("restart", "restart service", common.CommanderFunc(RunServiceControl), flags...)
+	common.RegisterCommand("status", "get status of a service", common.CommanderFunc(RunServiceControl), flags...)
 }
 
 // applyStrArg applies the named string-typed runtime argument to the service configuration in whatever way the `apply`

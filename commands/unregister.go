@@ -121,7 +121,7 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 }
 
 func init() {
-	common.RegisterCommand2("unregister", "unregister specific runner", &UnregisterCommand{
+	common.RegisterCommand("unregister", "unregister specific runner", &UnregisterCommand{
 		network: network.NewGitLabClient(),
 	})
 }
