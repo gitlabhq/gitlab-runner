@@ -110,35 +110,38 @@ func login(clictx *cli.Context) error {
 }
 
 func init() {
-	common.RegisterCommand(cli.Command{
-		Name:  "fleeting",
-		Usage: "manage fleeting plugins",
-		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config, c", EnvVar: "CONFIG_FILE", Value: commands.GetDefaultConfigFile()},
+	subcommands := []cli.Command{
+		{
+			Name:   "install",
+			Usage:  "install or update fleeting plugins",
+			Flags:  []cli.Flag{cli.BoolFlag{Name: "upgrade"}},
+			Action: install,
 		},
-		Subcommands: []cli.Command{
-			{
-				Name:   "install",
-				Usage:  "install or update fleeting plugins",
-				Flags:  []cli.Flag{cli.BoolFlag{Name: "upgrade"}},
-				Action: install,
-			},
-			{
-				Name:   "list",
-				Usage:  "list installed plugins",
-				Action: list,
-			},
-			{
-				Name:  "login",
-				Usage: "login to container registry",
-				Flags: []cli.Flag{
-					cli.StringFlag{Name: "username"},
-					cli.StringFlag{Name: "password"},
-					cli.BoolFlag{Name: "password-stdin", Usage: "take the password from stdin"},
-				},
-				ArgsUsage: "[server]",
-				Action:    login,
-			},
+		{
+			Name:   "list",
+			Usage:  "list installed plugins",
+			Action: list,
 		},
-	})
+		{
+			Name:  "login",
+			Usage: "login to container registry",
+			Flags: []cli.Flag{
+				cli.StringFlag{Name: "username"},
+				cli.StringFlag{Name: "password"},
+				cli.BoolFlag{Name: "password-stdin", Usage: "take the password from stdin"},
+			},
+			ArgsUsage: "[server]",
+			Action:    login,
+		},
+	}
+
+	common.RegisterCommandWithSubcommands(
+		"fleeting",
+		"manage fleeting plugins",
+		common.CommanderFunc(func(ctx *cli.Context) {
+			_ = cli.ShowAppHelp(ctx)
+		}),
+		subcommands,
+		cli.StringFlag{Name: "config, c", EnvVar: "CONFIG_FILE", Value: commands.GetDefaultConfigFile()},
+	)
 }

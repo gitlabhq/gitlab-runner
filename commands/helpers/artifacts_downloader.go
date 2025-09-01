@@ -159,7 +159,7 @@ func openArchive(filename string) (*os.File, int64, archive.Format, error) {
 }
 
 func init() {
-	common.RegisterCommand2(
+	common.RegisterCommand(
 		"artifacts-downloader",
 		"download and extract build artifacts (internal)",
 		&ArtifactsDownloaderCommand{

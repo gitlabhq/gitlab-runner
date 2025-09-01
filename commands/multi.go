@@ -1507,7 +1507,7 @@ func init() {
 		reloadConfigInterval: common.ReloadConfigInterval,
 	}
 
-	common.RegisterCommand2("run", "run multi runner service", cmd)
+	common.RegisterCommand("run", "run multi runner service", cmd)
 }
 
 func (mr *RunCommand) checkConfigConcurrency(config *common.Config) {

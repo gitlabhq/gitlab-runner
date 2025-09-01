@@ -598,5 +598,5 @@ func accessLevelValid(levels []AccessLevel, givenLevel AccessLevel) bool {
 }
 
 func init() {
-	common.RegisterCommand2("register", "register a new runner", newRegisterCommand())
+	common.RegisterCommand("register", "register a new runner", newRegisterCommand())
 }

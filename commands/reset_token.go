@@ -97,7 +97,7 @@ func (c *ResetTokenCommand) Execute(_context *cli.Context) {
 }
 
 func init() {
-	common.RegisterCommand2("reset-token", "reset a runner's token", &ResetTokenCommand{
+	common.RegisterCommand("reset-token", "reset a runner's token", &ResetTokenCommand{
 		network: network.NewGitLabClient(),
 	})
 }

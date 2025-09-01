@@ -253,7 +253,7 @@ func (c *ArtifactsUploaderCommand) normalizeArgs() {
 }
 
 func init() {
-	common.RegisterCommand2(
+	common.RegisterCommand(
 		"artifacts-uploader",
 		"create and upload build artifacts (internal)",
 		&ArtifactsUploaderCommand{

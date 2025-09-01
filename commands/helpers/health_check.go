@@ -109,5 +109,5 @@ func checkPort(parentCtx context.Context, addr, port string, cancel func(), done
 }
 
 func init() {
-	common.RegisterCommand2("health-check", "check health for a specific address", &HealthCheckCommand{})
+	common.RegisterCommand("health-check", "check health for a specific address", &HealthCheckCommand{})
 }

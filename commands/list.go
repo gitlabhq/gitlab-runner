@@ -35,5 +35,5 @@ func (c *ListCommand) Execute(context *cli.Context) {
 }
 
 func init() {
-	common.RegisterCommand2("list", "List all configured runners", &ListCommand{})
+	common.RegisterCommand("list", "List all configured runners", &ListCommand{})
 }

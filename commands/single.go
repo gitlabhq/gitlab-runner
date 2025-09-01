@@ -226,7 +226,7 @@ func (r *RunSingleCommand) getShutdownTimeout() time.Duration {
 }
 
 func init() {
-	common.RegisterCommand2("run-single", "start single runner", &RunSingleCommand{
+	common.RegisterCommand("run-single", "start single runner", &RunSingleCommand{
 		network: network.NewGitLabClient(),
 	})
 }

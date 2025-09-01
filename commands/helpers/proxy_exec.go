@@ -158,7 +158,7 @@ func bootstrap(dst string) error {
 }
 
 func init() {
-	common.RegisterCommand2(
+	common.RegisterCommand(
 		"proxy-exec",
 		"execute internal commands (internal)",
 		&ProxyExecCommand{},
