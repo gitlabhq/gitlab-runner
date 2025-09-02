@@ -34,26 +34,30 @@ func TestLabels(t *testing.T) {
 			RunnerCredentials: common.RunnerCredentials{
 				Token: "test-token",
 			},
+			SystemID: "some-system-ID",
 		},
-		RunnerID: 123,
+		RunnerID:        123,
+		ProjectRunnerID: 456,
 	}
 
 	l := NewLabeler(b)
 
 	expected := map[string]string{
-		"com.gitlab.gitlab-runner.job.id":          "12345",
-		"com.gitlab.gitlab-runner.job.url":         "https://gitlab.example.com/namespace/project/-/jobs/12345",
-		"com.gitlab.gitlab-runner.job.sha":         "sha",
-		"com.gitlab.gitlab-runner.job.before_sha":  "before-sha",
-		"com.gitlab.gitlab-runner.job.ref":         "ref",
-		"com.gitlab.gitlab-runner.job.timeout":     "2h0m0s",
-		"com.gitlab.gitlab-runner.project.id":      "123456",
-		"com.gitlab.gitlab-runner.pipeline.id":     "",
-		"com.gitlab.gitlab-runner.runner.id":       "test-toke",
-		"com.gitlab.gitlab-runner.runner.local_id": "123",
-		"com.gitlab.gitlab-runner.managed":         "true",
-		"com.gitlab.gitlab-runner.other.label1":    "1",
-		"com.gitlab.gitlab-runner.other.label2":    "2",
+		"com.gitlab.gitlab-runner.job.id":            "12345",
+		"com.gitlab.gitlab-runner.job.url":           "https://gitlab.example.com/namespace/project/-/jobs/12345",
+		"com.gitlab.gitlab-runner.job.sha":           "sha",
+		"com.gitlab.gitlab-runner.job.before_sha":    "before-sha",
+		"com.gitlab.gitlab-runner.job.ref":           "ref",
+		"com.gitlab.gitlab-runner.job.timeout":       "2h0m0s",
+		"com.gitlab.gitlab-runner.project.id":        "123456",
+		"com.gitlab.gitlab-runner.project.runner_id": "456",
+		"com.gitlab.gitlab-runner.pipeline.id":       "",
+		"com.gitlab.gitlab-runner.runner.id":         "test-toke",
+		"com.gitlab.gitlab-runner.runner.local_id":   "123",
+		"com.gitlab.gitlab-runner.runner.system_id":  "some-system-ID",
+		"com.gitlab.gitlab-runner.managed":           "true",
+		"com.gitlab.gitlab-runner.other.label1":      "1",
+		"com.gitlab.gitlab-runner.other.label2":      "2",
 	}
 
 	actual := l.Labels(map[string]string{"other.label1": "1", "other.label2": "2"})

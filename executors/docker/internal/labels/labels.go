@@ -29,17 +29,19 @@ type labeler struct {
 // Includes a set of defaults. Add additional ones or overwrites in the provided map.
 func (l *labeler) Labels(otherLabels map[string]string) map[string]string {
 	labels := map[string]string{
-		dockerLabelPrefix + ".job.id":          strconv.FormatInt(l.build.ID, 10),
-		dockerLabelPrefix + ".job.url":         l.build.JobURL(),
-		dockerLabelPrefix + ".job.sha":         l.build.GitInfo.Sha,
-		dockerLabelPrefix + ".job.before_sha":  l.build.GitInfo.BeforeSha,
-		dockerLabelPrefix + ".job.ref":         l.build.GitInfo.Ref,
-		dockerLabelPrefix + ".job.timeout":     l.build.GetBuildTimeout().String(),
-		dockerLabelPrefix + ".project.id":      strconv.FormatInt(l.build.JobInfo.ProjectID, 10),
-		dockerLabelPrefix + ".pipeline.id":     l.build.GetAllVariables().Value("CI_PIPELINE_ID"),
-		dockerLabelPrefix + ".runner.id":       l.build.Runner.ShortDescription(),
-		dockerLabelPrefix + ".runner.local_id": strconv.Itoa(l.build.RunnerID),
-		dockerLabelPrefix + ".managed":         "true",
+		dockerLabelPrefix + ".job.id":            strconv.FormatInt(l.build.ID, 10),
+		dockerLabelPrefix + ".job.url":           l.build.JobURL(),
+		dockerLabelPrefix + ".job.sha":           l.build.GitInfo.Sha,
+		dockerLabelPrefix + ".job.before_sha":    l.build.GitInfo.BeforeSha,
+		dockerLabelPrefix + ".job.ref":           l.build.GitInfo.Ref,
+		dockerLabelPrefix + ".job.timeout":       l.build.GetBuildTimeout().String(),
+		dockerLabelPrefix + ".project.id":        strconv.FormatInt(l.build.JobInfo.ProjectID, 10),
+		dockerLabelPrefix + ".project.runner_id": strconv.Itoa(l.build.ProjectRunnerID),
+		dockerLabelPrefix + ".pipeline.id":       l.build.GetAllVariables().Value("CI_PIPELINE_ID"),
+		dockerLabelPrefix + ".runner.id":         l.build.Runner.ShortDescription(),
+		dockerLabelPrefix + ".runner.local_id":   strconv.Itoa(l.build.RunnerID),
+		dockerLabelPrefix + ".runner.system_id":  l.build.Runner.SystemID,
+		dockerLabelPrefix + ".managed":           "true",
 	}
 
 	for k, v := range otherLabels {

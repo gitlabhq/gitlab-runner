@@ -2,6 +2,8 @@ package common
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -224,6 +226,8 @@ func (b *Build) ProjectUniqueShortName() string {
 	return dns.MakeRFC1123Compatible(projectUniqueName)
 }
 
+// ProjectUniqueName returns a unique name for a runner && project. It uses the runner's short description, thus uses a
+// truncated token in it's human readable form.
 func (b *Build) ProjectUniqueName() string {
 	projectUniqueName := fmt.Sprintf(
 		"runner-%s-project-%d-concurrent-%d",
@@ -233,6 +237,33 @@ func (b *Build) ProjectUniqueName() string {
 	)
 
 	return dns.MakeRFC1123Compatible(projectUniqueName)
+}
+
+// ProjectRealUniqueName is similar to its sister methods, and returns a unique name for the runner && project.
+// It uses the following parts to generate a truncated¹ sha256 sum:
+//   - the runner's full token
+//   - the runner's system ID
+//   - the project ID
+//   - the project runner ID
+//
+// With that the name is not susceptible to name clashes, when tokens are similar enough and therefore are the same
+// after getting the runner's short description (i.e. after the token has been truncated)
+//
+// ¹ we truncate the resulting sum from original 32 bytes to 16 bytes, to give us and users a shorter name, thus shorter
+// volume names when used in the docker volume manager. Truncating to 16 bytes (32 chars when hex encoded, the same
+// length as an hex encoded md5sum) is cryptographically sound, it's still strong against collisions.
+func (b *Build) ProjectRealUniqueName() string {
+	const byteLen = 16
+
+	data := fmt.Sprintf("%s-%s-%d-%d",
+		b.Runner.GetToken(),
+		b.Runner.GetSystemID(),
+		b.JobInfo.ProjectID,
+		b.ProjectRunnerID,
+	)
+
+	sum := sha256.Sum256([]byte(data))
+	return "runner-" + hex.EncodeToString(sum[:byteLen])
 }
 
 func (b *Build) ProjectSlug() (string, error) {

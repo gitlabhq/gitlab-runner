@@ -2041,7 +2041,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 
 	tests := map[string]struct {
 		buildVars []common.JobVariable
-		assert    func(string, error)
+		assert    func(*testing.T, string, error)
 	}{
 		"enabled": {
 			buildVars: []common.JobVariable{
@@ -2055,7 +2055,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 					Public: true,
 				},
 			},
-			assert: func(out string, err error) {
+			assert: func(t *testing.T, out string, err error) {
 				assert.NoError(t, err)
 				assert.NotContains(t, out, "WARNING: CI_DEBUG_SERVICES: expected bool got \"blammo\", using default value: false")
 
@@ -2070,7 +2070,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			},
 		},
 		"not enabled": {
-			assert: func(out string, err error) {
+			assert: func(t *testing.T, out string, err error) {
 				assert.NoError(t, err)
 				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\]`, out)
 				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\]`, out)
@@ -2084,7 +2084,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 				Value:  "blammo",
 				Public: true,
 			}},
-			assert: func(out string, err error) {
+			assert: func(t *testing.T, out string, err error) {
 				assert.NoError(t, err)
 				assert.Contains(t, out, "WARNING: CI_DEBUG_SERVICES: expected bool got \"blammo\", using default value: false")
 				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\]`, out)
@@ -2103,7 +2103,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 
 			build.Variables = tt.buildVars
 			out, err := buildtest.RunBuildReturningOutput(t, &build)
-			tt.assert(out, err)
+			tt.assert(t, out, err)
 		})
 	}
 }

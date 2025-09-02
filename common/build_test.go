@@ -2346,6 +2346,59 @@ func TestProjectUniqueShortName(t *testing.T) {
 	}
 }
 
+func TestProjectRealUniqueName(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		name               string
+		token              string
+		projectID          int64
+		projectRunnerID    int
+		systemID           string
+		expectedUniqueName string
+	}{
+		"zero values": {
+			expectedUniqueName: "runner-f1969ebde09ffbae93df68a9aec385a8",
+		},
+		"with token": {
+			token:              "some-random-token-and-we-sure-don't-run-it-through-the-shortener",
+			expectedUniqueName: "runner-f563c42913906cc3c0c50d55b005ce86",
+		},
+		"with token & system ID": {
+			token:              "some-random-token-and-we-sure-don't-run-it-through-the-shortener",
+			systemID:           "some-system-ID",
+			expectedUniqueName: "runner-576923f59d7b85f6258fe7e56d254ce0",
+		},
+		"with token & system ID & project ID": {
+			token:              "some-random-token-and-we-sure-don't-run-it-through-the-shortener",
+			systemID:           "some-system-ID",
+			projectID:          42,
+			expectedUniqueName: "runner-896339b5ef9bebb3cbb72960ea8e89bb",
+		},
+		"with token & system ID & project ID & project runner ID": {
+			token:              "some-random-token-and-we-sure-don't-run-it-through-the-shortener",
+			systemID:           "some-system-ID",
+			projectID:          42,
+			projectRunnerID:    4242,
+			expectedUniqueName: "runner-9d75c021c38f7957cb372857766d74b4",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			build := &Build{Runner: &RunnerConfig{}}
+			build.Runner.RunnerCredentials.Token = test.token
+			build.Runner.SystemID = test.systemID
+			build.JobResponse.JobInfo.ProjectID = test.projectID
+			build.ProjectRunnerID = test.projectRunnerID
+
+			assert.Equal(t, test.expectedUniqueName, build.ProjectRealUniqueName())
+		})
+	}
+}
+
 func TestBuildStages(t *testing.T) {
 	scriptOnlyBuild, err := GetRemoteSuccessfulBuild()
 	require.NoError(t, err)
