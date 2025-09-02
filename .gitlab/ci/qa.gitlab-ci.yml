@@ -123,6 +123,19 @@ docs:lint i18n markdown:
     # Lint i18n content and Markdown
     - make lint-i18n-docs VALE_MIN_ALERT_LEVEL=error
 
+# Verify localized documentation files have corresponding English versions
+docs:lint i18n paths:
+  image: $DOCS_LINT_IMAGE
+  stage: qa
+  extends:
+    - .rules:merge_request_pipelines:docs-i18n
+    - .no_cache_and_dependencies
+    - .kubernetes runner
+  needs: []
+  script:
+    # Run the i18n path verification script
+    - ./scripts/docs_i18n_verify_paths
+
 docs:check feature flags:
   stage: qa
   extends:
