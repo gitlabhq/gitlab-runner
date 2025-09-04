@@ -67,7 +67,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli v1.22.15
 	gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20250813150340-82a2c0debfe3
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20250904145345-b20f31ede24b
 	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20240911165028-a0ce7d6c3260
 	gitlab.com/gitlab-org/fleeting/nesting v0.1.1-0.20230410214021-ab545632193b
@@ -76,7 +76,7 @@ require (
 	gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api v0.1.1
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425133101-519a58790bfd
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
-	gitlab.com/gitlab-org/labkit v1.25.0
+	gitlab.com/gitlab-org/labkit v1.27.1
 	gitlab.com/gitlab-org/step-runner v0.13.0
 	go.uber.org/automaxprocs v1.5.2
 	gocloud.dev v0.40.0
@@ -87,7 +87,7 @@ require (
 	golang.org/x/sys v0.35.0
 	golang.org/x/text v0.28.0
 	google.golang.org/api v0.191.0
-	google.golang.org/grpc v1.74.2
+	google.golang.org/grpc v1.75.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
@@ -239,9 +239,9 @@ require (
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.53.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0 // indirect
-	go.opentelemetry.io/otel v1.36.0 // indirect
-	go.opentelemetry.io/otel/metric v1.36.0 // indirect
-	go.opentelemetry.io/otel/trace v1.36.0 // indirect
+	go.opentelemetry.io/otel v1.37.0 // indirect
+	go.opentelemetry.io/otel/metric v1.37.0 // indirect
+	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
@@ -251,9 +251,9 @@ require (
 	golang.org/x/tools v0.35.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
 	google.golang.org/genproto v0.0.0-20240812133136-8ffd90a71988 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250528174236-200df99c418a // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
-	google.golang.org/protobuf v1.36.7 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250707201910-8d1bb00bc6a7 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250826171959-ef028d996bc1 // indirect
+	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
