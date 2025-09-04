@@ -1,3 +1,9 @@
+## v18.3.1 (2025-09-04)
+
+### Bug fixes
+
+- Remove health check from Vault client call [!5803](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5803)
+
 ## v18.3.0 (2025-08-21)
 
 ### New features
