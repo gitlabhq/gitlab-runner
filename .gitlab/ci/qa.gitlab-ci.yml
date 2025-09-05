@@ -211,6 +211,7 @@ docs:check Hugo build:
   image: registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/docs-gitlab-com-builder:hugo-0.145.0
   extends:
     - .rules:merge_request_pipelines:docs
+    - .rules:merge_request_pipelines:docs-i18n
     - .no_cache_and_dependencies
     - .kubernetes runner
   needs: []
@@ -232,15 +233,13 @@ docs:check Hugo build:
     - git clone --depth 1 --filter=tree:0 --branch $DOCS_BRANCH https://gitlab.com/gitlab-org/technical-writing/docs-gitlab-com.git
     - cd docs-gitlab-com
     - make add-latest-icons
-    # Copy the current project's docs to the appropriate location in the docs website
-    - mkdir content/runner
-    - cp -r ../docs/* content/runner/
   script:
     # Test that Hugo will build
-    - hugo --gc --printPathWarnings --panicOnWarning
+    - hugo --gc --printPathWarnings --panicOnWarning --environment test
     # Test for invalid index pages
     # See https://gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/-/blob/main/scripts/check-index-filenames.sh
     - make check-index-pages SEARCH_DIR="../docs"
+    - make check-index-pages SEARCH_DIR="../docs-locale"
 
 yaml:lint:
   stage: qa
