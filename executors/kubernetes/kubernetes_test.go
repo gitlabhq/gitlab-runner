@@ -7275,11 +7275,10 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 			require.NoError(t, err)
 			pw.Close() // this will also close pr
 
-			assert.Eventually(t, func() bool {
+			assert.EventuallyWithT(t, func(t *assert.CollectT) {
 				contents, err := buf.Bytes(0, math.MaxInt64)
-				require.NoError(t, err)
-
-				return assert.Contains(t, string(contents), tt.wantLog)
+				assert.NoError(t, err)
+				assert.Contains(t, string(contents), tt.wantLog)
 			}, time.Second*1, time.Millisecond+100)
 		})
 	}
