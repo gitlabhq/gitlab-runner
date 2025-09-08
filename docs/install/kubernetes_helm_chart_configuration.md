@@ -12,7 +12,7 @@ title: Configure the GitLab Runner Helm chart
 
 {{< /details >}}
 
-This page describes optional configuration you can add to your GitLab Runner Helm chart.
+You can add optional configuration to your GitLab Runner Helm chart.
 
 ## Use the cache with a configuration template
 
