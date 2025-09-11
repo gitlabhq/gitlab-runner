@@ -76,7 +76,7 @@ func (p Package) RpmIbm() error {
 		return err
 	}
 
-	err = p.Rpm("ppc64le", "ppc64el")
+	err = p.Rpm("ppc64le", "ppc64le")
 	if err != nil {
 		return err
 	}

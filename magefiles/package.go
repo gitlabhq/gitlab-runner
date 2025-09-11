@@ -68,7 +68,7 @@ var packageBuilds = packages.Builds{
 		{"RpmArm64", []string{"arm64", "arm64"}, []string{"aarch64", "arm64"}, []string{"aarch64", "arm64"}},
 		{"RpmArm32", []string{"arm", "arm"}, []string{"arm", "armhf"}, []string{"arm", "armhf"}},
 		{"RpmRiscv64", []string{"riscv64"}, []string{"riscv64"}, []string{"riscv64"}},
-		{"RpmIbm", []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64el"}, []string{"s390x", "ppc64le"}},
+		{"RpmIbm", []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64le"}},
 	},
 }
 
