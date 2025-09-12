@@ -27,6 +27,14 @@
   - "docs-locale/**/*"
   - "scripts/lint-i18n-docs"
 
+.docs-all-patterns: &docs-all-patterns
+  - ".vale.ini"
+  - ".markdownlint.yml"
+  - "docs/**/*"
+  - "docs-locale/**/*"
+  - "scripts/lint-docs"
+  - "scripts/lint-i18n-docs"
+
 ##############
 # Conditions #
 ##############
@@ -160,6 +168,21 @@
       changes: *docs-i18n-patterns
     - <<: *if-security-runner-release-ref
       changes: *docs-i18n-patterns
+
+.rules:merge_request_pipelines:docs-all:
+  rules:
+    - <<: *if-merge-request-pipeline
+      changes: *docs-all-patterns
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *docs-all-patterns
+    - <<: *if-runner-or-security-runner-stable-ref
+      changes: *docs-all-patterns
+    - <<: *if-runner-or-security-runner-feature-ref
+      changes: *docs-all-patterns
+    - <<: *if-runner-release-ref
+      changes: *docs-all-patterns
+    - <<: *if-security-runner-release-ref
+      changes: *docs-all-patterns
 
 .rules:merge_request_pipelines:no_docs:no-community-mr:
   rules:
