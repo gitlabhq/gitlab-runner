@@ -474,7 +474,7 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 				build.Runner.CacheDir = tc.cacheDir
 				build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
 					EmptyDirs: []common.KubernetesEmptyDir{
-						common.KubernetesEmptyDir{
+						{
 							Name:      "cache",
 							MountPath: "$CACHE_DIRECTORY",
 						},
@@ -3653,7 +3653,7 @@ func testKubernetesOptionsUserAndGroup(t *testing.T, featureFlagName string, fea
 				return &id
 			},
 			verifyFn: func(t *testing.T, out string) {
-				assert.Contains(t, out, "uid and gid is set to: 1002:0")
+				assert.Contains(t, out, "uid and gid is set to: 1003:0")
 			},
 		},
 	}
@@ -4003,6 +4003,108 @@ func testJobAgainstServiceContainerBehaviour(t *testing.T, featureFlagName strin
 
 			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 			tc.verifyFn(t, err)
+		})
+	}
+}
+
+func TestKubernetesUserAndGroupConstraints(t *testing.T) {
+	t.Parallel()
+
+	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	type testDef struct {
+		name          string
+		runnerUID     *int64
+		runnerGID     *int64
+		allowedUsers  []string
+		allowedGroups []string
+		imageUser     string
+		expectError   string
+	}
+
+	tests := []testDef{
+		{
+			name:          "no constraints - should succeed",
+			allowedUsers:  nil,
+			allowedGroups: nil,
+			imageUser:     "1000:1000",
+			expectError:   "",
+		},
+		{
+			name:          "user allowed - should succeed",
+			allowedUsers:  []string{"1000"},
+			allowedGroups: nil,
+			imageUser:     "1000:1000",
+			expectError:   "",
+		},
+		{
+			name:          "user not allowed - should succeed with warning",
+			allowedUsers:  []string{"1001"},
+			allowedGroups: nil,
+			imageUser:     "1000:1000",
+			expectError:   "", // Should succeed, not fail
+		},
+		{
+			name:          "group not allowed - should succeed with warning",
+			allowedUsers:  nil,
+			allowedGroups: []string{"1001"},
+			imageUser:     "1000:1000",
+			expectError:   "", // Should succeed, not fail
+		},
+		{
+			name:          "runner user takes precedence - should succeed",
+			runnerUID:     common.Int64Ptr(2000),
+			runnerGID:     common.Int64Ptr(2000),
+			allowedUsers:  []string{"2000"},
+			allowedGroups: []string{"2000"},
+			imageUser:     "1000:1000",
+			expectError:   "",
+		},
+		{
+			name:          "runner user takes precedence - bypasses allowlist validation",
+			runnerUID:     common.Int64Ptr(2000),
+			runnerGID:     common.Int64Ptr(2000),
+			allowedUsers:  []string{"1000"},
+			allowedGroups: []string{"1000"},
+			imageUser:     "1000:1000",
+			expectError:   "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse(`
+					echo "Testing Kubernetes user and group constraints"
+					echo "Current user ID: $(id -u)"
+					echo "Current group ID: $(id -g)"
+					echo "Build completed"
+				`)
+			})
+
+			build.Image.ExecutorOptions.Kubernetes.User = common.StringOrInt64(test.imageUser)
+			build.Runner.Kubernetes.AllowedUsers = test.allowedUsers
+			build.Runner.Kubernetes.AllowedGroups = test.allowedGroups
+
+			// Configure security context for admin override
+			if test.runnerUID != nil {
+				build.Runner.Kubernetes.BuildContainerSecurityContext.RunAsUser = test.runnerUID
+			}
+			if test.runnerGID != nil {
+				build.Runner.Kubernetes.BuildContainerSecurityContext.RunAsGroup = test.runnerGID
+			}
+
+			var buffer bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+
+			if test.expectError != "" {
+				assert.Error(t, err, "Expected build to fail but it succeeded")
+				if err != nil {
+					assert.Contains(t, err.Error(), test.expectError, "Expected error message not found")
+				}
+			} else {
+				assert.NoError(t, err, "Expected build to succeed but got error: %v", err)
+			}
 		})
 	}
 }

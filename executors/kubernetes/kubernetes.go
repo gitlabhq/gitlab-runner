@@ -1072,20 +1072,24 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 }
 
 func (s *executor) buildUiGidCollector(os string) (api.Container, error) {
+	const containerName = "init-build-uid-gid-collector"
+
+	securityContext := s.getSecurityContextWithUIDGID(
+		string(s.options.Image.ExecutorOptions.Kubernetes.User),
+		containerName,
+		s.Config.Kubernetes.BuildContainerSecurityContext,
+	)
+
 	opts := containerBuildOpts{
-		name:            "init-build-uid-gid-collector",
+		name:            containerName,
 		image:           s.options.Image.Name,
 		imageDefinition: s.options.Image,
 		requests:        s.configurationOverwrites.buildRequests,
 		limits:          s.configurationOverwrites.buildLimits,
-		securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
-			s.Config.Kubernetes.BuildContainerSecurityContext,
-			s.defaultCapDrop()...,
-		),
+		securityContext: securityContext,
 	}
 
-	err := s.verifyAllowedImages(opts)
-	if err != nil {
+	if err := s.verifyAllowedImages(opts); err != nil {
 		return api.Container{}, err
 	}
 
@@ -2166,11 +2170,17 @@ func (s *executor) prepareImagePullSecrets() []api.LocalObjectReference {
 }
 
 func (s *executor) preparePodServices() ([]api.Container, error) {
-	var err error
 	podServices := make([]api.Container, len(s.options.Services))
 
 	for i, name := range s.options.getSortedServiceNames() {
 		service := s.options.Services[name]
+		securityContext := s.getSecurityContextWithUIDGID(
+			string(service.ExecutorOptions.Kubernetes.User),
+			name,
+			s.Config.Kubernetes.ServiceContainerSecurityContext,
+		)
+
+		var err error
 		podServices[i], err = s.buildContainer(containerBuildOpts{
 			name:               name,
 			image:              service.Name,
@@ -2178,13 +2188,7 @@ func (s *executor) preparePodServices() ([]api.Container, error) {
 			isServiceContainer: true,
 			requests:           s.configurationOverwrites.getServiceResourceRequests(name),
 			limits:             s.configurationOverwrites.getServiceResourceLimits(name),
-			securityContext: s.setSecurityContextUser(
-				service.ExecutorOptions.Kubernetes,
-				s.Config.Kubernetes.GetContainerSecurityContext(
-					s.Config.Kubernetes.ServiceContainerSecurityContext,
-					s.defaultCapDrop()...,
-				),
-			),
+			securityContext:    securityContext,
 		})
 		if err != nil {
 			return nil, err
@@ -2292,20 +2296,20 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 		return api.Container{}, api.Container{}, err
 	}
 
+	securityContext := s.getSecurityContextWithUIDGID(
+		string(s.options.Image.ExecutorOptions.Kubernetes.User),
+		buildContainerName,
+		s.Config.Kubernetes.BuildContainerSecurityContext,
+	)
+
 	buildContainer, err := s.buildContainer(containerBuildOpts{
 		name:            buildContainerName,
 		image:           s.options.Image.Name,
 		imageDefinition: s.options.Image,
 		requests:        s.configurationOverwrites.buildRequests,
 		limits:          s.configurationOverwrites.buildLimits,
-		securityContext: s.setSecurityContextUser(
-			s.options.Image.ExecutorOptions.Kubernetes,
-			s.Config.Kubernetes.GetContainerSecurityContext(
-				s.Config.Kubernetes.BuildContainerSecurityContext,
-				s.defaultCapDrop()...,
-			),
-		),
-		command: buildCmd,
+		securityContext: securityContext,
+		command:         buildCmd,
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building build container: %w", err)
@@ -2315,16 +2319,19 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 	if err != nil {
 		return api.Container{}, api.Container{}, err
 	}
+	helperSecurityContext := s.getSecurityContextWithUIDGID(
+		"", // Empty user - helper doesn't inherit job user config
+		helperContainerName,
+		s.Config.Kubernetes.HelperContainerSecurityContext,
+	)
+
 	helperContainer, err := s.buildContainer(containerBuildOpts{
-		name:     helperContainerName,
-		image:    s.getHelperImage(),
-		requests: s.configurationOverwrites.helperRequests,
-		limits:   s.configurationOverwrites.helperLimits,
-		securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
-			s.Config.Kubernetes.HelperContainerSecurityContext,
-			s.defaultCapDrop()...,
-		),
-		command: helperCmd,
+		name:            helperContainerName,
+		image:           s.getHelperImage(),
+		requests:        s.configurationOverwrites.helperRequests,
+		limits:          s.configurationOverwrites.helperLimits,
+		securityContext: helperSecurityContext,
+		command:         helperCmd,
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building helper container: %w", err)
@@ -2337,24 +2344,119 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 	return buildContainer, helperContainer, nil
 }
 
-func (s *executor) setSecurityContextUser(opts common.ImageKubernetesOptions, context *api.SecurityContext) *api.SecurityContext {
-	uid, gid, err := opts.GetUIDGID()
-
-	if err != nil {
-		s.BuildLogger.Warningln(
-			fmt.Sprintf(
-				"Error parsing 'uid' or 'gid' from image options, using the configured security context: %v",
-				err,
-			),
-		)
-		return context
+func (s *executor) parseAndValidateID(kind, idStr string, validator func(string) error) (int64, error) {
+	if idStr == "" {
+		return -1, nil
 	}
 
-	if uid > 0 {
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return -1, fmt.Errorf("failed to parse %s: %w", kind, err)
+	}
+	if id < 0 {
+		return -1, fmt.Errorf("failed to parse %s: negative values not allowed", kind)
+	}
+	if err := validator(idStr); err != nil {
+		return -1, fmt.Errorf("validating %s: %w", kind, err)
+	}
+
+	return id, nil
+}
+
+func (s *executor) parseAndValidateUID(uidStr string) (int64, error) {
+	return s.parseAndValidateID("UID", uidStr, s.Config.Kubernetes.IsUserAllowed)
+}
+
+func (s *executor) parseAndValidateGID(gidStr string) (int64, error) {
+	return s.parseAndValidateID("GID", gidStr, s.Config.Kubernetes.IsGroupAllowed)
+}
+
+type securityContextIDSource string
+
+const (
+	securityContextIDSourceContainer securityContextIDSource = "container security context"
+	securityContextIDSourcePod       securityContextIDSource = "pod security context"
+	securityContextIDSourceJob       securityContextIDSource = "job configuration"
+)
+
+func (s *executor) pickSecurityContextID(containerRunAs, podRunAs *int64, jobRunAs func() int64) (int64, securityContextIDSource) {
+	if containerRunAs != nil {
+		return *containerRunAs, securityContextIDSourceContainer
+	}
+
+	if podRunAs != nil {
+		return *podRunAs, securityContextIDSourcePod
+	}
+
+	return jobRunAs(), securityContextIDSourceJob
+}
+
+func (s *executor) getContainerUIDGID(jobUser, containerName string, containerSecurityContext common.KubernetesContainerSecurityContext) (int64, int64) {
+	containerContext := s.Config.Kubernetes.GetContainerSecurityContext(
+		containerSecurityContext,
+		s.defaultCapDrop()...,
+	)
+	podContext := s.Config.Kubernetes.GetPodSecurityContext()
+
+	jobUIDStr, jobGIDStr, _ := strings.Cut(jobUser, ":")
+
+	var podRunAsUser, podRunAsGroup *int64
+	if podContext != nil {
+		podRunAsUser = podContext.RunAsUser
+		podRunAsGroup = podContext.RunAsGroup
+	}
+
+	uid, uidSource := s.pickSecurityContextID(containerContext.RunAsUser, podRunAsUser, func() int64 {
+		uid, err := s.parseAndValidateUID(jobUIDStr)
+		if err != nil {
+			s.BuildLogger.Warningln(fmt.Sprintf("Error parsing 'uid' from image options for container %q, using the configured security context: %v",
+				containerName,
+				err,
+			))
+		}
+
+		return uid
+	})
+
+	gid, gidSource := s.pickSecurityContextID(containerContext.RunAsGroup, podRunAsGroup, func() int64 {
+		gid, err := s.parseAndValidateGID(jobGIDStr)
+		if err != nil {
+			s.BuildLogger.Warningln(fmt.Sprintf("Error parsing 'gid' from image options for container %q, using the configured security context: %v",
+				containerName,
+				err,
+			))
+		}
+
+		return gid
+	})
+
+	if uidSource != securityContextIDSourceJob && jobUIDStr != "" {
+		s.BuildLogger.Println(fmt.Sprintf("Overriding user for container %q to %q is not allowed: user is set to %d in %s", containerName, jobUIDStr, uid, uidSource))
+	}
+
+	if gidSource != securityContextIDSourceJob && jobGIDStr != "" {
+		s.BuildLogger.Println(fmt.Sprintf("Overriding group for container %q to %q is not allowed: group is set to %d in %s", containerName, jobGIDStr, gid, gidSource))
+	}
+
+	return uid, gid
+}
+
+// getSecurityContextWithUIDGID returns a container security context, where the runAsUser & runAsGroup are set to user provided ones if
+//   - the user provided UID/GID is in the allowed list of IDs configured by the admin
+//   - the admin hasn't set specific a UID/GID via either the pod security context or the container security context
+func (s *executor) getSecurityContextWithUIDGID(jobUser, containerName string, containerSecurityContext common.KubernetesContainerSecurityContext) *api.SecurityContext {
+	context := s.Config.Kubernetes.GetContainerSecurityContext(
+		containerSecurityContext,
+		s.defaultCapDrop()...,
+	)
+
+	uid, gid := s.getContainerUIDGID(jobUser, containerName, containerSecurityContext)
+
+	if uid > -1 {
 		context.RunAsUser = &uid
 	}
 
-	if gid > 0 {
+	if gid > -1 {
 		context.RunAsGroup = &gid
 	}
 

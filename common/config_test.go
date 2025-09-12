@@ -2755,6 +2755,73 @@ func Test_Docker_UserIsAllowed(t *testing.T) {
 	}
 }
 
+func Test_Kubernetes_GroupIsAllowed(t *testing.T) {
+	tests := map[string]struct {
+		group         string
+		allowedGroups []string
+		expectError   bool
+	}{
+		"no allowed groups":             {group: "1000", allowedGroups: nil, expectError: false},
+		"exact match":                   {group: "1000", allowedGroups: []string{"1000"}, expectError: false},
+		"exact match fails":             {group: "1000", allowedGroups: []string{"1001"}, expectError: true},
+		"multiple groups":               {group: "1000", allowedGroups: []string{"1000", "1001"}, expectError: false},
+		"string group exact match":      {group: "wheel", allowedGroups: []string{"wheel"}, expectError: false},
+		"string group fails":            {group: "wheel", allowedGroups: []string{"docker"}, expectError: true},
+		"empty group allowed":           {group: "", allowedGroups: []string{"1000"}, expectError: false},
+		"root group blocked by default": {group: "0", expectError: true},
+		"root group explicitly allowed": {group: "0", allowedGroups: []string{"0", "1000"}, expectError: false},
+		"root group explicitly blocked": {group: "0", allowedGroups: []string{"1000", "1001"}, expectError: true},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := KubernetesConfig{
+				AllowedGroups: tt.allowedGroups,
+			}
+
+			err := cfg.IsGroupAllowed(tt.group)
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_Kubernetes_UserIsAllowed(t *testing.T) {
+	tests := map[string]struct {
+		user         string
+		allowedUsers []string
+		expectError  bool
+	}{
+		"empty user":                   {user: "", expectError: false},
+		"no allowed users specified":   {user: "1000", expectError: false},
+		"user in allowed list":         {user: "1000", allowedUsers: []string{"1000", "1001"}, expectError: false},
+		"user not in allowed list":     {user: "1002", allowedUsers: []string{"1000", "1001"}, expectError: true},
+		"single user allowed list":     {user: "1000", allowedUsers: []string{"1000"}, expectError: false},
+		"single user not in list":      {user: "1001", allowedUsers: []string{"1000"}, expectError: true},
+		"root user blocked by default": {user: "0", expectError: true},
+		"root user explicitly allowed": {user: "0", allowedUsers: []string{"0", "1000"}, expectError: false},
+		"root user explicitly blocked": {user: "0", allowedUsers: []string{"1000", "1001"}, expectError: true},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := KubernetesConfig{
+				AllowedUsers: tt.allowedUsers,
+			}
+
+			err := cfg.IsUserAllowed(tt.user)
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestLoadConfig(t *testing.T) {
 	tests := map[string]struct {
 		config         string
