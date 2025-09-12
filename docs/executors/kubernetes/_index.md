@@ -302,9 +302,11 @@ This approach allows developers to optimize resource usage per job while maintai
 |-----------------------------------------------|-------------|
 | `affinity`                                    | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#define-a-list-of-node-affinities). |
 | `allow_privilege_escalation`                  | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) behavior. |
+| `allowed_groups`                              | Array of group IDs that can be specified for container groups. If not present, all groups are allowed. For more information, see [configure container user and group](#configure-container-user-and-group). |
 | `allowed_images`                              | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restrict-docker-images-and-services). |
 | `allowed_pull_policies`                       | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. |
 | `allowed_services`                            | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restrict-docker-images-and-services). |
+| `allowed_users`                               | Array of user IDs that can be specified for container users. If not present, all users are allowed. For more information, see [configure container user and group](#configure-container-user-and-group). |
 | `automount_service_account_token`             | Boolean to control whether the service account token automatically mounts in the build pod. |
 | `bearer_token`                                | Default bearer token used to launch build pods. |
 | `bearer_token_overwrite_allowed`              | Boolean to allow projects to specify a bearer token used to create the build pod. |
@@ -993,6 +995,235 @@ When you specify the capabilities:
 - The owner of the Kubernetes cluster
   [can define a PodSecurityPolicy](https://kubernetes.io/docs/concepts/security/pod-security-policy/#capabilities),
   where specific capabilities are allowed, restricted, or added by default. These rules take precedence over any user-defined configuration.
+
+### Configure container user and group
+
+{{< history >}}
+
+- Support for security context-based user configuration [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38894) in GitLab Runner 18.4.
+
+{{< /history >}}
+
+Configure users and groups run by containers with the Kubernetes security context configuration.
+Administrators can control container security and allow jobs to specify users for specific container types.
+
+{{< alert type="note" >}}
+
+Setting `runAsUser`, `runAsGroup` or `image:user` in job definition for Windows is not supported.
+Setting [runAsUserName](https://kubernetes.io/docs/tasks/configure-pod-container/configure-runasusername/) through [FF_USE_ADVANCED_POD_SPEC_CONFIGURATION](#overwrite-generated-pod-specifications) is recommended instead.
+
+{{< /alert >}}
+
+#### Configuration precedence
+
+Runner applies user configuration in the following order:
+
+For build and service containers:
+
+1. Container security context (`run_as_user`/`run_as_group`): Administrators control this configuration
+1. Pod security context (`run_as_user`/`run_as_group`): Administrators control pod-level defaults
+1. Job configuration (`.gitlab-ci.yml`): Users control this configuration
+
+For helper containers:
+
+1. Helper container security context (`run_as_user`/`run_as_group`): Administrators control this configuration
+1. Pod security context (`run_as_user`/`run_as_group`): Administrators control pod-level defaults
+
+Job configuration does not apply to helper containers for security isolation.
+
+Administrators can override user-specified values for security compliance. Helper containers remain isolated from job specifications.
+
+#### Requirements for Kubernetes
+
+Kubernetes requires numeric values for user and group IDs:
+
+- User and Group IDs must be integers
+- `SecurityContext` uses `run_as_user` and `run_as_group` and accepts only numeric values
+- In job configuration, use "1000" for only user, or "1000:1001" for user and group
+
+#### Override user and group settings
+
+Use pod and container-specific security contexts to override user and group settings:
+
+```toml
+[[runners]]
+  name = "k8s-runner"
+  url = "https://gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    allowed_users = ["1000", "1001", "65534"]
+    allowed_groups = ["1001", "65534"]
+    
+    # Pod security context - provides defaults for all containers
+    [runners.kubernetes.pod_security_context]
+      run_as_user = 1500
+      run_as_group = 1500
+    
+    # Build container security context - overrides pod context
+    [runners.kubernetes.build_container_security_context]
+      run_as_user = 2000
+      run_as_group = 2001
+      
+    # Helper container security context - overrides pod context
+    [runners.kubernetes.helper_container_security_context]
+      run_as_user = 3000
+      run_as_group = 3001
+      
+    # Service container security context - overrides pod context
+    [runners.kubernetes.service_container_security_context]
+      run_as_user = 4000
+      run_as_group = 4001
+```
+
+In this example:
+
+- Pod security context sets defaults (1500:1500) for containers without specific configuration
+- Container security contexts override the pod defaults
+- Users 1500, 2000, 3000, and 4000 are not in the `allowed_users` list, but security context can use them because these values bypass allowlist validation
+- This capability gives administrators unrestricted override control at both pod and container levels
+
+You can configure each container type independently. Security context configuration
+takes precedence over any user specification in job configurations.
+
+#### Specify users in job configuration
+
+Jobs can specify a user in the image configuration:
+
+```yaml
+# Job with custom user
+job:
+  image:
+    name: alpine:latest
+    kubernetes:
+      user: "1000"
+  script:
+    - whoami
+    - id
+
+# Job with user and group
+job_with_group:
+  image:
+    name: alpine:latest
+    kubernetes:
+      user: "1000:1001"
+  script:
+    - whoami
+    - id
+
+# Job using environment variable
+job_dynamic:
+  image:
+    name: alpine:latest
+    kubernetes:
+      user: "${CUSTOM_USER_ID}"
+  variables:
+    CUSTOM_USER_ID: "1000"
+  script:
+    - whoami
+```
+
+#### Security validation
+
+The runner validates user and group IDs against allowlists for job-level configuration only:
+
+- Root user/group (UID/GID 0): Always requires explicit allowlist permission for job configuration
+- Empty `allowed_users`: Any non-root job user is allowed
+- Specified `allowed_users`: Only listed job users are allowed
+- Empty `allowed_groups`: Any non-root job group is allowed
+- Specified `allowed_groups`: Only listed job groups are allowed
+- Security context configuration: Not validated against allowlists (administrator override)
+
+```toml
+[runners.kubernetes]
+  allowed_users = ["1000", "65534"]
+  allowed_groups = ["1001", "65534"]
+```
+
+#### Container behavior and precedence
+
+Security context configuration follows this precedence order (highest to lowest):
+
+1. Container security context
+1. Pod security context
+1. Job configuration
+
+```toml
+[runners.kubernetes]
+  # Pod-level defaults
+  [runners.kubernetes.pod_security_context]
+    run_as_user = 1500
+    run_as_group = 1500
+  
+  # Container-specific overrides
+  [runners.kubernetes.build_container_security_context]
+    run_as_user = 1000
+    run_as_group = 1001
+  [runners.kubernetes.helper_container_security_context]
+    run_as_user = 1000
+    run_as_group = 1001
+```
+
+```yaml
+job:
+  image:
+    name: alpine:latest
+    kubernetes:
+      user: "2000:2001"  # Ignored - container security context uses 1000:1001
+```
+
+Each container type uses its security context configuration with pod-level fallback:
+
+- Build container: Uses `build_container_security_context` first, then `pod_security_context`, then job-level user configuration from `.gitlab-ci.yml`.
+- Helper container: Uses `helper_container_security_context` first, then `pod_security_context`. Does not inherit job-level user configuration.
+- Service containers: Use `service_container_security_context` first, then `pod_security_context`, then job-level user configuration.
+
+This approach gives you granular control over each container type's security configuration while
+keeping helper containers isolated from job specifications.
+
+#### Comparison with Docker executor
+
+| Feature                       | Docker executor                    | Kubernetes executor                          |
+|-------------------------------|------------------------------------|----------------------------------------------|
+| User format                   | Username or UID (`root` or `1000`) | Numeric UID only (`1000`)                    |
+| Group format                  | Not supported in user field        | Numeric GID (`1000:1001`)                    |
+| Administrator override method | Runner `user` field                | Container and pod security contexts          |
+| Precedence                    | Runner > Job                       | Container context > Pod context > Job        |
+| Security validation           | Username allowlists                | Numeric UID/GID allowlists                   |
+| Administrator override        | Supported                          | Supported (pod and container levels)         |
+| Helper container user         | Same as build container            | Uses own `helper_container_security_context` |
+| Pod-level defaults            | Not available                      | `pod_security_context`                       |
+
+#### Troubleshoot user and group configuration
+
+##### Error: `failed to parse UID` or `failed to parse GID`
+
+- Ensure the user ID is numeric: `"1000"` not `"user"`
+- Check the format: `"1000:1001"` for user and group
+- Negative values are not allowed
+
+##### Error: `user "1000" is not in the allowed list`
+
+This error occurs only for job-level user configuration (`.gitlab-ci.yml`).
+Add the user to `allowed_users` in the runner configuration or remove `allowed_users` to allow any non-root job user.
+Security context and pod security context users are not validated against allowlists.
+
+##### Error: `group "1001" is not in the allowed list`
+
+This error occurs only for job-level group configuration (`.gitlab-ci.yml`).
+Add the group to `allowed_groups` in the runner configuration or remove `allowed_groups` to allow any non-root job group.
+Security context and pod security context groups are not validated against allowlists.
+
+##### Error: `user "0" is not in the allowed list` (Root user blocked)
+
+This error occurs only when root is specified in job configuration (`.gitlab-ci.yml`).
+Root user (UID 0) from job configuration requires explicit permission: add `"0"` to `allowed_users`.
+Alternatively, use security context or pod security context to set root user: `run_as_user = 0` (bypasses allowlist validation).
+
+##### Container runs as different user than expected
+
+Check if the runner configuration overrides job configuration with security context (security context always wins).
+If using job configuration only, then verify if `allowed_users` contains the desired user ID.
+Security context values are not validated against allowlists and provide administrator override capability.
 
 ### Overwrite container resources
 

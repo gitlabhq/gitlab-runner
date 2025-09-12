@@ -173,6 +173,44 @@ func (c KubernetesConfig) GetAllowedPullPolicies() ([]api.PullPolicy, error) {
 	return pullPolicies, nil
 }
 
+type allowListKind string
+
+const (
+	allowListKindUser  allowListKind = "user"
+	allowListKindGroup allowListKind = "group"
+)
+
+func (c KubernetesConfig) isUserOrGroupAllowed(v string, kind allowListKind, allowedList []string) error {
+	// default image user is allowed.
+	if v == "" {
+		return nil
+	}
+
+	// Root requires explicit permission in allowlist, even if allowlist is empty
+	if v == "0" && !slices.Contains(allowedList, "0") {
+		return fmt.Errorf("%s %q is not in the allowed list: %v", kind, v, allowedList)
+	}
+
+	// if no allowed-users/groups have been specified in the runner config, any non-root user is allowed.
+	if len(allowedList) == 0 {
+		return nil
+	}
+
+	if !slices.Contains(allowedList, v) {
+		return fmt.Errorf("%s %q is not in the allowed list: %v", kind, v, allowedList)
+	}
+
+	return nil
+}
+
+func (c KubernetesConfig) IsUserAllowed(user string) error {
+	return c.isUserOrGroupAllowed(user, allowListKindUser, c.AllowedUsers)
+}
+
+func (c KubernetesConfig) IsGroupAllowed(group string) error {
+	return c.isUserOrGroupAllowed(group, allowListKindGroup, c.AllowedGroups)
+}
+
 // StringOrArray implements UnmarshalTOML to unmarshal either a string or array of strings.
 type StringOrArray []string
 
@@ -628,6 +666,8 @@ type KubernetesConfig struct {
 	AllowedImages                                     []string                           `toml:"allowed_images,omitempty" json:"allowed_images,omitempty" long:"allowed-images" env:"KUBERNETES_ALLOWED_IMAGES" description:"Image allowlist"`
 	AllowedPullPolicies                               []DockerPullPolicy                 `toml:"allowed_pull_policies,omitempty" json:"allowed_pull_policies,omitempty" long:"allowed-pull-policies" env:"KUBERNETES_ALLOWED_PULL_POLICIES" description:"Pull policy allowlist"`
 	AllowedServices                                   []string                           `toml:"allowed_services,omitempty" json:"allowed_services,omitempty" long:"allowed-services" env:"KUBERNETES_ALLOWED_SERVICES" description:"Service allowlist"`
+	AllowedUsers                                      []string                           `toml:"allowed_users,omitempty" json:"allowed_users,omitempty" long:"allowed-users" env:"KUBERNETES_ALLOWED_USERS" description:"User allowlist"`
+	AllowedGroups                                     []string                           `toml:"allowed_groups,omitempty" json:"allowed_groups,omitempty" long:"allowed-groups" env:"KUBERNETES_ALLOWED_GROUPS" description:"Group allowlist"`
 	PullPolicy                                        StringOrArray                      `toml:"pull_policy,omitempty" json:"pull_policy,omitempty" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
 	NodeSelector                                      map[string]string                  `toml:"node_selector,omitempty" json:"node_selector,omitempty" long:"node-selector" env:"KUBERNETES_NODE_SELECTOR" description:"A toml table/json object of key:value. Value is expected to be a string. When set this will create pods on k8s nodes that match all the key:value pairs. Only one selector is supported through environment variable configuration."`
 	NodeSelectorOverwriteAllowed                      string                             `toml:"node_selector_overwrite_allowed" json:"node_selector_overwrite_allowed" long:"node_selector_overwrite_allowed" env:"KUBERNETES_NODE_SELECTOR_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_NODE_SELECTOR_*' values"`
