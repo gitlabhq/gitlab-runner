@@ -528,7 +528,7 @@ To do this, configure the runner's `devices` and `services_devices` options.
   To restrict a service container's device access to specific images, use exact image names or glob patterns.
   This action prevents direct access to host system devices.
 
-For more information on device access, see [Docker documentation](https://docs.docker.com/reference/cli/docker/container/run/#add-host-device-to-container---device).
+For more information on device access, see [Docker documentation](https://docs.docker.com/reference/cli/docker/container/run/#device).
 
 ### Build container example
 
