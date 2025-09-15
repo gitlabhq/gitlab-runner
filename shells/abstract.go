@@ -7,9 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"net/url"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -18,6 +18,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
@@ -28,18 +29,34 @@ const (
 	// a hidden file, .gitlab-build-uid-gid, is created in the `builds_dir` directory to assist the helper container
 	// in retrieving the build image's configured `uid:gid`.
 	// This information is then applied to the working directories to prevent them from being writable by anyone.
-	BuildUidGidFile        = ".gitlab-build-uid-gid"
-	StartupProbeFile       = ".gitlab-startup-marker"
-	gitlabEnvFileName      = "gitlab_runner_env"
-	gitlabCacheEnvFileName = "gitlab_runner_cache_env"
-	// credHelperConfFile is the base path used for the cred helper config file within the jobs temp directory
-	credHelperConfFile = "cred-helper.conf"
-	// credHelperCommand is the command to use as a git credential helper to pull credentials from the environment.
-	// git always comes (or depends) on a POSIX shell, so any helper can rely on that, regardless of the OS, git distribution, ...
-	credHelperCommand         = `!f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
+	BuildUidGidFile           = ".gitlab-build-uid-gid"
+	StartupProbeFile          = ".gitlab-startup-marker"
+	gitlabEnvFileName         = "gitlab_runner_env"
+	gitlabCacheEnvFileName    = "gitlab_runner_cache_env"
 	gitDir                    = ".git"
 	gitTemplateDir            = "git-template"
 	gitMinVersionCloneWithRef = "2.49"
+)
+
+const (
+	// externalGitConfigFile is the base name for externalized git config.
+	// The externalized config file holds
+	//	- config specific for the repo
+	//	- insteadOf configs
+	// so that we can
+	//	- drop creds in there, without exposing them inside the build dir
+	//	- support alternative URL formats (git+ssh, ...) for repo
+	externalGitConfigFile = ".gitlab-runner.ext.conf"
+
+	// credHelperCommand is the command to use as a git credential helper to pull credentials from the environment.
+	// git always comes (or depends) on a POSIX shell, so any helper can rely on that, regardless of the OS, git distribution, ...
+	credHelperCommand = `!f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
+
+	// envVarExternalGitConfigFile is the environment variable name for the variable holding the **absolute** path to the
+	// externalized git configuration. This can only be known at runtime (e.g. see: relative builds_dir), and therefore
+	// needs to be set up when the main repo is configured/pulled, so that it can then be used explicitly for submodule
+	// operations with auth.
+	envVarExternalGitConfigFile = "GLR_EXT_GIT_CONFIG_PATH"
 )
 
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
@@ -527,16 +544,6 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 	return nil
 }
 
-// credConfigFile returns the file path were we expect configuration for a credential helper setup. If an empty string
-// is returned, we are not expected to neither setup a cred helper nor use one.
-func (b *AbstractShell) credConfigFile(build *common.Build, w ShellWriter) string {
-	if !build.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
-		return ""
-	}
-
-	return w.TmpFile(credHelperConfFile)
-}
-
 func (b *AbstractShell) writeClearWorktreeScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	// Sometimes repos can get into a state where `git clean` isn't enough. A simple
 	// example is if you have an untracked file in an uninitialised submodule.
@@ -620,12 +627,7 @@ func (b *AbstractShell) getRemoteHost(build *common.Build) (string, error) {
 		return "", fmt.Errorf("getting remote URL: %w", err)
 	}
 
-	u, err := url.Parse(remoteURL)
-	if err != nil {
-		return "", fmt.Errorf("parsing remote URL: %w", err)
-	}
-
-	return url_helpers.OnlySchemeAndHost(u).String(), nil
+	return url_helpers.OnlySchemeAndHost(remoteURL).String(), nil
 }
 
 func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) error {
@@ -720,16 +722,9 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, info common.Shel
 	case common.GitFetch, common.GitClone:
 		b.writeGitCleanup(w, build)
 
-		templateDir := b.setupTemplateDir(w, build, projectDir)
-
-		credConfigFile := b.credConfigFile(build, w)
-		if credConfigFile != "" {
-			remoteHost, err := b.getRemoteHost(build)
-			if err != nil {
-				return fmt.Errorf("getting remote host: %w", err)
-			}
-			w.RmFile(credConfigFile)
-			w.SetupGitCredHelper(credConfigFile, "credential."+remoteHost, "gitlab-ci-token")
+		templateDir, remoteURL, err := b.setupTemplateDir(w, build, projectDir)
+		if err != nil {
+			return err
 		}
 
 		getCmdWriter := b.writeRefspecFetchCmd
@@ -737,7 +732,8 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, info common.Shel
 			getCmdWriter = b.writeCloneCmdIfPossible
 		}
 
-		return getCmdWriter(w, info, templateDir, credConfigFile)
+		getCmdWriter(w, info, templateDir, remoteURL)
+		return nil
 	case common.GitNone:
 		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
@@ -752,8 +748,69 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, info common.Shel
 	}
 }
 
+// setupExternalGitConfig sets up a git config file, holding the externalized config for the git repo.
+// This file is meant to be "included" (either via CLI flag or via include from another git config).
+// It holds some configuration specific to the main repo.
+// It holds insteadOf stanzas, which allows git to replace a repo URL without credentials by one with credentials, on
+// the fly. With this we can avoid dumping creds into the build directory.
+// It also has the configuration for the git credential helper, if enabled.
+func (b *AbstractShell) setupExternalGitConfig(w ShellWriter, build *common.Build, extConfigFile string) (remoteURL string, err error) {
+	w.RmFile(extConfigFile)
+
+	if build.IsFeatureFlagOn(featureflags.UseGitalyCorrelationId) {
+		w.CommandArgExpand("git", "config", "-f", extConfigFile, "http.extraHeader", "X-Gitaly-Correlation-ID: "+build.JobRequestCorrelationID)
+		w.Noticef("Gitaly correlation ID: %s", build.JobRequestCorrelationID)
+	}
+
+	if build.IsFeatureFlagOn(featureflags.UseGitBundleURIs) {
+		w.CommandArgExpand("git", "config", "-f", extConfigFile, "transfer.bundleURI", "true")
+	}
+
+	if build.IsSharedEnv() {
+		b.writeGitSSLConfig(w, build, []string{"-f", extConfigFile})
+	}
+
+	urlWithCreds, err := build.GetRemoteURL()
+	if err != nil {
+		return "", err
+	}
+
+	urlWithoutCreds := *urlWithCreds
+	urlWithoutCreds.User = nil
+
+	withCreds, withoutCreds := urlWithCreds.String(), urlWithoutCreds.String()
+	insteadOfs := [][2]string{}
+
+	if withoutCreds != withCreds {
+		insteadOfs = append(insteadOfs, [2]string{withCreds, withoutCreds})
+	}
+
+	if ios, err := build.GetInsteadOfs(); err != nil {
+		return "", err
+	} else {
+		insteadOfs = append(insteadOfs, ios...)
+	}
+
+	for _, io := range insteadOfs {
+		replaceStanza := "url." + io[0] + ".insteadOf"
+		orgURL := io[1]
+		pattern := "^" + regexp.QuoteMeta(orgURL) + "$"
+		w.CommandArgExpand("git", "config", "--file", extConfigFile, "--replace-all", replaceStanza, orgURL, pattern)
+	}
+
+	if build.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
+		remoteHost, err := b.getRemoteHost(build)
+		if err != nil {
+			return "", err
+		}
+		w.SetupGitCredHelper(extConfigFile, "credential."+remoteHost, "gitlab-ci-token")
+	}
+
+	return withoutCreds, nil
+}
+
 //nolint:funlen
-func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScriptInfo, templateDir, credConfigFile string) error {
+func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScriptInfo, templateDir, remoteURL string) {
 	build := info.Build
 	projectDir := build.FullProjectDir()
 	depth := build.GitInfo.Depth
@@ -773,15 +830,6 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	}
 
 	w.Cd(projectDir)
-
-	remoteURL, err := build.GetRemoteURL()
-	if err != nil {
-		return fmt.Errorf("writing fetch commands: %w", err)
-	}
-
-	if credConfigFile != "" {
-		w.Command("git", "config", "include.path", credConfigFile)
-	}
 
 	// Add `git remote` or update existing
 	w.IfCmd("git", "remote", "add", "origin", remoteURL)
@@ -812,11 +860,9 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	} else {
 		w.Command("git", fetchArgs...)
 	}
-
-	return nil
 }
 
-func (b *AbstractShell) writeCloneCmdIfPossible(w ShellWriter, info common.ShellScriptInfo, templateDir, credConfigFile string) error {
+func (b *AbstractShell) writeCloneCmdIfPossible(w ShellWriter, info common.ShellScriptInfo, templateDir, remoteURL string) {
 	build := info.Build
 	projectDir := build.FullProjectDir()
 
@@ -824,26 +870,18 @@ func (b *AbstractShell) writeCloneCmdIfPossible(w ShellWriter, info common.Shell
 	w.RmDir(projectDir)
 
 	if !build.IsFeatureFlagOn(featureflags.UseGitNativeClone) {
-		return b.writeRefspecFetchCmd(w, info, templateDir, credConfigFile)
+		b.writeRefspecFetchCmd(w, info, templateDir, remoteURL)
+		return
 	}
 
 	w.IfGitVersionIsAtLeast(gitMinVersionCloneWithRef)
-	defer w.EndIf()
-
-	if err := b.writeCloneRevisionCmd(w, info, templateDir, credConfigFile); err != nil {
-		return err
-	}
-
+	b.writeCloneRevisionCmd(w, info, templateDir, remoteURL)
 	w.Else()
-
-	if err := b.writeRefspecFetchCmd(w, info, templateDir, credConfigFile); err != nil {
-		return err
-	}
-
-	return nil
+	b.writeRefspecFetchCmd(w, info, templateDir, remoteURL)
+	w.EndIf()
 }
 
-func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellScriptInfo, templateDir, credConfigFile string) error {
+func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellScriptInfo, templateDir, remoteURL string) {
 	build := info.Build
 	projectDir := build.FullProjectDir()
 	depth := build.GitInfo.Depth
@@ -855,11 +893,6 @@ func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellSc
 		w.Noticef("Cloning repository for %s...", build.GitInfo.Ref)
 	default:
 		w.Noticef("Cloning repository...")
-	}
-
-	remoteURL, err := build.GetRemoteURL()
-	if err != nil {
-		return fmt.Errorf("writing clone command: %w", err)
 	}
 
 	v := common.AppVersion
@@ -879,25 +912,27 @@ func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellSc
 
 	cloneArgs = append(cloneArgs, build.GetGitCloneFlags()...)
 
-	if credConfigFile != "" {
-		// we don't have a git repo / config yet, thus adding cred helper explicitly as an arg.
-		cloneArgs = append(cloneArgs, "-c", "include.path="+credConfigFile)
-	}
-
 	w.Command("git", cloneArgs...)
+
 	w.Cd(projectDir)
-
-	if credConfigFile != "" {
-		// now that we have a git repo / config, we persist the cred helper.
-		w.Command("git", "config", "include.path", credConfigFile)
-	}
-
-	return nil
 }
 
-func (b *AbstractShell) setupTemplateDir(w ShellWriter, build *common.Build, projectDir string) string {
+// includeExternalGitConfig runs the git config command, to add a include.path setting to targetFile to include fileToInclude.
+// The path to fileToInclude must be absolute, so that it does not matter where git is eventually called from.
+// It will replace all existing include.path settings which point to the same base name. This ensures that we only have
+// one include to the same file, do not mess with user-/pre-defined includes, and support the buildsDir to change.
+// It also sets a env variable with the **absolute** path to the included file for later use.
+func includeExternalGitConfig(w ShellWriter, targetFile, fileToInclude string) {
+	baseName := path.Base(helpers.ToSlash(fileToInclude))
+	pattern := regexp.QuoteMeta(baseName) + "$"
+	w.CommandArgExpand("git", "config", "--file", targetFile, "--replace-all", "include.path", fileToInclude, pattern)
+	w.ExportRaw(envVarExternalGitConfigFile, fileToInclude)
+}
+
+func (b *AbstractShell) setupTemplateDir(w ShellWriter, build *common.Build, projectDir string) (string, string, error) {
 	templateDir := w.MkTmpDir(gitTemplateDir)
 	templateFile := w.Join(templateDir, "config")
+	extConfigFile := w.TmpFile(externalGitConfigFile)
 
 	if build.SafeDirectoryCheckout {
 		// Solves problem with newer Git versions when files existing in the working directory
@@ -912,20 +947,16 @@ func (b *AbstractShell) setupTemplateDir(w ShellWriter, build *common.Build, pro
 	w.Command("git", "config", "-f", templateFile, "credential.interactive", "never")
 	w.Command("git", "config", "-f", templateFile, "gc.autoDetach", "false")
 
-	if build.IsFeatureFlagOn(featureflags.UseGitalyCorrelationId) {
-		w.Command("git", "config", "-f", templateFile, "http.extraHeader", "X-Gitaly-Correlation-ID: "+build.JobRequestCorrelationID)
-		w.Noticef("Gitaly correlation ID: %s", build.JobRequestCorrelationID)
+	// for externalized configs & creds
+	remoteURL, err := b.setupExternalGitConfig(w, build, extConfigFile)
+	if err != nil {
+		return "", "", fmt.Errorf("setting up external git config: %w", err)
 	}
 
-	if build.IsFeatureFlagOn(featureflags.UseGitBundleURIs) {
-		w.Command("git", "config", "-f", templateFile, "transfer.bundleURI", "true")
-	}
+	// Note: We need to ensure that credConfigFile is rendered into the template with the absolute path!
+	includeExternalGitConfig(w, templateFile, extConfigFile)
 
-	if build.IsSharedEnv() {
-		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
-	}
-
-	return templateDir
+	return templateDir, remoteURL, nil
 }
 
 func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
@@ -1048,17 +1079,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	syncArgs = append(syncArgs, pathArgs...)
 	w.Command("git", syncArgs...)
 
-	// Update / initialize submodules
-	gitURLArgs, err := build.GetURLInsteadOfArgs()
-	if err != nil {
-		return fmt.Errorf("writing submodule update commands: %w", err)
-	}
-
-	if credConfigFile := b.credConfigFile(build, w); credConfigFile != "" {
-		gitURLArgs = append(gitURLArgs, "-c", "include.path="+credConfigFile)
-	}
-
-	updateArgs := append(gitURLArgs, "submodule", "update", "--init") //nolint:gocritic
+	updateArgs := []string{"submodule", "update", "--init"}
 	foreachArgs := []string{"submodule", "foreach"}
 	if recursive {
 		updateArgs = append(updateArgs, "--recursive")
@@ -1081,7 +1102,17 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", append(foreachArgs, cleanCommand...)...)
 	w.Command("git", append(foreachArgs, "git reset --hard")...)
 
-	w.IfCmdWithOutput("git", updateArgs...)
+	// Some submodule operations need creds configured, but don't pick up config from the main repo. For those, we
+	// explicitly "include.path" the externalized git config. For the "include.path" value, we use an env var, thus we
+	// need to ensure that those commands run with arg expansion.
+	withExplicitSubmoduleCreds := func(orgArgs []string) []string {
+		return slices.Concat(
+			[]string{"-c", "include.path=" + w.EnvVariableKey(envVarExternalGitConfigFile)},
+			orgArgs,
+		)
+	}
+
+	w.IfCmdWithOutputArgExpand("git", withExplicitSubmoduleCreds(updateArgs)...)
 	w.Noticef("Updated submodules")
 	w.Command("git", syncArgs...)
 	w.Else()
@@ -1099,17 +1130,14 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 		// We only do this as a fallback / on retry *and* when the `--remote` update flag is used, so that we don't
 		// unnecessarily pull in a ton of remote heads.
 		// This renders a command similar to:
-		//	git \
-		//		-c url.https://test.local.insteadOf=ssh://git@test.local \
-		//		-c include.path=blipp/blarp/blarz.conf \
-		//		submodule foreach 'git fetch origin +refs/heads/*:refs/remotes/origin/*'
-		w.Command("git", slices.Concat(
-			gitURLArgs, foreachArgs, []string{"git fetch origin +refs/heads/*:refs/remotes/origin/*"},
-		)...)
+		//	git submodule foreach 'git fetch origin +refs/heads/*:refs/remotes/origin/*'
+		w.CommandArgExpand("git", withExplicitSubmoduleCreds(slices.Concat(
+			foreachArgs, []string{"git fetch origin +refs/heads/*:refs/remotes/origin/*"},
+		))...)
 	}
 
 	w.Command("git", syncArgs...)
-	w.Command("git", updateArgs...)
+	w.CommandArgExpand("git", withExplicitSubmoduleCreds(updateArgs)...)
 	w.Command("git", append(foreachArgs, "git reset --hard")...)
 	w.EndIf()
 
@@ -1117,7 +1145,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 
 	if !build.IsLFSSmudgeDisabled() {
 		w.IfCmd("git", "lfs", "version")
-		w.Command("git", append(append(gitURLArgs, foreachArgs...), "git lfs pull")...)
+		w.CommandArgExpand("git", withExplicitSubmoduleCreds(append(foreachArgs, "git lfs pull"))...)
 		w.EndIf()
 	}
 
@@ -1611,6 +1639,7 @@ func (b *AbstractShell) writeArchiveCacheOnFailureScript(
 func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	w.RmFile(w.TmpFile(gitlabEnvFileName))
 	w.RmFile(w.TmpFile("masking.db"))
+	w.RmFile(w.TmpFile(externalGitConfigFile))
 
 	for _, variable := range info.Build.GetAllVariables() {
 		if !variable.File {

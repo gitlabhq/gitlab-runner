@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/client"
@@ -125,4 +126,13 @@ func CommandVersionIsAtLeast(t *testing.T, minVersion string, getVersionCommand 
 	t.Logf("version for %q: %s (current: %q, minimum: %q)", bin, msg, vCurrent.String(), vMin.String())
 
 	return isAtLeast
+}
+
+// NormalizePath is a quick & dirty way to handle some path oddities for our tests / test infra.
+func NormalizePath(orgPath string) string {
+	replacements := []string{
+		// on the hosted runners sometimes we get the short path, so we just normalize that here.
+		`C:\Users\GITLAB~1\AppData\`, `C:\Users\gitlab_runner\AppData\`,
+	}
+	return strings.NewReplacer(replacements...).Replace(orgPath)
 }

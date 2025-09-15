@@ -3,18 +3,20 @@
 package shells_test
 
 import (
+	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
@@ -98,6 +100,78 @@ func TestRmFile(t *testing.T) {
 	})
 }
 
+func TestExportRaw(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	tests := []struct {
+		name           string
+		value          string
+		expectedOutput string
+	}{
+		{
+			name:           "empty value",
+			expectedOutput: "env:() | var:()",
+		},
+		{
+			name:           "plain value",
+			value:          "some-value",
+			expectedOutput: "env:(some-value) | var:(some-value)",
+		},
+		{
+			name:  "ref other var",
+			value: filepath.Join("$PWD", "something"),
+			expectedOutput: func() string {
+				f := test.NormalizePath(filepath.Join(tmpDir, "something"))
+				return "env:(" + f + ") | var:(" + f + ")"
+			}(),
+		},
+		{
+			name:  "is not escaped",
+			value: "'$PWD'",
+			expectedOutput: func() string {
+				d := test.NormalizePath(tmpDir)
+				return "env:('" + d + "') | var:('" + d + "')"
+			}(),
+		},
+	}
+
+	const varName = "someVar"
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, w shells.ShellWriter) {
+				t.Parallel()
+
+				w.ExportRaw(varName, tc.value)
+
+				testCmd := fmt.Sprintf(
+					`echo "env:(%s) | var:(%s)"`,
+					varRef(varName, shell, true),  // -> sh: $someVar, pwsh: $env:someVar
+					varRef(varName, shell, false), // -> sh: $someVar, pwsh: $someVar
+				)
+				w.Line(testCmd)
+
+				out := runShell(t, shell, tmpDir, w, nil)
+				assert.Equal(t, tc.expectedOutput, strings.TrimSpace(out))
+			})
+		})
+	}
+}
+
+func varRef(name, shell string, exported bool) string {
+	if shell == shells.Bash {
+		return "$" + name
+	}
+	if exported {
+		name = "env:" + name
+	}
+	return "$" + name
+}
+
 func TestRmFilesRecursive(t *testing.T) {
 	const baseName = "test-file"
 
@@ -160,9 +234,7 @@ func TestRmDirsRecursive(t *testing.T) {
 }
 
 func TestCommandArgumentExpansion(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "runner-test")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, w shells.ShellWriter) {
 		var argumentsNoExpand []string

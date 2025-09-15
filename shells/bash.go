@@ -160,7 +160,7 @@ func (b *BashWriter) SetupGitCredHelper(confFile, section, user string) {
 			`git config -f %[1]s --replace-all %[2]s %[3]s && `+
 				`git config -f %[1]s --add %[2]s %[4]s && `+
 				`git config -f %[1]s %[5]s %[6]s`,
-			b.escape(confFile),
+			doubleQuote(confFile),
 			helperSection,
 			emptyArg,
 			b.escape(credHelperCommand),
@@ -220,6 +220,10 @@ func (b *BashWriter) Variable(variable common.JobVariable) {
 	}
 }
 
+func (b *BashWriter) ExportRaw(name, value string) {
+	b.Linef(`export %s=%s`, b.escape(name), doubleQuote(value))
+}
+
 func (b *BashWriter) DotEnvVariables(baseFilename string, variables map[string]string) string {
 	dotEnvFile := b.TmpFile(baseFilename)
 
@@ -250,14 +254,19 @@ func (b *BashWriter) IfFile(path string) {
 }
 
 func (b *BashWriter) IfCmd(cmd string, arguments ...string) {
-	cmdline := b.buildCommand(b.escape, cmd, arguments...)
-	b.Linef("if %s >/dev/null 2>&1; then", cmdline)
-	b.Indent()
+	b.ifCmd(b.buildCommand(b.escape, cmd, arguments...) + " >/dev/null 2>&1")
 }
 
 func (b *BashWriter) IfCmdWithOutput(cmd string, arguments ...string) {
-	cmdline := b.buildCommand(b.escape, cmd, arguments...)
-	b.Linef("if %s; then", cmdline)
+	b.ifCmd(b.buildCommand(b.escape, cmd, arguments...))
+}
+
+func (b *BashWriter) IfCmdWithOutputArgExpand(cmd string, arguments ...string) {
+	b.ifCmd(b.buildCommand(doubleQuote, cmd, arguments...))
+}
+
+func (b *BashWriter) ifCmd(cmdline string) {
+	b.Linef("if %s ; then", cmdline)
 	b.Indent()
 }
 

@@ -47,7 +47,7 @@ func TestBash_IfCmdShellEscapes(t *testing.T) {
 	writer := &BashWriter{}
 	writer.IfCmd("foo", "x&(y)")
 
-	assert.Equal(t, "if foo $'x&(y)' >/dev/null 2>&1; then\n", writer.String())
+	assert.Equal(t, "if foo $'x&(y)' >/dev/null 2>&1 ; then\n", writer.String())
 }
 
 func TestBash_CheckForErrors(t *testing.T) {
