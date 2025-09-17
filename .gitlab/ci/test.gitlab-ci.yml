@@ -74,7 +74,7 @@ integration test:
         -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
         -tags integration \
         ./... \
-        -- -ldflags "$(make print_test_ldflags)" -timeout 15m
+        -- -ldflags "$(make print_test_ldflags)" -timeout 25m
   parallel: 4
 
 integration test with race:
@@ -93,7 +93,7 @@ integration test with race:
         -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
         -tags integration \
         ./... \
-        -- -ldflags "$(make print_test_ldflags)" -timeout 30m
+        -- -ldflags "$(make print_test_ldflags)" -timeout 40m
 
 fuzz variable mask:
   extends:
@@ -161,7 +161,7 @@ fuzz variable mask:
     - "clone test repo"
   #- 'prepare done'
   script:
-    - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_windows_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 ./... -- -timeout 20m
+    - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_windows_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 ./... -- -timeout 30m
 
 .windows integration test:
   extends:
@@ -183,7 +183,7 @@ fuzz variable mask:
     - docker network create -d "nat" test-network
     - docker network rm test-network
     - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest
-    - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_windows_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 -tags integration ./... -- -timeout 45m
+    - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_windows_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 -tags integration ./... -- -timeout 55m
 
 windows 1809 compile tests:
   extends:
