@@ -1232,6 +1232,8 @@ type CacheConfig struct {
 }
 
 type RunnerSettings struct {
+	Labels Labels `toml:"labels,omitempty" json:"labels,omitempty" description:"Custom labels for the runner worker. Duplicate keys will override any global defaults in this scope."`
+
 	Executor  string `toml:"executor" json:"executor" long:"executor" env:"RUNNER_EXECUTOR" required:"true" description:"Select executor, eg. shell, docker, etc."`
 	BuildsDir string `toml:"builds_dir,omitempty" json:"builds_dir" long:"builds-dir" env:"RUNNER_BUILDS_DIR" description:"Directory where builds are stored"`
 	CacheDir  string `toml:"cache_dir,omitempty" json:"cache_dir" long:"cache-dir" env:"RUNNER_CACHE_DIR" description:"Directory where build cache is stored"`
@@ -1281,6 +1283,9 @@ type RunnerSettings struct {
 	Autoscaler *AutoscalerConfig `toml:"autoscaler,omitempty" json:",omitempty"`
 
 	StepRunnerImage string `toml:"step_runner_image,omitempty" json:"step_runner_image" long:"step-runner-image" env:"STEP_RUNNER_IMAGE" description:"[ADVANCED] Override the default step-runner image used to inject the step-runner binary into the build container"`
+
+	// this is the combined labels from global defaults and this specific runner's labels
+	labels Labels
 }
 
 type RunnerConfig struct {
@@ -1310,6 +1315,8 @@ type SessionServer struct {
 type Config struct {
 	ListenAddress string        `toml:"listen_address,omitempty" json:"listen_address"`
 	SessionServer SessionServer `toml:"session_server,omitempty" json:"session_server"`
+
+	Labels Labels `toml:"labels,omitempty" json:"labels,omitempty" description:"Default custom labels for all runners."`
 
 	Concurrent       int             `toml:"concurrent" json:"concurrent"`
 	CheckInterval    int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
@@ -1491,6 +1498,22 @@ func (c *CacheConfig) GetPath() string {
 
 func (c *CacheConfig) GetShared() bool {
 	return c.Shared
+}
+
+func (r *RunnerSettings) ComputeLabels(globalDefaults Labels) {
+	r.labels = make(Labels)
+
+	for k, v := range globalDefaults {
+		r.labels[k] = v
+	}
+
+	for k, v := range r.Labels {
+		r.labels[k] = v
+	}
+}
+
+func (r *RunnerSettings) ComputedLabels() Labels {
+	return r.labels
 }
 
 func (r *RunnerSettings) GetGracefulKillTimeout() time.Duration {
@@ -2272,21 +2295,17 @@ func (c *Config) LoadConfig(configFile string) error {
 		return fmt.Errorf("decoding configuration file: %w", err)
 	}
 
-	for _, runner := range c.Runners {
-		if runner.Machine != nil {
-			err := runner.Machine.CompilePeriods()
-			if err != nil {
-				return fmt.Errorf("compiling docker machine autoscaling periods: %w", err)
-			}
-			runner.Machine.logDeprecationWarning()
+	for _, r := range c.Runners {
+		err := r.loadConfig(c)
+		if err != nil {
+			return fmt.Errorf("loading coniguration for %s runner: %w", r.Name, err)
 		}
+	}
 
-		if runner.Monitoring != nil {
-			err = runner.Monitoring.Compile()
-			if err != nil {
-				return fmt.Errorf("compiling monitoring sections: %w", err)
-			}
-		}
+	// config built-in validation is blocking when doesn't pass
+	err = c.Validate()
+	if err != nil {
+		return fmt.Errorf("invalid config: %w", err)
 	}
 
 	c.ModTime = info.ModTime()
@@ -2297,6 +2316,27 @@ func (c *Config) LoadConfig(configFile string) error {
 	}
 
 	c.Loaded = true
+
+	return nil
+}
+
+func (c *RunnerConfig) loadConfig(globalCfg *Config) error {
+	if c.Machine != nil {
+		err := c.Machine.CompilePeriods()
+		if err != nil {
+			return fmt.Errorf("compiling docker machine autoscaling periods: %w", err)
+		}
+		c.Machine.logDeprecationWarning()
+	}
+
+	if c.Monitoring != nil {
+		err := c.Monitoring.Compile()
+		if err != nil {
+			return fmt.Errorf("compiling monitoring sections: %w", err)
+		}
+	}
+
+	c.RunnerSettings.ComputeLabels(globalCfg.Labels)
 
 	return nil
 }
@@ -2389,4 +2429,50 @@ func (c *Config) RunnerByNameAndToken(name string, token string) (*RunnerConfig,
 	}
 
 	return nil, fmt.Errorf("could not find a runner with the Name '%s' and Token '%s'", name, token)
+}
+
+func (c *Config) Validate() error {
+	for vn, v := range map[string]func() error{
+		"global labels": c.validateLabels,
+	} {
+		err := v()
+		if err != nil {
+			return fmt.Errorf("validating %s: %w", vn, err)
+		}
+	}
+
+	for _, r := range c.Runners {
+		err := r.Validate()
+		if err != nil {
+			return fmt.Errorf("validating runner %s: %w", r.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func (c *Config) validateLabels() error {
+	return c.Labels.validatePatterns()
+}
+
+func (c *RunnerConfig) Validate() error {
+	for vn, v := range map[string]func() error{
+		"labels":          c.validateLabels,
+		"computed labels": c.validateComputedLabels,
+	} {
+		err := v()
+		if err != nil {
+			return fmt.Errorf("validating %s: %w", vn, err)
+		}
+	}
+
+	return nil
+}
+
+func (c *RunnerConfig) validateLabels() error {
+	return c.Labels.validatePatterns()
+}
+
+func (c *RunnerConfig) validateComputedLabels() error {
+	return c.labels.validateCount()
 }

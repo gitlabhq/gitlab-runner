@@ -104,6 +104,7 @@ func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.Versi
 		Architecture: runtime.GOARCH,
 		Executor:     config.Executor,
 		Shell:        config.Shell,
+		Labels:       config.ComputedLabels(),
 	}
 
 	n.getFeatures(&info.Features)

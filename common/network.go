@@ -275,6 +275,7 @@ type VersionInfo struct {
 	Shell        string       `json:"shell,omitempty"`
 	Features     FeaturesInfo `json:"features"`
 	Config       ConfigInfo   `json:"config,omitempty"`
+	Labels       Labels       `json:"labels,omitempty"`
 }
 
 type JobRequest struct {

@@ -977,6 +977,7 @@ func (mr *RunCommand) processBuildOnRunner(
 					StartedAt:       build.StartedAt().UTC(),
 					FinishedAt:      build.FinishedAt().UTC(),
 				},
+				Labels: runner.ComputedLabels(),
 			})
 		}
 	}()
