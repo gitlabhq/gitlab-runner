@@ -15,9 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 
+	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
+
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
-	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 )
 
 func TestCacheS3Config_AuthType(t *testing.T) {
@@ -2826,7 +2827,7 @@ func TestLoadConfig(t *testing.T) {
 	tests := map[string]struct {
 		config         string
 		validateConfig func(t *testing.T, config *Config)
-		expectedErr    string
+		assertError    func(t *testing.T, err error)
 	}{
 		"parse defaults": {
 			config: ``,
@@ -2842,6 +2843,73 @@ func TestLoadConfig(t *testing.T) {
 				require.Equal(t, 1*time.Second, *config.ConnectionMaxAge)
 			},
 		},
+		"invalid labels": {
+			config: `[labels]  # Global defaults
+  "invalid/key" = "valid_value"
+
+[[runners]]
+  name = "labels-test"
+  [runners.labels]  # Runner-specific data
+    env = "prod"
+`,
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, ErrInvalidLabelKey)
+			},
+		},
+		"valid labels": {
+			config: `
+concurrent = 1
+
+[labels]
+  "env" = "prod"
+  test = "value"
+  test_label = "value"
+  test-label = "value"
+  "test.label" = "value"
+
+[[runners]]
+  name = "labels-test"
+
+  [runners.labels]
+    "shard" = "default"
+    test = "override"
+    test_label = "override"
+    "test-label" = "override"
+    "test.label" = "override"
+`,
+			validateConfig: func(t *testing.T, config *Config) {
+				globalLabels := Labels{
+					"env":        "prod",
+					"test":       "value",
+					"test_label": "value",
+					"test.label": "value",
+					"test-label": "value",
+				}
+
+				runnerLabels := Labels{
+					"shard":      "default",
+					"test":       "override",
+					"test_label": "override",
+					"test.label": "override",
+					"test-label": "override",
+				}
+
+				computedLabels := Labels{
+					"env":        "prod",
+					"shard":      "default",
+					"test":       "override",
+					"test_label": "override",
+					"test.label": "override",
+					"test-label": "override",
+				}
+
+				assert.Equal(t, globalLabels, config.Labels)
+				if assert.GreaterOrEqual(t, len(config.Runners), 1) {
+					assert.Equal(t, runnerLabels, config.Runners[0].Labels)
+					assert.Equal(t, computedLabels, config.Runners[0].ComputedLabels())
+				}
+			},
+		},
 	}
 
 	for tn, tt := range tests {
@@ -2855,7 +2923,13 @@ func TestLoadConfig(t *testing.T) {
 
 			cfg := NewConfig()
 			err = cfg.LoadConfig(tempFile.Name())
-			require.NoError(t, err)
+
+			if tt.assertError != nil {
+				tt.assertError(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
 
 			if tt.validateConfig != nil {
 				tt.validateConfig(t, cfg)
@@ -3254,6 +3328,267 @@ func TestRunnerByNameAndToken(t *testing.T) {
 				assert.Equal(t, tt.runners[tt.expectedIndex], runner)
 			}
 			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
+
+func TestRunnerSettings_ComputeLabels(t *testing.T) {
+	tests := map[string]struct {
+		runnerWorkerLabels        Labels
+		initialRunnerWorkerLabels Labels
+		globalDefaults            Labels
+		expectedResult            Labels
+	}{
+		"nil labels and nil computed with empty global defaults": {
+			runnerWorkerLabels: nil,
+			globalDefaults:     Labels{},
+			expectedResult:     Labels{},
+		},
+		"nil labels and nil computed with global defaults": {
+			runnerWorkerLabels: nil,
+			globalDefaults:     Labels{"env": "prod", "team": "backend"},
+			expectedResult:     Labels{"env": "prod", "team": "backend"},
+		},
+		"empty labels with global defaults": {
+			runnerWorkerLabels: Labels{},
+			globalDefaults:     Labels{"env": "prod", "team": "backend"},
+			expectedResult:     Labels{"env": "prod", "team": "backend"},
+		},
+		"runner labels override global defaults": {
+			runnerWorkerLabels: Labels{"env": "staging", "region": "us-west"},
+			globalDefaults:     Labels{"env": "prod", "team": "backend"},
+			expectedResult:     Labels{"env": "staging", "team": "backend", "region": "us-west"},
+		},
+		"runner labels only, no global defaults": {
+			runnerWorkerLabels: Labels{"custom": "value", "runner": "specific"},
+			expectedResult:     Labels{"custom": "value", "runner": "specific"},
+		},
+		"existing computed labels are overwritten": {
+			runnerWorkerLabels:        Labels{"env": "staging"},
+			initialRunnerWorkerLabels: Labels{"old": "value", "env": "dev"},
+			globalDefaults:            Labels{"team": "backend"},
+			expectedResult:            Labels{"env": "staging", "team": "backend"},
+		},
+		"nil global defaults with existing labels": {
+			runnerWorkerLabels: Labels{"runner": "test"},
+			globalDefaults:     nil,
+			expectedResult:     Labels{"runner": "test"},
+		},
+		"complex scenario with multiple overrides": {
+			runnerWorkerLabels: Labels{"env": "staging", "version": "1.2.3", "team": "frontend"},
+			globalDefaults:     Labels{"env": "prod", "team": "backend", "region": "us-east", "cost-center": "eng"},
+			expectedResult:     Labels{"env": "staging", "version": "1.2.3", "team": "frontend", "region": "us-east", "cost-center": "eng"},
+		},
+		"empty string values in labels": {
+			runnerWorkerLabels: Labels{"empty": "", "normal": "value"},
+			globalDefaults:     Labels{"global": "default", "empty": "global-value"},
+			expectedResult:     Labels{"global": "default", "empty": "", "normal": "value"},
+		},
+		"labels with special characters in key": {
+			runnerWorkerLabels: Labels{"key-with-dashes": "value1", "key_with_underscores": "value2", "key.with.dots": "value3"},
+			globalDefaults:     Labels{"key-with_different.characters": "value4"},
+			expectedResult:     Labels{"key-with-dashes": "value1", "key_with_underscores": "value2", "key.with.dots": "value3", "key-with_different.characters": "value4"},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			r := &RunnerSettings{
+				Labels: tt.runnerWorkerLabels,
+				labels: tt.initialRunnerWorkerLabels,
+			}
+
+			r.ComputeLabels(tt.globalDefaults)
+
+			assert.Equal(t, tt.runnerWorkerLabels, r.Labels)
+			assert.Equal(t, tt.expectedResult, r.labels, "computed labels should match expected result")
+		})
+	}
+}
+
+func TestRunnerSettings_ComputedLabels(t *testing.T) {
+	tests := map[string]struct {
+		computedLabels Labels
+		expected       Labels
+	}{
+		"nil computed labels": {
+			computedLabels: nil,
+			expected:       nil,
+		},
+		"empty computed labels": {
+			computedLabels: Labels{},
+			expected:       Labels{},
+		},
+		"single label": {
+			computedLabels: Labels{"env": "prod"},
+			expected:       Labels{"env": "prod"},
+		},
+		"multiple labels": {
+			computedLabels: Labels{"env": "prod", "team": "backend", "region": "us-west"},
+			expected:       Labels{"env": "prod", "team": "backend", "region": "us-west"},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			r := &RunnerSettings{
+				labels: tt.computedLabels,
+			}
+
+			assert.Equal(t, tt.expected, r.ComputedLabels(), "ComputedLabels should return the labels field")
+		})
+	}
+}
+
+func TestRunnerSettings_CombineLabels_MultipleCalls(t *testing.T) {
+	t.Run("multiple calls to ComputeLabels", func(t *testing.T) {
+		r := &RunnerSettings{
+			Labels: Labels{"runner": "test"},
+		}
+
+		// First call
+		r.ComputeLabels(Labels{"env": "prod", "team": "backend"})
+		expected1 := Labels{"env": "prod", "team": "backend", "runner": "test"}
+		assert.Equal(t, expected1, r.ComputedLabels())
+
+		// Second call with different global defaults
+		r.ComputeLabels(Labels{"env": "staging", "region": "us-east"})
+		expected2 := Labels{"env": "staging", "region": "us-east", "runner": "test"}
+		assert.Equal(t, expected2, r.ComputedLabels())
+	})
+}
+
+func TestConfig_Validate(t *testing.T) {
+	tests := map[string]struct {
+		globalLabels Labels
+		runnerLabels Labels
+		assertError  func(t *testing.T, err error)
+	}{
+		"all labels are valid": {
+			globalLabels: Labels{
+				"env": "production",
+			},
+			runnerLabels: Labels{
+				"privileged": "true",
+			},
+		},
+		"invalid global label key": {
+			globalLabels: Labels{
+				"test/key": "test_value",
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, ErrInvalidLabelKey)
+				assert.Contains(t, err.Error(), "lobal labels")
+			},
+		},
+		"invalid global label value": {
+			globalLabels: Labels{
+				"test_key": "test/value",
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, ErrInvalidLabelValue)
+				assert.Contains(t, err.Error(), "lobal labels")
+			},
+		},
+		"invalid runner label key": {
+			runnerLabels: Labels{
+				"test/key": "test_value",
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, ErrInvalidLabelKey)
+				assert.Contains(t, err.Error(), "runner-tested")
+			},
+		},
+		"invalid runner label value": {
+			runnerLabels: Labels{
+				"test_key": "test/value",
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, ErrInvalidLabelValue)
+				assert.Contains(t, err.Error(), "runner-tested")
+			},
+		},
+		"too many labels": {
+			globalLabels: Labels{
+				"one":       "1",
+				"two":       "2",
+				"three":     "3",
+				"four":      "4",
+				"five":      "5",
+				"six":       "6",
+				"seven":     "7",
+				"eight":     "8",
+				"nine":      "9",
+				"ten":       "10",
+				"eleven":    "11",
+				"twelve":    "12",
+				"thirteen":  "13",
+				"fourteen":  "14",
+				"fifteen":   "15",
+				"sixteen":   "16",
+				"seventeen": "17",
+			},
+			runnerLabels: Labels{
+				"eighteen":     "18",
+				"nineteen":     "19",
+				"twenty":       "20",
+				"twenty-one":   "21",
+				"twenty-two":   "22",
+				"twenty-three": "23",
+				"twenty-four":  "24",
+				"twenty-five":  "25",
+				"twenty-six":   "26",
+				"twenty-seven": "27",
+				"twenty-eight": "28",
+				"twenty-nine":  "29",
+				"thirty":       "30",
+				"thirty-one":   "31",
+				"thirty-two":   "32",
+				"thirty-three": "33",
+				"thirty-four":  "34",
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, ErrLabelsCountExceeded)
+				assert.Contains(t, err.Error(), "runner-tested")
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			c := &Config{
+				Labels: tc.globalLabels,
+				Runners: []*RunnerConfig{
+					{
+						Name: "runner-always-valid",
+						RunnerSettings: RunnerSettings{
+							Labels: Labels{
+								"runner": "name",
+							},
+						},
+					},
+					{
+						Name: "runner-tested",
+						RunnerSettings: RunnerSettings{
+							Labels: tc.runnerLabels,
+						},
+					},
+				},
+			}
+
+			for _, r := range c.Runners {
+				r.ComputeLabels(c.Labels)
+			}
+
+			assert.NoError(t, c.Runners[0].Validate())
+
+			err := c.Validate()
+			if tc.assertError == nil {
+				assert.NoError(t, err)
+				return
+			}
+
+			tc.assertError(t, err)
 		})
 	}
 }

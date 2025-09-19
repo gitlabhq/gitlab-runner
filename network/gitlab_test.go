@@ -3061,18 +3061,27 @@ func TestArtifactsDownload(t *testing.T) {
 
 func TestRunnerVersion(t *testing.T) {
 	c := NewGitLabClient()
-	info := c.getRunnerVersion(RunnerConfig{
+	config := RunnerConfig{
 		RunnerSettings: RunnerSettings{
 			Executor: "my-executor",
 			Shell:    "my-shell",
+			Labels:   Labels{"testing": "testing"},
 		},
-	})
+	}
+	config.ComputeLabels(Labels{"123": "123"})
+	info := c.getRunnerVersion(config)
 
 	assert.NotEmpty(t, info.Name)
 	assert.NotEmpty(t, info.Version)
 	assert.NotEmpty(t, info.Revision)
 	assert.NotEmpty(t, info.Platform)
 	assert.NotEmpty(t, info.Architecture)
+	if assert.Contains(t, info.Labels, "testing") {
+		assert.Contains(t, "testing", info.Labels["testing"])
+	}
+	if assert.Contains(t, info.Labels, "123") {
+		assert.Contains(t, "123", info.Labels["123"])
+	}
 	assert.Equal(t, "my-executor", info.Executor)
 	assert.Equal(t, "my-shell", info.Shell)
 }
@@ -3100,15 +3109,24 @@ func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testin
 	RegisterShell(shell)
 
 	c := NewGitLabClient()
-	info := c.getRunnerVersion(RunnerConfig{
+	config := RunnerConfig{
 		RunnerSettings: RunnerSettings{
 			Executor: "my-test-executor",
 			Shell:    "",
+			Labels:   Labels{"testing": "testing"},
 		},
-	})
+	}
+	config.ComputeLabels(Labels{"123": "123"})
+	info := c.getRunnerVersion(config)
 
 	assert.Equal(t, "my-test-executor", info.Executor)
 	assert.Equal(t, "my-default-executor-shell", info.Shell)
+	if assert.Contains(t, info.Labels, "testing") {
+		assert.Equal(t, "testing", info.Labels["testing"])
+	}
+	if assert.Contains(t, info.Labels, "123") {
+		assert.Equal(t, "123", info.Labels["123"])
+	}
 	assert.False(t, info.Features.Artifacts, "dry-run that this is not enabled")
 	assert.True(t, info.Features.Shared, "feature is enabled by executor")
 	assert.True(t, info.Features.Variables, "feature is enabled by shell")
