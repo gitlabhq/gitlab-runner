@@ -1009,19 +1009,44 @@ func TestDockerIsolationWithIncorrectValue(t *testing.T) {
 	assert.Contains(t, err.Error(), `the isolation value "someIncorrectValue" is not valid`)
 }
 
-func TestDockerContainerConfigIncludesDockerLabels(t *testing.T) {
+func TestDockerServiceContainerConfigIncludesDockerLabels(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		HelperImage:     "gitlab/gitlab-runner:${CI_RUNNER_REVISION}",
-		ContainerLabels: map[string]string{"dockerConfigLabel": "dockerConfigLabelValue"},
+		ContainerLabels: map[string]string{"my.custom.dockerConfigLabel": "dockerConfigLabelValue"},
 	}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 	}
 	_, executor := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	containerConfig := executor.createServiceContainerConfig("service_name", "service_tag", "abc123def456", common.Image{Name: "alpine"})
+	containerConfig := executor.createServiceContainerConfig("postgres", "15-alpine", "abc123def456", common.Image{Name: "postgres:15-alpine"})
 
-	assert.Equal(t, "dockerConfigLabelValue", containerConfig.Labels["com.gitlab.gitlab-runner.dockerConfigLabel"])
+	expectedLabels := map[string]string{
+		// default labels
+		"com.gitlab.gitlab-runner.job.before_sha":    "",
+		"com.gitlab.gitlab-runner.job.id":            "0",
+		"com.gitlab.gitlab-runner.job.ref":           "",
+		"com.gitlab.gitlab-runner.job.sha":           "",
+		"com.gitlab.gitlab-runner.job.timeout":       "2h0m0s",
+		"com.gitlab.gitlab-runner.job.url":           "/-/jobs/0",
+		"com.gitlab.gitlab-runner.managed":           "true",
+		"com.gitlab.gitlab-runner.pipeline.id":       "",
+		"com.gitlab.gitlab-runner.project.id":        "0",
+		"com.gitlab.gitlab-runner.project.runner_id": "0",
+		"com.gitlab.gitlab-runner.runner.id":         "",
+		"com.gitlab.gitlab-runner.runner.local_id":   "0",
+		"com.gitlab.gitlab-runner.runner.system_id":  "",
+		"com.gitlab.gitlab-runner.service":           "postgres",
+		"com.gitlab.gitlab-runner.service.version":   "15-alpine",
+		"com.gitlab.gitlab-runner.type":              "service",
+		// from user-defined config
+		"my.custom.dockerConfigLabel": "dockerConfigLabelValue",
+		// NOTE: this is only here for backwards-compatibility
+		// see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39048
+		"com.gitlab.gitlab-runner.my.custom.dockerConfigLabel": "dockerConfigLabelValue",
+	}
+
+	assert.Equal(t, expectedLabels, containerConfig.Labels)
 }
 
 func TestDockerMacAddress(t *testing.T) {

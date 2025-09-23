@@ -558,9 +558,20 @@ func (e *executor) createServiceContainerConfig(
 		"service.version": version,
 	})
 
+	// NOTE: the follow is for backwards-compatibility.
+	// See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39048
+	// It adds the labels from the configuration with the gitlab-runner prefix.
+	// The SSoT for the dockerLabelPrefix is the labels package, but lets avoid
+	// exporting it or providing helper functions to add it.
+	// The code below is an EXCEPTION and should be removed asap.
+	const dockerLabelPrefix = "com.gitlab.gitlab-runner"
+	for k, v := range e.Config.Docker.ContainerLabels {
+		labels[fmt.Sprintf("%s.%s", dockerLabelPrefix, k)] = e.Build.Variables.ExpandValue(v)
+	}
+
 	config := &container.Config{
 		Image:  serviceImageID,
-		Labels: e.labeler.Labels(labels),
+		Labels: labels,
 		Env:    e.getServiceVariables(definition),
 	}
 
@@ -1703,6 +1714,8 @@ func (e *executor) readContainerLogs(containerID string) string {
 	return strings.TrimSpace(buf.String())
 }
 
+// prepareContainerLabels returns a map of the default labels combined with the passed otherLabels
+// and the docker labels from the config.
 func (e *executor) prepareContainerLabels(otherLabels map[string]string) map[string]string {
 	l := e.labeler.Labels(otherLabels)
 
