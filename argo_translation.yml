@@ -2,6 +2,7 @@ source_language: en-us
 target_languages: [ja-jp]
 argo_request_key: GITTECH
 translation_mr_labels: [gitlab-translation-service]
+translation_mr_branch_name: docs-i18n/
 components:
   - name: Technical Documentation
     create_request: false
