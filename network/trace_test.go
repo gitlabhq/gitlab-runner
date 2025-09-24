@@ -472,11 +472,10 @@ func TestJobIncrementalStatusRefresh(t *testing.T) {
 	// 2. inject final state as early as possible
 	b.lock.Lock()
 	b.start()
-	b.state = common.Success
 	b.lock.Unlock()
 
 	wg.Wait()
-	assert.NoError(t, b.finish())
+	assert.NoError(t, b.Success())
 }
 
 func TestCancelingJobIncrementalUpdate(t *testing.T) {

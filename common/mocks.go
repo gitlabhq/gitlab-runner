@@ -1673,6 +1673,39 @@ func (_c *MockJobTrace_Fail_Call) RunAndReturn(run func(err error, failureData J
 	return _c
 }
 
+// Finish provides a mock function for the type MockJobTrace
+func (_mock *MockJobTrace) Finish() {
+	_mock.Called()
+	return
+}
+
+// MockJobTrace_Finish_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Finish'
+type MockJobTrace_Finish_Call struct {
+	*mock.Call
+}
+
+// Finish is a helper method to define mock.On call
+func (_e *MockJobTrace_Expecter) Finish() *MockJobTrace_Finish_Call {
+	return &MockJobTrace_Finish_Call{Call: _e.mock.On("Finish")}
+}
+
+func (_c *MockJobTrace_Finish_Call) Run(run func()) *MockJobTrace_Finish_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockJobTrace_Finish_Call) Return() *MockJobTrace_Finish_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockJobTrace_Finish_Call) RunAndReturn(run func()) *MockJobTrace_Finish_Call {
+	_c.Run(run)
+	return _c
+}
+
 // IsStdout provides a mock function for the type MockJobTrace
 func (_mock *MockJobTrace) IsStdout() bool {
 	ret := _mock.Called()

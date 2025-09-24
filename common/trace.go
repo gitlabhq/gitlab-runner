@@ -42,6 +42,9 @@ func (s *Trace) Fail(err error, failureData JobFailureData) error {
 	return nil
 }
 
+func (s *Trace) Finish() {
+}
+
 func (s *Trace) SetCancelFunc(cancelFunc context.CancelFunc) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

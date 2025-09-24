@@ -64,6 +64,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 
 	mNetwork := common.NewMockNetwork(t)
 	mNetwork.On("RequestJob", mock.Anything, mock.Anything, mock.Anything).Return(&jobData, true)
+	mNetwork.On("UpdateJob", mock.Anything, mock.Anything, mock.Anything).Return(common.UpdateJobResult{State: common.UpdateSucceeded})
 	mNetwork.On("ProcessJob", mock.Anything, mock.Anything).Return(mJobTrace, nil)
 
 	var runningBuilds uint32
@@ -1415,4 +1416,148 @@ func TestRequestBottleneckWarning(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunCommand_requestJob_HandlesUpdateAbort(t *testing.T) {
+	runner := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "test-token",
+		},
+	}
+
+	jobData := &common.JobResponse{
+		ID:    123,
+		Token: "job-token",
+	}
+
+	network := common.NewMockNetwork(t)
+	mockTrace := common.NewMockJobTrace(t)
+	mockTrace.On("SetFailuresCollector", mock.Anything).Return()
+	mockTrace.On("Finish").Return()
+
+	// Mock RequestJob to return a job
+	network.On("RequestJob", mock.Anything, *runner, mock.Anything).Return(jobData, true)
+	// Mock ProcessJob to return a trace
+	network.On("ProcessJob", *runner, mock.AnythingOfType("*common.JobCredentials")).Return(mockTrace, nil)
+	// Mock UpdateJob to return UpdateAbort
+	network.On("UpdateJob", *runner, mock.AnythingOfType("*common.JobCredentials"), mock.AnythingOfType("common.UpdateJobInfo")).
+		Return(common.UpdateJobResult{State: common.UpdateAbort})
+
+	cmd := &RunCommand{
+		network: network,
+	}
+
+	trace, response, err := cmd.requestJob(runner, nil)
+
+	// When UpdateJob returns UpdateAbort, requestJob should return nil
+	assert.Nil(t, trace, "Should return nil trace when update is aborted")
+	assert.Nil(t, response, "Should return nil response when update is aborted")
+	assert.Nil(t, err, "Should return nil error when update is aborted")
+
+	network.AssertExpectations(t)
+	mockTrace.AssertExpectations(t)
+}
+
+func TestRunCommand_requestJob_HandlesCancelRequested(t *testing.T) {
+	runner := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "test-token",
+		},
+	}
+
+	jobData := &common.JobResponse{
+		ID:    123,
+		Token: "job-token",
+	}
+
+	network := common.NewMockNetwork(t)
+	mockTrace := common.NewMockJobTrace(t)
+	mockTrace.On("SetFailuresCollector", mock.Anything).Return()
+	mockTrace.On("Finish").Return()
+
+	// Mock RequestJob to return a job
+	network.On("RequestJob", mock.Anything, *runner, mock.Anything).Return(jobData, true)
+	// Mock ProcessJob to return a trace
+	network.On("ProcessJob", *runner, mock.AnythingOfType("*common.JobCredentials")).Return(mockTrace, nil)
+	// Mock UpdateJob to return success but with CancelRequested=true
+	network.On("UpdateJob", *runner, mock.AnythingOfType("*common.JobCredentials"), mock.AnythingOfType("common.UpdateJobInfo")).
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded, CancelRequested: true})
+
+	cmd := &RunCommand{
+		network: network,
+	}
+
+	trace, response, err := cmd.requestJob(runner, nil)
+
+	// When UpdateJob has CancelRequested=true, requestJob should return nil
+	assert.Nil(t, trace, "Should return nil trace when job is being canceled")
+	assert.Nil(t, response, "Should return nil response when job is being canceled")
+	assert.Nil(t, err, "Should return nil error when job is being canceled")
+
+	network.AssertExpectations(t)
+	mockTrace.AssertExpectations(t)
+}
+
+func TestRunCommand_requestJob_ContinuesWhenUpdateSucceeds(t *testing.T) {
+	runner := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "test-token",
+		},
+	}
+
+	jobData := &common.JobResponse{
+		ID:    123,
+		Token: "job-token",
+	}
+
+	mockTrace := &common.MockJobTrace{}
+	mockTrace.On("SetFailuresCollector", mock.Anything).Return()
+
+	network := common.NewMockNetwork(t)
+	// Mock RequestJob to return a job
+	network.On("RequestJob", mock.Anything, *runner, mock.Anything).Return(jobData, true)
+	// Mock UpdateJob to return success
+	network.On("UpdateJob", *runner, mock.AnythingOfType("*common.JobCredentials"), mock.AnythingOfType("common.UpdateJobInfo")).
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded})
+	// Mock ProcessJob to return a trace
+	network.On("ProcessJob", *runner, mock.AnythingOfType("*common.JobCredentials")).Return(mockTrace, nil)
+
+	cmd := &RunCommand{
+		network: network,
+	}
+
+	trace, response, err := cmd.requestJob(runner, nil)
+
+	// When UpdateJob succeeds, requestJob should continue and return the job
+	assert.Equal(t, mockTrace, trace, "Should return the job trace when update succeeds")
+	assert.Equal(t, jobData, response, "Should return the job response when update succeeds")
+	assert.Nil(t, err, "Should return no error when update succeeds")
+
+	network.AssertExpectations(t)
+	mockTrace.AssertExpectations(t)
+}
+
+func TestRunCommand_requestJob_ReturnsNilWhenNoJob(t *testing.T) {
+	runner := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "test-token",
+		},
+	}
+
+	network := common.NewMockNetwork(t)
+	// Mock RequestJob to return no job
+	network.On("RequestJob", mock.Anything, *runner, mock.Anything).Return(nil, true)
+
+	cmd := &RunCommand{
+		network: network,
+	}
+
+	trace, response, err := cmd.requestJob(runner, nil)
+
+	// When no job is available, requestJob should return nil without calling UpdateJob
+	assert.Nil(t, trace, "Should return nil trace when no job available")
+	assert.Nil(t, response, "Should return nil response when no job available")
+	assert.Nil(t, err, "Should return nil error when no job available")
+
+	network.AssertExpectations(t)
 }

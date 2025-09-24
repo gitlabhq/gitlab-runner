@@ -3203,3 +3203,159 @@ func TestGetCorrelationID(t *testing.T) {
 		})
 	}
 }
+
+func TestGitLabClient_getFeatures_TwoPhaseJobCommit(t *testing.T) {
+	client := NewGitLabClient()
+	features := &FeaturesInfo{}
+
+	client.getFeatures(features)
+
+	// Test that TwoPhaseJobCommit is set to true by the network client
+	assert.True(t, features.TwoPhaseJobCommit, "TwoPhaseJobCommit should be set to true by getFeatures")
+}
+
+func TestGitLabClient_RequestJob_TransmitsTwoPhaseJobCommit(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v4/jobs/request" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		var req JobRequest
+		err = json.Unmarshal(body, &req)
+		require.NoError(t, err)
+
+		// Verify that TwoPhaseJobCommit feature is transmitted
+		assert.True(t, req.Info.Features.TwoPhaseJobCommit, "TwoPhaseJobCommit feature should be transmitted in job request")
+
+		// Return no content (no jobs available)
+		w.WriteHeader(http.StatusNoContent)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(handler))
+	defer server.Close()
+
+	config := RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL:   server.URL,
+			Token: validToken,
+		},
+	}
+
+	client := NewGitLabClient()
+	response, ok := client.RequestJob(t.Context(), config, nil)
+
+	assert.True(t, ok, "Job request should succeed")
+	assert.Nil(t, response, "No job should be returned with status 204")
+}
+
+func TestGitLabClient_RegisterRunner_TransmitsTwoPhaseJobCommit(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v4/runners" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		var req RegisterRunnerRequest
+		err = json.Unmarshal(body, &req)
+		require.NoError(t, err)
+
+		// Verify that TwoPhaseJobCommit feature is transmitted
+		assert.True(t, req.Info.Features.TwoPhaseJobCommit, "TwoPhaseJobCommit feature should be transmitted in register request")
+
+		w.Header().Set(ContentType, "application/json")
+		w.WriteHeader(http.StatusCreated)
+		response := RegisterRunnerResponse{
+			ID:    12345,
+			Token: validToken,
+		}
+		output, _ := json.Marshal(response)
+		_, _ = w.Write(output)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(handler))
+	defer server.Close()
+
+	credentials := RunnerCredentials{
+		URL:   server.URL,
+		Token: validToken,
+	}
+
+	parameters := RegisterRunnerParameters{
+		Description: "test",
+	}
+
+	client := NewGitLabClient()
+	response := client.RegisterRunner(credentials, parameters)
+
+	assert.NotNil(t, response, "Registration should succeed")
+	assert.Equal(t, int64(12345), response.ID)
+	assert.Equal(t, validToken, response.Token)
+}
+
+func TestGitLabClient_UpdateJob_TransmitsTwoPhaseJobCommit(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/v4/jobs/") {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		if r.Method != http.MethodPut {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		var req UpdateJobRequest
+		err = json.Unmarshal(body, &req)
+		require.NoError(t, err)
+
+		// Verify that TwoPhaseJobCommit feature is transmitted
+		assert.True(t, req.Info.Features.TwoPhaseJobCommit, "TwoPhaseJobCommit feature should be transmitted in update request")
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(handler))
+	defer server.Close()
+
+	config := RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL:   server.URL,
+			Token: validToken,
+		},
+	}
+
+	jobCredentials := &JobCredentials{
+		ID:    123,
+		Token: validToken,
+	}
+
+	jobInfo := UpdateJobInfo{
+		ID:    123,
+		State: Success,
+	}
+
+	client := NewGitLabClient()
+	result := client.UpdateJob(config, jobCredentials, jobInfo)
+
+	assert.Equal(t, UpdateSucceeded, result.State, "Job update should succeed")
+}
