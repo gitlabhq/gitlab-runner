@@ -31,7 +31,7 @@ The end-of-publishing dates for the base distributions will not necessarily alig
 | Red Hat Universal Base Image 9 | 9.5                    | 2025-04-31      | 2025-05-22      |
 
 GitLab Runner versions 17.7 and later support only a single Alpine version (`latest`) instead of specific versions.
-Alpine versions 3.18 and 3.19 will be supported to the stated EOL date. In contrast, Ubuntu 20.04, as an LTS release,
+Alpine versions 3.18 and 3.19 will be supported to the stated EOL date. In contrast, Ubuntu 24.04, as an LTS release,
 will be supported to its EOL date, at which point we will move to the most recent LTS release.
 
 ## Windows version support
