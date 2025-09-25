@@ -341,7 +341,7 @@ Here are some tips on troubleshooting and resolving issues when installing GitLa
 
 ### Error: `No such file or directory` job failures
 
-Sometimes the default [skeleton (`skel`) directory](https://www.thegeekdiary.com/understanding-the-etc-skel-directory-in-linux/)
+Sometimes the default skeleton (`skel`) directory
 causes issues for GitLab Runner, and it fails to run a job.
 See [issue 4449](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4449) and
 [issue 1379](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379).

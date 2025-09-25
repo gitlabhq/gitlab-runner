@@ -79,7 +79,7 @@ The following are some configuration examples:
 
 For more information, see:
 
-- [Long polling for runners](https://docs.gitlab.com/ee/ci/runners/long_polling.html)
+- [Long polling for runners](https://docs.gitlab.com/ci/runners/long_polling/)
 - [Workhorse configuration](https://docs.gitlab.com/development/workhorse/configuration/)
 
 **Symptoms:**
