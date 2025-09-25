@@ -952,6 +952,7 @@ func (mr *RunCommand) processBuildOnRunner(
 	fields := logrus.Fields{
 		"job":                   build.ID,
 		"project":               build.JobInfo.ProjectID,
+		"project_name":          build.JobInfo.ProjectName,
 		"repo_url":              build.RepoCleanURL(),
 		"time_in_queue_seconds": build.JobInfo.TimeInQueueSeconds,
 		"queue_size":            build.JobInfo.QueueSize,

@@ -208,7 +208,10 @@ func (b *Build) FailureReason() JobFailureReason {
 }
 
 func (b *Build) Log() *logrus.Entry {
-	return b.Runner.Log().WithField("job", b.ID).WithField("project", b.JobInfo.ProjectID)
+	return b.Runner.Log().
+		WithField("job", b.ID).
+		WithField("project", b.JobInfo.ProjectID).
+		WithField("project_name", b.JobInfo.ProjectName)
 }
 
 // ProjectUniqueShortName returns a unique name for the current build.
