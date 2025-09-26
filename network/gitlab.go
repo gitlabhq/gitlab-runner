@@ -92,11 +92,11 @@ func (n *GitLabClient) getFeatures(features *common.FeaturesInfo) {
 }
 
 func (n *GitLabClient) ExecutorSupportsNativeSteps(config common.RunnerConfig) bool {
-	return n.getRunnerVersion(config).Features.NativeStepsIntegration
+	return n.getRunnerInfo(config).Features.NativeStepsIntegration
 }
 
-func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.VersionInfo {
-	info := common.VersionInfo{
+func (n *GitLabClient) getRunnerInfo(config common.RunnerConfig) common.Info {
+	info := common.Info{
 		Name:         common.AppVersion.Name,
 		Version:      common.AppVersion.Version,
 		Revision:     common.AppVersion.Revision,
@@ -338,7 +338,7 @@ func (n *GitLabClient) RegisterRunner(
 	request := common.RegisterRunnerRequest{
 		RegisterRunnerParameters: parameters,
 		Token:                    runner.Token,
-		Info:                     n.getRunnerVersion(common.RunnerConfig{}),
+		Info:                     n.getRunnerInfo(common.RunnerConfig{}),
 	}
 
 	headers, correlationID := addCorrelationID(RunnerTokenHeader(runner.Token))
@@ -606,7 +606,7 @@ func (n *GitLabClient) RequestJob(
 	sessionInfo *common.SessionInfo,
 ) (*common.JobResponse, bool) {
 	request := common.JobRequest{
-		Info:       n.getRunnerVersion(config),
+		Info:       n.getRunnerInfo(config),
 		Token:      config.Token,
 		SystemID:   config.SystemID,
 		LastUpdate: n.getLastUpdate(&config.RunnerCredentials),
@@ -677,7 +677,7 @@ func (n *GitLabClient) UpdateJob(
 	jobInfo common.UpdateJobInfo,
 ) common.UpdateJobResult {
 	request := common.UpdateJobRequest{
-		Info:          n.getRunnerVersion(config),
+		Info:          n.getRunnerInfo(config),
 		Token:         jobCredentials.Token,
 		State:         jobInfo.State,
 		FailureReason: jobInfo.FailureReason,
