@@ -3069,7 +3069,7 @@ func TestRunnerVersion(t *testing.T) {
 		},
 	}
 	config.ComputeLabels(Labels{"123": "123"})
-	info := c.getRunnerVersion(config)
+	info := c.getRunnerInfo(config)
 
 	assert.NotEmpty(t, info.Name)
 	assert.NotEmpty(t, info.Version)
@@ -3117,7 +3117,7 @@ func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testin
 		},
 	}
 	config.ComputeLabels(Labels{"123": "123"})
-	info := c.getRunnerVersion(config)
+	info := c.getRunnerInfo(config)
 
 	assert.Equal(t, "my-test-executor", info.Executor)
 	assert.Equal(t, "my-default-executor-shell", info.Shell)

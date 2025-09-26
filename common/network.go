@@ -225,8 +225,8 @@ type RegisterRunnerParameters struct {
 
 type RegisterRunnerRequest struct {
 	RegisterRunnerParameters
-	Info  VersionInfo `json:"info,omitempty"`
-	Token string      `json:"token,omitempty"`
+	Info  Info   `json:"info,omitempty"`
+	Token string `json:"token,omitempty"`
 }
 
 type RegisterRunnerResponse struct {
@@ -265,7 +265,7 @@ type ResetTokenResponse struct {
 	TokenExpiresAt  time.Time `json:"token_expires_at,omitempty"`
 }
 
-type VersionInfo struct {
+type Info struct {
 	Name         string       `json:"name,omitempty"`
 	Version      string       `json:"version,omitempty"`
 	Revision     string       `json:"revision,omitempty"`
@@ -279,7 +279,7 @@ type VersionInfo struct {
 }
 
 type JobRequest struct {
-	Info       VersionInfo  `json:"info,omitempty"`
+	Info       Info         `json:"info,omitempty"`
 	Token      string       `json:"token,omitempty"`
 	SystemID   string       `json:"system_id,omitempty"`
 	LastUpdate string       `json:"last_update,omitempty"`
@@ -1100,7 +1100,7 @@ func (j *JobResponse) UnsupportedOptions() error {
 }
 
 type UpdateJobRequest struct {
-	Info          VersionInfo      `json:"info,omitempty"`
+	Info          Info             `json:"info,omitempty"`
 	Token         string           `json:"token,omitempty"`
 	State         JobState         `json:"state,omitempty"`
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
