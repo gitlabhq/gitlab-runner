@@ -29,6 +29,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
+	"gitlab.com/gitlab-org/moa/value"
 )
 
 func init() {
@@ -3511,4 +3512,82 @@ func TestBuildIsProtected(t *testing.T) {
 			assert.Equal(t, test.expected, actual)
 		})
 	}
+}
+
+func TestExpandingInputs(t *testing.T) {
+	inputs, err := newJobInputs([]JobInput{
+		{
+			Key: "any_input",
+			Value: JobInputValue{
+				Type:      JobInputContentTypeNameString,
+				Content:   value.String("any-value"),
+				Sensitive: false,
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	setup := func(t *testing.T) {
+		t.Helper()
+
+		p := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
+		RegisterExecutorProviderForTest(t, t.Name(), p)
+	}
+
+	run := func(t *testing.T, job JobResponse) *Build {
+		build, err := NewBuild(
+			job,
+			&RunnerConfig{RunnerSettings: RunnerSettings{Executor: t.Name()}},
+			nil,
+			nil,
+		)
+		require.NoError(t, err)
+		err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+		require.NoError(t, err)
+
+		return build
+	}
+
+	t.Run("expand inputs in step script", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job)
+
+		assert.Equal(t, "echo 'Input is: any-value'", build.Steps[0].Script[0])
+	})
+
+	t.Run("expand inputs in step after_script", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{""},
+					When:   StepWhenAlways,
+				},
+				{
+					Name:   StepNameAfterScript,
+					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job)
+
+		assert.Equal(t, "echo 'Input is: any-value'", build.Steps[1].Script[0])
+	})
 }

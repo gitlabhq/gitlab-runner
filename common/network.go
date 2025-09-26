@@ -773,6 +773,7 @@ type JobResponse struct {
 	JobInfo       JobInfo        `json:"job_info"`
 	GitInfo       GitInfo        `json:"git_info"`
 	RunnerInfo    RunnerInfo     `json:"runner_info"`
+	Inputs        JobInputs      `json:"inputs"`
 	Variables     JobVariables   `json:"variables"`
 	Steps         Steps          `json:"steps"`
 	Image         Image          `json:"image"`

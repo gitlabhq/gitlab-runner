@@ -1164,6 +1164,11 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		}
 	}()
 
+	err = b.expandInputs()
+	if err != nil {
+		return fmt.Errorf("failed to expand inputs: %w", err)
+	}
+
 	b.logUsedImages()
 	b.printRunningWithHeader(trace)
 
@@ -1223,6 +1228,38 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	executor.Finish(err)
 
 	return err
+}
+
+// expandInputs expands inputs in various build configuration settings.
+//
+// TODO: we want to expand inputs as early as possible to optimize the feedback loop.
+// However, that may lead to problems where certain expansion context is only available later on.
+// This might not be a problem for Inputs itself, but for functions (like `now()`) or
+// when we allow other context in the expression, like access to environment variables,
+// or other job-runtime dependent features.
+// For a good middle ground we could parse the scripts as moa expressions and cache them
+// and only later on evaluate given the necessary context.
+func (b *Build) expandInputs() error {
+	// expand inputs in script and after_script steps
+	for _, step := range b.Steps {
+		switch step.Name {
+		case StepNameScript:
+		case StepNameAfterScript:
+		default:
+			continue
+		}
+
+		for i, s := range step.Script {
+			expanded, err := b.Inputs.Expand(s)
+			if err != nil {
+				return err
+			}
+
+			step.Script[i] = expanded
+		}
+	}
+
+	return nil
 }
 
 func (b *Build) logUsedImages() {
