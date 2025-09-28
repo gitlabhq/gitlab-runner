@@ -208,7 +208,7 @@ docs:check supported distros package docs:
       )
 
 docs:check Hugo build:
-  image: registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/docs-gitlab-com-builder:hugo-0.148.2
+  image: registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/docs-gitlab-com-builder:hugo-0.150.1
   extends:
     - .rules:merge_request_pipelines:docs-all
     - .no_cache_and_dependencies
