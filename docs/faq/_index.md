@@ -463,9 +463,11 @@ For example: `docker-machine create --driver=google --google-project=GOOGLE-PROJ
 
 This error might occur when you create or update a runner and
 the database does not have a unique index for the `tags` table.
-In the GitLab UI, you might get a `Response not successful: Received status code 500` error.
+In the GitLab UI, you might get a
+`Response not successful: Received status code 500` error.
 
-This issue might affect instances that have undergone multiple major upgrades over an extended period.
+This issue might affect instances that have undergone multiple major upgrades
+over an extended period.
 To resolve this issue, consolidate any duplicate tags in the table with the
 [`gitlab:db:deduplicate_tags` Rake task](https://docs.gitlab.com/administration/raketasks/maintenance/#check-the-database-for-deduplicate-cicd-tags).
 For more information, see [Rake tasks](https://docs.gitlab.com/administration/raketasks/).
