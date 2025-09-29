@@ -293,10 +293,15 @@ type SessionInfo struct {
 }
 
 type JobInfo struct {
-	Name        string `json:"name"`
-	Stage       string `json:"stage"`
-	ProjectID   int64  `json:"project_id"`
-	ProjectName string `json:"project_name"`
+	Name            string  `json:"name"`
+	Stage           string  `json:"stage"`
+	ProjectID       int64   `json:"project_id"`
+	ProjectName     string  `json:"project_name"`
+	ProjectFullPath string  `json:"project_full_path"`
+	UserID          int64   `json:"user_id"`
+	Username        string  `json:"username"`
+	ScopedUserID    *int64  `json:"scoped_user_id"`
+	ScopedUsername  *string `json:"scoped_username"`
 
 	TimeInQueueSeconds                       float64 `json:"time_in_queue_seconds"`
 	ProjectJobsRunningOnInstanceRunnersCount string  `json:"project_jobs_running_on_instance_runners_count"`

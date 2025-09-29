@@ -952,11 +952,20 @@ func (mr *RunCommand) processBuildOnRunner(
 	fields := logrus.Fields{
 		"job":                   build.ID,
 		"project":               build.JobInfo.ProjectID,
-		"project_name":          build.JobInfo.ProjectName,
+		"project_path":          build.JobInfo.ProjectFullPath,
+		"user_id":               build.JobInfo.UserID,
+		"username":              build.JobInfo.Username,
 		"repo_url":              build.RepoCleanURL(),
 		"time_in_queue_seconds": build.JobInfo.TimeInQueueSeconds,
 		"queue_size":            build.JobInfo.QueueSize,
 		"queue_depth":           build.JobInfo.QueueDepth,
+	}
+
+	if build.JobInfo.ScopedUserID != nil {
+		fields["scoped_user_id"] = *build.JobInfo.ScopedUserID
+	}
+	if build.JobInfo.ScopedUsername != nil {
+		fields["scoped_username"] = *build.JobInfo.ScopedUsername
 	}
 
 	mr.log().WithFields(fields).Infoln("Added job to processing list")
