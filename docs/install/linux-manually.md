@@ -15,15 +15,15 @@ title: Install GitLab Runner manually on GNU/Linux
 You can install GitLab Runner manually by using a `deb` or `rpm` package or a binary file.
 Use this approach as a last resort if:
 
-- You can't use the [deb/rpm repository](linux-repository.md) to install GitLab Runner
+- You can't use the deb/rpm repository to install GitLab Runner
 - Your GNU/Linux OS is not supported
 
-If you want to use the [Docker executor](../executors/docker.md),
-you must [install Docker](https://docs.docker.com/engine/install/centos/#install-docker-ce)
-before using GitLab Runner.
+## Prerequisites
 
-Make sure that you read the [FAQ](../faq/_index.md) section which describes
-some of the most common problems with GitLab Runner.
+Before running GitLab Runner manually:
+
+- If you plan to use the Docker executor, install Docker first.
+- Review the FAQ section for common problems and solutions.
 
 ## Using deb/rpm package
 
@@ -58,7 +58,7 @@ curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/
 curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner_${arch}.rpm"
 ```
 
-For example, for [FIPS compliant GitLab Runner](_index.md#fips-compliant-gitlab-runner) on RHEL:
+For example, for FIPS compliant GitLab Runner on RHEL:
 
 ```shell
 # Currently only amd64 is a supported arch
@@ -82,8 +82,6 @@ curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/
    ```shell
    dnf install -y gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
    ```
-
-1. [Register a runner](../register/_index.md)
 
 ### Upgrade
 
@@ -160,54 +158,6 @@ You can download and install GitLab Runner by using a binary file.
    Ensure you have `/usr/local/bin/` in `$PATH` for root or you might get a `command not found` error.
    Alternately, you can install `gitlab-runner` in a different location, like `/usr/bin/`.
 
-1. [Register a runner](../register/_index.md)
-
-   The runner binary does not include pre-built helper images. To use pre-built helper images, download the corresponding version of the helper image archive and copy it to the appropriate location:
-
-   ```shell
-   mkdir -p /usr/local/bin/out/helper-images
-   cd /usr/local/bin/out/helper-images
-
-   # Linux x86-64 ubuntu
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-x86_64.tar.xz
-
-   # Linux x86-64 ubuntu pwsh
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-x86_64-pwsh.tar.xz
-
-   # Linux s390x ubuntu
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-s390x.tar.xz
-
-   # Linux ppc64le ubuntu
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-ppc64le.tar.xz
-
-   # Linux arm64 ubuntu
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-arm64.tar.xz
-
-   # Linux arm ubuntu
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-arm.tar.xz
-
-   # Linux x86-64 alpine
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-x86_64.tar.xz
-
-   # Linux x86-64 alpine pwsh
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-x86_64-pwsh.tar.xz
-
-   # Linux s390x alpine
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-s390x.tar.xz
-
-   # Linux riscv64 alpine edge
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-edge-riscv64.tar.xz
-
-   # Linux arm64 alpine
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-arm64.tar.xz
-
-   # Linux arm alpine
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-arm.tar.xz
-
-   # Linux x86-64 ubuntu specific version - v17.10.0
-   wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/v17.10.0/helper-images/prebuilt-ubuntu-x86_64.tar.xz
-   ```
-
 {{< alert type="note" >}}
 
 If `gitlab-runner` is installed and run as a service, it runs as root,
@@ -246,3 +196,79 @@ Therefore, the user under which jobs are run needs to have access to the executa
    ```shell
    sudo gitlab-runner start
    ```
+
+## Next steps
+
+After installation, [register a runner](../register/_index.md) to complete the setup.
+
+The runner binary doesn't include pre-built helper images. You can use these commands to download the corresponding version of the helper image archive and copy it to the appropriate location:
+
+```shell
+mkdir -p /usr/local/bin/out/helper-images
+cd /usr/local/bin/out/helper-images
+```
+
+Choose the appropriate helper image for your architecture:
+
+<details>
+<summary>Ubuntu helper images</summary>
+
+```shell
+# Linux x86-64 ubuntu
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-x86_64.tar.xz
+
+# Linux x86-64 ubuntu pwsh
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-x86_64-pwsh.tar.xz
+
+# Linux s390x ubuntu
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-s390x.tar.xz
+
+# Linux ppc64le ubuntu
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-ppc64le.tar.xz
+
+# Linux arm64 ubuntu
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-arm64.tar.xz
+
+# Linux arm ubuntu
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-ubuntu-arm.tar.xz
+
+# Linux x86-64 ubuntu specific version - v17.10.0
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/v17.10.0/helper-images/prebuilt-ubuntu-x86_64.tar.xz
+```
+
+</details>
+
+<details>
+<summary>Alpine helper images</summary>
+
+```shell
+# Linux x86-64 alpine
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-x86_64.tar.xz
+
+# Linux x86-64 alpine pwsh
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-x86_64-pwsh.tar.xz
+
+# Linux s390x alpine
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-s390x.tar.xz
+
+# Linux riscv64 alpine edge
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-edge-riscv64.tar.xz
+
+# Linux arm64 alpine
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-arm64.tar.xz
+
+# Linux arm alpine
+wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/helper-images/prebuilt-alpine-arm.tar.xz
+```
+
+</details>
+
+## Additional resources
+
+- [Docker executor documentation](../executors/docker.md)
+- [Install Docker](https://docs.docker.com/engine/install/centos/#install-docker-ce)
+- [Download other GitLab Runner versions](bleeding-edge.md#download-any-other-tagged-release)
+- [FIPS compliant GitLab Runner information](_index.md#fips-compliant-gitlab-runner)
+- [GitLab Runner FAQ](../faq/_index.md)
+- [deb/rpm repository installation](linux-repository.md)
+   
