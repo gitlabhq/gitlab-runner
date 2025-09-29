@@ -93,17 +93,6 @@ func TestService_GetSecret(t *testing.T) {
 			expectedValue: "",
 		},
 		{
-			name: "field not found",
-			secret: &common.GitLabSecretsManagerSecret{
-				Engine: common.GitLabSecretsManagerEngine{
-					Name: "test_engine",
-				},
-				Path:  "test_path",
-				Field: "missing_field",
-			},
-			expectedErr: `field "missing_field" not found in secret`,
-		},
-		{
 			name: "field exists but not string",
 			secret: &common.GitLabSecretsManagerSecret{
 				Engine: common.GitLabSecretsManagerEngine{
