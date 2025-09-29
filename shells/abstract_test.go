@@ -682,7 +682,7 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 			},
 		},
 		{
-			name:           "clone strategy with native and ref",
+			name:           "clone strategy with native and ref and extra clone args",
 			buildDir:       "build/dir",
 			gitStrategy:    "clone",
 			cloneExtraArgs: "--reference-if-available /tmp/test",
