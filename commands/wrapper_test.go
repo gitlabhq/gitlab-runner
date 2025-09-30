@@ -35,7 +35,7 @@ func TestRunnerWrapperCommand_createListener(t *testing.T) {
 				assert.ErrorIs(t, err, errFailedToParseGRPCAddress)
 			},
 		},
-		"proper unix socket - unix://": {
+		"proper unix socket with full scheme - unix://": {
 			skip:            skipOnWindows,
 			grpcAddress:     fmt.Sprintf("unix://%s", testSocketPath),
 			expectedNetwork: "unix",
@@ -43,7 +43,7 @@ func TestRunnerWrapperCommand_createListener(t *testing.T) {
 		},
 		"proper unix socket - unix:": {
 			skip:            skipOnWindows,
-			grpcAddress:     fmt.Sprintf("unix://%s", testSocketPath),
+			grpcAddress:     fmt.Sprintf("unix:%s", testSocketPath),
 			expectedNetwork: "unix",
 			expectedAddress: testSocketPath,
 		},
