@@ -36,7 +36,7 @@ func (e *machineExecutor) log() (log *logrus.Entry) {
 	if details != nil {
 		log = log.WithFields(logrus.Fields{
 			"name":      details.Name,
-			"usedcount": details.UsedCount,
+			"usedCount": details.UsedCount,
 			"created":   details.Created,
 			"now":       time.Now(),
 		})
