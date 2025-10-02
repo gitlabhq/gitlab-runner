@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
+	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
 var successAlwaysWantOut = []string{
@@ -67,7 +68,7 @@ func Test_StepsIntegration(t *testing.T) {
   script: echo ${{ env.FLIN_FLAN_FLON }}`,
 			variables: common.JobVariables{{Key: "FLIN_FLAN_FLON", Value: "flin, flan, flon"}},
 			wantOut: []string{
-				"ERROR: Job failed: container",
+				"ERROR: Job failed:",
 				`env.FLIN_FLAN_FLON: the "FLIN_FLAN_FLON" was not found`,
 			},
 			wantErr: true,
@@ -82,7 +83,8 @@ func Test_StepsIntegration(t *testing.T) {
 			successfulBuild.Services = tt.services
 			successfulBuild.Variables = append(successfulBuild.Variables, tt.variables...)
 			build := &common.Build{
-				JobResponse: successfulBuild,
+				ExecuteStepFn: steps.Execute,
+				JobResponse:   successfulBuild,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",

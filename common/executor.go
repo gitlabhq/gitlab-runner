@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
@@ -72,6 +73,10 @@ type Executor interface {
 	GetCurrentStage() ExecutorStage
 	// SetCurrentStage sets the current stage of build execution.
 	SetCurrentStage(stage ExecutorStage)
+}
+
+type Connector interface {
+	Connect(ctx context.Context) (io.ReadWriteCloser, error)
 }
 
 type ManagedExecutorProvider interface {

@@ -45,7 +45,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
-	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
 const (
@@ -985,15 +984,6 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 
 func (e *executor) startAndWatchContainer(ctx context.Context, id string, input io.Reader) error {
 	dockerExec := exec.NewDocker(e.Context, e.dockerConn, e.waiter, e.Build.Log())
-
-	// Use stepsDocker exec implementation if steps is enabled and this is the build container.
-	if id == e.buildContainerID && e.Build.UseNativeSteps() {
-		request, err := steps.NewRequest(e.Build)
-		if err != nil {
-			return common.MakeBuildError("creating steps request: %w", err)
-		}
-		dockerExec = exec.NewStepsDocker(e.dockerConn, e.waiter, e.Build.Log(), request)
-	}
 
 	stdout := e.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
 	defer stdout.Close()

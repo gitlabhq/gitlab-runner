@@ -8,12 +8,82 @@ import (
 	"path"
 	"strings"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/omitwriter"
 )
 
 const bootstrappedBinary = "/opt/gitlab-runner/gitlab-runner-helper"
+
+type conn struct {
+	resp    types.HijackedResponse
+	reader  *io.PipeReader
+	cleanup func()
+}
+
+func (c *conn) Read(p []byte) (int, error) {
+	return c.reader.Read(p)
+}
+
+func (c *conn) Write(p []byte) (int, error) {
+	return c.resp.Conn.Write(p)
+}
+
+func (c *conn) Close() error {
+	err := c.reader.Close()
+	_ = c.resp.Conn.Close()
+	c.cleanup()
+
+	return err
+}
+
+func (s *commandExecutor) Connect(ctx context.Context) (io.ReadWriteCloser, error) {
+	ctr, err := s.requestBuildContainer()
+	if err != nil {
+		return nil, fmt.Errorf("creating build container for dialer: %w", err)
+	}
+
+	if err := s.dockerConn.ContainerStart(ctx, ctr.ID, container.StartOptions{}); err != nil {
+		return nil, err
+	}
+
+	resp, err := s.dockerConn.ContainerExecCreate(ctx, ctr.ID, container.ExecOptions{
+		Cmd:          []string{bootstrappedBinary, "steps", "proxy"},
+		AttachStdin:  true,
+		AttachStderr: true,
+		AttachStdout: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("exec build container for dialer: %w", err)
+	}
+
+	hijacked, err := s.dockerConn.ContainerExecAttach(ctx, resp.ID, container.ExecAttachOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("attach build container for dialer: %w", err)
+	}
+
+	r, w := io.Pipe()
+	go func() {
+		stderr := omitwriter.New()
+		_, err := stdcopy.StdCopy(w, stderr, hijacked.Reader)
+		if err != nil {
+			err = fmt.Errorf("%w: %w", err, stderr.Error())
+		}
+		w.CloseWithError(err)
+	}()
+
+	return &conn{
+		resp:   hijacked,
+		reader: r,
+		cleanup: func() {
+			if err := s.dockerConn.ContainerStop(s.Context, ctr.ID, container.StopOptions{}); err != nil {
+				s.BuildLogger.Errorln("Stopping steps container", err)
+			}
+		},
+	}, nil
+}
 
 func (e *executor) bootstrap() error {
 	if !e.Build.UseNativeSteps() {

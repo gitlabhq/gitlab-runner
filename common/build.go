@@ -158,6 +158,8 @@ type Build struct {
 	Referees         []referees.Referee
 	ArtifactUploader func(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string)
 
+	ExecuteStepFn func(ctx context.Context, connector Connector, build *Build, trace JobTrace) error
+
 	urlHelper urlHelper
 
 	OnBuildStageStartFn OnBuildStageFn
@@ -404,6 +406,36 @@ func (b *Build) StartBuild(
 	return nil
 }
 
+func (b *Build) executeStepStage(ctx context.Context, connector Connector, buildStage BuildStage, trace JobTrace) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	b.OnBuildStageStartFn.Call(buildStage)
+	defer b.OnBuildStageEndFn.Call(buildStage)
+
+	b.setCurrentStage(buildStage)
+	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
+
+	section := helpers.BuildSection{
+		Name:        string(buildStage),
+		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		Run: func() error {
+			msg := fmt.Sprintf(
+				"%s%s%s",
+				helpers.ANSI_BOLD_CYAN,
+				GetStageDescription(buildStage),
+				helpers.ANSI_RESET,
+			)
+			b.logger.Println(msg)
+
+			return b.ExecuteStepFn(ctx, connector, b, trace)
+		},
+	}
+
+	return section.Execute(&b.logger)
+}
+
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -538,7 +570,6 @@ func (b *Build) executeArchiveCache(ctx context.Context, state error, executor E
 	return b.executeStage(ctx, BuildStageArchiveOnFailureCache, executor)
 }
 
-//nolint:gocognit
 func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Executor) error {
 	// track job start and create referees
 	startTime := time.Now()
@@ -552,7 +583,12 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 
 	// execute user provided scripts
 	if err == nil {
-		err = b.executeUserScripts(ctx, trace, executor)
+		connector, ok := executor.(Connector)
+		if b.UseNativeSteps() && ok && b.ExecuteStepFn != nil {
+			err = b.executeStepStage(ctx, connector, BuildStage("step_"+StepNameRun), trace)
+		} else {
+			err = b.executeUserScripts(ctx, trace, executor)
+		}
 	}
 
 	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
