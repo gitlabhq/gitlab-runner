@@ -971,23 +971,7 @@ func (mr *RunCommand) processBuildOnRunner(
 	defer func() {
 		if mr.buildsHelper.removeBuild(build) {
 			mr.log().WithFields(fields).Infoln("Removed job from processing list")
-
-			mr.usageLoggerStore(usage_log.Record{
-				Runner: usage_log.Runner{
-					ID:       runner.ShortDescription(),
-					Name:     runner.Name,
-					SystemID: runner.GetSystemID(),
-				},
-				Job: usage_log.Job{
-					URL:             build.JobURL(),
-					DurationSeconds: build.FinalDuration().Seconds(),
-					Status:          build.CurrentState().String(),
-					FailureReason:   build.FailureReason().String(),
-					StartedAt:       build.StartedAt().UTC(),
-					FinishedAt:      build.FinishedAt().UTC(),
-				},
-				Labels: runner.ComputedLabels(),
-			})
+			mr.usageLoggerStore(common.UsageLogRecordFrom(runner, build))
 		}
 	}()
 
