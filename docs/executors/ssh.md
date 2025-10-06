@@ -69,8 +69,6 @@ connecting to through SSH.
 
 ## Configure strict host key checking
 
-To enable SSH `StrictHostKeyChecking`, make sure the `[runners.ssh.disable_strict_host_key_checking]` is set
-to `false`. The current default is `true`.
-
-[In GitLab 15.0 and later](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192),
-the default value is `false`, meaning host key checking is required.
+SSH `StrictHostKeyChecking` is [enabled](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192) by default.
+To disable SSH `StrictHostKeyChecking`, set `[runners.ssh.disable_strict_host_key_checking]` to `true`.
+The current default value is `false`.
