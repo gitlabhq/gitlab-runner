@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -3413,7 +3414,12 @@ func TestBuild_RunCallsEnsureFinishedAt(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			executor := NewMockExecutor(t)
 			executor.EXPECT().Prepare(mock.Anything).Return(nil)
-			executor.EXPECT().Run(mock.Anything).Return(tt.executorRunError)
+			executor.EXPECT().
+				Run(mock.Anything).
+				Run(func(cmd ExecutorCommand) {
+					time.Sleep(1 * time.Millisecond)
+				}).
+				Return(tt.executorRunError)
 			executor.EXPECT().Shell().Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
 			executor.EXPECT().Finish(mock.Anything)
 			executor.EXPECT().Cleanup()
@@ -3453,17 +3459,31 @@ func TestBuild_RunCallsEnsureFinishedAt(t *testing.T) {
 			trace := NewMockJobTrace(t)
 			trace.EXPECT().SetAbortFunc(mock.Anything)
 			trace.EXPECT().SetCancelFunc(mock.AnythingOfType("context.CancelFunc")).Maybe()
-			trace.EXPECT().IsStdout().Return(true)
+			trace.EXPECT().IsStdout().Return(false)
 			trace.EXPECT().Write(mock.Anything).Return(0, nil)
 			trace.EXPECT().Fail(mock.Anything, mock.Anything).Return(nil).Maybe()
 			trace.EXPECT().Success().Return(nil).Maybe()
 			trace.EXPECT().SetSupportedFailureReasonMapper(mock.Anything).Maybe()
+
+			l := logrus.New()
+			lh := test.NewLocal(l)
+			build.Runner.RunnerCredentials.Logger = l
 
 			err = build.Run(&Config{}, trace)
 			if tt.assertError != nil {
 				tt.assertError(t, err)
 			} else {
 				assert.NoError(t, err)
+			}
+
+			for _, e := range lh.AllEntries() {
+				if !strings.Contains(e.Message, "Job succeeded") && !strings.Contains(e.Message, "Job failed") {
+					continue
+				}
+
+				if assert.Contains(t, e.Data, "duration_s") {
+					assert.Greater(t, e.Data["duration_s"], float64(0))
+				}
 			}
 
 			assert.NotZero(t, build.finishedAt)
