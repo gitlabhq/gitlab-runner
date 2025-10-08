@@ -1063,8 +1063,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	// These defers are ordered because runBuild could panic and the recover needs to handle that panic.
 	// setTraceStatus needs to be last since it needs a correct error value to report the job's status
 	defer func() {
-		b.setTraceStatus(trace, err)
 		b.ensureFinishedAt()
+		b.setTraceStatus(trace, err)
 	}()
 
 	defer func() {
