@@ -92,7 +92,7 @@ func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err er
 	}
 
 	if err = e.executor.Prepare(options); err != nil {
-		e.log().Infoln("Preparing docker-machine wrapped executor failed")
+		e.log().WithError(err).Errorln("Preparing docker-machine wrapped executor failed")
 		return err
 	}
 
