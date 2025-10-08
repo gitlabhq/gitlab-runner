@@ -271,4 +271,3 @@ wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest
 - [FIPS compliant GitLab Runner information](_index.md#fips-compliant-gitlab-runner)
 - [GitLab Runner FAQ](../faq/_index.md)
 - [deb/rpm repository installation](linux-repository.md)
-   
