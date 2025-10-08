@@ -2422,6 +2422,33 @@ func Test_ServiceLabels(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
+	expectedLabels := map[string]string{
+		// default labels
+		"com.gitlab.gitlab-runner.job.before_sha":    "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
+		"com.gitlab.gitlab-runner.job.id":            "0",
+		"com.gitlab.gitlab-runner.job.ref":           "main",
+		"com.gitlab.gitlab-runner.job.sha":           "69b18e5ed3610cf646119c3e38f462c64ec462b7",
+		"com.gitlab.gitlab-runner.job.timeout":       "2h0m0s",
+		"com.gitlab.gitlab-runner.job.url":           "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test/-/jobs/0",
+		"com.gitlab.gitlab-runner.managed":           "true",
+		"com.gitlab.gitlab-runner.pipeline.id":       "",
+		"com.gitlab.gitlab-runner.project.id":        "0",
+		"com.gitlab.gitlab-runner.project.runner_id": "0",
+		"com.gitlab.gitlab-runner.runner.id":         "",
+		"com.gitlab.gitlab-runner.runner.local_id":   "0",
+		"com.gitlab.gitlab-runner.runner.system_id":  "",
+		"com.gitlab.gitlab-runner.service":           "redis",
+		"com.gitlab.gitlab-runner.service.version":   "7.0",
+		"com.gitlab.gitlab-runner.type":              "service",
+		// from user-defined config
+		"FOO":                 "FOO",
+		"my.custom.label.BAR": "BAR",
+		// NOTE: these are only here for backwards-compatibility
+		// see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39048
+		"com.gitlab.gitlab-runner.FOO":                 "FOO",
+		"com.gitlab.gitlab-runner.my.custom.label.BAR": "BAR",
+	}
+
 	go func() {
 		defer wg.Done()
 
@@ -2443,10 +2470,8 @@ func Test_ServiceLabels(t *testing.T) {
 		// inspect container and assert expected labels exist...
 		info, err := client.ContainerInspect(context.Background(), container)
 		require.NoError(t, err)
-		assert.Contains(t, info.Config.Labels, "com.gitlab.gitlab-runner.FOO")
-		assert.Equal(t, "FOO", info.Config.Labels["com.gitlab.gitlab-runner.FOO"])
-		assert.Contains(t, info.Config.Labels, "com.gitlab.gitlab-runner.BAR")
-		assert.Equal(t, "BAR", info.Config.Labels["com.gitlab.gitlab-runner.BAR"])
+
+		assert.Equal(t, expectedLabels, info.Config.Labels)
 	}()
 
 	successfulBuild, err := common.GetRemoteBuildResponse("sleep 3")
@@ -2461,8 +2486,8 @@ func Test_ServiceLabels(t *testing.T) {
 				Docker: &common.DockerConfig{
 					Image: "alpine:latest",
 					ContainerLabels: map[string]string{
-						"FOO": "FOO",
-						"BAR": "BAR",
+						"FOO":                 "FOO",
+						"my.custom.label.BAR": "BAR",
 					},
 				},
 			},
