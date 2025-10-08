@@ -1053,22 +1053,22 @@ Use pod and container-specific security contexts to override user and group sett
   [runners.kubernetes]
     allowed_users = ["1000", "1001", "65534"]
     allowed_groups = ["1001", "65534"]
-    
+
     # Pod security context - provides defaults for all containers
     [runners.kubernetes.pod_security_context]
       run_as_user = 1500
       run_as_group = 1500
-    
+
     # Build container security context - overrides pod context
     [runners.kubernetes.build_container_security_context]
       run_as_user = 2000
       run_as_group = 2001
-      
+
     # Helper container security context - overrides pod context
     [runners.kubernetes.helper_container_security_context]
       run_as_user = 3000
       run_as_group = 3001
-      
+
     # Service container security context - overrides pod context
     [runners.kubernetes.service_container_security_context]
       run_as_user = 4000
@@ -1153,7 +1153,7 @@ Security context configuration follows this precedence order (highest to lowest)
   [runners.kubernetes.pod_security_context]
     run_as_user = 1500
     run_as_group = 1500
-  
+
   # Container-specific overrides
   [runners.kubernetes.build_container_security_context]
     run_as_user = 1000
