@@ -952,9 +952,11 @@ func (mr *RunCommand) processBuildOnRunner(
 	fields := logrus.Fields{
 		"job":                   build.ID,
 		"project":               build.JobInfo.ProjectID,
-		"project_path":          build.JobInfo.ProjectFullPath,
-		"user_id":               build.JobInfo.UserID,
-		"username":              build.JobInfo.Username,
+		"project_full_path":     build.JobInfo.ProjectFullPath,
+		"namespace_id":          build.JobInfo.NamespaceID,
+		"root_namespace_id":     build.JobInfo.RootNamespaceID,
+		"organization_id":       build.JobInfo.OrganizationID,
+		"gitlab_user_id":        build.JobInfo.UserID,
 		"repo_url":              build.RepoCleanURL(),
 		"time_in_queue_seconds": build.JobInfo.TimeInQueueSeconds,
 		"queue_size":            build.JobInfo.QueueSize,
@@ -962,10 +964,7 @@ func (mr *RunCommand) processBuildOnRunner(
 	}
 
 	if build.JobInfo.ScopedUserID != nil {
-		fields["scoped_user_id"] = *build.JobInfo.ScopedUserID
-	}
-	if build.JobInfo.ScopedUsername != nil {
-		fields["scoped_username"] = *build.JobInfo.ScopedUsername
+		fields["gitlab_scoped_user_id"] = *build.JobInfo.ScopedUserID
 	}
 
 	mr.log().WithFields(fields).Infoln("Added job to processing list")
