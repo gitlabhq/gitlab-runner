@@ -21,7 +21,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/watchers"
 )
 
-type kubeConfigProvider func() (*restclient.Config, error)
+type kubeConfigProvider func(config *common.KubernetesConfig) (*restclient.Config, error)
 
 type resourceQuantityError struct {
 	resource string
@@ -40,7 +40,7 @@ func (r *resourceQuantityError) Is(err error) bool {
 
 var (
 	// inClusterConfig parses kubernetes configuration reading in cluster values
-	inClusterConfig kubeConfigProvider = restclient.InClusterConfig
+	inClusterConfig kubeConfigProvider = func(_ *common.KubernetesConfig) (*restclient.Config, error) { return restclient.InClusterConfig() }
 	// defaultKubectlConfig parses kubectl configuration ad loads the default cluster
 	defaultKubectlConfig kubeConfigProvider = loadDefaultKubectlConfig
 )
@@ -52,7 +52,7 @@ func getKubeClientConfig(
 	if config.Host != "" {
 		kubeConfig, err = getOutClusterClientConfig(config)
 	} else {
-		kubeConfig, err = guessClientConfig()
+		kubeConfig, err = guessClientConfig(config)
 	}
 	if err != nil {
 		return nil, err
@@ -90,23 +90,27 @@ func getOutClusterClientConfig(config *common.KubernetesConfig) (*restclient.Con
 	return kubeConfig, nil
 }
 
-func guessClientConfig() (*restclient.Config, error) {
+func guessClientConfig(config *common.KubernetesConfig) (*restclient.Config, error) {
 	// Try in cluster config first
-	if inClusterCfg, err := inClusterConfig(); err == nil {
+	if inClusterCfg, err := inClusterConfig(config); err == nil {
 		return inClusterCfg, nil
 	}
 
 	// in cluster config failed. Reading default kubectl config
-	return defaultKubectlConfig()
+	return defaultKubectlConfig(config)
 }
 
-func loadDefaultKubectlConfig() (*restclient.Config, error) {
-	config, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+func loadDefaultKubectlConfig(config *common.KubernetesConfig) (*restclient.Config, error) {
+	cmdConfig, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 	if err != nil {
 		return nil, err
 	}
 
-	return clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
+	if config.Context != "" {
+		return clientcmd.NewNonInteractiveClientConfig(*cmdConfig, config.Context, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
+	}
+
+	return clientcmd.NewDefaultClientConfig(*cmdConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
 func getContainerStatus(containerStatuses []api.ContainerStatus, containerName string) (api.ContainerStatus, bool) {

@@ -950,6 +950,7 @@ func (mr *RunCommand) processBuildOnRunner(
 	mr.buildsHelper.addBuild(build)
 
 	fields := logrus.Fields{
+		"runner":                runner.Name,
 		"job":                   build.ID,
 		"project":               build.JobInfo.ProjectID,
 		"repo_url":              build.RepoCleanURL(),
