@@ -37,12 +37,12 @@ func (_m *MockInteractiveTerminal) EXPECT() *MockInteractiveTerminal_Expecter {
 	return &MockInteractiveTerminal_Expecter{mock: &_m.Mock}
 }
 
-// Connect provides a mock function for the type MockInteractiveTerminal
-func (_mock *MockInteractiveTerminal) Connect() (Conn, error) {
+// TerminalConnect provides a mock function for the type MockInteractiveTerminal
+func (_mock *MockInteractiveTerminal) TerminalConnect() (Conn, error) {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for Connect")
+		panic("no return value specified for TerminalConnect")
 	}
 
 	var r0 Conn
@@ -65,29 +65,29 @@ func (_mock *MockInteractiveTerminal) Connect() (Conn, error) {
 	return r0, r1
 }
 
-// MockInteractiveTerminal_Connect_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Connect'
-type MockInteractiveTerminal_Connect_Call struct {
+// MockInteractiveTerminal_TerminalConnect_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TerminalConnect'
+type MockInteractiveTerminal_TerminalConnect_Call struct {
 	*mock.Call
 }
 
-// Connect is a helper method to define mock.On call
-func (_e *MockInteractiveTerminal_Expecter) Connect() *MockInteractiveTerminal_Connect_Call {
-	return &MockInteractiveTerminal_Connect_Call{Call: _e.mock.On("Connect")}
+// TerminalConnect is a helper method to define mock.On call
+func (_e *MockInteractiveTerminal_Expecter) TerminalConnect() *MockInteractiveTerminal_TerminalConnect_Call {
+	return &MockInteractiveTerminal_TerminalConnect_Call{Call: _e.mock.On("TerminalConnect")}
 }
 
-func (_c *MockInteractiveTerminal_Connect_Call) Run(run func()) *MockInteractiveTerminal_Connect_Call {
+func (_c *MockInteractiveTerminal_TerminalConnect_Call) Run(run func()) *MockInteractiveTerminal_TerminalConnect_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *MockInteractiveTerminal_Connect_Call) Return(conn Conn, err error) *MockInteractiveTerminal_Connect_Call {
+func (_c *MockInteractiveTerminal_TerminalConnect_Call) Return(conn Conn, err error) *MockInteractiveTerminal_TerminalConnect_Call {
 	_c.Call.Return(conn, err)
 	return _c
 }
 
-func (_c *MockInteractiveTerminal_Connect_Call) RunAndReturn(run func() (Conn, error)) *MockInteractiveTerminal_Connect_Call {
+func (_c *MockInteractiveTerminal_TerminalConnect_Call) RunAndReturn(run func() (Conn, error)) *MockInteractiveTerminal_TerminalConnect_Call {
 	_c.Call.Return(run)
 	return _c
 }

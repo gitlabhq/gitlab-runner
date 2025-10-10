@@ -35,7 +35,7 @@ func (t terminalConn) Close() error {
 	return t.shellFd.Close()
 }
 
-func (s *executor) Connect() (terminalsession.Conn, error) {
+func (s *executor) TerminalConnect() (terminalsession.Conn, error) {
 	if s.Shell().Shell == "pwsh" {
 		return nil, errors.New("not yet supported")
 	}

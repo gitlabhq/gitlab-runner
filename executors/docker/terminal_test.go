@@ -94,7 +94,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 				}, test.containerInspectErr)
 			}
 
-			conn, err := s.Connect()
+			conn, err := s.TerminalConnect()
 
 			if test.buildContainerRunning {
 				assert.NoError(t, err)
@@ -168,7 +168,7 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 				).Once()
 			}
 
-			conn, err := s.Connect()
+			conn, err := s.TerminalConnect()
 			require.NoError(t, err)
 
 			timeoutCh := make(chan error)

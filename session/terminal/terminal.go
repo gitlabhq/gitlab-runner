@@ -6,7 +6,7 @@ import (
 )
 
 type InteractiveTerminal interface {
-	Connect() (Conn, error)
+	TerminalConnect() (Conn, error)
 }
 
 type Conn interface {

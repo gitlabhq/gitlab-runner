@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-func (s *executor) Connect() (terminalsession.Conn, error) {
+func (s *executor) TerminalConnect() (terminalsession.Conn, error) {
 	settings, err := s.getTerminalSettings()
 	if err != nil {
 		return nil, err

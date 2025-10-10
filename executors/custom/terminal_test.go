@@ -10,7 +10,7 @@ import (
 
 func TestExecutor_Connect(t *testing.T) {
 	e := new(executor)
-	connection, err := e.Connect()
+	connection, err := e.TerminalConnect()
 
 	assert.Nil(t, connection)
 	assert.EqualError(t, err, "not yet supported")

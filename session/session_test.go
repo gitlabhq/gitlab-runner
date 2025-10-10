@@ -30,7 +30,7 @@ func TestExecSuccessful(t *testing.T) {
 
 	mockTerminal := terminal.NewMockInteractiveTerminal(t)
 
-	mockTerminal.On("Connect").Return(mockTerminalConn, nil).Once()
+	mockTerminal.On("TerminalConnect").Return(mockTerminalConn, nil).Once()
 
 	session.SetInteractiveTerminal(mockTerminal)
 
@@ -102,7 +102,7 @@ func TestExecFailedRequest(t *testing.T) {
 			mockTerminal := terminal.NewMockInteractiveTerminal(t)
 
 			if c.authorization == validToken && c.isWebsocketUpgrade && c.attachTerminal {
-				mockTerminal.On("Connect").Return(mockTerminalConn, c.connectionErr).Once()
+				mockTerminal.On("TerminalConnect").Return(mockTerminalConn, c.connectionErr).Once()
 			}
 
 			if c.attachTerminal {
@@ -137,7 +137,7 @@ func TestDoNotAllowMultipleConnections(t *testing.T) {
 
 	mockTerminalConn := terminal.NewMockConn(t)
 	mockTerminal := terminal.NewMockInteractiveTerminal(t)
-	mockTerminal.On("Connect").Return(mockTerminalConn, nil).Once()
+	mockTerminal.On("TerminalConnect").Return(mockTerminalConn, nil).Once()
 
 	session.SetInteractiveTerminal(mockTerminal)
 

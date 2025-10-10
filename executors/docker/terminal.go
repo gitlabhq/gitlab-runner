@@ -45,7 +45,7 @@ func (s *commandExecutor) watchForRunningBuildContainer(deadline time.Time) (str
 	return "", buildContainerTerminalTimeout{}
 }
 
-func (s *commandExecutor) Connect() (terminalsession.Conn, error) {
+func (s *commandExecutor) TerminalConnect() (terminalsession.Conn, error) {
 	// Waiting for the container to start,  is not ideal as it might be hiding a
 	// real issue and the user is not aware of it. Ideally, the runner should
 	// inform the user in an interactive way that the container has no started
