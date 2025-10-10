@@ -5,5 +5,16 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Parallels
 ---
 
-Check the [VirtualBox executor](virtualbox.md) to see how to configure the
-**parallels** executor.
+The Parallels executor uses the [Parallels Desktop](https://www.parallels.com/) virtualization software to run CI/CD jobs in virtual machines (VMs) on macOS.
+Parallels Desktop can run Windows, Linux, and other operating systems alongside macOS.
+
+The Parallels executor works similarly to the VirtualBox executor.
+It creates and manages virtual machines and executes your GitLab CI/CD jobs.
+Each job runs in a clean VM environment, providing isolation between builds.
+For configuration information, see [VirtualBox executor](virtualbox.md).
+
+{{< alert type="note" >}}
+
+Parallels executors do not support the caching feature.
+
+{{< /alert >}}
