@@ -8,6 +8,6 @@ import (
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
-func (e *executor) Connect() (terminalsession.Conn, error) {
+func (e *executor) TerminalConnect() (terminalsession.Conn, error) {
 	return nil, errors.New("not yet supported")
 }

@@ -15,7 +15,7 @@ func TestMachineExecutor_Connect_NoTerminal(t *testing.T) {
 		executor: common.NewMockExecutor(t),
 	}
 
-	conn, err := e.Connect()
+	conn, err := e.TerminalConnect()
 	assert.Error(t, err)
 	assert.Nil(t, conn)
 }
@@ -33,9 +33,9 @@ func TestMachineExecutor_Connect_Terminal(t *testing.T) {
 	e := machineExecutor{
 		executor: &mock,
 	}
-	mock.MockInteractiveTerminal.On("Connect").Return(terminal.NewMockConn(t), nil).Once()
+	mock.MockInteractiveTerminal.On("TerminalConnect").Return(terminal.NewMockConn(t), nil).Once()
 
-	conn, err := e.Connect()
+	conn, err := e.TerminalConnect()
 	assert.NoError(t, err)
 	assert.NotNil(t, conn)
 }

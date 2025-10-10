@@ -205,7 +205,7 @@ func (s *Session) newTerminalConn() (terminal.Conn, error) {
 		return nil, connectionInUseError{}
 	}
 
-	conn, err := s.interactiveTerminal.Connect()
+	conn, err := s.interactiveTerminal.TerminalConnect()
 	if err != nil {
 		return nil, err
 	}

@@ -1778,7 +1778,7 @@ func TestWaitForTerminal(t *testing.T) {
 				}).Once()
 
 			mockTerminal := terminal.NewMockInteractiveTerminal(t)
-			mockTerminal.On("Connect").Return(mockConn, nil)
+			mockTerminal.On("TerminalConnect").Return(mockConn, nil)
 			sess.SetInteractiveTerminal(mockTerminal)
 
 			u := url.URL{
