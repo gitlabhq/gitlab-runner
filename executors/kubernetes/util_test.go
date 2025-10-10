@@ -49,11 +49,11 @@ func TestGetKubeClientConfig(t *testing.T) {
 		UserAgent: common.AppVersion.UserAgent(),
 	}
 
-	noConfigAvailable := func() (*restclient.Config, error) {
+	noConfigAvailable := func(_ *common.KubernetesConfig) (*restclient.Config, error) {
 		return nil, fmt.Errorf("config not available")
 	}
 
-	aConfig := func() (*restclient.Config, error) {
+	aConfig := func(_ *common.KubernetesConfig) (*restclient.Config, error) {
 		config := *completeConfig
 		return &config, nil
 	}

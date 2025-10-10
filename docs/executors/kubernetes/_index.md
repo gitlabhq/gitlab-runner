@@ -73,6 +73,7 @@ permission to create, list, and attach to Pods in the specified namespace.
 | Option      | Description |
 |-------------|-------------|
 | `host`      | Optional Kubernetes API server host URL (auto-discovery attempted if not specified). |
+| `context`   | Optional Kubernetes context name to use from your `kubectl` configuration. Use this option when you don't specify `host`. |
 | `cert_file` | Optional Kubernetes API server user auth certificate. |
 | `key_file`  | Optional Kubernetes API server user auth private key. |
 | `ca_file`   | Optional Kubernetes API server ca certificate. |
@@ -81,7 +82,8 @@ If you're running GitLab Runner in the Kubernetes cluster, omit
 these fields so that the GitLab Runner auto-discovers the Kubernetes API.
 
 If you're running GitLab Runner externally to the Cluster, these settings ensure that GitLab Runner
-has access to the Kubernetes API on the cluster.
+has access to the Kubernetes API on the cluster. You can either specify the `host` with authentication details,
+or use `context` to reference a specific context from your `kubectl` configuration.
 
 ### Set the bearer token for Kubernetes API calls
 
@@ -314,6 +316,7 @@ This approach allows developers to optimize resource usage per job while maintai
 | `cap_add`                                     | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#specify-container-capabilities). |
 | `cap_drop`                                    | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#specify-container-capabilities). |
 | `cleanup_grace_period_seconds`                | When a job completes, the duration in seconds that the pod has to terminate gracefully. After this period, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified. |
+| `context`                                      | Kubernetes context name to use from `kubectl` configuration (when `host` is not specified). |
 | `dns_policy`                                  | Specify the DNS policy that should be used when constructing the pod: `none`, `default`, `cluster-first`, `cluster-first-with-host-net`. The Kubernetes default (`cluster-first`) is used if not set. |
 | `dns_config`                                  | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#configure-pod-dns-settings). |
 | `helper_container_security_context`           | Sets a container security context for the helper container. [Read more about security context](#set-a-security-policy-for-the-pod). |

@@ -615,6 +615,7 @@ func (h *KubernetesHostAliasesFlag) UnmarshalFlag(value string) error {
 
 type KubernetesConfig struct {
 	Host                                              string                             `toml:"host" json:"host" long:"host" env:"KUBERNETES_HOST" description:"Optional Kubernetes master host URL (auto-discovery attempted if not specified)"`
+	Context                                           string                             `toml:"context,omitempty" json:"context" long:"context" env:"KUBECTL_CONTEXT" description:"Optional Kubernetes context name to use if host is not specified (kubectl config get-contexts)."`
 	CertFile                                          string                             `toml:"cert_file,omitempty" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
 	KeyFile                                           string                             `toml:"key_file,omitempty" json:"key_file" long:"key-file" env:"KUBERNETES_KEY_FILE" description:"Optional Kubernetes master auth private key"`
 	CAFile                                            string                             `toml:"ca_file,omitempty" json:"ca_file" long:"ca-file" env:"KUBERNETES_CA_FILE" description:"Optional Kubernetes master auth ca certificate"`
