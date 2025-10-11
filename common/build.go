@@ -208,7 +208,22 @@ func (b *Build) FailureReason() JobFailureReason {
 }
 
 func (b *Build) Log() *logrus.Entry {
-	return b.Runner.Log().WithField("job", b.ID).WithField("project", b.JobInfo.ProjectID)
+	l := b.Runner.Log().
+		WithFields(logrus.Fields{
+			"job":               b.ID,
+			"project":           b.JobInfo.ProjectID,
+			"project_full_path": b.JobInfo.ProjectFullPath,
+			"namespace_id":      b.JobInfo.NamespaceID,
+			"root_namespace_id": b.JobInfo.RootNamespaceID,
+			"organization_id":   b.JobInfo.OrganizationID,
+			"gitlab_user_id":    b.JobInfo.UserID,
+		})
+
+	if b.JobInfo.ScopedUserID != nil {
+		l = l.WithField("gitlab_scoped_user_id", *b.JobInfo.ScopedUserID)
+	}
+
+	return l
 }
 
 // ProjectUniqueShortName returns a unique name for the current build.
