@@ -1110,6 +1110,17 @@ func (mr *RunCommand) requestJob(
 	}
 
 	trace.SetFailuresCollector(mr.failuresCollector)
+
+	updateResult := mr.network.UpdateJob(*runner, jobCredentials, common.UpdateJobInfo{
+		ID:    jobCredentials.ID,
+		State: common.Running,
+	})
+
+	if updateResult.State == common.UpdateAbort || updateResult.CancelRequested {
+		trace.Finish()
+		return nil, nil, nil
+	}
+
 	return trace, jobData, nil
 }
 

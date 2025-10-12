@@ -50,6 +50,8 @@ type clientJobTrace struct {
 	finalUpdateRetryLimit int
 }
 
+// Success marks the job as Success and cleans up the trace. Either Success, Fail or Finish must be called
+// and only once.
 func (c *clientJobTrace) Success() error {
 	return c.complete(nil, common.JobFailureData{})
 }
@@ -69,9 +71,11 @@ func (c *clientJobTrace) complete(err error, failureData common.JobFailureData) 
 	}
 
 	c.lock.Unlock()
-	return c.finish()
+	return c.finishWithFinalUpdate()
 }
 
+// Fail marks the job as a Failure and cleans up the trace. Either Success, Fail or Finish must be called
+// and only once.
 func (c *clientJobTrace) Fail(err error, failureData common.JobFailureData) error {
 	return c.complete(err, failureData)
 }
@@ -242,7 +246,15 @@ func (c *clientJobTrace) finalUpdate() error {
 	}
 }
 
-func (c *clientJobTrace) finish() error {
+// Finish cleans up the trace without sending updates. Either Success, Fail or Finish must be called
+// and only once.
+func (c *clientJobTrace) Finish() {
+	c.buffer.Finish()
+	c.finished <- true
+	c.buffer.Close()
+}
+
+func (c *clientJobTrace) finishWithFinalUpdate() error {
 	c.buffer.Finish()
 	c.finished <- true
 	err := retry.NewNoValue(

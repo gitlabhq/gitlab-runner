@@ -206,6 +206,7 @@ type FeaturesInfo struct {
 	ServiceExecutorOpts     bool `json:"service_executor_opts"`
 	CancelGracefully        bool `json:"cancel_gracefully"`
 	NativeStepsIntegration  bool `json:"native_steps_integration"`
+	TwoPhaseJobCommit       bool `json:"two_phase_job_commit"`
 }
 
 type ConfigInfo struct {
@@ -1183,6 +1184,7 @@ type JobTrace interface {
 	io.Writer
 	Success() error
 	Fail(err error, failureData JobFailureData) error
+	Finish()
 	SetCancelFunc(cancelFunc context.CancelFunc)
 	Cancel() bool
 	SetAbortFunc(abortFunc context.CancelFunc)

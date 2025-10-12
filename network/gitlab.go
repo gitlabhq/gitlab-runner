@@ -89,6 +89,7 @@ func (n *GitLabClient) getFeatures(features *common.FeaturesInfo) {
 	features.TraceSize = true
 	features.Cancelable = true
 	features.CancelGracefully = true
+	features.TwoPhaseJobCommit = true
 }
 
 func (n *GitLabClient) ExecutorSupportsNativeSteps(config common.RunnerConfig) bool {

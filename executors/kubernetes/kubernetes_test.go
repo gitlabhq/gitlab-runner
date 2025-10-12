@@ -6473,8 +6473,9 @@ type FakeBuildTrace struct {
 	testWriter
 }
 
-func (f FakeBuildTrace) Success()                                                                   {}
-func (f FakeBuildTrace) Fail(err error, failureData common.JobFailureData)                          {}
+func (f FakeBuildTrace) Success() error                                                             { return nil }
+func (f FakeBuildTrace) Fail(err error, failureData common.JobFailureData) error                    { return nil }
+func (f FakeBuildTrace) Finish()                                                                    {}
 func (f FakeBuildTrace) Notify(func())                                                              {}
 func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc)                                {}
 func (f FakeBuildTrace) Cancel() bool                                                               { return false }

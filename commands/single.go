@@ -108,12 +108,23 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		ID:    jobData.ID,
 		Token: jobData.Token,
 	}
+
 	trace, err := r.network.ProcessJob(r.RunnerConfig, jobCredentials)
 	if err != nil {
 		return err
 	}
 
 	trace.SetDebugModeEnabled(newBuild.IsDebugModeEnabled())
+
+	updateResult := r.network.UpdateJob(r.RunnerConfig, jobCredentials, common.UpdateJobInfo{
+		ID:    jobCredentials.ID,
+		State: common.Running,
+	})
+
+	if updateResult.State == common.UpdateAbort || updateResult.CancelRequested {
+		trace.Finish()
+		return nil
+	}
 
 	defer func() {
 		err := trace.Success()

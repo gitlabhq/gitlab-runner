@@ -831,3 +831,58 @@ func TestJobResponse_Run(t *testing.T) {
 		})
 	}
 }
+
+func TestFeaturesInfo_TwoPhaseJobCommit_JSONMarshaling(t *testing.T) {
+	tests := []struct {
+		name     string
+		features FeaturesInfo
+		expected string
+	}{
+		{
+			name: "TwoPhaseJobCommit enabled",
+			features: FeaturesInfo{
+				TwoPhaseJobCommit: true,
+			},
+			expected: `{"variables":false,"image":false,"services":false,"artifacts":false,"cache":false,"fallback_cache_keys":false,"shared":false,"upload_multiple_artifacts":false,"upload_raw_artifacts":false,"session":false,"terminal":false,"refspecs":false,"masking":false,"proxy":false,"raw_variables":false,"artifacts_exclude":false,"multi_build_steps":false,"trace_reset":false,"trace_checksum":false,"trace_size":false,"vault_secrets":false,"cancelable":false,"return_exit_code":false,"service_variables":false,"service_multiple_aliases":false,"image_executor_opts":false,"service_executor_opts":false,"cancel_gracefully":false,"native_steps_integration":false,"two_phase_job_commit":true}`,
+		},
+		{
+			name: "TwoPhaseJobCommit disabled",
+			features: FeaturesInfo{
+				TwoPhaseJobCommit: false,
+			},
+			expected: `{"variables":false,"image":false,"services":false,"artifacts":false,"cache":false,"fallback_cache_keys":false,"shared":false,"upload_multiple_artifacts":false,"upload_raw_artifacts":false,"session":false,"terminal":false,"refspecs":false,"masking":false,"proxy":false,"raw_variables":false,"artifacts_exclude":false,"multi_build_steps":false,"trace_reset":false,"trace_checksum":false,"trace_size":false,"vault_secrets":false,"cancelable":false,"return_exit_code":false,"service_variables":false,"service_multiple_aliases":false,"image_executor_opts":false,"service_executor_opts":false,"cancel_gracefully":false,"native_steps_integration":false,"two_phase_job_commit":false}`,
+		},
+		{
+			name: "Multiple features including TwoPhaseJobCommit",
+			features: FeaturesInfo{
+				Variables:         true,
+				Artifacts:         true,
+				Cache:             true,
+				TwoPhaseJobCommit: true,
+				Cancelable:        true,
+			},
+			expected: `{"variables":true,"image":false,"services":false,"artifacts":true,"cache":true,"fallback_cache_keys":false,"shared":false,"upload_multiple_artifacts":false,"upload_raw_artifacts":false,"session":false,"terminal":false,"refspecs":false,"masking":false,"proxy":false,"raw_variables":false,"artifacts_exclude":false,"multi_build_steps":false,"trace_reset":false,"trace_checksum":false,"trace_size":false,"vault_secrets":false,"cancelable":true,"return_exit_code":false,"service_variables":false,"service_multiple_aliases":false,"image_executor_opts":false,"service_executor_opts":false,"cancel_gracefully":false,"native_steps_integration":false,"two_phase_job_commit":true}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test marshaling
+			jsonData, err := json.Marshal(tt.features)
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.expected, string(jsonData))
+
+			// Test unmarshaling
+			var features FeaturesInfo
+			err = json.Unmarshal(jsonData, &features)
+			require.NoError(t, err)
+			assert.Equal(t, tt.features, features)
+		})
+	}
+}
+
+func TestFeaturesInfo_TwoPhaseJobCommit_DefaultValue(t *testing.T) {
+	// Test that the default value is false
+	var features FeaturesInfo
+	assert.False(t, features.TwoPhaseJobCommit, "TwoPhaseJobCommit should default to false")
+}
