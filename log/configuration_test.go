@@ -55,25 +55,25 @@ func TestHandleCliCtx(t *testing.T) {
 	tests := map[string]handleCliCtxTestCase{
 		"no configuration specified": {
 			expectedLevel:     logrus.InfoLevel,
-			expectedFormatter: new(RunnerTextFormatter),
+			expectedFormatter: formats[FormatRunner],
 		},
 		"--log-level specified": {
 			args:                    []string{"--log-level", "error"},
 			expectedLevel:           logrus.ErrorLevel,
-			expectedFormatter:       new(RunnerTextFormatter),
+			expectedFormatter:       formats[FormatRunner],
 			expectedLevelSetWithCli: true,
 		},
 		"--debug specified": {
 			args:                       []string{"--debug"},
 			expectedLevel:              logrus.DebugLevel,
-			expectedFormatter:          new(RunnerTextFormatter),
+			expectedFormatter:          formats[FormatRunner],
 			expectedLevelSetWithCli:    true,
 			goroutinesDumpStopChExists: true,
 		},
 		"--log-level and --debug specified": {
 			args:                       []string{"--log-level", "error", "--debug"},
 			expectedLevel:              logrus.DebugLevel,
-			expectedFormatter:          new(RunnerTextFormatter),
+			expectedFormatter:          formats[FormatRunner],
 			expectedLevelSetWithCli:    true,
 			goroutinesDumpStopChExists: true,
 		},
@@ -84,7 +84,7 @@ func TestHandleCliCtx(t *testing.T) {
 		"--log-format specified": {
 			args:                     []string{"--log-format", "json"},
 			expectedLevel:            logrus.InfoLevel,
-			expectedFormatter:        new(logrus.JSONFormatter),
+			expectedFormatter:        formats[FormatJSON],
 			expectedFormatSetWithCli: true,
 		},
 		"invalid --log-format specified": {
