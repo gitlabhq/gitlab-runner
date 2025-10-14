@@ -21,7 +21,6 @@ package kubernetes
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,13 +30,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	testclient "k8s.io/client-go/kubernetes/fake"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 type fakeRemoteExecutor struct {
@@ -114,18 +115,14 @@ func TestExec(t *testing.T) {
 			ex.execErr = fmt.Errorf("exec error")
 		}
 
-		bufOut := bytes.NewBuffer([]byte{})
-		bufErr := bytes.NewBuffer([]byte{})
-		bufIn := bytes.NewBuffer([]byte{})
-
 		params := &ExecOptions{
 			PodName:       "foo",
 			ContainerName: "bar",
 			Namespace:     "test",
 			Command:       []string{"command"},
-			In:            bufIn,
-			Out:           bufOut,
-			Err:           bufErr,
+			In:            bytes.NewBuffer([]byte{}),
+			Out:           bytes.NewBuffer([]byte{}),
+			Err:           bytes.NewBuffer([]byte{}),
 			Stdin:         true,
 			Executor:      ex,
 			KubeClient:    c,
@@ -176,98 +173,139 @@ func execPodWithPhase(phase api.PodPhase) *api.Pod {
 }
 
 func TestAttach(t *testing.T) {
-	version, codec := testVersionAndCodec()
+	const (
+		testPodNameRunning = "running"
+		testPodNamePending = "pending"
+		testNamespace      = "someNamespace"
+		testContainerName  = "someContainer"
 
-	fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-		switch p, m := req.URL.Path, req.Method; {
-		case p == "/api/v1/namespaces/test-resource/pods/test-resource" && m == http.MethodGet:
-			body := objBody(codec, execPod())
-			return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
-				common.ContentType: {"application/json"},
-			}}, nil
+		testKubeHost         = "some-host:123"
+		testScheme           = "some-scheme"
+		testBasePath         = "basePath"
+		testVersionedAPIPath = "versionedAPI"
+	)
 
-		default:
-			return nil, fmt.Errorf("unexpected request")
+	testPods := func() []runtime.Object {
+		return []runtime.Object{
+			&api.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: testPodNameRunning, Namespace: testNamespace},
+				Spec: api.PodSpec{
+					Containers: []api.Container{{Name: testContainerName}},
+				},
+				Status: api.PodStatus{Phase: api.PodRunning},
+			},
+			&api.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: testPodNamePending, Namespace: testNamespace},
+				Spec: api.PodSpec{
+					Containers: []api.Container{{Name: testContainerName}},
+				},
+				Status: api.PodStatus{Phase: api.PodPending},
+			},
 		}
-	})
-
-	client := testKubernetesClient(version, fakeClient)
-	clientConfig := &restclient.Config{}
-
-	mockExecutor := NewMockRemoteExecutor(t)
-
-	urlMatcher := mock.MatchedBy(func(url *url.URL) bool {
-		return url.Path == "/api/v1/namespaces/test/pods/foo/attach"
-	})
-	stdinMatcher := mock.MatchedBy(func(stdin io.Reader) bool {
-		b, _ := io.ReadAll(stdin)
-		return string(b) == "sleep 1\n"
-	})
-
-	ctx := t.Context()
-
-	mockExecutor.
-		On("Execute", ctx, http.MethodPost, urlMatcher, clientConfig, stdinMatcher, nil, nil, false).
-		Return(nil).
-		Once()
-
-	opts := &AttachOptions{
-		Namespace:     "test-resource",
-		PodName:       "test-resource",
-		ContainerName: "test-resource",
-		Command:       []string{"sleep", "1"},
-		Executor:      mockExecutor,
-		KubeClient:    client,
-		Config:        clientConfig,
-		Context:       ctx,
 	}
 
-	assert.Nil(t, opts.Run())
-}
-
-func TestAttachErrorGettingPod(t *testing.T) {
-	err := errors.New("error")
-
-	version, _ := testVersionAndCodec()
-
-	fakeClient := fake.CreateHTTPClient(func(*http.Request) (*http.Response, error) {
-		return nil, err
-	})
-
-	client := testKubernetesClient(version, fakeClient)
-	clientConfig := &restclient.Config{}
-
-	opts := &AttachOptions{
-		Namespace:     "test-resource",
-		PodName:       "test-resource",
-		ContainerName: "test-resource",
-		KubeClient:    client,
-		Config:        clientConfig,
-		Context:       t.Context(),
-	}
-
-	assert.ErrorIs(t, opts.Run(), err)
-}
-
-func TestAttachPodNotRunning(t *testing.T) {
-	pod := &api.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-resource",
-			Namespace: "test-resource",
+	tests := []struct {
+		name          string
+		attachTo      string
+		executeErr    error
+		kubeAPIErr    error
+		expectExecute bool
+		expectedErr   string
+	}{
+		{
+			name:          "pod attach",
+			attachTo:      testPodNameRunning,
+			expectExecute: true,
 		},
-		Status: api.PodStatus{
-			Phase: api.PodUnknown,
+		{
+			name:        "pod does not exist",
+			attachTo:    "doesNotExist",
+			expectedErr: "not found",
+		},
+		{
+			name:        "pod not running",
+			attachTo:    testPodNamePending,
+			expectedErr: "is not running and cannot execute commands",
+		},
+		{
+			name:          "execute error bubbles up",
+			attachTo:      testPodNameRunning,
+			executeErr:    fmt.Errorf("some error on execute"),
+			expectExecute: true,
+			expectedErr:   "some error on execute",
+		},
+		{
+			name:        "kube API error bubbles up",
+			kubeAPIErr:  fmt.Errorf("some kube API error"),
+			expectedErr: "some kube API error",
 		},
 	}
-	fakeClient := testclient.NewSimpleClientset(pod)
-	opts := &AttachOptions{
-		Namespace:  pod.GetNamespace(),
-		PodName:    pod.GetName(),
-		KubeClient: fakeClient,
-		Context:    t.Context(),
-	}
 
-	err := opts.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), api.PodUnknown)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fakeClientSet := testclient.NewSimpleClientset(testPods()...)
+			clientConfig := &restclient.Config{}
+
+			fakeRESTRequest := restclient.NewRequestWithClient(
+				&url.URL{Host: testKubeHost, Scheme: testScheme, Path: testBasePath},
+				testVersionedAPIPath,
+				restclient.ClientContentConfig{
+					GroupVersion: schema.GroupVersion{Group: "", Version: "v1"},
+				},
+				nil,
+			)
+			fakeRESTClient := &FakeRESTClient{fakePostRequest: fakeRESTRequest}
+			fakeClient := &FakeClient{
+				FakeCoreV1: &FakeCoreV1{
+					CoreV1Interface: fakeClientSet.CoreV1(),
+					FakeRESTClient:  fakeRESTClient,
+				},
+			}
+
+			if err := test.kubeAPIErr; err != nil {
+				fakeClientSet.PrependReactor("*", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
+					return true, nil, err
+				})
+			}
+
+			mockExecutor := NewMockRemoteExecutor(t)
+
+			if test.expectExecute {
+				stdinMatcher := mock.MatchedBy(func(stdin io.Reader) bool {
+					b, err := io.ReadAll(stdin)
+					require.NoError(t, err, "reading stdin")
+					return string(b) == "sleep 1\n"
+				})
+
+				expectedURL := &url.URL{
+					Scheme:   testScheme,
+					Host:     testKubeHost,
+					Path:     fmt.Sprintf("/%s/%s/namespaces/%s/pods/%s/attach", testBasePath, testVersionedAPIPath, testNamespace, test.attachTo),
+					RawQuery: fmt.Sprintf("container=%s&stdin=true", testContainerName),
+				}
+
+				mockExecutor.
+					On("Execute", t.Context(), http.MethodPost, expectedURL, clientConfig, stdinMatcher, nil, nil, false).
+					Return(test.executeErr).
+					Once()
+			}
+
+			opts := &AttachOptions{
+				Namespace:     testNamespace,
+				PodName:       test.attachTo,
+				ContainerName: testContainerName,
+				Command:       []string{"sleep", "1"},
+				Executor:      mockExecutor,
+				KubeClient:    fakeClient,
+				Config:        clientConfig,
+				Context:       t.Context(),
+			}
+			err := opts.Run()
+			if test.expectedErr != "" {
+				assert.ErrorContains(t, err, test.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
