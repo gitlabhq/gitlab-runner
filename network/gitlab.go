@@ -30,7 +30,8 @@ const (
 	clientError              = -100
 	responseBodyPeekMax      = 512
 
-	correlationIDHeader = "X-Request-Id"
+	correlationIDHeader   = "X-Request-Id"
+	correlationIDLogField = "correlation_id"
 )
 
 func TokenIsCreatedRunnerToken(token string) bool {
@@ -357,7 +358,7 @@ func (n *GitLabClient) RegisterRunner(
 	)
 	defer closeResponseBody(resp, false)
 
-	logger := runner.Log().WithField("correlation_id", getCorrelationID(resp, correlationID))
+	logger := runner.Log().WithField(correlationIDLogField, getCorrelationID(resp, correlationID))
 
 	switch result {
 	case http.StatusCreated:
@@ -413,7 +414,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 	}
 	defer closeResponseBody(resp, false)
 
-	logger := runner.Log().WithField("correlation_id", getCorrelationID(resp, correlationID))
+	logger := runner.Log().WithField(correlationIDLogField, getCorrelationID(resp, correlationID))
 
 	switch result {
 	case http.StatusOK:
@@ -459,7 +460,7 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 	)
 	defer closeResponseBody(resp, false)
 
-	logger := runner.Log().WithField("correlation_id", getCorrelationID(resp, correlationID))
+	logger := runner.Log().WithField(correlationIDLogField, getCorrelationID(resp, correlationID))
 
 	const baseLogText = "Unregistering runner from GitLab"
 	switch result {
@@ -498,7 +499,7 @@ func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, 
 	)
 	defer closeResponseBody(resp, false)
 
-	logger := runner.Log().WithField("correlation_id", getCorrelationID(resp, correlationID))
+	logger := runner.Log().WithField(correlationIDLogField, getCorrelationID(resp, correlationID))
 
 	const baseLogText = "Unregistering runner manager from GitLab"
 	switch result {
@@ -564,7 +565,7 @@ func (n *GitLabClient) resetToken(
 
 	defer closeResponseBody(resp, false)
 
-	logger := runner.Log().WithField("correlation_id", getCorrelationID(resp, correlationID))
+	logger := runner.Log().WithField(correlationIDLogField, getCorrelationID(resp, correlationID))
 
 	const baseLogText = "Resetting runner authentication token..."
 	switch result {
@@ -635,7 +636,7 @@ func (n *GitLabClient) RequestJob(
 	)
 	defer closeResponseBody(httpResponse, false)
 
-	logger := config.Log().WithField("correlation_id", getCorrelationID(httpResponse, correlationID))
+	logger := config.Log().WithField(correlationIDLogField, getCorrelationID(httpResponse, correlationID))
 
 	switch result {
 	case http.StatusCreated:
@@ -687,15 +688,17 @@ func (n *GitLabClient) UpdateJob(
 		ExitCode:      jobInfo.ExitCode,
 	}
 
+	headers, correlationID := addCorrelationID(JobTokenHeader(jobCredentials.Token))
+
 	log := config.Log().WithFields(logrus.Fields{
-		"job":      jobInfo.ID,
-		"checksum": request.Output.Checksum,
-		"bytesize": request.Output.Bytesize,
+		"job":                 jobInfo.ID,
+		"checksum":            request.Output.Checksum,
+		"bytesize":            request.Output.Bytesize,
+		correlationIDLogField: correlationID,
 	})
 
 	log.Info("Updating job...")
 
-	headers, correlationID := addCorrelationID(JobTokenHeader(jobCredentials.Token))
 	//nolint:bodyclose
 	statusCode, statusText, response := n.doMeasuredJSON(
 		context.Background(),
@@ -734,10 +737,10 @@ func (n *GitLabClient) createUpdateJobResult(
 	}
 
 	log = log.WithFields(logrus.Fields{
-		"code":            statusCode,
-		"job-status":      remoteJobStateResponse.RemoteState,
-		"update-interval": remoteJobStateResponse.RemoteUpdateInterval,
-		"correlation_id":  getCorrelationID(response, fallbackCorrelationID),
+		"code":                statusCode,
+		"job-status":          remoteJobStateResponse.RemoteState,
+		"update-interval":     remoteJobStateResponse.RemoteUpdateInterval,
+		correlationIDLogField: getCorrelationID(response, fallbackCorrelationID),
 	})
 
 	switch {
@@ -818,13 +821,13 @@ func (n *GitLabClient) PatchTrace(
 
 	tracePatchResponse := NewTracePatchResponse(response, baseLog)
 	log := baseLog.WithFields(logrus.Fields{
-		"sent-log":        contentRange,
-		"job-log":         tracePatchResponse.RemoteRange,
-		"job-status":      tracePatchResponse.RemoteState,
-		"code":            response.StatusCode,
-		"status":          response.Status,
-		"update-interval": tracePatchResponse.RemoteUpdateInterval,
-		"correlation_id":  getCorrelationID(response, correlationID),
+		"sent-log":            contentRange,
+		"job-log":             tracePatchResponse.RemoteRange,
+		"job-status":          tracePatchResponse.RemoteState,
+		"code":                response.StatusCode,
+		"status":              response.Status,
+		"update-interval":     tracePatchResponse.RemoteUpdateInterval,
+		correlationIDLogField: getCorrelationID(response, correlationID),
 	})
 
 	return n.createPatchTraceResult(startOffset, tracePatchResponse, response, endOffset, log)
@@ -990,9 +993,9 @@ func (n *GitLabClient) UploadRawArtifacts(
 	defer closeResponseBody(res, true)
 
 	log := logrus.WithFields(logrus.Fields{
-		"id":             config.ID,
-		"token":          helpers.ShortenToken(config.Token),
-		"correlation_id": getCorrelationID(res, correlationID),
+		"id":                  config.ID,
+		"token":               helpers.ShortenToken(config.Token),
+		correlationIDLogField: getCorrelationID(res, correlationID),
 	})
 
 	if options.LogResponseDetails {
@@ -1120,9 +1123,9 @@ func (n *GitLabClient) DownloadArtifacts(
 	)
 
 	log := logrus.WithFields(logrus.Fields{
-		"id":             config.ID,
-		"token":          helpers.ShortenToken(config.Token),
-		"correlation_id": getCorrelationID(res, correlationID),
+		"id":                  config.ID,
+		"token":               helpers.ShortenToken(config.Token),
+		correlationIDLogField: getCorrelationID(res, correlationID),
 	})
 
 	if res != nil {
