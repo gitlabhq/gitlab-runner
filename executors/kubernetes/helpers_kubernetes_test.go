@@ -176,3 +176,16 @@ func (fcv1 *FakeCoreV1) RESTClient() rest.Interface {
 }
 
 var _ corev1.CoreV1Interface = &FakeCoreV1{}
+
+// FakeRESTClient wraps around the RESTClient to be able to fake out certain parts of it.
+type FakeRESTClient struct {
+	rest.Interface
+
+	fakePostRequest *rest.Request
+}
+
+func (frc *FakeRESTClient) Post() *rest.Request {
+	return frc.fakePostRequest
+}
+
+var _ rest.Interface = &FakeRESTClient{}
