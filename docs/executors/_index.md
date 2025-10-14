@@ -166,7 +166,7 @@ it allows you to use custom executables to provision and clean up environments.
 
 Supported features by different executors:
 
-| Executor                                     | SSH            | Shell          |VirtualBox      | Parallels      | Docker  | Docker Autoscaler | Instance       | Kubernetes | Custom                                                       |
+| Executor                                     | SSH            | Shell          | VirtualBox     | Parallels      | Docker  | Docker Autoscaler | Instance       | Kubernetes | Custom                                                       |
 |:---------------------------------------------|:--------------:|:--------------:|:--------------:|:--------------:|:-------:|:-----------------:|:--------------:| :---------:| :-----------------------------------------------------------:|
 | Secure Variables                             | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓                                                           |
 | `.gitlab-ci.yml`: image                      | ✗              | ✗              | ✓ (1)          | ✓ (1)          | ✓       | ✓                 | ✗              | ✓          | ✓ (by using [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)) |
