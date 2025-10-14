@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -36,9 +37,13 @@ var (
 	}
 
 	formats = map[string]logrus.Formatter{
-		FormatRunner: new(RunnerTextFormatter),
-		FormatText:   new(logrus.TextFormatter),
-		FormatJSON:   new(logrus.JSONFormatter),
+		FormatRunner: &RunnerTextFormatter{},
+		FormatText: &logrus.TextFormatter{
+			TimestampFormat: time.RFC3339Nano,
+		},
+		FormatJSON: &logrus.JSONFormatter{
+			TimestampFormat: time.RFC3339Nano,
+		},
 	}
 )
 
