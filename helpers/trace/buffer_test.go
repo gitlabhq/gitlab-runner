@@ -235,3 +235,23 @@ func TestFixupInvalidUTF8(t *testing.T) {
 	assert.True(t, utf8.ValidString(string(content)))
 	assert.Equal(t, "hello a\ufffdb a\ufffdb\n", string(content))
 }
+
+func TestReferenceBiggerOffsetThanWritten(t *testing.T) {
+	buffer, err := New()
+	require.NoError(t, err)
+	defer buffer.Close()
+
+	n, err := buffer.Write([]byte("test"))
+	require.NoError(t, err)
+
+	bytes, err := buffer.Bytes(n*2, 10124)
+
+	assert.Empty(t, bytes)
+
+	var eerr *ErrInvalidOffset
+	if assert.ErrorAs(t, err, &eerr) {
+		assert.Equal(t, n*2, eerr.Offset)
+		assert.Equal(t, int64(n), eerr.Written)
+		assert.Less(t, eerr.N, 0)
+	}
+}
