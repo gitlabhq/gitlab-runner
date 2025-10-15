@@ -136,6 +136,7 @@ var (
 		"read: connection timed out",
 		"connect: connection timed out",
 		"Timeout occurred",
+		"etcdserver: request timed out",
 		"http2: client connection lost",
 		"connection refused",
 		"tls: internal error",

@@ -7841,6 +7841,14 @@ func TestRetryLimits(t *testing.T) {
 			expectedRetryCount:       3,
 			expectedLastRetryBackoff: 1100 * time.Millisecond,
 		},
+		"etcd request timeout": {
+			config: common.KubernetesConfig{
+				RequestRetryLimit: 5,
+			},
+			err:                      errors.New("etcdserver: request timed out"),
+			expectedRetryCount:       5,
+			expectedLastRetryBackoff: common.DefaultRequestRetryBackoffMax,
+		},
 	}
 
 	for tn, tt := range tests {
