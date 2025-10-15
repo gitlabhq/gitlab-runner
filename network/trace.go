@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
@@ -18,6 +20,7 @@ var (
 )
 
 type clientJobTrace struct {
+	log            logrus.FieldLogger
 	client         common.Network
 	config         common.RunnerConfig
 	jobCredentials *common.JobCredentials
@@ -313,6 +316,16 @@ func (c *clientJobTrace) sendPatch() common.PatchTraceResult {
 	c.lock.RUnlock()
 
 	if err != nil {
+		fields := make(logrus.Fields)
+		var eerr *trace.ErrInvalidOffset
+		if errors.As(err, &eerr) {
+			fields["offset"] = eerr.Offset
+			fields["written"] = eerr.Written
+			fields["n_value"] = eerr.N
+		}
+
+		c.log.WithError(err).WithFields(fields).Error("Failed to read trace buffer bytes")
+
 		return common.PatchTraceResult{State: common.PatchFailed}
 	}
 
@@ -469,6 +482,7 @@ func newJobTrace(
 	client common.Network,
 	config common.RunnerConfig,
 	jobCredentials *common.JobCredentials,
+	log logrus.FieldLogger,
 ) (*clientJobTrace, error) {
 	buffer, err := trace.New()
 	if err != nil {
@@ -476,6 +490,7 @@ func newJobTrace(
 	}
 
 	return &clientJobTrace{
+		log:                   log,
 		client:                client,
 		config:                config,
 		buffer:                buffer,

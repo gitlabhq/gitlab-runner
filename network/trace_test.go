@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -59,7 +60,7 @@ func ignoreOptionalTouchJob(mockNetwork *common.MockNetwork) {
 }
 
 func newTestJobTrace(network *common.MockNetwork, config common.RunnerConfig) (*clientJobTrace, error) {
-	trace, err := newJobTrace(network, config, jobCredentials)
+	trace, err := newJobTrace(network, config, jobCredentials, logrus.New())
 	if err != nil {
 		return nil, err
 	}
@@ -833,7 +834,7 @@ func TestDynamicForceSendUpdate(t *testing.T) {
 				},
 			}
 
-			trace, err := newJobTrace(nil, config, jobCredentials)
+			trace, err := newJobTrace(nil, config, jobCredentials, logrus.New())
 			require.NoError(t, err)
 
 			for updateInterval, forceInterval := range intervals {

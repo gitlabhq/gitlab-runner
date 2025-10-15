@@ -11,9 +11,10 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 const defaultBytesLimit = 4 * 1024 * 1024 // 4MB
@@ -60,6 +61,16 @@ func (b *Buffer) Size() int {
 	return int(b.lw.written)
 }
 
+type ErrInvalidOffset struct {
+	Written int64
+	Offset  int
+	N       int
+}
+
+func (e *ErrInvalidOffset) Error() string {
+	return fmt.Sprintf("invalid offset information: offset=%d, written=%d n=%d", e.Offset, e.Written, e.N)
+}
+
 func (b *Buffer) Bytes(offset, n int) ([]byte, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -78,6 +89,10 @@ func (b *Buffer) Bytes(offset, n int) ([]byte, error) {
 	size := int(b.lw.written - int64(offset))
 	if n > size {
 		n = size
+	}
+
+	if n < 0 {
+		return nil, &ErrInvalidOffset{Written: b.lw.written, Offset: offset, N: n}
 	}
 
 	buf := make([]byte, n)

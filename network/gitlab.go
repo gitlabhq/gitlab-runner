@@ -1188,7 +1188,13 @@ func (n *GitLabClient) ProcessJob(
 	config common.RunnerConfig,
 	jobCredentials *common.JobCredentials,
 ) (common.JobTrace, error) {
-	trace, err := newJobTrace(n, config, jobCredentials)
+	l := logrus.New().WithFields(logrus.Fields{
+		"runner":      config.ShortDescription(),
+		"runner_name": config.Name,
+		"job":         jobCredentials.ID,
+	})
+
+	trace, err := newJobTrace(n, config, jobCredentials, l)
 	if err != nil {
 		return nil, fmt.Errorf("create job trace: %w", err)
 	}
