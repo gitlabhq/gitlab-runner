@@ -1036,6 +1036,24 @@ Use this configuration only for testing purposes and not as a permanent solution
 
 {{< /alert >}}
 
+#### Configure SELinux MCS
+
+If SELinux blocks some write operations (such as reinitializing an existing Git repository), you can force a Multi-Category Security (MCS) on all containers launched by the runner:
+
+```toml
+[[runners]]
+  [runners.docker]
+    security_opt = ["label=level:s0:c1000"]
+```
+
+This option does not disable SELinux, but sets the container's MCS level. This approach is more secure than using `label:disable`.
+
+{{< alert type="warning" >}}
+
+Multiple containers that use the same MCS category can access the same files tagged with that category.
+
+{{< /alert >}}
+
 ## Specify which user runs the job
 
 By default, the runner runs jobs as the `root` user in the container. To specify a different, non-root user to run the job, use the `USER` directive in the Dockerfile of the Docker image.
