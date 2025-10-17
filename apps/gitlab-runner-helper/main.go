@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
+	_ "gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 )
 
 func init() {

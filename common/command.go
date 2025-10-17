@@ -39,12 +39,13 @@ func RegisterCommand(name, usage string, data Commander, flags ...cli.Flag) {
 }
 
 // RegisterCommandWithSubcommands registers a command with the given name, usage, data, subcommands, and flags.
-func RegisterCommandWithSubcommands(name, usage string, data Commander, subcommands []cli.Command, flags ...cli.Flag) {
+func RegisterCommandWithSubcommands(name, usage string, data Commander, hidden bool, subcommands []cli.Command, flags ...cli.Flag) {
 	registerCommand(cli.Command{
 		Name:        name,
 		Usage:       usage,
 		Action:      data.Execute,
 		Flags:       append(flags, clihelpers.GetFlagsFromStruct(data)...),
+		Hidden:      hidden,
 		Subcommands: subcommands,
 	})
 }

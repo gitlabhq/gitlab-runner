@@ -141,6 +141,7 @@ func init() {
 		common.CommanderFunc(func(ctx *cli.Context) {
 			_ = cli.ShowAppHelp(ctx)
 		}),
+		false,
 		subcommands,
 		cli.StringFlag{Name: "config, c", EnvVar: "CONFIG_FILE", Value: commands.GetDefaultConfigFile()},
 	)
