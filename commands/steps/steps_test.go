@@ -77,6 +77,15 @@ func TestMain(m *testing.M) {
 	os.Exit(rc)
 }
 
+func TestBootstrap(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "file")
+
+	require.NoFileExists(t, dest)
+	require.NoError(t, steps.Bootstrap(dest))
+	require.FileExists(t, dest)
+}
+
 func TestServe(t *testing.T) {
 	t.Parallel()
 
@@ -327,7 +336,7 @@ func TestCli(t *testing.T) {
 		{
 			name:             "steps subcommands are visible",
 			args:             []string{"steps", "--help"},
-			expectedStdoutRE: `\nCOMMANDS:\n[ ]+serve[^\n]+\n[ ]+proxy[^\n]+\n\nOPTIONS:\n`,
+			expectedStdoutRE: `\nCOMMANDS:\n[ ]+bootstrap[^\n]+\n[ ]+serve[^\n]+\n[ ]+proxy[^\n]+\n\nOPTIONS:\n`,
 		},
 		{
 			name:             "uses and shows the correct default socket path for serve",

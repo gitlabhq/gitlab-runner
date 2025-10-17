@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -38,6 +39,40 @@ type IOStreams struct {
 // gracefulShutdown is a special error we use to cancel the context when no error occurred. With that, we can
 // differentiate between explicit cancels we did, or any cancellation by a parent context.
 var gracefulShutdown = fmt.Errorf("shut down gracefully")
+
+func Bootstrap(destination string) error {
+	source, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to get source path: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+		return err
+	}
+
+	src, err := os.Open(source)
+	if err != nil {
+		return fmt.Errorf("failed to open source file %q: %w", source, err)
+	}
+	defer func() { _ = src.Close() }()
+
+	dest, err := os.Create(destination)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer func() { _ = dest.Close() }()
+
+	_, err = io.Copy(dest, src)
+	if err != nil {
+		return fmt.Errorf("failed to copy file contents: %w", err)
+	}
+
+	if err := dest.Close(); err != nil {
+		return fmt.Errorf("failed to close file: %w", err)
+	}
+
+	return os.Chmod(destination, 0o755)
+}
 
 func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs ...string) error {
 	ctx, cancel := context.WithCancelCause(ctx)
@@ -122,6 +157,18 @@ func init() {
 	defaultSockPath := api.DefaultSocketPath()
 
 	subcommands := []cli.Command{
+		{
+			Name:  "bootstrap",
+			Usage: "bootstrap the gitlab-runner-helper to the build container",
+			Action: func(cliCtx *cli.Context) error {
+				destination := cliCtx.Args().First()
+				if destination == "" {
+					return fmt.Errorf("destination argument must be provided")
+				}
+
+				return Bootstrap(destination)
+			},
+		},
 		{
 			Name:  "serve",
 			Usage: "start the CI Functions server",
