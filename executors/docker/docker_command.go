@@ -24,7 +24,6 @@ import (
 const (
 	buildContainerType      = "build"
 	predefinedContainerType = "predefined"
-	stepRunnerContainerType = "step-runner"
 )
 
 type commandExecutor struct {
@@ -33,7 +32,6 @@ type commandExecutor struct {
 	buildContainer                  *container.InspectResponse
 	lock                            sync.Mutex
 	terminalWaitForContainerTimeout time.Duration
-	stepRunnerContainerOnce         sync.Once
 }
 
 func (s *commandExecutor) getBuildContainer() *container.InspectResponse {
@@ -87,15 +85,6 @@ func (s *commandExecutor) isUmaskDisabled() bool {
 
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	if cmd.Predefined {
-		// if steps is enabled, run the step-runner container with the helper container. Eventually we can remove the
-		// helper execution path.
-		if s.Build.UseNativeSteps() {
-			var err error
-			s.stepRunnerContainerOnce.Do(func() { err = s.runContainer(stepRunnerContainerType, common.ExecutorCommand{Context: cmd.Context}) })
-			if err != nil {
-				return err
-			}
-		}
 		return s.runContainer(predefinedContainerType, cmd)
 	} else {
 		return s.runContainer(buildContainerType, cmd)
@@ -140,8 +129,6 @@ func (s *commandExecutor) requestContainer(containerType string) (*container.Ins
 		return s.requestBuildContainer()
 	case predefinedContainerType:
 		return s.requestHelperContainer()
-	case stepRunnerContainerType:
-		return s.requestStepRunnerContainer()
 	default:
 		return nil, fmt.Errorf("invalid container-type %q", containerType)
 	}
@@ -204,8 +191,6 @@ func (s *commandExecutor) getHelperImageCmd() []string {
 	return s.helperImageInfo.Cmd
 }
 
-var stepRunnerServiceCommand = []string{"step-runner", "serve"}
-
 func (s *commandExecutor) requestBuildContainer() (*container.InspectResponse, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -217,7 +202,7 @@ func (s *commandExecutor) requestBuildContainer() (*container.InspectResponse, e
 	// Overwrite the build container command if using steps
 	cmd := s.BuildShell.DockerCommand
 	if s.Build.UseNativeSteps() {
-		cmd = stepRunnerServiceCommand
+		cmd = append([]string{bootstrappedBinary, "steps", "serve"}, s.BuildShell.DockerCommand...)
 	}
 
 	var err error
