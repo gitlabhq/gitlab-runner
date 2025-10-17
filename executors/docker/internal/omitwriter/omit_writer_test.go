@@ -1,6 +1,6 @@
 //go:build !integration
 
-package exec
+package omitwriter
 
 import (
 	"strings"
@@ -39,7 +39,7 @@ func Test_OmitWriter(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			writer := newOmitWriter()
+			writer := New()
 
 			for _, input := range tc.input {
 				_, err := writer.Write([]byte(input))

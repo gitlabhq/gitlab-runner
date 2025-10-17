@@ -2,13 +2,16 @@ package exec
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/omitwriter"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	"golang.org/x/sync/errgroup"
@@ -97,7 +100,7 @@ func (td *tunnelingDialer) containerExec(ctx context.Context, source io.ReadClos
 	eg.Go(func() error {
 		//nolint:errcheck
 		defer hijacked.Close()
-		stderr := newOmitWriter()
+		stderr := omitwriter.New()
 		_, err = stdcopy.StdCopy(sink, stderr, hijacked.Reader)
 		if err != nil {
 			return fmt.Errorf("streaming out of container %q: %w (%w)", td.containerID, err, stderr.Error())
@@ -107,3 +110,49 @@ func (td *tunnelingDialer) containerExec(ctx context.Context, source io.ReadClos
 
 	return eg.Wait()
 }
+
+type rwConn struct {
+	io.WriteCloser
+	io.ReadCloser
+}
+
+func (conn *rwConn) CloseWrite() error {
+	return silenceAlreadyClosed(conn.WriteCloser.Close())
+}
+
+func (conn *rwConn) CloseRead() error {
+	return silenceAlreadyClosed(conn.ReadCloser.Close())
+}
+
+func (conn *rwConn) Close() error {
+	defer conn.WriteCloser.Close()
+
+	if err := silenceAlreadyClosed(conn.ReadCloser.Close()); err != nil {
+		return err
+	}
+
+	return silenceAlreadyClosed(conn.WriteCloser.Close())
+}
+
+func silenceAlreadyClosed(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, net.ErrClosed) {
+		return nil
+	}
+
+	return err
+}
+
+func (*rwConn) LocalAddr() net.Addr                { return addr{} }
+func (*rwConn) RemoteAddr() net.Addr               { return addr{} }
+func (*rwConn) SetDeadline(t time.Time) error      { return fmt.Errorf("unsupported") }
+func (*rwConn) SetReadDeadline(t time.Time) error  { return fmt.Errorf("unsupported") }
+func (*rwConn) SetWriteDeadline(t time.Time) error { return fmt.Errorf("unsupported") }
+
+type addr struct{}
+
+func (addr) Network() string { return "gocat.Conn" }
+func (addr) String() string  { return "gocat.Conn" }
