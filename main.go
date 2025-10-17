@@ -22,6 +22,7 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/fleeting"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
+	_ "gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/custom"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/autoscaler"
