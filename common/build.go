@@ -550,71 +550,9 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		return err
 	}
 
-	//nolint:nestif
+	// execute user provided scripts
 	if err == nil {
-		timeouts := b.getStageTimeoutContexts(ctx,
-			stageTimeout{"RUNNER_SCRIPT_TIMEOUT", 0},
-			stageTimeout{"RUNNER_AFTER_SCRIPT_TIMEOUT", AfterScriptTimeout})
-
-		scriptCtx, cancel := timeouts["RUNNER_SCRIPT_TIMEOUT"]()
-		defer cancel()
-
-		// update trace's cancel function so that the main script can be cancelled,
-		// with after_script and later stages to still complete.
-		trace.SetCancelFunc(cancel)
-
-		b.printPolicyOptions()
-
-		for _, s := range b.Steps {
-			// after_script has a separate BuildStage. See common.BuildStageAfterScript
-			if s.Name == StepNameAfterScript {
-				continue
-			}
-			err = b.executeStage(scriptCtx, StepToBuildStage(s), executor)
-			if err != nil {
-				break
-			}
-		}
-
-		switch {
-		// if parent context is fine but script context was cancelled we ensure the build error
-		// failure reason is "canceled".
-		case ctx.Err() == nil && errors.Is(scriptCtx.Err(), context.Canceled):
-			err = &BuildError{
-				Inner:         ErrJobCanceled,
-				FailureReason: JobCanceled,
-			}
-
-			b.logger.Warningln("script canceled externally (UI, API)")
-
-		// If the parent context reached deadline, don't do anything different than usual.
-		// If the script context reached deadline, return the deadline error.
-		case !errors.Is(ctx.Err(), context.DeadlineExceeded) && errors.Is(scriptCtx.Err(), context.DeadlineExceeded):
-			err = &BuildError{
-				Inner:         fmt.Errorf("%w: %w", ErrJobScriptTimeout, scriptCtx.Err()),
-				FailureReason: JobExecutionTimeout,
-			}
-		}
-
-		afterScriptCtx, cancel := timeouts["RUNNER_AFTER_SCRIPT_TIMEOUT"]()
-		defer cancel()
-
-		if afterScriptErr := b.executeAfterScript(afterScriptCtx, err, executor); afterScriptErr != nil {
-			// the parent deadline being exceeded is reported at a later stage, so we
-			// only focus on errors specific to after_script here.
-			if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				// By default after-script ignores errors, but this can
-				// be disabled via the AFTER_SCRIPT_IGNORE_ERRORS variable.
-
-				if b.Settings().AfterScriptIgnoreErrors {
-					b.logger.Warningln("after_script failed, but job will continue unaffected:", afterScriptErr)
-				} else if err == nil {
-					// If there's an existing error don't overwrite it with
-					// the after-script error.
-					err = afterScriptErr
-				}
-			}
-		}
+		err = b.executeUserScripts(ctx, trace, executor)
 	}
 
 	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
@@ -660,6 +598,76 @@ func (b *Build) executePrepareScripts(ctx context.Context, executor Executor) (e
 	}
 
 	return err, true
+}
+
+func (b *Build) executeUserScripts(ctx context.Context, trace JobTrace, executor Executor) error {
+	var err error
+
+	timeouts := b.getStageTimeoutContexts(ctx,
+		stageTimeout{"RUNNER_SCRIPT_TIMEOUT", 0},
+		stageTimeout{"RUNNER_AFTER_SCRIPT_TIMEOUT", AfterScriptTimeout})
+
+	scriptCtx, cancel := timeouts["RUNNER_SCRIPT_TIMEOUT"]()
+	defer cancel()
+
+	// update trace's cancel function so that the main script can be cancelled,
+	// with after_script and later stages to still complete.
+	trace.SetCancelFunc(cancel)
+
+	b.printPolicyOptions()
+
+	for _, s := range b.Steps {
+		// after_script has a separate BuildStage. See common.BuildStageAfterScript
+		if s.Name == StepNameAfterScript {
+			continue
+		}
+		err = b.executeStage(scriptCtx, StepToBuildStage(s), executor)
+		if err != nil {
+			break
+		}
+	}
+
+	switch {
+	// if parent context is fine but script context was cancelled we ensure the build error
+	// failure reason is "canceled".
+	case ctx.Err() == nil && errors.Is(scriptCtx.Err(), context.Canceled):
+		err = &BuildError{
+			Inner:         ErrJobCanceled,
+			FailureReason: JobCanceled,
+		}
+
+		b.logger.Warningln("script canceled externally (UI, API)")
+
+	// If the parent context reached deadline, don't do anything different than usual.
+	// If the script context reached deadline, return the deadline error.
+	case !errors.Is(ctx.Err(), context.DeadlineExceeded) && errors.Is(scriptCtx.Err(), context.DeadlineExceeded):
+		err = &BuildError{
+			Inner:         fmt.Errorf("%w: %w", ErrJobScriptTimeout, scriptCtx.Err()),
+			FailureReason: JobExecutionTimeout,
+		}
+	}
+
+	afterScriptCtx, cancel := timeouts["RUNNER_AFTER_SCRIPT_TIMEOUT"]()
+	defer cancel()
+
+	if afterScriptErr := b.executeAfterScript(afterScriptCtx, err, executor); afterScriptErr != nil {
+		// the parent deadline being exceeded is reported at a later stage, so we
+		// only focus on errors specific to after_script here.
+		if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			// By default after-script ignores errors, but this can
+			// be disabled via the AFTER_SCRIPT_IGNORE_ERRORS variable.
+
+			if b.Settings().AfterScriptIgnoreErrors {
+				b.logger.Warningln("after_script failed, but job will continue unaffected:", afterScriptErr)
+			} else if err == nil {
+				// If there's an existing error don't overwrite it with
+				// the after-script error.
+				err = afterScriptErr
+			}
+		}
+	}
+
+	return err
 }
 
 func (b *Build) pickPriorityError(jobErr error, archiveCacheErr error, artifactUploadErr error) error {
