@@ -544,32 +544,10 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	startTime := time.Now()
 	b.createReferees(executor)
 
-	// Prepare stage
-	err := b.executeStage(ctx, BuildStagePrepare, executor)
-	if err != nil {
-		return fmt.Errorf(
-			"prepare environment: %w. "+
-				"Check https://docs.gitlab.com/runner/shells/#shell-profile-loading for more information",
-			err,
-		)
-	}
-
-	err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts(), func(attempt int) error {
-		if attempt == 1 {
-			// If GetSources fails we delete all tracked and untracked files. This is
-			// because Git's submodule support has various bugs that cause fetches to
-			// fail if submodules have changed.
-			return b.executeStage(ctx, BuildStageClearWorktree, executor)
-		}
-
-		return nil
-	})
-
-	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts(), nil)
-	}
-	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts(), nil)
+	// execute prepare scripts
+	err, cont := b.executePrepareScripts(ctx, executor)
+	if !cont {
+		return err
 	}
 
 	//nolint:nestif
@@ -650,6 +628,38 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	b.removeFileBasedVariables(ctx, executor)
 
 	return b.pickPriorityError(err, archiveCacheErr, artifactUploadErr)
+}
+
+func (b *Build) executePrepareScripts(ctx context.Context, executor Executor) (error, bool) {
+	// Prepare stage
+	err := b.executeStage(ctx, BuildStagePrepare, executor)
+	if err != nil {
+		return fmt.Errorf(
+			"prepare environment: %w. "+
+				"Check https://docs.gitlab.com/runner/shells/#shell-profile-loading for more information",
+			err,
+		), false
+	}
+
+	err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts(), func(attempt int) error {
+		if attempt == 1 {
+			// If GetSources fails we delete all tracked and untracked files. This is
+			// because Git's submodule support has various bugs that cause fetches to
+			// fail if submodules have changed.
+			return b.executeStage(ctx, BuildStageClearWorktree, executor)
+		}
+
+		return nil
+	})
+
+	if err == nil {
+		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts(), nil)
+	}
+	if err == nil {
+		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts(), nil)
+	}
+
+	return err, true
 }
 
 func (b *Build) pickPriorityError(jobErr error, archiveCacheErr error, artifactUploadErr error) error {
