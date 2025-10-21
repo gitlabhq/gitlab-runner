@@ -1079,8 +1079,9 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 func (s *executor) buildUiGidCollector(os string) (api.Container, error) {
 	const containerName = "init-build-uid-gid-collector"
 
+	kubernetesOptions := s.options.Image.ExecutorOptions.Kubernetes.Expand(s.Build.GetAllVariables())
 	securityContext := s.getSecurityContextWithUIDGID(
-		string(s.options.Image.ExecutorOptions.Kubernetes.User),
+		string(kubernetesOptions.User),
 		containerName,
 		s.Config.Kubernetes.BuildContainerSecurityContext,
 	)
@@ -2179,8 +2180,9 @@ func (s *executor) preparePodServices() ([]api.Container, error) {
 
 	for i, name := range s.options.getSortedServiceNames() {
 		service := s.options.Services[name]
+		kubernetesOptions := service.ExecutorOptions.Kubernetes.Expand(s.Build.GetAllVariables())
 		securityContext := s.getSecurityContextWithUIDGID(
-			string(service.ExecutorOptions.Kubernetes.User),
+			string(kubernetesOptions.User),
 			name,
 			s.Config.Kubernetes.ServiceContainerSecurityContext,
 		)
@@ -2301,8 +2303,9 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 		return api.Container{}, api.Container{}, err
 	}
 
+	kubernetesOptions := s.options.Image.ExecutorOptions.Kubernetes.Expand(s.Build.GetAllVariables())
 	securityContext := s.getSecurityContextWithUIDGID(
-		string(s.options.Image.ExecutorOptions.Kubernetes.User),
+		string(kubernetesOptions.User),
 		buildContainerName,
 		s.Config.Kubernetes.BuildContainerSecurityContext,
 	)

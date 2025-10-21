@@ -471,6 +471,13 @@ func (ido *ImageDockerOptions) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (ido *ImageDockerOptions) Expand(vars JobVariables) ImageDockerOptions {
+	return ImageDockerOptions{
+		Platform: vars.ExpandValue(ido.Platform),
+		User:     StringOrInt64(vars.ExpandValue(string(ido.User))),
+	}
+}
+
 func (iko *ImageKubernetesOptions) UnmarshalJSON(data []byte) error {
 	type imageKubernetesOptions ImageKubernetesOptions
 	inner := imageKubernetesOptions{}
@@ -482,6 +489,12 @@ func (iko *ImageKubernetesOptions) UnmarshalJSON(data []byte) error {
 	// call validate after json.Unmarshal so the former handles bad json.
 	iko.unsupportedOptions = iko.validate(data, SupportedExecutorOptions["kubernetes"], "kubernetes executor", "image")
 	return nil
+}
+
+func (iko *ImageKubernetesOptions) Expand(vars JobVariables) ImageKubernetesOptions {
+	return ImageKubernetesOptions{
+		User: StringOrInt64(vars.ExpandValue(string(iko.User))),
+	}
 }
 
 func (iko *ImageKubernetesOptions) GetUIDGID() (int64, int64, error) {

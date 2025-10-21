@@ -2553,6 +2553,7 @@ func TestDockerImageWithUser(t *testing.T) {
 		"ok allowed users, runner user specified": {allowedUsers: []string{"baba"}, runnerUser: "baba", want: "baba"},
 		"ok allowed users, job user specified":    {allowedUsers: []string{"baba"}, jobUser: "baba", want: "baba"},
 		"ok allowed users, both specified":        {allowedUsers: []string{"baba"}, runnerUser: "baba", jobUser: "yaga", want: "baba"},
+		"ok allowed users, job user as variable":  {allowedUsers: []string{"baba"}, jobUser: "${TTUSER}", want: "baba"},
 
 		"bad allowed users, runner user specified": {allowedUsers: []string{"yaga"}, runnerUser: "baba", want: "", wantErr: true},
 		"bad allowed users, job user specified":    {allowedUsers: []string{"yaga"}, jobUser: "baba", want: "", wantErr: true},
@@ -2589,6 +2590,11 @@ func TestDockerImageWithUser(t *testing.T) {
 				Return(nil).Maybe()
 			c.On("ContainerInspect", mock.Anything, "abc").
 				Return(container.InspectResponse{}, nil).Maybe()
+
+			e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+				Key:   "TTUSER",
+				Value: tt.want,
+			})
 
 			err := e.createVolumesManager()
 			require.NoError(t, err)

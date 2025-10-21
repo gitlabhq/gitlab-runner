@@ -34,7 +34,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
-func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName string) {
+func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName, platform string) {
 	c := docker.NewMockClient(t)
 	p := pull.NewMockManager(t)
 
@@ -117,15 +117,30 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	err = e.createVolumesManager()
 	require.NoError(t, err)
 
+	imageConfig := common.Image{
+		Name: description,
+	}
+	if platform != "" {
+		imageConfig.ExecutorOptions = common.ImageExecutorOptions{
+			Docker: common.ImageDockerOptions{
+				Platform: "${PLATFORM}",
+			},
+		}
+		e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+			Key:   "PLATFORM",
+			Value: platform,
+		})
+	}
+
 	linksMap := make(map[string]*container.Summary)
-	err = e.createFromServiceDefinition(0, common.Image{Name: description}, linksMap)
+	err = e.createFromServiceDefinition(0, imageConfig, linksMap)
 	assert.NoError(t, err)
 }
 
 func TestServiceFromNamedImage(t *testing.T) {
 	for _, test := range service_test.Services {
 		t.Run(test.Description, func(t *testing.T) {
-			testServiceFromNamedImage(t, test.Description, test.Image, test.Service)
+			testServiceFromNamedImage(t, test.Description, test.Image, test.Service, test.Platform)
 		})
 	}
 }
