@@ -800,7 +800,11 @@ func (j *JobResponse) ValidateStepsJobRequest(executorSupportsNativeSteps bool) 
 		j.Image.Name = "registry.gitlab.com/gitlab-org/step-runner:v0"
 	}
 
-	if executorSupportsNativeSteps && j.NativeStepsRequested() {
+	if executorSupportsNativeSteps {
+		// If the executor supports native step execution and the job was specified as steps, execute the job via native
+		// steps integration. In other words, disallow executing the job in shim mode if the executor supports native
+		// steps.
+
 		// If native steps is enabled, the script steps won't be executed anyway, but this change ensures the job log
 		// trace is coherent since it will print: Executing "step_run" stage of the job script
 		j.Steps = Steps{{Name: StepNameRun}}

@@ -794,19 +794,9 @@ func TestJobResponse_Run(t *testing.T) {
 			wantJSON: `
 {
   "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Variables":[
-    {
-      "Key":"STEPS",
-      "Value":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-      "Raw":true
-    }
-  ],
   "Steps":[
     {
-      "Name":"script",
-      "Script":["step-runner ci"],
-      "Timeout":3600,
-      "When":"on_success"
+      "Name":"run"
     }
   ],
   "Image":{"Name":"registry.gitlab.com/gitlab-org/step-runner:v0"}
