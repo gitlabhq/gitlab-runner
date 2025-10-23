@@ -658,8 +658,7 @@ func TestJobResponse_Run(t *testing.T) {
       "Timeout":3600,
       "When":"on_success"
     }
-  ],
-  "Image":{"Name":"registry.gitlab.com/gitlab-org/step-runner:v0"}
+  ]
 }`,
 		},
 		"steps are requested via shim, image unmodified": {
@@ -744,8 +743,7 @@ func TestJobResponse_Run(t *testing.T) {
     {
       "Name":"run"
     }
-  ],
-  "Image":{"Name":"registry.gitlab.com/gitlab-org/step-runner:v0"}
+  ]
 }`,
 		},
 		"steps request via native exec, executor does not support native exec": {
@@ -781,8 +779,7 @@ func TestJobResponse_Run(t *testing.T) {
       "Timeout":3600,
       "When":"on_success"
     }
-  ],
-  "Image":{"Name":"registry.gitlab.com/gitlab-org/step-runner:v0"}
+  ]
 }`,
 		},
 		"steps are requested via shim, executor supports native exec": {
@@ -798,8 +795,7 @@ func TestJobResponse_Run(t *testing.T) {
     {
       "Name":"run"
     }
-  ],
-  "Image":{"Name":"registry.gitlab.com/gitlab-org/step-runner:v0"}
+  ]
 }`,
 		},
 	}
