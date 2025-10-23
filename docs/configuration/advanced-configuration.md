@@ -1385,6 +1385,7 @@ The IAM policy for this role must have permissions to do the following actions f
 - `s3:GetObjectVersion`
 - `s3:GetObject`
 - `s3:DeleteObject`
+- `s3:ListBucket`
 
 If you use `ServerSideEncryption` of type `KMS`, this role must also have permission to do the following actions for the specified AWS KMS Key:
 
@@ -1451,6 +1452,7 @@ permissions:
 
 - `s3:GetObject` access to the bucket specified in `BucketName`.
 - `s3:PutObject` access to the bucket specified in `BucketName`.
+- `s3:ListBucket` access to the bucket specified in `BucketName`.
 - `kms:Decrypt` and `kms:GenerateDataKey` if server side encryption with KMS or DSSE-KMS is enabled.
 
 For example, suppose you have an IAM role called `my-instance-role`
