@@ -312,14 +312,20 @@ func (b *BashWriter) RmFile(path string) {
 func (b *BashWriter) RmFilesRecursive(path string, name string) {
 	b.IfDirectory(path)
 	// `find -delete` is not portable; https://unix.stackexchange.com/a/194348
-	b.Linef("find %q -name %q -type f -exec rm -f {} +", path, name)
+	// The '+' `find -exec` terminator is the default as it performs less invocations on supported systems.
+	//   Other systems (e.g. z/OS) will use the ';' terminator when the initial 'test find' command fails, causing `$et` to be updated.
+	//   The intitial `test find` command is used to prevent undesirable stderr output from a failed execution using the `+` terminator.
+	b.Linef(`et='+' ; find /dev/null -exec true {} + 2>/dev/null || et=';' ; find %q -name %q -type f -exec rm -f {} "${et}"`, path, name)
 	b.EndIf()
 }
 
 func (b *BashWriter) RmDirsRecursive(path string, name string) {
 	b.IfDirectory(path)
 	// `find -delete` is not portable; https://unix.stackexchange.com/a/194348
-	b.Linef("find %q -name %q -type d -depth -exec rm -rf -- {} +", path, name)
+	// The '+' `find -exec` terminator is the default as it performs less invocations on supported systems.
+	//   Other systems (e.g. z/OS) will use the ';' terminator when the initial 'test find' command fails, causing `$et` to be updated.
+	//   The intitial `test find` command is used to prevent undesirable stderr output from a failed execution using the `+` terminator.
+	b.Linef(`et='+' ; find /dev/null -exec true {} + 2>/dev/null || et=';' ; find %q -name %q -type d -depth -exec rm -rf -- {} "${et}"`, path, name)
 	b.EndIf()
 }
 
