@@ -7,23 +7,23 @@ title: Docker Autoscaler executor
 
 {{< history >}}
 
-- GitLab Runner 15.11.0で[実験](https://docs.gitlab.com/policy/development_stages_support/#experiment)として導入されました。
-- GitLab Runner 16.6で[ベータ](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404)に[変更](https://docs.gitlab.com/policy/development_stages_support/#beta)されました。
+- GitLab Runner 15.11.0で[実験的機能](https://docs.gitlab.com/policy/development_stages_support/#experiment)として導入されました。
+- GitLab Runner 16.6で[ベータ](https://docs.gitlab.com/policy/development_stages_support/#beta)に[変更](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404)されました。
 - GitLab Runner 17.1で[一般提供](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29221)になりました。
 
 {{< /history >}}
 
-Docker Autoscaler executorを使用する前に、一連の既知のイシューについて、GitLab Runner自動スケールに関する[フィードバックイシュー](https://gitlab.com/gitlab-org/gitlab/-/issues/408131)を参照してください。
+Docker Autoscaler executorを使用する前に、一連の既知のイシューについて、GitLab Runnerオートスケールに関する[フィードバックイシュー](https://gitlab.com/gitlab-org/gitlab/-/issues/408131)を参照してください。
 
-Docker Autoscaler executorは、Runnerマネージャーが処理するジョブに対処するために、オンデマンドでインスタンスを作成する自動スケール対応のDocker executorです。[Docker executor](docker.md)をラップしているため、すべてのDocker executorのオプションと機能がサポートされています。
+Docker Autoscaler executorは、Runnerマネージャーが処理するジョブに対処するために、オンデマンドでインスタンスを作成するオートスケール対応のDocker executorです。[Docker executor](docker.md)をラップしているため、すべてのDocker executorのオプションと機能がサポートされています。
 
-Docker Autoscalerは、[フリートプラグイン](https://gitlab.com/gitlab-org/fleeting/fleeting)を使用して自動スケールします。フリートとは、自動スケールされたインスタンスのグループの抽象化であり、Google Cloud、AWS、Azureなどのクラウドプロバイダーをサポートするプラグインを使用します。
+Docker Autoscalerは、[フリートプラグイン](https://gitlab.com/gitlab-org/fleeting/plugins)を使用してオートスケールします。フリートとは、オートスケールされたインスタンスのグループの抽象化であり、Google Cloud、AWS、Azureなどのクラウドプロバイダーをサポートするプラグインを使用します。
 
-## フリートプラグインをインストールする
+## フリートプラグインをインストールする {#install-a-fleeting-plugin}
 
-ご使用のターゲットプラットフォームに対応するプラグインをインストールするには、[フリートプラグインをインストールする](../fleet_scaling/fleeting.md#install-a-fleeting-plugin)を参照してください。
+ご使用のターゲットプラットフォームに対応するプラグインをインストールするには、[フリートプラグインをインストールする](../fleet_scaling/fleeting.md#install-a-fleeting-plugin)を参照してください。具体的な設定について詳しくは、[それぞれのプラグインプロジェクトのドキュメント](https://gitlab.com/gitlab-org/fleeting/plugins)を参照してください。
 
-## Docker Autoscalerを設定する
+## Docker Autoscalerを設定する {#configure-docker-autoscaler}
 
 Docker Autoscaler executorは[Docker executor](docker.md)をラップしているため、すべてのDocker executorオプションと機能がサポートされています。
 
@@ -34,28 +34,35 @@ Docker Autoscalerを設定するには、`config.toml`で以下のように設�
   - [`[runners.docker]`](../configuration/advanced-configuration.md#the-runnersdocker-section)
   - [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 
-### 各Runner設定の専用自動スケールグループ
+### 各Runner設定の専用オートスケールグループ {#dedicated-autoscaling-groups-for-each-runner-configuration}
 
-各Docker Autoscaler設定には、それぞれに専用の自動スケールリソースが必要です。
+各Docker Autoscaler設定には、それぞれに専用のオートスケールリソースが必要です。
 
-- AWSでは専用の自動スケールグループ
+- AWSでは専用のオートスケールグループ
 - GCPでは専用のインスタンスグループ
 - Azureでは専用のスケールセット
 
-これらの自動スケールリソースを以下の要素間で共有しないでください。
+これらのオートスケールリソースを以下の要素間で共有しないでください。
 
 - 複数のRunnerマネージャー（個別のGitLab Runnerインストール）
 - 同じRunnerマネージャーの`config.toml`内の複数の`[[runners]]`エントリ
 
-Docker Autoscalerは、クラウドプロバイダーの自動スケールリソースと同期する必要があるインスタンスの状態を追跡します。複数のシステムが同じ自動スケールリソースを管理しようとすると、競合するスケーリングコマンドが発行され、予測できない動作、ジョブの失敗、および高い可能性があるコストが発生する可能性があります。
+Docker Autoscalerは、クラウドプロバイダーのオートスケールリソースと同期する必要があるインスタンスの状態を追跡します。複数のシステムが同じオートスケールリソースを管理しようとすると、競合するスケーリングコマンドが発行され、予測できない動作、ジョブの失敗、および高い可能性があるコストが発生する可能性があります。
 
-### 例:インスタンスあたり1つのジョブに対するAWS自動スケール
+### 次に例を示します。インスタンスあたり1つのジョブに対するAWSオートスケール {#example-aws-autoscaling-for-1-job-per-instance}
 
 前提要件:
 
 - [Docker Engine](https://docs.docker.com/engine/)がインストールされたAMI。RunnerマネージャーがAMI上のDockerソケットにアクセスできるようにするには、ユーザーが`docker`グループに所属している必要があります。
-- AWS自動スケールグループ。Runnerがスケーリングを処理するため、スケーリングポリシーには「none」を使用します。インスタンスのスケールイン保護を有効にします。
-- [適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)を持つIAMポリシー
+
+  {{< alert type="note" >}}
+
+  AMIでは、GitLab Runnerをインストールする必要はありません。AMIを使用して起動されたインスタンスを、GitLabにRunnerとして登録しないようにしてください。
+
+  {{< /alert >}}
+
+- AWSオートスケールグループ。Runnerがスケーリングを処理するため、スケーリングポリシーには「none」を使用します。インスタンスのスケールイン保護を有効にします。
+- [適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)が設定されたIAMポリシー。
 
 この設定では以下がサポートされています。
 
@@ -115,12 +122,26 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-### 例:インスタンスあたり1つのジョブに対するGoogle Cloudインスタンスグループ
+### 例: インスタンスあたり1つのジョブに対するGoogle Cloudインスタンスグループ {#example-google-cloud-instance-group-for-1-job-per-instance}
 
 前提要件:
 
 - [Docker Engine](https://docs.docker.com/engine/)がインストールされたVMイメージ（[`COS`](https://cloud.google.com/container-optimized-os/docs)など）。
-- Google Cloudインスタンスグループ。**Autoscaling mode**で**Do not autoscale**を選択します。Runnerが自動スケールを処理し、Google Cloudインスタンスグループは処理しません。
+
+  {{< alert type="note" >}}
+
+  VMイメージでは、GitLab Runnerをインストールする必要はありません。VMイメージを使用して起動されたインスタンスを、GitLabにRunnerとして登録しないようにしてください。
+  
+  {{< /alert >}}
+
+- シングルゾーンGoogle Cloudインスタンスグループ。**Autoscaling mode**で**Do not autoscale**を選択します。Runnerがオートスケールを処理し、Google Cloudインスタンスグループは処理しません。
+
+  {{< alert type="note" >}}
+
+  現在のところ、マルチゾーンインスタンスグループはサポートされていません。将来マルチゾーンインスタンスグループをサポートするための[イシュー](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud/-/issues/20)が存在しています。
+
+  {{< /alert >}}
+
 - [適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions)が設定されたIAMポリシー。GKEクラスターにRunnerをデプロイする場合は、KubernetesサービスアカウントとGCPサービスアカウントの間にIAMバインディングを追加できます。`credentials_file`でキーファイルを使用する代わりに、`iam.workloadIdentityUser`ロールでこのバインディングを追加し、GCPに対して認証できます。
 
 この設定では以下がサポートされています。
@@ -181,12 +202,19 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-### 例:インスタンスあたり1つのジョブに対するAzureスケールセット
+### 例: インスタンスあたり1つのジョブに対するAzureスケールセット {#example-azure-scale-set-for-1-job-per-instance}
 
 前提要件:
 
-- [Docker Engine](https://docs.docker.com/engine/)がインストールされたAzure VMイメージ。
-- 自動スケールポリシーが`manual`に設定されているAzureスケールセット。Runnerがスケーリングを処理します。
+- [Docker Engine](https://docs.docker.com/engine/)がインストールされているAzure VMイメージ。
+
+  {{< alert type="note" >}}
+
+  VMイメージでは、GitLab Runnerをインストールする必要はありません。VMイメージを使用して起動されたインスタンスを、GitLabにRunnerとして登録しないようにしてください。
+
+  {{< /alert >}}
+
+- オートスケールポリシーが`manual`に設定されているAzureスケールセット。Runnerがスケーリングを処理します。
 
 この設定では以下がサポートされています。
 
@@ -248,11 +276,11 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-## トラブルシューティング
+## トラブルシューティング {#troubleshooting}
 
-### `ERROR: error during connect: ssh tunnel: EOF ()`
+### `ERROR: error during connect: ssh tunnel: EOF ()` {#error-error-during-connect-ssh-tunnel-eof-}
 
-インスタンスが外部ソース（自動スケールグループや自動スクリプトなど）によって削除された場合、ジョブは次のエラーで失敗します。
+インスタンスが外部ソース（オートスケールグループや自動スクリプトなど）によって削除された場合、ジョブは次のエラーで失敗します。
 
 ```plaintext
 ERROR: Job failed (system failure): error during connect: Post "http://internal.tunnel.invalid/v1.43/containers/xyz/wait?condition=not-running": ssh tunnel: EOF ()
@@ -265,3 +293,22 @@ ERROR: instance unexpectedly removed    instance=<instance_id> max-use-count=999
 ```
 
 このエラーを解決するには、クラウドプロバイダープラットフォームでインスタンスに関連するイベントを確認してください。たとえばAWSでは、イベントソース`ec2.amazonaws.com`のCloudTrailイベント履歴を確認します。
+
+### `ERROR: Preparation failed: unable to acquire instance: context deadline exceeded` {#error-preparation-failed-unable-to-acquire-instance-context-deadline-exceeded}
+
+[AWSフリートプラグイン](https://gitlab.com/gitlab-org/fleeting/plugins/aws)を使用している場合、ジョブが失敗して次のエラーになることが断続的に発生する可能性があります。
+
+```plaintext
+ERROR: Preparation failed: unable to acquire instance: context deadline exceeded
+```
+
+`reserved`のインスタンス数が変動するため、多くの場合、これはAWS CloudWatchのログの中に示されます。
+
+```plaintext
+"2024-07-23T18:10:24Z","instance_count:1,max_instance_count:1000,acquired:0,unavailable_capacity:0,pending:0,reserved:0,idle_count:0,scale_factor:0,scale_factor_limit:0,capacity_per_instance:1","required scaling change",
+"2024-07-23T18:10:25Z","instance_count:1,max_instance_count:1000,acquired:0,unavailable_capacity:0,pending:0,reserved:1,idle_count:0,scale_factor:0,scale_factor_limit:0,capacity_per_instance:1","required scaling change",
+"2024-07-23T18:11:15Z","instance_count:1,max_instance_count:1000,acquired:0,unavailable_capacity:0,pending:0,reserved:0,idle_count:0,scale_factor:0,scale_factor_limit:0,capacity_per_instance:1","required scaling change",
+"2024-07-23T18:11:16Z","instance_count:1,max_instance_count:1000,acquired:0,unavailable_capacity:0,pending:0,reserved:1,idle_count:0,scale_factor:0,scale_factor_limit:0,capacity_per_instance:1","required scaling change",
+```
+
+このエラーを解決するには、AWSでオートスケールグループに対して`AZRebalance`プロセスが無効になっていることを確認してください。
