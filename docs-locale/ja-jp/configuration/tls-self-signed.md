@@ -2,13 +2,13 @@
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-title: 自己署名証明書またはカスタム公開認証局
+title: 自己署名証明書またはカスタム認証局
 ---
 
 {{< details >}}
 
-- プラン:Free、Premium、Ultimate
-- 製品:GitLab.com、GitLab Self-Managed、GitLab Dedicated
+- プラン: Free、Premium、Ultimate
+- 提供形態: GitLab.com、GitLab Self-Managed、GitLab Dedicated
 
 {{< /details >}}
 
@@ -22,34 +22,34 @@ GitLab Runnerには、TLSピアの検証に使用される証明書を設定す�
 
 - **GitLabサーバーへの接続の場合**は、証明書ファイルを指定できます。詳しくは、[GitLabサーバーを対象とする自己署名証明書でサポートされているオプション](#supported-options-for-self-signed-certificates-targeting-the-gitlab-server)セクションで説明します。
 
-  **これにより、Runnerを登録する際の`x509: certificate signed by unknown authority`の問題が解決されます**。
+    **これにより、Runnerを登録する際の`x509: certificate signed by unknown authority`の問題が解決されます**。
 
-  既存のRunnerの場合、ジョブを確認しようとするとRunnerログに同じエラーが示されることがあります。
+    既存のRunnerの場合、ジョブを確認しようとするとRunnerログに同じエラーが示されることがあります。
 
-  ```plaintext
-  Couldn't execute POST against https://hostname.tld/api/v4/jobs/request:
-  Post https://hostname.tld/api/v4/jobs/request: x509: certificate signed by unknown authority
-  ```
+    ```plaintext
+    Couldn't execute POST against https://hostname.tld/api/v4/jobs/request:
+    Post https://hostname.tld/api/v4/jobs/request: x509: certificate signed by unknown authority
+    ```
 
 - **ユーザースクリプト、キャッシュ サーバーへの接続、外部Git LFSストアへの接続などの他のシナリオにも対応するより一般的な方法**として、証明書を指定してコンテナにインストールできます。詳しくは、[DockerおよびKubernetes executorのTLS証明書を信頼する](#trusting-tls-certificates-for-docker-and-kubernetes-executors)セクションで説明します。
 
-  証明書が欠落しているGit LFSオペレーションに関するジョブログのエラーの例
+    証明書が欠落しているGit LFSオペレーションに関するジョブログのエラーの例
 
-  ```plaintext
-  LFS: Get https://object.hostname.tld/lfs-dev/c8/95/a34909dce385b85cee1a943788044859d685e66c002dbf7b28e10abeef20?X-Amz-Expires=600&X-Amz-Date=20201006T043010Z&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=svcgitlabstoragedev%2F20201006%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-SignedHeaders=host&X-Amz-Signature=012211eb0ff0e374086e8c2d37556f2d8ca4cc948763e90896f8f5774a100b55: x509: certificate signed by unknown authority
-  ```
+    ```plaintext
+    LFS: Get https://object.hostname.tld/lfs-dev/c8/95/a34909dce385b85cee1a943788044859d685e66c002dbf7b28e10abeef20?X-Amz-Expires=600&X-Amz-Date=20201006T043010Z&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=svcgitlabstoragedev%2F20201006%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-SignedHeaders=host&X-Amz-Signature=012211eb0ff0e374086e8c2d37556f2d8ca4cc948763e90896f8f5774a100b55: x509: certificate signed by unknown authority
+    ```
 
-## GitLabサーバーを対象とする自己署名証明書のサポートされているオプション
+## GitLabサーバーを対象とする自己署名証明書のサポートされているオプション {#supported-options-for-self-signed-certificates-targeting-the-gitlab-server}
 
 このセクションでは、GitLabサーバーのみがカスタム証明書を必要とする状況について説明します。他のホスト（[プロキシダウンロードが有効](https://docs.gitlab.com/administration/object_storage/#proxy-download)になっていないオブジェクトストレージサービスなど）もカスタム公開認証局（CA）を必要とする場合は、[次のセクション](#trusting-tls-certificates-for-docker-and-kubernetes-executors)を参照してください。
 
 GitLab Runnerは次のオプションをサポートしています。
 
-- **デフォルト - システム証明書を読み取る**:GitLab Runnerはシステム証明書ストアを読み取り、システムに保存されている公開認証局（CA）に照らしてGitLabサーバーを検証します。
+- **デフォルト - システム証明書を読み取る**: GitLab Runnerはシステム証明書ストアを読み取り、システムに保存されている公開認証局（CA）に照らしてGitLabサーバーを検証します。
 
-- **カスタム証明書ファイルを指定する**:GitLab Runnerは、[登録時](../commands/_index.md#gitlab-runner-register)（`gitlab-runner register --tls-ca-file=/path`）および[`config.toml`](advanced-configuration.md)の`[[runners]]`セクションで`tls-ca-file`オプションを公開します。これにより、カスタム証明書ファイルを指定できるようになります。このファイルは、RunnerがGitLabサーバーへのアクセスを試行するたびに読み取られます。GitLab Runner Helmチャートを使用している場合は、[カスタム証明書を使用してGitLabにアクセスする](../install/kubernetes_helm_chart_configuration.md#access-gitlab-with-a-custom-certificate)の説明に従って証明書を設定する必要があります。
+- **カスタム証明書ファイルを指定する**: GitLab Runnerは、[登録時](../commands/_index.md#gitlab-runner-register)（`gitlab-runner register --tls-ca-file=/path`）および[`config.toml`](advanced-configuration.md)の`[[runners]]`セクションで`tls-ca-file`オプションを公開します。これにより、カスタム証明書ファイルを指定できるようになります。このファイルは、RunnerがGitLabサーバーへのアクセスを試行するたびに読み取られます。GitLab Runner Helmチャートを使用している場合は、[カスタム証明書を使用してGitLabにアクセスする](../install/kubernetes_helm_chart_configuration.md#access-gitlab-with-a-custom-certificate)の説明に従って証明書を設定する必要があります。
 
-- **PEM証明書を読み取る**:GitLab Runnerは、定義済みのファイルからPEM証明書（**DER形式はサポートされていない**）を読み取ります。
+- **PEM証明書を読み取る**: GitLab Runnerは、定義済みのファイルからPEM証明書（**DER形式はサポートされていない**）を読み取ります。
   - GitLab Runnerが`root`として実行されている場合は、*nixシステムの`/etc/gitlab-runner/certs/gitlab.example.com.crt`。
 
     サーバーアドレスが`https://gitlab.example.com:8443/`の場合は、`/etc/gitlab-runner/certs/gitlab.example.com.crt`に証明書ファイルを作成します。
@@ -73,36 +73,36 @@ GitLab Runnerは次のオプションをサポートしています。
 
 - GitLabサーバー証明書がCAによって署名されている場合は、GitLabサーバー署名証明書ではなくCA証明書を使用してください。場合によっては、中間証明書もチェーンに追加する必要があります。たとえば、プライマリ証明書、中間証明書、ルート証明書がある場合は、それらすべてを1つのファイルにまとめることができます。
 
-  ```plaintext
-  -----BEGIN CERTIFICATE-----
-  (Your primary SSL certificate: your_domain_name.crt)
-  -----END CERTIFICATE-----
-  -----BEGIN CERTIFICATE-----
-  (Your intermediate certificate)
-  -----END CERTIFICATE-----
-  -----BEGIN CERTIFICATE-----
-  (Your root certificate)
-  -----END CERTIFICATE-----
-  ```
+    ```plaintext
+    -----BEGIN CERTIFICATE-----
+    (Your primary SSL certificate: your_domain_name.crt)
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    (Your intermediate certificate)
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    (Your root certificate)
+    -----END CERTIFICATE-----
+    ```
 
 - 既存のRunnerの証明書を更新する場合は、[再起動](../commands/_index.md#gitlab-runner-restart)します。
 - HTTPを介してすでにRunnerを設定している場合は、`config.toml`でインスタンスパスをGitLabインスタンスの新しいHTTPS URLに更新します。
 - 一時的な安全性の低い回避策として、証明書の検証をスキップする方法があります。このためには、`.gitlab-ci.yml`ファイルの`variables:`セクションでCI変数`GIT_SSL_NO_VERIFY`を`true`に設定します。
 
-### Gitのクローン
+### Gitのクローン {#git-cloning}
 
 Runnerは、`CI_SERVER_TLS_CA_FILE`を使用してCAチェーンを構築するために不足している証明書を挿入します。これにより、公的に信頼されている証明書を使用しないサーバーで`git clone`とアーティファクトが機能するようになります。
 
 このアプローチは安全ですが、Runnerが単一信頼点になります。
 
-## Docker executorとKubernetes executorのTLS証明書を信頼する
+## Docker executorとKubernetes executorのTLS証明書を信頼する {#trusting-tls-certificates-for-docker-and-kubernetes-executors}
 
 コンテナに証明書を登録する際には、次の情報を考慮してください。
 
 - ユーザースクリプトの実行に使用される[**ユーザーイメージ**](https://docs.gitlab.com/ci/yaml/#image)。ユーザースクリプトの証明書を信頼するシナリオでは、証明書のインストール方法についてユーザーが責任を担う必要があります。証明書のインストール手順は、イメージによって異なることがあります。Runnerは、発生し得るすべてのシナリオにおいて証明書をインストールする方法を把握することはできません。
 - Git、アーティファクト、およびキャッシュオペレーションの処理に使用される[**Runnerヘルパーイメージ**](advanced-configuration.md#helper-image)。他のCI/CDステージの証明書を信頼するシナリオでは、ユーザーが行う必要がある操作は、特定の場所（`/etc/gitlab-runner/certs/ca.crt`など）で証明書ファイルを使用できるようにすることだけです。Dockerコンテナがユーザーのために証明書ファイルを自動的にインストールします。
 
-### ユーザースクリプトの証明書を信頼する
+### ユーザースクリプトの証明書を信頼する {#trusting-the-certificate-for-user-scripts}
 
 ビルドがTLSと自己署名証明書またはカスタム証明書を使用する場合は、ピア通信のためにビルドジョブに証明書をインストールします。デフォルトでは、ユーザースクリプトを実行しているDockerコンテナには証明書ファイルがインストールされていません。これは、カスタムキャッシュホストを使用するか、セカンダリ`git clone`を実行するか、`wget`のようなツールでファイルをフェッチするために必要になる場合があります。
 
@@ -126,7 +126,7 @@ Runnerは、`CI_SERVER_TLS_CA_FILE`を使用してCAチェーンを構築する�
           volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
      ```
 
-1. **Linuxのみ**:[`pre_build_script`](advanced-configuration.md#the-runners-section)で、次の操作を行うマップされたファイル（`ca.crt`など）を使用します。
+1. **Linuxのみ**: [`pre_build_script`](advanced-configuration.md#the-runners-section)で、次の操作を行うマップされたファイル（`ca.crt`など）を使用します。
    1. Dockerコンテナ内の`/usr/local/share/ca-certificates/ca.crt`にこのファイルをコピーします。
    1. `update-ca-certificates --fresh`を実行してインストールします。次に例を示します（コマンドは使用しているディストリビューションによって異なります）。
 
@@ -175,11 +175,11 @@ Runnerは、`CI_SERVER_TLS_CA_FILE`を使用してCAチェーンを構築する�
 curl --cacert "${CI_SERVER_TLS_CA_FILE}"  ${URL} -o ${FILE}
 ```
 
-### 他のCI/CDステージの証明書を信頼する
+### 他のCI/CDステージの証明書を信頼する {#trusting-the-certificate-for-the-other-cicd-stages}
 
 Linuxでは`/etc/gitlab-runner/certs/ca.crt`に、Windowsでは`C:\GitLab-Runner\certs\ca.crt`に証明書ファイルをマップできます。Runnerヘルパーイメージは、起動時にこのユーザー定義の`ca.crt`ファイルをインストールし、クローンやアーティファクトのアップロードなどの操作を実行するときにこのファイルを使用します。
 
-#### Docker
+#### Docker {#docker}
 
 - **Linux**:
 
@@ -213,7 +213,7 @@ Linuxでは`/etc/gitlab-runner/certs/ca.crt`に、Windowsでは`C:\GitLab-Runner
       volumes = ["c:\\cache", "c:\\path\\to-ca-cert-dir:C:\\GitLab-Runner\\certs:ro"]
   ```
 
-#### Kubernetes
+#### Kubernetes {#kubernetes}
 
 Kubernetesで実行されているジョブに証明書ファイルを提供するには、次の手順に従います。
 
@@ -249,7 +249,7 @@ Kubernetesで実行されているジョブに証明書ファイルを提供す�
 
   Kubernetes executorによるヘルパーイメージの`ENTRYPOINT`の処理には、[既知のイシュー](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28484)があります。証明書ファイルがマップされている場合、この証明書ファイルはシステム証明書ストアに自動的にインストールされません。
 
-## トラブルシューティング
+## トラブルシューティング {#troubleshooting}
 
 一般的な[SSLトラブルシューティング](https://docs.gitlab.com/omnibus/settings/ssl/ssl_troubleshooting/)のドキュメントを参照してください。
 
@@ -257,9 +257,9 @@ Kubernetesで実行されているジョブに証明書ファイルを提供す�
 
 <!-- markdownlint-disable line-length -->
 
-### プライベートレジストリからexecutorイメージのプルを試行しているときに`x509: certificate signed by unknown authority`が発生する
+### プライベートレジストリからexecutorイメージのプルを試行しているときに`x509: certificate signed by unknown authority`が発生する {#x509-certificate-signed-by-unknown-authority-while-trying-to-pull-executor-images-from-private-registry}
 
-このエラーは、RunnerがexecutorをスケジュールするDockerホストまたはKubernetesノードが、プライベートレジストリの証明書を信頼していない場合に発生します。このエラーを修正するには、関連するルート公開認証局（CA）または証明書チェーンをシステムのトラストストアに追加し、コンテナサービスを再起動します。
+このエラーは、RunnerがexecutorをスケジュールするDockerホストまたはKubernetesノードが、プライベートレジストリの証明書を信頼していない場合に発生します。このエラーを修正するには、関連するルート認証局または証明書チェーンをシステムのトラストストアに追加し、コンテナサービスを再起動します。
 
 UbuntuまたはAlpineを使用している場合は、次のコマンドを実行します。
 
@@ -275,7 +275,7 @@ GitLab RunnerのバージョンとDockerホスト環境によっては、`FF_RES
 
 <!-- markdownlint-enable line-length -->
 
-### ジョブでの`apt-get: not found`エラー
+### ジョブでの`apt-get: not found`エラー {#apt-get-not-found-errors-in-jobs}
 
 [`pre_build_script`](advanced-configuration.md#the-runners-section)コマンドは、Runnerが実行するすべてのジョブよりも前に実行されます。`apk`または`apt-get`のようなディストリビューション固有のコマンドは、イシューを引き起こす可能性があります。ユーザースクリプトの証明書をインストールすると、これらのスクリプトが異なるディストリビューションに基づいた[イメージ](https://docs.gitlab.com/ci/yaml/#image)を使用している場合に、CIジョブが失敗する可能性があります。
 
@@ -284,7 +284,7 @@ GitLab RunnerのバージョンとDockerホスト環境によっては、`FF_RES
 - ディストリビューションに依存しない`pre_build_script`を作成します。
 - [タグ](https://docs.gitlab.com/ci/yaml/#tags)を使用して、Runnerが互換性のあるイメージを持つジョブのみをピックアップするようにします。
 
-### エラー: `self-signed certificate in certificate chain`
+### エラー: `self-signed certificate in certificate chain` {#error-self-signed-certificate-in-certificate-chain}（ヘルプページドキュメントのべースURLがブロックされています: 実行が期限切れです）
 
 CI/CDジョブが次のエラーで失敗します。
 

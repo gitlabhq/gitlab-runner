@@ -7,8 +7,8 @@ title: GitLab Runner Helmチャート
 
 {{< details >}}
 
-- プラン:Free、Premium、Ultimate
-- 製品:GitLab.com、GitLab Self-Managed、GitLab Dedicated
+- プラン: Free、Premium、Ultimate
+- 提供形態: GitLab.com、GitLab Self-Managed、GitLab Dedicated
 
 {{< /details >}}
 
@@ -17,7 +17,7 @@ GitLab Runner Helmチャートは、GitLab RunnerインスタンスをKubernetes
 - GitLab Runnerの[Kubernetes executor](../executors/kubernetes/_index.md)を使用して実行する。
 - 新しいCI/CDジョブごとに、指定されたネームスペースで新しいポッドをプロビジョニングする。
 
-## HelmチャートでGitLab Runnerを設定する
+## HelmチャートでGitLab Runnerを設定する {#configure-gitlab-runner-with-the-helm-chart}
 
 GitLab Runnerの設定の変更を`values.yaml`に保存します。このファイルの設定については、以下を参照してください。
 
@@ -26,18 +26,27 @@ GitLab Runnerの設定の変更を`values.yaml`に保存します。このファ
 
 GitLab Runnerを適切に実行するには、設定ファイルで次の値を設定する必要があります。
 
-- `gitlabUrl`:Runnerの登録先のGitLabサーバーの完全なURL（`https://gitlab.example.com`など）。
-- `rbac: { create: true }`:GitLab Runnerがジョブを実行するポッドを作成するためのRBAC（ロールベースのアクセス制御）ルールを作成します。
-  - 既存の`serviceAccount`を使用する場合は`rbac: { serviceAccountName: "SERVICE_ACCOUNT_NAME" }`も設定する必要があります。
+- `gitlabUrl`: Runnerの登録先のGitLabサーバーの完全なURL（`https://gitlab.example.com`など）。
+- `rbac: { create: true }`: GitLab Runnerがジョブを実行するポッドを作成するためのRBAC（ロールベースのアクセス制御）ルールを作成します。
+  - 既存の`serviceAccount`を使用する場合は、`rbac`にサービスアカウント名を追加してください。
+
+    ```yaml
+    rbac:
+      create: false
+    serviceAccount:
+      create: false
+      name: your-service-account
+    ```
+
   - `serviceAccount`に必要な最小限の権限については、[Runner APIの権限を設定する](../executors/kubernetes/_index.md#configure-runner-api-permissions)を参照してください。
-- `runnerToken`:[GitLab UIでRunnerを作成する](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-runner-authentication-token)ときに取得した認証トークン。
+- `runnerToken`: [GitLab UIでRunnerを作成する](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-runner-authentication-token)ときに取得した認証トークン。
   - このトークンを直接設定するか、シークレットに保存します。
 
 その他の[オプションの設定](kubernetes_helm_chart_configuration.md)も使用できます。
 
 これで、[GitLab Runnerをインストール](#install-gitlab-runner-with-the-helm-chart)する準備ができました。
 
-## Helmチャートを使用してGitLab Runnerをインストールする
+## Helmチャートを使用してGitLab Runnerをインストールする {#install-gitlab-runner-with-the-helm-chart}
 
 前提要件:
 
@@ -49,7 +58,7 @@ GitLab Runnerを適切に実行するには、設定ファイルで次の値を�
 
 HelmチャートからGitLab Runnerをインストールするには、次の手順に従います。
 
-1. GitLab Helm リポジトリを追加します。
+1. GitLab Helmリポジトリを追加します。
 
    ```shell
    helm repo add gitlab https://charts.gitlab.io
@@ -62,13 +71,13 @@ HelmチャートからGitLab Runnerをインストールするには、次の手
    helm search repo -l gitlab/gitlab-runner
    ```
 
-1. GitLab Runnerの最新バージョンにアクセスできない場合は、次のコマンドでチャートを更新します:
+1. GitLab Runnerの最新バージョンにアクセスできない場合は、次のコマンドでチャートを更新します。
 
    ```shell
    helm repo update gitlab
    ```
 
-1. `values.yaml`ファイルでGitLab Runnerを[設定](#configure-gitlab-runner-with-the-helm-chart)したら、必要に応じてパラメーターを変更して、次のコマンドを実行します。
+1. `values.yaml`ファイルでGitLab Runnerを[設定](#configure-gitlab-runner-with-the-helm-chart)したら、必要に応じてパラメータを変更して、次のコマンドを実行します。
 
    ```shell
    # For Helm 2
@@ -78,11 +87,11 @@ HelmチャートからGitLab Runnerをインストールするには、次の手
    helm install --namespace <NAMESPACE> gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
    ```
 
-   - `<NAMESPACE>`:GitLab RunnerをインストールするKubernetesネームスペース。
-   - `<CONFIG_VALUES_FILE>`:カスタム設定を含む値ファイルのパス。作成するには、[HelmチャートでGitLab Runnerを設定する](#configure-gitlab-runner-with-the-helm-chart)を参照してください。
+   - `<NAMESPACE>`: GitLab RunnerをインストールするKubernetesネームスペース。
+   - `<CONFIG_VALUES_FILE>`: カスタム設定を含む値ファイルのパス。作成するには、[HelmチャートでGitLab Runnerを設定する](#configure-gitlab-runner-with-the-helm-chart)を参照してください。
    - GitLab Runner Helmチャートの特定バージョンをインストールするには、`helm install`コマンドに`--version <RUNNER_HELM_CHART_VERSION>`を追加します。任意のバージョンのチャートをインストールできますが、新しい`values.yml`には古いバージョンのチャートとの互換性がない場合があります。
 
-### 使用可能なGitLab Runner Helmチャートのバージョンを確認する
+### 使用可能なGitLab Runner Helmチャートのバージョンを確認する {#check-available-gitlab-runner-helm-chart-versions}
 
 HelmチャートとGitLab Runnerのバージョニング方法は異なります。この2つの間のバージョンマッピングを確認するには、ご使用のHelmのバージョンに対応するコマンドを実行します。
 
@@ -107,26 +116,26 @@ gitlab/gitlab-runner  0.61.2        16.8.0      GitLab Runner
 ...
 ```
 
-## Helmチャートを使用してGitLab Runnerをアップグレードする
+## Helmチャートを使用してGitLab Runnerをアップグレードする {#upgrade-gitlab-runner-with-the-helm-chart}
 
 前提要件:
 
-- GitLab Runner チャートをインストールしていること。
+- GitLab Runnerチャートをインストールしていること。
 - GitLabでRunnerを一時停止していること。これにより、[完了時の認証エラー](../faq/_index.md#helm-chart-error--unauthorized)など、ジョブで発生する問題を回避できます。
 - すべてのジョブが完了していることを確認していること。
 
-設定を変更するか、チャートを更新するには、必要に応じてパラメーターを変更して`helm upgrade`を使用します。
+設定を変更するか、チャートを更新するには、必要に応じてパラメータを変更して`helm upgrade`を使用します。
 
 ```shell
 helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitlab/gitlab-runner
 ```
 
-- `<NAMESPACE>`:GitLab RunnerをインストールしたKubernetesネームスペース。
-- `<CONFIG_VALUES_FILE>`:カスタム設定を含む値ファイルのパス。作成するには、[HelmチャートでGitLab Runnerを設定する](#configure-gitlab-runner-with-the-helm-chart)を参照してください。
-- `<RELEASE-NAME>`:チャートをインストールしたときに付けた名前。インストールセクションの例では`gitlab-runner`という名前が付けられています。
+- `<NAMESPACE>`: GitLab RunnerをインストールしたKubernetesネームスペース。
+- `<CONFIG_VALUES_FILE>`: カスタム設定を含む値ファイルのパス。作成するには、[HelmチャートでGitLab Runnerを設定する](#configure-gitlab-runner-with-the-helm-chart)を参照してください。
+- `<RELEASE-NAME>`: チャートをインストールしたときに付けた名前。インストールセクションの例では`gitlab-runner`という名前が付けられています。
 - GitLab Runner Helmチャートの最新バージョンではなく特定バージョンに更新するには、`helm upgrade`コマンドに`--version <RUNNER_HELM_CHART_VERSION>`を追加します。
 
-## Helmチャートを使用してGitLab Runnerをアンインストールする
+## Helmチャートを使用してGitLab Runnerをアンインストールする {#uninstall-gitlab-runner-with-the-helm-chart}
 
 GitLab Runnerをアンインストールするには、次の手順に従います。
 

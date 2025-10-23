@@ -7,8 +7,8 @@ title: SSH
 
 {{< details >}}
 
-- プラン:Free、Premium、Ultimate
-- 製品:GitLab.com、GitLab Self-Managed、GitLab Dedicated
+- プラン: Free、Premium、Ultimate
+- 提供形態: GitLab.com、GitLab Self-Managed、GitLab Dedicated
 
 {{< /details >}}
 
@@ -26,7 +26,7 @@ GitLab RunnerがSSH executorを使用するすべてのリモートシステム�
 
 {{< /alert >}}
 
-## SSH executorを使用する
+## SSH executorを使用する {#use-the-ssh-executor}
 
 SSH executorを使用するには、[`[runners.ssh]`](../configuration/advanced-configuration.md#the-runnersssh-section)セクションで`executor = "ssh"`を指定します。次に例を示します。
 
@@ -56,8 +56,8 @@ SSH executorを使用するには、[`[runners.ssh]`](../configuration/advanced-
 
 ジョブアーティファクトをアップロードする場合は、SSH経由で接続するホストに`gitlab-runner`をインストールします。
 
-## 厳密なホスト鍵チェックを設定する
+## 厳密なホストキーチェックを設定する {#configure-strict-host-key-checking}
 
 SSHの`StrictHostKeyChecking`を有効にするには、`[runners.ssh.disable_strict_host_key_checking]`が`false`に設定されていることを確認してください。現在のデフォルトは`true`です。
 
-[GitLab 15.0以降](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192)のデフォルト値は`false`です。つまり、ホスト鍵チェックは必須です。
+[GitLab 15.0以降](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192)のデフォルト値は`false`です。つまり、ホストキーチェックは必須です。

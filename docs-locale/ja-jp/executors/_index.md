@@ -7,8 +7,8 @@ title: executor
 
 {{< details >}}
 
-- プラン:Free、Premium、Ultimate
-- 製品:GitLab.com、GitLab Self-Managed、GitLab Dedicated
+- プラン: Free、Premium、Ultimate
+- 提供形態: GitLab.com、GitLab Self-Managed、GitLab Dedicated
 
 {{< /details >}}
 
@@ -26,14 +26,14 @@ GitLab Runnerは次のexecutorを提供します。
 - [VirtualBox](virtualbox.md)
 - [Docker](docker.md)
 - [Docker Autoscaler](docker_autoscaler.md)
-- [Docker Machine（自動スケーリング）](docker_machine.md)
+- [Docker Machine（オートスケーリング）](docker_machine.md)
 - [Kubernetes](../executors/kubernetes/_index.md)
-- [Instance](instance.md)
-- [Custom](custom.md)
+- [インスタンス](instance.md)
+- [カスタム](custom.md)
 
 これらのexecutorはロックされており、新規のexecutorの開発や受け入れは行っていません。詳細については、[新しいexecutorのコントリビュート](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CONTRIBUTING.md#contributing-new-executors)を参照してください。
 
-## Docker以外のexecutorの前提要件
+## Docker以外のexecutorの前提要件 {#prerequisites-for-non-docker-executors}
 
 [ヘルパーイメージに依存しない](../configuration/advanced-configuration.md#helper-image)executorでは、ターゲットマシンと`PATH`にGitがインストールされている必要があります。常に[利用可能な最新バージョンのGit](https://git-scm.com/downloads)を使用してください。
 
@@ -41,13 +41,16 @@ GitLab Runnerは次のexecutorを提供します。
 
 `git lfs install`を使用して、GitLab Runnerコマンドを実行するユーザーに対してGit LFSを初期化してください。システム全体でGit LFSを初期化するには、`git lfs install --system`を使用します。
 
-[FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)を有効にする場合は、Git認証情報ヘルパーなどを使用してビルド間でGit認証情報をキャッシュすることがないようにしないでください。認証情報をキャッシュすると、[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)が同時ビルドまたは連続ビルド間で共有され、これによって認証エラーやビルドの失敗が発生する可能性があります。
+GitLabインスタンスとのGitインタラクションを認証するため、GitLab Runnerでは[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)を使用します。[FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)の設定によっては、Git認証情報のヘルパー（[Git認証情報マネージャー](https://github.com/git-ecosystem/git-credential-manager)など）がインストールされていて、認証情報をキャッシュに入れるように設定されている場合、最後に使用された認証情報がそのヘルパーのキャッシュに入れられることがあります。
 
-## executorを選択する
+- [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)が`false`なら、最後に使用された[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)が、インストール済みのGit認証情報ヘルパーに保存されます。
+- [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)が`true`なら、[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)は、インストール済みのGit認証情報ヘルパーに保存されず、そのキャッシュに入れられることもありません。
+
+## executorを選択する {#selecting-the-executor}
 
 executorは、プロジェクトをビルドするためのさまざまなプラットフォームと開発手法をサポートしています。次の表に、使用するexecutorを決定する際に役立つ各executorの重要な情報を示します。
 
-| Executor                                         | SSH  |     Shell      |   VirtualBox   |   Parallels    | Docker | Docker Autoscaler |                 Instance |   Kubernetes   |          Custom          |
+| executor                                         | SSH  |     Shell      |   VirtualBox   |   Parallels    | Docker | Docker Autoscaler |                 インスタンス |   Kubernetes   |          カスタム          |
 |:-------------------------------------------------|:----:|:--------------:|:--------------:|:--------------:|:------:|:-----------------:|-------------------------:|:--------------:|:------------------------:|
 | すべてのビルドのためのクリーンなビルド環境          |  ✗   |       ✗        |       ✓        |       ✓        |   ✓    |         ✓         | 条件付き<sup>4</sup> |       ✓        | 条件付き<sup>4</sup> |
 | 存在する場合は、以前のクローンを再利用する                |  ✓   |       ✓        |       ✗        |       ✗        |   ✓    |         ✓         | 条件付き<sup>4</sup> | ✓ <sup>6</sup> | 条件付き<sup>4</sup> |
@@ -57,16 +60,16 @@ executorは、プロジェクトをビルドするためのさまざまなプラ
 | 複雑なビルド環境                   |  ✗   | ✗ <sup>2</sup> | ✓ <sup>3</sup> | ✓ <sup>3</sup> |   ✓    |         ✓         |           ✗ <sup>2</sup> |       ✓        |            ✓             |
 | ビルドの問題のデバッグ                         | 簡単 |      簡単      |      難しい      |      難しい      | 普通 |      普通       |                   普通 |     普通     |          普通          |
 
-**脚注:**
+**補足説明**:
 
 1. ビルドマシンにインストールされているサービスをビルドで使用する場合、executorを選択できますが、問題があります。
 1. 依存関係を手動でインストールする必要があります。
 1. たとえば、[Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "VirtualBoxのVagrantドキュメント")を使用します。
 1. プロビジョニングする環境によって異なります。完全に分離することも、ビルド間で共有することもできます。
-1. Runnerのファイルシステムアクセスが保護されていない場合、ジョブはRunnerのトークンや他のジョブのキャッシュとコードなど、システム全体にアクセスできます。✓が付いているexecutorは、デフォルトではRunnerがファイルシステムにアクセスすることを許可していません。ただし、セキュリティ上の欠陥または特定の設定により、ジョブがコンテナからブレイクアウトし、Runnerをホストしているファイルシステムにアクセスする可能性があります。
+1. Runnerのファイルシステムアクセスが保護されていない場合、ジョブはRunnerのトークンや他のジョブのキャッシュとコードなど、システム全体にアクセスできます。✓が付いているexecutorは、デフォルトではRunnerがファイルシステムにアクセスすることを許可していません。ただし、セキュリティ上の欠陥または特定の設定により、ジョブがコンテナからブレイクアウトし、Runnerをホスティングしているファイルシステムにアクセスする可能性があります。
 1. [並行処理ごとの永続ビルドボリューム](kubernetes/_index.md#persistent-per-concurrency-build-volumes)設定が必要です。
 
-### Shell executor
+### Shell executor {#shell-executor}
 
 Shell executorは、GitLab Runnerの最もシンプルな設定オプションです。GitLab Runnerがインストールされているシステムでジョブをローカルに実行し、すべての依存関係を同じマシンに手動でインストールする必要があります。
 
@@ -74,7 +77,7 @@ Shell executorは、GitLab Runnerの最もシンプルな設定オプション�
 
 最小限の依存関係を持つビルドにとって理想的ですが、ジョブ間の分離は限定的です。
 
-### Docker executor
+### Docker executor {#docker-executor}
 
 Docker executorは、コンテナを介してクリーンなビルド環境を提供します。すべての依存関係がDockerイメージにパッケージ化されているため、依存関係を容易に管理できます。このexecutorを使用するには、RunnerホストにDockerがインストールされている必要があります。
 
@@ -82,7 +85,7 @@ Docker executorは、コンテナを介してクリーンなビルド環境を�
 
 このexecutorは、一貫性のある分離されたビルド環境を保持します。
 
-### Docker Machine Executor（非推奨）
+### Docker Machine Executor（非推奨） {#docker-machine-executor-deprecated}
 
 {{< alert type="warning" >}}
 
@@ -90,41 +93,41 @@ Docker executorは、コンテナを介してクリーンなビルド環境を�
 
 {{< /alert >}}
 
-Docker Machine Executorは、自動スケーリングに対応しているDocker executorの特別なバージョンです。標準的なDocker executorと同様に動作しますが、Docker Machineによってオンデマンドで作成されたビルドホストを使用します。この機能により、このexecutorはAWS EC2などのクラウド環境で特に効果的であり、さまざまなワークロードに対して優れた分離性とスケーラビリティを提供します。
+Docker Machine Executorは、オートスケーリングに対応しているDocker executorの特別なバージョンです。標準的なDocker executorと同様に動作しますが、Docker Machineによってオンデマンドで作成されたビルドホストを使用します。この機能により、このexecutorはAWS EC2などのクラウド環境で特に効果的であり、さまざまなワークロードに対して優れた分離性とスケーラビリティを提供します。
 
-### Docker Autoscaler executor
+### Docker Autoscaler executor {#docker-autoscaler-executor}
 
-Docker Autoscaler executorは、Runnerマネージャーが処理するジョブに対処するために、オンデマンドでインスタンスを作成する自動スケール対応のDocker executorです。[Docker executor](docker.md)をラップしているため、すべてのDocker executorのオプションと機能がサポートされています。
+Docker Autoscaler executorは、Runnerマネージャーが処理するジョブに対処するために、オンデマンドでインスタンスを作成するオートスケール対応のDocker executorです。[Docker executor](docker.md)をラップしているため、すべてのDocker executorのオプションと機能がサポートされています。
 
-Docker Autoscalerは、[フリートプラグイン](https://gitlab.com/gitlab-org/fleeting/fleeting)を使用して自動スケールします。フリートとは、自動スケールされたインスタンスのグループの抽象化であり、Google Cloud、AWS、Azureなどのクラウドプロバイダーをサポートするプラグインを使用します。このexecutorは、動的なワークロードの要件がある環境に特に適しています。
+Docker Autoscalerは、[フリートプラグイン](https://gitlab.com/gitlab-org/fleeting/fleeting)を使用してオートスケールします。フリートとは、オートスケールされたインスタンスのグループの抽象化であり、Google Cloud、AWS、Azureなどのクラウドプロバイダーをサポートするプラグインを使用します。このexecutorは、動的なワークロードの要件がある環境に特に適しています。
 
-### Instance executor
+### インスタンスexecutor {#instance-executor}
 
-Instance executorは、Runnerマネージャーが処理するジョブの予期されるボリュームに対処するために、オンデマンドでインスタンスを作成する自動スケール対応のexecutorです。
+インスタンスexecutorは、Runnerマネージャーが処理するジョブの予期されるボリュームに対処するために、オンデマンドでインスタンスを作成するオートスケール対応のexecutorです。
 
-このexecutorと、関連するDocker Autoscale executorは、GitLab RunnerフリートおよびTaskscalerテクノロジーと連携する新しい自動スケールexecutorです。
+このexecutorと、関連するDocker Autoscale executorは、GitLab RunnerフリートおよびTaskscalerテクノロジーと連携する新しいオートスケールexecutorです。
 
-Instance executorも[フリートプラグイン](https://gitlab.com/gitlab-org/fleeting/fleeting)を使用して自動スケールします。
+インスタンスexecutorも[フリートプラグイン](https://gitlab.com/gitlab-org/fleeting/fleeting)を使用してオートスケールします。
 
-ジョブがホストインスタンス、オペレーティングシステム、および接続デバイスへのフルアクセスを必要とする場合は、Instance executorを使用できます。Instance executorは、シングルテナントジョブとマルチテナントジョブに対応するように設定することもできます。
+ジョブがホストインスタンス、オペレーティングシステム、および接続デバイスへのフルアクセスを必要とする場合は、インスタンスexecutorを使用できます。インスタンスexecutorは、シングルテナントジョブとマルチテナントジョブに対応するように設定することもできます。
 
-### Kubernetes executor
+### Kubernetes executor {#kubernetes-executor}
 
 ビルドに既存のKubernetesクラスターを使用する場合にKubernetes executorを使用できます。このexecutorはKubernetesクラスターAPIを呼び出して、各GitLab CI/CDジョブの新しいポッド（ビルドコンテナとサービスコンテナを含む）を作成します。このexecutorは、クラウドネイティブ環境に特に適しており、優れたスケーラビリティとリソース利用率を実現します。
 
-### SSH executor
+### SSH executor {#ssh-executor}
 
 SSH executorは完全性を期すために追加されましたが、サポートが最も少ないexecutorの1つです。SSH executorを使用すると、GitLab Runnerは外部サーバーに接続し、そこでビルドを実行します。このexecutorを使用している組織からの成功事例がいくつかありますが、通常は他のタイプのexecutorを使用してください。
 
-### Custom executor
+### カスタムexecutor {#custom-executor}
 
-Custom executorを使用すると、独自の実行環境を指定できます。GitLab Runnerがexecutor（Linuxコンテナなど）を提供しない場合、カスタムの実行可能ファイルを使用して環境をプロビジョニングよびクリーンアップできます。
+カスタムexecutorを使用すると、独自の実行環境を指定できます。GitLab Runnerがexecutor（Linuxコンテナなど）を提供しない場合、カスタムの実行可能ファイルを使用して環境をプロビジョニングおよびクリーンアップできます。
 
-## 互換性チャート
+## 互換性チャート {#compatibility-chart}
 
 各種executorでサポートされている機能を以下に示します。
 
-| Executor                                     | SSH            | Shell          |VirtualBox      | Parallels      | Docker  | Docker Autoscaler | Instance       | Kubernetes | Custom                                                       |
+| executor                                     | SSH            | Shell          | VirtualBox      | Parallels      | Docker  | Docker Autoscaler | インスタンス       | Kubernetes | カスタム                                                       |
 |:---------------------------------------------|:--------------:|:--------------:|:--------------:|:--------------:|:-------:|:-----------------:|:--------------:| :---------:| :-----------------------------------------------------------:|
 | セキュア変数                             | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓                                                           |
 | `.gitlab-ci.yml`: イメージ                      | ✗              | ✗              | ✓（1）          | ✓（1）          | ✓       | ✗                 | ✗              | ✓          | ✓（[`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)を使用） |
@@ -133,7 +136,7 @@ Custom executorを使用すると、独自の実行環境を指定できます�
 | `.gitlab-ci.yml`: アーティファクト                  | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓      |
 | ステージ間のアーティファクトの受け渡し             | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓      |
 | GitLabコンテナレジストリのプライベートイメージを使用する | 該当なし | 該当なし | 該当なし | 該当なし | ✓       | ✓                 | 該当なし | ✓          | 該当なし |
-| インタラクティブウェブターミナル                     | ✗              | ✓（UNIX）       | ✗              | ✗              | ✓       | ✗                 | ✗              | ✓          | ✗              |
+| インタラクティブWebターミナル                     | ✗              | ✓（UNIX）       | ✗              | ✗              | ✓       | ✗                 | ✗              | ✓          | ✗              |
 
 1. GitLab Runner 14.2でサポートが[追加](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1257)されました。詳細については、[ベースVMイメージの上書き](../configuration/advanced-configuration.md#overriding-the-base-vm-image)セクションを参照してください。
 
@@ -151,7 +154,7 @@ Custom executorを使用すると、独自の実行環境を指定できます�
 1. 新しいRunnerの登録時のデフォルトのShell。
 1. WindowsのBash Shellはサポートされていません。
 
-各種Shellによりサポートされているインタラクティブウェブターミナルのシステムを以下に示します。
+各種ShellによりサポートされているインタラクティブWebターミナルのシステムを以下に示します。
 
 | Shell  | Bash        | PowerShell Desktop    | PowerShell Core    | Windows Batch（非推奨） |
 |:-------:|:-----------:|:---------------------:|:------------------:|:--------------------------:|

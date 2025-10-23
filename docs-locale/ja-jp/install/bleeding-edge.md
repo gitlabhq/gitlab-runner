@@ -7,18 +7,18 @@ title: GitLab Runner最新リリース
 
 {{< details >}}
 
-- プラン:Free、Premium、Ultimate
-- 製品:GitLab.com、GitLab Self-Managed、GitLab Dedicated
+- プラン: Free、Premium、Ultimate
+- 提供形態: GitLab.com、GitLab Self-Managed、GitLab Dedicated
 
 {{< /details >}}
 
 {{< alert type="warning" >}}
 
-これらのGitLab Runnerリリースは最新であり、`main`ブランチから直接ビルドされているため、テストされていない可能性があります。ご自身の責任においてご利用ください。
+これらのGitLab Runnerのリリースは最新であり、`main`ブランチから直接ビルドされているため、テストされていない可能性があります。ご自身の責任においてご利用ください。
 
 {{< /alert >}}
 
-## スタンドアロンバイナリをダウンロードする
+## スタンドアロンバイナリをダウンロードする {#download-the-standalone-binaries}
 
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-linux-386>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-linux-amd64>
@@ -39,7 +39,7 @@ chmod +x gitlab-runner-linux-amd64
 ./gitlab-runner-linux-amd64 run
 ```
 
-## DebianまたはUbuntu用のパッケージをダウンロードする
+## DebianまたはUbuntu用のパッケージをダウンロードする {#download-one-of-the-packages-for-debian-or-ubuntu}
 
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_i686.deb>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_amd64.deb>
@@ -49,7 +49,7 @@ chmod +x gitlab-runner-linux-amd64
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_aarch64.deb>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_riscv64.deb>
 
-### エクスポートされたrunner-helperイメージパッケージをダウンロードする
+### エクスポートされたrunner-helperイメージパッケージをダウンロードする {#download-the-exported-runner-helper-images-package}
 
 runner-helperイメージパッケージは、GitLab Runner `.deb`パッケージに必要な依存関係です。
 
@@ -65,7 +65,7 @@ https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/deb/
 dpkg -i gitlab-runner-helper-images.deb gitlab-runner_<arch>.deb
 ```
 
-## Red HatまたはCentOS用のパッケージをダウンロードする
+## Red HatまたはCentOS用のパッケージをダウンロードする {#download-one-of-the-packages-for-red-hat-or-centos}
 
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_i686.rpm>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_amd64.rpm>
@@ -75,7 +75,7 @@ dpkg -i gitlab-runner-helper-images.deb gitlab-runner_<arch>.deb
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_aarch64.rpm>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_riscv64.rpm>
 
-### エクスポートされたrunner-helperイメージパッケージをダウンロードする
+### エクスポートされたrunner-helperイメージパッケージをダウンロードする {#download-the-exported-runner-helper-images-package-1}
 
 runner-helperイメージパッケージは、GitLab Runner `.rpm`パッケージに必要な依存関係です。
 
@@ -91,7 +91,7 @@ https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/
 rpm -i gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
 ```
 
-## その他のタグ付きリリースをダウンロードする
+## その他のタグ付きリリースをダウンロードする {#download-any-other-tagged-release}
 
 `main`を`tag`（`v16.5.0`など）または`latest`（最新の安定版）のいずれかに置き換えます。タグの一覧については、<https://gitlab.com/gitlab-org/gitlab-runner/-/tags>を参照してください。次に例を示します。
 
