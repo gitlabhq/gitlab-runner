@@ -15,7 +15,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
@@ -225,7 +224,7 @@ func TestHelperImageWithVariable(t *testing.T) {
 	runnerImageTag := "gitlab/gitlab-runner:" + common.AppVersion.Revision
 
 	p.On("GetDockerImage", runnerImageTag, common.ImageDockerOptions{}, []common.DockerPullPolicy(nil)).
-		Return(&types.ImageInspect{ID: "helper-image"}, nil).
+		Return(&image.InspectResponse{ID: "helper-image"}, nil).
 		Once()
 
 	e := executorWithMockClient(c)
@@ -754,7 +753,7 @@ func TestCreateDependencies(t *testing.T) {
 			})
 
 			c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
-				Return(types.ImageInspect{}, nil, nil).
+				Return(image.InspectResponse{}, nil, nil).
 				Once()
 			c.On("NetworkList", mock.Anything, mock.Anything).
 				Return(nil, nil).
@@ -858,7 +857,7 @@ func prepareTestDockerConfiguration(
 	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
 	c.On("ImageInspectWithRaw", mock.Anything, expectedInspectImage).
-		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
+		Return(image.InspectResponse{ID: "123"}, []byte{}, nil).Twice()
 	c.On("ImagePullBlocking", mock.Anything, expectedPullImage, mock.Anything).
 		Return(nil).Once()
 	c.On("NetworkList", mock.Anything, mock.Anything).
@@ -876,7 +875,7 @@ func testDockerConfigurationWithJobContainer(
 ) {
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
 	c.On("ContainerInspect", mock.Anything, "abc").
-		Return(types.ContainerJSON{}, nil).Once()
+		Return(container.InspectResponse{}, nil).Once()
 
 	err := e.createVolumesManager()
 	require.NoError(t, err)
@@ -898,7 +897,7 @@ func testDockerConfigurationWithPredefinedContainer(
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
 
 	c.On("ContainerInspect", mock.Anything, "abc").
-		Return(types.ContainerJSON{}, nil).Once()
+		Return(container.InspectResponse{}, nil).Once()
 
 	err := e.createVolumesManager()
 	require.NoError(t, err)
@@ -2034,7 +2033,7 @@ func TestLocalHelperImage(t *testing.T) {
 		jobVariables     common.JobVariables
 		config           helperimage.Config
 		clientAssertions func(*docker.MockClient)
-		expectedImage    *types.ImageInspect
+		expectedImage    *image.InspectResponse
 	}{
 		"docker import using registry.gitlab.com name": {
 			config: helperimage.Config{
@@ -2055,7 +2054,7 @@ func TestLocalHelperImage(t *testing.T) {
 					},
 				).Return(nil)
 
-				imageInspect := types.ImageInspect{
+				imageInspect := image.InspectResponse{
 					RepoTags: []string{
 						imageName("", ""),
 					},
@@ -2067,7 +2066,7 @@ func TestLocalHelperImage(t *testing.T) {
 					imageName("", ""),
 				).Return(imageInspect, []byte{}, nil)
 			},
-			expectedImage: &types.ImageInspect{
+			expectedImage: &image.InspectResponse{
 				RepoTags: []string{
 					imageName("", ""),
 				},
@@ -2107,7 +2106,7 @@ func TestLocalHelperImage(t *testing.T) {
 					"ImageInspectWithRaw",
 					mock.Anything,
 					mock.Anything,
-				).Return(types.ImageInspect{}, []byte{}, errors.New("error"))
+				).Return(image.InspectResponse{}, []byte{}, errors.New("error"))
 			},
 			expectedImage: nil,
 		},
@@ -2133,7 +2132,7 @@ func TestLocalHelperImage(t *testing.T) {
 					mock.Anything,
 				).Return(nil)
 
-				imageInspect := types.ImageInspect{
+				imageInspect := image.InspectResponse{
 					RepoTags: []string{
 						imageName("", "-pwsh"),
 					},
@@ -2145,7 +2144,7 @@ func TestLocalHelperImage(t *testing.T) {
 					imageName("", "-pwsh"),
 				).Return(imageInspect, []byte{}, nil)
 			},
-			expectedImage: &types.ImageInspect{
+			expectedImage: &image.InspectResponse{
 				RepoTags: []string{
 					imageName("", "-pwsh"),
 				},
@@ -2174,7 +2173,7 @@ func TestLocalHelperImage(t *testing.T) {
 					mock.Anything,
 				).Return(nil)
 
-				imageInspect := types.ImageInspect{
+				imageInspect := image.InspectResponse{
 					RepoTags: []string{
 						imageName("ubuntu-", "-pwsh"),
 					},
@@ -2186,7 +2185,7 @@ func TestLocalHelperImage(t *testing.T) {
 					imageName("ubuntu-", "-pwsh"),
 				).Return(imageInspect, []byte{}, nil)
 			},
-			expectedImage: &types.ImageInspect{
+			expectedImage: &image.InspectResponse{
 				RepoTags: []string{
 					imageName("ubuntu-", "-pwsh"),
 				},
@@ -2213,7 +2212,7 @@ func TestLocalHelperImage(t *testing.T) {
 					imageName("ubuntu-", ""),
 				).Return(nil)
 
-				imageInspect := types.ImageInspect{
+				imageInspect := image.InspectResponse{
 					RepoTags: []string{
 						imageName("ubuntu-", ""),
 					},
@@ -2225,7 +2224,7 @@ func TestLocalHelperImage(t *testing.T) {
 					imageName("ubuntu-", ""),
 				).Return(imageInspect, []byte{}, nil)
 			},
-			expectedImage: &types.ImageInspect{
+			expectedImage: &image.InspectResponse{
 				RepoTags: []string{
 					imageName("ubuntu-", ""),
 				},
@@ -2366,7 +2365,7 @@ func TestExpandingDockerImageWithImagePullPolicyAlways(t *testing.T) {
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
 
 	c.On("ContainerInspect", mock.Anything, "abc").
-		Return(types.ContainerJSON{}, nil).Once()
+		Return(container.InspectResponse{}, nil).Once()
 
 	err := e.createVolumesManager()
 	require.NoError(t, err)
@@ -2579,7 +2578,7 @@ func TestDockerImageWithUser(t *testing.T) {
 
 			c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 			c.On("ImageInspectWithRaw", mock.Anything, mock.Anything).
-				Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Maybe()
+				Return(image.InspectResponse{ID: "123"}, []byte{}, nil).Maybe()
 			c.On("ImagePullBlocking", mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 			c.On("NetworkList", mock.Anything, mock.Anything).
@@ -2587,7 +2586,7 @@ func TestDockerImageWithUser(t *testing.T) {
 			c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 			c.On("ContainerInspect", mock.Anything, "abc").
-				Return(types.ContainerJSON{}, nil).Maybe()
+				Return(container.InspectResponse{}, nil).Maybe()
 
 			err := e.createVolumesManager()
 			require.NoError(t, err)
@@ -2615,7 +2614,7 @@ func TestCreateHostConfigForServiceHealthCheck(t *testing.T) {
 				networkMode: container.NetworkMode(tc),
 			}
 
-			hostConfig := e.createHostConfigForServiceHealthCheck(&types.Container{Names: []string{"service-name"}})
+			hostConfig := e.createHostConfigForServiceHealthCheck(&container.Summary{Names: []string{"service-name"}})
 
 			if e.networkMode.UserDefined() != "" {
 				require.Empty(t, hostConfig.Links)

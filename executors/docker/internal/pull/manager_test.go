@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/errdefs"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -215,7 +215,7 @@ func TestDockerForExistingImage(t *testing.T) {
 		Once()
 
 	c.On("ImageInspectWithRaw", m.context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
 	image, err := m.pullDockerImage("existing", dockerOptions, nil)
@@ -233,7 +233,7 @@ func TestDockerGetImageById(t *testing.T) {
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
 	c.On("ImageInspectWithRaw", m.context, "ID").
-		Return(types.ImageInspect{ID: "ID"}, nil, nil).
+		Return(image.InspectResponse{ID: "ID"}, nil, nil).
 		Once()
 
 	image, err := m.GetDockerImage("ID", dockerOptions, nil)
@@ -262,11 +262,11 @@ func TestDockerPolicyModeNever(t *testing.T) {
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
 	c.On("ImageInspectWithRaw", m.context, "existing").
-		Return(types.ImageInspect{ID: "existing"}, nil, nil).
+		Return(image.InspectResponse{ID: "existing"}, nil, nil).
 		Once()
 
 	c.On("ImageInspectWithRaw", m.context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
+		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
 	image, err := m.GetDockerImage("existing", dockerOptions, nil)
@@ -286,7 +286,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
 	c.On("ImageInspectWithRaw", m.context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
 	image, err := m.GetDockerImage("existing", dockerOptions, nil)
@@ -305,7 +305,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	m.onPullImageHookFunc = func() { pullImageHookCalled = true }
 
 	c.On("ImageInspectWithRaw", m.context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
+		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
 	c.On("ImagePullBlocking", m.context, "not-existing:latest", mock.AnythingOfType("image.PullOptions")).
@@ -313,22 +313,22 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 		Once()
 
 	c.On("ImageInspectWithRaw", m.context, "not-existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
-	image, err := m.GetDockerImage("not-existing", dockerOptions, nil)
+	img, err := m.GetDockerImage("not-existing", dockerOptions, nil)
 	assert.NoError(t, err)
-	assert.NotNil(t, image)
+	assert.NotNil(t, img)
 	assert.True(t, pullImageHookCalled)
 
 	c.On("ImageInspectWithRaw", m.context, "not-existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
 	// It shouldn't execute the pull for second time
-	image, err = m.GetDockerImage("not-existing", dockerOptions, nil)
+	img, err = m.GetDockerImage("not-existing", dockerOptions, nil)
 	assert.NoError(t, err)
-	assert.NotNil(t, image)
+	assert.NotNil(t, img)
 }
 
 func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
@@ -342,7 +342,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	m.onPullImageHookFunc = func() { pullImageHookCalled = true }
 
 	c.On("ImageInspectWithRaw", m.context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
 	c.On("ImagePullBlocking", m.context, "existing:latest", mock.AnythingOfType("image.PullOptions")).
@@ -350,7 +350,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 		Once()
 
 	c.On("ImageInspectWithRaw", m.context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
 	image, err := m.GetDockerImage("existing", dockerOptions, nil)
@@ -370,7 +370,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 	m.onPullImageHookFunc = func() { pullImageHookCalled = true }
 
 	c.On("ImageInspectWithRaw", m.context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
 	c.On("ImagePullBlocking", m.context, "existing:latest", mock.AnythingOfType("image.PullOptions")).
@@ -391,28 +391,28 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	m := newDefaultTestManager(t, c, dockerConfig)
 
 	c.On("ImageInspectWithRaw", m.context, "to-pull").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
 	c.On("ImagePullBlocking", m.context, "to-pull:latest", mock.AnythingOfType("image.PullOptions")).
 		Return(os.ErrNotExist).
 		Once()
 
-	image, err := m.GetDockerImage("to-pull", dockerOptions, nil)
+	img, err := m.GetDockerImage("to-pull", dockerOptions, nil)
 	assert.Error(t, err)
-	assert.Nil(t, image, "Forces to authorize pulling")
+	assert.Nil(t, img, "Forces to authorize pulling")
 
 	c.On("ImageInspectWithRaw", m.context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
+		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
 	c.On("ImagePullBlocking", m.context, "not-existing:latest", mock.AnythingOfType("image.PullOptions")).
 		Return(os.ErrNotExist).
 		Once()
 
-	image, err = m.GetDockerImage("not-existing", dockerOptions, nil)
+	img, err = m.GetDockerImage("not-existing", dockerOptions, nil)
 	assert.Error(t, err)
-	assert.Nil(t, image, "No existing image")
+	assert.Nil(t, img, "No existing image")
 }
 
 func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testing.T) {
@@ -428,7 +428,7 @@ func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testi
 	m.logger = &buildLogger
 
 	c.On("ImageInspectWithRaw", m.context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
 	c.On("ImagePullBlocking", m.context, "existing:latest", mock.AnythingOfType("image.PullOptions")).
@@ -436,7 +436,7 @@ func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testi
 		Once()
 
 	c.On("ImageInspectWithRaw", m.context, "existing").
-		Return(types.ImageInspect{ID: "local-image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "local-image-id"}, nil, nil).
 		Once()
 
 	image, err := m.GetDockerImage("existing", dockerOptions, nil)
@@ -457,7 +457,7 @@ func TestCombinedDockerPolicyModeAlwaysAndIfNotPresentForNonExistingImage(t *tes
 	m := newDefaultTestManager(t, c, dockerConfig)
 
 	c.On("ImageInspectWithRaw", m.context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
+		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
 	c.On("ImagePullBlocking", m.context, "not-existing:latest", mock.AnythingOfType("image.PullOptions")).
@@ -465,7 +465,7 @@ func TestCombinedDockerPolicyModeAlwaysAndIfNotPresentForNonExistingImage(t *tes
 		Twice()
 
 	c.On("ImageInspectWithRaw", m.context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
+		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
 	image, err := m.GetDockerImage("not-existing", dockerOptions, nil)
@@ -512,7 +512,7 @@ func TestPullPolicyPassedAsIfNotPresentForExistingAndConfigAlways(t *testing.T) 
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
 	c.On("ImageInspectWithRaw", m.context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
 	imagePullPolicies := []common.DockerPullPolicy{common.PullPolicyIfNotPresent}
@@ -535,7 +535,7 @@ func TestPullPolicyPassedAsIfNotPresentForNonExistingAndConfigAlways(t *testing.
 	m.onPullImageHookFunc = func() { pullImageHookCalled = true }
 
 	c.On("ImageInspectWithRaw", m.context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
+		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
 	c.On("ImagePullBlocking", m.context, "not-existing:latest", mock.AnythingOfType("image.PullOptions")).
@@ -543,7 +543,7 @@ func TestPullPolicyPassedAsIfNotPresentForNonExistingAndConfigAlways(t *testing.
 		Once()
 
 	c.On("ImageInspectWithRaw", m.context, "not-existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
 	imagePullPolicies := []common.DockerPullPolicy{common.PullPolicyIfNotPresent}
@@ -623,7 +623,7 @@ func TestPullPolicyWhenConfigIsAllowed(t *testing.T) {
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
 	c.On("ImageInspectWithRaw", m.context, "existing").
-		Return(types.ImageInspect{ID: "existing"}, nil, nil).
+		Return(image.InspectResponse{ID: "existing"}, nil, nil).
 		Once()
 
 	image, err := m.GetDockerImage("existing", dockerOptions, nil)
@@ -754,13 +754,13 @@ func testDeniesDockerImage(
 
 func addFindsLocalImageExpectations(c *docker.MockClient, imageName string) {
 	c.On("ImageInspectWithRaw", mock.Anything, imageName).
-		Return(types.ImageInspect{ID: "this-image"}, nil, nil).
+		Return(image.InspectResponse{ID: "this-image"}, nil, nil).
 		Once()
 }
 
 func addPullsRemoteImageExpectations(c *docker.MockClient, imageName string) {
 	c.On("ImageInspectWithRaw", mock.Anything, imageName).
-		Return(types.ImageInspect{ID: "not-this-image"}, nil, nil).
+		Return(image.InspectResponse{ID: "not-this-image"}, nil, nil).
 		Once()
 
 	c.On("ImagePullBlocking", mock.Anything, imageName, mock.AnythingOfType("image.PullOptions")).
@@ -768,13 +768,13 @@ func addPullsRemoteImageExpectations(c *docker.MockClient, imageName string) {
 		Once()
 
 	c.On("ImageInspectWithRaw", mock.Anything, imageName).
-		Return(types.ImageInspect{ID: "this-image"}, nil, nil).
+		Return(image.InspectResponse{ID: "this-image"}, nil, nil).
 		Once()
 }
 
 func addDeniesPullExpectations(c *docker.MockClient, imageName string) {
 	c.On("ImageInspectWithRaw", mock.Anything, imageName).
-		Return(types.ImageInspect{ID: "image"}, nil, nil).
+		Return(image.InspectResponse{ID: "image"}, nil, nil).
 		Once()
 
 	c.On("ImagePullBlocking", mock.Anything, imageName, mock.AnythingOfType("image.PullOptions")).
@@ -841,7 +841,7 @@ func TestDockerGetImagePlatformSuccess(t *testing.T) {
 		Once()
 
 	c.On("ImageInspectWithRaw", m.context, "test").
-		Return(types.ImageInspect{Architecture: "arm64/v8"}, nil, nil).
+		Return(image.InspectResponse{Architecture: "arm64/v8"}, nil, nil).
 		Once()
 
 	image, err := m.pullDockerImage("test", dockerOptions, nil)

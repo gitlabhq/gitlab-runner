@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/pkg/stdcopy"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
@@ -47,7 +47,7 @@ func (e *executor) createServices() error {
 		return err
 	}
 
-	linksMap := make(map[string]*types.Container)
+	linksMap := make(map[string]*container.Summary)
 
 	for index, serviceDefinition := range servicesDefinitions {
 		if err := e.createFromServiceDefinition(index, serviceDefinition, linksMap); err != nil {
@@ -109,7 +109,7 @@ func (e *executor) waitForServices() {
 		wg := sync.WaitGroup{}
 		for _, service := range e.services {
 			wg.Add(1)
-			go func(service *types.Container) {
+			go func(service *container.Summary) {
 				_ = e.waitForServiceContainer(service, time.Duration(timeout)*time.Second)
 				wg.Done()
 			}(service)
@@ -118,7 +118,7 @@ func (e *executor) waitForServices() {
 	}
 }
 
-func (e *executor) buildServiceLinks(linksMap map[string]*types.Container) (links []string) {
+func (e *executor) buildServiceLinks(linksMap map[string]*container.Summary) (links []string) {
 	for linkName, linkee := range linksMap {
 		newContainer, err := e.dockerConn.ContainerInspect(e.Context, linkee.ID)
 		if err != nil {
@@ -134,9 +134,9 @@ func (e *executor) buildServiceLinks(linksMap map[string]*types.Container) (link
 func (e *executor) createFromServiceDefinition(
 	serviceIndex int,
 	serviceDefinition common.Image,
-	linksMap map[string]*types.Container,
+	linksMap map[string]*container.Summary,
 ) error {
-	var container *types.Container
+	var container *container.Summary
 
 	serviceMeta := services.SplitNameAndVersion(serviceDefinition.Name)
 	if len(serviceDefinition.Aliases()) != 0 {
@@ -186,7 +186,7 @@ func (e *serviceHealthCheckError) Error() string {
 	return e.Inner.Error()
 }
 
-func (e *executor) runServiceHealthCheckContainer(service *types.Container, timeout time.Duration) error {
+func (e *executor) runServiceHealthCheckContainer(service *container.Summary, timeout time.Duration) error {
 	waitImage, err := e.getHelperImage()
 	if err != nil {
 		return fmt.Errorf("getPrebuiltImage: %w", err)
@@ -238,9 +238,9 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 }
 
 func (e *executor) createConfigForServiceHealthCheckContainer(
-	service *types.Container,
+	service *container.Summary,
 	cmd []string,
-	waitImage *types.ImageInspect,
+	waitImage *image.InspectResponse,
 	environment []string,
 ) *container.Config {
 	return &container.Config{
@@ -251,7 +251,7 @@ func (e *executor) createConfigForServiceHealthCheckContainer(
 	}
 }
 
-func (e *executor) waitForServiceContainer(service *types.Container, timeout time.Duration) error {
+func (e *executor) waitForServiceContainer(service *container.Summary, timeout time.Duration) error {
 	err := e.runServiceHealthCheckContainer(service, timeout)
 	if err == nil {
 		return nil
@@ -296,7 +296,7 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 // sink is the jobs main trace, which is wrapped in an inlineServiceLogWriter
 // instance to add additional context to logs. In the future this could be
 // separate file.
-func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[string]*types.Container) {
+func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[string]*container.Summary) {
 	if !e.Build.IsCIDebugServiceEnabled() {
 		return
 	}

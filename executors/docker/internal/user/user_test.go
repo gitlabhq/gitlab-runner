@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -30,7 +30,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 		"ImageInspectWithRaw error": {
 			setupDockerClientMock: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
 				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID).
-					Return(types.ImageInspect{}, nil, assert.AnError).
+					Return(image.InspectResponse{}, nil, assert.AnError).
 					Once()
 			},
 			expectedIsRoot: true,
@@ -39,7 +39,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 		"empty Config": {
 			setupDockerClientMock: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
 				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID).
-					Return(types.ImageInspect{}, nil, nil).
+					Return(image.InspectResponse{}, nil, nil).
 					Once()
 			},
 			expectedIsRoot: true,
@@ -48,7 +48,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 		"empty user entry in Config": {
 			setupDockerClientMock: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
 				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID).
-					Return(types.ImageInspect{Config: &container.Config{User: ""}}, nil, nil).
+					Return(image.InspectResponse{Config: &container.Config{User: ""}}, nil, nil).
 					Once()
 			},
 			expectedIsRoot: true,
@@ -57,7 +57,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 		"user entry in Config set to root": {
 			setupDockerClientMock: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
 				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID).
-					Return(types.ImageInspect{Config: &container.Config{User: "root"}}, nil, nil).
+					Return(image.InspectResponse{Config: &container.Config{User: "root"}}, nil, nil).
 					Once()
 			},
 			expectedIsRoot: true,
@@ -66,7 +66,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 		"user entry in Config set to non-root": {
 			setupDockerClientMock: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
 				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID).
-					Return(types.ImageInspect{Config: &container.Config{User: "non-root"}}, nil, nil).
+					Return(image.InspectResponse{Config: &container.Config{User: "non-root"}}, nil, nil).
 					Once()
 			},
 			expectedIsRoot: false,

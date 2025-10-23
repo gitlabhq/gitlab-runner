@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -19,7 +19,7 @@ const stepRunnerBinaryPath = "/opt/step-runner"
 
 var stepRunnerBootstrapCommand = []string{"/step-runner", "bootstrap", stepRunnerBinaryPath}
 
-func (e *commandExecutor) requestStepRunnerContainer() (*types.ContainerJSON, error) {
+func (e *commandExecutor) requestStepRunnerContainer() (*container.InspectResponse, error) {
 	return e.createContainer(
 		stepRunnerContainerType,
 		common.Image{Name: e.Config.GetStepRunnerImage()},
@@ -38,7 +38,7 @@ func newStepRunnerContainerConfigurator(e *executor) *stepRunnerContainerConfigu
 	return &stepRunnerContainerConfigurator{e: e}
 }
 
-func (c *stepRunnerContainerConfigurator) ContainerConfig(image *types.ImageInspect) (*container.Config, error) {
+func (c *stepRunnerContainerConfigurator) ContainerConfig(image *image.InspectResponse) (*container.Config, error) {
 	return &container.Config{
 		Image:           image.ID,
 		Cmd:             stepRunnerBootstrapCommand,

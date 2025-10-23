@@ -16,8 +16,8 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/docker/cli/opts"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
@@ -91,7 +91,7 @@ type executor struct {
 	temporary        []string // IDs of containers that should be removed
 	buildContainerID string
 
-	services []*types.Container
+	services []*container.Summary
 
 	links []string
 
@@ -249,7 +249,7 @@ func (e *executor) expandAndGetDockerImage(
 	allowedImages []string,
 	dockerOptions common.ImageDockerOptions,
 	imagePullPolicies []common.DockerPullPolicy,
-) (*types.ImageInspect, error) {
+) (*image.InspectResponse, error) {
 	imageName, err := e.expandImageName(imageName, allowedImages)
 	if err != nil {
 		return nil, err
@@ -265,7 +265,7 @@ func (e *executor) expandAndGetDockerImage(
 	return image, nil
 }
 
-func (e *executor) getHelperImage() (*types.ImageInspect, error) {
+func (e *executor) getHelperImage() (*image.InspectResponse, error) {
 	if imageNameFromConfig := e.ExpandValue(e.Config.Docker.HelperImage); imageNameFromConfig != "" {
 		e.BuildLogger.Debugln(
 			"Pull configured helper_image for predefined container instead of import bundled image",
@@ -297,7 +297,7 @@ func (e *executor) getHelperImage() (*types.ImageInspect, error) {
 	return e.pullManager.GetDockerImage(e.helperImageInfo.String(), common.ImageDockerOptions{}, nil)
 }
 
-func (e *executor) getLocalHelperImage() *types.ImageInspect {
+func (e *executor) getLocalHelperImage() *image.InspectResponse {
 	if e.helperImageInfo.Prebuilt == "" {
 		return nil
 	}
@@ -310,7 +310,7 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 	return image
 }
 
-func (e *executor) getBuildImage() (*types.ImageInspect, error) {
+func (e *executor) getBuildImage() (*image.InspectResponse, error) {
 	imageName, err := e.expandImageName(e.Build.Image.Name, []string{})
 	if err != nil {
 		return nil, err
@@ -327,8 +327,8 @@ func (e *executor) getBuildImage() (*types.ImageInspect, error) {
 	return image, nil
 }
 
-func fakeContainer(id string, names ...string) *types.Container {
-	return &types.Container{ID: id, Names: names}
+func fakeContainer(id string, names ...string) *container.Summary {
+	return &container.Summary{ID: id, Names: names}
 }
 
 func (e *executor) parseDeviceString(deviceString string) (device container.DeviceMapping, err error) {
@@ -422,7 +422,7 @@ func (e *executor) createService(
 	service, version, image string,
 	definition common.Image,
 	linkNames []string,
-) (*types.Container, error) {
+) (*container.Summary, error) {
 	if service == "" {
 		return nil, common.MakeBuildError("invalid service image name: %s", definition.Name)
 	}
@@ -486,7 +486,7 @@ func (e *executor) createService(
 	return fakeContainer(resp.ID, containerName), nil
 }
 
-func platformForImage(image *types.ImageInspect, opts common.ImageExecutorOptions) *v1.Platform {
+func platformForImage(image *image.InspectResponse, opts common.ImageExecutorOptions) *v1.Platform {
 	if image == nil || opts.Docker.Platform == "" {
 		return nil
 	}
@@ -719,7 +719,7 @@ func (e *executor) isInPrivilegedImageList(imageDefinition common.Image) bool {
 }
 
 type containerConfigurator interface {
-	ContainerConfig(image *types.ImageInspect) (*container.Config, error)
+	ContainerConfig(image *image.InspectResponse) (*container.Config, error)
 	HostConfig() (*container.HostConfig, error)
 	NetworkConfig(aliases []string) *network.NetworkingConfig
 }
@@ -750,7 +750,7 @@ func newDefaultContainerConfigurator(
 	}
 }
 
-func (c *defaultContainerConfigurator) ContainerConfig(image *types.ImageInspect) (*container.Config, error) {
+func (c *defaultContainerConfigurator) ContainerConfig(image *image.InspectResponse) (*container.Config, error) {
 	hostname := c.e.Config.Docker.Hostname
 	if hostname == "" {
 		hostname = c.e.Build.ProjectUniqueName()
@@ -781,7 +781,7 @@ func (e *executor) createContainer(
 	imageDefinition common.Image,
 	allowedInternalImages []string,
 	cfgTor containerConfigurator,
-) (*types.ContainerJSON, error) {
+) (*container.InspectResponse, error) {
 	if e.volumesManager == nil {
 		return nil, errVolumesManagerUndefined
 	}
@@ -851,7 +851,7 @@ func addStepRunnerToPath(env []string) []string {
 func (e *executor) createContainerConfig(
 	containerType string,
 	imageDefinition common.Image,
-	image *types.ImageInspect,
+	image *image.InspectResponse,
 	hostname string,
 	cmd []string,
 ) (*container.Config, error) {
@@ -1599,7 +1599,7 @@ func (e *executor) cleanupVolume(ctx context.Context) error {
 	return nil
 }
 
-func (e *executor) createHostConfigForServiceHealthCheck(service *types.Container) *container.HostConfig {
+func (e *executor) createHostConfigForServiceHealthCheck(service *container.Summary) *container.HostConfig {
 	var legacyLinks []string
 	if e.networkMode.UserDefined() == "" {
 		legacyLinks = append(legacyLinks, service.Names[0]+":service")
@@ -1628,7 +1628,7 @@ func (e *executor) createHostConfigForServiceHealthCheck(service *types.Containe
 // The legacy container links (https://docs.docker.com/network/links/) network
 // feature is deprecated. When we remove support for links, the healthcheck
 // system can be updated to no longer rely on environment variables
-func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([]string, error) {
+func (e *executor) addServiceHealthCheckEnvironment(service *container.Summary) ([]string, error) {
 	environment := []string{}
 
 	if e.networkMode.UserDefined() != "" {
@@ -1650,7 +1650,7 @@ func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([
 }
 
 //nolint:gocognit
-func (e *executor) getContainerExposedPorts(container *types.Container) ([]int, error) {
+func (e *executor) getContainerExposedPorts(container *container.Summary) ([]int, error) {
 	inspect, err := e.dockerConn.ContainerInspect(e.Context, container.ID)
 	if err != nil {
 		return nil, err
