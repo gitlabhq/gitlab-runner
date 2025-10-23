@@ -79,15 +79,15 @@ func TestCommandExecutor_Connect(t *testing.T) {
 			}
 
 			if test.hasBuildContainer {
-				s.buildContainer = &types.ContainerJSON{
-					ContainerJSONBase: &types.ContainerJSONBase{
+				s.buildContainer = &container.InspectResponse{
+					ContainerJSONBase: &container.ContainerJSONBase{
 						ID: "1234",
 					},
 				}
 
-				c.On("ContainerInspect", s.Context, "1234").Return(types.ContainerJSON{
-					ContainerJSONBase: &types.ContainerJSONBase{
-						State: &types.ContainerState{
+				c.On("ContainerInspect", s.Context, "1234").Return(container.InspectResponse{
+					ContainerJSONBase: &container.ContainerJSONBase{
+						State: &container.State{
 							Running: test.buildContainerRunning,
 						},
 					},
@@ -141,23 +141,23 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 					},
 					dockerConn: &dockerConnection{Client: c},
 				},
-				buildContainer: &types.ContainerJSON{
-					ContainerJSONBase: &types.ContainerJSONBase{
+				buildContainer: &container.InspectResponse{
+					ContainerJSONBase: &container.ContainerJSONBase{
 						ID: "1234",
 					},
 				},
 			}
 
-			c.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					State: &types.ContainerState{
+			c.On("ContainerInspect", mock.Anything, mock.Anything).Return(container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
+					State: &container.State{
 						Running: true,
 					},
 				},
 			}, nil)
 
 			c.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(
-				types.IDResponse{},
+				container.ExecCreateResponse{},
 				test.containerExecCreateErr,
 			).Once()
 
@@ -240,22 +240,22 @@ func TestTerminalConn_Start(t *testing.T) {
 			dockerConn: &dockerConnection{Client: c},
 			waiter:     wait.NewDockerKillWaiter(c),
 		},
-		buildContainer: &types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{
+		buildContainer: &container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{
 				ID: "1234",
 			},
 		},
 	}
 
-	c.On("ContainerInspect", mock.Anything, "1234").Return(types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			State: &types.ContainerState{
+	c.On("ContainerInspect", mock.Anything, "1234").Return(container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			State: &container.State{
 				Running: true,
 			},
 		},
 	}, nil).Once()
 
-	c.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{
+	c.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(container.ExecCreateResponse{
 		ID: "4321",
 	}, nil).Once()
 

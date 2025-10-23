@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
@@ -19,10 +19,10 @@ type dockerLinuxSetter struct {
 	client      docker.Client
 	waiter      wait.Waiter
 	logger      logrus.FieldLogger
-	helperImage *types.ImageInspect
+	helperImage *image.InspectResponse
 }
 
-func NewDockerLinuxSetter(c docker.Client, logger logrus.FieldLogger, helperImage *types.ImageInspect) Setter {
+func NewDockerLinuxSetter(c docker.Client, logger logrus.FieldLogger, helperImage *image.InspectResponse) Setter {
 	return &dockerLinuxSetter{
 		client:      c,
 		waiter:      wait.NewDockerKillWaiter(c),

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -19,7 +19,7 @@ import (
 )
 
 func TestNewDockerLinuxSetter(t *testing.T) {
-	got := NewDockerLinuxSetter(docker.NewMockClient(t), logrus.New(), &types.ImageInspect{})
+	got := NewDockerLinuxSetter(docker.NewMockClient(t), logrus.New(), &image.InspectResponse{})
 	assert.IsType(t, &dockerLinuxSetter{}, got)
 }
 
@@ -153,7 +153,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 				client: mClient,
 				waiter: mWaiter,
 				logger: logrus.New(),
-				helperImage: &types.ImageInspect{
+				helperImage: &image.InspectResponse{
 					ID: helperImageID,
 				},
 			}

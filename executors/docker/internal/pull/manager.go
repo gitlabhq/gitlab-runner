@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	cli "github.com/docker/cli/cli/config/types"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/image"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -18,7 +17,7 @@ import (
 
 type Manager interface {
 	GetDockerImage(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy,
-	) (*types.ImageInspect, error)
+	) (*image.InspectResponse, error)
 }
 
 type ManagerConfig struct {
@@ -66,7 +65,7 @@ func NewManager(
 func (m *manager) GetDockerImage(
 	imageName string, options common.ImageDockerOptions,
 	imagePullPolicies []common.DockerPullPolicy,
-) (*types.ImageInspect, error) {
+) (*image.InspectResponse, error) {
 	pullPolicies, err := m.getPullPolicies(imagePullPolicies)
 	if err != nil {
 		return nil, err
@@ -95,7 +94,7 @@ func (m *manager) GetDockerImage(
 			m.logger.Infoln(fmt.Sprintf("Attempt #%d: Trying %q pull policy", attempt, pullPolicy))
 		}
 
-		var img *types.ImageInspect
+		var img *image.InspectResponse
 		img, imageErr = m.getImageUsingPullPolicy(imageName, options, pullPolicy)
 		if imageErr != nil {
 			m.logger.Warningln(fmt.Sprintf("Failed to pull image with policy %q: %v", pullPolicy, imageErr))
@@ -122,7 +121,7 @@ func (m *manager) wasImageUsed(imageName, imageID string) bool {
 	return m.usedImages[imageName] == imageID
 }
 
-func (m *manager) markImageAsUsed(imageName string, image *types.ImageInspect) {
+func (m *manager) markImageAsUsed(imageName string, image *image.InspectResponse) {
 	m.usedImagesLock.Lock()
 	defer m.usedImagesLock.Unlock()
 
@@ -145,7 +144,7 @@ func (m *manager) markImageAsUsed(imageName string, image *types.ImageInspect) {
 func (m *manager) getImageUsingPullPolicy(
 	imageName string, options common.ImageDockerOptions,
 	pullPolicy common.DockerPullPolicy,
-) (*types.ImageInspect, error) {
+) (*image.InspectResponse, error) {
 	m.logger.Debugln("Looking for image", imageName, "...")
 	existingImage, _, err := m.client.ImageInspectWithRaw(m.context, imageName)
 
@@ -208,7 +207,7 @@ func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, 
 	return authConfig, nil
 }
 
-func (m *manager) pullDockerImage(imageName string, options common.ImageDockerOptions, ac *cli.AuthConfig) (*types.ImageInspect, error) {
+func (m *manager) pullDockerImage(imageName string, options common.ImageDockerOptions, ac *cli.AuthConfig) (*image.InspectResponse, error) {
 	if m.onPullImageHookFunc != nil {
 		m.onPullImageHookFunc()
 	}

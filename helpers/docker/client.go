@@ -17,7 +17,7 @@ type Client interface {
 	ClientVersion() string
 	ServerVersion(context.Context) (types.Version, error)
 
-	ImageInspectWithRaw(ctx context.Context, imageID string) (types.ImageInspect, []byte, error)
+	ImageInspectWithRaw(ctx context.Context, imageID string) (image.InspectResponse, []byte, error)
 
 	ImagePullBlocking(ctx context.Context, ref string, options image.PullOptions) error
 	ImageImportBlocking(
@@ -29,7 +29,7 @@ type Client interface {
 	ImageLoad(ctx context.Context, input io.Reader, quiet bool) (image.LoadResponse, error)
 	ImageTag(ctx context.Context, source string, target string) error
 
-	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error)
 	ContainerCreate(
 		ctx context.Context,
 		config *container.Config,
@@ -40,7 +40,7 @@ type Client interface {
 	ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error
 	ContainerKill(ctx context.Context, containerID, signal string) error
 	ContainerStop(ctx context.Context, containerID string, opions container.StopOptions) error
-	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
 	ContainerAttach(
 		ctx context.Context,
 		container string,
@@ -53,7 +53,7 @@ type Client interface {
 		condition container.WaitCondition,
 	) (<-chan container.WaitResponse, <-chan error)
 	ContainerLogs(ctx context.Context, container string, options container.LogsOptions) (io.ReadCloser, error)
-	ContainerExecCreate(ctx context.Context, container string, config container.ExecOptions) (types.IDResponse, error)
+	ContainerExecCreate(ctx context.Context, container string, config container.ExecOptions) (container.ExecCreateResponse, error)
 	ContainerExecAttach(ctx context.Context, execID string, config container.ExecStartOptions) (types.HijackedResponse, error)
 
 	NetworkCreate(

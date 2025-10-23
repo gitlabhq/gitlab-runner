@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/image"
 	"github.com/sirupsen/logrus"
 
@@ -58,7 +57,7 @@ func init() {
 	}
 }
 
-func Get(ctx context.Context, client docker.Client, info helperimage.Info) (*types.ImageInspect, error) {
+func Get(ctx context.Context, client docker.Client, info helperimage.Info) (*image.InspectResponse, error) {
 	if err := load(ctx, client, info); err != nil {
 		return nil, err
 	}

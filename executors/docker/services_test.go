@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/go-connections/nat"
@@ -82,7 +82,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	options := common.ImageDockerOptions{}
 
 	p.On("GetDockerImage", imageName, options, []common.DockerPullPolicy(nil)).
-		Return(&types.ImageInspect{ID: "helper-image"}, nil).
+		Return(&image.InspectResponse{ID: "helper-image"}, nil).
 		Once()
 
 	c.On(
@@ -117,7 +117,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	err = e.createVolumesManager()
 	require.NoError(t, err)
 
-	linksMap := make(map[string]*types.Container)
+	linksMap := make(map[string]*container.Summary)
 	err = e.createFromServiceDefinition(0, common.Image{Name: description}, linksMap)
 	assert.NoError(t, err)
 }
@@ -342,7 +342,7 @@ func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolic
 	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
 	c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
-		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Once()
+		Return(image.InspectResponse{ID: "123"}, []byte{}, nil).Once()
 	c.On("NetworkList", mock.Anything, mock.Anything).
 		Return([]network.Summary{}, nil).Once()
 	c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
@@ -633,7 +633,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			networkMode: "test",
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
-					Return(types.ContainerJSON{
+					Return(container.InspectResponse{
 						Config: &container.Config{
 							ExposedPorts: nat.PortSet{
 								"1000/tcp": {},
@@ -651,7 +651,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			networkMode: "test",
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
-					Return(types.ContainerJSON{
+					Return(container.InspectResponse{
 						Config: &container.Config{
 							ExposedPorts: nat.PortSet{
 								"1000/tcp":  {},
@@ -684,7 +684,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			networkMode: "test",
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
-					Return(types.ContainerJSON{
+					Return(container.InspectResponse{
 						Config: &container.Config{
 							ExposedPorts: nat.PortSet{
 								"1000-1100": {},
@@ -721,7 +721,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			networkMode: "test",
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
-					Return(types.ContainerJSON{
+					Return(container.InspectResponse{
 						Config: &container.Config{
 							ExposedPorts: nat.PortSet{
 								"1000/tcp": {},
@@ -742,7 +742,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			networkMode: "test",
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
-					Return(types.ContainerJSON{
+					Return(container.InspectResponse{
 						Config: &container.Config{
 							ExposedPorts: nat.PortSet{
 								"1000/tcp": {},
@@ -763,7 +763,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			networkMode: "test",
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
-					Return(types.ContainerJSON{
+					Return(container.InspectResponse{
 						Config: &container.Config{
 							ExposedPorts: nat.PortSet{
 								"1000/tcp": {},
@@ -781,7 +781,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			networkMode: "test",
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
-					Return(types.ContainerJSON{
+					Return(container.InspectResponse{
 						Config: &container.Config{
 							ExposedPorts: nat.PortSet{},
 						},
@@ -794,7 +794,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			networkMode: "test",
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
-					Return(types.ContainerJSON{}, fmt.Errorf("%v", "test error")).
+					Return(container.InspectResponse{}, fmt.Errorf("%v", "test error")).
 					Once()
 			},
 			expectedErr: fmt.Sprintf("get container exposed ports: %v", "test error"),
@@ -814,7 +814,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 				dockerConn:  &dockerConnection{Client: client},
 			}
 
-			service := &types.Container{
+			service := &container.Summary{
 				ID:    "0000000000000000000000000000000000000000000000000000000000000000",
 				Names: []string{"default"},
 			}
@@ -905,7 +905,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 }
 
 func Test_Executor_captureContainersLogs(t *testing.T) {
-	containers := []*types.Container{
+	containers := []*container.Summary{
 		{
 			ID:    "000000000000000000000000000000000",
 			Names: []string{"some container"},
@@ -918,7 +918,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 		},
 	}
 
-	linksMap := map[string]*types.Container{
+	linksMap := map[string]*container.Summary{
 		"one":       containers[0],
 		"two":       containers[1],
 		"two-alias": containers[1],

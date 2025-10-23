@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -29,14 +29,14 @@ const (
 
 type commandExecutor struct {
 	executor
-	helperContainer                 *types.ContainerJSON
-	buildContainer                  *types.ContainerJSON
+	helperContainer                 *container.InspectResponse
+	buildContainer                  *container.InspectResponse
 	lock                            sync.Mutex
 	terminalWaitForContainerTimeout time.Duration
 	stepRunnerContainerOnce         sync.Once
 }
 
-func (s *commandExecutor) getBuildContainer() *types.ContainerJSON {
+func (s *commandExecutor) getBuildContainer() *container.InspectResponse {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -134,7 +134,7 @@ func (s *commandExecutor) runContainer(containerType string, cmd common.Executor
 	return runErr
 }
 
-func (s *commandExecutor) requestContainer(containerType string) (*types.ContainerJSON, error) {
+func (s *commandExecutor) requestContainer(containerType string) (*container.InspectResponse, error) {
 	switch containerType {
 	case buildContainerType:
 		return s.requestBuildContainer()
@@ -147,7 +147,7 @@ func (s *commandExecutor) requestContainer(containerType string) (*types.Contain
 	}
 }
 
-func (s *commandExecutor) hasExistingContainer(containerType string, container *types.ContainerJSON) bool {
+func (s *commandExecutor) hasExistingContainer(containerType string, container *container.InspectResponse) bool {
 	if container == nil {
 		return false
 	}
@@ -166,7 +166,7 @@ func (s *commandExecutor) hasExistingContainer(containerType string, container *
 	return false
 }
 
-func (s *commandExecutor) requestHelperContainer() (*types.ContainerJSON, error) {
+func (s *commandExecutor) requestHelperContainer() (*container.InspectResponse, error) {
 	if s.hasExistingContainer(predefinedContainerType, s.helperContainer) {
 		return s.helperContainer, nil
 	}
@@ -206,7 +206,7 @@ func (s *commandExecutor) getHelperImageCmd() []string {
 
 var stepRunnerServiceCommand = []string{"step-runner", "serve"}
 
-func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) {
+func (s *commandExecutor) requestBuildContainer() (*container.InspectResponse, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -327,7 +327,7 @@ func (s *commandExecutor) executeChown(dockerExec exec.Docker, uid int, gid int)
 }
 
 func (s *commandExecutor) executeChownOnDir(
-	c *types.ContainerJSON,
+	c *container.InspectResponse,
 	dockerExec exec.Docker,
 	uid int,
 	gid int,

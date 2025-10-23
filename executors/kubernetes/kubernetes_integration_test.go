@@ -3303,7 +3303,29 @@ func TestKubernetesProcMount(t *testing.T) {
 	t.Parallel()
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	privileged := false
+	setBuildWithProcMount := func(build *common.Build, procMountType v1.ProcMountType) {
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "none"})
+		build.Runner.RunnerSettings.Kubernetes.BuildContainerSecurityContext = common.KubernetesContainerSecurityContext{
+			ProcMount:  procMountType,
+			Privileged: &[]bool{false}[0], // unpriv'ed
+		}
+		if strings.EqualFold(strings.TrimSpace(string(procMountType)), "unmasked") {
+			// when we set "unmsked", we also need to set .spec.hostUsers to false explicitly (since: 1.33?)
+			// for that we need to leverage the pod spec patch feature
+			build.Runner.RunnerSettings.FeatureFlags = map[string]bool{
+				featureflags.UseAdvancedPodSpecConfiguration: true,
+			}
+			build.Runner.RunnerSettings.Kubernetes.PodSpec = append(build.Runner.RunnerSettings.Kubernetes.PodSpec, common.KubernetesPodSpec{
+				Name:      "disable_host_usersns",
+				PatchType: common.PatchTypeJSONPatchType,
+				Patch: `[{
+					"op": "add",
+					"path": "/hostUsers",
+					"value": false
+				}]`,
+			})
+		}
+	}
 
 	// Generate a temporary Pod with procMount set to Unmasked.
 	// If the cluster supports the ProcMount feature, then this will be reflected
@@ -3313,10 +3335,7 @@ func TestKubernetesProcMount(t *testing.T) {
 		return common.GetRemoteBuildResponse("cat")
 	})
 
-	tmpPod.Runner.RunnerSettings.Kubernetes.BuildContainerSecurityContext = common.KubernetesContainerSecurityContext{
-		ProcMount:  v1.UnmaskedProcMount,
-		Privileged: &privileged,
-	}
+	setBuildWithProcMount(tmpPod, v1.UnmaskedProcMount)
 
 	shouldSkipCh := make(chan bool)
 	cleanup := buildtest.OnUserStage(tmpPod, func() {
@@ -3354,10 +3373,6 @@ func TestKubernetesProcMount(t *testing.T) {
 	// If we get here, then we have validated that the cluster does indeed support the
 	// ProcMount feature, and we can proceed with a more thorough set of tests.
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
-		return common.GetRemoteBuildResponse("unshare --fork -r -p --mount-proc true")
-	})
-
 	var buildErr *common.BuildError
 
 	tests := map[string]struct {
@@ -3369,6 +3384,7 @@ func TestKubernetesProcMount(t *testing.T) {
 			validate: func(t *testing.T, out string, err error) {
 				assert.ErrorAs(t, err, &buildErr)
 				assert.Contains(t, out, "Job failed")
+				assert.Contains(t, out, "[masked]")
 			},
 		},
 		"default": {
@@ -3376,6 +3392,7 @@ func TestKubernetesProcMount(t *testing.T) {
 			validate: func(t *testing.T, out string, err error) {
 				assert.ErrorAs(t, err, &buildErr)
 				assert.Contains(t, out, "Job failed")
+				assert.Contains(t, out, "[masked]")
 			},
 		},
 		"Unmasked": {
@@ -3383,6 +3400,7 @@ func TestKubernetesProcMount(t *testing.T) {
 			validate: func(t *testing.T, out string, err error) {
 				require.NoError(t, err)
 				assert.Contains(t, out, "Job succeeded")
+				assert.Contains(t, out, "[unmasked]")
 			},
 		},
 		"unmasked": {
@@ -3390,6 +3408,7 @@ func TestKubernetesProcMount(t *testing.T) {
 			validate: func(t *testing.T, out string, err error) {
 				require.NoError(t, err)
 				assert.Contains(t, out, "Job succeeded")
+				assert.Contains(t, out, "[unmasked]")
 			},
 		},
 		"empty": {
@@ -3397,6 +3416,7 @@ func TestKubernetesProcMount(t *testing.T) {
 			validate: func(t *testing.T, out string, err error) {
 				assert.ErrorAs(t, err, &buildErr)
 				assert.Contains(t, out, "Job failed")
+				assert.Contains(t, out, "[masked]")
 			},
 		},
 		"invalid": {
@@ -3404,18 +3424,29 @@ func TestKubernetesProcMount(t *testing.T) {
 			validate: func(t *testing.T, out string, err error) {
 				assert.ErrorAs(t, err, &buildErr)
 				assert.Contains(t, out, "Job failed")
+				assert.Contains(t, out, "[masked]")
 			},
 		},
 	}
+
+	const testScript = `
+		if mount | grep 'proc on /proc' | grep -q 'ro,'
+		then
+			echo '[masked] masked /proc paths found, some paths have ro mount overwrites'
+			exit 1
+		fi
+		echo '[unmasked] /proc is unmasked, no ro mount overwrites'
+	`
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			build.Runner.RunnerSettings.Kubernetes.BuildContainerSecurityContext = common.KubernetesContainerSecurityContext{
-				ProcMount:  test.procMount,
-				Privileged: &privileged,
-			}
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse(testScript)
+			})
+
+			setBuildWithProcMount(build, test.procMount)
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 			test.validate(t, out, err)

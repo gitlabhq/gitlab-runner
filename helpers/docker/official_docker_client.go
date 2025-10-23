@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -102,16 +103,18 @@ func (c *officialDockerClient) ServerVersion(ctx context.Context) (types.Version
 func (c *officialDockerClient) ImageInspectWithRaw(
 	ctx context.Context,
 	imageID string,
-) (types.ImageInspect, []byte, error) {
+) (image.InspectResponse, []byte, error) {
 	started := time.Now()
-	image, data, err := c.client.ImageInspectWithRaw(ctx, imageID)
-	return image, data, wrapError("ImageInspectWithRaw", err, started)
+	raw := &bytes.Buffer{}
+	inspectOpts := client.ImageInspectWithRawResponse(raw)
+	image, err := c.client.ImageInspect(ctx, imageID, inspectOpts)
+	return image, raw.Bytes(), wrapError("ImageInspectWithRaw", err, started)
 }
 
 func (c *officialDockerClient) ContainerList(
 	ctx context.Context,
 	options container.ListOptions,
-) ([]types.Container, error) {
+) ([]container.Summary, error) {
 	started := time.Now()
 	containers, err := c.client.ContainerList(ctx, options)
 	return containers, wrapError("ContainerList", err, started)
@@ -156,7 +159,7 @@ func (c *officialDockerClient) ContainerStop(
 	return wrapError("ContainerStop", err, started)
 }
 
-func (c *officialDockerClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+func (c *officialDockerClient) ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error) {
 	started := time.Now()
 	data, err := c.client.ContainerInspect(ctx, containerID)
 	return data, wrapError("ContainerInspect", err, started)
@@ -204,7 +207,7 @@ func (c *officialDockerClient) ContainerExecCreate(
 	ctx context.Context,
 	container string,
 	config container.ExecOptions,
-) (types.IDResponse, error) {
+) (container.ExecCreateResponse, error) {
 	started := time.Now()
 	resp, err := c.client.ContainerExecCreate(ctx, container, config)
 	return resp, wrapError("ContainerExecCreate", err, started)
@@ -286,7 +289,7 @@ func (c *officialDockerClient) Info(ctx context.Context) (system.Info, error) {
 
 func (c *officialDockerClient) ImageLoad(ctx context.Context, input io.Reader, quiet bool) (image.LoadResponse, error) {
 	started := time.Now()
-	resp, err := c.client.ImageLoad(ctx, input, quiet)
+	resp, err := c.client.ImageLoad(ctx, input, client.ImageLoadWithQuiet(quiet))
 	return resp, wrapError("ImageLoad", err, started)
 }
 
