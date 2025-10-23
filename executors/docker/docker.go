@@ -1007,7 +1007,7 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 		if err != nil {
 			return common.MakeBuildError("creating steps request: %w", err)
 		}
-		dockerExec = exec.NewStepsDocker(e.Context, e.dockerConn, e.waiter, e.Build.Log(), request)
+		dockerExec = exec.NewStepsDocker(e.dockerConn, e.waiter, e.Build.Log(), request)
 	}
 
 	stdout := e.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
