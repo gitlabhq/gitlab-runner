@@ -409,9 +409,14 @@ func init() {
 		DefaultShellName: options.Shell.Shell,
 	})
 
+	windowsFeaturesUpdater := func(features *common.FeaturesInfo) {
+		featuresUpdater(features)
+		features.NativeStepsIntegration = false
+	}
+
 	common.RegisterExecutorProvider("docker-windows", executors.DefaultExecutorProvider{
 		Creator:          creator,
-		FeaturesUpdater:  featuresUpdater,
+		FeaturesUpdater:  windowsFeaturesUpdater,
 		ConfigUpdater:    configUpdater,
 		DefaultShellName: options.Shell.Shell,
 	})
