@@ -793,14 +793,11 @@ func (j *JobResponse) ValidateStepsJobRequest(executorSupportsNativeSteps bool) 
 		return fmt.Errorf("the `run` keyword requires the exclusive use of the variable STEPS")
 	}
 
-	if j.Image.Name == "" {
-		// Experiment requires step-runner to be present in
-		// the container image. If no image is provided then
-		// we use the step-runner v0 image.
-		j.Image.Name = "registry.gitlab.com/gitlab-org/step-runner:v0"
-	}
+	if executorSupportsNativeSteps {
+		// If the executor supports native step execution and the job was specified as steps, execute the job via native
+		// steps integration. In other words, disallow executing the job in shim mode if the executor supports native
+		// steps.
 
-	if executorSupportsNativeSteps && j.NativeStepsRequested() {
 		// If native steps is enabled, the script steps won't be executed anyway, but this change ensures the job log
 		// trace is coherent since it will print: Executing "step_run" stage of the job script
 		j.Steps = Steps{{Name: StepNameRun}}
