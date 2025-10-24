@@ -44,15 +44,37 @@ const (
 
 func TestMain(m *testing.M) {
 	if len(os.Args) > 1 {
-		args := slices.Clone(os.Args[2:])
-		switch os.Args[1] {
-		case externalMode:
-			os.Exit(beExternalBinary(args...))
-		case appMode:
-			os.Exit(beCliApp(args...))
+		cmds := map[string]func(...string) int{
+			externalMode: beExternalBinary,
+			appMode:      beCliApp,
+		}
+		mode := os.Args[1]
+		if cmd, ok := cmds[mode]; ok {
+			mainTmpDir := os.Getenv("_MAIN_TMP_DIR")
+			fakeCoverDir, err := os.MkdirTemp(mainTmpDir, mode)
+			if err != nil {
+				panic("creating fake cover dir: " + err.Error())
+			}
+			os.Setenv("GOCOVERDIR", fakeCoverDir)
+			args := slices.Clone(os.Args[2:])
+			os.Exit(cmd(args...))
 		}
 	}
-	os.Exit(m.Run())
+
+	mainTmpDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		panic("creating main temp dir: " + err.Error())
+	}
+	os.Setenv("_MAIN_TMP_DIR", mainTmpDir)
+
+	rc := m.Run()
+
+	err = os.RemoveAll(mainTmpDir)
+	if err != nil {
+		panic("deleting main temp dir: " + err.Error())
+	}
+
+	os.Exit(rc)
 }
 
 func TestServe(t *testing.T) {
