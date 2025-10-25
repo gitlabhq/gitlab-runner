@@ -15,10 +15,11 @@ type Tee struct {
 
 	entry *logrus.Entry
 
-	// disable stops teeing to the runner log, this is essentially used by
+	// noLog stops teeing to the runner log, this is essentially used by
 	// runner tests where both the build and runner logs both use the same
-	// destination (like stdout)
-	disable bool
+	// destination (like stdout), as well as builds logs where we want separate
+	// structured log lines in the runner log vs the build..
+	noLog bool
 }
 
 func NewTee(logFn func(args ...any), entry *logrus.Entry, disable bool) Tee {
@@ -27,9 +28,17 @@ func NewTee(logFn func(args ...any), entry *logrus.Entry, disable bool) Tee {
 
 func (t *Tee) WithFields(fields logrus.Fields) Tee {
 	return Tee{
-		logFn:   t.logFn,
-		entry:   t.entry.WithFields(fields),
-		disable: t.disable,
+		logFn: t.logFn,
+		entry: t.entry.WithFields(fields),
+		noLog: t.noLog,
+	}
+}
+
+func (t *Tee) WithoutLog() Tee {
+	return Tee{
+		logFn: t.logFn,
+		entry: t.entry,
+		noLog: true,
 	}
 }
 
@@ -57,7 +66,7 @@ func (t *Tee) log(level logrus.Level, logPrefix string, args ...interface{}) {
 	}
 
 	// don't tee to logrus entry (runner log) when disabled or no args
-	if t.disable || len(args) == 0 {
+	if t.noLog || len(args) == 0 {
 		return
 	}
 
