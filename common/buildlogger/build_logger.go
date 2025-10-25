@@ -24,6 +24,7 @@ type Options struct {
 	MaskTokenPrefixes    []string
 	Timestamping         bool
 	MaskAllDefaultTokens bool
+	TeeOnly              bool
 }
 
 const (
@@ -77,6 +78,9 @@ func New(log Trace, entry *logrus.Entry, opts Options) Logger {
 	}
 
 	l.Tee = internal.NewTee(l.SendRawLog, entry, log != nil && log.IsStdout())
+	if opts.TeeOnly {
+		l.Tee = l.Tee.WithoutLog()
+	}
 
 	return l
 }

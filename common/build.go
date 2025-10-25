@@ -1019,20 +1019,25 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 // If an error cannot be unwrapped to `BuildError`, `SystemFailure`
 // is used as the failure reason.
 func (b *Build) setTraceStatus(trace JobTrace, err error) {
-	logger := buildlogger.New(
-		trace, b.Log().WithFields(logrus.Fields{
-			"duration_s": b.FinalDuration().Seconds(),
-		}),
+	logger := b.Log().WithFields(logrus.Fields{
+		"duration_s": b.FinalDuration().Seconds(),
+	})
+
+	buildLogger := buildlogger.New(
+		trace,
+		logger,
 		buildlogger.Options{
 			Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),
 			MaskAllDefaultTokens: b.IsFeatureFlagOn(featureflags.MaskAllDefaultTokens),
+			TeeOnly:              true,
 		},
 	)
-	defer logger.Close()
+	defer buildLogger.Close()
 
 	if err == nil {
-		logger.Infoln("Job succeeded")
-		logTerminationError(logger, "Success", trace.Success())
+		logger.WithFields(logrus.Fields{"job-status": "success"}).Infoln("Job succeeded")
+		buildLogger.Infoln("Job succeeded")
+		logTerminationError(buildLogger, "Success", trace.Success())
 
 		return
 	}
@@ -1043,25 +1048,40 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	if errors.As(err, &buildError) {
 		b.failureReason = buildError.FailureReason
 
-		msg := fmt.Sprintln("Job failed:", err)
+		msg := fmt.Sprint("Job failed: ", err)
 		if buildError.FailureReason == RunnerSystemFailure {
-			msg = fmt.Sprintln("Job failed (system failure):", err)
+			msg = fmt.Sprint("Job failed (system failure): ", err)
 		}
 
-		logger.SoftErrorln(msg)
+		logger.
+			WithFields(logrus.Fields{
+				"job-status":     "failed",
+				"error":          err,
+				"failure_reason": buildError.FailureReason,
+				"exit_code":      buildError.ExitCode,
+			}).
+			Warningln(msg)
+		buildLogger.SoftErrorln(msg)
 
 		trace.SetSupportedFailureReasonMapper(newFailureReasonMapper(b.Features.FailureReasons))
 		err = trace.Fail(err, JobFailureData{
 			Reason:   buildError.FailureReason,
 			ExitCode: buildError.ExitCode,
 		})
-		logTerminationError(logger, "Fail", err)
+		logTerminationError(buildLogger, "Fail", err)
 
 		return
 	}
 
-	logger.Errorln("Job failed (system failure):", err)
-	logTerminationError(logger, "Fail", trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure}))
+	logger.
+		WithFields(logrus.Fields{
+			"job-status":     "failed",
+			"error":          err,
+			"failure_reason": RunnerSystemFailure,
+		}).
+		Errorln("Job failed (system failure):", err)
+	buildLogger.Errorln("Job failed (system failure):", err)
+	logTerminationError(buildLogger, "Fail", trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure}))
 }
 
 func logTerminationError(logger buildlogger.Logger, name string, err error) {
