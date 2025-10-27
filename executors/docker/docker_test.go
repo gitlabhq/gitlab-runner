@@ -2806,3 +2806,195 @@ func Test_createStepRunnerVolume(t *testing.T) {
 		})
 	}
 }
+
+// TestDockerSlotCgroupSettings verifies that slot-based cgroup settings
+// are actually applied to container HostConfig when creating containers
+func TestDockerSlotCgroupSettings(t *testing.T) {
+	t.Run("Build container with slot cgroups enabled", func(t *testing.T) {
+		runnerConfig := &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				UseSlotCgroups:     true,
+				SlotCgroupTemplate: "runner/slot-${slot}",
+				Docker: &common.DockerConfig{
+					CgroupParent: "should-not-use-this",
+				},
+			},
+		}
+
+		// Verify HostConfig.CgroupParent is set to slot-based value
+		cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+			assert.Equal(t, "runner/slot-5", hostConfig.CgroupParent, "HostConfig.CgroupParent should be set to slot-based value")
+		}
+
+		testDockerConfigurationWithSlotCgroups(t, runnerConfig, &mockAutoscalerExecutorData{slot: 5}, cce)
+	})
+
+	t.Run("Build container with slot cgroups enabled using default template", func(t *testing.T) {
+		runnerConfig := &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				UseSlotCgroups: true,
+				Docker: &common.DockerConfig{
+					CgroupParent: "fallback-cgroup",
+				},
+			},
+		}
+
+		cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+			assert.Equal(t, "gitlab-runner/slot-10", hostConfig.CgroupParent, "HostConfig.CgroupParent should use default template")
+		}
+
+		testDockerConfigurationWithSlotCgroups(t, runnerConfig, &mockAutoscalerExecutorData{slot: 10}, cce)
+	})
+
+	t.Run("Build container with slot cgroups disabled", func(t *testing.T) {
+		runnerConfig := &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				UseSlotCgroups: false,
+				Docker: &common.DockerConfig{
+					CgroupParent: "static-build-cgroup",
+				},
+			},
+		}
+
+		cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+			assert.Equal(t, "static-build-cgroup", hostConfig.CgroupParent, "HostConfig.CgroupParent should use static value when slot cgroups disabled")
+		}
+
+		testDockerConfigurationWithSlotCgroups(t, runnerConfig, &mockAutoscalerExecutorData{slot: 5}, cce)
+	})
+
+	t.Run("Build container with slot cgroups enabled but no slot available", func(t *testing.T) {
+		runnerConfig := &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				UseSlotCgroups: true,
+				Docker: &common.DockerConfig{
+					CgroupParent: "fallback-build-cgroup",
+				},
+			},
+		}
+
+		cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+			assert.Equal(t, "fallback-build-cgroup", hostConfig.CgroupParent, "HostConfig.CgroupParent should fallback when no slot available")
+		}
+
+		testDockerConfigurationWithSlotCgroups(t, runnerConfig, nil, cce)
+	})
+
+	t.Run("Service container with slot cgroups enabled", func(t *testing.T) {
+		runnerConfig := &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				UseSlotCgroups: true,
+				Docker: &common.DockerConfig{
+					ServiceCgroupParent:       "should-not-use-this",
+					ServiceSlotCgroupTemplate: "runner/service-${slot}",
+				},
+			},
+		}
+
+		testDockerServiceContainerCgroup(t, runnerConfig, &mockAutoscalerExecutorData{slot: 7}, "runner/service-7")
+	})
+
+	t.Run("Service container with slot cgroups enabled using default template", func(t *testing.T) {
+		runnerConfig := &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				UseSlotCgroups: true,
+				Docker: &common.DockerConfig{
+					ServiceCgroupParent: "fallback-service",
+				},
+			},
+		}
+
+		testDockerServiceContainerCgroup(t, runnerConfig, &mockAutoscalerExecutorData{slot: 3}, "gitlab-runner/slot-3")
+	})
+
+	t.Run("Service container with slot cgroups disabled", func(t *testing.T) {
+		runnerConfig := &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				UseSlotCgroups: false,
+				Docker: &common.DockerConfig{
+					ServiceCgroupParent: "static-service-cgroup",
+				},
+			},
+		}
+
+		testDockerServiceContainerCgroup(t, runnerConfig, &mockAutoscalerExecutorData{slot: 5}, "static-service-cgroup")
+	})
+
+	t.Run("Service container with slot cgroups enabled but no slot available", func(t *testing.T) {
+		runnerConfig := &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				UseSlotCgroups: true,
+				Docker: &common.DockerConfig{
+					ServiceCgroupParent: "fallback-service-cgroup",
+				},
+			},
+		}
+
+		testDockerServiceContainerCgroup(t, runnerConfig, nil, "fallback-service-cgroup")
+	})
+}
+
+// Mock ExecutorData for testing slot functionality
+type mockAutoscalerExecutorData struct {
+	slot int
+}
+
+func (m *mockAutoscalerExecutorData) AcquisitionSlot() int {
+	return m.slot
+}
+
+// testDockerConfigurationWithSlotCgroups tests that build containers are created with slot-based cgroups
+func testDockerConfigurationWithSlotCgroups(
+	t *testing.T,
+	runnerConfig *common.RunnerConfig,
+	executorData interface{},
+	cce containerConfigExpectations,
+) {
+	c, e := prepareTestDockerConfiguration(t, runnerConfig.Docker, cce, "alpine", "alpine:latest")
+	c.On("ContainerInspect", mock.Anything, "abc").
+		Return(container.InspectResponse{}, nil).Once()
+
+	// Set the executor data for slot testing
+	e.Build.ExecutorData = executorData
+	// Set the runner config for slot testing
+	e.Config = *runnerConfig
+
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
+	err = e.createPullManager()
+	require.NoError(t, err)
+
+	imageConfig := common.Image{Name: "alpine"}
+	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
+	assert.NoError(t, err, "Should create container without errors")
+}
+
+// testDockerServiceContainerCgroup tests that service containers are created with the expected cgroup parent
+func testDockerServiceContainerCgroup(
+	t *testing.T,
+	runnerConfig *common.RunnerConfig,
+	executorData interface{},
+	expectedCgroup string,
+) {
+	// Create mock docker client
+	c := docker.NewMockClient(t)
+
+	// Create mock volumes manager
+	vm := volumes.NewMockManager(t)
+	vm.On("Binds").Return([]string{})
+
+	e := new(executor)
+	e.dockerConn = &dockerConnection{Client: c}
+	e.Config = *runnerConfig
+	e.Build = &common.Build{
+		ExecutorData: executorData,
+	}
+	e.volumesManager = vm
+
+	// Call createHostConfigForService and verify the cgroup is set correctly
+	hostConfig, err := e.createHostConfigForService(false, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, expectedCgroup, hostConfig.CgroupParent, "Service container HostConfig.CgroupParent should be set correctly")
+}

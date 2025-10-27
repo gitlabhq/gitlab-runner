@@ -23,6 +23,9 @@ import (
 
 var _ executors.Environment = (*acquisitionRef)(nil)
 
+// AcquisitionRef is an exported alias for acquisitionRef
+type AcquisitionRef = acquisitionRef
+
 var (
 	errRefAcqNotSet = errors.New("ref.acq is not set")
 
@@ -55,6 +58,24 @@ func newAcquisitionRef(key string, mapJobImageToVMImage bool) *acquisitionRef {
 	}
 }
 
+// AcquisitionSlot returns the slot number for this acquisition
+func (ref *acquisitionRef) AcquisitionSlot() int {
+	if ref.acq != nil {
+		return ref.acq.Slot()
+	}
+	return -1
+}
+
+// addSlotCgroupEnvironmentVariable adds GITLAB_RUNNER_SLOT_CGROUP environment variable if slot cgroups are enabled
+func (ref *acquisitionRef) addSlotCgroupEnvironmentVariable(options *common.ExecutorPrepareOptions) {
+	if cgroupPath := options.Config.GetSlotCgroupPath(ref); cgroupPath != "" {
+		options.Build.Variables = append(options.Build.Variables, common.JobVariable{
+			Key:   "GITLAB_RUNNER_SLOT_CGROUP",
+			Value: cgroupPath,
+		})
+	}
+}
+
 func (ref *acquisitionRef) Prepare(
 	ctx context.Context,
 	logger buildlogger.Logger,
@@ -63,6 +84,8 @@ func (ref *acquisitionRef) Prepare(
 	if ref.acq == nil {
 		return nil, errRefAcqNotSet
 	}
+
+	ref.addSlotCgroupEnvironmentVariable(&options)
 
 	dialCtx, cancel := ref.acq.WithContext(ctx)
 	defer cancel()
@@ -196,7 +219,7 @@ func (ref *acquisitionRef) createVMTunnel(
 	var stompedVMID *string
 	var err error
 	err = withInit(ctx, options.Config, nc, func() error {
-		slot := int32(ref.acq.Slot())
+		slot := int32(ref.AcquisitionSlot())
 		vm, stompedVMID, err = nc.Create(ctx, image, &slot)
 		return err
 	})

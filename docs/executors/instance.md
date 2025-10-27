@@ -538,6 +538,20 @@ concurrent = 50
       idle_time = "20m0s"
 ```
 
+## Slot-based cgroup support
+
+The Instance executor supports slot-based cgroups for improved resource isolation between concurrent jobs. When enabled, the `GITLAB_RUNNER_SLOT_CGROUP` environment variable is automatically provided to jobs, allowing you to run processes under slot-specific cgroups.
+
+For detailed information about slot-based cgroups, including benefits, prerequisites, configuration, and setup instructions,
+see [slot-based cgroup support](../configuration/slot_based_cgroups.md).
+
+### Using the GitLab Runner slot cgroup environment variable
+
+The Instance executor provides the `GITLAB_RUNNER_SLOT_CGROUP` environment variable to your jobs.
+Use this variable with tools like `systemd-run` or `cgexec` to run processes under the slot-specific cgroup.
+
+For usage examples and troubleshooting, see the [Instance executor section](../configuration/slot_based_cgroups.md#instance-executor) in the slot-based cgroup documentation.
+
 ## Troubleshooting
 
 When working with the Instance executor, you might encounter the following issues:

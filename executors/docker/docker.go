@@ -522,7 +522,7 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 			Memory:            e.Config.Docker.GetServiceMemory(),
 			MemorySwap:        e.Config.Docker.GetServiceMemorySwap(),
 			MemoryReservation: e.Config.Docker.GetServiceMemoryReservation(),
-			CgroupParent:      e.Config.Docker.ServiceCgroupParent,
+			CgroupParent:      e.getServiceCgroupParent(),
 			CpusetCpus:        e.Config.Docker.ServiceCPUSetCPUs,
 			CPUShares:         e.Config.Docker.ServiceCPUShares,
 			NanoCPUs:          nanoCPUs,
@@ -914,6 +914,22 @@ func (e *executor) getBuildContainerUser(imageDefinition common.Image) (string, 
 	return user, nil
 }
 
+// getCgroupParent returns the cgroup parent for build containers
+func (e *executor) getCgroupParent() string {
+	if path := e.Config.GetSlotCgroupPath(e.Build.ExecutorData); path != "" {
+		return path
+	}
+	return e.Config.Docker.CgroupParent
+}
+
+// getServiceCgroupParent returns the cgroup parent for service containers
+func (e *executor) getServiceCgroupParent() string {
+	if path := e.Config.GetServiceSlotCgroupPath(e.Build.ExecutorData); path != "" {
+		return path
+	}
+	return e.Config.Docker.ServiceCgroupParent
+}
+
 func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetNanoCPUs()
 	if err != nil {
@@ -942,7 +958,7 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 			Memory:            e.Config.Docker.GetMemory(),
 			MemorySwap:        e.Config.Docker.GetMemorySwap(),
 			MemoryReservation: e.Config.Docker.GetMemoryReservation(),
-			CgroupParent:      e.Config.Docker.CgroupParent,
+			CgroupParent:      e.getCgroupParent(),
 			CpusetCpus:        e.Config.Docker.CPUSetCPUs,
 			CpusetMems:        e.Config.Docker.CPUSetMems,
 			CPUShares:         e.Config.Docker.CPUShares,
