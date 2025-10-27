@@ -420,7 +420,7 @@ func (s *StubSSHServer) handleSession(ctx context.Context, channel ssh.NewChanne
 			if _, err := conn.SendRequest("exit-status", false, exit[:]); err != nil {
 				return err
 			}
-			return runErr
+			return nil
 
 		default:
 			return fmt.Errorf("unknown request type: %s", req.Type)
