@@ -20,6 +20,7 @@ import (
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	nestingapi "gitlab.com/gitlab-org/fleeting/nesting/api"
 	nestingmocks "gitlab.com/gitlab-org/fleeting/nesting/api/mocks"
+	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/fleeting/taskscaler/mocks"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -417,4 +418,161 @@ func int32Ref(i int32) *int32 {
 
 func stringRef(s string) *string {
 	return &s
+}
+
+func TestAcquisitionRef_AcquisitionSlot(t *testing.T) {
+	tests := []struct {
+		name         string
+		acq          taskscaler.Acquisition
+		expectedSlot int
+	}{
+		{
+			name: "returns slot when acquisition set",
+			acq: func() taskscaler.Acquisition {
+				acq := mocks.NewAcquisition(t)
+				acq.EXPECT().Slot().Return(42)
+				return acq
+			}(),
+			expectedSlot: 42,
+		},
+		{
+			name:         "returns -1 when acquisition not set",
+			acq:          nil,
+			expectedSlot: -1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ref := &acquisitionRef{
+				key: "test-key",
+				acq: tt.acq,
+			}
+
+			result := ref.AcquisitionSlot()
+
+			assert.Equal(t, tt.expectedSlot, result)
+		})
+	}
+}
+
+func TestAcquisitionRef_Prepare_SlotCgroupEnvironmentVariable(t *testing.T) {
+	tests := []struct {
+		name                  string
+		useSlotCgroups        bool
+		slotCgroupTemplate    string
+		slot                  int
+		expectedVariableValue string
+		expectVariable        bool
+	}{
+		{
+			name:                  "adds GITLAB_RUNNER_SLOT_CGROUP when use_slot_cgroups is true",
+			useSlotCgroups:        true,
+			slotCgroupTemplate:    "gitlab-runner/slot-${slot}",
+			slot:                  5,
+			expectedVariableValue: "gitlab-runner/slot-5",
+			expectVariable:        true,
+		},
+		{
+			name:                  "uses default template when slot_cgroup_template is empty",
+			useSlotCgroups:        true,
+			slotCgroupTemplate:    "",
+			slot:                  10,
+			expectedVariableValue: "gitlab-runner/slot-10",
+			expectVariable:        true,
+		},
+		{
+			name:                  "does not add variable when use_slot_cgroups is false",
+			useSlotCgroups:        false,
+			slotCgroupTemplate:    "gitlab-runner/slot-${slot}",
+			slot:                  5,
+			expectedVariableValue: "",
+			expectVariable:        false,
+		},
+		{
+			name:                  "does not add variable when slot is negative",
+			useSlotCgroups:        true,
+			slotCgroupTemplate:    "gitlab-runner/slot-${slot}",
+			slot:                  -1,
+			expectedVariableValue: "",
+			expectVariable:        false,
+		},
+		{
+			name:                  "adds variable with custom template",
+			useSlotCgroups:        true,
+			slotCgroupTemplate:    "custom/runner-${slot}",
+			slot:                  3,
+			expectedVariableValue: "custom/runner-3",
+			expectVariable:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithDeadline(t.Context(), time.Now().Add(time.Minute))
+			defer cancel()
+
+			acq := mocks.NewAcquisition(t)
+			acq.EXPECT().WithContext(ctx).Return(ctx, cancel)
+			acq.EXPECT().InstanceConnectInfo(mock.Anything).Return(fleetingprovider.ConnectInfo{}, nil).Once()
+			// Slot() is called when UseSlotCgroups is true, regardless of slot value
+			if tt.useSlotCgroups {
+				acq.EXPECT().Slot().Return(tt.slot).Once()
+			}
+
+			fleetingDialer := fleetingmocks.NewClient(t)
+			fleetingDialer.EXPECT().Close().Return(nil).Once()
+
+			logger, _ := test.NewNullLogger()
+			bl := buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{})
+
+			options := common.ExecutorPrepareOptions{
+				Config: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						UseSlotCgroups:     tt.useSlotCgroups,
+						SlotCgroupTemplate: tt.slotCgroupTemplate,
+						Autoscaler: &common.AutoscalerConfig{
+							VMIsolation: common.VMIsolation{
+								Enabled: false,
+							},
+						},
+					},
+				},
+				Build: &common.Build{
+					JobResponse: common.JobResponse{
+						Variables: common.JobVariables{},
+					},
+					Runner: &common.RunnerConfig{},
+				},
+			}
+
+			ref := newAcquisitionRef("test-key", true)
+			ref.acq = acq
+			ref.dialAcquisitionInstance = func(_ context.Context, _ fleetingprovider.ConnectInfo, _ connector.DialOptions) (connector.Client, error) {
+				return fleetingDialer, nil
+			}
+
+			c, err := ref.Prepare(ctx, bl, options)
+
+			require.NoError(t, err)
+			require.NotNil(t, c)
+			defer c.Close()
+
+			// Check if the environment variable was added
+			found := false
+			for _, v := range options.Build.Variables {
+				if v.Key == "GITLAB_RUNNER_SLOT_CGROUP" {
+					found = true
+					assert.Equal(t, tt.expectedVariableValue, v.Value, "Environment variable value should match expected")
+					break
+				}
+			}
+
+			if tt.expectVariable {
+				assert.True(t, found, "GITLAB_RUNNER_SLOT_CGROUP environment variable should be present")
+			} else {
+				assert.False(t, found, "GITLAB_RUNNER_SLOT_CGROUP environment variable should not be present")
+			}
+		})
+	}
 }

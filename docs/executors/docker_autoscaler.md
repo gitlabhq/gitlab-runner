@@ -299,6 +299,29 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
+## Slot-based cgroup support
+
+The Docker Autoscaler executor supports slot-based cgroups for improved resource isolation between concurrent jobs. Cgroup paths are automatically applied to Docker containers using the `--cgroup-parent` flag.
+
+For detailed information about slot-based cgroups, including benefits, prerequisites, and setup instructions,
+see [slot-based cgroup support](../configuration/slot_based_cgroups.md).
+
+### Docker-specific configuration
+
+In addition to the standard slot cgroup configuration, you can specify a separate cgroup template for service containers:
+
+```toml
+[[runners]]
+  executor = "docker+autoscaler"
+  use_slot_cgroups = true
+  slot_cgroup_template = "gitlab-runner/slot-${slot}"
+
+  [runners.docker]
+    service_slot_cgroup_template = "gitlab-runner/service-slot-${slot}"
+```
+
+For all available options, see the [slot-based cgroup configuration documentation](../configuration/slot_based_cgroups.md#docker-specific-configuration).
+
 ## Troubleshooting
 
 ### `ERROR: error during connect: ssh tunnel: EOF ()`

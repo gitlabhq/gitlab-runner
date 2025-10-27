@@ -286,6 +286,7 @@ type DockerConfig struct {
 	ServiceMemorySwap          string              `toml:"service_memory_swap,omitempty" json:"service_memory_swap" long:"service-memory-swap" env:"DOCKER_SERVICE_MEMORY_SWAP" description:"Service total memory limit (memory + swap, format: <number>[<unit>]). Unit can be one of b (if omitted), k, m, or g."`
 	ServiceMemoryReservation   string              `toml:"service_memory_reservation,omitempty" json:"service_memory_reservation" long:"service-memory-reservation" env:"DOCKER_SERVICE_MEMORY_RESERVATION" description:"Service memory soft limit (format: <number>[<unit>]). Unit can be one of b (if omitted), k, m, or g."`
 	ServiceCgroupParent        string              `toml:"service_cgroup_parent,omitempty" json:"service_cgroup_parent" long:"service-cgroup-parent" env:"DOCKER_SERVICE_CGROUP_PARENT" description:"String value containing the cgroup parent to use for service"`
+	ServiceSlotCgroupTemplate  string              `toml:"service_slot_cgroup_template,omitempty" json:"service_slot_cgroup_template" long:"service-slot-cgroup-template" env:"DOCKER_SERVICE_SLOT_CGROUP_TEMPLATE" description:"Template for service slot-derived cgroup names (use ${slot} placeholder)"`
 	ServiceCPUSetCPUs          string              `toml:"service_cpuset_cpus,omitempty" json:"service_cpuset_cpus" long:"service-cpuset-cpus" env:"DOCKER_SERVICE_CPUSET_CPUS" description:"String value containing the cgroups CpusetCpus to use for service"`
 	ServiceCPUS                string              `toml:"service_cpus,omitempty" json:"service_cpus" long:"service-cpus" env:"DOCKER_SERVICE_CPUS" description:"Number of CPUs for service"`
 	ServiceCPUShares           int64               `toml:"service_cpu_shares,omitzero" json:"service_cpu_shares" long:"service-cpu-shares" env:"DOCKER_SERVICE_CPU_SHARES" description:"Number of CPU shares for service"`
@@ -1271,6 +1272,10 @@ type RunnerSettings struct {
 	FeatureFlags map[string]bool `toml:"feature_flags" json:"feature_flags,omitempty" long:"feature-flags" env:"FEATURE_FLAGS" description:"Enable/Disable feature flags https://docs.gitlab.com/runner/configuration/feature-flags/"`
 
 	Monitoring *runner.Monitoring `toml:"monitoring,omitempty" json:"monitoring,omitempty" long:"runner-monitoring" description:"(Experimental) Monitoring configuration specific to this runner"`
+
+	// Slot-based cgroup configuration
+	UseSlotCgroups     bool   `toml:"use_slot_cgroups,omitempty" json:"use_slot_cgroups" long:"use-slot-cgroups" env:"RUNNER_USE_SLOT_CGROUPS" description:"Use slot-derived cgroup names for resource isolation"`
+	SlotCgroupTemplate string `toml:"slot_cgroup_template,omitempty" json:"slot_cgroup_template" long:"slot-cgroup-template" env:"RUNNER_SLOT_CGROUP_TEMPLATE" description:"Template for slot-derived cgroup names (use ${slot} placeholder)"`
 
 	Instance   *InstanceConfig   `toml:"instance,omitempty" json:"instance,omitempty"`
 	SSH        *SshConfig        `toml:"ssh,omitempty" json:"ssh,omitempty" group:"ssh executor" namespace:"ssh"`
@@ -2460,6 +2465,7 @@ func (c *RunnerConfig) Validate() error {
 	for vn, v := range map[string]func() error{
 		"labels":          c.validateLabels,
 		"computed labels": c.validateComputedLabels,
+		"slot cgroups":    c.validateSlotCgroups,
 	} {
 		err := v()
 		if err != nil {
@@ -2476,4 +2482,102 @@ func (c *RunnerConfig) validateLabels() error {
 
 func (c *RunnerConfig) validateComputedLabels() error {
 	return c.labels.validateCount()
+}
+
+func (c *RunnerConfig) validateSlotCgroups() error {
+	if !c.UseSlotCgroups {
+		return nil
+	}
+
+	// Validate main slot cgroup template
+	template := c.SlotCgroupTemplate
+	if template == "" {
+		template = DefaultSlotCgroupTemplate
+	}
+	validateSlotCgroupTemplate(template, "slot_cgroup_template")
+
+	// Validate service slot cgroup template if configured
+	if c.Docker != nil && c.Docker.ServiceSlotCgroupTemplate != "" {
+		validateSlotCgroupTemplate(c.Docker.ServiceSlotCgroupTemplate, "service_slot_cgroup_template")
+	}
+
+	return nil
+}
+
+const DefaultSlotCgroupTemplate = "gitlab-runner/slot-${slot}"
+
+// GetSlot extracts the slot number from ExecutorData if available, otherwise returns -1
+func GetSlot(data ExecutorData) int {
+	if s, ok := data.(interface{ AcquisitionSlot() int }); ok {
+		return s.AcquisitionSlot()
+	}
+	logrus.WithField("data_type", fmt.Sprintf("%T", data)).
+		Debug("ExecutorData does not implement AcquisitionSlot() interface")
+	return -1
+}
+
+// GetSlotCgroupPath returns the cgroup path for the given slot and ExecutorData
+func (c *RunnerConfig) GetSlotCgroupPath(data ExecutorData) string {
+	if !c.UseSlotCgroups {
+		return ""
+	}
+
+	slot := GetSlot(data)
+	if slot < 0 {
+		return ""
+	}
+
+	template := c.SlotCgroupTemplate
+	if template == "" {
+		template = DefaultSlotCgroupTemplate
+	}
+
+	return expandSlotTemplate(template, slot)
+}
+
+// GetServiceSlotCgroupPath returns the cgroup path for service containers
+func (c *RunnerConfig) GetServiceSlotCgroupPath(data ExecutorData) string {
+	if !c.UseSlotCgroups {
+		return ""
+	}
+
+	slot := GetSlot(data)
+	if slot < 0 {
+		return ""
+	}
+
+	var template string
+	if c.Docker != nil && c.Docker.ServiceSlotCgroupTemplate != "" {
+		template = c.Docker.ServiceSlotCgroupTemplate
+	} else {
+		template = c.SlotCgroupTemplate
+		if template == "" {
+			template = DefaultSlotCgroupTemplate
+		}
+	}
+
+	return expandSlotTemplate(template, slot)
+}
+
+// validateSlotCgroupTemplate checks if the template contains the ${slot} placeholder and logs a warning if not
+func validateSlotCgroupTemplate(template string, configName string) {
+	if !strings.Contains(template, "${slot}") && !strings.Contains(template, "$slot") {
+		logrus.WithFields(logrus.Fields{
+			"template":    template,
+			"config_name": configName,
+		}).Warning("Slot cgroup template does not contain ${slot} placeholder. " +
+			"All jobs will use the same cgroup, defeating the purpose of slot-based isolation. " +
+			"Consider using a template like 'gitlab-runner/slot-${slot}'")
+	}
+}
+
+// expandSlotTemplate replaces ${slot} placeholder with actual slot number using os.Expand
+func expandSlotTemplate(template string, slot int) string {
+	slotStr := strconv.Itoa(slot)
+	return os.Expand(template, func(name string) string {
+		if name == "slot" {
+			return slotStr
+		}
+		return ""
+	})
 }
