@@ -73,10 +73,17 @@ func newDockerImageChecker(image string) *dockerImageChecker {
 
 func (d *dockerImageChecker) Exists() error {
 	// the results of this function can be cached but there's no need atm
-	args := []string{
-		"inspect", "--raw", "--no-tags",
-		"docker://" + d.image,
+	args := []string{"inspect", "--raw", "--no-tags"}
+
+	if user, pass := os.Getenv("CI_REGISTRY_USER"), os.Getenv("CI_REGISTRY_PASSWORD"); user != "" && pass != "" {
+		args = append(
+			args,
+			"--username", user,
+			"--password", pass,
+		)
 	}
+
+	args = append(args, "docker://"+d.image)
 	command := "skopeo"
 	_, err := exec.LookPath(command)
 	if err != nil {

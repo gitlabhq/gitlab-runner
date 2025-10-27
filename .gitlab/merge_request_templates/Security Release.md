@@ -38,7 +38,15 @@ See [the general developer security release guidelines](https://gitlab.com/gitla
   with passing CI pipelines and **when all backports including the MR
   targeting main are ready.**
 
+## AppSec checklist
+
+- [ ] Assign the right [AppSecWeight](https://handbook.gitlab.com/handbook/security/product-security/application-security/milestone-planning/#weight-labels) label
+
 /label ~security ~"Category:Runner" ~"devops::verify" ~"group::runner"
+
+/label ~"Division::Security" ~"Department::Product Security" ~"Application Security Team"
+/label ~"AppSecWorkflow::planned" ~"AppSecWorkType::VulnFixVerification"
+/label ~"AppSecPriority::1" <!-- This is always a priority to review for us to ensure the fix is good and the release is done on time -->
 
 [GitLab Runner Security]: https://gitlab.com/gitlab-org/security/gitlab-runner
 [quick actions]: https://docs.gitlab.com/user/project/quick_actions/#quick-actions-for-issues-merge-requests-and-epics

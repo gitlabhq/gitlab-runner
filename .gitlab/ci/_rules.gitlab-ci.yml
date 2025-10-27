@@ -42,6 +42,9 @@
 .if-not-canonical-namespace: &if-not-canonical-namespace
   if: '$CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/'
 
+.if-security-project-path: &if-security-project-path
+  if: '$CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"'
+
 .if-default-branch: &if-default-branch
   if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
 
@@ -195,6 +198,23 @@
     - <<: *if-runner-or-security-runner-stable-ref
       changes: *code-backstage-patterns
     - <<: *if-runner-or-security-runner-feature-ref
+      changes: *code-backstage-patterns
+    - <<: *if-runner-release-ref
+      changes: *code-backstage-patterns
+    - <<: *if-security-runner-release-ref
+      changes: *code-backstage-patterns
+
+.rules:merge_request_pipelines:no_docs:no-community-mr:no-security-mr:
+  rules:
+    - <<: *if-not-canonical-namespace
+      when: never
+    - <<: *if-security-project-path
+      when: never
+    - <<: *if-merge-request-pipeline
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-stable-ref
       changes: *code-backstage-patterns
     - <<: *if-runner-release-ref
       changes: *code-backstage-patterns

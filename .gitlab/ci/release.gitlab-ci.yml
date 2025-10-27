@@ -109,6 +109,14 @@ stable packagecloud:
 # Image Registry Releases
 #########################
 
+.overwrite_security_docker_variables: &overwrite_security_docker_variables |
+  if [[ $CI_COMMIT_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] && [[ $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner" ]]; then
+    export CI_REGISTRY="registry.gitlab.com"
+    export CI_REGISTRY_IMAGE="registry.gitlab.com/gitlab-org/gitlab-runner"
+    export CI_REGISTRY_USER=$CI_REGISTRY_USER_CANONICAL
+    export CI_REGISTRY_PASSWORD=$CI_REGISTRY_PASSWORD_CANONICAL
+  fi
+
 development docker images:
   stage: release
   extends:
@@ -122,6 +130,7 @@ development docker images:
     paths:
       - out/release_artifacts/*
   script:
+    - *overwrite_security_docker_variables
     - echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
     - (cd scripts/pusher && go build)
     - tags=$(make print_image_tags)
@@ -145,6 +154,7 @@ bleeding edge docker images:
     paths:
       - out/release_artifacts/*
   script:
+    - *overwrite_security_docker_variables
     - echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username "${DOCKER_HUB_USER}" --password-stdin "registry.hub.docker.com/gitlab"
     - (cd scripts/pusher && go build)
@@ -178,6 +188,7 @@ stable docker images:
     paths:
       - out/release_artifacts/*
   script:
+    - *overwrite_security_docker_variables
     - echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username "${DOCKER_HUB_USER}" --password-stdin "registry.hub.docker.com/gitlab"
     - aws --region us-east-1 ecr-public get-login-password | docker login --username "AWS" --password-stdin "public.ecr.aws/gitlab"
