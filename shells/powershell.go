@@ -713,14 +713,18 @@ func (b *PowerShell) scriptArgs(script *common.ShellConfiguration) []string {
 }
 
 func (b *PowerShell) passAsFile(info common.ShellScriptInfo) bool {
+	// custom executor always passes script by a file
+	if info.Build.Runner.Executor == "custom" {
+		return true
+	}
+
 	// if DisablePowershellStdin is false, powershell is passed via stdin
 	if !info.Build.IsFeatureFlagOn(featureflags.DisablePowershellStdin) {
 		return false
 	}
 
-	// we only support powershell script by a file for shell & custom executors
-	switch info.Build.Runner.Executor {
-	case "shell", "custom":
+	// we only support powershell script by a file for shell
+	if info.Build.Runner.Executor == "shell" {
 		return true
 	}
 

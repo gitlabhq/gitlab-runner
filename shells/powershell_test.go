@@ -279,6 +279,15 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			},
 			expectedCmdLine: powershellStdinExpectedLine,
 		},
+		"powershell on custom executor": {
+			shell:    SNPowershell,
+			executor: "custom",
+
+			expectedPassFile:     true,
+			expectedCommand:      SNPowershell,
+			getExpectedArguments: func(_ string, _ ...string) []string { return fileCmdArgs() },
+			expectedCmdLine:      "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File",
+		},
 	}
 
 	for tn, tc := range testCases {
