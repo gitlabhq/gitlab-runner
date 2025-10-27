@@ -1,6 +1,6 @@
 .integration kubernetes:
   extends:
-    - .rules:merge_request_pipelines:no_docs:no-community-mr
+    - .rules:merge_request_pipelines:no_docs:no-community-mr:no-security-mr
   tags:
     - $KUBERNETES_RUNNER_INTEGRATION_TAG
   stage: test kubernetes integration
