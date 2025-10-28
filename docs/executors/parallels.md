@@ -15,6 +15,6 @@ For configuration information, see [VirtualBox executor](virtualbox.md).
 
 {{< alert type="note" >}}
 
-Parallels executors do not support the caching feature.
+Parallels executors do not support local cache. [Distributed cache](../configuration/speed_up_job_execution.md) is supported.
 
 {{< /alert >}}
