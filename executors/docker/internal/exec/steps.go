@@ -15,16 +15,14 @@ import (
 )
 
 type stepsDocker struct {
-	ctx     context.Context
 	client  docker.Client
 	waiter  wait.KillWaiter
 	logger  logrus.FieldLogger
 	request *client.RunRequest
 }
 
-func NewStepsDocker(ctx context.Context, client docker.Client, waiter wait.KillWaiter, logger logrus.FieldLogger, request *client.RunRequest) Docker {
+func NewStepsDocker(client docker.Client, waiter wait.KillWaiter, logger logrus.FieldLogger, request *client.RunRequest) Docker {
 	return &stepsDocker{
-		ctx:     ctx,
 		client:  client,
 		waiter:  waiter,
 		logger:  logger,
@@ -46,7 +44,7 @@ func (sd *stepsDocker) Exec(ctx context.Context, containerID string, streams IOS
 		execErr = fmt.Errorf("container exec on %q finished with: %w", containerID, execErr)
 	}
 
-	killErr := sd.waiter.StopKillWait(sd.ctx, containerID, nil, nil)
+	killErr := sd.waiter.StopKillWait(ctx, containerID, nil, nil)
 	if killErr != nil {
 		killErr = fmt.Errorf("container kill on %q finished with: %w", containerID, killErr)
 	}
