@@ -14,8 +14,8 @@ title: VirtualBox
 
 {{< alert type="note" >}}
 
-The Parallels executor works the same as the VirtualBox executor. The
-caching feature is currently not supported.
+The Parallels executor works the same as the VirtualBox executor.
+Local cache is not supported. [Distributed cache](../configuration/speed_up_job_execution.md) is supported.
 
 {{< /alert >}}
 
