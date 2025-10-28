@@ -51,7 +51,7 @@ net/http: invalid header field for "Private-Token"
 ```
 
 To resolve this issue, ensure a newline (`\n`) is not appended to the token value.
-For example: `echo -n glrt-A5sFGybkt0pY8AdVLnx4 | base64`.
+For example: `echo -n <gitlab-runner-token> | base64`.
 
 ## Error: `FATAL: Runner configuration is reserved`
 
