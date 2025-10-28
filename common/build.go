@@ -1600,13 +1600,13 @@ func (b *Build) withUrlHelper() urlHelper {
 }
 
 // GetRemoteURL uses the urlHelper to get the remote URL used for fetching the repo.
-func (b *Build) GetRemoteURL() (string, error) {
+func (b *Build) GetRemoteURL() (*url.URL, error) {
 	return b.withUrlHelper().GetRemoteURL()
 }
 
-// GetURLInsteadOfArgs uses the urlHelper to generate insteadOf URLs to pass on to git.
-func (b *Build) GetURLInsteadOfArgs() ([]string, error) {
-	return b.withUrlHelper().GetURLInsteadOfArgs()
+// GetInsteadOfs uses the urlHelper to generate insteadOf URLs to pass on to git.
+func (b *Build) GetInsteadOfs() ([][2]string, error) {
+	return b.withUrlHelper().GetInsteadOfs()
 }
 
 type stageTimeout struct {
@@ -1785,8 +1785,8 @@ func (b *Build) ensureFinishedAt() {
 }
 
 type urlHelper interface {
-	GetRemoteURL() (string, error)
-	GetURLInsteadOfArgs() ([]string, error)
+	GetRemoteURL() (*url.URL, error)
+	GetInsteadOfs() ([][2]string, error)
 }
 
 func NewBuild(

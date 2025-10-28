@@ -7,6 +7,7 @@ package common
 import (
 	"context"
 	"io"
+	"net/url"
 	"time"
 
 	mock "github.com/stretchr/testify/mock"
@@ -131,23 +132,80 @@ func (_m *mockUrlHelper) EXPECT() *mockUrlHelper_Expecter {
 	return &mockUrlHelper_Expecter{mock: &_m.Mock}
 }
 
+// GetInsteadOfs provides a mock function for the type mockUrlHelper
+func (_mock *mockUrlHelper) GetInsteadOfs() ([][2]string, error) {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetInsteadOfs")
+	}
+
+	var r0 [][2]string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func() ([][2]string, error)); ok {
+		return returnFunc()
+	}
+	if returnFunc, ok := ret.Get(0).(func() [][2]string); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([][2]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func() error); ok {
+		r1 = returnFunc()
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// mockUrlHelper_GetInsteadOfs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetInsteadOfs'
+type mockUrlHelper_GetInsteadOfs_Call struct {
+	*mock.Call
+}
+
+// GetInsteadOfs is a helper method to define mock.On call
+func (_e *mockUrlHelper_Expecter) GetInsteadOfs() *mockUrlHelper_GetInsteadOfs_Call {
+	return &mockUrlHelper_GetInsteadOfs_Call{Call: _e.mock.On("GetInsteadOfs")}
+}
+
+func (_c *mockUrlHelper_GetInsteadOfs_Call) Run(run func()) *mockUrlHelper_GetInsteadOfs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *mockUrlHelper_GetInsteadOfs_Call) Return(stringss [][2]string, err error) *mockUrlHelper_GetInsteadOfs_Call {
+	_c.Call.Return(stringss, err)
+	return _c
+}
+
+func (_c *mockUrlHelper_GetInsteadOfs_Call) RunAndReturn(run func() ([][2]string, error)) *mockUrlHelper_GetInsteadOfs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetRemoteURL provides a mock function for the type mockUrlHelper
-func (_mock *mockUrlHelper) GetRemoteURL() (string, error) {
+func (_mock *mockUrlHelper) GetRemoteURL() (*url.URL, error) {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetRemoteURL")
 	}
 
-	var r0 string
+	var r0 *url.URL
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() (string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func() (*url.URL, error)); ok {
 		return returnFunc()
 	}
-	if returnFunc, ok := ret.Get(0).(func() string); ok {
+	if returnFunc, ok := ret.Get(0).(func() *url.URL); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*url.URL)
+		}
 	}
 	if returnFunc, ok := ret.Get(1).(func() error); ok {
 		r1 = returnFunc()
@@ -174,67 +232,12 @@ func (_c *mockUrlHelper_GetRemoteURL_Call) Run(run func()) *mockUrlHelper_GetRem
 	return _c
 }
 
-func (_c *mockUrlHelper_GetRemoteURL_Call) Return(s string, err error) *mockUrlHelper_GetRemoteURL_Call {
-	_c.Call.Return(s, err)
+func (_c *mockUrlHelper_GetRemoteURL_Call) Return(uRL *url.URL, err error) *mockUrlHelper_GetRemoteURL_Call {
+	_c.Call.Return(uRL, err)
 	return _c
 }
 
-func (_c *mockUrlHelper_GetRemoteURL_Call) RunAndReturn(run func() (string, error)) *mockUrlHelper_GetRemoteURL_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetURLInsteadOfArgs provides a mock function for the type mockUrlHelper
-func (_mock *mockUrlHelper) GetURLInsteadOfArgs() ([]string, error) {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetURLInsteadOfArgs")
-	}
-
-	var r0 []string
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]string, error)); ok {
-		return returnFunc()
-	}
-	if returnFunc, ok := ret.Get(0).(func() []string); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// mockUrlHelper_GetURLInsteadOfArgs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetURLInsteadOfArgs'
-type mockUrlHelper_GetURLInsteadOfArgs_Call struct {
-	*mock.Call
-}
-
-// GetURLInsteadOfArgs is a helper method to define mock.On call
-func (_e *mockUrlHelper_Expecter) GetURLInsteadOfArgs() *mockUrlHelper_GetURLInsteadOfArgs_Call {
-	return &mockUrlHelper_GetURLInsteadOfArgs_Call{Call: _e.mock.On("GetURLInsteadOfArgs")}
-}
-
-func (_c *mockUrlHelper_GetURLInsteadOfArgs_Call) Run(run func()) *mockUrlHelper_GetURLInsteadOfArgs_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *mockUrlHelper_GetURLInsteadOfArgs_Call) Return(strings []string, err error) *mockUrlHelper_GetURLInsteadOfArgs_Call {
-	_c.Call.Return(strings, err)
-	return _c
-}
-
-func (_c *mockUrlHelper_GetURLInsteadOfArgs_Call) RunAndReturn(run func() ([]string, error)) *mockUrlHelper_GetURLInsteadOfArgs_Call {
+func (_c *mockUrlHelper_GetRemoteURL_Call) RunAndReturn(run func() (*url.URL, error)) *mockUrlHelper_GetRemoteURL_Call {
 	_c.Call.Return(run)
 	return _c
 }

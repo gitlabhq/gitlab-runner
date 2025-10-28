@@ -20,10 +20,15 @@ type ShellWriter interface {
 	// It disables any other helper, by replacing all with "", thus global or system helpers won't run.
 	SetupGitCredHelper(confFile, section, user string)
 
+	// ExportRaw exports a variable name and sets the value to value. It does NOT escape the value, so it will be
+	// expanded. The caller is responsible to ensure the value is safe.
+	ExportRaw(name, value string)
+
 	IfDirectory(path string)
 	IfFile(file string)
 	IfCmd(cmd string, arguments ...string)
 	IfCmdWithOutput(cmd string, arguments ...string)
+	IfCmdWithOutputArgExpand(cmd string, arguments ...string)
 	IfGitVersionIsAtLeast(version string)
 	Else()
 	EndIf()

@@ -4,6 +4,7 @@ package shell_test
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -117,7 +119,7 @@ func tempDir(t *testing.T) string {
 func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) *common.Build {
 	dir := tempDir(t)
 
-	t.Log("Build directory:", dir)
+	t.Logf("setting 'builds_dir' to %q", dir)
 
 	build := &common.Build{
 		JobResponse: getBuildResponse,
@@ -2346,6 +2348,8 @@ func TestCredSetup(t *testing.T) {
 					assert.Contains(t, gitConfig, "credential."+remoteHost+".username=gitlab-ci-token", "should contain a username setting")
 					assert.Contains(t, gitConfig, "credential."+remoteHost+".helper=!", "should contain a credential helper")
 					assert.NotContains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "the origin URL should not contain any auth data")
+					assert.NotContains(t, gitConfig, "url."+withMaskedPassword(t, remoteURL)+".insteadof="+remoteHost, "should not have an insteadOf URL with auth data")
+					assert.Contains(t, gitConfig, "include.path=", "should include config file with creds")
 				}
 
 				// pre get-source: gitlab-ci-token password comes from the 1st global credential helper
@@ -2370,7 +2374,9 @@ func TestCredSetup(t *testing.T) {
 					gitConfig := extractGitConfig(out, marker)
 					assert.NotContains(t, gitConfig, "credential."+remoteHost+".username=gitlab-ci-token", "should not contain a username setting")
 					assert.NotContains(t, gitConfig, "credential."+remoteHost+".helper=!", "should not contain a credential helper")
-					assert.Contains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "should contain the origin URL including auth data")
+					assert.NotContains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "should contain the origin URL including auth data")
+					assert.Contains(t, gitConfig, "url."+withMaskedPassword(t, remoteURL)+".insteadof="+remoteHost, "should have an insteadOf URL with auth data")
+					assert.Contains(t, gitConfig, "include.path=", "should include config file with creds")
 				}
 
 				// pre get-source: gitlab-ci-token password comes from the 1st global credential helper
@@ -2464,7 +2470,7 @@ func TestCredSetup(t *testing.T) {
 
 						// cached creds from the 1st helper created in setupTestCredHelpers
 						cachedCreds := filepath.Join(build.Runner.BuildsDir, "git-credentials")
-						test.validator(t, out, remoteURL, cachedCreds, token)
+						test.validator(t, out, remoteURL.String(), cachedCreds, token)
 					})
 				})
 			}
@@ -2625,6 +2631,195 @@ func TestBuildWithCleanGitConfig(t *testing.T) {
 	})
 }
 
+func TestGitIncludePaths(t *testing.T) {
+	th := testOSHelper(runtime.GOOS)
+
+	th.Parallel(t)
+
+	const (
+		repoURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-branches"
+		repoSha = "b557eadceba20d40c6e10b274a1437e88051a4fd"
+	)
+
+	submodules := []string{
+		"private-repo-git",
+		"private-repo-relative",
+	}
+
+	assertIncludePaths := func(t *testing.T, expectedIncludes []string, buildDir string) {
+		gitConfig := filepath.Join(buildDir, ".git", "config")
+
+		stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}
+		cmd := exec.Command("git", "config", "--file", gitConfig, "--get-all", "include.path")
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
+		err := cmd.Run()
+		require.NoError(t, err, "getting git 'include.path' settings\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
+
+		actualIncludes := strings.FieldsFunc(stdout.String(), func(r rune) bool {
+			return r == '\n' || r == '\r'
+		})
+
+		for i, p := range actualIncludes {
+			actualIncludes[i] = test.NormalizePath(p)
+		}
+
+		assert.Equal(t, expectedIncludes, actualIncludes, `unexpected "include.path"s`)
+	}
+
+	expectedIncludes := func(build *common.Build, pwd string, addIncludes ...string) []string {
+		tmpProjectDir := test.NormalizePath(filepath.Join(pwd, build.BuildDir, "..", "mixed-submodules-branches.tmp"))
+
+		// the main config, with insteadOfs
+		includes := []string{filepath.Join(tmpProjectDir, ".gitlab-runner.ext.conf")}
+
+		return append(includes, addIncludes...)
+	}
+
+	buildsDirPathOverrides := map[string]*string{
+		"absolute": nil,
+		"relative": &[]string{""}[0],
+		// "relative-var": &[]string{"$PWD"}[0], // This is not supported
+	}
+
+	for name, buildsDirOverride := range buildsDirPathOverrides {
+		t.Run("builds_dir:"+name, func(t *testing.T) {
+			th.Parallel(t)
+
+			for _, tokenFromEnv := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s:%t", featureflags.GitURLsWithoutTokens, tokenFromEnv), func(t *testing.T) {
+					th.Parallel(t)
+
+					shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+						th.Parallel(t)
+
+						jobResponse, err := common.GetSuccessfulBuild()
+						require.NoError(t, err)
+
+						jobResponse.GitInfo.RepoURL = repoURL
+						jobResponse.GitInfo.Sha = repoSha
+						buildtest.InjectJobTokenFromEnv(t, &jobResponse)
+
+						build := newBuild(t, jobResponse, shell)
+						buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, tokenFromEnv)
+						build.Runner.RunnerSettings.CleanGitConfig = &[]bool{false}[0]
+						build.Variables.Set(common.JobVariables{
+							// {Key: "GIT_TRACE", Value: "2"},
+							// {Key: "CI_DEBUG_TRACE", Value: "true"},
+							{Key: "GIT_STRATEGY", Value: "fetch"},
+						}...)
+						setupForSubmoduleClone(build, "gitlab.com", submodules)
+
+						var pwd string
+						if buildsDirOverride != nil {
+							var relBuildsDir string
+							pwd, relBuildsDir = th.RelativeTempDir(t, "builds dir *")
+							relBuildsDir = filepath.Join(*buildsDirOverride, relBuildsDir)
+							t.Logf("overwriting 'builds_dir' to %q (in %q)", relBuildsDir, pwd)
+							build.Runner.BuildsDir = relBuildsDir
+						}
+
+						randomInclude := "/some/random\\include/file"
+						build.Runner.PostGetSourcesScript = fmt.Sprintf("git config --local --add include.path '%s'", randomInclude)
+
+						for i := range 2 {
+							name := fmt.Sprintf("run:%d", i)
+							t.Run(name, func(t *testing.T) {
+								_, err = buildtest.RunBuildReturningOutput(t, build)
+								assert.NoError(t, err)
+								expectedIncludes := expectedIncludes(build, pwd, slices.Repeat([]string{randomInclude}, i+1)...)
+								assertIncludePaths(t, expectedIncludes, build.BuildDir)
+							})
+						}
+					})
+				})
+			}
+		})
+	}
+}
+
+func setupForSubmoduleClone(build *common.Build, serverHostname string, submodules []string) {
+	build.Variables.Set(common.JobVariables{
+		{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+		{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+		{Key: "CI_SERVER_HOST", Value: serverHostname},
+	}...)
+
+	if len(submodules) > 0 {
+		build.Variables.Set(common.JobVariable{
+			Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " "),
+		})
+	}
+
+	build.Runner.RunnerCredentials.URL = fmt.Sprintf("https://%s/", serverHostname)
+}
+
+// testOSHelper abstracts away some differences on how we want to run the tests on different OSs.
+type testOSHelper string
+
+// Parallel runs tests in Parallel, if not running on windows.
+// We can't run in parallel on windows, because of the difference in [RelativeTempDir].
+func (th testOSHelper) Parallel(t *testing.T) {
+	switch th {
+	case "windows":
+		t.Logf("not using t.Parallel() because OS is %s", th)
+	default:
+		t.Parallel()
+	}
+}
+
+// RelativeTempDir creates a temporary directory in $PWD, and returns $PWD and the relative path from there to this
+// temporary directory.
+//
+// Default approach:
+//
+//	Nothing really special:
+//	- get $PWD
+//	- create a temporary directory there
+//	- return $PWD and the relative path to the temporary directory
+//
+// Special case for windows:
+//
+//	Because there are file path length limitations, creating the temporary directory in $PWD and dropping the git repo
+//	with submodules in there might exceed that limit.
+//	Thus we use a different approach:
+//	- create a temporary in the system's $TEMP
+//	- cd to $TEMP
+//	- return $TEMP (which is no $PWD) and the relative path to the temporary directory
+//	Because we did the cd, test can't run in parallel anymore.
+func (th testOSHelper) RelativeTempDir(t *testing.T, pattern string) (outerDir, dir string) {
+	switch th {
+	case "windows":
+		fullPath, err := os.MkdirTemp("", cmp.Or(pattern, "local-tmp-dir-*"))
+		require.NoError(t, err, "creating local temp dir")
+
+		t.Cleanup(func() {
+			err := os.RemoveAll(fullPath)
+			require.NoError(t, err, "removing local tmp dir")
+		})
+
+		pwd, rel := filepath.Split(fullPath)
+		t.Chdir(pwd) // t.Parallel() can't be used when using t.Chdir()
+		return pwd, rel
+	default:
+		pwd, err := os.Getwd()
+		require.NoError(t, err, "getting PWD")
+
+		fullPath, err := os.MkdirTemp(pwd, cmp.Or(pattern, "local-tmp-dir-*"))
+		require.NoError(t, err, "creating local tmp dir")
+
+		t.Cleanup(func() {
+			err := os.RemoveAll(fullPath)
+			require.NoError(t, err, "removing local tmp dir")
+		})
+
+		rel, err := filepath.Rel(pwd, fullPath)
+		require.NoError(t, err, "getting local tmp dir's relative path")
+
+		return pwd, rel
+	}
+}
+
 // setupCachingCredHelpers sets up a (global) git cred helpers
 //   - the 1st one uses `git-credential-store` to create a file in the build directory
 //   - the 2nd one uses `git-credential-store` with a temporary file
@@ -2705,4 +2900,14 @@ func onlyHost(t *testing.T, remoteURL string) string {
 	require.NoError(t, err, "parsing URL")
 
 	return url_helpers.OnlySchemeAndHost(u).String()
+}
+
+func withMaskedPassword(t *testing.T, orgURL string) string {
+	t.Helper()
+
+	pattern := `(//[^:]*:)([^@]+?)(@)`
+	re, err := regexp.Compile(pattern)
+	require.NoError(t, err, "compiling RE %q", pattern)
+
+	return re.ReplaceAllString(orgURL, "${1}[MASKED]${3}")
 }

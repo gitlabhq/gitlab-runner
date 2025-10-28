@@ -539,6 +539,52 @@ func (_c *MockShellWriter_Errorf_Call) RunAndReturn(run func(fmt string, argumen
 	return _c
 }
 
+// ExportRaw provides a mock function for the type MockShellWriter
+func (_mock *MockShellWriter) ExportRaw(name string, value string) {
+	_mock.Called(name, value)
+	return
+}
+
+// MockShellWriter_ExportRaw_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ExportRaw'
+type MockShellWriter_ExportRaw_Call struct {
+	*mock.Call
+}
+
+// ExportRaw is a helper method to define mock.On call
+//   - name string
+//   - value string
+func (_e *MockShellWriter_Expecter) ExportRaw(name interface{}, value interface{}) *MockShellWriter_ExportRaw_Call {
+	return &MockShellWriter_ExportRaw_Call{Call: _e.mock.On("ExportRaw", name, value)}
+}
+
+func (_c *MockShellWriter_ExportRaw_Call) Run(run func(name string, value string)) *MockShellWriter_ExportRaw_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockShellWriter_ExportRaw_Call) Return() *MockShellWriter_ExportRaw_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockShellWriter_ExportRaw_Call) RunAndReturn(run func(name string, value string)) *MockShellWriter_ExportRaw_Call {
+	_c.Run(run)
+	return _c
+}
+
 // Finish provides a mock function for the type MockShellWriter
 func (_mock *MockShellWriter) Finish(trace bool) string {
 	ret := _mock.Called(trace)
@@ -704,6 +750,65 @@ func (_c *MockShellWriter_IfCmdWithOutput_Call) Return() *MockShellWriter_IfCmdW
 }
 
 func (_c *MockShellWriter_IfCmdWithOutput_Call) RunAndReturn(run func(cmd string, arguments ...string)) *MockShellWriter_IfCmdWithOutput_Call {
+	_c.Run(run)
+	return _c
+}
+
+// IfCmdWithOutputArgExpand provides a mock function for the type MockShellWriter
+func (_mock *MockShellWriter) IfCmdWithOutputArgExpand(cmd string, arguments ...string) {
+	// string
+	_va := make([]interface{}, len(arguments))
+	for _i := range arguments {
+		_va[_i] = arguments[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, cmd)
+	_ca = append(_ca, _va...)
+	_mock.Called(_ca...)
+	return
+}
+
+// MockShellWriter_IfCmdWithOutputArgExpand_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IfCmdWithOutputArgExpand'
+type MockShellWriter_IfCmdWithOutputArgExpand_Call struct {
+	*mock.Call
+}
+
+// IfCmdWithOutputArgExpand is a helper method to define mock.On call
+//   - cmd string
+//   - arguments ...string
+func (_e *MockShellWriter_Expecter) IfCmdWithOutputArgExpand(cmd interface{}, arguments ...interface{}) *MockShellWriter_IfCmdWithOutputArgExpand_Call {
+	return &MockShellWriter_IfCmdWithOutputArgExpand_Call{Call: _e.mock.On("IfCmdWithOutputArgExpand",
+		append([]interface{}{cmd}, arguments...)...)}
+}
+
+func (_c *MockShellWriter_IfCmdWithOutputArgExpand_Call) Run(run func(cmd string, arguments ...string)) *MockShellWriter_IfCmdWithOutputArgExpand_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 []string
+		variadicArgs := make([]string, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(string)
+			}
+		}
+		arg1 = variadicArgs
+		run(
+			arg0,
+			arg1...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockShellWriter_IfCmdWithOutputArgExpand_Call) Return() *MockShellWriter_IfCmdWithOutputArgExpand_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockShellWriter_IfCmdWithOutputArgExpand_Call) RunAndReturn(run func(cmd string, arguments ...string)) *MockShellWriter_IfCmdWithOutputArgExpand_Call {
 	_c.Run(run)
 	return _c
 }

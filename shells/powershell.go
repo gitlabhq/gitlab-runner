@@ -293,7 +293,7 @@ func (p *PsWriter) SetupGitCredHelper(confFile, section, user string) {
 	//		- if it's enabled, we need to accept that; we can control exact behavior but we have to use it
 	// We run all that in a script block, so that setting PSNativeCommandArgumentPassing only effects this (and child)
 	// scopes.
-	p.Line(strings.Join([]string{
+	p.lines(
 		`& {`,
 		`$psVer = [Version]$PSVersionTable.PSVersion`,
 		`$needsSpecialArgQuoting = ($psVer -lt [Version]"7.3")`,
@@ -302,16 +302,26 @@ func (p *PsWriter) SetupGitCredHelper(confFile, section, user string) {
 		`  $needsSpecialArgQuoting = $False`,
 		`}`,
 		`if ($needsSpecialArgQuoting) {`,
-		clearCmd + " " + `'""'`,
-		setCmd + " " + psSingleQuote(strings.ReplaceAll(credHelperCommand, `"`, `\"`)),
+		clearCmd+" "+`'""'`,
+		setCmd+" "+psSingleQuote(strings.ReplaceAll(credHelperCommand, `"`, `\"`)),
 		`} else {`,
-		clearCmd + " " + `''`,
-		setCmd + " " + psSingleQuote(credHelperCommand),
+		clearCmd+" "+`''`,
+		setCmd+" "+psSingleQuote(credHelperCommand),
 		`}`,
 		userCmd,
 		`}`,
-	}, p.EOL))
+	)
 	p.CheckForErrors()
+}
+
+func (p *PsWriter) lines(texts ...string) {
+	lines := []string{}
+
+	for _, t := range texts {
+		lines = append(lines, strings.FieldsFunc(t, func(r rune) bool { return r == '\n' })...)
+	}
+
+	p.Line(strings.Join(lines, p.EOL))
 }
 
 func (p *PsWriter) CommandArgExpand(command string, arguments ...string) {
@@ -404,6 +414,12 @@ func (p *PsWriter) Variable(variable common.JobVariable) {
 	p.Linef("$env:%s=$%s", variable.Key, variable.Key)
 }
 
+func (p *PsWriter) ExportRaw(name, value string) {
+	quotedVal := psDoubleQuote(value)
+	p.Linef("$%s=%s", name, quotedVal)
+	p.Linef("$env:%s=%s", name, quotedVal)
+}
+
 func (p *PsWriter) DotEnvVariables(baseFilename string, variables map[string]string) string {
 	p.MkDir(p.TemporaryPath)
 	dotEnvFile := p.TmpFile(baseFilename)
@@ -440,6 +456,10 @@ func (p *PsWriter) IfCmd(cmd string, arguments ...string) {
 
 func (p *PsWriter) IfCmdWithOutput(cmd string, arguments ...string) {
 	p.ifInTryCatch(p.buildCommand(psSingleQuote, cmd, arguments...))
+}
+
+func (p *PsWriter) IfCmdWithOutputArgExpand(cmd string, arguments ...string) {
+	p.ifInTryCatch(p.buildCommand(psDoubleQuote, cmd, arguments...))
 }
 
 func (p *PsWriter) IfGitVersionIsAtLeast(version string) {

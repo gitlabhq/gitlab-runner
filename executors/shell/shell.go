@@ -156,8 +156,8 @@ func RegisterExecutor(executorName string, runnerCommandPath string) {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
 		DefaultSafeDirectoryCheckout:  false,
-		DefaultBuildsDir:              "$PWD/builds",
-		DefaultCacheDir:               "$PWD/cache",
+		DefaultBuildsDir:              "builds",
+		DefaultCacheDir:               "cache",
 		SharedBuildsDir:               true,
 		Shell: common.ShellScriptInfo{
 			Shell:         common.GetDefaultShell(),

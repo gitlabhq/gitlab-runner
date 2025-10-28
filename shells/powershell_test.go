@@ -507,6 +507,13 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`  Remove-Item -Force "$CurrentDirectory/.tmp/masking.db"` + eol +
 		`}`
 	cleanGitFiles := `` +
+		`$CurrentDirectory = (Resolve-Path ./).Path` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/.gitlab-runner.ext.conf" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force "$CurrentDirectory/.tmp/.gitlab-runner.ext.conf"` + eol +
+		`} elseif(Test-Path "$CurrentDirectory/.tmp/.gitlab-runner.ext.conf") {` + eol +
+		`  Remove-Item -Force "$CurrentDirectory/.tmp/.gitlab-runner.ext.conf"` + eol +
+		`}` + eol +
+		`` + eol +
 		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/index.lock" -PathType Leaf) ) {` + eol +
 		`  Remove-Item2 -Force ".git/index.lock"` + eol +
 		`} elseif(Test-Path ".git/index.lock") {` + eol +
