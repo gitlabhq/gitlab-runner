@@ -75,12 +75,15 @@ func (d *dockerImageChecker) Exists() error {
 	// the results of this function can be cached but there's no need atm
 	args := []string{"inspect", "--raw", "--no-tags"}
 
-	if user, pass := os.Getenv("CI_REGISTRY_USER"), os.Getenv("CI_REGISTRY_PASSWORD"); user != "" && pass != "" {
-		args = append(
-			args,
-			"--username", user,
-			"--password", pass,
-		)
+	// This is mostly for the security fork, to be able to query images from the security repos
+	if strings.HasPrefix(strings.ToLower(d.image), "registry.gitlab.com") {
+		if user, pass := os.Getenv("CI_REGISTRY_USER"), os.Getenv("CI_REGISTRY_PASSWORD"); user != "" && pass != "" {
+			args = append(
+				args,
+				"--username", user,
+				"--password", pass,
+			)
+		}
 	}
 
 	args = append(args, "docker://"+d.image)
