@@ -10,7 +10,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 )
 
@@ -81,7 +80,6 @@ func Test_StepsIntegration(t *testing.T) {
 			assert.NoError(t, err)
 
 			successfulBuild.Services = tt.services
-			successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{Key: featureflags.UseNativeSteps, Value: "true", Public: true})
 			successfulBuild.Variables = append(successfulBuild.Variables, tt.variables...)
 			build := &common.Build{
 				JobResponse: successfulBuild,
