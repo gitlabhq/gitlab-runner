@@ -373,3 +373,15 @@ artefacts are usually ephemeral, `emptyDir` works for most cases.
 The Amazon EKS zone rebalancing feature balances the availability zones in an autoscaling group. This feature might stop a node in one availability zone and create it in another.
 
 Runner jobs cannot be stopped and moved to another node. Disable this feature for runner jobs to resolve this error.
+
+## Services not supported with Windows containers
+
+When attempting to use [services](https://docs.gitlab.com/ci/services/) on Windows nodes, 
+they might fail with the following error:
+
+- `ERROR: Job failed (system failure): prepare environment: admission webhook "windows.common-webhooks.networking.gke.io" denied the request: spec.hostAliases: Invalid value: []v1.HostAlias{v1.HostAlias{IP:"127.0.0.1", Hostnames:[]string{"<your windows image>"}}}: Windows does not support this field.`
+
+Depending on the Kubernetes runtime, the error could either be reported or silently ignored.
+For example, GKE does report the error.
+
+Services are implemented using `hostAlias` in Kubernetes executor, which is not supported in Windows containers.
