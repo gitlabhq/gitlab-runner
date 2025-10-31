@@ -471,3 +471,27 @@ over an extended period.
 To resolve this issue, consolidate any duplicate tags in the table with the
 [`gitlab:db:deduplicate_tags` Rake task](https://docs.gitlab.com/administration/raketasks/maintenance/#check-the-database-for-deduplicate-cicd-tags).
 For more information, see [Rake tasks](https://docs.gitlab.com/administration/raketasks/).
+
+## Error: `Not authorized to perform sts:AssumeRoleWithWebIdentity`
+
+If you configured an IAM role for your runner's Kubernetes ServiceAccount resource,
+but runner logs show that it is not able to perform `sts:AssumeRoleWithWebIdentity`,
+you might get an error that states:
+
+```plaintext
+{"error":"Not authorized to perform sts:AssumeRoleWithWebIdentity","level":"error","msg":"error while generating S3 pre-signed URL","time":"2025-10-15T18:07:20Z"}
+```
+
+This issue occurs when you include `https://` in the `StringLike` or `StringEquals`
+condition of your IAM role's trusted entities configuration.
+
+To resolve this issue, remove `https://` from the OIDC URL:
+
+```json
+"Action": "sts:AssumeRoleWithWebIdentity",
+"Condition": {
+  "StringLike": {
+    "oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>:sub": "system:serviceaccount:<NAMESPACE>:<SERVICE_ACCOUNT>"
+  } 
+}
+```
