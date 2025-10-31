@@ -776,7 +776,11 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	podStatusCh := s.watchPodStatus(ctx, &podContainerStatusChecker{shouldCheckContainerFilter: isNotServiceContainer})
+	podStatusCh := s.watchPodStatus(ctx, &podContainerStatusChecker{
+		shouldCheckContainerFilter: func(cs api.ContainerStatus) bool {
+			return isNotServiceContainerName(cs.Name)
+		},
+	})
 
 	select {
 	case err := <-s.runInContainer(ctx, cmd.Stage, containerName, containerCommand):
@@ -2862,8 +2866,8 @@ func (c *podContainerStatusChecker) check(ctx context.Context, pod *api.Pod) err
 	return nil
 }
 
-func isNotServiceContainer(containerStatus api.ContainerStatus) bool {
-	return containerStatus.Name == buildContainerName || containerStatus.Name == helperContainerName
+func isNotServiceContainerName(name string) bool {
+	return name == buildContainerName || name == helperContainerName
 }
 
 func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck podStatusChecker) error {
@@ -3162,7 +3166,7 @@ func (s *executor) captureServiceContainersLogs(ctx context.Context, containers 
 	for _, name := range s.options.getSortedServiceNames() {
 		service := s.options.Services[name]
 		for _, container := range containers {
-			if service.Name != container.Image {
+			if service.Name != container.Image || isNotServiceContainerName(container.Name) {
 				continue
 			}
 
