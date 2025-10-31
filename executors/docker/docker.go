@@ -53,12 +53,11 @@ const (
 	ExecutorStageRun     common.ExecutorStage = "docker_run"
 	ExecutorStageCleanup common.ExecutorStage = "docker_cleanup"
 
-	ExecutorStageBootstrap                common.ExecutorStage = "docker_bootstrap"
-	ExecutorStageCreatingBuildVolumes     common.ExecutorStage = "docker_creating_build_volumes"
-	ExecutorStageCreatingStepRunnerVolume common.ExecutorStage = "docker_creating_step_runner_volume"
-	ExecutorStageCreatingServices         common.ExecutorStage = "docker_creating_services"
-	ExecutorStageCreatingUserVolumes      common.ExecutorStage = "docker_creating_user_volumes"
-	ExecutorStagePullingImage             common.ExecutorStage = "docker_pulling_image"
+	ExecutorStageBootstrap            common.ExecutorStage = "docker_bootstrap"
+	ExecutorStageCreatingBuildVolumes common.ExecutorStage = "docker_creating_build_volumes"
+	ExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
+	ExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
+	ExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
 )
 
 const ServiceLogOutputLimit = 64 * 1024
