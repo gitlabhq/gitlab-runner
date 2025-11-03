@@ -115,7 +115,7 @@ To maintain runners:
 To remove the runner and its infrastructure:
 
 ```plaintext
-terrafrom destroy
+terraform destroy
 ```
 
 ## Supported configurations
