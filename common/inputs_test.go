@@ -350,3 +350,86 @@ func TestJobInputs_Expand_StructField(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Field is Streetname 1", expanded)
 }
+
+type customInputExpander string
+
+func (c *customInputExpander) Expand(inputs *JobInputs) error {
+	*c = "REDACTED"
+	return nil
+}
+
+func TestInputsTag(t *testing.T) {
+	type MyString string
+
+	type JobResponse struct {
+		StringToExpand          string `inputs:"expand"`
+		StringNotToExpand       string
+		CustomStringToExpand    MyString `inputs:"expand"`
+		CustomStringNotToExpand MyString
+		StructToExpand          struct {
+			StringToExpand    string `inputs:"expand"`
+			StringNotToExpand string
+		} `inputs:"expand"`
+		StructNotToExpand struct {
+			StringToExpand    string `inputs:"expand"`
+			StringNotToExpand string
+		}
+		SliceToExpand                  []string `inputs:"expand"`
+		SliceNotToExpand               []string
+		CustomInputExpanderToExpand    customInputExpander `inputs:"expand"`
+		CustomInputExpanderNotToExpand customInputExpander
+	}
+
+	jobResponse := JobResponse{
+		StringToExpand:          "${{ job.inputs.any }}",
+		StringNotToExpand:       "${{ job.inputs.any }}",
+		CustomStringToExpand:    "${{ job.inputs.any }}",
+		CustomStringNotToExpand: "${{ job.inputs.any }}",
+		StructToExpand: struct {
+			StringToExpand    string "inputs:\"expand\""
+			StringNotToExpand string
+		}{
+			StringToExpand:    "${{ job.inputs.any }}",
+			StringNotToExpand: "${{ job.inputs.any }}",
+		},
+		StructNotToExpand: struct {
+			StringToExpand    string "inputs:\"expand\""
+			StringNotToExpand string
+		}{
+			StringToExpand:    "${{ job.inputs.any }}",
+			StringNotToExpand: "${{ job.inputs.any }}",
+		},
+		SliceToExpand:                  []string{"${{ job.inputs.any }}", "${{ job.inputs.any }}"},
+		SliceNotToExpand:               []string{"${{ job.inputs.any }}", "${{ job.inputs.any }}"},
+		CustomInputExpanderToExpand:    "${{ job.inputs.any }}",
+		CustomInputExpanderNotToExpand: "${{ job.inputs.any }}",
+	}
+
+	inputs, err := newJobInputs([]JobInput{
+		{
+			Key: "any",
+			Value: JobInputValue{
+				Type:      JobInputContentTypeNameString,
+				Content:   value.String("value"),
+				Sensitive: false,
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	err = ExpandInputs(&inputs, &jobResponse)
+	require.NoError(t, err)
+
+	assert.Equal(t, "value", jobResponse.StringToExpand)
+	assert.Equal(t, "${{ job.inputs.any }}", jobResponse.StringNotToExpand)
+	assert.Equal(t, MyString("value"), jobResponse.CustomStringToExpand)
+	assert.Equal(t, MyString("${{ job.inputs.any }}"), jobResponse.CustomStringNotToExpand)
+	assert.Equal(t, "value", jobResponse.StructToExpand.StringToExpand)
+	assert.Equal(t, "${{ job.inputs.any }}", jobResponse.StructToExpand.StringNotToExpand)
+	assert.Equal(t, "${{ job.inputs.any }}", jobResponse.StructNotToExpand.StringToExpand)
+	assert.Equal(t, "${{ job.inputs.any }}", jobResponse.StructNotToExpand.StringNotToExpand)
+	assert.Equal(t, []string{"value", "value"}, jobResponse.SliceToExpand)
+	assert.Equal(t, []string{"${{ job.inputs.any }}", "${{ job.inputs.any }}"}, jobResponse.SliceNotToExpand)
+	assert.Equal(t, customInputExpander("REDACTED"), jobResponse.CustomInputExpanderToExpand)
+	assert.Equal(t, customInputExpander("${{ job.inputs.any }}"), jobResponse.CustomInputExpanderNotToExpand)
+}

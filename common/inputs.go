@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"reflect"
 	"slices"
 
 	"gitlab.com/gitlab-org/moa"
@@ -31,12 +32,20 @@ type JobInputValue struct {
 
 type JobInputContentTypeName string
 
+type InputExpander interface {
+	Expand(*JobInputs) error
+}
+
 const (
 	JobInputContentTypeNameString  JobInputContentTypeName = "string"
 	JobInputContentTypeNameNumber  JobInputContentTypeName = "number"
 	JobInputContentTypeNameBoolean JobInputContentTypeName = "boolean"
 	JobInputContentTypeNameArray   JobInputContentTypeName = "array"
 	JobInputContentTypeNameStruct  JobInputContentTypeName = "struct"
+)
+
+var (
+	errInputExpanderNotSupported = errors.New("type does not implement InputExpander")
 )
 
 func (t JobInputContentTypeName) MoaKind() (value.Kind, error) {
@@ -215,4 +224,145 @@ func (i *JobInputs) Expand(text string) (string, error) {
 	}
 
 	return result.String(), nil
+}
+
+func ExpandInputs(inputs *JobInputs, v any) error {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return fmt.Errorf("expected struct, got %s", rv.Kind())
+	}
+	return processStruct(inputs, rv)
+}
+
+//nolint:gocognit
+func processStruct(inputs *JobInputs, rv reflect.Value) error {
+	err := tryExpanderInterface(inputs, rv)
+	switch {
+	case errors.Is(err, errInputExpanderNotSupported):
+	case err != nil:
+		return err
+	default:
+		// Successfully expanded using the interface
+		return nil
+	}
+
+	rt := rv.Type()
+	for i := 0; i < rv.NumField(); i++ {
+		field := rv.Field(i)
+		if !field.CanInterface() {
+			continue
+		}
+
+		fieldType := rt.Field(i)
+		inputsTag := fieldType.Tag.Get("inputs")
+		if inputsTag != "expand" {
+			continue
+		}
+
+		err := tryExpanderInterface(inputs, field)
+		switch {
+		case errors.Is(err, errInputExpanderNotSupported):
+		case err != nil:
+			return err
+		default:
+			// Successfully expanded using the interface
+			continue
+		}
+
+		switch field.Kind() {
+		case reflect.String:
+			if err := expandStringField(inputs, field); err != nil {
+				return fmt.Errorf("failed to expand string field %s: %w", fieldType.Name, err)
+			}
+		case reflect.Struct:
+			if err := processStruct(inputs, field); err != nil {
+				return fmt.Errorf("failed to process struct field %s: %w", fieldType.Name, err)
+			}
+		case reflect.Slice:
+			if err := expandSlice(inputs, field); err != nil {
+				return fmt.Errorf("failed to expand slice field %s: %w", fieldType.Name, err)
+			}
+		default:
+			return fmt.Errorf("field %s has inputs:expand tag but is neither string-based nor struct (type: %s)",
+				fieldType.Name, field.Type())
+		}
+	}
+
+	return nil
+}
+
+func tryExpanderInterface(inputs *JobInputs, field reflect.Value) error {
+	var fieldInterface any
+
+	// We need to get the address if possible since methods might be on pointer receiver
+	if field.CanAddr() {
+		fieldInterface = field.Addr().Interface()
+	} else {
+		fieldInterface = field.Interface()
+	}
+
+	expander, ok := fieldInterface.(InputExpander)
+	if !ok {
+		return errInputExpanderNotSupported
+	}
+
+	return expander.Expand(inputs)
+}
+
+// expandStringField expands a string-based field
+func expandStringField(inputs *JobInputs, field reflect.Value) error {
+	if !field.CanAddr() {
+		return errors.New("field is not addressable")
+	}
+
+	if !field.CanSet() {
+		return errors.New("field is not settable")
+	}
+
+	expandedValue, err := inputs.Expand(field.String())
+	if err != nil {
+		return err
+	}
+
+	field.SetString(expandedValue)
+	return nil
+}
+
+func expandSlice(inputs *JobInputs, field reflect.Value) error {
+	if field.Len() == 0 {
+		return nil
+	}
+
+	elemType := field.Type().Elem()
+	switch elemType.Kind() {
+	case reflect.String:
+		return expandStringSlice(inputs, field)
+	case reflect.Struct:
+		return expandStructSlice(inputs, field)
+	default:
+		return fmt.Errorf("slice elements must be either strings or structs (element type: %s)", elemType)
+	}
+}
+
+func expandStringSlice(inputs *JobInputs, field reflect.Value) error {
+	for i := range field.Len() {
+		elem := field.Index(i)
+		if err := expandStringField(inputs, elem); err != nil {
+			return fmt.Errorf("failed to expand element %d: %w", i, err)
+		}
+	}
+	return nil
+}
+
+func expandStructSlice(inputs *JobInputs, field reflect.Value) error {
+	for i := range field.Len() {
+		elem := field.Index(i)
+		if err := processStruct(inputs, elem); err != nil {
+			return fmt.Errorf("failed to process struct element %d: %w", i, err)
+		}
+	}
+	return nil
 }

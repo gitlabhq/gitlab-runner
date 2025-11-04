@@ -113,7 +113,7 @@ const (
 var ErrSkipBuildStage = errors.New("skip build stage")
 
 type Build struct {
-	JobResponse `yaml:",inline"`
+	JobResponse `yaml:",inline" inputs:"expand"`
 
 	SystemInterrupt  chan os.Signal `json:"-" yaml:"-"`
 	RootDir          string         `json:"-" yaml:"-"`
@@ -1240,26 +1240,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 // For a good middle ground we could parse the scripts as moa expressions and cache them
 // and only later on evaluate given the necessary context.
 func (b *Build) expandInputs() error {
-	// expand inputs in script and after_script steps
-	for _, step := range b.Steps {
-		switch step.Name {
-		case StepNameScript:
-		case StepNameAfterScript:
-		default:
-			continue
-		}
-
-		for i, s := range step.Script {
-			expanded, err := b.Inputs.Expand(s)
-			if err != nil {
-				return err
-			}
-
-			step.Script[i] = expanded
-		}
-	}
-
-	return nil
+	return ExpandInputs(&b.Inputs, b)
 }
 
 func (b *Build) logUsedImages() {

@@ -368,10 +368,23 @@ const (
 
 type Step struct {
 	Name         StepName   `json:"name"`
-	Script       StepScript `json:"script"`
+	Script       StepScript `json:"script" inputs:"expand"`
 	Timeout      int        `json:"timeout"`
 	When         StepWhen   `json:"when"`
 	AllowFailure bool       `json:"allow_failure"`
+}
+
+func (s *Step) Expand(inputs *JobInputs) error {
+	switch s.Name {
+	case StepNameScript:
+	case StepNameAfterScript:
+	default:
+		// Step name not supported
+		return nil
+	}
+
+	type alias Step
+	return ExpandInputs(inputs, (*alias)(s))
 }
 
 type Steps []Step
@@ -433,20 +446,20 @@ var SupportedExecutorOptions = map[string][]string{
 type (
 	ImageDockerOptions struct {
 		executorOptions
-		Platform string        `json:"platform"`
-		User     StringOrInt64 `json:"user"`
+		Platform string        `json:"platform" inputs:"expand"`
+		User     StringOrInt64 `json:"user" inputs:"expand"`
 	}
 
 	StringOrInt64 string
 
 	ImageKubernetesOptions struct {
 		executorOptions
-		User StringOrInt64 `json:"user"`
+		User StringOrInt64 `json:"user" inputs:"expand"`
 	}
 	ImageExecutorOptions struct {
 		executorOptions
-		Docker     ImageDockerOptions     `json:"docker,omitempty"`
-		Kubernetes ImageKubernetesOptions `json:"kubernetes,omitempty"`
+		Docker     ImageDockerOptions     `json:"docker,omitempty" inputs:"expand"`
+		Kubernetes ImageKubernetesOptions `json:"kubernetes,omitempty" inputs:"expand"`
 	}
 )
 
@@ -558,14 +571,14 @@ func (ieo *ImageExecutorOptions) UnsupportedOptions() error {
 }
 
 type Image struct {
-	Name            string               `json:"name"`
+	Name            string               `json:"name" inputs:"expand"`
 	Alias           string               `json:"alias,omitempty"`
-	Command         []string             `json:"command,omitempty"`
-	Entrypoint      []string             `json:"entrypoint,omitempty"`
+	Command         []string             `json:"command,omitempty" inputs:"expand"`
+	Entrypoint      []string             `json:"entrypoint,omitempty" inputs:"expand"`
 	Ports           []Port               `json:"ports,omitempty"`
 	Variables       JobVariables         `json:"variables,omitempty"`
-	PullPolicies    []DockerPullPolicy   `json:"pull_policy,omitempty"`
-	ExecutorOptions ImageExecutorOptions `json:"executor_opts,omitempty"`
+	PullPolicies    []DockerPullPolicy   `json:"pull_policy,omitempty" inputs:"expand"`
+	ExecutorOptions ImageExecutorOptions `json:"executor_opts,omitempty" inputs:"expand"`
 }
 
 func (i *Image) Aliases() []string { return strings.Fields(strings.ReplaceAll(i.Alias, ",", " ")) }
@@ -641,14 +654,14 @@ const (
 )
 
 type Artifact struct {
-	Name      string          `json:"name"`
+	Name      string          `json:"name" inputs:"expand"`
 	Untracked bool            `json:"untracked"`
-	Paths     ArtifactPaths   `json:"paths"`
-	Exclude   ArtifactExclude `json:"exclude"`
-	When      ArtifactWhen    `json:"when"`
+	Paths     ArtifactPaths   `json:"paths" inputs:"expand"`
+	Exclude   ArtifactExclude `json:"exclude" inputs:"expand"`
+	When      ArtifactWhen    `json:"when" inputs:"expand"`
 	Type      string          `json:"artifact_type"`
 	Format    ArtifactFormat  `json:"artifact_format"`
-	ExpireIn  string          `json:"expire_in"`
+	ExpireIn  string          `json:"expire_in" inputs:"expand"`
 }
 
 type Artifacts []Artifact
@@ -661,12 +674,12 @@ type PolicyOptions struct {
 }
 
 type Cache struct {
-	Key          string            `json:"key"`
+	Key          string            `json:"key" inputs:"expand"`
 	Untracked    bool              `json:"untracked"`
-	Policy       CachePolicy       `json:"policy"`
-	Paths        ArtifactPaths     `json:"paths"`
-	When         CacheWhen         `json:"when"`
-	FallbackKeys CacheFallbackKeys `json:"fallback_keys"`
+	Policy       CachePolicy       `json:"policy" inputs:"expand"`
+	Paths        ArtifactPaths     `json:"paths" inputs:"expand"`
+	When         CacheWhen         `json:"when" inputs:"expand"`
+	FallbackKeys CacheFallbackKeys `json:"fallback_keys" inputs:"expand"`
 }
 
 type (
@@ -775,11 +788,11 @@ type JobResponse struct {
 	RunnerInfo    RunnerInfo     `json:"runner_info"`
 	Inputs        JobInputs      `json:"inputs"`
 	Variables     JobVariables   `json:"variables"`
-	Steps         Steps          `json:"steps"`
-	Image         Image          `json:"image"`
-	Services      Services       `json:"services"`
-	Artifacts     Artifacts      `json:"artifacts"`
-	Cache         Caches         `json:"cache"`
+	Steps         Steps          `json:"steps" inputs:"expand"`
+	Image         Image          `json:"image" inputs:"expand"`
+	Services      Services       `json:"services" inputs:"expand"`
+	Artifacts     Artifacts      `json:"artifacts" inputs:"expand"`
+	Cache         Caches         `json:"cache" inputs:"expand"`
 	Credentials   []Credentials  `json:"credentials"`
 	Dependencies  Dependencies   `json:"dependencies"`
 	Features      GitlabFeatures `json:"features"`
