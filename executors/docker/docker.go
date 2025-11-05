@@ -855,8 +855,16 @@ func (e *executor) createContainerConfig(
 		AttachStderr: true,
 		OpenStdin:    true,
 		StdinOnce:    true,
-		Env:          e.Build.GetAllVariables().StringList(),
 		Entrypoint:   e.overwriteEntrypoint(&imageDefinition),
+	}
+
+	// We should never really need to set the environment variables on the container,
+	// as these are exported via the abstract shell.
+	//
+	// Adding these variables interferes with steps. Given this situation, when native
+	// steps is enabled, we no longer add the env vars to the container.
+	if !e.Build.UseNativeSteps() {
+		config.Env = e.Build.GetAllVariables().StringList()
 	}
 
 	// user config should only be set in build containers
