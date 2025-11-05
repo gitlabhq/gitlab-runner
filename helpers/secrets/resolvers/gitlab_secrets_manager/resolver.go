@@ -37,12 +37,24 @@ func (r *resolver) Resolve() (string, error) {
 
 	gsmSecret := r.secret.GitLabSecretsManager
 
+	// When path exists, prefer it over templating a fixed path based on
+	// AuthMount. Note that AuthMount does not allow control over additional
+	// auth paths (e.g., cel/login) or namespaces (which prefix the path,
+	// i.e., (<namespace>/auth/<auth_mount>/login).
+	//
+	// While commonly true, login requests do not necessarily always go to
+	// a path called login.
+	loginPath := gsmSecret.Server.InlineAuth.Path
+	if loginPath == "" {
+		loginPath = path.Join("auth", gsmSecret.Server.InlineAuth.AuthMount, "login")
+	}
+
 	client, err := vault.NewClient(
 		gsmSecret.Server.URL,
 		"",
 		vault.WithInlineAuth(
 			&vault.InlineAuth{
-				Path: path.Join("auth", gsmSecret.Server.InlineAuth.AuthMount, "login"),
+				Path: loginPath,
 				JWT:  gsmSecret.Server.InlineAuth.JWT,
 				Role: gsmSecret.Server.InlineAuth.Role,
 			},
