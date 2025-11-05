@@ -105,6 +105,22 @@ func TestResolver_Resolve(t *testing.T) {
 			expectedErr: "getting secret",
 		},
 		{
+			name: "failure get secret with path",
+			secret: common.Secret{
+				GitLabSecretsManager: &common.GitLabSecretsManagerSecret{
+					Server: common.GitLabSecretsManagerServer{
+						URL: server.URL,
+						InlineAuth: common.GitLabSecretsManagerServerInlineAuth{
+							Path: "auth/jwt/login",
+							JWT:  "test-jwt",
+							Role: "test-role",
+						},
+					},
+				},
+			},
+			expectedErr: "getting secret",
+		},
+		{
 			name: "success",
 			secret: common.Secret{
 				GitLabSecretsManager: &common.GitLabSecretsManagerSecret{
@@ -114,6 +130,28 @@ func TestResolver_Resolve(t *testing.T) {
 							AuthMount: "jwt",
 							JWT:       "test-jwt",
 							Role:      "test-role",
+						},
+					},
+					Engine: common.GitLabSecretsManagerEngine{
+						Name: "kv-v2",
+						Path: "test_path",
+					},
+					Path:  "test_path",
+					Field: "test_field",
+				},
+			},
+			expectedValue: "test_value",
+		},
+		{
+			name: "success with path",
+			secret: common.Secret{
+				GitLabSecretsManager: &common.GitLabSecretsManagerSecret{
+					Server: common.GitLabSecretsManagerServer{
+						URL: server.URL,
+						InlineAuth: common.GitLabSecretsManagerServerInlineAuth{
+							Path: "auth/jwt/login",
+							JWT:  "test-jwt",
+							Role: "test-role",
 						},
 					},
 					Engine: common.GitLabSecretsManagerEngine{

@@ -1067,9 +1067,21 @@ type GitLabSecretsManagerServer struct {
 // for OpenBao JWT authentication. This allows the runner to authenticate on each
 // request without storing tokens.
 type GitLabSecretsManagerServerInlineAuth struct {
+	// Path is the full path for this login request. This is assumed to be
+	// against an OpenBao auth method that takes a role and jwt parameter;
+	// or, roughly equivalent semantic as the JWT auth engine.
+	Path string `json:"path"`
+
+	// JWT is the JWT to use to authenticate against the OpenBao server.
+	JWT string `json:"jwt"`
+
+	// Role is the required login authentication role.
+	Role string `json:"role"`
+
+	// AuthMount is a legacy field sent on older GitLab versions and must be
+	// templated to auth/<auth_mount>/login. Newer server versions send the
+	// full request path to authenticate via.
 	AuthMount string `json:"auth_mount"`
-	JWT       string `json:"jwt"`
-	Role      string `json:"role"`
 }
 
 // GitLabSecretsManagerEngine specifies the secret engine configuration in OpenBao,
