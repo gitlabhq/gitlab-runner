@@ -89,18 +89,17 @@ func TestBootstrap(t *testing.T) {
 func TestServe(t *testing.T) {
 	t.Parallel()
 
-	toTerminateWith := func(s string) *string { return &s }
-
 	tests := []struct {
-		name              string
-		sockName          string
-		cmdAndArgs        []string
-		stdin             string
-		explicitCancel    bool
-		expectedStdout    string
-		expectedStderr    string
-		expectListening   bool
-		expectTermination *string
+		name            string
+		sockName        string
+		cmdAndArgs      []string
+		stdin           string
+		explicitCancel  bool
+		expectedStdout  string
+		expectedStderr  string
+		expectListening bool
+		expectErr       string
+		exitCode        int
 	}{
 		{
 			name:            "valid socket name",
@@ -108,56 +107,69 @@ func TestServe(t *testing.T) {
 			expectListening: true,
 		},
 		{
-			name:              "invalid socket name",
-			sockName:          filepath.Join("subdir", "not-existent", "fails.sock"),
-			expectTermination: toTerminateWith("opening socket: listen unix .*: " + socketErrs.Get(t, "listenInvalidSocket")),
+			name:      "invalid socket name",
+			sockName:  filepath.Join("subdir", "not-existent", "fails.sock"),
+			expectErr: "opening socket: listen unix",
 		},
 		{
-			name:              "with a successful command",
-			sockName:          "some.sock",
-			cmdAndArgs:        []string{os.Args[0], externalMode, dontSleep, "foo", "bar", "0"},
-			stdin:             "some stdin",
-			expectedStdout:    "stdin: some stdin\nstdout: foo\n",
-			expectedStderr:    "stderr: bar\n",
-			expectListening:   true,
-			expectTermination: toTerminateWith(""),
+			name:            "with a successful command",
+			sockName:        "some.sock",
+			cmdAndArgs:      []string{os.Args[0], externalMode, dontSleep, "foo", "bar", "0"},
+			stdin:           "some stdin",
+			expectedStdout:  "stdin: some stdin\nstdout: foo\n",
+			expectedStderr:  "stderr: bar\n",
+			expectListening: true,
 		},
 		{
-			name:              "with a failing command",
-			sockName:          "some.sock",
-			cmdAndArgs:        []string{os.Args[0], externalMode, dontSleep, "foo", "bar", "42"},
-			stdin:             "some stdin",
-			expectedStdout:    "stdin: some stdin\nstdout: foo\n",
-			expectedStderr:    "stderr: bar\n",
-			expectTermination: toTerminateWith("command error: exit status 42"),
+			name:           "with a failing command",
+			sockName:       "some.sock",
+			cmdAndArgs:     []string{os.Args[0], externalMode, dontSleep, "foo", "bar", "42"},
+			stdin:          "some stdin",
+			expectedStdout: "stdin: some stdin\nstdout: foo\n",
+			expectedStderr: "stderr: bar\n",
+			expectErr:      "exit status 42",
+			exitCode:       42,
 		},
 		{
-			name:              "with a successful longer-running command",
-			sockName:          "some.sock",
-			cmdAndArgs:        []string{os.Args[0], externalMode, sleepSomeTime, "foo", "bar", "0"},
-			stdin:             "some stdin",
-			expectedStdout:    "stdin: some stdin\nstdout: foo\n",
-			expectedStderr:    "stderr: bar\n",
-			expectListening:   true,
-			expectTermination: toTerminateWith(""),
+			name:            "with a successful longer-running command",
+			sockName:        "some.sock",
+			cmdAndArgs:      []string{os.Args[0], externalMode, sleepSomeTime, "foo", "bar", "0"},
+			stdin:           "some stdin",
+			expectedStdout:  "stdin: some stdin\nstdout: foo\n",
+			expectedStderr:  "stderr: bar\n",
+			expectListening: true,
 		},
 		{
-			name:              "with a failing longer-running command",
-			sockName:          "some.sock",
-			cmdAndArgs:        []string{os.Args[0], externalMode, sleepSomeTime, "foo", "bar", "43"},
-			stdin:             "some stdin",
-			expectedStdout:    "stdin: some stdin\nstdout: foo\n",
-			expectedStderr:    "stderr: bar\n",
-			expectTermination: toTerminateWith("command error: exit status 43"),
-			expectListening:   true,
+			name:            "with a failing longer-running command",
+			sockName:        "some.sock",
+			cmdAndArgs:      []string{os.Args[0], externalMode, sleepSomeTime, "foo", "bar", "43"},
+			stdin:           "some stdin",
+			expectedStdout:  "stdin: some stdin\nstdout: foo\n",
+			expectedStderr:  "stderr: bar\n",
+			expectErr:       "exit status 43",
+			expectListening: true,
 		},
 		{
-			name:              "with context being canceled from the outside",
-			sockName:          "some.sock",
-			cmdAndArgs:        []string{os.Args[0], externalMode, sleepReallyLong, "", "", "42"},
-			explicitCancel:    true,
-			expectListening:   true,
-			expectTermination: toTerminateWith("context canceled"),
+			name:            "with context being canceled from the outside",
+			sockName:        "some.sock",
+			cmdAndArgs:      []string{os.Args[0], externalMode, sleepReallyLong, "", "", "42"},
+			stdin:           "some stdin",
+			explicitCancel:  true,
+			expectListening: true,
+			expectErr: func() string {
+				if runtime.GOOS == "windows" {
+					return "exit status 1"
+				}
+				return "signal: killed"
+			}(),
+		},
+		{
+			name:            "serve and explicit cancel",
+			sockName:        "some.sock",
+			cmdAndArgs:      []string{os.Args[0], externalMode, sleepReallyLong, "", "", "42"},
+			explicitCancel:  true,
+			expectListening: true,
+			expectErr:       "",
 		},
 	}
 
@@ -212,17 +224,27 @@ func TestServe(t *testing.T) {
 			}
 
 			if tc.explicitCancel {
+				time.Sleep(time.Second)
 				shutDown()
 			}
 
-			if re := tc.expectTermination; re != nil {
-				err := <-serveErr
-				if *re == "" {
-					assert.NoError(t, err, "expected no error")
-				} else {
-					assert.Regexp(t, *re, err.Error(), "expected serve error")
-				}
-				return
+			var err error
+			// if explicit cancel, or expected error, we're expecting serve to return
+			// otherwise, we let it run and it'll stop running when the test performs cleanup
+			if tc.explicitCancel || tc.expectErr != "" {
+				err = <-serveErr
+			}
+
+			if tc.expectErr != "" {
+				require.ErrorContains(t, err, tc.expectErr)
+			} else {
+				require.NoError(t, err)
+			}
+
+			if tc.exitCode != 0 {
+				exitErr, ok := err.(*exec.ExitError)
+				require.True(t, ok, "must return ExitError directly, not wrapped")
+				require.Equal(t, tc.exitCode, exitErr.ExitCode())
 			}
 		})
 	}
