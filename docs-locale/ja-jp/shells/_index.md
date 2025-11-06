@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: GitLab RunnerでサポートされているShellの種類
 ---
@@ -14,7 +14,7 @@ title: GitLab RunnerでサポートされているShellの種類
 
 GitLab Runnerは、さまざまなシステムでビルドを実行できるようにするShellスクリプトジェネレーターを実装しています。
 
-Shellスクリプトには、ビルドのすべてのステップを実行するコマンドが含まれています。
+Shellスクリプトには、ビルドのすべてのステップを実行するコマンドが含まれています:
 
 1. `git clone`
 1. ビルドキャッシュの復元
@@ -24,20 +24,20 @@ Shellスクリプトには、ビルドのすべてのステップを実行する
 
 Shellには設定オプションはありません。[`script`の`.gitlab-ci.yml`ディレクティブ](https://docs.gitlab.com/ci/yaml/#script)で定義されたコマンドからビルドのステップを受信します。
 
-サポートされているShellは次のとおりです。
+サポートされているShellは次のとおりです:
 
 | Shell        | 状態          | 説明 |
 |--------------|-----------------|-------------|
 | `bash`       | 完全にサポート | Bash（Bourne Again Shell）。すべてのコマンドはBashコンテキストで実行されます（すべてのUnixシステムのデフォルト）。 |
-| `sh`         | 完全にサポート | Sh（Bourne shell）。すべてのコマンドはShコンテキストで実行されます（すべてのUnixシステムの`bash`のフォールバック） |
+| `sh`         | 完全にサポート | Sh（Bourne shell）。すべてのコマンドはShコンテキストで実行されます（すべてのUnixシステムの`bash`のフォールバック）。 |
 | `powershell` | 完全にサポート | PowerShellスクリプト。すべてのコマンドはPowerShell Desktopのコンテキストで実行されます。 |
-| `pwsh`       | 完全にサポート | PowerShellスクリプト。すべてのコマンドはPowerShell Coreのコンテキストで実行されます。GitLab Runner 14.0以降では、これはWindowsで新しいRunnerを登録する場合のデフォルトです。 |
+| `pwsh`       | 完全にサポート | PowerShellスクリプト。すべてのコマンドはPowerShell Coreのコンテキストで実行されます。これは、Windowsで新しいRunnerを登録する際のデフォルトです。 |
 
 デフォルト以外の特定のShellを使用する場合は、`config.toml`ファイルで[Shellを指定する](../executors/shell.md#selecting-your-shell)必要があります。
 
 ## Sh/Bash Shell {#shbash-shells}
 
-Sh/Bashは、すべてのUnixベースのシステムで使用されるデフォルトのShellです。`.gitlab-ci.yml`で使用されているbashスクリプトは、Shellスクリプトを次のいずれかのコマンドにパイプすることで実行されます。
+Sh/Bashは、すべてのUnixベースのシステムで使用されるデフォルトのShellです。`.gitlab-ci.yml`で使用されているbashスクリプトは、Shellスクリプトを次のいずれかのコマンドにパイプすることで実行されます:
 
 ```shell
 # This command is used if the build should be executed in context
@@ -59,7 +59,7 @@ cat generated-bash-script | /bin/bash
 
 [`Prepare environment`ステージでジョブが失敗した](../faq/_index.md#job-failed-system-failure-preparing-environment)場合、その原因はShellプロファイル内にある可能性があります。一般的な失敗として、コンソールのクリアを試行する`.bash_logout`がある場合の失敗があります。
 
-このエラーを解決するには、`/home/gitlab-runner/.bash_logout`を確認してください。たとえば、`.bash_logout`ファイルに次のようなスクリプトセクションがある場合は、このセクションをコメントアウトしてパイプラインを再起動します。
+このエラーを解決するには、`/home/gitlab-runner/.bash_logout`を確認してください。たとえば、`.bash_logout`ファイルに次のようなスクリプトセクションがある場合は、このセクションをコメントアウトしてパイプラインを再起動します:
 
 ```shell
 if [ "$SHLVL" = 1 ]; then
@@ -80,7 +80,7 @@ PowerShell Desktop Editionは、GitLab Runner 12.0〜13.12を使用してWindows
 
 PowerShellは、別のユーザーのコンテキストでビルドを実行することをサポートしていません。
 
-生成されたPowerShellスクリプトを実行するには、そのコンテンツをファイルに保存し、ファイル名を次のコマンドに渡します。
+生成されたPowerShellスクリプトを実行するには、そのコンテンツをファイルに保存し、ファイル名を次のコマンドに渡します:
 
 - PowerShell Desktop Edition:
 
@@ -94,7 +94,7 @@ PowerShellは、別のユーザーのコンテキストでビルドを実行す�
   pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
   ```
 
-PowerShellスクリプトの例を以下に示します。
+PowerShellスクリプトの例を以下に示します:
 
 ```powershell
 $ErrorActionPreference = "Continue" # This will be set to 'Stop' when targetting PowerShell Core
@@ -275,9 +275,9 @@ PowerShellに移植されていない古いBatchスクリプトの場合は、`S
 
 ### PowerShellのサンプルの使い方を紹介するビデオチュートリアル {#video-walkthrough-of-working-powershell-examples}
 
-[Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/watch?v=UZvtAYwruFc)は、[PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/microsoft/powershell/powershell-pipelines-on-gitlab-ci) Guided Explorationプロジェクトのチュートリアル動画です。これは以下の環境でテストされています。
+[Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/watch?v=UZvtAYwruFc)は、[PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/microsoft/powershell/powershell-pipelines-on-gitlab-ci) Guided Explorationプロジェクトのチュートリアル動画です。これは以下の環境でテストされています:
 
 - [GitLab.com向けにWindows上でホストされるrunner](https://docs.gitlab.com/ci/runners/hosted_runners/windows/)のWindows PowerShellおよびPowerShell Core 7。
 - [Docker-Machine Runner](../executors/docker_machine.md)を使用したLinux ContainersのPowerShell Core 7。
 
-この例は、テスト用に自分のグループまたはインスタンスにコピーできます。他のGitLab CIパターンのデモの詳細は、プロジェクトページで入手できます。
+この例は、テスト用に自分のグループまたはインスタンスにコピーできます。他のGitLab CIパターンのデモについての詳細は、プロジェクトページをご覧ください。

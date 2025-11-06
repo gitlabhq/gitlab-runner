@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: GitLab Runnerのオートスケール
 ---
@@ -17,7 +17,7 @@ GitLab Runnerのオートスケールを使用すると、パブリッククラ�
 パブリッククラウドインスタンスのオートスケールオプションに加えて、次のコンテナオーケストレーションソリューションを使用して、Runnerフリートをホストおよびスケールできます。
 
 - Red Hat OpenShift Kubernetesクラスター
-- Kubernetesクラスター:AWS EKS、Azure、オンプレミス
+- Kubernetesクラスター: AWS EKS、Azure、オンプレミス
 - AWS FargateのAmazon Elastic Container Servicesクラスター
 
 ## Runnerマネージャーを設定する {#configure-the-runner-manager}
@@ -75,9 +75,9 @@ Runnerマネージャーは、オートスケール用に複数のRunnerを作�
 
 ## Runnerのオートスケールexecutorを設定する {#configure-runner-autoscaling-executors}
 
-Runnerマネージャーを設定したら、オートスケールに固有のexecutorを設定します。
+Runnerマネージャーを設定したら、オートスケールに固有のexecutorを設定します:
 
-- [Instance Executor](../executors/instance.md)
+- [インスタンスExecutor](../executors/instance.md)
 - [Docker Autoscaling Executor](../executors/docker_autoscaler.md)
 - [Docker Machine Executor](../executors/docker_machine.md)
 

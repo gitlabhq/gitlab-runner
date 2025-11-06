@@ -1,22 +1,20 @@
 ---
 stage: Verify
-group: Runner
+group: CI Functions Platform
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: インスタンスRunnerまたはグループRunnerのRunnerフリートを計画および運用する
 ---
 
-このガイドでは、共有サービスモデルでRunnerフリートをスケーリングするためのベストプラクティスについて説明します。
+共有サービスモデルでRunnerフリートをスケールする際に、これらのベストプラクティスと推奨事項を適用します。
 
-インスタンスRunnerフリートをホストする場合は、以下を考慮して十分に計画されたインフラストラクチャが必要です。
+インスタンスRunnerフリートをホストする場合は、以下を考慮して十分に計画されたインフラストラクチャが必要です:
 
 - コンピューティングキャパシティ。
 - ストレージキャパシティ。
 - ネットワークの帯域幅とスループット。
 - ジョブの種類（プログラミング言語、OSプラットフォーム、依存関係ライブラリなど）。
 
-このガイドを利用することにより、組織の要件に基づいてGitLab Runnerのデプロイ戦略を策定してください。
-
-このガイドでは、使用する必要があるインフラストラクチャの種類に関する具体的な推奨事項は示されていません。ただし、毎月数百万件のCI/CDジョブを処理するGitLab.comでRunnerフリートを運用した経験から得られたインサイトを説明しています。
+これらの推奨事項を参考に、組織の要件に基づいたGitLab Runnerのデプロイ戦略を策定してください。
 
 ## ワークロードと環境を検討する {#consider-your-workload-and-environment}
 
@@ -47,6 +45,8 @@ RunnerフリートでのCI/CDジョブのパフォーマンスは、フリート
 - オートスケールしないRunnerの場合、`limit`はホストシステムのRunnerのキャパシティを定義します。
 - オートスケールRunnerの場合、`limit`は実行するRunnerの合計数です。
 
+`concurrency`、`limit`、および`request_concurrency`がどのように連携してジョブフローを制御するかについて詳しくは、[GitLab Runnerの並行処理チューニングに関するKB記事](https://support.gitlab.com/hc/en-us/articles/21324350882076-GitLab-Runner-Concurrency-Tuning-Understanding-request-concurrency)をご覧ください。
+
 ### 基本設定: 1つのRunnerマネージャー、1つのRunner {#basic-configuration-one-runner-manager-one-runner}
 
 最も基本的な設定では、サポートされているコンピューティングアーキテクチャとオペレーティングシステムにGitLab Runnerソフトウェアをインストールします。たとえば、Ubuntu Linuxを実行しているx86-64仮想マシン（VM）があるとします。
@@ -63,7 +63,7 @@ concurrent = 1
   executor = "shell"
 ```
 
-このRunnerが処理できるGitLab CI/CDジョブは、Runnerをインストールしたホストシステム上で直接実行されます。これは、ターミナルでCI/CDジョブコマンドを自分で実行する場合と同様です。この場合、登録コマンドを実行したのは1回だけなので、`config.toml`ファイルに含まれる`[[runners]]`セクションは1つだけです。並行処理数の値を`1`に設定した場合、1つのRunner「ワーカー」のみがこのシステムのRunnerプロセスでCI/CD ジョブを実行できます。
+このRunnerが処理できるGitLab CI/CDジョブは、Runnerをインストールしたホストシステム上で直接実行されます。これは、ターミナルでCI/CDジョブコマンドを自分で実行する場合と同様です。この場合、登録コマンドを実行したのは1回だけなので、`config.toml`ファイルに含まれる`[[runners]]`セクションは1つだけです。並行処理数の値を`1`に設定した場合、1つのRunner「ワーカー」のみがこのシステムのRunnerプロセスでCI/CDジョブを実行できます。
 
 ### 中程度の設定: 1つのRunnerマネージャー、複数のRunner {#intermediate-configuration-one-runner-manager-multiple-runners}
 
@@ -100,7 +100,7 @@ concurrent = 3
 
 #### Docker Machine executor {#docker-machine-executor}
 
-[Docker Machine Executor](../executors/docker_machine.md)を使用する場合、次のようになります。
+[Docker Machine Executor](../executors/docker_machine.md)を使用する場合、次のようになります:
 
 - Runnerマネージャーは、Dockerを使用してオンデマンドの仮想マシンインスタンスをプロビジョニングします。
 - これらのVMで、GitLab Runnerは、`.gitlab-ci.yml`ファイルに指定されているコンテナイメージを使用して、CI/CDジョブを実行します。
@@ -109,7 +109,7 @@ concurrent = 3
 
 #### Kubernetes executor {#kubernetes-executor}
 
-[Kubernetes executor](../executors/kubernetes/_index.md)を使用する場合、次のようになります。
+[Kubernetes executor](../executors/kubernetes/_index.md)を使用する場合、次のようになります:
 
 - Runnerマネージャーが、ターゲットのKubernetesクラスターでポッドをプロビジョニングします。
 - CI/CDジョブは、複数のコンテナで構成される各ポッドで実行されます。
@@ -121,9 +121,9 @@ concurrent = 3
 
 類似するRunnerを1つの設定にグループ化すると、Runnerフリートのオペレーションが簡素化されます。
 
-類似するRunnerを1つの設定にグループ化できるシナリオの例を次に示します。
+類似するRunnerを1つの設定にグループ化できるシナリオの例を次に示します:
 
-プラットフォーム管理者は、タグ`docker-builds-2vCPU-8GB`を使用して、基盤となる仮想マシンインスタンスサイズ（2 vCPU、8 GB RAM）が同じである複数のRunnerを指定する必要があります。高可用性またはスケーリングのために、このようなRunnerが少なくとも2つ必要です。UIで2つの個別のRunnerエントリを作成する代わりに、管理者は、同じコンピューティングインスタンスサイズを持つすべてのRunnerに対して1つのRunner 設定を作成できます。複数のRunnerを登録するために、Runner設定に認証トークンを再利用できます。登録された各Runnerは`docker-builds-2vCPU-8GB`タグを継承します。1つのRunner設定のすべての子Runnerに対して、`system_id`は固有識別子として機能します。
+プラットフォーム管理者は、タグ`docker-builds-2vCPU-8GB`を使用して、基盤となる仮想マシンインスタンスサイズ（2 vCPU、8 GB RAM）が同じである複数のRunnerを指定する必要があります。高可用性またはスケーリングのために、このようなRunnerが少なくとも2つ必要です。UIで2つの個別のRunnerエントリを作成する代わりに、管理者は、同じコンピューティングインスタンスサイズを持つすべてのRunnerに対して1つのRunner設定を作成できます。複数のRunnerを登録するために、Runner設定に認証トークンを再利用できます。登録された各Runnerは`docker-builds-2vCPU-8GB`タグを継承します。1つのRunner設定のすべての子Runnerに対して、`system_id`は固有識別子として機能します。
 
 グループにまとめられたRunnerは、複数のRunnerマネージャーによってさまざまなジョブを実行するために再利用できます。
 
@@ -133,12 +133,12 @@ GitLab Runnerは、起動時、または設定の保存時に`system_id`を生�
 
 GitLab Runnerは`system_id`を生成するために、ハードウェア識別子（一部のLinuxディストリビューションの`/etc/machine-id`など）から一意のシステム識別子を派生しようと試みます。この操作が成功しなかった場合、GitLab Runnerはランダムな識別子を使用して`system_id`を生成します。
 
-`system_id`には、次のいずれかのプレフィックスが付いています。
+`system_id`には、次のいずれかのプレフィックスが付いています:
 
 - `r_`: GitLab Runnerがランダムな識別子を割り当てました。
 - `s_`: GitLab Runnerがハードウェア識別子から一意のシステム識別子を割り当てました。
 
-たとえば、`system_id`がイメージにハードコーディングされないように、コンテナイメージを作成する際にこの点を考慮することが重要です。`system_id`がハードコーディングされている場合、特定のジョブを実行しているホストを区別できません。
+たとえば、`system_id`がイメージにハードコードされないように、コンテナイメージを作成する際にこの点を考慮することが重要です。`system_id`がハードコーディングされている場合、特定のジョブを実行しているホストを区別できません。
 
 ##### RunnerとRunnerマネージャーを削除する {#delete-runners-and-runner-managers}
 
@@ -150,7 +150,7 @@ Runner認証トークンを使用して作成されたRunnerとRunnerマネー�
 
 効率的かつ効果的な開始方法は、オートスケール設定（Runnerが「Runnerマネージャー」として機能する設定）でインスタンスRunnerを使用することです。
 
-VMまたはポッドをホストするインフラストラクチャスタックのコンピューティングキャパシティは、以下の条件によって異なります。
+VMまたはポッドをホストするインフラストラクチャスタックのコンピューティングキャパシティは、以下の条件によって異なります:
 
 - ワークロードと環境を検討する際に特定した要件。
 - Runnerフリートをホストするために使用するテクノロジースタック。
@@ -159,7 +159,7 @@ CI/CDワークロードの実行と、経時的なパフォーマンスの分析
 
 インスタンスRunnerとオートスケールexecutorを使用する設定では、最小限の2つのRunnerマネージャーで開始する必要があります。
 
-時間の経過とともに必要になるRunnerマネージャーの合計数は、以下の条件によって異なります。
+時間の経過とともに必要になるRunnerマネージャーの合計数は、以下の条件によって異なります:
 
 - Runnerマネージャーをホストするスタックのコンピューティングリソース。
 - 各Runnerマネージャーに設定する並行処理数。
@@ -226,7 +226,7 @@ Runnerフリートのモニタリングに使用する必要がある重要な�
 
 OpenShift、Amazon EKS、GKEなどのKubernetesプラットフォームでホストされているRunnerフリートの場合は、別の方法でGrafanaダッシュボードをセットアップします。
 
-Kubernetesでは、Runner CI/CDジョブ実行ポッドを頻繁に作成および削除することがあります。このような場合は、Runnerマネージャーポッドをモニタリングし、次の機能を実装する予定を立てておく必要があります。
+Kubernetesでは、Runner CI/CDジョブ実行ポッドを頻繁に作成および削除することがあります。このような場合は、Runnerマネージャーポッドをモニタリングし、次の機能を実装する予定を立てておく必要があります:
 
 - ゲージ: 異なるソースからの同一メトリクスの集計を表示します。
 - カウンター: `rate`または`increase`関数を適用するときにカウンターをリセットします。
@@ -239,7 +239,7 @@ Kubernetesでは、Runner CI/CDジョブ実行ポッドを頻繁に作成およ�
 
 ### 高カーディナリティメトリクスのリスト {#list-of-high-cardinality-metrics}
 
-- `gitlab_runner_job_stage_duration_seconds`: 個々のジョブステージの期間（秒単位）を測定します。このメトリクスには`stage`ラベルが含まれており、定義済みの値として次のものがあります。
+- `gitlab_runner_job_stage_duration_seconds`: 個々のジョブステージの期間（秒単位）を測定します。このメトリクスには`stage`ラベルが含まれており、定義済みの値として次のものがあります:
 
   - `resolve_secrets`
   - `prepare_executor`
@@ -264,7 +264,7 @@ Kubernetesでは、Runner CI/CDジョブ実行ポッドを頻繁に作成およ�
 
 #### 特定のステージを削除する設定の例 {#example-configuration-to-remove-specific-stages}
 
-次の設定は、`stage`ラベルに`prepare_executor`値が設定されているすべてのメトリクスを削除します。
+次の設定は、`stage`ラベルに`prepare_executor`値が設定されているすべてのメトリクスを削除します:
 
 ```yaml
 scrape_configs:
@@ -279,7 +279,7 @@ scrape_configs:
 
 #### 関連するステージのみを保持する例 {#example-to-keep-only-relevant-stages}
 
-次の設定は、`step_script`ステージのメトリクスのみを保持し、他のメトリクスを完全に破棄します。
+次の設定は、`step_script`ステージのメトリクスのみを保持し、他のメトリクスを完全に破棄します:
 
 ```yaml
 scrape_configs:

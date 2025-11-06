@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 description: Config.toml、証明書、オートスケール、プロキシ設定
 title: GitLab Runnerを設定する
@@ -15,7 +15,7 @@ title: GitLab Runnerを設定する
 
 GitLab Runnerの設定方法について説明します。
 
-- [高度な設定オプション](advanced-configuration.md): [`config.toml`](https://github.com/toml-lang/toml)設定ファイルを使用してrunnerの設定を編集します。
+- [高度な設定オプション](advanced-configuration.md): [`config.toml`](https://github.com/toml-lang/toml)設定ファイルを使用してRunnerの設定を編集します。
 - [自己署名証明書を使用する](tls-self-signed.md): GitLabサーバーへの接続時にTLSピアを検証する証明書を設定します。
 - [Docker Machineでオートスケールする](autoscale.md): Docker Machineによって自動的に作成されたマシンでジョブを実行します。
 - [AWS EC2でGitLab Runnerをオートスケールする](runner_autoscale_aws/_index.md): オートスケールされたAWS EC2インスタンスでジョブを実行します。
@@ -27,5 +27,6 @@ GitLab Runnerの設定方法について説明します。
 - [Runnerのモニタリング](../monitoring/_index.md): Runnerの動作をモニタリングします。
 - [Dockerキャッシュを自動的にクリーンアップする](../executors/docker.md#clear-the-docker-cache): ディスク容量が少なくなっている場合は、cronジョブを使用して古いコンテナとボリュームをクリーンアップします。
 - [プロキシの背後で実行するようにGitLab Runnerを設定する](proxy.md): Linuxプロキシをセットアップし、GitLab Runnerを設定します。このセットアップは、Docker executorと適切に連携します。
+- [Oracle Cloud Infrastructure ( OCI ) 用のGitLab Runnerを設定する](oracle_cloud_performance.md): OCIでGitLab Runnerのパフォーマンスを最適化します。
 - [レート制限されたリクエストを処理する](proxy.md#handling-rate-limited-requests)。
 - [GitLab Runner Operatorを設定する](configuring_runner_operator.md)。
