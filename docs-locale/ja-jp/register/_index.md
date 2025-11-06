@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: Runnerの登録
 ---
@@ -14,7 +14,7 @@ title: Runnerの登録
 
 {{< history >}}
 
-- GitLab Runner 15.0で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3414)されました。登録リクエストの形式が変更されたため、GitLab Runnerは以前のバージョンのGitLabと通信できなくなりました。GitLabのバージョンに適したバージョンのGitLab Runnerを使用するか、GitLabアプリケーションをアップグレードする必要があります。
+- GitLab Runner 15.0で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3414)。登録リクエストの形式が変更されたため、GitLab Runnerは以前のバージョンのGitLabと通信できなくなりました。GitLabのバージョンに適したバージョンのGitLab Runnerを使用するか、GitLabアプリケーションをアップグレードする必要があります。
 
 {{< /history >}}
 
@@ -22,7 +22,7 @@ Runnerの登録とは、Runnerを1つ以上のGitLabインスタンスに関連�
 
 ## 要件 {#requirements}
 
-Runnerを登録する前に
+Runnerを登録する前に:
 
 - [GitLab Runner](../install/_index.md)を、GitLabがインストールされているサーバーとは別のサーバーにインストールします。
 - DockerでRunnerを登録するために、[DockerコンテナにGitLab Runnerをインストール](../install/docker.md)します。
@@ -31,21 +31,21 @@ Runnerを登録する前に
 
 {{< history >}}
 
-- GitLab 15.10で[導入されました](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613)。
+- GitLab 15.10で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613)されました。
 
 {{< /history >}}
 
 前提要件:
 
-- Runner認証トークンを取得します。次のいずれかの方法があります。
-  - [インスタンス](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-runner-authentication-token)、[グループ](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-group-runner-with-a-runner-authentication-token)、または[プロジェクト](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-runner-authentication-token)のRunnerを作成する。
+- Runner認証トークンを取得します。次のいずれかの方法があります:
+  - インスタンス、グループ、またはプロジェクトのRunnerを作成します。手順については、[manageランナー](https://docs.gitlab.com/ci/runners/runners_scope)を参照してください。
   - `config.toml`ファイルの中でRunner認証トークンを見つける。Runner認証トークンのプレフィックスは`glrt-`です。
 
 Runnerを登録すると、`config.toml`に設定が保存されます。
 
-[Runner認証トークン](https://docs.gitlab.com/security/tokens/#runner-authentication-tokens)を使用してRunnerを登録するには
+[Runner認証トークン](https://docs.gitlab.com/security/tokens/#runner-authentication-tokens)を使用してRunnerを登録するには:
 
-1. registerコマンドを実行します。
+1. registerコマンドを実行します:
 
    {{< tabs >}}
 
@@ -55,7 +55,7 @@ Runnerを登録すると、`config.toml`に設定が保存されます。
    sudo gitlab-runner register
    ```
 
-   プロキシの背後にいる場合は、環境変数を追加してから、登録コマンドを実行します。
+   プロキシの背後にいる場合は、環境変数を追加してから、登録コマンドを実行します:
 
    ```shell
    export HTTP_PROXY=http://yourproxyurl:3128
@@ -92,11 +92,11 @@ Runnerを登録すると、`config.toml`に設定が保存されます。
 
    {{< tab title="Docker" >}}
 
-   コンテナを使用して登録するには、次のいずれかを実行します。
+   コンテナを使用して登録するには、次のいずれかを実行します:
 
-   - 適切な設定ボリュームマウントによる有効期間の短い`gitlab-runner`コンテナを使用します。
+   - 適切な設定ボリュームマウントによる有効期間の短い`gitlab-runner`コンテナを使用します:
 
-     - ローカルシステムボリュームマウントの場合
+     - ローカルシステムボリュームマウントの場合:
 
        ```shell
        docker run --rm -it -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
@@ -104,23 +104,23 @@ Runnerを登録すると、`config.toml`に設定が保存されます。
 
        インストール中に`/srv/gitlab-runner/config`以外の設定ボリュームを使用した場合は、適切なボリュームでコマンドを更新します。
 
-     - Dockerボリュームマウントの場合
+     - Dockerボリュームマウントの場合:
 
        ```shell
        docker run --rm -it -v gitlab-runner-config:/etc/gitlab-runner gitlab/gitlab-runner:latest register
        ```
 
-   - アクティブなRunnerコンテナ内で実行可能ファイルを使用します。
+   - アクティブなRunnerコンテナ内で実行可能ファイルを使用します:
 
      ```shell
      docker exec -it gitlab-runner gitlab-runner register
      ```
 
-      {{< /tab >}}
+   {{< /tab >}}
 
    {{< /tabs >}}
 
-1. GitLabのURLを入力します。
+1. GitLabのURLを入力します:
    - GitLab Self-ManagedのRunnerの場合は、GitLabインスタンスのURLを使用します。たとえば、プロジェクトが`gitlab.example.com/yourname/yourproject`でホストされている場合、GitLabインスタンスのURLは`https://gitlab.example.com`です。
    - GitLab.comのRunnerの場合、GitLabインスタンスのURLは`https://gitlab.com`です。
 1. Runner認証トークンを入力します。
@@ -132,7 +132,7 @@ Runnerを登録すると、`config.toml`に設定が保存されます。
 - 異なる設定の複数のRunnerを同じホストマシンに登録するには、それぞれについて`register`コマンドを繰り返します。
 - 複数のホストマシンに同じ設定を登録するには、各Runnerの登録に同じRunner認証トークンを使用します。詳細については、[Runner設定の再利用](../fleet_scaling/_index.md#reusing-a-runner-configuration)を参照してください。
 
-[非対話モード](../commands/_index.md#non-interactive-registration)を使用して、追加の引数を使用してRunnerを登録することもできます。
+[非対話モード](../commands/_index.md#non-interactive-registration)を使用して、追加の引数を使用してRunnerを登録することもできます:
 
 {{< tabs >}}
 
@@ -212,20 +212,20 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 {{< alert type="warning" >}}
 
-Runner登録トークンを渡して特定の設定引数をサポートするという機能は、GitLab 15.6で[非推奨](https://gitlab.com/gitlab-org/gitlab/-/issues/380872)になりました。これらは、GitLab 20.0での削除が予定されています。代わりにRunner認証トークンを使用してください。詳細については、[新しいRunner登録ワークフローに移行する](https://docs.gitlab.com/ci/runners/new_creation_workflow/)を参照してください。
+Runnerの登録トークンといくつかのRunnerの設定引数は[非推奨](https://gitlab.com/gitlab-org/gitlab/-/issues/380872)になりました。これらは、GitLab 20.0での削除が予定されています。代わりにRunner認証トークンを使用してください。詳細については、[新しいRunner登録ワークフローに移行する](https://docs.gitlab.com/ci/runners/new_creation_workflow/)を参照してください。
 
 {{< /alert >}}
 
 前提要件:
 
 - 管理者エリアでRunner登録トークンが[有効](https://docs.gitlab.com/administration/settings/continuous_integration/#allow-runner-registrations-tokens)になっている必要があります。
-- 登録したい[インスタンス](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-registration-token-deprecated)、[グループ](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-registration-token-deprecated)、または[プロジェクト](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-group-runner-with-a-registration-token-deprecated)でRunner登録トークンを取得します。
+- 登録したいインスタンス、グループ、またはプロジェクトでRunner登録トークンを取得します。手順については、[manageランナー](https://docs.gitlab.com/ci/runners/runners_scope)を参照してください。
 
 Runnerを登録すると、`config.toml`に設定が保存されます。
 
-[Runner登録トークン](https://docs.gitlab.com/security/tokens/#runner-registration-tokens-deprecated)を使用してRunnerを登録するには
+[Runner登録トークン](https://docs.gitlab.com/security/tokens/#runner-registration-tokens-deprecated)を使用してRunnerを登録するには:
 
-1. registerコマンドを実行します。
+1. registerコマンドを実行します:
 
    {{< tabs >}}
 
@@ -235,7 +235,7 @@ Runnerを登録すると、`config.toml`に設定が保存されます。
    sudo gitlab-runner register
    ```
 
-   プロキシの背後にいる場合は、環境変数を追加してから、登録コマンドを実行します。
+   プロキシの背後にいる場合は、環境変数を追加してから、登録コマンドを実行します:
 
    ```shell
    export HTTP_PROXY=http://yourproxyurl:3128
@@ -272,9 +272,9 @@ Runnerを登録すると、`config.toml`に設定が保存されます。
 
    {{< tab title="Docker" >}}
 
-   インストール中に作成したコンテナを登録するため、有効期間の短い`gitlab-runner`コンテナを起動するには
+   インストール中に作成したコンテナを登録するため、有効期間の短い`gitlab-runner`コンテナを起動するには:
 
-   - ローカルシステムボリュームマウントの場合
+   - ローカルシステムボリュームマウントの場合:
 
      ```shell
      docker run --rm -it -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
@@ -282,17 +282,17 @@ Runnerを登録すると、`config.toml`に設定が保存されます。
 
      インストール中に`/srv/gitlab-runner/config`以外の設定ボリュームを使用した場合は、適切なボリュームでコマンドを更新します。
 
-   - Dockerボリュームマウントの場合
+   - Dockerボリュームマウントの場合:
 
      ```shell
      docker run --rm -it -v gitlab-runner-config:/etc/gitlab-runner gitlab/gitlab-runner:latest register
      ```
 
-      {{< /tab >}}
+   {{< /tab >}}
 
    {{< /tabs >}}
 
-1. GitLabのURLを入力します。
+1. GitLabのURLを入力します:
    - GitLab Self-ManagedのRunnerの場合は、GitLabインスタンスのURLを使用します。たとえば、プロジェクトが`gitlab.example.com/yourname/yourproject`でホストされている場合、GitLabインスタンスのURLは`https://gitlab.example.com`です。
    - GitLab.comの場合、GitLabインスタンスのURLは`https://gitlab.com`です。
 1. Runnerを登録するために取得したトークンを入力します。
@@ -303,7 +303,7 @@ Runnerを登録すると、`config.toml`に設定が保存されます。
 
 異なる設定の複数のRunnerを同じホストマシンに登録するには、それぞれについて`register`コマンドを繰り返します。
 
-[非対話モード](../commands/_index.md#non-interactive-registration)を使用して、追加の引数を使用してRunnerを登録することもできます。
+[非対話モード](../commands/_index.md#non-interactive-registration)を使用して、追加の引数を使用してRunnerを登録することもできます:
 
 {{< tabs >}}
 
@@ -404,7 +404,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 {{< /tabs >}}
 
-- `--access-level`は、[保護Runner](https://docs.gitlab.com/ci/runners/configure_runners/#prevent-runners-from-revealing-sensitive-information)を作成するかどうかを設定します。
+- `--access-level`は、[保護されたRunner](https://docs.gitlab.com/ci/runners/configure_runners/#prevent-runners-from-revealing-sensitive-information)を作成するかどうかを設定します。
   - 保護されたRunnerの場合は、`--access-level="ref_protected"`パラメータを使用します。
   - 保護されていないRunnerの場合は、`--access-level="not_protected"`を使用するか、値を未定義のままにします。
 - `--maintenance-note`を使用すると、Runnerのメンテナンスに役立つ情報を追加できます。最大長は255文字です。
@@ -417,7 +417,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 {{< /history >}}
 
-GitLab 15.6で、Runner登録トークンといくつかのRunner設定引数が[非推奨](https://gitlab.com/gitlab-org/gitlab/-/issues/379743)になりました。これらは、GitLab 20.0での削除が予定されています。自動化ワークフローへの影響を最小限にするため、レガシーパラメータ`--registration-token`の中でRunner認証トークンが指定されている場合、`legacy-compatible registration process`がトリガーされます。
+Runnerの登録トークンといくつかのRunnerの設定引数は[非推奨](https://gitlab.com/gitlab-org/gitlab/-/issues/379743)になりました。これらは、GitLab 20.0での削除が予定されています。自動化ワークフローへの影響を最小限にするため、レガシーパラメータ`--registration-token`の中でRunner認証トークンが指定されている場合、`legacy-compatible registration process`がトリガーされます。
 
 レガシー互換登録プロセスでは、次のコマンドラインパラメータは無視されます。これらのパラメータは、UIまたはAPIでRunnerが作成された場合にのみ設定可能です。
 
@@ -436,13 +436,13 @@ GitLab 15.6で、Runner登録トークンといくつかのRunner設定引数が
 前提要件:
 
 - テンプレートファイルの格納場所となるボリュームは、GitLab Runnerコンテナにマウントされている必要があります。
-- Runner認証トークンまたは登録トークン
-  - Runner認証トークンを取得します（推奨）。次のいずれかの方法があります。
-    - [インスタンス](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-runner-authentication-token)、[グループ](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-group-runner-with-a-runner-authentication-token)、または[プロジェクト](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-runner-authentication-token)のRunnerを作成する。
+- Runner認証トークンまたは登録トークン:
+  - Runner認証トークンを取得します（推奨）。次のいずれかの方法があります:
+    - 登録したいインスタンス、グループ、またはプロジェクトでRunner認証トークンを取得します。手順については、[manageランナー](https://docs.gitlab.com/ci/runners/runners_scope)を参照してください。
     - `config.toml`ファイルの中でRunner認証トークンを見つける。Runner認証トークンのプレフィックスは`glrt-`です。
-  - （非推奨）[インスタンス](https://docs.gitlab.com/ci/runners/runners_scope/#create-an-instance-runner-with-a-registration-token-deprecated)、[グループ](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-registration-token-deprecated)、または[プロジェクト](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-group-runner-with-a-registration-token-deprecated)の各RunnerのためのRunner登録トークンを取得する。
+  - （非推奨）インスタンス、グループ、またはプロジェクトの各RunnerのためのRunner登録トークンを取得する。手順については、[manageランナー](https://docs.gitlab.com/ci/runners/runners_scope)を参照してください。
 
-設定テンプレートは、次の理由により`register`コマンドの一部の引数をサポートしていない自動化環境で使用できます。
+設定テンプレートは、次の理由により`register`コマンドの一部の引数をサポートしていない自動化環境で使用できます:
 
 - 環境に基づく環境変数のサイズ制限。
 - Kubernetes用のexecutorボリュームで使用できないコマンドラインオプション。
@@ -453,9 +453,9 @@ GitLab 15.6で、Runner登録トークンといくつかのRunner設定引数が
 
 {{< /alert >}}
 
-Runnerを登録するには、次のようにします。
+Runnerを登録するには、次のようにします:
 
-1. `.toml`形式の設定テンプレートファイルを作成し、仕様を追加します。次に例を示します。
+1. `.toml`形式の設定テンプレートファイルを作成し、仕様を追加します。次に例を示します:
 
    ```toml
    [[runners]]
@@ -467,8 +467,8 @@ Runnerを登録するには、次のようにします。
          medium = "Memory"
    ```
 
-1. ファイルのパスを追加します。次のいずれかを使用できます。
-   - コマンドラインの[非対話モード](../commands/_index.md#non-interactive-registration)
+1. ファイルのパスを追加します。次のいずれかを使用できます:
+   - コマンドラインの[非対話モード](../commands/_index.md#non-interactive-registration):
 
      ```shell
      $ sudo gitlab-runner register \
@@ -481,7 +481,7 @@ Runnerを登録するには、次のようにします。
          --host = "http://localhost:9876/"
      ```
 
-   - `.gitlab.yaml`ファイルの中の環境変数
+   - `.gitlab.yaml`ファイルの中の環境変数:
 
      ```yaml
      variables:
@@ -490,7 +490,7 @@ Runnerを登録するには、次のようにします。
 
      環境変数を更新する場合、`register`コマンドでファイルパスを毎回追加する必要はありません。
 
-Runnerを登録すると、`config.toml`内で作成された`[[runners]]`エントリと設定テンプレートの設定がマージされます。
+Runnerを登録すると、`config.toml`内で作成された`[[runners]]`エントリと設定テンプレートの設定がマージされます:
 
 ```toml
 concurrent = 1
@@ -522,7 +522,7 @@ check_interval = 0
         medium = "Memory"
 ```
 
-テンプレートの設定がマージされるのは、次の場合のみです。
+テンプレートの設定がマージされるのは、次の場合のみです:
 
 - 空の文字列
 - nullまたは存在しないエントリ
@@ -530,12 +530,12 @@ check_interval = 0
 
 コマンドライン引数と環境変数は、設定テンプレートの設定よりも優先されます。たとえば、テンプレートでは`docker`executorを指定し、コマンドラインでは`shell`を指定した場合、設定されるexecutorは`shell`になります。
 
-## GitLab Community Edition（CE）インテグレーションテスト用にRunnerを登録する {#register-a-runner-for-gitlab-community-edition-integration-tests}
+## GitLab Community Editionインテグレーションテスト用にRunnerを登録する {#register-a-runner-for-gitlab-community-edition-integration-tests}
 
-GitLab Community Edition（CE）インテグレーションをテストするには、設定テンプレートを使用して、制限付きDocker executorでRunnerを登録します。
+GitLab Community Editionインテグレーションをテストするには、設定テンプレートを使用して、制限付きDocker executorでRunnerを登録します。
 
 1. [プロジェクトRunner](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-runner-authentication-token)を作成します。
-1. `[[runners.docker.services]]`セクションを含むテンプレートを作成します。
+1. `[[runners.docker.services]]`セクションを含むテンプレートを作成します:
 
    ```shell
    $ cat > /tmp/test-config.template.toml << EOF
@@ -549,7 +549,7 @@ GitLab Community Edition（CE）インテグレーションをテストするに
    EOF
    ```
 
-1. Runnerを登録します。
+1. Runnerを登録します:
 
    {{< tabs >}}
 
@@ -626,7 +626,7 @@ GitLab Community Edition（CE）インテグレーションをテストするに
      --docker-image ruby:3.1
    ```
 
-      {{< /tab >}}
+   {{< /tab >}}
 
    {{< /tabs >}}
 
@@ -634,7 +634,7 @@ GitLab Community Edition（CE）インテグレーションをテストするに
 
 ## DockerによるRunnerの登録 {#registering-runners-with-docker}
 
-DockerコンテナによるRunner登録後
+DockerコンテナによるRunner登録後:
 
 - 設定が設定ボリュームに書き込まれます。たとえば、`/srv/gitlab-runner/config`などです。
 - コンテナが設定ボリュームを使用してRunnerを読み込みます。
@@ -647,23 +647,23 @@ DockerコンテナによるRunner登録後
 
 ## トラブルシューティング {#troubleshooting}
 
-### `Check registration token`エラー {#check-registration-token-error}
+### エラー: `Check registration token` {#error-check-registration-token}
 
-`check registration token`（登録トークンを確認してください）エラーメッセージは、登録中に入力したRunner登録トークンをGitLabインスタンスが認識しない場合に表示されます。この問題は、次のいずれかの場合に発生する可能性があります。
+`check registration token`（登録トークンを確認してください）エラーメッセージは、登録中に入力したRunner登録トークンをGitLabインスタンスが認識しない場合に表示されます。この問題は、次のいずれかの場合に発生する可能性があります:
 
 - GitLabで、インスタンス、グループ、またはプロジェクトのRunner登録トークンが変更された。
 - 正しくないRunner登録トークンが入力された。
 
-このエラーが発生した場合は、GitLab管理者に次のことを依頼できます。
+このエラーが発生した場合は、GitLab管理者に次のことを依頼できます:
 
 - Runner登録トークンが有効であることを確認する。
 - プロジェクトまたはグループでRunner登録が[許可されている](https://docs.gitlab.com/administration/settings/continuous_integration/#restrict-runner-registration-by-all-members-in-a-group)ことを確認する。
 
-### `410 Gone - runner registration disallowed`エラー {#410-gone---runner-registration-disallowed-error}
+### エラー: `410 Gone - runner registration disallowed` {#error-410-gone---runner-registration-disallowed}
 
 `410 Gone - runner registration disallowed`（Runner登録が無効です）エラーメッセージは、登録トークンによるRunner登録が無効になっている場合に表示されます。
 
-このエラーが発生した場合は、GitLab管理者に次のことを依頼できます。
+このエラーが発生した場合は、GitLab管理者に次のことを依頼できます:
 
 - Runner登録トークンが有効であることを確認する。
 - インスタンスでのRunner登録が[許可されている](https://docs.gitlab.com/administration/settings/continuous_integration/#allow-runner-registrations-tokens)ことを確認する。
