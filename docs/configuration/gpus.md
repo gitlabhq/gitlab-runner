@@ -28,6 +28,13 @@ No runner configuration is needed.
 
 ## Docker executor
 
+{{< alert type="warning" >}}
+
+If you're using Podman as the container runtime engine, GPUs are not detected.
+For more information, see [issue 39095](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39095).
+
+{{< /alert >}}
+
 Prerequisites:
 
 - Install [NVIDIA Driver](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/index.html).
