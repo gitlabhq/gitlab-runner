@@ -3592,3 +3592,59 @@ func TestConfig_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestRunnerConfig_ValidateMachineOptionsWithName(t *testing.T) {
+	tests := map[string]struct {
+		options      []string
+		expectError  bool
+		errorMessage string
+	}{
+		"valid options with %s": {
+			options:     []string{"--option=%s", "--another=%s-suffix"},
+			expectError: false,
+		},
+		"empty options": {
+			options:     []string{},
+			expectError: false,
+		},
+		"nil options": {
+			options:     nil,
+			expectError: false,
+		},
+		"nil machine config": {
+			options:     nil,
+			expectError: false,
+		},
+		"invalid option without %s": {
+			options:      []string{"--option=value"},
+			expectError:  true,
+			errorMessage: `machine option with name "--option=value" must contain %s placeholder`,
+		},
+		"mixed valid and invalid": {
+			options:      []string{"--valid=%s", "--invalid=value"},
+			expectError:  true,
+			errorMessage: `machine option with name "--invalid=value" must contain %s placeholder`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			config := &RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					Machine: &DockerMachine{
+						MachineOptionsWithName: tc.options,
+					},
+				},
+			}
+
+			err := config.Validate()
+
+			if tc.expectError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errorMessage)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

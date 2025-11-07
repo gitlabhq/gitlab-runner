@@ -455,6 +455,8 @@ type DockerMachine struct {
 	MachineName     string   `long:"machine-name" env:"MACHINE_NAME" description:"The template for machine name (needs to include %s)"`
 	MachineOptions  []string `long:"machine-options" json:",omitempty" env:"MACHINE_OPTIONS" description:"Additional machine creation options"`
 
+	MachineOptionsWithName []string `long:"machine-options-with-name" json:",omitempty" env:"MACHINE_OPTIONS_WITH_NAME" description:"Template for additional options that may reference the machine name (need to include %s)"`
+
 	OffPeakPeriods   []string `toml:"OffPeakPeriods,omitempty" json:",omitempty" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`              // DEPRECATED
 	OffPeakTimezone  string   `toml:"OffPeakTimezone,omitempty" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                 // DEPRECATED
 	OffPeakIdleCount int      `toml:"OffPeakIdleCount,omitzero" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                      // DEPRECATED
@@ -2463,9 +2465,10 @@ func (c *Config) validateLabels() error {
 
 func (c *RunnerConfig) Validate() error {
 	for vn, v := range map[string]func() error{
-		"labels":          c.validateLabels,
-		"computed labels": c.validateComputedLabels,
-		"slot cgroups":    c.validateSlotCgroups,
+		"labels":                    c.validateLabels,
+		"computed labels":           c.validateComputedLabels,
+		"slot cgroups":              c.validateSlotCgroups,
+		"machine options with name": c.validateMachineOptionsWithName,
 	} {
 		err := v()
 		if err != nil {
@@ -2501,6 +2504,19 @@ func (c *RunnerConfig) validateSlotCgroups() error {
 		validateSlotCgroupTemplate(c.Docker.ServiceSlotCgroupTemplate, "service_slot_cgroup_template")
 	}
 
+	return nil
+}
+
+func (c *RunnerConfig) validateMachineOptionsWithName() error {
+	if c.Machine == nil {
+		return nil
+	}
+
+	for _, opt := range c.Machine.MachineOptionsWithName {
+		if !strings.Contains(opt, "%s") {
+			return fmt.Errorf("machine option with name %q must contain %%s placeholder", opt)
+		}
+	}
 	return nil
 }
 

@@ -793,3 +793,79 @@ func TestIntermediateMachineList(t *testing.T) {
 	intermediateMachine := p.intermediateMachineList([]string{"machine1", "machine2"})
 	assert.Equal(t, expectedIntermediateMachines, intermediateMachine)
 }
+
+func TestMachineOptionsWithName(t *testing.T) {
+	provisionRetryInterval = 0
+
+	p := newMachineProvider()
+	machineMock := docker.NewMockMachine(t)
+	p.machine = machineMock
+
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:            "test-machine-%s",
+				IdleTime:               5,
+				MachineOptions:         []string{"--option1=value1", "--option2=value2"},
+				MachineOptionsWithName: []string{"--name-option=%s", "--another-name-option=%s-suffix"},
+			},
+		},
+	}
+
+	var capturedOpts []string
+	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			for i := 3; i < len(args); i++ {
+				capturedOpts = append(capturedOpts, args.String(i))
+			}
+		}).
+		Return(nil).
+		Once()
+
+	d, errCh := p.create(config, machineStateIdle)
+	require.NotNil(t, d)
+	require.NoError(t, <-errCh)
+
+	expectedOpts := []string{
+		"--option1=value1",
+		"--option2=value2",
+		fmt.Sprintf("--name-option=%s", d.Name),
+		fmt.Sprintf("--another-name-option=%s-suffix", d.Name),
+	}
+	assert.Equal(t, expectedOpts, capturedOpts)
+}
+
+func TestMachineOptionsWithNameEmpty(t *testing.T) {
+	provisionRetryInterval = 0
+
+	p := newMachineProvider()
+	machineMock := docker.NewMockMachine(t)
+	p.machine = machineMock
+
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:    "test-machine-%s",
+				IdleTime:       5,
+				MachineOptions: []string{"--option1=value1"},
+			},
+		},
+	}
+
+	var capturedOpts []string
+	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			for i := 3; i < len(args); i++ {
+				capturedOpts = append(capturedOpts, args.String(i))
+			}
+		}).
+		Return(nil).
+		Once()
+
+	d, errCh := p.create(config, machineStateIdle)
+	require.NotNil(t, d)
+	require.NoError(t, <-errCh)
+
+	expectedOpts := []string{"--option1=value1"}
+	assert.Equal(t, expectedOpts, capturedOpts)
+}
