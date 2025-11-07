@@ -122,7 +122,12 @@ func (m *machineProvider) createWithGrowthCapacity(
 	ctx, ctxCancelFn := context.WithTimeout(context.Background(), machineCreateCommandTimeout)
 	defer ctxCancelFn()
 
-	err := m.machine.Create(ctx, config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
+	opts := config.Machine.MachineOptions
+	for _, tpl := range config.Machine.MachineOptionsWithName {
+		opts = append(opts, fmt.Sprintf(tpl, details.Name))
+	}
+
+	err := m.machine.Create(ctx, config.Machine.MachineDriver, details.Name, opts...)
 	if err != nil {
 		logger.WithField("time", time.Since(started)).
 			WithError(err).
