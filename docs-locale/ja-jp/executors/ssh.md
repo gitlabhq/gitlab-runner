@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: SSH
 ---
@@ -28,7 +28,7 @@ GitLab RunnerがSSH executorを使用するすべてのリモートシステム�
 
 ## SSH executorを使用する {#use-the-ssh-executor}
 
-SSH executorを使用するには、[`[runners.ssh]`](../configuration/advanced-configuration.md#the-runnersssh-section)セクションで`executor = "ssh"`を指定します。次に例を示します。
+SSH executorを使用するには、[`[runners.ssh]`](../configuration/advanced-configuration.md#the-runnersssh-section)セクションで`executor = "ssh"`を指定します。次に例を示します:
 
 ```toml
 [[runners]]
@@ -45,10 +45,10 @@ SSH executorを使用するには、[`[runners.ssh]`](../configuration/advanced-
 
 プロジェクトのソースは`~/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`にチェックアウトされます。
 
-各要素の内容は次のとおりです。
+各要素の内容は次のとおりです:
 
 - `<short-token>`は、Runnerのトークンの短縮バージョンです（最初の8文字）。
-- `<concurrent-id>`は、プロジェクトのコンテキストで特定のRunner上のローカルジョブIDを識別する一意の番号です。
+- `<concurrent-id>`は、プロジェクトのコンテキストで特定のrunner上のローカルジョブIDを識別する一意の番号です。
 - `<namespace>`は、GitLabでプロジェクトが保存されているネームスペースです。
 - `<project-name>`は、GitLabに保存されているプロジェクトの名前です。
 
@@ -58,6 +58,4 @@ SSH executorを使用するには、[`[runners.ssh]`](../configuration/advanced-
 
 ## 厳密なホストキーチェックを設定する {#configure-strict-host-key-checking}
 
-SSHの`StrictHostKeyChecking`を有効にするには、`[runners.ssh.disable_strict_host_key_checking]`が`false`に設定されていることを確認してください。現在のデフォルトは`true`です。
-
-[GitLab 15.0以降](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192)のデフォルト値は`false`です。つまり、ホストキーチェックは必須です。
+SSH `StrictHostKeyChecking`は、[デフォルトで有効になっています。](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192)`StrictHostKeyChecking`のSSHを無効にするには、`[runners.ssh.disable_strict_host_key_checking]`を`true`に設定します。現在のデフォルト値は`false`です。

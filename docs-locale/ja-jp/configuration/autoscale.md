@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: Docker Machine Executorのオートスケール設定
 ---
@@ -32,7 +32,7 @@ Docker Machine autoscalerは、`limit`と`concurrent`の設定に関係なく、
 
 この機能が有効であり、適切に設定されている場合、ジョブは_オンデマンド_で作成されたマシン上で実行されます。これらのマシンは、ジョブの完了後に次のジョブを実行するために待機するか、設定された`IdleTime`の経過後に削除できます。多くのクラウドプロバイダーでは、この方法は既存のインスタンスを使用することでコストを削減します。
 
-以下に、[GitLab Community Edition（CE）](https://gitlab.com/gitlab-org/gitlab-foss)プロジェクトのGitLab.comでテストされたGitLab Runnerオートスケール機能の実例を示します。
+以下に、[GitLab Community Edition](https://gitlab.com/gitlab-org/gitlab-foss)プロジェクトのGitLab.comでテストされたGitLab Runnerオートスケール機能の実例を示します:
 
 ![オートスケールの実例](img/autoscale-example.png)
 
@@ -40,7 +40,7 @@ Docker Machine autoscalerは、`limit`と`concurrent`の設定に関係なく、
 
 ## システム要件 {#system-requirements}
 
-オートスケールを設定する前に、次のことを行う必要があります。
+オートスケールを設定する前に、次のことを行う必要があります:
 
 - [独自の環境を準備します](../executors/docker_machine.md#preparing-the-environment)。
 - （オプション）GitLabが提供するDocker Machineの[フォークバージョン](../executors/docker_machine.md#forked-version-of-docker-machine)を使用します。これにはいくつかの追加修正が含まれています。
@@ -68,7 +68,7 @@ Docker Machine autoscalerは、`limit`と`concurrent`の設定に関係なく、
 
 ### `[runners.machine]`のオプション {#runnersmachine-options}
 
-設定パラメータの詳細については、[GitLab Runner - 高度な構成 - `[runners.machine]` セクション](advanced-configuration.md#the-runnersmachine-section)を参照してください。
+設定パラメータの詳細については、[GitLab Runner - 高度な構成 - `[runners.machine]`セクション](advanced-configuration.md#the-runnersmachine-section)を参照してください。
 
 ### `[runners.cache]`のオプション {#runnerscache-options}
 
@@ -76,7 +76,7 @@ Docker Machine autoscalerは、`limit`と`concurrent`の設定に関係なく、
 
 ### その他の設定情報 {#additional-configuration-information}
 
-`IdleCount = 0`を設定する場合には特別なモードもあります。このモードでは、（アイドル状態のマシンがない場合は）各ジョブの前にマシンが**常に****オンデマンド**で作成されます。ジョブが完了すると、オートスケールアルゴリズムは[以下の説明と同様に](#autoscaling-algorithm-and-parameters)動作します。マシンが次のジョブを待機しているが実行するジョブがない場合、`IdleTime`期間の経過後にマシンは削除されます。ジョブがない場合、アイドル状態のマシンはありません。
+`IdleCount = 0`を設定する場合には特別なモードもあります。このモードでは、（アイドル状態のマシンがない場合は）各ジョブの前にマシンが**常にon-demand**（オンデマンド）で作成されます。ジョブが完了すると、オートスケールアルゴリズムは[以下の説明と同様に](#autoscaling-algorithm-and-parameters)動作します。マシンが次のジョブを待機しているが実行するジョブがない場合、`IdleTime`期間の経過後にマシンは削除されます。ジョブがない場合、アイドル状態のマシンはありません。
 
 `IdleCount`が`0`より大きな値に設定されている場合、アイドル状態のVMがバックグラウンドで作成されます。Runnerは新しいジョブを要求する前に、既存のアイドル状態のVMを取得します。
 
@@ -87,11 +87,11 @@ Docker Machine autoscalerは、`limit`と`concurrent`の設定に関係なく、
 
 Docker Machine Executorによって作成される仮想マシン（VM）の数を制限するには、`config.toml`ファイルの`[[runners]]`セクションの`limit`パラメータを使用します。
 
-`concurrent`パラメータではVMの数は**制限されません**。
+`concurrent`パラメータではVMの数は**does not**（制限されません）。
 
 複数のRunnerワーカーを管理するように1つのプロセスを設定できます。詳細については、[基本設定: 1つのRunnerマネージャー、1つのRunner](../fleet_scaling/_index.md#basic-configuration-one-runner-manager-one-runner)を参照してください。
 
-次の例は、1つのRunnerプロセスに対して`config.toml`ファイルで設定された値を示しています。
+次の例は、1つのRunnerプロセスに対して`config.toml`ファイルで設定された値を示しています:
 
 ```toml
 concurrent = 100
@@ -121,7 +121,7 @@ limit = 20
 
 ```
 
-この設定では次のようになります。
+この設定では次のようになります:
 
 - 1つのRunnerプロセスで、異なる実行環境を使用する4つの異なるRunnerワーカーを作成できます。
 - `concurrent`の値が100に設定されているため、この1つのRunnerは、最大100個のGitLab CI/CDジョブを同時実行します。
@@ -129,7 +129,7 @@ limit = 20
 - `limit`が`30`に設定されているため、`second` Runnerワーカーは常に、オートスケールされたVMで最大30個のCI/CDジョブを実行できます。
 - `concurrent`は複数の`[[runners]]`ワーカー全体のグローバルな並行処理制限を定義しますが、`limit`は1つの`[[runners]]`ワーカーの最大同時実行数を定義します。
 
-この例では、Runnerプロセスは次のように処理します。
+この例では、Runnerプロセスは次のように処理します:
 
 - すべての`[[runners]]`ワーカー全体で最大100個の同時ジョブ。
 - `first`ワーカーの場合、40個以下のジョブ。これらのジョブは`shell` executorを使用して実行されます。
@@ -156,7 +156,7 @@ limit = 50
 
 ```
 
-この例では、次のようになります。
+この例では、次のようになります:
 
 - Runnerプロセスが処理するジョブは最大100個です（`concurrent`の値）。
 - Runnerプロセスは、2つの`[[runners]]`ワーカーでジョブを実行します。各ワーカーは`docker+machine` executorを使用します。
@@ -171,7 +171,7 @@ limit = 50
 
 ## オートスケールアルゴリズムとパラメータ {#autoscaling-algorithm-and-parameters}
 
-オートスケールアルゴリズムは次のパラメータに基づいています。
+オートスケールアルゴリズムは次のパラメータに基づいています:
 
 - `IdleCount`
 - `IdleCountMin`
@@ -188,7 +188,7 @@ limit = 50
 
 ### 設定の例 {#example-configuration}
 
-次のオートスケールパラメータで設定されているGitLab Runnerについて考えてみましょう。
+次のオートスケールパラメータで設定されているGitLab Runnerについて考えてみましょう:
 
 ```toml
 [[runners]]
@@ -210,7 +210,7 @@ limit = 50
 
 現在、1台のアイドル状態のマシンがあるため、GitLab Runnerは`IdleCount`を満たすために新しいマシンを1台起動します。キューに新しいジョブがないため、この2台のマシンはアイドル状態になり、GitLab Runnerは満足します。
 
-**発生した状況**: 
+**What happened**（発生した状況）: 
 
 この例では、新しいジョブを待機しているアイドル状態のマシンが2台あります。5つのジョブがキューに入れられた後、新しいマシンが作成されます。したがって、合計7台のマシンがあります。5つはジョブを実行しており、2つは次のジョブを待機中のアイドル状態です。
 
@@ -218,11 +218,11 @@ GitLab Runnerは、`IdleCount`が満たされるまで、ジョブの実行に�
 
 上記の例では、アイドル状態のマシンが常に2台利用可能です。`IdleTime`パラメータが適用されるのは、数値が`IdleCount`を超えた場合だけです。その時点でGitLab Runnerは、マシンの数を減らして`IdleCount`になるようにします。
 
-**スケールダウン**: 
+**Scaling down**（スケールダウン）: 
 
 ジョブが完了すると、マシンはアイドル状態に設定され、新しいジョブが実行されるまで待機します。新しいジョブがキューに表れない場合、`IdleTime`で指定された時間が経過した後にアイドルマシンが削除されます。この例の場合、（各マシンの最後のジョブの実行が終了した時点から測定して）非アクティブ状態が30分続いた後にすべてのマシンが削除されます。GitLab Runnerは、この例の最初の部分と同じように、アイドル状態のマシンを`IdleCount`台、実行し続けます。
 
-オートスケールアルゴリズムは次のように動作します。
+オートスケールアルゴリズムは次のように動作します:
 
 1. GitLab Runnerが起動します。
 1. GitLab Runnerがアイドル状態のマシンを2台作成します
@@ -232,7 +232,7 @@ GitLab Runnerは、`IdleCount`が満たされるまで、ジョブの実行に�
 1. 3台のアイドルマシンのうちの1台は、その最後のジョブを選択してから`IdleTime`を超えた時点で削除されます。
 1. 迅速なジョブ処理のため、GitLab Runnerは、少なくとも2台のアイドルマシンを常に保持します。
 
-次の図は、マシンとビルド(ジョブ)の時間的推移を示しています。
+次の図は、マシンとビルド(ジョブ)の時間的推移を示しています:
 
 ![オートスケール状態のチャート](img/autoscale-state-chart.png)
 
@@ -240,7 +240,7 @@ GitLab Runnerは、`IdleCount`が満たされるまで、ジョブの実行に�
 
 `limit`または`concurrent`に設定すべき値を示す魔法のような方程式は存在しません。各自のニーズに応じて設定してください。`IdleCount`の数のアイドル状態のマシンを維持することで、処理がスピードアップします。インスタンスが作成されるまで、10秒/20秒/30秒にわたって待つ必要はありません。ただしユーザーとしては、（料金を支払う必要のある）すべてのマシンにジョブを実行させ、アイドル状態にしないようにしたいと考えます。したがって`concurrent`と`limit`は、料金を支払う最大数のマシンを実行する値に設定する必要があります。`IdleCount`は、ジョブキューが空の場合に維持する_未使用_のマシンの最小数を示す値に設定する必要があります。
 
-次の例を考えてみましょう。
+次の例を考えてみましょう:
 
 ```toml
 concurrent=20
@@ -253,7 +253,7 @@ concurrent=20
 
 上記のシナリオでは、作成するマシンの総数は30です。マシン（ビルド中およびアイドル状態）の総数の`limit`を40に設定できます。10台のアイドル状態のマシンを維持できますが、`concurrent`ジョブは20個です。したがって、20台の同時実行マシンがジョブを実行し、10台のマシンがアイドル状態であるため、総数は30になります。
 
-しかし`limit`が、作成される可能性があるマシンの総数よりも少ない場合はどうなるでしょうか？以下の例で、このケースについて説明します。
+しかし`limit`が、作成される可能性があるマシンの総数よりも少ない場合はどうなるでしょうか？以下の例で、このケースについて説明します:
 
 ```toml
 concurrent=20
@@ -286,7 +286,7 @@ concurrent=20
 
 `IdleCountMin`を使用して、常に利用可能である必要があるアイドル状態のマシンの最小数を定義することもできます。これにより、キューに入れられる新しいジョブをすばやく開始できます。`IdleCount`と同様に、割り当てる値はユースケースによって異なります。
 
-次に例を示します。
+次に例を示します:
 
 ```toml
 concurrent=200
@@ -313,13 +313,13 @@ concurrent=200
 
 これらの期間は`[[runners.machine.autoscaling]]`セクションを使用して設定できます。各期間では、一連の`Periods`に基づいて`IdleCount`と`IdleTime`を設定することがサポートされています。
 
-**オートスケールの期間の仕組み**
+**How autoscaling periods work**（オートスケールの期間の仕組み）
 
 `[runners.machine]`設定に複数の`[[runners.machine.autoscaling]]`セクションを追加できます。各セクションには、独自の`IdleCount`、`IdleTime`、`Periods`、および`Timezone`プロパティがあります。最も一般的なシナリオから最も具体的なシナリオの順に、設定ごとにセクションを定義する必要があります。
 
 すべてのセクションが解析されます。現在の時刻に一致する最後のセクションがアクティブになります。一致するものがない場合、`[runners.machine]`のルートの値が使用されます。
 
-次に例を示します。
+次に例を示します:
 
 ```toml
 [runners.machine]
@@ -355,7 +355,7 @@ concurrent=200
 
 {{< alert type="note" >}}
 
-[分散キャッシュの使用方法](../configuration/speed_up_job_execution.md#use-a-distributed-cache)を参照してください。
+[分散キャッシュの使用方法](speed_up_job_execution.md#use-a-distributed-cache)を参照してください。
 
 {{< /alert >}}
 
@@ -367,7 +367,7 @@ concurrent=200
 
 この機能は設定済みのオブジェクトストレージサーバーを使用して、使用中のDockerホスト間でキャッシュを共有します。GitLab Runnerはサーバーをクエリし、アーカイブをダウンロードしてキャッシュを復元するか、アップロードしてキャッシュをアーカイブします。
 
-分散キャッシュを有効にするには、`config.toml`で[`[runners.cache]`ディレクティブ](advanced-configuration.md#the-runnerscache-section)を使用して定義する必要があります。
+分散キャッシュを有効にするには、`config.toml`で[`[runners.cache]`ディレクティブ](advanced-configuration.md#the-runnerscache-section)を使用して定義する必要があります:
 
 ```toml
 [[runners]]
@@ -395,7 +395,7 @@ Dockerコンテナ内で実行されるジョブを高速化するには、[Dock
 
 ミラーがDocker MachineのLANに存在する場合、各ホストでのイメージのダウンロードステップははるかに高速になります。
 
-Dockerレジストリミラーリングを設定するには、`config.toml`で設定に`MachineOptions`を追加する必要があります。
+Dockerレジストリミラーリングを設定するには、`config.toml`で設定に`MachineOptions`を追加する必要があります:
 
 ```toml
 [[runners]]
@@ -411,11 +411,11 @@ Dockerレジストリミラーリングを設定するには、`config.toml`で�
 
 ここで`10.11.12.13:12345`は、レジストリミラーがDockerサービスからの接続をリッスンしているIPアドレスとポートです。Docker Machineによって作成された各ホストからアクセスできる必要があります。
 
-[コンテナのプロキシの使用方法](../configuration/speed_up_job_execution.md#use-a-proxy-for-containers)の詳細を参照してください。
+[コンテナのプロキシの使用方法](speed_up_job_execution.md#use-a-proxy-for-containers)の詳細を参照してください。
 
 ## 完全な`config.toml`の例 {#a-complete-example-of-configtoml}
 
-以下に示す`config.toml`では、[`google` Docker Machineドライバー](https://github.com/docker/docs/blob/173d3c65f8e7df2a8c0323594419c18086fc3a30/machine/drivers/gce.md)が使用されています。
+以下に示す`config.toml`では、[`google` Docker Machineドライバー](https://github.com/docker/docs/blob/173d3c65f8e7df2a8c0323594419c18086fc3a30/machine/drivers/gce.md)が使用されています:
 
 ```toml
 concurrent = 50   # All registered runners can run up to 50 concurrent jobs
@@ -436,7 +436,7 @@ concurrent = 50   # All registered runners can run up to 50 concurrent jobs
     MachineDriver = "google" # Refer to Docker Machine docs on how to authenticate: https://docs.docker.com/machine/drivers/gce/#credentials
     MachineOptions = [
       "google-project=GOOGLE-PROJECT-ID",
-      "google-zone=GOOGLE-ZONE", # e.g. 'us-central-1'
+      "google-zone=GOOGLE-ZONE", # e.g. 'us-west1'
       "google-machine-type=GOOGLE-MACHINE-TYPE", # e.g. 'n1-standard-8'
       "google-machine-image=ubuntu-os-cloud/global/images/family/ubuntu-1804-lts",
       "google-username=root",
