@@ -51,6 +51,7 @@ const (
 	UseAdaptiveRequestConcurrency        string = "FF_USE_ADAPTIVE_REQUEST_CONCURRENCY"
 	UseGitalyCorrelationId               string = "FF_USE_GITALY_CORRELATION_ID"
 	HashCacheKeys                        string = "FF_HASH_CACHE_KEYS"
+	EnableJobInputsInterpolation         string = "FF_ENABLE_JOB_INPUTS_INTERPOLATION"
 )
 
 type FeatureFlag struct {
@@ -421,6 +422,12 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When GitLab Runner creates or extracts caches, it hashes the cache keys (SHA256) before using them, both for local " +
 			"and distributed caches (for example, S3). For more information, see [cache key handling](advanced-configuration.md#cache-key-handling).",
+	},
+	{
+		Name:         EnableJobInputsInterpolation,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, job inputs are interpolated. For more information, see [&17833](https://gitlab.com/groups/gitlab-org/-/epics/17833).",
 	},
 }
 

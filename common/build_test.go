@@ -3534,10 +3534,13 @@ func TestExpandingInputs(t *testing.T) {
 		RegisterExecutorProviderForTest(t, t.Name(), p)
 	}
 
-	run := func(t *testing.T, job JobResponse) *Build {
+	run := func(t *testing.T, job JobResponse, ffEnabled bool) *Build {
 		build, err := NewBuild(
 			job,
-			&RunnerConfig{RunnerSettings: RunnerSettings{Executor: t.Name()}},
+			&RunnerConfig{RunnerSettings: RunnerSettings{
+				Executor:     t.Name(),
+				FeatureFlags: map[string]bool{featureflags.EnableJobInputsInterpolation: ffEnabled},
+			}},
 			nil,
 			nil,
 		)
@@ -3562,9 +3565,28 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, "echo 'Input is: any-value'", build.Steps[0].Script[0])
+	})
+
+	t.Run("do not expand inputs in step script with FF disabled", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, false)
+
+		assert.Equal(t, "echo 'Input is: ${{ job.inputs.any_input }}'", build.Steps[0].Script[0])
 	})
 
 	t.Run("expand inputs in step after_script", func(t *testing.T) {
@@ -3586,7 +3608,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, "echo 'Input is: any-value'", build.Steps[1].Script[0])
 	})
@@ -3608,7 +3630,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, "any-value-image:latest", build.Image.Name)
 	})
@@ -3631,7 +3653,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, []string{"/bin/sh", "-c", "echo any-value"}, build.Image.Entrypoint)
 	})
@@ -3659,7 +3681,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		expected := []string{
 			"/bin/sh",
@@ -3692,7 +3714,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, "linux/any-value", build.Image.ExecutorOptions.Docker.Platform)
 	})
@@ -3719,7 +3741,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, StringOrInt64("any-value"), build.Image.ExecutorOptions.Docker.User)
 	})
@@ -3746,7 +3768,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, StringOrInt64("any-value"), build.Image.ExecutorOptions.Kubernetes.User)
 	})
@@ -3769,7 +3791,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, []DockerPullPolicy{"any-value-if-not-present"}, build.Image.PullPolicies)
 	})
@@ -3793,7 +3815,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, "any-value-cache-key", build.Cache[0].Key)
 	})
@@ -3822,7 +3844,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		expected := CacheFallbackKeys{
 			"any-value-fallback-1",
@@ -3856,7 +3878,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		expected := ArtifactPaths{
 			"any-value/cache",
@@ -3886,7 +3908,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, CacheWhen("on_any-value"), build.Cache[0].When)
 	})
@@ -3911,7 +3933,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, CachePolicy("any-value-push"), build.Cache[0].Policy)
 	})
@@ -3935,7 +3957,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, "any-value-artifact", build.Artifacts[0].Name)
 	})
@@ -3964,7 +3986,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		expected := ArtifactPaths{
 			"any-value/artifacts",
@@ -3998,7 +4020,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		expected := ArtifactExclude{
 			"any-value/exclude",
@@ -4028,7 +4050,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, "any-value days", build.Artifacts[0].ExpireIn)
 	})
@@ -4053,7 +4075,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, ArtifactWhen("on_any-value"), build.Artifacts[0].When)
 	})
@@ -4077,7 +4099,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, "any-value-service:latest", build.Services[0].Name)
 	})
@@ -4102,7 +4124,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, []string{"/bin/sh", "-c", "echo any-value"}, build.Services[0].Entrypoint)
 	})
@@ -4131,7 +4153,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, "linux/any-value", build.Services[0].ExecutorOptions.Docker.Platform)
 	})
@@ -4160,7 +4182,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, StringOrInt64("any-value"), build.Services[0].ExecutorOptions.Docker.User)
 	})
@@ -4189,7 +4211,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, StringOrInt64("any-value"), build.Services[0].ExecutorOptions.Kubernetes.User)
 	})
@@ -4214,7 +4236,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		assert.Equal(t, []DockerPullPolicy{"any-value-if-not-present"}, build.Services[0].PullPolicies)
 	})
@@ -4244,7 +4266,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job)
+		build := run(t, job, true)
 
 		expected := []string{
 			"/bin/sh",

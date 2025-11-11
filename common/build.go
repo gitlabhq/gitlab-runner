@@ -1240,6 +1240,10 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 // For a good middle ground we could parse the scripts as moa expressions and cache them
 // and only later on evaluate given the necessary context.
 func (b *Build) expandInputs() error {
+	if !b.IsFeatureFlagOn(featureflags.EnableJobInputsInterpolation) {
+		return nil
+	}
+
 	return ExpandInputs(&b.Inputs, b)
 }
 
