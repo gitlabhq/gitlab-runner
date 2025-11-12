@@ -53,11 +53,11 @@ const (
 	ExecutorStageRun     common.ExecutorStage = "docker_run"
 	ExecutorStageCleanup common.ExecutorStage = "docker_cleanup"
 
-	ExecutorStageCreatingBuildVolumes     common.ExecutorStage = "docker_creating_build_volumes"
-	ExecutorStageCreatingStepRunnerVolume common.ExecutorStage = "docker_creating_step_runner_volume"
-	ExecutorStageCreatingServices         common.ExecutorStage = "docker_creating_services"
-	ExecutorStageCreatingUserVolumes      common.ExecutorStage = "docker_creating_user_volumes"
-	ExecutorStagePullingImage             common.ExecutorStage = "docker_pulling_image"
+	ExecutorStageBootstrap            common.ExecutorStage = "docker_bootstrap"
+	ExecutorStageCreatingBuildVolumes common.ExecutorStage = "docker_creating_build_volumes"
+	ExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
+	ExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
+	ExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
 )
 
 const ServiceLogOutputLimit = 64 * 1024
@@ -835,19 +835,6 @@ func (e *executor) createContainer(
 	return &inspect, err
 }
 
-// addStepRunnerToPath adds the step-runner's path (stepRunnerBinaryPath) to the specific environment's PATH variable.
-func addStepRunnerToPath(env []string) []string {
-	res := []string{}
-	for _, e := range env {
-		if strings.HasPrefix(e, "PATH=") {
-			res = append(res, e+":"+stepRunnerBinaryPath)
-		} else {
-			res = append(res, e)
-		}
-	}
-	return res
-}
-
 func (e *executor) createContainerConfig(
 	containerType string,
 	imageDefinition common.Image,
@@ -867,7 +854,16 @@ func (e *executor) createContainerConfig(
 		AttachStderr: true,
 		OpenStdin:    true,
 		StdinOnce:    true,
-		Env:          e.Build.GetAllVariables().StringList(),
+		Entrypoint:   e.overwriteEntrypoint(&imageDefinition),
+	}
+
+	// We should never really need to set the environment variables on the container,
+	// as these are exported via the abstract shell.
+	//
+	// Adding these variables interferes with steps. Given this situation, when native
+	// steps is enabled, we no longer add the env vars to the container.
+	if !e.Build.UseNativeSteps() {
+		config.Env = e.Build.GetAllVariables().StringList()
 	}
 
 	// user config should only be set in build containers
@@ -877,17 +873,6 @@ func (e *executor) createContainerConfig(
 		} else {
 			config.User = user
 		}
-	}
-
-	// only allow entrypoint overwriting if steps is not enabled OR this is the helper container.
-	if containerType == predefinedContainerType || !e.Build.UseNativeSteps() {
-		config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
-	}
-
-	if containerType == buildContainerType && e.Build.UseNativeSteps() {
-		// Set the build container's environment to the build IMAGE's environment with the step-runner binary path
-		// appended to PATH.
-		config.Env = addStepRunnerToPath(image.Config.Env)
 	}
 
 	// setting a container's mac-address changed in API version 1.44
@@ -1263,7 +1248,7 @@ func (e *executor) createDependencies() error {
 		e.createVolumesManager,
 		e.createVolumes,
 		e.createBuildVolume,
-		e.createStepRunnerVolume,
+		e.bootstrap,
 		e.createServices,
 	}
 
@@ -1336,21 +1321,6 @@ func (e *executor) createBuildVolume() error {
 	}
 
 	return nil
-}
-
-func (e *executor) createStepRunnerVolume() error {
-	if !e.Build.UseNativeSteps() {
-		return nil
-	}
-
-	e.SetCurrentStage(ExecutorStageCreatingStepRunnerVolume)
-	e.BuildLogger.Debugln("Creating step-runner volume...")
-
-	if e.volumesManager == nil {
-		return errVolumesManagerUndefined
-	}
-
-	return e.volumesManager.CreateTemporary(e.Context, stepRunnerBinaryPath)
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {

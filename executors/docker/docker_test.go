@@ -3,6 +3,7 @@
 package docker
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
@@ -2745,18 +2747,18 @@ func TestTooManyServicesRequestedError(t *testing.T) {
 	})
 }
 
-func Test_createStepRunnerVolume(t *testing.T) {
+func Test_bootstrap(t *testing.T) {
 	type testCase struct {
-		setup         func(*volumes.MockManager, *common.Build) []string
+		setup         func(*volumes.MockManager, *docker.MockClient, *common.Build) []string
 		expectedBinds []string
 		wantStage     common.ExecutorStage
 	}
 	tests := map[string]map[string]testCase{
 		"linux": {
 			"native steps enabled": {
-				expectedBinds: []string{"/opt/step-runner"},
-				wantStage:     ExecutorStageCreatingStepRunnerVolume,
-				setup: func(vm *volumes.MockManager, b *common.Build) []string {
+				expectedBinds: []string{"/opt/gitlab-runner"},
+				wantStage:     ExecutorStageBootstrap,
+				setup: func(vm *volumes.MockManager, c *docker.MockClient, b *common.Build) []string {
 					binds := make([]string, 1)
 					b.JobResponse.Run = "blablabla"
 					b.Variables = append(b.Variables, common.JobVariable{
@@ -2764,12 +2766,42 @@ func Test_createStepRunnerVolume(t *testing.T) {
 						Value: "true",
 					})
 
-					vm.On("CreateTemporary", mock.Anything, "/opt/step-runner").
+					c.EXPECT().ImageInspectWithRaw(mock.Anything, mock.Anything).Return(image.InspectResponse{
+						ID: "helper-id",
+					}, nil, nil)
+					c.EXPECT().ContainerCreate(mock.Anything, &container.Config{
+						Image:           "helper-id",
+						Cmd:             []string{"gitlab-runner-helper", "steps", "bootstrap", bootstrappedBinary},
+						Tty:             false,
+						AttachStdin:     false,
+						AttachStdout:    true,
+						AttachStderr:    true,
+						OpenStdin:       false,
+						StdinOnce:       true,
+						NetworkDisabled: true,
+					}, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(container.CreateResponse{ID: "container-id"}, nil)
+
+					c.EXPECT().ContainerAttach(mock.Anything, "container-id", mock.Anything).Return(types.HijackedResponse{
+						Reader: bufio.NewReader(strings.NewReader("")),
+						Conn:   &net.UnixConn{},
+					}, nil)
+					c.EXPECT().ContainerRemove(mock.Anything, "container-id", mock.Anything).Return(nil)
+
+					bodyCh := make(chan container.WaitResponse, 1)
+					bodyCh <- container.WaitResponse{StatusCode: 0}
+					c.EXPECT().ContainerWait(mock.Anything, "container-id", container.WaitConditionNextExit).
+						Return((<-chan container.WaitResponse)(bodyCh), nil)
+
+					c.EXPECT().ContainerStart(mock.Anything, "container-id", mock.Anything).Return(nil)
+
+					vm.EXPECT().CreateTemporary(mock.Anything, "/opt/gitlab-runner").
 						Return(nil).
-						Run(func(args mock.Arguments) {
-							binds[0] = args.Get(1).(string)
+						Run(func(ctx context.Context, destination string) {
+							binds[0] = destination
 						}).
 						Once()
+					vm.EXPECT().Binds().Return(binds).Once()
+
 					return binds
 				},
 			},
@@ -2783,13 +2815,21 @@ func Test_createStepRunnerVolume(t *testing.T) {
 
 	for name, tt := range tests[runtime.GOOS] {
 		t.Run(name, func(t *testing.T) {
+			c := docker.NewMockClient(t)
 			vm := volumes.NewMockManager(t)
 			e := executor{
 				volumesManager: vm,
+				dockerConn:     &dockerConnection{Client: c},
 				AbstractExecutor: executors.AbstractExecutor{
+					Context: t.Context(),
 					Build: &common.Build{
 						ExecutorFeatures: common.FeaturesInfo{
 							NativeStepsIntegration: true,
+						},
+					},
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Docker: &common.DockerConfig{},
 						},
 					},
 				},
@@ -2797,10 +2837,10 @@ func Test_createStepRunnerVolume(t *testing.T) {
 
 			var binds []string
 			if tt.setup != nil {
-				binds = tt.setup(vm, e.Build)
+				binds = tt.setup(vm, c, e.Build)
 			}
 
-			assert.NoError(t, e.createStepRunnerVolume())
+			assert.NoError(t, e.bootstrap())
 			assert.Equal(t, tt.expectedBinds, binds)
 			assert.Equal(t, tt.wantStage, e.GetCurrentStage())
 		})

@@ -1,47 +1,43 @@
 package docker
 
 import (
+	"bytes"
+	"context"
 	"fmt"
-	"slices"
+	"io"
+	"path"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"github.com/docker/docker/pkg/stdcopy"
 )
 
-// This is that path to which the step-runner binary will be copied in the build container. This path MUST be added
-// to the container's PATH. When copying the step-runner binary from the step-runner container to the shared volume,
-// this path can be anything as long the mount-point and destination argument to the bootstrap command are the same.
-const stepRunnerBinaryPath = "/opt/step-runner"
+const bootstrappedBinary = "/opt/gitlab-runner/gitlab-runner-helper"
 
-var stepRunnerBootstrapCommand = []string{"/step-runner", "bootstrap", stepRunnerBinaryPath}
+func (e *executor) bootstrap() error {
+	if !e.Build.UseNativeSteps() {
+		return nil
+	}
 
-func (e *commandExecutor) requestStepRunnerContainer() (*container.InspectResponse, error) {
-	return e.createContainer(
-		stepRunnerContainerType,
-		common.Image{Name: e.Config.GetStepRunnerImage()},
-		nil,
-		newStepRunnerContainerConfigurator(&e.executor),
-	)
-}
+	e.SetCurrentStage(ExecutorStageBootstrap)
+	e.BuildLogger.Debugln("Creating bootstrap volume...")
 
-type stepRunnerContainerConfigurator struct {
-	e *executor
-}
+	ctx, cancel := context.WithCancel(e.Context)
+	defer cancel()
 
-var _ containerConfigurator = &stepRunnerContainerConfigurator{}
+	if err := e.volumesManager.CreateTemporary(ctx, path.Dir(bootstrappedBinary)); err != nil {
+		return fmt.Errorf("bootstrap volume: %w", err)
+	}
 
-func newStepRunnerContainerConfigurator(e *executor) *stepRunnerContainerConfigurator {
-	return &stepRunnerContainerConfigurator{e: e}
-}
+	helperImage, err := e.getHelperImage()
+	if err != nil {
+		return fmt.Errorf("bootstrap helper image: %w", err)
+	}
 
-func (c *stepRunnerContainerConfigurator) ContainerConfig(image *image.InspectResponse) (*container.Config, error) {
-	return &container.Config{
-		Image:           image.ID,
-		Cmd:             stepRunnerBootstrapCommand,
+	containerConfig := &container.Config{
+		Image:           helperImage.ID,
+		Cmd:             []string{"gitlab-runner-helper", "steps", "bootstrap", bootstrappedBinary},
 		Tty:             false,
 		AttachStdin:     false,
 		AttachStdout:    true,
@@ -49,29 +45,63 @@ func (c *stepRunnerContainerConfigurator) ContainerConfig(image *image.InspectRe
 		OpenStdin:       false,
 		StdinOnce:       true,
 		NetworkDisabled: true,
-	}, nil
-}
-
-func (c *stepRunnerContainerConfigurator) HostConfig() (*container.HostConfig, error) {
-	i := slices.IndexFunc(c.e.volumesManager.Binds(), func(bind string) bool {
-		return strings.Contains(bind, stepRunnerBinaryPath)
-	})
-	if i == -1 {
-		return nil, fmt.Errorf("failed to find volume bind with mount-point %q for %q",
-			stepRunnerBinaryPath, c.e.Config.GetStepRunnerImage())
+	}
+	hostConfig := &container.HostConfig{
+		AutoRemove:     true,
+		ReadonlyRootfs: true, // todo: windows doesn't support read-only fs
+		RestartPolicy:  neverRestartPolicy,
+		Binds:          e.volumesManager.Binds(),
+		NetworkMode:    network.NetworkNone,
+		Runtime:        e.Config.Docker.Runtime,
+		Isolation:      container.Isolation(e.Config.Docker.Isolation),
 	}
 
-	return &container.HostConfig{
-		AutoRemove:     true,
-		ReadonlyRootfs: true,
-		RestartPolicy:  neverRestartPolicy,
-		Binds:          []string{c.e.volumesManager.Binds()[i]},
-		NetworkMode:    network.NetworkNone,
-		Runtime:        c.e.Config.Docker.Runtime,
-		Isolation:      container.Isolation(c.e.Config.Docker.Isolation),
-	}, nil
-}
+	bootstrapContainer, err := e.dockerConn.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
+	if err != nil {
+		return fmt.Errorf("bootstrap container create: %w", err)
+	}
+	defer func() {
+		_ = e.dockerConn.ContainerRemove(ctx, bootstrapContainer.ID, container.RemoveOptions{
+			RemoveVolumes: true,
+			Force:         true,
+		})
+	}()
 
-func (c *stepRunnerContainerConfigurator) NetworkConfig(_ []string) *network.NetworkingConfig {
+	hijacked, err := e.dockerConn.ContainerAttach(ctx, bootstrapContainer.ID, container.AttachOptions{
+		Stream: true,
+		Stdout: true,
+		Stderr: true,
+	})
+	if err != nil {
+		return fmt.Errorf("bootstrap container attach: %w", err)
+	}
+	defer hijacked.Close()
+
+	okCh, errCh := e.dockerConn.ContainerWait(ctx, bootstrapContainer.ID, container.WaitConditionNextExit)
+
+	if err := e.dockerConn.ContainerStart(ctx, bootstrapContainer.ID, container.StartOptions{}); err != nil {
+		return fmt.Errorf("bootstrap container start: %w", err)
+	}
+
+	select {
+	case err := <-errCh:
+		buf := new(bytes.Buffer)
+		_, _ = stdcopy.StdCopy(buf, buf, io.LimitReader(hijacked.Reader, 1024))
+
+		return fmt.Errorf("bootstrap container wait: %w (%v)", err, buf.String())
+
+	case ok := <-okCh:
+		if ok.StatusCode != 0 {
+			buf := new(bytes.Buffer)
+			_, _ = stdcopy.StdCopy(buf, buf, io.LimitReader(hijacked.Reader, 1024))
+
+			// detect if this helper is too old to support the functions subcommand
+			if strings.Contains(buf.String(), "Command steps not found") {
+				return fmt.Errorf("helper does not contain CI Steps support: please upgrade your version of the GitLab Runner helper binary")
+			}
+			return fmt.Errorf("bootstrap container non zero exit: %v (%v) %v", ok.Error, ok.StatusCode, buf.String())
+		}
+	}
+
 	return nil
 }

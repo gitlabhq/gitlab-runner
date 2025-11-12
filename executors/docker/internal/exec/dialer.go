@@ -66,7 +66,7 @@ func (td *tunnelingDialer) Dial() (*grpc.ClientConn, error) {
 
 func (td *tunnelingDialer) containerExec(ctx context.Context, source io.ReadCloser, sink io.Writer) error {
 	execCreateResp, err := td.client.ContainerExecCreate(ctx, td.containerID, container.ExecOptions{
-		Cmd:          []string{"step-runner", "proxy"},
+		Cmd:          []string{"/opt/gitlab-runner/gitlab-runner-helper", "steps", "proxy"},
 		AttachStdin:  true,
 		AttachStderr: true,
 		AttachStdout: true,

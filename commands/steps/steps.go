@@ -1,6 +1,7 @@
 package steps
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -9,10 +10,11 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"syscall"
-	"time"
 
 	"github.com/urfave/cli"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -24,9 +26,6 @@ import (
 
 const (
 	SubCommandName = "steps"
-
-	// shutdownTimeout is time we wait for a graceful shutdown of the server before we run the forceful shutdown
-	shutdownTimeout = time.Second * 5
 )
 
 type IOStreams struct {
@@ -35,14 +34,41 @@ type IOStreams struct {
 	Stderr io.Writer
 }
 
-// gracefulShutdown is a special error we use to cancel the context when no error occurred. With that, we can
-// differentiate between explicit cancels we did, or any cancellation by a parent context.
-var gracefulShutdown = fmt.Errorf("shut down gracefully")
+func Bootstrap(destination string) error {
+	source, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to get source path: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+		return err
+	}
+
+	src, err := os.Open(source)
+	if err != nil {
+		return fmt.Errorf("failed to open source file %q: %w", source, err)
+	}
+	defer func() { _ = src.Close() }()
+
+	dest, err := os.Create(destination)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer func() { _ = dest.Close() }()
+
+	_, err = io.Copy(dest, src)
+	if err != nil {
+		return fmt.Errorf("failed to copy file contents: %w", err)
+	}
+
+	if err := dest.Close(); err != nil {
+		return fmt.Errorf("failed to close file: %w", err)
+	}
+
+	return os.Chmod(destination, 0o755)
+}
 
 func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs ...string) error {
-	ctx, cancel := context.WithCancelCause(ctx)
-	defer cancel(gracefulShutdown)
-
 	listener, err := net.ListenUnix("unix", api.SocketAddr(sockPath))
 	if err != nil {
 		return fmt.Errorf("opening socket: %w", err)
@@ -57,54 +83,58 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 	srv := grpc.NewServer()
 	proto.RegisterStepRunnerServer(srv, service)
 
-	serverStopped := make(chan struct{}, 2)
+	wg, ctx := errgroup.WithContext(ctx)
 
 	go func() {
 		<-ctx.Done()
-
-		defer time.AfterFunc(shutdownTimeout, func() {
-			srv.Stop()
-			serverStopped <- struct{}{}
-		}).Stop()
-
 		srv.GracefulStop()
-		serverStopped <- struct{}{}
 	}()
 
-	go func() {
-		err := srv.Serve(listener)
-		if err != nil {
-			cancel(fmt.Errorf("server error: %w", err))
+	wg.Go(func() error {
+		if err := srv.Serve(listener); err != nil {
+			return fmt.Errorf("server error: %w", err)
 		}
-		cancel(gracefulShutdown)
-	}()
+
+		return nil
+	})
 
 	if len(cmdAndArgs) > 0 {
-		go func() {
+		wg.Go(func() error {
+			stdin := bufio.NewReader(ioStreams.Stdin)
+
+			stdinCheck := make(chan error, 1)
+			go func() {
+				_, err := stdin.Peek(1)
+				stdinCheck <- err
+			}()
+
+			// block until either:
+			// - cancellation
+			// - data on stdin
+			//
+			// this prevents us running a command with no script to execute, and therefore returning
+			// an error on cancellation even if there's no work performed.
+			select {
+			case err := <-stdinCheck:
+				if errors.Is(err, io.EOF) {
+					return nil
+				}
+			case <-ctx.Done():
+				return nil
+			}
+
 			cmd := exec.CommandContext(ctx, cmdAndArgs[0], cmdAndArgs[1:]...)
-			cmd.Stdin = ioStreams.Stdin
+			cmd.Stdin = stdin
 			cmd.Stdout = ioStreams.Stdout
 			cmd.Stderr = ioStreams.Stderr
 
-			err := cmd.Run()
-			if err != nil {
-				cancel(fmt.Errorf("command error: %w", err))
-			}
-			cancel(gracefulShutdown)
-		}()
+			// error is not wrapped intentionally:
+			// os.ExitError needs to be returned unwrapped.
+			return cmd.Run()
+		})
 	}
 
-	<-ctx.Done()
-	err = context.Cause(ctx)
-	if errors.Is(err, gracefulShutdown) {
-		// context.Cancel will always give as at least context.Canceled, and we can't be sure where this came from (a parent
-		// context that was canceled by a timeout?). Thus we use a special cancel cause for our known graceful
-		// cancellations, and know that this is not an error case.
-		err = nil
-	}
-
-	<-serverStopped
-	return err
+	return wg.Wait()
 }
 
 func Proxy(sockPath string, io IOStreams) error {
@@ -122,6 +152,18 @@ func init() {
 	defaultSockPath := api.DefaultSocketPath()
 
 	subcommands := []cli.Command{
+		{
+			Name:  "bootstrap",
+			Usage: "bootstrap the gitlab-runner-helper to the build container",
+			Action: func(cliCtx *cli.Context) error {
+				destination := cliCtx.Args().First()
+				if destination == "" {
+					return fmt.Errorf("destination argument must be provided")
+				}
+
+				return Bootstrap(destination)
+			},
+		},
 		{
 			Name:  "serve",
 			Usage: "start the CI Functions server",
