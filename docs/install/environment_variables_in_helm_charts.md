@@ -65,7 +65,7 @@ These variables only affect the GitLab Runner Manager container.
 - `extraEnvFrom`
 
   ```yaml
-  extraEnvFrom: {}
+  extraEnvFrom:
     CACHE_S3_ACCESS_KEY:
       secretKeyRef:
         name: s3access
