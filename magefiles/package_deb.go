@@ -68,6 +68,17 @@ func (p Package) DebRiscv64() error {
 	return nil
 }
 
+// DebLoong64 builds deb package for loong64
+func (p Package) DebLoong64() error {
+	var err error
+	err = p.Deb("loong64", "loong64")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // DebIbm builds deb package for s390x ppc64le
 func (p Package) DebIbm() error {
 	var err error

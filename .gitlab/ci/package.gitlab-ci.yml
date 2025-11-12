@@ -40,6 +40,7 @@ package-deb:
           - debArm32
           - debIbm
           - debRiscv64
+          - debLoong64
 
 package-rpm:
   extends:
@@ -54,6 +55,7 @@ package-rpm:
           - rpmIbm
           - rpmRiscv64
           - rpmFips
+          - rpmLoong64
 
 package-helpers:
   extends:

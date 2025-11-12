@@ -68,6 +68,17 @@ func (p Package) RpmRiscv64() error {
 	return nil
 }
 
+// RpmLoong64 builds rpm package for loong64
+func (p Package) RpmLoong64() error {
+	var err error
+	err = p.Rpm("loong64", "loong64")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // RpmIbm builds rpm package for s390x ppc64le
 func (p Package) RpmIbm() error {
 	var err error

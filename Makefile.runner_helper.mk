@@ -21,6 +21,7 @@ BINARIES += ${BASE_BINARY_PATH}.linux-arm64
 BINARIES += ${BASE_BINARY_PATH}.linux-s390x
 BINARIES += ${BASE_BINARY_PATH}.linux-ppc64le
 BINARIES += ${BASE_BINARY_PATH}.linux-riscv64
+BINARIES += ${BASE_BINARY_PATH}.linux-loong64
 BINARIES += ${BASE_BINARY_PATH}.linux-amd64-fips
 
 # Go files that are used to create the helper binary.

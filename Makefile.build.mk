@@ -6,6 +6,7 @@ BINARIES += ${BASE_BINARY_PATH}-linux-arm
 BINARIES += ${BASE_BINARY_PATH}-linux-s390x
 BINARIES += ${BASE_BINARY_PATH}-linux-ppc64le
 BINARIES += ${BASE_BINARY_PATH}-linux-riscv64
+BINARIES += ${BASE_BINARY_PATH}-linux-loong64
 BINARIES += ${BASE_BINARY_PATH}-darwin-amd64
 BINARIES += ${BASE_BINARY_PATH}-darwin-arm64
 BINARIES += ${BASE_BINARY_PATH}-freebsd-386
@@ -51,7 +52,7 @@ out/runner-images:
 	mkdir -p out/runner-images
 	cd dockerfiles/runner && docker buildx bake --progress plain $(TARGETS)
 
-ARCH_REPLACE="s/aarch64/arm64/ ; s/armv7l/arm/ ; s/x86_64/amd64/ ; s/i386/386/"
+ARCH_REPLACE="s/aarch64/arm64/ ; s/armv7l/arm/ ; s/x86_64/amd64/ ; s/i386/386/ ; s/loongarch64/loong64/"
 
 runner-bin-host: OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 runner-bin-host: ARCH := $(shell uname -m | sed $(ARCH_REPLACE))
@@ -83,7 +84,7 @@ runner-and-helper-rpm-host: runner-and-helper-bin-host
 	$(MAGE) package:deps package:prepare
 	$(MAKE) package-rpm-arch ARCH=$(ARCH) PACKAGE_ARCH=$(PACKAGE_ARCH)
 
-UNIX_ARCHS_CHECK ?= aix/ppc64 android/amd64 dragonfly/amd64 freebsd/amd64 hurd/amd64 illumos/amd64 linux/riscv64 netbsd/amd64 openbsd/amd64 solaris/amd64
+UNIX_ARCHS_CHECK ?= aix/ppc64 android/amd64 dragonfly/amd64 freebsd/amd64 hurd/amd64 illumos/amd64 linux/riscv64 linux/loong64 netbsd/amd64 openbsd/amd64 solaris/amd64
 
 # runner-unix-check compiles against various unix OSs that we don't officially support. This is not used
 # as part of any CI job at the moment, but is to be used locally to easily determine what currently compiles.

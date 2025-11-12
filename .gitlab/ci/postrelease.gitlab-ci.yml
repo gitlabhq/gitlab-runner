@@ -185,6 +185,9 @@ stable gitlab release:
         - name: "binary: Linux riscv64"
           url: "$S3/binaries/gitlab-runner-linux-riscv64"
           filepath: "/binaries/gitlab-runner-linux-riscv64"
+        - name: "binary: Linux loong64"
+          url: "$S3/binaries/gitlab-runner-linux-loong64"
+          filepath: "/binaries/gitlab-runner-linux-loong64"
 
         - name: "binary: macOS amd64"
           url: "$S3/binaries/gitlab-runner-darwin-amd64"

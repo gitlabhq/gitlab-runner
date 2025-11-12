@@ -10,6 +10,7 @@ out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-arm out/release/bin
 out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-arm64 out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.arm64
 out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-ppc64le out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.ppc64le
 out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-riscv64 out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.riscv64
+out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-loong64 out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.loong64
 out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-s390x out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.s390x
 out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-amd64 out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64
 out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-amd64-fips out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64-fips
@@ -21,6 +22,7 @@ out/binaries/gitlab-runner-linux-arm out/release/binaries/gitlab-runner-linux-ar
 out/binaries/gitlab-runner-linux-arm64 out/release/binaries/gitlab-runner-linux-arm64
 out/binaries/gitlab-runner-linux-ppc64le out/release/binaries/gitlab-runner-linux-ppc64le
 out/binaries/gitlab-runner-linux-riscv64 out/release/binaries/gitlab-runner-linux-riscv64
+out/binaries/gitlab-runner-linux-loong64 out/release/binaries/gitlab-runner-linux-loong64
 out/binaries/gitlab-runner-linux-s390x out/release/binaries/gitlab-runner-linux-s390x
 out/binaries/gitlab-runner-windows-386.exe out/release/binaries/gitlab-runner-windows-386.exe
 out/binaries/gitlab-runner-windows-386.zip out/release/binaries/gitlab-runner-windows-386.zip
@@ -34,6 +36,7 @@ out/deb/gitlab-runner_armhf.deb out/release/deb/gitlab-runner_armhf.deb
 out/deb/gitlab-runner_i686.deb out/release/deb/gitlab-runner_i686.deb
 out/deb/gitlab-runner_ppc64el.deb out/release/deb/gitlab-runner_ppc64el.deb
 out/deb/gitlab-runner_riscv64.deb out/release/deb/gitlab-runner_riscv64.deb
+out/deb/gitlab-runner_loong64.deb out/release/deb/gitlab-runner_loong64.deb
 out/deb/gitlab-runner_s390x.deb out/release/deb/gitlab-runner_s390x.deb
 out/deb/gitlab-runner-helper-images.deb out/release/deb/gitlab-runner-helper-images.deb
 out/helper-images/prebuilt-alpine-arm.tar.xz out/release/helper-images/prebuilt-alpine-arm.tar.xz
@@ -83,6 +86,7 @@ out/rpm/gitlab-runner_armhf.rpm out/release/rpm/gitlab-runner_armhf.rpm
 out/rpm/gitlab-runner_i686.rpm out/release/rpm/gitlab-runner_i686.rpm
 out/rpm/gitlab-runner_ppc64le.rpm out/release/rpm/gitlab-runner_ppc64le.rpm
 out/rpm/gitlab-runner_riscv64.rpm out/release/rpm/gitlab-runner_riscv64.rpm
+out/rpm/gitlab-runner_loong64.rpm out/release/rpm/gitlab-runner_loong64.rpm
 out/rpm/gitlab-runner_s390x.rpm out/release/rpm/gitlab-runner_s390x.rpm
 out/rpm/gitlab-runner-helper-images.rpm out/release/rpm/gitlab-runner-helper-images.rpm
 out/zoneinfo.zip out/release/zoneinfo.zip

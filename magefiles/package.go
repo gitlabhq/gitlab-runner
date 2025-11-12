@@ -60,6 +60,7 @@ var packageBuilds = packages.Builds{
 		{"DebArm64", []string{"arm64", "arm64"}, []string{"aarch64", "arm64"}, []string{"aarch64", "arm64"}},
 		{"DebArm32", []string{"arm", "arm"}, []string{"armel", "armhf"}, []string{"armel", "armhf"}},
 		{"DebRiscv64", []string{"riscv64"}, []string{"riscv64"}, []string{"riscv64"}},
+		{"DebLoong64", []string{"loong64"}, []string{"loong64"}, []string{"loong64"}},
 		{"DebIbm", []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64el"}, []string{"s390x", "ppc64le"}},
 	},
 	"rpm": {
@@ -68,6 +69,7 @@ var packageBuilds = packages.Builds{
 		{"RpmArm64", []string{"arm64", "arm64"}, []string{"aarch64", "arm64"}, []string{"aarch64", "arm64"}},
 		{"RpmArm32", []string{"arm", "arm"}, []string{"arm", "armhf"}, []string{"arm", "armhf"}},
 		{"RpmRiscv64", []string{"riscv64"}, []string{"riscv64"}, []string{"riscv64"}},
+		{"RpmLoong64", []string{"loong64"}, []string{"loong64"}, []string{"loongarch64"}},
 		{"RpmIbm", []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64le"}},
 	},
 }
