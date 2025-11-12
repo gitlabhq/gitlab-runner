@@ -53,6 +53,7 @@ GitLab Runner is available for the following architectures:
 - s390x
 - ppc64le
 - riscv64
+- loong64
 
 ## System requirements
 
