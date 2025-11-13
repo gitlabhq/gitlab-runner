@@ -17,6 +17,13 @@ else
     echo "Vale is missing, please install it from https://vale.sh/docs/vale-cli/installation/"
 fi
 
+echo "Check links"
+if command -v lychee >/dev/null 2>&1; then
+    lychee --offline --include-fragments docs-locale || echo "Lychee found issues but continuing..."
+else
+    echo "Lychee is missing, please install it from https://lychee.cli.rs/installation/"
+fi
+
 echo "Lint Markdown"
 if command -v markdownlint-cli2 >/dev/null 2>&1; then
     cd "${GIT_ROOT}/docs-locale" && markdownlint-cli2 --config .markdownlint/.markdownlint-cli2.yaml '**/*.md' || ((ERROR_RESULTS++))

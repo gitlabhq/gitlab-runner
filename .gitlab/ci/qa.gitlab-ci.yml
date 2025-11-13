@@ -120,7 +120,7 @@ docs:lint i18n markdown:
   script:
     # Makefiles in this project expect Go to be available
     - apk add --quiet go
-    # Lint i18n content and Markdown
+    # Lint i18n content and Markdown, and check links
     - make lint-i18n-docs VALE_MIN_ALERT_LEVEL=error
 
 # Verify localized documentation files have corresponding English versions
@@ -134,7 +134,7 @@ docs:lint i18n paths:
   needs: []
   script:
     # Run the i18n path verification script
-    - ./scripts/docs_i18n_verify_paths
+    - ./scripts/docs-i18n-verify-paths
 
 docs:check feature flags:
   stage: qa
