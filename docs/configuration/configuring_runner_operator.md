@@ -417,7 +417,7 @@ run_as_user = 1001
 run_as_group = 1001
 ```
 
-**Additional notes***
+**Additional notes**
 
 - These settings ensure consistent file ownership between the container that clones the repository and the container that builds it.
 - If you've customized your helper image with different user ID or group IDs, adjust these values accordingly.
@@ -514,7 +514,7 @@ oc create secret generic mySecret --from-file=tls.crt=myCert.pem -o yaml
 #### Register GitLab Runner with an external URL that points to an IP address
 
 If the runner cannot match the self-signed certificate with the hostname, you might get an error message.
-This issue occurs when you configure GitLab Self-Managed to use an IP address (like ###.##.##.##) instead of a hostname:
+This issue occurs when you configure GitLab Self-Managed to use an IP address (like `###.##.##.##`) instead of a hostname:
 
 ```shell
 [31;1mERROR: Registering runner... failed               [0;m  [31;1mrunner[0;m=A5abcdEF [31;1mstatus[0;m=couldn't execute POST against https://###.##.##.##/api/v4/runners:
@@ -531,7 +531,7 @@ To fix this issue:
 
    [ v3_ca ]
    subjectAltName=IP:169.57.64.36 <---- Add this line. 169.57.64.36 is your GitLab server IP.
-    ```
+   ```
 
 1. Then re-generate a self-signed CA with the commands below:
 
@@ -548,12 +548,12 @@ To fix this issue:
 
 Each specification patch consists of the following properties:
 
-| Setting     | Description                                                                                                                                     |
-|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| `name`      | Name of the custom specification patch.                                                                                                     |
+| Setting     | Description |
+|-------------|-------------|
+| `name`      | Name of the custom specification patch. |
 | `patchFile` | Path to the file that defines the changes to apply to the final specification before it is generated. The file must be a JSON or YAML file. |
-| `patch`     | A JSON or YAML format string that describes the changes to apply to the final specification before it is generated.                         |
-| `patchType` | The strategy used to apply the specified changes to the specification. The accepted values are `merge`, `json`, and `strategic` (default).  |
+| `patch`     | A JSON or YAML format string that describes the changes to apply to the final specification before it is generated. |
+| `patchType` | The strategy used to apply the specified changes to the specification. The accepted values are `merge`, `json`, and `strategic` (default). |
 
 You cannot set both `patchFile` and `patch` in the same specification configuration.
 
