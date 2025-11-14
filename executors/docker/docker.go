@@ -254,7 +254,7 @@ func (e *executor) expandAndGetDockerImage(
 		return nil, err
 	}
 
-	dockerOptions.Platform = e.ExpandValue(dockerOptions.Platform)
+	dockerOptions = dockerOptions.Expand(e.Build.GetAllVariables())
 
 	image, err := e.pullManager.GetDockerImage(imageName, dockerOptions, imagePullPolicies)
 	if err != nil {
@@ -315,10 +315,11 @@ func (e *executor) getBuildImage() (*image.InspectResponse, error) {
 		return nil, err
 	}
 
+	dockerOptions := e.Build.Image.ExecutorOptions.Docker.Expand(e.Build.GetAllVariables())
 	imagePullPolicies := e.Build.Image.PullPolicies
 
 	// Fetch image
-	image, err := e.pullManager.GetDockerImage(imageName, e.Build.Image.ExecutorOptions.Docker, imagePullPolicies)
+	image, err := e.pullManager.GetDockerImage(imageName, dockerOptions, imagePullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -335,8 +336,7 @@ func (e *executor) parseDeviceString(deviceString string) (device container.Devi
 	parts := strings.Split(deviceString, ":")
 
 	if len(parts) > 3 {
-		err = fmt.Errorf("too many colons")
-		return
+		return device, fmt.Errorf("too many colons")
 	}
 
 	device.PathOnHost = parts[0]
@@ -357,7 +357,7 @@ func (e *executor) parseDeviceString(deviceString string) (device container.Devi
 		device.CgroupPermissions = "rwm"
 	}
 
-	return
+	return device, err
 }
 
 func (e *executor) bindDevices() (err error) {
@@ -437,8 +437,10 @@ func (e *executor) createService(
 		serviceName = fmt.Sprintf("%s:%s...", service, version) // service:version
 	}
 
+	dockerOptions := definition.ExecutorOptions.Docker.Expand(e.Build.GetAllVariables())
+
 	e.BuildLogger.Println("Starting service", serviceName)
-	serviceImage, err := e.pullManager.GetDockerImage(image, definition.ExecutorOptions.Docker, definition.PullPolicies)
+	serviceImage, err := e.pullManager.GetDockerImage(image, dockerOptions, definition.PullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -578,7 +580,7 @@ func (e *executor) createServiceContainerConfig(
 		config.Cmd = definition.Command
 	}
 	config.Entrypoint = e.overwriteEntrypoint(&definition)
-	config.User = string(definition.ExecutorOptions.Docker.User)
+	config.User = string(definition.ExecutorOptions.Docker.Expand(e.Build.GetAllVariables()).User)
 
 	return config
 }
@@ -887,7 +889,7 @@ func (e *executor) getBuildContainerUser(imageDefinition common.Image) (string, 
 	// runner config takes precedence
 	user := e.Config.Docker.User
 	if user == "" {
-		user = string(imageDefinition.ExecutorOptions.Docker.User)
+		user = string(imageDefinition.ExecutorOptions.Docker.Expand(e.Build.GetAllVariables()).User)
 	}
 
 	if !e.Config.Docker.IsUserAllowed(user) {
