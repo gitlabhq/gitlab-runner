@@ -1797,7 +1797,7 @@ Example:
 When you use `docker`, `docker+machine`, or `kubernetes` executors, GitLab Runner uses a specific container
 to handle Git, artifacts, and cache operations. This container is created from an image named `helper image`.
 
-The helper image is available for amd64, arm, arm64, s390x, and ppc64le architectures. It contains
+The helper image is available for amd64, arm, arm64, s390x, ppc64le, and riscv64 architectures. It contains
 a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner binary. It contains only a subset
 of available commands, and Git, Git LFS, and SSL certificates store.
 

@@ -14,18 +14,27 @@ variable "LOCAL_FLAVOR" {
   default = "alpine-latest"
 }
 
+common-platforms = [
+  "linux/amd64",
+  "linux/arm64",
+  "linux/s390x",
+  "linux/ppc64le",
+  "linux/riscv64"
+]
+
+alpine-platforms = {
+  "3.19" : setsubtract(common-platforms, ["linux/riscv64"]),
+  "3.21" : common-platforms,
+  "latest" : common-platforms,
+}
+
 target "base" {
   contexts = {
     binary_dir = "../../out/binaries/"
     packaging_dir = "../../packaging/root/usr/share/gitlab-runner/"
   }
 
-  platforms = [
-    "linux/amd64",
-    "linux/arm64",
-    "linux/s390x",
-    "linux/ppc64le",
-  ]
+  platforms = common-platforms
 }
 
 target "ubuntu" {
@@ -55,12 +64,14 @@ target "alpine" {
   name = "alpine-${replace(version, ".", "-")}"
 
   matrix = {
-    version = ["latest", "3.19", "3.21"]
+    version = keys(alpine-platforms)
   }
 
   args = {
     BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner:${RUNNER_IMAGES_VERSION}-alpine-${version}"
   }
+
+  platforms = alpine-platforms[version]
   output = ["type=oci,dest=./../../out/runner-images/alpine-${version}.tar,tar=true"]
 }
 
