@@ -585,21 +585,23 @@ func (n *GitLabClient) resetToken(
 	}
 }
 
-func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
+func loadTLSData(tlsData ResponseTLSData) common.TLSData {
+	var res common.TLSData
 	if tlsData.CAChain != "" {
-		response.TLSData.CAChain = tlsData.CAChain
+		res.CAChain = tlsData.CAChain
 	}
 
 	if tlsData.CertFile != "" && tlsData.KeyFile != "" {
 		data, err := os.ReadFile(tlsData.CertFile)
 		if err == nil {
-			response.TLSData.AuthCert = string(data)
+			res.AuthCert = string(data)
 		}
 		data, err = os.ReadFile(tlsData.KeyFile)
 		if err == nil {
-			response.TLSData.AuthKey = string(data)
+			res.AuthKey = string(data)
 		}
 	}
+	return res
 }
 
 func (n *GitLabClient) RequestJob(
@@ -650,8 +652,7 @@ func (n *GitLabClient) RequestJob(
 		if err != nil {
 			logger.WithError(err).Errorln("Error on fetching TLS Data from API response...", "error")
 		}
-		addTLSData(&response, tlsData)
-
+		response.TLSData = loadTLSData(tlsData)
 		response.JobRequestCorrelationID = getCorrelationID(httpResponse, correlationID)
 
 		return &response, true
