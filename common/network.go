@@ -760,6 +760,12 @@ func (hooks Hooks) Get(name HookName) Hook {
 	return Hook{}
 }
 
+type TLSData struct {
+	CAChain  string `json:"-"`
+	AuthCert string `json:"-"`
+	AuthKey  string `json:"-"`
+}
+
 type JobResponse struct {
 	ID            int64          `json:"id"`
 	Token         string         `json:"token"`
@@ -781,9 +787,7 @@ type JobResponse struct {
 	Run           string         `json:"run"`
 	PolicyOptions PolicyOptions  `json:"policy_options,omitempty"`
 
-	TLSCAChain  string `json:"-"`
-	TLSAuthCert string `json:"-"`
-	TLSAuthKey  string `json:"-"`
+	TLSData TLSData `json:"-"`
 
 	JobRequestCorrelationID string `json:"-"`
 }

@@ -587,17 +587,17 @@ func (n *GitLabClient) resetToken(
 
 func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
 	if tlsData.CAChain != "" {
-		response.TLSCAChain = tlsData.CAChain
+		response.TLSData.CAChain = tlsData.CAChain
 	}
 
 	if tlsData.CertFile != "" && tlsData.KeyFile != "" {
 		data, err := os.ReadFile(tlsData.CertFile)
 		if err == nil {
-			response.TLSAuthCert = string(data)
+			response.TLSData.AuthCert = string(data)
 		}
 		data, err = os.ReadFile(tlsData.KeyFile)
 		if err == nil {
-			response.TLSAuthKey = string(data)
+			response.TLSData.AuthKey = string(data)
 		}
 	}
 }
