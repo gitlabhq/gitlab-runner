@@ -1214,14 +1214,23 @@ func closeResponseBody(res *http.Response, discardBody bool) {
 	_ = res.Body.Close()
 }
 
-func NewGitLabClientWithAPIRequestsCollector(c *APIRequestsCollector) *GitLabClient {
-	return &GitLabClient{
-		apiRequestsCollector: c,
+type ClientOption func(*GitLabClient)
+
+func WithAPIRequestsCollector(collector *APIRequestsCollector) ClientOption {
+	return func(c *GitLabClient) {
+		c.apiRequestsCollector = collector
 	}
 }
 
-func NewGitLabClient() *GitLabClient {
-	return NewGitLabClientWithAPIRequestsCollector(NewAPIRequestsCollector())
+func NewGitLabClient(options ...ClientOption) *GitLabClient {
+	c := &GitLabClient{}
+	for _, o := range options {
+		o(c)
+	}
+	if c.apiRequestsCollector == nil {
+		c.apiRequestsCollector = NewAPIRequestsCollector()
+	}
+	return c
 }
 
 func getCorrelationID(resp *http.Response, fallbackValue string) string {
