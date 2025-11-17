@@ -8,7 +8,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 type VerifyCommand struct {
@@ -20,9 +19,9 @@ type VerifyCommand struct {
 	DeleteNonExisting bool   `long:"delete" description:"Delete no longer existing runners?"`
 }
 
-func NewVerifyCommand() cli.Command {
+func NewVerifyCommand(n common.Network) cli.Command {
 	return common.NewCommand("verify", "verify all registered runners", &VerifyCommand{
-		network: network.NewGitLabClient(),
+		network: n,
 	})
 }
 

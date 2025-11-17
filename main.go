@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
+	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/labkit/fips"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/azure"
@@ -89,18 +90,20 @@ func main() {
 }
 
 func newCommands() []cli.Command {
+	apiRequestsCollector := network.NewAPIRequestsCollector()
+	n := network.NewGitLabClient(network.WithAPIRequestsCollector(apiRequestsCollector))
 	cmds := []cli.Command{
 		commands.NewListCommand(),
-		commands.NewRegisterCommand(),
-		commands.NewResetTokenCommand(),
-		commands.NewRunCommand(),
-		commands.NewRunSingleCommand(),
+		commands.NewRegisterCommand(n),
+		commands.NewResetTokenCommand(n),
+		commands.NewRunCommand(n, apiRequestsCollector),
+		commands.NewRunSingleCommand(n),
 		commands.NewRunnerWrapperCommand(),
-		commands.NewUnregisterCommand(),
-		commands.NewVerifyCommand(),
+		commands.NewUnregisterCommand(n),
+		commands.NewVerifyCommand(n),
 		fleeting.NewCommand(),
-		helpers.NewArtifactsDownloaderCommand(),
-		helpers.NewArtifactsUploaderCommand(),
+		helpers.NewArtifactsDownloaderCommand(n),
+		helpers.NewArtifactsUploaderCommand(n),
 		helpers.NewCacheArchiverCommand(),
 		helpers.NewCacheExtractorCommand(),
 		helpers.NewCacheInitCommand(),

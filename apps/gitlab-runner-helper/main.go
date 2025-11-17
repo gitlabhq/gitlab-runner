@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
+	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 func init() {
@@ -55,9 +56,10 @@ func main() {
 }
 
 func newCommands() []cli.Command {
+	n := network.NewGitLabClient()
 	return []cli.Command{
-		helpers.NewArtifactsDownloaderCommand(),
-		helpers.NewArtifactsUploaderCommand(),
+		helpers.NewArtifactsDownloaderCommand(n),
+		helpers.NewArtifactsUploaderCommand(n),
 		helpers.NewCacheArchiverCommand(),
 		helpers.NewCacheExtractorCommand(),
 		helpers.NewCacheInitCommand(),

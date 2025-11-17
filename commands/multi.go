@@ -152,12 +152,10 @@ type RunCommand struct {
 	runnerWorkerProcessingFailure *prometheus.CounterVec
 }
 
-func NewRunCommand() cli.Command {
-	apiRequestsCollector := network.NewAPIRequestsCollector()
-
+func NewRunCommand(n common.Network, apiRequestsCollector prometheus.Collector) cli.Command {
 	cmd := &RunCommand{
 		ServiceName:          defaultServiceName,
-		network:              network.NewGitLabClient(network.WithAPIRequestsCollector(apiRequestsCollector)),
+		network:              n,
 		apiRequestsCollector: apiRequestsCollector,
 		prometheusLogHook:    prometheus_helper.NewLogHook(),
 		failuresCollector:    prometheus_helper.NewFailuresCollector(),

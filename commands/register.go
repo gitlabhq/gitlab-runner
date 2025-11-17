@@ -96,8 +96,8 @@ type RegisterCommand struct {
 	common.RunnerConfig
 }
 
-func NewRegisterCommand() cli.Command {
-	return common.NewCommand("register", "register a new runner", newRegisterCommand())
+func NewRegisterCommand(n common.Network) cli.Command {
+	return common.NewCommand("register", "register a new runner", newRegisterCommand(n))
 }
 
 type AccessLevel string
@@ -566,7 +566,7 @@ func getHostname() string {
 	return hostname
 }
 
-func newRegisterCommand() *RegisterCommand {
+func newRegisterCommand(n common.Network) *RegisterCommand {
 	return &RegisterCommand{
 		RunnerConfig: common.RunnerConfig{
 			Name: getHostname(),
@@ -582,7 +582,7 @@ func newRegisterCommand() *RegisterCommand {
 		},
 		Locked:    true,
 		Paused:    false,
-		network:   network.NewGitLabClient(),
+		network:   n,
 		timeNowFn: time.Now,
 	}
 }

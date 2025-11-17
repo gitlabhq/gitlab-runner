@@ -18,7 +18,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
-	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 const (
@@ -48,12 +47,12 @@ type ArtifactsUploaderCommand struct {
 	CiDebugTrace     bool                  `long:"ci-debug-trace" env:"CI_DEBUG_TRACE" description:"enable debug trace logging"`
 }
 
-func NewArtifactsUploaderCommand() cli.Command {
+func NewArtifactsUploaderCommand(n common.Network) cli.Command {
 	return common.NewCommand(
 		"artifacts-uploader",
 		"create and upload build artifacts (internal)",
 		&ArtifactsUploaderCommand{
-			network: network.NewGitLabClient(),
+			network: n,
 			Name:    "artifacts",
 		},
 	)

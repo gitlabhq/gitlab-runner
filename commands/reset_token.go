@@ -8,7 +8,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 type ResetTokenCommand struct {
@@ -23,9 +22,9 @@ type ResetTokenCommand struct {
 	PAT        string `long:"pat" description:"Personal access token to use in lieu of runner's old authentication token"`
 }
 
-func NewResetTokenCommand() cli.Command {
+func NewResetTokenCommand(n common.Network) cli.Command {
 	return common.NewCommand("reset-token", "reset a runner's token", &ResetTokenCommand{
-		network: network.NewGitLabClient(),
+		network: n,
 	})
 }
 

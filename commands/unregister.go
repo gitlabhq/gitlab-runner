@@ -21,9 +21,9 @@ type UnregisterCommand struct {
 	AllRunners bool   `toml:"all_runners" json:"all-runners" long:"all-runners" description:"Unregister all runners"`
 }
 
-func NewUnregisterCommand() cli.Command {
+func NewUnregisterCommand(n common.Network) cli.Command {
 	return common.NewCommand("unregister", "unregister specific runner", &UnregisterCommand{
-		network: network.NewGitLabClient(),
+		network: n,
 	})
 }
 

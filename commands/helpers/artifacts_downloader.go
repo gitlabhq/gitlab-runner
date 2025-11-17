@@ -15,7 +15,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
-	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 type ArtifactsDownloaderCommand struct {
@@ -28,12 +27,12 @@ type ArtifactsDownloaderCommand struct {
 	StagingDir     string `long:"archiver-staging-dir" env:"ARCHIVER_STAGING_DIR" description:"Directory to stage artifact archives"`
 }
 
-func NewArtifactsDownloaderCommand() cli.Command {
+func NewArtifactsDownloaderCommand(n common.Network) cli.Command {
 	return common.NewCommand(
 		"artifacts-downloader",
 		"download and extract build artifacts (internal)",
 		&ArtifactsDownloaderCommand{
-			network: network.NewGitLabClient(),
+			network: n,
 			retryHelper: retryHelper{
 				Retry:     2,
 				RetryTime: time.Second,
