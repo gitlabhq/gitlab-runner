@@ -44,7 +44,7 @@ var dialer = net.Dialer{
 	KeepAlive: 30 * time.Second,
 }
 
-type Option = func(c *client)
+type option func(*client)
 
 type client struct {
 	http.Client
@@ -529,13 +529,13 @@ func (n *client) findCertificate(certificate *string, base string, name string) 
 	}
 }
 
-func withMaxAge(connectionMaxAge time.Duration) Option {
+func withMaxAge(connectionMaxAge time.Duration) option {
 	return func(c *client) {
 		c.connectionMaxAge = connectionMaxAge
 	}
 }
 
-func newClient(requestCredentials requestCredentials, collector *APIRequestsCollector, options ...Option) (*client, error) {
+func newClient(requestCredentials requestCredentials, collector *APIRequestsCollector, options ...option) (*client, error) {
 	url, err := url.Parse(fixCIURL(requestCredentials.GetURL()) + "/api/v4/")
 	if err != nil {
 		return nil, fmt.Errorf("parse URL: %w", err)
