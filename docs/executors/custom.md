@@ -351,8 +351,8 @@ If none is provided the defaults for the OS platform are used.
 
 {{< alert type="note" >}}
 
-Ensure your `shell` configuration matches the PowerShell version used by your `run_exec` script. 
-Use `shell = "pwsh"` with `pwsh.exe` (PowerShell Core) 
+Ensure your `shell` configuration matches the PowerShell version used by your `run_exec` script.
+Use `shell = "pwsh"` with `pwsh.exe` (PowerShell Core)
 or `shell = "powershell"` with `powershell.exe` (PowerShell Desktop).
 
 {{< /alert >}}
