@@ -376,7 +376,7 @@ Runner jobs cannot be stopped and moved to another node. Disable this feature fo
 
 ## Services not supported with Windows containers
 
-When attempting to use [services](https://docs.gitlab.com/ci/services/) on Windows nodes, 
+When attempting to use [services](https://docs.gitlab.com/ci/services/) on Windows nodes,
 they might fail with the following error:
 
 - `ERROR: Job failed (system failure): prepare environment: admission webhook "windows.common-webhooks.networking.gke.io" denied the request: spec.hostAliases: Invalid value: []v1.HostAlias{v1.HostAlias{IP:"127.0.0.1", Hostnames:[]string{"<your windows image>"}}}: Windows does not support this field.`

@@ -208,33 +208,33 @@ Supported systems for interactive web terminals by different shells:
 ```mermaid
 flowchart LR
     Start([Executor<br/>Selection]) --> Auto{Autoscaling?}
-    
+
     Auto -->|YES| Platform{Platform?}
     Auto -->|NO| BuildType{Build<br/>Type?}
-    
+
     Platform -->|Cloud<br/>Native| K8s[Kubernetes]
     Platform -->|Cloud<br/>VMs| OS1{OS?}
-    
+
     OS1 -->|Linux| L1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
     OS1 -->|macOS| M1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
     OS1 -->|Windows| W1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
-    
+
     BuildType -->|Container| OS2{OS?}
     BuildType -->|Shell| OS3{OS?}
-    
+
     OS2 -->|Linux| L2[Docker<br/>Podman]
     OS2 -->|macOS| M2[Docker]
     OS2 -->|Windows| W2[Docker]
-    
+
     OS3 -->|Linux| L3[Bash<br/>Zsh]
     OS3 -->|macOS| M3[Bash<br/>Zsh]
     OS3 -->|Windows| W3[PowerShell 5.1<br/>PowerShell 7.x]
     OS3 -->|Remote| R3[SSH]
-    
+
     classDef question fill:#e1f3fe,stroke:#333,stroke-width:2px,color:#000
     classDef result fill:#dcffe4,stroke:#333,stroke-width:2px,color:#000
     classDef start fill:#f9f9f9,stroke:#fff,stroke-width:2px,color:#000
-    
+
     class Start start;
     class Auto,Platform,BuildType,OS1,OS2,OS3 question;
     class K8s,L1,M1,W1,L2,M2,W2,L3,M3,W3,R3 result;

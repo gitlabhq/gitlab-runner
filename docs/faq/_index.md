@@ -492,6 +492,6 @@ To resolve this issue, remove `https://` from the OIDC URL:
 "Condition": {
   "StringLike": {
     "oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>:sub": "system:serviceaccount:<NAMESPACE>:<SERVICE_ACCOUNT>"
-  } 
+  }
 }
 ```
