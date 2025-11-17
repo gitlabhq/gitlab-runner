@@ -48,6 +48,17 @@ type ArtifactsUploaderCommand struct {
 	CiDebugTrace     bool                  `long:"ci-debug-trace" env:"CI_DEBUG_TRACE" description:"enable debug trace logging"`
 }
 
+func NewArtifactsUploaderCommand() cli.Command {
+	return common.NewCommand(
+		"artifacts-uploader",
+		"create and upload build artifacts (internal)",
+		&ArtifactsUploaderCommand{
+			network: network.NewGitLabClient(),
+			Name:    "artifacts",
+		},
+	)
+}
+
 func (c *ArtifactsUploaderCommand) artifactFilename(name string, format common.ArtifactFormat) string {
 	name = filepath.Base(name)
 	if name == "" || name == "." {
@@ -250,15 +261,4 @@ func (c *ArtifactsUploaderCommand) normalizeArgs() {
 			c.Exclude[idx] = path
 		}
 	}
-}
-
-func init() {
-	common.RegisterCommand(
-		"artifacts-uploader",
-		"create and upload build artifacts (internal)",
-		&ArtifactsUploaderCommand{
-			network: network.NewGitLabClient(),
-			Name:    "artifacts",
-		},
-	)
 }

@@ -144,7 +144,9 @@ func Test_URFavArgParsing(t *testing.T) {
 	app.Name = "gitlab-runner-helper"
 	app.Usage = "a GitLab Runner Helper"
 	app.Version = common.AppVersion.ShortLine()
-	app.Commands = common.GetCommands()
+	app.Commands = []cli.Command{
+		NewArtifactsDownloaderCommand(),
+	}
 
 	jobToken := "-Abajdbajdbajb"
 

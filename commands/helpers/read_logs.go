@@ -100,6 +100,14 @@ type ReadLogsCommand struct {
 	readerBufferSize  int
 }
 
+func NewReadLogsCommand() cli.Command {
+	return common.NewCommand(
+		"read-logs",
+		"reads job logs from a file, used by kubernetes executor (internal)",
+		newReadLogsCommand(),
+	)
+}
+
 func newReadLogsCommand() *ReadLogsCommand {
 	return &ReadLogsCommand{
 		logOutputWriter:  &streamLogOutputWriter{stream: os.Stdout},
@@ -177,12 +185,4 @@ func (c *ReadLogsCommand) openFileReader() (readSeekCloser, *bufio.Reader, error
 	}
 
 	return s, bufio.NewReaderSize(s, c.readerBufferSize), nil
-}
-
-func init() {
-	common.RegisterCommand(
-		"read-logs",
-		"reads job logs from a file, used by kubernetes executor (internal)",
-		newReadLogsCommand(),
-	)
 }

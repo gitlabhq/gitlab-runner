@@ -47,6 +47,19 @@ type CacheArchiverCommand struct {
 	mux    *blob.URLMux
 }
 
+func NewCacheArchiverCommand() cli.Command {
+	return common.NewCommand(
+		"cache-archiver",
+		"create and upload cache artifacts (internal)",
+		&CacheArchiverCommand{
+			retryHelper: retryHelper{
+				Retry:     2,
+				RetryTime: time.Second,
+			},
+		},
+	)
+}
+
 type metadata map[string]string
 
 func (m *metadata) UnmarshalFlag(raw string) error {
@@ -308,17 +321,4 @@ func split(raw []string) map[string]string {
 	}
 
 	return data
-}
-
-func init() {
-	common.RegisterCommand(
-		"cache-archiver",
-		"create and upload cache artifacts (internal)",
-		&CacheArchiverCommand{
-			retryHelper: retryHelper{
-				Retry:     2,
-				RetryTime: time.Second,
-			},
-		},
-	)
 }

@@ -23,6 +23,12 @@ type ResetTokenCommand struct {
 	PAT        string `long:"pat" description:"Personal access token to use in lieu of runner's old authentication token"`
 }
 
+func NewResetTokenCommand() cli.Command {
+	return common.NewCommand("reset-token", "reset a runner's token", &ResetTokenCommand{
+		network: network.NewGitLabClient(),
+	})
+}
+
 func (c *ResetTokenCommand) resetAllRunnerTokens(cfg *common.Config) {
 	logrus.Warningln("Resetting all runner authentication tokens")
 	for _, r := range cfg.Runners {
@@ -94,10 +100,4 @@ func (c *ResetTokenCommand) Execute(_context *cli.Context) {
 	}
 
 	log.Println("Updated")
-}
-
-func init() {
-	common.RegisterCommand("reset-token", "reset a runner's token", &ResetTokenCommand{
-		network: network.NewGitLabClient(),
-	})
 }

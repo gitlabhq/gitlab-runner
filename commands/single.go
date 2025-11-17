@@ -236,8 +236,8 @@ func (r *RunSingleCommand) getShutdownTimeout() time.Duration {
 	return common.DefaultShutdownTimeout
 }
 
-func init() {
-	common.RegisterCommand("run-single", "start single runner", &RunSingleCommand{
+func NewRunSingleCommand() cli.Command {
+	return common.NewCommand("run-single", "start single runner", &RunSingleCommand{
 		network: network.NewGitLabClient(),
 	})
 }

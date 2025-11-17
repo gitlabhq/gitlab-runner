@@ -152,6 +152,24 @@ type RunCommand struct {
 	runnerWorkerProcessingFailure *prometheus.CounterVec
 }
 
+func NewRunCommand() cli.Command {
+	apiRequestsCollector := network.NewAPIRequestsCollector()
+
+	cmd := &RunCommand{
+		ServiceName:          defaultServiceName,
+		network:              network.NewGitLabClient(network.WithAPIRequestsCollector(apiRequestsCollector)),
+		apiRequestsCollector: apiRequestsCollector,
+		prometheusLogHook:    prometheus_helper.NewLogHook(),
+		failuresCollector:    prometheus_helper.NewFailuresCollector(),
+		healthHelper:         newHealthHelper(),
+		buildsHelper:         newBuildsHelper(),
+		runAt:                runAt,
+		reloadConfigInterval: common.ReloadConfigInterval,
+	}
+
+	return common.NewCommand("run", "run multi runner service", cmd)
+}
+
 func (mr *RunCommand) log() *logrus.Entry {
 	config := mr.configfile.Config()
 	concurrent := 0
@@ -1498,24 +1516,6 @@ func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 	mr.runnerWorkerSlots.Collect(ch)
 	mr.runnerWorkerSlotOperations.Collect(ch)
 	mr.runnerWorkerProcessingFailure.Collect(ch)
-}
-
-func init() {
-	apiRequestsCollector := network.NewAPIRequestsCollector()
-
-	cmd := &RunCommand{
-		ServiceName:          defaultServiceName,
-		network:              network.NewGitLabClient(network.WithAPIRequestsCollector(apiRequestsCollector)),
-		apiRequestsCollector: apiRequestsCollector,
-		prometheusLogHook:    prometheus_helper.NewLogHook(),
-		failuresCollector:    prometheus_helper.NewFailuresCollector(),
-		healthHelper:         newHealthHelper(),
-		buildsHelper:         newBuildsHelper(),
-		runAt:                runAt,
-		reloadConfigInterval: common.ReloadConfigInterval,
-	}
-
-	common.RegisterCommand("run", "run multi runner service", cmd)
 }
 
 func (mr *RunCommand) checkConfigConcurrency(config *common.Config) {

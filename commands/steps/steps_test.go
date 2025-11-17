@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/steps"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/step-runner/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -400,7 +399,9 @@ func TestCli(t *testing.T) {
 // With that, we can check on certain aspects of how commands are registered.
 func beCliApp(args ...string) int {
 	app := cli.NewApp()
-	app.Commands = common.GetCommands()
+	app.Commands = []cli.Command{
+		steps.NewCommand(),
+	}
 	app.CommandNotFound = func(ctx *cli.Context, s string) {
 		fmt.Fprintf(os.Stderr, "command not found: %s", s)
 		os.Exit(-2)

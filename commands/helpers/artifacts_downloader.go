@@ -28,6 +28,20 @@ type ArtifactsDownloaderCommand struct {
 	StagingDir     string `long:"archiver-staging-dir" env:"ARCHIVER_STAGING_DIR" description:"Directory to stage artifact archives"`
 }
 
+func NewArtifactsDownloaderCommand() cli.Command {
+	return common.NewCommand(
+		"artifacts-downloader",
+		"download and extract build artifacts (internal)",
+		&ArtifactsDownloaderCommand{
+			network: network.NewGitLabClient(),
+			retryHelper: retryHelper{
+				Retry:     2,
+				RetryTime: time.Second,
+			},
+		},
+	)
+}
+
 func (c *ArtifactsDownloaderCommand) directDownloadFlag(retry int) *bool {
 	// We want to send `?direct_download=true`
 	// Use direct download only on a first attempt
@@ -156,18 +170,4 @@ func openArchive(filename string) (*os.File, int64, archive.Format, error) {
 	}
 
 	return f, fi.Size(), format, nil
-}
-
-func init() {
-	common.RegisterCommand(
-		"artifacts-downloader",
-		"download and extract build artifacts (internal)",
-		&ArtifactsDownloaderCommand{
-			network: network.NewGitLabClient(),
-			retryHelper: retryHelper{
-				Retry:     2,
-				RetryTime: time.Second,
-			},
-		},
-	)
 }

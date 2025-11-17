@@ -20,6 +20,12 @@ type VerifyCommand struct {
 	DeleteNonExisting bool   `long:"delete" description:"Delete no longer existing runners?"`
 }
 
+func NewVerifyCommand() cli.Command {
+	return common.NewCommand("verify", "verify all registered runners", &VerifyCommand{
+		network: network.NewGitLabClient(),
+	})
+}
+
 //nolint:gocognit
 func (c *VerifyCommand) Execute(context *cli.Context) {
 	userModeWarning(true)
@@ -73,10 +79,4 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		logrus.Fatalln("Failed to update", c.ConfigFile, err)
 	}
 	logrus.Println("Updated", c.ConfigFile)
-}
-
-func init() {
-	common.RegisterCommand("verify", "verify all registered runners", &VerifyCommand{
-		network: network.NewGitLabClient(),
-	})
 }

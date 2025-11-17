@@ -96,6 +96,10 @@ type RegisterCommand struct {
 	common.RunnerConfig
 }
 
+func NewRegisterCommand() cli.Command {
+	return common.NewCommand("register", "register a new runner", newRegisterCommand())
+}
+
 type AccessLevel string
 
 const (
@@ -595,8 +599,4 @@ func accessLevelValid(levels []AccessLevel, givenLevel AccessLevel) bool {
 	}
 
 	return false
-}
-
-func init() {
-	common.RegisterCommand("register", "register a new runner", newRegisterCommand())
 }

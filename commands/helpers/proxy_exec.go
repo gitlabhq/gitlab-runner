@@ -28,6 +28,14 @@ type ProxyExecCommand struct {
 	TempDir   string `long:"temp-dir" description:"temporary directory"`
 }
 
+func NewProxyExecCommand() cli.Command {
+	return common.NewCommand(
+		"proxy-exec",
+		"execute internal commands (internal)",
+		&ProxyExecCommand{},
+	)
+}
+
 type Proxy struct {
 	store   *store.Store
 	addmask *addmask.AddMask
@@ -155,12 +163,4 @@ func bootstrap(dst string) error {
 	}
 
 	return nil
-}
-
-func init() {
-	common.RegisterCommand(
-		"proxy-exec",
-		"execute internal commands (internal)",
-		&ProxyExecCommand{},
-	)
 }
