@@ -65,7 +65,7 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (*client, error
 		return c, nil
 	}
 
-	c, err := newClient(credentials, n.apiRequestsCollector, WithMaxAge(n.connectionMaxAge))
+	c, err := newClient(credentials, n.apiRequestsCollector, withMaxAge(n.connectionMaxAge))
 	if err != nil {
 		return nil, fmt.Errorf("new client: %w", err)
 	}

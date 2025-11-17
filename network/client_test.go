@@ -1059,7 +1059,7 @@ func TestWithMaxAge(t *testing.T) {
 	for _, tc := range testCases {
 		c := &client{}
 
-		WithMaxAge(tc.age)(c)
+		withMaxAge(tc.age)(c)
 
 		assert.Equal(t, c.connectionMaxAge, tc.age)
 	}

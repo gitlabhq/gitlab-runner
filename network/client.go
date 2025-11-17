@@ -529,7 +529,7 @@ func (n *client) findCertificate(certificate *string, base string, name string) 
 	}
 }
 
-func WithMaxAge(connectionMaxAge time.Duration) Option {
+func withMaxAge(connectionMaxAge time.Duration) Option {
 	return func(c *client) {
 		c.connectionMaxAge = connectionMaxAge
 	}
