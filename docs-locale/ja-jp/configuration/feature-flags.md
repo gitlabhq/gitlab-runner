@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: GitLab Runnerの機能フラグ
 ---
@@ -11,7 +11,7 @@ title: GitLab Runnerの機能フラグ
 
 {{< /alert >}}
 
-機能フラグは、特定の機能を有効または無効にできる切替です。機能フラグは通常、次の機能に対して使用されます。
+機能フラグは、特定の機能を有効または無効を切り替えることができる仕組みです。機能フラグは通常、次の機能に対して使用されます:
 
 - ボランティアがテストできるベータ機能のうち、すべてのユーザーに対して有効にできる状態ではない機能。
 
@@ -23,7 +23,7 @@ title: GitLab Runnerの機能フラグ
 
   そのような場合、機能フラグを使用して、オンデマンドで古い動作から新しい動作に切り替えることができます。これにより、ユーザーは製品の新しいバージョンを採用し、古い動作から新しい動作へのスムーズで永続的な移行を計画するための時間を確保できます。
 
-機能フラグは、環境変数を使用して切り替えます。次のように設定します。
+機能フラグは、環境変数を使用して切り替えます。次のように設定します:
 
 - 機能フラグを有効にするには、対応する環境変数を`"true"`または`1`に設定します。
 - 機能フラグを無効にするには、対応する環境変数を`"false"`または`0`に設定します。
@@ -89,7 +89,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 
 ## パイプライン設定で機能フラグを有効にする {#enable-feature-flag-in-pipeline-configuration}
 
-[CI変数](https://docs.gitlab.com/ci/variables/)を使用して機能フラグを有効にできます。
+[CI/CD変数](https://docs.gitlab.com/ci/variables/)を使用して機能フラグを有効にできます:
 
 - パイプライン内のすべてのジョブ（グローバル）:
 
@@ -111,7 +111,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 
 ## Runner環境変数で機能フラグを有効にする {#enable-feature-flag-in-runner-environment-variables}
 
-Runnerが実行するすべてのジョブで機能を有効にするには、[Runner設定](advanced-configuration.md)で機能フラグを[`environment`](advanced-configuration.md#the-runners-section)変数として指定します。
+Runnerが実行するすべてのジョブで機能を有効にするには、[Runner設定](advanced-configuration.md)で機能フラグを[`environment`](advanced-configuration.md#the-runners-section)変数として指定します:
 
 ```toml
 [[runners]]

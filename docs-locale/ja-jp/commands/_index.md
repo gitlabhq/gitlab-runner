@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: GitLab Runnerのコマンド
 ---
@@ -14,13 +14,13 @@ title: GitLab Runnerのコマンド
 
 GitLab Runnerには、ビルドの登録、管理、実行に使用する一連のコマンドがあります。
 
-コマンドのリストは、以下を実行して確認できます。
+コマンドのリストは、以下を実行して確認できます:
 
 ```shell
 gitlab-runner --help
 ```
 
-コマンドの後に`--help`を付加すると、そのコマンドに固有のヘルプページが表示されます。
+コマンドの後に`--help`を付加すると、そのコマンドに固有のヘルプページが表示されます:
 
 ```shell
 gitlab-runner <command> --help
@@ -30,13 +30,13 @@ gitlab-runner <command> --help
 
 ほとんどのコマンドは、コマンドへ設定を渡す方法として環境変数をサポートしています。
 
-特定のコマンドに対して`--help`を呼び出すと、環境変数の名前を確認できます。たとえば、`run`コマンドのヘルプメッセージは次のようになります。
+特定のコマンドに対して`--help`を呼び出すと、環境変数の名前を確認できます。たとえば、`run`コマンドのヘルプメッセージは次のようになります:
 
 ```shell
 gitlab-runner run --help
 ```
 
-出力は次のようになります。
+出力は次のようになります:
 
 ```plaintext
 NAME:
@@ -53,7 +53,7 @@ OPTIONS:
 
 未定義の動作またはエラーの原因を調べる場合は、デバッグモードを使用します。
 
-コマンドをデバッグモードで実行するには、コマンドの先頭に`--debug`を追加します。
+コマンドをデバッグモードで実行するには、コマンドの先頭に`--debug`を追加します:
 
 ```shell
 gitlab-runner --debug <command>
@@ -63,7 +63,7 @@ gitlab-runner --debug <command>
 
 GitLab Runnerの設定にアクセスするコマンドは、スーパーユーザー（`root`）として実行する場合には動作が異なります。ファイルの場所は、コマンドを実行するユーザーに応じて異なります。
 
-`gitlab-runner`コマンドを実行すると、実行中のモードが表示されます。
+`gitlab-runner`コマンドを実行すると、実行中のモードが表示されます:
 
 ```shell
 $ gitlab-runner run
@@ -74,7 +74,7 @@ WARN[0000] Use sudo for system-mode:
 WARN[0000] $ sudo gitlab-runner...
 ```
 
-`user-mode`が使用するモードであると確信できる場合は、このモードを使用してください。それ以外の場合は、コマンドの先頭に`sudo`を付加します。
+`user-mode`が使用するモードであると確信できる場合は、このモードを使用してください。それ以外の場合は、コマンドの先頭に`sudo`を付加します:
 
 ```shell
 $ sudo gitlab-runner run
@@ -89,32 +89,32 @@ Windowsの場合、コマンドプロンプトを管理者として実行する�
 
 GitLab Runnerの設定では[TOML](https://github.com/toml-lang/toml)形式が使用されます。
 
-編集するファイルは次の場所にあります。
+編集するファイルは次の場所にあります:
 
 1. \*nixシステムでGitLab Runnerがスーパーユーザー（`root`）として実行されている場合は`/etc/gitlab-runner/config.toml`
-1. \*nix システムでGitLab Runnerが非rootユーザーとして実行されている場合は`~/.gitlab-runner/config.toml`
+1. \*nixシステムでGitLab Runnerが非rootユーザーとして実行されている場合は`~/.gitlab-runner/config.toml`
 1. その他のシステムでは`./config.toml`
 
 ほとんどのコマンドは、カスタム設定ファイルを指定する引数を受け入れるため、1つのマシンで複数の異なる設定を持つことができます。カスタム設定ファイルを指定するには、`-c`または`--config`フラグを使用するか、`CONFIG_FILE`環境変数を使用します。
 
 ## シグナル {#signals}
 
-システムシグナルを使用してGitLab Runnerを操作できます。以下のコマンドは、以下のシグナルをサポートしています。
+システムシグナルを使用してGitLab Runnerを操作できます。以下のコマンドは、以下のシグナルをサポートしています:
 
 | コマンド             | シグナル              | アクション |
 |---------------------|---------------------|--------|
 | `register`          | `SIGINT`            | Runnerの登録をキャンセルし、すでに登録されている場合は削除します。 |
-| `run`、`run-single` | `SIGINT`、`SIGTERM` | 実行中のすべてのビルドを中断し、できるだけ早く終了します。すぐに終了するには2回使用します（**強制シャットダウン**）。 |
-| `run`、`run-single` | `SIGQUIT`           | 新しいビルドの受け入れを停止します。実行中のビルドが完了したらすぐに終了します（**正常なシャットダウン**）。 |
+| `run`、`run-single` | `SIGINT`、`SIGTERM` | 実行中のすべてのビルドを中断し、できるだけ早く終了します。すぐに終了するには2回使用します（**forceful shutdown**（強制シャットダウン））。 |
+| `run`、`run-single` | `SIGQUIT`           | 新しいビルドの受け入れを停止します。実行中のビルドが完了したらすぐに終了します（**graceful shutdown**（正常なシャットダウン））。 |
 | `run`               | `SIGHUP`            | 設定ファイルを強制的に再読み込みします。 |
 
-たとえばRunnerの設定ファイルを強制的に再読み込みするには、次のように実行します。
+たとえばRunnerの設定ファイルを強制的に再読み込みするには、次のように実行します:
 
 ```shell
 sudo kill -SIGHUP <main_runner_pid>
 ```
 
-[正常なシャットダウン](#gitlab-runner-stop-doesnt-shut-down-gracefully)の場合は次のようになります。
+[正常なシャットダウン](#gitlab-runner-stop-doesnt-shut-down-gracefully)の場合は次のようになります:
 
 ```shell
 sudo kill -SIGQUIT <main_runner_pid>
@@ -122,7 +122,7 @@ sudo kill -SIGQUIT <main_runner_pid>
 
 {{< alert type="warning" >}}
 
-`shell`または`docker` executorを使用している場合は、正常なシャットダウンのために`killall`または`pkill`を**使用しないでください**。これによりサブプロセスも強制終了されるため、シグナルが不適切に処理される可能性があります。ジョブを処理するメインプロセスでのみ使用してください。
+`shell`または`docker` executorを使用している場合は、正常なシャットダウンのために`killall`または`pkill`を**not**（使用しないでください）。これによりサブプロセスも強制終了されるため、シグナルが不適切に処理される可能性があります。ジョブを処理するメインプロセスでのみ使用してください。
 
 {{< /alert >}}
 
@@ -130,7 +130,7 @@ sudo kill -SIGQUIT <main_runner_pid>
 
 ## コマンドの概要 {#commands-overview}
 
-引数を指定せずに`gitlab-runner`を実行すると、次のように表示されます。
+引数を指定せずに`gitlab-runner`を実行すると、次のように表示されます:
 
 ```plaintext
 NAME:
@@ -193,7 +193,7 @@ GLOBAL OPTIONS:
 - [`gitlab-runner verify`](#gitlab-runner-verify)
 - [`gitlab-runner unregister`](#gitlab-runner-unregister)
 
-これらのコマンドでは次の引数がサポートされています。
+これらのコマンドでは次の引数がサポートされています:
 
 | パラメータ  | デフォルト                                                   | 説明 |
 |------------|-----------------------------------------------------------|-------------|
@@ -205,7 +205,7 @@ GLOBAL OPTIONS:
 
 登録されたRunnerは[設定ファイル](#configuration-file)に追加されます。1つのGitLab Runnerインストールで複数の設定を使用できます。`gitlab-runner register`を実行すると、新しい設定エントリが追加されます。以前のエントリは削除されません。
 
-Runnerは次のいずれかの方法で登録できます。
+Runnerは次のいずれかの方法で登録できます:
 
 - インタラクティブ
 - 非インタラクティブ
@@ -220,13 +220,13 @@ RunnerはGitLab [Runners API](https://docs.gitlab.com/api/runners/#register-a-ne
 
 このコマンドは通常、インタラクティブモード（**デフォルト**）で使用されます。Runnerの登録中に複数の質問が表示されます。
 
-この質問に対する回答を事前に入力するには、登録コマンドの呼び出し時に引数を追加します。
+この質問に対する回答を事前に入力するには、登録コマンドの呼び出し時に引数を追加します:
 
 ```shell
 gitlab-runner register --name my-runner --url "http://gitlab.example.com" --token my-authentication-token
 ```
 
-あるいは`register`コマンドよりも前に環境変数を設定します。
+あるいは`register`コマンドよりも前に環境変数を設定します:
 
 ```shell
 export CI_SERVER_URL=http://gitlab.example.com
@@ -235,7 +235,7 @@ export CI_SERVER_TOKEN=my-authentication-token
 gitlab-runner register
 ```
 
-設定可能なすべての引数と環境を確認するには、以下を実行します。
+設定可能なすべての引数と環境を確認するには、以下を実行します:
 
 ```shell
 gitlab-runner register --help
@@ -245,13 +245,13 @@ gitlab-runner register --help
 
 非インタラクティブ/無人モードで登録を使用することができます。
 
-登録コマンドの呼び出し時に引数を指定できます。
+登録コマンドの呼び出し時に引数を指定できます:
 
 ```shell
 gitlab-runner register --non-interactive <other-arguments>
 ```
 
-あるいは`register`コマンドよりも前に環境変数を設定します。
+あるいは`register`コマンドよりも前に環境変数を設定します:
 
 ```shell
 <other-environment-variables>
@@ -281,7 +281,7 @@ gitlab-runner register
 
 ### `gitlab-runner verify` {#gitlab-runner-verify}
 
-このコマンドは、登録されたRunnerがGitLabに接続できることを確認します。ただし、RunnerがGitLab Runner サービスで使用されているかどうかは検証しません。出力例を次に示します。
+このコマンドは、登録されたRunnerがGitLabに接続できることを確認します。ただし、RunnerがGitLab Runnerサービスで使用されているかどうかは検証しません。出力例を次に示します:
 
 ```plaintext
 Verifying runner... is alive                        runner=fee9938e
@@ -306,7 +306,7 @@ gitlab-runner verify --delete
 
 このコマンドは、GitLab [Runners API](https://docs.gitlab.com/api/runners/#delete-a-runner)を使用して、登録されているRunnerを登録解除します。
 
-次のいずれかを指定する必要があります。
+次のいずれかを指定する必要があります:
 
 - 完全なURLとRunnerのトークン。
 - Runnerの名前。
@@ -322,7 +322,7 @@ RunnerはGitLab [Runners API](https://docs.gitlab.com/api/runners/#delete-a-runn
 - Runner登録トークンを使用してRunnerが作成された場合、Runner認証トークンを指定した`gitlab-runner unregister`を実行すると、Runnerが削除されます。
 - RunnerがGitLab UIまたはRunners APIで作成された場合、Runner認証トークンを指定して`gitlab-runner unregister`を実行すると、Runnerマネージャーが削除されますが、Runnerは削除されません。Runnerを完全に削除するには、[Runner管理ページでRunnerを削除する](https://docs.gitlab.com/ci/runners/runners_scope/#delete-instance-runners)か、[`DELETE /runners`](https://docs.gitlab.com/api/runners/#delete-a-runner) REST APIエンドポイントを使用します。
 
-1つのRunnerを登録解除するには、まず`gitlab-runner list`を実行してRunnerの詳細を取得します。
+1つのRunnerを登録解除するには、まず`gitlab-runner list`を実行してRunnerの詳細を取得します:
 
 ```plaintext
 test-runner     Executor=shell Token=t0k3n URL=http://gitlab.example.com
@@ -364,7 +364,7 @@ gitlab-runner unregister --all-runners
 
 このコマンドはGitLab Runners APIを使用して、[Runner ID](https://docs.gitlab.com/api/runners/#reset-runners-authentication-token-by-using-the-runner-id)または[現在のトークン](https://docs.gitlab.com/api/runners/#reset-runners-authentication-token-by-using-the-current-token)のいずれかでRunnerのトークンをリセットします。
 
-Runnerの名前（またはURLとID）が必要です。Runner IDでリセットする場合はオプションのパーソナルアクセストークン（PAT）が必要です。パーソナルアクセストークン（PAT）とRunner IDは、トークンがすでに期限切れになっている場合に使用することを目的としています。
+Runnerの名前（またはURLとID）が必要です。Runner IDでリセットする場合はオプションのPATが必要です。PATとRunner IDは、トークンがすでに期限切れになっている場合に使用することを目的としています。
 
 `--all-runners`オプションを使用すると、アタッチされているRunnerのすべてのトークンがリセットされます。
 
@@ -374,13 +374,13 @@ Runnerの名前（またはURLとID）が必要です。Runner IDでリセット
 gitlab-runner reset-token --name test-runner
 ```
 
-#### パーソナルアクセストークン（PAT）とRunner名を使用 {#with-pat-and-runner-name}
+#### PATとRunner名を使用 {#with-pat-and-runner-name}
 
 ```shell
 gitlab-runner reset-token --name test-runner --pat PaT
 ```
 
-#### パーソナルアクセストークン（PAT）、GitLab URL、およびRunner IDを使用 {#with-pat-gitlab-url-and-runner-id}
+#### PAT、GitLab URL、およびRunner IDを使用 {#with-pat-gitlab-url-and-runner-id}
 
 ```shell
 gitlab-runner reset-token --url "https://gitlab.example.com/" --id 12345 --pat PaT
@@ -403,9 +403,9 @@ gitlab-runners reset-token --all-runners
 - [`gitlab-runner restart`](#gitlab-runner-restart)
 - [`gitlab-runner status`](#gitlab-runner-status)
 - [複数のサービス](#multiple-services)
-- サービス関連コマンドの実行時に[**アクセスが拒否される**](#access-denied-when-running-the-service-related-commands)
+- サービス関連コマンドの実行時に[**アクセスが拒否されました**](#access-denied-when-running-the-service-related-commands)
 
-すべてのサービス関連コマンドは、次の引数を受け入れます。
+すべてのサービス関連コマンドは、次の引数を受け入れます:
 
 | パラメータ        | デフォルト                                           | 説明 |
 |------------------|---------------------------------------------------|-------------|
@@ -417,14 +417,14 @@ gitlab-runners reset-token --all-runners
 
 このコマンドは、GitLab Runnerをサービスとしてインストールします。受け入れられる引数のセットは、実行するシステムに応じて異なります。
 
-**Windows**で実行する場合、またはスーパーユーザーとして実行する場合は、`--user`フラグが受け入れられます。このフラグにより、**Shell** executorで実行されるビルドの権限を削除できます。
+**Windows**（Windows）で実行する場合、またはスーパーユーザーとして実行する場合は、`--user`フラグが受け入れられます。このフラグにより、**shell**（Shell） executorで実行されるビルドの権限を削除できます。
 
 | パラメータ             | デフォルト                                           | 説明 |
 |-----------------------|---------------------------------------------------|-------------|
 | `--service`           | `gitlab-runner`                                   | 使用するサービス名を指定します |
 | `--config`            | [設定ファイル](#configuration-file)を参照 | 使用するカスタム設定ファイルを指定します |
 | `--syslog`            | `true`（systemd以外のシステムの場合）                  | サービスをシステムログ生成サービスと統合するかどうかを指定します |
-| `--working-directory` | 現在のディレクトリ                             | **Shell** executorを使用してビルドを実行するときにすべてのデータを保存するルートディレクトリを指定します |
+| `--working-directory` | 現在のディレクトリ                             | **shell**（Shell） executorを使用してビルドを実行するときにすべてのデータを保存するルートディレクトリを指定します |
 | `--user`              | `root`                                            | ビルドを実行するユーザーを指定します |
 | `--password`          | なし                                              | ビルドを実行するユーザーのパスワードを指定します |
 
@@ -471,7 +471,7 @@ gitlab-runners reset-token --all-runners
 | パラメータ             | デフォルト                                       | 説明 |
 |-----------------------|-----------------------------------------------|-------------|
 | `--config`            | [設定ファイル](#configuration-file)を参照 | 使用するカスタム設定ファイルを指定します |
-| `--working-directory` | 現在のディレクトリ                         | **Shell** executorを使用してビルドを実行するときにすべてのデータを保存するルートディレクトリを指定します |
+| `--working-directory` | 現在のディレクトリ                         | **shell**（Shell） executorを使用してビルドを実行するときにすべてのデータを保存するルートディレクトリを指定します |
 | `--user`              | 現在のユーザー                              | ビルドを実行するユーザーを指定します |
 | `--syslog`            | `false`                                       | すべてのログをSysLog（Unix）またはEventLog（Windows）に送信します |
 | `--listen-address`    | 空                                         | PrometheusメトリクスHTTPサーバーがリッスンするアドレス（`<host>:<port>`） |
@@ -484,21 +484,21 @@ gitlab-runners reset-token --all-runners
 
 {{< /history >}}
 
-1つのGitLabインスタンスから1つのビルドを実行するには、この補助コマンドを使用します。このコマンドでは次のことができます。
+1つのGitLabインスタンスから1つのビルドを実行するには、この補助コマンドを使用します。このコマンドでは次のことができます:
 
-- GitLab URLやRunnerトークンなど、すべてのオプションをCLIパラメータまたは環境変数として取ります。たとえば、すべてのパラメータが明示的に指定されたシングルジョブの場合は次のようになります。
+- GitLab URLやRunnerトークンなど、すべてのオプションをCLIパラメータまたは環境変数として取ります。たとえば、すべてのパラメータが明示的に指定されたシングルジョブの場合は次のようになります:
 
   ```shell
   gitlab-runner run-single -u http://gitlab.example.com -t my-runner-token --executor docker --docker-image ruby:3.3
   ```
 
-- 設定ファイルを読み取って、特定のRunnerの設定を使用します。たとえば、設定ファイルが指定されたシングルジョブの場合は次のようになります。
+- 設定ファイルを読み取って、特定のRunnerの設定を使用します。たとえば、設定ファイルが指定されたシングルジョブの場合は次のようになります:
 
   ```shell
   gitlab-runner run-single -c ~/.gitlab-runner/config.toml -r runner-name
   ```
 
-`--help`フラグを使用すると、使用可能なすべての設定オプションを確認できます。
+`--help`フラグを使用すると、使用可能なすべての設定オプションを確認できます:
 
 ```shell
 gitlab-runner run-single --help
@@ -532,20 +532,20 @@ GitLabからアーティファクトアーカイブをダウンロードしま�
 
 よくある落とし穴のいくつかについて説明します。
 
-### サービス関連コマンドの実行時に**アクセスが拒否される** {#access-denied-when-running-the-service-related-commands}
+### サービス関連コマンドの実行時に**アクセスが拒否されました** {#access-denied-when-running-the-service-related-commands}
 
-通常、[サービス関連コマンド](#service-related-commands)を実行するには管理者権限が必要です。
+通常、[サービス関連コマンド](#service-related-commands)を実行するには管理者権限が必要です:
 
 - Unix（Linux、macOS、FreeBSD）システムでは、`gitlab-runner`の前に`sudo`を付加します
-- Windowsシステムでは、管理者権限でのコマンドプロンプトを使用します。`Administrator`コマンドプロンプトを実行します。Windowsの検索フィールドに`Command Prompt`を書き込むには、右クリックして`Run as administrator`を選択します。管理者権限でのコマンドプロンプトを実行することを確認します。
+- Windowsシステムでは、管理者権限でのコマンドプロンプトを使用します。`Administrator`コマンドプロンプトを実行します。Windowsの検索ボックスに`Command Prompt`を書き込むには、右クリックして`Run as administrator`を選択します。管理者権限でのコマンドプロンプトを実行することを確認します。
 
 ## `gitlab-runner stop`が正常にシャットダウンしない {#gitlab-runner-stop-doesnt-shut-down-gracefully}
 
 GitLab Runnerがホストにインストールされており、ローカルexecutorを実行すると、アーティファクトのダウンロードやアップロード、キャッシュの処理などの操作のために追加のプロセスが開始されます。これらのプロセスは`gitlab-runner`コマンドとして実行されます。つまり、`pkill -QUIT gitlab-runner`または`killall QUIT gitlab-runner`を使用してプロセスを強制終了できます。プロセスを強制終了すると、プロセスが担当するオペレーションが失敗します。
 
-これを防ぐには、次の2つの方法があります。
+これを防ぐには、次の2つの方法があります:
 
-- kill（強制終了）シグナルとして`SIGQUIT`を使用して、Runnerをローカルサービス（`systemd`など）として登録し、`gitlab-runner stop`または`systemctl stop gitlab-runner.service`を使用します。この動作を有効にするための設定例を次に示します。
+- kill（強制終了）シグナルとして`SIGQUIT`を使用して、Runnerをローカルサービス（`systemd`など）として登録し、`gitlab-runner stop`または`systemctl stop gitlab-runner.service`を使用します。この動作を有効にするための設定例を次に示します:
 
   ```ini
   ; /etc/systemd/system/gitlab-runner.service.d/kill.conf
@@ -556,7 +556,7 @@ GitLab Runnerがホストにインストールされており、ローカルexec
 
   - 設定の変更を適用するには、このファイルを作成した後、`systemctl daemon-reload`を使用して`systemd`を再読み込みします。
 
-- `kill -SIGQUIT <pid>`を使用してプロセスを手動で強制終了します。メインの`gitlab-runner`プロセスの`pid`を確認する必要があります。これを確認するには、起動時に表示されるログを調べます。
+- `kill -SIGQUIT <pid>`を使用してプロセスを手動で強制終了します。メインの`gitlab-runner`プロセスの`pid`を確認する必要があります。これを確認するには、起動時に表示されるログを調べます:
 
   ```shell
   $ gitlab-runner run
