@@ -178,12 +178,10 @@ following solutions.
 >   ENV GIT_CONFIG_NOSYSTEM=
 >   ```
 
-<!-- markdownlint-disable line-length -->
+### Error with Windows batch scripts: `The system cannot find the batch label specified - buildscript`
 
-### I can't run Windows bash scripts; I'm getting `The system cannot find the batch label specified - buildscript`
-
-You need to prepend `call` to your Batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
-is a more complete example:
+You need to prepend `call` to your Batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`.
+For example:
 
 ```yaml
 before_script:
@@ -191,8 +189,6 @@ before_script:
 ```
 
 For more information, see [issue 1025](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1025).
-
-<!-- markdownlint-enable line-length -->
 
 ### How can I get colored output on the web terminal?
 
