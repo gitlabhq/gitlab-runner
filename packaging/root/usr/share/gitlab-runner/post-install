@@ -2,6 +2,28 @@
 
 set -e
 
+# Check if service management is available by testing gitlab-runner status.
+# This will fail if neither systemctl nor service commands are available.
+check_service_management() {
+  set +e
+  error_output=$(gitlab-runner status 2>&1)
+  status_exit_code=$?
+  set -e
+
+  # Check the error message to see if it's a service management issue
+  if [ $status_exit_code -eq 0 ]; then
+    # Command succeeded
+    return 0
+  fi
+
+  if echo "$error_output" | grep -q "executable file not found"; then
+    return 1
+  fi
+
+  # If status command works but returns non-zero (e.g., service not installed yet), that's fine
+  return 0
+}
+
 # detect user: first try to use gitlab_ci_multi_runner
 for USER in gitlab_ci_multi_runner gitlab-runner; do
   if id -u "$USER" >/dev/null 2>/dev/null; then
@@ -43,6 +65,16 @@ if [ -f $HOMEDIR/config.toml ] && [ ! -f /etc/gitlab-runner/config.toml ]; then
   echo "GitLab Runner: importing configuration to /etc/gitlab-runner/config.toml"
   cp $HOMEDIR/config.toml /etc/gitlab-runner/config.toml
   chmod 0600 /etc/gitlab-runner/config.toml
+fi
+
+# Verify service management is available before proceeding
+if ! check_service_management; then
+  echo "GitLab Runner: WARNING - Service management is not available on this system."
+  echo "GitLab Runner: Neither 'systemctl' nor 'service' command found."
+  echo "GitLab Runner: The runner binary has been installed, but automatic service setup is skipped."
+  echo "GitLab Runner: You may need to manually configure the runner or install a service manager."
+  echo "GitLab Runner: For systemd systems, install 'systemd'. For SysV init systems, install 'initscripts' or 'sysvinit-utils'."
+  exit 0
 fi
 
 # uninstall old service
