@@ -441,23 +441,22 @@ Without the role binding, the runner pod no longer has access.
 See [this issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/225)
 for details.
 
-<!-- markdownlint-disable line-length -->
+## Elasticsearch service startup error `max virtual memory areas vm.max_map_count [65530] is too low`
 
-## Elasticsearch service container startup error `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
+On startup of an Elasticsearch service container, you might receive an error simlar to:
+
+- `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
 
 Elasticsearch has a `vm.max_map_count` requirement that has to be set on the instance on which Elasticsearch is run.
-
 See the [Elasticsearch documentation](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-prod)
 for how to set this value correctly depending on the platform.
 
-## Error: `Preparing the "docker+machine" executor ERROR: Preparation failed: exit status 1 Will be retried in 3s`
+## Error: `Preparing the "docker+machine" executor ERROR: Preparation failed: exit status 1`
 
 This error can occur when the Docker machine is not able to successfully create the executor virtual machines. To get more information
 about the error, manually create the virtual machine with the same `MachineOptions` that you have defined in your `config.toml`.
 
 For example: `docker-machine create --driver=google --google-project=GOOGLE-PROJECT-ID --google-zone=GOOGLE-ZONE ...`.
-
-<!-- markdownlint-enable line-length -->
 
 ## Error: `No unique index found for name`
 

@@ -290,9 +290,7 @@ causes to why this happens:
    Then you can verify that `~/Library/LaunchAgents/gitlab-runner.plist` has
    `SessionCreate` set to `false`.
 
-<!-- markdownlint-disable line-length -->
-
-### Job error: `fatal: unable to access 'https://path:3000/user/repo.git/': Failed to connect to path port 3000: Operation timed out`
+### Job error: `Failed to connect to path port 3000: Operation timed out`
 
 If one of the jobs fails with this error, make sure the runner can connect to your GitLab instance. The connection could be blocked by things like:
 
@@ -301,7 +299,7 @@ If one of the jobs fails with this error, make sure the runner can connect to yo
 - permissions
 - routing configurations
 
-### `FATAL: Failed to start gitlab-runner: exit status 134` on `gitlab-runner start` command
+### Error: `FATAL: Failed to start gitlab-runner: exit status 134` on `gitlab-runner start` command
 
 This error indicates that the GitLab Runner service is not installed properly.
 Run the following commands to resolve the error:
@@ -320,9 +318,10 @@ Use the `ssh -L` option to enable SSH port forwarding to allow a remote desktop 
 You must also configure `AllowTcpForwarding yes` in the `/private/etc/ssh/sshd_config` on the AWS hosted macOS instance. Restart the instance to apply the change to the `sshd` configuration.
 After you sign in to the GUI, repeat the GitLab Runner troubleshooting steps from a terminal in the GUI to resolve the error.
 
-### `FATAL: Failed to start gitlab-runner: "launchctl" failed with stderr: Load failed: 5: Input/output error` on `gitlab-runner start` command
+### Error: `"launchctl" failed with stderr: Load failed: 5: Input/output error`
 
-If this error is encountered when running the `gitlab-runner start` command, ensure that the directories specified in the `~/Library/LaunchAgents/gitlab-runner.plist` values `StandardOutPath` and `StandardErrorPath` exist:
+If this error is encountered when running the `gitlab-runner start` command, ensure that the directories specified in the
+`~/Library/LaunchAgents/gitlab-runner.plist` values `StandardOutPath` and `StandardErrorPath` exist:
 
 ```xml
 <key>StandardOutPath</key>
@@ -332,8 +331,6 @@ If this error is encountered when running the `gitlab-runner start` command, ens
 ```
 
 If the directories do not exist, create them and ensure that the runner service user has appropriate permissions to read and write to them.
-
-<!-- markdownlint-enable line-length -->
 
 ### Error: `Error on fetching TLS Data from API response... error  error=couldn't build CA Chain`
 
