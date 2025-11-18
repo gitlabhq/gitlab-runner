@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: Shell executor
 ---
@@ -28,7 +28,7 @@ GitLab RunnerがShell executorを使用するマシンで、[一般的な前提�
 
 プロジェクトのキャッシュは`<working-directory>/cache/<namespace>/<project-name>`に保存されます。
 
-各要素の内容は次のとおりです。
+各要素の内容は次のとおりです:
 
 - `<working-directory>`は、`gitlab-runner run`コマンドに渡された`--working-directory`の値、またはRunnerが実行されている現在のディレクトリです。
 - `<short-token>`は、Runnerのトークンの短縮バージョンです（最初の8文字）。
@@ -44,7 +44,7 @@ GitLab Runnerが[公式`.deb`パッケージまたは`.rpm`パッケージ](http
 
 すべてのShellビルドは、`gitlab-runner`ユーザーと`gitlab_ci_multi_runner`ユーザーのいずれかとして実行されます。
 
-一部のテストシナリオでは、ビルドがDocker EngineやVirtualBoxなどの特権リソースにアクセスすることが必要な場合があります。その場合は、`gitlab-runner`ユーザーをそれぞれのグループに追加する必要があります。
+一部のテストシナリオでは、ビルドがDocker EngineやVirtualBoxなどの特権リソースにアクセスすることが必要な場合があります。その場合は、`gitlab-runner`ユーザーをそれぞれのグループに追加する必要があります:
 
 ```shell
 usermod -aG docker gitlab-runner
@@ -53,7 +53,7 @@ usermod -aG vboxusers gitlab-runner
 
 ## Shellを選択する {#selecting-your-shell}
 
-GitLab Runnerは[特定のShellをサポートしています](../shells/_index.md)。Shellを選択するには、`config.toml`ファイルでそのShellを指定します。次に例を示します。
+GitLab Runnerは[特定のShellをサポートしています](../shells/_index.md)。Shellを選択するには、`config.toml`ファイルでそのShellを指定します。次に例を示します:
 
 ```toml
 ...
@@ -72,7 +72,7 @@ GitLab Runnerは[特定のShellをサポートしています](../shells/_index.
 
 Shell executorは各ジョブのスクリプトを、新しいプロセスで開始します。UNIXシステムでは、メインプロセスをプロセスグループとして設定します。
 
-GitLab Runnerは、次の場合にプロセスを終了します。
+GitLab Runnerは、次の場合にプロセスを終了します:
 
 - ジョブが[タイムアウトになった](https://docs.gitlab.com/ci/pipelines/settings/#set-a-limit-for-how-long-jobs-can-run)。
 - ジョブがキャンセルされた。

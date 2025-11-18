@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: executor
 ---
@@ -18,7 +18,7 @@ GitLab Runnerはさまざまなexecutorを実装しています。これらのex
 
 各executorでサポートされている機能の詳細については、[互換性チャート](#compatibility-chart)を参照してください。
 
-GitLab Runnerは次のexecutorを提供します。
+GitLab Runnerは次のexecutorを提供します:
 
 - [SSH](ssh.md)
 - [Shell](shell.md)
@@ -27,7 +27,7 @@ GitLab Runnerは次のexecutorを提供します。
 - [Docker](docker.md)
 - [Docker Autoscaler](docker_autoscaler.md)
 - [Docker Machine（オートスケーリング）](docker_machine.md)
-- [Kubernetes](../executors/kubernetes/_index.md)
+- [Kubernetes](kubernetes/_index.md)
 - [インスタンス](instance.md)
 - [カスタム](custom.md)
 
@@ -41,7 +41,7 @@ GitLab Runnerは次のexecutorを提供します。
 
 `git lfs install`を使用して、GitLab Runnerコマンドを実行するユーザーに対してGit LFSを初期化してください。システム全体でGit LFSを初期化するには、`git lfs install --system`を使用します。
 
-GitLabインスタンスとのGitインタラクションを認証するため、GitLab Runnerでは[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)を使用します。[FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)の設定によっては、Git認証情報のヘルパー（[Git認証情報マネージャー](https://github.com/git-ecosystem/git-credential-manager)など）がインストールされていて、認証情報をキャッシュに入れるように設定されている場合、最後に使用された認証情報がそのヘルパーのキャッシュに入れられることがあります。
+GitLabインスタンスとのGitインタラクションを認証するため、GitLab Runnerでは[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)を使用します。[FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)の設定によっては、Git認証情報のヘルパー（[Git認証情報マネージャー](https://github.com/git-ecosystem/git-credential-manager)など）がインストールされていて、認証情報をキャッシュに入れるように設定されている場合、最後に使用された認証情報がそのヘルパーのキャッシュに入れられることがあります:
 
 - [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)が`false`なら、最後に使用された[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)が、インストール済みのGit認証情報ヘルパーに保存されます。
 - [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)が`true`なら、[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)は、インストール済みのGit認証情報ヘルパーに保存されず、そのキャッシュに入れられることもありません。
@@ -125,13 +125,13 @@ SSH executorは完全性を期すために追加されましたが、サポー�
 
 ## 互換性チャート {#compatibility-chart}
 
-各種executorでサポートされている機能を以下に示します。
+各種executorでサポートされている機能を以下に示します:
 
 | executor                                     | SSH            | Shell          | VirtualBox      | Parallels      | Docker  | Docker Autoscaler | インスタンス       | Kubernetes | カスタム                                                       |
 |:---------------------------------------------|:--------------:|:--------------:|:--------------:|:--------------:|:-------:|:-----------------:|:--------------:| :---------:| :-----------------------------------------------------------:|
 | セキュア変数                             | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓                                                           |
-| `.gitlab-ci.yml`: イメージ                      | ✗              | ✗              | ✓（1）          | ✓（1）          | ✓       | ✗                 | ✗              | ✓          | ✓（[`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)を使用） |
-| `.gitlab-ci.yml`: サービス                   | ✗              | ✗              | ✗              | ✗              | ✓       | ✗                 | ✗              | ✓          | ✓      |
+| `.gitlab-ci.yml`: イメージ                      | ✗              | ✗              | ✓（1）          | ✓（1）          | ✓       | ✓                 | ✗              | ✓          | ✓（[`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)を使用） |
+| `.gitlab-ci.yml`: サービス                   | ✗              | ✗              | ✗              | ✗              | ✓       | ✓                 | ✗              | ✓          | ✓      |
 | `.gitlab-ci.yml`: キャッシュ                      | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓      |
 | `.gitlab-ci.yml`: アーティファクト                  | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓      |
 | ステージ間のアーティファクトの受け渡し             | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓      |
@@ -140,7 +140,7 @@ SSH executorは完全性を期すために追加されましたが、サポー�
 
 1. GitLab Runner 14.2でサポートが[追加](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1257)されました。詳細については、[ベースVMイメージの上書き](../configuration/advanced-configuration.md#overriding-the-base-vm-image)セクションを参照してください。
 
-各種Shellでサポートされているシステムを以下に示します。
+各種Shellでサポートされているシステムを以下に示します:
 
 | Shell  | Bash        | PowerShell Desktop | PowerShell Core | Windows Batch（非推奨） |
 |:-------:|:-----------:|:------------------:|:---------------:|:--------------------------:|
@@ -154,7 +154,7 @@ SSH executorは完全性を期すために追加されましたが、サポー�
 1. 新しいRunnerの登録時のデフォルトのShell。
 1. WindowsのBash Shellはサポートされていません。
 
-各種ShellによりサポートされているインタラクティブWebターミナルのシステムを以下に示します。
+各種ShellによりサポートされているインタラクティブWebターミナルのシステムを以下に示します:
 
 | Shell  | Bash        | PowerShell Desktop    | PowerShell Core    | Windows Batch（非推奨） |
 |:-------:|:-----------:|:---------------------:|:------------------:|:--------------------------:|
@@ -163,53 +163,37 @@ SSH executorは完全性を期すために追加されましたが、サポー�
 | macOS   | ✓           | ✗                     | ✗                  | ✗                          |
 | FreeBSD | ✓           | ✗                     | ✗                  | ✗                          |
 
-次の図は、オペレーティングシステムとプラットフォームに基づいてどのexecutorを選択すべきかを示しています。
-
 ```mermaid
-graph TD
-    Start[Which executor to choose?] --> BuildType{Autoscaling or No Autosclaing?}
-
-
-    BuildType -->|No| BuildType2{Container or OS Shell builds?}
-    BuildType-->|Yes| Platform{Platform}
-    BuildType2 -->|Shell| ShellOptions{Operating System}
-    BuildType2 -->|Container| ContainerOptions{Operating System}
-
-
-    Platform -->|Cloud Native| Kubernetes[Kubernetes]
-    Platform -->|Cloud VMs| OSType{Operating System}
-
-    OSType -->|Windows| WinExec{Executor Type}
-    OSType -->|macOS| MacExec{Executor Type}
-    OSType -->|Linux| LinuxExec{Executor Type}
-
-
-    WinExec --> AutoscalerWin[Fleeting: Docker Autoscaler Executor]
-    WinExec --> InstanceWin[Fleeting:Instance Executor]
-
-    MacExec --> AutoscalerMac[Fleeting: Docker Autoscaler Executor]
-    MacExec --> InstanceMac[Fleeting:Instance Executor]
-
-    LinuxExec --> AutoscalerLin[Fleeting: Docker Autoscaler Executor]
-    LinuxExec --> InstanceLin[Fleeting:Instance Executor]
-
-
-    ShellOptions -->|Linux| Linux_Shell[Bash;Zsh]
-    ShellOptions -->|macOS| MacOS[Bash;Zsh]
-    ShellOptions -->|Windows| Windows[Powershell 5.1; PowerShell 7.x]
-    ShellOptions -->|Remote Machine| SSH[SSH]
-
-
-    ContainerOptions -->|Linux| Linux_Shell2[Docker;Podman]
-    ContainerOptions -->|macOS| macOS2[Docker]
-    ContainerOptions -->|Windows| Windows2[Docker]
-
-    %% Styling
-    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
-    classDef decision fill:#e1f3fe,stroke:#333,stroke-width:2px;
-    classDef executor fill:#dcffe4,stroke:#333,stroke-width:2px;
-
-    class Start default;
-    class BuildType,BuildType2,Container,Scaling,AutoScale,NoAutoScale,ShellOptions,ContainerOptions,OSType,WinExec,MacExec,Platform,LinuxExec decision;
-    class Kubernetes,Docker,Custom,Shell,Windows,SSH,DockerMachineWin,AutoscalerWin,InstanceWin,DockerMachineMac,AutoscalerMac,InstanceMac,DockerMachineLin,AutoscalerLin,InstanceLin executor;
+flowchart LR
+    Start([Executor<br/>Selection]) --> Auto{Autoscaling?}
+    
+    Auto -->|YES| Platform{Platform?}
+    Auto -->|NO| BuildType{Build<br/>Type?}
+    
+    Platform -->|Cloud<br/>Native| K8s[Kubernetes]
+    Platform -->|Cloud<br/>VMs| OS1{OS?}
+    
+    OS1 -->|Linux| L1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
+    OS1 -->|macOS| M1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
+    OS1 -->|Windows| W1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
+    
+    BuildType -->|Container| OS2{OS?}
+    BuildType -->|Shell| OS3{OS?}
+    
+    OS2 -->|Linux| L2[Docker<br/>Podman]
+    OS2 -->|macOS| M2[Docker]
+    OS2 -->|Windows| W2[Docker]
+    
+    OS3 -->|Linux| L3[Bash<br/>Zsh]
+    OS3 -->|macOS| M3[Bash<br/>Zsh]
+    OS3 -->|Windows| W3[PowerShell 5.1<br/>PowerShell 7.x]
+    OS3 -->|Remote| R3[SSH]
+    
+    classDef question fill:#e1f3fe,stroke:#333,stroke-width:2px,color:#000
+    classDef result fill:#dcffe4,stroke:#333,stroke-width:2px,color:#000
+    classDef start fill:#f9f9f9,stroke:#fff,stroke-width:2px,color:#000
+    
+    class Start start;
+    class Auto,Platform,BuildType,OS1,OS2,OS3 question;
+    class K8s,L1,M1,W1,L2,M2,W2,L3,M3,W3,R3 result;
 ```
