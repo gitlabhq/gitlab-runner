@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: Docker Autoscaler executor
 ---
@@ -27,29 +27,29 @@ Docker Autoscalerは、[フリートプラグイン](https://gitlab.com/gitlab-o
 
 Docker Autoscaler executorは[Docker executor](docker.md)をラップしているため、すべてのDocker executorオプションと機能がサポートされています。
 
-Docker Autoscalerを設定するには、`config.toml`で以下のように設定します。
+Docker Autoscalerを設定するには、`config.toml`で以下のように設定します:
 
 - [`[runners]`](../configuration/advanced-configuration.md#the-runners-section)セクションで`executor`を`docker-autoscaler`として指定します。
-- 以下のセクションで、要件に基づいてDocker Autoscalerを設定します。
+- 以下のセクションで、要件に基づいてDocker Autoscalerを設定します:
   - [`[runners.docker]`](../configuration/advanced-configuration.md#the-runnersdocker-section)
   - [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 
 ### 各Runner設定の専用オートスケールグループ {#dedicated-autoscaling-groups-for-each-runner-configuration}
 
-各Docker Autoscaler設定には、それぞれに専用のオートスケールリソースが必要です。
+各Docker Autoscaler設定には、それぞれに専用のオートスケールリソースが必要です:
 
 - AWSでは専用のオートスケールグループ
 - GCPでは専用のインスタンスグループ
 - Azureでは専用のスケールセット
 
-これらのオートスケールリソースを以下の要素間で共有しないでください。
+これらのオートスケールリソースを以下の要素間で共有しないでください:
 
 - 複数のRunnerマネージャー（個別のGitLab Runnerインストール）
 - 同じRunnerマネージャーの`config.toml`内の複数の`[[runners]]`エントリ
 
 Docker Autoscalerは、クラウドプロバイダーのオートスケールリソースと同期する必要があるインスタンスの状態を追跡します。複数のシステムが同じオートスケールリソースを管理しようとすると、競合するスケーリングコマンドが発行され、予測できない動作、ジョブの失敗、および高い可能性があるコストが発生する可能性があります。
 
-### 次に例を示します。インスタンスあたり1つのジョブに対するAWSオートスケール {#example-aws-autoscaling-for-1-job-per-instance}
+### 次に例を示します: インスタンスあたり1つのジョブに対するAWSオートスケール {#example-aws-autoscaling-for-1-job-per-instance}
 
 前提要件:
 
@@ -64,7 +64,7 @@ Docker Autoscalerは、クラウドプロバイダーのオートスケールリ
 - AWSオートスケールグループ。Runnerがスケーリングを処理するため、スケーリングポリシーには「none」を使用します。インスタンスのスケールイン保護を有効にします。
 - [適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)が設定されたIAMポリシー。
 
-この設定では以下がサポートされています。
+この設定では以下がサポートされています:
 
 - インスタンスあたりのキャパシティ: 1
 - 使用回数: 1
@@ -131,7 +131,7 @@ concurrent = 10
   {{< alert type="note" >}}
 
   VMイメージでは、GitLab Runnerをインストールする必要はありません。VMイメージを使用して起動されたインスタンスを、GitLabにRunnerとして登録しないようにしてください。
-  
+
   {{< /alert >}}
 
 - シングルゾーンGoogle Cloudインスタンスグループ。**Autoscaling mode**で**Do not autoscale**を選択します。Runnerがオートスケールを処理し、Google Cloudインスタンスグループは処理しません。
@@ -144,7 +144,7 @@ concurrent = 10
 
 - [適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions)が設定されたIAMポリシー。GKEクラスターにRunnerをデプロイする場合は、KubernetesサービスアカウントとGCPサービスアカウントの間にIAMバインディングを追加できます。`credentials_file`でキーファイルを使用する代わりに、`iam.workloadIdentityUser`ロールでこのバインディングを追加し、GCPに対して認証できます。
 
-この設定では以下がサポートされています。
+この設定では以下がサポートされています:
 
 - インスタンスあたりのキャパシティ: 1
 - 使用回数: 1
@@ -216,7 +216,7 @@ concurrent = 10
 
 - オートスケールポリシーが`manual`に設定されているAzureスケールセット。Runnerがスケーリングを処理します。
 
-この設定では以下がサポートされています。
+この設定では以下がサポートされています:
 
 - インスタンスあたりのキャパシティ: 1
 - 使用回数: 1
@@ -280,13 +280,13 @@ concurrent = 10
 
 ### `ERROR: error during connect: ssh tunnel: EOF ()` {#error-error-during-connect-ssh-tunnel-eof-}
 
-インスタンスが外部ソース（オートスケールグループや自動スクリプトなど）によって削除された場合、ジョブは次のエラーで失敗します。
+インスタンスが外部ソース（オートスケールグループや自動スクリプトなど）によって削除された場合、ジョブは次のエラーで失敗します:
 
 ```plaintext
 ERROR: Job failed (system failure): error during connect: Post "http://internal.tunnel.invalid/v1.43/containers/xyz/wait?condition=not-running": ssh tunnel: EOF ()
 ```
 
-また、GitLab Runnerのログには、ジョブに割り当てられたインスタンスIDの`instance unexpectedly removed`エラーが表示されます。
+また、GitLab Runnerのログには、ジョブに割り当てられたインスタンスIDの`instance unexpectedly removed`エラーが表示されます:
 
 ```plaintext
 ERROR: instance unexpectedly removed    instance=<instance_id> max-use-count=9999 runner=XYZ slots=map[] subsystem=taskscaler used=45
@@ -296,13 +296,13 @@ ERROR: instance unexpectedly removed    instance=<instance_id> max-use-count=999
 
 ### `ERROR: Preparation failed: unable to acquire instance: context deadline exceeded` {#error-preparation-failed-unable-to-acquire-instance-context-deadline-exceeded}
 
-[AWSフリートプラグイン](https://gitlab.com/gitlab-org/fleeting/plugins/aws)を使用している場合、ジョブが失敗して次のエラーになることが断続的に発生する可能性があります。
+[AWSフリートプラグイン](https://gitlab.com/gitlab-org/fleeting/plugins/aws)を使用している場合、ジョブが失敗して次のエラーになることが断続的に発生する可能性があります:
 
 ```plaintext
 ERROR: Preparation failed: unable to acquire instance: context deadline exceeded
 ```
 
-`reserved`のインスタンス数が変動するため、多くの場合、これはAWS CloudWatchのログの中に示されます。
+`reserved`のインスタンス数が変動するため、多くの場合、これはAWS CloudWatchのログの中に示されます:
 
 ```plaintext
 "2024-07-23T18:10:24Z","instance_count:1,max_instance_count:1000,acquired:0,unavailable_capacity:0,pending:0,reserved:0,idle_count:0,scale_factor:0,scale_factor_limit:0,capacity_per_instance:1","required scaling change",
