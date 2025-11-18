@@ -99,7 +99,7 @@ will use the base script below to generate variables that are used
 throughout other scripts.
 
 It's important that this script is located in the same directory as the
-other scripts, in this case `/opt/libivirt-driver/`.
+other scripts, in this case `/opt/libvirt-driver/`.
 
 ```shell
 #!/usr/bin/env bash
