@@ -29,3 +29,4 @@ config:
   ul-style:                         # MD004
     style: "dash"
   link-fragments: false             # MD051
+  table-column-style: false         # MD060

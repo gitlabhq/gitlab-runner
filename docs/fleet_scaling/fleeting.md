@@ -28,7 +28,7 @@ The following plugins are community maintained:
 |----------------|---------------|-------|
 | [VMware vSphere](https://gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere) | `registry.gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere:latest` | Uses VMware vSphere to create and manage virtual machines by cloning from an existing template. Tested with [`govmomi vcsim`](https://github.com/vmware/govmomi/tree/main/vcsim) simulator and validated by community members against basic use cases. It might have limitations with restricted vSphere permissions. You can create related issues in the [Fleeting Plugin VMware vSphere project](https://gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere/-/issues).|
 
-Community maintained plugins are owned, built, hosted and maintained by contributors outside of GitLab (the community).
+Community maintained plugins are owned, built, hosted, and maintained by contributors outside of GitLab (the community).
 GitLab owns and maintains the Fleeting library and API to provide static code review.
 GitLab cannot test community plugins because we don't have access to all the necessary computing environments.
 Community members should build, test, and publish plugins to an OCI repository and provide the reference on this page through merge requests.
