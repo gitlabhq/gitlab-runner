@@ -5,12 +5,15 @@ package shell
 import (
 	"context"
 	"errors"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -141,5 +144,74 @@ func setupProcessMocks(t *testing.T) (*process.MockKillWaiter, *process.MockComm
 	return mProcessKillWaiter, mCmd, func() {
 		newProcessKillWaiter = oldNewProcessKillWaiter
 		newCommander = oldCmd
+	}
+}
+
+func TestExecutor_Prepare_MakesPathsAbsolute(t *testing.T) {
+	tests := map[string]struct {
+		defaultBuildsDir string
+		defaultCacheDir  string
+	}{
+		"relative paths": {
+			defaultBuildsDir: "builds",
+			defaultCacheDir:  "cache",
+		},
+		"paths with $PWD": {
+			defaultBuildsDir: "$PWD/builds",
+			defaultCacheDir:  "$PWD/cache",
+		},
+		"already absolute paths": {
+			defaultBuildsDir: "/tmp/builds",
+			defaultCacheDir:  "/tmp/cache",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			wd, err := os.Getwd()
+			require.NoError(t, err)
+
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				e := &executor{
+					AbstractExecutor: executors.AbstractExecutor{
+						ExecutorOptions: executors.ExecutorOptions{
+							DefaultBuildsDir: tt.defaultBuildsDir,
+							DefaultCacheDir:  tt.defaultCacheDir,
+							Shell: common.ShellScriptInfo{
+								Shell: shell,
+							},
+						},
+					},
+				}
+
+				// Create a minimal build for Prepare to work
+				build := &common.Build{
+					JobResponse: common.JobResponse{
+						Variables: common.JobVariables{},
+					},
+					Runner: &common.RunnerConfig{},
+				}
+
+				// Call Prepare which should make paths absolute
+				err = e.Prepare(common.ExecutorPrepareOptions{
+					Config:  &common.RunnerConfig{},
+					Build:   build,
+					Context: t.Context(),
+				})
+				require.NoError(t, err)
+
+				// Verify that both paths are now absolute
+				assert.True(t, filepath.IsAbs(e.DefaultBuildsDir), "DefaultBuildsDir should be absolute, got: %s", e.DefaultBuildsDir)
+				assert.True(t, filepath.IsAbs(e.DefaultCacheDir), "DefaultCacheDir should be absolute, got: %s", e.DefaultCacheDir)
+
+				// Verify that relative paths are resolved relative to current working directory
+				if tt.defaultBuildsDir == "builds" {
+					assert.Equal(t, filepath.Join(wd, "builds"), e.DefaultBuildsDir)
+				}
+				if tt.defaultCacheDir == "cache" {
+					assert.Equal(t, filepath.Join(wd, "cache"), e.DefaultCacheDir)
+				}
+			})
+		})
 	}
 }

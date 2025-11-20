@@ -49,6 +49,14 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.DefaultBuildsDir = os.Expand(s.DefaultBuildsDir, mapping)
 	s.DefaultCacheDir = os.Expand(s.DefaultCacheDir, mapping)
 
+	// Make paths absolute if they are relative
+	if !filepath.IsAbs(s.DefaultBuildsDir) {
+		s.DefaultBuildsDir = filepath.Join(wd, s.DefaultBuildsDir)
+	}
+	if !filepath.IsAbs(s.DefaultCacheDir) {
+		s.DefaultCacheDir = filepath.Join(wd, s.DefaultCacheDir)
+	}
+
 	// Pass control to executor
 	err = s.AbstractExecutor.Prepare(options)
 	if err != nil {
