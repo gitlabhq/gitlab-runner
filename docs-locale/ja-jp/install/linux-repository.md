@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: 公式のGitLabリポジトリを使用してGitLab Runnerをインストールする
 ---
@@ -19,24 +19,25 @@ GitLab Runnerをインストールするには、[GitLabリポジトリ](https:/
 GitLabでは、[Packagecloud](https://packages.gitlab.com/runner/gitlab-runner/)でサポートされている以下のバージョンのLinuxディストリビューションのパッケージを提供しています。新しいOSディストリビューションリリースに対応する新しいRunner `deb`または`rpm`パッケージは、Packagecloudでサポートされている場合、自動的に追加されます。
 
 <!-- supported_os_versions_list_start -->
+
 ### Debベースのディストリビューション {#deb-based-distributions}
 
 | ディストリビューション | サポート対象バージョン |
 |--------------|--------------------|
-| Debian       | 14 Forky、13 Trixie、12 Bookworm、11 Bullseye |
-| LinuxMint    | 22.1 Xia、22 Wilma、21.3 Virginia、21.2 Victoria、21.1 Vera、21 Vanessa、20.3 Una、20.2 Uma、20.1 Ulyssa、20 Ulyana |
-| Raspbian     | 14 Forky、13 Trixie、12 Bookworm、11 Bullseye |
-| Ubuntu       | 24.10 Oracular Oriole、24.04 Lts Noble Numbat、22.04 Jammy Jellyfish、20.04 Focal Fossa、18.04 Lts Bionic Beaver、16.04 Lts Xenial Xerus |
+| Debian | 14 Forky、13 Trixie、12 Bookworm、11 Bullseye |
+| LinuxMint | 22.1 Xia、22 Wilma、21.3 Virginia、21.2 Victoria、21.1 Vera、21 Vanessa、20.3 Una、20.2 Uma、20.1 Ulyssa、20 Ulyana |
+| Raspbian | 14 Forky、13 Trixie、12 Bookworm、11 Bullseye |
+| Ubuntu | 24.10 Oracular Oriole、24.04 Lts Noble Numbat、22.04 Jammy Jellyfish、20.04 Focal Fossa、18.04 Lts Bionic Beaver、16.04 Lts Xenial Xerus |
 
 ### RPMベースのディストリビューション {#rpm-based-distributions}
 
-| ディストリビューション                 | サポート対象バージョン |
-|------------------------------|--------------------|
-| Amazon Linux                 | 2025、2023、2022、2 |
-| Red Hat Enterprise Linux     | 9、8、7            |
-| Fedora                       | 43、42、41、40     |
-| Oracle Linux                 | 9、8、7、6         |
-| openSUSE                     | 16.0、15.6、15.5、15.4、15.3、15.2、15.1、15.0 |
+| ディストリビューション | サポート対象バージョン |
+|--------------|--------------------|
+| Amazon Linux | 2025、2023、2022、2 |
+| Red Hat Enterprise Linux | 9、8、7 |
+| Fedora | 43、42、41、40 |
+| Oracle Linux | 9、8、7、6 |
+| openSUSE | 16.0、15.6、15.5、15.4、15.3、15.2、15.1、15.0 |
 | SUSE Linux Enterprise Server | 15.6、15.5、15.4、15.3、15.2、12.5 |
 
 <!-- supported_os_versions_list_end -->
@@ -51,9 +52,9 @@ GitLabでは、[Packagecloud](https://packages.gitlab.com/runner/gitlab-runner/)
 
 ## GitLab Runnerをインストールする {#install-gitlab-runner}
 
-GitLab Runnerをインストールするには、次の手順に従います。
+GitLab Runnerをインストールするには、次の手順に従います:
 
-1. 公式GitLabリポジトリを追加します。
+1. 公式GitLabリポジトリを追加します:
 
    {{< tabs >}}
 
@@ -71,15 +72,15 @@ GitLab Runnerをインストールするには、次の手順に従います。
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
    ```
 
-      {{< /tab >}}
+   {{< /tab >}}
 
    {{< /tabs >}}
 
-1. 最新バージョンのGitLab Runnerをインストールするか、次のステップに進んで特定のバージョンをインストールします。
+1. 最新バージョンのGitLab Runnerをインストールするか、次のステップに進んで特定のバージョンをインストールします:
 
    {{< alert type="note" >}}
 
-[`No such file or directory`ジョブの失敗](#error-no-such-file-or-directory-job-failures)を防ぐために、`skel`ディレクトリの使用はデフォルトで無効になっています。
+   [`No such file or directory`ジョブの失敗](#error-no-such-file-or-directory-job-failures)を防ぐために、`skel`ディレクトリの使用はデフォルトで無効になっています。
 
    {{< /alert >}}
 
@@ -109,11 +110,11 @@ GitLab Runnerをインストールするには、次の手順に従います。
 
    {{< alert type="note" >}}
 
-RHELディストリビューション向けに、FIPS 140-2準拠バージョンのGitLab Runnerが利用可能です。このバージョンをインストールするには、パッケージ名として`gitlab-runner`の代わりに`gitlab-runner-fips`を使用します。
+   RHELディストリビューション向けに、FIPS 140-2準拠バージョンのGitLab Runnerが利用可能です。このバージョンをインストールするには、パッケージ名として`gitlab-runner`の代わりに`gitlab-runner-fips`を使用します。
 
    {{< /alert >}}
 
-1. 特定のバージョンのGitLab Runnerをインストールするには、次のようにします。
+1. 特定のバージョンのGitLab Runnerをインストールするには、次のようにします:
 
    {{< tabs >}}
 
@@ -121,7 +122,7 @@ RHELディストリビューション向けに、FIPS 140-2準拠バージョン
 
    {{< alert type="note" >}}
 
-`gitlab-runner`バージョン`v17.7.1`の時点では、最新バージョンではない特定のバージョンの`gitlab-runner`をインストールする場合、そのバージョンに必要な`gitlab-runner-helper-packages`を明示的にインストールする必要があります。この要件は、`apt`/`apt-get`の制限により存在しています。
+   `gitlab-runner`バージョン`v17.7.1`の時点では、最新バージョンではない特定のバージョンの`gitlab-runner`をインストールする場合、そのバージョンに必要な`gitlab-runner-helper-packages`を明示的にインストールする必要があります。この要件は、`apt`/`apt-get`の制限により存在しています。
 
    {{< /alert >}}
 
@@ -130,15 +131,15 @@ RHELディストリビューション向けに、FIPS 140-2準拠バージョン
    sudo apt install gitlab-runner=17.7.1-1 gitlab-runner-helper-images=17.7.1-1
    ```
 
-   特定バージョンの`gitlab-runner`をインストールするときに、同じバージョンの`gitlab-runner-helper-images`をインストールしないと、次のようなエラーが発生する可能性があります。
+   特定バージョンの`gitlab-runner`をインストールするときに、同じバージョンの`gitlab-runner-helper-images`をインストールしないと、次のようなエラーが発生する可能性があります:
 
    ```shell
-    sudo apt install gitlab-runner=17.7.1-1
-    ...
-    The following packages have unmet dependencies:
-     gitlab-runner : Depends: gitlab-runner-helper-images (= 17.7.1-1) but 17.8.3-1 is to be installed
-    E: Unable to correct problems, you have held broken packages.
-    ```
+   sudo apt install gitlab-runner=17.7.1-1
+   ...
+   The following packages have unmet dependencies:
+    gitlab-runner : Depends: gitlab-runner-helper-images (= 17.7.1-1) but 17.8.3-1 is to be installed
+   E: Unable to correct problems, you have held broken packages.
+   ```
 
    {{< /tab >}}
 
@@ -161,7 +162,7 @@ RHELディストリビューション向けに、FIPS 140-2準拠バージョン
 
 ## GitLab Runnerをアップグレードする {#upgrade-gitlab-runner}
 
-最新バージョンのGitLab Runnerをインストールするには、次のようにします。
+最新バージョンのGitLab Runnerをインストールするには、次のようにします:
 
 {{< tabs >}}
 
@@ -187,61 +188,61 @@ sudo yum install gitlab-runner
 
 ## PackageインストールのGPG署名 {#gpg-signatures-for-package-installation}
 
-GitLab Runnerプロジェクトは、パッケージインストール方法に対して2種類のGPG署名を提供しています。
+GitLab Runnerプロジェクトは、パッケージインストール方法に対して2種類のGPG署名を提供しています:
 
 - [リポジトリメタデータの署名](#repository-metadata-signing)
 - [パッケージの署名](#package-signing)
 
 ### リポジトリメタデータの署名 {#repository-metadata-signing}
 
-リモートリポジトリからダウンロードしたパッケージ情報が信頼できるものであることを検証するために、パッケージ管理システムはリポジトリメタデータの署名を使用します。
+リモートリポジトリからダウンロードしたパッケージ情報が信頼できるものであることを検証するために、パッケージマネージャーはリポジトリメタデータの署名を使用します。
 
-この署名は、`apt-get update`などのコマンドを使用するときに検証されます。このため、**パッケージのダウンロードとインストールが行われる前に**、利用可能なパッケージに関する情報が更新されます。検証に失敗した場合、パッケージ管理システムはメタデータを拒否します。つまり、署名の不一致の原因となった問題が見つかって解決されるまで、リポジトリからパッケージをダウンロードしてインストールすることはできません。
+この署名は、`apt-get update`などのコマンドを使用するときに検証されます。このため、**パッケージのダウンロードとインストールが行われる前に**、利用可能なパッケージに関する情報が更新されます。検証に失敗した場合、パッケージマネージャーはメタデータを拒否します。つまり、署名の不一致の原因となった問題が見つかって解決されるまで、リポジトリからパッケージをダウンロードしてインストールすることはできません。
 
-パッケージメタデータ署名の検証に使用されるGPG公開鍵は、上記の手順で最初に行われたインストール時に自動的にインストールされます。今後の鍵の更新では、既存のユーザーが新しい鍵を手動でダウンロードしてインストールする必要があります。
+パッケージメタデータ署名の検証に使用されるGPG公開キーは、上記の手順で最初に行われたインストール時に自動的にインストールされます。今後のキーの更新では、既存のユーザーが新しいキーを手動でダウンロードしてインストールする必要があります。
 
-<https://packages.gitlab.com>でホストされているすべてのプロジェクトに対して1つの鍵を使用します。使用されている鍵の詳細は、[Linuxパッケージのドキュメント](https://docs.gitlab.com/omnibus/update/package_signatures/#package-repository-metadata-signing-keys)で確認できます。このドキュメントページには、[過去に使用されたすべての鍵](https://docs.gitlab.com/omnibus/update/package_signatures/#previous-keys)も記載されています。
+<https://packages.gitlab.com>でホストされているすべてのプロジェクトに対して1つのキーを使用します。使用されているキーの詳細は、[Linuxパッケージのドキュメント](https://docs.gitlab.com/omnibus/update/package_signatures/#package-repository-metadata-signing-keys)で確認できます。このドキュメントページには、[過去に使用されたすべてのキー](https://docs.gitlab.com/omnibus/update/package_signatures/#previous-keys)も記載されています。
 
 ### パッケージの署名 {#package-signing}
 
 リポジトリメタデータの署名は、ダウンロードされたバージョン情報が<https://packages.gitlab.com>からのものであることを証明します。パッケージ自体の整合性を証明するものではありません。リポジトリからユーザーへのメタデータ転送が影響を受けていない限り、<https://packages.gitlab.com>にアップロードされたものはすべて、承認されているかどうかにかかわらず、適切に検証されます。
 
-パッケージ署名では、各パッケージがそのビルド時に署名されます。ビルド環境と使用されているGPG鍵の機密性を信頼できるようになるまで、パッケージの信頼性を検証できません。パッケージの有効な署名は、その出所が認証されており、その整合性が侵害されていないことを証明します。
+パッケージ署名では、各パッケージがそのビルド時に署名されます。ビルド環境と使用されているGPGキーの機密性を信頼できるようになるまで、パッケージの信頼性を検証できません。パッケージの有効な署名は、その出所が認証されており、その整合性が侵害されていないことを証明します。
 
 パッケージ署名検証は、Debian/RPMベースのディストリビューションの一部でのみデフォルトで有効になっています。このタイプの検証を使用するには、設定の調整が必要になる場合があります。
 
-<https://packages.gitlab.com>でホストされているリポジトリごとに、パッケージ署名検証に使用されるGPG鍵が異なる場合があります。GitLab Runnerプロジェクトでは、このタイプの署名に独自のキーペアを使用します。
+<https://packages.gitlab.com>でホストされているリポジトリごとに、パッケージ署名検証に使用されるGPGキーが異なる場合があります。GitLab Runnerプロジェクトでは、このタイプの署名に独自のキーペアを使用します。
 
 #### RPMベースのディストリビューション {#rpm-based-distributions-1}
 
 RPM形式には、GPG署名機能の完全な実装が含まれており、この形式に基づくパッケージ管理システムと完全に統合されています。
 
-[Linuxパッケージのドキュメント](https://docs.gitlab.com/omnibus/update/package_signatures/#rpm-based-distributions)に、RPMベースのディストリビューションのパッケージ署名検証を設定する方法に関する技術的な説明があります。GitLab Runnerでの違いは次のとおりです。
+[Linuxパッケージのドキュメント](https://docs.gitlab.com/omnibus/update/package_signatures/#rpm-based-distributions)に、RPMベースのディストリビューションのパッケージ署名検証を設定する方法に関する技術的な説明があります。GitLab Runnerでの違いは次のとおりです:
 
-- インストールする必要がある公開鍵パッケージの名前は`gpg-pubkey-35dfa027-60ba0235`です。
+- インストールする必要がある公開キーパッケージの名前は`gpg-pubkey-35dfa027-60ba0235`です。
 - RPMベースのディストリビューションのリポジトリファイルの名前は、`/etc/yum.repos.d/runner_gitlab-runner.repo`（安定版リリースの場合）または`/etc/yum.repos.d/runner_unstable.repo`（不安定版リリースの場合）です。
-- [パッケージ署名公開鍵](#current-gpg-public-key)は、`https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg`からインポートできます。
+- [パッケージ署名公開キー](#current-gpg-public-key)は、`https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg`からインポートできます。
 
 #### Debianベースのディストリビューション {#debian-based-distributions}
 
 `deb`形式は、公式にはパッケージ署名機能をデフォルトで備えていません。GitLab Runnerプロジェクトでは、パッケージの署名と検証に`dpkg-sig`ツールを使用します。この方法では、パッケージの手動検証のみがサポートされています。
 
-`deb`パッケージを検証するには、次の手順に従います。
+`deb`パッケージを検証するには、次の手順に従います:
 
-1. `dpkg-sig`をインストールします。
+1. `dpkg-sig`をインストールします:
 
    ```shell
    apt update && apt install dpkg-sig
    ```
 
-1. [パッケージ署名公開鍵](#current-gpg-public-key)をダウンロードしてインポートします。
+1. [パッケージ署名公開キー](#current-gpg-public-key)をダウンロードしてインポートします:
 
    ```shell
    curl -JLO "https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg"
    gpg --import runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg
    ```
 
-1. `dpkg-sig`でダウンロードしたパッケージを検証します。
+1. `dpkg-sig`でダウンロードしたパッケージを検証します:
 
    ```shell
    dpkg-sig --verify gitlab-runner_amd64.deb
@@ -249,7 +250,7 @@ RPM形式には、GPG署名機能の完全な実装が含まれており、こ�
    GOODSIG _gpgbuilder 931DA69CFA3AFEBBC97DAA8C6C57C29C6BA75A4E 1623755049
    ```
 
-   パッケージの署名が無効であるか、無効な鍵（失効した鍵など）で署名されている場合、出力は次のようになります。
+   パッケージの署名が無効であるか、無効なキー（失効したキーなど）で署名されている場合、出力は次のようになります:
 
    ```shell
    dpkg-sig --verify gitlab-runner_amd64.deb
@@ -257,7 +258,7 @@ RPM形式には、GPG署名機能の完全な実装が含まれており、こ�
    BADSIG _gpgbuilder
    ```
 
-   鍵がユーザーのキーリングに存在しない場合、出力は次のようになります。
+   キーがユーザーのキーリングに存在しない場合、出力は次のようになります:
 
    ```shell
    dpkg-sig --verify gitlab-runner_amd64.v13.1.0.deb
@@ -265,11 +266,11 @@ RPM形式には、GPG署名機能の完全な実装が含まれており、こ�
    UNKNOWNSIG _gpgbuilder 880721D4
    ```
 
-#### 現在のGPG公開鍵 {#current-gpg-public-key}
+#### 現在のGPG公開キー {#current-gpg-public-key}
 
-`https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg`からパッケージ署名に使用される現在の公開GPG鍵をダウンロードできます。
+`https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg`からパッケージ署名に使用される現在の公開GPGキーをダウンロードできます。
 
-| 鍵の属性 | 値 |
+| キーの属性 | 値 |
 |---------------|-------|
 | 名前          | `GitLab, Inc.` |
 | メール         | `support@gitlab.com` |
@@ -278,22 +279,22 @@ RPM形式には、GPG署名機能の完全な実装が含まれており、こ�
 
 {{< alert type="note" >}}
 
-GitLab Runnerプロジェクトは、`<https://gitlab-runner-downloads.s3.dualstack.us-east-1.amazonaws.com>`バケットで利用可能なS3リリースの`release.sha256`ファイルに署名するために、同じ鍵を使用します。
+GitLab Runnerプロジェクトは、`<https://gitlab-runner-downloads.s3.dualstack.us-east-1.amazonaws.com>`バケットで利用可能なS3リリースの`release.sha256`ファイルに署名するために、同じキーを使用します。
 
 {{< /alert >}}
 
-#### 過去のGPG公開鍵 {#previous-gpg-public-keys}
+#### 過去のGPG公開キー {#previous-gpg-public-keys}
 
-過去に使用された鍵を以下の表に示します。
+過去に使用されたキーを以下の表に示します。
 
-失効した鍵は、パッケージ署名検証設定から削除することを強くお勧めします。
+失効したキーは、パッケージ署名検証設定から削除することを強くお勧めします。
 
-次の鍵によって作成された署名は、信頼すべきではありません。
+次のキーによって作成された署名は、信頼すべきではありません。
 
-| シリアル番号 | 鍵のフィンガープリント                                      | 状態    | 有効期限  | ダウンロード（失効した鍵のみ） |
+| シリアル番号 | キーのフィンガープリント                                      | 状態    | 有効期限  | ダウンロード（失効したキーのみ） |
 |---------|------------------------------------------------------|-----------|--------------|------------------------------|
-| 1       | `3018 3AC2 C4E2 3A40 9EFB  E705 9CE4 5ABC 8807 21D4` | `revoked` | `2021-06-08` | [失効した鍵](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/docs/install/gpg-keys/9CE45ABC880721D4.pub.gpg) |
-| 2       | `09E5 7083 F34C CA94 D541  BC58 A674 BF81 35DF A027` | `revoked` | `2023-04-26` | [失効した鍵](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/docs/install/gpg-keys/A674BF8135DFA027.pub.gpg) |
+| 1       | `3018 3AC2 C4E2 3A40 9EFB  E705 9CE4 5ABC 8807 21D4` | `revoked` | `2021-06-08` | [失効したキー](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/docs/install/gpg-keys/9CE45ABC880721D4.pub.gpg) |
+| 2       | `09E5 7083 F34C CA94 D541  BC58 A674 BF81 35DF A027` | `revoked` | `2023-04-26` | [失効したキー](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/docs/install/gpg-keys/A674BF8135DFA027.pub.gpg) |
 
 ## トラブルシューティング {#troubleshooting}
 
@@ -301,11 +302,11 @@ GitLab Runnerのインストール時に発生する問題のトラブルシュ�
 
 ### エラー: `No such file or directory`ジョブの失敗 {#error-no-such-file-or-directory-job-failures}
 
-デフォルトの[スケルトン（`skel`）ディレクトリ](https://www.thegeekdiary.com/understanding-the-etc-skel-directory-in-linux/)が原因でGitLab Runnerに問題が発生し、ジョブの実行に失敗することがあります。[イシュー4449](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4449)と[イシュー1379](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379)を参照してください。
+デフォルトのスケルトン（`skel`）ディレクトリが原因でGitLab Runnerに問題が発生し、ジョブの実行に失敗することがあります。[イシュー4449](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4449)と[イシュー1379](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379)を参照してください。
 
 これを回避するために、GitLab Runnerをインストールすると、`gitlab-runner`ユーザーが作成され、デフォルトでは、ホームディレクトリはスケルトンなしで作成されます。`skel`の使用によってホームディレクトリに追加されるShell設定は、ジョブの実行を妨げる可能性があります。この設定は、前述のような予期しない問題を引き起こす可能性があります。
 
-`skel`の回避がデフォルトの動作になる前にRunnerを作成していた場合は、次のドットファイルを削除してみてください。
+`skel`の回避がデフォルトの動作になる前にRunnerを作成していた場合は、次のドットファイルを削除してみてください:
 
 ```shell
 sudo rm /home/gitlab-runner/.profile
@@ -313,7 +314,7 @@ sudo rm /home/gitlab-runner/.bashrc
 sudo rm /home/gitlab-runner/.bash_logout
 ```
 
-`skel`ディレクトリを使用して、新しく作成された`$HOME`ディレクトリにデータを入力する必要がある場合は、Runnerをインストールする前に、`GITLAB_RUNNER_DISABLE_SKEL`変数を明示的に`false`に設定する必要があります。
+`skel`ディレクトリを使用して、新しく作成された`$HOME`ディレクトリにデータを入力する必要がある場合は、Runnerをインストールする前に、`GITLAB_RUNNER_DISABLE_SKEL`変数を明示的に`false`に設定する必要があります:
 
 {{< tabs >}}
 
