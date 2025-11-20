@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: Kubernetes executor
 ---
@@ -14,24 +14,24 @@ title: Kubernetes executor
 
 ビルドにKubernetesクラスターを使用する場合、Kubernetes executorを使用します。executorはKubernetesクラスターAPIを呼び出し、GitLab CIジョブごとにポッドを作成します。
 
-Kubernetes executorは、ビルドを複数のステップに分割します。
+Kubernetes executorは、ビルドを複数のステップに分割します:
 
-1. **準備**: Kubernetesクラスターに対してポッドを作成します。これにより、ビルドに必要なコンテナと、実行するサービスが作成されます。
-1. **ビルド前**: クローン、キャッシュの復元、および前のステージからアーティファクトのダウンロードを実行します。このステップは、ポッドの一部である特別なコンテナで実行されます。
+1. **Prepare**（準備）: Kubernetesクラスターに対してポッドを作成します。これにより、ビルドに必要なコンテナと、実行するサービスが作成されます。
+1. **Pre-build**（ビルド前）: クローン、キャッシュの復元、および前のステージからアーティファクトのダウンロードを実行します。このステップは、ポッドの一部である特別なコンテナで実行されます。
 1. **ビルド**: ユーザービルド。
-1. **ビルド**後: キャッシュの作成、GitLabへのアーティファクトのアップロードを実行します。このステップでも、ポッドの一部である特別なコンテナを使用します。
+1. **Post-build**（ビルド後）: キャッシュの作成、GitLabへのアーティファクトのアップロードを実行します。このステップでも、ポッドの一部である特別なコンテナを使用します。
 
 ## RunnerがKubernetesポッドを作成する仕組み {#how-the-runner-creates-kubernetes-pods}
 
 次の図は、GitLabインスタンスとKubernetesクラスターでホストされているRunner間の相互作用を示しています。RunnerはKubernetes APIを呼び出して、クラスター上にポッドを作成します。
 
-ポッドは、`.gitlab-ci.yml`ファイルまたは`config.toml`ファイルで定義されている`service`ごとに次のコンテナで構成されます。
+ポッドは、`.gitlab-ci.yml`ファイルまたは`config.toml`ファイルで定義されている`service`ごとに次のコンテナで構成されます:
 
 - `build`として定義されているビルドコンテナ。
 - `helper`として定義されているヘルパーコンテナ。
 - `svc-X`として定義されているサービスコンテナ。`X`は`[0-9]+`です。
 
-サービスとコンテナは同じKubernetesポッドで実行され、同じlocalhostアドレスを共有します。次の制限が適用されます。
+サービスとコンテナは同じKubernetesポッドで実行され、同じlocalhostアドレスを共有します。次の制限が適用されます:
 
 - これらのサービスには、そのDNS名を介してアクセスできます。これよりも古いバージョンを使用する場合は、`localhost`を使用する必要があります。
 - 同じポートを使用する複数のサービスを使用することはできません。たとえば、2つの`mysql`サービスを同時に使用することはできません。
@@ -64,13 +64,14 @@ Kubernetes APIに接続するには次のオプションを使用します。提
 | オプション      | 説明 |
 |-------------|-------------|
 | `host`      | オプションのKubernetes APIサーバーホストのURL（指定されていない場合は自動検出が試行されます）。 |
+| `context`   | オプションのKubernetesコンテキスト名。 `kubectl`の設定で使用します。`host`を指定しない場合は、このオプションを使用します。 |
 | `cert_file` | オプションのKubernetes APIサーバーユーザー認証証明書。 |
-| `key_file`  | オプションのKubernetes APIサーバーユーザー認証秘密鍵。 |
+| `key_file`  | オプションのKubernetes APIサーバーユーザー認証秘密キー。 |
 | `ca_file`   | オプションのKubernetes APIサーバーCA証明書。 |
 
-Kubernetesクラスターで GitLab Runnerを実行している場合に、GitLab RunnerがKubernetes APIを自動的に検出できるようにするには、これらのフィールドを省略します。
+KubernetesクラスターでGitLab Runnerを実行している場合に、GitLab RunnerがKubernetes APIを自動的に検出できるようにするには、これらのフィールドを省略します。
 
-クラスターの外部でGitLab Runnerを実行している場合、これらの設定により、GitLab Runnerがクラスター上のKubernetes APIにアクセスできるようになります。
+クラスターの外部でGitLab Runnerを実行している場合、これらの設定により、GitLab Runnerがクラスター上のKubernetes APIにアクセスできるようになります。認証の詳細とともに`host`を指定するか、`context`を使用して`kubectl`設定から特定のコンテキストを参照できます。
 
 ### Kubernetes APIコールのベアラートークンを設定する {#set-the-bearer-token-for-kubernetes-api-calls}
 
@@ -87,18 +88,18 @@ variables:
 
 コアAPIグループの権限を設定するには、GitLab Runner Helmチャートの`values.yml`ファイルを更新します。
 
-次のいずれかの方法があります。
+次のいずれかの方法があります:
 
 - `rbac.create`を`true`に設定します。
 - `values.yml`ファイルで、次の権限が付与されているサービスアカウント`serviceAccount.name: <service_account_name>`を指定します。
 
- <!-- k8s_api_permissions_list_start -->
+<!-- k8s_api_permissions_list_start -->
 
 | リソース | 動詞（オプションの機能/設定フラグ） |
 |----------|-------------------------------|
 | events | list（`print_pod_warning_events=true`）、watch（`FF_PRINT_POD_EVENTS=true`） |
 | namespaces | create（`kubernetes.NamespacePerJob=true`）、delete（`kubernetes.NamespacePerJob=true`） |
-| pods | create、delete、get、list（[Informerを使用](#informers)）、watch（[Informerを使用](#informers)、`FF_KUBERNETES_HONOR_ENTRYPOINT=true`、`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`） |
+| pods | create、delete、get、list（[Informerを使用](#informers) ）、watch（[Informerを使用](#informers)、`FF_KUBERNETES_HONOR_ENTRYPOINT=true`、`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`） |
 | pods/attach | create（`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`）、delete（`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`）、get（`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`）、patch（`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`） |
 | pods/exec | create、delete、get、patch |
 | pods/log | get（`FF_KUBERNETES_HONOR_ENTRYPOINT=true`、`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`、`FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`）、list（`FF_KUBERNETES_HONOR_ENTRYPOINT=true`、`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`） |
@@ -174,26 +175,14 @@ rules:
 ```
 <!-- k8s_api_permissions_role_yaml_end -->
 
-- _GitLab 15.0および15.1。_
-- _GitLab 15.0.1、15.1.1、および 15.2で`resource_availability_check_max_attempts`が0より大きい値に設定されている場合。_
+詳細情報:
 
-- _GitLab Runner 15.8の時点で`configmaps`権限は不要になりました。_
-
-- _`event`権限が必要となるのは、次の場合のみです。_
-
-  - _GitLab 16.2.1以降。_
-
-- _`namespace`権限が必要となるのは、次の場合のみです。_
-
-  - _`namespace_per_job`を使用してネームスペースの分離を有効にする場合。_
-
-- _`pods/log`権限は、次のいずれかのシナリオに該当する場合にのみ必要です。_
-
-  - _[`FF_KUBERNETES_HONOR_ENTRYPOINT`機能フラグ](../../configuration/feature-flags.md)が有効になっている。_
-
-  - _[`CI_DEBUG_SERVICES`変数](https://docs.gitlab.com/ci/services/#capturing-service-container-logs)が`true`に設定されている場合に[`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`機能フラグ](../../configuration/feature-flags.md)が無効になっている。_
-
-  - _[`FF_WAIT_FOR_POD_TO_BE_REACHABLE`機能フラグ](../../configuration/feature-flags.md)が有効になっている。_
+- `event`権限は、GitLab 16.2.1以降でのみ必要です。
+- `namespace`権限は、`namespace_per_job`を使用してネームスペースの分離を有効にする場合にのみ必要です。
+- `pods/log`の権限は、次のいずれかのシナリオに該当する場合にのみ必要です:
+  - [が有効になっている場合、`FF_KUBERNETES_HONOR_ENTRYPOINT`機能フラグ](../../configuration/feature-flags.md)
+  - `true`に[が`CI_DEBUG_SERVICES`変数](https://docs.gitlab.com/ci/services/#capturing-service-container-logs)設定されている場合、[`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`機能フラグ](../../configuration/feature-flags.md)は無効になります。
+  - [が有効になっている場合、`FF_WAIT_FOR_POD_TO_BE_REACHABLE`機能フラグ](../../configuration/feature-flags.md)
 
 #### informer {#informers}
 
@@ -239,6 +228,37 @@ Kubernetes executorを設定するには、`config.toml`ファイルで次の設
 | `service_memory_request`                       | ビルドサービスコンテナにリクエストされるメモリの量。 |
 | `service_memory_request_overwrite_max_allowed` | サービスコンテナのメモリ割り当てリクエストを上書きできる最大量。空の場合、メモリリクエスト上書き機能が無効になります。 |
 
+#### ヘルパーコンテナのメモリサイズに関する推奨事項 {#helper-container-memory-sizing-recommendations}
+
+最適なパフォーマンスを得るには、ワークロードの要件に基づいてヘルパーコンテナのメモリ制限を設定します:
+
+- **Workloads with caching and artifact generation**（キャッシュおよびアーティファクト生成を使用するワークロード）: 最小250 MiB
+- **Basic workloads without cache/artifacts**（キャッシュ / アーティファクトなしの基本的なワークロード）: より低い制限（128～200 MiB）で動作する可能性があります
+
+**Basic configuration example:**（基本設定例）:
+
+```toml
+[[runners]]
+  executor = "kubernetes"
+  [runners.kubernetes]
+    helper_memory_limit = "250Mi"
+    helper_memory_request = "250Mi"
+    helper_memory_limit_overwrite_max_allowed = "1Gi"
+```
+
+**Job-specific memory overrides:**（ジョブ固有のメモリーオーバーライド:）
+
+`KUBERNETES_HELPER_MEMORY_LIMIT`変数を使用して、管理者の変更を必要とせずに、特定のジョブのメモリーを調整します:
+
+```yaml
+job_with_higher_helper_memory_limit:
+  variables:
+    KUBERNETES_HELPER_MEMORY_LIMIT: "512Mi"
+  script:
+```
+
+このアプローチにより、開発者は`helper_memory_limit_overwrite_max_allowed`を使用して、クラスター全体の制限を維持しながら、ジョブごとのリソース使用率を最適化できます。
+
 ### ストレージのリクエストと制限 {#storage-requests-and-limits}
 
 | 設定                                                   | 説明 |
@@ -262,9 +282,11 @@ Kubernetes executorを設定するには、`config.toml`ファイルで次の設
 |-----------------------------------------------|-------------|
 | `affinity`                                    | ビルドを実行するノードを決定するアフィニティルールを指定します。[アフィニティの使用](#define-a-list-of-node-affinities)についての詳細を参照してください。 |
 | `allow_privilege_escalation`                  | `allowPrivilegeEscalation`フラグを有効にしてすべてのコンテナを実行します。空の場合、コンテナ`SecurityContext`の`allowPrivilegeEscalation`フラグは定義されず、Kubernetesはデフォルトの[特権エスカレーション](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)動作を使用できます。 |
+| `allowed_groups`                              | コンテナグループに指定できるグループIDの配列。存在しない場合、すべてのグループが許可されます。詳細については、[コンテナのユーザーとグループの設定](#configure-container-user-and-group)を参照してください。 |
 | `allowed_images`                              | `.gitlab-ci.yml`で指定できるイメージのワイルドカードリスト。この設定が存在しない場合は、すべてのイメージが許可されます（`["*/*:*"]`と同等）。[詳細](#restrict-docker-images-and-services)を参照してください。 |
 | `allowed_pull_policies`                       | `.gitlab-ci.yml`ファイルまたは`config.toml`ファイルで指定できるプルポリシーのリスト。 |
 | `allowed_services`                            | `.gitlab-ci.yml`で指定できるサービスのワイルドカードリスト。この設定が存在しない場合は、すべてのイメージが許可されます（`["*/*:*"]`と同等）。[詳細](#restrict-docker-images-and-services)を参照してください。 |
+| `allowed_users`                               | コンテナユーザーに指定できるユーザーIDの配列。存在しない場合、すべてのユーザーが許可されます。詳細については、[コンテナのユーザーとグループの設定](#configure-container-user-and-group)を参照してください。 |
 | `automount_service_account_token`             | サービスアカウントトークンをビルドポッドに自動的にマウントするかどうかを制御するブール値。 |
 | `bearer_token`                                | ビルドポッドの起動に使用されるデフォルトのベアラートークン。 |
 | `bearer_token_overwrite_allowed`              | ビルドポッドの作成に使用されるベアラートークンをプロジェクトが指定できるようにするブール値。 |
@@ -272,11 +294,12 @@ Kubernetes executorを設定するには、`config.toml`ファイルで次の設
 | `cap_add`                                     | ジョブポッドコンテナに追加するLinux機能を指定します。[Kubernetes executorでの機能設定の詳細](#specify-container-capabilities)を参照してください。 |
 | `cap_drop`                                    | ジョブポッドコンテナから削除するLinux機能を指定します。[Kubernetes executorでの機能設定の詳細](#specify-container-capabilities)を参照してください。 |
 | `cleanup_grace_period_seconds`                | ジョブの完了後、ポッドが正常に終了するまでの秒数。この期間を過ぎると、プロセスはkill（強制終了）シグナルによって強制的に停止します。`terminationGracePeriodSeconds`が指定されている場合は無視されます。 |
+| `context`                                      | `kubectl`設定で使用するKubernetesコンテキスト名（`host`が指定されていない場合）。 |
 | `dns_policy`                                  | ポッドの作成時に使用するDNSポリシー（`none`、`default`、`cluster-first`、`cluster-first-with-host-net`）を指定します。設定されていない場合は、Kubernetesのデフォルト（`cluster-first`）が使用されます。 |
 | `dns_config`                                  | ポッドの作成時に使用するDNS設定を指定します。[ポッドのDNS設定の使用についての詳細](#configure-pod-dns-settings)を参照してください。 |
 | `helper_container_security_context`           | ヘルパーコンテナのコンテナセキュリティコンテキストを設定します。[セキュリティコンテキストの詳細](#set-a-security-policy-for-the-pod)を参照してください。 |
 | `helper_image`                                | （上級者向け）リポジトリのクローンとアーティファクトのアップロードに使用される[デフォルトのヘルパーイメージを上書きします](../../configuration/advanced-configuration.md#helper-image)。 |
-| `helper_image_flavor`                         | ヘルパーイメージのフレーバー（`alpine`、`alpine3.18`、`alpine3.19`、`alpine3.21`、または`ubuntu`）を設定します。デフォルトは`alpine`です。`alpine`を使用する場合、これは`alpine3.19`と同じです。 |
+| `helper_image_flavor`                         | ヘルパーイメージのフレーバー (`alpine`、`alpine3.19`、`alpine3.21`、または`ubuntu`) を設定します。`alpine`がデフォルトです。`alpine`を使用する場合、これは`alpine3.19`と同じです。 |
 | `host_aliases`                                | すべてのコンテナに追加される追加のホスト名エイリアスのリスト。[追加のホストエイリアスの使用についての詳細](#add-extra-host-aliases)を参照してください。 |
 | `image_pull_secrets`                          | プライベートレジストリからのDockerイメージのプルを認証するために使用されるKubernetes `docker-registry`シークレット名を含むアイテムの配列。 |
 | `init_permissions_container_security_context` | init-permissionsコンテナのコンテナセキュリティコンテキストを設定します。[セキュリティコンテキストの詳細](#set-a-security-policy-for-the-pod)を参照してください。 |
@@ -297,14 +320,14 @@ Kubernetes executorを設定するには、`config.toml`ファイルで次の設
 | `priority_class_name`                         | ポッドに設定する優先度クラスを指定します。設定されていない場合は、デフォルトの優先度クラスが使用されます。 |
 | `privileged`                                  | 特権フラグを指定してコンテナを実行します。 |
 | `pull_policy`                                 | イメージプルポリシー（`never`、`if-not-present`、`always`）を指定します。設定されていない場合は、クラスターのイメージの[デフォルトプルポリシー](https://kubernetes.io/docs/concepts/containers/images/#updating-images)が使用されます。複数のプルポリシーの設定方法と詳細については、[プルポリシーの使用](#set-a-pull-policy)を参照してください。[`if-not-present`および`never`のセキュリティに関する考慮事項](../../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy)も参照してください。[プルポリシーを制限する](#restrict-docker-pull-policies)こともできます。 |
-| `resource_availability_check_max_attempts`    | 設定されたリソース（サービスアカウントとプルシークレット）が使用可能であるかどうかを確認する操作の最大試行回数。この回数を超えると試行されなくなります。各試行の間隔は5秒です。GitLab 15.0で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664)されました。[準備ステップでのリソースチェックについての詳細](#resources-check-during-prepare-step)を参照してください。 |
+| `resource_availability_check_max_attempts`    | 設定されたリソース（サービスアカウントとプルシークレット）が使用可能であるかどうかを確認する操作の最大試行回数。この回数を超えると試行されなくなります。各試行の間隔は5秒です。[準備ステップでのリソースチェックについての詳細](#resources-check-during-prepare-step)を参照してください。 |
 | `runtime_class_name`                          | 作成されたすべてのポッドに使用するランタイムクラス。クラスターでこの機能がサポートされていない場合、ジョブは終了または失敗します。 |
 | `service_container_security_context`          | サービスコンテナのコンテナセキュリティコンテキストを設定します。[セキュリティコンテキストの詳細](#set-a-security-policy-for-the-pod)を参照してください。 |
 | `scheduler_name`                              | ビルドポッドのスケジュールに使用するスケジューラ。 |
 | `service_account`                             | ジョブ/executorポッドがKubernetes APIと通信するために使用するデフォルトのサービスアカウント。 |
 | `service_account_overwrite_allowed`           | サービスアカウント上書き環境変数の内容を検証する正規表現。空の場合、サービスアカウント上書き機能が無効になります。 |
 | `services`                                    | [サイドカーパターン](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar)を使用してビルドコンテナにアタッチされている[サービス](https://docs.gitlab.com/ci/services/)のリスト。[サービスの使用](#define-a-list-of-services)についての詳細を参照してください。 |
-| `use_service_account_image_pull_secrets`      | 有効にすると、executorによって作成されるポッドに`imagePullSecrets`が含まれなくなります。これにより、ポッドは[サービスアカウントの`imagePullSecrets`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-image-pull-secret-to-service-account)（設定されている場合）を使用して作成されます。 |
+| `use_service_account_image_pull_secrets`      | 有効にすると、executorによって作成されるポッドに`imagePullSecrets`が含まれなくなります。これにより、ポッドは[サービスアカウントの`imagePullSecrets`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-image-pull-secret-to-service-account)を使用して作成されます。 |
 | `terminationGracePeriodSeconds`               | ポッドで実行されているプロセスに自動終了シグナルが送信された時点から、プロセスがkill（強制終了）シグナルで強制的に停止されるまでの期間。[`cleanup_grace_period_seconds`と`pod_termination_grace_period_seconds`が優先され、これは非推奨になりました](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165)。 |
 | `volumes`                                     | 設定ファイルで設定され、ビルドコンテナにマウントされるボリュームのリスト。[ボリュームの使用](#configure-volume-types)についての詳細を参照してください。 |
 | `pod_spec`                                    | これは実験的な設定です。Runnerマネージャーによって生成されるポッド仕様を、CIジョブの実行に使用されるポッドで設定された設定のリストで上書きします。`Kubernetes Pod Specification`にリストされているすべてのプロパティを設定できます。詳細については、[生成されたポッド仕様を上書きする（実験的機）](#overwrite-generated-pod-specifications)を参照してください。 |
@@ -386,13 +409,7 @@ Runner設定または`.gitlab-ci.yml`ファイルを使用してこれらのラ�
 
 ### ジョブポッドのデフォルトのアノテーション {#default-annotations-for-job-pods}
 
-{{< history >}}
-
-- GitLab Runner 15.9で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3845)されました。
-
-{{< /history >}}
-
-ジョブを実行しているポッドには、デフォルトで次のアノテーションが追加されます。
+ジョブを実行しているポッドには、デフォルトで次のアノテーションが追加されます:
 
 | キー                                | 説明 |
 |------------------------------------|-------------|
@@ -409,7 +426,7 @@ Runner設定または`.gitlab-ci.yml`ファイルを使用してこれらのラ�
 
 ### ポッドのライフサイクル {#pod-lifecycle}
 
-[ポッドのライフサイクル](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle)は、次の影響を受ける可能性があります。
+[ポッドのライフサイクル](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle)は、次の影響を受ける可能性があります:
 
 - `TOML`設定ファイルでの`pod_termination_grace_period_seconds`プロパティの設定。ポッドで実行されているプロセスは、`TERM`シグナルの送信後に指定された期間にわたって実行できます。この期間が経過してもポッドが正常に終了しない場合は、kill（強制終了）シグナルが送信されます。
 - [`FF_USE_POD_ACTIVE_DEADLINE_SECONDS`機能フラグ](../../configuration/feature-flags.md)の有効化。有効にすると、ジョブがタイムアウトしたときに、CI/CDジョブを実行しているポッドは失敗としてマークされ、関連付けられているすべてのコンテナが強制終了されます。最初にGitLabでジョブをタイムアウトさせるには、`activeDeadlineSeconds`を`configured timeout + 1 second`に設定します。
@@ -422,7 +439,7 @@ Runner設定または`.gitlab-ci.yml`ファイルを使用してこれらのラ�
 
 ### ポッドのtolerationを上書きする {#overwrite-pod-tolerations}
 
-Kubernetesポッドのtolerationを上書きするには、次のようにします。
+Kubernetesポッドのtolerationを上書きするには、次のようにします:
 
 1. `config.toml`ファイルまたはHelm `values.yaml`ファイルでCIジョブポッドのtolerationの上書きを有効にするには、`node_tolerations_overwrite_allowed`の正規表現を定義します。この正規表現は、名前が`KUBERNETES_NODE_TOLERATIONS_`で始まるCI変数の値を検証します。
 
@@ -448,10 +465,10 @@ Kubernetesポッドのtolerationを上書きするには、次のようにしま
 
 ### ポッドラベルを上書きする {#overwrite-pod-labels}
 
-各CI/CDジョブのKubernetesポッドラベルを上書きするには、次の手順に従います。
+各CI/CDジョブのKubernetesポッドラベルを上書きするには、次の手順に従います:
 
 1. `.config.yaml`ファイルで`pod_labels_overwrite_allowed`の正規表現を定義します。
-1. `.gitlab-ci.yml`ファイルで、値`key=value`を持つ`KUBERNETES_POD_LABELS_*`変数を設定します。ポッドラベルは`key=value`で上書きされます。複数の値を適用できます。
+1. `.gitlab-ci.yml`ファイルで、値`key=value`を持つ`KUBERNETES_POD_LABELS_*`変数を設定します。ポッドラベルは`key=value`で上書きされます。複数の値を適用できます:
 
     ```yaml
     variables:
@@ -468,10 +485,10 @@ Kubernetesポッドのtolerationを上書きするには、次のようにしま
 
 ### ポッドアノテーションを上書きする {#overwrite-pod-annotations}
 
-各CI/CDジョブのKubernetesポッドアノテーションを上書きするには、次の手順に従います。
+各CI/CDジョブのKubernetesポッドアノテーションを上書きするには、次の手順に従います:
 
 1. `.config.yaml`ファイルで`pod_annotations_overwrite_allowed`の正規表現を定義します。
-1. `.gitlab-ci.yml`ファイルで`KUBERNETES_POD_ANNOTATIONS_*`変数を設定し、値として`key=value`を使用します。ポッドアノテーションは`key=value`で上書きされます。複数のアノテーションを指定できます。
+1. `.gitlab-ci.yml`ファイルで`KUBERNETES_POD_ANNOTATIONS_*`変数を設定し、値として`key=value`を使用します。ポッドアノテーションは`key=value`で上書きされます。複数のアノテーションを指定できます:
 
    ```yaml
    variables:
@@ -504,19 +521,15 @@ Kubernetesポッドのtolerationを上書きするには、次のようにしま
 
 {{< /details >}}
 
-{{< history >}}
-
-- GitLab Runner 15.10で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3114)されました。
-
-{{< /history >}}
-
 この機能は[ベータ版](https://docs.gitlab.com/policy/development_stages_support/#beta)です。本番環境のクラスターで使用する前に、テストKubernetesクラスターでこの機能を使用することを強くお勧めします。この機能を使用するには、`FF_USE_ADVANCED_POD_SPEC_CONFIGURATION`[機能フラグ](../../configuration/feature-flags.md)を有効にする必要があります。
 
-機能が一般提供になる前に改善のためのフィードバックを追加するには、[このイシュー](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29659)を使用してください。
+機能が一般公開される前にフィードバックを追加するには、[イシュー556286](https://gitlab.com/gitlab-org/gitlab/-/issues/556286)にコメントを残してください。
 
 Runnerマネージャーによって生成された`PodSpec`を変更するには、`config.toml`ファイルで`pod_spec`設定を使用します。
 
-`pod_spec`設定により次のようになります。
+Runnerオペレーター固有の設定については、[パッチ構造](../../configuration/configuring_runner_operator.md#patch-structure)を参照してください。
+
+`pod_spec`設定により次のようになります:
 
 - 生成されたポッド仕様のフィールドを上書きして補完します。
 - `config.toml`の`[runners.kubernetes]`で設定された可能性のある設定値を上書きします。
@@ -532,7 +545,7 @@ Runnerマネージャーによって生成された`PodSpec`を変更するに�
 
 同じ`pod_spec`設定で`patch_path`と`patch`を設定することはできません。このように設定するとエラーが発生します。
 
-`config.toml`での複数の`pod_spec`設定の例を以下に示します。
+`config.toml`での複数の`pod_spec`設定の例を以下に示します:
 
 ```toml
 [[runners]]
@@ -559,9 +572,9 @@ Runnerマネージャーによって生成された`PodSpec`を変更するに�
 
 #### マージパッチ戦略 {#merge-patch-strategy}
 
-`merge`パッチ戦略は、既存の`PodSpec`に[キー/値置換](https://datatracker.ietf.org/doc/html/rfc7386)を適用します。この戦略を使用する場合、`config.toml`の`pod_spec`設定により、最終的な`PodSpec`オブジェクトの生成前に、このオブジェクトの値が**上書き**されます。値が完全に上書きされるので、このパッチ戦略を使用する際には十分に注意してください。
+`merge`パッチ戦略は、既存の`PodSpec`に[キー/値置換](https://datatracker.ietf.org/doc/html/rfc7386)を適用します。この戦略を使用する場合、`config.toml`の`pod_spec`設定により、最終的な`PodSpec`オブジェクトの生成前に、このオブジェクトの値が**overwrites**（上書き）されます。値が完全に上書きされるので、このパッチ戦略を使用する際には十分に注意してください。
 
-`merge`パッチ戦略を使用する`pod_spec`設定の例を以下に示します。
+`merge`パッチ戦略を使用する`pod_spec`設定の例を以下に示します:
 
 ```toml
 concurrent = 1
@@ -599,7 +612,7 @@ shutdown_timeout = 0
       patch_type = "merge"
 ```
 
-この設定では、最終的な`PodSpec`には、2つの環境変数（`env1`と`env2`）を持つ1つのコンテナ（`build`）のみが含まれています。上記の例では、次のようになるために関連するCIジョブが失敗します。
+この設定では、最終的な`PodSpec`には、2つの環境変数（`env1`と`env2`）を持つ1つのコンテナ（`build`）のみが含まれています。上記の例では、次のようになるために関連するCIジョブが失敗します:
 
 - `helper`コンテナ仕様が削除されます。
 - `build`コンテナ仕様は、GitLab Runnerによって設定された必要なすべての設定を失います。
@@ -637,7 +650,7 @@ shutdown_timeout = 0
     [[runners.kubernetes.pod_spec]]
       name = "val1 node"
       patch = '''
-        { "op": "add", "path": "/nodeSelector", "value": { key1: "val1" } }
+        [{ "op": "add", "path": "/nodeSelector", "value": { key1: "val1" } }]
       '''
       patch_type = "json"
 ```
@@ -731,7 +744,7 @@ shutdown_timeout = 0
 
 Kubernetesでは、ポッドのライフサイクルにアタッチされた一時的な[PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)を作成できます。このアプローチは、Kubernetesクラスターで[動的プロビジョニング](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/)が有効になっている場合に機能します。各`PVC`は、新しい[ボリューム](https://kubernetes.io/docs/concepts/storage/volumes/)をリクエストできます。ボリュームはポッドのライフサイクルにも関連付けられています。
 
-[動的プロビジョニング](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/)を有効にした後で、一時的な`PVC`を作成するために`config.toml`を次のように変更できます。
+[動的プロビジョニング](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/)を有効にした後で、一時的な`PVC`を作成するために`config.toml`を次のように変更できます:
 
 ```toml
 [[runners.kubernetes.pod_spec]]
@@ -763,7 +776,7 @@ Kubernetesでは、ポッドのライフサイクルにアタッチされた一�
 
 ビルドポッドのセキュリティポリシーを設定するには、`config.toml`で[セキュリティコンテキスト](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)を設定します。
 
-次のオプションを使用します。
+次のオプションを使用します:
 
 | オプション                | 型       | 必須 | 説明 |
 |-----------------------|------------|----------|-------------|
@@ -774,7 +787,7 @@ Kubernetesでは、ポッドのライフサイクルにアタッチされた一�
 | `supplemental_groups` | `int`リスト | いいえ       | コンテナのプライマリGIDに加えて、各コンテナで最初に実行されるプロセスに適用されるグループのリスト。 |
 | `selinux_type`        | `string`   | いいえ       | ポッド内のすべてのコンテナに適用されるSELinuxタイプラベル。 |
 
-`config.toml`のポッドセキュリティコンテキストの例を以下に示します。
+`config.toml`のポッドセキュリティコンテキストの例を以下に示します:
 
 ```toml
 concurrent = %(concurrent)s
@@ -796,7 +809,7 @@ check_interval = 30
 
 古いRunnerポッドがクリアされないことがあります。これは、Runnerマネージャーが誤ってシャットダウンされた場合に発生する可能性があります。
 
-この状況に対処するには、GitLab Runner Pod Cleanupアプリケーションを使用して、古いポッドのクリーンアップをスケジュールできます。詳細については、以下を参照してください。
+この状況に対処するには、GitLab Runner Pod Cleanupアプリケーションを使用して、古いポッドのクリーンアップをスケジュールできます。詳細については、以下を参照してください:
 
 - GitLab Runner Pod Cleanupプロジェクトの[README](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pod-cleanup/-/blob/main/readme.md)。
 - GitLab Runner Pod Cleanupの[ドキュメント](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pod-cleanup/-/blob/main/docs/README.md)。
@@ -805,7 +818,7 @@ check_interval = 30
 
 ビルドポッド、ヘルパーポッド、またはサービスポッドのコンテナセキュリティポリシーを設定するため、`config.toml` executorで[コンテナセキュリティコンテキスト](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)を設定します。
 
-次のオプションを使用します。
+次のオプションを使用します:
 
 | オプション              | 型        | 必須 | 説明 |
 |---------------------|-------------|----------|-------------|
@@ -816,7 +829,7 @@ check_interval = 30
 | `capabilities.drop` | 文字列リスト | いいえ       | コンテナの実行時に削除する機能。 |
 | `selinux_type`      | 文字列      | いいえ       | コンテナプロセスに関連付けられているSELinuxタイプラベル。 |
 
-次の`config.toml`の例では、セキュリティコンテキスト設定により、次のようになります。
+次の`config.toml`の例では、セキュリティコンテキスト設定により、次のようになります:
 
 - ポッドセキュリティコンテキストが設定されます。
 - ビルドコンテナとヘルパーコンテナの`run_as_user`と`run_as_group`が上書きされます。
@@ -858,14 +871,14 @@ check_interval = 30
 
 使用するポリシーを決定するには、[プルポリシーに関するKubernetesのドキュメント](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy)を参照してください。
 
-1つのプルポリシーの場合は次のようになります。
+1つのプルポリシーの場合は次のようになります:
 
 ```toml
 [runners.kubernetes]
   pull_policy = "never"
 ```
 
-複数のプルポリシーの場合は次のようになります。
+複数のプルポリシーの場合は次のようになります:
 
 ```toml
 [runners.kubernetes]
@@ -875,7 +888,7 @@ check_interval = 30
 
 複数のポリシーを定義すると、イメージが正常に取得されるまで各ポリシーが試行されます。たとえば`[ always, if-not-present ]`を使用する場合、一時的なレジストリの問題が原因で`always`ポリシーが失敗すると、ポリシー`if-not-present`が使用されます。
 
-失敗したプルを再試行するには、次のようにします。
+失敗したプルを再試行するには、次のようにします:
 
 ```toml
 [runners.kubernetes]
@@ -886,7 +899,7 @@ GitLabの命名規則はKubernetesの命名規則とは異なります。
 
 | Runnerのプルポリシー | Kubernetesのプルポリシー | 説明 |
 |--------------------|------------------------|-------------|
-| _空白_            | _空白_                | Kubernetesによって指定されたデフォルトポリシーを使用します。 |
+| なし               | なし                   | Kubernetesによって指定されたデフォルトポリシーを使用します。 |
 | `if-not-present`   | `IfNotPresent`         | ジョブを実行するノードにイメージがまだ存在しない場合にのみ、イメージがプルされます。このプルポリシーを使用する前に、[セキュリティに関する考慮事項](../../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy)を確認してください。 |
 | `always`           | `Always`               | ジョブが実行されるたびにイメージがプルされます。 |
 | `never`            | `Never`                | イメージはプルされません。イメージがノードにすでに存在している必要があります。 |
@@ -899,7 +912,7 @@ GitLabの命名規則はKubernetesの命名規則とは異なります。
 
 Runnerがデフォルトで削除する[機能のリスト](#default-list-of-dropped-capabilities)があります。`cap_add`オプションに指定した機能は、削除対象から除外されます。
 
-`config.toml`ファイルの設定例を次に示します。
+`config.toml`ファイルの設定例を次に示します:
 
 ```toml
 concurrent = 1
@@ -915,11 +928,228 @@ check_interval = 30
     # ...
 ```
 
-機能を指定するときには、次のようになります。
+機能を指定するときには、次のようになります:
 
 - ユーザー定義の`cap_drop`は、ユーザー定義の`cap_add`よりも優先されます。両方の設定で同じ機能を定義した場合、`cap_drop`の機能のみがコンテナに渡されます。
 - コンテナ設定に渡される機能識別子から`CAP_`プレフィックスを削除します。たとえば、`CAP_SYS_TIME`機能を追加または削除する場合は、設定ファイルに文字列`SYS_TIME`を入力します。
 - Kubernetesクラスターのオーナーが[PodSecurityPolicyを定義できます](https://kubernetes.io/docs/concepts/security/pod-security-policy/#capabilities)。このポリシーでは、特定の機能をデフォルトで許可、制限、または追加できます。これらのルールは、すべてのユーザー定義設定よりも優先されます。
+
+### コンテナのユーザーとグループの設定 {#configure-container-user-and-group}
+
+{{< history >}}
+
+- セキュリティコンテキストベースのユーザー設定のサポートがGitLab Runner 18.4で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38894)されました。
+
+{{< /history >}}
+
+Kubernetesセキュリティコンテキスト設定で、コンテナが実行するユーザーとグループを設定します。管理者は、コンテナのセキュリティを制御し、ジョブが特定のコンテナタイプにユーザーを指定できるようにすることができます。
+
+{{< alert type="note" >}}
+
+Windowsのジョブ定義で`runAsUser`、`runAsGroup`、または`image:user`を設定することはサポートされていません。代わりに、[runAsUserName](https://kubernetes.io/docs/tasks/configure-pod-container/configure-runasusername/)を[FF_USE_ADVANCED_POD_SPEC_CONFIGURATION](#overwrite-generated-pod-specifications)を使用して設定することをお勧めします。
+
+{{< /alert >}}
+
+#### 設定の優先順位 {#configuration-precedence}
+
+Runnerは、次の順序でユーザー設定を適用します:
+
+ビルドおよびサービスコンテナの場合:
+
+1. コンテナセキュリティコンテキスト（`run_as_user`/`run_as_group`）: 管理者がこの設定を制御します
+1. ポッドセキュリティコンテキスト（`run_as_user`/`run_as_group`）: 管理者がポッドレベルのデフォルトを制御します
+1. ジョブ設定 (`.gitlab-ci.yml`): ユーザーがこの設定を制御します
+
+ヘルパーコンテナの場合:
+
+1. ヘルパーコンテナセキュリティコンテキスト（`run_as_user`/`run_as_group`）: 管理者がこの設定を制御します
+1. ポッドセキュリティコンテキスト（`run_as_user`/`run_as_group`）: 管理者がポッドレベルのデフォルトを制御します
+
+ジョブ設定は、セキュリティ分離のためにヘルパーコンテナには適用されません。
+
+管理者は、セキュリティコンプライアンスのために、ユーザーが指定した値をオーバーライドできます。ヘルパーコンテナは、ジョブの仕様から分離されたままです。
+
+#### Kubernetesの要件 {#requirements-for-kubernetes}
+
+Kubernetesには、ユーザーIDとグループIDに数値が必要です:
+
+- ユーザーIDとグループIDは整数である必要があります
+- `SecurityContext`は`run_as_user`と`run_as_group`を使用し、数値のみを受け入れます
+- ジョブ設定では、ユーザーのみの場合は「1000」を使用し、ユーザーとグループの場合は「1000:1001」を使用します
+
+#### ユーザーとグループ設定のオーバーライド {#override-user-and-group-settings}
+
+ポッドおよびコンテナ固有のセキュリティコンテキストを使用して、ユーザーとグループの設定をオーバーライドします:
+
+```toml
+[[runners]]
+  name = "k8s-runner"
+  url = "https://gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    allowed_users = ["1000", "1001", "65534"]
+    allowed_groups = ["1001", "65534"]
+
+    # Pod security context - provides defaults for all containers
+    [runners.kubernetes.pod_security_context]
+      run_as_user = 1500
+      run_as_group = 1500
+
+    # Build container security context - overrides pod context
+    [runners.kubernetes.build_container_security_context]
+      run_as_user = 2000
+      run_as_group = 2001
+
+    # Helper container security context - overrides pod context
+    [runners.kubernetes.helper_container_security_context]
+      run_as_user = 3000
+      run_as_group = 3001
+
+    # Service container security context - overrides pod context
+    [runners.kubernetes.service_container_security_context]
+      run_as_user = 4000
+      run_as_group = 4001
+```
+
+この例では: 
+
+- ポッドセキュリティコンテキストは、特定の設定がないコンテナのデフォルト（1500:1500）を設定します
+- コンテナセキュリティコンテキストは、ポッドのデフォルトをオーバーライドします
+- ユーザー1500、2000、3000、および4000は`allowed_users`リストにありませんが、セキュリティコンテキストはこれらの値が許可リストの検証を回避するため、使用できます
+- この機能により、管理者はポッドとコンテナの両方のレベルで無制限のオーバーライド制御を行うことができます
+
+各コンテナタイプを個別に設定できます。セキュリティコンテキスト設定は、ジョブ設定のユーザー仕様よりも優先されます。
+
+#### ジョブ設定でユーザーを指定する {#specify-users-in-job-configuration}
+
+ジョブは、イメージ設定でユーザーを指定できます:
+
+```yaml
+# Job with custom user
+job:
+  image:
+    name: alpine:latest
+    kubernetes:
+      user: "1000"
+  script:
+    - whoami
+    - id
+
+# Job with user and group
+job_with_group:
+  image:
+    name: alpine:latest
+    kubernetes:
+      user: "1000:1001"
+  script:
+    - whoami
+    - id
+
+# Job using environment variable
+job_dynamic:
+  image:
+    name: alpine:latest
+    kubernetes:
+      user: "${CUSTOM_USER_ID}"
+  variables:
+    CUSTOM_USER_ID: "1000"
+  script:
+    - whoami
+```
+
+#### セキュリティ検証 {#security-validation}
+
+Runnerは、ジョブレベルの設定に対してのみ、ユーザーIDとグループIDを許可リストに対して検証します:
+
+- ルートユーザー/グループ（UID/GID 0）: ジョブ設定には、常に明示的な許可リスト権限が必要です
+- 空 (`allowed_users`): ルート以外のジョブユーザーはすべて許可されます
+- 指定された`allowed_users`: リストされているジョブユーザーのみが許可されます
+- 空 (`allowed_groups`): ルート以外のジョブグループはすべて許可されます
+- 指定された`allowed_groups`: リストされているジョブグループのみが許可されます
+- セキュリティコンテキスト設定: 許可リストに対して検証されていません（管理者のオーバーライド）
+
+```toml
+[runners.kubernetes]
+  allowed_users = ["1000", "65534"]
+  allowed_groups = ["1001", "65534"]
+```
+
+#### コンテナの動作と優先順位 {#container-behavior-and-precedence}
+
+セキュリティコンテキスト設定は、次の優先順位（最高から最低）に従います:
+
+1. コンテナセキュリティコンテキスト
+1. ポッドセキュリティコンテキスト
+1. ジョブ設定
+
+```toml
+[runners.kubernetes]
+  # Pod-level defaults
+  [runners.kubernetes.pod_security_context]
+    run_as_user = 1500
+    run_as_group = 1500
+
+  # Container-specific overrides
+  [runners.kubernetes.build_container_security_context]
+    run_as_user = 1000
+    run_as_group = 1001
+  [runners.kubernetes.helper_container_security_context]
+    run_as_user = 1000
+    run_as_group = 1001
+```
+
+```yaml
+job:
+  image:
+    name: alpine:latest
+    kubernetes:
+      user: "2000:2001"  # Ignored - container security context uses 1000:1001
+```
+
+各コンテナタイプは、ポッドレベルのフォールバックでセキュリティコンテキスト設定を使用します:
+
+- ビルドコンテナ: 最初に`build_container_security_context`、次に`pod_security_context`、次に`.gitlab-ci.yml`からのジョブレベルのユーザー設定を使用します。
+- ヘルパーコンテナ: 最初に`helper_container_security_context`、次に`pod_security_context`を使用します。ジョブレベルのユーザー設定は継承しません。
+- サービスコンテナ: 最初に`service_container_security_context`、次に`pod_security_context`、次にジョブレベルのユーザー設定を使用します。
+
+このアプローチにより、ヘルパーコンテナをジョブ仕様から分離した状態に保ちながら、各コンテナタイプのセキュリティ設定をきめ細かく制御できます。
+
+#### Dockerエクゼキューターとの比較 {#comparison-with-docker-executor}
+
+| 機能                       | Docker executor                    | Kubernetes executor                          |
+|-------------------------------|------------------------------------|----------------------------------------------|
+| ユーザー形式                   | ユーザー名またはUID（`root`または`1000`） | 数値のUIDのみ（`1000`）                    |
+| グループ形式                  | ユーザーフィールドではサポートされていません        | 数値GID（`1000:1001`）                    |
+| 管理者のオーバーライド方法 | Runnerの`user`フィールド                | コンテナとポッドのセキュリティコンテキスト          |
+| 優先順位                    | Runner > ジョブ                       | コンテナコンテキスト > ポッドコンテキスト > ジョブ        |
+| セキュリティ検証           | ユーザー名の許可リスト                | 数値のUID/GID許可リスト                   |
+| 管理者のオーバーライド        | サポート対象                          | サポート対象（ポッドおよびコンテナレベル）         |
+| ヘルパーコンテナユーザー         | ビルドコンテナと同じ            | 独自の`helper_container_security_context`を使用 |
+| ポッドレベルのデフォルト            | 利用できません                      | `pod_security_context`                       |
+
+#### ユーザーとグループの設定の問題を解決する {#troubleshoot-user-and-group-configuration}
+
+##### エラー: `failed to parse UID`または`failed to parse GID` {#error-failed-to-parse-uid-or-failed-to-parse-gid}
+
+- ユーザーIDが数値であることを確認してください: `"1000"`ではありません`"user"`
+- 形式を確認してください: ユーザーとグループの場合は`"1000:1001"`
+- 負の値は許可されていません
+
+##### エラー: `user "1000" is not in the allowed list` {#error-user-1000-is-not-in-the-allowed-list}
+
+このエラーは、ジョブレベルのユーザー設定（`.gitlab-ci.yml`）でのみ発生します。Runner設定の`allowed_users`にユーザーを追加するか、`allowed_users`を削除して、ルート以外のジョブユーザーを許可します。セキュリティコンテキストとポッドセキュリティコンテキストユーザーは、許可リストに対して検証されません。
+
+##### エラー: `group "1001" is not in the allowed list` {#error-group-1001-is-not-in-the-allowed-list}
+
+このエラーは、ジョブレベルのグループ設定（`.gitlab-ci.yml`）でのみ発生します。Runner設定の`allowed_groups`にグループを追加するか、`allowed_groups`を削除して、ルート以外のジョブグループを許可します。セキュリティコンテキストとポッドセキュリティコンテキストグループは、許可リストに対して検証されません。
+
+##### エラー: `user "0" is not in the allowed list` (ルートユーザーがブロックされました) {#error-user-0-is-not-in-the-allowed-list-root-user-blocked}
+
+このエラーは、ジョブ設定（`.gitlab-ci.yml`）でルートが指定されている場合にのみ発生します。ジョブ設定からのルートユーザー（UID 0）には、明示的な権限が必要です: `"0"`を`allowed_users`に追加します。または、セキュリティコンテキストまたはポッドセキュリティコンテキストを使用して、ルートユーザーを設定します: `run_as_user = 0` （許可リストの検証を回避します）。
+
+##### コンテナが予期されるユーザーとは異なるユーザーとして実行される {#container-runs-as-different-user-than-expected}
+
+Runner設定がセキュリティコンテキストでジョブ設定をオーバーライドするかどうかを確認します（セキュリティコンテキストが常に優先されます）。ジョブ設定のみを使用している場合は、`allowed_users`に目的のユーザーIDが含まれているかどうかを確認します。セキュリティコンテキスト値は許可リストに対して検証されず、管理者のオーバーライド機能を提供します。
 
 ### コンテナリソースを上書きする {#overwrite-container-resources}
 
@@ -961,7 +1191,7 @@ check_interval = 30
 
 {{< /history >}}
 
-`config.toml`で[サービス](https://docs.gitlab.com/ci/services/) のリストを定義します。
+`config.toml`で[サービス](https://docs.gitlab.com/ci/services/)のリストを定義します。
 
 ```toml
 concurrent = 1
@@ -1024,18 +1254,18 @@ variables:
   KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: ci-service-account
 ```
 
-CIの実行中に指定されたサービスアカウントのみが使用されるようにするには、次のいずれかの正規表現を定義します。
+CIの実行中に指定されたサービスアカウントのみが使用されるようにするには、次のいずれかの正規表現を定義します:
 
 - `service_account_overwrite_allowed`設定。
 - `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED`環境変数。
 
 どちらも設定しない場合、上書きは無効になります。
 
-### RuntimeClassを設定する {#set-the-runtimeclass}
+### `RuntimeClass`を設定します {#set-the-runtimeclass}
 
-ジョブコンテナごとに[RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/)を設定するには、`runtime_class_name`を使用します。
+`runtime_class_name`を使用して、各ジョブコンテナの[`RuntimeClass`](https://kubernetes.io/docs/concepts/containers/runtime-class/)を設定します。
 
-RuntimeClass名を指定してもクラスターでこれを設定しない場合、または機能がサポートされていない場合は、executorはジョブを作成できません。
+`RuntimeClass`名を指定しても、クラスターで設定されていない場合、またはこの機能がサポートされていない場合、エグゼキューターはジョブを作成できません。
 
 ```toml
 concurrent = 1
@@ -1056,20 +1286,20 @@ check_interval = 30
 
 {{< /history >}}
 
-ビルドログとスクリプトのために`emptyDir`ボリュームがポッドにマウントされるディレクトリを変更できます。このディレクトリは次の操作に使用できます。
+ビルドログとスクリプトのために`emptyDir`ボリュームがポッドにマウントされるディレクトリを変更できます。このディレクトリは次の操作に使用できます:
 
 - 変更されたイメージでジョブポッドを実行する。
 - 特権のないユーザーとして実行する。
 - `SecurityContext`設定をカスタマイズする。
 
-ディレクトリを変更するには、次のようにします。
+ディレクトリを変更するには、次のようにします:
 
 - ビルドログの場合は`logs_base_dir`を設定します。
 - ビルドスクリプトの場合は`scripts_base_dir`を設定します。
 
-期待される値は、末尾のスラッシュがないベースディレクトリを表す文字列です（`/tmp`、`/mydir/example`など）。**ディレクトリはすでに存在している必要があります**。
+期待される値は、末尾のスラッシュがないベースディレクトリを表す文字列です（`/tmp`、`/mydir/example`など）。**The directory must already exist**（ディレクトリはすでに存在している必要があります）。
 
-この値は、ビルドログおよびスクリプトのために生成されたパスの先頭に追加されます。次に例を示します。
+この値は、ビルドログおよびスクリプトのために生成されたパスの先頭に追加されます。次に例を示します: 
 
 ```toml
   [[runners]]
@@ -1081,7 +1311,7 @@ check_interval = 30
       scripts_base_dir = "/tmp"
 ```
 
-この設定では、次の場所に`emptyDir`ボリュームがマウントされます。
+この設定では、次の場所に`emptyDir`ボリュームがマウントされます:
 
 - ビルドログの場合はデフォルトの`/logs-${CI_PROJECT_ID}-${CI_JOB_ID}`ではなく`/tmp/logs-${CI_PROJECT_ID}-${CI_JOB_ID}`。
 - ビルドスクリプトの場合は`/tmp/scripts-${CI_PROJECT_ID}-${CI_JOB_ID}`。
@@ -1090,9 +1320,9 @@ check_interval = 30
 
 Kubernetes 1.30以降では、[ユーザーネームスペース](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/)を使用して、コンテナ内で実行しているユーザーをホスト上のユーザーから隔離できます。コンテナ内でrootとして実行しているプロセスは、ホスト上の別の特権のないユーザーとして実行できます。
 
-ユーザーネームスペースを使用すると、CI/CD ジョブの実行に使用されるイメージをより細かく制御できます。追加の設定が必要な操作（rootとしての実行など）も、ホスト上で追加のアタックサーフェスを生じることなく機能できます。
+ユーザーネームスペースを使用すると、CI/CDジョブの実行に使用されるイメージをより細かく制御できます。追加の設定が必要な操作（rootとしての実行など）も、ホスト上で追加のアタックサーフェスを生じることなく機能できます。
 
-この機能を使用するには、クラスターが[適切に設定されている](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/#introduction)ことを確認してください。次の例では、`hostUsers`キーの`pod_spec`を追加し、特権ポッドと特権エスカレーションの両方を無効にします。
+この機能を使用するには、クラスターが[適切に設定されている](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/#introduction)ことを確認してください。次の例では、`hostUsers`キーの`pod_spec`を追加し、特権ポッドと特権エスカレーションの両方を無効にします:
 
 ```toml
   [[runners]]
@@ -1121,7 +1351,7 @@ Kubernetes 1.30以降では、[ユーザーネームスペース](https://kubern
 
 システムはヘルパーイメージのオペレーティングシステム、アーキテクチャ、およびWindowsカーネルバージョン（該当する場合）を判別します。次にこれらのパラメータを、ビルドの他の側面（使用するコンテナやイメージなど）に利用します。
 
-次の図は、システムがこれらの詳細を検出する仕組みを示しています。
+次の図は、システムがこれらの詳細を検出する仕組みを示しています:
 
 ```mermaid
 %%|fig-align: center
@@ -1207,9 +1437,9 @@ Kubernetes for Windowsには特定の[制限](https://kubernetes.io/docs/concept
 
 ### ノードセレクターの上書き {#overwrite-the-node-selector}
 
-ノードセレクターを上書きするには、次の手順に従います。
+ノードセレクターを上書きするには、次の手順に従います:
 
-1. `config.toml`ファイルまたはHelm `values.yaml`ファイルで、ノードセレクターの上書きを有効にします。
+1. `config.toml`ファイルまたはHelm `values.yaml`ファイルで、ノードセレクターの上書きを有効にします:
 
    ```toml
    runners:
@@ -1220,14 +1450,14 @@ Kubernetes for Windowsには特定の[制限](https://kubernetes.io/docs/concept
           node_selector_overwrite_allowed = ".*"
    ```
 
-1. `.gitlab-ci.yml`ファイルで、ノードセレクターを上書きするための変数を定義します。
+1. `.gitlab-ci.yml`ファイルで、ノードセレクターを上書きするための変数を定義します:
 
    ```yaml
    variables:
      KUBERNETES_NODE_SELECTOR_* = ''
    ```
 
-次の例では、Kubernetesノードアーキテクチャを上書きするために、設定が`config.toml`ファイルと`.gitlab-ci.yml`ファイルで指定されています。
+次の例では、Kubernetesノードアーキテクチャを上書きするために、設定が`config.toml`ファイルと`.gitlab-ci.yml`ファイルで指定されています:
 
 {{< tabs >}}
 
@@ -1286,7 +1516,7 @@ job:
 
 {{< alert type="note" >}}
 
-`node_affinities`は、ビルドを実行するオペレーティングシステムを決定しません。このオペレーションシステムを決定するのは`node_selectors`のみです。詳細については、[オペレーティングシステム、アーキテクチャ、およびWindowsカーネルバージョン](#operating-system-architecture-and-windows-kernel-version)を参照してください。`config.toml`の設定例を次に示します。
+`node_affinities`は、ビルドを実行するオペレーティングシステムを決定しません。このオペレーションシステムを決定するのは`node_selectors`のみです。詳細については、[オペレーティングシステム、アーキテクチャ、およびWindowsカーネルバージョン](#operating-system-architecture-and-windows-kernel-version)を参照してください。`config.toml`の設定例を次に示します:
 
 {{< /alert >}}
 
@@ -1336,7 +1566,7 @@ concurrent = 1
 
 他のポッドのラベルに基づいて[ポッドをスケジュールできる](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity)ノードを制約するには、ポッドアフィニティとアンチアフィニティを使用します。
 
-`config.toml`の設定例を次に示します。
+`config.toml`の設定例を次に示します:
 
 ```toml
 concurrent = 1
@@ -1402,7 +1632,7 @@ concurrent = 1
 
 `PreStop`と`PostStart`の2種類のフックを設定できます。それぞれのフックでは1つのハンドラータイプのみを設定できます。
 
-`config.toml`ファイルの設定例を次に示します。
+`config.toml`ファイルの設定例を次に示します:
 
 ```toml
 [[runners]]
@@ -1428,7 +1658,7 @@ concurrent = 1
         value = "header_value_2"
 ```
 
-次の設定を使用して、各ライフサイクルフックを設定します。
+次の設定を使用して、各ライフサイクルフックを設定します:
 
 | オプション       | 型                            | 必須 | 説明 |
 |--------------|---------------------------------|----------|-------------|
@@ -1436,13 +1666,13 @@ concurrent = 1
 | `http_get`   | `KubernetesLifecycleHTTPGet`    | いいえ       | `HTTPGet`は、実行するHTTPリクエストを指定します。 |
 | `tcp_socket` | `KubernetesLifecycleTcpSocket`  | いいえ       | `TCPsocket`は、TCPポートが関与するアクションを指定します。 |
 
-#### KubernetesLifecycleExecAction {#kuberneteslifecycleexecaction}
+#### `KubernetesLifecycleExecAction` {#kuberneteslifecycleexecaction}
 
 | オプション    | 型          | 必須 | 説明 |
 |-----------|---------------|----------|-------------|
 | `command` | `string`リスト | はい      | コンテナ内で実行するコマンドライン。 |
 
-#### KubernetesLifecycleHTTPGet {#kuberneteslifecyclehttpget}
+#### `KubernetesLifecycleHTTPGet` {#kuberneteslifecyclehttpget}
 
 | オプション         | 型                                    | 必須 | 説明 |
 |----------------|-----------------------------------------|----------|-------------|
@@ -1452,14 +1682,14 @@ concurrent = 1
 | `scheme`       | 文字列                                  | いいえ       | ホストへの接続に使用されるスキーム。デフォルトはHTTPです（オプション）。 |
 | `http_headers` | `KubernetesLifecycleHTTPGetHeader`リスト | いいえ       | リクエストで設定するカスタムヘッダー（オプション）。 |
 
-#### KubernetesLifecycleHTTPGetHeader {#kuberneteslifecyclehttpgetheader}
+#### `KubernetesLifecycleHTTPGetHeader` {#kuberneteslifecyclehttpgetheader}
 
 | オプション  | 型   | 必須 | 説明 |
 |---------|--------|----------|-------------|
 | `name`  | 文字列 | はい      | HTTPヘッダー名。 |
 | `value` | 文字列 | はい      | HTTPヘッダー値。 |
 
-#### KubernetesLifecycleTcpSocket {#kuberneteslifecycletcpsocket}
+#### `KubernetesLifecycleTcpSocket` {#kuberneteslifecycletcpsocket}
 
 | オプション | 型   | 必須 | 説明 |
 |--------|--------|----------|-------------|
@@ -1476,7 +1706,7 @@ concurrent = 1
 | `options`     | `KubernetesDNSConfigOption` | いいえ       | nameプロパティ（必須）とvalueプロパティ（オプション）を含めることができるオブジェクトのリスト（オプション）。 |
 | `searches`    | `string`リスト              | いいえ       | ポッドでのホスト名検索に使用するDNS検索ドメインのリスト。 |
 
-`config.toml`ファイルの設定例を次に示します。
+`config.toml`ファイルの設定例を次に示します:
 
 ```toml
 concurrent = 1
@@ -1505,7 +1735,7 @@ check_interval = 30
         name = "edns0"
 ```
 
-#### KubernetesDNSConfigOption {#kubernetesdnsconfigoption}
+#### `KubernetesDNSConfigOption` {#kubernetesdnsconfigoption}
 
 | オプション  | 型      | 必須 | 説明 |
 |---------|-----------|----------|-------------|
@@ -1529,14 +1759,14 @@ GitLab Runnerは、デフォルトで次の機能を削除します。
 
 [ホストエイリアス](https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/)を設定して、コンテナ内の`/etc/hosts`ファイルにエントリを追加するようにKubernetesに指示します。
 
-次のオプションを使用します。
+次のオプションを使用します:
 
 | オプション      | 型          | 必須 | 説明 |
 |-------------|---------------|----------|-------------|
 | `IP`        | 文字列        | はい      | ホストをアタッチするIPアドレス。 |
 | `Hostnames` | `string`リスト | はい      | IPにアタッチされているホスト名エイリアスのリスト。 |
 
-`config.toml`ファイルの設定例を次に示します。
+`config.toml`ファイルの設定例を次に示します:
 
 ```toml
 concurrent = 4
@@ -1553,7 +1783,7 @@ concurrent = 4
       hostnames = ["web14", "web15"]
 ```
 
-コマンドラインパラメータ`--kubernetes-host_aliases`とJSONインプットを使用して、ホストエイリアスを設定することもできます。次に例を示します。
+コマンドラインパラメータ`--kubernetes-host_aliases`とJSONインプットを使用して、ホストエイリアスを設定することもできます。次に例を示します: 
 
 ```shell
 gitlab-runner register --kubernetes-host_aliases '[{"ip":"192.168.1.100","hostnames":["myservice.local"]},{"ip":"192.168.1.101","hostnames":["otherservice.local"]}]'
@@ -1572,7 +1802,7 @@ gitlab-runner register --kubernetes-host_aliases '[{"ip":"192.168.1.100","hostna
 
 ### ボリュームタイプを設定する {#configure-volume-types}
 
-次のボリュームタイプをマウントできます。
+次のボリュームタイプをマウントできます:
 
 - `hostPath`
 - `persistentVolumeClaim`
@@ -1581,7 +1811,7 @@ gitlab-runner register --kubernetes-host_aliases '[{"ip":"192.168.1.100","hostna
 - `emptyDir`
 - `csi`
 
-複数のボリュームタイプを使用した設定の例を以下に示します。
+複数のボリュームタイプを使用した設定の例を以下に示します:
 
 ```toml
 concurrent = 4
@@ -1630,13 +1860,13 @@ concurrent = 4
 
 コンテナ内の指定されたホストパスをマウントするようにKubernetesに指示するには、[`hostPath`ボリューム](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath)を設定します。
 
-`config.toml`ファイルで次のオプションを使用します。
+`config.toml`ファイルで次のオプションを使用します:
 
 | オプション              | 型    | 必須 | 説明 |
 |---------------------|---------|----------|-------------|
 | `name`              | 文字列  | はい      | ボリュームの名前。 |
 | `mount_path`        | 文字列  | はい      | コンテナ内でボリュームがマウントされるパス。 |
-| `sub_path`          | 文字列  | いいえ       | マウントされるボリューム内の[サブパス](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath)（ルートではありません）。 |
+| `sub_path`          | 文字列  | いいえ       | マウントされるボリューム内の[サブパス](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath)。 |
 | `host_path`         | 文字列  | いいえ       | ボリュームとしてマウントされるホスト上のパス。値を指定しない場合、デフォルトでは`mount_path`と同じパスになります。 |
 | `read_only`         | ブール値 | いいえ       | ボリュームを読み取り専用モードに設定します。デフォルトは`false`です。 |
 | `mount_propagation` | 文字列  | いいえ       | コンテナ間でマウントされたボリュームを共有します。詳細については、[マウントの伝搬](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation)を参照してください。 |
@@ -1645,7 +1875,7 @@ concurrent = 4
 
 Kubernetesクラスターで定義されている`persistentVolumeClaim`を使用してコンテナにマウントすることをKubernetesに指示するには、[`persistentVolumeClaim`ボリューム](https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim)を設定します。
 
-`config.toml`ファイルで次のオプションを使用します。
+`config.toml`ファイルで次のオプションを使用します:
 
 | オプション              | 型    | 必須 | 説明 |
 |---------------------|---------|----------|-------------|
@@ -1659,7 +1889,7 @@ Kubernetesクラスターで定義されている`persistentVolumeClaim`を使�
 
 Kubernetesクラスターで定義されている[`configMap`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)を使用してコンテナにマウントすることをKubernetesに指示するには、`configMap`ボリュームを設定します。
 
-`config.toml`で次のオプションを使用します。
+`config.toml`で次のオプションを使用します:
 
 | オプション       | 型                | 必須 | 説明 |
 |--------------|---------------------|----------|-------------|
@@ -1669,13 +1899,13 @@ Kubernetesクラスターで定義されている[`configMap`](https://kubernete
 | `sub_path`   | 文字列              | いいえ       | ルートの代わりにボリューム内の[サブパス](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath)をマウントします。 |
 | `items`      | `map[string]string` | いいえ       | 使用する`configMap`のキーのキーからパスへのマッピング。 |
 
-`configMap`の各キーはファイルに変更され、マウントパスに保存されます。デフォルトでは次のようになります。
+`configMap`の各キーはファイルに変更され、マウントパスに保存されます。デフォルトでは次のようになります:
 
 - すべてのキーが含まれます。
 - `configMap`キーはファイル名として使用されます。
 - 値はファイルコンテンツに保存されます。
 
-デフォルトのキーと値のストレージを変更するには、`items`オプションを使用します。`items`オプションを使用すると、**指定されたキーのみ**がボリュームに追加され、他のキーはすべてスキップされます。
+デフォルトのキーと値のストレージを変更するには、`items`オプションを使用します。`items`オプションを使用すると、**only specified keys**（指定されたキーのみ）がボリュームに追加され、他のキーはすべてスキップされます。
 
 {{< alert type="note" >}}
 
@@ -1687,7 +1917,7 @@ Kubernetesクラスターで定義されている[`configMap`](https://kubernete
 
 Kubernetesクラスターで定義されている`secret`を使用してコンテナにマウントすることをKubernetesに指示するには、[`secret`ボリューム](https://kubernetes.io/docs/concepts/storage/volumes/#secret)を設定します。
 
-`config.toml`ファイルで次のオプションを使用します。
+`config.toml`ファイルで次のオプションを使用します:
 
 | オプション       | 型                | 必須 | 説明 |
 |--------------|---------------------|----------|-------------|
@@ -1697,13 +1927,13 @@ Kubernetesクラスターで定義されている`secret`を使用してコン�
 | `sub_path`   | 文字列              | いいえ       | ルートの代わりにボリューム内の[サブパス](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath)をマウントします。 |
 | `items`      | `map[string]string` | いいえ       | 使用するconfigMapからのキーのキーからパスへのマッピング。 |
 
-選択した`secret`の各キーは、選択されているマウントパスに保存されているファイルに変更されます。デフォルトでは次のようになります。
+選択した`secret`の各キーは、選択されているマウントパスに保存されているファイルに変更されます。デフォルトでは次のようになります:
 
 - すべてのキーが含まれます。
 - `configMap`キーはファイル名として使用されます。
 - 値はファイルコンテンツに保存されます。
 
-デフォルトのキーと値のストレージを変更するには、`items`オプションを使用します。`items`オプションを使用すると、**指定されたキーのみ**がボリュームに追加され、他のキーはすべてスキップされます。
+デフォルトのキーと値のストレージを変更するには、`items`オプションを使用します。`items`オプションを使用すると、**only specified keys**（指定されたキーのみ）がボリュームに追加され、他のキーはすべてスキップされます。
 
 {{< alert type="note" >}}
 
@@ -1715,7 +1945,7 @@ Kubernetesクラスターで定義されている`secret`を使用してコン�
 
 コンテナに空のディレクトリをマウントするようにKubernetesに指示するには、[`emptyDir`ボリューム](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir)を設定します。
 
-`config.toml`ファイルで次のオプションを使用します。
+`config.toml`ファイルで次のオプションを使用します:
 
 | オプション       | 型   | 必須 | 説明 |
 |--------------|--------|----------|-------------|
@@ -1729,7 +1959,7 @@ Kubernetesクラスターで定義されている`secret`を使用してコン�
 
 コンテナに任意のストレージシステムをマウントするために、カスタム`csi`ドライバーを使用するようにKubernetesに指示するには、[Container Storage Interface（`csi`）ボリューム](https://kubernetes.io/docs/concepts/storage/volumes/#csi)を設定します。
 
-`config.toml`で次のオプションを使用します。
+`config.toml`で次のオプションを使用します:
 
 | オプション              | 型                | 必須 | 説明 |
 |---------------------|---------------------|----------|-------------|
@@ -1743,9 +1973,9 @@ Kubernetesクラスターで定義されている`secret`を使用してコン�
 
 ### サービスコンテナにボリュームをマウントする {#mount-volumes-on-service-containers}
 
-ビルドコンテナに対して定義されたボリュームは、すべてのサービスコンテナにも自動的にマウントされます。この機能は、テストにかかる時間を短縮する目的でデータベースストレージをRAMにマウントするために、[`services_tmpfs`](../../executors/docker.md#mount-a-directory-in-ram)（Docker executorでのみ使用可能）の代替として使用できます。
+ビルドコンテナに対して定義されたボリュームは、すべてのサービスコンテナにも自動的にマウントされます。この機能は、テストにかかる時間を短縮する目的でデータベースストレージをRAMにマウントするために、[`services_tmpfs`](../../executors/docker.md#mount-a-directory-in-ram)の代替として使用できます。
 
-`config.toml`ファイルの設定例を次に示します。
+`config.toml`ファイルの設定例を次に示します:
 
 ```toml
 [[runners]]
@@ -1762,7 +1992,7 @@ Kubernetesクラスターで定義されている`secret`を使用してコン�
 
 ジョブのビルドディレクトリを保存するには、設定されている`builds_dir`（デフォルトでは`/builds`）へのカスタムボリュームマウントを定義します。[`pvc`ボリューム](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)を使用する場合、[アクセスモード](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes)に基づいて、ジョブを1つのノードで実行するように制限されることがあります。
 
-`config.toml`ファイルの設定例を次に示します。
+`config.toml`ファイルの設定例を次に示します:
 
 ```toml
 concurrent = 4
@@ -1786,7 +2016,7 @@ concurrent = 4
 
 {{< /history >}}
 
-Kubernetes CIジョブのビルドディレクトリは、デフォルトでは一時的です。（`GIT_STRATEGY=fetch`を機能させるために）ジョブ間でGitクローンを永続化する場合は、ビルドフォルダーに対する永続ボリュームクレームをマウントする必要があります。複数のジョブを同時実行できるため、`ReadWriteMany`ボリュームを使用するか、同じRunner上で発生する可能性がある同時実行ジョブごとに1つのボリュームを用意する必要があります。後者の方がパフォーマンの向上を見込めます。このような設定の例を以下に示します。
+Kubernetes CIジョブのビルドディレクトリは、デフォルトでは一時的です。（`GIT_STRATEGY=fetch`を機能させるために）ジョブ間でGitクローンを永続化する場合は、ビルドフォルダーに対する永続ボリュームクレームをマウントする必要があります。複数のジョブを同時実行できるため、`ReadWriteMany`ボリュームを使用するか、同じRunner上で発生する可能性がある同時実行ジョブごとに1つのボリュームを用意する必要があります。後者の方がパフォーマンの向上を見込めます。このような設定の例を以下に示します:
 
 ```toml
 concurrent = 4
@@ -1839,12 +2069,12 @@ USER 59417:59417
 
 Dockerデーモンは、通常は`.gitlab-ci.yml`で`service`として起動されるため、ポッド内で個別のコンテナとして実行されます。ポッド内のコンテナは、割り当てられたボリュームとIPアドレスのみを共有します。このIPアドレスは、`localhost`と相互に通信するときに使用されます。`docker:dind`コンテナは`/var/run/docker.sock`を共有せず、`docker`バイナリはデフォルトでそれを使用しようとします。
 
-クライアントがTCPを使用してDockerデーモンと通信するように設定するには、もう一方のコンテナで、ビルドコンテナの環境変数を含めます。
+クライアントがTCPを使用してDockerデーモンと通信するように設定するには、もう一方のコンテナで、ビルドコンテナの環境変数を含めます:
 
 - 非TLS接続の場合は`DOCKER_HOST=tcp://docker:2375`。
 - TLS接続の場合は`DOCKER_HOST=tcp://docker:2376`。
 
-Docker 19.03以降では、TLSはデフォルトで有効になっていますが、クライアントに証明書をマップする必要があります。Docker-in-Dockerの非TLS接続を有効にするか、証明書をマウントできます。詳細については、[**Docker executorでDocker In Dockerワークフローを使用する**](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker)を参照してください。
+Docker 19.03以降では、TLSはデフォルトで有効になっていますが、クライアントに証明書をマップする必要があります。Docker-in-Dockerの非TLS接続を有効にするか、証明書をマウントできます。詳細については、[DockerエグゼキューターでDocker-in-Dockerを使用する](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker)を参照してください。
 
 ### ホストカーネルの公開を防ぐ {#prevent-host-kernel-exposure}
 
@@ -1856,7 +2086,7 @@ Docker 19.03以降では、TLSはデフォルトで有効になっています�
 
 ### Dockerイメージとサービスを制限する {#restrict-docker-images-and-services}
 
-ジョブの実行に使用されるDockerイメージを制限できます。これを行うには、ワイルドカードパターンを指定します。たとえば、プライベートDockerレジストリのイメージのみを許可するには、次のようにします。
+ジョブの実行に使用されるDockerイメージを制限できます。これを行うには、ワイルドカードパターンを指定します。たとえば、プライベートDockerレジストリのイメージのみを許可するには、次のようにします:
 
 ```toml
 [[runners]]
@@ -1868,7 +2098,7 @@ Docker 19.03以降では、TLSはデフォルトで有効になっています�
     allowed_services = ["my.registry.tld:5000/*:*"]
 ```
 
-あるいはこのレジストリからのイメージの特定のリストに制限するには、次のようにします。
+あるいはこのレジストリからのイメージの特定のリストに制限するには、次のようにします:
 
 ```toml
 [[runners]]
@@ -1882,17 +2112,11 @@ Docker 19.03以降では、TLSはデフォルトで有効になっています�
 
 ### Dockerプルポリシーを制限する {#restrict-docker-pull-policies}
 
-{{< history >}}
-
-- GitLab 15.1で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753)されました。
-
-{{< /history >}}
-
 `.gitlab-ci.yml`ファイルでプルポリシーを指定できます。このポリシーは、CI/CDジョブがイメージをフェッチする方法を決定します。
 
 `.gitlab-ci.yml`ファイルで指定されているものの中から使用できるプルポリシーを制限するには、`allowed_pull_policies`を使用します。
 
-たとえば、`always`プルポリシーと`if-not-present`プルポリシーのみを許可するには、次のようにします。
+たとえば、`always`プルポリシーと`if-not-present`プルポリシーのみを許可するには、次のようにします:
 
 ```toml
 [[runners]]
@@ -1916,7 +2140,7 @@ GitLab Runnerは、デフォルトで`kube exec`の代わりに`kube attach`を�
 
 ### Kubernetes APIへのリクエスト試行回数を設定する {#configure-the-number-of-request-attempts-to-the-kubernetes-api}
 
-デフォルトでは、Kubernetes executorは、試行が5回失敗すると、Kubernetes APIへの特定のリクエストを再試行します。遅延は、500ミリ秒のフロアと、デフォルト値が2秒のカスタマイズ可能な上限が設定されたバックオフアルゴリズムによって制御されます。再試行回数を設定するには、`config.toml`ファイルで`retry_limit`オプションを使用します。同様に、バックオフ上限には`retry_backoff_max`オプションを使用します。次のエラーは自動的に再試行されます。
+デフォルトでは、Kubernetes executorは、試行が5回失敗すると、Kubernetes APIへの特定のリクエストを再試行します。遅延は、500ミリ秒のフロアと、デフォルト値が2秒のカスタマイズ可能な上限が設定されたバックオフアルゴリズムによって制御されます。再試行回数を設定するには、`config.toml`ファイルで`retry_limit`オプションを使用します。同様に、バックオフ上限には`retry_backoff_max`オプションを使用します。次のエラーは自動的に再試行されます:
 
 - `error dialing backend`
 - `TLS handshake timeout`
@@ -1934,7 +2158,7 @@ GitLab Runnerは、デフォルトで`kube exec`の代わりに`kube attach`を�
 
 各エラーの再試行回数を制御するには、`retry_limits`オプションを使用します。`rety_limits`は、各エラーの再試行回数を個別に指定するものであり、エラーメッセージと再試行回数のマップです。エラーメッセージは、Kubernetes APIから返されるエラーメッセージのサブ文字列であることがあります。`retry_limits`オプションは`retry_limit`オプションよりも優先されます。
 
-たとえば、環境内のTLS関連のエラーの再試行回数を、デフォルトの5回ではなく10回にするには、`retry_limits`オプションを設定します。
+たとえば、環境内のTLS関連のエラーの再試行回数を、デフォルトの5回ではなく10回にするには、`retry_limits`オプションを設定します:
 
 ```toml
 [[runners]]
@@ -1949,7 +2173,7 @@ GitLab Runnerは、デフォルトで`kube exec`の代わりに`kube attach`を�
         "tls: internal error" = 10
 ```
 
-`exceeded quota`などのまったく異なるエラーを20回再試行するには、次のようにします。
+`exceeded quota`などのまったく異なるエラーを20回再試行するには、次のようにします:
 
 ```toml
 [[runners]]
@@ -1965,50 +2189,43 @@ GitLab Runnerは、デフォルトで`kube exec`の代わりに`kube attach`を�
 
 ### コンテナのエントリポイントに関する既知の問題 {#container-entrypoint-known-issues}
 
-{{< history >}}
-
-- GitLab Runner 14.5で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3095)されました。
-- GitLab Runner 15.1で[更新](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3212)されました。
-
-{{< /history >}}
-
 {{< alert type="note" >}}
 
-15.0では、GitLab Runnerは、`kube attach`でKubernetes executorで使用される場合、Dockerイメージで定義されているエントリポイントを使用します。GitLab 15.1以降では、`FF_KUBERNETES_HONOR_ENTRYPOINT`が設定されている場合、Dockerイメージで定義されているエントリポイントがKubernetes executorで使用されます。
+GitLab 15.1以降では、`FF_KUBERNETES_HONOR_ENTRYPOINT`が設定されている場合、Dockerイメージで定義されているエントリポイントがKubernetes executorで使用されます。
 
 {{< /alert >}}
 
-コンテナのエントリポイントには、次の既知の問題があります。
+コンテナのエントリポイントには、次の既知の問題があります:
 
-- <a id="open-valid-shell"></a> イメージのDockerfileでエントリポイントが定義されている場合は、有効なShellを開く必要があります。このようにしないとジョブがハングします。
+- <a id="open-valid-shell"></a>イメージのDockerfileでエントリポイントが定義されている場合は、有効なShellを開く必要があります。このようにしないとジョブがハングします。
 
   - Shellを開くために、システムはコマンドをビルドコンテナの[`args`](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#entrypoint)として渡します。
 - [ファイルタイプのCI/CD変数](https://docs.gitlab.com/ci/variables/#use-file-type-cicd-variables)は、エントリポイントの実行時にディスクに書き込まれません。ファイルは、スクリプト実行中にジョブでのみアクセス可能です。
-- 次のCI/CD変数は、エントリポイントではアクセスできません。[`before_script`](https://docs.gitlab.com/ci/yaml/#beforescript)を使用して、スクリプトコマンドを実行する前にセットアップに変更を加えることができます。
+- 次のCI/CD変数は、エントリポイントではアクセスできません。[`before_script`](https://docs.gitlab.com/ci/yaml/#beforescript)を使用して、スクリプトコマンドを実行する前にセットアップに変更を加えることができます:
   - [設定で定義されているCI/CD変数](https://docs.gitlab.com/ci/variables/#define-a-cicd-variable-in-the-ui)。
   - [マスクされたCI/CD変数](https://docs.gitlab.com/ci/variables/#mask-a-cicd-variable)。
 
-GitLab Runner 17.4より前では次のような状況でした。
+GitLab Runner 17.4より前では次のような状況でした:
 
 - エントリポイントログは、ビルドのログに転送されませんでした。
 - `kube exec`でのKubernetes executorでは、GitLab RunnerはエントリポイントがShellを開くまで待機しませんでした（[上記の説明](#open-valid-shell)を参照）。
 
-GitLab Runner 17.4以降では、エントリポイントログが転送されるようになりました。システムは、エントリポイントが実行され、Shellが起動するまで待ちます。これにより次のような影響があります。
+GitLab Runner 17.4以降では、エントリポイントログが転送されるようになりました。システムは、エントリポイントが実行され、Shellが起動するまで待ちます。これにより次のような影響があります:
 
-- `FF_KUBERNETES_HONOR_ENTRYPOINT`が設定されていて、イメージのエントリポイントが`poll_timeout`（デフォルトは180秒）より長くかかる場合、ビルドは失敗します。エントリポイントの実行時間が長いことが予想される場合は、`poll_timeout`の値（および場合によっては`poll_interval`の値）を調整する必要があります。
+- `FF_KUBERNETES_HONOR_ENTRYPOINT`が設定されていて、イメージのエントリポイントが`poll_timeout`（デフォルトは: 180秒）より長くかかる場合、ビルドは失敗します。エントリポイントの実行時間が長いことが予想される場合は、`poll_timeout`の値（および場合によっては`poll_interval`の値）を調整する必要があります。
 - `FF_KUBERNETES_HONOR_ENTRYPOINT`*と*`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`が設定されている場合、システムはビルドコンテナに[スタートアッププローブ](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes)を追加して、エントリポイントがShellを起動したことを認識できるようにします。カスタムエントリポイントが、指定された`args`を使用して想定されるShellを起動する場合、スタートアッププローブは自動的に解決されます。ただし`args`で渡されたコマンドを使用せずにコンテナイメージがShellを起動する場合、エントリポイントは、ビルドディレクトリのルート内に`.gitlab-startup-marker`という名前のファイルを作成して、スタートアッププローブ自体を解決する必要があります。スタートアッププローブは、`poll_interval`ごとに`.gitlab-startup-marker`ファイルを確認します。`poll_timeout`の間にファイルが存在しない場合、ポッドは異常とみなされ、システムはビルドを中断します。
 
 ### ジョブ変数へのアクセスを制限する {#restrict-access-to-job-variables}
 
-Kubernetes executorを使用する場合、Kubernetesクラスターへのアクセス権を持つユーザーは、ジョブで使用される変数を読み取ることができます。デフォルトでは、ジョブ変数は以下に保存されます。
+Kubernetes executorを使用する場合、Kubernetesクラスターへのアクセス権を持つユーザーは、ジョブで使用される変数を読み取ることができます。デフォルトでは、ジョブ変数は以下に保存されます:
 
 - ポッドの環境セクション
 
 ジョブ変数データへのアクセスを制限するには、ロールベースのアクセス制御（RBAC）を使用する必要があります。RBACを使用する場合、GitLab Runnerによって使用されるネームスペースにアクセスできるのはGitLab管理者のみです。
 
-他のユーザーがGitLab Runnerネームスペースにアクセスする必要がある場合は、以下の`verbs`を設定して、GitLab Runnerネームスペースのユーザーアクセスを制限します。
+他のユーザーがGitLab Runnerネームスペースにアクセスする必要がある場合は、以下の`verbs`を設定して、GitLab Runnerネームスペースのユーザーアクセスを制限します:
 
-- `pods`と`configmaps`の場合
+- `pods`と`configmaps`の場合:
   - `get`
   - `watch`
   - `list`
@@ -2032,13 +2249,6 @@ rules:
 
 ## 準備ステップでのリソースチェック {#resources-check-during-prepare-step}
 
-{{< history >}}
-
-- GitLab 15.0で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664)されました。
-- GitLab 15.2で[更新](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29101)されました。
-
-{{< /history >}}
-
 前提要件:
 
 - `image_pull_secrets`または`service_account`が設定されていること。
@@ -2047,8 +2257,7 @@ rules:
 
 GitLab Runnerは、新しいサービスアカウントまたはシークレットが使用可能かどうかを確認します。この確認操作は5秒間隔で試行されます。
 
-- GitLab 15.0および15.1ではこの機能を無効にできず、負の値が設定されている場合はデフォルトで`5`になります。
-- GitLab 15.0.1、15.1.1、および15.2以降では、この機能はデフォルトで無効になっています。この機能を有効にするには、`resource_availability_check_max_attempts`を`0`以外の任意の値に設定します。設定した値によって、Runnerがサービスアカウントまたはシークレットを確認する回数が定義されます。
+- この機能はデフォルトでは無効になっています。この機能を有効にするには、`resource_availability_check_max_attempts`を`0`以外の任意の値に設定します。設定した値によって、Runnerがサービスアカウントまたはシークレットを確認する回数が定義されます。
 
 ### Kubernetesネームスペースを上書きする {#overwrite-the-kubernetes-namespace}
 
@@ -2072,7 +2281,7 @@ variables:
 
 {{< /alert >}}
 
-CI実行中に指定されたネームスペースのみを使用するには、`config.toml`ファイルで`namespace_overwrite_allowed`の正規表現を定義します。
+CI実行中に指定されたネームスペースのみを使用するには、`config.toml`ファイルで`namespace_overwrite_allowed`の正規表現を定義します:
 
 ```toml
 [runners.kubernetes]

@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: GitLab Runner Helmチャート
 ---
@@ -12,23 +12,23 @@ title: GitLab Runner Helmチャート
 
 {{< /details >}}
 
-GitLab Runner Helmチャートは、GitLab RunnerインスタンスをKubernetesクラスターにデプロイするための公式の手法です。このチャートにより、GitLab Runnerが次のように設定されます。
+GitLab Runner Helmチャートは、GitLab RunnerインスタンスをKubernetesクラスターにデプロイするための公式の手法です。このチャートにより、GitLab Runnerが次のように設定されます:
 
 - GitLab Runnerの[Kubernetes executor](../executors/kubernetes/_index.md)を使用して実行する。
 - 新しいCI/CDジョブごとに、指定されたネームスペースで新しいポッドをプロビジョニングする。
 
 ## HelmチャートでGitLab Runnerを設定する {#configure-gitlab-runner-with-the-helm-chart}
 
-GitLab Runnerの設定の変更を`values.yaml`に保存します。このファイルの設定については、以下を参照してください。
+GitLab Runnerの設定の変更を`values.yaml`に保存します。このファイルの設定については、以下を参照してください:
 
 - チャートリポジトリ内のデフォルトの[`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml)設定。
 - [値ファイル](https://helm.sh/docs/chart_template_guide/values_files/)に関するHelmドキュメント。値ファイルによってデフォルト値がオーバーライドされる仕組みが説明されています。
 
-GitLab Runnerを適切に実行するには、設定ファイルで次の値を設定する必要があります。
+GitLab Runnerを適切に実行するには、設定ファイルで次の値を設定する必要があります:
 
 - `gitlabUrl`: Runnerの登録先のGitLabサーバーの完全なURL（`https://gitlab.example.com`など）。
 - `rbac: { create: true }`: GitLab Runnerがジョブを実行するポッドを作成するためのRBAC（ロールベースのアクセス制御）ルールを作成します。
-  - 既存の`serviceAccount`を使用する場合は、`rbac`にサービスアカウント名を追加してください。
+  - 既存の`serviceAccount`を使用する場合は、`rbac`にサービスアカウント名を追加してください:
 
     ```yaml
     rbac:
@@ -56,7 +56,7 @@ GitLab Runnerを適切に実行するには、設定ファイルで次の値を�
 - [Helmクライアント](https://helm.sh/docs/using_helm/#installing-the-helm-client)がマシンにローカルにインストールされていること。
 - [`values.yaml`で必要な値](#configure-gitlab-runner-with-the-helm-chart)をすべて設定していること。
 
-HelmチャートからGitLab Runnerをインストールするには、次の手順に従います。
+HelmチャートからGitLab Runnerをインストールするには、次の手順に従います:
 
 1. GitLab Helmリポジトリを追加します。
 
@@ -65,19 +65,19 @@ HelmチャートからGitLab Runnerをインストールするには、次の手
    ```
 
 1. Helm 2を使用している場合は、`helm init`でHelmを初期化します。
-1. アクセスできるGitLab Runnerのバージョンを確認します。
+1. アクセスできるGitLab Runnerのバージョンを確認します:
 
    ```shell
    helm search repo -l gitlab/gitlab-runner
    ```
 
-1. GitLab Runnerの最新バージョンにアクセスできない場合は、次のコマンドでチャートを更新します。
+1. GitLab Runnerの最新バージョンにアクセスできない場合は、次のコマンドでチャートを更新します:
 
    ```shell
    helm repo update gitlab
    ```
 
-1. `values.yaml`ファイルでGitLab Runnerを[設定](#configure-gitlab-runner-with-the-helm-chart)したら、必要に応じてパラメータを変更して、次のコマンドを実行します。
+1. `values.yaml`ファイルでGitLab Runnerを[設定](#configure-gitlab-runner-with-the-helm-chart)したら、必要に応じてパラメータを変更して、次のコマンドを実行します:
 
    ```shell
    # For Helm 2
@@ -93,7 +93,7 @@ HelmチャートからGitLab Runnerをインストールするには、次の手
 
 ### 使用可能なGitLab Runner Helmチャートのバージョンを確認する {#check-available-gitlab-runner-helm-chart-versions}
 
-HelmチャートとGitLab Runnerのバージョニング方法は異なります。この2つの間のバージョンマッピングを確認するには、ご使用のHelmのバージョンに対応するコマンドを実行します。
+HelmチャートとGitLab Runnerのバージョニング方法は異なります。この2つの間のバージョンマッピングを確認するには、ご使用のHelmのバージョンに対応するコマンドを実行します:
 
 ```shell
 # For Helm 2
@@ -103,7 +103,7 @@ helm search -l gitlab/gitlab-runner
 helm search repo -l gitlab/gitlab-runner
 ```
 
-出力の例は次のとおりです。
+出力の例は次のとおりです:
 
 ```plaintext
 NAME                  CHART VERSION APP VERSION DESCRIPTION
@@ -124,7 +124,7 @@ gitlab/gitlab-runner  0.61.2        16.8.0      GitLab Runner
 - GitLabでRunnerを一時停止していること。これにより、[完了時の認証エラー](../faq/_index.md#helm-chart-error--unauthorized)など、ジョブで発生する問題を回避できます。
 - すべてのジョブが完了していることを確認していること。
 
-設定を変更するか、チャートを更新するには、必要に応じてパラメータを変更して`helm upgrade`を使用します。
+設定を変更するか、チャートを更新するには、必要に応じてパラメータを変更して`helm upgrade`を使用します:
 
 ```shell
 helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitlab/gitlab-runner
@@ -137,10 +137,10 @@ helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitl
 
 ## Helmチャートを使用してGitLab Runnerをアンインストールする {#uninstall-gitlab-runner-with-the-helm-chart}
 
-GitLab Runnerをアンインストールするには、次の手順に従います。
+GitLab Runnerをアンインストールするには、次の手順に従います:
 
 1. GitLabでRunnerを一時停止し、すべてのジョブが完了していることを確認します。これにより、[完了時の認証エラー](../faq/_index.md#helm-chart-error--unauthorized)など、ジョブに関連する問題を回避できます。
-1. このコマンドを実行します（必要に応じて変更します）。
+1. このコマンドを実行します（必要に応じて変更します）:
 
    ```shell
    helm delete --namespace <NAMESPACE> <RELEASE-NAME>
