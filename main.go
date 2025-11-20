@@ -91,7 +91,10 @@ func main() {
 
 func newCommands() []cli.Command {
 	apiRequestsCollector := network.NewAPIRequestsCollector()
-	n := network.NewGitLabClient(network.WithAPIRequestsCollector(apiRequestsCollector))
+	n := network.NewGitLabClient(
+		network.WithAPIRequestsCollector(apiRequestsCollector),
+		network.WithCertificateDirectory(commands.GetDefaultCertificateDirectory()),
+	)
 	cmds := []cli.Command{
 		commands.NewListCommand(),
 		commands.NewRegisterCommand(n),

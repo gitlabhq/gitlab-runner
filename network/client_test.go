@@ -632,14 +632,13 @@ func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 	require.NoError(t, err)
 
 	tempDir := t.TempDir()
-	CertificateDirectory = tempDir
 
 	err = writeTLSCertificate(s, filepath.Join(tempDir, hostname+".crt"))
 	assert.NoError(t, err)
 
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
-	}, NewAPIRequestsCollector())
+	}, NewAPIRequestsCollector(), withCertificateDirectory(tempDir))
 	statusCode, statusText, resp := c.doJSON(
 		t.Context(),
 		"test/ok",
@@ -749,7 +748,6 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 	defer s.Close()
 
 	tempDir := t.TempDir()
-	CertificateDirectory = tempDir
 
 	serverURL, err := url.Parse(s.URL)
 	require.NoError(t, err)
@@ -768,7 +766,7 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
-	}, NewAPIRequestsCollector())
+	}, NewAPIRequestsCollector(), withCertificateDirectory(tempDir))
 	statusCode, statusText, resp := c.doJSON(
 		t.Context(),
 		"test/ok",

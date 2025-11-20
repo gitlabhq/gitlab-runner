@@ -39,9 +39,9 @@ func TokenIsCreatedRunnerToken(token string) bool {
 }
 
 type GitLabClient struct {
-	clients map[string]*client
-	lock    sync.Mutex
-
+	clients              map[string]*client
+	lock                 sync.Mutex
+	certDirectory        string
 	apiRequestsCollector *APIRequestsCollector
 	connectionMaxAge     time.Duration
 }
@@ -65,7 +65,12 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (*client, error
 		return c, nil
 	}
 
-	c, err := newClient(credentials, n.apiRequestsCollector, withMaxAge(n.connectionMaxAge))
+	c, err := newClient(
+		credentials,
+		n.apiRequestsCollector,
+		withMaxAge(n.connectionMaxAge),
+		withCertificateDirectory(n.certDirectory),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("new client: %w", err)
 	}
@@ -1219,6 +1224,12 @@ type ClientOption func(*GitLabClient)
 func WithAPIRequestsCollector(collector *APIRequestsCollector) ClientOption {
 	return func(c *GitLabClient) {
 		c.apiRequestsCollector = collector
+	}
+}
+
+func WithCertificateDirectory(certDirectory string) ClientOption {
+	return func(c *GitLabClient) {
+		c.certDirectory = certDirectory
 	}
 }
 

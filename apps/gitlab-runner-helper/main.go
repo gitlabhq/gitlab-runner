@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli"
 	"go.uber.org/automaxprocs/maxprocs"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -56,7 +57,9 @@ func main() {
 }
 
 func newCommands() []cli.Command {
-	n := network.NewGitLabClient()
+	n := network.NewGitLabClient(
+		network.WithCertificateDirectory(commands.GetDefaultCertificateDirectory()),
+	)
 	return []cli.Command{
 		helpers.NewArtifactsDownloaderCommand(n),
 		helpers.NewArtifactsUploaderCommand(n),
