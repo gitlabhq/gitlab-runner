@@ -106,9 +106,11 @@ func TestWriteGitSSLConfig(t *testing.T) {
 			GitInfo: common.GitInfo{
 				RepoURL: "https://gitlab-ci-token:xxx@example.com:3443/project/repo.git",
 			},
-			TLSAuthCert: "TLS_CERT",
-			TLSAuthKey:  "TLS_KEY",
-			TLSCAChain:  "CA_CHAIN",
+			TLSData: common.TLSData{
+				CAChain:  "CA_CHAIN",
+				AuthCert: "TLS_CERT",
+				AuthKey:  "TLS_KEY",
+			},
 		},
 	}
 

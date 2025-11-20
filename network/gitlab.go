@@ -65,7 +65,7 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (*client, error
 		return c, nil
 	}
 
-	c, err := newClient(credentials, n.apiRequestsCollector, WithMaxAge(n.connectionMaxAge))
+	c, err := newClient(credentials, n.apiRequestsCollector, withMaxAge(n.connectionMaxAge))
 	if err != nil {
 		return nil, fmt.Errorf("new client: %w", err)
 	}
@@ -585,21 +585,23 @@ func (n *GitLabClient) resetToken(
 	}
 }
 
-func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
+func loadTLSData(tlsData ResponseTLSData) common.TLSData {
+	var res common.TLSData
 	if tlsData.CAChain != "" {
-		response.TLSCAChain = tlsData.CAChain
+		res.CAChain = tlsData.CAChain
 	}
 
 	if tlsData.CertFile != "" && tlsData.KeyFile != "" {
 		data, err := os.ReadFile(tlsData.CertFile)
 		if err == nil {
-			response.TLSAuthCert = string(data)
+			res.AuthCert = string(data)
 		}
 		data, err = os.ReadFile(tlsData.KeyFile)
 		if err == nil {
-			response.TLSAuthKey = string(data)
+			res.AuthKey = string(data)
 		}
 	}
+	return res
 }
 
 func (n *GitLabClient) RequestJob(
@@ -650,8 +652,7 @@ func (n *GitLabClient) RequestJob(
 		if err != nil {
 			logger.WithError(err).Errorln("Error on fetching TLS Data from API response...", "error")
 		}
-		addTLSData(&response, tlsData)
-
+		response.TLSData = loadTLSData(tlsData)
 		response.JobRequestCorrelationID = getCorrelationID(httpResponse, correlationID)
 
 		return &response, true
@@ -1213,14 +1214,23 @@ func closeResponseBody(res *http.Response, discardBody bool) {
 	_ = res.Body.Close()
 }
 
-func NewGitLabClientWithAPIRequestsCollector(c *APIRequestsCollector) *GitLabClient {
-	return &GitLabClient{
-		apiRequestsCollector: c,
+type ClientOption func(*GitLabClient)
+
+func WithAPIRequestsCollector(collector *APIRequestsCollector) ClientOption {
+	return func(c *GitLabClient) {
+		c.apiRequestsCollector = collector
 	}
 }
 
-func NewGitLabClient() *GitLabClient {
-	return NewGitLabClientWithAPIRequestsCollector(NewAPIRequestsCollector())
+func NewGitLabClient(options ...ClientOption) *GitLabClient {
+	c := &GitLabClient{}
+	for _, o := range options {
+		o(c)
+	}
+	if c.apiRequestsCollector == nil {
+		c.apiRequestsCollector = NewAPIRequestsCollector()
+	}
+	return c
 }
 
 func getCorrelationID(resp *http.Response, fallbackValue string) string {

@@ -332,7 +332,7 @@ func getRemoteCustomTLSBuild(chain string) (JobResponse, error) {
 		return JobResponse{}, err
 	}
 
-	job.TLSCAChain = chain
+	job.TLSData.CAChain = chain
 	job.Variables = append(
 		job.Variables,
 		JobVariable{Key: "GIT_STRATEGY", Value: "clone"},

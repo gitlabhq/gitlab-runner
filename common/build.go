@@ -1420,29 +1420,29 @@ func (b *Build) GetSharedEnvVariable() JobVariable {
 func (b *Build) GetCITLSVariables() JobVariables {
 	variables := JobVariables{}
 
-	if b.TLSCAChain != "" {
+	if b.TLSData.CAChain != "" {
 		variables = append(variables, JobVariable{
 			Key:      tls.VariableCAFile,
-			Value:    b.TLSCAChain,
+			Value:    b.TLSData.CAChain,
 			Public:   true,
 			Internal: true,
 			File:     true,
 		})
 	}
 
-	if b.TLSAuthCert != "" && b.TLSAuthKey != "" {
+	if b.TLSData.AuthCert != "" && b.TLSData.AuthKey != "" {
 		variables = append(
 			variables,
 			JobVariable{
 				Key:      tls.VariableCertFile,
-				Value:    b.TLSAuthCert,
+				Value:    b.TLSData.AuthCert,
 				Public:   true,
 				Internal: true,
 				File:     true,
 			},
 			JobVariable{
 				Key:      tls.VariableKeyFile,
-				Value:    b.TLSAuthKey,
+				Value:    b.TLSData.AuthKey,
 				Internal: true,
 				File:     true,
 			},
