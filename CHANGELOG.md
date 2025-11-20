@@ -1,3 +1,62 @@
+## v18.6.0 (2025-11-17)
+
+### New features
+
+- Functions subcommands in runner binary [!5875](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5875)
+- Add namespace support to GitLab Secrets Manager [!5918](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5918)
+- Disallow shim execution mode if executor supports native steps execution [!5898](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5898)
+- Add MachineOptionsWithName configuration option [!5920](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5920)
+- Add slot-based cgroup support for Docker executor [!5870](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5870)
+- Add LoongArch (loong64) build support [!5800](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5800) (Mingcong Bai @MingcongBai)
+- Bootstrap gitlab-helper-binary for Docker [!5892](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5892)
+- Add correlation_id to "Update job..." log line [!5887](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5887)
+
+### Bug fixes
+
+- Retry etcd request timeout error in Kubernetes executor [!5877](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5877)
+- Always pass as a file for custom executor [!5904](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5904)
+- Handle unexpected panics in trace buffer [!5890](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5890)
+- Fix removing files recursively for bash on z/OS [!5623](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5623) (Kai McGregor @kmcgreg-ibm)
+- Externalize git configuration [!5912](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5912)
+- Fix job logs duplicating as service logs [!5863](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5863) (Markus Kaihola @makeri89)
+- Expand variables in `image.docker.platform` before pulling images [!5897](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5897) (Bert Wesarg @bertwesarg)
+
+### Maintenance
+
+- Update Vale rules from GitLab project [!5884](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5884)
+- AI Translated Documentation Push: GITTECHA-374 [!5935](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5935)
+- Add troubleshooting docs for services on windows k8s executor [!5913](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5913) (Erik Petzold @erik.petzold1)
+- Move build execute prepare/user scripts to their own functions [!5893](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5893)
+- Docs: Add note for PowerShell versions in the custom executor [!5894](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5894)
+- Steps execution via Connect() [!5927](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5927)
+- Clarify docs for supported caching feature [!5910](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5910)
+- Pull in fixes for CVEs [!5895](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5895)
+- Translation Push - All - For English Anchor LInks [!5896](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5896)
+- Integration Tests for GCP Secrets Manager [!5881](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5881)
+- Use passed context in NewStepsDocker.Exec() [!5915](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5915)
+- Remove obsolete code [!5902](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5902)
+- Build linux/riscv64 platform for registry.gitlab.com/gitlab-org/gitlab-runner image [!5923](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5923) (Ludovic Henry @luhenry)
+- docs(docker.md): add podman selinux mcs section [!5879](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5879) (vtardiveau @vtardiveau)
+- Verify all: only use creds for local images [!5914](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5914)
+- Update cache S3 SSE Key ID docs [!5919](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5919)
+- Add warning regarding podman and GPUs [!5937](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5937)
+- AI Translated Documentation Push: GITTECHA-370 [!5917](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5917)
+- Fix typo [!5924](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5924)
+- Make structured "job finished" log line with failure_reason and exit_code [!5885](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5885)
+- [steps] Deflake steps command tests [!5905](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5905)
+- Add s3:ListBucket to the required permissions for IAM role to access S3 bucket [!5903](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5903)
+- docs: Update docker-machine version [!5899](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5899)
+- Add link to UI redesign doc [!5925](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5925)
+- Document error when performing sts:AssumeRoleWithWebIdentity for s3 cache [!5921](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5921)
+- Minor copy edits in runner docs [!5944](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5944)
+- Add link checking to i18n docs linting [!5943](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5943)
+- Document Kubernetes CI [!5786](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5786)
+- Copy edits to runner docs [!5911](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5911)
+- Pull in some changes from the security fork [!5906](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5906)
+- Use RFC3339Nano timestamp format for JSON logs [!5888](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5888)
+- Remove curly brackets from example [!5942](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5942)
+- chore: refactor TestAttach using canonical client [!5838](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5838) (Muhammad Daffa Dinaya @mdaffad)
+
 ## v18.5.0 (2025-10-13)
 
 ### New features
