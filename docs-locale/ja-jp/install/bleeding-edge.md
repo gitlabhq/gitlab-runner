@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: GitLab Runner最新リリース
 ---
@@ -32,7 +32,7 @@ title: GitLab Runner最新リリース
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-freebsd-amd64>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-freebsd-arm>
 
-その後、次のコマンドを使用してGitLab Runnerを実行できます。
+その後、次のコマンドを使用してGitLab Runnerを実行できます:
 
 ```shell
 chmod +x gitlab-runner-linux-amd64
@@ -53,13 +53,13 @@ chmod +x gitlab-runner-linux-amd64
 
 runner-helperイメージパッケージは、GitLab Runner `.deb`パッケージに必要な依存関係です。
 
-次の場所からパッケージをダウンロードします。
+次の場所からパッケージをダウンロードします:
 
 ```plaintext
 https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/deb/gitlab-runner-helper-images.deb
 ```
 
-その後、次のコマンドを使用してインストールできます。
+その後、次のコマンドを使用してインストールできます:
 
 ```shell
 dpkg -i gitlab-runner-helper-images.deb gitlab-runner_<arch>.deb
@@ -79,13 +79,13 @@ dpkg -i gitlab-runner-helper-images.deb gitlab-runner_<arch>.deb
 
 runner-helperイメージパッケージは、GitLab Runner `.rpm`パッケージに必要な依存関係です。
 
-次の場所からパッケージをダウンロードします。
+次の場所からパッケージをダウンロードします:
 
 ```plaintext
 https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner-helper-images.rpm
 ```
 
-その後、次のコマンドを使用してインストールできます。
+その後、次のコマンドを使用してインストールできます:
 
 ```shell
 rpm -i gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
@@ -93,13 +93,13 @@ rpm -i gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
 
 ## その他のタグ付きリリースをダウンロードする {#download-any-other-tagged-release}
 
-`main`を`tag`（`v16.5.0`など）または`latest`（最新の安定版）のいずれかに置き換えます。タグの一覧については、<https://gitlab.com/gitlab-org/gitlab-runner/-/tags>を参照してください。次に例を示します。
+`main`を`tag`（`v16.5.0`など）または`latest`（最新の安定版）のいずれかに置き換えます。タグの一覧については、<https://gitlab.com/gitlab-org/gitlab-runner/-/tags>を参照してください。次に例を示します: 
 
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-linux-386>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-386>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/v16.5.0/binaries/gitlab-runner-linux-386>
 
-`https`経由でのダウンロードに問題がある場合は、プレーンな`http`にフォールバックします。
+`https`経由でのダウンロードに問題がある場合は、プレーンな`http`にフォールバックします:
 
 - <http://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-linux-386>
 - <http://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-386>

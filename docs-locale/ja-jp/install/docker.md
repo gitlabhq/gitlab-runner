@@ -1,6 +1,6 @@
 ---
 stage: Verify
-group: Runner
+group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 title: コンテナ内でGitLab Runnerを実行する
 ---
@@ -12,7 +12,7 @@ title: コンテナ内でGitLab Runnerを実行する
 
 {{< /details >}}
 
-DockerコンテナでGitLab Runnerを実行して、CI/CDジョブを実行できます。GitLab Runner Dockerイメージには、以下の実行に必要なすべての依存関係が含まれています。
+DockerコンテナでGitLab Runnerを実行して、CI/CDジョブを実行できます。GitLab Runner Dockerイメージには、以下の実行に必要なすべての依存関係が含まれています:
 
 - GitLab Runnerを実行する。
 - コンテナ内でCI/CDジョブを実行する。
@@ -21,12 +21,12 @@ GitLab Runner Dockerイメージは、[UbuntuまたはAlpine Linux](#docker-imag
 
 `gitlab-runner`コマンドはDockerコンテナで実行されます。このセットアップでは、Dockerデーモンに対する完全な制御が各GitLab Runnerコンテナに委譲されます。このため、他のペイロードも実行するDockerデーモン内部でGitLab Runnerを実行すると、分離の保証が損なわれます。
 
-このセットアップでは、以下に示すように、実行するどのGitLab Runnerコマンドにも、それに相当する`docker run`のコマンドがあります。
+このセットアップでは、以下に示すように、実行するどのGitLab Runnerコマンドにも、それに相当する`docker run`のコマンドがあります:
 
 - Runnerコマンド: `gitlab-runner <runner command and options...>`
 - Dockerコマンド: `docker run <chosen docker options...> gitlab/gitlab-runner <runner command and options...>`
 
-たとえば、GitLab Runnerのトップレベルのヘルプ情報を取得するには、コマンドの`gitlab-runner`の部分を`docker run [docker options] gitlab/gitlab-runner`に置き換えます。次に例を示します。
+たとえば、GitLab Runnerのトップレベルのヘルプ情報を取得するには、コマンドの`gitlab-runner`の部分を`docker run [docker options] gitlab/gitlab-runner`に置き換えます。次に例を示します:
 
 ```shell
 docker run --rm -t -i gitlab/gitlab-runner --help
@@ -58,20 +58,20 @@ Docker EngineとGitLab Runnerコンテナイメージのバージョンが一致
 
    利用可能なバージョンタグのリストについては、[GitLab Runnerのタグ](https://hub.docker.com/r/gitlab/gitlab-runner/tags)を参照してください。
 1. `docker run -d [options] <image-uri> <runner-command>`コマンドを使用して、`gitlab-runner` Dockerイメージを実行します。
-1. Dockerコンテナで`gitlab-runner`を実行する場合は、コンテナの再起動時に設定が失われないようにしてください。永続ボリュームをマウントして設定を保存します。ボリュームは次のいずれかにマウントできます。
+1. Dockerコンテナで`gitlab-runner`を実行する場合は、コンテナの再起動時に設定が失われないようにしてください。永続ボリュームをマウントして設定を保存します。ボリュームは次のいずれかにマウントできます:
 
    - [ローカルシステムボリューム](#from-a-local-system-volume)
    - [Dockerボリューム](#from-a-docker-volume)
 
 1. （オプション）[`session_server`](../configuration/advanced-configuration.md)を使用している場合は、`docker run`コマンドに`-p 8093:8093`を追加して、ポート`8093`を公開します。
-1. （オプション）オートスケールにDocker Machine Executorを使用するには、`docker run`コマンドにボリュームマウントを追加して、Docker Machineストレージパス（`/root/.docker/machine`）をマウントします。
+1. （オプション）オートスケールにDocker Machine Executorを使用するには、`docker run`コマンドにボリュームマウントを追加して、Docker Machineストレージパス（`/root/.docker/machine`）をマウントします:
 
    - システムボリュームマウントの場合は、`-v /srv/gitlab-runner/docker-machine-config:/root/.docker/machine`を追加
    - Dockerの名前付きボリュームの場合は、`-v docker-machine-config:/root/.docker/machine`を追加
 
 1. [新しいRunnerを登録します](../register/_index.md)。ジョブを取得するには、GitLab Runnerコンテナを登録する必要があります。
 
-利用可能な設定オプションには次のものがあります。
+利用可能な設定オプションには次のものがあります:
 
 - コンテナのタイムゾーンを設定するには、フラグ`--env TZ=<TIMEZONE>`を使用します。[利用可能なタイムゾーンの一覧](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)を参照してください。
 - [FIPS準拠のGitLab Runner](_index.md#fips-compliant-gitlab-runner)イメージを使用する場合は、`redhat/ubi9-micro`ベースの`gitlab/gitlab-runner:ubi-fips`タグを使用します。
@@ -79,10 +79,10 @@ Docker EngineとGitLab Runnerコンテナイメージのバージョンが一致
 
 ### ローカルシステムボリュームを使用する場合 {#from-a-local-system-volume}
 
-`gitlab-runner`コンテナにマウントされた設定ボリュームやその他のリソースとしてローカルシステムを使用するには、次のようにします。
+`gitlab-runner`コンテナにマウントされた設定ボリュームやその他のリソースとしてローカルシステムを使用するには、次のようにします:
 
 1. （オプション）MacOSシステムでは、デフォルトの場合、`/srv`は存在しません。セットアップ用に`/private/srv`を作成するか、または別のプライベートディレクトリを作成します。
-1. 次のコマンドを実行します（必要に応じて修正）。
+1. 次のコマンドを実行します（必要に応じて修正）:
 
    ```shell
    docker run -d --name gitlab-runner --restart always \
@@ -93,15 +93,15 @@ Docker EngineとGitLab Runnerコンテナイメージのバージョンが一致
 
 ### Dockerボリュームを使用する場合 {#from-a-docker-volume}
 
-設定コンテナを使用してカスタムデータボリュームをマウントするには、次の手順に従います。
+設定コンテナを使用してカスタムデータボリュームをマウントするには、次の手順に従います:
 
-1. Dockerボリュームを作成します。
+1. Dockerボリュームを作成します:
 
    ```shell
    docker volume create gitlab-runner-config
    ```
 
-1. 作成したボリュームを使用してGitLab Runnerコンテナを起動します。
+1. 作成したボリュームを使用してGitLab Runnerコンテナを起動します:
 
    ```shell
    docker run -d --name gitlab-runner --restart always \
@@ -120,19 +120,19 @@ Docker EngineとGitLab Runnerコンテナイメージのバージョンが一致
 
 - 最初に使用した方法（`-v /srv/gitlab-runner/config:/etc/gitlab-runner`または`-v gitlab-runner-config:/etc/gitlab-runner`）でデータボリュームをマウントする必要があります。
 
-1. 最新バージョン（または特定のタグ）をプルします。
+1. 最新バージョン（または特定のタグ）をプルします:
 
    ```shell
    docker pull gitlab/gitlab-runner:latest
    ```
 
-1. 既存のコンテナを停止して削除します。
+1. 既存のコンテナを停止して削除します:
 
    ```shell
    docker stop gitlab-runner && docker rm gitlab-runner
    ```
 
-1. 最初に使用した方法でコンテナを起動します。
+1. 最初に使用した方法でコンテナを起動します:
 
    ```shell
    docker run -d --name gitlab-runner --restart always \
@@ -143,13 +143,13 @@ Docker EngineとGitLab Runnerコンテナイメージのバージョンが一致
 
 ## Runnerのログを表示する {#view-runner-logs}
 
-ログファイルの場所は、Runnerの起動方法によって異なります。次のようになります。
+ログファイルの場所は、Runnerの起動方法によって異なります。次のようになります:
 
 - **フォアグラウンドタスク**として（ローカルにインストールされたバイナリとして、またはDockerコンテナ内で）起動する場合は、ログは`stdout`に出力されます。
 - `systemd`などを使用して**システムサービス**として起動する場合は、Syslogなどのシステムログ生成メカニズムでログが使用可能になります。
 - **Dockerベースのサービス**として起動する場合は、`docker logs`コマンドを使用します。これは、`gitlab-runner ...`コマンドがコンテナのメインプロセスであるためです。
 
-たとえば、次のコマンドでコンテナを起動すると、その名前は`gitlab-runner`に設定されます。
+たとえば、次のコマンドでコンテナを起動すると、その名前は`gitlab-runner`に設定されます:
 
 ```shell
 docker run -d --name gitlab-runner --restart always \
@@ -158,7 +158,7 @@ docker run -d --name gitlab-runner --restart always \
   gitlab/gitlab-runner:latest
 ```
 
-ログを表示するには、`gitlab-runner`をコンテナ名に置き換えて次のコマンドを実行します。
+ログを表示するには、`gitlab-runner`をコンテナ名に置き換えて次のコマンドを実行します:
 
 ```shell
 docker logs gitlab-runner
@@ -180,7 +180,7 @@ GitLab CI/CDサーバーが自己署名SSL証明書を使用している場合�
 
 ## Dockerイメージ {#docker-images}
 
-GitLab Runner 17.10.0では、AlpineベースのDockerイメージはAlpine 3.19を使用します。次のマルチプラットフォームDockerイメージが利用可能です。
+GitLab Runner 17.10.0では、AlpineベースのDockerイメージはAlpine 3.19を使用します。次のマルチプラットフォームDockerイメージが利用可能です:
 
 - `gitlab/gitlab-runner:latest` - Ubuntuベース、約800 MB
 - `gitlab/gitlab-runner:alpine` - Alpineベース、約460 MB
@@ -195,7 +195,7 @@ GitLabリポジトリで更新が利用可能になる前に、イメージの�
 
 - IBM Zイメージを使用していないこと（`docker-machine`依存関係が含まれていないため）。このイメージは、Linux s390xまたはLinux ppc64leプラットフォーム向けにはメンテナンスされていません。現状については、[イシュー26551](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26551)を参照してください。
 
-最新のAlpineバージョン用の`gitlab-runner` Dockerイメージをビルドするには、次の手順に従います。
+最新のAlpineバージョン用の`gitlab-runner` Dockerイメージをビルドするには、次の手順に従います:
 
 1. `alpine-upgrade/Dockerfile`を作成します。
 
@@ -242,7 +242,7 @@ CentOS、Red Hat、Fedoraなどの一部のディストリビューションで�
 - 強制モードでSELinuxを使用する場合は、Runnerが`/var/run/docker.sock`にアクセスするときに`Permission denied`エラーが発生しないようにするため、[`selinux-dockersock`](https://github.com/dpw/selinux-dockersock)をインストールします。
 
 1. ホストに永続ディレクトリを作成します（`mkdir -p /srv/gitlab-runner/config`）。
-1. ボリュームで`:Z`を使用してDockerを実行します。
+1. ボリュームで`:Z`を使用してDockerを実行します:
 
    ```shell
    docker run -d --name gitlab-runner --restart always \
