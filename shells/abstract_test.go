@@ -558,7 +558,7 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 	const (
 		// The jobResponse is always a http(s) URL. If it were a `git@example.com/...` URL, go's url.Parse() would fail. To
 		// make the runner pull via SSH, `clone_url` would need to be used, to change from a http(s) URL to an SSH URL.
-		repoURI        = "https://user:pass@example.com/project/repo.git"
+		repoURI        = "https://gitlab-ci-token:pass@example.com/project/repo.git"
 		cleanedRepoURI = "https://example.com/project/repo.git"
 		repoHostURI    = "https://example.com"
 	)
@@ -576,6 +576,8 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 		m.EXPECT().Noticef("Created fresh repository.").Once()
 		m.EXPECT().Else().Once()
 		m.EXPECT().Command("git", "remote", "set-url", "origin", repoURI).Once()
+		calls := expectSetupExistingRepoConfig(m, "build/dir", externalGitConfigFile)
+		require.NotNil(t, calls)
 		m.EXPECT().EndIf().Once()
 
 		m.EXPECT().IfFile(".git/shallow").Once()
@@ -592,7 +594,7 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 			return nil
 		}
 		return [][2]string{
-			{"https://user:pass@example.com/project/repo.git", "https://example.com/project/repo.git"},
+			{"https://gitlab-ci-token:pass@example.com/project/repo.git", "https://example.com/project/repo.git"},
 		}
 	}
 
@@ -710,6 +712,7 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 								{Key: "GIT_CLONE_EXTRA_FLAGS", Value: tc.cloneExtraArgs},
 							},
 							JobRequestCorrelationID: "foobar",
+							Token:                   "pass",
 						},
 						BuildDir: tc.buildDir,
 					}
@@ -831,6 +834,9 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 						msw.EXPECT().Noticef("Created fresh repository.").Once()
 						msw.EXPECT().Else().Once()
 						msw.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
+						// For existing repositories, include external git config
+						extConfigFile := path.Join("git-temp-dir", "some-gitlab-runner.external.conf")
+						expectSetupExistingRepoConfig(msw, "build-dir", extConfigFile)
 						msw.EXPECT().EndIf().Once()
 
 						msw.EXPECT().IfFile(".git/shallow").Once()
@@ -885,6 +891,9 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 						msw.EXPECT().Noticef("Created fresh repository.").Once()
 						msw.EXPECT().Else().Once()
 						msw.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
+						// For existing repositories, include external git config
+						extConfigFile := path.Join("git-temp-dir", "some-gitlab-runner.external.conf")
+						expectSetupExistingRepoConfig(msw, "build-dir", extConfigFile)
 						msw.EXPECT().EndIf().Once()
 						msw.EXPECT().IfFile(".git/shallow").Once()
 						msw.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
@@ -1309,6 +1318,11 @@ func TestGitFetchFlags(t *testing.T) {
 			mockWriter.EXPECT().Noticef("Created fresh repository.").Once()
 			mockWriter.EXPECT().Else().Once()
 			mockWriter.EXPECT().Command("git", "remote", "set-url", "origin", mock.Anything).Once()
+			// For existing repositories, include external git config
+			mockWriter.EXPECT().TmpFile(externalGitConfigFile).Return(mock.Anything).Once()
+			mockWriter.EXPECT().Join(dummyProjectDir, gitDir, "config").Return(mock.Anything).Once()
+			mockWriter.EXPECT().CommandArgExpand("git", "config", "--file", mock.Anything, "--replace-all", "include.path", mock.Anything, mock.Anything).Once()
+			mockWriter.EXPECT().ExportRaw("GLR_EXT_GIT_CONFIG_PATH", mock.Anything).Once()
 			mockWriter.EXPECT().EndIf().Once()
 
 			v := common.AppVersion
@@ -3565,6 +3579,17 @@ func expectIncludeExternalGitConfig(w *MockShellWriter, target, toInclude string
 	return calls
 }
 
+func expectSetupExistingRepoConfig(w *MockShellWriter, projectDir, extConfigFile string) []*mock.Call {
+	gitConfigFile := path.Join(projectDir, gitDir, "config")
+	calls := []*mock.Call{
+		w.EXPECT().TmpFile(externalGitConfigFile).Return(extConfigFile).Once(),
+		w.EXPECT().Join(projectDir, gitDir, "config").Return(gitConfigFile).Once(),
+	}
+	calls = append(calls, expectIncludeExternalGitConfig(w, gitConfigFile, extConfigFile)...)
+
+	return calls
+}
+
 func expectSetupExternalGitConfig(w *MockShellWriter, extConfFile string, withCredHelper bool, url string, insteadOfs ...[2]string) []*mock.Call {
 	calls := []*mock.Call{
 		w.EXPECT().RmFile(extConfFile).Once(),
@@ -3787,6 +3812,9 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 								sw.EXPECT().Noticef("Created fresh repository.").Once()
 								sw.EXPECT().Else().Once()
 								sw.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
+								// For existing repositories, include external git config
+								extConfigFile := path.Join("git-temp-dir", "some-gitlab-runner.external.conf")
+								expectSetupExistingRepoConfig(sw, "", extConfigFile)
 								sw.EXPECT().EndIf().Once()
 
 								sw.EXPECT().IfFile(".git/shallow").Once()

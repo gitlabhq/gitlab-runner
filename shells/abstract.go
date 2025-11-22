@@ -836,6 +836,9 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	w.Noticef("Created fresh repository.")
 	w.Else()
 	w.Command("git", "remote", "set-url", "origin", remoteURL)
+	// For existing repositories, the template isn't reapplied, so we need to explicitly
+	// configure the repository to use the external git config
+	b.setupExistingRepoConfig(w, projectDir)
 	w.EndIf()
 
 	v := common.AppVersion
@@ -927,6 +930,14 @@ func includeExternalGitConfig(w ShellWriter, targetFile, fileToInclude string) {
 	pattern := regexp.QuoteMeta(baseName) + "$"
 	w.CommandArgExpand("git", "config", "--file", targetFile, "--replace-all", "include.path", fileToInclude, pattern)
 	w.ExportRaw(envVarExternalGitConfigFile, fileToInclude)
+}
+
+// setupExistingRepoConfig configures an existing Git repository to use the external Git config.
+// This is needed because git init with a template doesn't re-apply the template to existing repositories.
+func (b *AbstractShell) setupExistingRepoConfig(w ShellWriter, projectDir string) {
+	extConfigFile := w.TmpFile(externalGitConfigFile)
+	gitConfigFile := w.Join(projectDir, gitDir, "config")
+	includeExternalGitConfig(w, gitConfigFile, extConfigFile)
 }
 
 func (b *AbstractShell) setupTemplateDir(w ShellWriter, build *common.Build, projectDir string) (string, string, error) {

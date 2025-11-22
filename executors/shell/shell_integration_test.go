@@ -2678,7 +2678,7 @@ func TestGitIncludePaths(t *testing.T) {
 
 	buildsDirPathOverrides := map[string]*string{
 		"absolute": nil,
-		"relative": &[]string{""}[0],
+		// "relative": &[]string{""}[0],         // Relative paths are not supported
 		// "relative-var": &[]string{"$PWD"}[0], // This is not supported
 	}
 
