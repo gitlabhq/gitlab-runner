@@ -1154,6 +1154,14 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 
 	w.Command("git", append(foreachArgs, cleanCommand...)...)
 
+	// Configure each submodule to include the external git config.
+	// This allows git operations inside submodule directories (e.g., cd patches && git pull)
+	// to authenticate properly using the parent repo's credentials.
+	// This is done once at the end, after all submodule operations are complete.
+	// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39133
+	w.Noticef("Configuring submodules to use parent git credentials...")
+	b.configureSubmoduleCredentials(w, foreachArgs)
+
 	if !build.IsLFSSmudgeDisabled() {
 		w.IfCmd("git", "lfs", "version")
 		w.CommandArgExpand("git", withExplicitSubmoduleCreds(append(foreachArgs, "git lfs pull"))...)
@@ -1174,6 +1182,17 @@ func (b *AbstractShell) writeSubmoduleUpdateNoticeMsg(w ShellWriter, recursive b
 	default:
 		w.Noticef("Updating/initializing submodules...")
 	}
+}
+
+// configureSubmoduleCredentials configures each submodule to include the external git config
+// from the parent repository. This allows git operations inside submodule directories
+// (e.g., cd patches && git pull) to authenticate properly using the parent repo's credentials.
+func (b *AbstractShell) configureSubmoduleCredentials(w ShellWriter, foreachArgs []string) {
+	// Use the GLR_EXT_GIT_CONFIG_PATH environment variable that was set earlier.
+	// This avoids shell escaping issues and works consistently across platforms.
+	cmd := "git config include.path " + w.EnvVariableKey(envVarExternalGitConfigFile)
+	args := append(foreachArgs, cmd) //nolint:gocritic
+	w.CommandArgExpand("git", args...)
 }
 
 func (b *AbstractShell) writeRestoreCacheScript(
