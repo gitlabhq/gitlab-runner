@@ -1,3 +1,9 @@
+## v18.6.2 (2025-11-25)
+
+### Bug fixes
+
+- Fix "unable to get password from user" errors in shell executor [!5961](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5961)
+
 ## v18.6.0 (2025-11-17)
 
 ### New features
