@@ -41,6 +41,19 @@ type CacheExtractorCommand struct {
 	mux    *blob.URLMux
 }
 
+func NewCacheExtractorCommand() cli.Command {
+	return common.NewCommand(
+		"cache-extractor",
+		"download and extract cache artifacts (internal)",
+		&CacheExtractorCommand{
+			retryHelper: retryHelper{
+				Retry:     2,
+				RetryTime: time.Second,
+			},
+		},
+	)
+}
+
 func (c *CacheExtractorCommand) getClient() *CacheClient {
 	if c.client == nil {
 		c.client = NewCacheClient(c.Timeout)
@@ -269,17 +282,4 @@ func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
 func warningln(args interface{}) {
 	logrus.Warningln(args)
 	logrus.Exit(1)
-}
-
-func init() {
-	common.RegisterCommand(
-		"cache-extractor",
-		"download and extract cache artifacts (internal)",
-		&CacheExtractorCommand{
-			retryHelper: retryHelper{
-				Retry:     2,
-				RetryTime: time.Second,
-			},
-		},
-	)
 }

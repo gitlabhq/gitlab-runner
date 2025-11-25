@@ -147,7 +147,7 @@ func Proxy(sockPath string, io IOStreams) error {
 	return proxy.Proxy(io.Stdin, io.Stdout, conn)
 }
 
-func init() {
+func NewCommand() cli.Command {
 	const sockFlag = "socket"
 	defaultSockPath := api.DefaultSocketPath()
 
@@ -197,7 +197,7 @@ func init() {
 		},
 	}
 
-	common.RegisterCommandWithSubcommands(
+	return common.NewCommandWithSubcommands(
 		SubCommandName,
 		"manage server that can run CI Functions (internal)",
 		common.CommanderFunc(func(ctx *cli.Context) {

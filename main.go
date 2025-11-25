@@ -9,9 +9,14 @@ import (
 	"github.com/urfave/cli"
 	"go.uber.org/automaxprocs/maxprocs"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/fleeting"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
+	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/labkit/fips"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/azure"
@@ -19,10 +24,6 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/gcsv2"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/s3"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/s3v2"
-	_ "gitlab.com/gitlab-org/gitlab-runner/commands"
-	_ "gitlab.com/gitlab-org/gitlab-runner/commands/fleeting"
-	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
-	_ "gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/custom"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/autoscaler"
@@ -70,7 +71,7 @@ func main() {
 			Email: "support@gitlab.com",
 		},
 	}
-	app.Commands = common.GetCommands()
+	app.Commands = newCommands()
 	app.CommandNotFound = func(context *cli.Context, command string) {
 		logrus.Fatalln("Command", command, "not found.")
 	}
@@ -86,4 +87,31 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		logrus.Fatal(err)
 	}
+}
+
+func newCommands() []cli.Command {
+	apiRequestsCollector := network.NewAPIRequestsCollector()
+	n := network.NewGitLabClient(network.WithAPIRequestsCollector(apiRequestsCollector))
+	cmds := []cli.Command{
+		commands.NewListCommand(),
+		commands.NewRegisterCommand(n),
+		commands.NewResetTokenCommand(n),
+		commands.NewRunCommand(n, apiRequestsCollector),
+		commands.NewRunSingleCommand(n),
+		commands.NewRunnerWrapperCommand(),
+		commands.NewUnregisterCommand(n),
+		commands.NewVerifyCommand(n),
+		fleeting.NewCommand(),
+		helpers.NewArtifactsDownloaderCommand(n),
+		helpers.NewArtifactsUploaderCommand(n),
+		helpers.NewCacheArchiverCommand(),
+		helpers.NewCacheExtractorCommand(),
+		helpers.NewCacheInitCommand(),
+		helpers.NewHealthCheckCommand(),
+		helpers.NewProxyExecCommand(),
+		helpers.NewReadLogsCommand(),
+		steps.NewCommand(),
+	}
+	cmds = append(cmds, commands.NewServiceCommands()...)
+	return cmds
 }

@@ -8,7 +8,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 type VerifyCommand struct {
@@ -18,6 +17,12 @@ type VerifyCommand struct {
 	ConfigFile        string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 	Name              string `toml:"name" json:"name" short:"n" long:"name" description:"Name of the runner you wish to verify"`
 	DeleteNonExisting bool   `long:"delete" description:"Delete no longer existing runners?"`
+}
+
+func NewVerifyCommand(n common.Network) cli.Command {
+	return common.NewCommand("verify", "verify all registered runners", &VerifyCommand{
+		network: n,
+	})
 }
 
 //nolint:gocognit
@@ -73,10 +78,4 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		logrus.Fatalln("Failed to update", c.ConfigFile, err)
 	}
 	logrus.Println("Updated", c.ConfigFile)
-}
-
-func init() {
-	common.RegisterCommand("verify", "verify all registered runners", &VerifyCommand{
-		network: network.NewGitLabClient(),
-	})
 }

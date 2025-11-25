@@ -13,7 +13,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 type RunSingleCommand struct {
@@ -236,8 +235,8 @@ func (r *RunSingleCommand) getShutdownTimeout() time.Duration {
 	return common.DefaultShutdownTimeout
 }
 
-func init() {
-	common.RegisterCommand("run-single", "start single runner", &RunSingleCommand{
-		network: network.NewGitLabClient(),
+func NewRunSingleCommand(n common.Network) cli.Command {
+	return common.NewCommand("run-single", "start single runner", &RunSingleCommand{
+		network: n,
 	})
 }

@@ -109,7 +109,7 @@ func login(clictx *cli.Context) error {
 	return nil
 }
 
-func init() {
+func NewCommand() cli.Command {
 	subcommands := []cli.Command{
 		{
 			Name:   "install",
@@ -135,7 +135,7 @@ func init() {
 		},
 	}
 
-	common.RegisterCommandWithSubcommands(
+	return common.NewCommandWithSubcommands(
 		"fleeting",
 		"manage fleeting plugins",
 		common.CommanderFunc(func(ctx *cli.Context) {

@@ -15,6 +15,10 @@ import (
 // to initialize.
 type CacheInitCommand struct{}
 
+func NewCacheInitCommand() cli.Command {
+	return common.NewCommand("cache-init", "changed permissions for cache paths (internal)", &CacheInitCommand{})
+}
+
 func (c *CacheInitCommand) Execute(ctx *cli.Context) {
 	if ctx.NArg() == 0 {
 		logrus.Fatal("No arguments passed, at least 1 path is required.")
@@ -26,8 +30,4 @@ func (c *CacheInitCommand) Execute(ctx *cli.Context) {
 			logrus.WithError(err).Error("failed to chmod path")
 		}
 	}
-}
-
-func init() {
-	common.RegisterCommand("cache-init", "changed permissions for cache paths (internal)", &CacheInitCommand{})
 }

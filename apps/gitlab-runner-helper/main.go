@@ -9,11 +9,11 @@ import (
 	"github.com/urfave/cli"
 	"go.uber.org/automaxprocs/maxprocs"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
-
-	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
-	_ "gitlab.com/gitlab-org/gitlab-runner/commands/steps"
+	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 func init() {
@@ -43,7 +43,7 @@ func main() {
 			Email: "support@gitlab.com",
 		},
 	}
-	app.Commands = common.GetCommands()
+	app.Commands = newCommands()
 	app.CommandNotFound = func(context *cli.Context, command string) {
 		logrus.Fatalln("Command", command, "not found")
 	}
@@ -52,5 +52,20 @@ func main() {
 
 	if err := app.Run(os.Args); err != nil {
 		logrus.Fatal(err)
+	}
+}
+
+func newCommands() []cli.Command {
+	n := network.NewGitLabClient()
+	return []cli.Command{
+		helpers.NewArtifactsDownloaderCommand(n),
+		helpers.NewArtifactsUploaderCommand(n),
+		helpers.NewCacheArchiverCommand(),
+		helpers.NewCacheExtractorCommand(),
+		helpers.NewCacheInitCommand(),
+		helpers.NewHealthCheckCommand(),
+		helpers.NewProxyExecCommand(),
+		helpers.NewReadLogsCommand(),
+		steps.NewCommand(),
 	}
 }

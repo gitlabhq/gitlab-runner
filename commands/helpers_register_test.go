@@ -19,9 +19,8 @@ var RegisterTimeNowDate = time.Date(2020, 01, 01, 10, 10, 10, 0, time.UTC)
 
 // NewRegisterCommandForTest exposes RegisterCommand to integration tests
 func NewRegisterCommandForTest(reader *bufio.Reader, network common.Network) *RegisterCommand {
-	cmd := newRegisterCommand()
+	cmd := newRegisterCommand(network)
 	cmd.reader = reader
-	cmd.network = network
 	cmd.timeNowFn = func() time.Time {
 		return RegisterTimeNowDate
 	}

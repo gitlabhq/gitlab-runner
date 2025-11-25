@@ -12,6 +12,10 @@ type ListCommand struct {
 	ConfigFile string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 }
 
+func NewListCommand() cli.Command {
+	return common.NewCommand("list", "List all configured runners", &ListCommand{})
+}
+
 func (c *ListCommand) Execute(context *cli.Context) {
 	cfg := configfile.New(c.ConfigFile)
 
@@ -32,8 +36,4 @@ func (c *ListCommand) Execute(context *cli.Context) {
 			"URL":      runner.RunnerCredentials.URL,
 		}).Println(runner.Name)
 	}
-}
-
-func init() {
-	common.RegisterCommand("list", "List all configured runners", &ListCommand{})
 }

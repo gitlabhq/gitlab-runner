@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
 	"gitlab.com/gitlab-org/fleeting/fleeting-artifact/pkg/installer"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 func init() {
@@ -26,7 +25,9 @@ func TestInstall(t *testing.T) {
 
 	app := cli.NewApp()
 	app.Name = "runner"
-	app.Commands = common.GetCommands()
+	app.Commands = []cli.Command{
+		NewCommand(),
+	}
 
 	const config = `
 [[runners]]

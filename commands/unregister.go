@@ -21,6 +21,12 @@ type UnregisterCommand struct {
 	AllRunners bool   `toml:"all_runners" json:"all-runners" long:"all-runners" description:"Unregister all runners"`
 }
 
+func NewUnregisterCommand(n common.Network) cli.Command {
+	return common.NewCommand("unregister", "unregister specific runner", &UnregisterCommand{
+		network: n,
+	})
+}
+
 func (c *UnregisterCommand) unregisterAllRunners(cfg *common.Config) ([]*common.RunnerConfig, error) {
 	logrus.Warningln("Unregistering all runners")
 	var errs error
@@ -118,10 +124,4 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 		logrus.Fatalln("Failed to update", c.ConfigFile, err)
 	}
 	logrus.Println("Updated", c.ConfigFile)
-}
-
-func init() {
-	common.RegisterCommand("unregister", "unregister specific runner", &UnregisterCommand{
-		network: network.NewGitLabClient(),
-	})
 }

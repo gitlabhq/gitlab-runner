@@ -15,7 +15,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
-	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 type ArtifactsDownloaderCommand struct {
@@ -26,6 +25,20 @@ type ArtifactsDownloaderCommand struct {
 
 	DirectDownload bool   `long:"direct-download" env:"FF_USE_DIRECT_DOWNLOAD" description:"Support direct download for data stored externally to GitLab"`
 	StagingDir     string `long:"archiver-staging-dir" env:"ARCHIVER_STAGING_DIR" description:"Directory to stage artifact archives"`
+}
+
+func NewArtifactsDownloaderCommand(n common.Network) cli.Command {
+	return common.NewCommand(
+		"artifacts-downloader",
+		"download and extract build artifacts (internal)",
+		&ArtifactsDownloaderCommand{
+			network: n,
+			retryHelper: retryHelper{
+				Retry:     2,
+				RetryTime: time.Second,
+			},
+		},
+	)
 }
 
 func (c *ArtifactsDownloaderCommand) directDownloadFlag(retry int) *bool {
@@ -156,18 +169,4 @@ func openArchive(filename string) (*os.File, int64, archive.Format, error) {
 	}
 
 	return f, fi.Size(), format, nil
-}
-
-func init() {
-	common.RegisterCommand(
-		"artifacts-downloader",
-		"download and extract build artifacts (internal)",
-		&ArtifactsDownloaderCommand{
-			network: network.NewGitLabClient(),
-			retryHelper: retryHelper{
-				Retry:     2,
-				RetryTime: time.Second,
-			},
-		},
-	)
 }

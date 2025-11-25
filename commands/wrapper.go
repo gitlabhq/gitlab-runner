@@ -45,6 +45,16 @@ type RunnerWrapperCommand struct {
 	ProcessTerminationTimeout time.Duration `long:"process-termination-timeout"`
 }
 
+func NewRunnerWrapperCommand() cli.Command {
+	return common.NewCommand(
+		"wrapper", "start multi runner service wrapped with gRPC manager server",
+		&RunnerWrapperCommand{
+			GRPCListen:                defaultWrapperGRPCListen,
+			ProcessTerminationTimeout: runner_wrapper.DefaultTerminationTimeout,
+		},
+	)
+}
+
 func (c *RunnerWrapperCommand) Execute(cctx *cli.Context) {
 	logrus.AddHook(new(logHook))
 	log := logrus.WithField("wrapper", true)
@@ -93,14 +103,4 @@ func (c *RunnerWrapperCommand) createListener() (net.Listener, error) {
 	default:
 		return nil, fmt.Errorf("%w: %s", errUnsupportedGRPCAddressScheme, uri.Scheme)
 	}
-}
-
-func init() {
-	common.RegisterCommand(
-		"wrapper", "start multi runner service wrapped with gRPC manager server",
-		&RunnerWrapperCommand{
-			GRPCListen:                defaultWrapperGRPCListen,
-			ProcessTerminationTimeout: runner_wrapper.DefaultTerminationTimeout,
-		},
-	)
 }

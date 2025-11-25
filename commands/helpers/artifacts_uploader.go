@@ -18,7 +18,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
-	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 const (
@@ -46,6 +45,17 @@ type ArtifactsUploaderCommand struct {
 	Type             string                `long:"artifact-type" description:"Type of generated artifacts"`
 	CompressionLevel string                `long:"compression-level" env:"ARTIFACT_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
 	CiDebugTrace     bool                  `long:"ci-debug-trace" env:"CI_DEBUG_TRACE" description:"enable debug trace logging"`
+}
+
+func NewArtifactsUploaderCommand(n common.Network) cli.Command {
+	return common.NewCommand(
+		"artifacts-uploader",
+		"create and upload build artifacts (internal)",
+		&ArtifactsUploaderCommand{
+			network: n,
+			Name:    "artifacts",
+		},
+	)
 }
 
 func (c *ArtifactsUploaderCommand) artifactFilename(name string, format common.ArtifactFormat) string {
@@ -250,15 +260,4 @@ func (c *ArtifactsUploaderCommand) normalizeArgs() {
 			c.Exclude[idx] = path
 		}
 	}
-}
-
-func init() {
-	common.RegisterCommand(
-		"artifacts-uploader",
-		"create and upload build artifacts (internal)",
-		&ArtifactsUploaderCommand{
-			network: network.NewGitLabClient(),
-			Name:    "artifacts",
-		},
-	)
 }

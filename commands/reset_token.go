@@ -8,7 +8,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 type ResetTokenCommand struct {
@@ -21,6 +20,12 @@ type ResetTokenCommand struct {
 	ID         int64  `short:"i" long:"id" description:"ID of the runner whose token you wish to reset (as defined in the configuration file)"`
 	AllRunners bool   `long:"all-runners" description:"Reset all runner authentication tokens"`
 	PAT        string `long:"pat" description:"Personal access token to use in lieu of runner's old authentication token"`
+}
+
+func NewResetTokenCommand(n common.Network) cli.Command {
+	return common.NewCommand("reset-token", "reset a runner's token", &ResetTokenCommand{
+		network: n,
+	})
 }
 
 func (c *ResetTokenCommand) resetAllRunnerTokens(cfg *common.Config) {
@@ -94,10 +99,4 @@ func (c *ResetTokenCommand) Execute(_context *cli.Context) {
 	}
 
 	log.Println("Updated")
-}
-
-func init() {
-	common.RegisterCommand("reset-token", "reset a runner's token", &ResetTokenCommand{
-		network: network.NewGitLabClient(),
-	})
 }

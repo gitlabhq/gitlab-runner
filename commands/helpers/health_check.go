@@ -21,6 +21,10 @@ type HealthCheckCommand struct {
 	Ports []string `short:"p" long:"port" description:"Service port"`
 }
 
+func NewHealthCheckCommand() cli.Command {
+	return common.NewCommand("health-check", "check health for a specific address", &HealthCheckCommand{})
+}
+
 func (c *HealthCheckCommand) Execute(_ *cli.Context) {
 	var ports []string
 	var addr string
@@ -106,8 +110,4 @@ func checkPort(parentCtx context.Context, addr, port string, cancel func(), done
 		fmt.Printf("dial succeeded on %s:%s. Exiting...\n", addr, port)
 		return
 	}
-}
-
-func init() {
-	common.RegisterCommand("health-check", "check health for a specific address", &HealthCheckCommand{})
 }
