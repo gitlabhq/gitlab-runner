@@ -49,6 +49,7 @@ type option func(*client)
 type client struct {
 	http.Client
 	url              *url.URL
+	certDirectory    string
 	caFile           string
 	certFile         string
 	keyFile          string
@@ -519,11 +520,11 @@ func fixCIURL(url string) string {
 	return url
 }
 
-func (n *client) findCertificate(certificate *string, base string, name string) {
+func (n *client) findCertificate(certificate *string, name string) {
 	if *certificate != "" {
 		return
 	}
-	path := filepath.Join(base, name)
+	path := filepath.Join(n.certDirectory, name)
 	if _, err := os.Stat(path); err == nil {
 		*certificate = path
 	}
@@ -532,6 +533,12 @@ func (n *client) findCertificate(certificate *string, base string, name string) 
 func withMaxAge(connectionMaxAge time.Duration) option {
 	return func(c *client) {
 		c.connectionMaxAge = connectionMaxAge
+	}
+}
+
+func withCertificateDirectory(certDirectory string) option {
+	return func(c *client) {
+		c.certDirectory = certDirectory
 	}
 }
 
@@ -553,15 +560,15 @@ func newClient(requestCredentials requestCredentials, collector *APIRequestsColl
 	}
 	c.requester = newRetryRequester(&c.Client, collector)
 
-	host := strings.Split(url.Host, ":")[0]
-	if CertificateDirectory != "" {
-		c.findCertificate(&c.caFile, CertificateDirectory, host+".crt")
-		c.findCertificate(&c.certFile, CertificateDirectory, host+".auth.crt")
-		c.findCertificate(&c.keyFile, CertificateDirectory, host+".auth.key")
-	}
-
 	for _, o := range options {
 		o(c)
+	}
+
+	if c.certDirectory != "" {
+		host := strings.Split(url.Host, ":")[0]
+		c.findCertificate(&c.caFile, host+".crt")
+		c.findCertificate(&c.certFile, host+".auth.crt")
+		c.findCertificate(&c.keyFile, host+".auth.key")
 	}
 
 	return c, nil
