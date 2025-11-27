@@ -1492,7 +1492,12 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 
 					expectSubmoduleCleanCommand()
 
+					mockWriter.EXPECT().Noticef("Configuring submodules to use parent git credentials...").Once()
+					mockWriter.EXPECT().EnvVariableKey("GLR_EXT_GIT_CONFIG_PATH").Return("$GLR_EXT_GIT_CONFIG_PATH").Once()
+					mockWriter.EXPECT().CommandArgExpand("git", append(expectedGitForEachArgsFn(), "git config include.path $GLR_EXT_GIT_CONFIG_PATH")...).Once()
+
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
+					mockWriter.EXPECT().Noticef("Pulling LFS files...").Once()
 					mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), expectedGitForEachArgsFn(), []any{"git lfs pull"})...).Once()
 					mockWriter.EXPECT().EndIf().Once()
 
@@ -2638,7 +2643,12 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 						cleanCmd.Once()
 					}).Twice()
 
+					mockWriter.EXPECT().Noticef("Configuring submodules to use parent git credentials...").Once()
+					mockWriter.EXPECT().EnvVariableKey("GLR_EXT_GIT_CONFIG_PATH").Return("$GLR_EXT_GIT_CONFIG_PATH").Once()
+					mockWriter.EXPECT().CommandArgExpand("git", "submodule", "foreach", "git config include.path $GLR_EXT_GIT_CONFIG_PATH").Once()
+
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
+					mockWriter.EXPECT().Noticef("Pulling LFS files...").Once()
 					mockWriter.EXPECT().CommandArgExpand("git", withExplicitSubmoduleCreds([]any{"submodule", "foreach", "git lfs pull"})...).Once()
 					mockWriter.EXPECT().EndIf().Once()
 
