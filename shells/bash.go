@@ -308,14 +308,14 @@ func (b *BashWriter) MkTmpDir(name string) string {
 func (b *BashWriter) RmDir(path string) {
 	if b.setPermissionsBeforeCleanup {
 		b.IfDirectory(path)
-		b.Command("chmod", "-R", "u+rwX", path)
+		b.CommandArgExpand("chmod", "-R", "u+rwX", path)
 		b.EndIf()
 	}
-	b.Command("rm", "-r", "-f", path)
+	b.CommandArgExpand("rm", "-r", "-f", path)
 }
 
 func (b *BashWriter) RmFile(path string) {
-	b.Command("rm", "-f", path)
+	b.CommandArgExpand("rm", "-f", path)
 }
 
 func (b *BashWriter) RmFilesRecursive(path string, name string) {
