@@ -929,7 +929,9 @@ func includeExternalGitConfig(w ShellWriter, targetFile, fileToInclude string) {
 	baseName := path.Base(helpers.ToSlash(fileToInclude))
 	pattern := regexp.QuoteMeta(baseName) + "$"
 	w.CommandArgExpand("git", "config", "--file", targetFile, "--replace-all", "include.path", fileToInclude, pattern)
-	w.ExportRaw(envVarExternalGitConfigFile, fileToInclude)
+	// Convert backslashes to forward slashes for git compatibility on Windows.
+	// This ensures the path works correctly when expanded in shell contexts like git submodule foreach
+	w.ExportRaw(envVarExternalGitConfigFile, helpers.ToSlash(fileToInclude))
 }
 
 // setupExistingRepoConfig configures an existing Git repository to use the external Git config.
