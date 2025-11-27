@@ -1247,7 +1247,7 @@ type RunnerSettings struct {
 
 	ProxyExec *bool `toml:"proxy_exec,omitempty" json:"proxy_exec,omitempty" long:"proxy-exec" env:"RUNNER_PROXY_EXEC" description:"(Experimental) Proxy execution via helper binary"`
 
-	PreGetSourcesScript  string `toml:"pre_get_sources_script,omitempty" json:"pre_get_sources_script" long:"pre-get-sources-script" env:"RUNNER_PRE_GET_SOURCES_SCRIPT" description:"Runner-specific commands to be executed on the runner before updating the Git repository an updating submodules."`
+	PreGetSourcesScript  string `toml:"pre_get_sources_script,omitempty" json:"pre_get_sources_script" long:"pre-get-sources-script" env:"RUNNER_PRE_GET_SOURCES_SCRIPT" description:"Runner-specific commands to be executed on the runner before updating the Git repository and updating submodules."`
 	PostGetSourcesScript string `toml:"post_get_sources_script,omitempty" json:"post_get_sources_script" long:"post-get-sources-script" env:"RUNNER_POST_GET_SOURCES_SCRIPT" description:"Runner-specific commands to be executed on the runner after updating the Git repository and updating submodules."`
 
 	PreBuildScript  string `toml:"pre_build_script,omitempty" json:"pre_build_script" long:"pre-build-script" env:"RUNNER_PRE_BUILD_SCRIPT" description:"Runner-specific command script executed just before build executes"`
