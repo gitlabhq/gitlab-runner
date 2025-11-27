@@ -1499,6 +1499,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					mockWriter.EXPECT().CommandArgExpand("git", append(expectedGitForEachArgsFn(), "git config include.path $GLR_EXT_GIT_CONFIG_PATH")...).Once()
 
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
+					mockWriter.EXPECT().Noticef("Pulling LFS files...").Once()
 					mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), expectedGitForEachArgsFn(), []any{"git lfs pull"})...).Once()
 					mockWriter.EXPECT().EndIf().Once()
 
@@ -2649,6 +2650,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 					mockWriter.EXPECT().CommandArgExpand("git", "submodule", "foreach", "git config include.path $GLR_EXT_GIT_CONFIG_PATH").Once()
 
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
+					mockWriter.EXPECT().Noticef("Pulling LFS files...").Once()
 					mockWriter.EXPECT().CommandArgExpand("git", withExplicitSubmoduleCreds([]any{"submodule", "foreach", "git lfs pull"})...).Once()
 					mockWriter.EXPECT().EndIf().Once()
 

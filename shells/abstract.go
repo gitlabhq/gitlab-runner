@@ -1166,6 +1166,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 
 	if !build.IsLFSSmudgeDisabled() {
 		w.IfCmd("git", "lfs", "version")
+		w.Noticef("Pulling LFS files...")
 		w.CommandArgExpand("git", withExplicitSubmoduleCreds(append(foreachArgs, "git lfs pull"))...)
 		w.EndIf()
 	}
