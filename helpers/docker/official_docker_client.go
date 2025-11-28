@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
@@ -34,7 +35,7 @@ func IsErrNotFound(err error) bool {
 	if unwrapped != nil {
 		err = unwrapped
 	}
-	return client.IsErrNotFound(err)
+	return errdefs.IsNotFound(err)
 }
 
 // type officialDockerClient wraps a "github.com/docker/docker/client".Client,
