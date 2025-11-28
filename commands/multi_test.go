@@ -53,9 +53,8 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		},
 	}
 
-	mJobTrace := common.NewMockJobTrace(t)
+	mJobTrace := common.NewMockLightJobTrace(t)
 	mJobTrace.On("SetFailuresCollector", mock.Anything)
-	mJobTrace.On("Write", mock.Anything).Return(0, nil)
 	mJobTrace.On("IsStdout").Return(false)
 	mJobTrace.On("SetCancelFunc", mock.Anything)
 	mJobTrace.On("SetAbortFunc", mock.Anything)

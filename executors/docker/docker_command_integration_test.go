@@ -776,9 +776,8 @@ func TestDockerCommandOutput(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 
-	re, err := regexp.Compile("(?m)^Initialized empty Git repository in /builds/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test/.git/")
-	require.NoError(t, err)
-	assert.Regexp(t, re, buffer.String())
+	pattern := regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\S+\s+Initialized empty Git repository in /builds/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test/.git/`)
+	assert.Regexp(t, pattern, buffer.String())
 }
 
 func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
@@ -947,7 +946,7 @@ func TestCacheInContainer(t *testing.T) {
 		},
 	}
 
-	cacheNotPresentRE := regexp.MustCompile("(?m)^no cached directory")
+	cacheNotPresentRE := regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\w+\s+no cached directory`)
 	skipCacheDownload := "Not downloading cache key due to policy"
 	skipCacheUpload := "Not uploading cache key due to policy"
 
@@ -2357,9 +2356,9 @@ func testDockerBuildContainerGracefulShutdown(t *testing.T, useInit bool) {
 			assert.Error(t, err)
 
 			assert.EventuallyWithT(t, func(t *assert.CollectT) {
-				assert.Regexp(t, "Starting [0-9]{1,2}", out.String())
-				assert.Regexp(t, "Caught SIGTERM", out.String())
-				assert.Regexp(t, "Exiting [0-9]{1,2}", out.String())
+				assert.Regexp(t, `(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\d{2}O\s+Starting [0-9]{1,2}`, out.String())
+				assert.Regexp(t, `(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\d{2}O\s+Caught SIGTERM`, out.String())
+				assert.Regexp(t, `(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\d{2}O\s+Exiting [0-9]{1,2}`, out.String())
 			}, 5*time.Second, 1*time.Second)
 		})
 	}
@@ -2627,7 +2626,7 @@ func TestDockerCommandWithUser(t *testing.T) {
 	var buffer bytes.Buffer
 	require.NoError(t, build.Run(&common.Config{}, &common.Trace{Writer: &buffer}))
 
-	assert.Regexp(t, "whoami.*\nsquid", buffer.String())
+	assert.Regexp(t, "whoami.*\n.*squid", buffer.String())
 }
 
 // TestGitCredHelper assert that the git cred helper works with the docker executor, with the container images we ship
@@ -2774,8 +2773,10 @@ func TestPwshGitCredHelper(t *testing.T) {
 
 			out, err := buildtest.RunBuildReturningOutput(t, &build)
 			require.NoError(t, err)
-			assert.Contains(t, out, "\nusername=some-user\n", "expected to get user via custom cred helper")
-			assert.Contains(t, out, "\npassword=test-job-token\n", "expected to get token via custom cred helper")
+			usernamePattern := regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\S+\s+username=some-user\n`)
+			assert.Regexp(t, usernamePattern, out)
+			passwordPattern := regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\S+\s+password=test-job-token\n`)
+			assert.Regexp(t, passwordPattern, out)
 
 			if tc.withNativeArgPassing {
 				assert.Contains(t, out,

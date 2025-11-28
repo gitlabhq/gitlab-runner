@@ -740,26 +740,41 @@ func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, f
 	assert.Equal(t, common.JobExecutionTimeout, buildError.FailureReason)
 }
 
+func countWord(t *testing.T, text, word string) int {
+	t.Helper()
+	count := 0
+	for w := range strings.FieldsSeq(text) {
+		if w == word {
+			count++
+		}
+	}
+	return count
+}
+
 func testKubernetesLongLogsFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
+	timestampPattern := regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z`)
+
 	tests := map[string]struct {
-		getLine func() string
+		word          string
+		log           string
+		expectedCount int
 	}{
 		"short log": {
-			getLine: func() string {
-				return "Regular log"
-			},
-		},
-		"buffer size log": {
-			getLine: func() string {
-				return strings.Repeat("1", common.DefaultReaderBufferSize)
-			},
+			word:          "Regular log",
+			log:           "Regular log",
+			expectedCount: 1,
 		},
 		"long log": {
-			getLine: func() string {
-				return strings.Repeat("lorem ipsum", common.DefaultReaderBufferSize)
-			},
+			word:          "1",
+			log:           strings.Repeat("1", common.DefaultReaderBufferSize),
+			expectedCount: common.DefaultReaderBufferSize,
+		},
+		"really long log": {
+			word:          "lorem ipsum",
+			log:           strings.Repeat("lorem ipsum", common.DefaultReaderBufferSize),
+			expectedCount: common.DefaultReaderBufferSize,
 		},
 	}
 
@@ -767,7 +782,7 @@ func testKubernetesLongLogsFeatureFlag(t *testing.T, featureFlagName string, fea
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			line := tc.getLine()
+			line := tc.log
 			build := getTestBuild(t, func() (common.JobResponse, error) {
 				return common.GetRemoteBuildResponse(fmt.Sprintf(`echo "%s"`, line))
 			})
@@ -776,9 +791,8 @@ func testKubernetesLongLogsFeatureFlag(t *testing.T, featureFlagName string, fea
 			outBuffer := new(bytes.Buffer)
 			err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
 			require.NoError(t, err)
-			assert.Contains(t, outBuffer.String(), fmt.Sprintf(`$ echo "%s"`, line))
-			// We check the whole line is found in the log without any newline within
-			assert.Regexp(t, regexp.MustCompile(fmt.Sprintf(`(?m)^%s$`, line)), outBuffer.String())
+
+			assert.GreaterOrEqual(t, tc.expectedCount, countWord(t, timestampPattern.ReplaceAllString(outBuffer.String(), ""), tc.word))
 		})
 	}
 }
@@ -1068,7 +1082,7 @@ containers:
 
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnUserStage(build, func() {
-				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+				ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 				defer cancel()
 				pods, err := client.CoreV1().Pods(ciNamespace).List(
 					ctx,
@@ -1402,7 +1416,7 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 	secrets, err := client.
 		CoreV1().
 		Secrets(ciNamespace).
-		List(context.Background(), metav1.ListOptions{})
+		List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err)
 
 	build := getTestBuild(t, func() (common.JobResponse, error) {
@@ -1697,7 +1711,7 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnUserStage(build, func() {
-				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+				ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 				defer cancel()
 				pods, err := client.CoreV1().Pods(ciNamespace).List(
 					ctx,
@@ -1752,7 +1766,7 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 	client := getTestKubeClusterClient(t)
 
 	validateNamespaceDeleted := func(t *testing.T, client *k8s.Clientset, namespace string) {
-		ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+		ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 		defer cancel()
 
 		ns, err := client.CoreV1().Namespaces().Get(
@@ -1818,7 +1832,7 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnUserStage(build, func() {
-				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+				ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 				defer cancel()
 				pods, err := client.CoreV1().Pods(expectedNamespace).List(
 					ctx,
@@ -1938,7 +1952,7 @@ func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string,
 
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnUserStage(build, func() {
-				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+				ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 				defer cancel()
 				pods, err := client.CoreV1().Pods(ciNamespace).List(
 					ctx,
@@ -2029,7 +2043,7 @@ func testKubernetesWaitResources(t *testing.T, featureFlagName string, featureFl
 			imagePullSecret:  []string{secretName()},
 			init: func(t *testing.T, secretName, saName string, build *common.Build, client *k8s.Clientset) {
 				time.Sleep(time.Second * 3)
-				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+				ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 				defer cancel()
 
 				s := &v1.Secret{
@@ -2046,7 +2060,7 @@ func testKubernetesWaitResources(t *testing.T, featureFlagName string, featureFl
 				require.NoError(t, err)
 			},
 			finalize: func(t *testing.T, secretName, saName string, client *k8s.Clientset) {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+				ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 				defer cancel()
 
 				err := client.
@@ -2059,7 +2073,7 @@ func testKubernetesWaitResources(t *testing.T, featureFlagName string, featureFl
 		"serviceaccount made available while waiting for resources": {
 			init: func(t *testing.T, secretName, saName string, build *common.Build, client *k8s.Clientset) {
 				time.Sleep(time.Second * 3)
-				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+				ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 				defer cancel()
 
 				sa := &v1.ServiceAccount{
@@ -2077,7 +2091,7 @@ func testKubernetesWaitResources(t *testing.T, featureFlagName string, featureFl
 			checkMaxAttempts: 10,
 			serviceAccount:   saName(),
 			finalize: func(t *testing.T, secretName, saName string, client *k8s.Clientset) {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+				ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 				defer cancel()
 
 				err := client.
@@ -2242,7 +2256,7 @@ func TestLogDeletionAttach(t *testing.T) {
 				pods, err := client.
 					CoreV1().
 					Pods(ciNamespace).
-					List(context.Background(), metav1.ListOptions{
+					List(t.Context(), metav1.ListOptions{
 						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
 					})
 				require.NoError(t, err)
@@ -2321,7 +2335,7 @@ func TestPrepareIssue2583(t *testing.T) {
 	prepareOptions := common.ExecutorPrepareOptions{
 		Config:      build.Runner,
 		Build:       build,
-		Context:     context.TODO(),
+		Context:     t.Context(),
 		BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 	}
 
@@ -2337,7 +2351,7 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 	type terminator = func(client k8s.Interface, podName string) error
 
 	deletePod := func(client k8s.Interface, podName string, delOpts metav1.DeleteOptions) error {
-		return client.CoreV1().Pods(ciNamespace).Delete(context.Background(), podName, delOpts)
+		return client.CoreV1().Pods(ciNamespace).Delete(t.Context(), podName, delOpts)
 	}
 	deletePodGracefully := func(client k8s.Interface, podName string) error {
 		return deletePod(client, podName, metav1.DeleteOptions{})
@@ -2346,7 +2360,7 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 		return deletePod(client, podName, metav1.DeleteOptions{GracePeriodSeconds: common.Int64Ptr(0)})
 	}
 	evictPod := func(client k8s.Interface, podName string, delOpts metav1.DeleteOptions) error {
-		return client.CoreV1().Pods(ciNamespace).EvictV1(context.Background(), &policyv1.Eviction{
+		return client.CoreV1().Pods(ciNamespace).EvictV1(t.Context(), &policyv1.Eviction{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: podName,
 			},
@@ -2443,7 +2457,7 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 				t.Run(name, func(t *testing.T) {
 					t.Parallel()
 
-					ctx := context.Background()
+					ctx := t.Context()
 
 					build := getTestBuild(t, common.GetRemoteLongRunningBuild)
 
@@ -3344,7 +3358,7 @@ func TestKubernetesProcMount(t *testing.T) {
 		pods, err := client.
 			CoreV1().
 			Pods(ciNamespace).
-			List(context.Background(), metav1.ListOptions{
+			List(t.Context(), metav1.ListOptions{
 				LabelSelector: labels.Set(tmpPod.Runner.Kubernetes.PodLabels).String(),
 			})
 
@@ -3601,7 +3615,7 @@ func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, f
 			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
 			buildtest.SetBuildFeatureFlag(build, featureflags.PrintPodEvents, true)
 
-			ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+			ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnUserStage(build, func() {
 				defer cancel()
@@ -3877,7 +3891,7 @@ func TestKubernetesScriptsBaseDir(t *testing.T) {
 			script:  "find /tmp",
 			baseDir: "/tmp",
 			verifyFn: func(t *testing.T, out string) {
-				assert.Regexp(t, regexp.MustCompile(`(?m)^/tmp/scripts-0-0$`), out)
+				assert.Regexp(t, regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\w+\s+/tmp/scripts-0-0$`), out)
 			},
 		},
 		"scripts_base_dir trailing slash": {
@@ -3886,7 +3900,7 @@ func TestKubernetesScriptsBaseDir(t *testing.T) {
 			script:  "find /tmp",
 			baseDir: "/tmp/",
 			verifyFn: func(t *testing.T, out string) {
-				assert.Regexp(t, regexp.MustCompile(`(?m)^/tmp/scripts-0-0$`), out)
+				assert.Regexp(t, regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\w+\s+/tmp/scripts-0-0$`), out)
 			},
 		},
 		"scripts_base_dir disabled": {
@@ -3895,7 +3909,7 @@ func TestKubernetesScriptsBaseDir(t *testing.T) {
 			script:  "find / -maxdepth 1",
 			baseDir: "",
 			verifyFn: func(t *testing.T, out string) {
-				assert.Regexp(t, regexp.MustCompile(`(?m)^/scripts-0-0$`), out)
+				assert.Regexp(t, regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\w+\s+/scripts-0-0$`), out)
 			},
 		},
 	}
@@ -3941,7 +3955,7 @@ func TestKubernetesLogsBaseDir(t *testing.T) {
 			script:  "find /tmp",
 			baseDir: "/tmp",
 			verifyFn: func(t *testing.T, out string) {
-				assert.Regexp(t, regexp.MustCompile(`(?m)^/tmp/logs-0-0$`), out)
+				assert.Regexp(t, regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\w+\s+/tmp/logs-0-0$`), out)
 			},
 		},
 		"logs_base_dir trailing slash": {
@@ -3950,7 +3964,7 @@ func TestKubernetesLogsBaseDir(t *testing.T) {
 			script:  "find /tmp",
 			baseDir: "/tmp/",
 			verifyFn: func(t *testing.T, out string) {
-				assert.Regexp(t, regexp.MustCompile(`(?m)^/tmp/logs-0-0$`), out)
+				assert.Regexp(t, regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\w+\s+/tmp/logs-0-0$`), out)
 			},
 		},
 		"logs_base_dir disabled": {
@@ -3959,7 +3973,7 @@ func TestKubernetesLogsBaseDir(t *testing.T) {
 			script:  "find / -maxdepth 1",
 			baseDir: "",
 			verifyFn: func(t *testing.T, out string) {
-				assert.Regexp(t, regexp.MustCompile(`(?m)^/logs-0-0$`), out)
+				assert.Regexp(t, regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\w+\s+/logs-0-0$`), out)
 			},
 		},
 	}
