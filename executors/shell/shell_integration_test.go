@@ -2322,8 +2322,13 @@ func TestCredSetup(t *testing.T) {
 	}
 	extractGitConfig := func(blob, prefix string) string {
 		out := []string{}
+		// Regex to match timestamp format + prefix: YYYY-MM-DDTHH:MM:SS.microsZ WORD prefix
+		pattern := fmt.Sprintf(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\w+\s+%s`, regexp.QuoteMeta(prefix))
+		timestampPattern := regexp.MustCompile(pattern)
+
 		for _, line := range strings.Split(blob, "\n") {
-			if l, ok := strings.CutPrefix(line, prefix); ok {
+			if timestampPattern.MatchString(line) {
+				l := timestampPattern.ReplaceAllString(line, "")
 				out = append(out, l)
 			}
 		}

@@ -326,9 +326,9 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:         UseTimestamps,
-		DefaultValue: false,
+		DefaultValue: true,
 		Deprecated:   false,
-		Description:  "When enabled timestamps are added to the beginning of each log trace line.",
+		Description:  "When disabled timestamps are not added to the beginning of each log trace line.",
 	},
 	{
 		Name:         DisableAutomaticTokenRotation,

@@ -401,8 +401,7 @@ func TestJobFailure(t *testing.T) {
 		},
 	}
 
-	trace := NewMockJobTrace(t)
-	trace.On("Write", mock.Anything).Return(0, nil)
+	trace := NewMockLightJobTrace(t)
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Once()
 	trace.On("SetAbortFunc", mock.Anything).Once()
@@ -432,8 +431,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.JobResponse.RunnerInfo.Timeout = 1
 
-	trace := NewMockJobTrace(t)
-	trace.On("Write", mock.Anything).Return(0, nil)
+	trace := NewMockLightJobTrace(t)
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Twice()
 	trace.On("SetAbortFunc", mock.Anything).Once()
@@ -2659,29 +2657,29 @@ func TestSecretsResolving(t *testing.T) {
 func TestSetTraceStatus(t *testing.T) {
 	tests := map[string]struct {
 		err    error
-		assert func(*testing.T, *MockJobTrace, error)
+		assert func(*testing.T, *mockLightJobTrace, error)
 	}{
 		"nil error is successful": {
 			err: nil,
-			assert: func(t *testing.T, mt *MockJobTrace, err error) {
+			assert: func(t *testing.T, mt *mockLightJobTrace, err error) {
 				mt.On("Success").Return(nil).Once()
 			},
 		},
 		"build error, script failure": {
 			err: &BuildError{FailureReason: ScriptFailure},
-			assert: func(t *testing.T, mt *MockJobTrace, err error) {
+			assert: func(t *testing.T, mt *mockLightJobTrace, err error) {
 				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure}).Return(nil).Once()
 			},
 		},
 		"build error, wrapped script failure": {
 			err: fmt.Errorf("wrapped: %w", &BuildError{FailureReason: ScriptFailure}),
-			assert: func(t *testing.T, mt *MockJobTrace, err error) {
+			assert: func(t *testing.T, mt *mockLightJobTrace, err error) {
 				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure}).Return(nil).Once()
 			},
 		},
 		"non-build error": {
 			err: fmt.Errorf("some error"),
-			assert: func(t *testing.T, mt *MockJobTrace, err error) {
+			assert: func(t *testing.T, mt *mockLightJobTrace, err error) {
 				mt.On("Fail", err, JobFailureData{Reason: RunnerSystemFailure}).Return(nil).Once()
 			},
 		},
@@ -2693,9 +2691,8 @@ func TestSetTraceStatus(t *testing.T) {
 				Runner: &RunnerConfig{},
 			}
 
-			trace := NewMockJobTrace(t)
+			trace := NewMockLightJobTrace(t)
 			trace.On("IsStdout").Return(true)
-			trace.On("Write", mock.Anything).Return(0, nil)
 
 			var be *BuildError
 			if errors.As(tc.err, &be) {
@@ -3414,11 +3411,10 @@ func TestBuild_RunCallsEnsureFinishedAt(t *testing.T) {
 
 			require.Zero(t, build.finishedAt)
 
-			trace := NewMockJobTrace(t)
+			trace := NewMockLightJobTrace(t)
 			trace.EXPECT().SetAbortFunc(mock.Anything)
 			trace.EXPECT().SetCancelFunc(mock.AnythingOfType("context.CancelFunc")).Maybe()
 			trace.EXPECT().IsStdout().Return(false)
-			trace.EXPECT().Write(mock.Anything).Return(0, nil)
 			trace.EXPECT().Fail(mock.Anything, mock.Anything).Return(nil).Maybe()
 			trace.EXPECT().Success().Return(nil).Maybe()
 			trace.EXPECT().SetSupportedFailureReasonMapper(mock.Anything).Maybe()
