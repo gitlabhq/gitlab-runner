@@ -24,8 +24,8 @@ require (
 	github.com/creack/pty v1.1.21
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v27.5.0+incompatible
-	github.com/docker/docker v28.0.0+incompatible
+	github.com/docker/cli v28.3.3+incompatible
+	github.com/docker/docker v28.2.2+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/docker/go-units v0.5.0
 	github.com/evanphx/json-patch v4.12.0+incompatible
@@ -54,7 +54,7 @@ require (
 	github.com/magefile/mage v1.15.0
 	github.com/minio/minio-go/v7 v7.0.70
 	github.com/openbao/openbao/api/v2 v2.3.1-0.20250728113059-0a60aea0150a
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.60.1
@@ -65,7 +65,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.11.1
-	github.com/urfave/cli v1.22.15
+	github.com/urfave/cli v1.22.16
 	gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20250910083154-db769f38ab21
 	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c
@@ -77,7 +77,7 @@ require (
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425133101-519a58790bfd
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gitlab.com/gitlab-org/labkit v1.28.1
-	gitlab.com/gitlab-org/step-runner v0.17.0
+	gitlab.com/gitlab-org/step-runner v0.20.0
 	go.uber.org/automaxprocs v1.5.2
 	gocloud.dev v0.40.0
 	golang.org/x/crypto v0.43.0
@@ -135,15 +135,17 @@ require (
 	github.com/cilium/ebpf v0.20.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
+	github.com/containerd/errdefs v1.0.0 // indirect
+	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker-credential-helpers v0.8.2 // indirect
+	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.2 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -167,9 +169,10 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-containerregistry v0.20.3 // indirect
+	github.com/google/go-containerregistry v0.20.6 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
+	github.com/google/safearchive v0.0.0-20241025131057-f7ce9d7b6f9c // indirect
 	github.com/google/wire v0.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -207,6 +210,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/spdystream v0.2.1-0.20240621174147-0c1fc43b0e4a // indirect
+	github.com/moby/sys/sequential v0.6.0 // indirect
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -236,14 +240,15 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tidwall/transform v0.0.0-20201103190739-32f242e2dbde // indirect
-	github.com/vbatts/tar-split v0.11.6 // indirect
+	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	gitlab.com/gitlab-org/go/reopen v1.0.0 // indirect
+	gitlab.com/gitlab-org/moa v0.0.0-20251111105317-872458e08dae // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.53.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.38.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect

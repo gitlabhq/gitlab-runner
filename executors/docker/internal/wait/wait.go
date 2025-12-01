@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/errdefs"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
