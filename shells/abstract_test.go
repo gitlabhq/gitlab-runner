@@ -212,6 +212,8 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
 		"--path", "default",
 	).Once()
 	mockWriter.On(
@@ -219,6 +221,8 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
 		"--path", "on-success",
 	).Once()
 	mockWriter.On(
@@ -226,6 +230,8 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
 		"--path", "always",
 	).Once()
 	mockWriter.On(
@@ -233,6 +239,8 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
 		"--path", "zip-archive",
 		"--artifact-format", "zip",
 		"--artifact-type", "archive",
@@ -242,6 +250,8 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
 		"--path", "gzip-junit",
 		"--artifact-format", "gzip",
 		"--artifact-type", "junit",
@@ -283,6 +293,8 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
 		"--path", "on-failure",
 	).Once()
 	mockWriter.On(
@@ -290,6 +302,8 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
 		"--path", "always",
 	).Once()
 	mockWriter.On(
@@ -297,6 +311,8 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
 		"--path", "zip-archive",
 		"--artifact-format", "zip",
 		"--artifact-type", "archive",
@@ -306,6 +322,8 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
 		"--path", "gzip-junit",
 		"--artifact-format", "gzip",
 		"--artifact-type", "junit",
@@ -359,6 +377,8 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 		"--url", "https://gitlab.example.com",
 		"--token", "token",
 		"--id", "1001",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
 		"--path", "include/**",
 		"--exclude", "include/exclude/*",
 		"--artifact-format", "zip",
@@ -3462,6 +3482,10 @@ func TestWriteUploadArtifactIncludesGenerateArtifactsMetadataArgs(t *testing.T) 
 		"testtoken",
 		"--id",
 		"1000",
+		"--timeout",
+		"1h0m0s",
+		"--response-header-timeout",
+		"10m0s",
 	}
 
 	for _, f := range []spec.ArtifactFormat{
