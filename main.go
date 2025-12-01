@@ -15,8 +15,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
+	"gitlab.com/gitlab-org/gitlab-runner/router"
 	"gitlab.com/gitlab-org/labkit/fips"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/azure"
@@ -59,6 +61,8 @@ func main() {
 	}()
 
 	fips.Check()
+	gitLabClient, clientShutdown, apiRequestsCollector := newClient()
+	defer clientShutdown()
 
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
@@ -71,7 +75,7 @@ func main() {
 			Email: "support@gitlab.com",
 		},
 	}
-	app.Commands = newCommands()
+	app.Commands = newCommands(gitLabClient, apiRequestsCollector)
 	app.CommandNotFound = func(context *cli.Context, command string) {
 		logrus.Fatalln("Command", command, "not found.")
 	}
@@ -89,12 +93,7 @@ func main() {
 	}
 }
 
-func newCommands() []cli.Command {
-	apiRequestsCollector := network.NewAPIRequestsCollector()
-	n := network.NewGitLabClient(
-		network.WithAPIRequestsCollector(apiRequestsCollector),
-		network.WithCertificateDirectory(commands.GetDefaultCertificateDirectory()),
-	)
+func newCommands(n common.Network, apiRequestsCollector *network.APIRequestsCollector) []cli.Command {
 	cmds := []cli.Command{
 		commands.NewListCommand(),
 		commands.NewRegisterCommand(n),
@@ -117,4 +116,23 @@ func newCommands() []cli.Command {
 	}
 	cmds = append(cmds, commands.NewServiceCommands()...)
 	return cmds
+}
+
+func newClient() (common.Network, func(), *network.APIRequestsCollector) {
+	apiRequestsCollector := network.NewAPIRequestsCollector()
+	certDir := commands.GetDefaultCertificateDirectory()
+
+	mainClient := network.NewGitLabClient(
+		network.WithAPIRequestsCollector(apiRequestsCollector),
+		network.WithCertificateDirectory(certDir),
+	)
+	if os.Getenv(featureflags.UseJobRouter) != "true" {
+		return mainClient, func() {}, apiRequestsCollector
+	}
+	rc := router.NewClient(
+		mainClient,
+		certDir,
+		common.AppVersion.UserAgent(),
+	)
+	return rc, rc.Shutdown, apiRequestsCollector
 }
