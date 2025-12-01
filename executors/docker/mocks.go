@@ -5,8 +5,8 @@
 package docker
 
 import (
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -39,8 +39,8 @@ func (_m *mockContainerConfigurator) EXPECT() *mockContainerConfigurator_Expecte
 }
 
 // ContainerConfig provides a mock function for the type mockContainerConfigurator
-func (_mock *mockContainerConfigurator) ContainerConfig(image *types.ImageInspect) (*container.Config, error) {
-	ret := _mock.Called(image)
+func (_mock *mockContainerConfigurator) ContainerConfig(image1 *image.InspectResponse) (*container.Config, error) {
+	ret := _mock.Called(image1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ContainerConfig")
@@ -48,18 +48,18 @@ func (_mock *mockContainerConfigurator) ContainerConfig(image *types.ImageInspec
 
 	var r0 *container.Config
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(*types.ImageInspect) (*container.Config, error)); ok {
-		return returnFunc(image)
+	if returnFunc, ok := ret.Get(0).(func(*image.InspectResponse) (*container.Config, error)); ok {
+		return returnFunc(image1)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*types.ImageInspect) *container.Config); ok {
-		r0 = returnFunc(image)
+	if returnFunc, ok := ret.Get(0).(func(*image.InspectResponse) *container.Config); ok {
+		r0 = returnFunc(image1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*container.Config)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(*types.ImageInspect) error); ok {
-		r1 = returnFunc(image)
+	if returnFunc, ok := ret.Get(1).(func(*image.InspectResponse) error); ok {
+		r1 = returnFunc(image1)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -72,16 +72,16 @@ type mockContainerConfigurator_ContainerConfig_Call struct {
 }
 
 // ContainerConfig is a helper method to define mock.On call
-//   - image *types.ImageInspect
-func (_e *mockContainerConfigurator_Expecter) ContainerConfig(image interface{}) *mockContainerConfigurator_ContainerConfig_Call {
-	return &mockContainerConfigurator_ContainerConfig_Call{Call: _e.mock.On("ContainerConfig", image)}
+//   - image1 *image.InspectResponse
+func (_e *mockContainerConfigurator_Expecter) ContainerConfig(image1 interface{}) *mockContainerConfigurator_ContainerConfig_Call {
+	return &mockContainerConfigurator_ContainerConfig_Call{Call: _e.mock.On("ContainerConfig", image1)}
 }
 
-func (_c *mockContainerConfigurator_ContainerConfig_Call) Run(run func(image *types.ImageInspect)) *mockContainerConfigurator_ContainerConfig_Call {
+func (_c *mockContainerConfigurator_ContainerConfig_Call) Run(run func(image1 *image.InspectResponse)) *mockContainerConfigurator_ContainerConfig_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *types.ImageInspect
+		var arg0 *image.InspectResponse
 		if args[0] != nil {
-			arg0 = args[0].(*types.ImageInspect)
+			arg0 = args[0].(*image.InspectResponse)
 		}
 		run(
 			arg0,
@@ -95,7 +95,7 @@ func (_c *mockContainerConfigurator_ContainerConfig_Call) Return(config *contain
 	return _c
 }
 
-func (_c *mockContainerConfigurator_ContainerConfig_Call) RunAndReturn(run func(image *types.ImageInspect) (*container.Config, error)) *mockContainerConfigurator_ContainerConfig_Call {
+func (_c *mockContainerConfigurator_ContainerConfig_Call) RunAndReturn(run func(image1 *image.InspectResponse) (*container.Config, error)) *mockContainerConfigurator_ContainerConfig_Call {
 	_c.Call.Return(run)
 	return _c
 }
