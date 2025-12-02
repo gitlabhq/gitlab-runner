@@ -21,6 +21,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.35.4
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.19
 	github.com/bmatcuk/doublestar/v4 v4.8.1
+	github.com/containerd/errdefs v1.0.0
 	github.com/creack/pty v1.1.21
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/distribution/reference v0.6.0
@@ -53,6 +54,7 @@ require (
 	github.com/klauspost/pgzip v1.2.5
 	github.com/magefile/mage v1.15.0
 	github.com/minio/minio-go/v7 v7.0.70
+	github.com/moby/docker-image-spec v1.3.1
 	github.com/openbao/openbao/api/v2 v2.3.1-0.20250728113059-0a60aea0150a
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.20.5
@@ -135,7 +137,6 @@ require (
 	github.com/cilium/ebpf v0.20.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
-	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
@@ -208,7 +209,6 @@ require (
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/spdystream v0.2.1-0.20240621174147-0c1fc43b0e4a // indirect
 	github.com/moby/sys/sequential v0.6.0 // indirect
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
