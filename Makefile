@@ -343,23 +343,23 @@ development_setup:
 	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
 
 check_modules:
-	# check go.sum
-	@git checkout HEAD -- go.sum
-	@git diff go.sum > /tmp/gosum-$${CI_JOB_ID}-before
+	# check go.mod and go.sum
+	@git checkout HEAD -- go.mod go.sum
+	@git diff go.mod go.sum > /tmp/gomodsum-$${CI_JOB_ID}-before
 	@go mod tidy
-	@git diff go.sum > /tmp/gosum-$${CI_JOB_ID}-after
-	@diff -U0 /tmp/gosum-$${CI_JOB_ID}-before /tmp/gosum-$${CI_JOB_ID}-after
+	@git diff go.mod go.sum > /tmp/gomodsum-$${CI_JOB_ID}-after
+	@diff -U0 /tmp/gomodsum-$${CI_JOB_ID}-before /tmp/gomodsum-$${CI_JOB_ID}-after
 
 	# check dependency resolution
 	@go list -m all >/dev/null
 
 	# check helpers/runner_wrapper/api/ go.sum
 	@cd ./helpers/runner_wrapper/api/
-	@git checkout HEAD -- go.sum
-	@git diff go.sum > /tmp/gosum-$${CI_JOB_ID}-before
+	@git checkout HEAD -- go.mod go.sum
+	@git diff go.mod go.sum > /tmp/gomodsum-$${CI_JOB_ID}-before
 	@go mod tidy
-	@git diff go.sum > /tmp/gosum-$${CI_JOB_ID}-after
-	@diff -U0 /tmp/gosum-$${CI_JOB_ID}-before /tmp/gosum-$${CI_JOB_ID}-after
+	@git diff go.mod go.sum > /tmp/gomodsum-$${CI_JOB_ID}-after
+	@diff -U0 /tmp/gomodsum-$${CI_JOB_ID}-before /tmp/gomodsum-$${CI_JOB_ID}-after
 
 	# check dependency helpers/runner_wrapper/api/ resolution
 	@go list -m all >/dev/null
