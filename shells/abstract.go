@@ -1198,8 +1198,8 @@ func (b *AbstractShell) writeSubmoduleUpdateNoticeMsg(w ShellWriter, recursive b
 // (e.g., cd patches && git pull) to authenticate properly using the parent repo's credentials.
 func (b *AbstractShell) configureSubmoduleCredentials(w ShellWriter, foreachArgs []string) {
 	// Use the GLR_EXT_GIT_CONFIG_PATH environment variable that was set earlier.
-	// This avoids shell escaping issues and works consistently across platforms.
-	cmd := "git config include.path " + w.EnvVariableKey(envVarExternalGitConfigFile)
+	// We need to quote the variable expansion to handle paths with spaces.
+	cmd := fmt.Sprintf(`git config --replace-all include.path "%s"`, w.EnvVariableKey(envVarExternalGitConfigFile))
 	args := append(foreachArgs, cmd) //nolint:gocritic
 	w.CommandArgExpand("git", args...)
 }
