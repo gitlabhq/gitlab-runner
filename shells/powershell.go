@@ -378,11 +378,7 @@ func (p *PsWriter) fromSlash(path string) string {
 		return path
 	}
 
-	if p.Shell == SNPwsh {
-		// pwsh wants OS slash style, not necessarily backslashes
-		return filepath.FromSlash(path)
-	}
-	return helpers.ToBackslash(path)
+	return filepath.FromSlash(path)
 }
 
 func (p *PsWriter) EnvVariableKey(name string) string {

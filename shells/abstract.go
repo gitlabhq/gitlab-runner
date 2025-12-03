@@ -929,9 +929,7 @@ func includeExternalGitConfig(w ShellWriter, targetFile, fileToInclude string) {
 	baseName := path.Base(helpers.ToSlash(fileToInclude))
 	pattern := regexp.QuoteMeta(baseName) + "$"
 	w.CommandArgExpand("git", "config", "--file", targetFile, "--replace-all", "include.path", fileToInclude, pattern)
-	// Convert backslashes to forward slashes for git compatibility on Windows.
-	// This ensures the path works correctly when expanded in shell contexts like git submodule foreach
-	w.ExportRaw(envVarExternalGitConfigFile, helpers.ToSlash(fileToInclude))
+	w.ExportRaw(envVarExternalGitConfigFile, fileToInclude)
 }
 
 // setupExistingRepoConfig configures an existing Git repository to use the external Git config.
@@ -1199,7 +1197,7 @@ func (b *AbstractShell) writeSubmoduleUpdateNoticeMsg(w ShellWriter, recursive b
 func (b *AbstractShell) configureSubmoduleCredentials(w ShellWriter, foreachArgs []string) {
 	// Use the GLR_EXT_GIT_CONFIG_PATH environment variable that was set earlier.
 	// We need to quote the variable expansion to handle paths with spaces.
-	cmd := fmt.Sprintf(`git config --replace-all include.path "%s"`, w.EnvVariableKey(envVarExternalGitConfigFile))
+	cmd := fmt.Sprintf(`git config --replace-all include.path '%s'`, w.EnvVariableKey(envVarExternalGitConfigFile))
 	args := append(foreachArgs, cmd) //nolint:gocritic
 	w.CommandArgExpand("git", args...)
 }
