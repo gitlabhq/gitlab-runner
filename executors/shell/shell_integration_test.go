@@ -2696,46 +2696,48 @@ func TestGitIncludePaths(t *testing.T) {
 					th.Parallel(t)
 
 					shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-						th.Parallel(t)
+						buildtest.WithEachFeatureFlag(t, func(t *testing.T, setup buildtest.BuildSetupFn) {
+							th.Parallel(t)
 
-						jobResponse, err := common.GetSuccessfulBuild()
-						require.NoError(t, err)
+							jobResponse, err := common.GetSuccessfulBuild()
+							require.NoError(t, err)
 
-						jobResponse.GitInfo.RepoURL = repoURL
-						jobResponse.GitInfo.Sha = repoSha
-						buildtest.InjectJobTokenFromEnv(t, &jobResponse)
+							jobResponse.GitInfo.RepoURL = repoURL
+							jobResponse.GitInfo.Sha = repoSha
+							buildtest.InjectJobTokenFromEnv(t, &jobResponse)
 
-						build := newBuild(t, jobResponse, shell)
-						buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, tokenFromEnv)
-						build.Runner.RunnerSettings.CleanGitConfig = &[]bool{false}[0]
-						build.Variables.Set(common.JobVariables{
-							// {Key: "GIT_TRACE", Value: "2"},
-							// {Key: "CI_DEBUG_TRACE", Value: "true"},
-							{Key: "GIT_STRATEGY", Value: "fetch"},
-						}...)
-						setupForSubmoduleClone(build, "gitlab.com", submodules)
+							build := newBuild(t, jobResponse, shell)
+							buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, tokenFromEnv)
+							build.Runner.RunnerSettings.CleanGitConfig = &[]bool{false}[0]
+							build.Variables.Set(common.JobVariables{
+								// {Key: "GIT_TRACE", Value: "2"},
+								// {Key: "CI_DEBUG_TRACE", Value: "true"},
+								{Key: "GIT_STRATEGY", Value: "fetch"},
+							}...)
+							setupForSubmoduleClone(build, "gitlab.com", submodules)
 
-						var pwd string
-						if buildsDirOverride != nil {
-							var relBuildsDir string
-							pwd, relBuildsDir = th.RelativeTempDir(t, "builds dir *")
-							relBuildsDir = filepath.Join(*buildsDirOverride, relBuildsDir)
-							t.Logf("overwriting 'builds_dir' to %q (in %q)", relBuildsDir, pwd)
-							build.Runner.BuildsDir = relBuildsDir
-						}
+							var pwd string
+							if buildsDirOverride != nil {
+								var relBuildsDir string
+								pwd, relBuildsDir = th.RelativeTempDir(t, "builds dir *")
+								relBuildsDir = filepath.Join(*buildsDirOverride, relBuildsDir)
+								t.Logf("overwriting 'builds_dir' to %q (in %q)", relBuildsDir, pwd)
+								build.Runner.BuildsDir = relBuildsDir
+							}
 
-						randomInclude := "/some/random\\include/file"
-						build.Runner.PostGetSourcesScript = fmt.Sprintf("git config --local --add include.path '%s'", randomInclude)
+							randomInclude := "/some/random\\include/file"
+							build.Runner.PostGetSourcesScript = fmt.Sprintf("git config --local --add include.path '%s'", randomInclude)
 
-						for i := range 2 {
-							name := fmt.Sprintf("run:%d", i)
-							t.Run(name, func(t *testing.T) {
-								_, err = buildtest.RunBuildReturningOutput(t, build)
-								assert.NoError(t, err)
-								expectedIncludes := expectedIncludes(build, pwd, slices.Repeat([]string{randomInclude}, i+1)...)
-								assertIncludePaths(t, expectedIncludes, build.BuildDir)
-							})
-						}
+							for i := range 2 {
+								name := fmt.Sprintf("run:%d", i)
+								t.Run(name, func(t *testing.T) {
+									_, err = buildtest.RunBuildReturningOutput(t, build)
+									assert.NoError(t, err)
+									expectedIncludes := expectedIncludes(build, pwd, slices.Repeat([]string{randomInclude}, i+1)...)
+									assertIncludePaths(t, expectedIncludes, build.BuildDir)
+								})
+							}
+						}, featureflags.UsePowershellPathResolver)
 					})
 				})
 			}
