@@ -5,7 +5,7 @@
 package pull
 
 import (
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	mock "github.com/stretchr/testify/mock"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -38,23 +38,23 @@ func (_m *MockManager) EXPECT() *MockManager_Expecter {
 }
 
 // GetDockerImage provides a mock function for the type MockManager
-func (_mock *MockManager) GetDockerImage(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy) (*types.ImageInspect, error) {
+func (_mock *MockManager) GetDockerImage(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy) (*image.InspectResponse, error) {
 	ret := _mock.Called(imageName, options, imagePullPolicies)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDockerImage")
 	}
 
-	var r0 *types.ImageInspect
+	var r0 *image.InspectResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) (*types.ImageInspect, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) (*image.InspectResponse, error)); ok {
 		return returnFunc(imageName, options, imagePullPolicies)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) *types.ImageInspect); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) *image.InspectResponse); ok {
 		r0 = returnFunc(imageName, options, imagePullPolicies)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*types.ImageInspect)
+			r0 = ret.Get(0).(*image.InspectResponse)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) error); ok {
@@ -101,12 +101,12 @@ func (_c *MockManager_GetDockerImage_Call) Run(run func(imageName string, option
 	return _c
 }
 
-func (_c *MockManager_GetDockerImage_Call) Return(imageInspect *types.ImageInspect, err error) *MockManager_GetDockerImage_Call {
-	_c.Call.Return(imageInspect, err)
+func (_c *MockManager_GetDockerImage_Call) Return(inspectResponse *image.InspectResponse, err error) *MockManager_GetDockerImage_Call {
+	_c.Call.Return(inspectResponse, err)
 	return _c
 }
 
-func (_c *MockManager_GetDockerImage_Call) RunAndReturn(run func(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy) (*types.ImageInspect, error)) *MockManager_GetDockerImage_Call {
+func (_c *MockManager_GetDockerImage_Call) RunAndReturn(run func(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy) (*image.InspectResponse, error)) *MockManager_GetDockerImage_Call {
 	_c.Call.Return(run)
 	return _c
 }
