@@ -132,11 +132,12 @@ func TestPowershell_MkTmpDirOnUNCShare(t *testing.T) {
 	writer := &PsWriter{TemporaryPath: `\\unc-server\share`, EOL: "\n"}
 	writer.MkTmpDir("tmp")
 
-	assert.Equal(
-		t,
-		`New-Item -ItemType directory -Force -Path "\\unc-server\share\tmp" | out-null`+writer.EOL,
-		writer.String(),
-	)
+	expected := `New-Item -ItemType directory -Force -Path "\\unc-server\share\tmp" | out-null` + writer.EOL
+	if runtime.GOOS != OSWindows {
+		expected = `New-Item -ItemType directory -Force -Path "\\unc-server\share/tmp" | out-null` + writer.EOL
+	}
+
+	assert.Equal(t, expected, writer.String())
 }
 
 func TestPowershell_GetName(t *testing.T) {
@@ -788,17 +789,17 @@ func Test_PsWriter_cleanPath(t *testing.T) {
 	}{
 		"relative path": {
 			path:        "foo/bar/KEY",
-			wantLinux:   "$CurrentDirectory\\foo\\bar\\KEY",
+			wantLinux:   "$CurrentDirectory/foo/bar/KEY",
 			wantWindows: "$CurrentDirectory\\foo\\bar\\KEY",
 		},
 		"absolute path": {
 			path:        "/foo/bar/KEY",
-			wantLinux:   "\\foo\\bar\\KEY",
+			wantLinux:   "/foo/bar/KEY",
 			wantWindows: "$CurrentDirectory\\foo\\bar\\KEY",
 		},
 		"absolute path with drive": {
 			path:        "C:/foo/bar/KEY",
-			wantLinux:   "$CurrentDirectory\\C:\\foo\\bar\\KEY",
+			wantLinux:   "$CurrentDirectory/C:/foo/bar/KEY",
 			wantWindows: "C:\\foo\\bar\\KEY",
 		},
 	}
@@ -828,31 +829,31 @@ func Test_PsWriter_Variable(t *testing.T) {
 		"file var, relative path": {
 			variable:    common.JobVariable{Key: "KEY", Value: "the secret", File: true},
 			writer:      PsWriter{TemporaryPath: "foo/bar"},
-			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).PathNew-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\KEY\", \"the secret\")$KEY=\"$CurrentDirectory\\foo\\bar\\KEY\"$env:KEY=$KEY",
+			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).PathNew-Item -ItemType directory -Force -Path \"foo/bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory/foo/bar/KEY\", \"the secret\")$KEY=\"$CurrentDirectory/foo/bar/KEY\"$env:KEY=$KEY",
 			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).PathNew-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\KEY\", \"the secret\")$KEY=\"$CurrentDirectory\\foo\\bar\\KEY\"$env:KEY=$KEY",
 		},
 		"file var, absolute path": {
 			variable:    common.JobVariable{Key: "KEY", Value: "the secret", File: true},
 			writer:      PsWriter{TemporaryPath: "/foo/bar"},
-			wantLinux:   "New-Item -ItemType directory -Force -Path \"\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"\\foo\\bar\\KEY\", \"the secret\")$KEY=\"\\foo\\bar\\KEY\"$env:KEY=$KEY",
+			wantLinux:   "New-Item -ItemType directory -Force -Path \"/foo/bar\" | out-null[System.IO.File]::WriteAllText(\"/foo/bar/KEY\", \"the secret\")$KEY=\"/foo/bar/KEY\"$env:KEY=$KEY",
 			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).PathNew-Item -ItemType directory -Force -Path \"\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\KEY\", \"the secret\")$KEY=\"$CurrentDirectory\\foo\\bar\\KEY\"$env:KEY=$KEY",
 		},
 		"file var, absolute path with drive": {
 			variable:    common.JobVariable{Key: "KEY", Value: "the secret", File: true},
 			writer:      PsWriter{TemporaryPath: "C:/foo/bar"},
-			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).PathNew-Item -ItemType directory -Force -Path \"C:\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\C:\\foo\\bar\\KEY\", \"the secret\")$KEY=\"$CurrentDirectory\\C:\\foo\\bar\\KEY\"$env:KEY=$KEY",
+			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).PathNew-Item -ItemType directory -Force -Path \"C:/foo/bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory/C:/foo/bar/KEY\", \"the secret\")$KEY=\"$CurrentDirectory/C:/foo/bar/KEY\"$env:KEY=$KEY",
 			wantWindows: "New-Item -ItemType directory -Force -Path \"C:\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"C:\\foo\\bar\\KEY\", \"the secret\")$KEY=\"C:\\foo\\bar\\KEY\"$env:KEY=$KEY",
 		},
 		"tmp file var, relative path": {
 			variable:    common.JobVariable{Key: "KEY", Value: "foo/bar/KEY2"},
 			writer:      PsWriter{TemporaryPath: "foo/bar"},
-			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).Path$KEY=\"`$CurrentDirectory\\foo\\bar\\KEY2\"$env:KEY=$KEY",
+			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).Path$KEY=\"`$CurrentDirectory/foo/bar/KEY2\"$env:KEY=$KEY",
 			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).Path$KEY=\"`$CurrentDirectory\\foo\\bar\\KEY2\"$env:KEY=$KEY",
 		},
 		"tmp file var, absolute path": {
 			variable:    common.JobVariable{Key: "KEY", Value: "/foo/bar/KEY2"},
 			writer:      PsWriter{TemporaryPath: "/foo/bar"},
-			wantLinux:   "$KEY=\"\\foo\\bar\\KEY2\"$env:KEY=$KEY",
+			wantLinux:   "$KEY=\"/foo/bar/KEY2\"$env:KEY=$KEY",
 			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).Path$KEY=\"`$CurrentDirectory\\foo\\bar\\KEY2\"$env:KEY=$KEY",
 		},
 		"regular var": {
@@ -914,7 +915,7 @@ func Test_PsWriter_Variable(t *testing.T) {
 }
 
 func Test_PsWriter_DotEnvVariables(t *testing.T) {
-	templateLinux := "New-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null$CurrentDirectory = (Resolve-Path ./).Path[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\test\", @\"\n%s\n\"@)"
+	templateLinux := "New-Item -ItemType directory -Force -Path \"foo/bar\" | out-null$CurrentDirectory = (Resolve-Path ./).Path[System.IO.File]::WriteAllText(\"$CurrentDirectory/foo/bar/test\", @\"\n%s\n\"@)"
 	templateWindows := "New-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null$CurrentDirectory = (Resolve-Path .\\).Path[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\test\", @\"\n%s\n\"@)"
 
 	tests := map[string]struct {
