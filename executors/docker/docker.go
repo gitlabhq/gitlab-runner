@@ -90,8 +90,14 @@ type executor struct {
 	temporary        []string // IDs of containers that should be removed
 	buildContainerID string
 
-	services []*container.Summary
+	services []*serviceInfo
 
+	// links used to use docker 'links' feature, which tied containers together
+	// so that their hosts would resolve.
+	//
+	// This feature is now deprecated, but we emulate it using ExtraHosts, and
+	// therefore links is now an array of "<service name>:<service ip>" that
+	// is provided to every container.
 	links []string
 
 	devices        []container.DeviceMapping
@@ -421,7 +427,7 @@ func (e *executor) createService(
 	service, version, image string,
 	definition common.Image,
 	linkNames []string,
-) (*container.Summary, error) {
+) (*serviceInfo, error) {
 	if service == "" {
 		return nil, common.MakeBuildError("invalid service image name: %s", definition.Name)
 	}
@@ -484,7 +490,17 @@ func (e *executor) createService(
 		return nil, err
 	}
 
-	return fakeContainer(resp.ID, containerName), nil
+	ip, ports, err := e.getContainerIPAndExposedPorts(resp.ID)
+	if err != nil {
+		return nil, fmt.Errorf("getting exposed ports: %w", err)
+	}
+
+	return &serviceInfo{
+		ID:    resp.ID,
+		Name:  containerName,
+		IP:    ip,
+		Ports: ports,
+	}, nil
 }
 
 func platformForImage(image *image.InspectResponse, opts common.ImageExecutorOptions) *v1.Platform {
@@ -965,10 +981,10 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 		CapDrop:       e.Config.Docker.CapDrop,
 		SecurityOpt:   e.Config.Docker.SecurityOpt,
 		RestartPolicy: neverRestartPolicy,
-		ExtraHosts:    e.Config.Docker.ExtraHosts,
+		ExtraHosts:    append(e.Config.Docker.ExtraHosts, e.links...),
 		NetworkMode:   e.networkMode,
 		IpcMode:       container.IpcMode(e.Config.Docker.IpcMode),
-		Links:         append(e.Config.Docker.Links, e.links...),
+		Links:         e.Config.Docker.Links,
 		Binds:         e.volumesManager.Binds(),
 		OomScoreAdj:   e.Config.Docker.OomScoreAdjust,
 		ShmSize:       e.Config.Docker.ShmSize,
@@ -1577,15 +1593,18 @@ func (e *executor) cleanupVolume(ctx context.Context) error {
 	return nil
 }
 
-func (e *executor) createHostConfigForServiceHealthCheck(service *container.Summary) *container.HostConfig {
-	var legacyLinks []string
-	if e.networkMode.UserDefined() == "" {
-		legacyLinks = append(legacyLinks, service.Names[0]+":service")
+func (e *executor) createHostConfigForServiceHealthCheck(service *serviceInfo) *container.HostConfig {
+	var extraHosts []string
+
+	// we only get a service IP from the default network, for other networks, Docker
+	// already provides DNS entries
+	if service.IP != "" {
+		extraHosts = []string{service.ID[:min(12, len(service.ID))] + ":" + service.IP}
 	}
 
 	return &container.HostConfig{
 		RestartPolicy: neverRestartPolicy,
-		Links:         legacyLinks,
+		ExtraHosts:    extraHosts,
 		NetworkMode:   e.networkMode,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
@@ -1606,32 +1625,45 @@ func (e *executor) createHostConfigForServiceHealthCheck(service *container.Summ
 // The legacy container links (https://docs.docker.com/network/links/) network
 // feature is deprecated. When we remove support for links, the healthcheck
 // system can be updated to no longer rely on environment variables
-func (e *executor) addServiceHealthCheckEnvironment(service *container.Summary) ([]string, error) {
+func (e *executor) addServiceHealthCheckEnvironment(service *serviceInfo) ([]string, error) {
 	environment := []string{}
 
-	if e.networkMode.UserDefined() != "" {
-		environment = append(environment, "WAIT_FOR_SERVICE_TCP_ADDR="+service.ID[:12])
-		ports, err := e.getContainerExposedPorts(service)
-		if err != nil {
-			return nil, fmt.Errorf("get container exposed ports: %w", err)
-		}
-		if len(ports) == 0 {
-			return nil, fmt.Errorf("service %q has no exposed ports", service.Names[0])
-		}
+	if len(service.Ports) == 0 {
+		return environment, fmt.Errorf("service %q has no exposed ports", service.Name)
+	}
 
-		for _, port := range ports {
-			environment = append(environment, fmt.Sprintf("WAIT_FOR_SERVICE_%d_TCP_PORT=%d", port, port))
-		}
+	environment = append(environment, "WAIT_FOR_SERVICE_TCP_ADDR="+service.ID[:12])
+	for _, port := range service.Ports {
+		environment = append(environment, fmt.Sprintf("WAIT_FOR_SERVICE_%d_TCP_PORT=%d", port, port))
 	}
 
 	return environment, nil
 }
 
 //nolint:gocognit
-func (e *executor) getContainerExposedPorts(container *container.Summary) ([]int, error) {
-	inspect, err := e.dockerConn.ContainerInspect(e.Context, container.ID)
-	if err != nil {
-		return nil, err
+func (e *executor) getContainerIPAndExposedPorts(id string) (string, []int, error) {
+	timeout := e.Config.Docker.WaitForServicesTimeout
+	if timeout == 0 {
+		timeout = common.DefaultWaitForServicesTimeout
+	}
+
+	var inspect container.InspectResponse
+	start := time.Now()
+	for {
+		if time.Since(start) > time.Duration(timeout)*time.Second {
+			return "", nil, fmt.Errorf("service failed to start after %v", time.Since(start))
+		}
+
+		var err error
+		inspect, err = e.dockerConn.ContainerInspect(e.Context, id)
+		if err != nil {
+			return "", nil, err
+		}
+
+		if inspect.State.Status != container.StateCreated {
+			break
+		}
+		time.Sleep(time.Second)
 	}
 
 	for _, env := range inspect.Config.Env {
@@ -1643,10 +1675,10 @@ func (e *executor) getContainerExposedPorts(container *container.Summary) ([]int
 		if strings.EqualFold(key, "HEALTHCHECK_TCP_PORT") {
 			port, err := strconv.ParseInt(val, 10, 32)
 			if err != nil {
-				return nil, fmt.Errorf("invalid health check tcp port: %v", val)
+				return "", nil, fmt.Errorf("invalid health check tcp port: %v", val)
 			}
 
-			return []int{int(port)}, nil
+			return inspect.NetworkSettings.IPAddress, []int{int(port)}, nil
 		}
 	}
 
@@ -1666,7 +1698,7 @@ func (e *executor) getContainerExposedPorts(container *container.Summary) ([]int
 
 	sort.Ints(ports)
 
-	return ports, nil
+	return inspect.NetworkSettings.IPAddress, ports, nil
 }
 
 func (e *executor) readContainerLogs(containerID string) string {
