@@ -838,7 +838,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	w.Command("git", "remote", "set-url", "origin", remoteURL)
 	// For existing repositories, the template isn't reapplied, so we need to explicitly
 	// configure the repository to use the external git config
-	b.setupExistingRepoConfig(w, projectDir)
+	b.setupExistingRepoConfig(w)
 	w.EndIf()
 
 	v := common.AppVersion
@@ -929,17 +929,21 @@ func includeExternalGitConfig(w ShellWriter, targetFile, fileToInclude string) {
 	baseName := path.Base(helpers.ToSlash(fileToInclude))
 	pattern := regexp.QuoteMeta(baseName) + "$"
 	w.CommandArgExpand("git", "config", "--file", targetFile, "--replace-all", "include.path", fileToInclude, pattern)
-	// Convert backslashes to forward slashes for git compatibility on Windows.
-	// This ensures the path works correctly when expanded in shell contexts like git submodule foreach
-	w.ExportRaw(envVarExternalGitConfigFile, helpers.ToSlash(fileToInclude))
+	w.ExportRaw(envVarExternalGitConfigFile, fileToInclude)
 }
 
 // setupExistingRepoConfig configures an existing Git repository to use the external Git config.
 // This is needed because git init with a template doesn't re-apply the template to existing repositories.
-func (b *AbstractShell) setupExistingRepoConfig(w ShellWriter, projectDir string) {
-	extConfigFile := w.TmpFile(externalGitConfigFile)
-	gitConfigFile := w.Join(projectDir, gitDir, "config")
-	includeExternalGitConfig(w, gitConfigFile, extConfigFile)
+// Note: This function relies on the GLR_EXT_GIT_CONFIG_PATH environment variable being set by setupTemplateDir().
+func (b *AbstractShell) setupExistingRepoConfig(w ShellWriter) {
+	// We're already in projectDir (after cd), so .git/config is relative to current directory
+	gitConfigFile := w.Join(gitDir, "config")
+	// Use the environment variable that was set in setupTemplateDir() to get the absolute path.
+	// This ensures the path is correct even when BuildDir is relative and we've already changed directories.
+	extConfigFile := w.EnvVariableKey(envVarExternalGitConfigFile)
+	baseName := path.Base(helpers.ToSlash(externalGitConfigFile))
+	pattern := regexp.QuoteMeta(baseName) + "$"
+	w.CommandArgExpand("git", "config", "--file", gitConfigFile, "--replace-all", "include.path", extConfigFile, pattern)
 }
 
 func (b *AbstractShell) setupTemplateDir(w ShellWriter, build *common.Build, projectDir string) (string, string, error) {
@@ -1192,8 +1196,8 @@ func (b *AbstractShell) writeSubmoduleUpdateNoticeMsg(w ShellWriter, recursive b
 // (e.g., cd patches && git pull) to authenticate properly using the parent repo's credentials.
 func (b *AbstractShell) configureSubmoduleCredentials(w ShellWriter, foreachArgs []string) {
 	// Use the GLR_EXT_GIT_CONFIG_PATH environment variable that was set earlier.
-	// This avoids shell escaping issues and works consistently across platforms.
-	cmd := "git config include.path " + w.EnvVariableKey(envVarExternalGitConfigFile)
+	// We need to quote the variable expansion to handle paths with spaces.
+	cmd := fmt.Sprintf(`git config --replace-all include.path '%s'`, w.EnvVariableKey(envVarExternalGitConfigFile))
 	args := append(foreachArgs, cmd) //nolint:gocritic
 	w.CommandArgExpand("git", args...)
 }
