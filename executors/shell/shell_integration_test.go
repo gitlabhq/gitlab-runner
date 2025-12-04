@@ -2285,7 +2285,7 @@ func TestCredSetup(t *testing.T) {
 		return ""
 	}
 	getGitCred := func(t *testing.T, shell, prefix string) string {
-		const username = "gitlab-ci-token"
+		username := cmp.Or(os.Getenv("GITLAB_TEST_USERNAME"), "gitlab-ci-token")
 
 		switch shell {
 		case shells.Bash:
@@ -2304,7 +2304,7 @@ func TestCredSetup(t *testing.T) {
 		return ""
 	}
 	setGitCred := func(t *testing.T, shell string) string {
-		const username = "gitlab-ci-token"
+		username := cmp.Or(os.Getenv("GITLAB_TEST_USERNAME"), "gitlab-ci-token")
 		const password = "fake_password"
 
 		switch shell {

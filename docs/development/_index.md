@@ -462,6 +462,26 @@ and [integration tests](https://en.wikipedia.org/wiki/Integration_testing) in th
 
 To test the state of the build directives in test files, `make check_test_directives` can be used.
 
+### Running shell integration tests with custom credentials
+
+Some shell integration tests interact with GitLab.com repositories and require authentication.
+By default, these tests use `gitlab-ci-token` as the username. To run these tests locally with
+your own credentials, override the username using environment variables:
+
+```shell
+export GITLAB_TEST_USERNAME="your-username"
+export GITLAB_TOKEN="your-personal-access-token"
+```
+
+For example, to run the `TestGitIncludePaths` test:
+
+```shell
+go test -count=1 -v -run TestGitIncludePaths --tags=integration ./executors/shell
+```
+
+If you don't set the environment variables, the tests default to `gitlab-ci-token`,
+maintaining backward compatibility with CI/CD pipelines.
+
 ## Developing for Windows on a non-windows environment
 
 We provide a [Vagrantfile](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/Vagrantfile)
