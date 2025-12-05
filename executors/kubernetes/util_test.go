@@ -476,6 +476,7 @@ func testKubernetesClient(version string, httpClient *http.Client) *kubernetes.C
 	conf := restclient.Config{
 		ContentConfig: restclient.ContentConfig{
 			GroupVersion: &schema.GroupVersion{Version: version},
+			ContentType:  runtime.ContentTypeJSON,
 		},
 	}
 	kube := kubernetes.NewForConfigOrDie(&conf)

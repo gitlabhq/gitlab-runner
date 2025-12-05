@@ -1216,7 +1216,7 @@ func TestDockerServiceHealthcheckOverflow(t *testing.T) {
 	}
 
 	build.Services = append(build.Services, common.Image{
-		Name:    common.TestAlpineImage,
+		Name:    "alpine:3.22",
 		Command: []string{"printf", "datastart: %" + strconv.Itoa(execDocker.ServiceLogOutputLimit) + "s", ":dataend"},
 	})
 

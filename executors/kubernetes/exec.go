@@ -196,11 +196,11 @@ func (p *ExecOptions) executeRequest() error {
 }
 
 func init() {
-	runtime.ErrorHandlers = append(runtime.ErrorHandlers, func(err error) {
+	runtime.ErrorHandlers = append(runtime.ErrorHandlers, func(_ context.Context, err error, _ string, _ ...interface{}) {
 		logrus.WithError(err).Error("K8S stream error")
 	})
 
-	runtime.PanicHandlers = append(runtime.PanicHandlers, func(r interface{}) {
+	runtime.PanicHandlers = append(runtime.PanicHandlers, func(_ context.Context, r interface{}) {
 		logrus.Errorf("K8S stream panic: %v", r)
 	})
 }

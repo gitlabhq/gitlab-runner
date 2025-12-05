@@ -7706,6 +7706,34 @@ containers:
 				assert.Contains(t, names, "second-container")
 			},
 		},
+		"successful pod-level resources strategic patch type on pod": {
+			getOriginal: func() *api.PodSpec {
+				return &api.PodSpec{
+					NodeName: "my-node-name",
+				}
+			},
+			podSpec: common.KubernetesPodSpec{
+				Patch: `
+resources:
+  requests:
+    cpu: "1.5"
+    memory: "3Gi"
+  limits:
+    cpu: "2"
+    memory: "5Gi"
+`,
+				PatchType: common.PatchTypeStrategicMergePatchType,
+			},
+			verifyFn: func(t *testing.T, patchedPodSpec *api.PodSpec) {
+				assert.NotNil(t, patchedPodSpec)
+				resources := patchedPodSpec.Resources
+				expectedRequests := mustCreateResourceList(t, "1.5", "3Gi", "")
+				expectedLimits := mustCreateResourceList(t, "2", "5Gi", "")
+				assert.NotNil(t, resources)
+				assert.Equal(t, expectedRequests, resources.Requests)
+				assert.Equal(t, expectedLimits, resources.Limits)
+			},
+		},
 		"unsupported patch type": {
 			getOriginal: func() *api.PodSpec {
 				return &api.PodSpec{
