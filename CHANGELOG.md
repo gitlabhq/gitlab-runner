@@ -1,3 +1,9 @@
+## v18.6.4 (2025-12-05)
+
+### Bug fixes
+
+- Fix handling of relative builds dir [!5977](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5977)
+
 ## v18.6.3 (2025-11-28)
 
 ### Bug fixes
