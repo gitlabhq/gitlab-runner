@@ -79,6 +79,7 @@ require (
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425133101-519a58790bfd
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gitlab.com/gitlab-org/labkit v1.28.1
+	gitlab.com/gitlab-org/moa v0.0.0-20251111105317-872458e08dae
 	gitlab.com/gitlab-org/step-runner v0.20.0
 	go.uber.org/automaxprocs v1.5.2
 	gocloud.dev v0.40.0
@@ -244,7 +245,6 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	gitlab.com/gitlab-org/go/reopen v1.0.0 // indirect
-	gitlab.com/gitlab-org/moa v0.0.0-20251111105317-872458e08dae // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.53.0 // indirect

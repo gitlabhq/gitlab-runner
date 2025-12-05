@@ -29,6 +29,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
+	"gitlab.com/gitlab-org/moa/value"
 )
 
 func init() {
@@ -3511,4 +3512,768 @@ func TestBuildIsProtected(t *testing.T) {
 			assert.Equal(t, test.expected, actual)
 		})
 	}
+}
+
+func TestExpandingInputs(t *testing.T) {
+	inputs, err := newJobInputs([]JobInput{
+		{
+			Key: "any_input",
+			Value: JobInputValue{
+				Type:      JobInputContentTypeNameString,
+				Content:   value.String("any-value"),
+				Sensitive: false,
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	setup := func(t *testing.T) {
+		t.Helper()
+
+		p := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
+		RegisterExecutorProviderForTest(t, t.Name(), p)
+	}
+
+	run := func(t *testing.T, job JobResponse, ffEnabled bool) *Build {
+		build, err := NewBuild(
+			job,
+			&RunnerConfig{RunnerSettings: RunnerSettings{
+				Executor:     t.Name(),
+				FeatureFlags: map[string]bool{featureflags.EnableJobInputsInterpolation: ffEnabled},
+			}},
+			nil,
+			nil,
+		)
+		require.NoError(t, err)
+		err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+		require.NoError(t, err)
+
+		return build
+	}
+
+	t.Run("expand inputs in step script", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, "echo 'Input is: any-value'", build.Steps[0].Script[0])
+	})
+
+	t.Run("do not expand inputs in step script with FF disabled", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, false)
+
+		assert.Equal(t, "echo 'Input is: ${{ job.inputs.any_input }}'", build.Steps[0].Script[0])
+	})
+
+	t.Run("expand inputs in step after_script", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{""},
+					When:   StepWhenAlways,
+				},
+				{
+					Name:   StepNameAfterScript,
+					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, "echo 'Input is: any-value'", build.Steps[1].Script[0])
+	})
+
+	t.Run("expand inputs in image name", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Image: Image{
+				Name: "${{ job.inputs.any_input }}-image:latest",
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, "any-value-image:latest", build.Image.Name)
+	})
+
+	t.Run("expand inputs in image entrypoint", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Image: Image{
+				Name:       "alpine:latest",
+				Entrypoint: []string{"/bin/sh", "-c", "echo ${{ job.inputs.any_input }}"},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, []string{"/bin/sh", "-c", "echo any-value"}, build.Image.Entrypoint)
+	})
+
+	t.Run("expand inputs in image command", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Image: Image{
+				Name: "alpine:latest",
+				Command: []string{
+					"/bin/sh",
+					"-c",
+					"echo ${{ job.inputs.any_input }}",
+					"start-${{ job.inputs.any_input }}",
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		expected := []string{
+			"/bin/sh",
+			"-c",
+			"echo any-value",
+			"start-any-value",
+		}
+		assert.Equal(t, expected, build.Image.Command)
+	})
+
+	t.Run("expand inputs in docker platform", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Image: Image{
+				Name: "alpine:latest",
+				ExecutorOptions: ImageExecutorOptions{
+					Docker: ImageDockerOptions{
+						Platform: "linux/${{ job.inputs.any_input }}",
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, "linux/any-value", build.Image.ExecutorOptions.Docker.Platform)
+	})
+
+	t.Run("expand inputs in docker user", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Image: Image{
+				Name: "alpine:latest",
+				ExecutorOptions: ImageExecutorOptions{
+					Docker: ImageDockerOptions{
+						User: StringOrInt64("${{ job.inputs.any_input }}"),
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, StringOrInt64("any-value"), build.Image.ExecutorOptions.Docker.User)
+	})
+
+	t.Run("expand inputs in kubernetes user", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Image: Image{
+				Name: "alpine:latest",
+				ExecutorOptions: ImageExecutorOptions{
+					Kubernetes: ImageKubernetesOptions{
+						User: StringOrInt64("${{ job.inputs.any_input }}"),
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, StringOrInt64("any-value"), build.Image.ExecutorOptions.Kubernetes.User)
+	})
+
+	t.Run("expand inputs in pull policies", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Image: Image{
+				Name:         "alpine:latest",
+				PullPolicies: []DockerPullPolicy{"${{ job.inputs.any_input }}-if-not-present"},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, []DockerPullPolicy{"any-value-if-not-present"}, build.Image.PullPolicies)
+	})
+
+	t.Run("expand inputs in cache key", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Cache: Caches{
+				{
+					Key: "${{ job.inputs.any_input }}-cache-key",
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, "any-value-cache-key", build.Cache[0].Key)
+	})
+
+	t.Run("expand inputs in cache fallback keys", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Cache: Caches{
+				{
+					Key: "main-cache-key",
+					FallbackKeys: []string{
+						"${{ job.inputs.any_input }}-fallback-1",
+						"fallback-${{ job.inputs.any_input }}-2",
+						"${{ job.inputs.any_input }}",
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		expected := CacheFallbackKeys{
+			"any-value-fallback-1",
+			"fallback-any-value-2",
+			"any-value",
+		}
+		assert.Equal(t, expected, build.Cache[0].FallbackKeys)
+	})
+
+	t.Run("expand inputs in cache paths", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Cache: Caches{
+				{
+					Key: "cache-key",
+					Paths: []string{
+						"${{ job.inputs.any_input }}/cache",
+						"build/${{ job.inputs.any_input }}",
+						"${{ job.inputs.any_input }}",
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		expected := ArtifactPaths{
+			"any-value/cache",
+			"build/any-value",
+			"any-value",
+		}
+		assert.Equal(t, expected, build.Cache[0].Paths)
+	})
+
+	t.Run("expand inputs in cache when", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Cache: Caches{
+				{
+					Key:  "cache-key",
+					When: CacheWhen("on_${{ job.inputs.any_input }}"),
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, CacheWhen("on_any-value"), build.Cache[0].When)
+	})
+
+	t.Run("expand inputs in cache policy", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Cache: Caches{
+				{
+					Key:    "cache-key",
+					Policy: CachePolicy("${{ job.inputs.any_input }}-push"),
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, CachePolicy("any-value-push"), build.Cache[0].Policy)
+	})
+
+	t.Run("expand inputs in artifact name", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Artifacts: Artifacts{
+				{
+					Name: "${{ job.inputs.any_input }}-artifact",
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, "any-value-artifact", build.Artifacts[0].Name)
+	})
+
+	t.Run("expand inputs in artifact paths", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Artifacts: Artifacts{
+				{
+					Name: "test-artifact",
+					Paths: ArtifactPaths{
+						"${{ job.inputs.any_input }}/artifacts",
+						"build/${{ job.inputs.any_input }}",
+						"${{ job.inputs.any_input }}",
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		expected := ArtifactPaths{
+			"any-value/artifacts",
+			"build/any-value",
+			"any-value",
+		}
+		assert.Equal(t, expected, build.Artifacts[0].Paths)
+	})
+
+	t.Run("expand inputs in artifact exclude", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Artifacts: Artifacts{
+				{
+					Name: "test-artifact",
+					Exclude: ArtifactExclude{
+						"${{ job.inputs.any_input }}/exclude",
+						"temp/${{ job.inputs.any_input }}",
+						"${{ job.inputs.any_input }}",
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		expected := ArtifactExclude{
+			"any-value/exclude",
+			"temp/any-value",
+			"any-value",
+		}
+		assert.Equal(t, expected, build.Artifacts[0].Exclude)
+	})
+
+	t.Run("expand inputs in artifact expire_in", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Artifacts: Artifacts{
+				{
+					Name:     "test-artifact",
+					ExpireIn: "${{ job.inputs.any_input }} days",
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, "any-value days", build.Artifacts[0].ExpireIn)
+	})
+
+	t.Run("expand inputs in artifact when", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Artifacts: Artifacts{
+				{
+					Name: "test-artifact",
+					When: ArtifactWhen("on_${{ job.inputs.any_input }}"),
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, ArtifactWhen("on_any-value"), build.Artifacts[0].When)
+	})
+
+	t.Run("expand inputs in service name", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Services: Services{
+				{
+					Name: "${{ job.inputs.any_input }}-service:latest",
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, "any-value-service:latest", build.Services[0].Name)
+	})
+
+	t.Run("expand inputs in service entrypoint", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Services: Services{
+				{
+					Name:       "postgres:latest",
+					Entrypoint: []string{"/bin/sh", "-c", "echo ${{ job.inputs.any_input }}"},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, []string{"/bin/sh", "-c", "echo any-value"}, build.Services[0].Entrypoint)
+	})
+
+	t.Run("expand inputs in service docker platform", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Services: Services{
+				{
+					Name: "postgres:latest",
+					ExecutorOptions: ImageExecutorOptions{
+						Docker: ImageDockerOptions{
+							Platform: "linux/${{ job.inputs.any_input }}",
+						},
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, "linux/any-value", build.Services[0].ExecutorOptions.Docker.Platform)
+	})
+
+	t.Run("expand inputs in service docker user", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Services: Services{
+				{
+					Name: "postgres:latest",
+					ExecutorOptions: ImageExecutorOptions{
+						Docker: ImageDockerOptions{
+							User: StringOrInt64("${{ job.inputs.any_input }}"),
+						},
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, StringOrInt64("any-value"), build.Services[0].ExecutorOptions.Docker.User)
+	})
+
+	t.Run("expand inputs in service kubernetes user", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Services: Services{
+				{
+					Name: "postgres:latest",
+					ExecutorOptions: ImageExecutorOptions{
+						Kubernetes: ImageKubernetesOptions{
+							User: StringOrInt64("${{ job.inputs.any_input }}"),
+						},
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, StringOrInt64("any-value"), build.Services[0].ExecutorOptions.Kubernetes.User)
+	})
+
+	t.Run("expand inputs in service pull policies", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Services: Services{
+				{
+					Name:         "postgres:latest",
+					PullPolicies: []DockerPullPolicy{"${{ job.inputs.any_input }}-if-not-present"},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		assert.Equal(t, []DockerPullPolicy{"any-value-if-not-present"}, build.Services[0].PullPolicies)
+	})
+
+	t.Run("expand inputs in service command", func(t *testing.T) {
+		setup(t)
+
+		job := JobResponse{
+			Inputs: inputs,
+			Services: Services{
+				{
+					Name: "postgres:latest",
+					Command: []string{
+						"/bin/sh",
+						"-c",
+						"echo ${{ job.inputs.any_input }}",
+						"start-${{ job.inputs.any_input }}",
+					},
+				},
+			},
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'test'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build := run(t, job, true)
+
+		expected := []string{
+			"/bin/sh",
+			"-c",
+			"echo any-value",
+			"start-any-value",
+		}
+		assert.Equal(t, expected, build.Services[0].Command)
+	})
 }
