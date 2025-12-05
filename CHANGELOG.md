@@ -13,10 +13,13 @@
 - Fix bash shell cleanup to support variable expansion in paths [!5966](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5966)
 - Fix "unable to get password from user" errors in shell executor [!5961](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5961)
 
-## v18.6.2 (2025-11-25)
+## v18.6.2 (2025-12-05)
 
 ### Bug fixes
 
+- Fix handling of relative builds dir [!5977](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5977)
+- Configure submodules to inherit parent repository credentials [!5962](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5962)
+- Fix bash shell cleanup to support variable expansion in paths [!5966](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5966)
 - Fix "unable to get password from user" errors in shell executor [!5961](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5961)
 
 ## v18.6.0 (2025-11-17)
