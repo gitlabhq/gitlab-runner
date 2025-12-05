@@ -2449,7 +2449,8 @@ func TestCredSetup(t *testing.T) {
 							common.JobVariable{Key: "GIT_TRACE", Value: "1"},
 							common.JobVariable{Key: "GIT_CURL_VERBOSE", Value: "1"},
 							common.JobVariable{Key: "GIT_TRANSFER_TRACE", Value: "1"},
-							common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "1"},
+							// CI_DEBUG_TRACE causes shell tracing which can corrupt git config output with -race
+							// common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "1"},
 							common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
 							common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
 							common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
