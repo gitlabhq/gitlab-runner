@@ -193,6 +193,7 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 		"AWS_ACCESS_KEY_ID":     *roleCredentials.Credentials.AccessKeyId,
 		"AWS_SECRET_ACCESS_KEY": *roleCredentials.Credentials.SecretAccessKey,
 		"AWS_SESSION_TOKEN":     *roleCredentials.Credentials.SessionToken,
+		"AWS_PROFILE":           "", // Ignore user-defined values
 	}, nil
 }
 
