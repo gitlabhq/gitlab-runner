@@ -4,6 +4,10 @@
 
 - Fix handling of relative builds dir [!5977](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5977)
 
+### Maintenance
+
+- Fix race condition in TestDockerServiceHealthcheckOverflow [!5985](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5985)
+
 ## v18.6.3 (2025-11-28)
 
 ### Bug fixes
