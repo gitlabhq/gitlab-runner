@@ -468,6 +468,7 @@ func TestFetchCredentialsForRole(t *testing.T) {
 		"AWS_ACCESS_KEY_ID":     "mock-access-key",
 		"AWS_SECRET_ACCESS_KEY": "mock-secret-key",
 		"AWS_SESSION_TOKEN":     "mock-session-token",
+		"AWS_PROFILE":           "",
 	}
 	govCloudConfig := common.CacheConfig{
 		S3: &common.CacheS3Config{
