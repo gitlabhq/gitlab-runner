@@ -2080,6 +2080,16 @@ func (c *RunnerCredentials) GetURL() string {
 	return c.URL
 }
 
+func (c *RunnerCredentials) WarnOnLegacyCIURL() {
+	if strings.HasSuffix(strings.TrimRight(c.URL, "/"), "/ci") {
+		c.Log().Warning("The runner URL contains a legacy '/ci' suffix.\n" +
+			"  This suffix is deprecated and should be removed from the configuration.\n" +
+			"  Git submodules may fail to clone with authentication errors if this suffix is present.\n" +
+			"  Please update the 'url' field in your config.toml to remove the '/ci' suffix.\n" +
+			"  See https://docs.gitlab.com/runner/configuration/advanced-configuration.html#legacy-ci-url-suffix")
+	}
+}
+
 func (c *RunnerCredentials) GetTLSCAFile() string {
 	return c.TLSCAFile
 }
