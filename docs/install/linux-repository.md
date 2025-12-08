@@ -169,6 +169,38 @@ After completing the above steps, a runner can be started and can be used with y
 Make sure that you read the [FAQ](../faq/_index.md) section which describes
 some of the most common problems with GitLab Runner.
 
+## Helper images package
+
+The `gitlab-runner-helper-images` package contains pre-built helper container images that GitLab Runner uses during job execution.
+These images provide the necessary tools and utilities to clone repositories, upload artifacts, and manage caches.
+
+The `gitlab-runner-helper-images` package includes helper images for the following operating systems and architectures:
+
+Alpine-based images (latest):
+
+- `alpine-arm`
+- `alpine-arm64`
+- `alpine-riscv64`
+- `alpine-s390x`
+- `alpine-x86_64`
+- `alpine-x86_64-pwsh`
+
+Ubuntu-based images (24.04):
+
+- `ubuntu-arm`
+- `ubuntu-arm64`
+- `ubuntu-ppc64le`
+- `ubuntu-s390x`
+- `ubuntu-x86_64`
+- `ubuntu-x86_64-pwsh`
+
+### Automatic helper image download
+
+If a helper image for a specific operating system and architecture combination is not available on the host system,
+GitLab Runner automatically downloads the required image when needed. Manual installation is not required for architectures
+that are not included in the `gitlab-runner-helper-images package`. This automatic download ensures that the runner can support
+additional architectures (such as `loong64`) without requiring manual intervention or separate package installations.
+
 ## Upgrade GitLab Runner
 
 To install the latest version of GitLab Runner:
