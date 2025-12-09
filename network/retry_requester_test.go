@@ -276,6 +276,8 @@ func TestRetryRequester_Do_BodyCopiedBetweenRequests(t *testing.T) {
 
 	rlr := newRetryRequester(http.DefaultClient, NewAPIRequestsCollector())
 	rlr.retriesCount = 5
+	logger, _ := test.NewNullLogger()
+	rlr.logger = logger
 
 	req, err := http.NewRequest(http.MethodPost, testServer.URL, strings.NewReader("somebody"))
 	assert.NoError(t, err)
