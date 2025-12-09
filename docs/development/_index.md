@@ -77,7 +77,7 @@ asdf install
 
 ```shell
 sudo apt-get install -y mercurial git-core wget make build-essential
-wget https://storage.googleapis.com/golang/go1.24.6.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.24.11.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 YQ_BINARY="yq_$(go env GOHOSTOS)_$(go env GOHOSTARCH).tar.gz"
@@ -92,7 +92,7 @@ sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 ```shell
 sudo yum install mercurial wget make
 sudo yum groupinstall 'Development Tools'
-wget https://storage.googleapis.com/golang/go1.24.6.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.24.11.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 YQ_BINARY="yq_$(go env GOHOSTOS)_$(go env GOHOSTARCH).tar.gz"
@@ -107,7 +107,7 @@ sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 Using binary package:
 
 ```shell
-wget https://storage.googleapis.com/golang/go1.24.6.darwin-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.24.11.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 YQ_BINARY="yq_$(go env GOHOSTOS)_$(go env GOHOSTARCH).tar.gz"
@@ -118,7 +118,7 @@ sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 Using installation package:
 
 ```shell
-wget https://storage.googleapis.com/golang/go1.24.6.darwin-amd64.pkg
+wget https://storage.googleapis.com/golang/go1.24.11.darwin-amd64.pkg
 open go*-*.pkg
 export PATH="$(go env GOBIN):$PATH"
 YQ_BINARY="yq_$(go env GOHOSTOS)_$(go env GOHOSTARCH).tar.gz"
