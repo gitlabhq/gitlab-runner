@@ -1,3 +1,15 @@
+## v18.6.6 (2025-12-09)
+
+### Bug fixes
+
+- Ignore user-defined AWS_PROFILE variable in cache uploads [!5986](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5986)
+
+### Maintenance
+
+- Fix flaky tests [!5994](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5994)
+- Update to Go 1.24.11 [!5992](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5992)
+- Ensure `stable docker images` only runs after all tests pass [!5990](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5990)
+
 ## v18.6.4 (2025-12-05)
 
 ### Bug fixes
