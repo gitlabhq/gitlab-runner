@@ -35,14 +35,22 @@
 - Fix bash shell cleanup to support variable expansion in paths [!5966](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5966)
 - Fix "unable to get password from user" errors in shell executor [!5961](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5961)
 
-## v18.6.2 (2025-12-05)
+## v18.6.2 (2025-12-09)
 
 ### Bug fixes
 
 - Fix handling of relative builds dir [!5977](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5977)
-- Configure submodules to inherit parent repository credentials [!5962](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5962)
-- Fix bash shell cleanup to support variable expansion in paths [!5966](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5966)
 - Fix "unable to get password from user" errors in shell executor [!5961](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5961)
+- Fix bash shell cleanup to support variable expansion in paths [!5966](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5966)
+- Ignore user-defined AWS_PROFILE variable in cache uploads [!5986](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5986)
+- Configure submodules to inherit parent repository credentials [!5962](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5962)
+
+### Maintenance
+
+- Fix flaky tests [!5994](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5994)
+- Ensure `stable docker images` only runs after all tests pass [!5990](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5990)
+- Update to Go 1.24.11 [!5992](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5992)
+- Fix race condition in TestDockerServiceHealthcheckOverflow [!5985](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5985)
 
 ## v18.6.0 (2025-11-17)
 
