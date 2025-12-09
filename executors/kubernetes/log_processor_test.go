@@ -520,23 +520,16 @@ func TestScanHandlesCancelledContext(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	var wg sync.WaitGroup
 	scanner, ch := processor.scan(ctx, logsToReader(log{}))
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
 
-		// Block the channel, so there's no consumers
-		time.Sleep(time.Second)
+	// Block the channel, so there's no consumers
+	time.Sleep(time.Second)
 
-		// Assert that the channel is closed
-		line, more := <-ch
-		assert.Empty(t, line)
-		assert.False(t, more)
+	// Assert that the channel is closed
+	line, more := <-ch
+	assert.Empty(t, line)
+	assert.False(t, more)
 
-		// Assert that the scanner had no error
-		assert.Nil(t, scanner.Err())
-	}()
-
-	wg.Wait()
+	// Assert that the scanner had no error
+	assert.Nil(t, scanner.Err())
 }
