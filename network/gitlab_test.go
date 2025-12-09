@@ -1346,7 +1346,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			outBuffer := new(bytes.Buffer)
-			logger := logrus.StandardLogger()
+			logger := logrus.New()
 			logger.SetLevel(logrus.InfoLevel)
 			logger.SetOutput(outBuffer)
 
