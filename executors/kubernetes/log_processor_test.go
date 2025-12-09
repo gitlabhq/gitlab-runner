@@ -4,6 +4,7 @@ package kubernetes
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -19,7 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 )
@@ -233,6 +233,7 @@ func TestListenReadLines(t *testing.T) {
 	expectedLines := []string{line1 + "\n", line2 + "\n"}
 
 	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
 
 	mockLogStreamer := makeMockLogStreamer(t)
 
@@ -310,7 +311,8 @@ func newTestKubernetesLogProcessor(t *testing.T) *kubernetesLogProcessor {
 func TestListenCancelContext(t *testing.T) {
 	mockLogStreamer := makeMockLogStreamer(t)
 
-	ctx, _ := context.WithTimeout(t.Context(), 200*time.Millisecond)
+	ctx, cancel := context.WithTimeout(t.Context(), 200*time.Millisecond)
+	defer cancel()
 
 	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
 		Run(func(mock.Arguments) {
@@ -336,6 +338,7 @@ func TestListenCancelContext(t *testing.T) {
 func TestAttachReconnectLogStream(t *testing.T) {
 	const expectedConnectCount = 5
 	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
 
 	mockLogStreamer := makeMockLogStreamer(t)
 
@@ -369,6 +372,7 @@ func TestAttachReconnectLogStream(t *testing.T) {
 func TestAttachReconnectReadLogs(t *testing.T) {
 	const expectedConnectCount = 5
 	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
 
 	mockLogStreamer := makeMockLogStreamer(t)
 
@@ -422,6 +426,7 @@ func drainProcessLogsChannels(ch <-chan string, errCh <-chan error) error {
 
 func TestAttachCorrectOffset(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
 
 	mockLogStreamer := makeMockLogStreamer(t)
 
@@ -515,23 +520,16 @@ func TestScanHandlesCancelledContext(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	var wg sync.WaitGroup
 	scanner, ch := processor.scan(ctx, logsToReader(log{}))
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
 
-		// Block the channel, so there's no consumers
-		time.Sleep(time.Second)
+	// Block the channel, so there's no consumers
+	time.Sleep(time.Second)
 
-		// Assert that the channel is closed
-		line, more := <-ch
-		assert.Empty(t, line)
-		assert.False(t, more)
+	// Assert that the channel is closed
+	line, more := <-ch
+	assert.Empty(t, line)
+	assert.False(t, more)
 
-		// Assert that the scanner had no error
-		assert.Nil(t, scanner.Err())
-	}()
-
-	wg.Wait()
+	// Assert that the scanner had no error
+	assert.Nil(t, scanner.Err())
 }
