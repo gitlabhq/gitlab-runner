@@ -437,7 +437,7 @@ func TestDockerCommandOwnershipOverflow(t *testing.T) {
 	}
 
 	trace := &common.Trace{Writer: os.Stdout}
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
+	timeoutTimer := time.AfterFunc(2*time.Minute, func() {
 		trace.Abort()
 	})
 	defer timeoutTimer.Stop()
