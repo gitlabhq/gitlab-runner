@@ -3,49 +3,50 @@
     "export": "../../out/release_artifacts/",
     "default": {
         "alpine3.19-arm64": [
-            "alpine3.19-arm64-%",
-            "arm64-%"
+            "alpine3.19-arm64-%"
         ],
         "alpine3.19-arm": [
-            "alpine3.19-arm-%",
-            "arm-%"
+            "alpine3.19-arm-%"
         ],
         "alpine3.19-ppc64le": [
-            "alpine3.19-ppc64le-%",
-            "ppc64le-%"
+            "alpine3.19-ppc64le-%"
         ],
         "alpine3.19-s390x": [
-            "alpine3.19-s390x-%",
-            "s390x-%"
+            "alpine3.19-s390x-%"
         ],
         "alpine3.19-x86_64-pwsh": [
-            "alpine3.19-x86_64-%-pwsh",
-            "x86_64-%-pwsh"
+            "alpine3.19-x86_64-%-pwsh"
         ],
         "alpine3.19-x86_64": [
-            "alpine3.19-x86_64-%",
-            "x86_64-%"
+            "alpine3.19-x86_64-%"
         ],
         "alpine3.21-arm64": [
-            "alpine3.21-arm64-%"
+            "alpine3.21-arm64-%",
+            "arm64-%"
         ],
         "alpine3.21-arm": [
-            "alpine3.21-arm-%"
+            "alpine3.21-arm-%",
+            "arm-%"
         ],
         "alpine3.21-ppc64le": [
-            "alpine3.21-ppc64le-%"
+            "alpine3.21-ppc64le-%",
+            "ppc64le-%"
         ],
         "alpine3.21-riscv64": [
-            "alpine3.21-riscv64-%"
+            "alpine3.21-riscv64-%",
+            "riscv64-%"
         ],
         "alpine3.21-s390x": [
-            "alpine3.21-s390x-%"
+            "alpine3.21-s390x-%",
+            "s390x-%"
         ],
         "alpine3.21-x86_64-pwsh": [
-            "alpine3.21-x86_64-%-pwsh"
+            "alpine3.21-x86_64-%-pwsh",
+            "x86_64-%-pwsh"
         ],
         "alpine3.21-x86_64": [
-            "alpine3.21-x86_64-%"
+            "alpine3.21-x86_64-%",
+            "x86_64-%"
         ],
         "alpine-edge-arm64": [
             "alpine-edge-arm64-%"
