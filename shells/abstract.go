@@ -1166,7 +1166,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	// This is done once at the end, after all submodule operations are complete.
 	// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39133
 	w.Noticef("Configuring submodules to use parent git credentials...")
-	b.configureSubmoduleCredentials(w, foreachArgs)
+	b.configureSubmoduleCredentials(w, foreachArgs, recursive)
 
 	if !build.IsLFSSmudgeDisabled() {
 		w.IfCmd("git", "lfs", "version")
@@ -1194,11 +1194,17 @@ func (b *AbstractShell) writeSubmoduleUpdateNoticeMsg(w ShellWriter, recursive b
 // configureSubmoduleCredentials configures each submodule to include the external git config
 // from the parent repository. This allows git operations inside submodule directories
 // (e.g., cd patches && git pull) to authenticate properly using the parent repo's credentials.
-func (b *AbstractShell) configureSubmoduleCredentials(w ShellWriter, foreachArgs []string) {
+func (b *AbstractShell) configureSubmoduleCredentials(w ShellWriter, foreachArgs []string, recursive bool) {
 	// Use the GLR_EXT_GIT_CONFIG_PATH environment variable that was set earlier.
 	// We need to quote the variable expansion to handle paths with spaces.
 	cmd := fmt.Sprintf(`git config --replace-all include.path '%s'`, w.EnvVariableKey(envVarExternalGitConfigFile))
-	args := append(foreachArgs, cmd) //nolint:gocritic
+	args := foreachArgs
+	// Even if `GIT_SUBMODULE_STRATEGY: normal` is used, we should set up the credentials
+	// for all the Git submodules to preserve existing workflows.
+	if !recursive {
+		args = append(args, "--recursive")
+	}
+	args = append(args, cmd)
 	w.CommandArgExpand("git", args...)
 }
 
