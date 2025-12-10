@@ -391,6 +391,12 @@ func (mr *RunCommand) reloadConfig() error {
 	config := mr.configfile.Config()
 	mr.healthHelper.healthy = nil
 	mr.log().Println("Configuration loaded")
+
+	// Warn about legacy /ci URL suffix in runner configurations
+	for _, runner := range config.Runners {
+		runner.WarnOnLegacyCIURL()
+	}
+
 	mr.checkConfigConcurrency(config)
 	if c, err := config.Masked(); err == nil {
 		mr.log().Debugln(helpers.ToYAML(c))

@@ -381,6 +381,61 @@ Example:
   clone_url = "http://gitlab.example.local"
 ```
 
+### Legacy `/ci` URL suffix
+
+{{< history >}}
+
+- Deprecated in [GitLab Runner 1.0.0](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/289).
+- Warning added in GitLab Runner 18.7.0.
+
+{{< /history >}}
+
+In versions of GitLab Runner before 1.0.0, the runner URL was configured with a `/ci` suffix,
+such as `url = "https://gitlab.example.com/ci"`. This suffix is no longer required and should be removed
+from your configuration.
+
+If your `config.toml` contains a URL with the `/ci` suffix, GitLab Runner automatically strips it when
+processing the configuration. However, you should update your configuration file to remove the suffix to
+avoid potential issues.
+
+#### Known issues
+
+- Git submodule authentication failures: When `GIT_SUBMODULE_FORCE_HTTPS=true` is set, submodules might fail
+  to clone with authentication errors like `fatal: could not read Username for 'https://gitlab.example.com': terminal prompts disabled`.
+  This issue occurs because the `/ci` suffix interferes with Git URL rewriting rules. For more details, see
+  [issue 581678](https://gitlab.com/gitlab-org/gitlab/-/work_items/581678#note_2934077238).
+
+**Problematic configuration**:
+
+```toml
+[[runners]]
+  name = "legacy-runner"
+  url = "https://gitlab.example.com/ci"  # Remove the /ci suffix
+  token = "TOKEN"
+  executor = "docker"
+```
+
+**Corrected configuration**:
+
+```toml
+[[runners]]
+  name = "legacy-runner"
+  url = "https://gitlab.example.com"  # /ci suffix removed
+  token = "TOKEN"
+  executor = "docker"
+```
+
+When GitLab Runner starts with a URL containing the `/ci` suffix, it logs a warning message:
+
+```plaintext
+WARNING: The runner URL contains a legacy '/ci' suffix. This suffix is deprecated and should be
+removed from the configuration. Git submodules may fail to clone with authentication errors if this
+suffix is present. Please update the 'url' field in your config.toml to remove the '/ci' suffix.
+See https://docs.gitlab.com/runner/configuration/advanced-configuration.html#legacy-ci-url-suffix for more information.
+```
+
+To resolve this warning, edit your `config.toml` file and remove the `/ci` suffix from the `url` field.
+
 ### How `clone_url` works
 
 When the GitLab instance is available at a URL that the runner can't use,
