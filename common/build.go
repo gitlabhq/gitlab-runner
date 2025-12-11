@@ -804,7 +804,7 @@ func (b *Build) attemptExecuteStage(
 	}
 
 	var err error
-	for attempt := 0; attempt < attempts; attempt++ {
+	for attempt := range attempts {
 		if retryCallback != nil {
 			if err = retryCallback(attempt); err != nil {
 				continue
@@ -813,6 +813,10 @@ func (b *Build) attemptExecuteStage(
 
 		if err = b.executeStage(ctx, buildStage, executor); err == nil {
 			return nil
+		}
+
+		if attempt == attempts-1 {
+			break
 		}
 
 		if b.IsFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry) {
