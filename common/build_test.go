@@ -4277,3 +4277,359 @@ func TestExpandingInputs(t *testing.T) {
 		assert.Equal(t, expected, build.Services[0].Command)
 	})
 }
+
+func TestBuild_attemptExecuteStage(t *testing.T) {
+	tests := []struct {
+		name                   string
+		attempts               int
+		featureFlagEnabled     bool
+		shouldRetry            bool
+		expectedRetryMessage   bool
+		expectedRetryCount     int
+		executorFailurePattern []bool // true = fail, false = succeed
+	}{
+		{
+			name:                   "single attempt with failure - no retry message",
+			attempts:               1,
+			featureFlagEnabled:     true,
+			shouldRetry:            false,
+			expectedRetryMessage:   false,
+			expectedRetryCount:     0,
+			executorFailurePattern: []bool{true},
+		},
+		{
+			name:                   "two attempts with failure on first - shows retry message",
+			attempts:               2,
+			featureFlagEnabled:     true,
+			shouldRetry:            true,
+			expectedRetryMessage:   true,
+			expectedRetryCount:     1,
+			executorFailurePattern: []bool{true, true},
+		},
+		{
+			name:                   "three attempts with failures - shows retry message twice",
+			attempts:               3,
+			featureFlagEnabled:     true,
+			shouldRetry:            true,
+			expectedRetryMessage:   true,
+			expectedRetryCount:     2,
+			executorFailurePattern: []bool{true, true, true},
+		},
+		{
+			name:                   "two attempts success on second - shows retry message once",
+			attempts:               2,
+			featureFlagEnabled:     true,
+			shouldRetry:            true,
+			expectedRetryMessage:   true,
+			expectedRetryCount:     1,
+			executorFailurePattern: []bool{true, false},
+		},
+		{
+			name:                   "three attempts with feature flag disabled - no retry message",
+			attempts:               3,
+			featureFlagEnabled:     false,
+			shouldRetry:            false,
+			expectedRetryMessage:   false,
+			expectedRetryCount:     0,
+			executorFailurePattern: []bool{true, true, true},
+		},
+		{
+			name:                   "single attempt with success - no retry message",
+			attempts:               1,
+			featureFlagEnabled:     true,
+			shouldRetry:            false,
+			expectedRetryMessage:   false,
+			expectedRetryCount:     0,
+			executorFailurePattern: []bool{false},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up logger with test hook to capture log messages
+			logger := logrus.New()
+			hook := test.NewLocal(logger)
+
+			// Create a mock executor
+			executor := NewMockExecutor(t)
+			executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
+
+			// Set up the executor to fail or succeed based on the pattern
+			for _, shouldFail := range tt.executorFailurePattern {
+				if shouldFail {
+					executor.On("Run", mock.Anything).Return(errors.New("simulated failure")).Once()
+				} else {
+					executor.On("Run", mock.Anything).Return(nil).Once()
+				}
+			}
+
+			// Create a build with the specified configuration
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Logger: logger,
+					},
+				},
+				JobResponse: JobResponse{
+					Variables: JobVariables{},
+				},
+				logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
+			}
+
+			// Initialize settings
+			build.initSettings()
+
+			// Set the feature flag
+			if tt.featureFlagEnabled {
+				build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
+			} else {
+				build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = false
+			}
+
+			// Call attemptExecuteStage
+			ctx := t.Context()
+			err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, tt.attempts, nil)
+
+			// Verify the error state
+			if tt.executorFailurePattern[len(tt.executorFailurePattern)-1] {
+				assert.Error(t, err, "Expected error when final attempt fails")
+			} else {
+				assert.NoError(t, err, "Expected no error when an attempt succeeds")
+			}
+
+			// Count retry messages in the logs
+			retryMessageCount := 0
+			for _, entry := range hook.AllEntries() {
+				if strings.Contains(entry.Message, "Retrying in") {
+					retryMessageCount++
+				}
+			}
+
+			// Verify retry message behavior
+			if tt.expectedRetryMessage {
+				assert.Equal(t, tt.expectedRetryCount, retryMessageCount,
+					"Expected %d retry messages but found %d", tt.expectedRetryCount, retryMessageCount)
+			} else {
+				assert.Equal(t, 0, retryMessageCount,
+					"Expected no retry messages but found %d", retryMessageCount)
+			}
+
+			// Verify all expected calls were made
+			executor.AssertExpectations(t)
+		})
+	}
+}
+
+func TestBuild_attemptExecuteStageWithRetryCallback(t *testing.T) {
+	tests := []struct {
+		name                 string
+		attempts             int
+		retryCallbackError   bool
+		expectedRetryMessage bool
+	}{
+		{
+			name:                 "retry callback succeeds - stage executes",
+			attempts:             2,
+			retryCallbackError:   false,
+			expectedRetryMessage: true,
+		},
+		{
+			name:                 "retry callback fails - stage skipped",
+			attempts:             2,
+			retryCallbackError:   true,
+			expectedRetryMessage: true, // First attempt fails and prints retry message before callback error on attempt 1
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up logger with test hook
+			logger := logrus.New()
+			hook := test.NewLocal(logger)
+
+			// Create a mock executor
+			executor := NewMockExecutor(t)
+			executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
+
+			// If callback succeeds, executor will be called for all attempts
+			// If callback fails, it only fails after attempt 0, so executor runs once
+			if !tt.retryCallbackError {
+				executor.On("Run", mock.Anything).Return(errors.New("simulated failure")).Times(tt.attempts)
+			} else {
+				executor.On("Run", mock.Anything).Return(errors.New("simulated failure")).Once()
+			}
+
+			// Create build
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Logger: logger,
+					},
+				},
+				JobResponse: JobResponse{
+					Variables: JobVariables{},
+				},
+				logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
+			}
+
+			build.initSettings()
+			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
+
+			// Create retry callback
+			retryCallback := func(attempt int) error {
+				if tt.retryCallbackError && attempt > 0 {
+					return errors.New("retry callback error")
+				}
+				return nil
+			}
+
+			// Call attemptExecuteStage with retry callback
+			ctx := t.Context()
+			err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, tt.attempts, retryCallback)
+
+			// Should always have an error since we're simulating failures
+			assert.Error(t, err)
+
+			// Count retry messages
+			retryMessageCount := 0
+			for _, entry := range hook.AllEntries() {
+				if strings.Contains(entry.Message, "Retrying in") {
+					retryMessageCount++
+				}
+			}
+
+			if tt.expectedRetryMessage {
+				assert.Greater(t, retryMessageCount, 0, "Expected at least one retry message")
+			} else {
+				assert.Equal(t, 0, retryMessageCount, "Expected no retry messages")
+			}
+
+			executor.AssertExpectations(t)
+		})
+	}
+}
+
+func TestBuild_attemptExecuteStageExponentialBackoff(t *testing.T) {
+	// Skip this test in short mode as it tests actual timing
+	if testing.Short() {
+		t.Skip("Skipping timing test in short mode")
+	}
+
+	// This test verifies that the exponential backoff actually waits between retries
+	logger := logrus.New()
+	hook := test.NewLocal(logger)
+
+	executor := NewMockExecutor(t)
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
+	executor.On("Run", mock.Anything).Return(errors.New("failure")).Times(3)
+
+	build := &Build{
+		Runner: &RunnerConfig{
+			RunnerCredentials: RunnerCredentials{
+				Logger: logger,
+			},
+		},
+		JobResponse: JobResponse{
+			Variables: JobVariables{},
+		},
+		logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
+	}
+
+	build.initSettings()
+	build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
+
+	ctx := t.Context()
+	startTime := time.Now()
+	err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, 3, nil)
+	elapsed := time.Since(startTime)
+
+	require.Error(t, err)
+
+	// With 3 attempts, we should have 2 retries
+	// First retry: ~5s, Second retry: ~7.5s (5 * 1.5)
+	// Total should be at least 10s (allowing for some variance)
+	assert.Greater(t, elapsed, 10*time.Second, "Expected exponential backoff delays")
+
+	// Verify we got 2 retry messages
+	retryMessageCount := 0
+	for _, entry := range hook.AllEntries() {
+		if strings.Contains(entry.Message, "Retrying in") {
+			retryMessageCount++
+		}
+	}
+	assert.Equal(t, 2, retryMessageCount)
+
+	executor.AssertExpectations(t)
+}
+
+func TestBuild_attemptExecuteStageInvalidAttempts(t *testing.T) {
+	tests := []struct {
+		name     string
+		attempts int
+		wantErr  bool
+	}{
+		{
+			name:     "zero attempts - invalid",
+			attempts: 0,
+			wantErr:  true,
+		},
+		{
+			name:     "negative attempts - invalid",
+			attempts: -1,
+			wantErr:  true,
+		},
+		{
+			name:     "eleven attempts - invalid",
+			attempts: 11,
+			wantErr:  true,
+		},
+		{
+			name:     "one attempt - valid",
+			attempts: 1,
+			wantErr:  false,
+		},
+		{
+			name:     "ten attempts - valid",
+			attempts: 10,
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger := logrus.New()
+			executor := NewMockExecutor(t)
+			executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
+
+			if !tt.wantErr {
+				executor.On("Run", mock.Anything).Return(nil).Maybe()
+			}
+
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Logger: logger,
+					},
+				},
+				JobResponse: JobResponse{
+					Variables: JobVariables{},
+				},
+			}
+
+			build.initSettings()
+			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
+
+			ctx := t.Context()
+			err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, tt.attempts, nil)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "out of the range [1, 10]")
+			} else {
+				assert.NoError(t, err)
+			}
+
+			executor.AssertExpectations(t)
+		})
+	}
+}
