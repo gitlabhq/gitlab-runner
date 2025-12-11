@@ -381,6 +381,8 @@ $(MAGE): .tmp
 	cd mage && \
 	GOPATH=$(local) go run bootstrap.go
 	# Remove the source code once binary built
+	# Go intentionally makes module cache directories read-only to prevent accidental modifications
+	GOPATH=$(local) go clean -modcache
 	rm -rf .tmp/mage .tmp/pkg
 
 ifneq ($(GOLANGLINT_VERSION),)

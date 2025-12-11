@@ -96,7 +96,7 @@ The `Executor` interface is responsible for the job execution management.
 
 The described methods are managing preparation of the job environment (`Prepare()`), job script
 executions (`Run()` and `Finish()`; note: subsequent job steps are executed with a separate `Run()` calls)
-and job environment cleanup (`Finish()`).
+and job environment cleanup (`Cleanup()`).
 
 It also provides integration for internal Prometheus metrics exporter to label some relevant metrics
 with information about the current executor usage stage (`GetCurrentStage()`, `SetCurrentStage()`).
@@ -310,7 +310,7 @@ configure access credentials of the Docker Engine API. With that the Docker Mach
 manages the VMs, chooses a VM for a job and instantiates the Docker executor, automatically configuring
 it to use the credentials and API endpoint of the VM. With that jobs are executed like with the normal
 Docker executor (supporting all the different features available for it in `.gitlab-ci.yml` syntax), but
-doest that on an external host, independent for each job.
+does that on an external host, independent for each job.
 
 #### ExecutorProvider
 

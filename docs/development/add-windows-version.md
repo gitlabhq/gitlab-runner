@@ -46,7 +46,7 @@ following files:
 
 ### Test the image generated
 
-We recommend testing the image generated in the `dev` step. It is likely to be name `dev xxx` where `xxx` stands for the windows server version.
+We recommend testing the image generated in the `dev` step. It is likely to be named `dev xxx` where `xxx` stands for the windows server version.
 
 To test the image, the following steps can be followed:
 
