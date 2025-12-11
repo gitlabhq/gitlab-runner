@@ -255,24 +255,89 @@ We track a lot of metrics for GitLab.com. As a large provider of cloud-based CI/
 into the system so we can debug issues. In most cases, self-managed runner fleets don't need to track the volume
 of metrics that we track with GitLab.com.
 
-Here are a few essential dashboards that you should use to monitor your runner fleet.
+#### Dashboard generation process
 
-**Jobs started on runners**:
+Grafana accepts only JSON format, so you must convert the `jsonnet` files to JSON.
+
+The [runbooks repository](https://gitlab.com/gitlab-com/runbooks/-/tree/master/dashboards) contains
+automated scripts for GitLab infrastructure only. To generate these dashboards for your own environment:
+
+1. Create dashboards using the `jsonnet` configuration language (`.dashboard.jsonnet` files).
+1. Process `jsonnet` files with the `jsonnet` library to produce JSON output.
+1. Upload the resulting JSON files to Grafana (using the API or UI).
+
+#### Available runner dashboards
+
+Here are a few essential dashboards that you should use to monitor your runner fleet:
+
+Jobs started on runners:
 
 - View an overview of the total jobs executed on your runner fleet for a selected time interval.
 - View trends in usage. You should analyze this dashboard weekly at a minimum.
+- Correlate this data with metrics like job duration to determine if you need configuration changes or
+  capacity upgrades to meet your CI/CD job performance SLOs.
 
-Correlate this data with metrics like job duration to determine if you need configuration changes or
-capacity upgrades to meet your CI/CD job performance SLOs.
-
-**Job duration**:
+Job duration:
 
 - Analyze the performance and scaling of your runner fleet.
+- Identify performance bottlenecks and optimization opportunities.
 
-**Runner capacity**:
+Runner capacity:
 
 - View the number of jobs being executed divided by the value of limit or concurrent.
 - Determine if there is still capacity to execute additional jobs.
+- Plan for capacity upgrades based on utilization trends.
+
+Additional dashboards include:
+
+- Main Dashboard (`main.dashboard.jsonnet`): Overview of runner infrastructure and HAProxy metrics.
+- Business Metrics (`business-stats.dashboard.jsonnet`): Job statistics, finished job minutes, and runner saturation.
+- Autoscaling Algorithm (`autoscaling-algorithm.dashboard.jsonnet`): Visualization of autoscaling behavior and machine states.
+- Queuing Overview (`queuing-overview.dashboard.jsonnet`): Job queue depth and wait times.
+- Request Concurrency (`request-concurrency.dashboard.jsonnet`): Concurrent request analysis.
+- Deployment (`deployment.dashboard.jsonnet`): Deployment-related metrics.
+- Incident Dashboards: Specialized dashboards for troubleshooting autoscaling, database, application, and runner manager issues.
+
+Each dashboard includes descriptions and context in the source `jsonnet` files to explain what metrics are being displayed.
+
+### Template variables
+
+Dashboards use Grafana template variables to create reusable dashboard templates across different contexts:
+
+- Environments: For example, `production`, `staging`, `development`.
+- Stage: For example, `main`, `canary`.
+- Type: For example, `ci`, `verify`. Varies by use case.
+- Shard: Optional. For distributed runner deployments.
+
+Organizations that implement these dashboards must adjust these variables to match their own environment structure.
+Update these variables in the Grafana dashboard settings after import.
+
+### Supported runners
+
+These dashboards work with all GitLab Runner executor types:
+
+- Kubernetes
+- Shell
+- VM (Docker Machine)
+- Windows
+
+The metrics collection is executor-independent and available across all runner fleet types.
+
+### Customize dashboards
+
+To modify dashboards for your environment:
+
+1. Edit the `.dashboard.jsonnet` files in the `dashboards/ci-runners/` directory.
+1. Use [Grafonnet library](https://grafana.github.io/grafonnet-lib/) syntax (built on `jsonnet`).
+1. Test the changes using the playground:
+
+   ```shell
+   ./test-dashboard.sh dashboards/ci-runners/your-dashboard.dashboard.jsonnet
+   ```
+
+1. Regenerate and deploy using `./generate-dashboards.sh`.
+
+For more information, see the [video guide on extending dashboards](https://www.youtube.com/watch?v=yZ2RiY_Akz0).
 
 ### Considerations for monitoring runners on Kubernetes
 
