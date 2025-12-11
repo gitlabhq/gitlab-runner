@@ -14,7 +14,7 @@ For developing GitLab Runner in instance executor mode (1), the only setup requi
 For developing GitLab Runner in Manager and Helper mode (2), setup also requires a Docker build environment.
 Additionally, running the Manager or Helper in Kubernetes requires a working cluster.
 
-The following instructions setup your Go environment using `asdf` to manage the Go version. If you already have this or otherwise know what you're doing, you can skip step 2 ("Install dependencies and Go runtime").
+The following instructions setup your Go environment using `mise` to manage the Go version. If you already have this or otherwise know what you're doing, you can skip step 2 ("Install dependencies and Go runtime").
 
 In order to provide Docker and Kubernetes locally Step 3 has you setting Rancher Desktop. If you don't need one or both you can skip step 3 ("Install Rancher Desktop") or just disable `k3s` (Kubernetes) in Rancher Desktop.
 
@@ -56,19 +56,16 @@ go work use fleeting-plugin-googlecompute
 
 ## 2. Install dependencies and Go runtime
 
-The GitLab Runner project uses [`asdf`](https://asdf-vm.com/) to manage dependencies.
-The simplest way to get your development environment setup is to use `asdf`.
+The GitLab Runner project uses [`mise`](https://mise.jdx.dev/) to manage dependencies.
+The simplest way to get your development environment setup is to use `mise`.
 
 {{< tabs >}}
 
-{{< tab title="asdf" >}}
+{{< tab title="mise" >}}
 
 ```shell
 cd gitlab-runner
-asdf plugin add golang
-asdf plugin add vale
-asdf plugin add yq
-asdf install
+mise install
 ```
 
 {{< /tab >}}
@@ -157,7 +154,7 @@ To install Rancher Desktop, follow the
 
 ```shell
 make deps
-asdf reshim
+mise reshim
 ```
 
 **For FreeBSD use `gmake deps`**
@@ -227,10 +224,10 @@ cd cmd/fleeting-plugin-aws/
 go install
 ```
 
-If you manage go versions with asdf, run this command after the binary generates:
+If you manage go versions with mise, run this command after the binary generates:
 
 ```shell
-asdf reshim
+mise reshim
 ```
 
 #### Use the plugin
