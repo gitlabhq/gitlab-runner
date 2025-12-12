@@ -1886,7 +1886,7 @@ To use the `arm64` helper image on `arm64` Kubernetes clusters, set the followin
 
 ```toml
 [runners.kubernetes]
-        helper_image = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:arm64-latest"
+  helper_image = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:arm64-v${CI_RUNNER_VERSION}"
 ```
 
 ### Runner images that use an old version of Alpine Linux
