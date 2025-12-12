@@ -218,6 +218,10 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		taskscaler.WithScaleThrottle(config.Autoscaler.ScaleThrottle.Limit, config.Autoscaler.ScaleThrottle.Burst),
 	}
 
+	if config.Autoscaler.ReservationThrottling == nil || *config.Autoscaler.ReservationThrottling {
+		options = append(options, taskscaler.WithReservationThrottling())
+	}
+
 	if config.IsFeatureFlagOn(featureflags.UseFleetingAcquireHeartbeats) {
 		options = append(options, taskscaler.WithHeartbeatFunc(instanceHeartbeat(config)))
 	}
