@@ -334,6 +334,7 @@ type AutoscalerConfig struct {
 	ShutdownDeletionRetries     int                     `toml:"shutdown_deletion_retries,omitempty" json:",omitempty"`
 	FailureThreshold            int                     `toml:"failure_threshold,omitempty" json:",omitempty"`
 	ScaleThrottle               AutoscalerScaleThrottle `toml:"scale_throttle,omitempty" json:",omitempty"`
+	ReservationThrottling       *bool                   `toml:"reservation_throttling,omitempty" json:",omitempty"`
 
 	LogInternalIP bool `toml:"log_internal_ip,omitempty" json:",omitempty"`
 	LogExternalIP bool `toml:"log_external_ip,omitempty" json:",omitempty"`
