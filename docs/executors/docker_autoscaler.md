@@ -72,7 +72,7 @@ Prerequisites:
 
   {{< /alert >}}
 
-- An AWS autoscaling group. For the scaling policy use "none", as runner handles the scaling. Enable instance scale-in protection.
+- An AWS autoscaling group. The runner directly manages all scaling behavior. For the scaling policy, use `none` and turn on instance scale-in protection. If you have configured multiple availability zones, turn off the `AZRebalance` process.
 - An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy).
 
 This configuration supports:
