@@ -844,17 +844,17 @@ Example of a pod security context in the `config.toml`:
 ```toml
 concurrent = %(concurrent)s
 check_interval = 30
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-    [runners.kubernetes]
-      helper_image = "gitlab-registry.example.com/helper:latest"
-      [runners.kubernetes.pod_security_context]
-        run_as_non_root = true
-        run_as_user = 59417
-        run_as_group = 59417
-        fs_group = 59417
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    helper_image = "gitlab-registry.example.com/helper:latest"
+    [runners.kubernetes.pod_security_context]
+      run_as_non_root = true
+      run_as_user = 59417
+      run_as_group = 59417
+      fs_group = 59417
 ```
 
 ### Remove old runner pods
@@ -891,31 +891,31 @@ In the following example in the `config.toml`, the security context configuratio
 ```toml
 concurrent = 4
 check_interval = 30
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-    [runners.kubernetes]
-      helper_image = "gitlab-registry.example.com/helper:latest"
-      [runners.kubernetes.pod_security_context]
-        run_as_non_root = true
-        run_as_user = 59417
-        run_as_group = 59417
-        fs_group = 59417
-      [runners.kubernetes.init_permissions_container_security_context]
-        run_as_user = 1000
-        run_as_group = 1000
-      [runners.kubernetes.build_container_security_context]
-        run_as_user = 65534
-        run_as_group = 65534
-        [runners.kubernetes.build_container_security_context.capabilities]
-          add = ["NET_ADMIN"]
-      [runners.kubernetes.helper_container_security_context]
-        run_as_user = 1000
-        run_as_group = 1000
-      [runners.kubernetes.service_container_security_context]
-        run_as_user = 1000
-        run_as_group = 1000
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    helper_image = "gitlab-registry.example.com/helper:latest"
+    [runners.kubernetes.pod_security_context]
+      run_as_non_root = true
+      run_as_user = 59417
+      run_as_group = 59417
+      fs_group = 59417
+    [runners.kubernetes.init_permissions_container_security_context]
+      run_as_user = 1000
+      run_as_group = 1000
+    [runners.kubernetes.build_container_security_context]
+      run_as_user = 65534
+      run_as_group = 65534
+      [runners.kubernetes.build_container_security_context.capabilities]
+        add = ["NET_ADMIN"]
+    [runners.kubernetes.helper_container_security_context]
+      run_as_user = 1000
+      run_as_group = 1000
+    [runners.kubernetes.service_container_security_context]
+      run_as_user = 1000
+      run_as_group = 1000
 ```
 
 ### Set a pull policy
@@ -1275,21 +1275,21 @@ Define a list of [services](https://docs.gitlab.com/ci/services/) in the `config
 ```toml
 concurrent = 1
 check_interval = 30
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-    [runners.kubernetes]
-      helper_image = "gitlab-registy.example.com/helper:latest"
-      [[runners.kubernetes.services]]
-        name = "postgres:12-alpine"
-        alias = "db1"
-      [[runners.kubernetes.services]]
-        name = "registry.example.com/svc1"
-        alias = "svc1"
-        entrypoint = ["entrypoint.sh"]
-        command = ["executable","param1","param2"]
-        environment = ["ENV=value1", "ENV2=value2"]
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    helper_image = "gitlab-registy.example.com/helper:latest"
+    [[runners.kubernetes.services]]
+      name = "postgres:12-alpine"
+      alias = "db1"
+    [[runners.kubernetes.services]]
+      name = "registry.example.com/svc1"
+      alias = "svc1"
+      entrypoint = ["entrypoint.sh"]
+      command = ["executable","param1","param2"]
+      environment = ["ENV=value1", "ENV2=value2"]
 ```
 
 If the service environment includes `HEALTHCHECK_TCP_PORT`, GitLab Runner waits until the service
@@ -1360,12 +1360,12 @@ the executor fails to create jobs.
 ```toml
 concurrent = 1
 check_interval = 30
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-    [runners.kubernetes]
-      runtime_class_name = "myclass"
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    runtime_class_name = "myclass"
 ```
 
 ### Change the base directory for build logs and scripts
@@ -1395,13 +1395,13 @@ This value is prepended to the generated path for build logs and scripts.
 For example:
 
 ```toml
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-    [runners.kubernetes]
-      logs_base_dir = "/tmp"
-      scripts_base_dir = "/tmp"
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    logs_base_dir = "/tmp"
+    scripts_base_dir = "/tmp"
 ```
 
 This configuration would result in an `emptyDir` volume mounted in:
@@ -1425,20 +1425,20 @@ The following example adds `pod_spec` for the `hostUsers` key
 and disables both privileged pods and privilege escalation:
 
 ```toml
-  [[runners]]
-    environment = ["FF_USE_ADVANCED_POD_SPEC_CONFIGURATION=true"]
-    builds_dir = "/tmp/builds"
-  [runners.kubernetes]
-    logs_base_dir = "/tmp"
-    scripts_base_dir = "/tmp"
-    privileged = false
-    allowPrivilegeEscalation = false
-  [[runners.kubernetes.pod_spec]]
-    name = "hostUsers"
-    patch = '''
-      [{"op": "add", "path": "/hostUsers", "value": false}]
-    '''
-    patch_type = "json"
+[[runners]]
+  environment = ["FF_USE_ADVANCED_POD_SPEC_CONFIGURATION=true"]
+  builds_dir = "/tmp/builds"
+[runners.kubernetes]
+  logs_base_dir = "/tmp"
+  scripts_base_dir = "/tmp"
+  privileged = false
+  allowPrivilegeEscalation = false
+[[runners.kubernetes.pod_spec]]
+  name = "hostUsers"
+  patch = '''
+    [{"op": "add", "path": "/hostUsers", "value": false}]
+  '''
+  patch_type = "json"
 ```
 
 With user namespaces, you cannot use the default path for the build directory (`builds_dir`),
@@ -1514,14 +1514,14 @@ You can use specific labels to schedule nodes with different operating systems a
 #### Example for `linux/arm64`
 
 ```toml
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
 
-    [runners.kubernetes.node_selector]
-      "kubernetes.io/arch" = "arm64"
-      "kubernetes.io/os" = "linux"
+  [runners.kubernetes.node_selector]
+    "kubernetes.io/arch" = "arm64"
+    "kubernetes.io/os" = "linux"
 ```
 
 #### Example for `windows/amd64`
@@ -1531,20 +1531,20 @@ If you are using process isolation, you must also provide the specific Windows b
 [`node.kubernetes.io/windows-build`](https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build) label.
 
 ```toml
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
 
-    # The FF_USE_POWERSHELL_PATH_RESOLVER feature flag has to be enabled for PowerShell
-    # to resolve paths for Windows correctly when Runner is operating in a Linux environment
-    # but targeting Windows nodes.
-    environment = ["FF_USE_POWERSHELL_PATH_RESOLVER=true"]
+  # The FF_USE_POWERSHELL_PATH_RESOLVER feature flag has to be enabled for PowerShell
+  # to resolve paths for Windows correctly when Runner is operating in a Linux environment
+  # but targeting Windows nodes.
+  environment = ["FF_USE_POWERSHELL_PATH_RESOLVER=true"]
 
-    [runners.kubernetes.node_selector]
-      "kubernetes.io/arch" = "amd64"
-      "kubernetes.io/os" = "windows"
-      "node.kubernetes.io/windows-build" = "10.0.20348"
+  [runners.kubernetes.node_selector]
+    "kubernetes.io/arch" = "amd64"
+    "kubernetes.io/os" = "windows"
+    "node.kubernetes.io/windows-build" = "10.0.20348"
 ```
 
 ### Overwrite the node selector
@@ -1555,11 +1555,11 @@ To overwrite the node selector:
 
    ```toml
    runners:
-    ...
-    config: |
-      [[runners]]
-        [runners.kubernetes]
-          node_selector_overwrite_allowed = ".*"
+     ...
+     config: |
+       [[runners]]
+         [runners.kubernetes]
+           node_selector_overwrite_allowed = ".*"
    ```
 
 1. In the `.gitlab-ci.yml` file, define the variable to overwrite the node selector:
@@ -1703,14 +1703,14 @@ concurrent = 1
               operator = "In"
               values = ["S1"]
         [[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution]]
-        weight = 100
-        [runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
-          topology_key = "failure-domain.beta.kubernetes.io/zone"
-          [runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
-            [[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
-              key = "security_2"
-              operator = "In"
-              values = ["S2"]
+          weight = 100
+          [runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
+            topology_key = "failure-domain.beta.kubernetes.io/zone"
+            [runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
+              [[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
+                key = "security_2"
+                operator = "In"
+                values = ["S2"]
       [runners.kubernetes.affinity.pod_anti_affinity]
         [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution]]
           topology_key = "failure-domain.beta.kubernetes.io/zone"
@@ -1726,19 +1726,19 @@ concurrent = 1
               operator = "In"
               values = ["S1"]
         [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution]]
-        weight = 100
-        [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
-          topology_key = "failure-domain.beta.kubernetes.io/zone"
-          [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
-            [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
-              key = "security_2"
-              operator = "In"
-              values = ["S2"]
-          [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.namespace_selector]
-            [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.namespace_selector.match_expressions]]
-              key = "security_2"
-              operator = "In"
-              values = ["S2"]
+          weight = 100
+          [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
+            topology_key = "failure-domain.beta.kubernetes.io/zone"
+            [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
+              [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
+                key = "security_2"
+                operator = "In"
+                values = ["S2"]
+            [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.namespace_selector]
+              [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.namespace_selector.match_expressions]]
+                key = "security_2"
+                operator = "In"
+                values = ["S2"]
 ```
 
 ## Networking
