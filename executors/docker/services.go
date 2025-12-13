@@ -20,6 +20,13 @@ import (
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 )
 
+type serviceInfo struct {
+	ID    string
+	Name  string
+	IP    string
+	Ports []int
+}
+
 type tooManyServicesRequestedError struct {
 	requested int
 	allowed   int
@@ -47,7 +54,7 @@ func (e *executor) createServices() error {
 		return err
 	}
 
-	linksMap := make(map[string]*container.Summary)
+	linksMap := make(map[string]*serviceInfo)
 
 	for index, serviceDefinition := range servicesDefinitions {
 		if err := e.createFromServiceDefinition(index, serviceDefinition, linksMap); err != nil {
@@ -59,13 +66,10 @@ func (e *executor) createServices() error {
 
 	e.waitForServices()
 
-	if e.networkMode.UserDefined() != "" {
-		return nil
-	}
-
-	if e.networkMode.IsBridge() || e.networkMode.NetworkName() == "" {
-		e.BuildLogger.Debugln("Building service links...")
-		e.links = e.buildServiceLinks(linksMap)
+	for linkName, linkee := range linksMap {
+		if linkee.IP != "" {
+			e.links = append(e.links, linkName+":"+linkee.IP)
+		}
 	}
 
 	return nil
@@ -109,8 +113,8 @@ func (e *executor) waitForServices() {
 		wg := sync.WaitGroup{}
 		for _, service := range e.services {
 			wg.Add(1)
-			go func(service *container.Summary) {
-				_ = e.waitForServiceContainer(service, time.Duration(timeout)*time.Second)
+			go func(service *serviceInfo) {
+				e.waitForServiceContainer(service, time.Duration(timeout)*time.Second)
 				wg.Done()
 			}(service)
 		}
@@ -118,25 +122,12 @@ func (e *executor) waitForServices() {
 	}
 }
 
-func (e *executor) buildServiceLinks(linksMap map[string]*container.Summary) (links []string) {
-	for linkName, linkee := range linksMap {
-		newContainer, err := e.dockerConn.ContainerInspect(e.Context, linkee.ID)
-		if err != nil {
-			continue
-		}
-		if newContainer.State.Running {
-			links = append(links, linkee.ID+":"+linkName)
-		}
-	}
-	return
-}
-
 func (e *executor) createFromServiceDefinition(
 	serviceIndex int,
 	serviceDefinition common.Image,
-	linksMap map[string]*container.Summary,
+	linksMap map[string]*serviceInfo,
 ) error {
-	var container *container.Summary
+	var container *serviceInfo
 
 	serviceMeta := services.SplitNameAndVersion(serviceDefinition.Name)
 	if len(serviceDefinition.Aliases()) != 0 {
@@ -186,13 +177,13 @@ func (e *serviceHealthCheckError) Error() string {
 	return e.Inner.Error()
 }
 
-func (e *executor) runServiceHealthCheckContainer(service *container.Summary, timeout time.Duration) error {
+func (e *executor) runServiceHealthCheckContainer(service *serviceInfo, timeout time.Duration) error {
 	waitImage, err := e.getHelperImage()
 	if err != nil {
 		return fmt.Errorf("getPrebuiltImage: %w", err)
 	}
 
-	containerName := service.Names[0] + "-wait-for-service"
+	containerName := service.Name + "-wait-for-service"
 
 	environment, err := e.addServiceHealthCheckEnvironment(service)
 	if err != nil {
@@ -238,7 +229,7 @@ func (e *executor) runServiceHealthCheckContainer(service *container.Summary, ti
 }
 
 func (e *executor) createConfigForServiceHealthCheckContainer(
-	service *container.Summary,
+	service *serviceInfo,
 	cmd []string,
 	waitImage *image.InspectResponse,
 	environment []string,
@@ -251,16 +242,16 @@ func (e *executor) createConfigForServiceHealthCheckContainer(
 	}
 }
 
-func (e *executor) waitForServiceContainer(service *container.Summary, timeout time.Duration) error {
+func (e *executor) waitForServiceContainer(service *serviceInfo, timeout time.Duration) {
 	err := e.runServiceHealthCheckContainer(service, timeout)
 	if err == nil {
-		return nil
+		return
 	}
 
 	var buffer bytes.Buffer
 	buffer.WriteString("\n")
 	buffer.WriteString(
-		helpers.ANSI_YELLOW + "*** WARNING:" + helpers.ANSI_RESET + " Service " + service.Names[0] +
+		helpers.ANSI_YELLOW + "*** WARNING:" + helpers.ANSI_RESET + " Service " + service.Name +
 			" probably didn't start properly.\n")
 	buffer.WriteString("\n")
 	buffer.WriteString("Health check error:\n")
@@ -287,8 +278,6 @@ func (e *executor) waitForServiceContainer(service *container.Summary, timeout t
 	defer wc.Close()
 
 	_, _ = wc.Write(buffer.Bytes())
-
-	return err
 }
 
 // captureContainersLogs initiates capturing logs for the specified containers
@@ -296,7 +285,7 @@ func (e *executor) waitForServiceContainer(service *container.Summary, timeout t
 // sink is the jobs main trace, which is wrapped in an inlineServiceLogWriter
 // instance to add additional context to logs. In the future this could be
 // separate file.
-func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[string]*container.Summary) {
+func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[string]*serviceInfo) {
 	if !e.Build.IsCIDebugServiceEnabled() {
 		return
 	}
@@ -314,7 +303,7 @@ func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[strin
 		defer logger.Close()
 
 		sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), logger)
-		if err := e.captureContainerLogs(ctx, service.ID, service.Names[0], sink); err != nil {
+		if err := e.captureContainerLogs(ctx, service.ID, service.Name, sink); err != nil {
 			e.BuildLogger.Warningln(err.Error())
 		}
 		logger.Close()
