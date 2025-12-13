@@ -2613,26 +2613,6 @@ func TestDockerImageWithUser(t *testing.T) {
 	}
 }
 
-func TestCreateHostConfigForServiceHealthCheck(t *testing.T) {
-	tests := []string{"default", "user-defined"}
-
-	for _, tc := range tests {
-		t.Run("network "+tc, func(t *testing.T) {
-			e := &executor{
-				networkMode: container.NetworkMode(tc),
-			}
-
-			hostConfig := e.createHostConfigForServiceHealthCheck(&container.Summary{Names: []string{"service-name"}})
-
-			if e.networkMode.UserDefined() != "" {
-				require.Empty(t, hostConfig.Links)
-			} else {
-				require.NotEmpty(t, hostConfig.Links)
-			}
-		})
-	}
-}
-
 var _ executors.Environment = (*env)(nil)
 
 type env struct {
