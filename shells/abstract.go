@@ -289,7 +289,8 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	// the fallback key from CACHE_FALLBACK_KEY
 	blockProtectedFallback := func(key string) bool {
 		const blockedSuffix = "-protected"
-		allowed := !strings.HasSuffix(key, blockedSuffix)
+		trimmedKey := strings.TrimRight(key, ". ")
+		allowed := !strings.HasSuffix(trimmedKey, blockedSuffix)
 		if !allowed {
 			w.Warningf("CACHE_FALLBACK_KEY %q not allowed to end in %q", key, blockedSuffix)
 		}
