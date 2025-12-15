@@ -1170,7 +1170,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	err = b.expandInputs()
 	if err != nil {
-		return fmt.Errorf("failed to expand inputs: %w", err)
+		return &BuildError{FailureReason: ConfigurationError, Inner: err}
 	}
 
 	b.logUsedImages()
