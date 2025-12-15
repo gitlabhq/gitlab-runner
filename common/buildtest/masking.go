@@ -1,6 +1,7 @@
 package buildtest
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -12,7 +13,52 @@ import (
 )
 
 func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
-	testBuildWithMasking(t, config, setup, false)
+	t.Run("success job", func(t *testing.T) {
+		testBuildWithMasking(t, config, setup, false)
+	})
+
+	t.Run("failed job (can mask error message)", func(t *testing.T) {
+		resp, err := common.GetRemoteFailedBuild()
+		require.NoError(t, err)
+
+		// different platforms/executors report the error differently
+		masks := []string{
+			"Job failed: exit code 1",
+			"Job failed: exit status 1",
+			"Job failed: run exit (exit code: 1)",
+			"Job failed: command terminated with exit code 1",
+		}
+
+		build := &common.Build{
+			JobResponse: resp,
+			Runner:      config,
+		}
+
+		for idx, mask := range masks {
+			build.Variables = append(build.Variables, common.JobVariable{Key: fmt.Sprintf("MASK_ERROR_MSG_%d", idx), Value: mask, Masked: true})
+		}
+
+		if setup != nil {
+			setup(t, build)
+		}
+
+		buf, err := trace.New()
+		require.NoError(t, err)
+		defer buf.Close()
+
+		err = build.Run(&common.Config{}, &common.Trace{Writer: buf})
+		assert.Error(t, err)
+
+		buf.Finish()
+
+		contents, err := buf.Bytes(0, math.MaxInt64)
+		assert.NoError(t, err)
+
+		for _, mask := range masks {
+			assert.NotContains(t, string(contents), mask)
+		}
+		assert.Contains(t, string(contents), "ERROR: [MASKED]")
+	})
 }
 
 func RunBuildWithMaskingProxyExec(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {

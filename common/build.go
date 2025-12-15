@@ -1063,15 +1063,7 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 		"duration_s": b.FinalDuration().Seconds(),
 	})
 
-	buildLogger := buildlogger.New(
-		trace,
-		logger,
-		buildlogger.Options{
-			Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),
-			MaskAllDefaultTokens: b.IsFeatureFlagOn(featureflags.MaskAllDefaultTokens),
-			TeeOnly:              true,
-		},
-	)
+	buildLogger := b.getNewLogger(trace, logger, true)
 	defer buildLogger.Close()
 
 	if err == nil {
@@ -1183,16 +1175,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	b.expandContainerOptions()
 
-	b.logger = buildlogger.New(
-		trace,
-		b.Log(),
-		buildlogger.Options{
-			MaskPhrases:          b.GetAllVariables().Masked(),
-			MaskTokenPrefixes:    b.JobResponse.Features.TokenMaskPrefixes,
-			Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),
-			MaskAllDefaultTokens: b.IsFeatureFlagOn(featureflags.MaskAllDefaultTokens),
-		},
-	)
+	b.logger = b.getNewLogger(trace, b.Log(), false)
 	defer b.logger.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
@@ -1251,6 +1234,20 @@ func (b *Build) expandInputs() error {
 	return ExpandInputs(&b.Inputs, b)
 }
 
+func (b *Build) getNewLogger(trace JobTrace, log *logrus.Entry, teeOnly bool) buildlogger.Logger {
+	return buildlogger.New(
+		trace,
+		log,
+		buildlogger.Options{
+			MaskPhrases:          b.GetAllVariables().Masked(),
+			MaskTokenPrefixes:    b.JobResponse.Features.TokenMaskPrefixes,
+			Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),
+			MaskAllDefaultTokens: b.IsFeatureFlagOn(featureflags.MaskAllDefaultTokens),
+			TeeOnly:              teeOnly,
+		},
+	)
+}
+
 func (b *Build) logUsedImages() {
 	if !b.IsFeatureFlagOn(featureflags.LogImagesConfiguredForJob) {
 		return
@@ -1295,14 +1292,7 @@ func (b *Build) resolveSecrets(trace JobTrace) error {
 		Name:        string(BuildStageResolveSecrets),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
-			logger := buildlogger.New(
-				trace,
-				b.Log(),
-				buildlogger.Options{
-					Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),
-					MaskAllDefaultTokens: b.IsFeatureFlagOn(featureflags.MaskAllDefaultTokens),
-				},
-			)
+			logger := b.getNewLogger(trace, b.Log(), false)
 			defer logger.Close()
 
 			resolver, err := b.secretsResolver(&logger, GetSecretResolverRegistry(), b.IsFeatureFlagOn)
@@ -1894,14 +1884,7 @@ func (b *Build) getFeatureFlagInfo() string {
 }
 
 func (b *Build) printRunningWithHeader(trace JobTrace) {
-	logger := buildlogger.New(
-		trace,
-		b.Log(),
-		buildlogger.Options{
-			Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),
-			MaskAllDefaultTokens: b.IsFeatureFlagOn(featureflags.MaskAllDefaultTokens),
-		},
-	)
+	logger := b.getNewLogger(trace, b.Log(), false)
 	defer logger.Close()
 
 	logger.Println("Running with", AppVersion.Line())
