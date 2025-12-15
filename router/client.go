@@ -77,7 +77,7 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 		grpc.Header(&responseMD),
 	)
 	if err != nil {
-		config.Log().WithError(err).Error("GetJob RPC")
+		config.Log().WithError(err).Error("Error requesting a job")
 		switch status.Code(err) {
 		case codes.DeadlineExceeded, codes.Canceled, codes.Unavailable:
 			return nil, true
