@@ -2264,7 +2264,7 @@ func TestDockerCommandWithRunnerServiceEnvironmentVariables(t *testing.T) {
 								"FOO=value from [[runners.docker.services]]",
 							},
 							Entrypoint: []string{"/bin/sh", "-c"},
-							Command:    []string{"echo -e \"FOO = $FOO\nEXPANDED = $EXPANDED\""},
+							Command:    []string{"echo -e \"FOO = $FOO\nEXPANDED = $EXPANDED\" && sleep 10"},
 						},
 					},
 				},
