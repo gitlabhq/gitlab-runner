@@ -243,6 +243,8 @@ func (e *executor) createConfigForServiceHealthCheckContainer(
 }
 
 func (e *executor) waitForServiceContainer(service *serviceInfo, timeout time.Duration) {
+	start := time.Now()
+
 	err := e.runServiceHealthCheckContainer(service, timeout)
 	if err == nil {
 		return
@@ -264,6 +266,12 @@ func (e *executor) waitForServiceContainer(service *serviceInfo, timeout time.Du
 		buffer.WriteString(healtCheckErr.Logs)
 		buffer.WriteString("\n")
 	}
+
+	// The service health checker will keep checking ports for up to the timeout
+	// specified above, this gives the container chance to output some logs.
+	// However, in the scenario where there is no ports, or some other problem,
+	// we need to give the container a little time to emit something of use.
+	time.Sleep(min(timeout-time.Since(start), 10*time.Second))
 
 	buffer.WriteString("\n")
 	buffer.WriteString("Service container logs:\n")
