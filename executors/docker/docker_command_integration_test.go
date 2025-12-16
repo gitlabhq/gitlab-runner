@@ -1217,7 +1217,7 @@ func TestDockerServiceHealthcheckOverflow(t *testing.T) {
 
 	build.Services = append(build.Services, common.Image{
 		Name:    "alpine:3.22",
-		Command: []string{"sh", "-c", "printf 'datastart: %" + strconv.Itoa(execDocker.ServiceLogOutputLimit) + "s' ':dataend' && sleep 10"},
+		Command: []string{"sh", "-c", "printf 'datastart: %" + strconv.Itoa(execDocker.ServiceLogOutputLimit) + "s' ':dataend'"},
 	})
 
 	build.Variables = append(build.Variables, common.JobVariable{
@@ -1244,7 +1244,7 @@ func TestDockerHandlesAliasDuplicates(t *testing.T) {
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
-				Docker:   &common.DockerConfig{},
+				Docker:   &common.DockerConfig{WaitForServicesTimeout: 5},
 			},
 		},
 	}
@@ -1255,7 +1255,7 @@ func TestDockerHandlesAliasDuplicates(t *testing.T) {
 
 	build.Services = append(build.Services, common.Image{
 		Name:    common.TestAlpineImage,
-		Command: []string{"sleep", "5"},
+		Command: []string{"sleep", "15"},
 		Alias:   "alpine alpine svc-1 svc-1",
 	})
 
@@ -2264,7 +2264,7 @@ func TestDockerCommandWithRunnerServiceEnvironmentVariables(t *testing.T) {
 								"FOO=value from [[runners.docker.services]]",
 							},
 							Entrypoint: []string{"/bin/sh", "-c"},
-							Command:    []string{"echo -e \"FOO = $FOO\nEXPANDED = $EXPANDED\" && sleep 10"},
+							Command:    []string{"echo -e \"FOO = $FOO\nEXPANDED = $EXPANDED\""},
 						},
 					},
 				},
