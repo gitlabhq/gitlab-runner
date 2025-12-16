@@ -321,7 +321,7 @@ This approach allows developers to optimize resource usage per job while maintai
 | `dns_config`                                  | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#configure-pod-dns-settings). |
 | `helper_container_security_context`           | Sets a container security context for the helper container. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `helper_image`                                | (Advanced) [Override the default helper image](../../configuration/advanced-configuration.md#helper-image) used to clone repositories and upload artifacts. |
-| `helper_image_flavor`                         | Sets the helper image flavor (`alpine`, `alpine3.19`, `alpine3.21`, or `ubuntu`). Defaults to `alpine`. Using `alpine` is the same as `alpine3.19`. |
+| `helper_image_flavor`                         | Sets the helper image flavor (`alpine`, `alpine3.19`, `alpine3.21`, or `ubuntu`). Defaults to `alpine`. Using `alpine` is the same as `alpine3.21`. |
 | `host_aliases`                                | List of additional host name aliases that are added to all containers. [Read more about using extra host aliases](#add-extra-host-aliases). |
 | `image_pull_secrets`                          | An array of items containing the Kubernetes `docker-registry` secret names used to authenticate Docker image pulling from private registries. |
 | `init_permissions_container_security_context` | Sets a container security context for the init-permissions container. [Read more about security context](#set-a-security-policy-for-the-pod). |
