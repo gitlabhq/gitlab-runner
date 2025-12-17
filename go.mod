@@ -79,8 +79,8 @@ require (
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425133101-519a58790bfd
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gitlab.com/gitlab-org/labkit v1.28.1
-	gitlab.com/gitlab-org/moa v0.0.0-20251111105317-872458e08dae
-	gitlab.com/gitlab-org/step-runner v0.20.0
+	gitlab.com/gitlab-org/moa v0.0.0-20251209091627-66342f721c88
+	gitlab.com/gitlab-org/step-runner v0.22.0
 	go.uber.org/automaxprocs v1.5.2
 	gocloud.dev v0.40.0
 	golang.org/x/crypto v0.46.0

@@ -36,6 +36,14 @@ type InputExpander interface {
 	Expand(*JobInputs) error
 }
 
+type InputInterpolationError struct {
+	err error
+}
+
+func (e *InputInterpolationError) Error() string {
+	return fmt.Sprintf("failed to interpolate job inputs: %s", e.err.Error())
+}
+
 const (
 	JobInputContentTypeNameString  JobInputContentTypeName = "string"
 	JobInputContentTypeNameNumber  JobInputContentTypeName = "number"
@@ -211,12 +219,12 @@ func (i *JobInputs) Expand(text string) (string, error) {
 
 	expr, err := moa.ParseTemplate(text)
 	if err != nil {
-		return "", err
+		return "", &InputInterpolationError{err: err}
 	}
 
-	result, err := i.evaluator.Eval(expr)
+	result, err := i.evaluator.Eval(text, expr)
 	if err != nil {
-		return "", err
+		return "", &InputInterpolationError{err: err}
 	}
 
 	if result.HasMarks(expression.Sensitive) {
@@ -234,7 +242,18 @@ func ExpandInputs(inputs *JobInputs, v any) error {
 	if rv.Kind() != reflect.Struct {
 		return fmt.Errorf("expected struct, got %s", rv.Kind())
 	}
-	return processStruct(inputs, rv)
+
+	err := processStruct(inputs, rv)
+	if err != nil {
+		e := &InputInterpolationError{}
+		if errors.As(err, &e) {
+			return e
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 //nolint:gocognit

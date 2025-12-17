@@ -3551,6 +3551,38 @@ func TestExpandingInputs(t *testing.T) {
 		return build
 	}
 
+	t.Run("fail to expand inputs", func(t *testing.T) {
+		job := JobResponse{
+			Inputs: inputs,
+			Steps: Steps{
+				{
+					Name:   StepNameScript,
+					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input + }}'"},
+					When:   StepWhenAlways,
+				},
+			},
+		}
+
+		build, err := NewBuild(
+			job,
+			&RunnerConfig{RunnerSettings: RunnerSettings{
+				Executor:     t.Name(),
+				FeatureFlags: map[string]bool{featureflags.EnableJobInputsInterpolation: true},
+			}},
+			nil,
+			nil,
+		)
+		require.NoError(t, err)
+
+		err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+
+		et := &BuildError{}
+		require.ErrorAs(t, err, &et)
+		assert.Equal(t, ConfigurationError, et.FailureReason)
+		etInner := &InputInterpolationError{}
+		assert.ErrorAs(t, et.Inner, &etInner)
+	})
+
 	t.Run("expand inputs in step script", func(t *testing.T) {
 		setup(t)
 
