@@ -1,7 +1,9 @@
 package machine
 
 import (
+	"context"
 	"errors"
+	"io"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -9,6 +11,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker" // Force to load docker executor
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
+	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
+)
+
+var (
+	_ terminal.InteractiveTerminal = (*machineExecutor)(nil)
+	_ common.Connector             = (*machineExecutor)(nil)
 )
 
 const (
@@ -160,6 +168,22 @@ func (e *machineExecutor) GetMetricsSelector() string {
 	}
 
 	return refereed.GetMetricsSelector()
+}
+
+func (s *machineExecutor) Connect(ctx context.Context) (io.ReadWriteCloser, error) {
+	if connector, ok := s.executor.(common.Connector); ok {
+		return connector.Connect(ctx)
+	}
+
+	return nil, common.ExecutorStepRunnerConnectNotSupported
+}
+
+func (e *machineExecutor) TerminalConnect() (terminal.Conn, error) {
+	if connector, ok := e.executor.(terminal.InteractiveTerminal); ok {
+		return connector.TerminalConnect()
+	}
+
+	return nil, errors.New("executor does not have terminal")
 }
 
 func init() {

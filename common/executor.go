@@ -75,6 +75,8 @@ type Executor interface {
 	SetCurrentStage(stage ExecutorStage)
 }
 
+var ExecutorStepRunnerConnectNotSupported = fmt.Errorf("executor does not support step-runner connect")
+
 type Connector interface {
 	Connect(ctx context.Context) (io.ReadWriteCloser, error)
 }
