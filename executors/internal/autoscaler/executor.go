@@ -4,9 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
+)
+
+var (
+	_ terminal.InteractiveTerminal = (*executor)(nil)
+	_ common.Connector             = (*executor)(nil)
 )
 
 type executor struct {
@@ -64,4 +71,20 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 func (e *executor) Cleanup() {
 	e.Executor.Cleanup()
+}
+
+func (s *executor) Connect(ctx context.Context) (io.ReadWriteCloser, error) {
+	if connector, ok := s.Executor.(common.Connector); ok {
+		return connector.Connect(ctx)
+	}
+
+	return nil, common.ExecutorStepRunnerConnectNotSupported
+}
+
+func (e *executor) TerminalConnect() (terminal.Conn, error) {
+	if connector, ok := e.Executor.(terminal.InteractiveTerminal); ok {
+		return connector.TerminalConnect()
+	}
+
+	return nil, errors.New("executor does not have terminal")
 }
