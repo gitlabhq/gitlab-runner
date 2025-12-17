@@ -8,11 +8,13 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 type StatusType string
@@ -45,6 +47,8 @@ const (
 	Unknown                StatusType = "unknown"
 	// TODO: update as new VM states are added
 )
+
+var hddInfoRe = regexp.MustCompile(`UUID:[[:space:]]*([a-f0-9\-]+)[\s|\S]*?Location:[[:space:]]*([a-zA-Z0-9 -/\\]*)`)
 
 func IsStatusOnlineOrTransient(vmStatus StatusType) bool {
 	switch vmStatus {
@@ -255,7 +259,33 @@ func Kill(ctx context.Context, vmName string) error {
 
 func Delete(ctx context.Context, vmName string) error {
 	_, err := VBoxManage(ctx, "unregistervm", vmName, "--delete")
-	return err
+	if err == nil {
+		return nil
+	}
+	// VM itself does not exist, but there are some dangling resources which need to be cleaned up
+	// This occurs when the VM boot up was prematurely aborted e.g. user cancels the job while VM is booting up.
+	// Unregistering a non-existent VM returns an error above.
+	hdds, err := ListHDDForVM(ctx, vmName)
+	if err != nil {
+		return err
+	}
+	for _, hdd := range hdds {
+		if err := DeleteHDD(ctx, hdd); err != nil {
+			return err
+		}
+	}
+	// Does not handle default folder change after this VM is created
+	folder, err := GetDefaultMachineFolder(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get machine folder: %w", err)
+	}
+	vmFolder := filepath.Join(folder, vmName)
+	// Check if the vm folder is a child folder of `folder` to add another check preventing path traversal attacks
+	immediate := helpers.IsImmediateChild(folder, vmFolder)
+	if !immediate {
+		return fmt.Errorf("vm machine folder is not immediate child of the default machine folder")
+	}
+	return os.RemoveAll(vmFolder)
 }
 
 func Status(ctx context.Context, vmName string) (StatusType, error) {
@@ -286,5 +316,58 @@ func WaitForStatus(ctx context.Context, vmName string, vmStatus StatusType, seco
 
 func Unregister(ctx context.Context, vmName string) error {
 	_, err := VBoxManage(ctx, "unregistervm", vmName)
+	return err
+}
+
+func GetDefaultMachineFolder(ctx context.Context) (string, error) {
+	output, err := VBoxManage(ctx, "list", "systemproperties")
+	if err != nil {
+		return "", err
+	}
+	_, after, found := strings.Cut(output, "Default machine folder:")
+	if !found {
+		return "", errors.New("failed to extract default machine folder")
+	}
+	if after == "" {
+		return "", errors.New("empty default machine folder")
+	}
+	return filepath.Clean(strings.TrimSpace(after)), nil
+}
+
+func extractHDDInfo(output string) [][]string {
+	return hddInfoRe.FindAllStringSubmatch(output, -1)
+}
+
+func ListHDDForVM(ctx context.Context, vmName string) ([]string, error) {
+	output, err := VBoxManage(ctx, "list", "hdds")
+	if err != nil {
+		return nil, err
+	}
+	hddsResult := extractHDDInfo(output)
+
+	// Check if location contains the VM name.
+	// Do not use the machine folder path since it can be overridden and any new value only affects new VMs.
+	// VM name is surrounded by path separator to prevent any possible substring matching.
+	vmPath := string(filepath.Separator) + vmName + string(filepath.Separator)
+	locationRe := regexp.MustCompile(regexp.QuoteMeta(vmPath))
+
+	var hdds []string
+	for _, match := range hddsResult {
+		if len(match) >= 3 {
+			hdd := match[1]
+			location := match[2]
+			if locationRe.MatchString(location) {
+				hdds = append(hdds, hdd)
+			}
+		} else {
+			return nil, errors.New("failed to find hdds for vm")
+		}
+	}
+
+	return hdds, nil
+}
+
+func DeleteHDD(ctx context.Context, identifier string) error {
+	_, err := VBoxManage(ctx, "closemedium", identifier, "--delete")
 	return err
 }
