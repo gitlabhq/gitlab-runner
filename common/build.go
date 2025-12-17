@@ -582,10 +582,15 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	}
 
 	// execute user provided scripts
+	//nolint:nestif
 	if err == nil {
-		connector, ok := executor.(Connector)
-		if b.UseNativeSteps() && ok && b.ExecuteStepFn != nil {
-			err = b.executeStepStage(ctx, connector, BuildStage("step_"+StepNameRun), trace)
+		if b.UseNativeSteps() && b.ExecuteStepFn != nil {
+			connector, ok := executor.(Connector)
+			if ok {
+				err = b.executeStepStage(ctx, connector, BuildStage("step_"+StepNameRun), trace)
+			} else {
+				return ExecutorStepRunnerConnectNotSupported
+			}
 		} else {
 			err = b.executeUserScripts(ctx, trace, executor)
 		}

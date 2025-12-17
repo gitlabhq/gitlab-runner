@@ -11,6 +11,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
 func getRunnerConfig() *common.RunnerConfig {
@@ -128,4 +129,62 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 func TestMachineCredentialsUsage(t *testing.T) {
 	testMachineCredentialsUsage(t, "config-with-docker-section", getRunnerConfig)
 	testMachineCredentialsUsage(t, "config-without-docker-section", getRunnerConfigWithoutDockerConfig)
+}
+
+// mockDockerExecutor implements InteractiveTerminal and Connector.
+type mockDockerExecutor struct {
+	*common.MockExecutor
+	*terminal.MockInteractiveTerminal
+	*common.MockConnector
+}
+
+func TestMachineExecutor_WithoutInteractiveTerminal(t *testing.T) {
+	e := machineExecutor{
+		executor: common.NewMockExecutor(t),
+	}
+
+	conn, err := e.TerminalConnect()
+	assert.Error(t, err)
+	assert.Nil(t, conn)
+}
+
+func TestMachineExecutor_WithoutConnector(t *testing.T) {
+	e := machineExecutor{
+		executor: common.NewMockExecutor(t),
+	}
+
+	conn, err := e.Connect(t.Context())
+	assert.ErrorIs(t, err, common.ExecutorStepRunnerConnectNotSupported)
+	assert.Nil(t, conn)
+}
+
+func TestMachineExecutor_WithInteractiveTerminal(t *testing.T) {
+	mock := mockDockerExecutor{
+		MockExecutor:            common.NewMockExecutor(t),
+		MockInteractiveTerminal: terminal.NewMockInteractiveTerminal(t),
+	}
+	e := machineExecutor{
+		executor: &mock,
+	}
+
+	mock.MockInteractiveTerminal.EXPECT().TerminalConnect().Return(terminal.NewMockConn(t), nil).Once()
+
+	conn, err := e.TerminalConnect()
+	assert.NoError(t, err)
+	assert.NotNil(t, conn)
+}
+
+func TestMachineExecutor_Connect(t *testing.T) {
+	mock := mockDockerExecutor{
+		MockExecutor:  common.NewMockExecutor(t),
+		MockConnector: common.NewMockConnector(t),
+	}
+	e := machineExecutor{
+		executor: &mock,
+	}
+
+	mock.MockConnector.EXPECT().Connect(t.Context()).Return(nil, nil).Once()
+
+	_, err := e.Connect(t.Context())
+	assert.NoError(t, err)
 }
