@@ -1856,7 +1856,7 @@ The helper image is available for amd64, arm, arm64, s390x, ppc64le, and riscv64
 a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner binary. It contains only a subset
 of available commands, and Git, Git LFS, and SSL certificates store.
 
-The helper image has a few flavors: `alpine`, `alpine3.19`, `alpine3.21`, `alpine-latest`, `ubi-fips` and `ubuntu`.
+The helper image has a few flavors: `alpine`, `alpine3.21`, `alpine-latest`, `ubi-fips` and `ubuntu`.
 The `alpine` image is the default due to its small footprint.
 Using `helper_image_flavor = "ubuntu"` selects the `ubuntu` flavor of the helper image.
 

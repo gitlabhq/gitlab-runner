@@ -2,9 +2,6 @@
     "dir": "../../out/runner-images/",
     "export": "../../out/release_artifacts/",
     "default": {
-        "alpine-3.19": [
-            "alpine3.19-%"
-        ],
         "alpine-3.21": [
             "alpine3.21-%"
         ],
@@ -21,9 +18,6 @@
     },
     "match": {
         "latest": {
-            "alpine-3.19": [
-                "alpine3.19"
-            ],
             "alpine-3.21": [
                 "alpine3.21"
             ],

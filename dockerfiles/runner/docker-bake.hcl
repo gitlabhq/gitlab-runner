@@ -23,7 +23,6 @@ common-platforms = [
 ]
 
 alpine-platforms = {
-  "3.19" : setsubtract(common-platforms, ["linux/riscv64"]),
   "3.21" : common-platforms,
   "latest" : common-platforms,
 }
