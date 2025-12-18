@@ -273,7 +273,7 @@ func (b *BashWriter) ifCmd(cmdline string) {
 func (b *BashWriter) IfGitVersionIsAtLeast(version string) {
 	b.Linef(`current_ver="$(git version|cut -d ' ' -f 3)"`)
 	b.Linef(`required_ver=%q`, version)
-	b.Line(`minimum_ver="$(printf '%s\n%s' "$required_ver" "$current_ver" | sort --version-sort | head -n1)"`)
+	b.Line(`minimum_ver="$(printf '%s\n%s' "$required_ver" "$current_ver" | sort -t '.' -k 1,1n -k 2,2n -k 3,3n | head -n1)"`)
 	b.Linef(`if [ "$minimum_ver" = "$required_ver" ]; then`)
 	b.Printf("Git version at least %q", version)
 	b.Indent()
