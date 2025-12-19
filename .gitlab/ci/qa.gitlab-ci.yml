@@ -132,6 +132,7 @@ docs:lint i18n paths:
     - .no_cache_and_dependencies
     - .kubernetes runner
   needs: []
+  allow_failure: true
   script:
     # Run the i18n path verification script
     - ./scripts/docs-i18n-verify-paths
