@@ -18,6 +18,7 @@ const (
 	apiEndpointRequestJob apiEndpoint = "request_job"
 	apiEndpointUpdateJob  apiEndpoint = "update_job"
 	apiEndpointPatchTrace apiEndpoint = "patch_trace"
+	apiEndpointDiscovery  apiEndpoint = "discovery"
 )
 
 var (

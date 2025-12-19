@@ -298,9 +298,13 @@ func addCorrelationID(headers http.Header) (http.Header, string) {
 	if headers == nil {
 		headers = http.Header{}
 	}
-	correlationID := strings.ReplaceAll(uuid.NewString(), "-", "")
+	correlationID := NewCorrelationID()
 	headers.Set(correlationIDHeader, correlationID)
 	return headers, correlationID
+}
+
+func NewCorrelationID() string {
+	return strings.ReplaceAll(uuid.NewString(), "-", "")
 }
 
 func (n *GitLabClient) doJSON(
@@ -609,18 +613,25 @@ func loadTLSData(tlsData ResponseTLSData) common.TLSData {
 	return res
 }
 
-func (n *GitLabClient) RequestJob(
-	ctx context.Context,
+func (n *GitLabClient) PrepareJobRequest(
 	config common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
-) (*common.JobResponse, bool) {
-	request := common.JobRequest{
+) common.JobRequest {
+	return common.JobRequest{
 		Info:       n.getRunnerInfo(config),
 		Token:      config.Token,
 		SystemID:   config.SystemID,
 		LastUpdate: n.getLastUpdate(&config.RunnerCredentials),
 		Session:    sessionInfo,
 	}
+}
+
+func (n *GitLabClient) RequestJob(
+	ctx context.Context,
+	config common.RunnerConfig,
+	sessionInfo *common.SessionInfo,
+) (*common.JobResponse, bool) {
+	request := n.PrepareJobRequest(config, sessionInfo)
 
 	var response common.JobResponse
 
@@ -638,7 +649,8 @@ func (n *GitLabClient) RequestJob(
 			uri:         "jobs/request",
 			statusCode:  http.StatusCreated,
 			headers:     headers,
-			request:     &request, response: &response,
+			request:     &request,
+			response:    &response,
 		},
 	)
 	defer closeResponseBody(httpResponse, false)
@@ -955,6 +967,55 @@ func (n *GitLabClient) createArtifactsContentProvider(originalContentProvider co
 	}
 
 	return bodyProvider, contentType
+}
+
+func (n *GitLabClient) GetRouterDiscovery(
+	ctx context.Context,
+	config common.RunnerConfig,
+) *common.RouterDiscovery {
+	var response common.RouterDiscovery
+
+	headers, correlationID := addCorrelationID(RunnerTokenHeader(config.Token))
+	//nolint:bodyclose
+	result, statusText, httpResponse := n.doMeasuredJSON(
+		ctx,
+		config.Log(),
+		config.RunnerCredentials.ShortDescription(),
+		config.SystemID,
+		apiEndpointDiscovery,
+		doJSONParams{
+			credentials: &config.RunnerCredentials,
+			method:      http.MethodGet,
+			uri:         "runners/router/discovery",
+			statusCode:  http.StatusOK,
+			headers:     headers,
+			response:    &response,
+		},
+	)
+	defer closeResponseBody(httpResponse, false)
+
+	logger := config.Log().WithField(correlationIDLogField, getCorrelationID(httpResponse, correlationID))
+	const baseLogText = "Discovering Job Router..."
+	switch result {
+	case http.StatusOK:
+		resolveFullChain := config.IsFeatureFlagOn(featureflags.ResolveFullTLSChain)
+		tlsData, err := n.getResponseTLSData(&config.RunnerCredentials, resolveFullChain, httpResponse)
+		if err != nil {
+			logger.WithError(err).Errorln("Error on fetching TLS Data from API response...", "error")
+		}
+		response.TLSData = loadTLSData(tlsData)
+
+		return &response
+	case http.StatusForbidden:
+		logger.WithField("status", statusText).Errorln(baseLogText, "failed (check used token)")
+	case http.StatusNotImplemented:
+		logger.WithField("status", statusText).Errorln(baseLogText, "not configured/enabled")
+	case clientError:
+		logger.WithField("status", statusText).Errorln(baseLogText, "client error")
+	default:
+		logger.WithField("status", statusText).Errorln(baseLogText, "failed")
+	}
+	return nil
 }
 
 func uploadRawArtifactsQuery(options common.ArtifactsOptions) url.Values {

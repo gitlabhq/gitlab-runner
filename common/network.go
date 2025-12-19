@@ -1199,6 +1199,11 @@ type ArtifactsOptions struct {
 	LogResponseDetails bool
 }
 
+type RouterDiscovery struct {
+	ServerURL string  `json:"server_url"`
+	TLSData   TLSData `json:"-"`
+}
+
 type FailuresCollector interface {
 	RecordFailure(reason JobFailureReason, runnerConfig RunnerConfig)
 }

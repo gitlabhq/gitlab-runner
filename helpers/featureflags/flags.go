@@ -52,6 +52,7 @@ const (
 	UseGitalyCorrelationId               string = "FF_USE_GITALY_CORRELATION_ID"
 	HashCacheKeys                        string = "FF_HASH_CACHE_KEYS"
 	EnableJobInputsInterpolation         string = "FF_ENABLE_JOB_INPUTS_INTERPOLATION"
+	UseJobRouter                         string = "FF_USE_JOB_ROUTER"
 )
 
 type FeatureFlag struct {
@@ -428,6 +429,12 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, job inputs are interpolated. For more information, see [&17833](https://gitlab.com/groups/gitlab-org/-/epics/17833).",
+	},
+	{
+		Name:         UseJobRouter,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "Makes GitLab Runner fetch jobs by connecting to Job Router rather than GitLab directly.",
 	},
 }
 

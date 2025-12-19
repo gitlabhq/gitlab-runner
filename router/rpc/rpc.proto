@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+// Must be compatible with https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent/-/blob/master/internal/module/runner/rpc/rpc.proto
+
+package gitlab.agent.runner.rpc; // must match the package in the agent project
+
+option go_package = "gitlab.com/gitlab-org/gitlab-runner/router/rpc";
+
+message GetJobRequest {
+  // JSON containing the payload to send to the main GitLab application to retrieve CI jobs.
+  // We treat this as a black box (at least for now).
+  bytes job_request = 1;
+}
+
+message GetJobResponse {
+  // JSON response from the main GitLab application.
+  // We treat this as a black box (at least for now).
+  bytes job_response = 1;
+}
+
+service JobRouter {
+  // GetJob allows Runner to request a job.
+  rpc GetJob (GetJobRequest) returns (GetJobResponse) {
+  }
+}
