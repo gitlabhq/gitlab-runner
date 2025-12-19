@@ -49,22 +49,22 @@ export PATH := $(localBin):$(PATH)
 # Development Tools
 GOCOVER_COBERTURA = gocover-cobertura
 
-MOCKERY_VERSION ?= 3.4.0
+MOCKERY_VERSION ?= 3.6.1
 MOCKERY = mockery
 
 PROTOC := $(localBin)/protoc
 PROTOC_VERSION := 28.2
 
 PROTOC_GEN_GO := protoc-gen-go
-PROTOC_GEN_GO_VERSION := v1.34.2
+PROTOC_GEN_GO_VERSION := v1.36.10
 
 PROTOC_GEN_GO_GRPC := protoc-gen-go-grpc
-PROTOC_GEN_GO_GRPC_VERSION := v1.5.1
+PROTOC_GEN_GO_GRPC_VERSION := v1.6.0
 
 SPLITIC = splitic
 MAGE = $(localBin)/mage
 
-GOLANGLINT_VERSION ?= v2.3.1
+GOLANGLINT_VERSION ?= v2.7.2
 GOLANGLINT ?= $(localBin)/golangci-lint$(GOLANGLINT_VERSION)
 GOLANGLINT_GOARGS ?= $(localBin)/goargs.so
 
