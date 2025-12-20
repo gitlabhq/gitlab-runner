@@ -748,6 +748,20 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, info common.Shel
 	}
 }
 
+// deduplicateInsteadOfs removes duplicate insteadOf entries, keeping the first occurrence.
+// This prevents redundant git config rules when the same URL rewrite appears multiple times.
+func deduplicateInsteadOfs(insteadOfs [][2]string) [][2]string {
+	seen := make(map[[2]string]bool)
+	result := make([][2]string, 0, len(insteadOfs))
+	for _, io := range insteadOfs {
+		if !seen[io] {
+			seen[io] = true
+			result = append(result, io)
+		}
+	}
+	return result
+}
+
 // setupExternalGitConfig sets up a git config file, holding the externalized config for the git repo.
 // This file is meant to be "included" (either via CLI flag or via include from another git config).
 // It holds some configuration specific to the main repo.
@@ -790,6 +804,9 @@ func (b *AbstractShell) setupExternalGitConfig(w ShellWriter, build *common.Buil
 	} else {
 		insteadOfs = append(insteadOfs, ios...)
 	}
+
+	// De-duplicate insteadOfs entries to avoid redundant git config rules
+	insteadOfs = deduplicateInsteadOfs(insteadOfs)
 
 	for _, io := range insteadOfs {
 		replaceStanza := "url." + io[0] + ".insteadOf"

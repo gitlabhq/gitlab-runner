@@ -4144,6 +4144,9 @@ func TestSetupExternalConfigFile(t *testing.T) {
 				urlsWithTokens: {
 					{"https://gitlab-ci-token:some-token@some.clone.url/project/repo.git", "https://some.clone.url/project/repo.git"},
 					{"https://gitlab-ci-token:some-token@some.clone.url", "https://some.clone.url"},
+					// RepoURL base is added by build_url_helper, but de-duplicated in setupExternalGitConfig
+					// since it's different from the clone URL base
+					{"https://gitlab-ci-token:some-token@some.gitlab.com", "https://some.gitlab.com"},
 				},
 			},
 		},
@@ -4159,6 +4162,9 @@ func TestSetupExternalConfigFile(t *testing.T) {
 					{"https://gitlab-ci-token:some-token@some.cred.url", "https://some.cred.url"},
 					{"https://gitlab-ci-token:some-token@some.cred.url/", "git@some.server.host:"},
 					{"https://gitlab-ci-token:some-token@some.cred.url", "ssh://git@some.server.host"},
+					// RepoURL base is added by build_url_helper, but de-duplicated in setupExternalGitConfig
+					// since it's different from the cred URL base
+					{"https://gitlab-ci-token:some-token@some.gitlab.url", "https://some.gitlab.url"},
 				},
 				urlsWithoutTokens: {
 					{"https://some.cred.url/", "git@some.server.host:"},
@@ -4179,6 +4185,7 @@ func TestSetupExternalConfigFile(t *testing.T) {
 					{"https://gitlab-ci-token:some-token@some.clone.url", "https://some.clone.url"},
 					{"https://gitlab-ci-token:some-token@some.clone.url/", "git@some.server.host:"},
 					{"https://gitlab-ci-token:some-token@some.clone.url", "ssh://git@some.server.host"},
+					{"https://gitlab-ci-token:some-token@some.gitlab.com", "https://some.gitlab.com"},
 				},
 				urlsWithoutTokens: {
 					{"https://some.clone.url/", "git@some.server.host:"},
@@ -4199,6 +4206,7 @@ func TestSetupExternalConfigFile(t *testing.T) {
 					{"https://gitlab-ci-token:some-token@some.clone.url/project/repo.git", "https://some.clone.url/project/repo.git"},
 					{"https://gitlab-ci-token:some-token@some.clone.url", "https://some.clone.url"},
 					{"https://gitlab-ci-token:some-token@some.clone.url", "ssh://git@some.ssh.server:4444"},
+					{"https://gitlab-ci-token:some-token@some.gitlab.com", "https://some.gitlab.com"},
 				},
 				urlsWithoutTokens: {
 					{"https://some.clone.url", "ssh://git@some.ssh.server:4444"},
