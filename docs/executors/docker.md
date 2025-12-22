@@ -950,8 +950,15 @@ For more information, see [GitHub issue 389](https://github.com/containers/aardv
        host = "unix:///run/user/1012/podman/podman.sock"
        tls_verify = false
        image = "quay.io/podman/stable"
-       privileged = true
+       privileged = false
    ```
+
+   {{< alert type="note" >}}
+
+   Set `privileged = false` for standard Podman usage. Set `privileged = true` only if you need to run
+   [Docker-in-Docker services](#use-docker-in-docker-with-privileged-mode) within your jobs.
+
+   {{< /alert >}}
 
 ### Use Podman to build container images from a Dockerfile
 
