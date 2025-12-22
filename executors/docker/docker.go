@@ -1642,10 +1642,12 @@ func (e *executor) addServiceHealthCheckEnvironment(service *serviceInfo) ([]str
 
 //nolint:gocognit
 func (e *executor) getContainerIPAndExposedPorts(id string) ([]string, []int, error) {
-	timeout := e.Config.Docker.WaitForServicesTimeout
-	if timeout == 0 {
-		timeout = common.DefaultWaitForServicesTimeout
-	}
+	// We either wait for the user's provided timeout, or our default, whichever is larger.
+	//
+	// The reason we don't wait for the smaller timeout is because users often set WaitForServicesTimeout=-1,
+	// or a low number, to indicate they want to skip the healthcheck. In this scenario, we're not using
+	// it for the healthcheck, but the wait for the container to come up.
+	timeout := max(e.Config.Docker.WaitForServicesTimeout, common.DefaultWaitForServicesTimeout)
 
 	var inspect container.InspectResponse
 	start := time.Now()
