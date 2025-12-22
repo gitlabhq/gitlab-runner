@@ -23,7 +23,7 @@ import (
 type serviceInfo struct {
 	ID    string
 	Name  string
-	IP    string
+	IP    []string
 	Ports []int
 }
 
@@ -67,8 +67,8 @@ func (e *executor) createServices() error {
 	e.waitForServices()
 
 	for linkName, linkee := range linksMap {
-		if linkee.IP != "" {
-			e.links = append(e.links, linkName+":"+linkee.IP)
+		for _, ip := range linkee.IP {
+			e.links = append(e.links, linkName+":"+ip)
 		}
 	}
 
