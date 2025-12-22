@@ -1882,11 +1882,13 @@ The GitLab Runner revision and architecture define which tag to download.
 
 ### Helper image configuration for Kubernetes on Arm
 
-To use the `arm64` helper image on `arm64` Kubernetes clusters, set the following values in your [configuration file](../executors/kubernetes/_index.md#configuration-settings).
+By default, the correct [helper image for your architecture](../executors/kubernetes/_index.md#operating-system-architecture-and-windows-kernel-version)
+is selected. If you need to set a custom `helper_image` path to use the `arm64` helper image on `arm64` Kubernetes clusters, set the following values
+in your [configuration file](../executors/kubernetes/_index.md#configuration-settings):
 
 ```toml
 [runners.kubernetes]
-  helper_image = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:arm64-v${CI_RUNNER_VERSION}"
+  helper_image = "my.registry.local/gitlab/gitlab-runner-helper:arm64-v${CI_RUNNER_VERSION}"
 ```
 
 ### Runner images that use an old version of Alpine Linux
@@ -1923,12 +1925,9 @@ docker pull registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:al
 
 In GitLab 15.0 and earlier, you configure helper images to use images from Docker Hub.
 
-In GitLab 15.1 and later, the helper image is pulled from the GitLab Container Registry.
-
-To retrieve the base `gitlab-runner-helper` image from the GitLab registry, use a `helper-image` value: `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`.
-
-GitLab Self-Managed instances also pull the helper image from the GitLab Container Registry on GitLab.com.
-To check the status of the GitLab Container Registry, see the [GitLab System Status](https://status.gitlab.com/).
+In GitLab 15.1 and later, the helper image is pulled from the GitLab Container Registry on GitLab.com at `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`.
+GitLab Self-Managed instances also pull the helper image from the GitLab Container Registry on GitLab.com by default.
+To check the status of the GitLab Container Registry on GitLab.com, see [GitLab System Status](https://status.gitlab.com/).
 
 ### Override the helper image
 
@@ -1966,7 +1965,7 @@ API that is expected to be the same in both binaries.
 By default, GitLab Runner references a `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:XYZ` image, where `XYZ` is based
 on the GitLab Runner architecture and Git revision. You can define the
 image version by using one of the
-[version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/common/version.go#L48-49):
+[version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/common/version.go#L60-61):
 
 ```toml
 [[runners]]
