@@ -19,65 +19,36 @@ GitLab Runner can run as a single binary and has no language-specific requiremen
 For security and performance reasons, install GitLab Runner on a machine
 separate from the machine that hosts your GitLab instance.
 
-## Supported operating systems
+Before you install, review the [system requirements and supported platforms](requirements.md).
 
-You can install GitLab Runner on:
+## Operating systems
 
-- Linux from a [GitLab repository](linux-repository.md) or [manually](linux-manually.md)
+{{< cards >}}
+
+- [Linux](linux-repository.md)
+- [Linux manual install](linux-manually.md)
 - [FreeBSD](freebsd.md)
 - [macOS](osx.md)
 - [Windows](windows.md)
 - [z/OS](z-os.md)
 
-[Bleeding-edge binaries](bleeding-edge.md) are also available.
+{{< /cards >}}
 
-To use a different operating system, ensure the operating system can compile a Go binary.
+## Containers
 
-## Supported containers
-
-You can install GitLab Runner with:
+{{< cards >}}
 
 - [Docker](docker.md)
-- [The GitLab Helm chart](kubernetes.md)
-- [The GitLab agent for Kubernetes](kubernetes-agent.md)
-- [The GitLab Operator](operator.md)
+- [Helm chart](kubernetes.md)
+- [GitLab agent](kubernetes-agent.md)
+- [Operator](operator.md)
 
-## Supported architectures
+{{< /cards >}}
 
-GitLab Runner is available for the following architectures:
+## Other installation options
 
-- x86
-- AMD64
-- ARM64
-- ARM
-- s390x
-- ppc64le
-- riscv64
-- loong64
+{{< cards >}}
 
-## System requirements
+- [Bleeding edge releases](bleeding-edge.md)
 
-The system requirements for GitLab Runner depend on the:
-
-- Anticipated CPU load of CI/CD jobs
-- Anticipated memory usage of CI/CD jobs
-- Number of concurrent CI/CD jobs
-- Number of projects in active development
-- Number of developers expected to work in parallel
-
-For more information about the machine types available for GitLab.com,
-see [GitLab-hosted runners](https://docs.gitlab.com/ci/runners/).
-
-## FIPS-compliant GitLab Runner
-
-A GitLab Runner binary compliant with FIPS 140-2 is available for
-Red Hat Enterprise Linux (RHEL) distributions and the AMD64 architecture.
-Support for other distributions and architectures is proposed in
-[issue 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814).
-
-This binary is built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux)
-and calls into a FIPS 140-2 validated cryptographic library.
-A [UBI-8 minimal image](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#con_understanding-the-ubi-minimal-images_assembly_types-of-container-images) is used as the base for creating the GitLab Runner FIPS image.
-
-For more information about using FIPS-compliant GitLab Runner in RHEL, see
-[Switching RHEL to FIPS mode](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/security_hardening/switching-rhel-to-fips-mode_security-hardening).
+{{< /cards >}}

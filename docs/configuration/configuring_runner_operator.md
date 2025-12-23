@@ -473,7 +473,7 @@ For Operator, you can change only the helper image. You can't change the GitLab 
 
 {{< /alert >}}
 
-To use a [FIPS compliant GitLab Runner helper](../install/_index.md#fips-compliant-gitlab-runner), change the helper image as follows:
+To use a [FIPS compliant GitLab Runner helper](../install/requirements.md#fips-compliant-gitlab-runner), change the helper image as follows:
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2

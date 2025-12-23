@@ -455,7 +455,7 @@ It's important that this user ID is part of the root group. Being part of the ro
 
 ## Use a FIPS-compliant GitLab Runner
 
-To use a [FIPS-compliant GitLab Runner](_index.md#fips-compliant-gitlab-runner), change the GitLab Runner image
+To use a [FIPS-compliant GitLab Runner](requirements.md#fips-compliant-gitlab-runner), change the GitLab Runner image
 and the Helper image in `values.yaml`:
 
 ```yaml
