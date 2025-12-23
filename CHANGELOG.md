@@ -1,3 +1,9 @@
+## v18.7.1 (2025-12-23)
+
+### Bug fixes
+
+- Add IPv6 address when emulating links functionality [!6027](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6027)
+
 ## v18.7.0 (2025-12-18)
 
 ### New features
