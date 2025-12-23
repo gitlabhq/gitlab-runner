@@ -1598,8 +1598,8 @@ func (e *executor) createHostConfigForServiceHealthCheck(service *serviceInfo) *
 
 	// we only get a service IP from the default network, for other networks, Docker
 	// already provides DNS entries
-	if service.IP != "" {
-		extraHosts = []string{service.ID[:min(12, len(service.ID))] + ":" + service.IP}
+	for _, ip := range service.IP {
+		extraHosts = []string{service.ID[:min(12, len(service.ID))] + ":" + ip}
 	}
 
 	return &container.HostConfig{
@@ -1641,29 +1641,39 @@ func (e *executor) addServiceHealthCheckEnvironment(service *serviceInfo) ([]str
 }
 
 //nolint:gocognit
-func (e *executor) getContainerIPAndExposedPorts(id string) (string, []int, error) {
-	timeout := e.Config.Docker.WaitForServicesTimeout
-	if timeout == 0 {
-		timeout = common.DefaultWaitForServicesTimeout
-	}
+func (e *executor) getContainerIPAndExposedPorts(id string) ([]string, []int, error) {
+	// We either wait for the user's provided timeout, or our default, whichever is larger.
+	//
+	// The reason we don't wait for the smaller timeout is because users often set WaitForServicesTimeout=-1,
+	// or a low number, to indicate they want to skip the healthcheck. In this scenario, we're not using
+	// it for the healthcheck, but the wait for the container to come up.
+	timeout := max(e.Config.Docker.WaitForServicesTimeout, common.DefaultWaitForServicesTimeout)
 
 	var inspect container.InspectResponse
 	start := time.Now()
 	for {
 		if time.Since(start) > time.Duration(timeout)*time.Second {
-			return "", nil, fmt.Errorf("service failed to start after %v", time.Since(start))
+			return nil, nil, fmt.Errorf("service failed to start after %v", time.Since(start))
 		}
 
 		var err error
 		inspect, err = e.dockerConn.ContainerInspect(e.Context, id)
 		if err != nil {
-			return "", nil, err
+			return nil, nil, err
 		}
 
 		if inspect.State.Status != container.StateCreated {
 			break
 		}
 		time.Sleep(time.Second)
+	}
+
+	var ip []string
+	if inspect.NetworkSettings.IPAddress != "" {
+		ip = append(ip, inspect.NetworkSettings.IPAddress)
+	}
+	if inspect.NetworkSettings.GlobalIPv6Address != "" {
+		ip = append(ip, inspect.NetworkSettings.GlobalIPv6Address)
 	}
 
 	for _, env := range inspect.Config.Env {
@@ -1675,10 +1685,10 @@ func (e *executor) getContainerIPAndExposedPorts(id string) (string, []int, erro
 		if strings.EqualFold(key, "HEALTHCHECK_TCP_PORT") {
 			port, err := strconv.ParseInt(val, 10, 32)
 			if err != nil {
-				return "", nil, fmt.Errorf("invalid health check tcp port: %v", val)
+				return nil, nil, fmt.Errorf("invalid health check tcp port: %v", val)
 			}
 
-			return inspect.NetworkSettings.IPAddress, []int{int(port)}, nil
+			return ip, []int{int(port)}, nil
 		}
 	}
 
@@ -1698,7 +1708,7 @@ func (e *executor) getContainerIPAndExposedPorts(id string) (string, []int, erro
 
 	sort.Ints(ports)
 
-	return inspect.NetworkSettings.IPAddress, ports, nil
+	return ip, ports, nil
 }
 
 func (e *executor) readContainerLogs(containerID string) string {
