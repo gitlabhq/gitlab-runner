@@ -2,6 +2,7 @@
 stage: Verify
 group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: Manually download and install the GitLab Runner binary on Linux.
 title: Install GitLab Runner manually on GNU/Linux
 ---
 
@@ -271,6 +272,6 @@ wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest
 - [Docker executor documentation](../executors/docker.md)
 - [Install Docker](https://docs.docker.com/engine/install/centos/#install-docker-ce)
 - [Download other GitLab Runner versions](bleeding-edge.md#download-any-other-tagged-release)
-- [FIPS compliant GitLab Runner information](_index.md#fips-compliant-gitlab-runner)
+- [FIPS compliant GitLab Runner information](requirements.md#fips-compliant-gitlab-runner)
 - [GitLab Runner FAQ](../faq/_index.md)
 - [deb/rpm repository installation](linux-repository.md)

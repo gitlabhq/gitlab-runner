@@ -2,6 +2,7 @@
 stage: Verify
 group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: Run GitLab Runner in a Docker container.
 title: Run GitLab Runner in a container
 ---
 
@@ -85,7 +86,7 @@ Some available configuration options include:
 
 - Set the container's time zone with the flag `--env TZ=<TIMEZONE>`.
   [See a list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
-- For a [FIPS compliant GitLab Runner](_index.md#fips-compliant-gitlab-runner) image, based on
+- For a [FIPS compliant GitLab Runner](requirements.md#fips-compliant-gitlab-runner) image, based on
   `redhat/ubi9-micro`, use the `gitlab/gitlab-runner:ubi-fips` tags.
 - [Install trusted SSL server certificates](#install-trusted-ssl-server-certificates).
 
