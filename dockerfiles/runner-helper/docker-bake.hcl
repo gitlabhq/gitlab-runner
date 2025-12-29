@@ -141,21 +141,29 @@ target "concrete" {
 target "windows" {
   inherits = ["base"]
 
-  name = "windows-${replace(version, ":", "-")}"
+  name = "windows-${replace(item.version, ":", "-")}"
 
   matrix = {
-    version = ["nanoserver:ltsc2019", "nanoserver:ltsc2022", "servercore:ltsc2019", "servercore:ltsc2022"]
+    item = [
+      { version = "nanoserver:ltsc2019",       arch = "amd64" },
+      { version = "nanoserver:ltsc2022",       arch = "amd64" },
+      { version = "servercore:ltsc2019",       arch = "amd64" },
+      { version = "servercore:ltsc2022",       arch = "amd64" },
+      { version = "servercore:ltsc2025-arm64", arch = "arm64" }
+    ]
   }
 
-  platforms = ["windows/amd64"]
+  platforms = ["windows/${item.arch}"]
   args = {
-    BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner-helper:${RUNNER_IMAGES_VERSION}-${replace(version, ":", "-")}"
+    BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner-helper:${RUNNER_IMAGES_VERSION}-${replace(item.version, ":", "-")}"
     SRC_SUFFIX = ".exe"
     DST_SUFFIX = ".exe"
+    TARGETARCH = "amd64"  # Force override of TARGETARCH because arm64 runner-helper is not yet available; amd64 version of runner-helper works on arm64 Windows via emulation.
     DST_DIR    = "/Program Files/gitlab-runner-helper"
   }
 
-  output = ["type=oci,dest=./../../out/helper-images/windows-${replace(version, ":", "-")}-x86_64.tar,tar=true"]
+  # Note: "arm64" is already in the name of version so "arm64" is not appended to the name of the tar
+  output = ["type=oci,dest=./../../out/helper-images/windows-${replace(item.version, ":", "-")}${item.arch == "amd64" ? "-x86_64" : ""}.tar,tar=true"]
 }
 
 # Used for local testing, creates the gitlab-runner-helper:local image in the user's current docker context
