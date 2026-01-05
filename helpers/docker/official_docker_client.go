@@ -282,6 +282,12 @@ func (c *officialDockerClient) VolumeInspect(ctx context.Context, volumeID strin
 	return v, wrapError("VolumeInspect", err, started)
 }
 
+func (c *officialDockerClient) VolumeList(ctx context.Context, options volume.ListOptions) (volume.ListResponse, error) {
+	started := time.Now()
+	v, err := c.client.VolumeList(ctx, options)
+	return v, wrapError("VolumeList", err, started)
+}
+
 func (c *officialDockerClient) Info(ctx context.Context) (system.Info, error) {
 	started := time.Now()
 	info, err := c.client.Info(ctx)
