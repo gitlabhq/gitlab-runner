@@ -27,6 +27,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -1276,10 +1277,10 @@ func runDockerInDocker(version string) (id string, err error) {
 	cmd.Stderr = os.Stderr
 	data, err := cmd.Output()
 	if err != nil {
-		return
+		return id, err
 	}
 	id = strings.TrimSpace(string(data))
-	return
+	return id, err
 }
 
 func getDockerCredentials(id string) (credentials docker.Credentials, err error) {
@@ -1287,7 +1288,7 @@ func getDockerCredentials(id string) (credentials docker.Credentials, err error)
 	cmd.Stderr = os.Stderr
 	data, err := cmd.Output()
 	if err != nil {
-		return
+		return credentials, err
 	}
 
 	hostPort := strings.Split(strings.TrimSpace(string(data)), ":")
@@ -1298,7 +1299,7 @@ func getDockerCredentials(id string) (credentials docker.Credentials, err error)
 		hostPort[0] = "localhost"
 	}
 	credentials.Host = "tcp://" + hostPort[0] + ":" + hostPort[1]
-	return
+	return credentials, err
 }
 
 func waitForDocker(credentials docker.Credentials) error {
@@ -2951,6 +2952,82 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 			assert.NoError(t, err, "inspecting container %q", ctr.ID)
 
 			tc.validate(t, info)
+		})
+	}
+}
+
+func Test_CacheVolumeProtected(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	tests := map[string]struct {
+		protectedRef          bool
+		cacheKey              string
+		expectProtectedVolume bool
+	}{
+		"not protected ref, not protected cache key": {false, "blammo", false},
+		"not protected ref, non_protected cache key": {false, "blammo-non_protected", false},
+		"protected ref, not protected cache key":     {true, "blammo", true},
+		"not protected ref, protected cache key":     {false, "blammo-protected", true},
+		"protected ref, protected cache key":         {true, "blammo-protected", true},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			successfulBuild, err := common.GetRemoteSuccessfulBuild()
+			assert.NoError(t, err)
+
+			successfulBuild.GitInfo.Protected = &tt.protectedRef
+
+			successfulBuild.JobInfo.ProjectID = time.Now().Unix()
+			successfulBuild.Cache = common.Caches{
+				common.Cache{
+					Key:   tt.cacheKey,
+					Paths: common.ArtifactPaths{"cached/*"},
+				},
+			}
+
+			build := &common.Build{
+				JobResponse: successfulBuild,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "docker",
+						Docker: &common.DockerConfig{
+							Image:      common.TestAlpineImage,
+							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+							Volumes:    []string{"/cache"},
+						},
+						Cache: &common.CacheConfig{},
+					},
+				},
+			}
+
+			// Run a job. We only care that the cache volume is created.
+			_, err = buildtest.RunBuildReturningOutput(t, build)
+			require.NoError(t, err)
+
+			client, err := docker.New(docker.Credentials{})
+			require.NoError(t, err, "creating docker client")
+			defer client.Close()
+
+			// Inspect the created cache volume
+			vols, err := client.VolumeList(context.Background(), volume.ListOptions{
+				Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: build.ProjectRealUniqueName()}),
+			})
+			require.NoError(t, err)
+			assert.Len(t, vols.Volumes, 1)
+			vol := vols.Volumes[0]
+
+			assert.Equal(t, vol.Labels["com.gitlab.gitlab-runner.type"], "cache", "volume label 'com.gitlab.gitlab-runner.type' should be 'cache'")
+			assert.Equal(t, vol.Labels["com.gitlab.gitlab-runner.destination"], "/cache", "volume label 'com.gitlab.gitlab-runner.destination' should be '/cache'")
+
+			if tt.expectProtectedVolume {
+				assert.True(t, strings.HasSuffix(vol.Name, "-protected"), "volume name should end in '-protected'")
+				assert.Equal(t, vol.Labels["com.gitlab.gitlab-runner.protected"], "true", "volume label 'com.gitlab.gitlab-runner.protected' should be 'true'")
+			} else {
+				assert.False(t, strings.HasSuffix(vol.Name, "-protected"), "volume name should NOT end in '-protected'")
+				assert.Equal(t, vol.Labels["com.gitlab.gitlab-runner.protected"], "false", "volume label 'com.gitlab.gitlab-runner.protected' should be 'false'")
+			}
 		})
 	}
 }

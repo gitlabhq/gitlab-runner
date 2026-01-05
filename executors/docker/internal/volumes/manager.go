@@ -16,7 +16,7 @@ import (
 
 var ErrCacheVolumesDisabled = errors.New("cache volumes feature disabled")
 
-const protectedPostfix = "-protected"
+const protectedSuffix = "-protected"
 
 type Manager interface {
 	Create(ctx context.Context, volume string) error
@@ -276,12 +276,12 @@ func (m *manager) Binds() []string {
 	return m.volumeBindings
 }
 
-// withProtected returns a string with a specific postfix when the config states, we are running against a protected
-// ref. Main use is to build up volume names / mount sources, to keep cache volumes for protected & unprotected
-// separated.
+// withProtected returns a string with a specific suffix when the config states, we are running against a protected
+// ref, or when any of the cache keys includes the `-protected` suffix.
+// See https://gitlab.com/gitlab-org/gitlab/-/work_items/494478.
 func (m *manager) withProtected(s string) string {
 	if !m.config.Protected {
 		return s
 	}
-	return s + protectedPostfix
+	return s + protectedSuffix
 }

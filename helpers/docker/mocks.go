@@ -1900,6 +1900,72 @@ func (_c *MockClient_VolumeInspect_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// VolumeList provides a mock function for the type MockClient
+func (_mock *MockClient) VolumeList(ctx context.Context, options volume.ListOptions) (volume.ListResponse, error) {
+	ret := _mock.Called(ctx, options)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VolumeList")
+	}
+
+	var r0 volume.ListResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, volume.ListOptions) (volume.ListResponse, error)); ok {
+		return returnFunc(ctx, options)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, volume.ListOptions) volume.ListResponse); ok {
+		r0 = returnFunc(ctx, options)
+	} else {
+		r0 = ret.Get(0).(volume.ListResponse)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, volume.ListOptions) error); ok {
+		r1 = returnFunc(ctx, options)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockClient_VolumeList_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VolumeList'
+type MockClient_VolumeList_Call struct {
+	*mock.Call
+}
+
+// VolumeList is a helper method to define mock.On call
+//   - ctx context.Context
+//   - options volume.ListOptions
+func (_e *MockClient_Expecter) VolumeList(ctx interface{}, options interface{}) *MockClient_VolumeList_Call {
+	return &MockClient_VolumeList_Call{Call: _e.mock.On("VolumeList", ctx, options)}
+}
+
+func (_c *MockClient_VolumeList_Call) Run(run func(ctx context.Context, options volume.ListOptions)) *MockClient_VolumeList_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 volume.ListOptions
+		if args[1] != nil {
+			arg1 = args[1].(volume.ListOptions)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockClient_VolumeList_Call) Return(listResponse volume.ListResponse, err error) *MockClient_VolumeList_Call {
+	_c.Call.Return(listResponse, err)
+	return _c
+}
+
+func (_c *MockClient_VolumeList_Call) RunAndReturn(run func(ctx context.Context, options volume.ListOptions) (volume.ListResponse, error)) *MockClient_VolumeList_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // VolumeRemove provides a mock function for the type MockClient
 func (_mock *MockClient) VolumeRemove(ctx context.Context, volumeID string, force bool) error {
 	ret := _mock.Called(ctx, volumeID, force)
