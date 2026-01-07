@@ -64,12 +64,12 @@ var packageBuilds = packages.Builds{
 		{"DebIbm", []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64el"}, []string{"s390x", "ppc64le"}},
 	},
 	"rpm": {
-		{"Rpm64", []string{"amd64"}, []string{"amd64"}, []string{"x86_64"}},
+		{"Rpm64", []string{"amd64"}, []string{"x86_64"}, []string{"x86_64"}},
 		{"Rpm32", []string{"386"}, []string{"i686"}, []string{"i686"}},
-		{"RpmArm64", []string{"arm64", "arm64"}, []string{"aarch64", "arm64"}, []string{"aarch64", "arm64"}},
-		{"RpmArm32", []string{"arm", "arm"}, []string{"arm", "armhf"}, []string{"arm", "armhf"}},
+		{"RpmArm64", []string{"arm64"}, []string{"aarch64"}, []string{"aarch64"}},
+		{"RpmArm32", []string{"arm"}, []string{"armhfp"}, []string{"armhfp"}},
 		{"RpmRiscv64", []string{"riscv64"}, []string{"riscv64"}, []string{"riscv64"}},
-		{"RpmLoong64", []string{"loong64"}, []string{"loong64"}, []string{"loongarch64"}},
+		{"RpmLoong64", []string{"loong64"}, []string{"loongarch64"}, []string{"loongarch64"}},
 		{"RpmIbm", []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64le"}},
 	},
 }

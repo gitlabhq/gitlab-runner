@@ -73,14 +73,12 @@ out/helper-images/prebuilt-ubuntu-x86_64-pwsh.tar.xz out/release/helper-images/p
 out/helper-images/prebuilt-ubuntu-x86_64.tar.xz out/release/helper-images/prebuilt-ubuntu-x86_64.tar.xz
 out/rpm/gitlab-runner_aarch64.rpm out/release/rpm/gitlab-runner_aarch64.rpm
 out/rpm/gitlab-runner_x86_64-fips.rpm out/release/rpm/gitlab-runner_x86_64-fips.rpm
-out/rpm/gitlab-runner_amd64.rpm out/release/rpm/gitlab-runner_amd64.rpm
-out/rpm/gitlab-runner_arm.rpm out/release/rpm/gitlab-runner_arm.rpm
-out/rpm/gitlab-runner_arm64.rpm out/release/rpm/gitlab-runner_arm64.rpm
-out/rpm/gitlab-runner_armhf.rpm out/release/rpm/gitlab-runner_armhf.rpm
+out/rpm/gitlab-runner_x86_64.rpm out/release/rpm/gitlab-runner_x86_64.rpm
+out/rpm/gitlab-runner_armhfp.rpm out/release/rpm/gitlab-runner_armhfp.rpm
 out/rpm/gitlab-runner_i686.rpm out/release/rpm/gitlab-runner_i686.rpm
 out/rpm/gitlab-runner_ppc64le.rpm out/release/rpm/gitlab-runner_ppc64le.rpm
 out/rpm/gitlab-runner_riscv64.rpm out/release/rpm/gitlab-runner_riscv64.rpm
-out/rpm/gitlab-runner_loong64.rpm out/release/rpm/gitlab-runner_loong64.rpm
+out/rpm/gitlab-runner_loongarch64.rpm out/release/rpm/gitlab-runner_loongarch64.rpm
 out/rpm/gitlab-runner_s390x.rpm out/release/rpm/gitlab-runner_s390x.rpm
 out/rpm/gitlab-runner-helper-images.rpm out/release/rpm/gitlab-runner-helper-images.rpm
 out/zoneinfo.zip out/release/zoneinfo.zip
