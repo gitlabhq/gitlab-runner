@@ -61,18 +61,46 @@ To install GitLab Runner:
    {{< tabs >}}
 
    {{< tab title="Debian/Ubuntu/Mint" >}}
+ 
+   1. Download the repository configuration script:
 
-   ```shell
-   curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
-   ```
+      ```shell
+      curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" -o script.deb.sh 
+      ```
+
+   1. Inspect the script before running it:
+
+      ```shell
+      less script.deb.sh
+      ```
+
+   1. Run the script:
+
+      ```shell
+      sudo bash script.deb.sh
+      ```
 
    {{< /tab >}}
 
    {{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
 
-   ```shell
-   curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
-   ```
+   1. Download the repository configuration script:
+
+      ```shell
+      curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" -o script.rpm.sh
+      ```
+
+   1. Inspect the script before running it:
+
+      ```shell
+      less script.rpm.sh
+      ```
+
+   1. Run the script:
+
+      ```shell
+      sudo bash script.rpm.sh
+      ```
 
    {{< /tab >}}
 
