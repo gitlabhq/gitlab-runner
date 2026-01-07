@@ -72,7 +72,7 @@ out/helper-images/prebuilt-ubuntu-s390x.tar.xz out/release/helper-images/prebuil
 out/helper-images/prebuilt-ubuntu-x86_64-pwsh.tar.xz out/release/helper-images/prebuilt-ubuntu-x86_64-pwsh.tar.xz
 out/helper-images/prebuilt-ubuntu-x86_64.tar.xz out/release/helper-images/prebuilt-ubuntu-x86_64.tar.xz
 out/rpm/gitlab-runner_aarch64.rpm out/release/rpm/gitlab-runner_aarch64.rpm
-out/rpm/gitlab-runner_amd64-fips.rpm out/release/rpm/gitlab-runner_amd64-fips.rpm
+out/rpm/gitlab-runner_x86_64-fips.rpm out/release/rpm/gitlab-runner_x86_64-fips.rpm
 out/rpm/gitlab-runner_amd64.rpm out/release/rpm/gitlab-runner_amd64.rpm
 out/rpm/gitlab-runner_arm.rpm out/release/rpm/gitlab-runner_arm.rpm
 out/rpm/gitlab-runner_arm64.rpm out/release/rpm/gitlab-runner_arm64.rpm

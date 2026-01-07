@@ -30,7 +30,7 @@ func (p Package) Rpm(arch, packageArch string) error {
 
 // RpmFips builds rpm package for fips
 func (p Package) RpmFips() error {
-	return p.createPackage(packages.RpmFips, "amd64", "amd64")
+	return p.createPackage(packages.RpmFips, "amd64", "x86_64")
 }
 
 func (p Package) createPackage(pkgType packages.Type, arch, packageArch string) error {
