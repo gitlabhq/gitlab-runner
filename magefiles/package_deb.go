@@ -17,7 +17,7 @@ func (p Package) Deb64() error {
 // Deb32 builds deb package for 386
 func (p Package) Deb32() error {
 	var err error
-	err = p.Deb("386", "i686")
+	err = p.Deb("386", "i386")
 	if err != nil {
 		return err
 	}
@@ -25,14 +25,9 @@ func (p Package) Deb32() error {
 	return nil
 }
 
-// DebArm64 builds deb package for arm64 arm64
+// DebArm64 builds deb package for arm64
 func (p Package) DebArm64() error {
 	var err error
-	err = p.Deb("arm64", "aarch64")
-	if err != nil {
-		return err
-	}
-
 	err = p.Deb("arm64", "arm64")
 	if err != nil {
 		return err
@@ -41,14 +36,9 @@ func (p Package) DebArm64() error {
 	return nil
 }
 
-// DebArm32 builds deb package for arm arm
+// DebArm32 builds deb package for arm
 func (p Package) DebArm32() error {
 	var err error
-	err = p.Deb("arm", "armel")
-	if err != nil {
-		return err
-	}
-
 	err = p.Deb("arm", "armhf")
 	if err != nil {
 		return err

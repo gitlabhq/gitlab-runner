@@ -56,12 +56,12 @@ func (p Package) createPackage(pkgType packages.Type, arch, packageArch string) 
 var packageBuilds = packages.Builds{
 	"deb": {
 		{"Deb64", []string{"amd64"}, []string{"amd64"}, []string{"amd64"}},
-		{"Deb32", []string{"386"}, []string{"i686"}, []string{"i686"}},
-		{"DebArm64", []string{"arm64", "arm64"}, []string{"aarch64", "arm64"}, []string{"aarch64", "arm64"}},
-		{"DebArm32", []string{"arm", "arm"}, []string{"armel", "armhf"}, []string{"armel", "armhf"}},
+		{"Deb32", []string{"386"}, []string{"i386"}, []string{"i386"}},
+		{"DebArm64", []string{"arm64"}, []string{"arm64"}, []string{"arm64"}},
+		{"DebArm32", []string{"arm"}, []string{"armhf"}, []string{"armhf"}},
 		{"DebRiscv64", []string{"riscv64"}, []string{"riscv64"}, []string{"riscv64"}},
 		{"DebLoong64", []string{"loong64"}, []string{"loong64"}, []string{"loong64"}},
-		{"DebIbm", []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64el"}, []string{"s390x", "ppc64le"}},
+		{"DebIbm", []string{"s390x", "ppc64le"}, []string{"s390x", "ppc64el"}, []string{"s390x", "ppc64el"}},
 	},
 	"rpm": {
 		{"Rpm64", []string{"amd64"}, []string{"x86_64"}, []string{"x86_64"}},
