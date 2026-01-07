@@ -4129,6 +4129,7 @@ func TestSetupExternalConfigFile(t *testing.T) {
 
 		expectedRemoteURL  string
 		expectedInsteadOfs map[bool][][2]string
+		expectedError      bool
 	}{
 		{
 			name:              "default",
@@ -4213,6 +4214,12 @@ func TestSetupExternalConfigFile(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:              "with bad repo URL",
+			gitRepoURL:        "https://[invalid/",
+			expectedRemoteURL: "https://some.clone.url/.git",
+			expectedError:     true,
+		},
 	}
 
 	for _, gitURLsWithoutTokens := range []bool{true, false} {
@@ -4230,10 +4237,12 @@ func TestSetupExternalConfigFile(t *testing.T) {
 					build.JobRequestCorrelationID = "foobar"
 
 					repoURL, err := url.Parse(test.gitRepoURL)
-					require.NoError(t, err, "parsing repo URL")
-					projectPath, _ := strings.CutSuffix(repoURL.Path, ".git")
-					build.Variables.Set(common.JobVariable{Key: "CI_PROJECT_PATH", Value: projectPath})
 
+					if !test.expectedError {
+						require.NoError(t, err, "parsing repo URL")
+						projectPath, _ := strings.CutSuffix(repoURL.Path, ".git")
+						build.Variables.Set(common.JobVariable{Key: "CI_PROJECT_PATH", Value: projectPath})
+					}
 					if test.forceHttps {
 						build.Variables.Set(common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "true"})
 					}
@@ -4259,12 +4268,19 @@ func TestSetupExternalConfigFile(t *testing.T) {
 						require.NoError(t, err)
 						return url_helpers.OnlySchemeAndHost(u).String()
 					}(test.expectedRemoteURL)
-					expectSetupExternalGitConfig(w, extConfigFile, gitURLsWithoutTokens, expectedHost, test.expectedInsteadOfs[gitURLsWithoutTokens]...)
+					expectCredHelper := gitURLsWithoutTokens
+					if test.expectedError {
+						expectCredHelper = false
+					}
+					expectSetupExternalGitConfig(w, extConfigFile, expectCredHelper, expectedHost, test.expectedInsteadOfs[gitURLsWithoutTokens]...)
 
 					remoteURL, err := shell.setupExternalGitConfig(w, build, extConfigFile)
-					assert.NoError(t, err)
-
-					assert.Equal(t, test.expectedRemoteURL, remoteURL)
+					if test.expectedError {
+						assert.Error(t, err)
+					} else {
+						assert.NoError(t, err)
+						assert.Equal(t, test.expectedRemoteURL, remoteURL)
+					}
 				})
 			}
 		})

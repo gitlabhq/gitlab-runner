@@ -75,19 +75,25 @@ func (uh *authenticatedURLHelper) GetInsteadOfs() ([][2]string, error) {
 	// submodules may reference different projects on the same host.
 	// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39170
 	repoURL, err := url.Parse(uh.config.RepoURL)
-	if err == nil && isHTTP(repoURL) {
+	if err != nil {
+		return nil, err
+	}
+
+	if isHTTP(repoURL) {
 		// Create a base URL without the project path for submodule support
 		repoBaseURL := *repoURL
 		repoBaseURL.Path = ""
 		repoBaseURLWithAuth, err := uh.defaultAuthWithToken(&repoBaseURL)
-		if err == nil {
-			repoBaseURLWithoutAuth := repoBaseURL
-			repoBaseURLWithoutAuth.User = nil
-			insteadOfs = append(insteadOfs, [2]string{
-				renderTrimmed(repoBaseURLWithAuth),
-				renderTrimmed(&repoBaseURLWithoutAuth),
-			})
+		if err != nil {
+			return nil, err
 		}
+
+		repoBaseURLWithoutAuth := repoBaseURL
+		repoBaseURLWithoutAuth.User = nil
+		insteadOfs = append(insteadOfs, [2]string{
+			renderTrimmed(repoBaseURLWithAuth),
+			renderTrimmed(&repoBaseURLWithoutAuth),
+		})
 	}
 
 	return insteadOfs, nil
