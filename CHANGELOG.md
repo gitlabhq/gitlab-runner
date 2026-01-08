@@ -1,7 +1,8 @@
-## v18.7.1 (2025-12-23)
+## v18.7.1 (2026-01-08)
 
 ### Bug fixes
 
+- Support Git submodules with different hosts via RepoURL insteadOf [!6025](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6025)
 - Add IPv6 address when emulating links functionality [!6027](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6027)
 
 ## v18.7.0 (2025-12-23)
