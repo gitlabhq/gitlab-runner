@@ -66,7 +66,37 @@ func (uh *authenticatedURLHelper) GetInsteadOfs() ([][2]string, error) {
 		{renderTrimmed(baseURLWithAuth), renderTrimmed(baseURL)},
 	}
 
-	return append(insteadOfs, uh.getInsteadOfs(renderTrimmed(baseURLWithAuth))...), nil
+	insteadOfs = append(insteadOfs, uh.getInsteadOfs(renderTrimmed(baseURLWithAuth))...)
+
+	// Always include the RepoURL base (without project path) in insteadOf config to support Git submodules.
+	// The RepoURL comes from the GitInfo returned by the API and may differ from the CloneURL configured
+	// in the runner. For submodules to clone properly, we need to ensure that the API-provided URL can be
+	// rewritten with credentials. We strip the project path from RepoURL to get just the base URL, since
+	// submodules may reference different projects on the same host.
+	// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39170
+	repoURL, err := url.Parse(uh.config.RepoURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if isHTTP(repoURL) {
+		// Create a base URL without the project path for submodule support
+		repoBaseURL := *repoURL
+		repoBaseURL.Path = ""
+		repoBaseURLWithAuth, err := uh.defaultAuthWithToken(&repoBaseURL)
+		if err != nil {
+			return nil, err
+		}
+
+		repoBaseURLWithoutAuth := repoBaseURL
+		repoBaseURLWithoutAuth.User = nil
+		insteadOfs = append(insteadOfs, [2]string{
+			renderTrimmed(repoBaseURLWithAuth),
+			renderTrimmed(&repoBaseURLWithoutAuth),
+		})
+	}
+
+	return insteadOfs, nil
 }
 
 // defaultAuth ensures the URL has appropriate auth data set.
