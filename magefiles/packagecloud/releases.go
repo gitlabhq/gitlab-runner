@@ -77,25 +77,25 @@ var (
 		"debian":    "bullseye",
 		"ubuntu":    "xenial",
 		"raspbian":  "bullseye",
-		"linuxmint": "ulyana",
-		"fedora":    "40",
-		"ol":        "6",
+		"linuxmint": "vanessa",
+		"fedora":    "42",
+		"ol":        "7",
 		"el":        "7",
 		"amazon":    "2",
 		"sles":      "12.5",
-		"opensuse":  "15.0",
+		"opensuse":  "15.6",
 	}
 
 	skipReleases = map[string][]string{
 		"debian":    {},
-		"ubuntu":    {"hirsute", "groovy", "eoan", "disco", "cosmic", "artful", "zesty", "yakkety", "impish", "kinetic", "lunar", "mantic"},
+		"ubuntu":    {"hirsute", "groovy", "eoan", "disco", "cosmic", "artful", "zesty", "yakkety", "impish", "kinetic", "lunar", "mantic", "oracular"},
 		"raspbian":  {},
 		"linuxmint": {},
 		"fedora":    {},
 		"ol":        {},
 		"el":        {},
 		"amazon":    {},
-		"sles":      {"15.0", "15.1"},
+		"sles":      {"15.0", "15.1", "15.2", "15.3"},
 		"opensuse":  {},
 	}
 )
