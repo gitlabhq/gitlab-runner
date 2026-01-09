@@ -31,16 +31,16 @@ func Open(dir string) (*Store, error) {
 	sum := sha256.Sum256([]byte(pathname))
 	keyPath := filepath.Join(dir, "runner"+hex.EncodeToString(sum[:]))
 
-	_ = os.MkdirAll(filepath.Dir(pathname), 0o750)
+	_ = os.MkdirAll(filepath.Dir(pathname), 0o755)
 	_, err := os.Stat(pathname)
 	if err != nil {
 		// store file doesn't exist, so re-generate key
-		if err := os.WriteFile(keyPath, generateKey(), 0o600); err != nil {
+		if err := os.WriteFile(keyPath, generateKey(), 0o644); err != nil {
 			return nil, fmt.Errorf("writing key: %w", err)
 		}
 	}
 
-	f, err := os.OpenFile(pathname, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0640)
+	f, err := openFile(pathname)
 	if err != nil {
 		return nil, fmt.Errorf("opening store file: %w", err)
 	}
