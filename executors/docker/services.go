@@ -158,6 +158,9 @@ func (e *executor) createFromServiceDefinition(
 			e.BuildLogger.Debugln("Created service", serviceDefinition.Name, "as", container.ID)
 			e.services = append(e.services, container)
 			e.temporary = append(e.temporary, container.ID)
+
+			// add 12-character container ID as hostname
+			linksMap[container.ID[:min(12, len(container.ID))]] = container
 		}
 		linksMap[linkName] = container
 	}
@@ -302,6 +305,12 @@ func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[strin
 		aliases := []string{}
 
 		for alias, container := range linksMap {
+			if alias == container.ID[:min(12, len(container.ID))] {
+				// skip if the alias is the container ID:
+				// we're only interested in aliases the user provided,
+				// not the container ID docker provides.
+				continue
+			}
 			if container == service {
 				aliases = append(aliases, alias)
 			}
