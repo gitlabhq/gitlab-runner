@@ -6,7 +6,7 @@ package main
 // Rpm64 builds rpm package for amd64
 func (p Package) Rpm64() error {
 	var err error
-	err = p.Rpm("amd64", "amd64")
+	err = p.Rpm("amd64", "x86_64")
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (p Package) Rpm32() error {
 	return nil
 }
 
-// RpmArm64 builds rpm package for arm64 arm64
+// RpmArm64 builds rpm package for arm64
 func (p Package) RpmArm64() error {
 	var err error
 	err = p.Rpm("arm64", "aarch64")
@@ -33,23 +33,13 @@ func (p Package) RpmArm64() error {
 		return err
 	}
 
-	err = p.Rpm("arm64", "arm64")
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
-// RpmArm32 builds rpm package for arm arm
+// RpmArm32 builds rpm package for arm
 func (p Package) RpmArm32() error {
 	var err error
-	err = p.Rpm("arm", "arm")
-	if err != nil {
-		return err
-	}
-
-	err = p.Rpm("arm", "armhf")
+	err = p.Rpm("arm", "armhfp")
 	if err != nil {
 		return err
 	}
@@ -71,7 +61,7 @@ func (p Package) RpmRiscv64() error {
 // RpmLoong64 builds rpm package for loong64
 func (p Package) RpmLoong64() error {
 	var err error
-	err = p.Rpm("loong64", "loong64")
+	err = p.Rpm("loong64", "loongarch64")
 	if err != nil {
 		return err
 	}
