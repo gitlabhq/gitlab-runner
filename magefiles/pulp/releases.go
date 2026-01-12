@@ -48,14 +48,13 @@ var (
 )
 
 func Releases(dist, branch string) ([]string, error) {
-	if !slices.Contains(dists, dist) {
-		return nil, fmt.Errorf("unsupported package type %q", dist)
+	if err := validateInputs(dist, branch); err != nil {
+		return nil, err
 	}
+	return releases(dist, branch)
+}
 
-	if !slices.Contains(branches, branch) {
-		return nil, fmt.Errorf("unsupported branch %q", branch)
-	}
-
+func releases(dist, branch string) ([]string, error) {
 	tokenType, tokenValue, err := getToken()
 	if err != nil {
 		return nil, err
@@ -67,6 +66,17 @@ func Releases(dist, branch string) ([]string, error) {
 	}
 
 	return releasesForDistBranch(dist, branch, config), nil
+}
+
+func validateInputs(pkgType, branch string) error {
+	if !slices.Contains(dists, pkgType) {
+		return fmt.Errorf("unsupported package type %q", pkgType)
+	}
+
+	if !slices.Contains(branches, branch) {
+		return fmt.Errorf("unsupported branch %q", branch)
+	}
+	return nil
 }
 
 func firstEnv(envs ...string) (string, string, bool) {
