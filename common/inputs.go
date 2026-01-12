@@ -9,14 +9,15 @@ import (
 	"slices"
 
 	"gitlab.com/gitlab-org/moa"
-	"gitlab.com/gitlab-org/step-runner/pkg/api/expression"
-
+	"gitlab.com/gitlab-org/moa/ast"
 	"gitlab.com/gitlab-org/moa/value"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/expression"
 )
 
 type JobInputs struct {
-	inputs    []expression.Input
-	evaluator *expression.Evaluator
+	inputs           []expression.Input
+	evaluator        *expression.Evaluator
+	metricsCollector *JobInputsMetricsCollector
 }
 
 type JobInput struct {
@@ -75,7 +76,24 @@ func (t JobInputContentTypeName) MoaKind() (value.Kind, error) {
 
 var (
 	ErrSensitiveUnsupported = errors.New("sensitive inputs are unsupported in interpolations yet")
+	// errInterpolationFound defines a sentinel error for when an interpolation was detected
+	errInterpolationFound = errors.New("interpolation found")
 )
+
+// interpolationDetector is a visitor that detects if the AST contains an Interpolation
+// The visitor returns a sentinel error if as soon as it encounters the first Template.
+type interpolationDetector struct{}
+
+func (v *interpolationDetector) Enter(expr ast.Expr) (ast.Visitor, error) {
+	if _, ok := expr.(*ast.Template); ok {
+		return nil, errInterpolationFound
+	}
+	return v, nil
+}
+
+func (v *interpolationDetector) Exit(expr ast.Expr) (ast.Expr, error) {
+	return expr, nil
+}
 
 func (i *JobInput) UnmarshalJSON(data []byte) error {
 	type alias JobInput
@@ -212,6 +230,11 @@ func (i *JobInputs) WithMarks(marks uint16) value.Mapper {
 	return i
 }
 
+// SetMetricsCollector injects the metrics collector
+func (i *JobInputs) SetMetricsCollector(collector *JobInputsMetricsCollector) {
+	i.metricsCollector = collector
+}
+
 func (i *JobInputs) Expand(text string) (string, error) {
 	if i == nil || i.evaluator == nil {
 		return text, nil
@@ -219,19 +242,29 @@ func (i *JobInputs) Expand(text string) (string, error) {
 
 	expr, err := moa.ParseTemplate(text)
 	if err != nil {
+		i.metricsCollector.recordParseError()
 		return "", &InputInterpolationError{err: err}
 	}
 
 	result, err := i.evaluator.Eval(text, expr)
 	if err != nil {
+		i.metricsCollector.recordEvalError()
 		return "", &InputInterpolationError{err: err}
 	}
 
 	if result.HasMarks(expression.Sensitive) {
+		i.metricsCollector.recordSensitiveUnsupportedError()
 		return "", ErrSensitiveUnsupported
 	}
 
-	return result.String(), nil
+	resultString := result.String()
+
+	if _, walkErr := expr.Walk(&interpolationDetector{}); errors.Is(walkErr, errInterpolationFound) {
+		// Only count as an interpolation if at least one interpolation was actually present in the AST
+		i.metricsCollector.recordSuccess()
+	}
+
+	return resultString, nil
 }
 
 func ExpandInputs(inputs *JobInputs, v any) error {

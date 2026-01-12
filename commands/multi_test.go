@@ -40,19 +40,6 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		},
 	}
 
-	jobData := common.JobResponse{
-		ID: 1,
-		Steps: []common.Step{
-			{
-				Name:         "sleep",
-				Script:       common.StepScript{"sleep 10"},
-				Timeout:      15,
-				When:         "",
-				AllowFailure: false,
-			},
-		},
-	}
-
 	mJobTrace := common.NewMockLightJobTrace(t)
 	mJobTrace.On("SetFailuresCollector", mock.Anything)
 	mJobTrace.On("IsStdout").Return(false)
@@ -62,7 +49,20 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	mJobTrace.On("Success").Return(nil)
 
 	mNetwork := common.NewMockNetwork(t)
-	mNetwork.On("RequestJob", mock.Anything, mock.Anything, mock.Anything).Return(&jobData, true)
+	mNetwork.On("RequestJob", mock.Anything, mock.Anything, mock.Anything).Return(func(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo) (*common.JobResponse, bool) {
+		return &common.JobResponse{
+			ID: 1,
+			Steps: []common.Step{
+				{
+					Name:         "sleep",
+					Script:       common.StepScript{"sleep 10"},
+					Timeout:      15,
+					When:         "",
+					AllowFailure: false,
+				},
+			},
+		}, true
+	})
 	mNetwork.On("UpdateJob", mock.Anything, mock.Anything, mock.Anything).Return(common.UpdateJobResult{State: common.UpdateSucceeded})
 	mNetwork.On("ProcessJob", mock.Anything, mock.Anything).Return(mJobTrace, nil)
 

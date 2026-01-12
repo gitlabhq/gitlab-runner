@@ -110,8 +110,9 @@ type RunCommand struct {
 
 	prometheusLogHook prometheus_helper.LogHook
 
-	failuresCollector    *prometheus_helper.FailuresCollector
-	apiRequestsCollector prometheus.Collector
+	failuresCollector      *prometheus_helper.FailuresCollector
+	apiRequestsCollector   prometheus.Collector
+	inputsMetricsCollector *common.JobInputsMetricsCollector
 
 	sessionServer *session.Server
 
@@ -154,15 +155,16 @@ type RunCommand struct {
 
 func NewRunCommand(n common.Network, apiRequestsCollector prometheus.Collector) cli.Command {
 	cmd := &RunCommand{
-		ServiceName:          defaultServiceName,
-		network:              n,
-		apiRequestsCollector: apiRequestsCollector,
-		prometheusLogHook:    prometheus_helper.NewLogHook(),
-		failuresCollector:    prometheus_helper.NewFailuresCollector(),
-		healthHelper:         newHealthHelper(),
-		buildsHelper:         newBuildsHelper(),
-		runAt:                runAt,
-		reloadConfigInterval: common.ReloadConfigInterval,
+		ServiceName:            defaultServiceName,
+		network:                n,
+		apiRequestsCollector:   apiRequestsCollector,
+		inputsMetricsCollector: common.NewJobInputsMetricsCollector(),
+		prometheusLogHook:      prometheus_helper.NewLogHook(),
+		failuresCollector:      prometheus_helper.NewFailuresCollector(),
+		healthHelper:           newHealthHelper(),
+		buildsHelper:           newBuildsHelper(),
+		runAt:                  runAt,
+		reloadConfigInterval:   common.ReloadConfigInterval,
 	}
 
 	return common.NewCommand("run", "run multi runner service", cmd)
@@ -670,6 +672,8 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	// Metrics about configuration file accessing
 	registry.MustRegister(mr.configfile.AccessCollector())
 	registry.MustRegister(mr)
+	// Metrics about job inputs interpolation
+	registry.MustRegister(mr.inputsMetricsCollector)
 	// Metrics about API connections
 	registry.MustRegister(mr.apiRequestsCollector)
 	// Metrics about jobs failures
@@ -1084,6 +1088,9 @@ func (mr *RunCommand) requestJob(
 	if jobData == nil {
 		return nil, nil, nil
 	}
+
+	// Inject metrics collector into JobInputs
+	jobData.Inputs.SetMetricsCollector(mr.inputsMetricsCollector)
 
 	// Make sure to always close output
 	jobCredentials := &common.JobCredentials{
