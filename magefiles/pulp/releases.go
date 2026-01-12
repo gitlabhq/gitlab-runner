@@ -20,6 +20,7 @@ const (
 type (
 	pulpRepository struct {
 		Path string `yaml:"path"`
+		EOL  bool   `yaml:"eol"`
 	}
 
 	pulpRepositories struct {
@@ -108,6 +109,9 @@ func releasesForDistBranch(dist, branch string, config *pulpConfig) []string {
 	case "rpm":
 		repos = release.Repositories.Rpm
 	}
+
+	// exclude releases that have reached EOL.
+	repos = lo.Filter(repos, func(repo pulpRepository, _ int) bool { return !repo.EOL })
 
 	return lo.Map(repos, func(repo pulpRepository, _ int) string {
 		return repo.Path
