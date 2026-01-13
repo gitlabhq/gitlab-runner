@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -14,7 +15,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/router/internal/wstunnel"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -26,6 +29,11 @@ const (
 	protocolGRPCS = "grpcs"
 	protocolWS    = "ws"
 	protocolWSS   = "wss"
+
+	webSocketMaxMessageSize = 10 * 1024 * 1024 // matches kas limit
+	// tunnelWebSocketProtocol is a subprotocol that allows client and server to recognize each other.
+	// See https://datatracker.ietf.org/doc/html/rfc6455#section-11.3.4
+	tunnelWebSocketProtocol = "ws-tunnel"
 )
 
 type ClientConn interface {
@@ -195,6 +203,13 @@ func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid kas address: %w", err)
 	}
+	var tlsConfig *tls.Config
+	if u.Scheme == protocolWSS || u.Scheme == protocolGRPCS {
+		tlsConfig, err = maybeConstructTLSConfig(target.TLSCAFile, target.TLSCertFile, target.TLSKeyFile)
+		if err != nil {
+			return nil, err
+		}
+	}
 	var opts []grpc.DialOption
 	var addressToDial string
 	// "grpcs" is the only scheme where encryption is done by gRPC.
@@ -202,7 +217,26 @@ func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 	secure := u.Scheme == protocolGRPCS
 	switch u.Scheme {
 	case protocolWS, protocolWSS:
-		// TODO
+		// See https://github.com/grpc/grpc/blob/master/doc/naming.md.
+		addressToDial = "passthrough:" + target.URL
+		dialer := net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}
+		opts = append(opts, grpc.WithContextDialer(wstunnel.DialerForGRPC(
+			webSocketMaxMessageSize,
+			websocket.Dialer{
+				NetDialContext:   dialer.DialContext,
+				Proxy:            http.ProxyFromEnvironment,
+				TLSClientConfig:  tlsConfig,
+				HandshakeTimeout: 10 * time.Second,
+				Subprotocols:     []string{tunnelWebSocketProtocol},
+			},
+			http.Header{
+				"Authorization": []string{"Bearer " + target.Token},
+				"User-Agent":    []string{f.userAgent},
+			},
+		)))
 	case protocolGRPC:
 		// See https://github.com/grpc/grpc/blob/master/doc/naming.md.
 		addressToDial = "dns:" + hostWithPort(u)
@@ -212,10 +246,6 @@ func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 			grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
 		)
 	case protocolGRPCS:
-		tlsConfig, err := maybeConstructTLSConfig(target.TLSCAFile, target.TLSCertFile, target.TLSKeyFile)
-		if err != nil {
-			return nil, err
-		}
 		// See https://github.com/grpc/grpc/blob/master/doc/naming.md.
 		addressToDial = "dns:" + hostWithPort(u)
 		opts = append(opts,
