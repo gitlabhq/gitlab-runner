@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-// Must be compatible with https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent/-/blob/master/internal/module/runner/rpc/rpc.proto
+// Must be compatible with https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent/-/blob/master/internal/module/job_router/rpc/rpc.proto
 
-package gitlab.agent.runner.rpc; // must match the package in the agent project
+package gitlab.agent.job_router.rpc; // must match the package in the agent project
 
 option go_package = "gitlab.com/gitlab-org/gitlab-runner/router/rpc";
 

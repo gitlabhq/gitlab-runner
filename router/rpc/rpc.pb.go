@@ -4,7 +4,7 @@
 // 	protoc        v5.28.2
 // source: rpc.proto
 
-// Must be compatible with https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent/-/blob/master/internal/module/runner/rpc/rpc.proto
+// Must be compatible with https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent/-/blob/master/internal/module/job_router/rpc/rpc.proto
 
 package rpc
 
@@ -119,14 +119,14 @@ var File_rpc_proto protoreflect.FileDescriptor
 
 const file_rpc_proto_rawDesc = "" +
 	"\n" +
-	"\trpc.proto\x12\x17gitlab.agent.runner.rpc\"0\n" +
+	"\trpc.proto\x12\x1bgitlab.agent.job_router.rpc\"0\n" +
 	"\rGetJobRequest\x12\x1f\n" +
 	"\vjob_request\x18\x01 \x01(\fR\n" +
 	"jobRequest\"3\n" +
 	"\x0eGetJobResponse\x12!\n" +
-	"\fjob_response\x18\x01 \x01(\fR\vjobResponse2h\n" +
-	"\tJobRouter\x12[\n" +
-	"\x06GetJob\x12&.gitlab.agent.runner.rpc.GetJobRequest\x1a'.gitlab.agent.runner.rpc.GetJobResponse\"\x00B0Z.gitlab.com/gitlab-org/gitlab-runner/router/rpcb\x06proto3"
+	"\fjob_response\x18\x01 \x01(\fR\vjobResponse2p\n" +
+	"\tJobRouter\x12c\n" +
+	"\x06GetJob\x12*.gitlab.agent.job_router.rpc.GetJobRequest\x1a+.gitlab.agent.job_router.rpc.GetJobResponse\"\x00B0Z.gitlab.com/gitlab-org/gitlab-runner/router/rpcb\x06proto3"
 
 var (
 	file_rpc_proto_rawDescOnce sync.Once
@@ -142,12 +142,12 @@ func file_rpc_proto_rawDescGZIP() []byte {
 
 var file_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_rpc_proto_goTypes = []any{
-	(*GetJobRequest)(nil),  // 0: gitlab.agent.runner.rpc.GetJobRequest
-	(*GetJobResponse)(nil), // 1: gitlab.agent.runner.rpc.GetJobResponse
+	(*GetJobRequest)(nil),  // 0: gitlab.agent.job_router.rpc.GetJobRequest
+	(*GetJobResponse)(nil), // 1: gitlab.agent.job_router.rpc.GetJobResponse
 }
 var file_rpc_proto_depIdxs = []int32{
-	0, // 0: gitlab.agent.runner.rpc.JobRouter.GetJob:input_type -> gitlab.agent.runner.rpc.GetJobRequest
-	1, // 1: gitlab.agent.runner.rpc.JobRouter.GetJob:output_type -> gitlab.agent.runner.rpc.GetJobResponse
+	0, // 0: gitlab.agent.job_router.rpc.JobRouter.GetJob:input_type -> gitlab.agent.job_router.rpc.GetJobRequest
+	1, // 1: gitlab.agent.job_router.rpc.JobRouter.GetJob:output_type -> gitlab.agent.job_router.rpc.GetJobResponse
 	1, // [1:2] is the sub-list for method output_type
 	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
