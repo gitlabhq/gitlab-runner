@@ -4,7 +4,7 @@
 // - protoc             v5.28.2
 // source: rpc.proto
 
-// Must be compatible with https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent/-/blob/master/internal/module/runner/rpc/rpc.proto
+// Must be compatible with https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent/-/blob/master/internal/module/job_router/rpc/rpc.proto
 
 package rpc
 
@@ -21,7 +21,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	JobRouter_GetJob_FullMethodName = "/gitlab.agent.runner.rpc.JobRouter/GetJob"
+	JobRouter_GetJob_FullMethodName = "/gitlab.agent.job_router.rpc.JobRouter/GetJob"
 )
 
 // JobRouterClient is the client API for JobRouter service.
@@ -112,7 +112,7 @@ func _JobRouter_GetJob_Handler(srv interface{}, ctx context.Context, dec func(in
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var JobRouter_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "gitlab.agent.runner.rpc.JobRouter",
+	ServiceName: "gitlab.agent.job_router.rpc.JobRouter",
 	HandlerType: (*JobRouterServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
