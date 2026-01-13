@@ -142,6 +142,7 @@ trap "exit $SYSTEM_FAILURE_EXIT_CODE" ERR
 qemu-img create -f qcow2 -b "$BASE_VM_IMAGE" "$VM_IMAGE" -F qcow2
 
 # Install the VM
+# To boot VM in UEFI mode, add: --boot uefi
 virt-install \
     --name "$VM_ID" \
     --os-variant debian11 \
@@ -155,7 +156,7 @@ virt-install \
 
 # Wait for VM to get IP
 echo 'Waiting for VM to get IP'
-for i in $(seq 1 30); do
+for i in $(seq 1 300); do
     VM_IP=$(_get_vm_ip)
 
     if [ -n "$VM_IP" ]; then
@@ -163,8 +164,8 @@ for i in $(seq 1 30); do
         break
     fi
 
-    if [ "$i" == "30" ]; then
-        echo 'Waited 30 seconds for VM to start, exiting...'
+    if [ "$i" == "300" ]; then
+        echo 'Waited 300 seconds for VM to start, exiting...'
         # Inform GitLab Runner that this is a system failure, so it
         # should be retried.
         exit "$SYSTEM_FAILURE_EXIT_CODE"
@@ -175,13 +176,13 @@ done
 
 # Wait for ssh to become available
 echo "Waiting for sshd to be available"
-for i in $(seq 1 30); do
+for i in $(seq 1 300); do
     if ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no gitlab-runner@$VM_IP >/dev/null 2>/dev/null; then
         break
     fi
 
-    if [ "$i" == "30" ]; then
-        echo 'Waited 30 seconds for sshd to start, exiting...'
+    if [ "$i" == "300" ]; then
+        echo 'Waited 300 seconds for sshd to start, exiting...'
         # Inform GitLab Runner that this is a system failure, so it
         # should be retried.
         exit "$SYSTEM_FAILURE_EXIT_CODE"
@@ -228,11 +229,20 @@ source ${currentDir}/base.sh # Get variables from base script.
 
 set -eo pipefail
 
-# Destroy VM.
-virsh shutdown "$VM_ID"
+# Destroy VM and wait 300 second.
+for i in $(seq 1 300); do
+  virsh destroy "$VM_ID" >/dev/null 2>&1
+  if [[ "$(virsh domstate "$VM_ID" 2>/dev/null | tr '[:upper:]' '[:lower:]')" =~ shut\ off|destroyed|^$ ]]; then
+      break
+  fi
+  if [ $i -eq 300 ]; then
+     exit "$SYSTEM_FAILURE_EXIT_CODE"
+  fi
+  sleep 1
+done
 
 # Undefine VM.
-virsh undefine "$VM_ID"
+virsh undefine "$VM_ID" || virsh undefine "$VM_ID" --nvram
 
 # Delete VM disk.
 if [ -f "$VM_IMAGE" ]; then
