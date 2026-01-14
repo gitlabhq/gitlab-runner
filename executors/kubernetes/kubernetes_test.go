@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kuberuntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	testclient "k8s.io/client-go/kubernetes/fake"
@@ -9129,4 +9130,238 @@ func TestGetSecurityContextWithUidGid(t *testing.T) {
 			}
 		})
 	}
+}
+
+type podWarningEventsScenario struct {
+	logs     string
+	executor *executor
+	logged   []*api.Event
+	ignored  []*api.Event
+}
+
+func preparePodWarningEventsScenario(t *testing.T) podWarningEventsScenario {
+	t.Helper()
+
+	newEvent := func(uid, message string, ts time.Time, count int32) *api.Event {
+		return &api.Event{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:               types.UID(uid),
+				Name:              uid,
+				Namespace:         "default",
+				CreationTimestamp: metav1.NewTime(ts),
+			},
+			InvolvedObject: api.ObjectReference{Name: "test-pod"},
+			Type:           "Warning",
+			Message:        message,
+			LastTimestamp:  metav1.NewTime(ts),
+			Count:          count,
+		}
+	}
+
+	now := time.Now()
+	eventOld := newEvent("old", "should skip old but its not in the cache", now.Add(-25*time.Minute), 1)
+	eventSeen := newEvent("seen", "already seen which means it is in the cache", now.Add(-10*time.Minute), 1)
+	dupFirst := newEvent("dup", "duplicate allowed", now.Add(-6*time.Minute), 1)
+	firstNew := newEvent("new-1", "first new", now.Add(-5*time.Minute), 1)
+	dupAggregated := newEvent("dup", "duplicate aggregated update should also log", now.Add(-4*time.Minute), 2)
+	secondNew := newEvent("new-2", "second new", now.Add(-3*time.Minute), 1)
+
+	pageOne := &api.EventList{
+		Items: []api.Event{*eventOld, *eventSeen, *dupFirst, *dupAggregated},
+		ListMeta: metav1.ListMeta{
+			Continue: "page-2",
+		},
+	}
+	pageTwo := &api.EventList{Items: []api.Event{*firstNew, *secondNew}}
+
+	fakeClient := testclient.NewSimpleClientset()
+	listCall := 0
+	fakeClient.Fake.PrependReactor("list", "events", func(action k8stesting.Action) (bool, kuberuntime.Object, error) {
+		listCall++
+		switch listCall {
+		case 1:
+			return true, pageOne, nil
+		case 2:
+			return true, pageTwo, nil
+		default:
+			return true, &api.EventList{}, nil
+		}
+	})
+
+	executor := newExecutor()
+	executor.options = &kubernetesOptions{}
+	executor.pod = &api.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pod",
+			Namespace: "default",
+		},
+	}
+	executor.kubeClient = fakeClient
+
+	var logOutput strings.Builder
+	buildTrace := FakeBuildTrace{
+		testWriter: testWriter{
+			call: func(b []byte) (int, error) {
+				logOutput.Write(b)
+				return len(b), nil
+			},
+		},
+	}
+	executor.BuildLogger = buildlogger.New(buildTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+
+	executor.initPodEventState()
+	executor.podEventState.lastFetched = now.Add(-15 * time.Minute)
+	executor.podEventState.seen.Add(eventKey(eventSeen), eventLastOccurredTimestamp(eventSeen))
+
+	executor.logPodWarningEvents(t.Context(), "Warning")
+
+	return podWarningEventsScenario{
+		logs:     logOutput.String(),
+		executor: executor,
+		logged: []*api.Event{
+			dupFirst,
+			firstNew,
+			dupAggregated,
+			secondNew,
+		},
+		ignored: []*api.Event{
+			eventOld,
+			eventSeen,
+		},
+	}
+}
+
+func TestExecutor_logPodWarningEvents(t *testing.T) {
+	t.Run("pod state is not initialized when no pod is present", func(t *testing.T) {
+		executor := newExecutor()
+
+		executor.logPodWarningEvents(t.Context(), "Warning")
+		assert.Nil(t, executor.podEventState)
+	})
+
+	t.Run("initializes pod event state when missing", func(t *testing.T) {
+		fakeClient := testclient.NewSimpleClientset()
+
+		executor := newExecutor()
+		executor.options = &kubernetesOptions{}
+		executor.pod = &api.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-pod",
+				Namespace: "default",
+			},
+		}
+		executor.kubeClient = fakeClient
+
+		var logOutput strings.Builder
+		buildTrace := FakeBuildTrace{
+			testWriter: testWriter{
+				call: func(b []byte) (int, error) {
+					logOutput.Write(b)
+					return len(b), nil
+				},
+			},
+		}
+
+		executor.BuildLogger = buildlogger.New(buildTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+
+		executor.logPodWarningEvents(t.Context(), "Warning")
+
+		assert.NotNil(t, executor.podEventState)
+		assert.Empty(t, logOutput.String())
+	})
+
+	t.Run("filters paginated events and updates state", func(t *testing.T) {
+		scenario := preparePodWarningEventsScenario(t)
+
+		t.Run("logs only relevant warning events", func(t *testing.T) {
+			logs := scenario.logs
+			for _, ev := range scenario.logged {
+				assert.Contains(t, logs, fmt.Sprintf("Event retrieved from the cluster: %s", ev.Message))
+			}
+		})
+
+		t.Run("logs events in chronological order", func(t *testing.T) {
+			logs := scenario.logs
+			previous := -1
+			for _, ev := range scenario.logged {
+				idx := strings.Index(logs, ev.Message)
+				require.NotEqual(t, -1, idx)
+				assert.Greater(t, idx, previous, "event %s logged out of order", ev.Message)
+				previous = idx
+			}
+		})
+
+		t.Run("does not log old and already logged events", func(t *testing.T) {
+			logs := scenario.logs
+			for _, ev := range scenario.ignored {
+				assert.NotContains(t, logs, ev.Message)
+			}
+		})
+
+		t.Run("updates executor pod event state", func(t *testing.T) {
+			for _, ev := range scenario.logged {
+				assert.True(t, scenario.executor.podEventState.seen.Contains(eventKey(ev)), "event %s not marked as seen", ev.Message)
+			}
+			lastLogged := scenario.logged[len(scenario.logged)-1]
+			assert.Equal(t, eventLastOccurredTimestamp(lastLogged), scenario.executor.podEventState.lastFetched)
+		})
+	})
+}
+
+func TestExecutor_logNewPodEvents(t *testing.T) {
+	t.Run("sorts events and updates state", func(t *testing.T) {
+		executor := newExecutor()
+
+		var logOutput strings.Builder
+		buildTrace := FakeBuildTrace{
+			testWriter: testWriter{
+				call: func(b []byte) (int, error) {
+					logOutput.Write(b)
+					return len(b), nil
+				},
+			},
+		}
+
+		executor.BuildLogger = buildlogger.New(buildTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+		executor.initPodEventState()
+
+		now := time.Now()
+		earlier := &api.Event{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:       "early",
+				Name:      "early",
+				Namespace: "default",
+			},
+			InvolvedObject: api.ObjectReference{Name: "test-pod"},
+			Type:           "Warning",
+			Message:        "earlier",
+			LastTimestamp:  metav1.NewTime(now.Add(-2 * time.Minute)),
+			Count:          1,
+		}
+		later := &api.Event{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:       "later",
+				Name:      "later",
+				Namespace: "default",
+			},
+			InvolvedObject: api.ObjectReference{Name: "test-pod"},
+			Type:           "Warning",
+			Message:        "later",
+			LastTimestamp:  metav1.NewTime(now.Add(-1 * time.Minute)),
+			Count:          1,
+		}
+
+		executor.logNewPodEvents([]*api.Event{later, earlier})
+
+		logs := logOutput.String()
+		idxEarlier := strings.Index(logs, "earlier")
+		idxLater := strings.Index(logs, "later")
+		require.NotEqual(t, -1, idxEarlier)
+		require.NotEqual(t, -1, idxLater)
+		assert.Less(t, idxEarlier, idxLater)
+
+		assert.True(t, executor.podEventState.seen.Contains(eventKey(earlier)))
+		assert.True(t, executor.podEventState.seen.Contains(eventKey(later)))
+		assert.Equal(t, eventLastOccurredTimestamp(later), executor.podEventState.lastFetched)
+	})
 }
