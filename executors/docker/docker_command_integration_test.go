@@ -1195,6 +1195,51 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 	}
 }
 
+func TestDockerServiceAliases(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+	if runtime.GOOS == "windows" {
+		t.Skip()
+	}
+
+	// script that works in alpine image:
+	// - resolve 'my_service' to an IP
+	// - gather all the other aliases that resolve that IP
+	// - fetch from them all to test they resolve correctly
+	resp, err := common.GetRemoteBuildResponse(
+		`ip=$(awk '/my_service/{print $1;exit}' /etc/hosts) && ` +
+			`awk -v ip="$ip" '$1==ip{for(i=2;i<=NF;i++)print $i}' /etc/hosts | xargs -I{} sh -c 'echo "Testing: {}"; wget -q --spider "{}"'`,
+	)
+	require.NoError(t, err)
+
+	resp.Image = common.Image{Name: common.TestAlpineImage}
+	resp.Services = []common.Image{
+		{
+			Name:    common.TestLivenessImage,
+			Alias:   "my_service",
+			Command: []string{"server", "--addr", ":80"},
+		},
+	}
+
+	build := common.Build{
+		JobResponse: resp,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					WaitForServicesTimeout: 15,
+				},
+			},
+		},
+	}
+
+	out, err := buildtest.RunBuildReturningOutput(t, &build)
+	assert.NoError(t, err)
+	assert.Contains(t, out, "Testing: registry.gitlab.com__gitlab-org__ci-cd__tests__liveness")
+	assert.Contains(t, out, "Testing: registry.gitlab.com-gitlab-org-ci-cd-tests-liveness")
+	assert.Contains(t, out, "Testing: my_service")
+	assert.Regexp(t, `Testing: [0-9a-f]{12}`, out) // service container ID
+}
+
 func TestDockerServiceHealthcheckOverflow(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
