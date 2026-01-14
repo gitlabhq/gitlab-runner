@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/docker/cli/cli/config/types"
 	jsonpatch "github.com/evanphx/json-patch"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
@@ -97,6 +99,12 @@ const (
 	// Because of a connectivity issue, an attempt to create a resource can fail while the request itself
 	// was successfully executed. We then monitor the conflict error message to retrieve the already create resource
 	errorAlreadyExistsMessage = "the server was not able to generate a unique name for the object"
+
+	// Memory usage estimate per cache entry:
+	//   key (UID:count) ≈ 40 B + string header 16 B + time.Time 24 B + LRU links 16 B ≈ 96 B
+	//   For 100k entries, worst‑case RAM ≈ 10 MB.
+	podEventLRUCapacity = 100000
+	podEventStateTTL    = 2 * time.Hour
 )
 
 var (
@@ -313,6 +321,13 @@ type executor struct {
 
 	podWatcher    podWatcher
 	newPodWatcher func(podWatcherConfig) podWatcher
+
+	podEventState *podEventState
+}
+
+type podEventState struct {
+	lastFetched time.Time
+	seen        *expirable.LRU[string, time.Time]
 }
 
 type podWatcher interface {
@@ -628,26 +643,133 @@ func (s *executor) printPodEvents() {
 	}
 }
 
+//nolint:gocognit,unparam
 func (s *executor) logPodWarningEvents(ctx context.Context, eventType string) {
 	if s.pod == nil {
 		return
 	}
 
-	events, err := retry.WithValueFn(s, func() (*api.EventList, error) {
-		//nolint:gocritic
-		// kubeAPI: events, list, print_pod_warning_events=true
-		return s.kubeClient.CoreV1().Events(s.pod.Namespace).
-			List(ctx, metav1.ListOptions{
-				FieldSelector: fmt.Sprintf("involvedObject.name=%s,type=%s", s.pod.Name, eventType),
-			})
-	}).Run()
-	if err != nil {
-		s.BuildLogger.Debugln(fmt.Sprintf("Error retrieving events list: %s", err.Error()))
+	s.initPodEventState()
+
+	options := metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("involvedObject.name=%s,type=%s", s.pod.Name, eventType),
+		Limit:         200,
+	}
+
+	var newEvents []*api.Event
+	seenDuringFetch := make(map[string]struct{})
+
+	for {
+		events, err := retry.WithValueFn(s, func() (*api.EventList, error) {
+			//nolint:gocritic
+			// kubeAPI: events, list, print_pod_warning_events=true
+			return s.kubeClient.CoreV1().Events(s.pod.Namespace).
+				List(ctx, options)
+		}).Run()
+		if err != nil {
+			s.BuildLogger.Debugln(fmt.Sprintf("Error retrieving events list: %s", err.Error()))
+			return
+		}
+
+		for i := range events.Items {
+			ev := &events.Items[i]
+			timestamp := eventLastOccurredTimestamp(ev)
+
+			// We're filtering events by timestamp to skip older ones.
+			// Heads up: there's a small race condition risk here.
+			//
+			// Under heavy load or K8s leader changes, List() might miss an old event
+			// initially, then show it later—skipping it here.
+			//
+			// Trade-off between performance and full correctness.
+			// Misses are super rare, so we prioritize speed:
+			//   - Keeps LRU cache small, fewer duplicates
+			//
+			// Alternative (no filter): 100% complete, but might contain duplicates,
+			// might need a bigger cache, and will be slower under high event volume.
+			if !s.podEventState.lastFetched.IsZero() && timestamp.Before(s.podEventState.lastFetched) {
+				continue
+			}
+
+			key := eventKey(ev)
+
+			if s.podEventState.seen.Contains(key) {
+				continue
+			}
+
+			if _, exists := seenDuringFetch[key]; exists {
+				continue
+			}
+			seenDuringFetch[key] = struct{}{}
+
+			newEvents = append(newEvents, ev)
+		}
+
+		if events.Continue == "" {
+			break
+		}
+
+		options.Continue = events.Continue
+	}
+
+	if len(newEvents) == 0 {
 		return
 	}
 
-	for _, event := range events.Items {
-		s.BuildLogger.Warningln(fmt.Sprintf("Event retrieved from the cluster: %s", event.Message))
+	s.logNewPodEvents(newEvents)
+}
+
+func (s *executor) initPodEventState() {
+	if s.podEventState != nil {
+		return
+	}
+
+	cache := expirable.NewLRU[string, time.Time](podEventLRUCapacity, nil, podEventStateTTL)
+
+	s.podEventState = &podEventState{seen: cache}
+}
+
+func eventLastOccurredTimestamp(e *api.Event) time.Time {
+	if e.Series != nil && !e.Series.LastObservedTime.IsZero() {
+		return e.Series.LastObservedTime.Time
+	}
+
+	// All other below values are for backwards compatibility.
+	// Not all objects in Kubernetes currently support Event.Series
+	if !e.LastTimestamp.IsZero() {
+		return e.LastTimestamp.Time
+	}
+	if !e.EventTime.IsZero() {
+		return e.EventTime.Time
+	}
+	if !e.FirstTimestamp.IsZero() {
+		return e.FirstTimestamp.Time
+	}
+	return e.ObjectMeta.CreationTimestamp.Time
+}
+
+func eventKey(e *api.Event) string {
+	return fmt.Sprintf("%s:%d", e.UID, e.Count)
+}
+
+func (s *executor) logNewPodEvents(events []*api.Event) {
+	if len(events) == 0 {
+		return
+	}
+
+	sort.Slice(events, func(i, j int) bool {
+		return eventLastOccurredTimestamp(events[i]).Before(eventLastOccurredTimestamp(events[j]))
+	})
+
+	for _, ev := range events {
+		s.BuildLogger.Warningln(fmt.Sprintf("Event retrieved from the cluster: %s", ev.Message))
+
+		timestamp := eventLastOccurredTimestamp(ev)
+		if timestamp.After(s.podEventState.lastFetched) {
+			s.podEventState.lastFetched = timestamp
+		}
+
+		s.podEventState.seen.Add(eventKey(ev), timestamp)
 	}
 }
 
