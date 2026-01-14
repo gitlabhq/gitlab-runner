@@ -231,7 +231,7 @@ func TestClientConfiguration(t *testing.T) {
 			require.NotNil(t, transport.DialContext)
 			if scheme == "http" {
 				//nolint:staticcheck
-				_, err = transport.Dial("", "")
+				_, err = transport.DialContext(t.Context(), "", "")
 				assert.ErrorIs(t, errDialerTest, err)
 			}
 		})

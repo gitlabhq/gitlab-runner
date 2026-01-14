@@ -72,7 +72,7 @@ func (a *gcsAdapter) presignURL(ctx context.Context, method string, contentType 
 	var options []option.ClientOption
 	switch {
 	case a.config.CredentialsFile != "":
-		options = append(options, option.WithCredentialsFile(a.config.CredentialsFile))
+		options = append(options, option.WithCredentialsFile(a.config.CredentialsFile)) // nolint:staticcheck
 	case a.config.AccessID != "" || a.config.PrivateKey != "":
 		// if providing accessID / privateKey for signing, then we don't need the
 		// storage client to authenticate

@@ -74,7 +74,7 @@ func TestPodWatcher(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			fakeKubeClient := fake.NewSimpleClientset()
+			fakeKubeClient := fake.NewClientset()
 			fakeLogger := newMockLogger(t)
 
 			podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels, 0)
@@ -125,7 +125,7 @@ func TestPodWatcherNoConsumer(t *testing.T) {
 	defer cancel()
 
 	podWithErr := withDeletionTimestamp(defaultPod())
-	fakeKubeClient := fake.NewSimpleClientset()
+	fakeKubeClient := fake.NewClientset()
 	fakeLogger := newMockLogger(t)
 
 	podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels, 0)

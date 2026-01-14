@@ -1669,11 +1669,11 @@ func (e *executor) getContainerIPAndExposedPorts(id string) ([]string, []int, er
 	}
 
 	var ip []string
-	if inspect.NetworkSettings.IPAddress != "" {
-		ip = append(ip, inspect.NetworkSettings.IPAddress)
+	if inspect.NetworkSettings.IPAddress != "" { //nolint:staticcheck
+		ip = append(ip, inspect.NetworkSettings.IPAddress) //nolint:staticcheck
 	}
-	if inspect.NetworkSettings.GlobalIPv6Address != "" {
-		ip = append(ip, inspect.NetworkSettings.GlobalIPv6Address)
+	if inspect.NetworkSettings.GlobalIPv6Address != "" { //nolint:staticcheck
+		ip = append(ip, inspect.NetworkSettings.GlobalIPv6Address) //nolint:staticcheck
 	}
 
 	for _, env := range inspect.Config.Env {

@@ -2840,7 +2840,7 @@ func (s *executor) makePodProxyServices(
 			portName := fmt.Sprintf("%s-%d", serviceName, port.Number)
 			servicePorts[i] = api.ServicePort{
 				Port:       int32(port.Number),
-				TargetPort: intstr.FromInt(port.Number),
+				TargetPort: intstr.FromInt32(int32(port.Number)),
 				Name:       portName,
 			}
 		}

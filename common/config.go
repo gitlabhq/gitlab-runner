@@ -1091,7 +1091,7 @@ func (h *KubernetesLifecycleHandler) ToKubernetesLifecycleHandler() *api.Lifecyc
 
 		kubeHandler.HTTPGet = &api.HTTPGetAction{
 			Host:        h.HTTPGet.Host,
-			Port:        intstr.FromInt(h.HTTPGet.Port),
+			Port:        intstr.FromInt32(int32(h.HTTPGet.Port)),
 			Path:        h.HTTPGet.Path,
 			Scheme:      api.URIScheme(h.HTTPGet.Scheme),
 			HTTPHeaders: httpHeaders,
@@ -1100,7 +1100,7 @@ func (h *KubernetesLifecycleHandler) ToKubernetesLifecycleHandler() *api.Lifecyc
 	if h.TCPSocket != nil {
 		kubeHandler.TCPSocket = &api.TCPSocketAction{
 			Host: h.TCPSocket.Host,
-			Port: intstr.FromInt(h.TCPSocket.Port),
+			Port: intstr.FromInt32(int32(h.TCPSocket.Port)),
 		}
 	}
 

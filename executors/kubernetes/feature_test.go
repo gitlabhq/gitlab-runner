@@ -195,7 +195,7 @@ func TestKubeClientFeatureChecker_ResouceVerbAllowed(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			fakeClient := fake.NewSimpleClientset()
+			fakeClient := fake.NewClientset()
 			ctx := t.Context()
 
 			fakeClient.PrependReactor("create", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {

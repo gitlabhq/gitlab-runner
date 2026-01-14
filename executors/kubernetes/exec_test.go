@@ -243,7 +243,7 @@ func TestAttach(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			fakeClientSet := testclient.NewSimpleClientset(testPods()...)
+			fakeClientSet := testclient.NewClientset(testPods()...)
 			clientConfig := &restclient.Config{}
 
 			fakeRESTRequest := restclient.NewRequestWithClient(
