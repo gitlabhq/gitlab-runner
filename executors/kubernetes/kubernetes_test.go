@@ -3076,7 +3076,7 @@ func TestSetupCredentials(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			fakeKubeClient := testclient.NewSimpleClientset()
+			fakeKubeClient := testclient.NewClientset()
 
 			createCount := 0
 			fakeKubeClient.PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret kuberuntime.Object, err error) {
@@ -4456,7 +4456,7 @@ func TestSetupBuildPod(t *testing.T) {
 							Ports: []api.ServicePort{
 								{
 									Port:       80,
-									TargetPort: intstr.FromInt(80),
+									TargetPort: intstr.FromInt32(80),
 									Name:       "build-80",
 								},
 							},
@@ -4474,12 +4474,12 @@ func TestSetupBuildPod(t *testing.T) {
 							Ports: []api.ServicePort{
 								{
 									Port:       82,
-									TargetPort: intstr.FromInt(82),
+									TargetPort: intstr.FromInt32(82),
 									Name:       "proxy-svc-0-82",
 								},
 								{
 									Port:       84,
-									TargetPort: intstr.FromInt(84),
+									TargetPort: intstr.FromInt32(84),
 									Name:       "proxy-svc-0-84",
 								},
 							},
@@ -4497,7 +4497,7 @@ func TestSetupBuildPod(t *testing.T) {
 							Ports: []api.ServicePort{
 								{
 									Port:       85,
-									TargetPort: intstr.FromInt(85),
+									TargetPort: intstr.FromInt32(85),
 									Name:       "proxy-svc-1-85",
 								},
 							},
@@ -4855,7 +4855,7 @@ func TestSetupBuildPod(t *testing.T) {
 						PodSecurityContext: common.KubernetesPodSecurityContext{
 							FSGroup:            func() *int64 { i := int64(200); return &i }(),
 							RunAsGroup:         func() *int64 { i := int64(200); return &i }(),
-							RunAsNonRoot:       func() *bool { i := bool(true); return &i }(),
+							RunAsNonRoot:       func() *bool { i := true; return &i }(),
 							RunAsUser:          func() *int64 { i := int64(200); return &i }(),
 							SupplementalGroups: []int64{200},
 							SELinuxType:        "spc_t",
@@ -5931,7 +5931,7 @@ func TestPodWatcherSetup(t *testing.T) {
 		},
 	}
 
-	fakeKubeClient := testclient.NewSimpleClientset()
+	fakeKubeClient := testclient.NewClientset()
 	mockPodWatcher := newMockPodWatcher(t)
 
 	ex := newExecutor()
@@ -6800,14 +6800,14 @@ func TestLifecyclePrepare(t *testing.T) {
 	}
 
 	httpGetHandler := &api.HTTPGetAction{
-		Port:        intstr.FromInt(8080),
+		Port:        intstr.FromInt32(8080),
 		Path:        "/test",
 		Host:        "localhost",
 		HTTPHeaders: []api.HTTPHeader{},
 	}
 
 	tcpSocketHander := &api.TCPSocketAction{
-		Port: intstr.FromInt(8080),
+		Port: intstr.FromInt32(8080),
 		Host: "localhost",
 	}
 
@@ -7994,7 +7994,7 @@ func TestContainerPullPolicies(t *testing.T) {
 
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
-			fakeKubeClient := testclient.NewSimpleClientset()
+			fakeKubeClient := testclient.NewClientset()
 
 			runnerConfig := &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -8071,7 +8071,7 @@ func TestNoContainerEnvDups(t *testing.T) {
 		varValPipeline = ".gitlab-ci.yaml"
 	)
 
-	fakeKubeClient := testclient.NewSimpleClientset()
+	fakeKubeClient := testclient.NewClientset()
 
 	build := &common.Build{
 		JobResponse: common.JobResponse{
@@ -9174,7 +9174,7 @@ func preparePodWarningEventsScenario(t *testing.T) podWarningEventsScenario {
 	}
 	pageTwo := &api.EventList{Items: []api.Event{*firstNew, *secondNew}}
 
-	fakeClient := testclient.NewSimpleClientset()
+	fakeClient := testclient.NewClientset()
 	listCall := 0
 	fakeClient.Fake.PrependReactor("list", "events", func(action k8stesting.Action) (bool, kuberuntime.Object, error) {
 		listCall++
@@ -9240,7 +9240,7 @@ func TestExecutor_logPodWarningEvents(t *testing.T) {
 	})
 
 	t.Run("initializes pod event state when missing", func(t *testing.T) {
-		fakeClient := testclient.NewSimpleClientset()
+		fakeClient := testclient.NewClientset()
 
 		executor := newExecutor()
 		executor.options = &kubernetesOptions{}

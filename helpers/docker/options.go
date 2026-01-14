@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -23,7 +24,7 @@ const (
 var (
 	useTestDialerFunc = false
 	errDialerTest     = errors.New("custom dialer error")
-	testDialerFunc    = func(string, string) (net.Conn, error) {
+	testDialerFunc    = func(context.Context, string, string) (net.Conn, error) {
 		return nil, errDialerTest
 	}
 )
@@ -82,23 +83,17 @@ func WithCustomHTTPClient(transport *http.Transport) client.Opt {
 			return nil
 		}
 
-		dialer, err := sockets.DialerFromEnvironment(&net.Dialer{
+		dialer := &net.Dialer{
 			Timeout:   defaultTimeout,
 			KeepAlive: defaultKeepAlive,
-		})
-		if err != nil {
-			return err
 		}
 
-		// copy same behaviour as docker's client, and use Dial rather
-		// than DialContext
-		//nolint:staticcheck
 		if !useTestDialerFunc {
-			transport.Dial = dialer.Dial
+			transport.DialContext = dialer.DialContext
 		} else {
 			// set the test dialer function, so we can test that
 			// our client setup works in the expected order
-			transport.Dial = testDialerFunc
+			transport.DialContext = testDialerFunc
 		}
 
 		return nil

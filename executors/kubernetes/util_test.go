@@ -765,7 +765,7 @@ func TestWaitForRunningContainer(t *testing.T) {
 			watcherChan := make(chan struct{})
 			returnChan := make(chan struct{})
 
-			fakeKubeClient := testclient.NewSimpleClientset()
+			fakeKubeClient := testclient.NewClientset()
 			tracker := fakeKubeClient.Tracker()
 
 			fakeKubeClient.PrependWatchReactor("pods", func(action k8stesting.Action) (handled bool, ret watch.Interface, err error) {
