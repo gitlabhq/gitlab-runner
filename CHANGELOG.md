@@ -1,3 +1,37 @@
+## v18.8.0 (2026-01-15)
+
+### New features
+
+- Job Router [!5945](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5945)
+- Implement mage pulp:supportedOSVersions  target [!6024](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6024)
+- Improve Portability of Git Version Check for z/OS [!6001](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6001) (Kai McGregor @kmcgreg-ibm)
+- Introduce better job inputs interpolation error [!6014](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6014)
+- Emulate deprecated Docker links functionality with ExtraHosts [!5980](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5980)
+- Mage target to create Pulp CLI configuration [!6039](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6039)
+
+### Bug fixes
+
+- Ensure buildlogger uses available masks (issue reported by Christian Sousa from Blue Origin Manufacturing, LLC) [!5909](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5909)
+- Support Git submodules with different hosts via RepoURL insteadOf [!6025](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6025)
+- Add IPv6 address when emulating links functionality [!6027](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6027)
+- Cleanup dangling virtualbox resources [!5941](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5941)
+- Add `-protected` suffix to docker cache volumes if any of the cache keys include the `-protected` suffix [!6021](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6021)
+- Fix connector interface not being exposed for docker+machine and docker-autoscaler executors [!6015](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6015)
+
+### Maintenance
+
+- Fix service container log collection wait time [!6019](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6019)
+- Fix race condition in TestDockerCommandWithRunnerServiceEnvironmentVariables [!6018](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6018)
+- Fix a typo in the GitLab Runner system requirements page [!6031](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6031)
+- Fix privileged setting for general Podman usage [!6023](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6023)
+- Update Golang to 1.25.3 [!5978](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5978)
+- Make Alpine 3.21 the default base for helper images [!5995](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5995)
+- docs: Replace `curl | bash` commands with safer steps [!6036](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6036) (Yasssmiine @Yasssmiine-x)
+- Remove alpine 3.19 [!5993](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5993)
+- Restructure GitLab Runner installation documentation with card-based navigation [!6030](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6030)
+- Clarify details about arm helper image, cleanup extra wording, fix link [!6012](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6012) (Ben Bodenmiller @bbodenmiller)
+- Allow the i18n lint paths job to fail [!6017](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6017)
+
 ## v18.7.2 (2026-01-08)
 
 ### Bug fixes
