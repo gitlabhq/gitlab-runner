@@ -2713,7 +2713,7 @@ func TestArtifactsUpload(t *testing.T) {
 			expectedUploadState: UploadServiceUnavailable,
 			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
 				// Prior log entries are part of retry logic.
-				i := 5
+				i := 4
 				if logResponseDetail {
 					isResponseBodyLog(t, logs.entries[i])
 					i += 1
