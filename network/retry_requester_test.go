@@ -26,7 +26,7 @@ func TestNewRetryRequester(t *testing.T) {
 
 	assert.Equal(t, apiRequestCollector, rl.apiRequestCollector)
 	assert.Equal(t, rl.client, http.DefaultClient)
-	assert.Equal(t, rl.retriesCount, defaultRateLimitRetriesCount)
+	assert.Equal(t, rl.maxAttempts, defaultRateLimitMaxAttempts)
 	assert.NotNil(t, rl.logger)
 }
 
@@ -93,7 +93,7 @@ func TestRetryRequester_Do(t *testing.T) {
 			setup: func(tb testing.TB) requester {
 				tb.Helper()
 				mr := newMockRequester(t)
-				res := &http.Response{StatusCode: http.StatusInternalServerError}
+				res := &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(""))}
 				call1 := mr.On("Do", mock.Anything).Twice().Return(res, nil)
 				call2 := mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
 					rawBytes, _ := io.ReadAll(req.Body)
@@ -113,7 +113,7 @@ func TestRetryRequester_Do(t *testing.T) {
 			setup: func(tb testing.TB) requester {
 				tb.Helper()
 				mr := newMockRequester(t)
-				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}}
+				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}
 				res.Header.Set(rateLimitResetTimeHeader, time.Now().Add(2*time.Second).Format(time.RFC1123))
 				call1 := mr.On("Do", mock.Anything).Twice().Return(res, nil)
 				call2 := mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
@@ -134,7 +134,7 @@ func TestRetryRequester_Do(t *testing.T) {
 			setup: func(tb testing.TB) requester {
 				tb.Helper()
 				mr := newMockRequester(t)
-				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}}
+				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}
 				res.Header.Set(rateLimitResetTimeHeader, "invalid")
 				call1 := mr.On("Do", mock.Anything).Twice().Return(res, nil)
 				call2 := mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
@@ -155,7 +155,7 @@ func TestRetryRequester_Do(t *testing.T) {
 			setup: func(tb testing.TB) requester {
 				tb.Helper()
 				mr := newMockRequester(t)
-				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}}
+				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}
 				res.Header.Set(retryAfterHeader, "1")
 				call1 := mr.On("Do", mock.Anything).Twice().Return(res, nil)
 				call2 := mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
@@ -176,7 +176,7 @@ func TestRetryRequester_Do(t *testing.T) {
 			setup: func(tb testing.TB) requester {
 				tb.Helper()
 				mr := newMockRequester(t)
-				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}}
+				res := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}
 				res.Header.Set(retryAfterHeader, "invalid")
 				call1 := mr.On("Do", mock.Anything).Twice().Return(res, nil)
 				call2 := mr.On("Do", mock.MatchedBy(func(req *http.Request) bool {
@@ -197,7 +197,7 @@ func TestRetryRequester_Do(t *testing.T) {
 			setup: func(tb testing.TB) requester {
 				tb.Helper()
 				mr := newMockRequester(t)
-				res := &http.Response{StatusCode: http.StatusTooManyRequests}
+				res := &http.Response{StatusCode: http.StatusTooManyRequests, Body: io.NopCloser(strings.NewReader(""))}
 				mr.On("Do", mock.Anything).Once().Return(res, nil)
 				return mr
 			},
@@ -210,7 +210,7 @@ func TestRetryRequester_Do(t *testing.T) {
 			request: httptest.NewRequest(http.MethodPost, "http://example.com", strings.NewReader("somebody")),
 			setup: func(tb testing.TB) requester {
 				mr := newMockRequester(t)
-				res := &http.Response{StatusCode: http.StatusTooManyRequests}
+				res := &http.Response{StatusCode: http.StatusTooManyRequests, Body: io.NopCloser(strings.NewReader(""))}
 				mr.On("Do", mock.Anything).Times(3).Return(res, nil)
 				return mr
 			},
@@ -225,7 +225,7 @@ func TestRetryRequester_Do(t *testing.T) {
 			t.Parallel()
 			mr := tc.setup(t)
 			rlr := newRetryRequester(mr, NewAPIRequestsCollector())
-			rlr.retriesCount = 3
+			rlr.maxAttempts = 3
 			logger, _ := test.NewNullLogger()
 			rlr.logger = logger
 
@@ -275,7 +275,7 @@ func TestRetryRequester_Do_BodyCopiedBetweenRequests(t *testing.T) {
 	defer testServer.Close()
 
 	rlr := newRetryRequester(http.DefaultClient, NewAPIRequestsCollector())
-	rlr.retriesCount = 5
+	rlr.maxAttempts = 5
 	logger, _ := test.NewNullLogger()
 	rlr.logger = logger
 
@@ -292,6 +292,53 @@ func TestRetryRequester_Do_BodyCopiedBetweenRequests(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "somebody", string(body))
 	assert.Equal(t, 4, requestCount)
+}
+
+// trackingReadCloser tracks whether Close was called on the response body.
+type trackingReadCloser struct {
+	io.Reader
+	closed bool
+}
+
+func (t *trackingReadCloser) Close() error {
+	t.closed = true
+	return nil
+}
+
+func TestRetryRequester_Do_ResponseBodyClosedOnRetry(t *testing.T) {
+	t.Parallel()
+
+	var responseBodies []*trackingReadCloser
+
+	mr := newMockRequester(t)
+	mr.On("Do", mock.Anything).Times(3).Return(func(*http.Request) *http.Response {
+		body := &trackingReadCloser{Reader: strings.NewReader("rate limited")}
+		responseBodies = append(responseBodies, body)
+		return &http.Response{
+			StatusCode: http.StatusTooManyRequests,
+			Body:       body,
+		}
+	}, nil)
+
+	rlr := newRetryRequester(mr, NewAPIRequestsCollector())
+	rlr.maxAttempts = 3
+	logger, _ := test.NewNullLogger()
+	rlr.logger = logger
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
+	res, err := rlr.Do(req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, http.StatusTooManyRequests, res.StatusCode)
+	assert.Len(t, responseBodies, 3)
+
+	// All response bodies except the last one should have been closed before retrying
+	for i, body := range responseBodies[:len(responseBodies)-1] {
+		assert.True(t, body.closed, "response body %d should have been closed before retry", i)
+	}
+	// The last response body is returned to the caller and should NOT be closed by retryRequester
+	assert.False(t, responseBodies[len(responseBodies)-1].closed, "last response body should not be closed by retryRequester")
 }
 
 func TestRetryRequester_calculateWaitTime(t *testing.T) {

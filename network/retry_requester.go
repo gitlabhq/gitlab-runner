@@ -15,11 +15,11 @@ import (
 // are documented in `docs/configuration/proxy.md#handling-rate-limited-requests`
 
 const (
-	backOffMinDelay              = 100 * time.Millisecond
-	backOffMaxDelay              = 60 * time.Second
-	backOffDelayFactor           = 2.0
-	backOffDelayJitter           = true
-	defaultRateLimitRetriesCount = 5
+	backOffMinDelay             = 100 * time.Millisecond
+	backOffMaxDelay             = 60 * time.Second
+	backOffDelayFactor          = 2.0
+	backOffDelayJitter          = true
+	defaultRateLimitMaxAttempts = 5
 	// RateLimit-ResetTime: Wed, 21 Oct 2015 07:28:00 GMT
 	rateLimitResetTimeHeader = "RateLimit-ResetTime"
 	retryAfterHeader         = "Retry-After"
@@ -37,7 +37,7 @@ var retryStatuses = map[int]struct{}{
 type retryRequester struct {
 	apiRequestCollector *APIRequestsCollector
 	client              requester
-	retriesCount        int
+	maxAttempts         int
 	logger              *logrus.Logger
 }
 
@@ -45,25 +45,18 @@ func newRetryRequester(client requester, apiRequestCollector *APIRequestsCollect
 	return &retryRequester{
 		apiRequestCollector: apiRequestCollector,
 		client:              client,
-		retriesCount:        defaultRateLimitRetriesCount,
+		maxAttempts:         defaultRateLimitMaxAttempts,
 		logger:              logrus.StandardLogger(),
 	}
 }
 
-func (r *retryRequester) Do(req *http.Request) (res *http.Response, err error) {
+func (r *retryRequester) Do(req *http.Request) (*http.Response, error) {
 	logger := r.logger.
 		WithFields(logrus.Fields{
 			"context": "ratelimit-requester-gitlab-request",
 			"url":     req.URL.String(),
 			"method":  req.Method,
 		})
-
-	var retries int
-	defer func() {
-		if retries != 0 {
-			r.apiRequestCollector.AddRetries(logger, normalizedURI(req.URL.Path), req.Method, float64(retries))
-		}
-	}()
 
 	bo := &backoff.Backoff{
 		Min:    backOffMinDelay,
@@ -72,40 +65,78 @@ func (r *retryRequester) Do(req *http.Request) (res *http.Response, err error) {
 		Jitter: backOffDelayJitter,
 	}
 
-	// Worst case would be the configured timeout from reverse proxy * retriesCount
-	for i := 0; i < r.retriesCount; i++ {
-		retries = i
-		res, err = r.client.Do(req)
+	res, attempts, err := r.executeRequestWithRetries(req, bo, logger)
+
+	// Track total attempts (including initial request) for metrics.
+	// Note: Despite the method name "AddRetries", this tracks all attempts, not just retries.
+	// This maintains backward compatibility with existing metrics collection behavior.
+	// See discussion: https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6041#note_3004520228
+	r.apiRequestCollector.AddRetries(logger, normalizedURI(req.URL.Path), req.Method, float64(attempts))
+	return res, err
+}
+
+func (r *retryRequester) executeRequestWithRetries(req *http.Request, bo *backoff.Backoff, logger *logrus.Entry) (*http.Response, int, error) {
+	var attempts int
+	var resp *http.Response
+	success := false
+
+	defer func() {
+		if !success {
+			closeResponseBody(resp, true)
+		}
+	}()
+
+	for {
+		var err error
+		resp, err = r.client.Do(req)
+		attempts++
 		if err != nil {
-			return nil, fmt.Errorf("couldn't execute %s against %s: %w", req.Method, req.URL, err)
+			return nil, attempts, fmt.Errorf("couldn't execute %s against %s: %w", req.Method, req.URL, err)
 		}
 
-		if !shouldRetryRequest(res) {
-			return res, nil
+		if !shouldRetryRequest(resp) || attempts >= r.maxAttempts {
+			success = true
+			return resp, attempts, nil
 		}
 
-		waitTime := r.calculateWaitTime(res, bo)
-		logger.
-			WithField("duration", waitTime).
-			Infoln("Waiting before making the next call")
+		closeResponseBody(resp, true)
 
-		select {
-		case <-time.After(waitTime):
-		case <-req.Context().Done():
-			return nil, req.Context().Err()
+		if err := r.waitForRetry(req, resp, bo, logger); err != nil {
+			return nil, attempts, err
 		}
 
-		if req.GetBody != nil {
-			body, err := req.GetBody()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get body: %w", err)
-			}
-
-			req.Body = body
+		if err := r.regenerateRequestBody(req); err != nil {
+			return nil, attempts, err
 		}
 	}
+}
 
-	return res, err
+func (r *retryRequester) waitForRetry(req *http.Request, resp *http.Response, bo *backoff.Backoff, logger *logrus.Entry) error {
+	waitTime := r.calculateWaitTime(resp, bo)
+	logger.
+		WithField("duration", waitTime).
+		Infoln("Waiting before making the next call")
+
+	select {
+	case <-time.After(waitTime):
+		return nil
+	case <-req.Context().Done():
+		return req.Context().Err()
+	}
+}
+
+func (r *retryRequester) regenerateRequestBody(req *http.Request) error {
+	if req.GetBody == nil {
+		return nil
+	}
+
+	body, err := req.GetBody()
+	if err != nil {
+		return fmt.Errorf("failed to get body: %w", err)
+	}
+
+	req.Body = body
+	return nil
 }
 
 func shouldRetryRequest(res *http.Response) bool {
