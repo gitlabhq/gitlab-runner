@@ -1,11 +1,81 @@
+package pulp
+
 import (
+	"bufio"
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 
+	"github.com/magefile/mage/sh"
+	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/pool"
 )
+
+type PushOpts struct {
+	Branch      string   // Branch is the release branch ("stable" or "unstable").
+	PkgType     string   // PkgType is the package type ("deb" or "rpm").
+	Distro      string   // Distro is the distribution/release filter prefix (e.g., "ubuntu/focal", "fedora/43").
+	Archs       []string // Archs is the list of architectures. Only relevant for for RPM packages.
+	Concurrency int      // Concurrency is the maximum number of concurrent uploads.
+	DryRun      bool     // DryRun enables dry-run mode (no actual commands executed).
+}
+
+func Push(opts PushOpts) error {
+	if err := validateInputs(opts.PkgType, opts.Branch); err != nil {
+		return err
+	}
+
+	// get the distro/releases for this package-type and branch
+	releases, err := releases(opts.PkgType, opts.Branch)
+	if err != nil {
+		return err
+	}
+
+	// filter releases by distro...
+	releases = lo.Filter(releases, func(release string, _ int) bool {
+		keep := strings.HasPrefix(release, opts.Distro)
+		if !keep {
+			slog.Debug("Skipping...", "distro", release)
+		}
+		return keep
+	})
+
+	if len(releases) == 0 {
+		return fmt.Errorf("no valid releases to push to")
+	}
+
+	// get the packages to upload...
+	packages, err := filepath.Glob(fmt.Sprintf("out/%s/*.%s", opts.PkgType, opts.PkgType))
+	if err != nil {
+		return err
+	}
+
+	if len(packages) == 0 {
+		return fmt.Errorf("no packages to push")
+	}
+
+	// the actual repo name for the stable branch is gitlab-runner
+	if opts.Branch == "stable" {
+		opts.Branch = "gitlab-runner"
+	}
+
+	var p pusher
+	base := basePusher{dryrun: opts.DryRun, run: sh.Run, exec: sh.Exec, branch: opts.Branch, concurrency: opts.Concurrency}
+	switch opts.PkgType {
+	case "deb":
+		p = &debPusher{basePusher: base}
+	case "rpm":
+		p = &rpmPusher{basePusher: base, archs: opts.Archs}
+	}
+	return p.Push(releases, packages)
+}
 
 type (
 	shRun  = func(string, ...string) error
