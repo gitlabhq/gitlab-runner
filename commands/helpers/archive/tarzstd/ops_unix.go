@@ -29,6 +29,11 @@ func lchmod(name string, mode os.FileMode) error {
 }
 
 func lchtimes(name string, mode os.FileMode, atime, mtime time.Time) error {
+	if runtime.GOOS == "zos" {
+		if err := lchmod(name, mode); err != nil {
+			return err
+		}
+	}
 	at := unix.NsecToTimeval(atime.UnixNano())
 	mt := unix.NsecToTimeval(mtime.UnixNano())
 	tv := [2]unix.Timeval{at, mt}
