@@ -313,8 +313,16 @@ resolve each other's hostnames and aliases. This functionality is
 
 ### Configure a network with container links
 
-You can configure a network mode that uses Docker [legacy container links](https://docs.docker.com/engine/network/links/) and the default Docker `bridge` to link the job container with the services. This network mode is the default
-if [`FF_NETWORK_PER_BUILD`](#create-a-network-for-each-job) is not enabled.
+GitLab Runner before 18.7.0 uses the default Docker `bridge` along with [legacy container links](https://docs.docker.com/engine/network/links/) to link the job container with the services. Because Docker deprecated the links functionality, in GitLab Runner 18.7.0 and later, the legacy container link behavior is emulated by allowing service aliases to be resolved using Docker's `extra_hosts` functionality. This network mode is the default if [`FF_NETWORK_PER_BUILD`](#create-a-network-for-each-job) is disabled.
+
+{{< alert type="note" >}}
+
+GitLab Runner's emulated links behavior differs slightly from [legacy container links](https://docs.docker.com/engine/network/links/):
+
+- Disabling `icc` disables inter-container communication and containers cannot communicate with each other.
+- Environment variables for the linked containers are no longer present (`<name>_PORT_<port>_<protocol>`).
+
+{{< /alert >}}
 
 To configure the network, specify the [networking mode](https://docs.docker.com/engine/containers/run/#network-settings) in the `config.toml` file:
 
