@@ -31,7 +31,6 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/fatih/color v1.18.0
-	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/getsentry/sentry-go v0.40.0
 	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a
 	github.com/golang/mock v1.6.0
@@ -82,6 +81,7 @@ require (
 	gitlab.com/gitlab-org/labkit v1.34.0
 	gitlab.com/gitlab-org/moa v0.0.0-20251209091627-66342f721c88
 	gitlab.com/gitlab-org/step-runner v0.22.0
+	go.mozilla.org/pkcs7 v0.9.0
 	go.uber.org/automaxprocs v1.6.0
 	gocloud.dev v0.44.0
 	golang.org/x/crypto v0.46.0

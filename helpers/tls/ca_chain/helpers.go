@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fullsailor/pkcs7"
 	"github.com/sirupsen/logrus"
+	"go.mozilla.org/pkcs7"
 )
 
 const (
