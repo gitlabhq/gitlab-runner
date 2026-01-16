@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 const (
@@ -1385,7 +1386,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 	}
 }
 
-func assertOnJobResponse(tb testing.TB, res *JobResponse, assertUnsupportedOpts bool) {
+func assertOnJobResponse(tb testing.TB, res *spec.Job, assertUnsupportedOpts bool) {
 	tb.Helper()
 	assert.NotNil(tb, res)
 	assert.NotEmpty(tb, res.ID)
@@ -1425,8 +1426,8 @@ func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]i
 		w.WriteHeader(http.StatusOK)
 	case "failed":
 		failureReason, ok := req["failure_reason"].(string)
-		if ok && (JobFailureReason(failureReason) == ScriptFailure ||
-			JobFailureReason(failureReason) == RunnerSystemFailure) {
+		if ok && (spec.JobFailureReason(failureReason) == ScriptFailure ||
+			spec.JobFailureReason(failureReason) == RunnerSystemFailure) {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
@@ -2556,7 +2557,7 @@ func uploadArtifacts(
 	config JobCredentials,
 	artifactsFile,
 	artifactType string,
-	artifactFormat ArtifactFormat,
+	artifactFormat spec.ArtifactFormat,
 	logResponseDetails bool,
 ) (UploadState, string) {
 	file, err := os.Open(artifactsFile)
@@ -2614,7 +2615,7 @@ func TestArtifactsUpload(t *testing.T) {
 		content           []byte
 		config            JobCredentials
 		artifactType      string
-		artifactFormat    ArtifactFormat
+		artifactFormat    spec.ArtifactFormat
 		overwriteFileName string
 
 		expectedUploadState UploadState
@@ -2649,7 +2650,7 @@ func TestArtifactsUpload(t *testing.T) {
 		"zip": {
 			content:        []byte("zip"),
 			config:         defaultConfig,
-			artifactFormat: ArtifactFormatZip,
+			artifactFormat: spec.ArtifactFormatZip,
 			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
 				i := 0
 				if logResponseDetail {
@@ -2662,7 +2663,7 @@ func TestArtifactsUpload(t *testing.T) {
 		"gzip": {
 			content:        []byte("gzip"),
 			config:         defaultConfig,
-			artifactFormat: ArtifactFormatGzip,
+			artifactFormat: spec.ArtifactFormatGzip,
 			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
 				i := 0
 				if logResponseDetail {
@@ -2676,7 +2677,7 @@ func TestArtifactsUpload(t *testing.T) {
 			content:        []byte("junit"),
 			config:         defaultConfig,
 			artifactType:   "junit",
-			artifactFormat: ArtifactFormatGzip,
+			artifactFormat: spec.ArtifactFormatGzip,
 			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
 				i := 0
 				if logResponseDetail {
@@ -2752,7 +2753,7 @@ func TestArtifactsUpload(t *testing.T) {
 			content:             []byte("content"),
 			config:              redirectToken,
 			expectedUploadState: UploadSucceeded,
-			artifactFormat:      ArtifactFormatZip,
+			artifactFormat:      spec.ArtifactFormatZip,
 			verifyLogs: func(t *testing.T, logResponseDetail bool, logs *logHook) {
 				i := 0
 				if logResponseDetail {

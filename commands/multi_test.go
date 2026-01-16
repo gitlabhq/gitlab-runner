@@ -21,6 +21,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	helper_test "gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
@@ -49,13 +50,13 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	mJobTrace.On("Success").Return(nil)
 
 	mNetwork := common.NewMockNetwork(t)
-	mNetwork.On("RequestJob", mock.Anything, mock.Anything, mock.Anything).Return(func(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo) (*common.JobResponse, bool) {
-		return &common.JobResponse{
+	mNetwork.On("RequestJob", mock.Anything, mock.Anything, mock.Anything).Return(func(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo) (*spec.Job, bool) {
+		return &spec.Job{
 			ID: 1,
-			Steps: []common.Step{
+			Steps: []spec.Step{
 				{
 					Name:         "sleep",
-					Script:       common.StepScript{"sleep 10"},
+					Script:       spec.StepScript{"sleep 10"},
 					Timeout:      15,
 					When:         "",
 					AllowFailure: false,
@@ -132,7 +133,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 }
 
 func TestRunCommand_doJobRequest(t *testing.T) {
-	returnedJob := new(common.JobResponse)
+	returnedJob := new(spec.Job)
 
 	waitForContext := func(ctx context.Context) {
 		<-ctx.Done()
@@ -1424,7 +1425,7 @@ func TestRunCommand_requestJob_HandlesUpdateAbort(t *testing.T) {
 		},
 	}
 
-	jobData := &common.JobResponse{
+	jobData := &spec.Job{
 		ID:    123,
 		Token: "job-token",
 	}
@@ -1464,7 +1465,7 @@ func TestRunCommand_requestJob_HandlesCancelRequested(t *testing.T) {
 		},
 	}
 
-	jobData := &common.JobResponse{
+	jobData := &spec.Job{
 		ID:    123,
 		Token: "job-token",
 	}
@@ -1504,7 +1505,7 @@ func TestRunCommand_requestJob_ContinuesWhenUpdateSucceeds(t *testing.T) {
 		},
 	}
 
-	jobData := &common.JobResponse{
+	jobData := &spec.Job{
 		ID:    123,
 		Token: "job-token",
 	}

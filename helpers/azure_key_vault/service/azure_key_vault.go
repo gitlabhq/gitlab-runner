@@ -7,7 +7,9 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 type AzureKeyVault interface {
@@ -18,7 +20,7 @@ type defaultAzureKeyVault struct {
 	client *azsecrets.Client
 }
 
-func NewAzureKeyVault(server common.AzureKeyVaultServer) (AzureKeyVault, error) {
+func NewAzureKeyVault(server spec.AzureKeyVaultServer) (AzureKeyVault, error) {
 	v := new(defaultAzureKeyVault)
 
 	getAssertion := func(c context.Context) (string, error) {

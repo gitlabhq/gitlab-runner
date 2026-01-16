@@ -18,6 +18,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -103,8 +104,8 @@ func TestBuildSuccess(t *testing.T) {
 		require.NoError(t, err)
 
 		build := &common.Build{
-			JobResponse: successfulBuild,
-			Runner:      newRunnerConfig(t, shell),
+			Job:    successfulBuild,
+			Runner: newRunnerConfig(t, shell),
 		}
 		setupAcquireBuild(t, build)
 
@@ -120,14 +121,14 @@ func TestBuildTimeout(t *testing.T) {
 		successfulBuild.RunnerInfo.Timeout = 15
 
 		build := &common.Build{
-			JobResponse: successfulBuild,
-			Runner:      newRunnerConfig(t, shell),
+			Job:    successfulBuild,
+			Runner: newRunnerConfig(t, shell),
 		}
 		setupAcquireBuild(t, build)
 
 		runnerID := rand.Intn(999999999)
 		build.ProjectRunnerID = runnerID
-		build.Variables = append(successfulBuild.Variables, common.JobVariable{
+		build.Variables = append(successfulBuild.Variables, spec.Variable{
 			Key:   featureflags.NetworkPerBuild,
 			Value: "true",
 		})
@@ -168,8 +169,8 @@ func TestBuildSuccessUsingDockerHost(t *testing.T) {
 		require.NoError(t, err)
 
 		build := &common.Build{
-			JobResponse: successfulBuild,
-			Runner:      newRunnerConfig(t, shell),
+			Job:    successfulBuild,
+			Runner: newRunnerConfig(t, shell),
 		}
 
 		// explicitly set the docker host, which will override the use of connecting
@@ -191,14 +192,14 @@ func TestBuildSuccessUsingDockerHostLegacyTunnel(t *testing.T) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		require.NoError(t, err)
 
-		successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+		successfulBuild.Variables = append(successfulBuild.Variables, spec.Variable{
 			Key:   featureflags.UseDockerAutoscalerDialStdio,
 			Value: "false",
 		})
 
 		build := &common.Build{
-			JobResponse: successfulBuild,
-			Runner:      newRunnerConfig(t, shell),
+			Job:    successfulBuild,
+			Runner: newRunnerConfig(t, shell),
 		}
 
 		setupAcquireBuild(t, build)

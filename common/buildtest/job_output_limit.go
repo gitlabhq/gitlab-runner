@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
@@ -22,14 +23,14 @@ func RunBuildWithJobOutputLimitExceeded(t *testing.T, config *common.RunnerConfi
 }
 
 type jobOutputLimitExceededTestCase struct {
-	jobResponse func(t *testing.T, g baseJobGetter) common.JobResponse
+	jobResponse func(t *testing.T, g baseJobGetter) spec.Job
 	handleTrace func(t *testing.T, done chan struct{}, traceBuffer *trace.Buffer, trace common.JobTrace)
 	assertError func(t *testing.T, err error)
 }
 
 var jobOutputLimitExceededTestCases = map[string]jobOutputLimitExceededTestCase{
 	"successful job": {
-		jobResponse: func(t *testing.T, baseJobGetter baseJobGetter) common.JobResponse {
+		jobResponse: func(t *testing.T, baseJobGetter baseJobGetter) spec.Job {
 			return getJobResponseWithCommands(t, baseJobGetter, "echo Hello World", "exit 0")
 		},
 		handleTrace: func(t *testing.T, done chan struct{}, traceBuffer *trace.Buffer, trace common.JobTrace) {},
@@ -38,7 +39,7 @@ var jobOutputLimitExceededTestCases = map[string]jobOutputLimitExceededTestCase{
 		},
 	},
 	"failed job": {
-		jobResponse: func(t *testing.T, baseJobGetter baseJobGetter) common.JobResponse {
+		jobResponse: func(t *testing.T, baseJobGetter baseJobGetter) spec.Job {
 			return getJobResponseWithCommands(t, baseJobGetter, "echo Hello World", "exit 1")
 		},
 		handleTrace: func(t *testing.T, done chan struct{}, traceBuffer *trace.Buffer, trace common.JobTrace) {},
@@ -51,7 +52,7 @@ var jobOutputLimitExceededTestCases = map[string]jobOutputLimitExceededTestCase{
 		},
 	},
 	"canceled job": {
-		jobResponse: func(t *testing.T, baseJobGetter baseJobGetter) common.JobResponse {
+		jobResponse: func(t *testing.T, baseJobGetter baseJobGetter) spec.Job {
 			return getJobResponseWithCommands(t, baseJobGetter, "echo Hello World", "sleep 10", "exit 0")
 		},
 		handleTrace: func(t *testing.T, done chan struct{}, traceBuffer *trace.Buffer, trace common.JobTrace) {
@@ -84,12 +85,12 @@ func runBuildWithJobOutputLimitExceeded(
 	t *testing.T,
 	config *common.RunnerConfig,
 	setup BuildSetupFn,
-	baseJob func() (common.JobResponse, error),
+	baseJob func() (spec.Job, error),
 ) {
 	for tn, tt := range jobOutputLimitExceededTestCases {
 		t.Run(tn, func(t *testing.T) {
 			build := &common.Build{
-				JobResponse:     tt.jobResponse(t, baseJob),
+				Job:             tt.jobResponse(t, baseJob),
 				Runner:          config,
 				SystemInterrupt: make(chan os.Signal, 1),
 			}

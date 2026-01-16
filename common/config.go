@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/config/runner"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -41,7 +42,7 @@ import (
 )
 
 type (
-	DockerPullPolicy string
+	DockerPullPolicy = spec.PullPolicy
 	DockerSysCtls    map[string]string
 )
 
@@ -1154,8 +1155,8 @@ type Service struct {
 
 func (s *Service) Aliases() []string { return strings.Fields(strings.ReplaceAll(s.Alias, ",", " ")) }
 
-func (s *Service) ToImageDefinition() Image {
-	image := Image{
+func (s *Service) ToImageDefinition() spec.Image {
+	image := spec.Image{
 		Name:       s.Name,
 		Alias:      s.Alias,
 		Command:    s.Command,
@@ -1163,7 +1164,7 @@ func (s *Service) ToImageDefinition() Image {
 	}
 
 	for _, environment := range s.Environment {
-		if variable, err := ParseVariable(environment); err == nil {
+		if variable, err := parseVariable(environment); err == nil {
 			variable.Internal = true
 			image.Variables = append(image.Variables, variable)
 		}
@@ -1656,7 +1657,7 @@ func (c *DockerConfig) GetOomKillDisable() *bool {
 	return &c.OomKillDisable
 }
 
-func getExpandedServices(services []Service, vars JobVariables) []Service {
+func getExpandedServices(services []Service, vars spec.Variables) []Service {
 	result := []Service{}
 	for _, s := range services {
 		s.Name = vars.ExpandValue(s.Name)
@@ -1669,7 +1670,7 @@ func getExpandedServices(services []Service, vars JobVariables) []Service {
 // GetExpandedServices returns the executor-configured services, with the values expanded. This is necessary because
 // some of the values in service definition can point to job variables, so the final value is job-dependant.
 // See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29499
-func (c *DockerConfig) GetExpandedServices(vars JobVariables) []Service {
+func (c *DockerConfig) GetExpandedServices(vars spec.Variables) []Service {
 	return getExpandedServices(c.Services, vars)
 }
 
@@ -1981,7 +1982,7 @@ func (c *KubernetesConfig) GetHostAliases() []api.HostAlias {
 // GetExpandedServices returns the executor-configured services, with the values expanded. This is necessary because
 // some of the values in service definition can point to job variables, so the final value is job-dependant.
 // See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29499
-func (c *KubernetesConfig) GetExpandedServices(vars JobVariables) []Service {
+func (c *KubernetesConfig) GetExpandedServices(vars spec.Variables) []Service {
 	return getExpandedServices(c.Services, vars)
 }
 
@@ -2173,13 +2174,13 @@ func (c *RunnerConfig) GetRequestConcurrency() int {
 	return max(1, c.RequestConcurrency)
 }
 
-func (c *RunnerConfig) GetVariables() JobVariables {
-	variables := JobVariables{
+func (c *RunnerConfig) GetVariables() spec.Variables {
+	variables := spec.Variables{
 		{Key: "CI_RUNNER_SHORT_TOKEN", Value: c.ShortDescription(), Public: true, Internal: true, File: false},
 	}
 
 	for _, environment := range c.Environment {
-		if variable, err := ParseVariable(environment); err == nil {
+		if variable, err := parseVariable(environment); err == nil {
 			variable.Internal = true
 			variables = append(variables, variable)
 		}
@@ -2607,4 +2608,17 @@ func expandSlotTemplate(template string, slot int) string {
 		}
 		return ""
 	})
+}
+
+func parseVariable(text string) (variable spec.Variable, err error) {
+	keyValue := strings.SplitN(text, "=", 2)
+	if len(keyValue) != 2 {
+		err = errors.New("missing =")
+		return
+	}
+	variable = spec.Variable{
+		Key:   keyValue[0],
+		Value: keyValue[1],
+	}
+	return
 }

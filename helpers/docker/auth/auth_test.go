@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 const (
@@ -38,7 +38,7 @@ var (
 	testFileAuthConfigsWithPathTraversalFormat = `{"auths":{` +
 		`"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"},` +
 		`"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyXzI6dGVzdF9wYXNzd29yZF8y"}},%s}`
-	gitlabRegistryCredentials = []common.Credentials{
+	gitlabRegistryCredentials = []spec.Credentials{
 		{
 			Type:     "registry",
 			URL:      "registry.gitlab.tld:1234",
@@ -71,7 +71,7 @@ func TestGetConfigForImage(t *testing.T) {
 	tests := map[string]struct {
 		configFileContents string
 		dockerAuthValue    string
-		jobCredentials     []common.Credentials
+		jobCredentials     []spec.Credentials
 		image              string
 		checks             func(*testing.T, *RegistryInfo, error, string, *fakeLogger)
 	}{
@@ -370,7 +370,7 @@ func TestCredsForImagesWithDifferentPaths(t *testing.T) {
 	})
 
 	tests := map[string]struct {
-		jobCreds         []common.Credentials
+		jobCreds         []spec.Credentials
 		expectNoResult   bool
 		expectedSource   string
 		expectedUsername string
@@ -409,7 +409,7 @@ func TestCredsForImagesWithDifferentPaths(t *testing.T) {
 		},
 		"registry.local/ns/blipp/image:foo": {
 			// there are job creds, but for the same path we already have a $DOCKER_AUTH_CONFIG, $DOCKER_AUTH_CONFIG wins
-			jobCreds: []common.Credentials{{
+			jobCreds: []spec.Credentials{{
 				Type:     "registry",
 				Username: "job-cred-user",
 				Password: "job-cred-pass",
@@ -426,7 +426,7 @@ func TestCredsForImagesWithDifferentPaths(t *testing.T) {
 		},
 		"registry.local/ns/blipp/image:bar": {
 			// there are job creds which have a more specific match for the image ref than auths in $DOCKER_AUTH_CONFIG
-			jobCreds: []common.Credentials{{
+			jobCreds: []spec.Credentials{{
 				Type:     "registry",
 				Username: "job-cred-user",
 				Password: "job-cred-pass",
@@ -515,7 +515,7 @@ func TestResolver_AllConfigs(t *testing.T) {
 }
 
 func TestGetConfigs_DuplicatedRegistryCredentials(t *testing.T) {
-	registryCredentials := []common.Credentials{
+	registryCredentials := []spec.Credentials{
 		{
 			Type:     "registry",
 			URL:      "registry.domain.tld:5005",
@@ -766,7 +766,7 @@ type testRegistryConfig struct {
 
 func createTestDockerConfig(regs []testRegistryConfig) string {
 	config := map[string]map[string]map[string]string{
-		"auths": map[string]map[string]string{},
+		"auths": {},
 	}
 
 	for _, creds := range regs {

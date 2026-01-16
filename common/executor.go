@@ -7,7 +7,9 @@ import (
 	"io"
 
 	"github.com/sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 // ExecutorData is an empty interface representing free-form data
@@ -131,7 +133,7 @@ type ExecutorProvider interface {
 // the job script, e.g. failed to create container, establish ssh connection.
 type BuildError struct {
 	Inner         error
-	FailureReason JobFailureReason
+	FailureReason spec.JobFailureReason
 	ExitCode      int
 }
 

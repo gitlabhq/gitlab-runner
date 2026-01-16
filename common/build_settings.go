@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
@@ -116,7 +117,7 @@ func (b *Build) initSettings() {
 	})
 }
 
-func validateVariables(variables JobVariables, b *Build, defaultGitStategy GitStrategy) []error {
+func validateVariables(variables spec.Variables, b *Build, defaultGitStategy GitStrategy) []error {
 	return []error{
 		validate(variables, "CI_DEBUG_SERVICES", &b.buildSettings.CIDebugServices, false),
 		validate(variables, "CI_DEBUG_TRACE", &b.buildSettings.CIDebugTrace, false),
@@ -147,7 +148,7 @@ func validateVariables(variables JobVariables, b *Build, defaultGitStategy GitSt
 	}
 }
 
-func validate[T any](variables JobVariables, name string, value *T, def T) error {
+func validate[T any](variables spec.Variables, name string, value *T, def T) error {
 	raw := variables.Value(name)
 	var err error
 
@@ -217,7 +218,7 @@ func validate[T any](variables JobVariables, name string, value *T, def T) error
 	return nil
 }
 
-func populateFeatureFlags(b *Build, variables JobVariables) []error {
+func populateFeatureFlags(b *Build, variables spec.Variables) []error {
 	var errs []error
 
 	b.buildSettings.FeatureFlags = make(map[string]bool)

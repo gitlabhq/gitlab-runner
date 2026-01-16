@@ -2,6 +2,8 @@ package common
 
 import (
 	"errors"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 const (
@@ -13,8 +15,8 @@ var (
 )
 
 type failureReasonMapper struct {
-	supportedByGitLab []JobFailureReason
-	compatibilityMap  map[JobFailureReason]JobFailureReason
+	supportedByGitLab []spec.JobFailureReason
+	compatibilityMap  map[spec.JobFailureReason]spec.JobFailureReason
 	maxMappingDepth   int
 
 	// err is used only for tests. It allows us to check if `Map()` behavior is correct
@@ -23,7 +25,7 @@ type failureReasonMapper struct {
 	err error
 }
 
-func newFailureReasonMapper(supported []JobFailureReason) *failureReasonMapper {
+func newFailureReasonMapper(supported []spec.JobFailureReason) *failureReasonMapper {
 	return &failureReasonMapper{
 		supportedByGitLab: append(supported, alwaysSupportedFailureReasons...),
 		compatibilityMap:  failureReasonsCompatibilityMap,
@@ -31,7 +33,7 @@ func newFailureReasonMapper(supported []JobFailureReason) *failureReasonMapper {
 	}
 }
 
-func (f *failureReasonMapper) Map(reason JobFailureReason) JobFailureReason {
+func (f *failureReasonMapper) Map(reason spec.JobFailureReason) spec.JobFailureReason {
 	f.err = nil
 
 	// No specific reason means it's a script failure
@@ -60,7 +62,7 @@ func (f *failureReasonMapper) Map(reason JobFailureReason) JobFailureReason {
 	return UnknownFailure
 }
 
-func (f *failureReasonMapper) findSupported(reason JobFailureReason) (JobFailureReason, bool) {
+func (f *failureReasonMapper) findSupported(reason spec.JobFailureReason) (spec.JobFailureReason, bool) {
 	for _, supported := range f.supportedByGitLab {
 		if reason == supported {
 			return reason, true
@@ -70,7 +72,7 @@ func (f *failureReasonMapper) findSupported(reason JobFailureReason) (JobFailure
 	return UnknownFailure, false
 }
 
-func (f *failureReasonMapper) findBackwardCompatible(reason JobFailureReason) (JobFailureReason, bool) {
+func (f *failureReasonMapper) findBackwardCompatible(reason spec.JobFailureReason) (spec.JobFailureReason, bool) {
 	for i := 0; i < f.maxMappingDepth; i++ {
 		mappedReason, ok := f.compatibilityMap[reason]
 		if !ok {

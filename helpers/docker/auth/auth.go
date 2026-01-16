@@ -20,7 +20,8 @@ import (
 	"github.com/docker/cli/cli/config/credentials"
 	"github.com/docker/cli/cli/config/types"
 	dockerHomeDir "github.com/docker/docker/pkg/homedir"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 const (
@@ -100,7 +101,7 @@ type Resolver struct {
 // It returns nil when no matching config can be found.
 func (r Resolver) ConfigForImage(
 	imageName, dockerAuthConfig, username string,
-	credentials []common.Credentials, logger DebugLogger,
+	credentials []spec.Credentials, logger DebugLogger,
 ) (*RegistryInfo, error) {
 	authConfigs, err := r.AllConfigs(dockerAuthConfig, username, credentials, logger)
 	if len(authConfigs) == 0 || err != nil {
@@ -125,7 +126,7 @@ func (r Resolver) ConfigForImage(
 // Returns a list of RegistryInfos, in the order of discovery.
 func (r Resolver) AllConfigs(
 	dockerAuthConfig, username string,
-	credentials []common.Credentials, logger DebugLogger,
+	credentials []spec.Credentials, logger DebugLogger,
 ) (RegistryInfos, error) {
 	resolvers := []func() (string, []types.AuthConfig, error){
 		func() (string, []types.AuthConfig, error) {
@@ -215,7 +216,7 @@ func EncodeConfig(authConfig *types.AuthConfig) (string, error) {
 	return base64.URLEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-func getBuildConfiguration(credentials []common.Credentials) (string, []types.AuthConfig, error) {
+func getBuildConfiguration(credentials []spec.Credentials) (string, []types.AuthConfig, error) {
 	authConfigs := make([]types.AuthConfig, 0, len(credentials))
 
 	for _, credentials := range credentials {

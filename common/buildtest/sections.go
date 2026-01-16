@@ -6,13 +6,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 func RunBuildWithSections(t *testing.T, build *common.Build) {
 	build.Features.TraceSections = true
-	build.Variables = append(build.Variables, common.JobVariable{
+	build.Variables = append(build.Variables, spec.Variable{
 		Key:   featureflags.ScriptSections,
 		Value: "true",
 	})

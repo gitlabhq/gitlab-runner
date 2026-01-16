@@ -1,12 +1,10 @@
 package shells
 
-import (
-	"gitlab.com/gitlab-org/gitlab-runner/common"
-)
+import "gitlab.com/gitlab-org/gitlab-runner/common/spec"
 
 type ShellWriter interface {
 	EnvVariableKey(name string) string
-	Variable(variable common.JobVariable)
+	Variable(variable spec.Variable)
 	// Save variables in key=value format to a temporary file
 	DotEnvVariables(baseFilename string, variables map[string]string) string
 	SourceEnv(pathname string)

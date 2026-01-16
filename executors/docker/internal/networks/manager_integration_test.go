@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -37,9 +38,9 @@ func TestCreateNetworkLabels(t *testing.T) {
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{Token: "test-token"},
 		},
-		JobResponse: successfulJobResponse,
+		Job: successfulJobResponse,
 	}
-	build.Variables = common.JobVariables{
+	build.Variables = spec.Variables{
 		{Key: featureflags.NetworkPerBuild, Value: "true"},
 		{Key: "CI_PIPELINE_ID", Value: "1"},
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 var numJobFailuresDesc = prometheus.NewDesc(
@@ -18,7 +19,7 @@ var numJobFailuresDesc = prometheus.NewDesc(
 type failurePermutation struct {
 	runnerDescription string
 	runnerName        string
-	reason            common.JobFailureReason
+	reason            spec.JobFailureReason
 }
 
 type FailuresCollector struct {
@@ -27,7 +28,7 @@ type FailuresCollector struct {
 	failures map[failurePermutation]int64
 }
 
-func (fc *FailuresCollector) RecordFailure(reason common.JobFailureReason, runnerConfig common.RunnerConfig) {
+func (fc *FailuresCollector) RecordFailure(reason spec.JobFailureReason, runnerConfig common.RunnerConfig) {
 	failure := failurePermutation{
 		runnerDescription: runnerConfig.ShortDescription(),
 		runnerName:        runnerConfig.Name,

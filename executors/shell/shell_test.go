@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
@@ -93,8 +94,8 @@ func TestExecutor_Run(t *testing.T) {
 				executor := executor{
 					AbstractExecutor: executors.AbstractExecutor{
 						Build: &common.Build{
-							JobResponse: common.JobResponse{},
-							Runner:      &common.RunnerConfig{},
+							Job:    spec.Job{},
+							Runner: &common.RunnerConfig{},
 						},
 						BuildShell: &common.ShellConfiguration{
 							Command: shell,
@@ -186,8 +187,8 @@ func TestExecutor_Prepare_MakesPathsAbsolute(t *testing.T) {
 
 				// Create a minimal build for Prepare to work
 				build := &common.Build{
-					JobResponse: common.JobResponse{
-						Variables: common.JobVariables{},
+					Job: spec.Job{
+						Variables: spec.Variables{},
 					},
 					Runner: &common.RunnerConfig{},
 				}

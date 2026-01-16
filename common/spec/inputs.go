@@ -1,4 +1,4 @@
-package common
+package spec
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/api/expression"
 )
 
-type JobInputs struct {
+type Inputs struct {
 	inputs           []expression.Input
 	evaluator        *expression.Evaluator
 	metricsCollector *JobInputsMetricsCollector
@@ -34,7 +34,7 @@ type JobInputValue struct {
 type JobInputContentTypeName string
 
 type InputExpander interface {
-	Expand(*JobInputs) error
+	Expand(*Inputs) error
 }
 
 type InputInterpolationError struct {
@@ -132,14 +132,14 @@ func (i *JobInput) validate() error {
 	return nil
 }
 
-func (i *JobInputs) UnmarshalJSON(data []byte) error {
+func (i *Inputs) UnmarshalJSON(data []byte) error {
 	var inputs []JobInput
 
 	if err := json.Unmarshal(data, &inputs); err != nil {
 		return err
 	}
 
-	jobInputs, err := newJobInputs(inputs)
+	jobInputs, err := NewJobInputs(inputs)
 	if err != nil {
 		return err
 	}
@@ -148,8 +148,8 @@ func (i *JobInputs) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func newJobInputs(inputs []JobInput) (JobInputs, error) {
-	i := JobInputs{}
+func NewJobInputs(inputs []JobInput) (Inputs, error) {
+	i := Inputs{}
 
 	for _, input := range inputs {
 		// post-process sensitive mark for input value
@@ -166,14 +166,14 @@ func newJobInputs(inputs []JobInput) (JobInputs, error) {
 
 	e, err := expression.NewEvaluator(value.Object(&i))
 	if err != nil {
-		return JobInputs{}, err
+		return Inputs{}, err
 	}
 	i.evaluator = e
 
 	return i, nil
 }
 
-func (i *JobInputs) All() iter.Seq2[value.Value, value.Value] {
+func (i *Inputs) All() iter.Seq2[value.Value, value.Value] {
 	return func(yield func(value.Value, value.Value) bool) {
 		for _, input := range i.inputs {
 			if !yield(value.String(input.Key), input.Value) {
@@ -183,7 +183,7 @@ func (i *JobInputs) All() iter.Seq2[value.Value, value.Value] {
 	}
 }
 
-func (i *JobInputs) Attr(a string) (value.Value, error) {
+func (i *Inputs) Attr(a string) (value.Value, error) {
 	idx := slices.IndexFunc(i.inputs, func(x expression.Input) bool {
 		return x.Key == a
 	})
@@ -193,7 +193,7 @@ func (i *JobInputs) Attr(a string) (value.Value, error) {
 	return i.inputs[idx].Value, nil
 }
 
-func (i *JobInputs) Get(key value.Value) (value.Value, error) {
+func (i *Inputs) Get(key value.Value) (value.Value, error) {
 	if key.Kind() != value.StringKind {
 		return value.Null(), fmt.Errorf("%w: object requires string key not %v", value.ErrInvalidKey, key.Kind())
 	}
@@ -201,7 +201,7 @@ func (i *JobInputs) Get(key value.Value) (value.Value, error) {
 	return i.Attr(key.String())
 }
 
-func (i *JobInputs) Keys() iter.Seq[value.Value] {
+func (i *Inputs) Keys() iter.Seq[value.Value] {
 	return func(yield func(value.Value) bool) {
 		for _, v := range i.inputs {
 			if !yield(value.String(v.Key)) {
@@ -211,11 +211,11 @@ func (i *JobInputs) Keys() iter.Seq[value.Value] {
 	}
 }
 
-func (i *JobInputs) Len() int {
+func (i *Inputs) Len() int {
 	return len(i.inputs)
 }
 
-func (i *JobInputs) Values() iter.Seq[value.Value] {
+func (i *Inputs) Values() iter.Seq[value.Value] {
 	return func(yield func(value.Value) bool) {
 		for _, v := range i.inputs {
 			if !yield(v.Value) {
@@ -225,17 +225,17 @@ func (i *JobInputs) Values() iter.Seq[value.Value] {
 	}
 }
 
-func (i *JobInputs) WithMarks(marks uint16) value.Mapper {
+func (i *Inputs) WithMarks(marks uint16) value.Mapper {
 	// FIXME: what should we do here ...
 	return i
 }
 
 // SetMetricsCollector injects the metrics collector
-func (i *JobInputs) SetMetricsCollector(collector *JobInputsMetricsCollector) {
+func (i *Inputs) SetMetricsCollector(collector *JobInputsMetricsCollector) {
 	i.metricsCollector = collector
 }
 
-func (i *JobInputs) Expand(text string) (string, error) {
+func (i *Inputs) Expand(text string) (string, error) {
 	if i == nil || i.evaluator == nil {
 		return text, nil
 	}
@@ -267,7 +267,7 @@ func (i *JobInputs) Expand(text string) (string, error) {
 	return resultString, nil
 }
 
-func ExpandInputs(inputs *JobInputs, v any) error {
+func ExpandInputs(inputs *Inputs, v any) error {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
@@ -290,7 +290,7 @@ func ExpandInputs(inputs *JobInputs, v any) error {
 }
 
 //nolint:gocognit
-func processStruct(inputs *JobInputs, rv reflect.Value) error {
+func processStruct(inputs *Inputs, rv reflect.Value) error {
 	err := tryExpanderInterface(inputs, rv)
 	switch {
 	case errors.Is(err, errInputExpanderNotSupported):
@@ -346,7 +346,7 @@ func processStruct(inputs *JobInputs, rv reflect.Value) error {
 	return nil
 }
 
-func tryExpanderInterface(inputs *JobInputs, field reflect.Value) error {
+func tryExpanderInterface(inputs *Inputs, field reflect.Value) error {
 	var fieldInterface any
 
 	// We need to get the address if possible since methods might be on pointer receiver
@@ -365,7 +365,7 @@ func tryExpanderInterface(inputs *JobInputs, field reflect.Value) error {
 }
 
 // expandStringField expands a string-based field
-func expandStringField(inputs *JobInputs, field reflect.Value) error {
+func expandStringField(inputs *Inputs, field reflect.Value) error {
 	if !field.CanAddr() {
 		return errors.New("field is not addressable")
 	}
@@ -383,7 +383,7 @@ func expandStringField(inputs *JobInputs, field reflect.Value) error {
 	return nil
 }
 
-func expandSlice(inputs *JobInputs, field reflect.Value) error {
+func expandSlice(inputs *Inputs, field reflect.Value) error {
 	if field.Len() == 0 {
 		return nil
 	}
@@ -399,7 +399,7 @@ func expandSlice(inputs *JobInputs, field reflect.Value) error {
 	}
 }
 
-func expandStringSlice(inputs *JobInputs, field reflect.Value) error {
+func expandStringSlice(inputs *Inputs, field reflect.Value) error {
 	for i := range field.Len() {
 		elem := field.Index(i)
 		if err := expandStringField(inputs, elem); err != nil {
@@ -409,7 +409,7 @@ func expandStringSlice(inputs *JobInputs, field reflect.Value) error {
 	return nil
 }
 
-func expandStructSlice(inputs *JobInputs, field reflect.Value) error {
+func expandStructSlice(inputs *Inputs, field reflect.Value) error {
 	for i := range field.Len() {
 		elem := field.Index(i)
 		if err := processStruct(inputs, elem); err != nil {

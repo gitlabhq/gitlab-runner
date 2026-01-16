@@ -8,10 +8,12 @@ import (
 
 	sm "cloud.google.com/go/secretmanager/apiv1"
 	smpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sts/v1"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 const (
@@ -33,7 +35,7 @@ func NewClient() Client {
 	}
 }
 
-func (c Client) GetSecret(ctx context.Context, secret *common.GCPSecretManagerSecret) (string, error) {
+func (c Client) GetSecret(ctx context.Context, secret *spec.GCPSecretManagerSecret) (string, error) {
 	tokenResponse, err := c.getToken(ctx, secret)
 	if err != nil {
 		return "", fmt.Errorf("failed to exchange sts token: %w", err)
@@ -58,9 +60,9 @@ func (c Client) GetSecret(ctx context.Context, secret *common.GCPSecretManagerSe
 	return string(accessSecretVersionResponse.Payload.Data), nil
 }
 
-type getTokenFunc func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error)
+type getTokenFunc func(ctx context.Context, secret *spec.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error)
 
-func getToken(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
+func getToken(ctx context.Context, secret *spec.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
 	// option.WithoutAuthentication() is required for STS service.
 	// https://cloud.google.com/iam/docs/reference/sts/rest/v1/TopLevel/token
 	// specifies clients NOT to send `Authorization` header. Without this option,
@@ -82,7 +84,7 @@ func getToken(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.
 	return stsService.V1.Token(stsTokenRequest).Do()
 }
 
-func stsAudience(secret *common.GCPSecretManagerSecret) string {
+func stsAudience(secret *spec.GCPSecretManagerSecret) string {
 	return fmt.Sprintf(
 		"//iam.googleapis.com/projects/%s/locations/global/workloadIdentityPools/%s/providers/%s",
 		secret.Server.ProjectNumber,
@@ -90,9 +92,9 @@ func stsAudience(secret *common.GCPSecretManagerSecret) string {
 		secret.Server.WorkloadIdentityFederationProviderID)
 }
 
-type accessSecretFunc func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error)
+type accessSecretFunc func(ctx context.Context, secret *spec.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error)
 
-func access(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
+func access(ctx context.Context, secret *spec.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
 	smClient, err := sm.NewClient(ctx, option.WithTokenSource(source))
 	if err != nil {
 		return nil, fmt.Errorf("unable to create secrets manager client: %w", err)
@@ -112,7 +114,7 @@ func toTokenSource(resp *sts.GoogleIdentityStsV1ExchangeTokenResponse) oauth2.To
 	})
 }
 
-func secretVersionResourceName(secret *common.GCPSecretManagerSecret) string {
+func secretVersionResourceName(secret *spec.GCPSecretManagerSecret) string {
 	// Support secrets where the full secret resource path is provided. Note that filepath.Match can only return an error
 	// when the pattern is malformed which should be impossible as it is a static string. If the pattern is still somehow
 	// malformed or to handle filepath.Match gaining additional errors in future, we revert to the implicit use of project

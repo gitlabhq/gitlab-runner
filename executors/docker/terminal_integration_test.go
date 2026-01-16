@@ -32,7 +32,7 @@ func TestInteractiveTerminal(t *testing.T) {
 	require.NoError(t, err)
 
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",

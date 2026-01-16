@@ -29,6 +29,7 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func TestGetKubeClientConfig(t *testing.T) {
@@ -548,7 +549,7 @@ func TestSanitizeLabel(t *testing.T) {
 }
 
 func TestBuildVariables(t *testing.T) {
-	bv := []common.JobVariable{
+	bv := []spec.Variable{
 		{Key: "k", Value: "__nope__"},
 		{Key: "filetype", Value: "secret-stuff", File: true},
 		{Key: "k", Value: "v"},

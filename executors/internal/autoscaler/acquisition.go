@@ -18,6 +18,7 @@ import (
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
@@ -69,7 +70,7 @@ func (ref *acquisitionRef) AcquisitionSlot() int {
 // addSlotCgroupEnvironmentVariable adds GITLAB_RUNNER_SLOT_CGROUP environment variable if slot cgroups are enabled
 func (ref *acquisitionRef) addSlotCgroupEnvironmentVariable(options *common.ExecutorPrepareOptions) {
 	if cgroupPath := options.Config.GetSlotCgroupPath(ref); cgroupPath != "" {
-		options.Build.Variables = append(options.Build.Variables, common.JobVariable{
+		options.Build.Variables = append(options.Build.Variables, spec.Variable{
 			Key:   "GITLAB_RUNNER_SLOT_CGROUP",
 			Value: cgroupPath,
 		})

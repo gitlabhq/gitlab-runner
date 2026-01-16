@@ -11,6 +11,7 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"google.golang.org/grpc"
 )
 
@@ -423,23 +424,23 @@ func (_c *MockDelegate_RegisterRunner_Call) RunAndReturn(run func(config common.
 }
 
 // RequestJob provides a mock function for the type MockDelegate
-func (_mock *MockDelegate) RequestJob(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo) (*common.JobResponse, bool) {
+func (_mock *MockDelegate) RequestJob(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo) (*spec.Job, bool) {
 	ret := _mock.Called(ctx, config, sessionInfo)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RequestJob")
 	}
 
-	var r0 *common.JobResponse
+	var r0 *spec.Job
 	var r1 bool
-	if returnFunc, ok := ret.Get(0).(func(context.Context, common.RunnerConfig, *common.SessionInfo) (*common.JobResponse, bool)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, common.RunnerConfig, *common.SessionInfo) (*spec.Job, bool)); ok {
 		return returnFunc(ctx, config, sessionInfo)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, common.RunnerConfig, *common.SessionInfo) *common.JobResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, common.RunnerConfig, *common.SessionInfo) *spec.Job); ok {
 		r0 = returnFunc(ctx, config, sessionInfo)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*common.JobResponse)
+			r0 = ret.Get(0).(*spec.Job)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, common.RunnerConfig, *common.SessionInfo) bool); ok {
@@ -486,12 +487,12 @@ func (_c *MockDelegate_RequestJob_Call) Run(run func(ctx context.Context, config
 	return _c
 }
 
-func (_c *MockDelegate_RequestJob_Call) Return(jobResponse *common.JobResponse, b bool) *MockDelegate_RequestJob_Call {
-	_c.Call.Return(jobResponse, b)
+func (_c *MockDelegate_RequestJob_Call) Return(job *spec.Job, b bool) *MockDelegate_RequestJob_Call {
+	_c.Call.Return(job, b)
 	return _c
 }
 
-func (_c *MockDelegate_RequestJob_Call) RunAndReturn(run func(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo) (*common.JobResponse, bool)) *MockDelegate_RequestJob_Call {
+func (_c *MockDelegate_RequestJob_Call) RunAndReturn(run func(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo) (*spec.Job, bool)) *MockDelegate_RequestJob_Call {
 	_c.Call.Return(run)
 	return _c
 }

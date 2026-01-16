@@ -35,7 +35,7 @@ func TestBuildsHelperCollect(t *testing.T) {
 	require.NoError(t, err)
 
 	build := &common.Build{
-		JobResponse: longRunningBuild,
+		Job: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				BuildsDir: dir,

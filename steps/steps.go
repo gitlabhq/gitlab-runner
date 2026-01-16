@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"strconv"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 	"gopkg.in/yaml.v2"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func NewRequest(build *common.Build) (*client.RunRequest, error) {
-	steps, err := addStepsPreamble(build.JobResponse.Run)
+	steps, err := addStepsPreamble(build.Job.Run)
 	if err != nil {
 		return nil, fmt.Errorf("parsing step request: %w", err)
 	}
@@ -31,7 +33,7 @@ var variablesToOmit = map[string]bool{
 	"FF_USE_NATIVE_STEPS": true,
 }
 
-func addVariables(vars common.JobVariables) []client.Variable {
+func addVariables(vars spec.Variables) []client.Variable {
 	result := make([]client.Variable, 0, len(vars))
 	for _, v := range vars {
 		if variablesToOmit[v.Key] {

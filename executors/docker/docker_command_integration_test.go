@@ -33,6 +33,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	execDocker "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/prebuilt"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -98,7 +99,7 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	tests := map[string]struct {
-		buildGetter    func() (common.JobResponse, error)
+		buildGetter    func() (spec.Job, error)
 		expectedOutput []string
 		unwantedOutput []string
 		errExpected    bool
@@ -113,8 +114,8 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 			errExpected: false,
 		},
 		"Failure on script step. Release is skipped. After script runs.": {
-			buildGetter: func() (common.JobResponse, error) {
-				return common.GetRemoteFailingMultistepBuild(common.StepNameScript)
+			buildGetter: func() (spec.Job, error) {
+				return common.GetRemoteFailingMultistepBuild(spec.StepNameScript)
 			},
 			expectedOutput: []string{
 				"echo Hello World",
@@ -126,7 +127,7 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 			errExpected: true,
 		},
 		"Failure on release step. After script runs.": {
-			buildGetter: func() (common.JobResponse, error) {
+			buildGetter: func() (spec.Job, error) {
 				return common.GetRemoteFailingMultistepBuild("release")
 			},
 			expectedOutput: []string{
@@ -165,13 +166,13 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 	}
 }
 
-func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) common.Build {
+func getBuildForOS(t *testing.T, getJobResp func() (spec.Job, error)) common.Build {
 	jobResp, err := getJobResp()
 	require.NoError(t, err)
 
 	build := common.Build{
-		JobResponse: jobResp,
-		Runner:      getRunnerConfigForOS(t),
+		Job:    jobResp,
+		Runner: getRunnerConfigForOS(t),
 	}
 
 	return build
@@ -261,12 +262,12 @@ func TestBuildPassingEnvsMultistep(t *testing.T) {
 func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	build := getBuildForOS(t, func() (common.JobResponse, error) {
+	build := getBuildForOS(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse("echo $TEST")
 	})
 
 	value := "$VARIABLE$WITH$DOLLARS$$"
-	build.Variables = append(build.Variables, common.JobVariable{
+	build.Variables = append(build.Variables, spec.Variable{
 		Key:   "TEST",
 		Value: value,
 		Raw:   true,
@@ -280,7 +281,7 @@ func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
 func TestDockerCommandSuccessRunFileVariableContent(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	build := getBuildForOS(t, func() (common.JobResponse, error) {
+	build := getBuildForOS(t, func() (spec.Job, error) {
 		if runtime.GOOS == "windows" {
 			return common.GetRemoteBuildResponse(`Get-Filehash -Algorithm SHA1 -Path $TEST`)
 		}
@@ -288,7 +289,7 @@ func TestDockerCommandSuccessRunFileVariableContent(t *testing.T) {
 	})
 
 	value := "this is the content"
-	build.Variables = append(build.Variables, common.JobVariable{
+	build.Variables = append(build.Variables, spec.Variable{
 		Key:   "TEST",
 		Value: value,
 		File:  true,
@@ -307,7 +308,7 @@ func TestBuildScriptSections(t *testing.T) {
 			t.Skip("pwsh, powershell not supported")
 		}
 
-		build := getBuildForOS(t, func() (common.JobResponse, error) {
+		build := getBuildForOS(t, func() (spec.Job, error) {
 			return common.GetRemoteBuildResponse(`echo "Hello
 World"`)
 		})
@@ -321,7 +322,7 @@ World"`)
 func TestDockerCommandUsingCustomClonePath(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	remoteBuild := func() (common.JobResponse, error) {
+	remoteBuild := func() (spec.Job, error) {
 		cmd := "ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
 		if runtime.GOOS == "windows" {
 			cmd = "Get-Item -Path $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
@@ -372,7 +373,7 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 	assert.NoError(t, err)
 	successfulBuild.Image.Name = common.TestAlpineNoRootImage
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -396,7 +397,7 @@ func TestDockerCommandEntrypointWithStderrOutput(t *testing.T) {
 
 	resp.Image.Name = common.TestAlpineEntrypointStderrImage
 	build := &common.Build{
-		JobResponse: resp,
+		Job: resp,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -423,7 +424,7 @@ func TestDockerCommandOwnershipOverflow(t *testing.T) {
 
 	resp.Image.Name = common.TestAlpineIDOverflowImage
 	build := &common.Build{
-		JobResponse: resp,
+		Job: resp,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -456,18 +457,18 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
-	successfulBuild.Image = common.Image{Name: "$IMAGE_NAME"}
-	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+	successfulBuild.Image = spec.Image{Name: "$IMAGE_NAME"}
+	successfulBuild.Variables = append(successfulBuild.Variables, spec.Variable{
 		Key:      "IMAGE_NAME",
 		Value:    common.TestAlpineImage,
 		Public:   true,
 		Internal: false,
 		File:     false,
 	})
-	successfulBuild.Services = append(successfulBuild.Services, common.Image{Name: common.TestDockerDindImage})
+	successfulBuild.Services = append(successfulBuild.Services, spec.Image{Name: common.TestDockerDindImage})
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -520,8 +521,8 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 			successfulBuild.Image.Entrypoint = []string{"/bin/sh", "-c", "echo 'image overwritten'"}
 
 			if test.services {
-				successfulBuild.Services = common.Services{
-					common.Image{
+				successfulBuild.Services = spec.Services{
+					spec.Image{
 						Name:       common.TestDockerDindImage,
 						Entrypoint: []string{"/bin/sh", "-c", "echo 'service overwritten'"},
 					},
@@ -529,7 +530,7 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 			}
 
 			build := &common.Build{
-				JobResponse: successfulBuild,
+				Job: successfulBuild,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",
@@ -589,7 +590,7 @@ func TestDockerCommandMissingServiceImage(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	build := getBuildForOS(t, common.GetSuccessfulBuild)
-	build.Services = common.Services{
+	build.Services = spec.Services{
 		{
 			Name: "some/non-existing/image",
 		},
@@ -648,13 +649,13 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	tests := map[string]struct {
-		variables common.JobVariables
+		variables spec.Variables
 	}{
 		"bridge network": {
-			variables: common.JobVariables{},
+			variables: spec.Variables{},
 		},
 		"network per build": {
-			variables: common.JobVariables{
+			variables: spec.Variables{
 				{
 					Key:   featureflags.NetworkPerBuild,
 					Value: "true",
@@ -664,13 +665,13 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 	}
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
-	successfulBuild.Services = common.Services{
+	successfulBuild.Services = spec.Services{
 		{Name: common.TestAlpineImage, Alias: "service-1"},
 		{Name: common.TestAlpineImage, Alias: "service-2"},
 	}
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -703,13 +704,13 @@ func TestDockerCommandServiceNameEmpty(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	tests := map[string]struct {
-		variables common.JobVariables
+		variables spec.Variables
 	}{
 		"bridge network": {
-			variables: common.JobVariables{},
+			variables: spec.Variables{},
 		},
 		"network per build": {
-			variables: common.JobVariables{
+			variables: spec.Variables{
 				{
 					Key:   featureflags.NetworkPerBuild,
 					Value: "true",
@@ -719,12 +720,12 @@ func TestDockerCommandServiceNameEmpty(t *testing.T) {
 	}
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
-	successfulBuild.Services = common.Services{
+	successfulBuild.Services = spec.Services{
 		{Name: "", Alias: "service-1"}, // Name can be empty if for example env variable expands to empty string.
 	}
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -760,7 +761,7 @@ func TestDockerCommandOutput(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -802,8 +803,8 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 
 		build := getTestDockerJob(t, job)
 		build.Image.Name = common.TestDockerGitImage
-		build.Services = common.Services{
-			common.Image{
+		build.Services = spec.Services{
+			spec.Image{
 				Name: common.TestDockerDindImage,
 				// set bip manually to prevent DinD-ception networking problems
 				// and avoid collision with:
@@ -814,7 +815,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 			},
 		}
 
-		build.Variables = append(build.Variables, common.JobVariable{
+		build.Variables = append(build.Variables, spec.Variable{
 			Key: "GIT_STRATEGY", Value: strategy,
 		})
 
@@ -823,15 +824,15 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 	}
 }
 
-func getTestDockerJob(t *testing.T, job common.JobResponse) *common.Build {
+func getTestDockerJob(t *testing.T, job spec.Job) *common.Build {
 	job.Variables = append(job.Variables,
-		common.JobVariable{Key: "DOCKER_TLS_VERIFY", Value: "1"},
-		common.JobVariable{Key: "DOCKER_TLS_CERTDIR", Value: "/certs"},
-		common.JobVariable{Key: "DOCKER_CERT_PATH", Value: "/certs/client"},
+		spec.Variable{Key: "DOCKER_TLS_VERIFY", Value: "1"},
+		spec.Variable{Key: "DOCKER_TLS_CERTDIR", Value: "/certs"},
+		spec.Variable{Key: "DOCKER_CERT_PATH", Value: "/certs/client"},
 	)
 
 	build := &common.Build{
-		JobResponse: job,
+		Job: job,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -853,39 +854,39 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	examples := []struct {
-		image     common.Image
-		services  common.Services
-		variables common.JobVariables
+		image     spec.Image
+		services  spec.Services
+		variables spec.Variables
 	}{
 		{
-			image: common.Image{
+			image: spec.Image{
 				Name:       "$IMAGE_NAME",
 				Entrypoint: []string{"sh", "-c"},
 			},
-			services: common.Services{
-				common.Image{
+			services: spec.Services{
+				spec.Image{
 					Name:       "$SERVICE_NAME",
 					Entrypoint: []string{"sh", "-c"},
 					Command:    []string{"dockerd-entrypoint.sh"},
 					Alias:      "my-docker-service",
 				},
 			},
-			variables: common.JobVariables{
+			variables: spec.Variables{
 				{Key: "DOCKER_HOST", Value: "tcp://docker:2376"},
 				{Key: "IMAGE_NAME", Value: common.TestDockerGitImage},
 				{Key: "SERVICE_NAME", Value: common.TestDockerDindImage},
 			},
 		},
 		{
-			image: common.Image{
+			image: spec.Image{
 				Name: "$IMAGE_NAME",
 			},
-			services: common.Services{
-				common.Image{
+			services: spec.Services{
+				spec.Image{
 					Name: "$SERVICE_NAME",
 				},
 			},
-			variables: common.JobVariables{
+			variables: spec.Variables{
 				{Key: "DOCKER_HOST", Value: "tcp://docker:2376"},
 				{Key: "IMAGE_NAME", Value: common.TestDockerGitImage},
 				{Key: "SERVICE_NAME", Value: common.TestDockerDindImage},
@@ -917,23 +918,23 @@ func TestCacheInContainer(t *testing.T) {
 	assert.NoError(t, err)
 
 	successfulBuild.JobInfo.ProjectID = time.Now().Unix()
-	successfulBuild.Steps[0].Script = common.StepScript{
+	successfulBuild.Steps[0].Script = spec.StepScript{
 		"(test -d cached/ && ls -lh cached/) || echo \"no cached directory\"",
 		"(test -f cached/date && cat cached/date) || echo \"no cached date\"",
 		"mkdir -p cached",
 		"date > cached/date",
 	}
-	successfulBuild.Cache = common.Caches{
-		common.Cache{
+	successfulBuild.Cache = spec.Caches{
+		spec.Cache{
 			Key:    "key",
-			Paths:  common.ArtifactPaths{"cached/*"},
-			Policy: common.CachePolicyPullPush,
-			When:   common.CacheWhenOnSuccess,
+			Paths:  spec.ArtifactPaths{"cached/*"},
+			Policy: spec.CachePolicyPullPush,
+			When:   spec.CacheWhenOnSuccess,
 		},
 	}
 
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -960,18 +961,18 @@ func TestCacheInContainer(t *testing.T) {
 		output,
 		skipCacheDownload,
 		"Cache download should be performed with policy: %s",
-		common.CachePolicyPullPush,
+		spec.CachePolicyPullPush,
 	)
 	assert.NotContains(
 		t,
 		output,
 		skipCacheUpload,
 		"Cache upload should be performed with policy: %s",
-		common.CachePolicyPullPush,
+		spec.CachePolicyPullPush,
 	)
 
 	// pull-only jobs should skip the push step
-	build.JobResponse.Cache[0].Policy = common.CachePolicyPull
+	build.Job.Cache[0].Policy = spec.CachePolicyPull
 	output, err = buildtest.RunBuildReturningOutput(t, build)
 	require.NoError(t, err)
 	assert.NotRegexp(t, cacheNotPresentRE, output, "Second job execution should have cached data")
@@ -980,18 +981,18 @@ func TestCacheInContainer(t *testing.T) {
 		output,
 		skipCacheDownload,
 		"Cache download should be performed with policy: %s",
-		common.CachePolicyPull,
+		spec.CachePolicyPull,
 	)
 	assert.Contains(
 		t,
 		output,
 		skipCacheUpload,
 		"Cache upload should be skipped with policy: %s",
-		common.CachePolicyPull,
+		spec.CachePolicyPull,
 	)
 
 	// push-only jobs should skip the pull step
-	build.JobResponse.Cache[0].Policy = common.CachePolicyPush
+	build.Job.Cache[0].Policy = spec.CachePolicyPush
 	output, err = buildtest.RunBuildReturningOutput(t, build)
 	require.NoError(t, err)
 	assert.Regexp(t, cacheNotPresentRE, output, "Third job execution should not have cached data")
@@ -999,9 +1000,9 @@ func TestCacheInContainer(t *testing.T) {
 	assert.NotContains(t, output, skipCacheUpload, "Cache upload should be performed with policy: push")
 
 	// For failed job it should push cache as well.
-	build.JobResponse.Cache[0].Policy = common.CachePolicyPullPush
-	build.JobResponse.Cache[0].When = common.CacheWhenAlways
-	build.JobResponse.Steps[0].Script = append(build.JobResponse.Steps[0].Script, "exit 1")
+	build.Job.Cache[0].Policy = spec.CachePolicyPullPush
+	build.Job.Cache[0].When = spec.CacheWhenAlways
+	build.Job.Steps[0].Script = append(build.Job.Steps[0].Script, "exit 1")
 	output, err = buildtest.RunBuildReturningOutput(t, build)
 	require.Error(t, err)
 	assert.NotRegexp(t, cacheNotPresentRE, output, "Second job execution should have cached data")
@@ -1014,16 +1015,16 @@ func TestDockerImageNameFromVariable(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
-	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+	successfulBuild.Variables = append(successfulBuild.Variables, spec.Variable{
 		Key:   "CI_REGISTRY_IMAGE",
 		Value: common.TestAlpineImage,
 	})
-	successfulBuild.Image = common.Image{
+	successfulBuild.Image = spec.Image{
 		Name: "$CI_REGISTRY_IMAGE",
 	}
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -1048,16 +1049,16 @@ func TestDockerServiceNameFromVariable(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
-	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+	successfulBuild.Variables = append(successfulBuild.Variables, spec.Variable{
 		Key:   "CI_REGISTRY_IMAGE",
 		Value: common.TestAlpineImage,
 	})
-	successfulBuild.Services = append(successfulBuild.Services, common.Image{
+	successfulBuild.Services = append(successfulBuild.Services, spec.Image{
 		Name: "$CI_REGISTRY_IMAGE",
 	})
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -1086,7 +1087,7 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 		networkPerBuild string
 		skip            bool
 		port            int
-		variables       common.JobVariables
+		variables       spec.Variables
 	}{
 		"successful service (FF_NETWORK_PER_BUILD=false)": {
 			command:         []string{"server"},
@@ -1106,7 +1107,7 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 			networkPerBuild: "false",
 			skip:            runtime.GOOS == "windows",
 			port:            8888,
-			variables:       []common.JobVariable{{Key: "HEALTHCHECK_TCP_PORT", Value: "8888"}},
+			variables:       []spec.Variable{{Key: "HEALTHCHECK_TCP_PORT", Value: "8888"}},
 		},
 		"successful service explicit port (FF_NETWORK_PER_BUILD=true)": {
 			command:         []string{"server", "--addr", ":8888"},
@@ -1114,7 +1115,7 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 			networkPerBuild: "true",
 			skip:            false,
 			port:            8888,
-			variables:       []common.JobVariable{{Key: "HEALTHCHECK_TCP_PORT", Value: "8888"}},
+			variables:       []spec.Variable{{Key: "HEALTHCHECK_TCP_PORT", Value: "8888"}},
 		},
 		"failed service (FF_NETWORK_PER_BUILD=false)": {
 			command:         []string{"server", "--addr", ":8888"},
@@ -1148,7 +1149,7 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 			require.NoError(t, err)
 
 			build := common.Build{
-				JobResponse: resp,
+				Job: resp,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",
@@ -1159,7 +1160,7 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 				},
 			}
 
-			build.Image = common.Image{
+			build.Image = spec.Image{
 				Name:       common.TestLivenessImage,
 				Entrypoint: []string{""},
 			}
@@ -1169,14 +1170,14 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 				build.Runner.RunnerSettings.Shell = shells.SNPwsh
 			}
 
-			build.Services = append(build.Services, common.Image{
+			build.Services = append(build.Services, spec.Image{
 				Name:      common.TestLivenessImage,
 				Alias:     "db",
 				Command:   tc.command,
 				Variables: tc.variables,
 			})
 
-			build.Variables = append(build.Variables, common.JobVariable{
+			build.Variables = append(build.Variables, spec.Variable{
 				Key:    "FF_NETWORK_PER_BUILD",
 				Value:  tc.networkPerBuild,
 				Public: true,
@@ -1211,8 +1212,8 @@ func TestDockerServiceAliases(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	resp.Image = common.Image{Name: common.TestAlpineImage}
-	resp.Services = []common.Image{
+	resp.Image = spec.Image{Name: common.TestAlpineImage}
+	resp.Services = []spec.Image{
 		{
 			Name:    common.TestLivenessImage,
 			Alias:   "my_service",
@@ -1221,7 +1222,7 @@ func TestDockerServiceAliases(t *testing.T) {
 	}
 
 	build := common.Build{
-		JobResponse: resp,
+		Job: resp,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -1248,7 +1249,7 @@ func TestDockerServiceHealthcheckOverflow(t *testing.T) {
 	assert.NoError(t, err)
 
 	build := &common.Build{
-		JobResponse: resp,
+		Job: resp,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -1257,16 +1258,16 @@ func TestDockerServiceHealthcheckOverflow(t *testing.T) {
 		},
 	}
 
-	build.Image = common.Image{
+	build.Image = spec.Image{
 		Name: common.TestAlpineImage,
 	}
 
-	build.Services = append(build.Services, common.Image{
+	build.Services = append(build.Services, spec.Image{
 		Name:    "alpine:3.22",
 		Command: []string{"sh", "-c", "printf 'datastart: %" + strconv.Itoa(execDocker.ServiceLogOutputLimit) + "s' ':dataend'"},
 	})
 
-	build.Variables = append(build.Variables, common.JobVariable{
+	build.Variables = append(build.Variables, spec.Variable{
 		Key:    "FF_NETWORK_PER_BUILD",
 		Value:  "true",
 		Public: true,
@@ -1286,7 +1287,7 @@ func TestDockerHandlesAliasDuplicates(t *testing.T) {
 	assert.NoError(t, err)
 
 	build := &common.Build{
-		JobResponse: resp,
+		Job: resp,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -1295,17 +1296,17 @@ func TestDockerHandlesAliasDuplicates(t *testing.T) {
 		},
 	}
 
-	build.Image = common.Image{
+	build.Image = spec.Image{
 		Name: common.TestAlpineImage,
 	}
 
-	build.Services = append(build.Services, common.Image{
+	build.Services = append(build.Services, spec.Image{
 		Name:    common.TestAlpineImage,
 		Command: []string{"sleep", "15"},
 		Alias:   "alpine alpine svc-1 svc-1",
 	})
 
-	build.Variables = append(build.Variables, common.JobVariable{
+	build.Variables = append(build.Variables, spec.Variable{
 		Key:    "FF_NETWORK_PER_BUILD",
 		Value:  "true",
 		Public: true,
@@ -1394,7 +1395,7 @@ func testDockerVersion(t *testing.T, version string) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -1461,7 +1462,7 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 	successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
 				URL: "https://gitlab.com",
@@ -1494,7 +1495,7 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -1530,14 +1531,14 @@ func TestDockerCommand_Pwsh(t *testing.T) {
 	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
 	build.Image.Name = common.TestPwshImage
 	build.Runner.Shell = shells.SNPwsh
-	build.JobResponse.Steps = common.Steps{
-		common.Step{
-			Name: common.StepNameScript,
+	build.Job.Steps = spec.Steps{
+		spec.Step{
+			Name: spec.StepNameScript,
 			Script: []string{
 				"Write-Output $PSVersionTable",
 			},
 			Timeout:      120,
-			When:         common.StepWhenAlways,
+			When:         spec.StepWhenAlways,
 			AllowFailure: false,
 		},
 	}
@@ -1555,7 +1556,7 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuildWithAfterScript()
 
 	dockerSocket := "/var/run/docker.sock"
-	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+	successfulBuild.Variables = append(successfulBuild.Variables, spec.Variable{
 		Key:   "DOCKER_HOST",
 		Value: "unix://" + dockerSocket,
 	})
@@ -1577,14 +1578,14 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 	// It will fail if: cannot be removed, or no containers is found
 	// It is assuming that name of each runner created container starts
 	// with `runner-doprune-`
-	successfulBuild.Steps[0].Script = common.StepScript{
+	successfulBuild.Steps[0].Script = spec.StepScript{
 		"docker ps -a -f status=exited | grep runner-doprune-",
 		"docker rm $(docker ps -a -f status=exited | grep runner-doprune- | awk '{print $1}')",
 	}
 
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
 				Token: "doprune",
@@ -1616,18 +1617,18 @@ func TestDockerCommandRunAttempts(t *testing.T) {
 
 	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
 	build.Runner.RunnerCredentials.Token = "misscont"
-	build.JobResponse.Steps = common.Steps{
-		common.Step{
-			Name: common.StepNameScript,
+	build.Job.Steps = spec.Steps{
+		spec.Step{
+			Name: spec.StepNameScript,
 			Script: []string{
 				sleepCMD,
 			},
 			Timeout:      120,
-			When:         common.StepWhenAlways,
+			When:         spec.StepWhenAlways,
 			AllowFailure: false,
 		},
 	}
-	build.JobResponse.Variables = append(build.JobResponse.Variables, common.JobVariable{
+	build.Job.Variables = append(build.Job.Variables, spec.Variable{
 		Key:    common.ExecutorJobSectionAttempts,
 		Value:  strconv.Itoa(executorStageAttempts),
 		Public: true,
@@ -1724,7 +1725,7 @@ func TestDockerCommandRunAttempts_InvalidAttempts(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
-	build.JobResponse.Variables = append(build.JobResponse.Variables, common.JobVariable{
+	build.Job.Variables = append(build.Job.Variables, spec.Variable{
 		Key:    common.ExecutorJobSectionAttempts,
 		Value:  strconv.Itoa(999),
 		Public: true,
@@ -1758,14 +1759,14 @@ func TestDockerCommand_WriteToVolumeNonRootImage(t *testing.T) {
 	// Ensure ProxyExec is disabled as the gitlab-runner-helper image above doesn't contain
 	// the proxy_exec subcommand.
 	build.Runner.RunnerSettings.ProxyExec = func() *bool { v := false; return &v }()
-	build.JobResponse.Steps = common.Steps{
-		common.Step{
-			Name: common.StepNameScript,
+	build.Job.Steps = spec.Steps{
+		spec.Step{
+			Name: spec.StepNameScript,
 			Script: []string{
 				"echo test > /test/test.txt",
 			},
 			Timeout:      120,
-			When:         common.StepWhenAlways,
+			When:         spec.StepWhenAlways,
 			AllowFailure: false,
 		},
 	}
@@ -1816,12 +1817,12 @@ func TestChownAndUmaskUsage(t *testing.T) {
 		assert.Regexp(t, `-rw-r--r--\s+[0-9]+\s+alpine\s+alpine\s+[0-9a-zA-Z: ]+\s+regular-file`, output, "regular-file permissions not changed by umask, user alpine")
 	}
 
-	gitInfo := common.GitInfo{
+	gitInfo := spec.GitInfo{
 		RepoURL:   "https://gitlab.com/gitlab-org/ci-cd/tests/file-permissions.git",
 		Sha:       "050d238e16c5962fc16e49ab1b6be1be39778b6c",
 		BeforeSha: "0000000000000000000000000000000000000000",
 		Ref:       "main",
-		RefType:   common.RefTypeBranch,
+		RefType:   spec.RefTypeBranch,
 		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
 	}
 
@@ -1868,13 +1869,13 @@ func TestChownAndUmaskUsage(t *testing.T) {
 			require.NoError(t, err)
 
 			jobResponse.GitInfo = gitInfo
-			jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
+			jobResponse.Variables = append(jobResponse.Variables, spec.Variable{
 				Key:   featureflags.DisableUmaskForDockerExecutor,
 				Value: tt.ffValue,
 			})
 
 			build := &common.Build{
-				JobResponse: jobResponse,
+				Job: jobResponse,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",
@@ -1912,7 +1913,7 @@ func TestCleanupProjectGitFetch(t *testing.T) {
 
 	untrackedFilename := "untracked"
 
-	build := getBuildForOS(t, func() (common.JobResponse, error) {
+	build := getBuildForOS(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFilename, "", "")...,
 		)
@@ -1927,7 +1928,7 @@ func TestCleanupProjectGitSubmoduleNormal(t *testing.T) {
 	untrackedFile := "untracked"
 	untrackedSubmoduleFile := "untracked_submodule"
 
-	build := getBuildForOS(t, func() (common.JobResponse, error) {
+	build := getBuildForOS(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFile, untrackedSubmoduleFile, "")...,
 		)
@@ -1943,7 +1944,7 @@ func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
 	untrackedSubmoduleFile := "untracked_submodule"
 	untrackedSubSubmoduleFile := "untracked_submodule_submodule"
 
-	build := getBuildForOS(t, func() (common.JobResponse, error) {
+	build := getBuildForOS(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(
 				untrackedFile,
@@ -1966,13 +1967,13 @@ func TestDockerCommandServiceVariables(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
-	build.Variables = append(build.JobResponse.Variables,
-		common.JobVariable{
+	build.Variables = append(build.Job.Variables,
+		spec.Variable{
 			Key:    "FF_NETWORK_PER_BUILD",
 			Value:  "true",
 			Public: true,
 		},
-		common.JobVariable{
+		spec.Variable{
 			Key:    "BUILD_VAR",
 			Value:  "BUILD_VAR_VALUE",
 			Public: true,
@@ -1988,10 +1989,10 @@ func TestDockerCommandServiceVariables(t *testing.T) {
 	// service to send its output to the log
 	build.Runner.Docker.WaitForServicesTimeout = 1
 
-	build.Services = common.Services{
-		common.Image{
+	build.Services = spec.Services{
+		spec.Image{
 			Name: common.TestLivenessImage,
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{
 					Key:   "SERVICE_VAR",
 					Value: "SERVICE_VAR_VALUE",
@@ -2020,9 +2021,9 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	require.NoError(t, err)
 
-	successfulBuild.Image = common.Image{Name: common.TestAlpineImage}
+	successfulBuild.Image = spec.Image{Name: common.TestAlpineImage}
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -2067,7 +2068,7 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			build.JobResponse.Image.PullPolicies = test.imagePullPolicies
+			build.Job.Image.PullPolicies = test.imagePullPolicies
 			build.Runner.RunnerSettings.Docker.PullPolicy = test.pullPolicy
 			build.Runner.RunnerSettings.Docker.AllowedPullPolicies = test.allowedPullPolicies
 
@@ -2085,11 +2086,11 @@ func Test_CaptureServiceLogs(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	tests := map[string]struct {
-		buildVars []common.JobVariable
+		buildVars []spec.Variable
 		assert    func(*testing.T, string, error)
 	}{
 		"enabled": {
-			buildVars: []common.JobVariable{
+			buildVars: []spec.Variable{
 				{
 					Key:    "CI_DEBUG_SERVICES",
 					Value:  "true",
@@ -2124,7 +2125,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			},
 		},
 		"bogus value": {
-			buildVars: []common.JobVariable{{
+			buildVars: []spec.Variable{{
 				Key:    "CI_DEBUG_SERVICES",
 				Value:  "blammo",
 				Public: true,
@@ -2143,8 +2144,8 @@ func Test_CaptureServiceLogs(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
-			build.Services = append(build.Services, common.Image{Name: "postgres:14.4", Alias: "db"})
-			build.Services = append(build.Services, common.Image{Name: "redis:7.0", Alias: "cache"})
+			build.Services = append(build.Services, spec.Image{Name: "postgres:14.4", Alias: "db"})
+			build.Services = append(build.Services, spec.Image{Name: "redis:7.0", Alias: "cache"})
 
 			build.Variables = tt.buildVars
 			out, err := buildtest.RunBuildReturningOutput(t, &build)
@@ -2203,7 +2204,7 @@ func Test_ExpandingVolumes(t *testing.T) {
 
 	randString := strconv.Itoa(rand.Int())
 	runnerEnv := []string{"FOO=theFoo"}
-	jobVariables := common.JobVariables{
+	jobVariables := spec.Variables{
 		{Key: "SOME_VAR", Value: "${FOO}-${BAR}-theBlipp"},
 		{Key: "BAR", Value: "theBar"},
 		{Key: "RANDOM", Value: randString},
@@ -2222,19 +2223,19 @@ func Test_ExpandingVolumes(t *testing.T) {
 	}
 
 	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
-	build.JobResponse.Variables = jobVariables
+	build.Job.Variables = jobVariables
 	build.Runner.Docker.Volumes = volumes
 	build.Runner.Environment = runnerEnv
 
 	// ensures that the volume is mounted and can be written to.
-	build.JobResponse.Steps[0].Script[0] = fmt.Sprintf(prepareScript, testFile, randString)
+	build.Job.Steps[0].Script[0] = fmt.Sprintf(prepareScript, testFile, randString)
 	_, err := buildtest.RunBuildReturningOutput(t, &build)
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	// ensures that the volume with same vars is cached/kept around, and the same volume is mounted again.
-	build.JobResponse.Steps[0].Script[0] = fmt.Sprintf(checkScript, testFile, randString)
+	build.Job.Steps[0].Script[0] = fmt.Sprintf(checkScript, testFile, randString)
 	_, err = buildtest.RunBuildReturningOutput(t, &build)
 	assert.NoError(t, err)
 }
@@ -2246,7 +2247,7 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuildWithDumpedVariables()
 	assert.NoError(t, err)
 
-	jobVars := common.JobVariables{
+	jobVars := spec.Variables{
 		{Key: "CI_DEBUG_SERVICES", Value: "true", Public: true},
 		{Key: "POSTGRES_PASSWORD", Value: "password", Public: true},
 		{Key: "JOB_IMAGE", Value: "alpine:latest"},
@@ -2257,7 +2258,7 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 	successfulBuild.Variables = append(successfulBuild.Variables, jobVars...)
 
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -2287,14 +2288,14 @@ func TestDockerCommandWithRunnerServiceEnvironmentVariables(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Adding a gitlab-ci.yml variable to test the expansion of the service env variables
-	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+	successfulBuild.Variables = append(successfulBuild.Variables, spec.Variable{
 		Key:    "MY_GLOBAL_VAR",
 		Value:  "my_global_var_value",
 		Public: true,
 	})
 
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -2345,7 +2346,7 @@ func testDockerBuildContainerGracefulShutdown(t *testing.T, useInit bool) {
 		// 	return func() {}
 		// },
 		"RUNNER_SCRIPT_TIMEOUT exceeded": func(b *common.Build, _ *common.Trace) func() {
-			b.Variables = append(b.Variables, common.JobVariable{
+			b.Variables = append(b.Variables, spec.Variable{
 				Key:   "RUNNER_SCRIPT_TIMEOUT",
 				Value: "2s",
 			})
@@ -2373,7 +2374,7 @@ func testDockerBuildContainerGracefulShutdown(t *testing.T, useInit bool) {
 			successfulBuild.GitInfo.Sha = "6353879af977aed75f7f75b7f8084a5cb6f1177a"
 
 			build := &common.Build{
-				JobResponse: successfulBuild,
+				Job: successfulBuild,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",
@@ -2386,7 +2387,7 @@ func testDockerBuildContainerGracefulShutdown(t *testing.T, useInit bool) {
 			}
 
 			if useInit {
-				build.Variables = append(build.Variables, common.JobVariable{
+				build.Variables = append(build.Variables, spec.Variable{
 					Key:   "FF_USE_INIT_WITH_DOCKER_EXECUTOR",
 					Value: "true",
 				})
@@ -2425,7 +2426,7 @@ func Test_FF_USE_INIT_WITH_DOCKER_EXECUTOR(t *testing.T) {
 			assert.NoError(t, err)
 
 			build := &common.Build{
-				JobResponse: successfulBuild,
+				Job: successfulBuild,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",
@@ -2438,7 +2439,7 @@ func Test_FF_USE_INIT_WITH_DOCKER_EXECUTOR(t *testing.T) {
 			}
 
 			if useInit {
-				build.Variables = append(build.Variables, common.JobVariable{
+				build.Variables = append(build.Variables, spec.Variable{
 					Key:   "FF_USE_INIT_WITH_DOCKER_EXECUTOR",
 					Value: "true",
 				})
@@ -2520,11 +2521,11 @@ func Test_ServiceLabels(t *testing.T) {
 	}()
 
 	successfulBuild, err := common.GetRemoteBuildResponse("sleep 3")
-	successfulBuild.Services = common.Services{{Name: "redis:7.0", Alias: "service-1"}}
+	successfulBuild.Services = spec.Services{{Name: "redis:7.0", Alias: "service-1"}}
 
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -2569,7 +2570,7 @@ func Test_ServiceVolumeMounts(t *testing.T) {
 	}
 
 	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
-	build.Services = append(build.Services, common.Image{
+	build.Services = append(build.Services, spec.Image{
 		Name:       "alpine:latest",
 		Entrypoint: []string{"ls", "/test"},
 	})
@@ -2601,23 +2602,23 @@ func TestDockerCommandWithPlatform(t *testing.T) {
 	// leave platform empty
 	successfulBuild.Image.Name = common.TestAlpineImage
 
-	successfulBuild.Services = common.Services{
+	successfulBuild.Services = spec.Services{
 		{
 			Name: "redis:7.0",
-			ExecutorOptions: common.ImageExecutorOptions{
-				Docker: common.ImageDockerOptions{Platform: "amd64"},
+			ExecutorOptions: spec.ImageExecutorOptions{
+				Docker: spec.ImageDockerOptions{Platform: "amd64"},
 			},
 		},
 		{
 			Name: "postgres:14.4",
-			ExecutorOptions: common.ImageExecutorOptions{
-				Docker: common.ImageDockerOptions{Platform: "arm64"}, // this image will download but fail to run, which is OK.
+			ExecutorOptions: spec.ImageExecutorOptions{
+				Docker: spec.ImageDockerOptions{Platform: "arm64"}, // this image will download but fail to run, which is OK.
 			},
 		},
 	}
 
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -2660,7 +2661,7 @@ func TestDockerCommandWithUser(t *testing.T) {
 	successfulBuild.Image.ExecutorOptions.Docker.User = "squid"
 
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -2687,16 +2688,16 @@ func TestGitCredHelper(t *testing.T) {
 
 	submodules := []string{"private-repo-relative", "public-repo-ssh"}
 
-	build := getBuildForOS(t, func() (common.JobResponse, error) {
+	build := getBuildForOS(t, func() (spec.Job, error) {
 		jobResponse, err := common.GetRemoteSuccessfulBuild()
 
 		jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
 		jobResponse.GitInfo.Sha = repoShaWithSubmodules
 		jobResponse.Variables.Set(
-			common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " ")},
-			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: string(common.SubmoduleRecursive)},
-			common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
-			common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
+			spec.Variable{Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " ")},
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: string(common.SubmoduleRecursive)},
+			spec.Variable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+			spec.Variable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
 		)
 
 		buildtest.InjectJobTokenFromEnv(t, &jobResponse)
@@ -2791,7 +2792,7 @@ func TestPwshGitCredHelper(t *testing.T) {
 
 			script := w.Finish(debug)
 
-			build := getBuildForOS(t, func() (common.JobResponse, error) {
+			build := getBuildForOS(t, func() (spec.Job, error) {
 				cmds := []string{gitInstaller}
 				if debug {
 					cmds = append(cmds, "Set-PSDebug -Trace 2", "$env:GIT_TRACE=2")
@@ -2804,16 +2805,16 @@ func TestPwshGitCredHelper(t *testing.T) {
 			build.Runner.Docker.DisableCache = true
 			build.Runner.Shell = shells.SNPwsh
 			build.Variables = append(build.Variables,
-				common.JobVariable{Key: "GIT_STRATEGY", Value: "none"},
-				common.JobVariable{Key: "minGitURL", Value: minGitURL},
+				spec.Variable{Key: "GIT_STRATEGY", Value: "none"},
+				spec.Variable{Key: "minGitURL", Value: minGitURL},
 			)
 
 			// with native arg passing, we need to enable the experimental feature in a separate shell session,
 			// thus we prepend a step enabling the feature and run the actual script in a separate step
 			if tc.withNativeArgPassing {
-				build.Steps = append([]common.Step{{
+				build.Steps = append([]spec.Step{{
 					Name:   "enable_experimental_feature",
-					Script: common.StepScript{`Enable-ExperimentalFeature -Name PSNativeCommandArgumentPassing`},
+					Script: spec.StepScript{`Enable-ExperimentalFeature -Name PSNativeCommandArgumentPassing`},
 				}}, build.Steps...)
 			}
 
@@ -2943,12 +2944,12 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 			rc := getRunnerConfigForOS(t)
 			rc.Docker.MacAddress = macAddress
 			rc.Docker.NetworkMode = tc.networkMode
-			build := getBuildForOS(t, func() (common.JobResponse, error) {
+			build := getBuildForOS(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse("sleep 3")
 			})
 			build.Runner = rc
 			build.ProjectRunnerID = runnerID
-			build.Variables = append(build.Variables, common.JobVariable{
+			build.Variables = append(build.Variables, spec.Variable{
 				Key:   featureflags.NetworkPerBuild,
 				Value: strconv.FormatBool(tc.networkPerBuild),
 			})
@@ -3025,15 +3026,15 @@ func Test_CacheVolumeProtected(t *testing.T) {
 			successfulBuild.GitInfo.Protected = &tt.protectedRef
 
 			successfulBuild.JobInfo.ProjectID = time.Now().Unix()
-			successfulBuild.Cache = common.Caches{
-				common.Cache{
+			successfulBuild.Cache = spec.Caches{
+				spec.Cache{
 					Key:   tt.cacheKey,
-					Paths: common.ArtifactPaths{"cached/*"},
+					Paths: spec.ArtifactPaths{"cached/*"},
 				},
 			}
 
 			build := &common.Build{
-				JobResponse: successfulBuild,
+				Job: successfulBuild,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",

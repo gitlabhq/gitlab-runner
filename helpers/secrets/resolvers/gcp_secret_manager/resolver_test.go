@@ -5,38 +5,37 @@ package gcp_secret_manager
 import (
 	"testing"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
 )
 
 func TestResolver_Name(t *testing.T) {
-	r := newResolver(common.Secret{})
+	r := newResolver(spec.Secret{})
 	assert.Equal(t, resolverName, r.Name())
 }
 
 func TestResolver_IsSupported(t *testing.T) {
 	tests := map[string]struct {
-		secret        common.Secret
+		secret        spec.Secret
 		expectedVault bool
 	}{
 		"supported resolver": {
-			secret: common.Secret{
-				GCPSecretManager: &common.GCPSecretManagerSecret{},
+			secret: spec.Secret{
+				GCPSecretManager: &spec.GCPSecretManagerSecret{},
 			},
 			expectedVault: true,
 		},
 		"unsupported resolver": {
-			secret: common.Secret{
-				Vault: &common.VaultSecret{},
+			secret: spec.Secret{
+				Vault: &spec.VaultSecret{},
 			},
 			expectedVault: false,
 		},
 		"no resolver": {
-			secret:        common.Secret{},
+			secret:        spec.Secret{},
 			expectedVault: false,
 		},
 	}
@@ -50,9 +49,9 @@ func TestResolver_IsSupported(t *testing.T) {
 }
 
 func TestResolver_Resolve(t *testing.T) {
-	secret := common.Secret{
-		GCPSecretManager: &common.GCPSecretManagerSecret{
-			Server: common.GCPSecretManagerServer{
+	secret := spec.Secret{
+		GCPSecretManager: &spec.GCPSecretManagerSecret{
+			Server: spec.GCPSecretManagerServer{
 				WorkloadIdentityFederationPoolId:     "",
 				WorkloadIdentityFederationProviderID: "",
 				JWT:                                  "",
@@ -61,7 +60,7 @@ func TestResolver_Resolve(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		secret        common.Secret
+		secret        spec.Secret
 		setupMock     func(c *mockClient)
 		expectedValue string
 		expectedError error

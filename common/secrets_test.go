@@ -8,24 +8,26 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 func TestDefaultResolver_Resolve(t *testing.T) {
 	variableKey := "TEST_VARIABLE"
 	returnValue := "test"
-	secrets := Secrets{
-		variableKey: Secret{
-			Vault: &VaultSecret{
-				Server: VaultServer{
+	secrets := spec.Secrets{
+		variableKey: spec.Secret{
+			Vault: &spec.VaultSecret{
+				Server: spec.VaultServer{
 					URL: "url",
-					Auth: VaultAuth{
+					Auth: spec.VaultAuth{
 						Name: "name",
 						Path: "path",
-						Data: VaultAuthData{"data": "data"},
+						Data: spec.VaultAuthData{"data": "data"},
 					},
 				},
-				Engine: VaultEngine{
+				Engine: spec.VaultEngine{
 					Name: "name",
 					Path: "path",
 				},
@@ -35,11 +37,11 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 		},
 	}
 
-	composeSecrets := func(file bool) Secrets {
+	composeSecrets := func(file bool) spec.Secrets {
 		secret := secrets[variableKey]
 		secret.File = &file
 
-		return Secrets{variableKey: secret}
+		return spec.Secrets{variableKey: secret}
 	}
 
 	getLogger := func(t *testing.T) logger {
@@ -51,12 +53,12 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 	tests := map[string]struct {
 		getLogger                     func(t *testing.T) logger
 		supportedResolverPresent      bool
-		secrets                       Secrets
-		resolvedVariable              *JobVariable
+		secrets                       spec.Secrets
+		resolvedVariable              *spec.Variable
 		failIfSecretMissing           bool
 		errorOnSecretResolving        error
 		expectedResolverCreationError error
-		expectedVariables             JobVariables
+		expectedVariables             spec.Variables
 		expectedError                 error
 	}{
 		"resolver creation error": {
@@ -84,7 +86,7 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			getLogger:                getLogger,
 			supportedResolverPresent: true,
 			secrets:                  secrets,
-			expectedVariables: JobVariables{
+			expectedVariables: spec.Variables{
 				{
 					Key:    variableKey,
 					Value:  returnValue,
@@ -99,7 +101,7 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			getLogger:                getLogger,
 			supportedResolverPresent: true,
 			secrets:                  composeSecrets(true),
-			expectedVariables: JobVariables{
+			expectedVariables: spec.Variables{
 				{
 					Key:    variableKey,
 					Value:  returnValue,
@@ -114,7 +116,7 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			getLogger:                getLogger,
 			supportedResolverPresent: true,
 			secrets:                  composeSecrets(false),
-			expectedVariables: JobVariables{
+			expectedVariables: spec.Variables{
 				{
 					Key:    variableKey,
 					Value:  returnValue,
@@ -135,7 +137,7 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			},
 			supportedResolverPresent: false,
 			secrets:                  secrets,
-			expectedVariables:        JobVariables{},
+			expectedVariables:        spec.Variables{},
 			expectedError:            nil,
 		},
 		"secret not found - fail if missing": {
@@ -153,7 +155,7 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			secrets:                  secrets,
 			failIfSecretMissing:      false,
 			errorOnSecretResolving:   ErrSecretNotFound,
-			expectedVariables: JobVariables{
+			expectedVariables: spec.Variables{
 				{
 					Key:    variableKey,
 					Value:  returnValue,
@@ -190,8 +192,8 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			}
 
 			registry := new(defaultSecretResolverRegistry)
-			registry.Register(func(secret Secret) SecretResolver { return unsupportedResolver })
-			registry.Register(func(secret Secret) SecretResolver { return supportedResolver })
+			registry.Register(func(secret spec.Secret) SecretResolver { return unsupportedResolver })
+			registry.Register(func(secret spec.Secret) SecretResolver { return supportedResolver })
 
 			logger := tt.getLogger(t)
 			r, err := newSecretsResolver(logger, registry, func(s string) bool {

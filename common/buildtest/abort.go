@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 type withContext struct {
@@ -65,7 +66,7 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 	}{
 		"job script timeout": {
 			setupFn: func(build *common.Build) {
-				build.Variables = append(build.Variables, common.JobVariable{
+				build.Variables = append(build.Variables, spec.Variable{
 					Key:   "RUNNER_SCRIPT_TIMEOUT",
 					Value: "5s",
 				})
@@ -119,7 +120,7 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			build := &common.Build{
-				JobResponse:     resp,
+				Job:             resp,
 				Runner:          config,
 				SystemInterrupt: make(chan os.Signal, 1),
 			}
@@ -163,7 +164,7 @@ func RunBuildWithExecutorCancel(t *testing.T, config *common.RunnerConfig, setup
 	require.NoError(t, err)
 
 	build := &common.Build{
-		JobResponse:     resp,
+		Job:             resp,
 		Runner:          config,
 		SystemInterrupt: make(chan os.Signal, 1),
 	}

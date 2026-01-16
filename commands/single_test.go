@@ -16,6 +16,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func init() {
@@ -112,7 +113,7 @@ func mockingExecutionStack(
 	mockNetwork := common.NewMockNetwork(t)
 
 	// Network
-	jobData := common.JobResponse{}
+	jobData := spec.Job{}
 	_, cancel := context.WithCancel(t.Context())
 	jobTrace := common.Trace{Writer: io.Discard}
 	jobTrace.SetCancelFunc(cancel)
@@ -160,7 +161,7 @@ func TestRunSingleCommand_processBuild_HandlesUpdateAbort(t *testing.T) {
 		},
 	}
 
-	jobData := &common.JobResponse{
+	jobData := &spec.Job{
 		ID:    123,
 		Token: "job-token",
 	}
@@ -199,7 +200,7 @@ func TestRunSingleCommand_processBuild_HandlesCancelRequested(t *testing.T) {
 		},
 	}
 
-	jobData := &common.JobResponse{
+	jobData := &spec.Job{
 		ID:    123,
 		Token: "job-token",
 	}

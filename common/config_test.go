@@ -17,6 +17,7 @@ import (
 
 	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
@@ -1122,39 +1123,39 @@ func TestKubernetesHostAliases(t *testing.T) {
 func TestService_ToImageDefinition(t *testing.T) {
 	tests := map[string]struct {
 		service       Service
-		expectedImage Image
+		expectedImage spec.Image
 	}{
 		"empty service": {
 			service:       Service{},
-			expectedImage: Image{},
+			expectedImage: spec.Image{},
 		},
 		"only name": {
 			service:       Service{Name: "name"},
-			expectedImage: Image{Name: "name"},
+			expectedImage: spec.Image{Name: "name"},
 		},
 		"only alias": {
 			service:       Service{Alias: "alias"},
-			expectedImage: Image{Alias: "alias"},
+			expectedImage: spec.Image{Alias: "alias"},
 		},
 		"name and alias": {
 			service:       Service{Name: "name", Alias: "alias"},
-			expectedImage: Image{Name: "name", Alias: "alias"},
+			expectedImage: spec.Image{Name: "name", Alias: "alias"},
 		},
 		"only aliases": {
 			service:       Service{Alias: "alias-1 alias-2"},
-			expectedImage: Image{Alias: "alias-1 alias-2"},
+			expectedImage: spec.Image{Alias: "alias-1 alias-2"},
 		},
 		"name and aliases": {
 			service:       Service{Name: "name", Alias: "alias-1 alias-2"},
-			expectedImage: Image{Name: "name", Alias: "alias-1 alias-2"},
+			expectedImage: spec.Image{Name: "name", Alias: "alias-1 alias-2"},
 		},
 		"command specified": {
 			service:       Service{Name: "name", Command: []string{"executable", "param1", "param2"}},
-			expectedImage: Image{Name: "name", Command: []string{"executable", "param1", "param2"}},
+			expectedImage: spec.Image{Name: "name", Command: []string{"executable", "param1", "param2"}},
 		},
 		"entrypoint specified": {
 			service:       Service{Name: "name", Entrypoint: []string{"executable", "param3", "param4"}},
-			expectedImage: Image{Name: "name", Entrypoint: []string{"executable", "param3", "param4"}},
+			expectedImage: spec.Image{Name: "name", Entrypoint: []string{"executable", "param3", "param4"}},
 		},
 		"command and entrypoint specified": {
 			service: Service{
@@ -1162,7 +1163,7 @@ func TestService_ToImageDefinition(t *testing.T) {
 				Command:    []string{"executable", "param1", "param2"},
 				Entrypoint: []string{"executable", "param3", "param4"},
 			},
-			expectedImage: Image{
+			expectedImage: spec.Image{
 				Name:       "name",
 				Command:    []string{"executable", "param1", "param2"},
 				Entrypoint: []string{"executable", "param3", "param4"},
@@ -1170,7 +1171,7 @@ func TestService_ToImageDefinition(t *testing.T) {
 		},
 		"environment specified": {
 			service: Service{Name: "name", Environment: []string{"ENV1=value1", "ENV2=value2"}},
-			expectedImage: Image{Name: "name", Variables: JobVariables{
+			expectedImage: spec.Image{Name: "name", Variables: spec.Variables{
 				{Key: "ENV1", Value: "value1", Internal: true},
 				{Key: "ENV2", Value: "value2", Internal: true},
 			}},
@@ -3647,4 +3648,15 @@ func TestRunnerConfig_ValidateMachineOptionsWithName(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseVariable(t *testing.T) {
+	v, err := parseVariable("key=value=value2")
+	assert.NoError(t, err)
+	assert.Equal(t, spec.Variable{Key: "key", Value: "value=value2"}, v)
+}
+
+func TestInvalidParseVariable(t *testing.T) {
+	_, err := parseVariable("some_other_key")
+	assert.Error(t, err)
 }

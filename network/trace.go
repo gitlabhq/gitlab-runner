@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
@@ -36,7 +37,7 @@ type clientJobTrace struct {
 	state    common.JobState
 	finished chan bool
 
-	failureReason                common.JobFailureReason
+	failureReason                spec.JobFailureReason
 	supportedFailureReasonMapper common.SupportedFailureReasonMapper
 
 	sentTrace int
@@ -172,7 +173,7 @@ func (c *clientJobTrace) setFailure(data common.JobFailureData) {
 	}
 }
 
-func (c *clientJobTrace) ensureSupportedFailureReason(reason common.JobFailureReason) common.JobFailureReason {
+func (c *clientJobTrace) ensureSupportedFailureReason(reason spec.JobFailureReason) spec.JobFailureReason {
 	if c.supportedFailureReasonMapper == nil {
 		return reason
 	}
@@ -180,7 +181,7 @@ func (c *clientJobTrace) ensureSupportedFailureReason(reason common.JobFailureRe
 	return c.supportedFailureReasonMapper.Map(reason)
 }
 
-func (c *clientJobTrace) ensureNonEmptyFailureReason(reason common.JobFailureReason) common.JobFailureReason {
+func (c *clientJobTrace) ensureNonEmptyFailureReason(reason spec.JobFailureReason) spec.JobFailureReason {
 	// No specific reason means it's a script failure
 	// (or Runner doesn't yet detect that it's something else)
 	if reason == "" {

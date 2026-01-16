@@ -22,6 +22,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
@@ -104,8 +105,8 @@ func prepareExecutor(t *testing.T, tt executorTestCase) (*executor, common.Execu
 
 	options := common.ExecutorPrepareOptions{
 		Build: &common.Build{
-			JobResponse: successfulBuild,
-			Runner:      &tt.config,
+			Job:    successfulBuild,
+			Runner: &tt.config,
 		},
 		Config:      &tt.config,
 		Context:     t.Context(),
@@ -875,7 +876,7 @@ func TestExecutor_Env(t *testing.T) {
 	adjustExecutorFactory := func(imageName string) func(t *testing.T, e *executor) {
 		return func(t *testing.T, e *executor) {
 			// the build is assumed to be non-nil across the executor codebase
-			e.Build.Image = common.Image{Name: imageName}
+			e.Build.Image = spec.Image{Name: imageName}
 		}
 	}
 
@@ -893,7 +894,7 @@ func TestExecutor_Env(t *testing.T) {
 		"custom executor set expanded " + ciJobImageEnv: {
 			config: runnerConfig,
 			adjustExecutor: func(t *testing.T, e *executor) {
-				e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+				e.Build.Variables = append(e.Build.Variables, spec.Variable{
 					Key:   "to_expand",
 					Value: "expanded",
 				})
@@ -942,7 +943,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		CleanupExec: "bash",
 	})
 
-	adjustExecutorServices := func(services common.Services) func(t *testing.T, e *executor) {
+	adjustExecutorServices := func(services spec.Services) func(t *testing.T, e *executor) {
 		return func(t *testing.T, e *executor) {
 			e.Build.Services = services
 		}
@@ -1009,7 +1010,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 	tests := map[string]executorTestCase{
 		"returns only name when service name is the only definition": {
 			config: runnerConfig,
-			adjustExecutor: adjustExecutorServices(common.Services{
+			adjustExecutor: adjustExecutorServices(spec.Services{
 				{
 					Name: "ruby:latest",
 				},
@@ -1027,7 +1028,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		},
 		"returns full service definition": {
 			config: runnerConfig,
-			adjustExecutor: adjustExecutorServices(common.Services{
+			adjustExecutor: adjustExecutorServices(spec.Services{
 				{
 					Name:       "ruby:latest",
 					Alias:      "henk-ruby",
@@ -1048,7 +1049,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		},
 		"returns both simple and full service definitions": {
 			config: runnerConfig,
-			adjustExecutor: adjustExecutorServices(common.Services{
+			adjustExecutor: adjustExecutorServices(spec.Services{
 				{
 					Name:       "python:latest",
 					Alias:      "henk-python",
@@ -1078,7 +1079,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		},
 		"does not create env CI_JOB_SERVICES": {
 			config:               runnerConfig,
-			adjustExecutor:       adjustExecutorServices(common.Services{}),
+			adjustExecutor:       adjustExecutorServices(spec.Services{}),
 			assertCommandFactory: assertEmptyEnv(),
 		},
 	}

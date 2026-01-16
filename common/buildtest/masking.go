@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
@@ -30,12 +31,12 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 		}
 
 		build := &common.Build{
-			JobResponse: resp,
-			Runner:      config,
+			Job:    resp,
+			Runner: config,
 		}
 
 		for idx, mask := range masks {
-			build.Variables = append(build.Variables, common.JobVariable{Key: fmt.Sprintf("MASK_ERROR_MSG_%d", idx), Value: mask, Masked: true})
+			build.Variables = append(build.Variables, spec.Variable{Key: fmt.Sprintf("MASK_ERROR_MSG_%d", idx), Value: mask, Masked: true})
 		}
 
 		if setup != nil {
@@ -82,31 +83,31 @@ func testBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup Build
 	resp.Features.TokenMaskPrefixes = []string{"glpat-", "mytoken:", "foobar-"}
 
 	if proxy {
-		resp.Steps = append([]common.Step{
+		resp.Steps = append([]spec.Step{
 			{
 				Name:   "before_script",
 				Script: []string{`echo "::add-mask::ADD_MASK_SECRET_VALUE"`},
-				When:   common.StepWhenAlways,
+				When:   spec.StepWhenAlways,
 			},
 		}, resp.Steps...)
 	}
 
 	build := &common.Build{
-		JobResponse: resp,
-		Runner:      config,
+		Job:    resp,
+		Runner: config,
 	}
 
 	build.Variables = append(
 		build.Variables,
-		common.JobVariable{Key: "MASKED_KEY", Value: "MASKED_VALUE", Masked: true},
-		common.JobVariable{Key: "CLEARTEXT_KEY", Value: "CLEARTEXT_VALUE", Masked: false},
-		common.JobVariable{Key: "MASKED_KEY_OTHER", Value: "MASKED_VALUE_OTHER", Masked: true},
-		common.JobVariable{Key: "URL_MASKED_PARAM", Value: "https://example.com/?x-amz-credential=foobar"},
+		spec.Variable{Key: "MASKED_KEY", Value: "MASKED_VALUE", Masked: true},
+		spec.Variable{Key: "CLEARTEXT_KEY", Value: "CLEARTEXT_VALUE", Masked: false},
+		spec.Variable{Key: "MASKED_KEY_OTHER", Value: "MASKED_VALUE_OTHER", Masked: true},
+		spec.Variable{Key: "URL_MASKED_PARAM", Value: "https://example.com/?x-amz-credential=foobar"},
 
-		common.JobVariable{Key: "TOKEN_REVEALS", Value: "glpat-abcdef mytoken:ghijklmno foobar-pqrstuvwxyz"},
+		spec.Variable{Key: "TOKEN_REVEALS", Value: "glpat-abcdef mytoken:ghijklmno foobar-pqrstuvwxyz"},
 
 		// proxy exec masking
-		common.JobVariable{Key: "ADD_MASK_SECRET", Value: "ADD_MASK_SECRET_VALUE"},
+		spec.Variable{Key: "ADD_MASK_SECRET", Value: "ADD_MASK_SECRET_VALUE"},
 	)
 
 	if setup != nil {

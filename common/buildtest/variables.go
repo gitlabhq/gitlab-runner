@@ -10,7 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
@@ -24,14 +26,14 @@ func RunBuildWithExpandedFileVariable(t *testing.T, config *common.RunnerConfig,
 	require.NoError(t, err)
 
 	build := &common.Build{
-		JobResponse: resp,
-		Runner:      config,
+		Job:    resp,
+		Runner: config,
 	}
 
 	build.Variables = append(
 		build.Variables,
-		common.JobVariable{Key: "MY_FILE_VARIABLE", Value: "FILE_CONTENTS", File: true},
-		common.JobVariable{Key: "MY_EXPANDED_FILE_VARIABLE", Value: "${MY_FILE_VARIABLE}_FOOBAR"},
+		spec.Variable{Key: "MY_FILE_VARIABLE", Value: "FILE_CONTENTS", File: true},
+		spec.Variable{Key: "MY_EXPANDED_FILE_VARIABLE", Value: "${MY_FILE_VARIABLE}_FOOBAR"},
 	)
 
 	if setup != nil {
@@ -66,8 +68,8 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 	require.NoError(t, err)
 
 	build := &common.Build{
-		JobResponse: resp,
-		Runner:      config,
+		Job:    resp,
+		Runner: config,
 	}
 
 	if runtime.GOOS == "linux" && config.Shell == shells.SNPwsh {
@@ -77,14 +79,14 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 	dir := t.TempDir()
 	build.Runner.RunnerSettings.BuildsDir = filepath.Join(dir, "build")
 	build.Runner.RunnerSettings.CacheDir = filepath.Join(dir, "cache")
-	build.Variables = append(build.Variables, common.JobVariable{
+	build.Variables = append(build.Variables, spec.Variable{
 		Key:   "existing",
 		Value: "existingvalue",
 	})
 
 	build.Steps = append(
 		build.Steps,
-		common.Step{
+		spec.Step{
 			Name: "custom-step",
 			Script: []string{
 				`echo ` + formatter.EnvName("GITLAB_ENV"),
@@ -92,21 +94,21 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 				`echo executed=` + formatter.EnvName("executed"),
 				formatter.PipeVar("foo=bar") + formatter.EnvName("GITLAB_ENV"),
 			},
-			When: common.StepWhenOnSuccess,
+			When: spec.StepWhenOnSuccess,
 		},
-		common.Step{
-			Name: common.StepNameAfterScript,
+		spec.Step{
+			Name: spec.StepNameAfterScript,
 			Script: []string{
 				`echo foovalue=` + formatter.EnvName("foo"),
 				`echo existing=` + formatter.EnvName("existing"),
 			},
-			When: common.StepWhenAlways,
+			When: spec.StepWhenAlways,
 		},
 	)
-	build.Cache = append(build.Cache, common.Cache{
+	build.Cache = append(build.Cache, spec.Cache{
 		Key:    "cache",
-		Paths:  common.ArtifactPaths{"unknown/path/${foo}"},
-		Policy: common.CachePolicyPullPush,
+		Paths:  spec.ArtifactPaths{"unknown/path/${foo}"},
+		Policy: spec.CachePolicyPullPush,
 	})
 
 	if setup != nil {
@@ -127,10 +129,10 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 
 func RunBuildWithPassingEnvsJobIsolation(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
 	dir := t.TempDir()
-	run := func(response common.JobResponse) string {
+	run := func(response spec.Job) string {
 		build := &common.Build{
-			JobResponse: response,
-			Runner:      config,
+			Job:    response,
+			Runner: config,
 		}
 
 		if runtime.GOOS == "linux" && config.Shell == shells.SNPwsh {

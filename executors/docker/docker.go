@@ -29,6 +29,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/exec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
@@ -242,7 +243,7 @@ func createDockerConnection(ctx context.Context, opts common.ExecutorPrepareOpti
 
 var version1_44 = version.Must(version.NewVersion("1.44"))
 
-func (e *executor) getServiceVariables(serviceDefinition common.Image) []string {
+func (e *executor) getServiceVariables(serviceDefinition spec.Image) []string {
 	variables := e.Build.GetAllVariables().PublicOrInternal()
 	variables = append(variables, serviceDefinition.Variables...)
 
@@ -252,7 +253,7 @@ func (e *executor) getServiceVariables(serviceDefinition common.Image) []string 
 func (e *executor) expandAndGetDockerImage(
 	imageName string,
 	allowedImages []string,
-	dockerOptions common.ImageDockerOptions,
+	dockerOptions spec.ImageDockerOptions,
 	imagePullPolicies []common.DockerPullPolicy,
 ) (*image.InspectResponse, error) {
 	imageName, err := e.expandImageName(imageName, allowedImages)
@@ -280,7 +281,7 @@ func (e *executor) getHelperImage() (*image.InspectResponse, error) {
 
 		e.BuildLogger.Println("Using helper image: ", imageNameFromConfig, " (overridden, default would be ", e.helperImageInfo, ")")
 
-		return e.pullManager.GetDockerImage(imageNameFromConfig, common.ImageDockerOptions{}, nil)
+		return e.pullManager.GetDockerImage(imageNameFromConfig, spec.ImageDockerOptions{}, nil)
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
@@ -299,7 +300,7 @@ func (e *executor) getHelperImage() (*image.InspectResponse, error) {
 
 	// Fall back to getting image from registry
 	e.BuildLogger.Debugln(fmt.Sprintf("Loading image form registry: %s", e.helperImageInfo))
-	return e.pullManager.GetDockerImage(e.helperImageInfo.String(), common.ImageDockerOptions{}, nil)
+	return e.pullManager.GetDockerImage(e.helperImageInfo.String(), spec.ImageDockerOptions{}, nil)
 }
 
 func (e *executor) getLocalHelperImage() *image.InspectResponse {
@@ -418,14 +419,14 @@ func isInAllowedPrivilegedImages(image string, allowedPrivilegedImages []string)
 	return false
 }
 
-func (e *executor) isInPrivilegedServiceList(serviceDefinition common.Image) bool {
+func (e *executor) isInPrivilegedServiceList(serviceDefinition spec.Image) bool {
 	return isInAllowedPrivilegedImages(serviceDefinition.Name, e.Config.Docker.AllowedPrivilegedServices)
 }
 
 func (e *executor) createService(
 	serviceIndex int,
 	service, version, image string,
-	definition common.Image,
+	definition spec.Image,
 	linkNames []string,
 ) (*serviceInfo, error) {
 	if service == "" {
@@ -503,7 +504,7 @@ func (e *executor) createService(
 	}, nil
 }
 
-func platformForImage(image *image.InspectResponse, opts common.ImageExecutorOptions) *v1.Platform {
+func platformForImage(image *image.InspectResponse, opts spec.ImageExecutorOptions) *v1.Platform {
 	if image == nil || opts.Docker.Platform == "" {
 		return nil
 	}
@@ -567,7 +568,7 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 
 func (e *executor) createServiceContainerConfig(
 	service, version, serviceImageID string,
-	definition common.Image,
+	definition spec.Image,
 ) *container.Config {
 	labels := e.prepareContainerLabels(map[string]string{
 		"type":            labelServiceType,
@@ -731,7 +732,7 @@ func (e *executor) cleanupNetwork(ctx context.Context) error {
 	return e.networksManager.Cleanup(ctx)
 }
 
-func (e *executor) isInPrivilegedImageList(imageDefinition common.Image) bool {
+func (e *executor) isInPrivilegedImageList(imageDefinition spec.Image) bool {
 	return isInAllowedPrivilegedImages(imageDefinition.Name, e.Config.Docker.AllowedPrivilegedImages)
 }
 
@@ -744,7 +745,7 @@ type containerConfigurator interface {
 type defaultContainerConfigurator struct {
 	e                     *executor
 	containerType         string
-	imageDefinition       common.Image
+	imageDefinition       spec.Image
 	cmd                   []string
 	allowedInternalImages []string
 }
@@ -754,7 +755,7 @@ var _ containerConfigurator = &defaultContainerConfigurator{}
 func newDefaultContainerConfigurator(
 	e *executor,
 	containerType string,
-	imageDefinition common.Image,
+	imageDefinition spec.Image,
 	cmd,
 	allowedInternalImages []string,
 ) *defaultContainerConfigurator {
@@ -795,7 +796,7 @@ func (c *defaultContainerConfigurator) NetworkConfig(aliases []string) *network.
 
 func (e *executor) createContainer(
 	containerType string,
-	imageDefinition common.Image,
+	imageDefinition spec.Image,
 	allowedInternalImages []string,
 	cfgTor containerConfigurator,
 ) (*container.InspectResponse, error) {
@@ -854,7 +855,7 @@ func (e *executor) createContainer(
 
 func (e *executor) createContainerConfig(
 	containerType string,
-	imageDefinition common.Image,
+	imageDefinition spec.Image,
 	image *image.InspectResponse,
 	hostname string,
 	cmd []string,
@@ -901,7 +902,7 @@ func (e *executor) createContainerConfig(
 	return config, nil
 }
 
-func (e *executor) getBuildContainerUser(imageDefinition common.Image) (string, error) {
+func (e *executor) getBuildContainerUser(imageDefinition spec.Image) (string, error) {
 	// runner config takes precedence
 	user := e.Config.Docker.User
 	if user == "" {
@@ -1129,7 +1130,7 @@ func (e *executor) expandImageName(imageName string, allowedInternalImages []str
 	return defaultDockerImage, nil
 }
 
-func (e *executor) overwriteEntrypoint(image *common.Image) []string {
+func (e *executor) overwriteEntrypoint(image *spec.Image) []string {
 	if len(image.Entrypoint) > 0 {
 		if !e.Config.Docker.DisableEntrypointOverwrite {
 			return image.Entrypoint

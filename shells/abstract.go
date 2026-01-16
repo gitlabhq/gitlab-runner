@@ -18,6 +18,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
@@ -220,9 +221,9 @@ func (b *AbstractShell) cacheExtractor(ctx context.Context, w ShellWriter, info 
 			continue
 		}
 
-		cacheOptions.Policy = common.CachePolicy(info.Build.GetAllVariables().ExpandValue(string(cacheOptions.Policy)))
+		cacheOptions.Policy = spec.CachePolicy(info.Build.GetAllVariables().ExpandValue(string(cacheOptions.Policy)))
 
-		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPull); err != nil {
+		if ok, err := cacheOptions.CheckPolicy(spec.CachePolicyPull); err != nil {
 			return fmt.Errorf("%w for %s", err, cacheConfig.HumanKey)
 		} else if !ok {
 			w.Noticef("Not downloading cache %s due to policy", cacheConfig.HumanKey)
@@ -256,7 +257,7 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	w ShellWriter,
 	info common.ShellScriptInfo,
 	initialCacheConfig cacheConfig,
-	cacheOptions common.Cache,
+	cacheOptions spec.Cache,
 ) {
 	// the "default" cache key
 	cacheConfigs := []cacheConfig{initialCacheConfig}
@@ -432,7 +433,7 @@ func getCacheDownloadURLAndEnv(ctx context.Context, build *common.Build, cacheKe
 	return []string{}, nil, nil
 }
 
-func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {
+func (b *AbstractShell) downloadArtifacts(w ShellWriter, job spec.Dependency, info common.ShellScriptInfo) {
 	args := []string{
 		"artifacts-downloader",
 		"--url",
@@ -447,7 +448,7 @@ func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, 
 	w.Command(info.RunnerCommand, args...)
 }
 
-func (b *AbstractShell) jobArtifacts(info common.ShellScriptInfo) (otherJobs []common.Dependency) {
+func (b *AbstractShell) jobArtifacts(info common.ShellScriptInfo) (otherJobs []spec.Dependency) {
 	for _, otherJob := range info.Build.Dependencies {
 		if otherJob.ArtifactsFile.Filename == "" {
 			continue
@@ -494,8 +495,8 @@ func (b *AbstractShell) writePrepareScript(_ context.Context, w ShellWriter, _ c
 func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	b.writeExports(w, info)
 
-	w.Variable(common.JobVariable{Key: "GIT_TERMINAL_PROMPT", Value: "0"})
-	w.Variable(common.JobVariable{Key: "GCM_INTERACTIVE", Value: "Never"})
+	w.Variable(spec.Variable{Key: "GIT_TERMINAL_PROMPT", Value: "0"})
+	w.Variable(spec.Variable{Key: "GCM_INTERACTIVE", Value: "Never"})
 
 	if !info.Build.IsSharedEnv() {
 		b.writeGitSSLConfig(w, info.Build, []string{"--global"})
@@ -508,7 +509,7 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 			s = append(s, info.PreGetSourcesScript)
 		}
 
-		h := info.Build.Hooks.Get(common.HookPreGetSourcesScript)
+		h := info.Build.Hooks.Get(spec.HookPreGetSourcesScript)
 		if len(h.Script) > 0 {
 			s = append(s, h.Script...)
 		}
@@ -527,7 +528,7 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 	b.guardGetSourcesScriptHooks(w, info, "post_clone_script", func() []string {
 		var s []string
 
-		h := info.Build.Hooks.Get(common.HookPostGetSourcesScript)
+		h := info.Build.Hooks.Get(spec.HookPostGetSourcesScript)
 		if len(h.Script) > 0 {
 			s = append(s, h.Script...)
 		}
@@ -583,7 +584,7 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 
 	gitlabEnvFile := w.TmpFile(gitlabEnvFileName)
 
-	w.Variable(common.JobVariable{
+	w.Variable(spec.Variable{
 		Key:   "GITLAB_ENV",
 		Value: gitlabEnvFile,
 	})
@@ -642,7 +643,7 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 	// Please read https://gitlab.com/gitlab-org/gitlab-runner/issues/3366 and
 	// https://github.com/git-lfs/git-lfs/issues/3524 for context.
 	if !build.IsLFSSmudgeDisabled() {
-		w.Variable(common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1"})
+		w.Variable(spec.Variable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1"})
 	}
 
 	err := b.handleGetSourcesStrategy(w, info)
@@ -1269,7 +1270,7 @@ func (b *AbstractShell) writeCommands(w ShellWriter, info common.ShellScriptInfo
 		}
 
 		if info.Build.IsFeatureFlagOn(featureflags.ScriptSections) &&
-			info.Build.JobResponse.Features.TraceSections {
+			info.Build.Job.Features.TraceSections {
 			b.writeMultilineCommand(w, fmt.Sprintf("%s_%d", prefix, i), command)
 		} else {
 			w.Noticef("$ %s # collapsed multi-line command", command[:nlIndex])
@@ -1298,7 +1299,7 @@ func (b *AbstractShell) writeUserScript(
 	info common.ShellScriptInfo,
 	buildStage common.BuildStage,
 ) error {
-	var scriptStep *common.Step
+	var scriptStep *spec.Step
 	for _, step := range info.Build.Steps {
 		if common.StepToBuildStage(step) == buildStage {
 			scriptStep = &step
@@ -1388,9 +1389,9 @@ func (b *AbstractShell) archiveCache(
 			continue
 		}
 
-		cacheOptions.Policy = common.CachePolicy(info.Build.GetAllVariables().ExpandValue(string(cacheOptions.Policy)))
+		cacheOptions.Policy = spec.CachePolicy(info.Build.GetAllVariables().ExpandValue(string(cacheOptions.Policy)))
 
-		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPush); err != nil {
+		if ok, err := cacheOptions.CheckPolicy(spec.CachePolicyPush); err != nil {
 			return false, fmt.Errorf("%w for %s", err, cacheConfig.HumanKey)
 		} else if !ok {
 			w.Noticef("Not uploading cache %s due to policy", cacheConfig.HumanKey)
@@ -1403,7 +1404,7 @@ func (b *AbstractShell) archiveCache(
 	return skipArchiveCache, nil
 }
 
-func (b *AbstractShell) getArchiverArgs(cacheOptions common.Cache, _ common.ShellScriptInfo) []string {
+func (b *AbstractShell) getArchiverArgs(cacheOptions spec.Cache, _ common.ShellScriptInfo) []string {
 	var archiverArgs []string
 	for _, path := range cacheOptions.Paths {
 		archiverArgs = append(archiverArgs, "--path", path)
@@ -1504,7 +1505,7 @@ func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, hashedCac
 	return uploadArgs, nil, err
 }
 
-func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScriptInfo, artifact common.Artifact) bool {
+func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScriptInfo, artifact spec.Artifact) bool {
 	args := []string{
 		"artifacts-uploader",
 		"--url",
@@ -1565,11 +1566,11 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 	return true
 }
 
-func (b *AbstractShell) shouldGenerateArtifactsMetadata(info common.ShellScriptInfo, artifact common.Artifact) bool {
+func (b *AbstractShell) shouldGenerateArtifactsMetadata(info common.ShellScriptInfo, artifact spec.Artifact) bool {
 	generateArtifactsMetadata := info.Build.Variables.Bool(common.GenerateArtifactsMetadataVariable)
 	// Currently only zip artifacts are supported as artifact metadata effectively adds another file to the archive
 	// https://gitlab.com/gitlab-org/gitlab/-/issues/367203#note_1059841610
-	metadataArtifactsFormatSupported := artifact.Format == common.ArtifactFormatZip
+	metadataArtifactsFormatSupported := artifact.Format == spec.ArtifactFormatZip
 	return generateArtifactsMetadata && metadataArtifactsFormatSupported
 }
 
@@ -1642,9 +1643,9 @@ func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScr
 }
 
 func (b *AbstractShell) writeAfterScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
-	var afterScriptStep *common.Step
+	var afterScriptStep *spec.Step
 	for _, step := range info.Build.Steps {
-		if step.Name == common.StepNameAfterScript {
+		if step.Name == spec.StepNameAfterScript {
 			afterScriptStep = &step
 			break
 		}

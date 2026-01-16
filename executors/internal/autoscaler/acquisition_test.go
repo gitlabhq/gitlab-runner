@@ -25,6 +25,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
@@ -334,11 +335,11 @@ func executorPrepareOptions(buildImageName, nestingCfgImage, host, variableValue
 			},
 		},
 		Build: &common.Build{
-			JobResponse: common.JobResponse{
-				Image: common.Image{
+			Job: spec.Job{
+				Image: spec.Image{
 					Name: buildImageName,
 				},
-				Variables: common.JobVariables{
+				Variables: spec.Variables{
 					{
 						Key:    "TEST_VARIABLE",
 						Value:  variableValue,
@@ -539,8 +540,8 @@ func TestAcquisitionRef_Prepare_SlotCgroupEnvironmentVariable(t *testing.T) {
 					},
 				},
 				Build: &common.Build{
-					JobResponse: common.JobResponse{
-						Variables: common.JobVariables{},
+					Job: spec.Job{
+						Variables: spec.Variables{},
 					},
 					Runner: &common.RunnerConfig{},
 				},

@@ -10,28 +10,30 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func TestCacheCheckPolicy(t *testing.T) {
 	for num, tc := range []struct {
-		object      CachePolicy
-		subject     CachePolicy
+		object      spec.CachePolicy
+		subject     spec.CachePolicy
 		expected    bool
 		expectErr   bool
 		description string
 	}{
-		{CachePolicyPullPush, CachePolicyPull, true, false, "pull-push allows pull"},
-		{CachePolicyPullPush, CachePolicyPush, true, false, "pull-push allows push"},
-		{CachePolicyUndefined, CachePolicyPull, true, false, "undefined allows pull"},
-		{CachePolicyUndefined, CachePolicyPush, true, false, "undefined allows push"},
-		{CachePolicyPull, CachePolicyPull, true, false, "pull allows pull"},
-		{CachePolicyPull, CachePolicyPush, false, false, "pull forbids push"},
-		{CachePolicyPush, CachePolicyPull, false, false, "push forbids pull"},
-		{CachePolicyPush, CachePolicyPush, true, false, "push allows push"},
-		{"unknown", CachePolicyPull, false, true, "unknown raises error on pull"},
-		{"unknown", CachePolicyPush, false, true, "unknown raises error on push"},
+		{spec.CachePolicyPullPush, spec.CachePolicyPull, true, false, "pull-push allows pull"},
+		{spec.CachePolicyPullPush, spec.CachePolicyPush, true, false, "pull-push allows push"},
+		{spec.CachePolicyUndefined, spec.CachePolicyPull, true, false, "undefined allows pull"},
+		{spec.CachePolicyUndefined, spec.CachePolicyPush, true, false, "undefined allows push"},
+		{spec.CachePolicyPull, spec.CachePolicyPull, true, false, "pull allows pull"},
+		{spec.CachePolicyPull, spec.CachePolicyPush, false, false, "pull forbids push"},
+		{spec.CachePolicyPush, spec.CachePolicyPull, false, false, "push forbids pull"},
+		{spec.CachePolicyPush, spec.CachePolicyPush, true, false, "push allows push"},
+		{"unknown", spec.CachePolicyPull, false, true, "unknown raises error on pull"},
+		{"unknown", spec.CachePolicyPush, false, true, "unknown raises error on push"},
 	} {
-		cache := Cache{Policy: tc.object}
+		cache := spec.Cache{Policy: tc.object}
 
 		result, err := cache.CheckPolicy(tc.subject)
 		if tc.expectErr {
@@ -47,15 +49,15 @@ func TestCacheCheckPolicy(t *testing.T) {
 func TestShouldCache(t *testing.T) {
 	for _, params := range []struct {
 		jobSuccess          bool
-		when                CacheWhen
+		when                spec.CacheWhen
 		expectedShouldCache bool
 	}{
-		{true, CacheWhenOnSuccess, true},
-		{true, CacheWhenAlways, true},
-		{true, CacheWhenOnFailure, false},
-		{false, CacheWhenOnSuccess, false},
-		{false, CacheWhenAlways, true},
-		{false, CacheWhenOnFailure, true},
+		{true, spec.CacheWhenOnSuccess, true},
+		{true, spec.CacheWhenAlways, true},
+		{true, spec.CacheWhenOnFailure, false},
+		{false, spec.CacheWhenOnSuccess, false},
+		{false, spec.CacheWhenAlways, true},
+		{false, spec.CacheWhenOnFailure, true},
 	} {
 		tn := "jobSuccess=" + strconv.FormatBool(params.jobSuccess) + ",when=" + string(params.when)
 
@@ -87,7 +89,7 @@ func TestSecrets_expandVariables(t *testing.T) {
 	testPath := "secret-path"
 	testField := "secret-field"
 
-	variables := JobVariables{
+	variables := spec.Variables{
 		{Key: "CI_VAULT_SERVER_URL", Value: testServerURL},
 		{Key: "CI_VAULT_NAMESPACE", Value: testNamespace},
 		{Key: "CI_VAULT_AUTH_NAME", Value: testAuthName},
@@ -110,41 +112,41 @@ func TestSecrets_expandVariables(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		secrets       Secrets
-		assertSecrets func(t *testing.T, secrets Secrets)
+		secrets       spec.Secrets
+		assertSecrets func(t *testing.T, secrets spec.Secrets)
 	}{
 		"no secrets defined": {
 			secrets: nil,
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				assert.Nil(t, secrets)
 			},
 		},
 		"nil vault secret": {
-			secrets: Secrets{
-				"VAULT": Secret{
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
 					Vault: nil,
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				assert.Nil(t, secrets["VAULT"].Vault)
 			},
 		},
 		"vault missing data": {
-			secrets: Secrets{
-				"VAULT": Secret{
-					Vault: &VaultSecret{},
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
+					Vault: &spec.VaultSecret{},
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				assert.NotNil(t, secrets["VAULT"].Vault)
 			},
 		},
 		"vault missing jwt data": {
-			secrets: Secrets{
-				"VAULT": Secret{
-					Vault: &VaultSecret{
-						Server: VaultServer{
-							Auth: VaultAuth{
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
+					Vault: &spec.VaultSecret{
+						Server: spec.VaultServer{
+							Auth: spec.VaultAuth{
 								Data: map[string]interface{}{
 									"role": testAuthRole,
 								},
@@ -153,19 +155,19 @@ func TestSecrets_expandVariables(t *testing.T) {
 					},
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				require.NotNil(t, secrets["VAULT"].Vault)
 				assert.Equal(t, testAuthRole, secrets["VAULT"].Vault.Server.Auth.Data["role"])
 			},
 		},
 		"vault secret defined": {
-			secrets: Secrets{
-				"VAULT": Secret{
-					Vault: &VaultSecret{
-						Server: VaultServer{
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
+					Vault: &spec.VaultSecret{
+						Server: spec.VaultServer{
 							URL:       "url ${CI_VAULT_SERVER_URL}",
 							Namespace: "namespace ${CI_VAULT_NAMESPACE}",
-							Auth: VaultAuth{
+							Auth: spec.VaultAuth{
 								Name: "name ${CI_VAULT_AUTH_NAME}",
 								Path: "path ${CI_VAULT_AUTH_PATH}",
 								Data: map[string]interface{}{
@@ -175,7 +177,7 @@ func TestSecrets_expandVariables(t *testing.T) {
 								},
 							},
 						},
-						Engine: VaultEngine{
+						Engine: spec.VaultEngine{
 							Name: "name ${CI_VAULT_ENGINE_NAME}",
 							Path: "path ${CI_VAULT_ENGINE_PATH}",
 						},
@@ -184,7 +186,7 @@ func TestSecrets_expandVariables(t *testing.T) {
 					},
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				require.NotNil(t, secrets["VAULT"].Vault)
 				assertValue(t, "url", testServerURL, secrets["VAULT"].Vault.Server.URL)
 				assertValue(t, "namespace", testNamespace, secrets["VAULT"].Vault.Server.Namespace)
@@ -207,7 +209,7 @@ func TestSecrets_expandVariables(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				tt.secrets.expandVariables(variables)
+				tt.secrets.ExpandVariables(variables)
 				tt.assertSecrets(t, tt.secrets)
 			})
 		})
@@ -222,7 +224,7 @@ func TestGCPSecretManagerSecrets_expandVariables(t *testing.T) {
 	providerId := "my-provider-123"
 	jwt := "my-jwt"
 
-	variables := JobVariables{
+	variables := spec.Variables{
 		{Key: "NAME", Value: secretName},
 		{Key: "VERSION", Value: secretVersion},
 		{Key: "PROJECT_NUMBER", Value: projectNumber},
@@ -232,32 +234,32 @@ func TestGCPSecretManagerSecrets_expandVariables(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		secrets       Secrets
-		assertSecrets func(t *testing.T, secrets Secrets)
+		secrets       spec.Secrets
+		assertSecrets func(t *testing.T, secrets spec.Secrets)
 	}{
 		"no secrets defined": {
 			secrets: nil,
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				assert.Nil(t, secrets)
 			},
 		},
 		"empty data": {
-			secrets: Secrets{
-				"VAULT": Secret{
-					GCPSecretManager: &GCPSecretManagerSecret{},
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
+					GCPSecretManager: &spec.GCPSecretManagerSecret{},
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
-				assert.Equal(t, &GCPSecretManagerSecret{}, secrets["VAULT"].GCPSecretManager)
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
+				assert.Equal(t, &spec.GCPSecretManagerSecret{}, secrets["VAULT"].GCPSecretManager)
 			},
 		},
 		"without expansion": {
-			secrets: Secrets{
-				"VAULT": Secret{
-					GCPSecretManager: &GCPSecretManagerSecret{
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
+					GCPSecretManager: &spec.GCPSecretManagerSecret{
 						Name:    "my-secret",
 						Version: "latest",
-						Server: GCPSecretManagerServer{
+						Server: spec.GCPSecretManagerServer{
 							ProjectNumber:                        "1234",
 							WorkloadIdentityFederationPoolId:     "pool-id",
 							WorkloadIdentityFederationProviderID: "provider-id",
@@ -266,7 +268,7 @@ func TestGCPSecretManagerSecrets_expandVariables(t *testing.T) {
 					},
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				assert.Equal(t, "my-secret", secrets["VAULT"].GCPSecretManager.Name)
 				assert.Equal(t, "latest", secrets["VAULT"].GCPSecretManager.Version)
 				assert.Equal(t, "1234", secrets["VAULT"].GCPSecretManager.Server.ProjectNumber)
@@ -276,12 +278,12 @@ func TestGCPSecretManagerSecrets_expandVariables(t *testing.T) {
 			},
 		},
 		"with expansion": {
-			secrets: Secrets{
-				"VAULT": Secret{
-					GCPSecretManager: &GCPSecretManagerSecret{
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
+					GCPSecretManager: &spec.GCPSecretManagerSecret{
 						Name:    "$NAME",
 						Version: "$VERSION",
-						Server: GCPSecretManagerServer{
+						Server: spec.GCPSecretManagerServer{
 							ProjectNumber:                        "$PROJECT_NUMBER",
 							WorkloadIdentityFederationPoolId:     "$POOL_ID",
 							WorkloadIdentityFederationProviderID: "$PROVIDER_ID",
@@ -290,7 +292,7 @@ func TestGCPSecretManagerSecrets_expandVariables(t *testing.T) {
 					},
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				assert.Equal(t, secretName, secrets["VAULT"].GCPSecretManager.Name)
 				assert.Equal(t, secretVersion, secrets["VAULT"].GCPSecretManager.Version)
 				assert.Equal(t, projectNumber, secrets["VAULT"].GCPSecretManager.Server.ProjectNumber)
@@ -304,7 +306,7 @@ func TestGCPSecretManagerSecrets_expandVariables(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				tt.secrets.expandVariables(variables)
+				tt.secrets.ExpandVariables(variables)
 				tt.assertSecrets(t, tt.secrets)
 			})
 		})
@@ -316,7 +318,7 @@ func TestAzureKeyVaultSecrets_expandVariables(t *testing.T) {
 	testVersion := "key-version"
 	testAuthJWT := "auth-jwt"
 
-	variables := JobVariables{
+	variables := spec.Variables{
 		{Key: "CI_AZURE_KEY_VAULT_KEY_NAME", Value: testName},
 		{Key: "CI_AZURE_KEY_VAULT_KEY_VERSION", Value: testVersion},
 		{Key: "CI_AZURE_KEY_VAULT_AUTH_JWT", Value: testAuthJWT},
@@ -331,42 +333,42 @@ func TestAzureKeyVaultSecrets_expandVariables(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		secrets       Secrets
-		assertSecrets func(t *testing.T, secrets Secrets)
+		secrets       spec.Secrets
+		assertSecrets func(t *testing.T, secrets spec.Secrets)
 	}{
 		"no secrets defined": {
 			secrets: nil,
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				assert.Nil(t, secrets)
 			},
 		},
 		"nil vault secret": {
-			secrets: Secrets{
-				"VAULT": Secret{
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
 					AzureKeyVault: nil,
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				assert.Nil(t, secrets["VAULT"].Vault)
 			},
 		},
 		"vault missing data": {
-			secrets: Secrets{
-				"VAULT": Secret{
-					AzureKeyVault: &AzureKeyVaultSecret{},
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
+					AzureKeyVault: &spec.AzureKeyVaultSecret{},
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				assert.NotNil(t, secrets["VAULT"].AzureKeyVault)
 			},
 		},
 		"vault missing jwt data": {
-			secrets: Secrets{
-				"VAULT": Secret{
-					AzureKeyVault: &AzureKeyVaultSecret{
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
+					AzureKeyVault: &spec.AzureKeyVaultSecret{
 						Name:    testName,
 						Version: testVersion,
-						Server: AzureKeyVaultServer{
+						Server: spec.AzureKeyVaultServer{
 							ClientID: "test_client_id",
 							TenantID: "test_tenant_id",
 							URL:      "test_url",
@@ -374,19 +376,19 @@ func TestAzureKeyVaultSecrets_expandVariables(t *testing.T) {
 					},
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				require.NotNil(t, secrets["VAULT"].AzureKeyVault)
 				assert.Equal(t, testName, secrets["VAULT"].AzureKeyVault.Name)
 				assert.Equal(t, testVersion, secrets["VAULT"].AzureKeyVault.Version)
 			},
 		},
 		"vault secret defined": {
-			secrets: Secrets{
-				"VAULT": Secret{
-					AzureKeyVault: &AzureKeyVaultSecret{
+			secrets: spec.Secrets{
+				"VAULT": spec.Secret{
+					AzureKeyVault: &spec.AzureKeyVaultSecret{
 						Name:    "name ${CI_AZURE_KEY_VAULT_KEY_NAME}",
 						Version: "version ${CI_AZURE_KEY_VAULT_KEY_VERSION}",
-						Server: AzureKeyVaultServer{
+						Server: spec.AzureKeyVaultServer{
 							ClientID: "client_id",
 							TenantID: "tenant_id",
 							JWT:      "jwt ${CI_AZURE_KEY_VAULT_AUTH_JWT}",
@@ -395,7 +397,7 @@ func TestAzureKeyVaultSecrets_expandVariables(t *testing.T) {
 					},
 				},
 			},
-			assertSecrets: func(t *testing.T, secrets Secrets) {
+			assertSecrets: func(t *testing.T, secrets spec.Secrets) {
 				require.NotNil(t, secrets["VAULT"].AzureKeyVault)
 				assertValue(t, "name", testName, secrets["VAULT"].AzureKeyVault.Name)
 				assertValue(t, "version", testVersion, secrets["VAULT"].AzureKeyVault.Version)
@@ -407,7 +409,7 @@ func TestAzureKeyVaultSecrets_expandVariables(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				tt.secrets.expandVariables(variables)
+				tt.secrets.ExpandVariables(variables)
 				tt.assertSecrets(t, tt.secrets)
 			})
 		})
@@ -425,9 +427,9 @@ func TestJobResponse_JobURL(t *testing.T) {
 	}
 
 	for repoURL, expectedURL := range testCases {
-		job := JobResponse{
+		job := spec.Job{
 			ID: jobID,
-			GitInfo: GitInfo{
+			GitInfo: spec.GitInfo{
 				RepoURL: repoURL,
 			},
 		}
@@ -437,46 +439,46 @@ func TestJobResponse_JobURL(t *testing.T) {
 }
 
 func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
-	emptyUser := StringOrInt64("")
-	uid1000 := StringOrInt64("1000")
-	ubuntuUser := StringOrInt64("ubuntu")
+	emptyUser := spec.StringOrInt64("")
+	uid1000 := spec.StringOrInt64("1000")
+	ubuntuUser := spec.StringOrInt64("ubuntu")
 
 	tests := map[string]struct {
 		json           string
-		expected       func(*testing.T, Image)
+		expected       func(*testing.T, spec.Image)
 		expectedErrMsg []string
 	}{
 		"no executor_opts": {
 			json: `{"executor_opts":{}}`,
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"docker, empty": {
 			json: `{"executor_opts":{"docker": {}}}`,
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"docker, only user": {
 			json: `{"executor_opts":{"docker": {"user": "ubuntu"}}}`,
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, ubuntuUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"docker, only platform": {
 			json: `{"executor_opts":{"docker": {"platform": "amd64"}}}`,
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, "amd64", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"docker, all options": {
 			json: `{"executor_opts":{"docker": {"platform": "arm64", "user": "ubuntu"}}}`,
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, "arm64", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, ubuntuUser, i.ExecutorOptions.Docker.User)
 			},
@@ -484,33 +486,33 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 		"docker, invalid options": {
 			json:           `{"executor_opts":{"docker": {"foobar": 1234}}}`,
 			expectedErrMsg: []string{`Unsupported "image" options [foobar] for "docker executor"; supported options are [platform user]`},
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 			},
 		},
 		"kubernetes, empty": {
 			json: `{"executor_opts":{"kubernetes": {}}}`,
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, emptyUser, i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"kubernetes, all options": {
 			json: `{"executor_opts":{"kubernetes": {"user": "1000"}}}`,
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, uid1000, i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"kubernetes, user as int64": {
 			json: `{"executor_opts":{"kubernetes": {"user": 1000}}}`,
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, uid1000, i.ExecutorOptions.Kubernetes.User)
 			},
 		},
 		"kubernetes, invalid options": {
 			json:           `{"executor_opts":{"kubernetes": {"foobar": 1234}}}`,
 			expectedErrMsg: []string{`Unsupported "image" options [foobar] for "kubernetes executor"; supported options are [user]`},
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 				assert.Equal(t, emptyUser, i.ExecutorOptions.Kubernetes.User)
@@ -519,7 +521,7 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 		"invalid executor": {
 			json:           `{"executor_opts":{"k8s": {}}}`,
 			expectedErrMsg: []string{`Unsupported "image" options [k8s] for "executor_opts"; supported options are [docker kubernetes]`},
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 				assert.Equal(t, emptyUser, i.ExecutorOptions.Kubernetes.User)
@@ -531,7 +533,7 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 				`Unsupported "image" options [k8s] for "executor_opts"; supported options are [docker kubernetes]`,
 				`Unsupported "image" options [foobar] for "docker executor"; supported options are [platform user]`,
 			},
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, "amd64", i.ExecutorOptions.Docker.Platform)
 				assert.Equal(t, emptyUser, i.ExecutorOptions.Docker.User)
 			},
@@ -542,7 +544,7 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 				`Unsupported "image" options [dockers] for "executor_opts"; supported options are [docker kubernetes]`,
 				`Unsupported "image" options [foobar] for "kubernetes executor"; supported options are [user]`,
 			},
-			expected: func(t *testing.T, i Image) {
+			expected: func(t *testing.T, i spec.Image) {
 				assert.Equal(t, uid1000, i.ExecutorOptions.Kubernetes.User)
 			},
 		},
@@ -550,7 +552,7 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := Image{}
+			got := spec.Image{}
 			err := json.Unmarshal([]byte(tt.json), &got)
 			assert.NoError(t, err)
 			tt.expected(t, got)
@@ -562,64 +564,6 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 					assert.Contains(t, got.UnsupportedOptions().Error(), tt.expectedErrMsg[i])
 				}
 			}
-		})
-	}
-}
-
-func Test_Image_ExecutorOptions_GetUIDGID(t *testing.T) {
-	tests := map[string]struct {
-		kubernetesOptions func() *ImageKubernetesOptions
-		expectedError     bool
-		expectedUID       int64
-		expectedGID       int64
-	}{
-		"empty user": {
-			kubernetesOptions: func() *ImageKubernetesOptions {
-				return &ImageKubernetesOptions{
-					User: "",
-				}
-			},
-		},
-		"only user": {
-			kubernetesOptions: func() *ImageKubernetesOptions {
-				return &ImageKubernetesOptions{
-					User: "1000",
-				}
-			},
-			expectedUID: int64(1000),
-		},
-		"uid and gid": {
-			kubernetesOptions: func() *ImageKubernetesOptions {
-				return &ImageKubernetesOptions{
-					User: "1000:1000",
-				}
-			},
-			expectedUID: int64(1000),
-			expectedGID: int64(1000),
-		},
-		"invalid user": {
-			kubernetesOptions: func() *ImageKubernetesOptions {
-				return &ImageKubernetesOptions{
-					User: "gitlab-runner",
-				}
-			},
-			expectedError: true,
-		},
-	}
-
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			uid, gid, err := tt.kubernetesOptions().GetUIDGID()
-			if tt.expectedError {
-				require.Error(t, err)
-				require.Equal(t, int64(0), uid)
-				require.Equal(t, int64(0), gid)
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tt.expectedUID, uid)
-			require.Equal(t, tt.expectedGID, gid)
 		})
 	}
 }
@@ -801,7 +745,7 @@ func TestJobResponse_Run(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			jobResponse := &JobResponse{}
+			jobResponse := &spec.Job{}
 			require.NoError(t, json.Unmarshal([]byte(tt.json), &jobResponse))
 
 			err := jobResponse.ValidateStepsJobRequest(tt.execNativeSteps)
@@ -811,7 +755,7 @@ func TestJobResponse_Run(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			want := &JobResponse{}
+			want := &spec.Job{}
 			require.NoError(t, json.Unmarshal([]byte(tt.wantJSON), &want))
 			require.Equal(t, want, jobResponse)
 		})

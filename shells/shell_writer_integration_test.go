@@ -14,7 +14,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
@@ -249,28 +251,28 @@ func TestCommandArgumentExpansion(t *testing.T) {
 		}
 
 		testFn := func(t *testing.T, w shells.ShellWriter) {
-			w.Variable(common.JobVariable{
+			w.Variable(spec.Variable{
 				Key:   "a",
 				Value: "ac/dc",
 			})
-			w.Variable(common.JobVariable{
+			w.Variable(spec.Variable{
 				Key:   "b",
 				Value: "beatles",
 			})
-			w.Variable(common.JobVariable{
+			w.Variable(spec.Variable{
 				Key:   "c",
 				Value: "credence clearwater revival",
 			})
 
-			w.Variable(common.JobVariable{
+			w.Variable(spec.Variable{
 				Key:   "d",
 				Value: "d_expanded",
 			})
-			w.Variable(common.JobVariable{
+			w.Variable(spec.Variable{
 				Key:   "e",
 				Value: "e_expanded",
 			})
-			w.Variable(common.JobVariable{
+			w.Variable(spec.Variable{
 				Key:   "f",
 				Value: "f_expanded",
 			})

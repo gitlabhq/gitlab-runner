@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
@@ -594,8 +595,8 @@ func (n *GitLabClient) resetToken(
 	}
 }
 
-func loadTLSData(tlsData ResponseTLSData) common.TLSData {
-	var res common.TLSData
+func loadTLSData(tlsData ResponseTLSData) spec.TLSData {
+	var res spec.TLSData
 	if tlsData.CAChain != "" {
 		res.CAChain = tlsData.CAChain
 	}
@@ -630,10 +631,10 @@ func (n *GitLabClient) RequestJob(
 	ctx context.Context,
 	config common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
-) (*common.JobResponse, bool) {
+) (*spec.Job, bool) {
 	request := n.PrepareJobRequest(config, sessionInfo)
 
-	var response common.JobResponse
+	var response spec.Job
 
 	headers, correlationID := addCorrelationID(RunnerTokenHeader(config.Token))
 	//nolint:bodyclose

@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func Test_addStepsPreamble(t *testing.T) {
@@ -46,11 +47,11 @@ func Test_addStepsPreamble(t *testing.T) {
 }
 
 func Test_addVariables_Omits(t *testing.T) {
-	keysToVars := func(keys []string) common.JobVariables {
-		jobVars := common.JobVariables{}
+	keysToVars := func(keys []string) spec.Variables {
+		jobVars := spec.Variables{}
 
 		for _, k := range keys {
-			jobVars = append(jobVars, common.JobVariable{
+			jobVars = append(jobVars, spec.Variable{
 				Key:   k,
 				Value: k,
 			})

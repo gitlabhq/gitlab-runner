@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
@@ -206,7 +207,7 @@ func TestBuildPanic(t *testing.T) {
 func TestJobImageExposed(t *testing.T) {
 	tests := map[string]struct {
 		image           string
-		vars            []JobVariable
+		vars            []spec.Variable
 		expectVarExists bool
 		expectImageName string
 	}{
@@ -217,7 +218,7 @@ func TestJobImageExposed(t *testing.T) {
 		},
 		"image with variable expansion": {
 			image:           "${IMAGE}:3.14",
-			vars:            []JobVariable{{Key: "IMAGE", Value: "alpine", Public: true}},
+			vars:            []spec.Variable{{Key: "IMAGE", Value: "alpine", Public: true}},
 			expectVarExists: true,
 			expectImageName: "alpine:3.14",
 		},
@@ -363,7 +364,7 @@ func TestPrepareEnvironmentFailure(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-prepare-environment-failure-on-build-error",
@@ -394,7 +395,7 @@ func TestJobFailure(t *testing.T) {
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		JobResponse: failedBuild,
+		Job: failedBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-job-failure",
@@ -430,7 +431,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	executor.On("Finish", mock.Anything).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.JobResponse.RunnerInfo.Timeout = 1
+	build.Job.RunnerInfo.Timeout = 1
 
 	trace := NewMockLightJobTrace(t)
 	trace.On("IsStdout").Return(true)
@@ -471,7 +472,7 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		JobResponse: failedBuild,
+		Job: failedBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-run-failure",
@@ -503,7 +504,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
@@ -526,7 +527,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.Variables = append(build.Variables, JobVariable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, spec.Variable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
@@ -551,13 +552,13 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 	executor.On("Finish", errors.New("upload fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	successfulBuild := build.JobResponse
-	successfulBuild.Artifacts = make(Artifacts, 1)
-	successfulBuild.Artifacts[0] = Artifact{
+	successfulBuild := build.Job
+	successfulBuild.Artifacts = make(spec.Artifacts, 1)
+	successfulBuild.Artifacts[0] = spec.Artifact{
 		Name:      "my-artifact",
 		Untracked: false,
-		Paths:     ArtifactPaths{"cached/*"},
-		When:      ArtifactWhenAlways,
+		Paths:     spec.ArtifactPaths{"cached/*"},
+		When:      spec.ArtifactWhenAlways,
 	}
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "upload fail")
@@ -628,7 +629,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.Variables = append(build.Variables, JobVariable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, spec.Variable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
@@ -651,7 +652,7 @@ func TestRunWrongAttempts(t *testing.T) {
 	)
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
+	build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "number of attempts out of the range [1, 10] for stage: get_sources")
 }
@@ -679,7 +680,7 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 	})
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 	assert.Equal(t, 2, getSourcesRunAttempts)
@@ -718,8 +719,8 @@ func TestDebugTrace(t *testing.T) {
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			build := &Build{
-				JobResponse: JobResponse{
-					Variables: JobVariables{},
+				Job: spec.Job{
+					Variables: spec.Variables{},
 				},
 				Runner: &RunnerConfig{
 					RunnerSettings: RunnerSettings{
@@ -731,7 +732,7 @@ func TestDebugTrace(t *testing.T) {
 			if testCase.debugTraceVariableValue != "" {
 				build.Variables = append(
 					build.Variables,
-					JobVariable{Key: "CI_DEBUG_TRACE", Value: testCase.debugTraceVariableValue, Public: true},
+					spec.Variable{Key: "CI_DEBUG_TRACE", Value: testCase.debugTraceVariableValue, Public: true},
 				)
 			}
 
@@ -923,9 +924,9 @@ func TestGetRemoteURL(t *testing.T) {
 						Runner: &RunnerConfig{
 							RunnerSettings: tc.runner,
 						},
-						JobResponse: JobResponse{
+						Job: spec.Job{
 							Token: exampleJobToken,
-							GitInfo: GitInfo{
+							GitInfo: spec.GitInfo{
 								RepoURL: exampleRepoURL,
 							},
 						},
@@ -935,18 +936,18 @@ func TestGetRemoteURL(t *testing.T) {
 						ff: ffState,
 					}
 
-					variables := JobVariables{
+					variables := spec.Variables{
 						{Key: "CI_PROJECT_PATH", Value: exampleProjectPath},
 					}
 
 					if tc.jobTokenVariableOverwrite != "" {
-						variables = append(variables, JobVariable{
+						variables = append(variables, spec.Variable{
 							Key:   "CI_JOB_TOKEN",
 							Value: tc.jobTokenVariableOverwrite,
 						})
 					}
 
-					build.JobResponse.Variables = variables
+					build.Job.Variables = variables
 
 					remoteURL, err := build.GetRemoteURL()
 					assert.NoError(t, err, "getting remote URL")
@@ -1102,7 +1103,7 @@ func TestGetInsteadOfs(t *testing.T) {
 								CloneURL: tc.cloneURL,
 							},
 						},
-						JobResponse: JobResponse{
+						Job: spec.Job{
 							Token: exampleJobToken,
 						},
 					}
@@ -1115,14 +1116,14 @@ func TestGetInsteadOfs(t *testing.T) {
 						build.Runner.RunnerCredentials.URL = tc.serverURL
 					}
 
-					build.Variables.Set(JobVariable{Key: "CI_SERVER_SHELL_SSH_HOST", Value: exampleServerHost})
+					build.Variables.Set(spec.Variable{Key: "CI_SERVER_SHELL_SSH_HOST", Value: exampleServerHost})
 
 					if tc.forceHTTPS {
-						build.Variables.Set(JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "true"})
+						build.Variables.Set(spec.Variable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "true"})
 					}
 
 					if tc.serverPort != "" {
-						build.Variables.Set(JobVariable{Key: "CI_SERVER_SHELL_SSH_PORT", Value: tc.serverPort})
+						build.Variables.Set(spec.Variable{Key: "CI_SERVER_SHELL_SSH_PORT", Value: tc.serverPort})
 					}
 
 					insteadOfs, err := build.GetInsteadOfs()
@@ -1183,7 +1184,7 @@ func TestIsFeatureFlagOn(t *testing.T) {
 					FeatureFlags: testCase.featureFlagCfg,
 				},
 			}
-			build.Variables = JobVariables{
+			build.Variables = spec.Variables{
 				{Key: testFF, Value: testCase.value},
 			}
 
@@ -1239,8 +1240,8 @@ func TestIsFeatureFlagOn_Precedence(t *testing.T) {
 					},
 				},
 			},
-			JobResponse: JobResponse{
-				Variables: JobVariables{
+			Job: spec.Job{
+				Variables: spec.Variables{
 					{Key: testFF, Value: "false"},
 				},
 			},
@@ -1271,8 +1272,8 @@ func TestIsFeatureFlagOn_Precedence(t *testing.T) {
 					Environment: []string{testFF + "=false"},
 				},
 			},
-			JobResponse: JobResponse{
-				Variables: JobVariables{
+			Job: spec.Job{
+				Variables: spec.Variables{
 					{Key: testFF, Value: "true"},
 				},
 			},
@@ -1287,7 +1288,7 @@ func TestGetAllVariables_FeatureFlagResolution(t *testing.T) {
 
 	tests := map[string]struct {
 		runnerFeatureFlags map[string]bool
-		jobVariables       JobVariables
+		jobVariables       spec.Variables
 		expectedFFValue    string
 		description        string
 	}{
@@ -1302,14 +1303,14 @@ func TestGetAllVariables_FeatureFlagResolution(t *testing.T) {
 			runnerFeatureFlags: map[string]bool{
 				testFF: true,
 			},
-			jobVariables: JobVariables{
+			jobVariables: spec.Variables{
 				{Key: testFF, Value: "false"},
 			},
 			expectedFFValue: "true",
 			description:     "TOML setting should override job variable in GetAllVariables",
 		},
 		"job variable appears when no TOML setting": {
-			jobVariables: JobVariables{
+			jobVariables: spec.Variables{
 				{Key: testFF, Value: "true"},
 			},
 			expectedFFValue: "true",
@@ -1325,7 +1326,7 @@ func TestGetAllVariables_FeatureFlagResolution(t *testing.T) {
 						FeatureFlags: tc.runnerFeatureFlags,
 					},
 				},
-				JobResponse: JobResponse{
+				Job: spec.Job{
 					Variables: tc.jobVariables,
 				},
 			}
@@ -1361,7 +1362,7 @@ func TestStartBuild(t *testing.T) {
 
 	tests := map[string]struct {
 		args                          startBuildArgs
-		jobVariables                  JobVariables
+		jobVariables                  spec.Variables
 		expectedBuildDir              string
 		expectedCacheDir              string
 		expectedSafeDirectoryCheckout bool
@@ -1375,7 +1376,7 @@ func TestStartBuild(t *testing.T) {
 				sharedDir:             false,
 				safeDirectoryCheckout: false,
 			},
-			jobVariables:                  JobVariables{},
+			jobVariables:                  spec.Variables{},
 			expectedBuildDir:              "/build/test-namespace/test-repo",
 			expectedCacheDir:              "/cache/test-namespace/test-repo",
 			expectedSafeDirectoryCheckout: false,
@@ -1389,7 +1390,7 @@ func TestStartBuild(t *testing.T) {
 				sharedDir:             true,
 				safeDirectoryCheckout: false,
 			},
-			jobVariables:                  JobVariables{},
+			jobVariables:                  spec.Variables{},
 			expectedBuildDir:              "/builds/1234/0/test-namespace/test-repo",
 			expectedCacheDir:              "/cache/test-namespace/test-repo",
 			expectedSafeDirectoryCheckout: false,
@@ -1403,7 +1404,7 @@ func TestStartBuild(t *testing.T) {
 				sharedDir:             false,
 				safeDirectoryCheckout: false,
 			},
-			jobVariables: JobVariables{
+			jobVariables: spec.Variables{
 				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo", Public: true},
 			},
 			expectedBuildDir:              "/builds/go/src/gitlab.com/test-namespace/test-repo",
@@ -1419,7 +1420,7 @@ func TestStartBuild(t *testing.T) {
 				sharedDir:             false,
 				safeDirectoryCheckout: false,
 			},
-			jobVariables: JobVariables{
+			jobVariables: spec.Variables{
 				{
 					Key:    "GIT_CLONE_PATH",
 					Value:  "$CI_BUILDS_DIR/go/src/gitlab.com/test-namespace/test-repo",
@@ -1439,7 +1440,7 @@ func TestStartBuild(t *testing.T) {
 				sharedDir:             false,
 				safeDirectoryCheckout: false,
 			},
-			jobVariables: JobVariables{
+			jobVariables: spec.Variables{
 				{
 					Key:    "GIT_CLONE_PATH",
 					Value:  "/builds/../outside",
@@ -1456,7 +1457,7 @@ func TestStartBuild(t *testing.T) {
 				sharedDir:             false,
 				safeDirectoryCheckout: false,
 			},
-			jobVariables: JobVariables{
+			jobVariables: spec.Variables{
 				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo", Public: true},
 			},
 			expectedBuildDir:              "/builds/test-namespace/test-repo",
@@ -1472,7 +1473,7 @@ func TestStartBuild(t *testing.T) {
 				sharedDir:             false,
 				safeDirectoryCheckout: false,
 			},
-			jobVariables: JobVariables{
+			jobVariables: spec.Variables{
 				{Key: "GIT_CLONE_PATH", Value: "/go/src/gitlab.com/test-namespace/test-repo", Public: true},
 			},
 			expectedError: true,
@@ -1496,8 +1497,8 @@ func TestStartBuild(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			build := Build{
-				JobResponse: JobResponse{
-					GitInfo: GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						RepoURL: "https://gitlab.com/test-namespace/test-repo.git",
 					},
 					Variables: test.jobVariables,
@@ -1531,10 +1532,10 @@ func TestStartBuild(t *testing.T) {
 }
 
 func TestTmpProjectDir(t *testing.T) {
-	createTestBuild := func(variables JobVariables) Build {
+	createTestBuild := func(variables spec.Variables) Build {
 		return Build{
-			JobResponse: JobResponse{
-				GitInfo: GitInfo{
+			Job: spec.Job{
+				GitInfo: spec.GitInfo{
 					RepoURL: "https://gitlab.com/test-namespace/test-repo.git",
 				},
 				Variables: variables,
@@ -1562,7 +1563,7 @@ func TestTmpProjectDir(t *testing.T) {
 
 	tests := map[string]struct {
 		args                  startBuildArgs
-		jobVariables          JobVariables
+		jobVariables          spec.Variables
 		expectedTmpProjectDir string
 		expectedError         bool
 	}{
@@ -1574,7 +1575,7 @@ func TestTmpProjectDir(t *testing.T) {
 		},
 		"test custom build dir with double trailing slashes": {
 			args: testStartBuildArgs,
-			jobVariables: JobVariables{
+			jobVariables: spec.Variables{
 				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo//", Public: true},
 			},
 			expectedError:         false,
@@ -1622,8 +1623,8 @@ func TestSkipBuildStageFeatureFlag(t *testing.T) {
 		t.Run(value, func(t *testing.T) {
 			build := &Build{
 				Runner: &RunnerConfig{},
-				JobResponse: JobResponse{
-					Variables: JobVariables{
+				Job: spec.Job{
+					Variables: spec.Variables{
 						{
 							Key:   featureflags.SkipNoOpBuildStages,
 							Value: "false",
@@ -1700,8 +1701,8 @@ func TestWaitForTerminal(t *testing.T) {
 						Executor: "shell",
 					},
 				},
-				JobResponse: JobResponse{
-					RunnerInfo: RunnerInfo{
+				Job: spec.Job{
+					RunnerInfo: spec.RunnerInfo{
 						Timeout: c.jobTimeout,
 					},
 				},
@@ -1804,15 +1805,15 @@ func TestBuild_IsLFSSmudgeDisabled(t *testing.T) {
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			b := &Build{
-				JobResponse: JobResponse{
-					Variables: JobVariables{},
+				Job: spec.Job{
+					Variables: spec.Variables{},
 				},
 			}
 
 			if !testCase.isVariableUnset {
 				b.Variables = append(
 					b.Variables,
-					JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: testCase.variableValue, Public: true},
+					spec.Variable{Key: "GIT_LFS_SKIP_SMUDGE", Value: testCase.variableValue, Public: true},
 				)
 			}
 
@@ -1888,15 +1889,15 @@ func TestGitSubmodulePaths(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			build := &Build{
 				Runner: &RunnerConfig{},
-				JobResponse: JobResponse{
-					Variables: JobVariables{},
+				Job: spec.Job{
+					Variables: spec.Variables{},
 				},
 			}
 
 			if test.isVariableSet {
 				build.Variables = append(
 					build.Variables,
-					JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: test.value, Public: true},
+					spec.Variable{Key: "GIT_SUBMODULE_PATHS", Value: test.value, Public: true},
 				)
 			}
 
@@ -1939,8 +1940,8 @@ func TestGitCleanFlags(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			build := &Build{
 				Runner: &RunnerConfig{},
-				JobResponse: JobResponse{
-					Variables: JobVariables{
+				Job: spec.Job{
+					Variables: spec.Variables{
 						{Key: "GIT_CLEAN_FLAGS", Value: test.value},
 					},
 				},
@@ -1983,8 +1984,8 @@ func TestGitCloneFlags(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			build := &Build{
 				Runner: &RunnerConfig{},
-				JobResponse: JobResponse{
-					Variables: JobVariables{
+				Job: spec.Job{
+					Variables: spec.Variables{
 						{Key: "GIT_CLONE_EXTRA_FLAGS", Value: test.value},
 					},
 				},
@@ -2023,8 +2024,8 @@ func TestGitFetchFlags(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			build := &Build{
 				Runner: &RunnerConfig{},
-				JobResponse: JobResponse{
-					Variables: JobVariables{
+				Job: spec.Job{
+					Variables: spec.Variables{
 						{Key: "GIT_FETCH_EXTRA_FLAGS", Value: test.value},
 					},
 				},
@@ -2059,8 +2060,8 @@ func TestGetRepositoryObjectFormat(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			build := &Build{
 				Runner: &RunnerConfig{},
-				JobResponse: JobResponse{
-					GitInfo: GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						RepoObjectFormat: test.value,
 					},
 				},
@@ -2095,8 +2096,8 @@ func TestGitSubmoduleUpdateFlags(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			build := &Build{
 				Runner: &RunnerConfig{},
-				JobResponse: JobResponse{
-					Variables: JobVariables{
+				Job: spec.Job{
+					Variables: spec.Variables{
 						{Key: "GIT_SUBMODULE_UPDATE_FLAGS", Value: test.value},
 					},
 				},
@@ -2110,25 +2111,25 @@ func TestGitSubmoduleUpdateFlags(t *testing.T) {
 
 func TestDefaultVariables(t *testing.T) {
 	tests := map[string]struct {
-		jobVariables  JobVariables
+		jobVariables  spec.Variables
 		rootDir       string
 		key           string
 		expectedValue string
 	}{
 		"get default CI_SERVER value": {
-			jobVariables:  JobVariables{},
+			jobVariables:  spec.Variables{},
 			rootDir:       "/builds",
 			key:           "CI_SERVER",
 			expectedValue: "yes",
 		},
 		"get default CI_PROJECT_DIR value": {
-			jobVariables:  JobVariables{},
+			jobVariables:  spec.Variables{},
 			rootDir:       "/builds",
 			key:           "CI_PROJECT_DIR",
 			expectedValue: "/builds/test-namespace/test-repo",
 		},
 		"get overwritten CI_PROJECT_DIR value": {
-			jobVariables: JobVariables{
+			jobVariables: spec.Variables{
 				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/gitlab-org/gitlab-runner", Public: true},
 			},
 			rootDir:       "/builds",
@@ -2140,8 +2141,8 @@ func TestDefaultVariables(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			build := Build{
-				JobResponse: JobResponse{
-					GitInfo: GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						RepoURL: "https://gitlab.com/test-namespace/test-repo.git",
 					},
 					Variables: test.jobVariables,
@@ -2207,8 +2208,8 @@ func TestProjectUniqueName(t *testing.T) {
 						Token: "Ze_n8E6en622WxxSg4r8",
 					},
 				},
-				JobResponse: JobResponse{
-					JobInfo: JobInfo{
+				Job: spec.Job{
+					JobInfo: spec.JobInfo{
 						ProjectID: 1234567890,
 					},
 				},
@@ -2223,8 +2224,8 @@ func TestProjectUniqueName(t *testing.T) {
 						Token: "xYzWabc-Ij3xlKjmoPO9",
 					},
 				},
-				JobResponse: JobResponse{
-					JobInfo: JobInfo{
+				Job: spec.Job{
+					JobInfo: spec.JobInfo{
 						ProjectID: 1234567890,
 					},
 				},
@@ -2253,8 +2254,8 @@ func TestProjectUniqueShortName(t *testing.T) {
 						Token: "Ze_n8E6en622WxxSg4r8",
 					},
 				},
-				JobResponse: JobResponse{
-					JobInfo: JobInfo{
+				Job: spec.Job{
+					JobInfo: spec.JobInfo{
 						ProjectID: 1234567890,
 					},
 				},
@@ -2269,8 +2270,8 @@ func TestProjectUniqueShortName(t *testing.T) {
 						Token: "xYzWabc-Ij3xlKjmoPO9",
 					},
 				},
-				JobResponse: JobResponse{
-					JobInfo: JobInfo{
+				Job: spec.Job{
+					JobInfo: spec.JobInfo{
 						ProjectID: 1234567890,
 					},
 				},
@@ -2285,9 +2286,9 @@ func TestProjectUniqueShortName(t *testing.T) {
 						Token: "xYzWabc-Ij3xlKjmoPO9",
 					},
 				},
-				JobResponse: JobResponse{
+				Job: spec.Job{
 					ID: 12345,
-					JobInfo: JobInfo{
+					JobInfo: spec.JobInfo{
 						ProjectID: 1234567890,
 					},
 				},
@@ -2349,7 +2350,7 @@ func TestProjectRealUniqueName(t *testing.T) {
 			build := &Build{Runner: &RunnerConfig{}}
 			build.Runner.RunnerCredentials.Token = test.token
 			build.Runner.SystemID = test.systemID
-			build.JobResponse.JobInfo.ProjectID = test.projectID
+			build.Job.JobInfo.ProjectID = test.projectID
 			build.ProjectRunnerID = test.projectRunnerID
 
 			assert.Equal(t, test.expectedUniqueName, build.ProjectRealUniqueName())
@@ -2365,7 +2366,7 @@ func TestBuildStages(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := map[string]struct {
-		jobResponse    JobResponse
+		jobResponse    spec.Job
 		expectedStages []BuildStage
 	}{
 		"script only build": {
@@ -2381,7 +2382,7 @@ func TestBuildStages(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			build := &Build{
-				JobResponse: tt.jobResponse,
+				Job: tt.jobResponse,
 			}
 			assert.ElementsMatch(t, tt.expectedStages, build.BuildStages())
 		})
@@ -2417,9 +2418,9 @@ func TestBuild_GetExecutorJobSectionAttempts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.attempts, func(t *testing.T) {
 			build := Build{
-				JobResponse: JobResponse{
-					Variables: JobVariables{
-						JobVariable{
+				Job: spec.Job{
+					Variables: spec.Variables{
+						spec.Variable{
 							Key:   ExecutorJobSectionAttempts,
 							Value: tt.attempts,
 						},
@@ -2459,9 +2460,9 @@ func TestBuild_getFeatureFlagInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.value, func(t *testing.T) {
 			b := Build{
-				JobResponse: JobResponse{
-					Variables: JobVariables{
-						{
+				Job: spec.Job{
+					Variables: spec.Variables{
+						spec.Variable{
 							Key:    featureflags.UseLegacyKubernetesExecutionStrategy,
 							Value:  tt.value,
 							Public: true,
@@ -2545,7 +2546,7 @@ func runSuccessfulMockBuild(t *testing.T, prepareFn func(options ExecutorPrepare
 }
 
 func TestSecretsResolving(t *testing.T) {
-	exampleVariables := JobVariables{
+	exampleVariables := spec.Variables{
 		{Key: "key", Value: "value"},
 	}
 
@@ -2559,19 +2560,19 @@ func TestSecretsResolving(t *testing.T) {
 		return p
 	}
 
-	secrets := Secrets{
-		"TEST_SECRET": Secret{
-			Vault: &VaultSecret{},
+	secrets := spec.Secrets{
+		"TEST_SECRET": spec.Secret{
+			Vault: &spec.VaultSecret{},
 		},
 	}
 
 	tests := map[string]struct {
-		secrets                 Secrets
+		secrets                 spec.Secrets
 		resolverCreationError   error
 		prepareExecutorProvider func(t *testing.T) *MockExecutorProvider
-		returnVariables         JobVariables
+		returnVariables         spec.Variables
 		resolvingError          error
-		expectedVariables       JobVariables
+		expectedVariables       spec.Variables
 		expectedError           error
 	}{
 		"secrets not present": {
@@ -2708,22 +2709,22 @@ func TestSetTraceStatus(t *testing.T) {
 
 func Test_GetDebugServicePolicy(t *testing.T) {
 	tests := map[string]struct {
-		variable JobVariable
+		variable spec.Variable
 		want     bool
 		wantLog  string
 	}{
 		"empty": {want: false},
 		"disabled": {
-			variable: JobVariable{Key: "CI_DEBUG_SERVICES", Value: "false", Public: true},
+			variable: spec.Variable{Key: "CI_DEBUG_SERVICES", Value: "false", Public: true},
 			want:     false,
 		},
 		"bogus value": {
-			variable: JobVariable{Key: "CI_DEBUG_SERVICES", Value: "blammo", Public: true},
+			variable: spec.Variable{Key: "CI_DEBUG_SERVICES", Value: "blammo", Public: true},
 			want:     false,
 			wantLog:  "CI_DEBUG_SERVICES: expected bool got \"blammo\", using default value: false",
 		},
 		"enabled": {
-			variable: JobVariable{Key: "CI_DEBUG_SERVICES", Value: "true", Public: true},
+			variable: spec.Variable{Key: "CI_DEBUG_SERVICES", Value: "true", Public: true},
 			want:     true,
 		},
 	}
@@ -2731,8 +2732,8 @@ func Test_GetDebugServicePolicy(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			b := &Build{
-				Runner:      &RunnerConfig{},
-				JobResponse: JobResponse{Variables: []JobVariable{tt.variable}},
+				Runner: &RunnerConfig{},
+				Job:    spec.Job{Variables: []spec.Variable{tt.variable}},
 			}
 
 			got := b.IsCIDebugServiceEnabled()
@@ -2750,19 +2751,19 @@ func Test_GetDebugServicePolicy(t *testing.T) {
 
 func Test_expandContainerOptions(t *testing.T) {
 	testCases := map[string]struct {
-		jobVars  JobVariables
-		image    Image
-		services Services
+		jobVars  spec.Variables
+		image    spec.Image
+		services spec.Services
 	}{
 		"no expansion required": {
-			image: Image{Name: "alpine:latest", Alias: "jobctr"},
-			services: Services{
+			image: spec.Image{Name: "alpine:latest", Alias: "jobctr"},
+			services: spec.Services{
 				{Name: "postgres:latest", Alias: "db, pg"},
 				{Name: "redis:latest", Alias: "cache"},
 			},
 		},
 		"expansion required": {
-			jobVars: JobVariables{
+			jobVars: spec.Variables{
 				{Key: "JOB_IMAGE", Value: "alpine:latest"},
 				{Key: "JOB_ALIAS", Value: "jobctr"},
 				{Key: "DB_IMAGE", Value: "postgres:latest"},
@@ -2770,8 +2771,8 @@ func Test_expandContainerOptions(t *testing.T) {
 				{Key: "CACHE_IMAGE", Value: "redis:latest"},
 				{Key: "CACHE_IMAGE_ALIAS", Value: "cache"},
 			},
-			image: Image{Name: "$JOB_IMAGE", Alias: "$JOB_ALIAS"},
-			services: Services{
+			image: spec.Image{Name: "$JOB_IMAGE", Alias: "$JOB_ALIAS"},
+			services: spec.Services{
 				{Name: "$DB_IMAGE", Alias: "$DB_IMAGE_ALIAS, pg"},
 				{Name: "$CACHE_IMAGE", Alias: "$CACHE_IMAGE_ALIAS"},
 			},
@@ -2782,7 +2783,7 @@ func Test_expandContainerOptions(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			b := &Build{
 				Runner: &RunnerConfig{},
-				JobResponse: JobResponse{
+				Job: spec.Job{
 					Variables: tt.jobVars,
 					Image:     tt.image,
 					Services:  tt.services,
@@ -2809,7 +2810,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 	trueValue := true
 	testCases := []struct {
 		desc          string
-		policyOptions PolicyOptions
+		policyOptions spec.PolicyOptions
 		contains      []string
 	}{
 		{
@@ -2817,13 +2818,13 @@ func TestPrintPolicyOptions(t *testing.T) {
 		},
 		{
 			desc: "not a policy job",
-			policyOptions: PolicyOptions{
+			policyOptions: spec.PolicyOptions{
 				PolicyJob: false,
 			},
 		},
 		{
 			desc: "policy job without override",
-			policyOptions: PolicyOptions{
+			policyOptions: spec.PolicyOptions{
 				PolicyJob: true,
 				Name:      "Test Policy",
 			},
@@ -2831,7 +2832,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 		},
 		{
 			desc: "policy job with override allowed",
-			policyOptions: PolicyOptions{
+			policyOptions: spec.PolicyOptions{
 				PolicyJob:               true,
 				Name:                    "Test Policy",
 				VariableOverrideAllowed: &trueValue,
@@ -2840,7 +2841,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 		},
 		{
 			desc: "policy job with override allowed with exceptions",
-			policyOptions: PolicyOptions{
+			policyOptions: spec.PolicyOptions{
 				PolicyJob:                  true,
 				Name:                       "Test Policy",
 				VariableOverrideAllowed:    &trueValue,
@@ -2850,7 +2851,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 		},
 		{
 			desc: "policy job with override denied",
-			policyOptions: PolicyOptions{
+			policyOptions: spec.PolicyOptions{
 				PolicyJob:               true,
 				Name:                    "Test Policy",
 				VariableOverrideAllowed: &falseValue,
@@ -2859,7 +2860,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 		},
 		{
 			desc: "policy job with override denied with exceptions",
-			policyOptions: PolicyOptions{
+			policyOptions: spec.PolicyOptions{
 				PolicyJob:                  true,
 				Name:                       "Test Policy",
 				VariableOverrideAllowed:    &falseValue,
@@ -2878,7 +2879,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 
 			b := &Build{
 				Runner: &RunnerConfig{},
-				JobResponse: JobResponse{
+				Job: spec.Job{
 					PolicyOptions: tc.policyOptions,
 				},
 				logger: logger,
@@ -3052,7 +3053,7 @@ func TestGetStageTimeoutContexts(t *testing.T) {
 				logger: logger,
 			}
 			for key, val := range tc.variables {
-				b.Variables = append(b.Variables, JobVariable{
+				b.Variables = append(b.Variables, spec.Variable{
 					Key:   key,
 					Value: val,
 				})
@@ -3097,14 +3098,14 @@ func Test_logUsedImages(t *testing.T) {
 
 	tests := map[string]struct {
 		featureOn    bool
-		image        Image
-		services     Services
+		image        spec.Image
+		services     spec.Services
 		assertImages func(t *testing.T, images []string, platforms []string)
 	}{
 		"FF disabled": {
 			featureOn: false,
-			image:     Image{Name: testImage1},
-			services: Services{
+			image:     spec.Image{Name: testImage1},
+			services: spec.Services{
 				{Name: testImage2},
 				{Name: testImage3},
 			},
@@ -3120,10 +3121,10 @@ func Test_logUsedImages(t *testing.T) {
 		},
 		"job image defined": {
 			featureOn: true,
-			image: Image{
+			image: spec.Image{
 				Name: testImage1,
-				ExecutorOptions: ImageExecutorOptions{
-					Docker: ImageDockerOptions{
+				ExecutorOptions: spec.ImageExecutorOptions{
+					Docker: spec.ImageDockerOptions{
 						Platform: testPlatform,
 					},
 				},
@@ -3138,12 +3139,12 @@ func Test_logUsedImages(t *testing.T) {
 		},
 		"service images defined": {
 			featureOn: true,
-			services: Services{
+			services: spec.Services{
 				{Name: testImage1},
 				{
 					Name: testImage2,
-					ExecutorOptions: ImageExecutorOptions{
-						Docker: ImageDockerOptions{
+					ExecutorOptions: spec.ImageExecutorOptions{
+						Docker: spec.ImageDockerOptions{
 							Platform: testPlatform,
 						},
 					},
@@ -3160,8 +3161,8 @@ func Test_logUsedImages(t *testing.T) {
 		},
 		"all images defined": {
 			featureOn: true,
-			image:     Image{Name: testImage1},
-			services: Services{
+			image:     spec.Image{Name: testImage1},
+			services: spec.Services{
 				{Name: testImage2},
 				{Name: testImage3},
 			},
@@ -3189,7 +3190,7 @@ func Test_logUsedImages(t *testing.T) {
 						Logger: logger,
 					},
 				},
-				JobResponse: JobResponse{
+				Job: spec.Job{
 					Image:    tt.image,
 					Services: tt.services,
 				},
@@ -3271,7 +3272,7 @@ func TestBuildStageMetricsFailBuild(t *testing.T) {
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		JobResponse: failedBuild,
+		Job: failedBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: t.Name(),
@@ -3312,7 +3313,7 @@ func TestBuildDurationsAndBoundaryTimes(t *testing.T) {
 	rc := new(RunnerConfig)
 	rc.RunnerSettings.Executor = t.Name()
 
-	build, err := NewBuild(JobResponse{}, rc, nil, nil)
+	build, err := NewBuild(spec.Job{}, rc, nil, nil)
 	require.NoError(t, err)
 
 	startedAt1 := build.StartedAt()
@@ -3393,7 +3394,7 @@ func TestBuild_RunCallsEnsureFinishedAt(t *testing.T) {
 
 			interrupt := make(chan os.Signal, 1)
 
-			build, err := NewBuild(JobResponse{}, rc, interrupt, nil)
+			build, err := NewBuild(spec.Job{}, rc, interrupt, nil)
 			require.NoError(t, err)
 
 			// Some of the job execution steps use the configurable number of attempts
@@ -3454,7 +3455,7 @@ func TestBuildIsProtected(t *testing.T) {
 	tests := []struct {
 		name             string
 		gitInfoProtected *bool
-		variables        JobVariables
+		variables        spec.Variables
 		expected         bool
 	}{
 		{
@@ -3463,33 +3464,33 @@ func TestBuildIsProtected(t *testing.T) {
 		{
 			name:             "non-protected via GitInfo",
 			gitInfoProtected: &someFalse,
-			variables:        JobVariables{{Key: protectedVarName, Value: "true"}},
+			variables:        spec.Variables{{Key: protectedVarName, Value: "true"}},
 		},
 		{
 			name:             "protected via GitInfo",
 			gitInfoProtected: &someTrue,
-			variables:        JobVariables{{Key: protectedVarName, Value: "false"}},
+			variables:        spec.Variables{{Key: protectedVarName, Value: "false"}},
 			expected:         true,
 		},
 		{
 			name:      "non-protected via JobVariables",
-			variables: JobVariables{{Key: protectedVarName, Value: "false"}},
+			variables: spec.Variables{{Key: protectedVarName, Value: "false"}},
 		},
 		{
 			name:      "protected via JobVariables",
-			variables: JobVariables{{Key: protectedVarName, Value: "true"}},
+			variables: spec.Variables{{Key: protectedVarName, Value: "true"}},
 			expected:  true,
 		},
 		{
 			name: "non-protected via JobVariables, multiple vars",
-			variables: JobVariables{
+			variables: spec.Variables{
 				{Key: protectedVarName, Value: "false"},
 				{Key: protectedVarName, Value: "true"},
 			},
 		},
 		{
 			name: "protected via JobVariables, multiple vars",
-			variables: JobVariables{
+			variables: spec.Variables{
 				{Key: protectedVarName, Value: "true"},
 				{Key: protectedVarName, Value: "false"},
 			},
@@ -3500,9 +3501,9 @@ func TestBuildIsProtected(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			build := &Build{
-				JobResponse: JobResponse{
+				Job: spec.Job{
 					Variables: test.variables,
-					GitInfo: GitInfo{
+					GitInfo: spec.GitInfo{
 						Protected: test.gitInfoProtected,
 					},
 				},
@@ -3515,11 +3516,11 @@ func TestBuildIsProtected(t *testing.T) {
 }
 
 func TestExpandingInputs(t *testing.T) {
-	inputs, err := newJobInputs([]JobInput{
+	inputs, err := spec.NewJobInputs([]spec.JobInput{
 		{
 			Key: "any_input",
-			Value: JobInputValue{
-				Type:      JobInputContentTypeNameString,
+			Value: spec.JobInputValue{
+				Type:      spec.JobInputContentTypeNameString,
 				Content:   value.String("any-value"),
 				Sensitive: false,
 			},
@@ -3534,7 +3535,7 @@ func TestExpandingInputs(t *testing.T) {
 		RegisterExecutorProviderForTest(t, t.Name(), p)
 	}
 
-	run := func(t *testing.T, job JobResponse, ffEnabled bool) *Build {
+	run := func(t *testing.T, job spec.Job, ffEnabled bool) *Build {
 		build, err := NewBuild(
 			job,
 			&RunnerConfig{RunnerSettings: RunnerSettings{
@@ -3552,13 +3553,13 @@ func TestExpandingInputs(t *testing.T) {
 	}
 
 	t.Run("fail to expand inputs", func(t *testing.T) {
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input + }}'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'Input is: ${{ job.inputs.any_input + }}'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3579,20 +3580,20 @@ func TestExpandingInputs(t *testing.T) {
 		et := &BuildError{}
 		require.ErrorAs(t, err, &et)
 		assert.Equal(t, ConfigurationError, et.FailureReason)
-		etInner := &InputInterpolationError{}
+		etInner := &spec.InputInterpolationError{}
 		assert.ErrorAs(t, et.Inner, &etInner)
 	})
 
 	t.Run("expand inputs in step script", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3605,13 +3606,13 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("do not expand inputs in step script with FF disabled", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3624,18 +3625,18 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in step after_script", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{""},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{""},
+					When:   spec.StepWhenAlways,
 				},
 				{
-					Name:   StepNameAfterScript,
-					Script: StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameAfterScript,
+					Script: spec.StepScript{"echo 'Input is: ${{ job.inputs.any_input }}'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3648,16 +3649,16 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in image name", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Image: Image{
+			Image: spec.Image{
 				Name: "${{ job.inputs.any_input }}-image:latest",
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3670,17 +3671,17 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in image entrypoint", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Image: Image{
+			Image: spec.Image{
 				Name:       "alpine:latest",
 				Entrypoint: []string{"/bin/sh", "-c", "echo ${{ job.inputs.any_input }}"},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3693,9 +3694,9 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in image command", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Image: Image{
+			Image: spec.Image{
 				Name: "alpine:latest",
 				Command: []string{
 					"/bin/sh",
@@ -3704,11 +3705,11 @@ func TestExpandingInputs(t *testing.T) {
 					"start-${{ job.inputs.any_input }}",
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3727,21 +3728,21 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in docker platform", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Image: Image{
+			Image: spec.Image{
 				Name: "alpine:latest",
-				ExecutorOptions: ImageExecutorOptions{
-					Docker: ImageDockerOptions{
+				ExecutorOptions: spec.ImageExecutorOptions{
+					Docker: spec.ImageDockerOptions{
 						Platform: "linux/${{ job.inputs.any_input }}",
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3754,71 +3755,71 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in docker user", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Image: Image{
+			Image: spec.Image{
 				Name: "alpine:latest",
-				ExecutorOptions: ImageExecutorOptions{
-					Docker: ImageDockerOptions{
-						User: StringOrInt64("${{ job.inputs.any_input }}"),
+				ExecutorOptions: spec.ImageExecutorOptions{
+					Docker: spec.ImageDockerOptions{
+						User: spec.StringOrInt64("${{ job.inputs.any_input }}"),
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		assert.Equal(t, StringOrInt64("any-value"), build.Image.ExecutorOptions.Docker.User)
+		assert.Equal(t, spec.StringOrInt64("any-value"), build.Image.ExecutorOptions.Docker.User)
 	})
 
 	t.Run("expand inputs in kubernetes user", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Image: Image{
+			Image: spec.Image{
 				Name: "alpine:latest",
-				ExecutorOptions: ImageExecutorOptions{
-					Kubernetes: ImageKubernetesOptions{
-						User: StringOrInt64("${{ job.inputs.any_input }}"),
+				ExecutorOptions: spec.ImageExecutorOptions{
+					Kubernetes: spec.ImageKubernetesOptions{
+						User: spec.StringOrInt64("${{ job.inputs.any_input }}"),
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		assert.Equal(t, StringOrInt64("any-value"), build.Image.ExecutorOptions.Kubernetes.User)
+		assert.Equal(t, spec.StringOrInt64("any-value"), build.Image.ExecutorOptions.Kubernetes.User)
 	})
 
 	t.Run("expand inputs in pull policies", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Image: Image{
+			Image: spec.Image{
 				Name:         "alpine:latest",
-				PullPolicies: []DockerPullPolicy{"${{ job.inputs.any_input }}-if-not-present"},
+				PullPolicies: []spec.PullPolicy{"${{ job.inputs.any_input }}-if-not-present"},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3831,18 +3832,18 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in cache key", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Cache: Caches{
+			Cache: spec.Caches{
 				{
 					Key: "${{ job.inputs.any_input }}-cache-key",
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3855,9 +3856,9 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in cache fallback keys", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Cache: Caches{
+			Cache: spec.Caches{
 				{
 					Key: "main-cache-key",
 					FallbackKeys: []string{
@@ -3867,18 +3868,18 @@ func TestExpandingInputs(t *testing.T) {
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		expected := CacheFallbackKeys{
+		expected := spec.CacheFallbackKeys{
 			"any-value-fallback-1",
 			"fallback-any-value-2",
 			"any-value",
@@ -3889,9 +3890,9 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in cache paths", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Cache: Caches{
+			Cache: spec.Caches{
 				{
 					Key: "cache-key",
 					Paths: []string{
@@ -3901,18 +3902,18 @@ func TestExpandingInputs(t *testing.T) {
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		expected := ArtifactPaths{
+		expected := spec.ArtifactPaths{
 			"any-value/cache",
 			"build/any-value",
 			"any-value",
@@ -3923,68 +3924,68 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in cache when", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Cache: Caches{
+			Cache: spec.Caches{
 				{
 					Key:  "cache-key",
-					When: CacheWhen("on_${{ job.inputs.any_input }}"),
+					When: spec.CacheWhen("on_${{ job.inputs.any_input }}"),
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		assert.Equal(t, CacheWhen("on_any-value"), build.Cache[0].When)
+		assert.Equal(t, spec.CacheWhen("on_any-value"), build.Cache[0].When)
 	})
 
 	t.Run("expand inputs in cache policy", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Cache: Caches{
+			Cache: spec.Caches{
 				{
 					Key:    "cache-key",
-					Policy: CachePolicy("${{ job.inputs.any_input }}-push"),
+					Policy: spec.CachePolicy("${{ job.inputs.any_input }}-push"),
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		assert.Equal(t, CachePolicy("any-value-push"), build.Cache[0].Policy)
+		assert.Equal(t, spec.CachePolicy("any-value-push"), build.Cache[0].Policy)
 	})
 
 	t.Run("expand inputs in artifact name", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Artifacts: Artifacts{
+			Artifacts: spec.Artifacts{
 				{
 					Name: "${{ job.inputs.any_input }}-artifact",
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -3997,30 +3998,30 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in artifact paths", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Artifacts: Artifacts{
+			Artifacts: spec.Artifacts{
 				{
 					Name: "test-artifact",
-					Paths: ArtifactPaths{
+					Paths: spec.ArtifactPaths{
 						"${{ job.inputs.any_input }}/artifacts",
 						"build/${{ job.inputs.any_input }}",
 						"${{ job.inputs.any_input }}",
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		expected := ArtifactPaths{
+		expected := spec.ArtifactPaths{
 			"any-value/artifacts",
 			"build/any-value",
 			"any-value",
@@ -4031,30 +4032,30 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in artifact exclude", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Artifacts: Artifacts{
+			Artifacts: spec.Artifacts{
 				{
 					Name: "test-artifact",
-					Exclude: ArtifactExclude{
+					Exclude: spec.ArtifactExclude{
 						"${{ job.inputs.any_input }}/exclude",
 						"temp/${{ job.inputs.any_input }}",
 						"${{ job.inputs.any_input }}",
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		expected := ArtifactExclude{
+		expected := spec.ArtifactExclude{
 			"any-value/exclude",
 			"temp/any-value",
 			"any-value",
@@ -4065,19 +4066,19 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in artifact expire_in", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Artifacts: Artifacts{
+			Artifacts: spec.Artifacts{
 				{
 					Name:     "test-artifact",
 					ExpireIn: "${{ job.inputs.any_input }} days",
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -4090,43 +4091,43 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in artifact when", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Artifacts: Artifacts{
+			Artifacts: spec.Artifacts{
 				{
 					Name: "test-artifact",
-					When: ArtifactWhen("on_${{ job.inputs.any_input }}"),
+					When: spec.ArtifactWhen("on_${{ job.inputs.any_input }}"),
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		assert.Equal(t, ArtifactWhen("on_any-value"), build.Artifacts[0].When)
+		assert.Equal(t, spec.ArtifactWhen("on_any-value"), build.Artifacts[0].When)
 	})
 
 	t.Run("expand inputs in service name", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Services: Services{
+			Services: spec.Services{
 				{
 					Name: "${{ job.inputs.any_input }}-service:latest",
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -4139,19 +4140,19 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in service entrypoint", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Services: Services{
+			Services: spec.Services{
 				{
 					Name:       "postgres:latest",
 					Entrypoint: []string{"/bin/sh", "-c", "echo ${{ job.inputs.any_input }}"},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -4164,23 +4165,23 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in service docker platform", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Services: Services{
+			Services: spec.Services{
 				{
 					Name: "postgres:latest",
-					ExecutorOptions: ImageExecutorOptions{
-						Docker: ImageDockerOptions{
+					ExecutorOptions: spec.ImageExecutorOptions{
+						Docker: spec.ImageDockerOptions{
 							Platform: "linux/${{ job.inputs.any_input }}",
 						},
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -4193,92 +4194,92 @@ func TestExpandingInputs(t *testing.T) {
 	t.Run("expand inputs in service docker user", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Services: Services{
+			Services: spec.Services{
 				{
 					Name: "postgres:latest",
-					ExecutorOptions: ImageExecutorOptions{
-						Docker: ImageDockerOptions{
-							User: StringOrInt64("${{ job.inputs.any_input }}"),
+					ExecutorOptions: spec.ImageExecutorOptions{
+						Docker: spec.ImageDockerOptions{
+							User: spec.StringOrInt64("${{ job.inputs.any_input }}"),
 						},
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		assert.Equal(t, StringOrInt64("any-value"), build.Services[0].ExecutorOptions.Docker.User)
+		assert.Equal(t, spec.StringOrInt64("any-value"), build.Services[0].ExecutorOptions.Docker.User)
 	})
 
 	t.Run("expand inputs in service kubernetes user", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Services: Services{
+			Services: spec.Services{
 				{
 					Name: "postgres:latest",
-					ExecutorOptions: ImageExecutorOptions{
-						Kubernetes: ImageKubernetesOptions{
-							User: StringOrInt64("${{ job.inputs.any_input }}"),
+					ExecutorOptions: spec.ImageExecutorOptions{
+						Kubernetes: spec.ImageKubernetesOptions{
+							User: spec.StringOrInt64("${{ job.inputs.any_input }}"),
 						},
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		assert.Equal(t, StringOrInt64("any-value"), build.Services[0].ExecutorOptions.Kubernetes.User)
+		assert.Equal(t, spec.StringOrInt64("any-value"), build.Services[0].ExecutorOptions.Kubernetes.User)
 	})
 
 	t.Run("expand inputs in service pull policies", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Services: Services{
+			Services: spec.Services{
 				{
 					Name:         "postgres:latest",
-					PullPolicies: []DockerPullPolicy{"${{ job.inputs.any_input }}-if-not-present"},
+					PullPolicies: []spec.PullPolicy{"${{ job.inputs.any_input }}-if-not-present"},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
 
 		build := run(t, job, true)
 
-		assert.Equal(t, []DockerPullPolicy{"any-value-if-not-present"}, build.Services[0].PullPolicies)
+		assert.Equal(t, []spec.PullPolicy{"any-value-if-not-present"}, build.Services[0].PullPolicies)
 	})
 
 	t.Run("expand inputs in service command", func(t *testing.T) {
 		setup(t)
 
-		job := JobResponse{
+		job := spec.Job{
 			Inputs: inputs,
-			Services: Services{
+			Services: spec.Services{
 				{
 					Name: "postgres:latest",
 					Command: []string{
@@ -4289,11 +4290,11 @@ func TestExpandingInputs(t *testing.T) {
 					},
 				},
 			},
-			Steps: Steps{
+			Steps: spec.Steps{
 				{
-					Name:   StepNameScript,
-					Script: StepScript{"echo 'test'"},
-					When:   StepWhenAlways,
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo 'test'"},
+					When:   spec.StepWhenAlways,
 				},
 			},
 		}
@@ -4402,8 +4403,8 @@ func TestBuild_attemptExecuteStage(t *testing.T) {
 						Logger: logger,
 					},
 				},
-				JobResponse: JobResponse{
-					Variables: JobVariables{},
+				Job: spec.Job{
+					Variables: spec.Variables{},
 				},
 				logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
 			}
@@ -4498,8 +4499,8 @@ func TestBuild_attemptExecuteStageWithRetryCallback(t *testing.T) {
 						Logger: logger,
 					},
 				},
-				JobResponse: JobResponse{
-					Variables: JobVariables{},
+				Job: spec.Job{
+					Variables: spec.Variables{},
 				},
 				logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
 			}
@@ -4561,8 +4562,8 @@ func TestBuild_attemptExecuteStageExponentialBackoff(t *testing.T) {
 				Logger: logger,
 			},
 		},
-		JobResponse: JobResponse{
-			Variables: JobVariables{},
+		Job: spec.Job{
+			Variables: spec.Variables{},
 		},
 		logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
 	}
@@ -4643,8 +4644,8 @@ func TestBuild_attemptExecuteStageInvalidAttempts(t *testing.T) {
 						Logger: logger,
 					},
 				},
-				JobResponse: JobResponse{
-					Variables: JobVariables{},
+				Job: spec.Job{
+					Variables: spec.Variables{},
 				},
 			}
 
@@ -4663,5 +4664,148 @@ func TestBuild_attemptExecuteStageInvalidAttempts(t *testing.T) {
 
 			executor.AssertExpectations(t)
 		})
+	}
+}
+
+func TestPredefinedServerVariables(t *testing.T) {
+	// predefinedServerJobVariables are variables that _only_ come from the CI
+	// server.
+	//
+	// This list was extracted from:
+	// https://docs.gitlab.com/ci/variables/predefined_variables/#predefined-environment-variables-reference
+	//
+	// handy console js:
+	// console.log(Object.values($("tr td:first-child code").map((_, val) => val.innerText)).join("\n"))
+	//
+	// commented out variables are non-server ci variables, they are handy to keep
+	// here for reference/future update updating.
+	var predefinedServerJobVariables = []string{
+		"CHAT_CHANNEL",
+		"CHAT_INPUT",
+		"CI",
+		"CI_API_V4_URL",
+		// "CI_BUILDS_DIR",
+		"CI_COMMIT_BEFORE_SHA",
+		"CI_COMMIT_DESCRIPTION",
+		"CI_COMMIT_MESSAGE",
+		"CI_COMMIT_REF_NAME",
+		"CI_COMMIT_REF_PROTECTED",
+		"CI_COMMIT_REF_SLUG",
+		"CI_COMMIT_SHA",
+		"CI_COMMIT_SHORT_SHA",
+		"CI_COMMIT_BRANCH",
+		"CI_COMMIT_TAG",
+		"CI_COMMIT_TITLE",
+		"CI_COMMIT_TIMESTAMP",
+		// "CI_CONCURRENT_ID",
+		// "CI_CONCURRENT_PROJECT_ID",
+		"CI_CONFIG_PATH",
+		"CI_DEBUG_TRACE",
+		"CI_DEFAULT_BRANCH",
+		"CI_DEPLOY_FREEZE",
+		"CI_DEPLOY_PASSWORD",
+		"CI_DEPLOY_USER",
+		// "CI_DISPOSABLE_ENVIRONMENT",
+		"CI_ENVIRONMENT_NAME",
+		"CI_ENVIRONMENT_SLUG",
+		"CI_ENVIRONMENT_URL",
+		"CI_EXTERNAL_PULL_REQUEST_IID",
+		"CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY",
+		"CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY",
+		"CI_EXTERNAL_PULL_REQUEST_SOURCE_BRANCH_NAME",
+		"CI_EXTERNAL_PULL_REQUEST_SOURCE_BRANCH_SHA",
+		"CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME",
+		"CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_SHA",
+		"CI_HAS_OPEN_REQUIREMENTS",
+		"CI_JOB_ID",
+		"CI_JOB_IMAGE",
+		"CI_JOB_MANUAL",
+		"CI_JOB_NAME",
+		"CI_JOB_STAGE",
+		"CI_JOB_TOKEN",
+		"CI_JOB_JWT",
+		"CI_JOB_URL",
+		"CI_KUBERNETES_ACTIVE",
+		"CI_MERGE_REQUEST_ASSIGNEES",
+		"CI_MERGE_REQUEST_ID",
+		"CI_MERGE_REQUEST_IID",
+		"CI_MERGE_REQUEST_LABELS",
+		"CI_MERGE_REQUEST_MILESTONE",
+		"CI_MERGE_REQUEST_PROJECT_ID",
+		"CI_MERGE_REQUEST_PROJECT_PATH",
+		"CI_MERGE_REQUEST_PROJECT_URL",
+		"CI_MERGE_REQUEST_REF_PATH",
+		"CI_MERGE_REQUEST_SOURCE_BRANCH_NAME",
+		"CI_MERGE_REQUEST_SOURCE_BRANCH_SHA",
+		"CI_MERGE_REQUEST_SOURCE_PROJECT_ID",
+		"CI_MERGE_REQUEST_SOURCE_PROJECT_PATH",
+		"CI_MERGE_REQUEST_SOURCE_PROJECT_URL",
+		"CI_MERGE_REQUEST_TARGET_BRANCH_NAME",
+		"CI_MERGE_REQUEST_TARGET_BRANCH_SHA",
+		"CI_MERGE_REQUEST_TITLE",
+		"CI_MERGE_REQUEST_EVENT_TYPE",
+		"CI_NODE_INDEX",
+		"CI_NODE_TOTAL",
+		"CI_PAGES_DOMAIN",
+		"CI_PAGES_URL",
+		"CI_PIPELINE_ID",
+		"CI_PIPELINE_IID",
+		"CI_PIPELINE_SOURCE",
+		"CI_PIPELINE_TRIGGERED",
+		"CI_PIPELINE_URL",
+		// "CI_PROJECT_DIR",
+		"CI_PROJECT_ID",
+		"CI_PROJECT_NAME",
+		"CI_PROJECT_NAMESPACE",
+		"CI_PROJECT_ROOT_NAMESPACE",
+		"CI_PROJECT_PATH",
+		"CI_PROJECT_PATH_SLUG",
+		"CI_PROJECT_REPOSITORY_LANGUAGES",
+		"CI_PROJECT_TITLE",
+		"CI_PROJECT_URL",
+		"CI_PROJECT_VISIBILITY",
+		"CI_REGISTRY",
+		"CI_REGISTRY_IMAGE",
+		"CI_REGISTRY_PASSWORD",
+		"CI_REGISTRY_USER",
+		"CI_REPOSITORY_URL",
+		"CI_RUNNER_DESCRIPTION",
+		// "CI_RUNNER_EXECUTABLE_ARCH",
+		"CI_RUNNER_ID",
+		// "CI_RUNNER_REVISION",
+		"CI_RUNNER_SHORT_TOKEN",
+		"CI_RUNNER_TAGS",
+		// "CI_RUNNER_VERSION",
+		// "CI_SERVER",
+		"CI_SERVER_URL",
+		"CI_SERVER_HOST",
+		"CI_SERVER_PORT",
+		"CI_SERVER_PROTOCOL",
+		"CI_SERVER_NAME",
+		"CI_SERVER_REVISION",
+		"CI_SERVER_VERSION",
+		"CI_SERVER_VERSION_MAJOR",
+		"CI_SERVER_VERSION_MINOR",
+		"CI_SERVER_VERSION_PATCH",
+		"CI_SHARED_ENVIRONMENT",
+		"GITLAB_CI",
+		"GITLAB_FEATURES",
+		"GITLAB_USER_EMAIL",
+		"GITLAB_USER_ID",
+		"GITLAB_USER_LOGIN",
+		"GITLAB_USER_NAME",
+	}
+
+	build := &Build{}
+	for _, v := range build.GetAllVariables() {
+		for _, predefined := range predefinedServerJobVariables {
+			assert.NotEqual(
+				t,
+				predefined,
+				v.Key,
+				"%s is a predefined server variable and should not be set by runner",
+				predefined,
+			)
+		}
 	}
 }

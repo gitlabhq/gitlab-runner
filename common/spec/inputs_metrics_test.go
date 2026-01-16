@@ -1,6 +1,6 @@
 //go:build !integration
 
-package common
+package spec
 
 import (
 	"fmt"
@@ -138,10 +138,10 @@ func TestJobInputsInterpolationMetrics(t *testing.T) {
 	})
 }
 
-func prepareTestInputs(t *testing.T, jsonData string) *JobInputs {
+func prepareTestInputs(t *testing.T, jsonData string) *Inputs {
 	t.Helper()
 
-	var inputs JobInputs
+	var inputs Inputs
 	err := inputs.UnmarshalJSON([]byte(jsonData))
 	require.NoError(t, err)
 	return &inputs

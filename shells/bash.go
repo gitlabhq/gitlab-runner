@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
@@ -206,7 +207,7 @@ func (b *BashWriter) isTmpFile(path string) bool {
 	return strings.HasPrefix(path, b.TemporaryPath)
 }
 
-func (b *BashWriter) Variable(variable common.JobVariable) {
+func (b *BashWriter) Variable(variable spec.Variable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
 		b.Linef("mkdir -p %q", helpers.ToSlash(b.TemporaryPath))

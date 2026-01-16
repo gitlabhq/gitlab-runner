@@ -25,6 +25,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -112,7 +113,7 @@ type RunCommand struct {
 
 	failuresCollector      *prometheus_helper.FailuresCollector
 	apiRequestsCollector   prometheus.Collector
-	inputsMetricsCollector *common.JobInputsMetricsCollector
+	inputsMetricsCollector *spec.JobInputsMetricsCollector
 
 	sessionServer *session.Server
 
@@ -158,7 +159,7 @@ func NewRunCommand(n common.Network, apiRequestsCollector prometheus.Collector) 
 		ServiceName:            defaultServiceName,
 		network:                n,
 		apiRequestsCollector:   apiRequestsCollector,
-		inputsMetricsCollector: common.NewJobInputsMetricsCollector(),
+		inputsMetricsCollector: spec.NewJobInputsMetricsCollector(),
 		prometheusLogHook:      prometheus_helper.NewLogHook(),
 		failuresCollector:      prometheus_helper.NewFailuresCollector(),
 		healthHelper:           newHealthHelper(),
@@ -1081,7 +1082,7 @@ func (mr *RunCommand) createSession(provider common.ExecutorProvider) (*session.
 func (mr *RunCommand) requestJob(
 	runner *common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
-) (common.JobTrace, *common.JobResponse, error) {
+) (common.JobTrace, *spec.Job, error) {
 	jobData, healthy := mr.doJobRequest(context.Background(), runner, sessionInfo)
 	mr.healthHelper.markHealth(runner, healthy)
 
@@ -1150,7 +1151,7 @@ func (mr *RunCommand) doJobRequest(
 	ctx context.Context,
 	runner *common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
-) (*common.JobResponse, bool) {
+) (*spec.Job, bool) {
 	// Terminate opened requests to GitLab when interrupt signal
 	// is broadcast.
 	ctx, cancelFn := context.WithCancel(ctx)

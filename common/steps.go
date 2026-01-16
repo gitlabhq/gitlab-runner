@@ -9,7 +9,7 @@ import (
 // - the executor supports native steps.
 // - we are not running on windows
 func (b *Build) UseNativeSteps() bool {
-	return b.JobResponse.Run != "" &&
+	return b.Job.Run != "" &&
 		b.ExecutorFeatures.NativeStepsIntegration &&
 		runtime.GOOS != "windows"
 }

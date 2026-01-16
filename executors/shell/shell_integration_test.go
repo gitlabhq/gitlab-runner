@@ -28,6 +28,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/shell"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -116,13 +117,13 @@ func tempDir(t *testing.T) string {
 	return dir
 }
 
-func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) *common.Build {
+func newBuild(t *testing.T, getBuildResponse spec.Job, shell string) *common.Build {
 	dir := tempDir(t)
 
 	t.Logf("setting 'builds_dir' to %q", dir)
 
 	build := &common.Build{
-		JobResponse: getBuildResponse,
+		Job: getBuildResponse,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				BuildsDir:           dir,
@@ -160,7 +161,7 @@ func TestBuildSuccess(t *testing.T) {
 
 func TestBuildPassingEnvsMultistep(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build := newBuild(t, common.JobResponse{}, shell)
+		build := newBuild(t, spec.Job{}, shell)
 
 		buildtest.RunBuildWithPassingEnvsMultistep(t, build.Runner, nil)
 	})
@@ -168,7 +169,7 @@ func TestBuildPassingEnvsMultistep(t *testing.T) {
 
 func TestBuildPassingEnvsJobIsolation(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build := newBuild(t, common.JobResponse{}, shell)
+		build := newBuild(t, spec.Job{}, shell)
 
 		buildtest.RunBuildWithPassingEnvsJobIsolation(t, build.Runner, nil)
 	})
@@ -178,17 +179,17 @@ func TestMultistepBuild(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulMultistepBuild()
 	require.NoError(t, err)
 
-	failingScriptBuild, err := common.GetRemoteFailingMultistepBuild(common.StepNameScript)
+	failingScriptBuild, err := common.GetRemoteFailingMultistepBuild(spec.StepNameScript)
 	require.NoError(t, err)
 
 	failingReleaseBuild, err := common.GetRemoteFailingMultistepBuild("release")
 	require.NoError(t, err)
 
-	failingAfterScriptBuild, err := common.GetRemoteFailingMultistepBuild(common.StepNameAfterScript)
+	failingAfterScriptBuild, err := common.GetRemoteFailingMultistepBuild(spec.StepNameAfterScript)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
-		jobResponse             common.JobResponse
+		jobResponse             spec.Job
 		afterScriptIgnoreErrors bool
 		expectedOutput          []string
 		unwantedOutput          []string
@@ -253,7 +254,7 @@ func TestMultistepBuild(t *testing.T) {
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 				build := newBuild(t, tt.jobResponse, shell)
 				if !tt.afterScriptIgnoreErrors {
-					build.Variables = append(build.Variables, common.JobVariable{
+					build.Variables = append(build.Variables, spec.Variable{
 						Key:   "AFTER_SCRIPT_IGNORE_ERRORS",
 						Value: "false",
 					})
@@ -358,7 +359,7 @@ func TestRawVariableOutput(t *testing.T) {
 		build := newBuild(t, successfulBuild, shell)
 
 		value := "$VARIABLE$WITH$DOLLARS$$"
-		build.Variables = append(build.Variables, common.JobVariable{
+		build.Variables = append(build.Variables, spec.Variable{
 			Key:   "TEST",
 			Value: value,
 			Raw:   true,
@@ -372,7 +373,7 @@ func TestRawVariableOutput(t *testing.T) {
 
 func TestBuildCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build := newBuild(t, common.JobResponse{}, shell)
+		build := newBuild(t, spec.Job{}, shell)
 
 		buildtest.RunBuildWithCancel(t, build.Runner, nil)
 	})
@@ -380,7 +381,7 @@ func TestBuildCancel(t *testing.T) {
 
 func TestBuildWithExecutorCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build := newBuild(t, common.JobResponse{}, shell)
+		build := newBuild(t, spec.Job{}, shell)
 
 		buildtest.RunBuildWithExecutorCancel(t, build.Runner, nil)
 	})
@@ -388,7 +389,7 @@ func TestBuildWithExecutorCancel(t *testing.T) {
 
 func TestBuildMasking(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build := newBuild(t, common.JobResponse{}, shell)
+		build := newBuild(t, spec.Job{}, shell)
 
 		buildtest.RunBuildWithMasking(t, build.Runner, nil)
 	})
@@ -398,7 +399,7 @@ func TestBuildMaskingProxyExec(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build := newBuild(t, common.JobResponse{}, shell)
+		build := newBuild(t, spec.Job{}, shell)
 
 		buildtest.RunBuildWithMaskingProxyExec(t, build.Runner, nil)
 	})
@@ -406,7 +407,7 @@ func TestBuildMaskingProxyExec(t *testing.T) {
 
 func TestBuildExpandedFileVariable(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build := newBuild(t, common.JobResponse{}, shell)
+		build := newBuild(t, spec.Job{}, shell)
 		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, nil)
 	})
 }
@@ -420,7 +421,7 @@ func TestBuildWithIndexLock(t *testing.T) {
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
 
-		build.JobResponse.AllowGitFetch = true
+		build.Job.AllowGitFetch = true
 		err = os.WriteFile(build.BuildDir+"/.git/index.lock", []byte{}, os.ModeSticky)
 		require.NoError(t, err)
 
@@ -437,7 +438,7 @@ func TestBuildWithShallowLock(t *testing.T) {
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
 		)
 
 		err = buildtest.RunBuild(t, build)
@@ -460,7 +461,7 @@ func TestBuildWithHeadLock(t *testing.T) {
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
 
-		build.JobResponse.AllowGitFetch = true
+		build.Job.AllowGitFetch = true
 		err = os.WriteFile(build.BuildDir+"/.git/HEAD.lock", []byte{}, os.ModeSticky)
 		require.NoError(t, err)
 
@@ -478,7 +479,7 @@ func TestBuildWithLeftoverConfigLock(t *testing.T) {
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
 
-		build.JobResponse.AllowGitFetch = true
+		build.Job.AllowGitFetch = true
 		err = os.WriteFile(build.BuildDir+"/.git/config.lock", []byte{}, os.ModeSticky)
 		require.NoError(t, err)
 
@@ -502,7 +503,7 @@ func TestBuildWithGitLFSHook(t *testing.T) {
 		require.NoError(t, err)
 		err = os.WriteFile(build.BuildDir+"/.git/hooks/post-checkout", []byte(gitLFSPostCheckoutHook), 0777)
 		require.NoError(t, err)
-		build.JobResponse.AllowGitFetch = true
+		build.Job.AllowGitFetch = true
 
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
@@ -520,7 +521,7 @@ func TestBuildWithRefLock(t *testing.T) {
 
 		refDir := build.BuildDir + "/.git/refs/remotes/origin/"
 		lockfile := "main.lock"
-		build.JobResponse.AllowGitFetch = true
+		build.Job.AllowGitFetch = true
 		err = os.MkdirAll(refDir, 0755)
 		require.NoError(t, err)
 		err = os.WriteFile(refDir+lockfile, []byte{}, os.ModeSticky)
@@ -566,7 +567,7 @@ func TestBuildWithGitStrategyNoneWithoutLFS(t *testing.T) {
 
 		build.Runner.PreGetSourcesScript = "echo pre-clone-script"
 		build.Runner.PostGetSourcesScript = "echo post-clone-script"
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "none"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "none"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -584,7 +585,7 @@ func TestBuildWithGitStrategyNoneWithLFS(t *testing.T) {
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "none"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "none"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -603,7 +604,7 @@ func TestBuildWithGitStrategyEmptyWithoutLFS(t *testing.T) {
 
 		build.Runner.PreGetSourcesScript = "echo pre-clone-script"
 		build.Runner.PostGetSourcesScript = "echo post-clone-script"
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "empty"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "empty"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -635,7 +636,7 @@ func TestBuildWithGitStrategyEmptyWithLFS(t *testing.T) {
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "empty"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "empty"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -671,7 +672,7 @@ func TestBuildWithGitStrategyFetchWithoutLFS(t *testing.T) {
 
 		build.Runner.PreGetSourcesScript = "echo pre-clone-script"
 		build.Runner.PostGetSourcesScript = "echo post-clone-script"
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -693,7 +694,7 @@ func TestBuildWithGitStrategyFetchWithLFS(t *testing.T) {
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -719,8 +720,8 @@ func TestBuildWithGitStrategyFetchWithUserDisabledLFS(t *testing.T) {
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+			spec.Variable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -732,7 +733,7 @@ func TestBuildWithGitStrategyFetchWithUserDisabledLFS(t *testing.T) {
 		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
+			spec.Variable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
 		)
 
 		out, err = buildtest.RunBuildReturningOutput(t, build)
@@ -753,8 +754,8 @@ func TestBuildWithGitStrategyFetchNoCheckoutWithoutLFS(t *testing.T) {
 		build.Runner.PostGetSourcesScript = "echo post-clone-script"
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-			common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+			spec.Variable{Key: "GIT_CHECKOUT", Value: "false"},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -779,8 +780,8 @@ func TestBuildWithGitStrategyFetchNoCheckoutWithLFS(t *testing.T) {
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-			common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+			spec.Variable{Key: "GIT_CHECKOUT", Value: "false"},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -807,7 +808,7 @@ func TestBuildWithGitStrategyCloneWithoutLFS(t *testing.T) {
 
 		build.Runner.PreGetSourcesScript = "echo pre-clone-script"
 		build.Runner.PostGetSourcesScript = "echo post-clone-script"
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "clone"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -828,7 +829,7 @@ func TestBuildWithGitStrategyCloneWithLFS(t *testing.T) {
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "clone"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -845,8 +846,8 @@ func TestBuildWithGitStrategyCloneWithUserDisabledLFS(t *testing.T) {
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
-			common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "clone"},
+			spec.Variable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -866,8 +867,8 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithoutLFS(t *testing.T) {
 		build.Runner.PostGetSourcesScript = "echo post-clone-script"
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
-			common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "clone"},
+			spec.Variable{Key: "GIT_CHECKOUT", Value: "false"},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -891,8 +892,8 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithLFS(t *testing.T) {
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
-			common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "clone"},
+			spec.Variable{Key: "GIT_CHECKOUT", Value: "false"},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -910,8 +911,8 @@ func TestBuildWithSubmoduleLFSPullsLFSObject(t *testing.T) {
 		build := newBuild(t, successfulBuild, shell)
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
 		)
 		build.GitInfo = common.GetSubmoduleLFSGitInfo(build.GitInfo.RepoURL)
 
@@ -932,9 +933,9 @@ func TestBuildWithSubmoduleLFSDisabledSmudging(t *testing.T) {
 		build := newBuild(t, successfulBuild, shell)
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
-			common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+			spec.Variable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
 		)
 		build.GitInfo = common.GetSubmoduleLFSGitInfo(build.GitInfo.RepoURL)
 
@@ -958,7 +959,7 @@ func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 
 				build.Variables = append(
 					build.Variables,
-					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "none"},
+					spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "none"},
 				)
 
 				out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1049,8 +1050,8 @@ func TestBuildWithGitSubmodulePaths(t *testing.T) {
 
 				build.Variables = append(
 					build.Variables,
-					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
-					common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: tt.paths},
+					spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+					spec.Variable{Key: "GIT_SUBMODULE_PATHS", Value: tt.paths},
 				)
 
 				out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1083,7 +1084,7 @@ func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -1112,8 +1113,8 @@ func TestBuildWithGitSubmoduleStrategyNormalAndGitSubmoduleDepth(t *testing.T) {
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
-			common.JobVariable{Key: "GIT_SUBMODULE_DEPTH", Value: "1"},
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+			spec.Variable{Key: "GIT_SUBMODULE_DEPTH", Value: "1"},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1141,7 +1142,7 @@ func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -1173,8 +1174,8 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitSubmoduleDepth(t *testing.T
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
-			common.JobVariable{Key: "GIT_SUBMODULE_DEPTH", Value: "1"},
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+			spec.Variable{Key: "GIT_SUBMODULE_DEPTH", Value: "1"},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1227,8 +1228,8 @@ func TestBuildWithGitFetchSubmoduleStrategyRecursive(t *testing.T) {
 
 				build.Variables = append(
 					build.Variables,
-					common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+					spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+					spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
 				)
 				build.Runner.RunnerSettings.CleanGitConfig = test.cleanGitConfig
 
@@ -1364,7 +1365,7 @@ func TestBuildGitFetchStrategyFallback(t *testing.T) {
 		// Perform a successful build that doesn't fetch submodules.
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
 		)
 		_, err = buildtest.RunBuildReturningOutput(t, build)
 		require.NoError(t, err)
@@ -1386,8 +1387,8 @@ func TestBuildGitFetchStrategyFallback(t *testing.T) {
 		// so the second attempt will succeed.
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "2"},
-			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+			spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "2"},
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
 		)
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		err = buildtest.RunBuild(t, build)
@@ -1408,7 +1409,7 @@ func TestBuildWithGitSubmoduleStrategyInvalid(t *testing.T) {
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "invalid"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "invalid"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.EqualError(t, err, "unknown GIT_SUBMODULE_STRATEGY")
@@ -1426,8 +1427,8 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "none"},
-			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "none"},
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1449,8 +1450,8 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyEmpty(t *testing.T)
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "empty"},
-			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "empty"},
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1470,7 +1471,7 @@ func TestBuildWithGitSubmoduleModified(t *testing.T) {
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -1506,7 +1507,7 @@ func TestBuildWithGitSubmoduleModified(t *testing.T) {
 		err = os.WriteFile(submoduleReadme, []byte(modifySubmoduleAfterCommit), os.ModeSticky)
 		require.NoError(t, err)
 
-		build.JobResponse.AllowGitFetch = true
+		build.Job.AllowGitFetch = true
 		out, err = buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.NotContains(t, out, "Your local changes to the following files would be overwritten by checkout")
@@ -1541,7 +1542,7 @@ func TestBuildWithDebugTrace(t *testing.T) {
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "true"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "CI_DEBUG_TRACE", Value: "true"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -1592,7 +1593,7 @@ func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
 
 		build.Runner.PreGetSourcesScript = "echo pre-clone-script"
 		build.Runner.PostGetSourcesScript = "echo post-clone-script"
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -1613,7 +1614,7 @@ func TestBuildWithUntrackedDirFromPreviousBuild(t *testing.T) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -1633,7 +1634,7 @@ func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -1677,8 +1678,8 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 					build := newBuild(t, successfulBuild, shell)
 					build.Variables = append(
 						build.Variables,
-						common.JobVariable{Key: "ErrorActionPreference", Value: "Stop"},
-						common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+						spec.Variable{Key: "ErrorActionPreference", Value: "Stop"},
+						spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
 					)
 					build.Runner.RunnerSettings.CleanGitConfig = test.cleanGitConfig
 
@@ -1698,7 +1699,7 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 
 					build.Variables = append(
 						build.Variables,
-						common.JobVariable{Key: "ErrorActionPreference", Value: "Continue"},
+						spec.Variable{Key: "ErrorActionPreference", Value: "Continue"},
 					)
 					out, err = buildtest.RunBuildReturningOutput(t, build)
 					assert.NoError(t, err)
@@ -1707,7 +1708,7 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 
 					build.Variables = append(
 						build.Variables,
-						common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"},
+						spec.Variable{Key: "ErrorActionPreference", Value: "SilentlyContinue"},
 					)
 					out, err = buildtest.RunBuildReturningOutput(t, build)
 					assert.NoError(t, err)
@@ -1818,8 +1819,8 @@ func TestBuildWithGitCleanFlags(t *testing.T) {
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-			common.JobVariable{Key: "GIT_CLEAN_FLAGS", Value: "-ffdx cleanup_file"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+			spec.Variable{Key: "GIT_CLEAN_FLAGS", Value: "-ffdx cleanup_file"},
 		)
 
 		// Run build and save file
@@ -1858,8 +1859,8 @@ func TestSanitizeGitDirectory(t *testing.T) {
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-			common.JobVariable{Key: featureflags.EnableJobCleanup, Value: "true"},
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+			spec.Variable{Key: featureflags.EnableJobCleanup, Value: "true"},
 		)
 
 		build.Runner.RunnerSettings.CleanGitConfig = &[]bool{true}[0]
@@ -1880,7 +1881,7 @@ func TestSanitizeGitDirectory(t *testing.T) {
 }
 
 func TestBuildFileVariablesRemoval(t *testing.T) {
-	getJobResponse := func(t *testing.T, jobResponseRequester func() (common.JobResponse, error)) common.JobResponse {
+	getJobResponse := func(t *testing.T, jobResponseRequester func() (spec.Job, error)) spec.Job {
 		jobResponse, err := jobResponseRequester()
 		require.NoError(t, err)
 
@@ -1888,7 +1889,7 @@ func TestBuildFileVariablesRemoval(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		jobResponse common.JobResponse
+		jobResponse spec.Job
 	}{
 		"succeeded job": {
 			jobResponse: getJobResponse(t, common.GetSuccessfulBuild),
@@ -1908,7 +1909,7 @@ func TestBuildFileVariablesRemoval(t *testing.T) {
 
 					build.Variables = append(
 						build.Variables,
-						common.JobVariable{Key: testVariableName, Value: "test", File: true},
+						spec.Variable{Key: testVariableName, Value: "test", File: true},
 					)
 
 					setup(t, build)
@@ -1929,7 +1930,7 @@ func TestBuildFileVariablesRemoval(t *testing.T) {
 
 func TestBuildLogLimitExceeded(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build := newBuild(t, common.JobResponse{}, shell)
+		build := newBuild(t, spec.Job{}, shell)
 
 		buildtest.RunBuildWithJobOutputLimitExceeded(t, build.Runner, nil)
 	})
@@ -1950,10 +1951,10 @@ func TestBuildInvokeBinaryHelper(t *testing.T) {
 			build.Runner.RunnerSettings.BuildsDir = filepath.Join(dir, "build")
 			build.Runner.RunnerSettings.CacheDir = filepath.Join(dir, "cache")
 
-			build.Cache = append(build.Cache, common.Cache{
+			build.Cache = append(build.Cache, spec.Cache{
 				Key:    "cache",
 				Paths:  []string{"*"},
-				Policy: common.CachePolicyPullPush,
+				Policy: spec.CachePolicyPullPush,
 			})
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -2065,7 +2066,7 @@ func TestBuildPwshHandlesScriptEncodingCorrectly(t *testing.T) {
 
 	build := newBuild(t, successfulBuild, shells.SNPwsh)
 
-	build.Variables = append(build.Variables, common.JobVariable{
+	build.Variables = append(build.Variables, spec.Variable{
 		Key:   "GL_Test1",
 		Value: "∅",
 		Raw:   true,
@@ -2082,11 +2083,11 @@ func TestBuildScriptSections(t *testing.T) {
 			// support for pwsh and powershell tracked in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28119
 			t.Skip("pwsh and powershell not supported")
 		}
-		build := newBuild(t, common.JobResponse{}, shell)
+		build := newBuild(t, spec.Job{}, shell)
 
 		successfulBuild, err := common.GetSuccessfulMultilineCommandBuild()
 		require.NoError(t, err)
-		build.JobResponse = successfulBuild
+		build.Job = successfulBuild
 		build.Runner.RunnerSettings.Shell = shell
 		buildtest.RunBuildWithSections(t, build)
 	})
@@ -2101,12 +2102,12 @@ func TestCloneBranchExpansion(t *testing.T) {
 	}()
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build := newBuild(t, common.JobResponse{}, shell)
+		build := newBuild(t, spec.Job{}, shell)
 
 		successfulBuild, err := common.GetLocalBuildResponse()
 		require.NoError(t, err)
 
-		build.JobResponse = successfulBuild
+		build.Job = successfulBuild
 		build.GitInfo.Ref = branch
 		build.Runner.RunnerSettings.Shell = shell
 
@@ -2130,10 +2131,10 @@ func TestBuildCacheHelper(t *testing.T) {
 			name: "cache settings provided, job cache provided",
 			buildFn: func(dir string, build *common.Build) {
 				build.Runner.RunnerSettings.Cache = &common.CacheConfig{}
-				build.Cache = append(build.Cache, common.Cache{
+				build.Cache = append(build.Cache, spec.Cache{
 					Key:    "cache",
 					Paths:  []string{"*"},
-					Policy: common.CachePolicyPullPush,
+					Policy: spec.CachePolicyPullPush,
 				})
 			},
 			expectedCacheCreated: true,
@@ -2142,10 +2143,10 @@ func TestBuildCacheHelper(t *testing.T) {
 			name: "no cache settings defined, job cache provided",
 			buildFn: func(dir string, build *common.Build) {
 				build.Runner.RunnerSettings.Cache = nil
-				build.Cache = append(build.Cache, common.Cache{
+				build.Cache = append(build.Cache, spec.Cache{
 					Key:    "cache",
 					Paths:  []string{"*"},
-					Policy: common.CachePolicyPullPush,
+					Policy: spec.CachePolicyPullPush,
 				})
 			},
 			expectedCacheCreated: true,
@@ -2240,7 +2241,7 @@ func TestBuildWithCustomClonePath(t *testing.T) {
 
 				build.Variables = append(
 					build.Variables,
-					common.JobVariable{
+					spec.Variable{
 						Key:   "GIT_CLONE_PATH",
 						Value: gitClonePath,
 					},
@@ -2403,15 +2404,15 @@ func TestCredSetup(t *testing.T) {
 
 	gitStrategies := map[string]struct {
 		featureFlags map[string]bool
-		jobVariables common.JobVariables
+		jobVariables spec.Variables
 	}{
 		"fetch": {},
 		"clone": {
-			jobVariables: common.JobVariables{{Key: "GIT_STRATEGY", Value: "clone"}},
+			jobVariables: spec.Variables{{Key: "GIT_STRATEGY", Value: "clone"}},
 		},
 		"nativeClone": {
 			featureFlags: map[string]bool{featureflags.UseGitNativeClone: true},
-			jobVariables: common.JobVariables{{Key: "GIT_STRATEGY", Value: "clone"}},
+			jobVariables: spec.Variables{{Key: "GIT_STRATEGY", Value: "clone"}},
 		},
 	}
 
@@ -2435,25 +2436,25 @@ func TestCredSetup(t *testing.T) {
 						jobResponse.GitInfo.Sha = repoShaWithSubmodules
 						token, _ := buildtest.InjectJobTokenFromEnv(t, &jobResponse)
 
-						jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
-							Name:   common.HookPreGetSourcesScript,
-							Script: common.StepScript{setGitCred(t, shell), getGitCred(t, shell, markerPreGetSource)},
+						jobResponse.Hooks = append(jobResponse.Hooks, spec.Hook{
+							Name:   spec.HookPreGetSourcesScript,
+							Script: spec.StepScript{setGitCred(t, shell), getGitCred(t, shell, markerPreGetSource)},
 						})
 
-						jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
-							Name:   common.HookPostGetSourcesScript,
-							Script: common.StepScript{listGitConfig(t, shell, markerForHelper), getGitCred(t, shell, markerPostGetSource)},
+						jobResponse.Hooks = append(jobResponse.Hooks, spec.Hook{
+							Name:   spec.HookPostGetSourcesScript,
+							Script: spec.StepScript{listGitConfig(t, shell, markerForHelper), getGitCred(t, shell, markerPostGetSource)},
 						})
 
 						jobResponse.Variables = append(jobResponse.Variables,
-							common.JobVariable{Key: "GIT_TRACE", Value: "1"},
-							common.JobVariable{Key: "GIT_CURL_VERBOSE", Value: "1"},
-							common.JobVariable{Key: "GIT_TRANSFER_TRACE", Value: "1"},
+							spec.Variable{Key: "GIT_TRACE", Value: "1"},
+							spec.Variable{Key: "GIT_CURL_VERBOSE", Value: "1"},
+							spec.Variable{Key: "GIT_TRANSFER_TRACE", Value: "1"},
 							// CI_DEBUG_TRACE causes shell tracing which can corrupt git config output with -race
-							// common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "1"},
-							common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
-							common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
-							common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
+							// spec.Variable{Key: "CI_DEBUG_TRACE", Value: "1"},
+							spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+							spec.Variable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+							spec.Variable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
 						)
 						jobResponse.Variables = append(jobResponse.Variables, gitStrategy.jobVariables...)
 
@@ -2540,15 +2541,15 @@ func TestSubmoduleAutoBump(t *testing.T) {
 				buildtest.InjectJobTokenFromEnv(t, &jobResponse)
 
 				jobResponse.Variables = append(jobResponse.Variables,
-					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
-					common.JobVariable{Key: "GIT_SUBMODULE_UPDATE_FLAGS", Value: "--remote"},
-					common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " ")},
-					common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
-					common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
+					spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+					spec.Variable{Key: "GIT_SUBMODULE_UPDATE_FLAGS", Value: "--remote"},
+					spec.Variable{Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " ")},
+					spec.Variable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+					spec.Variable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
 				)
-				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
+				jobResponse.Hooks = append(jobResponse.Hooks, spec.Hook{
 					Name:   "pre_get_sources_script",
-					Script: common.StepScript{"git version"},
+					Script: spec.StepScript{"git version"},
 				})
 
 				build := newBuild(t, jobResponse, shell)
@@ -2613,10 +2614,10 @@ func TestBuildWithCleanGitConfig(t *testing.T) {
 		assert.NoError(t, err)
 
 		jobResponse.Variables = append(jobResponse.Variables,
-			common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " ")},
-			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: string(common.SubmoduleRecursive)},
-			common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
-			common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
+			spec.Variable{Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " ")},
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: string(common.SubmoduleRecursive)},
+			spec.Variable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+			spec.Variable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
 		)
 		jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
 		jobResponse.GitInfo.Sha = repoShaWithSubmodules
@@ -2710,7 +2711,7 @@ func TestGitIncludePaths(t *testing.T) {
 							build := newBuild(t, jobResponse, shell)
 							buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, tokenFromEnv)
 							build.Runner.RunnerSettings.CleanGitConfig = &[]bool{false}[0]
-							build.Variables.Set(common.JobVariables{
+							build.Variables.Set(spec.Variables{
 								// {Key: "GIT_TRACE", Value: "2"},
 								// {Key: "CI_DEBUG_TRACE", Value: "true"},
 								{Key: "GIT_STRATEGY", Value: "fetch"},
@@ -2747,14 +2748,14 @@ func TestGitIncludePaths(t *testing.T) {
 }
 
 func setupForSubmoduleClone(build *common.Build, serverHostname string, submodules []string) {
-	build.Variables.Set(common.JobVariables{
+	build.Variables.Set(spec.Variables{
 		{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
 		{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
 		{Key: "CI_SERVER_HOST", Value: serverHostname},
 	}...)
 
 	if len(submodules) > 0 {
-		build.Variables.Set(common.JobVariable{
+		build.Variables.Set(spec.Variable{
 			Key: "GIT_SUBMODULE_PATHS", Value: strings.Join(submodules, " "),
 		})
 	}

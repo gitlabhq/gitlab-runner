@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
@@ -14,15 +15,15 @@ type logger interface {
 }
 
 type SecretsResolver interface {
-	Resolve(secrets Secrets) (JobVariables, error)
+	Resolve(secrets spec.Secrets) (spec.Variables, error)
 }
 
 type SecretResolverRegistry interface {
 	Register(f secretResolverFactory)
-	GetFor(secret Secret) (SecretResolver, error)
+	GetFor(secret spec.Secret) (SecretResolver, error)
 }
 
-type secretResolverFactory func(secret Secret) SecretResolver
+type secretResolverFactory func(secret spec.Secret) SecretResolver
 
 type SecretResolver interface {
 	Name() string
@@ -52,7 +53,7 @@ func (r *defaultSecretResolverRegistry) Register(f secretResolverFactory) {
 	r.factories = append(r.factories, f)
 }
 
-func (r *defaultSecretResolverRegistry) GetFor(secret Secret) (SecretResolver, error) {
+func (r *defaultSecretResolverRegistry) GetFor(secret spec.Secret) (SecretResolver, error) {
 	for _, f := range r.factories {
 		sr := f(secret)
 		if sr.IsSupported() {
@@ -83,7 +84,7 @@ type defaultSecretsResolver struct {
 	featureFlagOn          func(string) bool
 }
 
-func (r *defaultSecretsResolver) Resolve(secrets Secrets) (JobVariables, error) {
+func (r *defaultSecretsResolver) Resolve(secrets spec.Secrets) (spec.Variables, error) {
 	if secrets == nil {
 		return nil, nil
 	}
@@ -95,7 +96,7 @@ func (r *defaultSecretsResolver) Resolve(secrets Secrets) (JobVariables, error) 
 	)
 	r.logger.Println(msg)
 
-	variables := make(JobVariables, 0)
+	variables := make(spec.Variables, 0)
 	for variableKey, secret := range secrets {
 		r.logger.Println(fmt.Sprintf("Resolving secret %q...", variableKey))
 
@@ -112,7 +113,7 @@ func (r *defaultSecretsResolver) Resolve(secrets Secrets) (JobVariables, error) 
 	return variables, nil
 }
 
-func (r *defaultSecretsResolver) handleSecret(variableKey string, secret Secret) (*JobVariable, error) {
+func (r *defaultSecretsResolver) handleSecret(variableKey string, secret spec.Secret) (*spec.Variable, error) {
 	sr, err := r.secretResolverRegistry.GetFor(secret)
 	if err != nil {
 		r.logger.Warningln(fmt.Sprintf("Not resolved: %v", err))
@@ -133,7 +134,7 @@ func (r *defaultSecretsResolver) handleSecret(variableKey string, secret Secret)
 		return nil, err
 	}
 
-	variable := &JobVariable{
+	variable := &spec.Variable{
 		Key:    variableKey,
 		Value:  value,
 		File:   secret.IsFile(),

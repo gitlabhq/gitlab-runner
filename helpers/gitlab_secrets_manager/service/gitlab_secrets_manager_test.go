@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines"
 )
@@ -38,14 +38,14 @@ func TestService_GetSecret(t *testing.T) {
 
 	testCases := []struct {
 		name          string
-		secret        *common.GitLabSecretsManagerSecret
+		secret        *spec.GitLabSecretsManagerSecret
 		expectedErr   string
 		expectedValue string
 	}{
 		{
 			name: "failed to get secret engine",
-			secret: &common.GitLabSecretsManagerSecret{
-				Engine: common.GitLabSecretsManagerEngine{
+			secret: &spec.GitLabSecretsManagerSecret{
+				Engine: spec.GitLabSecretsManagerEngine{
 					Name: "invalid",
 				},
 			},
@@ -53,8 +53,8 @@ func TestService_GetSecret(t *testing.T) {
 		},
 		{
 			name: "failed to get secret data",
-			secret: &common.GitLabSecretsManagerSecret{
-				Engine: common.GitLabSecretsManagerEngine{
+			secret: &spec.GitLabSecretsManagerSecret{
+				Engine: spec.GitLabSecretsManagerEngine{
 					Name: "test_engine",
 				},
 				Path: "error",
@@ -63,8 +63,8 @@ func TestService_GetSecret(t *testing.T) {
 		},
 		{
 			name: "secret not found",
-			secret: &common.GitLabSecretsManagerSecret{
-				Engine: common.GitLabSecretsManagerEngine{
+			secret: &spec.GitLabSecretsManagerSecret{
+				Engine: spec.GitLabSecretsManagerEngine{
 					Name: "test_engine",
 				},
 				Path: "missing_data",
@@ -73,8 +73,8 @@ func TestService_GetSecret(t *testing.T) {
 		},
 		{
 			name: "field not found",
-			secret: &common.GitLabSecretsManagerSecret{
-				Engine: common.GitLabSecretsManagerEngine{
+			secret: &spec.GitLabSecretsManagerSecret{
+				Engine: spec.GitLabSecretsManagerEngine{
 					Name: "test_engine",
 				},
 				Field: "missing_field",
@@ -83,8 +83,8 @@ func TestService_GetSecret(t *testing.T) {
 		},
 		{
 			name: "field exists but empty string",
-			secret: &common.GitLabSecretsManagerSecret{
-				Engine: common.GitLabSecretsManagerEngine{
+			secret: &spec.GitLabSecretsManagerSecret{
+				Engine: spec.GitLabSecretsManagerEngine{
 					Name: "test_engine",
 				},
 				Path:  "test_path",
@@ -94,8 +94,8 @@ func TestService_GetSecret(t *testing.T) {
 		},
 		{
 			name: "field exists but not string",
-			secret: &common.GitLabSecretsManagerSecret{
-				Engine: common.GitLabSecretsManagerEngine{
+			secret: &spec.GitLabSecretsManagerSecret{
+				Engine: spec.GitLabSecretsManagerEngine{
 					Name: "test_engine",
 				},
 				Path:  "test_path",
@@ -105,8 +105,8 @@ func TestService_GetSecret(t *testing.T) {
 		},
 		{
 			name: "success",
-			secret: &common.GitLabSecretsManagerSecret{
-				Engine: common.GitLabSecretsManagerEngine{
+			secret: &spec.GitLabSecretsManagerSecret{
+				Engine: spec.GitLabSecretsManagerEngine{
 					Name: "test_engine",
 				},
 				Field: "test_field",

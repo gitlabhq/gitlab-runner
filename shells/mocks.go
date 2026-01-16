@@ -6,7 +6,7 @@ package shells
 
 import (
 	mock "github.com/stretchr/testify/mock"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 // NewMockShellWriter creates a new instance of MockShellWriter. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -1643,7 +1643,7 @@ func (_c *MockShellWriter_TmpFile_Call) RunAndReturn(run func(name string) strin
 }
 
 // Variable provides a mock function for the type MockShellWriter
-func (_mock *MockShellWriter) Variable(variable common.JobVariable) {
+func (_mock *MockShellWriter) Variable(variable spec.Variable) {
 	_mock.Called(variable)
 	return
 }
@@ -1654,16 +1654,16 @@ type MockShellWriter_Variable_Call struct {
 }
 
 // Variable is a helper method to define mock.On call
-//   - variable common.JobVariable
+//   - variable spec.Variable
 func (_e *MockShellWriter_Expecter) Variable(variable interface{}) *MockShellWriter_Variable_Call {
 	return &MockShellWriter_Variable_Call{Call: _e.mock.On("Variable", variable)}
 }
 
-func (_c *MockShellWriter_Variable_Call) Run(run func(variable common.JobVariable)) *MockShellWriter_Variable_Call {
+func (_c *MockShellWriter_Variable_Call) Run(run func(variable spec.Variable)) *MockShellWriter_Variable_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 common.JobVariable
+		var arg0 spec.Variable
 		if args[0] != nil {
-			arg0 = args[0].(common.JobVariable)
+			arg0 = args[0].(spec.Variable)
 		}
 		run(
 			arg0,
@@ -1677,7 +1677,7 @@ func (_c *MockShellWriter_Variable_Call) Return() *MockShellWriter_Variable_Call
 	return _c
 }
 
-func (_c *MockShellWriter_Variable_Call) RunAndReturn(run func(variable common.JobVariable)) *MockShellWriter_Variable_Call {
+func (_c *MockShellWriter_Variable_Call) RunAndReturn(run func(variable spec.Variable)) *MockShellWriter_Variable_Call {
 	_c.Run(run)
 	return _c
 }

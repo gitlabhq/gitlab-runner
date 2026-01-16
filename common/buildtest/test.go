@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 const testTimeout = 30 * time.Minute
@@ -96,17 +97,17 @@ func SetBuildFeatureFlag(build *common.Build, flag string, value bool) {
 		}
 	}
 
-	build.Variables = append(build.Variables, common.JobVariable{
+	build.Variables = append(build.Variables, spec.Variable{
 		Key:   flag,
 		Value: fmt.Sprint(value),
 	})
 }
 
-type baseJobGetter func() (common.JobResponse, error)
+type baseJobGetter func() (spec.Job, error)
 
 // getJobResponseWithCommands is a wrapper that will decorate a JobResponse getter
 // like common.GetRemoteSuccessfulBuild with a custom commands list
-func getJobResponseWithCommands(t *testing.T, baseJobGetter baseJobGetter, commands ...string) common.JobResponse {
+func getJobResponseWithCommands(t *testing.T, baseJobGetter baseJobGetter, commands ...string) spec.Job {
 	jobResponse, err := baseJobGetter()
 	require.NoError(t, err)
 
@@ -141,7 +142,7 @@ func WithEachFeatureFlag(t *testing.T, f func(t *testing.T, setup BuildSetupFn),
 // - updating the jobResponse's gitInfo with an URL with the token
 // - injecting a CI_JOB_TOKEN jobVariable
 // It returns the new repo URL with the injected token.
-func injectJobToken(t *testing.T, jobResponse *common.JobResponse, token string) *url.URL {
+func injectJobToken(t *testing.T, jobResponse *spec.Job, token string) *url.URL {
 	repoURLWithToken := func(orgRepoURL, token string) *url.URL {
 		u, err := url.Parse(orgRepoURL)
 		require.NoError(t, err, "parsing original repo URL")
@@ -149,7 +150,7 @@ func injectJobToken(t *testing.T, jobResponse *common.JobResponse, token string)
 		return u
 	}(jobResponse.GitInfo.RepoURL, token)
 
-	jobResponse.Variables.Set(common.JobVariable{Key: "CI_JOB_TOKEN", Value: token, Masked: true})
+	jobResponse.Variables.Set(spec.Variable{Key: "CI_JOB_TOKEN", Value: token, Masked: true})
 
 	jobResponse.Token = token
 	jobResponse.GitInfo.RepoURL = repoURLWithToken.String()
@@ -159,7 +160,7 @@ func injectJobToken(t *testing.T, jobResponse *common.JobResponse, token string)
 
 // InjectJobTokenFromEnv injects a job token from the environment into an existing jobResponse.
 // It returns the token value and the new repo URL with the injected token.
-func InjectJobTokenFromEnv(t *testing.T, jobResponse *common.JobResponse, envVars ...string) (string, *url.URL) {
+func InjectJobTokenFromEnv(t *testing.T, jobResponse *spec.Job, envVars ...string) (string, *url.URL) {
 	if len(envVars) == 0 {
 		envVars = []string{"GITLAB_TOKEN", "CI_JOB_TOKEN", "OUTER_CI_JOB_TOKEN"}
 	}

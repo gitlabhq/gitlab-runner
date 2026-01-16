@@ -7,6 +7,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/urfave/cli"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 var (
@@ -55,8 +57,8 @@ func (v *AppVersionInfo) UserAgent() string {
 	return fmt.Sprintf("%s %s (%s; %s; %s/%s)", v.Name, v.Version, v.Branch, v.GOVersion, v.OS, v.Architecture)
 }
 
-func (v *AppVersionInfo) Variables() JobVariables {
-	return JobVariables{
+func (v *AppVersionInfo) Variables() spec.Variables {
+	return spec.Variables{
 		{Key: "CI_RUNNER_VERSION", Value: v.Version, Public: true, Internal: true, File: false},
 		{Key: "CI_RUNNER_REVISION", Value: v.Revision, Public: true, Internal: true, File: false},
 		{
