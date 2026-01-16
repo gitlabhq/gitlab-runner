@@ -1259,13 +1259,28 @@ func (b *Build) logUsedImages() {
 		return
 	}
 
-	imageFields := b.Job.Image.LogFields()
+	fields := func(i spec.Image) logrus.Fields {
+		if i.Name == "" {
+			return nil
+		}
+
+		fields := logrus.Fields{
+			"image_name": i.Name,
+		}
+		if i.ExecutorOptions.Docker.Platform != "" {
+			fields["image_platform"] = i.ExecutorOptions.Docker.Platform
+		}
+
+		return fields
+	}
+
+	imageFields := fields(b.Job.Image)
 	if imageFields != nil {
 		b.Log().WithFields(imageFields).Info("Image configured for job")
 	}
 
 	for _, service := range b.Job.Services {
-		b.Log().WithFields(service.LogFields()).Info("Service image configured for job")
+		b.Log().WithFields(fields(service)).Info("Service image configured for job")
 	}
 }
 

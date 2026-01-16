@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods"
 )
@@ -326,25 +324,6 @@ func (i *Image) Aliases() []string { return strings.Fields(strings.ReplaceAll(i.
 
 func (i *Image) UnsupportedOptions() error {
 	return i.ExecutorOptions.UnsupportedOptions()
-}
-
-func (i *Image) LogFields() logrus.Fields {
-	// Empty Name means the field is in fact not used. So whatever wants to
-	// use this method to prepare information to logging, nil response means
-	// there is no need to log at all.
-	if i.Name == "" {
-		return nil
-	}
-
-	fields := logrus.Fields{
-		"image_name": i.Name,
-	}
-
-	if i.ExecutorOptions.Docker.Platform != "" {
-		fields["image_platform"] = i.ExecutorOptions.Docker.Platform
-	}
-
-	return fields
 }
 
 type Port struct {
