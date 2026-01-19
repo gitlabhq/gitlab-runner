@@ -69,7 +69,7 @@ func Test_StepsIntegration(t *testing.T) {
 			variables: common.JobVariables{{Key: "FLIN_FLAN_FLON", Value: "flin, flan, flon"}},
 			wantOut: []string{
 				"ERROR: Job failed:",
-				`env.FLIN_FLAN_FLON: the "FLIN_FLAN_FLON" was not found`,
+				`evaluating expression failed at ".FLIN_FLAN_FLON": attribute not found`,
 			},
 			wantErr: true,
 		},
