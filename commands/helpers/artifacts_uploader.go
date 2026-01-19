@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 )
@@ -39,12 +40,12 @@ type ArtifactsUploaderCommand struct {
 
 	network common.Network
 
-	Name             string                `long:"name" description:"The name of the archive"`
-	ExpireIn         string                `long:"expire-in" description:"When to expire artifacts"`
-	Format           common.ArtifactFormat `long:"artifact-format" description:"Format of generated artifacts"`
-	Type             string                `long:"artifact-type" description:"Type of generated artifacts"`
-	CompressionLevel string                `long:"compression-level" env:"ARTIFACT_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
-	CiDebugTrace     bool                  `long:"ci-debug-trace" env:"CI_DEBUG_TRACE" description:"enable debug trace logging"`
+	Name             string              `long:"name" description:"The name of the archive"`
+	ExpireIn         string              `long:"expire-in" description:"When to expire artifacts"`
+	Format           spec.ArtifactFormat `long:"artifact-format" description:"Format of generated artifacts"`
+	Type             string              `long:"artifact-type" description:"Type of generated artifacts"`
+	CompressionLevel string              `long:"compression-level" env:"ARTIFACT_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
+	CiDebugTrace     bool                `long:"ci-debug-trace" env:"CI_DEBUG_TRACE" description:"enable debug trace logging"`
 }
 
 func NewArtifactsUploaderCommand(n common.Network) cli.Command {
@@ -58,20 +59,20 @@ func NewArtifactsUploaderCommand(n common.Network) cli.Command {
 	)
 }
 
-func (c *ArtifactsUploaderCommand) artifactFilename(name string, format common.ArtifactFormat) string {
+func (c *ArtifactsUploaderCommand) artifactFilename(name string, format spec.ArtifactFormat) string {
 	name = filepath.Base(name)
 	if name == "" || name == "." {
 		name = DefaultUploadName
 	}
 
 	switch format {
-	case common.ArtifactFormatZip, common.ArtifactFormatZipZstd:
+	case spec.ArtifactFormatZip, spec.ArtifactFormatZipZstd:
 		return name + ".zip"
 
-	case common.ArtifactFormatGzip:
+	case spec.ArtifactFormatGzip:
 		return name + ".gz"
 
-	case common.ArtifactFormatTarZstd:
+	case spec.ArtifactFormatTarZstd:
 		return name + ".tar.zst"
 	}
 	return name
@@ -84,8 +85,8 @@ func (c *ArtifactsUploaderCommand) createBodyProvider() (string, common.ContentP
 	}
 
 	format := c.Format
-	if format == common.ArtifactFormatDefault {
-		format = common.ArtifactFormatZip
+	if format == spec.ArtifactFormatDefault {
+		format = spec.ArtifactFormatZip
 	}
 
 	filename := c.artifactFilename(c.Name, format)

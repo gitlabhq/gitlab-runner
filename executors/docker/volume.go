@@ -4,14 +4,14 @@ import (
 	"slices"
 	"strings"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 )
 
 var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 	// Note if any of the cache keys includes the `-protected` suffix (but not the `-non_protected` suffix).
 	// See https://gitlab.com/gitlab-org/gitlab/-/work_items/494478.
-	protectedKeyIdx := slices.IndexFunc(e.Build.Cache, func(c common.Cache) bool {
+	protectedKeyIdx := slices.IndexFunc(e.Build.Cache, func(c spec.Cache) bool {
 		return strings.HasSuffix(c.Key, "-protected") && !strings.HasSuffix(c.Key, "-non_protected")
 	})
 

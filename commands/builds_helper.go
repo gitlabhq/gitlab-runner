@@ -8,12 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -288,7 +289,7 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 	b.initializeBuildStageMetrics(build)
 }
 
-func (b *buildsHelper) evaluateJobQueuingDuration(runner *common.RunnerConfig, jobInfo common.JobInfo) {
+func (b *buildsHelper) evaluateJobQueuingDuration(runner *common.RunnerConfig, jobInfo spec.JobInfo) {
 	counterForRunner := b.acceptableJobQueuingDurationExceeded.
 		WithLabelValues(
 			runner.ShortDescription(),

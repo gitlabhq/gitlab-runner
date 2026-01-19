@@ -16,7 +16,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 type realClient struct {
@@ -33,7 +33,7 @@ func newRealClientFromEnv() *realClient {
 
 // Expects s to carry at least Secret name and optional Version.
 // Project number comes from env (defaults), mirroring the resolver behavior.
-func (c *realClient) GetSecret(ctx context.Context, s *common.GCPSecretManagerSecret) (string, error) {
+func (c *realClient) GetSecret(ctx context.Context, s *spec.GCPSecretManagerSecret) (string, error) {
 	if s == nil {
 		return "", errors.New("nil secret")
 	}
@@ -139,19 +139,19 @@ func TestGCPSecretManagerResolver_Integration(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		secret        common.Secret
+		secret        spec.Secret
 		setupEnv      map[string]string
 		server        serverCase
 		expectedValue string
 		expectErrSub  string
 	}{
 		"unsupported when nil": {
-			secret:       common.Secret{}, // GCPSecretManager: nil
+			secret:       spec.Secret{}, // GCPSecretManager: nil
 			expectErrSub: "unsupported",
 		},
 		"basic success (latest)": {
-			secret: common.Secret{
-				GCPSecretManager: &common.GCPSecretManagerSecret{
+			secret: spec.Secret{
+				GCPSecretManager: &spec.GCPSecretManagerSecret{
 					Name: "api-key",
 				},
 			},
@@ -164,8 +164,8 @@ func TestGCPSecretManagerResolver_Integration(t *testing.T) {
 			expectedValue: "secret-value",
 		},
 		"explicit version": {
-			secret: common.Secret{
-				GCPSecretManager: &common.GCPSecretManagerSecret{
+			secret: spec.Secret{
+				GCPSecretManager: &spec.GCPSecretManagerSecret{
 					Name:    "db-pass",
 					Version: "5",
 				},
@@ -179,8 +179,8 @@ func TestGCPSecretManagerResolver_Integration(t *testing.T) {
 			expectedValue: "v5",
 		},
 		"permission denied bubble up": {
-			secret: common.Secret{
-				GCPSecretManager: &common.GCPSecretManagerSecret{
+			secret: spec.Secret{
+				GCPSecretManager: &spec.GCPSecretManagerSecret{
 					Name: "locked",
 				},
 			},
@@ -193,8 +193,8 @@ func TestGCPSecretManagerResolver_Integration(t *testing.T) {
 			expectErrSub: "Permission",
 		},
 		"empty string allowed": {
-			secret: common.Secret{
-				GCPSecretManager: &common.GCPSecretManagerSecret{
+			secret: spec.Secret{
+				GCPSecretManager: &spec.GCPSecretManagerSecret{
 					Name: "empty",
 				},
 			},
@@ -207,8 +207,8 @@ func TestGCPSecretManagerResolver_Integration(t *testing.T) {
 			expectedValue: "",
 		},
 		"env defaults missing -> resolver should error before call": {
-			secret: common.Secret{
-				GCPSecretManager: &common.GCPSecretManagerSecret{
+			secret: spec.Secret{
+				GCPSecretManager: &spec.GCPSecretManagerSecret{
 					Name: "x",
 				},
 			},

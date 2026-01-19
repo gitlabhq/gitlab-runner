@@ -10,6 +10,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 const (
@@ -133,7 +134,7 @@ type overwrites struct {
 
 func createOverwrites(
 	config *common.KubernetesConfig,
-	variables common.JobVariables,
+	variables spec.Variables,
 	logger buildlogger.Logger,
 ) (*overwrites, error) {
 	var err error
@@ -249,7 +250,7 @@ func createOverwrites(
 
 func (o *overwrites) evaluateMaxBuildResourcesOverwrite(
 	config *common.KubernetesConfig,
-	variables common.JobVariables,
+	variables spec.Variables,
 	logger buildlogger.Logger,
 ) (err error) {
 	o.buildRequests, err = o.evaluateMaxResourceListOverwrite(
@@ -296,7 +297,7 @@ func (o *overwrites) evaluateMaxBuildResourcesOverwrite(
 func (o *overwrites) evaluateExplicitServiceResourceOverwrite(
 	config *common.KubernetesConfig,
 	serviceName string,
-	serviceVariables common.JobVariables,
+	serviceVariables spec.Variables,
 	logger buildlogger.Logger,
 ) (err error) {
 	cpuRequest := serviceVariables.Value(ServiceCPURequestOverwriteVariableValue)
@@ -406,7 +407,7 @@ func getServiceResourceValue(resourceList api.ResourceList, resource api.Resourc
 
 func (o *overwrites) evaluateMaxServiceResourcesOverwrite(
 	config *common.KubernetesConfig,
-	variables common.JobVariables,
+	variables spec.Variables,
 	logger buildlogger.Logger,
 ) (err error) {
 	o.serviceRequests, err = o.evaluateMaxResourceListOverwrite(
@@ -470,7 +471,7 @@ func (o *overwrites) getServiceResourceRequests(serviceName string) api.Resource
 
 func (o *overwrites) evaluateMaxHelperResourcesOverwrite(
 	config *common.KubernetesConfig,
-	variables common.JobVariables,
+	variables spec.Variables,
 	logger buildlogger.Logger,
 ) (err error) {
 	o.helperRequests, err = o.evaluateMaxResourceListOverwrite(
@@ -596,7 +597,7 @@ func (o *overwrites) evaluateMapOverwrite(
 	fieldName string,
 	values map[string]string,
 	regex string,
-	variables common.JobVariables,
+	variables spec.Variables,
 	variablesSelector string,
 	logger buildlogger.Logger,
 	split func(string) (string, string, error),

@@ -6,13 +6,15 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/network"
-	"gitlab.com/gitlab-org/gitlab-runner/router/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/network"
+	"gitlab.com/gitlab-org/gitlab-runner/router/rpc"
 )
 
 var (
@@ -51,7 +53,7 @@ func (c *Client) Shutdown() {
 	c.factory.Shutdown()
 }
 
-func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo) (*common.JobResponse, bool) {
+func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo) (*spec.Job, bool) {
 	client, disco := c.getClientOrNil(ctx, config)
 	if client == nil {
 		return c.delegate.RequestJob(ctx, config, sessionInfo)
@@ -88,7 +90,7 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 	if len(job.JobResponse) == 0 {
 		return nil, true
 	}
-	var response common.JobResponse
+	var response spec.Job
 	err = json.Unmarshal(job.JobResponse, &response)
 	if err != nil {
 		config.Log().WithError(err).Error("json.Unmarshal()")

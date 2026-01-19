@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 type mockResponse struct {
@@ -29,7 +29,7 @@ type mockResponse struct {
 
 type testCase struct {
 	name          string
-	secret        common.Secret
+	secret        spec.Secret
 	response      mockResponse
 	expectedVal   string
 	expectError   bool
@@ -48,8 +48,8 @@ var (
 		"AWS_EC2_METADATA_DISABLED": "true",
 	}
 
-	basicSecret = common.Secret{
-		AWSSecretsManager: &common.AWSSecret{
+	basicSecret = spec.Secret{
+		AWSSecretsManager: &spec.AWSSecret{
 			SecretId: "test-secret",
 			Field:    "Date",
 			Region:   "us-west-2",
@@ -81,8 +81,8 @@ func TestAWSSecretsManagerIntegration(t *testing.T) {
 			errorContains: "key 'Date' not found",
 		},
 		"version stage AWSCURRENT": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId:     "prod-app-secrets/database",
 					Field:        "password",
 					Region:       "us-east-1",
@@ -103,8 +103,8 @@ func TestAWSSecretsManagerIntegration(t *testing.T) {
 			},
 		},
 		"version ID": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId:  "prod-app-secrets/database",
 					Field:     "password",
 					Region:    "us-east-1",
@@ -125,8 +125,8 @@ func TestAWSSecretsManagerIntegration(t *testing.T) {
 			},
 		},
 		"version ID and stage conflict": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId:     "prod-app-secrets/database",
 					Field:        "password",
 					Region:       "us-east-1",
@@ -150,8 +150,8 @@ func TestAWSSecretsManagerIntegration(t *testing.T) {
 			},
 		},
 		"cross-account ARN": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "arn:aws:secretsmanager:us-east-1:987654321098:secret:shared-api-keys-AbCdEf",
 					Field:    "production_key",
 					Region:   "us-east-1",
@@ -171,8 +171,8 @@ func TestAWSSecretsManagerIntegration(t *testing.T) {
 			},
 		},
 		"per-secret region override": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "eu-app-secrets/database",
 					Region:   "eu-west-1", // override
 				},
@@ -191,8 +191,8 @@ func TestAWSSecretsManagerIntegration(t *testing.T) {
 			},
 		},
 		"secret binary base64": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "bin",
 					Region:   "us-west-2",
 				},
@@ -204,8 +204,8 @@ func TestAWSSecretsManagerIntegration(t *testing.T) {
 			expectedVal: "AP8QIH8=",
 		},
 		"field with number": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "cfg",
 					Field:    "retries",
 					Region:   "us-west-2",
@@ -218,8 +218,8 @@ func TestAWSSecretsManagerIntegration(t *testing.T) {
 			expectedVal: "3",
 		},
 		"retry on 5xx": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "r",
 					Region:   "us-west-2",
 				},
@@ -237,12 +237,12 @@ func TestAWSSecretsManagerIntegration(t *testing.T) {
 			},
 		},
 		"OIDC web identity role": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "app-secrets/database",
 					Field:    "password",
 					Region:   "us-east-1",
-					Server: common.AWSServer{
+					Server: spec.AWSServer{
 						Region:          "us-east-1",
 						JWT:             "dummy-oidc-id-token",
 						RoleArn:         "arn:aws:iam::123456789012:role/gitlab-secrets-role",

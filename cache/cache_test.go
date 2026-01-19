@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 type cacheOperationTest struct {
@@ -191,11 +192,11 @@ func defaultCacheConfig() *common.CacheConfig {
 
 func defaultBuild(cacheConfig *common.CacheConfig) *common.Build {
 	return &common.Build{
-		JobResponse: common.JobResponse{
-			JobInfo: common.JobInfo{
+		Job: spec.Job{
+			JobInfo: spec.JobInfo{
 				ProjectID: 10,
 			},
-			RunnerInfo: common.RunnerInfo{
+			RunnerInfo: spec.RunnerInfo{
 				Timeout: 3600,
 			},
 		},

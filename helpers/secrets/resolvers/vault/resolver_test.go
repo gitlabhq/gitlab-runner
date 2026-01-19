@@ -7,29 +7,29 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/service"
 )
 
 func TestResolver_Name(t *testing.T) {
-	r := newResolver(common.Secret{})
+	r := newResolver(spec.Secret{})
 	assert.Equal(t, resolverName, r.Name())
 }
 
 func TestResolver_IsSupported(t *testing.T) {
 	tests := map[string]struct {
-		secret        common.Secret
+		secret        spec.Secret
 		expectedVault bool
 	}{
 		"supported secret": {
-			secret: common.Secret{
-				Vault: &common.VaultSecret{},
+			secret: spec.Secret{
+				Vault: &spec.VaultSecret{},
 			},
 			expectedVault: true,
 		},
 		"unsupported secret": {
-			secret:        common.Secret{},
+			secret:        spec.Secret{},
 			expectedVault: false,
 		},
 	}
@@ -43,9 +43,9 @@ func TestResolver_IsSupported(t *testing.T) {
 }
 
 func TestResolver_Resolve(t *testing.T) {
-	secret := common.Secret{
-		Vault: &common.VaultSecret{
-			Server: common.VaultServer{
+	secret := spec.Secret{
+		Vault: &spec.VaultSecret{
+			Server: spec.VaultServer{
 				URL:       "test_url",
 				Namespace: "test_namespace",
 			},
@@ -53,7 +53,7 @@ func TestResolver_Resolve(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		secret                    common.Secret
+		secret                    spec.Secret
 		vaultServiceCreationError error
 		assertVaultServiceMock    func(s *service.MockVault)
 		expectedValue             string

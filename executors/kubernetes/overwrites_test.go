@@ -14,16 +14,17 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 type variableOverwrites map[string]string
 
-func buildOverwriteVariables(overwrites variableOverwrites, globOverwrites ...map[string]string) common.JobVariables {
-	variables := make(common.JobVariables, 8)
+func buildOverwriteVariables(overwrites variableOverwrites, globOverwrites ...map[string]string) spec.Variables {
+	variables := make(spec.Variables, 8)
 
 	for variableKey, overwriteValue := range overwrites {
 		if overwriteValue != "" {
-			variables = append(variables, common.JobVariable{Key: variableKey, Value: overwriteValue})
+			variables = append(variables, spec.Variable{Key: variableKey, Value: overwriteValue})
 		}
 	}
 
@@ -32,7 +33,7 @@ func buildOverwriteVariables(overwrites variableOverwrites, globOverwrites ...ma
 	// KUBERNETES_POD_LABELS_*
 	for _, glob := range globOverwrites {
 		for k, v := range glob {
-			variables = append(variables, common.JobVariable{Key: k, Value: v})
+			variables = append(variables, spec.Variable{Key: k, Value: v})
 		}
 	}
 
@@ -651,7 +652,7 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 		ServiceEphemeralStorageRequestOverwriteMaxAllowed: "2Gi",
 		ServiceEphemeralStorageLimitOverwriteMaxAllowed:   "4Gi",
 	}
-	defaultOverwrites, err := createOverwrites(defaultKubernetesConfig, common.JobVariables{}, defaultLogger)
+	defaultOverwrites, err := createOverwrites(defaultKubernetesConfig, spec.Variables{}, defaultLogger)
 	assert.NoError(t, err)
 	defaultServiceLimits := mustCreateResourceList(
 		t,
@@ -675,13 +676,13 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 	tests := []struct {
 		name      string
 		config    *common.KubernetesConfig
-		services  common.Services
-		variables common.JobVariables
+		services  spec.Services
+		variables spec.Variables
 		want      testResults
 	}{
 		{
 			name: "empty, only globals service overwrites",
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name: "someimage:tag", Alias: "multiple-hyphens-and.multiple.dots",
 				},
@@ -695,11 +696,11 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 		},
 		{
 			name: "only specific cpu request",
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  "someimage:tag",
 					Alias: "multiple-hyphens-and.multiple.dots",
-					Variables: common.JobVariables{
+					Variables: spec.Variables{
 						{
 							Key:   "KUBERNETES_SERVICE_CPU_REQUEST",
 							Value: "500m",
@@ -721,11 +722,11 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 		},
 		{
 			name: "only specific cpu limit",
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  "registry.test.io/image:1234",
 					Alias: "service1",
-					Variables: common.JobVariables{
+					Variables: spec.Variables{
 						{
 							Key:   "KUBERNETES_SERVICE_CPU_LIMIT",
 							Value: "2",
@@ -746,11 +747,11 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 		},
 		{
 			name: "only specific memory request",
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  "foo",
 					Alias: "my--service",
-					Variables: common.JobVariables{
+					Variables: spec.Variables{
 						{
 							Key:   "KUBERNETES_SERVICE_MEMORY_REQUEST",
 							Value: "500M",
@@ -773,10 +774,10 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 		},
 		{
 			name: "only specific memory limit",
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name: "random.io:tag1234", Alias: "1234567890",
-					Variables: common.JobVariables{
+					Variables: spec.Variables{
 						{
 							Key:   "KUBERNETES_SERVICE_MEMORY_LIMIT",
 							Value: "64Mi",
@@ -798,11 +799,11 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 		},
 		{
 			name: "only specific ephemeral storage request",
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  "foo",
 					Alias: "my--service",
-					Variables: common.JobVariables{
+					Variables: spec.Variables{
 						{
 							Key:   "KUBERNETES_SERVICE_EPHEMERAL_STORAGE_REQUEST",
 							Value: "1Gi",
@@ -825,10 +826,10 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 		},
 		{
 			name: "only specific ephemeral storage limit",
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name: "random.io:tag1234", Alias: "1234567890",
-					Variables: common.JobVariables{
+					Variables: spec.Variables{
 						{
 							Key:   "KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT",
 							Value: "1Gi",
@@ -850,10 +851,10 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 		},
 		{
 			name: "complete requests overwrite",
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name: "someimage:tag",
-					Variables: common.JobVariables{
+					Variables: spec.Variables{
 						{
 							Key:   "KUBERNETES_SERVICE_CPU_REQUEST",
 							Value: "500m",
@@ -879,10 +880,10 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 
 		{
 			name: "complete limits overwrite",
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name: "someimage:tag",
-					Variables: common.JobVariables{
+					Variables: spec.Variables{
 						{
 							Key:   "KUBERNETES_SERVICE_CPU_LIMIT",
 							Value: "500m",
@@ -907,10 +908,10 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 		},
 		{
 			name: "complete requests & limits overwrite",
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name: "someimage:tag",
-					Variables: common.JobVariables{
+					Variables: spec.Variables{
 						{
 							Key:   "KUBERNETES_SERVICE_CPU_LIMIT",
 							Value: "500m",
@@ -988,11 +989,11 @@ func Test_overwrites_getServiceResourceLimits(t *testing.T) {
 		ServiceEphemeralStorageRequestOverwriteMaxAllowed: "2Gi",
 		ServiceEphemeralStorageLimitOverwriteMaxAllowed:   "4Gi",
 	}
-	defaultOverwrites, err := createOverwrites(defaultKubernetesConfig, common.JobVariables{}, defaultLogger)
+	defaultOverwrites, err := createOverwrites(defaultKubernetesConfig, spec.Variables{}, defaultLogger)
 	assert.NoError(t, err)
 	err = defaultOverwrites.evaluateMaxServiceResourcesOverwrite(
 		defaultKubernetesConfig,
-		common.JobVariables{},
+		spec.Variables{},
 		defaultLogger,
 	)
 	assert.NoError(t, err)
@@ -1065,14 +1066,14 @@ func Test_overwrites_getServiceResourceRequests(t *testing.T) {
 	}
 	defaultOverwrites, err := createOverwrites(
 		defaultKubernetesConfig,
-		common.JobVariables{},
+		spec.Variables{},
 		defaultLogger,
 	)
 	assert.NoError(t, err)
 
 	err = defaultOverwrites.evaluateMaxServiceResourcesOverwrite(
 		defaultKubernetesConfig,
-		common.JobVariables{},
+		spec.Variables{},
 		defaultLogger,
 	)
 	assert.NoError(t, err)

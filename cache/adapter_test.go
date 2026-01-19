@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 

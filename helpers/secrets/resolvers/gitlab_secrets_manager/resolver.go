@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/gitlab_secrets_manager/service"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault"
@@ -13,10 +14,10 @@ import (
 const resolverName = "gitlab_secrets_manager"
 
 type resolver struct {
-	secret common.Secret
+	secret spec.Secret
 }
 
-func newResolver(secret common.Secret) common.SecretResolver {
+func newResolver(secret spec.Secret) common.SecretResolver {
 	return &resolver{
 		secret: secret,
 	}

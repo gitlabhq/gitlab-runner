@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
@@ -32,7 +33,7 @@ func TestParallelsSuccessRun(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "parallels",
@@ -62,7 +63,7 @@ func TestBuildScriptSections(t *testing.T) {
 World"`)
 
 		build := &common.Build{
-			JobResponse: successfulBuild,
+			Job: successfulBuild,
 			Runner: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Executor: "parallels",
@@ -87,7 +88,7 @@ func TestParallelsSuccessRunRawVariable(t *testing.T) {
 	successfulBuild, err := common.GetRemoteBuildResponse("echo $TEST")
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: successfulBuild,
+		Job: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "parallels",
@@ -101,7 +102,7 @@ func TestParallelsSuccessRunRawVariable(t *testing.T) {
 	}
 
 	value := "$VARIABLE$WITH$DOLLARS$$"
-	build.Variables = append(build.Variables, common.JobVariable{
+	build.Variables = append(build.Variables, spec.Variable{
 		Key:   "TEST",
 		Value: value,
 		Raw:   true,
@@ -118,7 +119,7 @@ func TestParallelsBuildFail(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		JobResponse: failedBuild,
+		Job: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "parallels",
@@ -231,12 +232,12 @@ func TestParallelsBuildMasking(t *testing.T) {
 	buildtest.RunBuildWithMasking(t, config, nil)
 }
 
-func getTestBuild(t *testing.T, getJobResp func() (common.JobResponse, error)) *common.Build {
+func getTestBuild(t *testing.T, getJobResp func() (spec.Job, error)) *common.Build {
 	jobResponse, err := getJobResp()
 	require.NoError(t, err)
 
 	return &common.Build{
-		JobResponse: jobResponse,
+		Job: jobResponse,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "parallels",
@@ -261,7 +262,7 @@ func TestCleanupProjectGitFetch(t *testing.T) {
 
 	untrackedFilename := "untracked"
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
+	build := getTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFilename, "", "")...,
 		)
@@ -276,7 +277,7 @@ func TestCleanupProjectGitSubmoduleNormal(t *testing.T) {
 	untrackedFile := "untracked"
 	untrackedSubmoduleFile := "untracked_submodule"
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
+	build := getTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFile, untrackedSubmoduleFile, "")...,
 		)
@@ -292,7 +293,7 @@ func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
 	untrackedSubmoduleFile := "untracked_submodule"
 	untrackedSubSubmoduleFile := "untracked_submodule_submodule"
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
+	build := getTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(
 				untrackedFile,

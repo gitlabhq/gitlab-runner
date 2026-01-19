@@ -10,9 +10,10 @@ import (
 
 	smpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/sts/v1"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func TestClient_GetSecret(t *testing.T) {
@@ -23,10 +24,10 @@ func TestClient_GetSecret(t *testing.T) {
 	workloadIdentityProviderID := "provider-id"
 	jwtToken := "jwt token"
 
-	secret := &common.GCPSecretManagerSecret{
+	secret := &spec.GCPSecretManagerSecret{
 		Name:    secretName,
 		Version: secretVersion,
-		Server: common.GCPSecretManagerServer{
+		Server: spec.GCPSecretManagerServer{
 			ProjectNumber:                        projectNumber,
 			WorkloadIdentityFederationPoolId:     workloadIdentityPoolId,
 			WorkloadIdentityFederationProviderID: workloadIdentityProviderID,
@@ -50,7 +51,7 @@ func TestClient_GetSecret(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		secret             *common.GCPSecretManagerSecret
+		secret             *spec.GCPSecretManagerSecret
 		verifyGetToken     func(c *Client) func(t *testing.T)
 		verifyAccessSecret func(c *Client) func(t *testing.T)
 		assertError        assert.ErrorAssertionFunc
@@ -60,7 +61,7 @@ func TestClient_GetSecret(t *testing.T) {
 			secret: secret,
 			verifyGetToken: func(c *Client) func(t *testing.T) {
 				callCount := 0
-				c.getToken = func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
+				c.getToken = func(ctx context.Context, secret *spec.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
 					callCount += 1
 					return stubTokenResponse, nil
 				}
@@ -73,7 +74,7 @@ func TestClient_GetSecret(t *testing.T) {
 				callCount := 0
 				var accessToken string
 
-				c.accessSecret = func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
+				c.accessSecret = func(ctx context.Context, secret *spec.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
 					callCount += 1
 					token, _ := source.Token()
 					accessToken = token.AccessToken
@@ -93,7 +94,7 @@ func TestClient_GetSecret(t *testing.T) {
 			secret: secret,
 			verifyGetToken: func(c *Client) func(t *testing.T) {
 				callCount := 0
-				c.getToken = func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
+				c.getToken = func(ctx context.Context, secret *spec.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
 					callCount += 1
 					return nil, errors.New("failed getToken")
 				}
@@ -104,7 +105,7 @@ func TestClient_GetSecret(t *testing.T) {
 			},
 			verifyAccessSecret: func(c *Client) func(t *testing.T) {
 				callCount := 0
-				c.accessSecret = func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
+				c.accessSecret = func(ctx context.Context, secret *spec.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
 					callCount += 1
 					return stubAccessSecretResponse, nil
 				}
@@ -122,7 +123,7 @@ func TestClient_GetSecret(t *testing.T) {
 			secret: secret,
 			verifyGetToken: func(c *Client) func(t *testing.T) {
 				callCount := 0
-				c.getToken = func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
+				c.getToken = func(ctx context.Context, secret *spec.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
 					callCount += 1
 					return stubTokenResponse, nil
 				}
@@ -133,7 +134,7 @@ func TestClient_GetSecret(t *testing.T) {
 			},
 			verifyAccessSecret: func(c *Client) func(t *testing.T) {
 				callCount := 0
-				c.accessSecret = func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
+				c.accessSecret = func(ctx context.Context, secret *spec.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
 					callCount += 1
 					return nil, errors.New("failed to get secret")
 				}
@@ -151,7 +152,7 @@ func TestClient_GetSecret(t *testing.T) {
 			secret: secret,
 			verifyGetToken: func(c *Client) func(t *testing.T) {
 				callCount := 0
-				c.getToken = func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
+				c.getToken = func(ctx context.Context, secret *spec.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
 					callCount += 1
 					return stubTokenResponse, nil
 				}
@@ -162,7 +163,7 @@ func TestClient_GetSecret(t *testing.T) {
 			},
 			verifyAccessSecret: func(c *Client) func(t *testing.T) {
 				callCount := 0
-				c.accessSecret = func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
+				c.accessSecret = func(ctx context.Context, secret *spec.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
 					callCount += 1
 					incorrectChecksum := int64(1234)
 
@@ -230,10 +231,10 @@ func TestSecretVersionResourceName(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			secret := &common.GCPSecretManagerSecret{
+			secret := &spec.GCPSecretManagerSecret{
 				Name:    tt.secretName,
 				Version: secretVersion,
-				Server: common.GCPSecretManagerServer{
+				Server: spec.GCPSecretManagerServer{
 					ProjectNumber:                        wifPoolProjectNumber,
 					WorkloadIdentityFederationPoolId:     "pool-id",
 					WorkloadIdentityFederationProviderID: "provider-id",

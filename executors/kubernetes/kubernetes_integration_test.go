@@ -42,6 +42,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -223,7 +224,7 @@ func testKubernetesPodEvents(t *testing.T, featureFlagName string, featureFlagVa
 	build.Image.Name = common.TestAlpineImage
 	build.Variables = append(
 		build.Variables,
-		common.JobVariable{Key: featureflags.PrintPodEvents, Value: "true"},
+		spec.Variable{Key: featureflags.PrintPodEvents, Value: "true"},
 	)
 
 	out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -267,8 +268,8 @@ func testKubernetesBuildPassingEnvsMultistep(t *testing.T, featureFlagName strin
 			t.Skip("TODO: Fix pwsh fails")
 		}
 
-		build := getTestBuild(t, func() (common.JobResponse, error) {
-			return common.JobResponse{}, nil
+		build := getTestBuild(t, func() (spec.Job, error) {
+			return spec.Job{}, nil
 		})
 		build.Runner.RunnerSettings.Shell = shell
 
@@ -306,12 +307,12 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 		shell        string
 		buildDir     string
 		cacheDir     string
-		cache        common.Caches
+		cache        spec.Caches
 		script       string
 		runAsUser    int64
 		runAsGroup   int64
 		disableUmask bool
-		envars       common.JobVariables
+		envars       spec.Variables
 		verifyFn     func(t *testing.T, out string)
 	}{
 		"umask enabled": {
@@ -362,8 +363,8 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			script:     "ls -lR $BUILDS_DIRECTORY/gitlab-org/ci-cd/gitlab-runner-pipeline-tests",
 			runAsUser:  int64(1234),
 			runAsGroup: int64(5678),
-			envars: common.JobVariables{
-				common.JobVariable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
+			envars: spec.Variables{
+				spec.Variable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
 			},
 			verifyFn: func(t *testing.T, out string) {
 				assert.NotContains(t, out, "1234")
@@ -381,8 +382,8 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			runAsUser:    int64(1234),
 			runAsGroup:   int64(5678),
 			disableUmask: true,
-			envars: common.JobVariables{
-				common.JobVariable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
+			envars: spec.Variables{
+				spec.Variable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
 			},
 			verifyFn: func(t *testing.T, out string) {
 				assert.NotContains(t, out, "root")
@@ -395,19 +396,19 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			image:    common.TestAlpineImage,
 			buildDir: customBuildDir,
 			script:   "mkdir -p cache_files && touch cache_files/cache && ls -lR $BUILDS_DIRECTORY/",
-			cache: common.Caches{
-				common.Cache{
+			cache: spec.Caches{
+				spec.Cache{
 					Key:    "key",
-					Paths:  common.ArtifactPaths{"cache_files"},
-					Policy: common.CachePolicyPullPush,
-					When:   common.CacheWhenOnSuccess,
+					Paths:  spec.ArtifactPaths{"cache_files"},
+					Policy: spec.CachePolicyPullPush,
+					When:   spec.CacheWhenOnSuccess,
 				},
 			},
 			runAsUser:    int64(1234),
 			runAsGroup:   int64(5678),
 			disableUmask: true,
-			envars: common.JobVariables{
-				common.JobVariable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
+			envars: spec.Variables{
+				spec.Variable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
 			},
 			verifyFn: func(t *testing.T, out string) {
 				assert.NotContains(t, out, "root")
@@ -421,20 +422,20 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			buildDir: customBuildDir,
 			cacheDir: customCacheDir,
 			script:   "mkdir -p cache_files && touch cache_files/cache && ls -lR $BUILDS_DIRECTORY/",
-			cache: common.Caches{
-				common.Cache{
+			cache: spec.Caches{
+				spec.Cache{
 					Key:    "key",
-					Paths:  common.ArtifactPaths{"cache_files"},
-					Policy: common.CachePolicyPullPush,
-					When:   common.CacheWhenOnSuccess,
+					Paths:  spec.ArtifactPaths{"cache_files"},
+					Policy: spec.CachePolicyPullPush,
+					When:   spec.CacheWhenOnSuccess,
 				},
 			},
 			runAsUser:    int64(1234),
 			runAsGroup:   int64(5678),
 			disableUmask: true,
-			envars: common.JobVariables{
-				common.JobVariable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
-				common.JobVariable{Key: "CACHE_DIRECTORY", Value: customCacheDir},
+			envars: spec.Variables{
+				spec.Variable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
+				spec.Variable{Key: "CACHE_DIRECTORY", Value: customCacheDir},
 			},
 			verifyFn: func(t *testing.T, out string) {
 				assert.NotContains(t, out, "root")
@@ -449,14 +450,14 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse(tc.script)
 			})
 
 			build.Variables = append(build.Variables, tc.envars...)
 			build.Runner.RunnerSettings.Shell = tc.shell
-			build.JobResponse.Image.Name = tc.image
-			build.JobResponse.Cache = tc.cache
+			build.Job.Image.Name = tc.image
+			build.Job.Cache = tc.cache
 
 			if tc.buildDir != "" {
 				build.Runner.BuildsDir = tc.buildDir
@@ -503,12 +504,12 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 func testKubernetesNoAdditionalNewLines(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
+	build := getTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse("for i in $(seq 1 120); do printf .; sleep 0.02; done; echo")
 	})
 
 	build.Runner.RunnerSettings.Shell = "bash"
-	build.JobResponse.Image.Name = common.TestAlpineImage
+	build.Job.Image.Name = common.TestAlpineImage
 	build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
@@ -530,7 +531,7 @@ func TestBuildScriptSections(t *testing.T) {
 		}
 
 		t.Parallel()
-		build := getTestBuild(t, func() (common.JobResponse, error) {
+		build := getTestBuild(t, func() (spec.Job, error) {
 			return common.GetRemoteBuildResponse(`echo "Hello
 World"`)
 		})
@@ -548,7 +549,7 @@ func TestEntrypointNotIgnored(t *testing.T) {
 
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	buildTestJob := func() (common.JobResponse, error) {
+	buildTestJob := func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			"if [ -f /tmp/debug.log ]; then",
 			"cat /tmp/debug.log",
@@ -559,7 +560,7 @@ func TestEntrypointNotIgnored(t *testing.T) {
 		)
 	}
 
-	helperTestJob := func() (common.JobResponse, error) {
+	helperTestJob := func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			"if [ -f /builds/debug.log ]; then",
 			"cat /builds/debug.log",
@@ -571,7 +572,7 @@ func TestEntrypointNotIgnored(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		jobResponse          func() (common.JobResponse, error)
+		jobResponse          func() (spec.Job, error)
 		buildImage           string
 		helperImage          string
 		useHonorEntrypointFF bool
@@ -607,13 +608,13 @@ func TestEntrypointNotIgnored(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuildWithImage(t, common.TestAlpineEntrypointImage, func() (common.JobResponse, error) {
+			build := getTestBuildWithImage(t, common.TestAlpineEntrypointImage, func() (spec.Job, error) {
 				jobResponse, err := tc.jobResponse()
 				if err != nil {
-					return common.JobResponse{}, err
+					return spec.Job{}, err
 				}
 
-				jobResponse.Image = common.Image{
+				jobResponse.Image = spec.Image{
 					Name: common.TestAlpineEntrypointImage,
 				}
 
@@ -626,7 +627,7 @@ func TestEntrypointNotIgnored(t *testing.T) {
 
 			build.Variables = append(
 				build.Variables,
-				common.JobVariable{Key: featureflags.KubernetesHonorEntrypoint, Value: strconv.FormatBool(tc.useHonorEntrypointFF)},
+				spec.Variable{Key: featureflags.KubernetesHonorEntrypoint, Value: strconv.FormatBool(tc.useHonorEntrypointFF)},
 			)
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -647,7 +648,7 @@ func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string,
 	successfulBuild, err := common.GetRemoteSuccessfulMultistepBuild()
 	require.NoError(t, err)
 
-	failingScriptBuild, err := common.GetRemoteFailingMultistepBuild(common.StepNameScript)
+	failingScriptBuild, err := common.GetRemoteFailingMultistepBuild(spec.StepNameScript)
 	require.NoError(t, err)
 
 	failingReleaseBuild, err := common.GetRemoteFailingMultistepBuild("release")
@@ -658,7 +659,7 @@ func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string,
 	failingReleaseBuild.Image.Name = common.TestDockerGitImage
 
 	tests := map[string]struct {
-		jobResponse    common.JobResponse
+		jobResponse    spec.Job
 		expectedOutput []string
 		unwantedOutput []string
 		errExpected    bool
@@ -698,7 +699,7 @@ func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string,
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return tt.jobResponse, nil
 			})
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
@@ -783,7 +784,7 @@ func testKubernetesLongLogsFeatureFlag(t *testing.T, featureFlagName string, fea
 			t.Parallel()
 
 			line := tc.log
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse(fmt.Sprintf(`echo "%s"`, line))
 			})
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
@@ -800,14 +801,14 @@ func testKubernetesLongLogsFeatureFlag(t *testing.T, featureFlagName string, fea
 func testKubernetesHugeScriptAndAfterScriptFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	getAfterScript := func(featureFlag bool, script ...string) common.Step {
-		as := common.Step{
+	getAfterScript := func(featureFlag bool, script ...string) spec.Step {
+		as := spec.Step{
 			Name: "after_script",
-			Script: common.StepScript{
+			Script: spec.StepScript{
 				"echo $CI_JOB_STATUS",
 			},
 			Timeout:      3600,
-			When:         common.StepWhenAlways,
+			When:         spec.StepWhenAlways,
 			AllowFailure: true,
 		}
 
@@ -823,14 +824,14 @@ func testKubernetesHugeScriptAndAfterScriptFeatureFlag(t *testing.T, featureFlag
 	tests := map[string]struct {
 		image       string
 		shell       string
-		getScript   func() common.StepScript
+		getScript   func() spec.StepScript
 		afterScript []string
 		verifyFn    func(t *testing.T, out string)
 	}{
 		"bash normal script": {
 			image: common.TestAlpineImage,
 			shell: "bash",
-			getScript: func() common.StepScript {
+			getScript: func() spec.StepScript {
 				return []string{
 					`echo "My normal string"`,
 				}
@@ -843,7 +844,7 @@ func testKubernetesHugeScriptAndAfterScriptFeatureFlag(t *testing.T, featureFlag
 		"pwsh unicode script": {
 			image: common.TestPwshImage,
 			shell: "pwsh",
-			getScript: func() common.StepScript {
+			getScript: func() spec.StepScript {
 				return []string{
 					"echo \"`“ `“ `” `” `„ ‘ ’ ‚ ‛ ‘ ’ ; < ( ) & ^ # [ ] { } ' < > | @ % „",
 				}
@@ -857,7 +858,7 @@ func testKubernetesHugeScriptAndAfterScriptFeatureFlag(t *testing.T, featureFlag
 			image:       common.TestAlpineImage,
 			shell:       "bash",
 			afterScript: []string{"cat ./print.sh"},
-			getScript: func() common.StepScript {
+			getScript: func() spec.StepScript {
 				return []string{
 					`cat <<EOF > ./print.sh
 #!/bin/bash
@@ -874,7 +875,7 @@ EOF
 		"pwsh nested here-string": {
 			image: common.TestPwshImage,
 			shell: "pwsh",
-			getScript: func() common.StepScript {
+			getScript: func() spec.StepScript {
 				return []string{
 					`echo @'
 My nested here-string
@@ -895,7 +896,7 @@ My nested nested here-string
 		"bash huge script": {
 			image: common.TestAlpineImage,
 			shell: "bash",
-			getScript: func() common.StepScript {
+			getScript: func() spec.StepScript {
 				s := strings.Repeat(
 					"echo \"Lorem ipsum dolor sit amet, consectetur adipiscing elit\"\n",
 					10*1024,
@@ -910,7 +911,7 @@ My nested nested here-string
 		"pwsh special script with special character": {
 			image: common.TestPwshImage,
 			shell: "pwsh",
-			getScript: func() common.StepScript {
+			getScript: func() spec.StepScript {
 				return []string{
 					`& {$Calendar = Get-Date; If ($Calendar.Month -eq '0') {"This is wrong"} Else {echo "not happening" > test.txt}; ls; Get-Content test.txt;}`,
 				}
@@ -923,7 +924,7 @@ My nested nested here-string
 		"pwsh multiple instructions in the script": {
 			image: common.TestPwshImage,
 			shell: "pwsh",
-			getScript: func() common.StepScript {
+			getScript: func() spec.StepScript {
 				return []string{
 					`$Calendar = Get-Date`,
 					`If ($Calendar.Month -eq '0') {"This is wrong"} Else {echo "not happening" > test.txt}`,
@@ -941,7 +942,7 @@ My nested nested here-string
 		"pwsh instruction with arrays": {
 			image: common.TestPwshImage,
 			shell: "pwsh",
-			getScript: func() common.StepScript {
+			getScript: func() spec.StepScript {
 				return []string{
 					`$data = @('Zero','One')`,
 					`$data | % {"$PSItem"}`,
@@ -962,18 +963,18 @@ My nested nested here-string
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse("echo \"Hello World\"")
 			})
 
 			build.Runner.RunnerSettings.Shell = tc.shell
-			build.JobResponse.Image.Name = tc.image
-			build.JobResponse.Steps[0].Script = append(
-				build.JobResponse.Steps[0].Script,
+			build.Job.Image.Name = tc.image
+			build.Job.Steps[0].Script = append(
+				build.Job.Steps[0].Script,
 				tc.getScript()...,
 			)
-			build.JobResponse.Steps = append(
-				build.JobResponse.Steps,
+			build.Job.Steps = append(
+				build.Job.Steps,
 				getAfterScript(featureFlagValue, tc.afterScript...),
 			)
 
@@ -1066,7 +1067,7 @@ containers:
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				jobResponse, err := common.GetRemoteBuildResponse(
 					"sleep 5000",
 				)
@@ -1139,12 +1140,12 @@ func testKubernetesFailingBuildForBashAndPwshFeatureFlag(t *testing.T, featureFl
 				t.Skip("TODO: Fix pwsh fails")
 			}
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse("invalid_command")
 			})
 
 			build.Runner.RunnerSettings.Shell = tc.shell
-			build.JobResponse.Image.Name = tc.image
+			build.Job.Image.Name = tc.image
 
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -1172,8 +1173,8 @@ func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, 
 	t.Skip("TODO: Flaky test https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/8628638315#L318")
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
-		return common.JobResponse{}, nil
+	build := getTestBuild(t, func() (spec.Job, error) {
+		return spec.Job{}, nil
 	})
 	buildtest.RunBuildWithCancel(
 		t,
@@ -1187,8 +1188,8 @@ func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, 
 func testKubernetesBuildLogLimitExceededFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
-		return common.JobResponse{}, nil
+	build := getTestBuild(t, func() (spec.Job, error) {
+		return spec.Job{}, nil
 	})
 	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(
 		t,
@@ -1202,8 +1203,8 @@ func testKubernetesBuildLogLimitExceededFeatureFlag(t *testing.T, featureFlagNam
 func testKubernetesBuildMaskingFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
-		return common.JobResponse{}, nil
+	build := getTestBuild(t, func() (spec.Job, error) {
+		return spec.Job{}, nil
 	})
 	buildtest.RunBuildWithMasking(
 		t,
@@ -1247,13 +1248,13 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse("ls -la " + defaultGitClonePath)
 			})
 			build.Runner.CustomBuildDir = test.customBuildDirConfig
 			build.Runner.BuildsDir += test.buildsDirConfig
 			build.Variables = append(build.Variables,
-				common.JobVariable{Key: "GIT_CLONE_PATH", Value: cmp.Or(test.gitClonePathOverwrite, defaultGitClonePath)},
+				spec.Variable{Key: "GIT_CLONE_PATH", Value: cmp.Or(test.gitClonePathOverwrite, defaultGitClonePath)},
 			)
 
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
@@ -1325,7 +1326,7 @@ func testKubernetesFailingToPullSvcImageTwiceFeatureFlag(t *testing.T, featureFl
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
 	build := getTestBuild(t, common.GetRemoteFailedBuild)
-	build.Services = common.Services{
+	build.Services = spec.Services{
 		{
 			Name: "some/non-existing/image",
 		},
@@ -1356,15 +1357,15 @@ func testKubernetesFailingToPullHelperTwiceFeatureFlag(t *testing.T, featureFlag
 func testOverwriteNamespaceNotMatchFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
-		return common.JobResponse{
-			GitInfo: common.GitInfo{
+	build := getTestBuild(t, func() (spec.Job, error) {
+		return spec.Job{
+			GitInfo: spec.GitInfo{
 				Sha: "1234567890",
 			},
-			Image: common.Image{
+			Image: spec.Image{
 				Name: "test-image",
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: kubernetes.NamespaceOverwriteVariableName, Value: "namespace"},
 			},
 		}, nil
@@ -1382,15 +1383,15 @@ func testOverwriteNamespaceNotMatchFeatureFlag(t *testing.T, featureFlagName str
 func testOverwriteServiceAccountNotMatchFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
-		return common.JobResponse{
-			GitInfo: common.GitInfo{
+	build := getTestBuild(t, func() (spec.Job, error) {
+		return spec.Job{
+			GitInfo: spec.GitInfo{
 				Sha: "1234567890",
 			},
-			Image: common.Image{
+			Image: spec.Image{
 				Name: "test-image",
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: kubernetes.ServiceAccountOverwriteVariableName, Value: "service-account"},
 			},
 		}, nil
@@ -1419,7 +1420,7 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 		List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err)
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
+	build := getTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse("sleep 5")
 	})
 	build.Image.Name = "docker:git"
@@ -1479,10 +1480,10 @@ func testKubernetesReplaceEnvFeatureFlag(t *testing.T, featureFlagName string, f
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
 	build.Image.Name = "$IMAGE:$VERSION"
-	build.JobResponse.Variables = append(
-		build.JobResponse.Variables,
-		common.JobVariable{Key: "IMAGE", Value: "alpine"},
-		common.JobVariable{Key: "VERSION", Value: "latest"},
+	build.Job.Variables = append(
+		build.Job.Variables,
+		spec.Variable{Key: "IMAGE", Value: "alpine"},
+		spec.Variable{Key: "VERSION", Value: "latest"},
 	)
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 	out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1686,13 +1687,13 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				jobResponse, err := common.GetRemoteBuildResponse(
 					"sleep 5000",
 				)
 				require.NoError(t, err)
 
-				jobResponse.Credentials = []common.Credentials{
+				jobResponse.Credentials = []spec.Credentials{
 					{
 						Type:     "registry",
 						URL:      "http://example.com",
@@ -1804,13 +1805,13 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				jobResponse, err := common.GetRemoteBuildResponse(
 					"sleep 5000",
 				)
 				require.NoError(t, err)
 
-				jobResponse.Credentials = []common.Credentials{
+				jobResponse.Credentials = []spec.Credentials{
 					{
 						Type:     "registry",
 						URL:      "http://example.com",
@@ -1886,17 +1887,17 @@ func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string,
 	ctxTimeout := time.Minute
 	client := getTestKubeClusterClient(t)
 
-	containsVerifyFn := func(t *testing.T, v common.JobVariable, envNames []string, envValues []string) {
+	containsVerifyFn := func(t *testing.T, v spec.Variable, envNames []string, envValues []string) {
 		assert.Contains(t, envNames, v.Key)
 		assert.Contains(t, envValues, v.Value)
 	}
 
 	tests := map[string]struct {
-		variable common.JobVariable
-		verifyFn func(*testing.T, common.JobVariable, []string, []string)
+		variable spec.Variable
+		verifyFn func(*testing.T, spec.Variable, []string, []string)
 	}{
 		"internal variable": {
-			variable: common.JobVariable{
+			variable: spec.Variable{
 				Key:      "my_internal_variable",
 				Value:    "my internal variable",
 				Internal: true,
@@ -1904,7 +1905,7 @@ func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string,
 			verifyFn: containsVerifyFn,
 		},
 		"public variable": {
-			variable: common.JobVariable{
+			variable: spec.Variable{
 				Key:    "my_public_variable",
 				Value:  "my public variable",
 				Public: true,
@@ -1912,11 +1913,11 @@ func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string,
 			verifyFn: containsVerifyFn,
 		},
 		"regular variable": {
-			variable: common.JobVariable{
+			variable: spec.Variable{
 				Key:   "my_regular_variable",
 				Value: "my regular variable",
 			},
-			verifyFn: func(t *testing.T, v common.JobVariable, envNames []string, envValues []string) {
+			verifyFn: func(t *testing.T, v spec.Variable, envNames []string, envValues []string) {
 				assert.NotContains(t, envNames, v.Key)
 				assert.NotContains(t, envValues, v.Value)
 			},
@@ -1927,13 +1928,13 @@ func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string,
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				jobResponse, err := common.GetRemoteBuildResponse(
 					"sleep 15000",
 				)
 				require.NoError(t, err)
 
-				jobResponse.Credentials = []common.Credentials{
+				jobResponse.Credentials = []spec.Credentials{
 					{
 						Type:     "registry",
 						URL:      "http://example.com",
@@ -1942,7 +1943,7 @@ func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string,
 					},
 				}
 
-				jobResponse.Variables = []common.JobVariable{
+				jobResponse.Variables = []spec.Variable{
 					tc.variable,
 				}
 
@@ -2107,13 +2108,13 @@ func testKubernetesWaitResources(t *testing.T, featureFlagName string, featureFl
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				jobResponse, err := common.GetRemoteBuildResponse(
 					"echo Hello World",
 				)
 				require.NoError(t, err)
 
-				jobResponse.Credentials = []common.Credentials{
+				jobResponse.Credentials = []spec.Credentials{
 					{
 						Type:     "registry",
 						URL:      "http://example.com",
@@ -2186,7 +2187,7 @@ func testKubernetesClusterWarningEvent(t *testing.T, featureFlagName string, fea
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				jobResponse, err := common.GetRemoteBuildResponse(
 					"echo Hello World",
 				)
@@ -2243,7 +2244,7 @@ func TestLogDeletionAttach(t *testing.T) {
 		t.Run(tt.stage, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse(
 					"sleep 5000",
 				)
@@ -2264,7 +2265,7 @@ func TestLogDeletionAttach(t *testing.T) {
 				pod := pods.Items[0]
 				config, err := kubernetes.GetKubeClientConfig(new(common.KubernetesConfig))
 				require.NoError(t, err)
-				logsPath := fmt.Sprintf("/logs-%d-%d", build.JobInfo.ProjectID, build.JobResponse.ID)
+				logsPath := fmt.Sprintf("/logs-%d-%d", build.JobInfo.ProjectID, build.Job.ID)
 				opts := kubernetes.ExecOptions{
 					Namespace:  pod.Namespace,
 					PodName:    pod.Name,
@@ -2304,9 +2305,9 @@ func TestPrepareIssue2583(t *testing.T) {
 	overwriteNamespace := ciNamespace
 	overwriteServiceAccount := "some-other-service-account"
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
-		return common.JobResponse{
-			Variables: []common.JobVariable{
+	build := getTestBuild(t, func() (spec.Job, error) {
+		return spec.Job{
+			Variables: []spec.Variable{
 				{Key: kubernetes.NamespaceOverwriteVariableName, Value: overwriteNamespace},
 				{Key: kubernetes.ServiceAccountOverwriteVariableName, Value: overwriteServiceAccount},
 			},
@@ -2501,7 +2502,7 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 func testKubernetesWithNonRootSecurityContext(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
+	build := getTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse("id")
 	})
 	build.Image.Name = common.TestAlpineNoRootImage
@@ -2519,7 +2520,7 @@ func testKubernetesWithNonRootSecurityContext(t *testing.T, featureFlagName stri
 	// 	error: could not lock config file //.gitconfig: Permission denied
 	// 	ERROR: Job failed: command terminated with exit code 1
 	// 	```
-	build.Variables = append(build.Variables, common.JobVariable{
+	build.Variables = append(build.Variables, spec.Variable{
 		Key:   "HOME",
 		Value: "/dev/shm",
 	})
@@ -2570,9 +2571,9 @@ func testKubernetesBashFeatureFlag(t *testing.T, featureFlagName string, feature
 
 			build.Image.Name = common.TestAlpineImage
 			build.Runner.Shell = "bash"
-			build.JobResponse.Steps = common.Steps{
-				common.Step{
-					Name:   common.StepNameScript,
+			build.Job.Steps = spec.Steps{
+				spec.Step{
+					Name:   spec.StepNameScript,
 					Script: []string{tc.script},
 				},
 			}
@@ -2597,7 +2598,7 @@ func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string
 		image           string
 		shell           string
 		lifecycleCfg    common.KubernetesContainerLifecyle
-		steps           common.Steps
+		steps           spec.Steps
 		validateOutputs func(t *testing.T, out string, err error)
 	}{
 		"invalid hook configuration: more than one handler type": {
@@ -2619,9 +2620,9 @@ func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string
 			},
 		},
 		"postStart exec hook bash": {
-			steps: common.Steps{
-				common.Step{
-					Name: common.StepNameScript,
+			steps: spec.Steps{
+				spec.Step{
+					Name: spec.StepNameScript,
 					Script: []string{
 						"ls -l /builds",
 					},
@@ -2643,9 +2644,9 @@ func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string
 		"postStart exec hook pwsh": {
 			image: common.TestPwshImage,
 			shell: shells.SNPwsh,
-			steps: common.Steps{
-				common.Step{
-					Name: common.StepNameScript,
+			steps: spec.Steps{
+				spec.Step{
+					Name: spec.StepNameScript,
 					Script: []string{
 						"Get-ChildItem /builds",
 					},
@@ -2684,7 +2685,7 @@ func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string
 			}
 
 			if tt.steps != nil {
-				build.JobResponse.Steps = tt.steps
+				build.Job.Steps = tt.steps
 			}
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -2693,7 +2694,7 @@ func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string
 	}
 }
 
-func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (common.JobResponse, error)) *common.Build {
+func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (spec.Job, error)) *common.Build {
 	jobResponse, err := getJobResponse()
 	assert.NoError(t, err)
 
@@ -2711,7 +2712,7 @@ func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (co
 	}
 
 	return &common.Build{
-		JobResponse: jobResponse,
+		Job: jobResponse,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: common.ExecutorKubernetes,
@@ -2739,19 +2740,19 @@ func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (co
 	}
 }
 
-func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error)) *common.Build {
+func getTestBuild(t *testing.T, getJobResponse func() (spec.Job, error)) *common.Build {
 	return getTestBuildWithImage(t, common.TestAlpineImage, getJobResponse)
 }
 
 func getTestBuildWithServices(
 	t *testing.T,
-	getJobResponse func() (common.JobResponse, error),
+	getJobResponse func() (spec.Job, error),
 	services ...string,
 ) *common.Build {
 	build := getTestBuild(t, getJobResponse)
 
 	for _, service := range services {
-		build.Services = append(build.Services, common.Image{
+		build.Services = append(build.Services, spec.Image{
 			Name: service,
 		})
 	}
@@ -2933,14 +2934,14 @@ func TestKubernetesAllowedServices(t *testing.T) {
 
 	type testDef struct {
 		AllowedServices []string
-		Services        common.Services
+		Services        spec.Services
 		VerifyFn        func(*testing.T, error)
 	}
 	tests := map[string]testDef{
 		"allowed service case": {
 			AllowedServices: []string{"alpine", "debian"},
-			Services: common.Services{
-				common.Image{Name: "alpine"},
+			Services: spec.Services{
+				spec.Image{Name: "alpine"},
 			},
 			VerifyFn: func(t *testing.T, err error) {
 				assert.NoError(t, err)
@@ -2948,9 +2949,9 @@ func TestKubernetesAllowedServices(t *testing.T) {
 		},
 		"disallowed service case": {
 			AllowedServices: []string{"alpine", "debian"},
-			Services: common.Services{
-				common.Image{Name: "alpine"},
-				common.Image{Name: "ubuntu"},
+			Services: spec.Services{
+				spec.Image{Name: "alpine"},
+				spec.Image{Name: "ubuntu"},
 			},
 			VerifyFn: func(t *testing.T, err error) {
 				require.Error(t, err)
@@ -2988,7 +2989,7 @@ func TestCleanupProjectGitFetch(t *testing.T) {
 
 	untrackedFilename := "untracked"
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
+	build := getTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFilename, "", "")...,
 		)
@@ -3005,7 +3006,7 @@ func TestCleanupProjectGitSubmoduleNormal(t *testing.T) {
 	untrackedFile := "untracked"
 	untrackedSubmoduleFile := "untracked_submodule"
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
+	build := getTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFile, untrackedSubmoduleFile, "")...,
 		)
@@ -3023,7 +3024,7 @@ func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
 	untrackedSubmoduleFile := "untracked_submodule"
 	untrackedSubSubmoduleFile := "untracked_submodule_submodule"
 
-	build := getTestBuild(t, func() (common.JobResponse, error) {
+	build := getTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse(
 			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(
 				untrackedFile,
@@ -3089,9 +3090,9 @@ func TestKubernetesPwshFeatureFlag(t *testing.T) {
 
 			build.Image.Name = common.TestPwshImage
 			build.Runner.Shell = shells.SNPwsh
-			build.JobResponse.Steps = common.Steps{
-				common.Step{
-					Name:   common.StepNameScript,
+			build.Job.Steps = spec.Steps{
+				spec.Step{
+					Name:   spec.StepNameScript,
 					Script: []string{tc.script},
 				},
 			}
@@ -3139,16 +3140,16 @@ func TestKubernetesProcessesInBackground(t *testing.T) {
 
 			build.Image.Name = tc.image
 			build.Runner.Shell = tc.shell
-			build.JobResponse.Steps = common.Steps{
-				common.Step{
-					Name: common.StepNameScript,
+			build.Job.Steps = spec.Steps{
+				spec.Step{
+					Name: spec.StepNameScript,
 					Script: []string{
 						`sleep infinity &`,
 						`mkdir out && echo "Hello, world" > out/greeting`,
 					},
 				},
-				common.Step{
-					Name: common.StepNameAfterScript,
+				spec.Step{
+					Name: spec.StepNameAfterScript,
 					Script: []string{
 						`echo I should be running`,
 					},
@@ -3217,7 +3218,7 @@ func TestConflictingPullPolicies(t *testing.T) {
 			t.Parallel()
 
 			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
-			build.JobResponse.Image.PullPolicies = test.imagePullPolicies
+			build.Job.Image.PullPolicies = test.imagePullPolicies
 			build.Runner.RunnerSettings.Kubernetes.PullPolicy = test.pullPolicy
 			build.Runner.RunnerSettings.Kubernetes.AllowedPullPolicies = test.allowedPullPolicies
 
@@ -3236,11 +3237,11 @@ func Test_CaptureServiceLogs(t *testing.T) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
 	tests := map[string]struct {
-		buildVars []common.JobVariable
+		buildVars []spec.Variable
 		assert    func(string, error)
 	}{
 		"enabled": {
-			buildVars: []common.JobVariable{
+			buildVars: []spec.Variable{
 				{
 					Key:    "CI_DEBUG_SERVICES",
 					Value:  "1",
@@ -3267,7 +3268,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			},
 		},
 		"bogus value": {
-			buildVars: []common.JobVariable{{
+			buildVars: []spec.Variable{{
 				Key:    "CI_DEBUG_SERVICES",
 				Value:  "blammo",
 				Public: true,
@@ -3291,7 +3292,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			build.Services[0].Alias = "db"
 			build.Services[1].Alias = "cache"
 			build.Variables = tt.buildVars
-			build.Variables = append(build.Variables, common.JobVariable{
+			build.Variables = append(build.Variables, spec.Variable{
 				Key:    "POSTGRES_PASSWORD",
 				Value:  "password",
 				Public: true,
@@ -3318,7 +3319,7 @@ func TestKubernetesProcMount(t *testing.T) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
 	setBuildWithProcMount := func(build *common.Build, procMountType v1.ProcMountType) {
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "none"})
+		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "none"})
 		build.Runner.RunnerSettings.Kubernetes.BuildContainerSecurityContext = common.KubernetesContainerSecurityContext{
 			ProcMount:  procMountType,
 			Privileged: &[]bool{false}[0], // unpriv'ed
@@ -3345,7 +3346,7 @@ func TestKubernetesProcMount(t *testing.T) {
 	// If the cluster supports the ProcMount feature, then this will be reflected
 	// in the PodSpec. If the cluster does not support this feature, the API server
 	// will return DefaultProcMount.
-	tmpPod := getTestBuild(t, func() (common.JobResponse, error) {
+	tmpPod := getTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse("cat")
 	})
 
@@ -3456,7 +3457,7 @@ func TestKubernetesProcMount(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse(testScript)
 			})
 
@@ -3475,7 +3476,7 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 
 	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
 
-	jobVars := common.JobVariables{
+	jobVars := spec.Variables{
 		{Key: "CI_DEBUG_SERVICES", Value: "true", Public: true},
 		{Key: "POSTGRES_PASSWORD", Value: "password", Public: true},
 		{Key: "JOB_IMAGE", Value: "alpine:latest"},
@@ -3489,7 +3490,7 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 	build.Runner.Kubernetes.Image = "$JOB_IMAGE"
 	build.Runner.Kubernetes.HelperImage = "$HELPER_IMAGE"
 	build.Runner.Kubernetes.HelperImageFlavor = "$HELPER_IMAGE_FLAVOR"
-	build.Services = []common.Image{
+	build.Services = []spec.Image{
 		{Name: "$SRVS_IMAGE", Alias: "$SRVS_IMAGE_ALIAS"},
 	}
 
@@ -3501,16 +3502,16 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 }
 
 func testJobRunningAndPassingWhenServiceStops(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	build := getTestBuild(t, func() (common.JobResponse, error) {
+	build := getTestBuild(t, func() (spec.Job, error) {
 		jobResponse, err := common.GetRemoteBuildResponse("sleep 12")
 		if err != nil {
-			return common.JobResponse{}, err
+			return spec.Job{}, err
 		}
 
 		jobResponse.Steps = append(
 			jobResponse.Steps,
-			common.Step{
-				Name:   common.StepNameAfterScript,
+			spec.Step{
+				Name:   spec.StepNameAfterScript,
 				Script: []string{"echo after script"},
 			},
 		)
@@ -3535,11 +3536,11 @@ func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, f
 	client := getTestKubeClusterClient(t)
 
 	tests := map[string]struct {
-		services   common.Services
+		services   spec.Services
 		lookupName []string
 	}{
 		"service container without alias": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name: common.TestAlpineImage,
 				},
@@ -3547,7 +3548,7 @@ func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, f
 			lookupName: []string{"svc-0"},
 		},
 		"service container with alias": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  common.TestAlpineImage,
 					Alias: "alpine-service",
@@ -3556,7 +3557,7 @@ func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, f
 			lookupName: []string{"alpine-service"},
 		},
 		"service container with multiple different aliases": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  common.TestAlpineImage,
 					Alias: "alpine-service-1",
@@ -3569,7 +3570,7 @@ func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, f
 			lookupName: []string{"alpine-service-1", "alpine-service-2"},
 		},
 		"service container with multiple similar aliases": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  common.TestAlpineImage,
 					Alias: "alpine-service",
@@ -3582,7 +3583,7 @@ func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, f
 			lookupName: []string{"alpine-service", "svc-0"},
 		},
 		"service container with multiple similar aliases 2": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  common.TestAlpineImage,
 					Alias: "alpine,foo,bar",
@@ -3606,7 +3607,7 @@ func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, f
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse(
 					"sleep 60",
 				)
@@ -3705,14 +3706,14 @@ func testKubernetesOptionsUserAndGroup(t *testing.T, featureFlagName string, fea
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				jobResponse, err := common.GetRemoteBuildResponse(`echo "uid and gid is set to: $(id -u):$(id -g)"`)
 				if err != nil {
-					return common.JobResponse{}, err
+					return spec.Job{}, err
 				}
 
-				jobResponse.Image.ExecutorOptions.Kubernetes = common.ImageKubernetesOptions{
-					User: common.StringOrInt64(tc.ciUserId),
+				jobResponse.Image.ExecutorOptions.Kubernetes = spec.ImageKubernetesOptions{
+					User: spec.StringOrInt64(tc.ciUserId),
 				}
 
 				return jobResponse, nil
@@ -3918,13 +3919,13 @@ func TestKubernetesScriptsBaseDir(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse(tc.script)
 			})
 
 			build.Runner.RunnerSettings.Shell = tc.shell
 			build.Runner.RunnerSettings.Kubernetes.ScriptsBaseDir = tc.baseDir
-			build.JobResponse.Image.Name = tc.image
+			build.Job.Image.Name = tc.image
 			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			var buf bytes.Buffer
@@ -3946,7 +3947,7 @@ func TestKubernetesLogsBaseDir(t *testing.T) {
 		shell    string
 		script   string
 		baseDir  string
-		envVars  common.JobVariables
+		envVars  spec.Variables
 		verifyFn func(t *testing.T, out string)
 	}{
 		"logs_base_dir enabled": {
@@ -3982,13 +3983,13 @@ func TestKubernetesLogsBaseDir(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse(tc.script)
 			})
 
 			build.Runner.RunnerSettings.Shell = tc.shell
 			build.Runner.RunnerSettings.Kubernetes.LogsBaseDir = tc.baseDir
-			build.JobResponse.Image.Name = tc.image
+			build.Job.Image.Name = tc.image
 			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			var buf bytes.Buffer
@@ -4004,15 +4005,15 @@ func testJobAgainstServiceContainerBehaviour(t *testing.T, featureFlagName strin
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
 	tests := map[string]struct {
-		services common.Services
+		services spec.Services
 		verifyFn func(t *testing.T, err error)
 	}{
 		"job fails when waiting for service port readiness and service fails": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name: "postgres:12.17-alpine3.19",
-					Variables: common.JobVariables{
-						common.JobVariable{Key: "HEALTHCHECK_TCP_PORT", Value: "5432"},
+					Variables: spec.Variables{
+						spec.Variable{Key: "HEALTHCHECK_TCP_PORT", Value: "5432"},
 					},
 				},
 			},
@@ -4022,7 +4023,7 @@ func testJobAgainstServiceContainerBehaviour(t *testing.T, featureFlagName strin
 		},
 		// Postgres service container will fail because the password and database variables are not provided
 		"job passes when service fails": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name: "postgres:12.17-alpine3.19",
 				},
@@ -4037,13 +4038,13 @@ func testJobAgainstServiceContainerBehaviour(t *testing.T, featureFlagName strin
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse("sleep 5s")
 			})
 
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-			build.JobResponse.Image.Name = common.TestAlpineImage
-			build.JobResponse.Services = append(build.JobResponse.Services, tc.services...)
+			build.Job.Image.Name = common.TestAlpineImage
+			build.Job.Services = append(build.Job.Services, tc.services...)
 			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -4118,7 +4119,7 @@ func TestKubernetesUserAndGroupConstraints(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse(`
 					echo "Testing Kubernetes user and group constraints"
 					echo "Current user ID: $(id -u)"
@@ -4127,7 +4128,7 @@ func TestKubernetesUserAndGroupConstraints(t *testing.T) {
 				`)
 			})
 
-			build.Image.ExecutorOptions.Kubernetes.User = common.StringOrInt64(test.imageUser)
+			build.Image.ExecutorOptions.Kubernetes.User = spec.StringOrInt64(test.imageUser)
 			build.Runner.Kubernetes.AllowedUsers = test.allowedUsers
 			build.Runner.Kubernetes.AllowedGroups = test.allowedGroups
 
@@ -4189,12 +4190,12 @@ allocate_memory
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (common.JobResponse, error) {
+			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse(tc.script)
 			})
 
 			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
-			build.JobResponse.Image.Name = common.TestAlpineImage
+			build.Job.Image.Name = common.TestAlpineImage
 			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 			build.Runner.Kubernetes.MemoryLimit = tc.memoryLimit
 			build.Runner.Kubernetes.MemoryRequest = tc.memoryLimit

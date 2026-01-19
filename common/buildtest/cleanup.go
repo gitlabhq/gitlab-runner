@@ -5,14 +5,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func RunBuildWithCleanupGitClone(t *testing.T, build *common.Build) {
 	build.Variables = append(
 		build.Variables,
-		common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
-		common.JobVariable{Key: "FF_ENABLE_JOB_CLEANUP", Value: "true"},
+		spec.Variable{Key: "GIT_STRATEGY", Value: "clone"},
+		spec.Variable{Key: "FF_ENABLE_JOB_CLEANUP", Value: "true"},
 	)
 	out, err := RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
@@ -22,8 +24,8 @@ func RunBuildWithCleanupGitClone(t *testing.T, build *common.Build) {
 func RunBuildWithCleanupGitFetch(t *testing.T, build *common.Build, untrackedFilename string) {
 	build.Variables = append(
 		build.Variables,
-		common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-		common.JobVariable{Key: "FF_ENABLE_JOB_CLEANUP", Value: "true"},
+		spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+		spec.Variable{Key: "FF_ENABLE_JOB_CLEANUP", Value: "true"},
 	)
 
 	out, err := RunBuildReturningOutput(t, build)
@@ -40,9 +42,9 @@ func RunBuildWithCleanupNormalSubmoduleStrategy(
 ) {
 	build.Variables = append(
 		build.Variables,
-		common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-		common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
-		common.JobVariable{Key: "FF_ENABLE_JOB_CLEANUP", Value: "true"},
+		spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+		spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+		spec.Variable{Key: "FF_ENABLE_JOB_CLEANUP", Value: "true"},
 	)
 
 	out, err := RunBuildReturningOutput(t, build)
@@ -62,9 +64,9 @@ func RunBuildWithCleanupRecursiveSubmoduleStrategy(
 ) {
 	build.Variables = append(
 		build.Variables,
-		common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-		common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
-		common.JobVariable{Key: "FF_ENABLE_JOB_CLEANUP", Value: "true"},
+		spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+		spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+		spec.Variable{Key: "FF_ENABLE_JOB_CLEANUP", Value: "true"},
 	)
 
 	out, err := RunBuildReturningOutput(t, build)

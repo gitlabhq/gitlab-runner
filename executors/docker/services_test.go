@@ -26,6 +26,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	service_test "gitlab.com/gitlab-org/gitlab-runner/helpers/container/services/test"
@@ -79,7 +80,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	e.BuildShell = &common.ShellConfiguration{}
 
 	realServiceContainerName := e.getProjectUniqRandomizedName() + servicePart
-	options := common.ImageDockerOptions{}
+	options := spec.ImageDockerOptions{}
 
 	p.On("GetDockerImage", imageName, options, []common.DockerPullPolicy(nil)).
 		Return(&image.InspectResponse{ID: "helper-image"}, nil).
@@ -124,16 +125,16 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	err = e.createVolumesManager()
 	require.NoError(t, err)
 
-	imageConfig := common.Image{
+	imageConfig := spec.Image{
 		Name: description,
 	}
 	if platform != "" {
-		imageConfig.ExecutorOptions = common.ImageExecutorOptions{
-			Docker: common.ImageDockerOptions{
+		imageConfig.ExecutorOptions = spec.ImageExecutorOptions{
+			Docker: spec.ImageDockerOptions{
 				Platform: "${PLATFORM}",
 			},
 		}
-		e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+		e.Build.Variables = append(e.Build.Variables, spec.Variable{
 			Key:   "PLATFORM",
 			Value: platform,
 		})
@@ -180,7 +181,7 @@ func testDockerConfigurationWithServiceContainer(
 		"alpine",
 		"latest",
 		"alpine:latest",
-		common.Image{Name: "alpine", Command: []string{"/bin/sh"}},
+		spec.Image{Name: "alpine", Command: []string{"/bin/sh"}},
 		nil,
 	)
 	assert.NoError(t, err, "Should create service container without errors")
@@ -326,7 +327,7 @@ func TestDockerServicePrivilegedSetting(t *testing.T) {
 
 func TestDockerWithNoDockerConfigAndWithServiceImagePullPolicyAlways(t *testing.T) {
 	dockerConfig := &common.DockerConfig{}
-	serviceConfig := common.Image{
+	serviceConfig := spec.Image{
 		Name:         "alpine",
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
 	}
@@ -367,7 +368,7 @@ func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolic
 	dockerConfig := &common.DockerConfig{
 		PullPolicy: common.StringOrArray{common.PullPolicyAlways, common.PullPolicyIfNotPresent},
 	}
-	serviceConfig := common.Image{
+	serviceConfig := spec.Image{
 		Name:         "alpine",
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
@@ -414,7 +415,7 @@ func TestDockerWithDockerConfigAlwaysButNotAllowedAndWithNoServiceImagePullPolic
 		PullPolicy:          common.StringOrArray{common.PullPolicyAlways},
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
-	serviceConfig := common.Image{Name: "alpine"}
+	serviceConfig := spec.Image{Name: "alpine"}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 	}
@@ -447,7 +448,7 @@ func TestDockerWithDockerConfigAlwaysAndWithServiceImagePullPolicyIfNotPresent(t
 		PullPolicy:          common.StringOrArray{common.PullPolicyAlways},
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
 	}
-	serviceConfig := common.Image{
+	serviceConfig := spec.Image{
 		Name:         "alpine",
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
@@ -493,9 +494,9 @@ func TestGetServiceDefinitions(t *testing.T) {
 	tests := map[string]struct {
 		services         []common.Service
 		servicesLimit    *int
-		buildServices    []common.Image
+		buildServices    []spec.Image
 		allowedServices  []string
-		expectedServices common.Services
+		expectedServices spec.Services
 		expectedErr      string
 	}{
 		"all services with proper name and alias": {
@@ -517,7 +518,7 @@ func TestGetServiceDefinitions(t *testing.T) {
 					Entrypoint: []string{"executable", "param3", "param4"},
 				},
 			},
-			expectedServices: common.Services{
+			expectedServices: spec.Services{
 				{
 					Name:       "name",
 					Alias:      "alias",
@@ -543,12 +544,12 @@ func TestGetServiceDefinitions(t *testing.T) {
 					Alias: "alias",
 				},
 			},
-			buildServices: []common.Image{
+			buildServices: []spec.Image{
 				{
 					Name: "name_not_in_internal",
 				},
 			},
-			expectedServices: common.Services{
+			expectedServices: spec.Services{
 				{
 					Name:  "name",
 					Alias: "alias",
@@ -564,7 +565,7 @@ func TestGetServiceDefinitions(t *testing.T) {
 					Name: "name",
 				},
 			},
-			buildServices: []common.Image{
+			buildServices: []spec.Image{
 				{
 					Name: "name_not_in_internal",
 				},
@@ -578,13 +579,13 @@ func TestGetServiceDefinitions(t *testing.T) {
 					Name: "name",
 				},
 			},
-			buildServices: []common.Image{
+			buildServices: []spec.Image{
 				{
 					Name: "name",
 				},
 			},
 			allowedServices: []string{"allowed_name"},
-			expectedServices: common.Services{
+			expectedServices: spec.Services{
 				{
 					Name: "name",
 				},
@@ -599,8 +600,8 @@ func TestGetServiceDefinitions(t *testing.T) {
 					Name: "",
 				},
 			},
-			buildServices: []common.Image{},
-			expectedServices: common.Services{
+			buildServices: []spec.Image{},
+			expectedServices: spec.Services{
 				{
 					Name: "",
 				},
@@ -622,7 +623,7 @@ func TestGetServiceDefinitions(t *testing.T) {
 				},
 			},
 			servicesLimit: testServicesLimit(1),
-			expectedServices: common.Services{
+			expectedServices: spec.Services{
 				{
 					Name: "name",
 				},
@@ -1038,7 +1039,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 		logs.Reset()
 		t.Run(name, func(t *testing.T) {
 			e.Build = &common.Build{}
-			e.Build.Variables = common.JobVariables{
+			e.Build.Variables = spec.Variables{
 				{Key: "CI_DEBUG_SERVICES", Value: tt.debugServicePolicy, Public: true},
 			}
 

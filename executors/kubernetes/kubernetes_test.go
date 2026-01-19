@@ -47,6 +47,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/watchers"
@@ -407,8 +408,8 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Variables: []common.JobVariable{
+				Job: spec.Job{
+					Variables: []spec.Variable{
 						{Key: "DOCKER_SOCKET", Value: "/var/run/docker.sock"},
 						{Key: "PATH_TWO", Value: "/path/two"},
 						{Key: "SUB_PATH", Value: "subpath"},
@@ -760,15 +761,15 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	ex.podWatcher = mockPodWatcher
 
 	ex.options = &kubernetesOptions{
-		Image: common.Image{
+		Image: spec.Image{
 			Name:  "test-image",
-			Ports: []common.Port{{Number: 80}},
+			Ports: []spec.Port{{Number: 80}},
 		},
-		Services: map[string]*common.Image{
+		Services: map[string]*spec.Image{
 			"test-service": {
 				Name:  "test-service",
 				Alias: "custom_name",
-				Ports: []common.Port{
+				Ports: []spec.Port{
 					{
 						Number:   81,
 						Name:     "custom_port_name",
@@ -799,7 +800,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 		Return(api.PullAlways, nil).
 		Once()
 
-	err := ex.prepareOverwrites(make(common.JobVariables, 0))
+	err := ex.prepareOverwrites(make(spec.Variables, 0))
 	assert.NoError(t, err)
 
 	err = ex.setupBuildPod(t.Context(), nil)
@@ -829,10 +830,10 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 
 			e := newExecutor()
 			e.options = &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-build",
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name: "test-service",
 					},
@@ -841,8 +842,8 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 			e.AbstractExecutor.Config = runnerConfig
 			e.AbstractExecutor.BuildShell = &common.ShellConfiguration{}
 			e.AbstractExecutor.Build = &common.Build{
-				JobResponse: common.JobResponse{},
-				Runner:      &runnerConfig,
+				Job:    spec.Job{},
+				Runner: &runnerConfig,
 			}
 			e.featureChecker = mockFc
 			e.pullManager = mockPullManager
@@ -857,7 +858,7 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 				Return(api.PullAlways, nil).
 				Maybe()
 
-			err := e.prepareOverwrites(make(common.JobVariables, 0))
+			err := e.prepareOverwrites(make(spec.Variables, 0))
 			assert.NoError(t, err)
 
 			err = e.setupBuildPod(t.Context(), nil)
@@ -890,8 +891,8 @@ func testGetPodActiveDeadlineSecondsFeatureFlag(t *testing.T, featureFlagName st
 		t.Run(tn, func(t *testing.T) {
 			e := newExecutor()
 			e.AbstractExecutor.Build = &common.Build{
-				JobResponse: common.JobResponse{
-					RunnerInfo: common.RunnerInfo{
+				Job: spec.Job{
+					RunnerInfo: spec.RunnerInfo{
 						Timeout: tc.timeoutSeconds,
 					},
 				},
@@ -1200,10 +1201,10 @@ func TestPrepare(t *testing.T) {
 
 		return &executor{
 			options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
 				},
-				Services: map[string]*common.Image{},
+				Services: map[string]*spec.Image{},
 			},
 			configurationOverwrites: defaultOverwrites,
 			helperImageInfo:         hi,
@@ -1248,24 +1249,24 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Variables: []common.JobVariable{
+					Variables: []spec.Variable{
 						{Key: "privileged", Value: "true"},
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "default",
@@ -1312,24 +1313,24 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Variables: []common.JobVariable{
+					Variables: []spec.Variable{
 						{Key: ServiceAccountOverwriteVariableName, Value: "not-default"},
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "default",
@@ -1378,14 +1379,14 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Variables: []common.JobVariable{
+					Variables: []spec.Variable{
 						{Key: ServiceAccountOverwriteVariableName, Value: "not-default"},
 					},
 				},
@@ -1424,24 +1425,24 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Variables: []common.JobVariable{
+					Variables: []spec.Variable{
 						{Key: NamespaceOverwriteVariableName, Value: "new-namespace-name"},
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "new-namespace-name",
@@ -1468,24 +1469,24 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Variables: []common.JobVariable{
+					Variables: []spec.Variable{
 						{Key: NamespaceOverwriteVariableName, Value: "namespace-$CI_CONCURRENT_ID"},
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "namespace-0",
@@ -1510,18 +1511,18 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -1539,11 +1540,11 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Variables: []common.JobVariable{
+					Variables: []spec.Variable{
 						// Try to bypass namespace isolation
 						{Key: NamespaceOverwriteVariableName, Value: "ci-job-42"},
 					},
@@ -1551,10 +1552,10 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "ci-job-0",
@@ -1581,18 +1582,18 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace:       "default",
@@ -1617,15 +1618,15 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: common.Services{
+					Services: spec.Services{
 						{
 							Name:       "test-service",
 							Entrypoint: []string{"/init", "run"},
@@ -1636,11 +1637,11 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: map[string]*common.Image{
+					Services: map[string]*spec.Image{
 						"svc-0": {
 							Name:       "test-service",
 							Entrypoint: []string{"/init", "run"},
@@ -1695,15 +1696,15 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: common.Services{
+					Services: spec.Services{
 						{
 							Name:       "test-service",
 							Alias:      "test-alias",
@@ -1718,11 +1719,11 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: map[string]*common.Image{
+					Services: map[string]*spec.Image{
 						"alias": {
 							Name:  "test-service-k8s",
 							Alias: "alias",
@@ -1802,21 +1803,21 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: common.Services{
+					Services: spec.Services{
 						{
 							Name:       "test-service-explicit-overrides",
 							Alias:      "test-alias-0",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
-							Variables: []common.JobVariable{
+							Variables: []spec.Variable{
 								{
 									Key:   ServiceCPULimitOverwriteVariableValue,
 									Value: "200m",
@@ -1854,17 +1855,17 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: map[string]*common.Image{
+					Services: map[string]*spec.Image{
 						"test-alias-0": {
 							Name:       "test-service-explicit-overrides",
 							Alias:      "test-alias-0",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
-							Variables: []common.JobVariable{
+							Variables: []spec.Variable{
 								{
 									Key:   ServiceCPULimitOverwriteVariableValue,
 									Value: "200m",
@@ -1935,21 +1936,21 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: common.Services{
+					Services: spec.Services{
 						{
 							Name:       "test-service-explicit-overrides",
 							Alias:      "test-alias-0",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
-							Variables: []common.JobVariable{
+							Variables: []spec.Variable{
 								{
 									Key:   ServiceCPULimitOverwriteVariableValue,
 									Value: "200m",
@@ -1987,17 +1988,17 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: map[string]*common.Image{
+					Services: map[string]*spec.Image{
 						"test-alias-0": {
 							Name:       "test-service-explicit-overrides",
 							Alias:      "test-alias-0",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
-							Variables: []common.JobVariable{
+							Variables: []spec.Variable{
 								{
 									Key:   ServiceCPULimitOverwriteVariableValue,
 									Value: "200m",
@@ -2064,21 +2065,21 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: common.Services{
+					Services: spec.Services{
 						{
 							Name:       "test-service-explicit-overrides",
 							Alias:      "test-alias-0",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
-							Variables: []common.JobVariable{
+							Variables: []spec.Variable{
 								{
 									Key:   ServiceCPULimitOverwriteVariableValue,
 									Value: "200m",
@@ -2116,17 +2117,17 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name:       "test-image",
 						Entrypoint: []string{"/init", "run"},
 					},
-					Services: map[string]*common.Image{
+					Services: map[string]*spec.Image{
 						"test-alias-0": {
 							Name:       "test-service-explicit-overrides",
 							Alias:      "test-alias-0",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
-							Variables: []common.JobVariable{
+							Variables: []spec.Variable{
 								{
 									Key:   ServiceCPULimitOverwriteVariableValue,
 									Value: "200m",
@@ -2193,18 +2194,18 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
+				Job: spec.Job{
+					Image: spec.Image{
 						Name: "test-image",
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				helperImageInfo:         defaultHelperImage,
 				configurationOverwrites: defaultOverwrites,
@@ -2221,18 +2222,18 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
+				Job: spec.Job{
+					Image: spec.Image{
 						Name: "test-image",
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo: helperimage.Info{
@@ -2259,18 +2260,18 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
+				Job: spec.Job{
+					Image: spec.Image{
 						Name: "test-image",
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace: "default",
@@ -2311,18 +2312,18 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
+				Job: spec.Job{
+					Image: spec.Image{
 						Name: "test-image",
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace: "default",
@@ -2375,18 +2376,18 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
+				Job: spec.Job{
+					Image: spec.Image{
 						Name: "test-image",
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         helperimage.Info{},
@@ -2410,21 +2411,21 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
+				Job: spec.Job{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Variables: []common.JobVariable{
+					Variables: []spec.Variable{
 						{Key: NodeSelectorOverwriteVariablePrefix + "ARCH", Value: api.LabelArchStable + "=arm64"},
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: &overwrites{
 					namespace: "default",
@@ -2461,10 +2462,10 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2493,10 +2494,10 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2524,10 +2525,10 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2554,10 +2555,10 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2577,18 +2578,18 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2608,11 +2609,11 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
+				Job: spec.Job{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					GitInfo: common.GitInfo{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
 				},
@@ -2638,21 +2639,21 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
-						PullPolicies: []common.DockerPullPolicy{common.PullPolicyNever},
+					Image: spec.Image{
+						PullPolicies: []spec.PullPolicy{common.PullPolicyNever},
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2671,13 +2672,13 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name:         "test-image",
-						PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+						PullPolicies: []spec.PullPolicy{common.PullPolicyIfNotPresent},
 					},
 				},
 			},
@@ -2707,21 +2708,21 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
-						PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+					Image: spec.Image{
+						PullPolicies: []spec.PullPolicy{common.PullPolicyIfNotPresent},
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2741,18 +2742,18 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2774,18 +2775,18 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2807,22 +2808,22 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name:         "test-image",
-						PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, "invalid"},
+						PullPolicies: []spec.PullPolicy{common.PullPolicyAlways, "invalid"},
 					},
 				},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -2847,11 +2848,11 @@ func TestPrepare(t *testing.T) {
 				return "10.0.17763"
 			},
 			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
 				},
@@ -2902,10 +2903,10 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: common.Image{
+					Image: spec.Image{
 						Name: "test-image",
 					},
-					Services: map[string]*common.Image{},
+					Services: map[string]*spec.Image{},
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
@@ -3023,7 +3024,7 @@ func TestSetupDefaultExecutorOptions(t *testing.T) {
 func TestSetupCredentials(t *testing.T) {
 	tests := map[string]struct {
 		RunnerCredentials *common.RunnerCredentials
-		Credentials       []common.Credentials
+		Credentials       []spec.Credentials
 		VerifyFn          func(*testing.T, *api.Secret)
 	}{
 		"no credentials": {
@@ -3031,7 +3032,7 @@ func TestSetupCredentials(t *testing.T) {
 			VerifyFn: nil,
 		},
 		"registry credentials": {
-			Credentials: []common.Credentials{
+			Credentials: []spec.Credentials{
 				{
 					Type:     "registry",
 					URL:      "http://example.com",
@@ -3045,7 +3046,7 @@ func TestSetupCredentials(t *testing.T) {
 			},
 		},
 		"other credentials": {
-			Credentials: []common.Credentials{
+			Credentials: []spec.Credentials{
 				{
 					Type:     "other",
 					URL:      "http://example.com",
@@ -3060,7 +3061,7 @@ func TestSetupCredentials(t *testing.T) {
 			RunnerCredentials: &common.RunnerCredentials{
 				Token: "ToK3_?OF",
 			},
-			Credentials: []common.Credentials{
+			Credentials: []spec.Credentials{
 				{
 					Type:     "registry",
 					URL:      "http://example.com",
@@ -3100,7 +3101,7 @@ func TestSetupCredentials(t *testing.T) {
 			ex.kubeClient = fakeKubeClient
 			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = "default"
 			ex.AbstractExecutor.Build = &common.Build{
-				JobResponse: common.JobResponse{
+				Job: spec.Job{
 					Credentials: test.Credentials,
 				},
 				Runner: &common.RunnerConfig{},
@@ -3198,7 +3199,7 @@ func TestSetupBuildNamespace(t *testing.T) {
 
 			executed = false
 
-			err := ex.prepareOverwrites(common.JobVariables{})
+			err := ex.prepareOverwrites(spec.Variables{})
 			assert.NoError(t, err)
 			err = ex.checkDefaults()
 			assert.NoError(t, err)
@@ -3272,7 +3273,7 @@ func TestTeardownBuildNamespace(t *testing.T) {
 
 			executed = false
 
-			err := ex.prepareOverwrites(common.JobVariables{})
+			err := ex.prepareOverwrites(spec.Variables{})
 			assert.NoError(t, err)
 			err = ex.checkDefaults()
 			assert.NoError(t, err)
@@ -3348,7 +3349,7 @@ func TestServiceAccountExists(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), time.Second*30)
 			defer cancel()
 
-			err := ex.prepareOverwrites(make(common.JobVariables, 0))
+			err := ex.prepareOverwrites(make(spec.Variables, 0))
 			assert.NoError(t, err)
 			assert.Equal(t, tc.found, ex.serviceAccountExists()(ctx, tc.name))
 		})
@@ -3413,7 +3414,7 @@ func TestSecretExists(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), time.Second*30)
 			defer cancel()
 
-			err := ex.prepareOverwrites(make(common.JobVariables, 0))
+			err := ex.prepareOverwrites(make(spec.Variables, 0))
 			assert.NoError(t, err)
 			assert.Equal(t, tc.found, ex.secretExists()(ctx, tc.name))
 		})
@@ -3625,7 +3626,7 @@ func TestWaitForResources(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), tc.ctxTimeout)
 			defer cancel()
 
-			err = ex.prepareOverwrites(make(common.JobVariables, 0))
+			err = ex.prepareOverwrites(make(spec.Variables, 0))
 			assert.NoError(t, err)
 
 			switch tc.resourceType {
@@ -3649,8 +3650,8 @@ func TestWaitForResources(t *testing.T) {
 
 type setupBuildPodTestDef struct {
 	RunnerConfig             common.RunnerConfig
-	Variables                []common.JobVariable
-	Credentials              []common.Credentials
+	Variables                []spec.Variable
+	Credentials              []spec.Credentials
 	Options                  *kubernetesOptions
 	InitContainers           []api.Container
 	SetHTTPPutResponse       func() (*http.Response, error)
@@ -3948,7 +3949,7 @@ func TestSetupBuildPod(t *testing.T) {
 				}
 				containsLabels(t, pod.ObjectMeta.Labels, expectedLabels)
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: "test", Value: "sometestvar"},
 			},
 		},
@@ -3975,7 +3976,7 @@ func TestSetupBuildPod(t *testing.T) {
 				}
 				containsLabels(t, pod.ObjectMeta.Labels, expectedLabels)
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: "test", Value: "sometestvar"},
 				{Key: "KUBERNETES_POD_LABELS_1", Value: "another=newlabel"},
 				{Key: "KUBERNETES_POD_LABELS_2", Value: "another2=$test"},
@@ -3995,7 +3996,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: "KUBERNETES_POD_LABELS_1", Value: "manager.runner.gitlab.com/bar=bar"},
 				{Key: "KUBERNETES_POD_LABELS_2", Value: "manager.runner.gitlab.com=ohno"},
 			},
@@ -4024,7 +4025,7 @@ func TestSetupBuildPod(t *testing.T) {
 				e.Build.JobInfo.ProjectName = "some-project-name"
 				e.Build.JobInfo.ProjectID = 42
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: "CI_PROJECT_NAMESPACE_ID", Value: "123"},
 				{Key: "CI_PROJECT_NAMESPACE", Value: "some-namespace"},
 				{Key: "CI_PROJECT_ROOT_NAMESPACE", Value: "some-root-namespace"},
@@ -4071,7 +4072,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"project.runner.gitlab.com/id":     "0",
 				}, pod.ObjectMeta.Annotations)
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: "test", Value: "sometestvar"},
 			},
 		},
@@ -4188,7 +4189,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: "KUBERNETES_NODE_TOLERATIONS_1", Value: "node-role.kubernetes.io/master:NoSchedule", Public: true},
 				{Key: "KUBERNETES_NODE_TOLERATIONS_2", Value: "custom.toleration=value:NoSchedule", Public: true},
 				{Key: "KUBERNETES_NODE_TOLERATIONS_3", Value: "empty.value=:PreferNoSchedule", Public: true},
@@ -4235,11 +4236,11 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name:       "test-image",
 					Entrypoint: []string{"/init", "run"},
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name:       "test-service",
 						Entrypoint: []string{"/init", "run"},
@@ -4252,7 +4253,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"svc-2": {
 						Name:    "test-service-3",
 						Command: []string{"application", "--debug"},
-						Variables: []common.JobVariable{
+						Variables: []spec.Variable{
 							{
 								Key:   "SERVICE_VAR",
 								Value: "SERVICE_VAR_VALUE",
@@ -4265,7 +4266,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: "BUILD_VAR", Value: "BUILD_VAR_VALUE", Public: true},
 				{Key: "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR", Value: "true", Public: true},
 			},
@@ -4323,11 +4324,11 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name:       "test-image",
 					Entrypoint: []string{"/init", "run"},
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name:       "test-service",
 						Entrypoint: []string{"/init", "run"},
@@ -4340,7 +4341,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"svc-2": {
 						Name:    "test-service-3",
 						Command: []string{"application", "--debug"},
-						Variables: []common.JobVariable{
+						Variables: []spec.Variable{
 							{
 								Key:   "SERVICE_VAR",
 								Value: "SERVICE_VAR_VALUE",
@@ -4353,7 +4354,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: "BUILD_VAR", Value: "BUILD_VAR_VALUE", Public: true},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
@@ -4410,18 +4411,18 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
-					Ports: []common.Port{
+					Ports: []spec.Port{
 						{
 							Number: 80,
 						},
 					},
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name: "test-service",
-						Ports: []common.Port{
+						Ports: []spec.Port{
 							{
 								Number: 82,
 							},
@@ -4432,7 +4433,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 					"svc-1": {
 						Name: "test-service2",
-						Ports: []common.Port{
+						Ports: []spec.Port{
 							{
 								Number: 85,
 							},
@@ -4528,9 +4529,9 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
-					Ports: []common.Port{
+					Ports: []spec.Port{
 						{
 							Number: 80,
 						},
@@ -4553,18 +4554,18 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
-					Ports: []common.Port{
+					Ports: []spec.Port{
 						{
 							Number: 80,
 						},
 					},
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name: "test-service",
-						Ports: []common.Port{
+						Ports: []spec.Port{
 							{
 								Number: 82,
 							},
@@ -4587,14 +4588,14 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"custom-name": {
 						Name:  "test-service",
 						Alias: "custom-name",
-						Ports: []common.Port{
+						Ports: []spec.Port{
 							{
 								Number: 82,
 							},
@@ -4618,19 +4619,19 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
-					Ports: []common.Port{
+					Ports: []spec.Port{
 						{
 							Number: 80,
 						},
 					},
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name:  "test-service",
 						Alias: "custom_name",
-						Ports: []common.Port{
+						Ports: []spec.Port{
 							{
 								Number:   81,
 								Name:     "custom_port_name",
@@ -4640,7 +4641,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 					"svc-1": {
 						Name: "test-service2",
-						Ports: []common.Port{
+						Ports: []spec.Port{
 							{
 								Number: 82,
 							},
@@ -4676,14 +4677,14 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"service": {
 						Name:  "test-service",
 						Alias: "service,name-.non-compat!ble",
-						Ports: []common.Port{
+						Ports: []spec.Port{
 							{
 								Number:   81,
 								Name:     "port,name-.non-compat!ble",
@@ -4730,10 +4731,10 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name:    "test-service-0",
 						Command: []string{"application", "--debug"},
@@ -4777,7 +4778,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[4].Command)
 				assert.Equal(t, []string{"argument1", "argument2"}, pod.Spec.Containers[4].Args)
 			},
-			Variables: []common.JobVariable{
+			Variables: []spec.Variable{
 				{Key: "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR", Value: "true", Public: true},
 			},
 		},
@@ -4790,10 +4791,10 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name:    "test-service-0",
 						Command: []string{"application", "--debug"},
@@ -5127,7 +5128,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-alias": {
 						Name:  "test-service",
 						Alias: "svc-alias",
@@ -5137,7 +5138,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 					"svc-1": {
 						Name: "service-with-port:dind",
-						Ports: []common.Port{{
+						Ports: []spec.Port{{
 							Number:   0,
 							Protocol: "",
 							Name:     "",
@@ -5170,7 +5171,7 @@ func TestSetupBuildPod(t *testing.T) {
 		},
 		"ignores non RFC1123 aliases": {
 			Options: &kubernetesOptions{
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name:  "test-service",
 						Alias: "INVALID_ALIAS",
@@ -5208,7 +5209,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name:  "test-service",
 						Alias: "alias",
@@ -5227,7 +5228,7 @@ func TestSetupBuildPod(t *testing.T) {
 		},
 		"check host aliases with non kubernetes version error": {
 			Options: &kubernetesOptions{
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name:  "test-service",
 						Alias: "alias",
@@ -5245,7 +5246,7 @@ func TestSetupBuildPod(t *testing.T) {
 		},
 		"check host aliases with kubernetes version error": {
 			Options: &kubernetesOptions{
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name:  "test-service",
 						Alias: "alias",
@@ -5347,7 +5348,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name:    "test-service-0",
 						Command: []string{"application", "--debug"},
@@ -5518,18 +5519,18 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
-					Ports: []common.Port{
+					Ports: []spec.Port{
 						{
 							Number: 80,
 						},
 					},
 				},
-				Services: map[string]*common.Image{
+				Services: map[string]*spec.Image{
 					"svc-0": {
 						Name: "test-service",
-						Ports: []common.Port{
+						Ports: []spec.Port{
 							{
 								Number: 82,
 							},
@@ -5540,7 +5541,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 					"svc-1": {
 						Name: "test-service2",
-						Ports: []common.Port{
+						Ports: []spec.Port{
 							{
 								Number: 85,
 							},
@@ -5569,7 +5570,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			Credentials: []common.Credentials{
+			Credentials: []spec.Credentials{
 				{
 					Type:     "registry",
 					URL:      "http://example.com",
@@ -5578,9 +5579,9 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
-					Ports: []common.Port{
+					Ports: []spec.Port{
 						{
 							Number: 80,
 						},
@@ -5605,7 +5606,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			Credentials: []common.Credentials{
+			Credentials: []spec.Credentials{
 				{
 					Type:     "registry",
 					URL:      "http://example.com",
@@ -5614,9 +5615,9 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Options: &kubernetesOptions{
-				Image: common.Image{
+				Image: spec.Image{
 					Name: "test-image",
-					Ports: []common.Port{
+					Ports: []spec.Port{
 						{
 							Number: 80,
 						},
@@ -5810,12 +5811,12 @@ containers:
 
 			vars := test.Variables
 			if vars == nil {
-				vars = []common.JobVariable{}
+				vars = []spec.Variable{}
 			}
 
 			creds := test.Credentials
 			if creds == nil {
-				creds = []common.Credentials{}
+				creds = []spec.Credentials{}
 			}
 
 			options := test.Options
@@ -5850,7 +5851,7 @@ containers:
 			ex.AbstractExecutor.Config = test.RunnerConfig
 			ex.AbstractExecutor.BuildShell = &common.ShellConfiguration{}
 			ex.AbstractExecutor.Build = &common.Build{
-				JobResponse: common.JobResponse{
+				Job: spec.Job{
 					Variables:   vars,
 					Credentials: creds,
 				},
@@ -5918,7 +5919,7 @@ func TestPodWatcherSetup(t *testing.T) {
 	}
 
 	build := &common.Build{
-		JobResponse: common.JobResponse{},
+		Job: spec.Job{},
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Kubernetes: &common.KubernetesConfig{
@@ -6761,9 +6762,9 @@ func TestGetContainerInfo(t *testing.T) {
 	}
 }
 
-func setupExecutor(shell string, successfulResponse common.JobResponse) *executor {
+func setupExecutor(shell string, successfulResponse spec.Job) *executor {
 	build := &common.Build{
-		JobResponse: successfulResponse,
+		Job: successfulResponse,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: common.ExecutorKubernetes,
@@ -7383,10 +7384,10 @@ func TestInitBuildUidGidCollectorSecurityContext(t *testing.T) {
 			executor.Config.Kubernetes.AllowedUsers = tt.allowedUsers
 			executor.Config.Kubernetes.AllowedGroups = tt.allowedGroups
 			executor.options = &kubernetesOptions{
-				Image: common.Image{
-					ExecutorOptions: common.ImageExecutorOptions{
-						Kubernetes: common.ImageKubernetesOptions{
-							User: common.StringOrInt64(tt.jobUser),
+				Image: spec.Image{
+					ExecutorOptions: spec.ImageExecutorOptions{
+						Kubernetes: spec.ImageKubernetesOptions{
+							User: spec.StringOrInt64(tt.jobUser),
 						},
 					},
 				},
@@ -7595,11 +7596,11 @@ func Test_Executor_captureServiceContainersLogs(t *testing.T) {
 		logs.Reset()
 		t.Run(name, func(t *testing.T) {
 			e.Build = &common.Build{}
-			e.Build.Services = common.Services{
+			e.Build.Services = spec.Services{
 				{Name: "postgres", Alias: "db"},
 				{Name: "redis:latest", Alias: "cache"},
 			}
-			e.Build.Variables = common.JobVariables{
+			e.Build.Variables = spec.Variables{
 				{Key: "CI_DEBUG_SERVICES", Value: tt.debugServicePolicy, Public: true},
 			}
 
@@ -7917,7 +7918,7 @@ func TestContainerPullPolicies(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		Services            common.Services
+		Services            spec.Services
 		ServicesFromConfig  []common.Service
 		AllowedPullPolicies []common.DockerPullPolicy
 		DefaultPullPolicies common.StringOrArray
@@ -7926,11 +7927,11 @@ func TestContainerPullPolicies(t *testing.T) {
 	}{
 		"with explicitly all pull policies enabled and services": {
 			AllowedPullPolicies: allPullPolicies,
-			Services: common.Services{
+			Services: spec.Services{
 				{Name: "withNone"},
-				{Name: "withAlways", PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways}},
-				{Name: "withINP", PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent}},
-				{Name: "withNever", PullPolicies: []common.DockerPullPolicy{common.PullPolicyNever}},
+				{Name: "withAlways", PullPolicies: []spec.PullPolicy{common.PullPolicyAlways}},
+				{Name: "withINP", PullPolicies: []spec.PullPolicy{common.PullPolicyIfNotPresent}},
+				{Name: "withNever", PullPolicies: []spec.PullPolicy{common.PullPolicyNever}},
 			},
 			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
 				"build":  api.PullPolicy(""),
@@ -7950,9 +7951,9 @@ func TestContainerPullPolicies(t *testing.T) {
 		},
 		"with allowed pull policies from build container pull policy": {
 			DefaultPullPolicies: common.StringOrArray{"never", "always"},
-			Services: common.Services{
+			Services: spec.Services{
 				{Name: "foo"},
-				{Name: "bar", PullPolicies: []common.DockerPullPolicy{"always"}},
+				{Name: "bar", PullPolicies: []spec.PullPolicy{"always"}},
 			},
 			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
 				"build":  api.PullNever,
@@ -7962,7 +7963,7 @@ func TestContainerPullPolicies(t *testing.T) {
 			},
 		},
 		"with nothing re pull policies set": {
-			Services: common.Services{
+			Services: spec.Services{
 				{Name: "foo"},
 			},
 			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
@@ -7976,8 +7977,8 @@ func TestContainerPullPolicies(t *testing.T) {
 			ServicesFromConfig: []common.Service{
 				{Name: "from-toml"},
 			},
-			Services: common.Services{
-				{Name: "from-yaml-0", PullPolicies: []common.DockerPullPolicy{"if-not-present"}},
+			Services: spec.Services{
+				{Name: "from-yaml-0", PullPolicies: []spec.PullPolicy{"if-not-present"}},
 				{Name: "from-yaml-1"},
 			},
 			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
@@ -8008,7 +8009,7 @@ func TestContainerPullPolicies(t *testing.T) {
 			}
 
 			build := &common.Build{
-				JobResponse: common.JobResponse{
+				Job: spec.Job{
 					Services: tc.Services,
 				},
 				Runner: &common.RunnerConfig{
@@ -8074,9 +8075,9 @@ func TestNoContainerEnvDups(t *testing.T) {
 	fakeKubeClient := testclient.NewClientset()
 
 	build := &common.Build{
-		JobResponse: common.JobResponse{
-			Variables: common.JobVariables{
-				common.JobVariable{Key: varName, Value: varValPipeline, Public: true},
+		Job: spec.Job{
+			Variables: spec.Variables{
+				spec.Variable{Key: varName, Value: varValPipeline, Public: true},
 			},
 		},
 		Runner: &common.RunnerConfig{

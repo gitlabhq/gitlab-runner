@@ -7,29 +7,29 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/azure_key_vault/service"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
 )
 
 func TestResolver_Name(t *testing.T) {
-	r := newResolver(common.Secret{})
+	r := newResolver(spec.Secret{})
 	assert.Equal(t, resolverName, r.Name())
 }
 
 func TestResolver_IsSupported(t *testing.T) {
 	tests := map[string]struct {
-		secret        common.Secret
+		secret        spec.Secret
 		expectedVault bool
 	}{
 		"supported secret": {
-			secret: common.Secret{
-				AzureKeyVault: &common.AzureKeyVaultSecret{},
+			secret: spec.Secret{
+				AzureKeyVault: &spec.AzureKeyVaultSecret{},
 			},
 			expectedVault: true,
 		},
 		"unsupported secret": {
-			secret:        common.Secret{},
+			secret:        spec.Secret{},
 			expectedVault: false,
 		},
 	}
@@ -43,11 +43,11 @@ func TestResolver_IsSupported(t *testing.T) {
 }
 
 func TestResolver_Resolve(t *testing.T) {
-	secret := common.Secret{
-		AzureKeyVault: &common.AzureKeyVaultSecret{
+	secret := spec.Secret{
+		AzureKeyVault: &spec.AzureKeyVaultSecret{
 			Name:    "test",
 			Version: "version",
-			Server: common.AzureKeyVaultServer{
+			Server: spec.AzureKeyVaultServer{
 				ClientID: "test_url",
 				TenantID: "test_namespace",
 				JWT:      "jwt",
@@ -57,7 +57,7 @@ func TestResolver_Resolve(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		secret                    common.Secret
+		secret                    spec.Secret
 		vaultServiceCreationError error
 		assertVaultServiceMock    func(s *service.MockAzureKeyVault)
 		expectedValue             string
@@ -103,7 +103,7 @@ func TestResolver_Resolve(t *testing.T) {
 			defer func() {
 				newVaultService = oldNewVaultService
 			}()
-			newVaultService = func(server common.AzureKeyVaultServer) (service.AzureKeyVault, error) {
+			newVaultService = func(server spec.AzureKeyVaultServer) (service.AzureKeyVault, error) {
 				assert.Equal(t, tt.secret.AzureKeyVault.Server, server)
 				return serviceMock, tt.vaultServiceCreationError
 			}

@@ -10,13 +10,14 @@ import (
 	"github.com/docker/docker/api/types/image"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/pull_policies"
 )
 
 type Manager interface {
-	GetDockerImage(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy,
+	GetDockerImage(imageName string, options spec.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy,
 	) (*image.InspectResponse, error)
 }
 
@@ -24,7 +25,7 @@ type ManagerConfig struct {
 	DockerConfig *common.DockerConfig
 	AuthConfig   string
 	ShellUser    string
-	Credentials  []common.Credentials
+	Credentials  []spec.Credentials
 }
 
 type pullLogger interface {
@@ -63,7 +64,7 @@ func NewManager(
 }
 
 func (m *manager) GetDockerImage(
-	imageName string, options common.ImageDockerOptions,
+	imageName string, options spec.ImageDockerOptions,
 	imagePullPolicies []common.DockerPullPolicy,
 ) (*image.InspectResponse, error) {
 	pullPolicies, err := m.getPullPolicies(imagePullPolicies)
@@ -142,7 +143,7 @@ func (m *manager) markImageAsUsed(imageName string, image *image.InspectResponse
 }
 
 func (m *manager) getImageUsingPullPolicy(
-	imageName string, options common.ImageDockerOptions,
+	imageName string, options spec.ImageDockerOptions,
 	pullPolicy common.DockerPullPolicy,
 ) (*image.InspectResponse, error) {
 	m.logger.Debugln("Looking for image", imageName, "...")
@@ -207,7 +208,7 @@ func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, 
 	return authConfig, nil
 }
 
-func (m *manager) pullDockerImage(imageName string, options common.ImageDockerOptions, ac *cli.AuthConfig) (*image.InspectResponse, error) {
+func (m *manager) pullDockerImage(imageName string, options spec.ImageDockerOptions, ac *cli.AuthConfig) (*image.InspectResponse, error) {
 	if m.onPullImageHookFunc != nil {
 		m.onPullImageHookFunc()
 	}

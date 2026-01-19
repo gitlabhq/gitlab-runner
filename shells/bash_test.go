@@ -9,7 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func TestBash_CommandShellEscapes(t *testing.T) {
@@ -184,34 +186,34 @@ func Test_BashWriter_cleanPath(t *testing.T) {
 
 func Test_BashWriter_Variable(t *testing.T) {
 	tests := map[string]struct {
-		variable common.JobVariable
+		variable spec.Variable
 		writer   BashWriter
 		want     string
 	}{
 		"file var, relative path": {
-			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			variable: spec.Variable{Key: "KEY", Value: "the secret", File: true},
 			writer:   BashWriter{TemporaryPath: "foo/bar"},
 			// nolint:lll
 			want: "mkdir -p \"foo/bar\"\nprintf '%s' $'the secret' > \"$PWD/foo/bar/KEY\"\nexport KEY=\"$PWD/foo/bar/KEY\"\n",
 		},
 		"file var, absolute path": {
-			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			variable: spec.Variable{Key: "KEY", Value: "the secret", File: true},
 			writer:   BashWriter{TemporaryPath: "/foo/bar"},
 			// nolint:lll
 			want: "mkdir -p \"/foo/bar\"\nprintf '%s' $'the secret' > \"/foo/bar/KEY\"\nexport KEY=\"/foo/bar/KEY\"\n",
 		},
 		"tmp file var, relative path": {
-			variable: common.JobVariable{Key: "KEY", Value: "foo/bar/KEY2"},
+			variable: spec.Variable{Key: "KEY", Value: "foo/bar/KEY2"},
 			writer:   BashWriter{TemporaryPath: "foo/bar"},
 			want:     "export KEY=$'$PWD/foo/bar/KEY2'\n",
 		},
 		"tmp file var, absolute path": {
-			variable: common.JobVariable{Key: "KEY", Value: "/foo/bar/KEY2"},
+			variable: spec.Variable{Key: "KEY", Value: "/foo/bar/KEY2"},
 			writer:   BashWriter{TemporaryPath: "/foo/bar"},
 			want:     "export KEY=/foo/bar/KEY2\n",
 		},
 		"regular var": {
-			variable: common.JobVariable{Key: "KEY", Value: "VALUE"},
+			variable: spec.Variable{Key: "KEY", Value: "VALUE"},
 			writer:   BashWriter{TemporaryPath: "/foo/bar"},
 			want:     "export KEY=VALUE\n",
 		},

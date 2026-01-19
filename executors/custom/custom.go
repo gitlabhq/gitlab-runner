@@ -14,6 +14,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/api"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
@@ -166,7 +167,7 @@ func (e *executor) createJobResponseFile() (string, error) {
 	defer func() { _ = file.Close() }()
 
 	encoder := json.NewEncoder(file)
-	err = encoder.Encode(e.Build.JobResponse)
+	err = encoder.Encode(e.Build.Job)
 	if err != nil {
 		return "", fmt.Errorf("encoding job response file: %w", err)
 	}
@@ -272,9 +273,9 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 	return commandFactory(ctx, opts.executable, opts.args, cmdOpts, options)
 }
 
-func (e *executor) getCIJobServicesEnv() common.JobVariable {
+func (e *executor) getCIJobServicesEnv() spec.Variable {
 	if len(e.Build.Services) == 0 {
-		return common.JobVariable{Key: "CI_JOB_SERVICES"}
+		return spec.Variable{Key: "CI_JOB_SERVICES"}
 	}
 
 	var services []jsonService
@@ -292,7 +293,7 @@ func (e *executor) getCIJobServicesEnv() common.JobVariable {
 		e.BuildLogger.Warningln("Unable to serialize CI_JOB_SERVICES json:", err)
 	}
 
-	return common.JobVariable{
+	return spec.Variable{
 		Key:   "CI_JOB_SERVICES",
 		Value: string(servicesSerialized),
 	}

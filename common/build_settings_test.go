@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 // For https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37386
@@ -17,7 +19,7 @@ func TestBuildVariablesAsFileType(t *testing.T) {
 
 	for name, isFileType := range tests {
 		t.Run(name, func(t *testing.T) {
-			vars := []JobVariable{
+			vars := []spec.Variable{
 				{Key: "DOCKER_AUTH_CONFIG", Value: "foobarbaz", File: isFileType},
 				{Key: "GIT_CLONE_PATH", Value: "/root/dir/foobarbaz", File: isFileType},
 				{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive", File: isFileType},

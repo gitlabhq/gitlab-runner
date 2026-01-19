@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
@@ -75,9 +76,9 @@ func (e *executor) createServices() error {
 	return nil
 }
 
-func (e *executor) getServicesDefinitions() (common.Services, error) {
+func (e *executor) getServicesDefinitions() (spec.Services, error) {
 	var internalServiceImages []string
-	serviceDefinitions := common.Services{}
+	serviceDefinitions := spec.Services{}
 
 	for _, service := range e.Config.Docker.GetExpandedServices(e.Build.GetAllVariables()) {
 		internalServiceImages = append(internalServiceImages, service.Name)
@@ -124,7 +125,7 @@ func (e *executor) waitForServices() {
 
 func (e *executor) createFromServiceDefinition(
 	serviceIndex int,
-	serviceDefinition common.Image,
+	serviceDefinition spec.Image,
 	linksMap map[string]*serviceInfo,
 ) error {
 	var container *serviceInfo

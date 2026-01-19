@@ -1,8 +1,7 @@
-package common
+package spec
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -11,33 +10,23 @@ import (
 	"strings"
 )
 
-type JobVariable struct {
-	Key      string `json:"key"`
-	Value    string `json:"value"`
-	Public   bool   `json:"public"`
-	Internal bool   `json:"-"`
-	File     bool   `json:"file"`
-	Masked   bool   `json:"masked"`
-	Raw      bool   `json:"raw"`
-}
+type Variables []Variable
 
-type JobVariables []JobVariable
-
-func (b JobVariable) String() string {
+func (b Variable) String() string {
 	return fmt.Sprintf("%s=%s", b.Key, b.Value)
 }
 
-const tempProjectDirVariableKey = "RUNNER_TEMP_PROJECT_DIR"
+const TempProjectDirVariableKey = "RUNNER_TEMP_PROJECT_DIR"
 
 // tmpFile will return a canonical temp file path by prepending the job
 // variables Key with the value of `RUNNER_TEMP_PROJECT_DIR` (typically the
 // build's temporary directory). The returned path must be further expanded
 // by/for each shell that uses it.
-func (b JobVariables) tmpFile(s string) string {
-	return path.Join(b.Value(tempProjectDirVariableKey), s)
+func (b Variables) tmpFile(s string) string {
+	return path.Join(b.Value(TempProjectDirVariableKey), s)
 }
 
-func (b JobVariables) PublicOrInternal() (variables JobVariables) {
+func (b Variables) PublicOrInternal() (variables Variables) {
 	for _, variable := range b {
 		if variable.Public || variable.Internal {
 			variables = append(variables, variable)
@@ -46,7 +35,7 @@ func (b JobVariables) PublicOrInternal() (variables JobVariables) {
 	return variables
 }
 
-func (b JobVariables) StringList() (variables []string) {
+func (b Variables) StringList() (variables []string) {
 	for _, variable := range b {
 		// For file-type secrets, substitute the path to the secret for the secret
 		// value.
@@ -63,25 +52,25 @@ func (b JobVariables) StringList() (variables []string) {
 
 // Get returns the value of a variable, or if a file type variable, the
 // pathname to the saved file containing the value,
-func (b JobVariables) Get(key string) string {
+func (b Variables) Get(key string) string {
 	return b.value(key, true)
 }
 
 // Set sets newJobVars on the JobVariables, replacing all existing variables with the same key.
 // If newJobVars holds variables with the same key, only the last one is set.
-func (b *JobVariables) Set(newJobVars ...JobVariable) {
+func (b *Variables) Set(newJobVars ...Variable) {
 	if len(newJobVars) < 1 {
 		return
 	}
 
-	newVarsByKey := make(map[string]JobVariable, len(newJobVars))
+	newVarsByKey := make(map[string]Variable, len(newJobVars))
 
 	for _, v := range newJobVars {
 		// for multiple newJobVars with the same key, only keep the last one
 		newVarsByKey[v.Key] = v
 	}
 
-	*b = slices.DeleteFunc(*b, func(v JobVariable) bool {
+	*b = slices.DeleteFunc(*b, func(v Variable) bool {
 		_, exists := newVarsByKey[v.Key]
 		return exists
 	})
@@ -94,7 +83,7 @@ func (b *JobVariables) Set(newJobVars ...JobVariable) {
 // Value is similar to Get(), but always returns the key value, regardless
 // of the variable type. File variables therefore return the file contents
 // and not the path name of the file.
-func (b JobVariables) Value(key string) string {
+func (b Variables) Value(key string) string {
 	return b.value(key, false)
 }
 
@@ -102,7 +91,7 @@ func (b JobVariables) Value(key string) string {
 //
 // If the variable type is 'file' and the 'pathnames' parameter is true, then
 // the pathname of the file containing the contents is returned instead.
-func (b JobVariables) value(key string, pathnames bool) string {
+func (b Variables) value(key string, pathnames bool) string {
 	switch key {
 	case "$":
 		return key
@@ -123,7 +112,7 @@ func (b JobVariables) value(key string, pathnames bool) string {
 // Bool tries to get the boolean value of a variable
 // "true" and "false" strings are parsed as well as numeric values
 // where only the value of "1" is considered to be true
-func (b JobVariables) Bool(key string) bool {
+func (b Variables) Bool(key string) bool {
 	value := b.Get(key)
 	parsedBool, err := strconv.ParseBool(strings.ToLower(value))
 	if err == nil {
@@ -139,7 +128,7 @@ func (b JobVariables) Bool(key string) bool {
 }
 
 // OverwriteKey overwrites an existing key with a new variable.
-func (b JobVariables) OverwriteKey(key string, variable JobVariable) {
+func (b Variables) OverwriteKey(key string, variable Variable) {
 	for i, v := range b {
 		if v.Key == key {
 			b[i] = variable
@@ -148,12 +137,12 @@ func (b JobVariables) OverwriteKey(key string, variable JobVariable) {
 	}
 }
 
-func (b JobVariables) ExpandValue(value string) string {
+func (b Variables) ExpandValue(value string) string {
 	return os.Expand(value, b.Get)
 }
 
-func (b JobVariables) Expand() JobVariables {
-	var variables JobVariables
+func (b Variables) Expand() Variables {
+	var variables Variables
 	for _, variable := range b {
 		if !variable.Raw {
 			variable.Value = b.ExpandValue(variable.Value)
@@ -164,7 +153,7 @@ func (b JobVariables) Expand() JobVariables {
 	return variables
 }
 
-func (b JobVariables) Masked() (masked []string) {
+func (b Variables) Masked() (masked []string) {
 	for _, variable := range b {
 		if variable.Masked {
 			masked = append(masked, variable.Value)
@@ -177,7 +166,7 @@ func (b JobVariables) Masked() (masked []string) {
 // If keepOriginal is true, the first duplicate JobVariable (ie. the original value) is kept, else the last one (ie. the
 // final overridden value).
 // The order of variables is not preserved.
-func (b JobVariables) Dedup(keepOriginal bool) JobVariables {
+func (b Variables) Dedup(keepOriginal bool) Variables {
 	clone := slices.Clone(b)
 
 	if !keepOriginal {
@@ -187,24 +176,11 @@ func (b JobVariables) Dedup(keepOriginal bool) JobVariables {
 		slices.Reverse(clone)
 	}
 
-	slices.SortStableFunc(clone, func(a, b JobVariable) int {
+	slices.SortStableFunc(clone, func(a, b Variable) int {
 		return cmp.Compare(a.Key, b.Key)
 	})
 
-	return slices.Clip(slices.CompactFunc(clone, func(a, b JobVariable) bool {
+	return slices.Clip(slices.CompactFunc(clone, func(a, b Variable) bool {
 		return a.Key == b.Key
 	}))
-}
-
-func ParseVariable(text string) (variable JobVariable, err error) {
-	keyValue := strings.SplitN(text, "=", 2)
-	if len(keyValue) != 2 {
-		err = errors.New("missing =")
-		return
-	}
-	variable = JobVariable{
-		Key:   keyValue[0],
-		Value: keyValue[1],
-	}
-	return
 }

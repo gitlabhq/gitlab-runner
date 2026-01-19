@@ -33,6 +33,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/prebuilt"
@@ -225,7 +226,7 @@ func TestHelperImageWithVariable(t *testing.T) {
 
 	runnerImageTag := "gitlab/gitlab-runner:" + common.AppVersion.Revision
 
-	p.On("GetDockerImage", runnerImageTag, common.ImageDockerOptions{}, []common.DockerPullPolicy(nil)).
+	p.On("GetDockerImage", runnerImageTag, spec.ImageDockerOptions{}, []common.DockerPullPolicy(nil)).
 		Return(&image.InspectResponse{ID: "helper-image"}, nil).
 		Once()
 
@@ -302,7 +303,7 @@ func TestPrepareBuildsDir(t *testing.T) {
 			}
 
 			build := &common.Build{}
-			build.Variables = common.JobVariables{}
+			build.Variables = spec.Variables{}
 
 			options := common.ExecutorPrepareOptions{
 				Config: &c,
@@ -399,11 +400,11 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) *executor {
 		Build: &common.Build{
 			ProjectRunnerID: 0,
 			Runner:          &c,
-			JobResponse: common.JobResponse{
-				JobInfo: common.JobInfo{
+			Job: spec.Job{
+				JobInfo: spec.JobInfo{
 					ProjectID: 0,
 				},
-				GitInfo: common.GitInfo{
+				GitInfo: spec.GitInfo{
 					RepoURL: "https://gitlab.example.com/group/project.git",
 				},
 			},
@@ -419,7 +420,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) *executor {
 		OSType: helperimage.OSTypeLinux,
 	}
 
-	e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+	e.Build.Variables = append(e.Build.Variables, spec.Variable{
 		Key:   "GIT_STRATEGY",
 		Value: test.gitStrategy,
 	})
@@ -722,7 +723,7 @@ func TestCreateDependencies(t *testing.T) {
 		buildsDir: "/builds",
 		volumes:   []string{"/volume"},
 		adjustConfiguration: func(e *executor) {
-			e.Build.Services = append(e.Build.Services, common.Image{
+			e.Build.Services = append(e.Build.Services, spec.Image{
 				Name: "alpine:latest",
 			})
 
@@ -885,7 +886,7 @@ func testDockerConfigurationWithJobContainer(
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	imageConfig := common.Image{Name: "alpine"}
+	imageConfig := spec.Image{Name: "alpine"}
 	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
 	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.NoError(t, err, "Should create container without errors")
@@ -907,7 +908,7 @@ func testDockerConfigurationWithPredefinedContainer(
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	imageConfig := common.Image{Name: "alpine"}
+	imageConfig := spec.Image{Name: "alpine"}
 	cfgTor := newDefaultContainerConfigurator(e, predefinedContainerType, imageConfig, []string{"/bin/sh"}, []string{})
 	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.NoError(t, err, "Should create container without errors")
@@ -1020,7 +1021,7 @@ func TestDockerServiceContainerConfigIncludesDockerLabels(t *testing.T) {
 	}
 	_, executor := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	containerConfig := executor.createServiceContainerConfig("postgres", "15-alpine", "abc123def456", common.Image{Name: "postgres:15-alpine"})
+	containerConfig := executor.createServiceContainerConfig("postgres", "15-alpine", "abc123def456", spec.Image{Name: "postgres:15-alpine"})
 
 	expectedLabels := map[string]string{
 		// default labels
@@ -1901,11 +1902,11 @@ func getExecutorForNetworksTests(t *testing.T, test networksTestCase) *executor 
 			Build: &common.Build{
 				ProjectRunnerID: 0,
 				Runner:          &c,
-				JobResponse: common.JobResponse{
-					JobInfo: common.JobInfo{
+				Job: spec.Job{
+					JobInfo: spec.JobInfo{
 						ProjectID: 0,
 					},
-					GitInfo: common.GitInfo{
+					GitInfo: spec.GitInfo{
 						RepoURL: "https://gitlab.example.com/group/project.git",
 					},
 				},
@@ -1923,7 +1924,7 @@ func getExecutorForNetworksTests(t *testing.T, test networksTestCase) *executor 
 	}
 
 	e.Context = t.Context()
-	e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+	e.Build.Variables = append(e.Build.Variables, spec.Variable{
 		Key:   featureflags.NetworkPerBuild,
 		Value: test.networkPerBuild,
 	})
@@ -2032,7 +2033,7 @@ func TestLocalHelperImage(t *testing.T) {
 	createFakePrebuiltImages(t, "x86_64")
 
 	tests := map[string]struct {
-		jobVariables     common.JobVariables
+		jobVariables     spec.Variables
 		config           helperimage.Config
 		clientAssertions func(*docker.MockClient)
 		expectedImage    *image.InspectResponse
@@ -2244,7 +2245,7 @@ func TestLocalHelperImage(t *testing.T) {
 			e := &executor{
 				AbstractExecutor: executors.AbstractExecutor{
 					Build: &common.Build{
-						JobResponse: common.JobResponse{
+						Job: spec.Job{
 							Variables: tt.jobVariables,
 						},
 						Runner: &common.RunnerConfig{},
@@ -2355,9 +2356,9 @@ func TestExpandingDockerImageWithImagePullPolicyAlways(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		Memory: "42m",
 	}
-	imageConfig := common.Image{
+	imageConfig := spec.Image{
 		Name:         "alpine",
-		PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
+		PullPolicies: []spec.PullPolicy{common.PullPolicyAlways},
 	}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
@@ -2384,9 +2385,9 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		Memory: "42m",
 	}
-	imageConfig := common.Image{
+	imageConfig := spec.Image{
 		Name:         "alpine",
-		PullPolicies: []common.DockerPullPolicy{common.PullPolicyNever},
+		PullPolicies: []spec.PullPolicy{common.PullPolicyNever},
 	}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
@@ -2422,7 +2423,7 @@ func TestDockerImageWithVariablePlatform(t *testing.T) {
 		p := pull.NewMockManager(t)
 
 		// Ensure that the pull manager gets called with the expanded platform
-		p.On("GetDockerImage", mock.Anything, common.ImageDockerOptions{Platform: platform}, mock.Anything).
+		p.On("GetDockerImage", mock.Anything, spec.ImageDockerOptions{Platform: platform}, mock.Anything).
 			Return(nil, nil).
 			Once()
 
@@ -2431,16 +2432,17 @@ func TestDockerImageWithVariablePlatform(t *testing.T) {
 
 		e.Config.Docker = &common.DockerConfig{}
 
-		imageConfig := common.Image{
+		imageConfig := spec.Image{
 			Name: "alpine",
-			ExecutorOptions: common.ImageExecutorOptions{
-				Docker: common.ImageDockerOptions{
+			ExecutorOptions: spec.ImageExecutorOptions{
+				Docker: spec.ImageDockerOptions{
 					Platform: "${PLATFORM}",
 				},
 			},
+			PullPolicies: []spec.PullPolicy{common.PullPolicyAlways},
 		}
 
-		e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+		e.Build.Variables = append(e.Build.Variables, spec.Variable{
 			Key:   "PLATFORM",
 			Value: platform,
 		})
@@ -2455,13 +2457,13 @@ func TestExpandingVolumeDestination(t *testing.T) {
 	executor := executorWithMockClient(dockerClient)
 
 	executor.Build = &common.Build{
-		JobResponse: common.JobResponse{
-			Variables: common.JobVariables{
-				common.JobVariable{Key: "JOB_VAR_1", Value: "1"},
-				common.JobVariable{Key: "JOB_VAR_2", Value: "2"},
-				common.JobVariable{Key: "COMBINED_VAR", Value: "${JOB_VAR_1}-${JOB_VAR_2}-3"},
+		Job: spec.Job{
+			Variables: spec.Variables{
+				spec.Variable{Key: "JOB_VAR_1", Value: "1"},
+				spec.Variable{Key: "JOB_VAR_2", Value: "2"},
+				spec.Variable{Key: "COMBINED_VAR", Value: "${JOB_VAR_1}-${JOB_VAR_2}-3"},
 			},
-			JobInfo: common.JobInfo{
+			JobInfo: spec.JobInfo{
 				ProjectID: 1234,
 			},
 		},
@@ -2539,7 +2541,7 @@ func TestExpandingVolumeDestination(t *testing.T) {
 
 func TestDockerImageWithUser(t *testing.T) {
 	tests := map[string]struct {
-		jobUser          common.StringOrInt64
+		jobUser          spec.StringOrInt64
 		runnerUser, want string
 		allowedUsers     []string
 		wantErr          bool
@@ -2566,10 +2568,10 @@ func TestDockerImageWithUser(t *testing.T) {
 				User:         tt.runnerUser,
 				AllowedUsers: tt.allowedUsers,
 			}
-			imageConfig := common.Image{
+			imageConfig := spec.Image{
 				Name: "alpine",
-				ExecutorOptions: common.ImageExecutorOptions{
-					Docker: common.ImageDockerOptions{
+				ExecutorOptions: spec.ImageExecutorOptions{
+					Docker: spec.ImageDockerOptions{
 						User: tt.jobUser,
 					},
 				},
@@ -2591,7 +2593,7 @@ func TestDockerImageWithUser(t *testing.T) {
 			c.On("ContainerInspect", mock.Anything, "abc").
 				Return(container.InspectResponse{}, nil).Maybe()
 
-			e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+			e.Build.Variables = append(e.Build.Variables, spec.Variable{
 				Key:   "TTUSER",
 				Value: tt.want,
 			})
@@ -2669,8 +2671,8 @@ func TestConnectEnvironment(t *testing.T) {
 	env := &env{}
 
 	build := &common.Build{
-		JobResponse: common.JobResponse{
-			Image: common.Image{
+		Job: spec.Job{
+			Image: spec.Image{
 				Name: "test",
 			},
 		},
@@ -2746,8 +2748,8 @@ func Test_bootstrap(t *testing.T) {
 				wantStage:     ExecutorStageBootstrap,
 				setup: func(vm *volumes.MockManager, c *docker.MockClient, b *common.Build) []string {
 					binds := make([]string, 1)
-					b.JobResponse.Run = "blablabla"
-					b.Variables = append(b.Variables, common.JobVariable{
+					b.Job.Run = "blablabla"
+					b.Variables = append(b.Variables, spec.Variable{
 						Key:   "FF_USE_NATIVE_STEPS",
 						Value: "true",
 					})
@@ -2991,7 +2993,7 @@ func testDockerConfigurationWithSlotCgroups(
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	imageConfig := common.Image{Name: "alpine"}
+	imageConfig := spec.Image{Name: "alpine"}
 	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
 	_, err = e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
 	assert.NoError(t, err, "Should create container without errors")

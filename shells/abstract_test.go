@@ -24,6 +24,7 @@ import (
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/test"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
@@ -82,8 +83,8 @@ func TestAbstractShell_guardGetSourcesScriptHooks(t *testing.T) {
 				mockShellWriter,
 				common.ShellScriptInfo{
 					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							Variables: common.JobVariables{
+						Job: spec.Job{
+							Variables: spec.Variables{
 								{Key: "GIT_STRATEGY", Value: string(tc.strategy)},
 								{Key: "GIT_CHECKOUT", Value: "false"},
 							},
@@ -103,11 +104,11 @@ func TestWriteGitSSLConfig(t *testing.T) {
 	shell := AbstractShell{}
 	build := &common.Build{
 		Runner: &common.RunnerConfig{},
-		JobResponse: common.JobResponse{
-			GitInfo: common.GitInfo{
+		Job: spec.Job{
+			GitInfo: spec.GitInfo{
 				RepoURL: "https://gitlab-ci-token:xxx@example.com:3443/project/repo.git",
 			},
-			TLSData: common.TLSData{
+			TLSData: spec.TLSData{
 				CAChain:  "CA_CHAIN",
 				AuthCert: "TLS_CERT",
 				AuthKey:  "TLS_KEY",
@@ -145,36 +146,36 @@ func TestWriteGitSSLConfig(t *testing.T) {
 	shell.writeGitSSLConfig(mockWriter, build, nil)
 }
 
-func getJobResponseWithMultipleArtifacts() common.JobResponse {
-	return common.JobResponse{
+func getJobResponseWithMultipleArtifacts() spec.Job {
+	return spec.Job{
 		ID:    1000,
 		Token: "token",
-		Artifacts: common.Artifacts{
-			common.Artifact{
+		Artifacts: spec.Artifacts{
+			spec.Artifact{
 				Paths: []string{"default"},
 			},
-			common.Artifact{
+			spec.Artifact{
 				Paths: []string{"on-success"},
-				When:  common.ArtifactWhenOnSuccess,
+				When:  spec.ArtifactWhenOnSuccess,
 			},
-			common.Artifact{
+			spec.Artifact{
 				Paths: []string{"on-failure"},
-				When:  common.ArtifactWhenOnFailure,
+				When:  spec.ArtifactWhenOnFailure,
 			},
-			common.Artifact{
+			spec.Artifact{
 				Paths: []string{"always"},
-				When:  common.ArtifactWhenAlways,
+				When:  spec.ArtifactWhenAlways,
 			},
-			common.Artifact{
+			spec.Artifact{
 				Paths:  []string{"zip-archive"},
-				When:   common.ArtifactWhenAlways,
-				Format: common.ArtifactFormatZip,
+				When:   spec.ArtifactWhenAlways,
+				Format: spec.ArtifactFormatZip,
 				Type:   "archive",
 			},
-			common.Artifact{
+			spec.Artifact{
 				Paths:  []string{"gzip-junit"},
-				When:   common.ArtifactWhenAlways,
-				Format: common.ArtifactFormatGzip,
+				When:   spec.ArtifactWhenAlways,
+				Format: spec.ArtifactFormatGzip,
 				Type:   "junit",
 			},
 		},
@@ -186,7 +187,7 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 
 	shell := AbstractShell{}
 	build := &common.Build{
-		JobResponse: getJobResponseWithMultipleArtifacts(),
+		Job: getJobResponseWithMultipleArtifacts(),
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
 				URL: gitlabURL,
@@ -257,7 +258,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 
 	shell := AbstractShell{}
 	build := &common.Build{
-		JobResponse: getJobResponseWithMultipleArtifacts(),
+		Job: getJobResponseWithMultipleArtifacts(),
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
 				URL: gitlabURL,
@@ -320,15 +321,15 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	shell := AbstractShell{}
 
 	build := &common.Build{
-		JobResponse: common.JobResponse{
+		Job: spec.Job{
 			ID:    1001,
 			Token: "token",
-			Artifacts: common.Artifacts{
-				common.Artifact{
+			Artifacts: spec.Artifacts{
+				spec.Artifact{
 					Paths:   []string{"include/**"},
 					Exclude: []string{"include/exclude/*"},
-					When:    common.ArtifactWhenAlways,
-					Format:  common.ArtifactFormatZip,
+					When:    spec.ArtifactWhenAlways,
+					Format:  spec.ArtifactFormatZip,
 					Type:    "archive",
 				},
 			},
@@ -370,47 +371,47 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func getJobResponseWithCachePaths() common.JobResponse {
-	return common.JobResponse{
+func getJobResponseWithCachePaths() spec.Job {
+	return spec.Job{
 		ID:    1000,
 		Token: "token",
-		JobInfo: common.JobInfo{
+		JobInfo: spec.JobInfo{
 			Name: "some-job-name",
 		},
-		GitInfo: common.GitInfo{
+		GitInfo: spec.GitInfo{
 			Ref: "some-git-ref",
 		},
-		Cache: common.Caches{
-			common.Cache{
+		Cache: spec.Caches{
+			spec.Cache{
 				Key:       "cache-key1",
 				Untracked: true,
-				Policy:    common.CachePolicyPush,
+				Policy:    spec.CachePolicyPush,
 				Paths:     []string{"vendor/"},
-				When:      common.CacheWhenOnSuccess,
+				When:      spec.CacheWhenOnSuccess,
 			},
-			common.Cache{
+			spec.Cache{
 				Key:    "cache-key1",
-				Policy: common.CachePolicyPush,
+				Policy: spec.CachePolicyPush,
 				Paths:  []string{"some/path1", "other/path2"},
-				When:   common.CacheWhenOnSuccess,
+				When:   spec.CacheWhenOnSuccess,
 			},
-			common.Cache{
+			spec.Cache{
 				Key:       "cache-key1",
 				Untracked: true,
-				Policy:    common.CachePolicyPush,
+				Policy:    spec.CachePolicyPush,
 				Paths:     []string{"when-on-failure"},
-				When:      common.CacheWhenOnFailure,
+				When:      spec.CacheWhenOnFailure,
 			},
-			common.Cache{
+			spec.Cache{
 				Key:    "cache-key1",
-				Policy: common.CachePolicyPush,
+				Policy: spec.CachePolicyPush,
 				Paths:  []string{"when-always"},
-				When:   common.CacheWhenAlways,
+				When:   spec.CacheWhenAlways,
 			},
-			common.Cache{
+			spec.Cache{
 				Key:   "", // this forces the default cache key, comprised of the job name & the git ref
 				Paths: []string{"unset-cache-key"},
-				When:  common.CacheWhenAlways,
+				When:  spec.CacheWhenAlways,
 			},
 		},
 	}
@@ -484,8 +485,8 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 					info := common.ShellScriptInfo{
 						RunnerCommand: "gitlab-runner-helper",
 						Build: &common.Build{
-							CacheDir:    "cache_dir",
-							JobResponse: getJobResponseWithCachePaths(),
+							CacheDir: "cache_dir",
+							Job:      getJobResponseWithCachePaths(),
 							Runner: &common.RunnerConfig{
 								RunnerSettings: common.RunnerSettings{
 									Cache: &common.CacheConfig{
@@ -501,7 +502,7 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 					}
 
 					mockWriter := NewMockShellWriter(t)
-					mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
+					mockWriter.On("Variable", mock.MatchedBy(func(v spec.Variable) bool {
 						return v.Key == "GITLAB_ENV"
 					})).Once()
 					mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
@@ -702,13 +703,13 @@ func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 								},
 							},
 						},
-						JobResponse: common.JobResponse{
-							GitInfo: common.GitInfo{
+						Job: spec.Job{
+							GitInfo: spec.GitInfo{
 								Depth:   tc.depth,
 								Ref:     tc.ref,
 								RepoURL: repoURI,
 							},
-							Variables: common.JobVariables{
+							Variables: spec.Variables{
 								{Key: "GIT_STRATEGY", Value: tc.gitStrategy},
 								{Key: "GIT_CLONE_EXTRA_FLAGS", Value: tc.cloneExtraArgs},
 							},
@@ -926,23 +927,23 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 					info := common.ShellScriptInfo{
 						Shell: shell,
 						Build: &common.Build{
-							JobResponse: common.JobResponse{
+							Job: spec.Job{
 								Token: "some-token",
-								Variables: common.JobVariables{
+								Variables: spec.Variables{
 									{Key: "GIT_STRATEGY", Value: string(tc.strategy)},
 									{Key: "GIT_CHECKOUT", Value: "false"},
 								},
-								GitInfo: common.GitInfo{
+								GitInfo: spec.GitInfo{
 									RepoURL: "https://repo-url/some/repo",
 								},
-								Hooks: common.Hooks{
+								Hooks: spec.Hooks{
 									{
-										Name:   common.HookPreGetSourcesScript,
-										Script: common.StepScript{"job payload", "pre_get_sources"},
+										Name:   spec.HookPreGetSourcesScript,
+										Script: spec.StepScript{"job payload", "pre_get_sources"},
 									},
 									{
-										Name:   common.HookPostGetSourcesScript,
-										Script: common.StepScript{"job payload", "post_get_sources"},
+										Name:   spec.HookPostGetSourcesScript,
+										Script: spec.StepScript{"job payload", "post_get_sources"},
 									},
 								},
 								JobRequestCorrelationID: "foobar",
@@ -1069,17 +1070,17 @@ func TestAbstractShell_writeCleanupBuildDirectoryScript(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			info := common.ShellScriptInfo{
 				Build: &common.Build{
-					JobResponse: common.JobResponse{
-						Variables: common.JobVariables{
-							common.JobVariable{
+					Job: spec.Job{
+						Variables: spec.Variables{
+							spec.Variable{
 								Key:   "GIT_STRATEGY",
 								Value: tc.gitStrategy,
 							},
-							common.JobVariable{
+							spec.Variable{
 								Key:   "GIT_CLEAN_FLAGS",
 								Value: tc.gitCleanFlags,
 							},
-							common.JobVariable{
+							spec.Variable{
 								Key:   "GIT_SUBMODULE_STRATEGY",
 								Value: tc.gitSubmoduleStrategy,
 							},
@@ -1134,9 +1135,9 @@ func TestGitCleanFlags(t *testing.T) {
 
 			build := &common.Build{
 				Runner: &common.RunnerConfig{},
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef},
-					Variables: common.JobVariables{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{Sha: dummySha, Ref: dummyRef},
+					Variables: spec.Variables{
 						{Key: "GIT_CLEAN_FLAGS", Value: test.value},
 					},
 				},
@@ -1198,9 +1199,9 @@ func TestGitCloneFlags(t *testing.T) {
 
 			build := &common.Build{
 				Runner: &common.RunnerConfig{},
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: test.depth, RepoURL: dummyRepoUrl},
-					Variables: common.JobVariables{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: test.depth, RepoURL: dummyRepoUrl},
+					Variables: spec.Variables{
 						{Key: "GIT_CLONE_EXTRA_FLAGS", Value: test.value},
 					},
 				},
@@ -1281,9 +1282,9 @@ func TestGitFetchFlags(t *testing.T) {
 
 			build := &common.Build{
 				Runner: &common.RunnerConfig{},
-				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: test.depth, RepoObjectFormat: test.objectFormat},
-					Variables: common.JobVariables{
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: test.depth, RepoObjectFormat: test.objectFormat},
+					Variables: spec.Variables{
 						{Key: "GIT_FETCH_EXTRA_FLAGS", Value: test.value},
 					},
 				},
@@ -1513,10 +1514,10 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					err := shell.writeSubmoduleUpdateCmd(
 						mockWriter,
 						&common.Build{
-							JobResponse: common.JobResponse{
-								GitInfo: common.GitInfo{Depth: tc.Depth},
+							Job: spec.Job{
+								GitInfo: spec.GitInfo{Depth: tc.Depth},
 								Token:   exampleJobToken,
-								Variables: common.JobVariables{
+								Variables: spec.Variables{
 									{Key: "GIT_SUBMODULE_UPDATE_FLAGS", Value: tc.GitSubmoduleUpdateFlags},
 									{Key: "GIT_CLEAN_FLAGS", Value: tc.GitCleanFlags},
 								},
@@ -1781,23 +1782,23 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 						BuildDir: "/builds",
 						CacheDir: "/cache",
 						Runner:   runnerConfig,
-						JobResponse: common.JobResponse{
+						Job: spec.Job{
 							ID: 1000,
-							JobInfo: common.JobInfo{
+							JobInfo: spec.JobInfo{
 								ProjectID: 1000,
 								Name:      "some-job-name",
 							},
-							GitInfo: common.GitInfo{
+							GitInfo: spec.GitInfo{
 								Ref: "some-ref-name",
 							},
-							Cache: common.Caches{
+							Cache: spec.Caches{
 								{
 									Key:    tc.cacheKey,
-									Policy: common.CachePolicyPullPush,
+									Policy: spec.CachePolicyPullPush,
 									Paths:  []string{"path1", "path2"},
 								},
 							},
-							Variables: common.JobVariables{
+							Variables: spec.Variables{
 								{
 									Key:   "CACHE_FALLBACK_KEY",
 									Value: tc.cacheFallbackKeyVarValue,
@@ -1898,7 +1899,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 		cacheFallbackKeyVarValue  string
 		cacheFallbackKeysValues   []string
 		allowedCacheKeys          []string
-		variables                 common.JobVariables
+		variables                 spec.Variables
 		expectedAdditionalWarning []any
 	}{
 		"multiple fallback keys": {
@@ -1928,7 +1929,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 				"test-fallback-cache-key-2",
 				"test-var-fallback-cache-key",
 			},
-			variables: common.JobVariables{
+			variables: spec.Variables{
 				{
 					Key:   "CACHE_FALLBACK_1",
 					Value: "key-1",
@@ -1993,7 +1994,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 					}
 					shell := AbstractShell{}
 
-					variables := common.JobVariables{
+					variables := spec.Variables{
 						{
 							Key:   "CACHE_FALLBACK_KEY",
 							Value: tc.cacheFallbackKeyVarValue,
@@ -2003,19 +2004,19 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 						BuildDir: "/builds",
 						CacheDir: "/cache",
 						Runner:   runnerConfig,
-						JobResponse: common.JobResponse{
+						Job: spec.Job{
 							ID: 1000,
-							JobInfo: common.JobInfo{
+							JobInfo: spec.JobInfo{
 								ProjectID: 1000,
 								Name:      "some-job-name",
 							},
-							GitInfo: common.GitInfo{
+							GitInfo: spec.GitInfo{
 								Ref: "some-ref-name",
 							},
-							Cache: common.Caches{
+							Cache: spec.Caches{
 								{
 									Key:          tc.cacheKey,
-									Policy:       common.CachePolicyPullPush,
+									Policy:       spec.CachePolicyPullPush,
 									Paths:        []string{"path1", "path2"},
 									FallbackKeys: tc.cacheFallbackKeysValues,
 								},
@@ -2082,7 +2083,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 		cacheFallbackKeyVarValue  string
 		cacheFallbackKeysValues   []string
 		allowedCacheKeys          []string
-		variables                 common.JobVariables
+		variables                 spec.Variables
 		expectedAdditionalWarning []any
 	}{
 		"multiple fallback keys": {
@@ -2112,7 +2113,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 				"test-fallback-cache-key-2",
 				"test-var-fallback-cache-key",
 			},
-			variables: common.JobVariables{
+			variables: spec.Variables{
 				{
 					Key:   "CACHE_FALLBACK_1",
 					Value: "key-1",
@@ -2177,7 +2178,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 					}
 					shell := AbstractShell{}
 
-					variables := common.JobVariables{
+					variables := spec.Variables{
 						{
 							Key:   "CACHE_FALLBACK_KEY",
 							Value: tc.cacheFallbackKeyVarValue,
@@ -2191,19 +2192,19 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 						BuildDir: "/builds",
 						CacheDir: "/cache",
 						Runner:   runnerConfig,
-						JobResponse: common.JobResponse{
+						Job: spec.Job{
 							ID: 1000,
-							JobInfo: common.JobInfo{
+							JobInfo: spec.JobInfo{
 								ProjectID: 1000,
 								Name:      "some-job-name",
 							},
-							GitInfo: common.GitInfo{
+							GitInfo: spec.GitInfo{
 								Ref: "some-ref-name",
 							},
-							Cache: common.Caches{
+							Cache: spec.Caches{
 								{
 									Key:          tc.cacheKey,
-									Policy:       common.CachePolicyPullPush,
+									Policy:       spec.CachePolicyPullPush,
 									Paths:        []string{"path1", "path2"},
 									FallbackKeys: tc.cacheFallbackKeysValues,
 								},
@@ -2274,28 +2275,28 @@ func TestAbstractShell_cachePolicy(t *testing.T) {
 	tests := map[string]struct {
 		cacheKey  string
 		policy    string
-		variables common.JobVariables
+		variables spec.Variables
 		errMsg    string
 	}{
 		"using pull policy": {
 			cacheKey:  "test-cache-key",
 			policy:    "pull",
-			variables: common.JobVariables{},
+			variables: spec.Variables{},
 		},
 		"using push policy": {
 			cacheKey:  "test-cache-key",
 			policy:    "push",
-			variables: common.JobVariables{},
+			variables: spec.Variables{},
 		},
 		"using pull-push policy": {
 			cacheKey:  "test-cache-key",
 			policy:    "pull-push",
-			variables: common.JobVariables{},
+			variables: spec.Variables{},
 		},
 		"using variable with pull-push value": {
 			cacheKey: "test-cache-key",
 			policy:   "$CACHE_POLICY",
-			variables: common.JobVariables{
+			variables: spec.Variables{
 				{
 					Key:   "CACHE_POLICY",
 					Value: "pull-push",
@@ -2305,7 +2306,7 @@ func TestAbstractShell_cachePolicy(t *testing.T) {
 		"using variable with invalid value": {
 			cacheKey: "test-cache-key",
 			policy:   "$CACHE_POLICY",
-			variables: common.JobVariables{
+			variables: spec.Variables{
 				{
 					Key:   "CACHE_POLICY",
 					Value: "blah",
@@ -2316,7 +2317,7 @@ func TestAbstractShell_cachePolicy(t *testing.T) {
 		"using hardcoded value matching variable name": {
 			cacheKey: "test-cache-key",
 			policy:   "CACHE_POLICY",
-			variables: common.JobVariables{
+			variables: spec.Variables{
 				{
 					Key:   "CACHE_POLICY",
 					Value: "pull",
@@ -2357,15 +2358,15 @@ func TestAbstractShell_cachePolicy(t *testing.T) {
 					BuildDir: "/builds",
 					CacheDir: "/cache",
 					Runner:   runnerConfig,
-					JobResponse: common.JobResponse{
+					Job: spec.Job{
 						ID: 1000,
-						JobInfo: common.JobInfo{
+						JobInfo: spec.JobInfo{
 							ProjectID: 1000,
 						},
-						Cache: common.Caches{
+						Cache: spec.Caches{
 							{
 								Key:    tc.cacheKey,
-								Policy: common.CachePolicy(tc.policy),
+								Policy: spec.CachePolicy(tc.policy),
 								Paths:  []string{"path1", "path2"},
 							},
 						},
@@ -2484,13 +2485,13 @@ func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
 									FeatureFlags: map[string]bool{featureflags.HashCacheKeys: hashCacheKeys},
 								},
 							},
-							JobResponse: common.JobResponse{
-								JobInfo: common.JobInfo{Name: test.jobName},
-								GitInfo: common.GitInfo{Ref: test.gitRef},
-								Cache: common.Caches{
+							Job: spec.Job{
+								JobInfo: spec.JobInfo{Name: test.jobName},
+								GitInfo: spec.GitInfo{Ref: test.gitRef},
+								Cache: spec.Caches{
 									{
-										When:  common.CacheWhenAlways,
-										Paths: common.ArtifactPaths{"foo/bar", "foo/barz"},
+										When:  spec.CacheWhenAlways,
+										Paths: spec.ArtifactPaths{"foo/bar", "foo/barz"},
 										Key:   test.rawCacheKey,
 									},
 								},
@@ -2662,7 +2663,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 					mockWriter.EXPECT().EndIf().Once()
 
 					build := &common.Build{
-						JobResponse: common.JobResponse{Token: "xxx"},
+						Job: spec.Job{Token: "xxx"},
 						Runner: &common.RunnerConfig{
 							RunnerCredentials: common.RunnerCredentials{URL: "https://example.com"},
 							RunnerSettings: common.RunnerSettings{
@@ -2672,7 +2673,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 							},
 						},
 					}
-					build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: test.paths})
+					build.Variables = append(build.Variables, spec.Variable{Key: "GIT_SUBMODULE_PATHS", Value: test.paths})
 					err := shell.writeSubmoduleUpdateCmd(mockWriter, build, false)
 					assert.NoError(t, err)
 				})
@@ -2683,7 +2684,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 
 func TestWriteUserScript(t *testing.T) {
 	tests := map[string]struct {
-		inputSteps        common.Steps
+		inputSteps        spec.Steps
 		prebuildScript    string
 		postBuildScript   string
 		buildStage        common.BuildStage
@@ -2691,7 +2692,7 @@ func TestWriteUserScript(t *testing.T) {
 		expectedErr       error
 	}{
 		"no build steps, after script": {
-			inputSteps:        common.Steps{},
+			inputSteps:        spec.Steps{},
 			prebuildScript:    "",
 			postBuildScript:   "",
 			buildStage:        common.BuildStageAfterScript,
@@ -2699,10 +2700,10 @@ func TestWriteUserScript(t *testing.T) {
 			expectedErr:       common.ErrSkipBuildStage,
 		},
 		"single script step": {
-			inputSteps: common.Steps{
-				common.Step{
-					Name:   common.StepNameScript,
-					Script: common.StepScript{"echo hello"},
+			inputSteps: spec.Steps{
+				spec.Step{
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo hello"},
 				},
 			},
 			prebuildScript:  "",
@@ -2720,18 +2721,18 @@ func TestWriteUserScript(t *testing.T) {
 			expectedErr: nil,
 		},
 		"prebuild, multiple steps postBuild": {
-			inputSteps: common.Steps{
-				common.Step{
-					Name:   common.StepNameScript,
-					Script: common.StepScript{"echo script"},
+			inputSteps: spec.Steps{
+				spec.Step{
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"echo script"},
 				},
-				common.Step{
+				spec.Step{
 					Name:   "release",
-					Script: common.StepScript{"echo release"},
+					Script: spec.StepScript{"echo release"},
 				},
-				common.Step{
+				spec.Step{
 					Name:   "a11y",
-					Script: common.StepScript{"echo a11y"},
+					Script: spec.StepScript{"echo a11y"},
 				},
 			},
 			prebuildScript:  "echo prebuild",
@@ -2759,7 +2760,7 @@ func TestWriteUserScript(t *testing.T) {
 			info := common.ShellScriptInfo{
 				PreBuildScript: tt.prebuildScript,
 				Build: &common.Build{
-					JobResponse: common.JobResponse{
+					Job: spec.Job{
 						Steps: tt.inputSteps,
 					},
 					Runner: &common.RunnerConfig{},
@@ -2778,7 +2779,7 @@ func TestWriteUserScript(t *testing.T) {
 
 func TestScriptSections(t *testing.T) {
 	tests := []struct {
-		inputSteps        common.Steps
+		inputSteps        spec.Steps
 		setupExpectations func(*MockShellWriter)
 		featureFlagOn     bool
 		traceSections     bool
@@ -2786,10 +2787,10 @@ func TestScriptSections(t *testing.T) {
 		{
 			featureFlagOn: true,
 			traceSections: true,
-			inputSteps: common.Steps{
-				common.Step{
-					Name: common.StepNameScript,
-					Script: common.StepScript{`Multi line
+			inputSteps: spec.Steps{
+				spec.Step{
+					Name: spec.StepNameScript,
+					Script: spec.StepScript{`Multi line
 					script 1`, `Multi line
 					script 2`, `Multi line
 					script 3`},
@@ -2834,10 +2835,10 @@ func TestScriptSections(t *testing.T) {
 		{
 			featureFlagOn: true,
 			traceSections: true,
-			inputSteps: common.Steps{
-				common.Step{
-					Name:   common.StepNameScript,
-					Script: common.StepScript{"script 1", "script 2", "script 3"},
+			inputSteps: spec.Steps{
+				spec.Step{
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"script 1", "script 2", "script 3"},
 				},
 			},
 			setupExpectations: func(m *MockShellWriter) {
@@ -2861,10 +2862,10 @@ func TestScriptSections(t *testing.T) {
 		{
 			featureFlagOn: false,
 			traceSections: false,
-			inputSteps: common.Steps{
-				common.Step{
-					Name:   common.StepNameScript,
-					Script: common.StepScript{"script 1", "script 2", "script 3"},
+			inputSteps: spec.Steps{
+				spec.Step{
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"script 1", "script 2", "script 3"},
 				},
 			},
 			setupExpectations: func(m *MockShellWriter) {
@@ -2888,10 +2889,10 @@ func TestScriptSections(t *testing.T) {
 		{
 			featureFlagOn: true,
 			traceSections: false,
-			inputSteps: common.Steps{
-				common.Step{
-					Name:   common.StepNameScript,
-					Script: common.StepScript{"script 1", "script 2", "script 3"},
+			inputSteps: spec.Steps{
+				spec.Step{
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"script 1", "script 2", "script 3"},
 				},
 			},
 			setupExpectations: func(m *MockShellWriter) {
@@ -2915,10 +2916,10 @@ func TestScriptSections(t *testing.T) {
 		{
 			featureFlagOn: false,
 			traceSections: true,
-			inputSteps: common.Steps{
-				common.Step{
-					Name:   common.StepNameScript,
-					Script: common.StepScript{"script 1", "script 2", "script 3"},
+			inputSteps: spec.Steps{
+				spec.Step{
+					Name:   spec.StepNameScript,
+					Script: spec.StepScript{"script 1", "script 2", "script 3"},
 				},
 			},
 			setupExpectations: func(m *MockShellWriter) {
@@ -2948,9 +2949,9 @@ func TestScriptSections(t *testing.T) {
 				info := common.ShellScriptInfo{
 					PreBuildScript: "echo prebuild",
 					Build: &common.Build{
-						JobResponse: common.JobResponse{
+						Job: spec.Job{
 							Steps: tt.inputSteps,
-							Features: common.GitlabFeatures{
+							Features: spec.GitlabFeatures{
 								TraceSections: tt.traceSections,
 							},
 						},
@@ -2973,14 +2974,14 @@ func TestScriptSections(t *testing.T) {
 
 func TestSkipBuildStage(t *testing.T) {
 	stageTests := map[common.BuildStage]map[string]struct {
-		JobResponse common.JobResponse
+		JobResponse spec.Job
 		Runner      common.RunnerConfig
 	}{
 		common.BuildStageRestoreCache: {
 			"don't skip if cache has paths": {
-				common.JobResponse{
-					Cache: common.Caches{
-						common.Cache{
+				spec.Job{
+					Cache: spec.Caches{
+						spec.Cache{
 							Paths: []string{"default"},
 						},
 					},
@@ -2988,9 +2989,9 @@ func TestSkipBuildStage(t *testing.T) {
 				common.RunnerConfig{},
 			},
 			"don't skip if cache uses untracked files": {
-				common.JobResponse{
-					Cache: common.Caches{
-						common.Cache{
+				spec.Job{
+					Cache: spec.Caches{
+						spec.Cache{
 							Untracked: true,
 						},
 					},
@@ -3001,11 +3002,11 @@ func TestSkipBuildStage(t *testing.T) {
 
 		common.BuildStageDownloadArtifacts: {
 			"don't skip if job has any dependencies": {
-				common.JobResponse{
-					Dependencies: common.Dependencies{
-						common.Dependency{
+				spec.Job{
+					Dependencies: spec.Dependencies{
+						spec.Dependency{
 							ID:            1,
-							ArtifactsFile: common.DependencyArtifactsFile{Filename: "dependency.txt"},
+							ArtifactsFile: spec.DependencyArtifactsFile{Filename: "dependency.txt"},
 						},
 					},
 				},
@@ -3015,10 +3016,10 @@ func TestSkipBuildStage(t *testing.T) {
 
 		"step_script": {
 			"don't skip if user script is defined": {
-				common.JobResponse{
-					Steps: common.Steps{
-						common.Step{
-							Name: common.StepNameScript,
+				spec.Job{
+					Steps: spec.Steps{
+						spec.Step{
+							Name: spec.StepNameScript,
 						},
 					},
 				},
@@ -3028,11 +3029,11 @@ func TestSkipBuildStage(t *testing.T) {
 
 		common.BuildStageAfterScript: {
 			"don't skip if an after script is defined and has content": {
-				common.JobResponse{
-					Steps: common.Steps{
-						common.Step{
-							Name:   common.StepNameAfterScript,
-							Script: common.StepScript{"echo 'hello world'"},
+				spec.Job{
+					Steps: spec.Steps{
+						spec.Step{
+							Name:   spec.StepNameAfterScript,
+							Script: spec.StepScript{"echo 'hello world'"},
 						},
 					},
 				},
@@ -3042,22 +3043,22 @@ func TestSkipBuildStage(t *testing.T) {
 
 		common.BuildStageArchiveOnSuccessCache: {
 			"don't skip if cache has paths": {
-				common.JobResponse{
-					Cache: common.Caches{
-						common.Cache{
+				spec.Job{
+					Cache: spec.Caches{
+						spec.Cache{
 							Paths: []string{"default"},
-							When:  common.CacheWhenOnSuccess,
+							When:  spec.CacheWhenOnSuccess,
 						},
 					},
 				},
 				common.RunnerConfig{},
 			},
 			"don't skip if cache uses untracked files": {
-				common.JobResponse{
-					Cache: common.Caches{
-						common.Cache{
+				spec.Job{
+					Cache: spec.Caches{
+						spec.Cache{
 							Untracked: true,
-							When:      common.CacheWhenOnSuccess,
+							When:      spec.CacheWhenOnSuccess,
 						},
 					},
 				},
@@ -3066,22 +3067,22 @@ func TestSkipBuildStage(t *testing.T) {
 		},
 		common.BuildStageArchiveOnFailureCache: {
 			"don't skip if cache has paths": {
-				common.JobResponse{
-					Cache: common.Caches{
-						common.Cache{
+				spec.Job{
+					Cache: spec.Caches{
+						spec.Cache{
 							Paths: []string{"default"},
-							When:  common.CacheWhenOnFailure,
+							When:  spec.CacheWhenOnFailure,
 						},
 					},
 				},
 				common.RunnerConfig{},
 			},
 			"don't skip if cache uses untracked files": {
-				common.JobResponse{
-					Cache: common.Caches{
-						common.Cache{
+				spec.Job{
+					Cache: spec.Caches{
+						spec.Cache{
 							Untracked: true,
-							When:      common.CacheWhenOnFailure,
+							When:      spec.CacheWhenOnFailure,
 						},
 					},
 				},
@@ -3091,10 +3092,10 @@ func TestSkipBuildStage(t *testing.T) {
 
 		common.BuildStageUploadOnSuccessArtifacts: {
 			"don't skip if artifact has paths and URL defined": {
-				common.JobResponse{
-					Artifacts: common.Artifacts{
-						common.Artifact{
-							When:  common.ArtifactWhenOnSuccess,
+				spec.Job{
+					Artifacts: spec.Artifacts{
+						spec.Artifact{
+							When:  spec.ArtifactWhenOnSuccess,
 							Paths: []string{"default"},
 						},
 					},
@@ -3106,10 +3107,10 @@ func TestSkipBuildStage(t *testing.T) {
 				},
 			},
 			"don't skip if artifact uses untracked files and URL defined": {
-				common.JobResponse{
-					Artifacts: common.Artifacts{
-						common.Artifact{
-							When:      common.ArtifactWhenOnSuccess,
+				spec.Job{
+					Artifacts: spec.Artifacts{
+						spec.Artifact{
+							When:      spec.ArtifactWhenOnSuccess,
 							Untracked: true,
 						},
 					},
@@ -3124,10 +3125,10 @@ func TestSkipBuildStage(t *testing.T) {
 
 		common.BuildStageUploadOnFailureArtifacts: {
 			"don't skip if artifact has paths and URL defined": {
-				common.JobResponse{
-					Artifacts: common.Artifacts{
-						common.Artifact{
-							When:  common.ArtifactWhenOnFailure,
+				spec.Job{
+					Artifacts: spec.Artifacts{
+						spec.Artifact{
+							When:  spec.ArtifactWhenOnFailure,
 							Paths: []string{"default"},
 						},
 					},
@@ -3139,10 +3140,10 @@ func TestSkipBuildStage(t *testing.T) {
 				},
 			},
 			"don't skip if artifact uses untracked files and URL defined": {
-				common.JobResponse{
-					Artifacts: common.Artifacts{
-						common.Artifact{
-							When:      common.ArtifactWhenOnFailure,
+				spec.Job{
+					Artifacts: spec.Artifacts{
+						spec.Artifact{
+							When:      spec.ArtifactWhenOnFailure,
 							Untracked: true,
 						},
 					},
@@ -3162,8 +3163,8 @@ func TestSkipBuildStage(t *testing.T) {
 			for tn, tc := range tests {
 				t.Run(tn, func(t *testing.T) {
 					build := &common.Build{
-						JobResponse: common.JobResponse{},
-						Runner:      &common.RunnerConfig{},
+						Job:    spec.Job{},
+						Runner: &common.RunnerConfig{},
 					}
 					info := common.ShellScriptInfo{
 						RunnerCommand: "gitlab-runner-helper",
@@ -3176,8 +3177,8 @@ func TestSkipBuildStage(t *testing.T) {
 
 					// stages with bare minimum requirements should not be skipped.
 					build = &common.Build{
-						JobResponse: tc.JobResponse,
-						Runner:      &tc.Runner,
+						Job:    tc.JobResponse,
+						Runner: &tc.Runner,
 					}
 					info = common.ShellScriptInfo{
 						RunnerCommand: "gitlab-runner-helper",
@@ -3247,8 +3248,8 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 				t.Run(name, func(t *testing.T) {
 					info := common.ShellScriptInfo{
 						Build: &common.Build{
-							JobResponse: common.JobResponse{
-								Variables: common.JobVariables{
+							Job: spec.Job{
+								Variables: spec.Variables{
 									{Key: testVar1, Value: "test", File: true},
 									{Key: testVar2, Value: "test", File: false},
 									{Key: testVar3, Value: "test", File: true},
@@ -3303,17 +3304,17 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 func testGenerateArtifactsMetadataData() (common.ShellScriptInfo, []interface{}) {
 	info := common.ShellScriptInfo{
 		Build: &common.Build{
-			JobResponse: common.JobResponse{
-				Variables: common.JobVariables{
+			Job: spec.Job{
+				Variables: spec.Variables{
 					{Key: "CI_RUNNER_ID", Value: "1000"},
 					{Key: "TEST_VARIABLE", Value: ""},
 					{Key: "SLSA_PROVENANCE_SCHEMA_VERSION", Value: "v1"},
 				},
-				GitInfo: common.GitInfo{
+				GitInfo: spec.GitInfo{
 					RepoURL: "https://gitlab.com/my/repo.git",
 					Sha:     "testsha",
 				},
-				JobInfo: common.JobInfo{
+				JobInfo: spec.JobInfo{
 					Name: "testjob",
 				},
 			},
@@ -3373,7 +3374,7 @@ func TestWriteUploadArtifactIncludesGenerateArtifactsMetadataArgs(t *testing.T) 
 	info.RunnerCommand = "testcommand"
 	info.Build.Variables = append(
 		info.Build.Variables,
-		common.JobVariable{Key: common.GenerateArtifactsMetadataVariable, Value: "true"},
+		spec.Variable{Key: common.GenerateArtifactsMetadataVariable, Value: "true"},
 	)
 
 	uploaderArgs := []interface{}{
@@ -3386,23 +3387,23 @@ func TestWriteUploadArtifactIncludesGenerateArtifactsMetadataArgs(t *testing.T) 
 		"1000",
 	}
 
-	for _, f := range []common.ArtifactFormat{
-		common.ArtifactFormatZip,
-		common.ArtifactFormatGzip,
-		common.ArtifactFormatRaw,
-		common.ArtifactFormatDefault,
+	for _, f := range []spec.ArtifactFormat{
+		spec.ArtifactFormatZip,
+		spec.ArtifactFormatGzip,
+		spec.ArtifactFormatRaw,
+		spec.ArtifactFormatDefault,
 	} {
 		t.Run(string(f), func(t *testing.T) {
 			args := []interface{}{"testcommand"}
 			args = append(args, uploaderArgs...)
 
-			if f == common.ArtifactFormatZip {
+			if f == spec.ArtifactFormatZip {
 				args = append(args, expectedMetadataArgs...)
 			}
 
 			args = append(args, "--path", "testpath")
 
-			if f != common.ArtifactFormatDefault {
+			if f != spec.ArtifactFormatDefault {
 				args = append(args, "--artifact-format", string(f))
 			}
 
@@ -3415,7 +3416,7 @@ func TestWriteUploadArtifactIncludesGenerateArtifactsMetadataArgs(t *testing.T) 
 			shellWriter.On("EndIf").Once()
 
 			shell := &AbstractShell{}
-			shell.writeUploadArtifact(shellWriter, info, common.Artifact{
+			shell.writeUploadArtifact(shellWriter, info, spec.Artifact{
 				Paths:  []string{"testpath"},
 				Format: f,
 			})
@@ -3472,61 +3473,61 @@ func benchmarkScriptStage(b *testing.B, shell common.Shell, stage common.BuildSt
 					},
 				},
 			},
-			JobResponse: common.JobResponse{
-				GitInfo: common.GitInfo{
+			Job: spec.Job{
+				GitInfo: spec.GitInfo{
 					Sha: "deadbeef",
 				},
-				Dependencies: []common.Dependency{{
+				Dependencies: []spec.Dependency{{
 					ID: 1,
-					ArtifactsFile: common.DependencyArtifactsFile{
+					ArtifactsFile: spec.DependencyArtifactsFile{
 						Filename: "artifact.zip",
 					},
 				}},
-				Artifacts: []common.Artifact{
+				Artifacts: []spec.Artifact{
 					{
 						Name:  "artifact",
 						Paths: []string{"*"},
-						When:  common.ArtifactWhenOnSuccess,
+						When:  spec.ArtifactWhenOnSuccess,
 					},
 					{
 						Name:  "artifact",
 						Paths: []string{"*"},
-						When:  common.ArtifactWhenOnFailure,
+						When:  spec.ArtifactWhenOnFailure,
 					},
 				},
-				Cache: []common.Cache{
+				Cache: []spec.Cache{
 					{
 						Key:    "cache",
 						Paths:  []string{"*"},
-						Policy: common.CachePolicyPullPush,
-						When:   common.CacheWhenOnSuccess,
+						Policy: spec.CachePolicyPullPush,
+						When:   spec.CacheWhenOnSuccess,
 					},
 					{
 						Key:    "cache",
 						Paths:  []string{"*"},
-						Policy: common.CachePolicyPullPush,
-						When:   common.CacheWhenOnFailure,
+						Policy: spec.CachePolicyPullPush,
+						When:   spec.CacheWhenOnFailure,
 					},
 				},
-				Steps: common.Steps{
-					common.Step{
-						Name:   common.StepNameScript,
-						Script: common.StepScript{"echo script"},
+				Steps: spec.Steps{
+					spec.Step{
+						Name:   spec.StepNameScript,
+						Script: spec.StepScript{"echo script"},
 					},
-					common.Step{
-						Name:   common.StepNameAfterScript,
-						Script: common.StepScript{"echo after_script"},
+					spec.Step{
+						Name:   spec.StepNameAfterScript,
+						Script: spec.StepScript{"echo after_script"},
 					},
-					common.Step{
+					spec.Step{
 						Name:   "release",
-						Script: common.StepScript{"echo release"},
+						Script: spec.StepScript{"echo release"},
 					},
-					common.Step{
+					spec.Step{
 						Name:   "a11y",
-						Script: common.StepScript{"echo a11y"},
+						Script: spec.StepScript{"echo a11y"},
 					},
 				},
-				Variables: []common.JobVariable{
+				Variables: []spec.Variable{
 					{
 						Key:   "GIT_STRATEGY",
 						Value: "fetch",
@@ -3788,13 +3789,13 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 
 							info := common.ShellScriptInfo{
 								Build: &common.Build{
-									JobResponse: common.JobResponse{
-										Variables: common.JobVariables{
+									Job: spec.Job{
+										Variables: spec.Variables{
 											{Key: "GIT_STRATEGY", Value: "fetch"},
 											{Key: "GIT_SUBMODULE_STRATEGY", Value: string(submoduleStrategy)},
 											{Key: featureflags.GitURLsWithoutTokens, Value: fmt.Sprint(gitURLsWithoutTokens)},
 										},
-										GitInfo: common.GitInfo{
+										GitInfo: spec.GitInfo{
 											RepoURL: "https://foo:bar@repo-url/some/repo",
 										},
 										JobRequestCorrelationID: "foobar",
@@ -3892,7 +3893,7 @@ func TestNewCacheConfig(t *testing.T) {
 		ffs      map[string]bool
 		jobName  string
 		gitRef   string
-		vars     common.JobVariables
+		vars     spec.Variables
 
 		expectedErrorMsg    string
 		expectedCacheConfig map[string]cacheConfig
@@ -4022,7 +4023,7 @@ func TestNewCacheConfig(t *testing.T) {
 			cacheDir: "/some/cache/dir",
 			buildDir: "/some/build/dir",
 			userKey:  "${foo}/${bar}/baz",
-			vars: common.JobVariables{
+			vars: spec.Variables{
 				{Key: "foo", Value: "someFoo"},
 				{Key: "bar", Value: "someBar"},
 			},
@@ -4046,7 +4047,7 @@ func TestNewCacheConfig(t *testing.T) {
 			cacheDir: "/some/cache/dir",
 			buildDir: "/some/build/dir",
 			userKey:  "${foo}/${bar}/baz",
-			vars: common.JobVariables{
+			vars: spec.Variables{
 				{Key: "foo", Value: "someFoo"},
 				{Key: "bar", Value: "someBar"},
 			},
@@ -4071,12 +4072,12 @@ func TestNewCacheConfig(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			build := &common.Build{
-				JobResponse: common.JobResponse{
+				Job: spec.Job{
 					Variables: test.vars,
-					JobInfo: common.JobInfo{
+					JobInfo: spec.JobInfo{
 						Name: test.jobName,
 					},
-					GitInfo: common.GitInfo{
+					GitInfo: spec.GitInfo{
 						Ref: test.gitRef,
 					},
 				},
@@ -4241,19 +4242,19 @@ func TestSetupExternalConfigFile(t *testing.T) {
 					if !test.expectedError {
 						require.NoError(t, err, "parsing repo URL")
 						projectPath, _ := strings.CutSuffix(repoURL.Path, ".git")
-						build.Variables.Set(common.JobVariable{Key: "CI_PROJECT_PATH", Value: projectPath})
+						build.Variables.Set(spec.Variable{Key: "CI_PROJECT_PATH", Value: projectPath})
 					}
 					if test.forceHttps {
-						build.Variables.Set(common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "true"})
+						build.Variables.Set(spec.Variable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "true"})
 					}
 					if h := test.serverHost; h != "" {
-						build.Variables.Set(common.JobVariable{Key: "CI_SERVER_HOST", Value: h})
+						build.Variables.Set(spec.Variable{Key: "CI_SERVER_HOST", Value: h})
 					}
 					if h := test.sshHost; h != "" {
-						build.Variables.Set(common.JobVariable{Key: "CI_SERVER_SHELL_SSH_HOST", Value: h})
+						build.Variables.Set(spec.Variable{Key: "CI_SERVER_SHELL_SSH_HOST", Value: h})
 					}
 					if p := test.sshPort; p != "" {
-						build.Variables.Set(common.JobVariable{Key: "CI_SERVER_SHELL_SSH_PORT", Value: p})
+						build.Variables.Set(spec.Variable{Key: "CI_SERVER_SHELL_SSH_PORT", Value: p})
 					}
 
 					build.Runner.FeatureFlags = map[string]bool{

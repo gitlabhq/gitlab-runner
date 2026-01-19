@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/watchers"
 )
 
@@ -392,11 +393,11 @@ func createResourceList(cpu, memory, ephemeralStorage string) (api.ResourceList,
 	return l, nil
 }
 
-// buildVariables converts a common.JobVariables into a list of
+// buildVariables converts a spec.Variables into a list of
 // kubernetes EnvVar objects
 // The order of keys is preserved, but duplicate elements (with the same name/key) will be deduped, the last one in
 // the list wins.
-func buildVariables(bv common.JobVariables) []api.EnvVar {
+func buildVariables(bv spec.Variables) []api.EnvVar {
 	idx := map[string]int{}
 	envs := make([]api.EnvVar, 0, len(bv))
 

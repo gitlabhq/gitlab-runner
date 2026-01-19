@@ -14,6 +14,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
@@ -128,7 +129,7 @@ func TestArtifactsUploaderDefaultSucceeded(t *testing.T) {
 
 		cmd.Execute(nil)
 		assert.Equal(t, 1, network.uploadCalled)
-		assert.Equal(t, common.ArtifactFormatZip, network.uploadFormat)
+		assert.Equal(t, spec.ArtifactFormatZip, network.uploadFormat)
 		assert.Equal(t, DefaultUploadName+".zip", network.uploadName)
 		assert.Empty(t, network.uploadType)
 	})
@@ -141,7 +142,7 @@ func TestArtifactsUploaderZipSucceeded(t *testing.T) {
 		}
 		cmd := ArtifactsUploaderCommand{
 			JobCredentials: UploaderCredentials,
-			Format:         common.ArtifactFormatZip,
+			Format:         spec.ArtifactFormatZip,
 			Name:           "my-release",
 			Type:           "my-type",
 			network:        network,
@@ -155,7 +156,7 @@ func TestArtifactsUploaderZipSucceeded(t *testing.T) {
 
 		cmd.Execute(nil)
 		assert.Equal(t, 1, network.uploadCalled)
-		assert.Equal(t, common.ArtifactFormatZip, network.uploadFormat)
+		assert.Equal(t, spec.ArtifactFormatZip, network.uploadFormat)
 		assert.Equal(t, "my-release.zip", network.uploadName)
 		assert.Equal(t, "my-type", network.uploadType)
 		assert.Contains(t, network.uploadedFiles, artifactsTestArchivedFile)
@@ -168,7 +169,7 @@ func TestArtifactsUploaderGzipSendsMultipleFiles(t *testing.T) {
 	}
 	cmd := ArtifactsUploaderCommand{
 		JobCredentials: UploaderCredentials,
-		Format:         common.ArtifactFormatGzip,
+		Format:         spec.ArtifactFormatGzip,
 		Name:           "junit.xml",
 		Type:           "junit",
 		network:        network,
@@ -186,7 +187,7 @@ func TestArtifactsUploaderGzipSendsMultipleFiles(t *testing.T) {
 	cmd.Execute(nil)
 	assert.Equal(t, 1, network.uploadCalled)
 	assert.Equal(t, "junit.xml.gz", network.uploadName)
-	assert.Equal(t, common.ArtifactFormatGzip, network.uploadFormat)
+	assert.Equal(t, spec.ArtifactFormatGzip, network.uploadFormat)
 	assert.Equal(t, "junit", network.uploadType)
 	assert.Contains(t, network.uploadedFiles, artifactsTestArchivedFile)
 	assert.Contains(t, network.uploadedFiles, artifactsTestArchivedFile2)
@@ -198,7 +199,7 @@ func TestArtifactsUploaderRawSucceeded(t *testing.T) {
 	}
 	cmd := ArtifactsUploaderCommand{
 		JobCredentials: UploaderCredentials,
-		Format:         common.ArtifactFormatRaw,
+		Format:         spec.ArtifactFormatRaw,
 		Name:           "my-release",
 		Type:           "my-type",
 		network:        network,
@@ -212,7 +213,7 @@ func TestArtifactsUploaderRawSucceeded(t *testing.T) {
 
 	cmd.Execute(nil)
 	assert.Equal(t, 1, network.uploadCalled)
-	assert.Equal(t, common.ArtifactFormatRaw, network.uploadFormat)
+	assert.Equal(t, spec.ArtifactFormatRaw, network.uploadFormat)
 	assert.Equal(t, "my-release", network.uploadName)
 	assert.Equal(t, "my-type", network.uploadType)
 	assert.Contains(t, network.uploadedFiles, "raw")
@@ -224,7 +225,7 @@ func TestArtifactsUploaderRawDoesNotSendMultipleFiles(t *testing.T) {
 	}
 	cmd := ArtifactsUploaderCommand{
 		JobCredentials: UploaderCredentials,
-		Format:         common.ArtifactFormatRaw,
+		Format:         spec.ArtifactFormatRaw,
 		Name:           "junit.xml",
 		Type:           "junit",
 		network:        network,
@@ -298,7 +299,7 @@ func TestArtifactsExcludedPaths(t *testing.T) {
 	cmd := ArtifactsUploaderCommand{
 		JobCredentials: UploaderCredentials,
 		network:        network,
-		Format:         common.ArtifactFormatRaw,
+		Format:         spec.ArtifactFormatRaw,
 		fileArchiver: fileArchiver{
 			Paths:   []string{artifactsTestArchivedFile},
 			Exclude: []string{"something/**"},
@@ -339,7 +340,7 @@ func TestFileArchiverCompressionLevel(t *testing.T) {
 			cmd := ArtifactsUploaderCommand{
 				JobCredentials: UploaderCredentials,
 				network:        network,
-				Format:         common.ArtifactFormatZip,
+				Format:         spec.ArtifactFormatZip,
 				fileArchiver: fileArchiver{
 					Paths: []string{artifactsTestArchivedFile},
 				},

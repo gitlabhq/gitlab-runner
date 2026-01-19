@@ -5,13 +5,13 @@ import (
 
 	api "k8s.io/api/core/v1"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 )
 
 type invalidHostAliasDNSError struct {
-	service common.Image
+	service spec.Image
 	inner   error
 	alias   string
 }
@@ -30,7 +30,7 @@ func (e *invalidHostAliasDNSError) Is(err error) bool {
 	return ok
 }
 
-func createHostAliases(services common.Services, hostAliases []api.HostAlias) ([]api.HostAlias, error) {
+func createHostAliases(services spec.Services, hostAliases []api.HostAlias) ([]api.HostAlias, error) {
 	servicesHostAlias, err := createServicesHostAlias(services)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func createHostAliases(services common.Services, hostAliases []api.HostAlias) ([
 	return allHostAliases, nil
 }
 
-func createServicesHostAlias(srvs common.Services) (*api.HostAlias, error) {
+func createServicesHostAlias(srvs spec.Services) (*api.HostAlias, error) {
 	var hostnames []string
 
 	for _, srv := range srvs {

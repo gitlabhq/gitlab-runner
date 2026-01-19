@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 const (
@@ -30,7 +31,7 @@ type testNetwork struct {
 	directDownloadCalled int
 	uploadState          common.UploadState
 	uploadCalled         int
-	uploadFormat         common.ArtifactFormat
+	uploadFormat         spec.ArtifactFormat
 	uploadName           string
 	uploadType           string
 	uploadedFiles        []string
@@ -70,7 +71,7 @@ func (m *testNetwork) consumeZipUpload(reader io.Reader) common.UploadState {
 		m.uploadedFiles = append(m.uploadedFiles, file.Name)
 	}
 
-	m.uploadFormat = common.ArtifactFormatZip
+	m.uploadFormat = spec.ArtifactFormatZip
 
 	return m.uploadState
 }
@@ -104,7 +105,7 @@ func (m *testNetwork) consumeGzipUpload(reader io.Reader) common.UploadState {
 		gz.Multistream(false)
 	}
 
-	m.uploadFormat = common.ArtifactFormatGzip
+	m.uploadFormat = spec.ArtifactFormatGzip
 
 	return m.uploadState
 }
@@ -116,7 +117,7 @@ func (m *testNetwork) consumeRawUpload(reader io.Reader) common.UploadState {
 	}
 
 	m.uploadedFiles = append(m.uploadedFiles, "raw")
-	m.uploadFormat = common.ArtifactFormatRaw
+	m.uploadFormat = spec.ArtifactFormatRaw
 	return m.uploadState
 }
 
@@ -141,13 +142,13 @@ func (m *testNetwork) UploadRawArtifacts(
 		m.uploadName = options.BaseName
 
 		switch options.Format {
-		case common.ArtifactFormatZip, common.ArtifactFormatDefault:
+		case spec.ArtifactFormatZip, spec.ArtifactFormatDefault:
 			return m.consumeZipUpload(reader), ""
 
-		case common.ArtifactFormatGzip:
+		case spec.ArtifactFormatGzip:
 			return m.consumeGzipUpload(reader), ""
 
-		case common.ArtifactFormatRaw:
+		case spec.ArtifactFormatRaw:
 			return m.consumeRawUpload(reader), ""
 
 		default:

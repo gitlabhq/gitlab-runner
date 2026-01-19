@@ -12,28 +12,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines/kv_v2"
 )
 
 func TestResolver_Name(t *testing.T) {
-	r := newResolver(common.Secret{})
+	r := newResolver(spec.Secret{})
 	assert.Equal(t, resolverName, r.Name())
 }
 
 func TestResolver_IsSupported(t *testing.T) {
 	tests := map[string]struct {
-		secret                   common.Secret
+		secret                   spec.Secret
 		expectedGitLabSecretsMgr bool
 	}{
 		"supported secret": {
-			secret: common.Secret{
-				GitLabSecretsManager: &common.GitLabSecretsManagerSecret{},
+			secret: spec.Secret{
+				GitLabSecretsManager: &spec.GitLabSecretsManagerSecret{},
 			},
 			expectedGitLabSecretsMgr: true,
 		},
 		"unsupported secret": {
-			secret:                   common.Secret{},
+			secret:                   spec.Secret{},
 			expectedGitLabSecretsMgr: false,
 		},
 	}
@@ -73,7 +73,7 @@ func TestResolver_Resolve(t *testing.T) {
 
 	testCases := []struct {
 		name          string
-		secret        common.Secret
+		secret        spec.Secret
 		expectedErr   string
 		expectedValue string
 	}{
@@ -83,18 +83,18 @@ func TestResolver_Resolve(t *testing.T) {
 		},
 		{
 			name: "failure creating vault client",
-			secret: common.Secret{
-				GitLabSecretsManager: &common.GitLabSecretsManagerSecret{},
+			secret: spec.Secret{
+				GitLabSecretsManager: &spec.GitLabSecretsManagerSecret{},
 			},
 			expectedErr: "creating vault client",
 		},
 		{
 			name: "failure get secret",
-			secret: common.Secret{
-				GitLabSecretsManager: &common.GitLabSecretsManagerSecret{
-					Server: common.GitLabSecretsManagerServer{
+			secret: spec.Secret{
+				GitLabSecretsManager: &spec.GitLabSecretsManagerSecret{
+					Server: spec.GitLabSecretsManagerServer{
 						URL: server.URL,
-						InlineAuth: common.GitLabSecretsManagerServerInlineAuth{
+						InlineAuth: spec.GitLabSecretsManagerServerInlineAuth{
 							AuthMount: "jwt",
 							JWT:       "test-jwt",
 							Role:      "test-role",
@@ -106,11 +106,11 @@ func TestResolver_Resolve(t *testing.T) {
 		},
 		{
 			name: "failure get secret with path",
-			secret: common.Secret{
-				GitLabSecretsManager: &common.GitLabSecretsManagerSecret{
-					Server: common.GitLabSecretsManagerServer{
+			secret: spec.Secret{
+				GitLabSecretsManager: &spec.GitLabSecretsManagerSecret{
+					Server: spec.GitLabSecretsManagerServer{
 						URL: server.URL,
-						InlineAuth: common.GitLabSecretsManagerServerInlineAuth{
+						InlineAuth: spec.GitLabSecretsManagerServerInlineAuth{
 							Path: "auth/jwt/login",
 							JWT:  "test-jwt",
 							Role: "test-role",
@@ -122,17 +122,17 @@ func TestResolver_Resolve(t *testing.T) {
 		},
 		{
 			name: "success",
-			secret: common.Secret{
-				GitLabSecretsManager: &common.GitLabSecretsManagerSecret{
-					Server: common.GitLabSecretsManagerServer{
+			secret: spec.Secret{
+				GitLabSecretsManager: &spec.GitLabSecretsManagerSecret{
+					Server: spec.GitLabSecretsManagerServer{
 						URL: server.URL,
-						InlineAuth: common.GitLabSecretsManagerServerInlineAuth{
+						InlineAuth: spec.GitLabSecretsManagerServerInlineAuth{
 							AuthMount: "jwt",
 							JWT:       "test-jwt",
 							Role:      "test-role",
 						},
 					},
-					Engine: common.GitLabSecretsManagerEngine{
+					Engine: spec.GitLabSecretsManagerEngine{
 						Name: "kv-v2",
 						Path: "test_path",
 					},
@@ -144,17 +144,17 @@ func TestResolver_Resolve(t *testing.T) {
 		},
 		{
 			name: "success with path",
-			secret: common.Secret{
-				GitLabSecretsManager: &common.GitLabSecretsManagerSecret{
-					Server: common.GitLabSecretsManagerServer{
+			secret: spec.Secret{
+				GitLabSecretsManager: &spec.GitLabSecretsManagerSecret{
+					Server: spec.GitLabSecretsManagerServer{
 						URL: server.URL,
-						InlineAuth: common.GitLabSecretsManagerServerInlineAuth{
+						InlineAuth: spec.GitLabSecretsManagerServerInlineAuth{
 							Path: "auth/jwt/login",
 							JWT:  "test-jwt",
 							Role: "test-role",
 						},
 					},
-					Engine: common.GitLabSecretsManagerEngine{
+					Engine: spec.GitLabSecretsManagerEngine{
 						Name: "kv-v2",
 						Path: "test_path",
 					},

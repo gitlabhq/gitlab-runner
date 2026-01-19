@@ -8,18 +8,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	api "k8s.io/api/core/v1"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func TestCreateHostAliases(t *testing.T) {
 	tests := map[string]struct {
-		services            common.Services
+		services            spec.Services
 		hostAliases         []api.HostAlias
 		expectedHostAliases []api.HostAlias
 		expectedError       error
 	}{
 		"supports services as host aliases": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  "test-service",
 					Alias: "svc-alias svc-alias-alt",
@@ -36,14 +36,14 @@ func TestCreateHostAliases(t *testing.T) {
 			},
 		},
 		"ignores services with ports": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  "test-service",
 					Alias: "alias",
 				},
 				{
 					Name: "docker:dind",
-					Ports: []common.Port{{
+					Ports: []spec.Port{{
 						Number:   0,
 						Protocol: "",
 						Name:     "",
@@ -76,15 +76,15 @@ func TestCreateHostAliases(t *testing.T) {
 			},
 		},
 		"no services or aliases defined": {
-			services:            common.Services{},
+			services:            spec.Services{},
 			hostAliases:         []api.HostAlias{},
 			expectedHostAliases: nil,
 		},
 		"no host aliases when services only with ports": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name: "docker:dind",
-					Ports: []common.Port{{
+					Ports: []spec.Port{{
 						Number:   0,
 						Protocol: "",
 						Name:     "",
@@ -130,7 +130,7 @@ func TestCreateHostAliases(t *testing.T) {
 					Hostnames: []string{"google"},
 				},
 			},
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  "test-service",
 					Alias: "alias",
@@ -158,7 +158,7 @@ func TestCreateHostAliases(t *testing.T) {
 					Hostnames: []string{"google"},
 				},
 			},
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  "test-service",
 					Alias: "alias",
@@ -180,7 +180,7 @@ func TestCreateHostAliases(t *testing.T) {
 			},
 		},
 		"ignores non RFC1123 service aliases": {
-			services: common.Services{
+			services: spec.Services{
 				{
 					Name:  "test-service",
 					Alias: "INVALID_ALIAS",

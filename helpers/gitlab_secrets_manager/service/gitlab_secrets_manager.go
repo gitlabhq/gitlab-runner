@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines"
 )
@@ -18,7 +19,7 @@ func NewGitlabSecretsManager(client vault.Client) *GitLabSecretsManager {
 	}
 }
 
-func (service *GitLabSecretsManager) GetSecret(secret *common.GitLabSecretsManagerSecret) (string, error) {
+func (service *GitLabSecretsManager) GetSecret(secret *spec.GitLabSecretsManagerSecret) (string, error) {
 	engineFactory, err := secret_engines.GetFactory(secret.Engine.Name)
 	if err != nil {
 		return "", fmt.Errorf("getting secret engine: %w", err)

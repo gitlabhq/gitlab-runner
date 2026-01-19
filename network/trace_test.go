@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
@@ -30,7 +31,7 @@ func matchJobState(
 	jobInfo common.UpdateJobInfo,
 	id int64,
 	state common.JobState,
-	failureReason common.JobFailureReason,
+	failureReason spec.JobFailureReason,
 ) bool {
 	if jobInfo.ID != id {
 		return false
@@ -45,7 +46,7 @@ func matchJobState(
 }
 
 // nolint:unparam
-func generateJobInfoMatcher(id int64, state common.JobState, failureReason common.JobFailureReason) interface{} {
+func generateJobInfoMatcher(id int64, state common.JobState, failureReason spec.JobFailureReason) interface{} {
 	return mock.MatchedBy(func(jobInfo common.UpdateJobInfo) bool {
 		return matchJobState(jobInfo, id, state, failureReason)
 	})

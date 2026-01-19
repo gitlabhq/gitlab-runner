@@ -134,8 +134,8 @@ func TestInstanceReadyCommand(t *testing.T) {
 				cfg.Autoscaler.InstanceReadyCommand = tc.command
 
 				build := &common.Build{
-					JobResponse: successfulBuild,
-					Runner:      cfg,
+					Job:    successfulBuild,
+					Runner: cfg,
 				}
 				setupAcquireBuild(t, build)
 
@@ -156,8 +156,8 @@ func TestBuildSuccess(t *testing.T) {
 		require.NoError(t, err)
 
 		build := &common.Build{
-			JobResponse: successfulBuild,
-			Runner:      newRunnerConfig(t, shell),
+			Job:    successfulBuild,
+			Runner: newRunnerConfig(t, shell),
 		}
 		setupAcquireBuild(t, build)
 
@@ -175,8 +175,8 @@ func TestConnectionFailed(t *testing.T) {
 	require.NoError(t, err)
 
 	build := &common.Build{
-		JobResponse: successfulBuild,
-		Runner:      newRunnerConfig(t, shell, ssh.WithDontAcceptConnections()),
+		Job:    successfulBuild,
+		Runner: newRunnerConfig(t, shell, ssh.WithDontAcceptConnections()),
 	}
 	build.Runner.Autoscaler.ConnectorConfig.Timeout = 5 * time.Second
 	setupAcquireBuild(t, build)

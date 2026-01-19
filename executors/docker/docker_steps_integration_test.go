@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
@@ -26,8 +27,8 @@ func Test_StepsIntegration(t *testing.T) {
 
 	tests := map[string]struct {
 		steps     string
-		variables common.JobVariables
-		services  common.Services
+		variables spec.Variables
+		services  spec.Services
 		wantOut   []string
 		wantErr   bool
 	}{
@@ -60,13 +61,13 @@ func Test_StepsIntegration(t *testing.T) {
 		"file variable": {
 			steps: `- name: cat
   script: cat ${{ job.A_FILE_VAR }}`,
-			variables: common.JobVariables{{Key: "A_FILE_VAR", Value: "oh this is soo secret", File: true}},
+			variables: spec.Variables{{Key: "A_FILE_VAR", Value: "oh this is soo secret", File: true}},
 			wantOut:   []string{"oh this is soo secret"},
 		},
 		"job variables should not appear in environment": {
 			steps: `- name: echo
   script: echo ${{ env.FLIN_FLAN_FLON }}`,
-			variables: common.JobVariables{{Key: "FLIN_FLAN_FLON", Value: "flin, flan, flon"}},
+			variables: spec.Variables{{Key: "FLIN_FLAN_FLON", Value: "flin, flan, flon"}},
 			wantOut: []string{
 				"ERROR: Job failed:",
 				`evaluating expression failed at ".FLIN_FLAN_FLON": attribute not found`,
@@ -84,7 +85,7 @@ func Test_StepsIntegration(t *testing.T) {
 			successfulBuild.Variables = append(successfulBuild.Variables, tt.variables...)
 			build := &common.Build{
 				ExecuteStepFn: steps.Execute,
-				JobResponse:   successfulBuild,
+				Job:           successfulBuild,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",

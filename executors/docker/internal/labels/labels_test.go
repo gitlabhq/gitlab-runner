@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func TestNewLabeler(t *testing.T) {
@@ -18,15 +19,15 @@ func TestNewLabeler(t *testing.T) {
 
 func TestLabels(t *testing.T) {
 	b := &common.Build{
-		JobResponse: common.JobResponse{
+		Job: spec.Job{
 			ID: 12345,
-			GitInfo: common.GitInfo{
+			GitInfo: spec.GitInfo{
 				Sha:       "sha",
 				BeforeSha: "before-sha",
 				Ref:       "ref",
 				RepoURL:   "https://ci-job-token:ToKeN123@gitlab.example.com/namespace/project.git",
 			},
-			JobInfo: common.JobInfo{
+			JobInfo: spec.JobInfo{
 				ProjectID: 123456,
 			},
 		},

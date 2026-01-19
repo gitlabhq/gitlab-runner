@@ -7,31 +7,33 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func TestFailureReasonMapper_Map(t *testing.T) {
 	const (
-		frOne   JobFailureReason = "fr_one"
-		frTwo   JobFailureReason = "fr_two"
-		frThree JobFailureReason = "fr_three"
-		frFour  JobFailureReason = "fr_four"
-		frFive  JobFailureReason = "fr_five"
-		frSix   JobFailureReason = "fr_six"
-		frSeven JobFailureReason = "fr_seven"
-		frEight JobFailureReason = "fr_eight"
+		frOne   spec.JobFailureReason = "fr_one"
+		frTwo   spec.JobFailureReason = "fr_two"
+		frThree spec.JobFailureReason = "fr_three"
+		frFour  spec.JobFailureReason = "fr_four"
+		frFive  spec.JobFailureReason = "fr_five"
+		frSix   spec.JobFailureReason = "fr_six"
+		frSeven spec.JobFailureReason = "fr_seven"
+		frEight spec.JobFailureReason = "fr_eight"
 
-		frLoopOne   JobFailureReason = "fr_loop_one"
-		frLoopTwo   JobFailureReason = "fr_loop_two"
-		frLoopThree JobFailureReason = "fr_loop_three"
-		frLoopFour  JobFailureReason = "fr_loop_four"
+		frLoopOne   spec.JobFailureReason = "fr_loop_one"
+		frLoopTwo   spec.JobFailureReason = "fr_loop_two"
+		frLoopThree spec.JobFailureReason = "fr_loop_three"
+		frLoopFour  spec.JobFailureReason = "fr_loop_four"
 
-		frTotallyUnknown JobFailureReason = "fr_totally_unknown"
+		frTotallyUnknown spec.JobFailureReason = "fr_totally_unknown"
 
 		maxDepth = 3
 	)
 
-	supported := []JobFailureReason{frOne, frTwo}
-	compatibilityMap := map[JobFailureReason]JobFailureReason{
+	supported := []spec.JobFailureReason{frOne, frTwo}
+	compatibilityMap := map[spec.JobFailureReason]spec.JobFailureReason{
 		frThree: frOne,
 		frFive:  frFour,
 		frFour:  frTwo,

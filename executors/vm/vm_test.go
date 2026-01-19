@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/vm"
 )
 
@@ -15,7 +16,7 @@ func TestGetBaseName(t *testing.T) {
 	tests := map[string]struct {
 		image            string
 		allowedImages    []string
-		buildVariables   common.JobVariables
+		buildVariables   spec.Variables
 		expectedBaseName string
 		expectedErr      string
 	}{
@@ -59,7 +60,7 @@ func TestGetBaseName(t *testing.T) {
 		"override using expanded image and exact match pattern": {
 			image:         "${IMAGE}1",
 			allowedImages: []string{"^image1$"},
-			buildVariables: common.JobVariables{
+			buildVariables: spec.Variables{
 				{Key: "IMAGE", Value: "image"},
 			},
 			expectedBaseName: "image1",
@@ -67,7 +68,7 @@ func TestGetBaseName(t *testing.T) {
 		"attempt override using expanded image and disallowed pattern": {
 			image:         "${IMAGE}1",
 			allowedImages: []string{"^foobar$"},
-			buildVariables: common.JobVariables{
+			buildVariables: spec.Variables{
 				{Key: "IMAGE", Value: "image"},
 			},
 			expectedErr: "invalid image",

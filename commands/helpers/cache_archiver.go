@@ -14,17 +14,17 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"gocloud.dev/blob"
+	_ "gocloud.dev/blob/azureblob" // Needed to register the Azure driver
+	_ "gocloud.dev/blob/s3blob"    // Needed to register the AWS S3 driver
 	"mvdan.cc/sh/v3/shell"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
-
-	"gocloud.dev/blob"
-	_ "gocloud.dev/blob/azureblob" // Needed to register the Azure driver
-	_ "gocloud.dev/blob/s3blob"    // Needed to register the AWS S3 driver
 )
 
 type CacheArchiverCommand struct {
@@ -191,10 +191,10 @@ func (c *CacheArchiverCommand) createZipFile(filename string) (int64, error) {
 	logrus.Debugln("Temporary file:", f.Name())
 
 	switch strings.ToLower(c.CompressionFormat) {
-	case string(common.ArtifactFormatTarZstd):
-		c.CompressionFormat = string(common.ArtifactFormatTarZstd)
+	case string(spec.ArtifactFormatTarZstd):
+		c.CompressionFormat = string(spec.ArtifactFormatTarZstd)
 	default:
-		c.CompressionFormat = string(common.ArtifactFormatZip)
+		c.CompressionFormat = string(spec.ArtifactFormatZip)
 	}
 
 	archiver, err := archive.NewArchiver(archive.Format(c.CompressionFormat), f, c.wd, GetCompressionLevel(c.CompressionLevel))

@@ -41,6 +41,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/watchers"
@@ -245,12 +246,12 @@ func (p *podContainerError) Error() string {
 }
 
 type kubernetesOptions struct {
-	Image    common.Image
-	Services map[string]*common.Image
+	Image    spec.Image
+	Services map[string]*spec.Image
 }
 
-func (kOpts kubernetesOptions) servicesList() common.Services {
-	services := make(common.Services, len(kOpts.Services))
+func (kOpts kubernetesOptions) servicesList() spec.Services {
+	services := make(spec.Services, len(kOpts.Services))
 	for _, name := range slices.Sorted(maps.Keys(kOpts.Services)) {
 		services = append(services, *kOpts.Services[name])
 	}
@@ -265,7 +266,7 @@ func (kOpts kubernetesOptions) getSortedServiceNames() []string {
 type containerBuildOpts struct {
 	name               string
 	image              string
-	imageDefinition    common.Image
+	imageDefinition    spec.Image
 	isServiceContainer bool
 	requests           api.ResourceList
 	limits             api.ResourceList
@@ -1457,7 +1458,7 @@ func (s *executor) cleanupResources() {
 }
 
 func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error) {
-	var envVars []common.JobVariable
+	var envVars []spec.Variable
 
 	if opts.isServiceContainer {
 		envVars = s.getServiceVariables(opts.imageDefinition)
@@ -1560,7 +1561,7 @@ func (s *executor) shouldUseStartupProbe() bool {
 	return honorEntrypoint && legacyExecMode
 }
 
-func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) (retCommand []string, retArgs []string) {
+func (s *executor) getCommandAndArgs(imageDefinition spec.Image, command ...string) (retCommand []string, retArgs []string) {
 	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
 		return []string{}, command
 	}
@@ -1583,12 +1584,12 @@ func (s *executor) logFile() string {
 
 func (s *executor) logsDir() string {
 	return s.baseDir(defaultLogsBaseDir,
-		s.Config.Kubernetes.LogsBaseDir, s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
+		s.Config.Kubernetes.LogsBaseDir, s.Build.JobInfo.ProjectID, s.Build.Job.ID)
 }
 
 func (s *executor) scriptsDir() string {
 	return s.baseDir(defaultScriptsBaseDir,
-		s.Config.Kubernetes.ScriptsBaseDir, s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
+		s.Config.Kubernetes.ScriptsBaseDir, s.Build.JobInfo.ProjectID, s.Build.Job.ID)
 }
 
 func (s *executor) baseDir(defaultBaseDir, configDir string, projectId, jobId int64) string {
@@ -3135,7 +3136,7 @@ func (s *executor) checkScriptExecution(stage common.BuildStage, err error) erro
 	return err
 }
 
-func (s *executor) prepareOverwrites(variables common.JobVariables) error {
+func (s *executor) prepareOverwrites(variables spec.Variables) error {
 	values, err := createOverwrites(s.Config.Kubernetes, variables, s.BuildLogger)
 	if err != nil {
 		return err
@@ -3145,7 +3146,7 @@ func (s *executor) prepareOverwrites(variables common.JobVariables) error {
 	return nil
 }
 
-func (s *executor) prepareServiceOverwrites(services map[string]*common.Image) error {
+func (s *executor) prepareServiceOverwrites(services map[string]*spec.Image) error {
 	for name, service := range services {
 		if err := s.configurationOverwrites.evaluateExplicitServiceResourceOverwrite(
 			s.Config.Kubernetes,
@@ -3165,7 +3166,7 @@ func (s *executor) prepareOptions(build *common.Build) {
 	usedAliases := make(map[string]struct{})
 	s.options = &kubernetesOptions{
 		Image:    build.Image,
-		Services: make(map[string]*common.Image),
+		Services: make(map[string]*spec.Image),
 	}
 
 	for _, svc := range s.Config.Kubernetes.GetExpandedServices(s.Build.GetAllVariables()) {
@@ -3190,7 +3191,7 @@ func (s *executor) prepareOptions(build *common.Build) {
 }
 
 func (s *executor) getServiceDefinition(
-	service *common.Image,
+	service *spec.Image,
 	usedAliases map[string]struct{},
 	serviceIndex int,
 ) (int, string) {
@@ -3203,7 +3204,7 @@ func (s *executor) getServiceDefinition(
 	return serviceIndex, name
 }
 
-func getServiceName(svc *common.Image, usedAliases map[string]struct{}) string {
+func getServiceName(svc *spec.Image, usedAliases map[string]struct{}) string {
 	for _, alias := range svc.Aliases() {
 		if _, ok := usedAliases[alias]; ok {
 			continue
@@ -3239,7 +3240,7 @@ func (s *executor) prepareLifecycleHooks() *api.Lifecycle {
 	return lifecycle
 }
 
-func (s *executor) getServiceVariables(serviceDefinition common.Image) common.JobVariables {
+func (s *executor) getServiceVariables(serviceDefinition spec.Image) spec.Variables {
 	variables := s.Build.GetAllVariables().PublicOrInternal()
 	variables = append(variables, serviceDefinition.Variables...)
 

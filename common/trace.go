@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"sync"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 type Trace struct {
@@ -17,7 +19,7 @@ type Trace struct {
 const ExitCodeUnsupportedOptions = 3
 
 type JobFailureData struct {
-	Reason   JobFailureReason
+	Reason   spec.JobFailureReason
 	ExitCode int
 }
 

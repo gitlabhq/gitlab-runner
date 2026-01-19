@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -113,7 +114,7 @@ const (
 var ErrSkipBuildStage = errors.New("skip build stage")
 
 type Build struct {
-	JobResponse `yaml:",inline" inputs:"expand"`
+	spec.Job `yaml:",inline" inputs:"expand"`
 
 	SystemInterrupt  chan os.Signal `json:"-" yaml:"-"`
 	RootDir          string         `json:"-" yaml:"-"`
@@ -140,7 +141,7 @@ type Build struct {
 	currentState          BuildRuntimeState
 	executorStageResolver func() ExecutorStage
 
-	failureReason JobFailureReason
+	failureReason spec.JobFailureReason
 
 	secretsResolver func(l logger, registry SecretResolverRegistry, featureFlagOn func(string) bool) (SecretsResolver, error)
 
@@ -148,8 +149,8 @@ type Build struct {
 
 	logger buildlogger.Logger
 
-	allVariables     JobVariables
-	secretsVariables JobVariables
+	allVariables     spec.Variables
+	secretsVariables spec.Variables
 	buildSettings    *BuildSettings
 
 	startedAt  time.Time
@@ -205,7 +206,7 @@ func (b *Build) CurrentState() BuildRuntimeState {
 	return b.currentState
 }
 
-func (b *Build) FailureReason() JobFailureReason {
+func (b *Build) FailureReason() spec.JobFailureReason {
 	return b.failureReason
 }
 
@@ -343,7 +344,7 @@ func (b *Build) BuildStages() []BuildStage {
 	copy(stages, staticBuildStages)
 
 	for _, s := range b.Steps {
-		if s.Name == StepNameAfterScript {
+		if s.Name == spec.StepNameAfterScript {
 			continue
 		}
 
@@ -419,7 +420,7 @@ func (b *Build) executeStepStage(ctx context.Context, connector Connector, build
 
 	section := helpers.BuildSection{
 		Name:        string(buildStage),
-		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		SkipMetrics: !b.Job.Features.TraceSections,
 		Run: func() error {
 			msg := fmt.Sprintf(
 				"%s%s%s",
@@ -489,7 +490,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 
 	section := helpers.BuildSection{
 		Name:        string(buildStage),
-		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		SkipMetrics: !b.Job.Features.TraceSections,
 		Run: func() error {
 			msg := fmt.Sprintf(
 				"%s%s%s",
@@ -587,7 +588,7 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		if b.UseNativeSteps() && b.ExecuteStepFn != nil {
 			connector, ok := executor.(Connector)
 			if ok {
-				err = b.executeStepStage(ctx, connector, BuildStage("step_"+StepNameRun), trace)
+				err = b.executeStepStage(ctx, connector, BuildStage("step_"+spec.StepNameRun), trace)
 			} else {
 				return ExecutorStepRunnerConnectNotSupported
 			}
@@ -659,7 +660,7 @@ func (b *Build) executeUserScripts(ctx context.Context, trace JobTrace, executor
 
 	for _, s := range b.Steps {
 		// after_script has a separate BuildStage. See common.BuildStageAfterScript
-		if s.Name == StepNameAfterScript {
+		if s.Name == spec.StepNameAfterScript {
 			continue
 		}
 		err = b.executeStage(scriptCtx, StepToBuildStage(s), executor)
@@ -727,7 +728,7 @@ func (b *Build) pickPriorityError(jobErr error, archiveCacheErr error, artifactU
 
 func (b *Build) executeAfterScript(ctx context.Context, err error, executor Executor) error {
 	state, _ := b.runtimeStateAndError(err)
-	b.GetAllVariables().OverwriteKey("CI_JOB_STATUS", JobVariable{
+	b.GetAllVariables().OverwriteKey("CI_JOB_STATUS", spec.Variable{
 		Key:   "CI_JOB_STATUS",
 		Value: string(state),
 	})
@@ -736,7 +737,7 @@ func (b *Build) executeAfterScript(ctx context.Context, err error, executor Exec
 }
 
 // StepToBuildStage returns the BuildStage corresponding to a step.
-func StepToBuildStage(s Step) BuildStage {
+func StepToBuildStage(s spec.Step) BuildStage {
 	return BuildStage(fmt.Sprintf("step_%s", strings.ToLower(string(s.Name))))
 }
 
@@ -758,8 +759,8 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 	}
 
 	jobCredentials := JobCredentials{
-		ID:    b.JobResponse.ID,
-		Token: b.JobResponse.Token,
+		ID:    b.Job.ID,
+		Token: b.Job.Token,
 		URL:   b.Runner.RunnerCredentials.URL,
 	}
 
@@ -785,7 +786,7 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 		b.ArtifactUploader(jobCredentials, bodyProvider, ArtifactsOptions{
 			BaseName: referee.ArtifactBaseName(),
 			Type:     referee.ArtifactType(),
-			Format:   ArtifactFormat(referee.ArtifactFormat()),
+			Format:   spec.ArtifactFormat(referee.ArtifactFormat()),
 		})
 	}
 }
@@ -1236,7 +1237,7 @@ func (b *Build) expandInputs() error {
 		return nil
 	}
 
-	return ExpandInputs(&b.Inputs, b)
+	return spec.ExpandInputs(&b.Inputs, b)
 }
 
 func (b *Build) getNewLogger(trace JobTrace, log *logrus.Entry, teeOnly bool) buildlogger.Logger {
@@ -1245,7 +1246,7 @@ func (b *Build) getNewLogger(trace JobTrace, log *logrus.Entry, teeOnly bool) bu
 		log,
 		buildlogger.Options{
 			MaskPhrases:          b.GetAllVariables().Masked(),
-			MaskTokenPrefixes:    b.JobResponse.Features.TokenMaskPrefixes,
+			MaskTokenPrefixes:    b.Job.Features.TokenMaskPrefixes,
 			Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),
 			MaskAllDefaultTokens: b.IsFeatureFlagOn(featureflags.MaskAllDefaultTokens),
 			TeeOnly:              teeOnly,
@@ -1258,13 +1259,28 @@ func (b *Build) logUsedImages() {
 		return
 	}
 
-	imageFields := b.JobResponse.Image.LogFields()
+	fields := func(i spec.Image) logrus.Fields {
+		if i.Name == "" {
+			return nil
+		}
+
+		fields := logrus.Fields{
+			"image_name": i.Name,
+		}
+		if i.ExecutorOptions.Docker.Platform != "" {
+			fields["image_platform"] = i.ExecutorOptions.Docker.Platform
+		}
+
+		return fields
+	}
+
+	imageFields := fields(b.Job.Image)
 	if imageFields != nil {
 		b.Log().WithFields(imageFields).Info("Image configured for job")
 	}
 
-	for _, service := range b.JobResponse.Services {
-		b.Log().WithFields(service.LogFields()).Info("Service image configured for job")
+	for _, service := range b.Job.Services {
+		b.Log().WithFields(fields(service)).Info("Service image configured for job")
 	}
 }
 
@@ -1288,14 +1304,14 @@ func (b *Build) resolveSecrets(trace JobTrace) error {
 		return nil
 	}
 
-	b.Secrets.expandVariables(b.GetAllVariables())
+	b.Secrets.ExpandVariables(b.GetAllVariables())
 
 	b.OnBuildStageStartFn.Call(BuildStageResolveSecrets)
 	defer b.OnBuildStageEndFn.Call(BuildStageResolveSecrets)
 
 	section := helpers.BuildSection{
 		Name:        string(BuildStageResolveSecrets),
-		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		SkipMetrics: !b.Job.Features.TraceSections,
 		Run: func() error {
 			logger := b.getNewLogger(trace, b.Log(), false)
 			defer logger.Close()
@@ -1329,7 +1345,7 @@ func (b *Build) executeBuildSection(options ExecutorPrepareOptions, provider Exe
 
 	section := helpers.BuildSection{
 		Name:        string(BuildStagePrepareExecutor),
-		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		SkipMetrics: !b.Job.Features.TraceSections,
 		Run: func() error {
 			msg := fmt.Sprintf(
 				"%sPreparing the %q executor%s",
@@ -1359,8 +1375,8 @@ func (b *Build) platformAppropriatePath(s string) string {
 	return s
 }
 
-func (b *Build) GetDefaultVariables() JobVariables {
-	return JobVariables{
+func (b *Build) GetDefaultVariables() spec.Variables {
+	return spec.Variables{
 		{
 			Key:      "CI_BUILDS_DIR",
 			Value:    b.platformAppropriatePath(b.RootDir),
@@ -1412,10 +1428,10 @@ func (b *Build) GetDefaultVariables() JobVariables {
 	}
 }
 
-func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
-	variables := make(JobVariables, 0)
+func (b *Build) GetDefaultFeatureFlagsVariables() spec.Variables {
+	variables := make(spec.Variables, 0)
 	for _, featureFlag := range featureflags.GetAll() {
-		variables = append(variables, JobVariable{
+		variables = append(variables, spec.Variable{
 			Key:      featureFlag.Name,
 			Value:    strconv.FormatBool(featureFlag.DefaultValue),
 			Public:   true,
@@ -1427,8 +1443,8 @@ func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
 	return variables
 }
 
-func (b *Build) GetSharedEnvVariable() JobVariable {
-	env := JobVariable{Value: "true", Public: true, Internal: true, File: false}
+func (b *Build) GetSharedEnvVariable() spec.Variable {
+	env := spec.Variable{Value: "true", Public: true, Internal: true, File: false}
 	if b.IsSharedEnv() {
 		env.Key = "CI_SHARED_ENVIRONMENT"
 	} else {
@@ -1438,11 +1454,11 @@ func (b *Build) GetSharedEnvVariable() JobVariable {
 	return env
 }
 
-func (b *Build) GetCITLSVariables() JobVariables {
-	variables := JobVariables{}
+func (b *Build) GetCITLSVariables() spec.Variables {
+	variables := spec.Variables{}
 
 	if b.TLSData.CAChain != "" {
-		variables = append(variables, JobVariable{
+		variables = append(variables, spec.Variable{
 			Key:      tls.VariableCAFile,
 			Value:    b.TLSData.CAChain,
 			Public:   true,
@@ -1454,14 +1470,14 @@ func (b *Build) GetCITLSVariables() JobVariables {
 	if b.TLSData.AuthCert != "" && b.TLSData.AuthKey != "" {
 		variables = append(
 			variables,
-			JobVariable{
+			spec.Variable{
 				Key:      tls.VariableCertFile,
 				Value:    b.TLSData.AuthCert,
 				Public:   true,
 				Internal: true,
 				File:     true,
 			},
-			JobVariable{
+			spec.Variable{
 				Key:      tls.VariableKeyFile,
 				Value:    b.TLSData.AuthKey,
 				Internal: true,
@@ -1485,13 +1501,13 @@ func (b *Build) RefreshAllVariables() {
 }
 
 // getBaseVariablesBeforeJob returns the base variables that come before job variables.
-func (b *Build) getBaseVariablesBeforeJob() JobVariables {
-	variables := make(JobVariables, 0)
+func (b *Build) getBaseVariablesBeforeJob() spec.Variables {
+	variables := make(spec.Variables, 0)
 
 	if b.Image.Name != "" {
 		variables = append(
 			variables,
-			JobVariable{Key: "CI_JOB_IMAGE", Value: b.Image.Name, Public: true, Internal: true, File: false},
+			spec.Variable{Key: "CI_JOB_IMAGE", Value: b.Image.Name, Public: true, Internal: true, File: false},
 		)
 	}
 	if b.Runner != nil {
@@ -1504,15 +1520,15 @@ func (b *Build) getBaseVariablesBeforeJob() JobVariables {
 }
 
 // getBaseVariablesAfterJob returns the base variables that come after job variables.
-func (b *Build) getBaseVariablesAfterJob() JobVariables {
-	variables := make(JobVariables, 0)
+func (b *Build) getBaseVariablesAfterJob() spec.Variables {
+	variables := make(spec.Variables, 0)
 
 	variables = append(variables, b.GetSharedEnvVariable())
 	variables = append(variables, AppVersion.Variables()...)
 	variables = append(variables, b.secretsVariables...)
 
-	variables = append(variables, JobVariable{
-		Key: tempProjectDirVariableKey, Value: b.TmpProjectDir(), Public: true, Internal: true,
+	variables = append(variables, spec.Variable{
+		Key: spec.TempProjectDirVariableKey, Value: b.TmpProjectDir(), Public: true, Internal: true,
 	})
 
 	return variables
@@ -1520,8 +1536,8 @@ func (b *Build) getBaseVariablesAfterJob() JobVariables {
 
 // getVariablesForFeatureFlagResolution returns an initial set of variables that will be used
 // to resolve feature flag settings. This is used only during initSettings.
-func (b *Build) getVariablesForFeatureFlagResolution() JobVariables {
-	variables := make(JobVariables, 0)
+func (b *Build) getVariablesForFeatureFlagResolution() spec.Variables {
+	variables := make(spec.Variables, 0)
 
 	variables = append(variables, b.GetDefaultFeatureFlagsVariables()...)
 	variables = append(variables, b.getBaseVariablesBeforeJob()...)
@@ -1535,8 +1551,8 @@ func (b *Build) getVariablesForFeatureFlagResolution() JobVariables {
 // This assumes build settings have been initialized. This is
 // part of the two-phase feature flag resolution process that ensures
 // TOML settings take precedence over job variables.
-func (b *Build) getResolvedFeatureFlags() JobVariables {
-	variables := make(JobVariables, 0)
+func (b *Build) getResolvedFeatureFlags() spec.Variables {
+	variables := make(spec.Variables, 0)
 
 	if b.buildSettings == nil {
 		logrus.Warn("build settings are not initialized")
@@ -1545,7 +1561,7 @@ func (b *Build) getResolvedFeatureFlags() JobVariables {
 
 	for _, featureFlag := range featureflags.GetAll() {
 		resolvedValue := b.buildSettings.FeatureFlags[featureFlag.Name]
-		variables = append(variables, JobVariable{
+		variables = append(variables, spec.Variable{
 			Key:      featureFlag.Name,
 			Value:    strconv.FormatBool(resolvedValue),
 			Public:   true,
@@ -1559,13 +1575,13 @@ func (b *Build) getResolvedFeatureFlags() JobVariables {
 
 // getNonFeatureFlagJobVariables gets job variables, excluding feature flags to prevent double inclusion
 // and to maintain the precedence of TOML-configured feature flags over job variables.
-func (b *Build) getNonFeatureFlagJobVariables() JobVariables {
+func (b *Build) getNonFeatureFlagJobVariables() spec.Variables {
 	featureFlagNames := make(map[string]bool)
 	for _, ff := range featureflags.GetAll() {
 		featureFlagNames[ff.Name] = true
 	}
 
-	filtered := make(JobVariables, 0, len(b.Variables))
+	filtered := make(spec.Variables, 0, len(b.Variables))
 	for _, variable := range b.Variables {
 		if !featureFlagNames[variable.Key] {
 			filtered = append(filtered, variable)
@@ -1580,7 +1596,7 @@ func (b *Build) getNonFeatureFlagJobVariables() JobVariables {
 // 2. Base variables that come before job variables
 // 3. Job variables (excluding feature flags to prevent overriding resolved values)
 // 4. Base variables that come after job variables
-func (b *Build) GetAllVariables() JobVariables {
+func (b *Build) GetAllVariables() spec.Variables {
 	if b.allVariables != nil {
 		return b.allVariables
 	}
@@ -1590,7 +1606,7 @@ func (b *Build) GetAllVariables() JobVariables {
 		b.Settings()
 	}
 
-	variables := make(JobVariables, 0)
+	variables := make(spec.Variables, 0)
 
 	// Phase 2: Add resolved feature flags first (maintains original precedence order)
 	variables = append(variables, b.getResolvedFeatureFlags()...)
@@ -1847,7 +1863,7 @@ type urlHelper interface {
 }
 
 func NewBuild(
-	jobData JobResponse,
+	jobData spec.Job,
 	runnerConfig *RunnerConfig,
 	systemInterrupt chan os.Signal,
 	executorData ExecutorData,
@@ -1859,7 +1875,7 @@ func NewBuild(
 	}
 
 	return &Build{
-		JobResponse:     jobData,
+		Job:             jobData,
 		Runner:          runnerConfigCopy,
 		SystemInterrupt: systemInterrupt,
 		ExecutorData:    executorData,
@@ -1913,29 +1929,29 @@ func (b *Build) printSettingErrors() {
 }
 
 func (b *Build) printPolicyOptions() {
-	if !b.JobResponse.PolicyOptions.PolicyJob {
+	if !b.Job.PolicyOptions.PolicyJob {
 		return
 	}
 
-	b.logger.Infoln(fmt.Sprintf(`Job triggered by policy "%s".`, b.JobResponse.PolicyOptions.Name))
+	b.logger.Infoln(fmt.Sprintf(`Job triggered by policy "%s".`, b.Job.PolicyOptions.Name))
 
 	// VariableOverrideAllowed is optional.
 	// If not set, YAML variables defined in the policy are enforced with the highest precedence.
-	if b.JobResponse.PolicyOptions.VariableOverrideAllowed == nil {
+	if b.Job.PolicyOptions.VariableOverrideAllowed == nil {
 		b.logger.Infoln("Variables defined in the policy take precedence over matching user-defined CI/CD variables for this job.")
 		return
 	}
 
 	var message = "User-defined CI/CD variables are "
-	if *b.JobResponse.PolicyOptions.VariableOverrideAllowed {
+	if *b.Job.PolicyOptions.VariableOverrideAllowed {
 		message += "allowed in this job"
 	} else {
 		message += "ignored in this job"
 	}
 	// VariableOverrideExceptions acts as an allowlist when VariableOverrideExceptions is false
 	// and a denylist when it's true.
-	if b.JobResponse.PolicyOptions.VariableOverrideExceptions != nil {
-		message += fmt.Sprintf(" (except for %s)", strings.Join(b.JobResponse.PolicyOptions.VariableOverrideExceptions, ", "))
+	if b.Job.PolicyOptions.VariableOverrideExceptions != nil {
+		message += fmt.Sprintf(" (except for %s)", strings.Join(b.Job.PolicyOptions.VariableOverrideExceptions, ", "))
 	}
 	message += " according to the pipeline execution policy."
 	b.logger.Infoln(message)

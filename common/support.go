@@ -19,12 +19,14 @@ import (
 	"time"
 
 	yamlconv "sigs.k8s.io/yaml"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 const (
 	repoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test.git"
 
-	repoRefType = RefTypeBranch
+	repoRefType = spec.RefTypeBranch
 
 	repoSHA       = "69b18e5ed3610cf646119c3e38f462c64ec462b7"
 	repoBeforeSHA = "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7"
@@ -50,8 +52,8 @@ var (
 	gitLabComChainFetched atomic.Bool
 )
 
-func GetGitInfo(url string) GitInfo {
-	return GitInfo{
+func GetGitInfo(url string) spec.GitInfo {
+	return spec.GitInfo{
 		RepoURL:   url,
 		Sha:       repoSHA,
 		BeforeSha: repoBeforeSHA,
@@ -61,8 +63,8 @@ func GetGitInfo(url string) GitInfo {
 	}
 }
 
-func GetLFSGitInfo(url string) GitInfo {
-	return GitInfo{
+func GetLFSGitInfo(url string) spec.GitInfo {
+	return spec.GitInfo{
 		RepoURL:   url,
 		Sha:       repoLFSSHA,
 		BeforeSha: repoLFSBeforeSHA,
@@ -72,8 +74,8 @@ func GetLFSGitInfo(url string) GitInfo {
 	}
 }
 
-func GetSubmoduleLFSGitInfo(url string) GitInfo {
-	return GitInfo{
+func GetSubmoduleLFSGitInfo(url string) spec.GitInfo {
+	return spec.GitInfo{
 		RepoURL:   url,
 		Sha:       repoSubmoduleLFSSHA,
 		BeforeSha: repoSubmoduleLFSBeforeSHA,
@@ -83,8 +85,8 @@ func GetSubmoduleLFSGitInfo(url string) GitInfo {
 	}
 }
 
-func GetStepsGitInfo(url string) GitInfo {
-	return GitInfo{
+func GetStepsGitInfo(url string) spec.GitInfo {
+	return spec.GitInfo{
 		RepoURL:   url,
 		Sha:       repoStepsSHA,
 		BeforeSha: repoStepsBeforeSHA,
@@ -94,72 +96,78 @@ func GetStepsGitInfo(url string) GitInfo {
 	}
 }
 
-func GetSuccessfulBuild() (JobResponse, error) {
+func GetSuccessfulBuild() (spec.Job, error) {
 	return GetLocalBuildResponse("echo Hello World")
 }
 
-func GetSuccessfulMultilineCommandBuild() (JobResponse, error) {
+func GetSuccessfulMultilineCommandBuild() (spec.Job, error) {
 	return GetLocalBuildResponse(`echo "Hello
 World"`)
 }
 
-func GetRemoteSuccessfulBuild() (JobResponse, error) {
+func GetRemoteSuccessfulBuild() (spec.Job, error) {
 	return GetRemoteBuildResponse("echo Hello World")
 }
 
-func GetRemoteSuccessfulLFSBuild() (JobResponse, error) {
+func GetRemoteSuccessfulLFSBuild() (spec.Job, error) {
 	response, err := GetRemoteBuildResponse("echo Hello World")
 	response.GitInfo = GetLFSGitInfo(repoRemoteURL)
 
 	return response, err
 }
 
-func GetRemoteSuccessfulBuildWithAfterScript() (JobResponse, error) {
+func GetRemoteSuccessfulBuildWithAfterScript() (spec.Job, error) {
 	jobResponse, err := GetRemoteBuildResponse("echo Hello World")
 	jobResponse.Steps = append(
 		jobResponse.Steps,
-		Step{
-			Name:   StepNameAfterScript,
+		spec.Step{
+			Name:   spec.StepNameAfterScript,
 			Script: []string{"echo Hello World"},
-			When:   StepWhenAlways,
+			When:   spec.StepWhenAlways,
 		},
 	)
 	return jobResponse, err
 }
 
-func GetRemoteSuccessfulBuildPrintVars(shell string, vars ...string) (JobResponse, error) {
+func GetRemoteSuccessfulBuildPrintVars(shell string, vars ...string) (spec.Job, error) {
 	printVarsCmd := getShellPrintVars(shell, vars...)
 
 	return GetRemoteBuildResponse(printVarsCmd...)
 }
 
-func GetRemoteSuccessfulMultistepBuild() (JobResponse, error) {
+func GetRemoteSuccessfulBuildPrintVarsAfterScript(shell string, vars ...string) (spec.Job, error) {
+	printVarsCmd := getShellPrintVars(shell, vars...)
+
+	return GetRemoteBuildResponse(printVarsCmd...)
+}
+
+func GetRemoteSuccessfulMultistepBuild() (spec.Job, error) {
 	jobResponse, err := GetRemoteBuildResponse("echo Hello World")
 	if err != nil {
-		return JobResponse{}, err
+		return spec.Job{}, err
 	}
 
 	jobResponse.Steps = append(
 		jobResponse.Steps,
-		Step{
+		spec.Step{
 			Name:   "release",
 			Script: []string{"echo Release"},
-			When:   StepWhenOnSuccess,
+			When:   spec.StepWhenOnSuccess,
 		},
-		Step{
-			Name:   StepNameAfterScript,
+		spec.Step{
+			Name:   spec.StepNameAfterScript,
 			Script: []string{"echo After Script"},
-			When:   StepWhenAlways,
+			When:   spec.StepWhenAlways,
 		},
 	)
 
 	return jobResponse, nil
 }
 
-func GetRemoteFailingMultistepBuild(failingStepName StepName) (JobResponse, error) {
+func GetRemoteFailingMultistepBuild(failingStepName spec.StepName) (spec.Job, error) {
 	jobResponse, err := GetRemoteSuccessfulMultistepBuild()
 	if err != nil {
-		return JobResponse{}, err
+		return spec.Job{}, err
 	}
 
 	for i, step := range jobResponse.Steps {
@@ -171,10 +179,10 @@ func GetRemoteFailingMultistepBuild(failingStepName StepName) (JobResponse, erro
 	return jobResponse, nil
 }
 
-func GetRemoteFailingMultistepBuildPrintVars(shell string, fail bool, vars ...string) (JobResponse, error) {
+func GetRemoteFailingMultistepBuildPrintVars(shell string, fail bool, vars ...string) (spec.Job, error) {
 	jobResponse, err := GetRemoteBuildResponse("echo 'Hello World'")
 	if err != nil {
-		return JobResponse{}, err
+		return spec.Job{}, err
 	}
 
 	printVarsCmd := getShellPrintVars(shell, vars...)
@@ -186,15 +194,15 @@ func GetRemoteFailingMultistepBuildPrintVars(shell string, fail bool, vars ...st
 
 	jobResponse.Steps = append(
 		jobResponse.Steps,
-		Step{
+		spec.Step{
 			Name:   "env",
 			Script: append(printVarsCmd, exitCommand),
-			When:   StepWhenOnSuccess,
+			When:   spec.StepWhenOnSuccess,
 		},
-		Step{
-			Name:   StepNameAfterScript,
+		spec.Step{
+			Name:   spec.StepNameAfterScript,
 			Script: printVarsCmd,
-			When:   StepWhenAlways,
+			When:   spec.StepWhenAlways,
 		},
 	)
 
@@ -219,7 +227,7 @@ func getShellPrintVars(shell string, vars ...string) []string {
 	return envCommand
 }
 
-func GetRemoteSuccessfulBuildWithDumpedVariables() (JobResponse, error) {
+func GetRemoteSuccessfulBuildWithDumpedVariables() (spec.Job, error) {
 	variableName := "test_dump"
 	variableValue := "test"
 
@@ -228,10 +236,10 @@ func GetRemoteSuccessfulBuildWithDumpedVariables() (JobResponse, error) {
 		fmt.Sprintf("[[ $(cat $%s) == \"%s\" ]]", variableName, variableValue),
 	)
 	if err != nil {
-		return JobResponse{}, err
+		return spec.Job{}, err
 	}
 
-	dumpedVariable := JobVariable{
+	dumpedVariable := spec.Variable{
 		Key: variableName, Value: variableValue,
 		Internal: true, Public: true, File: true,
 	}
@@ -240,35 +248,35 @@ func GetRemoteSuccessfulBuildWithDumpedVariables() (JobResponse, error) {
 	return response, nil
 }
 
-func GetFailedBuild() (JobResponse, error) {
+func GetFailedBuild() (spec.Job, error) {
 	return GetLocalBuildResponse("exit 1")
 }
 
-func GetRemoteFailedBuild() (JobResponse, error) {
+func GetRemoteFailedBuild() (spec.Job, error) {
 	return GetRemoteBuildResponse("exit 1")
 }
 
-func GetLongRunningBuild() (JobResponse, error) {
+func GetLongRunningBuild() (spec.Job, error) {
 	return GetLocalBuildResponse("sleep 3600")
 }
 
-func GetRemoteLongRunningBuild() (JobResponse, error) {
+func GetRemoteLongRunningBuild() (spec.Job, error) {
 	return GetRemoteBuildResponse("sleep 3600")
 }
 
-func GetRemoteLongRunningBuildWithAfterScript(shell string) (JobResponse, error) {
-	var jobResponse JobResponse
+func GetRemoteLongRunningBuildWithAfterScript(shell string) (spec.Job, error) {
+	var jobResponse spec.Job
 	var err error
 
 	jobResponse, err = GetRemoteLongRunningBuild()
 	if err != nil {
-		return JobResponse{}, err
+		return spec.Job{}, err
 	}
 
 	switch shell {
 	default:
-		jobResponse.Steps = append(jobResponse.Steps, Step{
-			Name: StepNameAfterScript,
+		jobResponse.Steps = append(jobResponse.Steps, spec.Step{
+			Name: spec.StepNameAfterScript,
 			Script: []string{
 				"echo \"Hello World from after_script\"",
 				"echo \"job status $CI_JOB_STATUS\"",
@@ -276,8 +284,8 @@ func GetRemoteLongRunningBuildWithAfterScript(shell string) (JobResponse, error)
 		})
 
 	case "pwsh":
-		jobResponse.Steps = append(jobResponse.Steps, Step{
-			Name: StepNameAfterScript,
+		jobResponse.Steps = append(jobResponse.Steps, spec.Step{
+			Name: spec.StepNameAfterScript,
 			Script: []string{
 				"echo \"Hello World from after_script\"",
 				"echo \"job status $env:CI_JOB_STATUS\"",
@@ -285,8 +293,8 @@ func GetRemoteLongRunningBuildWithAfterScript(shell string) (JobResponse, error)
 		})
 
 	case "cmd":
-		jobResponse.Steps = append(jobResponse.Steps, Step{
-			Name: StepNameAfterScript,
+		jobResponse.Steps = append(jobResponse.Steps, spec.Step{
+			Name: spec.StepNameAfterScript,
 			Script: []string{
 				"echo \"Hello World from after_script\"",
 				"echo \"job status %CI_JOB_STATUS%\"",
@@ -297,104 +305,104 @@ func GetRemoteLongRunningBuildWithAfterScript(shell string) (JobResponse, error)
 	return jobResponse, nil
 }
 
-func GetMultilineBashBuild() (JobResponse, error) {
+func GetMultilineBashBuild() (spec.Job, error) {
 	return GetRemoteBuildResponse(`if true; then
 	echo 'Hello World'
 fi
 `)
 }
 
-func GetMultilineBashBuildPowerShell() (JobResponse, error) {
+func GetMultilineBashBuildPowerShell() (spec.Job, error) {
 	return GetRemoteBuildResponse("if (0 -eq 0) {\n\recho \"Hello World\"\n\r}")
 }
 
-func GetRemoteBrokenTLSBuild() (JobResponse, error) {
+func GetRemoteBrokenTLSBuild() (spec.Job, error) {
 	invalidCert, err := buildSnakeOilCert()
 	if err != nil {
-		return JobResponse{}, err
+		return spec.Job{}, err
 	}
 
 	return getRemoteCustomTLSBuild(invalidCert)
 }
 
-func GetRemoteGitLabComTLSBuild() (JobResponse, error) {
+func GetRemoteGitLabComTLSBuild() (spec.Job, error) {
 	cert, err := getGitLabComTLSChain()
 	if err != nil {
-		return JobResponse{}, err
+		return spec.Job{}, err
 	}
 
 	return getRemoteCustomTLSBuild(cert)
 }
 
-func getRemoteCustomTLSBuild(chain string) (JobResponse, error) {
+func getRemoteCustomTLSBuild(chain string) (spec.Job, error) {
 	job, err := GetRemoteBuildResponse("echo Hello World")
 	if err != nil {
-		return JobResponse{}, err
+		return spec.Job{}, err
 	}
 
 	job.TLSData.CAChain = chain
 	job.Variables = append(
 		job.Variables,
-		JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
-		JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+		spec.Variable{Key: "GIT_STRATEGY", Value: "clone"},
+		spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
 	)
 
 	return job, nil
 }
 
-func getBuildResponse(repoURL string, commands []string) JobResponse {
-	return JobResponse{
-		Variables: JobVariables{
-			JobVariable{Key: "CI_JOB_TOKEN", Value: "test-job-token"},
+func getBuildResponse(repoURL string, commands []string) spec.Job {
+	return spec.Job{
+		Variables: spec.Variables{
+			spec.Variable{Key: "CI_JOB_TOKEN", Value: "test-job-token"},
 		},
 		GitInfo: GetGitInfo(repoURL),
-		Steps: Steps{
-			Step{
-				Name:         StepNameScript,
+		Steps: spec.Steps{
+			spec.Step{
+				Name:         spec.StepNameScript,
 				Script:       commands,
-				When:         StepWhenAlways,
+				When:         spec.StepWhenAlways,
 				AllowFailure: false,
 			},
 		},
-		RunnerInfo: RunnerInfo{
+		RunnerInfo: spec.RunnerInfo{
 			Timeout: DefaultTimeout,
 		},
 	}
 }
 
-func getStepsBuildResponse(repoURL string, stepsYAML string) (JobResponse, error) {
+func getStepsBuildResponse(repoURL, stepsYAML string) (spec.Job, error) {
 	// steps come from GitLab in json, but it's a whole lot more convenient to write them in yaml in tests. Let's
 	// support the latter and convert the yaml to json here so everything else downstream works as if the steps were
 	// specified in json.
 	stepsJSON, err := yamlconv.YAMLToJSON([]byte(stepsYAML))
 	if err != nil {
-		return JobResponse{}, fmt.Errorf("converting json to yaml: %w", err)
+		return spec.Job{}, fmt.Errorf("converting json to yaml: %w", err)
 	}
-	return JobResponse{
+	return spec.Job{
 		GitInfo: GetStepsGitInfo(repoURL),
 		Run:     string(stepsJSON),
-		Steps:   Steps{Step{Name: StepNameRun}},
-		RunnerInfo: RunnerInfo{
+		Steps:   spec.Steps{spec.Step{Name: spec.StepNameRun}},
+		RunnerInfo: spec.RunnerInfo{
 			Timeout: DefaultTimeout,
 		},
 	}, nil
 }
 
-func GetRemoteStepsBuildResponse(stepsYAML string) (JobResponse, error) {
+func GetRemoteStepsBuildResponse(stepsYAML string) (spec.Job, error) {
 	return getStepsBuildResponse(repoRemoteURL, stepsYAML)
 }
 
-func GetRemoteBuildResponse(commands ...string) (JobResponse, error) {
+func GetRemoteBuildResponse(commands ...string) (spec.Job, error) {
 	return getBuildResponse(repoRemoteURL, commands), nil
 }
 
-func GetLocalBuildResponse(commands ...string) (JobResponse, error) {
+func GetLocalBuildResponse(commands ...string) (spec.Job, error) {
 	localRepoURL, err := getLocalRepoURL()
 	if err != nil {
 		if os.IsNotExist(err) {
 			panic("Local repo not found, please run `make development_setup`")
 		}
-		return JobResponse{}, err
+		return spec.Job{}, err
 	}
 
 	return getBuildResponse(localRepoURL, commands), nil

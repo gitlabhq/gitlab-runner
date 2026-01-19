@@ -8,7 +8,7 @@ import (
 	"context"
 
 	mock "github.com/stretchr/testify/mock"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 // newMockClient creates a new instance of mockClient. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -39,7 +39,7 @@ func (_m *mockClient) EXPECT() *mockClient_Expecter {
 }
 
 // GetSecret provides a mock function for the type mockClient
-func (_mock *mockClient) GetSecret(ctx context.Context, s *common.GCPSecretManagerSecret) (string, error) {
+func (_mock *mockClient) GetSecret(ctx context.Context, s *spec.GCPSecretManagerSecret) (string, error) {
 	ret := _mock.Called(ctx, s)
 
 	if len(ret) == 0 {
@@ -48,15 +48,15 @@ func (_mock *mockClient) GetSecret(ctx context.Context, s *common.GCPSecretManag
 
 	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *common.GCPSecretManagerSecret) (string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *spec.GCPSecretManagerSecret) (string, error)); ok {
 		return returnFunc(ctx, s)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *common.GCPSecretManagerSecret) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *spec.GCPSecretManagerSecret) string); ok {
 		r0 = returnFunc(ctx, s)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *common.GCPSecretManagerSecret) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *spec.GCPSecretManagerSecret) error); ok {
 		r1 = returnFunc(ctx, s)
 	} else {
 		r1 = ret.Error(1)
@@ -71,20 +71,20 @@ type mockClient_GetSecret_Call struct {
 
 // GetSecret is a helper method to define mock.On call
 //   - ctx context.Context
-//   - s *common.GCPSecretManagerSecret
+//   - s *spec.GCPSecretManagerSecret
 func (_e *mockClient_Expecter) GetSecret(ctx interface{}, s interface{}) *mockClient_GetSecret_Call {
 	return &mockClient_GetSecret_Call{Call: _e.mock.On("GetSecret", ctx, s)}
 }
 
-func (_c *mockClient_GetSecret_Call) Run(run func(ctx context.Context, s *common.GCPSecretManagerSecret)) *mockClient_GetSecret_Call {
+func (_c *mockClient_GetSecret_Call) Run(run func(ctx context.Context, s *spec.GCPSecretManagerSecret)) *mockClient_GetSecret_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *common.GCPSecretManagerSecret
+		var arg1 *spec.GCPSecretManagerSecret
 		if args[1] != nil {
-			arg1 = args[1].(*common.GCPSecretManagerSecret)
+			arg1 = args[1].(*spec.GCPSecretManagerSecret)
 		}
 		run(
 			arg0,
@@ -99,7 +99,7 @@ func (_c *mockClient_GetSecret_Call) Return(s1 string, err error) *mockClient_Ge
 	return _c
 }
 
-func (_c *mockClient_GetSecret_Call) RunAndReturn(run func(ctx context.Context, s *common.GCPSecretManagerSecret) (string, error)) *mockClient_GetSecret_Call {
+func (_c *mockClient_GetSecret_Call) RunAndReturn(run func(ctx context.Context, s *spec.GCPSecretManagerSecret) (string, error)) *mockClient_GetSecret_Call {
 	_c.Call.Return(run)
 	return _c
 }

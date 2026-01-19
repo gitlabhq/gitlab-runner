@@ -8,6 +8,7 @@ import (
 	"github.com/docker/docker/api/types/image"
 	mock "github.com/stretchr/testify/mock"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 // NewMockManager creates a new instance of MockManager. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -38,7 +39,7 @@ func (_m *MockManager) EXPECT() *MockManager_Expecter {
 }
 
 // GetDockerImage provides a mock function for the type MockManager
-func (_mock *MockManager) GetDockerImage(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy) (*image.InspectResponse, error) {
+func (_mock *MockManager) GetDockerImage(imageName string, options spec.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy) (*image.InspectResponse, error) {
 	ret := _mock.Called(imageName, options, imagePullPolicies)
 
 	if len(ret) == 0 {
@@ -47,17 +48,17 @@ func (_mock *MockManager) GetDockerImage(imageName string, options common.ImageD
 
 	var r0 *image.InspectResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) (*image.InspectResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, spec.ImageDockerOptions, []common.DockerPullPolicy) (*image.InspectResponse, error)); ok {
 		return returnFunc(imageName, options, imagePullPolicies)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) *image.InspectResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, spec.ImageDockerOptions, []common.DockerPullPolicy) *image.InspectResponse); ok {
 		r0 = returnFunc(imageName, options, imagePullPolicies)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*image.InspectResponse)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(string, spec.ImageDockerOptions, []common.DockerPullPolicy) error); ok {
 		r1 = returnFunc(imageName, options, imagePullPolicies)
 	} else {
 		r1 = ret.Error(1)
@@ -72,21 +73,21 @@ type MockManager_GetDockerImage_Call struct {
 
 // GetDockerImage is a helper method to define mock.On call
 //   - imageName string
-//   - options common.ImageDockerOptions
+//   - options spec.ImageDockerOptions
 //   - imagePullPolicies []common.DockerPullPolicy
 func (_e *MockManager_Expecter) GetDockerImage(imageName interface{}, options interface{}, imagePullPolicies interface{}) *MockManager_GetDockerImage_Call {
 	return &MockManager_GetDockerImage_Call{Call: _e.mock.On("GetDockerImage", imageName, options, imagePullPolicies)}
 }
 
-func (_c *MockManager_GetDockerImage_Call) Run(run func(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy)) *MockManager_GetDockerImage_Call {
+func (_c *MockManager_GetDockerImage_Call) Run(run func(imageName string, options spec.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy)) *MockManager_GetDockerImage_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 common.ImageDockerOptions
+		var arg1 spec.ImageDockerOptions
 		if args[1] != nil {
-			arg1 = args[1].(common.ImageDockerOptions)
+			arg1 = args[1].(spec.ImageDockerOptions)
 		}
 		var arg2 []common.DockerPullPolicy
 		if args[2] != nil {
@@ -106,7 +107,7 @@ func (_c *MockManager_GetDockerImage_Call) Return(inspectResponse *image.Inspect
 	return _c
 }
 
-func (_c *MockManager_GetDockerImage_Call) RunAndReturn(run func(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy) (*image.InspectResponse, error)) *MockManager_GetDockerImage_Call {
+func (_c *MockManager_GetDockerImage_Call) RunAndReturn(run func(imageName string, options spec.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy) (*image.InspectResponse, error)) *MockManager_GetDockerImage_Call {
 	_c.Call.Return(run)
 	return _c
 }

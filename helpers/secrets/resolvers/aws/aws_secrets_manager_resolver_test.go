@@ -11,28 +11,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
 )
 
 func TestResolver_Name(t *testing.T) {
-	r := newResolver(common.Secret{})
+	r := newResolver(spec.Secret{})
 	assert.Equal(t, resolverName, r.Name())
 }
 
 func TestResolver_IsSupported(t *testing.T) {
 	tests := map[string]struct {
-		secret      common.Secret
+		secret      spec.Secret
 		isSupported bool
 	}{
 		"supported secret": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{},
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{},
 			},
 			isSupported: true,
 		},
 		"unsupported secret": {
-			secret:      common.Secret{},
+			secret:      spec.Secret{},
 			isSupported: false,
 		},
 	}
@@ -46,8 +46,8 @@ func TestResolver_IsSupported(t *testing.T) {
 }
 
 func TestResolver_Resolve(t *testing.T) {
-	secret := common.Secret{
-		AWSSecretsManager: &common.AWSSecret{
+	secret := spec.Secret{
+		AWSSecretsManager: &spec.AWSSecret{
 			SecretId:     "test",
 			VersionId:    "version",
 			VersionStage: "version_stage",
@@ -56,7 +56,7 @@ func TestResolver_Resolve(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		secret                    common.Secret
+		secret                    spec.Secret
 		vaultServiceCreationError error
 		setupMock                 func(*MockAWSSecretsManager)
 		expectedValue             string
@@ -112,10 +112,10 @@ func TestResolver_Resolve(t *testing.T) {
 			expectedError: fmt.Errorf("failed to parse JSON for secret 'test'"),
 		},
 		"error when JWT is provided without RoleArn": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "test-secret",
-					Server: common.AWSServer{
+					Server: spec.AWSServer{
 						JWT:    "dummy-jwt-token",
 						Region: "us-east-1",
 					},
@@ -124,10 +124,10 @@ func TestResolver_Resolve(t *testing.T) {
 			expectedError: fmt.Errorf("Role ARN is required when using JWT for AWS authentication"),
 		},
 		"uses server region when secret region is empty": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "test-secret",
-					Server: common.AWSServer{
+					Server: spec.AWSServer{
 						Region: "us-west-2",
 					},
 				},
@@ -141,8 +141,8 @@ func TestResolver_Resolve(t *testing.T) {
 			expectedValue: "secret-value",
 		},
 		"plain text secret with no field specified": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "test-secret",
 					Region:   "us-east-1",
 				},
@@ -156,8 +156,8 @@ func TestResolver_Resolve(t *testing.T) {
 			expectedValue: "plain-text-secret",
 		},
 		"number value": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "test",
 					Field:    "foo",
 				},
@@ -171,8 +171,8 @@ func TestResolver_Resolve(t *testing.T) {
 			expectedValue: "42",
 		},
 		"boolean value": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "test",
 					Field:    "active",
 				},
@@ -186,8 +186,8 @@ func TestResolver_Resolve(t *testing.T) {
 			expectedValue: "false",
 		},
 		"object as value": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "test",
 					Field:    "field",
 				},
@@ -201,8 +201,8 @@ func TestResolver_Resolve(t *testing.T) {
 			expectedError: fmt.Errorf("key 'field' in aws secrets manager response for secret 'test' is not a string, number or boolean"),
 		},
 		"array as value": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "test",
 					Field:    "field",
 				},
@@ -216,10 +216,10 @@ func TestResolver_Resolve(t *testing.T) {
 			expectedError: fmt.Errorf("key 'field' in aws secrets manager response for secret 'test' is not a string, number or boolean"),
 		},
 		"uses default credentials when roleArn is empty and no JWT": {
-			secret: common.Secret{
-				AWSSecretsManager: &common.AWSSecret{
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
 					SecretId: "test-secret",
-					Server: common.AWSServer{
+					Server: spec.AWSServer{
 						Region: "us-east-1",
 						// No JWT and no RoleArn - should use default credentials
 					},

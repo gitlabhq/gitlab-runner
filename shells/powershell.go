@@ -11,10 +11,12 @@ import (
 	"runtime"
 	"strings"
 
+	"golang.org/x/text/encoding/unicode"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
-	"golang.org/x/text/encoding/unicode"
 )
 
 const (
@@ -389,7 +391,7 @@ func (p *PsWriter) isTmpFile(path string) bool {
 	return strings.HasPrefix(path, p.TemporaryPath)
 }
 
-func (p *PsWriter) Variable(variable common.JobVariable) {
+func (p *PsWriter) Variable(variable spec.Variable) {
 	if variable.File {
 		variableFile := p.TmpFile(variable.Key)
 		p.MkDir(p.TemporaryPath)

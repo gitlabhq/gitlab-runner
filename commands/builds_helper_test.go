@@ -18,6 +18,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/config/runner"
 	"gitlab.com/gitlab-org/gitlab-runner/common/config/runner/monitoring"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
@@ -187,10 +188,10 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 		"job exists": {
 			build: &common.Build{
 				Runner: &common.RunnerConfig{},
-				JobResponse: common.JobResponse{
+				Job: spec.Job{
 					ID:      1,
-					JobInfo: common.JobInfo{ProjectID: 1},
-					GitInfo: common.GitInfo{RepoURL: "https://gitlab.example.com/my-namespace/my-project.git"},
+					JobInfo: spec.JobInfo{ProjectID: 1},
+					GitInfo: spec.GitInfo{RepoURL: "https://gitlab.example.com/my-namespace/my-project.git"},
 				},
 			},
 			expectedOutput: []string{
@@ -338,9 +339,9 @@ func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
 					},
 					SystemID: "testSystemID",
 				},
-				JobResponse: common.JobResponse{
+				Job: spec.Job{
 					ID: 1,
-					JobInfo: common.JobInfo{
+					JobInfo: spec.JobInfo{
 						ProjectID:                                1,
 						TimeInQueueSeconds:                       tt.jobInfo.timeInQueueSeconds,
 						ProjectJobsRunningOnInstanceRunnersCount: tt.jobInfo.projectJobsRunningOnInstanceRunnersCount,
@@ -408,9 +409,9 @@ func TestPrepareStageMetrics(t *testing.T) {
 				Token: testToken,
 			},
 		},
-		JobResponse: common.JobResponse{
+		Job: spec.Job{
 			ID: 1,
-			JobInfo: common.JobInfo{
+			JobInfo: spec.JobInfo{
 				ProjectID: 1,
 			},
 		},
@@ -449,9 +450,9 @@ func TestPrepareStageMetricsNoFF(t *testing.T) {
 				Token: testToken,
 			},
 		},
-		JobResponse: common.JobResponse{
+		Job: spec.Job{
 			ID: 1,
-			JobInfo: common.JobInfo{
+			JobInfo: spec.JobInfo{
 				ProjectID: 1,
 			},
 		},

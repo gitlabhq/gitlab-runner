@@ -1,6 +1,6 @@
 //go:build !integration
 
-package common
+package spec
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	_ value.Mapper = (*JobInputs)(nil)
+	_ value.Mapper = (*Inputs)(nil)
 )
 
 // TODO: to be replaced, but used here for quick testing
@@ -89,7 +89,7 @@ func TestJobInputs_Unmarshalling(t *testing.T) {
 	t.Parallel()
 
 	inputData := []byte(complexExampleInputs)
-	inputs := JobInputs{}
+	inputs := Inputs{}
 
 	err := json.Unmarshal(inputData, &inputs)
 
@@ -133,7 +133,7 @@ func TestJobInputs_Unmarshalling_Sensitive(t *testing.T) {
 		]
 	`)
 
-	inputs := JobInputs{}
+	inputs := Inputs{}
 
 	err := json.Unmarshal(inputData, &inputs)
 	require.NoError(t, err)
@@ -248,7 +248,7 @@ func TestJobInputs_Unmarshalling_Error(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			inputs := JobInputs{}
+			inputs := Inputs{}
 			err := json.Unmarshal(tt.inputData, &inputs)
 
 			assert.EqualError(t, err, tt.expectedError)
@@ -260,7 +260,7 @@ func TestJobInputs_Expand_string(t *testing.T) {
 	t.Parallel()
 
 	inputData := []byte(complexExampleInputs)
-	inputs := JobInputs{}
+	inputs := Inputs{}
 	err := json.Unmarshal(inputData, &inputs)
 	require.NoError(t, err)
 
@@ -274,7 +274,7 @@ func TestJobInputs_Expand_sensitive_string_reject(t *testing.T) {
 	t.Parallel()
 
 	inputData := []byte(complexExampleInputs)
-	inputs := JobInputs{}
+	inputs := Inputs{}
 	err := json.Unmarshal(inputData, &inputs)
 	require.NoError(t, err)
 
@@ -287,7 +287,7 @@ func TestJobInputs_Expand_nonstring(t *testing.T) {
 	t.Parallel()
 
 	inputData := []byte(complexExampleInputs)
-	inputs := JobInputs{}
+	inputs := Inputs{}
 	err := json.Unmarshal(inputData, &inputs)
 	require.NoError(t, err)
 
@@ -312,7 +312,7 @@ func TestJobInputs_Expand_ArrayElement(t *testing.T) {
 		]
 	`)
 
-	inputs := JobInputs{}
+	inputs := Inputs{}
 	err := json.Unmarshal(inputData, &inputs)
 	require.NoError(t, err)
 
@@ -341,7 +341,7 @@ func TestJobInputs_Expand_StructField(t *testing.T) {
 		]
 	`)
 
-	inputs := JobInputs{}
+	inputs := Inputs{}
 	err := json.Unmarshal(inputData, &inputs)
 	require.NoError(t, err)
 
@@ -353,7 +353,7 @@ func TestJobInputs_Expand_StructField(t *testing.T) {
 
 type customInputExpander string
 
-func (c *customInputExpander) Expand(inputs *JobInputs) error {
+func (c *customInputExpander) Expand(inputs *Inputs) error {
 	*c = "REDACTED"
 	return nil
 }
@@ -405,7 +405,7 @@ func TestInputsTag(t *testing.T) {
 		CustomInputExpanderNotToExpand: "${{ job.inputs.any }}",
 	}
 
-	inputs, err := newJobInputs([]JobInput{
+	inputs, err := NewJobInputs([]JobInput{
 		{
 			Key: "any",
 			Value: JobInputValue{

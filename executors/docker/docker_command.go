@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/exec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/user"
@@ -163,7 +164,7 @@ func (s *commandExecutor) requestHelperContainer() (*container.InspectResponse, 
 		return nil, err
 	}
 
-	buildImage := common.Image{
+	buildImage := spec.Image{
 		Name: prebuildImage.ID,
 	}
 
