@@ -18,7 +18,11 @@ func RetryWithBackoff(ctx context.Context, timeout time.Duration, fn func() erro
 
 	var err error
 
-	cctx, cancelFn := context.WithDeadlineCause(ctx, time.Now().Add(timeout), fmt.Errorf("%w: %s", ErrRetryTimeoutExceeded, timeout))
+	cctx, cancelFn := context.WithDeadlineCause(
+		ctx,
+		time.Now().Add(timeout),
+		fmt.Errorf("%w: %s", ErrRetryTimeoutExceeded, timeout),
+	)
 	defer cancelFn()
 
 	for {
@@ -27,10 +31,15 @@ func RetryWithBackoff(ctx context.Context, timeout time.Duration, fn func() erro
 			return nil
 		}
 
+		timer := time.NewTimer(b.NextBackOff())
+
 		select {
 		case <-cctx.Done():
-			return ctx.Err()
-		case <-time.After(b.NextBackOff()):
+			timer.Stop()
+			return cctx.Err()
+		case <-timer.C:
+			// continue retrying
 		}
 	}
 }
+
