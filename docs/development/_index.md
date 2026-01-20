@@ -467,7 +467,7 @@ your own credentials, override the username using environment variables:
 
 ```shell
 export GITLAB_TEST_USERNAME="your-username"
-export GITLAB_TOKEN="your-personal-access-token"
+export GITLAB_TEST_TOKEN="your-personal-access-token"
 ```
 
 For example, to run the `TestGitIncludePaths` test:

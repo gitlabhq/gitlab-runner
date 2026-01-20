@@ -162,7 +162,7 @@ func injectJobToken(t *testing.T, jobResponse *spec.Job, token string) *url.URL 
 // It returns the token value and the new repo URL with the injected token.
 func InjectJobTokenFromEnv(t *testing.T, jobResponse *spec.Job, envVars ...string) (string, *url.URL) {
 	if len(envVars) == 0 {
-		envVars = []string{"GITLAB_TOKEN", "CI_JOB_TOKEN", "OUTER_CI_JOB_TOKEN"}
+		envVars = []string{"GITLAB_TEST_TOKEN", "CI_JOB_TOKEN", "OUTER_CI_JOB_TOKEN"}
 	}
 
 	var token string
