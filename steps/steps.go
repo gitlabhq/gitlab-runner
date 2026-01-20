@@ -7,7 +7,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
