@@ -53,7 +53,7 @@ require (
 	github.com/klauspost/compress v1.18.2
 	github.com/klauspost/pgzip v1.2.6
 	github.com/magefile/mage v1.15.0
-	github.com/minio/minio-go/v7 v7.0.97
+	github.com/minio/minio-go/v7 v7.0.98
 	github.com/moby/docker-image-spec v1.3.1
 	github.com/openbao/openbao/api/v2 v2.5.0
 	github.com/opencontainers/image-spec v1.1.1
