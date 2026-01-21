@@ -36,6 +36,19 @@
     - mage packagecloud:push deb "$CI_JOB_NAME" "$DIST_FLAVOR"
     - mage packagecloud:push rpm "$CI_JOB_NAME" "$DIST_FLAVOR"
 
+.release_pulp:
+  stage: release
+  dependencies:
+    - "package-deb"
+    - "package-rpm"
+    - "package-helpers"
+  before_script:
+    - ./ci/touch_git
+    - mage pulp:createConfig
+  script:
+    - mage pulp:push deb "$CI_JOB_NAME" "$DIST_FLAVOR"
+    - mage pulp:push rpm "$CI_JOB_NAME" "$DIST_FLAVOR"
+
 .release_artifacts:
   artifacts:
     paths:
