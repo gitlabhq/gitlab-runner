@@ -137,6 +137,27 @@ stable packagecloud:
           - sles
           - opensuse
 
+stable pulp:
+  extends:
+    - .release_pulp
+    - .rules:release:stable:branch
+  environment:
+    name: stable/pulp
+    url: https://pulp.gitlab.com/runner/gitlab-runner
+  parallel:
+    matrix:
+      - DIST_FLAVOR:
+          - debian
+          - ubuntu
+          - raspbian
+          - linuxmint
+          - el
+          - ol
+          - fedora
+          - amazon
+          - sles
+          - opensuse
+
 # Image Registry Releases
 #########################
 
