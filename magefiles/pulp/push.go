@@ -69,9 +69,9 @@ func Push(opts PushOpts) error {
 	var p pusher
 	base := basePusher{dryrun: opts.DryRun, run: sh.Run, exec: sh.Exec, branch: opts.Branch, concurrency: opts.Concurrency}
 	switch opts.PkgType {
-	case "deb":
+	case deb:
 		p = &debPusher{basePusher: base}
-	case "rpm":
+	case rpm:
 		p = &rpmPusher{basePusher: base, archs: opts.Archs}
 	}
 	return p.Push(releases, packages)
@@ -144,7 +144,7 @@ func (p *debPusher) Push(releases, pkgFiles []string) error {
 func (p *debPusher) pushArgs(release, pkg string) []string {
 	pulpRepo := "runner-" + p.branch + "-" + strings.Split(release, "/")[0]
 	return []string{
-		"deb", "content", "upload", "--file", pkg,
+		deb, "content", "upload", "--file", pkg,
 		"--distribution", strings.Split(release, "/")[1],
 		"--component", "main",
 		"--repository", pulpRepo,
@@ -198,11 +198,11 @@ func (p *rpmPusher) pulpRepo(release, arch string) string {
 }
 
 func (p *rpmPusher) pushArgs(pkgFile, repo string) []string {
-	return []string{"rpm", "content", "upload", "--file", pkgFile, "--repository", repo}
+	return []string{rpm, "content", "upload", "--file", pkgFile, "--repository", repo}
 }
 
 func (p *rpmPusher) linkArgs(repo, href string) []string {
-	return []string{"rpm", "repository", "content", "modify", "--repository", repo, "--add-content", `[{"pulp_href": "` + href + `"}]`}
+	return []string{rpm, "repository", "content", "modify", "--repository", repo, "--add-content", `[{"pulp_href": "` + href + `"}]`}
 }
 
 // Push the specific package file to all the specified releases and architectures
@@ -259,7 +259,7 @@ func (p *rpmPusher) doPush(pkgFile, repo string) (string, error) {
 // getRPMInfo runs rpm -qi on the given filename and extracts the Version, Name and Architecture fields
 func (p *rpmPusher) getRPMInfo(filename string) (rpmInfo, error) {
 	out := bytes.Buffer{}
-	if err := p.execCmd(&out, "rpm", "-qi", filename); err != nil {
+	if err := p.execCmd(&out, rpm, "-qi", filename); err != nil {
 		return rpmInfo{}, fmt.Errorf("failed to query rpm package %q: %w", filename, err)
 	}
 

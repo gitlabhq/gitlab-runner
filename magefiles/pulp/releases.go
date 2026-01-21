@@ -15,6 +15,8 @@ import (
 
 const (
 	pulpReposURL = "https://gitlab.com/api/v4/projects/75880111/repository/files/repos%2Frunner.yaml/raw"
+	rpm          = "rpm"
+	deb          = "deb"
 )
 
 type (
@@ -43,7 +45,7 @@ type (
 )
 
 var (
-	dists    = []string{"rpm", "deb"}
+	dists    = []string{rpm, deb}
 	branches = []string{"stable", "unstable"}
 )
 
@@ -114,9 +116,9 @@ func releasesForDistBranch(dist, branch string, config *pulpConfig) []string {
 
 	var repos []pulpRepository
 	switch dist {
-	case "deb":
+	case deb:
 		repos = release.Repositories.Deb
-	case "rpm":
+	case rpm:
 		repos = release.Repositories.Rpm
 	}
 

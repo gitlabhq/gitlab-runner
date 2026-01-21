@@ -231,7 +231,7 @@ func TestRpmPusherPush(t *testing.T) {
 			// Create mock for exec function
 			execMock := func(env map[string]string, out io.Writer, stderr io.Writer, cmd string, args ...string) (bool, error) {
 				// Detect rpm -qi command
-				if cmd == "rpm" && len(args) >= 2 && args[0] == "-qi" {
+				if cmd == rpm && len(args) >= 2 && args[0] == "-qi" {
 					// Track the package file being queried
 					lastPkgFile = args[1]
 
@@ -265,7 +265,7 @@ Description : GitLab Runner
 				}
 
 				// Detect pulp rpm content upload command
-				if cmd == "pulp" && len(args) >= 5 && args[0] == "rpm" && args[1] == "content" && args[2] == "upload" {
+				if cmd == "pulp" && len(args) >= 5 && args[0] == rpm && args[1] == "content" && args[2] == "upload" {
 					// Write JSON response with pulp_href
 					fmt.Fprintf(out, `{"pulp_href": "/pulp/api/v3/content/rpm/packages/abc123/"}`)
 					return true, nil
