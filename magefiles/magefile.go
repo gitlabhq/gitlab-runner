@@ -3,6 +3,9 @@
 package main
 
 import (
+	"log/slog"
+	"os"
+
 	"github.com/kelseyhightower/envconfig"
 	"github.com/magefile/mage/sh"
 )
@@ -13,6 +16,8 @@ type mageConfig struct {
 	Concurrency int
 	// DryRun if supplied and if the target allows will not perform any destructive or creative actions but just log instead
 	DryRun bool
+	// Verbose if applied will enable additional/debug logging
+	Verbose bool
 }
 
 var config mageConfig
@@ -22,6 +27,10 @@ func init() {
 
 	if config.Concurrency < 1 {
 		config.Concurrency = 1
+	}
+
+	if config.Verbose {
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
 	}
 }
 

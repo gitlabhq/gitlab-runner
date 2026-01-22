@@ -47,3 +47,15 @@ func (p Pulp) CreateConfig() error {
 		"--password", password,
 	)
 }
+
+func (p Pulp) Push(pkgType, branch, distro string) error {
+	branch = strings.Split(branch, " ")[0]
+	return pulp.Push(pulp.PushOpts{
+		Branch:      branch,
+		PkgType:     pkgType,
+		Distro:      distro,
+		Archs:       new(Package).archs(pkgType),
+		Concurrency: config.Concurrency,
+		DryRun:      config.DryRun,
+	})
+}

@@ -77,11 +77,13 @@ var packageBuilds = packages.Builds{
 // Archs prints the list of architectures as they appear in the final package's filename
 // for either "deb" or "rpm"
 func (p Package) Archs(dist string) {
-	archs := lo.Flatten(lo.Map(packageBuilds[dist], func(p packages.Build, index int) []string {
+	fmt.Println(strings.Join(p.archs(dist), " "))
+}
+
+func (p Package) archs(dist string) []string {
+	return lo.Flatten(lo.Map(packageBuilds[dist], func(p packages.Build, index int) []string {
 		return p.PackageFileArchs
 	}))
-
-	fmt.Println(strings.Join(archs, " "))
 }
 
 // Filenames prints the final names of the packages for all supported architectures for a version and a distribution
