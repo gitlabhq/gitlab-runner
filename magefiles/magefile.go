@@ -29,9 +29,11 @@ func init() {
 		config.Concurrency = 1
 	}
 
+	level := slog.LevelInfo
 	if config.Verbose {
-		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
+		level = slog.LevelDebug
 	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
 }
 
 // Generate runs go generate for all files in the magefiles directory
