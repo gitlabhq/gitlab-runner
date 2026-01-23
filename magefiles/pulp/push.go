@@ -150,6 +150,7 @@ func (p *debPusher) pushArgs(release, pkg string) []string {
 		"--distribution", strings.Split(release, "/")[1],
 		"--component", "main",
 		"--repository", pulpRepo,
+		"--chunk-size", "10MB",
 	}
 }
 
@@ -200,7 +201,7 @@ func (p *rpmPusher) pulpRepo(release, arch string) string {
 }
 
 func (p *rpmPusher) pushArgs(pkgFile, repo string) []string {
-	return []string{rpm, "content", "upload", "--file", pkgFile, "--repository", repo}
+	return []string{rpm, "content", "upload", "--file", pkgFile, "--repository", repo, "--chunk-size", "10MB"}
 }
 
 func (p *rpmPusher) linkArgs(repo, href string) []string {
