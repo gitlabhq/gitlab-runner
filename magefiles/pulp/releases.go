@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/samber/lo"
@@ -48,6 +47,11 @@ var (
 	dists    = []string{rpm, deb}
 	branches = []string{"stable", "unstable"}
 )
+
+var tokenHeaders = map[string]string{
+	"CI_JOB_TOKEN":  "JOB-TOKEN",
+	"PRIVATE_TOKEN": "PRIVATE-TOKEN",
+}
 
 func Releases(dist, branch string) ([]string, error) {
 	if err := validateInputs(dist, branch); err != nil {
@@ -100,7 +104,8 @@ func getToken() (string, string, error) {
 		return "", "", fmt.Errorf("%s cannot be empty", tokenType)
 	}
 
-	tokenType = strings.ReplaceAll(tokenType, "_", "-")
+	// Translate token type to required headers
+	tokenType = tokenHeaders[tokenType]
 
 	return tokenType, tokenValue, nil
 }
