@@ -147,7 +147,7 @@ func (p *debPusher) Push(releases, pkgFiles []string) error {
 	for _, release := range releases {
 		for _, pkgFile := range pkgFiles {
 			pool.Go(func() error {
-				return p.runPulpCmd(p.pushArgs(release, pkgFile)...)
+				return p.retryPulpCmd(p.pushArgs(release, pkgFile), io.Discard)
 			})
 		}
 	}
@@ -255,7 +255,7 @@ func (p *rpmPusher) doPush(pkgFile, repo string) (string, error) {
 	args := p.pushArgs(pkgFile, repo)
 
 	out := bytes.Buffer{}
-	if err := p.execCmd(&out, "pulp", args...); err != nil {
+	if err := p.retryPulpCmd(args, &out); err != nil {
 		return "", err
 	}
 
