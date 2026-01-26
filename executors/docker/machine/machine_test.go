@@ -12,6 +12,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
+	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
 func getRunnerConfig() *common.RunnerConfig {
@@ -135,7 +136,7 @@ func TestMachineCredentialsUsage(t *testing.T) {
 type mockDockerExecutor struct {
 	*common.MockExecutor
 	*terminal.MockInteractiveTerminal
-	*common.MockConnector
+	*steps.MockConnector
 }
 
 func TestMachineExecutor_WithoutInteractiveTerminal(t *testing.T) {
@@ -177,7 +178,7 @@ func TestMachineExecutor_WithInteractiveTerminal(t *testing.T) {
 func TestMachineExecutor_Connect(t *testing.T) {
 	mock := mockDockerExecutor{
 		MockExecutor:  common.NewMockExecutor(t),
-		MockConnector: common.NewMockConnector(t),
+		MockConnector: steps.NewMockConnector(t),
 	}
 	e := machineExecutor{
 		executor: &mock,

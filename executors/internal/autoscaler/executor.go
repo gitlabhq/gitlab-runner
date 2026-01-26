@@ -74,7 +74,7 @@ func (e *executor) Cleanup() {
 	e.Executor.Cleanup()
 }
 
-func (s *executor) Connect(ctx context.Context) (io.ReadWriteCloser, error) {
+func (s *executor) Connect(ctx context.Context) (func() (io.ReadWriteCloser, error), error) {
 	if connector, ok := s.Executor.(steps.Connector); ok {
 		return connector.Connect(ctx)
 	}

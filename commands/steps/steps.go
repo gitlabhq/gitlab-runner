@@ -27,6 +27,8 @@ import (
 
 const (
 	SubCommandName = "steps"
+
+	readyMessage = "step-runner is ready."
 )
 
 type IOStreams struct {
@@ -69,6 +71,7 @@ func Bootstrap(destination string) error {
 	return os.Chmod(destination, 0o755)
 }
 
+//nolint:gocognit
 func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs ...string) error {
 	listener, err := net.ListenUnix("unix", api.SocketAddr(sockPath))
 	if err != nil {
@@ -87,6 +90,9 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 	srv := grpc.NewServer()
 	proto.RegisterStepRunnerServer(srv, service)
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	wg, ctx := errgroup.WithContext(ctx)
 
 	go func() {
@@ -102,8 +108,13 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 		return nil
 	})
 
+	fmt.Fprintln(os.Stderr, readyMessage)
+
 	if len(cmdAndArgs) > 0 {
 		wg.Go(func() error {
+			// on script exit, we cancel() so that the step-runner serve also terminates
+			defer cancel()
+
 			stdin := bufio.NewReader(ioStreams.Stdin)
 
 			stdinCheck := make(chan error, 1)

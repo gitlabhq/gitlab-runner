@@ -171,7 +171,7 @@ func (e *machineExecutor) GetMetricsSelector() string {
 	return refereed.GetMetricsSelector()
 }
 
-func (s *machineExecutor) Connect(ctx context.Context) (io.ReadWriteCloser, error) {
+func (s *machineExecutor) Connect(ctx context.Context) (func() (io.ReadWriteCloser, error), error) {
 	if connector, ok := s.executor.(steps.Connector); ok {
 		return connector.Connect(ctx)
 	}

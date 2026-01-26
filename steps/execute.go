@@ -18,7 +18,7 @@ import (
 )
 
 type Connector interface {
-	Connect(ctx context.Context) (io.ReadWriteCloser, error)
+	Connect(ctx context.Context) (func() (io.ReadWriteCloser, error), error)
 }
 
 type JobInfo struct {
@@ -50,7 +50,12 @@ func (cserr *ClientStatusError) Unwrap() error {
 }
 
 func Execute(ctx context.Context, connector Connector, jobInfo JobInfo, steps []schema.Step, trace io.Writer) error {
-	dialer := &stdioDialer{connector: connector}
+	dialFn, err := connector.Connect(ctx)
+	if err != nil {
+		return fmt.Errorf("creating connect dialer: %w", err)
+	}
+
+	dialer := &stdioDialer{dialFn: dialFn}
 	c, err := extended.New(dialer)
 	if err != nil {
 		return fmt.Errorf("creating steps client: %w", err)
@@ -78,14 +83,14 @@ func Execute(ctx context.Context, connector Connector, jobInfo JobInfo, steps []
 }
 
 type stdioDialer struct {
-	connector Connector
+	dialFn func() (io.ReadWriteCloser, error)
 }
 
 func (d *stdioDialer) Dial() (*grpc.ClientConn, error) {
 	return grpc.NewClient("unix:step-runner",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
-			rwc, err := d.connector.Connect(ctx)
+			rwc, err := d.dialFn()
 			if err != nil {
 				return nil, err
 			}

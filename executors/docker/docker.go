@@ -883,19 +883,20 @@ func (e *executor) createContainerConfig(
 		OpenStdin:    true,
 		StdinOnce:    true,
 		Entrypoint:   e.overwriteEntrypoint(&imageDefinition),
+		Env:          e.Build.GetAllVariables().StringList(),
 	}
 
-	// We should never really need to set the environment variables on the container,
-	// as these are exported via the abstract shell.
-	//
-	// Adding these variables interferes with steps. Given this situation, when native
-	// steps is enabled, we no longer add the env vars to the container.
-	if !e.Build.UseNativeSteps() {
-		config.Env = e.Build.GetAllVariables().StringList()
-	}
-
-	// user config should only be set in build containers
+	//nolint:nestif
 	if containerType == buildContainerType {
+		if e.Build.UseNativeSteps() {
+			config.Cmd = append([]string{bootstrappedBinary, "steps", "serve"}, config.Cmd...)
+
+			// Environment variables interferes with steps. Given this situation, when
+			// native steps are enabled, we no longer add the env vars to the container.
+			config.Env = nil
+		}
+
+		// user config should only be set in build containers
 		if user, err := e.getBuildContainerUser(imageDefinition); err != nil {
 			return nil, err
 		} else {

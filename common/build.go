@@ -418,6 +418,7 @@ func (b *Build) StartBuild(
 	return nil
 }
 
+//nolint:gocognit
 func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector, buildStage BuildStage, req []schema.Step) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -453,28 +454,31 @@ func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector,
 				Variables:  b.GetAllVariables(),
 			}
 
-			err := steps.Execute(ctx, connector, info, req, stdout)
-			if err != nil {
-				berr := &BuildError{Inner: err}
-
-				var cserr *steps.ClientStatusError
-				if errors.As(err, &cserr) {
-					switch cserr.Status.State {
-					case client.StateUnspecified:
-						berr.FailureReason = UnknownFailure
-					case client.StateFailure:
-						berr.FailureReason = ScriptFailure
-					}
-				}
-
-				return berr
-			}
-
-			return err
+			return wrapStepStageErr(steps.Execute(ctx, connector, info, req, stdout))
 		},
 	}
 
 	return section.Execute(&b.logger)
+}
+
+func wrapStepStageErr(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	berr := &BuildError{Inner: err}
+
+	var cserr *steps.ClientStatusError
+	if errors.As(err, &cserr) {
+		switch cserr.Status.State {
+		case client.StateUnspecified:
+			berr.FailureReason = UnknownFailure
+		case client.StateFailure:
+			berr.FailureReason = ScriptFailure
+		}
+	}
+
+	return berr
 }
 
 //nolint:gocognit
