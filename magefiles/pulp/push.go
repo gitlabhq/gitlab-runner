@@ -114,6 +114,19 @@ func (p *basePusher) runPulpCmd(args ...string) error {
 	return p.run("pulp", args...)
 }
 
+var pulpRetryErrors = []*regexp.Regexp{
+	regexp.MustCompile(`Artifact with sha256 checksum of '.*' already exists`),
+}
+
+func (p *basePusher) retryPulpCmd(args []string, out io.Writer) error {
+	slog.Info("executing", "cmd", "pulp", "args", args)
+	if p.dryrun {
+		return nil
+	}
+
+	return newRetryCommand("pulp", args, pulpRetryErrors, out, p.exec).run()
+}
+
 func (p *basePusher) execCmd(out io.Writer, cmd string, args ...string) error {
 	slog.Info("executing", "cmd", cmd, "args", args)
 	if p.dryrun {
