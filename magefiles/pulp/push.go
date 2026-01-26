@@ -50,8 +50,7 @@ func Push(opts PushOpts) error {
 	})
 
 	if len(releases) == 0 {
-		slog.Info("No releases to push for package type", "package-type", opts.PkgType)
-		return nil
+		return fmt.Errorf("no valid releases to push to")
 	}
 
 	// get the packages to upload...
@@ -61,8 +60,7 @@ func Push(opts PushOpts) error {
 	}
 
 	if len(packages) == 0 {
-		slog.Info("No packages to push")
-		return nil
+		return fmt.Errorf("no packages to push")
 	}
 
 	// the actual repo name for the stable branch is gitlab-runner
@@ -117,7 +115,7 @@ func (p *basePusher) runPulpCmd(args ...string) error {
 }
 
 var pulpRetryErrors = []*regexp.Regexp{
-	regexp.MustCompile(`Artifact with checksum of '.*' already exists\.`),
+	regexp.MustCompile(`Artifact with sha256 checksum of '.*' already exists`),
 }
 
 func (p *basePusher) retryPulpCmd(args []string, out io.Writer) error {
@@ -368,7 +366,6 @@ func newRetryCommand(cmd string, args []string, retryableErrs []*regexp.Regexp, 
 
 func (c *retryCommand) run() error {
 	for i := range 5 {
-		time.Sleep(c.backoff.Duration())
 		slog.Info("attempting to run command", "attempt", i+1, "command", c.cmd, "args", c.args)
 
 		outBuf, errBuf := bytes.Buffer{}, bytes.Buffer{}
@@ -382,6 +379,7 @@ func (c *retryCommand) run() error {
 			return nil
 		}
 		if c.isRetryable(errBuf.String()) {
+			time.Sleep(c.backoff.Duration())
 			continue
 		}
 		return fmt.Errorf("execution of command (%s %s) failed: %s", c.cmd, c.args, errBuf.String())
