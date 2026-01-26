@@ -12,7 +12,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/jpillora/backoff"
 	"github.com/magefile/mage/sh"
 	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/pool"
@@ -324,4 +326,60 @@ func parseRPMInfo(out io.Reader) (rpmInfo, error) {
 	}
 
 	return info, nil
+}
+
+type retryCommand struct {
+	cmd           string
+	args          []string
+	backoff       backoff.Backoff
+	out           io.Writer
+	retryableErrs []*regexp.Regexp
+	exec          shExec
+}
+
+func newRetryCommand(cmd string, args []string, retryableErrs []*regexp.Regexp, out io.Writer, exec shExec) *retryCommand {
+	return &retryCommand{
+		cmd:  cmd,
+		args: args,
+		backoff: backoff.Backoff{
+			Min: time.Second,
+			Max: 5 * time.Second,
+		},
+		out:           out,
+		retryableErrs: retryableErrs,
+		exec:          exec,
+	}
+}
+
+func (c *retryCommand) run() error {
+	for i := range 5 {
+		slog.Info("attempting to run command", "attempt", i+1, "command", c.cmd, "args", c.args)
+
+		outBuf, errBuf := bytes.Buffer{}, bytes.Buffer{}
+		stdout := io.MultiWriter(&outBuf, os.Stdout)
+		stderr := io.MultiWriter(&errBuf, os.Stderr)
+
+		_, err := c.exec(nil, stdout, stderr, c.cmd, c.args...)
+
+		if err == nil {
+			_, _ = io.Copy(c.out, &outBuf)
+			return nil
+		}
+		if c.isRetryable(errBuf.String()) {
+			time.Sleep(c.backoff.Duration())
+			continue
+		}
+		return fmt.Errorf("execution of command (%s %s) failed: %s", c.cmd, c.args, errBuf.String())
+	}
+
+	return fmt.Errorf("execution of command (%s %s) failed after 5 retries ", c.cmd, c.args)
+}
+
+func (c *retryCommand) isRetryable(stderr string) bool {
+	for _, re := range c.retryableErrs {
+		if re.MatchString(stderr) {
+			return true
+		}
+	}
+	return false
 }
