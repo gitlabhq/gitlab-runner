@@ -105,7 +105,7 @@ type (
 )
 
 func (p *basePusher) runPulpCmd(args ...string) error {
-	fmt.Println("executing", "pulp", strings.Join(args, " "))
+	slog.Info("executing", "cmd", "pulp", "args", args)
 	if p.dryrun {
 		return nil
 	}
@@ -113,7 +113,7 @@ func (p *basePusher) runPulpCmd(args ...string) error {
 }
 
 func (p *basePusher) execCmd(out io.Writer, cmd string, args ...string) error {
-	fmt.Println("executing", cmd, strings.Join(args, " "))
+	slog.Info("executing", "cmd", cmd, "args", args)
 	if p.dryrun {
 		return nil
 	}
