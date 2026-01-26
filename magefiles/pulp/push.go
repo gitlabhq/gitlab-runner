@@ -132,7 +132,6 @@ func (p *debPusher) Push(releases, pkgFiles []string) error {
 	for _, release := range releases {
 		for _, pkgFile := range pkgFiles {
 			pool.Go(func() error {
-				slog.Debug("Pushing", "package", pkgFile, "release", release)
 				return p.runPulpCmd(p.pushArgs(release, pkgFile)...)
 			})
 		}
