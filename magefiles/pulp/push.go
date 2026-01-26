@@ -12,7 +12,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/jpillora/backoff"
 	"github.com/magefile/mage/sh"
 	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/pool"
@@ -107,15 +109,28 @@ type (
 )
 
 func (p *basePusher) runPulpCmd(args ...string) error {
-	fmt.Println("executing", "pulp", strings.Join(args, " "))
+	slog.Info("executing", "cmd", "pulp", "args", args)
 	if p.dryrun {
 		return nil
 	}
 	return p.run("pulp", args...)
 }
 
+var pulpRetryErrors = []*regexp.Regexp{
+	regexp.MustCompile(`Artifact with checksum of '.*' already exists\.`),
+}
+
+func (p *basePusher) retryPulpCmd(args []string, out io.Writer) error {
+	slog.Info("executing", "cmd", "pulp", "args", args)
+	if p.dryrun {
+		return nil
+	}
+
+	return newRetryCommand("pulp", args, pulpRetryErrors, out, p.exec).run()
+}
+
 func (p *basePusher) execCmd(out io.Writer, cmd string, args ...string) error {
-	fmt.Println("executing", cmd, strings.Join(args, " "))
+	slog.Info("executing", "cmd", cmd, "args", args)
 	if p.dryrun {
 		return nil
 	}
@@ -134,8 +149,7 @@ func (p *debPusher) Push(releases, pkgFiles []string) error {
 	for _, release := range releases {
 		for _, pkgFile := range pkgFiles {
 			pool.Go(func() error {
-				slog.Debug("Pushing", "package", pkgFile, "release", release)
-				return p.runPulpCmd(p.pushArgs(release, pkgFile)...)
+				return p.retryPulpCmd(p.pushArgs(release, pkgFile), io.Discard)
 			})
 		}
 	}
@@ -243,7 +257,7 @@ func (p *rpmPusher) doPush(pkgFile, repo string) (string, error) {
 	args := p.pushArgs(pkgFile, repo)
 
 	out := bytes.Buffer{}
-	if err := p.execCmd(&out, "pulp", args...); err != nil {
+	if err := p.retryPulpCmd(args, &out); err != nil {
 		return "", err
 	}
 
@@ -327,4 +341,60 @@ func parseRPMInfo(out io.Reader) (rpmInfo, error) {
 	}
 
 	return info, nil
+}
+
+type retryCommand struct {
+	cmd           string
+	args          []string
+	backoff       backoff.Backoff
+	out           io.Writer
+	retryableErrs []*regexp.Regexp
+	exec          shExec
+}
+
+func newRetryCommand(cmd string, args []string, retryableErrs []*regexp.Regexp, out io.Writer, exec shExec) *retryCommand {
+	return &retryCommand{
+		cmd:  cmd,
+		args: args,
+		backoff: backoff.Backoff{
+			Min: time.Second,
+			Max: 5 * time.Second,
+		},
+		out:           out,
+		retryableErrs: retryableErrs,
+		exec:          exec,
+	}
+}
+
+func (c *retryCommand) run() error {
+	for i := range 5 {
+		time.Sleep(c.backoff.Duration())
+		slog.Info("attempting to run command", "attempt", i+1, "command", c.cmd, "args", c.args)
+
+		outBuf, errBuf := bytes.Buffer{}, bytes.Buffer{}
+		stdout := io.MultiWriter(&outBuf, os.Stdout)
+		stderr := io.MultiWriter(&errBuf, os.Stderr)
+
+		_, err := c.exec(nil, stdout, stderr, c.cmd, c.args...)
+
+		if err == nil {
+			_, _ = io.Copy(c.out, &outBuf)
+			return nil
+		}
+		if c.isRetryable(errBuf.String()) {
+			continue
+		}
+		return fmt.Errorf("execution of command (%s %s) failed: %s", c.cmd, c.args, errBuf.String())
+	}
+
+	return fmt.Errorf("execution of command (%s %s) failed after 5 retries ", c.cmd, c.args)
+}
+
+func (c *retryCommand) isRetryable(stderr string) bool {
+	for _, re := range c.retryableErrs {
+		if re.MatchString(stderr) {
+			return true
+		}
+	}
+	return false
 }
