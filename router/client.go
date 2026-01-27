@@ -132,5 +132,8 @@ func (c *Client) getRouterDiscovery(ctx context.Context, config common.RunnerCon
 	}
 	c.disco = c.delegate.GetRouterDiscovery(ctx, config)
 	c.discoExpiresAt = time.Now().Add(discoveryTTL)
+	if c.disco != nil {
+		config.Log().Info("Using job router at " + c.disco.ServerURL)
+	}
 	return c.disco
 }
