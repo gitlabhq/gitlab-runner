@@ -1,0 +1,14 @@
+# Lint Go code in QA stage
+lint-go:
+  stage: qa
+  image: golang:1.25.3
+  script:
+    - echo "Running Go format and lint..."
+    - go fmt ./...
+    - golangci-lint run ./...
+  cache:
+    key: lint-go-${CI_COMMIT_REF_NAME}
+    paths:
+      - .cache/go-build
+  only:
+    - merge_requests
