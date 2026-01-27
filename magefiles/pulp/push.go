@@ -50,7 +50,8 @@ func Push(opts PushOpts) error {
 	})
 
 	if len(releases) == 0 {
-		return fmt.Errorf("no valid releases to push to")
+		slog.Info("No releases to push for package type", "package-type", opts.PkgType)
+		return nil
 	}
 
 	// get the packages to upload...
@@ -60,7 +61,8 @@ func Push(opts PushOpts) error {
 	}
 
 	if len(packages) == 0 {
-		return fmt.Errorf("no packages to push")
+		slog.Info("No packages to push")
+		return nil
 	}
 
 	// the actual repo name for the stable branch is gitlab-runner
