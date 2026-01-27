@@ -5,9 +5,12 @@ package pulp
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/jpillora/backoff"
 	"github.com/stretchr/testify/require"
 )
 
@@ -189,6 +192,161 @@ Description : GitLab Runner
 				require.Equal(t, tt.expectedVersion, info.version)
 				require.Equal(t, tt.expectedArch, info.arch)
 			}
+		})
+	}
+}
+
+func TestRetryCommandRun(t *testing.T) {
+	tests := map[string]struct {
+		execBehavior    func(attempt int) (bool, string, error) // returns (success, stderr, error )
+		retryableErrs   []*regexp.Regexp
+		expectedError   bool
+		errorContains   string
+		expectedAttempt int
+	}{
+		"successful on first attempt": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				return true, "", nil
+			},
+			retryableErrs:   []*regexp.Regexp{},
+			expectedError:   false,
+			expectedAttempt: 1,
+		},
+		"successful on second attempt with retryable error": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt == 1 {
+					return false, "Artifact with checksum of 'abc123' already exists.", fmt.Errorf("artifact error")
+				}
+				return true, "", nil
+			},
+			retryableErrs: []*regexp.Regexp{
+				regexp.MustCompile(`Artifact with checksum of '.*' already exists\.`),
+			},
+			expectedError:   false,
+			expectedAttempt: 2,
+		},
+		"successful on third attempt with retryable error": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt <= 2 {
+					return false, "Artifact with checksum of 'xyz789' already exists.", fmt.Errorf("artifact error")
+				}
+				return true, "", nil
+			},
+			retryableErrs: []*regexp.Regexp{
+				regexp.MustCompile(`Artifact with checksum of '.*' already exists\.`),
+			},
+			expectedError:   false,
+			expectedAttempt: 3,
+		},
+		"fails with non-retryable error on first attempt": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				return false, "Permission denied: cannot access repository", fmt.Errorf("permission denied")
+			},
+			retryableErrs: []*regexp.Regexp{
+				regexp.MustCompile(`Artifact with checksum of '.*' already exists\.`),
+			},
+			expectedError:   true,
+			errorContains:   "Permission denied",
+			expectedAttempt: 1,
+		},
+		"fails after max retries with retryable error": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				return false, "Artifact with checksum of 'def456' already exists.", fmt.Errorf("artifact error")
+			},
+			retryableErrs: []*regexp.Regexp{
+				regexp.MustCompile(`Artifact with checksum of '.*' already exists\.`),
+			},
+			expectedError:   true,
+			errorContains:   "failed after 5 retries",
+			expectedAttempt: 5,
+		},
+		"multiple retryable error patterns": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt == 1 {
+					return false, "Connection timeout: server not responding", fmt.Errorf("timeout")
+				}
+				if attempt == 2 {
+					return false, "Artifact with checksum of 'ghi012' already exists.", fmt.Errorf("artifact error")
+				}
+				return true, "", nil
+			},
+			retryableErrs: []*regexp.Regexp{
+				regexp.MustCompile(`Artifact with checksum of '.*' already exists\.`),
+				regexp.MustCompile(`Connection timeout:.*`),
+			},
+			expectedError:   false,
+			expectedAttempt: 3,
+		},
+		"retryable error on last attempt succeeds": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt < 5 {
+					return false, "Artifact with checksum of 'jkl345' already exists.", fmt.Errorf("artifact error")
+				}
+				return true, "", nil
+			},
+			retryableErrs: []*regexp.Regexp{
+				regexp.MustCompile(`Artifact with checksum of '.*' already exists\.`),
+			},
+			expectedError:   false,
+			expectedAttempt: 5,
+		},
+		"no retryable errors configured": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				return false, "Some error message", fmt.Errorf("some error")
+			},
+			retryableErrs:   []*regexp.Regexp{},
+			expectedError:   true,
+			errorContains:   "Some error message",
+			expectedAttempt: 1,
+		},
+		"empty stderr with error": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				return false, "", fmt.Errorf("command failed")
+			},
+			retryableErrs: []*regexp.Regexp{
+				regexp.MustCompile(`Artifact with checksum of '.*' already exists\.`),
+			},
+			expectedError:   true,
+			errorContains:   "execution of command",
+			expectedAttempt: 1,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			attempt := 0
+
+			// Create mock exec function that tracks attempts
+			execMock := func(env map[string]string, out io.Writer, stderr io.Writer, cmd string, args ...string) (bool, error) {
+				attempt++
+				success, stderrMsg, err := tt.execBehavior(attempt)
+
+				if stderrMsg != "" {
+					_, _ = io.WriteString(stderr, stderrMsg)
+				}
+
+				return success, err
+			}
+
+			// Create retryCommand with mocked exec
+			cmd := newRetryCommand("test-cmd", []string{"arg1", "arg2"}, tt.retryableErrs, io.Discard, execMock)
+			// make it a bit faster
+			cmd.backoff = backoff.Backoff{Min: 10 * time.Millisecond, Max: 50 * time.Millisecond}
+
+			// Run the command
+			err := cmd.run()
+
+			// Verify results
+			if tt.expectedError {
+				require.Error(t, err)
+				if tt.errorContains != "" {
+					require.Contains(t, err.Error(), tt.errorContains)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tt.expectedAttempt, attempt, "expected %d attempts, got %d", tt.expectedAttempt, attempt)
 		})
 	}
 }
