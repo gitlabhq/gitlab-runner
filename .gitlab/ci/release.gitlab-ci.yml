@@ -36,6 +36,19 @@
     - mage packagecloud:push deb "$CI_JOB_NAME" "$DIST_FLAVOR"
     - mage packagecloud:push rpm "$CI_JOB_NAME" "$DIST_FLAVOR"
 
+.release_pulp:
+  stage: release
+  dependencies:
+    - "package-deb"
+    - "package-rpm"
+    - "package-helpers"
+  before_script:
+    - ./ci/touch_git
+    - mage pulp:createConfig
+  script:
+    - mage pulp:push deb "$CI_JOB_NAME" "$DIST_FLAVOR"
+    - mage pulp:push rpm "$CI_JOB_NAME" "$DIST_FLAVOR"
+
 .release_artifacts:
   artifacts:
     paths:
@@ -85,6 +98,24 @@ bleeding edge packagecloud:
           - sles
           - opensuse
 
+unstable pulp:
+  extends:
+    - .release_pulp
+    - .rules:release:bleeding-edge
+  environment:
+    name: bleeding_edge/pulp
+    url: https://pulp.gitlab.com/runner/unstable
+  parallel:
+    matrix:
+      - DIST_FLAVOR:
+          - debian
+          - ubuntu
+          - el
+          - fedora
+          - amazon
+          - sles
+          - opensuse
+
 stable packagecloud:
   extends:
     - .release_packagecloud
@@ -92,6 +123,27 @@ stable packagecloud:
   environment:
     name: stable/packagecloud
     url: https://packages.gitlab.com/runner/gitlab-runner
+  parallel:
+    matrix:
+      - DIST_FLAVOR:
+          - debian
+          - ubuntu
+          - raspbian
+          - linuxmint
+          - el
+          - ol
+          - fedora
+          - amazon
+          - sles
+          - opensuse
+
+stable pulp:
+  extends:
+    - .release_pulp
+    - .rules:release:stable:branch
+  environment:
+    name: stable/pulp
+    url: https://pulp.gitlab.com/runner/gitlab-runner
   parallel:
     matrix:
       - DIST_FLAVOR:
