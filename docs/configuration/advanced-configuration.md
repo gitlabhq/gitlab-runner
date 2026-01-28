@@ -1637,7 +1637,7 @@ Example `config.toml`:
 
 The following parameters define native support for Google Cloud Storage. For more information
 about these values, see the
-[Google Cloud Storage (GCS) authentication documentation](https://cloud.google.com/storage/docs/authentication#service_accounts).
+[Google Cloud Storage (GCS) authentication documentation](https://docs.cloud.google.com/storage/docs/authentication#service_accounts).
 
 | Parameter         | Type   | Description |
 |-------------------|--------|-------------|
@@ -1686,7 +1686,7 @@ When you use GitLab Runner with Google Cloud ADC, you typically use the default 
     BucketName = "runners-cache"
 ```
 
-If you use ADC, be sure that the service account that you use has the `iam.serviceAccounts.signBlob` permission. Typically this is done by granting the [Service Account Token Creator role](https://cloud.google.com/iam/docs/service-account-permissions#token-creator-role) to the service account.
+If you use ADC, be sure that the service account that you use has the `iam.serviceAccounts.signBlob` permission. Typically this is done by granting the [Service Account Token Creator role](https://docs.cloud.google.com/iam/docs/service-account-permissions#token-creator-role) to the service account.
 
 #### Workload Identity Federation for GKE
 

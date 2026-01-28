@@ -139,7 +139,7 @@ concurrent = 10
 
 Prerequisites:
 
-- A VM image with [Docker Engine](https://docs.docker.com/engine/) installed, such as [`COS`](https://cloud.google.com/container-optimized-os/docs).
+- A VM image with [Docker Engine](https://docs.docker.com/engine/) installed, such as [`COS`](https://docs.cloud.google.com/container-optimized-os/docs).
 
   {{< alert type="note" >}}
 

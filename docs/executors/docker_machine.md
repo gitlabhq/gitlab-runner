@@ -159,7 +159,7 @@ You can also use the [Kubernetes executor](kubernetes/_index.md) for this purpos
 {{< /alert >}}
 
 You can use the Docker Machine [fork](#forked-version-of-docker-machine) to create
-[Google Compute Engine instances with graphics processing units (GPUs)](https://cloud.google.com/compute/docs/gpus/).
+[Google Compute Engine instances with graphics processing units (GPUs)](https://docs.cloud.google.com/compute/docs/gpus).
 
 #### Docker Machine GPU options
 
@@ -168,12 +168,12 @@ To create an instance with GPUs, use these Docker Machine options:
 | Option                        | Example                        | Description |
 |-------------------------------|--------------------------------|-------------|
 | `--google-accelerator`        | `type=nvidia-tesla-p4,count=1` | Specifies the type and number of GPU accelerators to attach to the instance (`type=TYPE,count=N` format) |
-| `--google-maintenance-policy` | `TERMINATE`                    | Always use `TERMINATE` because [Google Cloud does not allow live migration of GPU instances](https://cloud.google.com/compute/docs/instances/live-migration-process). |
-| `--google-machine-image`      | `https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110` | The URL of a GPU-enabled operating system. See the [list of available images](https://cloud.google.com/deep-learning-vm/docs/images). |
+| `--google-maintenance-policy` | `TERMINATE`                    | Always use `TERMINATE` because [Google Cloud does not allow live migration of GPU instances](https://docs.cloud.google.com/compute/docs/instances/live-migration-process). |
+| `--google-machine-image`      | `https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110` | The URL of a GPU-enabled operating system. See the [list of available images](https://docs.cloud.google.com/deep-learning-vm/docs/images). |
 | `--google-metadata`           | `install-nvidia-driver=True`   | This flag tells the image to install the NVIDIA GPU driver. |
 
-These arguments map to [command-line arguments for `gcloud compute`](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus#gcloud_1).
-See the [Google documentation on creating VMs with attached GPUs](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus)
+These arguments map to [command-line arguments for `gcloud compute`](https://docs.cloud.google.com/compute/docs/gcloud-compute).
+See the [Google documentation on creating VMs with attached GPUs](https://docs.cloud.google.com/compute/docs/gpus/create-vm-with-gpus)
 for more details.
 
 #### Verifying Docker Machine options

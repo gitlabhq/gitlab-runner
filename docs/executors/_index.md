@@ -38,7 +38,7 @@ new ones. For more information, see [Contributing new executors](https://gitlab.
 ## Prerequisites for non-Docker executors
 
 Executors that do not [rely on a helper image](../configuration/advanced-configuration.md#helper-image) require a Git
-installation on the target machine and in the `PATH`. Always use the [latest available version of Git](https://git-scm.com/downloads).
+installation on the target machine and in the `PATH`. Always use the [latest available version of Git](https://git-scm.com/downloads/).
 
 GitLab Runner uses the `git lfs` command if [Git LFS](https://git-lfs.com/) is installed
 on the target machine. Ensure Git LFS is up to date on any systems where GitLab Runner uses these executors.

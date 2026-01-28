@@ -109,7 +109,7 @@ To use VirtualBox with Windows, you can install Cygwin or PowerShell.
 
 ### Use native OpenSSH and PowerShell
 
-- Install [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.4)
+- Install [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-windows?view=powershell-7.4)
 - Install and configure [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=powershell#install-openssh-for-windows)
 - Install [Git for Windows](https://git-scm.com/)
 - Configure the [default shell as `pwsh`](https://learn.microsoft.com/en-us/windows-server/administration/OpenSSH/openssh-server-configuration#configuring-the-default-shell-for-openssh-in-windows). Update example with the correct full path:
