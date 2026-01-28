@@ -56,7 +56,7 @@ To work around this limitation, you can:
 - Create multiple ECS task definitions with different images and specify the ARN in the `FARGATE_TASK_DEFINITION` CI/CD variable.
 - Consider creating an EKS cluster by following the official [AWS EKS Blueprints](https://aws-ia.github.io/terraform-aws-eks-blueprints/).
 
-For more information, see [Get started with GitLab EKS Fargate runners in 1 hour and zero code](https://about.gitlab.com/blog/2023/05/24/eks-fargate-runner/).
+For more information, see [Get started with GitLab EKS Fargate runners in 1 hour and zero code](https://about.gitlab.com/blog/eks-fargate-runner/).
 
 {{< /alert >}}
 
@@ -283,7 +283,7 @@ An Amazon ECS cluster is a grouping of ECS container instances.
 1. Select **Update Cluster**.
 1. Next to `Default capacity provider strategy`, select **Add another provider** and choose `FARGATE`. Select **Update**.
 
-Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/userguide/create_cluster.html)
+Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html)
 for detailed instructions on setting up and working with a cluster on ECS Fargate.
 
 ## Step 6: Create an ECS task definition
@@ -380,7 +380,7 @@ the private subnet:
       with the same configuration as the VPC you deleted and update the `cird` address, for example `10.0.0.0/23`.
    1. [Create a public subnet](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html) with the same configuration as the subnet you deleted. Use a `cird` address that is a subset
       of the VPC address range, for example `10.0.0.0/24`.
-1. [Create a private subnet](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-subnets.html#create-subnets) with the same
+1. [Create a private subnet](https://docs.aws.amazon.com/vpc/latest/userguide/create-subnet.html#create-subnets) with the same
    configuration as the public subnet. Use a `cird` address range that does not overlap the public subnet range, for
    example `10.0.1.0/24`.
 1. [Create a NAT gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html), and place it inside
@@ -434,7 +434,7 @@ For more information, see the following AWS documentation:
 - [Amazon ECS task execution IAM role](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html)
 - [Amazon ECR interface VPC endpoints (AWS PrivateLink)](https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html)
 - [Amazon ECS interface VPC endpoints](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/vpc-endpoints.html)
-- [VPC with public and private subnets](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Scenario2.html)
+- [VPC with public and private subnets](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-example-private-subnets-nat.html)
 
 ## Troubleshooting
 

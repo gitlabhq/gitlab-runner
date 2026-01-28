@@ -194,7 +194,7 @@ GRIT follows the GitLab Code of Conduct, which is adapted from the [Contributor 
 When contributing to GRIT, follow these guidelines:
 
 - Review the [GORP Guidelines](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/blob/main/GORP.md) for overall architectural design.
-- Adhere to [Google's best practices for using Terraform](https://cloud.google.com/docs/terraform/best-practices/general-style-structure).
+- Adhere to [Google's best practices for using Terraform](https://docs.cloud.google.com/docs/terraform/best-practices/general-style-structure).
 - Follow the composable module approach to reduce complexity and repetition.
 - Include appropriate Go tests for your contributions.
 

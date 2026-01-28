@@ -59,7 +59,7 @@ You have to make sure that ports `2376` and `22` are accessible by the [Runner M
 
 ### AWS credentials
 
-You'll need an [AWS Access Key](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html)
+You'll need an [AWS Access Key](https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds.html)
 tied to a user with permission to scale (EC2) and update the cache (via S3).
 Create a new user with [policies](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-policies-for-amazon-ec2.html)
 for EC2 (AmazonEC2FullAccess) and S3. For more information about the
@@ -477,5 +477,5 @@ be an issue.
 You can read the following use cases from which this tutorial was (heavily)
 influenced:
 
-- [HumanGeo switched from Jenkins to GitLab](https://about.gitlab.com/blog/2017/11/14/humangeo-switches-jenkins-gitlab-ci/)
-- [Substrakt Health - Autoscale GitLab CI/CD runners and save 90% on EC2 costs](https://about.gitlab.com/blog/2017/11/23/autoscale-ci-runners/)
+- [HumanGeo switched from Jenkins to GitLab](https://about.gitlab.com/blog/humangeo-switches-jenkins-gitlab-ci/)
+- [Substrakt Health - Autoscale GitLab CI/CD runners and save 90% on EC2 costs](https://about.gitlab.com/blog/autoscale-ci-runners/)
