@@ -61,11 +61,11 @@ To install GitLab Runner:
    {{< tabs >}}
 
    {{< tab title="Debian/Ubuntu/Mint" >}}
- 
+
    1. Download the repository configuration script:
 
       ```shell
-      curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" -o script.deb.sh 
+      curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" -o script.deb.sh
       ```
 
    1. Inspect the script before running it:
