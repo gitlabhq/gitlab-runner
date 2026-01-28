@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -35,9 +36,10 @@ func NetConn(c *websocket.Conn) net.Conn {
 }
 
 type netConn struct {
-	c         *websocket.Conn
-	reader    io.Reader
-	readEOFed bool
+	c                   *websocket.Conn
+	reader              io.Reader
+	futureWriteDeadline atomic.Pointer[time.Time]
+	readEOFed           bool
 }
 
 func (nc *netConn) Close() (retErr error) {
@@ -53,6 +55,16 @@ func (nc *netConn) Close() (retErr error) {
 }
 
 func (nc *netConn) Write(p []byte) (int, error) {
+	old := nc.futureWriteDeadline.Swap(nil)
+	if old != nil {
+		// Unsynchronized write deadline field is read in the WriteMessage() call below.
+		// Hence, it is safe to call SetWriteDeadline() here as it must not be called concurrently
+		// since that would be a data race.
+		err := nc.c.SetWriteDeadline(*old)
+		if err != nil {
+			return 0, err
+		}
+	}
 	err := nc.c.WriteMessage(websocket.BinaryMessage, p)
 	if err != nil {
 		return 0, err
@@ -115,15 +127,13 @@ func (nc *netConn) SetDeadline(t time.Time) error {
 }
 
 func (nc *netConn) SetWriteDeadline(t time.Time) error {
-	// The method below doesn't set the write deadline on the underlying network connection, but it should.
-	// Hence, we should call the underlying method too to make it possible to abort stuck writes.
-	err := nc.c.SetWriteDeadline(t)
-	if err != nil {
-		return err
-	}
-	return nc.c.UnderlyingConn().SetWriteDeadline(t)
+	// This method must be thread safe - e.g. it is safe to call concurrently to abort a connection.
+	// We cannot use nc.c.SetWriteDeadline() here directly since it is not thread safe - cannot be called
+	// concurrently with WriteMessage(). So, we are making our own version with similar functionality.
+	nc.futureWriteDeadline.Store(&t)
+	return nc.c.NetConn().SetWriteDeadline(t)
 }
 
 func (nc *netConn) SetReadDeadline(t time.Time) error {
-	return nc.c.UnderlyingConn().SetReadDeadline(t)
+	return nc.c.NetConn().SetReadDeadline(t)
 }
