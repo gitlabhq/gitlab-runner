@@ -30,6 +30,9 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
+	"gitlab.com/gitlab-org/gitlab-runner/steps"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 type BuildRuntimeState string
@@ -158,8 +161,6 @@ type Build struct {
 
 	Referees         []referees.Referee
 	ArtifactUploader func(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string)
-
-	ExecuteStepFn func(ctx context.Context, connector Connector, build *Build, trace JobTrace) error
 
 	urlHelper urlHelper
 
@@ -407,7 +408,7 @@ func (b *Build) StartBuild(
 	return nil
 }
 
-func (b *Build) executeStepStage(ctx context.Context, connector Connector, buildStage BuildStage, trace JobTrace) error {
+func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector, buildStage BuildStage, req []schema.Step) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -430,14 +431,53 @@ func (b *Build) executeStepStage(ctx context.Context, connector Connector, build
 			)
 			b.logger.Println(msg)
 
-			return b.ExecuteStepFn(ctx, connector, b, trace)
+			// todo: step-runner should eventually:
+			// - format its own logs to the Runner log spec
+			// - provides its own timestamps and mask its own secrets
+			// for now though, we wrap its logs providing this, and treat everything as stdout
+			stdout := b.logger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
+
+			info := steps.JobInfo{
+				ID:         b.ID,
+				ProjectDir: b.FullProjectDir(),
+				Variables:  b.GetAllVariables(),
+			}
+
+			err := steps.Execute(ctx, connector, info, req, stdout)
+			if err != nil {
+				berr := &BuildError{Inner: err}
+
+				var cserr *steps.ClientStatusError
+				if errors.As(err, &cserr) {
+					switch cserr.Status.State {
+					case client.StateUnspecified:
+						berr.FailureReason = UnknownFailure
+					case client.StateFailure:
+						berr.FailureReason = ScriptFailure
+					}
+				}
+
+				return berr
+			}
+
+			return err
 		},
 	}
 
 	return section.Execute(&b.logger)
 }
 
+//nolint:gocognit
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
+	if b.UseNativeSteps() {
+		connector, ok := executor.(steps.Connector)
+		if ok {
+			if handled, steps := stepDispatch(b, executor, buildStage); handled {
+				return b.executeStepStage(ctx, connector, buildStage, steps)
+			}
+		}
+	}
+
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -585,13 +625,11 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	// execute user provided scripts
 	//nolint:nestif
 	if err == nil {
-		if b.UseNativeSteps() && b.ExecuteStepFn != nil {
-			connector, ok := executor.(Connector)
-			if ok {
-				err = b.executeStepStage(ctx, connector, BuildStage("step_"+spec.StepNameRun), trace)
-			} else {
+		if b.UseNativeSteps() && len(b.Job.Run) > 0 {
+			if _, ok := executor.(steps.Connector); !ok {
 				return ExecutorStepRunnerConnectNotSupported
 			}
+			err = b.executeStage(ctx, stepRunBuildStage, executor)
 		} else {
 			err = b.executeUserScripts(ctx, trace, executor)
 		}

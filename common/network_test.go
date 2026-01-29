@@ -580,167 +580,167 @@ func TestJobResponse_Run(t *testing.T) {
 			wantJSON: `{}`,
 		},
 		"steps not requested, image is unmodified": {
-			json:     `{"Image":{"Name":"registry.gitlab.com/project/image:v1"}}`,
-			wantJSON: `{"Image":{"Name":"registry.gitlab.com/project/image:v1"}}`,
+			json:     `{"image":{"name":"registry.gitlab.com/project/image:v1"}}`,
+			wantJSON: `{"image":{"name":"registry.gitlab.com/project/image:v1"}}`,
 		},
 		"steps are requested via shim, default image set": {
-			json: `{"Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]"}`,
+			json: `{"run":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]"}`,
 			wantJSON: `
 {
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Variables":[
+  "run":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+  "variables":[
     {
-      "Key":"STEPS",
-      "Value":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-      "Raw":true
+      "key":"STEPS",
+      "value":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+      "raw":true
     }
   ],
-  "Steps":[
+  "steps":[
     {
-      "Name":"script",
-      "Script":["step-runner ci"],
-      "Timeout":3600,
-      "When":"on_success"
+      "name":"script",
+      "script":["step-runner ci"],
+      "timeout":3600,
+      "when":"on_success"
     }
   ]
 }`,
 		},
 		"steps are requested via shim, image unmodified": {
 			json: `
-{
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Image":{"Name":"registry.gitlab.com/project/image:v1"}
-}`,
+		{
+		  "run":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+		  "image":{"name":"registry.gitlab.com/project/image:v1"}
+		}`,
 			wantJSON: `
-{
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Variables":[
-    {
-      "Key":"STEPS",
-      "Value":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-      "Raw":true
-    }
-  ],
-  "Steps":[
-    {
-      "Name":"script",
-      "Script":["step-runner ci"],
-      "Timeout":3600,
-      "When":"on_success"
-    }
-  ],
-  "Image":{"Name":"registry.gitlab.com/project/image:v1"}
-}`,
+		{
+		  "run":"[{\"Name\":\"hello\",\"Script\":\"echo hello world\"}]",
+		  "variables":[
+		    {
+		      "key":"STEPS",
+		      "value":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+		      "raw":true
+		    }
+		  ],
+		  "steps":[
+		    {
+		      "name":"script",
+		      "script":["step-runner ci"],
+		      "timeout":3600,
+		      "when":"on_success"
+		    }
+		  ],
+		  "image":{"name":"registry.gitlab.com/project/image:v1"}
+		}`,
 		},
 		"steps and script are requested": {
 			json: `
-{
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Steps":[
-    {
-      "Name":"script",
-      "Script":["echo hello job"],
-      "Timeout":3600,
-      "When":"on_success"
-    }
-  ]
-}`,
+				{
+				  "run":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+				  "Steps":[
+				    {
+				      "name":"script",
+				      "script":["echo hello job"],
+				      "timeout":3600,
+				      "when":"on_success"
+				    }
+				  ]
+				}`,
 			wantErr: true,
 		},
 		"steps requested and STEP variable used": {
 			json: `
-{
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Variables":[
-    {
-      "Key":"STEPS",
-      "Value":"not steps",
-      "Raw":true
-    }
-  ]
-}`,
+				{
+				  "run":"[{\"Name\":\"hello\",\"script\":\"echo hello world\"}]",
+				  "variables":[
+				    {
+				      "key":"STEPS",
+				      "value":"not steps",
+				      "raw":true
+				    }
+				  ]
+				}`,
 			wantErr: true,
 		},
 
 		"steps request via native exec, executor supports native exec": {
 			execNativeSteps: true,
 			json: `
-{
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Variables":[
-    {
-      "Key":"FF_USE_NATIVE_STEPS",
-      "Value":"true"
-    }
-  ]
-}`,
+				{
+				  "run":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+				  "variables":[
+				    {
+				      "key":"FF_USE_NATIVE_STEPS",
+				      "value":"true"
+				    }
+				  ]
+				}`,
 			wantJSON: `
-{
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Variables":[
-    {
-      "Key":"FF_USE_NATIVE_STEPS",
-      "Value":"true"
-    }
-  ],
-  "Steps":[
-    {
-      "Name":"run"
-    }
-  ]
-}`,
+				{
+				  "run":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+				  "variables":[
+				    {
+				      "key":"FF_USE_NATIVE_STEPS",
+				      "value":"true"
+				    }
+				  ],
+				  "steps":[
+				    {
+				      "name":"run"
+				    }
+				  ]
+				}`,
 		},
 		"steps request via native exec, executor does not support native exec": {
 			execNativeSteps: false,
 			json: `
-{
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Variables":[
-    {
-      "Key":"FF_USE_NATIVE_STEPS",
-      "Value":"true"
-    }
-  ]
-}`,
+				{
+				  "run":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+				  "variables":[
+				    {
+				      "key":"FF_USE_NATIVE_STEPS",
+				      "value":"true"
+				    }
+				  ]
+				}`,
 			wantJSON: `
-{
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Variables":[
-    {
-      "Key":"FF_USE_NATIVE_STEPS",
-      "Value":"true"
-    },
-    {
-      "Key":"STEPS",
-      "Value":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-      "Raw":true
-    }
-  ],
-  "Steps":[
-    {
-      "Name":"script",
-      "Script":["step-runner ci"],
-      "Timeout":3600,
-      "When":"on_success"
-    }
-  ]
-}`,
+				{
+				  "run":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+				  "Variables":[
+				    {
+				      "key":"FF_USE_NATIVE_STEPS",
+				      "value":"true"
+				    },
+				    {
+				      "key":"STEPS",
+				      "value":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+				      "raw":true
+				    }
+				  ],
+				  "steps":[
+				    {
+				      "name":"script",
+				      "script":["step-runner ci"],
+				      "timeout":3600,
+				      "when":"on_success"
+				    }
+				  ]
+				}`,
 		},
 		"steps are requested via shim, executor supports native exec": {
 			execNativeSteps: true,
 			json: `
-{
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]"
-}`,
+				{
+				  "run":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]"
+				}`,
 			wantJSON: `
-{
-  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
-  "Steps":[
-    {
-      "Name":"run"
-    }
-  ]
-}`,
+				{
+				  "run":"[{\"name\":\"hello\",\"script\":\"echo hello world\"}]",
+				  "steps":[
+				    {
+				      "name":"run"
+				    }
+				  ]
+				}`,
 		},
 	}
 	for name, tt := range tests {

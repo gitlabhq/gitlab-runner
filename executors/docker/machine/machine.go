@@ -12,11 +12,12 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker" // Force to load docker executor
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
+	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
 var (
 	_ terminal.InteractiveTerminal = (*machineExecutor)(nil)
-	_ common.Connector             = (*machineExecutor)(nil)
+	_ steps.Connector              = (*machineExecutor)(nil)
 )
 
 const (
@@ -171,7 +172,7 @@ func (e *machineExecutor) GetMetricsSelector() string {
 }
 
 func (s *machineExecutor) Connect(ctx context.Context) (io.ReadWriteCloser, error) {
-	if connector, ok := s.executor.(common.Connector); ok {
+	if connector, ok := s.executor.(steps.Connector); ok {
 		return connector.Connect(ctx)
 	}
 

@@ -37,7 +37,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
-	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
 const (
@@ -971,7 +970,6 @@ func (mr *RunCommand) processBuildOnRunner(
 	}
 	build.Session = buildSession
 	build.ArtifactUploader = mr.network.UploadRawArtifacts
-	build.ExecuteStepFn = steps.Execute
 
 	trace.SetDebugModeEnabled(build.IsDebugModeEnabled())
 

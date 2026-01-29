@@ -9,11 +9,12 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
+	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
 var (
 	_ terminal.InteractiveTerminal = (*executor)(nil)
-	_ common.Connector             = (*executor)(nil)
+	_ steps.Connector              = (*executor)(nil)
 )
 
 type executor struct {
@@ -74,7 +75,7 @@ func (e *executor) Cleanup() {
 }
 
 func (s *executor) Connect(ctx context.Context) (io.ReadWriteCloser, error) {
-	if connector, ok := s.Executor.(common.Connector); ok {
+	if connector, ok := s.Executor.(steps.Connector); ok {
 		return connector.Connect(ctx)
 	}
 

@@ -11,6 +11,7 @@ import (
 
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 type JobFailureReason string
@@ -518,12 +519,29 @@ type Job struct {
 	Features      GitlabFeatures `json:"features"`
 	Secrets       Secrets        `json:"secrets,omitempty"`
 	Hooks         Hooks          `json:"hooks,omitempty"`
-	Run           string         `json:"run"`
+	Run           Run            `json:"run,omitempty"`
 	PolicyOptions PolicyOptions  `json:"policy_options,omitempty"`
 
 	TLSData TLSData `json:"-"`
 
 	JobRequestCorrelationID string `json:"-"`
+}
+
+type Run []schema.Step
+
+func (r *Run) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	var run []schema.Step
+	if err := json.Unmarshal([]byte(s), &run); err != nil {
+		return err
+	}
+
+	*r = run
+	return nil
 }
 
 // ValidateStepsJobRequest does the following:
@@ -535,7 +553,7 @@ type Job struct {
 // 6. If not, it configures the job to be run via the step shim approach.
 func (j *Job) ValidateStepsJobRequest(executorSupportsNativeSteps bool) error {
 	switch {
-	case j.Run == "":
+	case len(j.Run) == 0:
 		return nil
 	case slices.ContainsFunc(j.Steps, func(step Step) bool { return len(step.Script) > 0 }):
 		return fmt.Errorf("the `run` and `script` keywords cannot be used together")
@@ -555,12 +573,15 @@ func (j *Job) ValidateStepsJobRequest(executorSupportsNativeSteps bool) error {
 		return nil
 	}
 
+	// re-encode the run steps to a string for shim-mode
+	runStr, _ := json.Marshal(j.Run)
+
 	// Use the shim approach to run steps jobs. This shims GitLab Steps from the `run` keyword into the step-runner
 	// image. This is a temporary mechanism for executing steps which will be replaced by a gRPC connection to
 	// step-runner in each executor.
 	j.Variables = append(j.Variables, Variable{
 		Key:   "STEPS",
-		Value: j.Run,
+		Value: string(runStr),
 		Raw:   true,
 	})
 

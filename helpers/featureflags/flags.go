@@ -53,6 +53,7 @@ const (
 	HashCacheKeys                        string = "FF_HASH_CACHE_KEYS"
 	EnableJobInputsInterpolation         string = "FF_ENABLE_JOB_INPUTS_INTERPOLATION"
 	UseJobRouter                         string = "FF_USE_JOB_ROUTER"
+	UseScriptToStepMigration             string = "FF_SCRIPT_TO_STEP_MIGRATION"
 )
 
 type FeatureFlag struct {
@@ -435,6 +436,12 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "Makes GitLab Runner fetch jobs by connecting to Job Router rather than GitLab directly.",
+	},
+	{
+		Name:         UseScriptToStepMigration,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, user scripts are migrated to steps and executed with the step-runner.",
 	},
 }
 

@@ -94,6 +94,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_HASH_CACHE_KEYS` | `false` | {{< icon name="dotted-circle" >}} No |  | When GitLab Runner creates or extracts caches, it hashes the cache keys (SHA256) before using them, both for local and distributed caches (for example, S3). For more information, see [cache key handling](advanced-configuration.md#cache-key-handling). |
 | `FF_ENABLE_JOB_INPUTS_INTERPOLATION` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, job inputs are interpolated. For more information, see [&17833](https://gitlab.com/groups/gitlab-org/-/epics/17833). |
 | `FF_USE_JOB_ROUTER` | `false` | {{< icon name="dotted-circle" >}} No |  | Makes GitLab Runner fetch jobs by connecting to Job Router rather than GitLab directly. |
+| `FF_SCRIPT_TO_STEP_MIGRATION` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, user scripts are migrated to steps and executed with the step-runner. |
 
 <!-- feature_flags_list_end -->
 
