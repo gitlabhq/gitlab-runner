@@ -190,6 +190,7 @@ type FeaturesInfo struct {
 	CancelGracefully        bool `json:"cancel_gracefully"`
 	NativeStepsIntegration  bool `json:"native_steps_integration"`
 	TwoPhaseJobCommit       bool `json:"two_phase_job_commit"`
+	JobInputs               bool `json:"job_inputs"`
 }
 
 type ConfigInfo struct {

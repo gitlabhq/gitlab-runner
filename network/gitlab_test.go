@@ -3360,3 +3360,13 @@ func TestGitLabClient_UpdateJob_TransmitsTwoPhaseJobCommit(t *testing.T) {
 
 	assert.Equal(t, UpdateSucceeded, result.State, "Job update should succeed")
 }
+
+func TestGitLabClient_getFeatures_JobInputs(t *testing.T) {
+	client := NewGitLabClient()
+	features := &FeaturesInfo{}
+
+	client.getFeatures(features)
+
+	// Test that JobInputs is set to true by the network client
+	assert.True(t, features.JobInputs, "JobInputs should be set to true by getFeatures")
+}
