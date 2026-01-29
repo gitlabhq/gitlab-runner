@@ -54,8 +54,29 @@ See the [documentation for the GitLab fork of Docker Machine](../executors/docke
 
 ## Kubernetes executor
 
-No runner configuration should be needed. Be sure to check that
-[the node selector chooses a node with GPU support](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/).
+Prerequisites:
+
+- Ensure that [the node selector chooses a node with GPU support](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/).
+- Enable the `FF_USE_ADVANCED_POD_SPEC_CONFIGURATION` feature flag.
+
+To enable GPU support, configure the runner to request GPU resources in the pod specification. For example:
+
+```toml
+[[runners.kubernetes.pod_spec]]
+  name = "gpu"
+  patch = '''
+    containers:
+    - name: build
+      resources:
+        requests:
+          nvidia.com/gpu: 1
+        limits:
+          nvidia.com/gpu: 1
+  '''
+  patch_type = "strategic" # <--- `strategic` patch_type
+```
+
+Adjust the GPU count in `requests` and `limits` based on your job requirements.
 
 GitLab Runner has been [tested on Amazon Elastic Kubernetes Service](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4355)
 with [GPU-enabled instances](https://docs.aws.amazon.com/dlami/latest/devguide/gpu.html).
