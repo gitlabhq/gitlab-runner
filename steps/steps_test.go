@@ -3,11 +3,13 @@
 package steps
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 func Test_addStepsPreamble(t *testing.T) {
@@ -39,7 +41,9 @@ func Test_addStepsPreamble(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := addStepsPreamble(tt.in)
+			var steps []schema.Step
+			assert.NoError(t, json.Unmarshal([]byte(tt.in), &steps))
+			got, err := addStepsPreamble(steps)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})

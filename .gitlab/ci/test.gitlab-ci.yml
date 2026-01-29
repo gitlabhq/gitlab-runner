@@ -77,6 +77,27 @@ integration test:
         -- -ldflags "$(make print_test_ldflags)" -timeout 25m
   parallel: 4
 
+integration test (docker, steps):
+  extends:
+    - integration test
+  variables:
+    RUNNER_TEST_FEATURE_FLAGS: "FF_SCRIPT_TO_STEP_MIGRATION"
+  script:
+    - docker import out/helper-images/prebuilt-alpine-latest-x86_64.tar.xz registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest
+    - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest
+    - make splitic
+    - >
+      .tmp/bin/splitic test \
+        -junit-report .splitic/junit_${CI_NODE_INDEX}_docker_steps.xml \
+        -cover-report .splitic/cover_${CI_NODE_INDEX}_docker_steps.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
+        -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
+        -tags integration \
+        ./executors/docker \
+        -- -ldflags "$(make print_test_ldflags)" -timeout 1h
+  parallel: 1
+  when: manual
+  allow_failure: true
+
 integration test with race:
   extends:
     - integration test

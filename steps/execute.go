@@ -8,60 +8,77 @@ import (
 	"net"
 	"time"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
-	"gitlab.com/gitlab-org/step-runner/pkg/api/client/extended"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/client/extended"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
-func Execute(ctx context.Context, connector common.Connector, build *common.Build, trace common.JobTrace) error {
+type Connector interface {
+	Connect(ctx context.Context) (io.ReadWriteCloser, error)
+}
+
+type JobInfo struct {
+	ID         int64
+	ProjectDir string
+	Variables  spec.Variables
+}
+
+type ClientStatusError struct {
+	Status client.Status
+	Err    error
+}
+
+func (cserr *ClientStatusError) Error() string {
+	return cserr.Err.Error()
+}
+
+func (cserr *ClientStatusError) Is(err error) bool {
+	cserr2, ok := err.(*ClientStatusError)
+	if !ok {
+		return false
+	}
+
+	return cserr.Status.State == cserr2.Status.State
+}
+
+func (cserr *ClientStatusError) Unwrap() error {
+	return cserr.Err
+}
+
+func Execute(ctx context.Context, connector Connector, jobInfo JobInfo, steps []schema.Step, trace io.Writer) error {
 	dialer := &stdioDialer{connector: connector}
-	client, err := extended.New(dialer)
+	c, err := extended.New(dialer)
 	if err != nil {
 		return fmt.Errorf("creating steps client: %w", err)
 	}
 	//nolint:errcheck
-	defer client.CloseConn()
+	defer c.CloseConn()
 
 	out := extended.FollowOutput{Logs: trace}
 
-	request, err := NewRequest(build)
+	request, err := NewRequest(jobInfo, steps)
 	if err != nil {
 		return fmt.Errorf("creating steps request: %w", err)
 	}
 
-	status, err := client.RunAndFollow(ctx, request, &out)
+	status, err := c.RunAndFollow(ctx, request, &out)
 	if err != nil {
 		return fmt.Errorf("executing steps request: %w", err)
 	}
 
-	return errFromStatus(status)
-}
-
-func errFromStatus(status client.Status) error {
-	berr := &common.BuildError{Inner: errors.New(status.Message)}
-
-	switch status.State {
-	case client.StateSuccess:
+	if status.State == client.StateSuccess {
 		return nil
-	case client.StateUnspecified:
-		berr.FailureReason = common.UnknownFailure
-	case client.StateFailure:
-		berr.FailureReason = common.ScriptFailure
-	case client.StateRunning:
-		// this should not happen!!!
-	case client.StateCancelled:
-		// nothing to do here since there is no CancelledFailure
 	}
 
-	// TODO: also set berr.ExitCode if we add an exit-code to client.Status
-
-	return berr
+	return &ClientStatusError{Status: status, Err: errors.New(status.Message)}
 }
 
 type stdioDialer struct {
-	connector common.Connector
+	connector Connector
 }
 
 func (d *stdioDialer) Dial() (*grpc.ClientConn, error) {

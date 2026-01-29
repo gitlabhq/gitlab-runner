@@ -12,7 +12,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
-	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
 var successAlwaysWantOut = []string{
@@ -84,8 +83,7 @@ func Test_StepsIntegration(t *testing.T) {
 			successfulBuild.Services = tt.services
 			successfulBuild.Variables = append(successfulBuild.Variables, tt.variables...)
 			build := &common.Build{
-				ExecuteStepFn: steps.Execute,
-				Job:           successfulBuild,
+				Job: successfulBuild,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",

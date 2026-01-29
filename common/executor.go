@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/sirupsen/logrus"
 
@@ -78,10 +77,6 @@ type Executor interface {
 }
 
 var ExecutorStepRunnerConnectNotSupported = fmt.Errorf("executor does not support step-runner connect")
-
-type Connector interface {
-	Connect(ctx context.Context) (io.ReadWriteCloser, error)
-}
 
 type ManagedExecutorProvider interface {
 	// Init initializes the executor provider.

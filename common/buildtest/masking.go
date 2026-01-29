@@ -28,6 +28,7 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 			"Job failed: exit status 1",
 			"Job failed: run exit (exit code: 1)",
 			"Job failed: command terminated with exit code 1",
+			"Job failed: step \"user_script\": exec: executing script: exit status 1",
 		}
 
 		build := &common.Build{

@@ -18,9 +18,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	yamlconv "sigs.k8s.io/yaml"
+	"github.com/stretchr/testify/assert/yaml"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 const (
@@ -371,16 +372,14 @@ func getBuildResponse(repoURL string, commands []string) spec.Job {
 }
 
 func getStepsBuildResponse(repoURL, stepsYAML string) (spec.Job, error) {
-	// steps come from GitLab in json, but it's a whole lot more convenient to write them in yaml in tests. Let's
-	// support the latter and convert the yaml to json here so everything else downstream works as if the steps were
-	// specified in json.
-	stepsJSON, err := yamlconv.YAMLToJSON([]byte(stepsYAML))
-	if err != nil {
-		return spec.Job{}, fmt.Errorf("converting json to yaml: %w", err)
+	var steps []schema.Step
+	if err := yaml.Unmarshal([]byte(stepsYAML), &steps); err != nil {
+		return spec.Job{}, err
 	}
+
 	return spec.Job{
 		GitInfo: GetStepsGitInfo(repoURL),
-		Run:     string(stepsJSON),
+		Run:     steps,
 		Steps:   spec.Steps{spec.Step{Name: spec.StepNameRun}},
 		RunnerInfo: spec.RunnerInfo{
 			Timeout: DefaultTimeout,

@@ -1,10 +1,13 @@
 package common
 
 import (
+	"flag"
 	"fmt"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -218,12 +221,30 @@ func validate[T any](variables spec.Variables, name string, value *T, def T) err
 	return nil
 }
 
+//nolint:gocognit
 func populateFeatureFlags(b *Build, variables spec.Variables) []error {
 	var errs []error
+
+	// test mode only: in tests, we provide a mechanism for providing
+	// feature flags via RUNNER_TEST_FEATURE_FLAGS, if the flag is present,
+	// we treat it as a toggle to the default flag value.
+	var testFlags []string
+	if flag.Lookup("test.v") != nil {
+		testFlags = strings.FieldsFunc(os.Getenv("RUNNER_TEST_FEATURE_FLAGS"), func(r rune) bool {
+			return r == ',' || unicode.IsSpace(r)
+		})
+	}
 
 	b.buildSettings.FeatureFlags = make(map[string]bool)
 	for _, ff := range featureflags.GetAll() {
 		b.buildSettings.FeatureFlags[ff.Name] = ff.DefaultValue
+
+		if len(testFlags) > 0 {
+			if slices.Contains(testFlags, ff.Name) {
+				b.buildSettings.FeatureFlags[ff.Name] = !ff.DefaultValue
+				continue
+			}
+		}
 
 		// runner setting takes precedence if defined
 		if b.Runner != nil && b.Runner.FeatureFlags != nil {

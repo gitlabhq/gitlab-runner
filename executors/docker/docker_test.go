@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
@@ -2748,11 +2749,8 @@ func Test_bootstrap(t *testing.T) {
 				wantStage:     ExecutorStageBootstrap,
 				setup: func(vm *volumes.MockManager, c *docker.MockClient, b *common.Build) []string {
 					binds := make([]string, 1)
-					b.Job.Run = "blablabla"
-					b.Variables = append(b.Variables, spec.Variable{
-						Key:   "FF_USE_NATIVE_STEPS",
-						Value: "true",
-					})
+					name := "blablabla"
+					b.Job.Run = []schema.Step{{Name: &name}}
 
 					c.EXPECT().ImageInspectWithRaw(mock.Anything, mock.Anything).Return(image.InspectResponse{
 						ID: "helper-id",
@@ -2793,7 +2791,16 @@ func Test_bootstrap(t *testing.T) {
 					return binds
 				},
 			},
-			"native steps not enabled": {},
+			"native steps not enabled": {
+				setup: func(vm *volumes.MockManager, c *docker.MockClient, b *common.Build) []string {
+					b.Variables = append(b.Variables, spec.Variable{
+						Key:   "FF_SCRIPT_TO_STEP_MIGRATION",
+						Value: "false",
+					})
+
+					return nil
+				},
+			},
 		},
 		"windows": {
 			"native steps enabled":     {},

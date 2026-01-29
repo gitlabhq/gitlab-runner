@@ -135,6 +135,11 @@ func Run(ctx context.Context, stepsCtx *runner.StepsContext) error {
 	env := stepsCtx.GetEnvList()
 	workDir := stepsCtx.WorkDir()
 
+	// Add job variables to env
+	for key, value := range stepsCtx.View().Vars {
+		env = append(env, fmt.Sprintf("%s=%s", key, value.GetStringValue()))
+	}
+
 	executorConfig := internal.ExecutorConfig{
 		Stdout:    stdout,
 		Stderr:    stderr,

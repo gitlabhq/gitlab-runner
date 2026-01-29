@@ -158,7 +158,7 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 			if tt.errExpected {
 				var buildErr *common.BuildError
 				assert.ErrorAs(t, err, &buildErr)
-				assert.Contains(t, err.Error(), "exit code 1")
+				assert.Equal(t, 1, buildErr.ExitCode)
 				return
 			}
 			assert.NoError(t, err)
