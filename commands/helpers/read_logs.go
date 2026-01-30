@@ -178,7 +178,7 @@ func (c *ReadLogsCommand) openFileReader() (readSeekCloser, *bufio.Reader, error
 		return nil, nil, err
 	}
 
-	_, err = s.Seek(c.Offset, 0)
+	_, err = s.Seek(c.Offset, io.SeekStart)
 	if err != nil {
 		_ = s.Close()
 		return nil, nil, err
