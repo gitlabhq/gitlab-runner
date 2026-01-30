@@ -123,7 +123,7 @@ func (c *ReadLogsCommand) Execute(*cli.Context) {
 	case os.IsNotExist(err):
 		os.Exit(outputLogFileNotExistsExitCode)
 	case err != nil:
-		c.logOutputWriter.Write(fmt.Sprintf("error reading logs %v\n", err))
+		c.logOutputWriter.Write(fmt.Sprintf("error reading logs from %s: %v\n", c.Path, err))
 		os.Exit(1)
 	}
 }
