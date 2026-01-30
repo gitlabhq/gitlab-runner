@@ -105,7 +105,13 @@ func walkTestFiles(testType string, rootPath string, walkFunc filepath.WalkFunc)
 	fmt.Printf("\nChecking %s test files...\n", testType)
 
 	err := filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			recordError(path, err)
+			return nil
+		}
+
 		name := info.Name()
+
 		if info.IsDir() && lo.Contains(ignoreDirectories, name) {
 			return filepath.SkipDir
 		}
