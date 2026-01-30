@@ -1195,6 +1195,7 @@ type CacheGCSConfig struct {
 	CacheGCSCredentials
 	CredentialsFile string `toml:"CredentialsFile,omitempty" long:"credentials-file" env:"GOOGLE_APPLICATION_CREDENTIALS" description:"File with GCP credentials, containing AccessID and PrivateKey"`
 	BucketName      string `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_GCS_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
+	UniverseDomain  string `toml:"UniverseDomain,omitempty" long:"universe-domain" env:"CACHE_GCS_UNIVERSE_DOMAIN" description:"Universe Domain for GCS requests (e.g., googleapis.com for public cloud, or a custom universe domain)"`
 }
 
 type CacheS3Config struct {

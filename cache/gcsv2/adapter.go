@@ -79,6 +79,10 @@ func (a *gcsAdapter) presignURL(ctx context.Context, method string, contentType 
 		options = append(options, option.WithoutAuthentication())
 	}
 
+	if a.config.UniverseDomain != "" {
+		options = append(options, option.WithUniverseDomain(a.config.UniverseDomain))
+	}
+
 	client, err := storage.NewClient(ctx, options...)
 	if err != nil {
 		return nil, fmt.Errorf("creating storage client: %w", err)
