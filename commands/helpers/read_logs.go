@@ -87,7 +87,7 @@ type streamLogOutputWriter struct {
 }
 
 func (s *streamLogOutputWriter) Write(data string) {
-	_, _ = fmt.Fprint(s.stream, data)
+	_, _ = io.WriteString(s.stream, data)
 }
 
 type ReadLogsCommand struct {
