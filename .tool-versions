@@ -2,6 +2,7 @@
 golang 1.25.5
 yq 4.44.3
 mockery 2.53.3
+mage 1.15.0
 
 # For linting documentation
 markdownlint-cli2 0.19.0
