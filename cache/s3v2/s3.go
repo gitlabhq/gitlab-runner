@@ -174,20 +174,36 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 		duration = timeout
 	}
 
+	startTime := time.Now()
 	roleCredentials, err := stsClient.AssumeRole(ctx, &sts.AssumeRoleInput{
 		RoleArn:         aws.String(roleARN),
 		RoleSessionName: aws.String(sessionName),
 		Policy:          aws.String(sessionPolicy), // Limit the role's access
 		DurationSeconds: aws.Int32(int32(duration.Seconds())),
 	})
+	elapsed := time.Since(startTime).Seconds()
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to assume role: %w", err)
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"role_arn":   roleARN,
+			"duration_s": elapsed,
+		}).Error("Failed to assume role for cache credentials")
+		return nil, fmt.Errorf("failed to assume role (took %.2fs): %w", elapsed, err)
 	}
 	// AssumeRole should always return credentials if successful, but
 	// just in case it doesn't let's check this.
 	if roleCredentials.Credentials == nil {
-		return nil, fmt.Errorf("failed to retrieve credentials: %w", err)
+		logrus.WithFields(logrus.Fields{
+			"role_arn":   roleARN,
+			"duration_s": elapsed,
+		}).Error("AssumeRole succeeded but returned no credentials")
+		return nil, fmt.Errorf("failed to retrieve credentials (took %.2fs): %w", elapsed, err)
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"role_arn":   roleARN,
+		"duration_s": elapsed,
+	}).Debug("Successfully assumed role for cache credentials")
 
 	return map[string]string{
 		"AWS_ACCESS_KEY_ID":     *roleCredentials.Credentials.AccessKeyId,
