@@ -117,8 +117,11 @@ func (r *retryRequester) waitForRetry(req *http.Request, resp *http.Response, bo
 		WithField("duration", waitTime).
 		Infoln("Waiting before making the next call")
 
+	timer := time.NewTimer(waitTime)
+	defer timer.Stop()
+
 	select {
-	case <-time.After(waitTime):
+	case <-timer.C:
 		return nil
 	case <-req.Context().Done():
 		return req.Context().Err()
