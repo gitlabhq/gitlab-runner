@@ -424,7 +424,7 @@ for the rest of the week, and on the weekends, no pipelines are started.
 These periods can be configured with the help of `[[runners.machine.autoscaling]]` sections.
 Each of them supports setting `IdleCount` and `IdleTime` based on a set of `Periods`.
 
-**How autoscaling periods work**
+### How autoscaling periods work
 
 In the `[runners.machine]` settings, you can add multiple `[[runners.machine.autoscaling]]` sections, each one with its own `IdleCount`, `IdleTime`, `Periods` and `Timezone` properties. A section should be defined for each configuration, proceeding in order from the most general scenario to the most specific scenario.
 
@@ -456,7 +456,7 @@ The rest of the time, the values are taken from the defaults in the root - `Idle
 {{< alert type="note" >}}
 
 The 59th second of the last
-minute in any period that you specify is *not* be considered part of the
+minute in any period that you specify is not be considered part of the
 period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2170).
 
 {{< /alert >}}

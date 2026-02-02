@@ -407,9 +407,7 @@ fatal: detected dubious ownership in repository at '/builds/gitlab-org/gitlab-ru
 
 This error indicates that the repository was cloned by user ID `1001` (helper container), but a different user ID in the build container is attempting to access it.
 
-**Solution**
-
-Configure your build container's security context to match the helper container's user ID and group ID:
+Solution: configure your build container's security context to match the helper container's user ID and group ID:
 
 ```toml
 [runners.kubernetes.build_container_security_context]
@@ -417,7 +415,7 @@ run_as_user = 1001
 run_as_group = 1001
 ```
 
-**Additional notes**
+Additional notes:
 
 - These settings ensure consistent file ownership between the container that clones the repository and the container that builds it.
 - If you've customized your helper image with different user ID or group IDs, adjust these values accordingly.

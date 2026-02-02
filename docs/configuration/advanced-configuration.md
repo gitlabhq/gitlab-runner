@@ -82,22 +82,20 @@ For more information, see:
 - [Long polling for runners](https://docs.gitlab.com/ci/runners/long_polling/)
 - [Workhorse configuration](https://docs.gitlab.com/development/workhorse/configuration/)
 
-**Symptoms:**
+Symptoms:
 
 - Jobs from some projects experience delays before starting (duration matches your GitLab instance long polling timeout)
 - Jobs from other projects run immediately
 - Warning message in runner logs: `CONFIGURATION: Long polling issues detected`
 
-**Common problematic scenarios:**
+Common problematic scenarios:
 
 - Worker starvation bottleneck: The `concurrent` setting is less than the number of runners (severe bottleneck)
 - Request bottleneck: Runners with `request_concurrency=1` cause job delays during long polling
 - Build limit bottleneck: Runners with low `limit` settings (≤2) combined with `request_concurrency=1`
 
-**Solution options:**
-
-GitLab Runner automatically detects the problem scenarios and provides tailored solutions in the warning messages.
-Common solutions include:
+GitLab Runner automatically detects the problem scenarios and provides tailored solutions in the
+warning messages. Common solutions include:
 
 - Increase the `concurrent` setting to exceed the number of runners.
 - Set the `request_concurrency` value for high-volume runners to a value higher than 1 (default is 1).
@@ -107,9 +105,9 @@ Common solutions include:
   see the [feature flags documentation](feature-flags.md).
 - Balance `limit` settings with expected job volume.
 
-**Example problematic configurations:**
+##### Example problematic configurations
 
-**Scenario 1: Worker starvation bottleneck**
+Scenario 1: Worker starvation bottleneck:
 
 ```toml
 concurrent = 2  # Only 2 concurrent workers
@@ -122,7 +120,7 @@ concurrent = 2  # Only 2 concurrent workers
   name = "runner-3"  # 3 runners, only 2 workers - severe bottleneck
 ```
 
-**Scenario 2: Request bottleneck**
+Scenario 2: Request bottleneck:
 
 ```toml
 concurrent = 4  # 4 workers available
@@ -133,7 +131,7 @@ concurrent = 4  # 4 workers available
   limit = 10               # Can handle 10 jobs, but only 1 request slot
 ```
 
-**Scenario 3: Build limit bottleneck**
+Scenario 3: Build limit bottleneck:
 
 ```toml
 concurrent = 4
@@ -145,7 +143,7 @@ concurrent = 4
   # Creates severe bottleneck: builds at capacity + request slot blocked by long polling
 ```
 
-**Example corrected configuration:**
+##### Example corrected configuration
 
 ```toml
 concurrent = 4  # Adequate worker capacity
@@ -760,11 +758,11 @@ precedence is taken into account:
 1. Credentials configured with `DOCKER_AUTH_CONFIG`.
 1. Credentials configured locally on the GitLab Runner host with `~/.docker/config.json`
    or `~/.dockercfg` files (for example, by running `docker login` on the host).
-1. Credentials sent by default with a job's payload (for example, credentials for the *integrated
-   registry* described earlier).
+1. Credentials sent by default with a job's payload (for example, credentials for the integrated
+   registry described earlier).
 
 The first credentials found for the registry are used. So for example,
-if you add credentials for the *integrated registry* with the
+if you add credentials for the integrated registry with the
 `DOCKER_AUTH_CONFIG` variable, then the default credentials are overridden.
 
 ## The `[runners.parallels]` section
