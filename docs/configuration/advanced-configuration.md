@@ -431,7 +431,7 @@ When GitLab Runner starts with a URL containing the `/ci` suffix, it logs a warn
 WARNING: The runner URL contains a legacy '/ci' suffix. This suffix is deprecated and should be
 removed from the configuration. Git submodules may fail to clone with authentication errors if this
 suffix is present. Please update the 'url' field in your config.toml to remove the '/ci' suffix.
-See https://docs.gitlab.com/runner/configuration/advanced-configuration.html#legacy-ci-url-suffix for more information.
+See https://docs.gitlab.com/runner/configuration/advanced-configuration/#legacy-ci-url-suffix for more information.
 ```
 
 To resolve this warning, edit your `config.toml` file and remove the `/ci` suffix from the `url` field.
