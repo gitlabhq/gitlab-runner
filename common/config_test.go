@@ -22,6 +22,54 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
+func TestCacheGCSConfig_UniverseDomain(t *testing.T) {
+	tests := map[string]struct {
+		config         string
+		expectedDomain string
+		validateConfig func(t *testing.T, config *Config)
+	}{
+		"universe domain not set": {
+			config: `
+[[runners]]
+	[runners.cache.gcs]
+		BucketName = "test-bucket"
+`,
+			expectedDomain: "",
+		},
+		"universe domain set to googleapis.com": {
+			config: `
+[[runners]]
+	[runners.cache.gcs]
+		BucketName = "test-bucket"
+		UniverseDomain = "googleapis.com"
+`,
+			expectedDomain: "googleapis.com",
+		},
+		"universe domain set to custom universe": {
+			config: `
+[[runners]]
+	[runners.cache.gcs]
+		BucketName = "test-bucket"
+		UniverseDomain = "custom.universe.com"
+`,
+			expectedDomain: "custom.universe.com",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := NewConfig()
+			_, err := toml.Decode(tt.config, cfg)
+			assert.NoError(t, err)
+
+			require.Len(t, cfg.Runners, 1)
+			require.NotNil(t, cfg.Runners[0].Cache)
+			require.NotNil(t, cfg.Runners[0].Cache.GCS)
+			assert.Equal(t, tt.expectedDomain, cfg.Runners[0].Cache.GCS.UniverseDomain)
+		})
+	}
+}
+
 func TestCacheS3Config_AuthType(t *testing.T) {
 	tests := map[string]struct {
 		s3       CacheS3Config
@@ -2586,6 +2634,36 @@ func TestConfig_Masked(t *testing.T) {
 									CacheGCSCredentials: CacheGCSCredentials{
 										PrivateKey: "[MASKED]",
 									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"cache gcs universe domain": {
+			input: &Config{
+				Runners: []*RunnerConfig{
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								GCS: &CacheGCSConfig{
+									BucketName:     "test-bucket",
+									UniverseDomain: "googleapis.com",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &Config{
+				Runners: []*RunnerConfig{
+					{
+						RunnerSettings: RunnerSettings{
+							Cache: &CacheConfig{
+								GCS: &CacheGCSConfig{
+									BucketName:     "test-bucket",
+									UniverseDomain: "googleapis.com",
 								},
 							},
 						},
