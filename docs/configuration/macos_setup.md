@@ -26,8 +26,8 @@ Before you begin:
 
 ## Change the system shell to Bash
 
-Newer versions of macOS ship with Zsh as the default shell.
-You must change it to Bash.
+Newer versions of macOS use Zsh as the default shell. However, the runner's shell executor requires
+Bash to ensure CI/CD scripts execute correctly because many use Bash-specific syntax and features.
 
 1. Connect to your machine and determine the default shell:
 
