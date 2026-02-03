@@ -2132,7 +2132,13 @@ func (c *RunnerCredentials) Log() *logrus.Entry {
 }
 
 func (c *RunnerCredentials) SameAs(other *RunnerCredentials) bool {
-	return c.URL == other.URL && c.Token == other.Token
+	if c.Token != other.Token {
+		return false
+	}
+	if wildcardURL(c.URL) || wildcardURL(other.URL) {
+		return true
+	}
+	return c.URL == other.URL
 }
 
 func (c *RunnerConfig) String() string {
@@ -2622,4 +2628,14 @@ func parseVariable(text string) (variable spec.Variable, err error) {
 		Value: keyValue[1],
 	}
 	return
+}
+
+// wildcardURL checks if the URL is a wildcard URL
+func wildcardURL(url string) bool {
+	switch url {
+	case "", "*":
+		return true
+	default:
+		return false
+	}
 }
