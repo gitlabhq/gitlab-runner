@@ -3738,3 +3738,184 @@ func TestInvalidParseVariable(t *testing.T) {
 	_, err := parseVariable("some_other_key")
 	assert.Error(t, err)
 }
+
+func TestRunnerCredentials_SameAs(t *testing.T) {
+	tests := map[string]struct {
+		c      *RunnerCredentials
+		other  *RunnerCredentials
+		result bool
+	}{
+		"same token and same URL": {
+			c: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			result: true,
+		},
+		"same token but different URL": {
+			c: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "https://gitlab.example.com",
+				Token: "token123",
+			},
+			result: false,
+		},
+		"different token but same URL": {
+			c: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token456",
+			},
+			result: false,
+		},
+		"different token and different URL": {
+			c: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "https://gitlab.example.com",
+				Token: "token456",
+			},
+			result: false,
+		},
+		"same token, first URL is wildcard *": {
+			c: &RunnerCredentials{
+				URL:   "*",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			result: true,
+		},
+		"same token, second URL is wildcard *": {
+			c: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "*",
+				Token: "token123",
+			},
+			result: true,
+		},
+		"same token, both URLs are wildcard *": {
+			c: &RunnerCredentials{
+				URL:   "*",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "*",
+				Token: "token123",
+			},
+			result: true,
+		},
+		"same token, first URL is empty": {
+			c: &RunnerCredentials{
+				URL:   "",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			result: true,
+		},
+		"same token, second URL is empty": {
+			c: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "",
+				Token: "token123",
+			},
+			result: true,
+		},
+		"same token, both URLs are empty": {
+			c: &RunnerCredentials{
+				URL:   "",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "",
+				Token: "token123",
+			},
+			result: true,
+		},
+		"same token, empty and wildcard *": {
+			c: &RunnerCredentials{
+				URL:   "",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "*",
+				Token: "token123",
+			},
+			result: true,
+		},
+		"different token, first URL is wildcard *": {
+			c: &RunnerCredentials{
+				URL:   "*",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token456",
+			},
+			result: false,
+		},
+		"different token, second URL is wildcard *": {
+			c: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "*",
+				Token: "token456",
+			},
+			result: false,
+		},
+		"same token, URLs differ only by trailing slash": {
+			c: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "https://gitlab.com/",
+				Token: "token123",
+			},
+			result: false,
+		},
+		"same token, URLs differ by protocol": {
+			c: &RunnerCredentials{
+				URL:   "http://gitlab.com",
+				Token: "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			result: false,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			result := tt.c.SameAs(tt.other)
+			assert.Equal(t, tt.result, result, "SameAs should return %v for this case", tt.result)
+		})
+	}
+}
