@@ -762,36 +762,63 @@ func TestJobResponse_Run(t *testing.T) {
 	}
 }
 
-func TestFeaturesInfo_TwoPhaseJobCommit_JSONMarshaling(t *testing.T) {
+func TestFeaturesInfo_JSONMarshaling(t *testing.T) {
 	tests := []struct {
 		name     string
 		features FeaturesInfo
 		expected string
 	}{
 		{
-			name: "TwoPhaseJobCommit enabled",
-			features: FeaturesInfo{
-				TwoPhaseJobCommit: true,
-			},
-			expected: `{"variables":false,"image":false,"services":false,"artifacts":false,"cache":false,"fallback_cache_keys":false,"shared":false,"upload_multiple_artifacts":false,"upload_raw_artifacts":false,"session":false,"terminal":false,"refspecs":false,"masking":false,"proxy":false,"raw_variables":false,"artifacts_exclude":false,"multi_build_steps":false,"trace_reset":false,"trace_checksum":false,"trace_size":false,"vault_secrets":false,"cancelable":false,"return_exit_code":false,"service_variables":false,"service_multiple_aliases":false,"image_executor_opts":false,"service_executor_opts":false,"cancel_gracefully":false,"native_steps_integration":false,"two_phase_job_commit":true}`,
+			name:     "all default (disabled)",
+			features: FeaturesInfo{},
+			expected: `{"variables":false,"image":false,"services":false,"artifacts":false,"cache":false,"fallback_cache_keys":false,"shared":false,"upload_multiple_artifacts":false,"upload_raw_artifacts":false,"session":false,"terminal":false,"refspecs":false,"masking":false,"proxy":false,"raw_variables":false,"artifacts_exclude":false,"multi_build_steps":false,"trace_reset":false,"trace_checksum":false,"trace_size":false,"vault_secrets":false,"cancelable":false,"return_exit_code":false,"service_variables":false,"service_multiple_aliases":false,"image_executor_opts":false,"service_executor_opts":false,"cancel_gracefully":false,"native_steps_integration":false,"two_phase_job_commit":false,"job_inputs":false}`,
 		},
 		{
-			name: "TwoPhaseJobCommit disabled",
-			features: FeaturesInfo{
-				TwoPhaseJobCommit: false,
-			},
-			expected: `{"variables":false,"image":false,"services":false,"artifacts":false,"cache":false,"fallback_cache_keys":false,"shared":false,"upload_multiple_artifacts":false,"upload_raw_artifacts":false,"session":false,"terminal":false,"refspecs":false,"masking":false,"proxy":false,"raw_variables":false,"artifacts_exclude":false,"multi_build_steps":false,"trace_reset":false,"trace_checksum":false,"trace_size":false,"vault_secrets":false,"cancelable":false,"return_exit_code":false,"service_variables":false,"service_multiple_aliases":false,"image_executor_opts":false,"service_executor_opts":false,"cancel_gracefully":false,"native_steps_integration":false,"two_phase_job_commit":false}`,
-		},
-		{
-			name: "Multiple features including TwoPhaseJobCommit",
+			name: "some enabled",
 			features: FeaturesInfo{
 				Variables:         true,
-				Artifacts:         true,
-				Cache:             true,
+				Image:             true,
 				TwoPhaseJobCommit: true,
-				Cancelable:        true,
+				JobInputs:         true,
 			},
-			expected: `{"variables":true,"image":false,"services":false,"artifacts":true,"cache":true,"fallback_cache_keys":false,"shared":false,"upload_multiple_artifacts":false,"upload_raw_artifacts":false,"session":false,"terminal":false,"refspecs":false,"masking":false,"proxy":false,"raw_variables":false,"artifacts_exclude":false,"multi_build_steps":false,"trace_reset":false,"trace_checksum":false,"trace_size":false,"vault_secrets":false,"cancelable":true,"return_exit_code":false,"service_variables":false,"service_multiple_aliases":false,"image_executor_opts":false,"service_executor_opts":false,"cancel_gracefully":false,"native_steps_integration":false,"two_phase_job_commit":true}`,
+			expected: `{"variables":true,"image":true,"services":false,"artifacts":false,"cache":false,"fallback_cache_keys":false,"shared":false,"upload_multiple_artifacts":false,"upload_raw_artifacts":false,"session":false,"terminal":false,"refspecs":false,"masking":false,"proxy":false,"raw_variables":false,"artifacts_exclude":false,"multi_build_steps":false,"trace_reset":false,"trace_checksum":false,"trace_size":false,"vault_secrets":false,"cancelable":false,"return_exit_code":false,"service_variables":false,"service_multiple_aliases":false,"image_executor_opts":false,"service_executor_opts":false,"cancel_gracefully":false,"native_steps_integration":false,"two_phase_job_commit":true,"job_inputs":true}`,
+		},
+		{
+			name: "all enabled",
+			features: FeaturesInfo{
+				Variables:               true,
+				Image:                   true,
+				Services:                true,
+				Artifacts:               true,
+				Cache:                   true,
+				FallbackCacheKeys:       true,
+				Shared:                  true,
+				UploadMultipleArtifacts: true,
+				UploadRawArtifacts:      true,
+				Session:                 true,
+				Terminal:                true,
+				Refspecs:                true,
+				Masking:                 true,
+				Proxy:                   true,
+				RawVariables:            true,
+				ArtifactsExclude:        true,
+				MultiBuildSteps:         true,
+				TraceReset:              true,
+				TraceChecksum:           true,
+				TraceSize:               true,
+				VaultSecrets:            true,
+				Cancelable:              true,
+				ReturnExitCode:          true,
+				ServiceVariables:        true,
+				ServiceMultipleAliases:  true,
+				ImageExecutorOpts:       true,
+				ServiceExecutorOpts:     true,
+				CancelGracefully:        true,
+				NativeStepsIntegration:  true,
+				TwoPhaseJobCommit:       true,
+				JobInputs:               true,
+			},
+			expected: `{"variables":true,"image":true,"services":true,"artifacts":true,"cache":true,"fallback_cache_keys":true,"shared":true,"upload_multiple_artifacts":true,"upload_raw_artifacts":true,"session":true,"terminal":true,"refspecs":true,"masking":true,"proxy":true,"raw_variables":true,"artifacts_exclude":true,"multi_build_steps":true,"trace_reset":true,"trace_checksum":true,"trace_size":true,"vault_secrets":true,"cancelable":true,"return_exit_code":true,"service_variables":true,"service_multiple_aliases":true,"image_executor_opts":true,"service_executor_opts":true,"cancel_gracefully":true,"native_steps_integration":true,"two_phase_job_commit":true,"job_inputs":true}`,
 		},
 	}
 
@@ -809,10 +836,4 @@ func TestFeaturesInfo_TwoPhaseJobCommit_JSONMarshaling(t *testing.T) {
 			assert.Equal(t, tt.features, features)
 		})
 	}
-}
-
-func TestFeaturesInfo_TwoPhaseJobCommit_DefaultValue(t *testing.T) {
-	// Test that the default value is false
-	var features FeaturesInfo
-	assert.False(t, features.TwoPhaseJobCommit, "TwoPhaseJobCommit should default to false")
 }
