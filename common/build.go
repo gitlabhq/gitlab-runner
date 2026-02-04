@@ -478,6 +478,15 @@ func wrapStepStageErr(err error) error {
 		}
 	}
 
+	// hack: for now, we parse the exit code from the error response
+	// later we might want to introduce a proper exit code from the step-runner
+	// https://gitlab.com/gitlab-org/step-runner/-/work_items/349
+	if _, code, ok := strings.Cut(err.Error(), "exit status"); ok {
+		if exitCode, err := strconv.Atoi(strings.TrimSpace(code)); err == nil {
+			berr.ExitCode = exitCode
+		}
+	}
+
 	return berr
 }
 
