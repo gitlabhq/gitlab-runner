@@ -1002,11 +1002,11 @@ func (mr *RunCommand) processBuildOnRunner(
 			mr.usageLoggerStore(common.UsageLogRecordFrom(runner, build))
 		}
 	}()
-
-	// Process the same runner by different worker again
-	// to speed up taking the builds
-	mr.requeueRunner(runner, runners)
-
+	if !runner.GetStrictCheckInterval() {
+		// Process the same runner by different worker again
+		// to speed up taking the builds
+		mr.requeueRunner(runner, runners)
+	}
 	// Process a build
 	return build.Run(mr.configfile.Config(), trace)
 }

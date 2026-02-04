@@ -1300,13 +1300,14 @@ type RunnerSettings struct {
 }
 
 type RunnerConfig struct {
-	Name               string `toml:"name" json:"name" short:"name" long:"description" env:"RUNNER_NAME" description:"Runner name"`
-	Limit              int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`
-	OutputLimit        int    `toml:"output_limit,omitzero" long:"output-limit" env:"RUNNER_OUTPUT_LIMIT" description:"Maximum build trace size in kilobytes"`
-	RequestConcurrency int    `toml:"request_concurrency,omitzero" long:"request-concurrency" env:"RUNNER_REQUEST_CONCURRENCY" description:"Maximum concurrency for job requests" jsonschema:"min=1"`
+	Name                string `toml:"name" json:"name" short:"name" long:"description" env:"RUNNER_NAME" description:"Runner name"`
+	Limit               int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`
+	OutputLimit         int    `toml:"output_limit,omitzero" long:"output-limit" env:"RUNNER_OUTPUT_LIMIT" description:"Maximum build trace size in kilobytes"`
+	RequestConcurrency  int    `toml:"request_concurrency,omitzero" long:"request-concurrency" env:"RUNNER_REQUEST_CONCURRENCY" description:"Maximum concurrency for job requests" jsonschema:"min=1"`
+	StrictCheckInterval *bool  `toml:"strict_check_interval,omitzero" json:",omitempty" long:"strict-check-interval" env:"RUNNER_STRICT_CHECK_INTERVAL" description:"When you set StrictCheckInterval to true, the runner disables the faster-than-check_interval re-polling loop that occurs when a runner receives a job. Instead, the runner waits <check_interval> seconds before it polls again, even if additional jobs are available."`
 
-	UnhealthyRequestsLimit         int            `toml:"unhealthy_requests_limit,omitzero" long:"unhealthy-requests-limit" env:"RUNNER_UNHEALTHY_REQUESTS_LIMIT" description:"The number of 'unhealthy' responses to new job requests after which a runner worker will be disabled"`
-	UnhealthyInterval              *time.Duration `toml:"unhealthy_interval,omitzero" json:",omitempty" long:"unhealthy-interval" ENV:"RUNNER_UNHEALTHY_INTERVAL" description:"Duration for which a runner worker is disabled after exceeding the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc"`
+	UnhealthyRequestsLimit         int            `toml:"unhealthy_requests_limit,omitzero" long:"unhealthy-requests-limit" env:"RUNNER_UNHEALTHY_REQUESTS_LIMIT" description:"The number of unhealthy responses to new job requests after which a runner worker is turned off."`
+	UnhealthyInterval              *time.Duration `toml:"unhealthy_interval,omitzero" json:",omitempty" long:"unhealthy-interval" ENV:"RUNNER_UNHEALTHY_INTERVAL" description:"Duration that the runner worker is turned off after it exceeds the unhealthy requests limit. Supports syntax like '3600s' and '1h30min'."`
 	JobStatusFinalUpdateRetryLimit int            `toml:"job_status_final_update_retry_limit,omitzero" json:"job_status_final_update_retry_limit,omitzero" long:"job-status-final-update-retry-limit" env:"RUNNER_job_status_final_update_retry_limit" description:"The maximum number of times GitLab Runner can retry to push the final job status to the GitLab instance."`
 
 	SystemID       string    `toml:"-" json:",omitempty"`
@@ -2179,6 +2180,14 @@ func (c *RunnerConfig) GetUnhealthyInterval() time.Duration {
 
 func (c *RunnerConfig) GetRequestConcurrency() int {
 	return max(1, c.RequestConcurrency)
+}
+
+func (c *RunnerConfig) GetStrictCheckInterval() bool {
+	if c.StrictCheckInterval == nil {
+		return false
+	}
+
+	return *c.StrictCheckInterval
 }
 
 func (c *RunnerConfig) GetVariables() spec.Variables {
