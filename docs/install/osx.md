@@ -321,7 +321,14 @@ After you sign in to the GUI, repeat the GitLab Runner troubleshooting steps fro
 
 ### Error: `"launchctl" failed with stderr: Load failed: 5: Input/output error`
 
-If this error is encountered when running the `gitlab-runner start` command, ensure that the directories specified in the
+If you encounter this error when you run the `gitlab-runner start` command, first check if the runner is already running:
+
+```shell
+gitlab-runner status
+```
+
+If the runner is already running, you don't need to start it again. If it's not running and you still encounter this error,
+ensure that the directories specified in the
 `~/Library/LaunchAgents/gitlab-runner.plist` values `StandardOutPath` and `StandardErrorPath` exist:
 
 ```xml
@@ -332,6 +339,11 @@ If this error is encountered when running the `gitlab-runner start` command, ens
 ```
 
 If the directories do not exist, create them and ensure that the runner service user has appropriate permissions to read and write to them.
+Then start the runner:
+
+```shell
+gitlab-runner start
+```
 
 ### Error: `Error on fetching TLS Data from API response... error  error=couldn't build CA Chain`
 
