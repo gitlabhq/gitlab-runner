@@ -1,6 +1,7 @@
 package retry
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -45,6 +46,7 @@ type Retry struct {
 	run     RunFunc
 	check   CheckFunc
 	backoff *backoff.Backoff
+	ctx     context.Context
 }
 
 type NoValueRetry struct {
@@ -86,8 +88,19 @@ func New() *Retry {
 		check: func(_ int, _ error) bool {
 			return true
 		},
-		backoff: &backoff.Backoff{Min: defaultRetryMinBackoff, Max: defaultRetryMaxBackoff},
+		backoff: &backoff.Backoff{
+			Min: defaultRetryMinBackoff,
+			Max: defaultRetryMaxBackoff,
+		},
+		ctx: context.Background(),
 	}
+}
+
+func (r *Retry) WithContext(ctx context.Context) *Retry {
+	if ctx != nil {
+		r.ctx = ctx
+	}
+	return r
 }
 
 func (r *Retry) wrapCheck(newCheck checkFuncWithPrevious) *Retry {
@@ -164,14 +177,28 @@ func retryRun[T any](retry *Retry, fn RunValueFunc[T]) (T, error) {
 	var err error
 	var tries int
 	var value T
+
+	select {
+	case <-retry.ctx.Done():
+		return value, retry.ctx.Err()
+	default:
+	}
+
 	for {
 		tries++
+
 		value, err = fn()
 		if err == nil || !retry.check(tries, err) {
 			break
 		}
 
-		time.Sleep(retry.backoff.Duration())
+		backoffDuration := retry.backoff.Duration()
+
+		select {
+		case <-time.After(backoffDuration):
+		case <-retry.ctx.Done():
+			return value, retry.ctx.Err()
+		}
 	}
 
 	return value, err
