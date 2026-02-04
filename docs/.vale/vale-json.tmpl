@@ -1,0 +1,43 @@
+{{- /* Modify Vale's output https://vale.sh/manual/output/ */ -}}
+
+{{- $fileIndexes := len .Files -}}
+{{- $fileIndexes = sub $fileIndexes 1 -}}
+
+[
+  {{- /* Range over the linted files */ -}}
+  {{- range $idx1, $a := .Files -}}
+    {{- $path := .Path -}}
+
+    {{/* Range over the file's alerts */}}
+    {{- range $idx2, $b := .Alerts -}}
+      {{- $error := "info" -}}
+      {{- if eq .Severity "error" -}}
+        {{- $error = "blocker" -}}
+      {{- else if eq .Severity "warning" -}}
+        {{- $error = "major" -}}
+      {{- end}}
+
+      {{- /* Variables setup */ -}}
+      {{- $loc := printf "%d" .Line -}}
+      {{- $message := printf "%s" .Message -}}
+      {{- $moreinfo := "" -}}
+      {{- if .Link -}}
+        {{- $moreinfo = printf " See %s" .Link -}}
+      {{- end -}}
+      {{- if $idx2 -}},{{- end -}}
+
+  {{/* Output */}}
+  {
+    "description": "{{ $message }}{{ $moreinfo }}",
+    "fingerprint": "{{ $path }}-{{ $loc }}",
+    "severity": "{{ $error }}",
+    "location": {
+      "path": "{{ $path }}",
+      "lines": {
+        "begin": {{ $loc }}
+      }
+    }
+  }
+    {{- end}}{{- if (lt $idx1 $fileIndexes) -}},{{- end -}}
+  {{- end}}
+]
