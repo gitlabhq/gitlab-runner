@@ -256,9 +256,9 @@ Now install GitLab Runner on the Ubuntu instance.
    - If `EnablePublicIP` is set to true, the public IP of the task container is gathered to perform the SSH connection.
    - If `EnablePublicIP` is set to false:
      - The Fargate driver uses the task container's private IP. To set up a connection when set to `false`, the VPC Security Group must
-     have an inbound rule for Port 22 (SSH), where the source is the VPC CIDR.
+       have an inbound rule for Port 22 (SSH), where the source is the VPC CIDR.
      - To fetch external dependencies, provisioned AWS Fargate containers must have access to the public internet. To provide
-     public internet access for AWS Fargate containers, you can use a NAT Gateway in the VPC.
+       public internet access for AWS Fargate containers, you can use a NAT Gateway in the VPC.
 
    - The port number of the SSH server is optional. If omitted, the default SSH port (22) is used.
    - For more information about the section settings, see the [Fargate driver documentation](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate/-/tree/master/docs#configuration).

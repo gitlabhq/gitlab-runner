@@ -80,9 +80,9 @@ fi
 Executors that load shell profiles:
 
 - [`shell`](../executors/shell.md)
-- [`parallels`](../executors/parallels.md)  (The shell profile of the *target* virtual machine is loaded)
-- [`virtualbox`](../executors/virtualbox.md)  (The shell profile of the *target* virtual machine is loaded)
-- [`ssh`](../executors/ssh.md) (The shell profile of the *target* machine is loaded)
+- [`parallels`](../executors/parallels.md) (The shell profile of the target virtual machine is loaded)
+- [`virtualbox`](../executors/virtualbox.md) (The shell profile of the target virtual machine is loaded)
+- [`ssh`](../executors/ssh.md) (The shell profile of the target machine is loaded)
 
 ## PowerShell
 

@@ -64,7 +64,7 @@ func GeneratePermissionsDocs(roleName, roleNamespace string, permissions Permiss
 		return err
 	}
 
-	roleYamlContent := fmt.Sprintf("```yaml\n%s\n```\n", strings.TrimSpace(roleYaml))
+	roleYamlContent := fmt.Sprintf("\n```yaml\n%s\n```\n\n", strings.TrimSpace(roleYaml))
 
 	newDocsFile, err = replace(roleYamlPlaceholderName, newDocsFile, roleYamlContent)
 	if err != nil {

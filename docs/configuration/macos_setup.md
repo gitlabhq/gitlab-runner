@@ -116,7 +116,7 @@ When you create and register the runner:
 After you register the runner, a success message displays in the command-line:
 
 ```shell
-> Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
+Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
 ```
 
 To view the runner:

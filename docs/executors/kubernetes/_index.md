@@ -127,6 +127,7 @@ You can either:
 You can use the following YAML role definition to create a role with the required permissions.
 
 <!-- k8s_api_permissions_role_yaml_start -->
+
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -188,6 +189,7 @@ rules:
   - "create"
   - "get"
 ```
+
 <!-- k8s_api_permissions_role_yaml_end -->
 
 Additional details:
@@ -2392,7 +2394,7 @@ In GitLab 15.1 and later, the entrypoint defined in a Docker image is used with 
 
 The container entry point has the following known issues:
 
-- <a id="open-valid-shell"></a> If an entrypoint is defined in the Dockerfile for an image, it must open a valid shell. Otherwise, the job hangs.
+- If an entrypoint is defined in the Dockerfile for an image, it must open a valid shell. Otherwise, the job hangs.
 
   - To open a shell, the system passes the command as
     [`args`](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#entrypoint)
@@ -2409,7 +2411,7 @@ The container entry point has the following known issues:
 Before GitLab Runner 17.4:
 
 - The entrypoint logs were not forwarded to the build's log.
-- With the Kubernetes executor with `kube exec`, GitLab Runner did not wait for the entrypoint to open a shell (see [above](#open-valid-shell)).
+- With the Kubernetes executor with `kube exec`, GitLab Runner did not wait for the entrypoint to open a shell (see earlier in this section).
 
 Starting with GitLab Runner 17.4, the entrypoint logs are now forwarded. The system waits
 for the entrypoint to run and spawn the shell. This has the following
@@ -2419,7 +2421,7 @@ implications:
   longer than `poll_timeout` (default: 180 s), the build fails. The
   `poll_timeout` value (and potentially `poll_interval`)
   must be adapted if the entrypoint is expected to run longer.
-- When `FF_KUBERNETES_HONOR_ENTRYPOINT` *and* `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` are set, the system adds a
+- When `FF_KUBERNETES_HONOR_ENTRYPOINT` and `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` are set, the system adds a
   [startup probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes)
   to the build container, so that it knows when the entrypoint is spawning
   the shell. If a custom entrypoint uses the provided `args`
