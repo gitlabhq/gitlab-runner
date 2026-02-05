@@ -227,6 +227,16 @@ func (b *Build) Log() *logrus.Entry {
 		l = l.WithField("gitlab_scoped_user_id", *b.JobInfo.ScopedUserID)
 	}
 
+	// this is only set after the prepare stage has run
+	if b.Hostname != "" {
+		l = l.WithField("name", b.Hostname)
+	}
+
+	// executor-specific log fields
+	for k, v := range GetExecutorLogFields(b.ExecutorData) {
+		l = l.WithField(k, v)
+	}
+
 	return l
 }
 

@@ -15,6 +15,21 @@ import (
 // executor will use. Meant to be casted, e.g. virtual machine details.
 type ExecutorData interface{}
 
+// ExecutorDataLogger is an optional interface that ExecutorData implementations
+// can implement to provide executor-specific fields for structured logging.
+type ExecutorDataLogger interface {
+	LogFields() map[string]string
+}
+
+// GetExecutorLogFields extracts log fields from ExecutorData if it implements
+// ExecutorDataLogger, otherwise returns nil.
+func GetExecutorLogFields(data ExecutorData) map[string]string {
+	if l, ok := data.(ExecutorDataLogger); ok {
+		return l.LogFields()
+	}
+	return nil
+}
+
 // ExecutorCommand stores the script executor will run on a given stage.
 // If Predefined it will try to use already allocated resources.
 type ExecutorCommand struct {
