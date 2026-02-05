@@ -2129,6 +2129,10 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 		return err
 	}
 
+	if data, ok := s.Build.ExecutorData.(*executorData); ok {
+		data.PodName = s.pod.GetName()
+	}
+
 	ownerReferences := s.buildPodReferences()
 	err = s.setOwnerReferencesForResources(ctx, ownerReferences)
 	if err != nil {
@@ -3533,11 +3537,13 @@ func featuresFn(features *common.FeaturesInfo) {
 }
 
 func init() {
-	common.RegisterExecutorProvider(common.ExecutorKubernetes, executors.DefaultExecutorProvider{
-		Creator: func() common.Executor {
-			return newExecutor()
+	common.RegisterExecutorProvider(common.ExecutorKubernetes, executorProvider{
+		DefaultExecutorProvider: executors.DefaultExecutorProvider{
+			Creator: func() common.Executor {
+				return newExecutor()
+			},
+			FeaturesUpdater:  featuresFn,
+			DefaultShellName: executorOptions.Shell.Shell,
 		},
-		FeaturesUpdater:  featuresFn,
-		DefaultShellName: executorOptions.Shell.Shell,
 	})
 }

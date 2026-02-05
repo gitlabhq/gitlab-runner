@@ -178,6 +178,10 @@ func (s *commandExecutor) requestHelperContainer() (*container.InspectResponse, 
 		return nil, err
 	}
 
+	if data, ok := s.Build.ExecutorData.(*executorData); ok {
+		data.ContainerName = s.helperContainer.Name
+	}
+
 	return s.helperContainer, nil
 }
 
@@ -215,6 +219,10 @@ func (s *commandExecutor) requestBuildContainer() (*container.InspectResponse, e
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if data, ok := s.Build.ExecutorData.(*executorData); ok {
+		data.ContainerName = s.buildContainer.Name
 	}
 
 	err = s.changeFilesOwnership()
@@ -388,11 +396,13 @@ func init() {
 		features.Variables = true
 	}
 
-	common.RegisterExecutorProvider("docker", executors.DefaultExecutorProvider{
-		Creator:          creator,
-		FeaturesUpdater:  featuresUpdater,
-		ConfigUpdater:    configUpdater,
-		DefaultShellName: options.Shell.Shell,
+	common.RegisterExecutorProvider("docker", executorProvider{
+		DefaultExecutorProvider: executors.DefaultExecutorProvider{
+			Creator:          creator,
+			FeaturesUpdater:  featuresUpdater,
+			ConfigUpdater:    configUpdater,
+			DefaultShellName: options.Shell.Shell,
+		},
 	})
 
 	windowsFeaturesUpdater := func(features *common.FeaturesInfo) {
@@ -400,10 +410,12 @@ func init() {
 		features.NativeStepsIntegration = false
 	}
 
-	common.RegisterExecutorProvider("docker-windows", executors.DefaultExecutorProvider{
-		Creator:          creator,
-		FeaturesUpdater:  windowsFeaturesUpdater,
-		ConfigUpdater:    configUpdater,
-		DefaultShellName: options.Shell.Shell,
+	common.RegisterExecutorProvider("docker-windows", executorProvider{
+		DefaultExecutorProvider: executors.DefaultExecutorProvider{
+			Creator:          creator,
+			FeaturesUpdater:  windowsFeaturesUpdater,
+			ConfigUpdater:    configUpdater,
+			DefaultShellName: options.Shell.Shell,
+		},
 	})
 }
