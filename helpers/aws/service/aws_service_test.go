@@ -98,6 +98,7 @@ func TestNewAWSSecretsManager(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, manager)
 	assert.NotNil(t, manager.client)
+	assert.NotEmpty(t, manager.client.(*secretsmanager.Client).Options().AppID)
 }
 
 func TestNewWebIdentityRoleProvider(t *testing.T) {
