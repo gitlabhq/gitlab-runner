@@ -8,14 +8,15 @@ import (
 	"path"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/omitwriter"
+	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
 const bootstrappedBinary = "/opt/gitlab-runner/gitlab-runner-helper"
@@ -85,18 +86,38 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 		_, _ = stdcopy.StdCopy(stdout, readyWriter, hijacked.Reader)
 	}()
 
+	// Build containers usually have to provide a shell to execute scripts on,
+	// for Functions, we continue to make use of this to execute the step-runner.
+	//
+	// However, Docker executors supports a mode called "job script as entrypoint":
+	//
+	// The build container does all of the work, and any script provided may
+	// or may not be executed. Because this happens implicitly, we cannot determine
+	// if that's going to be the case or not. So the solution is:
+	//
+	// - We wait indefinitely for the step-runner to return its ready message.
+	//   There's no other timeout here, other than the job timeout. So if the
+	//   step-runner just silently doesn't arrive, we'll never know.
+	// - On exit, if there's a non-zero code, we return a BuildError. If it
+	//   was a clean exit, we tell step-runner to not bother connecting by
+	//   returning ErrNoStepRunnerButOkay.
 	select {
 	case <-readyCh:
-		// success
+		// step-runner is ready
+
 	case err := <-errCh:
 		return nil, fmt.Errorf("connect container wait: %w", err)
+
 	case result := <-okCh:
-		if result.Error != nil {
-			return nil, fmt.Errorf("connect container exit: %s", result.Error.Message)
+		if result.StatusCode != 0 {
+			return nil, &common.BuildError{
+				Inner:    fmt.Errorf("exit code %d", result.StatusCode),
+				ExitCode: int(result.StatusCode),
+			}
 		}
-		return nil, fmt.Errorf("connect container exited unexpectedly with code %d", result.StatusCode)
-	case <-time.After(time.Minute):
-		return nil, fmt.Errorf("connect container ready timeout")
+
+		return nil, steps.ErrNoStepRunnerButOkay
+
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}

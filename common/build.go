@@ -466,6 +466,10 @@ func wrapStepStageErr(err error) error {
 		return nil
 	}
 
+	if errors.Is(err, steps.ErrNoStepRunnerButOkay) {
+		return nil
+	}
+
 	berr := &BuildError{Inner: err}
 
 	var cserr *steps.ClientStatusError

@@ -1,6 +1,7 @@
 package steps
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -10,6 +11,16 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
+
+// ErrNoStepRunnerButOkay is returned from Connect() when we cannot establish
+// a connection to the step-runner, but execution can continue normally.
+//
+// This occurs with the Docker executor when the container executes code directly
+// instead of starting the step-runner process. For example, when the job script
+// runs as the image ENTRYPOINT and the container terminates after execution.
+//
+// See: https://docs.gitlab.com/runner/executors/docker/#job-script-as-entrypoint
+var ErrNoStepRunnerButOkay = errors.New("no step runner but okay")
 
 func NewRequest(jobInfo JobInfo, steps []schema.Step) (*client.RunRequest, error) {
 	preambleSteps, err := addStepsPreamble(steps)
