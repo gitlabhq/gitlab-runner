@@ -215,7 +215,15 @@ func TestIsInAllowedPrivilegedImages(t *testing.T) {
 }
 
 func executorWithMockClient(c *docker.MockClient) *executor {
-	e := &executor{dockerConn: &dockerConnection{Client: c}}
+	mockConnector := func(ctx context.Context, options common.ExecutorPrepareOptions, e *executor) error {
+		e.dockerConn = &dockerConnection{Client: c}
+		e.info = system.Info{OSType: helperimage.OSTypeLinux}
+		return nil
+	}
+	e := &executor{
+		dockerConnector: mockConnector,
+	}
+
 	e.Context = context.Background()
 	e.Build = new(common.Build)
 	return e
@@ -2493,8 +2501,14 @@ func TestExpandingVolumeDestination(t *testing.T) {
 		},
 	}
 
+	// We need to explicitly connect, as we don't run Prepare where this would usually happen.
+	// In this context, this is only used to create a connection based on the mock client, and slap that onto the executor
+	// struct for later use.
+	err := executor.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, executor)
+	assert.NoError(t, err, "connecting connector")
+
 	executor.volumeParser = parser.NewLinuxParser(executor.ExpandValue)
-	err := executor.createLabeler()
+	err = executor.createLabeler()
 	assert.NoError(t, err, "creating labeler")
 	err = executor.createVolumesManager()
 	assert.NoError(t, err, "creating volumes manager")
@@ -2614,6 +2628,133 @@ func TestDockerImageWithUser(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDockerConfigGetLogConfig(t *testing.T) {
+	tests := []struct {
+		name           string
+		logOptions     map[string]string
+		expectedConfig map[string]string
+		expectedError  string
+	}{
+		{
+			name: "empty log options",
+		},
+		{
+			name:           "with env option",
+			logOptions:     map[string]string{"env": "CI_JOB_ID,CI_JOB_NAME,CI_PROJECT_ID"},
+			expectedConfig: map[string]string{"env": "CI_JOB_ID,CI_JOB_NAME,CI_PROJECT_ID"},
+		},
+		{
+			name:           "with labels and env options",
+			logOptions:     map[string]string{"labels": "com.gitlab.gitlab-runner.job.id,com.gitlab.gitlab-runner.project.id", "env": "CI_JOB_ID,CI_JOB_NAME,CI_PROJECT_ID"},
+			expectedConfig: map[string]string{"labels": "com.gitlab.gitlab-runner.job.id,com.gitlab.gitlab-runner.project.id", "env": "CI_JOB_ID,CI_JOB_NAME,CI_PROJECT_ID"},
+		},
+		{
+			name:          "invalid key",
+			logOptions:    map[string]string{"foo": "bar"},
+			expectedError: `creating docker log configuration: invalid log options: only ["env" "labels"] are allowed, but found: ["foo"]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+			if tt.expectedError == "" {
+				mockExecutorPrepareInteraction(t, c)
+			}
+
+			e := executorWithMockClient(c)
+			build := &common.Build{
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Docker: &common.DockerConfig{
+							Image:      "some-image",
+							LogOptions: tt.logOptions,
+						},
+					},
+				},
+			}
+
+			err := e.Prepare(common.ExecutorPrepareOptions{
+				Context:     t.Context(),
+				Build:       build,
+				BuildLogger: buildlogger.New(&common.Trace{Writer: io.Discard}, logrus.WithField("test", t.Name()), buildlogger.Options{}),
+				Config:      build.Runner,
+			})
+			if tt.expectedError != "" {
+				var buildErr *common.BuildError
+				assert.ErrorAs(t, err, &buildErr, "expected error to be a *common.BuildError")
+				assert.Equal(t, common.RunnerSystemFailure, buildErr.FailureReason, "expected a system failure")
+				assert.Equal(t, tt.expectedError, buildErr.Error())
+				return // when prepare fails, we can bail out
+			} else {
+				require.NoError(t, err)
+			}
+
+			hasExpectedLogConfig := func(t *testing.T, hostConfig *container.HostConfig) {
+				t.Helper()
+				assert.Equal(t, "json-file", hostConfig.LogConfig.Type)
+				assert.Equal(t, tt.logOptions, hostConfig.LogConfig.Config)
+			}
+
+			t.Run("build container", func(t *testing.T) {
+				buildContainerHostConfig, err := e.createHostConfig(true, false)
+				assert.NoError(t, err, "creating build container's host config")
+				hasExpectedLogConfig(t, buildContainerHostConfig)
+			})
+
+			t.Run("service container", func(t *testing.T) {
+				serviceContainerHostConfig, err := e.createHostConfigForService(false, nil, nil)
+				assert.NoError(t, err, "creating service container's host config")
+				hasExpectedLogConfig(t, serviceContainerHostConfig)
+			})
+		})
+	}
+}
+
+// mockExecutorPrepareInteraction mocks out interactions the executor does with the docker client, so that Prepare can
+// succeed.
+func mockExecutorPrepareInteraction(t *testing.T, c *docker.MockClient) {
+	waitResponseCh := make(chan container.WaitResponse)
+	errCh := make(chan error)
+	tCtx := t.Context()
+
+	go func() {
+		for {
+			select {
+			case waitResponseCh <- container.WaitResponse{}: // noop, just send out
+			case errCh <- nil: // noop, just send out
+			case <-tCtx.Done():
+				return
+			}
+		}
+	}()
+
+	c.EXPECT().
+		ImageInspectWithRaw(mock.Anything, mock.Anything).
+		Return(image.InspectResponse{}, []byte{}, nil).
+		Once()
+	c.EXPECT().
+		VolumeCreate(mock.Anything, mock.Anything).
+		Return(volume.Volume{Name: ""}, nil).
+		Once()
+	c.EXPECT().
+		ContainerCreate(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(container.CreateResponse{}, nil).
+		Once()
+	c.EXPECT().
+		ContainerStart(mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).
+		Once()
+	c.EXPECT().
+		ContainerWait(mock.Anything, mock.Anything, mock.Anything).
+		Return(waitResponseCh, errCh).
+		Once()
+	c.EXPECT().
+		ContainerRemove(mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).
+		Once()
 }
 
 var _ executors.Environment = (*env)(nil)
