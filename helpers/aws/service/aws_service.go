@@ -10,6 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type SecretsManagerAPI interface {
@@ -44,14 +46,22 @@ func NewAWSSecretsManager(ctx context.Context, region string, webIdentityProvide
 	var cfg aws.Config
 	var err error
 
+	// AppID is used by the AWS SDK to construct the User-Agent header sent with requests.
+	// The SDK automatically includes the Go version, OS, and architecture in the base user agent,
+	// and this AppID value appends the GitLab Runner version
+	// (e.g., "aws-sdk-go-v2/1.41.0 os/macos lang/go#1.25.5 md/GOOS#darwin md/GOARCH#arm64 app/GitLab-Runner-18.8.0").
+	appID := fmt.Sprintf("GitLab-Runner/%s", common.AppVersion.Version)
+
 	if webIdentityProvider != nil {
 		cfg = aws.Config{
 			Region:      region,
 			Credentials: webIdentityProvider,
+			AppID:       appID,
 		}
 	} else {
 		cfg, err = config.LoadDefaultConfig(ctx,
 			config.WithRegion(region),
+			config.WithAppID(appID),
 		)
 	}
 
