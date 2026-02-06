@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/BurntSushi/toml"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-units"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/sirupsen/logrus"
@@ -310,6 +311,7 @@ type DockerConfig struct {
 	EnableIPv6                 bool                `toml:"enable_ipv6,omitempty" json:"enable_ipv6" long:"enable-ipv6" description:"Enable IPv6 for automatically created networks. This is only takes affect when the feature flag FF_NETWORK_PER_BUILD is enabled."`
 	Ulimit                     map[string]string   `toml:"ulimit,omitempty" json:"ulimit,omitempty" long:"ulimit" env:"DOCKER_ULIMIT" description:"Ulimit options for container"`
 	NetworkMTU                 int                 `toml:"network_mtu,omitempty" json:"network_mtu" long:"network-mtu" description:"MTU of the Docker network created for the job IFF the FF_NETWORK_PER_BUILD feature-flag was specified."`
+	LogOptions                 map[string]string   `toml:"log_options,omitempty" json:"log_options,omitempty" long:"log-options" env:"DOCKER_LOG_OPTIONS" description:"Log driver options for json-file logging"`
 }
 
 type InstanceConfig struct {
@@ -1682,6 +1684,36 @@ func (c *DockerConfig) GetServicesLimit() int {
 	}
 
 	return *c.ServicesLimit
+}
+
+// GetLogConfig returns the LogConfig for build containers
+func (c *DockerConfig) GetLogConfig() (container.LogConfig, error) {
+	logConfig := container.LogConfig{
+		Type: "json-file",
+	}
+
+	if c == nil || len(c.LogOptions) == 0 {
+		return logConfig, nil
+	}
+
+	var invalidKeys []string
+	var allowedKeys = []string{"env", "labels"}
+
+	for key := range c.LogOptions {
+		if !slices.Contains(allowedKeys, key) {
+			invalidKeys = append(invalidKeys, key)
+		}
+	}
+
+	slices.Sort(invalidKeys) // to get stable error outputs
+
+	if len(invalidKeys) > 0 {
+		return logConfig, fmt.Errorf("invalid log options: only %q are allowed, but found: %q", allowedKeys, invalidKeys)
+	}
+
+	logConfig.Config = c.LogOptions
+
+	return logConfig, nil
 }
 
 func (c *KubernetesConfig) GetPollTimeout() int {

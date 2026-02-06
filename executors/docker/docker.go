@@ -115,7 +115,19 @@ type executor struct {
 
 	projectUniqRandomizedName string
 
-	dockerConn *dockerConnection
+	dockerConn      *dockerConnection
+	dockerConnector dockerConnector
+
+	logConfig container.LogConfig
+}
+
+type dockerConnector func(ctx context.Context, options common.ExecutorPrepareOptions, executor *executor) error
+
+func (dc dockerConnector) Connect(ctx context.Context, options common.ExecutorPrepareOptions, executor *executor) error {
+	if dc == nil {
+		dc = connectDocker
+	}
+	return dc(ctx, options, executor)
 }
 
 type dockerTunnel struct {
@@ -559,10 +571,8 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 		Binds:         e.volumesManager.Binds(),
 		ShmSize:       e.Config.Docker.ShmSize,
 		Tmpfs:         e.Config.Docker.ServicesTmpfs,
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-		},
-		Init: useInit,
+		LogConfig:     e.logConfig,
+		Init:          useInit,
 	}, nil
 }
 
@@ -992,12 +1002,10 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 		Isolation:     isolation,
 		VolumeDriver:  e.Config.Docker.VolumeDriver,
 		VolumesFrom:   e.Config.Docker.VolumesFrom,
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-		},
-		Tmpfs:   e.Config.Docker.Tmpfs,
-		Sysctls: e.Config.Docker.SysCtls,
-		Init:    useInit,
+		LogConfig:     e.logConfig,
+		Tmpfs:         e.Config.Docker.Tmpfs,
+		Sysctls:       e.Config.Docker.SysCtls,
+		Init:          useInit,
 	}, nil
 }
 
@@ -1142,7 +1150,7 @@ func (e *executor) overwriteEntrypoint(image *spec.Image) []string {
 	return nil
 }
 
-func (e *executor) connectDocker(ctx context.Context, options common.ExecutorPrepareOptions) error {
+func connectDocker(ctx context.Context, options common.ExecutorPrepareOptions, e *executor) error {
 	_ = e.dockerConn.Close()
 
 	dockerConnection, err := createDockerConnection(ctx, options, e)
@@ -1341,7 +1349,16 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	e.AbstractExecutor.PrepareConfiguration(options)
 
-	err := e.connectDocker(e.Context, options)
+	var err error
+	e.logConfig, err = options.Config.Docker.GetLogConfig()
+	if err != nil {
+		return &common.BuildError{
+			Inner:         fmt.Errorf("creating docker log configuration: %w", err),
+			FailureReason: common.RunnerSystemFailure,
+		}
+	}
+
+	err = e.dockerConnector.Connect(e.Context, options, e)
 	if err != nil {
 		return err
 	}
@@ -1607,9 +1624,7 @@ func (e *executor) createHostConfigForServiceHealthCheck(service *serviceInfo) *
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    extraHosts,
 		NetworkMode:   e.networkMode,
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-		},
+		LogConfig:     e.logConfig,
 	}
 }
 

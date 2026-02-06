@@ -559,6 +559,7 @@ The following settings define the Docker container parameters. These settings ar
 | `hostname`                         |                                                  | Custom hostname for the Docker container. |
 | `image`                            | `"ruby:3.3"`                                     | The image to run jobs with. |
 | `links`                            | `["mysql_container:mysql"]`                      | Containers that should be linked with container that runs the job. |
+| `log_options`                      | `{"env": "GITLAB_CI_JOB_ID,GITLAB_CI_JOB_NAME", "labels": "com.gitlab.gitlab-runner.type"}` | Log driver options for Docker containers that use the `json-file` log driver. Only `env` and `labels` options are allowed. For more information, see [Docker log options](#docker-log-options). |
 | `memory`                           | `"128m"`                                         | The memory limit. A string. |
 | `memory_swap`                      | `"256m"`                                         | The total memory limit. A string. |
 | `memory_reservation`               | `"64m"`                                          | The memory soft limit. A string. |
@@ -645,6 +646,7 @@ Example:
   links = ["mysql_container:mysql"]
   allowed_images = ["ruby:*", "python:*", "php:*"]
   allowed_services = ["postgres:9", "redis:*", "mysql:*"]
+  log_options = { env = "GITLAB_CI_JOB_ID,GITLAB_CI_JOB_NAME", labels = "com.gitlab.gitlab-runner.type" }
   [runners.docker.ulimit]
     "rtprio" = "99"
   [[runners.docker.services]]
@@ -710,6 +712,50 @@ This example uses `/path/to/bind/from/host` of the CI/CD host in the container a
 GitLab Runner 11.11 and later [mount the host directory](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1261)
 for the defined [services](https://docs.gitlab.com/ci/services/) as
 well.
+
+### Docker log options
+
+The `log_options` parameter allows you to configure Docker container log options for the `json-file` log driver.
+For security and compatibility reasons, only the `env` and `labels` options are supported.
+
+#### Supported log options
+
+- `env`: Comma-separated list of environment variable names to include in log entries
+- `labels`: Comma-separated list of container label names to include in log entries
+
+#### Configuration examples
+
+The following are some configuration examples:
+
+```toml
+[[runners]]
+  [runners.docker]
+    # Include specific environment variables in logs
+    log_options = { env = "GITLAB_CI_JOB_ID,GITLAB_CI_JOB_NAME,CI_PIPELINE_ID" }
+```
+
+```toml
+[[runners]]
+  [runners.docker]
+    # Include container labels in logs
+    log_options = { labels = "com.gitlab.gitlab-runner.type" }
+```
+
+```toml
+[[runners]]
+  [runners.docker]
+    # Include both environment variables and labels
+    log_options = { env = "GITLAB_CI_JOB_ID,GITLAB_CI_JOB_NAME", labels = "com.gitlab.gitlab-runner.type" }
+```
+
+#### Validation and error handling
+
+GitLab Runner validates log options during executor preparation. If you specify unsupported options
+such as `max-size`, `max-file`, or `compress`, the job fails immediately with a configuration error.
+
+The log options apply to the main job container and any service containers defined in your CI/CD configuration.
+
+For more information about Docker logging, see the [Docker `json-file` log driver documentation](https://docs.docker.com/config/containers/logging/json-file/).
 
 ### Use a private container registry
 
