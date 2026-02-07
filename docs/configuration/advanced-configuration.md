@@ -1690,6 +1690,7 @@ about these values, see the
 | `AccessID`        | string | ID of GCP Service Account used to access the storage. |
 | `PrivateKey`      | string | Private key used to sign GCS requests. |
 | `BucketName`      | string | Name of the storage bucket where cache is stored. |
+| `UniverseDomain`  | string | Universe domain for GCS requests (optional). For public Google Cloud, use `googleapis.com`. For Google Cloud Dedicated or other custom universe domains, specify the appropriate domain (for example, `custom.universe.com`). If you don't specify a domain, the default is `googleapis.com`. |
 
 Examples:
 
@@ -1704,6 +1705,7 @@ Examples:
     AccessID = "cache-access-account@test-project-123456.iam.gserviceaccount.com"
     PrivateKey = "-----BEGIN PRIVATE KEY-----\nXXXXXX\n-----END PRIVATE KEY-----\n"
     BucketName = "runners-cache"
+    UniverseDomain = "googleapis.com"  # Optional
 ```
 
 **Credentials in JSON file downloaded from GCP**:
@@ -1716,6 +1718,7 @@ Examples:
   [runners.cache.gcs]
     CredentialsFile = "/etc/gitlab-runner/service-account.json"
     BucketName = "runners-cache"
+    UniverseDomain = "googleapis.com"  # Optional
 ```
 
 **Application Default Credentials (ADC) from the metadata server in GCP**:
@@ -1729,6 +1732,7 @@ When you use GitLab Runner with Google Cloud ADC, you typically use the default 
   Shared = false
   [runners.cache.gcs]
     BucketName = "runners-cache"
+    UniverseDomain = "googleapis.com"  # Optional
 ```
 
 If you use ADC, be sure that the service account that you use has the `iam.serviceAccounts.signBlob` permission. Typically this is done by granting the [Service Account Token Creator role](https://docs.cloud.google.com/iam/docs/service-account-permissions#token-creator-role) to the service account.
