@@ -80,7 +80,7 @@ require (
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e
 	gitlab.com/gitlab-org/labkit v1.34.0
 	gitlab.com/gitlab-org/moa v0.0.0-20251209091627-66342f721c88
-	gitlab.com/gitlab-org/step-runner v0.24.0
+	gitlab.com/gitlab-org/step-runner v0.26.0
 	go.mozilla.org/pkcs7 v0.9.0
 	go.uber.org/automaxprocs v1.6.0
 	go.yaml.in/yaml/v3 v3.0.4
@@ -147,7 +147,6 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.18.1 // indirect
-	github.com/coreos/go-systemd/v22 v22.6.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
