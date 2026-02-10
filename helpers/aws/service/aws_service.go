@@ -49,7 +49,7 @@ func NewAWSSecretsManager(ctx context.Context, region string, webIdentityProvide
 	// AppID is used by the AWS SDK to construct the User-Agent header sent with requests.
 	// The SDK automatically includes the Go version, OS, and architecture in the base user agent,
 	// and this AppID value appends the GitLab Runner version
-	// (e.g., "aws-sdk-go-v2/1.41.0 os/macos lang/go#1.25.5 md/GOOS#darwin md/GOARCH#arm64 app/GitLab-Runner-18.8.0").
+	// (e.g., "aws-sdk-go-v2/1.41.0 os/macos lang/go#1.25.7 md/GOOS#darwin md/GOARCH#arm64 app/GitLab-Runner-18.8.0").
 	appID := fmt.Sprintf("GitLab-Runner/%s", common.AppVersion.Version)
 
 	if webIdentityProvider != nil {

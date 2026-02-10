@@ -1,5 +1,5 @@
 # renovate: datasource=docker depName=golang allowedVersions=/1\.24\..+/
-golang 1.25.5
+golang 1.25.7
 yq 4.44.3
 mockery 2.53.3
 mage 1.15.0
