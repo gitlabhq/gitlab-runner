@@ -6,7 +6,7 @@ variables:
   GO_VERSION: "1.25.5"
   GOLANGLINT_VERSION: "2.7.2"
   RUNNER_IMAGES_REGISTRY: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/base-images
-  RUNNER_IMAGES_VERSION: "0.0.34"
+  RUNNER_IMAGES_VERSION: "0.0.35"
   RUNNER_IMAGES_WINDOWS_GO_URL: https://gitlab.com/api/v4/projects/gitlab-org%2fci-cd%2frunner-tools%2fbase-images/packages/generic/runner-images/v${RUNNER_IMAGES_VERSION}/golang-windows-amd64.zip
   CI_IMAGE: "${RUNNER_IMAGES_REGISTRY}/ci:${RUNNER_IMAGES_VERSION}"
   DOCS_LINT_IMAGE: registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/lint-markdown:alpine-3.22-vale-3.13.0-markdownlint2-0.19.0-lychee-0.21.0
