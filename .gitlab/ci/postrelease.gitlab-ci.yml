@@ -91,7 +91,7 @@ static QA:
     - .no_cache
     - .kubernetes runner
   stage: postrelease
-  image: alpine:3.14.2
+  image: alpine:latest
   needs:
     - code_quality
   script: |
