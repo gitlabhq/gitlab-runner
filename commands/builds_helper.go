@@ -104,6 +104,7 @@ type buildsHelper struct {
 	lock                  sync.Mutex
 
 	jobsTotal                  *prometheus.CounterVec
+	jobExecutionModeTotal      *prometheus.CounterVec
 	jobDurationHistogram       *prometheus.HistogramVec
 	jobStagesDurationHistogram *prometheus.HistogramVec
 	jobQueueDurationHistogram  *prometheus.HistogramVec
@@ -287,6 +288,7 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 		Set(float64(build.JobInfo.QueueDepth))
 
 	b.evaluateJobQueuingDuration(build.Runner, build.JobInfo)
+	build.OnJobExecutionModeDispatchedFn = b.handleOnJobExecutionModeDispatched
 	b.initializeBuildStageMetrics(build)
 }
 
@@ -450,6 +452,14 @@ func (b *buildsHelper) handleOnBuildStageEnd(build *common.Build, stage common.B
 		Observe(duration.Seconds())
 }
 
+func (b *buildsHelper) handleOnJobExecutionModeDispatched(mode common.JobExecutionMode, executor string) {
+	if executor == "" {
+		executor = "unknown"
+	}
+
+	b.jobExecutionModeTotal.WithLabelValues(string(mode), executor).Inc()
+}
+
 // Describe implements prometheus.Collector.
 func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	ch <- numBuildsDesc
@@ -460,6 +470,7 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	ch <- requestConcurrencyUsedLimitDesc
 
 	b.jobsTotal.Describe(ch)
+	b.jobExecutionModeTotal.Describe(ch)
 	b.jobDurationHistogram.Describe(ch)
 	b.jobQueueDurationHistogram.Describe(ch)
 	b.jobQueueSize.Describe(ch)
@@ -529,6 +540,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	b.jobsTotal.Collect(ch)
+	b.jobExecutionModeTotal.Collect(ch)
 	b.jobDurationHistogram.Collect(ch)
 	b.jobQueueDurationHistogram.Collect(ch)
 	b.jobQueueSize.Collect(ch)
@@ -566,6 +578,13 @@ func newBuildsHelper() buildsHelper {
 				Help: "Total number of handled jobs",
 			},
 			[]string{"runner", "runner_name", "system_id"},
+		),
+		jobExecutionModeTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "gitlab_runner_job_execution_mode_total",
+				Help: "Total number of jobs grouped by execution mode and executor",
+			},
+			[]string{"mode", "executor"},
 		),
 		jobDurationHistogram: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{

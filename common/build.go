@@ -53,6 +53,7 @@ const (
 )
 
 type BuildStage string
+type JobExecutionMode string
 
 // WithContext is an interface that some Executor's ExecutorData will implement as a
 // mechanism for extending the build context and canceling if the executor cannot
@@ -86,6 +87,19 @@ type OnBuildStageFn func(stage BuildStage)
 func (fn OnBuildStageFn) Call(stage BuildStage) {
 	if fn != nil {
 		fn(stage)
+	}
+}
+
+const (
+	JobExecutionModeSteps       JobExecutionMode = "steps"
+	JobExecutionModeTraditional JobExecutionMode = "traditional"
+)
+
+type OnJobExecutionModeDispatchedFn func(mode JobExecutionMode, executor string)
+
+func (fn OnJobExecutionModeDispatchedFn) Call(mode JobExecutionMode, executor string) {
+	if fn != nil {
+		fn(mode, executor)
 	}
 }
 
@@ -140,10 +154,11 @@ type Build struct {
 	// CurrentStage(), CurrentState() and CurrentExecutorStage() are called
 	// from the metrics go routine whilst a build is in-flight, so access
 	// to these variables requires a lock.
-	statusLock            sync.Mutex
-	currentStage          BuildStage
-	currentState          BuildRuntimeState
-	executorStageResolver func() ExecutorStage
+	statusLock             sync.Mutex
+	currentStage           BuildStage
+	currentState           BuildRuntimeState
+	executorStageResolver  func() ExecutorStage
+	stepDispatchedInScript bool
 
 	failureReason spec.JobFailureReason
 
@@ -165,8 +180,9 @@ type Build struct {
 
 	urlHelper *url_helpers.GitAuthHelper
 
-	OnBuildStageStartFn OnBuildStageFn
-	OnBuildStageEndFn   OnBuildStageFn
+	OnBuildStageStartFn            OnBuildStageFn
+	OnBuildStageEndFn              OnBuildStageFn
+	OnJobExecutionModeDispatchedFn OnJobExecutionModeDispatchedFn
 }
 
 func (b *Build) setCurrentStage(stage BuildStage) {
@@ -199,6 +215,24 @@ func (b *Build) setCurrentStateIf(existingState BuildRuntimeState, newState Buil
 	}
 
 	b.currentState = newState
+}
+
+func (b *Build) markStepDispatchedInScript() {
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
+
+	b.stepDispatchedInScript = true
+}
+
+func (b *Build) dispatchedJobExecutionMode() JobExecutionMode {
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
+
+	if b.stepDispatchedInScript {
+		return JobExecutionModeSteps
+	}
+
+	return JobExecutionModeTraditional
 }
 
 func (b *Build) CurrentState() BuildRuntimeState {
@@ -512,6 +546,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 		connector, ok := executor.(steps.Connector)
 		if ok {
 			if handled, steps := stepDispatch(b, executor, buildStage); handled {
+				b.markStepDispatchedInScript()
 				return b.executeStepStage(ctx, connector, buildStage, steps)
 			}
 		}
@@ -666,12 +701,15 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	if err == nil {
 		if b.UseNativeSteps() && len(b.Job.Run) > 0 {
 			if _, ok := executor.(steps.Connector); !ok {
+				b.OnJobExecutionModeDispatchedFn.Call(b.dispatchedJobExecutionMode(), b.Runner.Executor)
 				return ExecutorStepRunnerConnectNotSupported
 			}
 			err = b.executeStage(ctx, stepRunBuildStage, executor)
 		} else {
 			err = b.executeUserScripts(ctx, trace, executor)
 		}
+
+		b.OnJobExecutionModeDispatchedFn.Call(b.dispatchedJobExecutionMode(), b.Runner.Executor)
 	}
 
 	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
