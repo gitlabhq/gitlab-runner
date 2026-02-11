@@ -160,6 +160,9 @@ rpm verify fips:
     OCI_TARS: |-
       runner=out/runner-images/ubi-fips.tar
       helper=out/helper-images/ubi-fips-x86_64.tar
+    # See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6370
+    # Disable mtime checks within `rpm --verify`
+    RPM_VERIFY_NOMTIME: "true"
   script:
     - ci/rpm_verify_fips
   artifacts:

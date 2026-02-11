@@ -11,6 +11,9 @@ set -o pipefail
 : "${LOGS_DIR:=logs}"
 : "${OCI_TARS:=}"
 
+# Handling for downstream rpm_verify_fips script
+: "${RPM_VERIFY_NOMTIME:=false}"
+
 main() {
   mkdir -p "${SCRATCH_DIR}" "${LOGS_DIR}"
 
@@ -33,7 +36,7 @@ main() {
     # export the rootfs
     crane ${VERBOSE+-v} export - - <"${dockerTar}" | tar -x${VERBOSE+v} -C "${rootfs}"
 
-    LOG_FILE="${log}" INSTALL_ROOT="${rootfs}" rpm_verify_fips
+    LOG_FILE="${log}" INSTALL_ROOT="${rootfs}" RPM_VERIFY_NOMTIME="${RPM_VERIFY_NOMTIME}" rpm_verify_fips
 
     rm -rf "${tmpDir}"
   done
