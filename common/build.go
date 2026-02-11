@@ -418,6 +418,7 @@ func (b *Build) StartBuild(
 	return nil
 }
 
+//nolint:gocognit
 func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector, buildStage BuildStage, req []schema.Step) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -453,28 +454,44 @@ func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector,
 				Variables:  b.GetAllVariables(),
 			}
 
-			err := steps.Execute(ctx, connector, info, req, stdout)
-			if err != nil {
-				berr := &BuildError{Inner: err}
-
-				var cserr *steps.ClientStatusError
-				if errors.As(err, &cserr) {
-					switch cserr.Status.State {
-					case client.StateUnspecified:
-						berr.FailureReason = UnknownFailure
-					case client.StateFailure:
-						berr.FailureReason = ScriptFailure
-					}
-				}
-
-				return berr
-			}
-
-			return err
+			return wrapStepStageErr(steps.Execute(ctx, connector, info, req, stdout))
 		},
 	}
 
 	return section.Execute(&b.logger)
+}
+
+func wrapStepStageErr(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, steps.ErrNoStepRunnerButOkay) {
+		return nil
+	}
+
+	berr := &BuildError{Inner: err}
+
+	var cserr *steps.ClientStatusError
+	if errors.As(err, &cserr) {
+		switch cserr.Status.State {
+		case client.StateUnspecified:
+			berr.FailureReason = UnknownFailure
+		case client.StateFailure:
+			berr.FailureReason = ScriptFailure
+		}
+	}
+
+	// hack: for now, we parse the exit code from the error response
+	// later we might want to introduce a proper exit code from the step-runner
+	// https://gitlab.com/gitlab-org/step-runner/-/work_items/349
+	if _, code, ok := strings.Cut(err.Error(), "exit status"); ok {
+		if exitCode, err := strconv.Atoi(strings.TrimSpace(code)); err == nil {
+			berr.ExitCode = exitCode
+		}
+	}
+
+	return berr
 }
 
 //nolint:gocognit

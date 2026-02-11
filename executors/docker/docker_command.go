@@ -204,18 +204,12 @@ func (s *commandExecutor) requestBuildContainer() (*container.InspectResponse, e
 		return s.buildContainer, nil
 	}
 
-	// Overwrite the build container command if using steps
-	cmd := s.BuildShell.DockerCommand
-	if s.Build.UseNativeSteps() {
-		cmd = append([]string{bootstrappedBinary, "steps", "serve"}, s.BuildShell.DockerCommand...)
-	}
-
 	var err error
 	s.buildContainer, err = s.createContainer(
 		buildContainerType,
 		s.Build.Image,
 		[]string{},
-		newDefaultContainerConfigurator(&s.executor, buildContainerType, s.Build.Image, cmd, []string{}),
+		newDefaultContainerConfigurator(&s.executor, buildContainerType, s.Build.Image, s.BuildShell.DockerCommand, []string{}),
 	)
 	if err != nil {
 		return nil, err
