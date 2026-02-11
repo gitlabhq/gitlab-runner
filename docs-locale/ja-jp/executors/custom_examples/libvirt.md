@@ -12,13 +12,13 @@ title: Custom executorでlibvirtを使用する
 
 {{< /details >}}
 
-[libvirt](https://libvirt.org/)を使用すると、Custom executorドライバーは、実行するジョブごとに新しいディスクとVMを作成します。その後、ディスクとVMは削除されます。
+[libvirt](https://libvirt.org/)を使用すると、Custom executorドライバーは、実行するジョブごとに新しいディスクとVMを作成し、その後、ディスクとVMは削除されます。
 
-このドキュメントでは、スコープ外であるため、libvirtのセットアップ方法については説明しません。ただし、このドライバーは[GCP Nested](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview)仮想化を使用してテストされており、ブリッジネットワーキングで[libvirtをセットアップする方法の詳細](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#starting_a_private_bridge_between_the_host_and_nested_vms)も記載されています。この例では、libvirtのインストール時に付属する`default`ネットワークを使用するため、実行されていることを確認してください。
+このドキュメントでは、libvirtのセットアップ方法については、スコープ外であるため説明しません。ただし、このドライバーは[GCPネストされた](https://docs.cloud.google.com/compute/docs/instances/nested-virtualization/overview)仮想化を使用してテストされており、ブリッジネットワーキングで[libvirtをセットアップする方法の詳細](https://docs.cloud.google.com/compute/docs/instances/nested-virtualization/overview#starting_a_private_bridge_between_the_host_and_nested_vms)も記載されています。この例では、libvirtのインストール時に付属する`default`ネットワークを使用するため、実行されていることを確認してください。
 
-このドライバーにはブリッジネットワーキングが必要です。各VMは専用のIPアドレスを持つ必要があり、GitLab RunnerはSSH内でコマンドを実行できます。SSHキーは、[次のコマンドを使用して](https://docs.gitlab.com/user/ssh/#generate-an-ssh-key-pair)生成できます。
+このドライバーはブリッジネットワーキングを必要とします。これは、各VMが専用のIPアドレスを持っている必要があるため、GitLab RunnerがSSH内部でコマンドを実行できるためです。SSHキーは、[次のコマンドを使用して](https://docs.gitlab.com/user/ssh/#generate-an-ssh-key-pair)生成できます。
 
-ベースディスクVMイメージが作成されるため、dependenciesがすべてのビルドでダウンロードされることはありません。次の例では、[virt-builder](https://libguestfs.org/virt-builder.1.html)を使用してディスクVMイメージを作成します。
+依存関係がすべてのビルドでダウンロードされないように、ベースディスクVMイメージが作成されます。次の例では、ディスクVMイメージを作成するために[virt-builder](https://libguestfs.org/virt-builder.1.html)が使用されています。
 
 ```shell
 virt-builder debian-12 \
@@ -42,13 +42,13 @@ virt-builder debian-12 \
     --run-command "echo 'iface eth0 inet dhcp' >> /etc/network/interfaces"
 ```
 
-上記のコマンドは、以前に指定されたすべての[前提条件](../custom.md#prerequisite-software-for-running-a-job)をインストールします。
+上記のコマンドは、[前提条件](../custom.md#prerequisite-software-for-running-a-job)以前に指定されたすべてをインストールします。
 
-`virt-builder`は、最後に表示されるルートパスワードを自動的に設定します。自分でパスワードを指定する場合は、[`--root-password password:$SOME_PASSWORD`](https://libguestfs.org/virt-builder.1.html#setting-the-root-password)を渡します。
+`virt-builder`は、最後に印刷されるルートパスワードを自動的に設定します。パスワードを自分で指定する場合は、[`--root-password password:$SOME_PASSWORD`](https://libguestfs.org/virt-builder.1.html#setting-the-root-password)を渡します。
 
 ## 設定 {#configuration}
 
-次に、libvirtのGitLab Runner設定の例を示します:
+以下は、libvirtのGitLab Runner設定の例です:
 
 ```toml
 concurrent = 1
@@ -74,11 +74,11 @@ check_interval = 0
     cleanup_exec = "/opt/libvirt-driver/cleanup.sh" # Path to a bash script to delete VM and disks.
 ```
 
-## ベース {#base}
+## Base {#base}
 
-各ステージング（[prepare](#prepare) 、[run](#run) 、および[cleanup](#cleanup)）は、以下のベーススクリプトを使用して、他のスクリプト全体で使用される変数を生成します。
+各ステージ（[prepare](#prepare) 、[run](#run) 、および[cleanup](#cleanup)）は、他のスクリプト全体で使用される変数を生成するために、以下のベーススクリプトを使用します。
 
-このスクリプトは、他のスクリプトと同じディレクトリ（この場合は`/opt/libivirt-driver/`）に配置されていることが重要です。
+このスクリプトが他のスクリプトと同じディレクトリにあることが重要です。この場合、`/opt/libvirt-driver/`です。
 
 ```shell
 #!/usr/bin/env bash
@@ -95,14 +95,14 @@ _get_vm_ip() {
 }
 ```
 
-## 準備 {#prepare}
+## Prepare {#prepare}
 
-prepareスクリプト:
+準備スクリプト:
 
 - ディスクを新しいパスにコピーします。
 - コピーされたディスクから新しいVMをインストールします。
 - VMがIPを取得するのを待ちます。
-- SSHがVM上で応答するのを待ちます。
+- VMでSSHが応答するのを待ちます。
 
 ```shell
 #!/usr/bin/env bash
@@ -121,6 +121,7 @@ trap "exit $SYSTEM_FAILURE_EXIT_CODE" ERR
 qemu-img create -f qcow2 -b "$BASE_VM_IMAGE" "$VM_IMAGE" -F qcow2
 
 # Install the VM
+# To boot VM in UEFI mode, add: --boot uefi
 virt-install \
     --name "$VM_ID" \
     --os-variant debian11 \
@@ -134,7 +135,7 @@ virt-install \
 
 # Wait for VM to get IP
 echo 'Waiting for VM to get IP'
-for i in $(seq 1 30); do
+for i in $(seq 1 300); do
     VM_IP=$(_get_vm_ip)
 
     if [ -n "$VM_IP" ]; then
@@ -142,8 +143,8 @@ for i in $(seq 1 30); do
         break
     fi
 
-    if [ "$i" == "30" ]; then
-        echo 'Waited 30 seconds for VM to start, exiting...'
+    if [ "$i" == "300" ]; then
+        echo 'Waited 300 seconds for VM to start, exiting...'
         # Inform GitLab Runner that this is a system failure, so it
         # should be retried.
         exit "$SYSTEM_FAILURE_EXIT_CODE"
@@ -154,13 +155,13 @@ done
 
 # Wait for ssh to become available
 echo "Waiting for sshd to be available"
-for i in $(seq 1 30); do
+for i in $(seq 1 300); do
     if ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no gitlab-runner@$VM_IP >/dev/null 2>/dev/null; then
         break
     fi
 
-    if [ "$i" == "30" ]; then
-        echo 'Waited 30 seconds for sshd to start, exiting...'
+    if [ "$i" == "300" ]; then
+        echo 'Waited 300 seconds for sshd to start, exiting...'
         # Inform GitLab Runner that this is a system failure, so it
         # should be retried.
         exit "$SYSTEM_FAILURE_EXIT_CODE"
@@ -170,9 +171,9 @@ for i in $(seq 1 30); do
 done
 ```
 
-## 実行 {#run}
+## Run {#run}
 
-これにより、GitLab Runnerによって生成されたスクリプトが実行されます。SSHを介して`STDIN`経由でスクリプトのコンテンツをVMに送信します。
+これにより、SSHを介して`STDIN`経由でスクリプトのコンテンツをVMに送信することにより、GitLab Runnerによって生成されたスクリプトが実行されます。
 
 ```shell
 #!/usr/bin/env bash
@@ -192,9 +193,9 @@ if [ $? -ne 0 ]; then
 fi
 ```
 
-## クリーンアップ {#cleanup}
+## Cleanup {#cleanup}
 
-このスクリプトはVMを削除し、ディスクを削除します。
+このスクリプトは、VMを削除し、ディスクを削除します。
 
 ```shell
 #!/usr/bin/env bash
@@ -206,11 +207,20 @@ source ${currentDir}/base.sh # Get variables from base script.
 
 set -eo pipefail
 
-# Destroy VM.
-virsh shutdown "$VM_ID"
+# Destroy VM and wait 300 second.
+for i in $(seq 1 300); do
+  virsh destroy "$VM_ID" >/dev/null 2>&1
+  if [[ "$(virsh domstate "$VM_ID" 2>/dev/null | tr '[:upper:]' '[:lower:]')" =~ shut\ off|destroyed|^$ ]]; then
+      break
+  fi
+  if [ $i -eq 300 ]; then
+     exit "$SYSTEM_FAILURE_EXIT_CODE"
+  fi
+  sleep 1
+done
 
 # Undefine VM.
-virsh undefine "$VM_ID"
+virsh undefine "$VM_ID" || virsh undefine "$VM_ID" --nvram
 
 # Delete VM disk.
 if [ -f "$VM_IMAGE" ]; then

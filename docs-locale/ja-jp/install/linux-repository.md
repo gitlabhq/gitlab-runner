@@ -2,6 +2,7 @@
 stage: Verify
 group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: パッケージマネージャーを使用して、GitLabリポジトリからGitLab Runnerをインストールします。
 title: 公式のGitLabリポジトリを使用してGitLab Runnerをインストールする
 ---
 
@@ -24,21 +25,21 @@ GitLabでは、[Packagecloud](https://packages.gitlab.com/runner/gitlab-runner/)
 
 | ディストリビューション | サポート対象バージョン |
 |--------------|--------------------|
-| Debian | 14 Forky、13 Trixie、12 Bookworm、11 Bullseye |
-| LinuxMint | 22.1 Xia、22 Wilma、21.3 Virginia、21.2 Victoria、21.1 Vera、21 Vanessa、20.3 Una、20.2 Uma、20.1 Ulyssa、20 Ulyana |
-| Raspbian | 14 Forky、13 Trixie、12 Bookworm、11 Bullseye |
-| Ubuntu | 24.10 Oracular Oriole、24.04 Lts Noble Numbat、22.04 Jammy Jellyfish、20.04 Focal Fossa、18.04 Lts Bionic Beaver、16.04 Lts Xenial Xerus |
+| Debian | 15 Duke、14 Forky、13 Trixie、12 Bookworm、11 Bullseye |
+| LinuxMint | 22.1 Xia、22 Wilma、21.3 Virginia、21.2 Victoria、21.1 Vera、21 Vanessa |
+| Raspbian | 15 Duke、14 Forky、13 Trixie、12 Bookworm、11 Bullseye |
+| Ubuntu | 25.04 Plucky Puffin、24.04 Lts Noble Numbat、22.04 Jammy Jellyfish、20.04 Focal Fossa、18.04 Lts Bionic Beaver、16.04 Lts Xenial Xerus |
 
 ### RPMベースのディストリビューション {#rpm-based-distributions}
 
 | ディストリビューション | サポート対象バージョン |
 |--------------|--------------------|
 | Amazon Linux | 2025、2023、2022、2 |
-| Red Hat Enterprise Linux | 9、8、7 |
-| Fedora | 43、42、41、40 |
-| Oracle Linux | 9、8、7、6 |
-| openSUSE | 16.0、15.6、15.5、15.4、15.3、15.2、15.1、15.0 |
-| SUSE Linux Enterprise Server | 15.6、15.5、15.4、15.3、15.2、12.5 |
+| Red Hat Enterprise Linux | 10、9、8、7 |
+| Fedora | 43, 42 |
+| Oracle Linux | 10、9、8、7 |
+| openSUSE | 16.0、15.6 |
+| SUSE Linux Enterprise Server | 15.7、15.6、15.5、15.4、12.5 |
 
 <!-- supported_os_versions_list_end -->
 
@@ -52,31 +53,59 @@ GitLabでは、[Packagecloud](https://packages.gitlab.com/runner/gitlab-runner/)
 
 ## GitLab Runnerをインストールする {#install-gitlab-runner}
 
-GitLab Runnerをインストールするには、次の手順に従います:
+GitLab Runnerをインストールするには、次の手順に従います。
 
-1. 公式GitLabリポジトリを追加します:
+1. 公式GitLabリポジトリを追加します。
 
    {{< tabs >}}
 
    {{< tab title="Debian/Ubuntu/Mint" >}}
 
-   ```shell
-   curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
-   ```
+   1. リポジトリ設定スクリプトをダウンロードします:
+
+      ```shell
+      curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" -o script.deb.sh
+      ```
+
+   1. 実行する前にスクリプトを検査します:
+
+      ```shell
+      less script.deb.sh
+      ```
+
+   1. スクリプトを実行します:
+
+      ```shell
+      sudo bash script.deb.sh
+      ```
 
    {{< /tab >}}
 
    {{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
 
-   ```shell
-   curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
-   ```
+   1. リポジトリ設定スクリプトをダウンロードします:
+
+      ```shell
+      curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" -o script.rpm.sh
+      ```
+
+   1. 実行する前にスクリプトを検査します:
+
+      ```shell
+      less script.rpm.sh
+      ```
+
+   1. スクリプトを実行します:
+
+      ```shell
+      sudo bash script.rpm.sh
+      ```
 
    {{< /tab >}}
 
    {{< /tabs >}}
 
-1. 最新バージョンのGitLab Runnerをインストールするか、次のステップに進んで特定のバージョンをインストールします:
+1. 最新バージョンのGitLab Runnerをインストールするか、次のステップに進んで特定のバージョンをインストールします。
 
    {{< alert type="note" >}}
 
@@ -114,7 +143,7 @@ GitLab Runnerをインストールするには、次の手順に従います:
 
    {{< /alert >}}
 
-1. 特定のバージョンのGitLab Runnerをインストールするには、次のようにします:
+1. 特定のバージョンのGitLab Runnerをインストールするには、次のようにします。
 
    {{< tabs >}}
 
@@ -131,7 +160,7 @@ GitLab Runnerをインストールするには、次の手順に従います:
    sudo apt install gitlab-runner=17.7.1-1 gitlab-runner-helper-images=17.7.1-1
    ```
 
-   特定バージョンの`gitlab-runner`をインストールするときに、同じバージョンの`gitlab-runner-helper-images`をインストールしないと、次のようなエラーが発生する可能性があります:
+   特定バージョンの`gitlab-runner`をインストールするときに、同じバージョンの`gitlab-runner-helper-images`をインストールしないと、次のようなエラーが発生する可能性があります。
 
    ```shell
    sudo apt install gitlab-runner=17.7.1-1
@@ -160,9 +189,37 @@ GitLab Runnerをインストールするには、次の手順に従います:
 
 [FAQ](../faq/_index.md)セクションを参照してください。このセクションでは、GitLab Runnerに関する最も一般的な問題について説明しています。
 
+## ヘルパーイメージパッケージ {#helper-images-package}
+
+`gitlab-runner-helper-images`パッケージには、GitLab Runnerがジョブの実行中に使用する、構築済みのヘルパーコンテナイメージが含まれています。これらのイメージは、リポジトリのクローンを作成し、アーティファクトをアップロードし、キャッシュを管理するために必要なツールとユーティリティを提供します。
+
+`gitlab-runner-helper-images`パッケージには、次のオペレーティングシステムとアーキテクチャ用のヘルパーイメージが含まれています:
+
+Alpineベースのイメージ（最新）:
+
+- `alpine-arm`
+- `alpine-arm64`
+- `alpine-riscv64`
+- `alpine-s390x`
+- `alpine-x86_64`
+- `alpine-x86_64-pwsh`
+
+Ubuntuベースのイメージ（24.04）:
+
+- `ubuntu-arm`
+- `ubuntu-arm64`
+- `ubuntu-ppc64le`
+- `ubuntu-s390x`
+- `ubuntu-x86_64`
+- `ubuntu-x86_64-pwsh`
+
+### ヘルパーイメージの自動ダウンロード {#automatic-helper-image-download}
+
+特定のオペレーティングシステムとアーキテクチャの組み合わせ用のヘルパーイメージがホストシステムで使用できない場合、GitLab Runnerは必要に応じて必要なイメージを自動的にダウンロードします。`gitlab-runner-helper-images package`に含まれていないアーキテクチャの場合、手動インストールは必要ありません。この自動ダウンロードにより、runnerは、手動での介入や個別のパッケージインストールを必要とせずに、追加のアーキテクチャ（`loong64`など）をサポートできます。
+
 ## GitLab Runnerをアップグレードする {#upgrade-gitlab-runner}
 
-最新バージョンのGitLab Runnerをインストールするには、次のようにします:
+最新バージョンのGitLab Runnerをインストールするには、次のようにします。
 
 {{< tabs >}}
 
@@ -188,7 +245,7 @@ sudo yum install gitlab-runner
 
 ## PackageインストールのGPG署名 {#gpg-signatures-for-package-installation}
 
-GitLab Runnerプロジェクトは、パッケージインストール方法に対して2種類のGPG署名を提供しています:
+GitLab Runnerプロジェクトは、パッケージインストール方法に対して2種類のGPG署名を提供しています。
 
 - [リポジトリメタデータの署名](#repository-metadata-signing)
 - [パッケージの署名](#package-signing)
@@ -215,9 +272,9 @@ GitLab Runnerプロジェクトは、パッケージインストール方法に�
 
 #### RPMベースのディストリビューション {#rpm-based-distributions-1}
 
-RPM形式には、GPG署名機能の完全な実装が含まれており、この形式に基づくパッケージ管理システムと完全に統合されています。
+RPM形式には、GPG署名機能の完全な実装が含まれており、この形式に基づくパッケージマネージャーと完全に統合されています。
 
-[Linuxパッケージのドキュメント](https://docs.gitlab.com/omnibus/update/package_signatures/#rpm-based-distributions)に、RPMベースのディストリビューションのパッケージ署名検証を設定する方法に関する技術的な説明があります。GitLab Runnerでの違いは次のとおりです:
+[Linuxパッケージのドキュメント](https://docs.gitlab.com/omnibus/update/package_signatures/#rpm-based-distributions)に、RPMベースのディストリビューションのパッケージ署名検証を設定する方法に関する技術的な説明があります。GitLab Runnerでの違いは次のとおりです。
 
 - インストールする必要がある公開キーパッケージの名前は`gpg-pubkey-35dfa027-60ba0235`です。
 - RPMベースのディストリビューションのリポジトリファイルの名前は、`/etc/yum.repos.d/runner_gitlab-runner.repo`（安定版リリースの場合）または`/etc/yum.repos.d/runner_unstable.repo`（不安定版リリースの場合）です。
@@ -227,22 +284,22 @@ RPM形式には、GPG署名機能の完全な実装が含まれており、こ�
 
 `deb`形式は、公式にはパッケージ署名機能をデフォルトで備えていません。GitLab Runnerプロジェクトでは、パッケージの署名と検証に`dpkg-sig`ツールを使用します。この方法では、パッケージの手動検証のみがサポートされています。
 
-`deb`パッケージを検証するには、次の手順に従います:
+`deb`パッケージを検証するには、次の手順に従います。
 
-1. `dpkg-sig`をインストールします:
+1. `dpkg-sig`をインストールします。
 
    ```shell
    apt update && apt install dpkg-sig
    ```
 
-1. [パッケージ署名公開キー](#current-gpg-public-key)をダウンロードしてインポートします:
+1. [パッケージ署名公開キー](#current-gpg-public-key)をダウンロードしてインポートします。
 
    ```shell
    curl -JLO "https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg"
    gpg --import runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg
    ```
 
-1. `dpkg-sig`でダウンロードしたパッケージを検証します:
+1. `dpkg-sig`でダウンロードしたパッケージを検証します。
 
    ```shell
    dpkg-sig --verify gitlab-runner_amd64.deb
@@ -250,7 +307,7 @@ RPM形式には、GPG署名機能の完全な実装が含まれており、こ�
    GOODSIG _gpgbuilder 931DA69CFA3AFEBBC97DAA8C6C57C29C6BA75A4E 1623755049
    ```
 
-   パッケージの署名が無効であるか、無効なキー（失効したキーなど）で署名されている場合、出力は次のようになります:
+   パッケージの署名が無効であるか、無効なキー（失効したキーなど）で署名されている場合、出力は次のようになります。
 
    ```shell
    dpkg-sig --verify gitlab-runner_amd64.deb
@@ -258,7 +315,7 @@ RPM形式には、GPG署名機能の完全な実装が含まれており、こ�
    BADSIG _gpgbuilder
    ```
 
-   キーがユーザーのキーリングに存在しない場合、出力は次のようになります:
+   キーがユーザーのキーリングに存在しない場合、出力は次のようになります。
 
    ```shell
    dpkg-sig --verify gitlab-runner_amd64.v13.1.0.deb
@@ -302,11 +359,11 @@ GitLab Runnerのインストール時に発生する問題のトラブルシュ�
 
 ### エラー: `No such file or directory`ジョブの失敗 {#error-no-such-file-or-directory-job-failures}
 
-デフォルトのスケルトン（`skel`）ディレクトリが原因でGitLab Runnerに問題が発生し、ジョブの実行に失敗することがあります。[イシュー4449](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4449)と[イシュー1379](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379)を参照してください。
+デフォルトのスケルトン（`skel`）ディレクトリが原因でGitLab Runnerで問題が発生し、ジョブの実行に失敗することがあります。[イシュー4449](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4449)と[イシュー1379](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379)を参照してください。
 
 これを回避するために、GitLab Runnerをインストールすると、`gitlab-runner`ユーザーが作成され、デフォルトでは、ホームディレクトリはスケルトンなしで作成されます。`skel`の使用によってホームディレクトリに追加されるShell設定は、ジョブの実行を妨げる可能性があります。この設定は、前述のような予期しない問題を引き起こす可能性があります。
 
-`skel`の回避がデフォルトの動作になる前にRunnerを作成していた場合は、次のドットファイルを削除してみてください:
+`skel`の回避がデフォルトの動作になる前にRunnerを作成していた場合は、次のドットファイルを削除してみてください。
 
 ```shell
 sudo rm /home/gitlab-runner/.profile
@@ -314,7 +371,7 @@ sudo rm /home/gitlab-runner/.bashrc
 sudo rm /home/gitlab-runner/.bash_logout
 ```
 
-`skel`ディレクトリを使用して、新しく作成された`$HOME`ディレクトリにデータを入力する必要がある場合は、Runnerをインストールする前に、`GITLAB_RUNNER_DISABLE_SKEL`変数を明示的に`false`に設定する必要があります:
+`skel`ディレクトリを使用して、新しく作成された`$HOME`ディレクトリにデータを入力する必要がある場合は、Runnerをインストールする前に、`GITLAB_RUNNER_DISABLE_SKEL`変数を明示的に`false`に設定する必要があります。
 
 {{< tabs >}}
 

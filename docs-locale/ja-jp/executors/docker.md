@@ -14,19 +14,19 @@ title: Docker executor
 
 GitLab Runnerは、Docker executorを使用してDockerイメージでジョブを実行します。
 
-Docker executorを使用すると、次のことが可能になります:
+Docker executorを使用すると、次のことが可能になります。
 
 - 各ジョブで同じビルド環境を維持する。
 - イメージを使用してコマンドをローカルでテストする（CIサーバーでジョブを実行する必要はない）。
 
-Docker executorは[Docker Engine](https://www.docker.com/products/container-runtime/)を使用して、個別の隔離されたコンテナ内で各ジョブを実行します。Docker Engineに接続するために、executorは以下を使用します:
+Docker executorは[Docker Engine](https://www.docker.com/products/container-runtime/)を使用して、個別の隔離されたコンテナ内で各ジョブを実行します。Docker Engineに接続するために、executorは以下を使用します。
 
 - [`.gitlab-ci.yml`](https://docs.gitlab.com/ci/yaml/)で定義するイメージとサービス。
 - [`config.toml`](../commands/_index.md#configuration-file)で定義する設定。
 
 `config.toml`でデフォルトのイメージを定義していないなら、RunnerとそのDocker executorを登録することはできません。`.gitlab-ci.yml`で何も定義されていない場合、`config.toml`で定義されているイメージを使用できます。`.gitlab-ci.yml`でイメージが定義されている場合、それは`config.toml`で定義されているイメージをオーバーライドします。
 
-前提要件:
+前提条件: 
 
 - [Dockerをインストールします](https://docs.docker.com/engine/install/)。
 
@@ -34,12 +34,12 @@ Docker executorは[Docker Engine](https://www.docker.com/products/container-runt
 
 Docker executorは、[Alpine Linux](https://alpinelinux.org/)をベースとするDockerイメージを使用します。このイメージには、準備、ジョブ実行前、およびジョブ実行後のステップを実行するためのツールが含まれています。特別なDockerイメージの定義を確認するには、[GitLab Runnerリポジトリ](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/v13.4.1/dockerfiles/runner-helper)を参照してください。
 
-Docker executorは、ジョブを複数のステップに分割します:
+Docker executorは、ジョブを複数のステップに分割します。
 
-1. **Prepare**（準備）: [サービス](https://docs.gitlab.com/ci/yaml/#services)を作成して開始します。
-1. **Pre-job**（ジョブ実行前）: クローン、[キャッシュ](https://docs.gitlab.com/ci/yaml/#cache)の復元、および前のステージからの[アーティファクト](https://docs.gitlab.com/ci/yaml/#artifacts)のダウンロードを行います。特別なDockerイメージで実行されます。
+1. **準備**: [サービス](https://docs.gitlab.com/ci/yaml/#services)を作成して開始します。
+1. **ジョブ実行前**: クローン、[キャッシュ](https://docs.gitlab.com/ci/yaml/#cache)の復元、および前のステージからの[アーティファクト](https://docs.gitlab.com/ci/yaml/#artifacts)のダウンロードを行います。特別なDockerイメージで実行されます。
 1. **ジョブ**: Runner用に設定したDockerイメージでビルドを実行します。
-1. **Post-job**（ジョブ実行後）: キャッシュの作成、GitLabへのアーティファクトのアップロードを実行します。特別なDockerイメージで実行されます。
+1. **ジョブ実行後**: キャッシュの作成、GitLabへのアーティファクトのアップロードを実行します。特別なDockerイメージで実行されます。
 
 ## サポートされている設定 {#supported-configurations}
 
@@ -54,7 +54,7 @@ Windows設定に関する既知のイシューと追加の要件については�
 | Linux                   | `docker`         | Linux                 |
 | macOS                   | `docker`         | Linux                 |
 
-以下の設定はサポート**not**（されていません）:
+以下の設定はサポート**されていません**。
 
 | Runnerがインストールされている場所: | executor:     | コンテナの実行: |
 |-------------------------|------------------|-----------------------|
@@ -104,9 +104,9 @@ executor = "docker"
 
 ## イメージとサービスを設定する {#configure-images-and-services}
 
-前提要件:
+前提条件: 
 
-- ジョブが実行されるイメージには、オペレーティングシステムの`PATH`に動作するShellが必要です。サポートされているShellは次のとおりです:
+- ジョブが実行されるイメージには、オペレーティングシステムの`PATH`に動作するShellが必要です。サポートされているShellは次のとおりです。
   - Linux:
     - `sh`
     - `bash`
@@ -117,7 +117,7 @@ executor = "docker"
 
 Docker executorを設定するには、[`.gitlab-ci.yml`](https://docs.gitlab.com/ci/yaml/)と[`config.toml`](../commands/_index.md#configuration-file)でDockerイメージとサービスを定義します。
 
-次のキーワードを使用します:
+次のキーワードを使用します。
 
 - `image`: Runnerがジョブを実行するために使用するDockerイメージの名前。
   - ローカルDocker Engineのイメージ、またはDocker Hubの任意のイメージを入力します。詳細については、[Dockerのドキュメント](https://docs.docker.com/get-started/introduction/)を参照してください。
@@ -128,7 +128,7 @@ Docker executorを設定するには、[`.gitlab-ci.yml`](https://docs.gitlab.co
 
 Runnerがすべてのジョブに使用するイメージと、ビルド時に使用する一連のサービスを定義します。
 
-次に例を示します: 
+例: 
 
 ```yaml
 image: ruby:3.3
@@ -144,7 +144,7 @@ test:
   - bundle exec rake spec
 ```
 
-ジョブごとに異なるイメージとサービスを定義するには、次のようにします:
+ジョブごとに異なるイメージとサービスを定義するには、次のようにします。
 
 ```yaml
 before_script:
@@ -173,7 +173,7 @@ Runnerが実行するすべてのジョブにイメージとサービスを追�
 
 デフォルトの場合、`.gitlab-ci.yml`で定義されている`image`がDocker executorで使用されます。`.gitlab-ci.yml`で定義していない場合、Runnerは`config.toml`で定義されているイメージを使用します。
 
-次に例を示します: 
+例: 
 
 ```toml
 [runners.docker]
@@ -192,13 +192,13 @@ Runnerが実行するすべてのジョブにイメージとサービスを追�
 
 ### プライベートレジストリのイメージを定義する {#define-an-image-from-a-private-registry}
 
-前提要件:
+前提条件: 
 
 - プライベートレジストリのイメージにアクセスするには、[GitLab Runnerを認証する](https://docs.gitlab.com/ci/docker/using_docker_images/#access-an-image-from-a-private-container-registry)必要があります。
 
 プライベートレジストリのイメージを定義するには、`.gitlab-ci.yml`でレジストリ名とイメージを指定します。
 
-次に例を示します: 
+例: 
 
 ```yaml
 image: my.registry.tld:5000/namespace/image:tag
@@ -210,9 +210,9 @@ image: my.registry.tld:5000/namespace/image:tag
 
 サービスをCI/CDジョブに接続するには、ネットワークを設定する必要があります。
 
-ネットワークを設定するには、次のいずれかを実行します:
+ネットワークを設定するには、次のいずれかを実行します。
 
-- （推奨）ジョブごとにネットワークを作成するようにRunnerを設定します。
+- 推奨。ジョブごとにネットワークを作成するようにRunnerを設定します。
 - コンテナリンクを定義します。コンテナリンクは、Dockerのレガシー機能です。
 
 ### ジョブごとにネットワークを作成する {#create-a-network-for-each-job}
@@ -225,7 +225,7 @@ image: my.registry.tld:5000/namespace/image:tag
 
 `network_mode`は設定しないでください。
 
-次に例を示します: 
+例: 
 
 ```toml
 [[runners]]
@@ -250,23 +250,27 @@ image: my.registry.tld:5000/namespace/image:tag
 
 Runnerは、ジョブコンテナを解決するために`build`エイリアスを使用します。
 
-> この機能を使用すると、Docker-in-Docker（`dind`）サービスでDNSが正しく機能しない場合があります。
->
-> この動作は、ネットワークを指定した場合に`dind`コンテナがカスタムDNSエントリを継承しないという、[Docker/Moby](https://github.com/moby/moby/issues/20037#issuecomment-181659049)の問題によるものです。
->
-> 回避策として、`dind`サービスに対して、カスタムDNS設定を手動で指定してください。たとえば、カスタムDNSサーバーが`1.1.1.1`の場合、Dockerの内部DNSサービスである`127.0.0.11`を使用できます:
->
-> ```yaml
->   services:
->     - name: docker:dind
->       command: [--dns=127.0.0.11, --dns=1.1.1.1]
-> ```
->
-> このアプローチでは、コンテナが同じネットワーク上のサービスを解決できるようになります。
+{{< alert type="note" >}}
+
+この機能を使用すると、Docker-in-Docker（`dind`）サービスでDNSが正しく機能しない場合があります。
+
+この動作は、ネットワークを指定した場合に`dind`コンテナがカスタムDNSエントリを継承しないという、[Docker/Moby](https://github.com/moby/moby/issues/20037#issuecomment-181659049)の問題によるものです。
+
+回避策として、`dind`サービスに対して、カスタムDNS設定を手動で指定してください。たとえば、カスタムDNSサーバーが`1.1.1.1`の場合、Dockerの内部DNSサービスである`127.0.0.11`を使用できます。
+
+```yaml
+  services:
+    - name: docker:dind
+      command: [--dns=127.0.0.11, --dns=1.1.1.1]
+```
+
+このアプローチでは、コンテナが同じネットワーク上のサービスを解決できるようになります。
+
+{{< /alert >}}
 
 #### Runnerがジョブごとにネットワークを作成する仕組み {#how-the-runner-creates-a-network-for-each-job}
 
-ジョブが開始されると、Runnerは次の処理を行います:
+ジョブが開始されると、Runnerは次の処理を行います。
 
 1. Dockerコマンド`docker network create <network>`と同様に、ブリッジネットワークを作成します。
 1. サービスとコンテナをブリッジネットワークに接続します。
@@ -276,15 +280,24 @@ Runnerは、ジョブコンテナを解決するために`build`エイリアス�
 
 ### コンテナリンクを使用してネットワークを設定する {#configure-a-network-with-container-links}
 
-Dockerの[レガシーコンテナリンク](https://docs.docker.com/engine/network/links/)とデフォルトのDocker `bridge`を使用して、ジョブコンテナをサービスにリンクするネットワークモードを設定できます。[`FF_NETWORK_PER_BUILD`](#create-a-network-for-each-job)が有効になっていない場合、このネットワークモードがデフォルトです。
+GitLab Runner 18.7.0以前は、デフォルトのDocker `bridge`と[レガシーコンテナリンク](https://docs.docker.com/engine/network/links/)を使用して、ジョブコンテナとサービスをリンクしていました。Dockerはリンク機能を非推奨にしたため、GitLab Runner 18.7.0以降では、サービスのエイリアスがDockerの`extra_hosts`機能を使用して解決されるようにすることで、レガシーコンテナリンクの動作がエミュレートされます。このネットワークモードは、[`FF_NETWORK_PER_BUILD`](#create-a-network-for-each-job)が無効になっている場合のデフォルトです。
 
-ネットワークを設定するには、`config.toml`ファイルで[ネットワーキング](https://docs.docker.com/engine/containers/run/#network-settings)モードを指定します:
+{{< alert type="note" >}}
+
+GitLab Runnerのエミュレートされたリンクの動作は、[レガシーコンテナリンク](https://docs.docker.com/engine/network/links/)とはわずかに異なります:
+
+- `icc`を無効にすると、コンテナ間通信が無効になり、コンテナが相互に通信できなくなります。
+- リンクされたコンテナの環境変数は存在しなくなりました（`<name>_PORT_<port>_<protocol>`）。
+
+{{< /alert >}}
+
+ネットワークを設定するには、`config.toml`ファイルで[ネットワーキング](https://docs.docker.com/engine/containers/run/#network-settings)モードを指定します。
 
 - `bridge`: ブリッジネットワークを使用します。デフォルト。
 - `host`: コンテナ内でホストのネットワークスタックを使用します。
 - `none`: ネットワーキングなし。推奨されません。
 
-次に例を示します: 
+例: 
 
 ```toml
 [[runners]]
@@ -296,7 +309,7 @@ Dockerの[レガシーコンテナリンク](https://docs.docker.com/engine/netw
 
 他の`network_mode`値を使用すると、ビルドコンテナが接続する既存のDockerネットワークの名前として扱われます。
 
-Dockerは名前の解決中にサービスコンテナのホスト名とエイリアスを使用して、コンテナ内の`/etc/hosts`ファイルを更新します。ただし、サービスコンテナはコンテナ名を解決**not**（できません）。コンテナ名を解決するには、ジョブごとにネットワークを作成する必要があります。
+Dockerは名前の解決中にサービスコンテナのホスト名とエイリアスを使用して、コンテナ内の`/etc/hosts`ファイルを更新します。ただし、サービスコンテナはコンテナ名を解決**できません**。コンテナ名を解決するには、ジョブごとにネットワークを作成する必要があります。
 
 リンクされたコンテナは、その環境変数を共有します。
 
@@ -320,7 +333,7 @@ OpenStackの仮想マシンなどの一部の環境では、カスタムMTUが�
 
 Dockerイメージとサービスを制限するには、`allowed_images`および`allowed_services`パラメータでワイルドカードパターンを指定します。構文の詳細については、[doublestarのドキュメント](https://github.com/bmatcuk/doublestar)を参照してください。
 
-たとえば、プライベートDockerレジストリのイメージのみを許可するには、次のようにします:
+たとえば、プライベートDockerレジストリのイメージのみを許可するには、次のようにします。
 
 ```toml
 [[runners]]
@@ -332,7 +345,7 @@ Dockerイメージとサービスを制限するには、`allowed_images`およ�
     allowed_services = ["my.registry.tld:5000/*:*"]
 ```
 
-プライベートDockerレジストリのイメージのリストに制限するには、次のようにします:
+プライベートDockerレジストリのイメージのリストに制限するには、次のようにします。
 
 ```toml
 [[runners]]
@@ -344,7 +357,7 @@ Dockerイメージとサービスを制限するには、`allowed_images`およ�
     allowed_services = ["postgres:9.4", "postgres:latest"]
 ```
 
-Kaliなどの特定のイメージを除外するには、次のようにします:
+Kaliなどの特定のイメージを除外するには、次のようにします。
 
 ```toml
 [[runners]]
@@ -359,7 +372,7 @@ Kaliなどの特定のイメージを除外するには、次のようにしま�
 
 サービスホスト名にアクセスするには、`.gitlab-ci.yml`で`services`にサービスを追加します。
 
-たとえば、Wordpressインスタンスを使用してアプリケーションとのAPIインテグレーションをテストするには、[tutum/wordpress](https://hub.docker.com/r/tutum/wordpress/)をサービスイメージとして使用します:
+たとえば、Wordpressインスタンスを使用してアプリケーションとのAPIインテグレーションをテストするには、[tutum/wordpress](https://hub.docker.com/r/tutum/wordpress/)をサービスイメージとして使用します。
 
 ```yaml
 services:
@@ -370,7 +383,7 @@ services:
 
 指定されたサービスエイリアスの他に、Runnerはサービスイメージの名前をエイリアスとしてサービスコンテナに割り当てます。これらのエイリアスはどれでも使用できます。
 
-Runnerは以下のルールに従って、イメージ名に基づいてエイリアスを作成します:
+Runnerは以下のルールに従って、イメージ名に基づいてエイリアスを作成します。
 
 - `:`より後のすべての文字が削除されます。
 - 1番目のエイリアスでは、スラッシュ（`/`）が2つのアンダースコア（`__`）に置き換えられます。
@@ -382,7 +395,7 @@ Runnerは以下のルールに従って、イメージ名に基づいてエイ�
 
 データベース名を変更する場合、またはアカウント名を設定する場合には、サービスに環境変数を定義します。
 
-Runnerが変数を渡すときには、次のように渡されます:
+Runnerが変数を渡すときには、次のように渡されます。
 
 - 変数はすべてのコンテナに渡されます。Runnerは、特定のコンテナに変数を渡すことができません。
 - セキュア変数はビルドコンテナに渡されます。
@@ -395,7 +408,7 @@ Runnerが変数を渡すときには、次のように渡されます:
 
 Runner設定で`tmpfs`オプションと`services_tmpfs`オプションを使用する場合は、複数のパスをそれぞれ専用のオプションで指定できます。詳細については、[Dockerのドキュメント](https://docs.docker.com/reference/cli/docker/container/run/#tmpfs)を参照してください。
 
-たとえば、公式のMySQLコンテナのデータディレクトリをRAMにマウントするには、`config.toml`を設定します:
+たとえば、公式のMySQLコンテナのデータディレクトリをRAMにマウントするには、`config.toml`を設定します。
 
 ```toml
 [runners.docker]
@@ -412,7 +425,7 @@ Runner設定で`tmpfs`オプションと`services_tmpfs`オプションを使用
 
 GitLab Runnerは、すべての共有サービスに`/builds`ディレクトリをマウントします。
 
-さまざまなサービスの使用法の詳細については、以下を参照してください:
+さまざまなサービスの使用法の詳細については、以下を参照してください。
 
 - [PostgreSQLを使用する](https://docs.gitlab.com/ci/services/postgres/)
 - [MySQLを使用する](https://docs.gitlab.com/ci/services/mysql/)
@@ -430,7 +443,7 @@ GitLab Runnerは、すべての共有サービスに`/builds`ディレクトリ�
 - GitLab 15.11以前では、最初に公開されたポートのみがチェックされます。
 - GitLab 16.0以降では、最初に公開された20個のポートがチェックされます。
 
-特定のポートでヘルスチェックを実行するには、`HEALTHCHECK_TCP_PORT`サービス変数を使用できます:
+特定のポートでヘルスチェックを実行するには、`HEALTHCHECK_TCP_PORT`サービス変数を使用できます。
 
 ```yaml
 job:
@@ -486,7 +499,7 @@ GitLab Runnerホスト上のハードウェアデバイスを、ジョブを実�
 
 ### プライベートレジストリの例 {#private-registry-example}
 
-この例は、プライベートDockerレジストリから`/dev/kvm`デバイスと`/dev/dri`デバイスをコンテナイメージに公開する方法を示します。これらのデバイスは通常、ハードウェアアクセラレーションによる仮想化とレンダリングに使用されます。ハードウェアリソースへの直接アクセスをユーザーに付与することに伴うリスクを軽減するには、デバイスアクセスを、`myregistry:5000/emulator/*`ネームスペース内の信頼できるイメージに制限します:
+この例は、プライベートDockerレジストリから`/dev/kvm`デバイスと`/dev/dri`デバイスをコンテナイメージに公開する方法を示します。これらのデバイスは通常、ハードウェアアクセラレーションによる仮想化とレンダリングに使用されます。ハードウェアリソースへの直接アクセスをユーザーに付与することに伴うリスクを軽減するには、デバイスアクセスを、`myregistry:5000/emulator/*`ネームスペース内の信頼できるイメージに制限します。
 
 ```toml
 [runners.docker]
@@ -507,7 +520,7 @@ GitLab Runnerホスト上のハードウェアデバイスを、ジョブを実�
 
 `/cache`ストレージパスを変更する場合は、パスを永続としてマークするために、`config.toml`の`[runners.docker]`セクションで`volumes = ["/my/cache/"]`にこのパスを定義する必要があります。
 
-デフォルトでは、Docker executorは次のディレクトリにビルドとキャッシュを保存します:
+デフォルトでは、Docker executorは次のディレクトリにビルドとキャッシュを保存します。
 
 - ビルド: `/builds/<namespace>/<project-name>`
 - キャッシュ: コンテナ内の`/cache`
@@ -516,7 +529,7 @@ GitLab Runnerホスト上のハードウェアデバイスを、ジョブを実�
 
 Runnerによって作成された未使用のコンテナとボリュームを削除するには、[`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache)を使用します。
 
-オプションのリストを確認するには、`help`オプションを指定してスクリプトを実行します:
+オプションのリストを確認するには、`help`オプションを指定してスクリプトを実行します。
 
 ```shell
 clear-docker-cache help
@@ -524,7 +537,7 @@ clear-docker-cache help
 
 デフォルトのオプションは`prune-volumes`です。これにより、未使用のコンテナ（ダングリングおよび未参照）とボリュームがすべて削除されます。
 
-キャッシュストレージを効率的に管理するには、次の操作を行う必要があります:
+キャッシュストレージを効率的に管理するには、次の操作を行う必要があります。
 
 - `cron`を使用して`clear-docker-cache`を定期的に実行します（たとえば週に1回）。
 - ディスクスペースを回収する際に、パフォーマンスのためにキャッシュに最近のコンテナをいくつか保持します。
@@ -535,9 +548,9 @@ clear-docker-cache help
 
 DockerイメージはGitLab Runnerによってタグ付けされていないため、[`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache)スクリプトはDockerイメージを削除しません。
 
-Dockerビルドイメージをクリアするには、次の手順に従います:
+Dockerビルドイメージをクリアするには、次の手順に従います。
 
-1. 回収できるディスクスペースを確認します:
+1. 回収できるディスクスペースを確認します。
 
    ```shell
    clear-docker-cache space
@@ -558,25 +571,25 @@ Dockerビルドイメージをクリアするには、次の手順に従いま�
 
 Docker executorは、コンテナの実行時に永続ストレージを提供します。`volumes =`で定義されているすべてのディレクトリは、ビルド間で維持されます。
 
-`volumes`ディレクティブは、次の種類のストレージをサポートしています:
+`volumes`ディレクティブは、次の種類のストレージをサポートしています。
 
-- 動的ストレージの場合は`<path>`を使用します。`<path>`は、そのプロジェクトで同じ同時実行ジョブの後続の実行間で維持されます。`runners.docker.cache_dir`を設定しない場合、データはDockerボリュームに永続化されます。それ以外の場合は、ホスト上の設定されたディレクトリ（ビルドコンテナにマウントされている）に永続化されます。
+- 動的ストレージの場合は`<path>`を使用します。`<path>`は、そのプロジェクトで同じ同時実行ジョブの後続の実行間で維持されます。`runners.docker.cache_dir`を設定しない場合、データはDockerボリュームに永続的に保存されます。そうでない場合は、ホスト上の設定されたディレクトリに永続的に保存されます（ビルドコンテナにマウントされます）。
 
   ボリュームベースの永続ストレージのボリューム名:
 
-  - 18.4.0バージョンより以前のGitLab Runnerの場合: `runner-<short-token>-project-<project-id>-concurrent-<concurrency-id>-cache-<md5-of-path>`
-  - GitLab Runner 18.4.0: `runner-<runner-id-hash>-cache-<md5-of-path><protection>`
+  - 18.4.0より以前のGitLab Runnerの場合: `runner-<short-token>-project-<project-id>-concurrent-<concurrency-id>-cache-<md5-of-path>`
+  - GitLab Runner 18.4.0以降の場合: `runner-<runner-id-hash>-cache-<md5-of-path><protection>`
 
-    ボリューム名で人が判読できなくなったデータは、ボリュームのラベルに移動されます。
+    ボリューム名で人間が読めなくなったデータは、ボリュームのラベルに移動されます。
 
   ホストベースの永続ストレージのホストディレクトリ:
 
-  - 18.4.0バージョンより以前のGitLab Runnerの場合: `<cache-dir>/runner-<short-token>-project-<project-id>-concurrent-<concurrency-id>/<md5-of-path>`
-  - GitLab Runner 18.4.0: `<cache-dir>/runner-<runner-id-hash>/<md5-of-path><protection>`
+  - 18.4.0より以前のGitLab Runnerの場合: `<cache-dir>/runner-<short-token>-project-<project-id>-concurrent-<concurrency-id>/<md5-of-path>`
+  - GitLab Runner 18.4.0以降の場合: `<cache-dir>/runner-<runner-id-hash>/<md5-of-path><protection>`
 
-  各変数部の説明:
+  変数部分の説明:
 
-  - `<short-token>`:  は、Runnerのトークンを短縮したものです（最初の8文字）。
+  - `<short-token>`: Runnerのトークンの短縮バージョン（最初の8文字）
   - `<project-id>`: GitLabプロジェクトのID
   - `<concurrency-id>`: Runnerのインデックス（同じプロジェクトのビルドを同時に実行しているすべてのRunnerのリストから）
   - `<md5-of-path>`: コンテナ内のパスのMD5サム
@@ -585,22 +598,22 @@ Docker executorは、コンテナの実行時に永続ストレージを提供�
     - RunnerのシステムID
     - `<project-id>`
     - `<concurrency-id>`
-  - `<protection>`: 値は、保護ブランチのビルドでは空で、保護ブランチのビルドでは`-protected`です
+  - `<protection>`: 値は、保護されていないブランチのビルドの場合は空で、保護されたブランチのビルドの場合は`-protected`です
   - `<cache-dir>`: `runners.docker.cache_dir`の設定
 
-- ホストにバインドされたストレージの場合は、`<host-path>:<path>[:<mode>]`を使用します。GitLab Runnerは、ホストシステム上の`<host-path>`に`<path>`をバインドします。オプションの`<mode>`は、このストレージが読み取り専用であるか、読み取り/書き込み可能（デフォルト）であるかを指定します。
+- ホストにバインドされたストレージの場合は、`<host-path>:<path>[:<mode>]`を使用します。GitLab Runnerは、ホストシステムの`<host-path>`に`<path>`をバインドします。オプションの`<mode>`は、このストレージが読み取り専用か読み取り/書き込み（デフォルト）かを指定します。
 
 {{< alert type="warning" >}}
 
-GitLab Runner 18.4.0では、動的ストレージのソースの命名（上記参照）は、Dockerボリュームベースとホストディレクトリベースの永続ストレージの両方で変更されました。18.4.0にアップグレードすると、GitLab Runnerは以前のRunnerバージョンからのキャッシュデータを無視し、新しいDockerボリュームまたは新しいホストディレクトリを介して、オンデマンドで新しい動的ストレージを作成します。
+GitLab Runner 18.4.0では、動的ストレージのソースの命名（上記参照）が、Dockerボリュームベースおよびホストディレクトリベースの永続ストレージの両方で変更されました。18.4.0にアップグレードすると、GitLab Runnerは以前のRunnerバージョンのキャッシュされたデータを無視し、新しいDockerボリュームまたは新しいホストディレクトリを介して、オンデマンドで新しい動的ストレージを作成します。
 
-ホストバインドストレージ（`<host-path>`設定を使用）は、動的ストレージとは対照的に、影響を受けません。
+動的ストレージとは対照的に、ホストバインドストレージ（`<host-path>`設定を使用）は影響を受けません。
 
 {{< /alert >}}
 
 ### ビルド用の永続ストレージ {#persistent-storage-for-builds}
 
-`/builds`ディレクトリをホストにバインドされたストレージにすると、ビルドは`/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`に保存されます:
+`/builds`ディレクトリをホストにバインドされたストレージにすると、ビルドは`/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`に保存されます。
 
 - `<short-token>`は、Runnerのトークンの短縮バージョンです（最初の8文字）。
 - `<concurrent-id>`は、プロジェクトのコンテキストで特定のRunnerのローカルジョブIDを識別する一意の番号です。
@@ -617,7 +630,7 @@ Docker executorは、ビルドコンテナのファインチューニングを�
 
 設定された`privileged`フラグがビルドコンテナとすべてのサービスに渡されます。このフラグを使用すると、Docker-in-Dockerアプローチを使用できます。
 
-まず、`privileged`モードで実行するようにRunner（`config.toml`）を設定します:
+まず、`privileged`モードで実行するようにRunner（`config.toml`）を設定します。
 
 ```toml
 [[runners]]
@@ -626,7 +639,7 @@ Docker executorは、ビルドコンテナのファインチューニングを�
     privileged = true
 ```
 
-次に、Docker-in-Dockerコンテナを使用するためのビルドスクリプト（`.gitlab-ci.yml`）を作成します:
+次に、Docker-in-Dockerコンテナを使用するためのビルドスクリプト（`.gitlab-ci.yml`）を作成します。
 
 ```yaml
 image: docker:git
@@ -645,7 +658,7 @@ build:
 
 {{< /alert >}}
 
-次のようなエラーを回避するには、[TLSを使用してDocker-in-Dockerを設定するか、またはTLSを無効にする](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker)必要があります:
+次のようなエラーを回避するには、[TLSを使用してDocker-in-Dockerを設定するか、またはTLSを無効にする](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker)必要があります。
 
 ```plaintext
 Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon running?
@@ -657,9 +670,9 @@ Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon r
 
 `services_privileged`および`allowed_privileged_services`設定パラメータは、特権モードで実行できるコンテナを制限します。
 
-制限付き特権モードでルートレスDocker-in-Dockerを使用するには、次の手順に従います:
+制限付き特権モードでルートレスDocker-in-Dockerを使用するには、次の手順に従います。
 
-1. `config.toml`で、`services_privileged`と`allowed_privileged_services`を使用するようにRunnerを設定します:
+1. `config.toml`で、`services_privileged`と`allowed_privileged_services`を使用するようにRunnerを設定します。
 
    ```toml
    [[runners]]
@@ -669,7 +682,7 @@ Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon r
        allowed_privileged_services = ["docker.io/library/docker:*-dind-rootless", "docker.io/library/docker:dind-rootless", "docker:*-dind-rootless", "docker:dind-rootless"]
    ```
 
-1. `.gitlab-ci.yml`で、Docker-in-Dockerルートなしコンテナを使用するようにビルドスクリプトを編集します:
+1. `.gitlab-ci.yml`で、Docker-in-Dockerルートなしコンテナを使用するようにビルドスクリプトを編集します。
 
    ```yaml
    image: docker:git
@@ -692,18 +705,18 @@ Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon r
 
 デフォルトの場合、Docker executorは[Dockerイメージの`ENTRYPOINT`](https://docs.docker.com/engine/containers/run/#entrypoint-default-command-to-execute-at-runtime)をオーバーライドしません。ジョブスクリプトを実行するコンテナを起動するために、`sh`または`bash`を[`COMMAND`](https://docs.docker.com/engine/containers/run/#cmd-default-command-or-options)として渡します。
 
-ジョブを実行できるようにするには、そのDockerイメージが次の処理を行う必要があります:
+ジョブを実行できるようにするには、そのDockerイメージが次の処理を行う必要があります。
 
 - `sh`または`bash`と`grep`を提供する。
 - 引数として`sh`/`bash`が渡されるとShellを起動する`ENTRYPOINT`を定義する。
 
-Docker Executorは、次のコマンドと同等のコマンドでジョブのコンテナを実行します:
+Docker Executorは、次のコマンドと同等のコマンドでジョブのコンテナを実行します。
 
 ```shell
 docker run <image> sh -c "echo 'It works!'" # or bash
 ```
 
-Dockerイメージがこのメカニズムをサポートしていない場合は、プロジェクト設定で次のように[イメージのENTRYPOINTをオーバーライドできます](https://docs.gitlab.com/ci/yaml/#imageentrypoint):
+Dockerイメージがこのメカニズムをサポートしていない場合は、プロジェクト設定で次のように[イメージのENTRYPOINTをオーバーライドできます](https://docs.gitlab.com/ci/yaml/#imageentrypoint)。
 
 ```yaml
 # Equivalent of
@@ -721,7 +734,7 @@ image:
 
 たとえば、ビルドスクリプトを実行しない`ENTRYPOINT`を使用するDockerイメージを作成できます。代わりにDockerイメージは、定義済みの一連のコマンドを実行して、ディレクトリからDockerイメージをビルドします。[特権モード](#privileged-mode)でビルドコンテナを実行し、Runnerのビルド環境を保護します。
 
-1. 新しいDockerfileを作成します:
+1. 新しいDockerfileを作成します。
 
    ```dockerfile
    FROM docker:dind
@@ -729,7 +742,7 @@ image:
    ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
    ```
 
-1. `ENTRYPOINT`として使用されるbashスクリプト（`entrypoint.sh`）を作成します:
+1. `ENTRYPOINT`として使用されるbashスクリプト（`entrypoint.sh`）を作成します。
 
    ```shell
    #!/bin/sh
@@ -745,7 +758,7 @@ image:
 
 1. イメージをDockerレジストリにプッシュします。
 
-1. `privileged`モードでDocker executorを実行します。`config.toml`で次のように定義します:
+1. `privileged`モードでDocker executorを実行します。`config.toml`で次のように定義します。
 
    ```toml
    [[runners]]
@@ -754,7 +767,7 @@ image:
        privileged = true
    ```
 
-1. プロジェクトで次の`.gitlab-ci.yml`を使用します:
+1. プロジェクトで次の`.gitlab-ci.yml`を使用します。
 
    ```yaml
    variables:
@@ -775,41 +788,41 @@ image:
 
 LinuxにGitLab Runnerがインストールされている場合、ジョブはPodmanを使用して、DockerをDocker executorのコンテナランタイムに置き換えることができます。
 
-前提要件:
+前提条件: 
 
 - [Podman](https://podman.io/) v4.2.0以降。
 - Podmanをexecutorとして使用して[サービス](#services)を実行するには、[`FF_NETWORK_PER_BUILD`機能フラグ](#create-a-network-for-each-job)を有効にします。[Dockerコンテナリンク](https://docs.docker.com/engine/network/links/)はレガシー機能であり、[Podman](https://podman.io/)ではサポートされていません。ネットワークエイリアスを作成するサービスの場合、`podman-plugins`パッケージをインストールする必要があります。
 
 {{< alert type="note" >}}
 
-Podmanは、コンテナのDNSサーバーとして`aardvark-dns`を使用します。`aardvark-dns`バージョン1.10.0以前は、CI/CDジョブでDNS解決の失敗が散発的に発生します。新しいバージョンがインストールされていることを確認してください。詳細については、[GitHubイシュー389](https://github.com/containers/aardvark-dns/issues/389)を参照してください。
+Podmanは、コンテナのDNSサーバーとして`aardvark-dns`を使用します。`aardvark-dns`バージョン1.10.0以前では、CI/CDジョブで散発的なDNS解決の失敗が発生します。新しいバージョンがインストールされていることを確認してください。詳細については、[GitHubイシュー389](https://github.com/containers/aardvark-dns/issues/389)を参照してください。
 
 {{< /alert >}}
 
 1. LinuxホストにGitLab Runnerをインストールします。システムのパッケージマネージャーを使用してGitLab Runnerをインストールした場合、`gitlab-runner`ユーザーが自動的に作成されます。
 1. GitLab Runnerを実行するユーザーとしてサインインします。これは、[`pam_systemd`](https://www.freedesktop.org/software/systemd/man/latest/pam_systemd.html)を回避しない方法で行う必要があります。正しいユーザーでSSHを使用できます。これにより、このユーザーとして`systemctl`を実行できるようになります。
-1. システムが、[ルートレスPodmanセットアップ](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md)の前提要件を満たしていることを確認します。具体的には、[`/etc/subuid`および`/etc/subgid`にユーザーの正しいエントリがあること](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md#etcsubuid-and-etcsubgid-configuration)を確認します。
+1. システムが、[ルートレスPodmanセットアップ](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md)の前提条件を満たしていることを確認します。具体的には、[`/etc/subuid`および`/etc/subgid`にユーザーの正しいエントリがあること](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md#etcsubuid-and-etcsubgid-configuration)を確認します。
 1. Linuxホストに[Podmanをインストール](https://podman.io/getting-started/installation)します。
-1. Podmanソケットを有効にして起動します:
+1. Podmanソケットを有効にして起動します。
 
    ```shell
    systemctl --user --now enable podman.socket
    ```
 
-1. Podmanソケットがリッスンしていることを検証します:
+1. Podmanソケットがリッスンしていることを検証します。
 
    ```shell
    systemctl status --user podman.socket
    ```
 
 1. Podman APIへのアクセスに使用されている`Listen`キーのソケット文字列をコピーします。
-1. GitLab Runnerユーザーがログアウトした後も、Podmanソケットが利用可能な状態であることを確認します:
+1. GitLab Runnerユーザーがログアウトした後も、Podmanソケットが利用可能な状態であることを確認します。
 
    ```shell
    sudo loginctl enable-linger gitlab-runner
    ```
 
-1. GitLab Runnerの`config.toml`ファイルを編集し、`[runners.docker]`セクションのhostエントリにソケット値を追加します。次に例を示します:
+1. GitLab Runnerの`config.toml`ファイルを編集し、`[runners.docker]`セクションのhostエントリにソケット値を追加します。例: 
 
    ```toml
    [[runners]]
@@ -821,8 +834,14 @@ Podmanは、コンテナのDNSサーバーとして`aardvark-dns`を使用しま
        host = "unix:///run/user/1012/podman/podman.sock"
        tls_verify = false
        image = "quay.io/podman/stable"
-       privileged = true
+       privileged = false
    ```
+
+   {{< alert type="note" >}}
+
+   標準のPodmanを使用するには、`privileged = false`を設定します。ジョブ内で[Docker-in-Dockerサービス](#use-docker-in-docker-with-privileged-mode)を実行する必要がある場合にのみ、`privileged = true`を設定してください。
+
+   {{< /alert >}}
 
 ### Podmanを使用してDockerfileからコンテナイメージをビルドする {#use-podman-to-build-container-images-from-a-dockerfile}
 
@@ -868,7 +887,7 @@ oci-container-build:
 
 ### 既知の問題 {#known-issues}
 
-Dockerとは異なり、PodmanはデフォルトでSELinuxポリシーを適用します。多くのパイプラインは問題なく実行されますが、ツールが一時ディレクトリを使用すると、SELinuxコンテキストの継承が原因で一部のパイプラインが失敗する場合があります。
+Dockerとは異なり、PodmanはデフォルトでSELinuxポリシーを適用します。多くのパイプラインは問題なく実行されますが、ツールが一時ディレクトリを使用すると、SELinuxコンテキストの継承により失敗する場合があります。
 
 たとえば、次のパイプラインはPodmanでは失敗します:
 
@@ -880,9 +899,9 @@ testing:
     - pip3 install --target $CI_PROJECT_DIR requests==2.28.2
 ```
 
-この失敗は、Pipが作業ディレクトリとして`/tmp`を使用することが原因で発生します。`/tmp`に作成されたファイルは、そのSELinuxコンテキストを継承し、コンテナがこれらのファイルを`$CI_PROJECT_DIR`に移動したときに変更できなくなります。
+pipが作業ディレクトリとして`/tmp`を使用するため、失敗が発生します。`/tmp`で作成されたファイルは、そのSELinuxコンテキストを継承します。これにより、コンテナは、これらのファイルが`$CI_PROJECT_DIR`に移動されたときに変更できなくなります。
 
-**Solution:**（解決策:）`runners.docker`セクションの下のRunnerの`config.toml`にあるボリュームに`/tmp`を追加します: 
+**Solution:**`runners.docker`セクションの下のRunnerの`config.toml`のボリュームに`/tmp`を追加します:
 
 ```toml
 [[runners]]
@@ -890,13 +909,13 @@ testing:
     volumes = ["/cache", "/tmp"]
 ```
 
-この追加により、マウントされたディレクトリ全体で一貫したSELinuxコンテキストが保証されます。
+この追加により、マウントされたディレクトリ全体で一貫したSELinuxコンテキストが確保されます。
 
 #### SELinuxのトラブルシューティング {#troubleshooting-selinux-issues}
 
 その他のPodman/SELinuxの問題では、必要な設定の変更を特定するために、追加のトラブルシューティングが必要になる場合があります。
 
-Podman Runnerの問題がSELinuxに関連しているかどうかをテストするには、次のディレクティブをRunnerの`config.toml`の`runners.docker`セクションに一時的に追加します:
+Podman Runnerの問題がSELinuxに関連しているかどうかをテストするには、`runners.docker`セクションの下のRunnerの`config.toml`に、次のディレクティブを一時的に追加します:
 
 ```toml
 [[runners]]
@@ -906,7 +925,7 @@ Podman Runnerの問題がSELinuxに関連しているかどうかをテストす
 
 {{< alert type="warning" >}}
 
-この追加により、コンテナでのSELinux適用が無効になります（これはDockerのデフォルトの動作です）。この設定は、セキュリティ上の影響がある可能性があるため、テスト目的でのみ使用し、永続的な解決策としては使用しないでください。
+この追加により、コンテナ内のSELinuxの適用がオフになります（これはDockerのデフォルトの動作です）。この設定はテスト目的でのみ使用し、セキュリティに影響を与える可能性があるため、永続的なソリューションとしては使用しないでください。
 
 {{< /alert >}}
 
@@ -920,7 +939,7 @@ SELinuxが一部の書き込み操作（既存のGitリポジトリの再初期�
     security_opt = ["label=level:s0:c1000"]
 ```
 
-このオプションはSELinuxを無効にしませんが、コンテナのMCSレベルを設定します。このアプローチは、`label:disable`を使用するよりも安全です。
+このオプションではSELinuxは無効になりませんが、コンテナのMCSサービスレベル指標を設定します。このアプローチは、`label:disable`を使用するよりも安全です。
 
 {{< alert type="warning" >}}
 
@@ -940,7 +959,7 @@ USER "www"
 CMD ["/bin/bash"]
 ```
 
-そのDockerイメージを使用してジョブを実行すると、指定されたユーザーとして実行されます:
+そのDockerイメージを使用してジョブを実行すると、指定されたユーザーとして実行されます。
 
 ```yaml
 build:
@@ -951,11 +970,11 @@ build:
 
 ## Runnerがイメージをプルする方法を設定する {#configure-how-runners-pull-images}
 
-RunnerがレジストリからDockerイメージをプルする方法を定義するには、`config.toml`でプルポリシーを設定します。1つのポリシー、[ポリシーのリスト](#set-multiple-pull-policies) 、または[特定のプルポリシーを許可](#allow-docker-pull-policies)できます。
+RunnerがレジストリからDockerイメージをプルする方法を定義するには、`config.toml`でプルポリシーを設定します。1つのポリシー、[ポリシーのリスト](#set-multiple-pull-policies)、または[特定のプルポリシーを許可](#allow-docker-pull-policies)できます。
 
-`pull_policy`には次の値を使用します:
+`pull_policy`には次の値を使用します。
 
-- [`always`](#set-the-always-pull-policy): デフォルト。ローカルイメージが存在する場合でもイメージをプルします。このプルポリシーは、ディスク上にすでに存在する`SHA256`で指定されたイメージには適用されません。
+- [`always`](#set-the-always-pull-policy): デフォルト。ローカルイメージが存在する場合でもイメージをプルします。このプルポリシーは、ディスクに既に存在する`SHA256`で指定されたイメージには適用されません。
 - [`if-not-present`](#set-the-if-not-present-pull-policy): ローカルバージョンが存在しない場合にのみ、イメージをプルします。
 - [`never`](#set-the-never-pull-policy): イメージをプルせずに、ローカルイメージのみを使用します。
 
@@ -972,14 +991,14 @@ RunnerがレジストリからDockerイメージをプルする方法を定義�
 
 `always`オプションはデフォルトで有効になっており、常にコンテナの作成前にプルを開始します。このオプションにより、イメージが最新の状態になり、ローカルイメージが存在する場合でも古いイメージの使用を回避できます。
 
-このプルポリシーは、次の場合に使用します:
+このプルポリシーは、次の場合に使用します。
 
 - Runnerが常に最新のイメージをプルする必要がある。
 - Runnerが公開されており、[オートスケール](../configuration/autoscale.md)向けに設定されているか、またはGitLabインスタンスのインスタンスRunnerとして設定されている。
 
-Runnerがローカルに保存されているイメージを使用する必要がある場合は、このポリシーを**Do not use**（使用しないでください）。
+Runnerがローカルに保存されているイメージを使用する必要がある場合は、このポリシーを**使用しないでください**。
 
-`config.toml`で`always`を`pull policy`として設定します:
+`config.toml`で`always`を`pull policy`として設定します。
 
 ```toml
 [[runners]]
@@ -994,17 +1013,17 @@ Runnerがローカルに保存されているイメージを使用する必要�
 
 プルポリシーを`if-not-present`に設定すると、Runnerは最初にローカルイメージが存在するかどうかを確認します。ローカルイメージがない場合、Runnerはレジストリからイメージをプルします。
 
-`if-not-present`ポリシーは、次の場合に使用します:
+`if-not-present`ポリシーは、次の場合に使用します。
 
 - ローカルイメージを使用するが、ローカルイメージが存在しない場合はイメージをプルする。
 - 負荷が高いイメージやほとんど更新されないイメージのイメージレイヤの差分をRunnerが分析する時間を短縮する。この場合、イメージの更新を強制的に実行するために、ローカルのDocker Engineストアから定期的に手動でイメージを削除する必要があります。
 
-次の場合にはこのポリシーを**Do not use**（使用しないでください）:
+次の場合にはこのポリシーを**使用しないでください**。
 
 - Runnerを使用するさまざまなユーザーがプライベートイメージにアクセスできるインスタンスRunnerの場合。セキュリティの問題の詳細については、[if-not-presentプルポリシーでのプライベートDockerイメージの使用](../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy)をご覧ください。
 - ジョブが頻繁に更新され、最新のイメージバージョンでジョブを実行する必要がある場合。これにより実現するネットワーク負荷の軽減の価値は、ローカルイメージを頻繁に削除する価値を上回る可能性があります。
 
-`config.toml`で`if-not-present`ポリシーを設定します:
+`config.toml`で`if-not-present`ポリシーを設定します。
 
 ```toml
 [[runners]]
@@ -1017,20 +1036,20 @@ Runnerがローカルに保存されているイメージを使用する必要�
 
 ### `never`プルポリシーを設定する {#set-the-never-pull-policy}
 
-前提要件:
+前提条件: 
 
 - ローカルイメージには、インストール済みのDocker Engineと、使用されているイメージのローカルコピーが含まれている必要があります。
 
 プルポリシーを`never`に設定すると、イメージのプルが無効になります。ユーザーはRunnerが実行されているDockerホストで、手動でプルされたイメージのみを使用できます。
 
-次の場合に`never`プルポリシーを使用します:
+次の場合に`never`プルポリシーを使用します。
 
 - Runnerユーザーが使用するイメージを制御する場合。
 - レジストリで公開されていない特定のイメージのみを使用できるプロジェクト専用のプライベートRunnerの場合。
 
-[オートスケールされた](../configuration/autoscale.md)Docker executorには、`never`プルポリシーを**Do not use**（使用しないでください）。`never`プルポリシーは、選択したクラウドプロバイダーに定義済みのクラウドインスタンスイメージを使用する場合にのみ使用できます。
+[オートスケールされた](../configuration/autoscale.md)Docker executorには、`never`プルポリシーを**使用しないでください**。`never`プルポリシーは、選択したクラウドプロバイダーに定義済みのクラウドインスタンスイメージを使用する場合にのみ使用できます。
 
-`config.toml`で`never`ポリシーを設定します:
+`config.toml`で`never`ポリシーを設定します。
 
 ```toml
 [[runners]]
@@ -1047,7 +1066,7 @@ Runnerがローカルに保存されているイメージを使用する必要�
 
 このプルポリシーのセキュリティへの影響について詳しくは、[if-not-presentプルポリシーでのプライベートDockerイメージの使用](../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy)を参照してください。
 
-複数のプルポリシーを設定するには、`config.toml`でプルポリシーをリストとして追加します:
+複数のプルポリシーを設定するには、`config.toml`でプルポリシーをリストとして追加します。
 
 ```toml
 [[runners]]
@@ -1070,7 +1089,7 @@ Runnerがローカルに保存されているイメージを使用する必要�
 
 `.gitlab-ci.yml`ファイルで指定されているものの中から使用できるプルポリシーを制限するには、`allowed_pull_policies`を使用します。
 
-たとえば、`always`および`if-not-present`プルポリシーのみを許可するには、それらを`config.toml`に追加します:
+たとえば、`always`および`if-not-present`プルポリシーのみを許可するには、それらを`config.toml`に追加します。
 
 ```toml
 [[runners]]
@@ -1100,7 +1119,7 @@ Runnerがローカルに保存されているイメージを使用する必要�
 
 失敗したイメージのプルを再試行するようにRunnerを設定するには、`config.toml`で同じポリシーを複数回指定します。
 
-たとえば次の設定では、プルを1回再試行します:
+たとえば次の設定では、プルを1回再試行します。
 
 ```toml
 [runners.docker]
@@ -1119,7 +1138,7 @@ Windowsヘルパーイメージで導入されたPowerShell Coreのサポート�
 
 ### Windows上のDocker executorに関する既知のイシュー {#known-issues-with-docker-executor-on-windows}
 
-以下は、Docker executorでWindowsコンテナを使用する場合の制限事項の一部です:
+以下は、Docker executorでWindowsコンテナを使用する場合の制限事項の一部です。
 
 - Docker-in-DockerはDocker自体で[サポートされていない](https://github.com/docker-library/docker/issues/49)ため、サポートされていません。
 - インタラクティブWebターミナルはサポートされていません。
@@ -1127,7 +1146,7 @@ Windowsヘルパーイメージで導入されたPowerShell Coreのサポート�
 - ボリュームディレクトリをマウントする場合、ディレクトリが存在している必要があります。そうでない場合、Dockerはコンテナを起動できません。詳細については、[\#3754](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3754)を参照してください。
 - `docker-windows` executorは、Windowsで実行されているGitLab Runnerのみを使用して実行できます。
 - [Windows上のLinuxコンテナ](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/set-up-linux-containers)はまだ実験的機能であるため、サポートされていません。詳細については、[関連するイシュー](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373)を確認してください。
-- [Dockerでの制限](https://github.com/MicrosoftDocs/Virtualization-Documentation/pull/331)により、宛先パスのドライブ文字が`c:`ではない場合、以下ではパスがサポートされません:
+- [Dockerでの制限](https://github.com/MicrosoftDocs/Virtualization-Documentation/pull/331)により、宛先パスのドライブ文字が`c:`ではない場合、以下ではパスがサポートされません。
 
   - [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
   - [`cache_dir`](../configuration/advanced-configuration.md#the-runners-section)
@@ -1141,14 +1160,14 @@ Windowsヘルパーイメージで導入されたPowerShell Coreのサポート�
 
 ### サポートされているWindowsバージョン {#supported-windows-versions}
 
-GitLab Runnerは、[Windowsのサポートライフサイクル](../install/support-policy.md#windows-version-support)に従う次のバージョンのWindowsのみをサポートします:
+GitLab Runnerは、[Windowsのサポートライフサイクル](../install/support-policy.md#windows-version-support)に従う次のバージョンのWindowsのみをサポートします。
 
 - Windows Server 2022 LTSC（21H2）
 - Windows Server 2019 LTSC（1809）
 
 将来のWindows Serverバージョンについては、[将来のバージョンサポートポリシー](../install/support-policy.md#windows-version-support)があります。
 
-Dockerデーモンが実行されているOSバージョンに基づいたコンテナのみを実行できます。たとえば、次の[`Windows Server Core`](https://hub.docker.com/r/microsoft/windows-servercore)イメージを使用できます:
+Dockerデーモンが実行されているOSバージョンに基づいたコンテナのみを実行できます。たとえば、次の[`Windows Server Core`](https://hub.docker.com/r/microsoft/windows-servercore)イメージを使用できます。
 
 - `mcr.microsoft.com/windows/servercore:ltsc2022`
 - `mcr.microsoft.com/windows/servercore:ltsc2022-amd64`
@@ -1160,7 +1179,7 @@ Dockerデーモンが実行されているOSバージョンに基づいたコン
 
 GitLab RunnerはDockerを使用して、実行されているWindows Serverのバージョンを検出します。したがって、GitLab Runnerを実行しているWindows Serverで、最新バージョンのDockerが実行されている必要があります。
 
-GitLab Runnerで機能しない既知のDockerのバージョンは`Docker 17.06`です。DockerはWindows Serverのバージョンを識別しないため、次のエラーが発生します:
+GitLab Runnerで機能しない既知のDockerのバージョンは`Docker 17.06`です。DockerはWindows Serverのバージョンを識別しないため、次のエラーが発生します。
 
 ```plaintext
 unsupported Windows Version: Windows Server Datacenter
@@ -1228,7 +1247,7 @@ step job:
 
 - GitLab 17.9以降では、ビルドイメージで`ca-certificates`パッケージがインストールされている必要があります。インストールされていないと、`step-runner`がジョブで定義されているステップのプルに失敗します。たとえば、DebianベースのLinuxディストリビューションは、デフォルトでは`ca-certificates`をインストールしません。
 
-- 17.9より前のGitLabバージョンでは、ビルドイメージで`$PATH`に`step-runner`バイナリが含まれている必要があります。これを実現するには、次のいずれかを実行します:
+- 17.9より前のGitLabバージョンでは、ビルドイメージで`$PATH`に`step-runner`バイナリが含まれている必要があります。これを実現するには、次のいずれかを実行します。
 
   - 独自のカスタムビルドイメージを作成し、`step-runner`バイナリを含めます。
   - `registry.gitlab.com/gitlab-org/step-runner:v0`イメージに、ジョブの実行に必要な依存関係が含まれている場合は、このイメージを使用します。
