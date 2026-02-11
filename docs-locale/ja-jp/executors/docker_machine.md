@@ -22,7 +22,7 @@ Docker Machine ExecutorはGitLab 17.5で非推奨となりました。GitLab 20.
 
 ## Docker Machineのフォークバージョン {#forked-version-of-docker-machine}
 
-Dockerでは[Docker Machineが非推奨になりました](https://gitlab.com/gitlab-org/gitlab/-/issues/341856)。ただしGitLabでは、Docker Machine executorを利用しているGitLab Runnerユーザーのために[Docker Machineフォーク](https://gitlab.com/gitlab-org/ci-cd/docker-machine)を維持しています。このフォークは、`docker-machine`の最新の`main`ブランチをベースにしており、次のバグに対する追加パッチがいくつか含まれています:
+Dockerでは[Docker Machineが非推奨になりました](https://gitlab.com/gitlab-org/gitlab/-/issues/341856)。ただしGitLabでは、Docker Machine executorを利用しているGitLab Runnerユーザーのために[Docker Machineフォーク](https://gitlab.com/gitlab-org/ci-cd/docker-machine)を維持しています。このフォークは、`docker-machine`の最新の`main`ブランチをベースにしており、次のバグに対する追加パッチがいくつか含まれています。
 
 - [DigitalOceanドライバーをRateLimit対応にする](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/2)
 - [Googleドライバーオペレーションチェックにバックオフを追加する](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/7)
@@ -36,7 +36,7 @@ Dockerでは[Docker Machineが非推奨になりました](https://gitlab.com/gi
 
 ## 環境を準備する {#preparing-the-environment}
 
-オートスケール機能を使用するには、DockerとGitLab Runnerが同じマシンにインストールされている必要があります:
+オートスケール機能を使用するには、DockerとGitLab Runnerが同じマシンにインストールされている必要があります。
 
 1. 踏み台サーバーとして機能できる新しいLinuxベースのマシンにサインインします。この踏み台サーバーでDockerが新しいマシンを作成します。
 1. [GitLab Runnerをインストールします](../install/_index.md)。
@@ -45,7 +45,7 @@ Dockerでは[Docker Machineが非推奨になりました](https://gitlab.com/gi
 
 ## GitLab Runnerを設定する {#configuring-gitlab-runner}
 
-1. `docker-machine`と`gitlab-runner`を使用するという基本的な概念を理解します:
+1. `docker-machine`と`gitlab-runner`を使用するという基本的な概念を理解します。
    - [GitLab Runnerのオートスケール](../configuration/autoscale.md)を読みます
    - [GitLab Runner MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section)を読みます
 1. Docker Machineを**初めて**使用する場合は、[Docker Machineドライバー](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/tree/main/drivers)を指定した`docker-machine create ...`コマンドを手動で実行する方法が最良の方法です。`[runners.machine]`セクションの[MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section)で設定するオプションを使用して、このコマンドを実行します。この手法ではDocker Machine環境が適切に設定され、指定されたオプションが検証されます。その後に`docker-machine rm [machine_name]`でマシンを破棄し、Runnerを起動できます。
@@ -62,8 +62,8 @@ Dockerでは[Docker Machineが非推奨になりました](https://gitlab.com/gi
 
 ## GitLab Runnerをアップグレードする {#upgrading-gitlab-runner}
 
-1. ご使用のオペレーティングシステムがGitLab Runnerを自動的に再起動するように設定されているかどうかを確認します（たとえば、そのサービスファイルを確認します）:
-   - **設定されている**場合は、サービスマネージャーが[`SIGQUIT`を使用するように設定されている](../configuration/init.md)ことを確認し、サービスツールを使用してプロセスを停止します:
+1. ご使用のオペレーティングシステムがGitLab Runnerを自動的に再起動するように設定されているかどうかを確認します（たとえば、そのサービスファイルを確認します）。
+   - **設定されている**場合は、サービスマネージャーが[`SIGQUIT`を使用するように設定されている](../configuration/init.md)ことを確認し、サービスツールを使用してプロセスを停止します。
 
      ```shell
      # For systemd
@@ -73,7 +73,7 @@ Dockerでは[Docker Machineが非推奨になりました](https://gitlab.com/gi
      sudo service gitlab-runner stop
      ```
 
-   - **設定されていない**場合は、プロセスを手動で停止できます:
+   - **設定されていない**場合は、プロセスを手動で停止できます。
 
      ```shell
      sudo killall -SIGQUIT gitlab-runner
@@ -85,7 +85,7 @@ Dockerでは[Docker Machineが非推奨になりました](https://gitlab.com/gi
 
    {{< /alert >}}
 
-1. GitLab Runnerが終了するまで待ちます。`gitlab-runner status`でその状態を確認するか、正常なシャットダウンが行われるまで最大30分間待つことができます:
+1. GitLab Runnerが終了するまで待ちます。`gitlab-runner status`でその状態を確認するか、正常なシャットダウンが行われるまで最大30分間待つことができます。
 
    ```shell
    for i in `seq 1 180`; do # 1800 seconds = 30 minutes
@@ -100,10 +100,10 @@ Dockerでは[Docker Machineが非推奨になりました](https://gitlab.com/gi
 
 ### インストール {#install}
 
-1. [適切な`docker-machine`バイナリ](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases)をダウンロードします。`PATH`がアクセスできる場所にバイナリをコピーし、実行可能にします。たとえば、`v0.16.2-gitlab.40`をダウンロードしてインストールするには、次のようにします:
+1. [適切な`docker-machine`バイナリ](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases)をダウンロードします。`PATH`がアクセスできる場所にバイナリをコピーし、実行可能にします。たとえば、`v0.16.2-gitlab.43`をダウンロードしてインストールするには、次のようにします。
 
    ```shell
-   curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.40/docker-machine-Linux-x86_64"
+   curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.43/docker-machine-Linux-x86_64"
    cp docker-machine-Linux-x86_64 /usr/local/bin/docker-machine
    chmod +x /usr/local/bin/docker-machine
    ```
@@ -116,32 +116,32 @@ GPUは[すべてのexecutorでサポートされています](../configuration/g
 
 {{< /alert >}}
 
-Docker Machine[フォーク](#forked-version-of-docker-machine)を使用して、[GPU（グラフィックスプロセッシングユニット）を使用するGoogle Compute Engineインスタンス](https://cloud.google.com/compute/docs/gpus/)を作成できます。
+Docker Machine[フォーク](#forked-version-of-docker-machine)を使用して、[GPU（グラフィックスプロセッシングユニット）を使用するGoogle Compute Engineインスタンス](https://docs.cloud.google.com/compute/docs/gpus)を作成できます。
 
 #### Docker Machine GPUオプション {#docker-machine-gpu-options}
 
-GPUを使用するインスタンスを作成するには、次のDocker Machineオプションを使用します:
+GPUを使用するインスタンスを作成するには、次のDocker Machineオプションを使用します。
 
 | オプション                        | 例                        | 説明 |
 |-------------------------------|--------------------------------|-------------|
 | `--google-accelerator`        | `type=nvidia-tesla-p4,count=1` | インスタンスにアタッチするGPUアクセラレータのタイプと数を指定します（`type=TYPE,count=N`形式）。 |
-| `--google-maintenance-policy` | `TERMINATE`                    | [Google CloudではGPUインスタンスのライブ移行が許可されていない](https://cloud.google.com/compute/docs/instances/live-migration-process)ため、常に`TERMINATE`を使用してください。 |
-| `--google-machine-image`      | `https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110` | GPU対応オペレーティングシステムのURL。[使用可能なイメージのリスト](https://cloud.google.com/deep-learning-vm/docs/images)を参照してください。 |
+| `--google-maintenance-policy` | `TERMINATE`                    | [Google CloudではGPUインスタンスのライブ移行が許可されていない](https://docs.cloud.google.com/compute/docs/instances/live-migration-process)ため、常に`TERMINATE`を使用してください。 |
+| `--google-machine-image`      | `https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110` | GPU対応オペレーティングシステムのURL。[使用可能なイメージのリスト](https://docs.cloud.google.com/deep-learning-vm/docs/images)を参照してください。 |
 | `--google-metadata`           | `install-nvidia-driver=True`   | このフラグは、NVIDIA GPUドライバーをインストールするようにイメージに指示します。 |
 
-これらの引数は、[`gcloud compute`のコマンドライン引数](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus#gcloud_1)にマップされます。詳細については、[GPUがアタッチされたVMの作成に関するGoogleドキュメント](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus)を参照してください。
+これらの引数は、[`gcloud compute`のコマンドライン引数](https://docs.cloud.google.com/compute/docs/gcloud-compute)にマップされます。詳細については、[GPUがアタッチされたVMの作成に関するGoogleドキュメント](https://docs.cloud.google.com/compute/docs/gpus/create-vm-with-gpus)を参照してください。
 
 #### Docker Machineオプションを検証する {#verifying-docker-machine-options}
 
 システムを準備し、Google Compute EngineでGPUを作成できることをテストするには、次の手順に従います:
 
-1. Docker Machineの[Google Compute Engineドライバー認証情報をセットアップ](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/gce.md#credentials)します。場合によっては、VMにデフォルトのサービスアカウントがないときに環境変数をRunnerにエクスポートする必要があります。その方法は、Runnerの起動方法によって異なります。たとえば、次のいずれかを使用します:
+1. Docker Machineの[Google Compute Engineドライバー認証情報をセットアップ](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/gce.md#credentials)します。場合によっては、VMにデフォルトのサービスアカウントがないときに環境変数をRunnerにエクスポートする必要があります。その方法は、Runnerの起動方法によって異なります。たとえば、次のいずれかを使用します。
 
    - `systemd`または`upstart`: [カスタム環境変数の設定に関するドキュメント](../configuration/init.md#setting-custom-environment-variables)を参照してください。
    - Helmチャートを使用したKubernetes: [`values.yaml`エントリ](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/blob/5e7c5c0d6e1159647d65f04ff2cc1f45bb2d5efc/values.yaml#L431-438)を更新します。
    - Docker: `-e`オプションを使用します（`docker run -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json gitlab/gitlab-runner`など）。
 
-1. 必要なオプションを指定した`docker-machine`が仮想マシンを作成できることを確認します。たとえば、1つのNVIDIA Tesla P4アクセラレータを備えた`n1-standard-1`マシンを作成するには、`test-gpu`を名前で置き換えて、次のように実行します:
+1. 必要なオプションを指定した`docker-machine`が仮想マシンを作成できることを確認します。たとえば、1つのNVIDIA Tesla P4アクセラレータを備えた`n1-standard-1`マシンを作成するには、`test-gpu`を名前で置き換えて、次のように実行します。
 
    ```shell
    docker-machine create --driver google --google-project your-google-project \
@@ -153,7 +153,7 @@ GPUを使用するインスタンスを作成するには、次のDocker Machine
      --google-metadata "install-nvidia-driver=True" test-gpu
    ```
 
-1. GPUがアクティブであることを確認するには、マシンにSSHで接続し、`nvidia-smi`を実行します:
+1. GPUがアクティブであることを確認するには、マシンにSSHで接続し、`nvidia-smi`を実行します。
 
    ```shell
    $ docker-machine ssh test-gpu sudo nvidia-smi
@@ -178,7 +178,7 @@ GPUを使用するインスタンスを作成するには、次のDocker Machine
    +-----------------------------------------------------------------------------+
    ```
 
-1. 費用を節約するために、このテストインスタンスを削除します:
+1. 費用を節約するために、このテストインスタンスを削除します。
 
    ```shell
    docker-machine rm test-gpu
@@ -186,7 +186,7 @@ GPUを使用するインスタンスを作成するには、次のDocker Machine
 
 #### GitLab Runnerを設定する {#configuring-gitlab-runner-1}
 
-1. これらのオプションを検証したら、[`runners.docker`設定](../configuration/advanced-configuration.md#the-runnersdocker-section)で使用可能なすべてのGPUを使用するようにDocker executorを設定します。次に、[GitLab Runner `runners.machine`設定の`MachineOptions`設定](../configuration/advanced-configuration.md#the-runnersmachine-section)にDocker Machineオプションを追加します。次に例を示します:
+1. これらのオプションを検証したら、[`runners.docker`設定](../configuration/advanced-configuration.md#the-runnersdocker-section)で使用可能なすべてのGPUを使用するようにDocker executorを設定します。次に、[GitLab Runner `runners.machine`設定の`MachineOptions`設定](../configuration/advanced-configuration.md#the-runnersmachine-section)にDocker Machineオプションを追加します。例: 
 
    ```toml
    [runners.docker]
@@ -212,7 +212,7 @@ Docker Machine executorを使用するときに次の問題が発生する可能
 
 Docker Machineをインストールするときに、`ERROR: Error creating machine: Error running provisioning: error installing docker`というエラーが発生することがあります。
 
-Docker Machineは次のスクリプトを使用して、新しくプロビジョニングされた仮想マシンへのDockerのインストールを試行します:
+Docker Machineは次のスクリプトを使用して、新しくプロビジョニングされた仮想マシンへのDockerのインストールを試行します。
 
 ```shell
 if ! type docker; then curl -sSL "https://get.docker.com" | sh -; fi
@@ -226,7 +226,7 @@ if ! type docker; then curl -sSL "https://get.docker.com" | sh -; fi
 
 ### エラー: Dockerデーモンに接続できない {#error-cannot-connect-to-the-docker-daemon}
 
-ジョブは、準備段階で次のエラーメッセージで失敗することがあります:
+ジョブは、準備段階で次のエラーメッセージで失敗することがあります。
 
 ```plaintext
 Preparing environment

@@ -14,24 +14,30 @@ title: グラフィカルプロセッシングユニット（GPU）の使用
 
 {{< history >}}
 
-- GitLab Runner 13.9で導入されました。
+- GitLab Runner 13.9で導入。
 
 {{< /history >}}
 
-GitLab Runnerは、グラフィカルプロセッシングユニット（GPU）の使用をサポートしています。次のセクションでは、さまざまなexecutorでGPUを有効にするために必要な設定について説明します。
+GitLab Runnerは、グラフィカルプロセッシングユニット（GPU）の使用をサポートしています。次のセクションでは、さまざまなexecutorに対してGPUを有効にするために必要な設定について説明します。
 
 ## Shell executor {#shell-executor}
 
-Runnerの設定は必要ありません。
+必要なRunnerの設定はありません。
 
 ## Docker executor {#docker-executor}
 
-前提要件:
+{{< alert type="warning" >}}
+
+Podmanをコンテナのランタイムエンジンとして使用している場合、GPUは検出されません。詳細については、[issue 39095](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39095)を参照してください。
+
+{{< /alert >}}
+
+前提条件: 
 
 - [NVIDIAドライバー](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/index.html)をインストールします。
-- [NVIDIAコンテナToolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)をインストールします。
+- [NVIDIAコンテナツールキット](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)をインストールします。
 
-`gpus`または`service_gpus`設定オプションを[`runners.docker`セクション](advanced-configuration.md#the-runnersdocker-section)で使用します:
+[`runners.docker`セクション](advanced-configuration.md#the-runnersdocker-section)で、`gpus`または`service_gpus`の設定オプションを使用します:
 
 ```toml
 [runners.docker]
@@ -45,13 +51,35 @@ Runnerの設定は必要ありません。
 
 ## Kubernetes executor {#kubernetes-executor}
 
-Runnerの設定は不要です。[ノードセレクターがGPUをサポートするノードを選択している](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/)ことを確認してください。
+前提条件: 
 
-GitLab Runnerは、[Amazon Elastic Kubernetes Serviceでテスト](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4355)され、[GPU対応インスタンス](https://docs.aws.amazon.com/dlami/latest/devguide/gpu.html)でテストされています。
+- [ノードセレクターがGPUをサポートするノードを選択](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/)していることを確認してください。
+- `FF_USE_ADVANCED_POD_SPEC_CONFIGURATION`機能フラグを有効にします。
+
+GPUサポートを有効にするには、ポッドの仕様でGPUリソースをリクエストするようにRunnerを設定します。例: 
+
+```toml
+[[runners.kubernetes.pod_spec]]
+  name = "gpu"
+  patch = '''
+    containers:
+    - name: build
+      resources:
+        requests:
+          nvidia.com/gpu: 1
+        limits:
+          nvidia.com/gpu: 1
+  '''
+  patch_type = "strategic" # <--- `strategic` patch_type
+```
+
+ジョブの要件に基づいて、`requests`および`limits`のGPU数を調整します。
+
+GitLab Runnerは、[Amazon Elastic Kubernetes Serviceでテスト](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4355)されており、[GPU対応のインスタンス](https://docs.aws.amazon.com/dlami/latest/devguide/gpu.html)を備えています。
 
 ## GPUが有効になっていることを検証する {#validate-that-gpus-are-enabled}
 
-NVIDIA GPUでRunnerを使用できます。NVIDIA GPUの場合、CIジョブでGPUが有効になっていることを確認する方法の1つは、スクリプトの先頭で`nvidia-smi`を実行することです。次に例を示します: 
+NVIDIA GPUでRunnerを使用できます。NVIDIA GPUの場合、CIジョブに対してGPUが有効になっていることを確認する方法の1つは、スクリプトの先頭で`nvidia-smi`を実行することです。例: 
 
 ```yaml
 train:

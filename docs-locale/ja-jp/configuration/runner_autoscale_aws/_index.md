@@ -20,7 +20,7 @@ GitLab Runnerの最大の利点の1つは、ビルドがすぐに処理される
 
 さらに[AmazonのEC2スポットインスタンス](https://aws.amazon.com/ec2/spot/)を利用することで、非常に強力なオートスケールマシンを使用しながら、GitLab Runnerインスタンスのコストを大幅に削減できます。
 
-## 前提要件 {#prerequisites}
+## 前提条件 {#prerequisites}
 
 設定のほとんどがAWSで行われるため、Amazon Web Services（AWS）に関する知識が必要です。
 
@@ -36,13 +36,13 @@ Docker Machineは、Dockerデーモンとの通信に必要なポート`2376`お
 
 ### AWS認証情報 {#aws-credentials}
 
-キャッシュのスケール（EC2）とキャッシュの更新（S3経由）の権限を持つユーザーに関連付けられている[AWSアクセスキー](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html)が必要です。EC2（AmazonEC2FullAccess）およびS3の[ポリシー](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-policies-for-amazon-ec2.html)を使用して新しいユーザーを作成します。S3に必要な最小限の権限の詳細については、[`runners.cache.s3`](../advanced-configuration.md#the-runnerscaches3-section)を参照してください。セキュリティを強化するために、そのユーザーのコンソールログインを無効にできます。タブを開いたままにするか、後で[GitLab Runnerの設定](#the-runnersmachine-section)で使用するためにセキュリティ認証情報をエディタにコピーして貼り付けます。
+キャッシュのスケール（EC2）とキャッシュの更新（S3経由）の権限を持つユーザーに関連付けられている[AWSアクセスキー](https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds.html)が必要です。EC2（AmazonEC2FullAccess）およびS3の[ポリシー](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-policies-for-amazon-ec2.html)を使用して新しいユーザーを作成します。S3に必要な最小限の権限の詳細については、[`runners.cache.s3`](../advanced-configuration.md#the-runnerscaches3-section)を参照してください。セキュリティを強化するために、そのユーザーのコンソールログインを無効にできます。タブを開いたままにするか、後で[GitLab Runnerの設定](#the-runnersmachine-section)で使用するためにセキュリティ認証情報をエディタにコピーして貼り付けます。
 
 必要な`AmazonEC2FullAccess`ポリシーと`AmazonS3FullAccess`ポリシーを使用して[EC2インスタンスプロファイル](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)を作成することもできます。
 
 ジョブの実行のために新しいEC2インスタンスをプロビジョニングするには、このインスタンスプロファイルをRunnerマネージャーEC2インスタンスにアタッチします。Runnerマシンがインスタンスプロファイルを使用している場合は、Runnerマネージャーのインスタンスプロファイルに`iam:PassRole`アクションを含めます。
 
-次に例を示します:
+例: 
 
 ```json
 {
@@ -63,7 +63,7 @@ Docker Machineは、Dockerデーモンとの通信に必要なポート`2376`お
 
 Runnerマネージャーインスタンス自体はジョブを実行しないため、これは強力なマシンである必要はありません。最初の設定では、小さなインスタンスから開始できます。このマシンは常に稼働している必要があるため、専任ホストです。したがって、継続的なベースラインコストがかかるのはこのホストだけです。
 
-前提要件をインストールします:
+前提条件をインストールします。
 
 1. サーバーにログインします
 1. [GitLabの公式リポジトリからGitLab Runnerをインストールします](../../install/linux-repository.md)
@@ -74,7 +74,7 @@ Runnerがインストールされたので、次にRunnerを登録します。
 
 ## GitLab Runnerを登録する {#registering-the-gitlab-runner}
 
-GitLab Runnerを設定する前に、最初にGitLab Runnerを登録して、GitLabインスタンスに接続する必要があります:
+GitLab Runnerを設定する前に、最初にGitLab Runnerを登録して、GitLabインスタンスに接続する必要があります。
 
 1. [Runnerトークンを取得します](https://docs.gitlab.com/ci/runners/)
 1. [Runnerを登録します](../../register/_index.md)
@@ -100,7 +100,7 @@ Runnerが登録されたので、その設定ファイルを編集してAWS Mach
 
 `check_interval`オプションは、RunnerがGitLabで新しいジョブを確認する頻度を秒単位で定義します。
 
-次に例を示します:
+例: 
 
 ```toml
 concurrent = 10
@@ -115,7 +115,7 @@ check_interval = 0
 
 `limit`は、このRunnerが起動するマシン（実行中のマシンおよびアイドル状態のマシン）の最大数を設定します。詳細については、[`limit`、`concurrent`、`IdleCount`の間の関係](../autoscale.md#how-concurrent-limit-and-idlecount-generate-the-upper-limit-of-running-machines)をご確認ください。
 
-次に例を示します:
+例: 
 
 ```toml
 [[runners]]
@@ -134,7 +134,7 @@ check_interval = 0
 
 次に`disable_cache = true`を使用して、Docker executorの内部キャッシュメカニズムを無効にします。これは、以下のセクションで説明するように分散キャッシュモードを使用するためです。
 
-次に例を示します:
+例: 
 
 ```toml
   [runners.docker]
@@ -149,7 +149,7 @@ check_interval = 0
 
 ジョブの処理をスピードアップするために、GitLab Runnerは、選択されたディレクトリやファイルを保存し、後続のジョブ間で共有するキャッシュメカニズムを提供します。このセットアップでは必須ではありませんが、GitLab Runnerが提供する分散キャッシュメカニズムを使用することをお勧めします。新しいインスタンスがオンデマンドで作成されるため、キャッシュを保存する共通の場所を確保することが重要です。
 
-次の例ではAmazon S3を使用します:
+次の例ではAmazon S3を使用します。
 
 ```toml
   [runners.cache]
@@ -163,7 +163,7 @@ check_interval = 0
       BucketLocation = "us-west-2"
 ```
 
-キャッシュメカニズムを詳しく調べるための詳細情報を以下に示します:
+キャッシュメカニズムを詳しく調べるための詳細情報を以下に示します。
 
 - [`runners.cache`のリファレンス](../advanced-configuration.md#the-runnerscache-section)
 - [`runners.cache.s3`のリファレンス](../advanced-configuration.md#the-runnerscaches3-section)
@@ -174,12 +174,12 @@ check_interval = 0
 
 これは設定で最も重要な部分であり、GitLab Runnerに対して新しいDocker Machineインスタンスを起動または削除する方法とタイミングを指示します。
 
-AWS Machineオプションを中心に説明します。その他の設定については、以下の資料を参照してください:
+AWS Machineオプションを中心に説明します。その他の設定については、以下の資料を参照してください。
 
 - [基盤となるオートスケールアルゴリズムとパラメータ](../autoscale.md#autoscaling-algorithm-and-parameters) \- 組織のニーズに応じて異なります。
 - [オートスケール期間](../autoscale.md#configure-autoscaling-periods) \- 組織で作業が行われない一定の期間がある場合（週末など）に役立ちます。
 
-以下に`runners.machine`セクションの例を示します:
+以下に`runners.machine`セクションの例を示します。
 
 ```toml
   [runners.machine]
@@ -247,7 +247,7 @@ Docker Machineドライバーは`amazonec2`に設定され、マシン名には�
 
 ### 完全な例 {#getting-it-all-together}
 
-完全な`/etc/gitlab-runner/config.toml`の例を次に示します:
+完全な`/etc/gitlab-runner/config.toml`の例を次に示します。
 
 ```toml
 concurrent = 10
@@ -303,12 +303,12 @@ check_interval = 0
 
 ## Amazon EC2スポットインスタンスによってコストを削減する {#cutting-down-costs-with-amazon-ec2-spot-instances}
 
-Amazonでは次のように[説明](https://aws.amazon.com/ec2/spot/)されています:
+Amazonでは次のように[説明](https://aws.amazon.com/ec2/spot/)されています。
 
 >
 Amazon EC2スポットインスタンスを使用すると、予備のAmazon EC2コンピューティングキャパシティに入札できます。スポットインスタンスは、オンデマンド料金と比較して割引された料金で利用できることが多いため、アプリケーションの実行コストを大幅に削減し、同じ予算でアプリケーションのコンピューティングキャパシティとスループットを向上させ、新しいタイプのクラウドコンピューティングアプリケーションを有効にすることができます。
 
-上記で選択した[`runners.machine`](#the-runnersmachine-section)オプションに加えて、`/etc/gitlab-runner/config.toml`の`MachineOptions`セクションの下に次の内容を追加します:
+上記で選択した[`runners.machine`](#the-runnersmachine-section)オプションに加えて、`/etc/gitlab-runner/config.toml`の`MachineOptions`セクションの下に次の内容を追加します。
 
 ```toml
     MachineOptions = [
@@ -319,7 +319,7 @@ Amazon EC2スポットインスタンスを使用すると、予備のAmazon EC2
 
 この設定では、`amazonec2-spot-price`が空の場合、AWSはスポットインスタンスの入札価格を、そのインスタンスクラスのデフォルトのオンデマンド価格に設定します。`amazonec2-spot-price`を完全に省略すると、Docker Machineは最高価格を[デフォルト値（1時間あたり$0.50）](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#environment-variables-and-default-values)に設定します。
 
-スポットインスタンスのリクエストをさらにカスタマイズできます:
+スポットインスタンスのリクエストをさらにカスタマイズできます。
 
 ```toml
     MachineOptions = [
@@ -331,7 +331,7 @@ Amazon EC2スポットインスタンスを使用すると、予備のAmazon EC2
 
 この設定では、Docker Machineは1時間あたり最大スポットリクエスト価格が$0.03のスポットインスタンスを使用して作成され、スポットインスタンスの期間は60分に制限されます。前述の数値`0.03`は単なる例です。選択したリージョンに基づいて現在の価格を確認してください。
 
-Amazon EC2スポットインスタンスの詳細については、次のリンクをご覧ください:
+Amazon EC2スポットインスタンスの詳細については、次のリンクをご覧ください。
 
 - <https://aws.amazon.com/ec2/spot/>
 - <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html>
@@ -345,7 +345,7 @@ Amazon EC2スポットインスタンスの詳細については、次のリン�
 
 その結果、オートスケールRunnerは新しいインスタンスをリクエストし続けても、新しいマシンを作成できません。これにより、最終的に60件のリクエストが行われ、AWSはそれ以上のリクエストを受け入れなくなります。その後、許容できるスポット価格になっても、呼び出し回数の制限を超えているため、しばらくの間ロックアウトされます。
 
-この状況が発生した場合は、Runnerマネージャーマシンで次のコマンドを使用して、Docker Machineの状態を確認できます:
+この状況が発生した場合は、Runnerマネージャーマシンで次のコマンドを使用して、Docker Machineの状態を確認できます。
 
 ```shell
 docker-machine ls -q --filter state=Error --format "{{.NAME}}"
@@ -365,7 +365,7 @@ GitLabフォークは、AWS EC2フリートとスポットインスタンスで�
 
 GitLab Runnerのオートスケール機能を使用すると、時間と費用の両方を節約できます。AWSが提供するスポットインスタンスを使用するとさらに節約できますが、その影響に注意する必要があります。入札価格が十分に高ければ、問題はありません。
 
-このチュートリアルに（大きな）影響を与えた次のユースケースを読むことができます:
+このチュートリアルに（大きな）影響を与えた次のユースケースを読むことができます。
 
-- [HumanGeo、JenkinsからGitLabへ乗り換え](https://about.gitlab.com/blog/2017/11/14/humangeo-switches-jenkins-gitlab-ci/)
-- [Substrakt Health - GitLab CI/CD Runnerをオートスケールし、EC2コストを90%削減](https://about.gitlab.com/blog/2017/11/23/autoscale-ci-runners/)
+- [HumanGeo、JenkinsからGitLabへ乗り換え](https://about.gitlab.com/blog/humangeo-switches-jenkins-gitlab-ci/)
+- [Substrakt Health - GitLab CI/CD Runnerをオートスケールし、EC2コストを90%削減](https://about.gitlab.com/blog/autoscale-ci-runners/)

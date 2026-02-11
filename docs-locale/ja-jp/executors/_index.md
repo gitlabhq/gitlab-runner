@@ -18,7 +18,7 @@ GitLab Runnerはさまざまなexecutorを実装しています。これらのex
 
 各executorでサポートされている機能の詳細については、[互換性チャート](#compatibility-chart)を参照してください。
 
-GitLab Runnerは次のexecutorを提供します:
+GitLab Runnerは次のexecutorを提供します。
 
 - [SSH](ssh.md)
 - [Shell](shell.md)
@@ -33,15 +33,15 @@ GitLab Runnerは次のexecutorを提供します:
 
 これらのexecutorはロックされており、新規のexecutorの開発や受け入れは行っていません。詳細については、[新しいexecutorのコントリビュート](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CONTRIBUTING.md#contributing-new-executors)を参照してください。
 
-## Docker以外のexecutorの前提要件 {#prerequisites-for-non-docker-executors}
+## Docker以外のexecutorの前提条件 {#prerequisites-for-non-docker-executors}
 
-[ヘルパーイメージに依存しない](../configuration/advanced-configuration.md#helper-image)executorでは、ターゲットマシンと`PATH`にGitがインストールされている必要があります。常に[利用可能な最新バージョンのGit](https://git-scm.com/downloads)を使用してください。
+[ヘルパーイメージに依存しない](../configuration/advanced-configuration.md#helper-image)executorでは、ターゲットマシンと`PATH`にGitがインストールされている必要があります。常に[利用可能な最新バージョンのGit](https://git-scm.com/downloads/)を使用してください。
 
 ターゲットマシンに[Git LFS](https://git-lfs.com/)がインストールされている場合、GitLab Runnerは`git lfs`コマンドを使用します。GitLab Runnerがこれらのexecutorを使用するすべてのシステムで、Git LFSが最新であることを確認してください。
 
 `git lfs install`を使用して、GitLab Runnerコマンドを実行するユーザーに対してGit LFSを初期化してください。システム全体でGit LFSを初期化するには、`git lfs install --system`を使用します。
 
-GitLabインスタンスとのGitインタラクションを認証するため、GitLab Runnerでは[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)を使用します。[FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)の設定によっては、Git認証情報のヘルパー（[Git認証情報マネージャー](https://github.com/git-ecosystem/git-credential-manager)など）がインストールされていて、認証情報をキャッシュに入れるように設定されている場合、最後に使用された認証情報がそのヘルパーのキャッシュに入れられることがあります:
+GitLabインスタンスとのGitインタラクションを認証するため、GitLab Runnerでは[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)を使用します。[FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)の設定によっては、Git認証情報のヘルパー（[Git認証情報マネージャー](https://github.com/git-ecosystem/git-credential-manager)など）がインストールされていて、認証情報をキャッシュに入れるように設定されている場合、最後に使用された認証情報がそのヘルパーのキャッシュに入れられることがあります。
 
 - [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)が`false`なら、最後に使用された[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)が、インストール済みのGit認証情報ヘルパーに保存されます。
 - [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md)が`true`なら、[`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)は、インストール済みのGit認証情報ヘルパーに保存されず、そのキャッシュに入れられることもありません。
@@ -125,9 +125,9 @@ SSH executorは完全性を期すために追加されましたが、サポー�
 
 ## 互換性チャート {#compatibility-chart}
 
-各種executorでサポートされている機能を以下に示します:
+各種executorでサポートされている機能を以下に示します。
 
-| executor                                     | SSH            | Shell          | VirtualBox      | Parallels      | Docker  | Docker Autoscaler | インスタンス       | Kubernetes | カスタム                                                       |
+| executor                                     | SSH            | Shell          | VirtualBox     | Parallels      | Docker  | Docker Autoscaler | インスタンス       | Kubernetes | カスタム                                                       |
 |:---------------------------------------------|:--------------:|:--------------:|:--------------:|:--------------:|:-------:|:-----------------:|:--------------:| :---------:| :-----------------------------------------------------------:|
 | セキュア変数                             | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓                                                           |
 | `.gitlab-ci.yml`: イメージ                      | ✗              | ✗              | ✓（1）          | ✓（1）          | ✓       | ✓                 | ✗              | ✓          | ✓（[`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)を使用） |
@@ -140,7 +140,7 @@ SSH executorは完全性を期すために追加されましたが、サポー�
 
 1. GitLab Runner 14.2でサポートが[追加](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1257)されました。詳細については、[ベースVMイメージの上書き](../configuration/advanced-configuration.md#overriding-the-base-vm-image)セクションを参照してください。
 
-各種Shellでサポートされているシステムを以下に示します:
+各種Shellでサポートされているシステムを以下に示します。
 
 | Shell  | Bash        | PowerShell Desktop | PowerShell Core | Windows Batch（非推奨） |
 |:-------:|:-----------:|:------------------:|:---------------:|:--------------------------:|
@@ -154,7 +154,7 @@ SSH executorは完全性を期すために追加されましたが、サポー�
 1. 新しいRunnerの登録時のデフォルトのShell。
 1. WindowsのBash Shellはサポートされていません。
 
-各種ShellによりサポートされているインタラクティブWebターミナルのシステムを以下に示します:
+各種ShellによりサポートされているインタラクティブWebターミナルのシステムを以下に示します。
 
 | Shell  | Bash        | PowerShell Desktop    | PowerShell Core    | Windows Batch（非推奨） |
 |:-------:|:-----------:|:---------------------:|:------------------:|:--------------------------:|
@@ -166,33 +166,33 @@ SSH executorは完全性を期すために追加されましたが、サポー�
 ```mermaid
 flowchart LR
     Start([Executor<br/>Selection]) --> Auto{Autoscaling?}
-    
+
     Auto -->|YES| Platform{Platform?}
     Auto -->|NO| BuildType{Build<br/>Type?}
-    
+
     Platform -->|Cloud<br/>Native| K8s[Kubernetes]
     Platform -->|Cloud<br/>VMs| OS1{OS?}
-    
+
     OS1 -->|Linux| L1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
     OS1 -->|macOS| M1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
     OS1 -->|Windows| W1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
-    
+
     BuildType -->|Container| OS2{OS?}
     BuildType -->|Shell| OS3{OS?}
-    
+
     OS2 -->|Linux| L2[Docker<br/>Podman]
     OS2 -->|macOS| M2[Docker]
     OS2 -->|Windows| W2[Docker]
-    
+
     OS3 -->|Linux| L3[Bash<br/>Zsh]
     OS3 -->|macOS| M3[Bash<br/>Zsh]
     OS3 -->|Windows| W3[PowerShell 5.1<br/>PowerShell 7.x]
     OS3 -->|Remote| R3[SSH]
-    
+
     classDef question fill:#e1f3fe,stroke:#333,stroke-width:2px,color:#000
     classDef result fill:#dcffe4,stroke:#333,stroke-width:2px,color:#000
     classDef start fill:#f9f9f9,stroke:#fff,stroke-width:2px,color:#000
-    
+
     class Start start;
     class Auto,Platform,BuildType,OS1,OS2,OS3 question;
     class K8s,L1,M1,W1,L2,M2,W2,L3,M3,W3,R3 result;

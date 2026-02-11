@@ -14,108 +14,108 @@ title: AWS FargateでGitLab CIをオートスケールする
 
 {{< alert type="warning" >}}
 
-Fargateドライバーは、コミュニティでサポートされています。GitLabサポートは、問題のデバッグを支援しますが、保証は提供しません。
+Fargateドライバーは、コミュニティでサポートされています。GitLabサポートは問題のデバッグを支援しますが、保証は提供しません。
 
 {{< /alert >}}
 
-[カスタムexecutor](../../executors/custom.md)のGitLabドライバーは、[AWS Fargate](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate)のAmazon Elastic Container Service (ECS) 上でコンテナを自動的に起動し、各GitLab CIジョブを実行します。
+GitLabの[custom executor](../../executors/custom.md)ドライバー（[AWS Fargate](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate)用）は、Amazon Elastic Container Service (ECS) 上のコンテナを自動的に起動して、各GitLab CIジョブを実行します。
 
-このドキュメントのタスクを完了すると、executorはGitLabから開始されたジョブを実行できます。GitLabでコミットが行われるたびに、GitLabインスタンスは新しいジョブが利用可能であることをRunnerに通知します。Runnerは、AWS ECSで設定したタスク定義に基づいて、ターゲットECSクラスターで新しいタスクを開始します。任意のDockerイメージを使用するようにAWS ECSタスク定義を設定できます。このアプローチでは、AWS Fargateで実行できるビルドのタイプを完全に柔軟に設定できます。
+このドキュメントのタスクを完了すると、executorはGitLabから開始されたジョブを実行できます。GitLabでコミットが行われるたびに、GitLabインスタンスは新しいジョブが利用可能になったことをRunnerに通知します。次に、Runnerは、AWS ECSで設定したタスク定義に基づいて、ターゲットECSクラスターで新しいタスクを開始します。任意のDockerイメージを使用するようにAWS ECSタスク定義を設定できます。このアプローチを使用すると、AWS Fargateで実行できるビルドのタイプを完全に柔軟に設定できます。
 
-![GitLab Runner Fargateドライバーアーキテクチャ](../img/runner_fargate_driver_ssh.png)
+![GitLab Runner Fargateドライバーのアーキテクチャ](../img/runner_fargate_driver_ssh.png)
 
-このドキュメントでは、実装の最初の理解を深めることを目的とした例を示します。これは本番環境での使用を目的としていません。AWSでは追加のセキュリティが必要です。
+このドキュメントでは、実装の最初の理解を深めるための例を示します。本番環境での使用を目的としたものではありません。AWSでは追加のセキュリティが必要です。
 
 たとえば、2つのAWSセキュリティグループが必要になる場合があります:
 
-- GitLab Runnerをホストし、制限された外部IP範囲（管理アクセス用）からのSSH接続のみを受け入れるEC2インスタンスによって使用されるもの。
+- GitLab RunnerをホストするEC2インスタンスで使用され、制限された外部IP範囲（管理アクセス用）からのSSH接続のみを受け入れるもの。
 - Fargateタスクに適用され、EC2インスタンスからのSSHトラフィックのみを許可するもの。
 
-パブリックでないコンテナレジストリの場合、ECSタスクには、[（AWS ECRのみの）IAM権限](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html)または非ECRプライベートレジストリの[タスクのプライベートレジストリ認証](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html)のいずれかが必要です。
+非公開のコンテナレジストリの場合、ECSタスクには、[IAM権限（AWS ECRのみ）](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html)または非ECRプライベートレジストリの[タスクのプライベートレジストリ認証](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html)が必要です。
 
 CloudFormationまたはTerraformを使用して、AWSインフラストラクチャのプロビジョニングとセットアップを自動化できます。
 
 {{< alert type="warning" >}}
 
-CI/CDジョブは、`.gitlab-ci.yml`ファイルの`image:`キーワードの値ではなく、ECSタスクで定義されたイメージを使用します。ECSでは、ECSタスクに使用されるイメージをオーバーライドできません。
+CI/CDジョブは、`image:`ファイルの`.gitlab-ci.yml`キーワードの値ではなく、ECSタスクで定義されたイメージを使用します。ECSでは、ECSタスクに使用されるイメージをオーバーライドすることはできません。
 
-この制限を回避するには、次の操作を実行します:
+この制限を回避するには、次の操作を実行できます:
 
-- Runnerが使用されるすべてのプロジェクトのすべてのビルド依存関係を含むECSタスク定義でイメージを作成して使用します。
-- 異なるイメージを持つ複数のECSタスク定義を作成し、`FARGATE_TASK_DEFINITION`CI/CD変数にARNを指定します。
-- 公式の[AWS EKS Blueprints](https://aws-ia.github.io/terraform-aws-eks-blueprints/)に従って、EKSクラスターの作成を検討してください。
+- Runnerが使用するすべてのプロジェクトのすべてのビルド依存関係を含むイメージをECSタスク定義に作成して使用します。
+- 異なるイメージを持つ複数のECSタスク定義を作成し、`FARGATE_TASK_DEFINITION` CI/CD変数でARNを指定します。
+- 公式の[AWS EKSブループリント](https://aws-ia.github.io/terraform-aws-eks-blueprints/)に従って、EKSクラスターの作成を検討してください。
 
-詳細については、[GitLab EKS Fargate Runnerを1時間とゼロコードで開始する方法](https://about.gitlab.com/blog/2023/05/24/eks-fargate-runner/)を参照してください。
+詳細については、[GitLab EKS Fargate Runnerを1時間で開始し、コードをゼロにする](https://about.gitlab.com/blog/eks-fargate-runner/)を参照してください。
 
 {{< /alert >}}
 
 {{< alert type="warning" >}}
 
-Fargateはコンテナホストを抽象化するため、コンテナホストのプロパティの設定が制限されます。これは、ディスクまたはネットワークへの高いIOを必要とするRunnerワークロードに影響します。これらのプロパティは、Fargateでの設定が制限されているか、または設定できないためです。FargateでGitLab Runnerを使用する前に、CPU、メモリ、ディスクIO、またはネットワークIOで高いコンピューティング特性を持つRunnerワークロードがFargateに適していることを確認してください。
+Fargateはコンテナホストを抽象化するため、コンテナホストのプロパティの設定可能性が制限されます。これは、ディスクまたはネットワークへの高いIOを必要とするRunnerワークロードに影響します。これらのプロパティは、Fargateでは設定可能性が限られているか、設定できないためです。FargateでGitLab Runnerを使用する前に、CPU、メモリ、ディスクI/O、またはネットワークI/Oに関するコンピューティング特性の高いRunnerワークロードがFargateに適していることを確認してください。
 
 {{< /alert >}}
 
-## 前提要件 {#prerequisites}
+## 前提条件 {#prerequisites}
 
 始める前に、以下が必要です:
 
-- EC2、ECS、およびECRリソースを作成および設定するための権限を持つAWS IAMユーザー。
+- EC2、ECS、ECRリソースを作成および構成する権限を持つAWS IAMユーザー。
 - AWS VPCとサブネット。
 - 1つ以上のAWSセキュリティグループ。
 
-## ステップ1: AWS Fargateタスク用のコンテナイメージを準備する {#step-1-prepare-a-container-image-for-the-aws-fargate-task}
+## ステップ1: AWS Fargateタスクのコンテナイメージを準備する {#step-1-prepare-a-container-image-for-the-aws-fargate-task}
 
-コンテナイメージを準備します。このイメージをレジストリにアップロードできます。これは、GitLabジョブの実行時にコンテナの作成に使用できます。
+コンテナイメージを準備します。このイメージをレジストリにアップロードできます。このレジストリは、GitLabジョブの実行時にコンテナを作成するために使用できます。
 
-1. イメージに、CIジョブのビルドに必要なツールがあることを確認します。たとえば、Javaプロジェクトには`Java JDK`や、MavenやGradleなどのビルドツールが必要です。Node.jsプロジェクトには、`node`と`npm`が必要です。
-1. イメージに、アーティファクトとキャッシュを処理するGitLab Runnerがあることを確認してください。詳細については、カスタムexecutorドキュメントの[実行](../../executors/custom.md#run)ステージセクションを参照してください。
+1. イメージにCIジョブのビルドに必要なツールがあることを確認します。たとえば、Javaプロジェクトには、`Java JDK`やMavenやGradleなどのビルドツールが必要です。Node.jsプロジェクトには、`node`と`npm`が必要です。
+1. イメージにアーティファクトとキャッシュを処理するGitLab Runnerがあることを確認します。詳細については、カスタムexecutorドキュメントの[実行](../../executors/custom.md#run)ステージセクションを参照してください。
 1. コンテナイメージが公開キー認証を介してSSH接続を受け入れることができることを確認します。Runnerは、この接続を使用して、`.gitlab-ci.yml`ファイルで定義されたビルドコマンドをAWS Fargate上のコンテナに送信します。SSHキーは、Fargateドライバーによって自動的に管理されます。コンテナは、`SSH_PUBLIC_KEY`環境変数からのキーを受け入れることができる必要があります。
 
-GitLab RunnerとSSH設定を含む[Debianの例](https://gitlab.com/tmaczukin-test-projects/fargate-driver-debian)をご覧ください。[Node.jsの例](https://gitlab.com/aws-fargate-driver-demo/docker-nodejs-gitlab-ci-fargate)をご覧ください。
+GitLab RunnerとSSH構成を含む[Debianの例](https://gitlab.com/tmaczukin-test-projects/fargate-driver-debian)をご覧ください。[Node.jsの例](https://gitlab.com/aws-fargate-driver-demo/docker-nodejs-gitlab-ci-fargate)をご覧ください。
 
 ## ステップ2: コンテナイメージをレジストリにプッシュする {#step-2-push-the-container-image-to-a-registry}
 
 イメージを作成したら、ECSタスク定義で使用するために、イメージをコンテナレジストリに公開します。
 
-- リポジトリを作成してイメージをECRにプッシュするには、[Amazon ECRリポジトリ](https://docs.aws.amazon.com/AmazonECR/latest/userguide/Repositories.html)ドキュメントに従ってください。
-- AWS CLIを使用してイメージをECRにプッシュするには、[AWS CLIを使用したAmazon ECRの開始方法](https://docs.aws.amazon.com/AmazonECR/latest/userguide/getting-started-cli.html)ドキュメントに従ってください。
-- [GitLabコンテナレジストリ](https://docs.gitlab.com/user/packages/container_registry/)を使用するには、[Debian](https://gitlab.com/tmaczukin-test-projects/fargate-driver-debian)または[NodeJS](https://gitlab.com/aws-fargate-driver-demo/docker-nodejs-gitlab-ci-fargate)の例を使用できます。Debianイメージは、`registry.gitlab.com/tmaczukin-test-projects/fargate-driver-debian:latest`に公開されています。NodeJSのイメージ例は、`registry.gitlab.com/aws-fargate-driver-demo/docker-nodejs-gitlab-ci-fargate:latest`に公開されています。
+- リポジトリを作成してイメージをECRにプッシュするには、[Amazon ECRリポジトリ](https://docs.aws.amazon.com/AmazonECR/latest/userguide/Repositories.html)のドキュメントに従ってください。
+- AWS CLIを使用してイメージをECRにプッシュするには、[AWS CLIを使用したAmazon ECRの概要](https://docs.aws.amazon.com/AmazonECR/latest/userguide/getting-started-cli.html)ドキュメントに従ってください。
+- [GitLabコンテナレジストリ](https://docs.gitlab.com/user/packages/container_registry/)を使用するには、[Debian](https://gitlab.com/tmaczukin-test-projects/fargate-driver-debian)または[NodeJS](https://gitlab.com/aws-fargate-driver-demo/docker-nodejs-gitlab-ci-fargate)の例を使用できます。Debianイメージは`registry.gitlab.com/tmaczukin-test-projects/fargate-driver-debian:latest`に公開されています。NodeJSのサンプルイメージは`registry.gitlab.com/aws-fargate-driver-demo/docker-nodejs-gitlab-ci-fargate:latest`に公開されています。
 
-## ステップ3: GitLab Runner用のEC2インスタンスを作成する {#step-3-create-an-ec2-instance-for-gitlab-runner}
+## ステップ3: GitLab RunnerのEC2インスタンスを作成する {#step-3-create-an-ec2-instance-for-gitlab-runner}
 
-次に、AWS EC2インスタンスを作成します。次のステップでは、GitLab Runnerをインストールします。
+次に、AWS EC2インスタンスを作成します。次の手順では、GitLab Runnerをインストールします。
 
 1. [https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard](https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard)にアクセスします。
-1. インスタンスの場合は、Ubuntu Server 18.04 LTS AMIを選択します。選択したAWSリージョンによっては、名前が異なる場合があります。
-1. インスタンスタイプの場合は、t2.microを選択します。**次へ: インスタンスの詳細**を選択します。
-1. **Number of instances**（インスタンス数）のデフォルトのままにします。
-1. **ネットワーク**の場合は、VPCを選択します。
-1. **Auto-assign Public IP**（パブリックIPの自動割り当て）を**有効**に設定します。
-1. **IAM role**（IAMロール）で、**Create new IAM role**（新しいIAMロールを作成）を選択します。このロールはテスト目的のみのものであり、安全ではありません。
-   1. **ロールを作成する**を選択します。
-   1. **AWS service**（AWSサービス）を選択し、**Common use cases**（一般的なユースケース）で**EC2**（EC2）を選択します。次に、**次へ: 権限**を選択します。
-   1. **AmazonECS_FullAccess**（AmazonECS_FullAccess）ポリシーのチェックボックスをオンにします。**次へ: タグ**を選択します。
-   1. **次へ: レビュー**を選択します。
-   1. IAMロールの名前（例：`fargate-test-instance`）を入力し、**ロールを作成する**を選択します。
+1. インスタンスの場合は、Ubuntu Server 18.04 LTS AMIを選択します。名前は、選択したAWSリージョンによって異なる場合があります。
+1. インスタンスタイプの場合は、t2.microを選択します。**次へ: インスタンスの詳細を設定**。
+1. **Number of instances**はデフォルトのままにします。
+1. **ネットワーク**はネットワーク、VPCを選択します。
+1. **Auto-assign Public IP**を**有効**に設定します。
+1. **IAM role**で、**Create new IAM role**を選択します。このロールはテストのみを目的としており、安全ではありません。
+   1. **Create role**を選択します。
+   1. **AWS service**を選択し、**Common use cases**で、**EC2**を選択します。次に、**次へ：を選択します: 権限**。
+   1. **AmazonECS_FullAccess**ポリシーのチェックボックスをオンにします。**次へ: タグ**。
+   1. **次へ: レビュー**。
+   1. IAMロールの名前（`fargate-test-instance`など）を入力し、**ロールを作成する**を選択します。
 1. インスタンスを作成しているブラウザータブに戻ります。
-1. **Create new IAM role**（新しいIAMロールを作成）の左側にある更新ボタンを選択します。`fargate-test-instance`ロールを選択します。**次へ: ストレージの追加**を選択します。
-1. **次へ: タグの追加**を選択します。
-1. **次へ: セキュリティグループ**を選択します。
-1. **Create a new security group**（新しいセキュリティグループを作成）を選択し、`fargate-test`という名前を付け、SSHのルールが定義されていることを確認します（`Type: SSH, Protocol: TCP, Port Range: 22`）。インバウンドルールとアウトバウンドルールのIP範囲を指定する必要があります。
-1. **Review and Launch**（レビューと起動）を選択します。
-1. **Launch**（起動）を選択します。
-1. （オプション）**Create a new key pair**（新しいキーペアを作成）を選択し、`fargate-runner-manager`という名前を付けて、**Download Key Pair**（キーペアをダウンロード）を選択します。SSHのプライベートキーがコンピューターにダウンロードされます（ブラウザーで設定されているディレクトリを確認してください）。
-1. **Launch Instances**（インスタンスを起動）を選択します。
-1. **View Instances**（インスタンスを表示）を選択します。
+1. **Create new IAM role**の左側にある更新ボタンを選択します。`fargate-test-instance`ロールを選択します。**次へ: ストレージを追加**。
+1. **次へ: タグの追加**。
+1. **次へ: セキュリティグループを設定**。
+1. **Create a new security group**を選択し、`fargate-test`という名前を付けて、SSHのルールが定義されていることを確認します（`Type: SSH, Protocol: TCP, Port Range: 22`）。インバウンドルールとアウトバウンドルールのIP範囲を指定する必要があります。
+1. **Review and Launch**を選択します。
+1. **Launch**を選択します。
+1. オプション。オプション。**Create a new key pair**を選択し、`fargate-runner-manager`という名前を付けて、**Download Key Pair**を選択します。SSHのプライベートキーがコンピューターにダウンロードされます（ブラウザーで構成されたディレクトリを確認してください）。
+1. **Launch Instances**を選択します。
+1. **View Instances**を選択します。
 1. インスタンスが起動するまで待ちます。`IPv4 Public IP`アドレスを書き留めます。
 
-## ステップ4: EC2インスタンスにGitLab Runnerをインストールして設定する {#step-4-install-and-configure-gitlab-runner-on-the-ec2-instance}
+## ステップ4: EC2インスタンスにGitLab Runnerをインストールして構成する {#step-4-install-and-configure-gitlab-runner-on-the-ec2-instance}
 
-UbuntuインスタンスにGitLab Runnerをインストールします。
+次に、UbuntuインスタンスにGitLab Runnerをインストールします。
 
-1. GitLabプロジェクトの**設定 > CI/CD**に移動し、Runnerセクションを展開します。**Set up a specific Runner manually**（特定Runnerを手動でセットアップ）で、登録トークンを書き留めます。
-1. `chmod 400 path/to/downloaded/key/file`を実行して、キーファイルに適切な権限があることを確認します。
-1. 次を使用して、作成したEC2インスタンスにSSHで接続します:
+1. GitLabプロジェクトの**設定 > CI/CD**に移動し、Runnerセクションを展開します。**Set up a specific Runner manually**で、登録トークンを書き留めます。
+1. キーファイルに適切な権限があることを確認するために、`chmod 400 path/to/downloaded/key/file`を実行します。
+1. 次のコマンドを使用して、作成したEC2インスタンスにSSHで接続します:
 
    ```shell
    ssh ubuntu@[ip_address] -i path/to/downloaded/key/file
@@ -129,7 +129,7 @@ UbuntuインスタンスにGitLab Runnerをインストールします。
    sudo apt install gitlab-runner
    ```
 
-1. ステップ1でメモしたGitLab URLと登録トークンを使用して、このコマンドを実行します。
+1. 手順1でメモしたGitLab URLと登録トークンを使用して、このコマンドを実行します。
 
    ```shell
    sudo gitlab-runner register --url "https://gitlab.com/" --registration-token TOKEN_HERE --name fargate-test-runner --run-untagged --executor custom -n
@@ -169,9 +169,9 @@ UbuntuインスタンスにGitLab Runnerをインストールします。
           volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
    ```
 
-   [証明書の信頼の詳細](../tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages)。
+   [証明書を信頼する方法の詳細](../tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages)。
 
-   以下に示す`config.toml`ファイルのセクションは、登録コマンドによって作成されます。変更しないでください。
+   以下に示す`config.toml`のセクションは、登録コマンドによって作成されます。変更しないでください。
 
    ```toml
    concurrent = 1
@@ -208,19 +208,19 @@ UbuntuインスタンスにGitLab Runnerをインストールします。
      Port = 22
    ```
 
-   - `Cluster`の値と`TaskDefinition`タスク定義の名前を書き留めます。この例は、リビジョン番号として`:1`を持つ`test-task`を示しています。リビジョン番号が指定されていない場合は、最新の**active**（アクティブ）なリビジョンが使用されます。
+   - `Cluster`の値と`TaskDefinition`の名前を書き留めます。この例では、`test-task`がリビジョン番号として`:1`と表示されています。リビジョン番号が指定されていない場合は、最新の**active**なリビジョンが使用されます。
    - リージョンを選択します。Runnerマネージャーインスタンスから`Subnet`の値を取得します。
-   - セキュリティグループIDを見つけるには:
+   - セキュリティグループIDを見つける方法:
 
-     1. AWSで、インスタンスのリストで、作成したEC2インスタンスを選択します。詳細が表示されます。
-     1. **Security groups**（セキュリティグループ）で、作成したグループの名前を選択します。
-     1. **Security group ID**（セキュリティグループID） をコピーします。
+     1. AWSのインスタンスのリストで、作成したEC2インスタンスを選択します。詳細が表示されます。
+     1. **Security groups**で、作成したグループの名前を選択します。
+     1. **Security group ID**をコピーします。
 
-     本番環境では、セキュリティグループのセットアップと使用に関する[AWSガイドライン](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html)に従ってください。
+     本番環境では、セキュリティグループの設定と使用に関する[AWSガイドライン](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html)に従ってください。
 
-   - `EnablePublicIP`がtrueに設定されている場合、SSH接続を実行するためにタスクコンテナのパブリックIPが収集されます。
+   - `EnablePublicIP`がtrueに設定されている場合、タスクコンテナのパブリックIPが収集され、SSH接続が実行されます。
    - `EnablePublicIP`がfalseに設定されている場合:
-     - Fargateドライバーは、タスクコンテナのプライベートIPを使用します。`false`に設定されているときに接続をセットアップするには、ソースがVPC CIDRである場合、VPCセキュリティグループにポート22（SSH）のインバウンドルールが必要です。
+     - Fargateドライバーは、タスクコンテナのプライベートIPを使用します。`false`に設定されている場合に接続をセットアップするには、VPCセキュリティグループにポート22（SSH）のインバウンドルールが必要です。ソースはVPC CIDRです。
      - 外部依存関係をフェッチするには、プロビジョニングされたAWS Fargateコンテナがパブリックインターネットにアクセスできる必要があります。AWS Fargateコンテナにパブリックインターネットアクセスを提供するには、VPCでNATゲートウェイを使用できます。
 
    - SSHサーバーのポート番号はオプションです。省略した場合、デフォルトのSSHポート（22）が使用されます。
@@ -237,51 +237,51 @@ UbuntuインスタンスにGitLab Runnerをインストールします。
 
 Amazon ECSクラスターは、ECSコンテナインスタンスのグループです。
 
-1. [`https://console.aws.amazon.com/ecs/home#/clusters`](https://console.aws.amazon.com/ecs/home#/clusters)に移動します。
-1. **Create Cluster**（クラスターの作成）を選択します。
-1. **Networking only**（ネットワークのみ）タイプを選択します。**次のステップ**を選択します。
-1. `fargate.toml`の場合と同じ`test-cluster`という名前を付けます。
-1. **作成**を選択します。
-1. **View cluster**（クラスターの表示）を選択します。`Cluster ARN`の値から、リージョンとアカウントIDの部分を書き留めます。
-1. **Update Cluster**（クラスターの更新）を選択します。
-1. `Default capacity provider strategy`の横にある**Add another provider**（別のプロバイダーを追加）を選択し、`FARGATE`を選択します。**更新**を選択します。
+1. [`https://console.aws.amazon.com/ecs/home#/clusters`](https://console.aws.amazon.com/ecs/home#/clusters)にアクセスします。
+1. **Create Cluster**を選択します。
+1. **Networking only**タイプを選択します。**次のステップ**を選択します。
+1. 名前を`test-cluster`（`fargate.toml`と同じ）にします。
+1. **Create**を選択します。
+1. **View cluster**を選択します。`Cluster ARN`の値からリージョンとアカウントIDの部分を書き留めます。
+1. **Update Cluster**を選択します。
+1. `Default capacity provider strategy`の横にある**Add another provider**を選択し、`FARGATE`を選択します。**更新**を選択します。
 
-ECS Fargateでのクラスターのセットアップと操作の詳細については、AWS[ドキュメント](https://docs.aws.amazon.com/AmazonECS/latest/userguide/create_cluster.html)を参照してください。
+ECS Fargateでのクラスターの設定と操作の詳細な手順については、[AWSドキュメント](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html)を参照してください。
 
 ## ステップ6: ECSタスク定義を作成する {#step-6-create-an-ecs-task-definition}
 
-このステップでは、タイプ`Fargate`のタスク定義を作成し、CIビルドに使用できるコンテナイメージを参照します。
+この手順では、タイプ`Fargate`のタスク定義を作成し、CIビルドに使用するコンテナイメージを参照します。
 
-1. [`https://console.aws.amazon.com/ecs/home#/taskDefinitions`](https://console.aws.amazon.com/ecs/home#/taskDefinitions)に移動します。
-1. **Create new Task Definition**（新しいタスク定義を作成）を選択します。
-1. **FARGATE**（FARGATE）を選択し、**次のステップ**を選択します。
-1. 名前を`test-task`にします。注: 名前は`fargate.toml`ファイルで定義されているのと同じ値ですが、`:1`はありません）。
-1. **Task memory (GB)**（タスク）メモリ（GB）および**Task CPU (vCPU)**（タスクCPU（vCPU））の値を選択します。
-1. **Add container**（コンテナの追加）を選択します。次に:
-   1. `ci-coordinator`という名前を付けます。これにより、Fargateドライバーが`SSH_PUBLIC_KEY`環境変数を挿入できます。
+1. [`https://console.aws.amazon.com/ecs/home#/taskDefinitions`](https://console.aws.amazon.com/ecs/home#/taskDefinitions)にアクセスします。
+1. **Create new Task Definition**を選択します。
+1. **FARGATE**を選択し、**次のステップ**を選択します。
+1. 名前を`test-task`にします。（注: 名前は`fargate.toml`ファイルで定義されているのと同じ値ですが、`:1`はありません）。
+1. **Task memory (GB)**と**Task CPU (vCPU)**の値を選択します。
+1. **Add container**を選択します。次に:
+   1. `ci-coordinator`という名前を付けて、Fargateドライバーが`SSH_PUBLIC_KEY`環境変数を挿入できるようにします。
    1. イメージを定義します（例：`registry.gitlab.com/tmaczukin-test-projects/fargate-driver-debian:latest`）。
    1. 22/TCPのポートマッピングを定義します。
    1. **追加**を選択します。
-1. **作成**を選択します。
-1. **View task definition**（タスク定義を表示）を選択します。
+1. **Create**を選択します。
+1. **View task definition**を選択します。
 
 {{< alert type="warning" >}}
 
-1つのFargateタスクで、複数のコンテナを起動できます。Fargateドライバーは、`ci-coordinator`名を持つコンテナにのみ`SSH_PUBLIC_KEY`環境変数を挿入します。Fargateドライバーで使用されるすべてのタスク定義に、この名前のコンテナが必要です。この名前を持つコンテナは、上記のように、SSHサーバーとすべてのGitLab Runner要件がインストールされているものである必要があります。
+単一のFargateタスクで、1つまたは複数のコンテナを起動できます。Fargateドライバーは、`ci-coordinator`という名前のコンテナにのみ、`SSH_PUBLIC_KEY`環境変数を挿入します。Fargateドライバーで使用されるすべてのタスク定義に、この名前のコンテナが必要です。この名前の付いたコンテナは、上記のように、SSHサーバーとすべてのGitLab Runnerの要件がインストールされているものである必要があります。
 
 {{< /alert >}}
 
-タスク定義のセットアップと操作の詳細については、AWS[ドキュメント](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-task-definition.html)を参照してください。
+タスク定義の設定と操作の詳細な手順については、AWSの[ドキュメント](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-task-definition.html)を参照してください。
 
-AWS ECRからイメージを起動するために必要なECSサービス権限については、[Amazon ECSタスク実行IAMロール](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html)を参照してください。
+AWS ECRからイメージを起動するために必要なECSサービス許可については、[Amazon ECSタスク実行IAMロール](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html)を参照してください。
 
 GitLabインスタンスでホストされているものを含む、プライベートレジストリへのECS認証については、[タスクのプライベートレジストリ認証](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html)を参照してください。
 
-この時点で、RunnerマネージャーとFargateドライバーが設定され、AWS Fargateでジョブの実行を開始する準備ができました。
+この時点で、RunnerマネージャーとFargateドライバーが構成され、AWS AWS Fargateでジョブの実行を開始する準備が完了します。
 
-## ステップ7: 設定をテストします {#step-7-test-the-configuration}
+## ステップ7: 設定のテスト {#step-7-test-the-configuration}
 
-構成が使用できる状態になりました。
+これで設定を使用する準備ができました。
 
 1. GitLabプロジェクトで、`.gitlab-ci.yml`ファイルを作成します:
 
@@ -293,37 +293,37 @@ GitLabインスタンスでホストされているものを含む、プライ�
    ```
 
 1. プロジェクトの**CI/CD > パイプライン**に移動します。
-1. **Run Pipeline**（パイプラインの実行）を選択します。
-1. ブランチと変数を更新し、**Run Pipeline**（パイプラインの実行）を選択します。
+1. **Run Pipeline**を選択します。
+1. ブランチとすべての変数を更新し、**Run Pipeline**を選択します。
 
 {{< alert type="note" >}}
 
-`.gitlab-ci.yml`ファイルの`image`および`service`キーワードは無視されます。Runnerは、タスク定義で指定された値のみを使用します。
+`.gitlab-ci.yml`ファイル内の`image`および`service`キーワードは無視されます。Runnerは、タスク定義で指定された値のみを使用します。
 
 {{< /alert >}}
 
 ## クリーンアップ {#clean-up}
 
-AWS Fargateでカスタムexecutorをテストした後でクリーンアップを実行する場合は、次のオブジェクトを削除します:
+AWS AWS Fargateでカスタムexecutorをテストした後でクリーンアップを実行する場合は、次のオブジェクトを削除します:
 
-- [ステップ3](#step-3-create-an-ec2-instance-for-gitlab-runner)で作成されたEC2インスタンス、キーペア、IAMロール、およびセキュリティグループ。
-- [ステップ5](#step-5-create-an-ecs-fargate-cluster)で作成されたECS Fargateクラスター。
-- [ステップ6](#step-6-create-an-ecs-task-definition)で作成されたECSタスク定義。
+- [手順3](#step-3-create-an-ec2-instance-for-gitlab-runner)で作成されたEC2インスタンス、キーペア、IAMロール、およびセキュリティグループ。
+- [手順5](#step-5-create-an-ecs-fargate-cluster)で作成されたECS AWS Fargateクラスター。
+- [手順6](#step-6-create-an-ecs-task-definition)で作成されたECSタスク定義。
 
-## プライベートAWS Fargateタスクを構成する {#configure-a-private-aws-fargate-task}
+## プライベートAWS AWS Fargateタスクの設定 {#configure-a-private-aws-fargate-task}
 
-高度なセキュリティを確保するために、[プライベートAWS Fargateタスク](https://repost.aws/knowledge-center/ecs-fargate-tasks-private-subnet)を構成します。この構成では、executorは内部AWS IPアドレスのみを使用します。CI/CDジョブがプライベートAWS Fargateインスタンスで実行されるように、AWSからの送信トラフィックのみを許可します。
+高度なセキュリティを確保するには、[プライベートAWS AWS Fargateタスク](https://repost.aws/knowledge-center/ecs-fargate-tasks-private-subnet)を設定します。この設定では、executorは内部AWS IPアドレスのみを使用します。CI/CDジョブがプライベートAWS AWS Fargateインスタンスで実行されるように、AWSからの送信トラフィックのみを許可します。
 
-プライベートAWS Fargateタスクを構成するには、次の手順に従ってAWSを構成し、プライベートサブネットでAWS Fargateタスクを実行します:
+プライベートAWS AWS Fargateタスクを設定するには、次の手順を完了して、AWSを設定し、プライベートサブネットでAWS AWS Fargateタスクを実行します:
 
 1. 既存のパブリックサブネットが、VPCアドレス範囲内のすべてのIPアドレスを予約していないことを確認します。VPCとサブネットの`cird`アドレス範囲を調べます。サブネット`cird`アドレス範囲がVPC `cird`アドレス範囲のサブセットである場合は、手順2と4をスキップします。それ以外の場合、VPCに使用可能なアドレス範囲がないため、VPCとパブリックサブネットを削除して再作成する必要があります:
    1. 既存のサブネットとVPCを削除します。
-   1. 削除したVPCと同じ構成で[VPCを作成](https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html#create-interface-endpoint)し、`cird`アドレス（例：`10.0.0.0/23`）を更新します。
-   1. 削除したサブネットと同じ構成で[パブリックサブネットを作成](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html)します。VPCアドレス範囲のサブセットである`cird`アドレス（例：`10.0.0.0/24`）を使用します。
-1. パブリックサブネットと同じ構成で[プライベートサブネットを作成](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-subnets.html#create-subnets)します。パブリックサブネット範囲とオーバーラップしない`cird`アドレス範囲（例：`10.0.1.0/24`）を使用します。
-1. [NATゲートウェイを作成](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)し、パブリックサブネット内に配置します。
-1. 宛先`0.0.0.0/0`がNATゲートウェイを指すように、プライベートサブルートテーブルを変更します。
-1. `farget.toml`の設定をタグ付けします:
+   1. 削除したVPCと同じ設定で[VPCを作成する](https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html#create-interface-endpoint)し、`cird`アドレス（例：`10.0.0.0/23`）を更新します。
+   1. 削除したサブネットと同じ設定で[パブリックサブネットを作成する](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html)。`cird`アドレス範囲（例：`10.0.0.0/24`）であるVPCアドレス範囲のサブセットであるアドレスを使用します。
+1. パブリックサブネットと同じ設定で[プライベートサブネットを作成する](https://docs.aws.amazon.com/vpc/latest/userguide/create-subnet.html#create-subnets)。`cird`アドレス範囲（例：`10.0.1.0/24`）であるパブリックサブネット範囲と重複しないアドレス範囲を使用します。
+1. [NATゲートウェイを作成する](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)し、パブリックサブネット内に配置します。
+1. 宛先`0.0.0.0/0`がNATゲートウェイを指すように、プライベートサブネットルーティングテーブルを変更します。
+1. `farget.toml`設定を更新します:
 
    ```toml
    Subnet = "private-subnet-id"
@@ -331,7 +331,7 @@ AWS Fargateでカスタムexecutorをテストした後でクリーンアップ�
    UsePublicIP = false
    ```
 
-1. 次のインラインポリシーを、Fargateタスクに関連付けられたIAMロールに追加します（Fargateタスクに関連付けられたIAMロールは通常`ecsTaskExecutionRole`という名前で、既に存在しているはずです）。
+1. Fargateタスクに関連付けられているIAMロールに次のインラインポリシーを追加します（Fargateタスクに関連付けられているIAMロールは通常、`ecsTaskExecutionRole`という名前で、既に存在しているはずです）。
 
    ```json
    {
@@ -353,11 +353,11 @@ AWS Fargateでカスタムexecutorをテストした後でクリーンアップ�
    }
    ```
 
-1. セキュリティグループの「受信ルール」を変更して、セキュリティグループ自体を参照するようにします。AWS構成ダイアログで:
+1. セキュリティグループ自体の参照するように、セキュリティグループの「受信ルール」を変更します。AWS設定ダイアログで、以下を実行します:
    - `Type`を`ssh`に設定します。
    - `Source`を`Custom`に設定します。
    - セキュリティグループを選択します。
-   - すべてのホストからのSSHアクセスを許可する既存の受信ルールを削除します。
+   - 任意のホストからのSSHアクセスを許可する既存の受信ルールを削除します。
 
 {{< alert type="warning" >}}
 
@@ -370,57 +370,53 @@ AWS Fargateでカスタムexecutorをテストした後でクリーンアップ�
 - [Amazon ECSタスク実行IAMロール](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html)
 - [Amazon ECRインターフェースVPCエンドポイント（AWS PrivateLink）](https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html)
 - [Amazon ECSインターフェースVPCエンドポイント](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/vpc-endpoints.html)
-- [パブリックサブネットとプライベートサブネットを備えたVPC](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Scenario2.html)
+- [パブリックサブネットとプライベートサブネットを持つVPC](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-example-private-subnets-nat.html)
 
 ## トラブルシューティング {#troubleshooting}
 
-### 構成のテスト中に`No Container Instances were found in your cluster`エラーが発生しました {#no-container-instances-were-found-in-your-cluster-error-when-testing-the-configuration}
+### 設定をテストする際のエラー`No Container Instances were found in your cluster` {#no-container-instances-were-found-in-your-cluster-error-when-testing-the-configuration}
 
 `error="starting new Fargate task: running new task on Fargate: error starting AWS Fargate Task: InvalidParameterException: No Container Instances were found in your cluster."`
 
-AWS Fargateドライバーでは、ECSクラスターが[デフォルトのキャパシティープロバイダー戦略](#step-5-create-an-ecs-fargate-cluster)で構成されている必要があります。
+AWS AWS Fargateドライバーでは、[デフォルトのキャパシティプロバイダー戦略](#step-5-create-an-ecs-fargate-cluster)でECSクラスターが設定されている必要があります。
 
-さらに詳しく:
+詳細情報:
 
-- デフォルトの[キャパシティープロバイダー戦略](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-capacity-providers.html)は、各Amazon ECSクラスターに関連付けられています。他のキャパシティープロバイダー戦略または起動タイプが指定されていない場合、タスクの実行時またはサービスの作成時に、クラスターはこの戦略を使用します。
-- [`capacityProviderStrategy`](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RunTask.html#ECS-RunTask-request-capacityProviderStrategy)が指定されている場合、`launchType`パラメータは省略する必要があります。`capacityProviderStrategy`または`launchType`が指定されていない場合は、クラスターの`defaultCapacityProviderStrategy`が使用されます。
+- デフォルトの[キャパシティプロバイダー戦略](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-capacity-providers.html)は、各Amazon ECSクラスターに関連付けられています。他のキャパシティプロバイダー戦略または起動タイプが指定されていない場合、タスクの実行またはサービスの作成時に、クラスターはこの戦略を使用します。
+- [`capacityProviderStrategy`](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RunTask.html#ECS-RunTask-request-capacityProviderStrategy)が指定されている場合、`launchType`パラメータは省略する必要があります。`capacityProviderStrategy`または`launchType`が指定されていない場合、クラスターの`defaultCapacityProviderStrategy`が使用されます。
 
-### ジョブの実行中にメタデータ`file does not exist`エラーが発生しました {#metadata-file-does-not-exist-error-when-running-jobs}
+### ジョブの実行時のメタデータ`file does not exist`エラー {#metadata-file-does-not-exist-error-when-running-jobs}
 
 `Application execution failed PID=xxxxx error="obtaining information about the running task: trying to access file \"/opt/gitlab-runner/metadata/<runner_token>-xxxxx.json\": file does not exist" cleanup_std=err job=xxxxx project=xx runner=<runner_token>`
 
-IAMロールポリシーが正しく構成されており、`/opt/gitlab-runner/metadata/`にメタデータJSONファイルを作成する書き込み操作を実行できることを確認してください。本番環境以外の環境でテストするには、AmazonECS_FullAccessポリシーを使用します。組織のセキュリティ要件に従って、IAMロールポリシーをレビューしてください。
+IAMロールポリシーが正しく設定され、`/opt/gitlab-runner/metadata/`にメタデータJSONファイルを作成するための書き込み操作を実行できることを確認してください。非本番環境でテストするには、AmazonECS_FullAccessポリシーを使用します。組織のセキュリティ要件に従ってIAMロールポリシーを確認します。
 
-### ジョブの実行中に`connection timed out`が発生しました {#connection-timed-out-when-running-jobs}
+### ジョブの実行時の`connection timed out` {#connection-timed-out-when-running-jobs}
 
 `Application execution failed PID=xxxx error="executing the script on the remote host: executing script on container with IP \"172.x.x.x\": connecting to server: connecting to server \"172.x.x.x:22\" as user \"root\": dial tcp 172.x.x.x:22: connect: connection timed out"`
 
-`EnablePublicIP`がfalseに構成されている場合は、VPCセキュリティグループに、SSH接続を許可する受信ルールがあることを確認してください。AWS Fargateタスクコンテナは、GitLab Runner EC2インスタンスからのSSHトラフィックを受け入れる必要があります。
+`EnablePublicIP`がfalseに設定されている場合は、VPCセキュリティグループに、SSH接続を許可する受信ルールがあることを確認してください。AWS AWS Fargateタスクコンテナは、GitLab Runner EC2インスタンスからのSSHトラフィックを受け入れる必要があります。
 
-### ジョブの実行中に`connection refused`が発生しました {#connection-refused-when-running-jobs}
+### ジョブの実行時の`connection refused` {#connection-refused-when-running-jobs}
 
 `Application execution failed PID=xxxx error="executing the script on the remote host: executing script on container with IP \"10.x.x.x\": connecting to server: connecting to server \"10.x.x.x:22\" as user \"root\": dial tcp 10.x.x.x:22: connect: connection refused"`
 
-タスクコンテナの22番ポートが公開されており、[ステップ6の指示に基づいてポートマッピングが構成されていることを確認してください: ECSタスク定義を作成します](#step-6-create-an-ecs-task-definition)。ポートが公開され、コンテナが構成されている場合:
+タスクコンテナのポート22が公開されており、[手順6の指示に基づいてポートマッピングが設定されていることを確認します: ECSタスク定義を作成します](#step-6-create-an-ecs-task-definition)。ポートが公開されていて、コンテナが設定されている場合:
 
-1. **Amazon ECS > Clusters > Choose your task definition > Tasks**（Amazon ECS > クラスター > タスク定義を選択 > タスク）で、コンテナのエラーがあるかどうかを確認します。
-1. `Stopped`のステータスのタスクを表示し、失敗した最新のタスクを確認します。**logs**（ログ）タブには、コンテナに障害が発生した場合の詳細が表示されます。
+1. **Amazon ECS > Clusters > Choose your task definition > Tasks**で、コンテナのエラーがないか確認します。
+1. `Stopped`ステータスのタスクを表示し、失敗した最新のタスクを確認します。コンテナに失敗がある場合、**logs**タブには詳細が表示されます。
 
-または、ローカルでDockerコンテナを実行できることを確認してください。
+または、Dockerコンテナをローカルで実行できることを確認します。
 
-<!-- markdownlint-disable line-length -->
+### エラー: `ssh: unable to authenticate, attempted methods [none publickey], no supported methods remain` {#error-ssh-unable-to-authenticate-attempted-methods-none-publickey-no-supported-methods-remain}
 
-### ジョブの実行中に`ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey], no supported methods remain`が発生しました {#ssh-handshake-failed-ssh-unable-to-authenticate-attempted-methods-none-publickey-no-supported-methods-remain-when-running-jobs}
-
-サポートされていないキータイプが、古いバージョンのAWS Fargateドライバーが原因で使用されている場合、次のエラーが発生します。
+AWS AWS Fargateドライバーの古いバージョンが原因で、サポートされていないキータイプが使用されている場合、次のエラーが発生します。
 
 `Application execution failed PID=xxxx error="executing the script on the remote host: executing script on container with IP \"172.x.x.x\": connecting to server: connecting to server \"172.x.x.x:22\" as user \"root\": ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey], no supported methods remain"`
 
-この問題を解決するには、最新のAWS FargateドライバーをGitLab Runner EC2インスタンスにインストールします:
+この問題を解決するには、最新のAWS AWS FargateドライバーをGitLab Runner EC2インスタンスにインストールします:
 
 ```shell
 sudo curl -Lo /opt/gitlab-runner/fargate "https://gitlab-runner-custom-fargate-downloads.s3.amazonaws.com/latest/fargate-linux-amd64"
 sudo chmod +x /opt/gitlab-runner/fargate
 ```
-
-<!-- markdownlint-enable line-length -->
