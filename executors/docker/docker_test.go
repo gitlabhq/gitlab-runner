@@ -3174,3 +3174,87 @@ func testDockerServiceContainerCgroup(
 	require.NoError(t, err)
 	assert.Equal(t, expectedCgroup, hostConfig.CgroupParent, "Service container HostConfig.CgroupParent should be set correctly")
 }
+
+func TestPrepareContainerEnvVariables(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
+	tests := map[string]struct {
+		featureFlagEnabled       bool
+		jobVariables             spec.Variables
+		expectedVarNames         []string
+		shouldHaveRunnerVarNames bool
+	}{
+		"feature flag disabled returns variables  unchanged": {
+			featureFlagEnabled: false,
+			jobVariables: spec.Variables{
+				{Key: "VAR1", Value: "value1"},
+				{Key: "VAR2", Value: "value2"},
+			},
+			shouldHaveRunnerVarNames: false,
+		},
+		"feature flag enabled compresses variable names": {
+			featureFlagEnabled: true,
+			jobVariables: spec.Variables{
+				{Key: "VAR1", Value: "value1"},
+				{Key: "VAR2", Value: "value2"},
+				{Key: "VAR3", Value: "value3"},
+			},
+			expectedVarNames:         []string{"VAR1", "VAR2", "VAR3"},
+			shouldHaveRunnerVarNames: true,
+		},
+		"feature flag enabled with empty variables": {
+			featureFlagEnabled:       true,
+			jobVariables:             spec.Variables{},
+			shouldHaveRunnerVarNames: true,
+		},
+		"feature flag enabled with many variables": {
+			featureFlagEnabled: true,
+			jobVariables: spec.Variables{
+				{Key: "LONG_VARIABLE_NAME_1", Value: "value1"},
+				{Key: "LONG_VARIABLE_NAME_2", Value: "value2"},
+				{Key: "LONG_VARIABLE_NAME_3", Value: "value3"},
+			},
+			expectedVarNames:         []string{"LONG_VARIABLE_NAME_1", "LONG_VARIABLE_NAME_2", "LONG_VARIABLE_NAME_3"},
+			shouldHaveRunnerVarNames: true,
+		},
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					Build: &common.Build{
+						Job: spec.Job{
+							Variables: test.jobVariables,
+						},
+					},
+				},
+			}
+
+			// Set the feature flag
+			if test.featureFlagEnabled {
+				e.Build.ExecutorFeatures.NativeStepsIntegration = test.featureFlagEnabled
+				e.Build.Variables = append(e.Build.Variables, spec.Variable{
+					Key:   featureflags.UseScriptToStepMigration,
+					Value: "true",
+				})
+			}
+
+			result, err := e.prepareContainerEnvVariables()
+
+			require.NoError(t, err)
+			require.NotNil(t, result)
+
+			require.Equal(t, test.shouldHaveRunnerVarNames, checkVariable(result, runnerJobVarsNames))
+		})
+	}
+}
+
+func checkVariable(vars spec.Variables, key string) bool {
+	for i := range vars {
+		if vars[i].Key == key {
+			return true
+		}
+	}
+	return false
+}

@@ -2,7 +2,9 @@ package docker
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -58,20 +60,22 @@ const (
 	ExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
 	ExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
 	ExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
-)
 
-const ServiceLogOutputLimit = 64 * 1024
+	ServiceLogOutputLimit = 64 * 1024
 
-const (
 	labelServiceType = "service"
 	labelWaitType    = "wait"
-)
 
-// internalFakeTunnelHostname is an internal hostname we provide the Docker client
-// when we provide a tunnelled dialer implementation. Because we're overriding
-// the dialer, this domain should never be used by the client, but we use the
-// reserved TLD ".invalid" for safety.
-const internalFakeTunnelHostname = "http://internal.tunnel.invalid"
+	// internalFakeTunnelHostname is an internal hostname we provide the Docker client
+	// when we provide a tunnelled dialer implementation. Because we're overriding
+	// the dialer, this domain should never be used by the client, but we use the
+	// reserved TLD ".invalid" for safety.
+	internalFakeTunnelHostname = "http://internal.tunnel.invalid"
+
+	// runnerJobVarsNames is the name used to identify the all the job variables names.
+	// It is used to allow step-runner to filter these variables once the gRPC service is started
+	runnerJobVarsNames = "RUNNER_JOB_VAR_NAMES"
+)
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
@@ -871,6 +875,11 @@ func (e *executor) createContainerConfig(
 	cmd []string,
 ) (*container.Config, error) {
 	labels := e.prepareContainerLabels(map[string]string{"type": containerType})
+	jobVars, err := e.prepareContainerEnvVariables()
+	if err != nil {
+		return nil, fmt.Errorf("setting job variables: %w", err)
+	}
+
 	config := &container.Config{
 		Image:        image.ID,
 		Hostname:     hostname,
@@ -883,7 +892,7 @@ func (e *executor) createContainerConfig(
 		OpenStdin:    true,
 		StdinOnce:    true,
 		Entrypoint:   e.overwriteEntrypoint(&imageDefinition),
-		Env:          e.Build.GetAllVariables().StringList(),
+		Env:          jobVars.StringList(),
 	}
 
 	//nolint:nestif
@@ -911,6 +920,53 @@ func (e *executor) createContainerConfig(
 	}
 
 	return config, nil
+}
+
+// prepareContainerEnvVariables prepares the environment variables for the build container.
+// When native steps are enabled, it compresses the list of job variable names and adds them
+// to the environment as RUNNER_JOB_VAR_NAMES. This allows step-runner to identify and filter
+// out job variables from the OS environment, preventing environment variable size limit issues.
+//
+// The variable names are gzip-compressed to minimize the size of the RUNNER_JOB_VAR_NAMES
+// environment variable itself, which is important on systems with strict environment limits
+// (particularly Windows).
+//
+// For non-native step builds, the function returns the variables unchanged since step-runner
+// filtering is not needed.
+func (e *executor) prepareContainerEnvVariables() (spec.Variables, error) {
+	vars := e.Build.GetAllVariables()
+
+	if !e.Build.UseNativeSteps() {
+		return vars, nil
+	}
+
+	names := vars.GetAllVariableNames()
+	compressedVarNames, err := gzipString(names)
+	if err != nil {
+		return nil, fmt.Errorf("job variables names compression failed: %w", err)
+	}
+
+	v := append([]spec.Variable{}, vars...)
+	v = append(v, spec.Variable{
+		Key:   runnerJobVarsNames,
+		Value: compressedVarNames,
+	})
+
+	return v, nil
+}
+
+// gzipString compresses a string and returns the compressed string.
+func gzipString(src string) (string, error) {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+	if _, err := gz.Write([]byte(src)); err != nil {
+		return "", fmt.Errorf("writing to gzip writer: %w", err)
+	}
+	if err := gz.Close(); err != nil {
+		return "", fmt.Errorf("closing gzip writer: %w", err)
+	}
+
+	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
 }
 
 func (e *executor) getBuildContainerUser(imageDefinition spec.Image) (string, error) {
