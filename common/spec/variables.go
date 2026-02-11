@@ -50,6 +50,19 @@ func (b Variables) StringList() (variables []string) {
 	return variables
 }
 
+// GetAllVariableNames returns a semicolon-separated list of all variable names
+// that are set in the build. This function is used to pass the list of job variable
+// names to the build container via an environment variable (e.g., RUNNER_JOB_VAR_NAMES),
+// allowing step-runner to identify and filter out job variables from the OS environment.
+func (b Variables) GetAllVariableNames() string {
+	names := make([]string, 0, len(b))
+	for _, variable := range b {
+		names = append(names, variable.Key)
+	}
+
+	return strings.Join(names, ";")
+}
+
 // Get returns the value of a variable, or if a file type variable, the
 // pathname to the saved file containing the value,
 func (b Variables) Get(key string) string {
