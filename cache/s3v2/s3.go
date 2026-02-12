@@ -242,7 +242,7 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*aws.Config, *s3.Client, er
 		break
 	case common.S3AuthTypeAccessKey:
 		options = append(options,
-			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(s3Config.AccessKey, s3Config.SecretKey, "")),
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(s3Config.AccessKey, s3Config.SecretKey, s3Config.SessionToken)),
 		)
 	}
 
