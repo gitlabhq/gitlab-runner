@@ -365,7 +365,7 @@ func (_c *MockDelegate_ProcessJob_Call) RunAndReturn(run func(config common.Runn
 }
 
 // RegisterRunner provides a mock function for the type MockDelegate
-func (_mock *MockDelegate) RegisterRunner(config common.RunnerCredentials, parameters common.RegisterRunnerParameters) *common.RegisterRunnerResponse {
+func (_mock *MockDelegate) RegisterRunner(config common.RunnerConfig, parameters common.RegisterRunnerParameters) *common.RegisterRunnerResponse {
 	ret := _mock.Called(config, parameters)
 
 	if len(ret) == 0 {
@@ -373,7 +373,7 @@ func (_mock *MockDelegate) RegisterRunner(config common.RunnerCredentials, param
 	}
 
 	var r0 *common.RegisterRunnerResponse
-	if returnFunc, ok := ret.Get(0).(func(common.RunnerCredentials, common.RegisterRunnerParameters) *common.RegisterRunnerResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(common.RunnerConfig, common.RegisterRunnerParameters) *common.RegisterRunnerResponse); ok {
 		r0 = returnFunc(config, parameters)
 	} else {
 		if ret.Get(0) != nil {
@@ -389,17 +389,17 @@ type MockDelegate_RegisterRunner_Call struct {
 }
 
 // RegisterRunner is a helper method to define mock.On call
-//   - config common.RunnerCredentials
+//   - config common.RunnerConfig
 //   - parameters common.RegisterRunnerParameters
 func (_e *MockDelegate_Expecter) RegisterRunner(config interface{}, parameters interface{}) *MockDelegate_RegisterRunner_Call {
 	return &MockDelegate_RegisterRunner_Call{Call: _e.mock.On("RegisterRunner", config, parameters)}
 }
 
-func (_c *MockDelegate_RegisterRunner_Call) Run(run func(config common.RunnerCredentials, parameters common.RegisterRunnerParameters)) *MockDelegate_RegisterRunner_Call {
+func (_c *MockDelegate_RegisterRunner_Call) Run(run func(config common.RunnerConfig, parameters common.RegisterRunnerParameters)) *MockDelegate_RegisterRunner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 common.RunnerCredentials
+		var arg0 common.RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(common.RunnerCredentials)
+			arg0 = args[0].(common.RunnerConfig)
 		}
 		var arg1 common.RegisterRunnerParameters
 		if args[1] != nil {
@@ -418,7 +418,7 @@ func (_c *MockDelegate_RegisterRunner_Call) Return(registerRunnerResponse *commo
 	return _c
 }
 
-func (_c *MockDelegate_RegisterRunner_Call) RunAndReturn(run func(config common.RunnerCredentials, parameters common.RegisterRunnerParameters) *common.RegisterRunnerResponse) *MockDelegate_RegisterRunner_Call {
+func (_c *MockDelegate_RegisterRunner_Call) RunAndReturn(run func(config common.RunnerConfig, parameters common.RegisterRunnerParameters) *common.RegisterRunnerResponse) *MockDelegate_RegisterRunner_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -498,7 +498,7 @@ func (_c *MockDelegate_RequestJob_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // ResetToken provides a mock function for the type MockDelegate
-func (_mock *MockDelegate) ResetToken(runner common.RunnerCredentials, systemID string) *common.ResetTokenResponse {
+func (_mock *MockDelegate) ResetToken(runner common.RunnerConfig, systemID string) *common.ResetTokenResponse {
 	ret := _mock.Called(runner, systemID)
 
 	if len(ret) == 0 {
@@ -506,7 +506,7 @@ func (_mock *MockDelegate) ResetToken(runner common.RunnerCredentials, systemID 
 	}
 
 	var r0 *common.ResetTokenResponse
-	if returnFunc, ok := ret.Get(0).(func(common.RunnerCredentials, string) *common.ResetTokenResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(common.RunnerConfig, string) *common.ResetTokenResponse); ok {
 		r0 = returnFunc(runner, systemID)
 	} else {
 		if ret.Get(0) != nil {
@@ -522,17 +522,17 @@ type MockDelegate_ResetToken_Call struct {
 }
 
 // ResetToken is a helper method to define mock.On call
-//   - runner common.RunnerCredentials
+//   - runner common.RunnerConfig
 //   - systemID string
 func (_e *MockDelegate_Expecter) ResetToken(runner interface{}, systemID interface{}) *MockDelegate_ResetToken_Call {
 	return &MockDelegate_ResetToken_Call{Call: _e.mock.On("ResetToken", runner, systemID)}
 }
 
-func (_c *MockDelegate_ResetToken_Call) Run(run func(runner common.RunnerCredentials, systemID string)) *MockDelegate_ResetToken_Call {
+func (_c *MockDelegate_ResetToken_Call) Run(run func(runner common.RunnerConfig, systemID string)) *MockDelegate_ResetToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 common.RunnerCredentials
+		var arg0 common.RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(common.RunnerCredentials)
+			arg0 = args[0].(common.RunnerConfig)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -551,13 +551,13 @@ func (_c *MockDelegate_ResetToken_Call) Return(resetTokenResponse *common.ResetT
 	return _c
 }
 
-func (_c *MockDelegate_ResetToken_Call) RunAndReturn(run func(runner common.RunnerCredentials, systemID string) *common.ResetTokenResponse) *MockDelegate_ResetToken_Call {
+func (_c *MockDelegate_ResetToken_Call) RunAndReturn(run func(runner common.RunnerConfig, systemID string) *common.ResetTokenResponse) *MockDelegate_ResetToken_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ResetTokenWithPAT provides a mock function for the type MockDelegate
-func (_mock *MockDelegate) ResetTokenWithPAT(runner common.RunnerCredentials, systemID string, pat string) *common.ResetTokenResponse {
+func (_mock *MockDelegate) ResetTokenWithPAT(runner common.RunnerConfig, systemID string, pat string) *common.ResetTokenResponse {
 	ret := _mock.Called(runner, systemID, pat)
 
 	if len(ret) == 0 {
@@ -565,7 +565,7 @@ func (_mock *MockDelegate) ResetTokenWithPAT(runner common.RunnerCredentials, sy
 	}
 
 	var r0 *common.ResetTokenResponse
-	if returnFunc, ok := ret.Get(0).(func(common.RunnerCredentials, string, string) *common.ResetTokenResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(common.RunnerConfig, string, string) *common.ResetTokenResponse); ok {
 		r0 = returnFunc(runner, systemID, pat)
 	} else {
 		if ret.Get(0) != nil {
@@ -581,18 +581,18 @@ type MockDelegate_ResetTokenWithPAT_Call struct {
 }
 
 // ResetTokenWithPAT is a helper method to define mock.On call
-//   - runner common.RunnerCredentials
+//   - runner common.RunnerConfig
 //   - systemID string
 //   - pat string
 func (_e *MockDelegate_Expecter) ResetTokenWithPAT(runner interface{}, systemID interface{}, pat interface{}) *MockDelegate_ResetTokenWithPAT_Call {
 	return &MockDelegate_ResetTokenWithPAT_Call{Call: _e.mock.On("ResetTokenWithPAT", runner, systemID, pat)}
 }
 
-func (_c *MockDelegate_ResetTokenWithPAT_Call) Run(run func(runner common.RunnerCredentials, systemID string, pat string)) *MockDelegate_ResetTokenWithPAT_Call {
+func (_c *MockDelegate_ResetTokenWithPAT_Call) Run(run func(runner common.RunnerConfig, systemID string, pat string)) *MockDelegate_ResetTokenWithPAT_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 common.RunnerCredentials
+		var arg0 common.RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(common.RunnerCredentials)
+			arg0 = args[0].(common.RunnerConfig)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -616,7 +616,7 @@ func (_c *MockDelegate_ResetTokenWithPAT_Call) Return(resetTokenResponse *common
 	return _c
 }
 
-func (_c *MockDelegate_ResetTokenWithPAT_Call) RunAndReturn(run func(runner common.RunnerCredentials, systemID string, pat string) *common.ResetTokenResponse) *MockDelegate_ResetTokenWithPAT_Call {
+func (_c *MockDelegate_ResetTokenWithPAT_Call) RunAndReturn(run func(runner common.RunnerConfig, systemID string, pat string) *common.ResetTokenResponse) *MockDelegate_ResetTokenWithPAT_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -662,7 +662,7 @@ func (_c *MockDelegate_SetConnectionMaxAge_Call) RunAndReturn(run func(duration 
 }
 
 // UnregisterRunner provides a mock function for the type MockDelegate
-func (_mock *MockDelegate) UnregisterRunner(config common.RunnerCredentials) bool {
+func (_mock *MockDelegate) UnregisterRunner(config common.RunnerConfig) bool {
 	ret := _mock.Called(config)
 
 	if len(ret) == 0 {
@@ -670,7 +670,7 @@ func (_mock *MockDelegate) UnregisterRunner(config common.RunnerCredentials) boo
 	}
 
 	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(common.RunnerCredentials) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(common.RunnerConfig) bool); ok {
 		r0 = returnFunc(config)
 	} else {
 		r0 = ret.Get(0).(bool)
@@ -684,16 +684,16 @@ type MockDelegate_UnregisterRunner_Call struct {
 }
 
 // UnregisterRunner is a helper method to define mock.On call
-//   - config common.RunnerCredentials
+//   - config common.RunnerConfig
 func (_e *MockDelegate_Expecter) UnregisterRunner(config interface{}) *MockDelegate_UnregisterRunner_Call {
 	return &MockDelegate_UnregisterRunner_Call{Call: _e.mock.On("UnregisterRunner", config)}
 }
 
-func (_c *MockDelegate_UnregisterRunner_Call) Run(run func(config common.RunnerCredentials)) *MockDelegate_UnregisterRunner_Call {
+func (_c *MockDelegate_UnregisterRunner_Call) Run(run func(config common.RunnerConfig)) *MockDelegate_UnregisterRunner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 common.RunnerCredentials
+		var arg0 common.RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(common.RunnerCredentials)
+			arg0 = args[0].(common.RunnerConfig)
 		}
 		run(
 			arg0,
@@ -707,13 +707,13 @@ func (_c *MockDelegate_UnregisterRunner_Call) Return(b bool) *MockDelegate_Unreg
 	return _c
 }
 
-func (_c *MockDelegate_UnregisterRunner_Call) RunAndReturn(run func(config common.RunnerCredentials) bool) *MockDelegate_UnregisterRunner_Call {
+func (_c *MockDelegate_UnregisterRunner_Call) RunAndReturn(run func(config common.RunnerConfig) bool) *MockDelegate_UnregisterRunner_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UnregisterRunnerManager provides a mock function for the type MockDelegate
-func (_mock *MockDelegate) UnregisterRunnerManager(config common.RunnerCredentials, systemID string) bool {
+func (_mock *MockDelegate) UnregisterRunnerManager(config common.RunnerConfig, systemID string) bool {
 	ret := _mock.Called(config, systemID)
 
 	if len(ret) == 0 {
@@ -721,7 +721,7 @@ func (_mock *MockDelegate) UnregisterRunnerManager(config common.RunnerCredentia
 	}
 
 	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(common.RunnerCredentials, string) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(common.RunnerConfig, string) bool); ok {
 		r0 = returnFunc(config, systemID)
 	} else {
 		r0 = ret.Get(0).(bool)
@@ -735,17 +735,17 @@ type MockDelegate_UnregisterRunnerManager_Call struct {
 }
 
 // UnregisterRunnerManager is a helper method to define mock.On call
-//   - config common.RunnerCredentials
+//   - config common.RunnerConfig
 //   - systemID string
 func (_e *MockDelegate_Expecter) UnregisterRunnerManager(config interface{}, systemID interface{}) *MockDelegate_UnregisterRunnerManager_Call {
 	return &MockDelegate_UnregisterRunnerManager_Call{Call: _e.mock.On("UnregisterRunnerManager", config, systemID)}
 }
 
-func (_c *MockDelegate_UnregisterRunnerManager_Call) Run(run func(config common.RunnerCredentials, systemID string)) *MockDelegate_UnregisterRunnerManager_Call {
+func (_c *MockDelegate_UnregisterRunnerManager_Call) Run(run func(config common.RunnerConfig, systemID string)) *MockDelegate_UnregisterRunnerManager_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 common.RunnerCredentials
+		var arg0 common.RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(common.RunnerCredentials)
+			arg0 = args[0].(common.RunnerConfig)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -764,7 +764,7 @@ func (_c *MockDelegate_UnregisterRunnerManager_Call) Return(b bool) *MockDelegat
 	return _c
 }
 
-func (_c *MockDelegate_UnregisterRunnerManager_Call) RunAndReturn(run func(config common.RunnerCredentials, systemID string) bool) *MockDelegate_UnregisterRunnerManager_Call {
+func (_c *MockDelegate_UnregisterRunnerManager_Call) RunAndReturn(run func(config common.RunnerConfig, systemID string) bool) *MockDelegate_UnregisterRunnerManager_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -905,7 +905,7 @@ func (_c *MockDelegate_UploadRawArtifacts_Call) RunAndReturn(run func(config com
 }
 
 // VerifyRunner provides a mock function for the type MockDelegate
-func (_mock *MockDelegate) VerifyRunner(config common.RunnerCredentials, systemID string) *common.VerifyRunnerResponse {
+func (_mock *MockDelegate) VerifyRunner(config common.RunnerConfig, systemID string) *common.VerifyRunnerResponse {
 	ret := _mock.Called(config, systemID)
 
 	if len(ret) == 0 {
@@ -913,7 +913,7 @@ func (_mock *MockDelegate) VerifyRunner(config common.RunnerCredentials, systemI
 	}
 
 	var r0 *common.VerifyRunnerResponse
-	if returnFunc, ok := ret.Get(0).(func(common.RunnerCredentials, string) *common.VerifyRunnerResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(common.RunnerConfig, string) *common.VerifyRunnerResponse); ok {
 		r0 = returnFunc(config, systemID)
 	} else {
 		if ret.Get(0) != nil {
@@ -929,17 +929,17 @@ type MockDelegate_VerifyRunner_Call struct {
 }
 
 // VerifyRunner is a helper method to define mock.On call
-//   - config common.RunnerCredentials
+//   - config common.RunnerConfig
 //   - systemID string
 func (_e *MockDelegate_Expecter) VerifyRunner(config interface{}, systemID interface{}) *MockDelegate_VerifyRunner_Call {
 	return &MockDelegate_VerifyRunner_Call{Call: _e.mock.On("VerifyRunner", config, systemID)}
 }
 
-func (_c *MockDelegate_VerifyRunner_Call) Run(run func(config common.RunnerCredentials, systemID string)) *MockDelegate_VerifyRunner_Call {
+func (_c *MockDelegate_VerifyRunner_Call) Run(run func(config common.RunnerConfig, systemID string)) *MockDelegate_VerifyRunner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 common.RunnerCredentials
+		var arg0 common.RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(common.RunnerCredentials)
+			arg0 = args[0].(common.RunnerConfig)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -958,7 +958,7 @@ func (_c *MockDelegate_VerifyRunner_Call) Return(verifyRunnerResponse *common.Ve
 	return _c
 }
 
-func (_c *MockDelegate_VerifyRunner_Call) RunAndReturn(run func(config common.RunnerCredentials, systemID string) *common.VerifyRunnerResponse) *MockDelegate_VerifyRunner_Call {
+func (_c *MockDelegate_VerifyRunner_Call) RunAndReturn(run func(config common.RunnerConfig, systemID string) *common.VerifyRunnerResponse) *MockDelegate_VerifyRunner_Call {
 	_c.Call.Return(run)
 	return _c
 }

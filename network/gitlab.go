@@ -344,7 +344,7 @@ func (n *GitLabClient) SetConnectionMaxAge(age time.Duration) {
 }
 
 func (n *GitLabClient) RegisterRunner(
-	runner common.RunnerCredentials,
+	runner common.RunnerConfig,
 	parameters common.RegisterRunnerParameters,
 ) *common.RegisterRunnerResponse {
 	// TODO: pass executor
@@ -387,7 +387,7 @@ func (n *GitLabClient) RegisterRunner(
 	}
 }
 
-func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID string) *common.VerifyRunnerResponse {
+func (n *GitLabClient) VerifyRunner(runner common.RunnerConfig, systemID string) *common.VerifyRunnerResponse {
 	request := common.VerifyRunnerRequest{
 		Token:    runner.Token,
 		SystemID: systemID,
@@ -452,7 +452,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 	}
 }
 
-func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
+func (n *GitLabClient) UnregisterRunner(runner common.RunnerConfig) bool {
 	request := common.UnregisterRunnerRequest{
 		Token: runner.Token,
 	}
@@ -490,7 +490,7 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 	}
 }
 
-func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, systemID string) bool {
+func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerConfig, systemID string) bool {
 	request := common.UnregisterRunnerManagerRequest{
 		Token:    runner.Token,
 		SystemID: systemID,
@@ -529,12 +529,12 @@ func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, 
 	}
 }
 
-func (n *GitLabClient) ResetToken(runner common.RunnerCredentials, systemID string) *common.ResetTokenResponse {
+func (n *GitLabClient) ResetToken(runner common.RunnerConfig, systemID string) *common.ResetTokenResponse {
 	return n.resetToken(runner, systemID, "runners/reset_authentication_token", "")
 }
 
 func (n *GitLabClient) ResetTokenWithPAT(
-	runner common.RunnerCredentials,
+	runner common.RunnerConfig,
 	systemID string,
 	pat string,
 ) *common.ResetTokenResponse {
@@ -542,7 +542,7 @@ func (n *GitLabClient) ResetTokenWithPAT(
 }
 
 func (n *GitLabClient) resetToken(
-	runner common.RunnerCredentials,
+	runner common.RunnerConfig,
 	systemID string,
 	uri string,
 	pat string,

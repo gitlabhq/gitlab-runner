@@ -388,12 +388,12 @@ type ArtifactsOptions struct {
 
 type Network interface {
 	SetConnectionMaxAge(time.Duration)
-	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
-	VerifyRunner(config RunnerCredentials, systemID string) *VerifyRunnerResponse
-	UnregisterRunner(config RunnerCredentials) bool
-	UnregisterRunnerManager(config RunnerCredentials, systemID string) bool
-	ResetToken(runner RunnerCredentials, systemID string) *ResetTokenResponse
-	ResetTokenWithPAT(runner RunnerCredentials, systemID string, pat string) *ResetTokenResponse
+	RegisterRunner(config RunnerConfig, parameters RegisterRunnerParameters) *RegisterRunnerResponse
+	VerifyRunner(config RunnerConfig, systemID string) *VerifyRunnerResponse
+	UnregisterRunner(config RunnerConfig) bool
+	UnregisterRunnerManager(config RunnerConfig, systemID string) bool
+	ResetToken(runner RunnerConfig, systemID string) *ResetTokenResponse
+	ResetTokenWithPAT(runner RunnerConfig, systemID string, pat string) *ResetTokenResponse
 	RequestJob(ctx context.Context, config RunnerConfig, sessionInfo *SessionInfo) (*spec.Job, bool)
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateJobResult
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte,

@@ -324,7 +324,7 @@ type runAtCall struct {
 }
 
 type resetTokenRequest struct {
-	runner   common.RunnerCredentials
+	runner   common.RunnerConfig
 	systemID string
 }
 
@@ -395,12 +395,12 @@ func (c *resetRunnerTokenTestController) mockResetToken(runnerID int64, response
 	c.networkMock.
 		On(
 			"ResetToken",
-			mock.MatchedBy(func(runner common.RunnerCredentials) bool {
+			mock.MatchedBy(func(runner common.RunnerConfig) bool {
 				return runnerID == runner.ID
 			}),
 			common.UnknownSystemID,
 		).
-		Return(func(runner common.RunnerCredentials, systemID string) *common.ResetTokenResponse {
+		Return(func(runner common.RunnerConfig, systemID string) *common.ResetTokenResponse {
 			// Sending is a blocking operation, so this blocks until the other thread receives it.
 			c.eventChan <- resetTokenRequest{
 				runner:   runner,

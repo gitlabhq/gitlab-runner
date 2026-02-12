@@ -248,7 +248,7 @@ func (s *RegisterCommand) verifyRunner() {
 	// If a runner authentication token is specified in place of a registration token, let's accept it and process it as
 	// an authentication token. This allows for an easier transition for users by simply replacing the
 	// registration token with the new authentication token.
-	result := s.network.VerifyRunner(s.RunnerCredentials, s.SystemID)
+	result := s.network.VerifyRunner(s.RunnerConfig, s.SystemID)
 	if result == nil || result.ID == 0 {
 		logrus.Panicln("Failed to verify the runner.")
 	}
@@ -264,7 +264,7 @@ func (s *RegisterCommand) askRunner(cfg *common.Config) {
 	if s.Token != "" && !s.tokenIsRunnerToken() {
 		logrus.Infoln("Token specified trying to verify runner...")
 		logrus.Warningln("If you want to register use the '-r' instead of '-t'.")
-		if s.network.VerifyRunner(s.RunnerCredentials, s.SystemID) == nil {
+		if s.network.VerifyRunner(s.RunnerConfig, s.SystemID) == nil {
 			logrus.Panicln("Failed to verify the runner. You may be having network problems.")
 		}
 		return
@@ -318,7 +318,7 @@ func (s *RegisterCommand) doLegacyRegisterRunner() {
 		)
 	}
 
-	result := s.network.RegisterRunner(s.RunnerCredentials, parameters)
+	result := s.network.RegisterRunner(s.RunnerConfig, parameters)
 	// golangci-lint doesn't recognize logrus.Panicln() call as breaking the execution
 	// flow which causes the following assignment to throw false-positive report for
 	// 'SA5011: possible nil pointer dereference'
@@ -509,9 +509,9 @@ func (s *RegisterCommand) unregisterRunnerFunc() func() {
 
 func (s *RegisterCommand) unregisterRunner() {
 	if s.tokenIsRunnerToken() {
-		s.network.UnregisterRunnerManager(s.RunnerCredentials, s.SystemID)
+		s.network.UnregisterRunnerManager(s.RunnerConfig, s.SystemID)
 	} else {
-		s.network.UnregisterRunner(s.RunnerCredentials)
+		s.network.UnregisterRunner(s.RunnerConfig)
 	}
 }
 

@@ -126,7 +126,7 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 		assert.Equal(t, "glrt-testtoken", s.Token)
 		assert.Equal(t, executor, s.RunnerSettings.Executor)
 	}
-	expectedParamsFn := func(p common.RunnerCredentials) bool {
+	expectedParamsFn := func(p common.RunnerConfig) bool {
 		return p.URL == "http://gitlab.example.com/" && p.Token == "glrt-testtoken"
 	}
 
@@ -134,7 +134,7 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 		answers        []string
 		arguments      []string
 		validate       func(s *commands.RegisterCommand)
-		expectedParams func(common.RunnerCredentials) bool
+		expectedParams func(common.RunnerConfig) bool
 	}{
 		"basic answers": {
 			answers: append([]string{
@@ -175,7 +175,7 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 				require.NotNil(t, s.RunnerSettings.Docker)
 				assert.Equal(t, "nginx:latest", s.RunnerSettings.Docker.Image)
 			},
-			expectedParams: func(p common.RunnerCredentials) bool {
+			expectedParams: func(p common.RunnerConfig) bool {
 				return p.URL == "http://gitlab.example2.com/" && p.Token == "glrt-testtoken2"
 			},
 		},
@@ -984,7 +984,7 @@ func TestUnregisterOnFailure(t *testing.T) {
 					Once()
 			}
 			if !testCase.expectsLeftRegistered {
-				credsMocker := mock.MatchedBy(func(credentials common.RunnerCredentials) bool {
+				credsMocker := mock.MatchedBy(func(credentials common.RunnerConfig) bool {
 					return credentials.Token == testCase.token
 				})
 				if runnerUICreated {

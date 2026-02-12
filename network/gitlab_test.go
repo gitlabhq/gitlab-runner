@@ -245,10 +245,12 @@ func TestGitLabClient_RegisterRunner(t *testing.T) {
 
 			// Act
 			res := glc.RegisterRunner(
-				RunnerCredentials{
-					URL:            tc.gitlabURL,
-					Token:          tc.token,
-					TokenExpiresAt: tc.tokenExpiresAt,
+				RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						URL:            tc.gitlabURL,
+						Token:          tc.token,
+						TokenExpiresAt: tc.tokenExpiresAt,
+					},
 				},
 				RegisterRunnerParameters{
 					AccessLevel: tc.runnerAccessLevel,
@@ -304,7 +306,9 @@ func TestGitLabClient_RegisterRunner_OnRunnerLimitHit(t *testing.T) {
 
 			// Act
 			res := c.RegisterRunner(
-				validToken,
+				RunnerConfig{
+					RunnerCredentials: validToken,
+				},
 				RegisterRunnerParameters{
 					Description: "test",
 					Tags:        "tags",
@@ -421,9 +425,11 @@ func TestGitLabClient_UnregisterRunner(t *testing.T) {
 			glc := NewGitLabClient()
 
 			// Act
-			state := glc.UnregisterRunner(RunnerCredentials{
-				URL:   tc.gitlabURL,
-				Token: tc.token,
+			state := glc.UnregisterRunner(RunnerConfig{
+				RunnerCredentials: RunnerCredentials{
+					URL:   tc.gitlabURL,
+					Token: tc.token,
+				},
 			})
 
 			// Assert
@@ -519,9 +525,11 @@ func TestUnregisterRunnerManager(t *testing.T) {
 			glc := NewGitLabClient()
 
 			// Act
-			state := glc.UnregisterRunnerManager(RunnerCredentials{
-				URL:   tc.gitlabURL,
-				Token: tc.token,
+			state := glc.UnregisterRunnerManager(RunnerConfig{
+				RunnerCredentials: RunnerCredentials{
+					URL:   tc.gitlabURL,
+					Token: tc.token,
+				},
 			}, "s_some_system_id")
 
 			// Assert
@@ -648,7 +656,12 @@ func TestVerifyRunnerOnLegacyServer(t *testing.T) {
 			logger, hook := test.NewNullLogger()
 			logger.SetLevel(logrus.InfoLevel)
 
-			res := c.VerifyRunner(RunnerCredentials{URL: tc.url, Token: tc.token, Logger: logger}, "")
+			res := c.VerifyRunner(
+				RunnerConfig{
+					RunnerCredentials: RunnerCredentials{URL: tc.url, Token: tc.token, Logger: logger},
+				},
+				"",
+			)
 
 			if tc.expectedNil {
 				assert.Nil(t, res)
@@ -727,7 +740,12 @@ func TestVerifyRunner(t *testing.T) {
 			logger, hook := test.NewNullLogger()
 			logger.SetLevel(logrus.InfoLevel)
 
-			res := c.VerifyRunner(RunnerCredentials{URL: tc.url, Token: tc.token, Logger: logger}, "")
+			res := c.VerifyRunner(
+				RunnerConfig{
+					RunnerCredentials: RunnerCredentials{URL: tc.url, Token: tc.token, Logger: logger},
+				},
+				"",
+			)
 
 			if tc.expectedNil {
 				assert.Nil(t, res)
@@ -858,11 +876,13 @@ func TestGitlabClient_ResetToken(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			logger, hook := test.NewNullLogger()
 			logger.SetLevel(logrus.InfoLevel)
-			res := c.ResetToken(RunnerCredentials{
-				Token:          tc.token,
-				URL:            s.URL,
-				TokenExpiresAt: tc.expiresAt,
-				Logger:         logger,
+			res := c.ResetToken(RunnerConfig{
+				RunnerCredentials: RunnerCredentials{
+					Token:          tc.token,
+					URL:            s.URL,
+					TokenExpiresAt: tc.expiresAt,
+					Logger:         logger,
+				},
 			}, "system-id-1")
 
 			if tc.expectations.isNil {
@@ -1032,12 +1052,14 @@ func TestGitLabClient_ResetTokenWithPAT(t *testing.T) {
 			logger, hook := test.NewNullLogger()
 			logger.SetLevel(logrus.InfoLevel)
 
-			res := c.ResetTokenWithPAT(RunnerCredentials{
-				ID:             tc.runnerCreds.ID,
-				URL:            tc.runnerCreds.URL,
-				Token:          tc.runnerCreds.Token,
-				TokenExpiresAt: tc.runnerCreds.TokenExpiresAt,
-				Logger:         logger,
+			res := c.ResetTokenWithPAT(RunnerConfig{
+				RunnerCredentials: RunnerCredentials{
+					ID:             tc.runnerCreds.ID,
+					URL:            tc.runnerCreds.URL,
+					Token:          tc.runnerCreds.Token,
+					TokenExpiresAt: tc.runnerCreds.TokenExpiresAt,
+					Logger:         logger,
+				},
 			}, "system-id-1", tc.pat)
 
 			if tc.expectedRes != nil {
@@ -3303,7 +3325,7 @@ func TestGitLabClient_RegisterRunner_TransmitsTwoPhaseJobCommit(t *testing.T) {
 	}
 
 	client := NewGitLabClient()
-	response := client.RegisterRunner(credentials, parameters)
+	response := client.RegisterRunner(RunnerConfig{RunnerCredentials: credentials}, parameters)
 
 	assert.NotNil(t, response, "Registration should succeed")
 	assert.Equal(t, int64(12345), response.ID)

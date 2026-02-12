@@ -31,7 +31,7 @@ func NewResetTokenCommand(n common.Network) cli.Command {
 func (c *ResetTokenCommand) resetAllRunnerTokens(cfg *common.Config) {
 	logrus.Warningln("Resetting all runner authentication tokens")
 	for _, r := range cfg.Runners {
-		if !common.ResetToken(c.network, &r.RunnerCredentials, "", c.PAT) {
+		if !common.ResetToken(c.network, r, "", c.PAT) {
 			logrus.WithField("name", r.Name).Errorln("Failed to reset runner authentication token")
 		}
 	}
@@ -60,14 +60,14 @@ func (c *ResetTokenCommand) resetSingleRunnerToken(cfg *common.Config) bool {
 	return true
 }
 
-func (c *ResetTokenCommand) getRunnerCredentials(cfg *common.Config) (*common.RunnerCredentials, error) {
+func (c *ResetTokenCommand) getRunnerCredentials(cfg *common.Config) (*common.RunnerConfig, error) {
 	if c.Name != "" {
 		runnerConfig, err := cfg.RunnerByName(c.Name)
 		if err != nil {
 			return nil, err
 		}
 
-		return &runnerConfig.RunnerCredentials, nil
+		return runnerConfig, nil
 	}
 
 	runnerConfig, err := cfg.RunnerByURLAndID(c.URL, c.ID)
@@ -75,7 +75,7 @@ func (c *ResetTokenCommand) getRunnerCredentials(cfg *common.Config) (*common.Ru
 		return nil, err
 	}
 
-	return &runnerConfig.RunnerCredentials, nil
+	return runnerConfig, nil
 }
 
 func (c *ResetTokenCommand) Execute(_context *cli.Context) {
