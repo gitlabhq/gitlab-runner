@@ -73,25 +73,43 @@ func TestNewS3ClientOptions(t *testing.T) {
 	disableDualStack := false
 
 	tests := map[string]struct {
-		s3Config           common.CacheS3Config
-		expectedRegion     string
-		expectedScheme     string
-		usePathStyle       bool
-		expectedAccelerate bool
-		expectedDualStack  bool
-		expectedEndpoint   string
+		s3Config            common.CacheS3Config
+		expectedStaticCreds bool
+		expectedRegion      string
+		expectedScheme      string
+		usePathStyle        bool
+		expectedAccelerate  bool
+		expectedDualStack   bool
+		expectedEndpoint    string
 	}{
 		"s3-standard": {
 			s3Config: common.CacheS3Config{
 				AccessKey:      "test-access-key",
 				SecretKey:      "test-secret-key",
+				ServerAddress:  "s3.amazonaws.com",
 				BucketName:     "test-bucket",
 				BucketLocation: "us-west-2",
 			},
-			expectedRegion:    "us-west-2",
-			expectedScheme:    "https",
-			expectedEndpoint:  "",
-			expectedDualStack: true,
+			expectedStaticCreds: true,
+			expectedRegion:      "us-west-2",
+			expectedScheme:      "https",
+			expectedEndpoint:    "",
+			expectedDualStack:   true,
+		},
+		"s3-standard-with-session-token": {
+			s3Config: common.CacheS3Config{
+				AccessKey:      "test-access-key",
+				SecretKey:      "test-secret-key",
+				SessionToken:   "test-session-token",
+				ServerAddress:  "s3.amazonaws.com",
+				BucketName:     "test-bucket",
+				BucketLocation: "us-west-2",
+			},
+			expectedStaticCreds: true,
+			expectedRegion:      "us-west-2",
+			expectedScheme:      "https",
+			expectedEndpoint:    "",
+			expectedDualStack:   true,
 		},
 		"s3-standard-dual-stack": {
 			s3Config: common.CacheS3Config{
@@ -212,8 +230,19 @@ func TestNewS3ClientOptions(t *testing.T) {
 			client, err := newS3Client(&tt.s3Config)
 			require.NoError(t, err)
 
-			clientOptions := client.(*s3Client).client.Options()
+			s3Client := client.(*s3Client).client
 
+			if tt.expectedStaticCreds {
+				credsProvider := s3Client.Options().Credentials
+
+				creds, err := credsProvider.Retrieve(t.Context())
+				require.NoError(t, err)
+				require.Equal(t, tt.s3Config.AccessKey, creds.AccessKeyID)
+				require.Equal(t, tt.s3Config.SecretKey, creds.SecretAccessKey)
+				require.Equal(t, tt.s3Config.SessionToken, creds.SessionToken)
+			}
+
+			clientOptions := s3Client.Options()
 			require.Equal(t, tt.expectedRegion, clientOptions.Region)
 			require.Equal(t, tt.s3Config.Accelerate, clientOptions.UseAccelerate)
 			require.Equal(t, tt.expectedDualStack, clientOptions.UseDualstack) // nolint:staticcheck
