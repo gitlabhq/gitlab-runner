@@ -433,3 +433,47 @@ func TestInputsTag(t *testing.T) {
 	assert.Equal(t, customInputExpander("REDACTED"), jobResponse.CustomInputExpanderToExpand)
 	assert.Equal(t, customInputExpander("${{ job.inputs.any }}"), jobResponse.CustomInputExpanderNotToExpand)
 }
+
+func TestJobInputs_Expand_NoInputsDefined(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		text     string
+		expected string
+	}{
+		{
+			name:     "no job input access",
+			text:     "Hello ${{ 1 + 2 }}",
+			expected: "Hello ${{ 1 + 2 }}",
+		},
+		{
+			name:     "with job input access",
+			text:     "Hello ${{ job.inputs.username }}",
+			expected: "Hello ${{ job.inputs.username }}",
+		},
+		{
+			name:     "plain text",
+			text:     "Hello world",
+			expected: "Hello world",
+		},
+		{
+			name:     "other selector",
+			text:     "${{ foo.bar.baz }}",
+			expected: "${{ foo.bar.baz }}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			inputs := Inputs{}
+			inputs.SetMetricsCollector(NewJobInputsMetricsCollector())
+
+			expanded, err := inputs.Expand(tt.text)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, expanded)
+		})
+	}
+}

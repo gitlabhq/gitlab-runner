@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"slices"
 
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/moa"
 	"gitlab.com/gitlab-org/moa/ast"
 	"gitlab.com/gitlab-org/moa/value"
@@ -18,6 +19,7 @@ type Inputs struct {
 	inputs           []expression.Input
 	evaluator        *expression.Evaluator
 	metricsCollector *JobInputsMetricsCollector
+	logger           *logrus.Entry
 }
 
 type JobInput struct {
@@ -78,6 +80,8 @@ var (
 	ErrSensitiveUnsupported = errors.New("sensitive inputs are unsupported in interpolations yet")
 	// errInterpolationFound defines a sentinel error for when an interpolation was detected
 	errInterpolationFound = errors.New("interpolation found")
+	// errJobInputAccessFound defines a sentinel error for when a job input access pattern is detected
+	errJobInputAccessFound = errors.New("job input access found")
 )
 
 // interpolationDetector is a visitor that detects if the AST contains an Interpolation
@@ -92,6 +96,56 @@ func (v *interpolationDetector) Enter(expr ast.Expr) (ast.Visitor, error) {
 }
 
 func (v *interpolationDetector) Exit(expr ast.Expr) (ast.Expr, error) {
+	return expr, nil
+}
+
+// jobInputDetector is a visitor that detects if the AST contains access to job inputs.
+// It looks for the pattern job.inputs.<key> in the expression tree, where <key> is
+// accessed via static property access (dot notation).
+//
+// This detector only finds static access patterns like:
+//   - job.inputs.username
+//   - job.inputs.foo.bar (nested access on an input)
+//   - str(job.inputs.age) (input used as function argument)
+//
+// It does NOT detect dynamic access patterns like:
+//   - job.inputs[key] (bracket notation with variable)
+//   - job["inputs"].foo (bracket notation for "inputs")
+//   - job["in" + "puts"].foo (computed property access)
+//
+// The visitor returns a sentinel error as soon as it encounters the first match,
+// exiting traversal early.
+type jobInputDetector struct{}
+
+func (v *jobInputDetector) Enter(expr ast.Expr) (ast.Visitor, error) {
+	selector, ok := expr.(*ast.Selector)
+	if !ok {
+		return v, nil
+	}
+
+	fromSelector, ok := selector.From.(*ast.Selector)
+	if !ok {
+		return v, nil
+	}
+
+	ident, ok := fromSelector.From.(*ast.Ident)
+	if !ok || ident.Name != "job" {
+		return v, nil
+	}
+
+	lit, ok := fromSelector.Select.(*ast.Literal)
+	if !ok {
+		return v, nil
+	}
+
+	if lit.String() == "inputs" {
+		return nil, errJobInputAccessFound
+	}
+
+	return v, nil
+}
+
+func (v *jobInputDetector) Exit(expr ast.Expr) (ast.Expr, error) {
 	return expr, nil
 }
 
@@ -235,6 +289,11 @@ func (i *Inputs) SetMetricsCollector(collector *JobInputsMetricsCollector) {
 	i.metricsCollector = collector
 }
 
+// SetLogger injects the logger
+func (i *Inputs) SetLogger(logger *logrus.Entry) {
+	i.logger = logger
+}
+
 func (i *Inputs) Expand(text string) (string, error) {
 	if i == nil || i.evaluator == nil {
 		return text, nil
@@ -244,6 +303,25 @@ func (i *Inputs) Expand(text string) (string, error) {
 	if err != nil {
 		i.metricsCollector.recordParseError()
 		return "", &InputInterpolationError{err: err}
+	}
+
+	// NOTE: check if we don't have any inputs defined to interpolate
+	// We do this to avoid a breaking change when a user already uses
+	// job input interpolation syntax (`${{ .. }}`) but doesn't actually
+	// want to use them. This hides potential errors when a user forgets
+	// to define inputs - but that's easier to debug and not a breaking
+	// change once GitLab enables job inputs but rather at the point in
+	// time when the user wants to use job inputs.
+	// For context see:
+	// https://gitlab.com/gitlab-org/step-runner/-/work_items/369
+	if len(i.inputs) == 0 {
+		_, walkErr := expr.Walk(&jobInputDetector{})
+		if errors.Is(walkErr, errJobInputAccessFound) {
+			if i.logger != nil {
+				i.logger.Warn("job input interpolation syntax detected but no inputs are defined, therefore job interpolation is not performed")
+			}
+		}
+		return text, nil
 	}
 
 	result, err := i.evaluator.Eval(text, expr)
