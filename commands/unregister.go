@@ -33,7 +33,7 @@ func (c *UnregisterCommand) unregisterAllRunners(cfg *common.Config) ([]*common.
 	var runners []*common.RunnerConfig
 
 	for _, r := range cfg.Runners {
-		if !c.unregisterRunner(r.RunnerCredentials, r.SystemID) {
+		if !c.unregisterRunner(*r, r.SystemID) {
 			errs = errors.Join(errs, fmt.Errorf("failed to unregister runner %q", r.Name))
 			// If unregister fails, leave the runner in the config
 			runners = append(runners, r)
@@ -62,7 +62,7 @@ func (c *UnregisterCommand) unregisterSingleRunner(cfg *common.Config) ([]*commo
 	c.RunnerCredentials = runnerConfig.RunnerCredentials
 
 	// Unregister given Token and URL of the runner
-	if !c.unregisterRunner(c.RunnerCredentials, runnerConfig.SystemID) {
+	if !c.unregisterRunner(*runnerConfig, runnerConfig.SystemID) {
 		return nil, fmt.Errorf("failed to unregister runner %q", c.Name)
 	}
 
@@ -75,7 +75,7 @@ func (c *UnregisterCommand) unregisterSingleRunner(cfg *common.Config) ([]*commo
 	return runners, nil
 }
 
-func (c *UnregisterCommand) unregisterRunner(r common.RunnerCredentials, systemID string) bool {
+func (c *UnregisterCommand) unregisterRunner(r common.RunnerConfig, systemID string) bool {
 	if network.TokenIsCreatedRunnerToken(r.Token) {
 		return c.network.UnregisterRunnerManager(r, systemID)
 	}

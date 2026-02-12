@@ -42,7 +42,7 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		for _, runner := range cfg.Runners {
 			if !hasSelector || runner.Name == c.Name || runner.RunnerCredentials.SameAs(&c.RunnerCredentials) {
 				verified++
-				if c.network.VerifyRunner(runner.RunnerCredentials, runner.SystemID) == nil {
+				if c.network.VerifyRunner(*runner, runner.SystemID) == nil {
 					unverified++
 					continue
 				}

@@ -135,7 +135,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		return nil, false, fmt.Errorf("marshaling plugin config: %w", err)
 	}
 
-	logger := logger.New(config.RunnerCredentials.Log())
+	logger := logger.New(config.Log())
 
 	var store storage.Storage
 	if config.Autoscaler.StateStorage.Enabled {

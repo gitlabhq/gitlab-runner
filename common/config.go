@@ -2116,16 +2116,6 @@ func (c *RunnerCredentials) GetURL() string {
 	return c.URL
 }
 
-func (c *RunnerCredentials) WarnOnLegacyCIURL() {
-	if strings.HasSuffix(strings.TrimRight(c.URL, "/"), "/ci") {
-		c.Log().Warning("The runner URL contains a legacy '/ci' suffix.\n" +
-			"  This suffix is deprecated and should be removed from the configuration.\n" +
-			"  Git submodules may fail to clone with authentication errors if this suffix is present.\n" +
-			"  Please update the 'url' field in your config.toml to remove the '/ci' suffix.\n" +
-			"  See https://docs.gitlab.com/runner/configuration/advanced-configuration.html#legacy-ci-url-suffix")
-	}
-}
-
 func (c *RunnerCredentials) GetTLSCAFile() string {
 	return c.TLSCAFile
 }
@@ -2152,18 +2142,6 @@ func (c *RunnerCredentials) UniqueID() string {
 	return c.URL + token
 }
 
-func (c *RunnerCredentials) Log() *logrus.Entry {
-	logger := c.Logger
-	if logger == nil {
-		logger = logrus.StandardLogger()
-	}
-
-	if c.ShortDescription() != "" {
-		return logger.WithField("runner", c.ShortDescription())
-	}
-	return logger.WithFields(logrus.Fields{})
-}
-
 func (c *RunnerCredentials) SameAs(other *RunnerCredentials) bool {
 	if c.Token != other.Token {
 		return false
@@ -2176,6 +2154,16 @@ func (c *RunnerCredentials) SameAs(other *RunnerCredentials) bool {
 
 func (c *RunnerConfig) String() string {
 	return fmt.Sprintf("%v url=%v token=%v executor=%v", c.Name, c.URL, c.Token, c.Executor)
+}
+
+func (c *RunnerConfig) WarnOnLegacyCIURL() {
+	if strings.HasSuffix(strings.TrimRight(c.URL, "/"), "/ci") {
+		c.Log().Warning("The runner URL contains a legacy '/ci' suffix.\n" +
+			"  This suffix is deprecated and should be removed from the configuration.\n" +
+			"  Git submodules may fail to clone with authentication errors if this suffix is present.\n" +
+			"  Please update the 'url' field in your config.toml to remove the '/ci' suffix.\n" +
+			"  See https://docs.gitlab.com/runner/configuration/advanced-configuration.html#legacy-ci-url-suffix")
+	}
 }
 
 func (c *RunnerConfig) GetSystemID() string {
@@ -2243,6 +2231,24 @@ func (c *RunnerConfig) IsProxyExec() bool {
 	}
 
 	return false
+}
+
+func (c *RunnerConfig) Log() *logrus.Entry {
+	logger := c.Logger
+	if logger == nil {
+		logger = logrus.StandardLogger()
+	}
+
+	entry := logger.WithFields(logrus.Fields{})
+
+	if c.ShortDescription() != "" {
+		entry = entry.WithField("runner", c.ShortDescription())
+	}
+	if c.Name != "" {
+		entry = entry.WithField("runner_name", c.Name)
+	}
+
+	return entry
 }
 
 // DeepCopy attempts to make a deep clone of the object

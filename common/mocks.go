@@ -2292,7 +2292,7 @@ func (_c *MockNetwork_ProcessJob_Call) RunAndReturn(run func(config RunnerConfig
 }
 
 // RegisterRunner provides a mock function for the type MockNetwork
-func (_mock *MockNetwork) RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse {
+func (_mock *MockNetwork) RegisterRunner(config RunnerConfig, parameters RegisterRunnerParameters) *RegisterRunnerResponse {
 	ret := _mock.Called(config, parameters)
 
 	if len(ret) == 0 {
@@ -2300,7 +2300,7 @@ func (_mock *MockNetwork) RegisterRunner(config RunnerCredentials, parameters Re
 	}
 
 	var r0 *RegisterRunnerResponse
-	if returnFunc, ok := ret.Get(0).(func(RunnerCredentials, RegisterRunnerParameters) *RegisterRunnerResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(RunnerConfig, RegisterRunnerParameters) *RegisterRunnerResponse); ok {
 		r0 = returnFunc(config, parameters)
 	} else {
 		if ret.Get(0) != nil {
@@ -2316,17 +2316,17 @@ type MockNetwork_RegisterRunner_Call struct {
 }
 
 // RegisterRunner is a helper method to define mock.On call
-//   - config RunnerCredentials
+//   - config RunnerConfig
 //   - parameters RegisterRunnerParameters
 func (_e *MockNetwork_Expecter) RegisterRunner(config interface{}, parameters interface{}) *MockNetwork_RegisterRunner_Call {
 	return &MockNetwork_RegisterRunner_Call{Call: _e.mock.On("RegisterRunner", config, parameters)}
 }
 
-func (_c *MockNetwork_RegisterRunner_Call) Run(run func(config RunnerCredentials, parameters RegisterRunnerParameters)) *MockNetwork_RegisterRunner_Call {
+func (_c *MockNetwork_RegisterRunner_Call) Run(run func(config RunnerConfig, parameters RegisterRunnerParameters)) *MockNetwork_RegisterRunner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 RunnerCredentials
+		var arg0 RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(RunnerCredentials)
+			arg0 = args[0].(RunnerConfig)
 		}
 		var arg1 RegisterRunnerParameters
 		if args[1] != nil {
@@ -2345,7 +2345,7 @@ func (_c *MockNetwork_RegisterRunner_Call) Return(registerRunnerResponse *Regist
 	return _c
 }
 
-func (_c *MockNetwork_RegisterRunner_Call) RunAndReturn(run func(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse) *MockNetwork_RegisterRunner_Call {
+func (_c *MockNetwork_RegisterRunner_Call) RunAndReturn(run func(config RunnerConfig, parameters RegisterRunnerParameters) *RegisterRunnerResponse) *MockNetwork_RegisterRunner_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2425,7 +2425,7 @@ func (_c *MockNetwork_RequestJob_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // ResetToken provides a mock function for the type MockNetwork
-func (_mock *MockNetwork) ResetToken(runner RunnerCredentials, systemID string) *ResetTokenResponse {
+func (_mock *MockNetwork) ResetToken(runner RunnerConfig, systemID string) *ResetTokenResponse {
 	ret := _mock.Called(runner, systemID)
 
 	if len(ret) == 0 {
@@ -2433,7 +2433,7 @@ func (_mock *MockNetwork) ResetToken(runner RunnerCredentials, systemID string) 
 	}
 
 	var r0 *ResetTokenResponse
-	if returnFunc, ok := ret.Get(0).(func(RunnerCredentials, string) *ResetTokenResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(RunnerConfig, string) *ResetTokenResponse); ok {
 		r0 = returnFunc(runner, systemID)
 	} else {
 		if ret.Get(0) != nil {
@@ -2449,17 +2449,17 @@ type MockNetwork_ResetToken_Call struct {
 }
 
 // ResetToken is a helper method to define mock.On call
-//   - runner RunnerCredentials
+//   - runner RunnerConfig
 //   - systemID string
 func (_e *MockNetwork_Expecter) ResetToken(runner interface{}, systemID interface{}) *MockNetwork_ResetToken_Call {
 	return &MockNetwork_ResetToken_Call{Call: _e.mock.On("ResetToken", runner, systemID)}
 }
 
-func (_c *MockNetwork_ResetToken_Call) Run(run func(runner RunnerCredentials, systemID string)) *MockNetwork_ResetToken_Call {
+func (_c *MockNetwork_ResetToken_Call) Run(run func(runner RunnerConfig, systemID string)) *MockNetwork_ResetToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 RunnerCredentials
+		var arg0 RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(RunnerCredentials)
+			arg0 = args[0].(RunnerConfig)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -2478,13 +2478,13 @@ func (_c *MockNetwork_ResetToken_Call) Return(resetTokenResponse *ResetTokenResp
 	return _c
 }
 
-func (_c *MockNetwork_ResetToken_Call) RunAndReturn(run func(runner RunnerCredentials, systemID string) *ResetTokenResponse) *MockNetwork_ResetToken_Call {
+func (_c *MockNetwork_ResetToken_Call) RunAndReturn(run func(runner RunnerConfig, systemID string) *ResetTokenResponse) *MockNetwork_ResetToken_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ResetTokenWithPAT provides a mock function for the type MockNetwork
-func (_mock *MockNetwork) ResetTokenWithPAT(runner RunnerCredentials, systemID string, pat string) *ResetTokenResponse {
+func (_mock *MockNetwork) ResetTokenWithPAT(runner RunnerConfig, systemID string, pat string) *ResetTokenResponse {
 	ret := _mock.Called(runner, systemID, pat)
 
 	if len(ret) == 0 {
@@ -2492,7 +2492,7 @@ func (_mock *MockNetwork) ResetTokenWithPAT(runner RunnerCredentials, systemID s
 	}
 
 	var r0 *ResetTokenResponse
-	if returnFunc, ok := ret.Get(0).(func(RunnerCredentials, string, string) *ResetTokenResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(RunnerConfig, string, string) *ResetTokenResponse); ok {
 		r0 = returnFunc(runner, systemID, pat)
 	} else {
 		if ret.Get(0) != nil {
@@ -2508,18 +2508,18 @@ type MockNetwork_ResetTokenWithPAT_Call struct {
 }
 
 // ResetTokenWithPAT is a helper method to define mock.On call
-//   - runner RunnerCredentials
+//   - runner RunnerConfig
 //   - systemID string
 //   - pat string
 func (_e *MockNetwork_Expecter) ResetTokenWithPAT(runner interface{}, systemID interface{}, pat interface{}) *MockNetwork_ResetTokenWithPAT_Call {
 	return &MockNetwork_ResetTokenWithPAT_Call{Call: _e.mock.On("ResetTokenWithPAT", runner, systemID, pat)}
 }
 
-func (_c *MockNetwork_ResetTokenWithPAT_Call) Run(run func(runner RunnerCredentials, systemID string, pat string)) *MockNetwork_ResetTokenWithPAT_Call {
+func (_c *MockNetwork_ResetTokenWithPAT_Call) Run(run func(runner RunnerConfig, systemID string, pat string)) *MockNetwork_ResetTokenWithPAT_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 RunnerCredentials
+		var arg0 RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(RunnerCredentials)
+			arg0 = args[0].(RunnerConfig)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -2543,7 +2543,7 @@ func (_c *MockNetwork_ResetTokenWithPAT_Call) Return(resetTokenResponse *ResetTo
 	return _c
 }
 
-func (_c *MockNetwork_ResetTokenWithPAT_Call) RunAndReturn(run func(runner RunnerCredentials, systemID string, pat string) *ResetTokenResponse) *MockNetwork_ResetTokenWithPAT_Call {
+func (_c *MockNetwork_ResetTokenWithPAT_Call) RunAndReturn(run func(runner RunnerConfig, systemID string, pat string) *ResetTokenResponse) *MockNetwork_ResetTokenWithPAT_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2589,7 +2589,7 @@ func (_c *MockNetwork_SetConnectionMaxAge_Call) RunAndReturn(run func(duration t
 }
 
 // UnregisterRunner provides a mock function for the type MockNetwork
-func (_mock *MockNetwork) UnregisterRunner(config RunnerCredentials) bool {
+func (_mock *MockNetwork) UnregisterRunner(config RunnerConfig) bool {
 	ret := _mock.Called(config)
 
 	if len(ret) == 0 {
@@ -2597,7 +2597,7 @@ func (_mock *MockNetwork) UnregisterRunner(config RunnerCredentials) bool {
 	}
 
 	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(RunnerCredentials) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(RunnerConfig) bool); ok {
 		r0 = returnFunc(config)
 	} else {
 		r0 = ret.Get(0).(bool)
@@ -2611,16 +2611,16 @@ type MockNetwork_UnregisterRunner_Call struct {
 }
 
 // UnregisterRunner is a helper method to define mock.On call
-//   - config RunnerCredentials
+//   - config RunnerConfig
 func (_e *MockNetwork_Expecter) UnregisterRunner(config interface{}) *MockNetwork_UnregisterRunner_Call {
 	return &MockNetwork_UnregisterRunner_Call{Call: _e.mock.On("UnregisterRunner", config)}
 }
 
-func (_c *MockNetwork_UnregisterRunner_Call) Run(run func(config RunnerCredentials)) *MockNetwork_UnregisterRunner_Call {
+func (_c *MockNetwork_UnregisterRunner_Call) Run(run func(config RunnerConfig)) *MockNetwork_UnregisterRunner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 RunnerCredentials
+		var arg0 RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(RunnerCredentials)
+			arg0 = args[0].(RunnerConfig)
 		}
 		run(
 			arg0,
@@ -2634,13 +2634,13 @@ func (_c *MockNetwork_UnregisterRunner_Call) Return(b bool) *MockNetwork_Unregis
 	return _c
 }
 
-func (_c *MockNetwork_UnregisterRunner_Call) RunAndReturn(run func(config RunnerCredentials) bool) *MockNetwork_UnregisterRunner_Call {
+func (_c *MockNetwork_UnregisterRunner_Call) RunAndReturn(run func(config RunnerConfig) bool) *MockNetwork_UnregisterRunner_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UnregisterRunnerManager provides a mock function for the type MockNetwork
-func (_mock *MockNetwork) UnregisterRunnerManager(config RunnerCredentials, systemID string) bool {
+func (_mock *MockNetwork) UnregisterRunnerManager(config RunnerConfig, systemID string) bool {
 	ret := _mock.Called(config, systemID)
 
 	if len(ret) == 0 {
@@ -2648,7 +2648,7 @@ func (_mock *MockNetwork) UnregisterRunnerManager(config RunnerCredentials, syst
 	}
 
 	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(RunnerCredentials, string) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(RunnerConfig, string) bool); ok {
 		r0 = returnFunc(config, systemID)
 	} else {
 		r0 = ret.Get(0).(bool)
@@ -2662,17 +2662,17 @@ type MockNetwork_UnregisterRunnerManager_Call struct {
 }
 
 // UnregisterRunnerManager is a helper method to define mock.On call
-//   - config RunnerCredentials
+//   - config RunnerConfig
 //   - systemID string
 func (_e *MockNetwork_Expecter) UnregisterRunnerManager(config interface{}, systemID interface{}) *MockNetwork_UnregisterRunnerManager_Call {
 	return &MockNetwork_UnregisterRunnerManager_Call{Call: _e.mock.On("UnregisterRunnerManager", config, systemID)}
 }
 
-func (_c *MockNetwork_UnregisterRunnerManager_Call) Run(run func(config RunnerCredentials, systemID string)) *MockNetwork_UnregisterRunnerManager_Call {
+func (_c *MockNetwork_UnregisterRunnerManager_Call) Run(run func(config RunnerConfig, systemID string)) *MockNetwork_UnregisterRunnerManager_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 RunnerCredentials
+		var arg0 RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(RunnerCredentials)
+			arg0 = args[0].(RunnerConfig)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -2691,7 +2691,7 @@ func (_c *MockNetwork_UnregisterRunnerManager_Call) Return(b bool) *MockNetwork_
 	return _c
 }
 
-func (_c *MockNetwork_UnregisterRunnerManager_Call) RunAndReturn(run func(config RunnerCredentials, systemID string) bool) *MockNetwork_UnregisterRunnerManager_Call {
+func (_c *MockNetwork_UnregisterRunnerManager_Call) RunAndReturn(run func(config RunnerConfig, systemID string) bool) *MockNetwork_UnregisterRunnerManager_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2832,7 +2832,7 @@ func (_c *MockNetwork_UploadRawArtifacts_Call) RunAndReturn(run func(config JobC
 }
 
 // VerifyRunner provides a mock function for the type MockNetwork
-func (_mock *MockNetwork) VerifyRunner(config RunnerCredentials, systemID string) *VerifyRunnerResponse {
+func (_mock *MockNetwork) VerifyRunner(config RunnerConfig, systemID string) *VerifyRunnerResponse {
 	ret := _mock.Called(config, systemID)
 
 	if len(ret) == 0 {
@@ -2840,7 +2840,7 @@ func (_mock *MockNetwork) VerifyRunner(config RunnerCredentials, systemID string
 	}
 
 	var r0 *VerifyRunnerResponse
-	if returnFunc, ok := ret.Get(0).(func(RunnerCredentials, string) *VerifyRunnerResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(RunnerConfig, string) *VerifyRunnerResponse); ok {
 		r0 = returnFunc(config, systemID)
 	} else {
 		if ret.Get(0) != nil {
@@ -2856,17 +2856,17 @@ type MockNetwork_VerifyRunner_Call struct {
 }
 
 // VerifyRunner is a helper method to define mock.On call
-//   - config RunnerCredentials
+//   - config RunnerConfig
 //   - systemID string
 func (_e *MockNetwork_Expecter) VerifyRunner(config interface{}, systemID interface{}) *MockNetwork_VerifyRunner_Call {
 	return &MockNetwork_VerifyRunner_Call{Call: _e.mock.On("VerifyRunner", config, systemID)}
 }
 
-func (_c *MockNetwork_VerifyRunner_Call) Run(run func(config RunnerCredentials, systemID string)) *MockNetwork_VerifyRunner_Call {
+func (_c *MockNetwork_VerifyRunner_Call) Run(run func(config RunnerConfig, systemID string)) *MockNetwork_VerifyRunner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 RunnerCredentials
+		var arg0 RunnerConfig
 		if args[0] != nil {
-			arg0 = args[0].(RunnerCredentials)
+			arg0 = args[0].(RunnerConfig)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -2885,7 +2885,7 @@ func (_c *MockNetwork_VerifyRunner_Call) Return(verifyRunnerResponse *VerifyRunn
 	return _c
 }
 
-func (_c *MockNetwork_VerifyRunner_Call) RunAndReturn(run func(config RunnerCredentials, systemID string) *VerifyRunnerResponse) *MockNetwork_VerifyRunner_Call {
+func (_c *MockNetwork_VerifyRunner_Call) RunAndReturn(run func(config RunnerConfig, systemID string) *VerifyRunnerResponse) *MockNetwork_VerifyRunner_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -23,8 +23,14 @@ const (
 )
 
 var (
-	testRunnerCreds1 = common.RunnerCredentials{Token: testToken1}
-	testRunnerCreds2 = common.RunnerCredentials{Token: testToken2}
+	testRunnerConfig1 = common.RunnerConfig{
+		Name:              testRunner1,
+		RunnerCredentials: common.RunnerCredentials{Token: testToken1},
+	}
+	testRunnerConfig2 = common.RunnerConfig{
+		Name:              testRunner2,
+		RunnerCredentials: common.RunnerCredentials{Token: testToken2},
+	}
 )
 
 func TestUnregisterCommand_unregisterAllRunner(t *testing.T) {
@@ -38,25 +44,19 @@ func TestUnregisterCommand_unregisterAllRunner(t *testing.T) {
 		{
 			name: "successfully unregister all runners",
 			cfgs: []*common.RunnerConfig{
-				{
-					Name:              testRunner1,
-					RunnerCredentials: testRunnerCreds1,
-				},
-				{
-					Name:              testRunner2,
-					RunnerCredentials: testRunnerCreds2,
-				},
+				&testRunnerConfig1,
+				&testRunnerConfig2,
 			},
 			setup: func(tb testing.TB) common.Network {
 				tb.Helper()
 				mn := common.NewMockNetwork(t)
 				mn.On(
 					"UnregisterRunner",
-					testRunnerCreds1,
+					testRunnerConfig1,
 				).Once().Return(true)
 				mn.On(
 					"UnregisterRunner",
-					testRunnerCreds2,
+					testRunnerConfig2,
 				).Once().Return(true)
 				return mn
 			},
@@ -64,33 +64,24 @@ func TestUnregisterCommand_unregisterAllRunner(t *testing.T) {
 		{
 			name: "successfully unregister some runners",
 			cfgs: []*common.RunnerConfig{
-				{
-					Name:              testRunner1,
-					RunnerCredentials: testRunnerCreds1,
-				},
-				{
-					Name:              testRunner2,
-					RunnerCredentials: testRunnerCreds2,
-				},
+				&testRunnerConfig1,
+				&testRunnerConfig2,
 			},
 			setup: func(tb testing.TB) common.Network {
 				tb.Helper()
 				mn := common.NewMockNetwork(t)
 				mn.On(
 					"UnregisterRunner",
-					testRunnerCreds1,
+					testRunnerConfig1,
 				).Once().Return(true)
 				mn.On(
 					"UnregisterRunner",
-					testRunnerCreds2,
+					testRunnerConfig2,
 				).Once().Return(false)
 				return mn
 			},
 			expectedRunners: []*common.RunnerConfig{
-				{
-					Name:              testRunner2,
-					RunnerCredentials: testRunnerCreds2,
-				},
+				&testRunnerConfig2,
 			},
 			expectedErr: `failed to unregister runner "test-runner-2"`,
 		},
@@ -119,7 +110,7 @@ func TestUnregisterCommand_unregisterSingleRunner(t *testing.T) {
 		name            string
 		cfg             *common.Config
 		runnerName      string
-		runnerCreds     common.RunnerCredentials
+		runnerConfig    common.RunnerConfig
 		setup           func(tb testing.TB) common.Network
 		expectedRunners []*common.RunnerConfig
 		expectedErr     string
@@ -128,45 +119,30 @@ func TestUnregisterCommand_unregisterSingleRunner(t *testing.T) {
 			name: "unregister with runner creds",
 			cfg: &common.Config{
 				Runners: []*common.RunnerConfig{
-					{
-						Name:              testRunner1,
-						RunnerCredentials: testRunnerCreds1,
-					},
-					{
-						Name:              testRunner2,
-						RunnerCredentials: testRunnerCreds2,
-					},
+					&testRunnerConfig1,
+					&testRunnerConfig2,
 				},
 			},
-			runnerCreds: testRunnerCreds1,
+			runnerConfig: testRunnerConfig1,
 			setup: func(tb testing.TB) common.Network {
 				tb.Helper()
 				mn := common.NewMockNetwork(t)
 				mn.On(
 					"UnregisterRunner",
-					testRunnerCreds1,
+					testRunnerConfig1,
 				).Return(true)
 				return mn
 			},
 			expectedRunners: []*common.RunnerConfig{
-				{
-					Name:              testRunner2,
-					RunnerCredentials: testRunnerCreds2,
-				},
+				&testRunnerConfig2,
 			},
 		},
 		{
 			name: "unregister with runner name",
 			cfg: &common.Config{
 				Runners: []*common.RunnerConfig{
-					{
-						Name:              testRunner1,
-						RunnerCredentials: testRunnerCreds1,
-					},
-					{
-						Name:              testRunner2,
-						RunnerCredentials: testRunnerCreds2,
-					},
+					&testRunnerConfig1,
+					&testRunnerConfig2,
 				},
 			},
 			runnerName: testRunner1,
@@ -175,47 +151,35 @@ func TestUnregisterCommand_unregisterSingleRunner(t *testing.T) {
 				mn := common.NewMockNetwork(t)
 				mn.On(
 					"UnregisterRunner",
-					testRunnerCreds1,
+					testRunnerConfig1,
 				).Return(true)
 				return mn
 			},
 			expectedRunners: []*common.RunnerConfig{
-				{
-					Name:              testRunner2,
-					RunnerCredentials: testRunnerCreds2,
-				},
+				&testRunnerConfig2,
 			},
 		},
 		{
 			name: "unregister with runner name and creds",
 			cfg: &common.Config{
 				Runners: []*common.RunnerConfig{
-					{
-						Name:              testRunner1,
-						RunnerCredentials: testRunnerCreds1,
-					},
-					{
-						Name:              testRunner2,
-						RunnerCredentials: testRunnerCreds2,
-					},
+					&testRunnerConfig1,
+					&testRunnerConfig2,
 				},
 			},
-			runnerName:  testRunner2,
-			runnerCreds: testRunnerCreds2,
+			runnerName:   testRunner2,
+			runnerConfig: testRunnerConfig2,
 			setup: func(tb testing.TB) common.Network {
 				tb.Helper()
 				mn := common.NewMockNetwork(t)
 				mn.On(
 					"UnregisterRunner",
-					testRunnerCreds2,
+					testRunnerConfig2,
 				).Return(true)
 				return mn
 			},
 			expectedRunners: []*common.RunnerConfig{
-				{
-					Name:              testRunner1,
-					RunnerCredentials: testRunnerCreds1,
-				},
+				&testRunnerConfig1,
 			},
 		},
 		{
@@ -229,9 +193,11 @@ func TestUnregisterCommand_unregisterSingleRunner(t *testing.T) {
 			expectedErr: "could not find a runner with the name 'not-found-runner'",
 		},
 		{
-			name:        "token not found",
-			cfg:         &common.Config{},
-			runnerCreds: common.RunnerCredentials{Token: "not-found-token"},
+			name: "token not found",
+			cfg:  &common.Config{},
+			runnerConfig: common.RunnerConfig{
+				RunnerCredentials: common.RunnerCredentials{Token: "not-found-token"},
+			},
 			setup: func(tb testing.TB) common.Network {
 				tb.Helper()
 				return common.NewMockNetwork(t)
@@ -251,24 +217,18 @@ func TestUnregisterCommand_unregisterSingleRunner(t *testing.T) {
 			name: "unregister failure",
 			cfg: &common.Config{
 				Runners: []*common.RunnerConfig{
-					{
-						Name:              testRunner1,
-						RunnerCredentials: testRunnerCreds1,
-					},
-					{
-						Name:              testRunner2,
-						RunnerCredentials: testRunnerCreds2,
-					},
+					&testRunnerConfig1,
+					&testRunnerConfig2,
 				},
 			},
-			runnerCreds: testRunnerCreds1,
-			runnerName:  testRunner1,
+			runnerConfig: testRunnerConfig1,
+			runnerName:   testRunner1,
 			setup: func(tb testing.TB) common.Network {
 				tb.Helper()
 				mn := common.NewMockNetwork(t)
 				mn.On(
 					"UnregisterRunner",
-					testRunnerCreds1,
+					testRunnerConfig1,
 				).Return(false)
 				return mn
 			},
@@ -281,7 +241,7 @@ func TestUnregisterCommand_unregisterSingleRunner(t *testing.T) {
 			cmd := UnregisterCommand{
 				network:           tc.setup(t),
 				Name:              tc.runnerName,
-				RunnerCredentials: tc.runnerCreds,
+				RunnerCredentials: tc.runnerConfig.RunnerCredentials,
 			}
 
 			runners, err := cmd.unregisterSingleRunner(tc.cfg)
@@ -372,7 +332,7 @@ func TestUnregisterCommand_unregisterRunner(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cmd := UnregisterCommand{network: tc.setup(t)}
 
-			result := cmd.unregisterRunner(common.RunnerCredentials{Token: tc.token}, tc.systemID)
+			result := cmd.unregisterRunner(common.RunnerConfig{RunnerCredentials: common.RunnerCredentials{Token: tc.token}}, tc.systemID)
 
 			assert.Equal(t, tc.expected, result)
 		})

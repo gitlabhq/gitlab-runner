@@ -349,7 +349,7 @@ func (mr *RunCommand) resetOneRunnerToken() bool {
 				return fmt.Errorf("resetting token for runner: %w", err)
 			}
 
-			updated = common.ResetToken(mr.network, &runnerCfg.RunnerCredentials, runnerCfg.GetSystemID(), "")
+			updated = common.ResetToken(mr.network, runnerCfg, runnerCfg.GetSystemID(), "")
 			return nil
 		})); err != nil {
 			mr.log().WithError(err).Errorln("Failed to load config (token reset)")
@@ -850,8 +850,9 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 			if err != nil {
 				logger := mr.log().
 					WithFields(logrus.Fields{
-						"runner":   runner.ShortDescription(),
-						"executor": runner.Executor,
+						"runner":      runner.ShortDescription(),
+						"runner_name": runner.Name,
+						"executor":    runner.Executor,
 					}).WithError(err)
 
 				l, failureType := loggerAndFailureTypeFromError(logger, err)
@@ -895,12 +896,17 @@ func loggerAndFailureTypeFromError(logger logrus.FieldLogger, err error) (func(a
 // To speed-up jobs handling before starting the job this method "requeues" the runner to another
 // worker (by feeding the channel normally handled by feedRunners).
 func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners chan *common.RunnerConfig) error {
-	mr.log().WithField("runner", runner.ShortDescription()).Debugln("Processing runner")
+	runnerFields := logrus.Fields{
+		"runner":      runner.ShortDescription(),
+		"runner_name": runner.Name,
+	}
+
+	mr.log().WithFields(runnerFields).Debugln("Processing runner")
 
 	provider := common.GetExecutorProvider(runner.Executor)
 	if provider == nil {
 		mr.log().
-			WithField("runner", runner.ShortDescription()).
+			WithFields(runnerFields).
 			Errorf("Executor %q is not known; marking Runner as unhealthy", runner.Executor)
 		mr.healthHelper.markHealth(runner, false)
 
@@ -909,10 +915,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring job slot")
 	if !mr.buildsHelper.acquireBuild(runner) {
-		logrus.WithFields(logrus.Fields{
-			"runner": runner.ShortDescription(),
-			"worker": id,
-		}).Debug("Failed to request job, runner limit met")
+		logrus.WithFields(runnerFields).WithField("worker", id).Debug("Failed to request job, runner limit met")
 
 		return nil
 	}
@@ -921,14 +924,14 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	// Acquire request for job
 	// We must ensure that this is released after the job request, or earlier if there's an
 	// error before the job request is made.
-	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring request slot")
+	mr.log().WithFields(runnerFields).Debug("Acquiring request slot")
 	if !mr.buildsHelper.acquireRequest(runner) {
-		mr.log().WithField("runner", runner.ShortDescription()).
+		mr.log().WithFields(runnerFields).
 			Debugln("Failed to request job: 'request_concurrency' already reached, see https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section")
 		return nil
 	}
 
-	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring executor from provider")
+	mr.log().WithFields(runnerFields).Debug("Acquiring executor from provider")
 	executorData, err := provider.Acquire(runner)
 	if err != nil {
 		// Release job request
@@ -977,7 +980,8 @@ func (mr *RunCommand) processBuildOnRunner(
 	mr.buildsHelper.addBuild(build)
 
 	fields := logrus.Fields{
-		"runner":                runner.Name,
+		"runner":                runner.ShortDescription(),
+		"runner_name":           runner.Name,
 		"job":                   build.ID,
 		"project":               build.JobInfo.ProjectID,
 		"project_full_path":     build.JobInfo.ProjectFullPath,
@@ -1172,7 +1176,7 @@ func (mr *RunCommand) doJobRequest(
 // behavior of feedRunners and speeds-up jobs handling. But if the channel is full, the
 // method just exits without blocking.
 func (mr *RunCommand) requeueRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
-	runnerLog := mr.log().WithField("runner", runner.ShortDescription())
+	runnerLog := mr.log().WithField("runner", runner.ShortDescription()).WithField("runner_name", runner.Name)
 
 	select {
 	case runners <- runner:
