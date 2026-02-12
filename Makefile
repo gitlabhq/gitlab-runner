@@ -64,8 +64,8 @@ PROTOC_GEN_GO_GRPC_VERSION := v1.6.0
 SPLITIC = splitic
 MAGE = $(localBin)/mage
 
-GOLANGLINT_VERSION ?= v2.7.2
-GOLANGLINT ?= $(localBin)/golangci-lint$(GOLANGLINT_VERSION)
+GOLANGLINT_VERSION ?= 2.7.2
+GOLANGLINT ?= $(localBin)/golangci-lint
 GOLANGLINT_GOARGS ?= $(localBin)/goargs.so
 
 GENERATED_FILES_TOOLS = $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
@@ -386,7 +386,7 @@ $(MAGE): .tmp
 	rm -rf .tmp/mage .tmp/pkg
 
 ifneq ($(GOLANGLINT_VERSION),)
-$(GOLANGLINT): CHECKOUT_REF := -b "$(GOLANGLINT_VERSION)"
+$(GOLANGLINT): CHECKOUT_REF := -b v"$(GOLANGLINT_VERSION)"
 endif
 $(GOLANGLINT): TOOL_BUILD_DIR := .tmp/build/golangci-lint
 $(GOLANGLINT): $(GOLANGLINT_GOARGS)
@@ -397,7 +397,7 @@ $(GOLANGLINT):
 	export COMMIT=$(shell git rev-parse --short HEAD) && \
 	export DATE=$(shell date -u '+%FT%TZ') && \
 	CGO_ENABLED=1 go build --trimpath -o $(GOLANGLINT) \
-		-ldflags "-s -w -X main.version=$(GOLANGLINT_VERSION) -X main.commit=$${COMMIT} -X main.date=$${DATE}" \
+		-ldflags "-s -w -X main.version=v$(GOLANGLINT_VERSION) -X main.commit=$${COMMIT} -X main.date=$${DATE}" \
 		./cmd/golangci-lint/
 	$(GOLANGLINT) --version
 	rm -rf $(TOOL_BUILD_DIR)

@@ -60,14 +60,13 @@ code_quality:
     # Use GOCACHE instead of GOLANGCI_LINT_CACHE
     # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
     - .go-cache
-  image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:2.7.2-go${GO_VERSION}
+  image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:${GOLANGLINT_VERSION}-go${GO_VERSION}
   needs: []
   allow_failure: true
   variables:
     REPORT_FILE: gl-code-quality-report.json
     LINT_FLAGS: "--color=never --timeout=15m"
     OUT_FORMAT: "--output.code-climate.path=gl-code-quality-report.json"
-    GOLANGLINT_VERSION: "" # Don't add version suffix to Makefile's GOLANGLINT (use plain golangci-lint from image)
   before_script:
     - !reference [.go-cache, before_script]
     # Ensure the goargs linter plugin is available at .tmp/bin/goargs.so to suit .golangci.yml
@@ -263,12 +262,12 @@ docs:check Hugo build:
 
 yaml:lint:
   stage: qa
-  image: node:18-alpine
+  image: node:alpine
   needs: []
   extends:
     - .rules:merge_request_pipelines
     - .kubernetes runner
   script:
-    - npm install -g prettier@3.0.3
+    - npm install -g prettier
     - echo "Checking YAML formatting in .gitlab/ci/ directory..."
     - prettier --check ".gitlab/ci/**/*.{yml,yaml}" --log-level warn
