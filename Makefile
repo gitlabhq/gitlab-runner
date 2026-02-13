@@ -478,3 +478,13 @@ print_image_tags:
 
 .PHONY: tools # Install dev tool and dependency binaries for local development.
 tools: $(GITLAB_CHANGELOG) $(GOCOVER_COBERTURA) $(GOLANGLINT) $(GOLANGLINT_GOARGS) $(MAGE) $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(RELEASE_INDEX_GENERATOR)
+
+.PHONY: sync-updated-go-version # Sync the go version in CI files to development docs and scripts
+sync-updated-go-version:
+	@echo "Updating Go version in documentation and scripts..."
+	$(eval GO_VERSION := $(shell grep 'GO_VERSION:' .gitlab/ci/_common.gitlab-ci.yml | awk '{print $$2}' | tr -d '"'))
+	@echo "Using Go version: $(GO_VERSION)"
+	@sed -i.bak -E 's/go[0-9]+\.[0-9]+\.[0-9]+/go$(GO_VERSION)/g' docs/development/_index.md && rm docs/development/_index.md.bak
+	@sed -i.bak -E 's/go-[0-9]+\.[0-9]+\.[0-9]+/go-$(GO_VERSION)/g' docs/development/_index.md && rm docs/development/_index.md.bak
+	@sed -i.bak -E 's/\$$goVersion = "[0-9]+\.[0-9]+\.[0-9]+"/$$goVersion = "$(GO_VERSION)"/g' scripts/vagrant/provision/base.ps1 && rm scripts/vagrant/provision/base.ps1.bak
+	@echo "Files updated with Go version $(GO_VERSION)"
