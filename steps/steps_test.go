@@ -5,11 +5,13 @@ package steps
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 func Test_addStepsPreamble(t *testing.T) {
@@ -48,6 +50,18 @@ func Test_addStepsPreamble(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func Test_NewRequest_Adds_Timeout(t *testing.T) {
+	step := `[{"name":"script", "script": "foo bar baz"}]`
+	var steps []schema.Step
+	assert.NoError(t, json.Unmarshal([]byte(step), &steps))
+	to := time.Second * 42
+
+	ji := JobInfo{Timeout: to}
+	got, err := NewRequest(ji, steps)
+	assert.NoError(t, err)
+	assert.Equal(t, to, *got.Timeout)
 }
 
 func Test_addVariables_Omits(t *testing.T) {
