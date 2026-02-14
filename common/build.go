@@ -450,6 +450,7 @@ func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector,
 
 			info := steps.JobInfo{
 				ID:         b.ID,
+				Timeout:    b.GetBuildTimeout(),
 				ProjectDir: b.FullProjectDir(),
 				Variables:  b.GetAllVariables(),
 			}

@@ -30,6 +30,7 @@ func NewRequest(jobInfo JobInfo, steps []schema.Step) (*client.RunRequest, error
 
 	return &client.RunRequest{
 		Id:        strconv.FormatInt(jobInfo.ID, 10),
+		Timeout:   &jobInfo.Timeout,
 		WorkDir:   jobInfo.ProjectDir,
 		BuildDir:  jobInfo.ProjectDir,
 		Env:       map[string]string{},

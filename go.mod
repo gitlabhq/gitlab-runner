@@ -80,7 +80,7 @@ require (
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e
 	gitlab.com/gitlab-org/labkit v1.34.0
 	gitlab.com/gitlab-org/moa v0.0.0-20251209091627-66342f721c88
-	gitlab.com/gitlab-org/step-runner v0.27.0
+	gitlab.com/gitlab-org/step-runner v0.29.0
 	go.mozilla.org/pkcs7 v0.9.0
 	go.uber.org/automaxprocs v1.6.0
 	go.yaml.in/yaml/v3 v3.0.4

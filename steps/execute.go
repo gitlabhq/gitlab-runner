@@ -23,6 +23,7 @@ type Connector interface {
 
 type JobInfo struct {
 	ID         int64
+	Timeout    time.Duration
 	ProjectDir string
 	Variables  spec.Variables
 }
