@@ -1,3 +1,80 @@
+## v18.9.0 (2026-02-15)
+
+### New features
+
+- Pass job timeout in steps RunRequest so server can also enforce job timeouts [!6375](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6375)
+- feat: allow passing `env` and `labels` options to `json-file` Docker logging driver [!5638](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5638) (Patrick Decat @pdecat)
+- Implement user script to step [!6069](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6069)
+- Job Router client - WebSocket support [!6020](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6020)
+- Update the libvirt use doc [!6034](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6034) (Funning @FunningC0217)
+- Enable Job Inputs feature flag by default [!6275](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6275)
+- Upgrade step-runner to version 0.24.0 [!6056](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6056)
+- Instrument input interpolations [!6047](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6047)
+- Filter out obsolete distro releases [!6042](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6042)
+- Avoid interpolation without defined job inputs [!6374](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6374)
+- Add user agent to AWS Secrets Manager integration [!6060](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6060) (derikwang @derik01)
+- Push runner linux packages to Pulp [!6062](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6062)
+- Script function [!6029](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6029)
+- helpers/retry: interrupt backoff sleep on context cancellation [!6061](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6061) (Emmanuel 326 @Emmanuel326)
+- Retry pulp content push  commands on specific errors [!6197](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6197)
+- Add zos build tags [!5835](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5835) (Joon Lee @jlee_ibm)
+- Add support for Google Cloud Service universe domain [!6338](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6338)
+- Upgrade step-runner to version 0.26.0 [!6351](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6351)
+- Add CI Jobs to push packages to Pulp [!6073](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6073)
+
+### Security fixes
+
+- Update RUNNER_IMAGES_VERSION to 0.0.34 [!6066](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6066)
+
+### Bug fixes
+
+- runner_wrapper: fix backoff retry context cancellation handling [!6064](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6064) (Emmanuel 326 @Emmanuel326)
+- Fix proxy_exec secret masking permissions [!6044](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6044)
+- fix: update the logic for comparing the urls and tokens [!6296](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6296) (Aayush @Aayush-Saini)
+- Fix WebSocket tunnel data race [!6237](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6237)
+- Fix: guard against nil FileInfo in filepath.Walk [!6050](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6050) (Bob Singh @bobsingh.dev)
+- Fix FD exhaustion during retry requests [!6041](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6041)
+- Add service container ID hostname when emulating links functionality [!6043](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6043)
+- Refactor Connector to allow setup before connection [!6359](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6359)
+- Update pkcs7 library [!6016](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6016)
+- Pass S3 session token for access key credentials [!6376](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6376)
+- Ensure check_interval takes effect and eliminate race condition between fleet of runners [!6081](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6081) (Pishel65 @pishel65)
+
+### Maintenance
+
+- Update linting configuration from GitLab project [!6352](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6352)
+- Add command to sync go version in other files [!6378](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6378)
+- Adds MR Review instructions focused around Log Field Standardisation [!6353](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6353)
+- Move JobResponse to spec.Job [!6058](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6058)
+- Bump Go to 1.25.7 and RUNNER_IMAGES_VERSION to 0.0.35 [!6370](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6370)
+- Move versions to variables [!6368](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6368)
+- Fix supported distros documentation [!6048](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6048)
+- Docs: Add status check to launchctl I/O error troubleshooting [!6358](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6358)
+- De-duplicate kube warning events [!5926](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5926)
+- Update go packages [!6032](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6032)
+- Add pod/container name to build logger fields [!5891](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5891)
+- Fix miscellaneous Markdown formatting issues [!6347](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6347)
+- docs: Clarify Bash requirement for GitLab Runner shell executor on macOS [!6350](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6350)
+- Incorporate additional change from GitLab project [!6357](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6357)
+- Doc: Kubernetes executor GPU configuration requirements [!6077](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6077)
+- Use chunk size of 10MB for pulp uploads [!6078](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6078)
+- Restore environment variables to build container [!6333](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6333)
+- Document emulated docker links caveats [!6054](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6054)
+- AI Translated Documentation Push: GITTECHA-544 [!6360](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6360)
+- Add mage to project dependencies [!6348](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6348)
+- Correct runner linux package archs [!6038](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6038)
+- Add UniverseDomain configuration for GCS cache [!6362](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6362)
+- Remove EOL spaces in doc files - 2026-01-28 [!6326](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6326)
+- Fix headers passed when using CI_JOB_TOKEN [!6075](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6075)
+- Switch to a maintained YAML library go.yaml.in/yaml/v3 [!6065](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6065)
+- Rename GITLAB_TOKEN to GITLAB_TEST_TOKEN in test utilities [!6045](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6045) (Aayush @Aayush-Saini)
+- Include runner_name in all relevant log lines [!5883](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5883)
+- Add diagnostics logging for S3 cache AssumeRole operations [!6345](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6345)
+- Rename job router RPC package [!6049](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6049)
+- Update crosslink pointing to docs [!6346](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6346)
+- network: stop retry backoff timer on context cancellation [!6063](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6063) (Emmanuel 326 @Emmanuel326)
+- Update redirecting links [!6327](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6327)
+
 ## v18.8.0 (2026-01-15)
 
 ### New features
