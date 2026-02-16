@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type s3CredentialsAdapter struct {
-	config *common.CacheS3Config
+	config *cacheconfig.CacheS3Config
 }
 
 func (a *s3CredentialsAdapter) GetCredentials() map[string]string {
@@ -25,7 +25,7 @@ func (a *s3CredentialsAdapter) GetCredentials() map[string]string {
 	return credMap
 }
 
-func NewS3CredentialsAdapter(config *common.CacheConfig) (cache.CredentialsAdapter, error) {
+func NewS3CredentialsAdapter(config *cacheconfig.Config) (cache.CredentialsAdapter, error) {
 	s3 := config.S3
 	if s3 == nil {
 		return nil, fmt.Errorf("missing S3 configuration")

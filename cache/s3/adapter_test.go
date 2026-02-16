@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 var defaultTimeout = 1 * time.Hour
@@ -26,10 +26,10 @@ const (
 	bucketLocation = "location"
 )
 
-func defaultCacheFactory() *common.CacheConfig {
-	return &common.CacheConfig{
+func defaultCacheFactory() *cacheconfig.Config {
+	return &cacheconfig.Config{
 		Type: "s3",
-		S3: &common.CacheS3Config{
+		S3: &cacheconfig.CacheS3Config{
 			ServerAddress:  "server.com",
 			AccessKey:      "access",
 			SecretKey:      "key",
@@ -38,13 +38,13 @@ func defaultCacheFactory() *common.CacheConfig {
 	}
 }
 
-func defaultCacheFactoryEncryptionAES() *common.CacheConfig {
+func defaultCacheFactoryEncryptionAES() *cacheconfig.Config {
 	cacheConfig := defaultCacheFactory()
 	cacheConfig.S3.ServerSideEncryption = "S3"
 	return cacheConfig
 }
 
-func defaultCacheFactoryEncryptionKMS() *common.CacheConfig {
+func defaultCacheFactoryEncryptionKMS() *cacheconfig.Config {
 	cacheConfig := defaultCacheFactory()
 	cacheConfig.S3.ServerSideEncryption = "KMS"
 	cacheConfig.S3.ServerSideEncryptionKeyID = "alias/my-key"
@@ -77,7 +77,7 @@ func onFakeMinioURLGenerator(t *testing.T, tc cacheOperationTest) {
 		Return(tc.presignedURL, err).Maybe()
 
 	oldNewMinioURLGenerator := newMinioClient
-	newMinioClient = func(s3 *common.CacheS3Config) (minioClient, error) {
+	newMinioClient = func(s3 *cacheconfig.CacheS3Config) (minioClient, error) {
 		if tc.errorOnMinioClientInitialization {
 			return nil, errors.New("test error")
 		}
@@ -94,7 +94,7 @@ func testCacheOperation(
 	operationName string,
 	operation func(adapter cache.Adapter) cache.PresignedURL,
 	tc cacheOperationTest,
-	cacheConfig *common.CacheConfig,
+	cacheConfig *cacheconfig.Config,
 ) {
 	t.Run(operationName, func(t *testing.T) {
 		onFakeMinioURLGenerator(t, tc)

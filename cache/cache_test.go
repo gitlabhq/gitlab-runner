@@ -14,8 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type cacheOperationTest struct {
@@ -30,75 +29,55 @@ type cacheOperationTest struct {
 }
 
 func prepareFakeCreateAdapter(t *testing.T, operationName string, tc cacheOperationTest) {
-	var adapter *MockAdapter = nil
+	var adapter Adapter
 
-	// override the adapter creator, reset after test run
 	oldCreateAdapter := createAdapter
-	createAdapter = func(_ *common.CacheConfig, _ time.Duration, _ string) (Adapter, error) {
+	createAdapter = func(_ *cacheconfig.Config, _ time.Duration, _ string) (Adapter, error) {
 		return adapter, tc.adapterCreateError
 	}
 	t.Cleanup(func() {
 		createAdapter = oldCreateAdapter
 	})
 
-	// for tests where we don't want the adapter to exist, we can return
 	if !tc.adapterExists {
 		return
 	}
 
-	// for all other tests, we set up a "real" mock
-	adapter = NewMockAdapter(t)
+	madapter := NewMockAdapter(t)
+	adapter = madapter
 
-	// for tests that are not supposed to produce a URL, we can leave the adapter mock without any assertions and return
 	if tc.adapterURL.URL == nil {
 		return
 	}
 
-	// for any other tests, we set up the assertions based on the test case at hand
 	if operationName == "GetGoCloudURL" {
-		adapter.On(operationName, mock.Anything, true).Return(GoCloudURL{URL: tc.adapterURL.URL}, nil).Once()
+		madapter.On(operationName, mock.Anything, true).Return(GoCloudURL{URL: tc.adapterURL.URL}, nil).Once()
 	} else {
-		adapter.On(operationName, mock.Anything).Return(tc.adapterURL).Once()
+		madapter.On(operationName, mock.Anything).Return(tc.adapterURL).Once()
 	}
 
 	if operationName == "GetUploadURL" {
-		adapter.On("WithMetadata", tc.metadata).Once()
+		madapter.On("WithMetadata", tc.metadata).Once()
 	}
 }
 
-func prepareFakeBuild(tc cacheOperationTest) *common.Build {
-	build := &common.Build{
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{},
-		},
+func prepareFakeConfig(tc cacheOperationTest) *cacheconfig.Config {
+	if !tc.configExists {
+		return nil
 	}
 
-	if tc.configExists {
-		build.Runner.Cache = &common.CacheConfig{}
-
-		if tc.adapterExists {
-			build.Runner.Cache.Type = "test"
-		}
+	config := &cacheconfig.Config{}
+	if tc.adapterExists {
+		config.Type = "test"
 	}
 
-	return build
-}
-
-func getCacheGoCloudURLAdapter(ctx context.Context, build *common.Build, key string) PresignedURL {
-	u, _ := GetCacheGoCloudURL(ctx, build, key, true)
-	return PresignedURL{URL: u.URL}
-}
-
-func getCachUploadURLWithMetadata(metadata map[string]string) func(ctx context.Context, build *common.Build, key string) PresignedURL {
-	return func(ctx context.Context, build *common.Build, key string) PresignedURL {
-		return GetCacheUploadURL(ctx, build, key, metadata)
-	}
+	return config
 }
 
 func testCacheOperation(
 	t *testing.T,
 	operationName string,
-	operation func(ctx context.Context, build *common.Build, key string) PresignedURL,
+	operation func(ctx context.Context, adaptor Adapter) PresignedURL,
 	tc cacheOperationTest,
 ) {
 	t.Run(operationName, func(t *testing.T) {
@@ -107,8 +86,9 @@ func testCacheOperation(
 
 		prepareFakeCreateAdapter(t, operationName, tc)
 
-		build := prepareFakeBuild(tc)
-		generatedURL := operation(ctx, build, tc.key)
+		config := prepareFakeConfig(tc)
+		adaptor := GetAdapter(config, 3600*time.Second, "shorttoken", "10", tc.key)
+		generatedURL := operation(ctx, adaptor)
 		assert.Equal(t, tc.expectedURL, generatedURL.URL)
 
 		if len(tc.expectedOutput) == 0 {
@@ -177,44 +157,28 @@ func TestCacheOperations(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			testCacheOperation(t, "GetDownloadURL", GetCacheDownloadURL, tc)
-			testCacheOperation(t, "GetUploadURL", getCachUploadURLWithMetadata(tc.metadata), tc)
-			testCacheOperation(t, "GetGoCloudURL", getCacheGoCloudURLAdapter, tc)
+			testCacheOperation(t, "GetDownloadURL", func(ctx context.Context, adaptor Adapter) PresignedURL {
+				return adaptor.GetDownloadURL(ctx)
+			}, tc)
+			testCacheOperation(t, "GetUploadURL", func(ctx context.Context, adaptor Adapter) PresignedURL {
+				adaptor.WithMetadata(tc.metadata)
+				return adaptor.GetUploadURL(ctx)
+			}, tc)
+			testCacheOperation(t, "GetGoCloudURL", func(ctx context.Context, adaptor Adapter) PresignedURL {
+				u, _ := adaptor.GetGoCloudURL(ctx, true)
+				return PresignedURL{URL: u.URL}
+			}, tc)
 		})
 	}
 }
 
-func defaultCacheConfig() *common.CacheConfig {
-	return &common.CacheConfig{
+func defaultCacheConfig() *cacheconfig.Config {
+	return &cacheconfig.Config{
 		Type: "test",
 	}
 }
 
-func defaultBuild(cacheConfig *common.CacheConfig) *common.Build {
-	return &common.Build{
-		Job: spec.Job{
-			JobInfo: spec.JobInfo{
-				ProjectID: 10,
-			},
-			RunnerInfo: spec.RunnerInfo{
-				Timeout: 3600,
-			},
-		},
-		Runner: &common.RunnerConfig{
-			RunnerCredentials: common.RunnerCredentials{
-				Token: "longtoken",
-			},
-			RunnerSettings: common.RunnerSettings{
-				Cache: cacheConfig,
-			},
-		},
-	}
-}
-
 type generateObjectNameTestCase struct {
-	cache *common.CacheConfig
-	build *common.Build
-
 	key    string
 	path   string
 	shared bool
@@ -224,89 +188,85 @@ type generateObjectNameTestCase struct {
 }
 
 func TestGenerateObjectName(t *testing.T) {
-	cache := defaultCacheConfig()
-	cacheBuild := defaultBuild(cache)
-
 	tests := map[string]generateObjectNameTestCase{
 		"default usage": {
-			cache:              cache,
-			build:              cacheBuild,
 			key:                "key",
 			expectedObjectName: "runner/longtoken/project/10/key",
 		},
 		"empty key": {
-			cache:              cache,
-			build:              cacheBuild,
 			key:                "",
 			expectedObjectName: "",
+			expectedError:      "Empty cache key",
 		},
 		"short path is set": {
-			cache:              cache,
-			build:              cacheBuild,
 			key:                "key",
 			path:               "whatever",
 			expectedObjectName: "whatever/runner/longtoken/project/10/key",
 		},
 		"multiple segment path is set": {
-			cache:              cache,
-			build:              cacheBuild,
 			key:                "key",
 			path:               "some/other/path/goes/here",
 			expectedObjectName: "some/other/path/goes/here/runner/longtoken/project/10/key",
 		},
 		"path is empty": {
-			cache:              cache,
-			build:              cacheBuild,
 			key:                "key",
 			path:               "",
 			expectedObjectName: "runner/longtoken/project/10/key",
 		},
 		"shared flag is set to true": {
-			cache:              cache,
-			build:              cacheBuild,
 			key:                "key",
 			shared:             true,
 			expectedObjectName: "project/10/key",
 		},
 		"shared flag is set to false": {
-			cache:              cache,
-			build:              cacheBuild,
 			key:                "key",
 			shared:             false,
 			expectedObjectName: "runner/longtoken/project/10/key",
 		},
 		"path traversal but within base path": {
-			cache:              cache,
-			build:              cacheBuild,
 			key:                "../10/key",
 			expectedObjectName: "runner/longtoken/project/10/key",
 		},
 		"path traversal resolves to empty key": {
-			cache:         cache,
-			build:         cacheBuild,
 			key:           "../10",
-			expectedError: "computed cache path outside of project bucket. Please remove `../` from cache key",
+			expectedError: "computed cache path outside of project bucket",
 		},
 		"path traversal escapes project namespace": {
-			cache:         cache,
-			build:         cacheBuild,
 			key:           "../10-outside",
-			expectedError: "computed cache path outside of project bucket. Please remove `../` from cache key",
+			expectedError: "computed cache path outside of project bucket",
 		},
 	}
 
-	for name, test := range tests {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			cache.Path = test.path
-			cache.Shared = test.shared
+			hook := test.NewGlobal()
 
-			objectName, err := generateObjectName(test.build, test.cache, test.key)
+			cache := defaultCacheConfig()
+			cache.Path = tc.path
+			cache.Shared = tc.shared
 
-			assert.Equal(t, test.expectedObjectName, objectName)
-			if test.expectedError == "" {
-				assert.NoError(t, err)
+			var capturedObjectName string
+			oldCreateAdapter := createAdapter
+			createAdapter = func(_ *cacheconfig.Config, _ time.Duration, objectName string) (Adapter, error) {
+				capturedObjectName = objectName
+				return NewMockAdapter(t), nil
+			}
+			t.Cleanup(func() {
+				createAdapter = oldCreateAdapter
+			})
+
+			adapter := GetAdapter(cache, 3600*time.Second, "longtoken", "10", tc.key)
+
+			if tc.expectedError != "" {
+				// The error/warning cases return a nopAdaptor and log instead of returning an error
+				assert.IsType(t, nopAdapter{}, adapter)
+				require.NotEmpty(t, hook.AllEntries())
+				message, err := hook.LastEntry().String()
+				require.NoError(t, err)
+				assert.Contains(t, message, tc.expectedError)
 			} else {
-				assert.EqualError(t, err, test.expectedError)
+				assert.Equal(t, tc.expectedObjectName, capturedObjectName)
+				assert.NotEqual(t, nopAdapter{}, adapter)
 			}
 		})
 	}

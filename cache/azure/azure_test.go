@@ -16,7 +16,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type azureSigningTest struct {
@@ -103,11 +103,11 @@ func TestAccountKeySigning(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			credentials := &common.CacheAzureCredentials{
+			credentials := &cacheconfig.CacheAzureCredentials{
 				AccountName: tt.accountName,
 				AccountKey:  tt.accountKey,
 			}
-			config := &common.CacheAzureConfig{
+			config := &cacheconfig.CacheAzureConfig{
 				CacheAzureCredentials: *credentials,
 				ContainerName:         tt.containerName,
 				StorageDomain:         tt.storageDomain,
@@ -207,11 +207,11 @@ func TestUserDelegationSigning(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			credentials := &common.CacheAzureCredentials{
+			credentials := &cacheconfig.CacheAzureCredentials{
 				AccountName: tt.accountName,
 				AccountKey:  tt.accountKey,
 			}
-			config := &common.CacheAzureConfig{
+			config := &cacheconfig.CacheAzureConfig{
 				CacheAzureCredentials: *credentials,
 			}
 			opts := &signedURLOptions{

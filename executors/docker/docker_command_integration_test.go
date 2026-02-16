@@ -22,8 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
-
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -31,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -42,6 +41,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
+	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
 
 // Specifying container image platform requires API version >= 1.41
@@ -196,7 +196,7 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 				Image:      image,
 				PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 			},
-			Cache: &common.CacheConfig{},
+			Cache: &cacheconfig.Config{},
 		},
 		RunnerCredentials: common.RunnerCredentials{
 			Token: fmt.Sprintf("%x", md5.Sum([]byte(t.Name()))),
@@ -943,7 +943,7 @@ func TestCacheInContainer(t *testing.T) {
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 					Volumes:    []string{"/cache"},
 				},
-				Cache: &common.CacheConfig{},
+				Cache: &cacheconfig.Config{},
 			},
 		},
 	}
@@ -3043,7 +3043,7 @@ func Test_CacheVolumeProtected(t *testing.T) {
 							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 							Volumes:    []string{"/cache"},
 						},
-						Cache: &common.CacheConfig{},
+						Cache: &cacheconfig.Config{},
 					},
 				},
 			}

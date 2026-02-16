@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type credentialsFactoryTestCase struct {
@@ -27,7 +27,7 @@ func prepareMockedCredentialsFactoriesMap() func() {
 }
 
 func makeTestCredentialsFactory(test credentialsFactoryTestCase) CredentialsFactory {
-	return func(config *common.CacheConfig) (CredentialsAdapter, error) {
+	return func(config *cacheconfig.Config) (CredentialsAdapter, error) {
 		if test.errorOnFactorize != nil {
 			return nil, test.errorOnFactorize
 		}
@@ -74,11 +74,11 @@ func TestCreateCredentialsAdapter(t *testing.T) {
 
 			_ = credentialsFactories.Register(
 				"additional-adapter",
-				func(config *common.CacheConfig) (CredentialsAdapter, error) {
+				func(config *cacheconfig.Config) (CredentialsAdapter, error) {
 					return NewMockCredentialsAdapter(t), nil
 				})
 
-			config := &common.CacheConfig{
+			config := &cacheconfig.Config{
 				Type: adapterTypeName,
 			}
 
@@ -97,7 +97,7 @@ func TestCreateCredentialsAdapter(t *testing.T) {
 
 func TestCredentialsFactoryDoubledRegistration(t *testing.T) {
 	adapterTypeName := "test"
-	fakeFactory := func(config *common.CacheConfig) (CredentialsAdapter, error) {
+	fakeFactory := func(config *cacheconfig.Config) (CredentialsAdapter, error) {
 		return nil, nil
 	}
 

@@ -7,25 +7,25 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type credentialsResolverTestCase struct {
-	config                        *common.CacheAzureConfig
+	config                        *cacheconfig.CacheAzureConfig
 	errorExpectedOnInitialization bool
 	errorExpectedOnResolve        bool
-	expectedCredentials           *common.CacheAzureCredentials
+	expectedCredentials           *cacheconfig.CacheAzureCredentials
 }
 
 type signerTestCase struct {
-	config                *common.CacheAzureConfig
+	config                *cacheconfig.CacheAzureConfig
 	errorExpectedOnSigner bool
 	expectedSignerType    string
 }
 
-func getCredentialsConfig(accountName string, accountKey string) *common.CacheAzureConfig {
-	return &common.CacheAzureConfig{
-		CacheAzureCredentials: common.CacheAzureCredentials{
+func getCredentialsConfig(accountName string, accountKey string) *cacheconfig.CacheAzureConfig {
+	return &cacheconfig.CacheAzureConfig{
+		CacheAzureCredentials: cacheconfig.CacheAzureCredentials{
 			AccountName: accountName,
 			AccountKey:  accountKey,
 		},
@@ -33,8 +33,8 @@ func getCredentialsConfig(accountName string, accountKey string) *common.CacheAz
 	}
 }
 
-func getExpectedCredentials(accountName string, accountKey string) *common.CacheAzureCredentials {
-	return &common.CacheAzureCredentials{
+func getExpectedCredentials(accountName string, accountKey string) *cacheconfig.CacheAzureCredentials {
+	return &cacheconfig.CacheAzureCredentials{
 		AccountName: accountName,
 		AccountKey:  accountKey,
 	}
@@ -47,7 +47,7 @@ func TestDefaultCredentialsResolver(t *testing.T) {
 			errorExpectedOnInitialization: true,
 		},
 		"credentials not set": {
-			config:                 &common.CacheAzureConfig{},
+			config:                 &cacheconfig.CacheAzureConfig{},
 			errorExpectedOnResolve: true,
 		},
 		"credentials direct in config": {

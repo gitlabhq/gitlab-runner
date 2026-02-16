@@ -13,13 +13,12 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type minioClientInitializationTest struct {
 	errorOnInitialization bool
-	configurationFactory  func() *common.CacheConfig
+	configurationFactory  func() *cacheconfig.Config
 	serverAddress         string
 
 	expectedToUseIAM bool
@@ -156,14 +155,14 @@ func TestMinioClientInitializationWithAccelerate(t *testing.T) {
 	}
 }
 
-func insecureCacheFactory() *common.CacheConfig {
+func insecureCacheFactory() *cacheconfig.Config {
 	cacheConfig := defaultCacheFactory()
 	cacheConfig.S3.Insecure = true
 
 	return cacheConfig
 }
 
-func emptyCredentialsCacheFactory() *common.CacheConfig {
+func emptyCredentialsCacheFactory() *cacheconfig.Config {
 	cacheConfig := defaultCacheFactory()
 	cacheConfig.S3.ServerAddress = ""
 	cacheConfig.S3.AccessKey = ""
@@ -172,7 +171,7 @@ func emptyCredentialsCacheFactory() *common.CacheConfig {
 	return cacheConfig
 }
 
-func emptyServerAddressFactory() *common.CacheConfig {
+func emptyServerAddressFactory() *cacheconfig.Config {
 	cacheConfig := emptyCredentialsCacheFactory()
 	cacheConfig.S3.AccessKey = "TOKEN"
 	cacheConfig.S3.SecretKey = "TOKEN"
@@ -180,7 +179,7 @@ func emptyServerAddressFactory() *common.CacheConfig {
 	return cacheConfig
 }
 
-func emptyAccessKeyFactory() *common.CacheConfig {
+func emptyAccessKeyFactory() *cacheconfig.Config {
 	cacheConfig := emptyCredentialsCacheFactory()
 	cacheConfig.S3.ServerAddress = "s3.amazonaws.com"
 	cacheConfig.S3.SecretKey = "TOKEN"
@@ -188,7 +187,7 @@ func emptyAccessKeyFactory() *common.CacheConfig {
 	return cacheConfig
 }
 
-func emptySecretKeyFactory() *common.CacheConfig {
+func emptySecretKeyFactory() *cacheconfig.Config {
 	cacheConfig := emptyCredentialsCacheFactory()
 	cacheConfig.S3.ServerAddress = "s3.amazonaws.com"
 	cacheConfig.S3.AccessKey = "TOKEN"
@@ -196,28 +195,28 @@ func emptySecretKeyFactory() *common.CacheConfig {
 	return cacheConfig
 }
 
-func onlyServerAddressFactory() *common.CacheConfig {
+func onlyServerAddressFactory() *cacheconfig.Config {
 	cacheConfig := emptyCredentialsCacheFactory()
 	cacheConfig.S3.ServerAddress = "s3.customurl.com"
 
 	return cacheConfig
 }
 
-func serverAddressAccelerateFactory(serverAddress string) *common.CacheConfig {
+func serverAddressAccelerateFactory(serverAddress string) *cacheconfig.Config {
 	cacheConfig := emptyCredentialsCacheFactory()
 	cacheConfig.S3.ServerAddress = serverAddress
 
 	return cacheConfig
 }
 
-func onlyAccessKeyFactory() *common.CacheConfig {
+func onlyAccessKeyFactory() *cacheconfig.Config {
 	cacheConfig := emptyCredentialsCacheFactory()
 	cacheConfig.S3.AccessKey = "TOKEN"
 
 	return cacheConfig
 }
 
-func onlySecretKeyFactory() *common.CacheConfig {
+func onlySecretKeyFactory() *cacheconfig.Config {
 	cacheConfig := emptyCredentialsCacheFactory()
 	cacheConfig.S3.SecretKey = "TOKEN"
 

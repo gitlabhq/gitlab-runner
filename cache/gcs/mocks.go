@@ -10,7 +10,7 @@ import (
 	"cloud.google.com/go/iam/credentials/apiv1/credentialspb"
 	"github.com/googleapis/gax-go/v2"
 	mock "github.com/stretchr/testify/mock"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 // newMockCredentialsResolver creates a new instance of mockCredentialsResolver. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -41,19 +41,19 @@ func (_m *mockCredentialsResolver) EXPECT() *mockCredentialsResolver_Expecter {
 }
 
 // Credentials provides a mock function for the type mockCredentialsResolver
-func (_mock *mockCredentialsResolver) Credentials() *common.CacheGCSCredentials {
+func (_mock *mockCredentialsResolver) Credentials() *cacheconfig.CacheGCSCredentials {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Credentials")
 	}
 
-	var r0 *common.CacheGCSCredentials
-	if returnFunc, ok := ret.Get(0).(func() *common.CacheGCSCredentials); ok {
+	var r0 *cacheconfig.CacheGCSCredentials
+	if returnFunc, ok := ret.Get(0).(func() *cacheconfig.CacheGCSCredentials); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*common.CacheGCSCredentials)
+			r0 = ret.Get(0).(*cacheconfig.CacheGCSCredentials)
 		}
 	}
 	return r0
@@ -76,12 +76,12 @@ func (_c *mockCredentialsResolver_Credentials_Call) Run(run func()) *mockCredent
 	return _c
 }
 
-func (_c *mockCredentialsResolver_Credentials_Call) Return(cacheGCSCredentials *common.CacheGCSCredentials) *mockCredentialsResolver_Credentials_Call {
+func (_c *mockCredentialsResolver_Credentials_Call) Return(cacheGCSCredentials *cacheconfig.CacheGCSCredentials) *mockCredentialsResolver_Credentials_Call {
 	_c.Call.Return(cacheGCSCredentials)
 	return _c
 }
 
-func (_c *mockCredentialsResolver_Credentials_Call) RunAndReturn(run func() *common.CacheGCSCredentials) *mockCredentialsResolver_Credentials_Call {
+func (_c *mockCredentialsResolver_Credentials_Call) RunAndReturn(run func() *cacheconfig.CacheGCSCredentials) *mockCredentialsResolver_Credentials_Call {
 	_c.Call.Return(run)
 	return _c
 }

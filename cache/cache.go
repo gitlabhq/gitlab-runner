@@ -4,32 +4,43 @@ import (
 	"context"
 	"fmt"
 	"path"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
+
+type nopAdapter struct{}
+
+func (nopAdapter) GetDownloadURL(context.Context) PresignedURL { return PresignedURL{} }
+func (nopAdapter) WithMetadata(map[string]string)              {}
+func (nopAdapter) GetUploadURL(context.Context) PresignedURL   { return PresignedURL{} }
+func (nopAdapter) GetGoCloudURL(ctx context.Context, upload bool) (GoCloudURL, error) {
+	return GoCloudURL{}, nil
+}
 
 var createAdapter = getCreateAdapter
 
-// generateObjectName returns a fully-qualified name for the cache object,
-// ensuring there's no path traversal outside.
-func generateObjectName(build *common.Build, config *common.CacheConfig, key string) (string, error) {
-	if key == "" {
-		return "", nil
+func GetAdapter(config *cacheconfig.Config, timeout time.Duration, shortToken, projectId, key string) Adapter {
+	if config == nil {
+		return nopAdapter{}
 	}
 
+	if key == "" {
+		logrus.Warning("Empty cache key. Skipping adapter selection.")
+		return nopAdapter{}
+	}
+
+	// generate object path
 	// runners get their own namespace, unless they're shared, in which case the
 	// namespace is empty.
 	namespace := ""
 	if !config.GetShared() {
-		namespace = path.Join("runner", build.Runner.ShortDescription())
+		namespace = path.Join("runner", shortToken)
 	}
-
-	basePath := path.Join(config.GetPath(), namespace, "project", strconv.FormatInt(build.JobInfo.ProjectID, 10))
+	basePath := path.Join(config.GetPath(), namespace, "project", projectId)
 	fullPath := path.Join(basePath, key)
 
 	// The typical concerns regarding the use of strings.HasPrefix to detect
@@ -38,72 +49,17 @@ func generateObjectName(build *common.Build, config *common.CacheConfig, key str
 	// the basepath has a final separator (the key can not be empty).
 	// TestGenerateObjectName contains path traversal tests.
 	if !strings.HasPrefix(fullPath, basePath+"/") {
-		return "", fmt.Errorf("computed cache path outside of project bucket. Please remove `../` from cache key")
+		logrus.WithError(fmt.Errorf("computed cache path outside of project bucket. Please remove `../` from cache key")).Error("Error while generating cache bucket.")
+		return nopAdapter{}
 	}
 
-	return fullPath, nil
-}
-
-func getAdaptorForBuild(build *common.Build, key string) Adapter {
-	if build == nil || build.Runner == nil {
-		return nil
-	}
-
-	if build.Runner.Cache == nil || build.Runner.Cache.Type == "" {
-		return nil
-	}
-
-	objectName, err := generateObjectName(build, build.Runner.Cache, key)
-	if err != nil {
-		logrus.WithError(err).Error("Error while generating cache bucket.")
-		return nil
-	}
-
-	if objectName == "" {
-		logrus.Warning("Empty cache key. Skipping adapter selection.")
-		return nil
-	}
-
-	if build.Runner.Cache.Type == "gcs" && !build.IsFeatureFlagOn(featureflags.UseLegacyGCSCacheAdapter) {
-		build.Runner.Cache.Type = "gcsv2"
-	}
-
-	if build.Runner.Cache.Type == "s3" && !build.IsFeatureFlagOn(featureflags.UseLegacyS3CacheAdapter) {
-		build.Runner.Cache.Type = "s3v2"
-	}
-
-	adapter, err := createAdapter(build.Runner.Cache, build.GetBuildTimeout(), objectName)
+	adapter, err := createAdapter(config, timeout, fullPath)
 	if err != nil {
 		logrus.WithError(err).Error("Could not create cache adapter")
 	}
+	if adapter == nil {
+		return nopAdapter{}
+	}
 
 	return adapter
-}
-
-func GetCacheDownloadURL(ctx context.Context, build *common.Build, key string) PresignedURL {
-	adaptor := getAdaptorForBuild(build, key)
-	if adaptor == nil {
-		return PresignedURL{}
-	}
-
-	return adaptor.GetDownloadURL(ctx)
-}
-
-func GetCacheUploadURL(ctx context.Context, build *common.Build, key string, metadata map[string]string) PresignedURL {
-	adaptor := getAdaptorForBuild(build, key)
-	if adaptor == nil {
-		return PresignedURL{}
-	}
-	adaptor.WithMetadata(metadata)
-
-	return adaptor.GetUploadURL(ctx)
-}
-
-func GetCacheGoCloudURL(ctx context.Context, build *common.Build, key string, upload bool) (GoCloudURL, error) {
-	adaptor := getAdaptorForBuild(build, key)
-	if adaptor == nil {
-		return GoCloudURL{}, nil
-	}
-
-	return adaptor.GetGoCloudURL(ctx, upload)
 }

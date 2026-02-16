@@ -11,12 +11,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type s3Adapter struct {
 	timeout    time.Duration
-	config     *common.CacheS3Config
+	config     *cacheconfig.CacheS3Config
 	objectName string
 	client     minioClient
 	metadata   map[string]string
@@ -101,7 +101,7 @@ func (a *s3Adapter) WithMetadata(metadata map[string]string) {
 	a.metadata = metadata
 }
 
-func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {
+func New(config *cacheconfig.Config, timeout time.Duration, objectName string) (cache.Adapter, error) {
 	s3 := config.S3
 	if s3 == nil {
 		return nil, fmt.Errorf("missing S3 configuration")

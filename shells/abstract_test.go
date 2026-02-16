@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/test"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -489,7 +490,7 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 							Job:      getJobResponseWithCachePaths(),
 							Runner: &common.RunnerConfig{
 								RunnerSettings: common.RunnerSettings{
-									Cache: &common.CacheConfig{
+									Cache: &cacheconfig.Config{
 										Type:   tt.cacheType,
 										Shared: true,
 									},
@@ -1767,7 +1768,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 				t.Run(tn, func(t *testing.T) {
 					runnerConfig := &common.RunnerConfig{
 						RunnerSettings: common.RunnerSettings{
-							Cache: &common.CacheConfig{
+							Cache: &cacheconfig.Config{
 								Type:   tc.cacheType,
 								Shared: true,
 							},
@@ -1983,7 +1984,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 				t.Run(tn, func(t *testing.T) {
 					runnerConfig := &common.RunnerConfig{
 						RunnerSettings: common.RunnerSettings{
-							Cache: &common.CacheConfig{
+							Cache: &cacheconfig.Config{
 								Type:   "test",
 								Shared: true,
 							},
@@ -2167,7 +2168,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 				t.Run(tn, func(t *testing.T) {
 					runnerConfig := &common.RunnerConfig{
 						RunnerSettings: common.RunnerSettings{
-							Cache: &common.CacheConfig{
+							Cache: &cacheconfig.Config{
 								Type:   "test",
 								Shared: true,
 							},
@@ -2343,7 +2344,7 @@ func TestAbstractShell_cachePolicy(t *testing.T) {
 
 	runnerConfig := &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
-			Cache: &common.CacheConfig{
+			Cache: &cacheconfig.Config{
 				Type:   "test",
 				Shared: true,
 			},
@@ -3468,7 +3469,7 @@ func benchmarkScriptStage(b *testing.B, shell common.Shell, stage common.BuildSt
 				RunnerSettings: common.RunnerSettings{
 					BuildsDir: "build",
 					CacheDir:  "cache",
-					Cache: &common.CacheConfig{
+					Cache: &cacheconfig.Config{
 						Type: "test",
 					},
 				},

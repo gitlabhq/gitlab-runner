@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type credentialsResolver interface {
@@ -13,14 +13,14 @@ type credentialsResolver interface {
 }
 
 type defaultCredentialsResolver struct {
-	config *common.CacheAzureConfig
+	config *cacheconfig.CacheAzureConfig
 }
 
 func (cr *defaultCredentialsResolver) Resolve() error {
 	return cr.readCredentialsFromConfig()
 }
 
-func (cr *defaultCredentialsResolver) Credentials() *common.CacheAzureCredentials {
+func (cr *defaultCredentialsResolver) Credentials() *cacheconfig.CacheAzureCredentials {
 	return &cr.config.CacheAzureCredentials
 }
 
@@ -46,7 +46,7 @@ func (cr *defaultCredentialsResolver) readCredentialsFromConfig() error {
 	return nil
 }
 
-func newDefaultCredentialsResolver(config *common.CacheAzureConfig) (*defaultCredentialsResolver, error) {
+func newDefaultCredentialsResolver(config *cacheconfig.CacheAzureConfig) (*defaultCredentialsResolver, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config can't be nil")
 	}

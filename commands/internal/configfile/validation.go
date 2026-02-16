@@ -21,6 +21,7 @@ func init() {
 
 	r := &jsonschema_generator.Reflector{
 		RequiredFromJSONSchemaTags: true,
+		DoNotReference:             true,
 	}
 	schema, err := json.Marshal(r.Reflect(&common.Config{}))
 	if err != nil {

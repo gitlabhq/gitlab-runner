@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 const DefaultAzureServer = "blob.core.windows.net"
@@ -109,7 +109,7 @@ func getSASToken(ctx context.Context, name string, o *signedURLOptions) (string,
 	return sas.Encode(), nil
 }
 
-func getBlobServiceURL(config *common.CacheAzureConfig) string {
+func getBlobServiceURL(config *cacheconfig.CacheAzureConfig) string {
 	domain := DefaultAzureServer
 	if config.StorageDomain != "" {
 		domain = config.StorageDomain
@@ -117,7 +117,7 @@ func getBlobServiceURL(config *common.CacheAzureConfig) string {
 	return fmt.Sprintf("https://%s.%s", config.CacheAzureCredentials.AccountName, domain)
 }
 
-func newAccountKeySigner(config *common.CacheAzureConfig) (sasSigner, error) {
+func newAccountKeySigner(config *cacheconfig.CacheAzureConfig) (sasSigner, error) {
 	credentials := config.CacheAzureCredentials
 	if credentials.AccountName == "" {
 		return nil, fmt.Errorf("missing Azure storage account name")
@@ -138,7 +138,7 @@ func newAccountKeySigner(config *common.CacheAzureConfig) (sasSigner, error) {
 	return &accountKeySigner{blobServiceURL: blobServiceURL, credential: credential}, nil
 }
 
-func newUserDelegationKeySigner(config *common.CacheAzureConfig, options ...userDelegationKeyOption) (sasSigner, error) {
+func newUserDelegationKeySigner(config *cacheconfig.CacheAzureConfig, options ...userDelegationKeyOption) (sasSigner, error) {
 	if config.AccountName == "" {
 		return nil, fmt.Errorf("no Azure storage account name provided")
 	}

@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 var (
@@ -27,11 +27,11 @@ var (
 	defaultTimeout = 1 * time.Hour
 )
 
-func defaultAzureCache() *common.CacheConfig {
-	return &common.CacheConfig{
+func defaultAzureCache() *cacheconfig.Config {
+	return &cacheconfig.Config{
 		Type: "azure",
-		Azure: &common.CacheAzureConfig{
-			CacheAzureCredentials: common.CacheAzureCredentials{
+		Azure: &cacheconfig.CacheAzureConfig{
+			CacheAzureCredentials: cacheconfig.CacheAzureCredentials{
 				AccountName: accountName,
 				AccountKey:  accountKey,
 			},
@@ -56,7 +56,7 @@ type adapterOperationInvalidConfigTestCase struct {
 
 func prepareMockedCredentialsResolverInitializer(tc adapterOperationInvalidConfigTestCase) func() {
 	oldCredentialsResolverInitializer := credentialsResolverInitializer
-	credentialsResolverInitializer = func(config *common.CacheAzureConfig) (*defaultCredentialsResolver, error) {
+	credentialsResolverInitializer = func(config *cacheconfig.CacheAzureConfig) (*defaultCredentialsResolver, error) {
 		if tc.errorOnCredentialsResolverInitialization {
 			return nil, errors.New("test error")
 		}

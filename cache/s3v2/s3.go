@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -39,7 +39,7 @@ type s3Presigner interface {
 }
 
 type s3Client struct {
-	s3Config      *common.CacheS3Config
+	s3Config      *cacheconfig.CacheS3Config
 	awsConfig     *aws.Config
 	client        *s3.Client
 	presignClient *s3.PresignClient
@@ -79,12 +79,12 @@ func (c *s3Client) PresignURL(ctx context.Context,
 			putObjectInput.Metadata = metadata
 		}
 		switch c.s3Config.EncryptionType() {
-		case common.S3EncryptionTypeAes256:
+		case cacheconfig.S3EncryptionTypeAes256:
 			putObjectInput.ServerSideEncryption = types.ServerSideEncryptionAes256
-		case common.S3EncryptionTypeKms:
+		case cacheconfig.S3EncryptionTypeKms:
 			putObjectInput.ServerSideEncryption = types.ServerSideEncryptionAwsKms
 			putObjectInput.SSEKMSKeyId = aws.String(c.s3Config.ServerSideEncryptionKeyID)
-		case common.S3EncryptionTypeDsseKms:
+		case cacheconfig.S3EncryptionTypeDsseKms:
 			putObjectInput.ServerSideEncryption = types.ServerSideEncryptionAwsKmsDsse
 			putObjectInput.SSEKMSKeyId = aws.String(c.s3Config.ServerSideEncryptionKeyID)
 		}
@@ -132,7 +132,7 @@ func (c *s3Client) generateSessionPolicy(bucketName, objectName string, upload b
 				"Resource": "arn:%s:s3:::%s/%s"
 			}`, action, s3Partition, bucketName, objectName)
 
-	if c.s3Config.EncryptionType() == common.S3EncryptionTypeKms || c.s3Config.EncryptionType() == common.S3EncryptionTypeDsseKms {
+	if c.s3Config.EncryptionType() == cacheconfig.S3EncryptionTypeKms || c.s3Config.EncryptionType() == cacheconfig.S3EncryptionTypeDsseKms {
 		// Permissions needed for multipart upload: https://repost.aws/knowledge-center/s3-large-file-encryption-kms-key
 		policy += fmt.Sprintf(`,
 			{
@@ -217,20 +217,20 @@ func (c *s3Client) ServerSideEncryptionType() string {
 	return s3EncryptionType(c.s3Config.EncryptionType())
 }
 
-func s3EncryptionType(encryptionType common.S3EncryptionType) string {
+func s3EncryptionType(encryptionType cacheconfig.S3EncryptionType) string {
 	switch encryptionType {
-	case common.S3EncryptionTypeAes256:
+	case cacheconfig.S3EncryptionTypeAes256:
 		return string(types.ServerSideEncryptionAes256)
-	case common.S3EncryptionTypeKms:
+	case cacheconfig.S3EncryptionTypeKms:
 		return string(types.ServerSideEncryptionAwsKms)
-	case common.S3EncryptionTypeDsseKms:
+	case cacheconfig.S3EncryptionTypeDsseKms:
 		return string(types.ServerSideEncryptionAwsKmsDsse)
 	default:
 		return ""
 	}
 }
 
-func newRawS3Client(s3Config *common.CacheS3Config) (*aws.Config, *s3.Client, error) {
+func newRawS3Client(s3Config *cacheconfig.CacheS3Config) (*aws.Config, *s3.Client, error) {
 	var cfg aws.Config
 	var err error
 	options := make([]func(*config.LoadOptions) error, 0)
@@ -238,9 +238,9 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*aws.Config, *s3.Client, er
 	endpoint := s3Config.GetEndpoint()
 
 	switch s3Config.AuthType() {
-	case common.S3AuthTypeIAM:
+	case cacheconfig.S3AuthTypeIAM:
 		break
-	case common.S3AuthTypeAccessKey:
+	case cacheconfig.S3AuthTypeAccessKey:
 		options = append(options,
 			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(s3Config.AccessKey, s3Config.SecretKey, s3Config.SessionToken)),
 		)
@@ -313,7 +313,7 @@ func detectBucketLocation(bucketName string, optFuncs ...func(*config.LoadOption
 	return string(output.LocationConstraint)
 }
 
-var newS3Client = func(s3Config *common.CacheS3Config, options ...s3ClientOption) (s3Presigner, error) {
+var newS3Client = func(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOption) (s3Presigner, error) {
 	cfg, client, err := newRawS3Client(s3Config)
 	if err != nil {
 		return nil, err

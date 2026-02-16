@@ -412,6 +412,16 @@ func (b *Build) StartBuild(
 		return err
 	}
 
+	// modify copied config for any feature flag
+	if b.Runner.Cache != nil {
+		switch {
+		case b.Runner.Cache.Type == "gcs" && !b.IsFeatureFlagOn(featureflags.UseLegacyGCSCacheAdapter):
+			b.Runner.Cache.Type = "gcsv2"
+		case b.Runner.Cache.Type == "s3" && !b.IsFeatureFlagOn(featureflags.UseLegacyS3CacheAdapter):
+			b.Runner.Cache.Type = "s3v2"
+		}
+	}
+
 	// We invalidate variables to be able to use
 	// CI_CACHE_DIR and CI_PROJECT_DIR
 	b.RefreshAllVariables()

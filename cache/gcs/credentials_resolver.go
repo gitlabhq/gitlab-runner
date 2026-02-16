@@ -11,11 +11,11 @@ import (
 	"cloud.google.com/go/iam/credentials/apiv1/credentialspb"
 	gax "github.com/googleapis/gax-go/v2"
 	"github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type credentialsResolver interface {
-	Credentials() *common.CacheGCSCredentials
+	Credentials() *cacheconfig.CacheGCSCredentials
 	Resolve() error
 	SignBytesFunc(context.Context) func([]byte) ([]byte, error)
 }
@@ -41,13 +41,13 @@ type credentialsFile struct {
 }
 
 type defaultCredentialsResolver struct {
-	config            *common.CacheGCSConfig
-	credentials       *common.CacheGCSCredentials
+	config            *cacheconfig.CacheGCSConfig
+	credentials       *cacheconfig.CacheGCSCredentials
 	metadataClient    MetadataClient
 	credentialsClient IamCredentialsClient
 }
 
-func (cr *defaultCredentialsResolver) Credentials() *common.CacheGCSCredentials {
+func (cr *defaultCredentialsResolver) Credentials() *cacheconfig.CacheGCSCredentials {
 	return cr.credentials
 }
 
@@ -139,14 +139,14 @@ func (cr *defaultCredentialsResolver) iamCredentialsClient(ctx context.Context) 
 	return cr.credentialsClient, nil
 }
 
-func newDefaultCredentialsResolver(config *common.CacheGCSConfig) (*defaultCredentialsResolver, error) {
+func newDefaultCredentialsResolver(config *cacheconfig.CacheGCSConfig) (*defaultCredentialsResolver, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config can't be nil")
 	}
 
 	credentials := &defaultCredentialsResolver{
 		config:         config,
-		credentials:    &common.CacheGCSCredentials{},
+		credentials:    &cacheconfig.CacheGCSCredentials{},
 		metadataClient: metadata.NewClient(nil),
 	}
 

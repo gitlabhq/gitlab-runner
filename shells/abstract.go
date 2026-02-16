@@ -419,14 +419,16 @@ func (b *AbstractShell) addExtractCacheCommand(
 // getCacheDownloadURLAndEnv will first try to generate the GoCloud URL if it's
 // available then fallback to a pre-signed URL.
 func getCacheDownloadURLAndEnv(ctx context.Context, build *common.Build, cacheKey string) ([]string, map[string]string, error) {
+	adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey)
+
 	// Prefer Go Cloud URL if supported
-	goCloudURL, err := cache.GetCacheGoCloudURL(ctx, build, cacheKey, false)
+	goCloudURL, err := adapter.GetGoCloudURL(ctx, false)
 
 	if goCloudURL.URL != nil {
 		return []string{"--gocloud-url", goCloudURL.URL.String()}, goCloudURL.Environment, err
 	}
 
-	if url := cache.GetCacheDownloadURL(ctx, build, cacheKey); url.URL != nil {
+	if url := adapter.GetDownloadURL(ctx); url.URL != nil {
 		return []string{"--url", url.URL.String()}, nil, nil
 	}
 
@@ -1482,15 +1484,18 @@ func (b *AbstractShell) addCacheUploadCommand(
 
 // getCacheUploadURLAndEnv will first try to generate the GoCloud URL if it's
 // available then fallback to a pre-signed URL.
-func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, hashedCacheKey string, metadata map[string]string) ([]string, map[string]string, error) {
+func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey string, metadata map[string]string) ([]string, map[string]string, error) {
+	adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey)
+
 	// Prefer Go Cloud URL if supported
-	goCloudURL, err := cache.GetCacheGoCloudURL(ctx, build, hashedCacheKey, true)
+	goCloudURL, err := adapter.GetGoCloudURL(ctx, true)
 	if goCloudURL.URL != nil {
 		uploadArgs := []string{"--gocloud-url", goCloudURL.URL.String()}
 		return uploadArgs, goCloudURL.Environment, err
 	}
 
-	uploadURL := cache.GetCacheUploadURL(ctx, build, hashedCacheKey, metadata)
+	adapter.WithMetadata(metadata)
+	uploadURL := adapter.GetUploadURL(ctx)
 	if uploadURL.URL == nil {
 		return []string{}, nil, nil
 	}

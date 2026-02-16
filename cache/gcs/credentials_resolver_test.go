@@ -14,25 +14,25 @@ import (
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 var accessID2 = "test-access-id-2@X.iam.gserviceaccount.com"
 
 type credentialsResolverTestCase struct {
-	config                         *common.CacheGCSConfig
+	config                         *cacheconfig.CacheGCSConfig
 	credentialsFileContent         *credentialsFile
 	credentialsFileDoesNotExist    bool
 	credentialsFileWithInvalidJSON bool
 	metadataServerError            bool
 	errorExpectedOnInitialization  bool
 	errorExpectedOnResolve         bool
-	expectedCredentials            *common.CacheGCSCredentials
+	expectedCredentials            *cacheconfig.CacheGCSCredentials
 }
 
-func getCredentialsConfig(accessID string, privateKey string) *common.CacheGCSConfig {
-	return &common.CacheGCSConfig{
-		CacheGCSCredentials: common.CacheGCSCredentials{
+func getCredentialsConfig(accessID string, privateKey string) *cacheconfig.CacheGCSConfig {
+	return &cacheconfig.CacheGCSConfig{
+		CacheGCSCredentials: cacheconfig.CacheGCSCredentials{
 			AccessID:   accessID,
 			PrivateKey: privateKey,
 		},
@@ -47,8 +47,8 @@ func getCredentialsFileContent(fileType string, clientEmail string, privateKey s
 	}
 }
 
-func getExpectedCredentials(accessID string, privateKey string) *common.CacheGCSCredentials {
-	return &common.CacheGCSCredentials{
+func getExpectedCredentials(accessID string, privateKey string) *cacheconfig.CacheGCSCredentials {
+	return &cacheconfig.CacheGCSCredentials{
 		AccessID:   accessID,
 		PrivateKey: privateKey,
 	}
@@ -62,12 +62,12 @@ func TestDefaultCredentialsResolver(t *testing.T) {
 			errorExpectedOnInitialization: true,
 		},
 		"credentials not set": {
-			config:                 &common.CacheGCSConfig{},
+			config:                 &cacheconfig.CacheGCSConfig{},
 			errorExpectedOnResolve: false,
 			expectedCredentials:    getExpectedCredentials(accessID, ""),
 		},
 		"credentials not set - metadata server error": {
-			config:                 &common.CacheGCSConfig{},
+			config:                 &cacheconfig.CacheGCSConfig{},
 			metadataServerError:    true,
 			errorExpectedOnResolve: true,
 		},
@@ -85,13 +85,13 @@ func TestDefaultCredentialsResolver(t *testing.T) {
 			errorExpectedOnResolve: true,
 		},
 		"credentials in credentials file - service account file": {
-			config:                 &common.CacheGCSConfig{},
+			config:                 &cacheconfig.CacheGCSConfig{},
 			credentialsFileContent: getCredentialsFileContent(TypeServiceAccount, accessID, privateKey),
 			errorExpectedOnResolve: false,
 			expectedCredentials:    getExpectedCredentials(accessID, privateKey),
 		},
 		"credentials in credentials file - unsupported type credentials file": {
-			config:                 &common.CacheGCSConfig{},
+			config:                 &cacheconfig.CacheGCSConfig{},
 			credentialsFileContent: getCredentialsFileContent("unknown_type", "", ""),
 			errorExpectedOnResolve: true,
 		},
@@ -102,13 +102,13 @@ func TestDefaultCredentialsResolver(t *testing.T) {
 			expectedCredentials:    getExpectedCredentials(accessID2, privateKey),
 		},
 		"credentials in non-existing credentials file": {
-			config:                      &common.CacheGCSConfig{},
+			config:                      &cacheconfig.CacheGCSConfig{},
 			credentialsFileContent:      getCredentialsFileContent(TypeServiceAccount, accessID, privateKey),
 			credentialsFileDoesNotExist: true,
 			errorExpectedOnResolve:      true,
 		},
 		"credentials in credentials file - invalid JSON": {
-			config:                         &common.CacheGCSConfig{},
+			config:                         &cacheconfig.CacheGCSConfig{},
 			credentialsFileContent:         getCredentialsFileContent(TypeServiceAccount, accessID, privateKey),
 			credentialsFileWithInvalidJSON: true,
 			errorExpectedOnResolve:         true,

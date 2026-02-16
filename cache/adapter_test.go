@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 var defaultTimeout = 1 * time.Hour
@@ -30,7 +30,7 @@ func prepareMockedFactoriesMap() func() {
 }
 
 func makeTestFactory(test factorizeTestCase) Factory {
-	return func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
+	return func(config *cacheconfig.Config, timeout time.Duration, objectName string) (Adapter, error) {
 		if test.errorOnFactorize != nil {
 			return nil, test.errorOnFactorize
 		}
@@ -77,11 +77,11 @@ func TestCreateAdapter(t *testing.T) {
 
 			_ = factories.Register(
 				"additional-adapter",
-				func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
+				func(config *cacheconfig.Config, timeout time.Duration, objectName string) (Adapter, error) {
 					return NewMockAdapter(t), nil
 				})
 
-			config := &common.CacheConfig{
+			config := &cacheconfig.Config{
 				Type: adapterTypeName,
 			}
 
@@ -100,7 +100,7 @@ func TestCreateAdapter(t *testing.T) {
 
 func TestDoubledRegistration(t *testing.T) {
 	adapterTypeName := "test"
-	fakeFactory := func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
+	fakeFactory := func(config *cacheconfig.Config, timeout time.Duration, objectName string) (Adapter, error) {
 		return nil, nil
 	}
 
