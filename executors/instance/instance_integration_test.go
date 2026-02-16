@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/instance"
@@ -72,7 +73,7 @@ func newRunnerConfig(t *testing.T, shell string, opts ...ssh.Option) *common.Run
 			BuildsDir: dir,
 			Executor:  integrationTestInstanceExecutor,
 			Shell:     shell,
-			Cache:     &common.CacheConfig{},
+			Cache:     &cacheconfig.Config{},
 			Autoscaler: &common.AutoscalerConfig{
 				CapacityPerInstance: 10,
 				MaxInstances:        1,

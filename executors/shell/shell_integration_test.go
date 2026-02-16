@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -131,7 +132,7 @@ func newBuild(t *testing.T, getBuildResponse spec.Job, shell string) *common.Bui
 				Shell:               shell,
 				GracefulKillTimeout: func(i int) *int { return &i }(5),
 				ForceKillTimeout:    func(i int) *int { return &i }(1),
-				Cache:               &common.CacheConfig{},
+				Cache:               &cacheconfig.Config{},
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
@@ -2130,7 +2131,7 @@ func TestBuildCacheHelper(t *testing.T) {
 		{
 			name: "cache settings provided, job cache provided",
 			buildFn: func(dir string, build *common.Build) {
-				build.Runner.RunnerSettings.Cache = &common.CacheConfig{}
+				build.Runner.RunnerSettings.Cache = &cacheconfig.Config{}
 				build.Cache = append(build.Cache, spec.Cache{
 					Key:    "cache",
 					Paths:  []string{"*"},
@@ -2154,7 +2155,7 @@ func TestBuildCacheHelper(t *testing.T) {
 		{
 			name: "cache settings provided, no job cache provided",
 			buildFn: func(dir string, build *common.Build) {
-				build.Runner.RunnerSettings.Cache = &common.CacheConfig{}
+				build.Runner.RunnerSettings.Cache = &cacheconfig.Config{}
 				build.Cache = nil
 			},
 		},

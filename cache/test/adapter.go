@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type testAdapter struct {
@@ -76,11 +76,11 @@ func (t *testAdapter) getURL(operation string) *url.URL {
 	}
 }
 
-func New(_ *common.CacheConfig, _ time.Duration, objectName string) (cache.Adapter, error) {
+func New(_ *cacheconfig.Config, _ time.Duration, objectName string) (cache.Adapter, error) {
 	return &testAdapter{objectName: objectName}, nil
 }
 
-func NewGoCloudAdapter(_ *common.CacheConfig, _ time.Duration, objectName string) (cache.Adapter, error) {
+func NewGoCloudAdapter(_ *cacheconfig.Config, _ time.Duration, objectName string) (cache.Adapter, error) {
 	return &testAdapter{objectName: objectName, useGoCloud: true}, nil
 }
 

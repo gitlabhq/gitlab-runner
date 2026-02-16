@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type CredentialsAdapter interface {
@@ -17,7 +17,7 @@ func CredentialsFactories() *CredentialsFactoriesMap {
 	return credentialsFactories
 }
 
-type CredentialsFactory func(config *common.CacheConfig) (CredentialsAdapter, error)
+type CredentialsFactory func(config *cacheconfig.Config) (CredentialsAdapter, error)
 
 type CredentialsFactoriesMap struct {
 	internal map[string]CredentialsFactory
@@ -54,7 +54,7 @@ func (m *CredentialsFactoriesMap) Find(typeName string) (CredentialsFactory, err
 	return factory, nil
 }
 
-func CreateCredentialsAdapter(cacheConfig *common.CacheConfig) (CredentialsAdapter, error) {
+func CreateCredentialsAdapter(cacheConfig *cacheconfig.Config) (CredentialsAdapter, error) {
 	create, err := CredentialsFactories().Find(cacheConfig.Type)
 	if err != nil {
 		return nil, fmt.Errorf("credentials adapter factory not found: %w", err)

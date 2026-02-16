@@ -16,7 +16,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 
 	"github.com/johannesboyne/gofakes3"
 	"github.com/johannesboyne/gofakes3/backend/s3mem"
@@ -35,7 +35,7 @@ type policyStatement struct {
 	Resource string   `json:"Resource"`
 }
 
-func setupMockS3Server(t *testing.T) *common.CacheS3Config {
+func setupMockS3Server(t *testing.T) *cacheconfig.CacheS3Config {
 	backend := s3mem.New()
 	server := gofakes3.New(backend)
 	ts := httptest.NewServer(server.Server())
@@ -45,7 +45,7 @@ func setupMockS3Server(t *testing.T) *common.CacheS3Config {
 	url, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 
-	s3Config := &common.CacheS3Config{
+	s3Config := &cacheconfig.CacheS3Config{
 		ServerAddress:  url.Host,
 		Insecure:       true,
 		BucketLocation: "us-west-1",
@@ -73,7 +73,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 	disableDualStack := false
 
 	tests := map[string]struct {
-		s3Config            common.CacheS3Config
+		s3Config            cacheconfig.CacheS3Config
 		expectedStaticCreds bool
 		expectedRegion      string
 		expectedScheme      string
@@ -83,7 +83,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 		expectedEndpoint    string
 	}{
 		"s3-standard": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				AccessKey:      "test-access-key",
 				SecretKey:      "test-secret-key",
 				ServerAddress:  "s3.amazonaws.com",
@@ -97,7 +97,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedDualStack:   true,
 		},
 		"s3-standard-with-session-token": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				AccessKey:      "test-access-key",
 				SecretKey:      "test-secret-key",
 				SessionToken:   "test-session-token",
@@ -112,7 +112,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedDualStack:   true,
 		},
 		"s3-standard-dual-stack": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				BucketName:     "test-bucket",
 				BucketLocation: "us-west-2",
 				DualStack:      &disableDualStack,
@@ -123,7 +123,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedEndpoint:  "",
 		},
 		"s3-default-address-set": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				BucketName:     "test-bucket",
 				BucketLocation: "us-west-2",
 				ServerAddress:  "s3.amazonaws.com",
@@ -134,7 +134,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedEndpoint:  "",
 		},
 		"s3-iam-profile": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				BucketName:     "test-bucket",
 				BucketLocation: "us-west-2",
 			},
@@ -144,7 +144,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedDualStack: true,
 		},
 		"s3-accelerate": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				BucketName:     "test-bucket",
 				BucketLocation: "us-east-1",
 				Accelerate:     true,
@@ -155,7 +155,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedDualStack:  true,
 		},
 		"s3-accelerate-custom-endpoint": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				ServerAddress:  "s3-accelerate.amazonaws.com",
 				BucketName:     "test-bucket",
 				BucketLocation: "us-east-1",
@@ -167,7 +167,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedDualStack:  false,
 		},
 		"s3-custom-endpoint": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				ServerAddress:  "localhost:9000",
 				BucketName:     "test-bucket",
 				BucketLocation: "us-west-2",
@@ -180,7 +180,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedDualStack: false,
 		},
 		"s3-dual-stack": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				BucketName:     "test-bucket",
 				BucketLocation: "us-east-1",
 			},
@@ -190,7 +190,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedDualStack: true,
 		},
 		"s3-dual-stack-and-accelerate": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				BucketName:     "test-bucket",
 				BucketLocation: "us-east-1",
 				Accelerate:     true,
@@ -201,7 +201,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedDualStack: true,
 		},
 		"s3-dual-stack-and-endpoint": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				ServerAddress:  "localhost:9000",
 				BucketName:     "test-bucket",
 				BucketLocation: "us-east-1",
@@ -213,7 +213,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedDualStack: false,
 		},
 		"s3-no-region": {
-			s3Config: common.CacheS3Config{
+			s3Config: cacheconfig.CacheS3Config{
 				ServerAddress: "localhost:9000",
 				BucketName:    "test-bucket",
 			},
@@ -484,8 +484,8 @@ func newMockSTSHandler(expectedKms bool, expectedDurationSecs int, s3Partition s
 }
 
 func TestFetchCredentialsForRole(t *testing.T) {
-	workingConfig := common.CacheConfig{
-		S3: &common.CacheS3Config{
+	workingConfig := cacheconfig.Config{
+		S3: &cacheconfig.CacheS3Config{
 			AccessKey:          "test-access-key",
 			SecretKey:          "test-secret-key",
 			AuthenticationType: "access-key",
@@ -499,8 +499,8 @@ func TestFetchCredentialsForRole(t *testing.T) {
 		"AWS_SESSION_TOKEN":     "mock-session-token",
 		"AWS_PROFILE":           "",
 	}
-	govCloudConfig := common.CacheConfig{
-		S3: &common.CacheS3Config{
+	govCloudConfig := cacheconfig.Config{
+		S3: &cacheconfig.CacheS3Config{
 			AccessKey:          "test-access-key",
 			BucketLocation:     "us-gov-west-1",
 			SecretKey:          "test-secret-key",
@@ -509,8 +509,8 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			UploadRoleARN:      "arn:aws:iam::123456789012:role/TestRole",
 		},
 	}
-	chinaConfig := common.CacheConfig{
-		S3: &common.CacheS3Config{
+	chinaConfig := cacheconfig.Config{
+		S3: &cacheconfig.CacheS3Config{
 			AccessKey:          "test-access-key",
 			BucketLocation:     "cn-north-1",
 			SecretKey:          "test-secret-key",
@@ -521,7 +521,7 @@ func TestFetchCredentialsForRole(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		config           *common.CacheConfig
+		config           *cacheconfig.Config
 		roleARN          string
 		expected         map[string]string
 		errMsg           string
@@ -569,8 +569,8 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			expectedDuration: 1 * time.Hour,
 		},
 		"successful fetch with encryption": {
-			config: &common.CacheConfig{
-				S3: &common.CacheS3Config{
+			config: &cacheconfig.Config{
+				S3: &cacheconfig.CacheS3Config{
 					AccessKey:                 "test-access-key",
 					SecretKey:                 "test-secret-key",
 					AuthenticationType:        "access-key",
@@ -585,8 +585,8 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			expectedKms: true,
 		},
 		"invalid role ARN": {
-			config: &common.CacheConfig{
-				S3: &common.CacheS3Config{
+			config: &cacheconfig.Config{
+				S3: &cacheconfig.CacheS3Config{
 					AccessKey:          "test-access-key",
 					SecretKey:          "test-secret-key",
 					AuthenticationType: "access-key",
@@ -598,8 +598,8 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			errMsg:  "failed to assume role",
 		},
 		"no role ARN": {
-			config: &common.CacheConfig{
-				S3: &common.CacheS3Config{
+			config: &cacheconfig.Config{
+				S3: &cacheconfig.CacheS3Config{
 					AccessKey:          "test-access-key",
 					SecretKey:          "test-secret-key",
 					AuthenticationType: "access-key",

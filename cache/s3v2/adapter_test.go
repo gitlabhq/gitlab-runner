@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 var defaultTimeout = 1 * time.Hour
@@ -26,10 +26,10 @@ const (
 	bucketLocation = "location"
 )
 
-func defaultCacheFactory() *common.CacheConfig {
-	return &common.CacheConfig{
+func defaultCacheFactory() *cacheconfig.Config {
+	return &cacheconfig.Config{
 		Type: "s3v2",
-		S3: &common.CacheS3Config{
+		S3: &cacheconfig.CacheS3Config{
 			ServerAddress:  "server.com",
 			AccessKey:      "access",
 			SecretKey:      "key",
@@ -70,7 +70,7 @@ func onFakeS3URLGenerator(t *testing.T, tc cacheOperationTest) {
 		Return(cache.PresignedURL{URL: tc.presignedURL}, err).Maybe()
 
 	oldS3URLGenerator := newS3Client
-	newS3Client = func(s3 *common.CacheS3Config, opts ...s3ClientOption) (s3Presigner, error) {
+	newS3Client = func(s3 *cacheconfig.CacheS3Config, opts ...s3ClientOption) (s3Presigner, error) {
 		if tc.errorOnS3ClientInitialization {
 			return nil, errors.New("test error")
 		}
@@ -87,7 +87,7 @@ func testCacheOperation(
 	operationName string,
 	operation func(adapter cache.Adapter) cache.PresignedURL,
 	tc cacheOperationTest,
-	cacheConfig *common.CacheConfig,
+	cacheConfig *cacheconfig.Config,
 ) {
 	t.Run(operationName, func(t *testing.T) {
 		onFakeS3URLGenerator(t, tc)
@@ -197,7 +197,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 
 	tests := map[string]struct {
 		objectName    string
-		config        *common.CacheS3Config
+		config        *cacheconfig.CacheS3Config
 		expected      string
 		noCredentials bool
 		failedFetch   bool
@@ -207,7 +207,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			noCredentials: true,
 		},
 		"role ARN": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:     "role-bucket",
 				BucketLocation: "us-west-1",
 				RoleARN:        roleARN,
@@ -216,7 +216,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 		},
 		"role ARN with leading slashes in object": {
 			objectName: "//" + objectName,
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:     "role-bucket",
 				BucketLocation: "us-west-1",
 				RoleARN:        roleARN,
@@ -224,7 +224,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://role-bucket/key?awssdk=v2&dualstack=true&region=us-west-1",
 		},
 		"global S3 endpoint": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				ServerAddress:  "s3.amazonaws.com",
 				BucketName:     "custom-bucket",
 				BucketLocation: "custom-location",
@@ -233,7 +233,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://custom-bucket/key?awssdk=v2&dualstack=true&region=custom-location",
 		},
 		"custom endpoint": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				ServerAddress:  "custom.s3.endpoint.com",
 				BucketName:     "custom-bucket",
 				BucketLocation: "custom-location",
@@ -242,7 +242,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://custom-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Fcustom.s3.endpoint.com&hostname_immutable=true&region=custom-location&use_path_style=true",
 		},
 		"path style": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				ServerAddress:  "minio.example.com:8080",
 				BucketName:     "path-style-bucket",
 				BucketLocation: "us-west-2",
@@ -252,7 +252,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Fminio.example.com%3A8080&hostname_immutable=true&region=us-west-2&use_path_style=true",
 		},
 		"HTTP and path style": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				ServerAddress:  "minio.example.com:8080",
 				Insecure:       true,
 				BucketName:     "path-style-bucket",
@@ -263,7 +263,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=http%3A%2F%2Fminio.example.com%3A8080&hostname_immutable=true&region=us-west-2&use_path_style=true",
 		},
 		"S3 regional endpoint and path style": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				ServerAddress:  "eu-north-1.s3.amazon.aws.com:443",
 				BucketName:     "path-style-bucket",
 				BucketLocation: "eu-north-1",
@@ -273,7 +273,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Feu-north-1.s3.amazon.aws.com&hostname_immutable=true&region=eu-north-1&use_path_style=true",
 		},
 		"dual stack disabled": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:     "dual-stack-bucket",
 				BucketLocation: "eu-central-1",
 				DualStack:      &disabled,
@@ -282,7 +282,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://dual-stack-bucket/key?awssdk=v2&region=eu-central-1",
 		},
 		"accelerate": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:     "accelerate-bucket",
 				BucketLocation: "us-east-1",
 				Accelerate:     true,
@@ -291,7 +291,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://accelerate-bucket/key?accelerate=true&awssdk=v2&dualstack=true&region=us-east-1",
 		},
 		"S3 encryption": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:           "encrypted-bucket",
 				BucketLocation:       "ap-southeast-1",
 				RoleARN:              roleARN,
@@ -300,7 +300,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://encrypted-bucket/key?awssdk=v2&dualstack=true&region=ap-southeast-1&ssetype=AES256",
 		},
 		"KMS encryption": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:                "encrypted-bucket",
 				BucketLocation:            "ap-southeast-1",
 				RoleARN:                   roleARN,
@@ -310,7 +310,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://encrypted-bucket/key?awssdk=v2&dualstack=true&kmskeyid=my-kms-key-id&region=ap-southeast-1&ssetype=aws%3Akms",
 		},
 		"DSSE-KMS encryption": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:                "encrypted-bucket",
 				BucketLocation:            "ap-southeast-1",
 				RoleARN:                   roleARN,
@@ -320,7 +320,7 @@ func TestGoCloudURLWithRoleARN(t *testing.T) {
 			expected: "s3://encrypted-bucket/key?awssdk=v2&dualstack=true&kmskeyid=my-kms-key-id&region=ap-southeast-1&ssetype=aws%3Akms%3Adsse",
 		},
 		"with failed credentials": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:     "role-bucket",
 				BucketLocation: "us-west-1",
 				RoleARN:        roleARN,
@@ -393,7 +393,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 
 	tests := map[string]struct {
 		objectName    string
-		config        *common.CacheS3Config
+		config        *cacheconfig.CacheS3Config
 		expected      string
 		noCredentials bool
 		failedFetch   bool
@@ -403,7 +403,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			noCredentials: true,
 		},
 		"role ARN": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:     "role-bucket",
 				BucketLocation: "us-west-1",
 				UploadRoleARN:  roleARN,
@@ -412,7 +412,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 		},
 		"role ARN with leading slashes in object": {
 			objectName: "//" + objectName,
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:     "role-bucket",
 				BucketLocation: "us-west-1",
 				UploadRoleARN:  roleARN,
@@ -420,7 +420,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://role-bucket/key?awssdk=v2&dualstack=true&region=us-west-1",
 		},
 		"global S3 endpoint": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				ServerAddress:  "s3.amazonaws.com",
 				BucketName:     "custom-bucket",
 				BucketLocation: "custom-location",
@@ -429,7 +429,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://custom-bucket/key?awssdk=v2&dualstack=true&region=custom-location",
 		},
 		"custom endpoint": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				ServerAddress:  "custom.s3.endpoint.com",
 				BucketName:     "custom-bucket",
 				BucketLocation: "custom-location",
@@ -438,7 +438,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://custom-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Fcustom.s3.endpoint.com&hostname_immutable=true&region=custom-location&use_path_style=true",
 		},
 		"path style": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				ServerAddress:  "minio.example.com:8080",
 				BucketName:     "path-style-bucket",
 				BucketLocation: "us-west-2",
@@ -448,7 +448,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Fminio.example.com%3A8080&hostname_immutable=true&region=us-west-2&use_path_style=true",
 		},
 		"HTTP and path style": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				ServerAddress:  "minio.example.com:8080",
 				Insecure:       true,
 				BucketName:     "path-style-bucket",
@@ -459,7 +459,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=http%3A%2F%2Fminio.example.com%3A8080&hostname_immutable=true&region=us-west-2&use_path_style=true",
 		},
 		"S3 regional endpoint and path style": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				ServerAddress:  "eu-north-1.s3.amazon.aws.com:443",
 				BucketName:     "path-style-bucket",
 				BucketLocation: "eu-north-1",
@@ -469,7 +469,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Feu-north-1.s3.amazon.aws.com&hostname_immutable=true&region=eu-north-1&use_path_style=true",
 		},
 		"dual stack disabled": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:     "dual-stack-bucket",
 				BucketLocation: "eu-central-1",
 				DualStack:      &disabled,
@@ -478,7 +478,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://dual-stack-bucket/key?awssdk=v2&region=eu-central-1",
 		},
 		"accelerate": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:     "accelerate-bucket",
 				BucketLocation: "us-east-1",
 				Accelerate:     true,
@@ -487,7 +487,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://accelerate-bucket/key?accelerate=true&awssdk=v2&dualstack=true&region=us-east-1",
 		},
 		"S3 encryption": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:           "encrypted-bucket",
 				BucketLocation:       "ap-southeast-1",
 				UploadRoleARN:        roleARN,
@@ -496,7 +496,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://encrypted-bucket/key?awssdk=v2&dualstack=true&region=ap-southeast-1&ssetype=AES256",
 		},
 		"KMS encryption": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:                "encrypted-bucket",
 				BucketLocation:            "ap-southeast-1",
 				UploadRoleARN:             roleARN,
@@ -506,7 +506,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://encrypted-bucket/key?awssdk=v2&dualstack=true&kmskeyid=my-kms-key-id&region=ap-southeast-1&ssetype=aws%3Akms",
 		},
 		"DSSE-KMS encryption": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:                "encrypted-bucket",
 				BucketLocation:            "ap-southeast-1",
 				UploadRoleARN:             roleARN,
@@ -516,7 +516,7 @@ func TestGoCloudURLWithUploadRoleARN(t *testing.T) {
 			expected: "s3://encrypted-bucket/key?awssdk=v2&dualstack=true&kmskeyid=my-kms-key-id&region=ap-southeast-1&ssetype=aws%3Akms%3Adsse",
 		},
 		"with failed credentials": {
-			config: &common.CacheS3Config{
+			config: &cacheconfig.CacheS3Config{
 				BucketName:     "role-bucket",
 				BucketLocation: "us-west-1",
 				UploadRoleARN:  roleARN,

@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 var (
@@ -56,10 +56,10 @@ vvm6J1WGbnxmuhzzvGNNExeZx9dfGLmcvSAvrweiFbi2yHAc1cBLBkc5/CqfS6QW
 	maxUploadedArchiveSize = int64(100)
 )
 
-func defaultGCSCache() *common.CacheConfig {
-	return &common.CacheConfig{
+func defaultGCSCache() *cacheconfig.Config {
+	return &cacheconfig.Config{
 		Type: "gcs",
-		GCS: &common.CacheGCSConfig{
+		GCS: &cacheconfig.CacheGCSConfig{
 			BucketName: bucketName,
 		},
 	}
@@ -79,7 +79,7 @@ type adapterOperationInvalidConfigTestCase struct {
 
 func prepareMockedCredentialsResolverInitializer(t *testing.T, tc adapterOperationInvalidConfigTestCase) {
 	oldCredentialsResolverInitializer := credentialsResolverInitializer
-	credentialsResolverInitializer = func(config *common.CacheGCSConfig) (*defaultCredentialsResolver, error) {
+	credentialsResolverInitializer = func(config *cacheconfig.CacheGCSConfig) (*defaultCredentialsResolver, error) {
 		if tc.errorOnCredentialsResolverInitialization {
 			return nil, errors.New("test error")
 		}
@@ -102,7 +102,7 @@ func prepareMockedCredentialsResolverForInvalidConfig(t *testing.T, adapter *gcs
 		resolveCall.Return(nil)
 	}
 
-	cr.On("Credentials").Return(&common.CacheGCSCredentials{
+	cr.On("Credentials").Return(&cacheconfig.CacheGCSCredentials{
 		AccessID:   tc.accessID,
 		PrivateKey: tc.privateKey,
 	}).Maybe()
@@ -226,7 +226,7 @@ func prepareMockedCredentialsResolver(t *testing.T, adapter *gcsAdapter, tc adap
 		pk = ""
 		cr.On("SignBytesFunc", mock.Anything).Return(mockSignBytesFunc).Once()
 	}
-	cr.On("Credentials").Return(&common.CacheGCSCredentials{
+	cr.On("Credentials").Return(&cacheconfig.CacheGCSCredentials{
 		AccessID:   accessID,
 		PrivateKey: pk,
 	}).Once()

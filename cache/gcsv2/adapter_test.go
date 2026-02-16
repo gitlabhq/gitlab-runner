@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 var (
@@ -45,13 +45,13 @@ vvm6J1WGbnxmuhzzvGNNExeZx9dfGLmcvSAvrweiFbi2yHAc1cBLBkc5/CqfS6QW
 
 func TestNew(t *testing.T) {
 	t.Run("no config", func(t *testing.T) {
-		adapter, err := New(&common.CacheConfig{}, time.Second, "bucket")
+		adapter, err := New(&cacheconfig.Config{}, time.Second, "bucket")
 		require.ErrorContains(t, err, "missing GCS configuration")
 		require.Nil(t, adapter)
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		adapter, err := New(&common.CacheConfig{GCS: &common.CacheGCSConfig{}}, time.Second, "bucket")
+		adapter, err := New(&cacheconfig.Config{GCS: &cacheconfig.CacheGCSConfig{}}, time.Second, "bucket")
 		require.NoError(t, err)
 		require.NotNil(t, adapter)
 	})
@@ -59,7 +59,7 @@ func TestNew(t *testing.T) {
 
 func TestAdapter(t *testing.T) {
 	tests := map[string]struct {
-		config                *common.CacheConfig
+		config                *cacheconfig.Config
 		timeout               time.Duration
 		objectName            string
 		metadata              map[string]string
@@ -69,27 +69,27 @@ func TestAdapter(t *testing.T) {
 		expectedUploadHeaders http.Header
 	}{
 		"missing config": {
-			config:         &common.CacheConfig{},
+			config:         &cacheconfig.Config{},
 			objectName:     "object-key",
 			newExpectedErr: "missing GCS configuration",
 		},
 		"no bucket name": {
-			config:         &common.CacheConfig{GCS: &common.CacheGCSConfig{}},
+			config:         &cacheconfig.Config{GCS: &cacheconfig.CacheGCSConfig{}},
 			objectName:     "object-key",
 			getExpectedErr: "config BucketName cannot be empty",
 			putExpectedErr: "config BucketName cannot be empty",
 		},
 		"valid": {
-			config:     &common.CacheConfig{GCS: &common.CacheGCSConfig{BucketName: "test", CacheGCSCredentials: common.CacheGCSCredentials{AccessID: accessID, PrivateKey: privateKey}}},
+			config:     &cacheconfig.Config{GCS: &cacheconfig.CacheGCSConfig{BucketName: "test", CacheGCSCredentials: cacheconfig.CacheGCSCredentials{AccessID: accessID, PrivateKey: privateKey}}},
 			objectName: "object-key",
 		},
 		"valid with max upload size": {
-			config:                &common.CacheConfig{MaxUploadedArchiveSize: 100, GCS: &common.CacheGCSConfig{BucketName: "test", CacheGCSCredentials: common.CacheGCSCredentials{AccessID: accessID, PrivateKey: privateKey}}},
+			config:                &cacheconfig.Config{MaxUploadedArchiveSize: 100, GCS: &cacheconfig.CacheGCSConfig{BucketName: "test", CacheGCSCredentials: cacheconfig.CacheGCSCredentials{AccessID: accessID, PrivateKey: privateKey}}},
 			objectName:            "object-key",
 			expectedUploadHeaders: http.Header{"X-Goog-Content-Length-Range": []string{"0,100"}},
 		},
 		"with metadata": {
-			config:                &common.CacheConfig{GCS: &common.CacheGCSConfig{BucketName: "test", CacheGCSCredentials: common.CacheGCSCredentials{AccessID: accessID, PrivateKey: privateKey}}},
+			config:                &cacheconfig.Config{GCS: &cacheconfig.CacheGCSConfig{BucketName: "test", CacheGCSCredentials: cacheconfig.CacheGCSCredentials{AccessID: accessID, PrivateKey: privateKey}}},
 			objectName:            "object-key",
 			metadata:              map[string]string{"foo": "some foo"},
 			expectedUploadHeaders: http.Header{"X-Goog-Meta-Foo": []string{"some foo"}},

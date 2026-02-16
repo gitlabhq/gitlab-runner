@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -58,7 +59,7 @@ func newRunnerConfig(t *testing.T, shell string) *common.RunnerConfig {
 			BuildsDir: dir,
 			Executor:  "docker-autoscaler",
 			Shell:     shell,
-			Cache:     &common.CacheConfig{},
+			Cache:     &cacheconfig.Config{},
 			Docker: &common.DockerConfig{
 				Image: image,
 			},

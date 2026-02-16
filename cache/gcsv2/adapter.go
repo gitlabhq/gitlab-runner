@@ -13,12 +13,12 @@ import (
 	"google.golang.org/api/option"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type gcsAdapter struct {
 	timeout                time.Duration
-	config                 *common.CacheGCSConfig
+	config                 *cacheconfig.CacheGCSConfig
 	objectName             string
 	maxUploadedArchiveSize int64
 	metadata               map[string]string
@@ -122,7 +122,7 @@ func (a *gcsAdapter) presignURL(ctx context.Context, method string, contentType 
 	return u, nil
 }
 
-func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {
+func New(config *cacheconfig.Config, timeout time.Duration, objectName string) (cache.Adapter, error) {
 	gcs := config.GCS
 	if gcs == nil {
 		return nil, fmt.Errorf("missing GCS configuration")

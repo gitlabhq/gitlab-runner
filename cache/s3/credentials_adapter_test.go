@@ -7,17 +7,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 func TestGetCredentials(t *testing.T) {
 	tests := map[string]struct {
-		s3            *common.CacheS3Config
+		s3            *cacheconfig.CacheS3Config
 		expectedError string
 		credsExpected bool
 	}{
 		"static credentials": {
-			s3: &common.CacheS3Config{
+			s3: &cacheconfig.CacheS3Config{
 				BucketName: bucketName,
 				AccessKey:  "somekey",
 				SecretKey:  "somesecret",
@@ -28,20 +28,20 @@ func TestGetCredentials(t *testing.T) {
 			expectedError: `missing S3 configuration`,
 		},
 		"empty access and secret key": {
-			s3: &common.CacheS3Config{
+			s3: &cacheconfig.CacheS3Config{
 				BucketName: bucketName,
 			},
 			credsExpected: false,
 		},
 		"empty access key": {
-			s3: &common.CacheS3Config{
+			s3: &cacheconfig.CacheS3Config{
 				BucketName: bucketName,
 				SecretKey:  "somesecret",
 			},
 			credsExpected: false,
 		},
 		"empty secret key": {
-			s3: &common.CacheS3Config{
+			s3: &cacheconfig.CacheS3Config{
 				BucketName: bucketName,
 				AccessKey:  "somekey",
 			},
@@ -51,7 +51,7 @@ func TestGetCredentials(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			config := &common.CacheConfig{S3: tt.s3}
+			config := &cacheconfig.Config{S3: tt.s3}
 			adapter, err := NewS3CredentialsAdapter(config)
 
 			if tt.expectedError != "" {

@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type signedURLGenerator func(ctx context.Context, name string, options *signedURLOptions) (*url.URL, error)
@@ -19,7 +19,7 @@ type blobTokenGenerator func(ctx context.Context, name string, options *signedUR
 
 type azureAdapter struct {
 	timeout    time.Duration
-	config     *common.CacheAzureConfig
+	config     *cacheconfig.CacheAzureConfig
 	objectName string
 
 	generateSignedURL   signedURLGenerator
@@ -130,7 +130,7 @@ func (a *azureAdapter) getSigner() sasSigner {
 	return signer
 }
 
-func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {
+func New(config *cacheconfig.Config, timeout time.Duration, objectName string) (cache.Adapter, error) {
 	azure := config.Azure
 	if azure == nil {
 		return nil, fmt.Errorf("missing Azure configuration")

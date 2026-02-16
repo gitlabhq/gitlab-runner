@@ -10,10 +10,9 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 
 	"github.com/minio/minio-go/v7/pkg/credentials"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 const DefaultAWSS3Server = "s3.amazonaws.com"
@@ -43,7 +42,7 @@ var newMinioWithIAM = func(serverAddress, bucketLocation string) (*minio.Client,
 	})
 }
 
-var newMinioClient = func(s3 *common.CacheS3Config) (minioClient, error) {
+var newMinioClient = func(s3 *cacheconfig.CacheS3Config) (minioClient, error) {
 	serverAddress := s3.ServerAddress
 
 	if serverAddress == "" {
@@ -60,9 +59,9 @@ var newMinioClient = func(s3 *common.CacheS3Config) (minioClient, error) {
 	var client *minio.Client
 	var err error
 	switch s3.AuthType() {
-	case common.S3AuthTypeIAM:
+	case cacheconfig.S3AuthTypeIAM:
 		client, err = newMinioWithIAM(serverAddress, s3.BucketLocation)
-	case common.S3AuthTypeAccessKey:
+	case cacheconfig.S3AuthTypeAccessKey:
 		client, err = newMinio(serverAddress, &minio.Options{
 			Creds:  credentials.NewStaticV4(s3.AccessKey, s3.SecretKey, s3.SessionToken),
 			Secure: !s3.Insecure,

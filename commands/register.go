@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
@@ -572,7 +573,7 @@ func newRegisterCommand(n common.Network) *RegisterCommand {
 			Name: getHostname(),
 			RunnerSettings: common.RunnerSettings{
 				Kubernetes: &common.KubernetesConfig{},
-				Cache:      &common.CacheConfig{},
+				Cache:      &cacheconfig.Config{},
 				Machine:    &common.DockerMachine{},
 				Docker:     &common.DockerConfig{},
 				SSH:        &common.SshConfig{},

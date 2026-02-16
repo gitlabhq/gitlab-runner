@@ -11,12 +11,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type s3Adapter struct {
 	timeout    time.Duration
-	config     *common.CacheS3Config
+	config     *cacheconfig.CacheS3Config
 	objectName string
 	client     s3Presigner
 	metadata   map[string]string
@@ -150,7 +150,7 @@ func (a *s3Adapter) presignURL(ctx context.Context, method string) (cache.Presig
 	return a.client.PresignURL(ctx, method, a.config.BucketName, a.objectName, a.metadata, a.timeout)
 }
 
-func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {
+func New(config *cacheconfig.Config, timeout time.Duration, objectName string) (cache.Adapter, error) {
 	s3Config := config.S3
 	if s3Config == nil {
 		return nil, fmt.Errorf("missing S3 configuration")

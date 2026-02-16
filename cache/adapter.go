@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
 type PresignedURL struct {
@@ -29,7 +29,7 @@ type Adapter interface {
 	GetGoCloudURL(ctx context.Context, upload bool) (GoCloudURL, error)
 }
 
-type Factory func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error)
+type Factory func(config *cacheconfig.Config, timeout time.Duration, objectName string) (Adapter, error)
 
 type FactoriesMap struct {
 	internal map[string]Factory
@@ -72,7 +72,7 @@ func Factories() *FactoriesMap {
 	return factories
 }
 
-func getCreateAdapter(cacheConfig *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
+func getCreateAdapter(cacheConfig *cacheconfig.Config, timeout time.Duration, objectName string) (Adapter, error) {
 	create, err := Factories().Find(cacheConfig.Type)
 	if err != nil {
 		return nil, fmt.Errorf("cache factory not found: %w", err)
