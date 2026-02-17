@@ -56,7 +56,7 @@ PROTOC := $(localBin)/protoc
 PROTOC_VERSION := 28.2
 
 PROTOC_GEN_GO := protoc-gen-go
-PROTOC_GEN_GO_VERSION := v1.36.10
+PROTOC_GEN_GO_VERSION := v1.36.11
 
 PROTOC_GEN_GO_GRPC := protoc-gen-go-grpc
 PROTOC_GEN_GO_GRPC_VERSION := v1.6.0
