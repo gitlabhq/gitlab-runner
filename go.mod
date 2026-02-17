@@ -71,7 +71,7 @@ require (
 	gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260107152956-5ca76afe7ef3
 	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c
-	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260212131712-53624768eb0d
+	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260217110227-9c980c4be36f
 	gitlab.com/gitlab-org/fleeting/nesting v0.4.0
 	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20251222171709-fd7a3aca1450
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20251222171709-fd7a3aca1450
