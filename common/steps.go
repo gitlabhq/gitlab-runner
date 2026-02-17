@@ -19,5 +19,5 @@ func (b *Build) UseNativeSteps() bool {
 		return false
 	}
 
-	return len(b.Job.Run) > 0 || b.IsFeatureFlagOn(featureflags.UseScriptToStepMigration)
+	return len(b.Job.Run) > 0 || b.IsFeatureFlagOn(featureflags.UseScriptToStepMigration) || b.IsFeatureFlagOn(featureflags.UseConcrete)
 }

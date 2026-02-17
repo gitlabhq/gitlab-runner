@@ -691,7 +691,22 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	startTime := time.Now()
 	b.createReferees(executor)
 
-	// execute prepare scripts
+	_, hasStepRunnerConnector := executor.(steps.Connector)
+
+	if b.IsFeatureFlagOn(featureflags.UseConcrete) && len(b.Job.Run) == 0 && hasStepRunnerConnector {
+		concreteSteps, err := stagesToConcreteStep(ctx, executor)
+		if err != nil {
+			return err
+		}
+
+		//nolint:errcheck
+		err = b.executeStepStage(ctx, executor.(steps.Connector), "concrete", concreteSteps)
+
+		b.executeUploadReferees(ctx, startTime, time.Now())
+
+		return err
+	}
+
 	err, cont := b.executePrepareScripts(ctx, executor)
 	if !cont {
 		return err
@@ -705,7 +720,7 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		}()
 
 		if b.UseNativeSteps() && len(b.Job.Run) > 0 {
-			if _, ok := executor.(steps.Connector); !ok {
+			if !hasStepRunnerConnector {
 				return ExecutorStepRunnerConnectNotSupported
 			}
 			err = b.executeStage(ctx, stepRunBuildStage, executor)
@@ -714,17 +729,18 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		}
 	}
 
-	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
-
-	artifactUploadErr := b.executeUploadArtifacts(ctx, err, executor)
+	// upload cache, upload artifacts, pick priority error
+	err = b.pickPriorityError(
+		err,
+		b.executeArchiveCache(ctx, err, executor),
+		b.executeUploadArtifacts(ctx, err, executor),
+	)
 
 	// track job end and execute referees
-	endTime := time.Now()
-	b.executeUploadReferees(ctx, startTime, endTime)
-
+	b.executeUploadReferees(ctx, startTime, time.Now())
 	b.removeFileBasedVariables(ctx, executor)
 
-	return b.pickPriorityError(err, archiveCacheErr, artifactUploadErr)
+	return err
 }
 
 func (b *Build) executePrepareScripts(ctx context.Context, executor Executor) (error, bool) {
