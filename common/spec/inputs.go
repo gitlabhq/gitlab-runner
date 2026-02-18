@@ -299,6 +299,15 @@ func (i *Inputs) Expand(text string) (string, error) {
 		return text, nil
 	}
 
+	// NOTE: to avoid breaking changes, we shouldn't even parse
+	// the text as a moa template. Later on we try to detect
+	// if an actual input is used, but only if the template parses.
+	// For context see:
+	// https://gitlab.com/gitlab-org/step-runner/-/work_items/369
+	if len(i.inputs) == 0 {
+		return text, nil
+	}
+
 	expr, err := moa.ParseTemplate(text)
 	if err != nil {
 		i.metricsCollector.recordParseError()
