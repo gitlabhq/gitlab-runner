@@ -17,6 +17,6 @@ magefiles/hosted_runners/
 /docs/ @gitlab-com/runner-docs-maintainers
 
 ## Localization
-[Localization Team] @gitlab-com/localization/maintainers
-/docs-locale/
-/argo_translation.yml
+/docs-locale/ @gitlab-com/localization/maintainers/tech-docs
+/docs-locale/ja-jp @gitlab-com/localization/maintainers/japanese @gitlab-com/localization/maintainers/tech-docs
+/argo_translation.yml @gitlab-com/localization/maintainers/tech-docs
