@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -160,7 +159,7 @@ func proxyHTTPRequest(
 		w.WriteHeader(code)
 
 		if message != "" {
-			_, _ = fmt.Fprint(w, message)
+			_, _ = io.WriteString(w, message)
 		}
 		return
 	}

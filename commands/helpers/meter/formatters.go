@@ -65,6 +65,6 @@ func LabelledRateFormat(w io.Writer, label string, totalSize int64) UpdateCallba
 			_, _ = fmt.Fprintln(w, line)
 			return
 		}
-		_, _ = fmt.Fprint(w, line)
+		_, _ = io.WriteString(w, line)
 	}
 }

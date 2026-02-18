@@ -171,26 +171,24 @@ func (p *ExecOptions) Run() error {
 }
 
 func (p *ExecOptions) executeRequest() error {
+	var stdin io.Reader
+	if p.Stdin {
+		stdin = p.In
+	}
 	// kubeAPI: pods/exec, get, create, patch, delete
 	req := p.KubeClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(p.PodName).
 		Namespace(p.Namespace).
 		SubResource("exec").
-		Param("container", p.ContainerName)
-
-	var stdin io.Reader
-	if p.Stdin {
-		stdin = p.In
-	}
-
-	req.VersionedParams(&api.PodExecOptions{
-		Container: p.ContainerName,
-		Command:   p.Command,
-		Stdin:     stdin != nil,
-		Stdout:    p.Out != nil,
-		Stderr:    p.Err != nil,
-	}, scheme.ParameterCodec)
+		Param("container", p.ContainerName).
+		VersionedParams(&api.PodExecOptions{
+			Container: p.ContainerName,
+			Command:   p.Command,
+			Stdin:     stdin != nil,
+			Stdout:    p.Out != nil,
+			Stderr:    p.Err != nil,
+		}, scheme.ParameterCodec)
 
 	return p.Executor.Execute(p.Context, http.MethodPost, req.URL(), p.Config, stdin, p.Out, p.Err, false)
 }

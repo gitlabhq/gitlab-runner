@@ -87,7 +87,7 @@ type streamLogOutputWriter struct {
 }
 
 func (s *streamLogOutputWriter) Write(data string) {
-	_, _ = fmt.Fprint(s.stream, data)
+	_, _ = io.WriteString(s.stream, data)
 }
 
 type ReadLogsCommand struct {
@@ -123,7 +123,7 @@ func (c *ReadLogsCommand) Execute(*cli.Context) {
 	case os.IsNotExist(err):
 		os.Exit(outputLogFileNotExistsExitCode)
 	case err != nil:
-		c.logOutputWriter.Write(fmt.Sprintf("error reading logs %v\n", err))
+		c.logOutputWriter.Write(fmt.Sprintf("error reading logs from %s: %v\n", c.Path, err))
 		os.Exit(1)
 	}
 }
@@ -178,7 +178,7 @@ func (c *ReadLogsCommand) openFileReader() (readSeekCloser, *bufio.Reader, error
 		return nil, nil, err
 	}
 
-	_, err = s.Seek(c.Offset, 0)
+	_, err = s.Seek(c.Offset, io.SeekStart)
 	if err != nil {
 		_ = s.Close()
 		return nil, nil, err
