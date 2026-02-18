@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/moa"
 	"gitlab.com/gitlab-org/moa/ast"
 	"gitlab.com/gitlab-org/moa/value"
@@ -19,7 +18,6 @@ type Inputs struct {
 	inputs           []expression.Input
 	evaluator        *expression.Evaluator
 	metricsCollector *JobInputsMetricsCollector
-	logger           *logrus.Entry
 }
 
 type JobInput struct {
@@ -96,56 +94,6 @@ func (v *interpolationDetector) Enter(expr ast.Expr) (ast.Visitor, error) {
 }
 
 func (v *interpolationDetector) Exit(expr ast.Expr) (ast.Expr, error) {
-	return expr, nil
-}
-
-// jobInputDetector is a visitor that detects if the AST contains access to job inputs.
-// It looks for the pattern job.inputs.<key> in the expression tree, where <key> is
-// accessed via static property access (dot notation).
-//
-// This detector only finds static access patterns like:
-//   - job.inputs.username
-//   - job.inputs.foo.bar (nested access on an input)
-//   - str(job.inputs.age) (input used as function argument)
-//
-// It does NOT detect dynamic access patterns like:
-//   - job.inputs[key] (bracket notation with variable)
-//   - job["inputs"].foo (bracket notation for "inputs")
-//   - job["in" + "puts"].foo (computed property access)
-//
-// The visitor returns a sentinel error as soon as it encounters the first match,
-// exiting traversal early.
-type jobInputDetector struct{}
-
-func (v *jobInputDetector) Enter(expr ast.Expr) (ast.Visitor, error) {
-	selector, ok := expr.(*ast.Selector)
-	if !ok {
-		return v, nil
-	}
-
-	fromSelector, ok := selector.From.(*ast.Selector)
-	if !ok {
-		return v, nil
-	}
-
-	ident, ok := fromSelector.From.(*ast.Ident)
-	if !ok || ident.Name != "job" {
-		return v, nil
-	}
-
-	lit, ok := fromSelector.Select.(*ast.Literal)
-	if !ok {
-		return v, nil
-	}
-
-	if lit.String() == "inputs" {
-		return nil, errJobInputAccessFound
-	}
-
-	return v, nil
-}
-
-func (v *jobInputDetector) Exit(expr ast.Expr) (ast.Expr, error) {
 	return expr, nil
 }
 
@@ -289,29 +237,9 @@ func (i *Inputs) SetMetricsCollector(collector *JobInputsMetricsCollector) {
 	i.metricsCollector = collector
 }
 
-// SetLogger injects the logger
-func (i *Inputs) SetLogger(logger *logrus.Entry) {
-	i.logger = logger
-}
-
 func (i *Inputs) Expand(text string) (string, error) {
 	if i == nil || i.evaluator == nil {
 		return text, nil
-	}
-
-	// NOTE: to avoid breaking changes, we shouldn't even parse
-	// the text as a moa template. Later on we try to detect
-	// if an actual input is used, but only if the template parses.
-	// For context see:
-	// https://gitlab.com/gitlab-org/step-runner/-/work_items/369
-	if len(i.inputs) == 0 {
-		return text, nil
-	}
-
-	expr, err := moa.ParseTemplate(text)
-	if err != nil {
-		i.metricsCollector.recordParseError()
-		return "", &InputInterpolationError{err: err}
 	}
 
 	// NOTE: check if we don't have any inputs defined to interpolate
@@ -324,13 +252,13 @@ func (i *Inputs) Expand(text string) (string, error) {
 	// For context see:
 	// https://gitlab.com/gitlab-org/step-runner/-/work_items/369
 	if len(i.inputs) == 0 {
-		_, walkErr := expr.Walk(&jobInputDetector{})
-		if errors.Is(walkErr, errJobInputAccessFound) {
-			if i.logger != nil {
-				i.logger.Warn("job input interpolation syntax detected but no inputs are defined, therefore job interpolation is not performed")
-			}
-		}
 		return text, nil
+	}
+
+	expr, err := moa.ParseTemplate(text)
+	if err != nil {
+		i.metricsCollector.recordParseError()
+		return "", &InputInterpolationError{err: err}
 	}
 
 	result, err := i.evaluator.Eval(text, expr)
