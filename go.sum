@@ -581,8 +581,8 @@ github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452 h1:ZIGEFZTBq5+/3xCDOmgY7j/x+P3bDqwuM/dN7yHxLBU=
 gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452/go.mod h1:VavCDRKaiqpuBytdiBVNw0+y7j3dw8Trt+96cj1A6uw=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260217110227-9c980c4be36f h1:563z9UUZaa4fXvSo74jVfy7+OJr/zn9P2Rf0Uz5s3JI=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260217110227-9c980c4be36f/go.mod h1:DroPUy/cU/dhE8+quugAQx6LCMHffQ8vePINBCKO0UA=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260219212929-1389ec067d0d h1:M852iAoPWolN1ewvqOd/Ks1MIVyPpJtl/DBKbS4MJEo=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260219212929-1389ec067d0d/go.mod h1:/iBoJz8/HRNdy+iIJhvehqRcdbhkNAK3Sesbbn5XIgE=
 gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c h1:ID20OmwvHB4e/563Vqko57tgkp14yUw3aNs/C9WqBao=
 gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c/go.mod h1:e7QnK+35jxOk0FJPfS5oVupY20h3oxnfZV2ZfBEseVY=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260217110227-9c980c4be36f h1:GHN546s3dMae0+KxJkmm84AMV/bxmIWOAFPSQ+lFf7Q=
@@ -599,8 +599,8 @@ gitlab.com/gitlab-org/go/reopen v1.0.0 h1:6BujZ0lkkjGIejTUJdNO1w56mN1SI10qcVQyQl
 gitlab.com/gitlab-org/go/reopen v1.0.0/go.mod h1:D6OID8YJDzEVZNYW02R/Pkj0v8gYFSIhXFTArAsBQw8=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e h1:Aw1nDGdZEm1Jv3jwKbT0hKTAxTpP4yVRGCI21MYRHBc=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e/go.mod h1:pKFT8nwdU5KuJYosKMGgMATMrV4AP6p9jRu4HobZaBA=
-gitlab.com/gitlab-org/labkit v1.37.1 h1:eVa2A0wuIbttOXWplC4GV9GMNrbZ+ZNAPAKxImr3G9s=
-gitlab.com/gitlab-org/labkit v1.37.1/go.mod h1:JqQLdgjV/KKAZJ6gvNodaLStmWeTT9mxgJPIEi66VHI=
+gitlab.com/gitlab-org/labkit v1.38.0 h1:rWkGbRx7rKnXCDCITCO1+bzEn0BhLfKQ8Enx9on3l+M=
+gitlab.com/gitlab-org/labkit v1.38.0/go.mod h1:JqQLdgjV/KKAZJ6gvNodaLStmWeTT9mxgJPIEi66VHI=
 gitlab.com/gitlab-org/moa v0.0.0-20251209091627-66342f721c88 h1:GVlo8Pr4wfXI/6UF+Rmi0Yv2l7lwVgFiNBeImgWVeko=
 gitlab.com/gitlab-org/moa v0.0.0-20251209091627-66342f721c88/go.mod h1:024490ksS75/Bi9UoJTu59qY44JuFBAfi5bzGsLIhtY=
 gitlab.com/gitlab-org/step-runner v0.29.0 h1:cVklPW741QGMblJEXE4WgyiXwYhmp7hNzQdmnl31Hxw=
