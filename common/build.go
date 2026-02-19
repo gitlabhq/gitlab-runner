@@ -1313,8 +1313,6 @@ func (b *Build) expandInputs() error {
 		return nil
 	}
 
-	b.Inputs.SetLogger(b.Log())
-
 	return spec.ExpandInputs(&b.Inputs, b)
 }
 
