@@ -229,12 +229,12 @@ func TestAcquire(t *testing.T) {
 				// Init fails to create new taskscaler.
 				p.taskscalerNew = mockTaskscalerNew(nil /* wantErr */, true)
 			case afterConfigure:
-				ts.EXPECT().ConfigureSchedule(schedule).Return(fmt.Errorf("test error"))
+				ts.EXPECT().ConfigureSchedule([]taskscaler.Schedule{schedule}).Return(fmt.Errorf("test error"))
 			case afterReserve:
-				ts.EXPECT().ConfigureSchedule(schedule).Return(nil)
+				ts.EXPECT().ConfigureSchedule([]taskscaler.Schedule{schedule}).Return(nil)
 				ts.EXPECT().Reserve(acqRefKey).Return(taskscaler.ErrNoCapacity)
 			default:
-				ts.EXPECT().ConfigureSchedule(schedule).Return(nil)
+				ts.EXPECT().ConfigureSchedule([]taskscaler.Schedule{schedule}).Return(nil)
 				ts.EXPECT().Reserve(acqRefKey).Return(nil)
 			}
 
