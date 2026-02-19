@@ -443,6 +443,11 @@ func TestJobInputs_Expand_NoInputsDefined(t *testing.T) {
 		expected string
 	}{
 		{
+			name:     "no job input access, invalid moa syntax",
+			text:     "Hello $",
+			expected: "Hello $",
+		},
+		{
 			name:     "no job input access",
 			text:     "Hello ${{ 1 + 2 }}",
 			expected: "Hello ${{ 1 + 2 }}",
