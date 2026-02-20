@@ -81,6 +81,16 @@ const (
 	// HelperEphemeralStorageRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten
 	// ephemeral storage
 	HelperMemoryRequestOverwriteVariableValue = "KUBERNETES_HELPER_MEMORY_REQUEST"
+	// PodCPULimitOverwriteVariableValue is the key for the JobVariable containing user overwritten pod cpu limit
+	PodCPULimitOverwriteVariableValue = "KUBERNETES_POD_CPU_LIMIT"
+	// PodCPURequestOverwriteVariableValue is the key for the JobVariable containing user overwritten pod cpu
+	// request
+	PodCPURequestOverwriteVariableValue = "KUBERNETES_POD_CPU_REQUEST"
+	// PodMemoryLimitOverwriteVariableValue is the key for the JobVariable containing user overwritten pod memory limit
+	PodMemoryLimitOverwriteVariableValue = "KUBERNETES_POD_MEMORY_LIMIT"
+	// PodMemoryRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten pod memory
+	// request
+	PodMemoryRequestOverwriteVariableValue = "KUBERNETES_POD_MEMORY_REQUEST"
 )
 
 type overwriteTooHighError struct {
@@ -124,9 +134,11 @@ type overwrites struct {
 	buildLimits     api.ResourceList
 	serviceLimits   api.ResourceList
 	helperLimits    api.ResourceList
+	podLimits       api.ResourceList
 	buildRequests   api.ResourceList
 	serviceRequests api.ResourceList
 	helperRequests  api.ResourceList
+	podRequests     api.ResourceList
 
 	explicitServiceLimits   map[string]api.ResourceList
 	explicitServiceRequests map[string]api.ResourceList
@@ -241,6 +253,11 @@ func createOverwrites(
 	}
 
 	err = o.evaluateMaxHelperResourcesOverwrite(config, variables, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	err = o.evaluateMaxPodResourcesOverwrite(config, variables, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -510,6 +527,52 @@ func (o *overwrites) evaluateMaxHelperResourcesOverwrite(
 	)
 	if err != nil {
 		return fmt.Errorf("invalid helper limits specified: %w", err)
+	}
+
+	return nil
+}
+
+func (o *overwrites) evaluateMaxPodResourcesOverwrite(
+	config *common.KubernetesConfig,
+	variables spec.Variables,
+	logger buildlogger.Logger,
+) (err error) {
+	o.podRequests, err = o.evaluateMaxResourceListOverwrite(
+		"PodCPURequest",
+		"PodMemoryRequest",
+		"PodEphemeralStorageRequest",
+		config.PodCPURequest,
+		config.PodMemoryRequest,
+		"",
+		config.PodCPURequestOverwriteMaxAllowed,
+		config.PodMemoryRequestOverwriteMaxAllowed,
+		"",
+		variables.Value(PodCPURequestOverwriteVariableValue),
+		variables.Value(PodMemoryRequestOverwriteVariableValue),
+		"",
+		logger,
+	)
+	if err != nil {
+		return fmt.Errorf("invalid Pod requests specified: %w", err)
+	}
+
+	o.podLimits, err = o.evaluateMaxResourceListOverwrite(
+		"PodCPULimit",
+		"PodMemoryLimit",
+		"PodEphemeralStorageLimit",
+		config.PodCPULimit,
+		config.PodMemoryLimit,
+		"",
+		config.PodCPULimitOverwriteMaxAllowed,
+		config.PodMemoryLimitOverwriteMaxAllowed,
+		"",
+		variables.Value(PodCPULimitOverwriteVariableValue),
+		variables.Value(PodMemoryLimitOverwriteVariableValue),
+		"",
+		logger,
+	)
+	if err != nil {
+		return fmt.Errorf("invalid Pod limits specified: %w", err)
 	}
 
 	return nil

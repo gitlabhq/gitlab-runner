@@ -234,6 +234,16 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `service_cpu_limit_overwrite_max_allowed`   | The maximum amount that the CPU allocation can be written to for service containers. When empty, it disables the CPU limit overwrite feature. |
 | `service_cpu_request`                       | The CPU allocation requested for build service containers. |
 | `service_cpu_request_overwrite_max_allowed` | The maximum amount that the CPU allocation request can be written to for service containers. When empty, it disables the CPU request overwrite feature. |
+| `pod_cpu_limit`                             | The CPU allocation given to build pod. |
+| `pod_cpu_limit_overwrite_max_allowed`       | The maximum amount that the CPU allocation can be written to for build pod. When empty, it disables the CPU limit overwrite feature. |
+| `pod_cpu_request`                           | The CPU allocation requested for build pod. |
+| `pod_cpu_request_overwrite_max_allowed`     | The maximum amount that the CPU allocation request can be written to for build pod. When empty, it disables the CPU request overwrite feature. |
+
+{{< alert type="note" >}}
+
+Pod-level resource specifications have been introduced as alpha features in [Kubernetes v1.32](https://v1-32.docs.kubernetes.io/blog/2024/12/11/kubernetes-v1-32-release/#pod-level-resource-specifications) and graduated to beta in [Kubernetes v1.34](https://kubernetes.io/blog/2025/09/22/kubernetes-v1-34-pod-level-resources/).
+
+{{< /alert >}}
 
 ### Memory requests and limits
 
@@ -251,6 +261,10 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `service_memory_limit_overwrite_max_allowed`   | The maximum amount that the memory allocation can be written to for service containers. When empty, it disables the memory limit overwrite feature. |
 | `service_memory_request`                       | The amount of memory requested for build service containers. |
 | `service_memory_request_overwrite_max_allowed` | The maximum amount that the memory allocation request can be written to for service containers. When empty, it disables the memory request overwrite feature. |
+| `pod_memory_limit`                             | The amount of memory allocated to build pod. |
+| `pod_memory_limit_overwrite_max_allowed`       | The maximum amount that the memory allocation can be written to for build pod. When empty, it disables the memory limit overwrite feature. |
+| `pod_memory_request`                           | The amount of memory requested for build pod. |
+| `pod_memory_request_overwrite_max_allowed`     | The maximum amount that the memory allocation request can be written to for build pod. When empty, it disables the memory request overwrite feature. |
 
 #### Helper container memory sizing recommendations
 

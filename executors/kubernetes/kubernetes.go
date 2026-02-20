@@ -1140,6 +1140,17 @@ func (s *executor) initContainerResources() api.ResourceRequirements {
 	return resources
 }
 
+func (s *executor) podResourcesReference() *api.ResourceRequirements {
+	resources := api.ResourceRequirements{}
+
+	if s.configurationOverwrites != nil {
+		resources.Limits = s.configurationOverwrites.podLimits
+		resources.Requests = s.configurationOverwrites.podRequests
+	}
+
+	return &resources
+}
+
 func (s *executor) buildPermissionsInitContainer(os string) (api.Container, error) {
 	pullPolicy, err := s.pullManager.GetPullPolicyFor(helperContainerName)
 	if err != nil {
@@ -2368,6 +2379,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 			DNSConfig:                     s.Config.Kubernetes.GetDNSConfig(),
 			RuntimeClassName:              s.Config.Kubernetes.RuntimeClassName,
 			PriorityClassName:             s.Config.Kubernetes.PriorityClassName,
+			Resources:                     s.podResourcesReference(),
 		},
 	}
 

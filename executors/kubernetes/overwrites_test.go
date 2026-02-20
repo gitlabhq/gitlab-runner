@@ -80,6 +80,11 @@ func TestOverwrites(t *testing.T) {
 		HelperCPURequestOverwriteVariableValue              string
 		HelperMemoryRequestOverwriteVariableValue           string
 		HelperEphemeralStorageRequestOverwriteVariableValue string
+
+		PodCPULimitOverwriteVariableValue      string
+		PodMemoryLimitOverwriteVariableValue   string
+		PodCPURequestOverwriteVariableValue    string
+		PodMemoryRequestOverwriteVariableValue string
 	}{
 		{
 			Name:   "Empty Configuration",
@@ -91,6 +96,8 @@ func TestOverwrites(t *testing.T) {
 				serviceRequests: api.ResourceList{},
 				helperLimits:    api.ResourceList{},
 				helperRequests:  api.ResourceList{},
+				podLimits:       api.ResourceList{},
+				podRequests:     api.ResourceList{},
 			},
 		},
 		{
@@ -160,6 +167,14 @@ func TestOverwrites(t *testing.T) {
 				HelperMemoryRequestOverwriteMaxAllowed:            "126Mi",
 				HelperEphemeralStorageRequest:                     "62Mi",
 				HelperEphemeralStorageRequestOverwriteMaxAllowed:  "127Mi",
+				PodCPULimit:                                       "3.5",
+				PodCPULimitOverwriteMaxAllowed:                    "6",
+				PodMemoryLimit:                                    "6Gi",
+				PodMemoryLimitOverwriteMaxAllowed:                 "15Gi",
+				PodCPURequest:                                     "2",
+				PodCPURequestOverwriteMaxAllowed:                  "3.5",
+				PodMemoryRequest:                                  "3.5Gi",
+				PodMemoryRequestOverwriteMaxAllowed:               "9Gi",
 			},
 			NamespaceOverwriteVariableValue:      "my_namespace",
 			ServiceAccountOverwriteVariableValue: "my_service_account",
@@ -203,6 +218,10 @@ func TestOverwrites(t *testing.T) {
 			HelperCPURequestOverwriteVariableValue:               "4.5m",
 			HelperMemoryRequestOverwriteVariableValue:            "84Mi",
 			HelperEphemeralStorageRequestOverwriteVariableValue:  "96Mi",
+			PodCPULimitOverwriteVariableValue:                    "4.5",
+			PodMemoryLimitOverwriteVariableValue:                 "14Gi",
+			PodCPURequestOverwriteVariableValue:                  "3",
+			PodMemoryRequestOverwriteVariableValue:               "6Gi",
 			Expected: &overwrites{
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
@@ -243,6 +262,8 @@ func TestOverwrites(t *testing.T) {
 				serviceRequests: mustCreateResourceList(t, "198m", "10Mi", "110Mi"),
 				helperLimits:    mustCreateResourceList(t, "105m", "202Mi", "303Mi"),
 				helperRequests:  mustCreateResourceList(t, "4.5m", "84Mi", "96Mi"),
+				podLimits:       mustCreateResourceList(t, "4.5", "14Gi", ""),
+				podRequests:     mustCreateResourceList(t, "3", "6Gi", ""),
 			},
 		},
 		{
@@ -286,6 +307,10 @@ func TestOverwrites(t *testing.T) {
 				HelperCPURequest:               "0.5m",
 				HelperMemoryRequest:            "42Mi",
 				HelperEphemeralStorageRequest:  "38Mi",
+				PodCPULimit:                    "2",
+				PodMemoryLimit:                 "6Gi",
+				PodCPURequest:                  "1.5",
+				PodMemoryRequest:               "4Gi",
 			},
 			NamespaceOverwriteVariableValue:      "another_namespace",
 			ServiceAccountOverwriteVariableValue: "another_service_account",
@@ -325,6 +350,10 @@ func TestOverwrites(t *testing.T) {
 			HelperCPURequestOverwriteVariableValue:               "4.5m",
 			HelperMemoryRequestOverwriteVariableValue:            "84Mi",
 			HelperEphemeralStorageRequestOverwriteVariableValue:  "13Gi",
+			PodCPULimitOverwriteVariableValue:                    "4.5",
+			PodMemoryLimitOverwriteVariableValue:                 "14Gi",
+			PodCPURequestOverwriteVariableValue:                  "3",
+			PodMemoryRequestOverwriteVariableValue:               "6Gi",
 			Expected: &overwrites{
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
@@ -352,6 +381,8 @@ func TestOverwrites(t *testing.T) {
 				serviceRequests: mustCreateResourceList(t, "99m", "5Mi", "10Mi"),
 				helperLimits:    mustCreateResourceList(t, "50m", "100Mi", "200Mi"),
 				helperRequests:  mustCreateResourceList(t, "0.5m", "42Mi", "38Mi"),
+				podLimits:       mustCreateResourceList(t, "2", "6Gi", ""),
+				podRequests:     mustCreateResourceList(t, "1.5", "4Gi", ""),
 			},
 		},
 		{
@@ -377,6 +408,8 @@ func TestOverwrites(t *testing.T) {
 				serviceRequests: api.ResourceList{},
 				helperLimits:    api.ResourceList{},
 				helperRequests:  api.ResourceList{},
+				podLimits:       api.ResourceList{},
+				podRequests:     api.ResourceList{},
 			},
 		},
 		{
@@ -595,6 +628,10 @@ func TestOverwrites(t *testing.T) {
 					HelperMemoryRequestOverwriteVariableValue:            test.HelperMemoryRequestOverwriteVariableValue,
 					HelperEphemeralStorageLimitOverwriteVariableValue:    test.HelperEphemeralStorageLimitOverwriteVariableValue,
 					HelperEphemeralStorageRequestOverwriteVariableValue:  test.HelperEphemeralStorageRequestOverwriteVariableValue,
+					PodCPULimitOverwriteVariableValue:                    test.PodCPULimitOverwriteVariableValue,
+					PodCPURequestOverwriteVariableValue:                  test.PodCPURequestOverwriteVariableValue,
+					PodMemoryLimitOverwriteVariableValue:                 test.PodMemoryLimitOverwriteVariableValue,
+					PodMemoryRequestOverwriteVariableValue:               test.PodMemoryRequestOverwriteVariableValue,
 				},
 				test.NodeSelectorOverwriteValues,
 				test.NodeTolerationsOverwriteValues,
