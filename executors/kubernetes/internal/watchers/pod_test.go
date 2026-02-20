@@ -187,7 +187,7 @@ func TestPodWatcherWrongObject(t *testing.T) {
 			handler := podWatcher.resourceHandler()
 
 			assert.NotPanics(t, func() {
-				handler.OnAdd(test.object, true)
+				handler.OnAdd(test.object, false)
 			})
 		})
 	}

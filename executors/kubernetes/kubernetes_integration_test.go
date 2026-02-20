@@ -33,8 +33,10 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	versionutil "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/watch"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -2881,6 +2883,130 @@ func runMultiPullPolicyBuild(t *testing.T, build *common.Build) error {
 	assert.Regexp(t, expectedLogRE, outBuffer.String())
 
 	return err
+}
+
+func mustCreateResourceList(t *testing.T, cpu, memory string) v1.ResourceList {
+	var rCPU, rMemory resource.Quantity
+	var err error
+	if cpu != "" {
+		rCPU, err = resource.ParseQuantity(cpu)
+	}
+	require.NoError(t, err)
+
+	if memory != "" {
+		rMemory, err = resource.ParseQuantity(memory)
+	}
+	require.NoError(t, err)
+
+	resources := make(v1.ResourceList)
+	q := resource.Quantity{}
+
+	if rCPU != q {
+		resources[v1.ResourceCPU] = rCPU
+	}
+	if rMemory != q {
+		resources[v1.ResourceMemory] = rMemory
+	}
+
+	return resources
+}
+
+func skipKubectlIntegrationTestsIfNotOnLinux(t *testing.T, client *k8s.Clientset) {
+	nodes, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	require.NoError(t, err)
+
+	os := nodes.Items[0].Status.NodeInfo.OperatingSystem
+
+	// skip tests on windows cluster
+	if os != "linux" {
+		t.Skip("Non linux -- skipping tests")
+	}
+}
+
+func skipKubectlIntegrationTestsIfOnOldCluster(t *testing.T, client *k8s.Clientset, minimalVersion string) {
+	serverVersion, err := client.Discovery().ServerVersion()
+	require.NoError(t, err)
+
+	version, err := versionutil.Parse(serverVersion.String())
+	require.NoError(t, err)
+
+	res, err := version.Compare(minimalVersion)
+	require.NoError(t, err)
+
+	// skip tests if cluster is below minimalVersion
+	if res == -1 {
+		t.Skipf("Kubernetes server (%s) is older than %s -- skipping tests", serverVersion.String(), minimalVersion)
+	}
+}
+
+func TestKubernetesBuildPodResources(t *testing.T) {
+	t.Parallel()
+
+	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	client := getTestKubeClusterClient(t)
+
+	// Pod Level Resources Graduated to Beta in kubernetes v1.34
+	skipKubectlIntegrationTestsIfOnOldCluster(t, client, "1.34.0")
+	// Pod-level resources are not supported for Windows pods
+	skipKubectlIntegrationTestsIfNotOnLinux(t, client)
+
+	ctxTimeout := time.Minute
+
+	tests := map[string]struct {
+		resources map[string]string
+		verifyFn  func(*testing.T, v1.Pod)
+	}{
+		"set all pod-level resources": {
+			resources: map[string]string{
+				"PodCPURequest":    "1",
+				"PodCPULimit":      "4",
+				"PodMemoryRequest": "1Gi",
+				"PodMemoryLimit":   "8Gi",
+			},
+			verifyFn: func(t *testing.T, pod v1.Pod) {
+				resources := pod.Spec.Resources
+				expectedRequests := mustCreateResourceList(t, "1", "1Gi")
+				expectedLimits := mustCreateResourceList(t, "4", "8Gi")
+
+				require.NotNil(t, resources)
+				assert.Equal(t, expectedRequests, resources.Requests)
+				assert.Equal(t, expectedLimits, resources.Limits)
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+
+			build.Runner.Kubernetes.PodCPURequest = test.resources["PodCPURequest"]
+			build.Runner.Kubernetes.PodCPULimit = test.resources["PodCPULimit"]
+			build.Runner.Kubernetes.PodMemoryRequest = test.resources["PodMemoryRequest"]
+			build.Runner.Kubernetes.PodMemoryLimit = test.resources["PodMemoryLimit"]
+
+			defer buildtest.OnUserStage(build, func() {
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+				defer cancel()
+				pods, err := client.CoreV1().Pods(ciNamespace).List(
+					ctx,
+					metav1.ListOptions{
+						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+					},
+				)
+				require.NoError(t, err)
+				require.NotEmpty(t, pods.Items)
+				pod := pods.Items[0]
+
+				test.verifyFn(t, pod)
+			})()
+
+			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func TestKubernetesAllowedImages(t *testing.T) {
