@@ -122,17 +122,15 @@ func main() {
 		}
 
 		for i, indexDef := range m.Indexes {
-			var taggedNames []string
 			for _, indexTag := range indexDef.Tags {
 				taggedName := strings.ReplaceAll(indexTag, "%", tag)
-				taggedNames = append(taggedNames, taggedName)
+				indexTags[i] = append(indexTags[i], taggedName)
 				// Ideally, this would be flagged as "Docker image index" or similar,
 				// but we have some difficulty in differentiating between images and
 				// image indexes, since all artifacts pushed are currently image indexes.
 				// The component images are pushed as indexes with a single manifest.
 				exports = append(exports, Export{Type: "Docker image", Value: repo + ":" + taggedName})
 			}
-			indexTags[i] = append(indexTags[i], taggedNames...)
 		}
 	}
 
@@ -380,7 +378,6 @@ func buildIndexAddendum(authOpt remote.Option, archiveDesc ArchiveDescriptor) (*
 		return nil, fmt.Errorf("calling get: %w", err)
 	}
 
-	var image v1.Image
 	if !desc.MediaType.IsIndex() {
 		return nil, fmt.Errorf("didn't expect non-index: %s", archiveDesc.ref)
 	}
@@ -400,7 +397,7 @@ func buildIndexAddendum(authOpt remote.Option, archiveDesc ArchiveDescriptor) (*
 	}
 
 	imageMan := indexMan.Manifests[0]
-	image, err = idx.Image(imageMan.Digest)
+	image, err := idx.Image(imageMan.Digest)
 	if err != nil {
 		return nil, fmt.Errorf("dereferencing the image from the manifest: %w", err)
 	}
