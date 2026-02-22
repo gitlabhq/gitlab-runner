@@ -12,12 +12,31 @@ type ImageIndex struct {
 	Components []string `json:"components"`
 }
 
+// Map from tagsKey(tagTemplates) to the ImageIndex containing those tags.
+// Used to collate the separate components in the config file to the appropriate
+// ImageIndex composite values.
 type IndexMap map[string]*ImageIndex
 
 // Known architectures for stripping arch info from tags
 var knownArchs = []string{"arm64", "arm", "ppc64le", "riscv64", "s390x", "x86_64"}
 
-// stripTag removes the architecture and windows os.version info from tag
+// Choose the windows archives that should be included in the default "%" index
+func isWindowsDefaultArchive(componentName string) bool {
+	return strings.Contains(componentName, "nanoserver")
+}
+
+// Determine whether a component belongs in the super index, e.g. gitlab-runner-helper:v18.10.0.
+func checkIfShouldBeInDefault(componentName string, strippedTags []string) bool {
+	for _, stripped := range strippedTags {
+		if stripped == "%" {
+			return true
+		}
+	}
+
+	return isWindowsDefaultArchive(componentName)
+}
+
+// stripTag removes the architecture and windows os.version info from tag templates
 // Makes the following assumptions:
 //  1. No tag ends with an architecture identifier.
 //  2. Windows tags all mention either nanoserver or servercore
@@ -62,23 +81,18 @@ func stripTags(tags []string) []string {
 	return result
 }
 
-// tagsKey creates a unique grouping key from a sorted tag set.
-// We sort the tags so that components which list their tags in inconsistent
-// order can still be grouped.
+// tagsKey creates a unique grouping key from an ordered tag set.
 func tagsKey(tags []string) string {
-	sort.Strings(tags)
 	return strings.Join(tags, "|")
 }
 
-// Choose the windows archives that should be included in the default "%" index
-func isWindowsDefaultArchive(archiveName string) bool {
-	return strings.HasPrefix(archiveName, "windows-nanoserver")
-}
-
-// Add archive/tag data to the map, either creating a new ImageIndex containing
-// the input archive as the only component, or appending that component to the
-// existing ImageIndex.
+// Add archive/tag data to the index map.
+//
+// Operates by either creating a new ImageIndex containing the input archive as
+// the only component, or appending that component to the existing ImageIndex.
+// Sorts the given tags slice as a side-effect of the operation.
 func (indexes IndexMap) Add(tags []string, archiveName string) {
+	sort.Strings(tags)
 	indexKey := tagsKey(tags)
 
 	if index, exists := indexes[indexKey]; exists {
@@ -91,31 +105,26 @@ func (indexes IndexMap) Add(tags []string, archiveName string) {
 	}
 }
 
-func checkIfShouldBeInDefault(archiveName string, strippedTags []string) bool {
-	for _, stripped := range strippedTags {
-		if stripped == "%" {
-			return true
-		}
-	}
-
-	return isWindowsDefaultArchive(archiveName)
-}
-
 // Group the component/tag data in the config file into a map of appropriate
 // indexes, with map key based on the set of stripped tags associated with
 // the component.
-func collectIndexes(defaultMap map[string][]string) IndexMap {
+func collectIndexes(m *Manifest) IndexMap {
 	indexes := make(IndexMap)
 
-	for archiveName, tags := range defaultMap {
+	// Note: We only generate indexes based on the "Default" component config.
+	//
+	// The manifest does support configuring some components to be pushed based on specific
+	// tag fragments given on the command line, via the m.match(tagFragment) function.
+	// This feature doesn't appear to be used in the current config file, and is entirely
+	// ignored here.
+	for componentName, tags := range m.Default {
 		strippedTags := stripTags(tags)
-
-		// Check if this should be in the default index
-		shouldBeInDefault := checkIfShouldBeInDefault(archiveName, strippedTags)
 
 		// Filter out "%" from the regular group tags
 		var nonDefaultTags []string
 		for _, tag := range strippedTags {
+			// We ignore the default tag template of "%" during normal processing to separate
+			// the super index from the other tags.
 			if tag != "%" {
 				nonDefaultTags = append(nonDefaultTags, tag)
 			}
@@ -123,12 +132,12 @@ func collectIndexes(defaultMap map[string][]string) IndexMap {
 
 		// Add to the non-default group if there are any non-default tags
 		if len(nonDefaultTags) > 0 {
-			indexes.Add(nonDefaultTags, archiveName)
+			indexes.Add(nonDefaultTags, componentName)
 		}
 
-		// Add to default group if needed
-		if shouldBeInDefault {
-			indexes.Add([]string{"%"}, archiveName)
+		// Add component to the super index if appropriate
+		if checkIfShouldBeInDefault(componentName, strippedTags) {
+			indexes.Add([]string{"%"}, componentName)
 		}
 	}
 
@@ -137,13 +146,15 @@ func collectIndexes(defaultMap map[string][]string) IndexMap {
 
 // GenerateIndexes automatically generates index manifests from the default map
 func GenerateIndexes(m *Manifest) []ImageIndex {
-	indexMap := collectIndexes(m.Default)
-
+	indexMap := collectIndexes(m)
 	var indexes []ImageIndex
 	for _, index := range indexMap {
+		// We sort the components to ensure deterministic ordering in the resulting image index
 		sort.Strings(index.Components)
 		indexes = append(indexes, *index)
 	}
+
+	// We sort the resulting ImageIndex values to make validation easier.
 	slices.SortFunc(indexes, func(a, b ImageIndex) int {
 		return strings.Compare(a.Tags[0], b.Tags[0])
 	})
