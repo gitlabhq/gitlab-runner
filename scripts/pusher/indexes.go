@@ -20,8 +20,8 @@ type IndexMap map[string]*ImageIndex
 // Known architectures for stripping arch info from tags
 var knownArchs = []string{"arm64", "arm", "ppc64le", "riscv64", "s390x", "x86_64"}
 
-// Choose the windows archives that should be included in the default "%" index
-func isWindowsDefaultArchive(componentName string) bool {
+// Identify the windows components that should be included in the default "%" image index
+func isWindowsDefaultFlavor(componentName string) bool {
 	return strings.Contains(componentName, "nanoserver")
 }
 
@@ -33,7 +33,7 @@ func checkIfShouldBeInDefault(componentName string, strippedTags []string) bool 
 		}
 	}
 
-	return isWindowsDefaultArchive(componentName)
+	return isWindowsDefaultFlavor(componentName)
 }
 
 // stripTag removes the architecture and windows os.version info from tag templates
