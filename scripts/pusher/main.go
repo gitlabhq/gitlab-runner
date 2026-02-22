@@ -354,6 +354,7 @@ func extract(archive string) (dir string, err error) {
 	if err != nil {
 		return "", err
 	}
+	defer f.Close()
 
 	tempDir, err := os.MkdirTemp("", "tar-extract-")
 	if err != nil {
@@ -445,6 +446,7 @@ func fixOCIArchive(dir string) error {
 	if err != nil {
 		return err
 	}
+	defer imageIndex.Close()
 
 	indexManifest, err = v1.ParseIndexManifest(imageIndex)
 	if err != nil {
