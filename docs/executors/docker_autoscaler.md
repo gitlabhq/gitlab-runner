@@ -363,3 +363,9 @@ This often shows up in the AWS CloudWatch logs because the `reserved` instance c
 ```
 
 To resolve this error, ensure that the `AZRebalance` process is disabled for your autoscaling group in AWS.
+
+### `Job failures when scaling from zero instances on Azure VMSS`
+
+Microsoft Azure Virtual Machine Scale Sets have an [overprovisioning feature](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-design-overview#overprovisioning), which can cause job failures. When Azure scales up, it creates extra VMs to ensure capacity and then terminates them after it meets the requested capacity. This behavior conflicts with GitLab Runner's instance tracking, which causes the autoscaler to assign jobs to instances that Azure is about to terminate.
+
+Disable overprovisioning by setting `overprovision` to `false` in your VMSS configuration.
