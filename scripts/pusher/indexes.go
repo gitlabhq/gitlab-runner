@@ -22,7 +22,7 @@ var knownArchs = []string{"arm64", "arm", "ppc64le", "riscv64", "s390x", "x86_64
 
 // Identify the windows components that should be included in the default "%" image index
 func isWindowsDefaultFlavor(componentName string) bool {
-	return strings.Contains(componentName, "nanoserver")
+	return strings.Contains(componentName, "servercore")
 }
 
 // Determine whether a component belongs in the super index, e.g. gitlab-runner-helper:v18.10.0.

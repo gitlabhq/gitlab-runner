@@ -76,8 +76,8 @@ func TestCollectIndexes(t *testing.T) {
 						"alpine3.21-arm64",
 						"alpine3.21-ppc64le",
 						"alpine3.21-x86_64",
-						"windows-nanoserver-ltsc2019-x86_64",
-						"windows-nanoserver-ltsc2022-x86_64",
+						"windows-servercore-ltsc2019-x86_64",
+						"windows-servercore-ltsc2022-x86_64",
 					},
 				},
 				{
@@ -160,10 +160,6 @@ func TestCollectIndexes(t *testing.T) {
 			},
 			wantGroups: []ImageIndex{
 				{
-					Tags:       []string{"%"},
-					Components: []string{"windows-nanoserver-ltsc2019-x86_64", "windows-nanoserver-ltsc2022-x86_64"},
-				},
-				{
 					Tags:       []string{"%-nanoserver"},
 					Components: []string{"windows-nanoserver-ltsc2019-x86_64", "windows-nanoserver-ltsc2022-x86_64"},
 				},
@@ -183,6 +179,10 @@ func TestCollectIndexes(t *testing.T) {
 				},
 			},
 			wantGroups: []ImageIndex{
+				{
+					Tags:       []string{"%"},
+					Components: []string{"windows-servercore-ltsc2019-x86_64", "windows-servercore-ltsc2022-x86_64"},
+				},
 				{
 					Tags:       []string{"%-servercore"},
 					Components: []string{"windows-servercore-ltsc2019-x86_64", "windows-servercore-ltsc2022-x86_64"},
