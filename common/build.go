@@ -2029,7 +2029,7 @@ func (b *Build) printPolicyOptions() {
 	if b.Job.PolicyOptions.VariableOverrideExceptions != nil {
 		message += fmt.Sprintf(" (except for %s)", strings.Join(b.Job.PolicyOptions.VariableOverrideExceptions, ", "))
 	}
-	message += " according to the pipeline execution policy."
+	message += " according to the policy."
 	b.logger.Infoln(message)
 }
 
