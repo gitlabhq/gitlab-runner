@@ -88,6 +88,13 @@ func TestCollectIndexes(t *testing.T) {
 					},
 				},
 				{
+					Tags: []string{"%-pwsh"},
+					Components: []string{
+						"windows-nanoserver-ltsc2019-x86_64",
+						"windows-nanoserver-ltsc2022-x86_64",
+					},
+				},
+				{
 					Tags: []string{"%-servercore"},
 					Components: []string{
 						"windows-servercore-ltsc2019-x86_64",
@@ -126,7 +133,43 @@ func TestCollectIndexes(t *testing.T) {
 			},
 			wantGroups: []ImageIndex{
 				{
-					Tags:       []string{"%-pwsh", "alpine3.21-%-pwsh"},
+					Tags:       []string{"%-pwsh"},
+					Components: []string{"alpine3.21-x86_64-pwsh"},
+				},
+				{
+					Tags:       []string{"alpine3.21-%-pwsh"},
+					Components: []string{"alpine3.21-x86_64-pwsh"},
+				},
+			},
+		},
+		{
+			// Verifies handling of the cross-OS pwsh index
+			name: "Cross-OS pwsh variant",
+			manifest: Manifest{
+				Default: map[string][]string{
+					"alpine3.21-x86_64-pwsh":             {"alpine3.21-x86_64-%-pwsh", "x86_64-%-pwsh"},
+					"windows-nanoserver-ltsc2019-x86_64": {"x86_64-%-nanoserver1809"},
+					"windows-nanoserver-ltsc2022-x86_64": {"x86_64-%-nanoserver21H2"},
+				},
+			},
+			wantGroups: []ImageIndex{
+				{
+					Tags: []string{"%-nanoserver"},
+					Components: []string{
+						"windows-nanoserver-ltsc2019-x86_64",
+						"windows-nanoserver-ltsc2022-x86_64",
+					},
+				},
+				{
+					Tags: []string{"%-pwsh"},
+					Components: []string{
+						"alpine3.21-x86_64-pwsh",
+						"windows-nanoserver-ltsc2019-x86_64",
+						"windows-nanoserver-ltsc2022-x86_64",
+					},
+				},
+				{
+					Tags:       []string{"alpine3.21-%-pwsh"},
 					Components: []string{"alpine3.21-x86_64-pwsh"},
 				},
 			},
@@ -161,6 +204,10 @@ func TestCollectIndexes(t *testing.T) {
 			wantGroups: []ImageIndex{
 				{
 					Tags:       []string{"%-nanoserver"},
+					Components: []string{"windows-nanoserver-ltsc2019-x86_64", "windows-nanoserver-ltsc2022-x86_64"},
+				},
+				{
+					Tags:       []string{"%-pwsh"},
 					Components: []string{"windows-nanoserver-ltsc2019-x86_64", "windows-nanoserver-ltsc2022-x86_64"},
 				},
 			},

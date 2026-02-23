@@ -20,20 +20,46 @@ type IndexMap map[string]*ImageIndex
 // Known architectures for stripping arch info from tags
 var knownArchs = []string{"arm64", "arm", "ppc64le", "riscv64", "s390x", "x86_64"}
 
-// Identify the windows components that should be included in the default "%" image index
-func isWindowsDefaultFlavor(componentName string) bool {
-	return strings.Contains(componentName, "servercore")
+// crossOsRule maps a tag template to the windows flavor which should be included
+type crossOsRule struct {
+	tagTemplate   string
+	windowsFlavor string
 }
 
-// Determine whether a component belongs in the super index, e.g. gitlab-runner-helper:v18.10.0.
-func checkIfShouldBeInDefault(componentName string, strippedTags []string) bool {
-	for _, stripped := range strippedTags {
-		if stripped == "%" {
+// The collection of rules
+type crossOsRules []crossOsRule
+
+// Add a rule, stating that:
+// 1. The tagTemplate should be handled separately from non-cross-OS tagTemplates
+// 2. Components containing the windowsFlavor should be included in that cross-OS tagTemplate
+func (r *crossOsRules) addRule(tagTemplate, windowsFlavor string) {
+	*r = append(*r, crossOsRule{tagTemplate: tagTemplate, windowsFlavor: windowsFlavor})
+}
+
+func (r crossOsRules) hasRule(tagTemplate string) bool {
+	for _, rule := range r {
+		if rule.tagTemplate == tagTemplate {
 			return true
 		}
 	}
+	return false
+}
 
-	return isWindowsDefaultFlavor(componentName)
+// Which cross OS tagTemplate should be used for the given component with the given tagTemplates.
+//
+// Returns "" if no rule matches the component and tags.
+func (r crossOsRules) tagFor(componentName string, compTagTemplates []string) string {
+	for _, rule := range r {
+		for _, compTagTemplate := range compTagTemplates {
+			if compTagTemplate == rule.tagTemplate {
+				return rule.tagTemplate
+			}
+		}
+		if strings.Contains(componentName, rule.windowsFlavor) {
+			return rule.tagTemplate
+		}
+	}
+	return ""
 }
 
 // stripTag removes the architecture and windows os.version info from tag templates
@@ -110,6 +136,10 @@ func (indexes IndexMap) Add(tags []string, archiveName string) {
 // the component.
 func collectIndexes(m *Manifest) IndexMap {
 	indexes := make(IndexMap)
+	crossOs := crossOsRules{}
+
+	crossOs.addRule("%", "servercore")
+	crossOs.addRule("%-pwsh", "nanoserver")
 
 	// Note: We only generate indexes based on the "Default" component config.
 	//
@@ -121,23 +151,23 @@ func collectIndexes(m *Manifest) IndexMap {
 		strippedTags := stripTags(tags)
 
 		// Filter out "%" from the regular group tags
-		var nonDefaultTags []string
+		var nonCrossOsTags []string
 		for _, tag := range strippedTags {
-			// We ignore the default tag template of "%" during normal processing to separate
-			// the super index from the other tags.
-			if tag != "%" {
-				nonDefaultTags = append(nonDefaultTags, tag)
+			// We ignore the cross OS tag templates during normal processing to separate
+			// the super indexes from the other tags.
+
+			if !crossOs.hasRule(tag) {
+				nonCrossOsTags = append(nonCrossOsTags, tag)
 			}
 		}
 
 		// Add to the non-default group if there are any non-default tags
-		if len(nonDefaultTags) > 0 {
-			indexes.Add(nonDefaultTags, componentName)
+		if len(nonCrossOsTags) > 0 {
+			indexes.Add(nonCrossOsTags, componentName)
 		}
 
-		// Add component to the super index if appropriate
-		if checkIfShouldBeInDefault(componentName, strippedTags) {
-			indexes.Add([]string{"%"}, componentName)
+		if crossOsTag := crossOs.tagFor(componentName, strippedTags); crossOsTag != "" {
+			indexes.Add([]string{crossOsTag}, componentName)
 		}
 	}
 
