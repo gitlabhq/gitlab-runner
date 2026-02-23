@@ -1554,10 +1554,9 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 	const cacheEnvFile = "/some/path/to/runner-cache-env"
 
 	type expectations struct {
-		cacheKeys   []string
-		usesEnvFile []bool
-		warning     []any
-		notices     [][]any
+		cacheKeys []string
+		warning   []any
+		notices   [][]any
 	}
 	type hashMode uint8
 	const (
@@ -1631,8 +1630,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
 				},
 				withHashing: {
-					cacheKeys:   []string{"test-cache-key", ".."},
-					usesEnvFile: []bool{true, false},
+					cacheKeys: []string{"test-cache-key", ".."},
 				},
 			},
 		},
@@ -1646,9 +1644,23 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 					warning:   []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
 				},
 				withHashing: {
-					cacheKeys:   []string{"test-cache-key"},
-					warning:     []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
-					usesEnvFile: []bool{true},
+					cacheKeys: []string{"test-cache-key"},
+					warning:   []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected", "-protected"},
+				},
+			},
+		},
+		"using trailing dot suffix": {
+			cacheType:                "test",
+			cacheKey:                 "test-cache-key",
+			cacheFallbackKeyVarValue: "main-protected.",
+			expectations: map[hashMode]expectations{
+				withoutHashing: {
+					cacheKeys: []string{"test-cache-key"},
+					warning:   []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected.", "-protected"},
+				},
+				withHashing: {
+					cacheKeys: []string{"test-cache-key"},
+					warning:   []any{"CACHE_FALLBACK_KEY %q not allowed to end in %q", "main-protected.", "-protected"},
 				},
 			},
 		},
@@ -1679,8 +1691,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
 				},
 				withHashing: {
-					cacheKeys:   []string{"some-job-name/some-ref-name", "."},
-					usesEnvFile: []bool{true, false},
+					cacheKeys: []string{"some-job-name/some-ref-name", "."},
 				},
 			},
 		},
