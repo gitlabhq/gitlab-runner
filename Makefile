@@ -49,7 +49,7 @@ export PATH := $(localBin):$(PATH)
 # Development Tools
 GOCOVER_COBERTURA = gocover-cobertura
 
-MOCKERY_VERSION ?= 3.6.1
+MOCKERY_VERSION ?= 3.6.4
 MOCKERY = mockery
 
 PROTOC := $(localBin)/protoc
