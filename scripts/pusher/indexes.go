@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// ImageIndex represents a group of archives that should be included in an index
+// ImageIndex represents a group of archives that should be included in an index.
 type ImageIndex struct {
 	Tags       []string `json:"tags"`
 	Components []string `json:"components"`
@@ -17,25 +17,30 @@ type ImageIndex struct {
 // ImageIndex composite values.
 type IndexMap map[string]*ImageIndex
 
-// Known architectures for stripping arch info from tags
+// Known architectures for stripping arch info from tags.
 var knownArchs = []string{"arm64", "arm", "ppc64le", "riscv64", "s390x", "x86_64"}
 
-// crossOsRule maps a tag template to the windows flavor which should be included
+// crossOsRule identifies a tag template that should be handled as a cross-OS tag,
+// and a component name fragment (e.g. "nanoserver") that identifies components that
+// should be included in that cross-OS tag.
 type crossOsRule struct {
 	tagTemplate   string
 	windowsFlavor string
 }
 
-// The collection of rules
+// crossOsRules encapsulates the matching rules for cross-OS image indexes.
+// Rules are stored in registration order to ensure deterministic matching.
 type crossOsRules []crossOsRule
 
-// Add a rule, stating that:
-// 1. The tagTemplate should be handled separately from non-cross-OS tagTemplates
-// 2. Components containing the windowsFlavor should be included in that cross-OS tagTemplate
+// addRule adds a rule, stating that:
+//  1. The tag template should be handled separately from simple tags which have no rules.
+//  2. Components containing the windows flavor should be included in the cross-OS index
+//     associated with that tag template.
 func (r *crossOsRules) addRule(tagTemplate, windowsFlavor string) {
 	*r = append(*r, crossOsRule{tagTemplate: tagTemplate, windowsFlavor: windowsFlavor})
 }
 
+// hasRule returns true if the given tag template matches any current rule.
 func (r crossOsRules) hasRule(tagTemplate string) bool {
 	for _, rule := range r {
 		if rule.tagTemplate == tagTemplate {
@@ -45,9 +50,8 @@ func (r crossOsRules) hasRule(tagTemplate string) bool {
 	return false
 }
 
-// Which cross OS tagTemplate should be used for the given component with the given tagTemplates.
-//
-// Returns "" if no rule matches the component and tags.
+// tagFor returns the cross-OS tag template that should be used for the given component
+// with the given tags, or "" if no rules matches.
 func (r crossOsRules) tagFor(componentName string, compTagTemplates []string) string {
 	for _, rule := range r {
 		for _, compTagTemplate := range compTagTemplates {
@@ -96,7 +100,7 @@ func stripTag(tag string) string {
 	return tag
 }
 
-// Run stripTag on the inputTags and return the collected result
+// stripTags runs stripTag on the given tags and returns the collected result.
 func stripTags(tags []string) []string {
 	var result []string
 
@@ -150,22 +154,22 @@ func collectIndexes(m *Manifest) IndexMap {
 	for componentName, tags := range m.Default {
 		strippedTags := stripTags(tags)
 
-		// Filter out "%" from the regular group tags
-		var nonCrossOsTags []string
+		// Filter out cross-OS tags from the simple tags, as cross-OS tags are handled
+		// separately, below.
+		var simpleTags []string
 		for _, tag := range strippedTags {
-			// We ignore the cross OS tag templates during normal processing to separate
-			// the super indexes from the other tags.
-
 			if !crossOs.hasRule(tag) {
-				nonCrossOsTags = append(nonCrossOsTags, tag)
+				simpleTags = append(simpleTags, tag)
 			}
 		}
 
-		// Add to the non-default group if there are any non-default tags
-		if len(nonCrossOsTags) > 0 {
-			indexes.Add(nonCrossOsTags, componentName)
+		// Add the component to an index with all its simple tags, if it has any.
+		if len(simpleTags) > 0 {
+			indexes.Add(simpleTags, componentName)
 		}
 
+		// Now add the component to the appropriate cross-OS index, if the rules
+		// indicate we should.
 		if crossOsTag := crossOs.tagFor(componentName, strippedTags); crossOsTag != "" {
 			indexes.Add([]string{crossOsTag}, componentName)
 		}
