@@ -223,7 +223,7 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 	defer shutdownProvider()
 
 	if managedProvider != nil {
-		managedProvider.Shutdown(providerShutdownCtx)
+		managedProvider.Shutdown(providerShutdownCtx, nil)
 	}
 }
 

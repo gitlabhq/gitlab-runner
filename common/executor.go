@@ -114,9 +114,10 @@ type ManagedExecutorProvider interface {
 	//
 	// Shutdown MUST BE BLOCKING until termination is done or provided context is canceled.
 	//
-	// First argument receive a context.Context object that will be canceled when shutting down will exceed
+	// First argument receives a context.Context object that will be canceled when shutting down will exceed
 	// configured timeout.
-	Shutdown(ctx context.Context)
+	// Second argument receives the global configuration, which may be nil.
+	Shutdown(ctx context.Context, config *Config)
 }
 
 // ExecutorProvider is responsible for managing the lifetime of executors, acquiring resources,

@@ -287,6 +287,66 @@ The same applies for `runner-2`.
 If you define more runners, the sleep interval is smaller. However, a request for a runner is
 repeated after all requests for the other runners and their sleep periods are called.
 
+## The `[machine]` section
+
+{{< history >}}
+
+- Introduced in GitLab Runner 18.10.
+
+{{< /history >}}
+
+The `[machine]` section configures global settings for the `docker+machine` executor provider.
+These settings apply to all runners that use the `docker+machine` executor.
+
+### The `[machine.shutdown_drain]` section
+
+When the runner process shuts down, idle machines in the pool are typically left to run.
+You must clean them up externally (for example, through a `systemd` post-stop hook).
+The `shutdown_drain` section configures the runner to automatically remove idle machines during shutdown.
+
+| Parameter       | Type     | Description |
+|-----------------|----------|-------------|
+| `enabled`       | boolean  | Turn on automatic removal of idle machines on shutdown. Default: `false`. |
+| `concurrency`   | integer  | Number of machines to remove concurrently. Default: `3`. |
+| `max_retries`   | integer  | Maximum retry attempts per machine. Default: `3`. |
+| `retry_backoff` | duration | Base backoff duration between retries (multiplied by attempt number). Default: `5s`. |
+
+> [!note]
+> The drain operation uses the global [`shutdown_timeout`](#the-global-section) setting.
+> The default timeout of 30 seconds is usually too short for draining machines.
+> When you turn on shutdown drain, increase `shutdown_timeout` to allow enough time
+> for all machines to be removed. A minimum of 5 minutes is recommended, but larger
+> pools may require longer timeouts. The runner logs a warning if the timeout is
+> too short.
+
+Example:
+
+```toml
+concurrent = 10
+check_interval = 0
+shutdown_timeout = 600  # 10 minutes - required for draining machines
+
+[machine]
+  [machine.shutdown_drain]
+    enabled = true
+    concurrency = 5
+    max_retries = 3
+    retry_backoff = "5s"
+
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "xxx"
+  executor = "docker+machine"
+
+  [runners.machine]
+    IdleCount = 5
+    IdleTime = 600
+    MachineName = "auto-scale-%s"
+    MachineDriver = "google"
+    MachineOptions = ["google-project=my-project", "google-zone=us-central1-a"]
+```
+
 ## The `[session_server]` section
 
 To interact with jobs, specify the `[session_server]` section

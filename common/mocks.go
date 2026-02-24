@@ -887,8 +887,8 @@ func (_c *MockManagedExecutorProvider_Init_Call) RunAndReturn(run func()) *MockM
 }
 
 // Shutdown provides a mock function for the type MockManagedExecutorProvider
-func (_mock *MockManagedExecutorProvider) Shutdown(ctx context.Context) {
-	_mock.Called(ctx)
+func (_mock *MockManagedExecutorProvider) Shutdown(ctx context.Context, config *Config) {
+	_mock.Called(ctx, config)
 	return
 }
 
@@ -899,18 +899,24 @@ type MockManagedExecutorProvider_Shutdown_Call struct {
 
 // Shutdown is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockManagedExecutorProvider_Expecter) Shutdown(ctx interface{}) *MockManagedExecutorProvider_Shutdown_Call {
-	return &MockManagedExecutorProvider_Shutdown_Call{Call: _e.mock.On("Shutdown", ctx)}
+//   - config *Config
+func (_e *MockManagedExecutorProvider_Expecter) Shutdown(ctx interface{}, config interface{}) *MockManagedExecutorProvider_Shutdown_Call {
+	return &MockManagedExecutorProvider_Shutdown_Call{Call: _e.mock.On("Shutdown", ctx, config)}
 }
 
-func (_c *MockManagedExecutorProvider_Shutdown_Call) Run(run func(ctx context.Context)) *MockManagedExecutorProvider_Shutdown_Call {
+func (_c *MockManagedExecutorProvider_Shutdown_Call) Run(run func(ctx context.Context, config *Config)) *MockManagedExecutorProvider_Shutdown_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 *Config
+		if args[1] != nil {
+			arg1 = args[1].(*Config)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -921,7 +927,7 @@ func (_c *MockManagedExecutorProvider_Shutdown_Call) Return() *MockManagedExecut
 	return _c
 }
 
-func (_c *MockManagedExecutorProvider_Shutdown_Call) RunAndReturn(run func(ctx context.Context)) *MockManagedExecutorProvider_Shutdown_Call {
+func (_c *MockManagedExecutorProvider_Shutdown_Call) RunAndReturn(run func(ctx context.Context, config *Config)) *MockManagedExecutorProvider_Shutdown_Call {
 	_c.Run(run)
 	return _c
 }

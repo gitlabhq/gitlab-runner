@@ -467,6 +467,13 @@ type DockerMachine struct {
 	AutoscalingConfigs []*DockerMachineAutoscaling `toml:"autoscaling" json:",omitempty" description:"Ordered list of configurations for autoscaling periods (last match wins)"`
 }
 
+type DockerMachineShutdownDrain struct {
+	Enabled      bool          `toml:"enabled,omitempty" json:"enabled,omitempty" description:"Enable draining idle machines on shutdown (default: false)"`
+	Concurrency  int           `toml:"concurrency,omitempty" json:"concurrency,omitempty" description:"Number of concurrent machines to remove during shutdown drain (default: 3)"`
+	MaxRetries   int           `toml:"max_retries,omitempty" json:"max_retries,omitempty" description:"Maximum number of retries for removing a machine during drain (default: 3)"`
+	RetryBackoff time.Duration `toml:"retry_backoff,omitempty" json:"retry_backoff,omitempty" description:"Base backoff duration between retries during drain (default: 5s)"`
+}
+
 type DockerMachineAutoscaling struct {
 	Periods         []string `long:"periods" json:",omitempty" description:"List of crontab expressions for this autoscaling configuration"`
 	Timezone        string   `long:"timezone" description:"Timezone for the periods (defaults to Local)"`
@@ -1297,11 +1304,18 @@ type Config struct {
 	ModTime          time.Time       `toml:"-"`
 	Loaded           bool            `toml:"-"`
 
+	Machine *MachineConfig `toml:"machine,omitempty" json:"machine,omitempty"`
+
 	Experimental *Experimental `toml:"experimental" json:"experimental,omitempty"`
 
 	ShutdownTimeout int `toml:"shutdown_timeout,omitempty" json:"shutdown_timeout" description:"Number of seconds until the forceful shutdown operation times out and exits the process"`
 
 	ConfigSaver ConfigSaver `toml:"-"`
+}
+
+// MachineConfig contains global configuration for the docker+machine executor provider.
+type MachineConfig struct {
+	ShutdownDrain *DockerMachineShutdownDrain `toml:"shutdown_drain,omitempty" json:"shutdown_drain,omitempty" description:"Configuration for draining idle machines on shutdown"`
 }
 
 type Experimental struct {
@@ -1938,6 +1952,37 @@ func (c *DockerMachine) logDeprecationWarning() {
 			"Please convert the setting into a [[docker.machine.autoscaling]] configuration instead: " +
 			"https://docs.gitlab.com/runner/configuration/autoscale/#off-peak-time-mode-configuration-deprecated")
 	}
+}
+
+const (
+	defaultShutdownDrainConcurrency  = 3
+	defaultShutdownDrainMaxRetries   = 3
+	defaultShutdownDrainRetryBackoff = 5 * time.Second
+)
+
+func (c DockerMachineShutdownDrain) IsEnabled() bool {
+	return c.Enabled
+}
+
+func (c DockerMachineShutdownDrain) GetConcurrency() int {
+	if c.Concurrency <= 0 {
+		return defaultShutdownDrainConcurrency
+	}
+	return c.Concurrency
+}
+
+func (c DockerMachineShutdownDrain) GetMaxRetries() int {
+	if c.MaxRetries <= 0 {
+		return defaultShutdownDrainMaxRetries
+	}
+	return c.MaxRetries
+}
+
+func (c DockerMachineShutdownDrain) GetRetryBackoff() time.Duration {
+	if c.RetryBackoff <= 0 {
+		return defaultShutdownDrainRetryBackoff
+	}
+	return c.RetryBackoff
 }
 
 func (c *RunnerCredentials) GetURL() string {

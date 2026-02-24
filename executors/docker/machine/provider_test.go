@@ -20,6 +20,11 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
+var (
+	_ common.ExecutorProvider        = (*machineProvider)(nil)
+	_ common.ManagedExecutorProvider = (*machineProvider)(nil)
+)
+
 var machineDefaultConfig = &common.RunnerConfig{
 	RunnerSettings: common.RunnerSettings{
 		Machine: &common.DockerMachine{
@@ -148,6 +153,10 @@ func (m *testMachine) Remove(ctx context.Context, name string) error {
 	m.Removed <- true
 
 	return nil
+}
+
+func (m *testMachine) ForceRemove(ctx context.Context, name string) error {
+	return m.Remove(ctx, name)
 }
 
 func (m *testMachine) Exist(ctx context.Context, name string) bool {
