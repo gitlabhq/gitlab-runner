@@ -865,7 +865,13 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	v := common.AppVersion
 	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
 
-	fetchArgs := []string{"-c", userAgent, "fetch", "origin", "--no-recurse-submodules"}
+	fetchArgs := []string{"-c", userAgent}
+	// Force Git to send credentials proactively instead of waiting for a 401.
+	// This ensures the username is propagated to Gitaly for public projects.
+	if build.IsFeatureFlagOn(featureflags.UseGitProactiveAuth) {
+		fetchArgs = append(fetchArgs, "-c", "http.proactiveAuth=basic")
+	}
+	fetchArgs = append(fetchArgs, "fetch", "origin", "--no-recurse-submodules")
 	fetchArgs = append(fetchArgs, build.GitInfo.Refspecs...)
 	if depth > 0 {
 		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(depth))
@@ -922,7 +928,13 @@ func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellSc
 	v := common.AppVersion
 	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
 
-	cloneArgs := []string{"-c", userAgent, "clone", "--no-checkout", remoteURL, projectDir, "--template", templateDir}
+	cloneArgs := []string{"-c", userAgent}
+	// Force Git to send credentials proactively instead of waiting for a 401.
+	// This ensures the username is propagated to Gitaly for public projects.
+	if build.IsFeatureFlagOn(featureflags.UseGitProactiveAuth) {
+		cloneArgs = append(cloneArgs, "-c", "http.proactiveAuth=basic")
+	}
+	cloneArgs = append(cloneArgs, "clone", "--no-checkout", remoteURL, projectDir, "--template", templateDir)
 
 	if depth > 0 {
 		cloneArgs = append(cloneArgs, "--depth", strconv.Itoa(depth))
