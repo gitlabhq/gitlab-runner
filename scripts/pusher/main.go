@@ -58,19 +58,19 @@ type ComponentRef struct {
 	ref  name.Reference
 }
 
-var dry, printConfig, skipIndexes bool
+var dry, generateIndexes, printIndexes bool
 
 func main() {
 	flag.BoolVar(&dry, "dry-run", false, "print what would be done, but don't push anything")
-	flag.BoolVar(&printConfig, "print-config", false, "print the full configuration, after index generation")
-	flag.BoolVar(&skipIndexes, "skip-indexes", false, "skip generating index config and pushing indexes")
+	flag.BoolVar(&generateIndexes, "gen-indexes", false, "generate index configuration before pushing")
+	flag.BoolVar(&printIndexes, "print-indexes", false, "print generated index config and exit")
 	flag.Parse()
 
-	if flag.NArg() < 3 && (!printConfig || flag.NArg() < 1) {
+	if flag.NArg() < 3 && (!printIndexes || flag.NArg() < 1) {
 		fmt.Println("Usage:")
 		flag.PrintDefaults()
-		fmt.Printf("%s <manifest> <repo> [tag...]      Push configured images to repo with specified tags\n", filepath.Base(os.Args[0]))
-		fmt.Printf("%s -print-config <manifest>        Generate index config if empty, print full config to stdout, then exit\n", filepath.Base(os.Args[0]))
+		fmt.Printf("%s [-gen-indexes] <manifest> <repo> [tag...]  Push configured images and indexes to repo with specified tags\n", filepath.Base(os.Args[0]))
+		fmt.Printf("%s -print-indexes <manifest>                  Print auto-generated index config to stdout, then exit\n", filepath.Base(os.Args[0]))
 		os.Exit(1)
 	}
 
@@ -83,8 +83,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if printConfig {
-		output, err := json.MarshalIndent(m, "", "    ")
+	if printIndexes {
+		indexes := GenerateIndexes(&m)
+		output, err := json.MarshalIndent(indexes, "", "    ")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error marshaling output: %v\n", err)
 			os.Exit(1)
@@ -119,11 +120,9 @@ func main() {
 		fmt.Printf("error pushing component images: %v", err)
 		os.Exit(1)
 	}
-	if !skipIndexes {
-		if err = config.pushIndexes(); err != nil {
-			fmt.Printf("error pushing indexes: %v", err)
-			os.Exit(1)
-		}
+	if err = config.pushIndexes(); err != nil {
+		fmt.Printf("error pushing indexes: %v", err)
+		os.Exit(1)
 	}
 	fmt.Printf("done in %v, export %v\n", time.Since(now), pathname)
 }
@@ -138,8 +137,9 @@ func readManifest(manifestPath string) (Manifest, error) {
 		return Manifest{}, fmt.Errorf("unmarshaling: %w", err)
 	}
 
-	// Auto-generate indexes if not manually configured
-	if len(m.Indexes) == 0 && !skipIndexes {
+	// If requested, generate indexes from the Default map rather than using
+	// those in the config file.
+	if generateIndexes {
 		m.Indexes = GenerateIndexes(&m)
 	}
 	return m, nil
