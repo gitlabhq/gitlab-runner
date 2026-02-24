@@ -76,11 +76,8 @@ world can't.
 
 ## Configuring Docker for downloading images
 
-{{< alert type="note" >}}
-
-The following apply to OSes with systemd support.
-
-{{< /alert >}}
+> [!note]
+> The following apply to OSes with systemd support.
 
 For information about how to use proxy, see [Docker documentation](https://docs.docker.com/engine/daemon/proxy/).
 
@@ -254,9 +251,6 @@ The runner retries failed requests up to 5 times. If all retries fail, the runne
 | `RateLimit-ResetTime` | HTTP Date (RFC1123) | `Wed, 21 Oct 2015 07:28:00 GMT` |
 | `Retry-After`         | Seconds             | `30`                            |
 
-{{< alert type="note" >}}
-
-The header `RateLimit-ResetTime` is case-insensitive because all header keys are run
-through the [`http.CanonicalHeaderKey`](https://pkg.go.dev/net/http#CanonicalHeaderKey) function.
-
-{{< /alert >}}
+> [!note]
+> The header `RateLimit-ResetTime` is case-insensitive because all header keys are run
+> through the [`http.CanonicalHeaderKey`](https://pkg.go.dev/net/http#CanonicalHeaderKey) function.

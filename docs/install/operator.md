@@ -145,11 +145,8 @@ To find out which version of GitLab Runner the Operator is running, view the con
 
 To install a specific version, create this `catalogsource.yaml` file and replace `<VERSION>` with a tag or a specific commit:
 
-{{< alert type="note" >}}
-
-When using an image for a specific commit, the tag format is `v0.0.1-<COMMIT>`. For example: `registry.gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/gitlab-runner-operator-catalog-source:v0.0.1-f5a798af`.
-
-{{< /alert >}}
+> [!note]
+> When using an image for a specific commit, the tag format is `v0.0.1-<COMMIT>`. For example: `registry.gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/gitlab-runner-operator-catalog-source:v0.0.1-f5a798af`.
 
 ```yaml
 apiVersion: operators.coreos.com/v1alpha1

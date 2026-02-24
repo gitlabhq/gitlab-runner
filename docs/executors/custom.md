@@ -488,12 +488,9 @@ fi
 CI/CD jobs require this method to leverage the
 [`allow_failure`](https://docs.gitlab.com/ci/yaml/#allow_failure) syntax.
 
-{{< alert type="note" >}}
-
-Store only the integer exit code in this file. Additional information might
-result in an `unknown Custom executor executable exit code` error.
-
-{{< /alert >}}
+> [!note]
+> Store only the integer exit code in this file. Additional information might
+> result in an `unknown Custom executor executable exit code` error.
 
 ### System Failure
 

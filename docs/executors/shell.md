@@ -17,12 +17,9 @@ locally on the machine where GitLab Runner is installed. It supports all systems
 which the Runner can be installed. That means that it's possible to use scripts
 generated for Bash, PowerShell Core, Windows PowerShell, and Windows Batch (deprecated).
 
-{{< alert type="note" >}}
-
-Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
-on the machine where GitLab Runner uses the shell executor.
-
-{{< /alert >}}
+> [!note]
+> Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
+> on the machine where GitLab Runner uses the shell executor.
 
 ## Run scripts as a privileged user
 

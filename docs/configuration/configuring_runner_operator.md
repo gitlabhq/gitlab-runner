@@ -338,11 +338,8 @@ Read more about security context constraints in [Red Hat Container Platform docu
 
 #### Run as `anyuid` security context constraints
 
-{{< alert type="warning" >}}
-
-Running jobs as root or writing to root filesystems can expose your system to security risks.
-
-{{< /alert >}}
+> [!warning]
+> Running jobs as root or writing to root filesystems can expose your system to security risks.
 
 To run a CI/CD job as the root user or write to root filesystems,
 set the `anyuid` security context constraints on the `gitlab-runner-app-sa` service account.
@@ -464,12 +461,9 @@ For more information, see the [Red Hat documentation](https://access.redhat.com/
 
 ### Using FIPS Compliant GitLab Runner
 
-{{< alert type="note" >}}
-
-For Operator, you can change only the helper image. You can't change the GitLab Runner image yet.
-[Issue 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) tracks this feature.
-
-{{< /alert >}}
+> [!note]
+> For Operator, you can change only the helper image. You can't change the GitLab Runner image yet.
+> [Issue 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) tracks this feature.
 
 To use a [FIPS compliant GitLab Runner helper](../install/requirements.md#fips-compliant-gitlab-runner), change the helper image as follows:
 

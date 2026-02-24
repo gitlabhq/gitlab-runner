@@ -13,12 +13,9 @@ title: GitLab Runner bleeding edge releases
 
 {{< /details >}}
 
-{{< alert type="warning" >}}
-
-These GitLab Runner releases are latest and built directly from the `main` branch and may be untested.
-Use at your own risk.
-
-{{< /alert >}}
+> [!warning]
+> These GitLab Runner releases are latest and built directly from the `main` branch and may be untested.
+> Use at your own risk.
 
 ## Download the standalone binaries
 

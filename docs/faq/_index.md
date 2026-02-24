@@ -86,12 +86,9 @@ to be protected in job log output, but not in container logs.
 
 From a terminal, logged in as root, run the following.
 
-{{< alert type="warning" >}}
-
-This should not be performed on runners with the [Shell executor](../executors/shell.md), because it redefines the `systemd` service
-and runs all jobs as root. This poses security risks and changes to file ownership that makes it difficult to revert to a non privileged account.
-
-{{< /alert >}}
+> [!warning]
+> This should not be performed on runners with the [Shell executor](../executors/shell.md), because it redefines the `systemd` service
+> and runs all jobs as root. This poses security risks and changes to file ownership that makes it difficult to revert to a non privileged account.
 
 ```shell
 gitlab-runner stop
@@ -174,11 +171,8 @@ This error relates to machine provisioning and might be due to the following rea
   a 64 character limit for `HOST_NAME_MAX`. The hostname is reported by `docker-machine ls`. Check the `MachineName` in the runner configuration
   and reduce the hostname length if required.
 
-{{< alert type="note" >}}
-
-This error might have occurred before Docker was installed in the machine.
-
-{{< /alert >}}
+> [!note]
+> This error might have occurred before Docker was installed in the machine.
 
 ## `dialing environment connection: ssh: rejected: connect failed (open failed)`
 
@@ -230,12 +224,9 @@ caused an error or blocked artifact uploads. To troubleshoot artifact upload iss
 [enable debug logging](https://docs.gitlab.com/ci/variables/#enable-debug-logging)
 for upload attempts to see upload response's headers and body.
 
-{{< alert type="note" >}}
-
-The response body length for artifact upload debug logging is capped at 512 bytes.
-Enable logging only for debugging because sensitive data can be exposed in logs.
-
-{{< /alert >}}
+> [!note]
+> The response body length for artifact upload debug logging is capped at 512 bytes.
+> Enable logging only for debugging because sensitive data can be exposed in logs.
 
 If uploads reach GitLab but fail with an error status code
 (for example, produces a non-successful response status code), investigate the

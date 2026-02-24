@@ -232,12 +232,9 @@ You can register a runner:
 - interactively.
 - non-interactively.
 
-{{< alert type="note" >}}
-
-Runners can be registered directly by using the GitLab [Runners API](https://docs.gitlab.com/api/runners/#register-a-new-runner) but
-configuration is not generated automatically.
-
-{{< /alert >}}
+> [!note]
+> Runners can be registered directly by using the GitLab [Runners API](https://docs.gitlab.com/api/runners/#register-a-new-runner) but
+> configuration is not generated automatically.
 
 #### Interactive registration
 
@@ -283,11 +280,8 @@ export REGISTER_NON_INTERACTIVE=true
 gitlab-runner register
 ```
 
-{{< alert type="note" >}}
-
-Boolean parameters must be passed in the command line with `--key={true|false}`.
-
-{{< /alert >}}
+> [!note]
+> Boolean parameters must be passed in the command line with `--key={true|false}`.
 
 #### `[[runners]]` configuration template file
 
@@ -321,12 +315,9 @@ Verifying runner... is alive                        runner=32773c0f
 To remove the old runners that have been removed from GitLab, execute the following
 command.
 
-{{< alert type="warning" >}}
-
-This operation cannot be undone. It updates the configuration file, so
-make sure to have a backup of `config.toml` before executing it.
-
-{{< /alert >}}
+> [!warning]
+> This operation cannot be undone. It updates the configuration file, so
+> make sure to have a backup of `config.toml` before executing it.
 
 ```shell
 gitlab-runner verify --delete
@@ -343,12 +334,9 @@ It expects either:
 
 With the `--all-runners` option, it unregisters all the attached runners.
 
-{{< alert type="note" >}}
-
-Runners can be unregistered with the GitLab [Runners API](https://docs.gitlab.com/api/runners/#delete-a-runner) but the
-configuration is not modified for the user.
-
-{{< /alert >}}
+> [!note]
+> Runners can be unregistered with the GitLab [Runners API](https://docs.gitlab.com/api/runners/#delete-a-runner) but the
+> configuration is not modified for the user.
 
 - If the runner was created with a runner registration token, `gitlab-runner unregister`
   with the runner authentication token deletes the runner.
@@ -366,12 +354,9 @@ test-runner     Executor=shell Token=t0k3n URL=http://gitlab.example.com
 
 Then use this information to unregister it, using one of the following commands.
 
-{{< alert type="warning" >}}
-
-This operation cannot be undone. It updates the configuration file, so
-make sure to have a backup of `config.toml` before executing it.
-
-{{< /alert >}}
+> [!warning]
+> This operation cannot be undone. It updates the configuration file, so
+> make sure to have a backup of `config.toml` before executing it.
 
 #### By URL and token
 
@@ -385,11 +370,8 @@ gitlab-runner unregister --url "http://gitlab.example.com/" --token t0k3n
 gitlab-runner unregister --name test-runner
 ```
 
-{{< alert type="note" >}}
-
-If there is more than one runner with the given name, only the first one is removed.
-
-{{< /alert >}}
+> [!note]
+> If there is more than one runner with the given name, only the first one is removed.
 
 #### All runners
 

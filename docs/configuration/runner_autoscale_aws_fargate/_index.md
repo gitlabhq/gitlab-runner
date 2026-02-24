@@ -12,11 +12,8 @@ title: Autoscaling GitLab CI on AWS Fargate
 
 {{< /details >}}
 
-{{< alert type="warning" >}}
-
-The Fargate driver is community supported. GitLab Support will try to help debug problems, but offers no guarantees.
-
-{{< /alert >}}
+> [!warning]
+> The Fargate driver is community supported. GitLab Support will try to help debug problems, but offers no guarantees.
 
 The GitLab [custom executor](../../executors/custom.md) driver for
 [AWS Fargate](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate)
@@ -60,11 +57,8 @@ For more information, see [Get started with GitLab EKS Fargate runners in 1 hour
 
 {{< /alert >}}
 
-{{< alert type="warning" >}}
-
-Fargate abstracts container hosts, which limits configurability for container host properties. This affects runner workloads that require high IO to disk or network, because these properties have limited or no configurability with Fargate. Before you use GitLab Runner on Fargate, ensure runner workloads with high compute characteristics on CPU, memory, disk IO, or network IO are suitable for Fargate.
-
-{{< /alert >}}
+> [!warning]
+> Fargate abstracts container hosts, which limits configurability for container host properties. This affects runner workloads that require high IO to disk or network, because these properties have limited or no configurability with Fargate. Before you use GitLab Runner on Fargate, ensure runner workloads with high compute characteristics on CPU, memory, disk IO, or network IO are suitable for Fargate.
 
 ## Prerequisites
 
@@ -345,12 +339,9 @@ Your configuration should now be ready to use.
 1. Select **Run Pipeline**.
 1. Update the branch and any variables and select **Run Pipeline**.
 
-{{< alert type="note" >}}
-
-The `image` and `service` keywords in your `.gitlab-ci.yml` file are ignored.
-The runner only uses the values specified in the task definition.
-
-{{< /alert >}}
+> [!note]
+> The `image` and `service` keywords in your `.gitlab-ci.yml` file are ignored.
+> The runner only uses the values specified in the task definition.
 
 ## Clean up
 
@@ -423,11 +414,8 @@ the private subnet:
    - Select the security group.
    - Remove the exiting inbound rule that allows SSH access from any host.
 
-{{< alert type="warning" >}}
-
-When you remove the exiting inbound rule, you cannot use SSH to connect to the Amazon Elastic Compute Cloud instance.
-
-{{< /alert >}}
+> [!warning]
+> When you remove the exiting inbound rule, you cannot use SSH to connect to the Amazon Elastic Compute Cloud instance.
 
 For more information, see the following AWS documentation:
 

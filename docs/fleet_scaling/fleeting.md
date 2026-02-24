@@ -39,11 +39,8 @@ The OCI reference should be accompanied by notes on the where to report issues, 
 To configure fleeting, in the `config.toml`, use the [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 configuration section.
 
-{{< alert type="note" >}}
-
-The README.md file for each plugin contains important information regarding installation and configuration.
-
-{{< /alert >}}
+> [!note]
+> The README.md file for each plugin contains important information regarding installation and configuration.
 
 ## Install a fleeting plugin
 

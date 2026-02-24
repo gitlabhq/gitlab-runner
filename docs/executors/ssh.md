@@ -12,22 +12,16 @@ title: SSH
 
 {{< /details >}}
 
-{{< alert type="note" >}}
-
-The SSH executor supports only scripts generated in Bash and the caching feature
-is not supported.
-
-{{< /alert >}}
+> [!note]
+> The SSH executor supports only scripts generated in Bash and the caching feature
+> is not supported.
 
 This executor allows you to execute builds on a remote machine
 by executing commands over SSH.
 
-{{< alert type="note" >}}
-
-Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
-on any remote systems where GitLab Runner uses the SSH executor.
-
-{{< /alert >}}
+> [!note]
+> Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
+> on any remote systems where GitLab Runner uses the SSH executor.
 
 ## Use the SSH executor
 

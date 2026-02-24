@@ -111,12 +111,9 @@ This executor maintains consistent, isolated build environments.
 
 ### Docker Machine executor (deprecated)
 
-{{< alert type="warning" >}}
-
-This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/498268) in GitLab 17.5
-and is planned for removal in 20.0. Use [GitLab Runner Autoscaler](../runner_autoscale/_index.md) instead.
-
-{{< /alert >}}
+> [!warning]
+> This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/498268) in GitLab 17.5
+> and is planned for removal in 20.0. Use [GitLab Runner Autoscaler](../runner_autoscale/_index.md) instead.
 
 The Docker Machine executor is a special version of the Docker executor with support for auto-scaling. It works like the typical
 Docker executor but with build hosts created on demand by Docker Machine. This capability makes it particularly effective

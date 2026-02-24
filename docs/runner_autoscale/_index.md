@@ -38,12 +38,9 @@ Docker and GitLab Runner supports, like Ubuntu, Debian, CentOS, or RHEL.
 1. [Install GitLab Runner](../install/linux-repository.md) on the instance.
 1. Add the cloud provider credentials to the Runner Manager host machine.
 
-{{< alert type="note" >}}
-
-You can host the runner manager in a container.
-For [GitLab-hosted runners](https://docs.gitlab.com/ci/runners/), the runner manager is hosted on a virtual machine instance.
-
-{{< /alert >}}
+> [!note]
+> You can host the runner manager in a container.
+> For [GitLab-hosted runners](https://docs.gitlab.com/ci/runners/), the runner manager is hosted on a virtual machine instance.
 
 ### Example credentials configuration for GitLab Runner Docker Machine Autoscaling
 
@@ -97,9 +94,6 @@ After you configure the runner manager, configure the executors specific to auto
 - [Docker Autoscaling Executor](../executors/docker_autoscaler.md)
 - [Docker Machine Executor](../executors/docker_machine.md)
 
-{{< alert type="note" >}}
-
-You should use the Instance and Docker Autoscaling executors, as these comprise the
-technology that replaces the Docker Machine autoscaler.
-
-{{< /alert >}}
+> [!note]
+> You should use the Instance and Docker Autoscaling executors, as these comprise the
+> technology that replaces the Docker Machine autoscaler.
