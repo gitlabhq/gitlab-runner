@@ -50,6 +50,7 @@ const (
 	UseExponentialBackoffStageRetry      string = "FF_USE_EXPONENTIAL_BACKOFF_STAGE_RETRY"
 	UseAdaptiveRequestConcurrency        string = "FF_USE_ADAPTIVE_REQUEST_CONCURRENCY"
 	UseGitalyCorrelationId               string = "FF_USE_GITALY_CORRELATION_ID"
+	UseGitProactiveAuth                  string = "FF_USE_GIT_PROACTIVE_AUTH"
 	HashCacheKeys                        string = "FF_HASH_CACHE_KEYS"
 	EnableJobInputsInterpolation         string = "FF_ENABLE_JOB_INPUTS_INTERPOLATION"
 	UseJobRouter                         string = "FF_USE_JOB_ROUTER"
@@ -417,6 +418,14 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, the `X-Gitaly-Correlation-ID` header is added to all Git HTTP requests. " +
 			"When disabled, the Git operations execute without Gitaly Correlation ID headers.",
+	},
+	{
+		Name:         UseGitProactiveAuth,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, the runner passes the `http.proactiveAuth=basic` Git configuration option to " +
+			"`git clone` and `git fetch` commands. As a result, Git sends credentials proactively instead of " +
+			"waiting for a `401` response. This behavior ensures the username is propagated to Gitaly for public projects.",
 	},
 	{
 		Name:         HashCacheKeys,

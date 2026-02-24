@@ -1240,6 +1240,71 @@ func TestGitCloneFlags(t *testing.T) {
 	}
 }
 
+func TestGitProactiveAuth(t *testing.T) {
+	const (
+		dummySha        = "01234567abcdef"
+		dummyRef        = "main"
+		dummyProjectDir = "./"
+		dummyRepoUrl    = "https://gitlab.com/my/repo.git"
+		templateDir     = "/some/template/dir"
+	)
+
+	tests := map[string]struct {
+		proactiveAuthEnabled bool
+		expectProactiveAuth  bool
+	}{
+		"proactive auth enabled": {
+			proactiveAuthEnabled: true,
+			expectProactiveAuth:  true,
+		},
+		"proactive auth disabled": {
+			proactiveAuthEnabled: false,
+			expectProactiveAuth:  false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+
+			build := &common.Build{
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						FeatureFlags: map[string]bool{
+							featureflags.UseGitProactiveAuth: test.proactiveAuthEnabled,
+						},
+					},
+				},
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: 0, RepoURL: dummyRepoUrl},
+				},
+				BuildDir: dummyProjectDir,
+			}
+			build.SafeDirectoryCheckout = true
+
+			mockWriter := NewMockShellWriter(t)
+			shellScriptInfo := common.ShellScriptInfo{
+				Build: build,
+			}
+
+			mockWriter.EXPECT().Noticef("Cloning repository for %s...", dummyRef).Once()
+
+			v := common.AppVersion
+			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
+
+			command := []interface{}{"-c", userAgent, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
+			if test.expectProactiveAuth {
+				command = []interface{}{"-c", userAgent, "-c", "http.proactiveAuth=basic", "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
+			}
+
+			mockWriter.EXPECT().Cd(mock.Anything).Once()
+			mockWriter.EXPECT().Command("git", command...).Once()
+
+			shell.writeCloneRevisionCmd(mockWriter, shellScriptInfo, templateDir, dummyRepoUrl)
+		})
+	}
+}
+
 func TestGitFetchFlags(t *testing.T) {
 	const (
 		dummySha        = "01234567abcdef"
