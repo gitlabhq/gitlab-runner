@@ -95,7 +95,7 @@ func New(ep common.ExecutorProvider, cfg Config) common.ExecutorProvider {
 
 func (p *provider) Init() {}
 
-func (p *provider) Shutdown(ctx context.Context) {
+func (p *provider) Shutdown(ctx context.Context, _ *common.Config) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 

@@ -106,7 +106,7 @@ func setupAcquireBuild(t *testing.T, build *common.Build) {
 		provider.Release(build.Runner, build.ExecutorData)
 
 		if shutdownable, ok := provider.(common.ManagedExecutorProvider); ok {
-			shutdownable.Shutdown(context.Background())
+			shutdownable.Shutdown(context.Background(), nil)
 		}
 	})
 }

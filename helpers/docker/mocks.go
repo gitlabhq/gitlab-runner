@@ -2324,6 +2324,63 @@ func (_c *MockMachine_Exist_Call) RunAndReturn(run func(ctx context.Context, nam
 	return _c
 }
 
+// ForceRemove provides a mock function for the type MockMachine
+func (_mock *MockMachine) ForceRemove(ctx context.Context, name string) error {
+	ret := _mock.Called(ctx, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ForceRemove")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockMachine_ForceRemove_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ForceRemove'
+type MockMachine_ForceRemove_Call struct {
+	*mock.Call
+}
+
+// ForceRemove is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+func (_e *MockMachine_Expecter) ForceRemove(ctx interface{}, name interface{}) *MockMachine_ForceRemove_Call {
+	return &MockMachine_ForceRemove_Call{Call: _e.mock.On("ForceRemove", ctx, name)}
+}
+
+func (_c *MockMachine_ForceRemove_Call) Run(run func(ctx context.Context, name string)) *MockMachine_ForceRemove_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockMachine_ForceRemove_Call) Return(err error) *MockMachine_ForceRemove_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockMachine_ForceRemove_Call) RunAndReturn(run func(ctx context.Context, name string) error) *MockMachine_ForceRemove_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function for the type MockMachine
 func (_mock *MockMachine) List() ([]string, error) {
 	ret := _mock.Called()

@@ -164,6 +164,26 @@ func (m *machineCommand) Remove(ctx context.Context, name string) error {
 	return nil
 }
 
+func (m *machineCommand) ForceRemove(ctx context.Context, name string) error {
+	cmd := newDockerMachineCommand(ctx, "rm", "-f", name)
+
+	fields := logrus.Fields{
+		"operation": "force-remove",
+		"name":      name,
+	}
+	stdoutLogWriter(cmd, fields)
+	stderrLogWriter(cmd, fields)
+
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	m.cacheLock.Lock()
+	delete(m.cache, name)
+	m.cacheLock.Unlock()
+	return nil
+}
+
 func (m *machineCommand) List() (hostNames []string, err error) {
 	dir, err := os.ReadDir(getMachineDir())
 	if err != nil {

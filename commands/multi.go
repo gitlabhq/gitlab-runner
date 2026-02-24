@@ -580,7 +580,8 @@ func (mr *RunCommand) initUsedExecutorProviders() {
 }
 
 func (mr *RunCommand) shutdownUsedExecutorProviders() {
-	shutdownTimeout := mr.configfile.Config().GetShutdownTimeout()
+	config := mr.configfile.Config()
+	shutdownTimeout := config.GetShutdownTimeout()
 
 	logger := mr.log().WithField("shutdown-timeout", shutdownTimeout)
 	logger.Info("Shutting down executor providers")
@@ -595,7 +596,7 @@ func (mr *RunCommand) shutdownUsedExecutorProviders() {
 			wg.Add(1)
 			go func(_ common.ManagedExecutorProvider) {
 				defer wg.Done()
-				managedProvider.Shutdown(ctx)
+				managedProvider.Shutdown(ctx, config)
 			}(managedProvider)
 		}
 	}
