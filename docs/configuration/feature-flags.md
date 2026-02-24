@@ -5,11 +5,8 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: GitLab Runner feature flags
 ---
 
-{{< alert type="warning" >}}
-
-Data corruption, stability degradation, performance degradation, and security issues may occur if you enable a feature that's disabled by default. Before you enable feature flags, you should be aware of the risks involved. For more information, see [Risks when enabling features still in development](https://docs.gitlab.com/administration/feature_flags/#risks-when-enabling-features-still-in-development).
-
-{{< /alert >}}
+> [!warning]
+> Data corruption, stability degradation, performance degradation, and security issues may occur if you enable a feature that's disabled by default. Before you enable feature flags, you should be aware of the risks involved. For more information, see [Risks when enabling features still in development](https://docs.gitlab.com/administration/feature_flags/#risks-when-enabling-features-still-in-development).
 
 Feature flags are toggles that allow you to enable or disable specific features. These flags are typically used:
 

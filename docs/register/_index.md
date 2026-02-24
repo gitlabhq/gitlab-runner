@@ -466,12 +466,9 @@ in the `register` command due to:
 - Size limits on environment variables based on the environment.
 - Command-line options that are not available for executor volumes for Kubernetes.
 
-{{< alert type="warning" >}}
-
-The configuration template supports only a single [`[[runners]]`](../configuration/advanced-configuration.md#the-runners-section)
-section and does not support global options.
-
-{{< /alert >}}
+> [!warning]
+> The configuration template supports only a single [`[[runners]]`](../configuration/advanced-configuration.md#the-runners-section)
+> section and does not support global options.
 
 To register a runner:
 
@@ -665,12 +662,9 @@ After you register the runner with a Docker container:
 - The configuration is written to your configuration volume. For example, `/srv/gitlab-runner/config`.
 - The container uses the configuration volume to load the runner.
 
-{{< alert type="note" >}}
-
-If `gitlab-runner restart` runs in a Docker container, GitLab Runner starts a new process instead of restarting the existing process.
-To apply configuration changes, restart the Docker container instead.
-
-{{< /alert >}}
+> [!note]
+> If `gitlab-runner restart` runs in a Docker container, GitLab Runner starts a new process instead of restarting the existing process.
+> To apply configuration changes, restart the Docker container instead.
 
 ## Troubleshooting
 

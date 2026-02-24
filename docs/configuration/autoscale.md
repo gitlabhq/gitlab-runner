@@ -194,12 +194,9 @@ In this example:
 - The `first` runner can create a maximum of 80 VMs. Therefore this runner can execute a maximum of 80 jobs at any point in time.
 - The `second` runner can create a maximum of 50 VMs. Therefore this runner can execute a maximum of 50 jobs at any point in time.
 
-{{< alert type="note" >}}
-
-Though the sum of limit values is `130` (`80 + 50`), the runner process executes a maximum of 100 jobs concurrently because the global
-`concurrent` setting is 100.
-
-{{< /alert >}}
+> [!note]
+> Though the sum of limit values is `130` (`80 + 50`), the runner process executes a maximum of 100 jobs concurrently because the global
+> `concurrent` setting is 100.
 
 ## Autoscaling algorithm and parameters
 
@@ -470,11 +467,8 @@ in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](ad
 
 ## Distributed runners caching
 
-{{< alert type="note" >}}
-
-Read how to [use a distributed cache](speed_up_job_execution.md#use-a-distributed-cache).
-
-{{< /alert >}}
+> [!note]
+> Read how to [use a distributed cache](speed_up_job_execution.md#use-a-distributed-cache).
 
 To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ci/yaml/#cache)
 where selected directories and/or files are saved and shared between subsequent

@@ -239,11 +239,8 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `pod_cpu_request`                           | The CPU allocation requested for build pod. |
 | `pod_cpu_request_overwrite_max_allowed`     | The maximum amount that the CPU allocation request can be written to for build pod. When empty, it disables the CPU request overwrite feature. |
 
-{{< alert type="note" >}}
-
-Pod-level resource specifications have been introduced as alpha features in [Kubernetes v1.32](https://v1-32.docs.kubernetes.io/blog/2024/12/11/kubernetes-v1-32-release/#pod-level-resource-specifications) and graduated to beta in [Kubernetes v1.34](https://kubernetes.io/blog/2025/09/22/kubernetes-v1-34-pod-level-resources/).
-
-{{< /alert >}}
+> [!note]
+> Pod-level resource specifications have been introduced as alpha features in [Kubernetes v1.32](https://v1-32.docs.kubernetes.io/blog/2024/12/11/kubernetes-v1-32-release/#pod-level-resource-specifications) and graduated to beta in [Kubernetes v1.34](https://kubernetes.io/blog/2025/09/22/kubernetes-v1-34-pod-level-resources/).
 
 ### Memory requests and limits
 
@@ -531,11 +528,8 @@ To overwrite Kubernetes pod labels for each CI/CD job:
       KUBERNETES_POD_LABELS_3: "Key3=Val3"
     ```
 
-{{< alert type="warning" >}}
-
-Labels in the `runner.gitlab.com` namespace are read-only. GitLab ignores any attempts to add, modify, or remove these GitLab-internal labels.
-
-{{< /alert >}}
+> [!warning]
+> Labels in the `runner.gitlab.com` namespace are read-only. GitLab ignores any attempts to add, modify, or remove these GitLab-internal labels.
 
 ### Overwrite pod annotations
 
@@ -1026,12 +1020,9 @@ When you specify the capabilities:
 Configure users and groups run by containers with the Kubernetes security context configuration.
 Administrators can control container security and allow jobs to specify users for specific container types.
 
-{{< alert type="note" >}}
-
-Setting `runAsUser`, `runAsGroup` or `image:user` in job definition for Windows is not supported.
-Setting [runAsUserName](https://kubernetes.io/docs/tasks/configure-pod-container/configure-runasusername/) through [FF_USE_ADVANCED_POD_SPEC_CONFIGURATION](#overwrite-generated-pod-specifications) is recommended instead.
-
-{{< /alert >}}
+> [!note]
+> Setting `runAsUser`, `runAsGroup` or `image:user` in job definition for Windows is not supported.
+> Setting [runAsUserName](https://kubernetes.io/docs/tasks/configure-pod-container/configure-runasusername/) through [FF_USE_ADVANCED_POD_SPEC_CONFIGURATION](#overwrite-generated-pod-specifications) is recommended instead.
 
 #### Configuration precedence
 
@@ -1644,12 +1635,9 @@ job:
 Define a list of [node affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)
 to add to a pod specification at build time.
 
-{{< alert type="note" >}}
-
-`node_affinities` does not determine which operating system a build should run with, only `node_selectors`. For more information, see [Operating system, architecture, and Windows kernel version](#operating-system-architecture-and-windows-kernel-version).
-Example configuration in the `config.toml`:
-
-{{< /alert >}}
+> [!note]
+> `node_affinities` does not determine which operating system a build should run with, only `node_selectors`. For more information, see [Operating system, architecture, and Windows kernel version](#operating-system-architecture-and-windows-kernel-version).
+> Example configuration in the `config.toml`:
 
 ```toml
 concurrent = 1
@@ -2052,11 +2040,8 @@ Each key from the `configMap` is changed into a file and stored in the mount pat
 To change the default key and value storage, use the `items` option. If you use the `items` option, **only specified keys**
 are added to the volumes and all other keys are skipped.
 
-{{< alert type="note" >}}
-
-If you use a key that doesn't exist, the job fails on the pod creation stage.
-
-{{< /alert >}}
+> [!note]
+> If you use a key that doesn't exist, the job fails on the pod creation stage.
 
 #### `secret` volume
 
@@ -2082,11 +2067,8 @@ Each key from selected `secret` is changed into a file stored in the selected mo
 To change default key and value storage, use the `items` option. If you use the `items` option, **only specified keys**
 are added to the volumes and all other keys are skipped.
 
-{{< alert type="note" >}}
-
-If you use a key that doesn't exist, the job fails on the pod creation stage.
-
-{{< /alert >}}
+> [!note]
+> If you use a key that doesn't exist, the job fails on the pod creation stage.
 
 #### `emptyDir` volume
 
@@ -2400,11 +2382,8 @@ To retry an entirely different error, such as `exceeded quota` 20 times:
 
 ### Container entrypoint known issues
 
-{{< alert type="note" >}}
-
-In GitLab 15.1 and later, the entrypoint defined in a Docker image is used with the Kubernetes executor when `FF_KUBERNETES_HONOR_ENTRYPOINT` is set.
-
-{{< /alert >}}
+> [!note]
+> In GitLab 15.1 and later, the entrypoint defined in a Docker image is used with the Kubernetes executor when `FF_KUBERNETES_HONOR_ENTRYPOINT` is set.
 
 The container entry point has the following known issues:
 
@@ -2512,11 +2491,8 @@ variables:
   KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_COMMIT_REF_SLUG}
 ```
 
-{{< alert type="note" >}}
-
-This variable does not create a namespace on your cluster. Ensure that the namespace exists before you run the job.
-
-{{< /alert >}}
+> [!note]
+> This variable does not create a namespace on your cluster. Ensure that the namespace exists before you run the job.
 
 To use only designated namespaces during CI runs, in the `config.toml` file, define a regular expression for `namespace_overwrite_allowed`:
 

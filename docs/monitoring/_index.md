@@ -84,12 +84,9 @@ You can read more about using `pprof` in its [documentation](https://pkg.go.dev/
 
 ## Configuration of the metrics HTTP server
 
-{{< alert type="note" >}}
-
-The metrics server exports data about the internal state of the
-GitLab Runner process and should not be publicly available!
-
-{{< /alert >}}
+> [!note]
+> The metrics server exports data about the internal state of the
+> GitLab Runner process and should not be publicly available!
 
 Configure the metrics HTTP server by using one of the following methods:
 

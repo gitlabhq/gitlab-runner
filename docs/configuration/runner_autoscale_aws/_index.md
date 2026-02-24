@@ -117,12 +117,9 @@ it connects with your GitLab instance:
 
 You can now move on to the most important part, configuring the GitLab Runner.
 
-{{< alert type="note" >}}
-
-If you want every user in your instance to be able to use the autoscaled runners,
-register the runner as a shared one.
-
-{{< /alert >}}
+> [!note]
+> If you want every user in your instance to be able to use the autoscaled runners,
+> register the runner as a shared one.
 
 ## Configuring the runner
 

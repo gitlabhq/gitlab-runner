@@ -12,24 +12,18 @@ title: VirtualBox
 
 {{< /details >}}
 
-{{< alert type="note" >}}
-
-The Parallels executor works the same as the VirtualBox executor.
-Local cache is not supported. [Distributed cache](../configuration/speed_up_job_execution.md) is supported.
-
-{{< /alert >}}
+> [!note]
+> The Parallels executor works the same as the VirtualBox executor.
+> Local cache is not supported. [Distributed cache](../configuration/speed_up_job_execution.md) is supported.
 
 VirtualBox allows you to use VirtualBox's virtualization to provide a clean
 build environment for every build. This executor supports all systems that can
 be run on VirtualBox. The only requirement is that the virtual machine exposes
 an SSH server and provides a shell compatible with Bash or PowerShell.
 
-{{< alert type="note" >}}
-
-Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
-on any virtual machine where GitLab Runner uses the VirtualBox executor.
-
-{{< /alert >}}
+> [!note]
+> Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
+> on any virtual machine where GitLab Runner uses the VirtualBox executor.
 
 ## Overview
 

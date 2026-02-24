@@ -46,11 +46,8 @@ GitLab provides packages for the following supported versions of Linux distribut
 Depending on your setup, other Debian or RPM based distributions may also be supported. This refers to distributions that are derivative of a supported GitLab Runner distribution and that have compatible package repositories. For example, Deepin is a Debian derivative. So, the runner `deb` package should install and run on Deepin. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file)
 on other Linux distributions.
 
-{{< alert type="note" >}}
-
-Packages for distributions that are not on the list are not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM or DEB package from our S3 bucket.
-
-{{< /alert >}}
+> [!note]
+> Packages for distributions that are not on the list are not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM or DEB package from our S3 bucket.
 
 ## Install GitLab Runner
 
@@ -375,12 +372,9 @@ Download the current public GPG key used for package signing from
 | Fingerprint   | `931D A69C FA3A FEBB C97D  AA8C 6C57 C29C 6BA7 5A4E` |
 | Expiry        | `2026-04-28` |
 
-{{< alert type="note" >}}
-
-The same key is used by the GitLab Runner project to sign `release.sha256` files for the S3 releases
-available in the `<https://gitlab-runner-downloads.s3.dualstack.us-east-1.amazonaws.com>` bucket.
-
-{{< /alert >}}
+> [!note]
+> The same key is used by the GitLab Runner project to sign `release.sha256` files for the S3 releases
+> available in the `<https://gitlab-runner-downloads.s3.dualstack.us-east-1.amazonaws.com>` bucket.
 
 #### Previous GPG public keys
 

@@ -13,8 +13,5 @@ It creates and manages virtual machines and executes your GitLab CI/CD jobs.
 Each job runs in a clean VM environment, providing isolation between builds.
 For configuration information, see [VirtualBox executor](virtualbox.md).
 
-{{< alert type="note" >}}
-
-Parallels executors do not support local cache. [Distributed cache](../configuration/speed_up_job_execution.md) is supported.
-
-{{< /alert >}}
+> [!note]
+> Parallels executors do not support local cache. [Distributed cache](../configuration/speed_up_job_execution.md) is supported.

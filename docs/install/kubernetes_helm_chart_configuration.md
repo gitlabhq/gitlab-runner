@@ -302,12 +302,9 @@ To use an image from a private registry, configure `imagePullSecrets`.
      imagePullSecrets: [your-image-pull-secret]
    ```
 
-{{< alert type="note" >}}
-
-The value of `imagePullSecrets` is not prefixed by a `name` tag, as is the convention in Kubernetes resources. This value requires
-an array of one or more secret names, even if you use only one registry credential.
-
-{{< /alert >}}
+> [!note]
+> The value of `imagePullSecrets` is not prefixed by a `name` tag, as is the convention in Kubernetes resources. This value requires
+> an array of one or more secret names, even if you use only one registry credential.
 
 For more details on how to create `imagePullSecrets`, see
 [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)

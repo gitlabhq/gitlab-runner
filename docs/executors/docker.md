@@ -578,11 +578,8 @@ restrict device access to trusted images in the `myregistry:5000/emulator/*` nam
     "myregistry:5000/emulator/*" = ["/dev/kvm", "/dev/dri"]
 ```
 
-{{< alert type="warning" >}}
-
-The image name `**/*` might expose devices to any image.
-
-{{< /alert >}}
+> [!warning]
+> The image name `**/*` might expose devices to any image.
 
 ## Configure directories for the container build and cache
 
@@ -1048,12 +1045,9 @@ To test whether a Podman runner issue is SELinux-related, temporarily add the fo
     security_opt = ["label:disable"]
 ```
 
-{{< alert type="warning" >}}
-
-This addition turns off SELinux enforcement in the container (which is Docker's default behavior).
-Use this configuration only for testing purposes and not as a permanent solution because it can have security implications.
-
-{{< /alert >}}
+> [!warning]
+> This addition turns off SELinux enforcement in the container (which is Docker's default behavior).
+> Use this configuration only for testing purposes and not as a permanent solution because it can have security implications.
 
 #### Configure SELinux MCS
 
@@ -1067,11 +1061,8 @@ If SELinux blocks some write operations (such as reinitializing an existing Git 
 
 This option does not disable SELinux, but sets the container's MCS level. This approach is more secure than using `label:disable`.
 
-{{< alert type="warning" >}}
-
-Multiple containers that use the same MCS category can access the same files tagged with that category.
-
-{{< /alert >}}
+> [!warning]
+> Multiple containers that use the same MCS category can access the same files tagged with that category.
 
 ## Specify which user runs the job
 

@@ -76,12 +76,9 @@ For more information, see the [glossary](../_index.md#glossary).
 
 ## Known issues
 
-{{< alert type="note" >}}
-
-The service needs to be installed from a Terminal window logged in
-as your current user. Only then can you manage the service.
-
-{{< /alert >}}
+> [!note]
+> The service needs to be installed from a Terminal window logged in
+> as your current user. Only then can you manage the service.
 
 To sign in as your current user, run the command `su - <username>` in the terminal. You can obtain your username by running the command `ls /users`.
 

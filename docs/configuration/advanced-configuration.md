@@ -323,11 +323,8 @@ When you configure the `[session_server]` section:
 
 To disable the session server and terminal support, delete the `[session_server]` section.
 
-{{< alert type="note" >}}
-
-When your runner instance is already running, you might need to execute `gitlab-runner restart` for the changes in the `[session_server]` section to be take effect.
-
-{{< /alert >}}
+> [!note]
+> When your runner instance is already running, you might need to execute `gitlab-runner restart` for the changes in the `[session_server]` section to be take effect.
 
 If you are using the GitLab Runner Docker image, you must expose port `8093` by
 adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
@@ -446,11 +443,8 @@ If the runner can reach the node on `192.168.1.23`, set the `clone_url` to `http
 If the `clone_url` is set, the runner constructs a clone URL in the form
 of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 
-{{< alert type="note" >}}
-
-`clone_url` does not affect Git LFS endpoints or artifact uploads or downloads.
-
-{{< /alert >}}
+> [!note]
+> `clone_url` does not affect Git LFS endpoints or artifact uploads or downloads.
 
 #### Modify Git LFS endpoints
 
@@ -1033,12 +1027,9 @@ faster than the runner accepts jobs. To support scale throttling, an exponential
 
 {{< /alert >}}
 
-{{< alert type="note" >}}
-
-Autoscaler configuration options don't reload with configuration changes. However, in
-GitLab 17.5.0 or later, `[[runners.autoscaler.policy]]` entries reload when configurations change.
-
-{{< /alert >}}
+> [!note]
+> Autoscaler configuration options don't reload with configuration changes. However, in
+> GitLab 17.5.0 or later, `[[runners.autoscaler.policy]]` entries reload when configurations change.
 
 ## The `[runners.autoscaler.plugin_config]` section
 
@@ -1500,12 +1491,9 @@ If you use `ServerSideEncryption` of type `KMS`, this role must also have permis
 This would mean passing the key material to the job, where the key can't be kept safe. This does have the potential to leak the decryption key.
 A discussion about this issue is in [this merge request](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3295).
 
-{{< alert type="note" >}}
-
-The maximum size of a single file that can be uploaded to AWS S3 cache is 5 GB.
-A discussion about potential workarounds for this behavior is in [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26921).
-
-{{< /alert >}}
+> [!note]
+> The maximum size of a single file that can be uploaded to AWS S3 cache is 5 GB.
+> A discussion about potential workarounds for this behavior is in [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26921).
 
 #### Use KMS key encryption in S3 bucket for runner cache
 
@@ -1657,11 +1645,8 @@ To use IAM roles for service accounts, an IAM OIDC provider [must exist for your
 
 {{< /history >}}
 
-{{< alert type="note" >}}
-
-[S3 Express One Zone directory buckets do not work with `RoleARN`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38484#note_2313111840) because the runner manager cannot restrict access to one specific object.
-
-{{< /alert >}}
+> [!note]
+> [S3 Express One Zone directory buckets do not work with `RoleARN`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38484#note_2313111840) because the runner manager cannot restrict access to one specific object.
 
 1. Set up an S3 Express One Zone bucket by following the [Amazon tutorial](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-getting-started.html).
 1. Configure `config.toml` with `BucketName` and `BucketLocation`.
