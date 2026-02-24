@@ -69,7 +69,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli v1.22.17
 	gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260217110227-9c980c4be36f
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260219212929-1389ec067d0d
 	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260219212929-1389ec067d0d
 	gitlab.com/gitlab-org/fleeting/nesting v0.4.0
@@ -78,7 +78,7 @@ require (
 	gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api v0.1.1
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e
-	gitlab.com/gitlab-org/labkit v1.37.1
+	gitlab.com/gitlab-org/labkit v1.38.0
 	gitlab.com/gitlab-org/moa v0.0.0-20251209091627-66342f721c88
 	gitlab.com/gitlab-org/step-runner v0.29.0
 	go.mozilla.org/pkcs7 v0.9.0
