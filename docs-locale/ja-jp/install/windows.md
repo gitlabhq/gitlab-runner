@@ -2,6 +2,7 @@
 stage: Verify
 group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+description: WindowsシステムにGitLab Runnerをインストールします。
 title: WindowsにGitLab Runnerをインストールする
 ---
 
@@ -12,7 +13,7 @@ title: WindowsにGitLab Runnerをインストールする
 
 {{< /details >}}
 
-WindowsにGitLab Runnerをインストールして実行するには、以下が必要です:
+WindowsにGitLab Runnerをインストールして実行するには、以下が必要です。
 
 - Git（[公式ウェブサイト](https://git-scm.com/download/win)からインストールできます）
 - ユーザーアカウントのパスワード（組み込みのシステムアカウントではなく、ユーザーアカウントで実行する場合）。
@@ -23,7 +24,7 @@ WindowsにGitLab Runnerをインストールして実行するには、以下が
 1. システム内の任意の場所（`C:\GitLab-Runner`など）にフォルダーを作成します。
 1. [64ビット](https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-windows-amd64.exe)または[32ビット](https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-windows-386.exe)のバイナリをダウンロードし、作成したフォルダーに配置します。以降の説明では、バイナリの名前を`gitlab-runner.exe`に変更したこと（オプション）を前提としています。[Bleeding Edge - その他のタグ付きリリースをダウンロードする](bleeding-edge.md#download-any-other-tagged-release)の説明に従って、利用可能なすべてのバージョンのバイナリをダウンロードできます。
 1. GitLab Runnerのディレクトリと実行可能ファイルに対する`Write`権限を制限してください。これらの権限を設定しないと、一般ユーザーが実行可能ファイルを独自のファイルに置き換え、管理者権限で任意のコードを実行してしまう可能性があります。
-1. [管理者権限でのコマンドプロンプト](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator)を実行します:
+1. [管理者権限でのコマンドプロンプト](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator)を実行します。
 1. [Runnerを登録します](../register/_index.md)。
 1. GitLab Runnerをサービスとしてインストールして開始します。組み込みのシステムアカウント（推奨）またはユーザーアカウントを使用してサービスを実行できます。
 
@@ -37,7 +38,7 @@ WindowsにGitLab Runnerをインストールして実行するには、以下が
 
    **ユーザーアカウントを使用してサービスを実行する**（ステップ1で作成したサンプルディレクトリ`C:\GitLab-Runner`内）
 
-   現在のユーザーアカウントの有効なパスワードを入力する必要があります。これは、Windowsでサービスを開始するために必要であるためです:
+   現在のユーザーアカウントの有効なパスワードを入力する必要があります。これは、Windowsでサービスを開始するために必要であるためです。
 
    ```powershell
    cd C:\GitLab-Runner
@@ -53,7 +54,7 @@ WindowsにGitLab Runnerをインストールして実行するには、以下が
 
 ## アップグレード {#upgrade}
 
-1. サービスを停止します（以前と同様に[管理者権限でのコマンドプロンプト](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator)が必要です）:
+1. サービスを停止します（以前と同様に[管理者権限でのコマンドプロンプト](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator)が必要です）。
 
    ```powershell
    cd C:\GitLab-Runner
@@ -62,7 +63,7 @@ WindowsにGitLab Runnerをインストールして実行するには、以下が
 
 1. [64ビット](https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-windows-amd64.exe)または[32ビット](https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-windows-386.exe)のバイナリをダウンロードし、Runnerの実行可能ファイルを置き換えます。[Bleeding Edge - その他のタグ付きリリースをダウンロードする](bleeding-edge.md#download-any-other-tagged-release)の説明に従って、利用可能なすべてのバージョンのバイナリをダウンロードできます。
 
-1. サービスを開始します:
+1. サービスを開始します。
 
    ```powershell
    .\gitlab-runner.exe start
@@ -70,7 +71,7 @@ WindowsにGitLab Runnerをインストールして実行するには、以下が
 
 ## アンインストール {#uninstall}
 
-[管理者権限でのコマンドプロンプト](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator)から次のようにします:
+[管理者権限でのコマンドプロンプト](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator)から次のようにします。
 
 ```powershell
 cd C:\GitLab-Runner
@@ -84,7 +85,7 @@ rmdir /s GitLab-Runner
 
 [FAQ](../faq/_index.md)セクションを参照してください。このセクションでは、GitLab Runnerに関する最も一般的な問題について説明しています。
 
-_アカウント名が無効です_のようなエラーが発生した場合は、以下を試してください:
+_アカウント名が無効です_のようなエラーが発生した場合は、以下を試してください。
 
 ```powershell
 # Add \. before the username
@@ -120,18 +121,18 @@ TimeCreated                     Id LevelDisplayName Message
 
 このエラーは、`npm`などのツールが、長さが260文字を超えるパスを含むディレクトリ構造を生成することがあるために発生します。この問題を解決するには、次のいずれかの解決策を採用します。
 
-- `core.longpaths`が有効になっているGitを使用します:
+- `core.longpaths`が有効になっているGitを使用します。
 
   Gitを使用してディレクトリ構造をクリーンアップすることで、問題を回避できます。
 
   1. コマンドラインから`git config --system core.longpaths true`を実行します。
   1. GitLab CIプロジェクト設定ページで、`git fetch`を使用するようにプロジェクトを設定します。
 
-- PowerShell用のNTFSSecurityツールを使用します:
+- PowerShell用のNTFSSecurityツールを使用します。
 
-  [NTFSSecurity](https://github.com/raandree/NTFSSecurity) PowerShellモジュールには、長いパスをサポートする`Remove-Item2`メソッドが含まれています。このモジュールが利用可能な場合は、GitLab Runnerによってそれが検出され、自動的にそれが利用されます。
+  [NTFSSecurity](https://github.com/raandree/NTFSSecurity) PowerShellモジュールは、長いパスをサポートする`Remove-Item2`メソッドを提供します。このモジュールが利用可能な場合は、GitLab Runnerによってそれが検出され、自動的にそれが利用されます。
 
-> GitLab Runner 16.9.1で導入されたリグレッションは、GitLab Runner 17.10.0で修正されています。リグレッションのあるGitLab Runnerバージョンを使用する場合は、次のいずれかの回避策を使用してください:
+> GitLab Runner 16.9.1で導入されたリグレッションは、GitLab Runner 17.10.0で修正されています。リグレッションのあるGitLab Runnerバージョンを使用する場合は、次のいずれかの回避策を使用してください。
 >
 > - `pre_get_sources_script`を使用することにより、Gitシステムレベルの設定を再度有効にします（`Git_CONFIG_NOSYSTEM`を設定解除します）。このアクションにより、Windowsで`core.longpaths`がデフォルトで有効になります。
 >
@@ -142,18 +143,16 @@ TimeCreated                     Id LevelDisplayName Message
 >         - $env:GIT_CONFIG_NOSYSTEM=''
 >   ```
 >
-> - カスタム`GitLab-runner-helper`イメージをビルドします:
+> - カスタム`GitLab-runner-helper`イメージをビルドします。
 >
 >   ```dockerfile
 >   FROM registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.3-servercore21H2
 >   ENV GIT_CONFIG_NOSYSTEM=
 >   ```
 
-<!-- markdownlint-disable line-length -->
+### Windowsバッチスクリプトのエラー: `The system cannot find the batch label specified - buildscript` {#error-with-windows-batch-scripts-the-system-cannot-find-the-batch-label-specified---buildscript}
 
-### Windows bashスクリプトを実行できません。`The system cannot find the batch label specified - buildscript`と表示されます。 {#i-cant-run-windows-bash-scripts-im-getting-the-system-cannot-find-the-batch-label-specified---buildscript}
-
-`.gitlab-ci.yml`のBatchファイル行の先頭に`call`を追加して、`call C:\path\to\test.bat`のように記述する必要があります。サンプルの全体を次に示します:
+`.gitlab-ci.yml`のBatchファイル行の先頭に`call`を追加して、`call C:\path\to\test.bat`のように記述する必要があります。下記は例です: 
 
 ```yaml
 before_script:
@@ -161,8 +160,6 @@ before_script:
 ```
 
 詳細については、[イシュー1025](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1025)を参照してください。
-
-<!-- markdownlint-enable line-length -->
 
 ### Webターミナルで色付きの出力を得るにはどうすればよいですか？ {#how-can-i-get-colored-output-on-the-web-terminal}
 
@@ -180,9 +177,9 @@ GitLab CIのウェブインターフェースは、UNIX ANSIターミナルを�
 
 詳細については、[GitLab CI YAMLドキュメント](https://docs.gitlab.com/ci/yaml/#coloring-script-output)でPowerShellを使用する例を参照し、[イシュー332](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/332)を参照してください。
 
-### エラー: `The service did not start due to a logon failure`（コンポーネントビルドエラー: specは有効なJSONスキーマである必要があります） {#error-the-service-did-not-start-due-to-a-logon-failure}
+### エラー: `The service did not start due to a logon failure` {#error-the-service-did-not-start-due-to-a-logon-failure}
 
-WindowsにGitLab Runnerサービスをインストールして開始するときに、このエラーが発生する可能性があります:
+WindowsにGitLab Runnerサービスをインストールして開始するときに、このエラーが発生する可能性があります。
 
 ```shell
 gitlab-runner install --password WINDOWS_MACHINE_PASSWORD
@@ -197,9 +194,9 @@ FATA[0000] Failed to start GitLab Runner: The service did not start due to a log
 1. 左側のリストで**Security Settings > Local Policies > User Rights Assignment**を選択します。
 1. 右側のリストで**Log on as a service**を開きます。
 1. **Add User or Group...**を選択します。
-1. （手動で、または**Advanced...**を使用して）ユーザーを追加し、設定を適用します。
+1. （「手動」で、または**Advanced...**を使用して）ユーザーを追加し、設定を適用します。
 
-[Microsoftドキュメント](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/dn221981(v=ws.11))によると、これは次のWindowsバージョンで機能します:
+[Microsoftドキュメント](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/dn221981(v=ws.11))によると、これは次のWindowsバージョンで機能します。
 
 - Windows Vista
 - Windows Server 2008
@@ -216,7 +213,7 @@ Local Security Policyツールは、一部のWindowsバージョン（各バー�
 
 ### ジョブが誤って成功または失敗としてマークされる {#job-marked-as-success-or-failed-incorrectly}
 
-ほとんどのWindowsプログラムは、成功した場合には`exit code 0`を出力します。ただし、一部のプログラムは終了コードを返さないか、成功時の値が異なることがあります。例として、Windowsツール`robocopy`があります。次の`.gitlab-ci.yml`は成功するはずですが、`robocopy`によって出力された終了コードが原因で失敗します:
+ほとんどのWindowsプログラムは、成功した場合には`exit code 0`を出力します。ただし、一部のプログラムは終了コードを返さないか、成功時の値が異なることがあります。例として、Windowsツール`robocopy`があります。次の`.gitlab-ci.yml`は成功するはずですが、`robocopy`によって出力された終了コードが原因で失敗します。
 
 ```yaml
 test:
@@ -230,7 +227,7 @@ test:
     - windows
 ```
 
-上記のケースでは、`script:`に終了コードチェックを手動で追加する必要があります。たとえば、PowerShellスクリプトを作成できます:
+上記のケースでは、`script:`に終了コードチェックを手動で追加する必要があります。たとえば、PowerShellスクリプトを作成できます。
 
 ```powershell
 $exitCodes = 0,1
@@ -244,7 +241,7 @@ if ( $exitCodes.Contains($LastExitCode) ) {
 }
 ```
 
-`.gitlab-ci.yml`ファイルを次のように変更します:
+`.gitlab-ci.yml`ファイルを次のように変更します。
 
 ```yaml
 test:
@@ -292,7 +289,7 @@ Operating System: Windows Server Datacenter
 
 ### Kubernetes executor: `unsupported Windows Version` {#kubernetes-executor-unsupported-windows-version}
 
-Windows上のKubernetes executorは、次のエラーで失敗することがあります:
+Windows上のKubernetes executorは、次のエラーで失敗することがあります。
 
 ```plaintext
 Using Kubernetes namespace: gitlab-runner
@@ -301,7 +298,7 @@ Will be retried in 3s ...
 ERROR: Job failed (system failure): prepare helper image: detecting base image: unsupported Windows Version:
 ```
 
-この問題を修正するには、GitLab Runner設定ファイルの`[runners.kubernetes.node_selector]`セクションに`node.kubernetes.io/windows-build`ノードセレクターを追加します。次に例を示します:
+この問題を修正するには、GitLab Runner設定ファイルの`[runners.kubernetes.node_selector]`セクションに`node.kubernetes.io/windows-build`ノードセレクターを追加します。次に例を示します。
 
 ```toml
    [runners.kubernetes.node_selector]
@@ -316,14 +313,14 @@ ERROR: Job failed (system failure): prepare helper image: detecting base image: 
 
 ### ビルドコンテナがサービスコンテナに接続できない {#the-build-container-is-unable-to-connect-to-service-containers}
 
-Windowsコンテナでサービスを使用するには、次のようにします:
+Windowsコンテナでサービスを使用するには、次のようにします。
 
 - [ジョブごとにネットワークを作成する](../executors/docker.md#create-a-network-for-each-job)ネットワーキングモードを使用します。
 - `FF_NETWORK_PER_BUILD`機能フラグが有効になっていることを確認します。
 
 ### ジョブがビルドディレクトリを作成できず、エラーで失敗する {#the-job-cannot-create-a-build-directory-and-fails-with-an-error}
 
-`Docker-Windows` executorで`GitLab-Runner`を使用すると、ジョブが次のようなエラーで失敗することがあります:
+`Docker-Windows` executorで`GitLab-Runner`を使用すると、ジョブが次のようなエラーで失敗することがあります。
 
 ```shell
 fatal: cannot chdir to c:/builds/gitlab/test: Permission denied`
