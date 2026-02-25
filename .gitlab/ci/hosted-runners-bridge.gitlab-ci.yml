@@ -25,6 +25,8 @@ hosted runners bridge bleeding edge:
       artifacts: false
     - job: bleeding edge docker images
       artifacts: false
+    - job: unstable pulp
+      artifacts: false
 
 hosted runners bridge stable:
   extends:
@@ -43,4 +45,6 @@ hosted runners bridge stable:
     - job: stable packagecloud
       artifacts: false
     - job: stable docker images
+      artifacts: false
+    - job: stable pulp
       artifacts: false
