@@ -2,7 +2,8 @@
 stage: Verify
 group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-title: z/OSにGitLab Runnerを手動でインストールする
+description: z/OSにGitLab Runnerを手動でインストールします。
+title: z/OSにGitLab Runnerを手動でインストール
 ---
 
 {{< details >}}
@@ -12,13 +13,13 @@ title: z/OSにGitLab Runnerを手動でインストールする
 
 {{< /details >}}
 
-IBM z/OS用GitLab RunnerはGitLabによって認定されており、z/OSメインフレーム環境でネイティブにCI/CDジョブを実行できます。
+IBM z/OS用のGitLab RunnerはGitLabによって認定されており、z/OSメインフレーム環境でネイティブにCI/CDジョブを実行できます。
 
-[`pax`](https://www.ibm.com/docs/en/aix/7.1.0?topic=p-pax-command)アーカイブからz/OSにGitLab Runnerを手動でダウンロードしてインストールできます。
+[`pax`](https://www.ibm.com/docs/en/aix/7.1.0?topic=p-pax-command)アーカイブから、z/OS上にGitLab Runnerを手動でダウンロードしてインストールできます。
 
-## 前提要件 {#prerequisites}
+## 前提条件 {#prerequisites}
 
-- GitLab Runnerを使用するには、プログラム一時修正 (`PTFs`) を含む、次の許可プログラム分析レポート (`APARs`) が必要です:
+- GitLab Runnerを使用するには、次のAuthorized Program Analysisレポート（`APARs`）とProgram Temporary修正（`PTFs`）が必要です:
 
   - z/OS 2.5
     - OA62757
@@ -35,11 +36,11 @@ IBM z/OS用GitLab RunnerはGitLabによって認定されており、z/OSメイ�
 
 ## GitLab Runnerをインストールする {#install-gitlab-runner}
 
-GitLab Runnerをインストールするには、次の手順に従います:
+GitLab Runnerをインストールするには、次の手順に従います。
 
 1. 選択したインストールディレクトリに`paxfile`をダウンロードします。
 
-1. ご使用のシステムに対応するパッケージを次のようにインストールします:
+1. ご使用のシステムのパッケージをインストールします:
 
    ```shell
    pax -ppx -rf gitlab-runner-<VERSION>.pax.Z
@@ -47,13 +48,13 @@ GitLab Runnerをインストールするには、次の手順に従います:
 
    インストールされたファイルは、インストール場所の`gitlab-runner`ディレクトリに展開されます。
 
-1. 実行するためのファイル権限を付与します:
+1. ファイルに実行権限を付与します:
 
    ```shell
    chmod +x <INSTALL_PATH>/bin/gitlab-runner
    ```
 
-1. GitLab Runnerをエクスポートして、`PATH`に追加します:
+1. GitLab Runnerをエクスポートし、`PATH`に追加します:
 
    ```shell
    export GITLAB_RUNNER=<INSTALL_PATH>/gitlab-runner/bin
@@ -72,7 +73,7 @@ GitLab Runnerは、直接または開始されたタスクとして実行でき�
 
 1. `<INSTALL_PATH>/bin`ディレクトリに移動します。
 
-1. サービスを開始します:
+1. サービスを開始します。
 
    ```shell
    gitlab-runner start
@@ -82,14 +83,14 @@ GitLab Runnerは、直接または開始されたタスクとして実行でき�
 
 GitLab Runnerプロセスを使用可能な状態に保つには、開始されたタスクとして実行します。
 
-1. 実行可能ファイルをShellスクリプト`gitlab-runner.sh`にラップします:
+1. 実行可能ファイルを`gitlab-runner.sh` Shellスクリプトでラップします:
 
    ```shell
    #! /bin/sh
    <INSTALL_PATH>/bin/gitlab-runner start
    ```
 
-1. `jcl`開始されたタスクプログラムを定義し、継続的なプロセスとして実行するためにそれを実行します:
+1. `jcl`開始されたタスクプログラムを定義し、継続的なプロセスとして実行するために実行します:
 
    ```jcl
    //GLRST  PROC CNFG='<PATH_TO_SCRIPT>'

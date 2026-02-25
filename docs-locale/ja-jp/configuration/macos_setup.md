@@ -2,12 +2,12 @@
 stage: Verify
 group: Runner Core
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-title: macOSランナーのセットアップ
+title: macOS Runnerをセットアップする
 ---
 
-macOSランナー上でCI/CDジョブを実行するには、次の手順を順番に実行します。
+macOS RunnerでCI/CDジョブを実行するには、次の手順を順番に実行します。
 
-完了すると、GitLab RunnerがmacOSマシン上で実行され、個々のランナーがジョブを処理できるようになります。
+完了すると、GitLab RunnerがmacOSマシン上で実行され、個々のRunnerがジョブを処理できるようになります。
 
 - システムShellをBashに変更します。
 - Homebrew、rbenv、およびGitLab Runnerをインストールします。
@@ -16,16 +16,16 @@ macOSランナー上でCI/CDジョブを実行するには、次の手順を順�
 - Runnerを登録します。
 - CI/CDを設定します。
 
-## 前提要件 {#prerequisites}
+## 前提条件 {#prerequisites}
 
 はじめる前:
 
 - macOSの最新バージョンをインストールします。このガイドは11.4で開発されました。
-- ターミナルまたはSSHでマシンにアクセスできることを確認してください。
+- ターミナルまたはSSHでマシンにアクセスできることを確認します。
 
-## システムShellをBashに変更します {#change-the-system-shell-to-bash}
+## システムShellをBashに変更する {#change-the-system-shell-to-bash}
 
-macOSの新しいバージョンには、デフォルトのShellとしてZshが付属しています。Bashに変更する必要があります。
+新しいバージョンのmacOSでは、デフォルトのShellとしてZshが使用されます。ただし、RunnerのShell executorでは、Bash固有の構文と機能を使用するものが多いため、CI/CDスクリプトが正しく実行されるようにBashが必要です。
 
 1. マシンに接続し、デフォルトのShellを確認します:
 
@@ -41,13 +41,13 @@ macOSの新しいバージョンには、デフォルトのShellとしてZshが�
 
 1. パスワードを入力します。
 1. ターミナルを再起動するか、SSHを使用して再接続します。
-1. `echo $SHELL`を再度実行します。結果は`/bin/bash`になるはずです。
+1. `echo $SHELL`をもう一度実行します。結果は`/bin/bash`になるはずです。
 
-## Homebrew、rbenv、およびGitLab Runnerをインストールします {#install-homebrew-rbenv-and-gitlab-runner}
+## Homebrew、rbenv、GitLab Runnerをインストールする {#install-homebrew-rbenv-and-gitlab-runner}
 
-ランナーがマシンに接続してジョブを実行するには、特定の環境オプションが必要です。
+Runnerがマシンに接続してジョブを実行するには、特定の環境オプションが必要です。
 
-1. [Homebrewパッケージマネージャー](https://brew.sh/)をインストールします:
+1. [Homebrew](https://brew.sh/)パッケージマネージャーをインストールします:
 
    ```shell
    /bin/bash -c "$(curl "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh")"
@@ -60,7 +60,7 @@ macOSの新しいバージョンには、デフォルトのShellとしてZshが�
    brew services start gitlab-runner
    ```
 
-## rbenvを設定し、Rubyをインストールします {#configure-rbenv-and-install-ruby}
+## rbenvを設定してRubyをインストールする {#configure-rbenv-and-install-ruby}
 
 rbenvを設定し、Rubyをインストールします。
 
@@ -71,7 +71,7 @@ rbenvを設定し、Rubyをインストールします。
    source ~/.bash_profile
    ```
 
-1. Ruby 3.3.xをインストールし、マシンのグローバルデフォルトとして設定します:
+1. Ruby 3.3.xをインストールし、マシン全体のデフォルトとして設定します:
 
    ```shell
    rbenv install 3.3.4
@@ -86,7 +86,7 @@ Xcodeをインストールして設定します。
 
    - Apple App Store。
    - [Apple Developer Portal](https://developer.apple.com/)。
-   - [`xcode-install`](https://github.com/xcpretty/xcode-install)。このプロジェクトは、コマンドラインからさまざまなApple依存関係を簡単にダウンロードできるようにすることを目的としています。
+   - [`xcode-install`](https://github.com/xcpretty/xcode-install)。このプロジェクトは、コマンドラインからさまざまなAppleの依存関係を簡単にダウンロードできるようにすることを目的としています。
 
 1. ライセンスに同意し、推奨される追加コンポーネントをインストールします。これを行うには、Xcodeを開いてプロンプトに従うか、ターミナルで次のコマンドを実行します:
 
@@ -102,28 +102,28 @@ Xcodeをインストールして設定します。
 
 ### プロジェクトRunnerを作成して登録する {#create-and-register-a-project-runner}
 
-ここで[プロジェクトRunnerを作成して登録](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-runner-authentication-token)します。
+[プロジェクトRunnerを作成して登録](https://docs.gitlab.com/ci/runners/runners_scope/#create-a-project-runner-with-a-runner-authentication-token)します。
 
-ランナーを作成して登録するとき:
+Runnerを作成して登録するとき:
 
 - GitLabで、タグ`macos`を追加して、macOSジョブがこのmacOSマシンで実行されるようにします。
-- コマンドラインで、[executor](../executors/_index.md)として`shell`を選択します。
+- コマンドラインで、`shell`を[executor](../executors/_index.md)として選択します。
 
-ランナーを登録すると、コマンドラインに成功メッセージが表示されます:
+Runnerを登録すると、コマンドラインに成功メッセージが表示されます:
 
 ```shell
-> Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
+Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
 ```
 
-ランナーを表示するには:
+Runnerを表示するには:
 
-1. 左側のサイドバーで、**検索または移動先**を選択して、プロジェクトまたはグループを見つけます。
+1. 上部のバーで、**検索または移動先**を選択して、プロジェクトまたはグループを見つけます。
 1. **設定 > CI/CD**を選択します。
-1. **Runners**を展開します。
+1. **Runner**を展開します。
 
-### CI/CDを設定します {#configure-cicd}
+### CI/CDを設定する {#configure-cicd}
 
-GitLabプロジェクトで、CI/CDを設定してビルドを開始します。このサンプル`.gitlab-ci.yml`ファイルを使用できます。使用したタグがランナーの登録に使用したタグと一致していることを確認してください。
+GitLabプロジェクトで、CI/CDを設定してビルドを開始します。このサンプルの`.gitlab-ci.yml`ファイルを使用できます。タグが、Runnerの登録に使用したタグと一致することを確認してください。
 
 ```yaml
 stages:
@@ -154,4 +154,4 @@ test:
     - macos
 ```
 
-macOSランナーがプロジェクトをビルドするはずです。
+macOS Runnerは、プロジェクトをビルドする必要があります。
