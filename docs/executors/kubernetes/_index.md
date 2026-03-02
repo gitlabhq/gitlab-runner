@@ -2104,7 +2104,7 @@ Use the following options in the `config.toml`:
 
 ### Mount volumes on service containers
 
-Volumes defined for the build container are also automatically mounted for all services containers. You can use this functionality as an alternative to [`services_tmpfs`](../../executors/docker.md#mount-a-directory-in-ram) (available only to Docker executor), to mount database storage in RAM to speed up tests.
+Volumes defined for the build container are also automatically mounted for all services containers. You can use this functionality as an alternative to [`services_tmpfs`](../docker.md#mount-a-directory-in-ram) (available only to Docker executor), to mount database storage in RAM to speed up tests.
 
 Example configuration in the `config.toml` file:
 

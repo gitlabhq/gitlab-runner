@@ -284,10 +284,10 @@ To provide a certificate file to jobs running in Kubernetes:
      - update-ca-certificates
    ```
 
-  The Kubernetes executor's handling of the helper image's `ENTRYPOINT` has a
-  [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28484).
-  When a certificate file is mapped, it isn't automatically installed
-  to the system certificate store.
+   The Kubernetes executor's handling of the helper image's `ENTRYPOINT` has a
+   [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28484).
+   When a certificate file is mapped, it isn't automatically installed
+   to the system certificate store.
 
 ## Troubleshooting
 
