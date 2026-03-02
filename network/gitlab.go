@@ -45,6 +45,8 @@ type GitLabClient struct {
 	certDirectory        string
 	apiRequestsCollector *APIRequestsCollector
 	connectionMaxAge     time.Duration
+
+	httpClientOptions HttpClientOptions
 }
 
 func (n *GitLabClient) getClient(credentials requestCredentials) (*client, error) {
@@ -70,6 +72,7 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (*client, error
 		credentials,
 		n.apiRequestsCollector,
 		withMaxAge(n.connectionMaxAge),
+		withHttpClientOptions(n.httpClientOptions),
 		withCertificateDirectory(n.certDirectory),
 	)
 	if err != nil {
@@ -1294,6 +1297,17 @@ func WithCertificateDirectory(certDirectory string) ClientOption {
 	return func(c *GitLabClient) {
 		c.certDirectory = certDirectory
 	}
+}
+
+func WithHttpClientOptions(opts HttpClientOptions) ClientOption {
+	return func(c *GitLabClient) {
+		c.httpClientOptions = opts
+	}
+}
+
+type HttpClientOptions struct {
+	Timeout               *time.Duration
+	ResponseHeaderTimeout *time.Duration
 }
 
 func NewGitLabClient(options ...ClientOption) *GitLabClient {

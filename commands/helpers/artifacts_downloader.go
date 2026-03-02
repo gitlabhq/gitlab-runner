@@ -11,10 +11,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
+	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 type ArtifactsDownloaderCommand struct {
@@ -27,7 +29,10 @@ type ArtifactsDownloaderCommand struct {
 	StagingDir     string `long:"archiver-staging-dir" env:"ARCHIVER_STAGING_DIR" description:"Directory to stage artifact archives"`
 }
 
-func NewArtifactsDownloaderCommand(n common.Network) cli.Command {
+func NewArtifactsDownloaderCommand() cli.Command {
+	n := network.NewGitLabClient(
+		network.WithCertificateDirectory(commands.GetDefaultCertificateDirectory()),
+	)
 	return common.NewCommand(
 		"artifacts-downloader",
 		"download and extract build artifacts (internal)",

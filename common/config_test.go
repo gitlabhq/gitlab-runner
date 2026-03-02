@@ -3324,6 +3324,140 @@ func TestConfig_Validate(t *testing.T) {
 	}
 }
 
+func TestArtifactConfig_GetUploadTimeout(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   ArtifactConfig
+		expected time.Duration
+	}{
+		{
+			name:     "default timeout when nil",
+			config:   ArtifactConfig{UploadTimeout: nil},
+			expected: time.Hour,
+		},
+		{
+			name:     "custom timeout when set",
+			config:   ArtifactConfig{UploadTimeout: &[]time.Duration{30 * time.Minute}[0]},
+			expected: 30 * time.Minute,
+		},
+		{
+			name:     "zero timeout when set to zero",
+			config:   ArtifactConfig{UploadTimeout: &[]time.Duration{0}[0]},
+			expected: 0,
+		},
+		{
+			name:     "very large timeout",
+			config:   ArtifactConfig{UploadTimeout: &[]time.Duration{24 * time.Hour}[0]},
+			expected: 24 * time.Hour,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.config.GetUploadTimeout()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestArtifactConfig_GetResponseHeaderTimeout(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   ArtifactConfig
+		expected time.Duration
+	}{
+		{
+			name:     "default timeout when nil",
+			config:   ArtifactConfig{ResponseHeaderTimeout: nil},
+			expected: 10 * time.Minute,
+		},
+		{
+			name:     "custom timeout when set",
+			config:   ArtifactConfig{ResponseHeaderTimeout: &[]time.Duration{5 * time.Minute}[0]},
+			expected: 5 * time.Minute,
+		},
+		{
+			name:     "zero timeout when set to zero",
+			config:   ArtifactConfig{ResponseHeaderTimeout: &[]time.Duration{0}[0]},
+			expected: 0,
+		},
+		{
+			name:     "very large timeout",
+			config:   ArtifactConfig{ResponseHeaderTimeout: &[]time.Duration{time.Hour}[0]},
+			expected: time.Hour,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.config.GetResponseHeaderTimeout()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestRunnerSettings_ArtifactConfig_Integration(t *testing.T) {
+	tests := []struct {
+		name           string
+		tomlConfig     string
+		expectedUpload time.Duration
+		expectedHeader time.Duration
+	}{
+		{
+			name: "default values when not specified",
+			tomlConfig: `
+				[[runners]]
+				name = "test"
+				url = "https://gitlab.example.com"
+				token = "test-token"
+			`,
+			expectedUpload: time.Hour,
+			expectedHeader: 10 * time.Minute,
+		},
+		{
+			name: "custom values when specified",
+			tomlConfig: `
+				[[runners]]
+				name = "test"
+				url = "https://gitlab.example.com"
+				token = "test-token"
+				[runners.artifact]
+				upload_timeout = "30m"
+				response_header_timeout = "5m"
+			`,
+			expectedUpload: 30 * time.Minute,
+			expectedHeader: 5 * time.Minute,
+		},
+		{
+			name: "zero values",
+			tomlConfig: `
+				[[runners]]
+				name = "test"
+				url = "https://gitlab.example.com"
+				token = "test-token"
+				[runners.artifact]
+				upload_timeout = "0s"
+				response_header_timeout = "0s"
+			`,
+			expectedUpload: 0,
+			expectedHeader: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var config Config
+			err := toml.Unmarshal([]byte(tt.tomlConfig), &config)
+			require.NoError(t, err)
+			require.Len(t, config.Runners, 1)
+
+			runner := config.Runners[0]
+			assert.Equal(t, tt.expectedUpload, runner.Artifact.GetUploadTimeout())
+			assert.Equal(t, tt.expectedHeader, runner.Artifact.GetResponseHeaderTimeout())
+		})
+	}
+}
+
 func TestRunnerConfig_ValidateMachineOptionsWithName(t *testing.T) {
 	tests := map[string]struct {
 		options      []string

@@ -1532,6 +1532,10 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 		info.Build.Token,
 		"--id",
 		strconv.FormatInt(info.Build.ID, 10),
+		"--timeout",
+		info.Build.Runner.Artifact.GetUploadTimeout().String(),
+		"--response-header-timeout",
+		info.Build.Runner.Artifact.GetResponseHeaderTimeout().String(),
 	}
 
 	if b.shouldGenerateArtifactsMetadata(info, artifact) {

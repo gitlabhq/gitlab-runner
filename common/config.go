@@ -1201,6 +1201,27 @@ type RunnerCredentials struct {
 	Logger logrus.FieldLogger `toml:"-" json:",omitempty"`
 }
 
+type ArtifactConfig struct {
+	UploadTimeout         *time.Duration `toml:"upload_timeout,omitempty" json:"upload_timeout,omitempty"`
+	ResponseHeaderTimeout *time.Duration `toml:"response_header_timeout,omitempty" json:"response_header_timeout,omitempty"`
+}
+
+func (a ArtifactConfig) GetUploadTimeout() time.Duration {
+	if a.UploadTimeout == nil {
+		return DefaultArtifactUploadTimeout
+	}
+
+	return *a.UploadTimeout
+}
+
+func (a ArtifactConfig) GetResponseHeaderTimeout() time.Duration {
+	if a.ResponseHeaderTimeout == nil {
+		return DefaultArtifactResponseHeaderTimeout
+	}
+
+	return *a.ResponseHeaderTimeout
+}
+
 type RunnerSettings struct {
 	Labels Labels `toml:"labels,omitempty" json:"labels,omitempty" description:"Custom labels for the runner worker. Duplicate keys will override any global defaults in this scope."`
 
@@ -1228,6 +1249,7 @@ type RunnerSettings struct {
 	CustomBuildDir CustomBuildDir      `toml:"custom_build_dir,omitempty" json:"custom_build_dir,omitempty" group:"custom build dir configuration" namespace:"custom_build_dir"`
 	Referees       *referees.Config    `toml:"referees,omitempty" json:"referees,omitempty" group:"referees configuration" namespace:"referees"`
 	Cache          *cacheconfig.Config `toml:"cache,omitempty" json:"cache,omitempty" group:"cache configuration" namespace:"cache"`
+	Artifact       ArtifactConfig      `toml:"artifact,omitempty" json:"artifact,omitempty"`
 
 	// GracefulKillTimeout and ForceKillTimeout aren't exposed to the users yet
 	// because not every executor supports it. We also have to keep in mind that

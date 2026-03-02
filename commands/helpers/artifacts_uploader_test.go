@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
@@ -16,12 +17,20 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 var UploaderCredentials = common.JobCredentials{
 	ID:    1000,
 	Token: "test",
 	URL:   "test",
+}
+
+// Create a function that returns a Network interface with injected test behavior
+func createTestNewNetwork(testNet *testNetwork) func() common.Network {
+	return func() common.Network {
+		return testNet
+	}
 }
 
 func TestArtifactsUploaderRequirements(t *testing.T) {
@@ -35,12 +44,12 @@ func TestArtifactsUploaderRequirements(t *testing.T) {
 }
 
 func TestArtifactsUploaderTooLarge(t *testing.T) {
-	network := &testNetwork{
+	testNet := &testNetwork{
 		uploadState: common.UploadTooLarge,
 	}
 	cmd := ArtifactsUploaderCommand{
 		JobCredentials: UploaderCredentials,
-		network:        network,
+		newNetwork:     createTestNewNetwork(testNet),
 		fileArchiver: fileArchiver{
 			Paths: []string{artifactsTestArchivedFile},
 		},
@@ -56,16 +65,16 @@ func TestArtifactsUploaderTooLarge(t *testing.T) {
 		cmd.Execute(nil)
 	})
 
-	assert.Equal(t, 1, network.uploadCalled)
+	assert.Equal(t, 1, testNet.uploadCalled)
 }
 
 func TestArtifactsUploaderForbidden(t *testing.T) {
-	network := &testNetwork{
+	testNet := &testNetwork{
 		uploadState: common.UploadForbidden,
 	}
 	cmd := ArtifactsUploaderCommand{
 		JobCredentials: UploaderCredentials,
-		network:        network,
+		newNetwork:     createTestNewNetwork(testNet),
 		fileArchiver: fileArchiver{
 			Paths: []string{artifactsTestArchivedFile},
 		},
@@ -81,17 +90,17 @@ func TestArtifactsUploaderForbidden(t *testing.T) {
 		cmd.Execute(nil)
 	})
 
-	assert.Equal(t, 1, network.uploadCalled)
+	assert.Equal(t, 1, testNet.uploadCalled)
 }
 
 func TestArtifactsUploaderRetry(t *testing.T) {
 	OnEachZipArchiver(t, func(t *testing.T) {
-		network := &testNetwork{
+		testNet := &testNetwork{
 			uploadState: common.UploadFailed,
 		}
 		cmd := ArtifactsUploaderCommand{
 			JobCredentials: UploaderCredentials,
-			network:        network,
+			newNetwork:     createTestNewNetwork(testNet),
 			fileArchiver: fileArchiver{
 				Paths: []string{artifactsTestArchivedFile},
 			},
@@ -107,18 +116,18 @@ func TestArtifactsUploaderRetry(t *testing.T) {
 			cmd.Execute(nil)
 		})
 
-		assert.Equal(t, defaultTries, network.uploadCalled)
+		assert.Equal(t, defaultTries, testNet.uploadCalled)
 	})
 }
 
 func TestArtifactsUploaderDefaultSucceeded(t *testing.T) {
 	OnEachZipArchiver(t, func(t *testing.T) {
-		network := &testNetwork{
+		testNet := &testNetwork{
 			uploadState: common.UploadSucceeded,
 		}
 		cmd := ArtifactsUploaderCommand{
 			JobCredentials: UploaderCredentials,
-			network:        network,
+			newNetwork:     createTestNewNetwork(testNet),
 			fileArchiver: fileArchiver{
 				Paths: []string{artifactsTestArchivedFile},
 			},
@@ -128,16 +137,16 @@ func TestArtifactsUploaderDefaultSucceeded(t *testing.T) {
 		defer os.Remove(artifactsTestArchivedFile)
 
 		cmd.Execute(nil)
-		assert.Equal(t, 1, network.uploadCalled)
-		assert.Equal(t, spec.ArtifactFormatZip, network.uploadFormat)
-		assert.Equal(t, DefaultUploadName+".zip", network.uploadName)
-		assert.Empty(t, network.uploadType)
+		assert.Equal(t, 1, testNet.uploadCalled)
+		assert.Equal(t, spec.ArtifactFormatZip, testNet.uploadFormat)
+		assert.Equal(t, DefaultUploadName+".zip", testNet.uploadName)
+		assert.Empty(t, testNet.uploadType)
 	})
 }
 
 func TestArtifactsUploaderZipSucceeded(t *testing.T) {
 	OnEachZipArchiver(t, func(t *testing.T) {
-		network := &testNetwork{
+		testNet := &testNetwork{
 			uploadState: common.UploadSucceeded,
 		}
 		cmd := ArtifactsUploaderCommand{
@@ -145,7 +154,7 @@ func TestArtifactsUploaderZipSucceeded(t *testing.T) {
 			Format:         spec.ArtifactFormatZip,
 			Name:           "my-release",
 			Type:           "my-type",
-			network:        network,
+			newNetwork:     createTestNewNetwork(testNet),
 			fileArchiver: fileArchiver{
 				Paths: []string{artifactsTestArchivedFile},
 			},
@@ -155,16 +164,16 @@ func TestArtifactsUploaderZipSucceeded(t *testing.T) {
 		defer os.Remove(artifactsTestArchivedFile)
 
 		cmd.Execute(nil)
-		assert.Equal(t, 1, network.uploadCalled)
-		assert.Equal(t, spec.ArtifactFormatZip, network.uploadFormat)
-		assert.Equal(t, "my-release.zip", network.uploadName)
-		assert.Equal(t, "my-type", network.uploadType)
-		assert.Contains(t, network.uploadedFiles, artifactsTestArchivedFile)
+		assert.Equal(t, 1, testNet.uploadCalled)
+		assert.Equal(t, spec.ArtifactFormatZip, testNet.uploadFormat)
+		assert.Equal(t, "my-release.zip", testNet.uploadName)
+		assert.Equal(t, "my-type", testNet.uploadType)
+		assert.Contains(t, testNet.uploadedFiles, artifactsTestArchivedFile)
 	})
 }
 
 func TestArtifactsUploaderGzipSendsMultipleFiles(t *testing.T) {
-	network := &testNetwork{
+	testNet := &testNetwork{
 		uploadState: common.UploadSucceeded,
 	}
 	cmd := ArtifactsUploaderCommand{
@@ -172,7 +181,7 @@ func TestArtifactsUploaderGzipSendsMultipleFiles(t *testing.T) {
 		Format:         spec.ArtifactFormatGzip,
 		Name:           "junit.xml",
 		Type:           "junit",
-		network:        network,
+		newNetwork:     createTestNewNetwork(testNet),
 		fileArchiver: fileArchiver{
 			Paths: []string{artifactsTestArchivedFile, artifactsTestArchivedFile2},
 		},
@@ -185,16 +194,16 @@ func TestArtifactsUploaderGzipSendsMultipleFiles(t *testing.T) {
 	defer os.Remove(artifactsTestArchivedFile)
 
 	cmd.Execute(nil)
-	assert.Equal(t, 1, network.uploadCalled)
-	assert.Equal(t, "junit.xml.gz", network.uploadName)
-	assert.Equal(t, spec.ArtifactFormatGzip, network.uploadFormat)
-	assert.Equal(t, "junit", network.uploadType)
-	assert.Contains(t, network.uploadedFiles, artifactsTestArchivedFile)
-	assert.Contains(t, network.uploadedFiles, artifactsTestArchivedFile2)
+	assert.Equal(t, 1, testNet.uploadCalled)
+	assert.Equal(t, "junit.xml.gz", testNet.uploadName)
+	assert.Equal(t, spec.ArtifactFormatGzip, testNet.uploadFormat)
+	assert.Equal(t, "junit", testNet.uploadType)
+	assert.Contains(t, testNet.uploadedFiles, artifactsTestArchivedFile)
+	assert.Contains(t, testNet.uploadedFiles, artifactsTestArchivedFile2)
 }
 
 func TestArtifactsUploaderRawSucceeded(t *testing.T) {
-	network := &testNetwork{
+	testNet := &testNetwork{
 		uploadState: common.UploadSucceeded,
 	}
 	cmd := ArtifactsUploaderCommand{
@@ -202,7 +211,7 @@ func TestArtifactsUploaderRawSucceeded(t *testing.T) {
 		Format:         spec.ArtifactFormatRaw,
 		Name:           "my-release",
 		Type:           "my-type",
-		network:        network,
+		newNetwork:     createTestNewNetwork(testNet),
 		fileArchiver: fileArchiver{
 			Paths: []string{artifactsTestArchivedFile},
 		},
@@ -212,15 +221,15 @@ func TestArtifactsUploaderRawSucceeded(t *testing.T) {
 	defer os.Remove(artifactsTestArchivedFile)
 
 	cmd.Execute(nil)
-	assert.Equal(t, 1, network.uploadCalled)
-	assert.Equal(t, spec.ArtifactFormatRaw, network.uploadFormat)
-	assert.Equal(t, "my-release", network.uploadName)
-	assert.Equal(t, "my-type", network.uploadType)
-	assert.Contains(t, network.uploadedFiles, "raw")
+	assert.Equal(t, 1, testNet.uploadCalled)
+	assert.Equal(t, spec.ArtifactFormatRaw, testNet.uploadFormat)
+	assert.Equal(t, "my-release", testNet.uploadName)
+	assert.Equal(t, "my-type", testNet.uploadType)
+	assert.Contains(t, testNet.uploadedFiles, "raw")
 }
 
 func TestArtifactsUploaderRawDoesNotSendMultipleFiles(t *testing.T) {
-	network := &testNetwork{
+	testNet := &testNetwork{
 		uploadState: common.UploadSucceeded,
 	}
 	cmd := ArtifactsUploaderCommand{
@@ -228,7 +237,7 @@ func TestArtifactsUploaderRawDoesNotSendMultipleFiles(t *testing.T) {
 		Format:         spec.ArtifactFormatRaw,
 		Name:           "junit.xml",
 		Type:           "junit",
-		network:        network,
+		newNetwork:     createTestNewNetwork(testNet),
 		fileArchiver: fileArchiver{
 			Paths: []string{artifactsTestArchivedFile, artifactsTestArchivedFile2},
 		},
@@ -249,12 +258,12 @@ func TestArtifactsUploaderRawDoesNotSendMultipleFiles(t *testing.T) {
 }
 
 func TestArtifactsUploaderNoFilesDoNotGenerateError(t *testing.T) {
-	network := &testNetwork{
+	testNet := &testNetwork{
 		uploadState: common.UploadSucceeded,
 	}
 	cmd := ArtifactsUploaderCommand{
 		JobCredentials: UploaderCredentials,
-		network:        network,
+		newNetwork:     createTestNewNetwork(testNet),
 		fileArchiver:   fileArchiver{},
 	}
 
@@ -267,12 +276,12 @@ func TestArtifactsUploaderNoFilesDoNotGenerateError(t *testing.T) {
 }
 
 func TestArtifactsUploaderServiceUnavailable(t *testing.T) {
-	network := &testNetwork{
+	testNet := &testNetwork{
 		uploadState: common.UploadServiceUnavailable,
 	}
 	cmd := ArtifactsUploaderCommand{
 		JobCredentials: UploaderCredentials,
-		network:        network,
+		newNetwork:     createTestNewNetwork(testNet),
 		fileArchiver: fileArchiver{
 			Paths: []string{artifactsTestArchivedFile},
 		},
@@ -288,17 +297,17 @@ func TestArtifactsUploaderServiceUnavailable(t *testing.T) {
 		cmd.Execute(nil)
 	})
 
-	assert.Equal(t, serviceUnavailableTries, network.uploadCalled)
+	assert.Equal(t, serviceUnavailableTries, testNet.uploadCalled)
 }
 
 func TestArtifactsExcludedPaths(t *testing.T) {
-	network := &testNetwork{
+	testNet := &testNetwork{
 		uploadState: common.UploadSucceeded,
 	}
 
 	cmd := ArtifactsUploaderCommand{
 		JobCredentials: UploaderCredentials,
-		network:        network,
+		newNetwork:     createTestNewNetwork(testNet),
 		Format:         spec.ArtifactFormatRaw,
 		fileArchiver: fileArchiver{
 			Paths:   []string{artifactsTestArchivedFile},
@@ -311,14 +320,14 @@ func TestArtifactsExcludedPaths(t *testing.T) {
 
 	cmd.Execute(nil)
 
-	assert.Equal(t, 1, network.uploadCalled)
+	assert.Equal(t, 1, testNet.uploadCalled)
 }
 
 func TestFileArchiverCompressionLevel(t *testing.T) {
 	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
 
-	network := &testNetwork{
+	testNet := &testNetwork{
 		uploadState: common.UploadSucceeded,
 	}
 
@@ -326,7 +335,9 @@ func TestFileArchiverCompressionLevel(t *testing.T) {
 		t.Run(expectedLevel, func(t *testing.T) {
 			mockArchiver := archive.NewMockArchiver(t)
 
-			archive.Register(
+			// Save previous archiver and restore it after test to prevent
+			// goroutine assertions from affecting subsequent tests
+			prevArchiver, _ := archive.Register(
 				"zip",
 				func(w io.Writer, dir string, level archive.CompressionLevel) (archive.Archiver, error) {
 					assert.Equal(t, GetCompressionLevel(expectedLevel), level)
@@ -334,12 +345,15 @@ func TestFileArchiverCompressionLevel(t *testing.T) {
 				},
 				nil,
 			)
+			defer func() {
+				archive.Register("zip", prevArchiver, nil)
+			}()
 
 			mockArchiver.On("Archive", mock.Anything, mock.Anything).Return(nil)
 
 			cmd := ArtifactsUploaderCommand{
 				JobCredentials: UploaderCredentials,
-				network:        network,
+				newNetwork:     createTestNewNetwork(testNet),
 				Format:         spec.ArtifactFormatZip,
 				fileArchiver: fileArchiver{
 					Paths: []string{artifactsTestArchivedFile},
@@ -418,6 +432,124 @@ func TestArtifactUploaderCommandShouldRetry(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			r := ArtifactsUploaderCommand{}
 			assert.Equal(t, tt.expectedShouldRetry, r.shouldRetry(tt.tries, tt.err))
+		})
+	}
+}
+
+type timeoutTestFixture struct {
+	timeout               time.Duration
+	responseHeaderTimeout time.Duration
+	mockNetwork           *testNetwork
+	executeCommand        bool
+	expectedError         bool
+}
+
+func (f *timeoutTestFixture) setupCommand() *ArtifactsUploaderCommand {
+	cmd := &ArtifactsUploaderCommand{
+		JobCredentials:        UploaderCredentials,
+		Timeout:               f.timeout,
+		ResponseHeaderTimeout: f.responseHeaderTimeout,
+		fileArchiver: fileArchiver{
+			Paths: []string{artifactsTestArchivedFile},
+		},
+	}
+
+	if f.mockNetwork != nil {
+		cmd.newNetwork = createTestNewNetwork(f.mockNetwork)
+	} else {
+		// Use real network client creation to test timeout value propagation
+		cmd.newNetwork = func() common.Network {
+			return network.NewGitLabClient(
+				network.WithHttpClientOptions(network.HttpClientOptions{
+					Timeout:               &cmd.Timeout,
+					ResponseHeaderTimeout: &cmd.ResponseHeaderTimeout,
+				}),
+			)
+		}
+	}
+
+	return cmd
+}
+
+func TestArtifactsUploaderCommandTimeouts(t *testing.T) {
+	tests := map[string]struct {
+		fixture                       *timeoutTestFixture
+		expectedTimeout               time.Duration
+		expectedResponseHeaderTimeout time.Duration
+		expectedUploadCalled          int
+	}{
+		"uses timeout values when creating network client": {
+			fixture: &timeoutTestFixture{
+				timeout:               time.Hour,
+				responseHeaderTimeout: 10 * time.Minute,
+				executeCommand:        false,
+			},
+			expectedTimeout:               time.Hour,
+			expectedResponseHeaderTimeout: 10 * time.Minute,
+		},
+		"zero timeout values work": {
+			fixture: &timeoutTestFixture{
+				timeout:               0,
+				responseHeaderTimeout: 0,
+				executeCommand:        false,
+			},
+			expectedTimeout:               0,
+			expectedResponseHeaderTimeout: 0,
+		},
+		"timeout values passed to network client when no injected network": {
+			fixture: &timeoutTestFixture{
+				timeout:               time.Minute,
+				responseHeaderTimeout: 30 * time.Second,
+				executeCommand:        true,
+				expectedError:         true,
+			},
+			expectedTimeout:               time.Minute,
+			expectedResponseHeaderTimeout: 30 * time.Second,
+		},
+		"injected network takes precedence over timeout values": {
+			fixture: &timeoutTestFixture{
+				timeout:               time.Hour,
+				responseHeaderTimeout: 10 * time.Minute,
+				mockNetwork: &testNetwork{
+					uploadState: common.UploadSucceeded,
+				},
+				executeCommand: true,
+				expectedError:  false,
+			},
+			expectedTimeout:               time.Hour,
+			expectedResponseHeaderTimeout: 10 * time.Minute,
+			expectedUploadCalled:          1,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			writeTestFile(t, artifactsTestArchivedFile)
+			defer os.Remove(artifactsTestArchivedFile)
+
+			cmd := tt.fixture.setupCommand()
+
+			// Verify timeout values are set correctly
+			assert.Equal(t, tt.expectedTimeout, cmd.Timeout)
+			assert.Equal(t, tt.expectedResponseHeaderTimeout, cmd.ResponseHeaderTimeout)
+
+			// Execute command if required by the test case
+			if tt.fixture.executeCommand {
+				err := cmd.enumerate()
+				require.NoError(t, err)
+
+				err = cmd.Run()
+
+				if tt.fixture.expectedError {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+
+				if tt.fixture.mockNetwork != nil {
+					assert.Equal(t, tt.expectedUploadCalled, tt.fixture.mockNetwork.uploadCalled)
+				}
+			}
 		})
 	}
 }

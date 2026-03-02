@@ -48,17 +48,18 @@ type option func(*client)
 
 type client struct {
 	http.Client
-	url              *url.URL
-	certDirectory    string
-	caFile           string
-	certFile         string
-	keyFile          string
-	caData           []byte
-	updateTime       time.Time
-	lastIdleRefresh  time.Time
-	lastUpdate       string
-	connectionMaxAge time.Duration
-	requester        requester
+	url               *url.URL
+	certDirectory     string
+	caFile            string
+	certFile          string
+	keyFile           string
+	caData            []byte
+	updateTime        time.Time
+	lastIdleRefresh   time.Time
+	lastUpdate        string
+	connectionMaxAge  time.Duration
+	requester         requester
+	httpClientOptions HttpClientOptions
 }
 
 type ResponseTLSData struct {
@@ -192,7 +193,7 @@ func (n *client) createTransport() {
 	n.addTLSAuth(&tlsConfig)
 
 	// create transport
-	n.Transport = &http.Transport{
+	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		Dial: func(network, addr string) (net.Conn, error) {
 			logrus.Debugln("Dialing:", network, addr, "...")
@@ -206,6 +207,16 @@ func (n *client) createTransport() {
 		ResponseHeaderTimeout: 10 * time.Minute,
 	}
 	n.Timeout = common.DefaultNetworkClientTimeout
+
+	if n.httpClientOptions.Timeout != nil {
+		n.Timeout = *n.httpClientOptions.Timeout
+	}
+
+	if n.httpClientOptions.ResponseHeaderTimeout != nil {
+		transport.ResponseHeaderTimeout = *n.httpClientOptions.ResponseHeaderTimeout
+	}
+
+	n.Transport = transport
 }
 
 func (n *client) do(
@@ -539,6 +550,11 @@ func withMaxAge(connectionMaxAge time.Duration) option {
 func withCertificateDirectory(certDirectory string) option {
 	return func(c *client) {
 		c.certDirectory = certDirectory
+	}
+}
+func withHttpClientOptions(opts HttpClientOptions) option {
+	return func(c *client) {
+		c.httpClientOptions = opts
 	}
 }
 

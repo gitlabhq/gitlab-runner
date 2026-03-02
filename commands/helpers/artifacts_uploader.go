@@ -8,17 +8,20 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"mvdan.cc/sh/v3/shell"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
+	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
 const (
@@ -38,24 +41,36 @@ type ArtifactsUploaderCommand struct {
 	meter.TransferMeterCommand
 	artifactStatementGenerator
 
-	network common.Network
+	newNetwork func() common.Network
 
-	Name             string              `long:"name" description:"The name of the archive"`
-	ExpireIn         string              `long:"expire-in" description:"When to expire artifacts"`
-	Format           spec.ArtifactFormat `long:"artifact-format" description:"Format of generated artifacts"`
-	Type             string              `long:"artifact-type" description:"Type of generated artifacts"`
-	CompressionLevel string              `long:"compression-level" env:"ARTIFACT_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
-	CiDebugTrace     bool                `long:"ci-debug-trace" env:"CI_DEBUG_TRACE" description:"enable debug trace logging"`
+	Name                  string              `long:"name" description:"The name of the archive"`
+	ExpireIn              string              `long:"expire-in" description:"When to expire artifacts"`
+	Format                spec.ArtifactFormat `long:"artifact-format" description:"Format of generated artifacts"`
+	Type                  string              `long:"artifact-type" description:"Type of generated artifacts"`
+	CompressionLevel      string              `long:"compression-level" env:"ARTIFACT_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
+	Timeout               time.Duration       `long:"timeout" description:"Timeout for the upload operation"`
+	ResponseHeaderTimeout time.Duration       `long:"response-header-timeout" description:"Timeout for response headers"`
+	CiDebugTrace          bool                `long:"ci-debug-trace" env:"CI_DEBUG_TRACE" description:"enable debug trace logging"`
 }
 
-func NewArtifactsUploaderCommand(n common.Network) cli.Command {
+func NewArtifactsUploaderCommand() cli.Command {
+	cmd := &ArtifactsUploaderCommand{
+		Name: "artifacts",
+	}
+	cmd.newNetwork = func() common.Network {
+		return network.NewGitLabClient(
+			network.WithCertificateDirectory(commands.GetDefaultCertificateDirectory()),
+			network.WithHttpClientOptions(network.HttpClientOptions{
+				Timeout:               &cmd.Timeout,
+				ResponseHeaderTimeout: &cmd.ResponseHeaderTimeout,
+			}),
+		)
+	}
+
 	return common.NewCommand(
 		"artifacts-uploader",
 		"create and upload build artifacts (internal)",
-		&ArtifactsUploaderCommand{
-			network: n,
-			Name:    "artifacts",
-		},
+		cmd,
 	)
 }
 
@@ -138,7 +153,7 @@ func (c *ArtifactsUploaderCommand) Run() error {
 	}
 
 	// Upload the data
-	resp, location := c.network.UploadRawArtifacts(c.JobCredentials, bodyProvider, options)
+	resp, location := c.newNetwork().UploadRawArtifacts(c.JobCredentials, bodyProvider, options)
 	switch resp {
 	case common.UploadSucceeded:
 		return nil

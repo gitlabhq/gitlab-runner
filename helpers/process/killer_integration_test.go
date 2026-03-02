@@ -140,6 +140,15 @@ func TestKiller(t *testing.T) {
 				)
 			}
 
+			if testCase.useWindowsJobObject {
+				// ForceKill may call Warn if taskKill fails
+				loggerMock.On(
+					"Warn",
+					"Failed to force-kill:",
+					mock.Anything,
+				).Maybe()
+			}
+
 			go func() {
 				waitCh <- cmd.Wait()
 			}()

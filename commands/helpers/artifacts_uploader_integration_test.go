@@ -72,7 +72,7 @@ func TestArchiveUploadRedirect(t *testing.T) {
 		Name:             "artifacts",
 		Format:           spec.ArtifactFormatZip,
 		CompressionLevel: "fastest",
-		network:          network.NewGitLabClient(),
+		newNetwork:       func() common.Network { return network.NewGitLabClient() },
 		fileArchiver: fileArchiver{
 			Paths: []string{
 				filepath.Join(".", "testdata", "test-artifacts"),
@@ -141,7 +141,7 @@ func TestArchiveUploadLogging(t *testing.T) {
 				Name:             "artifacts",
 				Format:           spec.ArtifactFormatZip,
 				CompressionLevel: "fastest",
-				network:          network.NewGitLabClient(),
+				newNetwork:       func() common.Network { return network.NewGitLabClient() },
 				fileArchiver: fileArchiver{
 					Paths: []string{
 						filepath.Join(".", "testdata", "test-artifacts"),
