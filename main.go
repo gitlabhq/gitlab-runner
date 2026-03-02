@@ -7,7 +7,6 @@ import (
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"go.uber.org/automaxprocs/maxprocs"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/fleeting"
@@ -45,7 +44,6 @@ import (
 )
 
 func init() {
-	_, _ = maxprocs.Set()
 	memlimit.SetGoMemLimitWithEnv()
 }
 
