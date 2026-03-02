@@ -5,7 +5,6 @@ package helpers
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -14,12 +13,16 @@ import (
 	"testing"
 	"time"
 
+	prov_v1 "github.com/in-toto/attestation/go/predicates/provenance/v1"
+	ita_v1 "github.com/in-toto/attestation/go/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
-	slsa_common "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa_v1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type fileInfo struct {
@@ -77,51 +80,55 @@ func TestGenerateMetadataToFile(t *testing.T) {
 		version string,
 		g *artifactStatementGenerator,
 		opts generateStatementOptions,
-	) *in_toto.ProvenanceStatementSLSA1 {
-		return &in_toto.ProvenanceStatementSLSA1{
-			StatementHeader: in_toto.StatementHeader{
-				Type:          in_toto.StatementInTotoV01,
-				PredicateType: slsa_v1.PredicateSLSAProvenance,
-				Subject: []in_toto.Subject{
-					{
-						Name:   tmpFile.Name(),
-						Digest: slsa_common.DigestSet{"sha256": hex.EncodeToString(checksum)},
+	) *ita_v1.Statement {
+		externalParams, err := g.externalParams(g.JobName, g.RepoURL)
+		require.NoError(t, err)
+
+		internalParams, err := g.internalParams(opts.jobID)
+		require.NoError(t, err)
+
+		provenance := &prov_v1.Provenance{
+			BuildDefinition: &prov_v1.BuildDefinition{
+				BuildType:          fmt.Sprintf(attestationTypeFormat, version),
+				ExternalParameters: externalParams,
+				InternalParameters: internalParams,
+				ResolvedDependencies: []*ita_v1.ResourceDescriptor{{
+					Uri:    g.RepoURL,
+					Digest: map[string]string{"sha256": g.RepoDigest},
+				}},
+			},
+			RunDetails: &prov_v1.RunDetails{
+				Builder: &prov_v1.Builder{
+					Id: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID),
+					Version: map[string]string{
+						"gitlab-runner": version,
 					},
+				},
+				Metadata: &prov_v1.BuildMetadata{
+					InvocationId: fmt.Sprint(opts.jobID),
+					StartedOn:    timestamppb.New(startedAt),
+					FinishedOn:   timestamppb.New(endedAt),
 				},
 			},
-			Predicate: slsa_v1.ProvenancePredicate{
-				BuildDefinition: slsa_v1.ProvenanceBuildDefinition{
-					BuildType: fmt.Sprintf(attestationTypeFormat, g.version()),
-					ExternalParameters: map[string]string{
-						"testparam":  "",
-						"entryPoint": g.JobName,
-						"source":     g.RepoURL,
-					},
-					InternalParameters: map[string]string{
-						"name":         g.RunnerName,
-						"executor":     g.ExecutorName,
-						"architecture": common.AppVersion.Architecture,
-						"job":          fmt.Sprint(opts.jobID),
-					},
-					ResolvedDependencies: []slsa_v1.ResourceDescriptor{{
-						URI:    g.RepoURL,
-						Digest: map[string]string{"sha256": g.RepoDigest},
-					}},
-				},
-				RunDetails: slsa_v1.ProvenanceRunDetails{
-					Builder: slsa_v1.Builder{
-						ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID),
-						Version: map[string]string{
-							"gitlab-runner": version,
-						},
-					},
-					BuildMetadata: slsa_v1.BuildMetadata{
-						InvocationID: fmt.Sprint(opts.jobID),
-						StartedOn:    &startedAt,
-						FinishedOn:   &endedAt,
-					},
+		}
+
+		predicateJSON, err := protojson.Marshal(provenance)
+		require.NoError(t, err)
+
+		predicate := &structpb.Struct{}
+		err = protojson.Unmarshal(predicateJSON, predicate)
+		require.NoError(t, err)
+
+		return &ita_v1.Statement{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: slsa_v1.PredicateSLSAProvenance,
+			Subject: []*ita_v1.ResourceDescriptor{
+				{
+					Name:   tmpFile.Name(),
+					Digest: map[string]string{"sha256": hex.EncodeToString(checksum)},
 				},
 			},
+			Predicate: predicate,
 		}
 	}
 
@@ -233,17 +240,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 				jobID:        1000,
 			},
 			expected: func(g *artifactStatementGenerator, opts generateStatementOptions) (any, func()) {
-				m := testStatement(common.AppVersion.Revision, g, opts)
-				switch m := m.(type) {
-				case *in_toto.ProvenanceStatementSLSA1:
-					m.Predicate.BuildDefinition.ExternalParameters = map[string]string{
-						"entryPoint": g.JobName,
-						"source":     g.RepoURL,
-					}
-				case *in_toto.ProvenanceStatementSLSA02:
-					m.Predicate.Invocation.Parameters = map[string]interface{}{}
-				}
-				return m, func() {}
+				return testStatement(common.AppVersion.Revision, g, opts), func() {}
 			},
 		},
 	}
@@ -280,7 +277,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 					b, err := io.ReadAll(file)
 					require.NoError(t, err)
 
-					indented, err := json.MarshalIndent(expected, "", " ")
+					indented, err := protojson.MarshalOptions{Multiline: true, Indent: " "}.Marshal(expected.(*ita_v1.Statement))
 					require.NoError(t, err)
 
 					assert.Equal(t, string(indented), string(b))
@@ -315,7 +312,8 @@ func TestGeneratePredicateV1(t *testing.T) {
 		common.AppVersion.Version = originalVersion
 	}()
 
-	actualPredicate := gen.generateSLSAv1Predicate(10001, startTime, endTime)
+	actualPredicate, err := gen.generateSLSAv1Predicate(10001, startTime, endTime)
+	require.NoError(t, err)
 
 	expectedBuildType := fmt.Sprintf(attestationTypeFormat, testVersion)
 	assert.Equal(t, expectedBuildType, actualPredicate.BuildDefinition.BuildType)

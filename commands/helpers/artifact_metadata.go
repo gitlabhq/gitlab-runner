@@ -4,19 +4,23 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
+	prov_v1 "github.com/in-toto/attestation/go/predicates/provenance/v1"
+	ita_v1 "github.com/in-toto/attestation/go/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
-	slsa_common "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa_v1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -51,33 +55,44 @@ const (
 	defaultSLSAProvenanceVersion = slsaProvenanceVersion1
 )
 
-var provenanceSchemaPredicateType = map[string]string{
-	slsaProvenanceVersion1: slsa_v1.PredicateSLSAProvenance,
-}
-
 func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatementOptions) (string, error) {
 	start, end, err := g.parseTimings()
 	if err != nil {
 		return "", err
 	}
 
-	provenanceVersion := g.SLSAProvenanceVersion
-	if provenanceVersion != slsaProvenanceVersion1 {
-		logrus.Warnln(fmt.Sprintf("Unknown SLSA provenance version %s, defaulting to %s", provenanceVersion, defaultSLSAProvenanceVersion))
-		provenanceVersion = defaultSLSAProvenanceVersion
+	if g.SLSAProvenanceVersion != slsaProvenanceVersion1 {
+		logrus.Warnf("Unknown SLSA provenance version %s, defaulting to %s", g.SLSAProvenanceVersion, defaultSLSAProvenanceVersion)
 	}
 
-	header, err := g.generateStatementHeader(opts.files, provenanceSchemaPredicateType[provenanceVersion])
+	subjects, err := g.generateSubjects(opts.files)
 	if err != nil {
 		return "", err
 	}
 
-	var statement = &in_toto.ProvenanceStatementSLSA1{
-		StatementHeader: header,
-		Predicate:       g.generateSLSAv1Predicate(opts.jobID, start, end),
+	provenance, err := g.generateSLSAv1Predicate(opts.jobID, start, end)
+	if err != nil {
+		return "", err
 	}
 
-	b, err := json.MarshalIndent(statement, "", " ")
+	predicateJSON, err := protojson.Marshal(provenance)
+	if err != nil {
+		return "", err
+	}
+
+	predicate := &structpb.Struct{}
+	if err := protojson.Unmarshal(predicateJSON, predicate); err != nil {
+		return "", err
+	}
+
+	statement := &ita_v1.Statement{
+		Type:          in_toto.StatementInTotoV01,
+		PredicateType: slsa_v1.PredicateSLSAProvenance,
+		Subject:       subjects,
+		Predicate:     predicate,
+	}
+
+	b, err := protojson.MarshalOptions{Multiline: true, Indent: " "}.Marshal(statement)
 	if err != nil {
 		return "", err
 	}
@@ -88,62 +103,67 @@ func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatem
 	return file, err
 }
 
-func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId int64, start time.Time, end time.Time) slsa_v1.ProvenancePredicate {
-	externalParams := g.params()
-	externalParams["entryPoint"] = g.JobName
-	externalParams["source"] = g.RepoURL
+func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId int64, start time.Time, end time.Time) (*prov_v1.Provenance, error) {
+	externalParams, err := g.externalParams(g.JobName, g.RepoURL)
+	if err != nil {
+		return nil, err
+	}
 
-	return slsa_v1.ProvenancePredicate{
-		BuildDefinition: slsa_v1.ProvenanceBuildDefinition{
+	internalParams, err := g.internalParams(jobId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &prov_v1.Provenance{
+		BuildDefinition: &prov_v1.BuildDefinition{
 			BuildType:          fmt.Sprintf(attestationTypeFormat, g.version()),
 			ExternalParameters: externalParams,
-			InternalParameters: map[string]string{
-				"name":         g.RunnerName,
-				"executor":     g.ExecutorName,
-				"architecture": common.AppVersion.Architecture,
-				"job":          fmt.Sprint(jobId),
-			},
-			ResolvedDependencies: []slsa_v1.ResourceDescriptor{{
-				URI:    g.RepoURL,
+			InternalParameters: internalParams,
+			ResolvedDependencies: []*ita_v1.ResourceDescriptor{{
+				Uri:    g.RepoURL,
 				Digest: map[string]string{"sha256": g.RepoDigest},
 			}},
 		},
-		RunDetails: slsa_v1.ProvenanceRunDetails{
-			Builder: slsa_v1.Builder{
-				ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID),
+		RunDetails: &prov_v1.RunDetails{
+			Builder: &prov_v1.Builder{
+				Id: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID),
 				Version: map[string]string{
 					"gitlab-runner": g.version(),
 				},
 			},
-			BuildMetadata: slsa_v1.BuildMetadata{
-				InvocationID: fmt.Sprint(jobId),
-				StartedOn:    &start,
-				FinishedOn:   &end,
+			Metadata: &prov_v1.BuildMetadata{
+				InvocationId: fmt.Sprint(jobId),
+				StartedOn:    timestamppb.New(start),
+				FinishedOn:   timestamppb.New(end),
 			},
 		},
-	}
-}
-
-func (g *artifactStatementGenerator) generateStatementHeader(artifacts map[string]os.FileInfo, predicateType string) (in_toto.StatementHeader, error) {
-	subjects, err := g.generateSubjects(artifacts)
-	if err != nil {
-		return in_toto.StatementHeader{}, err
-	}
-
-	return in_toto.StatementHeader{
-		Type:          in_toto.StatementInTotoV01,
-		PredicateType: predicateType,
-		Subject:       subjects,
 	}, nil
 }
 
-func (g *artifactStatementGenerator) params() map[string]string {
-	params := make(map[string]string, len(g.Parameters))
+func (g *artifactStatementGenerator) externalParams(jobName, repoURL string) (*structpb.Struct, error) {
+	paramsMap := make(map[string]any, len(g.Parameters))
 	for _, param := range g.Parameters {
-		params[param] = ""
+		paramsMap[param] = ""
 	}
 
-	return params
+	paramsMap["entryPoint"] = jobName
+	paramsMap["source"] = repoURL
+
+	params, err := structpb.NewStruct(paramsMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return params, nil
+}
+
+func (g *artifactStatementGenerator) internalParams(jobId int64) (*structpb.Struct, error) {
+	return structpb.NewStruct(map[string]any{
+		"name":         g.RunnerName,
+		"executor":     g.ExecutorName,
+		"architecture": common.AppVersion.Architecture,
+		"job":          strconv.FormatInt(jobId, 10),
+	})
 }
 
 func (g *artifactStatementGenerator) version() string {
@@ -168,30 +188,27 @@ func (g *artifactStatementGenerator) parseTimings() (time.Time, time.Time, error
 	return startedAt, endedAt, nil
 }
 
-func (g *artifactStatementGenerator) generateSubjects(files map[string]os.FileInfo) ([]in_toto.Subject, error) {
-	subjects := make([]in_toto.Subject, 0, len(files))
+func (g *artifactStatementGenerator) generateSubjects(files map[string]os.FileInfo) ([]*ita_v1.ResourceDescriptor, error) {
+	subjects := make([]*ita_v1.ResourceDescriptor, 0, len(files))
 
 	h := sha256.New()
 	br := bufio.NewReader(nil)
-	subjectGeneratorFunc := func(file string) (in_toto.Subject, error) {
+	subjectGeneratorFunc := func(file string) (*ita_v1.ResourceDescriptor, error) {
 		f, err := os.Open(file)
 		if err != nil {
-			return in_toto.Subject{}, err
+			return &ita_v1.ResourceDescriptor{}, err
 		}
 		defer f.Close()
 
 		br.Reset(f)
 		h.Reset()
 		if _, err := io.Copy(h, br); err != nil {
-			return in_toto.Subject{}, err
+			return &ita_v1.ResourceDescriptor{}, err
 		}
 
-		digestSet := make(slsa_common.DigestSet, 1)
-		digestSet["sha256"] = hex.EncodeToString(h.Sum(nil))
-
-		return in_toto.Subject{
+		return &ita_v1.ResourceDescriptor{
 			Name:   file,
-			Digest: digestSet,
+			Digest: map[string]string{"sha256": hex.EncodeToString(h.Sum(nil))},
 		}, nil
 	}
 
