@@ -17,7 +17,7 @@
         export GPG_KEY=$(cat ${GPG_KEY_PATH})
         export GPG_PASSPHRASE=$(cat ${GPG_PASSPHRASE_PATH})
       else
-        echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
+        echo "****** GPG signing disabled ******"
       fi
   script:
     - make release_s3
