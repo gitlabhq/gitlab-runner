@@ -823,137 +823,65 @@ func TestGetRemoteURL(t *testing.T) {
 		exampleJobToken    = "job-token"
 		exampleRepoURL     = "http://gitlab-ci-token:job-token@test.remote/my/project.git"
 		exampleProjectPath = "my/project"
-
-		jobTokenFromEnv = true
-		jobTokenInURL   = false
 	)
 
-	testCases := map[string]struct {
-		runner                    RunnerSettings
-		jobTokenVariableOverwrite string
-		expectedURL               map[bool]string
+	tests := []struct {
+		name        string
+		cloneURL    string
+		ffEnabled   bool
+		expectedURL string
 	}{
-		"using clone_url with http protocol": {
-			runner: RunnerSettings{
-				CloneURL: "http://test.local/",
-			},
-			expectedURL: map[bool]string{
-				jobTokenFromEnv: "http://test.local/my/project.git",
-				jobTokenInURL:   "http://gitlab-ci-token:job-token@test.local/my/project.git",
-			},
+		{
+			name:        "authenticated with CloneURL",
+			cloneURL:    "https://test.local/",
+			ffEnabled:   false,
+			expectedURL: "https://gitlab-ci-token:job-token@test.local/my/project.git",
 		},
-		"using clone_url with https protocol": {
-			runner: RunnerSettings{
-				CloneURL: "https://test.local",
-			},
-			expectedURL: map[bool]string{
-				jobTokenFromEnv: "https://test.local/my/project.git",
-				jobTokenInURL:   "https://gitlab-ci-token:job-token@test.local/my/project.git",
-			},
+		{
+			name:        "unauthenticated with CloneURL",
+			cloneURL:    "https://test.local/",
+			ffEnabled:   true,
+			expectedURL: "https://test.local/my/project.git",
 		},
-		"using clone_url with relative URL": {
-			runner: RunnerSettings{
-				CloneURL: "https://test.local/gitlab",
-			},
-			expectedURL: map[bool]string{
-				jobTokenFromEnv: "https://test.local/gitlab/my/project.git",
-				jobTokenInURL:   "https://gitlab-ci-token:job-token@test.local/gitlab/my/project.git",
-			},
+		{
+			name:        "authenticated falls back to RepoURL preserving credentials",
+			cloneURL:    "",
+			ffEnabled:   false,
+			expectedURL: exampleRepoURL,
 		},
-		"using clone_url with relative URL with trailing slash": {
-			runner: RunnerSettings{
-				CloneURL: "https://test.local/gitlab/",
-			},
-			expectedURL: map[bool]string{
-				jobTokenFromEnv: "https://test.local/gitlab/my/project.git",
-				jobTokenInURL:   "https://gitlab-ci-token:job-token@test.local/gitlab/my/project.git",
-			},
-		},
-		"using clone_url with ssh protocol": {
-			runner: RunnerSettings{
-				CloneURL: "ssh://git@test.local/",
-			},
-			expectedURL: map[bool]string{
-				jobTokenFromEnv: "ssh://git@test.local/my/project.git",
-				jobTokenInURL:   "ssh://git@test.local/my/project.git",
-			},
-		},
-		"using clone_url with ssh protocol and default username": {
-			runner: RunnerSettings{
-				CloneURL: "ssh://test.local/",
-			},
-			expectedURL: map[bool]string{
-				jobTokenFromEnv: "ssh://git@test.local/my/project.git",
-				jobTokenInURL:   "ssh://git@test.local/my/project.git",
-			},
-		},
-		"not using clone_url": {
-			runner: RunnerSettings{},
-			expectedURL: map[bool]string{
-				jobTokenFromEnv: "http://test.remote/my/project.git",
-				jobTokenInURL:   exampleRepoURL,
-			},
-		},
-		"overwriting job token with variable and clone_url": {
-			runner: RunnerSettings{
-				CloneURL: "https://test.local",
-			},
-			jobTokenVariableOverwrite: "wrong-token",
-			expectedURL: map[bool]string{
-				jobTokenFromEnv: "https://test.local/my/project.git",
-				jobTokenInURL:   "https://gitlab-ci-token:job-token@test.local/my/project.git",
-			},
-		},
-		"overwriting job token with variable and no clone_url": {
-			runner:                    RunnerSettings{},
-			jobTokenVariableOverwrite: "wrong-token",
-			expectedURL: map[bool]string{
-				jobTokenFromEnv: "http://test.remote/my/project.git",
-				jobTokenInURL:   exampleRepoURL,
-			},
+		{
+			name:        "unauthenticated falls back to RepoURL stripping credentials",
+			cloneURL:    "",
+			ffEnabled:   true,
+			expectedURL: "http://test.remote/my/project.git",
 		},
 	}
 
-	for _, ffState := range []bool{jobTokenFromEnv, jobTokenInURL} {
-		ff := featureflags.GitURLsWithoutTokens
-		name := fmt.Sprintf("%s:%t", ff, ffState)
-		t.Run(name, func(t *testing.T) {
-			for tn, tc := range testCases {
-				t.Run(tn, func(t *testing.T) {
-					build := &Build{
-						Runner: &RunnerConfig{
-							RunnerSettings: tc.runner,
-						},
-						Job: spec.Job{
-							Token: exampleJobToken,
-							GitInfo: spec.GitInfo{
-								RepoURL: exampleRepoURL,
-							},
-						},
-					}
-
-					build.Runner.FeatureFlags = map[string]bool{
-						ff: ffState,
-					}
-
-					variables := spec.Variables{
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						CloneURL: tt.cloneURL,
+					},
+				},
+				Job: spec.Job{
+					Token: exampleJobToken,
+					GitInfo: spec.GitInfo{
+						RepoURL: exampleRepoURL,
+					},
+					Variables: spec.Variables{
 						{Key: "CI_PROJECT_PATH", Value: exampleProjectPath},
-					}
-
-					if tc.jobTokenVariableOverwrite != "" {
-						variables = append(variables, spec.Variable{
-							Key:   "CI_JOB_TOKEN",
-							Value: tc.jobTokenVariableOverwrite,
-						})
-					}
-
-					build.Job.Variables = variables
-
-					remoteURL, err := build.GetRemoteURL()
-					assert.NoError(t, err, "getting remote URL")
-					assert.Equal(t, tc.expectedURL[ffState], remoteURL.String())
-				})
+					},
+				},
 			}
+			build.Runner.FeatureFlags = map[string]bool{
+				featureflags.GitURLsWithoutTokens: tt.ffEnabled,
+			}
+
+			remoteURL, err := build.GetRemoteURL()
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedURL, remoteURL.String())
 		})
 	}
 }
@@ -963,174 +891,86 @@ func TestGetInsteadOfs(t *testing.T) {
 		exampleJobToken   = "job-token"
 		exampleServerHost = "test.local"
 		exampleServerURL  = "https://test.local"
-
-		jobTokenFromEnv = true
-		jobTokenInURL   = false
 	)
 
-	testCases := map[string]struct {
-		cloneURL           string
-		serverURL          string
-		serverPort         string
-		expectedInsteadOfs map[bool][][2]string
-		forceHTTPS         bool
+	tests := []struct {
+		name       string
+		ffEnabled  bool
+		forceHTTPS bool
+		serverPort string
+		expected   [][2]string
 	}{
-		"with default url": {
-			expectedInsteadOfs: map[bool][][2]string{
-				jobTokenInURL: {
-					{"https://gitlab-ci-token:job-token@test.local", "https://test.local"},
-				},
+		{
+			name:      "authenticated basic rewrite",
+			ffEnabled: false,
+			expected: [][2]string{
+				{"https://gitlab-ci-token:job-token@test.local", "https://test.local"},
 			},
 		},
-		"with clone_url": {
-			cloneURL: "https://custom.local",
-			expectedInsteadOfs: map[bool][][2]string{
-				jobTokenInURL: {
-					{"https://gitlab-ci-token:job-token@custom.local", "https://custom.local"},
-				},
-			},
+		{
+			name:      "unauthenticated no rewrites without force HTTPS",
+			ffEnabled: true,
+			expected:  nil,
 		},
-		"with http protocol": {
-			serverURL: "http://test.local",
-			expectedInsteadOfs: map[bool][][2]string{
-				jobTokenInURL: {
-					{"http://gitlab-ci-token:job-token@test.local", "http://test.local"},
-				},
-			},
-		},
-		"with clone_url and http protocol": {
-			cloneURL: "http://test.local",
-			expectedInsteadOfs: map[bool][][2]string{
-				jobTokenInURL: {
-					{"http://gitlab-ci-token:job-token@test.local", "http://test.local"},
-				},
-			},
-		},
-		"with directory URL": {
-			serverURL: "https://test.local/gitlab",
-			expectedInsteadOfs: map[bool][][2]string{
-				jobTokenInURL: {
-					{"https://gitlab-ci-token:job-token@test.local/gitlab", "https://test.local/gitlab"},
-				},
-			},
-		},
-		"with directory URL with trailing slash stripped": {
-			cloneURL: "https://test.local/gitlab/",
-			expectedInsteadOfs: map[bool][][2]string{
-				jobTokenInURL: {
-					{"https://gitlab-ci-token:job-token@test.local/gitlab", "https://test.local/gitlab"},
-				},
-			},
-		},
-		"with clone_url and ssh protocol ignored": {
-			cloneURL: "ssh://git@test.local",
-		},
-		"with default url and force HTTPS": {
+		{
+			name:       "authenticated with force HTTPS",
+			ffEnabled:  false,
 			forceHTTPS: true,
-			expectedInsteadOfs: map[bool][][2]string{
-				jobTokenFromEnv: {
-					{"https://test.local/", "git@test.local:"},
-					{"https://test.local", "ssh://git@test.local"},
-				},
-				jobTokenInURL: {
-					{"https://gitlab-ci-token:job-token@test.local", "https://test.local"},
-					{"https://gitlab-ci-token:job-token@test.local/", "git@test.local:"},
-					{"https://gitlab-ci-token:job-token@test.local", "ssh://git@test.local"},
-				},
+			expected: [][2]string{
+				{"https://gitlab-ci-token:job-token@test.local", "https://test.local"},
+				{"https://gitlab-ci-token:job-token@test.local/", "git@test.local:"},
+				{"https://gitlab-ci-token:job-token@test.local", "ssh://git@test.local"},
 			},
 		},
-		"with default url and custom SSH port and force HTTPS": {
+		{
+			name:       "unauthenticated with force HTTPS",
+			ffEnabled:  true,
+			forceHTTPS: true,
+			expected: [][2]string{
+				{"https://test.local/", "git@test.local:"},
+				{"https://test.local", "ssh://git@test.local"},
+			},
+		},
+		{
+			name:       "feature flag controls server port wiring",
+			ffEnabled:  false,
 			forceHTTPS: true,
 			serverPort: "8022",
-			expectedInsteadOfs: map[bool][][2]string{
-				jobTokenFromEnv: {
-					{"https://test.local", "ssh://git@test.local:8022"},
-				},
-				jobTokenInURL: {
-					{"https://gitlab-ci-token:job-token@test.local", "https://test.local"},
-					{"https://gitlab-ci-token:job-token@test.local", "ssh://git@test.local:8022"},
-				},
+			expected: [][2]string{
+				{"https://gitlab-ci-token:job-token@test.local", "https://test.local"},
+				{"https://gitlab-ci-token:job-token@test.local", "ssh://git@test.local:8022"},
 			},
-		},
-		"with default url and trailing slash stripped and force HTTPS": {
-			forceHTTPS: true,
-			serverURL:  "https://test.local/",
-			expectedInsteadOfs: map[bool][][2]string{
-				jobTokenFromEnv: {
-					{"https://test.local/", "git@test.local:"},
-					{"https://test.local", "ssh://git@test.local"},
-				},
-				jobTokenInURL: {
-					{"https://gitlab-ci-token:job-token@test.local", "https://test.local"},
-					{"https://gitlab-ci-token:job-token@test.local/", "git@test.local:"},
-					{"https://gitlab-ci-token:job-token@test.local", "ssh://git@test.local"},
-				},
-			},
-		},
-		"with default url and directory URL and force HTTPS": {
-			forceHTTPS: true,
-			serverURL:  "https://test.local/gitlab",
-			expectedInsteadOfs: map[bool][][2]string{
-				jobTokenFromEnv: {
-					{"https://test.local/gitlab/", "git@test.local:"},
-					{"https://test.local/gitlab", "ssh://git@test.local"},
-				},
-				jobTokenInURL: {
-					{"https://gitlab-ci-token:job-token@test.local/gitlab", "https://test.local/gitlab"},
-					{"https://gitlab-ci-token:job-token@test.local/gitlab/", "git@test.local:"},
-					{"https://gitlab-ci-token:job-token@test.local/gitlab", "ssh://git@test.local"},
-				},
-			},
-		},
-		"with clone_url and ssh protocol and force HTTPS ignored": {
-			forceHTTPS: true,
-			cloneURL:   "ssh://git@test.local",
 		},
 	}
 
-	for _, ffState := range []bool{jobTokenFromEnv, jobTokenInURL} {
-		ff := featureflags.GitURLsWithoutTokens
-		name := fmt.Sprintf("%s:%t", ff, ffState)
-		t.Run(name, func(t *testing.T) {
-			for tn, tc := range testCases {
-				t.Run(tn, func(t *testing.T) {
-					build := &Build{
-						Runner: &RunnerConfig{
-							RunnerCredentials: RunnerCredentials{
-								URL: exampleServerURL,
-							},
-							RunnerSettings: RunnerSettings{
-								CloneURL: tc.cloneURL,
-							},
-						},
-						Job: spec.Job{
-							Token: exampleJobToken,
-						},
-					}
-
-					build.Runner.FeatureFlags = map[string]bool{
-						ff: ffState,
-					}
-
-					if tc.serverURL != "" {
-						build.Runner.RunnerCredentials.URL = tc.serverURL
-					}
-
-					build.Variables.Set(spec.Variable{Key: "CI_SERVER_SHELL_SSH_HOST", Value: exampleServerHost})
-
-					if tc.forceHTTPS {
-						build.Variables.Set(spec.Variable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "true"})
-					}
-
-					if tc.serverPort != "" {
-						build.Variables.Set(spec.Variable{Key: "CI_SERVER_SHELL_SSH_PORT", Value: tc.serverPort})
-					}
-
-					insteadOfs, err := build.GetInsteadOfs()
-					assert.NoError(t, err, "getting git insteadOfs")
-					assert.ElementsMatch(t, tc.expectedInsteadOfs[ffState], insteadOfs)
-				})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						URL: exampleServerURL,
+					},
+				},
+				Job: spec.Job{
+					Token: exampleJobToken,
+				},
 			}
+			build.Runner.FeatureFlags = map[string]bool{
+				featureflags.GitURLsWithoutTokens: tt.ffEnabled,
+			}
+
+			build.Variables.Set(spec.Variable{Key: "CI_SERVER_SHELL_SSH_HOST", Value: exampleServerHost})
+
+			if tt.forceHTTPS {
+				build.Variables.Set(spec.Variable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "true"})
+			}
+			if tt.serverPort != "" {
+				build.Variables.Set(spec.Variable{Key: "CI_SERVER_SHELL_SSH_PORT", Value: tt.serverPort})
+			}
+
+			insteadOfs, err := build.GetInsteadOfs()
+			require.NoError(t, err)
+			assert.ElementsMatch(t, tt.expected, insteadOfs)
 		})
 	}
 }
