@@ -26,6 +26,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
+	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
@@ -162,7 +163,7 @@ type Build struct {
 	Referees         []referees.Referee
 	ArtifactUploader func(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string)
 
-	urlHelper urlHelper
+	urlHelper *url_helpers.GitAuthHelper
 
 	OnBuildStageStartFn OnBuildStageFn
 	OnBuildStageEndFn   OnBuildStageFn
@@ -1721,29 +1722,26 @@ func (b *Build) expandContainerOptions() {
 
 // withUrlHelper lazyly sets up the correct url helper, stores it for the rest of the lifetime of the build, and returns
 // the appropriate url helper.
-func (b *Build) withUrlHelper() urlHelper {
+func (b *Build) withUrlHelper() *url_helpers.GitAuthHelper {
 	if b.urlHelper != nil {
 		return b.urlHelper
 	}
 
-	urlHelperConfig := urlHelperConfig{
+	vars := b.GetAllVariables()
+
+	b.urlHelper = url_helpers.NewGitAuthHelper(url_helpers.GitAuthConfig{
 		CloneURL:               b.Runner.CloneURL,
 		CredentialsURL:         b.Runner.RunnerCredentials.URL,
 		RepoURL:                b.GitInfo.RepoURL,
 		GitSubmoduleForceHTTPS: b.Settings().GitSubmoduleForceHTTPS,
 		Token:                  b.Token,
-		CiProjectPath:          b.GetAllVariables().Value("CI_PROJECT_PATH"),
-		CiServerShellSshPort:   b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_PORT"),
-		CiServerShellSshHost:   b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_HOST"),
-		CiServerHost:           b.GetAllVariables().Value("CI_SERVER_HOST"),
-	}
-
-	urlHelper := &authenticatedURLHelper{&urlHelperConfig}
-	b.urlHelper = urlHelper
-
-	if b.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
-		b.urlHelper = &unauthenticatedURLHelper{urlHelper}
-	}
+		ProjectPath:            vars.Value("CI_PROJECT_PATH"),
+		Server: url_helpers.GitAuthServerConfig{
+			Host:    vars.Value("CI_SERVER_HOST"),
+			SSHHost: vars.Value("CI_SERVER_SHELL_SSH_HOST"),
+			SSHPort: vars.Value("CI_SERVER_SHELL_SSH_PORT"),
+		},
+	}, !b.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens))
 
 	return b.urlHelper
 }
