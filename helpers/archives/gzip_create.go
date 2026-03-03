@@ -27,7 +27,7 @@ func writeGzipFile(w io.Writer, fileName string, fileInfo os.FileInfo) error {
 	}
 
 	gz := gzip.NewWriter(w)
-	gz.Header.Name = fileInfo.Name()
+	gz.Header.Name = sanitizePath(fileInfo.Name())
 	gz.Header.Comment = sanitizePath(fileName)
 	gz.Header.ModTime = fileInfo.ModTime()
 
