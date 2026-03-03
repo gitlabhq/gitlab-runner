@@ -465,3 +465,36 @@ func TestPrepareStageMetricsNoFF(t *testing.T) {
 
 	require.Nil(t, bh.buildStagesStartTimes)
 }
+
+func TestEnsureJobsTotalIsZero(t *testing.T) {
+	runner := &common.RunnerConfig{
+		Name: testName,
+		RunnerCredentials: common.RunnerCredentials{
+			Token: testToken,
+		},
+		SystemID: "testSystemID",
+	}
+
+	bh := newBuildsHelper()
+	bh.getRunnerCounter(runner)
+
+	ch := make(chan prometheus.Metric, 1)
+	bh.jobsTotal.Collect(ch)
+
+	var mm dto.Metric
+	err := (<-ch).Write(&mm)
+	require.NoError(t, err)
+
+	assert.Equal(t, float64(0), mm.GetCounter().GetValue())
+
+	labels := make(map[string]string)
+	for _, l := range mm.GetLabel() {
+		if l.Name != nil && l.Value != nil {
+			labels[*l.Name] = *l.Value
+		}
+	}
+
+	assert.Equal(t, runner.ShortDescription(), labels["runner"])
+	assert.Equal(t, runner.Name, labels["runner_name"])
+	assert.Equal(t, runner.GetSystemID(), labels["system_id"])
+}
