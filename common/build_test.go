@@ -2677,7 +2677,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 				Name:                    "Test Policy",
 				VariableOverrideAllowed: &trueValue,
 			},
-			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are allowed in this job according to the pipeline execution policy."},
+			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are allowed in this job according to the policy."},
 		},
 		{
 			desc: "policy job with override allowed with exceptions",
@@ -2687,7 +2687,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 				VariableOverrideAllowed:    &trueValue,
 				VariableOverrideExceptions: []string{"EXCEPTION_VAR1", "EXCEPTION_VAR2"},
 			},
-			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are allowed in this job (except for EXCEPTION_VAR1, EXCEPTION_VAR2) according to the pipeline execution policy."},
+			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are allowed in this job (except for EXCEPTION_VAR1, EXCEPTION_VAR2) according to the policy."},
 		},
 		{
 			desc: "policy job with override denied",
@@ -2696,7 +2696,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 				Name:                    "Test Policy",
 				VariableOverrideAllowed: &falseValue,
 			},
-			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are ignored in this job according to the pipeline execution policy."},
+			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are ignored in this job according to the policy."},
 		},
 		{
 			desc: "policy job with override denied with exceptions",
@@ -2706,7 +2706,7 @@ func TestPrintPolicyOptions(t *testing.T) {
 				VariableOverrideAllowed:    &falseValue,
 				VariableOverrideExceptions: []string{"EXCEPTION_VAR1", "EXCEPTION_VAR2"},
 			},
-			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are ignored in this job (except for EXCEPTION_VAR1, EXCEPTION_VAR2) according to the pipeline execution policy."},
+			contains: []string{`Job triggered by policy \"Test Policy\".`, "User-defined CI/CD variables are ignored in this job (except for EXCEPTION_VAR1, EXCEPTION_VAR2) according to the policy."},
 		},
 	}
 
