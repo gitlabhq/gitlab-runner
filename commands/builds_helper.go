@@ -122,6 +122,7 @@ func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCoun
 	if counter == nil {
 		counter = &runnerCounter{systemID: runner.GetSystemID(), runnerName: runner.Name}
 		b.counters[runner.Token] = counter
+		b.jobsTotal.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).Add(0)
 	}
 	return counter
 }
