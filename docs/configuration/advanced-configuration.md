@@ -396,8 +396,8 @@ Each `[[runners]]` section defines one runner.
 | Setting                               | Description                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`                                | The runner's description. Informational only.                                                                                                                                                                                                                                                                                                                                                               |
-| `url`                                 | GitLab instance URL.                                                                                                                                                                                                                                                                                                                                                                                        |
-| `token`                               | The runner's authentication token, which is obtained during runner registration. [Not the same as the registration token](https://docs.gitlab.com/api/runners/#registration-and-authentication-tokens).                                                                                                                                                                                                     |
+| `url`                                 | GitLab instance URL. Supports environment variable expansion (for example, `$GITLAB_URL` or `${GITLAB_URL}`).                                                                                                                                                                                                                                                                                               |
+| `token`                               | The runner's authentication token, which is obtained during runner registration. [Not the same as the registration token](https://docs.gitlab.com/api/runners/#registration-and-authentication-tokens). Supports environment variable expansion (for example, `$RUNNER_TOKEN` or `${RUNNER_TOKEN}`).                                                                                                        |
 | `tls-ca-file`                         | When using HTTPS, file that contains the certificates to verify the peer. See [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md).                                                                                                                                                                                                                             |
 | `tls-cert-file`                       | When using HTTPS, file that contains the certificate to authenticate with the peer.                                                                                                                                                                                                                                                                                                                         |
 | `tls-key-file`                        | When using HTTPS, file that contains the private key to authenticate with the peer.                                                                                                                                                                                                                                                                                                                         |
@@ -436,6 +436,32 @@ Example:
   environment = ["ENV=value", "LC_ALL=en_US.UTF-8"]
   clone_url = "http://gitlab.example.local"
 ```
+
+### Use environment variables for sensitive values
+
+You can use environment variables in the `token` and `url` fields to avoid
+storing sensitive values directly in the configuration file. Both `$VAR` and
+`${VAR}` syntax are supported.
+
+```toml
+[[runners]]
+  name = "runner-1"
+  url = "$GITLAB_URL"
+  token = "${RUNNER_TOKEN_1}"
+  executor = "docker"
+
+[[runners]]
+  name = "runner-2"
+  url = "$GITLAB_URL"
+  token = "${RUNNER_TOKEN_2}"
+  executor = "docker"
+```
+
+This is useful for:
+
+- Kubernetes deployments where tokens are mounted from secrets
+- Docker deployments where tokens are passed as environment variables
+- Avoiding secrets in version-controlled configuration files
 
 ### Legacy `/ci` URL suffix
 

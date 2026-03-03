@@ -2669,6 +2669,54 @@ concurrent = 1
 	}
 }
 
+func TestLoadConfig_ExpandsEnvironmentVariables(t *testing.T) {
+	t.Setenv("TEST_RUNNER_URL", "https://gitlab.example.com")
+	t.Setenv("TEST_RUNNER_TOKEN_1", "glrt-token-one")
+	t.Setenv("TEST_RUNNER_TOKEN_2", "glrt-token-two")
+
+	configContent := `
+[[runners]]
+  name = "runner-1"
+  url = "$TEST_RUNNER_URL"
+  token = "${TEST_RUNNER_TOKEN_1}"
+
+[[runners]]
+  name = "runner-2"
+  url = "${TEST_RUNNER_URL}"
+  token = "$TEST_RUNNER_TOKEN_2"
+
+[[runners]]
+  name = "runner-literal"
+  url = "https://literal.example.com"
+  token = "glrt-literal-token"
+`
+
+	tempFile, err := os.CreateTemp(t.TempDir(), "test_config")
+	require.NoError(t, err)
+	defer tempFile.Close()
+
+	_, err = tempFile.WriteString(configContent)
+	require.NoError(t, err)
+
+	cfg := NewConfig()
+	err = cfg.LoadConfig(tempFile.Name())
+	require.NoError(t, err)
+
+	require.Len(t, cfg.Runners, 3)
+
+	// runner-1: both $VAR and ${VAR} syntax should work
+	assert.Equal(t, "https://gitlab.example.com", cfg.Runners[0].URL)
+	assert.Equal(t, "glrt-token-one", cfg.Runners[0].Token)
+
+	// runner-2: same expansion
+	assert.Equal(t, "https://gitlab.example.com", cfg.Runners[1].URL)
+	assert.Equal(t, "glrt-token-two", cfg.Runners[1].Token)
+
+	// runner-literal: literal values should remain unchanged
+	assert.Equal(t, "https://literal.example.com", cfg.Runners[2].URL)
+	assert.Equal(t, "glrt-literal-token", cfg.Runners[2].Token)
+}
+
 func Test_CommandLineFlags(t *testing.T) {
 	tests := map[string]struct {
 		args          []string

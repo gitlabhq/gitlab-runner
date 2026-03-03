@@ -2290,6 +2290,10 @@ func (c *Config) LoadConfig(configFile string) error {
 }
 
 func (c *RunnerConfig) loadConfig(globalCfg *Config) error {
+	// Expand environment variables in credentials
+	c.Token = os.ExpandEnv(c.Token)
+	c.URL = os.ExpandEnv(c.URL)
+
 	if c.Machine != nil {
 		err := c.Machine.CompilePeriods()
 		if err != nil {
