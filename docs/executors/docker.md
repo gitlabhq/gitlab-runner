@@ -668,7 +668,8 @@ The `volumes` directive supports the following types of storage:
 
   - `<short-token>`: The shortened version of the runner's token (first 8 letters)
   - `<project-id>`: The ID of the GitLab project
-  - `<concurrency-id>`: The index of the runner (from the list of all runners running a build for the same project concurrently)
+  - `<concurrency-id>`: The index of the runner from the list of all runners that run a build for the same project concurrently (accessible through the
+  `CI_CONCURRENT_PROJECT_ID` [pre-defined variable](https://docs.gitlab.com/ci/variables/predefined_variables/)).
   - `<md5-of-path>`: The MD5 sum of the path within the container
   - `<runner-id-hash>`: The hash for the following data:
     - Runner's token
@@ -700,8 +701,8 @@ If you make the `/builds` directory a host-bound storage, your builds are stored
 `/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`, where:
 
 - `<short-token>` is a shortened version of the Runner's token (first 8 letters).
-- `<concurrent-id>` is a unique number that identifies the local job ID of the
-  particular runner in context of the project.
+- `<concurrent-id>` is the index of the runner from the list of all runners that run a build for the same project concurrently (accessible through the
+  `CI_CONCURRENT_PROJECT_ID` [pre-defined variable](https://docs.gitlab.com/ci/variables/predefined_variables/)).
 
 ## IPC mode
 
