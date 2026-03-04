@@ -165,6 +165,11 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 		if gcerrors.Code(err) == gcerrors.NotFound {
 			return nil
 		}
+		// GoCloud returns the Unknown code at the moment when Forbidden is returned until
+		// https://github.com/google/go-cloud/pull/3663 is merged.
+		if u.Scheme == "s3" && strings.Contains(err.Error(), "StatusCode: 403") {
+			return fmt.Errorf("%w: This 403 is expected if the file doesn't exist. See the behavior of HeadObject without s3::ListBucket permissions (https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html).", err)
+		}
 		return err
 	}
 
