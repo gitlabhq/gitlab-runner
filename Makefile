@@ -256,7 +256,7 @@ release_s3: prepare_windows_zip prepare_zoneinfo release_dir prepare_index
 release_dir:
 	@./ci/release_dir
 
-prepare_windows_zip: out/binaries/gitlab-runner-windows-386.zip out/binaries/gitlab-runner-windows-amd64.zip
+prepare_windows_zip: out/binaries/gitlab-runner-windows-386.zip out/binaries/gitlab-runner-windows-amd64.zip out/binaries/gitlab-runner-windows-arm64.zip
 
 out/binaries/gitlab-runner-windows-386.zip: out/binaries/gitlab-runner-windows-386.exe
 	zip -j out/binaries/gitlab-runner-windows-386.zip out/binaries/gitlab-runner-windows-386.exe
@@ -265,6 +265,10 @@ out/binaries/gitlab-runner-windows-386.zip: out/binaries/gitlab-runner-windows-3
 out/binaries/gitlab-runner-windows-amd64.zip: out/binaries/gitlab-runner-windows-amd64.exe
 	zip -j out/binaries/gitlab-runner-windows-amd64.zip out/binaries/gitlab-runner-windows-amd64.exe
 	cd out && zip binaries/gitlab-runner-windows-amd64.zip helper-images/prebuilt-*.tar.xz
+
+out/binaries/gitlab-runner-windows-arm64.zip: out/binaries/gitlab-runner-windows-arm64.exe
+	zip -j out/binaries/gitlab-runner-windows-arm64.zip out/binaries/gitlab-runner-windows-arm64.exe
+	cd out && zip binaries/gitlab-runner-windows-arm64.zip helper-images/prebuilt-*.tar.xz
 
 prepare_zoneinfo:
 	# preparing the zoneinfo file

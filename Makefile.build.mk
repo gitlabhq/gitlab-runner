@@ -14,6 +14,7 @@ BINARIES += ${BASE_BINARY_PATH}-freebsd-amd64
 BINARIES += ${BASE_BINARY_PATH}-freebsd-arm
 BINARIES += ${BASE_BINARY_PATH}-windows-386.exe
 BINARIES += ${BASE_BINARY_PATH}-windows-amd64.exe
+BINARIES += ${BASE_BINARY_PATH}-windows-arm64.exe
 
 
 .PHONY: runner-bin
