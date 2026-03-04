@@ -50,8 +50,8 @@ The project's source is checked out to:
 Where:
 
 - `<short-token>` is a shortened version of the runner's token (first 8 letters)
-- `<concurrent-id>` is a unique number, identifying the local job ID on the
-  particular runner in context of the project
+- `<concurrent-id>` is the index of the runner from the list of all runners that run a build for the same project concurrently (accessible through the
+  `CI_CONCURRENT_PROJECT_ID` [pre-defined variable](https://docs.gitlab.com/ci/variables/predefined_variables/)).
 - `<namespace>` is the namespace where the project is stored on GitLab
 - `<project-name>` is the name of the project as it is stored on GitLab
 
