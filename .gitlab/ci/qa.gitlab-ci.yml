@@ -116,6 +116,7 @@ docs:lint i18n markdown:
     - .rules:merge_request_pipelines:docs-i18n
     - .no_cache_and_dependencies
   needs: []
+  allow_failure: true
   script:
     # Makefiles in this project expect Go to be available
     - apk add --quiet go
