@@ -17,7 +17,7 @@ type osCmd struct {
 
 	// A job object to helper ensure processes are killed, plus a Once
 	// to ensure the job object is only closed one.
-	jobObject uintptr
+	jobObject windows.Handle
 	once      sync.Once
 }
 
@@ -68,7 +68,7 @@ func (c *osCmd) closeJobObject() {
 		return
 	}
 	c.once.Do(func() {
-		windows.CloseHandle(windows.Handle(c.jobObject))
+		windows.CloseHandle(c.jobObject)
 	})
 }
 
@@ -82,7 +82,7 @@ func setProcessGroup(c *exec.Cmd, useLegacyStrategy bool) {
 	}
 }
 
-func createJobObject() (uintptr, error) {
+func createJobObject() (windows.Handle, error) {
 	jobObj, err := windows.CreateJobObject(nil, nil)
 	if err != nil {
 		return 0, fmt.Errorf("creating job object: %w", err)
@@ -102,31 +102,30 @@ func createJobObject() (uintptr, error) {
 		return 0, fmt.Errorf("setting job object information: %w", err)
 	}
 
-	return uintptr(jobObj), nil
+	return jobObj, nil
 }
 
 // Assign the process with specified PID to the specified job object. Processes created as children of that one will
 // also be assigned to the job. When the last handle on the job is closed, all associated processes will be terminated.
-func assignProcessToJobObject(pid int, jobObject uintptr) error {
+func assignProcessToJobObject(pid int, jobObject windows.Handle) error {
 	procHandle, err := findProcessHandleFromPID(pid)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve handle for process: %w", err)
 	}
+	defer windows.CloseHandle(procHandle)
 
-	if err = windows.AssignProcessToJobObject(windows.Handle(jobObject), windows.Handle(procHandle)); err != nil {
+	if err = windows.AssignProcessToJobObject(jobObject, procHandle); err != nil {
 		return fmt.Errorf("failed to assign process to job: %w", err)
 	}
 	return nil
 }
 
-func findProcessHandleFromPID(pid int) (uintptr, error) {
-	const da = windows.PROCESS_TERMINATE | windows.PROCESS_SET_QUOTA
-	h, err := syscall.OpenProcess(da, false, uint32(pid))
+func findProcessHandleFromPID(pid int) (windows.Handle, error) {
+	const desiredAccess = windows.PROCESS_TERMINATE | windows.PROCESS_SET_QUOTA
+	handle, err := windows.OpenProcess(desiredAccess, false, uint32(pid))
 	if err != nil {
 		return 0, fmt.Errorf("calling OpenProcess: %w", err)
 	}
-	if uintptr(h) == 0 {
-		return 0, fmt.Errorf("getting process handle for pid %q", pid)
-	}
-	return uintptr(h), nil
+
+	return handle, nil
 }
