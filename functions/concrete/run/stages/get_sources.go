@@ -712,7 +712,7 @@ func (s GetSources) clearWorktree(ctx context.Context, e *env.Env) error {
 // --- helpers ---
 
 func git(ctx context.Context, e *env.Env, extraEnv map[string]string, args ...string) error {
-	return e.Command(ctx, "git", extraEnv, args...)
+	return e.Command(ctx, e.BundledGit(), e.HelperEnvs(extraEnv), args...)
 }
 
 func hasCommand(ctx context.Context, name string, args ...string) bool {

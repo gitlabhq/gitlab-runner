@@ -43,7 +43,7 @@ func (s ArtifactDownload) Run(ctx context.Context, e *env.Env) error {
 			e.Noticef("Downloading artifacts for %s (%d)...", s.ArtifactName, s.ID)
 		}
 
-		err = e.RunnerCommand(ctx, nil, args...)
+		err = e.RunnerCommand(ctx, e.HelperEnvs(nil), args...)
 		if err == nil {
 			return nil
 		}

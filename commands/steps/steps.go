@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"os"
 	"os/exec"
@@ -50,28 +51,84 @@ func Bootstrap(destination string) error {
 		return err
 	}
 
-	src, err := os.Open(source)
+	if err := copyFile(source, destination, 0o755); err != nil {
+		return fmt.Errorf("failed to copy binary: %w", err)
+	}
+
+	sslSource := "/ca-certs.pem"
+	if _, err := os.Stat(sslSource); err == nil {
+		sslDest := filepath.Join(filepath.Dir(destination), "ca-certs.pem")
+		if err := copyFile(sslSource, sslDest, 0o644); err != nil {
+			return fmt.Errorf("failed to copy ssl certs: %w", err)
+		}
+	}
+
+	gitSource := "/git"
+	if _, err := os.Stat(gitSource); err == nil {
+		gitDest := filepath.Join(filepath.Dir(destination), "git")
+		if err := copyDir(gitSource, gitDest); err != nil {
+			return fmt.Errorf("failed to copy git directory: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func copyDir(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
+			link, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+			return os.Symlink(link, target)
+		}
+
+		if d.IsDir() {
+			return os.MkdirAll(target, info.Mode())
+		}
+
+		return copyFile(path, target, info.Mode())
+	})
+}
+
+func copyFile(src, dst string, mode os.FileMode) error {
+	in, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("failed to open source file %q: %w", source, err)
+		return err
 	}
-	defer func() { _ = src.Close() }()
+	defer func() { _ = in.Close() }()
 
-	dest, err := os.Create(destination)
+	out, err := os.Create(dst)
 	if err != nil {
-		return fmt.Errorf("failed to create destination file: %w", err)
+		return err
 	}
-	defer func() { _ = dest.Close() }()
+	defer func() { _ = out.Close() }()
 
-	_, err = io.Copy(dest, src)
-	if err != nil {
-		return fmt.Errorf("failed to copy file contents: %w", err)
-	}
-
-	if err := dest.Close(); err != nil {
-		return fmt.Errorf("failed to close file: %w", err)
+	if _, err := io.Copy(out, in); err != nil {
+		return err
 	}
 
-	return os.Chmod(destination, 0o755)
+	if err := out.Close(); err != nil {
+		return err
+	}
+
+	return os.Chmod(dst, mode)
 }
 
 //nolint:gocognit

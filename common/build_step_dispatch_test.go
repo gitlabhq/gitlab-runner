@@ -231,11 +231,11 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
 
 	schema, err := stagesToConcreteStep(t.Context(), executor)
 	require.NoError(t, err)
-	require.Equal(t, 2, len(schema))
+	require.Equal(t, 1, len(schema))
 
 	var a, b any
 	require.NoError(t, json.Unmarshal([]byte(expectedJSON), &a))
-	require.NoError(t, json.Unmarshal([]byte(schema[1].Inputs["config"].(string)), &b))
+	require.NoError(t, json.Unmarshal([]byte(schema[0].Inputs["config"].(string)), &b))
 	msg, _ := json.MarshalIndent(b, "", " ")
 	require.Equal(t, a, b, string(msg))
 }

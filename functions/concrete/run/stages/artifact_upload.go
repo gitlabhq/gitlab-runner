@@ -113,7 +113,7 @@ func (s ArtifactUpload) Run(ctx context.Context, e *env.Env) error {
 		args = append(args, "--compression-level", s.CompressionLevel)
 	}
 
-	if err := e.RunnerCommand(ctx, nil, args...); err != nil {
+	if err := e.RunnerCommand(ctx, e.HelperEnvs(nil), args...); err != nil {
 		return fmt.Errorf("uploading artifacts %q: %w", s.ArtifactName, err)
 	}
 

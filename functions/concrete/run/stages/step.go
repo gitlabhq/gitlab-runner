@@ -37,7 +37,7 @@ func (s Step) Run(ctx context.Context, e *env.Env) error {
 	sw.ScriptSections = s.ScriptSections
 
 	script := sw.Build(s.Script)
-	if err := shell(ctx, e, script); err != nil {
+	if err := shell(ctx, e, script, s.Step); err != nil {
 		if s.AllowFailure {
 			e.Warningf("Step %s failed (allow_failure): %v", s.Step, err)
 			return nil
@@ -55,7 +55,7 @@ func (s Step) shouldRun(e *env.Env) bool {
 	return s.OnFailure
 }
 
-func shell(ctx context.Context, e *env.Env, script string) error {
+func shell(ctx context.Context, e *env.Env, script, stepName string) error {
 	isPwsh := e.Shell == "pwsh" || e.Shell == "powershell"
 
 	ext := ".sh"
@@ -96,5 +96,13 @@ func shell(ctx context.Context, e *env.Env, script string) error {
 		cmd = f.Name()
 	}
 
-	return e.Command(ctx, cmd, nil, args...)
+	// any user scripts that would previously be executed in the helper
+	// container benefit from being able to use the bundled git and CA certs
+	var envVars map[string]string
+	switch stepName {
+	case "pre_clone_script", "post_clone_script":
+		envVars = e.HelperEnvs(envVars)
+	}
+
+	return e.Command(ctx, cmd, envVars, args...)
 }

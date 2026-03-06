@@ -44,7 +44,7 @@ target "alpine" {
   matrix = {
     v = flatten([
       for key, values in alpine-platforms : [
-        for plat in values : { version: key, arch: split("/", plat)[1] }
+        for plat in values : { version : key, arch : split("/", plat)[1] }
       ]
     ])
   }
@@ -119,6 +119,25 @@ target "ubi-fips" {
   output = ["type=oci,dest=./../../out/helper-images/ubi-fips-x86_64.tar,tar=true"]
 }
 
+target "concrete" {
+  inherits = ["base"]
+
+  name = "concrete-${replace(platform, "/", "-")}"
+
+  matrix = {
+    platform = common-platforms
+  }
+
+  platforms = [platform]
+  args = {
+    BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner-helper:${RUNNER_IMAGES_VERSION}-concrete"
+  }
+
+  dockerfile = "Dockerfile.concrete"
+
+  output = ["type=oci,dest=./../../out/helper-images/concrete-${split("/", platform)[1] == "amd64" ? "x86_64" : split("/", platform)[1]}.tar,tar=true"]
+}
+
 target "windows" {
   inherits = ["base"]
 
@@ -133,7 +152,7 @@ target "windows" {
     BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner-helper:${RUNNER_IMAGES_VERSION}-${replace(version, ":", "-")}"
     SRC_SUFFIX = ".exe"
     DST_SUFFIX = ".exe"
-    DST_DIR = "/Program Files/gitlab-runner-helper"
+    DST_DIR    = "/Program Files/gitlab-runner-helper"
   }
 
   output = ["type=oci,dest=./../../out/helper-images/windows-${replace(version, ":", "-")}-x86_64.tar,tar=true"]
@@ -152,6 +171,20 @@ target "local-image" {
   tags      = ["gitlab-runner-helper:local"]
 }
 
+target "local-image-concrete" {
+  inherits = ["base"]
+
+  args = {
+    BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner-helper:${RUNNER_IMAGES_VERSION}-concrete"
+  }
+
+  platforms = ["linux/${LOCAL_ARCH}"]
+  output    = ["type=docker"]
+  tags      = ["gitlab-runner-helper:concrete"]
+
+  dockerfile = "Dockerfile.concrete"
+}
+
 group "all" {
   targets = [
     "alpine",
@@ -160,5 +193,6 @@ group "all" {
     "ubuntu-pwsh",
     "ubi-fips",
     "windows",
+    "concrete"
   ]
 }

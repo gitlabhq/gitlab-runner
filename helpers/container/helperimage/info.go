@@ -55,6 +55,7 @@ type Config struct {
 
 	ProxyExec    bool
 	DisableUmask bool
+	Concrete     bool
 }
 
 type creator interface {
