@@ -138,6 +138,13 @@ func TestGzipSanitization(t *testing.T) {
 			content:       []byte("content"),
 			needsEncoding: true,
 		},
+		{
+			name:          "with non-ASCII filename",
+			dir:           "test",
+			file:          "TEST-日本語テスト.txt",
+			content:       []byte("content"),
+			needsEncoding: true,
+		},
 	}
 
 	for _, tt := range tests {
