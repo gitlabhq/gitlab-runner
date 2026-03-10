@@ -436,7 +436,7 @@ func (s *executor) createClone(baseImage string, templateName string) error {
 	return nil
 }
 
-func init() {
+func NewProvider() common.ExecutorProvider {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
 		DefaultSafeDirectoryCheckout:  true,
@@ -465,9 +465,9 @@ func init() {
 		features.Variables = true
 	}
 
-	common.RegisterExecutorProvider("parallels", executors.DefaultExecutorProvider{
+	return executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,
-	})
+	}
 }

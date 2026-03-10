@@ -127,7 +127,8 @@ type Build struct {
 	Hostname         string         `json:"-" yaml:"-"`
 	Runner           *RunnerConfig  `json:"runner"`
 	ExecutorData     ExecutorData
-	ExecutorFeatures FeaturesInfo `json:"-" yaml:"-"`
+	ExecutorFeatures FeaturesInfo     `json:"-" yaml:"-"`
+	ExecutorProvider ExecutorProvider `json:"-" yaml:"-"`
 
 	SafeDirectoryCheckout bool `json:"-" yaml:"-"`
 
@@ -1269,7 +1270,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.printSettingErrors()
 
 	options := b.createExecutorPrepareOptions(ctx, globalConfig)
-	provider := GetExecutorProvider(b.Runner.Executor)
+	provider := b.ExecutorProvider
 	if provider == nil {
 		return errors.New("executor not found")
 	}
@@ -1941,6 +1942,7 @@ func NewBuild(
 	runnerConfig *RunnerConfig,
 	systemInterrupt chan os.Signal,
 	executorData ExecutorData,
+	executorProvider ExecutorProvider,
 ) (*Build, error) {
 	// Attempt to perform a deep copy of the RunnerConfig
 	runnerConfigCopy, err := runnerConfig.DeepCopy()
@@ -1949,12 +1951,13 @@ func NewBuild(
 	}
 
 	return &Build{
-		Job:             jobData,
-		Runner:          runnerConfigCopy,
-		SystemInterrupt: systemInterrupt,
-		ExecutorData:    executorData,
-		startedAt:       time.Now(),
-		secretsResolver: newSecretsResolver,
+		Job:              jobData,
+		Runner:           runnerConfigCopy,
+		SystemInterrupt:  systemInterrupt,
+		ExecutorData:     executorData,
+		ExecutorProvider: executorProvider,
+		startedAt:        time.Now(),
+		secretsResolver:  newSecretsResolver,
 	}, nil
 }
 

@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
@@ -177,9 +175,7 @@ func MakeBuildError(format string, args ...interface{}) error {
 	}
 }
 
-var executorProviders map[string]ExecutorProvider
-
-func validateExecutorProvider(provider ExecutorProvider) error {
+func ValidateExecutorProvider(provider ExecutorProvider) error {
 	if provider.GetDefaultShell() == "" {
 		return errors.New("default shell not implemented")
 	}
@@ -190,69 +186,6 @@ func validateExecutorProvider(provider ExecutorProvider) error {
 
 	if err := provider.GetFeatures(&FeaturesInfo{}); err != nil {
 		return fmt.Errorf("cannot get features: %w", err)
-	}
-
-	return nil
-}
-
-// RegisterExecutorProvider maps an ExecutorProvider to an executor name, i.e. registers it.
-func RegisterExecutorProvider(executor string, provider ExecutorProvider) {
-	logrus.Debugln("Registering", executor, "executor...")
-
-	if err := validateExecutorProvider(provider); err != nil {
-		panic("Executor cannot be registered: " + err.Error())
-	}
-
-	if executorProviders == nil {
-		executorProviders = make(map[string]ExecutorProvider)
-	}
-	if _, ok := executorProviders[executor]; ok {
-		panic("Executor already exist: " + executor)
-	}
-	executorProviders[executor] = provider
-}
-
-// RegisterExecutorProviderForTest is like RegisterExecutorProvider, but unregisters the provider on test cleanup.
-func RegisterExecutorProviderForTest(t interface{ Cleanup(func()) }, executor string, provider ExecutorProvider) {
-	RegisterExecutorProvider(executor, provider)
-
-	t.Cleanup(func() {
-		delete(executorProviders, executor)
-	})
-}
-
-// GetExecutorProvider returns an ExecutorProvider by name from the registered ones.
-func GetExecutorProvider(executor string) ExecutorProvider {
-	if executorProviders == nil {
-		return nil
-	}
-
-	provider := executorProviders[executor]
-	return provider
-}
-
-// GetExecutorNames returns a list of all registered executor names.
-func GetExecutorNames() []string {
-	var names []string
-	for name := range executorProviders {
-		names = append(names, name)
-	}
-	return names
-}
-
-// GetExecutorProviders returns a list of all registered executor providers.
-func GetExecutorProviders() []ExecutorProvider {
-	var providers []ExecutorProvider
-	for _, executorProvider := range executorProviders {
-		providers = append(providers, executorProvider)
-	}
-	return providers
-}
-
-func NewExecutor(executor string) Executor {
-	provider := GetExecutorProvider(executor)
-	if provider != nil {
-		return provider.Create()
 	}
 
 	return nil

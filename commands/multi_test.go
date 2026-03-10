@@ -22,6 +22,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	helper_test "gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
@@ -83,16 +84,13 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	p := common.NewMockExecutorProvider(t)
 	p.On("Acquire", mock.Anything).Return(nil, nil)
 	p.On("Release", mock.Anything, mock.Anything).Return(nil).Maybe()
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil)
 	p.On("Create").Return(e)
 
-	common.RegisterExecutorProviderForTest(t, "multi-runner-build-limit", p)
-
 	cmd := RunCommand{
-		network:      mNetwork,
-		buildsHelper: newBuildsHelper(),
+		network:           mNetwork,
+		executorProviders: executors.NewProviderRegistry(map[string]common.ExecutorProvider{"multi-runner-build-limit": p}),
+		buildsHelper:      newBuildsHelper(),
 		configfile: configfile.New("", configfile.WithExistingConfig(
 			&common.Config{User: "git"},
 		), configfile.WithSystemID(common.UnknownSystemID)),

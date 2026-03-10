@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
@@ -42,7 +43,8 @@ func TestInteractiveTerminal(t *testing.T) {
 				},
 			},
 		},
-		Session: sess,
+		ExecutorProvider: docker_executor.NewProvider(),
+		Session:          sess,
 	}
 
 	// Start build

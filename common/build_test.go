@@ -187,14 +187,12 @@ func TestBuildPanic(t *testing.T) {
 
 			tt.setupMockExecutor(executor)
 
-			RegisterExecutorProviderForTest(t, t.Name(), provider)
-
 			res, err := GetSuccessfulBuild()
 			require.NoError(t, err)
 
 			cfg := &RunnerConfig{}
 			cfg.Executor = t.Name()
-			build, err := NewBuild(res, cfg, nil, nil)
+			build, err := NewBuild(res, cfg, nil, nil, provider)
 			require.NoError(t, err)
 			var out bytes.Buffer
 			err = build.Run(&Config{}, &Trace{Writer: &out})
@@ -282,11 +280,7 @@ func TestRetryPrepare(t *testing.T) {
 	e := NewMockExecutor(t)
 	p := NewMockExecutorProvider(t)
 
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
+	p.On("GetFeatures", mock.Anything).Return(nil).Once()
 	p.On("Create").Return(e).Times(3)
 
 	// Prepare plan
@@ -312,11 +306,7 @@ func TestPrepareFailure(t *testing.T) {
 	e := NewMockExecutor(t)
 	p := NewMockExecutorProvider(t)
 
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
+	p.On("GetFeatures", mock.Anything).Return(nil).Once()
 	p.On("Create").Return(e).Times(3)
 
 	// Prepare plan
@@ -348,9 +338,7 @@ func TestPrepareEnvironmentFailure(t *testing.T) {
 	e := NewMockExecutor(t)
 	p := NewMockExecutorProvider(t)
 
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+	p.On("GetFeatures", mock.Anything).Return(nil).Once()
 	p.On("Create").Return(e).Once()
 
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
@@ -358,8 +346,6 @@ func TestPrepareEnvironmentFailure(t *testing.T) {
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(testErr).Once()
 	e.On("Finish", mock.Anything).Once()
-
-	RegisterExecutorProviderForTest(t, "build-run-prepare-environment-failure-on-build-error", p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -370,6 +356,7 @@ func TestPrepareEnvironmentFailure(t *testing.T) {
 				Executor: "build-run-prepare-environment-failure-on-build-error",
 			},
 		},
+		ExecutorProvider: p,
 	}
 
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
@@ -390,8 +377,6 @@ func TestJobFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", thrownErr).Once()
 
-	RegisterExecutorProviderForTest(t, "build-run-job-failure", provider)
-
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
 	build := &Build{
@@ -401,6 +386,7 @@ func TestJobFailure(t *testing.T) {
 				Executor: "build-run-job-failure",
 			},
 		},
+		ExecutorProvider: provider,
 	}
 
 	trace := NewMockLightJobTrace(t)
@@ -467,8 +453,6 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", errors.New("build fail")).Once()
 
-	RegisterExecutorProviderForTest(t, "build-run-run-failure", provider)
-
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
 	build := &Build{
@@ -478,6 +462,7 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 				Executor: "build-run-run-failure",
 			},
 		},
+		ExecutorProvider: provider,
 	}
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
@@ -2352,9 +2337,7 @@ func setupMockExecutorAndProvider(t *testing.T) (*MockExecutor, *MockExecutorPro
 	e := NewMockExecutor(t)
 	p := NewMockExecutorProvider(t)
 
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+	p.On("GetFeatures", mock.Anything).Return(nil).Once()
 	p.On("Create").Return(e).Once()
 
 	return e, p
@@ -2363,15 +2346,13 @@ func setupMockExecutorAndProvider(t *testing.T) (*MockExecutor, *MockExecutorPro
 func registerExecutorWithSuccessfulBuild(t *testing.T, p *MockExecutorProvider, rc *RunnerConfig) *Build {
 	require.NotNil(t, rc)
 
-	RegisterExecutorProviderForTest(t, t.Name(), p)
-
 	successfulBuild, err := GetSuccessfulBuild()
 	require.NoError(t, err)
 	if rc.RunnerSettings.Executor == "" {
 		// Ensure we set the executor name if not already defined
 		rc.RunnerSettings.Executor = t.Name()
 	}
-	build, err := NewBuild(successfulBuild, rc, nil, nil)
+	build, err := NewBuild(successfulBuild, rc, nil, nil, p)
 	assert.NoError(t, err)
 	return build
 }
@@ -2392,13 +2373,7 @@ func TestSecretsResolving(t *testing.T) {
 	}
 
 	setupFailureExecutorMocks := func(t *testing.T) *MockExecutorProvider {
-		p := NewMockExecutorProvider(t)
-
-		p.On("CanCreate").Return(true).Once()
-		p.On("GetDefaultShell").Return("bash").Once()
-		p.On("GetFeatures", mock.Anything).Return(nil).Once()
-
-		return p
+		return NewMockExecutorProvider(t)
 	}
 
 	secrets := spec.Secrets{
@@ -2461,8 +2436,6 @@ func TestSecretsResolving(t *testing.T) {
 			secretsResolverMock := NewMockSecretsResolver(t)
 			p := tt.prepareExecutorProvider(t)
 
-			RegisterExecutorProviderForTest(t, t.Name(), p)
-
 			successfulBuild, err := GetSuccessfulBuild()
 			require.NoError(t, err)
 
@@ -2477,7 +2450,7 @@ func TestSecretsResolving(t *testing.T) {
 			rc := new(RunnerConfig)
 			rc.RunnerSettings.Executor = t.Name()
 
-			build, err := NewBuild(successfulBuild, rc, nil, nil)
+			build, err := NewBuild(successfulBuild, rc, nil, nil, p)
 			assert.NoError(t, err)
 
 			build.secretsResolver = func(_ logger, _ SecretResolverRegistry, _ func(string) bool) (SecretsResolver, error) {
@@ -3108,8 +3081,6 @@ func TestBuildStageMetricsFailBuild(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", thrownErr).Once()
 
-	RegisterExecutorProviderForTest(t, t.Name(), provider)
-
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
 	build := &Build{
@@ -3119,6 +3090,7 @@ func TestBuildStageMetricsFailBuild(t *testing.T) {
 				Executor: t.Name(),
 			},
 		},
+		ExecutorProvider: provider,
 	}
 
 	build.Runner.Environment = append(build.Runner.Environment, fmt.Sprintf("%s=true", featureflags.ExportHighCardinalityMetrics))
@@ -3151,10 +3123,11 @@ func TestBuildStageMetricsFailBuild(t *testing.T) {
 }
 
 func TestBuildDurationsAndBoundaryTimes(t *testing.T) {
+	p := NewMockExecutorProvider(t)
 	rc := new(RunnerConfig)
 	rc.RunnerSettings.Executor = t.Name()
 
-	build, err := NewBuild(spec.Job{}, rc, nil, nil)
+	build, err := NewBuild(spec.Job{}, rc, nil, nil, p)
 	require.NoError(t, err)
 
 	startedAt1 := build.StartedAt()
@@ -3223,19 +3196,15 @@ func TestBuild_RunCallsEnsureFinishedAt(t *testing.T) {
 			executor.EXPECT().Cleanup()
 
 			ep := NewMockExecutorProvider(t)
-			ep.EXPECT().GetDefaultShell().Return("bash")
-			ep.EXPECT().CanCreate().Return(true)
 			ep.EXPECT().GetFeatures(mock.Anything).Return(nil)
 			ep.EXPECT().Create().Return(executor)
-
-			RegisterExecutorProviderForTest(t, t.Name(), ep)
 
 			rc := new(RunnerConfig)
 			rc.RunnerSettings.Executor = t.Name()
 
 			interrupt := make(chan os.Signal, 1)
 
-			build, err := NewBuild(spec.Job{}, rc, interrupt, nil)
+			build, err := NewBuild(spec.Job{}, rc, interrupt, nil, ep)
 			require.NoError(t, err)
 
 			// Some of the job execution steps use the configurable number of attempts
@@ -3369,14 +3338,13 @@ func TestExpandingInputs(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	setup := func(t *testing.T) {
+	setup := func(t *testing.T) ExecutorProvider {
 		t.Helper()
 
-		p := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
-		RegisterExecutorProviderForTest(t, t.Name(), p)
+		return setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
 	}
 
-	run := func(t *testing.T, job spec.Job, ffEnabled bool) *Build {
+	run := func(t *testing.T, job spec.Job, ffEnabled bool, p ExecutorProvider) *Build {
 		build, err := NewBuild(
 			job,
 			&RunnerConfig{RunnerSettings: RunnerSettings{
@@ -3385,6 +3353,7 @@ func TestExpandingInputs(t *testing.T) {
 			}},
 			nil,
 			nil,
+			p,
 		)
 		require.NoError(t, err)
 		err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
@@ -3394,6 +3363,7 @@ func TestExpandingInputs(t *testing.T) {
 	}
 
 	t.Run("fail to expand inputs", func(t *testing.T) {
+		p := NewMockExecutorProvider(t)
 		job := spec.Job{
 			Inputs: inputs,
 			Steps: spec.Steps{
@@ -3413,6 +3383,7 @@ func TestExpandingInputs(t *testing.T) {
 			}},
 			nil,
 			nil,
+			p,
 		)
 		require.NoError(t, err)
 
@@ -3426,7 +3397,7 @@ func TestExpandingInputs(t *testing.T) {
 	})
 
 	t.Run("expand inputs in step script", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3439,13 +3410,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, "echo 'Input is: any-value'", build.Steps[0].Script[0])
 	})
 
 	t.Run("do not expand inputs in step script with FF disabled", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3458,13 +3429,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, false)
+		build := run(t, job, false, p)
 
 		assert.Equal(t, "echo 'Input is: ${{ job.inputs.any_input }}'", build.Steps[0].Script[0])
 	})
 
 	t.Run("expand inputs in step after_script", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3482,13 +3453,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, "echo 'Input is: any-value'", build.Steps[1].Script[0])
 	})
 
 	t.Run("expand inputs in image name", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3504,13 +3475,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, "any-value-image:latest", build.Image.Name)
 	})
 
 	t.Run("expand inputs in image entrypoint", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3527,13 +3498,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, []string{"/bin/sh", "-c", "echo any-value"}, build.Image.Entrypoint)
 	})
 
 	t.Run("expand inputs in image command", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3555,7 +3526,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		expected := []string{
 			"/bin/sh",
@@ -3567,7 +3538,7 @@ func TestExpandingInputs(t *testing.T) {
 	})
 
 	t.Run("expand inputs in docker platform", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3588,13 +3559,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, "linux/any-value", build.Image.ExecutorOptions.Docker.Platform)
 	})
 
 	t.Run("expand inputs in docker user", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3615,13 +3586,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, spec.StringOrInt64("any-value"), build.Image.ExecutorOptions.Docker.User)
 	})
 
 	t.Run("expand inputs in kubernetes user", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3642,13 +3613,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, spec.StringOrInt64("any-value"), build.Image.ExecutorOptions.Kubernetes.User)
 	})
 
 	t.Run("expand inputs in pull policies", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3665,13 +3636,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, []DockerPullPolicy{"any-value-if-not-present"}, build.Image.PullPolicies)
 	})
 
 	t.Run("expand inputs in cache key", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3689,13 +3660,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, "any-value-cache-key", build.Cache[0].Key)
 	})
 
 	t.Run("expand inputs in cache fallback keys", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3718,7 +3689,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		expected := spec.CacheFallbackKeys{
 			"any-value-fallback-1",
@@ -3729,7 +3700,7 @@ func TestExpandingInputs(t *testing.T) {
 	})
 
 	t.Run("expand inputs in cache paths", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3752,7 +3723,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		expected := spec.ArtifactPaths{
 			"any-value/cache",
@@ -3763,7 +3734,7 @@ func TestExpandingInputs(t *testing.T) {
 	})
 
 	t.Run("expand inputs in cache when", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3782,13 +3753,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, spec.CacheWhen("on_any-value"), build.Cache[0].When)
 	})
 
 	t.Run("expand inputs in cache policy", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3807,13 +3778,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, spec.CachePolicy("any-value-push"), build.Cache[0].Policy)
 	})
 
 	t.Run("expand inputs in artifact name", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3831,13 +3802,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, "any-value-artifact", build.Artifacts[0].Name)
 	})
 
 	t.Run("expand inputs in artifact paths", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3860,7 +3831,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		expected := spec.ArtifactPaths{
 			"any-value/artifacts",
@@ -3871,7 +3842,7 @@ func TestExpandingInputs(t *testing.T) {
 	})
 
 	t.Run("expand inputs in artifact exclude", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3894,7 +3865,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		expected := spec.ArtifactExclude{
 			"any-value/exclude",
@@ -3905,7 +3876,7 @@ func TestExpandingInputs(t *testing.T) {
 	})
 
 	t.Run("expand inputs in artifact expire_in", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3924,13 +3895,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, "any-value days", build.Artifacts[0].ExpireIn)
 	})
 
 	t.Run("expand inputs in artifact when", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3949,13 +3920,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, spec.ArtifactWhen("on_any-value"), build.Artifacts[0].When)
 	})
 
 	t.Run("expand inputs in service name", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3973,13 +3944,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, "any-value-service:latest", build.Services[0].Name)
 	})
 
 	t.Run("expand inputs in service entrypoint", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -3998,13 +3969,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, []string{"/bin/sh", "-c", "echo any-value"}, build.Services[0].Entrypoint)
 	})
 
 	t.Run("expand inputs in service docker platform", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -4027,13 +3998,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, "linux/any-value", build.Services[0].ExecutorOptions.Docker.Platform)
 	})
 
 	t.Run("expand inputs in service docker user", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -4056,13 +4027,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, spec.StringOrInt64("any-value"), build.Services[0].ExecutorOptions.Docker.User)
 	})
 
 	t.Run("expand inputs in service kubernetes user", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -4085,13 +4056,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, spec.StringOrInt64("any-value"), build.Services[0].ExecutorOptions.Kubernetes.User)
 	})
 
 	t.Run("expand inputs in service pull policies", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -4110,13 +4081,13 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		assert.Equal(t, []spec.PullPolicy{"any-value-if-not-present"}, build.Services[0].PullPolicies)
 	})
 
 	t.Run("expand inputs in service command", func(t *testing.T) {
-		setup(t)
+		p := setup(t)
 
 		job := spec.Job{
 			Inputs: inputs,
@@ -4140,7 +4111,7 @@ func TestExpandingInputs(t *testing.T) {
 			},
 		}
 
-		build := run(t, job, true)
+		build := run(t, job, true, p)
 
 		expected := []string{
 			"/bin/sh",

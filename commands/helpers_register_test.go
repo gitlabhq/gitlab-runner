@@ -13,13 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
 var RegisterTimeNowDate = time.Date(2020, 01, 01, 10, 10, 10, 0, time.UTC)
 
 // NewRegisterCommandForTest exposes RegisterCommand to integration tests
-func NewRegisterCommandForTest(reader *bufio.Reader, network common.Network) *RegisterCommand {
-	cmd := newRegisterCommand(network)
+func NewRegisterCommandForTest(reader *bufio.Reader, network common.Network, executorProviders executors.Providers) *RegisterCommand {
+	cmd := newRegisterCommand(network, executorProviders)
 	cmd.reader = reader
 	cmd.timeNowFn = func() time.Time {
 		return RegisterTimeNowDate

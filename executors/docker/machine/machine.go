@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker" // Force to load docker executor
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
@@ -187,6 +186,6 @@ func (e *machineExecutor) TerminalConnect() (terminal.Conn, error) {
 	return nil, errors.New("executor does not have terminal")
 }
 
-func init() {
-	common.RegisterExecutorProvider("docker+machine", newMachineProvider())
+func NewProvider(dockerProvider common.ExecutorProvider) common.ExecutorProvider {
+	return newMachineProvider(dockerProvider)
 }

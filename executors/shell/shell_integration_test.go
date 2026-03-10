@@ -30,7 +30,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/shell"
+	shell_executor "gitlab.com/gitlab-org/gitlab-runner/executors/shell"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
@@ -41,6 +41,8 @@ import (
 )
 
 const integrationTestShellExecutor = "shell-integration-test"
+
+var runnerPath string
 
 func TestMain(m *testing.M) {
 	code := 1
@@ -56,9 +58,7 @@ func TestMain(m *testing.M) {
 	}
 	defer os.RemoveAll(targetDir)
 
-	path := buildtest.MustBuildBinary("../..", filepath.Join(targetDir, "gitlab-runner-integration"))
-
-	shell.RegisterExecutor(integrationTestShellExecutor, path)
+	runnerPath = buildtest.MustBuildBinary("../..", filepath.Join(targetDir, "gitlab-runner-integration"))
 
 	code = m.Run()
 }
@@ -135,7 +135,8 @@ func newBuild(t *testing.T, getBuildResponse spec.Job, shell string) *common.Bui
 				Cache:               &cacheconfig.Config{},
 			},
 		},
-		SystemInterrupt: make(chan os.Signal, 1),
+		ExecutorProvider: shell_executor.NewProvider(runnerPath),
+		SystemInterrupt:  make(chan os.Signal, 1),
 		Session: &session.Session{
 			DisconnectCh: make(chan error),
 			TimeoutCh:    make(chan error),
@@ -164,7 +165,7 @@ func TestBuildPassingEnvsMultistep(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
 
-		buildtest.RunBuildWithPassingEnvsMultistep(t, build.Runner, nil)
+		buildtest.RunBuildWithPassingEnvsMultistep(t, build.Runner, copyExecProvider(build))
 	})
 }
 
@@ -172,7 +173,7 @@ func TestBuildPassingEnvsJobIsolation(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
 
-		buildtest.RunBuildWithPassingEnvsJobIsolation(t, build.Runner, nil)
+		buildtest.RunBuildWithPassingEnvsJobIsolation(t, build.Runner, copyExecProvider(build))
 	})
 }
 
@@ -376,7 +377,7 @@ func TestBuildCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
 
-		buildtest.RunBuildWithCancel(t, build.Runner, nil)
+		buildtest.RunBuildWithCancel(t, build.Runner, copyExecProvider(build))
 	})
 }
 
@@ -384,7 +385,7 @@ func TestBuildWithExecutorCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
 
-		buildtest.RunBuildWithExecutorCancel(t, build.Runner, nil)
+		buildtest.RunBuildWithExecutorCancel(t, build.Runner, copyExecProvider(build))
 	})
 }
 
@@ -392,7 +393,7 @@ func TestBuildMasking(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
 
-		buildtest.RunBuildWithMasking(t, build.Runner, nil)
+		buildtest.RunBuildWithMasking(t, build.Runner, copyExecProvider(build))
 	})
 }
 
@@ -402,14 +403,14 @@ func TestBuildMaskingProxyExec(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
 
-		buildtest.RunBuildWithMaskingProxyExec(t, build.Runner, nil)
+		buildtest.RunBuildWithMaskingProxyExec(t, build.Runner, copyExecProvider(build))
 	})
 }
 
 func TestBuildExpandedFileVariable(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
-		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, nil)
+		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, copyExecProvider(build))
 	})
 }
 
@@ -1933,7 +1934,7 @@ func TestBuildLogLimitExceeded(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
 
-		buildtest.RunBuildWithJobOutputLimitExceeded(t, build.Runner, nil)
+		buildtest.RunBuildWithJobOutputLimitExceeded(t, build.Runner, copyExecProvider(build))
 	})
 }
 
@@ -2920,4 +2921,10 @@ func withMaskedPassword(t *testing.T, orgURL string) string {
 	require.NoError(t, err, "compiling RE %q", pattern)
 
 	return re.ReplaceAllString(orgURL, "${1}[MASKED]${3}")
+}
+
+func copyExecProvider(build *common.Build) func(*testing.T, *common.Build) {
+	return func(t *testing.T, b *common.Build) {
+		b.ExecutorProvider = build.ExecutorProvider
+	}
 }

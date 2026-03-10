@@ -10,8 +10,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -150,17 +148,7 @@ func (s *executor) shellScriptArgs(cmd common.ExecutorCommand, args []string) (i
 	return nil, append(args, scriptFile), cleanup, nil
 }
 
-func init() {
-	// Look for self
-	runnerCommand, err := os.Executable()
-	if err != nil {
-		logrus.Warningln(err)
-	}
-
-	RegisterExecutor("shell", runnerCommand)
-}
-
-func RegisterExecutor(executorName string, runnerCommandPath string) {
+func NewProvider(runnerCommandPath string) common.ExecutorProvider {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
 		DefaultSafeDirectoryCheckout:  false,
@@ -193,9 +181,9 @@ func RegisterExecutor(executorName string, runnerCommandPath string) {
 		}
 	}
 
-	common.RegisterExecutorProvider(executorName, executors.DefaultExecutorProvider{
+	return executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,
-	})
+	}
 }

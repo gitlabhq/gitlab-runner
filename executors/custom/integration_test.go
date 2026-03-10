@@ -37,6 +37,8 @@ var (
 
 const integrationTestCustomExecutor = "custom-integration-test"
 
+var runnerPath string
+
 func TestMain(m *testing.M) {
 	code := 1
 	defer func() {
@@ -54,8 +56,7 @@ func TestMain(m *testing.M) {
 	testExecutorFile = filepath.Join(targetDir, "main")
 	testExecutorFile = buildtest.MustBuildBinary("testdata/test_executor/main.go", testExecutorFile)
 
-	path := buildtest.MustBuildBinary("../..", filepath.Join(targetDir, "gitlab-runner-integration"))
-	custom.RegisterExecutor(integrationTestCustomExecutor, path)
+	runnerPath = buildtest.MustBuildBinary("../..", filepath.Join(targetDir, "gitlab-runner-integration"))
 
 	code = m.Run()
 }
@@ -89,7 +90,8 @@ func newBuild(t *testing.T, jobResponse spec.Job, shell string) *common.Build {
 				},
 			},
 		},
-		SystemInterrupt: make(chan os.Signal, 1),
+		ExecutorProvider: custom.NewProvider(runnerPath),
+		SystemInterrupt:  make(chan os.Signal, 1),
 		Session: &session.Session{
 			DisconnectCh: make(chan error),
 			TimeoutCh:    make(chan error),
@@ -240,7 +242,7 @@ func TestBuildCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
 
-		buildtest.RunBuildWithCancel(t, build.Runner, nil)
+		buildtest.RunBuildWithCancel(t, build.Runner, setupExecutor)
 	})
 }
 
@@ -248,7 +250,7 @@ func TestBuildMasking(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
 
-		buildtest.RunBuildWithMasking(t, build.Runner, nil)
+		buildtest.RunBuildWithMasking(t, build.Runner, setupExecutor)
 	})
 }
 
@@ -600,7 +602,7 @@ func TestBuildLogLimitExceeded(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
 
-		buildtest.RunBuildWithJobOutputLimitExceeded(t, build.Runner, nil)
+		buildtest.RunBuildWithJobOutputLimitExceeded(t, build.Runner, setupExecutor)
 	})
 }
 
@@ -682,4 +684,8 @@ func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
 
 		buildtest.RunBuildWithCleanupRecursiveSubmoduleStrategy(t, build, untrackedFile, untrackedSubmoduleFile, untrackedSubSubmoduleFile)
 	})
+}
+
+func setupExecutor(t *testing.T, build *common.Build) {
+	build.ExecutorProvider = custom.NewProvider(runnerPath)
 }

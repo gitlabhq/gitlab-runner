@@ -71,7 +71,7 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func init() {
+func NewProvider() common.ExecutorProvider {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
 		DefaultSafeDirectoryCheckout:  false,
@@ -99,9 +99,9 @@ func init() {
 		features.Shared = true
 	}
 
-	common.RegisterExecutorProvider("ssh", executors.DefaultExecutorProvider{
+	return executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,
-	})
+	}
 }

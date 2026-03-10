@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -13,6 +14,17 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/custom"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/autoscaler"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/machine"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/instance"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/parallels"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/shell"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
@@ -25,16 +37,6 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/gcsv2"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/s3"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/s3v2"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/custom"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/autoscaler"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/machine"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/instance"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/parallels"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/shell"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/aws"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/azure_key_vault"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/gcp_secret_manager"
@@ -58,8 +60,16 @@ func main() {
 		}
 	}()
 
+	executorProviders := newExecutorProviders()
+	for name, provider := range executorProviders.All() {
+		err := common.ValidateExecutorProvider(provider)
+		if err != nil {
+			panic(fmt.Sprintf("Executor %s cannot be registered: %v", name, err))
+		}
+	}
+
 	fips.Check()
-	gitLabClient, clientShutdown, apiRequestsCollector := newClient()
+	gitLabClient, clientShutdown, apiRequestsCollector := newClient(executorProviders)
 	defer clientShutdown()
 
 	app := cli.NewApp()
@@ -73,7 +83,7 @@ func main() {
 			Email: "support@gitlab.com",
 		},
 	}
-	app.Commands = newCommands(gitLabClient, apiRequestsCollector)
+	app.Commands = newCommands(gitLabClient, apiRequestsCollector, executorProviders)
 	app.CommandNotFound = func(context *cli.Context, command string) {
 		logrus.Fatalln("Command", command, "not found.")
 	}
@@ -91,13 +101,13 @@ func main() {
 	}
 }
 
-func newCommands(n common.Network, apiRequestsCollector *network.APIRequestsCollector) []cli.Command {
+func newCommands(n common.Network, apiRequestsCollector *network.APIRequestsCollector, executorProviders executors.Providers) []cli.Command {
 	cmds := []cli.Command{
 		commands.NewListCommand(),
-		commands.NewRegisterCommand(n),
+		commands.NewRegisterCommand(n, executorProviders),
 		commands.NewResetTokenCommand(n),
-		commands.NewRunCommand(n, apiRequestsCollector),
-		commands.NewRunSingleCommand(n),
+		commands.NewRunCommand(n, apiRequestsCollector, executorProviders),
+		commands.NewRunSingleCommand(n, executorProviders),
 		commands.NewRunnerWrapperCommand(),
 		commands.NewUnregisterCommand(n),
 		commands.NewVerifyCommand(n),
@@ -116,13 +126,14 @@ func newCommands(n common.Network, apiRequestsCollector *network.APIRequestsColl
 	return cmds
 }
 
-func newClient() (common.Network, func(), *network.APIRequestsCollector) {
+func newClient(executorProviders executors.Providers) (common.Network, func(), *network.APIRequestsCollector) {
 	apiRequestsCollector := network.NewAPIRequestsCollector()
 	certDir := commands.GetDefaultCertificateDirectory()
 
 	mainClient := network.NewGitLabClient(
 		network.WithAPIRequestsCollector(apiRequestsCollector),
 		network.WithCertificateDirectory(certDir),
+		network.WithExecutorProviderFunc(executorProviders.GetByName),
 	)
 	if os.Getenv(featureflags.UseJobRouter) != "true" {
 		return mainClient, func() {}, apiRequestsCollector
@@ -133,4 +144,26 @@ func newClient() (common.Network, func(), *network.APIRequestsCollector) {
 		common.AppVersion.UserAgent(),
 	)
 	return rc, rc.Shutdown, apiRequestsCollector
+}
+
+func newExecutorProviders() *executors.ProviderRegistry {
+	runnerCommand, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	dockerProvider := docker.NewProvider()
+
+	return executors.NewProviderRegistry(map[string]common.ExecutorProvider{
+		"shell":                   shell.NewProvider(runnerCommand),
+		"custom":                  custom.NewProvider(runnerCommand),
+		"instance":                instance.NewProvider(runnerCommand),
+		"docker":                  dockerProvider,
+		"docker-windows":          docker.NewWindowsProvider(),
+		"docker-autoscaler":       autoscaler.NewProvider(dockerProvider),
+		"docker+machine":          machine.NewProvider(dockerProvider),
+		common.ExecutorKubernetes: kubernetes.NewProvider(),
+		"ssh":                     ssh.NewProvider(),
+		"parallels":               parallels.NewProvider(),
+		"virtualbox":              virtualbox.NewProvider(),
+	})
 }

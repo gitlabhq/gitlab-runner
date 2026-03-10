@@ -363,7 +363,7 @@ func (s *executor) Cleanup() {
 	}
 }
 
-func init() {
+func NewProvider() common.ExecutorProvider {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
 		DefaultSafeDirectoryCheckout:  true,
@@ -392,9 +392,9 @@ func init() {
 		features.Variables = true
 	}
 
-	common.RegisterExecutorProvider("virtualbox", executors.DefaultExecutorProvider{
+	return executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,
-	})
+	}
 }

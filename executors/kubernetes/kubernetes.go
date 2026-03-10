@@ -3624,8 +3624,8 @@ func featuresFn(features *common.FeaturesInfo) {
 	features.Variables = true
 }
 
-func init() {
-	common.RegisterExecutorProvider(common.ExecutorKubernetes, executorProvider{
+func NewProvider() common.ExecutorProvider {
+	return executorProvider{
 		DefaultExecutorProvider: executors.DefaultExecutorProvider{
 			Creator: func() common.Executor {
 				return newExecutor()
@@ -3633,5 +3633,5 @@ func init() {
 			FeaturesUpdater:  featuresFn,
 			DefaultShellName: executorOptions.Shell.Shell,
 		},
-	})
+	}
 }

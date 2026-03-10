@@ -20,6 +20,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/autoscaler"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -85,11 +87,13 @@ func newRunnerConfig(t *testing.T, shell string) *common.RunnerConfig {
 }
 
 func setupAcquireBuild(t *testing.T, build *common.Build) {
-	provider := common.GetExecutorProvider("docker-autoscaler")
+	dockerProvider := docker_executor.NewProvider()
+	provider := autoscaler.NewProvider(dockerProvider)
 	data, err := provider.Acquire(build.Runner)
 	require.NoError(t, err)
 
 	build.ExecutorData = data
+	build.ExecutorProvider = provider
 	t.Cleanup(func() {
 		provider.Release(build.Runner, build.ExecutorData)
 

@@ -651,12 +651,8 @@ func (m *machineProvider) Create() common.Executor {
 	}
 }
 
-func newMachineProvider() *machineProvider {
+func newMachineProvider(provider common.ExecutorProvider) *machineProvider {
 	name := "docker+machine"
-	provider := common.GetExecutorProvider("docker")
-	if provider == nil {
-		logrus.Panicln("docker executor provider not initialized")
-	}
 
 	return &machineProvider{
 		name:     name,

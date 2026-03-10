@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
@@ -254,7 +255,7 @@ func testMachineProvider(machine ...string) (*machineProvider, *testMachine) {
 		Removed:  make(chan bool, 10),
 		Stopped:  make(chan bool, 10),
 	}
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = t
 	return p, t
 }
@@ -361,7 +362,7 @@ func TestMachineReuse(t *testing.T) {
 		},
 	}
 
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 
 	machineMock := docker.NewMockMachine(t)
 	p.machine = machineMock
@@ -419,7 +420,7 @@ func TestMachineReuseWithContention(t *testing.T) {
 		},
 	}
 
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 
 	machineMock := docker.NewMockMachine(t)
 	p.machine = machineMock
@@ -806,7 +807,7 @@ func TestIntermediateMachineList(t *testing.T) {
 func TestMachineOptionsWithName(t *testing.T) {
 	provisionRetryInterval = 0
 
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 	machineMock := docker.NewMockMachine(t)
 	p.machine = machineMock
 
@@ -847,7 +848,7 @@ func TestMachineOptionsWithName(t *testing.T) {
 func TestMachineOptionsWithNameEmpty(t *testing.T) {
 	provisionRetryInterval = 0
 
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 	machineMock := docker.NewMockMachine(t)
 	p.machine = machineMock
 

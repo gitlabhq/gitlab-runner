@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	shell_executor "gitlab.com/gitlab-org/gitlab-runner/executors/shell"
 )
 
 func TestBuildsHelperCollect(t *testing.T) {
@@ -44,6 +45,7 @@ func TestBuildsHelperCollect(t *testing.T) {
 			},
 			SystemID: systemID,
 		},
+		ExecutorProvider: shell_executor.NewProvider("gitlab-runner"),
 	}
 	trace := &common.Trace{Writer: io.Discard}
 

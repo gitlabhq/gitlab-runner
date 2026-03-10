@@ -10,6 +10,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 )
@@ -94,6 +95,7 @@ func Test_StepsIntegration(t *testing.T) {
 						},
 					},
 				},
+				ExecutorProvider: docker_executor.NewProvider(),
 			}
 
 			wantOut := tt.wantOut
