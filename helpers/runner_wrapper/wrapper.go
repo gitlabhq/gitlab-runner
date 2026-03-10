@@ -49,7 +49,7 @@ func New(log logrus.FieldLogger, path string, args []string) *Wrapper {
 		log:                log,
 		path:               path,
 		args:               args,
-		errCh:              make(chan error),
+		errCh:              make(chan error, 1),
 		terminationTimeout: DefaultTerminationTimeout,
 		status:             api.StatusUnknown,
 		commanderFactory:   newDefaultCommander,
