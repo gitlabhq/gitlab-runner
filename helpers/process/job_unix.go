@@ -38,3 +38,8 @@ func setProcessGroup(c *exec.Cmd) {
 		Setpgid: true,
 	}
 }
+
+func EnsureSubprocessTerminationOnExit() error {
+	// Currently unsupported on non-Windows
+	return nil
+}

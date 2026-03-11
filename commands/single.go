@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -172,6 +173,11 @@ func (r *RunSingleCommand) HandleArgs() {
 }
 
 func (r *RunSingleCommand) Execute(c *cli.Context) {
+	err := process.EnsureSubprocessTerminationOnExit()
+	if err != nil {
+		logrus.WithError(err).Warn("Failed to wrap process in job object")
+	}
+
 	r.HandleArgs()
 
 	executorProvider := common.GetExecutorProvider(r.Executor)
