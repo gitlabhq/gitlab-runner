@@ -602,8 +602,8 @@ gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e h1:A
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e/go.mod h1:pKFT8nwdU5KuJYosKMGgMATMrV4AP6p9jRu4HobZaBA=
 gitlab.com/gitlab-org/labkit v1.46.0 h1:peXJAf3ru+zT4iH/jfkA8ZNcQ5zFo7JNGsUug+ldR10=
 gitlab.com/gitlab-org/labkit v1.46.0/go.mod h1:TSgFzQbzLZdtFLhqyFEzDBJrfwD3cfZp+zxsqx6UJac=
-gitlab.com/gitlab-org/moa v0.0.0-20251209091627-66342f721c88 h1:GVlo8Pr4wfXI/6UF+Rmi0Yv2l7lwVgFiNBeImgWVeko=
-gitlab.com/gitlab-org/moa v0.0.0-20251209091627-66342f721c88/go.mod h1:024490ksS75/Bi9UoJTu59qY44JuFBAfi5bzGsLIhtY=
+gitlab.com/gitlab-org/moa v0.0.0-20260311233113-2b1643156012 h1:CiCyn6zDqq4+NAZWf4UhTAd/RmdRfp2lpgOrvVR5cMY=
+gitlab.com/gitlab-org/moa v0.0.0-20260311233113-2b1643156012/go.mod h1:024490ksS75/Bi9UoJTu59qY44JuFBAfi5bzGsLIhtY=
 gitlab.com/gitlab-org/step-runner v0.31.0 h1:c+nP58486UNX56I2GCVAVXJuPvFhHwJkB6/ahU81crs=
 gitlab.com/gitlab-org/step-runner v0.31.0/go.mod h1:05jTcUPyouT+qDUUa742sJl6E3A6ZOMxmyzYpS7xzH4=
 go.etcd.io/bbolt v1.3.5 h1:XAzx9gjCb0Rxj7EoqcClPD1d5ZBxZJk0jbuoPHenBt0=
