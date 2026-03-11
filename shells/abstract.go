@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cachekey"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -118,24 +118,21 @@ func newCacheConfig(build *common.Build, userKey string, keyChecks ...func(strin
 		rawKey = build.GetAllVariables().ExpandValue(userKey)
 	}
 
-	// hashers per mode: nop in unhashed mode, sha256sum in hashed mode
-	hashers := map[bool]func(string) string{
-		false: func(s string) string { return s },
-		true:  func(s string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(s))) },
+	hasher := func(s string) string { return s }
+	sanitizer := cachekey.Sanitize
+	// if hash key support is enabled, we don't need to sanitize keys anymore
+	if build.IsFeatureFlagOn(featureflags.HashCacheKeys) {
+		hasher = func(s string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(s))) }
+		sanitizer = func(s string) (string, error) { return s, nil }
 	}
-	// sanitizers per mode: real sanitizer in unhashed mode, nop sanitizer in hashed mode
-	sanitizers := map[bool]func(string) (string, error){
-		false: sanitizeCacheKey,
-		true:  func(s string) (string, error) { return s, nil },
-	}
-
-	hashCacheKeys := build.IsFeatureFlagOn(featureflags.HashCacheKeys)
-	hasher, sanitizer := hashers[hashCacheKeys], sanitizers[hashCacheKeys]
 
 	var warning string
 	humanKey, err := sanitizer(rawKey)
-	if err != nil {
+	switch {
+	case err != nil:
 		warning = err.Error()
+	case humanKey != rawKey:
+		warning = fmt.Sprintf("cache key %q sanitized to %q", rawKey, humanKey)
 	}
 
 	for _, check := range keyChecks {
@@ -302,68 +299,6 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
 		b.addExtractCacheCommand(ctx, w, info, cacheConfigs, cacheOptions.Paths)
 	})
-}
-
-// sanitizeCacheKey replicates some cache key rules from GitLab and adds additional validations for known-bad cache
-// keys.
-// It accepts that the cache keys can be paths and:
-//   - replaces the URL encoded version of `/` & `.` with their ASCII ones
-//   - replaces all `\` with `/`
-//   - ensures there are no path traversals possible "outside of the base path"
-//   - ensures the last path element is not empty or ends in a space
-func sanitizeCacheKey(cacheKey string) (sanitizedKey string, err error) {
-	if cacheKey == "" {
-		return "", nil
-	}
-
-	replaceEncodedSlashes := func(s string) string {
-		for _, slash := range []string{"%2f", "%2F"} {
-			s = strings.ReplaceAll(s, slash, "/")
-		}
-		return s
-	}
-	replaceEncodedDots := func(s string) string {
-		for _, dot := range []string{"%2e", "%2E"} {
-			s = strings.ReplaceAll(s, dot, ".")
-		}
-		return s
-	}
-	toSlash := func(s string) string {
-		return strings.ReplaceAll(s, `\`, `/`)
-	}
-	trimSpaceRight := func(s string) string {
-		return strings.TrimRightFunc(s, unicode.IsSpace)
-	}
-
-	// We root the path, so that path traversals outside of the base path, e.g. resulting in a key like `../../foo/bar`,
-	// aren't possible
-	// Note: path.Join calls path.Clean internally
-	cleaned := path.Join(
-		"/", toSlash(replaceEncodedSlashes(replaceEncodedDots(cacheKey))),
-	)
-
-	var key string
-	for cleaned != "" {
-		dir, file := path.Split(cleaned)
-		file = trimSpaceRight(file)
-
-		if file == "" {
-			cleaned = dir[:len(dir)-1] // cut off the trailing `/` from dir and continue with that
-			continue
-		}
-
-		key = path.Join(dir[1:], file) // cut off the leading `/` from dir, because we rooted the path initially
-		break
-	}
-
-	if key == "" {
-		return "", fmt.Errorf("cache key %q could not be sanitized", cacheKey)
-	}
-	if key != cacheKey {
-		return key, fmt.Errorf("cache key %q sanitized to %q", cacheKey, key)
-	}
-
-	return key, nil
 }
 
 func (b *AbstractShell) addExtractCacheCommand(
