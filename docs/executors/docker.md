@@ -1295,7 +1295,6 @@ Docker executor:
 - Docker-in-Docker is not supported, because it's
   [not supported](https://github.com/docker-library/docker/issues/49) by
   Docker itself.
-- Interactive web terminals are not supported.
 - Host device mounting not supported.
 - When mounting a volume directory it has to exist, or Docker fails
   to start the container, see

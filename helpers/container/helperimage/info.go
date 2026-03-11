@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/errors"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
@@ -94,5 +95,5 @@ func getPowerShellCmd(shell string) []string {
 		shell = shells.SNPowershell
 	}
 
-	return shells.PowershellDockerCmd(shell)
+	return shells.PowershellDockerCmd(shell, common.NormalShell)
 }

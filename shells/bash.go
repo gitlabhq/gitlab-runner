@@ -431,16 +431,17 @@ func (b *BashShell) GetName() string {
 }
 
 func (b *BashShell) GetEntrypointCommand(info common.ShellScriptInfo, probeFile string) []string {
-	script := b.bashDetectScript(info.Type == common.LoginShell)
+	script := b.bashDetectScript(info.Type == common.LoginShell || info.Type == common.InteractiveShell)
+
 	if probeFile != "" {
 		script = fmt.Sprintf(">'%s'", probeFile) + "; " + script
 	}
 	return []string{"sh", "-c", script}
 }
 
-func (b *BashShell) bashDetectScript(loginShell bool) string {
+func (b *BashShell) bashDetectScript(useLoginOrInteractiveShell bool) string {
 	args := ""
-	if loginShell {
+	if useLoginOrInteractiveShell {
 		args = "-l"
 	}
 
@@ -453,11 +454,11 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shell
 		CmdLine: b.Shell,
 	}
 
-	if info.Type == common.LoginShell {
+	if info.Type == common.LoginShell || info.Type == common.InteractiveShell {
 		script.CmdLine += " -l"
 		script.Arguments = []string{"-l"}
 	}
-	script.DockerCommand = []string{"sh", "-c", b.bashDetectScript(info.Type == common.LoginShell)}
+	script.DockerCommand = []string{"sh", "-c", b.bashDetectScript(info.Type == common.LoginShell || info.Type == common.InteractiveShell)}
 
 	if info.User == "" {
 		return script, nil

@@ -328,7 +328,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tc.getExpectedArguments(tc.shell), shellConfig.Arguments)
 			assert.Equal(t, tc.expectedCommand, shellConfig.Command)
-			assert.Equal(t, PowershellDockerCmd(tc.shell), shellConfig.DockerCommand)
+			assert.Equal(t, PowershellDockerCmd(tc.shell, common.LoginShell), shellConfig.DockerCommand)
 			assert.Equal(t, tc.expectedCmdLine, shellConfig.CmdLine)
 			assert.Equal(t, tc.expectedPassFile, shellConfig.PassFile)
 			assert.Equal(t, "ps1", shellConfig.Extension)
@@ -339,7 +339,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 func TestPowershellCmdArgs(t *testing.T) {
 	for _, tc := range []string{SNPwsh, SNPowershell} {
 		t.Run(tc, func(t *testing.T) {
-			args := PowershellDockerCmd(tc)
+			args := PowershellDockerCmd(tc, common.LoginShell)
 			assert.Equal(t, append([]string{tc}, stdinCmdArgs(tc)...), args)
 		})
 	}
@@ -1003,6 +1003,60 @@ func TestPowershellEntrypointCommand(t *testing.T) {
 
 					actualCommand := shell.GetEntrypointCommand(unusedShellScriptInfo, tc.probeFile)
 					assert.Equal(t, tc.expectedCommand, actualCommand)
+				})
+			}
+		})
+	}
+}
+
+func TestDockerCommand(t *testing.T) {
+	tests := map[string]map[string]struct {
+		shellType common.ShellType
+		expected  []string
+	}{
+		SNPwsh: {
+			"interactive shell": {
+				shellType: common.InteractiveShell,
+				expected:  []string{SNPwsh},
+			},
+			"login shell": {
+				shellType: common.LoginShell,
+				expected:  append([]string{SNPwsh}, stdinCmdArgs(SNPwsh)...),
+			},
+		},
+		SNPowershell: {
+			"interactive shell": {
+				shellType: common.InteractiveShell,
+				expected:  []string{SNPowershell},
+			},
+			"login shell": {
+				shellType: common.LoginShell,
+				expected:  append([]string{SNPowershell}, stdinCmdArgs(SNPowershell)...),
+			},
+		},
+	}
+
+	for shellName, testCases := range tests {
+		t.Run(shellName, func(t *testing.T) {
+			for tn, tc := range testCases {
+				t.Run(tn, func(t *testing.T) {
+					result := PowershellDockerCmd(shellName, tc.shellType)
+					assert.Equal(t, tc.expected, result)
+
+					shell := common.GetShell(shellName)
+					require.NotNil(t, shell)
+
+					info := common.ShellScriptInfo{
+						Shell: shellName,
+						Type:  tc.shellType,
+						Build: &common.Build{
+							Runner: &common.RunnerConfig{},
+						},
+					}
+
+					config, err := shell.GetConfiguration(info)
+					require.NoError(t, err)
+					assert.Equal(t, tc.expected, config.DockerCommand)
 				})
 			}
 		})

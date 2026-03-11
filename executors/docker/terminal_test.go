@@ -69,6 +69,14 @@ func TestCommandExecutor_Connect(t *testing.T) {
 				executor: executor{
 					AbstractExecutor: executors.AbstractExecutor{
 						Context: t.Context(),
+						ExecutorOptions: executors.ExecutorOptions{
+							Shell: common.ShellScriptInfo{
+								Shell: "bash",
+								Build: &common.Build{
+									Runner: &common.RunnerConfig{},
+								},
+							},
+						},
 						BuildShell: &common.ShellConfiguration{
 							DockerCommand: []string{"/bin/sh"},
 						},
@@ -135,6 +143,14 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 				executor: executor{
 					AbstractExecutor: executors.AbstractExecutor{
 						Context: t.Context(),
+						ExecutorOptions: executors.ExecutorOptions{
+							Shell: common.ShellScriptInfo{
+								Shell: "bash",
+								Build: &common.Build{
+									Runner: &common.RunnerConfig{},
+								},
+							},
+						},
 						BuildShell: &common.ShellConfiguration{
 							DockerCommand: []string{"/bin/sh"},
 						},
@@ -233,6 +249,14 @@ func TestTerminalConn_Start(t *testing.T) {
 		executor: executor{
 			AbstractExecutor: executors.AbstractExecutor{
 				Context: t.Context(),
+				ExecutorOptions: executors.ExecutorOptions{
+					Shell: common.ShellScriptInfo{
+						Shell: "bash",
+						Build: &common.Build{
+							Runner: &common.RunnerConfig{},
+						},
+					},
+				},
 				BuildShell: &common.ShellConfiguration{
 					DockerCommand: []string{"/bin/sh"},
 				},
