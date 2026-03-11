@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
@@ -15,7 +16,7 @@ import (
 )
 
 // buildContainerTerminalTimeout is the error used when the build container is
-// not running yet an we have a terminal request waiting for the container to
+// not running yet and we have a terminal request waiting for the container to
 // start and a certain amount of time is exceeded.
 type buildContainerTerminalTimeout struct{}
 
@@ -54,11 +55,21 @@ func (s *commandExecutor) TerminalConnect() (terminalsession.Conn, error) {
 	// `gitlab-terminal` package. There are plans to improve this please take a
 	// look at https://gitlab.com/gitlab-org/gitlab-ce/issues/50384#proposal and
 	// https://gitlab.com/gitlab-org/gitlab-terminal/issues/4
+
 	timeout := s.terminalWaitForContainerTimeout
 	if timeout == 0 {
 		timeout = waitForContainerTimeout
 	}
 	containerID, err := s.watchForRunningBuildContainer(time.Now().Add(timeout))
+	if err != nil {
+		return nil, err
+	}
+
+	interactiveTerminalInfo := *s.Shell()
+	interactiveTerminalInfo.Type = common.InteractiveShell
+
+	interactiveShell, err := common.GetShellConfiguration(interactiveTerminalInfo)
+
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +83,7 @@ func (s *commandExecutor) TerminalConnect() (terminalsession.Conn, error) {
 		executor:    s,
 		client:      s.dockerConn,
 		containerID: containerID,
-		shell:       s.BuildShell.DockerCommand,
+		shell:       interactiveShell.DockerCommand,
 	}, nil
 }
 

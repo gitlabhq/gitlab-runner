@@ -23,8 +23,13 @@ type ShellConfiguration struct {
 type ShellType int
 
 const (
+	// Use NormalShell when running builds inside a Docker container, as it preserves environment variables defined in the Dockerfile.
+	// Use InteractiveShell only when a custom configuration is required for the interactive web terminal.
+	// Use LoginShell in all other scenarios.
+
 	NormalShell ShellType = iota
 	LoginShell
+	InteractiveShell
 )
 
 func (s *ShellConfiguration) String() string {

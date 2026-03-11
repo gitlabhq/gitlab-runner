@@ -308,6 +308,15 @@ func TestBashEntrypointCommand(t *testing.T) {
 			probeFile:       "someFile",
 			expectedCommand: []string{"sh", "-c", ">'someFile'; if [ -x /usr/local/bin/bash ]; then\n\texec /usr/local/bin/bash -l\nelif [ -x /usr/bin/bash ]; then\n\texec /usr/bin/bash -l\nelif [ -x /bin/bash ]; then\n\texec /bin/bash -l\nelif [ -x /usr/local/bin/sh ]; then\n\texec /usr/local/bin/sh -l\nelif [ -x /usr/bin/sh ]; then\n\texec /usr/bin/sh -l\nelif [ -x /bin/sh ]; then\n\texec /bin/sh -l\nelif [ -x /busybox/sh ]; then\n\texec /busybox/sh -l\nelse\n\techo shell not found\n\texit 1\nfi\n\n"},
 		},
+		"interactive shell/no probe": {
+			shellType:       common.InteractiveShell,
+			expectedCommand: []string{"sh", "-c", "if [ -x /usr/local/bin/bash ]; then\n\texec /usr/local/bin/bash -l\nelif [ -x /usr/bin/bash ]; then\n\texec /usr/bin/bash -l\nelif [ -x /bin/bash ]; then\n\texec /bin/bash -l\nelif [ -x /usr/local/bin/sh ]; then\n\texec /usr/local/bin/sh -l\nelif [ -x /usr/bin/sh ]; then\n\texec /usr/bin/sh -l\nelif [ -x /bin/sh ]; then\n\texec /bin/sh -l\nelif [ -x /busybox/sh ]; then\n\texec /busybox/sh -l\nelse\n\techo shell not found\n\texit 1\nfi\n\n"},
+		},
+		"interactive shell/with probe": {
+			shellType:       common.InteractiveShell,
+			probeFile:       "someFile",
+			expectedCommand: []string{"sh", "-c", ">'someFile'; if [ -x /usr/local/bin/bash ]; then\n\texec /usr/local/bin/bash -l\nelif [ -x /usr/bin/bash ]; then\n\texec /usr/bin/bash -l\nelif [ -x /bin/bash ]; then\n\texec /bin/bash -l\nelif [ -x /usr/local/bin/sh ]; then\n\texec /usr/local/bin/sh -l\nelif [ -x /usr/bin/sh ]; then\n\texec /usr/bin/sh -l\nelif [ -x /bin/sh ]; then\n\texec /bin/sh -l\nelif [ -x /busybox/sh ]; then\n\texec /busybox/sh -l\nelse\n\techo shell not found\n\texit 1\nfi\n\n"},
+		},
 	}
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
@@ -431,6 +440,41 @@ func TestBash_CommandArgExpand(t *testing.T) {
 			writer.CommandArgExpand(tc.command, tc.args...)
 
 			assert.Equal(t, tc.expected, writer.String())
+		})
+	}
+}
+
+func TestBash_InteractiveShellHasNoEffectIn(t *testing.T) {
+	tests := map[string]struct {
+		shellType common.ShellType
+		expected  string
+	}{
+		"bash login shell produces -l": {
+			shellType: common.LoginShell,
+			expected:  "bash -l",
+		},
+		"bash interactive shell produces -l": {
+			shellType: common.InteractiveShell,
+			expected:  "bash -l",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shell := common.GetShell("bash")
+			require.NotNil(t, shell)
+
+			info := common.ShellScriptInfo{
+				Shell: "bash",
+				Type:  tc.shellType,
+				Build: &common.Build{
+					Runner: &common.RunnerConfig{},
+				},
+			}
+
+			config, err := shell.GetConfiguration(info)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, config.CmdLine)
 		})
 	}
 }

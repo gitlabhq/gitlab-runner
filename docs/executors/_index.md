@@ -163,28 +163,28 @@ it allows you to use custom executables to provision and clean up environments.
 
 Supported features by different executors:
 
-| Executor                                     | SSH            | Shell          | VirtualBox     | Parallels      | Docker  | Docker Autoscaler | Instance       | Kubernetes | Custom                                                       |
-|:---------------------------------------------|:--------------:|:--------------:|:--------------:|:--------------:|:-------:|:-----------------:|:--------------:| :---------:| :-----------------------------------------------------------:|
-| Secure Variables                             | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓                                                           |
-| `.gitlab-ci.yml`: image                      | ✗              | ✗              | ✓ (1)          | ✓ (1)          | ✓       | ✓                 | ✗              | ✓          | ✓ (by using [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)) |
-| `.gitlab-ci.yml`: services                   | ✗              | ✗              | ✗              | ✗              | ✓       | ✓                 | ✗              | ✓          | ✓      |
-| `.gitlab-ci.yml`: cache                      | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓      |
-| `.gitlab-ci.yml`: artifacts                  | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓      |
-| Passing artifacts between stages             | ✓              | ✓              | ✓              | ✓              | ✓       | ✓                 | ✓              | ✓          | ✓      |
-| Use GitLab Container Registry private images | not applicable | not applicable | not applicable | not applicable | ✓       | ✓                 | not applicable | ✓          | not applicable |
-| Interactive Web terminal                     | ✗              | ✓ (UNIX)       | ✗              | ✗              | ✓       | ✗                 | ✗              | ✓          | ✗              |
+| Executor                                     |      SSH       |     Shell      |   VirtualBox   |   Parallels    | Docker | Docker Autoscaler |    Instance    | Kubernetes |                           Custom                            |
+| :------------------------------------------- | :------------: | :------------: | :------------: | :------------: | :----: | :---------------: | :------------: | :--------: | :---------------------------------------------------------: |
+| Secure Variables                             |       ✓        |       ✓        |       ✓        |       ✓        |   ✓    |         ✓         |       ✓        |     ✓      |                              ✓                              |
+| `.gitlab-ci.yml`: image                      |       ✗        |       ✗        |     ✓ (1)      |     ✓ (1)      |   ✓    |         ✓         |       ✗        |     ✓      | ✓ (by using [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)) |
+| `.gitlab-ci.yml`: services                   |       ✗        |       ✗        |       ✗        |       ✗        |   ✓    |         ✓         |       ✗        |     ✓      |                              ✓                              |
+| `.gitlab-ci.yml`: cache                      |       ✓        |       ✓        |       ✓        |       ✓        |   ✓    |         ✓         |       ✓        |     ✓      |                              ✓                              |
+| `.gitlab-ci.yml`: artifacts                  |       ✓        |       ✓        |       ✓        |       ✓        |   ✓    |         ✓         |       ✓        |     ✓      |                              ✓                              |
+| Passing artifacts between stages             |       ✓        |       ✓        |       ✓        |       ✓        |   ✓    |         ✓         |       ✓        |     ✓      |                              ✓                              |
+| Use GitLab Container Registry private images | not applicable | not applicable | not applicable | not applicable |   ✓    |         ✓         | not applicable |     ✓      |                       not applicable                        |
+| Interactive Web terminal                     |       ✗        |       ✓        |       ✗        |       ✗        |   ✓    |         ✗         |       ✗        |     ✓      |                              ✗                              |
 
 1. Support [added](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1257) in GitLab Runner 14.2.
    Refer to the [Overriding the base VM image](../configuration/advanced-configuration.md#overriding-the-base-vm-image) section for further details.
 
 Supported systems by different shells:
 
-| Shells  | Bash        | PowerShell Desktop | PowerShell Core | Windows Batch (deprecated) |
-|:-------:|:-----------:|:------------------:|:---------------:|:--------------------------:|
-| Windows | ✗ (4)       | ✓ (3)              | ✓               | ✓ (2)                      |
-| Linux   | ✓ (1)       | ✗                  | ✓               | ✗                          |
-| macOS   | ✓ (1)       | ✗                  | ✓               | ✗                          |
-| FreeBSD | ✓ (1)       | ✗                  | ✗               | ✗                          |
+| Shells  | Bash  | PowerShell Desktop | PowerShell Core | Windows Batch (deprecated) |
+| :-----: | :---: | :----------------: | :-------------: | :------------------------: |
+| Windows | ✗ (4) |       ✓ (3)        |        ✓        |           ✓ (2)            |
+| Linux   | ✓ (1) |         ✗          |        ✓        |             ✗              |
+| macOS   | ✓ (1) |         ✗          |        ✓        |             ✗              |
+| FreeBSD | ✓ (1) |         ✗          |        ✗        |             ✗              |
 
 1. Default shell.
 1. Deprecated. Default shell if no
@@ -195,12 +195,12 @@ Supported systems by different shells:
 
 Supported systems for interactive web terminals by different shells:
 
-| Shells  | Bash        | PowerShell Desktop    | PowerShell Core    | Windows Batch (deprecated) |
-|:-------:|:-----------:|:---------------------:|:------------------:|:--------------------------:|
-| Windows | ✗           | ✗                     | ✗                  | ✗                          |
-| Linux   | ✓           | ✗                     | ✗                  | ✗                          |
-| macOS   | ✓           | ✗                     | ✗                  | ✗                          |
-| FreeBSD | ✓           | ✗                     | ✗                  | ✗                          |
+| Shells  | Bash | PowerShell Desktop | PowerShell Core | Windows Batch (deprecated) |
+| :-----: | :--: | :----------------: | :-------------: | :------------------------: |
+| Windows |  ✗   |         ✓          |        ✓        |             ✗              |
+| Linux   |  ✓   |         ✗          |        ✓        |             ✗              |
+| macOS   |  ✓   |         ✗          |        ✓        |             ✗              |
+| FreeBSD |  ✓   |         ✗          |        ✗        |             ✗              |
 
 ```mermaid
 flowchart LR

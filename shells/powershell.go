@@ -199,7 +199,13 @@ func PowershellStageProcessesKillerScript(processId string) string {
 	return fmt.Sprintf(powershellStageProcessesKillerScript, processId)
 }
 
-func PowershellDockerCmd(shell string, preCmds ...string) []string {
+func PowershellDockerCmd(shell string, shellType common.ShellType, preCmds ...string) []string {
+	// Due to this error: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3636#note_1909677283
+	// We bypass adding stdin arguments for Pwsh/PowerShell in InteractiveShell.
+	if shellType == common.InteractiveShell {
+		return []string{shell}
+	}
+
 	return append([]string{shell}, stdinCmdArgs(shell, preCmds...)...)
 }
 
@@ -679,12 +685,12 @@ func (b *PowerShell) GetName() string {
 	return b.Shell
 }
 
-func (b *PowerShell) GetEntrypointCommand(_ common.ShellScriptInfo, probeFile string) []string {
+func (b *PowerShell) GetEntrypointCommand(info common.ShellScriptInfo, probeFile string) []string {
 	preCmds := []string{}
 	if probeFile != "" {
 		preCmds = append(preCmds, fmt.Sprintf("Out-File -Force -FilePath '%s'", probeFile))
 	}
-	return PowershellDockerCmd(b.Shell, preCmds...)
+	return PowershellDockerCmd(b.Shell, info.Type, preCmds...)
 }
 
 func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.ShellConfiguration, error) {
@@ -692,7 +698,7 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shel
 		Command:       b.Shell,
 		PassFile:      b.passAsFile(info),
 		Extension:     "ps1",
-		DockerCommand: PowershellDockerCmd(b.Shell),
+		DockerCommand: PowershellDockerCmd(b.Shell, info.Type),
 	}
 
 	if info.User != "" {
