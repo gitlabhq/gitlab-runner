@@ -28,6 +28,7 @@ title: GitLab Runner bleeding edge releases
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-darwin-amd64>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-windows-386.exe>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-windows-amd64.exe>
+- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-windows-arm64.exe>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-freebsd-386>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-freebsd-amd64>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-freebsd-arm>
