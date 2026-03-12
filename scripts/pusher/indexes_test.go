@@ -11,7 +11,6 @@ func TestCollectIndexes(t *testing.T) {
 		name       string
 		manifest   Manifest
 		wantGroups []ImageIndex
-		wantErr    bool
 	}{
 		{
 			// Verifies simple grouping, with special handling for bare "%" tag,
