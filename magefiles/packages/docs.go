@@ -14,6 +14,7 @@ import (
 	"golang.org/x/text/language"
 
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/docutils"
+	"gitlab.com/gitlab-org/gitlab-runner/magefiles/pulp"
 )
 
 const (
@@ -21,11 +22,8 @@ const (
 	docsFilePath               = "docs/install/linux-repository.md"
 )
 
-// This type is to reuse existing code that would otherwise cause a circular dependency.
-type distListFunc func(string, string) ([]string, error)
-
-func GenerateSupportedOSDocs(f distListFunc) error {
-	debDists, rpmDists, err := getDistributionLists(f)
+func GenerateSupportedOSDocs() error {
+	debDists, rpmDists, err := getDistributionLists()
 	if err != nil {
 		return err
 	}
@@ -49,9 +47,9 @@ func GenerateSupportedOSDocs(f distListFunc) error {
 	return nil
 }
 
-func getDistributionLists(f distListFunc) ([]string, []string, error) {
-	debOSs, derr := f("deb", "stable")
-	rpmOSs, rerr := f("rpm", "stable")
+func getDistributionLists() ([]string, []string, error) {
+	debOSs, derr := pulp.Releases("deb", "stable")
+	rpmOSs, rerr := pulp.Releases("rpm", "stable")
 	return debOSs, rpmOSs, errors.Join(derr, rerr)
 }
 

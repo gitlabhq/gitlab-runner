@@ -21,8 +21,6 @@ hosted runners bridge bleeding edge:
       changes: !reference [.code-backstage-patterns]
       when: manual
   needs:
-    - job: bleeding edge packagecloud
-      artifacts: false
     - job: bleeding edge docker images
       artifacts: false
     - job: unstable pulp
@@ -42,8 +40,6 @@ hosted runners bridge stable:
       changes: !reference [.code-backstage-patterns]
       when: manual
   needs:
-    - job: stable packagecloud
-      artifacts: false
     - job: stable docker images
       artifacts: false
     - job: stable pulp

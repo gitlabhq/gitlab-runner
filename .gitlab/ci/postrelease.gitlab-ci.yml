@@ -61,7 +61,7 @@ package test variables:
     - .rules:release:bleeding-edge
     - .kubernetes runner
   needs:
-    - "bleeding edge packagecloud"
+    - "unstable pulp"
   image: alpine:latest
   artifacts:
     paths:
