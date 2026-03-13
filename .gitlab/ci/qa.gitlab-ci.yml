@@ -188,14 +188,11 @@ docs:check Kubernetes API docs:
         exit 1
       )
 
-# This jobs is triggered weekly and needs the PACKAGECLOUD_TOKEN variable scope to the autogen/docs environment to run.
+# This jobs is triggered weekly and needs either aq PRIVATE_TOKEN or CI_JOB_TOKEN variable.
 docs:check supported distros package docs:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
   stage: qa
-  environment:
-    name: autogen/docs
-    url: https://packages.gitlab.com/runner/gitlab-runner
   script:
     - cp docs/install/linux-repository.md docs/install/linux-repository.md.orig
     - mage package:docs
