@@ -207,7 +207,7 @@ func (e *executor) bootstrap() error {
 	}
 	defer func() {
 		_ = e.dockerConn.ContainerRemove(ctx, bootstrapContainer.ID, container.RemoveOptions{
-			RemoveVolumes: true,
+			RemoveVolumes: !e.Config.Docker.VolumeKeep,
 			Force:         true,
 		})
 	}()
