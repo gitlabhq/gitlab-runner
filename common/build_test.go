@@ -36,7 +36,7 @@ import (
 func init() {
 	s := MockShell{}
 	s.On("GetName").Return("script-shell")
-	s.On("IsDefault").Return(false)
+	s.On("IsDefault").Return(false).Maybe()
 	s.On("GenerateScript", mock.Anything, mock.Anything, mock.Anything).Return("script", nil)
 	RegisterShell(&s)
 }
@@ -1457,6 +1457,7 @@ func TestSkipBuildStageFeatureFlag(t *testing.T) {
 	s := NewMockShell(t)
 
 	s.On("GetName").Return("skip-build-stage-shell")
+	s.On("IsDefault").Return(false).Maybe()
 	RegisterShell(s)
 
 	for _, value := range featureFlagValues {
