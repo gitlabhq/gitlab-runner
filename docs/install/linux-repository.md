@@ -25,16 +25,16 @@ GitLab provides packages for the following supported versions of Linux distribut
 
 | Distribution | Supported Versions |
 |--------------|--------------------|
-| Debian | 15 Duke, 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
-| LinuxMint | 22.1 Xia, 22 Wilma, 21.3 Virginia, 21.2 Victoria, 21.1 Vera, 21 Vanessa |
-| Raspbian | 15 Duke, 14 Forky, 13 Trixie, 12 Bookworm, 11 Bullseye |
-| Ubuntu | 25.04 Plucky Puffin, 24.04 Lts Noble Numbat, 22.04 Jammy Jellyfish, 20.04 Focal Fossa, 18.04 Lts Bionic Beaver, 16.04 Lts Xenial Xerus |
+| Debian | Duke, Forky, Trixie, Bookworm, Bullseye |
+| LinuxMint | Xia, Wilma, Virginia, Victoria, Vera, Vanessa |
+| Raspbian | Duke, Forky, Trixie, Bookworm, Bullseye |
+| Ubuntu | Questing, Noble, Jammy, Focal, Bionic |
 
 ### Rpm-based Distributions
 
 | Distribution | Supported Versions |
 |--------------|--------------------|
-| Amazon Linux | 2025, 2023, 2022, 2 |
+| Amazon Linux | 2025, 2023, 2 |
 | Red Hat Enterprise Linux | 10, 9, 8, 7 |
 | Fedora | 43, 42 |
 | Oracle Linux | 10, 9, 8, 7 |

@@ -24,18 +24,6 @@
   tags:
     - !reference [.instance-medium]
 
-.release_packagecloud:
-  stage: release
-  dependencies:
-    - "package-deb"
-    - "package-rpm"
-    - "package-helpers"
-  before_script:
-    - ./ci/touch_git
-  script:
-    - mage packagecloud:push deb "$CI_JOB_NAME" "$DIST_FLAVOR"
-    - mage packagecloud:push rpm "$CI_JOB_NAME" "$DIST_FLAVOR"
-
 .release_pulp:
   stage: release
   dependencies:
@@ -78,26 +66,6 @@ stable S3:
     name: stable/s3
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
-bleeding edge packagecloud:
-  extends:
-    - .release_packagecloud
-    - .rules:release:bleeding-edge
-  environment:
-    name: bleeding_edge/packagecloud
-    url: https://packages.gitlab.com/runner/unstable
-  variables:
-    PACKAGE_CLOUD_NAMESPACE: runner/unstable
-  parallel:
-    matrix:
-      - DIST_FLAVOR:
-          - debian
-          - ubuntu
-          - el
-          - fedora
-          - amazon
-          - sles
-          - opensuse
-
 unstable pulp:
   extends:
     - .release_pulp
@@ -111,27 +79,6 @@ unstable pulp:
           - debian
           - ubuntu
           - el
-          - fedora
-          - amazon
-          - sles
-          - opensuse
-
-stable packagecloud:
-  extends:
-    - .release_packagecloud
-    - .rules:release:stable:branch
-  environment:
-    name: stable/packagecloud
-    url: https://packages.gitlab.com/runner/gitlab-runner
-  parallel:
-    matrix:
-      - DIST_FLAVOR:
-          - debian
-          - ubuntu
-          - raspbian
-          - linuxmint
-          - el
-          - ol
           - fedora
           - amazon
           - sles

@@ -156,7 +156,7 @@ func (p Package) {{ .Name }}() error {
 	}
 
 	for dist, b := range packageBuilds {
-		f, err := os.OpenFile(fmt.Sprintf("package_%s.go", dist), os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
+		f, err := os.OpenFile(fmt.Sprintf("package_%s.go", dist), os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0o666)
 		if err != nil {
 			return err
 		}
@@ -210,5 +210,5 @@ func (Package) VerifyIterationVariable() error {
 // Docs generates user documentation listing the linux distribution/versions for which runner packages are published for
 // the stable branch.
 func (p Package) Docs() error {
-	return packages.GenerateSupportedOSDocs(supportedOSVersions)
+	return packages.GenerateSupportedOSDocs()
 }
