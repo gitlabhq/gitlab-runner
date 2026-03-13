@@ -3258,3 +3258,46 @@ func checkVariable(vars spec.Variables, key string) bool {
 	}
 	return false
 }
+
+func TestRemoveContainerVolumeKeep(t *testing.T) {
+	tests := []struct {
+		name                  string
+		volumeKeep            bool
+		expectedRemoveVolumes bool
+	}{
+		{
+			name:                  "VolumeKeep=false removes volumes",
+			volumeKeep:            false,
+			expectedRemoveVolumes: true,
+		},
+		{
+			name:                  "VolumeKeep=true preserves volumes",
+			volumeKeep:            true,
+			expectedRemoveVolumes: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+
+			e := &executor{}
+			e.dockerConn = &dockerConnection{Client: c}
+			e.Config.Docker = &common.DockerConfig{VolumeKeep: tc.volumeKeep}
+			e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+
+			c.On("NetworkList", mock.Anything, mock.Anything).
+				Return([]network.Summary{}, nil).Once()
+
+			expectedOptions := container.RemoveOptions{
+				RemoveVolumes: tc.expectedRemoveVolumes,
+				Force:         true,
+			}
+			c.On("ContainerRemove", mock.Anything, "test-container-id", expectedOptions).
+				Return(nil).Once()
+
+			err := e.removeContainer(t.Context(), "test-container-id")
+			assert.NoError(t, err)
+		})
+	}
+}

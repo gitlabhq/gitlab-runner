@@ -1106,7 +1106,7 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 	e.disconnectNetwork(ctx, id)
 
 	options := container.RemoveOptions{
-		RemoveVolumes: true,
+		RemoveVolumes: !e.Config.Docker.VolumeKeep,
 		Force:         true,
 	}
 
@@ -1448,6 +1448,10 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	e.BuildLogger.Println("Using Docker executor with image", imageName, "...")
+
+	if e.Config.Docker.VolumeKeep {
+		e.BuildLogger.Warningln("volume_keep is enabled: Docker volumes will not be removed after job completion and may accumulate on disk")
+	}
 
 	err = e.createDependencies()
 	if err != nil {
