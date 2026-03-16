@@ -20,14 +20,12 @@ You can download and install GitLab Runner on z/OS manually from a [`pax`](https
 ## Prerequisites
 
 - To use GitLab Runner, you need the following authorized program analysis reports (`APARs`) with program temporary fixes (`PTFs`):
-
   - z/OS 2.5
     - OA62757
     - PH45182
   - z/OS 3.1
     - OA62757
     - PH57159
-
 - GitLab Runner expects bash to be installed at `/bin/bash` to execute shell commands.
   If bash is not installed at this location, create a symlink to the installed version:
 
@@ -40,7 +38,6 @@ You can download and install GitLab Runner on z/OS manually from a [`pax`](https
 To install GitLab Runner:
 
 1. Download the `paxfile` into your chosen install directory.
-
 1. Install the package for your system:
 
    ```shell
@@ -73,7 +70,6 @@ You can run GitLab Runner directly or as a started task.
 To run GitLab Runner by calling the executable:
 
 1. Go to the directory `<INSTALL_PATH>/bin`.
-
 1. Start the service:
 
    ```shell

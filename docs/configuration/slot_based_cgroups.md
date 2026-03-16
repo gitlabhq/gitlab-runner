@@ -336,9 +336,7 @@ job:
    ```
 
 1. Confirm `slot_cgroup_template` uses the correct format with `${slot}` placeholder:
-
 1. Check GitLab Runner logs for specific cgroup creation errors:
-
 1. Test manually:
 
    For Docker Autoscaler executor:

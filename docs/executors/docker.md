@@ -669,7 +669,7 @@ The `volumes` directive supports the following types of storage:
   - `<short-token>`: The shortened version of the runner's token (first 8 letters)
   - `<project-id>`: The ID of the GitLab project
   - `<concurrency-id>`: The index of the runner from the list of all runners that run a build for the same project concurrently (accessible through the
-  `CI_CONCURRENT_PROJECT_ID` [pre-defined variable](https://docs.gitlab.com/ci/variables/predefined_variables/)).
+    `CI_CONCURRENT_PROJECT_ID` [pre-defined variable](https://docs.gitlab.com/ci/variables/predefined_variables/)).
   - `<md5-of-path>`: The MD5 sum of the path within the container
   - `<runner-id-hash>`: The hash for the following data:
     - Runner's token
@@ -678,7 +678,6 @@ The `volumes` directive supports the following types of storage:
     - `<concurrency-id>`
   - `<protection>`: The value is empty for builds on unprotected branches, and `-protected` for protected branch builds
   - `<cache-dir>`: The configuration in `runners.docker.cache_dir`
-
 - For host-bound storage, use `<host-path>:<path>[:<mode>]`. GitLab Runner binds the `<path>`
   to `<host-path>` on the host system. The optional `<mode>` specifies whether this storage
   is read-only or read-write (default).
@@ -864,7 +863,6 @@ the build environment of the runner.
    ```
 
 1. Push the image to the Docker registry.
-
 1. Run Docker executor in `privileged` mode. In `config.toml` define:
 
    ```toml

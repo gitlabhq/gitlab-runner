@@ -103,7 +103,7 @@ use in the ECS task definition.
 
 Now create an AWS EC2 instance. In the next step you will install GitLab Runner on it.
 
-1. Go to [https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard](https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard).
+1. Go to <https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard>.
 1. For the instance, select the Ubuntu Server 18.04 LTS AMI.
    The name may be different depending on the AWS region you selected.
 1. For the instance type, choose t2.micro. Select **Next: Configure Instance Details**.

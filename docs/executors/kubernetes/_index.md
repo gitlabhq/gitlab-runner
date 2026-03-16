@@ -108,7 +108,7 @@ You can either:
 - Specify a service account `serviceAccount.name: <service_account_name>` with the following
   permissions in the `values.yml` file.
 
-<!-- k8s_api_permissions_list_start -->
+<!-- `k8s_api_permissions_list_start` -->
 
 | Resource | Verb (Optional Feature/Config Flags) |
 |----------|-------------------------------|
@@ -122,11 +122,11 @@ You can either:
 | serviceaccounts | get |
 | services | create, get |
 
-<!-- k8s_api_permissions_list_end -->
+<!-- `k8s_api_permissions_list_end` -->
 
 You can use the following YAML role definition to create a role with the required permissions.
 
-<!-- k8s_api_permissions_role_yaml_start -->
+<!-- `k8s_api_permissions_role_yaml_start` -->
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -190,7 +190,7 @@ rules:
   - "get"
 ```
 
-<!-- k8s_api_permissions_role_yaml_end -->
+<!-- `k8s_api_permissions_role_yaml_end` -->
 
 Additional details:
 
@@ -1872,10 +1872,10 @@ GitLab Runner drops the following capabilities by default.
 User-defined `cap_add` has priority over the default list of dropped capabilities.
 If you want to add the capability that is dropped by default, add it to `cap_add`.
 
-<!-- kubernetes_default_cap_drop_list_start -->
+<!-- `kubernetes_default_cap_drop_list_start` -->
 - `NET_RAW`
 
-<!-- kubernetes_default_cap_drop_list_end -->
+<!-- `kubernetes_default_cap_drop_list_end` -->
 
 ### Add extra host aliases
 

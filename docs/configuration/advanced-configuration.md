@@ -2057,12 +2057,9 @@ In some cases, you might need to override the helper image for the following rea
 1. **Speed up jobs execution**: In environments with slower internet connection, downloading the
    same image multiple times can increase the time it takes to execute a job. Downloading the helper image from
    a local registry, where the exact copy of `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:XYZ` is stored, can speed things up.
-
 1. **Security concerns**: You may not want to download external dependencies that were not checked before. There
    might be a business rule to use only dependencies that were reviewed and stored in local repositories.
-
 1. **Build environments without internet access**: If you have [Kubernetes clusters installed in an offline environment](../install/operator.md#install-gitlab-runner-operator-on-kubernetes-clusters-in-offline-environments), you can use a local image registry or package repository to pull images used in CI/CD jobs.
-
 1. **Additional software**: You may want to install some additional software to the helper image, like
    `openssh` to support submodules accessible with `git+ssh` instead of `git+http`.
 
