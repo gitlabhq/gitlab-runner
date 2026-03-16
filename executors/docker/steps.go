@@ -7,7 +7,6 @@ import (
 	"io"
 	"path"
 	"strings"
-	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -16,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/omitwriter"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/internal/readywriter"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
@@ -79,7 +79,7 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 		return nil, fmt.Errorf("connect container start: %w", err)
 	}
 
-	readyWriter, readyCh := newReadyWriter(initCtx, stderr)
+	readyWriter, readyCh := readywriter.New(initCtx, stderr)
 
 	// stream container log to job
 	go func() {
@@ -101,9 +101,17 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 	// - On exit, if there's a non-zero code, we return a BuildError. If it
 	//   was a clean exit, we tell step-runner to not bother connecting by
 	//   returning ErrNoStepRunnerButOkay.
+	var socketPath string
+	var readyChOk bool
+
 	select {
-	case <-readyCh:
-		// step-runner is ready
+	case socketPath, readyChOk = <-readyCh:
+		if !readyChOk {
+			return nil, fmt.Errorf("step-runner ready channel closed")
+		}
+		if socketPath == "" {
+			return nil, fmt.Errorf("step-runner ready message missing socket path")
+		}
 
 	case err := <-errCh:
 		return nil, fmt.Errorf("connect container wait: %w", err)
@@ -124,7 +132,7 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 
 	return func() (io.ReadWriteCloser, error) {
 		resp, err := s.dockerConn.ContainerExecCreate(ctx, ctr.ID, container.ExecOptions{
-			Cmd:          []string{bootstrappedBinary, "steps", "proxy"},
+			Cmd:          []string{bootstrappedBinary, "steps", "proxy", "--socket", socketPath},
 			AttachStdin:  true,
 			AttachStderr: true,
 			AttachStdout: true,
@@ -249,63 +257,4 @@ func (e *executor) bootstrap() error {
 	}
 
 	return nil
-}
-
-var readyMarker = []byte("step-runner is ready.\n")
-
-// readyWriter signals on a channel when readyMarker has been written to the
-// writer and is used to detect that the step-runner is ready for connections.
-type readyWriter struct {
-	io.Writer
-	ctx     context.Context
-	ready   chan struct{}
-	matched int
-	once    sync.Once
-}
-
-func newReadyWriter(ctx context.Context, w io.Writer) (io.Writer, <-chan struct{}) {
-	ch := make(chan struct{})
-	rw := &readyWriter{Writer: w, ctx: ctx, ready: ch}
-	go func() {
-		<-ctx.Done()
-		rw.close()
-	}()
-	return rw, ch
-}
-
-func (rw *readyWriter) close() {
-	rw.once.Do(func() { close(rw.ready) })
-}
-
-func (rw *readyWriter) Write(p []byte) (int, error) {
-	n, err := rw.Writer.Write(p)
-	if rw.matched < 0 || n == 0 {
-		return n, err
-	}
-
-	data := p[:n]
-	if rw.matched == 0 {
-		if idx := bytes.IndexByte(data, readyMarker[0]); idx >= 0 {
-			data = data[idx:]
-		} else {
-			return n, err
-		}
-	}
-
-	for _, b := range data {
-		switch b {
-		case readyMarker[rw.matched]:
-			rw.matched++
-			if rw.matched == len(readyMarker) {
-				rw.close()
-				rw.matched = -1
-				return n, err
-			}
-		case readyMarker[0]:
-			rw.matched = 1
-		default:
-			rw.matched = 0
-		}
-	}
-	return n, err
 }

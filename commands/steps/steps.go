@@ -27,9 +27,11 @@ import (
 
 const (
 	SubCommandName = "steps"
-
-	readyMessage = "step-runner is ready."
 )
+
+func readyMessage(sockPath string) string {
+	return fmt.Sprintf("step-runner is listening on socket %s", sockPath)
+}
 
 type IOStreams struct {
 	Stdin  io.Reader
@@ -108,7 +110,7 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 		return nil
 	})
 
-	fmt.Fprintln(os.Stderr, readyMessage)
+	fmt.Fprintln(os.Stderr, readyMessage(sockPath))
 
 	if len(cmdAndArgs) > 0 {
 		wg.Go(func() error {
