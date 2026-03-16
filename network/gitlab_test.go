@@ -272,17 +272,17 @@ func TestGitLabClient_RegisterRunner_OnRunnerLimitHit(t *testing.T) {
 	type testCase struct {
 		response registerRunnerResponse
 
-		expectedMessage string
+		expectedStatus int
 	}
 
 	testCases := map[string]testCase{
 		"namespace runner limit hit": {
-			response:        registerRunnerResponseRunnerNamespacesLimitHit,
-			expectedMessage: "400 Bad Request (runner_namespaces.base: Maximum number of ci registered group runners (3) exceeded)",
+			response:       registerRunnerResponseRunnerNamespacesLimitHit,
+			expectedStatus: 400,
 		},
 		"project runner limit hit": {
-			response:        registerRunnerResponseRunnerProjectsLimitHit,
-			expectedMessage: "400 Bad Request (runner_projects.base: Maximum number of ci registered project runners (3) exceeded)",
+			response:       registerRunnerResponseRunnerProjectsLimitHit,
+			expectedStatus: 400,
 		},
 	}
 
@@ -322,7 +322,7 @@ func TestGitLabClient_RegisterRunner_OnRunnerLimitHit(t *testing.T) {
 			require.Len(t, h.entries, 1)
 			assert.Equal(t, "Registering runner... failed", h.entries[0].Message)
 			assert.Equal(t, "foobar", h.entries[0].Data["correlation_id"])
-			assert.Contains(t, h.entries[0].Data["status"], tc.expectedMessage)
+			assert.Equal(t, tc.expectedStatus, h.entries[0].Data["status"])
 		})
 	}
 }
@@ -1323,7 +1323,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseNil: true,
 			},
-			expectedLog: `level=error msg="Checking for jobs... forbidden" correlation_id=foobar runner=invalid status="403 Forbidden"`,
+			expectedLog: `level=error msg="Checking for jobs... forbidden" correlation_id=foobar runner=invalid status=403`,
 		},
 		{
 			name:      "invalid url",
@@ -1332,7 +1332,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseNil: true,
 			},
-			expectedLog: `level=error msg="Checking for jobs\.\.\. client error" correlation_id=\S* runner=valid status="get client: new client: only http or https scheme supported"`,
+			expectedLog: `level=error msg="Checking for jobs\.\.\. client error" correlation_id=\S* runner=valid status=-100`,
 		},
 		{
 			name:                  "unsupported executor options",
@@ -1352,7 +1352,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 				responseOK:  true,
 				responseNil: true,
 			},
-			expectedLog: `level=warning msg="Checking for jobs\.\.\. GitLab instance currently unavailable" correlation_id=\S* runner=valid status="503 Service Unavailable"`,
+			expectedLog: `level=warning msg="Checking for jobs\.\.\. GitLab instance currently unavailable" correlation_id=\S* runner=valid status=503`,
 		},
 		{
 			name:      "too many requests",
@@ -1362,7 +1362,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 				responseOK:  true,
 				responseNil: true,
 			},
-			expectedLog: `level=warning msg="Checking for jobs\.\.\. failed" correlation_id=\S* runner=valid status="429 Too Many Requests"`,
+			expectedLog: `level=warning msg="Checking for jobs\.\.\. failed" correlation_id=\S* runner=valid status=429`,
 		},
 	}
 
@@ -1681,7 +1681,7 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 					Data: logrus.Fields{
 						"bytesize":        0,
 						"checksum":        "",
-						"code":            200,
+						"status":          200,
 						"correlation_id":  "foobar",
 						"job":             int64(10),
 						"job-status":      "",
@@ -1704,11 +1704,10 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 					Data: logrus.Fields{
 						"bytesize":        0,
 						"checksum":        "",
-						"code":            200,
+						"status":          200,
 						"correlation_id":  "foobar",
 						"job":             int64(11),
 						"job-status":      "canceled",
-						"status":          "200 OK",
 						"update-interval": time.Duration(0),
 					},
 				},
@@ -1728,11 +1727,10 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 					Data: logrus.Fields{
 						"bytesize":        0,
 						"checksum":        "",
-						"code":            200,
+						"status":          200,
 						"correlation_id":  "foobar",
 						"job":             int64(12),
 						"job-status":      "failed",
-						"status":          "200 OK",
 						"update-interval": time.Duration(0),
 					},
 				},
@@ -1752,7 +1750,7 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 					Data: logrus.Fields{
 						"bytesize":        0,
 						"checksum":        "",
-						"code":            200,
+						"status":          200,
 						"correlation_id":  "foobar",
 						"job":             int64(13),
 						"job-status":      "canceling",
@@ -3391,4 +3389,58 @@ func TestGitLabClient_getFeatures_JobInputs(t *testing.T) {
 
 	// Test that JobInputs is set to true by the network client
 	assert.True(t, features.JobInputs, "JobInputs should be set to true by getFeatures")
+}
+
+func TestHandleUploadRedirectionState(t *testing.T) {
+	tests := map[string]struct {
+		locationHeader string
+		expectedState  UploadState
+		expectedURL    string
+		expectLogEntry bool
+		expectedStatus int
+	}{
+		"redirect with location header": {
+			locationHeader: "https://storage.example.com/upload",
+			expectedState:  UploadRedirected,
+			expectedURL:    "https://storage.example.com/upload",
+			expectLogEntry: false,
+		},
+		"redirect with empty location header": {
+			locationHeader: "",
+			expectedState:  UploadFailed,
+			expectedURL:    "",
+			expectLogEntry: true,
+			expectedStatus: http.StatusTemporaryRedirect,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			logger, hook := test.NewNullLogger()
+			log := logrus.NewEntry(logger)
+
+			header := http.Header{}
+			if tc.locationHeader != "" {
+				header.Set("Location", tc.locationHeader)
+			}
+			resp := &http.Response{
+				StatusCode: http.StatusTemporaryRedirect,
+				Status:     "307 Temporary Redirect",
+				Header:     header,
+			}
+
+			state, url := handleUploadRedirectionState(resp, log, "Uploading artifacts to coordinator...", "307 Temporary Redirect")
+
+			assert.Equal(t, tc.expectedState, state)
+			assert.Equal(t, tc.expectedURL, url)
+
+			if tc.expectLogEntry {
+				require.Len(t, hook.Entries, 1)
+				assert.Equal(t, logrus.ErrorLevel, hook.Entries[0].Level)
+				assert.Equal(t, tc.expectedStatus, hook.Entries[0].Data["status"])
+			} else {
+				assert.Empty(t, hook.Entries)
+			}
+		})
+	}
 }
