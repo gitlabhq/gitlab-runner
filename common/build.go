@@ -699,17 +699,18 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	// execute user provided scripts
 	//nolint:nestif
 	if err == nil {
+		defer func() {
+			b.OnJobExecutionModeDispatchedFn.Call(b.dispatchedJobExecutionMode(), b.Runner.Executor)
+		}()
+
 		if b.UseNativeSteps() && len(b.Job.Run) > 0 {
 			if _, ok := executor.(steps.Connector); !ok {
-				b.OnJobExecutionModeDispatchedFn.Call(b.dispatchedJobExecutionMode(), b.Runner.Executor)
 				return ExecutorStepRunnerConnectNotSupported
 			}
 			err = b.executeStage(ctx, stepRunBuildStage, executor)
 		} else {
 			err = b.executeUserScripts(ctx, trace, executor)
 		}
-
-		b.OnJobExecutionModeDispatchedFn.Call(b.dispatchedJobExecutionMode(), b.Runner.Executor)
 	}
 
 	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)

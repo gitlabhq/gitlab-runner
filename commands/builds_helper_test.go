@@ -404,24 +404,28 @@ func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
 
 func TestJobExecutionModeTotal(t *testing.T) {
 	tests := map[string]struct {
-		mode          common.JobExecutionMode
-		executor      string
-		expectedValue float64
+		mode             common.JobExecutionMode
+		executor         string
+		expectedExecutor string
+		expectedValue    float64
 	}{
 		"steps mode": {
-			mode:          common.JobExecutionModeSteps,
-			executor:      "docker",
-			expectedValue: 1,
+			mode:             common.JobExecutionModeSteps,
+			executor:         "docker",
+			expectedExecutor: "docker",
+			expectedValue:    1,
 		},
 		"traditional mode": {
-			mode:          common.JobExecutionModeTraditional,
-			executor:      "docker+machine",
-			expectedValue: 1,
+			mode:             common.JobExecutionModeTraditional,
+			executor:         "docker+machine",
+			expectedExecutor: "docker+machine",
+			expectedValue:    1,
 		},
 		"empty executor uses unknown label": {
-			mode:          common.JobExecutionModeTraditional,
-			executor:      "",
-			expectedValue: 1,
+			mode:             common.JobExecutionModeTraditional,
+			executor:         "",
+			expectedExecutor: "unknown",
+			expectedValue:    1,
 		},
 	}
 
@@ -465,11 +469,7 @@ func TestJobExecutionModeTotal(t *testing.T) {
 			}
 
 			assert.Equal(t, string(tt.mode), labels["mode"])
-			expectedExecutor := tt.executor
-			if expectedExecutor == "" {
-				expectedExecutor = "unknown"
-			}
-			assert.Equal(t, expectedExecutor, labels["executor"])
+			assert.Equal(t, tt.expectedExecutor, labels["executor"])
 		})
 	}
 }
