@@ -736,6 +736,7 @@ type KubernetesConfig struct {
 	LogsBaseDir                                       string                             `toml:"logs_base_dir,omitempty" json:"logs_base_dir" long:"logs-base-dir" env:"KUBERNETES_LOGS_BASE_DIR" description:"Base directory for the path where build logs are stored. This directory is prepended to the final generated path. For example, <logs_base_dir>/logs-<project_id>-<job_id>."`
 	ScriptsBaseDir                                    string                             `toml:"scripts_base_dir,omitempty" json:"scripts_base_dir" long:"scripts-base-dir" env:"KUBERNETES_SCRIPTS_BASE_DIR" description:"Base directory for the path where build scripts are stored. This directory is prepended to the final generated path. For example, <scripts_base_dir>/scripts-<project_id>-<job_id>."`
 	PrintPodWarningEvents                             *bool                              `toml:"print_pod_warning_events,omitempty" json:"print_pod_warning_events,omitempty" long:"print-pod-warning-events" env:"KUBERNETES_PRINT_POD_WARNING_EVENTS" description:"When enabled, all warning events associated with the pod are retrieved when the job fails. Enabled by default."`
+	PodDisruptionBudget                               *bool                              `toml:"pod_disruption_budget,omitzero" json:"pod_disruption_budget,omitempty" long:"pod-disruption-budget" env:"KUBERNETES_POD_DISRUPTION_BUDGET" description:"When enabled, a PodDisruptionBudget is created for each job pod to prevent eviction during node drains. Disabled by default."`
 }
 
 type RequestRetryLimit int
@@ -1891,6 +1892,14 @@ func (c *KubernetesConfig) GetPrintPodWarningEvents() bool {
 	}
 
 	return *c.PrintPodWarningEvents
+}
+
+func (c *KubernetesConfig) GetPodDisruptionBudget() bool {
+	if c.PodDisruptionBudget == nil {
+		return false
+	}
+
+	return *c.PodDisruptionBudget
 }
 
 func (c *DockerMachine) GetIdleCount() int {
