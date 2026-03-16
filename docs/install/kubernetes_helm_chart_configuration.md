@@ -365,7 +365,6 @@ These commands store your certificate as a secret in Kubernetes, and present it 
   - `<NAMESPACE>`: The Kubernetes namespace where you want to install the GitLab Runner.
   - `<SECRET_NAME>`: The Kubernetes Secret resource name, like `gitlab-domain-cert`.
   - `<CERTIFICATE_FILENAME>`: The filename for the certificate in your current directory to import into the secret.
-
 - If your certificate is in another directory, or doesn't follow the format `<gitlab.hostname.crt>`, you must
   specify the filename to use as the target:
 

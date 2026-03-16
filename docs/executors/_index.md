@@ -47,15 +47,15 @@ Be sure to initialize Git LFS for the user that executes GitLab Runner commands 
 
 To authenticate Git interactions with the GitLab instance, GitLab Runner
 uses [`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/).
-Depending on the [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md) setting,
+Depending on the [`FF_GIT_URLS_WITHOUT_TOKENS`](../configuration/feature-flags.md) setting,
 the last used credential might be cached in a pre-installed Git credential helper (for
 example [Git credential manager](https://github.com/git-ecosystem/git-credential-manager))
 if such a helper is installed and configured to cache credentials:
 
-- When [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md) is
+- When [`FF_GIT_URLS_WITHOUT_TOKENS`](../configuration/feature-flags.md) is
   `false`, the last used [`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)
   is stored in pre-installed Git credential helpers.
-- When [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md) is
+- When [`FF_GIT_URLS_WITHOUT_TOKENS`](../configuration/feature-flags.md) is
   `true`, the [`CI_JOB_TOKEN`](https://docs.gitlab.com/ci/jobs/ci_job_token/)
   is never stored or cached in any pre-installed Git credential helper.
 

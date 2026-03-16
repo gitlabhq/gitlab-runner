@@ -175,12 +175,10 @@ sections in the infrastructure repository.
   - Check cluster resource availability.
   - Verify worker pool scaling (0-6 nodes).
   - Review test parallelism settings.
-
 - RBAC permissions:
   - Ensure provisioning job succeeded.
   - Verify service account creation.
   - Check generated Role matches code requirements.
-
 - Resource conflicts:
   - Check resource group isolation.
   - Verify cleanup job execution.
@@ -189,7 +187,6 @@ sections in the infrastructure repository.
 ### Debugging steps
 
 1. Check the infrastructure status. For more information about the `make` commands and infrastructure management, see [blue-green deployment](https://gitlab.com/gitlab-org/ci-cd/runner-tools/runner-kubernetes-infra#blue-green-deployment).
-
 1. Review test logs:
    - Check pipeline job logs for specific failures.
    - Use Grafana dashboard for aggregated logs. For more information, see [log collection](https://gitlab.com/gitlab-org/ci-cd/runner-tools/runner-kubernetes-infra#log-collection).

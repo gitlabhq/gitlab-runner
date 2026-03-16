@@ -44,9 +44,7 @@ To view a code coverage report for a merge request:
 
 1. In the merge request's **Overview** tab, under the pipeline
    result, click on **View exposed artifact** to expand the section.
-
 1. Click on **Code Coverage**.
-
 1. Use the artifact browser to navigate to the `out/coverage/`
    directory. For example,
    `https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/172824578/artifacts/browse/out/coverage/`.
@@ -122,22 +120,17 @@ Having all of that in mind, please follow these few rules when merging the merge
 
 - Any merge request related to how GitLab Runner or its parts are distributed should be labeled with the
   `runner-distribution` label.
-
 - Any merge request that touches security - no matter if it's a new feature or a bug fix - should have the
   `security` label. All merge requests that are not `feature::addition` will be then added to the security
   scope.
-
 - Any bug fix merge request should have the `bug` label.
-
 - In most merge requests that are not documentation update only or explicitly a bug fix, make sure that one of the
   `feature::` or `tooling::` labels is added. This will help us sort the changelog entries properly.
-
 - `documentation` label is added automatically when the Technical Writing review is done. **Even when the merge
   request updates more than only documentation**. If the merge request has only the `documentation` label and
   doesn't have any other label matching any of the defined `label_matchers` - double check that the merge request
   updates the documentation only. **Otherwise use one of the specific labels matching the type of the change
   that is being added!**
-
 - When you revert a change that was merged during the same release cycle, label the original merge request and
   the revert one with labels defined in `skip_changelog_labels`. This will reduce the manual work that release
   manager needs to do when preparing the release. We should not add entries about adding a change and reverting

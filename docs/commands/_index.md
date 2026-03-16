@@ -603,7 +603,6 @@ Here are two ways to prevent this:
   ```
 
   - To apply the configuration change, after you create this file, reload `systemd` with `systemctl daemon-reload`.
-
 - Manually kill the process with `kill -SIGQUIT <pid>`. You have to find the `pid`
   of the main `gitlab-runner` process. You can find this by looking at logs, as
   it's displayed on startup:

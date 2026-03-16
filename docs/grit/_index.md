@@ -212,7 +212,6 @@ For detailed instructions on setting up your development environment, running te
 GRIT has been adopted by various teams and services within the GitLab ecosystem:
 
 - **[GitLab Dedicated](https://about.gitlab.com/dedicated/)**: [Hosted runners for GitLab Dedicated](https://docs.gitlab.com/administration/dedicated/hosted_runners/) uses GRIT to provision and manage runner infrastructure.
-
 - **GitLab Self-Managed**: GRIT is highly requested among many GitLab Self-Managed customers. Some organizations have started to adopt GRIT to manage their runner deployments in a standardized way.
 
 If you're using GRIT in your organization and would like to be featured in this section, open a merge request!
