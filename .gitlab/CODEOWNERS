@@ -12,6 +12,14 @@
 magefiles/hosted_runners.go
 magefiles/hosted_runners/
 
+[Pipeline Security]
+helpers/vault/ @gitlab-com/pipeline-security-group/backend
+helpers/gcp_secret_manager/ @gitlab-com/pipeline-security-group/backend
+helpers/azure_key_vault/ @gitlab-com/pipeline-security-group/backend
+helpers/aws/ @gitlab-com/pipeline-security-group/backend
+helpers/gitlab_secrets_manager/ @gitlab-com/pipeline-security-group/backend
+helpers/secrets/ @gitlab-com/pipeline-security-group/backend
+
 [Documentation]
 .markdownlint.yml @gitlab-com/runner-docs-maintainers
 /docs/ @gitlab-com/runner-docs-maintainers
