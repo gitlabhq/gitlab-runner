@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -3701,6 +3702,7 @@ type setupBuildPodTestDef struct {
 	SetHTTPPutResponse       func() (*http.Response, error)
 	PrepareFn                func(*testing.T, setupBuildPodTestDef, *executor)
 	VerifyFn                 func(*testing.T, setupBuildPodTestDef, *api.Pod)
+	VerifyPDBFn              func(*testing.T, setupBuildPodTestDef, *policyv1.PodDisruptionBudget)
 	VerifyExecutorFn         func(*testing.T, setupBuildPodTestDef, *executor)
 	VerifySetupBuildPodErrFn func(*testing.T, error)
 }
@@ -3765,6 +3767,33 @@ func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Res
 		s.SetName("secret-name")
 		dataBytes, err = json.Marshal(s)
 		if !assert.NoError(rt.t, err, "failed to marshal secret named") {
+			return nil, err
+		}
+		resp = &http.Response{
+			StatusCode: http.StatusOK,
+			Body: FakeReadCloser{
+				Reader: bytes.NewBuffer(dataBytes),
+			},
+		}
+		resp.Header = make(http.Header)
+		resp.Header.Add(common.ContentType, "application/json")
+		return resp, nil
+	}
+
+	if req.Method == http.MethodPost && strings.Contains(req.URL.Path, "poddisruptionbudgets") {
+		pdb := new(policyv1.PodDisruptionBudget)
+		err = json.Unmarshal(dataBytes, pdb)
+		if !assert.NoError(rt.t, err, "failed to read PDB request body") {
+			return nil, err
+		}
+
+		if rt.test.VerifyPDBFn != nil {
+			rt.test.VerifyPDBFn(rt.t, rt.test, pdb)
+		}
+
+		pdb.SetUID("pdb-uid-1234")
+		dataBytes, err = json.Marshal(pdb)
+		if !assert.NoError(rt.t, err, "failed to marshal PDB response") {
 			return nil, err
 		}
 		resp = &http.Response{
@@ -5845,6 +5874,58 @@ containers:
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.False(t, *pod.Spec.AutomountServiceAccountToken)
+			},
+		},
+		"creates PodDisruptionBudget when enabled": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:           "default",
+						PodDisruptionBudget: func(b bool) *bool { return &b }(true),
+					},
+				},
+			},
+			VerifyPDBFn: func(t *testing.T, test setupBuildPodTestDef, pdb *policyv1.PodDisruptionBudget) {
+				assert.NotNil(t, pdb)
+				assert.Contains(t, pdb.Name, "-pdb")
+				assert.Equal(t, "default", pdb.Namespace)
+				require.NotNil(t, pdb.Spec.MinAvailable)
+				assert.Equal(t, int32(1), pdb.Spec.MinAvailable.IntVal)
+				assert.NotNil(t, pdb.Spec.Selector)
+				assert.Contains(t, pdb.Spec.Selector.MatchLabels, "job.runner.gitlab.com/pod")
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				require.NotNil(t, e.podDisruptionBudget)
+				assert.Equal(t, types.UID("pdb-uid-1234"), e.podDisruptionBudget.UID)
+				assert.Contains(t, e.podDisruptionBudget.Name, "-pdb")
+				assert.Equal(t, "default", e.podDisruptionBudget.Namespace)
+				require.NotNil(t, e.podDisruptionBudget.Spec.MinAvailable)
+				assert.Equal(t, int32(1), e.podDisruptionBudget.Spec.MinAvailable.IntVal)
+			},
+		},
+		"does not create PodDisruptionBudget when disabled": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:           "default",
+						PodDisruptionBudget: func(b bool) *bool { return &b }(false),
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				assert.Nil(t, e.podDisruptionBudget)
+			},
+		},
+		"does not create PodDisruptionBudget by default": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				assert.Nil(t, e.podDisruptionBudget)
 			},
 		},
 	}

@@ -485,6 +485,7 @@ func testKubernetesClient(version string, httpClient *http.Client) *kubernetes.C
 	kube.RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
 	kube.CoreV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
 	kube.ExtensionsV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
+	kube.PolicyV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
 
 	return kube
 }

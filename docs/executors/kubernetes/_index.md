@@ -114,6 +114,7 @@ You can either:
 |----------|-------------------------------|
 | events | list (`print_pod_warning_events=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
 | namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`) |
+| poddisruptionbudgets | create (`pod_disruption_budget=true`), get (`pod_disruption_budget=true`) |
 | pods | create, delete, get, list ([using Informers](#informers)), watch ([using Informers](#informers), `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/attach | create (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), delete (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), patch (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/exec | create, delete, get, patch |
@@ -145,6 +146,11 @@ rules:
   verbs:
   - "create" # Required when `kubernetes.NamespacePerJob=true`
   - "delete" # Required when `kubernetes.NamespacePerJob=true`
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs:
+  - "create" # Required when `pod_disruption_budget=true`
+  - "get" # Required when `pod_disruption_budget=true`
 - apiGroups: [""]
   resources: ["pods"]
   verbs:
@@ -372,6 +378,7 @@ This approach allows developers to optimize resource usage per job while maintai
 | `logs_base_dir`                               | Base directory to be prepended to the generated path to store build logs. For more information, see [Change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts). |
 | `scripts_base_dir`                            | Base directory to be prepended to the generated path to store build scripts. For more information, see [Change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts). |
 | `print_pod_warning_events`                    | When enabled, this feature retrieves all warning events associated with the pod when jobs fail. This functionality is enabled by default and requires a service account with at least [`events: list` permissions](#configure-runner-api-permissions). |
+| `pod_disruption_budget`                       | When enabled, a [`PodDisruptionBudget`](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) is created for each job pod to prevent eviction during voluntary disruptions such as node drains and cluster upgrades. Disabled by default. Requires a service account with [`poddisruptionbudgets` permissions](#configure-runner-api-permissions). |
 
 ### Configuration example
 
@@ -485,6 +492,36 @@ is not terminated immediately. The pod `terminationGracePeriods`
 ensures the pod is terminated only when it expired.
 
 {{< /alert >}}
+
+### Protect job pods from eviction
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6331) in GitLab Runner 18.10.
+
+{{< /history >}}
+
+To protect job pods from [voluntary disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#voluntary-and-involuntary-disruptions)
+like node drains and cluster upgrades, turn on the `pod_disruption_budget` option.
+
+When turned on, this setting creates a [`PodDisruptionBudget`](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)
+for each job pod with `minAvailable: 1`. This action prevents the Kubernetes
+eviction API from evicting the pod during voluntary disruptions.
+
+```toml
+[runners.kubernetes]
+  pod_disruption_budget = true
+```
+
+The `PodDisruptionBudget`:
+
+- Is automatically deleted when the job pod is deleted through Kubernetes owner references.
+- Does not protect against involuntary disruptions like node failures or out-of-memory kills.
+- Requires additional RBAC permissions. For detail, see [Configure runner API permissions](#configure-runner-api-permissions).
+
+> [!warning]
+> Turning on `PodDisruptionBudget` may cause node drains to hang if a job is running. Ensure your cluster upgrade
+> strategy accounts for potential node drain delays, or use job timeouts to limit how long a job can run.
 
 ### Overwrite pod tolerations
 

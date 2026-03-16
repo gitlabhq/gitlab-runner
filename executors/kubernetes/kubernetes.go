@@ -27,6 +27,7 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -294,10 +295,11 @@ type executor struct {
 
 	windowsKernelVersion func() string
 
-	pod         *api.Pod
-	credentials *api.Secret
-	options     *kubernetesOptions
-	services    []api.Service
+	pod                 *api.Pod
+	podDisruptionBudget *policyv1.PodDisruptionBudget
+	credentials         *api.Secret
+	options             *kubernetesOptions
+	services            []api.Service
 
 	configurationOverwrites *overwrites
 	pullManager             pull.Manager
@@ -2150,6 +2152,13 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 		return fmt.Errorf("error setting ownerReferences: %w", err)
 	}
 
+	if s.Config.Kubernetes.GetPodDisruptionBudget() {
+		s.podDisruptionBudget, err = s.createPodDisruptionBudget(ctx, ownerReferences)
+		if err != nil {
+			return fmt.Errorf("error creating PodDisruptionBudget: %w", err)
+		}
+	}
+
 	s.services, err = s.makePodProxyServices(ctx, ownerReferences)
 	return err
 }
@@ -2837,6 +2846,73 @@ func (s *executor) getHelperImage() string {
 	}
 
 	return s.helperImageInfo.String()
+}
+
+// createPodDisruptionBudget creates a PodDisruptionBudget for the job pod to prevent
+// voluntary evictions during node drains and cluster upgrades.
+//
+// The PDB is configured with minAvailable=1, which prevents the single job pod from
+// being evicted. The default unhealthyPodEvictionPolicy (IfHealthyBudget) is used,
+// meaning unhealthy pods won't be evicted since the budget requires 1 available pod.
+//
+// See: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
+func (s *executor) createPodDisruptionBudget(
+	ctx context.Context,
+	ownerReferences []metav1.OwnerReference,
+) (*policyv1.PodDisruptionBudget, error) {
+	s.BuildLogger.Debugln("Creating PodDisruptionBudget for build pod")
+
+	minAvailable := intstr.FromInt32(1)
+	pdb := &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            s.pod.Name + "-pdb",
+			Namespace:       s.pod.Namespace,
+			OwnerReferences: ownerReferences,
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MinAvailable: &minAvailable,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"job." + runnerLabelNamespace + "/pod": sanitizeLabel(s.Build.ProjectUniqueName()),
+				},
+			},
+		},
+	}
+
+	pdb, err := retry.WithValueFn(s, func() (*policyv1.PodDisruptionBudget, error) {
+		return s.requestPodDisruptionBudgetCreation(ctx, pdb)
+	}).Run()
+	if err != nil {
+		return nil, err
+	}
+
+	s.BuildLogger.Debugln(fmt.Sprintf("Created PodDisruptionBudget %q", pdb.Name))
+	return pdb, nil
+}
+
+func (s *executor) requestPodDisruptionBudgetCreation(
+	ctx context.Context,
+	pdb *policyv1.PodDisruptionBudget,
+) (*policyv1.PodDisruptionBudget, error) {
+	//nolint:gocritic // kubeAPI annotation, not commented-out code
+	// kubeAPI: poddisruptionbudgets, create, pod_disruption_budget=true
+	createdPDB, err := s.kubeClient.PolicyV1().
+		PodDisruptionBudgets(pdb.Namespace).Create(ctx, pdb, metav1.CreateOptions{})
+	if isConflict(err) {
+		s.BuildLogger.Debugln(
+			fmt.Sprintf(
+				"Conflict while trying to create the PodDisruptionBudget %s ... Retrieving the existing resource",
+				pdb.Name,
+			),
+		)
+
+		//nolint:gocritic // kubeAPI annotation, not commented-out code
+		// kubeAPI: poddisruptionbudgets, get, pod_disruption_budget=true
+		createdPDB, err = s.kubeClient.PolicyV1().
+			PodDisruptionBudgets(pdb.Namespace).Get(ctx, pdb.Name, metav1.GetOptions{})
+	}
+
+	return createdPDB, err
 }
 
 func (s *executor) makePodProxyServices(
