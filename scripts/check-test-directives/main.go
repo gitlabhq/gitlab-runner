@@ -1,8 +1,25 @@
+// Command check-test-directives verifies that every test file in the repository has
+// the correct //go:build directive for the "integration" build tag.
+//
+// Unit tests and integration tests are separated by build tag so that a plain
+// "go test ./..." only runs unit tests. Integration tests opt in with
+// "//go:build integration" and are run separately (e.g. with -tags=integration).
+//
+// To keep things consistent, we enforce a naming convention: files matching
+// integration(_...)?_test.go are integration tests, and everything else is a
+// unit test. This tool checks that the two stay in sync — integration-named
+// files must have "integration" in their build constraint, and all other test
+// files must have "!integration".
+//
+// Usage:
+//
+//	go run . [directory]
+//
+// If no directory is given, the current working directory is used.
 package main
 
 import (
 	"fmt"
-	"go/ast"
 	"go/build/constraint"
 	"go/parser"
 	"go/token"
@@ -10,237 +27,121 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
-
-	"github.com/samber/lo"
 )
 
 var (
-	testFileRx            = regexp.MustCompile("_test.go$")
-	integrationTestFileRx = regexp.MustCompile("integration(_[a-z0-9_]+)?_test.go$")
-	helpersTestFileRx     = regexp.MustCompile("helpers(_[a-z0-9_]+)?_test.go$")
+	testFileRx            = regexp.MustCompile(`_test\.go$`)
+	integrationTestFileRx = regexp.MustCompile(`integration(_[a-z0-9_]+)?_test\.go$`)
+	helpersTestFileRx     = regexp.MustCompile(`helpers(_[a-z0-9_]+)?_test\.go$`)
 
-	workingDirectory string
-	errors           []pathError
-
-	integrationTag    = buildTag{name: "integration", value: true}
-	nonIntegrationTag = buildTag{name: "non-integration", value: false}
-
-	tagOverrides = tagOverridesFilesMap{
-		"executors/custom/terminal_test.go": tagOverridesMap{
-			"windows": false,
-		},
-		"helpers/archives/zip_create_unix_test.go": tagOverridesMap{
-			"windows": false,
-		},
-		"executors/docker/internal/volumes/parser/windows_path_test.go": tagOverridesMap{
-			"windows": false,
-		},
-		"executors/docker/autoscaler/autoscaler_integration_unix_test.go": tagOverridesMap{
-			"windows": false,
-		},
+	ignoreDirectories = map[string]bool{
+		".git": true, "scripts": true, ".tmp": true, "magefiles": true,
 	}
-
-	ignoreDirectories = []string{".git", "scripts", ".tmp", "magefiles"}
 )
 
-type tagOverridesFilesMap map[string]tagOverridesMap
-
-type tagOverridesMap map[string]bool
-
-type pathError struct {
-	path string
-	err  error
-}
-
-type buildTag struct {
-	name  string
-	value bool
-}
-
-func init() {
-	path, err := os.Getwd()
-	if err != nil {
-		panic(fmt.Sprintf("checking working directory: %v", err))
-	}
-
-	if len(os.Args) > 1 {
-		path = os.Args[1]
-	}
-
-	workingDirectory = filepath.Clean(path)
-}
-
 func main() {
-	fmt.Printf("Analyse build directives in test files at %q\n", workingDirectory)
+	root := "."
+	if len(os.Args) > 1 {
+		root = os.Args[1]
+	}
+	root, err := filepath.Abs(root)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
 
-	walkNonIntegrationTestFiles(workingDirectory, integrationBuildConstraintDoesntExist)
-	walkIntegrationTestFiles(workingDirectory, integrationBuildConstraintExists)
+	fmt.Printf("Checking build directives in test files at %q\n", root)
 
-	checkErrors()
-}
+	var errs []string
 
-func walkNonIntegrationTestFiles(rootPath string, fn func(path string) error) {
-	walkTestFiles("non-integration", rootPath, func(walkPath string, info fs.FileInfo, _ error) error {
-		name := info.Name()
-		if !integrationTestFileRx.MatchString(name) && !helpersTestFileRx.MatchString(name) {
-			return fn(walkPath)
-		}
-
-		return nil
-	})
-}
-
-func walkIntegrationTestFiles(rootPath string, fn func(path string) error) {
-	walkTestFiles("integration", rootPath, func(walkPath string, info fs.FileInfo, _ error) error {
-		if integrationTestFileRx.MatchString(info.Name()) {
-			return fn(walkPath)
-		}
-
-		return nil
-	})
-}
-
-func walkTestFiles(testType string, rootPath string, walkFunc filepath.WalkFunc) {
-	fmt.Printf("\nChecking %s test files...\n", testType)
-
-	err := filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
+	_ = filepath.Walk(root, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
-			recordError(path, err)
 			return nil
 		}
-
-		name := info.Name()
-
-		if info.IsDir() && lo.Contains(ignoreDirectories, name) {
+		if info.IsDir() && ignoreDirectories[info.Name()] {
 			return filepath.SkipDir
 		}
 
-		if !testFileRx.MatchString(name) {
+		name := info.Name()
+		if !testFileRx.MatchString(name) || helpersTestFileRx.MatchString(name) {
 			return nil
 		}
 
-		recordError(path, walkFunc(path, info, err))
-
+		isIntegration := integrationTestFileRx.MatchString(name)
+		if err := checkFile(path, isIntegration); err != nil {
+			rel, _ := filepath.Rel(root, path)
+			errs = append(errs, fmt.Sprintf("  %s: %v", rel, err))
+		}
 		return nil
 	})
 
-	if err != nil {
-		panic(fmt.Sprintf("walking files: %v", err))
-	}
-}
-
-func recordError(path string, err error) {
-	if err == nil {
-		return
-	}
-
-	pe := pathError{path: path, err: err}
-	errors = append(errors, pe)
-}
-
-func integrationBuildConstraintDoesntExist(path string) error {
-	return checkBuildConstraints(path, nonIntegrationTag)
-}
-
-func integrationBuildConstraintExists(path string) error {
-	return checkBuildConstraints(path, integrationTag)
-}
-
-func checkBuildConstraints(path string, integrationTag buildTag) error {
-	fmt.Printf(" -> %s...\n", trimWDFromPath(path))
-
-	comments, err := parseFile(path)
-	if err != nil {
-		return err
-	}
-
-	expressions, err := scanAndParseBuildConstraints(comments)
-	if err != nil {
-		return err
-	}
-
-	for _, expr := range expressions {
-		if !expr.Eval(integrationEvalFn(path, integrationTag)) {
-			return fmt.Errorf(
-				"invalid integration build constraint %q evaluation for %s test file",
-				expr.String(),
-				integrationTag.name,
-			)
+	if len(errs) > 0 {
+		fmt.Println("\n✖ Failed directive expectations:")
+		for _, e := range errs {
+			fmt.Println(e)
 		}
+		os.Exit(1)
+	}
+
+	fmt.Println("\n✔ All directives match expectations")
+}
+
+func checkFile(path string, wantIntegration bool) error {
+	expr, err := parseBuildConstraint(path)
+	if err != nil {
+		return err
+	}
+
+	positive, negative := hasTag(expr, "integration")
+
+	if wantIntegration && !positive {
+		return fmt.Errorf("integration test missing 'integration' build tag")
+	}
+	if !wantIntegration && !negative {
+		return fmt.Errorf("non-integration test missing '!integration' build tag")
 	}
 
 	return nil
 }
 
-func parseFile(path string) ([]*ast.CommentGroup, error) {
-	fileSet := token.NewFileSet()
-	f, err := parser.ParseFile(fileSet, path, nil, parser.PackageClauseOnly+parser.ParseComments)
+func parseBuildConstraint(path string) (constraint.Expr, error) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, path, nil, parser.PackageClauseOnly|parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("parsing file: %w", err)
 	}
 
-	if len(f.Comments) < 1 {
-		return nil, fmt.Errorf("missing top-level comments")
-	}
-
-	return f.Comments, nil
-}
-
-func scanAndParseBuildConstraints(comments []*ast.CommentGroup) ([]constraint.Expr, error) {
-	var expressions []constraint.Expr
-
-	for _, group := range comments {
-		for _, line := range group.List {
-			text := line.Text
-			if constraint.IsGoBuild(text) || constraint.IsPlusBuild(text) {
-				expr, err := constraint.Parse(text)
-				if err != nil {
-					return nil, fmt.Errorf("parsing constraint %q: %w", text, err)
-				}
-				expressions = append(expressions, expr)
+	for _, group := range f.Comments {
+		for _, c := range group.List {
+			if constraint.IsGoBuild(c.Text) {
+				return constraint.Parse(c.Text)
 			}
 		}
 	}
 
-	return expressions, nil
+	return nil, fmt.Errorf("no //go:build directive found")
 }
 
-func integrationEvalFn(path string, integrationTag buildTag) func(tag string) bool {
-	return func(tag string) bool {
-		if tag == "integration" {
-			return integrationTag.value
+// hasTag walks the constraint expression tree and reports whether the given tag
+// appears in a positive or negative (negated) position. This avoids needing to
+// evaluate the full expression, so platform tags like "windows" don't interfere.
+func hasTag(expr constraint.Expr, tag string) (positive, negative bool) {
+	switch e := expr.(type) {
+	case *constraint.TagExpr:
+		if e.Tag == tag {
+			return true, false
 		}
-
-		m, ok := tagOverrides[trimWDFromPath(path)]
-		if ok {
-			v, ok := m[tag]
-			if ok {
-				return v
-			}
-		}
-
-		return true
+	case *constraint.NotExpr:
+		p, n := hasTag(e.X, tag)
+		return n, p
+	case *constraint.AndExpr:
+		p1, n1 := hasTag(e.X, tag)
+		p2, n2 := hasTag(e.Y, tag)
+		return p1 || p2, n1 || n2
+	case *constraint.OrExpr:
+		p1, n1 := hasTag(e.X, tag)
+		p2, n2 := hasTag(e.Y, tag)
+		return p1 || p2, n1 || n2
 	}
-}
-
-func checkErrors() {
-	fmt.Println()
-
-	if len(errors) < 1 {
-		fmt.Println("✔ All directives match expectations")
-		return
-	}
-
-	fmt.Println("✖ Failed directives expectations:")
-
-	for _, e := range errors {
-		fmt.Printf("%80s: %v\n", trimWDFromPath(e.path), e.err)
-	}
-
-	os.Exit(1)
-}
-
-func trimWDFromPath(path string) string {
-	return strings.TrimPrefix(path, workingDirectory+"/")
+	return false, false
 }
