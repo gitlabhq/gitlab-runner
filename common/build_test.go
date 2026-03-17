@@ -3067,6 +3067,29 @@ func TestBuildStageMetrics(t *testing.T) {
 	assert.Len(t, stagesMap, 0)
 }
 
+func TestBuild_dispatchedJobExecutionMode(t *testing.T) {
+	build := Build{
+		Runner: &RunnerConfig{},
+		Job: spec.Job{
+			Run: spec.Run{{}},
+			Variables: spec.Variables{
+				{
+					Key:   featureflags.UseScriptToStepMigration,
+					Value: "true",
+				},
+			},
+		},
+		ExecutorFeatures: FeaturesInfo{
+			NativeStepsIntegration: false,
+		},
+	}
+
+	assert.Equal(t, JobExecutionModeTraditional, build.dispatchedJobExecutionMode())
+
+	build.markStepDispatchedInScript()
+	assert.Equal(t, JobExecutionModeSteps, build.dispatchedJobExecutionMode())
+}
+
 func TestBuildStageMetricsFailBuild(t *testing.T) {
 	executor, provider := setupMockExecutorAndProvider(t)
 	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).

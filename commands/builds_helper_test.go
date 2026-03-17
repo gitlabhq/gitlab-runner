@@ -402,6 +402,78 @@ func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
 	}
 }
 
+func TestJobExecutionModeTotal(t *testing.T) {
+	tests := map[string]struct {
+		mode             common.JobExecutionMode
+		executor         string
+		expectedExecutor string
+		expectedValue    float64
+	}{
+		"steps mode": {
+			mode:             common.JobExecutionModeSteps,
+			executor:         "docker",
+			expectedExecutor: "docker",
+			expectedValue:    1,
+		},
+		"traditional mode": {
+			mode:             common.JobExecutionModeTraditional,
+			executor:         "docker+machine",
+			expectedExecutor: "docker+machine",
+			expectedValue:    1,
+		},
+		"empty executor uses unknown label": {
+			mode:             common.JobExecutionModeTraditional,
+			executor:         "",
+			expectedExecutor: "unknown",
+			expectedValue:    1,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &common.Build{
+				Runner: &common.RunnerConfig{
+					Name: testName,
+					RunnerCredentials: common.RunnerCredentials{
+						Token: testToken,
+					},
+					SystemID: "testSystemID",
+				},
+				Job: spec.Job{
+					ID: 1,
+					JobInfo: spec.JobInfo{
+						ProjectID: 1,
+					},
+				},
+			}
+
+			b := newBuildsHelper()
+			b.addBuild(build)
+			build.OnJobExecutionModeDispatchedFn.Call(tt.mode, tt.executor)
+
+			ch := make(chan prometheus.Metric, 1)
+			b.jobExecutionModeTotal.Collect(ch)
+
+			m := <-ch
+
+			var mm dto.Metric
+			err := m.Write(&mm)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedValue, mm.GetCounter().GetValue())
+
+			labels := make(map[string]string)
+			for _, l := range mm.GetLabel() {
+				if l.Name != nil && l.Value != nil {
+					labels[*l.Name] = *l.Value
+				}
+			}
+
+			assert.Equal(t, string(tt.mode), labels["mode"])
+			assert.Equal(t, tt.expectedExecutor, labels["executor"])
+		})
+	}
+}
+
 func TestPrepareStageMetrics(t *testing.T) {
 	build := &common.Build{
 		Runner: &common.RunnerConfig{
