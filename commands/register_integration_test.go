@@ -18,14 +18,19 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
-
 	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/machine"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/custom"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/machine"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/parallels"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/shell"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
@@ -195,6 +200,7 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 			cmd := commands.NewRegisterCommandForTest(
 				bufio.NewReader(strings.NewReader(strings.Join(tc.answers, "\n")+"\n")),
 				network,
+				testExecutorProviders(),
 			)
 
 			app := cli.NewApp()
@@ -251,6 +257,7 @@ func TestAskRunnerUsingRunnerTokenOnRegistrationTokenOverridingForbiddenDefaults
 			cmd := commands.NewRegisterCommandForTest(
 				bufio.NewReader(strings.NewReader(strings.Join(answers, "\n")+"\n")),
 				network,
+				testExecutorProviders(),
 			)
 
 			hook := test.NewGlobal()
@@ -301,6 +308,7 @@ func TestAskRunnerUsingRunnerTokenOverridingForbiddenDefaults(t *testing.T) {
 			cmd := commands.NewRegisterCommandForTest(
 				bufio.NewReader(strings.NewReader(strings.Join(answers, "\n")+"\n")),
 				network,
+				testExecutorProviders(),
 			)
 
 			hook := test.NewGlobal()
@@ -369,7 +377,7 @@ func testRegisterCommandRun(
 		}
 	}()
 
-	cmd := commands.NewRegisterCommandForTest(nil, network)
+	cmd := commands.NewRegisterCommandForTest(nil, network, testExecutorProviders())
 
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
@@ -567,6 +575,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 			cmd := commands.NewRegisterCommandForTest(
 				bufio.NewReader(strings.NewReader(strings.Join(tc.answers, "\n")+"\n")),
 				network,
+				testExecutorProviders(),
 			)
 
 			app := cli.NewApp()
@@ -1018,6 +1027,7 @@ func TestUnregisterOnFailure(t *testing.T) {
 			cmd := commands.NewRegisterCommandForTest(
 				bufio.NewReader(strings.NewReader(strings.Join(answers, "\n")+"\n")),
 				network,
+				testExecutorProviders(),
 			)
 
 			app := cli.NewApp()
@@ -1076,6 +1086,7 @@ func TestNameIsNotRequestedOnServerFailureRegisterCommandWithAuthToken(t *testin
 	cmd := commands.NewRegisterCommandForTest(
 		bufio.NewReader(strings.NewReader(strings.Join(answers, "\n")+"\n")),
 		network,
+		testExecutorProviders(),
 	)
 
 	app := cli.NewApp()
@@ -1372,4 +1383,20 @@ func TestRegisterTokenExpiresAt(t *testing.T) {
 			)
 		})
 	}
+}
+
+func testExecutorProviders() *executors.ProviderRegistry {
+	dockerProvider := docker.NewProvider()
+	runnerCommand := "gitlab-runner"
+	return executors.NewProviderRegistry(map[string]common.ExecutorProvider{
+		"custom":                  custom.NewProvider(runnerCommand),
+		"docker":                  dockerProvider,
+		"docker+machine":          machine.NewProvider(dockerProvider),
+		"docker-windows":          docker.NewWindowsProvider(),
+		"parallels":               parallels.NewProvider(),
+		"shell":                   shell.NewProvider(runnerCommand),
+		"ssh":                     ssh.NewProvider(),
+		"virtualbox":              virtualbox.NewProvider(),
+		common.ExecutorKubernetes: kubernetes.NewProvider(),
+	})
 }

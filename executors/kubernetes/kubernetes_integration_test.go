@@ -280,8 +280,9 @@ func testKubernetesBuildPassingEnvsMultistep(t *testing.T, featureFlagName strin
 		buildtest.RunBuildWithPassingEnvsMultistep(
 			t,
 			build.Runner,
-			func(_ *testing.T, build *common.Build) {
-				buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+			func(_ *testing.T, b *common.Build) {
+				b.ExecutorProvider = kubernetes.NewProvider()
+				buildtest.SetBuildFeatureFlag(b, featureFlagName, featureFlagValue)
 			},
 		)
 	})
@@ -1181,8 +1182,9 @@ func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, 
 	buildtest.RunBuildWithCancel(
 		t,
 		build.Runner,
-		func(_ *testing.T, build *common.Build) {
-			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+		func(_ *testing.T, b *common.Build) {
+			b.ExecutorProvider = kubernetes.NewProvider()
+			buildtest.SetBuildFeatureFlag(b, featureFlagName, featureFlagValue)
 		},
 	)
 }
@@ -1196,8 +1198,9 @@ func testKubernetesBuildLogLimitExceededFeatureFlag(t *testing.T, featureFlagNam
 	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(
 		t,
 		build.Runner,
-		func(_ *testing.T, build *common.Build) {
-			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+		func(_ *testing.T, b *common.Build) {
+			b.ExecutorProvider = kubernetes.NewProvider()
+			buildtest.SetBuildFeatureFlag(b, featureFlagName, featureFlagValue)
 		},
 	)
 }
@@ -1211,8 +1214,9 @@ func testKubernetesBuildMaskingFeatureFlag(t *testing.T, featureFlagName string,
 	buildtest.RunBuildWithMasking(
 		t,
 		build.Runner,
-		func(_ *testing.T, build *common.Build) {
-			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+		func(_ *testing.T, b *common.Build) {
+			b.ExecutorProvider = kubernetes.NewProvider()
+			buildtest.SetBuildFeatureFlag(b, featureFlagName, featureFlagValue)
 		},
 	)
 }
@@ -2328,7 +2332,7 @@ func TestPrepareIssue2583(t *testing.T) {
 		},
 	}
 
-	e := common.NewExecutor(common.ExecutorKubernetes)
+	e := kubernetes.NewProvider().Create()
 
 	mockTrace := buildlogger.NewMockTrace(t)
 	mockTrace.EXPECT().IsStdout().Return(true).Once()
@@ -2739,6 +2743,7 @@ func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (sp
 				},
 			},
 		},
+		ExecutorProvider: kubernetes.NewProvider(),
 	}
 }
 
@@ -3296,7 +3301,9 @@ func TestBuildExpandedFileVariable(t *testing.T) {
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
-		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, nil)
+		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, func(t *testing.T, b *common.Build) {
+			b.ExecutorProvider = build.ExecutorProvider
+		})
 	})
 }
 

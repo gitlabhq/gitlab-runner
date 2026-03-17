@@ -46,6 +46,7 @@ type GitLabClient struct {
 	certDirectory        string
 	apiRequestsCollector *APIRequestsCollector
 	connectionMaxAge     time.Duration
+	executorProviderFunc func(string) common.ExecutorProvider
 
 	httpClientOptions HttpClientOptions
 }
@@ -122,7 +123,7 @@ func (n *GitLabClient) getRunnerInfo(config common.RunnerConfig) common.Info {
 
 	n.getFeatures(&info.Features)
 
-	if executorProvider := common.GetExecutorProvider(config.Executor); executorProvider != nil {
+	if executorProvider := n.executorProviderFunc(config.Executor); executorProvider != nil {
 		_ = executorProvider.GetFeatures(&info.Features)
 
 		if info.Shell == "" {
@@ -1303,13 +1304,23 @@ func WithHttpClientOptions(opts HttpClientOptions) ClientOption {
 	}
 }
 
+func WithExecutorProviderFunc(fn func(string) common.ExecutorProvider) ClientOption {
+	return func(c *GitLabClient) {
+		c.executorProviderFunc = fn
+	}
+}
+
 type HttpClientOptions struct {
 	Timeout               *time.Duration
 	ResponseHeaderTimeout *time.Duration
 }
 
 func NewGitLabClient(options ...ClientOption) *GitLabClient {
-	c := &GitLabClient{}
+	c := &GitLabClient{
+		executorProviderFunc: func(name string) common.ExecutorProvider {
+			return nil
+		},
+	}
 	for _, o := range options {
 		o(c)
 	}

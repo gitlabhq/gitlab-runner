@@ -6,15 +6,15 @@ import (
 	"os"
 	"testing"
 
-	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
 
 const (
@@ -44,6 +44,7 @@ func TestVirtualBoxSuccessRun(t *testing.T) {
 				SSH: vboxSSHConfig,
 			},
 		},
+		ExecutorProvider: virtualbox.NewProvider(),
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -75,6 +76,7 @@ World"`)
 					Shell: shell,
 				},
 			},
+			ExecutorProvider: virtualbox.NewProvider(),
 		}
 
 		require.NoError(t, err)
@@ -99,6 +101,7 @@ func TestVirtualBoxSuccessRunRawVariable(t *testing.T) {
 				SSH: vboxSSHConfig,
 			},
 		},
+		ExecutorProvider: virtualbox.NewProvider(),
 	}
 
 	value := "$VARIABLE$WITH$DOLLARS$$"
@@ -130,6 +133,7 @@ func TestVirtualBoxBuildFail(t *testing.T) {
 				SSH: vboxSSHConfig,
 			},
 		},
+		ExecutorProvider: virtualbox.NewProvider(),
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -154,6 +158,7 @@ func TestVirtualBoxMissingImage(t *testing.T) {
 				SSH: vboxSSHConfig,
 			},
 		},
+		ExecutorProvider: virtualbox.NewProvider(),
 	}
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -174,6 +179,7 @@ func TestVirtualBoxMissingSSHCredentials(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: virtualbox.NewProvider(),
 	}
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -195,7 +201,7 @@ func TestVirtualBoxBuildCancel(t *testing.T) {
 		},
 	}
 
-	buildtest.RunBuildWithCancel(t, config, nil)
+	buildtest.RunBuildWithCancel(t, config, setupExecutor)
 }
 
 func TestBuildLogLimitExceeded(t *testing.T) {
@@ -212,7 +218,7 @@ func TestBuildLogLimitExceeded(t *testing.T) {
 		},
 	}
 
-	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(t, config, nil)
+	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(t, config, setupExecutor)
 }
 
 func TestVirtualBoxBuildMasking(t *testing.T) {
@@ -229,7 +235,7 @@ func TestVirtualBoxBuildMasking(t *testing.T) {
 		},
 	}
 
-	buildtest.RunBuildWithMasking(t, config, nil)
+	buildtest.RunBuildWithMasking(t, config, setupExecutor)
 }
 
 func getTestBuild(t *testing.T, getJobResp func() (spec.Job, error)) *common.Build {
@@ -248,6 +254,7 @@ func getTestBuild(t *testing.T, getJobResp func() (spec.Job, error)) *common.Bui
 				SSH: vboxSSHConfig,
 			},
 		},
+		ExecutorProvider: virtualbox.NewProvider(),
 	}
 }
 
@@ -316,6 +323,12 @@ func TestBuildExpandedFileVariable(t *testing.T) {
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
-		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, nil)
+		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, func(t *testing.T, b *common.Build) {
+			b.ExecutorProvider = build.ExecutorProvider
+		})
 	})
+}
+
+func setupExecutor(t *testing.T, build *common.Build) {
+	build.ExecutorProvider = virtualbox.NewProvider()
 }

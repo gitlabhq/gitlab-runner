@@ -109,7 +109,7 @@ func TestPrepare(t *testing.T) {
 }
 
 func TestSharedEnv(t *testing.T) {
-	provider := common.GetExecutorProvider("ssh")
+	provider := NewProvider()
 	features := &common.FeaturesInfo{}
 
 	_ = provider.GetFeatures(features)

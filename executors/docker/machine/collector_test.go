@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 )
 
 func TestIfMachineProviderExposesCollectInterface(t *testing.T) {
@@ -20,7 +21,7 @@ func TestIfMachineProviderExposesCollectInterface(t *testing.T) {
 }
 
 func TestMachineProviderDeadInterval(t *testing.T) {
-	provider := newMachineProvider()
+	provider := newMachineProvider(docker_executor.NewProvider())
 	assert.Equal(t, 0, provider.collectDetails().Idle)
 
 	details := provider.machineDetails("test", false)

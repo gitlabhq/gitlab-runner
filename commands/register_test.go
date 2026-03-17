@@ -14,8 +14,6 @@ import (
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/machine"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
 )
 
 func setupDockerRegisterCommand(dockerConfig *common.DockerConfig) *RegisterCommand {

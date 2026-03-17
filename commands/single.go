@@ -14,17 +14,19 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
 type RunSingleCommand struct {
 	common.RunnerConfig
-	network          common.Network
-	WaitTimeout      int `long:"wait-timeout" description:"How long to wait in seconds before receiving the first job"`
-	lastBuild        time.Time
-	runForever       bool
-	MaxBuilds        int `long:"max-builds" description:"How many builds to process before exiting"`
-	finished         atomic.Bool
-	interruptSignals chan os.Signal
+	network           common.Network
+	executorProviders executors.Providers
+	WaitTimeout       int `long:"wait-timeout" description:"How long to wait in seconds before receiving the first job"`
+	lastBuild         time.Time
+	runForever        bool
+	MaxBuilds         int `long:"max-builds" description:"How many builds to process before exiting"`
+	finished          atomic.Bool
+	interruptSignals  chan os.Signal
 
 	ConfigFile      string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 	RunnerName      string `short:"r" long:"runner" description:"Runner name from the config file to use instead of command-line arguments"`
@@ -79,7 +81,7 @@ func (r *RunSingleCommand) postBuild() {
 	r.lastBuild = time.Now()
 }
 
-func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal chan os.Signal) error {
+func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal chan os.Signal, provider common.ExecutorProvider) error {
 	jobData, healthy := r.network.RequestJob(context.Background(), r.RunnerConfig, nil)
 	if !healthy {
 		logrus.Println("Runner is not healthy!")
@@ -99,7 +101,7 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 	}
 
 	config := common.NewConfig()
-	newBuild, err := common.NewBuild(*jobData, &r.RunnerConfig, abortSignal, data)
+	newBuild, err := common.NewBuild(*jobData, &r.RunnerConfig, abortSignal, data, provider)
 	if err != nil {
 		return err
 	}
@@ -180,7 +182,7 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 
 	r.HandleArgs()
 
-	executorProvider := common.GetExecutorProvider(r.Executor)
+	executorProvider := r.executorProviders.GetByName(r.Executor)
 	if executorProvider == nil {
 		logrus.Fatalln("Unknown executor:", r.Executor)
 	}
@@ -214,7 +216,7 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 			logrus.Warningln("Executor update:", err)
 		}
 
-		pErr := r.processBuild(data, abortSignal)
+		pErr := r.processBuild(data, abortSignal, executorProvider)
 		if pErr != nil {
 			logrus.WithError(pErr).Error("Failed to process build")
 		}
@@ -241,8 +243,9 @@ func (r *RunSingleCommand) getShutdownTimeout() time.Duration {
 	return common.DefaultShutdownTimeout
 }
 
-func NewRunSingleCommand(n common.Network) cli.Command {
+func NewRunSingleCommand(n common.Network, executorProviders executors.Providers) cli.Command {
 	return common.NewCommand("run-single", "start single runner", &RunSingleCommand{
-		network: n,
+		network:           n,
+		executorProviders: executorProviders,
 	})
 }

@@ -3109,8 +3109,7 @@ func TestRunnerVersion(t *testing.T) {
 
 func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testing.T) {
 	executorProvider := NewMockExecutorProvider(t)
-	executorProvider.On("GetDefaultShell").Return("my-default-executor-shell").Twice()
-	executorProvider.On("CanCreate").Return(true).Once()
+	executorProvider.On("GetDefaultShell").Return("my-default-executor-shell").Once()
 	executorProvider.On("GetFeatures", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		features := args[0].(*FeaturesInfo)
 		features.Shared = true
@@ -3119,17 +3118,21 @@ func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testin
 		info := args[1].(*ConfigInfo)
 		info.Gpus = "all"
 	})
-	RegisterExecutorProviderForTest(t, "my-test-executor", executorProvider)
-
 	shell := NewMockShell(t)
 	shell.On("GetName").Return("my-default-executor-shell")
+	shell.On("IsDefault").Return(false).Maybe()
 	shell.On("GetFeatures", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		features := args[0].(*FeaturesInfo)
 		features.Variables = true
 	})
 	RegisterShell(shell)
 
-	c := NewGitLabClient()
+	providers := map[string]ExecutorProvider{"my-test-executor": executorProvider}
+	c := NewGitLabClient(
+		WithExecutorProviderFunc(func(name string) ExecutorProvider {
+			return providers[name]
+		}),
+	)
 	config := RunnerConfig{
 		RunnerSettings: RunnerSettings{
 			Executor: "my-test-executor",

@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/shell"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
@@ -70,7 +72,9 @@ func TestDefaultWindowsShell(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.shell, func(t *testing.T) {
 			n := network.NewGitLabClient()
-			cmd := newRegisterCommand(n)
+			cmd := newRegisterCommand(n, executors.NewProviderRegistry(map[string]common.ExecutorProvider{
+				"shell": shell.NewProvider("gitlab-runner"),
+			}))
 			cmd.Shell = tt.shell
 			cmd.Executor = "shell"
 

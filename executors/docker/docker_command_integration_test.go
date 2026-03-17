@@ -33,7 +33,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
-	execDocker "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/prebuilt"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
@@ -171,8 +171,9 @@ func getBuildForOS(t *testing.T, getJobResp func() (spec.Job, error)) common.Bui
 	require.NoError(t, err)
 
 	build := common.Build{
-		Job:    jobResp,
-		Runner: getRunnerConfigForOS(t),
+		Job:              jobResp,
+		Runner:           getRunnerConfigForOS(t),
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	return build
@@ -255,7 +256,7 @@ func TestBuildPassingEnvsMultistep(t *testing.T) {
 		runnerConfig := getRunnerConfigForOS(t)
 		runnerConfig.RunnerSettings.Shell = shell
 
-		buildtest.RunBuildWithPassingEnvsMultistep(t, runnerConfig, nil)
+		buildtest.RunBuildWithPassingEnvsMultistep(t, runnerConfig, setupExecutor)
 	})
 }
 
@@ -382,6 +383,7 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -409,6 +411,7 @@ func TestDockerCommandEntrypointWithStderrOutput(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -436,6 +439,7 @@ func TestDockerCommandOwnershipOverflow(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	trace := &common.Trace{Writer: os.Stdout}
@@ -480,6 +484,7 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -542,6 +547,7 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 						},
 					},
 				},
+				ExecutorProvider: docker_executor.NewProvider(),
 			}
 
 			var buffer bytes.Buffer
@@ -620,19 +626,19 @@ func TestDockerCommandPullingImageNoHost(t *testing.T) {
 func TestDockerCommandBuildCancel(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	buildtest.RunBuildWithCancel(t, getRunnerConfigForOS(t), nil)
+	buildtest.RunBuildWithCancel(t, getRunnerConfigForOS(t), setupExecutor)
 }
 
 func TestBuildMasking(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	buildtest.RunBuildWithMasking(t, getRunnerConfigForOS(t), nil)
+	buildtest.RunBuildWithMasking(t, getRunnerConfigForOS(t), setupExecutor)
 }
 
 func TestBuildMaskingProxyExec(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	buildtest.RunBuildWithMaskingProxyExec(t, getRunnerConfigForOS(t), nil)
+	buildtest.RunBuildWithMaskingProxyExec(t, getRunnerConfigForOS(t), setupExecutor)
 }
 
 func TestBuildExpandedFileVariable(t *testing.T) {
@@ -640,7 +646,7 @@ func TestBuildExpandedFileVariable(t *testing.T) {
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := getBuildForOS(t, common.GetSuccessfulBuild)
-		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, nil)
+		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, setupExecutor)
 	})
 }
 
@@ -681,6 +687,7 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	for name, tt := range tests {
@@ -735,6 +742,7 @@ func TestDockerCommandServiceNameEmpty(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	for name, tt := range tests {
@@ -771,6 +779,7 @@ func TestDockerCommandOutput(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	var buffer bytes.Buffer
@@ -844,6 +853,7 @@ func getTestDockerJob(t *testing.T, job spec.Job) *common.Build {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	return build
@@ -946,6 +956,7 @@ func TestCacheInContainer(t *testing.T) {
 				Cache: &cacheconfig.Config{},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	cacheNotPresentRE := regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\w+\s+no cached directory`)
@@ -1035,6 +1046,7 @@ func TestDockerImageNameFromVariable(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	re := regexp.MustCompile("(?m)^ERROR: The [^ ]+ is not present on list of allowed images")
@@ -1069,6 +1081,7 @@ func TestDockerServiceNameFromVariable(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	re := regexp.MustCompile("(?m)^ERROR: The [^ ]+ is not present on list of allowed services")
@@ -1158,6 +1171,7 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 						},
 					},
 				},
+				ExecutorProvider: docker_executor.NewProvider(),
 			}
 
 			build.Image = spec.Image{
@@ -1231,6 +1245,7 @@ func TestDockerServiceAliases(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	out, err := buildtest.RunBuildReturningOutput(t, &build)
@@ -1256,6 +1271,7 @@ func TestDockerServiceHealthcheckOverflow(t *testing.T) {
 				Docker:   &common.DockerConfig{},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	build.Image = spec.Image{
@@ -1264,7 +1280,7 @@ func TestDockerServiceHealthcheckOverflow(t *testing.T) {
 
 	build.Services = append(build.Services, spec.Image{
 		Name:    "alpine:3.22",
-		Command: []string{"sh", "-c", "printf 'datastart: %" + strconv.Itoa(execDocker.ServiceLogOutputLimit) + "s' ':dataend'"},
+		Command: []string{"sh", "-c", "printf 'datastart: %" + strconv.Itoa(docker_executor.ServiceLogOutputLimit) + "s' ':dataend'"},
 	})
 
 	build.Variables = append(build.Variables, spec.Variable{
@@ -1294,6 +1310,7 @@ func TestDockerHandlesAliasDuplicates(t *testing.T) {
 				Docker:   &common.DockerConfig{WaitForServicesTimeout: 5},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	build.Image = spec.Image{
@@ -1407,6 +1424,7 @@ func testDockerVersion(t *testing.T, version string) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -1475,6 +1493,7 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	var buffer bytes.Buffer
@@ -1509,6 +1528,7 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 				ProxyExec: func() *bool { v := false; return &v }(),
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	var buffer bytes.Buffer
@@ -1601,6 +1621,7 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -1885,6 +1906,7 @@ func TestChownAndUmaskUsage(t *testing.T) {
 						},
 					},
 				},
+				ExecutorProvider: docker_executor.NewProvider(),
 			}
 
 			output, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1898,7 +1920,7 @@ func TestChownAndUmaskUsage(t *testing.T) {
 func TestBuildLogLimitExceeded(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(t, getRunnerConfigForOS(t), nil)
+	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(t, getRunnerConfigForOS(t), setupExecutor)
 }
 
 func TestCleanupProjectGitClone(t *testing.T) {
@@ -2032,6 +2054,7 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	tests := map[string]struct {
@@ -2271,6 +2294,7 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -2317,6 +2341,7 @@ func TestDockerCommandWithRunnerServiceEnvironmentVariables(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	out := bytes.NewBuffer(nil)
@@ -2384,6 +2409,7 @@ func testDockerBuildContainerGracefulShutdown(t *testing.T, useInit bool) {
 						},
 					},
 				},
+				ExecutorProvider: docker_executor.NewProvider(),
 			}
 
 			if useInit {
@@ -2436,6 +2462,7 @@ func Test_FF_USE_INIT_WITH_DOCKER_EXECUTOR(t *testing.T) {
 						},
 					},
 				},
+				ExecutorProvider: docker_executor.NewProvider(),
 			}
 
 			if useInit {
@@ -2538,6 +2565,7 @@ func Test_ServiceLabels(t *testing.T) {
 				},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -2625,6 +2653,7 @@ func TestDockerCommandWithPlatform(t *testing.T) {
 				Docker:   &common.DockerConfig{},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: &bytes.Buffer{}})
@@ -2668,6 +2697,7 @@ func TestDockerCommandWithUser(t *testing.T) {
 				Docker:   &common.DockerConfig{},
 			},
 		},
+		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
 	var buffer bytes.Buffer
@@ -3046,6 +3076,7 @@ func Test_CacheVolumeProtected(t *testing.T) {
 						Cache: &cacheconfig.Config{},
 					},
 				},
+				ExecutorProvider: docker_executor.NewProvider(),
 			}
 
 			// Run a job. We only care that the cache volume is created.
@@ -3076,4 +3107,8 @@ func Test_CacheVolumeProtected(t *testing.T) {
 			}
 		})
 	}
+}
+
+func setupExecutor(t *testing.T, build *common.Build) {
+	build.ExecutorProvider = docker_executor.NewProvider()
 }

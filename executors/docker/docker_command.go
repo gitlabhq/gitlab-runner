@@ -349,8 +349,8 @@ func (s *commandExecutor) GetMetricsSelector() string {
 	return fmt.Sprintf("instance=%q", s.executor.info.Name)
 }
 
-func init() {
-	options := executors.ExecutorOptions{
+func newDockerOptions() executors.ExecutorOptions {
+	return executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: true,
 		DefaultSafeDirectoryCheckout:  true,
 		DefaultBuildsDir:              "/builds",
@@ -363,8 +363,10 @@ func init() {
 		},
 		ShowHostname: true,
 	}
+}
 
-	creator := func() common.Executor {
+func newDockerCreator(options executors.ExecutorOptions) func() common.Executor {
+	return func() common.Executor {
 		e := &commandExecutor{
 			executor: executor{
 				AbstractExecutor: executors.AbstractExecutor{
@@ -376,40 +378,45 @@ func init() {
 		e.SetCurrentStage(common.ExecutorStageCreated)
 		return e
 	}
+}
 
-	featuresUpdater := func(features *common.FeaturesInfo) {
-		features.Image = true
-		features.ImageExecutorOpts = true
-		features.NativeStepsIntegration = true
-		features.ServiceExecutorOpts = true
-		features.ServiceMultipleAliases = true
-		features.ServiceVariables = true
-		features.Services = true
-		features.Session = true
-		features.Terminal = true
-		features.Variables = true
-	}
+func dockerFeaturesUpdater(features *common.FeaturesInfo) {
+	features.Image = true
+	features.ImageExecutorOpts = true
+	features.NativeStepsIntegration = true
+	features.ServiceExecutorOpts = true
+	features.ServiceMultipleAliases = true
+	features.ServiceVariables = true
+	features.Services = true
+	features.Session = true
+	features.Terminal = true
+	features.Variables = true
+}
 
-	common.RegisterExecutorProvider("docker", executorProvider{
+func NewProvider() common.ExecutorProvider {
+	options := newDockerOptions()
+	return executorProvider{
 		DefaultExecutorProvider: executors.DefaultExecutorProvider{
-			Creator:          creator,
-			FeaturesUpdater:  featuresUpdater,
+			Creator:          newDockerCreator(options),
+			FeaturesUpdater:  dockerFeaturesUpdater,
 			ConfigUpdater:    configUpdater,
 			DefaultShellName: options.Shell.Shell,
 		},
-	})
+	}
+}
 
+func NewWindowsProvider() common.ExecutorProvider {
+	options := newDockerOptions()
 	windowsFeaturesUpdater := func(features *common.FeaturesInfo) {
-		featuresUpdater(features)
+		dockerFeaturesUpdater(features)
 		features.NativeStepsIntegration = false
 	}
-
-	common.RegisterExecutorProvider("docker-windows", executorProvider{
+	return executorProvider{
 		DefaultExecutorProvider: executors.DefaultExecutorProvider{
-			Creator:          creator,
+			Creator:          newDockerCreator(options),
 			FeaturesUpdater:  windowsFeaturesUpdater,
 			ConfigUpdater:    configUpdater,
 			DefaultShellName: options.Shell.Shell,
 		},
-	})
+	}
 }

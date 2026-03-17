@@ -24,6 +24,8 @@ import (
 
 const integrationTestInstanceExecutor = "instance-integration-test"
 
+var runnerPath string
+
 func TestMain(m *testing.M) {
 	code := 1
 	defer func() {
@@ -38,9 +40,7 @@ func TestMain(m *testing.M) {
 	}
 	defer os.RemoveAll(targetDir)
 
-	path := buildtest.MustBuildBinary("../..", filepath.Join(targetDir, "gitlab-runner-integration"))
-
-	instance.RegisterExecutor(integrationTestInstanceExecutor, path)
+	runnerPath = buildtest.MustBuildBinary("../..", filepath.Join(targetDir, "gitlab-runner-integration"))
 
 	code = m.Run()
 }
@@ -97,11 +97,12 @@ func newRunnerConfig(t *testing.T, shell string, opts ...ssh.Option) *common.Run
 }
 
 func setupAcquireBuild(t *testing.T, build *common.Build) {
-	provider := common.GetExecutorProvider(integrationTestInstanceExecutor)
+	provider := instance.NewProvider(runnerPath)
 	data, err := provider.Acquire(build.Runner)
 	require.NoError(t, err)
 
 	build.ExecutorData = data
+	build.ExecutorProvider = provider
 	t.Cleanup(func() {
 		provider.Release(build.Runner, build.ExecutorData)
 

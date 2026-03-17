@@ -94,11 +94,7 @@ func (e *executor) Cleanup() {
 	e.AbstractExecutor.Cleanup()
 }
 
-func init() {
-	RegisterExecutor("instance", "gitlab-runner")
-}
-
-func RegisterExecutor(executorName string, runnerCommandPath string) {
+func NewProvider(runnerCommandPath string) common.ExecutorProvider {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
 		DefaultBuildsDir:              "builds",
@@ -124,11 +120,11 @@ func RegisterExecutor(executorName string, runnerCommandPath string) {
 		features.Shared = true
 	}
 
-	common.RegisterExecutorProvider(executorName, autoscaler.New(executors.DefaultExecutorProvider{
+	return autoscaler.New(executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,
 	}, autoscaler.Config{
 		MapJobImageToVMImage: true,
-	}))
+	})
 }

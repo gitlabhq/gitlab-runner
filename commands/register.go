@@ -18,17 +18,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 	"gitlab.com/gitlab-org/labkit/fips"
-
-	// Force to load shell executor, executes init() on them
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/custom"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/parallels"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/shell"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
 )
 
 type configTemplate struct {
@@ -74,11 +67,12 @@ func (c *configTemplate) loadConfigTemplate() error {
 }
 
 type RegisterCommand struct {
-	context    *cli.Context
-	network    common.Network
-	reader     *bufio.Reader
-	registered bool
-	timeNowFn  func() time.Time
+	context           *cli.Context
+	network           common.Network
+	executorProviders executors.Providers
+	reader            *bufio.Reader
+	registered        bool
+	timeNowFn         func() time.Time
 
 	ConfigTemplate configTemplate `namespace:"template"`
 
@@ -97,8 +91,8 @@ type RegisterCommand struct {
 	common.RunnerConfig
 }
 
-func NewRegisterCommand(n common.Network) cli.Command {
-	return common.NewCommand("register", "register a new runner", newRegisterCommand(n))
+func NewRegisterCommand(n common.Network, executorProviders executors.Providers) cli.Command {
+	return common.NewCommand("register", "register a new runner", newRegisterCommand(n, executorProviders))
 }
 
 type AccessLevel string
@@ -163,11 +157,14 @@ func (s *RegisterCommand) ask(key, prompt string, allowEmptyOptional ...bool) st
 }
 
 func (s *RegisterCommand) askExecutor() {
+	var names []string
+	for name := range s.executorProviders.All() {
+		names = append(names, name)
+	}
+	executorNames := strings.Join(names, ", ")
 	for {
-		names := common.GetExecutorNames()
-		executors := strings.Join(names, ", ")
-		s.Executor = s.ask("executor", "Enter an executor: "+executors+":", true)
-		if common.GetExecutorProvider(s.Executor) != nil {
+		s.Executor = s.ask("executor", "Enter an executor: "+executorNames+":", true)
+		if s.executorProviders.GetByName(s.Executor) != nil {
 			return
 		}
 
@@ -567,7 +564,7 @@ func getHostname() string {
 	return hostname
 }
 
-func newRegisterCommand(n common.Network) *RegisterCommand {
+func newRegisterCommand(n common.Network, executorProviders executors.Providers) *RegisterCommand {
 	return &RegisterCommand{
 		RunnerConfig: common.RunnerConfig{
 			Name: getHostname(),
@@ -581,10 +578,11 @@ func newRegisterCommand(n common.Network) *RegisterCommand {
 				VirtualBox: &common.VirtualBoxConfig{},
 			},
 		},
-		Locked:    true,
-		Paused:    false,
-		network:   n,
-		timeNowFn: time.Now,
+		Locked:            true,
+		Paused:            false,
+		network:           n,
+		executorProviders: executorProviders,
+		timeNowFn:         time.Now,
 	}
 }
 

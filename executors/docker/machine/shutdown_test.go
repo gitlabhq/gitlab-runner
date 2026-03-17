@@ -15,12 +15,13 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
 func TestMachineProvider_Shutdown_NoDrainConfig(t *testing.T) {
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
@@ -31,7 +32,7 @@ func TestMachineProvider_Shutdown_NoDrainConfig(t *testing.T) {
 }
 
 func TestMachineProvider_Shutdown_DrainDisabled(t *testing.T) {
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 
 	config := &common.Config{
 		Machine: &common.MachineConfig{
@@ -71,7 +72,7 @@ func runWithLogCheck(t *testing.T, expectedLastMessage string, fn func()) {
 }
 
 func TestMachineProvider_Shutdown_NoMachines(t *testing.T) {
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 
 	config := &common.Config{
 		Machine: &common.MachineConfig{
@@ -93,7 +94,7 @@ func TestMachineProvider_Shutdown_NoMachines(t *testing.T) {
 func TestMachineProvider_Shutdown_DrainsMachines(t *testing.T) {
 	machine := docker.NewMockMachine(t)
 
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = machine
 
 	config := &common.Config{
@@ -130,7 +131,7 @@ func TestMachineProvider_Shutdown_DrainsMachines(t *testing.T) {
 func TestMachineProvider_Shutdown_ConcurrencyLimit(t *testing.T) {
 	machine := docker.NewMockMachine(t)
 
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = machine
 
 	concurrency := 2
@@ -185,7 +186,7 @@ func TestMachineProvider_Shutdown_ConcurrencyLimit(t *testing.T) {
 func TestMachineProvider_Shutdown_RetryOnFailure(t *testing.T) {
 	machine := docker.NewMockMachine(t)
 
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = machine
 
 	config := &common.Config{
@@ -220,7 +221,7 @@ func TestMachineProvider_Shutdown_Timeout(t *testing.T) {
 
 	machine := docker.NewMockMachine(t)
 
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = machine
 
 	config := &common.Config{
@@ -273,7 +274,7 @@ func TestMachineProvider_Shutdown_Timeout(t *testing.T) {
 func TestMachineProvider_Shutdown_DrainsAllMachineStates(t *testing.T) {
 	machine := docker.NewMockMachine(t)
 
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = machine
 
 	config := &common.Config{
@@ -316,7 +317,7 @@ func TestMachineProvider_Shutdown_DrainsAllMachineStates(t *testing.T) {
 }
 
 func TestMachineProvider_CollectAllMachines(t *testing.T) {
-	p := newMachineProvider()
+	p := newMachineProvider(docker_executor.NewProvider())
 
 	states := []struct {
 		name  string

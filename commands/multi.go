@@ -27,6 +27,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -88,7 +89,8 @@ func runAt(t time.Time, f func()) runAtTask {
 }
 
 type RunCommand struct {
-	network common.Network
+	network           common.Network
+	executorProviders executors.Providers
 
 	healthHelper healthHelper
 	buildsHelper buildsHelper
@@ -154,10 +156,11 @@ type RunCommand struct {
 	runnerWorkerProcessingFailure *prometheus.CounterVec
 }
 
-func NewRunCommand(n common.Network, apiRequestsCollector prometheus.Collector) cli.Command {
+func NewRunCommand(n common.Network, apiRequestsCollector prometheus.Collector, executorProviders executors.Providers) cli.Command {
 	cmd := &RunCommand{
 		ServiceName:            defaultServiceName,
 		network:                n,
+		executorProviders:      executorProviders,
 		apiRequestsCollector:   apiRequestsCollector,
 		inputsMetricsCollector: spec.NewJobInputsMetricsCollector(),
 		prometheusLogHook:      prometheus_helper.NewLogHook(),
@@ -572,7 +575,7 @@ func (mr *RunCommand) run() {
 func (mr *RunCommand) initUsedExecutorProviders() {
 	mr.log().Info("Initializing executor providers")
 
-	for _, provider := range common.GetExecutorProviders() {
+	for _, provider := range mr.executorProviders.All() {
 		managedProvider, ok := provider.(common.ManagedExecutorProvider)
 		if ok {
 			managedProvider.Init()
@@ -591,7 +594,7 @@ func (mr *RunCommand) shutdownUsedExecutorProviders() {
 	defer cancelFn()
 
 	wg := new(sync.WaitGroup)
-	for _, provider := range common.GetExecutorProviders() {
+	for _, provider := range mr.executorProviders.All() {
 		managedProvider, ok := provider.(common.ManagedExecutorProvider)
 		if ok {
 			wg.Add(1)
@@ -690,7 +693,7 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	// Register all executor provider collectors
-	for _, provider := range common.GetExecutorProviders() {
+	for _, provider := range mr.executorProviders.All() {
 		if collector, ok := provider.(prometheus.Collector); ok && collector != nil {
 			registry.MustRegister(collector)
 		}
@@ -905,7 +908,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	mr.log().WithFields(runnerFields).Debugln("Processing runner")
 
-	provider := common.GetExecutorProvider(runner.Executor)
+	provider := mr.executorProviders.GetByName(runner.Executor)
 	if provider == nil {
 		mr.log().
 			WithFields(runnerFields).
@@ -969,7 +972,7 @@ func (mr *RunCommand) processBuildOnRunner(
 	defer func() { mr.traceOutcome(trace, err) }()
 
 	// Create a new build
-	build, err := common.NewBuild(*jobData, runner, mr.abortBuilds, executorData)
+	build, err := common.NewBuild(*jobData, runner, mr.abortBuilds, executorData, provider)
 	if err != nil {
 		return err
 	}

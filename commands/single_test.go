@@ -17,11 +17,13 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
 func init() {
 	s := common.MockShell{}
 	s.On("GetName").Return("script-shell")
+	s.On("IsDefault").Return(false).Maybe()
 	s.On("GenerateScript", mock.Anything, mock.Anything, mock.Anything).Return("script", nil)
 	common.RegisterShell(&s)
 }
@@ -127,9 +129,7 @@ func mockingExecutionStack(
 	}
 
 	// ExecutorProvider
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Times(maxBuilds + 1)
+	p.On("GetFeatures", mock.Anything).Return(nil).Times(maxBuilds)
 
 	p.On("Create").Return(e).Times(maxBuilds)
 	p.On("Acquire", mock.Anything).Return(common.NewMockExecutorData(t), nil).Times(maxBuilds)
@@ -144,9 +144,8 @@ func mockingExecutionStack(
 	e.On("Shell").Return(&common.ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", mock.Anything).Return(nil)
 
-	common.RegisterExecutorProviderForTest(t, executorName, p)
-
 	single := newRunSingleCommand(executorName, mockNetwork)
+	single.executorProviders = executors.NewProviderRegistry(map[string]common.ExecutorProvider{executorName: p})
 	single.MaxBuilds = maxBuilds
 
 	t.Cleanup(cancel)
@@ -166,6 +165,7 @@ func TestRunSingleCommand_processBuild_HandlesUpdateAbort(t *testing.T) {
 		Token: "job-token",
 	}
 
+	p := common.NewMockExecutorProvider(t)
 	network := common.NewMockNetwork(t)
 	mockTrace := common.NewMockJobTrace(t)
 	mockTrace.On("SetDebugModeEnabled", false).Return()
@@ -184,7 +184,7 @@ func TestRunSingleCommand_processBuild_HandlesUpdateAbort(t *testing.T) {
 		network:      network,
 	}
 
-	err := cmd.processBuild(common.NewMockExecutorData(t), make(chan os.Signal))
+	err := cmd.processBuild(common.NewMockExecutorData(t), make(chan os.Signal), p)
 
 	// When UpdateJob returns UpdateAbort, processBuild should return nil (no error)
 	assert.Nil(t, err, "Should return no error when update is aborted")
@@ -205,6 +205,7 @@ func TestRunSingleCommand_processBuild_HandlesCancelRequested(t *testing.T) {
 		Token: "job-token",
 	}
 
+	p := common.NewMockExecutorProvider(t)
 	network := common.NewMockNetwork(t)
 	mockTrace := common.NewMockJobTrace(t)
 	mockTrace.On("SetDebugModeEnabled", false).Return()
@@ -223,7 +224,7 @@ func TestRunSingleCommand_processBuild_HandlesCancelRequested(t *testing.T) {
 		network:      network,
 	}
 
-	err := cmd.processBuild(common.NewMockExecutorData(t), make(chan os.Signal))
+	err := cmd.processBuild(common.NewMockExecutorData(t), make(chan os.Signal), p)
 
 	// When UpdateJob has CancelRequested=true, processBuild should return nil (no error)
 	assert.Nil(t, err, "Should return no error when job is being canceled")

@@ -169,6 +169,9 @@ func RunBuildWithExecutorCancel(t *testing.T, config *common.RunnerConfig, setup
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
 	build.ExecutorData = &withContext{}
+	if setup != nil {
+		setup(t, build)
+	}
 
 	buf := new(bytes.Buffer)
 	trace := &common.Trace{Writer: io.MultiWriter(buf, os.Stdout)}
