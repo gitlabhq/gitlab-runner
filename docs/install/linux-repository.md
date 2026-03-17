@@ -277,9 +277,9 @@ on first installation done with the instructions above. For key updates in the f
 existing users need to manually download and install the new keys.
 
 We use one key for all our projects hosted under <https://packages.gitlab.com>. You can find
-the details about the key used in the [Linux package documentation](https://docs.gitlab.com/omnibus/update/package_signatures/#package-repository-metadata-signing-keys).
+the details about the key used in the [Linux package documentation](https://docs.gitlab.com/omnibus/update/package_signatures/#package-repository-metadata-signing-key).
 This documentation page lists also
-[all keys used in the past](https://docs.gitlab.com/omnibus/update/package_signatures/#previous-keys).
+[all keys used in the past](https://docs.gitlab.com/omnibus/update/package_signatures/#previous-package-signing-keys).
 
 ### Package signing
 
