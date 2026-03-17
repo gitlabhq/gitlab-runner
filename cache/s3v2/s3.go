@@ -20,11 +20,31 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
 const DEFAULT_AWS_S3_ENDPOINT = "https://s3.amazonaws.com"
 const fallbackBucketLocation = "us-east-1"
+
+const defaultAssumeRoleMaxConcurrency = 5
+
+var assumeRoleInFlight = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name: "gitlab_runner_cache_s3_assume_role_requests_in_flight",
+	Help: "Number of AssumeRole requests to AWS STS in progress.",
+})
+
+var assumeRoleWaitDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
+	Name:    "gitlab_runner_cache_s3_assume_role_wait_seconds",
+	Help:    "Wait time to acquire a concurrency slot before an AssumeRole request.",
+	Buckets: []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
+})
+
+var assumeRoleCallDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
+	Name:    "gitlab_runner_cache_s3_assume_role_duration_seconds",
+	Help:    "Duration of AssumeRole API calls to AWS STS.",
+	Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30},
+})
 
 type s3Presigner interface {
 	PresignURL(
@@ -45,6 +65,7 @@ type s3Client struct {
 	client        *s3.Client
 	presignClient *s3.PresignClient
 	stsEndpoint   string
+	assumeRoleSem chan struct{}
 }
 
 type s3ClientOption func(*s3Client)
@@ -52,6 +73,12 @@ type s3ClientOption func(*s3Client)
 func withSTSEndpoint(endpoint string) s3ClientOption {
 	return func(c *s3Client) {
 		c.stsEndpoint = endpoint
+	}
+}
+
+func withAssumeRoleSem(sem chan struct{}) s3ClientOption {
+	return func(c *s3Client) {
+		c.assumeRoleSem = sem
 	}
 }
 
@@ -175,6 +202,21 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 		duration = timeout
 	}
 
+	if c.assumeRoleSem != nil {
+		waitStart := time.Now()
+		select {
+		case c.assumeRoleSem <- struct{}{}:
+			assumeRoleWaitDuration.Observe(time.Since(waitStart).Seconds())
+			assumeRoleInFlight.Inc()
+			defer func() {
+				<-c.assumeRoleSem
+				assumeRoleInFlight.Dec()
+			}()
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context cancelled waiting for AssumeRole semaphore: %w", ctx.Err())
+		}
+	}
+
 	startTime := time.Now()
 	roleCredentials, err := stsClient.AssumeRole(ctx, &sts.AssumeRoleInput{
 		RoleArn:         aws.String(roleARN),
@@ -183,6 +225,7 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 		DurationSeconds: aws.Int32(int32(duration.Seconds())),
 	})
 	elapsed := time.Since(startTime).Seconds()
+	assumeRoleCallDuration.Observe(elapsed)
 
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
@@ -334,11 +377,22 @@ func buildS3Client(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOptio
 
 	presignClient := s3.NewPresignClient(client)
 
+	concurrency := s3Config.AssumeRoleMaxConcurrency
+	var assumeRoleSem chan struct{}
+	switch {
+	case concurrency == 0:
+		assumeRoleSem = make(chan struct{}, defaultAssumeRoleMaxConcurrency)
+	case concurrency > 0:
+		assumeRoleSem = make(chan struct{}, concurrency)
+		// concurrency < 0: nil channel, semaphore disabled
+	}
+
 	c := &s3Client{
 		s3Config:      s3Config,
 		awsConfig:     cfg,
 		client:        client,
 		presignClient: presignClient,
+		assumeRoleSem: assumeRoleSem,
 	}
 
 	for _, opt := range options {

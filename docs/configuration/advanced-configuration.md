@@ -1395,6 +1395,7 @@ credentials from the environment, you can define `AWS_ACCESS_KEY_ID` and
 | `S3.PathStyle`                 | `[runners.cache.s3] -> PathStyle`                 | `--cache-s3-path-style`                    | `$CACHE_S3_PATH_STYLE`              |
 | `S3.RoleARN`                   | `[runners.cache.s3] -> RoleARN`                   | `--cache-s3-role-arn`                      | `$CACHE_S3_ROLE_ARN`                |
 | `S3.UploadRoleARN`             | `[runners.cache.s3] -> UploadRoleARN`             | `--cache-s3-upload-role-arn`               | `$CACHE_S3_UPLOAD_ROLE_ARN`         |
+| `S3.AssumeRoleMaxConcurrency`  | `[runners.cache.s3] -> AssumeRoleMaxConcurrency`  | `--cache-s3-assume-role-max-concurrency`   | `$CACHE_S3_ASSUME_ROLE_MAX_CONCURRENCY` |
 | `GCS.AccessID`                 | `[runners.cache.gcs] -> AccessID`                 | `--cache-gcs-access-id`                    | `$CACHE_GCS_ACCESS_ID`              |
 | `GCS.PrivateKey`               | `[runners.cache.gcs] -> PrivateKey`               | `--cache-gcs-private-key`                  | `$CACHE_GCS_PRIVATE_KEY`            |
 | `GCS.CredentialsFile`          | `[runners.cache.gcs] -> CredentialsFile`          | `--cache-gcs-credentials-file`             | `$GOOGLE_APPLICATION_CREDENTIALS`   |
@@ -1481,6 +1482,7 @@ The following parameters define S3 storage for cache.
 | `PathStyle`                 | boolean | Enables path-style access. By default, GitLab automatically detects this setting based on the `ServerAddress` value. Available in GitLab 17.5 and later. |
 | `UploadRoleARN`             | string  | Deprecated. Use `RoleARN` instead. Specifies an AWS role ARN that can be used with `AssumeRole` to generate time-limited `PutObject` S3 requests. Enables S3 multipart uploads. Available in GitLab 17.5 and later. |
 | `RoleARN`                   | string  | Specifies an AWS role ARN that can be used with `AssumeRole` to generate time-limited `GetObject` and `PutObject` S3 requests. Enables S3 multipart transfers. Available in GitLab 17.8 and later. |
+| `AssumeRoleMaxConcurrency`  | integer | Maximum concurrent `AssumeRole` requests to AWS STS when `RoleARN` is set. Defaults to `5`. Set to `-1` to remove the limit. |
 
 Example:
 
