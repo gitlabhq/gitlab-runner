@@ -827,3 +827,67 @@ func TestFetchCredentialsForRole_Metrics(t *testing.T) {
 	assert.EqualValues(t, 1, histogramSampleCount(t, testWait))
 	assert.EqualValues(t, 1, histogramSampleCount(t, testCall))
 }
+
+func TestDetectBucketLocation(t *testing.T) {
+	tests := map[string]struct {
+		locationConstraint string
+		serverError        bool
+		expectedLocation   string
+	}{
+		"returns region from custom endpoint": {
+			locationConstraint: "us-west-2",
+			expectedLocation:   "us-west-2",
+		},
+		"maps EU alias to eu-west-1": {
+			locationConstraint: "EU",
+			expectedLocation:   "eu-west-1",
+		},
+		"falls back to us-east-1 on server error": {
+			serverError:      true,
+			expectedLocation: fallbackBucketLocation,
+		},
+		"falls back to us-east-1 on empty location constraint": {
+			locationConstraint: "",
+			expectedLocation:   fallbackBucketLocation,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			// Provide static credentials so the SDK doesn't attempt IMDS lookups.
+			t.Setenv("AWS_ACCESS_KEY_ID", "test-access-key")
+			t.Setenv("AWS_SECRET_ACCESS_KEY", "test-secret-key")
+
+			serverCalled := false
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				serverCalled = true
+				if tt.serverError {
+					http.Error(w, "internal error", http.StatusInternalServerError)
+					return
+				}
+				// GetBucketLocation is a GET /<bucket>?location request.
+				// Respond with the configured location constraint for any request.
+				w.Header().Set("Content-Type", "application/xml")
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintf(w,
+					`<?xml version="1.0" encoding="UTF-8"?><LocationConstraint xmlns="http://s3.amazonaws.com/doc/2006-03-01/">%s</LocationConstraint>`,
+					tt.locationConstraint,
+				)
+			}))
+			defer ts.Close()
+
+			tsURL, err := url.Parse(ts.URL)
+			require.NoError(t, err)
+
+			s3Config := &cacheconfig.CacheS3Config{
+				BucketName:    "test-bucket",
+				ServerAddress: tsURL.Host,
+				Insecure:      true,
+			}
+
+			location := detectBucketLocation(s3Config)
+			assert.Equal(t, tt.expectedLocation, location)
+			assert.True(t, serverCalled, "expected the mock server to be contacted")
+		})
+	}
+}

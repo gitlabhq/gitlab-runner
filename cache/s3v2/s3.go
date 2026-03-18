@@ -292,7 +292,7 @@ func newRawS3Client(s3Config *cacheconfig.CacheS3Config) (*aws.Config, *s3.Clien
 
 	bucketLocation := s3Config.BucketLocation
 	if bucketLocation == "" {
-		bucketLocation = detectBucketLocation(s3Config.BucketName, options...)
+		bucketLocation = detectBucketLocation(s3Config, options...)
 	}
 
 	options = append(options, config.WithRegion(bucketLocation))
@@ -323,7 +323,7 @@ func newRawS3Client(s3Config *cacheconfig.CacheS3Config) (*aws.Config, *s3.Clien
 	return &cfg, client, nil
 }
 
-func detectBucketLocation(bucketName string, optFuncs ...func(*config.LoadOptions) error) string {
+func detectBucketLocation(s3Config *cacheconfig.CacheS3Config, optFuncs ...func(*config.LoadOptions) error) string {
 	// The 30 seconds timeout here is arbritrary
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -342,9 +342,15 @@ func detectBucketLocation(bucketName string, optFuncs ...func(*config.LoadOption
 		return fallbackBucketLocation
 	}
 
-	client := s3.NewFromConfig(cfg)
+	endpoint := s3Config.GetEndpoint()
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		if endpoint != "" && endpoint != DEFAULT_AWS_S3_ENDPOINT {
+			o.BaseEndpoint = aws.String(endpoint)
+		}
+		o.UsePathStyle = s3Config.PathStyleEnabled()
+	})
 	output, err := client.GetBucketLocation(ctx, &s3.GetBucketLocationInput{
-		Bucket: aws.String(bucketName),
+		Bucket: aws.String(s3Config.BucketName),
 	})
 
 	switch {
