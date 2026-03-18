@@ -155,8 +155,8 @@ func newExecutorProviders() *executors.ProviderRegistry {
 
 	return executors.NewProviderRegistry(map[string]common.ExecutorProvider{
 		"shell":                   shell.NewProvider(runnerCommand),
-		"custom":                  custom.NewProvider(runnerCommand),
-		"instance":                instance.NewProvider(runnerCommand),
+		"custom":                  custom.NewProvider("gitlab-runner"),
+		"instance":                instance.NewProvider("gitlab-runner"),
 		"docker":                  dockerProvider,
 		"docker-windows":          docker.NewWindowsProvider(),
 		"docker-autoscaler":       autoscaler.NewProvider(dockerProvider),
