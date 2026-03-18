@@ -1329,9 +1329,11 @@ follows our [support lifecycle for Windows](../install/support-policy.md#windows
 - Windows Server 2022 LTSC (21H2)
 - Windows Server 2019 LTSC (1809)
 
-You can only run containers based on the same OS version that the Docker
-daemon is running on. For example, the following [`Windows Server Core`](https://hub.docker.com/r/microsoft/windows-servercore) images can
-be used:
+Windows containers support backward compatibility based on the host OS and isolation mode. 
+Newer hosts can run older container images. For compatibility details, see 
+[Microsoft Windows container version compatibility guidelines](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility).
+
+You can use various Windows base images, including `Server Core`, `Nano Server`, `Server`, and `Windows`. For example, use the [`Windows Server Core`](https://hub.docker.com/r/microsoft/windows-servercore) images with their compatible OS versions:
 
 - `mcr.microsoft.com/windows/servercore:ltsc2025`
 - `mcr.microsoft.com/windows/servercore:ltsc2025-amd64`
