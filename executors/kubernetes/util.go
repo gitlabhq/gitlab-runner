@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -221,11 +222,14 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 		return podPhaseResponse{true, api.PodUnknown, err}
 	}
 
+	nodeName := cmp.Or(pod.Spec.NodeName, "<unknown>")
+
 	_, _ = fmt.Fprintf(
 		out,
-		"Waiting for pod %s/%s to be running, status is %s\n",
+		"Waiting for pod %s/%s to be running on the node %s, status is %s\n",
 		pod.Namespace,
 		pod.Name,
+		nodeName,
 		pod.Status.Phase,
 	)
 
