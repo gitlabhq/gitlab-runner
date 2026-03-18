@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
@@ -313,7 +314,19 @@ func detectBucketLocation(bucketName string, optFuncs ...func(*config.LoadOption
 	return string(output.LocationConstraint)
 }
 
-var newS3Client = func(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOption) (s3Presigner, error) {
+// clientInit holds a lazily-built s3Client. sync.Once ensures that concurrent
+// callers for the same s3Config pointer share a single buildS3Client call.
+type clientInit struct {
+	once   sync.Once
+	client s3Presigner
+	err    error
+}
+
+// s3ClientCache maps *cacheconfig.CacheS3Config → *clientInit.
+var s3ClientCache sync.Map
+
+// buildS3Client constructs a new s3Client without any caching.
+func buildS3Client(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOption) (s3Presigner, error) {
 	cfg, client, err := newRawS3Client(s3Config)
 	if err != nil {
 		return nil, err
@@ -333,4 +346,37 @@ var newS3Client = func(s3Config *cacheconfig.CacheS3Config, options ...s3ClientO
 	}
 
 	return c, nil
+}
+
+// newS3Client returns a cached s3Client for the given config when possible.
+//
+// The s3Config pointer is used as the cache key. Each config load allocates a
+// fresh CacheS3Config (TOML unmarshal creates new objects), so pointer identity
+// naturally captures both "which runner" and "which load": after a config
+// reload the pointer changes and the old entry is never matched again.
+//
+// Caching is skipped when options are provided (options such as withSTSEndpoint
+// mutate the client and must not be shared across callers).
+//
+// sync.Once inside clientInit ensures that concurrent callers sharing the same
+// s3Config pointer issue only one newRawS3Client call (and therefore one IMDS
+// request) even during the initial population or after a reload.
+var newS3Client = func(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOption) (s3Presigner, error) {
+	if len(options) > 0 {
+		return buildS3Client(s3Config, options...)
+	}
+
+	init := &clientInit{}
+	actual, _ := s3ClientCache.LoadOrStore(s3Config, init)
+	ci, ok := actual.(*clientInit)
+	if !ok {
+		return buildS3Client(s3Config)
+	}
+	ci.once.Do(func() {
+		ci.client, ci.err = buildS3Client(s3Config)
+		if ci.err != nil {
+			s3ClientCache.CompareAndDelete(s3Config, ci)
+		}
+	})
+	return ci.client, ci.err
 }

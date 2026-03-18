@@ -69,6 +69,41 @@ func setupMockS3Server(t *testing.T) *cacheconfig.CacheS3Config {
 	return s3Config
 }
 
+func TestS3ClientCaching(t *testing.T) {
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:      "test-access-key",
+		SecretKey:      "test-secret-key",
+		BucketName:     "test-bucket",
+		BucketLocation: "us-west-2",
+	}
+
+	t.Cleanup(func() {
+		s3ClientCache.Delete(s3Config)
+	})
+
+	c1, err := newS3Client(s3Config)
+	require.NoError(t, err)
+
+	// Same pointer returns the same instance.
+	c2, err := newS3Client(s3Config)
+	require.NoError(t, err)
+	assert.Same(t, c1.(*s3Client), c2.(*s3Client))
+
+	// A different pointer (simulating a config reload) returns a new instance.
+	reloadedConfig := *s3Config
+	t.Cleanup(func() {
+		s3ClientCache.Delete(&reloadedConfig)
+	})
+	c3, err := newS3Client(&reloadedConfig)
+	require.NoError(t, err)
+	assert.NotSame(t, c1.(*s3Client), c3.(*s3Client))
+
+	// Options bypass the cache entirely.
+	c4, err := newS3Client(s3Config, withSTSEndpoint("http://sts.example.com"))
+	require.NoError(t, err)
+	assert.NotSame(t, c1.(*s3Client), c4.(*s3Client))
+}
+
 func TestNewS3ClientOptions(t *testing.T) {
 	disableDualStack := false
 
