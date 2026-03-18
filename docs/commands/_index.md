@@ -219,7 +219,7 @@ These commands support the following arguments:
 
 ### `gitlab-runner register`
 
-This command registers your runner in GitLab by using the GitLab [Runners API](https://docs.gitlab.com/api/runners/#register-a-new-runner).
+This command registers your runner in GitLab by using the GitLab [Runners API](https://docs.gitlab.com/api/runners/).
 
 The registered runner is
 added to the [configuration file](#configuration-file).
@@ -233,7 +233,7 @@ You can register a runner:
 - non-interactively.
 
 > [!note]
-> Runners can be registered directly by using the GitLab [Runners API](https://docs.gitlab.com/api/runners/#register-a-new-runner) but
+> Runners can be registered directly by using the GitLab [Runners API](https://docs.gitlab.com/api/runners/) but
 > configuration is not generated automatically.
 
 #### Interactive registration

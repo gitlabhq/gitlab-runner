@@ -227,12 +227,12 @@ in GitLab 20.0. Use runner authentication tokens instead. For more information, 
 
 Prerequisites:
 
-- Runner registration tokens must be [enabled](https://docs.gitlab.com/administration/settings/continuous_integration/#allow-runner-registrations-tokens) in the Admin Area.
+- Runner registration tokens must be [enabled](https://docs.gitlab.com/administration/settings/continuous_integration/#control-runner-registration) in the Admin Area.
 - Obtain a runner registration token at the desired instance, group, or project. For instructions, see [manage runners](https://docs.gitlab.com/ci/runners/runners_scope).
 
 After you register the runner, the configuration is saved to the `config.toml`.
 
-To register the runner with a [runner registration token](https://docs.gitlab.com/security/tokens/#runner-registration-tokens-deprecated):
+To register the runner with a [runner registration token](https://docs.gitlab.com/security/tokens/#runner-registration-tokens-legacy):
 
 1. Run the register command:
 
@@ -679,7 +679,7 @@ the runner registration token entered during registration. This issue can occur 
 When this error occurs, you can ask a GitLab administrator to:
 
 - Verify that the runner registration token is valid.
-- Confirm that runner registration in the project or group is [permitted](https://docs.gitlab.com/administration/settings/continuous_integration/#restrict-runner-registration-by-all-members-in-a-group).
+- Confirm that runner registration in the project or group is [permitted](https://docs.gitlab.com/administration/settings/continuous_integration/#restrict-runner-registration-for-a-specific-group).
 
 ### Error: `410 Gone - runner registration disallowed`
 
@@ -689,6 +689,6 @@ registration tokens has been disabled.
 When this error occurs, you can ask a GitLab administrator to:
 
 - Verify that the runner registration token is valid.
-- Confirm that runner registration in the instance is [permitted](https://docs.gitlab.com/administration/settings/continuous_integration/#allow-runner-registrations-tokens).
+- Confirm that runner registration in the instance is [permitted](https://docs.gitlab.com/administration/settings/continuous_integration/#control-runner-registration).
 - In the case of a group or project runner registration token, verify that runner registration in the respective group
   and/or project [is allowed](https://docs.gitlab.com/ci/runners/runners_scope/#enable-use-of-runner-registration-tokens-in-projects-and-groups).
