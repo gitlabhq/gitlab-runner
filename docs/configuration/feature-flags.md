@@ -93,6 +93,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_ENABLE_JOB_INPUTS_INTERPOLATION` | `true` | {{< icon name="dotted-circle" >}} No |  | When enabled, job inputs are interpolated. For more information, see [&17833](https://gitlab.com/groups/gitlab-org/-/epics/17833). |
 | `FF_USE_JOB_ROUTER` | `false` | {{< icon name="dotted-circle" >}} No |  | Makes GitLab Runner fetch jobs by connecting to Job Router rather than GitLab directly. |
 | `FF_SCRIPT_TO_STEP_MIGRATION` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, user scripts are migrated to steps and executed with the step-runner. |
+| `FF_CONCRETE` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, traditional script execution is migrated to and executed with the step-runner. |
 
 <!-- feature_flags_list_end -->
 

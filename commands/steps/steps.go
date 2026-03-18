@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete"
 	"gitlab.com/gitlab-org/gitlab-runner/functions/script_legacy"
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/proxy"
@@ -83,6 +84,7 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 
 	service, err := di.NewContainer(
 		di.WithStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run),
+		di.WithStepFunc("concrete", concrete.Spec(), concrete.Run),
 	).StepRunnerService()
 
 	if err != nil {

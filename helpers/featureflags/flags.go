@@ -55,6 +55,7 @@ const (
 	EnableJobInputsInterpolation         string = "FF_ENABLE_JOB_INPUTS_INTERPOLATION"
 	UseJobRouter                         string = "FF_USE_JOB_ROUTER"
 	UseScriptToStepMigration             string = "FF_SCRIPT_TO_STEP_MIGRATION"
+	UseConcrete                          string = "FF_CONCRETE"
 )
 
 type FeatureFlag struct {
@@ -451,6 +452,12 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, user scripts are migrated to steps and executed with the step-runner.",
+	},
+	{
+		Name:         UseConcrete,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, traditional script execution is migrated to and executed with the step-runner.",
 	},
 }
 

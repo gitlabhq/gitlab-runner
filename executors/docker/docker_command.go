@@ -219,6 +219,10 @@ func (s *commandExecutor) requestBuildContainer() (*container.InspectResponse, e
 		data.ContainerName = s.buildContainer.Name
 	}
 
+	if s.Build.IsFeatureFlagOn(featureflags.UseConcrete) {
+		return s.buildContainer, nil
+	}
+
 	err = s.changeFilesOwnership()
 	if err != nil {
 		return nil, err
