@@ -53,7 +53,7 @@ curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/
 For example, for CentOS or Red Hat Enterprise Linux:
 
 ```shell
-# Replace ${arch} with any of the supported architectures, e.g. amd64, arm, arm64
+# Replace ${arch} with any of the supported architectures, e.g. x86_64, arm, arm64
 # A full list of architectures can be found here https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/index.html
 curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner-helper-images.rpm"
 curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner_${arch}.rpm"
@@ -62,10 +62,10 @@ curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/
 For example, for FIPS compliant GitLab Runner on RHEL:
 
 ```shell
-# Currently only amd64 is a supported arch
+# Currently only x86_64 is a supported arch
 # The FIPS compliant GitLab Runner version continues to include the helper images in one package.
 # A full list of architectures can be found here https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/index.html
-curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner_amd64-fips.rpm"
+curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner_x86_64-fips.rpm"
 ```
 
 ### Install
