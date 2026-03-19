@@ -351,14 +351,11 @@ Start by assigning a reasonably small number of machines in the idle state. Then
 automatically adjust to a bigger number, depending on the current usage. To do that, use the experimental
 `IdleScaleFactor` setting.
 
-{{< alert type="warning" >}}
-
-`IdleScaleFactor` internally is an `float64` value and requires the float format to be used,
-for example: `0.0`, or `1.0` or ,`1.5` etc. If an integer format is used (for example `IdleScaleFactor = 1`),
-Runner's process fails with the error:
-`FATAL: Service run failed   error=toml: cannot load TOML value of type int64 into a Go float`.
-
-{{< /alert >}}
+> [!warning]
+> `IdleScaleFactor` internally is an `float64` value and requires the float format to be used,
+> for example: `0.0`, or `1.0` or ,`1.5` etc. If an integer format is used (for example `IdleScaleFactor = 1`),
+> Runner's process fails with the error:
+> `FATAL: Service run failed   error=toml: cannot load TOML value of type int64 into a Go float`.
 
 When you use this setting, GitLab Runner tries to sustain a defined number of
 machines in the idle state. However, this number is no longer static. Instead of using `IdleCount`,

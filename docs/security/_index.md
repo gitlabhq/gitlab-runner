@@ -48,13 +48,10 @@ containers with disabled `sudo` or dropped `SETUID` and `SETGID` capabilities.
 More granular permissions can be configured in non-privileged mode via the
 `cap_add`/`cap_drop` settings.
 
-{{< alert type="warning" >}}
-
-Privileged containers in Docker have all the root capabilities of the host VM.
-For more information, check out the official Docker documentation
-on [Runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)
-
-{{< /alert >}}
+> [!warning]
+> Privileged containers in Docker have all the root capabilities of the host VM.
+> For more information, check out the official Docker documentation
+> on [Runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)
 
 It is **not advised** to run containers in privileged mode.
 

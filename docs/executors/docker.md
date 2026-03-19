@@ -682,17 +682,14 @@ The `volumes` directive supports the following types of storage:
   to `<host-path>` on the host system. The optional `<mode>` specifies whether this storage
   is read-only or read-write (default).
 
-{{< alert type="warning" >}}
-
-With GitLab Runner 18.4.0, the naming of sources for dynamic storage (see above) changed
-for both Docker volume-based and host directory-based persistent storage. When you upgrade
-to 18.4.0, GitLab Runner ignores the cached data from previous runner versions and creates
-new dynamic storage on-demand, either through new Docker volumes or new host directories.
-
-Host-bound storage (with a `<host-path>` configuration), in contrast to dynamic
-storage, is not affected.
-
-{{< /alert >}}
+> [!warning]
+> In GitLab Runner 18.4 and later, the naming of sources for dynamic storage (see above) changed
+> for both Docker volume-based and host directory-based persistent storage. When you upgrade
+> to 18.4.0, GitLab Runner ignores the cached data from previous runner versions and creates
+> new dynamic storage on-demand, either through new Docker volumes or new host directories.
+>
+> Host-bound storage (with a `<host-path>` configuration), in contrast to dynamic
+> storage, is not affected.
 
 ### Persistent storage for builds
 
@@ -742,16 +739,13 @@ build:
   - docker push my-image
 ```
 
-{{< alert type="warning" >}}
-
-Containers that run in privileged mode have security risks.
-When your containers run in privileged mode, you disable the
-container security mechanisms and expose your host to privilege escalation.
-Running containers in privileged mode can lead to container breakout. For more information,
-see the Docker documentation about
-[runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities).
-
-{{< /alert >}}
+> [!warning]
+> Containers that run in privileged mode have security risks.
+> When your containers run in privileged mode, you disable the
+> container security mechanisms and expose your host to privilege escalation.
+> Running containers in privileged mode can lead to container breakout. For more information,
+> see the Docker documentation about
+> [runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities).
 
 You might need to
 [configure Docker in Docker with TLS, or disable TLS](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker)

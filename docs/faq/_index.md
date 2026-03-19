@@ -73,14 +73,11 @@ the `coordinator` (GitLab installation through GitLab API).
 
 ## Enable debug logging mode
 
-{{< alert type="warning" >}}
-
-Debug logging can be a serious security risk. The output contains the content of
-all variables and other secrets available to the job. You should disable any log aggregation
-that might transmit secrets to third parties. The use of masked variables allows secrets
-to be protected in job log output, but not in container logs.
-
-{{< /alert >}}
+> [!warning]
+> Debug logging can be a serious security risk. The output contains the content of
+> all variables and other secrets available to the job. You should disable any log aggregation
+> that might transmit secrets to third parties. The use of masked variables allows secrets
+> to be protected in job log output, but not in container logs.
 
 ### In the command line
 

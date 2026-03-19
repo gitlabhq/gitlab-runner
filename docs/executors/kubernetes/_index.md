@@ -433,14 +433,10 @@ You can configure pods and containers to control how jobs are executed.
 
 ### Default labels for job pods
 
-{{< alert type="warning" >}}
-
-You cannot override these labels through runner configuration or
-`.gitlab-ci.yml` files.
-Any attempts to set or modify labels in the `runner.gitlab.com` namespace
-are ignored and logged as debug messages.
-
-{{< /alert >}}
+> [!warning]
+> You cannot override these labels through runner configuration or `.gitlab-ci.yml` files.
+> Any attempts to set or modify labels in the `runner.gitlab.com` namespace
+> are ignored and logged as debug messages.
 
 | Key                                        | Description |
 |--------------------------------------------|-------------|
