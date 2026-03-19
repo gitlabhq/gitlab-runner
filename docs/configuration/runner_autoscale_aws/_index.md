@@ -446,16 +446,13 @@ machine to see the Docker Machine's state:
 docker-machine ls -q --filter state=Error --format "{{.NAME}}"
 ```
 
-{{< alert type="note" >}}
-
-There are some issues regarding making GitLab Runner gracefully handle Spot
-price changes, and there are reports of `docker-machine` attempting to
-continually remove a Docker Machine. GitLab has provided patches for both cases
-in the upstream project. For more information, see issues
-[#2771](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2771) and
-[#2772](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2772).
-
-{{< /alert >}}
+> [!note]
+> There are some issues regarding making GitLab Runner gracefully handle Spot
+> price changes, and there are reports of `docker-machine` attempting to
+> continually remove a Docker Machine. GitLab has provided patches for both cases
+> in the upstream project. For more information, see
+> [issue 2771](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2771) and
+> [issue 2772](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2772).
 
 The GitLab fork does not support AWS EC2 fleets and their use with spot instances.
 As an alternative, you can use the

@@ -35,12 +35,9 @@ You must [configure the runner manager](_index.md#configure-the-runner-manager) 
 1. [Install GitLab Runner](../install/linux-repository.md) on the instance.
 1. Add the cloud provider credentials to the runner manager host machine.
 
-   {{< alert type="note" >}}
-
-   You can host the runner manager in a container.
-   For GitLab.com and GitLab Dedicated [hosted runners](https://docs.gitlab.com/ci/runners/), the runner manager is hosted on a virtual machine instance.
-
-   {{< /alert >}}
+   > [!note]
+   > You can host the runner manager in a container.
+   > For GitLab.com and GitLab Dedicated [hosted runners](https://docs.gitlab.com/ci/runners/), the runner manager is hosted on a virtual machine instance.
 
 ### Example credentials configuration for GitLab Runner instance group autoscaler
 

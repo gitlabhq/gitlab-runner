@@ -480,14 +480,11 @@ can be affected by:
   failed and all associated containers are killed. To have the job time out on GitLab first,
   `activeDeadlineSeconds` is set to `configured timeout + 1 second`.
 
-{{< alert type="note" >}}
-
-If you enable the `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` feature flag and set
-`pod_termination_grace_period_seconds` to a non-zero value, the CI/CD job pod
-is not terminated immediately. The pod `terminationGracePeriods`
-ensures the pod is terminated only when it expired.
-
-{{< /alert >}}
+> [!note]
+> If you enable the `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` feature flag and set
+> `pod_termination_grace_period_seconds` to a non-zero value, the CI/CD job pod
+> is not terminated immediately. The pod `terminationGracePeriods`
+> ensures the pod is terminated only when it expired.
 
 ### Protect job pods from eviction
 
@@ -2215,13 +2212,10 @@ Create as many as the runner's `concurrent` setting dictates.
 After you set the security policy, the [helper image](../../configuration/advanced-configuration.md#helper-image) must conform to the policy.
 The image does not receive privileges from the root group, so you must ensure that the user ID is part of the root group.
 
-{{< alert type="note" >}}
-
-If you only need the `nonroot` environment, you can use the [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421)
-OpenShift Container Platform images instead of a helper image. You can also use the [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433)
-OpenShift Container Platform images.
-
-{{< /alert >}}
+> [!note]
+> If you only need the `nonroot` environment, you can use the [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421)
+> OpenShift Container Platform images instead of a helper image. You can also use the [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433)
+> OpenShift Container Platform images.
 
 The following example creates a user and group called `nonroot` and sets the helper image to run as that user.
 

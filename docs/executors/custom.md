@@ -349,13 +349,10 @@ We generate the script using the shell configured by `shell` inside of
 [`[[runners]]`](../configuration/advanced-configuration.md#the-runners-section).
 If none is provided the defaults for the OS platform are used.
 
-{{< alert type="note" >}}
-
-Ensure your `shell` configuration matches the PowerShell version used by your `run_exec` script.
-Use `shell = "pwsh"` with `pwsh.exe` (PowerShell Core)
-or `shell = "powershell"` with `powershell.exe` (PowerShell Desktop).
-
-{{< /alert >}}
+> [!note]
+> Ensure your `shell` configuration matches the PowerShell version used by your `run_exec` script.
+> Use `shell = "pwsh"` with `pwsh.exe` (PowerShell Core)
+> or `shell = "powershell"` with `powershell.exe` (PowerShell Desktop).
 
 The table below is a detailed explanation of what each script does and
 what the main goal of that script is.
@@ -464,13 +461,10 @@ If the script that the user defines inside of `.gitlab-ci.yml` file
 exits with a non-zero code, `run_exec` should exit with
 `BUILD_FAILURE_EXIT_CODE` value.
 
-{{< alert type="note" >}}
-
-We strongly suggest using `BUILD_FAILURE_EXIT_CODE` to exit
-instead of a hard coded value because it can change in any release, making
-your binary/script future proof.
-
-{{< /alert >}}
+> [!note]
+> We strongly suggest using `BUILD_FAILURE_EXIT_CODE` to exit
+> instead of a hard coded value because it can change in any release, making
+> your binary/script future proof.
 
 ### Build failure exit code
 
@@ -508,13 +502,10 @@ Below is a table of what stages are retried, and by how many times.
 | `restore_cache`      | Value of `RESTORE_CACHE_ATTEMPTS` variable. (Default 1)     | 0 seconds                           |
 | `download_artifacts` | Value of `ARTIFACT_DOWNLOAD_ATTEMPTS` variable. (Default 1) | 0 seconds                           |
 
-{{< alert type="note" >}}
-
-We strongly suggest using `SYSTEM_FAILURE_EXIT_CODE` to exit
-instead of a hard coded value because it can change in any release, making
-your binary/script future proof.
-
-{{< /alert >}}
+> [!note]
+> We strongly suggest using `SYSTEM_FAILURE_EXIT_CODE` to exit
+> instead of a hard coded value because it can change in any release, making
+> your binary/script future proof.
 
 ## Job response
 

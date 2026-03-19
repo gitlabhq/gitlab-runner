@@ -16,13 +16,10 @@ GitLab Runner uses the [Go `service` library](https://github.com/kardianos/servi
 to detect the underlying OS and eventually install the service file based on
 the init system.
 
-{{< alert type="note" >}}
-
-The package `service` installs, un-installs, starts, stops, and runs a program as a
-service (daemon). Windows XP+, Linux (systemd, Upstart, and System V),
-and macOS (`launchd`) are supported.
-
-{{< /alert >}}
+> [!note]
+> The package `service` installs, un-installs, starts, stops, and runs a program as a
+> service (daemon). Windows XP+, Linux (systemd, Upstart, and System V),
+> and macOS (`launchd`) are supported.
 
 When GitLab Runner [is installed](../install/_index.md), the service file is
 automatically created:

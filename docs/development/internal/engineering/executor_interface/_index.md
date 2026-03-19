@@ -5,13 +5,10 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: Internal Executor Interface
 ---
 
-{{< alert type="note" >}}
-
-As this is a documentation of the code internals, it's easier to get it outdated than
-documentation of configuration, behaviors or features that we expose to the users. This
-page is accurate as for the date of creation: **2022-01-26**.
-
-{{< /alert >}}
+> [!note]
+> As this is a documentation of the code internals, it's easier to get it outdated than
+> documentation of configuration, behaviors or features that we expose to the users. This
+> page is accurate as for the date of creation: **2022-01-26**.
 
 ## Interfaces
 

@@ -65,14 +65,11 @@ This snippet is in the `runners.machine` section of the `config.toml` file.
     ]
 ```
 
-{{< alert type="note" >}}
-
-The credentials file is optional.
-You can use an [AWS Identity and Access Management](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)
-(IAM) instance profile for the runner manager in the AWS environment.
-If you do not want to host the runner manager in AWS, you can use the credentials file.
-
-{{< /alert >}}
+> [!note]
+> The credentials file is optional.
+> You can use an [AWS Identity and Access Management](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)
+> (IAM) instance profile for the runner manager in the AWS environment.
+> If you do not want to host the runner manager in AWS, you can use the credentials file.
 
 ## Implement a fault-tolerant design
 

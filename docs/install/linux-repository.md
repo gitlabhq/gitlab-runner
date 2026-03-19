@@ -106,12 +106,9 @@ To install GitLab Runner:
 1. Install the latest version of GitLab Runner, or skip to the next step to
    install a specific version:
 
-   {{< alert type="note" >}}
-
-   The `skel` directory usage is disabled by default to prevent
-   [`No such file or directory` job failures](#error-no-such-file-or-directory-job-failures).
-
-   {{< /alert >}}
+   > [!note]
+   > The `skel` directory usage is disabled by default to prevent
+   > [`No such file or directory` job failures](#error-no-such-file-or-directory-job-failures).
 
    {{< tabs >}}
 
@@ -137,13 +134,10 @@ To install GitLab Runner:
 
    {{< /tabs >}}
 
-   {{< alert type="note" >}}
-
-   A FIPS 140-2 compliant version of GitLab Runner is
-   available for RHEL distributions. You can install this version by using
-   `gitlab-runner-fips` as the package name, instead of `gitlab-runner`.
-
-   {{< /alert >}}
+   > [!note]
+   > A FIPS 140-2 compliant version of GitLab Runner is
+   > available for RHEL distributions. You can install this version by using
+   > `gitlab-runner-fips` as the package name, instead of `gitlab-runner`.
 
 1. To install a specific version of GitLab Runner:
 
@@ -151,13 +145,10 @@ To install GitLab Runner:
 
    {{< tab title="Debian/Ubuntu/Mint" >}}
 
-   {{< alert type="note" >}}
-
-   As of `gitlab-runner` version `v17.7.1`, when you install a specific version of `gitlab-runner` that is not the latest
-   version, you must explicitly install the required `gitlab-runner-helper-packages` for that version. This requirement
-   exists due to an `apt`/`apt-get` limitation.
-
-   {{< /alert >}}
+   > [!note]
+   > As of `gitlab-runner` version `v17.7.1`, when you install a specific version of `gitlab-runner` that is not the latest
+   > version, you must explicitly install the required `gitlab-runner-helper-packages` for that version. This requirement
+   > exists due to an `apt`/`apt-get` limitation.
 
    ```shell
    apt-cache madison gitlab-runner
