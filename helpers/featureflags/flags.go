@@ -178,10 +178,9 @@ var flags = []FeatureFlag{
 		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description: "When enabled, each script line from the `.gitlab-ci.yml` file is in a collapsible " +
-			"section in the job output, and shows the duration of each line. " +
-			"When the command spans multiple lines, the complete command is " +
-			"displayed within the job log output terminal.",
+		Description: "When enabled, multi-line script commands appear as collapsible sections in the job log, " +
+			"while single-line commands are printed directly with a `$` prefix. This is a known issue. " +
+			"For more information, see [issue 39294](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39294).",
 	},
 	{
 		Name:            EnableJobCleanup,
