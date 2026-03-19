@@ -216,14 +216,11 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 ## Register with a runner registration token (deprecated)
 
-{{< alert type="warning" >}}
-
-Runner registration tokens and several runner configuration arguments were
-[deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872). They are scheduled for removal
-in GitLab 20.0. Use runner authentication tokens instead. For more information, see
-[Migrating to the new runner registration workflow](https://docs.gitlab.com/ci/runners/new_creation_workflow/).
-
-{{< /alert >}}
+> [!warning]
+> Runner registration tokens and several runner configuration arguments were
+> [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872). They are scheduled for removal
+> in GitLab 20.0. Use runner authentication tokens instead. For more information, see
+> [Migrating to the new runner registration workflow](https://docs.gitlab.com/ci/runners/new_creation_workflow/).
 
 Prerequisites:
 

@@ -134,13 +134,10 @@ For [graceful shutdowns](#gitlab-runner-stop-doesnt-shut-down-gracefully):
 sudo kill -SIGQUIT <main_runner_pid>
 ```
 
-{{< alert type="warning" >}}
-
-Do **not** use `killall` or `pkill` for graceful shutdowns if you are using `shell`
-or `docker` executors. This can cause improper handling of the signals due to sub-processes
-being killed as well. Use it only on the main process handling the jobs.
-
-{{< /alert >}}
+> [!warning]
+> Do **not** use `killall` or `pkill` for graceful shutdowns if you are using `shell`
+> or `docker` executors. This can cause improper handling of the signals due to sub-processes
+> being killed as well. Use it only on the main process handling the jobs.
 
 Some operating systems are configured to automatically restart services when they fail (which is the default on some platforms).
 If your operating system has this configuration, it might automatically restart the runner if it is shut down by the signals above.

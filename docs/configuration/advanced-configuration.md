@@ -1442,8 +1442,6 @@ cache key created a specific cache artifact, GitLab Runner attaches metadata to 
   [user-defined object metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#UserMetadata)
   for AWS S3.
 
-{{< alert type="warning" >}}
-
 When you change `FF_HASH_CACHE_KEYS`, GitLab Runner ignores existing cache artifacts
 because hashing the cache key changes the cache artifact's name and location.
 This change applies in both directions, from `FF_HASH_CACHE_KEYS=true` to
@@ -1460,16 +1458,11 @@ Therefore, best practice is:
 - Expect cache misses, cache artifacts rebuild, and longer first job runs after
   you change `FF_HASH_CACHE_KEYS`.
 
-{{< /alert >}}
-
-{{< alert type="warning" >}}
-
-If you turn on `FF_HASH_CACHE_KEYS` but run an older version of the helper binary
-(for example, because you pinned the helper image to an older version), hashing the
-cache key and uploading or downloading caches still works. However, GitLab Runner
-does not maintain the metadata of cache artifacts.
-
-{{< /alert >}}
+> [!warning]
+> If you turn on `FF_HASH_CACHE_KEYS` but run an older version of the helper binary
+> (for example, because you pinned the helper image to an older version), hashing the
+> cache key and uploading or downloading caches still works. However, GitLab Runner
+> does not maintain the metadata of cache artifacts.
 
 ### The `[runners.cache.s3]` section
 

@@ -41,8 +41,6 @@ For any non-public container registry, your ECS task requires either [IAM permis
 
 You can use CloudFormation or Terraform to automate the provisioning and setup of your AWS infrastructure.
 
-{{< alert type="warning" >}}
-
 CI/CD jobs use the image defined in the ECS task, rather than the value of the
 `image:` keyword in your `.gitlab-ci.yml` file. ECS doesn't allow you to
 override the image used for an ECS task.
@@ -54,8 +52,6 @@ To work around this limitation, you can:
 - Consider creating an EKS cluster by following the official [AWS EKS Blueprints](https://aws-ia.github.io/terraform-aws-eks-blueprints/).
 
 For more information, see [Get started with GitLab EKS Fargate runners in 1 hour and zero code](https://about.gitlab.com/blog/eks-fargate-runner/).
-
-{{< /alert >}}
 
 > [!warning]
 > Fargate abstracts container hosts, which limits configurability for container host properties. This affects runner workloads that require high IO to disk or network, because these properties have limited or no configurability with Fargate. Before you use GitLab Runner on Fargate, ensure runner workloads with high compute characteristics on CPU, memory, disk IO, or network IO are suitable for Fargate.
@@ -300,17 +296,13 @@ the container image that you might use for your CI builds.
 1. Select **Create**.
 1. Select **View task definition**.
 
-{{< alert type="warning" >}}
-
-A single Fargate task may launch one or more containers.
-The Fargate driver injects the `SSH_PUBLIC_KEY` environment variable
-in containers with the `ci-coordinator` name only. You must
-have a container with this name in all task definitions used by the Fargate
-driver. The container with this name should be the one that has the
-SSH server and all GitLab Runner requirements installed, as described
-above.
-
-{{< /alert >}}
+> [!warning]
+> A single Fargate task may launch one or more containers.
+> The Fargate driver injects the `SSH_PUBLIC_KEY` environment variable
+> in containers with the `ci-coordinator` name only. You must
+> have a container with this name in all task definitions used by the Fargate
+> driver. The container with this name should be the one that has the
+> SSH server and all GitLab Runner requirements installed, as described above.
 
 Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-task-definition.html)
 for detailed instructions on setting up and working with task definitions.
