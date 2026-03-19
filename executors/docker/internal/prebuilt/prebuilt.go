@@ -175,9 +175,13 @@ func imageImport(ctx context.Context, client docker.Client, path, ref, tag strin
 	}
 	options := image.ImportOptions{
 		Tag: tag,
+	}
+
+	// non-concrete based helper images need import modifications
+	if !strings.HasPrefix(tag, "concrete") {
 		// NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
 		// See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2058#note_388341301
-		Changes: []string{`ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`},
+		options.Changes = []string{`ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`}
 	}
 
 	if err = client.ImageImportBlocking(ctx, source, ref, options); err != nil {
