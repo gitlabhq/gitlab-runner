@@ -13,13 +13,10 @@ title: Install GitLab Runner on FreeBSD
 
 {{< /details >}}
 
-{{< alert type="note" >}}
-
-The FreeBSD version is also available as a [bleeding edge](bleeding-edge.md)
-release. Make sure that you read the [FAQ](../faq/_index.md) section which
-describes some of the most common problems with GitLab Runner.
-
-{{< /alert >}}
+> [!note]
+> The FreeBSD version is also available as a [bleeding edge](bleeding-edge.md)
+> release. Make sure that you read the [FAQ](../faq/_index.md) section which
+> describes some of the most common problems with GitLab Runner.
 
 ## Installing GitLab Runner
 

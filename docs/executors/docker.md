@@ -72,17 +72,14 @@ These configurations are **not** supported:
 | Windows                 | `docker`         | Windows               |
 | Windows                 | `docker-windows` | Linux                 |
 
-{{< alert type="note" >}}
-
-GitLab Runner uses Docker Engine API
-[v1.25](https://docs.docker.com/reference/api/engine/version/v1.25/) to talk to the Docker
-Engine. This means the
-[minimum supported version](https://docs.docker.com/reference/api/engine/#api-version-matrix)
-of Docker on a Linux server is `1.13.0`.
-On Windows Server, [it needs to be more recent](#supported-docker-versions)
-to identify the Windows Server version.
-
-{{< /alert >}}
+> [!note]
+> GitLab Runner uses Docker Engine API
+> [v1.25](https://docs.docker.com/reference/api/engine/version/v1.25/) to talk to the Docker
+> Engine. This means the
+> [minimum supported version](https://docs.docker.com/reference/api/engine/#api-version-matrix)
+> of Docker on a Linux server is `1.13.0`.
+> On Windows Server, [it needs to be more recent](#supported-docker-versions)
+> to identify the Windows Server version.
 
 ## Use the Docker executor
 
@@ -279,8 +276,6 @@ For more information, see the [Docker documentation](https://docs.docker.com/eng
 
 The runner uses the `build` alias to resolve the job container.
 
-{{< alert type="note" >}}
-
 DNS might not work correctly with a Docker-in-Docker (`dind`) service when you use this feature.
 
 This behavior is due to an issue with [Docker/Moby](https://github.com/moby/moby/issues/20037#issuecomment-181659049),
@@ -296,8 +291,6 @@ if your custom DNS server is `1.1.1.1`, you can use `127.0.0.11`, which is Docke
 ```
 
 This approach also allows containers to resolve services on the same network.
-
-{{< /alert >}}
 
 #### How the runner creates a network for each job
 
@@ -315,14 +308,10 @@ resolve each other's hostnames and aliases. This functionality is
 
 GitLab Runner before 18.7.0 uses the default Docker `bridge` along with [legacy container links](https://docs.docker.com/engine/network/links/) to link the job container with the services. Because Docker deprecated the links functionality, in GitLab Runner 18.7.0 and later, the legacy container link behavior is emulated by allowing service aliases to be resolved using Docker's `extra_hosts` functionality. This network mode is the default if [`FF_NETWORK_PER_BUILD`](#create-a-network-for-each-job) is disabled.
 
-{{< alert type="note" >}}
-
-GitLab Runner's emulated links behavior differs slightly from [legacy container links](https://docs.docker.com/engine/network/links/):
+The GitLab Runner emulated link behavior differs slightly from [legacy container links](https://docs.docker.com/engine/network/links/):
 
 - Disabling `icc` disables inter-container communication and containers cannot communicate with each other.
 - Environment variables for the linked containers are no longer present (`<name>_PORT_<port>_<protocol>`).
-
-{{< /alert >}}
 
 To configure the network, specify the [networking mode](https://docs.docker.com/engine/containers/run/#network-settings) in the `config.toml` file:
 
@@ -897,14 +886,11 @@ Prerequisites:
   and are not supported by [Podman](https://podman.io/). For services that
   create a network alias, you must install the `podman-plugins` package.
 
-{{< alert type="note" >}}
-
-Podman uses `aardvark-dns` as the DNS server for containers.
-The `aardvark-dns` versions 1.10.0 and earlier cause sporadic DNS resolution failures in CI/CD jobs.
-Make sure that you have installed a newer version.
-For more information, see [GitHub issue 389](https://github.com/containers/aardvark-dns/issues/389).
-
-{{< /alert >}}
+> [!note]
+> Podman uses `aardvark-dns` as the DNS server for containers.
+> The `aardvark-dns` versions 1.10.0 and earlier cause sporadic DNS resolution failures in CI/CD jobs.
+> Make sure that you have installed a newer version.
+> For more information, see [GitHub issue 389](https://github.com/containers/aardvark-dns/issues/389).
 
 1. On your Linux host, install GitLab Runner. If you installed GitLab Runner
    by using your system's package manager, it automatically creates a `gitlab-runner` user.
@@ -951,12 +937,9 @@ For more information, see [GitHub issue 389](https://github.com/containers/aardv
        privileged = false
    ```
 
-   {{< alert type="note" >}}
-
-   Set `privileged = false` for standard Podman usage. Set `privileged = true` only if you need to run
-   [Docker-in-Docker services](#use-docker-in-docker-with-privileged-mode) within your jobs.
-
-   {{< /alert >}}
+   > [!note]
+   > Set `privileged = false` for standard Podman usage. Set `privileged = true` only if you need to run
+   > [Docker-in-Docker services](#use-docker-in-docker-with-privileged-mode) within your jobs.
 
 ### Use Podman to build container images from a Dockerfile
 
@@ -1354,14 +1337,11 @@ unsupported Windows Version: Windows Server Datacenter
 
 ### Configure a Windows Docker executor
 
-{{< alert type="note" >}}
-
-When a runner is registered with `c:\\cache`
-as a source directory when passing the `--docker-volumes` or
-`DOCKER_VOLUMES` environment variable, there is a
-[known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312).
-
-{{< /alert >}}
+> [!note]
+> When a runner is registered with `c:\\cache`
+> as a source directory when passing the `--docker-volumes` or
+> `DOCKER_VOLUMES` environment variable, there is a
+> [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312).
 
 Below is an example of the configuration for a Docker
 executor running Windows.

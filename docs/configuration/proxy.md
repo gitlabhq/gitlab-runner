@@ -20,14 +20,11 @@ Before continuing, ensure that you've already
 
 ## Configuring `cntlm`
 
-{{< alert type="note" >}}
-
-If you already use a proxy without authentication, this section is optional and
-you can skip straight to [configuring Docker](#configuring-docker-for-downloading-images).
-Configuring `cntlm` is only needed if you are behind a proxy with authentication,
-but it's recommended to use in any case.
-
-{{< /alert >}}
+> [!note]
+> If you already use a proxy without authentication, this section is optional and
+> you can skip straight to [configuring Docker](#configuring-docker-for-downloading-images).
+> Configuring `cntlm` is only needed if you are behind a proxy with authentication,
+> but it's recommended to use in any case.
 
 [`cntlm`](https://github.com/versat/cntlm) is a Linux proxy which can be used
 as a local proxy and has 2 major advantages compared to adding the proxy details
@@ -160,15 +157,12 @@ environment = ["https_proxy=http://docker0_interface_ip:3128", "http_proxy=http:
 
 Where `docker0_interface_ip` is the IP address of the `docker0` interface.
 
-{{< alert type="note" >}}
-
-In our examples, we are setting both lower case and upper case variables
-because certain programs expect `HTTP_PROXY` and others `http_proxy`.
-Unfortunately, there is no
-[standard](https://unix.stackexchange.com/questions/212894/whats-the-right-format-for-the-http-proxy-environment-variable-caps-or-no-ca#212972)
-on these kinds of environment variables.
-
-{{< /alert >}}
+> [!note]
+> In our examples, we are setting both lower case and upper case variables
+> because certain programs expect `HTTP_PROXY` and others `http_proxy`.
+> Unfortunately, there is no
+> [standard](https://unix.stackexchange.com/questions/212894/whats-the-right-format-for-the-http-proxy-environment-variable-caps-or-no-ca#212972)
+> on these kinds of environment variables.
 
 ## Proxy settings when using `dind` service
 
@@ -207,13 +201,10 @@ Or alternatively, in the configuration of the `gitlab-runner` (`/etc/gitlab-runn
   pre_build_script = "mkdir -p $HOME/.docker/ && echo \"{ \\\"proxies\\\": { \\\"default\\\": { \\\"httpProxy\\\": \\\"$HTTP_PROXY\\\", \\\"httpsProxy\\\": \\\"$HTTPS_PROXY\\\", \\\"noProxy\\\": \\\"$NO_PROXY\\\" } } }\" > $HOME/.docker/config.json"
 ```
 
-{{< alert type="note" >}}
-
-An additional level of escaping `"` is required because this creates a
-JSON file with a shell specified as a single string inside a TOML file.
-Because this is not YAML, do not escape the `:`.
-
-{{< /alert >}}
+> [!note]
+> An additional level of escaping `"` is required because this creates a
+> JSON file with a shell specified as a single string inside a TOML file.
+> Because this is not YAML, do not escape the `:`.
 
 If the `NO_PROXY` list needs to be extended, wildcards `*` only work for suffixes,
 but not for prefixes or CIDR notation.

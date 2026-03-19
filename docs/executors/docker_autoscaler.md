@@ -66,11 +66,8 @@ Prerequisites:
 
 - An AMI with [Docker Engine](https://docs.docker.com/engine/) installed. To enable Runner Manager's access to the Docker socket on the AMI, the user must be part of the `docker` group.
 
-  {{< alert type="note" >}}
-
-  The AMI does not require GitLab Runner to be installed. The instances launched using the AMI must not register themselves as runners in GitLab.
-
-  {{< /alert >}}
+  > [!note]
+  > The AMI does not require GitLab Runner to be installed. The instances launched using the AMI must not register themselves as runners in GitLab.
 
 - An AWS autoscaling group. The runner directly manages all scaling behavior. For the scaling policy, use `none` and turn on instance scale-in protection. If you have configured multiple availability zones, turn off the `AZRebalance` process.
 - An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy).
@@ -141,21 +138,15 @@ Prerequisites:
 
 - A VM image with [Docker Engine](https://docs.docker.com/engine/) installed, such as [`COS`](https://docs.cloud.google.com/container-optimized-os/docs).
 
-  {{< alert type="note" >}}
-
-  The VM image does not require GitLab Runner to be installed. The instances launched using the VM image must not register themselves as runners in GitLab.
-
-  {{< /alert >}}
+  > [!note]
+  > The VM image does not require GitLab Runner to be installed. The instances launched using the VM image must not register themselves as runners in GitLab.
 
 - A single-zone Google Cloud instance group. For **Autoscaling mode**, select **Do not autoscale**. The runner handles autoscaling, not
   the Google Cloud instance group.
 
-  {{< alert type="note" >}}
-
-  Multi-zone instance groups are not currently supported. An [issue](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud/-/issues/20)
-  exists to support multi-zone instance groups in the future.
-
-  {{< /alert >}}
+  > [!note]
+  > Multi-zone instance groups are not currently supported. An [issue](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud/-/issues/20)
+  > exists to support multi-zone instance groups in the future.
 
 - An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions).
   If you're deploying your runner in a GKE cluster, you can add an IAM binding
@@ -229,11 +220,8 @@ Prerequisites:
 
 - An Azure VM image with [Docker Engine](https://docs.docker.com/engine/) installed.
 
-  {{< alert type="note" >}}
-
-  The VM image does not require GitLab Runner to be installed. The instances launched using the VM image must not register themselves as runners in GitLab.
-
-  {{< /alert >}}
+  > [!note]
+  > The VM image does not require GitLab Runner to be installed. The instances launched using the VM image must not register themselves as runners in GitLab.
 
 - An Azure scale set where the autoscaling policy is set to `manual`. The runner handles the scaling.
 

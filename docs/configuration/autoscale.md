@@ -12,16 +12,13 @@ title: Docker Machine Executor autoscale configuration
 
 {{< /details >}}
 
-{{< alert type="note" >}}
-
-The Docker Machine executor was deprecated in GitLab 17.5 and is scheduled for removal in GitLab 20.0 (May 2027).
-While we continue to support the Docker Machine executor till GitLab 20.0, we do not plan to add new features.
-We will address only critical bugs that could prevent CI/CD job execution or affect running costs.
-If you're using the Docker Machine executor on Amazon Web Services (AWS) EC2,
-Microsoft Azure Compute, or Google Compute Engine (GCE), migrate to the
-[GitLab Runner Autoscaler](../runner_autoscale/_index.md).
-
-{{< /alert >}}
+> [!note]
+> The Docker Machine executor was deprecated in GitLab 17.5 and is scheduled for removal in GitLab 20.0 (May 2027).
+> While we continue to support the Docker Machine executor till GitLab 20.0, we do not plan to add new features.
+> We will address only critical bugs that could prevent CI/CD job execution or affect running costs.
+> If you're using the Docker Machine executor on Amazon Web Services (AWS) EC2,
+> Microsoft Azure Compute, or Google Compute Engine (GCE), migrate to the
+> [GitLab Runner Autoscaler](../runner_autoscale/_index.md).
 
 With the autoscale feature, you use resources in a more elastic and
 dynamic way.
@@ -31,14 +28,11 @@ many build instances as are necessary at any time. When you configure GitLab Run
 use only autoscale, the system hosting GitLab Runner acts as a
 bastion for all the machines it creates. This machine is referred to as a "Runner Manager."
 
-{{< alert type="note" >}}
-
-Docker has deprecated Docker Machine, the underlying technology used to autoscale
-runners on public cloud virtual machines. You can read the issue discussing the
-[strategy in response to the deprecation of Docker Machine](https://gitlab.com/gitlab-org/gitlab/-/issues/341856)
-for more details.
-
-{{< /alert >}}
+> [!note]
+> Docker has deprecated Docker Machine, the underlying technology used to autoscale
+> runners on public cloud virtual machines. You can read the issue discussing the
+> [strategy in response to the deprecation of Docker Machine](https://gitlab.com/gitlab-org/gitlab/-/issues/341856)
+> for more details.
 
 Docker Machine autoscaler creates one container per VM, regardless of the `limit` and `concurrent` configuration.
 
@@ -447,13 +441,10 @@ For example:
 In this configuration, every weekday between 9 and 16:59 UTC, machines are over-provisioned to handle the large traffic during operating hours. On the weekend, `IdleCount` drops to 5 to account for the drop in traffic.
 The rest of the time, the values are taken from the defaults in the root - `IdleCount = 10` and `IdleTime = 1800`.
 
-{{< alert type="note" >}}
-
-The 59th second of the last
-minute in any period that you specify is not be considered part of the
-period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2170).
-
-{{< /alert >}}
+> [!note]
+> The 59th second of the last
+> minute in any period that you specify is not be considered part of the period.
+> For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2170).
 
 You can specify the `Timezone` of a period, for example `"Australia/Sydney"`. If you don't,
 the system setting of the host machine of every runner is used. This

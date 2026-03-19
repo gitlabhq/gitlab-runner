@@ -1106,13 +1106,9 @@ The following parameters configure the autoscaler feature. You can only use thes
 | `log_internal_ip`                | Specifies whether the CI/CD output logs the internal IP address of the VM. Default: `false`. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
 | `log_external_ip`                | Specifies whether the CI/CD output logs the external IP address of the VM. Default: `false`. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
 
-{{< alert type="note" >}}
-
 If the `instance_ready_command` frequently fails with idle scale rules, instances might be removed and created
 faster than the runner accepts jobs. To support scale throttling, an exponential backoff was added in
 [GitLab 17.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37497).
-
-{{< /alert >}}
 
 > [!note]
 > Autoscaler configuration options don't reload with configuration changes. However, in
@@ -2169,14 +2165,11 @@ The used _Builds Directory_ may be defined explicitly by the user with the
 [`builds_dir`](#the-runners-section)
 setting.
 
-{{< alert type="note" >}}
-
-You can also specify
-[`GIT_CLONE_PATH`](https://docs.gitlab.com/ci/runners/configure_runners/#custom-build-directories)
-if you want to clone to a custom directory, and the guideline below
-doesn't apply.
-
-{{< /alert >}}
+> [!note]
+> You can also specify
+> [`GIT_CLONE_PATH`](https://docs.gitlab.com/ci/runners/configure_runners/#custom-build-directories)
+> if you want to clone to a custom directory, and the guideline below
+> doesn't apply.
 
 GitLab Runner uses the _Builds Directory_ for all the jobs that it
 runs, but nests them using a specific pattern

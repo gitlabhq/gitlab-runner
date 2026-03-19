@@ -169,11 +169,8 @@ To configure your cache to use a PVC:
 
 1. [Create a PVC](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims) in the namespace where job pods will run.
 
-   {{< alert type="note" >}}
-
-   If you want multiple job pods to access the same cache PVC, it must have the `ReadWriteMany` access mode.
-
-   {{< /alert >}}
+   > [!note]
+   > If you want multiple job pods to access the same cache PVC, it must have the `ReadWriteMany` access mode.
 
 1. Mount the PVC to the `/cache` directory:
 
@@ -310,8 +307,6 @@ For more details on how to create `imagePullSecrets`, see
 [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
 in the Kubernetes documentation.
 
-{{< alert type="note" >}}
-
 When a job Pod is being created, GitLab Runner automatically handles image access in two steps:
 
 1. GitLab Runner converts any existing Docker credentials into Kubernetes secrets so they can pull images from registries.
@@ -322,8 +317,6 @@ When a job Pod is being created, GitLab Runner automatically handles image acces
    the `imagePullSecrets` and the converted Docker credentials, in that order.
 
 When Kubernetes needs to pull the container image, it tries the credentials one by one until it finds the one that works.
-
-{{< /alert >}}
 
 ## Access GitLab with a custom certificate
 

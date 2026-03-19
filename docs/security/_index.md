@@ -155,14 +155,11 @@ All needs are unique, but for a cloud environment, this could include:
 - Restricting traffic between runner virtual machines
 - Filtering access to cloud provider metadata endpoints
 
-{{< alert type="note" >}}
-
-All runners will need outbound network connectivity to
-GitLab.com or your GitLab instance.
-Most jobs will also require outbound network connectivity to
-the Internet - for dependency pulling etc.
-
-{{< /alert >}}
+> [!note]
+> All runners will need outbound network connectivity to
+> GitLab.com or your GitLab instance.
+> Most jobs will also require outbound network connectivity to
+> the Internet - for dependency pulling etc.
 
 ### Secure the runner host
 
