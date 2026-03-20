@@ -23,26 +23,27 @@ We must build the helper image for it to be used for the user job.
 
 ### Create a base image for infrastructure to use
 
-Windows requires us to have the host OS version match the container
-OS, so if we are building `Windows Server Core 2004` image we need to
-have `gitlab-runner` installed on `Windows Server Core 2004`.
+To add support for a new Windows version, you might need to create a new helper image.
+Windows versions can run older helper images (backward compatibility), 
+or might require a newly built helper image. For compatibility details, see
+[Windows container version compatibility](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility)
 
-To do this we must update the
-[windows-containers](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers)
-repository to build a base image. The base image is used by the
-[autoscaler](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/autoscaler)
-for our CI. The new base image is used to build the GitLab Runner
-helper image.
+To support a new host OS environment or helper image, update the
+[windows-containers](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers) repository to build a base image.
+The [autoscaler](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/autoscaler) uses the
+base image to build the GitLab Runner helper image.
 
-For example, if we want to add support for `Windows Server Core 2004` in
-the 13.7 milestone we can see the following
-[merge request](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/merge_requests/29).
-Depending on the base image provided by GCP, we might have to install
-Docker as part of the build process or not. In this MR we update the
-following files:
+For example, when adding support for Windows Server 2025, 
+backward compatibility allowed reuse of the existing 2022 helper images.
+However, when adding support to Windows Server 2022, 
+the Windows Server 2019 helper image was not compatible with process isolation,
+so a new image was required.
 
-1. `.gitlab-ci.yml`
-1. `.gitlab/ci/build.gitlab-ci.yml`
+Some GCP base images require Docker installation during the build process. To update the CI/CD 
+environment for a new image, update the following files:
+
+- `.gitlab-ci.yml`
+- `.gitlab/ci/build.gitlab-ci.yml`
 
 ### Test the image generated
 
