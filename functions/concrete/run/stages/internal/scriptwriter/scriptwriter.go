@@ -8,6 +8,13 @@ import (
 	"strings"
 )
 
+const (
+	ShellPwsh       = "pwsh"
+	ShellPowershell = "powershell"
+	ShellBash       = "bash"
+	ShellSh         = "sh"
+)
+
 var bashFallbackPaths = []string{
 	"/usr/local/bin/bash",
 	"/usr/bin/bash",
@@ -38,7 +45,7 @@ func New(stepName, shell string) *Builder {
 // Build renders the script lines into a complete shell script.
 func (b *Builder) Build(lines []string) string {
 	switch b.shell {
-	case "pwsh", "powershell":
+	case ShellPwsh, ShellPowershell:
 		return b.buildPwshScript(lines)
 	default:
 		return b.buildBashScript(lines)
@@ -177,7 +184,7 @@ func (b *Builder) buildPwshScript(lines []string) string {
 // --- shell resolution ---
 
 func resolveBash() (string, error) {
-	for _, name := range []string{"bash", "sh"} {
+	for _, name := range []string{ShellBash, ShellSh} {
 		if p, err := exec.LookPath(name); err == nil {
 			return p, nil
 		}
@@ -194,7 +201,7 @@ func resolveBash() (string, error) {
 
 func shellPath(name string) (string, error) {
 	switch name {
-	case "pwsh", "powershell":
+	case ShellPwsh, ShellPowershell:
 		return exec.LookPath(name)
 	default:
 		return resolveBash()
