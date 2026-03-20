@@ -31,7 +31,7 @@ func TestGenerateScript_Basic(t *testing.T) {
 		t.Errorf("Script should contain 'echo world' command")
 	}
 
-	if !strings.Contains(script, "\\033[1;32m") {
+	if !strings.Contains(script, EscapeForAnsiC(ansiGreen)) {
 		t.Errorf("Script should contain ANSI color codes for logging")
 	}
 }
@@ -112,7 +112,7 @@ func TestGenerateScript_DebugTraceEnabled(t *testing.T) {
 		t.Errorf("Script should conditionally set pipefail")
 	}
 
-	if !strings.Contains(script, "\\033[1;32m") {
+	if !strings.Contains(script, EscapeForAnsiC(ansiGreen)) {
 		t.Errorf("Script should still have ANSI color logging when debug_trace is true")
 	}
 }
@@ -237,11 +237,11 @@ func TestGenerateScript_PosixEscape_Disabled(t *testing.T) {
 	commands := []string{"echo hello"}
 	script := gen.GenerateScript(commands)
 
-	if !strings.Contains(script, "echo $'\\033[1;32m$") {
+	if !strings.Contains(script, EscapeForAnsiC(ansiGreen)) {
 		t.Errorf("Script should use ANSI-C quoting with colors when posix_escape is false")
 	}
 
-	if !strings.Contains(script, "\\033[0m'") {
+	if !strings.Contains(script, EscapeForAnsiC(ansiReset)) {
 		t.Errorf("Script should include color reset code when posix_escape is false")
 	}
 }

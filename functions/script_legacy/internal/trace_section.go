@@ -6,14 +6,9 @@ import (
 )
 
 const (
-	// ansiClear clears the line (\033[0K or \e[0K)
-	ansiClear = "\\033[0K"
-
-	// ansiBoldGreen is bold green text (\033[32;1m or \e[32;1m)
-	ansiBoldGreen = "\\033[32;1m"
-
-	// ansiResetTrace resets all attributes (\033[0;m or \e[0;m)
-	ansiResetTrace = "\\033[0;m"
+	ansiClear      = "\033[0K"
+	ansiBoldGreen  = "\033[32;1m"
+	ansiResetTrace = "\033[0;m"
 
 	// traceSectionOptions are the default options for trace sections
 	// hide_duration=true: Don't show duration in the section header
@@ -31,12 +26,14 @@ const (
 // Trace sections create collapsible sections in GitLab CI logs.
 type TraceSectionWriter struct {
 	checkForErrors bool
+	posixMode      bool
 }
 
 // NewTraceSectionWriter creates a new trace section writer.
-func NewTraceSectionWriter(checkForErrors bool) *TraceSectionWriter {
+func NewTraceSectionWriter(checkForErrors, posixMode bool) *TraceSectionWriter {
 	return &TraceSectionWriter{
 		checkForErrors: checkForErrors,
+		posixMode:      posixMode,
 	}
 }
 
@@ -53,16 +50,15 @@ func (w *TraceSectionWriter) WriteSection(buf *strings.Builder, index int, comma
 // writeSectionStart writes the section_start marker with command preview.
 // Format: section_start:TIMESTAMP:section_NAME[options]\r\e[0K\e[32;1m$ COMMAND\e[0;m
 func (w *TraceSectionWriter) writeSectionStart(buf *strings.Builder, sectionName, command string) {
-	fmt.Fprintf(buf, "printf '%%b\\n' "+
-		"\"section_start:%s:section_%s[%s]\\r%s%s%s%s%s\"\n",
+	command = w.escape(ansiBoldGreen + commandPrefix + command + ansiResetTrace)
+
+	fmt.Fprintf(buf, "printf '%%s\\n' "+
+		"section_start:%s:section_%s[%s]\r%s%s\n",
 		timestampCommand,
 		sectionName,
 		traceSectionOptions,
 		ansiClear,
-		ansiBoldGreen,
-		commandPrefix,
-		EscapeForAnsiC(command),
-		ansiResetTrace)
+		command)
 }
 
 // writeCommand writes the actual command and optional error checking.
@@ -79,9 +75,18 @@ func (w *TraceSectionWriter) writeCommand(buf *strings.Builder, command string) 
 // writeSectionEnd writes the section_end marker.
 // Format: section_end:TIMESTAMP:section_NAME\r\e[0K
 func (w *TraceSectionWriter) writeSectionEnd(buf *strings.Builder, sectionName string) {
-	fmt.Fprintf(buf, "printf '%%b\\n' "+
-		"\"section_end:%s:section_%s\\r%s\"\n",
+	fmt.Fprintf(buf, "printf '%%s\\n' "+
+		"section_end:%s:section_%s\r%s\n",
 		timestampCommand,
 		sectionName,
 		ansiClear)
+}
+
+// escape routes through the appropriate shell escaping for the mode.
+func (w *TraceSectionWriter) escape(input string) string {
+	if w.posixMode {
+		return EscapeForPosix(input)
+	}
+
+	return "$'" + EscapeForAnsiC(input) + "'"
 }

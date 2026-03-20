@@ -135,7 +135,7 @@ func TestCommandProcessor_ProcessCommand_PosixMode(t *testing.T) {
 	result := buf.String()
 
 	// Should NOT have ANSI colors
-	if strings.Contains(result, ansiGreen) {
+	if strings.Contains(result, EscapeForAnsiC(ansiGreen)) {
 		t.Errorf("Should not have colors in POSIX mode")
 	}
 }
@@ -154,7 +154,7 @@ func TestCommandProcessor_ProcessCommand_BashMode(t *testing.T) {
 	processor.ProcessCommand(&buf, 0, "echo test")
 	result := buf.String()
 
-	if !strings.Contains(result, ansiGreen) {
+	if !strings.Contains(result, EscapeForAnsiC(ansiGreen)) {
 		t.Errorf("Expected colors in bash mode")
 	}
 }
@@ -268,7 +268,7 @@ func TestCommandProcessor_AllFlags_Enabled(t *testing.T) {
 	if !strings.Contains(result, exitCodeCheck) {
 		t.Errorf("Expected error checking for single line")
 	}
-	if strings.Contains(result, ansiGreen) {
+	if strings.Contains(result, EscapeForAnsiC(ansiGreen)) {
 		t.Errorf("Should not have colors in POSIX mode")
 	}
 	if strings.Contains(result, "section_start") {
