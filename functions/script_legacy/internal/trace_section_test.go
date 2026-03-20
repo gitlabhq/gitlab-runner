@@ -8,7 +8,7 @@ import (
 )
 
 func TestTraceSectionWriter_WriteSection_Basic(t *testing.T) {
-	writer := NewTraceSectionWriter(false)
+	writer := NewTraceSectionWriter(false, false)
 	var buf strings.Builder
 
 	writer.WriteSection(&buf, 0, "echo hello")
@@ -28,7 +28,7 @@ func TestTraceSectionWriter_WriteSection_Basic(t *testing.T) {
 }
 
 func TestTraceSectionWriter_WriteSection_WithErrorChecking(t *testing.T) {
-	writer := NewTraceSectionWriter(true) // Error checking enabled
+	writer := NewTraceSectionWriter(true, false) // Error checking enabled
 	var buf strings.Builder
 
 	writer.WriteSection(&buf, 0, "echo test")
@@ -40,7 +40,7 @@ func TestTraceSectionWriter_WriteSection_WithErrorChecking(t *testing.T) {
 }
 
 func TestTraceSectionWriter_WriteSection_WithoutErrorChecking(t *testing.T) {
-	writer := NewTraceSectionWriter(false) // Error checking disabled
+	writer := NewTraceSectionWriter(false, false) // Error checking disabled
 	var buf strings.Builder
 
 	writer.WriteSection(&buf, 0, "echo test")
@@ -52,7 +52,7 @@ func TestTraceSectionWriter_WriteSection_WithoutErrorChecking(t *testing.T) {
 }
 
 func TestTraceSectionWriter_SectionName_Format(t *testing.T) {
-	writer := NewTraceSectionWriter(false)
+	writer := NewTraceSectionWriter(false, false)
 	var buf strings.Builder
 
 	writer.WriteSection(&buf, 5, "echo test")
@@ -64,7 +64,7 @@ func TestTraceSectionWriter_SectionName_Format(t *testing.T) {
 }
 
 func TestTraceSectionWriter_ContainsTimestamp(t *testing.T) {
-	writer := NewTraceSectionWriter(false)
+	writer := NewTraceSectionWriter(false, false)
 	var buf strings.Builder
 
 	writer.WriteSection(&buf, 0, "echo test")
@@ -76,7 +76,7 @@ func TestTraceSectionWriter_ContainsTimestamp(t *testing.T) {
 }
 
 func TestTraceSectionWriter_ContainsSectionMarkers(t *testing.T) {
-	writer := NewTraceSectionWriter(false)
+	writer := NewTraceSectionWriter(false, false)
 	var buf strings.Builder
 
 	writer.WriteSection(&buf, 0, "echo test")
@@ -87,13 +87,13 @@ func TestTraceSectionWriter_ContainsSectionMarkers(t *testing.T) {
 	}
 
 	// Should have proper format with carriage return and clear line
-	if !strings.Contains(result, "\\r"+ansiClear) {
-		t.Errorf("Expected \\r and ANSI clear sequence")
+	if !strings.Contains(result, "\r"+ansiClear) {
+		t.Errorf("Expected \r and ANSI clear sequence")
 	}
 }
 
 func TestTraceSectionWriter_ContainsCommand(t *testing.T) {
-	writer := NewTraceSectionWriter(false)
+	writer := NewTraceSectionWriter(false, false)
 	var buf strings.Builder
 
 	testCmd := "multi\nline\ncommand"
@@ -113,7 +113,7 @@ func TestTraceSectionWriter_ContainsCommand(t *testing.T) {
 }
 
 func TestTraceSectionWriter_ANSICodes(t *testing.T) {
-	writer := NewTraceSectionWriter(false)
+	writer := NewTraceSectionWriter(false, false)
 	var buf strings.Builder
 
 	writer.WriteSection(&buf, 0, "echo test")
@@ -123,16 +123,16 @@ func TestTraceSectionWriter_ANSICodes(t *testing.T) {
 	if !strings.Contains(result, ansiClear) {
 		t.Errorf("Expected ANSI clear code")
 	}
-	if !strings.Contains(result, ansiBoldGreen) {
+	if !strings.Contains(result, EscapeForAnsiC(ansiBoldGreen)) {
 		t.Errorf("Expected ANSI bold green code")
 	}
-	if !strings.Contains(result, ansiResetTrace) {
+	if !strings.Contains(result, EscapeForAnsiC(ansiResetTrace)) {
 		t.Errorf("Expected ANSI reset code for trace sections")
 	}
 }
 
 func TestTraceSectionWriter_commandPrefix(t *testing.T) {
-	writer := NewTraceSectionWriter(false)
+	writer := NewTraceSectionWriter(false, false)
 	var buf strings.Builder
 
 	writer.WriteSection(&buf, 0, "echo test")
@@ -146,7 +146,7 @@ func TestTraceSectionWriter_commandPrefix(t *testing.T) {
 }
 
 func TestTraceSectionWriter_MultipleIndexes(t *testing.T) {
-	writer := NewTraceSectionWriter(false)
+	writer := NewTraceSectionWriter(false, false)
 
 	tests := []struct {
 		index    int

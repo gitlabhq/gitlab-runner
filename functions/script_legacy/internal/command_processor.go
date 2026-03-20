@@ -19,7 +19,7 @@ type CommandProcessor struct {
 func NewCommandProcessor(config ScriptGeneratorConfig) *CommandProcessor {
 	return &CommandProcessor{
 		formatter:      NewCommandFormatter(config.PosixEscape),
-		sectionWriter:  NewTraceSectionWriter(config.CheckForErrors),
+		sectionWriter:  NewTraceSectionWriter(config.CheckForErrors, config.PosixEscape),
 		checkForErrors: config.CheckForErrors,
 		traceSections:  config.TraceSections,
 	}

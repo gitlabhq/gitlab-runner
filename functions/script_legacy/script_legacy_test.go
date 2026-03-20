@@ -626,7 +626,9 @@ run:
 		assert.Equal(t, proto.StepResult_failure, res.Status)
 		require.Contains(t, logs, "before failure")
 		// exit 42 should cause errexit to trigger
-		require.NotContains(t, logs, "after failure - should not execute")
+		// `after failure - should not execute` is still display as part of the bloc of commands to run
+		// we therefore check that the whole line is the string we don't expect
+		require.NotRegexp(t, `(?m)^after failure - should not execute$`, logs)
 		// Section markers should still be present
 		require.Contains(t, logs, "section_start:")
 	})

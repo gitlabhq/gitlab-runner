@@ -11,10 +11,10 @@ func TestCommandFormatter_FormatLogLine_BashMode_SingleLine(t *testing.T) {
 	formatter := NewCommandFormatter(false) // Bash mode
 	result := formatter.FormatLogLine("echo hello")
 
-	if !strings.Contains(result, ansiGreen) {
+	if !strings.Contains(result, EscapeForAnsiC(ansiGreen)) {
 		t.Errorf("Expected green color code")
 	}
-	if !strings.Contains(result, ansiReset) {
+	if !strings.Contains(result, EscapeForAnsiC(ansiReset)) {
 		t.Errorf("Expected reset color code")
 	}
 
@@ -48,7 +48,7 @@ func TestCommandFormatter_FormatLogLine_BashMode_MultiLine(t *testing.T) {
 		t.Errorf("Expected multiline indicator")
 	}
 
-	if !strings.Contains(result, ansiGreen) {
+	if !strings.Contains(result, EscapeForAnsiC(ansiGreen)) {
 		t.Errorf("Expected green color code")
 	}
 }
@@ -57,7 +57,7 @@ func TestCommandFormatter_FormatLogLine_PosixMode_SingleLine(t *testing.T) {
 	formatter := NewCommandFormatter(true) // POSIX mode
 	result := formatter.FormatLogLine("echo hello")
 
-	if strings.Contains(result, ansiGreen) || strings.Contains(result, ansiReset) {
+	if strings.Contains(result, EscapeForAnsiC(ansiGreen)) || strings.Contains(result, EscapeForAnsiC(ansiReset)) {
 		t.Errorf("Should not have color codes in POSIX mode")
 	}
 
@@ -83,7 +83,7 @@ func TestCommandFormatter_FormatLogLine_PosixMode_MultiLine(t *testing.T) {
 		t.Errorf("Expected multiline indicator")
 	}
 
-	if strings.Contains(result, ansiGreen) {
+	if strings.Contains(result, EscapeForAnsiC(ansiGreen)) {
 		t.Errorf("Should not have colors in POSIX mode")
 	}
 }

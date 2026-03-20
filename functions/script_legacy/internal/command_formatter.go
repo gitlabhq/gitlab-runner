@@ -6,11 +6,8 @@ import (
 )
 
 const (
-	// ansiGreen is green text (\033[1;32m) used in bash mode
-	ansiGreen = "\\033[1;32m"
-
-	// ansiReset resets all attributes (\033[0m) used in bash mode
-	ansiReset = "\\033[0m"
+	ansiGreen = "\033[1;32m"
+	ansiReset = "\033[0m"
 
 	// commandPrefix is shown before each command
 	commandPrefix = "$ "
@@ -32,26 +29,13 @@ func NewCommandFormatter(posixMode bool) *CommandFormatter {
 // FormatLogLine generates the echo statement to log a command.
 // Returns different formats based on POSIX mode setting.
 func (f *CommandFormatter) FormatLogLine(command string) string {
+	command = ansiGreen + commandPrefix + f.getDisplayCommand(command) + ansiReset
+
 	if f.posixMode {
-		return f.formatPosixLogLine(command)
+		return fmt.Sprintf("echo %s", EscapeForPosix(command))
 	}
-	return f.formatBashLogLine(command)
-}
 
-// formatPosixLogLine creates a POSIX-compatible log line without colors.
-func (f *CommandFormatter) formatPosixLogLine(command string) string {
-	displayCmd := f.getDisplayCommand(command)
-	return fmt.Sprintf("echo %s", EscapeForPosix(commandPrefix+displayCmd))
-}
-
-// formatBashLogLine creates a bash log line with ANSI colors.
-func (f *CommandFormatter) formatBashLogLine(command string) string {
-	displayCmd := f.getDisplayCommand(command)
-	return fmt.Sprintf("echo $'%s%s%s%s'",
-		ansiGreen,
-		commandPrefix,
-		EscapeForAnsiC(displayCmd),
-		ansiReset)
+	return fmt.Sprintf("echo $'%s'", EscapeForAnsiC(command))
 }
 
 // getDisplayCommand returns the command string to display in logs.
