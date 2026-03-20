@@ -16,7 +16,7 @@
         export GPG_KEYID=$(gpg --with-colon --list-secret-keys | head -n1 | cut -d : -f 5)
         export GPG_PASSPHRASE=$(cat ${GPG_PASSPHRASE_PATH})
       else
-        echo "****** GPG signing disabled ******"
+        echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
       fi
   script:
     - mage package:prepare
