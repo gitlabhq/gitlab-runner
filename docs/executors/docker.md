@@ -1254,48 +1254,8 @@ but only takes effect if specifically the Docker pull fails initially.
 ## Use Windows containers
 
 To use Windows containers with the Docker executor, note the following
-information about limitations, supported Windows versions, and
-configuring a Windows Docker executor.
-
-### Nanoserver support
-
-With the support for PowerShell Core introduced in the Windows helper image, it is now possible to leverage
-the `nanoserver` variants for the helper image.
-
-### Known issues with Docker executor on Windows
-
-The following are some limitations of using Windows containers with
-Docker executor:
-
-- Docker-in-Docker is not supported, because it's
-  [not supported](https://github.com/docker-library/docker/issues/49) by
-  Docker itself.
-- Host device mounting not supported.
-- When mounting a volume directory it has to exist, or Docker fails
-  to start the container, see
-  [#3754](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3754) for
-  additional detail.
-- `docker-windows` executor can be run only using GitLab Runner running
-  on Windows.
-- [Linux containers on Windows](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/set-up-linux-containers)
-  are not supported, because they are still experimental. Read
-  [the relevant issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
-  more details.
-- Because of a [limitation in Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/pull/331),
-  if the destination path drive letter is not `c:`, paths are not supported for:
-
-  - [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
-  - [`cache_dir`](../configuration/advanced-configuration.md#the-runners-section)
-  - [`volumes`](../configuration/advanced-configuration.md#volumes-in-the-runnersdocker-section)
-
-  This means values such as `f:\\cache_dir` are not supported, but `f:` is supported.
-  However, if the destination path is on the `c:` drive, paths are also supported
-  (for example `c:\\cache_dir`).
-
-  To configure where the Docker daemon keeps images and containers, update
-  the `data-root` parameter in the `daemon.json` file of the Docker daemon.
-
-  For more information, see [Configure Docker with a configuration file](https://learn.microsoft.com/en-us/virtualization/windowscontainers/manage-docker/configure-docker-daemon#configure-docker-with-a-configuration-file).
+information about limitations, supported Windows versions, 
+configuring a Windows Docker executor, and Windows helper images.
 
 ### Supported Windows versions
 
@@ -1361,10 +1321,60 @@ For other configuration options for the Docker executor, see the
 [advanced configuration](../configuration/advanced-configuration.md#the-runnersdocker-section)
 section.
 
+### Windows helper images
+
+GitLab Runner provides several helper images tailored for different Windows versions and PowerShell requirements.
+Available variants:
+
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver21H2`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore21H2`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver1809`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore1809`
+
+> [!note]
+> Due to Windows container backward compatibility, Windows Server 2025 (24H2) can use the 21H2 (Windows Server 2022) helper images.
+
+Choose your helper image based on your shell requirements. The `servercore` image is the default and supports both `PowerShell` and `Pwsh`. For containers that only use `pwsh`, use the lighter `nanoserver` image.
+
 ### Services
 
 You can use [services](https://docs.gitlab.com/ci/services/) by
 enabling [a network for each job](#create-a-network-for-each-job).
+
+### Known issues with Docker executor on Windows
+
+The following are some limitations of using Windows containers with
+Docker executor:
+
+- Docker-in-Docker is not supported, because it's
+  [not supported](https://github.com/docker-library/docker/issues/49) by
+  Docker itself.
+- Host device mounting not supported.
+- When mounting a volume directory it has to exist, or Docker fails
+  to start the container, see
+  [#3754](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3754) for
+  additional detail.
+- `docker-windows` executor can be run only using GitLab Runner running
+  on Windows.
+- [Linux containers on Windows](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/set-up-linux-containers)
+  are not supported, because they are still experimental. Read
+  [the relevant issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
+  more details.
+- Because of a [limitation in Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/pull/331),
+  if the destination path drive letter is not `c:`, paths are not supported for:
+
+  - [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
+  - [`cache_dir`](../configuration/advanced-configuration.md#the-runners-section)
+  - [`volumes`](../configuration/advanced-configuration.md#volumes-in-the-runnersdocker-section)
+
+  This means values such as `f:\\cache_dir` are not supported, but `f:` is supported.
+  However, if the destination path is on the `c:` drive, paths are also supported
+  (for example `c:\\cache_dir`).
+
+  To configure where the Docker daemon keeps images and containers, update
+  the `data-root` parameter in the `daemon.json` file of the Docker daemon.
+
+  For more information, see [Configure Docker with a configuration file](https://learn.microsoft.com/en-us/virtualization/windowscontainers/manage-docker/configure-docker-daemon#configure-docker-with-a-configuration-file).
 
 ## Native Step Runner Integration
 
