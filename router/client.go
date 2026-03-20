@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/router/rpc"
 )
@@ -54,6 +55,10 @@ func (c *Client) Shutdown() {
 }
 
 func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo) (*spec.Job, bool) {
+	if !config.IsFeatureFlagOn(featureflags.UseJobRouter) {
+		return c.delegate.RequestJob(ctx, config, sessionInfo)
+	}
+
 	client, disco := c.getClientOrNil(ctx, config)
 	if client == nil {
 		return c.delegate.RequestJob(ctx, config, sessionInfo)

@@ -26,7 +26,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/router"
@@ -135,9 +134,6 @@ func newClient(executorProviders executors.Providers) (common.Network, func(), *
 		network.WithCertificateDirectory(certDir),
 		network.WithExecutorProviderFunc(executorProviders.GetByName),
 	)
-	if os.Getenv(featureflags.UseJobRouter) != "true" {
-		return mainClient, func() {}, apiRequestsCollector
-	}
 	rc := router.NewClient(
 		mainClient,
 		certDir,

@@ -77,6 +77,39 @@ func TestRequestJob_HappyPath(t *testing.T) {
 	})
 }
 
+func TestRequestJob_FeatureFlagOff(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v4/jobs/request", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, err := w.Write([]byte(fakeJobResponse))
+		assert.NoError(t, err)
+	})
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Failf(t, "unexpected call", "%s %s", req.Method, req.URL)
+		w.WriteHeader(http.StatusNotImplemented)
+	}))
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	certDir := t.TempDir()
+	rc := NewClient(
+		network.NewGitLabClient(
+			network.WithCertificateDirectory(certDir),
+		),
+		certDir,
+		"runner-test",
+	)
+	defer rc.Shutdown()
+	config := newConfig(server.URL)
+	config.RunnerSettings.FeatureFlags = nil
+	sessionInfo := &common.SessionInfo{}
+	job, healthy := rc.RequestJob(t.Context(), config, sessionInfo)
+	require.True(t, healthy)
+	require.NotNil(t, job)
+	assert.EqualValues(t, 1223, job.ID)
+}
+
 func TestRequestJob_NoRouter(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v4/runners/router/discovery", func(w http.ResponseWriter, req *http.Request) {
