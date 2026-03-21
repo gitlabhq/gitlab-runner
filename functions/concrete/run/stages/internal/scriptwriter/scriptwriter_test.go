@@ -16,11 +16,11 @@ import (
 func requireShell(t *testing.T, shell string) {
 	t.Helper()
 	switch shell {
-	case "bash", "sh":
+	case ShellBash, ShellSh:
 		if _, err := resolveBash(); err != nil {
 			t.Skipf("skipping: no POSIX shell available")
 		}
-	case "pwsh", "powershell":
+	case ShellPwsh, ShellPowershell:
 		if _, err := exec.LookPath(shell); err != nil {
 			t.Skipf("skipping: %s not available", shell)
 		}
@@ -40,7 +40,7 @@ func withDebugTrace(b *Builder)     { b.DebugTrace = true }
 func withScriptSections(b *Builder) { b.ScriptSections = true }
 
 func TestBashScript(t *testing.T) {
-	requireShell(t, "bash")
+	requireShell(t, ShellBash)
 
 	tests := map[string]struct {
 		lines  []string
@@ -163,7 +163,7 @@ func TestBashScript(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			b := newBuilder("bash", tc.opts...)
+			b := newBuilder(ShellBash, tc.opts...)
 			tc.assert(t, b.Build(tc.lines))
 		})
 	}
@@ -177,7 +177,7 @@ func TestPwshScript(t *testing.T) {
 		assert func(t *testing.T, script string)
 	}{
 		"structure": {
-			shell: "pwsh",
+			shell: ShellPwsh,
 			lines: []string{"echo hello"},
 			assert: func(t *testing.T, s string) {
 				assert.Contains(t, s, `$ErrorActionPreference = "Stop"`)
@@ -185,14 +185,14 @@ func TestPwshScript(t *testing.T) {
 			},
 		},
 		"error check": {
-			shell: "pwsh",
+			shell: ShellPwsh,
 			lines: []string{"echo a"},
 			assert: func(t *testing.T, s string) {
 				assert.Contains(t, s, "if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }")
 			},
 		},
 		"debug trace enabled": {
-			shell: "pwsh",
+			shell: ShellPwsh,
 			lines: []string{"echo a"},
 			opts:  []func(*Builder){withDebugTrace},
 			assert: func(t *testing.T, s string) {
@@ -200,21 +200,21 @@ func TestPwshScript(t *testing.T) {
 			},
 		},
 		"debug trace disabled": {
-			shell: "pwsh",
+			shell: ShellPwsh,
 			lines: []string{"echo a"},
 			assert: func(t *testing.T, s string) {
 				assert.NotContains(t, s, "Set-PSDebug -Trace 2")
 			},
 		},
 		"echoes commands": {
-			shell: "pwsh",
+			shell: ShellPwsh,
 			lines: []string{"echo hello"},
 			assert: func(t *testing.T, s string) {
 				assert.Contains(t, s, "$ echo hello")
 			},
 		},
 		"multiline collapsed": {
-			shell: "pwsh",
+			shell: ShellPwsh,
 			lines: []string{"echo first\necho second"},
 			assert: func(t *testing.T, s string) {
 				assert.Contains(t, s, "collapsed multi-line command")
@@ -222,7 +222,7 @@ func TestPwshScript(t *testing.T) {
 			},
 		},
 		"multiline with script sections": {
-			shell: "pwsh",
+			shell: ShellPwsh,
 			lines: []string{"echo first\necho second"},
 			opts:  []func(*Builder){withScriptSections},
 			assert: func(t *testing.T, s string) {
@@ -233,7 +233,7 @@ func TestPwshScript(t *testing.T) {
 			},
 		},
 		"preserves exit code": {
-			shell: "pwsh",
+			shell: ShellPwsh,
 			lines: []string{"echo hello"},
 			assert: func(t *testing.T, s string) {
 				assert.Contains(t, s, "$_runner_exit_code = $LASTEXITCODE")
@@ -241,19 +241,19 @@ func TestPwshScript(t *testing.T) {
 			},
 		},
 		"shebang non-windows": {
-			shell: "pwsh",
+			shell: ShellPwsh,
 			lines: []string{"echo hello"},
 			assert: func(t *testing.T, s string) {
 				if runtime.GOOS == "windows" {
 					assert.False(t, strings.HasPrefix(s, "#!"))
 				} else {
 					assert.True(t, strings.HasPrefix(s, "#!"))
-					assert.Contains(t, s, "pwsh")
+					assert.Contains(t, s, ShellPwsh)
 				}
 			},
 		},
 		"line breaks non-windows": {
-			shell: "pwsh",
+			shell: ShellPwsh,
 			lines: []string{"echo hello"},
 			assert: func(t *testing.T, s string) {
 				if runtime.GOOS != "windows" {
@@ -264,7 +264,7 @@ func TestPwshScript(t *testing.T) {
 			},
 		},
 		"line breaks windows": {
-			shell: "powershell",
+			shell: ShellPowershell,
 			lines: []string{"echo hello"},
 			assert: func(t *testing.T, s string) {
 				if runtime.GOOS == "windows" {
@@ -289,10 +289,10 @@ func TestBuild_Dispatch(t *testing.T) {
 		wantEval bool
 		wantPwsh bool
 	}{
-		"bash":       {shell: "bash", wantEval: true},
-		"sh":         {shell: "sh", wantEval: true},
-		"pwsh":       {shell: "pwsh", wantPwsh: true},
-		"powershell": {shell: "powershell", wantPwsh: true},
+		ShellBash:       {shell: ShellBash, wantEval: true},
+		ShellSh:         {shell: ShellSh, wantEval: true},
+		ShellPwsh:       {shell: ShellPwsh, wantPwsh: true},
+		ShellPowershell: {shell: ShellPowershell, wantPwsh: true},
 	}
 
 	for name, tc := range tests {
@@ -306,7 +306,7 @@ func TestBuild_Dispatch(t *testing.T) {
 }
 
 func TestResolveBash(t *testing.T) {
-	requireShell(t, "bash")
+	requireShell(t, ShellBash)
 
 	p, err := resolveBash()
 	require.NoError(t, err)
@@ -315,7 +315,7 @@ func TestResolveBash(t *testing.T) {
 }
 
 func TestShellPath(t *testing.T) {
-	for _, shell := range []string{"bash", "sh"} {
+	for _, shell := range []string{ShellBash, ShellSh} {
 		t.Run(shell, func(t *testing.T) {
 			requireShell(t, shell)
 			p, err := shellPath(shell)

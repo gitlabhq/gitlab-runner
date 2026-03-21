@@ -1511,6 +1511,7 @@ func (e *executor) prepareHelperImage() (helperimage.Info, error) {
 		Shell:         e.Config.Shell,
 		Flavor:        e.ExpandValue(e.Config.Docker.HelperImageFlavor),
 		ProxyExec:     e.Config.IsProxyExec(),
+		Concrete:      e.Build.IsFeatureFlagOn(featureflags.UseConcrete),
 	})
 }
 

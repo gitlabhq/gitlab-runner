@@ -690,13 +690,13 @@ func TestGetSources_PrePostCloneSkippedForNonGitStrategies(t *testing.T) {
 		post Step
 	}{
 		pre: Step{
-			Step:      "pre_clone",
+			Step:      "pre_clone_script",
 			Script:    []string{"echo pre"},
 			OnSuccess: true,
 			OnFailure: true,
 		},
 		post: Step{
-			Step:      "post_clone",
+			Step:      "post_clone_script",
 			Script:    []string{"echo post"},
 			OnSuccess: true,
 			OnFailure: true,

@@ -76,7 +76,7 @@ func (s CacheArchive) Run(ctx context.Context, e *env.Env) error {
 	metaJSON, _ := json.Marshal(map[string]string{"cachekey": s.Name})
 	desc.Env["CACHE_METADATA"] = string(metaJSON)
 
-	if err := e.RunnerCommand(ctx, desc.Env, args...); err != nil {
+	if err := e.RunnerCommand(ctx, e.HelperEnvs(desc.Env), args...); err != nil {
 		e.Warningf("Failed to create cache")
 		return fmt.Errorf("archiving cache %s: %w", s.Key, err)
 	}

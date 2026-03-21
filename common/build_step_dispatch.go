@@ -222,18 +222,6 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 
 	return []schema.Step{
 		{
-			// try to install git on linux by different means if not available
-			// or return an error.
-			//
-			// todo: this is obviously terrible and must be replaced by a better mechanism.
-			Name: func(s string) *string { return &s }("install_git"),
-			Step: "builtin://script_legacy",
-			Inputs: schema.StepInputs{
-				"script":       []string{`command -v git >/dev/null 2>&1 || { (command -v apk >/dev/null 2>&1 && apk update && apk add git) || (command -v apt-get >/dev/null 2>&1 && apt-get update && apt-get install -y git) || (command -v dnf >/dev/null 2>&1 && dnf install -y git) || (command -v yum >/dev/null 2>&1 && yum install -y git) || (command -v pacman >/dev/null 2>&1 && pacman -Sy --noconfirm git) || (command -v zypper >/dev/null 2>&1 && zypper refresh && zypper install -y git) || { echo "Error: git is not available and no supported package manager found to install it." >&2; exit 1; }; } && command -v git >/dev/null 2>&1 || { echo "Error: git is not available." >&2; exit 1; }`},
-				"posix_escape": true,
-			},
-		},
-		{
 			Name: func(s string) *string { return &s }("concrete"),
 			Step: "builtin://concrete",
 			Inputs: schema.StepInputs{

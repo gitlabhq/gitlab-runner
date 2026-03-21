@@ -6,7 +6,9 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -41,6 +43,10 @@ type Env struct {
 	Stderr io.Writer
 
 	status JobStatus
+
+	resolveBundleOnce sync.Once
+	bundledGit        string
+	bundledCACerts    string
 }
 
 func (e *Env) IsSuccessful() bool {
@@ -113,4 +119,64 @@ func (e *Env) Command(ctx context.Context, name string, env map[string]string, a
 	cmd.Stderr = e.Stderr
 
 	return cmd.Run()
+}
+
+func (e *Env) BundledGit() string {
+	e.resolveBundle()
+
+	return e.bundledGit
+}
+
+// HelperEnvs returns environment variables needed for bundled TLS support.
+// It sets SSL_CERT_FILE to the bundled CA certs (if available and not
+// already set), and prepends the bundled git to PATH. Returns nil if
+// nothing needs to be added.
+func (e *Env) HelperEnvs(existing map[string]string) map[string]string {
+	e.resolveBundle()
+
+	env := make(map[string]string)
+	for k, v := range existing {
+		env[k] = v
+	}
+
+	if e.bundledCACerts != "" {
+		if _, ok := env["SSL_CERT_FILE"]; !ok {
+			env["SSL_CERT_FILE"] = e.bundledCACerts
+		}
+	}
+
+	if e.bundledGit != "git" {
+		gitBinDir := filepath.Dir(e.bundledGit)
+		if path, ok := env["PATH"]; ok {
+			env["PATH"] = gitBinDir + ":" + path
+		} else {
+			env["PATH"] = gitBinDir + ":" + os.Getenv("PATH")
+		}
+	}
+
+	return env
+}
+
+func (e *Env) resolveBundle() {
+	e.resolveBundleOnce.Do(func() {
+		e.bundledGit = "git"
+
+		exe, err := os.Executable()
+		if err != nil {
+			return
+		}
+
+		exe, _ = filepath.EvalSymlinks(exe)
+		baseDir := filepath.Dir(exe)
+
+		candidate := filepath.Join(baseDir, "git", "bin", "git")
+		if _, err := os.Stat(candidate); err == nil {
+			e.bundledGit = candidate
+		}
+
+		candidate = filepath.Join(baseDir, "ca-certs.pem")
+		if _, err := os.Stat(candidate); err == nil {
+			e.bundledCACerts = candidate
+		}
+	})
 }

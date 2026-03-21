@@ -26,6 +26,10 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 
 	if cfg.Flavor == "" {
 		cfg.Flavor = DefaultFlavor
+
+		if cfg.Concrete {
+			cfg.Flavor = "concrete"
+		}
 	}
 
 	prebuilt := fmt.Sprintf("prebuilt-%s-%s", cfg.Flavor, arch)
@@ -40,6 +44,17 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 	prefix := ""
 	if cfg.Flavor != "" {
 		prefix = cfg.Flavor + "-"
+	}
+
+	tag := fmt.Sprintf("%s%s-%s", prefix, arch, revision)
+	if cfg.Concrete {
+		return Info{
+			Architecture: arch,
+			Name:         GitLabRegistryName,
+			Tag:          tag,
+			Cmd:          []string{},
+			Prebuilt:     prebuilt,
+		}, nil
 	}
 
 	shell := cfg.Shell
@@ -62,7 +77,6 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 		cmd = []string{"/bin/bash"}
 	}
 
-	tag := fmt.Sprintf("%s%s-%s", prefix, arch, revision)
 	if shell == shells.SNPwsh {
 		cmd = getPowerShellCmd(shell)
 		tag = fmt.Sprintf("%s-%s", tag, shell)

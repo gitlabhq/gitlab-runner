@@ -98,5 +98,5 @@ func (s CacheExtract) extract(ctx context.Context, e *env.Env, src CacheSource) 
 		}
 	}
 
-	return e.RunnerCommand(ctx, desc.Env, args...)
+	return e.RunnerCommand(ctx, e.HelperEnvs(desc.Env), args...)
 }

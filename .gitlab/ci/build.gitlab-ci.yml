@@ -19,7 +19,7 @@ helper images:
   parallel:
     matrix:
       - TARGETS:
-          - alpine alpine-pwsh ubuntu ubuntu-pwsh ubi-fips
+          - alpine alpine-pwsh ubuntu ubuntu-pwsh ubi-fips concrete
           - windows-nanoserver-ltsc2019 windows-servercore-ltsc2019
           - windows-nanoserver-ltsc2022 windows-servercore-ltsc2022
 
@@ -32,7 +32,7 @@ prebuilt helper images:
   stage: build
   image: "${RUNNER_IMAGES_REGISTRY}/ci:${RUNNER_IMAGES_VERSION}-prebuilt-images"
   needs:
-    - "helper images: [alpine alpine-pwsh ubuntu ubuntu-pwsh ubi-fips]"
+    - "helper images: [alpine alpine-pwsh ubuntu ubuntu-pwsh ubi-fips concrete]"
   script:
     - make prebuilt-helper-images
     - ls -alh out/helper-images/
@@ -154,7 +154,7 @@ rpm verify fips:
   image: "registry.gitlab.com/gitlab-org/cloud-native/container-dependencies-finder/cdf:main"
   needs:
     - "runner images"
-    - "helper images: [alpine alpine-pwsh ubuntu ubuntu-pwsh ubi-fips]"
+    - "helper images: [alpine alpine-pwsh ubuntu ubuntu-pwsh ubi-fips concrete]"
   variables:
     # VERBOSE: 1
     OCI_TARS: |-
