@@ -1,3 +1,9 @@
+## v18.9.1 (2026-03-23)
+
+### Security fixes
+
+- Bump up runner images version to 0.0.38 to fix CVE-2025-68121 [!6541](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6541)
+
 ## v18.9.0 (2026-02-19)
 
 ### New features
