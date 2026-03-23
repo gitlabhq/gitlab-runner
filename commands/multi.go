@@ -24,6 +24,7 @@ import (
 	"github.com/urfave/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -697,6 +698,11 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 		if collector, ok := provider.(prometheus.Collector); ok && collector != nil {
 			registry.MustRegister(collector)
 		}
+	}
+
+	// Register all cache adapter collectors
+	for _, collector := range cache.Collectors() {
+		registry.MustRegister(collector)
 	}
 
 	// restrictHTTPMethods should be used on all promhttp handlers

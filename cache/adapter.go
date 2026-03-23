@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 )
 
@@ -70,6 +72,26 @@ var factories = &FactoriesMap{}
 
 func Factories() *FactoriesMap {
 	return factories
+}
+
+var (
+	collectorsMu sync.Mutex
+	collectors   []prometheus.Collector
+)
+
+// RegisterCollector registers a prometheus.Collector for a cache adapter.
+// It is intended to be called from init() functions in cache adapter packages.
+func RegisterCollector(c prometheus.Collector) {
+	collectorsMu.Lock()
+	defer collectorsMu.Unlock()
+	collectors = append(collectors, c)
+}
+
+// Collectors returns all prometheus.Collectors registered by cache adapters.
+func Collectors() []prometheus.Collector {
+	collectorsMu.Lock()
+	defer collectorsMu.Unlock()
+	return collectors
 }
 
 func getCreateAdapter(cacheConfig *cacheconfig.Config, timeout time.Duration, objectName string) (Adapter, error) {

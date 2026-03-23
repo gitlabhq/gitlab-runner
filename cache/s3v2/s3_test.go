@@ -11,15 +11,20 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	dto "github.com/prometheus/client_model/go"
 	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 
 	"github.com/johannesboyne/gofakes3"
 	"github.com/johannesboyne/gofakes3/backend/s3mem"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -670,4 +675,155 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			}
 		})
 	}
+}
+
+func histogramSampleCount(t *testing.T, h prometheus.Histogram) uint64 {
+	t.Helper()
+	var m dto.Metric
+	require.NoError(t, h.Write(&m))
+	return m.GetHistogram().GetSampleCount()
+}
+
+// TestFetchCredentialsForRole_ConcurrencyLimit verifies that at most 5
+// AssumeRole calls are in-flight at any time.
+func TestFetchCredentialsForRole_ConcurrencyLimit(t *testing.T) {
+	const semSize = 5
+	const numRequests = 8
+
+	testSem := make(chan struct{}, semSize)
+
+	var currentInFlight atomic.Int32
+	reached := make(chan struct{}, numRequests)
+	release := make(chan struct{})
+
+	successXML := `<?xml version="1.0" encoding="UTF-8"?>
+<AssumeRoleResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <AssumeRoleResult>
+    <Credentials>
+      <AccessKeyId>mock-access-key</AccessKeyId>
+      <SecretAccessKey>mock-secret-key</SecretAccessKey>
+      <SessionToken>mock-session-token</SessionToken>
+      <Expiration>` + time.Now().Add(time.Hour).Format(time.RFC3339) + `</Expiration>
+    </Credentials>
+  </AssumeRoleResult>
+  <ResponseMetadata><RequestId>test</RequestId></ResponseMetadata>
+</AssumeRoleResponse>`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/sts" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = io.ReadAll(r.Body)
+		r.Body.Close()
+
+		currentInFlight.Add(1)
+		reached <- struct{}{}
+		<-release
+		currentInFlight.Add(-1)
+
+		w.Header().Set("Content-Type", "application/xml")
+		_, _ = w.Write([]byte(successXML))
+	}))
+	defer server.Close()
+
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:          "test-access-key",
+		SecretKey:          "test-secret-key",
+		AuthenticationType: "access-key",
+		BucketName:         bucketName,
+		BucketLocation:     "us-east-1",
+	}
+	client, err := newS3Client(s3Config, withSTSEndpoint(server.URL+"/sts"), withAssumeRoleSem(testSem))
+	require.NoError(t, err)
+
+	var wg sync.WaitGroup
+	for range numRequests {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = client.FetchCredentialsForRole(t.Context(), "arn:aws:iam::123456789012:role/TestRole", bucketName, objectName, true, 0)
+		}()
+	}
+
+	// Wait for exactly semSize requests to be in-flight inside the handler.
+	for range semSize {
+		select {
+		case <-reached:
+		case <-time.After(5 * time.Second):
+			t.Fatal("timed out waiting for requests to reach server")
+		}
+	}
+
+	assert.EqualValues(t, semSize, currentInFlight.Load())
+
+	close(release)
+	wg.Wait()
+}
+
+// TestFetchCredentialsForRole_ContextCancelledWaitingForSemaphore verifies
+// that a cancelled context while waiting for a semaphore slot is returned
+// immediately as an error.
+func TestFetchCredentialsForRole_ContextCancelledWaitingForSemaphore(t *testing.T) {
+	fullSem := make(chan struct{}, 5)
+	for range 5 {
+		fullSem <- struct{}{}
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:          "test-access-key",
+		SecretKey:          "test-secret-key",
+		AuthenticationType: "access-key",
+		BucketName:         bucketName,
+		BucketLocation:     "us-east-1",
+	}
+	client, err := newS3Client(s3Config, withSTSEndpoint("http://127.0.0.1:0/sts"), withAssumeRoleSem(fullSem))
+	require.NoError(t, err)
+
+	_, err = client.FetchCredentialsForRole(ctx, "arn:aws:iam::123456789012:role/TestRole", bucketName, objectName, true, 0)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "context cancelled waiting for AssumeRole semaphore")
+}
+
+// TestFetchCredentialsForRole_Metrics verifies that a successful call updates
+// the in-flight gauge and records an observation in both duration histograms.
+func TestFetchCredentialsForRole_Metrics(t *testing.T) {
+	origInFlight := assumeRoleInFlight
+	origWait := assumeRoleWaitDuration
+	origCall := assumeRoleCallDuration
+	testInFlight := prometheus.NewGauge(prometheus.GaugeOpts{Name: "test_in_flight", Help: "test"})
+	testWait := prometheus.NewHistogram(prometheus.HistogramOpts{Name: "test_wait", Help: "test"})
+	testCall := prometheus.NewHistogram(prometheus.HistogramOpts{Name: "test_call", Help: "test"})
+	assumeRoleInFlight = testInFlight
+	assumeRoleWaitDuration = testWait
+	assumeRoleCallDuration = testCall
+	t.Cleanup(func() {
+		assumeRoleInFlight = origInFlight
+		assumeRoleWaitDuration = origWait
+		assumeRoleCallDuration = origCall
+	})
+
+	mockServer := httptest.NewServer(newMockSTSHandler(false, 3600, ""))
+	defer mockServer.Close()
+
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:          "test-access-key",
+		SecretKey:          "test-secret-key",
+		AuthenticationType: "access-key",
+		BucketName:         bucketName,
+	}
+	client, err := newS3Client(s3Config, withSTSEndpoint(mockServer.URL+"/sts"))
+	require.NoError(t, err)
+
+	_, err = client.FetchCredentialsForRole(t.Context(), "arn:aws:iam::123456789012:role/TestRole", bucketName, objectName, true, 0)
+	require.NoError(t, err)
+
+	// In-flight gauge must return to 0 after the call completes.
+	assert.EqualValues(t, 0, testutil.ToFloat64(testInFlight))
+	// Both histograms must have recorded exactly one observation.
+	assert.EqualValues(t, 1, histogramSampleCount(t, testWait))
+	assert.EqualValues(t, 1, histogramSampleCount(t, testCall))
 }

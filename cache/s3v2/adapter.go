@@ -176,4 +176,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	cache.RegisterCollector(assumeRoleInFlight)
+	cache.RegisterCollector(assumeRoleWaitDuration)
+	cache.RegisterCollector(assumeRoleCallDuration)
 }

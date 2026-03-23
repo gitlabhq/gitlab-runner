@@ -812,6 +812,7 @@ shutdown_timeout = 0
   [runners.cache]
     MaxUploadedArchiveSize = 0
     [runners.cache.s3]
+      AssumeRoleMaxConcurrency = 0
     [runners.cache.gcs]
     [runners.cache.azure]
 `
@@ -879,6 +880,7 @@ shutdown_timeout = 0
   [runners.cache]
     MaxUploadedArchiveSize = 0
     [runners.cache.s3]
+      AssumeRoleMaxConcurrency = 0
     [runners.cache.gcs]
     [runners.cache.azure]
 `,

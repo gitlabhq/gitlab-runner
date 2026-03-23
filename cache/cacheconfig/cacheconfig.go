@@ -45,6 +45,7 @@ type CacheS3Config struct {
 	Accelerate                bool       `toml:"Accelerate,omitempty" long:"accelerate" env:"CACHE_S3_ACCELERATE" description:"Enable S3 Transfer Acceleration"`
 	RoleARN                   string     `toml:"RoleARN,omitempty" long:"role-arn" env:"CACHE_S3_ROLE_ARN" description:"Role ARN for transferring cache to S3"`
 	UploadRoleARN             string     `toml:"UploadRoleARN,omitempty" long:"upload-role-arn" env:"CACHE_S3_UPLOAD_ROLE_ARN" description:"Role ARN for uploading cache to S3"`
+	AssumeRoleMaxConcurrency  int        `toml:"AssumeRoleMaxConcurrency,omitempty" long:"assume-role-max-concurrency" env:"CACHE_S3_ASSUME_ROLE_MAX_CONCURRENCY" description:"Maximum concurrent AssumeRole requests to AWS STS (default: 5, -1 to disable limit)"`
 }
 
 type S3AuthType string
