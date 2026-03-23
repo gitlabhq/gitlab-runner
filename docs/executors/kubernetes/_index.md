@@ -112,6 +112,7 @@ You can either:
 
 | Resource | Verb (Optional Feature/Config Flags) |
 |----------|-------------------------------|
+| apps/deployments | create (`kubernetes.autoscaler`), delete (`kubernetes.autoscaler`), get (`kubernetes.autoscaler`), list (`kubernetes.autoscaler`), update (`kubernetes.autoscaler`) |
 | events | list (`print_pod_warning_events=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
 | namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`) |
 | poddisruptionbudgets | create (`pod_disruption_budget=true`), get (`pod_disruption_budget=true`) |
@@ -119,6 +120,7 @@ You can either:
 | pods/attach | create (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), delete (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), patch (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/exec | create, delete, get, patch |
 | pods/log | get (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| scheduling.k8s.io/priorityclasses | create (`kubernetes.autoscaler`), get (`kubernetes.autoscaler`) |
 | secrets | create, delete, get, update |
 | serviceaccounts | get |
 | services | create, get |
@@ -136,6 +138,14 @@ metadata:
   name: gitlab-runner
   namespace: default
 rules:
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs:
+  - "create" # Required when `kubernetes.autoscaler`
+  - "delete" # Required when `kubernetes.autoscaler`
+  - "get" # Required when `kubernetes.autoscaler`
+  - "list" # Required when `kubernetes.autoscaler`
+  - "update" # Required when `kubernetes.autoscaler`
 - apiGroups: [""]
   resources: ["events"]
   verbs:
@@ -178,6 +188,11 @@ rules:
   verbs:
   - "get" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`
   - "list" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`
+- apiGroups: ["scheduling.k8s.io"]
+  resources: ["priorityclasses"]
+  verbs:
+  - "create" # Required when `kubernetes.autoscaler`
+  - "get" # Required when `kubernetes.autoscaler`
 - apiGroups: [""]
   resources: ["secrets"]
   verbs:
@@ -422,6 +437,145 @@ concurrent = 4
       "empty.value=" = "PreferNoSchedule"
       "onlyKey" = ""
 ```
+
+## Pre-warm cluster capacity with pause pods
+
+{{< history >}}
+
+- Introduced in GitLab Runner 18.10.
+
+{{< /history >}}
+
+You can configure the Kubernetes executor to maintain pause pods that pre-warm
+cluster capacity. When a job starts, the low-priority pause pods are preempted,
+and the job pod is scheduled immediately on existing nodes.
+This configuration reduces job startup latency from waiting for the cluster
+autoscaler to provision new nodes.
+
+### How pause pods work
+
+1. The runner creates a `Deployment` of pause pods based on configured policies.
+1. Pause pods use a low priority class, so Kubernetes preempts them when higher-priority job pods need resources.
+1. When a pause pod is preempted, the job pod takes its place immediately.
+1. The `Deployment` recreates the preempted pause pod, potentially triggering the cluster autoscaler to add a new node.
+
+### Configure pause pods
+
+To enable pause pods, add a `[runners.kubernetes.autoscaler]` section to your
+`config.toml`:
+
+```toml
+[[runners]]
+  name = "kubernetes-runner"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    namespace = "gitlab-runner"
+    cpu_request = "500m"
+    memory_request = "1Gi"
+    [runners.kubernetes.autoscaler]
+      max_pause_pods = 10
+      [[runners.kubernetes.autoscaler.policy]]
+        idle_count = 5
+        periods = ["* 8-17 * * mon-fri"]
+        timezone = "UTC"
+      [[runners.kubernetes.autoscaler.policy]]
+        idle_count = 0
+        periods = ["* * * * *"]
+```
+
+### Autoscaler settings
+
+| Setting | Description |
+|---------|-------------|
+| `max_pause_pods` | Maximum number of pause pods to create. Set to `0` for unlimited. |
+| `pause_pod_image` | Image for pause pods. Defaults to `registry.k8s.io/pause:3.10`. |
+| `pause_pod_priority_class_name` | Priority class for pause pods. Defaults to `gitlab-runner-idle-capacity` (auto-created with priority `-1`). If specified, auto-creation is skipped. |
+
+### Priority classes for preemption
+
+For pause pods to be preempted by job pods, they must have a lower priority.
+By default, the runner automatically creates a `PriorityClass` named
+`gitlab-runner-idle-capacity` with priority `-1`. Because pods without a priority
+class use priority `0`, job pods will preempt pause pods.
+
+To use a custom `PriorityClass` instead, specify it in your configuration:
+
+```toml
+[runners.kubernetes.autoscaler]
+  pause_pod_priority_class_name = "my-custom-priority-class"
+```
+
+If your job pods use a custom priority class, ensure it has a higher value than
+the pause pod priority class.
+
+### Policy settings
+
+You can define multiple policies. The last matching policy based on the current
+time is used.
+
+| Setting | Description |
+|---------|-------------|
+| `periods` | Array of cron expressions defining when this policy is active. Defaults to `* * * * *` (always). |
+| `timezone` | Timezone for evaluating cron expressions. Defaults to system local time. |
+| `idle_count` | Target number of pause pods to maintain. Defaults to `0`. |
+| `idle_time` | Scale-down cooldown. When desired capacity decreases, pause pods are removed after this wait time. Prevents thrashing when using `scale_factor`. Defaults to `5m`. |
+| `scale_factor` | Scale pause pods based on active jobs: `max(idle_count, active_jobs * scale_factor)`. Defaults to `0` (disabled). |
+| `scale_factor_limit` | Maximum pause pods when using `scale_factor`. Defaults to `0` (no limit). |
+
+### Cron syntax
+
+The `periods` setting uses standard cron format with five fields:
+
+```plaintext
+ ┌────────── minute (0 - 59)
+ │ ┌──────── hour (0 - 23)
+ │ │ ┌────── day of month (1 - 31)
+ │ │ │ ┌──── month (1 - 12)
+ │ │ │ │ ┌── day of week (0 - 7, where 0 and 7 are Sunday, or MON-SUN)
+ * * * * *
+```
+
+Examples:
+
+| Period | Description |
+|--------|-------------|
+| `* * * * *` | Always active |
+| `* 8-17 * * mon-fri` | Weekdays 8:00-17:59 |
+| `* 0-12 * * *` | Midnight to 12:59 daily |
+
+### Create the priority class
+
+Pause pods require a priority class with lower priority than job pods. Create
+the priority class before configuring pause pods:
+
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: pause-pods
+value: -10
+globalDefault: false
+description: "Low priority class for runner pause pods"
+```
+
+### Required RBAC permissions
+
+To use pause pods, configure additional permissions for the runner service account to manage 
+`Deployments` and `PriorityClasses`:
+
+```yaml
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "create", "update", "delete"]
+- apiGroups: ["scheduling.k8s.io"]
+  resources: ["priorityclasses"]
+  verbs: ["get", "create"]
+```
+
+> [!note]
+> `PriorityClass` is a cluster-scoped resource. A namespaced `Role` and
+> `RoleBinding` cannot grant the `scheduling.k8s.io/priorityclasses` permissions.
+> Use `ClusterRole` and `ClusterRoleBinding` instead.
 
 ## Configure the executor service account
 

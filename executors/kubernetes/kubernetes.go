@@ -44,6 +44,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/autoscaler"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/watchers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
@@ -2895,7 +2896,7 @@ func (s *executor) requestPodDisruptionBudgetCreation(
 	pdb *policyv1.PodDisruptionBudget,
 ) (*policyv1.PodDisruptionBudget, error) {
 	//nolint:gocritic // kubeAPI annotation, not commented-out code
-	// kubeAPI: poddisruptionbudgets, create, pod_disruption_budget=true
+	// kubeAPI: policy/poddisruptionbudgets, create, pod_disruption_budget=true
 	createdPDB, err := s.kubeClient.PolicyV1().
 		PodDisruptionBudgets(pdb.Namespace).Create(ctx, pdb, metav1.CreateOptions{})
 	if isConflict(err) {
@@ -2907,7 +2908,7 @@ func (s *executor) requestPodDisruptionBudgetCreation(
 		)
 
 		//nolint:gocritic // kubeAPI annotation, not commented-out code
-		// kubeAPI: poddisruptionbudgets, get, pod_disruption_budget=true
+		// kubeAPI: policy/poddisruptionbudgets, get, pod_disruption_budget=true
 		createdPDB, err = s.kubeClient.PolicyV1().
 			PodDisruptionBudgets(pdb.Namespace).Get(ctx, pdb.Name, metav1.GetOptions{})
 	}
@@ -3625,7 +3626,7 @@ func featuresFn(features *common.FeaturesInfo) {
 }
 
 func NewProvider() common.ExecutorProvider {
-	return executorProvider{
+	baseProvider := executorProvider{
 		DefaultExecutorProvider: executors.DefaultExecutorProvider{
 			Creator: func() common.Executor {
 				return newExecutor()
@@ -3634,4 +3635,6 @@ func NewProvider() common.ExecutorProvider {
 			DefaultShellName: executorOptions.Shell.Shell,
 		},
 	}
+
+	return autoscaler.NewProvider(baseProvider)
 }

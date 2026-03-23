@@ -94,6 +94,7 @@ func GeneratePermissionsDocsRoleYaml(roleName, roleNamespace string, roleLabels 
 
 			return strings.Join(flags, ", ")
 		},
+		"parseResourceKey": ParseResourceKey,
 	})
 
 	tpl, err = tpl.Parse(string(roleTemplateBytes))

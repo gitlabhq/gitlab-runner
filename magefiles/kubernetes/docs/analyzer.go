@@ -47,6 +47,19 @@ func (v kvFlag) String() string {
 	return fmt.Sprintf("`%s=%s`", v.Name, v.Value)
 }
 
+// simpleFlag represents a config flag without a value (e.g., "kubernetes.autoscaler")
+type simpleFlag struct {
+	Name string
+}
+
+func (v simpleFlag) valid() bool {
+	return v.Name != ""
+}
+
+func (v simpleFlag) String() string {
+	return fmt.Sprintf("`%s`", v.Name)
+}
+
 type docLinkFlag struct {
 	Text string
 	URL  string
@@ -91,6 +104,48 @@ func (p verb) String() string {
 	sort.Strings(featureFlagsStrings)
 
 	return fmt.Sprintf("%s (%s)", p.Verb, strings.Join(featureFlagsStrings, ", "))
+}
+
+// ResourceKey represents a Kubernetes resource with its API group.
+// Format: "apiGroup/resource" or just "resource" for core API group.
+type ResourceKey struct {
+	APIGroup string
+	Resource string
+}
+
+func (r ResourceKey) String() string {
+	if r.APIGroup == "" {
+		return r.Resource
+	}
+	return r.APIGroup + "/" + r.Resource
+}
+
+// knownAPIGroups lists non-core API groups that we support.
+// Resources with these prefixes are treated as "apiGroup/resource".
+// Other resources with "/" are treated as subresources (e.g., "pods/exec").
+var knownAPIGroups = []string{
+	"apps",
+	"batch",
+	"rbac.authorization.k8s.io",
+	"networking.k8s.io",
+	"policy",
+	"scheduling.k8s.io",
+}
+
+// ParseResourceKey parses a resource key from format "apiGroup/resource" or "resource".
+// For known API groups (e.g., "apps"), "apps/deployments" is parsed as apiGroup=apps, resource=deployments.
+// For unknown prefixes (e.g., "pods/exec"), it's treated as a core API subresource.
+func ParseResourceKey(s string) ResourceKey {
+	if idx := strings.Index(s, "/"); idx != -1 {
+		prefix := s[:idx]
+		if slices.Contains(knownAPIGroups, prefix) {
+			return ResourceKey{
+				APIGroup: prefix,
+				Resource: s[idx+1:],
+			}
+		}
+	}
+	return ResourceKey{Resource: s}
 }
 
 type PermissionsGroup map[string][]verb
@@ -331,6 +386,10 @@ func groupPermissions(comment *ast.Comment, permissions PermissionsGroup) {
 
 		if verbIndex != -1 {
 			permissions[resource][verbIndex].ConfigFlags = append(permissions[resource][verbIndex].ConfigFlags, featureFlags...)
+			// Dedupe config flags
+			permissions[resource][verbIndex].ConfigFlags = lo.UniqBy(permissions[resource][verbIndex].ConfigFlags, func(cf configFlag) string {
+				return cf.String()
+			})
 		} else {
 			permissions[resource] = append(permissions[resource], verb{
 				Verb:        v,
@@ -354,7 +413,8 @@ func parseComment(comment *ast.Comment) (string, []string, []configFlag) {
 	var verbs []string
 	var ffs []string
 	for _, c := range components[1:] {
-		if strings.Contains(c, "=") {
+		// Config flags contain "=" or "." (like kubernetes.autoscaler or FF_SOMETHING=true)
+		if strings.Contains(c, "=") || strings.Contains(c, ".") || strings.HasPrefix(c, "FF_") {
 			ffs = append(ffs, c)
 			continue
 		}
@@ -363,6 +423,10 @@ func parseComment(comment *ast.Comment) (string, []string, []configFlag) {
 	}
 
 	featureFlags := lo.Map(ffs, func(ff string, _ int) configFlag {
+		if !strings.Contains(ff, "=") {
+			return simpleFlag{Name: strings.TrimSpace(ff)}
+		}
+
 		split := strings.Split(ff, "=")
 		name := strings.TrimSpace(split[0])
 		data := strings.TrimSpace(split[1])

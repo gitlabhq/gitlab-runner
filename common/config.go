@@ -737,6 +737,19 @@ type KubernetesConfig struct {
 	ScriptsBaseDir                                    string                             `toml:"scripts_base_dir,omitempty" json:"scripts_base_dir" long:"scripts-base-dir" env:"KUBERNETES_SCRIPTS_BASE_DIR" description:"Base directory for the path where build scripts are stored. This directory is prepended to the final generated path. For example, <scripts_base_dir>/scripts-<project_id>-<job_id>."`
 	PrintPodWarningEvents                             *bool                              `toml:"print_pod_warning_events,omitempty" json:"print_pod_warning_events,omitempty" long:"print-pod-warning-events" env:"KUBERNETES_PRINT_POD_WARNING_EVENTS" description:"When enabled, all warning events associated with the pod are retrieved when the job fails. Enabled by default."`
 	PodDisruptionBudget                               *bool                              `toml:"pod_disruption_budget,omitzero" json:"pod_disruption_budget,omitempty" long:"pod-disruption-budget" env:"KUBERNETES_POD_DISRUPTION_BUDGET" description:"When enabled, a PodDisruptionBudget is created for each job pod to prevent eviction during node drains. Disabled by default."`
+	Autoscaler                                        *KubernetesAutoscalerConfig        `toml:"autoscaler,omitempty" json:"autoscaler,omitempty" description:"Autoscaler configuration for pause pods"`
+}
+
+// KubernetesAutoscalerConfig defines autoscaling configuration for pause pods in the Kubernetes executor.
+type KubernetesAutoscalerConfig struct {
+	// MaxPausePods is the maximum number of pause pods that can be created. 0 means unlimited.
+	MaxPausePods int `toml:"max_pause_pods,omitempty" json:"max_pause_pods,omitempty" description:"Maximum number of pause pods to create. 0 means unlimited."`
+	// PausePodImage is the image to use for pause pods. Defaults to registry.k8s.io/pause:3.10.
+	PausePodImage string `toml:"pause_pod_image,omitempty" json:"pause_pod_image,omitempty" description:"Image to use for pause pods. Defaults to registry.k8s.io/pause:3.10."`
+	// PausePodPriorityClassName is the priority class for pause pods. Should be lower than job pods.
+	PausePodPriorityClassName string `toml:"pause_pod_priority_class_name,omitempty" json:"pause_pod_priority_class_name,omitempty" description:"Priority class for pause pods. Should be lower priority than job pods to enable preemption."`
+	// Policy defines the scaling policies for pause pods.
+	Policy []AutoscalerPolicyConfig `toml:"policy,omitempty" json:"policy,omitempty" description:"Scaling policies for pause pods"`
 }
 
 type RequestRetryLimit int
