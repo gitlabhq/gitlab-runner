@@ -11,8 +11,9 @@ metadata:
   {{- end }}
 rules:
 {{- range $resource, $verbs := .Rules }}
-- apiGroups: ["{{ if eq $resource "poddisruptionbudgets" }}policy{{ end }}"]
-  resources: ["{{ $resource }}"]
+{{- $rk := parseResourceKey $resource }}
+- apiGroups: ["{{ $rk.APIGroup }}"]
+  resources: ["{{ $rk.Resource }}"]
   verbs:
   {{- range $verb := $verbs }}
   {{- if $verb.ConfigFlags }}
