@@ -653,6 +653,9 @@ func TestFetchCredentialsForRole(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
+			FlushCredentialCache()
+			t.Cleanup(FlushCredentialCache)
+
 			duration := 3600
 			if tt.duration > 0 {
 				duration = int(tt.expectedDuration.Seconds())
@@ -687,6 +690,9 @@ func histogramSampleCount(t *testing.T, h prometheus.Histogram) uint64 {
 // TestFetchCredentialsForRole_ConcurrencyLimit verifies that at most 5
 // AssumeRole calls are in-flight at any time.
 func TestFetchCredentialsForRole_ConcurrencyLimit(t *testing.T) {
+	FlushCredentialCache()
+	t.Cleanup(FlushCredentialCache)
+
 	const semSize = 5
 	const numRequests = 8
 
@@ -765,6 +771,9 @@ func TestFetchCredentialsForRole_ConcurrencyLimit(t *testing.T) {
 // that a cancelled context while waiting for a semaphore slot is returned
 // immediately as an error.
 func TestFetchCredentialsForRole_ContextCancelledWaitingForSemaphore(t *testing.T) {
+	FlushCredentialCache()
+	t.Cleanup(FlushCredentialCache)
+
 	fullSem := make(chan struct{}, 5)
 	for range 5 {
 		fullSem <- struct{}{}
@@ -791,6 +800,9 @@ func TestFetchCredentialsForRole_ContextCancelledWaitingForSemaphore(t *testing.
 // TestFetchCredentialsForRole_Metrics verifies that a successful call updates
 // the in-flight gauge and records an observation in both duration histograms.
 func TestFetchCredentialsForRole_Metrics(t *testing.T) {
+	FlushCredentialCache()
+	t.Cleanup(FlushCredentialCache)
+
 	origInFlight := assumeRoleInFlight
 	origWait := assumeRoleWaitDuration
 	origCall := assumeRoleCallDuration
@@ -890,4 +902,247 @@ func TestDetectBucketLocation(t *testing.T) {
 			assert.True(t, serverCalled, "expected the mock server to be contacted")
 		})
 	}
+}
+
+// TestFetchCredentialsForRole_CacheHit verifies that a second call with the
+// same (roleARN, bucketName, objectName, upload) tuple returns the cached
+// credentials without issuing a new STS request.
+func TestFetchCredentialsForRole_CacheHit(t *testing.T) {
+	FlushCredentialCache()
+	t.Cleanup(FlushCredentialCache)
+
+	var callCount atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount.Add(1)
+		w.Header().Set("Content-Type", "application/xml")
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<AssumeRoleResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <AssumeRoleResult>
+    <Credentials>
+      <AccessKeyId>cached-key</AccessKeyId>
+      <SecretAccessKey>cached-secret</SecretAccessKey>
+      <SessionToken>cached-token</SessionToken>
+      <Expiration>%s</Expiration>
+    </Credentials>
+  </AssumeRoleResult>
+  <ResponseMetadata><RequestId>test</RequestId></ResponseMetadata>
+</AssumeRoleResponse>`, time.Now().Add(time.Hour).Format(time.RFC3339))
+	}))
+	defer server.Close()
+
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:          "test-access-key",
+		SecretKey:          "test-secret-key",
+		AuthenticationType: "access-key",
+		BucketName:         bucketName,
+		BucketLocation:     "us-east-1",
+	}
+	roleARN := "arn:aws:iam::123456789012:role/CacheTestRole"
+
+	client, err := newS3Client(s3Config, withSTSEndpoint(server.URL))
+	require.NoError(t, err)
+
+	// First call: hits STS.
+	creds1, err := client.FetchCredentialsForRole(t.Context(), roleARN, bucketName, objectName, false, 0)
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, callCount.Load(), "first call should reach STS")
+
+	// Second call with the same key: must return the cached creds, not call STS again.
+	creds2, err := client.FetchCredentialsForRole(t.Context(), roleARN, bucketName, objectName, false, 0)
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, callCount.Load(), "second call must be served from cache")
+	assert.Equal(t, creds1, creds2)
+
+	// A call with a different key (upload=true) must reach STS.
+	_, err = client.FetchCredentialsForRole(t.Context(), roleARN, bucketName, objectName, true, 0)
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, callCount.Load(), "different key must reach STS")
+}
+
+// TestFetchCredentialsForRole_CacheExpiry verifies that a cached credential
+// that does not have enough remaining validity is not reused.
+func TestFetchCredentialsForRole_CacheExpiry(t *testing.T) {
+	FlushCredentialCache()
+	t.Cleanup(FlushCredentialCache)
+
+	// Pre-populate the cache with credentials that expire in 30 seconds —
+	// less than the 1-minute minimum validity floor.
+	credKey := assumeRoleCacheKey("arn:aws:iam::123456789012:role/ExpiryRole", bucketName, objectName, false)
+	assumeRoleCredCache.Add(credKey, cachedCredential{
+		creds:     map[string]string{"AWS_ACCESS_KEY_ID": "stale-key"},
+		expiresAt: time.Now().Add(30 * time.Second),
+	})
+
+	var callCount atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount.Add(1)
+		w.Header().Set("Content-Type", "application/xml")
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<AssumeRoleResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <AssumeRoleResult>
+    <Credentials>
+      <AccessKeyId>fresh-key</AccessKeyId>
+      <SecretAccessKey>fresh-secret</SecretAccessKey>
+      <SessionToken>fresh-token</SessionToken>
+      <Expiration>%s</Expiration>
+    </Credentials>
+  </AssumeRoleResult>
+  <ResponseMetadata><RequestId>test</RequestId></ResponseMetadata>
+</AssumeRoleResponse>`, time.Now().Add(time.Hour).Format(time.RFC3339))
+	}))
+	defer server.Close()
+
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:          "test-access-key",
+		SecretKey:          "test-secret-key",
+		AuthenticationType: "access-key",
+		BucketName:         bucketName,
+		BucketLocation:     "us-east-1",
+	}
+	client, err := newS3Client(s3Config, withSTSEndpoint(server.URL))
+	require.NoError(t, err)
+
+	creds, err := client.FetchCredentialsForRole(t.Context(), "arn:aws:iam::123456789012:role/ExpiryRole", bucketName, objectName, false, 0)
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, callCount.Load(), "expired cache entry must not be reused")
+	assert.Equal(t, "fresh-key", creds["AWS_ACCESS_KEY_ID"])
+}
+
+// TestFetchCredentialsForRole_NoErrorCaching verifies that a failed AssumeRole
+// call does not populate the cache.
+func TestFetchCredentialsForRole_NoErrorCaching(t *testing.T) {
+	FlushCredentialCache()
+	t.Cleanup(FlushCredentialCache)
+
+	// Use an unreachable STS endpoint to force an error.
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:          "test-access-key",
+		SecretKey:          "test-secret-key",
+		AuthenticationType: "access-key",
+		BucketName:         bucketName,
+		BucketLocation:     "us-east-1",
+	}
+	roleARN := "arn:aws:iam::123456789012:role/ErrorRole"
+	client, err := newS3Client(s3Config, withSTSEndpoint("http://127.0.0.1:0"))
+	require.NoError(t, err)
+
+	_, err = client.FetchCredentialsForRole(t.Context(), roleARN, bucketName, objectName, false, 0)
+	require.Error(t, err)
+
+	// The cache must not contain an entry for the failed key.
+	credKey := assumeRoleCacheKey(roleARN, bucketName, objectName, false)
+	_, cached := assumeRoleCredCache.Get(credKey)
+	assert.False(t, cached, "failed AssumeRole call must not be cached")
+}
+
+// TestFlushCredentialCache verifies that FlushCredentialCache removes all
+// entries regardless of their validity.
+func TestFlushCredentialCache(t *testing.T) {
+	FlushCredentialCache()
+	t.Cleanup(FlushCredentialCache)
+
+	assumeRoleCredCache.Add("key-a", cachedCredential{
+		creds:     map[string]string{"k": "v"},
+		expiresAt: time.Now().Add(time.Hour),
+	})
+	assumeRoleCredCache.Add("key-b", cachedCredential{
+		creds:     map[string]string{"k": "v"},
+		expiresAt: time.Now().Add(time.Hour),
+	})
+	require.Equal(t, 2, assumeRoleCredCache.Len())
+
+	FlushCredentialCache()
+
+	assert.Equal(t, 0, assumeRoleCredCache.Len())
+}
+
+// TestFetchCredentialsForRole_CacheMetrics verifies that cache hits and misses
+// are counted correctly.
+func TestFetchCredentialsForRole_CacheMetrics(t *testing.T) {
+	FlushCredentialCache()
+	t.Cleanup(FlushCredentialCache)
+
+	origHits := assumeRoleCredCacheHits
+	origMisses := assumeRoleCredCacheMisses
+	testHits := prometheus.NewCounter(prometheus.CounterOpts{Name: "test_cache_hits", Help: "test"})
+	testMisses := prometheus.NewCounter(prometheus.CounterOpts{Name: "test_cache_misses", Help: "test"})
+	assumeRoleCredCacheHits = testHits
+	assumeRoleCredCacheMisses = testMisses
+	t.Cleanup(func() {
+		assumeRoleCredCacheHits = origHits
+		assumeRoleCredCacheMisses = origMisses
+	})
+
+	server := httptest.NewServer(newMockSTSHandler(false, 3600, ""))
+	defer server.Close()
+
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:          "test-access-key",
+		SecretKey:          "test-secret-key",
+		AuthenticationType: "access-key",
+		BucketName:         bucketName,
+		BucketLocation:     "us-east-1",
+	}
+	roleARN := "arn:aws:iam::123456789012:role/TestRole"
+	client, err := newS3Client(s3Config, withSTSEndpoint(server.URL+"/sts"))
+	require.NoError(t, err)
+
+	// First call: cache miss.
+	_, err = client.FetchCredentialsForRole(t.Context(), roleARN, bucketName, objectName, true, 0)
+	require.NoError(t, err)
+	assert.EqualValues(t, 0, testutil.ToFloat64(testHits))
+	assert.EqualValues(t, 1, testutil.ToFloat64(testMisses))
+
+	// Second call with the same key: cache hit.
+	_, err = client.FetchCredentialsForRole(t.Context(), roleARN, bucketName, objectName, true, 0)
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, testutil.ToFloat64(testHits))
+	assert.EqualValues(t, 1, testutil.ToFloat64(testMisses))
+}
+
+// TestFetchCredentialsForRole_CacheDisabled verifies that setting
+// DisableAssumeRoleCredentialsCaching causes every call to reach STS.
+func TestFetchCredentialsForRole_CacheDisabled(t *testing.T) {
+	FlushCredentialCache()
+	t.Cleanup(FlushCredentialCache)
+
+	var callCount atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount.Add(1)
+		w.Header().Set("Content-Type", "application/xml")
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<AssumeRoleResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <AssumeRoleResult>
+    <Credentials>
+      <AccessKeyId>key</AccessKeyId>
+      <SecretAccessKey>secret</SecretAccessKey>
+      <SessionToken>token</SessionToken>
+      <Expiration>%s</Expiration>
+    </Credentials>
+  </AssumeRoleResult>
+  <ResponseMetadata><RequestId>test</RequestId></ResponseMetadata>
+</AssumeRoleResponse>`, time.Now().Add(time.Hour).Format(time.RFC3339))
+	}))
+	defer server.Close()
+
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:                           "test-access-key",
+		SecretKey:                           "test-secret-key",
+		AuthenticationType:                  "access-key",
+		BucketName:                          bucketName,
+		BucketLocation:                      "us-east-1",
+		DisableAssumeRoleCredentialsCaching: true,
+	}
+	roleARN := "arn:aws:iam::123456789012:role/TestRole"
+	client, err := newS3Client(s3Config, withSTSEndpoint(server.URL))
+	require.NoError(t, err)
+
+	for range 3 {
+		_, err = client.FetchCredentialsForRole(t.Context(), roleARN, bucketName, objectName, true, 0)
+		require.NoError(t, err)
+	}
+
+	assert.EqualValues(t, 3, callCount.Load(), "every call must reach STS when caching is disabled")
+	_, cached := assumeRoleCredCache.Get(assumeRoleCacheKey(roleARN, bucketName, objectName, true))
+	assert.False(t, cached, "disabled cache must not be populated")
 }
