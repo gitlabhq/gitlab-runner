@@ -292,7 +292,7 @@ func newRawS3Client(s3Config *cacheconfig.CacheS3Config) (*aws.Config, *s3.Clien
 
 	bucketLocation := s3Config.BucketLocation
 	if bucketLocation == "" {
-		bucketLocation = detectBucketLocation(s3Config.BucketName, options...)
+		bucketLocation = detectBucketLocation(s3Config, options...)
 	}
 
 	options = append(options, config.WithRegion(bucketLocation))
@@ -323,7 +323,7 @@ func newRawS3Client(s3Config *cacheconfig.CacheS3Config) (*aws.Config, *s3.Clien
 	return &cfg, client, nil
 }
 
-func detectBucketLocation(bucketName string, optFuncs ...func(*config.LoadOptions) error) string {
+func detectBucketLocation(s3Config *cacheconfig.CacheS3Config, optFuncs ...func(*config.LoadOptions) error) string {
 	// The 30 seconds timeout here is arbritrary
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -342,19 +342,39 @@ func detectBucketLocation(bucketName string, optFuncs ...func(*config.LoadOption
 		return fallbackBucketLocation
 	}
 
-	client := s3.NewFromConfig(cfg)
+	endpoint := s3Config.GetEndpoint()
+	effectiveEndpoint := DEFAULT_AWS_S3_ENDPOINT
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		if endpoint != "" && endpoint != DEFAULT_AWS_S3_ENDPOINT {
+			o.BaseEndpoint = aws.String(endpoint)
+			effectiveEndpoint = endpoint
+		}
+		o.UsePathStyle = s3Config.PathStyleEnabled()
+	})
 	output, err := client.GetBucketLocation(ctx, &s3.GetBucketLocationInput{
-		Bucket: aws.String(bucketName),
+		Bucket: aws.String(s3Config.BucketName),
 	})
 
-	switch {
-	case err != nil || output.LocationConstraint == "":
+	logEntry := logrus.WithFields(logrus.Fields{
+		"endpoint": effectiveEndpoint,
+		"bucket":   s3Config.BucketName,
+	})
+
+	if err != nil {
+		logEntry.WithError(err).Warning("Failed to detect S3 bucket location, falling back to default region")
 		return fallbackBucketLocation
-	case output.LocationConstraint == types.BucketLocationConstraintEu:
-		return string(types.BucketLocationConstraintEuWest1)
 	}
 
-	return string(output.LocationConstraint)
+	location := string(output.LocationConstraint)
+	switch output.LocationConstraint {
+	case "":
+		location = fallbackBucketLocation
+	case types.BucketLocationConstraintEu:
+		location = string(types.BucketLocationConstraintEuWest1)
+	}
+
+	logEntry.WithField("location", location).Debug("Successfully detected S3 bucket location")
+	return location
 }
 
 // clientInit holds a lazily-built s3Client. sync.Once ensures that concurrent
