@@ -39,6 +39,15 @@ variables:
   # The integration tag cannot be changed as easily as it uses the cluster to run the integration tests as pods.
   # If required the jobs can be skipped
   KUBERNETES_RUNNER_INTEGRATION_TAG: kubernetes_integration
+  # Pilot runner toggle. Set USE_PILOT_RUNNERS to "false" to fall back to shared/instance runners
+  # (e.g. to restore GitLab Duo functionality). When "true" (default), jobs run on functions-pilot-* tagged runners.
+  USE_PILOT_RUNNERS: "true"
+  RUNNER_TAG_DEFAULT: "functions-pilot-linux-amd64"
+  RUNNER_TAG_DOCKER: "functions-pilot-linux-amd64"
+  RUNNER_TAG_2XLARGE: "functions-pilot-linux-amd64"
+  RUNNER_TAG_MEDIUM: "functions-pilot-linux-amd64"
+  RUNNER_TAG_WINDOWS_2019: "windows-1809"
+  RUNNER_TAG_WINDOWS_2022: "windows-21h1"
 
 workflow:
   rules: !reference [".rules:kubernetes:tag:if-not-canonical", rules]

@@ -391,6 +391,14 @@
       variables:
         # !reference doesn't work in variables
         KUBERNETES_RUNNER_TAG: gitlab-org
+    - if: '$USE_PILOT_RUNNERS == "false"'
+      variables:
+        RUNNER_TAG_DEFAULT: "gitlab-org"
+        RUNNER_TAG_DOCKER: "gitlab-org-docker"
+        RUNNER_TAG_2XLARGE: "saas-linux-2xlarge-amd64"
+        RUNNER_TAG_MEDIUM: "saas-linux-medium-amd64"
+        RUNNER_TAG_WINDOWS_2019: "windows-1809"
+        RUNNER_TAG_WINDOWS_2022: "windows-21h1"
     - when: always
 
 ########################
