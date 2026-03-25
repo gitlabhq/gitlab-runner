@@ -1,6 +1,6 @@
 helper images:
   tags:
-    - saas-linux-2xlarge-amd64
+    - !reference [.instance-2xlarge]
   extends:
     - .docker
     - .rules:merge_request_pipelines:no_docs:no-community-mr
