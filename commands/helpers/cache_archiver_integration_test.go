@@ -64,6 +64,8 @@ func TestCacheArchiveLocalMetadata(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			writeTestFile(t, cacheArchiverTestArchivedFile)
+			defer os.Remove(cacheArchiverTestArchivedFile)
 			srv := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
 			t.Cleanup(func() {
 				srv.Close()
@@ -77,6 +79,7 @@ func TestCacheArchiveLocalMetadata(t *testing.T) {
 				Metadata: test.metaArgs,
 				Timeout:  0,
 			}
+			cmd.Paths = []string{cacheArchiverTestArchivedFile}
 
 			cmd.Execute(&cli.Context{})
 
@@ -146,6 +149,9 @@ func TestCacheArchiverForIfNoFileDefined(t *testing.T) {
 }
 
 func TestCacheArchiverRemoteServerNotFound(t *testing.T) {
+	writeTestFile(t, cacheArchiverTestArchivedFile)
+	defer os.Remove(cacheArchiverTestArchivedFile)
+
 	ts := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
 	defer ts.Close()
 
@@ -158,12 +164,17 @@ func TestCacheArchiverRemoteServerNotFound(t *testing.T) {
 		URL:     ts.URL + "/invalid-file.zip",
 		Timeout: 0,
 	}
+	cmd.Paths = []string{cacheArchiverTestArchivedFile}
+
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
 }
 
 func TestCacheArchiverRemoteServer(t *testing.T) {
+	writeTestFile(t, cacheArchiverTestArchivedFile)
+	defer os.Remove(cacheArchiverTestArchivedFile)
+
 	ts := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
 	defer ts.Close()
 
@@ -176,12 +187,17 @@ func TestCacheArchiverRemoteServer(t *testing.T) {
 		URL:     ts.URL + "/cache.zip",
 		Timeout: 0,
 	}
+	cmd.Paths = []string{cacheArchiverTestArchivedFile}
+
 	assert.NotPanics(t, func() {
 		cmd.Execute(nil)
 	})
 }
 
 func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
+	writeTestFile(t, cacheArchiverTestArchivedFile)
+	defer os.Remove(cacheArchiverTestArchivedFile)
+
 	mux, bucketDir := setupGoCloudFileBucket(t, "testblob")
 
 	objectName := "path/to/cache.zip"
@@ -196,6 +212,8 @@ func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
 		Metadata:   map[string]string{"foo": "some foo", "bar": "some bar"},
 		Timeout:    0,
 	}
+	cmd.Paths = []string{cacheArchiverTestArchivedFile}
+
 	helpers.SetCacheArchiverCommandMux(&cmd, mux)
 	assert.NotPanics(t, func() {
 		cmd.Execute(nil)
@@ -228,6 +246,9 @@ func TestCacheArchiverRemoteServerWithHeaders(t *testing.T) {
 }
 
 func TestCacheArchiverRemoteServerTimedOut(t *testing.T) {
+	writeTestFile(t, cacheArchiverTestArchivedFile)
+	defer os.Remove(cacheArchiverTestArchivedFile)
+
 	ts := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
 	defer ts.Close()
 
@@ -244,6 +265,7 @@ func TestCacheArchiverRemoteServerTimedOut(t *testing.T) {
 		File: cacheArchiverArchive,
 		URL:  ts.URL + "/timeout",
 	}
+	cmd.Paths = []string{cacheArchiverTestArchivedFile}
 	helpers.SetCacheArchiverCommandClientTimeout(&cmd, 1*time.Millisecond)
 
 	assert.Panics(t, func() {
@@ -253,6 +275,9 @@ func TestCacheArchiverRemoteServerTimedOut(t *testing.T) {
 }
 
 func TestCacheArchiverRemoteServerFailOnInvalidServer(t *testing.T) {
+	writeTestFile(t, cacheArchiverTestArchivedFile)
+	defer os.Remove(cacheArchiverTestArchivedFile)
+
 	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 	defer os.Remove(cacheArchiverArchive)
@@ -262,12 +287,11 @@ func TestCacheArchiverRemoteServerFailOnInvalidServer(t *testing.T) {
 		URL:     "http://localhost:65333/cache.zip",
 		Timeout: 0,
 	}
+	cmd.Paths = []string{cacheArchiverTestArchivedFile}
+
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
-
-	_, err := os.Stat(cacheExtractorTestArchivedFile)
-	assert.Error(t, err)
 }
 
 func TestCacheArchiverCompressionLevel(t *testing.T) {
@@ -394,13 +418,17 @@ func TestCacheArchiverUploadedSize(t *testing.T) {
 		exceeded bool
 	}{
 		"no-limit":    {limit: 0, exceeded: false},
-		"above-limit": {limit: 10, exceeded: true},
-		"equal-limit": {limit: 22, exceeded: false},
-		"below-limit": {limit: 25, exceeded: false},
+		"above-limit": {limit: 100, exceeded: true},
+		"equal-limit": {limit: 215, exceeded: false},
+		"below-limit": {limit: 300, exceeded: false},
 	}
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
+			err := os.WriteFile(cacheArchiverTestArchivedFile, []byte("test content for cache"), 0600)
+			require.NoError(t, err)
+			defer os.Remove(cacheArchiverTestArchivedFile)
+
 			defer logrus.SetOutput(logrus.StandardLogger().Out)
 			defer testHelpers.MakeFatalToPanic()()
 
@@ -418,6 +446,7 @@ func TestCacheArchiverUploadedSize(t *testing.T) {
 				URL:                    ts.URL + "/cache.zip",
 				Timeout:                0,
 			}
+			cmd.Paths = []string{cacheArchiverTestArchivedFile}
 			assert.NotPanics(t, func() {
 				cmd.Execute(nil)
 			})
@@ -429,4 +458,37 @@ func TestCacheArchiverUploadedSize(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCacheArchiverSkipsEmptyCache(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
+	defer ts.Close()
+
+	defer logrus.SetOutput(logrus.StandardLogger().Out)
+	var buf bytes.Buffer
+	logrus.SetOutput(&buf)
+
+	defer os.Remove(cacheArchiverArchive)
+	defer os.Remove(cacheArchiverMetadata)
+
+	cmd := helpers.CacheArchiverCommand{
+		File:    cacheArchiverArchive,
+		URL:     ts.URL + "/cache.zip",
+		Timeout: 0,
+	}
+	cmd.Paths = []string{"/nonexistent/path/that/does/not/exist"}
+
+	assert.NotPanics(t, func() {
+		cmd.Execute(nil)
+	})
+
+	assert.Contains(t, buf.String(), "No files to cache")
+
+	_, err := os.Stat(cacheArchiverArchive)
+	assert.Error(t, err, "archive file should not be created for empty cache")
+	assert.True(t, os.IsNotExist(err), "archive file should not exist")
+
+	_, err = os.Stat(cacheArchiverMetadata)
+	assert.Error(t, err, "metadata file should not be created for empty cache")
+	assert.True(t, os.IsNotExist(err), "metadata file should not exist")
 }

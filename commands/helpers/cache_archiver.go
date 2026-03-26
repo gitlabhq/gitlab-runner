@@ -232,10 +232,15 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 		logrus.Fatalln(err)
 	}
 
+	// Skip upload if no files were found
+	if len(c.files) == 0 {
+		logrus.Warningln("No files to cache.")
+		return
+	}
+
 	// Check if list of files changed
 	if !c.isFileChanged(c.File) {
 		logrus.Infoln("Archive is up to date!")
-
 		return
 	}
 
