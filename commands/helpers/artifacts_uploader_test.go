@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -434,6 +435,29 @@ func TestArtifactUploaderCommandShouldRetry(t *testing.T) {
 			assert.Equal(t, tt.expectedShouldRetry, r.shouldRetry(tt.tries, tt.err))
 		})
 	}
+}
+
+func TestNewArtifactsUploaderCommandDefaultTimeouts(t *testing.T) {
+	cmd := NewArtifactsUploaderCommand()
+
+	var capturedTimeout, capturedResponseHeaderTimeout time.Duration
+	cmd.Action = func(c *cli.Context) {
+		capturedTimeout = c.Duration("timeout")
+		capturedResponseHeaderTimeout = c.Duration("response-header-timeout")
+	}
+
+	app := cli.NewApp()
+	app.Commands = []cli.Command{cmd}
+
+	err := app.Run([]string{"app", "artifacts-uploader",
+		"--url", "https://example.com",
+		"--token", "test-token",
+		"--id", "1",
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, common.DefaultArtifactUploadTimeout, capturedTimeout)
+	assert.Equal(t, common.DefaultArtifactResponseHeaderTimeout, capturedResponseHeaderTimeout)
 }
 
 type timeoutTestFixture struct {
