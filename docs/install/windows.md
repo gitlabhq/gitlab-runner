@@ -35,6 +35,10 @@ To install and run GitLab Runner on Windows you need:
 1. Install GitLab Runner as a service and start it. You can either run the service
    using the Built-in System Account (recommended) or using a user account.
 
+   > [!note]
+   > Windows services do not provide interactive desktop sessions. To run GUI or desktop automation 
+   > tests, see [GUI tests and interactive desktop sessions](#gui-tests-and-interactive-desktop-sessions).
+
    **Run service using Built-in System Account** (under the example directory created in step 1, `C:\GitLab-Runner`)
 
    ```powershell
@@ -139,6 +143,48 @@ TimeCreated                     Id LevelDisplayName Message
 2/4/2025 6:20:14 AM              1 Information      Configuration loaded                                builds=0...
 2/4/2025 6:20:14 AM              1 Information      Starting multi-runner from C:\config.toml...        builds=0...
 ```
+
+### GUI tests and interactive desktop sessions
+
+Windows GUI test tools (like Ranorex and desktop automation frameworks) require an interactive
+user session with access to the visible desktop. This is a known platform limitation. For details,
+see [issue 1046](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1046).
+
+When GitLab Runner runs only as a Windows service:
+
+- Jobs execute in a non-interactive session.
+- Jobs cannot access the visible desktop.
+- GUI tests fail or hang.
+
+To run GUI or desktop automation tests:
+
+1. Use the `shell` executor.
+
+   Docker and Kubernetes executors on Windows do not provide an interactive desktop session.
+
+1. Sign in to Windows with the user account for the interactive session.
+1. Start GitLab Runner as a foreground process in that session instead of using the service:
+
+   ```powershell
+   cd C:\GitLab-Runner
+   .\gitlab-runner.exe run
+   ```
+
+1. Keep the user session active for as long as GUI tests run.
+1. Use tags in your `.gitlab-ci.yml` file to send GUI test jobs to this runner:
+
+   ```yaml
+   gui_tests:
+     stage: test
+     tags:
+       - windows-gui
+     script:
+       - .\run-gui-tests.ps1
+   ```
+
+Autoscaled or ephemeral Windows runners cannot run GUI tests because they do not support
+interactive desktop sessions. Each job runs on a freshly provisioned VM with no logged-in user,
+so there is no visible desktop for GUI automation to target.
 
 ### I get a `PathTooLongException` during my builds on Windows
 
