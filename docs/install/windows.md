@@ -448,3 +448,31 @@ job:
   variables:
     WSL_UTF8: "1"
 ```
+
+### Display resolution is limited to 1024x768
+
+When you run CI/CD Jobs on Windows with GitLab Runner as a system service, the display resolution is limited to 1024x768.
+This issue is due to Windows Session 0 isolation. For more information, see
+[Session 0 Isolation](https://learn.microsoft.com/en-us/previous-versions/bb756986(v=msdn.10)?redirectedfrom=MSDN).
+
+To verify session and display resolution, run the following PowerShell script in a job:
+
+```powershell
+echo "Current session:"
+[System.Diagnostics.Process]::GetCurrentProcess().SessionId
+
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.Screen]::AllScreens
+```
+
+Here's the output of the script when running in the isolates session 0:
+
+```plaintext
+Current session:
+0
+BitsPerPixel : 0
+Bounds       : {X=0,Y=0,Width=1024,Height=768}
+DeviceName   : WinDisc
+Primary      : True
+WorkingArea  : {X=0,Y=0,Width=1024,Height=768}
+```
