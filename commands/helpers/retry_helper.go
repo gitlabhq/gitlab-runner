@@ -82,7 +82,7 @@ func (r *retryHelper) doRetry(handler func(int) error) error {
 	return err
 }
 
-// retryOnServerError will take the response and check if the the error should
+// retryOnServerError will take the response and check if the error should
 // be of type retryableErr or not. When the status code is of 5xx it will be a
 // retryableErr.
 func retryOnServerError(resp *http.Response) error {
