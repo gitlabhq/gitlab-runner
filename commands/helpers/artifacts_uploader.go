@@ -55,7 +55,9 @@ type ArtifactsUploaderCommand struct {
 
 func NewArtifactsUploaderCommand() cli.Command {
 	cmd := &ArtifactsUploaderCommand{
-		Name: "artifacts",
+		Name:                  "artifacts",
+		Timeout:               common.DefaultArtifactUploadTimeout,
+		ResponseHeaderTimeout: common.DefaultArtifactResponseHeaderTimeout,
 	}
 	cmd.newNetwork = func() common.Network {
 		return network.NewGitLabClient(
