@@ -4644,3 +4644,10 @@ func TestPredefinedServerVariables(t *testing.T) {
 		}
 	}
 }
+
+func TestWrapStepStageErr_NormalizesWindowsExitCode(t *testing.T) {
+	err := fmt.Errorf("step failed: exit status 4294967295")
+	berr, ok := wrapStepStageErr(err).(*BuildError)
+	require.True(t, ok, "expected *BuildError")
+	assert.Equal(t, -1, berr.ExitCode)
+}

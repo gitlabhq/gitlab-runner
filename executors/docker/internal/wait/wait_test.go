@@ -118,23 +118,45 @@ func TestDockerWaiter_WaitContextCanceled(t *testing.T) {
 }
 
 func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
-	exitCode := 1
-	failedContainer := container.WaitResponse{
-		StatusCode: int64(exitCode),
+	tests := map[string]struct {
+		statusCode   int64
+		wantExitCode int
+		wantInnerMsg string
+	}{
+		"unix exit code 1 (identity through NormalizeExitCode)": {
+			statusCode:   1,
+			wantExitCode: 1,
+			wantInnerMsg: "exit code 1",
+		},
+		// Windows DWORD 0xFFFFFFFF (4294967295) reinterprets as -1 after
+		// NormalizeExitCode. Without NormalizeExitCode, ExitCode would be
+		// 4294967295 on 64-bit platforms, making this assertion fail.
+		"windows DWORD 0xFFFFFFFF normalises to -1": {
+			statusCode:   4294967295,
+			wantExitCode: -1,
+			wantInnerMsg: "exit code -1",
+		},
 	}
 
-	mClient := docker.NewMockClient(t)
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			mClient := docker.NewMockClient(t)
 
-	bodyCh := make(chan container.WaitResponse, 1)
-	bodyCh <- failedContainer
-	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
-		Return((<-chan container.WaitResponse)(bodyCh), nil)
+			bodyCh := make(chan container.WaitResponse, 1)
+			bodyCh <- container.WaitResponse{StatusCode: tt.statusCode}
+			mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+				Return((<-chan container.WaitResponse)(bodyCh), nil)
 
-	waiter := NewDockerKillWaiter(mClient)
+			waiter := NewDockerKillWaiter(mClient)
 
-	err := waiter.Wait(t.Context(), "id")
+			err := waiter.Wait(t.Context(), "id")
 
-	var buildError *common.BuildError
-	assert.ErrorAs(t, err, &buildError)
-	assert.True(t, buildError.ExitCode == exitCode, "expected exit code %v, but got %v", exitCode, buildError.ExitCode)
+			var buildError *common.BuildError
+			assert.ErrorAs(t, err, &buildError)
+			assert.Equal(t, tt.wantExitCode, buildError.ExitCode,
+				"ExitCode must equal NormalizeExitCode(int(statusCode))")
+			assert.Equal(t, tt.wantInnerMsg, buildError.Inner.Error(),
+				"Inner error message must use normalized exit code")
+		})
+	}
 }

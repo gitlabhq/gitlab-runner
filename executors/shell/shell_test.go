@@ -5,6 +5,7 @@ package shell
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -146,6 +147,58 @@ func setupProcessMocks(t *testing.T) (*process.MockKillWaiter, *process.MockComm
 		newProcessKillWaiter = oldNewProcessKillWaiter
 		newCommander = oldCmd
 	}
+}
+
+func TestExecutor_Run_ExitCodeWiring(t *testing.T) {
+	exitErr := &exec.ExitError{}
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		mProcessKillWaiter, mCmd, cleanup := setupProcessMocks(t)
+		defer cleanup()
+		_ = mProcessKillWaiter
+
+		mCmd.On("Start").Return(nil).Once()
+		mCmd.On("Wait").Return(exitErr).Once()
+
+		executor := executor{
+			AbstractExecutor: executors.AbstractExecutor{
+				Build: &common.Build{
+					Job:    spec.Job{},
+					Runner: &common.RunnerConfig{},
+				},
+				BuildShell: &common.ShellConfiguration{
+					Command: shell,
+				},
+			},
+		}
+
+		cmd := common.ExecutorCommand{
+			Script:     "echo hello",
+			Predefined: false,
+			Context:    t.Context(),
+		}
+
+		err := executor.Run(cmd)
+
+		var buildErr *common.BuildError
+		require.ErrorAs(t, err, &buildErr)
+		assert.Equal(t, -1, buildErr.ExitCode,
+			"ExitCode must be the normalized exit code")
+		assert.Equal(t, exitErr, buildErr.Inner,
+			"Inner must be the original error, preserving messages like 'signal: killed'")
+	})
+}
+
+func TestExitCodeNormalization_WindowsDWORD(t *testing.T) {
+	const windowsDWORD = 4294967295 // "exit -1" on Windows stored as uint32 0xFFFFFFFF
+
+	buildErr := &common.BuildError{
+		Inner:    fmt.Errorf("exit status %d", windowsDWORD),
+		ExitCode: common.NormalizeExitCode(windowsDWORD),
+	}
+
+	assert.Equal(t, -1, buildErr.ExitCode)
+	assert.Equal(t, "exit status 4294967295", buildErr.Inner.Error())
 }
 
 func TestExecutor_Prepare_MakesPathsAbsolute(t *testing.T) {

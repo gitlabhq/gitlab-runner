@@ -810,7 +810,7 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
-			return &common.BuildError{Inner: err, ExitCode: exitError.ExitStatus()}
+			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitError.ExitStatus())}
 		}
 		return err
 
@@ -913,7 +913,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var terminatedError *commandTerminatedError
 		if err != nil && errors.As(err, &terminatedError) {
-			return &common.BuildError{Inner: err, ExitCode: terminatedError.exitCode}
+			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(terminatedError.exitCode)}
 		}
 
 		return err
@@ -1294,7 +1294,7 @@ func (s *executor) processLogs(ctx context.Context) {
 				s.BuildLogger.Warningln(fmt.Sprintf("Error processing the log file: %v", err))
 			}
 
-			exitCode := getExitCode(err)
+			exitCode := common.NormalizeExitCode(getExitCode(err))
 			// Script can be kept to nil as not being used after the exitStatus is received
 			s.remoteProcessTerminated <- shells.StageCommandStatus{CommandExitCode: &exitCode}
 		}
@@ -1378,7 +1378,7 @@ func (s *executor) saveScriptOnEmptyDir(ctx context.Context, scriptName, contain
 		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
-			return &common.BuildError{Inner: err, ExitCode: exitError.ExitStatus()}
+			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitError.ExitStatus())}
 		}
 		return err
 
@@ -3528,7 +3528,7 @@ func (s *executor) waitForServices(ctx context.Context) error {
 		s.BuildLogger.Debugln(fmt.Sprintf("Container helper exited with error: %v", err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
-			return &common.BuildError{Inner: err, ExitCode: exitError.ExitStatus()}
+			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitError.ExitStatus())}
 		}
 	case err := <-podStatusCh:
 		s.BuildLogger.Println("Health check aborted due to error: ", err.Error())
