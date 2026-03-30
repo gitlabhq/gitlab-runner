@@ -1,0 +1,41 @@
+# Update this tag when go.mod or GOLANGLINT_VERSION in the Makefile changes.
+image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:2.7.2-go1.25.7
+
+setup_script:
+  - export GOTOOLCHAIN=local
+  # GOMODCACHE must be project-relative so the cache archiver can reach it.
+  - export GOMODCACHE="${CI_PROJECT_DIR}/.cache/gomod"
+
+  # Remove image's pre-installed node to avoid version conflicts.
+  - rm -rf /root/.nvm/versions/node/ || true
+
+  - NODE_VERSION=20.20.0
+  - NODE_SHA256=92dfd59fb4837230abba5d6dd717b882ca897e22fde2f9268e1aac2c4bde0f5b
+  - NODE_DIR="${CI_PROJECT_DIR}/.cache/node"
+  - |
+    if ! "${NODE_DIR}/bin/node" --version 2>/dev/null | grep -qF "v${NODE_VERSION}"; then
+      echo "Installing Node.js ${NODE_VERSION}..."
+      curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz" -o /tmp/node.tar.gz
+      echo "${NODE_SHA256}  /tmp/node.tar.gz" | sha256sum -c -
+      rm -rf "${NODE_DIR}"
+      mkdir -p "${NODE_DIR}"
+      tar -xzf /tmp/node.tar.gz -C "${NODE_DIR}" --strip-components=1 --no-same-owner
+      rm /tmp/node.tar.gz
+    fi
+  - export PATH="${NODE_DIR}/bin:${PATH}"
+  - node --version && npm --version
+
+  - npm config set prefix "${CI_PROJECT_DIR}/.cache/npm-global"
+  - export PATH="${CI_PROJECT_DIR}/.cache/npm-global/bin:${PATH}"
+
+cache:
+  key:
+    files:
+      - go.sum
+    prefix: gitlab-runner-duo-v2
+  paths:
+    - .cache/node/        # Node.js runtime — version-checked, skips download on hit
+    - .cache/gomod/       # Go module cache (GOMODCACHE redirected here)
+    - .cache/npm-global/  # duo-cli and other global npm packages
+    - .tmp/               # make tools: golangci-lint, mockery, etc.
+    - tmp/                # make development_setup: test git fixtures
