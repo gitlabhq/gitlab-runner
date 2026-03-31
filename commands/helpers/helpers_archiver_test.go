@@ -26,7 +26,10 @@ func OnEachArchiver(t *testing.T, f func(t *testing.T, format archive.Format)) {
 
 	for name, a := range archivers {
 		t.Run(name, func(t *testing.T) {
-			archive.Register(a.format, a.archiver, a.extractor)
+			prevArchiver, prevExtractor := archive.Register(a.format, a.archiver, a.extractor)
+			t.Cleanup(func() {
+				archive.Register(a.format, prevArchiver, prevExtractor)
+			})
 			f(t, a.format)
 		})
 	}
@@ -42,8 +45,13 @@ func OnEachZipArchiver(t *testing.T, f func(t *testing.T), include ...string) {
 		if !hasArchiver(name, include) {
 			continue
 		}
-		archive.Register(archive.Zip, archiver, ziplegacy.NewExtractor)
-		t.Run(name, f)
+		t.Run(name, func(t *testing.T) {
+			prevArchiver, prevExtractor := archive.Register(archive.Zip, archiver, ziplegacy.NewExtractor)
+			t.Cleanup(func() {
+				archive.Register(archive.Zip, prevArchiver, prevExtractor)
+			})
+			f(t)
+		})
 	}
 }
 
@@ -57,8 +65,13 @@ func OnEachZipExtractor(t *testing.T, f func(t *testing.T), include ...string) {
 		if !hasArchiver(name, include) {
 			continue
 		}
-		archive.Register(archive.Zip, ziplegacy.NewArchiver, extractor)
-		t.Run(name, f)
+		t.Run(name, func(t *testing.T) {
+			prevArchiver, prevExtractor := archive.Register(archive.Zip, ziplegacy.NewArchiver, extractor)
+			t.Cleanup(func() {
+				archive.Register(archive.Zip, prevArchiver, prevExtractor)
+			})
+			f(t)
+		})
 	}
 }
 
