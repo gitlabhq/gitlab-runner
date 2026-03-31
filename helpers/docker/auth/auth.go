@@ -26,9 +26,9 @@ import (
 
 const (
 	// DefaultDockerRegistry is the name of the index
-	DefaultDockerRegistry            = "docker.io"
-	authConfigSourceNameUserVariable = "$DOCKER_AUTH_CONFIG"
-	authConfigSourceNameJobPayload   = "job payload (GitLab Registry)"
+	DefaultDockerRegistry        = "docker.io"
+	configSourceNameUserVariable = "$DOCKER_AUTH_CONFIG"
+	configSourceNameJobPayload   = "job payload (GitLab Registry)"
 )
 
 var (
@@ -68,8 +68,9 @@ func (ri *RegistryInfos) Append(newInfo RegistryInfo) error {
 	return nil
 }
 
-type DebugLogger interface {
-	Debugln(args ...interface{})
+type Logger interface {
+	Debugln(args ...any)
+	Warningln(args ...any)
 }
 
 // the parent directory of a path or ""
@@ -101,7 +102,7 @@ type Resolver struct {
 // It returns nil when no matching config can be found.
 func (r Resolver) ConfigForImage(
 	imageName, dockerAuthConfig, username string,
-	credentials []spec.Credentials, logger DebugLogger,
+	credentials []spec.Credentials, logger Logger,
 ) (*RegistryInfo, error) {
 	authConfigs, err := r.AllConfigs(dockerAuthConfig, username, credentials, logger)
 	if len(authConfigs) == 0 || err != nil {
@@ -126,7 +127,7 @@ func (r Resolver) ConfigForImage(
 // Returns a list of RegistryInfos, in the order of discovery.
 func (r Resolver) AllConfigs(
 	dockerAuthConfig, username string,
-	credentials []spec.Credentials, logger DebugLogger,
+	credentials []spec.Credentials, logger Logger,
 ) (RegistryInfos, error) {
 	resolvers := []func() (string, []types.AuthConfig, error){
 		func() (string, []types.AuthConfig, error) {
@@ -145,6 +146,13 @@ func (r Resolver) AllConfigs(
 		source, configs, err := r()
 		if errors.Is(err, errPathTraversal) {
 			return nil, err
+		}
+		if err != nil {
+			logger.Warningln(fmt.Sprintf(
+				"Failed to resolve credentials from %v: %v. Credentials from this source will not be used.",
+				source, err,
+			))
+			continue
 		}
 
 		if len(configs) == 0 {
@@ -179,14 +187,14 @@ func (r Resolver) AllConfigs(
 
 func getUserConfiguration(dockerAuthConfig string) (string, []types.AuthConfig, error) {
 	authConfigs, err := readConfigsFromReader(bytes.NewBufferString(dockerAuthConfig))
-	if errors.Is(err, errPathTraversal) {
-		return "", nil, err
+	if err != nil {
+		return configSourceNameUserVariable, nil, err
 	}
 	if authConfigs == nil {
 		return "", nil, nil
 	}
 
-	return authConfigSourceNameUserVariable, authConfigs, nil
+	return configSourceNameUserVariable, authConfigs, nil
 }
 
 func (r Resolver) getHomeDirConfiguration(username string) (string, []types.AuthConfig, error) {
@@ -231,7 +239,7 @@ func getBuildConfiguration(credentials []spec.Credentials) (string, []types.Auth
 		})
 	}
 
-	return authConfigSourceNameJobPayload, authConfigs, nil
+	return configSourceNameJobPayload, authConfigs, nil
 }
 
 // normalizeImageRef takes a raw image reference and normalizes it:

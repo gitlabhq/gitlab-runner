@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/api/types/image"
@@ -859,4 +860,44 @@ func TestGetDockerImageWithPlatform(t *testing.T) {
 	m := newDefaultTestManager(t, nil, dockerConfig)
 
 	testGetDockerImage(t, m, remoteImage, dockerOptions, addPullsRemoteImageExpectations)
+}
+
+func TestResolveAuthConfigForImageErrorsOnPathTraversal(t *testing.T) {
+	loggerMock := newMockPullLogger(t)
+	loggerMock.On("Debugln", mock.Anything, mock.Anything, mock.Anything).Maybe()
+
+	m := &manager{
+		context: t.Context(),
+		logger:  loggerMock,
+		config: ManagerConfig{
+			DockerConfig: &common.DockerConfig{},
+			AuthConfig:   `{"credsStore": "../../usr/bin/sudo"}`,
+		},
+	}
+
+	authConfig, err := m.resolveAuthConfigForImage("registry.domain.tld:5005/image/name:version")
+	assert.ErrorContains(t, err, "path traversal")
+	assert.Nil(t, authConfig)
+}
+
+func TestResolveAuthConfigForImageWarnsMissingCredentialHelper(t *testing.T) {
+	loggerMock := newMockPullLogger(t)
+	loggerMock.On("Debugln", mock.Anything, mock.Anything, mock.Anything).Maybe()
+	loggerMock.On("Warningln", mock.MatchedBy(func(msg string) bool {
+		return strings.Contains(msg, "$DOCKER_AUTH_CONFIG") &&
+			strings.Contains(msg, "Credentials from this source will not be used")
+	})).Once()
+
+	m := &manager{
+		context: t.Context(),
+		logger:  loggerMock,
+		config: ManagerConfig{
+			DockerConfig: &common.DockerConfig{},
+			AuthConfig:   `{"credsStore": "nonexistent-helper"}`,
+		},
+	}
+
+	authConfig, err := m.resolveAuthConfigForImage("registry.domain.tld:5005/image/name:version")
+	assert.NoError(t, err)
+	assert.Nil(t, authConfig)
 }
