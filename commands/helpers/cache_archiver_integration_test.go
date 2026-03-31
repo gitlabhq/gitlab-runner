@@ -413,14 +413,25 @@ func writeTestFile(t *testing.T, fileName string) {
 }
 
 func TestCacheArchiverUploadedSize(t *testing.T) {
+	// Pre-compute the actual archive size to avoid hardcoding an implementation-specific value.
+	require.NoError(t, os.WriteFile(cacheArchiverTestArchivedFile, []byte("test content for cache"), 0600))
+	sizeCmd := helpers.NewCacheArchiverCommandForTest(cacheArchiverArchive, []string{cacheArchiverTestArchivedFile})
+	sizeCmd.Execute(nil)
+	fi, err := os.Stat(cacheArchiverArchive)
+	require.NoError(t, err, "measuring archive size")
+	archiveSize := int(fi.Size())
+	os.Remove(cacheArchiverTestArchivedFile)
+	os.Remove(cacheArchiverArchive)
+	os.Remove(cacheArchiverMetadata)
+
 	tests := map[string]struct {
 		limit    int
 		exceeded bool
 	}{
 		"no-limit":    {limit: 0, exceeded: false},
 		"above-limit": {limit: 100, exceeded: true},
-		"equal-limit": {limit: 215, exceeded: false},
-		"below-limit": {limit: 300, exceeded: false},
+		"equal-limit": {limit: archiveSize, exceeded: false},
+		"below-limit": {limit: archiveSize + 100, exceeded: false},
 	}
 
 	for tn, tc := range tests {

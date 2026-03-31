@@ -2,7 +2,6 @@ package volumes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -13,8 +12,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
-
-var ErrCacheVolumesDisabled = errors.New("cache volumes feature disabled")
 
 const protectedSuffix = "-protected"
 
@@ -141,9 +138,16 @@ func (m *manager) addCacheVolume(ctx context.Context, volume *parser.Volume) err
 	// disable cache for automatic container cache,
 	// but leave it for host volumes (they are shared on purpose)
 	if m.config.DisableCache {
-		m.logger.Debugln("Cache containers feature is disabled")
+		m.logger.Debugln(fmt.Sprintf("Cache containers feature is disabled, creating non-reusable volume for %q", volume.Destination))
 
-		return ErrCacheVolumesDisabled
+		volumeName, err := m.createCacheVolume(ctx, volume.Destination, false)
+		if err != nil {
+			return err
+		}
+
+		m.temporaryVolumes = append(m.temporaryVolumes, volumeName)
+
+		return nil
 	}
 
 	if m.config.CacheDir != "" {
