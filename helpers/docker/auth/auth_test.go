@@ -158,7 +158,7 @@ func TestGetConfigForImage(t *testing.T) {
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
 					Path:       "registry.gitlab.tld:1234",
-					Source:     authConfigSourceNameJobPayload,
+					Source:     configSourceNameJobPayload,
 					AuthConfig: registryGitlabConfig,
 				}
 				assert.NoError(t, err)
@@ -176,7 +176,7 @@ func TestGetConfigForImage(t *testing.T) {
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
 					Path:       "registry.gitlab.tld:1234",
-					Source:     authConfigSourceNameJobPayload,
+					Source:     configSourceNameJobPayload,
 					AuthConfig: registryGitlabConfig,
 				}
 				assert.NoError(t, err)
@@ -195,7 +195,7 @@ func TestGetConfigForImage(t *testing.T) {
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
 					Path:       "registry.domain.tld:5005",
-					Source:     authConfigSourceNameUserVariable,
+					Source:     configSourceNameUserVariable,
 					AuthConfig: registryDomain1Config,
 				}
 				assert.NoError(t, err)
@@ -213,7 +213,7 @@ func TestGetConfigForImage(t *testing.T) {
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
 					Path:       "registry.domain.tld:5005",
-					Source:     authConfigSourceNameUserVariable,
+					Source:     configSourceNameUserVariable,
 					AuthConfig: registryDomain1Config,
 				}
 				assert.NoError(t, err)
@@ -236,7 +236,7 @@ func TestGetConfigForImage(t *testing.T) {
 
 				expectedResult := &RegistryInfo{
 					Path:       "registry2.domain.tld:5005",
-					Source:     authConfigSourceNameUserVariable,
+					Source:     configSourceNameUserVariable,
 					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
@@ -255,7 +255,7 @@ func TestGetConfigForImage(t *testing.T) {
 				authConfig.ServerAddress = "registry2.domain.tld:5005/image/name:version"
 				expectedResult := &RegistryInfo{
 					Path:       "registry2.domain.tld:5005/image/name",
-					Source:     authConfigSourceNameUserVariable,
+					Source:     configSourceNameUserVariable,
 					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
@@ -315,6 +315,32 @@ func TestGetConfigForImage(t *testing.T) {
 				assert.ErrorIs(t, err, errPathTraversal)
 
 				logger.ExpectLogs(t, nil)
+			},
+		},
+		"DOCKER_AUTH_CONFIG with missing credsStore binary logs warning and continues": {
+			dockerAuthValue: `{"credsStore": "nonexistent-helper"}`,
+			image:           imageRegistryDomain1,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				assert.Nil(t, result)
+				assert.NoError(t, err)
+				logger.ExpectLogs(t, nil)
+				require.Len(t, logger.warningLogs, 1)
+				warnMsg := fmt.Sprint(logger.warningLogs[0]...)
+				assert.Contains(t, warnMsg, configSourceNameUserVariable)
+				assert.Contains(t, warnMsg, "nonexistent-helper")
+			},
+		},
+		"DOCKER_AUTH_CONFIG with missing credHelpers binary logs warning and continues": {
+			dockerAuthValue: fmt.Sprintf(`{"credHelpers": {%q: "nonexistent-helper"}}`, registryDomain1Config.ServerAddress),
+			image:           imageRegistryDomain1,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				assert.Nil(t, result)
+				assert.NoError(t, err)
+				logger.ExpectLogs(t, nil)
+				require.Len(t, logger.warningLogs, 1)
+				warnMsg := fmt.Sprint(logger.warningLogs[0]...)
+				assert.Contains(t, warnMsg, configSourceNameUserVariable)
+				assert.Contains(t, warnMsg, "nonexistent-helper")
 			},
 		},
 	}
@@ -478,7 +504,7 @@ func TestResolver_AllConfigs(t *testing.T) {
 	assert.Equal(t, RegistryInfos{
 		{
 			Path:   "registry.domain.tld:5005",
-			Source: authConfigSourceNameUserVariable,
+			Source: configSourceNameUserVariable,
 			AuthConfig: types.AuthConfig{
 				Username:      "test_user_1",
 				Password:      "test_password_1",
@@ -496,7 +522,7 @@ func TestResolver_AllConfigs(t *testing.T) {
 		},
 		{
 			Path:   "registry.gitlab.tld:1234",
-			Source: authConfigSourceNameJobPayload,
+			Source: configSourceNameJobPayload,
 			AuthConfig: types.AuthConfig{
 				Username:      "test_user_3",
 				Password:      "test_password_3",
@@ -784,21 +810,28 @@ func createTestDockerConfig(regs []testRegistryConfig) string {
 	return string(json)
 }
 
-type fakeLogger [][]any
-
-func (l *fakeLogger) Debugln(args ...any) {
-	*l = append(*l, args)
+type fakeLogger struct {
+	debugLogs   [][]any
+	warningLogs [][]any
 }
 
-func (l fakeLogger) ExpectLogs(t *testing.T, expectedLogs [][]any) {
+func (l *fakeLogger) Debugln(args ...any) {
+	l.debugLogs = append(l.debugLogs, args)
+}
+
+func (l *fakeLogger) Warningln(args ...any) {
+	l.warningLogs = append(l.warningLogs, args)
+}
+
+func (l *fakeLogger) ExpectLogs(t *testing.T, expectedLogs [][]any) {
 	t.Helper()
 
 	le := len(expectedLogs)
-	la := len(l)
+	la := len(l.debugLogs)
 
-	assert.Len(t, l, le, "expected %d logs, got %d", le, la)
+	assert.Len(t, l.debugLogs, le, "expected %d debug logs, got %d", le, la)
 
 	for i := 0; i < min(le, la); i++ {
-		assert.Equal(t, expectedLogs[i], l[i], "log line %d", i)
+		assert.Equal(t, expectedLogs[i], l.debugLogs[i], "debug log line %d", i)
 	}
 }
