@@ -444,6 +444,11 @@ var headerMatcher = mock.MatchedBy(func(arg string) bool {
 		MatchString(arg)
 })
 
+var checkURLMatcher = mock.MatchedBy(func(arg string) bool {
+	u, err := url.Parse(arg)
+	return err == nil && u.Scheme == "test" && u.Host == "head"
+})
+
 func localCacheFileMatcher(t *testing.T, expectedCacheDir string) any {
 	expectedCacheDir = regexp.QuoteMeta(expectedCacheDir)
 	sep := regexp.QuoteMeta(string(filepath.Separator))
@@ -489,6 +494,7 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 				"--url", mock.Anything,
 				"--header", headerMatcher,
 				"--header", headerMatcher,
+				"--check-url", checkURLMatcher,
 			},
 		},
 		"GoCloud cache": {
@@ -537,6 +543,7 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 								"gitlab-runner-helper",
 								"cache-archiver",
 								"--file", localCacheFileMatcher(t, info.Build.CacheDir),
+								"--alternate-file", localCacheFileMatcher(t, info.Build.CacheDir),
 								"--timeout", mock.Anything,
 							},
 							// args per cache, e.g. paths of to-be-cached files
@@ -2621,6 +2628,10 @@ func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
 						expectedLocalFile := filepath.Join(
 							"../cacheDir", hashed(expectations.cacheKey), "cache.zip",
 						)
+						alternateHasher := getCacheKeyHasher(!hashCacheKeys)
+						expectedAlternateFile := filepath.Join(
+							"../cacheDir", alternateHasher(expectations.cacheKey), "cache.zip",
+						)
 
 						w.On("IfCmd", "some-runner-command", "--version").Once()
 						w.On("Noticef", "Creating cache %s...", expectations.cacheKey).Once()
@@ -2641,6 +2652,7 @@ func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
 						w.On("IfCmdWithOutput",
 							"some-runner-command", "cache-archiver",
 							"--file", expectedLocalFile,
+							"--alternate-file", expectedAlternateFile,
 							"--timeout", "10",
 							"--path", "foo/bar",
 							"--path", "foo/barz",
@@ -3932,14 +3944,16 @@ func TestNewCacheConfig(t *testing.T) {
 			},
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
-					HumanKey:    "some-job/some-ref",
-					HashedKey:   "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
-					ArchiveFile: "../../cache/dir/d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed/cache.zip",
+					HumanKey:             "some-job/some-ref",
+					HashedKey:            "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+					ArchiveFile:          "../../cache/dir/d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed/cache.zip",
+					AlternateArchiveFile: "../../cache/dir/some-job/some-ref/cache.zip",
 				},
 				windows: {
-					HumanKey:    "some-job/some-ref",
-					HashedKey:   "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
-					ArchiveFile: "..\\..\\cache\\dir\\d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed\\cache.zip",
+					HumanKey:             "some-job/some-ref",
+					HashedKey:            "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+					ArchiveFile:          "..\\..\\cache\\dir\\d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed\\cache.zip",
+					AlternateArchiveFile: "..\\..\\cache\\dir\\some-job\\some-ref\\cache.zip",
 				},
 			},
 		},
@@ -3952,14 +3966,16 @@ func TestNewCacheConfig(t *testing.T) {
 			},
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
-					HumanKey:    "some/user/key",
-					HashedKey:   "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
-					ArchiveFile: "../../cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
+					HumanKey:             "some/user/key",
+					HashedKey:            "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
+					ArchiveFile:          "../../cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
+					AlternateArchiveFile: "../../cache/dir/some/user/key/cache.zip",
 				},
 				windows: {
-					HumanKey:    "some/user/key",
-					HashedKey:   "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
-					ArchiveFile: "..\\..\\cache\\dir\\7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917\\cache.zip",
+					HumanKey:             "some/user/key",
+					HashedKey:            "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
+					ArchiveFile:          "..\\..\\cache\\dir\\7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917\\cache.zip",
+					AlternateArchiveFile: "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
 				},
 			},
 		},
@@ -3973,9 +3989,10 @@ func TestNewCacheConfig(t *testing.T) {
 			},
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
-					HumanKey:    "some/user/key",
-					HashedKey:   "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
-					ArchiveFile: "/some/cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
+					HumanKey:             "some/user/key",
+					HashedKey:            "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
+					ArchiveFile:          "/some/cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
+					AlternateArchiveFile: "/some/cache/dir/some/user/key/cache.zip",
 				},
 			},
 		},
@@ -3988,14 +4005,16 @@ func TestNewCacheConfig(t *testing.T) {
 			},
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
-					HumanKey:    "some/user/key",
-					HashedKey:   "some/user/key",
-					ArchiveFile: "../../cache/dir/some/user/key/cache.zip",
+					HumanKey:             "some/user/key",
+					HashedKey:            "some/user/key",
+					ArchiveFile:          "../../cache/dir/some/user/key/cache.zip",
+					AlternateArchiveFile: "../../cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
 				},
 				windows: {
-					HumanKey:    "some/user/key",
-					HashedKey:   "some/user/key",
-					ArchiveFile: "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
+					HumanKey:             "some/user/key",
+					HashedKey:            "some/user/key",
+					ArchiveFile:          "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
+					AlternateArchiveFile: "..\\..\\cache\\dir\\7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917\\cache.zip",
 				},
 			},
 		},
@@ -4009,14 +4028,16 @@ func TestNewCacheConfig(t *testing.T) {
 			expectedWarning: `cache key "some%2fuser%2Fkey" sanitized to "some/user/key"`,
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
-					HumanKey:    "some/user/key",
-					HashedKey:   "some/user/key",
-					ArchiveFile: "../../cache/dir/some/user/key/cache.zip",
+					HumanKey:             "some/user/key",
+					HashedKey:            "some/user/key",
+					ArchiveFile:          "../../cache/dir/some/user/key/cache.zip",
+					AlternateArchiveFile: "../../cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
 				},
 				windows: {
-					HumanKey:    "some/user/key",
-					HashedKey:   "some/user/key",
-					ArchiveFile: "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
+					HumanKey:             "some/user/key",
+					HashedKey:            "some/user/key",
+					ArchiveFile:          "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
+					AlternateArchiveFile: "..\\..\\cache\\dir\\7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917\\cache.zip",
 				},
 			},
 		},
@@ -4043,14 +4064,16 @@ func TestNewCacheConfig(t *testing.T) {
 			},
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
-					HumanKey:    "someFoo/someBar/baz",
-					HashedKey:   "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
-					ArchiveFile: "../../cache/dir/78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb/cache.zip",
+					HumanKey:             "someFoo/someBar/baz",
+					HashedKey:            "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
+					ArchiveFile:          "../../cache/dir/78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb/cache.zip",
+					AlternateArchiveFile: "../../cache/dir/someFoo/someBar/baz/cache.zip",
 				},
 				windows: {
-					HumanKey:    "someFoo/someBar/baz",
-					HashedKey:   "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
-					ArchiveFile: "..\\..\\cache\\dir\\78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb\\cache.zip",
+					HumanKey:             "someFoo/someBar/baz",
+					HashedKey:            "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
+					ArchiveFile:          "..\\..\\cache\\dir\\78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb\\cache.zip",
+					AlternateArchiveFile: "..\\..\\cache\\dir\\someFoo\\someBar\\baz\\cache.zip",
 				},
 			},
 		},
@@ -4067,14 +4090,16 @@ func TestNewCacheConfig(t *testing.T) {
 			},
 			expectedCacheConfig: map[string]cacheConfig{
 				fallback: {
-					HumanKey:    "someFoo/someBar/baz",
-					HashedKey:   "someFoo/someBar/baz",
-					ArchiveFile: "../../cache/dir/someFoo/someBar/baz/cache.zip",
+					HumanKey:             "someFoo/someBar/baz",
+					HashedKey:            "someFoo/someBar/baz",
+					ArchiveFile:          "../../cache/dir/someFoo/someBar/baz/cache.zip",
+					AlternateArchiveFile: "../../cache/dir/78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb/cache.zip",
 				},
 				windows: {
-					HumanKey:    "someFoo/someBar/baz",
-					HashedKey:   "someFoo/someBar/baz",
-					ArchiveFile: "..\\..\\cache\\dir\\someFoo\\someBar\\baz\\cache.zip",
+					HumanKey:             "someFoo/someBar/baz",
+					HashedKey:            "someFoo/someBar/baz",
+					ArchiveFile:          "..\\..\\cache\\dir\\someFoo\\someBar\\baz\\cache.zip",
+					AlternateArchiveFile: "..\\..\\cache\\dir\\78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb\\cache.zip",
 				},
 			},
 		},

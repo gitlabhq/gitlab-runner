@@ -133,6 +133,14 @@ func TestAdapter(t *testing.T) {
 				u := adapter.GetDownloadURL(t.Context())
 				require.NotNil(t, u)
 				assert.Contains(t, u.URL.String(), expectedURL)
+
+				headURL, err := adapter.(*gcsAdapter).presignURL(t.Context(), http.MethodHead, "")
+				require.NoError(t, err)
+				assert.Contains(t, headURL.String(), expectedURL)
+
+				hu := adapter.GetHeadURL(t.Context())
+				require.NotNil(t, hu)
+				assert.Contains(t, hu.URL.String(), expectedURL)
 			}
 
 			if putURL != nil {

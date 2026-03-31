@@ -33,6 +33,15 @@ func (a *gcsAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
 	return cache.PresignedURL{URL: u}
 }
 
+func (a *gcsAdapter) GetHeadURL(ctx context.Context) cache.PresignedURL {
+	u, err := a.presignURL(ctx, http.MethodHead, "")
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	return cache.PresignedURL{URL: u}
+}
+
 func (a *gcsAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	u, err := a.presignURL(ctx, http.MethodPut, "application/octet-stream")
 	if err != nil {

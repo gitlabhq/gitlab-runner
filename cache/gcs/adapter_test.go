@@ -360,6 +360,15 @@ func TestAdapterOperation(t *testing.T) {
 			testAdapterOperation(
 				t,
 				tc,
+				"GetHeadURL",
+				http.MethodHead,
+				"",
+				adapter,
+				a.GetHeadURL,
+			)
+			testAdapterOperation(
+				t,
+				tc,
 				"GetUploadURL",
 				http.MethodPut,
 				"application/octet-stream",

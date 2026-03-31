@@ -32,6 +32,16 @@ func (a *s3Adapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
 	return presignedURL
 }
 
+func (a *s3Adapter) GetHeadURL(ctx context.Context) cache.PresignedURL {
+	presignedURL, err := a.presignURL(ctx, http.MethodHead)
+	if err != nil {
+		logrus.WithError(err).Error("error while generating S3 pre-signed URL")
+		return cache.PresignedURL{}
+	}
+
+	return presignedURL
+}
+
 func (a *s3Adapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	presignedURL, err := a.presignURL(ctx, http.MethodPut)
 	if err != nil {
