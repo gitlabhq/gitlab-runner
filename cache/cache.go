@@ -15,6 +15,7 @@ import (
 type nopAdapter struct{}
 
 func (nopAdapter) GetDownloadURL(context.Context) PresignedURL { return PresignedURL{} }
+func (nopAdapter) GetHeadURL(context.Context) PresignedURL     { return PresignedURL{} }
 func (nopAdapter) WithMetadata(map[string]string)              {}
 func (nopAdapter) GetUploadURL(context.Context) PresignedURL   { return PresignedURL{} }
 func (nopAdapter) GetGoCloudURL(ctx context.Context, upload bool) (GoCloudURL, error) {

@@ -114,7 +114,7 @@ func testCacheOperation(
 		assert.Equal(t, tc.expectedURL, u.URL)
 
 		uploadHeaders := u.Headers
-		if operationName == "GetDownloadURL" {
+		if operationName == "GetDownloadURL" || operationName == "GetHeadURL" {
 			assert.Empty(t, uploadHeaders)
 		} else {
 			if tc.expectedUploadHeaders != nil {
@@ -179,6 +179,13 @@ func TestCacheOperation(t *testing.T) {
 			)
 			testCacheOperation(
 				t,
+				"GetHeadURL",
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetHeadURL(t.Context()) },
+				test,
+				defaultCacheFactory(),
+			)
+			testCacheOperation(
+				t,
 				"GetUploadURL",
 				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(t.Context()) },
 				test,
@@ -228,6 +235,13 @@ func TestCacheOperationEncryptionAES(t *testing.T) {
 				t,
 				"GetDownloadURL",
 				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(t.Context()) },
+				test,
+				defaultCacheFactoryEncryptionAES(),
+			)
+			testCacheOperation(
+				t,
+				"GetHeadURL",
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetHeadURL(t.Context()) },
 				test,
 				defaultCacheFactoryEncryptionAES(),
 			)
@@ -283,6 +297,13 @@ func TestCacheOperationEncryptionKMS(t *testing.T) {
 				t,
 				"GetDownloadURL",
 				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(t.Context()) },
+				test,
+				defaultCacheFactoryEncryptionKMS(),
+			)
+			testCacheOperation(
+				t,
+				"GetHeadURL",
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetHeadURL(t.Context()) },
 				test,
 				defaultCacheFactoryEncryptionKMS(),
 			)

@@ -154,6 +154,57 @@ func (_c *MockAdapter_GetGoCloudURL_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// GetHeadURL provides a mock function for the type MockAdapter
+func (_mock *MockAdapter) GetHeadURL(context1 context.Context) PresignedURL {
+	ret := _mock.Called(context1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetHeadURL")
+	}
+
+	var r0 PresignedURL
+	if returnFunc, ok := ret.Get(0).(func(context.Context) PresignedURL); ok {
+		r0 = returnFunc(context1)
+	} else {
+		r0 = ret.Get(0).(PresignedURL)
+	}
+	return r0
+}
+
+// MockAdapter_GetHeadURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetHeadURL'
+type MockAdapter_GetHeadURL_Call struct {
+	*mock.Call
+}
+
+// GetHeadURL is a helper method to define mock.On call
+//   - context1 context.Context
+func (_e *MockAdapter_Expecter) GetHeadURL(context1 interface{}) *MockAdapter_GetHeadURL_Call {
+	return &MockAdapter_GetHeadURL_Call{Call: _e.mock.On("GetHeadURL", context1)}
+}
+
+func (_c *MockAdapter_GetHeadURL_Call) Run(run func(context1 context.Context)) *MockAdapter_GetHeadURL_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAdapter_GetHeadURL_Call) Return(presignedURL PresignedURL) *MockAdapter_GetHeadURL_Call {
+	_c.Call.Return(presignedURL)
+	return _c
+}
+
+func (_c *MockAdapter_GetHeadURL_Call) RunAndReturn(run func(context1 context.Context) PresignedURL) *MockAdapter_GetHeadURL_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetUploadURL provides a mock function for the type MockAdapter
 func (_mock *MockAdapter) GetUploadURL(context1 context.Context) PresignedURL {
 	ret := _mock.Called(context1)

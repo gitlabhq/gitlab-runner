@@ -101,6 +101,21 @@ type cacheConfig struct {
 	HashedKey string
 	// the archive file path, where the local cache is (to be) stored.
 	ArchiveFile string
+	// the alternate archive file path for the "other" naming scheme.
+	// When FF_HASH_CACHE_KEYS is enabled, this is the unhashed path (used to upgrade an existing unhashed artifact).
+	// When FF_HASH_CACHE_KEYS is disabled, this is the hashed path (used to downgrade an existing hashed artifact).
+	AlternateArchiveFile string
+}
+
+// cacheAlternateKey returns the "other" archive key relative to the current FF_HASH_CACHE_KEYS setting.
+// When hashing is enabled, the alternate is the unhashed (human-readable) key.
+// When hashing is disabled, the alternate is the SHA256-hashed key.
+func cacheAlternateKey(humanKey string, hashEnabled bool) string {
+	sha256Key := fmt.Sprintf("%x", sha256.Sum256([]byte(humanKey)))
+	if hashEnabled {
+		return humanKey
+	}
+	return sha256Key
 }
 
 // newCacheConfig creates a cacheConfig for a provided build and userKey.
@@ -165,10 +180,19 @@ func newCacheConfig(build *common.Build, userKey string, keyChecks ...func(strin
 		return nil, warning, err
 	}
 
+	// alternateKey is always the "other" naming scheme relative to the current FF setting:
+	// - FF ON:  primary=hashed, alternate=unhashed → enables upgrade of old unhashed artifacts
+	// - FF OFF: primary=unhashed, alternate=hashed → enables downgrade of old hashed artifacts
+	alternateArchiveFile, err := getArchivePath(cacheAlternateKey(humanKey, build.IsFeatureFlagOn(featureflags.HashCacheKeys)))
+	if err != nil {
+		return nil, warning, err
+	}
+
 	cacheConfig := &cacheConfig{
-		HumanKey:    humanKey,
-		HashedKey:   hashedKey,
-		ArchiveFile: archiveFile,
+		HumanKey:             humanKey,
+		HashedKey:            hashedKey,
+		ArchiveFile:          archiveFile,
+		AlternateArchiveFile: alternateArchiveFile,
 	}
 
 	return cacheConfig, warning, nil
@@ -1378,6 +1402,7 @@ func (b *AbstractShell) addCacheUploadCommand(
 	args := []string{
 		"cache-archiver",
 		"--file", cacheConfig.ArchiveFile,
+		"--alternate-file", cacheConfig.AlternateArchiveFile,
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
@@ -1453,6 +1478,10 @@ func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey 
 		for _, value := range values {
 			uploadArgs = append(uploadArgs, "--header", fmt.Sprintf("%s: %s", key, value))
 		}
+	}
+
+	if headURL := adapter.GetHeadURL(ctx); headURL.URL != nil {
+		uploadArgs = append(uploadArgs, "--check-url", headURL.URL.String())
 	}
 
 	return uploadArgs, nil, err

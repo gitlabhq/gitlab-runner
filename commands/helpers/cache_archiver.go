@@ -3,8 +3,10 @@ package helpers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -33,7 +35,9 @@ type CacheArchiverCommand struct {
 	meter.TransferMeterCommand
 
 	File                   string   `long:"file" description:"The path to file"`
+	AlternateFile          string   `long:"alternate-file" description:"(temporary) Alternate local cache file path (e.g. unhashed name) to rename to --file if --file does not exist"`
 	URL                    string   `long:"url" description:"URL of remote cache resource (pre-signed URL)"`
+	CheckURL               string   `long:"check-url" description:"(temporary) Pre-signed HEAD URL to check whether the primary cache object already exists"`
 	GoCloudURL             string   `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
 	Timeout                int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
 	Headers                []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
@@ -221,10 +225,44 @@ func (c *CacheArchiverCommand) createZipFile(filename string) (int64, error) {
 	return info.Size(), os.Rename(f.Name(), filename)
 }
 
+func (c *CacheArchiverCommand) tryRenameAlternateFile() {
+	if c.AlternateFile == "" || c.AlternateFile == c.File {
+		return
+	}
+
+	_, err := os.Stat(c.File)
+	if err == nil {
+		logrus.Debugln("Primary cache file already exists locally, skipping rename from alternate")
+		return
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		logrus.WithError(err).Warningln("Failed to stat primary cache file")
+		return
+	}
+
+	if _, err := os.Stat(c.AlternateFile); err != nil {
+		logrus.Debugln("Alternate cache file not found locally, nothing to rename")
+		return
+	}
+
+	if err := os.MkdirAll(filepath.Dir(c.File), 0o700); err != nil {
+		logrus.WithError(err).Warningln("Failed to create directory for cache file rename")
+		return
+	}
+
+	if err := os.Rename(c.AlternateFile, c.File); err != nil {
+		logrus.WithError(err).Warningln("Failed to rename alternate cache file to primary")
+		return
+	}
+
+	logrus.Infoln("Renamed alternate cache file to primary")
+}
+
 func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	log.SetRunnerFormatter()
 
 	c.normalizeArgs()
+	c.tryRenameAlternateFile()
 
 	// Enumerate files
 	err := c.enumerate()
@@ -240,6 +278,17 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 
 	// Check if list of files changed
 	if !c.isFileChanged(c.File) {
+		if c.AlternateFile != c.File {
+			// AlternateFile is set (FF_HASH_CACHE_KEYS compatibility mode): the primary
+			// archive may have been downloaded from the alternate URL by the extractor,
+			// meaning the primary remote URL does not yet have an object. Upload the
+			// existing archive to ensure the primary URL is populated.
+			// This handles both transition directions:
+			//   FF false→true: primary=hashed, alternate=unhashed
+			//   FF true→false: primary=unhashed, alternate=hashed
+			c.uploadExistingArchiveIfNeeded()
+			return
+		}
 		logrus.Infoln("Archive is up to date!")
 		return
 	}
@@ -278,6 +327,81 @@ func (c *CacheArchiverCommand) normalizeArgs() {
 			c.Exclude[idx] = path
 		}
 	}
+}
+
+// uploadExistingArchiveIfNeeded uploads the local cache archive to the primary remote URL
+// if the archive exists locally and the primary remote does not yet have an object.
+func (c *CacheArchiverCommand) uploadExistingArchiveIfNeeded() {
+	fi, err := os.Stat(c.File)
+	if err != nil {
+		return
+	}
+	if c.primaryRemoteExists() {
+		logrus.Infoln("Primary cache already exists remotely, skipping upload")
+	} else {
+		logrus.Infoln("Primary cache does not exist remotely, uploading existing archive")
+		c.uploadArchiveIfNeeded(fi.Size())
+	}
+}
+
+// primaryRemoteExists reports whether the primary remote cache object already exists.
+// Returns true only when the object is confirmed present; returns false on any error or absence.
+func (c *CacheArchiverCommand) primaryRemoteExists() bool {
+	if c.GoCloudURL != "" {
+		return c.primaryGoCloudExists()
+	}
+	if c.CheckURL != "" {
+		return c.primaryPresignedExists()
+	}
+	return false
+}
+
+func (c *CacheArchiverCommand) primaryPresignedExists() bool {
+	resp, err := c.getClient().Head(c.CheckURL)
+	if err != nil {
+		logrus.WithError(err).Warningln("Failed to check primary cache existence via HEAD request, assuming absent")
+		return false
+	}
+	defer func() { _ = resp.Body.Close() }()
+	exists := resp.StatusCode == http.StatusOK
+	logrus.WithField("status", resp.StatusCode).Debugln("Primary cache HEAD request completed")
+	return exists
+}
+
+func (c *CacheArchiverCommand) primaryGoCloudExists() bool {
+	if c.mux == nil {
+		c.mux = blob.DefaultURLMux()
+	}
+
+	ctx := context.Background()
+
+	if err := loadEnvFile(c.EnvFile); err != nil {
+		return false
+	}
+
+	u, err := url.Parse(c.GoCloudURL)
+	if err != nil {
+		return false
+	}
+
+	objectName := strings.TrimLeft(u.Path, "/")
+	if objectName == "" {
+		return false
+	}
+
+	b, err := c.mux.OpenBucket(ctx, c.GoCloudURL)
+	if err != nil {
+		return false
+	}
+	defer b.Close()
+
+	_, err = b.Attributes(ctx, objectName)
+	if err != nil {
+		logrus.WithField("object", objectName).Debugln("Primary cache object not found in remote storage")
+		return false
+	}
+	logrus.WithField("object", objectName).Debugln("Primary cache object found in remote storage")
+	return true
 }
 
 func (c *CacheArchiverCommand) uploadArchiveIfNeeded(size int64) {

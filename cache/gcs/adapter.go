@@ -32,6 +32,10 @@ func (a *gcsAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
 	return cache.PresignedURL{URL: a.presignURL(ctx, http.MethodGet, "")}
 }
 
+func (a *gcsAdapter) GetHeadURL(ctx context.Context) cache.PresignedURL {
+	return cache.PresignedURL{URL: a.presignURL(ctx, http.MethodHead, "")}
+}
+
 func (a *gcsAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	return cache.PresignedURL{
 		URL:     a.presignURL(ctx, http.MethodPut, "application/octet-stream"),

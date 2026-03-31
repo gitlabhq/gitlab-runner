@@ -32,6 +32,11 @@ func (a *azureAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
 	return cache.PresignedURL{}
 }
 
+// GetHeadURL returns a blank value because we use GoCloud to handle existence checks.
+func (a *azureAdapter) GetHeadURL(ctx context.Context) cache.PresignedURL {
+	return cache.PresignedURL{}
+}
+
 // GetUploadURL returns a blank value because uploading via a pre-signed URL is
 // limited to 5 MB (https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob-from-url?tabs=microsoft-entra-id).
 // We depend on GoCloud to handle the upload.

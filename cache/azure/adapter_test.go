@@ -209,6 +209,7 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 
 			ctx := t.Context()
 			assert.Nil(t, adapter.GetDownloadURL(ctx).URL)
+			assert.Nil(t, adapter.GetHeadURL(ctx).URL)
 			assert.Nil(t, adapter.GetUploadURL(ctx).URL)
 
 			testGoCloudURLWithInvalidConfig(t, "GetGoCloudURL", tc, adapter, a.GetGoCloudURL, tc.expectedErrorMsg)
@@ -302,6 +303,7 @@ func TestAdapterOperation(t *testing.T) {
 
 			ctx := t.Context()
 			assert.Nil(t, adapter.GetDownloadURL(ctx).URL)
+			assert.Nil(t, adapter.GetHeadURL(ctx).URL)
 			assert.Nil(t, adapter.GetUploadURL(ctx).URL)
 		})
 	}

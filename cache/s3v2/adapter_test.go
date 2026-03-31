@@ -165,6 +165,13 @@ func TestCacheOperation(t *testing.T) {
 			)
 			testCacheOperation(
 				t,
+				"GetHeadURL",
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetHeadURL(t.Context()) },
+				test,
+				defaultCacheFactory(),
+			)
+			testCacheOperation(
+				t,
 				"GetUploadURL",
 				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(t.Context()) },
 				test,

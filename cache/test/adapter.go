@@ -21,6 +21,10 @@ func (t *testAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
 	return cache.PresignedURL{URL: t.getURL("download")}
 }
 
+func (t *testAdapter) GetHeadURL(ctx context.Context) cache.PresignedURL {
+	return cache.PresignedURL{URL: t.getURL("head")}
+}
+
 func (t *testAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	return cache.PresignedURL{URL: t.getURL("upload"), Headers: t.GetUploadHeaders()}
 }
