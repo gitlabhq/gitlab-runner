@@ -1,17 +1,13 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
 title: GitLab Runnerの機能フラグ
 ---
 
-{{< alert type="warning" >}}
+> [!warning]デフォルトで無効になっている機能を有効にすると、データ破損、安定性の低下、パフォーマンスの低下、およびセキュリティの問題が発生する可能性があります。機能フラグを有効にする前に、有効化に伴うリスクを認識しておく必要があります。詳細については、[開発中の機能を有効にする際のリスク](https://docs.gitlab.com/administration/feature_flags/#risks-when-enabling-features-still-in-development)を参照してください。
 
-デフォルトで無効になっている機能を有効にすると、データの破損、安定性の低下、パフォーマンスの低下、およびセキュリティの問題が発生する可能性があります。機能フラグを有効にする前に、有効化に伴うリスクを認識しておく必要があります。詳細については、[開発中の機能を有効にする際のリスク](https://docs.gitlab.com/administration/feature_flags/#risks-when-enabling-features-still-in-development)を参照してください。
-
-{{< /alert >}}
-
-機能フラグは、特定の機能を有効または無効を切り替えることができる仕組みです。機能フラグは通常、次の機能に対して使用されます。
+機能フラグは、特定の機能を有効または無効を切り替えることができる仕組みです。機能フラグは通常、次の機能に対して使用されます:
 
 - ボランティアがテストできるベータ機能のうち、すべてのユーザーに対して有効にできる状態ではない機能。
 
@@ -19,11 +15,11 @@ title: GitLab Runnerの機能フラグ
 
 - 近い将来に機能の非推奨化または機能の削除につながる破壊的な変更。
 
-  製品の進化に伴い、機能が変更されたり、完全に削除されたりします。多くの場合既知のバグは修正されますが、ユーザーに対して影響しているバグに対する回避策がすでに判明していることがあります。ユーザーに標準化されたバグ修正を採用することを強制すると、カスタマイズされた設定で他の問題が発生する可能性があります。
+  製品の進化に伴い、機能が変更または完全に削除されることがあります。多くの場合既知のバグは修正されますが、ユーザーに対して影響しているバグに対する回避策がすでに判明していることがあります。ユーザーに標準化されたバグ修正を採用することを強制すると、カスタマイズされた設定で他の問題が発生する可能性があります。
 
   そのような場合、機能フラグを使用して、オンデマンドで古い動作から新しい動作に切り替えることができます。これにより、ユーザーは製品の新しいバージョンを採用し、古い動作から新しい動作へのスムーズで永続的な移行を計画するための時間を確保できます。
 
-機能フラグは、環境変数を使用して切り替えます。次のように設定します。
+機能フラグは、環境変数を使用して切り替えます。次のように設定します:
 
 - 機能フラグを有効にするには、対応する環境変数を`"true"`または`1`に設定します。
 - 機能フラグを無効にするには、対応する環境変数を`"false"`または`0`に設定します。
@@ -43,16 +39,16 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 |--------------|---------------|------------|--------------------|-------------|
 | `FF_NETWORK_PER_BUILD` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | `docker` executorを使用したDockerの[ビルドごとのネットワーク](../executors/docker.md#network-configurations)の作成を有効にします。 |
 | `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | `false`に設定すると、[#4119](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)などのイシューを解決するために、`exec`によるリモートKubernetesコマンドの実行を無効にし、代わりに`attach`を使用します。 |
-| `FF_USE_DIRECT_DOWNLOAD` | `true` | {{< icon name="dotted-circle" >}} いいえ |  | `true`に設定すると、Runnerは最初にGitLabを介してプロキシする代わりに、すべてアーティファクトを直接ダウンロードしようとします。有効にすると、GitLabでオブジェクトストレージが有効になっている場合に、オブジェクトストレージのTLS証明書の検証で発生する問題が原因で、ダウンロードが失敗する可能性があります。[自己署名証明書またはカスタム認証局](tls-self-signed.md)を参照してください |
-| `FF_SKIP_NOOP_BUILD_STAGES` | `true` | {{< icon name="dotted-circle" >}} いいえ |  | `false`に設定すると、実行しても効果がない場合でも、すべてのビルドステージが実行されます |
-| `FF_USE_FASTZIP` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | Fastzipは、キャッシュ/アーティファクトのアーカイブと解凍を行うための高性能アーカイバーです |
+| `FF_USE_DIRECT_DOWNLOAD` | `true` | {{< icon name="dotted-circle" >}} いいえ |  | `true`に設定すると、Runnerは最初にGitLabを介してプロキシする代わりに、すべてアーティファクトを直接ダウンロードしようとします。有効にすると、GitLabでオブジェクトストレージが有効になっている場合に、オブジェクトストレージのTLS証明書の検証で発生する問題が原因で、ダウンロードが失敗する可能性があります。[自己署名証明書またはカスタム認証局](tls-self-signed.md)を参照してください。 |
+| `FF_SKIP_NOOP_BUILD_STAGES` | `true` | {{< icon name="dotted-circle" >}} いいえ |  | `false`に設定すると、実行しても効果がない場合でも、すべてのビルドステージが実行されます。 |
+| `FF_USE_FASTZIP` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | Fastzipは、キャッシュ/アーティファクトのアーカイブと解凍を行うための高性能アーカイバーです。 |
 | `FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、`docker` executorで実行されるジョブに対する`umask 0000`呼び出しの使用が削除されます。代わりに、Runnerはビルドコンテナで使用されるイメージに対して設定されたユーザーのUIDとGIDの検出を試み、（ソースの更新、キャッシュの復元、およびアーティファクトのダウンロード後に）定義済みのコンテナで`chmod`コマンドを実行して、作業ディレクトリとファイルの所有権を変更します。この機能フラグを使用するには、POSIXユーティリティ`id`がビルドイメージにインストールされ、動作可能である必要があります。RunnerはUIDとGIDを取得するために、オプション`-u`と`-g`を指定して`id`を実行します。 |
 | `FF_ENABLE_BASH_EXIT_CODE_CHECK` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、bashスクリプトは`set -e`のみに依存しませんが、各スクリプトコマンドの実行後にゼロ以外の終了コードを確認します。 |
 | `FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | GitLab Runner 16.10以降では、デフォルトは`false`です。GitLab Runner 16.9以前では、デフォルトは`true`です。無効にすると、WindowsでRunnerが作成するプロセス（Shell executorとカスタムexecutor）が、追加のセットアップを使用して作成され、これによりプロセスの終了が改善されます。`true`に設定すると、従来のプロセスセットアップが使用されます。Windows Runnerを正常にドレインするには、この機能フラグを`false`に設定する必要があります。 |
 | `FF_USE_NEW_BASH_EVAL_STRATEGY` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | `true`に設定すると、実行されたスクリプトの終了コードを適切に検出できるように、Bash `eval`呼び出しがサブShellで実行されます。 |
 | `FF_USE_POWERSHELL_PATH_RESOLVER` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、RunnerではなくPowerShellが、Runnerがホストされている場所に固有のOS特有のファイルパス関数を使用して、パス名を解決します。 |
 | `FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、ログのトレース強制送信間隔は、トレース更新間隔に基づいて動的に調整されます。 |
-| `FF_SCRIPT_SECTIONS` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、`.gitlab-ci.yml`ファイルの各スクリプト行がジョブ出力で折りたたみ可能なセクションにまとめられ、各行の期間が表示されます。コマンドが複数行にわたる場合、完全なコマンドがジョブログ出力ターミナルに表示されます。 |
+| `FF_SCRIPT_SECTIONS` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、複数行のスクリプトコマンドはジョブログで折りたたみ可能なセクションとして表示され、1行のコマンドは`$`プレフィックスを付けて直接出力されます。これは既知のイシューです。詳細については、[イシュー39294](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39294)を参照してください。 |
 | `FF_ENABLE_JOB_CLEANUP` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、プロジェクトディレクトリがビルドの最後にクリーンアップされます。`GIT_CLONE`を使用すると、プロジェクトディレクトリ全体が削除されます。`GIT_FETCH`を使用すると、一連のGit `clean`コマンドが発行されます。 |
 | `FF_KUBERNETES_HONOR_ENTRYPOINT` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`がtrueに設定されていない場合、イメージのDockerエントリポイントが実行されます。 |
 | `FF_POSIXLY_CORRECT_ESCAPES` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、[`bash`スタイルのANSI-Cの引用符の使い方](https://www.gnu.org/software/bash/manual/html_node/Quoting.html)ではなく[POSIX Shellエスケープ](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02)が使用されます。ジョブ環境がPOSIX準拠のShellを使用している場合は、これを有効にする必要があります。 |
@@ -84,10 +80,12 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_EXPONENTIAL_BACKOFF_STAGE_RETRY` | `true` | {{< icon name="dotted-circle" >}} いいえ |  | これが有効の場合、`GET_SOURCES_ATTEMPTS`、`ARTIFACT_DOWNLOAD_ATTEMPTS`、`RESTORE_CACHE_ATTEMPTS`、`EXECUTOR_JOB_SECTION_ATTEMPTS`の再試行では、指数バックオフ（5秒～5分）が使用されます。 |
 | `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` | `true` | {{< icon name="dotted-circle" >}} いいえ |  | これが有効の場合、`request_concurrency`の設定が最大並行処理値になり、同時リクエスト数はジョブリクエストの成功率に基づいて調整されます。 |
 | `FF_USE_GITALY_CORRELATION_ID` | `true` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、すべてのGit HTTPリクエストに`X-Gitaly-Correlation-ID`ヘッダーが追加されます。無効にすると、Git操作はGitaly Correlation IDヘッダーなしで実行されます。 |
+| `FF_USE_GIT_PROACTIVE_AUTH` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、Runnerは`http.proactiveAuth=basic` Gitの設定オプションを`git clone`および`git fetch`コマンドに渡します。その結果、Gitは`401`応答を待つ代わりに、認証情報を積極的に送信します。この動作により、パブリックプロジェクトに対してユーザー名がGitalyに伝播されることが保証されます。 |
 | `FF_HASH_CACHE_KEYS` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | GitLab Runnerがキャッシュを作成または抽出する際に、ローカルと分散キャッシュ（S3など）の両方に対して、使用前にキャッシュキーをハッシュします（SHA256）。詳細については、[キャッシュキーの処理](advanced-configuration.md#cache-key-handling)を参照してください。 |
-| `FF_ENABLE_JOB_INPUTS_INTERPOLATION` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、ジョブの入力が補間されます。詳細については、[&17833](https://gitlab.com/groups/gitlab-org/-/epics/17833)を参照してください。 |
-| `FF_USE_JOB_ROUTER` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | GitLab RunnerがGitLabに直接接続するのではなく、ジョブRouterに接続してジョブをフェッチするようにします。 |
-| `FF_SCRIPT_TO_STEP_MIGRATION` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、ユーザースクリプトはステップに移行され、ステップランナーで実行されます。 |
+| `FF_ENABLE_JOB_INPUTS_INTERPOLATION` | `true` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、ジョブの入力が補間されます。詳細については、[&17833](https://gitlab.com/groups/gitlab-org/-/epics/17833)を参照してください。 |
+| `FF_USE_JOB_ROUTER` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | GitLab RunnerがGitLabに直接接続するのではなく、ジョブルーターに接続してジョブをフェッチするようにします。 |
+| `FF_SCRIPT_TO_STEP_MIGRATION` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、ユーザースクリプトはステップに移行され、ステップRunnerで実行されます。 |
+| `FF_CONCRETE` | `false` | {{< icon name="dotted-circle" >}} いいえ |  | 有効にすると、従来のスクリプト実行はstep-runnerに移行され、step-runnerで実行されます。 |
 
 <!-- feature_flags_list_end -->
 
@@ -115,7 +113,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 
 ## Runner環境変数で機能フラグを有効にする {#enable-feature-flag-in-runner-environment-variables}
 
-Runnerが実行するすべてのジョブで機能を有効にするには、[Runner設定](advanced-configuration.md)で機能フラグを[`environment`](advanced-configuration.md#the-runners-section)変数として指定します。
+Runnerが実行するすべてのジョブで機能を有効にするには、[Runner設定](advanced-configuration.md)で機能フラグを[`environment`](advanced-configuration.md#the-runners-section)変数として指定します:
 
 ```toml
 [[runners]]
