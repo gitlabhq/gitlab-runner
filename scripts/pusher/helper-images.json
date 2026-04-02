@@ -111,6 +111,9 @@
         "windows-servercore-ltsc2022-x86_64": [
             "x86_64-%-servercore21H2"
         ],
+        "windows-servercore-ltsc2025-x86_64": [
+            "x86_64-%-servercore24H2"
+        ],
         "windows-servercore-ltsc2025-arm64": [
             "x86_64-binary-arm64-platform-%-servercore24H2"
         ],
