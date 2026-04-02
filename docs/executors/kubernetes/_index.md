@@ -1032,6 +1032,10 @@ Use the following options:
 | `run_as_user`         | `int`      | No       | The UID to run the entry point of the container process. |
 | `supplemental_groups` | `int` list | No       | A list of groups applied to the first process run in each container, in addition to the container's primary GID. |
 | `selinux_type`        | `string`   | No       | The SELinux type label that applies to all containers in a pod. |
+| `seccomp_profile.type` | string | No | The seccomp profile type. Valid values: `RuntimeDefault`, `Localhost`, `Unconfined`. |
+| `seccomp_profile.localhost_profile` | string | No | Path to a seccomp profile on the node. Required when type is `Localhost`. |
+| `app_armor_profile.type` | string | No | The AppArmor profile type. Valid values: `RuntimeDefault`, `Localhost`, `Unconfined`. Requires Kubernetes 1.30 or later. |
+| `app_armor_profile.localhost_profile` | string | No | The name of an AppArmor profile on the node. Required when type is `Localhost`. |
 
 Example of a pod security context in the `config.toml`:
 
@@ -1075,6 +1079,10 @@ Use the following options:
 | `capabilities.add`  | string list | No       | The capabilities to add when running the container. |
 | `capabilities.drop` | string list | No       | The capabilities to drop when running the container. |
 | `selinux_type`      | string      | No       | The SELinux type label that is associated with the container process. |
+| `seccomp_profile.type` | string | No | The seccomp profile type. Valid values: `RuntimeDefault`, `Localhost`, `Unconfined`. |
+| `seccomp_profile.localhost_profile` | string | No | Path to a seccomp profile on the node. Required when type is `Localhost`. |
+| `app_armor_profile.type` | string | No | The AppArmor profile type. Valid values: `RuntimeDefault`, `Localhost`, `Unconfined`. Requires Kubernetes 1.30 or later. |
+| `app_armor_profile.localhost_profile` | string | No | The name of an AppArmor profile on the node. Required when type is `Localhost`. |
 
 In the following example in the `config.toml`, the security context configuration:
 
@@ -1110,6 +1118,63 @@ check_interval = 30
     [runners.kubernetes.service_container_security_context]
       run_as_user = 1000
       run_as_group = 1000
+```
+
+### Set seccomp and AppArmor profiles
+
+You can configure [seccomp](https://kubernetes.io/docs/tutorials/security/seccomp/) and
+[AppArmor](https://kubernetes.io/docs/tutorials/security/apparmor/) profiles for build pods
+using the nested `seccomp_profile` and `app_armor_profile` configuration sections.
+
+These fields replace the deprecated annotation-based approach
+(`container.apparmor.security.beta.kubernetes.io` and `seccomp.security.alpha.kubernetes.io`
+annotations) with native Kubernetes API fields.
+
+| Field | Minimum Kubernetes Version |
+|-------|---------------------------|
+| `seccomp_profile` | 1.19 (GA) |
+| `app_armor_profile` | 1.30 (GA) |
+
+In the following example, seccomp and AppArmor profiles are set to `Unconfined`
+for the build container to enable rootless image building (for example, with BuildKit):
+
+```toml
+concurrent = 4
+check_interval = 30
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    [runners.kubernetes.pod_security_context]
+      run_as_non_root = true
+      run_as_user = 1001
+      [runners.kubernetes.pod_security_context.seccomp_profile]
+        type = "RuntimeDefault"
+    [runners.kubernetes.build_container_security_context]
+      run_as_user = 1001
+      run_as_group = 1001
+      [runners.kubernetes.build_container_security_context.seccomp_profile]
+        type = "Unconfined"
+      [runners.kubernetes.build_container_security_context.app_armor_profile]
+        type = "Unconfined"
+```
+
+The `seccomp_profile` and `app_armor_profile` sections are available in both
+`pod_security_context` and all container security contexts
+(`build_container_security_context`, `helper_container_security_context`,
+`service_container_security_context`, `init_permissions_container_security_context`).
+
+For `Localhost` type profiles, specify the profile path:
+
+```toml
+[runners.kubernetes.build_container_security_context.seccomp_profile]
+  type = "Localhost"
+  localhost_profile = "profiles/my-seccomp-profile.json"
+
+[runners.kubernetes.build_container_security_context.app_armor_profile]
+  type = "Localhost"
+  localhost_profile = "my-apparmor-profile"
 ```
 
 ### Set a pull policy
