@@ -149,6 +149,7 @@ target "windows" {
       { version = "nanoserver:ltsc2022",       arch = "amd64" },
       { version = "servercore:ltsc2019",       arch = "amd64" },
       { version = "servercore:ltsc2022",       arch = "amd64" },
+      { version = "servercore:ltsc2025",       arch = "amd64" },
       { version = "servercore:ltsc2025-arm64", arch = "arm64" }
     ]
   }
