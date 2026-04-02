@@ -1654,6 +1654,148 @@ func TestContainerSecurityContext(t *testing.T) {
 				}
 			},
 		},
+		"seccomp profile - Unconfined": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					SeccompProfile: &KubernetesSeccompProfile{Type: "Unconfined"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					SeccompProfile: &api.SeccompProfile{Type: api.SeccompProfileTypeUnconfined},
+				}
+			},
+		},
+		"seccomp profile - RuntimeDefault": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					SeccompProfile: &KubernetesSeccompProfile{Type: "RuntimeDefault"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					SeccompProfile: &api.SeccompProfile{Type: api.SeccompProfileTypeRuntimeDefault},
+				}
+			},
+		},
+		"seccomp profile - Localhost with profile": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					SeccompProfile: &KubernetesSeccompProfile{Type: "Localhost", LocalhostProfile: "profiles/my-profile.json"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				localhostProfile := "profiles/my-profile.json"
+				return &api.SecurityContext{
+					SeccompProfile: &api.SeccompProfile{
+						Type:             api.SeccompProfileTypeLocalhost,
+						LocalhostProfile: &localhostProfile,
+					},
+				}
+			},
+		},
+		"seccomp profile - Localhost without profile": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					SeccompProfile: &KubernetesSeccompProfile{Type: "Localhost"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					SeccompProfile: nil,
+				}
+			},
+		},
+		"seccomp profile - invalid type": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					SeccompProfile: &KubernetesSeccompProfile{Type: "InvalidValue"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					SeccompProfile: nil,
+				}
+			},
+		},
+		"apparmor profile - Unconfined": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					AppArmorProfile: &KubernetesAppArmorProfile{Type: "Unconfined"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					AppArmorProfile: &api.AppArmorProfile{Type: api.AppArmorProfileTypeUnconfined},
+				}
+			},
+		},
+		"apparmor profile - RuntimeDefault": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					AppArmorProfile: &KubernetesAppArmorProfile{Type: "RuntimeDefault"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					AppArmorProfile: &api.AppArmorProfile{Type: api.AppArmorProfileTypeRuntimeDefault},
+				}
+			},
+		},
+		"apparmor profile - Localhost with profile": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					AppArmorProfile: &KubernetesAppArmorProfile{Type: "Localhost", LocalhostProfile: "my-apparmor-profile"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				localhostProfile := "my-apparmor-profile"
+				return &api.SecurityContext{
+					AppArmorProfile: &api.AppArmorProfile{
+						Type:             api.AppArmorProfileTypeLocalhost,
+						LocalhostProfile: &localhostProfile,
+					},
+				}
+			},
+		},
+		"apparmor profile - Localhost without profile": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					AppArmorProfile: &KubernetesAppArmorProfile{Type: "Localhost"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					AppArmorProfile: nil,
+				}
+			},
+		},
+		"apparmor profile - invalid type": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					AppArmorProfile: &KubernetesAppArmorProfile{Type: "BadValue"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					AppArmorProfile: nil,
+				}
+			},
+		},
+		"seccomp and apparmor combined": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					SeccompProfile:  &KubernetesSeccompProfile{Type: "Unconfined"},
+					AppArmorProfile: &KubernetesAppArmorProfile{Type: "Unconfined"},
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					SeccompProfile:  &api.SeccompProfile{Type: api.SeccompProfileTypeUnconfined},
+					AppArmorProfile: &api.AppArmorProfile{Type: api.AppArmorProfileTypeUnconfined},
+				}
+			},
+		},
 	}
 
 	for tn, tt := range tests {
@@ -1662,6 +1804,76 @@ func TestContainerSecurityContext(t *testing.T) {
 			scExpected := tt.getExpectedContainerSecurityContext()
 			scActual := tt.getSecurityContext(config)
 			assert.Equal(t, scExpected, scActual)
+		})
+	}
+}
+
+func TestPodSecurityContextSeccompAppArmor(t *testing.T) {
+	tests := map[string]struct {
+		podSecurityContext         KubernetesPodSecurityContext
+		expectedPodSecurityContext *api.PodSecurityContext
+	}{
+		"no seccomp or apparmor set": {
+			podSecurityContext:         KubernetesPodSecurityContext{},
+			expectedPodSecurityContext: nil,
+		},
+		"seccomp profile - Unconfined at pod level": {
+			podSecurityContext: KubernetesPodSecurityContext{
+				SeccompProfile: &KubernetesSeccompProfile{Type: "Unconfined"},
+			},
+			expectedPodSecurityContext: &api.PodSecurityContext{
+				SeccompProfile: &api.SeccompProfile{Type: api.SeccompProfileTypeUnconfined},
+			},
+		},
+		"seccomp profile - RuntimeDefault at pod level": {
+			podSecurityContext: KubernetesPodSecurityContext{
+				SeccompProfile: &KubernetesSeccompProfile{Type: "RuntimeDefault"},
+			},
+			expectedPodSecurityContext: &api.PodSecurityContext{
+				SeccompProfile: &api.SeccompProfile{Type: api.SeccompProfileTypeRuntimeDefault},
+			},
+		},
+		"seccomp profile - Localhost at pod level": {
+			podSecurityContext: KubernetesPodSecurityContext{
+				SeccompProfile: &KubernetesSeccompProfile{Type: "Localhost", LocalhostProfile: "profiles/pod-profile.json"},
+			},
+			expectedPodSecurityContext: func() *api.PodSecurityContext {
+				localhostProfile := "profiles/pod-profile.json"
+				return &api.PodSecurityContext{
+					SeccompProfile: &api.SeccompProfile{
+						Type:             api.SeccompProfileTypeLocalhost,
+						LocalhostProfile: &localhostProfile,
+					},
+				}
+			}(),
+		},
+		"apparmor profile - Unconfined at pod level": {
+			podSecurityContext: KubernetesPodSecurityContext{
+				AppArmorProfile: &KubernetesAppArmorProfile{Type: "Unconfined"},
+			},
+			expectedPodSecurityContext: &api.PodSecurityContext{
+				AppArmorProfile: &api.AppArmorProfile{Type: api.AppArmorProfileTypeUnconfined},
+			},
+		},
+		"seccomp and apparmor combined at pod level": {
+			podSecurityContext: KubernetesPodSecurityContext{
+				SeccompProfile:  &KubernetesSeccompProfile{Type: "RuntimeDefault"},
+				AppArmorProfile: &KubernetesAppArmorProfile{Type: "Unconfined"},
+			},
+			expectedPodSecurityContext: &api.PodSecurityContext{
+				SeccompProfile:  &api.SeccompProfile{Type: api.SeccompProfileTypeRuntimeDefault},
+				AppArmorProfile: &api.AppArmorProfile{Type: api.AppArmorProfileTypeUnconfined},
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			config := &KubernetesConfig{
+				PodSecurityContext: tt.podSecurityContext,
+			}
+			actual := config.GetPodSecurityContext()
+			assert.Equal(t, tt.expectedPodSecurityContext, actual)
 		})
 	}
 }

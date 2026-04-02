@@ -878,13 +878,25 @@ type KubernetesCSI struct {
 	VolumeAttributes map[string]string `toml:"volume_attributes,omitempty" json:",omitempty" description:"Key-value pair mapping for attributes of the CSI volume."`
 }
 
+type KubernetesSeccompProfile struct {
+	Type             string `toml:"type,omitempty" json:",omitempty" long:"type" env:"@TYPE" description:"The seccomp profile type. Valid values: RuntimeDefault, Localhost, Unconfined"`
+	LocalhostProfile string `toml:"localhost_profile,omitempty" json:",omitempty" long:"localhost-profile" env:"@LOCALHOST_PROFILE" description:"The path to a seccomp profile on the node. Required when type is Localhost"`
+}
+
+type KubernetesAppArmorProfile struct {
+	Type             string `toml:"type,omitempty" json:",omitempty" long:"type" env:"@TYPE" description:"The AppArmor profile type. Valid values: RuntimeDefault, Localhost, Unconfined. Requires Kubernetes >= 1.30"`
+	LocalhostProfile string `toml:"localhost_profile,omitempty" json:",omitempty" long:"localhost-profile" env:"@LOCALHOST_PROFILE" description:"The name of an AppArmor profile on the node. Required when type is Localhost"`
+}
+
 type KubernetesPodSecurityContext struct {
-	FSGroup            *int64  `toml:"fs_group,omitempty" json:",omitempty" long:"fs-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_FS_GROUP" description:"A special supplemental group that applies to all containers in a pod"`
-	RunAsGroup         *int64  `toml:"run_as_group,omitempty" json:",omitempty" long:"run-as-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_GROUP" description:"The GID to run the entrypoint of the container process"`
-	RunAsNonRoot       *bool   `toml:"run_as_non_root,omitempty" json:",omitempty" long:"run-as-non-root" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_NON_ROOT" description:"Indicates that the container must run as a non-root user"`
-	RunAsUser          *int64  `toml:"run_as_user,omitempty" json:",omitempty" long:"run-as-user" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_USER" description:"The UID to run the entrypoint of the container process"`
-	SupplementalGroups []int64 `toml:"supplemental_groups,omitempty" json:",omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
-	SELinuxType        string  `toml:"selinux_type,omitempty" long:"selinux-type" description:"The SELinux type label that applies to all containers in a pod"`
+	FSGroup            *int64                     `toml:"fs_group,omitempty" json:",omitempty" long:"fs-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_FS_GROUP" description:"A special supplemental group that applies to all containers in a pod"`
+	RunAsGroup         *int64                     `toml:"run_as_group,omitempty" json:",omitempty" long:"run-as-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_GROUP" description:"The GID to run the entrypoint of the container process"`
+	RunAsNonRoot       *bool                      `toml:"run_as_non_root,omitempty" json:",omitempty" long:"run-as-non-root" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_NON_ROOT" description:"Indicates that the container must run as a non-root user"`
+	RunAsUser          *int64                     `toml:"run_as_user,omitempty" json:",omitempty" long:"run-as-user" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_USER" description:"The UID to run the entrypoint of the container process"`
+	SupplementalGroups []int64                    `toml:"supplemental_groups,omitempty" json:",omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
+	SELinuxType        string                     `toml:"selinux_type,omitempty" long:"selinux-type" description:"The SELinux type label that applies to all containers in a pod"`
+	SeccompProfile     *KubernetesSeccompProfile  `toml:"seccomp_profile,omitempty" json:",omitempty" namespace:"seccomp_profile" description:"The seccomp profile for all containers in a pod"`
+	AppArmorProfile    *KubernetesAppArmorProfile `toml:"app_armor_profile,omitempty" json:",omitempty" namespace:"app_armor_profile" description:"The AppArmor profile for all containers in a pod. Requires Kubernetes >= 1.30"`
 }
 
 type KubernetesContainerCapabilities struct {
@@ -902,6 +914,8 @@ type KubernetesContainerSecurityContext struct {
 	AllowPrivilegeEscalation *bool                            `toml:"allow_privilege_escalation" json:",omitempty" long:"allow-privilege-escalation" env:"@ALLOW_PRIVILEGE_ESCALATION" description:"AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process"`
 	SELinuxType              string                           `toml:"selinux_type,omitempty" long:"selinux-type" description:"The SELinux type label that is associated with the container process"`
 	ProcMount                api.ProcMountType                `toml:"proc_mount,omitempty" long:"proc-mount" env:"@PROC_MOUNT" description:"Denotes the type of proc mount to use for the container. Valid values: default | unmasked. Set to unmasked if this container will be used to build OCI images."`
+	SeccompProfile           *KubernetesSeccompProfile        `toml:"seccomp_profile,omitempty" json:",omitempty" namespace:"seccomp_profile" description:"The seccomp profile for the container"`
+	AppArmorProfile          *KubernetesAppArmorProfile       `toml:"app_armor_profile,omitempty" json:",omitempty" namespace:"app_armor_profile" description:"The AppArmor profile for the container. Requires Kubernetes >= 1.30"`
 }
 
 func (c *KubernetesConfig) getCapabilities(defaultCapDrop []string) *api.Capabilities {
@@ -956,6 +970,76 @@ func (c *KubernetesContainerSecurityContext) getProcMount() *api.ProcMountType {
 	}
 }
 
+func validateProfileType[T ~string](kind string, typ T, valid []T) bool {
+	if !slices.Contains(valid, typ) {
+		logrus.Errorf("invalid %s profile type value: %s", kind, typ)
+		return false
+	}
+	return true
+}
+
+func requireLocalhostProfile(kind, localhostProfile string) *string {
+	if localhostProfile == "" {
+		logrus.Errorf("%s profile type is Localhost but localhost_profile is not set", kind)
+		return nil
+	}
+	return &localhostProfile
+}
+
+var validSeccompProfileTypes = []api.SeccompProfileType{
+	api.SeccompProfileTypeRuntimeDefault,
+	api.SeccompProfileTypeUnconfined,
+	api.SeccompProfileTypeLocalhost,
+}
+
+var validAppArmorProfileTypes = []api.AppArmorProfileType{
+	api.AppArmorProfileTypeRuntimeDefault,
+	api.AppArmorProfileTypeUnconfined,
+	api.AppArmorProfileTypeLocalhost,
+}
+
+func (p *KubernetesSeccompProfile) toAPI() *api.SeccompProfile {
+	if p == nil || p.Type == "" {
+		return nil
+	}
+
+	typ := api.SeccompProfileType(p.Type)
+	if !validateProfileType("seccomp", typ, validSeccompProfileTypes) {
+		return nil
+	}
+
+	profile := &api.SeccompProfile{Type: typ}
+	if typ == api.SeccompProfileTypeLocalhost {
+		profile.LocalhostProfile = requireLocalhostProfile("seccomp", p.LocalhostProfile)
+		if profile.LocalhostProfile == nil {
+			return nil
+		}
+	}
+
+	return profile
+}
+
+func (p *KubernetesAppArmorProfile) toAPI() *api.AppArmorProfile {
+	if p == nil || p.Type == "" {
+		return nil
+	}
+
+	typ := api.AppArmorProfileType(p.Type)
+	if !validateProfileType("apparmor", typ, validAppArmorProfileTypes) {
+		return nil
+	}
+
+	profile := &api.AppArmorProfile{Type: typ}
+	if typ == api.AppArmorProfileTypeLocalhost {
+		profile.LocalhostProfile = requireLocalhostProfile("apparmor", p.LocalhostProfile)
+		if profile.LocalhostProfile == nil {
+			return nil
+		}
+	}
+
+	return profile
+}
+
 func (c *KubernetesConfig) GetContainerSecurityContext(
 	securityContext KubernetesContainerSecurityContext,
 	defaultCapDrop ...string,
@@ -981,6 +1065,8 @@ func (c *KubernetesConfig) GetContainerSecurityContext(
 		ReadOnlyRootFilesystem: securityContext.ReadOnlyRootFilesystem,
 		ProcMount:              securityContext.getProcMount(),
 		SELinuxOptions:         seLinuxOptions,
+		SeccompProfile:         securityContext.SeccompProfile.toAPI(),
+		AppArmorProfile:        securityContext.AppArmorProfile.toAPI(),
 	}
 }
 
@@ -1650,7 +1736,9 @@ func (c *KubernetesConfig) GetPodSecurityContext() *api.PodSecurityContext {
 		podSecurityContext.RunAsNonRoot == nil &&
 		podSecurityContext.RunAsUser == nil &&
 		len(podSecurityContext.SupplementalGroups) == 0 &&
-		podSecurityContext.SELinuxType == "" {
+		podSecurityContext.SELinuxType == "" &&
+		podSecurityContext.SeccompProfile == nil &&
+		podSecurityContext.AppArmorProfile == nil {
 		return nil
 	}
 
@@ -1666,6 +1754,8 @@ func (c *KubernetesConfig) GetPodSecurityContext() *api.PodSecurityContext {
 		RunAsUser:          podSecurityContext.RunAsUser,
 		SupplementalGroups: podSecurityContext.SupplementalGroups,
 		SELinuxOptions:     seLinuxOptions,
+		SeccompProfile:     podSecurityContext.SeccompProfile.toAPI(),
+		AppArmorProfile:    podSecurityContext.AppArmorProfile.toAPI(),
 	}
 }
 
