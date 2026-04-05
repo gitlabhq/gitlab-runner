@@ -1,3 +1,9 @@
+## v18.10.1 (2026-04-05)
+
+### New features
+
+- Fix default artifacts upload timeout values [!6584](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6584)
+
 ## v18.10.0 (2026-03-16)
 
 ### New features
