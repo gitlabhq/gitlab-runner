@@ -5,7 +5,8 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 title: GitLab Runnerの機能フラグ
 ---
 
-> [!warning]デフォルトで無効になっている機能を有効にすると、データ破損、安定性の低下、パフォーマンスの低下、およびセキュリティの問題が発生する可能性があります。機能フラグを有効にする前に、有効化に伴うリスクを認識しておく必要があります。詳細については、[開発中の機能を有効にする際のリスク](https://docs.gitlab.com/administration/feature_flags/#risks-when-enabling-features-still-in-development)を参照してください。
+> [!warning]
+> デフォルトで無効になっている機能を有効にすると、データ破損、安定性の低下、パフォーマンスの低下、およびセキュリティの問題が発生する可能性があります。機能フラグを有効にする前に、有効化に伴うリスクを認識しておく必要があります。詳細については、[開発中の機能を有効にする際のリスク](https://docs.gitlab.com/administration/feature_flags/#risks-when-enabling-features-still-in-development)を参照してください。
 
 機能フラグは、特定の機能を有効または無効を切り替えることができる仕組みです。機能フラグは通常、次の機能に対して使用されます:
 
