@@ -599,9 +599,9 @@ func (mr *RunCommand) shutdownUsedExecutorProviders() {
 		managedProvider, ok := provider.(common.ManagedExecutorProvider)
 		if ok {
 			wg.Add(1)
-			go func(_ common.ManagedExecutorProvider) {
+			go func(p common.ManagedExecutorProvider) {
 				defer wg.Done()
-				managedProvider.Shutdown(ctx, config)
+				p.Shutdown(ctx, config)
 			}(managedProvider)
 		}
 	}
