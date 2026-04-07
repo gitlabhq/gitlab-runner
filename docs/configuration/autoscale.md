@@ -158,7 +158,7 @@ In this example, the runner process handles:
 
 - Across all `[[runners]]` workers, up to 100 concurrent jobs.
 - For the `first` worker, no more than 40 jobs, which are executed with the `shell` executor.
-- For the `second` worker, no more than 30 jobs, which are executed with the `docker+machine` executor. Additionally, Runner maintains VMs based on the autoscaling configuration in `[runners.machine]`, but no more than 30 VMs in all states (idle, in-use, in-creation, in-removal).
+- For the `second` worker, no more than 30 jobs, which are executed with the `docker+machine` executor. Additionally, GitLab Runner maintains VMs based on the autoscaling configuration in `[runners.machine]`, but no more than 30 VMs in all states (idle, in-use, in-creation, in-removal).
 - For the `third` worker, no more than 10 jobs, executed with the `ssh` executor.
 - For the `fourth` worker, no more than 20 jobs, executed with the `virtualbox` executor.
 
@@ -338,7 +338,7 @@ In the worst case scenario, you can't have 10 idle machines, but only 5, because
 
 ## The `IdleScaleFactor` strategy
 
-The `IdleCount` parameter defines a static number of idle machines that runner should sustain.
+The `IdleCount` parameter defines a static number of idle machines that the runner should sustain.
 The value you assign depends on your use case.
 
 Start by assigning a reasonably small number of machines in the idle state. Then, have them
@@ -347,8 +347,8 @@ automatically adjust to a bigger number, depending on the current usage. To do t
 
 > [!warning]
 > `IdleScaleFactor` internally is an `float64` value and requires the float format to be used,
-> for example: `0.0`, or `1.0` or ,`1.5` etc. If an integer format is used (for example `IdleScaleFactor = 1`),
-> Runner's process fails with the error:
+> for example: `0.0`, `1.0`, or `1.5`. If an integer format is used (for example `IdleScaleFactor = 1`),
+> the runner process fails with the error:
 > `FATAL: Service run failed   error=toml: cannot load TOML value of type int64 into a Go float`.
 
 When you use this setting, GitLab Runner tries to sustain a defined number of
@@ -358,13 +358,13 @@ a factor of that number.
 
 If there aren't any used machines, `IdleScaleFactor` evaluates to no idle machines
 to maintain. If `IdleCount` is greater than `0` (and only then
-the `IdleScaleFactor` is applicable), runner doesn't ask for jobs if there are no idle machines that can handle
+the `IdleScaleFactor` is applicable), the runner doesn't ask for jobs if there are no idle machines that can handle
 them. Without new jobs the number of used machines would not rise, so `IdleScaleFactor` would constantly evaluate
-to `0`. And this would block the Runner in unusable state.
+to `0`. And this would block the runner in an unusable state.
 
 Therefore, we've introduced the second setting: `IdleCountMin`. It defines the minimum number of idle machines
 that need to be sustained no matter what `IdleScaleFactor` evaluates to. **The setting can't be set to less than
-one if `IdleScaleFactor` is used. Runner automatically sets `IdleCountMin` to one**.
+one if `IdleScaleFactor` is used. GitLab Runner automatically sets `IdleCountMin` to one**.
 
 You can also use `IdleCountMin` to define the minimum number of idle machines that should always be available.
 This allows new jobs entering the queue to start quickly. As with `IdleCount`, the value you assign
@@ -383,9 +383,9 @@ concurrent=200
     IdleScaleFactor = 1.1
 ```
 
-In this case, when Runner approaches the decision point, it checks how many machines are in use.
-For example, if there are five idle machines and ten machines in use. Multiplying it by the `IdleScaleFactor`
-Runner decides that it should have 11 idle machines. So 6 more are created.
+In this case, when the runner approaches the decision point, it checks how many machines are in use.
+For example, if there are five idle machines and ten machines in use. Multiplying it by the `IdleScaleFactor`,
+the runner decides that it should have 11 idle machines. So 6 more are created.
 
 If you have 90 idle machines and 100 machines in use, based on the `IdleScaleFactor`, GitLab Runner sees that
 it should have `100 * 1.1 = 110` idle machines. So it again starts creating new ones. However, when it reaches
@@ -397,8 +397,8 @@ machines that aren't used for `IdleTime`. Therefore, the removal of too many idl
 aggressively.
 
 If the number of idle machines goes down to 0, the desired number of idle machines is `0 * 1.1 = 0`. This,
-however, is less than the defined `IdleCountMin` setting, so Runner starts removing the idle VMs
-until 10 VMs remain. After that point, scaling down stops and Runner keeps 10 machines in idle state.
+however, is less than the defined `IdleCountMin` setting, so the runner starts removing the idle VMs
+until 10 VMs remain. After that point, scaling down stops and the runner keeps 10 machines in idle state.
 
 ## Configure autoscaling periods
 
@@ -443,7 +443,7 @@ The rest of the time, the values are taken from the defaults in the root - `Idle
 
 > [!note]
 > The 59th second of the last
-> minute in any period that you specify is not be considered part of the period.
+> minute in any period that you specify is not considered part of the period.
 > For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2170).
 
 You can specify the `Timezone` of a period, for example `"Australia/Sydney"`. If you don't,
