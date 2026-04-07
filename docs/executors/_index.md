@@ -13,27 +13,34 @@ title: Executors
 {{< /details >}}
 
 GitLab Runner implements different executors that can be used to run your
-builds in different environments.
+builds in different environments. The following executors are under active feature development:
 
-If you are not sure about which executor to select, see [Selecting the executor](#selecting-the-executor).
+- [Kubernetes](kubernetes/_index.md)
+- [Docker](docker.md)
+- [Docker Autoscaler](docker_autoscaler.md)
+- [Instance](instance.md)
+
+> [!note]
+> Some features require a runner that uses [fleeting](../fleet_scaling/fleeting.md). The Docker Autoscaler
+> and instance executors use fleeting. You should migrate to one of these executors to take advantage
+> of the full range of GitLab Runner capabilities.
+
+If you are not sure about which executor to select, see [selecting the executor](#selecting-the-executor).
 
 For more information about features supported by each executor, see the [compatibility chart](#compatibility-chart).
 
-GitLab Runner provides the following executors:
+These executors are not under active feature development. They receive critical security updates but no new features.
 
 - [SSH](ssh.md)
 - [Shell](shell.md)
 - [Parallels](parallels.md)
 - [VirtualBox](virtualbox.md)
-- [Docker](docker.md)
-- [Docker Autoscaler](docker_autoscaler.md)
 - [Docker Machine (auto-scaling)](docker_machine.md)
-- [Kubernetes](kubernetes/_index.md)
-- [Instance](instance.md)
 - [Custom](custom.md)
 
 These executors are locked and we are no longer developing or accepting
-new ones. For more information, see [Contributing new executors](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CONTRIBUTING.md#contributing-new-executors).
+new ones. For more information, see
+[contributing new executors](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CONTRIBUTING.md#contributing-new-executors).
 
 ## Prerequisites for non-Docker executors
 
