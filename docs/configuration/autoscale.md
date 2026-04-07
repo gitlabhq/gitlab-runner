@@ -39,7 +39,7 @@ Docker Machine autoscaler creates one container per VM, regardless of the `limit
 When this feature is enabled and configured properly, jobs are executed on
 machines created _on demand_. Those machines, after the job is finished, can
 wait to run the next jobs or can be removed after the configured `IdleTime`.
-In case of many cloud providers, this approach reduce costs by using existing instances.
+In case of many cloud providers, this approach reduces costs by using existing instances.
 
 Below, you can see a real life example of the GitLab Runner autoscale feature, tested
 on GitLab.com for the [GitLab Community Edition](https://gitlab.com/gitlab-org/gitlab-foss) project:
@@ -83,12 +83,12 @@ For more configurations details read the
 
 ### `[runners.machine]` options
 
-Configuration parameters details can be found
+Configuration parameter details can be found
 in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](advanced-configuration.md#the-runnersmachine-section).
 
 ### `[runners.cache]` options
 
-Configuration parameters details can be found
+Configuration parameter details can be found
 in [GitLab Runner - Advanced Configuration - The `[runners.cache]` section](advanced-configuration.md#the-runnerscache-section)
 
 ### Additional configuration information
@@ -158,7 +158,7 @@ In this example, the runner process handles:
 
 - Across all `[[runners]]` workers, up to 100 concurrent jobs.
 - For the `first` worker, no more than 40 jobs, which are executed with the `shell` executor.
-- For the `second` worker, no more than 30 jobs, which are executed with the `docker+machine` executor. Additionally, Runner maintain VMs based on the autoscaling configuration in `[runners.machine]`, but no more than 30 VMs in all states (idle, in-use, in-creation, in-removal).
+- For the `second` worker, no more than 30 jobs, which are executed with the `docker+machine` executor. Additionally, Runner maintains VMs based on the autoscaling configuration in `[runners.machine]`, but no more than 30 VMs in all states (idle, in-use, in-creation, in-removal).
 - For the `third` worker, no more than 10 jobs, executed with the `ssh` executor.
 - For the `fourth` worker, no more than 20 jobs, executed with the `virtualbox` executor.
 
@@ -364,7 +364,7 @@ to `0`. And this would block the Runner in unusable state.
 
 Therefore, we've introduced the second setting: `IdleCountMin`. It defines the minimum number of idle machines
 that need to be sustained no matter what `IdleScaleFactor` evaluates to. **The setting can't be set to less than
-one if `IdleScaleFactor` is used. Runner automatically sets `IdleCountMin` it one**.
+one if `IdleScaleFactor` is used. Runner automatically sets `IdleCountMin` to one**.
 
 You can also use `IdleCountMin` to define the minimum number of idle machines that should always be available.
 This allows new jobs entering the queue to start quickly. As with `IdleCount`, the value you assign
