@@ -62,19 +62,19 @@ type Config struct {
 	Cleanup          stages.Cleanup            `json:"cleanup,omitempty"`
 }
 
-func New(config Config, stepsCtx *runner.StepsContext, options ...Option) (*Runner, error) {
-	stepEnv := stepsCtx.GetEnvs()
-	for key, value := range stepsCtx.View().Vars {
+func New(config Config, builtinCtx runner.BuiltinContext, options ...Option) (*Runner, error) {
+	stepEnv := builtinCtx.GetEnvs()
+	for key, value := range builtinCtx.GetJobVars() {
 		stepEnv[key] = value.GetStringValue()
 	}
 
-	stdout, stderr := stepsCtx.Pipe()
+	stdout, stderr := builtinCtx.Pipe()
 
 	e := &env.Env{
 		ID:         config.ID,
 		Token:      config.Token,
 		BaseURL:    config.BaseURL,
-		WorkingDir: stepsCtx.WorkDir(),
+		WorkingDir: builtinCtx.WorkDir(),
 		CacheDir:   config.CacheDir,
 		StagingDir: config.ArchiverStagingDir,
 		Shell:      config.Shell,

@@ -21,8 +21,8 @@ func Spec() *proto.Spec {
 	}
 }
 
-func Run(ctx context.Context, stepsCtx *runner.StepsContext) error {
-	configRaw, err := stepsCtx.GetInput("config", runner.KindString)
+func Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
+	configRaw, err := builtinCtx.GetInput("config", runner.KindString)
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func Run(ctx context.Context, stepsCtx *runner.StepsContext) error {
 		return err
 	}
 
-	runner, err := run.New(config, stepsCtx)
+	runner, err := run.New(config, builtinCtx)
 	if err != nil {
 		return err
 	}
