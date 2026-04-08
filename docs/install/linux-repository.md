@@ -17,7 +17,7 @@ To install GitLab Runner, you can use a package from [the GitLab repository](htt
 
 ## Supported distributions
 
-GitLab provides packages for the following supported versions of Linux distributions with [Packagecloud](https://packages.gitlab.com/runner/gitlab-runner/). New runner `deb` or `rpm` packages for new OS distribution releases are added automatically when supported by Packagecloud.
+GitLab provides packages for the following supported versions of Linux distributions. New runner `deb` or `rpm` packages for new OS distribution releases are added automatically when supported by our package hosting system.
 
 <!-- supported_os_versions_list_start -->
 
@@ -303,7 +303,7 @@ The GitLab Runner differences are:
 - The repository file for RPM-based distributions is named `/etc/yum.repos.d/runner_gitlab-runner.repo`
   (for the stable release) or `/etc/yum.repos.d/runner_unstable.repo` (for the unstable releases).
 - The [package signing public key](#current-gpg-public-key) can be imported from
-  `https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg`.
+  `https://packages.gitlab.com/gpgkey/runner/49F16C5CC3A0F81F.pub.gpg`.
 
 #### Debian-based distributions
 
@@ -322,7 +322,7 @@ To verify a `deb` package:
 1. Download and import the [package signing public key](#current-gpg-public-key):
 
    ```shell
-   curl -JLO "https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg"
+   curl -JLO "https://packages.gitlab.com/gpgkey/runner/49F16C5CC3A0F81F.pub.gpg"
    gpg --import runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg
    ```
 

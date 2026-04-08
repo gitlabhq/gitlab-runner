@@ -12,8 +12,6 @@ ifeq ($(shell git describe --exact-match --match $(LATEST_STABLE_TAG) >/dev/null
 export IS_LATEST := true
 endif
 
-PACKAGE_CLOUD ?= runner/gitlab-runner
-PACKAGE_CLOUD_URL ?= https://packages.gitlab.com
 BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x' -arch 'ppc64le' -arch 'riscv64' -arch 'loong64'
 BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -osarch 'darwin/arm64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
 S3_UPLOAD_PATH ?= main
@@ -105,8 +103,6 @@ help:
 	# make deps - install all dependencies
 	# make runner-bin - build project for all supported platforms
 	# make package - package project using FPM
-	# make packagecloud - send all packages to packagecloud
-	# make packagecloud-yank - remove specific version from packagecloud
 	#
 	# Local Docker support commands
 	# make runner-bin-linux - build runner linux binary, on any host OS
@@ -313,13 +309,6 @@ update_feature_flags_docs:
 	@$(MAKE) \
 		SCRIPT_NAME=update-feature-flags-docs \
 		ARGS="$(shell pwd)" \
-		run_go_script
-
-packagecloud_releases: export ARGS ?=
-packagecloud_releases:
-	@$(MAKE) \
-		SCRIPT_NAME=packagecloud-releases \
-		ARGS="$(ARGS)" \
 		run_go_script
 
 generate_changelog: export CHANGELOG_RELEASE ?= $(VERSION)
