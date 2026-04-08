@@ -462,7 +462,7 @@ func TestPowershellPathResolveOperations(t *testing.T) {
 				w.TemporaryPath = path
 				w.Variable(spec.Variable{File: true, Key: "a key", Value: "foobar"})
 			},
-			template: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"%[1]v\") | out-null\n[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"%[1]v/a key\"), \"foobar\")\n$a key=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"%[1]v/a key\")\n$env:a key=$a key\n",
+			template: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"%[1]v\") | out-null\n[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"%[1]v/a key\"), \"foobar\")\n${a key}=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"%[1]v/a key\")\n${env:a key}=${a key}\n",
 			expected: map[string]func(string) string{
 				`path/name`:    templateReplacer(`path/name`),
 				`\\unc\file`:   templateReplacer(`\\unc\file`),
@@ -830,75 +830,81 @@ func Test_PsWriter_Variable(t *testing.T) {
 		"file var, relative path": {
 			variable:    spec.Variable{Key: "KEY", Value: "the secret", File: true},
 			writer:      PsWriter{TemporaryPath: "foo/bar"},
-			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).PathNew-Item -ItemType directory -Force -Path \"foo/bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory/foo/bar/KEY\", \"the secret\")$KEY=\"$CurrentDirectory/foo/bar/KEY\"$env:KEY=$KEY",
-			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).PathNew-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\KEY\", \"the secret\")$KEY=\"$CurrentDirectory\\foo\\bar\\KEY\"$env:KEY=$KEY",
+			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).PathNew-Item -ItemType directory -Force -Path \"foo/bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory/foo/bar/KEY\", \"the secret\")${KEY}=\"$CurrentDirectory/foo/bar/KEY\"${env:KEY}=${KEY}",
+			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).PathNew-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\KEY\", \"the secret\")${KEY}=\"$CurrentDirectory\\foo\\bar\\KEY\"${env:KEY}=${KEY}",
 		},
 		"file var, absolute path": {
 			variable:    spec.Variable{Key: "KEY", Value: "the secret", File: true},
 			writer:      PsWriter{TemporaryPath: "/foo/bar"},
-			wantLinux:   "New-Item -ItemType directory -Force -Path \"/foo/bar\" | out-null[System.IO.File]::WriteAllText(\"/foo/bar/KEY\", \"the secret\")$KEY=\"/foo/bar/KEY\"$env:KEY=$KEY",
-			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).PathNew-Item -ItemType directory -Force -Path \"\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\KEY\", \"the secret\")$KEY=\"$CurrentDirectory\\foo\\bar\\KEY\"$env:KEY=$KEY",
+			wantLinux:   "New-Item -ItemType directory -Force -Path \"/foo/bar\" | out-null[System.IO.File]::WriteAllText(\"/foo/bar/KEY\", \"the secret\")${KEY}=\"/foo/bar/KEY\"${env:KEY}=${KEY}",
+			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).PathNew-Item -ItemType directory -Force -Path \"\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\KEY\", \"the secret\")${KEY}=\"$CurrentDirectory\\foo\\bar\\KEY\"${env:KEY}=${KEY}",
 		},
 		"file var, absolute path with drive": {
 			variable:    spec.Variable{Key: "KEY", Value: "the secret", File: true},
 			writer:      PsWriter{TemporaryPath: "C:/foo/bar"},
-			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).PathNew-Item -ItemType directory -Force -Path \"C:/foo/bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory/C:/foo/bar/KEY\", \"the secret\")$KEY=\"$CurrentDirectory/C:/foo/bar/KEY\"$env:KEY=$KEY",
-			wantWindows: "New-Item -ItemType directory -Force -Path \"C:\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"C:\\foo\\bar\\KEY\", \"the secret\")$KEY=\"C:\\foo\\bar\\KEY\"$env:KEY=$KEY",
+			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).PathNew-Item -ItemType directory -Force -Path \"C:/foo/bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory/C:/foo/bar/KEY\", \"the secret\")${KEY}=\"$CurrentDirectory/C:/foo/bar/KEY\"${env:KEY}=${KEY}",
+			wantWindows: "New-Item -ItemType directory -Force -Path \"C:\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"C:\\foo\\bar\\KEY\", \"the secret\")${KEY}=\"C:\\foo\\bar\\KEY\"${env:KEY}=${KEY}",
 		},
 		"tmp file var, relative path": {
 			variable:    spec.Variable{Key: "KEY", Value: "foo/bar/KEY2"},
 			writer:      PsWriter{TemporaryPath: "foo/bar"},
-			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).Path$KEY=\"`$CurrentDirectory/foo/bar/KEY2\"$env:KEY=$KEY",
-			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).Path$KEY=\"`$CurrentDirectory\\foo\\bar\\KEY2\"$env:KEY=$KEY",
+			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).Path${KEY}=\"`$CurrentDirectory/foo/bar/KEY2\"${env:KEY}=${KEY}",
+			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).Path${KEY}=\"`$CurrentDirectory\\foo\\bar\\KEY2\"${env:KEY}=${KEY}",
 		},
 		"tmp file var, absolute path": {
 			variable:    spec.Variable{Key: "KEY", Value: "/foo/bar/KEY2"},
 			writer:      PsWriter{TemporaryPath: "/foo/bar"},
-			wantLinux:   "$KEY=\"/foo/bar/KEY2\"$env:KEY=$KEY",
-			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).Path$KEY=\"`$CurrentDirectory\\foo\\bar\\KEY2\"$env:KEY=$KEY",
+			wantLinux:   "${KEY}=\"/foo/bar/KEY2\"${env:KEY}=${KEY}",
+			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).Path${KEY}=\"`$CurrentDirectory\\foo\\bar\\KEY2\"${env:KEY}=${KEY}",
 		},
 		"regular var": {
 			variable:    spec.Variable{Key: "KEY", Value: "VALUE"},
 			writer:      PsWriter{TemporaryPath: "C:/foo/bar"},
-			wantLinux:   "$KEY=\"VALUE\"$env:KEY=$KEY",
-			wantWindows: "$KEY=\"VALUE\"$env:KEY=$KEY",
+			wantLinux:   "${KEY}=\"VALUE\"${env:KEY}=${KEY}",
+			wantWindows: "${KEY}=\"VALUE\"${env:KEY}=${KEY}",
+		},
+		"regular var with dashes": {
+			variable:    spec.Variable{Key: "Test-Variable", Value: "value"},
+			writer:      PsWriter{TemporaryPath: "C:/foo/bar"},
+			wantLinux:   "${Test-Variable}=\"value\"${env:Test-Variable}=${Test-Variable}",
+			wantWindows: "${Test-Variable}=\"value\"${env:Test-Variable}=${Test-Variable}",
 		},
 
 		"file var, relative path, resolvePaths": {
 			variable:    spec.Variable{Key: "KEY", Value: "the secret", File: true},
 			writer:      PsWriter{TemporaryPath: "foo/bar", resolvePaths: true},
-			wantLinux:   "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\")$env:KEY=$KEY",
-			wantWindows: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\")$env:KEY=$KEY",
+			wantLinux:   "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\"), \"the secret\")${KEY}=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\")${env:KEY}=${KEY}",
+			wantWindows: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\"), \"the secret\")${KEY}=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\")${env:KEY}=${KEY}",
 		},
 		"file var, absolute path, resolvePaths": {
 			variable:    spec.Variable{Key: "KEY", Value: "the secret", File: true},
 			writer:      PsWriter{TemporaryPath: "/foo/bar", resolvePaths: true},
-			wantLinux:   "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\")$env:KEY=$KEY",
-			wantWindows: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\")$env:KEY=$KEY",
+			wantLinux:   "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\"), \"the secret\")${KEY}=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\")${env:KEY}=${KEY}",
+			wantWindows: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\"), \"the secret\")${KEY}=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\")${env:KEY}=${KEY}",
 		},
 		"file var, absolute path with drive, resolvePaths": {
 			variable:    spec.Variable{Key: "KEY", Value: "the secret", File: true},
 			writer:      PsWriter{TemporaryPath: "C:/foo/bar", resolvePaths: true},
-			wantLinux:   "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\")$env:KEY=$KEY",
-			wantWindows: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\")$env:KEY=$KEY",
+			wantLinux:   "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\"), \"the secret\")${KEY}=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\")${env:KEY}=${KEY}",
+			wantWindows: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\"), \"the secret\")${KEY}=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\")${env:KEY}=${KEY}",
 		},
 		"tmp file var, relative path, resolvePaths": {
 			variable:    spec.Variable{Key: "KEY", Value: "foo/bar/KEY2"},
 			writer:      PsWriter{TemporaryPath: "foo/bar", resolvePaths: true},
-			wantLinux:   "$KEY=\"foo/bar/KEY2\"$env:KEY=$KEY",
-			wantWindows: "$KEY=\"foo/bar/KEY2\"$env:KEY=$KEY",
+			wantLinux:   "${KEY}=\"foo/bar/KEY2\"${env:KEY}=${KEY}",
+			wantWindows: "${KEY}=\"foo/bar/KEY2\"${env:KEY}=${KEY}",
 		},
 		"tmp file var, absolute path, resolvePaths": {
 			variable:    spec.Variable{Key: "KEY", Value: "/foo/bar/KEY2"},
 			writer:      PsWriter{TemporaryPath: "/foo/bar", resolvePaths: true},
-			wantLinux:   "$KEY=\"/foo/bar/KEY2\"$env:KEY=$KEY",
-			wantWindows: "$KEY=\"/foo/bar/KEY2\"$env:KEY=$KEY",
+			wantLinux:   "${KEY}=\"/foo/bar/KEY2\"${env:KEY}=${KEY}",
+			wantWindows: "${KEY}=\"/foo/bar/KEY2\"${env:KEY}=${KEY}",
 		},
 		"tmp file var, absolute path with drive, resolvePaths": {
 			variable:    spec.Variable{Key: "KEY", Value: "C:/foo/bar/KEY2"},
 			writer:      PsWriter{TemporaryPath: "C:/foo/bar", resolvePaths: true},
-			wantLinux:   "$KEY=\"C:/foo/bar/KEY2\"$env:KEY=$KEY",
-			wantWindows: "$KEY=\"C:/foo/bar/KEY2\"$env:KEY=$KEY",
+			wantLinux:   "${KEY}=\"C:/foo/bar/KEY2\"${env:KEY}=${KEY}",
+			wantWindows: "${KEY}=\"C:/foo/bar/KEY2\"${env:KEY}=${KEY}",
 		},
 	}
 
@@ -1009,55 +1015,66 @@ func TestPowershellEntrypointCommand(t *testing.T) {
 	}
 }
 
-func TestDockerCommand(t *testing.T) {
-	tests := map[string]map[string]struct {
-		shellType common.ShellType
-		expected  []string
+func TestPowershell_ExportRaw(t *testing.T) {
+	testCases := map[string]struct {
+		name        string
+		value       string
+		wantLinux   string
+		wantWindows string
 	}{
-		SNPwsh: {
-			"interactive shell": {
-				shellType: common.InteractiveShell,
-				expected:  []string{SNPwsh},
-			},
-			"login shell": {
-				shellType: common.LoginShell,
-				expected:  append([]string{SNPwsh}, stdinCmdArgs(SNPwsh)...),
-			},
+		"simple key": {
+			name:        "SIMPLE_VAR",
+			value:       "value",
+			wantLinux:   "${SIMPLE_VAR}=\"value\"${env:SIMPLE_VAR}=\"value\"",
+			wantWindows: "${SIMPLE_VAR}=\"value\"${env:SIMPLE_VAR}=\"value\"",
 		},
-		SNPowershell: {
-			"interactive shell": {
-				shellType: common.InteractiveShell,
-				expected:  []string{SNPowershell},
-			},
-			"login shell": {
-				shellType: common.LoginShell,
-				expected:  append([]string{SNPowershell}, stdinCmdArgs(SNPowershell)...),
-			},
+		"key with dashes": {
+			name:        "Test-Variable",
+			value:       "value",
+			wantLinux:   "${Test-Variable}=\"value\"${env:Test-Variable}=\"value\"",
+			wantWindows: "${Test-Variable}=\"value\"${env:Test-Variable}=\"value\"",
+		},
+		"key with single quotes": {
+			name:        "VAR'WITH'QUOTES",
+			value:       "value",
+			wantLinux:   "${VAR'WITH'QUOTES}=\"value\"${env:VAR'WITH'QUOTES}=\"value\"",
+			wantWindows: "${VAR'WITH'QUOTES}=\"value\"${env:VAR'WITH'QUOTES}=\"value\"",
+		},
+		"key with dashes and single quotes": {
+			name:        "MY-VAR'NAME",
+			value:       "value",
+			wantLinux:   "${MY-VAR'NAME}=\"value\"${env:MY-VAR'NAME}=\"value\"",
+			wantWindows: "${MY-VAR'NAME}=\"value\"${env:MY-VAR'NAME}=\"value\"",
+		},
+		"key with multiple dashes": {
+			name:        "MY-VAR-NAME-HERE",
+			value:       "value",
+			wantLinux:   "${MY-VAR-NAME-HERE}=\"value\"${env:MY-VAR-NAME-HERE}=\"value\"",
+			wantWindows: "${MY-VAR-NAME-HERE}=\"value\"${env:MY-VAR-NAME-HERE}=\"value\"",
+		},
+		"key with single quote at end": {
+			name:        "QUOTED_VAR'",
+			value:       "value",
+			wantLinux:   "${QUOTED_VAR'}=\"value\"${env:QUOTED_VAR'}=\"value\"",
+			wantWindows: "${QUOTED_VAR'}=\"value\"${env:QUOTED_VAR'}=\"value\"",
+		},
+		"key with dash and single quote mixed": {
+			name:        "VAR-'MIX'ED-NAME",
+			value:       "value",
+			wantLinux:   "${VAR-'MIX'ED-NAME}=\"value\"${env:VAR-'MIX'ED-NAME}=\"value\"",
+			wantWindows: "${VAR-'MIX'ED-NAME}=\"value\"${env:VAR-'MIX'ED-NAME}=\"value\"",
 		},
 	}
 
-	for shellName, testCases := range tests {
-		t.Run(shellName, func(t *testing.T) {
-			for tn, tc := range testCases {
-				t.Run(tn, func(t *testing.T) {
-					result := PowershellDockerCmd(shellName, tc.shellType)
-					assert.Equal(t, tc.expected, result)
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			writer := &PsWriter{TemporaryPath: "C:/foo/bar"}
+			writer.ExportRaw(tc.name, tc.value)
 
-					shell := common.GetShell(shellName)
-					require.NotNil(t, shell)
-
-					info := common.ShellScriptInfo{
-						Shell: shellName,
-						Type:  tc.shellType,
-						Build: &common.Build{
-							Runner: &common.RunnerConfig{},
-						},
-					}
-
-					config, err := shell.GetConfiguration(info)
-					require.NoError(t, err)
-					assert.Equal(t, tc.expected, config.DockerCommand)
-				})
+			if runtime.GOOS == OSWindows {
+				assert.Equal(t, tc.wantWindows, writer.String())
+			} else {
+				assert.Equal(t, tc.wantLinux, writer.String())
 			}
 		})
 	}

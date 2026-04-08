@@ -390,7 +390,7 @@ func (p *PsWriter) fromSlash(path string) string {
 }
 
 func (p *PsWriter) EnvVariableKey(name string) string {
-	return fmt.Sprintf("$%s", name)
+	return fmt.Sprintf("${%s}", name)
 }
 
 func (p *PsWriter) isTmpFile(path string) bool {
@@ -406,22 +406,22 @@ func (p *PsWriter) Variable(variable spec.Variable) {
 			p.resolvePath(variableFile),
 			psQuoteVariable(variable.Value),
 		)
-		p.Linef("$%s=%s", variable.Key, p.resolvePath(variableFile))
+		p.Linef("${%s}=%s", variable.Key, p.resolvePath(variableFile))
 	} else {
 		if p.isTmpFile(variable.Value) {
 			variable.Value = p.cleanPath(variable.Value)
 		}
 
-		p.Linef("$%s=%s", variable.Key, psQuoteVariable(variable.Value))
+		p.Linef("${%s}=%s", variable.Key, psQuoteVariable(variable.Value))
 	}
 
-	p.Linef("$env:%s=$%s", variable.Key, variable.Key)
+	p.Linef("${env:%s}=${%s}", variable.Key, variable.Key)
 }
 
 func (p *PsWriter) ExportRaw(name, value string) {
 	quotedVal := psDoubleQuote(value)
-	p.Linef("$%s=%s", name, quotedVal)
-	p.Linef("$env:%s=%s", name, quotedVal)
+	p.Linef("${%s}=%s", name, quotedVal)
+	p.Linef("${env:%s}=%s", name, quotedVal)
 }
 
 func (p *PsWriter) DotEnvVariables(baseFilename string, variables map[string]string) string {
