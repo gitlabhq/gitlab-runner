@@ -3,6 +3,8 @@
 package script_legacy_test
 
 import (
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -602,6 +604,82 @@ run:
 		require.Contains(t, logs, "+ echo")
 		// trace_sections for multi-line command
 		require.Contains(t, logs, "section_script_step_1")
+	})
+
+	t.Run("GITLAB_ENV is exported and file is sourced when RUNNER_TEMP_PROJECT_DIR is set", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		envFile := filepath.Join(tmpDir, "gitlab_runner_env")
+		require.NoError(t, os.WriteFile(envFile, []byte("MY_VAR=from_gitlab_env\n"), 0o600))
+
+		stepYml := `
+spec:
+---
+run:
+  - name: test_gitlab_env
+    step: builtin://script_legacy
+    inputs:
+      script:
+        - 'echo "var: $MY_VAR"'
+        - 'echo "path: $GITLAB_ENV"'
+`
+		res, logs, err := testutil.StepRunner(t).
+			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			WithJobKeyVal("RUNNER_TEMP_PROJECT_DIR", tmpDir).
+			Run(stepYml)
+		require.NoError(t, err)
+		assert.Equal(t, proto.StepResult_success, res.Status)
+		assert.Contains(t, logs, "var: from_gitlab_env")
+		assert.Contains(t, logs, "path: "+envFile)
+	})
+
+	t.Run("variables written to GITLAB_ENV in one step are available in the next", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		envFile := filepath.Join(tmpDir, "gitlab_runner_env")
+		// Start with an empty file, as the legacy prepare stage would create it.
+		require.NoError(t, os.WriteFile(envFile, nil, 0o600))
+
+		stepYml := `
+spec:
+---
+run:
+  - name: write_step
+    step: builtin://script_legacy
+    inputs:
+      script:
+        - 'echo hello=world >> "$GITLAB_ENV"'
+  - name: read_step
+    step: builtin://script_legacy
+    inputs:
+      script:
+        - 'echo "hellovalue=$hello"'
+`
+		res, logs, err := testutil.StepRunner(t).
+			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			WithJobKeyVal("RUNNER_TEMP_PROJECT_DIR", tmpDir).
+			Run(stepYml)
+		require.NoError(t, err)
+		assert.Equal(t, proto.StepResult_success, res.Status)
+		assert.Contains(t, logs, "hellovalue=world")
+	})
+
+	t.Run("no GITLAB_ENV preamble when RUNNER_TEMP_PROJECT_DIR is not set", func(t *testing.T) {
+		stepYml := `
+spec:
+---
+run:
+  - name: no_gitlab_env
+    step: builtin://script_legacy
+    inputs:
+      script:
+        - 'echo "GITLAB_ENV: $GITLAB_ENV"'
+`
+		res, logs, err := testutil.StepRunner(t).
+			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			Run(stepYml)
+		require.NoError(t, err)
+		assert.Equal(t, proto.StepResult_success, res.Status)
+		// GITLAB_ENV should be empty (not injected by preamble).
+		assert.Contains(t, logs, "GITLAB_ENV: \n")
 	})
 
 	t.Run("trace_sections with command failure", func(t *testing.T) {

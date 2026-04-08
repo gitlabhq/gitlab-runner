@@ -5,6 +5,8 @@ package internal
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTraceSectionWriter_WriteSection_Basic(t *testing.T) {
@@ -14,17 +16,9 @@ func TestTraceSectionWriter_WriteSection_Basic(t *testing.T) {
 	writer.WriteSection(&buf, 0, "echo hello")
 	result := buf.String()
 
-	if !strings.Contains(result, "section_start:") {
-		t.Errorf("Expected section_start marker")
-	}
-
-	if !strings.Contains(result, "section_end:") {
-		t.Errorf("Expected section_end marker")
-	}
-
-	if !strings.Contains(result, "echo hello") {
-		t.Errorf("Expected command in output")
-	}
+	assert.Contains(t, result, "section_start:", "Expected section_start marker")
+	assert.Contains(t, result, "section_end:", "Expected section_end marker")
+	assert.Contains(t, result, "echo hello", "Expected command in output")
 }
 
 func TestTraceSectionWriter_WriteSection_WithErrorChecking(t *testing.T) {
@@ -34,9 +28,7 @@ func TestTraceSectionWriter_WriteSection_WithErrorChecking(t *testing.T) {
 	writer.WriteSection(&buf, 0, "echo test")
 	result := buf.String()
 
-	if !strings.Contains(result, exitCodeCheck) {
-		t.Errorf("Expected exit code check when enabled")
-	}
+	assert.Contains(t, result, exitCodeCheck, "Expected exit code check when enabled")
 }
 
 func TestTraceSectionWriter_WriteSection_WithoutErrorChecking(t *testing.T) {
@@ -46,9 +38,7 @@ func TestTraceSectionWriter_WriteSection_WithoutErrorChecking(t *testing.T) {
 	writer.WriteSection(&buf, 0, "echo test")
 	result := buf.String()
 
-	if strings.Contains(result, "_runner_exit_code") {
-		t.Errorf("Should not have exit code check when disabled")
-	}
+	assert.NotContains(t, result, "_runner_exit_code", "Should not have exit code check when disabled")
 }
 
 func TestTraceSectionWriter_SectionName_Format(t *testing.T) {
@@ -58,9 +48,7 @@ func TestTraceSectionWriter_SectionName_Format(t *testing.T) {
 	writer.WriteSection(&buf, 5, "echo test")
 	result := buf.String()
 
-	if !strings.Contains(result, "section_script_step_5") {
-		t.Errorf("Expected section name 'section_script_step_5'")
-	}
+	assert.Contains(t, result, "section_script_step_5", "Expected section name 'section_script_step_5'")
 }
 
 func TestTraceSectionWriter_ContainsTimestamp(t *testing.T) {
@@ -70,9 +58,7 @@ func TestTraceSectionWriter_ContainsTimestamp(t *testing.T) {
 	writer.WriteSection(&buf, 0, "echo test")
 	result := buf.String()
 
-	if !strings.Contains(result, timestampCommand) {
-		t.Errorf("Expected timestamp command")
-	}
+	assert.Contains(t, result, timestampCommand, "Expected timestamp command")
 }
 
 func TestTraceSectionWriter_ContainsSectionMarkers(t *testing.T) {
@@ -82,14 +68,8 @@ func TestTraceSectionWriter_ContainsSectionMarkers(t *testing.T) {
 	writer.WriteSection(&buf, 0, "echo test")
 	result := buf.String()
 
-	if !strings.Contains(result, traceSectionOptions) {
-		t.Errorf("Expected trace section options")
-	}
-
-	// Should have proper format with carriage return and clear line
-	if !strings.Contains(result, "\r"+ansiClear) {
-		t.Errorf("Expected \r and ANSI clear sequence")
-	}
+	assert.Contains(t, result, traceSectionOptions, "Expected trace section options")
+	assert.Contains(t, result, "\r"+ansiClear, "Expected \\r and ANSI clear sequence")
 }
 
 func TestTraceSectionWriter_ContainsCommand(t *testing.T) {
@@ -100,16 +80,9 @@ func TestTraceSectionWriter_ContainsCommand(t *testing.T) {
 	writer.WriteSection(&buf, 0, testCmd)
 	result := buf.String()
 
-	// Should contain the full command (not just first line)
-	if !strings.Contains(result, "multi") {
-		t.Errorf("Expected first line")
-	}
-	if !strings.Contains(result, "line") {
-		t.Errorf("Expected second line")
-	}
-	if !strings.Contains(result, "command") {
-		t.Errorf("Expected third line")
-	}
+	assert.Contains(t, result, "multi", "Expected first line")
+	assert.Contains(t, result, "line", "Expected second line")
+	assert.Contains(t, result, "command", "Expected third line")
 }
 
 func TestTraceSectionWriter_ANSICodes(t *testing.T) {
@@ -119,16 +92,9 @@ func TestTraceSectionWriter_ANSICodes(t *testing.T) {
 	writer.WriteSection(&buf, 0, "echo test")
 	result := buf.String()
 
-	// Should contain ANSI codes for trace sections
-	if !strings.Contains(result, ansiClear) {
-		t.Errorf("Expected ANSI clear code")
-	}
-	if !strings.Contains(result, EscapeForAnsiC(ansiBoldGreen)) {
-		t.Errorf("Expected ANSI bold green code")
-	}
-	if !strings.Contains(result, EscapeForAnsiC(ansiResetTrace)) {
-		t.Errorf("Expected ANSI reset code for trace sections")
-	}
+	assert.Contains(t, result, ansiClear, "Expected ANSI clear code")
+	assert.Contains(t, result, EscapeForAnsiC(ansiBoldGreen), "Expected ANSI bold green code")
+	assert.Contains(t, result, EscapeForAnsiC(ansiResetTrace), "Expected ANSI reset code for trace sections")
 }
 
 func TestTraceSectionWriter_commandPrefix(t *testing.T) {
@@ -138,11 +104,7 @@ func TestTraceSectionWriter_commandPrefix(t *testing.T) {
 	writer.WriteSection(&buf, 0, "echo test")
 	result := buf.String()
 
-	// Should contain command prefix in section start
-	// It's part of the section_start line showing what will execute
-	if !strings.Contains(result, commandPrefix) {
-		t.Errorf("Expected command prefix in section start")
-	}
+	assert.Contains(t, result, commandPrefix, "Expected command prefix in section start")
 }
 
 func TestTraceSectionWriter_MultipleIndexes(t *testing.T) {
@@ -162,8 +124,6 @@ func TestTraceSectionWriter_MultipleIndexes(t *testing.T) {
 		writer.WriteSection(&buf, tt.index, "echo test")
 		result := buf.String()
 
-		if !strings.Contains(result, tt.expected) {
-			t.Errorf("Expected section name %s for index %d", tt.expected, tt.index)
-		}
+		assert.Contains(t, result, tt.expected, "Expected section name %s for index %d", tt.expected, tt.index)
 	}
 }

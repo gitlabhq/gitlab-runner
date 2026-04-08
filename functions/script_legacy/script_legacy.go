@@ -3,6 +3,7 @@ package script_legacy
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -121,12 +122,25 @@ func Run(ctx context.Context, stepsCtx *runner.StepsContext) error {
 	}
 	traceSections := traceSectionsInput.GetBoolValue()
 
+	// Derive the GITLAB_ENV file path from RUNNER_TEMP_PROJECT_DIR (always
+	// present in job variables) so we can export it and source any KEY=VALUE
+	// pairs written by previous stages. This mirrors AbstractShell.writeExports
+	// for the FF_SCRIPT_TO_STEP_MIGRATION path where each stage runs as a
+	// separate script_legacy invocation.
+	var gitLabEnvFile string
+	if tmpDirVar, ok := stepsCtx.View().Vars["RUNNER_TEMP_PROJECT_DIR"]; ok {
+		if tmpDir := tmpDirVar.GetStringValue(); tmpDir != "" {
+			gitLabEnvFile = filepath.Join(tmpDir, "gitlab_runner_env")
+		}
+	}
+
 	generatorConfig := internal.ScriptGeneratorConfig{
 		DebugTrace:     debugTrace,
 		CheckForErrors: checkForErrors,
 		PosixEscape:    posixEscape,
 		TraceSections:  traceSections,
 		ShellPath:      shellPath,
+		GitLabEnvFile:  gitLabEnvFile,
 	}
 	generator := internal.NewScriptGenerator(generatorConfig)
 	script := generator.GenerateScript(commands)

@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
@@ -532,9 +533,26 @@ func wrapStepStageErr(err error) error {
 	// hack: for now, we parse the exit code from the error response
 	// later we might want to introduce a proper exit code from the step-runner
 	// https://gitlab.com/gitlab-org/step-runner/-/work_items/349
-	if _, code, ok := strings.Cut(err.Error(), "exit status"); ok {
+	if before, code, ok := strings.Cut(err.Error(), "exit status"); ok {
 		if exitCode, err := strconv.Atoi(strings.TrimSpace(code)); err == nil {
 			berr.ExitCode = exitCode
+			// Normalize "exit status N" (Go's exec.ExitError format) to "exit code N"
+			// to match the legacy Docker executor format (wait.go uses
+			// fmt.Errorf("exit code %d", statusCode)). The prefix (e.g. "step release: ")
+			// is preserved so the trace message retains the failing step name.
+			berr.Inner = fmt.Errorf("%sexit code %d", strings.TrimRightFunc(before, unicode.IsSpace), exitCode)
+		}
+	}
+
+	// If no exit code was found via "exit status" parsing, propagate the exit
+	// code from an inner BuildError if one exists. This handles the case where
+	// Docker's Connect() returns BuildError{ExitCode: N} (container exits before
+	// step-runner is ready) — that path already uses "exit code N" format so the
+	// string-cut above does not match.
+	if berr.ExitCode == 0 {
+		var innerBuildErr *BuildError
+		if errors.As(err, &innerBuildErr) && innerBuildErr.ExitCode != 0 {
+			berr.ExitCode = innerBuildErr.ExitCode
 		}
 	}
 
@@ -543,13 +561,22 @@ func wrapStepStageErr(err error) error {
 
 //nolint:gocognit
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
-	if b.UseNativeSteps() {
-		connector, ok := executor.(steps.Connector)
-		if ok {
-			if handled, steps := stepDispatch(b, executor, buildStage); handled {
-				b.markStepDispatchedInScript()
-				return b.executeStepStage(ctx, connector, buildStage, steps)
+	if connector, ok := executor.(steps.Connector); b.UseNativeSteps() && ok {
+		if handled, steps := stepDispatch(b, executor, buildStage); handled {
+			b.markStepDispatchedInScript()
+			err := b.executeStepStage(ctx, connector, buildStage, steps)
+			// The defer below is never reached for the step-dispatch path,
+			// so we replicate its timeout warning here. We check ctx.Err()
+			// rather than the returned error because gRPC wraps deadline
+			// exceeded as a status error that does not unwrap to
+			// context.DeadlineExceeded.
+			if err != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				b.logger.Warningln(
+					string(buildStage) + " could not run to completion because the timeout was exceeded. " +
+						"For more control over job and script timeouts see: " +
+						"https://docs.gitlab.com/ci/runners/configure_runners/#set-script-and-after_script-timeouts")
 			}
+			return err
 		}
 	}
 
