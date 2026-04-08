@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -46,6 +47,69 @@ var assumeRoleCallDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
 	Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30},
 })
 
+var assumeRoleCredCacheHits = prometheus.NewCounter(prometheus.CounterOpts{
+	Name: "gitlab_runner_cache_s3_assume_role_cache_hits_total",
+	Help: "Number of AssumeRole credential cache hits.",
+})
+
+var assumeRoleCredCacheMisses = prometheus.NewCounter(prometheus.CounterOpts{
+	Name: "gitlab_runner_cache_s3_assume_role_cache_misses_total",
+	Help: "Number of AssumeRole credential cache misses (requests that reached STS).",
+})
+
+var assumeRoleCredCacheEntries = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+	Name: "gitlab_runner_cache_s3_assume_role_cached_credentials",
+	Help: "Current number of AssumeRole credentials held in the LRU cache.",
+}, func() float64 { return float64(assumeRoleCredCache.Len()) })
+
+// assumeRoleCredCacheSize is the maximum number of AssumeRole credentials held
+// in the cache. Each entry is a small map of four env-var strings (~200 B).
+// 1 000 entries ≈ 200 KB — sufficient for instance runners serving hundreds
+// of projects with multiple cache keys each.
+const assumeRoleCredCacheSize = 1000
+
+// assumeRoleCredCacheTTL is the LRU eviction TTL. It matches the maximum
+// AssumeRole session duration (1 hour), so the LRU's built-in background
+// sweep (runs every TTL/100 ≈ 36 s) cleans up entries that were never
+// accessed again after their credential expired.
+const assumeRoleCredCacheTTL = time.Hour
+
+// assumeRoleCredCache caches AssumeRole credentials keyed by
+// (roleARN, bucketName, objectName, upload). The objectName is deterministic
+// (runner/<token>/project/<id>/<cacheKey>), so concurrent jobs sharing the
+// same cache key reuse the same credentials without extra STS calls.
+//
+// The expirable.LRU provides two independent eviction mechanisms:
+//   - LRU cap: evicts the least-recently-used entry when the cache is full.
+//   - TTL: evicts entries 1 hour after insertion via a background goroutine.
+//
+// A per-entry expiresAt field is still checked on read so that credentials
+// with less remaining validity than required are never returned.
+var assumeRoleCredCache = expirable.NewLRU[string, cachedCredential](
+	assumeRoleCredCacheSize, nil, assumeRoleCredCacheTTL,
+)
+
+type cachedCredential struct {
+	creds     map[string]string
+	expiresAt time.Time
+}
+
+// assumeRoleCacheKey returns a cache key for a set of AssumeRole parameters.
+func assumeRoleCacheKey(roleARN, bucketName, objectName string, upload bool) string {
+	uploadStr := "0"
+	if upload {
+		uploadStr = "1"
+	}
+	return roleARN + "\x00" + bucketName + "\x00" + objectName + "\x00" + uploadStr
+}
+
+// FlushCredentialCache evicts all cached AssumeRole credentials, forcing the
+// next call for each key to issue a fresh STS request. Use this when a
+// credential is known to be compromised or after a configuration change.
+func FlushCredentialCache() {
+	assumeRoleCredCache.Purge()
+}
+
 type s3Presigner interface {
 	PresignURL(
 		ctx context.Context,
@@ -60,12 +124,13 @@ type s3Presigner interface {
 }
 
 type s3Client struct {
-	s3Config      *cacheconfig.CacheS3Config
-	awsConfig     *aws.Config
-	client        *s3.Client
-	presignClient *s3.PresignClient
-	stsEndpoint   string
-	assumeRoleSem chan struct{}
+	s3Config         *cacheconfig.CacheS3Config
+	awsConfig        *aws.Config
+	client           *s3.Client
+	presignClient    *s3.PresignClient
+	stsEndpoint      string
+	assumeRoleSem    chan struct{}
+	disableCredCache bool
 }
 
 type s3ClientOption func(*s3Client)
@@ -180,7 +245,56 @@ func (c *s3Client) generateSessionPolicy(bucketName, objectName string, upload b
 	return policy
 }
 
+// cachedCreds returns credentials from the cache if they have at least
+// minValidity of remaining lifetime. Returns (nil, false) on a cache miss,
+// a disabled cache, or insufficient remaining validity.
+func (c *s3Client) cachedCreds(credKey string, minValidity time.Duration) (map[string]string, bool) {
+	if c.disableCredCache {
+		return nil, false
+	}
+	cached, ok := assumeRoleCredCache.Get(credKey)
+	if !ok || time.Until(cached.expiresAt) < minValidity {
+		return nil, false
+	}
+	assumeRoleCredCacheHits.Inc()
+	return cached.creds, true
+}
+
+// acquireAssumeRoleSem acquires a slot in the concurrency semaphore and
+// returns a release function. If no semaphore is configured the release
+// function is a no-op. Returns an error if ctx is cancelled while waiting.
+func (c *s3Client) acquireAssumeRoleSem(ctx context.Context) (func(), error) {
+	if c.assumeRoleSem == nil {
+		return func() {}, nil
+	}
+	waitStart := time.Now()
+	select {
+	case c.assumeRoleSem <- struct{}{}:
+		assumeRoleWaitDuration.Observe(time.Since(waitStart).Seconds())
+		assumeRoleInFlight.Inc()
+		return func() {
+			<-c.assumeRoleSem
+			assumeRoleInFlight.Dec()
+		}, nil
+	case <-ctx.Done():
+		return nil, fmt.Errorf("context cancelled waiting for AssumeRole semaphore: %w", ctx.Err())
+	}
+}
+
 func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string, upload bool, timeout time.Duration) (map[string]string, error) {
+	// minValidity is the minimum remaining lifetime a cached credential must
+	// have to be considered usable. We want credentials to remain valid for
+	// the entire transfer (at least `timeout`), but cap at 55 minutes so
+	// that cache hits are always possible within the 1-hour session lifetime,
+	// regardless of how large `timeout` is configured.
+	minValidity := min(max(timeout, time.Minute), 55*time.Minute)
+	credKey := assumeRoleCacheKey(roleARN, bucketName, objectName, upload)
+
+	// Fast path: return cached credentials without touching the semaphore.
+	if creds, ok := c.cachedCreds(credKey, minValidity); ok {
+		return creds, nil
+	}
+
 	sessionPolicy := c.generateSessionPolicy(bucketName, objectName, upload)
 
 	stsClient := sts.NewFromConfig(*c.awsConfig, func(o *sts.Options) {
@@ -194,29 +308,27 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 	}
 	sessionName := fmt.Sprintf("gitlab-runner-cache-upload-%s", uuid)
 
-	// According to https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_manage-assume.html#id_roles_use_view-role-max-session,
-	// session durations must be between 15 minutes and 12 hours. However,
-	// when role chaining is in use, AWS limits the session duration to 1 hour.
-	duration := 1 * time.Hour
-	if timeout >= 15*time.Minute && timeout <= 1*time.Hour {
-		duration = timeout
+	// Request the maximum allowed session duration. Credentials are cached
+	// and reused across jobs, so a longer session duration means more cache
+	// hits. According to https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_manage-assume.html#id_roles_use_view-role-max-session,
+	// session durations must be between 15 minutes and 12 hours; when role
+	// chaining is in use, AWS limits this to 1 hour.
+	const duration = 1 * time.Hour
+
+	release, err := c.acquireAssumeRoleSem(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
+	// Double-check cache after acquiring the semaphore slot. A concurrent
+	// goroutine may have fetched and cached credentials for the same key
+	// while we were waiting.
+	if creds, ok := c.cachedCreds(credKey, minValidity); ok {
+		return creds, nil
 	}
 
-	if c.assumeRoleSem != nil {
-		waitStart := time.Now()
-		select {
-		case c.assumeRoleSem <- struct{}{}:
-			assumeRoleWaitDuration.Observe(time.Since(waitStart).Seconds())
-			assumeRoleInFlight.Inc()
-			defer func() {
-				<-c.assumeRoleSem
-				assumeRoleInFlight.Dec()
-			}()
-		case <-ctx.Done():
-			return nil, fmt.Errorf("context cancelled waiting for AssumeRole semaphore: %w", ctx.Err())
-		}
-	}
-
+	assumeRoleCredCacheMisses.Inc()
 	startTime := time.Now()
 	roleCredentials, err := stsClient.AssumeRole(ctx, &sts.AssumeRoleInput{
 		RoleArn:         aws.String(roleARN),
@@ -249,12 +361,24 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 		"duration_s": elapsed,
 	}).Debug("Successfully assumed role for cache credentials")
 
-	return map[string]string{
+	creds := map[string]string{
 		"AWS_ACCESS_KEY_ID":     *roleCredentials.Credentials.AccessKeyId,
 		"AWS_SECRET_ACCESS_KEY": *roleCredentials.Credentials.SecretAccessKey,
 		"AWS_SESSION_TOKEN":     *roleCredentials.Credentials.SessionToken,
 		"AWS_PROFILE":           "", // Ignore user-defined values
-	}, nil
+	}
+
+	// Cache only when the response includes an expiration. This is always
+	// the case for AssumeRole, but we guard defensively to avoid storing
+	// credentials that we cannot expire correctly.
+	if !c.disableCredCache && roleCredentials.Credentials.Expiration != nil {
+		assumeRoleCredCache.Add(credKey, cachedCredential{
+			creds:     creds,
+			expiresAt: *roleCredentials.Credentials.Expiration,
+		})
+	}
+
+	return creds, nil
 }
 
 func (c *s3Client) ServerSideEncryptionType() string {
@@ -408,11 +532,12 @@ func buildS3Client(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOptio
 	}
 
 	c := &s3Client{
-		s3Config:      s3Config,
-		awsConfig:     cfg,
-		client:        client,
-		presignClient: presignClient,
-		assumeRoleSem: assumeRoleSem,
+		s3Config:         s3Config,
+		awsConfig:        cfg,
+		client:           client,
+		presignClient:    presignClient,
+		assumeRoleSem:    assumeRoleSem,
+		disableCredCache: s3Config.DisableAssumeRoleCredentialsCaching,
 	}
 
 	for _, opt := range options {

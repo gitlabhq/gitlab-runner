@@ -1696,6 +1696,20 @@ If `RoleARN` is present, every time the runner uploads to the cache:
 1. The runner manager passes these credentials and URL in the `s3://<bucket name>/<filename>` format to
    the cache archiver, which then uploads the file.
 
+##### AssumeRole Prometheus metrics
+
+When `RoleARN` is set, GitLab Runner exposes the following Prometheus metrics for monitoring STS
+request behavior:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `gitlab_runner_cache_s3_assume_role_requests_in_flight` | Gauge | Number of `AssumeRole` requests to AWS STS in progress. |
+| `gitlab_runner_cache_s3_assume_role_wait_seconds` | Histogram | Wait time to acquire a concurrency slot before issuing an `AssumeRole` request. |
+| `gitlab_runner_cache_s3_assume_role_duration_seconds` | Histogram | Duration of `AssumeRole` API calls to AWS STS. |
+| `gitlab_runner_cache_s3_assume_role_cache_hits_total` | Counter | Number of `AssumeRole` credential cache hits (STS call avoided). |
+| `gitlab_runner_cache_s3_assume_role_cache_misses_total` | Counter | Number of `AssumeRole` credential cache misses (STS call was made). |
+| `gitlab_runner_cache_s3_assume_role_cached_credentials` | Gauge | Number of `AssumeRole` credentials held in the in-memory LRU cache. |
+
 #### Enable IAM roles for Kubernetes ServiceAccount resources
 
 To use IAM roles for service accounts, an IAM OIDC provider [must exist for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html). After an IAM OIDC provider is associated with your cluster, you can create an IAM role to associate to the service account of the runner.

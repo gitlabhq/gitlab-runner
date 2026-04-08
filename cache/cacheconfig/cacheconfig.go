@@ -30,22 +30,23 @@ func (c *Config) GetShared() bool {
 }
 
 type CacheS3Config struct {
-	ServerAddress             string     `toml:"ServerAddress,omitempty" long:"server-address" env:"CACHE_S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"`
-	AccessKey                 string     `toml:"AccessKey,omitempty" long:"access-key" env:"CACHE_S3_ACCESS_KEY" description:"S3 Access Key"`
-	SecretKey                 string     `toml:"SecretKey,omitempty" long:"secret-key" env:"CACHE_S3_SECRET_KEY" description:"S3 Secret Key"`
-	SessionToken              string     `toml:"SessionToken,omitempty" long:"session-token" env:"CACHE_S3_SESSION_TOKEN" description:"S3 Session Token"`
-	BucketName                string     `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
-	BucketLocation            string     `toml:"BucketLocation,omitempty" long:"bucket-location" env:"CACHE_S3_BUCKET_LOCATION" description:"Name of S3 region"`
-	Insecure                  bool       `toml:"Insecure,omitempty" long:"insecure" env:"CACHE_S3_INSECURE" description:"Use insecure mode (without https)"`
-	AuthenticationType        S3AuthType `toml:"AuthenticationType,omitempty" long:"authentication_type" env:"CACHE_S3_AUTHENTICATION_TYPE" description:"IAM or credentials"`
-	ServerSideEncryption      string     `toml:"ServerSideEncryption,omitempty" long:"server-side-encryption" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION" description:"Server side encryption type (S3, or KMS)"`
-	ServerSideEncryptionKeyID string     `toml:"ServerSideEncryptionKeyID,omitempty" long:"server-side-encryption-key-id" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID" description:"Server side encryption key ID (alias or Key ID or Key ARN)"`
-	DualStack                 *bool      `toml:"DualStack,omitempty" long:"dual-stack" env:"CACHE_S3_DUAL_STACK" description:"Enable dual-stack (IPv4 and IPv6) endpoints (default: true)" jsonschema:"oneof_type=boolean;null"`
-	PathStyle                 *bool      `toml:"PathStyle,omitempty" long:"path-style" env:"CACHE_S3_PATH_STYLE" description:"Use path style access (default: false)" jsonschema:"oneof_type=boolean;null"`
-	Accelerate                bool       `toml:"Accelerate,omitempty" long:"accelerate" env:"CACHE_S3_ACCELERATE" description:"Enable S3 Transfer Acceleration"`
-	RoleARN                   string     `toml:"RoleARN,omitempty" long:"role-arn" env:"CACHE_S3_ROLE_ARN" description:"Role ARN for transferring cache to S3"`
-	UploadRoleARN             string     `toml:"UploadRoleARN,omitempty" long:"upload-role-arn" env:"CACHE_S3_UPLOAD_ROLE_ARN" description:"Role ARN for uploading cache to S3"`
-	AssumeRoleMaxConcurrency  int        `toml:"AssumeRoleMaxConcurrency,omitempty" long:"assume-role-max-concurrency" env:"CACHE_S3_ASSUME_ROLE_MAX_CONCURRENCY" description:"Maximum concurrent AssumeRole requests to AWS STS (default: 5, -1 to disable limit)"`
+	ServerAddress                       string     `toml:"ServerAddress,omitempty" long:"server-address" env:"CACHE_S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"`
+	AccessKey                           string     `toml:"AccessKey,omitempty" long:"access-key" env:"CACHE_S3_ACCESS_KEY" description:"S3 Access Key"`
+	SecretKey                           string     `toml:"SecretKey,omitempty" long:"secret-key" env:"CACHE_S3_SECRET_KEY" description:"S3 Secret Key"`
+	SessionToken                        string     `toml:"SessionToken,omitempty" long:"session-token" env:"CACHE_S3_SESSION_TOKEN" description:"S3 Session Token"`
+	BucketName                          string     `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
+	BucketLocation                      string     `toml:"BucketLocation,omitempty" long:"bucket-location" env:"CACHE_S3_BUCKET_LOCATION" description:"Name of S3 region"`
+	Insecure                            bool       `toml:"Insecure,omitempty" long:"insecure" env:"CACHE_S3_INSECURE" description:"Use insecure mode (without https)"`
+	AuthenticationType                  S3AuthType `toml:"AuthenticationType,omitempty" long:"authentication_type" env:"CACHE_S3_AUTHENTICATION_TYPE" description:"IAM or credentials"`
+	ServerSideEncryption                string     `toml:"ServerSideEncryption,omitempty" long:"server-side-encryption" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION" description:"Server side encryption type (S3, or KMS)"`
+	ServerSideEncryptionKeyID           string     `toml:"ServerSideEncryptionKeyID,omitempty" long:"server-side-encryption-key-id" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID" description:"Server side encryption key ID (alias or Key ID or Key ARN)"`
+	DualStack                           *bool      `toml:"DualStack,omitempty" long:"dual-stack" env:"CACHE_S3_DUAL_STACK" description:"Enable dual-stack (IPv4 and IPv6) endpoints (default: true)" jsonschema:"oneof_type=boolean;null"`
+	PathStyle                           *bool      `toml:"PathStyle,omitempty" long:"path-style" env:"CACHE_S3_PATH_STYLE" description:"Use path style access (default: false)" jsonschema:"oneof_type=boolean;null"`
+	Accelerate                          bool       `toml:"Accelerate,omitempty" long:"accelerate" env:"CACHE_S3_ACCELERATE" description:"Enable S3 Transfer Acceleration"`
+	RoleARN                             string     `toml:"RoleARN,omitempty" long:"role-arn" env:"CACHE_S3_ROLE_ARN" description:"Role ARN for transferring cache to S3"`
+	UploadRoleARN                       string     `toml:"UploadRoleARN,omitempty" long:"upload-role-arn" env:"CACHE_S3_UPLOAD_ROLE_ARN" description:"Role ARN for uploading cache to S3"`
+	AssumeRoleMaxConcurrency            int        `toml:"AssumeRoleMaxConcurrency,omitempty" long:"assume-role-max-concurrency" env:"CACHE_S3_ASSUME_ROLE_MAX_CONCURRENCY" description:"Maximum concurrent AssumeRole requests to AWS STS (default: 5, -1 to disable limit)"`
+	DisableAssumeRoleCredentialsCaching bool       `toml:"DisableAssumeRoleCredentialsCaching,omitempty" long:"disable-assume-role-credentials-caching" env:"CACHE_S3_DISABLE_ASSUME_ROLE_CREDENTIALS_CACHING" description:"Disable in-process caching of AssumeRole credentials"`
 }
 
 type S3AuthType string
