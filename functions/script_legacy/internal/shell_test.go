@@ -7,6 +7,9 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDetectShell_FindsShell(t *testing.T) {
@@ -15,14 +18,11 @@ func TestDetectShell_FindsShell(t *testing.T) {
 	}
 
 	shellPath, err := DetectShell()
-	if err != nil {
-		t.Fatalf("DetectShell() failed: %v", err)
-	}
+	require.NoError(t, err, "DetectShell() failed")
 
 	// Verify the shell is actually executable
-	if _, err := exec.LookPath(shellPath); err != nil {
-		t.Errorf("Detected shell %s is not executable: %v", shellPath, err)
-	}
+	_, err = exec.LookPath(shellPath)
+	assert.NoError(t, err, "Detected shell %s is not executable", shellPath)
 
 	t.Logf("Detected shell: %s", shellPath)
 }
@@ -33,25 +33,18 @@ func TestDetectShell_PrefersBashOverSh(t *testing.T) {
 	}
 
 	shellPath, err := DetectShell()
-	if err != nil {
-		t.Fatalf("DetectShell() failed: %v", err)
-	}
+	require.NoError(t, err, "DetectShell() failed")
 
 	// If both bash and sh are available, should prefer bash
 	bashPath, bashErr := exec.LookPath("bash")
 	shPath, shErr := exec.LookPath("sh")
 
 	if bashErr == nil && shErr == nil {
-		// Both available - should choose bash
-		if !strings.Contains(shellPath, "bash") {
-			t.Errorf("Expected bash path when both bash and sh available, got %s", shellPath)
-		}
+		assert.True(t, strings.Contains(shellPath, "bash"),
+			"Expected bash path when both bash and sh available, got %s", shellPath)
 	}
 
-	// At minimum, should find something
-	if shellPath == "" {
-		t.Error("DetectShell() returned empty path")
-	}
+	assert.NotEmpty(t, shellPath, "DetectShell() returned empty path")
 
 	t.Logf("Detected shell at %s (bash: %s, sh: %s)", shellPath, bashPath, shPath)
 }
@@ -62,11 +55,6 @@ func TestDetectShell_Windows(t *testing.T) {
 	}
 
 	_, err := DetectShell()
-	if err == nil {
-		t.Error("Expected error on Windows, got nil")
-	}
-
-	if !strings.Contains(err.Error(), "not supported on Windows") {
-		t.Errorf("Expected Windows error message, got: %v", err)
-	}
+	assert.Error(t, err, "Expected error on Windows")
+	assert.Contains(t, err.Error(), "not supported on Windows", "Expected Windows error message")
 }

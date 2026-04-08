@@ -2,7 +2,11 @@
 
 package internal
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestEscapeForAnsiC(t *testing.T) {
 	tests := []struct {
@@ -85,9 +89,7 @@ func TestEscapeForAnsiC(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := EscapeForAnsiC(tt.input)
-			if result != tt.expected {
-				t.Errorf("EscapeForAnsiC(%q) = %q, want %q", tt.input, result, tt.expected)
-			}
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
@@ -124,10 +126,8 @@ func TestEscapeForAnsiC_SecurityFeatures(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := EscapeForAnsiC(tt.input)
-			// Verify that ESC character (0x1B) is hex-escaped
-			if !containsHexEscape(result) {
-				t.Errorf("Expected %s to be hex-escaped for security, got: %q", tt.description, result)
-			}
+			assert.True(t, containsHexEscape(result),
+				"Expected %s to be hex-escaped for security, got: %q", tt.description, result)
 		})
 	}
 }
@@ -202,9 +202,7 @@ func TestEscapeForPosix(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := EscapeForPosix(tt.input)
-			if result != tt.expected {
-				t.Errorf("EscapeForPosix(%q) = %q, want %q", tt.input, result, tt.expected)
-			}
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

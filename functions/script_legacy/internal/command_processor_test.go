@@ -5,6 +5,8 @@ package internal
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCommandProcessor_ProcessCommand_EmptyCommand(t *testing.T) {
@@ -21,9 +23,7 @@ func TestCommandProcessor_ProcessCommand_EmptyCommand(t *testing.T) {
 	processor.ProcessCommand(&buf, 0, "")
 	result := buf.String()
 
-	if result != "echo\n" {
-		t.Errorf("Expected 'echo\\n', got: %s", result)
-	}
+	assert.Equal(t, "echo\n", result)
 }
 
 func TestCommandProcessor_ProcessCommand_SingleLine_NoErrors(t *testing.T) {
@@ -40,17 +40,9 @@ func TestCommandProcessor_ProcessCommand_SingleLine_NoErrors(t *testing.T) {
 	processor.ProcessCommand(&buf, 0, "echo hello")
 	result := buf.String()
 
-	if !strings.Contains(result, commandPrefix) {
-		t.Errorf("Expected command prefix")
-	}
-
-	if !strings.Contains(result, "echo hello") {
-		t.Errorf("Expected command")
-	}
-
-	if strings.Contains(result, "_runner_exit_code") {
-		t.Errorf("Should not have exit code check when disabled")
-	}
+	assert.Contains(t, result, commandPrefix, "Expected command prefix")
+	assert.Contains(t, result, "echo hello", "Expected command")
+	assert.NotContains(t, result, "_runner_exit_code", "Should not have exit code check when disabled")
 }
 
 func TestCommandProcessor_ProcessCommand_SingleLine_WithErrors(t *testing.T) {
@@ -67,9 +59,7 @@ func TestCommandProcessor_ProcessCommand_SingleLine_WithErrors(t *testing.T) {
 	processor.ProcessCommand(&buf, 0, "echo test")
 	result := buf.String()
 
-	if !strings.Contains(result, exitCodeCheck) {
-		t.Errorf("Expected exit code check when enabled")
-	}
+	assert.Contains(t, result, exitCodeCheck, "Expected exit code check when enabled")
 }
 
 func TestCommandProcessor_ProcessCommand_MultiLine_NoTraceSections(t *testing.T) {
@@ -87,13 +77,8 @@ func TestCommandProcessor_ProcessCommand_MultiLine_NoTraceSections(t *testing.T)
 	processor.ProcessCommand(&buf, 0, multiLine)
 	result := buf.String()
 
-	if strings.Contains(result, "section_start") {
-		t.Errorf("Should not have section markers when trace_sections disabled")
-	}
-
-	if !strings.Contains(result, multilineIndicator) {
-		t.Errorf("Expected multiline indicator")
-	}
+	assert.NotContains(t, result, "section_start", "Should not have section markers when trace_sections disabled")
+	assert.Contains(t, result, multilineIndicator, "Expected multiline indicator")
 }
 
 func TestCommandProcessor_ProcessCommand_MultiLine_WithTraceSections(t *testing.T) {
@@ -111,13 +96,8 @@ func TestCommandProcessor_ProcessCommand_MultiLine_WithTraceSections(t *testing.
 	processor.ProcessCommand(&buf, 0, multiLine)
 	result := buf.String()
 
-	// Should have trace section markers
-	if !strings.Contains(result, "section_start") {
-		t.Errorf("Expected section_start marker")
-	}
-	if !strings.Contains(result, "section_end") {
-		t.Errorf("Expected section_end marker")
-	}
+	assert.Contains(t, result, "section_start", "Expected section_start marker")
+	assert.Contains(t, result, "section_end", "Expected section_end marker")
 }
 
 func TestCommandProcessor_ProcessCommand_PosixMode(t *testing.T) {
@@ -134,10 +114,7 @@ func TestCommandProcessor_ProcessCommand_PosixMode(t *testing.T) {
 	processor.ProcessCommand(&buf, 0, "echo test")
 	result := buf.String()
 
-	// Should NOT have ANSI colors
-	if strings.Contains(result, EscapeForAnsiC(ansiGreen)) {
-		t.Errorf("Should not have colors in POSIX mode")
-	}
+	assert.NotContains(t, result, EscapeForAnsiC(ansiGreen), "Should not have colors in POSIX mode")
 }
 
 func TestCommandProcessor_ProcessCommand_BashMode(t *testing.T) {
@@ -154,9 +131,7 @@ func TestCommandProcessor_ProcessCommand_BashMode(t *testing.T) {
 	processor.ProcessCommand(&buf, 0, "echo test")
 	result := buf.String()
 
-	if !strings.Contains(result, EscapeForAnsiC(ansiGreen)) {
-		t.Errorf("Expected colors in bash mode")
-	}
+	assert.Contains(t, result, EscapeForAnsiC(ansiGreen), "Expected colors in bash mode")
 }
 
 func TestCommandProcessor_ShouldUseTraceSection_True(t *testing.T) {
@@ -165,10 +140,8 @@ func TestCommandProcessor_ShouldUseTraceSection_True(t *testing.T) {
 	}
 	processor := NewCommandProcessor(config)
 
-	multiLine := "line1\nline2"
-	if !processor.shouldUseTraceSection(multiLine) {
-		t.Errorf("Expected true for multi-line with trace_sections enabled")
-	}
+	assert.True(t, processor.shouldUseTraceSection("line1\nline2"),
+		"Expected true for multi-line with trace_sections enabled")
 }
 
 func TestCommandProcessor_ShouldUseTraceSection_False_NotMultiline(t *testing.T) {
@@ -177,10 +150,8 @@ func TestCommandProcessor_ShouldUseTraceSection_False_NotMultiline(t *testing.T)
 	}
 	processor := NewCommandProcessor(config)
 
-	singleLine := "echo test"
-	if processor.shouldUseTraceSection(singleLine) {
-		t.Errorf("Expected false for single-line command")
-	}
+	assert.False(t, processor.shouldUseTraceSection("echo test"),
+		"Expected false for single-line command")
 }
 
 func TestCommandProcessor_ShouldUseTraceSection_False_Disabled(t *testing.T) {
@@ -189,10 +160,8 @@ func TestCommandProcessor_ShouldUseTraceSection_False_Disabled(t *testing.T) {
 	}
 	processor := NewCommandProcessor(config)
 
-	multiLine := "line1\nline2"
-	if processor.shouldUseTraceSection(multiLine) {
-		t.Errorf("Expected false when trace_sections disabled")
-	}
+	assert.False(t, processor.shouldUseTraceSection("line1\nline2"),
+		"Expected false when trace_sections disabled")
 }
 
 func TestCommandProcessor_WriteNormalCommand_WithErrorCheck(t *testing.T) {
@@ -205,9 +174,7 @@ func TestCommandProcessor_WriteNormalCommand_WithErrorCheck(t *testing.T) {
 	processor.writeNormalCommand(&buf, "echo test")
 	result := buf.String()
 
-	if !strings.Contains(result, exitCodeCheck) {
-		t.Errorf("Expected exit code check")
-	}
+	assert.Contains(t, result, exitCodeCheck, "Expected exit code check")
 }
 
 func TestCommandProcessor_WriteNormalCommand_NoErrorCheck(t *testing.T) {
@@ -220,9 +187,7 @@ func TestCommandProcessor_WriteNormalCommand_NoErrorCheck(t *testing.T) {
 	processor.writeNormalCommand(&buf, "echo test")
 	result := buf.String()
 
-	if strings.Contains(result, "_runner_exit_code") {
-		t.Errorf("Should not have exit code check when disabled")
-	}
+	assert.NotContains(t, result, "_runner_exit_code", "Should not have exit code check when disabled")
 }
 
 func TestCommandProcessor_AllFlags_Disabled(t *testing.T) {
@@ -239,16 +204,9 @@ func TestCommandProcessor_AllFlags_Disabled(t *testing.T) {
 	processor.ProcessCommand(&buf, 0, "echo test")
 	result := buf.String()
 
-	if !strings.Contains(result, "echo test") {
-		t.Errorf("Expected command")
-	}
-
-	if strings.Contains(result, "_runner_exit_code") {
-		t.Errorf("Should not have error checking")
-	}
-	if strings.Contains(result, "section_start") {
-		t.Errorf("Should not have trace sections")
-	}
+	assert.Contains(t, result, "echo test", "Expected command")
+	assert.NotContains(t, result, "_runner_exit_code", "Should not have error checking")
+	assert.NotContains(t, result, "section_start", "Should not have trace sections")
 }
 
 func TestCommandProcessor_AllFlags_Enabled(t *testing.T) {
@@ -265,23 +223,15 @@ func TestCommandProcessor_AllFlags_Enabled(t *testing.T) {
 	processor.ProcessCommand(&buf, 0, "echo test")
 	result := buf.String()
 
-	if !strings.Contains(result, exitCodeCheck) {
-		t.Errorf("Expected error checking for single line")
-	}
-	if strings.Contains(result, EscapeForAnsiC(ansiGreen)) {
-		t.Errorf("Should not have colors in POSIX mode")
-	}
-	if strings.Contains(result, "section_start") {
-		t.Errorf("Should not have trace sections for single line")
-	}
+	assert.Contains(t, result, exitCodeCheck, "Expected error checking for single line")
+	assert.NotContains(t, result, EscapeForAnsiC(ansiGreen), "Should not have colors in POSIX mode")
+	assert.NotContains(t, result, "section_start", "Should not have trace sections for single line")
 
 	buf.Reset()
 	processor.ProcessCommand(&buf, 1, "line1\nline2")
 	result2 := buf.String()
 
-	if !strings.Contains(result2, "section_start") {
-		t.Errorf("Expected trace sections for multi-line")
-	}
+	assert.Contains(t, result2, "section_start", "Expected trace sections for multi-line")
 }
 
 func TestCommandProcessor_Integration(t *testing.T) {
@@ -303,13 +253,8 @@ func TestCommandProcessor_Integration(t *testing.T) {
 
 	result := buf.String()
 
-	if !strings.Contains(result, "echo start") {
-		t.Errorf("Expected first command")
-	}
-
-	if !strings.Contains(result, "section_start") {
-		t.Errorf("Expected trace section for multi-line")
-	}
+	assert.Contains(t, result, "echo start", "Expected first command")
+	assert.Contains(t, result, "section_start", "Expected trace section for multi-line")
 
 	lines := strings.Split(result, "\n")
 	hasEchoOnly := false
@@ -319,11 +264,6 @@ func TestCommandProcessor_Integration(t *testing.T) {
 			break
 		}
 	}
-	if !hasEchoOnly {
-		t.Errorf("Expected 'echo' for empty command")
-	}
-
-	if !strings.Contains(result, "echo end") {
-		t.Errorf("Expected last command")
-	}
+	assert.True(t, hasEchoOnly, "Expected 'echo' for empty command")
+	assert.Contains(t, result, "echo end", "Expected last command")
 }

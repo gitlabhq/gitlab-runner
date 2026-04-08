@@ -5,132 +5,91 @@ package internal
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestScriptHeader_Generate_Bash(t *testing.T) {
 	header := NewScriptHeader("/bin/bash", false)
 	result := header.Generate()
 
-	if !strings.HasPrefix(result, "#!/bin/bash\n") {
-		t.Errorf("Expected bash shebang, got: %s", result)
-	}
-
-	if !strings.Contains(result, trapTerm) {
-		t.Errorf("Expected SIGTERM trap")
-	}
-
-	if !strings.Contains(result, setPipefailCheck) {
-		t.Errorf("Expected pipefail check")
-	}
-
-	if !strings.Contains(result, setErrexit) {
-		t.Errorf("Expected errexit")
-	}
-
-	if !strings.Contains(result, setNoclobber) {
-		t.Errorf("Expected noclobber disabled")
-	}
-
-	if strings.Contains(result, setXtrace) {
-		t.Errorf("Should not contain xtrace when debug is disabled")
-	}
+	assert.True(t, strings.HasPrefix(result, "#!/bin/bash\n"), "Expected bash shebang, got: %s", result)
+	assert.Contains(t, result, trapTerm, "Expected SIGTERM trap")
+	assert.Contains(t, result, setPipefailCheck, "Expected pipefail check")
+	assert.Contains(t, result, setErrexit, "Expected errexit")
+	assert.Contains(t, result, setNoclobber, "Expected noclobber disabled")
+	assert.NotContains(t, result, setXtrace, "Should not contain xtrace when debug is disabled")
 }
 
 func TestScriptHeader_Generate_BashWithDebug(t *testing.T) {
 	header := NewScriptHeader("/bin/bash", true)
 	result := header.Generate()
 
-	if !strings.HasPrefix(result, "#!/bin/bash\n") {
-		t.Errorf("Expected bash shebang, got: %s", result)
-	}
-
-	if !strings.Contains(result, setXtrace) {
-		t.Errorf("Expected xtrace when debug enabled")
-	}
-
-	if !strings.Contains(result, " -o "+setXtrace) {
-		t.Errorf("Expected ' -o xtrace' format")
-	}
+	assert.True(t, strings.HasPrefix(result, "#!/bin/bash\n"), "Expected bash shebang, got: %s", result)
+	assert.Contains(t, result, setXtrace, "Expected xtrace when debug enabled")
+	assert.Contains(t, result, " -o "+setXtrace, "Expected ' -o xtrace' format")
 }
 
 func TestScriptHeader_Generate_Sh(t *testing.T) {
 	header := NewScriptHeader("/bin/sh", false)
 	result := header.Generate()
 
-	if !strings.HasPrefix(result, "#!/bin/sh\n") {
-		t.Errorf("Expected sh shebang, got: %s", result)
-	}
-
-	if !strings.Contains(result, setPipefailCheck) {
-		t.Errorf("Expected pipefail check")
-	}
+	assert.True(t, strings.HasPrefix(result, "#!/bin/sh\n"), "Expected sh shebang, got: %s", result)
+	assert.Contains(t, result, setPipefailCheck, "Expected pipefail check")
 }
 
 func TestScriptHeader_ContainsPipefailCheck(t *testing.T) {
 	header := NewScriptHeader("/bin/bash", false)
 	result := header.Generate()
 
-	// Pipefail should be conditional for sh compatibility
 	expectedCheck := "if set -o | grep pipefail > /dev/null; then set -o pipefail; fi"
-	if !strings.Contains(result, expectedCheck) {
-		t.Errorf("Expected conditional pipefail check")
-	}
+	assert.Contains(t, result, expectedCheck, "Expected conditional pipefail check")
 }
 
 func TestScriptHeader_ContainsErrexit(t *testing.T) {
 	header := NewScriptHeader("/bin/bash", false)
 	result := header.Generate()
 
-	if !strings.Contains(result, "set -o errexit") {
-		t.Errorf("Expected 'set -o errexit'")
-	}
+	assert.Contains(t, result, "set -o errexit", "Expected 'set -o errexit'")
 }
 
 func TestScriptHeader_Format(t *testing.T) {
 	header := NewScriptHeader("/bin/bash", false)
 	result := header.Generate()
 
-	if !strings.HasPrefix(result, "#!/bin/bash\n\n") {
-		t.Errorf("Expected shebang followed by blank line")
-	}
-
-	if !strings.HasSuffix(result, "\n\n") {
-		t.Errorf("Expected to end with double newline")
-	}
+	assert.True(t, strings.HasPrefix(result, "#!/bin/bash\n\n"), "Expected shebang followed by blank line")
+	assert.True(t, strings.HasSuffix(result, "\n\n"), "Expected to end with double newline")
 }
 
 func TestScriptHeader_ContainsTrapTerm(t *testing.T) {
 	header := NewScriptHeader("/bin/bash", false)
 	result := header.Generate()
 
-	if !strings.Contains(result, "trap exit 1 TERM") {
-		t.Errorf("Expected SIGTERM trap for clean cancellation")
-	}
+	assert.Contains(t, result, "trap exit 1 TERM", "Expected SIGTERM trap for clean cancellation")
 }
 
 func TestScriptHeader_ContainsNoclobber(t *testing.T) {
 	header := NewScriptHeader("/bin/bash", false)
 	result := header.Generate()
 
-	if !strings.Contains(result, "set +o noclobber") {
-		t.Errorf("Expected noclobber disabled for file overwrite compatibility")
-	}
+	assert.Contains(t, result, "set +o noclobber", "Expected noclobber disabled for file overwrite compatibility")
 }
 
 func TestScriptHeader_SecurityFeatures(t *testing.T) {
 	header := NewScriptHeader("/bin/bash", false)
 	result := header.Generate()
 
-	securityFeatures := []string{
-		"trap exit 1 TERM", // Prevents script dump on cancellation
-		"set -o errexit",   // Exit on error
-		"set +o noclobber", // Allow file overwrites
+	securityFeatures := []struct {
+		feature string
+		desc    string
+	}{
+		{"trap exit 1 TERM", "Prevents script dump on cancellation"},
+		{"set -o errexit", "Exit on error"},
+		{"set +o noclobber", "Allow file overwrites"},
 	}
 
-	for _, feature := range securityFeatures {
-		if !strings.Contains(result, feature) {
-			t.Errorf("Missing security feature: %s", feature)
-		}
+	for _, sf := range securityFeatures {
+		assert.Contains(t, result, sf.feature, "Missing security feature: %s", sf.desc)
 	}
 }
 
@@ -144,18 +103,12 @@ func TestScriptHeader_OrderOfOptions(t *testing.T) {
 	errexitIdx := strings.Index(result, "set -o errexit")
 	noclobberIdx := strings.Index(result, "set +o noclobber")
 
-	if trapIdx == -1 || pipefailIdx == -1 || errexitIdx == -1 || noclobberIdx == -1 {
-		t.Errorf("Missing expected options")
-		return
-	}
+	assert.NotEqual(t, -1, trapIdx, "Missing trap option")
+	assert.NotEqual(t, -1, pipefailIdx, "Missing pipefail option")
+	assert.NotEqual(t, -1, errexitIdx, "Missing errexit option")
+	assert.NotEqual(t, -1, noclobberIdx, "Missing noclobber option")
 
-	if trapIdx > pipefailIdx {
-		t.Errorf("trap should come before pipefail")
-	}
-	if pipefailIdx > errexitIdx {
-		t.Errorf("pipefail should come before errexit")
-	}
-	if errexitIdx > noclobberIdx {
-		t.Errorf("errexit should come before noclobber")
-	}
+	assert.Less(t, trapIdx, pipefailIdx, "trap should come before pipefail")
+	assert.Less(t, pipefailIdx, errexitIdx, "pipefail should come before errexit")
+	assert.Less(t, errexitIdx, noclobberIdx, "errexit should come before noclobber")
 }

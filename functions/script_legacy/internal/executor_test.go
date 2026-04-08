@@ -5,8 +5,10 @@ package internal
 import (
 	"bytes"
 	"runtime"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExecute_BasicScript(t *testing.T) {
@@ -15,9 +17,7 @@ func TestExecute_BasicScript(t *testing.T) {
 	}
 
 	shellPath, err := DetectShell()
-	if err != nil {
-		t.Fatalf("DetectShell() failed: %v", err)
-	}
+	require.NoError(t, err, "DetectShell() failed")
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
@@ -34,14 +34,9 @@ echo "Hello World"
 `
 
 	err = executor.Execute(t.Context(), script)
-	if err != nil {
-		t.Fatalf("Execute() failed: %v", err)
-	}
+	require.NoError(t, err, "Execute() failed")
 
-	output := stdout.String()
-	if !strings.Contains(output, "Hello World") {
-		t.Errorf("Expected 'Hello World' in output, got: %s", output)
-	}
+	assert.Contains(t, stdout.String(), "Hello World", "Expected 'Hello World' in output")
 }
 
 func TestExecute_WithShCompatibility(t *testing.T) {
@@ -50,9 +45,7 @@ func TestExecute_WithShCompatibility(t *testing.T) {
 	}
 
 	shellPath, err := DetectShell()
-	if err != nil {
-		t.Fatalf("DetectShell() failed: %v", err)
-	}
+	require.NoError(t, err, "DetectShell() failed")
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
@@ -72,14 +65,9 @@ echo "test output"
 `
 
 	err = executor.Execute(t.Context(), script)
-	if err != nil {
-		t.Fatalf("Execute() failed with sh-compatible script: %v", err)
-	}
+	require.NoError(t, err, "Execute() failed with sh-compatible script")
 
-	output := stdout.String()
-	if !strings.Contains(output, "test output") {
-		t.Errorf("Expected 'test output' in output, got: %s", output)
-	}
+	assert.Contains(t, stdout.String(), "test output", "Expected 'test output' in output")
 }
 
 func TestExecute_ExitOnError(t *testing.T) {
@@ -88,9 +76,7 @@ func TestExecute_ExitOnError(t *testing.T) {
 	}
 
 	shellPath, err := DetectShell()
-	if err != nil {
-		t.Fatalf("DetectShell() failed: %v", err)
-	}
+	require.NoError(t, err, "DetectShell() failed")
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
@@ -109,14 +95,9 @@ echo "should not reach here"
 `
 
 	err = executor.Execute(t.Context(), script)
-	if err == nil {
-		t.Error("Expected error from failed command, got nil")
-	}
+	assert.Error(t, err, "Expected error from failed command")
 
-	output := stdout.String()
-	if strings.Contains(output, "should not reach here") {
-		t.Error("Script continued after error when errexit was set")
-	}
+	assert.NotContains(t, stdout.String(), "should not reach here", "Script continued after error when errexit was set")
 }
 
 func TestExecute_WithEnvironment(t *testing.T) {
@@ -125,9 +106,7 @@ func TestExecute_WithEnvironment(t *testing.T) {
 	}
 
 	shellPath, err := DetectShell()
-	if err != nil {
-		t.Fatalf("DetectShell() failed: %v", err)
-	}
+	require.NoError(t, err, "DetectShell() failed")
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
@@ -145,14 +124,9 @@ echo $TEST_VAR
 `
 
 	err = executor.Execute(t.Context(), script)
-	if err != nil {
-		t.Fatalf("Execute() failed: %v", err)
-	}
+	require.NoError(t, err, "Execute() failed")
 
-	output := stdout.String()
-	if !strings.Contains(output, "test_value") {
-		t.Errorf("Expected environment variable in output, got: %s", output)
-	}
+	assert.Contains(t, stdout.String(), "test_value", "Expected environment variable in output")
 }
 
 func TestExecute_CheckForErrorsCatchesFailure(t *testing.T) {
@@ -161,9 +135,7 @@ func TestExecute_CheckForErrorsCatchesFailure(t *testing.T) {
 	}
 
 	shellPath, err := DetectShell()
-	if err != nil {
-		t.Fatalf("DetectShell() failed: %v", err)
-	}
+	require.NoError(t, err, "DetectShell() failed")
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
@@ -184,16 +156,8 @@ echo "after false - should not reach here"
 `
 
 	err = executor.Execute(t.Context(), script)
-	if err == nil {
-		t.Error("Expected error from failed command with exit code check, got nil")
-	}
+	assert.Error(t, err, "Expected error from failed command with exit code check")
 
-	output := stdout.String()
-	if !strings.Contains(output, "before false") {
-		t.Error("Should have reached first echo")
-	}
-
-	if strings.Contains(output, "after false") {
-		t.Error("Should not have reached echo after failed command")
-	}
+	assert.Contains(t, stdout.String(), "before false", "Should have reached first echo")
+	assert.NotContains(t, stdout.String(), "after false", "Should not have reached echo after failed command")
 }
