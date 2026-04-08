@@ -172,6 +172,8 @@ func (rc *APIRequestsCollector) Collect(ch chan<- prometheus.Metric) {
 
 func statusClass(status int) string {
 	switch {
+	case status >= 600:
+		return "unknown"
 	case status >= 500:
 		return "5xx"
 	case status >= 400:

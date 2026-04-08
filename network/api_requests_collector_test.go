@@ -273,6 +273,10 @@ func TestStatusClass(t *testing.T) {
 		expected string
 	}{
 		{
+			status:   0,
+			expected: "unknown",
+		},
+		{
 			status:   99,
 			expected: "unknown",
 		},
@@ -315,6 +319,14 @@ func TestStatusClass(t *testing.T) {
 		{
 			status:   550,
 			expected: "5xx",
+		},
+		{
+			status:   599,
+			expected: "5xx",
+		},
+		{
+			status:   600,
+			expected: "unknown",
 		},
 	}
 
