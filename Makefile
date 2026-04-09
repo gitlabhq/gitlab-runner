@@ -65,6 +65,8 @@ MAGE = $(localBin)/mage
 GOLANGLINT_VERSION ?= 2.7.2
 GOLANGLINT ?= $(localBin)/golangci-lint
 GOLANGLINT_GOARGS ?= $(localBin)/goargs.so
+# Labkit validate-log-fields version
+LABKIT_VALIDATE_VERSION     := v2.0.0-20260331132242-b6ef9bf35f1d
 
 GENERATED_FILES_TOOLS = $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
 DEVELOPMENT_TOOLS = $(MOCKERY) $(MAGE)
@@ -163,6 +165,11 @@ test-compile:
 	go test -count=1 --tags=integration,steps -run=nope ./...
 	go test -count=1 --tags=integration,kubernetes -run=nope ./...
 	go test -count=1 -run=nope ./...
+
+.PHONY: validate-log-fields
+# Validate logging fields using labkit's validate-log-fields tool.
+validate-log-fields:
+	go run gitlab.com/gitlab-org/labkit/v2/cmd/validate-log-fields@${LABKIT_VALIDATE_VERSION} .
 
 simple-test: TEST_PKG ?= $(shell go list ./...)
 simple-test:

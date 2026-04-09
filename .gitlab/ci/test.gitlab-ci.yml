@@ -285,3 +285,13 @@ windows 21H2 integration tests:
     - "clone test repo"
     - "prepare done"
     - "prebuilt helper images windows 2022"
+
+logging-field-validator:
+  stage: test
+  image: golang:latest
+  extends:
+    - .no_dependencies
+    - .rules:merge_request_pipelines:no_docs
+    - .go-cache
+  script:
+    - make validate-log-fields
