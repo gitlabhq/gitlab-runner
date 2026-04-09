@@ -94,7 +94,15 @@ func (fn OnBuildStageFn) Call(stage BuildStage) {
 const (
 	JobExecutionModeSteps       JobExecutionMode = "steps"
 	JobExecutionModeTraditional JobExecutionMode = "traditional"
+	JobExecutionModeUnknown     JobExecutionMode = "unknown"
 )
+
+func (m JobExecutionMode) OrUnknown() JobExecutionMode {
+	if m == "" {
+		return JobExecutionModeUnknown
+	}
+	return m
+}
 
 type OnJobExecutionModeDispatchedFn func(mode JobExecutionMode, executor string)
 
@@ -226,7 +234,7 @@ func (b *Build) markStepDispatchedInScript() {
 	b.stepDispatchedInScript = true
 }
 
-func (b *Build) dispatchedJobExecutionMode() JobExecutionMode {
+func (b *Build) DispatchedJobExecutionMode() JobExecutionMode {
 	b.statusLock.Lock()
 	defer b.statusLock.Unlock()
 
@@ -743,7 +751,7 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	//nolint:nestif
 	if err == nil {
 		defer func() {
-			b.OnJobExecutionModeDispatchedFn.Call(b.dispatchedJobExecutionMode(), b.Runner.Executor)
+			b.OnJobExecutionModeDispatchedFn.Call(b.DispatchedJobExecutionMode(), b.Runner.Executor)
 		}()
 
 		if b.UseNativeSteps() && len(b.Job.Run) > 0 {
@@ -1265,6 +1273,7 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 		err = trace.Fail(err, JobFailureData{
 			Reason:   buildError.FailureReason,
 			ExitCode: buildError.ExitCode,
+			Mode:     b.DispatchedJobExecutionMode(),
 		})
 		logTerminationError(buildLogger, "Fail", err)
 
@@ -1279,7 +1288,7 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 		}).
 		Errorln("Job failed (system failure):", err)
 	buildLogger.Errorln("Job failed (system failure):", err)
-	logTerminationError(buildLogger, "Fail", trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure}))
+	logTerminationError(buildLogger, "Fail", trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure, Mode: b.DispatchedJobExecutionMode()}))
 }
 
 func logTerminationError(logger buildlogger.Logger, name string, err error) {

@@ -12,7 +12,7 @@ import (
 var numJobFailuresDesc = prometheus.NewDesc(
 	"gitlab_runner_failed_jobs_total",
 	"Total number of failed jobs",
-	[]string{"runner", "runner_name", "failure_reason"},
+	[]string{"runner", "runner_name", "failure_reason", "mode"},
 	nil,
 )
 
@@ -20,6 +20,7 @@ type failurePermutation struct {
 	runnerDescription string
 	runnerName        string
 	reason            spec.JobFailureReason
+	mode              common.JobExecutionMode
 }
 
 type FailuresCollector struct {
@@ -28,11 +29,14 @@ type FailuresCollector struct {
 	failures map[failurePermutation]int64
 }
 
-func (fc *FailuresCollector) RecordFailure(reason spec.JobFailureReason, runnerConfig common.RunnerConfig) {
+func (fc *FailuresCollector) RecordFailure(reason spec.JobFailureReason, runnerConfig common.RunnerConfig, mode common.JobExecutionMode) {
+	mode = mode.OrUnknown()
+
 	failure := failurePermutation{
 		runnerDescription: runnerConfig.ShortDescription(),
 		runnerName:        runnerConfig.Name,
 		reason:            reason,
+		mode:              mode,
 	}
 
 	fc.lock.Lock()
@@ -57,6 +61,7 @@ func (fc *FailuresCollector) Collect(ch chan<- prometheus.Metric) {
 			failure.runnerDescription,
 			failure.runnerName,
 			string(failure.reason),
+			string(failure.mode),
 		)
 	}
 }

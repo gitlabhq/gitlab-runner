@@ -335,7 +335,7 @@ type RouterDiscovery struct {
 }
 
 type FailuresCollector interface {
-	RecordFailure(reason spec.JobFailureReason, runnerConfig RunnerConfig)
+	RecordFailure(reason spec.JobFailureReason, runnerConfig RunnerConfig, mode JobExecutionMode)
 }
 
 type SupportedFailureReasonMapper interface {
