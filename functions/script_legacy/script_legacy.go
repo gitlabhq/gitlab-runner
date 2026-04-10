@@ -76,14 +76,14 @@ func Spec() *proto.Spec {
 }
 
 // Run executes the scriptv2 step, generating and running a shell script from the command array.
-func Run(ctx context.Context, stepsCtx *runner.StepsContext) error {
+func Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
 	// Detect shell early - used by both generator (for shebang) and executor (for execution)
 	shellPath, err := internal.DetectShell()
 	if err != nil {
 		return fmt.Errorf("detecting shell: %w", err)
 	}
 
-	scriptInput, err := stepsCtx.GetInput("script", runner.KindList)
+	scriptInput, err := builtinCtx.GetInput("script", runner.KindList)
 	if err != nil {
 		return fmt.Errorf("getting script input: %w", err)
 	}
@@ -98,25 +98,25 @@ func Run(ctx context.Context, stepsCtx *runner.StepsContext) error {
 	}
 
 	spec := Spec()
-	debugTraceInput, err := stepsCtx.GetInputWithDefault("debug_trace", runner.KindBool, spec.GetSpec().GetInputs())
+	debugTraceInput, err := builtinCtx.GetInputWithDefault("debug_trace", runner.KindBool, spec.GetSpec().GetInputs())
 	if err != nil {
 		return fmt.Errorf("getting debug_trace input: %w", err)
 	}
 	debugTrace := debugTraceInput.GetBoolValue()
 
-	checkForErrorsInput, err := stepsCtx.GetInputWithDefault("check_for_errors", runner.KindBool, spec.GetSpec().GetInputs())
+	checkForErrorsInput, err := builtinCtx.GetInputWithDefault("check_for_errors", runner.KindBool, spec.GetSpec().GetInputs())
 	if err != nil {
 		return fmt.Errorf("getting check_for_errors input: %w", err)
 	}
 	checkForErrors := checkForErrorsInput.GetBoolValue()
 
-	posixEscapeInput, err := stepsCtx.GetInputWithDefault("posix_escape", runner.KindBool, spec.GetSpec().GetInputs())
+	posixEscapeInput, err := builtinCtx.GetInputWithDefault("posix_escape", runner.KindBool, spec.GetSpec().GetInputs())
 	if err != nil {
 		return fmt.Errorf("getting posix_escape input: %w", err)
 	}
 	posixEscape := posixEscapeInput.GetBoolValue()
 
-	traceSectionsInput, err := stepsCtx.GetInputWithDefault("trace_sections", runner.KindBool, spec.GetSpec().GetInputs())
+	traceSectionsInput, err := builtinCtx.GetInputWithDefault("trace_sections", runner.KindBool, spec.GetSpec().GetInputs())
 	if err != nil {
 		return fmt.Errorf("getting trace_sections input: %w", err)
 	}
@@ -128,7 +128,7 @@ func Run(ctx context.Context, stepsCtx *runner.StepsContext) error {
 	// for the FF_SCRIPT_TO_STEP_MIGRATION path where each stage runs as a
 	// separate script_legacy invocation.
 	var gitLabEnvFile string
-	if tmpDirVar, ok := stepsCtx.View().Vars["RUNNER_TEMP_PROJECT_DIR"]; ok {
+	if tmpDirVar, ok := builtinCtx.GetJobVars()["RUNNER_TEMP_PROJECT_DIR"]; ok {
 		if tmpDir := tmpDirVar.GetStringValue(); tmpDir != "" {
 			gitLabEnvFile = filepath.Join(tmpDir, "gitlab_runner_env")
 		}
@@ -145,12 +145,12 @@ func Run(ctx context.Context, stepsCtx *runner.StepsContext) error {
 	generator := internal.NewScriptGenerator(generatorConfig)
 	script := generator.GenerateScript(commands)
 
-	stdout, stderr := stepsCtx.Pipe()
-	env := stepsCtx.GetEnvList()
-	workDir := stepsCtx.WorkDir()
+	stdout, stderr := builtinCtx.Pipe()
+	env := builtinCtx.GetEnvList()
+	workDir := builtinCtx.WorkDir()
 
 	// Add job variables to env
-	for key, value := range stepsCtx.View().Vars {
+	for key, value := range builtinCtx.GetJobVars() {
 		env = append(env, fmt.Sprintf("%s=%s", key, value.GetStringValue()))
 	}
 
