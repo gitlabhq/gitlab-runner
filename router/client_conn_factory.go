@@ -255,7 +255,7 @@ func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 			grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
 		)
 	default:
-		return nil, fmt.Errorf("unsupported scheme in GitLab Kubernetes Agent Server address: %q", u.Scheme)
+		return nil, fmt.Errorf("unsupported scheme in kas address: %q", u.Scheme)
 	}
 	if !secure {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
