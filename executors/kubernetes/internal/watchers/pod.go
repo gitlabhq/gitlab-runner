@@ -32,8 +32,7 @@ type PodWatcher struct {
 
 	podName atomic.Value
 
-	// Don't send on this channel in a blocking manner, so that we don't block the informer. You can use the emitError()
-	// method.
+	// Buffered (size 1) so emitError never blocks when the consumer hasn't read yet. Use emitError() to send.
 	errors chan error
 }
 
@@ -44,7 +43,7 @@ func NewPodWatcher(ctx context.Context, logger logger, kubeClient kubernetes.Int
 	return &PodWatcher{
 		factory: newScopedInformerFactory(ctx, kubeClient, namespace, labels, maxSyncDuration),
 		logger:  logger,
-		errors:  make(chan error),
+		errors:  make(chan error, 1),
 	}
 }
 

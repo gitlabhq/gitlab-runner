@@ -35,7 +35,7 @@ var (
 	helpersTestFileRx     = regexp.MustCompile(`helpers(_[a-z0-9_]+)?_test\.go$`)
 
 	ignoreDirectories = map[string]bool{
-		".git": true, "scripts": true, ".tmp": true, "magefiles": true,
+		".git": true, "scripts": true, ".tmp": true, "magefiles": true, ".cache": true,
 	}
 )
 
