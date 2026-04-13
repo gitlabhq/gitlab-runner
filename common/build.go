@@ -535,7 +535,7 @@ func wrapStepStageErr(err error) error {
 	// https://gitlab.com/gitlab-org/step-runner/-/work_items/349
 	if before, code, ok := strings.Cut(err.Error(), "exit status"); ok {
 		if exitCode, err := strconv.Atoi(strings.TrimSpace(code)); err == nil {
-			berr.ExitCode = exitCode
+			berr.ExitCode = NormalizeExitCode(exitCode)
 			// Normalize "exit status N" (Go's exec.ExitError format) to "exit code N"
 			// to match the legacy Docker executor format (wait.go uses
 			// fmt.Errorf("exit code %d", statusCode)). The prefix (e.g. "step release: ")

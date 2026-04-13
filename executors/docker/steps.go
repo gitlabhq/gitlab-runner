@@ -118,9 +118,10 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 
 	case result := <-okCh:
 		if result.StatusCode != 0 {
+			exitCode := common.NormalizeExitCode(int(result.StatusCode))
 			return nil, &common.BuildError{
-				Inner:    fmt.Errorf("exit code %d", result.StatusCode),
-				ExitCode: int(result.StatusCode),
+				Inner:    fmt.Errorf("exit code %d", exitCode),
+				ExitCode: exitCode,
 			}
 		}
 

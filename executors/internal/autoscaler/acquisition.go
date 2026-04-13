@@ -310,7 +310,7 @@ func (c *client) Run(ctx context.Context, opts executors.RunOptions) error {
 	if errors.As(err, &exitErr) {
 		return &common.BuildError{
 			Inner:    err,
-			ExitCode: exitErr.ExitCode(),
+			ExitCode: common.NormalizeExitCode(exitErr.ExitCode()),
 		}
 	}
 

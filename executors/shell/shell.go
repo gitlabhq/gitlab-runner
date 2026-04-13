@@ -106,7 +106,12 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		waitErr := c.Wait()
 		var exitErr *exec.ExitError
 		if errors.As(waitErr, &exitErr) {
-			waitErr = &common.BuildError{Inner: waitErr, ExitCode: exitErr.ExitCode()}
+			// ExitCode is normalized for API and allow_failure matching.
+			// Inner is left as-is so the original message (e.g. "signal: killed") is preserved in the job log.
+			waitErr = &common.BuildError{
+				Inner:    waitErr,
+				ExitCode: common.NormalizeExitCode(exitErr.ExitCode()),
+			}
 		}
 		waitCh <- waitErr
 	}()
