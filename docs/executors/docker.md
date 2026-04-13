@@ -37,7 +37,7 @@ Prerequisites:
 
 The Docker executor uses a Docker image based on [Alpine Linux](https://alpinelinux.org/) that
 contains the tools to run the prepare, pre-job, and post-job steps. To view the definition of
-the special Docker image, see the [GitLab Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/v13.4.1/dockerfiles/runner-helper).
+the special Docker image, see the [GitLab Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/main/dockerfiles/runner-helper).
 
 The Docker executor divides the job into several steps:
 
