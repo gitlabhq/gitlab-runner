@@ -166,7 +166,7 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 	if build.Runner.Cache != nil {
 		opts = append(opts, builder.WithCacheMaxArchiveSize(build.Runner.Cache.MaxUploadedArchiveSize),
 			builder.WithCacheDownloadDescriptor(func(cacheKey string) (cacheprovider.Descriptor, error) {
-				adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey)
+				adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey, build.IsFeatureFlagOn(featureflags.HashCacheKeys))
 
 				goCloudURL, err := adapter.GetGoCloudURL(ctx, false)
 				if goCloudURL.URL != nil {
@@ -187,7 +187,7 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 				return cacheprovider.Descriptor{}, nil
 			}),
 			builder.WithCacheUploadDescriptor(func(cacheKey string) (cacheprovider.Descriptor, error) {
-				adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey)
+				adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey, build.IsFeatureFlagOn(featureflags.HashCacheKeys))
 
 				goCloudURL, err := adapter.GetGoCloudURL(ctx, true)
 				if err != nil {

@@ -1642,6 +1642,22 @@ func getCacheKeyHasher(hash bool) func(string) string {
 	}
 }
 
+// getShardedObjectKey returns a function that, given a (hashed) cache key,
+// returns the object path component used by GetAdapter. When sharded is true
+// (i.e. FF_HASH_CACHE_KEYS is on), the first two hex characters are inserted
+// as a prefix: "<shard>/<key>". Otherwise the key is returned unchanged.
+func getShardedObjectKey(sharded bool) func(string) string {
+	if !sharded {
+		return func(key string) string { return key }
+	}
+	return func(key string) string {
+		if len(key) < 2 {
+			return key
+		}
+		return key[:2] + "/" + key
+	}
+}
+
 func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 	const cacheEnvFile = "/some/path/to/runner-cache-env"
 
@@ -1865,6 +1881,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 
 	for _, hashCacheKeys := range []bool{false, true} {
 		hashed := getCacheKeyHasher(hashCacheKeys)
+		shardedObjectPath := getShardedObjectKey(hashCacheKeys)
 
 		t.Run(fmt.Sprintf("%s:%t", featureflags.HashCacheKeys, hashCacheKeys), func(t *testing.T) {
 			for tn, tc := range tests {
@@ -1943,7 +1960,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 								"--timeout",
 								"10",
 								"--url",
-								fmt.Sprintf("test://download/project/1000/%s", expectedHashedCacheKey),
+								fmt.Sprintf("test://download/project/1000/%s", shardedObjectPath(expectedHashedCacheKey)),
 							).Once()
 						} else {
 							mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Once()
@@ -1955,7 +1972,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 								"--timeout",
 								"10",
 								"--gocloud-url",
-								fmt.Sprintf("gocloud://test/project/1000/%s", expectedHashedCacheKey),
+								fmt.Sprintf("gocloud://test/project/1000/%s", shardedObjectPath(expectedHashedCacheKey)),
 								"--env-file", cacheEnvFile,
 							).Once()
 						}
@@ -2081,6 +2098,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 
 	for _, hashedCacheKey := range []bool{false, true} {
 		hashed := getCacheKeyHasher(hashedCacheKey)
+		shardedObjectPath := getShardedObjectKey(hashedCacheKey)
 
 		t.Run(fmt.Sprintf("%s:%t", featureflags.HashCacheKeys, hashedCacheKey), func(t *testing.T) {
 			for tn, tc := range tests {
@@ -2149,7 +2167,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 							"--timeout",
 							"10",
 							"--url",
-							fmt.Sprintf("test://download/project/1000/%s", hashedCacheKey),
+							fmt.Sprintf("test://download/project/1000/%s", shardedObjectPath(hashedCacheKey)),
 						).Once()
 						mockWriter.On("Noticef", "Successfully extracted cache").Once()
 						mockWriter.On("Else").Once()
@@ -2265,6 +2283,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 
 	for _, hashedCacheKey := range []bool{false, true} {
 		hashed := getCacheKeyHasher(hashedCacheKey)
+		shardedObjectPath := getShardedObjectKey(hashedCacheKey)
 
 		t.Run(fmt.Sprintf("%s:%t", featureflags.HashCacheKeys, hashedCacheKey), func(t *testing.T) {
 			for tn, tc := range tests {
@@ -2337,7 +2356,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 							"--timeout",
 							"10",
 							"--url",
-							fmt.Sprintf("test://download/project/1000/%s", hashedCacheKey),
+							fmt.Sprintf("test://download/project/1000/%s", shardedObjectPath(hashedCacheKey)),
 						).Once()
 						mockWriter.On("Noticef", "Successfully extracted cache").Once()
 						mockWriter.On("Else").Once()

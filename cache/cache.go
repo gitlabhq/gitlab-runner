@@ -24,7 +24,7 @@ func (nopAdapter) GetGoCloudURL(ctx context.Context, upload bool) (GoCloudURL, e
 
 var createAdapter = getCreateAdapter
 
-func GetAdapter(config *cacheconfig.Config, timeout time.Duration, shortToken, projectId, key string) Adapter {
+func GetAdapter(config *cacheconfig.Config, timeout time.Duration, shortToken, projectId, key string, sharded bool) Adapter {
 	if config == nil {
 		return nopAdapter{}
 	}
@@ -42,7 +42,22 @@ func GetAdapter(config *cacheconfig.Config, timeout time.Duration, shortToken, p
 		namespace = path.Join("runner", shortToken)
 	}
 	basePath := path.Join(config.GetPath(), namespace, "project", projectId)
-	fullPath := path.Join(basePath, key)
+
+	// When sharded (i.e. FF_HASH_CACHE_KEYS is enabled), insert the first two
+	// hex characters of the key as an intermediate path component. This
+	// distributes objects across 256 distinct S3 prefixes per project, avoiding
+	// 503 Slow Down responses caused by all cache objects sharing the same
+	// prefix and landing on the same partition.
+	var fullPath string
+	if sharded {
+		if len(key) < 2 {
+			logrus.WithError(fmt.Errorf("cache key too short to shard (length %d)", len(key))).Error("Error while generating cache bucket.")
+			return nopAdapter{}
+		}
+		fullPath = path.Join(basePath, key[:2], key)
+	} else {
+		fullPath = path.Join(basePath, key)
+	}
 
 	// The typical concerns regarding the use of strings.HasPrefix to detect
 	// path traversal do not apply here. The detection here is made easier

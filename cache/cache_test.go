@@ -87,7 +87,7 @@ func testCacheOperation(
 		prepareFakeCreateAdapter(t, operationName, tc)
 
 		config := prepareFakeConfig(tc)
-		adaptor := GetAdapter(config, 3600*time.Second, "shorttoken", "10", tc.key)
+		adaptor := GetAdapter(config, 3600*time.Second, "shorttoken", "10", tc.key, false)
 		generatedURL := operation(ctx, adaptor)
 		assert.Equal(t, tc.expectedURL, generatedURL.URL)
 
@@ -179,9 +179,10 @@ func defaultCacheConfig() *cacheconfig.Config {
 }
 
 type generateObjectNameTestCase struct {
-	key    string
-	path   string
-	shared bool
+	key     string
+	path    string
+	shared  bool
+	sharded bool
 
 	expectedObjectName string
 	expectedError      string
@@ -235,6 +236,23 @@ func TestGenerateObjectName(t *testing.T) {
 			key:           "../10-outside",
 			expectedError: "computed cache path outside of project bucket",
 		},
+		"sharded key uses first two chars as prefix": {
+			key:                "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+			sharded:            true,
+			expectedObjectName: "runner/longtoken/project/10/d0/d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+		},
+		"sharded key with path prefix": {
+			key:                "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+			path:               "builds",
+			sharded:            true,
+			expectedObjectName: "builds/runner/longtoken/project/10/d0/d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+		},
+		"sharded key with shared runner": {
+			key:                "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+			shared:             true,
+			sharded:            true,
+			expectedObjectName: "project/10/d0/d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
+		},
 	}
 
 	for name, tc := range tests {
@@ -255,7 +273,7 @@ func TestGenerateObjectName(t *testing.T) {
 				createAdapter = oldCreateAdapter
 			})
 
-			adapter := GetAdapter(cache, 3600*time.Second, "longtoken", "10", tc.key)
+			adapter := GetAdapter(cache, 3600*time.Second, "longtoken", "10", tc.key, tc.sharded)
 
 			if tc.expectedError != "" {
 				// The error/warning cases return a nopAdaptor and log instead of returning an error

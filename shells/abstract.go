@@ -379,7 +379,7 @@ func (b *AbstractShell) addExtractCacheCommand(
 // getCacheDownloadURLAndEnv will first try to generate the GoCloud URL if it's
 // available then fallback to a pre-signed URL.
 func getCacheDownloadURLAndEnv(ctx context.Context, build *common.Build, cacheKey string) ([]string, map[string]string, error) {
-	adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey)
+	adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey, build.IsFeatureFlagOn(featureflags.HashCacheKeys))
 
 	// Prefer Go Cloud URL if supported
 	goCloudURL, err := adapter.GetGoCloudURL(ctx, false)
@@ -1458,7 +1458,7 @@ func (b *AbstractShell) addCacheUploadCommand(
 // getCacheUploadURLAndEnv will first try to generate the GoCloud URL if it's
 // available then fallback to a pre-signed URL.
 func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey string, metadata map[string]string) ([]string, map[string]string, error) {
-	adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey)
+	adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey, build.IsFeatureFlagOn(featureflags.HashCacheKeys))
 
 	// Prefer Go Cloud URL if supported
 	goCloudURL, err := adapter.GetGoCloudURL(ctx, true)

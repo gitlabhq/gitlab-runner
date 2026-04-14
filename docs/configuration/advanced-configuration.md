@@ -1409,7 +1409,8 @@ credentials from the environment, you can define `AWS_ACCESS_KEY_ID` and
 
 {{< history >}}
 
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5751) in GitLab Runner v18.4.0.
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5751) in GitLab Runner 18.4.0.
+- Object path in distributed caches [changed](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6628) in GitLab Runner 19.0 to include a shard prefix when `FF_HASH_CACHE_KEYS` is enabled.
 
 {{< /history >}}
 
@@ -1422,10 +1423,11 @@ the object in the storage bucket. If the sanitization changes the cache key,
 GitLab Runner logs this change. If GitLab Runner cannot sanitize the cache key,
 it also logs this, and does not use this specific cache.
 
-When you turn on this feature flag, GitLab Runner hashes the cache key before using
-it to build the path for the local cache artifact and the object in the remote storage
-bucket. GitLab Runner does not sanitize the cache key. To help you understand which
-cache key created a specific cache artifact, GitLab Runner attaches metadata to it:
+When you turn on this feature flag, GitLab Runner hashes the cache key (SHA-256)
+before using it to build the path for the local cache artifact and the object in
+the remote storage bucket. GitLab Runner does not sanitize the cache key. To help
+you understand which cache key created a specific cache artifact, GitLab Runner
+attaches metadata to it:
 
 - For local cache artifacts, GitLab Runner places a `metadata.json` file next to
   the cache artifact `cache.zip`, with the following content:
@@ -1438,6 +1440,36 @@ cache key created a specific cache artifact, GitLab Runner attaches metadata to 
   with the key `cachekey`. You can query it using the cloud provider's mechanisms. For an example, see the
   [user-defined object metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#UserMetadata)
   for AWS S3.
+
+#### Distributed cache object path with `FF_HASH_CACHE_KEYS`
+
+In GitLab Runner 19.0 and later, when `FF_HASH_CACHE_KEYS` is enabled,
+GitLab Runner inserts the first two hexadecimal characters of the SHA-256 hash
+as a shard prefix in the distributed cache object path:
+
+```plaintext
+[path/][runner/<token>/]project/<project_id>/<shard>/<hash>/cache.zip
+```
+
+For example:
+
+```plaintext
+runner/abc123/project/42/d0/d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed/cache.zip
+```
+
+This distributes cache objects across 256 distinct object prefixes per project,
+which prevents [Amazon S3 503 (Slow Down) responses](https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html)
+when many parallel jobs access the cache at high request rates.
+
+> [!warning]
+> Upgrading to GitLab Runner 19.0 is a breaking change if you use `FF_HASH_CACHE_KEYS`.
+> If you already have `FF_HASH_CACHE_KEYS` enabled and upgrade to GitLab Runner 19.0
+> or later, the shard prefix changes the object path for all cache artifacts in
+> distributed storage. Existing objects stored at the old path
+> (`.../<hash>/cache.zip`) become unreachable. Expect cache misses and cache
+> artifacts rebuild on the first job run after upgrade.
+
+#### Cache key handling behavior summary
 
 When you change `FF_HASH_CACHE_KEYS`, GitLab Runner ignores existing cache artifacts
 because hashing the cache key changes the cache artifact's name and location.
