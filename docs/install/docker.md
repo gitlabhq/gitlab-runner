@@ -43,7 +43,7 @@ USAGE:
    gitlab-runner [global options] command [command options] [arguments...]
 
 VERSION:
-   17.9.1 (bbf75488)
+   18.10.1 (3b43bf9f)
 
 (...)
 ```
@@ -203,8 +203,8 @@ Prerequisites:
 
 In GitLab Runner 18.8.0, the Docker image based on Alpine uses Alpine 3.21. These multi-platform Docker images are available:
 
-- `gitlab/gitlab-runner:latest` based on Ubuntu, approximately 800 MB.
-- `gitlab/gitlab-runner:alpine` based on Alpine, approximately 460 MB.
+- `gitlab/gitlab-runner:latest` based on Ubuntu, approximately 470 MB.
+- `gitlab/gitlab-runner:alpine` based on Alpine, approximately 270 MB.
 
 See the [GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/tree/main/dockerfiles)
 source for possible build instructions for both Ubuntu and Alpine images.
@@ -236,7 +236,7 @@ To build a `gitlab-runner` Docker image for the latest Alpine version:
 
    ```shell
    GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner \
-   GITLAB_RUNNER_IMAGE_TAG=alpine-v17.9.1 \
+   GITLAB_RUNNER_IMAGE_TAG=alpine-v18.10.1 \
    docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG \
      --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE \
      --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG \
@@ -247,7 +247,7 @@ To build a `gitlab-runner` Docker image for the latest Alpine version:
 
    ```shell
    GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner-helper \
-   GITLAB_RUNNER_IMAGE_TAG=x86_64-v17.9.1 \
+   GITLAB_RUNNER_IMAGE_TAG=x86_64-v18.10.1 \
    docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG \
      --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE \
      --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG \
