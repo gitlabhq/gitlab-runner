@@ -2326,13 +2326,14 @@ to instruct Kubernetes to mount an empty directory in the container.
 
 Use the following options in the `config.toml` file:
 
-| Option       | Type   | Required | Description |
-|--------------|--------|----------|-------------|
-| `name`       | string | Yes      | The name of the volume. |
-| `mount_path` | string | Yes      | Path inside of container where the volume should be mounted. |
-| `sub_path`   | string | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
-| `medium`     | string | No       | "Memory" provides a `tmpfs`, otherwise it defaults to the node disk storage (defaults to ""). |
-| `size_limit` | string | No       | The total amount of local storage required for the `emptyDir` volume. |
+| Option              | Type   | Required | Description |
+|---------------------|--------|----------|-------------|
+| `name`              | string | Yes      | The name of the volume. |
+| `mount_path`        | string | Yes      | Path inside of container where the volume should be mounted. |
+| `sub_path`          | string | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
+| `medium`            | string | No       | "Memory" provides a `tmpfs`, otherwise it defaults to the node disk storage (defaults to ""). |
+| `size_limit`        | string | No       | The total amount of local storage required for the `emptyDir` volume. |
+| `mount_propagation` | string | No       | Set the mount propagation mode for the volume. For more details, see [Kubernetes mount propagation](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation). |
 
 #### `csi` volume
 
