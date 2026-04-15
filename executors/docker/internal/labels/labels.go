@@ -28,6 +28,11 @@ type labeler struct {
 // Labels returns a map of label to value to be applied to docker entities.
 // Includes a set of defaults. Add additional ones or overwrites in the provided map.
 func (l *labeler) Labels(otherLabels map[string]string) map[string]string {
+	pipelineID := l.build.GetAllVariables().Value("CI_PIPELINE_ID")
+	if l.build.JobInfo.PipelineID > 0 {
+		pipelineID = strconv.FormatInt(l.build.JobInfo.PipelineID, 10)
+	}
+
 	labels := map[string]string{
 		dockerLabelPrefix + ".job.id":            strconv.FormatInt(l.build.ID, 10),
 		dockerLabelPrefix + ".job.url":           l.build.JobURL(),
@@ -37,7 +42,7 @@ func (l *labeler) Labels(otherLabels map[string]string) map[string]string {
 		dockerLabelPrefix + ".job.timeout":       l.build.GetBuildTimeout().String(),
 		dockerLabelPrefix + ".project.id":        strconv.FormatInt(l.build.JobInfo.ProjectID, 10),
 		dockerLabelPrefix + ".project.runner_id": strconv.Itoa(l.build.ProjectRunnerID),
-		dockerLabelPrefix + ".pipeline.id":       l.build.GetAllVariables().Value("CI_PIPELINE_ID"),
+		dockerLabelPrefix + ".pipeline.id":       pipelineID,
 		dockerLabelPrefix + ".runner.id":         l.build.Runner.ShortDescription(),
 		dockerLabelPrefix + ".runner.local_id":   strconv.Itoa(l.build.RunnerID),
 		dockerLabelPrefix + ".runner.system_id":  l.build.Runner.SystemID,

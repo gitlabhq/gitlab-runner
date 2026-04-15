@@ -27,6 +27,8 @@ type Job struct {
 	StartedAt       time.Time `json:"started_at"`
 	FinishedAt      time.Time `json:"finished_at"`
 
+	PipelineID int64 `json:"pipeline_id"`
+
 	Project       Project      `json:"project"`
 	Namespace     Namespace    `json:"namespace"`
 	RootNamespace Namespace    `json:"root_namespace"`

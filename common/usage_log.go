@@ -19,6 +19,7 @@ func UsageLogRecordFrom(runner *RunnerConfig, build *Build) usage_log.Record {
 			FailureReason:   build.FailureReason().String(),
 			StartedAt:       build.StartedAt().UTC(),
 			FinishedAt:      build.FinishedAt().UTC(),
+			PipelineID:      build.JobInfo.PipelineID,
 			Project: usage_log.Project{
 				ID:       build.JobInfo.ProjectID,
 				Name:     build.JobInfo.ProjectName,

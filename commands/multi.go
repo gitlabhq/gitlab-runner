@@ -994,6 +994,7 @@ func (mr *RunCommand) processBuildOnRunner(
 		"runner":                runner.ShortDescription(),
 		"runner_name":           runner.Name,
 		"job":                   build.ID,
+		"pipeline_id":           build.JobInfo.PipelineID,
 		"project":               build.JobInfo.ProjectID,
 		"project_full_path":     build.JobInfo.ProjectFullPath,
 		"namespace_id":          build.JobInfo.NamespaceID,

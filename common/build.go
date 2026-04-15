@@ -260,6 +260,7 @@ func (b *Build) Log() *logrus.Entry {
 	l := b.Runner.Log().
 		WithFields(logrus.Fields{
 			"job":               b.ID,
+			"pipeline_id":       b.JobInfo.PipelineID,
 			"project":           b.JobInfo.ProjectID,
 			"project_full_path": b.JobInfo.ProjectFullPath,
 			"namespace_id":      b.JobInfo.NamespaceID,
