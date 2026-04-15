@@ -345,8 +345,10 @@ func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	mode := deleteBuild.DispatchedJobExecutionMode().OrUnknown()
+
 	b.jobDurationHistogram.
-		WithLabelValues(deleteBuild.Runner.ShortDescription(), deleteBuild.Runner.Name, deleteBuild.Runner.GetSystemID()).
+		WithLabelValues(deleteBuild.Runner.ShortDescription(), deleteBuild.Runner.Name, deleteBuild.Runner.GetSystemID(), string(mode)).
 		Observe(deleteBuild.FinalDuration().Seconds())
 
 	for idx, build := range b.builds {
@@ -592,7 +594,7 @@ func newBuildsHelper() buildsHelper {
 				Help:    "Histogram of job durations",
 				Buckets: []float64{30, 60, 300, 600, 1800, 3600, 7200, 10800, 18000, 36000},
 			},
-			[]string{"runner", "runner_name", "system_id"},
+			[]string{"runner", "runner_name", "system_id", "mode"},
 		),
 		jobQueueDurationHistogram: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{

@@ -24,8 +24,8 @@ func TestFailuresCollector_Collect_GroupingReasons(t *testing.T) {
 	}
 
 	fc := NewFailuresCollector()
-	fc.RecordFailure(common.ScriptFailure, rc)
-	fc.RecordFailure(common.RunnerSystemFailure, rc)
+	fc.RecordFailure(common.ScriptFailure, rc, common.JobExecutionModeTraditional)
+	fc.RecordFailure(common.RunnerSystemFailure, rc, common.JobExecutionModeTraditional)
 
 	fc.Collect(ch)
 	assert.Len(t, ch, 2)
@@ -43,8 +43,8 @@ func TestFailuresCollector_Collect_MetricsValues(t *testing.T) {
 	}
 
 	fc := NewFailuresCollector()
-	fc.RecordFailure(common.ScriptFailure, rc)
-	fc.RecordFailure(common.ScriptFailure, rc)
+	fc.RecordFailure(common.ScriptFailure, rc, common.JobExecutionModeSteps)
+	fc.RecordFailure(common.ScriptFailure, rc, common.JobExecutionModeSteps)
 
 	fc.Collect(ch)
 
@@ -61,4 +61,32 @@ func TestFailuresCollector_Collect_MetricsValues(t *testing.T) {
 	assert.Equal(t, string(common.ScriptFailure), labels["failure_reason"])
 	assert.Equal(t, "a1b2c3d4", labels["runner"])
 	assert.Equal(t, "qwerty123", labels["runner_name"])
+	assert.Equal(t, string(common.JobExecutionModeSteps), labels["mode"])
+}
+
+func TestFailuresCollector_Collect_UnknownModeWhenEmpty(t *testing.T) {
+	ch := make(chan prometheus.Metric, 50)
+
+	rc := common.RunnerConfig{
+		Name: "test",
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "tok123",
+		},
+	}
+
+	fc := NewFailuresCollector()
+	fc.RecordFailure(common.ScriptFailure, rc, "")
+
+	fc.Collect(ch)
+
+	metric := &prometheus_go.Metric{}
+	m := <-ch
+	_ = m.Write(metric)
+
+	labels := make(map[string]string)
+	for _, labelPair := range metric.Label {
+		labels[*labelPair.Name] = *labelPair.Value
+	}
+
+	assert.Equal(t, "unknown", labels["mode"])
 }

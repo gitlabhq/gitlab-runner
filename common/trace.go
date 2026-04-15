@@ -21,6 +21,7 @@ const ExitCodeUnsupportedOptions = 3
 type JobFailureData struct {
 	Reason   spec.JobFailureReason
 	ExitCode int
+	Mode     JobExecutionMode
 }
 
 func (s *Trace) Write(p []byte) (n int, err error) {

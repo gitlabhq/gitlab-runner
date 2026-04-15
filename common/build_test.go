@@ -394,7 +394,7 @@ func TestJobFailure(t *testing.T) {
 	trace.On("SetCancelFunc", mock.Anything).Once()
 	trace.On("SetAbortFunc", mock.Anything).Once()
 	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Once()
-	trace.On("Fail", thrownErr, JobFailureData{Reason: "", ExitCode: 1}).Return(nil).Once()
+	trace.On("Fail", thrownErr, JobFailureData{Reason: "", ExitCode: 1, Mode: JobExecutionModeTraditional}).Return(nil).Once()
 
 	err = build.Run(&Config{}, trace)
 
@@ -424,7 +424,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	trace.On("SetCancelFunc", mock.Anything).Twice()
 	trace.On("SetAbortFunc", mock.Anything).Once()
 	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Once()
-	trace.On("Fail", mock.Anything, JobFailureData{Reason: JobExecutionTimeout}).Run(func(arguments mock.Arguments) {
+	trace.On("Fail", mock.Anything, JobFailureData{Reason: JobExecutionTimeout, Mode: JobExecutionModeTraditional}).Run(func(arguments mock.Arguments) {
 		assert.Error(t, arguments.Get(0).(error))
 	}).Return(nil).Once()
 
@@ -2484,19 +2484,19 @@ func TestSetTraceStatus(t *testing.T) {
 		"build error, script failure": {
 			err: &BuildError{FailureReason: ScriptFailure},
 			assert: func(t *testing.T, mt *mockLightJobTrace, err error) {
-				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure}).Return(nil).Once()
+				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure, Mode: JobExecutionModeTraditional}).Return(nil).Once()
 			},
 		},
 		"build error, wrapped script failure": {
 			err: fmt.Errorf("wrapped: %w", &BuildError{FailureReason: ScriptFailure}),
 			assert: func(t *testing.T, mt *mockLightJobTrace, err error) {
-				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure}).Return(nil).Once()
+				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure, Mode: JobExecutionModeTraditional}).Return(nil).Once()
 			},
 		},
 		"non-build error": {
 			err: fmt.Errorf("some error"),
 			assert: func(t *testing.T, mt *mockLightJobTrace, err error) {
-				mt.On("Fail", err, JobFailureData{Reason: RunnerSystemFailure}).Return(nil).Once()
+				mt.On("Fail", err, JobFailureData{Reason: RunnerSystemFailure, Mode: JobExecutionModeTraditional}).Return(nil).Once()
 			},
 		},
 	}
@@ -3067,7 +3067,7 @@ func TestBuildStageMetrics(t *testing.T) {
 	assert.Len(t, stagesMap, 0)
 }
 
-func TestBuild_dispatchedJobExecutionMode(t *testing.T) {
+func TestBuild_DispatchedJobExecutionMode(t *testing.T) {
 	build := Build{
 		Runner: &RunnerConfig{},
 		Job: spec.Job{
@@ -3084,10 +3084,10 @@ func TestBuild_dispatchedJobExecutionMode(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, JobExecutionModeTraditional, build.dispatchedJobExecutionMode())
+	assert.Equal(t, JobExecutionModeTraditional, build.DispatchedJobExecutionMode())
 
 	build.markStepDispatchedInScript()
-	assert.Equal(t, JobExecutionModeSteps, build.dispatchedJobExecutionMode())
+	assert.Equal(t, JobExecutionModeSteps, build.DispatchedJobExecutionMode())
 }
 
 func TestBuildStageMetricsFailBuild(t *testing.T) {
