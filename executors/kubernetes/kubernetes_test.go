@@ -129,6 +129,9 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 		)
 	}
 
+	emptyDirMountPropagationCfg := string(api.MountPropagationBidirectional)
+	emptyDirMountPropagationWant := api.MountPropagationBidirectional
+
 	tests := map[string]struct {
 		GlobalConfig *common.Config
 		RunnerConfig common.RunnerConfig
@@ -206,6 +209,11 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 									MountPath: "/subpath",
 									SubPath:   "empty-subpath",
 								},
+								{
+									Name:             "emptyDir-mountprop",
+									MountPath:        "/mnt/prop",
+									MountPropagation: &emptyDirMountPropagationCfg,
+								},
 							},
 							CSIs: []common.KubernetesCSI{
 								{Name: "csi", MountPath: "/path/to/csi/volume", Driver: "some-driver"},
@@ -237,6 +245,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 					{Name: "ConfigMap-subpath", MountPath: "/path/to/whatever", SubPath: "ConfigMap-subpath"},
 					{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
 					{Name: "emptyDir-subpath", MountPath: "/subpath", SubPath: "empty-subpath"},
+					{Name: "emptyDir-mountprop", MountPath: "/mnt/prop", MountPropagation: &emptyDirMountPropagationWant},
 					{Name: "csi", MountPath: "/path/to/csi/volume"},
 					{Name: "csi-subpath", MountPath: "/path/to/csi/volume", SubPath: "subpath"},
 					{Name: "repo", MountPath: "/builds"},
