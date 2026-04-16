@@ -55,6 +55,8 @@ const (
 	EnableJobInputsInterpolation         string = "FF_ENABLE_JOB_INPUTS_INTERPOLATION"
 	UseJobRouter                         string = "FF_USE_JOB_ROUTER"
 	UseScriptToStepMigration             string = "FF_SCRIPT_TO_STEP_MIGRATION"
+	UseParallelCacheTransfer             string = "FF_USE_PARALLEL_CACHE_TRANSFER"
+	UseParallelArtifactTransfer          string = "FF_USE_PARALLEL_ARTIFACT_TRANSFER"
 	UseConcrete                          string = "FF_CONCRETE"
 )
 
@@ -451,6 +453,21 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, user scripts are migrated to steps and executed with the step-runner.",
+	},
+	{
+		Name:         UseParallelCacheTransfer,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, cache uploads and downloads use parallel object storage transfers: GoCloud writes use multipart with concurrent parts; downloads use concurrent HTTP Range or GoCloud range reads. " +
+			"When disabled, uploads use a single concurrent part stream and downloads use one stream. Improves throughput on high-bandwidth links when enabled. " +
+			"Tune with `CACHE_CONCURRENCY` and `CACHE_CHUNK_SIZE`.",
+	},
+	{
+		Name:         UseParallelArtifactTransfer,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, artifact downloads that use `direct_download` and receive a redirect to object storage may use parallel HTTP Range GETs when the backend supports `206 Partial Content` with a `Content-Range` total. " +
+			"When disabled, a single download stream is used. Chunk size and concurrency are fixed in the runner (not `CACHE_*` variables).",
 	},
 	{
 		Name:         UseConcrete,

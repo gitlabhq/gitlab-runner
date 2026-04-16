@@ -25,7 +25,7 @@ BINARIES += ${BASE_BINARY_PATH}.linux-loong64
 BINARIES += ${BASE_BINARY_PATH}.linux-amd64-fips
 
 # Go files that are used to create the helper binary.
-HELPER_GO_FILES ?= $(shell find common network -name '*.go')
+HELPER_GO_FILES ?= $(shell find apps/gitlab-runner-helper commands common log network -name '*.go')
 
 # Used in the helper-bin-linux target for building a
 # local docker image. If set as a target-specific variable,

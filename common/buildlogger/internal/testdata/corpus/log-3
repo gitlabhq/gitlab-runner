@@ -16,7 +16,7 @@ section_end:1540587303:get_sources
 [0Ksection_end:1540587305:restore_cache
 [0Ksection_start:1540587305:download_artifacts
 [0K[32;1mDownloading artifacts for code_quality (113296602)...[0;m
-Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296602 responseStatus[0;m=200 OK token[0;m=9voFyq8b
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296602 status[0;m=200 token[0;m=9voFyq8b
 section_end:1540587306:download_artifacts
 [0Ksection_start:1540587306:build_script
 [0K[32;1m$ unset GPG_KEY[0;m

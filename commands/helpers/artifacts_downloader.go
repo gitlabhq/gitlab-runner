@@ -63,16 +63,12 @@ func (c *ArtifactsDownloaderCommand) download(file string, retry int) error {
 		return fmt.Errorf("creating target file: %w", err)
 	}
 
-	// Close() is checked properly inside of DownloadArtifacts() call
-	defer func() { _ = artifactsFile.Close() }()
-
 	writer := meter.NewWriter(
 		artifactsFile,
 		c.TransferMeterFrequency,
 		meter.LabelledRateFormat(os.Stdout, "Downloading artifacts", meter.UnknownTotalSize),
 	)
-
-	// Close() is checked properly inside of DownloadArtifacts() call
+	// writer.Close() closes the underlying file; caller owns the writer and closes it once on return
 	defer func() { _ = writer.Close() }()
 
 	switch c.network.DownloadArtifacts(c.JobCredentials, writer, c.directDownloadFlag(retry)) {

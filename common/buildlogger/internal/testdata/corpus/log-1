@@ -38,11 +38,11 @@ section_end:1621524511:restore_cache
 [0Ksection_start:1621524511:download_artifacts
 [0K[0K[36;1mDownloading artifacts[0;m
 [0;m[32;1mDownloading artifacts for helper images (1280281190)...[0;m
-Downloading artifacts from coordinator... ok      [0;m  id[0;m=1280281190 responseStatus[0;m=200 OK token[0;m=zaM3ywFV
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=1280281190 status[0;m=200 token[0;m=zaM3ywFV
 [32;1mDownloading artifacts for clone test repo (1280281192)...[0;m
-Downloading artifacts from coordinator... ok      [0;m  id[0;m=1280281192 responseStatus[0;m=200 OK token[0;m=xzA1hsVL
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=1280281192 status[0;m=200 token[0;m=xzA1hsVL
 [32;1mDownloading artifacts for tests definitions (1280281194)...[0;m
-Downloading artifacts from coordinator... ok      [0;m  id[0;m=1280281194 responseStatus[0;m=200 OK token[0;m=kQK1ELdZ
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=1280281194 status[0;m=200 token[0;m=kQK1ELdZ
 section_end:1621524516:download_artifacts
 [0Ksection_start:1621524516:step_script
 [0K[0K[36;1mExecuting "step_script" stage of the job script[0;m
@@ -2582,7 +2582,7 @@ section_end:1621524689:archive_cache
 [0;m[32;1mUploading artifacts...[0;m
 .cover/*: found 15 matching files and directories [0;m 
 .testoutput/*: found 15 matching files and directories[0;m 
-Uploading artifacts as "archive" to coordinator... ok[0;m  id[0;m=1280281226 responseStatus[0;m=201 Created token[0;m=LzAr9-as
+Uploading artifacts as "archive" to coordinator... ok[0;m  id[0;m=1280281226 status[0;m=201 token[0;m=LzAr9-as
 section_end:1621524691:upload_artifacts_on_success
 [0Ksection_start:1621524691:cleanup_file_variables
 [0K[0K[36;1mCleaning up file based variables[0;m

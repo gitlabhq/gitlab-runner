@@ -14,6 +14,8 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 	"gocloud.dev/blob/fileblob"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 const (
@@ -337,7 +340,7 @@ func TestIsLocalCacheFileUpToDate(t *testing.T) {
 }
 
 // cdTempDir creates a temp dir and changes into it; after the test this directory is cleaned up automatically.
-func cdTempDir(t *testing.T) string {
+func cdTempDir(t *testing.T) {
 	t.Helper()
 
 	pwd, err := os.Getwd()
@@ -349,6 +352,165 @@ func cdTempDir(t *testing.T) string {
 	t.Cleanup(func() {
 		require.NoError(t, os.Chdir(pwd), "changing back into previous PWD")
 	})
+}
 
-	return d
+// parallelTestZipBytes returns the same archive bytes as writeZipFile (small zip > default parallel chunk for tests that set a tiny ChunkSize).
+func parallelTestZipBytes(t *testing.T) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zipWriter := zip.NewWriter(&buf)
+	f, err := zipWriter.Create(cacheExtractorTestArchivedFile)
+	require.NoError(t, err)
+	_, err = io.WriteString(f, "This is a test.")
+	require.NoError(t, err)
+	require.NoError(t, zipWriter.Close())
+	return buf.Bytes()
+}
+
+func parseBytesRangeHeader(h string) (start, end int64, ok bool) {
+	const prefix = "bytes="
+	if !strings.HasPrefix(h, prefix) {
+		return 0, 0, false
+	}
+	h = h[len(prefix):]
+	i := strings.IndexByte(h, '-')
+	if i < 0 {
+		return 0, 0, false
+	}
+	start, err1 := strconv.ParseInt(h[:i], 10, 64)
+	end, err2 := strconv.ParseInt(h[i+1:], 10, 64)
+	if err1 != nil || err2 != nil {
+		return 0, 0, false
+	}
+	return start, end, true
+}
+
+// testParallelPresignedCacheHandler serves a fixed payload with 206 + Content-Range for every Range GET (probe + chunk fetches).
+func testParallelPresignedCacheHandler(t *testing.T, payload []byte, lastModified string) http.HandlerFunc {
+	t.Helper()
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/cache.zip" {
+			http.NotFound(w, r)
+			return
+		}
+		rangeHdr := r.Header.Get("Range")
+		start, end, ok := parseBytesRangeHeader(rangeHdr)
+		if !ok {
+			http.Error(w, "missing or invalid Range", http.StatusBadRequest)
+			return
+		}
+		if start < 0 || end < start || start >= int64(len(payload)) {
+			http.Error(w, "range not satisfiable", http.StatusRequestedRangeNotSatisfiable)
+			return
+		}
+		if end >= int64(len(payload)) {
+			end = int64(len(payload)) - 1
+		}
+		seg := payload[start : end+1]
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Last-Modified", lastModified)
+		w.Header().Set("x-fakeCloud-meta-foo", "some foo")
+		w.Header().Set("x-fakeCloud-meta-blank", "")
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(payload)))
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write(seg)
+	}
+}
+
+// TestCacheExtractorPresignedParallelTransfer exercises tryPresignedParallelDownload: Range probe, parallel chunk GETs, and WriteAt via the meter writer.
+func TestCacheExtractorPresignedParallelTransfer(t *testing.T) {
+	t.Setenv(featureflags.UseParallelCacheTransfer, "true")
+
+	cdTempDir(t)
+	removeHook := helpers.MakeWarningToPanic()
+	t.Cleanup(removeHook)
+
+	payload := parallelTestZipBytes(t)
+	require.Greater(t, len(payload), 32, "payload should span multiple parallel chunks")
+
+	lm := time.Date(2020, 5, 1, 12, 0, 0, 0, time.UTC).Format(http.TimeFormat)
+	ts := httptest.NewServer(testParallelPresignedCacheHandler(t, payload, lm))
+	t.Cleanup(ts.Close)
+
+	cmd := CacheExtractorCommand{
+		File:        cacheExtractorArchive,
+		URL:         ts.URL + "/cache.zip",
+		Timeout:     0,
+		ChunkSize:   7,
+		Concurrency: 4,
+		// TransferMeterFrequency left at 0 so meter.NewWriter returns *os.File (io.WriterAt) for parallel download.
+	}
+	assert.NotPanics(t, func() { cmd.Execute(nil) })
+
+	assert.FileExists(t, cacheExtractorTestArchivedFile)
+	assert.FileExists(t, cacheExtractorMetadata)
+	data, err := os.ReadFile(cacheExtractorMetadata)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"blank":"","foo":"some foo"}`, string(data))
+
+	got, err := os.ReadFile(cacheExtractorArchive)
+	require.NoError(t, err)
+	assert.Equal(t, payload, got)
+}
+
+// TestCacheExtractorGoCloudParallelTransfer exercises handleGoCloudURL with FF_USE_PARALLEL_CACHE_TRANSFER, range probe, and parallel NewRangeReader + WriteAt.
+func TestCacheExtractorGoCloudParallelTransfer(t *testing.T) {
+	t.Setenv(featureflags.UseParallelCacheTransfer, "true")
+
+	cdTempDir(t)
+	removeHook := helpers.MakeWarningToPanic()
+	t.Cleanup(removeHook)
+
+	mux, tmpDir := setupGoCloudFileBucket(t, "testblob")
+	testFile := path.Join(tmpDir, cacheExtractorArchive)
+	writeZipFileAndMetadata(t, testFile)
+
+	info, err := os.Stat(testFile)
+	require.NoError(t, err)
+	require.Greater(t, info.Size(), int64(32), "object should be larger than test chunk size")
+
+	cmd := CacheExtractorCommand{
+		File:        cacheExtractorArchive,
+		GoCloudURL:  fmt.Sprintf("testblob://bucket/%s", cacheExtractorArchive),
+		Timeout:     0,
+		mux:         mux,
+		ChunkSize:   32,
+		Concurrency: 4,
+	}
+	assert.NotPanics(t, func() { cmd.Execute(nil) })
+
+	assert.FileExists(t, cacheExtractorTestArchivedFile)
+	assert.FileExists(t, cacheExtractorMetadata)
+	data, err := os.ReadFile(cacheExtractorMetadata)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"blank":"","foo":"some foo"}`, string(data))
+}
+
+func TestGoCloudURLSchemeAssumesRangeSupport(t *testing.T) {
+	t.Parallel()
+
+	assert.True(t, goCloudURLSchemeAssumesRangeSupport("s3"))
+	assert.True(t, goCloudURLSchemeAssumesRangeSupport("S3"))
+	assert.True(t, goCloudURLSchemeAssumesRangeSupport("gs"))
+	assert.True(t, goCloudURLSchemeAssumesRangeSupport("azblob"))
+	assert.False(t, goCloudURLSchemeAssumesRangeSupport("testblob"))
+	assert.False(t, goCloudURLSchemeAssumesRangeSupport("file"))
+}
+
+// TestUseParallelCacheTransferEnv checks env parsing for the feature flag. Parallel download wiring is covered by
+// TestCacheExtractorPresignedParallelTransfer and TestCacheExtractorGoCloudParallelTransfer.
+func TestUseParallelCacheTransferEnv(t *testing.T) {
+	logger := logrus.WithField("name", featureflags.UseParallelCacheTransfer)
+	t.Run("unset", func(t *testing.T) {
+		t.Setenv(featureflags.UseParallelCacheTransfer, "")
+		assert.False(t, featureflags.IsOn(logger, os.Getenv(featureflags.UseParallelCacheTransfer)))
+	})
+	t.Run("false", func(t *testing.T) {
+		t.Setenv(featureflags.UseParallelCacheTransfer, "false")
+		assert.False(t, featureflags.IsOn(logger, os.Getenv(featureflags.UseParallelCacheTransfer)))
+	})
+	t.Run("true", func(t *testing.T) {
+		t.Setenv(featureflags.UseParallelCacheTransfer, "true")
+		assert.True(t, featureflags.IsOn(logger, os.Getenv(featureflags.UseParallelCacheTransfer)))
+	})
 }
