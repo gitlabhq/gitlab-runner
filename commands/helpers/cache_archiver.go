@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -25,6 +26,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 )
@@ -47,6 +49,11 @@ type CacheArchiverCommand struct {
 	MaxUploadedArchiveSize int64    `long:"max-uploaded-archive-size" env:"CACHE_MAX_UPLOADED_ARCHIVE_SIZE" description:"Limit the size of the cache archive being uploaded to cloud storage, in bytes."`
 	EnvFile                string   `long:"env-file" description:"Filename containing environment variables to read"`
 
+	// Transfer options (all backends: presigned S3, GoCloud S3/Azure/GCS).
+	TransferBufferSize int `long:"transfer-buffer-size" env:"CACHE_TRANSFER_BUFFER_SIZE" description:"Buffer size in bytes for streaming cache upload/download (default 4 MiB)"`
+	ChunkSize          int `long:"chunk-size" env:"CACHE_CHUNK_SIZE" description:"Part/chunk size in bytes for GoCloud upload when FF_USE_PARALLEL_CACHE_TRANSFER is enabled (default 16 MiB)"`
+	Concurrency        int `long:"concurrency" env:"CACHE_CONCURRENCY" description:"Concurrent parts for GoCloud multipart upload when FF_USE_PARALLEL_CACHE_TRANSFER is enabled (default 16; otherwise 1)"`
+
 	client *CacheClient
 	mux    *blob.URLMux
 }
@@ -60,6 +67,9 @@ func NewCacheArchiverCommand() cli.Command {
 				Retry:     2,
 				RetryTime: time.Second,
 			},
+			TransferBufferSize: defaultCacheTransferBufferSize,
+			ChunkSize:          defaultCacheChunkSize,
+			Concurrency:        defaultCacheConcurrency,
 		},
 	)
 }
@@ -98,16 +108,22 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	defer rc.Close()
 
 	if c.GoCloudURL != "" {
+		logrus.Infoln("Using GoCloud URL for cache upload")
 		return c.handleGoCloudURL(rc)
 	}
-
+	logrus.Infoln("Using presigned URL for cache upload")
 	return c.handlePresignedURL(fi, rc)
 }
 
-func (c *CacheArchiverCommand) handlePresignedURL(fi os.FileInfo, file io.Reader) error {
+func (c *CacheArchiverCommand) handlePresignedURL(fi os.FileInfo, file io.ReadCloser) error {
 	logrus.Infoln("Uploading", filepath.Base(c.File), "to", url_helpers.CleanURL(c.URL))
 
-	req, err := http.NewRequest(http.MethodPut, c.URL, file)
+	// Use a buffered body so the HTTP client reads in larger chunks (improves S3 upload throughput).
+	body := struct {
+		io.Reader
+		io.Closer
+	}{bufio.NewReaderSize(file, c.TransferBufferSize), file}
+	req, err := http.NewRequest(http.MethodPut, c.URL, body)
 	if err != nil {
 		return retryableErr{err: err}
 	}
@@ -155,16 +171,23 @@ func (c *CacheArchiverCommand) handleGoCloudURL(file io.Reader) error {
 	}
 	defer b.Close()
 
-	opts := &blob.WriterOptions{
-		Metadata: c.Metadata,
+	writerOpts := &blob.WriterOptions{
+		Metadata:       c.Metadata,
+		BufferSize:     c.ChunkSize,
+		MaxConcurrency: c.Concurrency,
+	}
+	ffLogger := logrus.WithField("name", featureflags.UseParallelCacheTransfer)
+	if !featureflags.IsOn(ffLogger, os.Getenv(featureflags.UseParallelCacheTransfer)) {
+		writerOpts.MaxConcurrency = 1
 	}
 
-	writer, err := b.NewWriter(ctx, objectName, opts)
+	writer, err := b.NewWriter(ctx, objectName, writerOpts)
 	if err != nil {
 		return err
 	}
 
-	if _, err = io.Copy(writer, file); err != nil {
+	buf := make([]byte, c.TransferBufferSize)
+	if _, err = io.CopyBuffer(writer, file, buf); err != nil {
 		cancelWrite()
 		if writerErr := writer.Close(); writerErr != nil {
 			logrus.WithError(writerErr).Error("error closing Go cloud upload after copy failure")
@@ -263,6 +286,9 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 
 	c.normalizeArgs()
 	c.tryRenameAlternateFile()
+	if err := validateCacheTransferTuning(c.TransferBufferSize, c.ChunkSize, c.Concurrency); err != nil {
+		logrus.Fatalln(err)
+	}
 
 	// Enumerate files
 	err := c.enumerate()
@@ -310,6 +336,16 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 func (c *CacheArchiverCommand) normalizeArgs() {
 	if c.File == "" {
 		logrus.Fatalln("Missing --file")
+	}
+
+	if c.TransferBufferSize == 0 {
+		c.TransferBufferSize = defaultCacheTransferBufferSize
+	}
+	if c.ChunkSize == 0 {
+		c.ChunkSize = defaultCacheChunkSize
+	}
+	if c.Concurrency == 0 {
+		c.Concurrency = defaultCacheConcurrency
 	}
 
 	for idx := range c.Paths {

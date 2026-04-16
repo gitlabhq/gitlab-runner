@@ -1354,6 +1354,55 @@ job:
     CACHE_COMPRESSION_LEVEL: fast
 ```
 
+### Parallel cache object storage transfers
+
+By default, cache downloads use a single HTTP GET or GoCloud read stream, and cache uploads
+that use the GoCloud path (for example S3 with `RoleARN`) use one concurrent multipart part at a time.
+
+You can enable higher throughput on fast links to object storage with the
+`FF_USE_PARALLEL_CACHE_TRANSFER` [feature flag](feature-flags.md). When it is enabled:
+
+- **Downloads** may use multiple concurrent range GETs (presigned URL; a small initial Range request is used
+  instead of HEAD, which often fails for GET-only presigned URLs such as S3) or concurrent GoCloud range reads,
+  when the backend supports ranges and the cache object is larger than one chunk.
+- **Uploads** on the GoCloud path use multipart uploads with concurrent parts.
+
+When the feature flag is off, behavior is unchanged regardless of the variables below.
+You can tune parallelism with these job environment variables (they are read by the `cache-extractor` and `cache-archiver` helpers):
+
+| Variable                     | Description                                                                 | Default |
+|------------------------------|-----------------------------------------------------------------------------|---------|
+| `CACHE_CHUNK_SIZE`           | Chunk size in bytes for parallel range downloads and multipart part size for GoCloud uploads | `16777216` (16 MiB) |
+| `CACHE_CONCURRENCY`          | Number of concurrent range downloads or concurrent upload parts (GoCloud). Use `0` or `1` for sequential downloads. | `16` |
+| `CACHE_TRANSFER_BUFFER_SIZE` | Buffer size in bytes when streaming to or from the archive file           | `4194304` (4 MiB) |
+
+Example:
+
+```yaml
+job:
+  variables:
+    FF_USE_PARALLEL_CACHE_TRANSFER: "true"
+    CACHE_CONCURRENCY: "8"
+    CACHE_CHUNK_SIZE: "16777216"
+```
+
+### Parallel artifact downloads (direct download)
+
+By default, when [`direct_download`](https://docs.gitlab.com/ci/jobs/job_artifacts/#download-artifacts-from-a-job)
+returns a redirect to object storage, the runner downloads artifacts with a single HTTP GET stream.
+
+Enable the `FF_USE_PARALLEL_ARTIFACT_TRANSFER` [feature flag](feature-flags.md) to allow parallel HTTP Range GETs when the
+object storage backend supports `206 Partial Content` with a `Content-Range` total. Chunk size and concurrency are fixed
+in the runner (not `CACHE_*` variables). This flag is independent of `FF_USE_PARALLEL_CACHE_TRANSFER`.
+
+Example:
+
+```yaml
+job:
+  variables:
+    FF_USE_PARALLEL_ARTIFACT_TRANSFER: "true"
+```
+
 The cache mechanism uses pre-signed URLs to upload and download cache. URLs are signed by GitLab Runner on its own instance.
 It does not matter if the job's script (including the cache upload/download script) are executed on local or external
 machines. For example, `shell` or `docker` executors run their scripts on the same

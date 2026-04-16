@@ -1,6 +1,7 @@
 package meter
 
 import (
+	"errors"
 	"io"
 	"sync/atomic"
 	"time"
@@ -9,7 +10,8 @@ import (
 type writer struct {
 	*meter
 
-	w io.WriteCloser
+	w  io.WriteCloser
+	at io.WriterAt // optional: set when w also implements io.WriterAt (e.g. *os.File)
 }
 
 func NewWriter(w io.WriteCloser, frequency time.Duration, fn UpdateCallback) io.WriteCloser {
@@ -17,20 +19,32 @@ func NewWriter(w io.WriteCloser, frequency time.Duration, fn UpdateCallback) io.
 		return w
 	}
 
-	m := &writer{
+	mw := &writer{
 		w:     w,
 		meter: newMeter(),
 	}
+	if a, ok := w.(io.WriterAt); ok {
+		mw.at = a
+	}
 
-	m.start(frequency, fn)
+	mw.start(frequency, fn)
 
-	return m
+	return mw
 }
 
 func (m *writer) Write(p []byte) (int, error) {
 	n, err := m.w.Write(p)
 	atomic.AddUint64(&m.count, uint64(n))
 
+	return n, err
+}
+
+func (m *writer) WriteAt(p []byte, off int64) (int, error) {
+	if m.at == nil {
+		return 0, errors.New("meter: underlying writer does not implement io.WriterAt")
+	}
+	n, err := m.at.WriteAt(p, off)
+	atomic.AddUint64(&m.count, uint64(n))
 	return n, err
 }
 

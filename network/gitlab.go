@@ -18,11 +18,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/labkit/fields"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/transfer"
+	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 const (
@@ -33,6 +36,15 @@ const (
 
 	correlationIDHeader   = "X-Request-Id"
 	correlationIDLogField = "correlation_id"
+
+	// artifactDownloadBufferSize is the buffer size when streaming artifact response body (e.g. from S3 after redirect).
+	// Larger buffers improve throughput when downloading from object storage; matches cache default.
+	artifactDownloadBufferSize = 4 * 1024 * 1024 // 4 MiB
+
+	// Parallel artifact download when coordinator returns 302 to object storage (e.g. S3).
+	// Requires FF_USE_PARALLEL_ARTIFACT_TRANSFER.
+	artifactParallelChunkSize   = 16 * 1024 * 1024 // 16 MiB
+	artifactParallelConcurrency = 16
 )
 
 func TokenIsCreatedRunnerToken(token string) bool {
@@ -1076,7 +1088,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 	}
 
 	if res != nil {
-		log = log.WithField("responseStatus", res.Status)
+		log = log.WithField(fields.HTTPStatusCode, res.StatusCode)
 	}
 
 	messagePrefix := "Uploading artifacts to coordinator..."
@@ -1171,44 +1183,216 @@ func handleUploadRedirectionState(
 	return common.UploadRedirected, location
 }
 
+// tryArtifactParallelDownload attempts parallel range GETs to locationURL (e.g. S3 after 302).
+// Call only when FF_USE_PARALLEL_ARTIFACT_TRANSFER is enabled (see DownloadArtifacts).
+// On success writes via io.WriterAt at each chunk offset (bounded memory). Returns false if dest does not implement io.WriterAt.
+// locationURL may be a presigned URL (auth in query string); it is used as-is for HEAD and all GETs (including Range), which is correct.
+func (n *GitLabClient) tryArtifactParallelDownload(
+	ctx context.Context,
+	config requestCredentials,
+	locationURL string,
+	contentLength int64,
+	log logrus.FieldLogger,
+	dest io.WriteCloser,
+) bool {
+	cli, err := n.getClient(config)
+	if err != nil {
+		return false
+	}
+	// Caller has already verified Range support (e.g. via GET Range bytes=0-0) and provided contentLength.
+	chunkSize := int64(artifactParallelChunkSize)
+	if contentLength <= chunkSize {
+		log.Infoln("Artifact download: file size <=", artifactParallelChunkSize/(1024*1024), "MiB (chunk size), using single download stream")
+		return false
+	}
+	fetchChunk := func(offset, length int64) (io.ReadCloser, error) {
+		rangeHeaders := http.Header{"Range": []string{fmt.Sprintf("bytes=%d-%d", offset, offset+length-1)}}
+		resp, err := cli.do(ctx, locationURL, http.MethodGet, nil, "", rangeHeaders)
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+			_ = resp.Body.Close()
+			return nil, fmt.Errorf("range request failed: %s", resp.Status)
+		}
+		return resp.Body, nil
+	}
+
+	destAt, ok := dest.(io.WriterAt)
+	if !ok {
+		log.Infoln("Artifact download: parallel download requires io.WriterAt destination, using single download stream")
+		return false
+	}
+
+	cleanedURL := url_helpers.CleanURL(locationURL)
+	log.WithField("url", cleanedURL).Infoln("Artifact download: parallel,", artifactParallelConcurrency, "streams,", artifactParallelChunkSize/(1024*1024), "MiB chunk size")
+
+	err = transfer.ParallelRangeDownload(contentLength, chunkSize, artifactParallelConcurrency, destAt, fetchChunk)
+	if err != nil {
+		log.WithError(err).Infoln("Artifact download: parallel failed, using single download stream")
+		return false
+	}
+	log.Println("Downloading artifacts from coordinator...", "ok")
+	return true
+}
+
+// artifactDownloadStateFromResponse returns the DownloadState for 403/401/404 responses, or (0, false) if not handled. Caller must close res.
+func artifactDownloadStateFromResponse(res *http.Response, log logrus.FieldLogger) (common.DownloadState, bool) {
+	if res == nil {
+		return 0, false
+	}
+	switch res.StatusCode {
+	case http.StatusForbidden:
+		statusText := getMessageFromJSONOrXMLResponse(res)
+		log.WithField("status", statusText).Errorln("Downloading artifacts from coordinator...", "forbidden")
+		return common.DownloadForbidden, true
+	case http.StatusUnauthorized:
+		log.WithField("status", res.Status).Errorln("Downloading artifacts from coordinator...", "unauthorized")
+		return common.DownloadUnauthorized, true
+	case http.StatusNotFound:
+		log.Errorln("Downloading artifacts from coordinator...", "not found")
+		return common.DownloadNotFound, true
+	default:
+		return 0, false
+	}
+}
+
+//nolint:gocognit // artifact download has many paths: direct 302 vs standard, parallel vs single stream, fallbacks
 func (n *GitLabClient) DownloadArtifacts(
 	config common.JobCredentials,
 	artifactsFile io.WriteCloser,
 	directDownload *bool,
 ) common.DownloadState {
-	query := url.Values{}
+	ctx := context.Background()
+	log := logrus.WithFields(logrus.Fields{
+		"id":    config.ID,
+		"token": helpers.ShortenToken(config.Token),
+	})
 
+	// When direct_download=true, try no-redirect GET first to detect 302 → object storage and use parallel range GETs.
+	//nolint:nestif // direct-download path: 302 vs OK, range probe, parallel vs fallback, 4xx handling
+	if directDownload != nil && *directDownload {
+		query := url.Values{}
+		query.Set("direct_download", "true")
+		uri := fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode())
+		headers, correlationID := addCorrelationID(JobTokenHeader(config.Token))
+		cli, err := n.getClient(&config)
+		if err != nil {
+			log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
+			return common.DownloadFailed
+		}
+		resolved := cli.url.ResolveReference(&url.URL{Path: fmt.Sprintf("jobs/%d/artifacts", config.ID), RawQuery: query.Encode()})
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, resolved.String(), nil)
+		if err != nil {
+			log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
+			return common.DownloadFailed
+		}
+		req.Header = headers
+		cli.ensureTLSConfig()
+		cli.ensureTransportMaxAge()
+		noRedirectClient := &http.Client{
+			Transport: cli.Transport,
+			Timeout:   cli.Timeout,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
+		res, err := noRedirectClient.Do(req)
+		if err != nil {
+			log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
+			return common.DownloadFailed
+		}
+		log = log.WithField(correlationIDLogField, getCorrelationID(res, correlationID))
+		if res != nil {
+			log = log.WithField(fields.HTTPStatusCode, res.StatusCode)
+		}
+
+		if res.StatusCode == http.StatusOK {
+			defer closeResponseBody(res, true)
+			return n.downloadArtifactFile(log, artifactsFile, res)
+		}
+		if res.StatusCode == http.StatusFound || res.StatusCode == http.StatusTemporaryRedirect {
+			// 302 Found and 307 Temporary Redirect both supply Location (e.g. to object storage).
+			location := res.Header.Get("Location")
+			closeResponseBody(res, true)
+			if location != "" {
+				if locURL, err := url.Parse(location); err == nil && locURL.Host != "" {
+					log.Infoln("Direct download from", locURL.Host)
+				}
+				parallelFF := logrus.WithField("name", featureflags.UseParallelArtifactTransfer)
+				if featureflags.IsOn(parallelFF, os.Getenv(featureflags.UseParallelArtifactTransfer)) {
+					// Use GET with Range: bytes=0-0 to probe Range support and get size from Content-Range
+					probeHeaders := http.Header{"Range": []string{"bytes=0-0"}}
+					probeResp, probeErr := cli.do(ctx, location, http.MethodGet, nil, "", probeHeaders)
+					if probeErr != nil || probeResp == nil {
+						log.Infoln("Artifact download: cannot probe size (Range request failed), using single download stream")
+						goto fallback
+					}
+					if probeResp.StatusCode != http.StatusPartialContent {
+						log.Infoln("Artifact download: remote host does not support Range, using single download stream")
+						closeResponseBody(probeResp, true)
+						goto fallback
+					}
+					contentLength, ok := transfer.ParseContentRangeTotal(probeResp.Header.Get("Content-Range"))
+					if !ok || contentLength <= 0 {
+						log.Infoln("Artifact download: unknown size (no Content-Range total), using single download stream")
+						closeResponseBody(probeResp, true)
+						goto fallback
+					}
+					// Drain probe body before Close so the connection can be reused (see transfer.RangeProbeBodyMaxDiscard).
+					_, _ = io.Copy(io.Discard, io.LimitReader(probeResp.Body, transfer.RangeProbeBodyMaxDiscard))
+					_ = probeResp.Body.Close()
+					if n.tryArtifactParallelDownload(ctx, &config, location, contentLength, log, artifactsFile) {
+						return common.DownloadSucceeded
+					}
+					log.Infoln("Artifact download: using single download stream")
+				}
+			}
+		fallback:
+			// Fall back to normal GET (follow redirect) and stream.
+			headers2, _ := addCorrelationID(JobTokenHeader(config.Token))
+			res2, err := n.doRaw(ctx, &config, http.MethodGet, uri, nil, "", headers2)
+			if err != nil {
+				log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
+				return common.DownloadFailed
+			}
+			defer closeResponseBody(res2, true)
+			if res2.StatusCode == http.StatusOK {
+				return n.downloadArtifactFile(log, artifactsFile, res2)
+			}
+			res = res2
+		} else {
+			// 4xx on initial no-redirect request
+			if state, ok := artifactDownloadStateFromResponse(res, log); ok {
+				closeResponseBody(res, true)
+				return state
+			}
+			closeResponseBody(res, true)
+			res = nil
+		}
+		// 4xx from fallback response (res2)
+		if state, ok := artifactDownloadStateFromResponse(res, log); ok {
+			return state
+		}
+		log.Warningln("Downloading artifacts from coordinator...", "failed")
+		return common.DownloadFailed
+	}
+
+	// Standard path: single GET (may follow redirect), stream body.
+	query := url.Values{}
 	if directDownload != nil {
 		query.Set("direct_download", strconv.FormatBool(*directDownload))
 	}
-
 	uri := fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode())
-
 	headers, correlationID := addCorrelationID(JobTokenHeader(config.Token))
-	res, err := n.doRaw(
-		context.Background(),
-		&config,
-		http.MethodGet,
-		uri,
-		nil,
-		"",
-		headers,
-	)
-
-	log := logrus.WithFields(logrus.Fields{
-		"id":                  config.ID,
-		"token":               helpers.ShortenToken(config.Token),
-		correlationIDLogField: getCorrelationID(res, correlationID),
-	})
-
+	res, err := n.doRaw(ctx, &config, http.MethodGet, uri, nil, "", headers)
+	log = log.WithField(correlationIDLogField, getCorrelationID(res, correlationID))
 	if res != nil {
-		log = log.WithField("responseStatus", res.Status)
-
+		log = log.WithField(fields.HTTPStatusCode, res.StatusCode)
 		if res.Request != nil && res.Request.URL != nil {
 			log = log.WithField("host", res.Request.URL.Host)
 		}
 	}
-
 	if err != nil {
 		log.Errorln("Downloading artifacts from coordinator...", "error", err.Error())
 		return common.DownloadFailed
@@ -1243,10 +1427,12 @@ func (n *GitLabClient) downloadArtifactFile(
 	file io.WriteCloser,
 	res *http.Response,
 ) common.DownloadState {
-	_, err := io.Copy(file, res.Body)
-
-	closeWithLogging(log, file, "file writer")
-
+	// Use a buffered reader so streaming from object storage (e.g. S3 after redirect) has good throughput.
+	body := struct {
+		io.Reader
+		io.Closer
+	}{bufio.NewReaderSize(res.Body, artifactDownloadBufferSize), res.Body}
+	_, err := io.Copy(file, body)
 	if err != nil {
 		log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
 		return common.DownloadFailed
