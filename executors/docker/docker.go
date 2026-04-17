@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -533,6 +534,41 @@ func platformForImage(image *image.InspectResponse, opts spec.ImageExecutorOptio
 	}
 }
 
+// processSecurityOpt processes security options and converts seccomp profile paths to inline JSON
+func (e *executor) processSecurityOpt(securityOpts []string) ([]string, error) {
+	if len(securityOpts) == 0 {
+		return securityOpts, nil
+	}
+
+	processed := make([]string, 0, len(securityOpts))
+
+	for _, opt := range securityOpts {
+		key, value, ok := strings.Cut(opt, "=")
+
+		// Check if this is a seccomp option with a file path
+		if ok && key == "seccomp" && !strings.HasPrefix(value, "{") && value != "unconfined" && value != "builtin" {
+			// Read the seccomp profile from file
+			profileJSON, err := os.ReadFile(value)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read seccomp profile from %s: %w", value, err)
+			}
+
+			if !json.Valid(profileJSON) {
+				return nil, fmt.Errorf("seccomp profile %s is not valid JSON", value)
+			}
+
+			// Create inline seccomp option with the file contents
+			processed = append(processed, fmt.Sprintf("seccomp=%s", profileJSON))
+			e.BuildLogger.Debugln("Loaded seccomp profile from", value)
+		} else {
+			// Pass through non-seccomp options or inline seccomp profiles as-is
+			processed = append(processed, opt)
+		}
+	}
+
+	return processed, nil
+}
+
 func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []container.DeviceMapping, deviceRequests []container.DeviceRequest) (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetServiceNanoCPUs()
 	if err != nil {
@@ -549,6 +585,12 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 	if e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
 		yes := true
 		useInit = &yes
+	}
+
+	// Process security options to handle seccomp profile paths
+	servicesSecurityOpt, err := e.processSecurityOpt(e.Config.Docker.ServicesSecurityOpt)
+	if err != nil {
+		return nil, fmt.Errorf("processing services security options: %w", err)
 	}
 
 	return &container.HostConfig{
@@ -568,7 +610,7 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		Privileged:    privileged,
-		SecurityOpt:   e.Config.Docker.ServicesSecurityOpt,
+		SecurityOpt:   servicesSecurityOpt,
 		Runtime:       e.Config.Docker.Runtime,
 		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		NetworkMode:   e.networkMode,
@@ -1023,6 +1065,12 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 		useInit = &yes
 	}
 
+	// Process security options to handle seccomp profile paths
+	securityOpt, err := e.processSecurityOpt(e.Config.Docker.SecurityOpt)
+	if err != nil {
+		return nil, fmt.Errorf("processing security options: %w", err)
+	}
+
 	return &container.HostConfig{
 		Resources: container.Resources{
 			Memory:            e.Config.Docker.GetMemory(),
@@ -1047,7 +1095,7 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		CapAdd:        e.Config.Docker.CapAdd,
 		CapDrop:       e.Config.Docker.CapDrop,
-		SecurityOpt:   e.Config.Docker.SecurityOpt,
+		SecurityOpt:   securityOpt,
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    append(e.Config.Docker.ExtraHosts, e.links...),
 		NetworkMode:   e.networkMode,

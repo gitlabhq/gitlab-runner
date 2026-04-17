@@ -3242,3 +3242,135 @@ func TestRemoveContainerVolumeKeep(t *testing.T) {
 		})
 	}
 }
+
+func TestProcessSecurityOpt(t *testing.T) {
+	// Create a temporary seccomp profile file
+	seccompProfile := `{"defaultAction":"SCMP_ACT_ERRNO"}`
+	seccompProfilePath := filepath.Join(t.TempDir(), "seccomp-profile.json")
+	require.NoError(t, os.WriteFile(seccompProfilePath, []byte(seccompProfile), 0644))
+
+	tests := map[string]struct {
+		securityOpts  []string
+		expectedOpts  []string
+		expectedError string
+	}{
+		"empty security opts": {
+			securityOpts: []string{},
+			expectedOpts: []string{},
+		},
+		"nil security opts": {
+			securityOpts: nil,
+			expectedOpts: nil,
+		},
+		"non-seccomp options pass through": {
+			securityOpts: []string{"apparmor=unconfined", "no-new-privileges"},
+			expectedOpts: []string{"apparmor=unconfined", "no-new-privileges"},
+		},
+		"seccomp=unconfined passes through": {
+			securityOpts: []string{"seccomp=unconfined"},
+			expectedOpts: []string{"seccomp=unconfined"},
+		},
+		"seccomp=builtin passes through": {
+			securityOpts: []string{"seccomp=builtin"},
+			expectedOpts: []string{"seccomp=builtin"},
+		},
+		"bare seccomp without value passes through": {
+			securityOpts: []string{"seccomp"},
+			expectedOpts: []string{"seccomp"},
+		},
+		"inline seccomp JSON passes through": {
+			securityOpts: []string{`seccomp={"defaultAction":"SCMP_ACT_ERRNO"}`},
+			expectedOpts: []string{`seccomp={"defaultAction":"SCMP_ACT_ERRNO"}`},
+		},
+		"seccomp profile path is loaded": {
+			securityOpts: []string{fmt.Sprintf("seccomp=%s", seccompProfilePath)},
+			expectedOpts: []string{fmt.Sprintf("seccomp=%s", seccompProfile)},
+		},
+		"mixed security options": {
+			securityOpts: []string{
+				"apparmor=unconfined",
+				fmt.Sprintf("seccomp=%s", seccompProfilePath),
+				"no-new-privileges",
+			},
+			expectedOpts: []string{
+				"apparmor=unconfined",
+				fmt.Sprintf("seccomp=%s", seccompProfile),
+				"no-new-privileges",
+			},
+		},
+		"non-existent file returns error": {
+			securityOpts:  []string{"seccomp=/nonexistent/profile.json"},
+			expectedError: "failed to read seccomp profile from /nonexistent/profile.json",
+		},
+	}
+
+	for testName, tt := range tests {
+		t.Run(testName, func(t *testing.T) {
+			logger, _ := logrustest.NewNullLogger()
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					BuildLogger: buildlogger.New(nil, logger.WithField("test", t.Name()), buildlogger.Options{}),
+				},
+			}
+
+			result, err := e.processSecurityOpt(tt.securityOpts)
+
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedOpts, result)
+		})
+	}
+}
+
+func TestDockerSecurityOptSetting(t *testing.T) {
+	// Create a temporary seccomp profile file
+	seccompProfile := `{"defaultAction":"SCMP_ACT_ERRNO"}`
+	seccompProfilePath := filepath.Join(t.TempDir(), "seccomp-profile.json")
+	require.NoError(t, os.WriteFile(seccompProfilePath, []byte(seccompProfile), 0644))
+
+	dockerConfig := &common.DockerConfig{
+		SecurityOpt: []string{
+			fmt.Sprintf("seccomp=%s", seccompProfilePath),
+			"apparmor=unconfined",
+		},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+		expected := []string{
+			fmt.Sprintf("seccomp=%s", seccompProfile),
+			"apparmor=unconfined",
+		}
+		assert.Equal(t, expected, hostConfig.SecurityOpt)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
+func TestDockerServicesSecurityOptSetting(t *testing.T) {
+	// Create a temporary seccomp profile file
+	seccompProfile := `{"defaultAction":"SCMP_ACT_ERRNO"}`
+	seccompProfilePath := filepath.Join(t.TempDir(), "seccomp-profile.json")
+	require.NoError(t, os.WriteFile(seccompProfilePath, []byte(seccompProfile), 0644))
+
+	dockerConfig := &common.DockerConfig{
+		ServicesSecurityOpt: []string{
+			fmt.Sprintf("seccomp=%s", seccompProfilePath),
+			"apparmor=unconfined",
+		},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+		expected := []string{
+			fmt.Sprintf("seccomp=%s", seccompProfile),
+			"apparmor=unconfined",
+		}
+		assert.Equal(t, expected, hostConfig.SecurityOpt)
+	}
+
+	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+}
