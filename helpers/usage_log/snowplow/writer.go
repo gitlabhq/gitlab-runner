@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	labkitsnowplow "gitlab.com/gitlab-org/labkit/v2/events/snowplow"
+	"gitlab.com/gitlab-org/labkit/v2/events/snowplow/metrics"
 	"gitlab.com/gitlab-org/labkit/v2/events/snowplow/oidc"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log"
@@ -18,6 +19,7 @@ const (
 
 type Writer struct {
 	options options
+	emitter *labkitsnowplow.Emitter
 	tracker *labkitsnowplow.Tracker
 	log     logrus.FieldLogger
 }
@@ -41,6 +43,16 @@ func New(log logrus.FieldLogger, collectorURI string, o ...Option) (*Writer, err
 		emitterOpts = append(emitterOpts, labkitsnowplow.WithTokenSource(ts))
 	}
 
+	metricsOptions := []metrics.CollectorOption{
+		metrics.WithCollectorNamespace("gitlab_runner"),
+	}
+
+	if len(opts.batchDeliveryDurationBuckets) > 0 {
+		metricsOptions = append(metricsOptions, metrics.WithCollectorBatchDeliveryDurationBuckets(opts.batchDeliveryDurationBuckets))
+	}
+
+	emitterOpts = append(emitterOpts, labkitsnowplow.WithMetricsCollectorOptions(metricsOptions...))
+
 	emitter, err := labkitsnowplow.NewEmitter(collectorURI, emitterOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating snowplow emitter: %w", err)
@@ -51,8 +63,16 @@ func New(log logrus.FieldLogger, collectorURI string, o ...Option) (*Writer, err
 		return nil, fmt.Errorf("creating snowplow tracker: %w", err)
 	}
 
+	if opts.promRegistry != nil {
+		err = opts.promRegistry.Register(emitter.Collector())
+		if err != nil {
+			return nil, fmt.Errorf("registering snowplow emitter collector: %w", err)
+		}
+	}
+
 	return &Writer{
 		options: opts,
+		emitter: emitter,
 		tracker: tracker,
 		log:     log,
 	}, nil
@@ -144,6 +164,10 @@ func (w *Writer) buildBillingInputs(record usage_log.Record) (labkitsnowplow.Bil
 func (w *Writer) Close() error {
 	w.log.Debug("Stopping snowplow tracker")
 	w.tracker.Stop()
+
+	if w.options.promRegistry != nil {
+		w.options.promRegistry.Unregister(w.emitter.Collector())
+	}
 
 	return nil
 }

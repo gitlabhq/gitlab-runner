@@ -123,6 +123,8 @@ type RunCommand struct {
 	apiRequestsCollector   prometheus.Collector
 	inputsMetricsCollector *spec.JobInputsMetricsCollector
 
+	prometheusRegistry *prometheus.Registry
+
 	sessionServer *session.Server
 
 	usageLogger atomic.Value // stores usageLoggerHolder
@@ -179,6 +181,7 @@ func NewRunCommand(n common.Network, apiRequestsCollector prometheus.Collector, 
 		runAt:                  runAt,
 		reloadConfigInterval:   common.ReloadConfigInterval,
 		processStateTracker:    process_state.NewTracker(),
+		prometheusRegistry:     prometheus.NewRegistry(),
 	}
 
 	return common.NewCommand("run", "run multi runner service", cmd)
@@ -609,7 +612,9 @@ func (mr *RunCommand) createSnowplowBillingWriter(ulConfig common.UsageLogger) u
 		"collector_uri": collectorURI,
 	}
 
-	var options []snowplow.Option
+	options := []snowplow.Option{
+		snowplow.WithPrometheusRegistry(mr.prometheusRegistry),
+	}
 
 	if ulConfig.Snowplow.AppID != "" {
 		options = append(options, snowplow.WithAppID(ulConfig.Snowplow.AppID))
@@ -645,6 +650,10 @@ func (mr *RunCommand) createSnowplowBillingWriter(ulConfig common.UsageLogger) u
 	if ulConfig.Snowplow.SkipRunnerSystemFailure == nil || *ulConfig.Snowplow.SkipRunnerSystemFailure {
 		options = append(options, snowplow.WithSkipFailureReason(string(common.RunnerSystemFailure)))
 		logFields["skip_runner_system_failure"] = true
+	}
+
+	if len(ulConfig.Snowplow.BatchDeliveryDurationBuckets) > 0 {
+		options = append(options, snowplow.WithBatchDeliveryDurationBuckets(ulConfig.Snowplow.BatchDeliveryDurationBuckets))
 	}
 
 	mr.log().WithFields(logFields).Debug("snowplow_billing configuration loaded")
@@ -810,56 +819,56 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 }
 
 func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
-	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
-	registry.MustRegister(&mr.buildsHelper)
+	mr.prometheusRegistry.MustRegister(&mr.buildsHelper)
 	// Metrics about runner workers health
-	registry.MustRegister(&mr.healthHelper)
+	mr.prometheusRegistry.MustRegister(&mr.healthHelper)
 	// Metrics about configuration file accessing
-	registry.MustRegister(mr.configfile.AccessCollector())
-	registry.MustRegister(mr)
+	mr.prometheusRegistry.MustRegister(mr.configfile.AccessCollector())
+	// Metrics about concurrency slots
+	mr.prometheusRegistry.MustRegister(mr)
 	// Metrics about job inputs interpolation
-	registry.MustRegister(mr.inputsMetricsCollector)
+	mr.prometheusRegistry.MustRegister(mr.inputsMetricsCollector)
 	// Metrics about API connections
-	registry.MustRegister(mr.apiRequestsCollector)
+	mr.prometheusRegistry.MustRegister(mr.apiRequestsCollector)
 	// Metrics about the Job Router circuit breaker
 	if rc, ok := mr.network.(*router.Client); ok {
-		registry.MustRegister(rc)
+		mr.prometheusRegistry.MustRegister(rc)
 	}
 	// Metrics about jobs failures
-	registry.MustRegister(mr.failuresCollector)
+	mr.prometheusRegistry.MustRegister(mr.failuresCollector)
 	// Metrics about catched errors
-	registry.MustRegister(&mr.prometheusLogHook)
+	mr.prometheusRegistry.MustRegister(&mr.prometheusLogHook)
 	// Metric providing info about current state of the GitLab Runner process
-	registry.MustRegister(mr.processStateTracker)
+	mr.prometheusRegistry.MustRegister(mr.processStateTracker)
 	// Metrics about the program's build version.
-	registry.MustRegister(common.AppVersion.NewMetricsCollector())
+	mr.prometheusRegistry.MustRegister(common.AppVersion.NewMetricsCollector())
 	// Go-specific metrics about the process (GC stats, goroutines, etc.).
-	registry.MustRegister(collectors.NewGoCollector())
+	mr.prometheusRegistry.MustRegister(collectors.NewGoCollector())
 	// Go-unrelated process metrics (memory usage, file descriptors, etc.).
-	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	mr.prometheusRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	// Register all executor provider collectors
 	for _, provider := range mr.executorProviders.All() {
 		if collector, ok := provider.(prometheus.Collector); ok && collector != nil {
-			registry.MustRegister(collector)
+			mr.prometheusRegistry.MustRegister(collector)
 		}
 	}
 
 	// Register all cache adapter collectors
 	for _, collector := range cache.Collectors() {
-		registry.MustRegister(collector)
+		mr.prometheusRegistry.MustRegister(collector)
 	}
 
 	// restrictHTTPMethods should be used on all promhttp handlers
 	// In this specific instance, the handler is uninstrumented, so isn't as
 	// important. But in the future, if any other promhttp handlers are added
-	// they too should be wrapped and restriced.
+	// they too should be wrapped and restricted.
 	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27194
 	mux.Handle(
 		"/metrics",
 		restrictHTTPMethods(
-			promhttp.HandlerFor(registry, promhttp.HandlerOpts{}),
+			promhttp.HandlerFor(mr.prometheusRegistry, promhttp.HandlerOpts{}),
 			http.MethodGet, http.MethodHead,
 		),
 	)
