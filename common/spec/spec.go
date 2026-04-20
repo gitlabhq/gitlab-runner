@@ -24,6 +24,8 @@ type JobInfo struct {
 	Name  string `json:"name"`
 	Stage string `json:"stage"`
 
+	PipelineID int64 `json:"pipeline_id"`
+
 	ProjectID       int64  `json:"project_id"`
 	ProjectName     string `json:"project_name"`
 	ProjectFullPath string `json:"project_full_path"`

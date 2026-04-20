@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -64,4 +65,81 @@ func TestLabels(t *testing.T) {
 	actual := l.Labels(map[string]string{"other.label1": "1", "other.label2": "2"})
 
 	assert.Equal(t, expected, actual)
+}
+
+func TestLabels_pipelineIDSupport(t *testing.T) {
+	tests := map[string]struct {
+		pipelineIDInJobPayload  *int64
+		pipelineIDInJobVariable *spec.Variable
+		expectedPipelineIDLabel string
+	}{
+		"pipelineID in job payload only": {
+			pipelineIDInJobPayload:  func(i int64) *int64 { return &i }(987654321),
+			expectedPipelineIDLabel: "987654321",
+		},
+		"pipelineID in job variable only": {
+			pipelineIDInJobVariable: &spec.Variable{
+				Key:   "CI_PIPELINE_ID",
+				Value: "123456789",
+			},
+			expectedPipelineIDLabel: "123456789",
+		},
+		"pipelineID in job variable and job payload": {
+			pipelineIDInJobPayload: func(i int64) *int64 { return &i }(987654321),
+			pipelineIDInJobVariable: &spec.Variable{
+				Key:   "CI_PIPELINE_ID",
+				Value: "123456789",
+			},
+			expectedPipelineIDLabel: "987654321",
+		},
+		"pipelineID not present at all": {
+			expectedPipelineIDLabel: "",
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			b := &common.Build{
+				Job: spec.Job{
+					ID: 12345,
+					GitInfo: spec.GitInfo{
+						Sha:       "sha",
+						BeforeSha: "before-sha",
+						Ref:       "ref",
+						RepoURL:   "https://ci-job-token:ToKeN123@gitlab.example.com/namespace/project.git",
+					},
+					JobInfo: spec.JobInfo{
+						ProjectID: 123456,
+					},
+					Variables: make([]spec.Variable, 0, 1),
+				},
+				Runner: &common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "test-token",
+					},
+					SystemID: "some-system-ID",
+				},
+				RunnerID:        123,
+				ProjectRunnerID: 456,
+			}
+
+			if tt.pipelineIDInJobPayload != nil {
+				b.Job.JobInfo.PipelineID = *tt.pipelineIDInJobPayload
+			}
+
+			if tt.pipelineIDInJobVariable != nil {
+				b.Job.Variables = append(b.Job.Variables, *tt.pipelineIDInJobVariable)
+			}
+
+			l := NewLabeler(b)
+			labels := l.Labels(map[string]string{"other": "label"})
+
+			t.Log(labels)
+
+			pipelineIDLabelKey := dockerLabelPrefix + ".pipeline.id"
+
+			require.Contains(t, labels, pipelineIDLabelKey)
+			assert.Equal(t, tt.expectedPipelineIDLabel, labels[pipelineIDLabelKey])
+		})
+	}
 }
