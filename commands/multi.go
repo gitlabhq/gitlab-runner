@@ -22,7 +22,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
@@ -32,6 +31,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 	prometheus_helper "gitlab.com/gitlab-org/gitlab-runner/helpers/prometheus"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/sentry"
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
@@ -986,6 +986,23 @@ func (mr *RunCommand) processBuildOnRunner(
 	build.ArtifactUploader = mr.network.UploadRawArtifacts
 
 	trace.SetDebugModeEnabled(build.IsDebugModeEnabled())
+
+	tracingFeature := jobData.Features.Tracing
+	tr, stop := tracer(mr.log(), tracingFeature)
+	defer func() {
+		stopErr := stop()
+		if stopErr != nil {
+			mr.log().WithError(stopErr).Warn("Error stopping trace provider")
+		}
+	}()
+	ctx := tracerContext(context.Background(), mr.log(), tracingFeature)
+	ctx, span := tr.Start(ctx, spanNameJobExecution)
+	defer span.End()
+	defer func() {
+		span.SetAttributes(spanAttrJobStatus.String(build.CurrentState().String()))
+	}()
+	setJobSpanAttributes(span, build, runner)
+	_ = ctx // we'll need it later
 
 	// Add build to list of builds to assign numbers
 	mr.buildsHelper.addBuild(build)

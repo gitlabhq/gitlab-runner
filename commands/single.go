@@ -133,6 +133,24 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		logTerminationError(logrus.StandardLogger(), "Success", err)
 	}()
 
+	log := logrus.WithFields(nil)
+	tracingFeature := jobData.Features.Tracing
+	tr, stop := tracer(log, tracingFeature)
+	defer func() {
+		stopErr := stop()
+		if stopErr != nil {
+			log.WithError(stopErr).Warn("Error stopping trace provider")
+		}
+	}()
+	ctx := tracerContext(context.Background(), log, tracingFeature)
+	ctx, span := tr.Start(ctx, spanNameJobExecution)
+	defer span.End()
+	defer func() {
+		span.SetAttributes(spanAttrJobStatus.String(newBuild.CurrentState().String()))
+	}()
+	setJobSpanAttributes(span, newBuild, &r.RunnerConfig)
+	_ = ctx // we'll need it later
+
 	err = newBuild.Run(config, trace)
 
 	r.postBuild()

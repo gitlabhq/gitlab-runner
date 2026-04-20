@@ -464,10 +464,31 @@ type Dependency struct {
 
 type Dependencies []Dependency
 
+type Tracing struct {
+	TraceID       string         `json:"trace_id"`
+	SpanParentID  string         `json:"span_parent_id"` // optional
+	OTELEndpoints []OTELEndpoint `json:"otel_endpoints"`
+}
+
+type OTELEndpoint struct {
+	URL  string            `json:"url"`
+	Auth *OTELEndpointAuth `json:"auth"`
+}
+
+type OTELEndpointAuth struct {
+	Type              string                 `json:"type"`
+	HTTPBearerGCPOIDC *HTTPBearerGCPOIDCAuth `json:"http_bearer_gcp_oidc"`
+}
+
+type HTTPBearerGCPOIDCAuth struct {
+	Audience string `json:"audience"`
+}
+
 type GitlabFeatures struct {
 	TraceSections     bool               `json:"trace_sections"`
 	TokenMaskPrefixes []string           `json:"token_mask_prefixes"`
 	FailureReasons    []JobFailureReason `json:"failure_reasons"`
+	Tracing           *Tracing           `json:"tracing"`
 }
 
 type Hooks []Hook
