@@ -375,7 +375,7 @@ func (c RuntimeConfig) buildIndexComponentAddendum(ref name.Reference) (*mutate.
 	}
 
 	if len(indexMan.Manifests) != 1 || !indexMan.Manifests[0].MediaType.IsImage() {
-		return nil, fmt.Errorf("expected single image in the manifest")
+		return nil, fmt.Errorf("expected single image in manifest for %s", ref)
 	}
 
 	imageMan := indexMan.Manifests[0]
@@ -431,7 +431,7 @@ func extract(archive string) (dir string, err error) {
 		if err := func() error {
 			targetPath := filepath.Join(tempDir, hdr.Name)
 
-			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
 				return err
 			}
 
@@ -639,7 +639,7 @@ func (c *RuntimeConfig) writeExports() (string, error) {
 		return "", fmt.Errorf("marshaling json: %w", err)
 	}
 
-	err = os.MkdirAll(exportPath, 0o777)
+	err = os.MkdirAll(exportPath, 0o755)
 	if err != nil {
 		return "", fmt.Errorf("making dest dir: %w", err)
 	}

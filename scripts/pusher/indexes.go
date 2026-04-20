@@ -2,7 +2,6 @@ package main
 
 import (
 	"slices"
-	"sort"
 	"strings"
 )
 
@@ -122,7 +121,7 @@ func tagsKey(tags []string) string {
 // the only component, or appending that component to the existing ImageIndex.
 // Sorts the given tags slice as a side-effect of the operation.
 func (indexes IndexMap) Add(tags []string, archiveName string) {
-	sort.Strings(tags)
+	slices.Sort(tags)
 	indexKey := tagsKey(tags)
 
 	if index, exists := indexes[indexKey]; exists {
@@ -184,7 +183,7 @@ func GenerateIndexes(m *Manifest) []ImageIndex {
 	var indexes []ImageIndex
 	for _, index := range indexMap {
 		// We sort the components to ensure deterministic ordering in the resulting image index
-		sort.Strings(index.Components)
+		slices.Sort(index.Components)
 		indexes = append(indexes, *index)
 	}
 
