@@ -4764,6 +4764,12 @@ func Test_wrapStepStageErr(t *testing.T) {
 			err:         steps.ErrNoStepRunnerButOkay,
 			expectedNil: true,
 		},
+		"client internal error": {
+			err: fmt.Errorf("wrapping: %w", &steps.ClientInternalError{
+				Err: errors.New("run request failed for job \"123\": rpc error: code = Internal desc = panic in /step.StepRunner/Run"),
+			}),
+			expectedReason: ScriptFailure,
+		},
 		"client status error with ErrorStepFailure": {
 			err: fmt.Errorf("executing steps request: %w", &steps.ClientStatusError{
 				Status: client.Status{State: client.StateFailure, ErrorKind: client.ErrorStepFailure},

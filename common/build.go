@@ -529,6 +529,15 @@ func wrapStepStageErr(err error) error {
 
 	berr := &BuildError{Inner: err}
 
+	// Classify step-runner internal failures (gRPC handler panics and
+	// ErrorInternal job statuses) as ScriptFailure rather than
+	// RunnerSystemFailure: a malicious job could deliberately trigger either
+	// path to forge a RunnerSystemFailure and evade job-failure accounting.
+	var cierr *steps.ClientInternalError
+	if errors.As(err, &cierr) {
+		berr.FailureReason = ScriptFailure
+	}
+
 	var cserr *steps.ClientStatusError
 	if errors.As(err, &cserr) {
 		switch cserr.Status.ErrorKind {

@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	grpcstatus "google.golang.org/grpc/status"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
@@ -50,6 +52,17 @@ func (cserr *ClientStatusError) Unwrap() error {
 	return cserr.Err
 }
 
+// ClientInternalError signals a step-runner client failure that is not tied
+// to a job Status — specifically, a gRPC handler panic surfacing as
+// codes.Internal via step-runner's panic-recovery interceptor. Distinct from
+// ClientStatusError, which reports a Status returned by step-runner.
+type ClientInternalError struct {
+	Err error
+}
+
+func (e *ClientInternalError) Error() string { return e.Err.Error() }
+func (e *ClientInternalError) Unwrap() error { return e.Err }
+
 func Execute(ctx context.Context, connector Connector, jobInfo JobInfo, steps []schema.Step, trace io.Writer) error {
 	dialFn, err := connector.Connect(ctx)
 	if err != nil {
@@ -73,7 +86,11 @@ func Execute(ctx context.Context, connector Connector, jobInfo JobInfo, steps []
 
 	status, err := c.RunAndFollow(ctx, request, &out)
 	if err != nil {
-		return fmt.Errorf("executing steps request: %w", err)
+		wrapped := fmt.Errorf("executing steps request: %w", err)
+		if grpcstatus.Code(err) == codes.Internal {
+			return &ClientInternalError{Err: wrapped}
+		}
+		return wrapped
 	}
 
 	if status.State == client.StateSuccess {
