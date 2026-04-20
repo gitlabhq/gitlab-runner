@@ -1159,7 +1159,15 @@ func (b *Build) retryCreateExecutor(
 
 		logger.SoftErrorln("Preparation failed:", err)
 		logger.Infoln("Will be retried in", PreparationRetryInterval, "...")
-		time.Sleep(PreparationRetryInterval)
+
+		// Wait for retry interval or context cancellation
+		timer := time.NewTimer(PreparationRetryInterval)
+		select {
+		case <-timer.C:
+		case <-options.Context.Done():
+			timer.Stop()
+			return nil, b.handleError(context.Cause(options.Context))
+		}
 	}
 
 	return nil, err
