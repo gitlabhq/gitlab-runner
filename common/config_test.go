@@ -2705,16 +2705,23 @@ func Test_Kubernetes_GroupIsAllowed(t *testing.T) {
 		allowedGroups []string
 		expectError   bool
 	}{
-		"no allowed groups":             {group: "1000", allowedGroups: nil, expectError: false},
-		"exact match":                   {group: "1000", allowedGroups: []string{"1000"}, expectError: false},
-		"exact match fails":             {group: "1000", allowedGroups: []string{"1001"}, expectError: true},
-		"multiple groups":               {group: "1000", allowedGroups: []string{"1000", "1001"}, expectError: false},
-		"string group exact match":      {group: "wheel", allowedGroups: []string{"wheel"}, expectError: false},
-		"string group fails":            {group: "wheel", allowedGroups: []string{"docker"}, expectError: true},
-		"empty group allowed":           {group: "", allowedGroups: []string{"1000"}, expectError: false},
-		"root group blocked by default": {group: "0", expectError: true},
-		"root group explicitly allowed": {group: "0", allowedGroups: []string{"0", "1000"}, expectError: false},
-		"root group explicitly blocked": {group: "0", allowedGroups: []string{"1000", "1001"}, expectError: true},
+		"no allowed groups":                           {group: "1000", allowedGroups: nil, expectError: false},
+		"exact match":                                 {group: "1000", allowedGroups: []string{"1000"}, expectError: false},
+		"exact match fails":                           {group: "1000", allowedGroups: []string{"1001"}, expectError: true},
+		"multiple groups":                             {group: "1000", allowedGroups: []string{"1000", "1001"}, expectError: false},
+		"empty group allowed":                         {group: "", allowedGroups: []string{"1000"}, expectError: false},
+		"non-numeric group rejected":                  {group: "wheel", expectError: true},
+		"root group blocked by default":               {group: "0", expectError: true},
+		"root group explicitly allowed":               {group: "0", allowedGroups: []string{"0", "1000"}, expectError: false},
+		"root group explicitly blocked":               {group: "0", allowedGroups: []string{"1000", "1001"}, expectError: true},
+		"root group bypass via 00":                    {group: "00", expectError: true},
+		"root group bypass via 000":                   {group: "000", expectError: true},
+		"root group bypass via -0":                    {group: "-0", expectError: true},
+		"root group via 00 explicitly allowed":        {group: "00", allowedGroups: []string{"0"}, expectError: false},
+		"root group via 000 explicitly allowed":       {group: "000", allowedGroups: []string{"0"}, expectError: false},
+		"root group via 0 with 00 in allowlist":       {group: "0", allowedGroups: []string{"00"}, expectError: false},
+		"numeric group with mixed allowlist match":    {group: "1000", allowedGroups: []string{"wheel", "1000"}, expectError: false},
+		"numeric group with mixed allowlist no match": {group: "1000", allowedGroups: []string{"wheel", "1001"}, expectError: true},
 	}
 
 	for name, tt := range tests {
@@ -2739,15 +2746,24 @@ func Test_Kubernetes_UserIsAllowed(t *testing.T) {
 		allowedUsers []string
 		expectError  bool
 	}{
-		"empty user":                   {user: "", expectError: false},
-		"no allowed users specified":   {user: "1000", expectError: false},
-		"user in allowed list":         {user: "1000", allowedUsers: []string{"1000", "1001"}, expectError: false},
-		"user not in allowed list":     {user: "1002", allowedUsers: []string{"1000", "1001"}, expectError: true},
-		"single user allowed list":     {user: "1000", allowedUsers: []string{"1000"}, expectError: false},
-		"single user not in list":      {user: "1001", allowedUsers: []string{"1000"}, expectError: true},
-		"root user blocked by default": {user: "0", expectError: true},
-		"root user explicitly allowed": {user: "0", allowedUsers: []string{"0", "1000"}, expectError: false},
-		"root user explicitly blocked": {user: "0", allowedUsers: []string{"1000", "1001"}, expectError: true},
+		"empty user":                                 {user: "", expectError: false},
+		"no allowed users specified":                 {user: "1000", expectError: false},
+		"user in allowed list":                       {user: "1000", allowedUsers: []string{"1000", "1001"}, expectError: false},
+		"user not in allowed list":                   {user: "1002", allowedUsers: []string{"1000", "1001"}, expectError: true},
+		"single user allowed list":                   {user: "1000", allowedUsers: []string{"1000"}, expectError: false},
+		"single user not in list":                    {user: "1001", allowedUsers: []string{"1000"}, expectError: true},
+		"non-numeric user rejected":                  {user: "nobody", expectError: true},
+		"root user blocked by default":               {user: "0", expectError: true},
+		"root user explicitly allowed":               {user: "0", allowedUsers: []string{"0", "1000"}, expectError: false},
+		"root user explicitly blocked":               {user: "0", allowedUsers: []string{"1000", "1001"}, expectError: true},
+		"root user bypass via 00":                    {user: "00", expectError: true},
+		"root user bypass via 000":                   {user: "000", expectError: true},
+		"root user bypass via -0":                    {user: "-0", expectError: true},
+		"root user via 00 explicitly allowed":        {user: "00", allowedUsers: []string{"0"}, expectError: false},
+		"root user via 000 explicitly allowed":       {user: "000", allowedUsers: []string{"0"}, expectError: false},
+		"root user via 0 with 00 in allowlist":       {user: "0", allowedUsers: []string{"00"}, expectError: false},
+		"numeric user with mixed allowlist match":    {user: "1000", allowedUsers: []string{"wheel", "1000"}, expectError: false},
+		"numeric user with mixed allowlist no match": {user: "1000", allowedUsers: []string{"wheel", "1001"}, expectError: true},
 	}
 
 	for name, tt := range tests {

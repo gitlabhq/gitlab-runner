@@ -180,15 +180,45 @@ const (
 	allowListKindGroup allowListKind = "group"
 )
 
-func (c KubernetesConfig) isUserOrGroupAllowed(v string, kind allowListKind, allowedList []string) error {
+// parseID parses a numeric UID/GID string into an int64.
+func parseID(s string) (int64, error) {
+	return strconv.ParseInt(s, 10, 64)
+}
+
+// allowListContainsID reports whether any entry in allowedList parses to the given id.
+// Non-numeric entries are logged as a warning and skipped.
+func allowListContainsID(id int64, kind allowListKind, allowedList []string) bool {
+	for _, entry := range allowedList {
+		entryID, err := parseID(entry)
+		if err != nil {
+			logrus.Warningf("ignoring non-numeric %s allowlist entry %q", kind, entry)
+			continue
+		}
+		if entryID == id {
+			return true
+		}
+	}
+	return false
+}
+
+func (c KubernetesConfig) isUserOrGroupAllowed(idStr string, kind allowListKind, allowedList []string) error {
 	// default image user is allowed.
-	if v == "" {
+	if idStr == "" {
 		return nil
 	}
 
-	// Root requires explicit permission in allowlist, even if allowlist is empty
-	if v == "0" && !slices.Contains(allowedList, "0") {
-		return fmt.Errorf("%s %q is not in the allowed list: %v", kind, v, allowedList)
+	id, err := parseID(idStr)
+	if err != nil {
+		return fmt.Errorf("%s %q is invalid: %w", kind, idStr, err)
+	}
+
+	// Root requires explicit permission in allowlist, even if allowlist is empty.
+	// Compare numerically so that "00", "000", etc. are all treated as UID/GID 0.
+	if id == 0 {
+		if allowListContainsID(0, kind, allowedList) {
+			return nil
+		}
+		return fmt.Errorf("%s %q is not in the allowed list: %v", kind, idStr, allowedList)
 	}
 
 	// if no allowed-users/groups have been specified in the runner config, any non-root user is allowed.
@@ -196,11 +226,10 @@ func (c KubernetesConfig) isUserOrGroupAllowed(v string, kind allowListKind, all
 		return nil
 	}
 
-	if !slices.Contains(allowedList, v) {
-		return fmt.Errorf("%s %q is not in the allowed list: %v", kind, v, allowedList)
+	if allowListContainsID(id, kind, allowedList) {
+		return nil
 	}
-
-	return nil
+	return fmt.Errorf("%s %q is not in the allowed list: %v", kind, idStr, allowedList)
 }
 
 func (c KubernetesConfig) IsUserAllowed(user string) error {
