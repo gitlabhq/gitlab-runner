@@ -590,8 +590,8 @@ CI/CD jobs run locally on the host machine when configured to use the shell exec
 |--------------|-------------|
 | `bash`       | Generate Bash (Bourne-shell) script. All commands executed in Bash context. Default for all Unix systems. |
 | `sh`         | Generate Sh (Bourne-shell) script. All commands executed in Sh context. The fallback for `bash` for all Unix systems. |
-| `powershell` | Generate PowerShell script. All commands are executed in PowerShell Desktop context. |
-| `pwsh`       | Generate PowerShell script. All commands are executed in PowerShell Core context. This is the default shell for Windows. |
+| `powershell` | Generate PowerShell script. All commands are executed in PowerShell Desktop context. Default shell for jobs on Windows with the `kubernetes` and `docker-windows` executors. |
+| `pwsh`       | Generate PowerShell script. All commands are executed in PowerShell Core context. Default shell for new runner registration on Windows, and for jobs with the `shell` executor. |
 
 When the `shell` option is set to `bash` or `sh`, Bash's [ANSI-C quoting](https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html) is used
 to shell escape job scripts.
