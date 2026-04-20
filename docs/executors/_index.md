@@ -186,19 +186,19 @@ Supported features by different executors:
 
 Supported systems by different shells:
 
-| Shells  | Bash  | PowerShell Desktop | PowerShell Core | Windows Batch (deprecated) |
-| :-----: | :---: | :----------------: | :-------------: | :------------------------: |
-| Windows | ✗ (4) |       ✓ (3)        |        ✓        |           ✓ (2)            |
-| Linux   | ✓ (1) |         ✗          |        ✓        |             ✗              |
-| macOS   | ✓ (1) |         ✗          |        ✓        |             ✗              |
-| FreeBSD | ✓ (1) |         ✗          |        ✗        |             ✗              |
+| Shells  |      Bash      | PowerShell Desktop | PowerShell Core  | Windows Batch (deprecated) |
+|:-------:|:--------------:|:------------------:|:----------------:|:--------------------------:|
+| Windows | ✗ <sup>2</sup> |   ✓ <sup>3</sup>   | ✓ <sup>1,4</sup> |             ✓              |
+| Linux   | ✓ <sup>1</sup> |         ✗          |        ✓         |             ✗              |
+| macOS   | ✓ <sup>1</sup> |         ✗          |        ✓         |             ✗              |
+| FreeBSD | ✓ <sup>1</sup> |         ✗          |        ✗         |             ✗              |
 
-1. Default shell.
-1. Deprecated. Default shell if no
-   [`shell`](../configuration/advanced-configuration.md#the-runners-section)
-   is specified.
-1. Default shell when a new runner is registered.
-1. Bash shell on Windows is not supported.
+**Footnotes:**
+
+1. Default shell for runner registration and for jobs with the `shell` executor.
+1. Bash shell is not supported on Windows.
+1. Default shell for jobs with the `docker-windows` and `kubernetes` executors.
+1. Default shell for jobs with the `shell` executor on Windows.
 
 Supported systems for interactive web terminals by different shells:
 

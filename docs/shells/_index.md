@@ -32,8 +32,8 @@ The supported shells are:
 |--------------|-----------------|-------------|
 | `bash`       | Fully Supported | Bash (Bourne Again Shell). All commands executed in Bash context (default for all Unix systems). |
 | `sh`         | Fully Supported | Sh (Bourne shell). All commands executed in Sh context (fallback for `bash` for all Unix systems). |
-| `powershell` | Fully Supported | PowerShell script. All commands are executed in PowerShell Desktop context. |
-| `pwsh`       | Fully Supported | PowerShell script. All commands are executed in PowerShell Core context. This is the default when registering a new runner on Windows. |
+| `powershell` | Fully Supported | PowerShell script. All commands are executed in PowerShell Desktop context. Default shell for jobs on Windows with the `kubernetes` and `docker-windows` executors. |
+| `pwsh`       | Fully Supported | PowerShell script. All commands are executed in PowerShell Core context. Default shell for new runner registration on Windows, and for jobs with the `shell` executor. |
 
 If you want to select a particular shell to use other than the default, you must [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
 
@@ -86,8 +86,12 @@ Executors that load shell profiles:
 
 ## PowerShell
 
-PowerShell Desktop Edition is the default shell when a new runner is registered on Windows using GitLab Runner
-12.0-13.12. In 14.0 and later, the default is PowerShell Core Edition.
+PowerShell Core is the default shell for new runner registration on Windows. However, this 
+registration default applies only when you explicitly set a `shell` value in `config.toml`.
+When no `shell` is configured:
+
+- The `docker-windows` and `kubernetes` executors default to PowerShell Desktop at runtime.
+- The `shell` executor defaults to PowerShell Core.
 
 PowerShell doesn't support executing the build in context of another user.
 
