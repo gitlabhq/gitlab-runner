@@ -81,7 +81,7 @@ require (
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e
 	gitlab.com/gitlab-org/labkit v1.46.0
 	gitlab.com/gitlab-org/moa v0.0.0-20260323144604-1ca892a61e74
-	gitlab.com/gitlab-org/step-runner v0.33.0
+	gitlab.com/gitlab-org/step-runner v0.34.0
 	go.mozilla.org/pkcs7 v0.9.0
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0
