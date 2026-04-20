@@ -30,7 +30,9 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
+	"gitlab.com/gitlab-org/gitlab-runner/steps"
 	"gitlab.com/gitlab-org/moa/value"
+	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 )
 
 func init() {
@@ -4746,4 +4748,69 @@ func TestWrapStepStageErr_NormalizesWindowsExitCode(t *testing.T) {
 	berr, ok := wrapStepStageErr(err).(*BuildError)
 	require.True(t, ok, "expected *BuildError")
 	assert.Equal(t, -1, berr.ExitCode)
+}
+
+func Test_wrapStepStageErr(t *testing.T) {
+	tests := map[string]struct {
+		err            error
+		expectedNil    bool
+		expectedReason spec.JobFailureReason
+	}{
+		"nil error": {
+			err:         nil,
+			expectedNil: true,
+		},
+		"ErrNoStepRunnerButOkay": {
+			err:         steps.ErrNoStepRunnerButOkay,
+			expectedNil: true,
+		},
+		"client status error with ErrorStepFailure": {
+			err: fmt.Errorf("executing steps request: %w", &steps.ClientStatusError{
+				Status: client.Status{State: client.StateFailure, ErrorKind: client.ErrorStepFailure},
+				Err:    errors.New("step failed"),
+			}),
+			expectedReason: ScriptFailure,
+		},
+		"client status error with ErrorInternal": {
+			err: fmt.Errorf("executing steps request: %w", &steps.ClientStatusError{
+				Status: client.Status{State: client.StateFailure, ErrorKind: client.ErrorInternal},
+				Err:    errors.New("panic in step function"),
+			}),
+			expectedReason: ScriptFailure,
+		},
+		"client status error with ErrorUnknown": {
+			err: fmt.Errorf("executing steps request: %w", &steps.ClientStatusError{
+				Status: client.Status{State: client.StateUnspecified, ErrorKind: client.ErrorUnknown},
+				Err:    errors.New("unspecified"),
+			}),
+			expectedReason: UnknownFailure,
+		},
+		"client status error with ErrorCancelled leaves reason unset": {
+			err: fmt.Errorf("executing steps request: %w", &steps.ClientStatusError{
+				Status: client.Status{State: client.StateCancelled, ErrorKind: client.ErrorCancelled},
+				Err:    errors.New("cancelled"),
+			}),
+			expectedReason: "",
+		},
+		"plain error": {
+			err:            fmt.Errorf("executing steps request: %w", errors.New("something broke")),
+			expectedReason: "",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			result := wrapStepStageErr(tc.err)
+
+			if tc.expectedNil {
+				assert.Nil(t, result)
+				return
+			}
+
+			require.NotNil(t, result)
+			var berr *BuildError
+			require.ErrorAs(t, result, &berr)
+			assert.Equal(t, tc.expectedReason, berr.FailureReason)
+		})
+	}
 }

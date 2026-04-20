@@ -531,11 +531,11 @@ func wrapStepStageErr(err error) error {
 
 	var cserr *steps.ClientStatusError
 	if errors.As(err, &cserr) {
-		switch cserr.Status.State {
-		case client.StateUnspecified:
-			berr.FailureReason = UnknownFailure
-		case client.StateFailure:
+		switch cserr.Status.ErrorKind {
+		case client.ErrorInternal, client.ErrorStepFailure:
 			berr.FailureReason = ScriptFailure
+		case client.ErrorUnknown:
+			berr.FailureReason = UnknownFailure
 		}
 	}
 
