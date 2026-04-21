@@ -88,7 +88,7 @@ Visit the [Changelog](CHANGELOG.md) to view recent changes.
 ## The future
 
 - Please see the [GitLab Direction page](https://about.gitlab.com/direction/).
-- Feel free submit issues with feature proposals on the issue tracker.
+- Feel free to submit issues with feature proposals on the issue tracker.
 
 ## Author
 
