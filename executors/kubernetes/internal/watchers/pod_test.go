@@ -135,7 +135,7 @@ func TestPodWatcherNoConsumer(t *testing.T) {
 
 	podWatcher.UpdatePodName(podWithErr.GetName())
 
-	expectedLog := fmt.Sprintf(`pod error not consumed in time (%s): pod "%s/%s" is being deleted`, emitErrorTimeout, podWithErr.GetNamespace(), podWithErr.GetName())
+	expectedLog := fmt.Sprintf(`pod error not consumed in time (%s): pod "%s/%s" is deleted`, emitErrorTimeout, podWithErr.GetNamespace(), podWithErr.GetName())
 	logObserved := make(chan struct{})
 	fakeLogger.On("Debugln", expectedLog).Run(func(_ mock.Arguments) {
 		close(logObserved)
@@ -143,6 +143,9 @@ func TestPodWatcherNoConsumer(t *testing.T) {
 
 	_, err = fakeKubeClient.CoreV1().Pods(podWithErr.GetNamespace()).Create(ctx, podWithErr, metav1.CreateOptions{})
 	assert.NoError(t, err, "creating pod")
+
+	err = fakeKubeClient.CoreV1().Pods(podWithErr.GetNamespace()).Delete(ctx, podWithErr.GetName(), metav1.DeleteOptions{})
+	assert.NoError(t, err, "deleting pod")
 
 	maxWaitTime := time.Second
 	select {
