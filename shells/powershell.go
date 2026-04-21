@@ -826,7 +826,7 @@ func (b *PowerShell) ensurePrepareStageHostnameMessage(
 }
 
 func (b *PowerShell) IsDefault() bool {
-	return runtime.GOOS == OSWindows
+	return runtime.GOOS == OSWindows && b.Shell == SNPwsh
 }
 
 func init() {
