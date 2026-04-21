@@ -617,9 +617,9 @@ func (s *executor) watchPodEvents() error {
 	// This strategy can be revised in the future if needed.
 	var err error
 	s.eventsStream, err = retry.WithValueFn(s, func() (watch.Interface, error) {
-		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+		//nolint:gocritic
 		// kubeAPI: events, watch, FF_PRINT_POD_EVENTS=true
-		return s.kubeClient.CoreV1().Events(s.pod.Namespace).Watch(context.Background(), metav1.ListOptions{
+		return s.kubeClient.CoreV1().Events(s.pod.Namespace).Watch(s.Context, metav1.ListOptions{
 			FieldSelector: fmt.Sprintf("involvedObject.name=%s", s.pod.Name),
 		})
 	}).Run()
