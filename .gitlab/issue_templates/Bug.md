@@ -37,8 +37,7 @@ What you should see instead
 ## Relevant logs and/or screenshots
 
 <!--
-Paste the job logs inside of the code blocks (```) below so it would be
-easier to read.
+Paste the job logs inside the code blocks (```) below so they are easier to read.
 -->
 
 <details>
@@ -74,7 +73,7 @@ Add your configuration here
 <!--
 Please run and paste the output of `gitlab-runner --version`. If you are using
 a Runner where you don't have access to, please paste at least the first lines
-the from build log, like:
+from the build log, like:
 
 ```
 Running with gitlab-ci-multi-runner 1.4.2 (bcc1794)
