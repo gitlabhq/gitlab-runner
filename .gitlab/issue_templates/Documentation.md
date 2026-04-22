@@ -33,7 +33,7 @@
 
 ### Who can address the issue
 
-<!-- What if any special expertise is required to resolve this issue? -->
+<!-- What, if any, special expertise is required to resolve this issue? -->
 
 ### Other links/references
 
