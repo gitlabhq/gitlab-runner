@@ -124,7 +124,7 @@ dockerfile:lint:
     when: always
     expire_in: 7d
 
-mage tests:
+build script tests:
   extends:
     - .rules:merge_request_pipelines:no_docs
     - .kubernetes runner
@@ -133,6 +133,7 @@ mage tests:
     - "prepare done"
   script:
     - make mage-test
+    - make pusher-test
 
 # Perform documentation linting and link checking on Markdown files
 docs:lint markdown:
