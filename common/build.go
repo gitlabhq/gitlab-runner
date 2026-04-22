@@ -503,6 +503,7 @@ func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector,
 			// - provides its own timestamps and mask its own secrets
 			// for now though, we wrap its logs providing this, and treat everything as stdout
 			stdout := b.logger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
+			defer stdout.Close()
 
 			info := steps.JobInfo{
 				ID:         b.ID,
