@@ -25,12 +25,6 @@ To run Podman as a non-root user with non-root container processes:
 
    ```yaml
    variables:
-     FF_USE_POWERSHELL_PATH_RESOLVER: "true"
-     FF_RETRIEVE_POD_WARNING_EVENTS: "true"
-     FF_PRINT_POD_EVENTS: "true"
-     FF_SCRIPT_SECTIONS: "true"
-     CI_DEBUG_SERVICES: "true"
-     GIT_DEPTH: 5
      HOME: /my_custom_dir
      DOCKER_HOST: tcp://docker:2375
 
@@ -42,6 +36,9 @@ To run Podman as a non-root user with non-root container processes:
      script:
        - podman build . -t playground-bis:testing
    ```
+
+   You can also enable feature flags to adjust runner behavior for your environment. For more information,
+   see [available feature flags](../../configuration/feature-flags.md#available-feature-flags).
 
 1. Set the default `user_id` to `1000` by adding the following configurations to your `config.toml` file:
 
@@ -70,9 +67,6 @@ To run Podman as a non-root user with non-root container processes:
      name = "investigation"
      limit = 50
      url = "https://gitlab.com/"
-     id = 0
-     token = "glrt-REDACTED"
-     token_obtained_at = 2024-09-30T14:38:04.623237Z
      executor = "kubernetes"
      builds_dir = "/my_custom_dir"
      shell = "bash"
@@ -89,8 +83,6 @@ To run Podman as a non-root user with non-root container processes:
        pod_labels_overwrite_allowed = ""
        service_account_overwrite_allowed = ""
        pod_annotations_overwrite_allowed = ""
-       [runners.kubernetes.pod_labels]
-         user = "ratchade"
        [runners.kubernetes.volumes]
          [[runners.kubernetes.volumes.empty_dir]]
            name = "repo"
@@ -99,9 +91,6 @@ To run Podman as a non-root user with non-root container processes:
          run_as_user = 1000
        [runners.kubernetes.build_container_security_context]
          run_as_user = 1000
-       [[runners.kubernetes.services]]
-         name = ""
-       [runners.kubernetes.dns_config]
    ```
 
 If the jobs pass as expected, the job log should look like in the following example:
@@ -309,9 +298,6 @@ To achieve this:
        [runners.kubernetes.build_container_security_context]
          run_as_user = 0
          run_as_group = 0
-       [[runners.kubernetes.services]]
-       [runners.kubernetes.dns_config]
-       [runners.kubernetes.pod_labels]
        [[runners.kubernetes.pod_spec]]
          name = "device-fuse"
          patch_type = "strategic"
@@ -328,12 +314,6 @@ To achieve this:
 
    ```yaml
    variables:
-     FF_USE_POWERSHELL_PATH_RESOLVER: "true"
-     FF_RETRIEVE_POD_WARNING_EVENTS: "true"
-     FF_PRINT_POD_EVENTS: "true"
-     FF_SCRIPT_SECTIONS: "true"
-     CI_DEBUG_SERVICES: "true"
-     GIT_DEPTH: 5
      FF_USE_ADVANCED_POD_SPEC_CONFIGURATION: "true"
 
    podman-privileged-test:
@@ -344,6 +324,9 @@ To achieve this:
      script:
        - podman build . -t playground-bis:testing
    ```
+
+   You can also enable feature flags to adjust runner behavior for your environment. For more information,
+   see [available feature flags](../../configuration/feature-flags.md#available-feature-flags).
 
 The job runs `podman build`, which should complete successfully.
 
