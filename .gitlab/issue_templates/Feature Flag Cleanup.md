@@ -2,7 +2,7 @@
 
 ## Summary
 
-This issue is to cleanup the `<feature-flag-name>` feature flag, after the feature flag has been enabled by default for an appropriate amount of time in production.
+This issue is to clean up the `<feature-flag-name>` feature flag, after the feature flag has been enabled by default for an appropriate amount of time in production.
 
 <!-- Short description of what the feature is about and link to relevant other issues. Ensure to note if the feature will be removed completely or will be productized-->
 
@@ -36,7 +36,7 @@ Please list here all the steps that must be taken if something goes wrong:
 
 ### Cleaning up the feature flag
 
-In most the use case, removing a feature flag will always be a breaking change. This breaking change must be planned in accordance with the GitLab's policy on breaking changes.
+In most use cases, removing a feature flag will be a breaking change. This breaking change must be planned in accordance with the GitLab's policy on breaking changes.
 
 <!-- The checklist here is to help stakeholders keep track of the feature flag status -->
 - [ ] Specify in the issue description if this feature will be removed completely or will be productized as part of the Feature Flag cleanup
