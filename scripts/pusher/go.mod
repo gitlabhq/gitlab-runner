@@ -1,6 +1,6 @@
 module gitlab.com/gitlab-org/gitlab-runner/scripts/pusher
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/google/go-containerregistry v0.20.2

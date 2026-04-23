@@ -229,7 +229,7 @@ func (b *BashWriter) DotEnvVariables(baseFilename string, variables map[string]s
 	dotEnvFile := b.TmpFile(baseFilename)
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("cat << EOF > %s\n", dotEnvFile))
+	fmt.Fprintf(&sb, "cat << EOF > %s\n", dotEnvFile)
 	sb.WriteString(helpers.DotEnvEscape(variables))
 	sb.WriteString("EOF\n")
 

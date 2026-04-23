@@ -62,7 +62,7 @@ PROTOC_GEN_GO_GRPC_VERSION := v1.6.1
 SPLITIC = splitic
 MAGE = $(localBin)/mage
 
-GOLANGLINT_VERSION ?= 2.7.2
+GOLANGLINT_VERSION ?= 2.11.4
 GOLANGLINT ?= $(localBin)/golangci-lint
 GOLANGLINT_GOARGS ?= $(localBin)/goargs.so
 # Labkit validate-log-fields version

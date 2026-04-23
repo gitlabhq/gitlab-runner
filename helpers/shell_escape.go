@@ -160,7 +160,7 @@ func DotEnvEscape(variables map[string]string) string {
 		}
 
 		value := variables[key]
-		sb.WriteString(fmt.Sprintf("%s=\"%s\"\n", key, escapeDotEnvValue(value)))
+		fmt.Fprintf(&sb, "%s=\"%s\"\n", key, escapeDotEnvValue(value))
 	}
 
 	return sb.String()
