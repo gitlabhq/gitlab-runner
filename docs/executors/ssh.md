@@ -20,7 +20,7 @@ This executor allows you to execute builds on a remote machine
 by executing commands over SSH.
 
 > [!note]
-> Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
+> Ensure you meet [common prerequisites](_index.md#git-requirements-for-non-docker-executors)
 > on any remote systems where GitLab Runner uses the SSH executor.
 
 ## Use the SSH executor

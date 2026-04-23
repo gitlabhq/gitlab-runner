@@ -18,7 +18,7 @@ which the Runner can be installed. That means that it's possible to use scripts
 generated for Bash, PowerShell Core, Windows PowerShell, and Windows Batch (deprecated).
 
 > [!note]
-> Ensure you meet [common prerequisites](_index.md#prerequisites-for-non-docker-executors)
+> Ensure you meet [common prerequisites](_index.md#git-requirements-for-non-docker-executors)
 > on the machine where GitLab Runner uses the shell executor.
 
 ## Run scripts as a privileged user

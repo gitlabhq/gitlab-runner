@@ -74,7 +74,7 @@ The user must set up the environment, including the following that must
 be present in the `PATH`:
 
 - [Git](https://git-scm.com/download) and [Git LFS](https://git-lfs.com/):
-  see [common prerequisites](_index.md#prerequisites-for-non-docker-executors).
+  see [common prerequisites](_index.md#git-requirements-for-non-docker-executors).
 - [GitLab Runner](../install/_index.md): Used to
   download/update artifacts and cache.
 
