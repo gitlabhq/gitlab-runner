@@ -1696,7 +1696,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 			expectations: map[hashMode]expectations{
 				withoutHashing: {
 					cacheKeys: []string{"test-cache-key", "hello....there"},
-					warning:   []any{`cache key "hello.%2e..there  " sanitized to "hello....there"`},
+					warning:   []any{"%s", `cache key "hello.%2e..there  " sanitized to "hello....there"`},
 				},
 				withHashing: {
 					cacheKeys: []string{"test-cache-key", "hello.%2e..there  "},
@@ -1710,7 +1710,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 			expectations: map[hashMode]expectations{
 				withoutHashing: {
 					cacheKeys: []string{"test-cache-key", "looks/like/a/win/path"},
-					warning:   []any{`cache key "looks\\like\\a\\win\\path" sanitized to "looks/like/a/win/path"`},
+					warning:   []any{"%s", `cache key "looks\\like\\a\\win\\path" sanitized to "looks/like/a/win/path"`},
 				},
 				withHashing: {
 					cacheKeys: []string{"test-cache-key", "looks\\like\\a\\win\\path"},
@@ -1734,7 +1734,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 			expectations: map[hashMode]expectations{
 				withoutHashing: {
 					cacheKeys: []string{"test-cache-key"},
-					warning:   []any{`cache key ".." could not be sanitized`},
+					warning:   []any{"%s", `cache key ".." could not be sanitized`},
 					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
 				},
 				withHashing: {
@@ -1795,7 +1795,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 			expectations: map[hashMode]expectations{
 				withoutHashing: {
 					cacheKeys: []string{"some-job-name/some-ref-name"},
-					warning:   []any{`cache key "." could not be sanitized`},
+					warning:   []any{"%s", `cache key "." could not be sanitized`},
 					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
 				},
 				withHashing: {
@@ -1847,7 +1847,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 			expectations: map[hashMode]expectations{
 				withoutHashing: {
 					cacheKeys: []string{"some-job-name/some-ref-name"},
-					warning:   []any{`cache key " /  " could not be sanitized`},
+					warning:   []any{"%s", `cache key " /  " could not be sanitized`},
 					notices:   [][]any{{`Skipping cache extraction due to %v`, fmt.Errorf("empty cache key")}},
 				},
 				withHashing: {
@@ -1870,7 +1870,7 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 			expectations: map[hashMode]expectations{
 				withoutHashing: {
 					cacheKeys: []string{`0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected`},
-					warning:   []any{`cache key "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected" sanitized to "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"`},
+					warning:   []any{"%s", `cache key "0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected" sanitized to "0_project/dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected"`},
 				},
 				withHashing: {
 					cacheKeys: []string{`0_project/foo/../dependencies-7ab1ff8ddd4179468d07100f16b6f19f91b645a8-non_protected`},
@@ -2636,7 +2636,7 @@ func TestAbstractShell_archiveCache_keySanitation(t *testing.T) {
 					}
 
 					if warning := expectations.sanitationWarning; warning != "" {
-						w.On("Warningf", warning).Once()
+						w.On("Warningf", "%s", warning).Once()
 					}
 
 					if notice := expectations.notice; len(notice) > 0 {

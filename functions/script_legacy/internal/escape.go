@@ -39,7 +39,7 @@ func EscapeForAnsiC(s string) string {
 			// Hex-escape control characters (0x00-0x1F, 0x7F) and non-ASCII (>0x7F)
 			// This prevents ANSI escape sequences (ESC = 0x1B) from manipulating terminal
 			if c < 0x20 || c == 0x7F || c > 0x7F {
-				buf.WriteString(fmt.Sprintf("\\x%c%c", hextable[c>>4], hextable[c&0x0f]))
+				fmt.Fprintf(&buf, "\\x%c%c", hextable[c>>4], hextable[c&0x0f])
 			} else {
 				buf.WriteByte(c)
 			}

@@ -235,7 +235,7 @@ func (b *AbstractShell) cacheExtractor(ctx context.Context, w ShellWriter, info 
 		// Skip extraction if no cache is defined
 		cacheConfig, warning, err := newCacheConfig(info.Build, cacheOptions.Key)
 		if warning != "" {
-			w.Warningf(warning)
+			w.Warningf("%s", warning)
 		}
 		if err != nil {
 			w.Noticef("Skipping cache extraction due to %v", err)
@@ -291,7 +291,7 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 		}
 		cc, warning, err := newCacheConfig(build, key, keyChecks...)
 		if warning != "" {
-			w.Warningf(warning)
+			w.Warningf("%s", warning)
 		}
 		if err != nil {
 			w.Noticef("Skipping cache extraction due to %v", err)
@@ -561,7 +561,7 @@ func (b *AbstractShell) writeCacheExports(w ShellWriter, variables map[string]st
 func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
 	host, err := b.getRemoteHost(build)
 	if err != nil {
-		w.Warningf("git SSL config: Can't get repository host. %w", err)
+		w.Warningf("git SSL config: Can't get repository host. %v", err)
 		return
 	}
 
@@ -1355,7 +1355,7 @@ func (b *AbstractShell) archiveCache(
 
 		cacheConfig, warning, err := newCacheConfig(info.Build, cacheOptions.Key)
 		if warning != "" {
-			w.Warningf(warning)
+			w.Warningf("%s", warning)
 		}
 		// Skip archiving if no cache is defined
 		if err != nil {

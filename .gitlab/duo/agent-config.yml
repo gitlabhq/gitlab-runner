@@ -1,5 +1,5 @@
 # Update this tag when go.mod or GOLANGLINT_VERSION in the Makefile changes.
-image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:2.7.2-go1.25.7
+image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:2.11.4-go1.26.1
 
 setup_script:
   - export GOTOOLCHAIN=local

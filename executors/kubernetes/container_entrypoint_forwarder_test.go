@@ -48,7 +48,7 @@ type timestampBuffer struct {
 }
 
 func (b *timestampBuffer) Write(p []byte) (int, error) {
-	return b.Buffer.Write([]byte(fmt.Sprintf("%s %s", someTimestamp, p)))
+	return fmt.Fprintf(&b.Buffer, "%s %s", someTimestamp, p)
 }
 
 func TestEntrypointLogForwarder(t *testing.T) {
