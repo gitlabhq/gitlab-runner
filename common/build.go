@@ -503,6 +503,7 @@ func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector,
 			// - provides its own timestamps and mask its own secrets
 			// for now though, we wrap its logs providing this, and treat everything as stdout
 			stdout := b.logger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
+			defer stdout.Close()
 
 			info := steps.JobInfo{
 				ID:         b.ID,
@@ -529,13 +530,22 @@ func wrapStepStageErr(err error) error {
 
 	berr := &BuildError{Inner: err}
 
+	// Classify step-runner internal failures (gRPC handler panics and
+	// ErrorInternal job statuses) as ScriptFailure rather than
+	// RunnerSystemFailure: a malicious job could deliberately trigger either
+	// path to forge a RunnerSystemFailure and evade job-failure accounting.
+	var cierr *steps.ClientInternalError
+	if errors.As(err, &cierr) {
+		berr.FailureReason = ScriptFailure
+	}
+
 	var cserr *steps.ClientStatusError
 	if errors.As(err, &cserr) {
-		switch cserr.Status.State {
-		case client.StateUnspecified:
-			berr.FailureReason = UnknownFailure
-		case client.StateFailure:
+		switch cserr.Status.ErrorKind {
+		case client.ErrorInternal, client.ErrorStepFailure:
 			berr.FailureReason = ScriptFailure
+		case client.ErrorUnknown:
+			berr.FailureReason = UnknownFailure
 		}
 	}
 
