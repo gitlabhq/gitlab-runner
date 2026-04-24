@@ -34,7 +34,7 @@ that is currently behind the `<feature-flag-name>` feature flag.
 <!-- End of block for deletes -->
 - [ ] Enable the feature globally on all private runners managed by the GitLab Runner team
 - [ ] Verify that the feature works as expected.
-- [ ] If the feature flag causes end-to-end tests to fail, disable the feature flag on private runner to avoid blocking pipelines
+- [ ] If the feature flag causes end-to-end tests to fail, disable the feature flag on private runners to avoid blocking pipelines
 
 For assistance with end-to-end test failures, please reach out via the [`#g_runner` Slack channel](https://gitlab.enterprise.slack.com/archives/CBQ76ND6W).
 
@@ -46,7 +46,7 @@ For assistance with end-to-end test failures, please reach out via the [`#g_runn
 
 ## Rollback Steps
 
-<!-- As the time of creation, we don't have a process for the Rollout on production and Rollback steps. -->
+<!-- At the time of creation, we do not have a process for the rollout on production and rollback steps. -->
 <!-- It is therefore recommended to sync with the author of the FeatureFlag to see the impact and necessary steps to disable the FF -->
 
 /label <group-label>
