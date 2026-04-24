@@ -568,6 +568,45 @@ func TestBuildVariables(t *testing.T) {
 	validate(t, envVars)
 }
 
+func TestBuildVariablesDollarEscaping(t *testing.T) {
+	tests := map[string]struct {
+		inputValue    string
+		expectedValue string
+	}{
+		"bare dollar reference is escaped": {
+			inputValue:    "$FOO",
+			expectedValue: "$$FOO",
+		},
+		"parenthesised reference is escaped": {
+			inputValue:    "$(FOO)",
+			expectedValue: "$$(FOO)",
+		},
+		"double dollar is escaped to quadruple dollar": {
+			inputValue:    "$$",
+			expectedValue: "$$$$",
+		},
+		"password with multiple dollars is fully escaped": {
+			inputValue:    "p@$$word",
+			expectedValue: "p@$$$$word",
+		},
+		"value without dollar is unchanged": {
+			inputValue:    "plain-value",
+			expectedValue: "plain-value",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			bv := []spec.Variable{
+				{Key: "VAR", Value: tc.inputValue},
+			}
+			envVars := buildVariables(bv)
+			require.Len(t, envVars, 1)
+			assert.Equal(t, tc.expectedValue, envVars[0].Value)
+		})
+	}
+}
+
 func TestGetContainerStatus(t *testing.T) {
 	const containerName = "some-container"
 

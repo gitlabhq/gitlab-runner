@@ -204,26 +204,3 @@ Most merged bug fixes change 1–3 files and under 30 lines net. If your propose
 fix is larger than this, re-examine whether you are solving the right problem or
 inadvertently refactoring. Flag it in the log and stop if scope has grown beyond
 a targeted fix.
-
-## Self-improvement — updating this file
-
-After completing a fix, before pushing your branch, do the following:
-
-1. **Identify the pattern class.** Does your fix fit an existing section in
-   "Patterns from past fixes"? If yes, add a bullet to that section. If no,
-   create a new `### Pattern name` subsection.
-
-2. **Write the rule, not the story.** Record the actionable rule a future agent
-   needs to apply the same fix correctly, not a narrative of what you did.
-   Format: one or two sentences stating what to do (or not do), followed by
-   *why* in one clause. End with `(MR !N)` referencing your MR.
-
-3. **Update this file in the same branch as your fix.** Commit it with:
-   `docs(agents): add pattern from fix for #ISSUE_IID`
-
-4. **Keep entries concise.** If an existing bullet already covers the pattern,
-   add a parenthetical `(also MR !N)` reference instead of duplicating it.
-
-This loop ensures that each fix makes future fixes cheaper. Agents reading this
-file in future conversations will inherit the accumulated knowledge of all prior
-fixes without needing to rediscover the same root causes.
