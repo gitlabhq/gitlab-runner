@@ -413,8 +413,11 @@ func buildVariables(bv spec.Variables) []api.EnvVar {
 			b.Value = bv.Get(b.Key)
 		}
 		e := api.EnvVar{
-			Name:  b.Key,
-			Value: b.Value,
+			Name: b.Key,
+			// Escape "$" as "$$" so Kubernetes does not apply $(VAR_NAME) substitution
+			// to the value before it reaches the container. Kubernetes treats "$$" as a
+			// literal "$". See: https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/
+			Value: strings.ReplaceAll(b.Value, "$", "$$"),
 		}
 		if j, ok := idx[e.Name]; ok {
 			envs[j] = e
