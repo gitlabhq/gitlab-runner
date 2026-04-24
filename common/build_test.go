@@ -87,6 +87,102 @@ func TestBuildTimeoutExposed(t *testing.T) {
 	}
 }
 
+func TestGetPrepareTimeout(t *testing.T) {
+	tests := map[string]struct {
+		runnerConfig    *RunnerConfig
+		jobTimeout      int // in seconds, matching RunnerInfo.Timeout
+		expectedTimeout time.Duration
+	}{
+		"nil runner config": {
+			runnerConfig:    nil,
+			jobTimeout:      600,
+			expectedTimeout: 600 * time.Second,
+		},
+		"nil prepare_timeout": {
+			runnerConfig:    &RunnerConfig{},
+			jobTimeout:      600,
+			expectedTimeout: 600 * time.Second,
+		},
+		"prepare_timeout is valid": {
+			runnerConfig: &RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					PrepareTimeout: func() *time.Duration { d := 300 * time.Second; return &d }(),
+				},
+			},
+			jobTimeout:      600,
+			expectedTimeout: 300 * time.Second,
+		},
+		"prepare_timeout equals job timeout": {
+			runnerConfig: &RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					PrepareTimeout: func() *time.Duration { d := 600 * time.Second; return &d }(),
+				},
+			},
+			jobTimeout:      600,
+			expectedTimeout: 600 * time.Second,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: tt.runnerConfig,
+			}
+			build.RunnerInfo.Timeout = tt.jobTimeout
+
+			assert.Equal(t, tt.expectedTimeout, build.GetPrepareTimeout())
+		})
+	}
+
+	warningTests := map[string]struct {
+		prepareTimeout  time.Duration
+		jobTimeout      int // in seconds, matching RunnerInfo.Timeout
+		expectedTimeout time.Duration
+		expectedWarning string
+	}{
+		"prepare_timeout is zero": {
+			prepareTimeout:  0,
+			jobTimeout:      600,
+			expectedTimeout: 600 * time.Second,
+			expectedWarning: "prepare_timeout (0s) must be greater than 0; using job timeout (10m0s)",
+		},
+		"prepare_timeout is negative": {
+			prepareTimeout:  -1 * time.Second,
+			jobTimeout:      600,
+			expectedTimeout: 600 * time.Second,
+			expectedWarning: "prepare_timeout (-1s) must be greater than 0; using job timeout (10m0s)",
+		},
+		"prepare_timeout exceeds job timeout": {
+			prepareTimeout:  601 * time.Second,
+			jobTimeout:      600,
+			expectedTimeout: 600 * time.Second,
+			expectedWarning: "prepare_timeout (10m1s) exceeds job timeout (10m0s); using job timeout",
+		},
+	}
+
+	for name, tt := range warningTests {
+		t.Run(name, func(t *testing.T) {
+			logger, hook := test.NewNullLogger()
+
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Logger: logger,
+					},
+					RunnerSettings: RunnerSettings{
+						PrepareTimeout: &tt.prepareTimeout,
+					},
+				},
+			}
+			build.RunnerInfo.Timeout = tt.jobTimeout
+
+			assert.Equal(t, tt.expectedTimeout, build.GetPrepareTimeout())
+			require.NotNil(t, hook.LastEntry())
+			assert.Equal(t, tt.expectedWarning, hook.LastEntry().Message)
+		})
+	}
+}
+
 func matchBuildStage(buildStage BuildStage) interface{} {
 	return mock.MatchedBy(func(cmd ExecutorCommand) bool {
 		return cmd.Stage == buildStage

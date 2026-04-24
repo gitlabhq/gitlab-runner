@@ -1353,6 +1353,7 @@ func (a ArtifactConfig) GetResponseHeaderTimeout() time.Duration {
 	return *a.ResponseHeaderTimeout
 }
 
+// RunnerSettings contains the configuration fields for a runner worker.
 type RunnerSettings struct {
 	Labels Labels `toml:"labels,omitempty" json:"labels,omitempty" description:"Custom labels for the runner worker. Duplicate keys will override any global defaults in this scope."`
 
@@ -1371,7 +1372,8 @@ type RunnerSettings struct {
 	PreBuildScript  string `toml:"pre_build_script,omitempty" json:"pre_build_script" long:"pre-build-script" env:"RUNNER_PRE_BUILD_SCRIPT" description:"Runner-specific command script executed just before build executes"`
 	PostBuildScript string `toml:"post_build_script,omitempty" json:"post_build_script" long:"post-build-script" env:"RUNNER_POST_BUILD_SCRIPT" description:"Runner-specific command script executed just after build executes"`
 
-	DebugTraceDisabled bool `toml:"debug_trace_disabled,omitempty" json:"debug_trace_disabled" long:"debug-trace-disabled" env:"RUNNER_DEBUG_TRACE_DISABLED" description:"When set to true Runner will disable the possibility of using the CI_DEBUG_TRACE feature"`
+	PrepareTimeout     *time.Duration `toml:"prepare_timeout,omitempty" json:"prepare_timeout,omitempty" long:"prepare-timeout" env:"RUNNER_PREPARE_TIMEOUT" description:"Timeout for the prepare stage of a job. Accepts duration strings like \"30s\" and \"1h30m\". Must not exceed the job timeout. Defaults to the job timeout."`
+	DebugTraceDisabled bool           `toml:"debug_trace_disabled,omitempty" json:"debug_trace_disabled" long:"debug-trace-disabled" env:"RUNNER_DEBUG_TRACE_DISABLED" description:"When set to true Runner will disable the possibility of using the CI_DEBUG_TRACE feature"`
 
 	SafeDirectoryCheckout *bool `toml:"safe_directory_checkout,omitempty" json:"safe_directory_checkout,omitempty" long:"safe-directory-checkout" env:"RUNNER_SAFE_DIRECTORY_CHECKOUT" description:"When set to true, Git global configuration will get a safe.directory directive pointing the job's working directory'"`
 	CleanGitConfig        *bool `toml:"clean_git_config,omitempty" json:"clean_git_config,omitempty" long:"clean-git-config" env:"RUNNER_CLEAN_GIT_CONFIG" description:"Clean git configuration before and after the build. Defaults to true, except the shell executor is used or the git strategy is \"none\""`
@@ -1415,6 +1417,8 @@ type RunnerSettings struct {
 	labels Labels
 }
 
+// RunnerConfig is the complete runtime representation of a runner worker,
+// loaded from one [[runners]] entry in config.toml.
 type RunnerConfig struct {
 	Name                string `toml:"name" json:"name" short:"name" long:"description" env:"RUNNER_NAME" description:"Runner name"`
 	Limit               int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`

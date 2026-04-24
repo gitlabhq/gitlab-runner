@@ -1012,6 +1012,32 @@ func (b *Build) GetBuildTimeout() time.Duration {
 	return time.Duration(buildTimeout) * time.Second
 }
 
+// GetPrepareTimeout returns the timeout for the prepare stage.
+// If prepare_timeout is not set or invalid, it defaults to the build timeout.
+func (b *Build) GetPrepareTimeout() time.Duration {
+	buildTimeout := b.GetBuildTimeout()
+
+	if b.Runner == nil || b.Runner.PrepareTimeout == nil {
+		return buildTimeout
+	}
+
+	prepareTimeout := *b.Runner.PrepareTimeout
+
+	if prepareTimeout <= 0 {
+		b.Log().Warningf("prepare_timeout (%s) must be greater than 0; using job timeout (%s)",
+			prepareTimeout, buildTimeout)
+		return buildTimeout
+	}
+
+	if prepareTimeout > buildTimeout {
+		b.Log().Warningf("prepare_timeout (%s) exceeds job timeout (%s); using job timeout",
+			prepareTimeout, buildTimeout)
+		return buildTimeout
+	}
+
+	return prepareTimeout
+}
+
 func (b *Build) handleError(err error) error {
 	state, err := b.runtimeStateAndError(err)
 	b.setCurrentState(state)

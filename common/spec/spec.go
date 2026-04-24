@@ -75,6 +75,7 @@ type Variable struct {
 	Raw      bool   `json:"raw"`
 }
 
+// RunnerInfo contains runner-specific metadata sent as part of the job payload.
 type RunnerInfo struct {
 	Timeout int `json:"timeout"`
 }
