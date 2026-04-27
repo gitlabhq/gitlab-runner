@@ -85,8 +85,9 @@ var flags = []FeatureFlag{
 		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description: "Enables creation of a Docker [network per build](../executors/docker.md#network-configurations) with " +
-			"the `docker` executor",
+		Description: "Enables creation of a Docker [network per build](../executors/docker.md#network-configurations) " +
+			"with the `docker` executor. Use the " +
+			"`CI_BUILD_NETWORK_NAME` variable to get the network name.",
 	},
 	{
 		Name:            UseLegacyKubernetesExecutionStrategy,
