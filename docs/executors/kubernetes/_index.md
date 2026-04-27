@@ -2232,6 +2232,12 @@ concurrent = 4
       driver = "my-csi-driver"
       [runners.kubernetes.volumes.csi.volume_attributes]
         size = "2Gi"
+      [[runners.kubernetes.volumes.nfs]]
+        name = "nfs"
+        mount_path = "/path/to/mount/point"
+        read_only = false
+        server = "foo.bar.com"
+        path = "/path/on/nfs-share"
 ```
 
 #### `hostPath` volume

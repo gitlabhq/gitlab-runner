@@ -224,6 +224,14 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 									SubPath:   "subpath",
 								},
 							},
+							NFSVolumes: []common.KubernetesNFS{
+								{Name: "NFS", MountPath: "/path/to/whatever"},
+								{
+									Name:      "NFS-subpath",
+									MountPath: "/path/to/whatever",
+									SubPath:   "nfs-subpath",
+								},
+							},
 						},
 					},
 				},
@@ -248,6 +256,8 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 					{Name: "emptyDir-mountprop", MountPath: "/mnt/prop", MountPropagation: &emptyDirMountPropagationWant},
 					{Name: "csi", MountPath: "/path/to/csi/volume"},
 					{Name: "csi-subpath", MountPath: "/path/to/csi/volume", SubPath: "subpath"},
+					{Name: "NFS", MountPath: "/path/to/whatever"},
+					{Name: "NFS-subpath", MountPath: "/path/to/whatever", SubPath: "nfs-subpath"},
 					{Name: "repo", MountPath: "/builds"},
 				}
 
@@ -588,6 +598,17 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 									VolumeAttributes: map[string]string{"key": "value"},
 								},
 							},
+							NFSVolumes: []common.KubernetesNFS{
+								{Name: "nfs", MountPath: "/path/to/nfs", Path: "/path/in/nfs", ReadOnly: false, Server: "foo.bar.com"},
+								{
+									Name:      "nfs-subpath",
+									MountPath: "/path/to/nfs",
+									Path:      "/path/in/nfs",
+									Server:    "foo.bar.com",
+									ReadOnly:  true,
+									SubPath:   "subpath",
+								},
+							},
 						},
 					},
 				},
@@ -653,6 +674,16 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 							},
 						},
 					},
+					{Name: "nfs", VolumeSource: api.VolumeSource{NFS: &api.NFSVolumeSource{
+						Server:   "foo.bar.com",
+						Path:     "/path/in/nfs",
+						ReadOnly: false,
+					}}},
+					{Name: "nfs-subpath", VolumeSource: api.VolumeSource{NFS: &api.NFSVolumeSource{
+						Server:   "foo.bar.com",
+						Path:     "/path/in/nfs",
+						ReadOnly: true,
+					}}},
 					{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 				}
 

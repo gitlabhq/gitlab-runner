@@ -185,6 +185,32 @@ To configure your cache to use a PVC:
            mount_path = "/cache"
    ```
 
+### Network File System
+
+Use a Network File System (NFS) for caching when object storage is not available.
+
+Prerequisites:
+
+- NFS is configured and accessible in your Kubernetes cluster. For more information, see [`nfs` volume](https://kubernetes.io/docs/concepts/storage/volumes/#nfs) in Kubernetes documentation.
+
+To configure your cache to use NFS:
+
+1. Mount the NFS volume to the `/cache` directory:
+
+   ```yaml
+   runners:
+     config: |
+       [[runners]]
+         [runners.kubernetes]
+           image = "ubuntu:22.04"
+         [[runners.kubernetes.volumes.nfs]]
+           name = "nfs"
+           mount_path = "/cache"
+           read_only = false
+           server = "foo.bar.com"
+           path = "/path/on/nfs-share"
+   ```
+
 ## Enable RBAC support
 
 If your cluster has RBAC (role-based access controls) enabled, the chart can create

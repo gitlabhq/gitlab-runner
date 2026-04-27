@@ -1384,6 +1384,103 @@ func TestStringOrArray_UnmarshalTOML(t *testing.T) {
 	}
 }
 
+func TestKubernetesNFS_UnmarshalTOML(t *testing.T) {
+	tests := map[string]struct {
+		toml           string
+		expectedResult KubernetesNFS
+		expectedErr    string
+	}{
+		"all required fields present": {
+			toml: `
+				name       = "nfs-vol"
+				mount_path = "/mnt/data"
+				server     = "nfs.example.com"
+				path       = "/exports/data"
+			`,
+			expectedResult: KubernetesNFS{
+				Name:      "nfs-vol",
+				MountPath: "/mnt/data",
+				Server:    "nfs.example.com",
+				Path:      "/exports/data",
+			},
+		},
+		"optional fields set": {
+			toml: `
+				name       = "nfs-vol"
+				mount_path = "/mnt/data"
+				server     = "nfs.example.com"
+				path       = "/exports/data"
+				sub_path   = "subdir"
+				read_only  = true
+			`,
+			expectedResult: KubernetesNFS{
+				Name:      "nfs-vol",
+				MountPath: "/mnt/data",
+				Server:    "nfs.example.com",
+				Path:      "/exports/data",
+				SubPath:   "subdir",
+				ReadOnly:  true,
+			},
+		},
+		"missing name": {
+			toml: `
+				mount_path = "/mnt/data"
+				server     = "nfs.example.com"
+				path       = "/exports/data"
+			`,
+			expectedErr: "name",
+		},
+		"missing mount_path": {
+			toml: `
+				name   = "nfs-vol"
+				server = "nfs.example.com"
+				path   = "/exports/data"
+			`,
+			expectedErr: "mount_path",
+		},
+		"missing server": {
+			toml: `
+				name       = "nfs-vol"
+				mount_path = "/mnt/data"
+				path       = "/exports/data"
+			`,
+			expectedErr: "server",
+		},
+		"missing path": {
+			toml: `
+				name       = "nfs-vol"
+				mount_path = "/mnt/data"
+				server     = "nfs.example.com"
+			`,
+			expectedErr: "path",
+		},
+		"all required fields missing": {
+			toml:        `read_only = true`,
+			expectedErr: "name, mount_path, server, path",
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			type Config struct {
+				NFS KubernetesNFS `toml:"nfs"`
+			}
+
+			var result Config
+			_, err := toml.Decode("[nfs]\n"+tt.toml, &result)
+
+			if tt.expectedErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, result.NFS)
+		})
+	}
+}
+
 func TestAutoscalerPolicyConfig_PreemptiveModeEnabled(t *testing.T) {
 	tests := map[string]struct {
 		internalValue *bool

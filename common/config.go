@@ -867,6 +867,7 @@ type KubernetesVolumes struct {
 	Secrets    []KubernetesSecret    `toml:"secret" json:",omitempty" description:"The secret maps which will be mounted"`
 	EmptyDirs  []KubernetesEmptyDir  `toml:"empty_dir" json:",omitempty" description:"The empty dirs which will be mounted"`
 	CSIs       []KubernetesCSI       `toml:"csi" json:",omitempty" description:"The CSI volumes which will be mounted"`
+	NFSVolumes []KubernetesNFS       `toml:"nfs" json:",omitempty" description:"The NSF volumes which will be mounted"`
 }
 
 type KubernetesConfigMap struct {
@@ -919,6 +920,59 @@ type KubernetesCSI struct {
 	FSType           string            `toml:"fs_type" description:"Filesystem type to mount. If not provided, the empty value is passed to the associated CSI driver which will determine the default filesystem to apply."`
 	ReadOnly         bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	VolumeAttributes map[string]string `toml:"volume_attributes,omitempty" json:",omitempty" description:"Key-value pair mapping for attributes of the CSI volume."`
+}
+
+type KubernetesNFS struct {
+	Name      string `toml:"name" json:"name" description:"The name of the NFS volume and volumeMount to use"`
+	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	SubPath   string `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
+	Server    string `toml:"server" description:"The NFS server that should be mounted"`
+	Path      string `toml:"path" description:"The path of the NFS share to mount"`
+	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+}
+
+func (n *KubernetesNFS) UnmarshalTOML(data any) error {
+	m, ok := data.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("nfs volume: expected a table, got %T", data)
+	}
+
+	if v, ok := m["name"].(string); ok {
+		n.Name = v
+	}
+	if v, ok := m["mount_path"].(string); ok {
+		n.MountPath = v
+	}
+	if v, ok := m["sub_path"].(string); ok {
+		n.SubPath = v
+	}
+	if v, ok := m["server"].(string); ok {
+		n.Server = v
+	}
+	if v, ok := m["path"].(string); ok {
+		n.Path = v
+	}
+	if v, ok := m["read_only"].(bool); ok {
+		n.ReadOnly = v
+	}
+
+	var missing []string
+	if n.Name == "" {
+		missing = append(missing, "name")
+	}
+	if n.MountPath == "" {
+		missing = append(missing, "mount_path")
+	}
+	if n.Server == "" {
+		missing = append(missing, "server")
+	}
+	if n.Path == "" {
+		missing = append(missing, "path")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("nfs volume: missing required fields: %s", strings.Join(missing, ", "))
+	}
+	return nil
 }
 
 type KubernetesSeccompProfile struct {
