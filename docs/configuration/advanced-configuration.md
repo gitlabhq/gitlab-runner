@@ -1796,8 +1796,9 @@ request behavior:
 | `gitlab_runner_cache_s3_assume_role_wait_seconds` | Histogram | Wait time to acquire a concurrency slot before issuing an `AssumeRole` request. |
 | `gitlab_runner_cache_s3_assume_role_duration_seconds` | Histogram | Duration of `AssumeRole` API calls to AWS STS. |
 | `gitlab_runner_cache_s3_assume_role_cache_hits_total` | Counter | Number of `AssumeRole` credential cache hits (STS call avoided). |
-| `gitlab_runner_cache_s3_assume_role_cache_misses_total` | Counter | Number of `AssumeRole` credential cache misses (STS call was made). |
+| `gitlab_runner_cache_s3_assume_role_cache_misses_total` | Counter | Number of `AssumeRole` credential cache misses (STS call made). |
 | `gitlab_runner_cache_s3_assume_role_cached_credentials` | Gauge | Number of `AssumeRole` credentials held in the in-memory LRU cache. |
+| `gitlab_runner_cache_s3_assume_role_failures_total` | Counter | Number of failed `AssumeRole` requests. |
 
 #### Enable IAM roles for Kubernetes ServiceAccount resources
 
