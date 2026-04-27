@@ -250,7 +250,15 @@ The following example has `check_interval` of 10 seconds and two `[[runners]]` s
    1. Sleep for `5s`.
    1. Request a job for `runner-2`.
    1. Sleep for `5s`.
-   1. Repeat.
+
+By default, when a runner receives a job, it immediately re-polls for more jobs until no
+jobs are available or the number of running jobs reaches `concurrent` or `limit`. To change
+this behavior, set `strict_check_interval` to `true`. When enabled, the runner strictly
+respects the check interval and sends one request every `check_interval` seconds (5 seconds
+in this example), regardless of whether a job was received.
+Turn on this setting to improve job distribution across a fleet of runners
+and prevent one runner from handling most jobs while others remain idle.
+However, jobs might wait longer in the queue.
 
 Here's a `check_interval` configuration example:
 
