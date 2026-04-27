@@ -6,7 +6,7 @@ Update milestone placeholders below
 -->
 
 
-## :paperclips: Cross Functional Programs
+## :paperclips: Cross-Functional Programs
 
 ## :runner: Runner Core
 
