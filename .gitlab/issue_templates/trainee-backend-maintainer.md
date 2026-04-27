@@ -8,7 +8,7 @@
 1. [ ] Read the [code review page in the handbook](https://about.gitlab.com/handbook/engineering/workflow/code-review/) and the [code review guidelines](https://docs.gitlab.com/development/code_review/).
 1. [ ] Understand [how to become a maintainer](https://about.gitlab.com/handbook/engineering/workflow/code-review/#how-to-become-a-maintainer).
 1. [ ] Add yourself as a [trainee maintainer](https://about.gitlab.com/handbook/engineering/workflow/code-review/#trainee-maintainer) on the [team page](https://gitlab.com/gitlab-com/www-gitlab-com/blob/master/data/team.yml).
-1. [ ] Ask your manager to set up a check in on this issue every six weeks or so.
+1. [ ] Ask your manager to set up a check-in on this issue every six weeks or so.
 
 ## Working towards becoming a maintainer
 
@@ -53,7 +53,7 @@ reveal security issue details.
 
 ## When you're ready to make it official
 
-When reviews have accumulated, you can confidently address the majority of the MR's assigned to you,
+When reviews have accumulated, you can confidently address the majority of the MRs assigned to you,
 and recent reviews consistently fulfill maintainer responsibilities, then you can propose yourself as a new maintainer
 for the relevant application.
 
