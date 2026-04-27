@@ -392,8 +392,31 @@ func TestS3Client_PresignURL(t *testing.T) {
 			resp.Body.Close()
 
 			assert.Equal(t, content, body)
+
+			// Presign a HEAD request to verify object existence
+			url, err = s3Client.PresignURL(t.Context(), http.MethodHead, s3Config.BucketName, objectName, nil, 5*time.Minute)
+			require.NoError(t, err)
+
+			req, err = http.NewRequest(http.MethodHead, url.URL.String(), nil)
+			require.NoError(t, err)
+
+			resp, err = client.Do(req)
+			require.NoError(t, err)
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		})
 	}
+}
+
+func TestS3Client_PresignURL_UnknownMethodError(t *testing.T) {
+	s3Config := setupMockS3Server(t)
+
+	s3Client, err := newS3Client(s3Config)
+	require.NoError(t, err)
+
+	_, err = s3Client.PresignURL(t.Context(), "INVALID", s3Config.BucketName, "some-object", nil, 5*time.Minute)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported method: INVALID")
 }
 
 func newMockSTSHandler(expectedKms bool, expectedDurationSecs int, s3Partition string) http.Handler {
