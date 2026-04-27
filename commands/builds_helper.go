@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	concurrencyIncreaseFactor = 1.1  // +10%
-	concurrencyDecreaseFactor = 0.95 // -5%
+	concurrencyIncreaseFactor        = 1.1  // clean job pickup: +10%
+	concurrencyDecreaseFactor        = 0.95 // clean empty/failed response: -5%
+	concurrencyRetriedDecreaseFactor = 0.5  // server-side back-pressure: halve
 )
 
 var numBuildsDesc = prometheus.NewDesc(
@@ -207,20 +208,24 @@ func (b *buildsHelper) acquireRequest(runner *common.RunnerConfig) bool {
 	return true
 }
 
-func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig, hasJob bool) bool {
+func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig, hasJob bool, retried bool) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	counter := b.getRunnerCounter(runner)
 
 	if runner.IsFeatureFlagOn(featureflags.UseAdaptiveRequestConcurrency) {
-		// if the request returned a job, increase the concurrency by 10%, if not, decrease by 5%
-		if hasJob {
+		// AIMD: a retried request is an explicit server-side slow-down
+		// signal and halves the limit; a clean job pickup grows it; an empty
+		// clean response nudges it down.
+		switch {
+		case retried:
+			counter.adaptiveConcurrencyLimit *= concurrencyRetriedDecreaseFactor
+		case hasJob:
 			counter.adaptiveConcurrencyLimit *= concurrencyIncreaseFactor
-		} else {
+		default:
 			counter.adaptiveConcurrencyLimit *= concurrencyDecreaseFactor
 		}
-		// adjust adaptive concurrency between 1 and max request concurrency
 		counter.adaptiveConcurrencyLimit = min(max(1, counter.adaptiveConcurrencyLimit), float64(runner.GetRequestConcurrency()))
 	}
 

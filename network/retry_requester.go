@@ -94,7 +94,12 @@ func (r *retryRequester) executeRequestWithRetries(req *http.Request, bo *backof
 			return nil, attempts, fmt.Errorf("couldn't execute %s against %s: %w", req.Method, req.URL, err)
 		}
 
-		if !shouldRetryRequest(resp) || attempts >= r.maxAttempts {
+		retriable := shouldRetryRequest(resp)
+		if retriable {
+			signalRetryAttempted(req)
+		}
+
+		if !retriable || attempts >= r.maxAttempts {
 			success = true
 			return resp, attempts, nil
 		}
@@ -108,6 +113,15 @@ func (r *retryRequester) executeRequestWithRetries(req *http.Request, bo *backof
 		if err := r.regenerateRequestBody(req); err != nil {
 			return nil, attempts, err
 		}
+	}
+}
+
+// signalRetryAttempted notifies any attached retry tracker that a retriable
+// response was observed. Called before the maxAttempts check so the signal
+// fires even if no further retry is actually performed.
+func signalRetryAttempted(req *http.Request) {
+	if t := retryTrackerFromContext(req.Context()); t != nil {
+		t.Store(true)
 	}
 }
 

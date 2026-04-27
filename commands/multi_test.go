@@ -1445,7 +1445,7 @@ func TestRunCommand_requestJob_HandlesUpdateAbort(t *testing.T) {
 		network: network,
 	}
 
-	trace, response, err := cmd.requestJob(runner, nil)
+	trace, response, _, err := cmd.requestJob(runner, nil)
 
 	// When UpdateJob returns UpdateAbort, requestJob should return nil
 	assert.Nil(t, trace, "Should return nil trace when update is aborted")
@@ -1485,7 +1485,7 @@ func TestRunCommand_requestJob_HandlesCancelRequested(t *testing.T) {
 		network: network,
 	}
 
-	trace, response, err := cmd.requestJob(runner, nil)
+	trace, response, _, err := cmd.requestJob(runner, nil)
 
 	// When UpdateJob has CancelRequested=true, requestJob should return nil
 	assert.Nil(t, trace, "Should return nil trace when job is being canceled")
@@ -1524,7 +1524,7 @@ func TestRunCommand_requestJob_ContinuesWhenUpdateSucceeds(t *testing.T) {
 		network: network,
 	}
 
-	trace, response, err := cmd.requestJob(runner, nil)
+	trace, response, _, err := cmd.requestJob(runner, nil)
 
 	// When UpdateJob succeeds, requestJob should continue and return the job
 	assert.Equal(t, mockTrace, trace, "Should return the job trace when update succeeds")
@@ -1550,7 +1550,7 @@ func TestRunCommand_requestJob_ReturnsNilWhenNoJob(t *testing.T) {
 		network: network,
 	}
 
-	trace, response, err := cmd.requestJob(runner, nil)
+	trace, response, _, err := cmd.requestJob(runner, nil)
 
 	// When no job is available, requestJob should return nil without calling UpdateJob
 	assert.Nil(t, trace, "Should return nil trace when no job available")
