@@ -1735,6 +1735,15 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		})
 	}
 
+	for _, mount := range s.Config.Kubernetes.Volumes.NFSVolumes {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: s.Build.GetAllVariables().ExpandValue(mount.MountPath),
+			SubPath:   s.Build.GetAllVariables().ExpandValue(mount.SubPath),
+			ReadOnly:  mount.ReadOnly,
+		})
+	}
+
 	return mounts
 }
 
@@ -1788,6 +1797,7 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 	volumes = append(volumes, s.getVolumesForConfigMaps()...)
 	volumes = append(volumes, s.getVolumesForEmptyDirs()...)
 	volumes = append(volumes, s.getVolumesForCSIs()...)
+	volumes = append(volumes, s.getVolumesForNFSs()...)
 
 	return volumes
 }
@@ -1934,6 +1944,24 @@ func (s *executor) getVolumesForCSIs() []api.Volume {
 					FSType:           &volume.FSType,
 					ReadOnly:         &volume.ReadOnly,
 					VolumeAttributes: volume.VolumeAttributes,
+				},
+			},
+		})
+	}
+	return volumes
+}
+
+func (s *executor) getVolumesForNFSs() []api.Volume {
+	var volumes []api.Volume
+
+	for _, volume := range s.Config.Kubernetes.Volumes.NFSVolumes {
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				NFS: &api.NFSVolumeSource{
+					Path:     volume.Path,
+					ReadOnly: volume.ReadOnly,
+					Server:   volume.Server,
 				},
 			},
 		})
