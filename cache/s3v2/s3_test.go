@@ -1146,3 +1146,65 @@ func TestFetchCredentialsForRole_CacheDisabled(t *testing.T) {
 	_, cached := assumeRoleCredCache.Get(assumeRoleCacheKey(roleARN, bucketName, objectName, true))
 	assert.False(t, cached, "disabled cache must not be populated")
 }
+
+func TestFetchCredentialsForRole_FailureMetric(t *testing.T) {
+	FlushCredentialCache()
+	t.Cleanup(FlushCredentialCache)
+
+	origFailures := assumeRoleFailures
+	t.Cleanup(func() { assumeRoleFailures = origFailures })
+
+	t.Run("STS error increments counter", func(t *testing.T) {
+		testFailures := prometheus.NewCounter(prometheus.CounterOpts{Name: "test_failures_sts", Help: "test"})
+		assumeRoleFailures = testFailures
+
+		s3Config := &cacheconfig.CacheS3Config{
+			AccessKey:          "test-access-key",
+			SecretKey:          "test-secret-key",
+			AuthenticationType: "access-key",
+			BucketName:         bucketName,
+			BucketLocation:     "us-east-1",
+		}
+		client, err := newS3Client(s3Config, withSTSEndpoint("http://127.0.0.1:0"))
+		require.NoError(t, err)
+
+		_, err = client.FetchCredentialsForRole(t.Context(), "arn:aws:iam::123456789012:role/TestRole", bucketName, objectName, true, 0)
+		require.Error(t, err)
+		assert.EqualValues(t, 1, testutil.ToFloat64(testFailures))
+	})
+
+	t.Run("nil credentials increments counter", func(t *testing.T) {
+		testFailures := prometheus.NewCounter(prometheus.CounterOpts{Name: "test_failures_nil", Help: "test"})
+		assumeRoleFailures = testFailures
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/xml")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
+<AssumeRoleResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <AssumeRoleResult>
+    <AssumedRoleUser>
+      <AssumedRoleId>AROATEST123:TestSession</AssumedRoleId>
+      <Arn>arn:aws:sts::123456789012:assumed-role/TestRole/TestSession</Arn>
+    </AssumedRoleUser>
+  </AssumeRoleResult>
+  <ResponseMetadata><RequestId>test</RequestId></ResponseMetadata>
+</AssumeRoleResponse>`))
+		}))
+		defer server.Close()
+
+		s3Config := &cacheconfig.CacheS3Config{
+			AccessKey:          "test-access-key",
+			SecretKey:          "test-secret-key",
+			AuthenticationType: "access-key",
+			BucketName:         bucketName,
+			BucketLocation:     "us-east-1",
+		}
+		client, err := newS3Client(s3Config, withSTSEndpoint(server.URL+"/sts"))
+		require.NoError(t, err)
+
+		_, err = client.FetchCredentialsForRole(t.Context(), "arn:aws:iam::123456789012:role/TestRole", bucketName, objectName, true, 0)
+		require.Error(t, err)
+		assert.EqualValues(t, 1, testutil.ToFloat64(testFailures))
+	})
+}

@@ -54,13 +54,18 @@ var assumeRoleCredCacheHits = prometheus.NewCounter(prometheus.CounterOpts{
 
 var assumeRoleCredCacheMisses = prometheus.NewCounter(prometheus.CounterOpts{
 	Name: "gitlab_runner_cache_s3_assume_role_cache_misses_total",
-	Help: "Number of AssumeRole credential cache misses (requests that reached STS).",
+	Help: "Number of AssumeRole credential cache misses (This is also a count of the STS calls for cache credentials that were made).",
 })
 
 var assumeRoleCredCacheEntries = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 	Name: "gitlab_runner_cache_s3_assume_role_cached_credentials",
 	Help: "Current number of AssumeRole credentials held in the LRU cache.",
 }, func() float64 { return float64(assumeRoleCredCache.Len()) })
+
+var assumeRoleFailures = prometheus.NewCounter(prometheus.CounterOpts{
+	Name: "gitlab_runner_cache_s3_assume_role_failures_total",
+	Help: "Number of AssumeRole requests which failed.",
+})
 
 // assumeRoleCredCacheSize is the maximum number of AssumeRole credentials held
 // in the cache. Each entry is a small map of four env-var strings (~200 B).
@@ -340,6 +345,7 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 	assumeRoleCallDuration.Observe(elapsed)
 
 	if err != nil {
+		assumeRoleFailures.Inc()
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"role_arn":   roleARN,
 			"duration_s": elapsed,
@@ -349,6 +355,7 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 	// AssumeRole should always return credentials if successful, but
 	// just in case it doesn't let's check this.
 	if roleCredentials.Credentials == nil {
+		assumeRoleFailures.Inc()
 		logrus.WithFields(logrus.Fields{
 			"role_arn":   roleARN,
 			"duration_s": elapsed,

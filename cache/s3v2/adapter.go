@@ -192,4 +192,5 @@ func init() {
 	cache.RegisterCollector(assumeRoleCredCacheHits)
 	cache.RegisterCollector(assumeRoleCredCacheMisses)
 	cache.RegisterCollector(assumeRoleCredCacheEntries)
+	cache.RegisterCollector(assumeRoleFailures)
 }
