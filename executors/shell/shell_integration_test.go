@@ -19,6 +19,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/gorilla/websocket"
@@ -2270,44 +2271,44 @@ const (
 
 func TestCredSetup(t *testing.T) {
 	const (
-		markerForBuild      = "#build# "
-		markerForHelper     = "#helper# "
-		markerPreGetSource  = "pre_get_source"
-		markerPostGetSource = "post_get_source"
+		markerForBuild      = "#build#"
+		markerForHelper     = "#helper#"
+		markerPreGetSource  = "#pre_get_source#"
+		markerPostGetSource = "#post_get_source#"
 	)
 
 	listGitConfig := func(t *testing.T, shell, prefix string) string {
 		switch shell {
 		case shells.Bash:
-			return fmt.Sprintf(`git config -l | sed 's/^/%s/g'`, prefix)
+			return fmt.Sprintf(`git config -l | sed 's/^/%s /g'`, prefix)
 		case shells.SNPwsh, shells.SNPowershell:
-			return fmt.Sprintf(`(git config -l) -replace '^','%s'`, prefix)
+			return fmt.Sprintf(`(git config -l) -replace '^','%s '`, prefix)
 		default:
 			t.Fatalf("shell %s not supported", shell)
 		}
 		return ""
 	}
-	getGitCred := func(t *testing.T, shell, prefix string) string {
-		username := cmp.Or(os.Getenv("GITLAB_TEST_USERNAME"), "gitlab-ci-token")
-
+	getGitCred := func(t *testing.T, shell, prefix string, username string) string {
 		switch shell {
 		case shells.Bash:
-			return fmt.Sprintf(`echo -e "protocol=https\nhost=gitlab.com\nusername=%s" | git -c credential.interactive=never credential fill | sed 's/^/#%s# /g';`, username, prefix)
+			return fmt.Sprintf(`echo -e "protocol=https\nhost=gitlab.com\nusername=%s" | git -c credential.interactive=never credential fill | awk '/^username=/{u=$0}/^password=/{p=$0}END{if(u && p) print "%s " u " " p}' || true;`, username, prefix)
 		case shells.SNPwsh, shells.SNPowershell:
 			return fmt.Sprintf("$GitStdin = \"protocol=https`nhost=gitlab.com`nusername=%s\"; "+
 				"$GitStdinFile = Join-Path ${CI_BUILDS_DIR} 'git_get_cred_stdin.txt' ; "+
 				"$GitStdoutFile = Join-Path ${CI_BUILDS_DIR} 'git_get_cred_stdout.txt' ; "+
 				"If(Test-Path $GitStdoutFile) { Remove-Item $GitStdoutFile } ; "+
 				"[System.IO.File]::WriteAllText($GitStdinFile, $GitStdin) ; "+
-				"Start-Process -FilePath 'git' -ArgumentList 'credential','fill' -RedirectStandardInput $GitStdinFile -RedirectStandardOutput $GitStdoutFile -NoNewWindow -Wait; "+
-				"(Get-Content -Path $GitStdoutFile) -replace '^','#%s# ';", username, prefix)
+				"Start-Process -FilePath 'git' -ArgumentList '-c','credential.interactive=never','credential','fill' -RedirectStandardInput $GitStdinFile -RedirectStandardOutput $GitStdoutFile -NoNewWindow -Wait; "+
+				"$GitCred = Get-Content -Path $GitStdoutFile ; "+
+				"$GitCredUser = $GitCred | Where-Object {$_ -match '^username='} ; "+
+				"$GitCredPass = $GitCred | Where-Object {$_ -match '^password='} ; "+
+				"if($GitCredUser -and $GitCredPass) { Write-Output (\"%s \" + $GitCredUser + \" \" + $GitCredPass) }", username, prefix)
 		default:
 			t.Fatalf("shell %s not supported", shell)
 		}
 		return ""
 	}
-	setGitCred := func(t *testing.T, shell string) string {
-		username := cmp.Or(os.Getenv("GITLAB_TEST_USERNAME"), "gitlab-ci-token")
+	setGitCred := func(t *testing.T, shell string, username string) string {
 		const password = "fake_password"
 
 		switch shell {
@@ -2323,86 +2324,79 @@ func TestCredSetup(t *testing.T) {
 		}
 		return ""
 	}
-	extractGitConfig := func(blob, prefix string) string {
-		out := []string{}
-		// Regex to match timestamp format + prefix: YYYY-MM-DDTHH:MM:SS.microsZ WORD prefix
-		pattern := fmt.Sprintf(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\w+\s+%s`, regexp.QuoteMeta(prefix))
-		timestampPattern := regexp.MustCompile(pattern)
 
-		for _, line := range strings.Split(blob, "\n") {
-			if timestampPattern.MatchString(line) {
-				l := timestampPattern.ReplaceAllString(line, "")
-				out = append(out, l)
-			}
-		}
-		return strings.Join(out, "\n")
-	}
+	var buildCounter atomic.Int64
 
 	tests := []struct {
 		gitUrlsWithoutTokens bool
-		validator            func(t *testing.T, out string, remoteURL string, cachedGitCreds string, token string)
+		validator            func(t *testing.T, out string, remoteURL string, cachedGitCreds string, token string, myTokenUsername string)
 	}{
 		{
 			gitUrlsWithoutTokens: true,
-			validator: func(t *testing.T, out string, remoteURL string, cachedGitCreds string, token string) {
-				assert.NotContains(t, remoteURL, "@", "the remote URL should not contain any auth data")
-				assert.NotContains(t, remoteURL, "gitlab-ci-token", "the remote URL should not contain the token user")
+			validator: func(t *testing.T, out string, remoteURL string, cachedGitCreds string, token string, myTokenUsername string) {
+				assert.NotContains(t, remoteURL, "@", "remote URL should not embed auth data")
+				assert.NotContains(t, remoteURL, "gitlab-ci-token", "remote URL should not embed the token user")
 
 				remoteHost := onlyHost(t, remoteURL)
+				remoteSchemeHost := onlySchemeAndHost(t, remoteURL)
 
-				// git cred helper is setup in the helper & build container
 				for _, marker := range []string{markerForHelper, markerForBuild} {
-					gitConfig := extractGitConfig(out, marker)
-					assert.Contains(t, gitConfig, "credential."+remoteHost+".username=gitlab-ci-token", "should contain a username setting")
-					assert.Contains(t, gitConfig, "credential."+remoteHost+".helper=!", "should contain a credential helper")
-					assert.NotContains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "the origin URL should not contain any auth data")
-					assert.NotContains(t, gitConfig, "url."+withMaskedPassword(t, remoteURL)+".insteadof="+remoteHost, "should not have an insteadOf URL with auth data")
-					assert.Contains(t, gitConfig, "include.path=", "should include config file with creds")
+					assert.Contains(t, out, fmt.Sprintf("%s credential.%s.username=gitlab-ci-token", marker, remoteHost), "gitlab-ci-token should be the default username for the remote host")
+					assert.Contains(t, out, fmt.Sprintf("%s credential.%s.helper=", marker, remoteHost), "a credential helper should be declared for the remote host")
+					assert.NotContains(t, out, fmt.Sprintf("%s remote.origin.url=%s://gitlab-ci-token:", marker, remoteSchemeHost.Scheme), "origin URL should not embed gitlab-ci-token creds")
+					assert.Contains(t, out, fmt.Sprintf("%s remote.origin.url=%s", marker, remoteHost), "origin URL should be the remote host")
+					assert.NotContains(t, out, fmt.Sprintf("%s url.%s.insteadof=", marker, withMaskedPassword(t, remoteURL)), "should not have an insteadOf URL with auth data")
+					assert.Contains(t, out, fmt.Sprintf("%s url.%s.insteadof=", marker, remoteHost), "an insteadOf rule should rewrite to the remote host")
+					assert.Contains(t, out, fmt.Sprintf("%s include.path=", marker), "should include an external config file")
 				}
 
-				// pre get-source: gitlab-ci-token password comes from the 1st global credential helper
-				// post get-source: globally defined credential.helpers should not be run, we can fetch the current token with the local cred helper, but it is not cached
-				assert.Contains(t, out, "#pre_get_source# password=fake_password", "before getting sources (& setting up the local cred helper), previously used creds are used")
-				assert.Contains(t, out, "#post_get_source# password=[MASKED]", "after getting sources (& setting up the local cred helper), only its creds are used")
 				content, err := os.ReadFile(cachedGitCreds)
 				require.NoError(t, err)
-				assert.Contains(t, "https://gitlab-ci-token:fake_password@gitlab.com\n", string(content), "per-build cred helper caches creds from before getting source (& setting up the local cred helper)")
+
+				for _, username := range []string{"gitlab-ci-token", myTokenUsername} {
+					assert.Contains(t, out, fmt.Sprintf("%s username=%s password=fake_password", markerPreGetSource, username), "pre_get_source, previously stored creds should be available")
+					for _, marker := range []string{markerPostGetSource, markerForBuild} {
+						assert.Contains(t, out, fmt.Sprintf("%s username=%s password=[MASKED]", marker, username), "per-build helper should return the masked CI token for any username")
+					}
+				}
+				assert.Contains(t, string(content), fmt.Sprintf("%s://gitlab-ci-token:fake_password@%s", remoteSchemeHost.Scheme, remoteSchemeHost.Host), "after cleanup, previously stored creds should be available")
+				assert.Contains(t, string(content), fmt.Sprintf("%s://%s:fake_password@%s", remoteSchemeHost.Scheme, myTokenUsername, remoteSchemeHost.Host), "after cleanup, previously stored creds should be available")
 			},
 		},
 		{
 			gitUrlsWithoutTokens: false,
-			validator: func(t *testing.T, out string, remoteURL string, cachedGitCreds string, token string) {
-				assert.Contains(t, remoteURL, "@", "the remote URL should contain auth data")
-				assert.Contains(t, remoteURL, "gitlab-ci-token", "remote URL should contain the token user")
+			validator: func(t *testing.T, out string, remoteURL string, cachedGitCreds string, token string, myTokenUsername string) {
+				assert.Contains(t, remoteURL, "@", "remote URL should embed auth data")
+				assert.Contains(t, remoteURL, "gitlab-ci-token", "remote URL should embed the gitlab-ci-token user")
 
 				remoteHost := onlyHost(t, remoteURL)
+				remoteSchemeHost := onlySchemeAndHost(t, remoteURL)
 
-				// git cred helper is neither setup in the helper or build container
 				for _, marker := range []string{markerForHelper, markerForBuild} {
-					gitConfig := extractGitConfig(out, marker)
-					assert.NotContains(t, gitConfig, "credential."+remoteHost+".username=gitlab-ci-token", "should not contain a username setting")
-					assert.NotContains(t, gitConfig, "credential."+remoteHost+".helper=!", "should not contain a credential helper")
-					assert.NotContains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "should contain the origin URL including auth data")
-					assert.Contains(t, gitConfig, "url."+withMaskedPassword(t, remoteURL)+".insteadof="+remoteHost, "should have an insteadOf URL with auth data")
-					assert.Contains(t, gitConfig, "include.path=", "should include config file with creds")
+					assert.NotContains(t, out, fmt.Sprintf("%s credential.%s.username=", marker, remoteHost), "no default username should be declared for the remote host")
+					assert.NotContains(t, out, fmt.Sprintf("%s credential.%s.helper=", marker, remoteHost), "no per-build inline credential helper should be declared")
+					assert.NotContains(t, out, fmt.Sprintf("%s remote.origin.url=%s://gitlab-ci-token:", marker, remoteSchemeHost.Scheme), "origin URL should not embed gitlab-ci-token creds")
+					assert.Contains(t, out, fmt.Sprintf("%s url.%s.insteadof=", marker, withMaskedPassword(t, remoteURL)), "an insteadOf rule should rewrite to the remote host")
+					assert.Contains(t, out, fmt.Sprintf("%s include.path=", marker), "should include an external config file")
 				}
 
-				// pre get-source: gitlab-ci-token password comes from the 1st global credential helper
-				// post get-source: we can fetch creds from the global helpers, because we didn't set the local empty cred helper: feature flag is OFF
-				// the CI_JOB_TOKEN is expected to be cached
-				assert.Contains(t, out, "#pre_get_source# password=fake_password", "before getting sources, previously used creds are used")
-				assert.Contains(t, out, "#post_get_source# password=[MASKED]", "after getting sources, the token is cached")
+				for _, marker := range []string{markerPreGetSource, markerPostGetSource, markerForBuild} {
+					assert.Contains(t, out, fmt.Sprintf("%s username=%s password=fake_password", marker, myTokenUsername), "previously stored creds should be available")
+				}
+				assert.Contains(t, out, fmt.Sprintf("%s username=gitlab-ci-token password=fake_password", markerPreGetSource), "previously stored creds should be available")
+				assert.Contains(t, out, fmt.Sprintf("%s username=gitlab-ci-token password=[MASKED]", markerPostGetSource), "per-build cred helper caches the most recently used creds")
+				assert.Contains(t, out, fmt.Sprintf("%s username=gitlab-ci-token password=[MASKED]", markerForBuild), "per-build cred helper caches the most recently used creds")
+
 				content, err := os.ReadFile(cachedGitCreds)
 				require.NoError(t, err)
-				assert.Contains(t, fmt.Sprintf("https://gitlab-ci-token:%s@gitlab.com\n", token), string(content), "per-build cred helper caches the most recently used creds")
+
+				assert.Contains(t, string(content), fmt.Sprintf("%s://gitlab-ci-token:%s@%s", remoteSchemeHost.Scheme, token, remoteSchemeHost.Host), "after cleanup, gitlab-ci-token is exported to credential helpers")
+				assert.Contains(t, string(content), fmt.Sprintf("%s://%s:fake_password@%s", remoteSchemeHost.Scheme, myTokenUsername, remoteSchemeHost.Host), "after cleanup, previously stored creds should be available")
 			},
 		},
 	}
 
 	setupCachingCredHelpers(t)
-	orgURL, err := url.Parse(repoURLWithSubmodules)
-	require.NoError(t, err, "parsing original repo url")
-	setInvalidGitCreds(t, *orgURL)
 
 	gitStrategies := map[string]struct {
 		featureFlags map[string]bool
@@ -2420,18 +2414,31 @@ func TestCredSetup(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%s:%t", featureflags.GitURLsWithoutTokens, test.gitUrlsWithoutTokens), func(t *testing.T) {
-			t.Parallel()
+			if test.gitUrlsWithoutTokens {
+				t.Parallel()
+			}
 
 			for gitStrategyName, gitStrategy := range gitStrategies {
 				t.Run("GIT_STRATEGY:"+gitStrategyName, func(t *testing.T) {
-					t.Parallel()
+					if test.gitUrlsWithoutTokens {
+						t.Parallel()
+					}
 
 					shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-						t.Parallel()
+						if test.gitUrlsWithoutTokens {
+							t.Parallel()
+						}
 
 						helpers.SkipIntegrationTests(t, shell)
 
-						jobResponse, err := common.GetRemoteBuildResponse(listGitConfig(t, shell, markerForBuild))
+						n := buildCounter.Add(1)
+						myTokenUsername := fmt.Sprintf("my-personal-token-%d", n)
+
+						jobResponse, err := common.GetRemoteBuildResponse(
+							listGitConfig(t, shell, markerForBuild),
+							getGitCred(t, shell, markerForBuild, "gitlab-ci-token"),
+							getGitCred(t, shell, markerForBuild, myTokenUsername),
+						)
 						require.NoError(t, err)
 
 						jobResponse.GitInfo.RepoURL = repoURLWithSubmodules
@@ -2439,13 +2446,22 @@ func TestCredSetup(t *testing.T) {
 						token, _ := buildtest.InjectJobTokenFromEnv(t, &jobResponse)
 
 						jobResponse.Hooks = append(jobResponse.Hooks, spec.Hook{
-							Name:   spec.HookPreGetSourcesScript,
-							Script: spec.StepScript{setGitCred(t, shell), getGitCred(t, shell, markerPreGetSource)},
+							Name: spec.HookPreGetSourcesScript,
+							Script: spec.StepScript{
+								setGitCred(t, shell, "gitlab-ci-token"),
+								setGitCred(t, shell, myTokenUsername),
+								getGitCred(t, shell, markerPreGetSource, "gitlab-ci-token"),
+								getGitCred(t, shell, markerPreGetSource, myTokenUsername),
+							},
 						})
 
 						jobResponse.Hooks = append(jobResponse.Hooks, spec.Hook{
-							Name:   spec.HookPostGetSourcesScript,
-							Script: spec.StepScript{listGitConfig(t, shell, markerForHelper), getGitCred(t, shell, markerPostGetSource)},
+							Name: spec.HookPostGetSourcesScript,
+							Script: spec.StepScript{
+								listGitConfig(t, shell, markerForHelper),
+								getGitCred(t, shell, markerPostGetSource, "gitlab-ci-token"),
+								getGitCred(t, shell, markerPostGetSource, myTokenUsername),
+							},
 						})
 
 						jobResponse.Variables = append(jobResponse.Variables,
@@ -2477,9 +2493,8 @@ func TestCredSetup(t *testing.T) {
 						remoteURL, err := build.GetRemoteURL()
 						assert.NoError(t, err, "getting build's remote URL")
 
-						// cached creds from the 1st helper created in setupTestCredHelpers
 						cachedCreds := filepath.Join(build.Runner.BuildsDir, "git-credentials")
-						test.validator(t, out, remoteURL.String(), cachedCreds, token)
+						test.validator(t, out, remoteURL.String(), cachedCreds, token, myTokenUsername)
 					})
 				})
 			}
@@ -2862,11 +2877,6 @@ func setupCachingCredHelpers(t *testing.T) {
 	err = exec.Command("git", "config", "--global", "--add", "credential.helper", "!"+helper).Run()
 	require.NoError(t, err, "adding storing cred helper per build")
 
-	// global credential helper which uses the same cache for all tests
-	helper = "store --file=" + helpers.ToSlash(gitCredCache.Name())
-	err = exec.Command("git", "config", "--global", "--add", "credential.helper", helper).Run()
-	require.NoError(t, err, "adding caching cred helper")
-
 	t.Cleanup(func() {
 		err := exec.Command("git", "config", "--global", "--unset-all", "credential.helper").Run()
 		require.NoError(t, err, "unsetting cred helper")
@@ -2879,38 +2889,19 @@ func setupCachingCredHelpers(t *testing.T) {
 	})
 }
 
-// setInvalidGitCreds injects invalid creds into git cred helpers
-func setInvalidGitCreds(t *testing.T, orgURL url.URL) {
-	creds := map[string]string{
-		"some-user":       "some-token",
-		"gitlab-ci-token": "old_expired_token",
-	}
-
-	for username, password := range creds {
-		// save the fake / invalid creds
-		cmd := exec.Command("git", "credential", "approve")
-		cmd.Stdin = strings.NewReader(fmt.Sprintf("protocol=%s\nhost=%s\nusername=%s\npassword=%s\n", orgURL.Scheme, orgURL.Host, username, password))
-		err := cmd.Run()
-		require.NoError(t, err, "setting up fake creds")
-
-		// ensure the cred helper is set up and returns the fake creds
-		cmd = exec.Command("git", "credential", "fill")
-		cmd.Stdin = strings.NewReader(fmt.Sprintf("protocol=%s\nhost=%s\nusername=%s\n", orgURL.Scheme, orgURL.Host, username))
-		var out []byte
-		out, err = cmd.Output()
-		require.NoError(t, err, "getting cached git creds")
-		require.Contains(t, string(out), fmt.Sprintf("username=%s", username), "wrong user for cached cred")
-		require.Contains(t, string(out), fmt.Sprintf("password=%s", password), "wrong password for cached cred")
-	}
-}
-
-func onlyHost(t *testing.T, remoteURL string) string {
+func onlySchemeAndHost(t *testing.T, remoteURL string) *url.URL {
 	t.Helper()
 
 	u, err := url.Parse(remoteURL)
 	require.NoError(t, err, "parsing URL")
 
-	return url_helpers.OnlySchemeAndHost(u).String()
+	return url_helpers.OnlySchemeAndHost(u)
+}
+
+func onlyHost(t *testing.T, remoteURL string) string {
+	t.Helper()
+
+	return onlySchemeAndHost(t, remoteURL).String()
 }
 
 func withMaskedPassword(t *testing.T, orgURL string) string {

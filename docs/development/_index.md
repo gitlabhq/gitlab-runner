@@ -458,23 +458,23 @@ To test the state of the build directives in test files, `make check_test_direct
 
 ### Running shell integration tests with custom credentials
 
-Some shell integration tests interact with GitLab.com repositories and require authentication.
-By default, these tests use `gitlab-ci-token` as the username. To run these tests locally with
-your own credentials, override the username using environment variables:
+To run these tests locally with your own credentials, set an environment variable:
 
 ```shell
-export GITLAB_TEST_USERNAME="your-username"
-export GITLAB_TEST_TOKEN="your-personal-access-token"
+export GITLAB_TEST_TOKEN="your-access-token"
 ```
+
+Use either a personal or group access token with one of `read_repository`, `read_api`, or `api` permission.
+
+If you don't have access to the projects under [`gitlab-runner-pipeline-tests`](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests),
+you can update the test URLs to point to your own project where your token has the required permissions.
+The project should be private and use a private repository as a submodule.
 
 For example, to run the `TestGitIncludePaths` test:
 
 ```shell
 go test -count=1 -v -run TestGitIncludePaths --tags=integration ./executors/shell
 ```
-
-If you don't set the environment variables, the tests default to `gitlab-ci-token`,
-maintaining backward compatibility with CI/CD pipelines.
 
 ## Developing for Windows on a non-windows environment
 
