@@ -340,6 +340,10 @@ func (b *Build) ProjectRealUniqueName() string {
 	return "runner-" + hex.EncodeToString(sum[:byteLen])
 }
 
+func (b *Build) GetNetworkName() string {
+	return b.ProjectUniqueShortName()
+}
+
 func (b *Build) ProjectSlug() (string, error) {
 	url, err := url.Parse(b.GitInfo.RepoURL)
 	if err != nil {
@@ -1699,6 +1703,13 @@ func (b *Build) getBaseVariablesAfterJob() spec.Variables {
 	variables = append(variables, spec.Variable{
 		Key: spec.TempProjectDirVariableKey, Value: b.TmpProjectDir(), Public: true, Internal: true,
 	})
+
+	if b.IsFeatureFlagOn(featureflags.NetworkPerBuild) {
+		variables = append(
+			variables,
+			spec.Variable{Key: "CI_BUILD_NETWORK_NAME", Value: b.ProjectUniqueShortName(), Public: true, Internal: true, File: false},
+		)
+	}
 
 	return variables
 }

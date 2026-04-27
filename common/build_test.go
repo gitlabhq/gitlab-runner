@@ -1962,6 +1962,32 @@ func TestDefaultVariables(t *testing.T) {
 			key:           "CI_PROJECT_DIR",
 			expectedValue: "/builds/go/src/gitlab.com/gitlab-org/gitlab-runner",
 		},
+
+		"CI_BUILD_NETWORK_NAME added when FF_NETWORK_PER_BUILD is enabled": {
+			jobVariables: spec.Variables{
+				{Key: featureflags.NetworkPerBuild, Value: "true"},
+			},
+			rootDir:       "/builds",
+			key:           "CI_BUILD_NETWORK_NAME",
+			expectedValue: "runner-1234-0-0-0",
+		},
+		"CI_BUILD_NETWORK_NAME not added when FF_NETWORK_PER_BUILD is disabled": {
+			jobVariables: spec.Variables{
+				{Key: featureflags.NetworkPerBuild, Value: "false"},
+			},
+			rootDir:       "/builds",
+			key:           "CI_BUILD_NETWORK_NAME",
+			expectedValue: "",
+		},
+		"CI_BUILD_NETWORK_NAME cannot be overridden by job variables": {
+			jobVariables: spec.Variables{
+				{Key: featureflags.NetworkPerBuild, Value: "true"},
+				{Key: "CI_BUILD_NETWORK_NAME", Value: "user-override"},
+			},
+			rootDir:       "/builds",
+			key:           "CI_BUILD_NETWORK_NAME",
+			expectedValue: "runner-1234-0-0-0",
+		},
 	}
 
 	for name, test := range tests {
