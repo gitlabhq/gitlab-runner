@@ -560,7 +560,7 @@ description: "Low priority class for runner pause pods"
 
 ### Required RBAC permissions
 
-To use pause pods, configure additional permissions for the runner service account to manage 
+To use pause pods, configure additional permissions for the runner service account to manage
 `Deployments` and `PriorityClasses`:
 
 ```yaml

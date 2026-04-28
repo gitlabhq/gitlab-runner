@@ -1254,7 +1254,7 @@ but only takes effect if specifically the Docker pull fails initially.
 ## Use Windows containers
 
 To use Windows containers with the Docker executor, note the following
-information about limitations, supported Windows versions, 
+information about limitations, supported Windows versions,
 configuring a Windows Docker executor, and Windows helper images.
 
 ### Supported Windows versions
@@ -1266,8 +1266,8 @@ follows our [support lifecycle for Windows](../install/support-policy.md#windows
 - Windows Server 2022 LTSC (21H2)
 - Windows Server 2019 LTSC (1809)
 
-Windows containers support backward compatibility based on the host OS and isolation mode. 
-Newer hosts can run older container images. For compatibility details, see 
+Windows containers support backward compatibility based on the host OS and isolation mode.
+Newer hosts can run older container images. For compatibility details, see
 [Microsoft Windows container version compatibility guidelines](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility).
 
 You can use various Windows base images, including `Server Core`, `Nano Server`, `Server`, and `Windows`. For example, use the [`Windows Server Core`](https://hub.docker.com/r/microsoft/windows-servercore) images with their compatible OS versions:

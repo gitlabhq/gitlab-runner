@@ -24,7 +24,7 @@ We must build the helper image for it to be used for the user job.
 ### Create a base image for infrastructure to use
 
 To add support for a new Windows version, you might need to create a new helper image.
-Windows versions can run older helper images (backward compatibility), 
+Windows versions can run older helper images (backward compatibility),
 or might require a newly built helper image. For compatibility details, see
 [Windows container version compatibility](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility)
 
@@ -33,13 +33,13 @@ To support a new host OS environment or helper image, update the
 The [autoscaler](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/autoscaler) uses the
 base image to build the GitLab Runner helper image.
 
-For example, when adding support for Windows Server 2025, 
+For example, when adding support for Windows Server 2025,
 backward compatibility allowed reuse of the existing 2022 helper images.
-However, when adding support to Windows Server 2022, 
+However, when adding support to Windows Server 2022,
 the Windows Server 2019 helper image was not compatible with process isolation,
 so a new image was required.
 
-Some GCP base images require Docker installation during the build process. To update the CI/CD 
+Some GCP base images require Docker installation during the build process. To update the CI/CD
 environment for a new image, update the following files:
 
 - `.gitlab-ci.yml`

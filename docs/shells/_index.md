@@ -86,7 +86,7 @@ Executors that load shell profiles:
 
 ## PowerShell
 
-PowerShell Core is the default shell for new runner registration on Windows. However, this 
+PowerShell Core is the default shell for new runner registration on Windows. However, this
 registration default applies only when you explicitly set a `shell` value in `config.toml`.
 When no `shell` is configured:
 
