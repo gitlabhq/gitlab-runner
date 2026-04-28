@@ -1256,7 +1256,7 @@ func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) erro
 	}
 }
 
-// getTerminalTimeout checks if the the job timeout comes before the
+// getTerminalTimeout checks if the job timeout comes before the
 // configured terminal timeout.
 func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) time.Duration {
 	expiryTime, _ := ctx.Deadline()

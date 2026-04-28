@@ -24,7 +24,7 @@ type PushOpts struct {
 	Branch      string   // Branch is the release branch ("stable" or "unstable").
 	PkgType     string   // PkgType is the package type ("deb" or "rpm").
 	Distro      string   // Distro is the distribution/release filter prefix (e.g., "ubuntu/focal", "fedora/43").
-	Archs       []string // Archs is the list of architectures. Only relevant for for RPM packages.
+	Archs       []string // Archs is the list of architectures. Only relevant for RPM packages.
 	Concurrency int      // Concurrency is the maximum number of concurrent uploads.
 	DryRun      bool     // DryRun enables dry-run mode (no actual commands executed).
 }

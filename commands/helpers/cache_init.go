@@ -11,7 +11,7 @@ import (
 
 // CacheInitCommand will take a single directory/file path and initialize it
 // correctly for it to be used for cache. This command tries to support spaces
-// in directories name by using the the flags to specify which entries you want
+// in directories name by using the flags to specify which entries you want
 // to initialize.
 type CacheInitCommand struct{}
 
