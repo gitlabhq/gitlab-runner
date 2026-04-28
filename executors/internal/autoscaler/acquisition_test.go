@@ -577,3 +577,32 @@ func TestAcquisitionRef_Prepare_SlotCgroupEnvironmentVariable(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildErrorFromContextCause(t *testing.T) {
+	tests := map[string]struct {
+		cause          error
+		expectedReason spec.JobFailureReason
+	}{
+		"context.Canceled maps to JobCanceled": {
+			cause:          context.Canceled,
+			expectedReason: common.JobCanceled,
+		},
+		"context.DeadlineExceeded maps to JobExecutionTimeout": {
+			cause:          context.DeadlineExceeded,
+			expectedReason: common.JobExecutionTimeout,
+		},
+		"other error maps to RunnerSystemFailure": {
+			cause:          fmt.Errorf("autoscaler internal error"),
+			expectedReason: common.RunnerSystemFailure,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			berr := buildErrorFromContextCause(tc.cause)
+			require.NotNil(t, berr)
+			assert.Equal(t, tc.expectedReason, berr.FailureReason)
+			assert.Equal(t, tc.cause, berr.Inner)
+		})
+	}
+}
