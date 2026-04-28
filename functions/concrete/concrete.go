@@ -25,6 +25,19 @@
 //     handled more precisely than rm -rf of user-declared paths (e.g.
 //     extract to staging then promote, or have the extractor track and
 //     remove only what it wrote).
+//
+//   - File-based variable cleanup:
+//     The abstract shell's writeCleanupScript (shells/abstract.go) walks
+//     info.Build.GetAllVariables() and removes each variable.File entry
+//     from the runner-side tmp dir. Concrete has no equivalent and does
+//     not need one: file-based variables are materialised and torn down
+//     by step-runner itself. We forward File:bool through the gRPC
+//     RunRequest (see steps/steps.go addVariables); step-runner allocates
+//     a per-job TmpDir (pkg/api/internal/jobs/jobs.go), writes each file
+//     variable into it via variables.Prepare/Variable.Write, and removes
+//     the whole TmpDir on Run() completion via fileutil.RetryRemoveAll.
+//     Common build.go's concrete branch correctly skips
+//     removeFileBasedVariables for the same reason.
 package concrete
 
 import (
