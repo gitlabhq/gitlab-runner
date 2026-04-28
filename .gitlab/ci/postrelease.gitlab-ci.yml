@@ -29,6 +29,13 @@
 trigger UBI images build:
   extends:
     - .trigger-downstream-pipeline-ref
+  needs:
+    - job: "development S3"
+      optional: true
+    - job: "bleeding edge S3"
+      optional: true
+    - job: "stable S3"
+      optional: true
   variables:
     BUILD_RELEASE: $CI_COMMIT_REF_NAME
     BUILD_RELEASE_SHA: $CI_COMMIT_SHORT_SHA
