@@ -93,7 +93,7 @@ func (ref *acquisitionRef) Prepare(
 
 	info, err := ref.acq.InstanceConnectInfo(dialCtx)
 	if cause := context.Cause(dialCtx); cause != nil {
-		return nil, &common.BuildError{Inner: cause, FailureReason: common.RunnerSystemFailure}
+		return nil, buildErrorFromContextCause(cause)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("getting instance connect info: %w", err)
@@ -127,7 +127,7 @@ func (ref *acquisitionRef) Prepare(
 	logger.Println(fmt.Sprintf("Dialing instance %s...", strings.Join(ident, ", ")))
 	fleetingDialer, err := ref.dialAcquisitionInstance(dialCtx, info, fleetingDialOpts)
 	if cause := context.Cause(dialCtx); cause != nil {
-		return nil, &common.BuildError{Inner: cause, FailureReason: common.RunnerSystemFailure}
+		return nil, buildErrorFromContextCause(cause)
 	}
 	if err != nil {
 		return nil, err
@@ -284,10 +284,25 @@ func (ref *acquisitionRef) createTunneledDialer(
 
 	client, err := ref.dialTunnel(ctx, info, options)
 	if cause := context.Cause(ctx); cause != nil {
-		return nil, &common.BuildError{Inner: cause, FailureReason: common.RunnerSystemFailure}
+		return nil, buildErrorFromContextCause(cause)
 	}
 
 	return client, err
+}
+
+// buildErrorFromContextCause maps a context cancellation cause to the
+// appropriate BuildError failure reason. User-initiated cancels and job
+// timeouts are distinguished from autoscaler-internal failures so that
+// Rails receives an accurate failure attribution.
+func buildErrorFromContextCause(cause error) *common.BuildError {
+	switch {
+	case errors.Is(cause, context.Canceled):
+		return &common.BuildError{Inner: cause, FailureReason: common.JobCanceled}
+	case errors.Is(cause, context.DeadlineExceeded):
+		return &common.BuildError{Inner: cause, FailureReason: common.JobExecutionTimeout}
+	default:
+		return &common.BuildError{Inner: cause, FailureReason: common.RunnerSystemFailure}
+	}
 }
 
 type client struct {
