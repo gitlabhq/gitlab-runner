@@ -45,7 +45,7 @@ require (
 	github.com/in-toto/attestation v1.1.2
 	github.com/in-toto/in-toto-golang v0.10.0
 	github.com/invopop/jsonschema v0.13.0
-	github.com/jedib0t/go-pretty/v6 v6.7.8
+	github.com/jedib0t/go-pretty/v6 v6.7.9
 	github.com/johannesboyne/gofakes3 v0.0.0-20260208201424-4c385a1f6a73
 	github.com/joho/godotenv v1.5.1
 	github.com/jpillora/backoff v1.0.0
