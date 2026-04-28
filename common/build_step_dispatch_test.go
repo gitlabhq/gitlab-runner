@@ -196,25 +196,23 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
   "shell": "bash",
   "steps": [
     {
-      "on_success": true,
-      "script": ["echo 'pre build sources'"],
-      "step": "pre_build_script"
-    },
-    {
       "on_failure": true,
       "on_success": true,
-      "script": ["echo 'script'"],
+      "script": [
+        "echo 'pre build sources'",
+        "echo 'script'",
+        "echo 'post build sources'"
+      ],
       "step": "script"
     },
     {
       "on_success": true,
-      "script": ["echo 'release'"],
+      "script": [
+        "echo 'pre build sources'",
+        "echo 'release'",
+        "echo 'post build sources'"
+      ],
       "step": "release"
-    },
-    {
-      "on_success": true,
-      "script": ["echo 'post build sources'"],
-      "step": "post_build_script"
     },
     {
       "allow_failure": true,

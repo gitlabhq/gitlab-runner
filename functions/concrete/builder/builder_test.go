@@ -234,7 +234,7 @@ func TestBuild_GetSources(t *testing.T) {
 }
 
 func TestBuild_Steps(t *testing.T) {
-	t.Run("ordering with pre/post build", func(t *testing.T) {
+	t.Run("pre/post build script wraps each user step in same shell", func(t *testing.T) {
 		job := baseJob()
 		job.Steps = []spec.Step{
 			{Name: "build", Script: []string{"make build"}, When: spec.StepWhenOnSuccess},
@@ -246,16 +246,40 @@ func TestBuild_Steps(t *testing.T) {
 			WithPostBuildScript([]string{"echo post-build"}),
 		)
 
-		require.Len(t, config.Steps, 4)
-		assert.Equal(t, "pre_build_script", config.Steps[0].Step)
-		assert.Equal(t, []string{"echo pre-build"}, config.Steps[0].Script)
-		assert.Equal(t, "build", config.Steps[1].Step)
+		// pre/post build are folded into each user step rather than emitted as
+		// their own steps; this matches abstract shell semantics where they
+		// share a shell process with the user script.
+		require.Len(t, config.Steps, 2)
+
+		assert.Equal(t, "build", config.Steps[0].Step)
+		assert.True(t, config.Steps[0].OnSuccess)
+		assert.False(t, config.Steps[0].OnFailure)
+		assert.Equal(t,
+			[]string{"echo pre-build", "make build", "echo post-build"},
+			config.Steps[0].Script)
+
+		assert.Equal(t, "test", config.Steps[1].Step)
 		assert.True(t, config.Steps[1].OnSuccess)
-		assert.False(t, config.Steps[1].OnFailure)
-		assert.Equal(t, "test", config.Steps[2].Step)
-		assert.True(t, config.Steps[2].OnSuccess)
-		assert.True(t, config.Steps[2].OnFailure)
-		assert.Equal(t, "post_build_script", config.Steps[3].Step)
+		assert.True(t, config.Steps[1].OnFailure)
+		assert.Equal(t,
+			[]string{"echo pre-build", "make test", "echo post-build"},
+			config.Steps[1].Script)
+	})
+
+	t.Run("after_script is not wrapped with pre/post build", func(t *testing.T) {
+		job := baseJob()
+		job.Steps = []spec.Step{
+			{Name: spec.StepNameAfterScript, Script: []string{"echo cleanup"}, When: spec.StepWhenAlways},
+		}
+
+		config := buildConfig(t, job, newTestVars(t, nil),
+			WithPreBuildScript([]string{"echo pre-build"}),
+			WithPostBuildScript([]string{"echo post-build"}),
+		)
+
+		require.Len(t, config.Steps, 1)
+		assert.Equal(t, string(spec.StepNameAfterScript), config.Steps[0].Step)
+		assert.Equal(t, []string{"echo cleanup"}, config.Steps[0].Script)
 	})
 
 	t.Run("after_script moved to end", func(t *testing.T) {

@@ -768,6 +768,42 @@ func TestExecuteSteps_CIJobStatus(t *testing.T) {
 	}
 }
 
+// TestStep_LinesShareShellState verifies the contract the builder relies on
+// when it folds pre_build_script and post_build_script into each user step:
+// every line of a single stages.Step.Script runs inside the same shell
+// process, so shell-only state (exports, cd, set options, function
+// definitions) defined earlier in the script is visible later. This matches
+// the abstract shell's writeUserScript behaviour, where pre_build_script,
+// the user script and post_build_script all run as one shell invocation.
+func TestStep_LinesShareShellState(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("bash export semantics; skip on windows")
+	}
+
+	r := testRunner(t, &Config{
+		Steps: []stages.Step{
+			{
+				Step: "script",
+				Script: []string{
+					"export PRE_BUILD_VAR=hello",     // pre_build_script line
+					`echo "got:[${PRE_BUILD_VAR}]"`,  // user script line
+					`echo "post:[${PRE_BUILD_VAR}]"`, // post_build_script line
+				},
+				OnSuccess: true,
+			},
+		},
+	})
+
+	err := r.executeSteps(t.Context())
+	require.NoError(t, err)
+
+	out := runnerStdout(r)
+	assert.Contains(t, out, "got:[hello]",
+		"pre_build_script exports must be visible to the user script lines that follow")
+	assert.Contains(t, out, "post:[hello]",
+		"pre_build_script exports must be visible to post_build_script lines that follow")
+}
+
 func TestExecuteSteps_CancelSetsCIJobStatusCanceled(t *testing.T) {
 	r := testRunner(t, &Config{
 		Steps: []stages.Step{

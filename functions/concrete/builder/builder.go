@@ -329,12 +329,6 @@ func (b *builder) buildSteps() []stages.Step {
 		return step
 	}
 
-	steps = append(steps, configure(stages.Step{
-		Step:      "pre_build_script",
-		Script:    b.opts.preBuildScript,
-		OnSuccess: true,
-	}))
-
 	for _, step := range b.meta.Steps {
 		script := step.Script
 
@@ -362,14 +356,14 @@ func (b *builder) buildSteps() []stages.Step {
 			continue
 		}
 
+		// Match abstract shell semantics: pre_build_script and post_build_script
+		// run inside the user step's shell, so shell-only state (exports, set
+		// options, function definitions, cd) carries over to the user script.
+		s.Script = slices.Concat(b.opts.preBuildScript, s.Script, b.opts.postBuildScript)
+
 		steps = append(steps, s)
 	}
 
-	steps = append(steps, configure(stages.Step{
-		Step:      "post_build_script",
-		Script:    b.opts.postBuildScript,
-		OnSuccess: true,
-	}))
 	steps = append(steps, afterScript...)
 
 	return steps
