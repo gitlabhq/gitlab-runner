@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -420,6 +421,93 @@ func TestSection_OutputFormat(t *testing.T) {
 	assert.Contains(t, out, "section_start:")
 	assert.Contains(t, out, "test_section")
 	assert.Contains(t, out, "section_end:")
+}
+
+// TestSectionNames_MatchAbstractShell verifies the runner emits section
+// names matching the abstract shell's BuildStage values (see
+// common/build.go's BuildStage constants and StepToBuildStage), so UI and
+// log tooling that keys off section names continues to work after the
+// script-to-step migration. Each section should appear exactly once,
+// regardless of how many cache/artifact items the loop processes.
+func TestSectionNames_MatchAbstractShell(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("script execution; skip on windows")
+	}
+
+	r := testRunner(t, &Config{
+		GetSources: stages.GetSources{GitStrategy: "none", MaxAttempts: 1},
+		CacheExtract: []stages.CacheExtract{
+			{Sources: []stages.CacheSource{{Key: "k1", Name: "k1"}}},
+			{Sources: []stages.CacheSource{{Key: "k2", Name: "k2"}}},
+		},
+		ArtifactExtract: []stages.ArtifactDownload{
+			{ArtifactName: "a1", Filename: "a1.zip", DownloadAttempts: 1},
+		},
+		Steps: []stages.Step{
+			{Step: "script", Script: []string{"true"}, OnSuccess: true},
+			{Step: afterScriptStepName, Script: []string{"true"}, OnSuccess: true, OnFailure: true},
+		},
+		CacheArchive: []stages.CacheArchive{
+			{Key: "k1", Paths: []string{"x"}, OnSuccess: true},
+		},
+		ArtifactsArchive: []stages.ArtifactUpload{
+			{ArtifactName: "a1", Paths: []string{"x"}, OnSuccess: true},
+		},
+	})
+
+	_ = r.Run(t.Context())
+	out := runnerStdout(r)
+
+	// Each section_start/end line is "section_<start|end>:<unix>:<name>\r...";
+	// expect exactly two occurrences of ":<name>\r" (start + end), regardless
+	// of how many cache/artifact items the loop processed.
+	wantOnce := []string{
+		"get_sources",
+		"restore_cache",
+		"download_artifacts",
+		"step_script",
+		"after_script",
+		"archive_cache",
+		"upload_artifacts_on_success",
+	}
+	for _, name := range wantOnce {
+		assert.Equal(t, 2, strings.Count(out, ":"+name+"\r"),
+			"section %q should appear exactly once (start+end markers)", name)
+	}
+
+	mustNotAppear := []string{
+		"restore_cache_0", "download_artifacts_0",
+		"step_0_script", "after_script_0",
+		"archive_cache_0", "upload_artifacts_0",
+		"archive_cache_on_failure", "upload_artifacts_on_failure",
+	}
+	for _, name := range mustNotAppear {
+		assert.NotContains(t, out, ":"+name+"\r",
+			"legacy or wrong-state section %q should not be emitted", name)
+	}
+}
+
+func TestFinalize_FailurePathSectionNames(t *testing.T) {
+	r := testRunner(t, &Config{
+		CacheArchive: []stages.CacheArchive{
+			{Key: "k1", Paths: []string{"x"}, OnFailure: true},
+		},
+		ArtifactsArchive: []stages.ArtifactUpload{
+			{ArtifactName: "a1", Paths: []string{"x"}, OnFailure: true},
+		},
+	})
+	r.env.BaseURL = "http://test"
+	r.env.SetStatus(env.Failed)
+
+	_, _ = r.finalize(t.Context())
+	out := runnerStdout(r)
+
+	assert.Contains(t, out, ":archive_cache_on_failure\r")
+	assert.Contains(t, out, ":upload_artifacts_on_failure\r")
+	assert.NotContains(t, out, ":archive_cache\r",
+		"must not emit success-path cache section name on failure path")
+	assert.NotContains(t, out, ":upload_artifacts_on_success\r",
+		"must not emit success-path upload section name on failure path")
 }
 
 func TestSection_PropagatesError(t *testing.T) {
