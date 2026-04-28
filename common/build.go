@@ -247,6 +247,10 @@ func (b *Build) DispatchedJobExecutionMode() JobExecutionMode {
 	return JobExecutionModeTraditional
 }
 
+func (b *Build) recordDispatchedExecutionMode() {
+	b.OnJobExecutionModeDispatchedFn.Call(b.DispatchedJobExecutionMode(), b.Runner.Executor)
+}
+
 func (b *Build) CurrentState() BuildRuntimeState {
 	b.statusLock.Lock()
 	defer b.statusLock.Unlock()
@@ -759,6 +763,13 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 			return err
 		}
 
+		// Concrete dispatches the whole job through step-runner; record it
+		// as the "steps" execution mode so jobs flowing through this path
+		// show up in the gitlab_runner_job_execution_mode_total counter
+		// and in trace.Fail data sent to GitLab.
+		b.markStepDispatchedInScript()
+		defer b.recordDispatchedExecutionMode()
+
 		// Route user cancellation through step-runner's Cancel API so the
 		// concrete step's post-cancel phases (e.g. cache/artifact upload)
 		// can run. This intentionally replaces the build-ctx cancel
@@ -781,9 +792,7 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	// execute user provided scripts
 	//nolint:nestif
 	if err == nil {
-		defer func() {
-			b.OnJobExecutionModeDispatchedFn.Call(b.DispatchedJobExecutionMode(), b.Runner.Executor)
-		}()
+		defer b.recordDispatchedExecutionMode()
 
 		if b.UseNativeSteps() && len(b.Job.Run) > 0 {
 			if !hasStepRunnerConnector {
