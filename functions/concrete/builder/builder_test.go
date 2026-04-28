@@ -1067,32 +1067,6 @@ func TestBuild_FeatureFlags(t *testing.T) {
 		}
 	})
 
-	t.Run("CleanUpFailedCacheExtract", func(t *testing.T) {
-		job := baseJob()
-		job.Cache = []spec.Cache{
-			{Key: "cache", Paths: []string{"build/"}, Policy: spec.CachePolicyPull},
-		}
-
-		tests := map[string]struct {
-			enabled  bool
-			expected bool
-		}{
-			"off": {enabled: false, expected: false},
-			"on":  {enabled: true, expected: true},
-		}
-
-		for name, tc := range tests {
-			t.Run(name, func(t *testing.T) {
-				vars := newTestVars(t, nil, expandValues(map[string]string{"cache": "cache"}))
-				ff := func(f string) bool { return f == featureflags.CleanUpFailedCacheExtract && tc.enabled }
-				config := buildConfig(t, job, vars, WithFeatureFlagProvider(ff))
-
-				require.Len(t, config.CacheExtract, 1)
-				assert.Equal(t, tc.expected, config.CacheExtract[0].CleanupFailedExtract)
-			})
-		}
-	})
-
 	t.Run("EnableBashExitCodeCheck", func(t *testing.T) {
 		job := baseJob()
 		job.Steps = []spec.Step{

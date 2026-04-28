@@ -183,13 +183,12 @@ func (b *builder) buildCacheExtract() ([]stages.CacheExtract, error) {
 		}
 
 		extracts = append(extracts, stages.CacheExtract{
-			Sources:              sources,
-			Warnings:             warnings,
-			Timeout:              variables.DefaultIntClamp(b.variables, "CACHE_REQUEST_TIMEOUT", 10, 1, 120),
-			Concurrency:          variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
-			Paths:                cache.Paths,
-			CleanupFailedExtract: b.isFeatureFlagOn(featureflags.CleanUpFailedCacheExtract),
-			MaxAttempts:          variables.DefaultIntClamp(b.variables, "RESTORE_CACHE_ATTEMPTS", 1, 1, 10),
+			Sources:     sources,
+			Warnings:    warnings,
+			Timeout:     variables.DefaultIntClamp(b.variables, "CACHE_REQUEST_TIMEOUT", 10, 1, 120),
+			Concurrency: variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
+			Paths:       cache.Paths,
+			MaxAttempts: variables.DefaultIntClamp(b.variables, "RESTORE_CACHE_ATTEMPTS", 1, 1, 10),
 		})
 	}
 
