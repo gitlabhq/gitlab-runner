@@ -36,7 +36,7 @@ To install and run GitLab Runner on Windows you need:
    using the Built-in System Account (recommended) or using a user account.
 
    > [!note]
-   > Windows services do not provide interactive desktop sessions. To run GUI or desktop automation 
+   > Windows services do not provide interactive desktop sessions. To run GUI or desktop automation
    > tests, see [GUI tests and interactive desktop sessions](#gui-tests-and-interactive-desktop-sessions).
 
    **Run service using Built-in System Account** (under the example directory created in step 1, `C:\GitLab-Runner`)
