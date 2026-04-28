@@ -304,7 +304,10 @@ func (r *Runner) finalize(ctx context.Context) (cacheErr, artifactErr error) {
 		})
 	}
 
-	if len(r.config.ArtifactsArchive) > 0 {
+	// Mirror abstract's writeUploadArtifacts ErrSkipBuildStage guard: with
+	// no server URL there is nowhere to upload to, so skip the section
+	// entirely rather than invoking artifacts-uploader with --url "".
+	if len(r.config.ArtifactsArchive) > 0 && r.env.BaseURL != "" {
 		_ = r.section(ctx, uploadSection, func(ctx context.Context, e *env.Env) error {
 			for _, artifact := range r.config.ArtifactsArchive {
 				if err := artifact.Run(ctx, e); err != nil {

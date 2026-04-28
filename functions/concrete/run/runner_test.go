@@ -454,6 +454,7 @@ func TestSectionNames_MatchAbstractShell(t *testing.T) {
 			{ArtifactName: "a1", Paths: []string{"x"}, OnSuccess: true},
 		},
 	})
+	r.env.BaseURL = "https://gitlab.example.com"
 
 	_ = r.Run(t.Context())
 	out := runnerStdout(r)
@@ -508,6 +509,32 @@ func TestFinalize_FailurePathSectionNames(t *testing.T) {
 		"must not emit success-path cache section name on failure path")
 	assert.NotContains(t, out, ":upload_artifacts_on_success\r",
 		"must not emit success-path upload section name on failure path")
+}
+
+// TestFinalize_EmptyBaseURLSkipsArtifactUpload mirrors abstract.go's
+// writeUploadArtifacts ErrSkipBuildStage guard: when there is no server
+// URL to upload to, the upload section must not be emitted at all rather
+// than invoking artifacts-uploader with --url "". The cache-archive
+// section is independent of BaseURL and should still emit.
+func TestFinalize_EmptyBaseURLSkipsArtifactUpload(t *testing.T) {
+	r := testRunner(t, &Config{
+		CacheArchive: []stages.CacheArchive{
+			{Key: "k1", Paths: []string{"x"}, OnSuccess: true},
+		},
+		ArtifactsArchive: []stages.ArtifactUpload{
+			{ArtifactName: "a1", Paths: []string{"x"}, OnSuccess: true},
+		},
+	})
+	// BaseURL deliberately left empty.
+
+	_, _ = r.finalize(t.Context())
+	out := runnerStdout(r)
+
+	assert.NotContains(t, out, ":upload_artifacts_on_success\r",
+		"upload section must be skipped when BaseURL is empty")
+	assert.NotContains(t, out, ":upload_artifacts_on_failure\r")
+	assert.Contains(t, out, ":archive_cache\r",
+		"cache archive should still emit independent of BaseURL")
 }
 
 func TestSection_PropagatesError(t *testing.T) {
