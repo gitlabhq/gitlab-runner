@@ -41,6 +41,7 @@ unit test:
     - make splitic
     - >
       .tmp/bin/splitic test -race \
+        -flaky .flaky-tests.txt \
         -junit-report .splitic/junit_report.xml \
         -cover-report .splitic/cover_0.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
         -tags !integration -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env ./... \
@@ -70,6 +71,7 @@ integration test:
     - make splitic
     - >
       .tmp/bin/splitic test \
+        -flaky .flaky-tests.txt \
         -junit-report .splitic/junit_${CI_NODE_INDEX}.xml \
         -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
         -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
@@ -89,6 +91,7 @@ integration test (docker, steps):
     - make splitic
     - >
       .tmp/bin/splitic test \
+        -flaky .flaky-tests.txt \
         -junit-report .splitic/junit_${CI_NODE_INDEX}_docker_steps.xml \
         -cover-report .splitic/cover_${CI_NODE_INDEX}_docker_steps.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
         -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
@@ -110,6 +113,7 @@ integration test (docker, concrete, steps):
     - make splitic
     - >
       .tmp/bin/splitic test \
+        -flaky .flaky-tests.txt \
         -junit-report .splitic/junit_${CI_NODE_INDEX}_docker_concrete_steps.xml \
         -cover-report .splitic/cover_${CI_NODE_INDEX}_docker_concrete_steps.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
         -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
@@ -130,6 +134,7 @@ integration test with race:
     - make splitic
     - >
       .tmp/bin/splitic test \
+        -flaky .flaky-tests.txt \
         -race \
         -junit-report .splitic/junit_${CI_NODE_INDEX}.xml \
         -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
@@ -204,7 +209,7 @@ fuzz variable mask:
     - "clone test repo"
   #- 'prepare done'
   script:
-    - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_windows_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 ./... -- -timeout 30m
+    - splitic test -flaky .flaky-tests.txt -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_windows_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 ./... -- -timeout 30m
 
 .windows integration test:
   extends:
@@ -226,7 +231,7 @@ fuzz variable mask:
     - docker network create -d "nat" test-network
     - docker network rm test-network
     - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest
-    - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_windows_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 -tags integration ./... -- -timeout 55m
+    - splitic test -flaky .flaky-tests.txt -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_windows_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 -tags integration ./... -- -timeout 55m
 
 windows 1809 compile tests:
   extends:
