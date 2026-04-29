@@ -22,6 +22,8 @@ helper images:
           - alpine alpine-pwsh ubuntu ubuntu-pwsh ubi-fips concrete
           - windows-nanoserver-ltsc2019 windows-servercore-ltsc2019
           - windows-nanoserver-ltsc2022 windows-servercore-ltsc2022
+          - windows-servercore-ltsc2025
+          - windows-servercore-ltsc2025-arm64
 
 prebuilt helper images:
   tags:
@@ -59,6 +61,24 @@ prebuilt helper images windows 2022:
     - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
     - "helper images: [windows-nanoserver-ltsc2022 windows-servercore-ltsc2022]"
+
+prebuilt helper images windows 2025:
+  tags:
+    - !reference [.instance-2xlarge]
+  extends:
+    - prebuilt helper images
+    - .rules:merge_request_pipelines:no_docs:no-community-mr
+  needs:
+    - "helper images: [windows-servercore-ltsc2025]"
+
+prebuilt helper images windows 2025 arm64:
+  tags:
+    - !reference [.instance-2xlarge]
+  extends:
+    - prebuilt helper images
+    - .rules:merge_request_pipelines:no_docs:no-community-mr
+  needs:
+    - "helper images: [windows-servercore-ltsc2025-arm64]"
 
 runner images:
   tags:
