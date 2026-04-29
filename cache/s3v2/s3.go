@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -427,6 +428,24 @@ func newRawS3Client(s3Config *cacheconfig.CacheS3Config) (*aws.Config, *s3.Clien
 	}
 
 	options = append(options, config.WithRegion(bucketLocation))
+
+	// AWS SDK Go v2 service/s3 v1.73.0 changed the defaults for both
+	// RequestChecksumCalculation and ResponseChecksumValidation from
+	// WhenRequired to WhenSupported. ResponseChecksumValidation=WhenSupported
+	// causes the SDK to inject "X-Amz-Checksum-Mode: ENABLED" as a signed
+	// header into every GetObject request. Third-party S3-compatible providers
+	// that don't recognize this header compute a different signature, causing
+	// SignatureDoesNotMatch errors on downloads and on presigned GET URLs.
+	// For custom (non-AWS) endpoints, apply WhenRequired defaults unless the
+	// user has explicitly configured the env vars to override this behavior.
+	if endpoint != "" && endpoint != DEFAULT_AWS_S3_ENDPOINT {
+		if os.Getenv("AWS_RESPONSE_CHECKSUM_VALIDATION") == "" {
+			options = append(options, config.WithResponseChecksumValidation(aws.ResponseChecksumValidationWhenRequired))
+		}
+		if os.Getenv("AWS_REQUEST_CHECKSUM_CALCULATION") == "" {
+			options = append(options, config.WithRequestChecksumCalculation(aws.RequestChecksumCalculationWhenRequired))
+		}
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

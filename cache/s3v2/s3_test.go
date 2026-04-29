@@ -1147,6 +1147,79 @@ func TestFetchCredentialsForRole_CacheDisabled(t *testing.T) {
 	assert.False(t, cached, "disabled cache must not be populated")
 }
 
+func TestChecksumDefaults(t *testing.T) {
+	tests := map[string]struct {
+		serverAddress string
+		envResponse   string
+		envRequest    string
+		wantResponse  aws.ResponseChecksumValidation
+		wantRequest   aws.RequestChecksumCalculation
+	}{
+		"custom endpoint defaults to WhenRequired": {
+			serverAddress: "minio.example.com:9000",
+			wantResponse:  aws.ResponseChecksumValidationWhenRequired,
+			wantRequest:   aws.RequestChecksumCalculationWhenRequired,
+		},
+		"AWS endpoint uses SDK default WhenSupported": {
+			serverAddress: "",
+			wantResponse:  aws.ResponseChecksumValidationWhenSupported,
+			wantRequest:   aws.RequestChecksumCalculationWhenSupported,
+		},
+		"explicit AWS default endpoint uses SDK default WhenSupported": {
+			serverAddress: "s3.amazonaws.com",
+			wantResponse:  aws.ResponseChecksumValidationWhenSupported,
+			wantRequest:   aws.RequestChecksumCalculationWhenSupported,
+		},
+		"custom endpoint: env var overrides response checksum validation": {
+			serverAddress: "minio.example.com:9000",
+			envResponse:   "when_supported",
+			wantResponse:  aws.ResponseChecksumValidationWhenSupported,
+			wantRequest:   aws.RequestChecksumCalculationWhenRequired,
+		},
+		"custom endpoint: env var overrides request checksum calculation": {
+			serverAddress: "minio.example.com:9000",
+			envRequest:    "when_supported",
+			wantResponse:  aws.ResponseChecksumValidationWhenRequired,
+			wantRequest:   aws.RequestChecksumCalculationWhenSupported,
+		},
+		"custom endpoint: both env vars override defaults": {
+			serverAddress: "minio.example.com:9000",
+			envResponse:   "when_supported",
+			envRequest:    "when_supported",
+			wantResponse:  aws.ResponseChecksumValidationWhenSupported,
+			wantRequest:   aws.RequestChecksumCalculationWhenSupported,
+		},
+		"AWS endpoint: env var can still set WhenRequired": {
+			serverAddress: "",
+			envResponse:   "when_required",
+			envRequest:    "when_required",
+			wantResponse:  aws.ResponseChecksumValidationWhenRequired,
+			wantRequest:   aws.RequestChecksumCalculationWhenRequired,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			// Neutralize any ambient env vars; set the test-specific values.
+			t.Setenv("AWS_RESPONSE_CHECKSUM_VALIDATION", tt.envResponse)
+			t.Setenv("AWS_REQUEST_CHECKSUM_CALCULATION", tt.envRequest)
+
+			s3Config := &cacheconfig.CacheS3Config{
+				ServerAddress:  tt.serverAddress,
+				AccessKey:      "test-access-key",
+				SecretKey:      "test-secret-key",
+				BucketName:     "test-bucket",
+				BucketLocation: "us-east-1",
+			}
+
+			cfg, _, err := newRawS3Client(s3Config)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantResponse, cfg.ResponseChecksumValidation)
+			assert.Equal(t, tt.wantRequest, cfg.RequestChecksumCalculation)
+		})
+	}
+}
+
 func TestFetchCredentialsForRole_FailureMetric(t *testing.T) {
 	FlushCredentialCache()
 	t.Cleanup(FlushCredentialCache)
