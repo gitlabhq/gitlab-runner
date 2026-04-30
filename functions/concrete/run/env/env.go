@@ -55,6 +55,20 @@ type Env struct {
 	bundledCACerts    string
 }
 
+// ExpandValue expands $VAR / ${VAR} against Env + GitLabEnv overlay.
+// Used for fields the helper subprocess does not expand itself.
+func (e *Env) ExpandValue(s string) string {
+	if s == "" {
+		return s
+	}
+	return os.Expand(s, func(key string) string {
+		if v, ok := e.GitLabEnv[key]; ok {
+			return v
+		}
+		return e.Env[key]
+	})
+}
+
 func (e *Env) IsSuccessful() bool {
 	switch e.status {
 	case "", Running, Success:
