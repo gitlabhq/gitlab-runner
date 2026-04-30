@@ -169,7 +169,10 @@ func (b *builder) buildCacheExtract() ([]stages.CacheExtract, error) {
 			continue
 		}
 
-		switch cache.Policy {
+		// Expand $VAR before classifying — without this, cache.policy: $MY_POLICY
+		// would fall into the default arm and the cache stage would be skipped.
+		policy := spec.CachePolicy(b.variables.ExpandValue(string(cache.Policy)))
+		switch policy {
 		case spec.CachePolicyUndefined, spec.CachePolicyPullPush, spec.CachePolicyPull:
 		default:
 			continue
@@ -260,7 +263,8 @@ func (b *builder) buildCacheArchive() ([]stages.CacheArchive, error) {
 			continue
 		}
 
-		switch cache.Policy {
+		policy := spec.CachePolicy(b.variables.ExpandValue(string(cache.Policy)))
+		switch policy {
 		case spec.CachePolicyUndefined, spec.CachePolicyPullPush, spec.CachePolicyPush:
 		default:
 			continue

@@ -47,7 +47,12 @@ func newTestVars(t *testing.T, overrides map[string]string, setup ...func(*varia
 	}
 
 	m.On("Get", mock.Anything).Maybe().Return("")
-	m.On("ExpandValue", mock.Anything).Maybe().Return("")
+	// ExpandValue defaults to identity for any unmocked input — matches
+	// real-world behaviour where strings with no $VAR references pass
+	// through unchanged. Without this, builder code that defensively
+	// expands every string field (e.g. artifact.name, expire_in, paths)
+	// would see empty values for any literal that wasn't pre-mocked.
+	m.On("ExpandValue", mock.Anything).Maybe().Return(func(s string) string { return s })
 
 	return m
 }
