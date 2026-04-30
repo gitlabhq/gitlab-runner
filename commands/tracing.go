@@ -48,13 +48,10 @@ func tracerContext(ctx context.Context, log *logrus.Entry, tracingFeature *spec.
 		log.WithError(err).Warn("Failed to parse trace ID")
 		return ctx
 	}
-	var spanID oteltrace.SpanID
-	if tracingFeature.SpanParentID != "" {
-		spanID, err = oteltrace.SpanIDFromHex(tracingFeature.SpanParentID)
-		if err != nil {
-			log.WithError(err).Warn("Failed to parse span ID")
-			// Continue anyway
-		}
+	spanID, err := oteltrace.SpanIDFromHex(tracingFeature.SpanParentID)
+	if err != nil {
+		log.WithError(err).Warn("Failed to parse span ID")
+		return ctx
 	}
 	return oteltrace.ContextWithSpanContext(ctx, oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
 		TraceID:    traceID,

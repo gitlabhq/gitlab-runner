@@ -29,18 +29,6 @@ func TestTracerContext(t *testing.T) {
 		assert.Equal(t, baseCtx, ctx)
 	})
 
-	t.Run("valid trace ID sets span context", func(t *testing.T) {
-		traceID := "0000000000000000000000000000abcd"
-		ctx := tracerContext(baseCtx, log, &spec.Tracing{
-			TraceID: traceID,
-		})
-		sc := oteltrace.SpanFromContext(ctx).SpanContext()
-		assert.Equal(t, traceID, sc.TraceID().String())
-		assert.False(t, sc.SpanID().IsValid())
-		assert.True(t, sc.IsSampled())
-		assert.True(t, sc.IsRemote())
-	})
-
 	t.Run("valid trace ID and span parent ID sets both", func(t *testing.T) {
 		traceID := "0000000000000000000000000000abcd"
 		spanID := "000000000000abcd"
@@ -51,17 +39,6 @@ func TestTracerContext(t *testing.T) {
 		sc := oteltrace.SpanFromContext(ctx).SpanContext()
 		assert.Equal(t, traceID, sc.TraceID().String())
 		assert.Equal(t, spanID, sc.SpanID().String())
-	})
-
-	t.Run("invalid span parent ID continues with zero span ID", func(t *testing.T) {
-		traceID := "0000000000000000000000000000abcd"
-		ctx := tracerContext(baseCtx, log, &spec.Tracing{
-			TraceID:      traceID,
-			SpanParentID: "not-valid",
-		})
-		sc := oteltrace.SpanFromContext(ctx).SpanContext()
-		assert.Equal(t, traceID, sc.TraceID().String())
-		assert.False(t, sc.SpanID().IsValid())
 	})
 }
 
