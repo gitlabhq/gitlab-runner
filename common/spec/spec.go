@@ -469,7 +469,7 @@ type Dependencies []Dependency
 
 type Tracing struct {
 	TraceID       string         `json:"trace_id"`
-	SpanParentID  string         `json:"span_parent_id"` // optional
+	SpanParentID  string         `json:"span_parent_id"`
 	OTELEndpoints []OTELEndpoint `json:"otel_endpoints"`
 }
 
