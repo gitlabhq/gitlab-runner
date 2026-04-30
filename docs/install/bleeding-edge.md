@@ -70,10 +70,8 @@ dpkg -i gitlab-runner-helper-images.deb gitlab-runner_<arch>.deb
 ## Download one of the packages for Red Hat or CentOS
 
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_i686.rpm>
-- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_amd64.rpm>
-- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_arm.rpm>
-- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_armhf.rpm>
-- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_arm64.rpm>
+- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_x86_64.rpm>
+- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_armhfp.rpm>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_aarch64.rpm>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_riscv64.rpm>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_loongarch64.rpm>

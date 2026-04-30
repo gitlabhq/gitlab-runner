@@ -53,7 +53,7 @@ curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/
 For example, for CentOS or Red Hat Enterprise Linux:
 
 ```shell
-# Replace ${arch} with any of the supported architectures, e.g. x86_64, arm, arm64
+# Replace ${arch} with any of the supported architectures, e.g. x86_64, aarch64, armhfp
 # A full list of architectures can be found here https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/index.html
 curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner-helper-images.rpm"
 curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner_${arch}.rpm"
