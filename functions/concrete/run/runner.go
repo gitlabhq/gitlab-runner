@@ -335,7 +335,11 @@ func (r *Runner) classifyScriptContextError(jobCtx, scriptCtx context.Context, e
 	switch {
 	case jobErr == nil && errors.Is(scriptCtxErr, context.Canceled):
 		r.logWarningf("Script canceled externally (UI, API)")
-		return &ExitError{Inner: ErrJobCanceled, ExitCode: 1}
+		// Wrap so step-runner's errors.Is(err, context.Canceled) matches.
+		return &ExitError{
+			Inner:    fmt.Errorf("%w: %w", ErrJobCanceled, scriptCtxErr),
+			ExitCode: 1,
+		}
 
 	case !errors.Is(jobErr, context.DeadlineExceeded) &&
 		errors.Is(scriptCtxErr, context.DeadlineExceeded):

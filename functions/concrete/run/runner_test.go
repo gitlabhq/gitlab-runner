@@ -180,6 +180,23 @@ func TestClassifyScriptContextError(t *testing.T) {
 	}
 }
 
+func TestClassifyScriptContextError_UserCancelUnwrapsContextCanceled(t *testing.T) {
+	r := testRunner(t, nil)
+
+	jobCtx, jobCancel := context.WithCancel(t.Context())
+	defer jobCancel()
+
+	scriptCtx, scriptCancel := context.WithCancel(t.Context())
+	scriptCancel()
+	defer scriptCancel()
+
+	err := r.classifyScriptContextError(jobCtx, scriptCtx, nil)
+
+	require.ErrorIs(t, err, ErrJobCanceled)
+	require.ErrorIs(t, err, context.Canceled,
+		"step-runner needs errors.Is(err, context.Canceled) to detect user cancellation")
+}
+
 func TestWithTimeout(t *testing.T) {
 	tests := []struct {
 		name        string
