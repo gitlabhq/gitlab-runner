@@ -49,6 +49,7 @@ type Config struct {
 	ScriptTimeout           time.Duration `json:"script_timeout,omitempty"`
 	AfterScriptTimeout      time.Duration `json:"after_script_timeout,omitempty"`
 	AfterScriptIgnoreErrors bool          `json:"after_script_ignore_errors,omitempty"`
+	TraceSections           bool          `json:"trace_sections,omitempty"`
 	ID                      int64         `json:"id,omitempty"`
 	Token                   string        `json:"token,omitempty"`
 	BaseURL                 string        `json:"base_url,omitempty"`
@@ -368,8 +369,10 @@ func (r *Runner) withTimeout(parent context.Context, d time.Duration) (context.C
 }
 
 func (r *Runner) section(ctx context.Context, name string, fn func(context.Context, *env.Env) error) error {
-	fmt.Fprintf(r.env.Stdout, "section_start:%d:%s\r\033[0K", time.Now().Unix(), name)
-	defer fmt.Fprintf(r.env.Stdout, "section_end:%d:%s\r\033[0K", time.Now().Unix(), name)
+	if r.config.TraceSections {
+		fmt.Fprintf(r.env.Stdout, "section_start:%d:%s\r\033[0K", time.Now().Unix(), name)
+		defer fmt.Fprintf(r.env.Stdout, "section_end:%d:%s\r\033[0K", time.Now().Unix(), name)
+	}
 
 	return fn(ctx, r.env)
 }

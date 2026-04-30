@@ -60,6 +60,7 @@ func Build(job spec.Job, vars variables.Provider, options ...Option) ([]byte, er
 	config.AfterScriptIgnoreErrors = variables.DefaultBool(
 		b.variables, "AFTER_SCRIPT_IGNORE_ERRORS", true,
 	)
+	config.TraceSections = b.meta.Features.TraceSections
 
 	config.CacheArchive, err = b.buildCacheArchive()
 	if err != nil {

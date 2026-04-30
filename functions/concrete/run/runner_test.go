@@ -410,7 +410,7 @@ func TestCancel_NilScriptCancel_DoesNotPanic(t *testing.T) {
 }
 
 func TestSection_OutputFormat(t *testing.T) {
-	r := testRunner(t, nil)
+	r := testRunner(t, &Config{TraceSections: true})
 
 	err := r.section(t.Context(), "test_section", func(_ context.Context, _ *env.Env) error {
 		return nil
@@ -435,7 +435,8 @@ func TestSectionNames_MatchAbstractShell(t *testing.T) {
 	}
 
 	r := testRunner(t, &Config{
-		GetSources: stages.GetSources{GitStrategy: "none", MaxAttempts: 1},
+		TraceSections: true,
+		GetSources:    stages.GetSources{GitStrategy: "none", MaxAttempts: 1},
 		CacheExtract: []stages.CacheExtract{
 			{Sources: []stages.CacheSource{{Key: "k1", Name: "k1"}}},
 			{Sources: []stages.CacheSource{{Key: "k2", Name: "k2"}}},
@@ -490,6 +491,7 @@ func TestSectionNames_MatchAbstractShell(t *testing.T) {
 
 func TestFinalize_FailurePathSectionNames(t *testing.T) {
 	r := testRunner(t, &Config{
+		TraceSections: true,
 		CacheArchive: []stages.CacheArchive{
 			{Key: "k1", Paths: []string{"x"}, OnFailure: true},
 		},
@@ -518,6 +520,7 @@ func TestFinalize_FailurePathSectionNames(t *testing.T) {
 // section is independent of BaseURL and should still emit.
 func TestFinalize_EmptyBaseURLSkipsArtifactUpload(t *testing.T) {
 	r := testRunner(t, &Config{
+		TraceSections: true,
 		CacheArchive: []stages.CacheArchive{
 			{Key: "k1", Paths: []string{"x"}, OnSuccess: true},
 		},
@@ -575,6 +578,7 @@ func TestExecuteSteps_ScriptFailureSetsSuccessFalse(t *testing.T) {
 
 func TestExecuteSteps_AfterScriptRunsOnFailure(t *testing.T) {
 	r := testRunner(t, &Config{
+		TraceSections: true,
 		Steps: []stages.Step{
 			{Step: "build", Script: []string{"exit 1"}, OnSuccess: true},
 			{Step: afterScriptStepName, Script: []string{"echo after"}, OnSuccess: true, OnFailure: true},
@@ -604,6 +608,7 @@ func TestScriptTimeout(t *testing.T) {
 
 func TestAfterScriptTimeout_IndependentOfScriptTimeout(t *testing.T) {
 	r := testRunner(t, &Config{
+		TraceSections:      true,
 		ScriptTimeout:      50 * time.Millisecond,
 		AfterScriptTimeout: 500 * time.Millisecond,
 		Steps: []stages.Step{
