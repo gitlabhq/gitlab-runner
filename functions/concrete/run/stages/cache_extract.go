@@ -2,7 +2,6 @@ package stages
 
 import (
 	"context"
-	"fmt"
 	"path"
 	"strconv"
 
@@ -86,11 +85,10 @@ func (s CacheExtract) extract(ctx context.Context, e *env.Env, src CacheSource) 
 		}
 	}
 
-	for k, values := range desc.Headers {
-		for _, v := range values {
-			args = append(args, "--header", fmt.Sprintf("%s: %s", k, v))
-		}
-	}
+	// cache-extractor doesn't accept --header (only cache-archiver does),
+	// so drop them. Matches abstract shell, which also doesn't forward
+	// headers on the download path.
+	_ = desc.Headers
 
 	return e.RunnerCommand(ctx, e.HelperEnvs(desc.Env), args...)
 }
