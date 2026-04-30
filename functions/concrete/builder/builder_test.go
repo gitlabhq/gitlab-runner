@@ -163,9 +163,9 @@ func TestBuild_GetSources(t *testing.T) {
 
 	t.Run("flags", func(t *testing.T) {
 		vars := newTestVars(t, map[string]string{
-			"GIT_CLONE_FLAGS": "--no-tags --single-branch",
-			"GIT_FETCH_FLAGS": "--prune",
-			"GIT_CLEAN_FLAGS": "-ffdx",
+			"GIT_CLONE_EXTRA_FLAGS": "--no-tags --single-branch",
+			"GIT_FETCH_EXTRA_FLAGS": "--prune",
+			"GIT_CLEAN_FLAGS":       "-ffdx",
 		})
 		config := buildConfig(t, baseJob(), vars)
 
@@ -921,7 +921,7 @@ func TestBuild_ArtifactMetadata(t *testing.T) {
 		}
 		job.Variables = spec.Variables{{Key: "VAR1"}, {Key: "VAR2"}}
 
-		vars := newTestVars(t, map[string]string{"GENERATE_ARTIFACTS_METADATA": "true"})
+		vars := newTestVars(t, map[string]string{"RUNNER_GENERATE_ARTIFACTS_METADATA": "true"})
 
 		config := buildConfig(t, job, vars,
 			WithExecutorName("docker"),
@@ -949,7 +949,7 @@ func TestBuild_ArtifactMetadata(t *testing.T) {
 			{Paths: []string{"dist/"}, Format: spec.ArtifactFormatGzip, When: spec.ArtifactWhenOnSuccess},
 		}
 
-		vars := newTestVars(t, map[string]string{"GENERATE_ARTIFACTS_METADATA": "true"})
+		vars := newTestVars(t, map[string]string{"RUNNER_GENERATE_ARTIFACTS_METADATA": "true"})
 		config := buildConfig(t, job, vars)
 
 		require.Len(t, config.ArtifactsArchive, 1)

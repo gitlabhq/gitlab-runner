@@ -122,8 +122,8 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 		SHA:               b.meta.GitInfo.Sha,
 		Ref:               b.meta.GitInfo.Ref,
 		GitStrategy:       variables.Default(b.variables, "GIT_STRATEGY", defaultGitStrategy, "empty", "none", "fetch", "clone"),
-		GitCloneFlags:     b.splitVarFlagsDefault("GIT_CLONE_FLAGS", nil),
-		GitFetchFlags:     b.splitVarFlagsDefault("GIT_FETCH_FLAGS", gitFetchFlagsDefault),
+		GitCloneFlags:     b.splitVarFlagsDefault("GIT_CLONE_EXTRA_FLAGS", nil),
+		GitFetchFlags:     b.splitVarFlagsDefault("GIT_FETCH_EXTRA_FLAGS", gitFetchFlagsDefault),
 		GitCleanFlags:     b.splitVarFlagsDefault("GIT_CLEAN_FLAGS", gitCleanFlagsDefault),
 		ObjectFormat:      variables.Default(b.variables, "GIT_OBJECT_FORMAT", "sha1"),
 
@@ -431,7 +431,7 @@ func (b *builder) buildArtifactUploads() []stages.ArtifactUpload {
 }
 
 func (b *builder) shouldGenerateArtifactMetadata(artifact spec.Artifact) bool {
-	enabled := variables.DefaultBool(b.variables, "GENERATE_ARTIFACTS_METADATA", false)
+	enabled := variables.DefaultBool(b.variables, "RUNNER_GENERATE_ARTIFACTS_METADATA", false)
 	// Currently only zip artifacts are supported as artifact metadata effectively
 	// adds another file to the archive.
 	// https://gitlab.com/gitlab-org/gitlab/-/issues/367203#note_1059841610
