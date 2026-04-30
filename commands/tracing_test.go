@@ -15,14 +15,15 @@ import (
 
 func TestTracerContext(t *testing.T) {
 	log := logrus.WithFields(nil)
-	baseCtx := t.Context()
 
 	t.Run("nil tracing feature returns original context", func(t *testing.T) {
+		baseCtx := t.Context()
 		ctx := tracerContext(baseCtx, log, nil)
 		assert.Equal(t, baseCtx, ctx)
 	})
 
 	t.Run("invalid trace ID returns original context", func(t *testing.T) {
+		baseCtx := t.Context()
 		ctx := tracerContext(baseCtx, log, &spec.Tracing{
 			TraceID: "not-a-valid-hex",
 		})
@@ -30,6 +31,7 @@ func TestTracerContext(t *testing.T) {
 	})
 
 	t.Run("valid trace ID and span parent ID sets both", func(t *testing.T) {
+		baseCtx := t.Context()
 		traceID := "0000000000000000000000000000abcd"
 		spanID := "000000000000abcd"
 		ctx := tracerContext(baseCtx, log, &spec.Tracing{
