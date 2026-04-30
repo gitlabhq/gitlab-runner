@@ -149,6 +149,12 @@ func (e *Env) HelperEnvs(existing map[string]string) map[string]string {
 		if _, ok := env["SSL_CERT_FILE"]; !ok {
 			env["SSL_CERT_FILE"] = e.bundledCACerts
 		}
+		// libcurl (used by bundled git) ignores SSL_CERT_FILE; GIT_SSL_CAINFO
+		// is what it honors. Per-host http.<host>.sslCAInfo from
+		// CI_SERVER_TLS_CA_FILE still takes precedence.
+		if _, ok := env["GIT_SSL_CAINFO"]; !ok {
+			env["GIT_SSL_CAINFO"] = e.bundledCACerts
+		}
 	}
 
 	if e.bundledGit != "git" {
