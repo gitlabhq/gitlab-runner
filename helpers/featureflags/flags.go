@@ -96,7 +96,9 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "When set to `false` disables execution of remote Kubernetes commands through `exec` in " +
 			"favor of `attach` to solve problems like " +
-			"[#4119](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)",
+			"[#4119](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119). " +
+			"This feature flag requires the Service Account to have specific permissions. " +
+			"For more information, see [configure runner API permissions](../executors/kubernetes/_index.md#configure-runner-api-permissions).",
 	},
 	{
 		Name:            UseDirectDownload,
@@ -201,7 +203,9 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description: "When enabled, the Docker entrypoint of an image will be honored if " +
-			"`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` is not set to true",
+			"`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` is not set to true. " +
+			"This feature flag requires the service account to have specific permissions. " +
+			"For more information, see [configure runner API permissions](../executors/kubernetes/_index.md#configure-runner-api-permissions).",
 	},
 	{
 		Name:            PosixlyCorrectEscapes,
@@ -380,7 +384,8 @@ var flags = []FeatureFlag{
 		Name:         WaitForPodReachable,
 		DefaultValue: false,
 		Deprecated:   false,
-		Description:  "When enabled, the runner waits for the Pod status to be 'Running', and for the Pod to be ready with its certificates attached.",
+		Description: "When enabled, the runner waits for the Pod status to be 'Running', and for the Pod to be ready with its certificates attached. " +
+			"For more information, see [configure runner API permissions](../executors/kubernetes/_index.md#configure-runner-api-permissions).",
 	},
 	{
 		Name:         MaskAllDefaultTokens,
