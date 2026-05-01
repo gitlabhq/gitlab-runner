@@ -455,7 +455,7 @@ for details.
 
 ## Elasticsearch service startup error `max virtual memory areas vm.max_map_count [65530] is too low`
 
-On startup of an Elasticsearch service container, you might receive an error simlar to:
+On startup of an Elasticsearch service container, you might receive an error similar to:
 
 - `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
 
