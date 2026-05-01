@@ -169,6 +169,12 @@ func (c *s3Client) PresignURL(ctx context.Context,
 			Key:    aws.String(objectName),
 		}
 		presignedReq, err = c.presignClient.PresignGetObject(ctx, getObjectInput, s3.WithPresignExpires(expires))
+	case http.MethodHead:
+		headObjectInput := &s3.HeadObjectInput{
+			Bucket: aws.String(bucketName),
+			Key:    aws.String(objectName),
+		}
+		presignedReq, err = c.presignClient.PresignHeadObject(ctx, headObjectInput, s3.WithPresignExpires(expires))
 	case http.MethodPut:
 		putObjectInput := &s3.PutObjectInput{
 			Bucket: aws.String(bucketName),
