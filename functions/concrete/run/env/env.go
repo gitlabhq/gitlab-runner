@@ -55,6 +55,20 @@ type Env struct {
 	bundledCACerts    string
 }
 
+// ExpandValue expands $VAR / ${VAR} against Env + GitLabEnv overlay.
+// Used for fields the helper subprocess does not expand itself.
+func (e *Env) ExpandValue(s string) string {
+	if s == "" {
+		return s
+	}
+	return os.Expand(s, func(key string) string {
+		if v, ok := e.GitLabEnv[key]; ok {
+			return v
+		}
+		return e.Env[key]
+	})
+}
+
 func (e *Env) IsSuccessful() bool {
 	switch e.status {
 	case "", Running, Success:
@@ -148,6 +162,12 @@ func (e *Env) HelperEnvs(existing map[string]string) map[string]string {
 	if e.bundledCACerts != "" {
 		if _, ok := env["SSL_CERT_FILE"]; !ok {
 			env["SSL_CERT_FILE"] = e.bundledCACerts
+		}
+		// libcurl (used by bundled git) ignores SSL_CERT_FILE; GIT_SSL_CAINFO
+		// is what it honors. Per-host http.<host>.sslCAInfo from
+		// CI_SERVER_TLS_CA_FILE still takes precedence.
+		if _, ok := env["GIT_SSL_CAINFO"]; !ok {
+			env["GIT_SSL_CAINFO"] = e.bundledCACerts
 		}
 	}
 

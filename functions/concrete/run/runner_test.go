@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -177,6 +178,23 @@ func TestClassifyScriptContextError(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClassifyScriptContextError_UserCancelUnwrapsContextCanceled(t *testing.T) {
+	r := testRunner(t, nil)
+
+	jobCtx, jobCancel := context.WithCancel(t.Context())
+	defer jobCancel()
+
+	scriptCtx, scriptCancel := context.WithCancel(t.Context())
+	scriptCancel()
+	defer scriptCancel()
+
+	err := r.classifyScriptContextError(jobCtx, scriptCtx, nil)
+
+	require.ErrorIs(t, err, ErrJobCanceled)
+	require.ErrorIs(t, err, context.Canceled,
+		"step-runner needs errors.Is(err, context.Canceled) to detect user cancellation")
 }
 
 func TestWithTimeout(t *testing.T) {
@@ -409,7 +427,7 @@ func TestCancel_NilScriptCancel_DoesNotPanic(t *testing.T) {
 }
 
 func TestSection_OutputFormat(t *testing.T) {
-	r := testRunner(t, nil)
+	r := testRunner(t, &Config{TraceSections: true})
 
 	err := r.section(t.Context(), "test_section", func(_ context.Context, _ *env.Env) error {
 		return nil
@@ -420,6 +438,123 @@ func TestSection_OutputFormat(t *testing.T) {
 	assert.Contains(t, out, "section_start:")
 	assert.Contains(t, out, "test_section")
 	assert.Contains(t, out, "section_end:")
+}
+
+// TestSectionNames_MatchAbstractShell verifies the runner emits section
+// names matching the abstract shell's BuildStage values (see
+// common/build.go's BuildStage constants and StepToBuildStage), so UI and
+// log tooling that keys off section names continues to work after the
+// script-to-step migration. Each section should appear exactly once,
+// regardless of how many cache/artifact items the loop processes.
+func TestSectionNames_MatchAbstractShell(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("script execution; skip on windows")
+	}
+
+	r := testRunner(t, &Config{
+		TraceSections: true,
+		GetSources:    stages.GetSources{GitStrategy: "none", MaxAttempts: 1},
+		CacheExtract: []stages.CacheExtract{
+			{Sources: []stages.CacheSource{{Key: "k1", Name: "k1"}}},
+			{Sources: []stages.CacheSource{{Key: "k2", Name: "k2"}}},
+		},
+		ArtifactExtract: []stages.ArtifactDownload{
+			{ArtifactName: "a1", Filename: "a1.zip", DownloadAttempts: 1},
+		},
+		Steps: []stages.Step{
+			{Step: "script", Script: []string{"true"}, OnSuccess: true},
+			{Step: afterScriptStepName, Script: []string{"true"}, OnSuccess: true, OnFailure: true},
+		},
+		CacheArchive: []stages.CacheArchive{
+			{Key: "k1", Paths: []string{"x"}, OnSuccess: true},
+		},
+		ArtifactsArchive: []stages.ArtifactUpload{
+			{ArtifactName: "a1", Paths: []string{"x"}, OnSuccess: true},
+		},
+	})
+	r.env.BaseURL = "https://gitlab.example.com"
+
+	_ = r.Run(t.Context())
+	out := runnerStdout(r)
+
+	// Each section_start/end line is "section_<start|end>:<unix>:<name>\r...";
+	// expect exactly two occurrences of ":<name>\r" (start + end), regardless
+	// of how many cache/artifact items the loop processed.
+	wantOnce := []string{
+		"get_sources",
+		"restore_cache",
+		"download_artifacts",
+		"step_script",
+		"after_script",
+		"archive_cache",
+		"upload_artifacts_on_success",
+	}
+	for _, name := range wantOnce {
+		assert.Equal(t, 2, strings.Count(out, ":"+name+"\r"),
+			"section %q should appear exactly once (start+end markers)", name)
+	}
+
+	mustNotAppear := []string{
+		"restore_cache_0", "download_artifacts_0",
+		"step_0_script", "after_script_0",
+		"archive_cache_0", "upload_artifacts_0",
+		"archive_cache_on_failure", "upload_artifacts_on_failure",
+	}
+	for _, name := range mustNotAppear {
+		assert.NotContains(t, out, ":"+name+"\r",
+			"legacy or wrong-state section %q should not be emitted", name)
+	}
+}
+
+func TestFinalize_FailurePathSectionNames(t *testing.T) {
+	r := testRunner(t, &Config{
+		TraceSections: true,
+		CacheArchive: []stages.CacheArchive{
+			{Key: "k1", Paths: []string{"x"}, OnFailure: true},
+		},
+		ArtifactsArchive: []stages.ArtifactUpload{
+			{ArtifactName: "a1", Paths: []string{"x"}, OnFailure: true},
+		},
+	})
+	r.env.BaseURL = "http://test"
+	r.env.SetStatus(env.Failed)
+
+	_, _ = r.finalize(t.Context())
+	out := runnerStdout(r)
+
+	assert.Contains(t, out, ":archive_cache_on_failure\r")
+	assert.Contains(t, out, ":upload_artifacts_on_failure\r")
+	assert.NotContains(t, out, ":archive_cache\r",
+		"must not emit success-path cache section name on failure path")
+	assert.NotContains(t, out, ":upload_artifacts_on_success\r",
+		"must not emit success-path upload section name on failure path")
+}
+
+// TestFinalize_EmptyBaseURLSkipsArtifactUpload mirrors abstract.go's
+// writeUploadArtifacts ErrSkipBuildStage guard: when there is no server
+// URL to upload to, the upload section must not be emitted at all rather
+// than invoking artifacts-uploader with --url "". The cache-archive
+// section is independent of BaseURL and should still emit.
+func TestFinalize_EmptyBaseURLSkipsArtifactUpload(t *testing.T) {
+	r := testRunner(t, &Config{
+		TraceSections: true,
+		CacheArchive: []stages.CacheArchive{
+			{Key: "k1", Paths: []string{"x"}, OnSuccess: true},
+		},
+		ArtifactsArchive: []stages.ArtifactUpload{
+			{ArtifactName: "a1", Paths: []string{"x"}, OnSuccess: true},
+		},
+	})
+	// BaseURL deliberately left empty.
+
+	_, _ = r.finalize(t.Context())
+	out := runnerStdout(r)
+
+	assert.NotContains(t, out, ":upload_artifacts_on_success\r",
+		"upload section must be skipped when BaseURL is empty")
+	assert.NotContains(t, out, ":upload_artifacts_on_failure\r")
+	assert.Contains(t, out, ":archive_cache\r",
+		"cache archive should still emit independent of BaseURL")
 }
 
 func TestSection_PropagatesError(t *testing.T) {
@@ -460,6 +595,7 @@ func TestExecuteSteps_ScriptFailureSetsSuccessFalse(t *testing.T) {
 
 func TestExecuteSteps_AfterScriptRunsOnFailure(t *testing.T) {
 	r := testRunner(t, &Config{
+		TraceSections: true,
 		Steps: []stages.Step{
 			{Step: "build", Script: []string{"exit 1"}, OnSuccess: true},
 			{Step: afterScriptStepName, Script: []string{"echo after"}, OnSuccess: true, OnFailure: true},
@@ -489,6 +625,7 @@ func TestScriptTimeout(t *testing.T) {
 
 func TestAfterScriptTimeout_IndependentOfScriptTimeout(t *testing.T) {
 	r := testRunner(t, &Config{
+		TraceSections:      true,
 		ScriptTimeout:      50 * time.Millisecond,
 		AfterScriptTimeout: 500 * time.Millisecond,
 		Steps: []stages.Step{
@@ -766,6 +903,42 @@ func TestExecuteSteps_CIJobStatus(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, r.env.Env["CI_JOB_STATUS"])
 		})
 	}
+}
+
+// TestStep_LinesShareShellState verifies the contract the builder relies on
+// when it folds pre_build_script and post_build_script into each user step:
+// every line of a single stages.Step.Script runs inside the same shell
+// process, so shell-only state (exports, cd, set options, function
+// definitions) defined earlier in the script is visible later. This matches
+// the abstract shell's writeUserScript behaviour, where pre_build_script,
+// the user script and post_build_script all run as one shell invocation.
+func TestStep_LinesShareShellState(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("bash export semantics; skip on windows")
+	}
+
+	r := testRunner(t, &Config{
+		Steps: []stages.Step{
+			{
+				Step: "script",
+				Script: []string{
+					"export PRE_BUILD_VAR=hello",     // pre_build_script line
+					`echo "got:[${PRE_BUILD_VAR}]"`,  // user script line
+					`echo "post:[${PRE_BUILD_VAR}]"`, // post_build_script line
+				},
+				OnSuccess: true,
+			},
+		},
+	})
+
+	err := r.executeSteps(t.Context())
+	require.NoError(t, err)
+
+	out := runnerStdout(r)
+	assert.Contains(t, out, "got:[hello]",
+		"pre_build_script exports must be visible to the user script lines that follow")
+	assert.Contains(t, out, "post:[hello]",
+		"pre_build_script exports must be visible to post_build_script lines that follow")
 }
 
 func TestExecuteSteps_CancelSetsCIJobStatusCanceled(t *testing.T) {

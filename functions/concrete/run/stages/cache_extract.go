@@ -2,7 +2,6 @@ package stages
 
 import (
 	"context"
-	"fmt"
 	"path"
 	"strconv"
 
@@ -18,13 +17,12 @@ type CacheSource struct {
 }
 
 type CacheExtract struct {
-	Sources              []CacheSource `json:"sources,omitempty"`
-	Timeout              int           `json:"timeout,omitempty"`
-	Concurrency          int           `json:"concurrency,omitempty"`
-	MaxAttempts          int           `json:"max_attempts,omitempty"`
-	Paths                []string      `json:"paths,omitempty"`
-	CleanupFailedExtract bool          `json:"cleanup_failed_extract,omitempty"`
-	Warnings             []string      `json:"warnings,omitempty"`
+	Sources     []CacheSource `json:"sources,omitempty"`
+	Timeout     int           `json:"timeout,omitempty"`
+	Concurrency int           `json:"concurrency,omitempty"`
+	MaxAttempts int           `json:"max_attempts,omitempty"`
+	Paths       []string      `json:"paths,omitempty"`
+	Warnings    []string      `json:"warnings,omitempty"`
 }
 
 //nolint:gocognit
@@ -63,11 +61,6 @@ func (s CacheExtract) Run(ctx context.Context, e *env.Env) error {
 			}
 
 			e.Warningf("Failed to extract cache %s: %v", src.Name, err)
-
-			// todo: Cleanup failed extraction... this functionality is likely broken in the abstract
-			// shell. So if we want to keep this, we likely need a new implementation.
-			// if s.CleanupFailedExtract {
-			// }
 		}
 	}
 
@@ -92,11 +85,10 @@ func (s CacheExtract) extract(ctx context.Context, e *env.Env, src CacheSource) 
 		}
 	}
 
-	for k, values := range desc.Headers {
-		for _, v := range values {
-			args = append(args, "--header", fmt.Sprintf("%s: %s", k, v))
-		}
-	}
+	// cache-extractor doesn't accept --header (only cache-archiver does),
+	// so drop them. Matches abstract shell, which also doesn't forward
+	// headers on the download path.
+	_ = desc.Headers
 
 	return e.RunnerCommand(ctx, e.HelperEnvs(desc.Env), args...)
 }

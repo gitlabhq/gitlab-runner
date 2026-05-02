@@ -49,6 +49,7 @@ type Config struct {
 	ScriptTimeout           time.Duration `json:"script_timeout,omitempty"`
 	AfterScriptTimeout      time.Duration `json:"after_script_timeout,omitempty"`
 	AfterScriptIgnoreErrors bool          `json:"after_script_ignore_errors,omitempty"`
+	TraceSections           bool          `json:"trace_sections,omitempty"`
 	ID                      int64         `json:"id,omitempty"`
 	Token                   string        `json:"token,omitempty"`
 	BaseURL                 string        `json:"base_url,omitempty"`
@@ -141,27 +142,47 @@ func (r *Runner) setCancel(cancel context.CancelFunc) {
 	r.mu.Unlock()
 }
 
+//nolint:gocognit
 func (r *Runner) prepare(ctx context.Context) error {
 	if err := r.section(ctx, "get_sources", r.config.GetSources.Run); err != nil {
 		return fmt.Errorf("fetching sources: %w", err)
 	}
 
-	for i, cache := range r.config.CacheExtract {
-		if len(cache.Sources) == 0 {
-			continue
-		}
-		if err := r.section(ctx, fmt.Sprintf("restore_cache_%d", i), cache.Run); err != nil {
-			r.logWarningf("Failed to restore cache %q: %v", cache.Sources[0].Key, err)
-		}
+	if hasCacheSources(r.config.CacheExtract) {
+		_ = r.section(ctx, "restore_cache", func(ctx context.Context, e *env.Env) error {
+			for _, cache := range r.config.CacheExtract {
+				if len(cache.Sources) == 0 {
+					continue
+				}
+				if err := cache.Run(ctx, e); err != nil {
+					r.logWarningf("Failed to restore cache %q: %v", cache.Sources[0].Key, err)
+				}
+			}
+			return nil
+		})
 	}
 
-	for i, artifact := range r.config.ArtifactExtract {
-		if err := r.section(ctx, fmt.Sprintf("download_artifacts_%d", i), artifact.Run); err != nil {
-			r.logWarningf("Failed to download artifact %q: %v", artifact.ArtifactName, err)
-		}
+	if len(r.config.ArtifactExtract) > 0 {
+		_ = r.section(ctx, "download_artifacts", func(ctx context.Context, e *env.Env) error {
+			for _, artifact := range r.config.ArtifactExtract {
+				if err := artifact.Run(ctx, e); err != nil {
+					r.logWarningf("Failed to download artifact %q: %v", artifact.ArtifactName, err)
+				}
+			}
+			return nil
+		})
 	}
 
 	return nil
+}
+
+func hasCacheSources(extracts []stages.CacheExtract) bool {
+	for _, c := range extracts {
+		if len(c.Sources) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // statusFromError mirrors build.go's runtimeStateAndError classification,
@@ -203,10 +224,10 @@ func (r *Runner) runScriptSteps(jobCtx context.Context, steps []stages.Step) err
 	r.setCancel(cancel)
 
 	var firstErr error
-	for i, step := range steps {
+	for _, step := range steps {
 		r.loadGitlabEnv()
 
-		if err := r.section(scriptCtx, fmt.Sprintf("step_%d_%s", i, step.Step), step.Run); err != nil {
+		if err := r.section(scriptCtx, "step_"+step.Step, step.Run); err != nil {
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -233,48 +254,72 @@ func (r *Runner) runAfterScriptSteps(jobCtx context.Context, steps []stages.Step
 	// is never updated for after_script.
 	r.setCancel(nil)
 
-	for i, step := range steps {
-		r.loadGitlabEnv()
+	_ = r.section(afterCtx, "after_script", func(ctx context.Context, e *env.Env) error {
+		for _, step := range steps {
+			r.loadGitlabEnv()
 
-		afterErr := r.section(afterCtx, fmt.Sprintf("after_script_%d", i), step.Run)
-		if afterErr == nil {
-			continue
-		}
+			afterErr := step.Run(ctx, e)
+			if afterErr == nil {
+				continue
+			}
 
-		// If the overall job deadline expired, stop immediately.
-		if errors.Is(jobCtx.Err(), context.DeadlineExceeded) {
-			break
-		}
+			// If the overall job deadline expired, stop immediately.
+			if errors.Is(jobCtx.Err(), context.DeadlineExceeded) {
+				break
+			}
 
-		if r.config.AfterScriptIgnoreErrors {
-			r.logWarningf("after_script failed, but job will continue unaffected: %v", afterErr)
-		} else if err == nil {
-			err = afterErr
+			if r.config.AfterScriptIgnoreErrors {
+				r.logWarningf("after_script failed, but job will continue unaffected: %v", afterErr)
+			} else if err == nil {
+				err = afterErr
+			}
 		}
-	}
+		return nil
+	})
 
 	return err
 }
 
+//nolint:gocognit
 func (r *Runner) finalize(ctx context.Context) (cacheErr, artifactErr error) {
 	r.loadGitlabEnv()
 
-	for i, cache := range r.config.CacheArchive {
-		if err := r.section(ctx, fmt.Sprintf("archive_cache_%d", i), cache.Run); err != nil {
-			r.logWarningf("Failed to archive cache %q: %v", cache.Key, err)
-			if cacheErr == nil {
-				cacheErr = err
-			}
-		}
+	cacheSection := "archive_cache"
+	uploadSection := "upload_artifacts_on_success"
+	if !r.env.IsSuccessful() {
+		cacheSection = "archive_cache_on_failure"
+		uploadSection = "upload_artifacts_on_failure"
 	}
 
-	for i, artifact := range r.config.ArtifactsArchive {
-		if err := r.section(ctx, fmt.Sprintf("upload_artifacts_%d", i), artifact.Run); err != nil {
-			r.logWarningf("Failed to upload artifact %q: %v", artifact.ArtifactName, err)
-			if artifactErr == nil {
-				artifactErr = err
+	if len(r.config.CacheArchive) > 0 {
+		_ = r.section(ctx, cacheSection, func(ctx context.Context, e *env.Env) error {
+			for _, cache := range r.config.CacheArchive {
+				if err := cache.Run(ctx, e); err != nil {
+					r.logWarningf("Failed to archive cache %q: %v", cache.Key, err)
+					if cacheErr == nil {
+						cacheErr = err
+					}
+				}
 			}
-		}
+			return nil
+		})
+	}
+
+	// Mirror abstract's writeUploadArtifacts ErrSkipBuildStage guard: with
+	// no server URL there is nowhere to upload to, so skip the section
+	// entirely rather than invoking artifacts-uploader with --url "".
+	if len(r.config.ArtifactsArchive) > 0 && r.env.BaseURL != "" {
+		_ = r.section(ctx, uploadSection, func(ctx context.Context, e *env.Env) error {
+			for _, artifact := range r.config.ArtifactsArchive {
+				if err := artifact.Run(ctx, e); err != nil {
+					r.logWarningf("Failed to upload artifact %q: %v", artifact.ArtifactName, err)
+					if artifactErr == nil {
+						artifactErr = err
+					}
+				}
+			}
+			return nil
+		})
 	}
 
 	return cacheErr, artifactErr
@@ -290,7 +335,11 @@ func (r *Runner) classifyScriptContextError(jobCtx, scriptCtx context.Context, e
 	switch {
 	case jobErr == nil && errors.Is(scriptCtxErr, context.Canceled):
 		r.logWarningf("Script canceled externally (UI, API)")
-		return &ExitError{Inner: ErrJobCanceled, ExitCode: 1}
+		// Wrap so step-runner's errors.Is(err, context.Canceled) matches.
+		return &ExitError{
+			Inner:    fmt.Errorf("%w: %w", ErrJobCanceled, scriptCtxErr),
+			ExitCode: 1,
+		}
 
 	case !errors.Is(jobErr, context.DeadlineExceeded) &&
 		errors.Is(scriptCtxErr, context.DeadlineExceeded):
@@ -324,8 +373,10 @@ func (r *Runner) withTimeout(parent context.Context, d time.Duration) (context.C
 }
 
 func (r *Runner) section(ctx context.Context, name string, fn func(context.Context, *env.Env) error) error {
-	fmt.Fprintf(r.env.Stdout, "section_start:%d:%s\r\033[0K", time.Now().Unix(), name)
-	defer fmt.Fprintf(r.env.Stdout, "section_end:%d:%s\r\033[0K", time.Now().Unix(), name)
+	if r.config.TraceSections {
+		fmt.Fprintf(r.env.Stdout, "section_start:%d:%s\r\033[0K", time.Now().Unix(), name)
+		defer fmt.Fprintf(r.env.Stdout, "section_end:%d:%s\r\033[0K", time.Now().Unix(), name)
+	}
 
 	return fn(ctx, r.env)
 }

@@ -63,6 +63,10 @@ func (s CacheArchive) Run(ctx context.Context, e *env.Env) error {
 		}
 	}
 
+	if desc.HeadURL != "" {
+		args = append(args, "--check-url", desc.HeadURL)
+	}
+
 	for k, values := range desc.Headers {
 		for _, v := range values {
 			args = append(args, "--header", fmt.Sprintf("%s: %s", k, v))

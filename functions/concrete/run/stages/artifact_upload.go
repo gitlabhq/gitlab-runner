@@ -97,8 +97,10 @@ func (s ArtifactUpload) Run(ctx context.Context, e *env.Env) error {
 		args = append(args, "--name", s.ArtifactName)
 	}
 
-	if s.ExpireIn != "" {
-		args = append(args, "--expire-in", s.ExpireIn)
+	// artifacts-uploader doesn't expand $VAR in --expire-in (unlike --name
+	// and --path), so we have to do it here.
+	if expireIn := e.ExpandValue(s.ExpireIn); expireIn != "" {
+		args = append(args, "--expire-in", expireIn)
 	}
 
 	if s.Format != "" {

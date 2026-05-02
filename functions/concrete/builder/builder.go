@@ -60,6 +60,7 @@ func Build(job spec.Job, vars variables.Provider, options ...Option) ([]byte, er
 	config.AfterScriptIgnoreErrors = variables.DefaultBool(
 		b.variables, "AFTER_SCRIPT_IGNORE_ERRORS", true,
 	)
+	config.TraceSections = b.meta.Features.TraceSections
 
 	config.CacheArchive, err = b.buildCacheArchive()
 	if err != nil {
@@ -121,8 +122,8 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 		SHA:               b.meta.GitInfo.Sha,
 		Ref:               b.meta.GitInfo.Ref,
 		GitStrategy:       variables.Default(b.variables, "GIT_STRATEGY", defaultGitStrategy, "empty", "none", "fetch", "clone"),
-		GitCloneFlags:     b.splitVarFlagsDefault("GIT_CLONE_FLAGS", nil),
-		GitFetchFlags:     b.splitVarFlagsDefault("GIT_FETCH_FLAGS", gitFetchFlagsDefault),
+		GitCloneFlags:     b.splitVarFlagsDefault("GIT_CLONE_EXTRA_FLAGS", nil),
+		GitFetchFlags:     b.splitVarFlagsDefault("GIT_FETCH_EXTRA_FLAGS", gitFetchFlagsDefault),
 		GitCleanFlags:     b.splitVarFlagsDefault("GIT_CLEAN_FLAGS", gitCleanFlagsDefault),
 		ObjectFormat:      variables.Default(b.variables, "GIT_OBJECT_FORMAT", "sha1"),
 
@@ -168,7 +169,10 @@ func (b *builder) buildCacheExtract() ([]stages.CacheExtract, error) {
 			continue
 		}
 
-		switch cache.Policy {
+		// Expand $VAR before classifying — without this, cache.policy: $MY_POLICY
+		// would fall into the default arm and the cache stage would be skipped.
+		policy := spec.CachePolicy(b.variables.ExpandValue(string(cache.Policy)))
+		switch policy {
 		case spec.CachePolicyUndefined, spec.CachePolicyPullPush, spec.CachePolicyPull:
 		default:
 			continue
@@ -183,13 +187,12 @@ func (b *builder) buildCacheExtract() ([]stages.CacheExtract, error) {
 		}
 
 		extracts = append(extracts, stages.CacheExtract{
-			Sources:              sources,
-			Warnings:             warnings,
-			Timeout:              variables.DefaultIntClamp(b.variables, "CACHE_REQUEST_TIMEOUT", 10, 1, 120),
-			Concurrency:          variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
-			Paths:                cache.Paths,
-			CleanupFailedExtract: b.isFeatureFlagOn(featureflags.CleanUpFailedCacheExtract),
-			MaxAttempts:          variables.DefaultIntClamp(b.variables, "RESTORE_CACHE_ATTEMPTS", 1, 1, 10),
+			Sources:     sources,
+			Warnings:    warnings,
+			Timeout:     variables.DefaultIntClamp(b.variables, "CACHE_REQUEST_TIMEOUT", 10, 1, 120),
+			Concurrency: variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
+			Paths:       cache.Paths,
+			MaxAttempts: variables.DefaultIntClamp(b.variables, "RESTORE_CACHE_ATTEMPTS", 1, 1, 10),
 		})
 	}
 
@@ -260,7 +263,8 @@ func (b *builder) buildCacheArchive() ([]stages.CacheArchive, error) {
 			continue
 		}
 
-		switch cache.Policy {
+		policy := spec.CachePolicy(b.variables.ExpandValue(string(cache.Policy)))
+		switch policy {
 		case spec.CachePolicyUndefined, spec.CachePolicyPullPush, spec.CachePolicyPush:
 		default:
 			continue
@@ -329,12 +333,6 @@ func (b *builder) buildSteps() []stages.Step {
 		return step
 	}
 
-	steps = append(steps, configure(stages.Step{
-		Step:      "pre_build_script",
-		Script:    b.opts.preBuildScript,
-		OnSuccess: true,
-	}))
-
 	for _, step := range b.meta.Steps {
 		script := step.Script
 
@@ -362,14 +360,14 @@ func (b *builder) buildSteps() []stages.Step {
 			continue
 		}
 
+		// Match abstract shell semantics: pre_build_script and post_build_script
+		// run inside the user step's shell, so shell-only state (exports, set
+		// options, function definitions, cd) carries over to the user script.
+		s.Script = slices.Concat(b.opts.preBuildScript, s.Script, b.opts.postBuildScript)
+
 		steps = append(steps, s)
 	}
 
-	steps = append(steps, configure(stages.Step{
-		Step:      "post_build_script",
-		Script:    b.opts.postBuildScript,
-		OnSuccess: true,
-	}))
 	steps = append(steps, afterScript...)
 
 	return steps
@@ -433,7 +431,7 @@ func (b *builder) buildArtifactUploads() []stages.ArtifactUpload {
 }
 
 func (b *builder) shouldGenerateArtifactMetadata(artifact spec.Artifact) bool {
-	enabled := variables.DefaultBool(b.variables, "GENERATE_ARTIFACTS_METADATA", false)
+	enabled := variables.DefaultBool(b.variables, "RUNNER_GENERATE_ARTIFACTS_METADATA", false)
 	// Currently only zip artifacts are supported as artifact metadata effectively
 	// adds another file to the archive.
 	// https://gitlab.com/gitlab-org/gitlab/-/issues/367203#note_1059841610

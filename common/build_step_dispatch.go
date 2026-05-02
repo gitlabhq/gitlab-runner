@@ -207,10 +207,16 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 					return cacheprovider.Descriptor{}, err
 				}
 
-				return cacheprovider.Descriptor{
+				desc := cacheprovider.Descriptor{
 					URL:     url.URL.String(),
 					Headers: url.Headers,
-				}, nil
+				}
+
+				if headURL := adapter.GetHeadURL(ctx); headURL.URL != nil {
+					desc.HeadURL = headURL.URL.String()
+				}
+
+				return desc, nil
 			}),
 		)
 	}

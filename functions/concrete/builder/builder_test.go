@@ -47,7 +47,12 @@ func newTestVars(t *testing.T, overrides map[string]string, setup ...func(*varia
 	}
 
 	m.On("Get", mock.Anything).Maybe().Return("")
-	m.On("ExpandValue", mock.Anything).Maybe().Return("")
+	// ExpandValue defaults to identity for any unmocked input — matches
+	// real-world behaviour where strings with no $VAR references pass
+	// through unchanged. Without this, builder code that defensively
+	// expands every string field (e.g. artifact.name, expire_in, paths)
+	// would see empty values for any literal that wasn't pre-mocked.
+	m.On("ExpandValue", mock.Anything).Maybe().Return(func(s string) string { return s })
 
 	return m
 }
@@ -158,9 +163,9 @@ func TestBuild_GetSources(t *testing.T) {
 
 	t.Run("flags", func(t *testing.T) {
 		vars := newTestVars(t, map[string]string{
-			"GIT_CLONE_FLAGS": "--no-tags --single-branch",
-			"GIT_FETCH_FLAGS": "--prune",
-			"GIT_CLEAN_FLAGS": "-ffdx",
+			"GIT_CLONE_EXTRA_FLAGS": "--no-tags --single-branch",
+			"GIT_FETCH_EXTRA_FLAGS": "--prune",
+			"GIT_CLEAN_FLAGS":       "-ffdx",
 		})
 		config := buildConfig(t, baseJob(), vars)
 
@@ -234,7 +239,7 @@ func TestBuild_GetSources(t *testing.T) {
 }
 
 func TestBuild_Steps(t *testing.T) {
-	t.Run("ordering with pre/post build", func(t *testing.T) {
+	t.Run("pre/post build script wraps each user step in same shell", func(t *testing.T) {
 		job := baseJob()
 		job.Steps = []spec.Step{
 			{Name: "build", Script: []string{"make build"}, When: spec.StepWhenOnSuccess},
@@ -246,16 +251,40 @@ func TestBuild_Steps(t *testing.T) {
 			WithPostBuildScript([]string{"echo post-build"}),
 		)
 
-		require.Len(t, config.Steps, 4)
-		assert.Equal(t, "pre_build_script", config.Steps[0].Step)
-		assert.Equal(t, []string{"echo pre-build"}, config.Steps[0].Script)
-		assert.Equal(t, "build", config.Steps[1].Step)
+		// pre/post build are folded into each user step rather than emitted as
+		// their own steps; this matches abstract shell semantics where they
+		// share a shell process with the user script.
+		require.Len(t, config.Steps, 2)
+
+		assert.Equal(t, "build", config.Steps[0].Step)
+		assert.True(t, config.Steps[0].OnSuccess)
+		assert.False(t, config.Steps[0].OnFailure)
+		assert.Equal(t,
+			[]string{"echo pre-build", "make build", "echo post-build"},
+			config.Steps[0].Script)
+
+		assert.Equal(t, "test", config.Steps[1].Step)
 		assert.True(t, config.Steps[1].OnSuccess)
-		assert.False(t, config.Steps[1].OnFailure)
-		assert.Equal(t, "test", config.Steps[2].Step)
-		assert.True(t, config.Steps[2].OnSuccess)
-		assert.True(t, config.Steps[2].OnFailure)
-		assert.Equal(t, "post_build_script", config.Steps[3].Step)
+		assert.True(t, config.Steps[1].OnFailure)
+		assert.Equal(t,
+			[]string{"echo pre-build", "make test", "echo post-build"},
+			config.Steps[1].Script)
+	})
+
+	t.Run("after_script is not wrapped with pre/post build", func(t *testing.T) {
+		job := baseJob()
+		job.Steps = []spec.Step{
+			{Name: spec.StepNameAfterScript, Script: []string{"echo cleanup"}, When: spec.StepWhenAlways},
+		}
+
+		config := buildConfig(t, job, newTestVars(t, nil),
+			WithPreBuildScript([]string{"echo pre-build"}),
+			WithPostBuildScript([]string{"echo post-build"}),
+		)
+
+		require.Len(t, config.Steps, 1)
+		assert.Equal(t, string(spec.StepNameAfterScript), config.Steps[0].Step)
+		assert.Equal(t, []string{"echo cleanup"}, config.Steps[0].Script)
 	})
 
 	t.Run("after_script moved to end", func(t *testing.T) {
@@ -892,7 +921,7 @@ func TestBuild_ArtifactMetadata(t *testing.T) {
 		}
 		job.Variables = spec.Variables{{Key: "VAR1"}, {Key: "VAR2"}}
 
-		vars := newTestVars(t, map[string]string{"GENERATE_ARTIFACTS_METADATA": "true"})
+		vars := newTestVars(t, map[string]string{"RUNNER_GENERATE_ARTIFACTS_METADATA": "true"})
 
 		config := buildConfig(t, job, vars,
 			WithExecutorName("docker"),
@@ -920,7 +949,7 @@ func TestBuild_ArtifactMetadata(t *testing.T) {
 			{Paths: []string{"dist/"}, Format: spec.ArtifactFormatGzip, When: spec.ArtifactWhenOnSuccess},
 		}
 
-		vars := newTestVars(t, map[string]string{"GENERATE_ARTIFACTS_METADATA": "true"})
+		vars := newTestVars(t, map[string]string{"RUNNER_GENERATE_ARTIFACTS_METADATA": "true"})
 		config := buildConfig(t, job, vars)
 
 		require.Len(t, config.ArtifactsArchive, 1)
@@ -1039,32 +1068,6 @@ func TestBuild_FeatureFlags(t *testing.T) {
 				} else {
 					assert.Empty(t, src.Warnings)
 				}
-			})
-		}
-	})
-
-	t.Run("CleanUpFailedCacheExtract", func(t *testing.T) {
-		job := baseJob()
-		job.Cache = []spec.Cache{
-			{Key: "cache", Paths: []string{"build/"}, Policy: spec.CachePolicyPull},
-		}
-
-		tests := map[string]struct {
-			enabled  bool
-			expected bool
-		}{
-			"off": {enabled: false, expected: false},
-			"on":  {enabled: true, expected: true},
-		}
-
-		for name, tc := range tests {
-			t.Run(name, func(t *testing.T) {
-				vars := newTestVars(t, nil, expandValues(map[string]string{"cache": "cache"}))
-				ff := func(f string) bool { return f == featureflags.CleanUpFailedCacheExtract && tc.enabled }
-				config := buildConfig(t, job, vars, WithFeatureFlagProvider(ff))
-
-				require.Len(t, config.CacheExtract, 1)
-				assert.Equal(t, tc.expected, config.CacheExtract[0].CleanupFailedExtract)
 			})
 		}
 	})
