@@ -174,6 +174,22 @@ func TestForcedFlush(t *testing.T) {
 	assert.Equal(t, strings.Join(expected, ""), buf.String())
 }
 
+func TestCloseIdempotent(t *testing.T) {
+	buf := new(bytes.Buffer)
+
+	defer setupDummyTime()()
+
+	w := New(buf, StderrType, 255, true)
+	_, err := w.Write([]byte("no trailing newline"))
+	assert.NoError(t, err)
+
+	assert.NoError(t, w.Close())
+	before := buf.String()
+
+	assert.NoError(t, w.Close())
+	assert.Equal(t, before, buf.String(), "second Close must not re-emit buffered data")
+}
+
 func BenchmarkWithTimestamps(b *testing.B) {
 	defer setupDummyTime()()
 

@@ -273,10 +273,11 @@ func (l *Logger) writeHeader(w io.Writer) error {
 }
 
 func (l *Logger) Close() error {
-	if l.buf.Len() > 0 {
-		l.buf.Write(lineEscape)
-		_, err := l.w.Write(l.buf.Bytes())
-		return err
+	if l.buf.Len() == 0 {
+		return nil
 	}
-	return nil
+	l.buf.Write(lineEscape)
+	_, err := l.w.Write(l.buf.Bytes())
+	l.buf.Reset()
+	return err
 }
