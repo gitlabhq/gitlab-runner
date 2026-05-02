@@ -562,6 +562,8 @@ func wrapStepStageErr(err error) error {
 		case client.ErrorCancelled:
 			berr.FailureReason = JobCanceled
 			berr.Inner = ErrJobCanceled
+		case client.ErrorTimeout:
+			berr.FailureReason = JobExecutionTimeout
 		case client.ErrorUnknown:
 			berr.FailureReason = UnknownFailure
 		}
