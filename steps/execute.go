@@ -8,6 +8,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -63,8 +64,24 @@ type ClientInternalError struct {
 func (e *ClientInternalError) Error() string { return e.Err.Error() }
 func (e *ClientInternalError) Unwrap() error { return e.Err }
 
-func Execute(ctx context.Context, connector Connector, jobInfo JobInfo, steps []schema.Step, trace io.Writer) error {
-	dialFn, err := connector.Connect(ctx)
+// Options bundles the parameters Execute needs to run a step-runner job.
+// RegisterCancel is optional; when set, Execute invokes it with a callback
+// that issues a graceful Cancel to step-runner. The signature matches
+// common.JobTrace.SetCancelFunc so callers can pass it directly. When the
+// callback fires, step-runner runs its post-cancel phases (e.g.
+// cache/artifact upload) before exiting, and the resulting cancelled status
+// flows back as the build outcome. All fields except for RegisterCancel are required.
+type Options struct {
+	Connector      Connector
+	JobInfo        JobInfo
+	Steps          []schema.Step
+	Trace          io.Writer
+	RegisterCancel func(context.CancelFunc)
+	Log            *logrus.Entry
+}
+
+func Execute(ctx context.Context, opts Options) error {
+	dialFn, err := opts.Connector.Connect(ctx)
 	if err != nil {
 		return fmt.Errorf("creating connect dialer: %w", err)
 	}
@@ -77,11 +94,22 @@ func Execute(ctx context.Context, connector Connector, jobInfo JobInfo, steps []
 	//nolint:errcheck
 	defer c.CloseConn()
 
-	out := extended.FollowOutput{Logs: trace}
+	out := extended.FollowOutput{Logs: opts.Trace}
 
-	request, err := NewRequest(jobInfo, steps)
+	request, err := NewRequest(opts.JobInfo, opts.Steps)
 	if err != nil {
 		return fmt.Errorf("creating steps request: %w", err)
+	}
+
+	if opts.RegisterCancel != nil {
+		opts.RegisterCancel(func() {
+			// this context is for the Cancel request only.
+			cancelCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := c.Cancel(cancelCtx, request.Id); err != nil {
+				opts.Log.WithError(err).Warn("Failed to cancel step-runner job")
+			}
+		})
 	}
 
 	status, err := c.RunAndFollow(ctx, request, &out)

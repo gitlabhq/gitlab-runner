@@ -31,8 +31,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
+	"gitlab.com/gitlab-org/gitlab-runner/steps/stepstest"
 	"gitlab.com/gitlab-org/moa/value"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 func init() {
@@ -4817,12 +4819,12 @@ func Test_wrapStepStageErr(t *testing.T) {
 			}),
 			expectedReason: UnknownFailure,
 		},
-		"client status error with ErrorCancelled leaves reason unset": {
+		"client status error with ErrorCancelled maps to JobCanceled": {
 			err: fmt.Errorf("executing steps request: %w", &steps.ClientStatusError{
 				Status: client.Status{State: client.StateCancelled, ErrorKind: client.ErrorCancelled},
 				Err:    errors.New("cancelled"),
 			}),
-			expectedReason: "",
+			expectedReason: JobCanceled,
 		},
 		"plain error": {
 			err:            fmt.Errorf("executing steps request: %w", errors.New("something broke")),
@@ -4845,4 +4847,93 @@ func Test_wrapStepStageErr(t *testing.T) {
 			assert.Equal(t, tc.expectedReason, berr.FailureReason)
 		})
 	}
+}
+
+// TestBuild_executeStepStage_ForwardsRegisterCancel asserts the wiring this
+// branch introduces: the registerCancel parameter on executeStepStage is
+// handed through to steps.Options.RegisterCancel, and the callback that
+// Execute then registers is the same one a JobTrace would receive via
+// SetCancelFunc. A regression here (e.g. dropping the field while plumbing
+// Options) would silently disable user-cancellation for the concrete path,
+// so guard it explicitly rather than rely on integration coverage.
+func TestBuild_executeStepStage_ForwardsRegisterCancel(t *testing.T) {
+	server := stepstest.New(t)
+
+	logger, _ := test.NewNullLogger()
+	build := &Build{
+		Job:    spec.Job{ID: 4242},
+		Runner: &RunnerConfig{},
+		// Pre-populate variables so GetAllVariables short-circuits and
+		// doesn't depend on Settings()/feature-flag resolution that the
+		// test isn't exercising.
+		allVariables: spec.Variables{},
+		BuildDir:     t.TempDir(),
+		logger:       buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
+	}
+
+	registered := make(chan context.CancelFunc, 1)
+	registerCancel := func(cb context.CancelFunc) {
+		registered <- cb
+	}
+
+	// Execute blocks on the fake server's FollowLogs until Cancel arrives,
+	// so trigger the registered callback as soon as it appears. This proves
+	// (a) registerCancel was invoked at all, and (b) the callback it
+	// received drives the Cancel RPC end-to-end.
+	go func() {
+		cb, ok := <-registered
+		if !ok {
+			return
+		}
+		cb()
+	}()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	err := build.executeStepStage(ctx, server.Connector(), "test_stage", []schema.Step{}, registerCancel)
+	close(registered)
+
+	var berr *BuildError
+	require.ErrorAs(t, err, &berr, "cancelled step-runner status must surface as a BuildError")
+	assert.Equal(t, JobCanceled, berr.FailureReason,
+		"executeStepStage must produce JobCanceled when the step-runner reports cancelled")
+	assert.ErrorIs(t, berr.Inner, ErrJobCanceled)
+
+	assert.Equal(t,
+		[]string{strconv.FormatInt(build.ID, 10)},
+		server.Cancels(),
+		"the registered callback must call Cancel with the build's job ID",
+	)
+}
+
+// TestBuild_executeStepStage_NilRegisterCancel verifies that the
+// dispatched-step path (which passes nil) still completes cleanly: no panic
+// from a nil callback, and steps.Execute exits via context cancellation.
+func TestBuild_executeStepStage_NilRegisterCancel(t *testing.T) {
+	server := stepstest.New(t)
+
+	logger, _ := test.NewNullLogger()
+	build := &Build{
+		Job:          spec.Job{ID: 9},
+		Runner:       &RunnerConfig{},
+		allVariables: spec.Variables{},
+		BuildDir:     t.TempDir(),
+		logger:       buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	// Drive shutdown via context cancel rather than a registered callback.
+	time.AfterFunc(200*time.Millisecond, cancel)
+
+	err := build.executeStepStage(ctx, server.Connector(), "test_stage", []schema.Step{}, nil)
+
+	// We don't assert a specific error shape here — context cancellation
+	// during gRPC streaming can surface as several wrapped forms. The
+	// assertion that matters is that the call returned at all without
+	// panicking on the nil registerCancel.
+	_ = err
+	assert.Empty(t, server.Cancels(), "no Cancel RPC should fire when registerCancel is nil")
 }

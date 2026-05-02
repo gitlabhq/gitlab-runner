@@ -53,8 +53,10 @@ const (
 	BuildRunRuntimeTimedout   BuildRuntimeState = "timedout"
 )
 
-type BuildStage string
-type JobExecutionMode string
+type (
+	BuildStage       string
+	JobExecutionMode string
+)
 
 // WithContext is an interface that some Executor's ExecutorData will implement as a
 // mechanism for extending the build context and canceling if the executor cannot
@@ -479,7 +481,7 @@ func (b *Build) StartBuild(
 }
 
 //nolint:gocognit
-func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector, buildStage BuildStage, req []schema.Step) error {
+func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector, buildStage BuildStage, req []schema.Step, registerCancel func(context.CancelFunc)) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -509,14 +511,19 @@ func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector,
 			stdout := b.logger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
 			defer stdout.Close()
 
-			info := steps.JobInfo{
-				ID:         b.ID,
-				Timeout:    b.GetBuildTimeout(),
-				ProjectDir: b.FullProjectDir(),
-				Variables:  b.GetAllVariables(),
-			}
-
-			return wrapStepStageErr(steps.Execute(ctx, connector, info, req, stdout))
+			return wrapStepStageErr(steps.Execute(ctx, steps.Options{
+				Connector: connector,
+				JobInfo: steps.JobInfo{
+					ID:         b.ID,
+					Timeout:    b.GetBuildTimeout(),
+					ProjectDir: b.FullProjectDir(),
+					Variables:  b.GetAllVariables(),
+				},
+				Steps:          req,
+				Trace:          stdout,
+				RegisterCancel: registerCancel,
+				Log:            b.Log(),
+			}))
 		},
 	}
 
@@ -548,6 +555,9 @@ func wrapStepStageErr(err error) error {
 		switch cserr.Status.ErrorKind {
 		case client.ErrorInternal, client.ErrorStepFailure:
 			berr.FailureReason = ScriptFailure
+		case client.ErrorCancelled:
+			berr.FailureReason = JobCanceled
+			berr.Inner = ErrJobCanceled
 		case client.ErrorUnknown:
 			berr.FailureReason = UnknownFailure
 		}
@@ -587,7 +597,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	if connector, ok := executor.(steps.Connector); b.UseNativeSteps() && ok {
 		if handled, steps := stepDispatch(b, executor, buildStage); handled {
 			b.markStepDispatchedInScript()
-			err := b.executeStepStage(ctx, connector, buildStage, steps)
+			err := b.executeStepStage(ctx, connector, buildStage, steps, nil)
 			// The defer below is never reached for the step-dispatch path,
 			// so we replicate its timeout warning here. We check ctx.Err()
 			// rather than the returned error because gRPC wraps deadline
@@ -749,8 +759,14 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 			return err
 		}
 
+		// Route user cancellation through step-runner's Cancel API so the
+		// concrete step's post-cancel phases (e.g. cache/artifact upload)
+		// can run. This intentionally replaces the build-ctx cancel
+		// configureTrace installed: we want step-runner to drive the
+		// graceful shutdown, and the resulting cancelled status maps to
+		// JobCanceled via wrapStepStageErr.
 		//nolint:errcheck
-		err = b.executeStepStage(ctx, executor.(steps.Connector), "concrete", concreteSteps)
+		err = b.executeStepStage(ctx, executor.(steps.Connector), "concrete", concreteSteps, trace.SetCancelFunc)
 
 		b.executeUploadReferees(ctx, startTime, time.Now())
 
@@ -2166,7 +2182,7 @@ func (b *Build) printPolicyOptions() {
 		return
 	}
 
-	var message = "User-defined CI/CD variables are "
+	message := "User-defined CI/CD variables are "
 	if *b.Job.PolicyOptions.VariableOverrideAllowed {
 		message += "allowed in this job"
 	} else {
