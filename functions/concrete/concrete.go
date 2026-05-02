@@ -37,5 +37,15 @@ func Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
 		return err
 	}
 
+	cancelCtx, cancel := builtinCtx.ListenCancel(ctx)
+	defer cancel()
+	go func() {
+		select {
+		case <-ctx.Done(): // no-op, the main context was cancelled OR the Close API was called.
+		case <-cancelCtx.Done(): // the cancel API was called.
+			runner.Cancel()
+		}
+	}()
+
 	return runner.Run(ctx)
 }

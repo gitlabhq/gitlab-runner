@@ -71,19 +71,20 @@ func New(config Config, builtinCtx runner.BuiltinContext, options ...Option) (*R
 	stdout, stderr := builtinCtx.Pipe()
 
 	e := &env.Env{
-		ID:         config.ID,
-		Token:      config.Token,
-		BaseURL:    config.BaseURL,
-		WorkingDir: builtinCtx.WorkDir(),
-		CacheDir:   config.CacheDir,
-		StagingDir: config.ArchiverStagingDir,
-		Shell:      config.Shell,
-		Timeout:    config.Timeout,
-		LoginShell: config.LoginShell,
-		GitLabEnv:  make(map[string]string),
-		Env:        stepEnv,
-		Stdout:     stdout,
-		Stderr:     stderr,
+		ID:                config.ID,
+		Token:             config.Token,
+		BaseURL:           config.BaseURL,
+		WorkingDir:        builtinCtx.WorkDir(),
+		CacheDir:          config.CacheDir,
+		StagingDir:        config.ArchiverStagingDir,
+		Shell:             config.Shell,
+		Timeout:           config.Timeout,
+		LoginShell:        config.LoginShell,
+		GracefulExitDelay: builtinCtx.GracefulExitDelay(),
+		GitLabEnv:         make(map[string]string),
+		Env:               stepEnv,
+		Stdout:            stdout,
+		Stderr:            stderr,
 	}
 
 	e.Env["CI_JOB_STATUS"] = string(env.Running)

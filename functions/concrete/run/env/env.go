@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/runner/gracefulexitcmd"
 )
 
 type JobStatus string
@@ -33,6 +35,10 @@ type Env struct {
 	Shell      string
 	Timeout    time.Duration
 	LoginShell bool
+
+	// GracefulExitDelay bounds the time between cancellation and forced
+	// pipe-close when a script is terminated. See gracefulexitcmd.New.
+	GracefulExitDelay time.Duration
 
 	Env map[string]string
 
@@ -112,7 +118,7 @@ func (e *Env) Command(ctx context.Context, name string, env map[string]string, a
 		environ = append(environ, k+"="+v)
 	}
 
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := gracefulexitcmd.New(ctx, e.GracefulExitDelay, name, args...)
 	cmd.Dir = e.WorkingDir
 	cmd.Env = environ
 	cmd.Stdout = e.Stdout
