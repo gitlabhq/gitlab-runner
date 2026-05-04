@@ -946,7 +946,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	executorData, err := provider.Acquire(runner)
 	if err != nil {
 		// Release job request
-		mr.buildsHelper.releaseRequest(runner, false)
+		mr.buildsHelper.releaseRequest(runner, false, false)
 
 		return fmt.Errorf("failed to update executor: %w", err)
 	}
@@ -964,14 +964,14 @@ func (mr *RunCommand) processBuildOnRunner(
 	buildSession, sessionInfo, err := mr.createSession(provider)
 	if err != nil {
 		// Release job request
-		mr.buildsHelper.releaseRequest(runner, false)
+		mr.buildsHelper.releaseRequest(runner, false, false)
 		return err
 	}
 
 	// Receive a new build
-	trace, jobData, err := mr.requestJob(runner, sessionInfo)
+	trace, jobData, retried, err := mr.requestJob(runner, sessionInfo)
 	// Release job request
-	mr.buildsHelper.releaseRequest(runner, jobData != nil)
+	mr.buildsHelper.releaseRequest(runner, jobData != nil, retried)
 	if err != nil || jobData == nil {
 		return err
 	}
@@ -1110,15 +1110,22 @@ func (mr *RunCommand) createSession(provider common.ExecutorProvider) (*session.
 
 // requestJob will check if the runner can send another concurrent request to
 // GitLab, if not the return value is nil.
+//
+// The returned `retried` flag covers only the initial job pickup: it is
+// snapshotted before any post-pickup network calls so ProcessJob/UpdateJob
+// retries cannot pollute the adaptive-concurrency signal.
 func (mr *RunCommand) requestJob(
 	runner *common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
-) (common.JobTrace, *spec.Job, error) {
-	jobData, healthy := mr.doJobRequest(context.Background(), runner, sessionInfo)
+) (common.JobTrace, *spec.Job, bool, error) {
+	reqCtx, retriedFlag := network.WithRetryTracker(context.Background())
+
+	jobData, healthy := mr.doJobRequest(reqCtx, runner, sessionInfo)
+	retried := retriedFlag.Load()
 	mr.healthHelper.markHealth(runner, healthy)
 
 	if jobData == nil {
-		return nil, nil, nil
+		return nil, nil, retried, nil
 	}
 
 	// Inject metrics collector into JobInputs
@@ -1140,7 +1147,7 @@ func (mr *RunCommand) requestJob(
 
 		// send failure once
 		mr.network.UpdateJob(*runner, jobCredentials, jobInfo)
-		return nil, nil, err
+		return nil, nil, retried, err
 	}
 
 	if err := errors.Join(jobData.UnsupportedOptions(),
@@ -1153,7 +1160,7 @@ func (mr *RunCommand) requestJob(
 		})
 		logTerminationError(mr.log(), "Fail", err)
 
-		return nil, nil, err
+		return nil, nil, retried, err
 	}
 
 	trace.SetFailuresCollector(mr.failuresCollector)
@@ -1165,10 +1172,10 @@ func (mr *RunCommand) requestJob(
 
 	if updateResult.State == common.UpdateAbort || updateResult.CancelRequested {
 		trace.Finish()
-		return nil, nil, nil
+		return nil, nil, retried, nil
 	}
 
-	return trace, jobData, nil
+	return trace, jobData, retried, nil
 }
 
 func (mr *RunCommand) executorSupportsNativeSteps(runnerConfig *common.RunnerConfig) bool {

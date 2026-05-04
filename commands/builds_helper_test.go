@@ -40,10 +40,10 @@ func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
 	result = b.acquireRequest(&runner)
 	require.False(t, result, "allow only one requests (adaptive limit)")
 
-	result = b.releaseRequest(&runner, false)
+	result = b.releaseRequest(&runner, false, false)
 	require.True(t, result)
 
-	result = b.releaseRequest(&runner, false)
+	result = b.releaseRequest(&runner, false, false)
 	require.False(t, result, "release only two requests")
 }
 
@@ -56,7 +56,7 @@ func TestBuildsHelperAcquireRequestWithAdaptiveLimit(t *testing.T) {
 	result := b.acquireRequest(&runner)
 	require.True(t, result)
 
-	result = b.releaseRequest(&runner, true)
+	result = b.releaseRequest(&runner, true, false)
 	require.True(t, result)
 
 	result = b.acquireRequest(&runner)
@@ -65,10 +65,10 @@ func TestBuildsHelperAcquireRequestWithAdaptiveLimit(t *testing.T) {
 	result = b.acquireRequest(&runner)
 	require.False(t, result, "allow only two requests")
 
-	result = b.releaseRequest(&runner, false)
+	result = b.releaseRequest(&runner, false, false)
 	require.True(t, result)
 
-	result = b.releaseRequest(&runner, false)
+	result = b.releaseRequest(&runner, false, false)
 	require.False(t, result, "release only two requests")
 }
 
@@ -84,20 +84,144 @@ func TestBuildsHelperAcquireRequestWithDefault(t *testing.T) {
 	result = b.acquireRequest(&runner)
 	require.False(t, result, "allow only one request")
 
-	result = b.releaseRequest(&runner, false)
+	result = b.releaseRequest(&runner, false, false)
 	require.True(t, result)
 
-	result = b.releaseRequest(&runner, false)
+	result = b.releaseRequest(&runner, false, false)
 	require.False(t, result, "release only one request")
 
 	result = b.acquireRequest(&runner)
 	require.True(t, result)
 
-	result = b.releaseRequest(&runner, false)
+	result = b.releaseRequest(&runner, false, false)
 	require.True(t, result)
 
-	result = b.releaseRequest(&runner, false)
+	result = b.releaseRequest(&runner, false, false)
 	require.False(t, result, "nothing to release")
+}
+
+func TestBuildsHelper_ReleaseRequest_AdaptiveGrowsOnCleanSuccess(t *testing.T) {
+	runner := common.RunnerConfig{
+		RequestConcurrency: 10,
+		RunnerSettings: common.RunnerSettings{
+			FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: true},
+		},
+	}
+
+	b := newBuildsHelper()
+	// 1.1^n reaches 10 at n≈25; 50 iterations is comfortably past the clamp.
+	for i := 0; i < 50; i++ {
+		require.True(t, b.acquireRequest(&runner))
+		b.releaseRequest(&runner, true, false)
+	}
+
+	counter := b.counters[runner.Token]
+	require.NotNil(t, counter)
+	assert.InDelta(t, 10.0, counter.adaptiveConcurrencyLimit, 0.01,
+		"clean first-try successes must grow adaptive limit up to the configured max")
+}
+
+func TestBuildsHelper_ReleaseRequest_RetriedDoesNotGrowAdaptive(t *testing.T) {
+	runner := common.RunnerConfig{
+		RequestConcurrency: 10,
+		RunnerSettings: common.RunnerSettings{
+			FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: true},
+		},
+	}
+
+	b := newBuildsHelper()
+	for i := 0; i < 20; i++ {
+		require.True(t, b.acquireRequest(&runner))
+		b.releaseRequest(&runner, true, true)
+	}
+
+	counter := b.counters[runner.Token]
+	require.NotNil(t, counter)
+	assert.InDelta(t, 1.0, counter.adaptiveConcurrencyLimit, 0.01,
+		"retried requests must be treated as non-capacity signals and keep adaptive clamped at 1")
+}
+
+func TestBuildsHelper_ReleaseRequest_RetriedAfterWarmupShrinksAdaptiveFast(t *testing.T) {
+	runner := common.RunnerConfig{
+		RequestConcurrency: 20,
+		RunnerSettings: common.RunnerSettings{
+			FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: true},
+		},
+	}
+
+	b := newBuildsHelper()
+	for i := 0; i < 100; i++ {
+		require.True(t, b.acquireRequest(&runner))
+		b.releaseRequest(&runner, true, false)
+	}
+	counter := b.counters[runner.Token]
+	require.NotNil(t, counter)
+	require.InDelta(t, 20.0, counter.adaptiveConcurrencyLimit, 0.01, "warmup should reach max")
+
+	for i := 0; i < 6; i++ {
+		require.True(t, b.acquireRequest(&runner))
+		b.releaseRequest(&runner, true, true)
+	}
+
+	assert.InDelta(t, 1.0, counter.adaptiveConcurrencyLimit, 0.01,
+		"multiplicative decrease must collapse the limit to the floor in a handful of retried requests")
+}
+
+func TestBuildsHelper_ReleaseRequest_RetriedDecreasesFasterThanEmptyResponse(t *testing.T) {
+	makeRunner := func() *common.RunnerConfig {
+		return &common.RunnerConfig{
+			RequestConcurrency: 20,
+			RunnerSettings: common.RunnerSettings{
+				FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: true},
+			},
+		}
+	}
+
+	warmTo20 := func(b *buildsHelper, runner *common.RunnerConfig) {
+		for i := 0; i < 100; i++ {
+			require.True(t, b.acquireRequest(runner))
+			b.releaseRequest(runner, true, false)
+		}
+		require.InDelta(t, 20.0, b.counters[runner.Token].adaptiveConcurrencyLimit, 0.01)
+	}
+
+	bRetried := newBuildsHelper()
+	rRetried := makeRunner()
+	warmTo20(&bRetried, rRetried)
+
+	bEmpty := newBuildsHelper()
+	rEmpty := makeRunner()
+	warmTo20(&bEmpty, rEmpty)
+
+	for i := 0; i < 3; i++ {
+		require.True(t, bRetried.acquireRequest(rRetried))
+		bRetried.releaseRequest(rRetried, true, true)
+
+		require.True(t, bEmpty.acquireRequest(rEmpty))
+		bEmpty.releaseRequest(rEmpty, false, false)
+	}
+
+	assert.Less(t, bRetried.counters[rRetried.Token].adaptiveConcurrencyLimit,
+		bEmpty.counters[rEmpty.Token].adaptiveConcurrencyLimit,
+		"retried must shrink adaptive faster than passive empty responses")
+}
+
+func TestBuildsHelper_ReleaseRequest_RetriedIgnoredWhenAdaptiveDisabled(t *testing.T) {
+	runner := common.RunnerConfig{
+		RequestConcurrency: 5,
+		RunnerSettings: common.RunnerSettings{
+			FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: false},
+		},
+	}
+
+	b := newBuildsHelper()
+	require.True(t, b.acquireRequest(&runner))
+	b.releaseRequest(&runner, true, true)
+
+	counter := b.counters[runner.Token]
+	require.NotNil(t, counter)
+	assert.Equal(t, 0.0, counter.adaptiveConcurrencyLimit,
+		"adaptive limit must remain untouched when the feature flag is off")
 }
 
 func TestBuildsHelperAcquireBuildWithLimit(t *testing.T) {
