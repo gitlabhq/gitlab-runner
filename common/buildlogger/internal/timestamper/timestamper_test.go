@@ -174,18 +174,80 @@ func TestForcedFlush(t *testing.T) {
 	assert.Equal(t, strings.Join(expected, ""), buf.String())
 }
 
-func BenchmarkWithTimestamps(b *testing.B) {
+func TestCloseIdempotent(t *testing.T) {
+	buf := new(bytes.Buffer)
+
 	defer setupDummyTime()()
+
+	w := New(buf, StderrType, 255, true)
+	_, err := w.Write([]byte("no trailing newline"))
+	assert.NoError(t, err)
+
+	assert.NoError(t, w.Close())
+	before := buf.String()
+
+	assert.NoError(t, w.Close())
+	assert.Equal(t, before, buf.String(), "second Close must not re-emit buffered data")
+}
+
+// TestTimestampSecondsCache covers the same-second fast path in writeHeader,
+// where Y/M/D/H/M/S are reused from the cache and only the microsecond digits
+// are refreshed. The other tests advance time by an hour per call and so
+// always hit the cache-miss branch.
+func TestTimestampSecondsCache(t *testing.T) {
+	oldNow := now
+	defer func() { now = oldNow }()
+
+	base, _ := time.Parse(time.RFC3339, "2021-06-15T12:34:56.000000Z")
+	offsets := []time.Duration{
+		0,                                // 12:34:56.000000 - first call, cache miss
+		time.Microsecond,                 // 12:34:56.000001 - same second, cache hit
+		123 * time.Microsecond,           // 12:34:56.000123 - same second, cache hit
+		time.Second,                      // 12:34:57.000000 - new second, cache miss
+		time.Second + 7*time.Microsecond, // 12:34:57.000007 - same second, cache hit
+	}
+	i := 0
+	now = func() time.Time {
+		t := base.Add(offsets[i])
+		i++
+		return t
+	}
+
+	buf := new(bytes.Buffer)
+	w := New(buf, StderrType, 1, true)
+	for range offsets {
+		_, _ = w.Write([]byte("line\n"))
+	}
+
+	expected := strings.Join([]string{
+		"2021-06-15T12:34:56.000000Z 01E line\n",
+		"2021-06-15T12:34:56.000001Z 01E line\n",
+		"2021-06-15T12:34:56.000123Z 01E line\n",
+		"2021-06-15T12:34:57.000000Z 01E line\n",
+		"2021-06-15T12:34:57.000007Z 01E line\n",
+	}, "")
+	assert.Equal(t, expected, buf.String())
+}
+
+// BenchmarkWithTimestamps mimics a realistic workload: many log lines
+// emitted within the same wall second, with microsecond-level spacing.
+func BenchmarkWithTimestamps(b *testing.B) {
+	oldNow := now
+	defer func() { now = oldNow }()
+
+	base, _ := time.Parse(time.RFC3339, "2021-01-01T00:00:00.000000Z")
+	now = func() time.Time {
+		base = base.Add(time.Microsecond)
+		return base
+	}
 
 	w := New(io.Discard, StderrType, 255, true)
 
 	headerSize := len(format) + 4
-
 	line := []byte("This is the beginning of a new line\n")
 	b.SetBytes(int64((headerSize + len(line)) * 200))
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		for j := 0; j < 200; j++ {
 			_, _ = w.Write(line)
 		}

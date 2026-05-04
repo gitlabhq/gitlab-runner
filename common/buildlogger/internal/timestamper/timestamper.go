@@ -3,7 +3,6 @@ package timestamper
 import (
 	"bytes"
 	"io"
-	"math"
 	"time"
 )
 
@@ -21,8 +20,8 @@ const (
 	// any consumer of the logs will receive.
 	bufSize = 8 * 1024
 
-	// fracs is the nanosecond length we append
-	fracs = 6
+	// nanosDivisor truncates time.Time.Nanosecond() to microsecond precision.
+	nanosDivisor = 1000
 
 	format = "YYYY-mm-ddTHH:MM:SS.123456Z "
 )
@@ -68,12 +67,20 @@ type Logger struct {
 	bufStream []byte
 	timeLen   int
 	timestamp bool
+
+	// cached unix second of the last header format. When the next
+	// header is in the same second we only need to rewrite the
+	// microsecond digits, skipping the relatively expensive
+	// time.Time.Date / Clock calls. Initialised to a sentinel that
+	// no real timestamp will match so the first call always formats.
+	cachedUnix int64
 }
 
 func New(w io.Writer, streamType StreamType, streamNumber uint8, timestamp bool) *Logger {
 	l := &Logger{
-		w:         w,
-		timestamp: timestamp,
+		w:          w,
+		timestamp:  timestamp,
+		cachedUnix: -1,
 	}
 
 	if timestamp {
@@ -81,6 +88,15 @@ func New(w io.Writer, streamType StreamType, streamNumber uint8, timestamp bool)
 	}
 	l.bufStream = make([]byte, l.timeLen+4)
 	if timestamp {
+		// pre-fill the static separators of YYYY-MM-DDTHH:MM:SS.UUUUUUZ<space>
+		// so writeHeader only has to fill in the digit positions.
+		l.bufStream[4] = '-'
+		l.bufStream[7] = '-'
+		l.bufStream[10] = 'T'
+		l.bufStream[13] = ':'
+		l.bufStream[16] = ':'
+		l.bufStream[19] = '.'
+		l.bufStream[26] = 'Z'
 		l.bufStream[l.timeLen-1] = ' '
 	}
 	l.bufStream[l.timeLen+0] = hextable[streamNumber>>4]
@@ -238,32 +254,42 @@ func (l *Logger) writeCarriageReturns(p []byte) (n int, err error) {
 func (l *Logger) writeHeader(w io.Writer) error {
 	if l.timestamp {
 		t := now()
+		sec := t.Unix()
+		buf := l.bufStream
 
-		// time.RFC3339 doesn't add nanosecond precision, and time.RFC3339Nano strips
-		// trailing zeros. Whilst we could use a custom format, this
-		// is slower, as Go as built-in optimizations for RFC3339. So here we use the
-		// non-nano version, and then add nanoseconds to a fixed length. Fixed length
-		// is important because it makes the logs easier for both a human and machine
-		// to read.
-		t.AppendFormat(l.bufStream[:0], time.RFC3339)
-
-		// replace 'Z' for '.'
-		l.bufStream[l.timeLen-3-fracs] = '.'
-
-		// ensure nanoseconds doesn't exceed our fracs precision
-		nanos := t.Nanosecond() / int(math.Pow10(9-fracs))
-
-		// add nanoseconds and append leading zeros
-		for i := 0; i < fracs; i++ {
-			l.bufStream[l.timeLen-3-i] = hextable[nanos%10]
-			nanos /= 10
+		// Static separators were pre-filled in New(). On a same-second
+		// repeat we only refresh the microsecond digits.
+		if sec != l.cachedUnix {
+			year, month, day := t.Date()
+			hour, minute, secOfMin := t.Clock()
+			buf[0] = '0' + byte(year/1000)
+			buf[1] = '0' + byte((year/100)%10)
+			buf[2] = '0' + byte((year/10)%10)
+			buf[3] = '0' + byte(year%10)
+			buf[5] = '0' + byte(int(month)/10)
+			buf[6] = '0' + byte(int(month)%10)
+			buf[8] = '0' + byte(day/10)
+			buf[9] = '0' + byte(day%10)
+			buf[11] = '0' + byte(hour/10)
+			buf[12] = '0' + byte(hour%10)
+			buf[14] = '0' + byte(minute/10)
+			buf[15] = '0' + byte(minute%10)
+			buf[17] = '0' + byte(secOfMin/10)
+			buf[18] = '0' + byte(secOfMin%10)
+			l.cachedUnix = sec
 		}
 
-		// add 'Z' back
-		l.bufStream[l.timeLen-2] = 'Z'
-
-		// expand back to full header size
-		l.bufStream = l.bufStream[:l.timeLen+4]
+		nanos := t.Nanosecond() / nanosDivisor
+		buf[25] = '0' + byte(nanos%10)
+		nanos /= 10
+		buf[24] = '0' + byte(nanos%10)
+		nanos /= 10
+		buf[23] = '0' + byte(nanos%10)
+		nanos /= 10
+		buf[22] = '0' + byte(nanos%10)
+		nanos /= 10
+		buf[21] = '0' + byte(nanos%10)
+		buf[20] = '0' + byte(nanos/10)
 	}
 	_, err := w.Write(l.bufStream)
 
@@ -273,10 +299,11 @@ func (l *Logger) writeHeader(w io.Writer) error {
 }
 
 func (l *Logger) Close() error {
-	if l.buf.Len() > 0 {
-		l.buf.Write(lineEscape)
-		_, err := l.w.Write(l.buf.Bytes())
-		return err
+	if l.buf.Len() == 0 {
+		return nil
 	}
-	return nil
+	l.buf.Write(lineEscape)
+	_, err := l.w.Write(l.buf.Bytes())
+	l.buf.Reset()
+	return err
 }
