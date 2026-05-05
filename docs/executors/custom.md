@@ -127,13 +127,26 @@ custom:
       alias: pg
       entrypoint: ["path", "to", "entrypoint"]
       command: ["path", "to", "cmd"]
+      variables:
+        POSTGRES_PASSWORD: secret
+        POSTGRES_DB: mydb
 ```
 
 The example above sets the `CUSTOM_ENV_CI_JOB_SERVICES` environment variable with the following value:
 
 ```json
-[{"name":"redis:latest","alias":"","entrypoint":null,"command":null},{"name":"my-postgres:9.4","alias":"pg","entrypoint":["path","to","entrypoint"],"command":["path","to","cmd"]}]
+[{"name":"redis:latest","alias":"","entrypoint":null,"command":null},{"name":"my-postgres:9.4","alias":"pg","entrypoint":["path","to","entrypoint"],"command":["path","to","cmd"],"variables":{"POSTGRES_DB":"mydb","POSTGRES_PASSWORD":"secret"}}]
 ```
+
+Each service object in the JSON array has the following fields:
+
+| Field        | Type          | Description                                                                              |
+|--------------|---------------|------------------------------------------------------------------------------------------|
+| `name`       | string        | Service image name.                                                                      |
+| `alias`      | string        | First alias defined for the service. Empty string if none.                               |
+| `entrypoint` | array or null | Container entrypoint override. `null` if not set.                                        |
+| `command`    | array or null | Container command override. `null` if not set.                                           |
+| `variables`  | object        | Key-value map of variables defined for the service. Omitted if no variables are defined. |
 
 ### Config
 
