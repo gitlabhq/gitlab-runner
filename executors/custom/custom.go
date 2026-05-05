@@ -42,10 +42,11 @@ type ConfigExecOutput struct {
 }
 
 type jsonService struct {
-	Name       string   `json:"name"`
-	Alias      string   `json:"alias"`
-	Entrypoint []string `json:"entrypoint"`
-	Command    []string `json:"command"`
+	Name       string            `json:"name"`
+	Alias      string            `json:"alias"`
+	Entrypoint []string          `json:"entrypoint"`
+	Command    []string          `json:"command"`
+	Variables  map[string]string `json:"variables,omitempty"`
 }
 
 func (c *ConfigExecOutput) InjectInto(executor *executor) {
@@ -278,13 +279,28 @@ func (e *executor) getCIJobServicesEnv() spec.Variable {
 		return spec.Variable{Key: "CI_JOB_SERVICES"}
 	}
 
+	buildVars := e.Build.GetAllVariables()
+
 	var services []jsonService
 	for _, service := range e.Build.Services {
+		var variables map[string]string
+		if len(service.Variables) > 0 {
+			allVars := make(spec.Variables, 0, len(buildVars)+len(service.Variables))
+			allVars = append(allVars, buildVars...)
+			allVars = append(allVars, service.Variables...)
+			expanded := allVars.Expand()
+
+			variables = make(map[string]string, len(service.Variables))
+			for _, v := range service.Variables {
+				variables[v.Key] = expanded.Value(v.Key)
+			}
+		}
 		services = append(services, jsonService{
 			Name:       service.Name,
 			Alias:      append(service.Aliases(), "")[0],
 			Entrypoint: service.Entrypoint,
 			Command:    service.Command,
+			Variables:  variables,
 		})
 	}
 
@@ -402,6 +418,7 @@ func NewProvider(runnerCommandPath string) common.ExecutorProvider {
 	featuresUpdater := func(features *common.FeaturesInfo) {
 		features.Variables = true
 		features.Shared = true
+		features.ServiceVariables = true
 	}
 
 	return executors.DefaultExecutorProvider{

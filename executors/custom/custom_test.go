@@ -968,7 +968,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 			options command.Options,
 		) {
 			for _, env := range cmdOpts.Env {
-				pair := strings.Split(env, "=")
+				pair := strings.SplitN(env, "=", 2)
 				if pair[0] == CIJobServicesEnv {
 					expectedServicesSerialized, _ := json.Marshal(expectedServices)
 
@@ -998,7 +998,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 			options command.Options,
 		) {
 			for _, env := range cmdOpts.Env {
-				pair := strings.Split(env, "=")
+				pair := strings.SplitN(env, "=", 2)
 				if pair[0] == CIJobServicesEnv {
 					assert.Equal(t, "", pair[1])
 					break
@@ -1073,6 +1073,142 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 						Alias:      "",
 						Entrypoint: nil,
 						Command:    nil,
+					},
+				},
+			),
+		},
+		"returns service with single variable": {
+			config: runnerConfig,
+			adjustExecutor: adjustExecutorServices(spec.Services{
+				{
+					Name:  "redis:latest",
+					Alias: "redis-test",
+					Variables: spec.Variables{
+						{Key: "TEST_VAR", Value: "xxxx"},
+					},
+				},
+			}),
+			assertCommandFactory: assertEnvValue(
+				[]jsonService{
+					{
+						Name:      "redis:latest",
+						Alias:     "redis-test",
+						Variables: map[string]string{"TEST_VAR": "xxxx"},
+					},
+				},
+			),
+		},
+		"returns service with multiple variables": {
+			config: runnerConfig,
+			adjustExecutor: adjustExecutorServices(spec.Services{
+				{
+					Name: "postgres:latest",
+					Variables: spec.Variables{
+						{Key: "POSTGRES_DB", Value: "testdb"},
+						{Key: "POSTGRES_PASSWORD", Value: "secret"},
+					},
+				},
+			}),
+			assertCommandFactory: assertEnvValue(
+				[]jsonService{
+					{
+						Name:      "postgres:latest",
+						Alias:     "",
+						Variables: map[string]string{"POSTGRES_DB": "testdb", "POSTGRES_PASSWORD": "secret"},
+					},
+				},
+			),
+		},
+		"returns mixed services with and without variables": {
+			config: runnerConfig,
+			adjustExecutor: adjustExecutorServices(spec.Services{
+				{
+					Name: "redis:latest",
+					Variables: spec.Variables{
+						{Key: "REDIS_PASSWORD", Value: "pass123"},
+					},
+				},
+				{
+					Name: "nginx:alpine",
+				},
+			}),
+			assertCommandFactory: assertEnvValue(
+				[]jsonService{
+					{
+						Name:      "redis:latest",
+						Alias:     "",
+						Variables: map[string]string{"REDIS_PASSWORD": "pass123"},
+					},
+					{
+						Name:       "nginx:alpine",
+						Alias:      "",
+						Entrypoint: nil,
+						Command:    nil,
+					},
+				},
+			),
+		},
+		"exposes masked variable value in plain text": {
+			config: runnerConfig,
+			adjustExecutor: adjustExecutorServices(spec.Services{
+				{
+					Name: "redis:latest",
+					Variables: spec.Variables{
+						{Key: "REDIS_PASSWORD", Value: "supersecret", Masked: true},
+					},
+				},
+			}),
+			assertCommandFactory: assertEnvValue(
+				[]jsonService{
+					{
+						Name:      "redis:latest",
+						Alias:     "",
+						Variables: map[string]string{"REDIS_PASSWORD": "supersecret"},
+					},
+				},
+			),
+		},
+		"resolves file-type service variable to its contents": {
+			config: runnerConfig,
+			adjustExecutor: adjustExecutorServices(spec.Services{
+				{
+					Name: "postgres:latest",
+					Variables: spec.Variables{
+						{Key: "DB_PASSWORD", Value: "secret-file-content", File: true},
+					},
+				},
+			}),
+			assertCommandFactory: assertEnvValue(
+				[]jsonService{
+					{
+						Name:      "postgres:latest",
+						Alias:     "",
+						Variables: map[string]string{"DB_PASSWORD": "secret-file-content"},
+					},
+				},
+			),
+		},
+		"expands service variable value referencing a build variable": {
+			config: runnerConfig,
+			adjustExecutor: func(t *testing.T, e *executor) {
+				e.Build.Variables = append(e.Build.Variables, spec.Variable{
+					Key: "BUILD_VAR", Value: "resolved-value", Public: true,
+				})
+				e.Build.Services = spec.Services{
+					{
+						Name: "postgres:latest",
+						Variables: spec.Variables{
+							{Key: "DB_URL", Value: "postgres://$BUILD_VAR/db"},
+						},
+					},
+				}
+			},
+			assertCommandFactory: assertEnvValue(
+				[]jsonService{
+					{
+						Name:      "postgres:latest",
+						Alias:     "",
+						Variables: map[string]string{"DB_URL": "postgres://resolved-value/db"},
 					},
 				},
 			),
