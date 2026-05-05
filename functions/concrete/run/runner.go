@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/env"
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/stages"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
+	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
 
 const afterScriptStepName = "after_script"
@@ -61,6 +63,13 @@ type Config struct {
 	CacheArchive     []stages.CacheArchive     `json:"cache_archive,omitempty"`
 	ArtifactsArchive []stages.ArtifactUpload   `json:"artifacts_archive,omitempty"`
 	Cleanup          stages.Cleanup            `json:"cleanup,omitempty"`
+
+	// RunSteps holds the user's `run:` keyword. When set, it is dispatched
+	// as a nested job through the step-runner that is hosting this concrete
+	// step (concrete dials back into the same socket as a separate tenant),
+	// so the surrounding prepare/finalize stages run regardless of whether
+	// the user's steps fail.
+	RunSteps []schema.Step `json:"run_steps,omitempty"`
 }
 
 func New(config Config, builtinCtx runner.BuiltinContext, options ...Option) (*Runner, error) {
@@ -202,19 +211,56 @@ func statusFromError(err error) env.JobStatus {
 
 // executeSteps runs all steps, switching from the script timeout to the
 // after-script timeout at the after_script boundary.
+//
+// When RunSteps is set the user's `run:` keyword owns the script phase: it
+// is dispatched as a nested job through the hosting step-runner, and any
+// stages.Step entries marked after_script still run afterwards under the
+// after-script timeout.
 func (r *Runner) executeSteps(jobCtx context.Context) error {
-	scriptSteps, afterSteps := r.config.Steps, []stages.Step(nil)
-	for i, step := range r.config.Steps {
-		if step.Step == afterScriptStepName {
-			scriptSteps, afterSteps = r.config.Steps[:i], r.config.Steps[i:]
-			break
-		}
+	afterIdx := slices.IndexFunc(r.config.Steps, func(s stages.Step) bool {
+		return s.Step == afterScriptStepName
+	})
+
+	var afterSteps []stages.Step
+	if afterIdx >= 0 {
+		afterSteps = r.config.Steps[afterIdx:]
 	}
 
-	err := r.runScriptSteps(jobCtx, scriptSteps)
+	var err error
+	if len(r.config.RunSteps) > 0 {
+		// runRunSteps owns the script phase; any pre-after_script entries
+		// in r.config.Steps are placeholders left over from the schema
+		// shim (see spec.ValidateStepsJobRequest) and would do nothing
+		// useful here.
+		err = r.runRunSteps(jobCtx, r.config.RunSteps)
+	} else {
+		scriptSteps := r.config.Steps
+		if afterIdx >= 0 {
+			scriptSteps = r.config.Steps[:afterIdx]
+		}
+		err = r.runScriptSteps(jobCtx, scriptSteps)
+	}
 	r.env.SetStatus(statusFromError(err))
 
 	return r.runAfterScriptSteps(jobCtx, afterSteps, err)
+}
+
+// runRunSteps dispatches the user's `run:` keyword via the hosting step-runner
+// under the script timeout, mirroring runScriptSteps' context handling so a
+// script-level timeout or external cancel is classified the same way.
+func (r *Runner) runRunSteps(jobCtx context.Context, steps []schema.Step) error {
+	scriptCtx, cancel := r.withTimeout(jobCtx, r.config.ScriptTimeout)
+	defer cancel()
+
+	r.setCancel(cancel)
+
+	// Pick up KEY=VALUE entries appended to $GITLAB_ENV by earlier stages
+	// (get_sources, restore_cache, download_artifacts) so the nested job
+	// inherits them, mirroring runScriptSteps' per-step reload.
+	r.loadGitlabEnv()
+
+	err := r.runUserSteps(scriptCtx, steps)
+	return r.classifyScriptContextError(jobCtx, scriptCtx, err)
 }
 
 func (r *Runner) runScriptSteps(jobCtx context.Context, steps []stages.Step) error {

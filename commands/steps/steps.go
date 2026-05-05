@@ -20,6 +20,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete"
+	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run"
 	"gitlab.com/gitlab-org/gitlab-runner/functions/script_legacy"
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/proxy"
@@ -131,6 +132,12 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	return os.Chmod(dst, mode)
 }
 
+// EnvSocketPath is the env var the serving process advertises its socket
+// path under, so in-process builtins (e.g. concrete) can dial back into
+// step-runner to dispatch nested jobs. The reading side lives in
+// functions/concrete/run; this alias keeps a single source of truth.
+const EnvSocketPath = run.EnvSocketPath
+
 //nolint:gocognit
 func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs ...string) error {
 	listener, err := net.ListenUnix("unix", api.SocketAddr(sockPath))
@@ -138,6 +145,9 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 		return fmt.Errorf("opening socket: %w", err)
 	}
 	defer listener.Close()
+
+	// Advertise the socket path so in-process builtins can dial back in.
+	_ = os.Setenv(EnvSocketPath, sockPath)
 
 	service, err := di.NewContainer(
 		di.WithStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run),
