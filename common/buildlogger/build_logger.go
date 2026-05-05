@@ -96,6 +96,71 @@ func (l *Logger) Stream(streamID int, streamType StreamType) io.WriteCloser {
 	return l.wrap(l.base, streamID, streamType)
 }
 
+// StepRunnerStream returns a writer for output produced by step-runner. When
+// step-runner emits lines already pre-stamped in the runner's timestamper
+// format, the data flows straight through to the base trace; otherwise the
+// full wrap chain is applied. This is the single hook for any future
+// step-runner-specific stream behavior.
+func (l *Logger) StepRunnerStream(streamID int, streamType StreamType) io.WriteCloser {
+	if l.base == nil {
+		return internal.NewNopCloser(io.Discard)
+	}
+
+	return &stepRunnerStream{
+		passthrough: internal.NewSync(l.base),
+		buildWrapped: func() io.WriteCloser {
+			return l.wrap(l.base, streamID, streamType)
+		},
+	}
+}
+
+// stepRunnerStream picks between two writers on its first write. The runner's
+// timestamper emits a fixed-width header — YYYY-MM-DDTHH:MM:SS.UUUUUUZ<space>
+// — and isPreStamped validates that full shape so producers other than
+// step-runner that happen to put 'Z' at byte 26 don't trip the passthrough.
+//
+// The wrap chain (timestamper, masker, sanitizers, sync) is built lazily via
+// buildWrapped so streams that only see pre-stamped output never pay for it.
+// step-runner output is the dominant case, so the saving compounds across
+// streams.
+type stepRunnerStream struct {
+	once         sync.Once
+	chosen       io.WriteCloser
+	passthrough  io.WriteCloser
+	buildWrapped func() io.WriteCloser
+}
+
+// isPreStamped reports whether p starts with a runner timestamper header
+// (YYYY-MM-DDTHH:MM:SS.UUUUUUZ<space>). Validating the full shape, not
+// just byte 26, hardens the detection against producers other than
+// step-runner that might happen to put 'Z' at byte 26.
+func isPreStamped(p []byte) bool {
+	if len(p) < 28 {
+		return false
+	}
+	return p[4] == '-' && p[7] == '-' && p[10] == 'T' &&
+		p[13] == ':' && p[16] == ':' && p[19] == '.' &&
+		p[26] == 'Z' && p[27] == ' '
+}
+
+func (s *stepRunnerStream) Write(p []byte) (int, error) {
+	s.once.Do(func() {
+		if isPreStamped(p) {
+			s.chosen = s.passthrough
+		} else {
+			s.chosen = s.buildWrapped()
+		}
+	})
+	return s.chosen.Write(p)
+}
+
+func (s *stepRunnerStream) Close() error {
+	// Close-without-write: nothing has been buffered by the wrap chain
+	// (it was never built), so the passthrough's Close is sufficient.
+	s.once.Do(func() { s.chosen = s.passthrough })
+	return s.chosen.Close()
+}
+
 // wrap wraps the underlying writer with "filters". Order here somewhat
 // matters, and the order they're instantiated in is the reverse order in which
 // writes are processed, e.g. last added filter is the first to process data.
