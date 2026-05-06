@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -11,6 +12,12 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
+
+// gracefulExitDelay bounds the time the script has between SIGTERM (on
+// cancellation) and SIGKILL of its process group. Also bounds how long we
+// wait for stdout/stderr drain when background processes have inherited
+// the pipe write-ends.
+const gracefulExitDelay = 5 * time.Second
 
 // Spec returns the step specification defining inputs for scriptv2.
 //
@@ -155,11 +162,12 @@ func Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
 	}
 
 	executorConfig := internal.ExecutorConfig{
-		Stdout:    stdout,
-		Stderr:    stderr,
-		Env:       env,
-		WorkDir:   workDir,
-		ShellPath: shellPath,
+		Stdout:            stdout,
+		Stderr:            stderr,
+		Env:               env,
+		WorkDir:           workDir,
+		ShellPath:         shellPath,
+		GracefulExitDelay: gracefulExitDelay,
 	}
 	executor := internal.NewExecutor(executorConfig)
 	if err := executor.Execute(ctx, script); err != nil {

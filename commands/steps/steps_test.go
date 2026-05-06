@@ -157,9 +157,12 @@ func TestServe(t *testing.T) {
 			expectListening: true,
 			expectErr: func() string {
 				if runtime.GOOS == "windows" {
-					return "exit status 1"
+					// gracefulexitcmd sends CTRL_BREAK_EVENT on cancel; the Go child
+					// terminates with STATUS_CONTROL_C_EXIT (0xc000013a), which Go's
+					// stdlib formats as hex for exit codes >= 1<<16.
+					return "exit status 0xc000013a"
 				}
-				return "signal: killed"
+				return "signal: terminated"
 			}(),
 		},
 		{

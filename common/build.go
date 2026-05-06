@@ -572,9 +572,14 @@ func wrapStepStageErr(err error) error {
 	// hack: for now, we parse the exit code from the error response
 	// later we might want to introduce a proper exit code from the step-runner
 	// https://gitlab.com/gitlab-org/step-runner/-/work_items/349
+	//
+	// Go's exec.ExitError formats Windows exit codes >= 1<<16 as hex (e.g.
+	// "exit status 0xc000013a" for STATUS_CONTROL_C_EXIT), so we use ParseInt
+	// with base 0 to accept both decimal and 0x-prefixed forms.
 	if before, code, ok := strings.Cut(err.Error(), "exit status"); ok {
-		if exitCode, err := strconv.Atoi(strings.TrimSpace(code)); err == nil {
-			berr.ExitCode = NormalizeExitCode(exitCode)
+		if parsed, err := strconv.ParseInt(strings.TrimSpace(code), 0, 64); err == nil {
+			exitCode := NormalizeExitCode(int(parsed))
+			berr.ExitCode = exitCode
 			// Normalize "exit status N" (Go's exec.ExitError format) to "exit code N"
 			// to match the legacy Docker executor format (wait.go uses
 			// fmt.Errorf("exit code %d", statusCode)). The prefix (e.g. "step release: ")

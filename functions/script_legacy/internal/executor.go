@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
+	"time"
+
+	"gitlab.com/gitlab-org/step-runner/pkg/runner/gracefulexitcmd"
 )
 
 // ExecutorConfig holds configuration options for script execution.
@@ -15,6 +17,10 @@ type ExecutorConfig struct {
 	Env       []string
 	WorkDir   string
 	ShellPath string
+
+	// GracefulExitDelay bounds the time between cancellation (or child exit)
+	// and forced termination of the process group. See gracefulexitcmd.New.
+	GracefulExitDelay time.Duration
 }
 
 // Executor executes generated bash scripts.
@@ -54,7 +60,7 @@ func (e *Executor) Execute(ctx context.Context, script string) error {
 		return fmt.Errorf("closing temporary script file: %w", err)
 	}
 
-	cmd := exec.CommandContext(ctx, e.config.ShellPath, tmpFile.Name())
+	cmd := gracefulexitcmd.New(ctx, e.config.GracefulExitDelay, e.config.ShellPath, tmpFile.Name())
 
 	cmd.Stdout = e.config.Stdout
 	cmd.Stderr = e.config.Stderr
