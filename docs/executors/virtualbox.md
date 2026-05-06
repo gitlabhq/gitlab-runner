@@ -98,7 +98,7 @@ To use VirtualBox with Windows, you can install Cygwin or PowerShell.
 - Install Git LFS
 - Configure `sshd` and set it up as a service (see [Cygwin wiki](https://cygwin.fandom.com/wiki/Sshd))
 - Create a rule for the Windows Firewall to allow incoming TCP traffic on port 22
-- Add the GitLab server(s) to `~/.ssh/known_hosts`
+- Add the GitLab servers to `~/.ssh/known_hosts`
 - To convert paths between Cygwin and Windows, use [the `cygpath` utility](https://cygwin.fandom.com/wiki/Cygpath_utility)
 
 ### Use native OpenSSH and PowerShell
