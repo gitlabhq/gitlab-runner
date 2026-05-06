@@ -12,11 +12,13 @@ title: The Custom executor
 
 {{< /details >}}
 
-GitLab Runner provides the Custom executor for environments that it
-doesn't support natively. For example, `LXD` or `Libvirt`.
+> [!note]
+> This executor is in maintenance mode. It receives critical security updates but no new features are planned.
+> For new projects, consider using one of the [actively developed executors](_index.md#selecting-the-executor).
 
-You can create your own executor by configuring
-GitLab Runner to use some executable to provision, run, and clean up
+You can use the Custom executor to specify your own execution environments.
+When GitLab Runner does not natively support an executor (for example, `LXD` or `Libvirt`),
+you can configure GitLab Runner to use custom executables to provision, run, and clean up
 your environment.
 
 The scripts you configure for the custom executor are called `Drivers`.

@@ -13,6 +13,14 @@ title: SSH
 {{< /details >}}
 
 > [!note]
+> This executor is in maintenance mode. It receives critical security updates but no new features are planned.
+> For new projects, consider using one of the [actively developed executors](_index.md#selecting-the-executor).
+
+The SSH executor is included for completeness, but it's among the least supported executors.
+GitLab Runner connects to an external server and runs builds there over SSH.
+While some organizations use this executor successfully, it's generally better to use a different executor type.
+
+> [!note]
 > The SSH executor supports only scripts generated in Bash and the caching feature
 > is not supported.
 
