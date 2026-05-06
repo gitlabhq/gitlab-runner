@@ -12,10 +12,18 @@ title: The Shell executor
 
 {{< /details >}}
 
-You can use the Shell executor to execute builds
-locally on the machine where GitLab Runner is installed. It supports all systems on
-which the Runner can be installed. That means that it's possible to use scripts
-generated for Bash, PowerShell Core, Windows PowerShell, and Windows Batch (deprecated).
+> [!note]
+> This executor is in maintenance mode. It receives critical security updates but no new features are planned.
+> For new projects, consider using one of the [actively developed executors](_index.md#selecting-the-executor).
+
+The Shell executor is the simplest executor configuration for GitLab Runner. It executes
+builds locally on the machine where GitLab Runner is installed, so all dependencies must
+be installed on the same machine. It supports all systems on which the Runner can be
+installed. That means that it's possible to use scripts generated for Bash, PowerShell
+Core, Windows PowerShell, and Windows Batch (deprecated).
+
+While ideal for builds with minimal dependencies, the Shell executor provides limited
+isolation between jobs.
 
 > [!note]
 > Ensure you meet [common prerequisites](_index.md#git-requirements-for-non-docker-executors)

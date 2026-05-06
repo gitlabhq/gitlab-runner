@@ -159,39 +159,6 @@ These executors receive critical security updates but no new features are planne
 - [Custom](custom.md)
 - [Docker Machine](docker_machine.md) (deprecated)
 
-### Shell executor
-
-The Shell executor is simplest configuration option for GitLab Runner. It executes jobs locally on
-the system where GitLab Runner is installed, requiring all dependencies to be manually installed on the same
-machine.
-
-This executor supports Bash for Linux, macOS, and FreeBSD operating systems, while offering PowerShell
-support for Windows environments.
-
-While ideal for builds with minimal dependencies, it only provides limited isolation between jobs.
-
-### SSH executor
-
-The SSH executor is added for completeness, but it's among the least supported executors.
-When you use the SSH executor, GitLab Runner connects to an external server and runs the builds there.
-We have some success stories from organizations using this executor, but usually you should use one of the other types.
-
-### Custom executor
-
-You can use the Custom executor to specify your own execution environments.
-When GitLab Runner does not provide an executor (for example, Linux containers),
-it allows you to use custom executables to provision and clean up environments.
-
-### Docker Machine executor (deprecated)
-
-> [!warning]
-> This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/498268) in GitLab 17.5
-> and is planned for removal in 20.0. Use [GitLab Runner Autoscaler](../runner_autoscale/_index.md) instead.
-
-The Docker Machine executor is a special version of the Docker executor with support for auto-scaling. It works like the typical
-Docker executor but with build hosts created on demand by Docker Machine. This capability makes it particularly effective
-in cloud environments like AWS EC2, offering excellent isolation and scalability for variable workloads.
-
 ## Compatibility chart
 
 Supported features by different executors.

@@ -12,13 +12,18 @@ title: Install and register GitLab Runner for autoscaling with Docker Machine
 
 {{< /details >}}
 
-> [!note]
+> [!warning]
 > The Docker Machine executor was deprecated in GitLab 17.5 and is scheduled for removal in GitLab 20.0 (May 2027).
 > While we continue to support the Docker Machine executor till GitLab 20.0, we do not plan to add new features.
 > We will address only critical bugs that could prevent CI/CD job execution or affect running costs.
 > If you're using the Docker Machine executor on Amazon Web Services (AWS) EC2,
 > Microsoft Azure Compute, or Google Compute Engine (GCE), you should migrate to the
 > [GitLab Runner Autoscaler](../runner_autoscale/_index.md).
+
+The Docker Machine executor is a special version of the Docker executor with support for auto-scaling.
+It works like the typical Docker executor, but build hosts are created on demand by Docker Machine.
+This makes it effective in cloud environments like AWS EC2, where it offers good isolation
+and scalability for variable workloads.
 
 For an overview of the autoscale architecture, take a look at the
 [comprehensive documentation on autoscaling](../configuration/autoscale.md).
