@@ -315,6 +315,7 @@ func (p *provider) Release(config *common.RunnerConfig, data common.ExecutorData
 	if acqRef.acq != nil {
 		p.getRunnerTaskscaler(config).Release(acqRef.key)
 		logrus.WithField("key", acqRef.key).Trace("Released capacity...")
+
 		acqRef.acq = nil
 		return
 	}

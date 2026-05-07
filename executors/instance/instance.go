@@ -1,8 +1,10 @@
 package instance
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -10,6 +12,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/internal/autoscaler"
 )
+
+var _ common.SuspendableExecutor = (*executor)(nil)
 
 type executor struct {
 	executors.AbstractExecutor
@@ -85,6 +89,14 @@ func (e *executor) Run(cmd common.ExecutorCommand) error {
 		Stdout:  stdout,
 		Stderr:  stderr,
 	})
+}
+
+func (e *executor) Suspend(_ context.Context) (url.Values, error) {
+	return url.Values{}, nil
+}
+
+func (e *executor) Resume(_ context.Context, _ url.Values) error {
+	return nil
 }
 
 func (e *executor) Cleanup() {

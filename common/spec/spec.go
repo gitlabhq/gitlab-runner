@@ -397,6 +397,12 @@ type PolicyOptions struct {
 	VariableOverrideExceptions []string `json:"policy_variables_override_exceptions,omitempty"`
 }
 
+type SuspendOptions struct {
+	SuspendOnSuccess bool   `json:"suspend_on_success,omitempty"`
+	SuspendOnFailure bool   `json:"suspend_on_failure,omitempty"`
+	EnvironmentKey   string `json:"environment_key,omitempty"`
+}
+
 type Cache struct {
 	Key          string            `json:"key" inputs:"expand"`
 	Untracked    bool              `json:"untracked"`
@@ -525,26 +531,27 @@ type TLSData struct {
 }
 
 type Job struct {
-	ID            int64          `json:"id"`
-	Token         string         `json:"token"`
-	AllowGitFetch bool           `json:"allow_git_fetch"`
-	JobInfo       JobInfo        `json:"job_info"`
-	GitInfo       GitInfo        `json:"git_info"`
-	RunnerInfo    RunnerInfo     `json:"runner_info"`
-	Inputs        Inputs         `json:"inputs"`
-	Variables     Variables      `json:"variables"`
-	Steps         Steps          `json:"steps" inputs:"expand"`
-	Image         Image          `json:"image" inputs:"expand"`
-	Services      Services       `json:"services" inputs:"expand"`
-	Artifacts     Artifacts      `json:"artifacts" inputs:"expand"`
-	Cache         Caches         `json:"cache" inputs:"expand"`
-	Credentials   []Credentials  `json:"credentials"`
-	Dependencies  Dependencies   `json:"dependencies"`
-	Features      GitlabFeatures `json:"features"`
-	Secrets       Secrets        `json:"secrets,omitempty"`
-	Hooks         Hooks          `json:"hooks,omitempty"`
-	Run           Run            `json:"run,omitempty"`
-	PolicyOptions PolicyOptions  `json:"policy_options,omitempty"`
+	ID             int64          `json:"id"`
+	Token          string         `json:"token"`
+	AllowGitFetch  bool           `json:"allow_git_fetch"`
+	JobInfo        JobInfo        `json:"job_info"`
+	GitInfo        GitInfo        `json:"git_info"`
+	RunnerInfo     RunnerInfo     `json:"runner_info"`
+	Inputs         Inputs         `json:"inputs"`
+	Variables      Variables      `json:"variables"`
+	Steps          Steps          `json:"steps" inputs:"expand"`
+	Image          Image          `json:"image" inputs:"expand"`
+	Services       Services       `json:"services" inputs:"expand"`
+	Artifacts      Artifacts      `json:"artifacts" inputs:"expand"`
+	Cache          Caches         `json:"cache" inputs:"expand"`
+	Credentials    []Credentials  `json:"credentials"`
+	Dependencies   Dependencies   `json:"dependencies"`
+	Features       GitlabFeatures `json:"features"`
+	Secrets        Secrets        `json:"secrets,omitempty"`
+	Hooks          Hooks          `json:"hooks,omitempty"`
+	Run            Run            `json:"run,omitempty"`
+	PolicyOptions  PolicyOptions  `json:"policy_options,omitempty"`
+	SuspendOptions SuspendOptions `json:"suspend_options,omitempty"`
 
 	TLSData TLSData `json:"-"`
 

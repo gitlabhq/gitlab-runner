@@ -36,7 +36,7 @@ func (_m *MockLogger) EXPECT() *MockLogger_Expecter {
 }
 
 // Debugln provides a mock function for the type MockLogger
-func (_mock *MockLogger) Debugln(args ...interface{}) {
+func (_mock *MockLogger) Debugln(args ...any) {
 	var _ca []interface{}
 	_ca = append(_ca, args...)
 	_mock.Called(_ca...)
@@ -49,19 +49,19 @@ type MockLogger_Debugln_Call struct {
 }
 
 // Debugln is a helper method to define mock.On call
-//   - args ...interface{}
+//   - args ...any
 func (_e *MockLogger_Expecter) Debugln(args ...interface{}) *MockLogger_Debugln_Call {
 	return &MockLogger_Debugln_Call{Call: _e.mock.On("Debugln",
 		append([]interface{}{}, args...)...)}
 }
 
-func (_c *MockLogger_Debugln_Call) Run(run func(args ...interface{})) *MockLogger_Debugln_Call {
+func (_c *MockLogger_Debugln_Call) Run(run func(args ...any)) *MockLogger_Debugln_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []interface{}
-		variadicArgs := make([]interface{}, len(args)-0)
+		var arg0 []any
+		variadicArgs := make([]any, len(args)-0)
 		for i, a := range args[0:] {
 			if a != nil {
-				variadicArgs[i] = a.(interface{})
+				variadicArgs[i] = a.(any)
 			}
 		}
 		arg0 = variadicArgs
@@ -77,13 +77,13 @@ func (_c *MockLogger_Debugln_Call) Return() *MockLogger_Debugln_Call {
 	return _c
 }
 
-func (_c *MockLogger_Debugln_Call) RunAndReturn(run func(args ...interface{})) *MockLogger_Debugln_Call {
+func (_c *MockLogger_Debugln_Call) RunAndReturn(run func(args ...any)) *MockLogger_Debugln_Call {
 	_c.Run(run)
 	return _c
 }
 
 // Warningln provides a mock function for the type MockLogger
-func (_mock *MockLogger) Warningln(args ...interface{}) {
+func (_mock *MockLogger) Warningln(args ...any) {
 	var _ca []interface{}
 	_ca = append(_ca, args...)
 	_mock.Called(_ca...)
@@ -96,19 +96,19 @@ type MockLogger_Warningln_Call struct {
 }
 
 // Warningln is a helper method to define mock.On call
-//   - args ...interface{}
+//   - args ...any
 func (_e *MockLogger_Expecter) Warningln(args ...interface{}) *MockLogger_Warningln_Call {
 	return &MockLogger_Warningln_Call{Call: _e.mock.On("Warningln",
 		append([]interface{}{}, args...)...)}
 }
 
-func (_c *MockLogger_Warningln_Call) Run(run func(args ...interface{})) *MockLogger_Warningln_Call {
+func (_c *MockLogger_Warningln_Call) Run(run func(args ...any)) *MockLogger_Warningln_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []interface{}
-		variadicArgs := make([]interface{}, len(args)-0)
+		var arg0 []any
+		variadicArgs := make([]any, len(args)-0)
 		for i, a := range args[0:] {
 			if a != nil {
-				variadicArgs[i] = a.(interface{})
+				variadicArgs[i] = a.(any)
 			}
 		}
 		arg0 = variadicArgs
@@ -124,7 +124,7 @@ func (_c *MockLogger_Warningln_Call) Return() *MockLogger_Warningln_Call {
 	return _c
 }
 
-func (_c *MockLogger_Warningln_Call) RunAndReturn(run func(args ...interface{})) *MockLogger_Warningln_Call {
+func (_c *MockLogger_Warningln_Call) RunAndReturn(run func(args ...any)) *MockLogger_Warningln_Call {
 	_c.Run(run)
 	return _c
 }

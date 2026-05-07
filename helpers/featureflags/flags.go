@@ -58,6 +58,7 @@ const (
 	UseParallelCacheTransfer             string = "FF_USE_PARALLEL_CACHE_TRANSFER"
 	UseParallelArtifactTransfer          string = "FF_USE_PARALLEL_ARTIFACT_TRANSFER"
 	UseConcrete                          string = "FF_CONCRETE"
+	SuspendableEnvironments              string = "FF_SUSPENDABLE_ENVIRONMENTS"
 )
 
 type FeatureFlag struct {
@@ -480,6 +481,11 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, traditional script execution is migrated to and executed with the step-runner.",
+	},
+	{
+		Name:         SuspendableEnvironments,
+		DefaultValue: false,
+		Description:  "When enabled, you can suspend or resume job environments.",
 	},
 }
 
