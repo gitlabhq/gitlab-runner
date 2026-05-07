@@ -45,6 +45,13 @@ func init() {
 	RegisterShell(&s)
 }
 
+// mockSuspendableExecutor composes a MockExecutor with a MockSuspendableExecutor
+// so tests can drive the SuspendableExecutor capability via testify expectations.
+type mockSuspendableExecutor struct {
+	*MockExecutor
+	*MockSuspendableExecutor
+}
+
 func TestBuildPredefinedVariables(t *testing.T) {
 	for _, rootDir := range []string{"/root/dir1", "/root/dir2"} {
 		t.Run(rootDir, func(t *testing.T) {
@@ -592,6 +599,41 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
+}
+
+func TestExecutePrepareScripts_SkipsGetSourcesOnResume(t *testing.T) {
+	exec := NewMockExecutor(t)
+	provider := NewMockExecutorProvider(t)
+	provider.On("GetFeatures", mock.Anything).Return(nil).Once()
+	provider.On("Create").Return(exec).Once()
+
+	exec.On("Prepare", mock.Anything).Return(nil).Once()
+	exec.On("Finish", nil).Once()
+	exec.On("Cleanup").Once()
+
+	exec.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	exec.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	// Strict mock would fail if GetSources/ClearWorktree were called; no expectations registered.
+	exec.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	exec.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	exec.On("Run", matchBuildStage("step_script")).Return(nil).Once()
+	exec.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	exec.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(nil).Once()
+	exec.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
+	exec.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+
+	rc := &RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			FeatureFlags: map[string]bool{
+				featureflags.SuspendableEnvironments: true,
+			},
+		},
+	}
+	build := registerExecutorWithSuccessfulBuild(t, provider, rc)
+	build.Job.SuspendOptions = spec.SuspendOptions{EnvironmentKey: "1/sys-1/acquisition-key=abc"}
+
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
 }
 
 func TestArtifactDownloadRunFailure(t *testing.T) {
@@ -4936,4 +4978,314 @@ func TestBuild_executeStepStage_NilRegisterCancel(t *testing.T) {
 	// panicking on the nil registerCancel.
 	_ = err
 	assert.Empty(t, server.Cancels(), "no Cancel RPC should fire when registerCancel is nil")
+}
+
+func TestRun_ShouldSuspend_TriggersExecutorSuspendAndLogs(t *testing.T) {
+	exec := &mockSuspendableExecutor{
+		MockExecutor:            NewMockExecutor(t),
+		MockSuspendableExecutor: NewMockSuspendableExecutor(t),
+	}
+	provider := NewMockExecutorProvider(t)
+	provider.On("GetFeatures", mock.Anything).Return(nil).Once()
+	provider.On("Create").Return(exec).Once()
+
+	exec.MockSuspendableExecutor.On("Suspend", mock.Anything).
+		Return(url.Values{"x": []string{"val"}}, nil).Once()
+
+	exec.MockExecutor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	exec.MockExecutor.On("Cleanup").Once()
+	exec.MockExecutor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+
+	thrownErr := &BuildError{Inner: errors.New("test error"), ExitCode: 1}
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	exec.MockExecutor.On("Run", mock.Anything).Return(thrownErr).Times(3)
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+	exec.MockExecutor.On("Finish", thrownErr).Once()
+
+	failedBuild, err := GetFailedBuild()
+	require.NoError(t, err)
+	build := &Build{
+		Job: failedBuild,
+		Runner: &RunnerConfig{
+			RunnerCredentials: RunnerCredentials{
+				ID: 7,
+			},
+			SystemID: "sys-1",
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-suspend-on-failure",
+				FeatureFlags: map[string]bool{
+					featureflags.SuspendableEnvironments: true,
+				},
+			},
+		},
+		ExecutorProvider: provider,
+	}
+	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnFailure: true}
+
+	var traceBuf bytes.Buffer
+	err = build.Run(&Config{}, &Trace{Writer: &traceBuf})
+	require.Error(t, err)
+	assert.Contains(t, traceBuf.String(), "Job environment suspended: 7/sys-1/x=val")
+}
+
+func TestRun_ShouldSuspend_FF_Off_NoSuspend(t *testing.T) {
+	mockExec, provider := setupMockExecutorAndProvider(t)
+
+	mockExec.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	mockExec.On("Cleanup").Once()
+	mockExec.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+
+	thrownErr := &BuildError{Inner: errors.New("test error"), ExitCode: 1}
+	mockExec.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	mockExec.On("Run", mock.Anything).Return(thrownErr).Times(3)
+	mockExec.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+	mockExec.On("Finish", thrownErr).Once()
+
+	failedBuild, err := GetFailedBuild()
+	require.NoError(t, err)
+	build := &Build{
+		Job: failedBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-suspend-ff-off",
+				FeatureFlags: map[string]bool{
+					featureflags.SuspendableEnvironments: false,
+				},
+			},
+		},
+		ExecutorProvider: provider,
+	}
+	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnFailure: true}
+
+	var traceBuf bytes.Buffer
+	err = build.Run(&Config{}, &Trace{Writer: &traceBuf})
+	require.Error(t, err)
+	// Strict mock would fail if Suspend were called; no expectation registered.
+	assert.NotContains(t, traceBuf.String(), "Job environment suspended")
+}
+
+func TestRun_ShouldSuspend_NotImplemented_FailsBuild(t *testing.T) {
+	mockExec, provider := setupMockExecutorAndProvider(t)
+
+	mockExec.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	mockExec.On("Cleanup").Once()
+	mockExec.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	mockExec.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	mockExec.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	mockExec.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	mockExec.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	mockExec.On("Run", matchBuildStage("step_script")).Return(nil).Once()
+	mockExec.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	mockExec.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(nil).Once()
+	mockExec.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
+	mockExec.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+	// Script succeeded, so the suspend error is the only error reaching Finish.
+	mockExec.On("Finish", mock.MatchedBy(func(err error) bool {
+		var buildErr *BuildError
+		return errors.As(err, &buildErr) && buildErr.FailureReason == RunnerSystemFailure
+	})).Once()
+
+	successfulBuild, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+	build := &Build{
+		Job: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-suspend-no-iface",
+				FeatureFlags: map[string]bool{
+					featureflags.SuspendableEnvironments: true,
+				},
+			},
+		},
+		ExecutorProvider: provider,
+	}
+	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnSuccess: true}
+
+	var traceBuf bytes.Buffer
+	err = build.Run(&Config{}, &Trace{Writer: &traceBuf})
+	require.Error(t, err)
+	var buildErr *BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, RunnerSystemFailure, buildErr.FailureReason)
+	assert.Contains(t, traceBuf.String(), "Job environment suspension not supported by executor")
+	assert.NotContains(t, traceBuf.String(), "Job environment suspended")
+}
+
+func TestRun_ShouldSuspend_SuspendErrorFailsBuild(t *testing.T) {
+	exec := &mockSuspendableExecutor{
+		MockExecutor:            NewMockExecutor(t),
+		MockSuspendableExecutor: NewMockSuspendableExecutor(t),
+	}
+	provider := NewMockExecutorProvider(t)
+	provider.On("GetFeatures", mock.Anything).Return(nil).Once()
+	provider.On("Create").Return(exec).Once()
+
+	suspErr := errors.New("suspend boom")
+	exec.MockSuspendableExecutor.On("Suspend", mock.Anything).
+		Return(nil, suspErr).Once()
+
+	exec.MockExecutor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	exec.MockExecutor.On("Cleanup").Once()
+	exec.MockExecutor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage("step_script")).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+	exec.MockExecutor.On("Finish", mock.MatchedBy(func(err error) bool {
+		var buildErr *BuildError
+		return errors.As(err, &buildErr) && buildErr.FailureReason == RunnerSystemFailure && errors.Is(err, suspErr)
+	})).Once()
+
+	successfulBuild, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+	build := &Build{
+		Job: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerCredentials: RunnerCredentials{ID: 7},
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-suspend-error-fails",
+				FeatureFlags: map[string]bool{
+					featureflags.SuspendableEnvironments: true,
+				},
+			},
+		},
+		ExecutorProvider: provider,
+	}
+	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnSuccess: true}
+
+	var traceBuf bytes.Buffer
+	err = build.Run(&Config{}, &Trace{Writer: &traceBuf})
+	require.Error(t, err)
+	var buildErr *BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, RunnerSystemFailure, buildErr.FailureReason)
+	assert.ErrorIs(t, err, suspErr)
+	assert.Contains(t, traceBuf.String(), "Job environment suspension failed")
+	assert.NotContains(t, traceBuf.String(), "Job environment suspended:")
+}
+
+func TestRun_ShouldSuspend_ScriptFailureWinsOverSuspendFailure(t *testing.T) {
+	exec := &mockSuspendableExecutor{
+		MockExecutor:            NewMockExecutor(t),
+		MockSuspendableExecutor: NewMockSuspendableExecutor(t),
+	}
+	provider := NewMockExecutorProvider(t)
+	provider.On("GetFeatures", mock.Anything).Return(nil).Once()
+	provider.On("Create").Return(exec).Once()
+
+	suspErr := errors.New("suspend boom")
+	exec.MockSuspendableExecutor.On("Suspend", mock.Anything).
+		Return(nil, suspErr).Once()
+
+	scriptErr := &BuildError{Inner: errors.New("script error"), ExitCode: 1}
+	exec.MockExecutor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	exec.MockExecutor.On("Cleanup").Once()
+	exec.MockExecutor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	exec.MockExecutor.On("Run", mock.Anything).Return(scriptErr).Times(3)
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+	exec.MockExecutor.On("Finish", scriptErr).Once()
+
+	failedBuild, err := GetFailedBuild()
+	require.NoError(t, err)
+	build := &Build{
+		Job: failedBuild,
+		Runner: &RunnerConfig{
+			RunnerCredentials: RunnerCredentials{ID: 7},
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-suspend-script-wins",
+				FeatureFlags: map[string]bool{
+					featureflags.SuspendableEnvironments: true,
+				},
+			},
+		},
+		ExecutorProvider: provider,
+	}
+	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnFailure: true}
+
+	var traceBuf bytes.Buffer
+	err = build.Run(&Config{}, &Trace{Writer: &traceBuf})
+	require.Error(t, err)
+	// Script error has priority over the suspend error.
+	assert.ErrorIs(t, err, scriptErr)
+	assert.NotErrorIs(t, err, suspErr)
+	// Suspend was still attempted and logged its failure.
+	assert.Contains(t, traceBuf.String(), "Job environment suspension failed")
+	assert.NotContains(t, traceBuf.String(), "Job environment suspended:")
+}
+
+func TestBuild_ShouldSuspend(t *testing.T) {
+	tests := []struct {
+		name      string
+		ffEnabled bool
+		opts      spec.SuspendOptions
+		state     BuildRuntimeState
+		expected  bool
+	}{
+		{"FF off, success+SuspendOnSuccess", false, spec.SuspendOptions{SuspendOnSuccess: true}, BuildRunRuntimeSuccess, false},
+		{"FF on, success+SuspendOnSuccess", true, spec.SuspendOptions{SuspendOnSuccess: true}, BuildRunRuntimeSuccess, true},
+		{"FF on, success+SuspendOnFailure", true, spec.SuspendOptions{SuspendOnFailure: true}, BuildRunRuntimeSuccess, false},
+		{"FF on, failed+SuspendOnFailure", true, spec.SuspendOptions{SuspendOnFailure: true}, BuildRunRuntimeFailed, true},
+		{"FF on, failed+SuspendOnSuccess", true, spec.SuspendOptions{SuspendOnSuccess: true}, BuildRunRuntimeFailed, false},
+		{"FF on, both, success", true, spec.SuspendOptions{SuspendOnSuccess: true, SuspendOnFailure: true}, BuildRunRuntimeSuccess, true},
+		{"FF on, both, failed", true, spec.SuspendOptions{SuspendOnSuccess: true, SuspendOnFailure: true}, BuildRunRuntimeFailed, true},
+		{"FF on, neither, success", true, spec.SuspendOptions{}, BuildRunRuntimeSuccess, false},
+		{"FF on, both, cancelled", true, spec.SuspendOptions{SuspendOnSuccess: true, SuspendOnFailure: true}, BuildRunRuntimeCanceled, false},
+		{"FF on, both, timedout", true, spec.SuspendOptions{SuspendOnSuccess: true, SuspendOnFailure: true}, BuildRunRuntimeTimedout, false},
+		{"FF on, both, terminated", true, spec.SuspendOptions{SuspendOnSuccess: true, SuspendOnFailure: true}, BuildRunRuntimeTerminated, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			b := &Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						FeatureFlags: map[string]bool{
+							featureflags.SuspendableEnvironments: tc.ffEnabled,
+						},
+					},
+				},
+			}
+			b.Job.SuspendOptions = tc.opts
+			b.setCurrentState(tc.state)
+			assert.Equal(t, tc.expected, b.ShouldSuspend())
+		})
+	}
+}
+
+func TestBuild_EnvironmentKey(t *testing.T) {
+	const envKeyValue = "1/sys-1/acquisition-key=abc"
+
+	tests := []struct {
+		name       string
+		ffEnabled  bool
+		envKey     string
+		wantEnvKey string
+	}{
+		{"FF off + env-key set", false, envKeyValue, ""},
+		{"FF on + env-key empty", true, "", ""},
+		{"FF on + env-key set", true, envKeyValue, envKeyValue},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			b := &Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						FeatureFlags: map[string]bool{
+							featureflags.SuspendableEnvironments: tc.ffEnabled,
+						},
+					},
+				},
+			}
+			b.Job.SuspendOptions = spec.SuspendOptions{EnvironmentKey: tc.envKey}
+
+			assert.Equal(t, tc.wantEnvKey, b.EnvironmentKey())
+		})
+	}
 }

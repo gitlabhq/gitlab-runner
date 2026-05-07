@@ -31,7 +31,7 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/fatih/color v1.18.0
-	github.com/getsentry/sentry-go v0.43.0
+	github.com/getsentry/sentry-go v0.45.0
 	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
@@ -70,16 +70,16 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli v1.22.17
 	gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260304132817-7f6dd45d4237
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260423090250-d453cbd29c2d
 	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c
-	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260219212929-1389ec067d0d
+	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260423090250-d453cbd29c2d
 	gitlab.com/gitlab-org/fleeting/nesting v0.4.0
-	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20260311212304-25dd020ebd12
-	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20260223104030-891f7bc8d103
+	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20260427035514-507d821b1888
+	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20260427035514-507d821b1888
 	gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api v0.1.1
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e
-	gitlab.com/gitlab-org/labkit v1.46.0
+	gitlab.com/gitlab-org/labkit v1.62.0
 	gitlab.com/gitlab-org/moa v0.0.0-20260423130817-a0fd335eb250
 	gitlab.com/gitlab-org/step-runner v0.36.0
 	go.mozilla.org/pkcs7 v0.9.0
@@ -225,7 +225,7 @@ require (
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 // indirect
-	github.com/masterzen/winrm v0.0.0-20250927112105-5f8e6c707321 // indirect
+	github.com/masterzen/winrm v0.0.0-20260407182533-5570be7f80cf // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
@@ -288,7 +288,7 @@ require (
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/term v0.42.0 // indirect
-	golang.org/x/time v0.14.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409 // indirect

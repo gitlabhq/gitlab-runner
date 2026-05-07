@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -87,6 +88,18 @@ type Executor interface {
 	GetCurrentStage() ExecutorStage
 	// SetCurrentStage sets the current stage of build execution.
 	SetCurrentStage(stage ExecutorStage)
+}
+
+// SuspendableExecutor is implemented by executors that can preserve a job's
+// workload state across job boundaries.
+type SuspendableExecutor interface {
+	// Suspend persists the workload state and returns the fields needed to
+	// restore it. These fields are carried in the EnvironmentKey to a future
+	// resuming job.
+	Suspend(ctx context.Context) (url.Values, error)
+	// Resume rebuilds the workload state from the fields produced by a prior
+	// Suspend call.
+	Resume(ctx context.Context, fields url.Values) error
 }
 
 var ExecutorStepRunnerConnectNotSupported = fmt.Errorf("executor does not support step-runner connect")

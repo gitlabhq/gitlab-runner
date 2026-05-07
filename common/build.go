@@ -258,6 +258,48 @@ func (b *Build) CurrentState() BuildRuntimeState {
 	return b.currentState
 }
 
+func (b *Build) ShouldSuspend() bool {
+	if !b.IsFeatureFlagOn(featureflags.SuspendableEnvironments) {
+		return false
+	}
+	switch b.CurrentState() {
+	case BuildRunRuntimeSuccess:
+		return b.Job.SuspendOptions.SuspendOnSuccess
+	case BuildRunRuntimeFailed:
+		return b.Job.SuspendOptions.SuspendOnFailure
+	default:
+		return false
+	}
+}
+
+func (b *Build) EnvironmentKey() string {
+	if !b.IsFeatureFlagOn(featureflags.SuspendableEnvironments) {
+		return ""
+	}
+	return b.Job.SuspendOptions.EnvironmentKey
+}
+
+func (b *Build) suspendEnvironment(ctx context.Context, executor Executor) (string, error) {
+	se, ok := executor.(SuspendableExecutor)
+	if !ok {
+		b.logger.Warningln("Job environment suspension not supported by executor")
+		return "", errors.New("executor does not support suspend/resume")
+	}
+	fields, err := se.Suspend(ctx)
+	if err != nil {
+		b.logger.Warningln("Job environment suspension failed:", err.Error())
+		return "", fmt.Errorf("suspending environment: %w", err)
+	}
+	envKey := EnvironmentKey{
+		RunnerID: b.Runner.ID,
+		SystemID: b.Runner.GetSystemID(),
+		Fields:   fields,
+	}
+	s := envKey.String()
+	b.logger.Infoln("Job environment suspended:", s)
+	return s, nil
+}
+
 func (b *Build) FailureReason() spec.JobFailureReason {
 	return b.failureReason
 }
@@ -600,6 +642,11 @@ func wrapStepStageErr(err error) error {
 
 //nolint:gocognit
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
+	if b.EnvironmentKey() != "" && buildStage == BuildStageGetSources {
+		b.Log().Infof("Skipping stage %s: resuming suspended environment", buildStage)
+		return nil
+	}
+
 	if connector, ok := executor.(steps.Connector); b.UseNativeSteps() && ok {
 		if handled, steps := stepDispatch(b, executor, buildStage); handled {
 			b.markStepDispatchedInScript()
@@ -1462,6 +1509,18 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	err = b.run(ctx, trace, executor)
 	if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
 		b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
+	}
+	if b.ShouldSuspend() {
+		envKey, suspErr := b.suspendEnvironment(ctx, executor)
+		if suspErr != nil && err == nil {
+			// Suspension failure on a successful job is reported as a system
+			// failure: the user opted into preserving environment state, and
+			// silently dropping the failure would leave them without the
+			// environment they expected to resume from.
+			err = &BuildError{Inner: suspErr, FailureReason: RunnerSystemFailure}
+		}
+		// TODO: persist envKey as an artifact.
+		_ = envKey
 	}
 	executor.Finish(err)
 

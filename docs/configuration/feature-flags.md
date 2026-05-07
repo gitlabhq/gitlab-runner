@@ -96,6 +96,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_PARALLEL_CACHE_TRANSFER` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, cache uploads and downloads use parallel object storage transfers: GoCloud writes use multipart with concurrent parts; downloads use concurrent HTTP Range or GoCloud range reads. When disabled, uploads use a single concurrent part stream and downloads use one stream. Improves throughput on high-bandwidth links when enabled. Tune with `CACHE_CONCURRENCY` and `CACHE_CHUNK_SIZE`. |
 | `FF_USE_PARALLEL_ARTIFACT_TRANSFER` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, artifact downloads that use `direct_download` and receive a redirect to object storage may use parallel HTTP Range GETs when the backend supports `206 Partial Content` with a `Content-Range` total. When disabled, a single download stream is used. Chunk size and concurrency are fixed in the runner (not `CACHE_*` variables). |
 | `FF_CONCRETE` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, traditional script execution is migrated to and executed with the step-runner. |
+| `FF_SUSPENDABLE_ENVIRONMENTS` | `false` | {{< icon name="dotted-circle" >}} No |  | When enabled, you can suspend or resume job environments. |
 
 <!-- feature_flags_list_end -->
 
