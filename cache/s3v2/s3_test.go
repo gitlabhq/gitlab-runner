@@ -29,17 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type sessionPolicy struct {
-	Version   string            `json:"Version"`
-	Statement []policyStatement `json:"Statement"`
-}
-
-type policyStatement struct {
-	Effect   string   `json:"Effect"`
-	Action   []string `json:"Action"`
-	Resource string   `json:"Resource"`
-}
-
 func setupMockS3Server(t *testing.T) *cacheconfig.CacheS3Config {
 	backend := s3mem.New()
 	server := gofakes3.New(backend)
@@ -408,6 +397,36 @@ func TestS3Client_PresignURL(t *testing.T) {
 	}
 }
 
+// TestGenerateSessionPolicy_JSONInjection verifies that an objectName
+// containing JSON metacharacters (which can appear when the cache key in
+// .gitlab-ci.yml contains quotes or braces) is escaped at the value
+// position rather than altering the policy structure.
+func TestGenerateSessionPolicy_JSONInjection(t *testing.T) {
+	cfg := aws.Config{Region: "us-east-1"}
+	c := &s3Client{
+		awsConfig: &cfg,
+		s3Config:  &cacheconfig.CacheS3Config{},
+	}
+
+	craftedKey := `key"},{"Effect":"Deny","Action":"*","Resource":"*"`
+
+	policy, err := c.generateSessionPolicy("test-bucket", craftedKey, true)
+	require.NoError(t, err)
+
+	var doc policyDocument
+	require.NoError(t, json.Unmarshal([]byte(policy), &doc), "policy must be valid JSON")
+
+	require.Len(t, doc.Statement, 1, "input must not introduce additional Statements")
+	stmt := doc.Statement[0]
+	assert.Equal(t, "Allow", stmt.Effect)
+	assert.Equal(t, []string{"s3:PutObject"}, stmt.Action)
+	assert.Equal(t,
+		"arn:aws:s3:::test-bucket/"+craftedKey,
+		stmt.Resource,
+		"the input must appear verbatim inside the Resource string, not as parsed JSON",
+	)
+}
+
 func TestS3Client_PresignURL_UnknownMethodError(t *testing.T) {
 	s3Config := setupMockS3Server(t)
 
@@ -476,7 +495,7 @@ func newMockSTSHandler(expectedKms bool, expectedDurationSecs int, s3Partition s
 			return
 		}
 
-		var policyJSON sessionPolicy
+		var policyJSON policyDocument
 		err = json.Unmarshal([]byte(policy), &policyJSON)
 		if err != nil {
 			http.Error(w, "Invalid Policy JSON", http.StatusBadRequest)
