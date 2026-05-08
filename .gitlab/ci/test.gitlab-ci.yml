@@ -34,6 +34,7 @@ unit test:
     - .rules:merge_request_pipelines:no_docs:unit_test
     - .kubernetes runner
     - .unit tests kubernetes limits
+  timeout: 60m
   needs:
     - "clone test repo"
     - "prepare done"
