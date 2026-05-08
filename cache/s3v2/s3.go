@@ -2,6 +2,7 @@ package s3v2
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -212,7 +213,20 @@ func (c *s3Client) PresignURL(ctx context.Context,
 	return cache.PresignedURL{URL: u, Headers: presignedReq.SignedHeader}, nil
 }
 
-func (c *s3Client) generateSessionPolicy(bucketName, objectName string, upload bool) string {
+// policyStatement is one entry in an IAM policy's Statement array.
+type policyStatement struct {
+	Effect   string   `json:"Effect"`
+	Action   []string `json:"Action"`
+	Resource string   `json:"Resource"`
+}
+
+// policyDocument is the top-level shape of an IAM policy document.
+type policyDocument struct {
+	Version   string            `json:"Version"`
+	Statement []policyStatement `json:"Statement"`
+}
+
+func (c *s3Client) generateSessionPolicy(bucketName, objectName string, upload bool) (string, error) {
 	action := "s3:GetObject"
 	if upload {
 		action = "s3:PutObject"
@@ -228,33 +242,35 @@ func (c *s3Client) generateSessionPolicy(bucketName, objectName string, upload b
 		s3Partition = "aws-cn"
 	}
 
-	policy := fmt.Sprintf(`{
-		"Version": "2012-10-17",
-		"Statement": [
+	// Build the policy via encoding/json rather than string formatting so that
+	// any special characters in objectName (which originates from the cache
+	// key in .gitlab-ci.yml) are escaped at the value position and cannot
+	// alter the policy structure.
+	doc := policyDocument{
+		Version: "2012-10-17",
+		Statement: []policyStatement{
 			{
-				"Effect": "Allow",
-				"Action": ["%s"],
-				"Resource": "arn:%s:s3:::%s/%s"
-			}`, action, s3Partition, bucketName, objectName)
+				Effect:   "Allow",
+				Action:   []string{action},
+				Resource: fmt.Sprintf("arn:%s:s3:::%s/%s", s3Partition, bucketName, objectName),
+			},
+		},
+	}
 
 	if c.s3Config.EncryptionType() == cacheconfig.S3EncryptionTypeKms || c.s3Config.EncryptionType() == cacheconfig.S3EncryptionTypeDsseKms {
 		// Permissions needed for multipart upload: https://repost.aws/knowledge-center/s3-large-file-encryption-kms-key
-		policy += fmt.Sprintf(`,
-			{
-				"Effect": "Allow",
-				"Action": [
-					"kms:Decrypt",
-					"kms:GenerateDataKey"
-				],
-				"Resource": "%s"
-			}`, c.s3Config.ServerSideEncryptionKeyID)
+		doc.Statement = append(doc.Statement, policyStatement{
+			Effect:   "Allow",
+			Action:   []string{"kms:Decrypt", "kms:GenerateDataKey"},
+			Resource: c.s3Config.ServerSideEncryptionKeyID,
+		})
 	}
 
-	policy += `
-	]
-}`
-
-	return policy
+	out, err := json.Marshal(doc)
+	if err != nil {
+		return "", fmt.Errorf("marshalling session policy: %w", err)
+	}
+	return string(out), nil
 }
 
 // cachedCreds returns credentials from the cache if they have at least
@@ -307,7 +323,10 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 		return creds, nil
 	}
 
-	sessionPolicy := c.generateSessionPolicy(bucketName, objectName, upload)
+	sessionPolicy, err := c.generateSessionPolicy(bucketName, objectName, upload)
+	if err != nil {
+		return nil, err
+	}
 
 	stsClient := sts.NewFromConfig(*c.awsConfig, func(o *sts.Options) {
 		if c.stsEndpoint != "" {
