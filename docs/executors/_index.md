@@ -185,12 +185,12 @@ Supported features by different executors.
 
 Supported systems by different shells:
 
-| Shells  |      Bash      | PowerShell Desktop | PowerShell Core  | Windows Batch (deprecated) |
-|:-------:|:--------------:|:------------------:|:----------------:|:--------------------------:|
-| Windows | ✗ <sup>2</sup> |   ✓ <sup>3</sup>   | ✓ <sup>1,4</sup> |             ✓              |
-| Linux   | ✓ <sup>1</sup> |         ✗          |        ✓         |             ✗              |
-| macOS   | ✓ <sup>1</sup> |         ✗          |        ✓         |             ✗              |
-| FreeBSD | ✓ <sup>1</sup> |         ✗          |        ✗         |             ✗              |
+| Shells  |      Bash      | PowerShell Desktop | PowerShell Core | sh  |
+| :-----: | :------------: | :----------------: | :-------------: | :-: |
+| Windows | ✗ <sup>4</sup> |   ✓ <sup>3</sup>   |        ✓        |  ✗  |
+|  Linux  | ✓ <sup>1</sup> |         ✗          |        ✓        |  ✓  |
+|  macOS  | ✓ <sup>1</sup> |         ✗          |        ✓        |  ✓  |
+| FreeBSD | ✓ <sup>1</sup> |         ✗          |        ✗        |  ✓  |
 
 **Footnotes:**
 
@@ -201,12 +201,12 @@ Supported systems by different shells:
 
 Supported systems for interactive web terminals by different shells:
 
-| Shells  | Bash | PowerShell Desktop | PowerShell Core | Windows Batch (deprecated) |
-| :-----: | :--: | :----------------: | :-------------: | :------------------------: |
-| Windows |  ✗   |         ✓          |        ✓        |             ✗              |
-| Linux   |  ✓   |         ✗          |        ✓        |             ✗              |
-| macOS   |  ✓   |         ✗          |        ✓        |             ✗              |
-| FreeBSD |  ✓   |         ✗          |        ✗        |             ✗              |
+| Shells  | Bash | PowerShell Desktop | PowerShell Core | sh  |
+| :-----: | :--: | :----------------: | :-------------: | :-: |
+| Windows |  ✗   |         ✓          |        ✓        |  ✗  |
+|  Linux  |  ✓   |         ✗          |        ✓        |  ✓  |
+|  macOS  |  ✓   |         ✗          |        ✓        |  ✓  |
+| FreeBSD |  ✓   |         ✗          |        ✗        |  ✓  |
 
 ## Git requirements for non-Docker executors
 
