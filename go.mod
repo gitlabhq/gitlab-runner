@@ -51,7 +51,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kardianos/service v1.2.4
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/klauspost/compress v1.18.5
+	github.com/klauspost/compress v1.18.6
 	github.com/klauspost/pgzip v1.2.6
 	github.com/magefile/mage v1.15.0
 	github.com/minio/minio-go/v7 v7.0.98
@@ -80,8 +80,8 @@ require (
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e
 	gitlab.com/gitlab-org/labkit v1.62.0
-	gitlab.com/gitlab-org/moa v0.0.0-20260423130817-a0fd335eb250
-	gitlab.com/gitlab-org/step-runner v0.36.0
+	gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7
+	gitlab.com/gitlab-org/step-runner v0.37.0
 	go.mozilla.org/pkcs7 v0.9.0
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0

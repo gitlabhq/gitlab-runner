@@ -621,13 +621,20 @@ func TestScriptTimeout(t *testing.T) {
 	if errors.As(err, &exitErr) {
 		assert.ErrorIs(t, exitErr.Inner, ErrJobScriptTimeout)
 	}
+
+	assert.Contains(t, runnerStderr(r),
+		"step_script could not run to completion because the timeout was exceeded")
 }
 
 func TestAfterScriptTimeout_IndependentOfScriptTimeout(t *testing.T) {
+	// AfterScriptTimeout is generous so the after-script has plenty of
+	// headroom to start, run echo, and return on slower shells (notably
+	// PowerShell on Windows, where shell startup alone can exceed
+	// 500ms). The script timeout stays tight to keep the test fast.
 	r := testRunner(t, &Config{
 		TraceSections:      true,
 		ScriptTimeout:      50 * time.Millisecond,
-		AfterScriptTimeout: 500 * time.Millisecond,
+		AfterScriptTimeout: 30 * time.Second,
 		Steps: []stages.Step{
 			{Step: "script", Script: []string{"sleep 10"}, OnSuccess: true},
 			{Step: afterScriptStepName, Script: []string{"echo after_ran"}, OnSuccess: true, OnFailure: true},
@@ -639,6 +646,15 @@ func TestAfterScriptTimeout_IndependentOfScriptTimeout(t *testing.T) {
 
 	// After-script should have run under its own timeout.
 	assert.Contains(t, runnerStdout(r), "after_script")
+
+	// Script timed out, so the script-phase warning must be emitted; the
+	// after-script ran under its own (longer) deadline so no after-script
+	// warning is expected here.
+	stderr := runnerStderr(r)
+	assert.Contains(t, stderr,
+		"step_script could not run to completion because the timeout was exceeded")
+	assert.NotContains(t, stderr,
+		"after_script could not run to completion because the timeout was exceeded")
 }
 
 func TestJobTimeout(t *testing.T) {
@@ -655,6 +671,52 @@ func TestJobTimeout(t *testing.T) {
 
 	err := r.Run(t.Context())
 	assert.Error(t, err)
+
+	// Job-level deadline propagates into scriptCtx; warnStageTimeout
+	// suppresses the per-stage warning in this case so the outer build
+	// orchestrator's "Job could not run to completion ..." emission is
+	// the sole timeout cue. Asserting NotContains here is the regression
+	// guard for that dedup.
+	assert.NotContains(t, runnerStderr(r),
+		"step_script could not run to completion because the timeout was exceeded")
+}
+
+func TestJobTimeout_DuringAfterScript_SuppressesPerStageWarning(t *testing.T) {
+	// Job-level deadline fires while after-script is running. The runner
+	// suppresses BOTH per-stage warnings (step_script and after_script)
+	// in this case via warnStageTimeout's jobCtx check; the outer build
+	// orchestrator emits the single "Job could not run to completion ..."
+	// instead. This test is the regression guard for that dedup.
+	//
+	// Job timeout must comfortably exceed shell startup so the script
+	// step finishes before jobCtx fires (otherwise scriptCtx trips its
+	// own deadline first, which is a different code path). PowerShell
+	// startup on Windows can take >500ms, so 3s is the safe floor.
+	r := testRunner(t, &Config{
+		Timeout: 3 * time.Second,
+		GetSources: stages.GetSources{
+			GitStrategy: "none",
+			MaxAttempts: 1,
+		},
+		Steps: []stages.Step{
+			{Step: "script", Script: []string{"echo hi"}, OnSuccess: true},
+			{Step: afterScriptStepName, Script: []string{"sleep 10"}, OnSuccess: true, OnFailure: true},
+		},
+	})
+
+	// Run() may return nil here: the script succeeded, and the after-script
+	// error triggered by the jobCtx deadline is intentionally swallowed by
+	// the early break in runAfterScriptSteps (matching legacy semantics in
+	// common/build.go:905-919, where parent-ctx DeadlineExceeded suppresses
+	// the after-script error). The job-level timeout is reported by the
+	// harness layer above, not by Runner.Run.
+	_ = r.Run(t.Context())
+
+	stderr := runnerStderr(r)
+	assert.NotContains(t, stderr,
+		"step_script could not run to completion because the timeout was exceeded")
+	assert.NotContains(t, stderr,
+		"after_script could not run to completion because the timeout was exceeded")
 }
 
 func TestCancel_DuringScripts(t *testing.T) {
