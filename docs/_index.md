@@ -104,7 +104,7 @@ version.
 
 If you host your own runners but host your repositories on GitLab.com,
 keep GitLab Runner [updated](install/_index.md) to the latest version, as GitLab.com is
-[updated continuously](https://gitlab.com/gitlab-org/release/tasks/-/issues).
+[updated continuously](https://handbook.gitlab.com/handbook/engineering/deployments-and-releases/).
 
 ## Troubleshooting
 
