@@ -1,3 +1,10 @@
+## v18.11.3 (2026-05-11)
+
+### Bug fixes
+
+- Merge branch 'sh-fix-role-arn-injection' into '18-11-stable' [!6715](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6715)
+- Update the parallels executor to work with Windows guests [!105](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/105) (Chris Rose @cdrx)
+
 ## v18.11.2 (2026-05-02)
 
 ### Bug fixes
