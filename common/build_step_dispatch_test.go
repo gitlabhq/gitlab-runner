@@ -215,7 +215,6 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
       "step": "release"
     },
     {
-      "allow_failure": true,
       "on_failure": true,
       "on_success": true,
       "script": ["echo 'after_script'"],

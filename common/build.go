@@ -656,11 +656,8 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 			// rather than the returned error because gRPC wraps deadline
 			// exceeded as a status error that does not unwrap to
 			// context.DeadlineExceeded.
-			if err != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				b.logger.Warningln(
-					string(buildStage) + " could not run to completion because the timeout was exceeded. " +
-						"For more control over job and script timeouts see: " +
-						"https://docs.gitlab.com/ci/runners/configure_runners/#set-script-and-after_script-timeouts")
+			if err != nil {
+				b.warnTimeoutExceeded(ctx, string(buildStage))
 			}
 			return err
 		}
@@ -676,14 +673,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	b.setCurrentStage(buildStage)
 	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
 
-	defer func() {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			b.logger.Warningln(
-				string(buildStage) + " could not run to completion because the timeout was exceeded. " +
-					"For more control over job and script timeouts see: " +
-					"https://docs.gitlab.com/ci/runners/configure_runners/#set-script-and-after_script-timeouts")
-		}
-	}()
+	defer b.warnTimeoutExceeded(ctx, string(buildStage))
 
 	shell := executor.Shell()
 	if shell == nil {
@@ -827,6 +817,12 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		// JobCanceled via wrapStepStageErr.
 		//nolint:errcheck
 		err = b.executeStepStage(ctx, executor.(steps.Connector), "concrete", concreteSteps, trace.SetCancelFunc)
+
+		// Whole-job dispatch: stage breakdown isn't visible to the user, so
+		// attribute the timeout to "Job" rather than a build stage.
+		if err != nil {
+			b.warnTimeoutExceeded(ctx, "Job")
+		}
 
 		b.executeUploadReferees(ctx, startTime, time.Now())
 
@@ -1090,6 +1086,16 @@ func (b *Build) attemptExecuteStage(
 	}
 
 	return err
+}
+
+func (b *Build) warnTimeoutExceeded(ctx context.Context, subject string) {
+	if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return
+	}
+	b.logger.Warningln(
+		subject + " could not run to completion because the timeout was exceeded. " +
+			"For more control over job and script timeouts see: " +
+			"https://docs.gitlab.com/ci/runners/configure_runners/#set-script-and-after_script-timeouts")
 }
 
 func (b *Build) GetBuildTimeout() time.Duration {

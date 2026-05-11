@@ -224,17 +224,21 @@ func (r *Runner) runScriptSteps(jobCtx context.Context, steps []stages.Step) err
 	r.setCancel(cancel)
 
 	var firstErr error
+	timeoutStage := "step_script"
 	for _, step := range steps {
 		r.loadGitlabEnv()
 
-		if err := r.section(scriptCtx, "step_"+step.Step, step.Run); err != nil {
+		sectionName := "step_" + step.Step
+		if err := r.section(scriptCtx, sectionName, step.Run); err != nil {
 			if firstErr == nil {
 				firstErr = err
 			}
+			timeoutStage = sectionName
 			break
 		}
 	}
 
+	r.warnStageTimeout(jobCtx, scriptCtx, timeoutStage)
 	return r.classifyScriptContextError(jobCtx, scriptCtx, firstErr)
 }
 
@@ -277,6 +281,7 @@ func (r *Runner) runAfterScriptSteps(jobCtx context.Context, steps []stages.Step
 		return nil
 	})
 
+	r.warnStageTimeout(jobCtx, afterCtx, "after_script")
 	return err
 }
 
@@ -384,6 +389,21 @@ func (r *Runner) section(ctx context.Context, name string, fn func(context.Conte
 func (r *Runner) logWarningf(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintf(r.env.Stderr, " %s\033[0m\n", msg)
+}
+
+// warnStageTimeout fires only on a stage-only deadline; the job-level
+// case is owned by the outer runner.
+func (r *Runner) warnStageTimeout(jobCtx, stageCtx context.Context, stageName string) {
+	if !errors.Is(stageCtx.Err(), context.DeadlineExceeded) {
+		return
+	}
+	if errors.Is(jobCtx.Err(), context.DeadlineExceeded) {
+		return
+	}
+	r.logWarningf("%s could not run to completion because the timeout was exceeded. "+
+		"For more control over job and script timeouts see: "+
+		"https://docs.gitlab.com/ci/runners/configure_runners/#set-script-and-after_script-timeouts",
+		stageName)
 }
 
 // setupGitlabEnv creates the GITLAB_ENV file so user scripts can append

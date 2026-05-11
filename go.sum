@@ -397,8 +397,8 @@ github.com/kevinburke/ssh_config v1.6.0 h1:J1FBfmuVosPHf5GRdltRLhPJtJpTlMdKTBjRg
 github.com/kevinburke/ssh_config v1.6.0/go.mod h1:q2RIzfka+BXARoNexmF9gkxEX7DmvbW9P4hIVx2Kg4M=
 github.com/keybase/go-keychain v0.0.1 h1:way+bWYa6lDppZoZcgMbYsvC7GxljxrskdNInRtuthU=
 github.com/keybase/go-keychain v0.0.1/go.mod h1:PdEILRW3i9D8JcdM+FmY6RwkHGnhHxXwkPPMeUgOK1k=
-github.com/klauspost/compress v1.18.5 h1:/h1gH5Ce+VWNLSWqPzOVn6XBO+vJbCNGvjoaGBFW2IE=
-github.com/klauspost/compress v1.18.5/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
+github.com/klauspost/compress v1.18.6 h1:2jupLlAwFm95+YDR+NwD2MEfFO9d4z4Prjl1XXDjuao=
+github.com/klauspost/compress v1.18.6/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
 github.com/klauspost/cpuid/v2 v2.0.1/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa0213Md/qVLRg=
 github.com/klauspost/cpuid/v2 v2.3.0 h1:S4CRMLnYUhGeDFDqkGriYKdfoFlDnMtqTiI/sFzhA9Y=
 github.com/klauspost/cpuid/v2 v2.3.0/go.mod h1:hqwkgyIinND0mEev00jJYCxPNVRVXFQeu1XKlok6oO0=
@@ -604,10 +604,10 @@ gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e h1:A
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e/go.mod h1:pKFT8nwdU5KuJYosKMGgMATMrV4AP6p9jRu4HobZaBA=
 gitlab.com/gitlab-org/labkit v1.62.0 h1:eYYMcu5ZpNtVpp1TNqdHLLmFHGP3Thv1j5k+vf+roeg=
 gitlab.com/gitlab-org/labkit v1.62.0/go.mod h1:7q5/Qxsbebgy8OIyIcsUGK92bPRfOiL8Ft1+TTykUdU=
-gitlab.com/gitlab-org/moa v0.0.0-20260423130817-a0fd335eb250 h1:Uv7uodeNaJaBtqOOw7nUJRGH9J5VugvgMFSpt43VTJ8=
-gitlab.com/gitlab-org/moa v0.0.0-20260423130817-a0fd335eb250/go.mod h1:024490ksS75/Bi9UoJTu59qY44JuFBAfi5bzGsLIhtY=
-gitlab.com/gitlab-org/step-runner v0.36.0 h1:VMlskpP53Ufannv2vR0/lSiGrj3j3IaGfw/ELgDrqW8=
-gitlab.com/gitlab-org/step-runner v0.36.0/go.mod h1:rBfixQ9r4o2KaRvE1LD5kyskNzzb71Tpu1xH5YV2hqk=
+gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7 h1:ZeO7PIjerXTEaZPvR2fBkB/8fTAFrVjUFgC1B8x64fM=
+gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7/go.mod h1:024490ksS75/Bi9UoJTu59qY44JuFBAfi5bzGsLIhtY=
+gitlab.com/gitlab-org/step-runner v0.37.0 h1:W8pdZ3T+iYFwmHW10qQww3AQkX+v/En1kMU7xtjcdtA=
+gitlab.com/gitlab-org/step-runner v0.37.0/go.mod h1:Rt5LmxOlCFJvuJkDfW6Uhj6htv+l7yYr4TB0mJ3Sg3o=
 go.etcd.io/bbolt v1.3.5 h1:XAzx9gjCb0Rxj7EoqcClPD1d5ZBxZJk0jbuoPHenBt0=
 go.etcd.io/bbolt v1.3.5/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
 go.mozilla.org/pkcs7 v0.9.0 h1:yM4/HS9dYv7ri2biPtxt8ikvB37a980dg69/pKmS+eI=

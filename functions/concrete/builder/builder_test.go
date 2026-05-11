@@ -298,7 +298,7 @@ func TestBuild_Steps(t *testing.T) {
 
 		last := config.Steps[len(config.Steps)-1]
 		assert.Equal(t, string(spec.StepNameAfterScript), last.Step)
-		assert.True(t, last.AllowFailure)
+		assert.False(t, last.AllowFailure)
 		assert.True(t, last.OnSuccess)
 		assert.True(t, last.OnFailure)
 	})

@@ -353,7 +353,6 @@ func (b *builder) buildSteps() []stages.Step {
 		})
 
 		if step.Name == spec.StepNameAfterScript {
-			s.AllowFailure = true
 			s.OnSuccess = true
 			s.OnFailure = true
 			afterScript = append(afterScript, s)
