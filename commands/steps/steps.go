@@ -9,10 +9,10 @@ import (
 	"io/fs"
 	"net"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/urfave/cli"
 	"golang.org/x/sync/errgroup"
@@ -24,8 +24,15 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/proxy"
 	"gitlab.com/gitlab-org/step-runner/pkg/di"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner/gracefulexitcmd"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
+
+// gracefulExitDelay bounds the time the spawned script has between
+// SIGTERM (on context cancellation) and SIGKILL of its process group.
+// Also bounds how long we wait for stdout/stderr drain when background
+// processes have inherited the pipe write-ends.
+const gracefulExitDelay = 5 * time.Second
 
 const (
 	SubCommandName = "steps"
@@ -199,7 +206,7 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 				return nil
 			}
 
-			cmd := exec.CommandContext(ctx, cmdAndArgs[0], cmdAndArgs[1:]...)
+			cmd := gracefulexitcmd.New(ctx, gracefulExitDelay, cmdAndArgs[0], cmdAndArgs[1:]...)
 			cmd.Stdin = stdin
 			cmd.Stdout = ioStreams.Stdout
 			cmd.Stderr = ioStreams.Stderr

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -95,6 +96,11 @@ func (c *ProxyExecCommand) Execute(cliContext *cli.Context) {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = proxy.Stdout()
 	cmd.Stderr = proxy.Stderr()
+	// WaitDelay bounds how long Run() blocks after the child exits when
+	// background processes have inherited the stdout/stderr pipe FDs. Without
+	// this, os/exec's internal copy goroutines wait for EOF — which never
+	// arrives while a grandchild holds the write-end open — and Run() hangs.
+	cmd.WaitDelay = time.Second
 
 	err = errors.Join(
 		cmd.Run(),
