@@ -447,7 +447,7 @@ func (e *executor) createService(
 	linkNames []string,
 ) (*serviceInfo, error) {
 	if service == "" {
-		return nil, common.MakeBuildError("invalid service image name: %s", definition.Name)
+		return nil, &common.BuildError{Inner: fmt.Errorf("invalid service image name: %s", definition.Name), FailureReason: common.ConfigurationError}
 	}
 
 	if e.volumesManager == nil {
@@ -1447,7 +1447,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	if err != nil {
 		return &common.BuildError{
 			Inner:         fmt.Errorf("creating docker log configuration: %w", err),
-			FailureReason: common.RunnerSystemFailure,
+			FailureReason: common.ConfigurationError,
 		}
 	}
 
@@ -1553,12 +1553,12 @@ func (e *executor) prepareHelperImage() (helperimage.Info, error) {
 
 func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error {
 	if e.volumeParser == nil {
-		return common.MakeBuildError("missing volume parser")
+		return &common.BuildError{Inner: fmt.Errorf("missing volume parser"), FailureReason: common.RunnerSystemFailure}
 	}
 
 	isHostMounted, err := volumes.IsHostMountedVolume(e.volumeParser, e.RootDir(), options.Config.Docker.Volumes...)
 	if err != nil {
-		return &common.BuildError{Inner: err}
+		return &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
 	}
 
 	// We need to set proper value for e.SharedBuildsDir because

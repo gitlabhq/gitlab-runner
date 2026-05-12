@@ -122,7 +122,7 @@ func (c *command) parseBuildFailure(eerr *exec.ExitError) error {
 	if err != nil {
 		// If the driver has not generated a file at the prescribed location
 		// we revert to the default BuildError and exitCode.
-		return &common.BuildError{Inner: eerr, ExitCode: BuildFailureExitCode}
+		return &common.BuildError{Inner: eerr, ExitCode: BuildFailureExitCode, FailureReason: common.ScriptFailure}
 	}
 	defer file.Close()
 
@@ -142,5 +142,5 @@ func (c *command) parseBuildFailure(eerr *exec.ExitError) error {
 	// We want to modify the exit code found in the error message to reflect the
 	// true error as defined in the file. This aims to prevent confusion users
 	// would like experience when presented with the exit status in the job log.
-	return &common.BuildError{Inner: fmt.Errorf("exit status %s", codeStr), ExitCode: bErrCode}
+	return &common.BuildError{Inner: fmt.Errorf("exit status %s", codeStr), ExitCode: bErrCode, FailureReason: common.ScriptFailure}
 }

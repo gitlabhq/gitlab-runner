@@ -10,9 +10,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
 var (
@@ -24,9 +28,10 @@ var (
 
 func TestPodWatcher(t *testing.T) {
 	tests := map[string]struct {
-		pod            *v1.Pod
-		shouldDelete   bool
-		expectedErrMsg string
+		pod                   *v1.Pod
+		shouldDelete          bool
+		expectedErrMsg        string
+		expectedFailureReason spec.JobFailureReason
 	}{
 		"deleted": {
 			pod:            defaultPod(),
@@ -42,16 +47,19 @@ func TestPodWatcher(t *testing.T) {
 			expectedErrMsg: `disrupted: reason "disruption-reason", message "disruption-msg"`,
 		},
 		"invalid image": {
-			pod:            withContainerWaiting(defaultPod(), "some-container", "some-msg", "InvalidImageName"),
-			expectedErrMsg: "image pull failed: some-msg",
+			pod:                   withContainerWaiting(defaultPod(), "some-container", "some-msg", "InvalidImageName"),
+			expectedErrMsg:        "image pull failed: some-msg",
+			expectedFailureReason: common.ConfigurationError,
 		},
 		"pull error": {
-			pod:            withContainerWaiting(defaultPod(), "some-container", "some-msg", "ErrImagePull"),
-			expectedErrMsg: "image pull failed: some-msg",
+			pod:                   withContainerWaiting(defaultPod(), "some-container", "some-msg", "ErrImagePull"),
+			expectedErrMsg:        "image pull failed: some-msg",
+			expectedFailureReason: common.ImagePullFailure,
 		},
 		"pull backoff": {
-			pod:            withContainerWaiting(defaultPod(), "some-container", "some-msg", "ImagePullBackOff"),
-			expectedErrMsg: "image pull failed: some-msg",
+			pod:                   withContainerWaiting(defaultPod(), "some-container", "some-msg", "ImagePullBackOff"),
+			expectedErrMsg:        "image pull failed: some-msg",
+			expectedFailureReason: common.ImagePullFailure,
 		},
 		"healthy pod": {
 			pod: defaultPod(),
@@ -109,6 +117,11 @@ func TestPodWatcher(t *testing.T) {
 				} else {
 					assert.ErrorContains(t, podErr, expectedPodNameForThisTry, "(try %d) expected the error to be for pod %q", try, expectedPodNameForThisTry)
 					assert.ErrorContains(t, podErr, test.expectedErrMsg, "(try %d) expected an error like %q from the pod watcher", try, test.expectedErrMsg)
+					if test.expectedFailureReason != "" {
+						var buildErr *common.BuildError
+						require.ErrorAs(t, podErr, &buildErr)
+						assert.Equal(t, test.expectedFailureReason, buildErr.FailureReason)
+					}
 				}
 			}
 

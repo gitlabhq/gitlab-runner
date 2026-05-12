@@ -157,6 +157,7 @@ func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
 				"ExitCode must equal NormalizeExitCode(int(statusCode))")
 			assert.Equal(t, tt.wantInnerMsg, buildError.Inner.Error(),
 				"Inner error message must use normalized exit code")
+			assert.Equal(t, common.ScriptFailure, buildError.FailureReason)
 		})
 	}
 }

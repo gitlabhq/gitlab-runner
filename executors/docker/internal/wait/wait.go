@@ -112,8 +112,9 @@ func (d *dockerWaiter) wait(ctx context.Context, containerID string, stopFn func
 			if status.StatusCode != 0 {
 				exitCode := common.NormalizeExitCode(int(status.StatusCode))
 				return &common.BuildError{
-					Inner:    fmt.Errorf("exit code %d", exitCode),
-					ExitCode: exitCode,
+					Inner:         fmt.Errorf("exit code %d", exitCode),
+					ExitCode:      exitCode,
+					FailureReason: common.ScriptFailure,
 				}
 			}
 

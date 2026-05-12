@@ -78,7 +78,7 @@ func TestExecutor_Run(t *testing.T) {
 			},
 			processKillerAssertions: func(mProcessKillWaiter *process.MockKillWaiter, waitCalled chan time.Time) {},
 			cancelJob:               false,
-			expectedErr:             &common.BuildError{},
+			expectedErr:             &common.BuildError{FailureReason: common.ScriptFailure},
 		},
 	}
 

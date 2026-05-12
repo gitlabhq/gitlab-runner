@@ -181,13 +181,6 @@ func (b *BuildError) Unwrap() error {
 	return b.Inner
 }
 
-// MakeBuildError returns an new instance of BuildError.
-func MakeBuildError(format string, args ...interface{}) error {
-	return &BuildError{
-		Inner: fmt.Errorf(format, args...),
-	}
-}
-
 func ValidateExecutorProvider(provider ExecutorProvider) error {
 	if provider.GetDefaultShell() == "" {
 		return errors.New("default shell not implemented")

@@ -101,7 +101,7 @@ func TestDockerLogOptions(t *testing.T) {
 			} else {
 				var eerr *common.BuildError
 				assert.ErrorAs(t, err, &eerr)
-				assert.Equal(t, common.RunnerSystemFailure, eerr.FailureReason)
+				assert.Equal(t, common.ConfigurationError, eerr.FailureReason)
 				assert.Regexp(t, test.expectedErrRE, eerr.Inner.Error())
 			}
 		})

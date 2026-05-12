@@ -109,8 +109,9 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 			// ExitCode is normalized for API and allow_failure matching.
 			// Inner is left as-is so the original message (e.g. "signal: killed") is preserved in the job log.
 			waitErr = &common.BuildError{
-				Inner:    waitErr,
-				ExitCode: common.NormalizeExitCode(exitErr.ExitCode()),
+				Inner:         waitErr,
+				ExitCode:      common.NormalizeExitCode(exitErr.ExitCode()),
+				FailureReason: common.ScriptFailure,
 			}
 		}
 		waitCh <- waitErr
