@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
@@ -53,26 +54,28 @@ func TestCommand_Run(t *testing.T) {
 	testErr := errors.New("test error")
 
 	tests := map[string]struct {
-		cmdStartErr       error
-		cmdWaitErr        error
-		getExitCode       func(err *exec.ExitError) int
-		contextClosed     bool
-		process           *os.Process
-		expectedError     string
-		expectedErrorType interface{}
-		expectedExitCode  int
-		options           Options
+		cmdStartErr           error
+		cmdWaitErr            error
+		getExitCode           func(err *exec.ExitError) int
+		contextClosed         bool
+		process               *os.Process
+		expectedError         string
+		expectedErrorType     interface{}
+		expectedExitCode      int
+		expectedFailureReason spec.JobFailureReason
+		options               Options
 	}{
 		"error on cmd start()": {
 			cmdStartErr:   errors.New("test-error"),
 			expectedError: "failed to start command: test-error",
 		},
 		"command ends with a build failure": {
-			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
-			getExitCode:       func(err *exec.ExitError) int { return BuildFailureExitCode },
-			expectedError:     "exit status 0",
-			expectedErrorType: &common.BuildError{},
-			expectedExitCode:  BuildFailureExitCode,
+			cmdWaitErr:            &exec.ExitError{ProcessState: &os.ProcessState{}},
+			getExitCode:           func(err *exec.ExitError) int { return BuildFailureExitCode },
+			expectedError:         "exit status 0",
+			expectedErrorType:     &common.BuildError{},
+			expectedExitCode:      BuildFailureExitCode,
+			expectedFailureReason: common.ScriptFailure,
 		},
 		"command ends with a system failure": {
 			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
@@ -106,11 +109,12 @@ func TestCommand_Run(t *testing.T) {
 			}(),
 		},
 		"command ends with build failure file": {
-			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
-			getExitCode:       func(err *exec.ExitError) int { return BuildFailureExitCode },
-			expectedError:     "exit status 42",
-			expectedErrorType: &common.BuildError{},
-			expectedExitCode:  42,
+			cmdWaitErr:            &exec.ExitError{ProcessState: &os.ProcessState{}},
+			getExitCode:           func(err *exec.ExitError) int { return BuildFailureExitCode },
+			expectedError:         "exit status 42",
+			expectedErrorType:     &common.BuildError{},
+			expectedExitCode:      42,
+			expectedFailureReason: common.ScriptFailure,
 			options: func() Options {
 				filename := t.TempDir() + "/valid"
 				err := os.WriteFile(filename, []byte("42"), 0o600)
@@ -119,11 +123,12 @@ func TestCommand_Run(t *testing.T) {
 			}(),
 		},
 		"additional information ignored": {
-			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
-			getExitCode:       func(err *exec.ExitError) int { return BuildFailureExitCode },
-			expectedError:     "exit status 42",
-			expectedErrorType: &common.BuildError{},
-			expectedExitCode:  42,
+			cmdWaitErr:            &exec.ExitError{ProcessState: &os.ProcessState{}},
+			getExitCode:           func(err *exec.ExitError) int { return BuildFailureExitCode },
+			expectedError:         "exit status 42",
+			expectedErrorType:     &common.BuildError{},
+			expectedExitCode:      42,
+			expectedFailureReason: common.ScriptFailure,
 			options: func() Options {
 				filename := t.TempDir() + "/valid"
 				err := os.WriteFile(filename, []byte("42\n\nTesting..."), 0o600)
@@ -189,6 +194,11 @@ func TestCommand_Run(t *testing.T) {
 				if errors.As(err, &buildError) {
 					assert.Equal(t, tt.expectedExitCode, buildError.ExitCode)
 				}
+			}
+			if tt.expectedFailureReason != "" {
+				var buildError *common.BuildError
+				require.ErrorAs(t, err, &buildError)
+				assert.Equal(t, tt.expectedFailureReason, buildError.FailureReason)
 			}
 		})
 	}

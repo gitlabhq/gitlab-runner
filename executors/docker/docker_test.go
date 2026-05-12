@@ -2626,7 +2626,7 @@ func TestDockerConfigGetLogConfig(t *testing.T) {
 			if tt.expectedError != "" {
 				var buildErr *common.BuildError
 				assert.ErrorAs(t, err, &buildErr, "expected error to be a *common.BuildError")
-				assert.Equal(t, common.RunnerSystemFailure, buildErr.FailureReason, "expected a system failure")
+				assert.Equal(t, common.ConfigurationError, buildErr.FailureReason, "expected a configuration error")
 				assert.Equal(t, tt.expectedError, buildErr.Error())
 				return // when prepare fails, we can bail out
 			} else {

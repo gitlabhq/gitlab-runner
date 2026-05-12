@@ -232,7 +232,7 @@ func (m *manager) pullDockerImage(imageName string, options spec.ImageDockerOpti
 
 	var err error
 	if opts.RegistryAuth, err = auth.EncodeConfig(ac); err != nil {
-		return nil, &common.BuildError{Inner: err, FailureReason: common.ImagePullFailure}
+		return nil, &common.BuildError{Inner: err, FailureReason: common.RunnerSystemFailure}
 	}
 
 	if err := m.client.ImagePullBlocking(m.context, ref, opts); err != nil {

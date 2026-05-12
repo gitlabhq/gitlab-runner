@@ -79,9 +79,9 @@ const (
 	ImagePullFailure    spec.JobFailureReason = "image_pull_failure"
 	UnknownFailure      spec.JobFailureReason = "unknown_failure"
 
-	// ConfigurationError indicates an error in the CI configuration that can only be determined by runner (and not by
-	// Rails). The typical example incompatible pull policies. Since this failure reason does not exist in rails, we map
-	// it to ScriptFailure below, which is more or less correct in that it's ultimately a user error.
+	// ConfigurationError indicates a configuration error that can only be determined by runner (and not by Rails).
+	// This covers both CI configuration errors (e.g. incompatible pull policies) and runner configuration errors
+	// (e.g. missing builds_dir). Since this failure reason does not exist in rails, we map it to ScriptFailure below.
 	ConfigurationError spec.JobFailureReason = "configuration_error"
 
 	// When defining new job failure reasons, consider if its meaning is

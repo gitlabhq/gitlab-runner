@@ -810,7 +810,7 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
-			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitError.ExitStatus())}
+			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitError.ExitStatus()), FailureReason: common.ScriptFailure}
 		}
 		return err
 
@@ -913,7 +913,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var terminatedError *commandTerminatedError
 		if err != nil && errors.As(err, &terminatedError) {
-			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(terminatedError.exitCode)}
+			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(terminatedError.exitCode), FailureReason: common.ScriptFailure}
 		}
 
 		return err

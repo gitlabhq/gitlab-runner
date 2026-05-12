@@ -47,7 +47,7 @@ var jobOutputLimitExceededTestCases = map[string]jobOutputLimitExceededTestCase{
 			var expectedErr *common.BuildError
 			if assert.ErrorAs(t, err, &expectedErr) {
 				assert.Equal(t, 1, expectedErr.ExitCode)
-				assert.Empty(t, expectedErr.FailureReason)
+				assert.Equal(t, common.ScriptFailure, expectedErr.FailureReason)
 			}
 		},
 	},

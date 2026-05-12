@@ -343,7 +343,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	})
 	if exitError, ok := err.(*ssh.ExitError); ok {
 		exitCode := exitError.ExitCode()
-		err = &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitCode)}
+		err = &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitCode), FailureReason: common.ScriptFailure}
 	}
 	return err
 }

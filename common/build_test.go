@@ -1334,6 +1334,7 @@ func TestStartBuild(t *testing.T) {
 		expectedCacheDir              string
 		expectedSafeDirectoryCheckout bool
 		expectedError                 bool
+		expectedFailureReason         spec.JobFailureReason
 	}{
 		"no job specific build dir with no shared dir": {
 			args: startBuildArgs{
@@ -1414,7 +1415,8 @@ func TestStartBuild(t *testing.T) {
 					Public: true,
 				},
 			},
-			expectedError: true,
+			expectedError:         true,
+			expectedFailureReason: ConfigurationError,
 		},
 		"custom build disabled": {
 			args: startBuildArgs{
@@ -1431,6 +1433,7 @@ func TestStartBuild(t *testing.T) {
 			expectedCacheDir:              "/cache/test-namespace/test-repo",
 			expectedSafeDirectoryCheckout: false,
 			expectedError:                 true,
+			expectedFailureReason:         ConfigurationError,
 		},
 		"invalid GIT_CLONE_PATH was specified": {
 			args: startBuildArgs{
@@ -1443,7 +1446,8 @@ func TestStartBuild(t *testing.T) {
 			jobVariables: spec.Variables{
 				{Key: "GIT_CLONE_PATH", Value: "/go/src/gitlab.com/test-namespace/test-repo", Public: true},
 			},
-			expectedError: true,
+			expectedError:         true,
+			expectedFailureReason: ConfigurationError,
 		},
 		"safeDirectoryCheckout enabled": {
 			args: startBuildArgs{
@@ -1458,6 +1462,28 @@ func TestStartBuild(t *testing.T) {
 			expectedCacheDir:              "/cache/test-namespace/test-repo",
 			expectedSafeDirectoryCheckout: true,
 			expectedError:                 false,
+		},
+		"builds_dir not configured": {
+			args: startBuildArgs{
+				rootDir:               "",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: false,
+				sharedDir:             false,
+				safeDirectoryCheckout: false,
+			},
+			expectedError:         true,
+			expectedFailureReason: ConfigurationError,
+		},
+		"cache_dir not configured": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "",
+				customBuildDirEnabled: false,
+				sharedDir:             false,
+				safeDirectoryCheckout: false,
+			},
+			expectedError:         true,
+			expectedFailureReason: ConfigurationError,
 		},
 	}
 
@@ -1485,7 +1511,12 @@ func TestStartBuild(t *testing.T) {
 				test.args.safeDirectoryCheckout,
 			)
 			if test.expectedError {
-				assert.Error(t, err)
+				require.Error(t, err)
+				if test.expectedFailureReason != "" {
+					var buildErr *BuildError
+					require.ErrorAs(t, err, &buildErr)
+					assert.Equal(t, test.expectedFailureReason, buildErr.FailureReason)
+				}
 				return
 			}
 

@@ -49,9 +49,10 @@ type executorTestCase struct {
 		cmdOpts process.CommandOptions,
 		options command.Options,
 	)
-	assertOutput   func(t *testing.T, output string)
-	assertExecutor func(t *testing.T, e *executor)
-	expectedError  string
+	assertOutput          func(t *testing.T, output string)
+	assertExecutor        func(t *testing.T, e *executor)
+	expectedError         string
+	expectedFailureReason spec.JobFailureReason
 }
 
 func getRunnerConfig(custom *common.CustomConfig) common.RunnerConfig {
@@ -196,16 +197,19 @@ func TestExecutor_Prepare(t *testing.T) {
 			config:                  common.RunnerConfig{},
 			doNotMockCommandFactory: true,
 			expectedError:           "custom executor not configured",
+			expectedFailureReason:   common.ConfigurationError,
 		},
 		"custom executor not set": {
 			config:                  getRunnerConfig(nil),
 			doNotMockCommandFactory: true,
 			expectedError:           "custom executor not configured",
+			expectedFailureReason:   common.ConfigurationError,
 		},
 		"custom executor set without RunExec": {
 			config:                  getRunnerConfig(&common.CustomConfig{}),
 			doNotMockCommandFactory: true,
 			expectedError:           "custom executor is missing RunExec",
+			expectedFailureReason:   common.ConfigurationError,
 		},
 		"custom executor set": {
 			config: getRunnerConfig(&common.CustomConfig{
@@ -313,7 +317,8 @@ func TestExecutor_Prepare(t *testing.T) {
 			assertOutput: func(t *testing.T, output string) {
 				assert.Contains(t, output, "Using Custom executor...")
 			},
-			expectedError: "the builds_dir is not configured",
+			expectedError:         "the builds_dir is not configured",
+			expectedFailureReason: common.ConfigurationError,
 		},
 		"custom executor set with ConfigExec and driver info missing name": {
 			config: getRunnerConfig(&common.CustomConfig{
@@ -603,6 +608,11 @@ func TestExecutor_Prepare(t *testing.T) {
 			}
 
 			assert.EqualError(t, err, tt.expectedError)
+			if tt.expectedFailureReason != "" {
+				var buildErr *common.BuildError
+				require.ErrorAs(t, err, &buildErr)
+				assert.Equal(t, tt.expectedFailureReason, buildErr.FailureReason)
+			}
 		})
 	}
 }
