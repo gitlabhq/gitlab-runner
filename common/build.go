@@ -130,8 +130,9 @@ var staticBuildStages = []BuildStage{
 }
 
 var (
-	ErrJobCanceled      = errors.New("canceled")
-	ErrJobScriptTimeout = errors.New("script timeout")
+	ErrJobCanceled       = errors.New("canceled")
+	ErrJobScriptTimeout  = errors.New("script timeout")
+	ErrJobPrepareTimeout = errors.New("prepare timeout")
 )
 
 const (
@@ -789,7 +790,7 @@ func (b *Build) executeArchiveCache(ctx context.Context, state error, executor E
 	return b.executeStage(ctx, BuildStageArchiveOnFailureCache, executor)
 }
 
-func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Executor) error {
+func (b *Build) executeScript(ctx, prepareCtx context.Context, trace JobTrace, executor Executor) error {
 	// track job start and create referees
 	startTime := time.Now()
 	b.createReferees(executor)
@@ -829,7 +830,7 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		return err
 	}
 
-	err, cont := b.executePrepareScripts(ctx, executor)
+	err, cont := b.executePrepareScripts(ctx, prepareCtx, executor)
 	if !cont {
 		return err
 	}
@@ -863,10 +864,12 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 	return err
 }
 
-func (b *Build) executePrepareScripts(ctx context.Context, executor Executor) (error, bool) {
-	// Prepare stage
-	err := b.executeStage(ctx, BuildStagePrepare, executor)
+func (b *Build) executePrepareScripts(ctx, prepareCtx context.Context, executor Executor) (error, bool) {
+	err := b.executeStage(prepareCtx, BuildStagePrepare, executor)
 	if err != nil {
+		if !errors.Is(ctx.Err(), context.DeadlineExceeded) && errors.Is(prepareCtx.Err(), context.DeadlineExceeded) {
+			return &BuildError{Inner: ErrJobPrepareTimeout, FailureReason: JobExecutionTimeout}, false
+		}
 		return fmt.Errorf(
 			"prepare environment: %w. "+
 				"Check https://docs.gitlab.com/runner/shells/#shell-profile-loading for more information",
@@ -1161,7 +1164,7 @@ func (b *Build) runtimeStateAndError(err error) (BuildRuntimeState, error) {
 	}
 }
 
-func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err error) {
+func (b *Build) run(ctx, prepareCtx context.Context, trace JobTrace, executor Executor) (err error) {
 	b.setCurrentState(BuildRunRuntimeRunning)
 
 	buildFinish := make(chan error, 1)
@@ -1189,7 +1192,7 @@ func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err
 			}
 		}()
 
-		buildFinish <- b.executeScript(runContext, trace, executor)
+		buildFinish <- b.executeScript(runContext, prepareCtx, trace, executor)
 	}()
 
 	// Wait for signals: cancel, timeout, abort or finish
@@ -1446,6 +1449,7 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 	return b.executorStageResolver()
 }
 
+//nolint:gocognit
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.setCurrentState(BuildRunStatePending)
 
@@ -1489,7 +1493,10 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	b.printSettingErrors()
 
-	options := b.createExecutorPrepareOptions(ctx, globalConfig)
+	prepareCtx, prepareCancel := context.WithTimeout(ctx, b.GetPrepareTimeout())
+	defer prepareCancel()
+
+	options := b.createExecutorPrepareOptions(prepareCtx, globalConfig)
 	provider := b.ExecutorProvider
 	if provider == nil {
 		return errors.New("executor not found")
@@ -1502,6 +1509,9 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	executor, err := b.executeBuildSection(options, provider)
 	if err != nil {
+		if !errors.Is(ctx.Err(), context.DeadlineExceeded) && errors.Is(prepareCtx.Err(), context.DeadlineExceeded) {
+			return &BuildError{Inner: ErrJobPrepareTimeout, FailureReason: JobExecutionTimeout}
+		}
 		return err
 	}
 	defer executor.Cleanup()
@@ -1512,7 +1522,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		defer cancel()
 	}
 
-	err = b.run(ctx, trace, executor)
+	err = b.run(ctx, prepareCtx, trace, executor)
 	if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
 		b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
 	}

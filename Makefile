@@ -137,6 +137,7 @@ format: $(GOLANGLINT)
 lint: OUT_FORMAT ?= --output.text.path=stdout --output.text.colors=true
 lint: LINT_FLAGS ?=
 lint: $(GOLANGLINT)
+	@$(GOLANGLINT) version
 	@$(MAKE) check_test_directives >/dev/stderr
 	@$(GOLANGLINT) run $(OUT_FORMAT) $(LINT_FLAGS) ./...
 
