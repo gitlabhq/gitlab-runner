@@ -30,6 +30,7 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -942,9 +943,16 @@ func (e *executor) createContainerConfig(
 		if e.Build.UseNativeSteps() {
 			config.Cmd = append([]string{bootstrappedBinary, "steps", "serve"}, config.Cmd...)
 
-			// Environment variables interferes with steps. Given this situation, when
-			// native steps are enabled, we no longer add the env vars to the container.
-			config.Env = nil
+			// Recovery for `sh -c` entrypoints that drop CMD[1:] as positional
+			// params exec doesn't forward. See commands/steps.RecoveryEnvVar.
+			recoveryArgv, err := steps.EncodeRecoveryArgv(config.Cmd[1:])
+			if err != nil {
+				return nil, fmt.Errorf("encoding native-steps recovery argv: %w", err)
+			}
+
+			// Job env vars are delivered by step-runner; the recovery var is
+			// the only one we set here.
+			config.Env = []string{steps.RecoveryEnvVar + "=" + recoveryArgv}
 		}
 
 		// user config should only be set in build containers
