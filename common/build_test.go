@@ -439,6 +439,97 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	assert.ErrorIs(t, err, expectedErr)
 }
 
+func TestBuildPrepareExecutorTimeout(t *testing.T) {
+	executor, provider := setupMockExecutorAndProvider(t)
+	executor.On("Prepare", mock.Anything).Return(func(options ExecutorPrepareOptions) error {
+		<-options.Context.Done()
+		return options.Context.Err()
+	}).Once()
+	executor.On("Cleanup").Once()
+
+	cfg := &RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			Executor:       t.Name(),
+			PrepareTimeout: new(1 * time.Millisecond),
+		},
+	}
+
+	res, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+	build, err := NewBuild(res, cfg, nil, nil, provider)
+	require.NoError(t, err)
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+
+	var buildErr *BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, JobExecutionTimeout, buildErr.FailureReason)
+	assert.ErrorIs(t, err, ErrJobPrepareTimeout)
+}
+
+func TestBuildPrepareScriptTimeout(t *testing.T) {
+	executor, provider := setupMockExecutorAndProvider(t)
+	executor.On("Prepare", mock.Anything).Return(nil).Once()
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(func(cmd ExecutorCommand) error {
+		<-cmd.Context.Done()
+		return cmd.Context.Err()
+	}).Once()
+	executor.On("Finish", mock.Anything).Once()
+	executor.On("Cleanup").Once()
+
+	cfg := &RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			Executor: t.Name(),
+			// 50ms: long enough for setup to complete so the timeout fires inside executor.Run,
+			// rather than at executeStage's context check
+			PrepareTimeout: new(50 * time.Millisecond),
+		},
+	}
+
+	res, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+	build, err := NewBuild(res, cfg, nil, nil, provider)
+	require.NoError(t, err)
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+
+	var buildErr *BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, JobExecutionTimeout, buildErr.FailureReason)
+	assert.ErrorIs(t, err, ErrJobPrepareTimeout)
+}
+
+func TestBuildPrepareErrorNotMistakenForTimeout(t *testing.T) {
+	PreparationRetryInterval = 0
+
+	e := NewMockExecutor(t)
+	p := NewMockExecutorProvider(t)
+	p.On("GetFeatures", mock.Anything).Return(nil).Once()
+	p.On("Create").Return(e).Times(3)
+
+	prepareErr := errors.New("prepare failed")
+	e.On("Prepare", mock.Anything).Return(prepareErr).Times(3)
+	e.On("Cleanup").Times(3)
+
+	cfg := &RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			Executor:       t.Name(),
+			PrepareTimeout: new(5 * time.Second),
+		},
+	}
+
+	res, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+	build, err := NewBuild(res, cfg, nil, nil, p)
+	require.NoError(t, err)
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+
+	assert.ErrorIs(t, err, prepareErr)
+	assert.NotErrorIs(t, err, ErrJobPrepareTimeout)
+}
+
 func TestPrepareEnvironmentFailure(t *testing.T) {
 	testErr := errors.New("test-err")
 
