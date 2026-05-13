@@ -101,10 +101,13 @@ type cacheConfig struct {
 	HashedKey string
 	// the archive file path, where the local cache is (to be) stored.
 	ArchiveFile string
-	// the alternate archive file path for the "other" naming scheme.
+	// (temporary) the alternate archive file path for the "other" naming scheme.
 	// When FF_HASH_CACHE_KEYS is enabled, this is the unhashed path (used to upgrade an existing unhashed artifact).
 	// When FF_HASH_CACHE_KEYS is disabled, this is the hashed path (used to downgrade an existing hashed artifact).
 	AlternateArchiveFile string
+	// (temporary) the cache key for the alternate URL (the "other" naming scheme).
+	// Used to fetch the alternate blob's timestamp for comparison during cache download.
+	AlternateKey string
 }
 
 // cacheAlternateKey returns the "other" archive key relative to the current FF_HASH_CACHE_KEYS setting.
@@ -183,7 +186,8 @@ func newCacheConfig(build *common.Build, userKey string, keyChecks ...func(strin
 	// alternateKey is always the "other" naming scheme relative to the current FF setting:
 	// - FF ON:  primary=hashed, alternate=unhashed → enables upgrade of old unhashed artifacts
 	// - FF OFF: primary=unhashed, alternate=hashed → enables downgrade of old hashed artifacts
-	alternateArchiveFile, err := getArchivePath(cacheAlternateKey(humanKey, build.IsFeatureFlagOn(featureflags.HashCacheKeys)))
+	alternateKey := cacheAlternateKey(humanKey, build.IsFeatureFlagOn(featureflags.HashCacheKeys))
+	alternateArchiveFile, err := getArchivePath(alternateKey)
 	if err != nil {
 		return nil, warning, err
 	}
@@ -193,6 +197,7 @@ func newCacheConfig(build *common.Build, userKey string, keyChecks ...func(strin
 		HashedKey:            hashedKey,
 		ArchiveFile:          archiveFile,
 		AlternateArchiveFile: alternateArchiveFile,
+		AlternateKey:         alternateKey,
 	}
 
 	return cacheConfig, warning, nil
@@ -353,6 +358,13 @@ func (b *AbstractShell) addExtractCacheCommand(
 		defer w.RmFile(cacheEnvFilename)
 	}
 
+	alternateURLArgs, alternateErr := getAlternateCacheDownloadURL(ctx, info.Build, cacheConfig.AlternateKey)
+	if alternateErr != nil {
+		w.Warningf("Failed to obtain alternate URL for cache %s: %v", cacheConfig.HumanKey, alternateErr)
+	} else {
+		args = append(args, alternateURLArgs...)
+	}
+
 	w.IfCmdWithOutput(info.RunnerCommand, args...)
 	w.Noticef("Successfully extracted cache")
 	w.Else()
@@ -376,6 +388,33 @@ func (b *AbstractShell) addExtractCacheCommand(
 	w.EndIf()
 }
 
+// getAlternateCacheDownloadURL returns the URL args for the alternate cache key, using "--alternate-url" or
+// "--alternate-gocloud-url". The alternate blob shares the same backend credentials as the primary, so no
+// additional env is returned.
+func getAlternateCacheDownloadURL(ctx context.Context, build *common.Build, cacheKey string) ([]string, error) {
+	// The alternate key was uploaded under the opposite FF setting, so its object path uses the opposite sharding scheme.
+	alternateSharded := !build.IsFeatureFlagOn(featureflags.HashCacheKeys)
+	adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey, alternateSharded)
+
+	goCloudURL, err := adapter.GetGoCloudURL(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+	if goCloudURL.URL != nil {
+		return []string{"--alternate-gocloud-url", goCloudURL.URL.String()}, nil
+	}
+
+	if url := adapter.GetDownloadURL(ctx); url.URL != nil {
+		args := []string{"--alternate-url", url.URL.String()}
+		if headURL := adapter.GetHeadURL(ctx); headURL.URL != nil {
+			args = append(args, "--alternate-head-url", headURL.URL.String())
+		}
+		return args, nil
+	}
+
+	return nil, nil
+}
+
 // getCacheDownloadURLAndEnv will first try to generate the GoCloud URL if it's
 // available then fallback to a pre-signed URL.
 func getCacheDownloadURLAndEnv(ctx context.Context, build *common.Build, cacheKey string) ([]string, map[string]string, error) {
@@ -389,7 +428,11 @@ func getCacheDownloadURLAndEnv(ctx context.Context, build *common.Build, cacheKe
 	}
 
 	if url := adapter.GetDownloadURL(ctx); url.URL != nil {
-		return []string{"--url", url.URL.String()}, nil, nil
+		args := []string{"--url", url.URL.String()}
+		if headURL := adapter.GetHeadURL(ctx); headURL.URL != nil {
+			args = append(args, "--head-url", headURL.URL.String())
+		}
+		return args, nil, nil
 	}
 
 	return []string{}, nil, nil

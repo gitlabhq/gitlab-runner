@@ -1948,33 +1948,43 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 
 					for _, expectedCacheKey := range expectations.cacheKeys {
 						expectedHashedCacheKey := hashed(expectedCacheKey)
+						expectedAlternateCacheKey := getCacheKeyHasher(!hashCacheKeys)(expectedCacheKey)
 
 						mockWriter.On("Noticef", "Checking cache for %s...", expectedCacheKey).Once()
 
+						// Only add alternate URL when alternate key is valid (mirrors GetAdapter path traversal check).
+						// Use mock.AnythingOfType for the URL value since exact encoding is adapter-dependent.
+						alternateObjectPath := path.Join("project/1000", expectedAlternateCacheKey)
+						alternateURLValid := strings.HasPrefix(alternateObjectPath, "project/1000/")
+
 						if tc.cacheType == "test" {
-							mockWriter.On("IfCmdWithOutput",
-								"runner-command",
-								"cache-extractor",
-								"--file",
-								filepath.Join("..", build.CacheDir, expectedHashedCacheKey, "cache.zip"),
-								"--timeout",
-								"10",
-								"--url",
-								fmt.Sprintf("test://download/project/1000/%s", shardedObjectPath(expectedHashedCacheKey)),
-							).Once()
+							extractArgs := []any{
+								"runner-command", "cache-extractor",
+								"--file", filepath.Join("..", build.CacheDir, expectedHashedCacheKey, "cache.zip"),
+								"--timeout", "10",
+								"--url", fmt.Sprintf("test://download/project/1000/%s", shardedObjectPath(expectedHashedCacheKey)),
+								"--head-url", fmt.Sprintf("test://head/project/1000/%s", shardedObjectPath(expectedHashedCacheKey)),
+							}
+							if alternateURLValid {
+								extractArgs = append(extractArgs,
+									"--alternate-url", mock.AnythingOfType("string"),
+									"--alternate-head-url", mock.AnythingOfType("string"),
+								)
+							}
+							mockWriter.On("IfCmdWithOutput", extractArgs...).Once()
 						} else {
 							mockWriter.On("DotEnvVariables", "gitlab_runner_cache_env", mock.Anything).Return(cacheEnvFile).Once()
-							mockWriter.On("IfCmdWithOutput",
-								"runner-command",
-								"cache-extractor",
-								"--file",
-								filepath.Join("..", build.CacheDir, expectedHashedCacheKey, "cache.zip"),
-								"--timeout",
-								"10",
-								"--gocloud-url",
-								fmt.Sprintf("gocloud://test/project/1000/%s", shardedObjectPath(expectedHashedCacheKey)),
+							extractArgs := []any{
+								"runner-command", "cache-extractor",
+								"--file", filepath.Join("..", build.CacheDir, expectedHashedCacheKey, "cache.zip"),
+								"--timeout", "10",
+								"--gocloud-url", fmt.Sprintf("gocloud://test/project/1000/%s", shardedObjectPath(expectedHashedCacheKey)),
 								"--env-file", cacheEnvFile,
-							).Once()
+							}
+							if alternateURLValid {
+								extractArgs = append(extractArgs, "--alternate-gocloud-url", mock.AnythingOfType("string"))
+							}
+							mockWriter.On("IfCmdWithOutput", extractArgs...).Once()
 						}
 
 						mockWriter.On("Noticef", "Successfully extracted cache").Once()
@@ -2155,20 +2165,27 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 					mockWriter.On("IfCmd", "runner-command", "--version").Once()
 
 					for _, cacheKey := range tc.allowedCacheKeys {
-						hashedCacheKey := hashed(cacheKey)
+						hashedKey := hashed(cacheKey)
 
 						mockWriter.On("Noticef", "Checking cache for %s...", cacheKey).Once()
-						mockWriter.On(
-							"IfCmdWithOutput",
-							"runner-command",
-							"cache-extractor",
-							"--file",
-							filepath.Join("..", build.CacheDir, hashedCacheKey, "cache.zip"),
-							"--timeout",
-							"10",
-							"--url",
-							fmt.Sprintf("test://download/project/1000/%s", shardedObjectPath(hashedCacheKey)),
-						).Once()
+						// alternate URL valid check mirrors GetAdapter path traversal check
+						alternateKey := getCacheKeyHasher(!hashedCacheKey)(cacheKey)
+						alternateObjectPath := path.Join("project/1000", alternateKey)
+						alternateURLValid := strings.HasPrefix(alternateObjectPath, "project/1000/")
+						extractArgs := []any{
+							"runner-command", "cache-extractor",
+							"--file", filepath.Join("..", build.CacheDir, hashedKey, "cache.zip"),
+							"--timeout", "10",
+							"--url", fmt.Sprintf("test://download/project/1000/%s", shardedObjectPath(hashedKey)),
+							"--head-url", fmt.Sprintf("test://head/project/1000/%s", shardedObjectPath(hashedKey)),
+						}
+						if alternateURLValid {
+							extractArgs = append(extractArgs,
+								"--alternate-url", mock.AnythingOfType("string"),
+								"--alternate-head-url", mock.AnythingOfType("string"),
+							)
+						}
+						mockWriter.On("IfCmdWithOutput", extractArgs...).Once()
 						mockWriter.On("Noticef", "Successfully extracted cache").Once()
 						mockWriter.On("Else").Once()
 						mockWriter.On("Warningf", "Failed to extract cache").Once()
@@ -2344,20 +2361,27 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testin
 					mockWriter.On("IfCmd", "runner-command", "--version").Once()
 
 					for _, cacheKey := range tc.allowedCacheKeys {
-						hashedCacheKey := hashed(cacheKey)
+						hashedKey := hashed(cacheKey)
 
 						mockWriter.On("Noticef", "Checking cache for %s...", cacheKey).Once()
-						mockWriter.On(
-							"IfCmdWithOutput",
-							"runner-command",
-							"cache-extractor",
-							"--file",
-							filepath.Join("..", build.CacheDir, hashedCacheKey, "cache.zip"),
-							"--timeout",
-							"10",
-							"--url",
-							fmt.Sprintf("test://download/project/1000/%s", shardedObjectPath(hashedCacheKey)),
-						).Once()
+						// alternate URL valid check mirrors GetAdapter path traversal check
+						alternateKey := getCacheKeyHasher(!hashedCacheKey)(cacheKey)
+						alternateObjectPath := path.Join("project/1000", alternateKey)
+						alternateURLValid := strings.HasPrefix(alternateObjectPath, "project/1000/")
+						extractArgs := []any{
+							"runner-command", "cache-extractor",
+							"--file", filepath.Join("..", build.CacheDir, hashedKey, "cache.zip"),
+							"--timeout", "10",
+							"--url", fmt.Sprintf("test://download/project/1000/%s", shardedObjectPath(hashedKey)),
+							"--head-url", fmt.Sprintf("test://head/project/1000/%s", shardedObjectPath(hashedKey)),
+						}
+						if alternateURLValid {
+							extractArgs = append(extractArgs,
+								"--alternate-url", mock.AnythingOfType("string"),
+								"--alternate-head-url", mock.AnythingOfType("string"),
+							)
+						}
+						mockWriter.On("IfCmdWithOutput", extractArgs...).Once()
 						mockWriter.On("Noticef", "Successfully extracted cache").Once()
 						mockWriter.On("Else").Once()
 						mockWriter.On("Warningf", "Failed to extract cache").Once()
@@ -3967,12 +3991,14 @@ func TestNewCacheConfig(t *testing.T) {
 					HashedKey:            "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
 					ArchiveFile:          "../../cache/dir/d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed/cache.zip",
 					AlternateArchiveFile: "../../cache/dir/some-job/some-ref/cache.zip",
+					AlternateKey:         "some-job/some-ref",
 				},
 				windows: {
 					HumanKey:             "some-job/some-ref",
 					HashedKey:            "d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed",
 					ArchiveFile:          "..\\..\\cache\\dir\\d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed\\cache.zip",
 					AlternateArchiveFile: "..\\..\\cache\\dir\\some-job\\some-ref\\cache.zip",
+					AlternateKey:         "some-job/some-ref",
 				},
 			},
 		},
@@ -3989,12 +4015,14 @@ func TestNewCacheConfig(t *testing.T) {
 					HashedKey:            "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
 					ArchiveFile:          "../../cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
 					AlternateArchiveFile: "../../cache/dir/some/user/key/cache.zip",
+					AlternateKey:         "some/user/key",
 				},
 				windows: {
 					HumanKey:             "some/user/key",
 					HashedKey:            "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
 					ArchiveFile:          "..\\..\\cache\\dir\\7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917\\cache.zip",
 					AlternateArchiveFile: "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
+					AlternateKey:         "some/user/key",
 				},
 			},
 		},
@@ -4012,6 +4040,7 @@ func TestNewCacheConfig(t *testing.T) {
 					HashedKey:            "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
 					ArchiveFile:          "/some/cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
 					AlternateArchiveFile: "/some/cache/dir/some/user/key/cache.zip",
+					AlternateKey:         "some/user/key",
 				},
 			},
 		},
@@ -4028,12 +4057,14 @@ func TestNewCacheConfig(t *testing.T) {
 					HashedKey:            "some/user/key",
 					ArchiveFile:          "../../cache/dir/some/user/key/cache.zip",
 					AlternateArchiveFile: "../../cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
+					AlternateKey:         "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
 				},
 				windows: {
 					HumanKey:             "some/user/key",
 					HashedKey:            "some/user/key",
 					ArchiveFile:          "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
 					AlternateArchiveFile: "..\\..\\cache\\dir\\7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917\\cache.zip",
+					AlternateKey:         "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
 				},
 			},
 		},
@@ -4051,12 +4082,14 @@ func TestNewCacheConfig(t *testing.T) {
 					HashedKey:            "some/user/key",
 					ArchiveFile:          "../../cache/dir/some/user/key/cache.zip",
 					AlternateArchiveFile: "../../cache/dir/7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917/cache.zip",
+					AlternateKey:         "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
 				},
 				windows: {
 					HumanKey:             "some/user/key",
 					HashedKey:            "some/user/key",
 					ArchiveFile:          "..\\..\\cache\\dir\\some\\user\\key\\cache.zip",
 					AlternateArchiveFile: "..\\..\\cache\\dir\\7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917\\cache.zip",
+					AlternateKey:         "7f6da050858a8c8767cddbfdf331cbe3a0269abba1fc11fd3fa381b8851b7917",
 				},
 			},
 		},
@@ -4087,12 +4120,14 @@ func TestNewCacheConfig(t *testing.T) {
 					HashedKey:            "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
 					ArchiveFile:          "../../cache/dir/78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb/cache.zip",
 					AlternateArchiveFile: "../../cache/dir/someFoo/someBar/baz/cache.zip",
+					AlternateKey:         "someFoo/someBar/baz",
 				},
 				windows: {
 					HumanKey:             "someFoo/someBar/baz",
 					HashedKey:            "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
 					ArchiveFile:          "..\\..\\cache\\dir\\78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb\\cache.zip",
 					AlternateArchiveFile: "..\\..\\cache\\dir\\someFoo\\someBar\\baz\\cache.zip",
+					AlternateKey:         "someFoo/someBar/baz",
 				},
 			},
 		},
@@ -4113,12 +4148,14 @@ func TestNewCacheConfig(t *testing.T) {
 					HashedKey:            "someFoo/someBar/baz",
 					ArchiveFile:          "../../cache/dir/someFoo/someBar/baz/cache.zip",
 					AlternateArchiveFile: "../../cache/dir/78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb/cache.zip",
+					AlternateKey:         "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
 				},
 				windows: {
 					HumanKey:             "someFoo/someBar/baz",
 					HashedKey:            "someFoo/someBar/baz",
 					ArchiveFile:          "..\\..\\cache\\dir\\someFoo\\someBar\\baz\\cache.zip",
 					AlternateArchiveFile: "..\\..\\cache\\dir\\78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb\\cache.zip",
+					AlternateKey:         "78c3e86b9d11a834cb5fe576456a2790c90c6068ef9907415873f1a9bd1b87bb",
 				},
 			},
 		},

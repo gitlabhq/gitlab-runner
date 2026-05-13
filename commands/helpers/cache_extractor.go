@@ -33,11 +33,15 @@ type CacheExtractorCommand struct {
 	retryHelper
 	meter.TransferMeterCommand
 
-	File       string `long:"file" description:"The file containing your cache artifacts"`
-	URL        string `long:"url" description:"URL of remote cache resource"`
-	GoCloudURL string `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
-	Timeout    int    `long:"timeout" description:"Overall timeout for cache downloading request (in minutes)"`
-	EnvFile    string `long:"env-file" description:"Filename containing environment variables to read"`
+	File                string `long:"file" description:"The file containing your cache artifacts"`
+	URL                 string `long:"url" description:"URL of remote cache resource"`
+	GoCloudURL          string `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
+	AlternateURL        string `long:"alternate-url" description:"(temporary) Alternate pre-signed URL of remote cache resource"`
+	AlternateGoCloudURL string `long:"alternate-gocloud-url" description:"(temporary) Alternate Go Cloud URL of remote cache resource"`
+	HeadURL             string `long:"head-url" description:"(temporary) HEAD pre-signed URL for primary cache existence check"`
+	AlternateHeadURL    string `long:"alternate-head-url" description:"(temporary) HEAD pre-signed URL for alternate cache existence check"`
+	Timeout             int    `long:"timeout" description:"Overall timeout for cache downloading request (in minutes)"`
+	EnvFile             string `long:"env-file" description:"Filename containing environment variables to read"`
 
 	// Transfer options (all backends: presigned S3, GoCloud S3/Azure/GCS).
 	TransferBufferSize int `long:"transfer-buffer-size" env:"CACHE_TRANSFER_BUFFER_SIZE" description:"Buffer size in bytes for streaming cache download (default 4 MiB)"`
@@ -85,6 +89,73 @@ func (c *CacheExtractorCommand) getClient() *CacheClient {
 	return c.client
 }
 
+// fetchPresignedTimestamp issues a HEAD request to retrieve the Last-Modified timestamp of a presigned URL.
+// Returns time.Time{} and an error if the request fails, the resource is not found, or the Last-Modified header is missing or malformed.
+func (c *CacheExtractorCommand) fetchPresignedTimestamp(rawURL string) (time.Time, error) {
+	resp, err := c.getClient().Head(rawURL)
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return time.Time{}, os.ErrNotExist
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		// Any non-OK status (including 403, which S3 may return instead of 404 when
+		// s3:ListBucket is absent) is treated as "unavailable" by the caller (selectPresignedURL).
+		// The caller checks only nil vs non-nil and prefers whichever URL did not error,
+		// so the error message is never surfaced to the user.
+		return time.Time{}, fmt.Errorf("unexpected HTTP status %d", resp.StatusCode)
+	}
+
+	t, err := http.ParseTime(resp.Header.Get("Last-Modified"))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse Last-Modified header: %w", err)
+	}
+	return t, nil
+}
+
+// selectPresignedURL compares the Last-Modified timestamps of the primary and alternate presigned URLs
+// and returns whichever refers to the newer blob. Falls back to the primary URL on any error.
+func (c *CacheExtractorCommand) selectPresignedURL() string {
+	if c.AlternateURL == "" {
+		return c.URL
+	}
+
+	primaryHeadURL := c.URL
+	if c.HeadURL != "" {
+		primaryHeadURL = c.HeadURL
+	}
+	alternateHeadURL := c.AlternateURL
+	if c.AlternateHeadURL != "" {
+		alternateHeadURL = c.AlternateHeadURL
+	}
+
+	primaryTime, primaryErr := c.fetchPresignedTimestamp(primaryHeadURL)
+	alternateTime, alternateErr := c.fetchPresignedTimestamp(alternateHeadURL)
+
+	log := logrus.WithFields(logrus.Fields{
+		"primary_url":        url_helpers.CleanURL(c.URL),
+		"alternate_url":      url_helpers.CleanURL(c.AlternateURL),
+		"primary_modified":   primaryTime,
+		"alternate_modified": alternateTime,
+	})
+
+	switch {
+	case primaryErr != nil && alternateErr == nil:
+		log.Infoln("Selecting alternate cache URL: primary not available")
+		return c.AlternateURL
+	case primaryErr == nil && alternateErr == nil && alternateTime.After(primaryTime):
+		log.Infoln("Selecting alternate cache URL: newer timestamp")
+		return c.AlternateURL
+	default:
+		log.Infoln("Selecting primary cache URL")
+		return c.URL
+	}
+}
+
 func checkIfUpToDate(path string, resp *http.Response) (bool, time.Time) {
 	date, _ := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
 	return isLocalCacheFileUpToDate(path, date), date
@@ -118,8 +189,8 @@ func (c *CacheExtractorCommand) download(_ int) error {
 	return c.handlePresignedURL()
 }
 
-func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
-	resp, err := c.getClient().Get(c.URL)
+func (c *CacheExtractorCommand) getCache(rawURL string) (*http.Response, error) {
+	resp, err := c.getClient().Get(rawURL)
 	if err != nil {
 		return nil, retryableErr{err: err}
 	}
@@ -184,7 +255,9 @@ func (c *CacheExtractorCommand) presignedParallelDownloadEligible() bool {
 // It returns done=true when the download path finished (including up-to-date short-circuit or parallel
 // download); err propagates parallel download failures. done=false, err=nil means fall back to a full GET.
 func (c *CacheExtractorCommand) tryPresignedParallelDownload() (done bool, err error) {
-	req, reqErr := http.NewRequest(http.MethodGet, c.URL, nil)
+	selectedURL := c.selectPresignedURL()
+
+	req, reqErr := http.NewRequest(http.MethodGet, selectedURL, nil)
 	if reqErr != nil {
 		return false, nil
 	}
@@ -227,13 +300,15 @@ func (c *CacheExtractorCommand) tryPresignedParallelDownload() (done bool, err e
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, transfer.RangeProbeBodyMaxDiscard))
 	_ = resp.Body.Close()
 
-	cleanedURL := url_helpers.CleanURL(c.URL)
-	err = c.downloadParallel(contentLength, date, resp.Header.Get("ETag"), cleanedURL, headersToCacheMetadata(resp.Header), c.presignedRangeFetchChunk())
+	cleanedURL := url_helpers.CleanURL(selectedURL)
+	err = c.downloadParallel(contentLength, date, resp.Header.Get("ETag"), cleanedURL, headersToCacheMetadata(resp.Header), c.presignedRangeFetchChunk(selectedURL))
 	return true, err
 }
 
 func (c *CacheExtractorCommand) downloadPresignedSequential() error {
-	resp, err := c.getCache()
+	selectedURL := c.selectPresignedURL()
+
+	resp, err := c.getCache(selectedURL)
 	if err != nil {
 		return err
 	}
@@ -246,7 +321,7 @@ func (c *CacheExtractorCommand) downloadPresignedSequential() error {
 	}
 
 	etag := resp.Header.Get("ETag")
-	cleanedURL := url_helpers.CleanURL(c.URL)
+	cleanedURL := url_helpers.CleanURL(selectedURL)
 	contentLength := getRemoteCacheSize(resp)
 
 	return c.downloadAndSaveCache(resp.Body, date, etag, cleanedURL, contentLength, headersToCacheMetadata(resp.Header))
@@ -259,9 +334,9 @@ func (c *CacheExtractorCommand) effectiveParallelChunkSize() int {
 	return c.ChunkSize
 }
 
-func (c *CacheExtractorCommand) presignedRangeFetchChunk() func(offset, length int64) (io.ReadCloser, error) {
+func (c *CacheExtractorCommand) presignedRangeFetchChunk(rawURL string) func(offset, length int64) (io.ReadCloser, error) {
 	return func(offset, length int64) (io.ReadCloser, error) {
-		req, err := http.NewRequest(http.MethodGet, c.URL, nil)
+		req, err := http.NewRequest(http.MethodGet, rawURL, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -278,6 +353,94 @@ func (c *CacheExtractorCommand) presignedRangeFetchChunk() func(offset, length i
 	}
 }
 
+// resolveGoCloudSource opens the primary GoCloud bucket and the alternate bucket (if configured),
+// selects between them based on availability and timestamp, and returns the selected bucket,
+// object name, GoCloud URL, and a cleanup function to close all opened buckets.
+func (c *CacheExtractorCommand) resolveGoCloudSource(ctx context.Context) (*blob.Bucket, string, string, func(), error) {
+	u, err := url.Parse(c.GoCloudURL)
+	if err != nil {
+		return nil, "", "", func() {}, err
+	}
+
+	objectName := strings.TrimLeft(u.Path, "/")
+	if objectName == "" {
+		return nil, "", "", func() {}, fmt.Errorf("no object name provided")
+	}
+
+	b, err := c.mux.OpenBucket(ctx, c.GoCloudURL)
+	if err != nil {
+		return nil, "", "", func() {}, err
+	}
+
+	altB, altObjectName, altErr := c.openAlternateGoCloudBucket(ctx)
+	if altErr != nil {
+		logrus.WithError(altErr).Warningln("Failed to open alternate GoCloud cache bucket")
+		return b, objectName, c.GoCloudURL, func() { _ = b.Close() }, nil
+	}
+	if altB == nil {
+		return b, objectName, c.GoCloudURL, func() { _ = b.Close() }, nil
+	}
+
+	selectedBucket, selectedObjectName := c.selectGoCloudSource(ctx, b, objectName, altB, altObjectName)
+	selectedGoCloudURL := c.GoCloudURL
+	if selectedBucket != b {
+		selectedGoCloudURL = c.AlternateGoCloudURL
+	}
+	return selectedBucket, selectedObjectName, selectedGoCloudURL, func() {
+		_ = b.Close()
+		_ = altB.Close()
+	}, nil
+}
+
+// openAlternateGoCloudBucket parses c.AlternateGoCloudURL, opens the bucket, and returns the bucket
+// and object name. Returns nil bucket (and no error) when AlternateGoCloudURL is not set.
+func (c *CacheExtractorCommand) openAlternateGoCloudBucket(ctx context.Context) (*blob.Bucket, string, error) {
+	if c.AlternateGoCloudURL == "" {
+		return nil, "", nil
+	}
+	altU, err := url.Parse(c.AlternateGoCloudURL)
+	if err != nil {
+		return nil, "", err
+	}
+	altObjectName := strings.TrimLeft(altU.Path, "/")
+	if altObjectName == "" {
+		return nil, "", fmt.Errorf("no object name in alternate GoCloud URL")
+	}
+	altB, err := c.mux.OpenBucket(ctx, c.AlternateGoCloudURL)
+	return altB, altObjectName, err
+}
+
+// selectGoCloudSource compares the ModTime of the primary and alternate GoCloud objects and returns
+// the bucket and object name for the newer blob. Falls back to the primary on any error.
+func (c *CacheExtractorCommand) selectGoCloudSource(
+	ctx context.Context,
+	primaryBucket *blob.Bucket, primaryObject string,
+	alternateBucket *blob.Bucket, alternateObject string,
+) (*blob.Bucket, string) {
+	primaryAttrs, primaryErr := primaryBucket.Attributes(ctx, primaryObject)
+	alternateAttrs, alternateErr := alternateBucket.Attributes(ctx, alternateObject)
+
+	log := logrus.WithFields(logrus.Fields{
+		"primary_object":   primaryObject,
+		"alternate_object": alternateObject,
+	})
+
+	switch {
+	case primaryErr != nil && alternateErr == nil:
+		log.Infoln("Selecting alternate GoCloud cache: primary not available")
+		return alternateBucket, alternateObject
+	case primaryErr == nil && alternateErr == nil && alternateAttrs.ModTime.After(primaryAttrs.ModTime):
+		log.WithFields(logrus.Fields{
+			"primary_modified":   primaryAttrs.ModTime,
+			"alternate_modified": alternateAttrs.ModTime,
+		}).Infoln("Selecting alternate GoCloud cache: newer timestamp")
+		return alternateBucket, alternateObject
+	default:
+		log.Infoln("Selecting primary GoCloud cache")
+		return primaryBucket, primaryObject
+	}
+}
+
 //nolint:gocognit // setup and parallel vs sequential branches
 func (c *CacheExtractorCommand) handleGoCloudURL() error {
 	if c.mux == nil {
@@ -287,28 +450,22 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 	ctx, cancelWrite := context.WithCancel(context.Background())
 	defer cancelWrite()
 
-	u, err := url.Parse(c.GoCloudURL)
+	if err := loadEnvFile(c.EnvFile); err != nil {
+		return err
+	}
+
+	selectedBucket, selectedObjectName, selectedGoCloudURL, cleanup, err := c.resolveGoCloudSource(ctx)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	u, err := url.Parse(selectedGoCloudURL)
 	if err != nil {
 		return err
 	}
 
-	err = loadEnvFile(c.EnvFile)
-	if err != nil {
-		return err
-	}
-
-	objectName := strings.TrimLeft(u.Path, "/")
-	if objectName == "" {
-		return fmt.Errorf("no object name provided")
-	}
-
-	b, err := c.mux.OpenBucket(ctx, c.GoCloudURL)
-	if err != nil {
-		return err
-	}
-	defer b.Close()
-
-	attrs, err := b.Attributes(ctx, objectName)
+	attrs, err := selectedBucket.Attributes(ctx, selectedObjectName)
 	if err != nil {
 		// Ignore 404 errors
 		if gcerrors.Code(err) == gcerrors.NotFound {
@@ -327,15 +484,15 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 		return nil
 	}
 
-	cleanedURL := url_helpers.CleanURL(c.GoCloudURL)
+	cleanedURL := url_helpers.CleanURL(selectedGoCloudURL)
 
 	// Use parallel range reads when FF_USE_PARALLEL_CACHE_TRANSFER is enabled, Concurrency > 1, and backend supports range.
 	logger := logrus.WithField("name", featureflags.UseParallelCacheTransfer)
 	if featureflags.IsOn(logger, os.Getenv(featureflags.UseParallelCacheTransfer)) && c.Concurrency > 1 && attrs.Size > 0 { //nolint:nestif
-		if c.gocloudParallelRangeSupported(ctx, u.Scheme, b, objectName) {
+		if c.gocloudParallelRangeSupported(ctx, u.Scheme, selectedBucket, selectedObjectName) {
 			if attrs.Size > int64(c.effectiveParallelChunkSize()) {
 				fetchChunk := func(offset, length int64) (io.ReadCloser, error) {
-					return b.NewRangeReader(ctx, objectName, offset, length, nil)
+					return selectedBucket.NewRangeReader(ctx, selectedObjectName, offset, length, nil)
 				}
 				return c.downloadParallel(attrs.Size, attrs.ModTime, attrs.ETag, cleanedURL, attrs.Metadata, fetchChunk)
 			}
@@ -344,7 +501,7 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 		}
 	}
 
-	reader, err := b.NewReader(ctx, objectName, nil)
+	reader, err := selectedBucket.NewReader(ctx, selectedObjectName, nil)
 	if err != nil {
 		return err
 	}
