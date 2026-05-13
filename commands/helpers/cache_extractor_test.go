@@ -16,6 +16,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -97,12 +98,10 @@ func writeZipFileAndMetadata(t *testing.T, filename string) {
 func TestCacheExtractorValidArchive(t *testing.T) {
 	expectedContents := bytes.Repeat([]byte("198273qhnjbqwdjbqwe2109u3abcdef3"), 1024*1024)
 	OnEachZipExtractor(t, func(t *testing.T) {
+		cdTempDir(t)
+
 		file, err := os.Create(cacheExtractorArchive)
-		assert.NoError(t, err)
-		defer file.Close()
-		defer os.Remove(file.Name())
-		defer os.Remove(cacheExtractorTestArchivedFile)
-		defer os.Remove(cacheExtractorTestFile)
+		require.NoError(t, err)
 
 		archive := zip.NewWriter(file)
 		_, err = archive.Create(cacheExtractorTestArchivedFile)
@@ -114,6 +113,7 @@ func TestCacheExtractorValidArchive(t *testing.T) {
 		require.NoError(t, err)
 
 		archive.Close()
+		file.Close()
 
 		_, err = os.Stat(cacheExtractorTestArchivedFile)
 		require.Error(t, err)
@@ -136,10 +136,11 @@ func TestCacheExtractorValidArchive(t *testing.T) {
 
 func TestCacheExtractorForInvalidArchive(t *testing.T) {
 	OnEachZipExtractor(t, func(t *testing.T) {
+		cdTempDir(t)
+
 		removeHook := helpers.MakeFatalToPanic()
 		defer removeHook()
 		writeTestFile(t, cacheExtractorArchive)
-		defer os.Remove(cacheExtractorArchive)
 
 		cmd := CacheExtractorCommand{
 			File: cacheExtractorArchive,
@@ -317,6 +318,248 @@ func TestCacheExtractorRemoteServerFailOnInvalidServer(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestSelectPresignedURL(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	older := now.Add(-1 * time.Hour)
+
+	makeServer := func(t *testing.T, lastModified time.Time, statusCode int) *httptest.Server {
+		t.Helper()
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if statusCode != http.StatusOK {
+				http.Error(w, "not found", statusCode)
+				return
+			}
+			w.Header().Set("Last-Modified", lastModified.UTC().Format(http.TimeFormat))
+		}))
+	}
+
+	t.Run("no alternate URL, uses primary", func(t *testing.T) {
+		primary := makeServer(t, now, http.StatusOK)
+		defer primary.Close()
+
+		cmd := &CacheExtractorCommand{URL: primary.URL + "/"}
+		assert.Equal(t, primary.URL+"/", cmd.selectPresignedURL())
+	})
+
+	t.Run("primary newer, uses primary", func(t *testing.T) {
+		primary := makeServer(t, now, http.StatusOK)
+		alternate := makeServer(t, older, http.StatusOK)
+		defer primary.Close()
+		defer alternate.Close()
+
+		cmd := &CacheExtractorCommand{URL: primary.URL + "/", AlternateURL: alternate.URL + "/"}
+		assert.Equal(t, primary.URL+"/", cmd.selectPresignedURL())
+	})
+
+	t.Run("alternate newer, uses alternate", func(t *testing.T) {
+		primary := makeServer(t, older, http.StatusOK)
+		alternate := makeServer(t, now, http.StatusOK)
+		defer primary.Close()
+		defer alternate.Close()
+
+		cmd := &CacheExtractorCommand{URL: primary.URL + "/", AlternateURL: alternate.URL + "/"}
+		assert.Equal(t, alternate.URL+"/", cmd.selectPresignedURL())
+	})
+
+	t.Run("primary not found, uses alternate", func(t *testing.T) {
+		primary := makeServer(t, now, http.StatusNotFound)
+		alternate := makeServer(t, now, http.StatusOK)
+		defer primary.Close()
+		defer alternate.Close()
+
+		cmd := &CacheExtractorCommand{URL: primary.URL + "/", AlternateURL: alternate.URL + "/"}
+		assert.Equal(t, alternate.URL+"/", cmd.selectPresignedURL())
+	})
+
+	t.Run("alternate not found, uses primary", func(t *testing.T) {
+		primary := makeServer(t, now, http.StatusOK)
+		alternate := makeServer(t, now, http.StatusNotFound)
+		defer primary.Close()
+		defer alternate.Close()
+
+		cmd := &CacheExtractorCommand{URL: primary.URL + "/", AlternateURL: alternate.URL + "/"}
+		assert.Equal(t, primary.URL+"/", cmd.selectPresignedURL())
+	})
+
+	t.Run("both not found, uses primary", func(t *testing.T) {
+		primary := makeServer(t, now, http.StatusNotFound)
+		alternate := makeServer(t, now, http.StatusNotFound)
+		defer primary.Close()
+		defer alternate.Close()
+
+		cmd := &CacheExtractorCommand{URL: primary.URL + "/", AlternateURL: alternate.URL + "/"}
+		assert.Equal(t, primary.URL+"/", cmd.selectPresignedURL())
+	})
+
+	t.Run("primary returns unexpected status, uses alternate", func(t *testing.T) {
+		primary := makeServer(t, now, http.StatusForbidden)
+		alternate := makeServer(t, now, http.StatusOK)
+		defer primary.Close()
+		defer alternate.Close()
+
+		cmd := &CacheExtractorCommand{URL: primary.URL + "/", AlternateURL: alternate.URL + "/"}
+		assert.Equal(t, alternate.URL+"/", cmd.selectPresignedURL())
+	})
+
+	t.Run("both return unexpected status, uses primary", func(t *testing.T) {
+		primary := makeServer(t, now, http.StatusForbidden)
+		alternate := makeServer(t, now, http.StatusForbidden)
+		defer primary.Close()
+		defer alternate.Close()
+
+		cmd := &CacheExtractorCommand{URL: primary.URL + "/", AlternateURL: alternate.URL + "/"}
+		assert.Equal(t, primary.URL+"/", cmd.selectPresignedURL())
+	})
+
+	// Verifies that HeadURL is used for HEAD requests instead of URL.
+	// Mirrors S3 behavior where GET presigned URLs reject HEAD requests with 403.
+	t.Run("uses HeadURL when set, even if URL would fail HEAD", func(t *testing.T) {
+		primaryGet := makeServer(t, now, http.StatusForbidden)
+		primaryHead := makeServer(t, now, http.StatusOK)
+		alternate := makeServer(t, older, http.StatusOK)
+		defer primaryGet.Close()
+		defer primaryHead.Close()
+		defer alternate.Close()
+
+		cmd := &CacheExtractorCommand{
+			URL:          primaryGet.URL + "/",
+			HeadURL:      primaryHead.URL + "/",
+			AlternateURL: alternate.URL + "/",
+		}
+		// If HeadURL is used, primary HEAD succeeds and is newer than alternate, so primary is selected.
+		// If URL were (incorrectly) used for HEAD, primary would 403 and alternate would be selected.
+		assert.Equal(t, primaryGet.URL+"/", cmd.selectPresignedURL())
+	})
+
+	t.Run("uses AlternateHeadURL when set, even if AlternateURL would fail HEAD", func(t *testing.T) {
+		primary := makeServer(t, older, http.StatusOK)
+		alternateGet := makeServer(t, now, http.StatusForbidden)
+		alternateHead := makeServer(t, now, http.StatusOK)
+		defer primary.Close()
+		defer alternateGet.Close()
+		defer alternateHead.Close()
+
+		cmd := &CacheExtractorCommand{
+			URL:              primary.URL + "/",
+			AlternateURL:     alternateGet.URL + "/",
+			AlternateHeadURL: alternateHead.URL + "/",
+		}
+		// If AlternateHeadURL is used, alternate HEAD succeeds with a newer timestamp, so alternate is selected.
+		// If AlternateURL were (incorrectly) used for HEAD, alternate would 403 and primary would be selected.
+		assert.Equal(t, alternateGet.URL+"/", cmd.selectPresignedURL())
+	})
+}
+
+func TestSelectGoCloudSource(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	older := now.Add(-1 * time.Hour)
+
+	const scheme = "testblob2"
+
+	setupBucket := func(t *testing.T) (*blob.URLMux, string) {
+		t.Helper()
+		mux, dir := setupGoCloudFileBucket(t, scheme)
+		return mux, dir
+	}
+
+	writeBlob := func(t *testing.T, dir, name string, modTime time.Time) {
+		t.Helper()
+		writeZipFile(t, path.Join(dir, name))
+		require.NoError(t, os.Chtimes(path.Join(dir, name), modTime, modTime))
+		// write empty attrs sidecar so fileblob returns modTime correctly
+		attrFile := path.Join(dir, name+".attrs")
+		require.NoError(t, os.WriteFile(attrFile, []byte("{}"), 0o640))
+	}
+
+	t.Run("primary newer, uses primary", func(t *testing.T) {
+		cdTempDir(t)
+		mux, dir := setupBucket(t)
+
+		writeBlob(t, dir, "primary.zip", now)
+		writeBlob(t, dir, "alternate.zip", older)
+
+		ctx := t.Context()
+		primaryB, err := mux.OpenBucket(ctx, scheme+"://bucket/primary.zip")
+		require.NoError(t, err)
+		defer primaryB.Close()
+
+		altB, err := mux.OpenBucket(ctx, scheme+"://bucket/alternate.zip")
+		require.NoError(t, err)
+		defer altB.Close()
+
+		cmd := &CacheExtractorCommand{}
+		gotBucket, gotObject := cmd.selectGoCloudSource(ctx, primaryB, "primary.zip", altB, "alternate.zip")
+		assert.Equal(t, primaryB, gotBucket)
+		assert.Equal(t, "primary.zip", gotObject)
+	})
+
+	t.Run("alternate newer, uses alternate", func(t *testing.T) {
+		cdTempDir(t)
+		mux, dir := setupBucket(t)
+
+		writeBlob(t, dir, "primary.zip", older)
+		writeBlob(t, dir, "alternate.zip", now)
+
+		ctx := t.Context()
+		primaryB, err := mux.OpenBucket(ctx, scheme+"://bucket/primary.zip")
+		require.NoError(t, err)
+		defer primaryB.Close()
+
+		altB, err := mux.OpenBucket(ctx, scheme+"://bucket/alternate.zip")
+		require.NoError(t, err)
+		defer altB.Close()
+
+		cmd := &CacheExtractorCommand{}
+		gotBucket, gotObject := cmd.selectGoCloudSource(ctx, primaryB, "primary.zip", altB, "alternate.zip")
+		assert.Equal(t, altB, gotBucket)
+		assert.Equal(t, "alternate.zip", gotObject)
+	})
+
+	t.Run("primary not found, uses alternate", func(t *testing.T) {
+		cdTempDir(t)
+		mux, dir := setupBucket(t)
+
+		writeBlob(t, dir, "alternate.zip", now)
+		// primary.zip does not exist
+
+		ctx := t.Context()
+		primaryB, err := mux.OpenBucket(ctx, scheme+"://bucket/primary.zip")
+		require.NoError(t, err)
+		defer primaryB.Close()
+
+		altB, err := mux.OpenBucket(ctx, scheme+"://bucket/alternate.zip")
+		require.NoError(t, err)
+		defer altB.Close()
+
+		cmd := &CacheExtractorCommand{}
+		gotBucket, gotObject := cmd.selectGoCloudSource(ctx, primaryB, "primary.zip", altB, "alternate.zip")
+		assert.Equal(t, altB, gotBucket)
+		assert.Equal(t, "alternate.zip", gotObject)
+	})
+
+	t.Run("alternate not found, uses primary", func(t *testing.T) {
+		cdTempDir(t)
+		mux, dir := setupBucket(t)
+
+		writeBlob(t, dir, "primary.zip", now)
+		// alternate.zip does not exist
+
+		ctx := t.Context()
+		primaryB, err := mux.OpenBucket(ctx, scheme+"://bucket/primary.zip")
+		require.NoError(t, err)
+		defer primaryB.Close()
+
+		altB, err := mux.OpenBucket(ctx, scheme+"://bucket/alternate.zip")
+		require.NoError(t, err)
+		defer altB.Close()
+
+		cmd := &CacheExtractorCommand{}
+		gotBucket, gotObject := cmd.selectGoCloudSource(ctx, primaryB, "primary.zip", altB, "alternate.zip")
+		assert.Equal(t, primaryB, gotBucket)
+		assert.Equal(t, "primary.zip", gotObject)
+	})
+}
+
 func TestIsLocalCacheFileUpToDate(t *testing.T) {
 	tmpDir := t.TempDir()
 	cacheFile := path.Join(tmpDir, "cache-file")
@@ -415,6 +658,91 @@ func testParallelPresignedCacheHandler(t *testing.T, payload []byte, lastModifie
 		w.WriteHeader(http.StatusPartialContent)
 		_, _ = w.Write(seg)
 	}
+}
+
+// testParallelPresignedCacheHandlerWithHEAD is like testParallelPresignedCacheHandler but also handles HEAD requests
+// (returning Last-Modified) and counts the number of Range GETs via the supplied atomic counter.
+func testParallelPresignedCacheHandlerWithHEAD(t *testing.T, payload []byte, lastModified string, getCount *atomic.Int64) http.HandlerFunc {
+	t.Helper()
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/cache.zip" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.Method == http.MethodHead {
+			w.Header().Set("Last-Modified", lastModified)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.NotFound(w, r)
+			return
+		}
+		getCount.Add(1)
+		rangeHdr := r.Header.Get("Range")
+		start, end, ok := parseBytesRangeHeader(rangeHdr)
+		if !ok {
+			http.Error(w, "missing or invalid Range", http.StatusBadRequest)
+			return
+		}
+		if start < 0 || end < start || start >= int64(len(payload)) {
+			http.Error(w, "range not satisfiable", http.StatusRequestedRangeNotSatisfiable)
+			return
+		}
+		if end >= int64(len(payload)) {
+			end = int64(len(payload)) - 1
+		}
+		seg := payload[start : end+1]
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Last-Modified", lastModified)
+		w.Header().Set("x-fakeCloud-meta-foo", "some foo")
+		w.Header().Set("x-fakeCloud-meta-blank", "")
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(payload)))
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write(seg)
+	}
+}
+
+// TestCacheExtractorPresignedParallelTransferAlternate verifies that when an alternate URL is configured
+// and selectPresignedURL picks it (alternate is newer), the parallel download path fetches chunks from
+// the alternate URL and not from the primary.
+func TestCacheExtractorPresignedParallelTransferAlternate(t *testing.T) {
+	t.Setenv(featureflags.UseParallelCacheTransfer, "true")
+
+	cdTempDir(t)
+	removeHook := helpers.MakeWarningToPanic()
+	t.Cleanup(removeHook)
+
+	payload := parallelTestZipBytes(t)
+	require.Greater(t, len(payload), 32, "payload should span multiple parallel chunks")
+
+	primaryLM := time.Date(2020, 5, 1, 12, 0, 0, 0, time.UTC).Format(http.TimeFormat)
+	alternateLM := time.Date(2021, 5, 1, 12, 0, 0, 0, time.UTC).Format(http.TimeFormat)
+
+	var primaryGetCount, alternateGetCount atomic.Int64
+
+	primaryTS := httptest.NewServer(testParallelPresignedCacheHandlerWithHEAD(t, payload, primaryLM, &primaryGetCount))
+	t.Cleanup(primaryTS.Close)
+
+	alternateTS := httptest.NewServer(testParallelPresignedCacheHandlerWithHEAD(t, payload, alternateLM, &alternateGetCount))
+	t.Cleanup(alternateTS.Close)
+
+	cmd := CacheExtractorCommand{
+		File:         cacheExtractorArchive,
+		URL:          primaryTS.URL + "/cache.zip",
+		AlternateURL: alternateTS.URL + "/cache.zip",
+		Timeout:      0,
+		ChunkSize:    7,
+		Concurrency:  4,
+	}
+	assert.NotPanics(t, func() { cmd.Execute(nil) })
+
+	assert.FileExists(t, cacheExtractorTestArchivedFile)
+
+	// selectPresignedURL picks alternate (newer Last-Modified). All Range GETs (probe + chunks) must hit alternate.
+	// Before the fix, parallel download used c.URL directly and would have hit primary.
+	assert.Zero(t, primaryGetCount.Load(), "primary Range GETs should not happen when alternate is newer")
+	assert.Greater(t, alternateGetCount.Load(), int64(0), "alternate Range GETs should happen")
 }
 
 // TestCacheExtractorPresignedParallelTransfer exercises tryPresignedParallelDownload: Range probe, parallel chunk GETs, and WriteAt via the meter writer.

@@ -1544,6 +1544,9 @@ Therefore, best practice is:
 - Expect cache misses, cache artifacts rebuild, and longer first job runs after
   you change `FF_HASH_CACHE_KEYS`.
 
+- Expect additional network requests during the transition period while
+  GitLab Runner checks both the primary and alternate cache locations.
+
 > [!warning]
 > If you turn on `FF_HASH_CACHE_KEYS` but run an older version of the helper binary
 > (for example, because you pinned the helper image to an older version), hashing the
