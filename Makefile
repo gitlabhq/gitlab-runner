@@ -100,6 +100,8 @@ help:
 	# make test - run project tests
 	# make lint - run code quality analysis
 	# make lint-docs - run documentation linting
+	# make lint-shell - run shell script linting
+	# make lint-shell-report - run shell script linting and produce a Code Climate report
 	#
 	# Deployment commands:
 	# make deps - install all dependencies
@@ -155,6 +157,18 @@ format-ci-yaml:
 .PHONY: lint-ci-yaml
 lint-ci-yaml:
 	prettier --check ".gitlab/ci/**/*.{yml,yaml}" --log-level warn
+
+SHELLCHECK_REPORT_FILE ?= gl-shellcheck-report.json
+
+.PHONY: lint-shell
+lint-shell:
+	@git grep -Pl '\A#\!.*(bash|[^a-z]sh)' | xargs shellcheck -x
+
+.PHONY: lint-shell-report
+lint-shell-report:
+	@# Execute the functionality of lint-shell and generate a Code Climate report.
+	@# Mainly for use in CI; requires https://gitlab.com/gitlab-org/language-tools/go/linters/linter2cc.
+	@git grep -Pl '\A#\!.*(bash|[^a-z]sh)' | xargs linter2cc shellcheck -x > $(SHELLCHECK_REPORT_FILE)
 
 .PHONY: test
 test: development_setup simple-test

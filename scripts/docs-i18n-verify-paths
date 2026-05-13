@@ -17,7 +17,7 @@ UNEXPECTED_PATHS=()
 check_file_exists() {
   local locale_file=$1
   local original_file=$2
-  
+
   if [[ ! -f "$original_file" ]]; then
     echo "Error: Original English file does not exist: $original_file" >&2
     echo "For localized file: $locale_file" >&2
