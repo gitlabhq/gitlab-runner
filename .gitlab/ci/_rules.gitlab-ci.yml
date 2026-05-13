@@ -35,6 +35,11 @@
   - "scripts/lint-docs"
   - "scripts/lint-i18n-docs"
 
+.dockerfile-patterns: &dockerfile-patterns
+  - "*Dockerfile*"
+  - "*dockerfile*"
+  - "Makefile*" # the Dockerfile linting target is defined here
+
 ##############
 # Conditions #
 ##############
@@ -189,6 +194,21 @@
       changes: *docs-all-patterns
     - <<: *if-security-runner-release-ref
       changes: *docs-all-patterns
+
+.rules:merge_request_pipelines:dockerfile:
+  rules:
+    - <<: *if-merge-request-pipeline
+      changes: *dockerfile-patterns
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *dockerfile-patterns
+    - <<: *if-runner-or-security-runner-stable-ref
+      changes: *dockerfile-patterns
+    - <<: *if-runner-or-security-runner-feature-ref
+      changes: *dockerfile-patterns
+    - <<: *if-runner-release-ref
+      changes: *dockerfile-patterns
+    - <<: *if-security-runner-release-ref
+      changes: *dockerfile-patterns
 
 .rules:merge_request_pipelines:no_docs:no-community-mr:
   rules:

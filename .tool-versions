@@ -4,6 +4,7 @@ yq 4.44.3
 mockery 2.53.3
 mage 1.15.0
 shellcheck 0.11.0
+hadolint 2.14.0
 
 # For linting documentation
 markdownlint-cli2 0.22.1

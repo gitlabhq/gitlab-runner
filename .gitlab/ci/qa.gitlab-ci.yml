@@ -106,6 +106,28 @@ shell:lint:
     when: always
     expire_in: 7d
 
+dockerfile:lint:
+  stage: qa
+  extends:
+    - .rules:merge_request_pipelines:dockerfile
+    - .no_cache_and_dependencies
+    - .kubernetes runner
+  image: $RUNNER_LINTERS_IMAGE
+  needs: []
+  allow_failure: true # to be disabled once all linter issues are resolved
+  variables:
+    HADOLINT_REPORT_FILE: gl-hadolint-report.json
+  script:
+    - make lint-dockerfiles-report
+    - if [ "$(cat "${HADOLINT_REPORT_FILE}")" != "[]" ]; then exit 1; fi
+  artifacts:
+    reports:
+      codequality: ${HADOLINT_REPORT_FILE}
+    paths:
+      - ${HADOLINT_REPORT_FILE}
+    when: always
+    expire_in: 7d
+
 mage tests:
   extends:
     - .rules:merge_request_pipelines:no_docs
