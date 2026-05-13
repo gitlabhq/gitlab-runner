@@ -60,7 +60,7 @@ code_quality:
     # Use GOCACHE instead of GOLANGCI_LINT_CACHE
     # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
     - .go-cache
-  image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:${GOLANGLINT_VERSION}-go${GO_VERSION}
+  image: $RUNNER_LINTERS_IMAGE
   needs: []
   allow_failure: true
   variables:
@@ -81,6 +81,28 @@ code_quality:
       codequality: ${REPORT_FILE}
     paths:
       - ${REPORT_FILE}
+    when: always
+    expire_in: 7d
+
+shell:lint:
+  stage: qa
+  extends:
+    - .rules:merge_request_pipelines
+    - .no_cache_and_dependencies
+    - .kubernetes runner
+  image: $RUNNER_LINTERS_IMAGE
+  needs: []
+  allow_failure: true # to be disabled once all linter issues are resolved
+  variables:
+    SHELLCHECK_REPORT_FILE: gl-shellcheck-report.json
+  script:
+    - make lint-shell-report
+    - if [ "$(cat "${SHELLCHECK_REPORT_FILE}")" != "[]" ]; then exit 1; fi
+  artifacts:
+    reports:
+      codequality: ${SHELLCHECK_REPORT_FILE}
+    paths:
+      - ${SHELLCHECK_REPORT_FILE}
     when: always
     expire_in: 7d
 
