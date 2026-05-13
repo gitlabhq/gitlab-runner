@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/steps"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -1013,6 +1014,43 @@ func TestDockerMacAddress(t *testing.T) {
 	}
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
+func TestDockerBuildContainerNativeStepsRecoveryEnv(t *testing.T) {
+	if runtime.GOOS == helperimage.OSTypeWindows {
+		t.Skip("UseNativeSteps returns false on Windows")
+	}
+
+	dockerConfig := &common.DockerConfig{}
+
+	cce := func(t *testing.T, config *container.Config, _ *container.HostConfig, _ *network.NetworkingConfig) {
+		assert.Nil(t, config.Entrypoint, "image entrypoint must not be cleared")
+		require.GreaterOrEqual(t, len(config.Cmd), 3)
+		assert.EqualValues(t,
+			[]string{bootstrappedBinary, "steps", "serve"},
+			config.Cmd[:3])
+		expected, err := steps.EncodeRecoveryArgv(config.Cmd[1:])
+		require.NoError(t, err)
+		assert.Equal(t, []string{steps.RecoveryEnvVar + "=" + expected}, config.Env)
+	}
+
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
+	c.On("ContainerInspect", mock.Anything, "abc").
+		Return(container.InspectResponse{}, nil).Once()
+
+	e.Build.ExecutorFeatures.NativeStepsIntegration = true
+	e.Build.Variables = append(e.Build.Variables, spec.Variable{
+		Key:   featureflags.UseScriptToStepMigration,
+		Value: "true",
+	})
+
+	require.NoError(t, e.createVolumesManager())
+	require.NoError(t, e.createPullManager())
+
+	imageConfig := spec.Image{Name: "alpine"}
+	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	_, err := e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
+	require.NoError(t, err)
 }
 
 func TestDockerCgroupParentSetting(t *testing.T) {

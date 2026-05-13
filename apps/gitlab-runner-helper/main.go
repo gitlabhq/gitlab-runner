@@ -29,6 +29,9 @@ func main() {
 		}
 	}()
 
+	// Must run before cli.NewApp. See commands/steps.RecoverArgv.
+	steps.RecoverArgv()
+
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
 	app.Usage = "a GitLab Runner Helper"
