@@ -1074,7 +1074,16 @@ func (b *AbstractShell) writeGitCleanupAllConfigs(sw ShellWriter, build *common.
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	w.Noticef("Checking out %s as detached HEAD (ref is %s)...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
-	w.Command("git", "-c", "submodule.recurse=false", "checkout", "-f", "-q", build.GitInfo.Sha)
+
+	checkoutArgs := []string{"-c", "submodule.recurse=false"}
+	// Force Git to send credentials proactively instead of waiting for a 401.
+	// This is needed because git checkout in partial-clone repositories can
+	// trigger lazy fetches from the promisor remote to retrieve missing objects.
+	if build.IsFeatureFlagOn(featureflags.UseGitProactiveAuth) {
+		checkoutArgs = append(checkoutArgs, "-c", "http.proactiveAuth=basic")
+	}
+	checkoutArgs = append(checkoutArgs, "checkout", "-f", "-q", build.GitInfo.Sha)
+	w.Command("git", checkoutArgs...)
 
 	cleanFlags := build.GetGitCleanFlags()
 	if len(cleanFlags) > 0 {
