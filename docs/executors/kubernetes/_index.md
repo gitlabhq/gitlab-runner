@@ -33,7 +33,16 @@ The pod consists of the following containers for each `service` defined in the `
 
 - A build container defined as `build`.
 - A helper container defined as `helper`.
-- A services containers defined as `svc-X`, where `X` is `[0-9]+`.
+- A services container named using the following logic:
+  - If the service has an alias that is a valid [DNS label name](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names)
+    and is not already used by another service container, that alias is used as the container name.
+  - If no valid alias is available, the container is named `svc-N`, where `N` is a sequential index starting at `0`.
+
+{{< history >}}
+
+- Alias-based naming [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4469) in GitLab Runner 17.9.
+
+{{< /history >}}
 
 Services and containers run in the same Kubernetes
 pod and share the same localhost address. The following restrictions apply:
