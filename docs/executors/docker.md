@@ -403,17 +403,14 @@ To exclude specific images like Kali:
 
 To access a service hostname, add the service to `services` in `.gitlab-ci.yml`.
 
-For example, to use a Wordpress instance to test an API integration with your application,
-use [tutum/wordpress](https://hub.docker.com/r/tutum/wordpress/) as the service image:
-
 ```yaml
 services:
-- tutum/wordpress:latest
+- valkey/valkey:latest
 ```
 
-When the job runs, the `tutum/wordpress` service starts. You can
-access it from your build container under the hostname `tutum__wordpress`
-and `tutum-wordpress`.
+When the job runs, the `valkey/valkey` service starts. You can
+access it from your build container under the hostname `valkey__valkey`
+and `valkey-valkey`.
 
 In addition to the specified service aliases, the runner assigns the name of the service image as an alias to the service container. You can use any of these aliases.
 
@@ -424,8 +421,8 @@ The runner uses the following rules to create the alias based on the image name:
 - For the second alias, the slash (`/`) is replaced with a single dash (`-`).
 
 If you use a private service image, the runner strips any specified port and applies the rules.
-The service `registry.gitlab-wp.com:4999/tutum/wordpress` results in the hostname
-`registry.gitlab-wp.com__tutum__wordpress` and `registry.gitlab-wp.com-tutum-wordpress`.
+The service `registry.example.com:4999/valkey/valkey` results in the hostname
+`registry.example.com__valkey__valkey` and `registry.example.com-valkey-valkey`.
 
 ## Configuring services
 
@@ -485,8 +482,7 @@ After the service starts, GitLab Runner waits for the service to
 respond. The Docker executor tries to open a TCP connection to the
 exposed service port in the service container.
 
-- In GitLab 15.11 and earlier, only the first exposed port is checked.
-- In GitLab 16.0 and later, the first 20 exposed ports are checked.
+Only the first 20 exposed ports are checked.
 
 The `HEALTHCHECK_TCP_PORT` service variable can be used to perform the health check on a specific port:
 
@@ -868,12 +864,6 @@ the build environment of the runner.
 
 ## Use Podman to run Docker commands
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27119) in GitLab 15.3.
-
-{{< /history >}}
-
 If you have GitLab Runner installed on Linux, your jobs can use Podman to replace Docker as
 the container runtime in the Docker executor.
 
@@ -1190,12 +1180,6 @@ To set multiple pull policies, add them as a list in the `config.toml`:
 ```
 
 ### Allow Docker pull policies
-
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
-
-{{< /history >}}
 
 In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how a CI/CD job
 fetches images.
