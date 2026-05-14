@@ -55,6 +55,7 @@ func Build(job spec.Job, vars variables.Provider, options ...Option) ([]byte, er
 
 	config.ArtifactExtract = b.buildArtifactDownloads()
 	config.Steps = b.buildSteps()
+	config.RunSteps = job.Run
 	config.ScriptTimeout = b.buildScriptTimeout()
 	config.AfterScriptTimeout = b.buildAfterScriptTimeout()
 	config.AfterScriptIgnoreErrors = variables.DefaultBool(

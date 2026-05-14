@@ -551,11 +551,11 @@ func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector,
 			)
 			b.logger.Println(msg)
 
-			// todo: step-runner should eventually:
-			// - format its own logs to the Runner log spec
-			// - provides its own timestamps and mask its own secrets
-			// for now though, we wrap its logs providing this, and treat everything as stdout
-			stdout := b.logger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
+			// step-runner can emit log lines pre-formatted in the runner's
+			// timestamper format (timestamp + stream marker + masking applied
+			// upstream). StepRunnerStream passes pre-formatted data straight
+			// through, otherwise the local wrap chain is applied.
+			stdout := b.logger.StepRunnerStream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
 			defer stdout.Close()
 
 			return wrapStepStageErr(steps.Execute(ctx, steps.Options{
@@ -802,7 +802,7 @@ func (b *Build) executeScript(ctx, prepareCtx context.Context, trace JobTrace, e
 
 	_, hasStepRunnerConnector := executor.(steps.Connector)
 
-	if b.IsFeatureFlagOn(featureflags.UseConcrete) && len(b.Job.Run) == 0 && hasStepRunnerConnector {
+	if b.IsFeatureFlagOn(featureflags.UseConcrete) && hasStepRunnerConnector {
 		concreteSteps, err := stagesToConcreteStep(ctx, executor)
 		if err != nil {
 			return err
