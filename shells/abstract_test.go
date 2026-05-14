@@ -1186,6 +1186,60 @@ func TestGitCleanFlags(t *testing.T) {
 	}
 }
 
+func TestGitProactiveAuthCheckout(t *testing.T) {
+	const (
+		dummySha = "01234567abcdef"
+		dummyRef = "main"
+	)
+
+	tests := map[string]struct {
+		proactiveAuthEnabled bool
+		expectProactiveAuth  bool
+	}{
+		"proactive auth enabled on checkout": {
+			proactiveAuthEnabled: true,
+			expectProactiveAuth:  true,
+		},
+		"proactive auth disabled on checkout": {
+			proactiveAuthEnabled: false,
+			expectProactiveAuth:  false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+
+			build := &common.Build{
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						FeatureFlags: map[string]bool{
+							featureflags.UseGitProactiveAuth: test.proactiveAuthEnabled,
+						},
+					},
+				},
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{Sha: dummySha, Ref: dummyRef},
+				},
+			}
+
+			mockWriter := NewMockShellWriter(t)
+			mockWriter.On("Noticef", "Checking out %s as detached HEAD (ref is %s)...", dummySha[0:8], dummyRef).Once()
+
+			if test.expectProactiveAuth {
+				mockWriter.On("Command", "git", "-c", "submodule.recurse=false", "-c", "http.proactiveAuth=basic", "checkout", "-f", "-q", dummySha).Once()
+			} else {
+				mockWriter.On("Command", "git", "-c", "submodule.recurse=false", "checkout", "-f", "-q", dummySha).Once()
+			}
+			// writeCheckoutCmd also issues the default `git clean -ffdx`
+			// when GIT_CLEAN_FLAGS is unset.
+			mockWriter.On("Command", "git", "clean", "-ffdx").Once()
+
+			shell.writeCheckoutCmd(mockWriter, build)
+		})
+	}
+}
+
 func TestGitCloneFlags(t *testing.T) {
 	const (
 		dummySha        = "01234567abcdef"

@@ -539,7 +539,8 @@ func (s GetSources) gitCheckout(ctx context.Context, e *env.Env, extraEnv map[st
 	}
 	e.Noticef("Checking out %s as detached HEAD (ref is %s)...", short, s.Ref)
 
-	if err := git(ctx, e, extraEnv, "-c", "submodule.recurse=false", "checkout", "-f", "-q", s.SHA); err != nil {
+	checkoutArgs := append(s.configArgs(), "-c", "submodule.recurse=false", "checkout", "-f", "-q", s.SHA)
+	if err := git(ctx, e, extraEnv, checkoutArgs...); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
 	}
 
