@@ -2,6 +2,9 @@ package cache
 
 import (
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
 	"sync"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
@@ -48,7 +51,11 @@ func (m *CredentialsFactoriesMap) Find(typeName string) (CredentialsFactory, err
 
 	factory := m.internal[typeName]
 	if factory == nil {
-		return nil, fmt.Errorf("factory for credentials adapter %q not registered", typeName)
+		return nil, fmt.Errorf(
+			"factory for credentials adapter %q not registered (registered adapters: %s)",
+			typeName,
+			strings.Join(slices.Sorted(maps.Keys(m.internal)), ", "),
+		)
 	}
 
 	return factory, nil

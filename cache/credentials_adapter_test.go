@@ -44,7 +44,7 @@ func TestCreateCredentialsAdapter(t *testing.T) {
 			adapter:          nil,
 			errorOnFactorize: nil,
 			expectedAdapter:  nil,
-			expectedError:    `credentials adapter factory not found: factory for credentials adapter "test" not registered`,
+			expectedError:    `credentials adapter factory not found: factory for credentials adapter "test" not registered (registered adapters: additional-adapter)`,
 		},
 		"adapter exists": {
 			adapter:          adapterMock,
