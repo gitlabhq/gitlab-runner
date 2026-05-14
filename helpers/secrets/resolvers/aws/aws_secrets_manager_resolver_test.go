@@ -61,6 +61,9 @@ func TestResolver_Resolve(t *testing.T) {
 		setupMock                 func(*MockAWSSecretsManager)
 		expectedValue             string
 		expectedError             error
+		expectedRegion            string
+		expectedRoleArn           string
+		expectedRoleSessionName   string
 	}{
 		"error on support detection": {
 			expectedError: &secrets.ResolvingUnsupportedSecretError{},
@@ -234,6 +237,63 @@ func TestResolver_Resolve(t *testing.T) {
 			expectedValue: "secret-value-with-default-creds",
 			expectedError: nil,
 		},
+		"per secret config region overrides server region": {
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
+					SecretId: "test-secret",
+					Region:   "us-east-1",
+					Server: spec.AWSServer{
+						Region: "us-west-2",
+					},
+				},
+			},
+			setupMock: func(m *MockAWSSecretsManager) {
+				m.EXPECT().
+					GetSecretString(mock.Anything, "test-secret", mock.Anything, mock.Anything).
+					Return("secret-from-us-east-1", nil).
+					Once()
+			},
+			expectedValue:  "secret-from-us-east-1",
+			expectedRegion: "us-east-1",
+		},
+		"per secret config role arn overrides server role arn": {
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
+					SecretId: "test-secret",
+					RoleARN:  "arn:aws:iam::123:role/user-role",
+					Server: spec.AWSServer{
+						RoleArn: "arn:aws:iam::123:role/server-role",
+					},
+				},
+			},
+			setupMock: func(m *MockAWSSecretsManager) {
+				m.EXPECT().
+					GetSecretString(mock.Anything, "test-secret", mock.Anything, mock.Anything).
+					Return("secret-with-user-role", nil).
+					Once()
+			},
+			expectedValue:   "secret-with-user-role",
+			expectedRoleArn: "arn:aws:iam::123:role/user-role",
+		},
+		"per secret config role session name overrides server role session name": {
+			secret: spec.Secret{
+				AWSSecretsManager: &spec.AWSSecret{
+					SecretId:        "test-secret",
+					RoleSessionName: "user-session",
+					Server: spec.AWSServer{
+						RoleSessionName: "server-session",
+					},
+				},
+			},
+			setupMock: func(m *MockAWSSecretsManager) {
+				m.EXPECT().
+					GetSecretString(mock.Anything, "test-secret", mock.Anything, mock.Anything).
+					Return("secret-with-user-session", nil).
+					Once()
+			},
+			expectedValue:           "secret-with-user-session",
+			expectedRoleSessionName: "user-session",
+		},
 	}
 
 	for tn, tt := range tests {
@@ -242,12 +302,17 @@ func TestResolver_Resolve(t *testing.T) {
 			defer func() { newAWSSecretsManagerService = oldAWSSecretsManagerService }()
 
 			var mockSvc *MockAWSSecretsManager
+			var capturedRegion string
+			var capturedRoleArn string
+			var capturedRoleSessionName string
+
 			if tt.setupMock != nil {
 				mockSvc = NewMockAWSSecretsManager(t)
 				tt.setupMock(mockSvc)
 			}
 
 			newAWSSecretsManagerService = func(ctx context.Context, region string, webIdentityProvider *stscreds.WebIdentityRoleProvider) (AWSSecretsManager, error) {
+				capturedRegion = region
 				if tt.vaultServiceCreationError != nil {
 					return nil, tt.vaultServiceCreationError
 				}
@@ -268,6 +333,18 @@ func TestResolver_Resolve(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedValue, value)
+
+			if tt.expectedRegion != "" {
+				assert.Equal(t, tt.expectedRegion, capturedRegion, "should use correct region")
+			}
+			if tt.expectedRoleArn != "" {
+				capturedRoleArn = r.(*resolver).getRoleArn()
+				assert.Equal(t, tt.expectedRoleArn, capturedRoleArn, "should use correct role ARN")
+			}
+			if tt.expectedRoleSessionName != "" {
+				capturedRoleSessionName = r.(*resolver).getRoleSessionName()
+				assert.Equal(t, tt.expectedRoleSessionName, capturedRoleSessionName, "should use correct role session name")
+			}
 		})
 	}
 }
