@@ -3,8 +3,11 @@ package cache
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -63,7 +66,11 @@ func (m *FactoriesMap) Find(typeName string) (Factory, error) {
 
 	factory := m.internal[typeName]
 	if factory == nil {
-		return nil, fmt.Errorf("factory for cache adapter %q was not registered", typeName)
+		return nil, fmt.Errorf(
+			"factory for cache adapter %q was not registered (registered adapters: %s)",
+			typeName,
+			strings.Join(slices.Sorted(maps.Keys(m.internal)), ", "),
+		)
 	}
 
 	return factory, nil

@@ -47,7 +47,7 @@ func TestCreateAdapter(t *testing.T) {
 			adapter:          nil,
 			errorOnFactorize: nil,
 			expectedAdapter:  nil,
-			expectedError:    `cache factory not found: factory for cache adapter \"test\" was not registered`,
+			expectedError:    `cache factory not found: factory for cache adapter "test" was not registered (registered adapters: additional-adapter)`,
 		},
 		"adapter exists": {
 			adapter:          adapterMock,
