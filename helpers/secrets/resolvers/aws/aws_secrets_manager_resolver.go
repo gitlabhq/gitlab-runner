@@ -55,17 +55,17 @@ func (v *resolver) getRegion() string {
 }
 
 func (v *resolver) getRoleArn() string {
-	if v.secret.AWSSecretsManager.Server.RoleArn != "" {
-		return v.secret.AWSSecretsManager.Server.RoleArn
+	if v.secret.AWSSecretsManager.RoleARN != "" {
+		return v.secret.AWSSecretsManager.RoleARN
 	}
-	return v.secret.AWSSecretsManager.RoleARN
+	return v.secret.AWSSecretsManager.Server.RoleArn
 }
 
 func (v *resolver) getRoleSessionName() string {
-	if v.secret.AWSSecretsManager.Server.RoleSessionName != "" {
-		return v.secret.AWSSecretsManager.Server.RoleSessionName
+	if v.secret.AWSSecretsManager.RoleSessionName != "" {
+		return v.secret.AWSSecretsManager.RoleSessionName
 	}
-	return v.secret.AWSSecretsManager.RoleSessionName
+	return v.secret.AWSSecretsManager.Server.RoleSessionName
 }
 
 func (v *resolver) getVersionId() *string {
