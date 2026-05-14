@@ -402,7 +402,7 @@ adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
 Each `[[runners]]` section defines one runner.
 
 | Setting                               | Description                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------- |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `name`                                | The runner's description. Informational only.                                                                                                                                                                                                                                                                                                                                                               |
 | `url`                                 | GitLab instance URL. Supports environment variable expansion (for example, `$GITLAB_URL` or `${GITLAB_URL}`).                                                                                                                                                                                                                                                                                               |
 | `token`                               | The runner's authentication token, which is obtained during runner registration. [Not the same as the registration token](https://docs.gitlab.com/api/runners/#registration-and-authentication-tokens). Supports environment variable expansion (for example, `$RUNNER_TOKEN` or `${RUNNER_TOKEN}`).                                                                                                        |
@@ -416,12 +416,12 @@ Each `[[runners]]` section defines one runner.
 | `cache_dir`                           | Absolute path to a directory where build caches are stored in context of selected executor. For example, locally, Docker, or SSH. If the `docker` executor is used, this directory needs to be included in its `volumes` parameter.                                                                                                                                                                         |
 | `environment`                         | Append or overwrite environment variables.                                                                                                                                                                                                                                                                                                                                                                  |
 | `request_concurrency`                 | Limit number of concurrent requests for new jobs from GitLab. Default is `1`. For more information about how `concurrency` , `limit`, and `request_concurrency` interact to control job flow, see the [KB article on GitLab Runner concurrency tuning](https://support.gitlab.com/hc/en-us/articles/21324350882076-GitLab-Runner-Concurrency-Tuning-Understanding-request-concurrency).                     |
-| `strict_check_interval`               | Under normal operation, when a runner polls for jobs and receives a job, it immediately re-polls for jobs until the number of jobs being processed matches `concurrent` or `limit`, or until no jobs are available. When you turn on `strict_check_interval`, the runner disables this faster-than-`check_interval` re-polling loop and strictly respects `check_interval`. Default is `false`.                    |
+| `strict_check_interval`               | Under normal operation, when a runner polls for jobs and receives a job, it immediately re-polls for jobs until the number of jobs being processed matches `concurrent` or `limit`, or until no jobs are available. When you turn on `strict_check_interval`, the runner disables this faster-than-`check_interval` re-polling loop and strictly respects `check_interval`. Default is `false`.             |
 | `output_limit`                        | Maximum build log size in kilobytes. Default is `4096` (4 MB).                                                                                                                                                                                                                                                                                                                                              |
 | `pre_get_sources_script`              | Commands to be executed on the runner before updating the Git repository and updating submodules. Use it to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                                                 |
 | `post_get_sources_script`             | Commands to be executed on the runner after updating the Git repository and updating submodules. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                                                                                                                    |
-| `pre_build_script`                    | Commands to be executed on the runner before executing the job. Runs in the same shell context as `before_script`, `script`, and `post_build_script`. If `pre_build_script` fails, the remaining commands in that context are skipped, but `after_script` still runs. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
-| `post_build_script`                   | Commands to be executed on the runner after executing the job. Runs in the same shell context as `pre_build_script`, `before_script`, and `script`. If any of those fail, `post_build_script` is skipped. `after_script` runs in a separate shell context and is not affected by `post_build_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
+| `pre_build_script`                    | Commands to be executed on the runner before executing the job. Runs in the same shell context as `before_script`, `script`, and `post_build_script`. If `pre_build_script` fails, the remaining commands in that context are skipped, but `after_script` still runs. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                               |
+| `post_build_script`                   | Commands to be executed on the runner after executing the job. Runs in the same shell context as `pre_build_script`, `before_script`, and `script`. If any of those fail, `post_build_script` is skipped. `after_script` runs in a separate shell context and is not affected by `post_build_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.               |
 | `clone_url`                           | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL.                                                                                                                                                                                                                                                                                                         |
 | `debug_trace_disabled`                | Disables [debug tracing](https://docs.gitlab.com/ci/variables/#enable-debug-logging). When set to `true`, the debug log (trace) remains disabled even if `CI_DEBUG_TRACE` is set to `true`.                                                                                                                                                                                                                 |
 | `clean_git_config`                    | Cleans the Git configuration. For more information, see [Cleaning Git configuration](#cleaning-git-configuration).                                                                                                                                                                                                                                                                                          |
@@ -429,6 +429,7 @@ Each `[[runners]]` section defines one runner.
 | `unhealthy_requests_limit`            | The number of `unhealthy` responses to new job requests after which a runner worker is disabled.                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_interval`                  | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like `3600 s`, `1 h 30 min`, and similar.                                                                                                                                                                                                                                                      |
 | `job_status_final_update_retry_limit` | The maximum number of times GitLab Runner can retry to push the final job status to the GitLab instance.                                                                                                                                                                                                                                                                                                    |
+| `prepare_timeout`                     | Maximum duration allowed for the `prepare` stage (executor initialization and shell environment setup). Accepts a duration string such as `30s` or `1h30m`. If unset, zero, or greater than the job timeout, defaults to the job timeout. For more information, see [prepare stage timeout](#prepare-stage-timeout).                                                                                        |
 
 Example:
 
@@ -572,6 +573,53 @@ To increase or decrease the duration that runners are idle, change the `unhealth
 To change runner's number of connection attempts to the GitLab server and
 receive an unhealthy sleep before becoming idle, change the `unhealthy_requests_limit` setting.
 For more information, see [How `check_interval` works](advanced-configuration.md#how-check_interval-works).
+
+### Prepare stage timeout
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/26583) in GitLab Runner 19.0.0.
+
+{{< /history >}}
+
+The `prepare_timeout` setting limits how long the runner spends on execution environment preparation
+before it runs your job scripts. The prepare stage covers two phases:
+
+1. **Executor initialization** (`prepare_executor`): The runner sets up the execution environment,
+   such as starting a Docker container, scheduling a Kubernetes pod, or connecting over SSH.
+1. **Shell environment setup** (`prepare_script`): The runner generates and runs a script to
+   initialize the shell environment (such as PATH, working directories, and shell functions)
+   needed for subsequent job stages.
+
+If the prepare stage exceeds `prepare_timeout`, the job fails immediately. Subsequent stages
+(`get_sources`, `restore_cache`, `script`, and so on) are not bounded by `prepare_timeout`.
+They use the overall job timeout instead.
+
+**Default behavior**: If `prepare_timeout` is not set, is `0`, or exceeds
+the job timeout, the runner uses the job timeout for the prepare stage.
+
+#### When to set `prepare_timeout`
+
+Set `prepare_timeout` when slow or unresponsive environment initialization might consume the
+entire job timeout before any job work begins. Common scenarios include:
+
+- **Docker image pulls**: If a container registry is slow or unreachable, image pulls can hang for
+  the full job timeout. On busy runners, stalled pulls fill all available job slots and prevent new
+  jobs from starting. `prepare_timeout` fails these jobs quickly to free runner capacity.
+- **Custom or HPC executors**: When the executor must wait for an external resource scheduler to
+  allocate capacity (like an HPC job queue), startup can be unpredictable and potentially
+  very long. Without `prepare_timeout`, stalled jobs hold runner slots for the full job timeout.
+
+#### Example configuration
+
+```toml
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "TOKEN"
+  executor = "docker"
+  prepare_timeout = "5m"
+```
 
 ## The executors
 

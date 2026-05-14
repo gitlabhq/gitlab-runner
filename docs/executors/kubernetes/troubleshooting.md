@@ -82,6 +82,9 @@ of pods that you hope to scale up to on the cluster.
 To change the time GitLab Runner waits for a pod to reach its `Ready` status, use the
 [`poll_timeout`](_index.md#other-configtoml-settings) setting.
 
+To limit how long the prepare stage can run in total (including pod scheduling), use the
+[`prepare_timeout`](../../configuration/advanced-configuration.md#prepare-stage-timeout) setting.
+
 To better understand how pods are scheduled or why they might not get scheduled
 on time, [read about the Kubernetes Scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/).
 
