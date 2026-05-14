@@ -253,7 +253,7 @@ type kubernetesOptions struct {
 }
 
 func (kOpts kubernetesOptions) servicesList() spec.Services {
-	services := make(spec.Services, len(kOpts.Services))
+	services := make(spec.Services, 0, len(kOpts.Services))
 	for _, name := range slices.Sorted(maps.Keys(kOpts.Services)) {
 		services = append(services, *kOpts.Services[name])
 	}
