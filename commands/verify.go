@@ -21,7 +21,8 @@ type VerifyCommand struct {
 
 func NewVerifyCommand(n common.Network) cli.Command {
 	return common.NewCommand("verify", "verify all registered runners", &VerifyCommand{
-		network: n,
+		network:    n,
+		ConfigFile: GetDefaultConfigFile(),
 	})
 }
 

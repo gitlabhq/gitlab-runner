@@ -160,6 +160,7 @@ type RunCommand struct {
 func NewRunCommand(n common.Network, apiRequestsCollector prometheus.Collector, executorProviders executors.Providers) cli.Command {
 	cmd := &RunCommand{
 		ServiceName:            defaultServiceName,
+		ConfigFile:             GetDefaultConfigFile(),
 		network:                n,
 		executorProviders:      executorProviders,
 		apiRequestsCollector:   apiRequestsCollector,

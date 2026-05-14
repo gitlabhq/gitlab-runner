@@ -13,7 +13,9 @@ type ListCommand struct {
 }
 
 func NewListCommand() cli.Command {
-	return common.NewCommand("list", "List all configured runners", &ListCommand{})
+	return common.NewCommand("list", "List all configured runners", &ListCommand{
+		ConfigFile: GetDefaultConfigFile(),
+	})
 }
 
 func (c *ListCommand) Execute(context *cli.Context) {

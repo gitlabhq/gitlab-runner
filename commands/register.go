@@ -566,6 +566,7 @@ func getHostname() string {
 
 func newRegisterCommand(n common.Network, executorProviders executors.Providers) *RegisterCommand {
 	return &RegisterCommand{
+		ConfigFile: GetDefaultConfigFile(),
 		RunnerConfig: common.RunnerConfig{
 			Name: getHostname(),
 			RunnerSettings: common.RunnerSettings{
