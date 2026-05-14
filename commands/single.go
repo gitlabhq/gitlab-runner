@@ -265,5 +265,6 @@ func NewRunSingleCommand(n common.Network, executorProviders executors.Providers
 	return common.NewCommand("run-single", "start single runner", &RunSingleCommand{
 		network:           n,
 		executorProviders: executorProviders,
+		ConfigFile:        GetDefaultConfigFile(),
 	})
 }

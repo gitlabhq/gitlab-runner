@@ -23,7 +23,8 @@ type UnregisterCommand struct {
 
 func NewUnregisterCommand(n common.Network) cli.Command {
 	return common.NewCommand("unregister", "unregister specific runner", &UnregisterCommand{
-		network: n,
+		network:    n,
+		ConfigFile: GetDefaultConfigFile(),
 	})
 }
 

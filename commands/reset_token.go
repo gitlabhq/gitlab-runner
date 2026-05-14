@@ -24,7 +24,8 @@ type ResetTokenCommand struct {
 
 func NewResetTokenCommand(n common.Network) cli.Command {
 	return common.NewCommand("reset-token", "reset a runner's token", &ResetTokenCommand{
-		network: n,
+		network:    n,
+		ConfigFile: GetDefaultConfigFile(),
 	})
 }
 
