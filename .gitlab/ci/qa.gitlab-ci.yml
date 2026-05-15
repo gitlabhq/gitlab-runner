@@ -52,7 +52,7 @@ check test directives:
   script:
     - make check_test_directives
 
-code_quality:
+go:lint:
   stage: qa
   extends:
     - .rules:merge_request_pipelines:no_docs
@@ -62,11 +62,10 @@ code_quality:
     - .go-cache
   image: $RUNNER_LINTERS_IMAGE
   needs: []
-  allow_failure: true
   variables:
-    REPORT_FILE: gl-code-quality-report.json
+    REPORT_FILE: gl-golangci-lint-report.json
     LINT_FLAGS: "--color=never --timeout=15m"
-    OUT_FORMAT: "--output.code-climate.path=gl-code-quality-report.json"
+    OUT_FORMAT: "--output.code-climate.path=gl-golangci-lint-report.json"
   before_script:
     - !reference [.go-cache, before_script]
     # Ensure the goargs linter plugin is available at .tmp/bin/goargs.so to suit .golangci.yml
