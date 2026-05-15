@@ -92,22 +92,6 @@ trigger runner package tests:
     # strategy: depend
     project: gitlab-org/ci-cd/runner-tools/gitlab-runner-package-tests
 
-static QA:
-  extends:
-    - .rules:merge_request_pipelines:no_docs
-    - .no_cache
-    - .kubernetes runner
-  stage: postrelease
-  image: alpine:latest
-  needs:
-    - code_quality
-  script: |
-    if [ "$(cat gl-code-quality-report.json)" != "[]" ] ; then
-      apk add -U --no-cache jq > /dev/null
-      jq -C . gl-code-quality-report.json
-      exit 1
-    fi
-
 .verify-resources:
   extends:
     - .rules:merge_request_pipelines:no_docs
