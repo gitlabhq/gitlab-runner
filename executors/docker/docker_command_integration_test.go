@@ -1763,7 +1763,7 @@ func TestDockerCommandRunAttempts_InvalidAttempts(t *testing.T) {
 	buf := new(bytes.Buffer)
 	err := build.Run(&common.Config{}, &common.Trace{Writer: buf})
 	require.NoError(t, err)
-	require.Contains(t, buf.String(), "WARNING: EXECUTOR_JOB_SECTION_ATTEMPTS: number of attempts out of the range [1, 10], using default 1")
+	require.Contains(t, buf.String(), "WARNING: EXECUTOR_JOB_SECTION_ATTEMPTS: number of attempts out of the range [1, 10], clamping to: 10")
 }
 
 func TestDockerCommand_WriteToVolumeNonRootImage(t *testing.T) {

@@ -411,7 +411,7 @@ var flags = []FeatureFlag{
 		Name:         UseExponentialBackoffStageRetry,
 		DefaultValue: true,
 		Deprecated:   false,
-		Description: "When enabled, the retries for `GET_SOURCES_ATTEMPTS`, `ARTIFACT_DOWNLOAD_ATTEMPTS`, `RESTORE_CACHE_ATTEMPTS`, and `EXECUTOR_JOB_SECTION_ATTEMPTS` " +
+		Description: "When enabled, the retries for `GET_SOURCES_ATTEMPTS`, `ARTIFACT_DOWNLOAD_ATTEMPTS`, `RESTORE_CACHE_ATTEMPTS`, `EXECUTOR_JOB_SECTION_ATTEMPTS`, and `SECRETS_RETRIEVAL_ATTEMPTS` " +
 			"use exponential backoff (5 sec - 5 min).",
 	},
 	{

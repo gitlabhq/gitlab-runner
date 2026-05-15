@@ -2523,12 +2523,12 @@ func TestBuild_GetExecutorJobSectionAttempts(t *testing.T) {
 		},
 		{
 			attempts:         "0",
-			expectedAttempts: DefaultExecutorStageAttempts,
+			expectedAttempts: 1,
 			expectedErr:      true,
 		},
 		{
 			attempts:         "99",
-			expectedAttempts: DefaultExecutorStageAttempts,
+			expectedAttempts: 10,
 			expectedErr:      true,
 		},
 	}
@@ -2551,6 +2551,165 @@ func TestBuild_GetExecutorJobSectionAttempts(t *testing.T) {
 				assert.NotEmpty(t, build.Settings().Errors)
 			}
 			assert.Equal(t, tt.expectedAttempts, attempts)
+		})
+	}
+}
+
+func TestBuild_GetSecretsRetrievalAttempts(t *testing.T) {
+	tests := []struct {
+		attempts         string
+		expectedAttempts int
+		expectedErr      bool
+	}{
+		{
+			attempts:         "",
+			expectedAttempts: 1,
+		},
+		{
+			attempts:         "3",
+			expectedAttempts: 3,
+		},
+		{
+			attempts:         "0",
+			expectedAttempts: 1,
+			expectedErr:      true,
+		},
+		{
+			attempts:         "11",
+			expectedAttempts: 10,
+			expectedErr:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.attempts, func(t *testing.T) {
+			build := Build{
+				Job: spec.Job{
+					Variables: spec.Variables{
+						spec.Variable{
+							Key:   "SECRETS_RETRIEVAL_ATTEMPTS",
+							Value: tt.attempts,
+						},
+					},
+				},
+			}
+
+			attempts := build.GetSecretsRetrievalAttempts()
+			if tt.expectedErr {
+				assert.NotEmpty(t, build.Settings().Errors)
+			}
+			assert.Equal(t, tt.expectedAttempts, attempts)
+		})
+	}
+}
+
+func TestSecretsResolvingWithRetry(t *testing.T) {
+	secrets := spec.Secrets{
+		"TEST_SECRET": spec.Secret{
+			Vault: &spec.VaultSecret{},
+		},
+	}
+
+	tests := []struct {
+		name                   string
+		attempts               string
+		resolverFailurePattern []bool // true = fail, false = succeed
+		expectedRetryCount     int
+		expectedError          bool
+	}{
+		{
+			name:                   "single attempt with failure - no retry",
+			attempts:               "1",
+			resolverFailurePattern: []bool{true},
+			expectedRetryCount:     0,
+			expectedError:          true,
+		},
+		{
+			name:                   "two attempts with failure on first - one retry",
+			attempts:               "2",
+			resolverFailurePattern: []bool{true, false},
+			expectedRetryCount:     1,
+			expectedError:          false,
+		},
+		{
+			name:                   "three attempts success on second - one retry",
+			attempts:               "3",
+			resolverFailurePattern: []bool{true, false},
+			expectedRetryCount:     1,
+			expectedError:          false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logrusLogger := logrus.New()
+			hook := test.NewLocal(logrusLogger)
+
+			// Create a mock executor provider
+			var p *MockExecutorProvider
+			if tt.expectedError {
+				p = NewMockExecutorProvider(t)
+			} else {
+				p = setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
+			}
+
+			secretsResolverMock := NewMockSecretsResolver(t)
+
+			for _, shouldFail := range tt.resolverFailurePattern {
+				if shouldFail {
+					secretsResolverMock.On("Resolve", secrets).
+						Return(nil, errors.New("simulated resolver failure")).Once()
+				} else {
+					secretsResolverMock.On("Resolve", secrets).
+						Return(spec.Variables{{Key: "TEST_SECRET", Value: "resolved"}}, nil).Once()
+				}
+			}
+
+			res, err := GetSuccessfulBuild()
+			require.NoError(t, err)
+			res.Secrets = secrets
+
+			rc := new(RunnerConfig)
+			rc.RunnerSettings.Executor = t.Name()
+
+			build, err := NewBuild(res, rc, nil, nil, p)
+			assert.NoError(t, err)
+
+			build.logger = buildlogger.New(nil, logrus.NewEntry(logrusLogger), buildlogger.Options{})
+
+			build.Variables = append(build.Variables, spec.Variable{
+				Key:   "SECRETS_RETRIEVAL_ATTEMPTS",
+				Value: tt.attempts,
+			})
+
+			build.secretsResolver = func(_ logger, _ SecretResolverRegistry, _ func(string) bool) (SecretsResolver, error) {
+				return secretsResolverMock, nil
+			}
+
+			build.initSettings()
+			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
+
+			err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+
+			if tt.expectedError {
+				assert.Error(t, err, "Expected error when final attempt fails")
+			} else {
+				assert.NoError(t, err, "Expected no error when an attempt succeeds")
+			}
+
+			// Count retry messages in the logs
+			retryMessageCount := 0
+			for _, entry := range hook.AllEntries() {
+				if strings.Contains(entry.Message, "Retrying...") {
+					retryMessageCount++
+				}
+			}
+
+			assert.Equal(t, tt.expectedRetryCount, retryMessageCount,
+				"Expected %d retry messages but found %d", tt.expectedRetryCount, retryMessageCount)
+
+			// Verify all expected calls were made
+			secretsResolverMock.AssertExpectations(t)
 		})
 	}
 }
@@ -4485,12 +4644,12 @@ func TestBuild_attemptExecuteStage(t *testing.T) {
 			executorFailurePattern: []bool{true, false},
 		},
 		{
-			name:                   "three attempts with feature flag disabled - no retry message",
+			name:                   "three attempts with feature flag disabled - retries still happen",
 			attempts:               3,
 			featureFlagEnabled:     false,
-			shouldRetry:            false,
-			expectedRetryMessage:   false,
-			expectedRetryCount:     0,
+			shouldRetry:            true,
+			expectedRetryMessage:   true,
+			expectedRetryCount:     2,
 			executorFailurePattern: []bool{true, true, true},
 		},
 		{
@@ -4560,7 +4719,7 @@ func TestBuild_attemptExecuteStage(t *testing.T) {
 			// Count retry messages in the logs
 			retryMessageCount := 0
 			for _, entry := range hook.AllEntries() {
-				if strings.Contains(entry.Message, "Retrying in") {
+				if strings.Contains(entry.Message, "Retrying...") {
 					retryMessageCount++
 				}
 			}
@@ -4653,7 +4812,7 @@ func TestBuild_attemptExecuteStageWithRetryCallback(t *testing.T) {
 			// Count retry messages
 			retryMessageCount := 0
 			for _, entry := range hook.AllEntries() {
-				if strings.Contains(entry.Message, "Retrying in") {
+				if strings.Contains(entry.Message, "Retrying...") {
 					retryMessageCount++
 				}
 			}
@@ -4713,7 +4872,7 @@ func TestBuild_attemptExecuteStageExponentialBackoff(t *testing.T) {
 	// Verify we got 2 retry messages
 	retryMessageCount := 0
 	for _, entry := range hook.AllEntries() {
-		if strings.Contains(entry.Message, "Retrying in") {
+		if strings.Contains(entry.Message, "Retrying...") {
 			retryMessageCount++
 		}
 	}
@@ -4724,34 +4883,40 @@ func TestBuild_attemptExecuteStageExponentialBackoff(t *testing.T) {
 
 func TestBuild_attemptExecuteStageInvalidAttempts(t *testing.T) {
 	tests := []struct {
-		name     string
-		attempts int
-		wantErr  bool
+		name            string
+		attempts        int
+		wantErr         bool
+		expectedAttempt int
 	}{
 		{
-			name:     "zero attempts - invalid",
-			attempts: 0,
-			wantErr:  true,
+			name:            "zero attempts - clamped to 1",
+			attempts:        0,
+			wantErr:         false,
+			expectedAttempt: 1,
 		},
 		{
-			name:     "negative attempts - invalid",
-			attempts: -1,
-			wantErr:  true,
+			name:            "negative attempts - clamped to 1",
+			attempts:        -1,
+			wantErr:         false,
+			expectedAttempt: 1,
 		},
 		{
-			name:     "eleven attempts - invalid",
-			attempts: 11,
-			wantErr:  true,
+			name:            "eleven attempts - clamped to 10",
+			attempts:        11,
+			wantErr:         false,
+			expectedAttempt: 10,
 		},
 		{
-			name:     "one attempt - valid",
-			attempts: 1,
-			wantErr:  false,
+			name:            "one attempt - valid",
+			attempts:        1,
+			wantErr:         false,
+			expectedAttempt: 1,
 		},
 		{
-			name:     "ten attempts - valid",
-			attempts: 10,
-			wantErr:  false,
+			name:            "ten attempts - valid",
+			attempts:        10,
+			wantErr:         false,
+			expectedAttempt: 10,
 		},
 	}
 
@@ -4761,9 +4926,7 @@ func TestBuild_attemptExecuteStageInvalidAttempts(t *testing.T) {
 			executor := NewMockExecutor(t)
 			executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
 
-			if !tt.wantErr {
-				executor.On("Run", mock.Anything).Return(nil).Maybe()
-			}
+			executor.On("Run", mock.Anything).Return(nil).Maybe()
 
 			build := &Build{
 				Runner: &RunnerConfig{
@@ -4774,22 +4937,20 @@ func TestBuild_attemptExecuteStageInvalidAttempts(t *testing.T) {
 				Job: spec.Job{
 					Variables: spec.Variables{},
 				},
+				logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
 			}
 
 			build.initSettings()
-			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
+			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = false
 
 			ctx := t.Context()
 			err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, tt.attempts, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "out of the range [1, 10]")
 			} else {
 				assert.NoError(t, err)
 			}
-
-			executor.AssertExpectations(t)
 		})
 	}
 }

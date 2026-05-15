@@ -61,6 +61,7 @@ type BuildSettings struct {
 	ArtifactDownloadAttempts   int
 	RestoreCacheAttempts       int
 	ExecutorJobSectionAttempts int
+	SecretsRetrievalAttempts   int
 
 	AfterScriptIgnoreErrors bool
 
@@ -96,17 +97,9 @@ func (b *Build) initSettings() {
 	}
 
 	errs := validateVariables(variablesForResolution, b, defaultGitStrategy)
-
-	if b.Runner != nil && b.Runner.DebugTraceDisabled {
-		if b.buildSettings.CIDebugTrace {
-			errs = append(errs, fmt.Errorf("CI_DEBUG_TRACE: usage is disabled on this Runner"))
-		}
-		if b.buildSettings.CIDebugServices {
-			errs = append(errs, fmt.Errorf("CI_DEBUG_SERVICES: usage is disabled on this Runner"))
-		}
-		b.buildSettings.CIDebugTrace = false
-		b.buildSettings.CIDebugServices = false
-	}
+	errs = append(errs, b.validateDebugTraceSettings()...)
+	errs = append(errs, b.validateAttemptSettings()...)
+	errs = append(errs, populateFeatureFlags(b, variablesForResolution)...)
 
 	if b.buildSettings.ExecutorJobSectionAttempts < 1 || b.buildSettings.ExecutorJobSectionAttempts > 10 {
 		errs = append(errs, fmt.Errorf("EXECUTOR_JOB_SECTION_ATTEMPTS: number of attempts out of the range [1, 10], using default %v", DefaultExecutorStageAttempts))
@@ -118,6 +111,45 @@ func (b *Build) initSettings() {
 	b.buildSettings.Errors = slices.DeleteFunc(errs, func(err error) bool {
 		return err == nil
 	})
+}
+
+func (b *Build) validateDebugTraceSettings() []error {
+	var errs []error
+	if b.Runner == nil || !b.Runner.DebugTraceDisabled {
+		return errs
+	}
+	if b.buildSettings.CIDebugTrace {
+		errs = append(errs, fmt.Errorf("CI_DEBUG_TRACE: usage is disabled on this Runner"))
+	}
+
+	if b.buildSettings.CIDebugServices {
+		errs = append(errs, fmt.Errorf("CI_DEBUG_SERVICES: usage is disabled on this Runner"))
+	}
+	b.buildSettings.CIDebugTrace = false
+	b.buildSettings.CIDebugServices = false
+
+	return errs
+}
+
+func (b *Build) validateAttemptSettings() []error {
+	var errs []error
+
+	clamp := func(variable *int, varName string) {
+		const minAttempts, maxAttempts = 1, 10
+		val := max(minAttempts, min(maxAttempts, *variable))
+		if val != *variable {
+			*variable = val
+			errs = append(errs, fmt.Errorf("%s: number of attempts out of the range [%d, %d], clamping to: %d", varName, minAttempts, maxAttempts, *variable))
+		}
+	}
+
+	clamp(&b.buildSettings.ExecutorJobSectionAttempts, "EXECUTOR_JOB_SECTION_ATTEMPTS")
+	clamp(&b.buildSettings.GetSourcesAttempts, "GET_SOURCES_ATTEMPTS")
+	clamp(&b.buildSettings.ArtifactDownloadAttempts, "ARTIFACT_DOWNLOAD_ATTEMPTS")
+	clamp(&b.buildSettings.RestoreCacheAttempts, "RESTORE_CACHE_ATTEMPTS")
+	clamp(&b.buildSettings.SecretsRetrievalAttempts, "SECRETS_RETRIEVAL_ATTEMPTS")
+
+	return errs
 }
 
 func validateVariables(variables spec.Variables, b *Build, defaultGitStategy GitStrategy) []error {
@@ -142,6 +174,7 @@ func validateVariables(variables spec.Variables, b *Build, defaultGitStategy Git
 		validate(variables, "ARTIFACT_DOWNLOAD_ATTEMPTS", &b.buildSettings.ArtifactDownloadAttempts, DefaultArtifactDownloadAttempts),
 		validate(variables, "RESTORE_CACHE_ATTEMPTS", &b.buildSettings.RestoreCacheAttempts, DefaultRestoreCacheAttempts),
 		validate(variables, "EXECUTOR_JOB_SECTION_ATTEMPTS", &b.buildSettings.ExecutorJobSectionAttempts, DefaultExecutorStageAttempts),
+		validate(variables, "SECRETS_RETRIEVAL_ATTEMPTS", &b.buildSettings.SecretsRetrievalAttempts, DefaultSecretsRetrievalAttempts),
 
 		validate(variables, "AFTER_SCRIPT_IGNORE_ERRORS", &b.buildSettings.AfterScriptIgnoreErrors, DefaultAfterScriptIgnoreErrors),
 
