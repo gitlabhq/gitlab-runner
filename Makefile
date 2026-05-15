@@ -172,6 +172,8 @@ lint-shell-report:
 	@# Execute the functionality of lint-shell and generate a Code Climate report.
 	@# Mainly for use in CI; requires https://gitlab.com/gitlab-org/language-tools/go/linters/linter2cc.
 	@git grep -Pl '\A#\!.*(bash|[^a-z]sh)' | xargs linter2cc shellcheck -x > $(SHELLCHECK_REPORT_FILE)
+	@# linter2cc produces an empty file when there are no findings; ensure valid JSON for the codequality artifact
+	@[ -s $(SHELLCHECK_REPORT_FILE) ] || echo "[]" > $(SHELLCHECK_REPORT_FILE)
 
 HADOLINT_REPORT_FILE ?= gl-hadolint-report.json
 

@@ -13,7 +13,7 @@ export KEY_RING="gitlab-rsa-ci-runners-signing"
 export KEY_NAME="gitlab-runner-rsa-macos-apple-com"
 
 # Source the common PKCS#11 functionality
-# shellcheck source=common-pkcs11.sh
+# shellcheck source=scripts/common-pkcs11.sh
 source "$SCRIPT_DIR/common-pkcs11.sh"
 
 check_appstore_key_file() {

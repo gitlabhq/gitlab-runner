@@ -7,14 +7,14 @@ status() {
 	pidof gitlab-runner
 }
 
-echo Checking existence of $USER...
+echo Checking existence of "$USER"...
 id -u "$USER"
 
 echo Check if /etc/gitlab-runner/config.toml is created...
 if [[ -f /etc/gitlab-runner/config.toml ]]; then
-	CONFIG=$(ls -al /etc/gitlab-runner | grep config.toml)
-	echo $CONFIG | grep "\-rw-------"
-	echo $CONFIG | grep "root root"
+	CONFIG=$(stat -c "%A %U %G" /etc/gitlab-runner/config.toml)
+	echo "$CONFIG" | grep "^-rw-------"
+	echo "$CONFIG" | grep "root root"
 fi
 
 echo List of processes:
@@ -31,7 +31,7 @@ echo
 
 echo Stopping runner...
 gitlab-runner stop
-! status
+status && exit 1
 echo
 
 echo Starting runner...
