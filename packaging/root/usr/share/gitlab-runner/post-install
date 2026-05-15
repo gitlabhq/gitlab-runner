@@ -42,11 +42,11 @@ GITLAB_RUNNER_DISABLE_SKEL=${GITLAB_RUNNER_DISABLE_SKEL:-true}
 if ! id -u "$USER" >/dev/null 2>/dev/null; then
   echo "GitLab Runner: creating $USER..."
 
-  if [ $GITLAB_RUNNER_DISABLE_SKEL = true ]; then
+  if [ "$GITLAB_RUNNER_DISABLE_SKEL" = true ]; then
     echo "Home directory skeleton not used"
-    useradd --system --shell /bin/bash --comment 'GitLab Runner' --create-home --skel /dev/null $USER
+    useradd --system --shell /bin/bash --comment 'GitLab Runner' --create-home --skel /dev/null "$USER"
   else
-    useradd --system --shell /bin/bash --comment 'GitLab Runner' --create-home $USER
+    useradd --system --shell /bin/bash --comment 'GitLab Runner' --create-home "$USER"
   fi
 fi
 
@@ -56,14 +56,14 @@ if id -nG "$USER" | grep -q docker; then
 fi
 
 # get USER home directory
-eval HOMEDIR=~$USER
+eval HOMEDIR=~"$USER"
 
 # create empty config and re-register runner
 mkdir -p /etc/gitlab-runner
 chmod 0700 /etc/gitlab-runner
-if [ -f $HOMEDIR/config.toml ] && [ ! -f /etc/gitlab-runner/config.toml ]; then
+if [ -f "$HOMEDIR"/config.toml ] && [ ! -f /etc/gitlab-runner/config.toml ]; then
   echo "GitLab Runner: importing configuration to /etc/gitlab-runner/config.toml"
-  cp $HOMEDIR/config.toml /etc/gitlab-runner/config.toml
+  cp "$HOMEDIR"/config.toml /etc/gitlab-runner/config.toml
   chmod 0600 /etc/gitlab-runner/config.toml
 fi
 
@@ -97,15 +97,15 @@ gitlab-runner uninstall >/dev/null 2>/dev/null || :
 # $USE_INIT_USER was specified.
 if [ -z "${USE_INIT_USER}" ];
 then
-    gitlab-runner install --user=$USER --working-directory="${HOMEDIR}"
+    gitlab-runner install --user="$USER" --working-directory="${HOMEDIR}"
 else
-    gitlab-runner install --init-user=$USER --working-directory="${HOMEDIR}"
+    gitlab-runner install --init-user="$USER" --working-directory="${HOMEDIR}"
     # If a config.toml does not already exist in the user's $HOMEDIR, copy it from the default config location. This
     # will only be true when using $USE_INIT_USER for the first time.
     targetPath="${HOMEDIR}/config.toml"
     if [ ! -f "${targetPath}" ] && [ -f /etc/gitlab-runner/config.toml ]; then
         cp /etc/gitlab-runner/config.toml "${targetPath}"
-        chown $USER:$USER "${targetPath}"
+        chown "$USER":"$USER" "${targetPath}"
     fi
 fi
 
