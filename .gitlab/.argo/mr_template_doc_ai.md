@@ -1,7 +1,7 @@
 # What does this MR do?
 
 This merge request contains translations of GitLab product documentation. The source files are
-from the `/doc` directory, and translations are returned to language-specific directories under `/doc-locale`.
+from the `/docs` directory, and translations are returned to language-specific directories under `/docs-locale`.
 
 ## Translation MR information
 
@@ -19,7 +19,7 @@ For the full review workflow documentation, see the [Translation MR Review Workf
 - [ ] Rebase if needed
 - [ ] Check the review app for all impacted pages (Duo can help produce a list of URLs)
 - [ ] Remove the MR from Draft mode (this triggers the first review by GitLab Duo)
-- [ ] If the Duo review identified translation errors requiring review by [Japanese content maintainers](https://gitlab.com/gitlab-com/localization/maintainers/japanese), ping and add them as a reviewer.
+- [ ] If the Duo review identified translation errors requiring review by language content maintainers ([Japanese](https://gitlab.com/gitlab-com/localization/maintainers/japanese), [French](https://gitlab.com/gitlab-com/localization/maintainers/french), or [Korean](https://gitlab.com/gitlab-com/localization/maintainers/korean)), ping and add them as a reviewer.
 - [ ] Hand off for review to a [tech docs maintainer](https://gitlab.com/gitlab-com/localization/maintainers/tech-docs). The MR should be ready to merge at this point
 
 ### Review App
