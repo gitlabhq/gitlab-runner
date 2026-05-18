@@ -185,28 +185,29 @@ Supported features by different executors.
 
 Supported systems by different shells:
 
-| Shells  |      Bash      | PowerShell Desktop | PowerShell Core | sh  |
-| :-----: | :------------: | :----------------: | :-------------: | :-: |
-| Windows | ✗ <sup>4</sup> |   ✓ <sup>3</sup>   |        ✓        |  ✗  |
-|  Linux  | ✓ <sup>1</sup> |         ✗          |        ✓        |  ✓  |
-|  macOS  | ✓ <sup>1</sup> |         ✗          |        ✓        |  ✓  |
-| FreeBSD | ✓ <sup>1</sup> |         ✗          |        ✗        |  ✓  |
+| Shells   |      Bash      | PowerShell Desktop  | PowerShell Core   |  sh  |
+| :------: | :------------: | :-----------------: | :---------------: | :--: |
+| Linux    | ✓ <sup>1</sup> |         ✗           |        ✓          |  ✓   |
+| macOS    | ✓ <sup>1</sup> |         ✗           |        ✓          |  ✓   |
+| FreeBSD  | ✓ <sup>1</sup> |         ✗           |        ✗          |  ✓   |
+| Windows  | ✗ <sup>3</sup> |   ✓ <sup>4</sup>    | ✓ <sup>2,5</sup>  |  ✗   |
 
 **Footnotes:**
 
+1. Default shell
 1. Default shell for runner registration and for jobs with the `shell` executor.
 1. Bash shell is not supported on Windows.
 1. Default shell for jobs with the `docker-windows` and `kubernetes` executors.
-1. Default shell for jobs with the `shell` executor on Windows.
+1. Default shell for jobs with the `shell` executor.
 
 Supported systems for interactive web terminals by different shells:
 
-| Shells  | Bash | PowerShell Desktop | PowerShell Core | sh  |
-| :-----: | :--: | :----------------: | :-------------: | :-: |
-| Windows |  ✗   |         ✓          |        ✓        |  ✗  |
-|  Linux  |  ✓   |         ✗          |        ✓        |  ✓  |
-|  macOS  |  ✓   |         ✗          |        ✓        |  ✓  |
-| FreeBSD |  ✓   |         ✗          |        ✗        |  ✓  |
+| Shells  | Bash | PowerShell Desktop | PowerShell Core |  sh  |
+| :-----: | :--: | :----------------: | :-------------: | :--: |
+| Windows |  ✗   |         ✓          |        ✓        |  ✗   |
+| Linux   |  ✓   |         ✗          |        ✓        |  ✓   |
+| macOS   |  ✓   |         ✗          |        ✓        |  ✓   |
+| FreeBSD |  ✓   |         ✗          |        ✗        |  ✓   |
 
 ## Git requirements for non-Docker executors
 
