@@ -354,17 +354,17 @@ instance.
 To configure a private AWS Fargate task, complete the following steps to configure AWS and run the AWS Fargate task in
 the private subnet:
 
-1. Ensure the existing public subnet has not reserved all IP addresses in the VPC address range. Inspect the `cird`
-   address ranges of the VPC and subnet. If the subnet `cird` address range is a subset of the VPC `cird` address range,
+1. Ensure the existing public subnet has not reserved all IP addresses in the VPC address range. Inspect the `cidr`
+   address ranges of the VPC and subnet. If the subnet `cidr` address range is a subset of the VPC `cidr` address range,
    skip steps 2 and 4. Otherwise your VPC has no free address range, so you must delete and
    recreate the VPC and the public subnet:
    1. Delete your existing subnet and VPC.
    1. [Create a VPC](https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html#create-interface-endpoint)
-      with the same configuration as the VPC you deleted and update the `cird` address, for example `10.0.0.0/23`.
-   1. [Create a public subnet](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html) with the same configuration as the subnet you deleted. Use a `cird` address that is a subset
+      with the same configuration as the VPC you deleted and update the `cidr` address, for example `10.0.0.0/23`.
+   1. [Create a public subnet](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html) with the same configuration as the subnet you deleted. Use a `cidr` address that is a subset
       of the VPC address range, for example `10.0.0.0/24`.
 1. [Create a private subnet](https://docs.aws.amazon.com/vpc/latest/userguide/create-subnet.html#create-subnets) with the same
-   configuration as the public subnet. Use a `cird` address range that does not overlap the public subnet range, for
+   configuration as the public subnet. Use a `cidr` address range that does not overlap the public subnet range, for
    example `10.0.1.0/24`.
 1. [Create a NAT gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html), and place it inside
    the public subnet.
