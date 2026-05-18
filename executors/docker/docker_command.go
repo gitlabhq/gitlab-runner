@@ -5,12 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -35,6 +37,8 @@ type commandExecutor struct {
 	terminalWaitForContainerTimeout time.Duration
 }
 
+var _ common.SuspendableExecutor = (*commandExecutor)(nil)
+
 func (s *commandExecutor) getBuildContainer() *container.InspectResponse {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -54,14 +58,16 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("script is not compatible with Docker")
 	}
 
-	_, err = s.getHelperImage()
-	if err != nil {
-		return err
-	}
+	if s.Build.EnvironmentKey() == "" {
+		_, err = s.getHelperImage()
+		if err != nil {
+			return err
+		}
 
-	_, err = s.getBuildImage()
-	if err != nil {
-		return err
+		_, err = s.getBuildImage()
+		if err != nil {
+			return err
+		}
 	}
 
 	if s.isUmaskDisabled() {
@@ -229,6 +235,83 @@ func (s *commandExecutor) requestBuildContainer() (*container.InspectResponse, e
 	}
 
 	return s.buildContainer, nil
+}
+
+func (s *commandExecutor) Suspend(ctx context.Context) (url.Values, error) {
+	if s.buildContainerID == "" {
+		return nil, errors.New("no build container to suspend")
+	}
+	if s.helperContainer == nil {
+		return nil, errors.New("no helper container to suspend")
+	}
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		if err := s.dockerConn.ContainerStop(gctx, s.buildContainerID, container.StopOptions{}); err != nil {
+			return fmt.Errorf("stopping build container %s: %w", s.buildContainerID, err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		if err := s.dockerConn.ContainerStop(gctx, s.helperContainer.ID, container.StopOptions{}); err != nil {
+			return fmt.Errorf("stopping helper container %s: %w", s.helperContainer.ID, err)
+		}
+		return nil
+	})
+
+	for _, svc := range s.services {
+		svcID := svc.ID
+		g.Go(func() error {
+			if err := s.dockerConn.ContainerStop(gctx, svcID, container.StopOptions{}); err != nil {
+				return fmt.Errorf("stopping service container %s: %w", svcID, err)
+			}
+			return nil
+		})
+	}
+
+	// Suspend is all-or-nothing: if any stop fails, the job fails and
+	// Cleanup removes all containers. A partially-stopped environment
+	// is not recoverable via retry.
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	s.suspended = true
+
+	serviceIDs := make([]string, 0, len(s.services))
+	for _, svc := range s.services {
+		serviceIDs = append(serviceIDs, svc.ID)
+	}
+	return envKeyFields{
+		buildContainerID:    s.buildContainerID,
+		helperContainerID:   s.helperContainer.ID,
+		serviceContainerIDs: serviceIDs,
+	}.toValues(), nil
+}
+
+func (s *commandExecutor) Resume(ctx context.Context, fields url.Values) error {
+	parsed, err := parseEnvKeyFields(fields)
+	if err != nil {
+		return err
+	}
+
+	buildInspect, err := s.dockerConn.ContainerInspect(ctx, parsed.buildContainerID)
+	if err != nil {
+		return fmt.Errorf("build container %s not found: %w", parsed.buildContainerID, err)
+	}
+	s.lock.Lock()
+	s.buildContainer = &buildInspect
+	s.lock.Unlock()
+
+	helperInspect, err := s.dockerConn.ContainerInspect(ctx, parsed.helperContainerID)
+	if err != nil {
+		return fmt.Errorf("helper container %s not found: %w", parsed.helperContainerID, err)
+	}
+	s.helperContainer = &helperInspect
+
+	return nil
 }
 
 func (s *commandExecutor) changeFilesOwnership() error {

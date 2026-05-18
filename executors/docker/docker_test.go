@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,12 +17,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
+	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
 	"github.com/hashicorp/go-version"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -3411,4 +3415,348 @@ func TestDockerServicesSecurityOptSetting(t *testing.T) {
 	}
 
 	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+}
+
+func TestSuspend_noBuildContainer(t *testing.T) {
+	c := docker.NewMockClient(t)
+	s := &commandExecutor{executor: *executorWithMockClient(c)}
+
+	fields, err := s.Suspend(t.Context())
+
+	require.EqualError(t, err, "no build container to suspend")
+	assert.Nil(t, fields)
+	assert.False(t, s.suspended)
+}
+
+func TestSuspend_noHelperContainer(t *testing.T) {
+	c := docker.NewMockClient(t)
+	s := &commandExecutor{executor: *executorWithMockClient(c)}
+	s.buildContainerID = "build-cid"
+
+	fields, err := s.Suspend(t.Context())
+
+	require.EqualError(t, err, "no helper container to suspend")
+	assert.Nil(t, fields)
+	assert.False(t, s.suspended)
+}
+
+func TestSuspend(t *testing.T) {
+	c := docker.NewMockClient(t)
+	s := &commandExecutor{executor: *executorWithMockClient(c)}
+	require.NoError(t, s.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, &s.executor))
+	s.buildContainerID = "build-cid"
+	s.helperContainer = &container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid"},
+	}
+	s.services = []*serviceInfo{
+		{ID: "svc-a"},
+		{ID: "svc-b"},
+	}
+
+	c.On("ContainerStop", mock.Anything, "build-cid", container.StopOptions{}).
+		Return(nil).Once()
+	c.On("ContainerStop", mock.Anything, "helper-cid", container.StopOptions{}).
+		Return(nil).Once()
+	c.On("ContainerStop", mock.Anything, "svc-a", container.StopOptions{}).
+		Return(nil).Once()
+	c.On("ContainerStop", mock.Anything, "svc-b", container.StopOptions{}).
+		Return(nil).Once()
+
+	fields, err := s.Suspend(t.Context())
+	require.NoError(t, err)
+
+	parsed, err := parseEnvKeyFields(fields)
+	require.NoError(t, err)
+	assert.Equal(t, "build-cid", parsed.buildContainerID)
+	assert.Equal(t, "helper-cid", parsed.helperContainerID)
+	assert.Equal(t, []string{"svc-a", "svc-b"}, parsed.serviceContainerIDs)
+	assert.True(t, s.suspended)
+}
+
+func TestSuspend_containerStopFails(t *testing.T) {
+	c := docker.NewMockClient(t)
+	s := &commandExecutor{executor: *executorWithMockClient(c)}
+	require.NoError(t, s.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, &s.executor))
+	s.buildContainerID = "build-cid"
+	s.helperContainer = &container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid"},
+	}
+
+	c.On("ContainerStop", mock.Anything, "build-cid", container.StopOptions{}).
+		Return(errors.New("dockerd boom")).Once()
+	c.On("ContainerStop", mock.Anything, "helper-cid", container.StopOptions{}).
+		Return(nil).Maybe()
+
+	fields, err := s.Suspend(t.Context())
+
+	assert.Error(t, err)
+	assert.Nil(t, fields)
+	assert.False(t, s.suspended)
+}
+
+func TestCleanup_skipsRemovalWhenSuspended(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := executorWithMockClient(c)
+	err := e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e)
+	require.NoError(t, err, "connecting mock client")
+	e.suspended = true
+	e.buildContainerID = "build-cid"
+	e.services = []*serviceInfo{{ID: "svc-a"}, {ID: "svc-b"}}
+	e.temporary = []string{"build-cid", "svc-a", "svc-b", "helper-cid"}
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{}
+
+	c.On("Close").Return(nil).Maybe()
+
+	e.Cleanup()
+
+	// No ContainerRemove / NetworkRemove / VolumeRemove expectations are set.
+	// Test will fail if any of them fires.
+}
+
+func TestResume_invalidEnvKeyFields(t *testing.T) {
+	c := docker.NewMockClient(t)
+	s := &commandExecutor{executor: *executorWithMockClient(c)}
+
+	err := s.Resume(t.Context(), url.Values{})
+
+	require.EqualError(t, err, "build-container-id is required")
+}
+
+func TestResume_buildContainerNotFound(t *testing.T) {
+	c := docker.NewMockClient(t)
+	s := &commandExecutor{executor: *executorWithMockClient(c)}
+	require.NoError(t, s.executor.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, &s.executor))
+
+	fields := envKeyFields{
+		buildContainerID:  "missing-cid",
+		helperContainerID: "helper-cid",
+	}
+
+	c.On("ContainerInspect", mock.Anything, "missing-cid").
+		Return(container.InspectResponse{}, errors.New("No such container: missing-cid")).Once()
+
+	err := s.Resume(t.Context(), fields.toValues())
+
+	require.EqualError(t, err, "build container missing-cid not found: No such container: missing-cid")
+}
+
+func TestResume_helperContainerNotFound(t *testing.T) {
+	c := docker.NewMockClient(t)
+	s := &commandExecutor{executor: *executorWithMockClient(c)}
+	require.NoError(t, s.executor.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, &s.executor))
+
+	fields := envKeyFields{
+		buildContainerID:  "build-cid",
+		helperContainerID: "missing-helper",
+	}
+
+	c.On("ContainerInspect", mock.Anything, "build-cid").
+		Return(container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{ID: "build-cid"},
+		}, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "missing-helper").
+		Return(container.InspectResponse{}, errors.New("No such container: missing-helper")).Once()
+
+	err := s.Resume(t.Context(), fields.toValues())
+
+	require.EqualError(t, err, "helper container missing-helper not found: No such container: missing-helper")
+}
+
+func TestResume(t *testing.T) {
+	c := docker.NewMockClient(t)
+	s := &commandExecutor{executor: *executorWithMockClient(c)}
+	require.NoError(t, s.executor.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, &s.executor))
+
+	fields := envKeyFields{
+		buildContainerID:  "build-cid",
+		helperContainerID: "helper-cid",
+	}
+
+	c.On("ContainerInspect", mock.Anything, "build-cid").
+		Return(container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{ID: "build-cid", Name: "/build-cont"},
+		}, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "helper-cid").
+		Return(container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid", Name: "/helper-cont"},
+		}, nil).Once()
+
+	err := s.Resume(t.Context(), fields.toValues())
+	assert.NoError(t, err)
+
+	assert.NotNil(t, s.buildContainer)
+	assert.Equal(t, "build-cid", s.buildContainer.ID)
+	assert.NotNil(t, s.helperContainer)
+	assert.Equal(t, "helper-cid", s.helperContainer.ID)
+}
+
+func TestResumeDependencies(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := executorWithMockClient(c)
+	require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{WaitForServicesTimeout: -1}
+	e.Build = &common.Build{
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{Token: "test-token"},
+		},
+	}
+	e.Build.Variables = append(e.Build.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+	)
+	e.Build.Job.SuspendOptions.EnvironmentKey =
+		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-a"
+
+	buildInspect := container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			ID:         "build-cid",
+			HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
+		},
+		Mounts: []container.MountPoint{
+			{Type: mount.TypeVolume, Name: "vol-x", Source: "/var/lib/docker/volumes/vol-x/_data", Destination: "/builds"},
+		},
+	}
+	svcInspect := container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			ID:    "svc-a",
+			Name:  "/svc-a",
+			State: &container.State{Status: "running"},
+		},
+		NetworkSettings: &container.NetworkSettings{
+			DefaultNetworkSettings: container.DefaultNetworkSettings{IPAddress: "172.17.0.4"}, //nolint:staticcheck
+		},
+		Config: &container.Config{
+			ExposedPorts: map[nat.Port]struct{}{"80/tcp": {}},
+		},
+	}
+
+	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid"},
+	}, nil).Once()
+	c.On("VolumeInspect", mock.Anything, "vol-x").Return(volume.Volume{Name: "vol-x"}, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "svc-a").Return(svcInspect, nil)
+	c.On("ContainerStart", mock.Anything, "svc-a", container.StartOptions{}).Return(nil).Once()
+
+	require.NoError(t, e.resumeDependencies())
+	assert.Equal(t, "build-cid", e.buildContainerID)
+	assert.Contains(t, e.temporary, "build-cid")
+	assert.Contains(t, e.temporary, "svc-a")
+	assert.Contains(t, e.temporary, "helper-cid")
+	assert.Len(t, e.services, 1)
+	assert.Equal(t, "svc-a", e.services[0].ID)
+	assert.Equal(t, []string{"172.17.0.4"}, e.services[0].IP)
+	assert.Equal(t, []int{80}, e.services[0].Ports)
+}
+
+func TestResumeDependencies_buildContainerNotFound(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := executorWithMockClient(c)
+	require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{}
+	e.Build = &common.Build{Runner: &common.RunnerConfig{}}
+	e.Build.Variables = append(e.Build.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+	)
+	e.Build.Job.SuspendOptions.EnvironmentKey =
+		"1/system-id/build-container-id=missing-cid&helper-id=helper-cid"
+
+	c.On("ContainerInspect", mock.Anything, "missing-cid").
+		Return(container.InspectResponse{}, errdefs.ErrNotFound).Once()
+
+	err := e.resumeDependencies()
+	require.EqualError(t, err, "build container missing-cid not found: not found")
+}
+
+func TestResumeDependencies_helperNotFound(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := executorWithMockClient(c)
+	require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{}
+	e.Build = &common.Build{Runner: &common.RunnerConfig{}}
+	e.Build.Variables = append(e.Build.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+	)
+	e.Build.Job.SuspendOptions.EnvironmentKey =
+		"1/system-id/build-container-id=build-cid&helper-id=missing-helper"
+
+	buildInspect := container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			ID:         "build-cid",
+			HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
+		},
+	}
+	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "missing-helper").
+		Return(container.InspectResponse{}, errdefs.ErrNotFound).Once()
+
+	err := e.resumeDependencies()
+	require.EqualError(t, err, "helper container missing-helper not found: not found")
+}
+
+func TestResumeDependencies_serviceNotFound(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := executorWithMockClient(c)
+	require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{}
+	e.Build = &common.Build{Runner: &common.RunnerConfig{}}
+	e.Build.Variables = append(e.Build.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+	)
+	e.Build.Job.SuspendOptions.EnvironmentKey =
+		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-missing"
+
+	buildInspect := container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			ID:         "build-cid",
+			HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
+		},
+	}
+	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid"},
+	}, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "svc-missing").
+		Return(container.InspectResponse{}, errdefs.ErrNotFound).Once()
+
+	err := e.resumeDependencies()
+	require.EqualError(t, err, "service container svc-missing not found: not found")
+}
+
+func TestResumeDependencies_serviceStartFails(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := executorWithMockClient(c)
+	require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{}
+	e.Build = &common.Build{Runner: &common.RunnerConfig{}}
+	e.Build.Variables = append(e.Build.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+	)
+	e.Build.Job.SuspendOptions.EnvironmentKey =
+		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-broken"
+
+	buildInspect := container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			ID:         "build-cid",
+			HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
+		},
+	}
+	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid"},
+	}, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "svc-broken").
+		Return(container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{ID: "svc-broken"},
+		}, nil).Once()
+	c.On("ContainerStart", mock.Anything, "svc-broken", container.StartOptions{}).
+		Return(errors.New("daemon error: cannot start")).Once()
+
+	err := e.resumeDependencies()
+	require.EqualError(t, err, "service container svc-broken failed to start: daemon error: cannot start")
 }

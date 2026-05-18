@@ -102,6 +102,40 @@ func (e *executor) getServicesDefinitions() (spec.Services, error) {
 	return serviceDefinitions, nil
 }
 
+func (e *executor) resumeServices(serviceIDs []string) error {
+	for _, svcID := range serviceIDs {
+		svcInspect, err := e.dockerConn.ContainerInspect(e.Context, svcID)
+		if err != nil {
+			return fmt.Errorf("service container %s not found: %w", svcID, err)
+		}
+		if err := e.dockerConn.ContainerStart(e.Context, svcInspect.ID, container.StartOptions{}); err != nil {
+			return fmt.Errorf("service container %s failed to start: %w", svcInspect.ID, err)
+		}
+		ip, ports, err := e.getContainerIPAndExposedPorts(svcInspect.ID)
+		if err != nil {
+			return fmt.Errorf("getting service container %s IP and ports: %w", svcInspect.ID, err)
+		}
+		e.services = append(e.services, &serviceInfo{
+			ID:    svcInspect.ID,
+			Name:  svcInspect.Name,
+			IP:    ip,
+			Ports: ports,
+		})
+	}
+
+	if len(serviceIDs) > 0 {
+		e.waitForServices()
+	}
+
+	// Track for cleanup only after all services started successfully.
+	// If any step above fails, Cleanup won't destroy the preserved environment.
+	for _, svc := range e.services {
+		e.temporary = append(e.temporary, svc.ID)
+	}
+
+	return nil
+}
+
 func (e *executor) waitForServices() {
 	timeout := e.Config.Docker.WaitForServicesTimeout
 	if timeout == 0 {

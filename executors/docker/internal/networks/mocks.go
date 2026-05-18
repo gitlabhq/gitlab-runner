@@ -39,6 +39,52 @@ func (_m *MockManager) EXPECT() *MockManager_Expecter {
 	return &MockManager_Expecter{mock: &_m.Mock}
 }
 
+// Adopt provides a mock function for the type MockManager
+func (_mock *MockManager) Adopt(ctx context.Context, networkMode container.NetworkMode) error {
+	ret := _mock.Called(ctx, networkMode)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Adopt")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, container.NetworkMode) error); ok {
+		r0 = returnFunc(ctx, networkMode)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_Adopt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Adopt'
+type MockManager_Adopt_Call struct {
+	*mock.Call
+}
+
+// Adopt is a helper method to define mock.On call
+//   - ctx context.Context
+//   - networkMode container.NetworkMode
+func (_e *MockManager_Expecter) Adopt(ctx interface{}, networkMode interface{}) *MockManager_Adopt_Call {
+	return &MockManager_Adopt_Call{Call: _e.mock.On("Adopt", ctx, networkMode)}
+}
+
+func (_c *MockManager_Adopt_Call) Run(run func(ctx context.Context, networkMode container.NetworkMode)) *MockManager_Adopt_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(container.NetworkMode))
+	})
+	return _c
+}
+
+func (_c *MockManager_Adopt_Call) Return(err error) *MockManager_Adopt_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_Adopt_Call) RunAndReturn(run func(ctx context.Context, networkMode container.NetworkMode) error) *MockManager_Adopt_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Cleanup provides a mock function for the type MockManager
 func (_mock *MockManager) Cleanup(ctx context.Context) error {
 	ret := _mock.Called(ctx)
