@@ -26,5 +26,7 @@ helpers/secrets/ @gitlab-com/pipeline-security-group/backend
 
 ## Localization
 /docs-locale/ @gitlab-com/localization/maintainers/tech-docs
-/docs-locale/ja-jp @gitlab-com/localization/maintainers/japanese @gitlab-com/localization/maintainers/tech-docs
+/docs-locale/ja-jp @gitlab-com/localization/maintainers/tech-docs @gitlab-com/localization/maintainers/japanese
+/docs-locale/fr-fr @gitlab-com/localization/maintainers/tech-docs @gitlab-com/localization/maintainers/french
+/docs-locale/ko-kr @gitlab-com/localization/maintainers/tech-docs @gitlab-com/localization/maintainers/korean
 /argo_translation.yml @gitlab-com/localization/maintainers/tech-docs
