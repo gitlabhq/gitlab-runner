@@ -137,7 +137,10 @@ func (e *executor) createFromServiceDefinition(
 
 	for _, linkName := range serviceMeta.Aliases {
 		if linksMap[linkName] != nil {
-			e.BuildLogger.Warningln("Service", serviceDefinition.Name, "is already created. Ignoring.")
+			e.BuildLogger.Warningln(fmt.Sprintf(
+				"Skipping alias %q for service %q (services[%d]): alias is already in use by another service.",
+				linkName, serviceDefinition.Name, serviceIndex,
+			))
 			continue
 		}
 

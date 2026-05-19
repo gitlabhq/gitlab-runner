@@ -153,6 +153,28 @@ func TestServiceFromNamedImage(t *testing.T) {
 	}
 }
 
+func TestCreateFromServiceDefinition_AliasCollisionWarning(t *testing.T) {
+	logs := bytes.Buffer{}
+	lentry := logrus.New()
+	lentry.Out = io.Discard
+
+	e := &executor{}
+	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry), buildlogger.Options{})
+
+	existing := &serviceInfo{ID: "existing-container-id", Name: "existing"}
+	linksMap := map[string]*serviceInfo{
+		"nginx":  existing,
+		"shared": existing,
+	}
+
+	imageConfig := spec.Image{Name: "nginx:latest", Alias: "shared"}
+	require.NoError(t, e.createFromServiceDefinition(2, imageConfig, linksMap))
+
+	logOutput := logs.String()
+	assert.Contains(t, logOutput, `Skipping alias "nginx" for service "nginx:latest" (services[2]): alias is already in use by another service.`)
+	assert.Contains(t, logOutput, `Skipping alias "shared" for service "nginx:latest" (services[2]): alias is already in use by another service.`)
+}
+
 func testDockerConfigurationWithServiceContainer(
 	t *testing.T,
 	dockerConfig *common.DockerConfig,

@@ -702,6 +702,12 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 			re, err := regexp.Compile("(?m)Conflict. The container name [^ ]+ is already in use by container")
 			require.NoError(t, err)
 			assert.NotRegexp(t, re, str, "Both service containers should be started and use different name")
+
+			assert.NotContains(t, str, "is already created. Ignoring.",
+				"old misleading warning should no longer appear")
+			assert.Contains(t, str,
+				fmt.Sprintf(`Skipping alias "alpine" for service %q (services[1]): alias is already in use by another service.`, common.TestAlpineImage),
+				"new alias-scoped warning should identify the colliding derived alias")
 		})
 	}
 }
