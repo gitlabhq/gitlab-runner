@@ -136,6 +136,24 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, "ENV2=value2", config.Runners[0].Docker.Services[0].Environment[1])
 			},
 		},
+		"parse pause pod image pull secrets": {
+			config: `
+						[[runners]]
+							executor = "kubernetes"
+								[runners.kubernetes]
+									[runners.kubernetes.autoscaler]
+										pause_pod_image = "internal-registry.example.com/pause:latest"
+											pause_pod_image_pull_secrets = ["internal-registry-secret"]
+					`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Equal(t, 1, len(config.Runners))
+
+				autoscaler := config.Runners[0].Kubernetes.Autoscaler
+
+				assert.Equal(t, "internal-registry.example.com/pause:latest", autoscaler.PausePodImage)
+				assert.Equal(t, []string{"internal-registry-secret"}, autoscaler.PausePodImagePullSecrets)
+			},
+		},
 		"parse Docker Container Labels with string key and value": {
 			config: `
                         [[runners]]

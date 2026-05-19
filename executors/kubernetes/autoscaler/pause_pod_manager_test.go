@@ -147,6 +147,10 @@ func TestPausePodManager_BuildDeployment(t *testing.T) {
 			api.ResourceCPU:    resource.MustParse("100m"),
 			api.ResourceMemory: resource.MustParse("128Mi"),
 		},
+
+		ImagePullSecrets: []api.LocalObjectReference{
+			{Name: "test-secret"},
+		},
 	}
 
 	manager, err := NewPausePodManager(client, config, log, nil)
@@ -175,6 +179,7 @@ func TestPausePodManager_BuildDeployment(t *testing.T) {
 	assert.Equal(t, map[string]string{"node-type": "runner"}, podSpec.NodeSelector)
 	assert.Len(t, podSpec.Tolerations, 1)
 	assert.Equal(t, int64(0), *podSpec.TerminationGracePeriodSeconds)
+	assert.Equal(t, []api.LocalObjectReference{{Name: "test-secret"}}, podSpec.ImagePullSecrets)
 
 	// Check container
 	require.Len(t, podSpec.Containers, 1)

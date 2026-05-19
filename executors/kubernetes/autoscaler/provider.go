@@ -6,11 +6,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	api "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 // Compile-time interface assertion.
@@ -204,6 +204,7 @@ func (p *Provider) createManager(config *common.RunnerConfig) (*PausePodManager,
 		Tolerations:        k8sConfig.GetNodeTolerations(),
 		ServiceAccountName: k8sConfig.ServiceAccount,
 		RuntimeClassName:   k8sConfig.RuntimeClassName,
+		ImagePullSecrets:   localObjectReferences(autoscalerConfig.PausePodImagePullSecrets),
 	}
 
 	manager, err := NewPausePodManager(client, managerConfig, log, p.metrics)
@@ -257,4 +258,17 @@ func getKubeConfig(k8sConfig *common.KubernetesConfig) (*restclient.Config, erro
 		).ClientConfig()
 	}
 	return config, nil
+}
+
+func localObjectReferences(names []string) []api.LocalObjectReference {
+	refs := make([]api.LocalObjectReference, 0, len(names))
+
+	for _, name := range names {
+		if name == "" {
+			continue
+		}
+		refs = append(refs, api.LocalObjectReference{Name: name})
+	}
+
+	return refs
 }
