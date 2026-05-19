@@ -360,6 +360,31 @@ Make sure to adjust the value to your specific environment requirements.
       FF_NETWORK_PER_BUILD = true
 ```
 
+#### Docker-in-Docker MTU does not inherit from the runner
+
+When you use `docker:dind` as a service, the inner `dockerd` defaults to MTU `1500`,
+regardless of the MTU configured on the runner's Docker bridge. If the runner's
+bridge MTU is lower than `1500`, large packets sent from build containers inside
+dind are silently dropped. Because ICMP `fragmentation needed` replies are often
+filtered in cloud and virtual environments, the sender never learns to lower its
+packet size, and connections hang silently.
+
+Symptoms: Commands like `dotnet restore` or `curl "https://api.nuget.org/v3/index.json"`
+time out in a Docker-in-Docker job, though these commands work outside dind.
+
+To fix this issue, set `--mtu` explicitly on the `docker:dind` service to a value less than
+or equal to the runner's Docker bridge MTU:
+
+```yaml
+services:
+  - name: docker:dind
+    command: ["--mtu=1360"]
+```
+
+If you do not know the runner's bridge MTU, `1360` is a safe value for most
+environments. If you omit the `--mtu` flag or set it to a value greater than
+the runner's bridge MTU, connections hang.
+
 ## Restrict Docker images and services
 
 To restrict Docker images and services, specify a wildcard pattern in the `allowed_images` and `allowed_services` parameters. For more details on syntax, see [doublestar documentation](https://github.com/bmatcuk/doublestar).
