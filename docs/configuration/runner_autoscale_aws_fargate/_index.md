@@ -49,7 +49,7 @@ To work around this limitation, you can:
 
 - Create and use an image in the ECS task definition that contains all build dependencies of all projects the runner is used for.
 - Create multiple ECS task definitions with different images and specify the ARN in the `FARGATE_TASK_DEFINITION` CI/CD variable.
-- Consider creating an EKS cluster by following the official [AWS EKS Blueprints](https://aws-ia.github.io/terraform-aws-eks-blueprints/).
+- Consider using the Kubernetes executor on an Amazon EKS cluster created with [AWS EKS Blueprints](https://aws-ia.github.io/terraform-aws-eks-blueprints/). The Fargate custom executor driver is not maintained by GitLab and is supported on a best-effort basis.
 
 For more information, see [Get started with GitLab EKS Fargate runners in 1 hour and zero code](https://about.gitlab.com/blog/eks-fargate-runner/).
 
