@@ -80,6 +80,8 @@ type PausePodManagerConfig struct {
 	ServiceAccountName string
 	// RuntimeClassName for pause pods.
 	RuntimeClassName *string
+
+	ImagePullSecrets []api.LocalObjectReference
 }
 
 // PausePodManager manages a Deployment of pause pods for pre-warming cluster capacity.
@@ -490,6 +492,7 @@ func (m *PausePodManager) buildDeployment(replicas int) *appsv1.Deployment {
 					Tolerations:                   m.config.Tolerations,
 					ServiceAccountName:            m.config.ServiceAccountName,
 					RuntimeClassName:              m.config.RuntimeClassName,
+					ImagePullSecrets:              m.config.ImagePullSecrets,
 				},
 			},
 		},

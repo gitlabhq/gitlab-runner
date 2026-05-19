@@ -779,6 +779,8 @@ type KubernetesAutoscalerConfig struct {
 	PausePodPriorityClassName string `toml:"pause_pod_priority_class_name,omitempty" json:"pause_pod_priority_class_name,omitempty" description:"Priority class for pause pods. Should be lower priority than job pods to enable preemption."`
 	// Policy defines the scaling policies for pause pods.
 	Policy []AutoscalerPolicyConfig `toml:"policy,omitempty" json:"policy,omitempty" description:"Scaling policies for pause pods"`
+
+	PausePodImagePullSecrets []string `toml:"pause_pod_image_pull_secrets,omitempty" json:"pause_pod_image_pull_secrets,omitempty" long:"pause-pod-image-pull-secrets" env:"KUBERNETES_AUTOSCALER_PAUSE_POD_IMAGE_PULL_SECRETS" description:"A list of image pull secrets for pause pod images"`
 }
 
 type RequestRetryLimit int
