@@ -404,7 +404,7 @@ func (b *BashWriter) Finish(trace bool) string {
 		buf.WriteString("set -o xtrace\n")
 	}
 
-	buf.WriteString("if set -o | grep pipefail > /dev/null; then set -o pipefail; fi; set -o errexit\n")
+	buf.WriteString(`case "$(set -o)" in *"pipefail"*) set -o pipefail;; esac; set -o errexit` + "\n")
 	buf.WriteString("set +o noclobber\n")
 
 	if b.useNewEval {
