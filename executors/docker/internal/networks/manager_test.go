@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/stretchr/testify/assert"
@@ -95,7 +96,7 @@ func TestCreateNetwork(t *testing.T) {
 				).
 					Return(network.CreateResponse{ID: "test-network"}, nil).
 					Once()
-				mc.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
+				mc.On("NetworkInspect", mock.Anything, "test-network").
 					Return(network.Inspect{
 						ID:   "test-network",
 						Name: "test-network",
@@ -136,7 +137,7 @@ func TestCreateNetwork(t *testing.T) {
 				mc.On(
 					"NetworkInspect",
 					mock.Anything,
-					mock.AnythingOfType("string"),
+					"test-network",
 				).
 					Return(network.Inspect{}, errors.New("network-inspect-failed")).
 					Once()
@@ -165,7 +166,7 @@ func TestCreateNetwork(t *testing.T) {
 				).
 					Return(network.CreateResponse{ID: "test-network"}, nil).
 					Once()
-				mc.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
+				mc.On("NetworkInspect", mock.Anything, "test-network").
 					Return(network.Inspect{
 						ID:         "test-network",
 						Name:       "test-network",
@@ -256,7 +257,7 @@ func TestCreateNetworkWithCustomMTU(t *testing.T) {
 					Return(network.CreateResponse{ID: "test-network"}, nil).
 					Once()
 
-				client.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
+				client.On("NetworkInspect", mock.Anything, "test-network").
 					Return(network.Inspect{
 						ID:   "test-network",
 						Name: "test-network",
@@ -392,4 +393,54 @@ func TestCleanupNetwork(t *testing.T) {
 			assert.ErrorIs(t, err, testCase.expectErr)
 		})
 	}
+}
+
+func TestAdopt_nonPerBuildNetwork(t *testing.T) {
+	m := newDefaultManager(t)
+	c := addClient(t, m)
+
+	require.NoError(t, m.Adopt(t.Context(), container.NetworkMode(network.NetworkDefault)))
+	assert.Equal(t, container.NetworkMode(network.NetworkDefault), m.networkMode)
+	assert.False(t, m.perBuild)
+	c.AssertNotCalled(t, "NetworkInspect", mock.Anything, mock.Anything)
+}
+
+func TestAdopt_perBuildNetwork(t *testing.T) {
+	const networkName = "runner-test-toke-0-0-0"
+	const networkID = "net-abc"
+
+	m := newDefaultManager(t)
+	c := addClient(t, m)
+
+	c.On("NetworkInspect", mock.Anything, networkName).
+		Return(network.Inspect{ID: networkID, Name: networkName}, nil).Once()
+
+	require.NoError(t, m.Adopt(t.Context(), container.NetworkMode(networkName)))
+	assert.Equal(t, container.NetworkMode(networkName), m.networkMode)
+	assert.Equal(t, networkID, m.buildNetwork.ID)
+	assert.True(t, m.perBuild)
+}
+
+func TestAdopt_networkMissing(t *testing.T) {
+	const networkName = "runner-test-toke-0-0-0"
+
+	m := newDefaultManager(t)
+	c := addClient(t, m)
+
+	c.On("NetworkInspect", mock.Anything, networkName).
+		Return(network.Inspect{}, errdefs.ErrNotFound).Once()
+
+	err := m.Adopt(t.Context(), container.NetworkMode(networkName))
+	require.Error(t, err)
+	require.EqualError(t, err, "build network runner-test-toke-0-0-0 not found: not found")
+}
+
+func TestAdopt_containerNamespaceMode(t *testing.T) {
+	m := newDefaultManager(t)
+	c := addClient(t, m)
+
+	require.NoError(t, m.Adopt(t.Context(), "container:other-cid"))
+	assert.Equal(t, container.NetworkMode("container:other-cid"), m.networkMode)
+	assert.False(t, m.perBuild)
+	c.AssertNotCalled(t, "NetworkInspect", mock.Anything, mock.Anything)
 }

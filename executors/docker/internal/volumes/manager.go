@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
@@ -20,6 +22,11 @@ type Manager interface {
 	CreateTemporary(ctx context.Context, destination string) error
 	RemoveTemporary(ctx context.Context) error
 	Binds() []string
+	// Adopt takes ownership of existing mounts from a previously suspended
+	// build. Named volumes are verified to still exist; bind mounts are
+	// recorded as-is. Reusable volumes (labeled as such) are not tracked
+	// for removal so they survive across suspend/resume cycles.
+	Adopt(ctx context.Context, mounts []container.MountPoint) error
 }
 
 type ManagerConfig struct {
@@ -217,6 +224,7 @@ func (m *manager) createCacheVolume(
 		Labels: m.labeler.Labels(map[string]string{
 			"destination": destination,
 			"protected":   strconv.FormatBool(m.config.Protected),
+			"reusable":    strconv.FormatBool(reusable),
 			"type":        "cache",
 		}),
 	}
@@ -288,4 +296,31 @@ func (m *manager) withProtected(s string) string {
 		return s
 	}
 	return s + protectedSuffix
+}
+
+func (m *manager) Adopt(ctx context.Context, mounts []container.MountPoint) error {
+	for _, mp := range mounts {
+		var source string
+		switch mp.Type {
+		case mount.TypeVolume:
+			vol, err := m.client.VolumeInspect(ctx, mp.Name)
+			if err != nil {
+				return fmt.Errorf("volume %s not found: %w", mp.Name, err)
+			}
+			if vol.Labels[m.labeler.LabelKey("reusable")] != "true" {
+				m.temporaryVolumes = append(m.temporaryVolumes, mp.Name)
+			}
+			source = mp.Name
+		case mount.TypeBind:
+			source = mp.Source
+		default:
+			return fmt.Errorf("unsupported mount type %s for %s", mp.Type, mp.Destination)
+		}
+		bind := fmt.Sprintf("%s:%s", source, mp.Destination)
+		if mp.Mode != "" {
+			bind = fmt.Sprintf("%s:%s:%s", source, mp.Destination, mp.Mode)
+		}
+		m.volumeBindings = append(m.volumeBindings, bind)
+	}
+	return nil
 }

@@ -12,6 +12,7 @@ const dockerLabelPrefix = "com.gitlab.gitlab-runner"
 // Labeler is responsible for handling labelling logic for docker entities - networks, containers.
 type Labeler interface {
 	Labels(otherLabels map[string]string) map[string]string
+	LabelKey(name string) string
 }
 
 // NewLabeler returns a new instance of a Labeler bound to this build.
@@ -50,8 +51,12 @@ func (l *labeler) Labels(otherLabels map[string]string) map[string]string {
 	}
 
 	for k, v := range otherLabels {
-		labels[fmt.Sprintf("%s.%s", dockerLabelPrefix, k)] = v
+		labels[l.LabelKey(k)] = v
 	}
 
 	return labels
+}
+
+func (l *labeler) LabelKey(name string) string {
+	return fmt.Sprintf("%s.%s", dockerLabelPrefix, name)
 }

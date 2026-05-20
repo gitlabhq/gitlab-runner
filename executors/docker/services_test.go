@@ -991,6 +991,134 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 	}
 }
 
+func newTestExecutor(t *testing.T, c *docker.MockClient) *executor {
+	t.Helper()
+
+	e := &executor{
+		dockerConn: &dockerConnection{Client: c},
+		info: system.Info{
+			OSType:       helperimage.OSTypeLinux,
+			Architecture: "amd64",
+		},
+	}
+	e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+	e.Config.Docker = &common.DockerConfig{}
+	e.Build = &common.Build{
+		Runner: &common.RunnerConfig{},
+	}
+	e.Build.Token = "abcd123456"
+	e.BuildShell = &common.ShellConfiguration{}
+
+	var err error
+	e.helperImageInfo, err = helperimage.Get(common.AppVersion.Version, helperimage.Config{
+		OSType:        e.info.OSType,
+		Architecture:  e.info.Architecture,
+		KernelVersion: e.info.KernelVersion,
+	})
+	require.NoError(t, err)
+	require.NoError(t, e.createLabeler())
+	e.serverAPIVersion = version.Must(version.NewVersion("1.43"))
+	e.Context = t.Context()
+	return e
+}
+
+func TestCreateService(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := newTestExecutor(t, c)
+
+	const freshID = "fresh-service-container-id"
+
+	c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
+		Return(image.InspectResponse{ID: "some-image-id"}, []byte{}, nil).Twice()
+	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
+		Return(nil).Once()
+
+	c.On("NetworkList", mock.Anything, mock.Anything).
+		Return([]network.Summary{}, nil).Once()
+	c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+
+	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(container.CreateResponse{ID: freshID}, nil).Once()
+
+	c.On("ContainerStart", e.Context, freshID, container.StartOptions{}).
+		Return(nil).Once()
+
+	c.On("ContainerInspect", e.Context, freshID).
+		Return(container.InspectResponse{
+			NetworkSettings:   &container.NetworkSettings{},
+			Config:            &container.Config{},
+			ContainerJSONBase: &container.ContainerJSONBase{ID: freshID, State: &container.State{Status: container.StateRunning}},
+		}, nil).Once()
+
+	require.NoError(t, e.createVolumesManager())
+	require.NoError(t, e.createPullManager())
+
+	info, err := e.createService(0, "alpine", "latest", "alpine:latest",
+		spec.Image{Name: "alpine"}, nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, freshID, info.ID)
+}
+
+func TestResumeServices(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := newTestExecutor(t, c)
+	e.Config.Docker.WaitForServicesTimeout = -1
+
+	svcInspect := container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			ID:    "svc-a",
+			Name:  "/svc-a",
+			State: &container.State{Status: "running"},
+		},
+		NetworkSettings: &container.NetworkSettings{
+			DefaultNetworkSettings: container.DefaultNetworkSettings{IPAddress: "172.17.0.4"}, //nolint:staticcheck
+		},
+		Config: &container.Config{
+			ExposedPorts: map[nat.Port]struct{}{"80/tcp": {}},
+		},
+	}
+
+	c.On("ContainerInspect", mock.Anything, "svc-a").Return(svcInspect, nil)
+	c.On("ContainerStart", mock.Anything, "svc-a", container.StartOptions{}).Return(nil).Once()
+
+	require.NoError(t, e.resumeServices([]string{"svc-a"}))
+
+	require.Len(t, e.services, 1)
+	assert.Equal(t, "svc-a", e.services[0].ID)
+	assert.Equal(t, "/svc-a", e.services[0].Name)
+	assert.Equal(t, []string{"172.17.0.4"}, e.services[0].IP)
+	assert.Equal(t, []int{80}, e.services[0].Ports)
+	assert.Contains(t, e.temporary, "svc-a")
+}
+
+func TestResumeServices_serviceNotFound(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := newTestExecutor(t, c)
+
+	c.On("ContainerInspect", mock.Anything, "missing-svc").
+		Return(container.InspectResponse{}, errors.New("not found")).Once()
+
+	err := e.resumeServices([]string{"missing-svc"})
+	require.EqualError(t, err, "service container missing-svc not found: not found")
+}
+
+func TestResumeServices_startFails(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := newTestExecutor(t, c)
+
+	c.On("ContainerInspect", mock.Anything, "svc-broken").
+		Return(container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{ID: "svc-broken"},
+		}, nil).Once()
+	c.On("ContainerStart", mock.Anything, "svc-broken", container.StartOptions{}).
+		Return(errors.New("daemon error")).Once()
+
+	err := e.resumeServices([]string{"svc-broken"})
+	require.EqualError(t, err, "service container svc-broken failed to start: daemon error")
+}
+
 func Test_Executor_captureContainersLogs(t *testing.T) {
 	containers := []*serviceInfo{
 		{

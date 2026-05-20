@@ -96,6 +96,7 @@ type executor struct {
 
 	temporary        []string // IDs of containers that should be removed
 	buildContainerID string
+	suspended        bool // When true, Cleanup preserves containers/volumes/network on the VM
 
 	services []*serviceInfo
 
@@ -1392,6 +1393,67 @@ func (e *executor) createDependencies() error {
 	return nil
 }
 
+func (e *executor) resumeDependencies() error {
+	envKey, err := common.ParseEnvironmentKey(e.Build.EnvironmentKey())
+	if err != nil {
+		return err
+	}
+	fields, err := parseEnvKeyFields(envKey.Fields)
+	if err != nil {
+		return err
+	}
+
+	buildInspect, err := e.dockerConn.ContainerInspect(e.Context, fields.buildContainerID)
+	if err != nil {
+		return fmt.Errorf("build container %s not found: %w", fields.buildContainerID, err)
+	}
+	e.buildContainerID = buildInspect.ID
+
+	if _, err := e.dockerConn.ContainerInspect(e.Context, fields.helperContainerID); err != nil {
+		return fmt.Errorf("helper container %s not found: %w", fields.helperContainerID, err)
+	}
+
+	if err := e.createLabeler(); err != nil {
+		return err
+	}
+	if err := e.createPullManager(); err != nil {
+		return err
+	}
+	if err := e.bindDevices(); err != nil {
+		return err
+	}
+	if err := e.bindDeviceRequests(); err != nil {
+		return err
+	}
+	if err := e.createNetworksManager(); err != nil {
+		return err
+	}
+	if buildInspect.HostConfig == nil {
+		return fmt.Errorf("build container %s missing host config", fields.buildContainerID)
+	}
+	if err := e.networksManager.Adopt(e.Context, buildInspect.HostConfig.NetworkMode); err != nil {
+		return err
+	}
+	e.networkMode = buildInspect.HostConfig.NetworkMode
+
+	if err := e.createVolumesManager(); err != nil {
+		return err
+	}
+	if err := e.volumesManager.Adopt(e.Context, buildInspect.Mounts); err != nil {
+		return err
+	}
+
+	if err := e.resumeServices(fields.serviceContainerIDs); err != nil {
+		return err
+	}
+
+	// Register containers for cleanup only after all steps succeed.
+	// On failure, the environment stays intact on the VM for retry.
+	e.temporary = append(e.temporary, buildInspect.ID, fields.helperContainerID)
+
+	return nil
+}
+
 func (e *executor) createVolumes() error {
 	e.SetCurrentStage(ExecutorStageCreatingUserVolumes)
 	e.BuildLogger.Debugln("Creating user-defined volumes...")
@@ -1491,17 +1553,18 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	e.BuildLogger.Println("Using Docker executor with image", imageName, "...")
-
-	if e.Config.Docker.VolumeKeep {
-		e.BuildLogger.Warningln("volume_keep is enabled: Docker volumes will not be removed after job completion and may accumulate on disk")
+	if e.Build.EnvironmentKey() != "" {
+		e.BuildLogger.Println("Resuming Docker executor...")
+		err = e.resumeDependencies()
+	} else {
+		e.BuildLogger.Println("Using Docker executor with image", imageName, "...")
+		if e.Config.Docker.VolumeKeep {
+			e.BuildLogger.Warningln("volume_keep is enabled: Docker volumes will not be removed after job completion and may accumulate on disk")
+		}
+		err = e.createDependencies()
 	}
 
-	err = e.createDependencies()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (e *executor) setupDefaultExecutorOptions(os string) {
@@ -1590,17 +1653,23 @@ func (e *executor) Cleanup() {
 
 	e.SetCurrentStage(ExecutorStageCleanup)
 
-	var wg sync.WaitGroup
-
-	// create a new context for cleanup in case the main context has expired or been cancelled.
-	ctx, cancel := context.WithTimeout(context.Background(), dockerCleanupTimeout)
-	defer cancel()
-
 	defer func() {
 		if err := e.dockerConn.Close(); err != nil {
 			e.BuildLogger.WithFields(logrus.Fields{"error": err}).Debugln("Failed to close the client")
 		}
 	}()
+
+	if e.suspended {
+		e.BuildLogger.Debugln("Job suspended; preserving containers, volumes, and network")
+		e.AbstractExecutor.Cleanup()
+		return
+	}
+
+	var wg sync.WaitGroup
+
+	// create a new context for cleanup in case the main context has expired or been cancelled.
+	ctx, cancel := context.WithTimeout(context.Background(), dockerCleanupTimeout)
+	defer cancel()
 
 	remove := func(id string) {
 		wg.Add(1)

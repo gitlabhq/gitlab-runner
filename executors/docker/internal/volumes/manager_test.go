@@ -6,6 +6,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/containerd/errdefs"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -420,6 +423,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 			uniqueName: "uniq",
 			expectedVolumeCreateOpts: testVolumeCreatOpts("uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa", map[string]string{
 				"destination": "/volume",
+				"reusable":    "true",
 			}),
 			expectedBindings: []string{
 				existingBinding,
@@ -432,6 +436,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 			uniqueName: "uniq",
 			expectedVolumeCreateOpts: testVolumeCreatOpts("uniq-cache-f69aef9fb01e88e6213362a04877452d", map[string]string{
 				"destination": "/builds/project/volume",
+				"reusable":    "true",
 			}),
 			expectedBindings: []string{
 				existingBinding,
@@ -457,6 +462,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 			expectedVolumeCreateOpts: testVolumeCreatOpts("some-unique-name-cache-7ee4ee58453a23f50e3e88641d9e4690-protected", map[string]string{
 				"destination": "/some/base/path/some/volume",
 				"protected":   "true",
+				"reusable":    "true",
 			}),
 			expectedBindings: []string{
 				existingBinding,
@@ -522,6 +528,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_WithError(t *t
 
 	expectedCreateOpts := testVolumeCreatOpts("unique-cache-f69aef9fb01e88e6213362a04877452d", map[string]string{
 		"destination": "/builds/project/volume",
+		"reusable":    "true",
 	})
 	mClient.
 		On("VolumeCreate", mock.Anything, *expectedCreateOpts).
@@ -792,6 +799,7 @@ func testVolumeCreatOpts(name string, additionalLabels map[string]string) *volum
 		pre + ".project.id":        "0",
 		pre + ".project.runner_id": "0",
 		pre + ".protected":         "false",
+		pre + ".reusable":          "false",
 		pre + ".runner.id":         "",
 		pre + ".runner.local_id":   "0",
 		pre + ".runner.system_id":  "",
@@ -806,4 +814,57 @@ func testVolumeCreatOpts(name string, additionalLabels map[string]string) *volum
 		Name:   name,
 		Labels: labels,
 	}
+}
+
+func TestAdopt_volumeMissing(t *testing.T) {
+	m := newDefaultManager(t, ManagerConfig{})
+	mClient := docker.NewMockClient(t)
+	m.client = mClient
+
+	mounts := []container.MountPoint{
+		{Type: mount.TypeVolume, Name: "missing-vol", Source: "/var/lib/docker/volumes/missing-vol/_data", Destination: "/builds"},
+	}
+
+	mClient.On("VolumeInspect", mock.Anything, "missing-vol").
+		Return(volume.Volume{}, errdefs.ErrNotFound).Once()
+
+	err := m.Adopt(t.Context(), mounts)
+	require.Error(t, err)
+	require.EqualError(t, err, "volume missing-vol not found: not found")
+}
+
+func TestAdopt_unsupportedMountType(t *testing.T) {
+	m := newDefaultManager(t, ManagerConfig{})
+
+	mounts := []container.MountPoint{
+		{Type: mount.TypeTmpfs, Destination: "/tmp"},
+	}
+
+	err := m.Adopt(t.Context(), mounts)
+	require.EqualError(t, err, "unsupported mount type tmpfs for /tmp")
+}
+
+func TestAdopt_mixedMounts(t *testing.T) {
+	m := newDefaultManager(t, ManagerConfig{})
+	mClient := docker.NewMockClient(t)
+	m.client = mClient
+
+	mounts := []container.MountPoint{
+		{Type: mount.TypeVolume, Name: "named-a", Source: "/var/lib/docker/volumes/named-a/_data", Destination: "/a"},
+		{Type: mount.TypeBind, Source: "/host-ro", Destination: "/ro-mount", Mode: "ro"},
+		{Type: mount.TypeBind, Source: "/host-rw", Destination: "/rw-mount"},
+		{Type: mount.TypeVolume, Name: "named-b", Source: "/var/lib/docker/volumes/named-b/_data", Destination: "/b"},
+	}
+
+	reusableKey := m.labeler.LabelKey("reusable")
+	mClient.On("VolumeInspect", mock.Anything, "named-a").
+		Return(volume.Volume{Name: "named-a", Labels: map[string]string{reusableKey: "true"}}, nil).Once()
+	mClient.On("VolumeInspect", mock.Anything, "named-b").
+		Return(volume.Volume{Name: "named-b", Labels: map[string]string{reusableKey: "false"}}, nil).Once()
+
+	require.NoError(t, m.Adopt(t.Context(), mounts))
+	assert.ElementsMatch(t,
+		[]string{"named-a:/a", "/host-ro:/ro-mount:ro", "/host-rw:/rw-mount", "named-b:/b"},
+		m.Binds())
+	assert.Equal(t, []string{"named-b"}, m.temporaryVolumes)
 }

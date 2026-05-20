@@ -36,6 +36,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_Windows(t *tes
 			uniqueName: "uniq",
 			expectedVolumeCreateOpts: testVolumeCreatOpts("uniq-cache-8abd376d059fcf32b6258f48c760885d", map[string]string{
 				"destination": `\\.\pipe\docker_engine`,
+				"reusable":    "true",
 			}),
 			expectedBindings: []string{`\\.\pipe\host:\\.\pipe\duplicated`, `uniq-cache-8abd376d059fcf32b6258f48c760885d:\\.\pipe\docker_engine`},
 		},
@@ -51,6 +52,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_Windows(t *tes
 			expectedVolumeCreateOpts: testVolumeCreatOpts("uniq-cache-8abd376d059fcf32b6258f48c760885d-protected", map[string]string{
 				"destination": `\\.\pipe\docker_engine`,
 				"protected":   "true",
+				"reusable":    "true",
 			}),
 			expectedBindings: []string{`\\.\pipe\host:\\.\pipe\duplicated`, `uniq-cache-8abd376d059fcf32b6258f48c760885d-protected:\\.\pipe\docker_engine`},
 		},

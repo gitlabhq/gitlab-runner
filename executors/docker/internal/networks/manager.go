@@ -21,6 +21,10 @@ type Manager interface {
 	Create(ctx context.Context, networkMode string, enableIPv6 bool) (container.NetworkMode, error)
 	Inspect(ctx context.Context) (network.Inspect, error)
 	Cleanup(ctx context.Context) error
+	// Adopt takes ownership of an existing network from a previously suspended
+	// build. User-defined networks are inspected to verify they still exist;
+	// built-in modes (bridge, none, default, etc.) are recorded as-is.
+	Adopt(ctx context.Context, networkMode container.NetworkMode) error
 }
 
 type manager struct {
@@ -123,5 +127,24 @@ func (m *manager) Cleanup(ctx context.Context) error {
 		return fmt.Errorf("docker remove network %s: %w", m.buildNetwork.ID, err)
 	}
 
+	return nil
+}
+
+func (m *manager) Adopt(ctx context.Context, mode container.NetworkMode) error {
+	// On Windows, IsHost() always returns false and IsUserDefined() does
+	// not exclude "host". In practice, Windows containers cannot use host networking.
+	if !mode.IsUserDefined() {
+		m.networkMode = mode
+		m.perBuild = false
+		return nil
+	}
+
+	inspect, err := m.client.NetworkInspect(ctx, string(mode))
+	if err != nil {
+		return fmt.Errorf("build network %s not found: %w", mode, err)
+	}
+	m.buildNetwork = inspect
+	m.networkMode = mode
+	m.perBuild = true
 	return nil
 }
