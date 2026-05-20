@@ -3,6 +3,7 @@ package docker
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -324,6 +325,76 @@ func newDockerMachineCommand(ctx context.Context, args ...string) *exec.Cmd {
 	cmd.Env = os.Environ()
 
 	return cmd
+}
+
+// Inspect reads <machineDir>/<name>/config.json — the file docker-machine
+// writes during Create — and pulls out the subset of driver state we use
+// for metric labelling. Driver-specific fields are only populated for
+// drivers with an explicit schema (currently just "google"). Other
+// drivers return DriverName only.
+func (m *machineCommand) Inspect(name string) (MachineInfo, error) {
+	path := filepath.Join(getMachineDir(), name, "config.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return MachineInfo{}, fmt.Errorf("reading docker-machine state for %q: %w", name, err)
+	}
+
+	// Decode driver fields in a second pass so we can choose the schema
+	// based on DriverName.
+	var raw struct {
+		DriverName string          `json:"DriverName"`
+		Driver     json.RawMessage `json:"Driver"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return MachineInfo{}, fmt.Errorf("parsing docker-machine state for %q: %w", name, err)
+	}
+
+	info := MachineInfo{DriverName: raw.DriverName}
+
+	if raw.DriverName == "google" {
+		if err := applyGoogleDriverInfo(&info, raw.Driver); err != nil {
+			return MachineInfo{}, fmt.Errorf("parsing google driver state for %q: %w", name, err)
+		}
+	}
+
+	return info, nil
+}
+
+// googleDriverState is the subset of the google driver's persisted
+// state the Inspect parser cares about. Any non-zero mode signal
+// (InstanceGroupManager, RegionInstanceGroupManager, BulkInsert) marks
+// a path where GCP picks placement post-hoc — only Resolved* fields are
+// honest then; otherwise operator-intent Zone / MachineType are reality.
+type googleDriverState struct {
+	Zone                       string `json:"Zone"`
+	MachineType                string `json:"MachineType"`
+	Project                    string `json:"Project"`
+	ResolvedZone               string `json:"ResolvedZone"`
+	ResolvedMachineType        string `json:"ResolvedMachineType"`
+	InstanceGroupManager       string `json:"InstanceGroupManager"`
+	RegionInstanceGroupManager string `json:"RegionInstanceGroupManager"`
+	BulkInsert                 bool   `json:"BulkInsert"`
+}
+
+func (s googleDriverState) gcpPicksPlacement() bool {
+	return s.InstanceGroupManager != "" || s.RegionInstanceGroupManager != "" || s.BulkInsert
+}
+
+func applyGoogleDriverInfo(info *MachineInfo, rawDriver json.RawMessage) error {
+	var s googleDriverState
+	if len(rawDriver) > 0 {
+		if err := json.Unmarshal(rawDriver, &s); err != nil {
+			return err
+		}
+	}
+	info.Project = s.Project
+	info.Zone = s.Zone
+	info.MachineType = s.MachineType
+	if s.gcpPicksPlacement() {
+		info.Zone = s.ResolvedZone
+		info.MachineType = s.ResolvedMachineType
+	}
+	return nil
 }
 
 func getBaseDir() string {

@@ -92,7 +92,7 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 			},
 		}
 
-		machine := docker.NewMockMachine(t)
+		machine := newMockMachine(t)
 
 		machine.On("CanConnect", mock.Anything, machineName, true).
 			Return(true).Once()
@@ -118,7 +118,7 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 						Name: "actions_total",
 						Help: "actions_total",
 					},
-					[]string{"action"},
+					append([]string{"action"}, targetLabelNames...),
 				),
 			},
 		}

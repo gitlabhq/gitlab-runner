@@ -2381,6 +2381,66 @@ func (_c *MockMachine_ForceRemove_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// Inspect provides a mock function for the type MockMachine
+func (_mock *MockMachine) Inspect(name string) (MachineInfo, error) {
+	ret := _mock.Called(name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Inspect")
+	}
+
+	var r0 MachineInfo
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) (MachineInfo, error)); ok {
+		return returnFunc(name)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) MachineInfo); ok {
+		r0 = returnFunc(name)
+	} else {
+		r0 = ret.Get(0).(MachineInfo)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(name)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockMachine_Inspect_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Inspect'
+type MockMachine_Inspect_Call struct {
+	*mock.Call
+}
+
+// Inspect is a helper method to define mock.On call
+//   - name string
+func (_e *MockMachine_Expecter) Inspect(name interface{}) *MockMachine_Inspect_Call {
+	return &MockMachine_Inspect_Call{Call: _e.mock.On("Inspect", name)}
+}
+
+func (_c *MockMachine_Inspect_Call) Run(run func(name string)) *MockMachine_Inspect_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockMachine_Inspect_Call) Return(machineInfo MachineInfo, err error) *MockMachine_Inspect_Call {
+	_c.Call.Return(machineInfo, err)
+	return _c
+}
+
+func (_c *MockMachine_Inspect_Call) RunAndReturn(run func(name string) (MachineInfo, error)) *MockMachine_Inspect_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function for the type MockMachine
 func (_mock *MockMachine) List() ([]string, error) {
 	ret := _mock.Called()

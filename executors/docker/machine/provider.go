@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,6 +14,74 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
+
+// targetLabelNames is the fixed schema of dynamic labels attached to the
+// gitlab_runner_autoscaling_actions_total counter. Values are read off
+// the docker-machine state file (config.json) via Machine.Inspect — see
+// targetLabelsFromInspect. There is intentionally no operator config knob
+// for these: the values reflect what was actually provisioned (or, on
+// creation-failed paths, what was attempted), so any operator-supplied
+// static defaults would just be a drift risk.
+var targetLabelNames = []string{
+	"target_zone",
+	"target_region",
+	"target_project",
+	"target_machine_type",
+}
+
+// targetLabels holds the values for targetLabelNames in the same order.
+// Cached on machineDetails so used / removed emissions later in the
+// lifecycle don't need to re-Inspect.
+type targetLabels struct {
+	zone, region, project, machineType string
+}
+
+// values returns the label values in targetLabelNames order.
+func (t targetLabels) values() []string {
+	return []string{t.zone, t.region, t.project, t.machineType}
+}
+
+// targetLabelsFromInspectFn populates a targetLabels from driver state.
+// Different drivers expose different fields; one function per driver
+// keeps driver-specific logic isolated.
+type targetLabelsFromInspectFn func(docker.MachineInfo) targetLabels
+
+// targetLabelsFromInspectByDriver dispatches to a per-driver populator.
+// Missing drivers return empty labels.
+var targetLabelsFromInspectByDriver = map[string]targetLabelsFromInspectFn{
+	"google": targetLabelsFromInspectGoogle,
+}
+
+// targetLabelsFromInspect dispatches to the driver-specific populator
+// or returns empty labels for unknown drivers.
+func targetLabelsFromInspect(info docker.MachineInfo) targetLabels {
+	if fn, ok := targetLabelsFromInspectByDriver[info.DriverName]; ok {
+		return fn(info)
+	}
+	return targetLabels{}
+}
+
+// targetLabelsFromInspectGoogle derives metric labels from a GCE
+// machine state. GCE zones are `<region>-<letter>`; the region is the
+// prefix before the trailing `-X`.
+func targetLabelsFromInspectGoogle(info docker.MachineInfo) targetLabels {
+	out := targetLabels{
+		zone:        info.Zone,
+		project:     info.Project,
+		machineType: info.MachineType,
+	}
+	if i := strings.LastIndex(info.Zone, "-"); i > 0 {
+		out.region = info.Zone[:i]
+	}
+	return out
+}
+
+// actionLabels combines the action value with cached target labels to
+// produce the full label-values slice for WithLabelValues, in the order
+// matching newMachineProvider's CounterVec schema.
+func actionLabels(action string, t targetLabels) []string {
+	return append([]string{action}, t.values()...)
+}
 
 type machineProvider struct {
 	name        string
@@ -46,20 +115,33 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 
 func (m *machineProvider) ensureDetails(name string) *machineDetails {
 	m.lock.Lock()
-	defer m.lock.Unlock()
+	if details, ok := m.details[name]; ok {
+		m.lock.Unlock()
+		return details
+	}
 
-	details, ok := m.details[name]
-	if !ok {
-		now := time.Now()
-		details = &machineDetails{
-			Name:      name,
-			Created:   now,
-			Used:      now,
-			LastSeen:  now,
-			UsedCount: 1, // any machine that we find we mark as already used
-			State:     machineStateIdle,
-		}
-		m.details[name] = details
+	now := time.Now()
+	details := &machineDetails{
+		Name:      name,
+		Created:   now,
+		Used:      now,
+		LastSeen:  now,
+		UsedCount: 1, // any machine that we find we mark as already used
+		State:     machineStateIdle,
+	}
+	m.details[name] = details
+	m.lock.Unlock()
+
+	// Populate target labels from on-disk state. Inspect happens after
+	// we drop the provider-wide lock; the brief window where an entry
+	// has empty targets is benign (metrics emit empty labels, same as
+	// pre-MR behaviour). For brand-new entries created here, config.json
+	// may not exist yet — Inspect fails silently and targets stay empty
+	// until createWithGrowthCapacity re-Inspects post-Create.
+	if info, err := m.machine.Inspect(name); err == nil {
+		details.Lock()
+		details.targets = targetLabelsFromInspect(info)
+		details.Unlock()
 	}
 
 	return details
@@ -92,6 +174,8 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	details.UsedCount = 0
 	details.RetryCount = 0
 	details.LastSeen = time.Now()
+	// details.targets is populated post-Create via Inspect (see
+	// createWithGrowthCapacity); we don't seed it from config.
 	details.Unlock()
 	errCh := make(chan error, 1)
 
@@ -128,11 +212,24 @@ func (m *machineProvider) createWithGrowthCapacity(
 	}
 
 	err := m.machine.Create(ctx, config.Machine.MachineDriver, details.Name, opts...)
+
+	// Inspect post-Create regardless of outcome. libmachine saves state
+	// both pre-create and on failure, so creation-failed counters get
+	// dimensional labels too. Missing state leaves targets empty.
+	if info, inspectErr := m.machine.Inspect(details.Name); inspectErr == nil {
+		details.Lock()
+		details.targets = targetLabelsFromInspect(info)
+		details.Unlock()
+	} else {
+		logger.WithError(inspectErr).
+			Warnln("Could not inspect docker-machine state; emitting metric with empty target labels")
+	}
+
 	if err != nil {
 		logger.WithField("time", time.Since(started)).
 			WithError(err).
 			Errorln("Machine creation failed")
-		m.totalActions.WithLabelValues("creation-failed").Inc()
+		m.totalActions.WithLabelValues(actionLabels("creation-failed", details.targets)...).Inc()
 		m.failedCreationHistogram.Observe(time.Since(started).Seconds())
 		_ = m.remove(details.Name, "Failed to create")
 	} else {
@@ -148,7 +245,7 @@ func (m *machineProvider) createWithGrowthCapacity(
 			WithField("retries", retryCount).
 			Infoln("Machine created")
 
-		m.totalActions.WithLabelValues("created").Inc()
+		m.totalActions.WithLabelValues(actionLabels("created", details.targets)...).Inc()
 		m.creationHistogram.Observe(creationTime.Seconds())
 
 		// Signal that a new machine is available. When there's contention, there's no guarantee between the
@@ -350,7 +447,7 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 		WithField("retries", retryCount).
 		Infoln("Machine removed")
 
-	m.totalActions.WithLabelValues("removed").Inc()
+	m.totalActions.WithLabelValues(actionLabels("removed", details.targets)...).Inc()
 }
 
 func (m *machineProvider) remove(machineName string, reason ...interface{}) error {
@@ -579,7 +676,7 @@ func (m *machineProvider) Use(
 	details.UsedCount++
 	details.Unlock()
 
-	m.totalActions.WithLabelValues("used").Inc()
+	m.totalActions.WithLabelValues(actionLabels("used", details.targets)...).Inc()
 	return
 }
 
@@ -668,12 +765,12 @@ func newMachineProvider(provider common.ExecutorProvider) *machineProvider {
 					"executor": name,
 				},
 			},
-			[]string{"action"},
+			append([]string{"action"}, targetLabelNames...),
 		),
 		currentStatesDesc: prometheus.NewDesc(
 			"gitlab_runner_autoscaling_machine_states",
 			"The current number of machines per state in this provider.",
-			[]string{"state"},
+			append([]string{"state"}, targetLabelNames...),
 			prometheus.Labels{
 				"executor": name,
 			},
