@@ -1,12 +1,14 @@
 package buildlogger
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"sync"
 
 	"github.com/sirupsen/logrus"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/innerstream"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/masker"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/timestamper"
@@ -96,38 +98,45 @@ func (l *Logger) Stream(streamID int, streamType StreamType) io.WriteCloser {
 	return l.wrap(l.base, streamID, streamType)
 }
 
-// StepRunnerStream returns a writer for output produced by step-runner. When
-// step-runner emits lines already pre-stamped in the runner's timestamper
-// format, the data flows straight through to the base trace; otherwise the
-// full wrap chain is applied. This is the single hook for any future
-// step-runner-specific stream behavior.
+// StepRunnerStream returns a writer for output produced by step-runner.
+// The mode is picked on the first write:
+//
+//   - pre-stamped (per isPreStamped) and Timestamping is on: bytes flow
+//     straight through to the base trace, preserving step-runner's headers
+//     and avoiding double-stamping.
+//   - pre-stamped and Timestamping is off: step-runner stamps anyway (it
+//     has no knob to disable them), so bytes are demuxed by innerstream
+//     and inner bodies routed through per-type wrap chains, giving the
+//     stamp-free trace the caller asked for.
+//   - not pre-stamped: bytes flow through one wrap chain with the
+//     caller-supplied streamType.
 func (l *Logger) StepRunnerStream(streamID int, streamType StreamType) io.WriteCloser {
 	if l.base == nil {
 		return internal.NewNopCloser(io.Discard)
 	}
 
 	return &stepRunnerStream{
-		passthrough: internal.NewSync(l.base),
+		timestamping: l.timestamping,
+		passthrough:  internal.NewSync(l.base),
+		buildStripped: func() io.WriteCloser {
+			return newInnerStreamStripper(
+				l.wrap(l.base, streamID, Stdout),
+				l.wrap(l.base, streamID, Stderr),
+			)
+		},
 		buildWrapped: func() io.WriteCloser {
 			return l.wrap(l.base, streamID, streamType)
 		},
 	}
 }
 
-// stepRunnerStream picks between two writers on its first write. The runner's
-// timestamper emits a fixed-width header — YYYY-MM-DDTHH:MM:SS.UUUUUUZ<space>
-// — and isPreStamped validates that full shape so producers other than
-// step-runner that happen to put 'Z' at byte 26 don't trip the passthrough.
-//
-// The wrap chain (timestamper, masker, sanitizers, sync) is built lazily via
-// buildWrapped so streams that only see pre-stamped output never pay for it.
-// step-runner output is the dominant case, so the saving compounds across
-// streams.
 type stepRunnerStream struct {
-	once         sync.Once
-	chosen       io.WriteCloser
-	passthrough  io.WriteCloser
-	buildWrapped func() io.WriteCloser
+	once          sync.Once
+	chosen        io.WriteCloser
+	timestamping  bool
+	passthrough   io.WriteCloser
+	buildStripped func() io.WriteCloser
+	buildWrapped  func() io.WriteCloser
 }
 
 // isPreStamped reports whether p starts with a runner timestamper header
@@ -144,21 +153,51 @@ func isPreStamped(p []byte) bool {
 }
 
 func (s *stepRunnerStream) Write(p []byte) (int, error) {
-	s.once.Do(func() {
-		if isPreStamped(p) {
-			s.chosen = s.passthrough
-		} else {
-			s.chosen = s.buildWrapped()
-		}
-	})
+	s.once.Do(s.pickMode(p))
 	return s.chosen.Write(p)
 }
 
 func (s *stepRunnerStream) Close() error {
-	// Close-without-write: nothing has been buffered by the wrap chain
-	// (it was never built), so the passthrough's Close is sufficient.
-	s.once.Do(func() { s.chosen = s.passthrough })
+	// Close before any write: fall back to the wrap chain so Close has
+	// something to delegate to.
+	s.once.Do(s.pickMode(nil))
 	return s.chosen.Close()
+}
+
+func (s *stepRunnerStream) pickMode(p []byte) func() {
+	return func() {
+		switch {
+		case isPreStamped(p) && s.timestamping:
+			s.chosen = s.passthrough
+		case isPreStamped(p):
+			s.chosen = s.buildStripped()
+		default:
+			s.chosen = s.buildWrapped()
+		}
+	}
+}
+
+// innerStreamStripper adapts innerstream.Splitter to io.WriteCloser. Close
+// drains the splitter's last unterminated line and closes both wrap chains.
+type innerStreamStripper struct {
+	splitter       *innerstream.Splitter
+	stdout, stderr io.WriteCloser
+}
+
+func newInnerStreamStripper(stdoutW, stderrW io.WriteCloser) *innerStreamStripper {
+	return &innerStreamStripper{
+		splitter: innerstream.New(stdoutW, stderrW),
+		stdout:   stdoutW,
+		stderr:   stderrW,
+	}
+}
+
+func (s *innerStreamStripper) Write(p []byte) (int, error) {
+	return s.splitter.Write(p)
+}
+
+func (s *innerStreamStripper) Close() error {
+	return errors.Join(s.splitter.Flush(), s.stdout.Close(), s.stderr.Close())
 }
 
 // wrap wraps the underlying writer with "filters". Order here somewhat
