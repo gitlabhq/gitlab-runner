@@ -178,7 +178,7 @@ func (c *RuntimeConfig) registerComponentRef(compRef ComponentRef) {
 	c.componentRefMap[compRef.name] = compRef.ref
 }
 
-func (c RuntimeConfig) refForComponent(name string) (name.Reference, error) {
+func (c *RuntimeConfig) refForComponent(name string) (name.Reference, error) {
 	if ref, ok := c.componentRefMap[name]; ok {
 		return ref, nil
 	}
@@ -324,7 +324,7 @@ func (c *RuntimeConfig) pushIndex(
 	return nil
 }
 
-func (c RuntimeConfig) buildIndexForPush(src ImageIndex) (v1.ImageIndex, error) {
+func (c *RuntimeConfig) buildIndexForPush(src ImageIndex) (v1.ImageIndex, error) {
 	// The pattern is to start with an empty Index (which we're trusting to
 	// have a sensible default schema version), and apply mutations to
 	// get to the desired state.
@@ -354,7 +354,7 @@ func (c RuntimeConfig) buildIndexForPush(src ImageIndex) (v1.ImageIndex, error) 
 //
 // We fetch details from the remote because the extracted local archive has been
 // removed by the time we push the index.
-func (c RuntimeConfig) buildIndexComponentAddendum(ref name.Reference) (*mutate.IndexAddendum, error) {
+func (c *RuntimeConfig) buildIndexComponentAddendum(ref name.Reference) (*mutate.IndexAddendum, error) {
 	desc, err := remote.Get(ref, c.authOpt)
 	if err != nil {
 		return nil, fmt.Errorf("calling get: %w", err)
@@ -608,7 +608,7 @@ func (m Manifest) archivePath(component string) string {
 }
 
 // Cross references the components included in indexes with the components being pushed.
-func (c RuntimeConfig) validate() error {
+func (c *RuntimeConfig) validate() error {
 	var errs []error
 	for _, tagFragment := range c.tagFragments {
 		pushedImages := c.manifest.match(tagFragment)
