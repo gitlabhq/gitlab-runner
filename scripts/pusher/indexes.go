@@ -22,26 +22,26 @@ var knownArchs = []string{"arm64", "arm", "ppc64le", "riscv64", "s390x", "x86_64
 // crossOsRule identifies a tag template that should be handled as a cross-OS tag,
 // and a component name fragment (e.g. "nanoserver") that identifies components that
 // should be included in that cross-OS tag.
-type crossOsRule struct {
+type CrossOsRule struct {
 	tagTemplate   string
 	windowsFlavor string
 }
 
 // crossOsRules encapsulates the matching rules for cross-OS image indexes.
 // Rules are stored in registration order to ensure deterministic matching.
-type crossOsRules []crossOsRule
+type CrossOsRules []CrossOsRule
 
 // addRule adds a rule, stating that:
 //  1. The tag template should be handled separately from simple tags which have no rules.
 //  2. Components containing the windows flavor should be included in the cross-OS index
 //     associated with that tag template.
-func (r *crossOsRules) addRule(tagTemplate, windowsFlavor string) {
-	*r = append(*r, crossOsRule{tagTemplate: tagTemplate, windowsFlavor: windowsFlavor})
+func (r *CrossOsRules) addRule(tagTemplate, windowsFlavor string) {
+	*r = append(*r, CrossOsRule{tagTemplate: tagTemplate, windowsFlavor: windowsFlavor})
 }
 
 // hasRule returns true if the given tag template matches any current rule.
-func (r crossOsRules) hasRule(tagTemplate string) bool {
-	for _, rule := range r {
+func (r *CrossOsRules) hasRule(tagTemplate string) bool {
+	for _, rule := range *r {
 		if rule.tagTemplate == tagTemplate {
 			return true
 		}
@@ -51,12 +51,10 @@ func (r crossOsRules) hasRule(tagTemplate string) bool {
 
 // tagFor returns the cross-OS tag template that should be used for the given component
 // with the given tags, or "" if no rules matches.
-func (r crossOsRules) tagFor(componentName string, compTagTemplates []string) string {
-	for _, rule := range r {
-		for _, compTagTemplate := range compTagTemplates {
-			if compTagTemplate == rule.tagTemplate {
-				return rule.tagTemplate
-			}
+func (r *CrossOsRules) tagFor(componentName string, compTagTemplates []string) string {
+	for _, rule := range *r {
+		if slices.Contains(compTagTemplates, rule.tagTemplate) {
+			return rule.tagTemplate
 		}
 		if strings.Contains(componentName, rule.windowsFlavor) {
 			return rule.tagTemplate
@@ -120,7 +118,7 @@ func tagsKey(tags []string) string {
 // Operates by either creating a new ImageIndex containing the input archive as
 // the only component, or appending that component to the existing ImageIndex.
 // Sorts the given tags slice as a side-effect of the operation.
-func (indexes IndexMap) Add(tags []string, archiveName string) {
+func (indexes IndexMap) add(tags []string, archiveName string) {
 	slices.Sort(tags)
 	indexKey := tagsKey(tags)
 
@@ -139,7 +137,7 @@ func (indexes IndexMap) Add(tags []string, archiveName string) {
 // the component.
 func collectIndexes(m *Manifest) IndexMap {
 	indexes := make(IndexMap)
-	crossOs := crossOsRules{}
+	crossOs := CrossOsRules{}
 
 	crossOs.addRule("%", "servercore")
 	crossOs.addRule("%-pwsh", "nanoserver")
@@ -164,21 +162,24 @@ func collectIndexes(m *Manifest) IndexMap {
 
 		// Add the component to an index with all its simple tags, if it has any.
 		if len(simpleTags) > 0 {
-			indexes.Add(simpleTags, componentName)
+			indexes.add(simpleTags, componentName)
 		}
 
 		// Now add the component to the appropriate cross-OS index, if the rules
 		// indicate we should.
 		if crossOsTag := crossOs.tagFor(componentName, strippedTags); crossOsTag != "" {
-			indexes.Add([]string{crossOsTag}, componentName)
+			indexes.add([]string{crossOsTag}, componentName)
 		}
 	}
 
 	return indexes
 }
 
-// GenerateIndexes automatically generates index manifests from the default map
-func GenerateIndexes(m *Manifest) []ImageIndex {
+// generateIndexes creates configuration for image indexes.
+// To reduce configuration burden when adding/updating component images to push,
+// simple rules are followed to combine pushed component images into a set of
+// reasonable image indexes.
+func generateIndexes(m *Manifest) []ImageIndex {
 	indexMap := collectIndexes(m)
 	var indexes []ImageIndex
 	for _, index := range indexMap {

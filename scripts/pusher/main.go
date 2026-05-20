@@ -58,11 +58,11 @@ type ComponentRef struct {
 	ref  name.Reference
 }
 
-var dry, generateIndexes, printIndexes bool
+var dry, genIndexes, printIndexes bool
 
 func main() {
 	flag.BoolVar(&dry, "dry-run", false, "print what would be done, but don't push anything")
-	flag.BoolVar(&generateIndexes, "gen-indexes", false, "generate index configuration before pushing")
+	flag.BoolVar(&genIndexes, "gen-indexes", false, "generate index configuration before pushing")
 	flag.BoolVar(&printIndexes, "print-indexes", false, "print generated index config and exit")
 	flag.Parse()
 
@@ -77,14 +77,14 @@ func main() {
 	// Split arg processing. If we're only printing the config, just read the
 	// manifest, print the result and exit.
 	manifest := flag.Arg(0)
-	m, err := readManifest(manifest)
+	m, err := readManifest(manifest, genIndexes)
 	if err != nil {
 		fmt.Printf("error %v\n", err)
 		os.Exit(1)
 	}
 
 	if printIndexes {
-		indexes := GenerateIndexes(&m)
+		indexes := generateIndexes(&m)
 		output, err := json.MarshalIndent(indexes, "", "    ")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error marshaling output: %v\n", err)
@@ -127,7 +127,10 @@ func main() {
 	fmt.Printf("done in %v, export %v\n", time.Since(now), pathname)
 }
 
-func readManifest(manifestPath string) (Manifest, error) {
+// readManifest reads and unmarshals the manifest at manifestPath.
+// If genIndexes is true, the Indexes field is populated from the Default map
+// rather than read from the config file.
+func readManifest(manifestPath string, genIndexes bool) (Manifest, error) {
 	var m Manifest
 	buf, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -139,8 +142,8 @@ func readManifest(manifestPath string) (Manifest, error) {
 
 	// If requested, generate indexes from the Default map rather than using
 	// those in the config file.
-	if generateIndexes {
-		m.Indexes = GenerateIndexes(&m)
+	if genIndexes {
+		m.Indexes = generateIndexes(&m)
 	}
 	return m, nil
 }

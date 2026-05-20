@@ -260,7 +260,7 @@ func TestCollectIndexes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotIndexes := GenerateIndexes(&tt.manifest)
+			gotIndexes := generateIndexes(&tt.manifest)
 
 			if diff := cmp.Diff(tt.wantGroups, gotIndexes); diff != "" {
 				t.Errorf("collectIndexes() mismatch (-want +got):\n%s", diff)
