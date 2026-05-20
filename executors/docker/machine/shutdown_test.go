@@ -16,7 +16,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
@@ -92,7 +91,7 @@ func TestMachineProvider_Shutdown_NoMachines(t *testing.T) {
 }
 
 func TestMachineProvider_Shutdown_DrainsMachines(t *testing.T) {
-	machine := docker.NewMockMachine(t)
+	machine := newMockMachine(t)
 
 	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = machine
@@ -129,7 +128,7 @@ func TestMachineProvider_Shutdown_DrainsMachines(t *testing.T) {
 }
 
 func TestMachineProvider_Shutdown_ConcurrencyLimit(t *testing.T) {
-	machine := docker.NewMockMachine(t)
+	machine := newMockMachine(t)
 
 	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = machine
@@ -184,7 +183,7 @@ func TestMachineProvider_Shutdown_ConcurrencyLimit(t *testing.T) {
 }
 
 func TestMachineProvider_Shutdown_RetryOnFailure(t *testing.T) {
-	machine := docker.NewMockMachine(t)
+	machine := newMockMachine(t)
 
 	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = machine
@@ -219,7 +218,7 @@ func TestMachineProvider_Shutdown_RetryOnFailure(t *testing.T) {
 func TestMachineProvider_Shutdown_Timeout(t *testing.T) {
 	t.Parallel()
 
-	machine := docker.NewMockMachine(t)
+	machine := newMockMachine(t)
 
 	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = machine
@@ -272,7 +271,7 @@ func TestMachineProvider_Shutdown_Timeout(t *testing.T) {
 }
 
 func TestMachineProvider_Shutdown_DrainsAllMachineStates(t *testing.T) {
-	machine := docker.NewMockMachine(t)
+	machine := newMockMachine(t)
 
 	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = machine

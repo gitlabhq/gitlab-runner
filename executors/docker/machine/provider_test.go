@@ -190,6 +190,13 @@ func (m *testMachine) Credentials(ctx context.Context, name string) (dc docker.C
 	return
 }
 
+// Inspect returns an empty MachineInfo by default. Tests that need to
+// exercise the target-label discovery path should swap in a mock that
+// returns a populated MachineInfo.
+func (m *testMachine) Inspect(name string) (docker.MachineInfo, error) {
+	return docker.MachineInfo{}, nil
+}
+
 func countIdleMachines(p *machineProvider) (count int) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
@@ -258,6 +265,18 @@ func testMachineProvider(machine ...string) (*machineProvider, *testMachine) {
 	p := newMachineProvider(docker_executor.NewProvider())
 	p.machine = t
 	return p, t
+}
+
+// newMockMachine wraps docker.NewMockMachine with a default Inspect
+// expectation pre-registered so individual tests don't have to know about
+// the post-Create Inspect call in createWithGrowthCapacity. Tests that
+// care about the Inspect return value can layer their own expectation on
+// top with a more specific matcher.
+func newMockMachine(t *testing.T) *docker.MockMachine {
+	t.Helper()
+	m := docker.NewMockMachine(t)
+	m.On("Inspect", mock.Anything).Return(docker.MachineInfo{}, nil).Maybe()
+	return m
 }
 
 func TestMachineDetails(t *testing.T) {
@@ -364,7 +383,7 @@ func TestMachineReuse(t *testing.T) {
 
 	p := newMachineProvider(docker_executor.NewProvider())
 
-	machineMock := docker.NewMockMachine(t)
+	machineMock := newMockMachine(t)
 	p.machine = machineMock
 
 	var blockCreatingMachineWg sync.WaitGroup
@@ -422,7 +441,7 @@ func TestMachineReuseWithContention(t *testing.T) {
 
 	p := newMachineProvider(docker_executor.NewProvider())
 
-	machineMock := docker.NewMockMachine(t)
+	machineMock := newMockMachine(t)
 	p.machine = machineMock
 
 	var listLock sync.Mutex
@@ -509,7 +528,7 @@ func TestMachineAcquireGrowthCapacity(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			machineMock := docker.NewMockMachine(t)
+			machineMock := newMockMachine(t)
 			p.machine = machineMock
 
 			var wg sync.WaitGroup
@@ -808,7 +827,7 @@ func TestMachineOptionsWithName(t *testing.T) {
 	provisionRetryInterval = 0
 
 	p := newMachineProvider(docker_executor.NewProvider())
-	machineMock := docker.NewMockMachine(t)
+	machineMock := newMockMachine(t)
 	p.machine = machineMock
 
 	config := &common.RunnerConfig{
@@ -849,7 +868,7 @@ func TestMachineOptionsWithNameEmpty(t *testing.T) {
 	provisionRetryInterval = 0
 
 	p := newMachineProvider(docker_executor.NewProvider())
-	machineMock := docker.NewMockMachine(t)
+	machineMock := newMockMachine(t)
 	p.machine = machineMock
 
 	config := &common.RunnerConfig{

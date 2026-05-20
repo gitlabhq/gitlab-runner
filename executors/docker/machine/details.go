@@ -21,6 +21,13 @@ type machineDetails struct {
 	RetryCount int
 	LastSeen   time.Time
 
+	// targets caches target_* metric labels for this machine. Populated
+	// from docker-machine config.json via targetLabelsFromInspect in
+	// ensureDetails (on first observation) and overwritten in
+	// createWithGrowthCapacity (post-Create, to catch driver-side
+	// mutations like regional MIG's zone discovery).
+	targets targetLabels `yaml:"-"`
+
 	lock sync.Mutex
 }
 

@@ -133,7 +133,7 @@ func (m *machineProvider) drainMachineWithRetry(
 			m.lock.Unlock()
 
 			machineLogger.Info("Machine drained successfully")
-			m.totalActions.WithLabelValues("removed").Inc()
+			m.totalActions.WithLabelValues(actionLabels("removed", details.targets)...).Inc()
 			return true
 		}
 
