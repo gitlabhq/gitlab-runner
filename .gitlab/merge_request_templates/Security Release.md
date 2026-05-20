@@ -40,12 +40,15 @@ See [the general developer security release guidelines](https://gitlab.com/gitla
 
 ## AppSec checklist
 
-- [ ] Assign the right [AppSecWeight](https://handbook.gitlab.com/handbook/security/product-security/application-security/milestone-planning/#weight-labels) label
+- [ ] Assign the right [AppSecWeight](https://handbook.gitlab.com/handbook/security/product-security/security-platforms-architecture/application-security/milestone-planning/#weight-labels) label
+- [ ] Update the `~AppSecWorkflow::in-progress` to `~AppSecWorkflow::complete`
 
 /label ~security ~"Category:Runner" ~"devops::verify" ~"group::runner"
 
-/label ~"Division::Security" ~"Department::Product Security" ~"Application Security Team"
-/label ~"AppSecWorkflow::planned" ~"AppSecWorkType::VulnFixVerification"
+<!-- AppSec specific labels -->
+
+/label ~"Division::Security" ~"Department::Product Security" ~"PSIRT"
+/label ~"AppSecWorkflow::in-progress" ~"AppSecWorkType::VulnFixVerification" 
 /label ~"AppSecPriority::1" <!-- This is always a priority to review for us to ensure the fix is good and the release is done on time -->
 
 [GitLab Runner Security]: https://gitlab.com/gitlab-org/security/gitlab-runner
