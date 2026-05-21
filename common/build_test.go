@@ -465,6 +465,7 @@ func TestBuildPrepareExecutorTimeout(t *testing.T) {
 	require.ErrorAs(t, err, &buildErr)
 	assert.Equal(t, JobExecutionTimeout, buildErr.FailureReason)
 	assert.ErrorIs(t, err, ErrJobPrepareTimeout)
+	assert.Contains(t, err.Error(), "exceeded timeout of 1ms")
 }
 
 func TestBuildPrepareScriptTimeout(t *testing.T) {
@@ -498,6 +499,7 @@ func TestBuildPrepareScriptTimeout(t *testing.T) {
 	require.ErrorAs(t, err, &buildErr)
 	assert.Equal(t, JobExecutionTimeout, buildErr.FailureReason)
 	assert.ErrorIs(t, err, ErrJobPrepareTimeout)
+	assert.Contains(t, err.Error(), "exceeded timeout of 50ms")
 }
 
 func TestBuildPrepareErrorNotMistakenForTimeout(t *testing.T) {
