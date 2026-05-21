@@ -872,8 +872,8 @@ func (b *Build) executeScript(ctx, prepareCtx context.Context, trace JobTrace, e
 func (b *Build) executePrepareScripts(ctx, prepareCtx context.Context, executor Executor) (error, bool) {
 	err := b.executeStage(prepareCtx, BuildStagePrepare, executor)
 	if err != nil {
-		if !errors.Is(ctx.Err(), context.DeadlineExceeded) && errors.Is(prepareCtx.Err(), context.DeadlineExceeded) {
-			return &BuildError{Inner: ErrJobPrepareTimeout, FailureReason: JobExecutionTimeout}, false
+		if cause := context.Cause(prepareCtx); errors.Is(cause, ErrJobPrepareTimeout) {
+			return &BuildError{Inner: cause, FailureReason: JobExecutionTimeout}, false
 		}
 		return fmt.Errorf(
 			"prepare environment: %w. "+
@@ -1498,7 +1498,9 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	b.printSettingErrors()
 
-	prepareCtx, prepareCancel := context.WithTimeout(ctx, b.GetPrepareTimeout())
+	prepareTimeout := b.GetPrepareTimeout()
+	prepareCause := fmt.Errorf("%w: exceeded timeout of %s", ErrJobPrepareTimeout, prepareTimeout)
+	prepareCtx, prepareCancel := context.WithTimeoutCause(ctx, prepareTimeout, prepareCause)
 	defer prepareCancel()
 
 	options := b.createExecutorPrepareOptions(prepareCtx, globalConfig)
@@ -1514,8 +1516,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	executor, err := b.executeBuildSection(options, provider)
 	if err != nil {
-		if !errors.Is(ctx.Err(), context.DeadlineExceeded) && errors.Is(prepareCtx.Err(), context.DeadlineExceeded) {
-			return &BuildError{Inner: ErrJobPrepareTimeout, FailureReason: JobExecutionTimeout}
+		if cause := context.Cause(prepareCtx); errors.Is(cause, ErrJobPrepareTimeout) {
+			return &BuildError{Inner: cause, FailureReason: JobExecutionTimeout}
 		}
 		return err
 	}
