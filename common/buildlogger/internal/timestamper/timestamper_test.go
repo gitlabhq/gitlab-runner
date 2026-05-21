@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func setupDummyTime() func() {
@@ -70,7 +71,7 @@ func TestWithTimestamps(t *testing.T) {
 
 			w := New(buf, StderrType, 255, true)
 			writeLines(w)
-			w.Close()
+			require.NoError(t, w.Close())
 
 			expected := []string{
 				"2021-01-01T01:00:00.020010Z ffE PREFIX This is the beginning of a new line\n",
@@ -113,7 +114,7 @@ func TestWithoutTimestamp(t *testing.T) {
 
 	w := New(buf, StderrType, 255, false)
 	writeLines(w)
-	w.Close()
+	require.NoError(t, w.Close())
 
 	expected := []string{
 		"ffE PREFIX This is the beginning of a new line\n",
@@ -172,6 +173,25 @@ func TestForcedFlush(t *testing.T) {
 	}
 
 	assert.Equal(t, strings.Join(expected, ""), buf.String())
+}
+
+// Bytes after the last \r in a single Write must stay in the same trace
+// entry, with their own fresh timestamp on each call. Splitting them off
+// strands the trailing bytes in the buffer until the next write.
+func TestCarriageReturnDoesNotSplitWrite(t *testing.T) {
+	buf := new(bytes.Buffer)
+	defer setupDummyTime()()
+
+	w := New(buf, StdoutType, 1, true)
+	_, _ = w.Write([]byte("section_start:123:foo\r\x1b[0K"))
+	_, _ = w.Write([]byte("section_end:123:foo\r\x1b[0K"))
+	_ = w.Close()
+
+	expected := strings.Join([]string{
+		"2021-01-01T01:00:00.020010Z 01O section_start:123:foo\r\x1b[0K\n",
+		"2021-01-01T02:00:00.020010Z 01O+section_end:123:foo\r\x1b[0K\n",
+	}, "")
+	assert.Equal(t, expected, buf.String())
 }
 
 func TestCloseIdempotent(t *testing.T) {

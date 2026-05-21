@@ -56,10 +56,15 @@ var (
 // A new log line is emitted for each new-line character (\n) found within data
 // provided to Write().
 //
-// A new log line is also emitted for the last carriage return (\r) in calls to
-// Write() that don't contain a new-line character. Such lines are often used
-// to display progress bars, so having them "flushed" to the underlying stream
-// can help with live log viewing.
+// A new log line is also emitted when a call to Write() contains a carriage
+// return (\r) but no new-line character. Such writes are often used to display
+// progress bars, so having them "flushed" to the underlying stream helps with
+// live log viewing. The whole Write() — including any bytes after the last
+// \r — goes into a single entry; the \r is treated as a flush hint, not a
+// content boundary. Splitting at the \r would strand the trailing bytes (e.g.
+// a `\x1b[0K` erase-line code paired with a section marker) in the buffer
+// until the next write on this stream, attaching them to that later entry
+// with a stale timestamp.
 type Logger struct {
 	buf bytes.Buffer
 	w   io.Writer
@@ -220,8 +225,7 @@ func (l *Logger) writeLines(p []byte) (n int, err error) {
 }
 
 func (l *Logger) writeCarriageReturns(p []byte) (n int, err error) {
-	idx := bytes.LastIndexByte(p, '\r')
-	if idx == -1 {
+	if bytes.IndexByte(p, '\r') == -1 {
 		return n, err
 	}
 
@@ -238,16 +242,19 @@ func (l *Logger) writeCarriageReturns(p []byte) (n int, err error) {
 		}
 	}
 
-	// ensure next write is a continuation
-	l.bufStream[l.timeLen+3] = byte(PartialLineType)
-
-	nn, err := l.w.Write(p[n : n+idx+1])
+	nn, err := l.w.Write(p)
 	n += nn
 	if err != nil {
 		return n, err
 	}
 
-	_, err = l.w.Write(lineEscape)
+	if _, err := l.w.Write(lineEscape); err != nil {
+		return n, err
+	}
+
+	// ensure next write is a continuation
+	l.bufStream[l.timeLen+3] = byte(PartialLineType)
+
 	return n, err
 }
 

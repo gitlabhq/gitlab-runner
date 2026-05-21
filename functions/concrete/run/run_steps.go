@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/internal/innerstream"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/innerstream"
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client/extended"

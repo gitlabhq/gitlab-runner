@@ -2,6 +2,7 @@ package env
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -138,7 +139,46 @@ func (e *Env) Command(ctx context.Context, name string, env map[string]string, a
 	cmd.Stdout = e.Stdout
 	cmd.Stderr = e.Stderr
 
-	return cmd.Run()
+	return normalizeExitError(cmd.Run(), cmd.ProcessState)
+}
+
+// normalizeExitError reclassifies two exec outcomes that gracefulexitcmd
+// surfaces as errors but which the runner's legacy bash-pipe execution
+// (shells/bash.go on the docker executor) effectively treats as success:
+//
+//  1. The script exited 0, but a backgrounded child outlived
+//     gracefulexitcmd's WaitDelay holding the parent's stdio pipes
+//     open. WaitDelay's job is to bound that drain, not to fail the
+//     job; the exit code already says the user script was fine.
+//
+//  2. The script's outer shell was terminated by a non-fatal
+//     user-defined signal (SIGUSR1, SIGUSR2, SIGHUP, SIGPIPE). These
+//     are routinely raised by user scripts that signal themselves
+//     (e.g. `kill -USR1 $$`) and the bash pipeline wrapping in
+//     functions/concrete/run/stages/internal/scriptwriter delivers
+//     the signal to the outer shell rather than the subshell that
+//     installs the trap, so what looks like a "script failure" here
+//     is actually expected behaviour. Surfacing these as failures
+//     diverges from the legacy executor without offering a recovery
+//     path inside the user's script.
+//
+// Cancellation-driven SIGTERM (from gracefulexitcmd.Cmd.Cancel) is
+// deliberately NOT included: the runner needs that to propagate so
+// the build is reported as canceled rather than passed silently.
+func normalizeExitError(err error, ps *os.ProcessState) error {
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, exec.ErrWaitDelay) && ps != nil && ps.ExitCode() == 0 {
+		return nil
+	}
+
+	if ps != nil && isNonFatalUserSignal(ps) {
+		return nil
+	}
+
+	return err
 }
 
 func (e *Env) BundledGit() string {
