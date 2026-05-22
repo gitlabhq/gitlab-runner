@@ -380,6 +380,32 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, []string{"S2"}, preferredMatchExp.Values)
 			},
 		},
+		"check pod affinity match_label_keys and mismatch_label_keys": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						[runners.kubernetes.affinity]
+							[runners.kubernetes.affinity.pod_affinity]
+								[[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution]]
+									topology_key = "topology.kubernetes.io/zone"
+									match_label_keys = ["pod-template-hash"]
+									mismatch_label_keys = ["tenant"]
+									[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector]
+										[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_labels]
+											app = "database"
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+				require.NotNil(t, config.Runners[0].Kubernetes.Affinity.PodAffinity)
+
+				required := config.Runners[0].Kubernetes.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+				require.Len(t, required, 1)
+				assert.Equal(t, []string{"pod-template-hash"}, required[0].MatchLabelKeys)
+				assert.Equal(t, []string{"pod-template-hash"}, required[0].GetPodAffinityTerm().MatchLabelKeys)
+				assert.Equal(t, []string{"tenant"}, required[0].MismatchLabelKeys)
+				assert.Equal(t, []string{"tenant"}, required[0].GetPodAffinityTerm().MismatchLabelKeys)
+			},
+		},
 		"check pod anti affinities": {
 			config: `
 				[[runners]]

@@ -1959,6 +1959,8 @@ concurrent = 1
         [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution]]
           topology_key = "failure-domain.beta.kubernetes.io/zone"
           namespaces = ["namespace_1", "namespace_2"]
+          match_label_keys = ["pod-template-hash"]
+          mismatch_label_keys = ["tenant"]
           [runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector]
             [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
               key = "security"
@@ -2002,6 +2004,12 @@ concurrent = 1
                 operator = "In"
                 values = ["S2"]
 ```
+
+> [!note]
+> `match_label_keys` and `mismatch_label_keys` require Kubernetes 1.31 or later.
+> On earlier alpha or beta clusters, enable the `MatchLabelKeysInPodAffinity`
+> feature gate. On clusters that don't support the feature gate, the API server
+> ignores these fields and the constraint does not apply.
 
 ## Networking
 
