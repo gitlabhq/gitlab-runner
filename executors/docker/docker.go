@@ -1067,10 +1067,16 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 		return nil, err
 	}
 
-	var useInit *bool
-	if isBuildContainer && e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
-		yes := true
-		useInit = &yes
+	var (
+		useInit *bool
+		pidMode container.PidMode
+	)
+	if isBuildContainer {
+		pidMode = container.PidMode(e.Config.Docker.PidMode)
+		if e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
+			yes := true
+			useInit = &yes
+		}
 	}
 
 	// Process security options to handle seccomp profile paths
@@ -1107,6 +1113,7 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    append(e.Config.Docker.ExtraHosts, e.links...),
 		NetworkMode:   e.networkMode,
+		PidMode:       pidMode,
 		IpcMode:       container.IpcMode(e.Config.Docker.IpcMode),
 		Links:         e.Config.Docker.Links,
 		Binds:         e.volumesManager.Binds(),

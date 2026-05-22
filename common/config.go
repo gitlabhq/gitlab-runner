@@ -307,6 +307,7 @@ type DockerConfig struct {
 	ExtraHosts                 []string            `toml:"extra_hosts,omitempty" json:"extra_hosts,omitempty" long:"extra-hosts" env:"DOCKER_EXTRA_HOSTS" description:"Add a custom host-to-IP mapping"`
 	VolumesFrom                []string            `toml:"volumes_from,omitempty" json:"volumes_from,omitempty" long:"volumes-from" env:"DOCKER_VOLUMES_FROM" description:"A list of volumes to inherit from another container"`
 	NetworkMode                string              `toml:"network_mode,omitempty" json:"network_mode" long:"network-mode" env:"DOCKER_NETWORK_MODE" description:"Add container to a custom network"`
+	PidMode                    string              `toml:"pid_mode,omitempty" json:"pid_mode" long:"pid-mode" env:"DOCKER_PID_MODE" description:"Run the container in a specific PID space"`
 	IpcMode                    string              `toml:"ipcmode,omitempty" json:"ipcmode" long:"ipcmode" env:"DOCKER_IPC_MODE" description:"Select IPC mode for container"`
 	MacAddress                 string              `toml:"mac_address,omitempty" json:"mac_address" long:"mac-address" env:"DOCKER_MAC_ADDRESS" description:"Container MAC address (e.g., 92:d0:c6:0a:29:33)"`
 	Links                      []string            `toml:"links,omitempty" json:"links,omitempty" long:"links" env:"DOCKER_LINKS" description:"Add link to another container"`
