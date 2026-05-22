@@ -710,16 +710,37 @@ If you make the `/builds` directory a host-bound storage, your builds are stored
 - `<concurrent-id>` is the index of the runner from the list of all runners that run a build for the same project concurrently (accessible through the
   `CI_CONCURRENT_PROJECT_ID` [pre-defined variable](https://docs.gitlab.com/ci/variables/predefined_variables/)).
 
+## PID mode
+
+The Docker executor supports setting the PID namespace mode of the container,
+which maps to the `docker run --pid` flag.
+Use PID mode when the build container and the host or other containers must share
+process visibility (like debugging purposes).
+For more information, see [PID settings](https://docs.docker.com/reference/cli/docker/container/run/#pid)
+in the Docker documentation.
+
+> [!warning]
+> Sharing the PID namespace between the build container and another container or the host
+> is a breach of isolation with serious security implications. Use this feature only with
+> fully trusted build containers, as you would in privileged mode.
+
 ## IPC mode
 
 The Docker executor supports sharing the IPC namespace of containers with other
 locations. This maps to the `docker run --ipc` flag.
-More details on [IPC settings in Docker documentation](https://docs.docker.com/engine/containers/run/#ipc-settings---ipc)
+For more information, see [IPC settings in Docker documentation](https://docs.docker.com/reference/cli/docker/container/run/#ipc).
 
 ## Privileged mode
 
 The Docker executor supports several options that allows fine-tuning of the
 build container. One of these options is the [`privileged` mode](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities).
+
+> [!warning]
+> Privileged mode has security risks. When containers run in privileged mode, container security
+> mechanisms are disabled and the host is exposed to privilege escalation. Running containers in
+> privileged mode can lead to container breakout. For more information, see
+> [runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)
+> in the Docker documentation.
 
 ### Use Docker-in-Docker with privileged mode
 
@@ -748,14 +769,6 @@ build:
   - docker build -t my-image .
   - docker push my-image
 ```
-
-> [!warning]
-> Containers that run in privileged mode have security risks.
-> When your containers run in privileged mode, you disable the
-> container security mechanisms and expose your host to privilege escalation.
-> Running containers in privileged mode can lead to container breakout. For more information,
-> see the Docker documentation about
-> [runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities).
 
 You might need to
 [configure Docker in Docker with TLS, or disable TLS](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker)

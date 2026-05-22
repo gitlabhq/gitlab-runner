@@ -869,6 +869,42 @@ func testDockerConfigurationWithPredefinedContainer(
 	assert.NoError(t, err, "Should create container without errors")
 }
 
+func TestDockerPIDMode(t *testing.T) {
+	tests := map[string]struct {
+		pidMode    string
+		privileged bool
+	}{
+		"unset":                         {pidMode: ""},
+		"host":                          {pidMode: "host"},
+		"container reference":           {pidMode: "container:some-other-container"},
+		"host with privileged":          {pidMode: "host", privileged: true},
+		"container ref with privileged": {pidMode: "container:some-other-container", privileged: true},
+		"unset with privileged":         {pidMode: "", privileged: true},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dockerConfig := &common.DockerConfig{
+				PidMode:    tt.pidMode,
+				Privileged: tt.privileged,
+			}
+
+			expectPidModeOnBuild := func(t *testing.T, _ *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+				assert.Equal(t, container.PidMode(tt.pidMode), hostConfig.PidMode)
+				assert.Equal(t, tt.privileged, hostConfig.Privileged)
+			}
+			expectNoPidMode := func(t *testing.T, _ *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+				assert.Zero(t, hostConfig.PidMode)
+				assert.Equal(t, tt.privileged, hostConfig.Privileged)
+			}
+
+			testDockerConfigurationWithJobContainer(t, dockerConfig, expectPidModeOnBuild)
+			testDockerConfigurationWithPredefinedContainer(t, dockerConfig, expectNoPidMode)
+			testDockerConfigurationWithServiceContainer(t, dockerConfig, expectNoPidMode)
+		})
+	}
+}
+
 func TestDockerMemorySetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		Memory: "42m",

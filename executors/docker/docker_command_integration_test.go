@@ -25,6 +25,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -2485,6 +2486,96 @@ func Test_FF_USE_INIT_WITH_DOCKER_EXECUTOR(t *testing.T) {
 				assert.Regexp(t, "1 root      0:00 /sbin/docker-init --", out.String())
 			} else {
 				assert.NotRegexp(t, "1 root      0:00 /sbin/docker-init --", out.String())
+			}
+		})
+	}
+}
+
+func TestPidMode(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	randID, err := helpers.GenerateRandomUUID(8)
+	require.NoError(t, err)
+	externalContainerName := "test_container_" + randID
+
+	client, err := docker.New(docker.Credentials{})
+	require.NoError(t, err, "creating docker client")
+	defer client.Close()
+
+	resp, err := client.ContainerCreate(
+		context.Background(),
+		&container.Config{
+			Image: "alpine:latest",
+			Cmd:   strslice.StrSlice{"sh", "-c", "while true; do sleep 1; done;"},
+		},
+		&container.HostConfig{AutoRemove: true},
+		nil,
+		nil,
+		externalContainerName,
+	)
+	require.NoError(t, err, "creating external container")
+	defer func() {
+		err := client.ContainerRemove(context.Background(), resp.ID, container.RemoveOptions{Force: true})
+		if err != nil {
+			t.Logf("failed to clear external container: %v", err)
+		}
+	}()
+	err = client.ContainerStart(context.Background(), resp.ID, container.StartOptions{})
+	require.NoError(t, err, "starting external container")
+
+	tests := []struct {
+		name                string
+		useExternalPidSpace bool
+		privileged          bool
+	}{
+		{"isolated and unprivileged", false, false},
+		{"isolated and privileged", false, true},
+		{"shared PID space and unprivileged", true, false},
+		{"shared PID space and privileged", true, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			successfulBuild, err := common.GetRemoteBuildResponse("ps -A && renice -1 1")
+			assert.NoError(t, err)
+
+			pidMode := ""
+			if tt.useExternalPidSpace {
+				pidMode = "container:" + externalContainerName
+			}
+
+			build := &common.Build{
+				Job: successfulBuild,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "docker",
+						Docker: &common.DockerConfig{
+							Image:      "alpine:latest",
+							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+							PidMode:    pidMode,
+							Privileged: tt.privileged,
+						},
+					},
+				},
+				ExecutorProvider: docker_executor.NewProvider(),
+			}
+
+			out := bytes.NewBuffer(nil)
+			err = build.Run(&common.Config{}, &common.Trace{Writer: out})
+
+			if !tt.privileged {
+				assert.Error(t, err)
+				assert.Contains(t, out.String(), "renice: setpriority: Permission denied")
+			} else {
+				assert.NoError(t, err)
+				assert.NotContains(t, out.String(), "renice: setpriority: Permission denied")
+			}
+
+			if tt.useExternalPidSpace {
+				assert.Contains(t, out.String(), "1 root      0:00 sh -c while true; do sleep 1; done;")
+			} else {
+				assert.NotContains(t, out.String(), "1 root      0:00 sh -c while true; do sleep 1; done;")
 			}
 		})
 	}

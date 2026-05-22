@@ -52,8 +52,9 @@ More granular permissions can be configured in non-privileged mode via the
 > Privileged containers in Docker have all the root capabilities of the host VM.
 > For more information, check out the official Docker documentation
 > on [Runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)
+> Similarly, running the container in the host PID namespace breaks container isolation and is unsafe.
 
-It is **not advised** to run containers in privileged mode.
+It is **not advised** to run containers in privileged mode, or with the `--pid=host` flag.
 
 When privileged mode is enabled, a user running a CI/CD job could gain full root access
 to the runner's host system, permission to mount and detach volumes, and run nested
