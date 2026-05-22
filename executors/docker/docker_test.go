@@ -3760,3 +3760,42 @@ func TestResumeDependencies_serviceStartFails(t *testing.T) {
 	err := e.resumeDependencies()
 	require.EqualError(t, err, "service container svc-broken failed to start: daemon error: cannot start")
 }
+
+func TestIsContainerNotRunning(t *testing.T) {
+	tests := map[string]struct {
+		err  error
+		want bool
+	}{
+		"nil":               {err: nil, want: false},
+		"unrelated":         {err: errors.New("some other failure"), want: false},
+		"docker daemon msg": {err: errors.New("Error response from daemon: can only create exec sessions on running containers: container state improper"), want: true},
+		"podman compat msg": {err: errors.New("can only create exec sessions on running containers"), want: true},
+		"wrapped":           {err: fmt.Errorf("exec failed: %w", errors.New("can only create exec sessions on running containers: container state improper")), want: true},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isContainerNotRunning(tc.err))
+		})
+	}
+}
+
+func TestShouldIgnoreDockerError(t *testing.T) {
+	preds := []func(error) bool{errdefs.IsConflict, errdefs.IsNotFound, isContainerNotRunning}
+
+	tests := map[string]struct {
+		err  error
+		want bool
+	}{
+		"nil":                              {err: nil, want: true},
+		"unrelated daemon error":           {err: errors.New("daemon: kaboom"), want: false},
+		"docker conflict (errdefs typed)":  {err: fmt.Errorf("wrap: %w", errdefs.ErrConflict), want: true},
+		"docker not-found (errdefs typed)": {err: fmt.Errorf("wrap: %w", errdefs.ErrNotFound), want: true},
+		"podman 500 not-running":           {err: errors.New("Error response from daemon: can only create exec sessions on running containers"), want: true},
+		"podman 500 not-running wrapped":   {err: fmt.Errorf("exec create: %w", errors.New("can only create exec sessions on running containers: container state improper")), want: true},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, shouldIgnoreDockerError(tc.err, preds...))
+		})
+	}
+}

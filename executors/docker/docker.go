@@ -1709,6 +1709,14 @@ func (e *executor) sendSIGTERMToContainerProcs(ctx context.Context, containerID 
 	return e.execScriptOnContainer(ctx, containerID, shells.ContainerSigTermScriptForLinux)
 }
 
+// isContainerNotRunning reports whether err is the daemon's "exec on a non-running
+// container" error. Docker returns this as 409 Conflict (caught by errdefs.IsConflict),
+// but Podman's docker-compat API returns 500, which doesn't map to any errdefs
+// predicate — so we fall back to matching the message, which is stable across both.
+func isContainerNotRunning(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "can only create exec sessions on running containers")
+}
+
 // Because docker error types are in fact interfaces with a unique identifying method, it's not possible to use
 // errors.Is or errors.As on them. And because we wrap those errors as they are returned up the chain, we can't use
 // errdefs directly. Do this instead.
@@ -1736,7 +1744,7 @@ func (e *executor) execScriptOnContainer(ctx context.Context, containerID string
 	}
 
 	defer func() {
-		if !shouldIgnoreDockerError(err, errdefs.IsConflict, errdefs.IsNotFound) {
+		if !shouldIgnoreDockerError(err, errdefs.IsConflict, errdefs.IsNotFound, isContainerNotRunning) {
 			e.Config.Log().WithFields(logrus.Fields{"error": err}).Warningln(action, err)
 		}
 	}()
