@@ -2071,6 +2071,33 @@ For cache uploads, credentials are retrieved from the pod that runs the [helper 
 
 For more details, see [issue 38330](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38330).
 
+## The `[runners.artifact]` section
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5900) in GitLab Runner 18.10.
+
+{{< /history >}}
+
+The following parameters control the HTTP timeouts used when the runner uploads job artifacts.
+In environments with slow networks, large artifacts, or high-latency storage backends,
+the default 1-hour upload timeout may be insufficient. You might want to reduce it to fail faster.
+
+Set `upload_timeout` to a value appropriate for your largest expected artifact size and available bandwidth.
+
+| Parameter                 | Type     | Description |
+|---------------------------|----------|-------------|
+| `upload_timeout`          | duration | Optional. Maximum time for the entire artifact upload operation. Default: `1h`. |
+| `response_header_timeout` | duration | Optional. Maximum time to wait for server response headers after the upload body is sent. Default: `10m`. |
+
+Example:
+
+```toml
+[runners.artifact]
+  upload_timeout = "2h"
+  response_header_timeout = "15m"
+```
+
 ## The `[runners.kubernetes]` section
 
 The following table lists configuration parameters available for the Kubernetes executor.
