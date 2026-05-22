@@ -1338,6 +1338,8 @@ type PodAffinityTerm struct {
 	Namespaces        []string       `toml:"namespaces,omitempty" json:"namespaces,omitempty"`
 	TopologyKey       string         `toml:"topology_key,omitempty" json:"topology_key"`
 	NamespaceSelector *LabelSelector `toml:"namespace_selector,omitempty" json:"namespace_selector,omitempty"`
+	MatchLabelKeys    []string       `toml:"match_label_keys,omitempty" json:"match_label_keys,omitempty"`
+	MismatchLabelKeys []string       `toml:"mismatch_label_keys,omitempty" json:"mismatch_label_keys,omitempty"`
 }
 
 type LabelSelector struct {
@@ -1997,6 +1999,8 @@ func (c *PodAffinityTerm) GetPodAffinityTerm() api.PodAffinityTerm {
 		Namespaces:        c.Namespaces,
 		TopologyKey:       c.TopologyKey,
 		NamespaceSelector: c.GetNamespaceSelector(),
+		MatchLabelKeys:    c.MatchLabelKeys,
+		MismatchLabelKeys: c.MismatchLabelKeys,
 	}
 }
 
