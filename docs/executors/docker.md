@@ -608,6 +608,11 @@ By default, the Docker executor stores builds and caches in the following direct
 
 Use [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache) to remove unused containers and volumes created by the runner.
 
+The script also works with Podman. It falls back to the `podman` binary when `docker` is not on `PATH`.
+Rootless Podman stores containers and images under the invoking user's home directory rather than a
+shared system location. The script (and any `cron` entry that invokes it) must run as the user that
+owns the Podman storage. Otherwise, it operates on a different user's empty storage.
+
 For a list of options, run the script with the `help` option:
 
 ```shell
