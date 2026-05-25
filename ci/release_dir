@@ -15,6 +15,7 @@ out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-s390x out/release/b
 out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-amd64 out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64
 out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-amd64-fips out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64-fips
 out/binaries/gitlab-runner-helper/gitlab-runner-helper.windows-amd64.exe out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64-windows.exe
+out/binaries/gitlab-runner-helper/gitlab-runner-helper.windows-arm64.exe out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.arm64-windows.exe
 out/binaries/gitlab-runner-linux-386 out/release/binaries/gitlab-runner-linux-386
 out/binaries/gitlab-runner-linux-amd64 out/release/binaries/gitlab-runner-linux-amd64
 out/binaries/gitlab-runner-linux-amd64-fips out/release/binaries/gitlab-runner-linux-amd64-fips

@@ -15,6 +15,7 @@
 # out/binaries/gitlab-runner-helper/gitlab-runner-helper.{{os}}-{{arch}}
 BASE_BINARY_PATH := out/binaries/gitlab-runner-helper/gitlab-runner-helper
 BINARIES := ${BASE_BINARY_PATH}.windows-amd64.exe
+BINARIES += ${BASE_BINARY_PATH}.windows-arm64.exe
 BINARIES += ${BASE_BINARY_PATH}.linux-amd64
 BINARIES += ${BASE_BINARY_PATH}.linux-arm
 BINARIES += ${BASE_BINARY_PATH}.linux-arm64
