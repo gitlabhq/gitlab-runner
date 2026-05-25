@@ -25,6 +25,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/stretchr/testify/assert"
@@ -2503,10 +2504,13 @@ func TestPidMode(t *testing.T) {
 	require.NoError(t, err, "creating docker client")
 	defer client.Close()
 
+	err = client.ImagePullBlocking(context.Background(), common.TestAlpineImage, image.PullOptions{})
+	require.NoError(t, err, "pulling alpine:latest")
+
 	resp, err := client.ContainerCreate(
 		context.Background(),
 		&container.Config{
-			Image: "alpine:latest",
+			Image: common.TestAlpineImage,
 			Cmd:   strslice.StrSlice{"sh", "-c", "while true; do sleep 1; done;"},
 		},
 		&container.HostConfig{AutoRemove: true},
