@@ -590,7 +590,7 @@ func TestDockerCommandMissingTag(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ImagePullFailure})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 	assert.Contains(t, err.Error(), "not found")
 }
 
@@ -611,7 +611,7 @@ func TestDockerCommandMissingServiceImage(t *testing.T) {
 }
 
 // TestDockerCommandPullingImageNoHost tests if the DNS resolution failure for the registry host
-// is categorized as a script failure.
+// is categorized as a runner external dependency failure.
 func TestDockerCommandPullingImageNoHost(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
@@ -622,7 +622,7 @@ func TestDockerCommandPullingImageNoHost(t *testing.T) {
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.ErrorAs(t, err, &buildError)
 
-	assert.Equal(t, common.ImagePullFailure, buildError.FailureReason, "expected script failure error")
+	assert.Equal(t, common.RunnerExternalDependencyFailure, buildError.FailureReason, "expected runner external dependency failure")
 }
 
 func TestDockerCommandBuildCancel(t *testing.T) {

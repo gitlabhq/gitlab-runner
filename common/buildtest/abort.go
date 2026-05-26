@@ -93,7 +93,7 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 			},
 			includesStage: abortIncludeStages,
 			excludesStage: abortExcludeStages,
-			expectedErr:   &common.BuildError{FailureReason: common.RunnerSystemFailure},
+			expectedErr:   &common.BuildError{FailureReason: common.RunnerInterrupted},
 		},
 		"job is aborted": {
 			onUserStep: func(_ *common.Build, trace common.JobTrace) {

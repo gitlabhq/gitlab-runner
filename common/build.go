@@ -1209,7 +1209,7 @@ func (b *Build) run(ctx, prepareCtx context.Context, trace JobTrace, executor Ex
 	case signal := <-b.SystemInterrupt:
 		err = &BuildError{
 			Inner:         fmt.Errorf("aborted: %v", signal),
-			FailureReason: RunnerSystemFailure,
+			FailureReason: RunnerInterrupted,
 		}
 		b.setCurrentState(BuildRunRuntimeTerminated)
 
