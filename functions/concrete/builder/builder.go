@@ -442,8 +442,9 @@ func (b *builder) buildArtifactMetadata() *stages.ArtifactMetadata {
 	schemaVersion := variables.Default(b.variables, "SLSA_PROVENANCE_SCHEMA_VERSION", "unknown")
 
 	meta := &stages.ArtifactMetadata{
-		RunnerID:      b.variables.Get("CI_RUNNER_ID"),
-		RepoURL:       strings.TrimSuffix(b.meta.GitInfo.RepoURL, ".git"),
+		RunnerID: b.variables.Get("CI_RUNNER_ID"),
+		// Strip userinfo (gitlab-ci-token) before the URL flows into SLSA provenance JSON.
+		RepoURL:       strings.TrimSuffix(b.meta.RepoCleanURL(), ".git"),
 		RepoDigest:    b.meta.GitInfo.Sha,
 		JobName:       b.meta.JobInfo.Name,
 		ExecutorName:  b.opts.executorName,

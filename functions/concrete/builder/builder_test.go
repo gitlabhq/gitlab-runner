@@ -956,6 +956,30 @@ func TestBuild_ArtifactMetadata(t *testing.T) {
 		assert.Nil(t, config.ArtifactsArchive[0].Metadata)
 	})
 
+	t.Run("repo url strips userinfo credentials", func(t *testing.T) {
+		// The test URL MUST embed userinfo for the NotContains asserts
+		// below to mean anything -- with a credential-free URL the
+		// asserts pass trivially whether or not the sanitisation runs.
+		job := baseJob()
+		job.GitInfo.RepoURL = "https://gitlab-ci-token:test-leak-token@gitlab.example.com/group/project.git"
+		job.Artifacts = []spec.Artifact{
+			{Paths: []string{"dist/"}, Format: spec.ArtifactFormatZip, When: spec.ArtifactWhenOnSuccess},
+		}
+
+		vars := newTestVars(t, map[string]string{"RUNNER_GENERATE_ARTIFACTS_METADATA": "true"})
+		config := buildConfig(t, job, vars)
+
+		require.Len(t, config.ArtifactsArchive, 1)
+		meta := config.ArtifactsArchive[0].Metadata
+		require.NotNil(t, meta)
+		assert.NotContains(t, meta.RepoURL, "test-leak-token",
+			"the userinfo segment of GitInfo.RepoURL must not reach the SLSA artifact metadata")
+		assert.NotContains(t, meta.RepoURL, "gitlab-ci-token:",
+			"any userinfo prefix from GitInfo.RepoURL must be stripped")
+		assert.Equal(t, "https://gitlab.example.com/group/project", meta.RepoURL,
+			"sanitized URL should retain scheme, host, and path with `.git` suffix removed")
+	})
+
 	t.Run("not generated when flag off", func(t *testing.T) {
 		job := baseJob()
 		job.Artifacts = []spec.Artifact{
