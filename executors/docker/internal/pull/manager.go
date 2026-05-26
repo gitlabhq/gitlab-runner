@@ -236,7 +236,7 @@ func (m *manager) pullDockerImage(imageName string, options spec.ImageDockerOpti
 	}
 
 	if err := m.client.ImagePullBlocking(m.context, ref, opts); err != nil {
-		return nil, &common.BuildError{Inner: err, FailureReason: common.ImagePullFailure}
+		return nil, &common.BuildError{Inner: err, FailureReason: common.ClassifyImagePullFailure(err.Error())}
 	}
 
 	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName)

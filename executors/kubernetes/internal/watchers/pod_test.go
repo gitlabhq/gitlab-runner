@@ -47,19 +47,33 @@ func TestPodWatcher(t *testing.T) {
 			expectedErrMsg: `disrupted: reason "disruption-reason", message "disruption-msg"`,
 		},
 		"invalid image": {
-			pod:                   withContainerWaiting(defaultPod(), "some-container", "some-msg", "InvalidImageName"),
+			pod:                   withContainerWaiting(defaultPod(), "some-msg", "InvalidImageName"),
 			expectedErrMsg:        "image pull failed: some-msg",
 			expectedFailureReason: common.ConfigurationError,
 		},
 		"pull error": {
-			pod:                   withContainerWaiting(defaultPod(), "some-container", "some-msg", "ErrImagePull"),
+			pod:                   withContainerWaiting(defaultPod(), "some-msg", "ErrImagePull"),
 			expectedErrMsg:        "image pull failed: some-msg",
 			expectedFailureReason: common.ImagePullFailure,
 		},
 		"pull backoff": {
-			pod:                   withContainerWaiting(defaultPod(), "some-container", "some-msg", "ImagePullBackOff"),
+			pod:                   withContainerWaiting(defaultPod(), "some-msg", "ImagePullBackOff"),
 			expectedErrMsg:        "image pull failed: some-msg",
 			expectedFailureReason: common.ImagePullFailure,
+		},
+		"pull error - network failure": {
+			pod: withContainerWaiting(defaultPod(),
+				`failed to pull and unpack image: failed to do request: Head "https://registry.example.com": dial tcp: lookup registry.example.com: no such host`,
+				"ErrImagePull"),
+			expectedErrMsg:        "image pull failed",
+			expectedFailureReason: common.RunnerExternalDependencyFailure,
+		},
+		"pull error - image not found": {
+			pod: withContainerWaiting(defaultPod(),
+				`failed to pull and unpack image: failed to resolve reference: unexpected status code 404 not found`,
+				"ErrImagePull"),
+			expectedErrMsg:        "image pull failed",
+			expectedFailureReason: common.ConfigurationError,
 		},
 		"healthy pod": {
 			pod: defaultPod(),
@@ -263,10 +277,10 @@ func withDisruption(pod *v1.Pod, msg, reason string) *v1.Pod {
 	return p
 }
 
-func withContainerWaiting(pod *v1.Pod, containerName, msg, reason string) *v1.Pod {
+func withContainerWaiting(pod *v1.Pod, msg, reason string) *v1.Pod {
 	p := pod.DeepCopy()
 	p.Status.ContainerStatuses = append(p.Status.ContainerStatuses, v1.ContainerStatus{
-		Name: containerName,
+		Name: "some-container",
 		State: v1.ContainerState{
 			Waiting: &v1.ContainerStateWaiting{
 				Reason:  reason,

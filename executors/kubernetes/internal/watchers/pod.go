@@ -207,7 +207,7 @@ func CheckTerminalContainerErrors(containerStatuses []v1.ContainerStatus) error 
 		case "ErrImagePull", "ImagePullBackOff":
 			msg := fmt.Sprintf("image pull failed: %s", waiting.Message)
 			imagePullErr := &pull.ImagePullError{Message: msg, Container: containerStatus.Name, Image: containerStatus.Image}
-			return &common.BuildError{Inner: imagePullErr, FailureReason: common.ImagePullFailure}
+			return &common.BuildError{Inner: imagePullErr, FailureReason: common.ClassifyImagePullFailure(waiting.Message)}
 		}
 	}
 

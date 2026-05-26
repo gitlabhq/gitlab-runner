@@ -921,7 +921,13 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodContainerError(err) {
 			return err
 		}
-		return &common.BuildError{Inner: err}
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return &common.BuildError{Inner: err, FailureReason: common.JobExecutionTimeout}
+		}
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return &common.BuildError{Inner: err, FailureReason: common.JobCanceled}
+		}
+		return &common.BuildError{Inner: err, FailureReason: common.UnknownFailure}
 
 	case err := <-s.podWatcher.Errors():
 		// if we observe terminal pod errors via the pod watcher, we can exit immediately

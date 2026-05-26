@@ -1297,7 +1297,7 @@ func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string,
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ImagePullFailure})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
@@ -1310,7 +1310,7 @@ func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, f
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ImagePullFailure})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
@@ -2868,7 +2868,7 @@ func runMultiPullPolicyBuild(t *testing.T, build *common.Build) error {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ImagePullFailure})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 
 	quotedImage := regexp.QuoteMeta("some/non-existing/image")
 	warningFmt := `WARNING: Failed to pull image "%s" for container "[^"]+" with policy "%s": image pull failed:`

@@ -82,7 +82,19 @@ const (
 	// ConfigurationError indicates a configuration error that can only be determined by runner (and not by Rails).
 	// This covers both CI configuration errors (e.g. incompatible pull policies) and runner configuration errors
 	// (e.g. missing builds_dir). Since this failure reason does not exist in rails, we map it to ScriptFailure below.
-	ConfigurationError spec.JobFailureReason = "configuration_error"
+	ConfigurationError spec.JobFailureReason = "runner_configuration_error"
+
+	// RunnerExternalDependencyFailure indicates a failure caused by an external dependency of the runner,
+	// e.g. Docker Hub, GitHub clones, or other HTTP requests. Since this failure reason may not exist in
+	// all Rails instances yet, we map it to RunnerSystemFailure below for backward compatibility.
+	RunnerExternalDependencyFailure spec.JobFailureReason = "runner_external_dependency_failure"
+
+	// RunnerInterrupted indicates that the runner process was told to stop by an external actor
+	// while a job was running, e.g. an admin sending SIGTERM/SIGINT/SIGQUIT, the OS shutting down,
+	// or a container orchestrator / autoscaler reclaiming the host. The runner itself is not broken
+	// and the job is not at fault. When this failure reason is not supported by Rails, the mapper
+	// falls through to UnknownFailure.
+	RunnerInterrupted spec.JobFailureReason = "runner_interrupted"
 
 	// When defining new job failure reasons, consider if its meaning is
 	// extracted from the scope of already existing one. If yes - update
@@ -103,6 +115,8 @@ var (
 		ImagePullFailure,
 		UnknownFailure,
 		ConfigurationError,
+		RunnerExternalDependencyFailure,
+		RunnerInterrupted,
 		JobCanceled,
 	}
 
@@ -112,8 +126,9 @@ var (
 	// introduced in runner but not yet supported by GitLab (and not in the
 	// supported list check).
 	failureReasonsCompatibilityMap = map[spec.JobFailureReason]spec.JobFailureReason{
-		ImagePullFailure:   RunnerSystemFailure,
-		ConfigurationError: ScriptFailure,
+		ImagePullFailure:                RunnerSystemFailure,
+		ConfigurationError:              ScriptFailure,
+		RunnerExternalDependencyFailure: RunnerSystemFailure,
 	}
 
 	// A small list of failure reasons that are supported by all
