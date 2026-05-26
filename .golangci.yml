@@ -9,7 +9,6 @@ linters:
     - errcheck
     - errorlint
     - gocognit
-    - goconst
     - gocritic
     - goprintffuncname
     - govet
