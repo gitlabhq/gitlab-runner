@@ -23,6 +23,7 @@ const DefaultGetSourcesAttempts = 1
 const DefaultArtifactDownloadAttempts = 1
 const DefaultRestoreCacheAttempts = 1
 const DefaultExecutorStageAttempts = 1
+const DefaultSecretsRetrievalAttempts = 1
 const DefaultAfterScriptIgnoreErrors = true
 const KubernetesPollInterval = 3
 const KubernetesPollTimeout = 180
@@ -41,6 +42,8 @@ const TokenResetIntervalFactor = 0.75
 const DefaultRequestRetryLimit = 5
 const RequestRetryBackoffMin = 500 * time.Millisecond
 const DefaultRequestRetryBackoffMax = 2000 * time.Millisecond
+const DefaultStageRetryBackoffMin = 5 * time.Second
+const DefaultStageRetryBackoffMax = 5 * time.Minute
 
 const (
 	DefaultTraceOutputLimit = 4 * 1024 * 1024 // in bytes

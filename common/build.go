@@ -18,7 +18,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
@@ -26,6 +25,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
@@ -1052,6 +1052,8 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 	}
 }
 
+func noOpRetryCallback(_ int) error { return nil }
+
 func (b *Build) attemptExecuteStage(
 	ctx context.Context,
 	buildStage BuildStage,
@@ -1059,41 +1061,43 @@ func (b *Build) attemptExecuteStage(
 	attempts int,
 	retryCallback func(attempt int) error,
 ) error {
-	if attempts < 1 || attempts > 10 {
-		return fmt.Errorf("number of attempts out of the range [1, 10] for stage: %s", buildStage)
+	attempts = max(1, min(10, attempts))
+	b.logger.Debugln("Will attempt to execute stage", buildStage, "up to", attempts, "times")
+
+	if retryCallback == nil {
+		retryCallback = noOpRetryCallback
 	}
 
-	retry := backoff.Backoff{
-		Min:    5 * time.Second,
-		Max:    5 * time.Minute,
-		Jitter: true,
-		Factor: 1.5,
+	retryRunner := retry.New().WithMaxTries(attempts).WithBuildLog(&b.logger)
+
+	if b.IsFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry) {
+		backoffConfig := b.getStageRetryBackoffConfig()
+		retryRunner = retryRunner.WithBackoff(backoffConfig.Min, backoffConfig.Max)
 	}
 
-	var err error
-	for attempt := range attempts {
-		if retryCallback != nil {
-			if err = retryCallback(attempt); err != nil {
-				continue
-			}
+	attempt := 0
+
+	return retry.NewNoValue(retryRunner, func() error {
+		defer func() { attempt++ }()
+
+		if err := retryCallback(attempt); err != nil {
+			return err
 		}
 
-		if err = b.executeStage(ctx, buildStage, executor); err == nil {
-			return nil
-		}
+		return b.executeStage(ctx, buildStage, executor)
+	}).Run()
+}
 
-		if attempt == attempts-1 {
-			break
-		}
+type stageRetryBackoffConfig struct {
+	Min time.Duration
+	Max time.Duration
+}
 
-		if b.IsFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry) {
-			duration := retry.Duration()
-			b.logger.Infoln(fmt.Sprintf("Retrying in %v", duration))
-			time.Sleep(duration)
-		}
+func (b *Build) getStageRetryBackoffConfig() stageRetryBackoffConfig {
+	return stageRetryBackoffConfig{
+		Min: DefaultStageRetryBackoffMin,
+		Max: DefaultStageRetryBackoffMax,
 	}
-
-	return err
 }
 
 func (b *Build) warnTimeoutExceeded(ctx context.Context, subject string) {
@@ -1633,6 +1637,29 @@ func (b *Build) resolveSecrets(trace JobTrace) error {
 
 	b.Secrets.ExpandVariables(b.GetAllVariables())
 
+	return b.attemptResolveSecrets(trace, b.GetSecretsRetrievalAttempts())
+}
+
+func (b *Build) GetSecretsRetrievalAttempts() int {
+	return b.Settings().SecretsRetrievalAttempts
+}
+
+func (b *Build) attemptResolveSecrets(trace JobTrace, attempts int) error {
+	retryRunner := retry.New().WithMaxTries(attempts)
+
+	if b.IsFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry) {
+		backoffConfig := b.getStageRetryBackoffConfig()
+		retryRunner = retryRunner.
+			WithBackoff(backoffConfig.Min, backoffConfig.Max).
+			WithBuildLog(&b.logger)
+	}
+
+	return retry.NewNoValue(retryRunner, func() error {
+		return b.executeResolveSecretsStage(trace)
+	}).Run()
+}
+
+func (b *Build) executeResolveSecretsStage(trace JobTrace) error {
 	b.OnBuildStageStartFn.Call(BuildStageResolveSecrets)
 	defer b.OnBuildStageEndFn.Call(BuildStageResolveSecrets)
 
