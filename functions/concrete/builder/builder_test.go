@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -814,11 +815,22 @@ func TestBuild_CacheExtract(t *testing.T) {
 func TestBuild_CacheExtract_ProtectedFallbackKey(t *testing.T) {
 	tests := map[string]struct {
 		fallbackKey   string
+		expandedValue string // empty -> identity expansion
 		expectBlocked bool
 	}{
 		"blocked":           {fallbackKey: "some-key-protected", expectBlocked: true},
 		"blocked with dots": {fallbackKey: "some-key-protected. ", expectBlocked: true},
 		"allowed":           {fallbackKey: "some-key-safe", expectBlocked: false},
+		"blocked via variable expansion": {
+			fallbackKey:   "$EVIL_VAR",
+			expandedValue: "some-key-protected",
+			expectBlocked: true,
+		},
+		"allowed via variable expansion": {
+			fallbackKey:   "$SAFE_VAR",
+			expandedValue: "some-key-safe",
+			expectBlocked: false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -828,9 +840,13 @@ func TestBuild_CacheExtract_ProtectedFallbackKey(t *testing.T) {
 				{Key: "primary", Paths: []string{"build/"}, Policy: spec.CachePolicyPullPush},
 			}
 
-			expands := map[string]string{"primary": "primary"}
-			if !tc.expectBlocked {
-				expands[tc.fallbackKey] = tc.fallbackKey
+			expanded := tc.expandedValue
+			if expanded == "" {
+				expanded = tc.fallbackKey
+			}
+			expands := map[string]string{
+				"primary":      "primary",
+				tc.fallbackKey: expanded,
 			}
 
 			vars := newTestVars(t, map[string]string{"CACHE_FALLBACK_KEY": tc.fallbackKey},
@@ -849,6 +865,32 @@ func TestBuild_CacheExtract_ProtectedFallbackKey(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("blocked key does not surface sanitization warnings", func(t *testing.T) {
+		// A fallback key that both sanitizes (backslash -> slash) and ends
+		// in -protected. The block is the actual reason for the drop, so
+		// only the block warning should appear -- a sanitization warning
+		// would misleadingly suggest the sanitized key was attempted.
+		job := baseJob()
+		job.Cache = []spec.Cache{
+			{Key: "primary", Paths: []string{"build/"}, Policy: spec.CachePolicyPullPush},
+		}
+		vars := newTestVars(t, map[string]string{"CACHE_FALLBACK_KEY": `foo\bar-protected`},
+			expandValues(map[string]string{
+				"primary":           "primary",
+				`foo\bar-protected`: `foo\bar-protected`,
+			}),
+		)
+		config := buildConfig(t, job, vars)
+
+		require.Len(t, config.CacheExtract, 1)
+		assert.Len(t, config.CacheExtract[0].Sources, 1)
+		for _, w := range config.CacheExtract[0].Warnings {
+			assert.NotContains(t, w, "sanitized to",
+				"blocked fallback key must not surface sanitization warnings")
+		}
+		assert.Contains(t, strings.Join(config.CacheExtract[0].Warnings, "\n"), "not allowed to end in")
+	})
 }
 
 func TestBuild_CacheArchive(t *testing.T) {

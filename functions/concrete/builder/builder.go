@@ -215,6 +215,7 @@ func (b *builder) buildCacheExtract() ([]stages.CacheExtract, error) {
 	return extracts, nil
 }
 
+//nolint:gocognit,nestif
 func (b *builder) buildCacheSources(cache spec.Cache) ([]stages.CacheSource, []string, error) {
 	var sources []stages.CacheSource
 	var warnings []string
@@ -238,12 +239,17 @@ func (b *builder) buildCacheSources(cache spec.Cache) ([]stages.CacheSource, []s
 		return nil
 	}
 
-	addSource := func(key string) error {
+	addSource := func(key string, checks ...func(humanKey string) bool) error {
 		humanKey, resolvedKey, keyWarnings, err := b.cacheKey(key)
 		if err != nil {
 			warnings = append(warnings, keyWarnings...)
 			warnings = append(warnings, fmt.Sprintf("Skipping cache extraction due to %v", err))
 			return nil // non-fatal: skip this source
+		}
+		for _, check := range checks {
+			if !check(humanKey) {
+				return nil
+			}
 		}
 		return addSourceWithKey(humanKey, resolvedKey, keyWarnings)
 	}
@@ -295,13 +301,17 @@ func (b *builder) buildCacheSources(cache spec.Cache) ([]stages.CacheSource, []s
 	}
 
 	if fk := b.variables.Get("CACHE_FALLBACK_KEY"); fk != "" {
-		if strings.HasSuffix(strings.TrimRight(fk, ". "), "-protected") {
-			warnings = append(warnings,
-				fmt.Sprintf("CACHE_FALLBACK_KEY %q not allowed to end in %q", fk, "-protected"),
-			)
-		} else {
-			_ = addSource(fk)
-		}
+		// Check against humanKey (post-expansion), not the raw value, to prevent bypass via CACHE_FALLBACK_KEY=$VAR.
+		_ = addSource(fk, func(humanKey string) bool {
+			const blockedSuffix = "-protected"
+			if strings.HasSuffix(strings.TrimRight(humanKey, ". "), blockedSuffix) {
+				warnings = append(warnings,
+					fmt.Sprintf("CACHE_FALLBACK_KEY %q not allowed to end in %q", humanKey, blockedSuffix),
+				)
+				return false
+			}
+			return true
+		})
 	}
 
 	return sources, warnings, nil
