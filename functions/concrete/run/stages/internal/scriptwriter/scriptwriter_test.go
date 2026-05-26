@@ -35,9 +35,10 @@ func newBuilder(shell string, opts ...func(*Builder)) *Builder {
 	return b
 }
 
-func withExitCodeCheck(b *Builder)  { b.ExitCodeCheck = true }
-func withDebugTrace(b *Builder)     { b.DebugTrace = true }
-func withScriptSections(b *Builder) { b.ScriptSections = true }
+func withExitCodeCheck(b *Builder)      { b.ExitCodeCheck = true }
+func withDebugTrace(b *Builder)         { b.DebugTrace = true }
+func withScriptSections(b *Builder)     { b.ScriptSections = true }
+func withUseNewEvalStrategy(b *Builder) { b.UseNewEvalStrategy = true }
 
 func TestBashScript(t *testing.T) {
 	requireShell(t, ShellBash)
@@ -80,6 +81,21 @@ func TestBashScript(t *testing.T) {
 			lines: []string{"echo a"},
 			assert: func(t *testing.T, s string) {
 				assert.NotContains(t, s, "set -o xtrace")
+			},
+		},
+		"new eval strategy disabled (default) uses bare eval pipeline": {
+			lines: []string{"echo a"},
+			assert: func(t *testing.T, s string) {
+				assert.Regexp(t, `:\s*\|\s*eval `, s)
+				assert.NotRegexp(t, `:\s*\|\s*\(eval `, s,
+					"FF off: must not wrap eval in an explicit subshell")
+			},
+		},
+		"new eval strategy enabled uses subshell-wrapped eval": {
+			lines: []string{"echo a"},
+			opts:  []func(*Builder){withUseNewEvalStrategy},
+			assert: func(t *testing.T, s string) {
+				assert.Regexp(t, `:\s*\|\s*\(eval `, s)
 			},
 		},
 		"echoes commands": {
