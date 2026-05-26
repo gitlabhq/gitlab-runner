@@ -492,6 +492,33 @@ func TestBuild_CacheExtract(t *testing.T) {
 		}
 	})
 
+	t.Run("unknown policy rejected", func(t *testing.T) {
+		cases := map[string]struct {
+			key            string
+			policy         string
+			policyResolved string
+		}{
+			"extract (via $VAR)": {"test-cache-key", "$CACHE_POLICY", "blah"},
+			"archive (literal)":  {"archive-key", "nonsense", "nonsense"},
+		}
+		for name, tc := range cases {
+			t.Run(name, func(t *testing.T) {
+				job := baseJob()
+				job.Cache = []spec.Cache{
+					{Key: tc.key, Paths: []string{"build/"}, Policy: spec.CachePolicy(tc.policy)},
+				}
+				vars := newTestVars(t, nil, expandValues(map[string]string{
+					tc.policy: tc.policyResolved,
+					tc.key:    tc.key,
+				}))
+				_, err := Build(job, vars)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unknown cache policy "+tc.policyResolved)
+				assert.Contains(t, err.Error(), tc.key)
+			})
+		}
+	})
+
 	t.Run("with descriptor", func(t *testing.T) {
 		job := baseJob()
 		job.Cache = []spec.Cache{

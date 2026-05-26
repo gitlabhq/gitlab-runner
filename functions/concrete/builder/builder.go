@@ -181,8 +181,16 @@ func (b *builder) buildCacheExtract() ([]stages.CacheExtract, error) {
 		policy := spec.CachePolicy(b.variables.ExpandValue(string(cache.Policy)))
 		switch policy {
 		case spec.CachePolicyUndefined, spec.CachePolicyPullPush, spec.CachePolicyPull:
-		default:
+		case spec.CachePolicyPush:
 			continue
+		default:
+			// Surface unknown policy values as a hard error so a typo in
+			// $CACHE_POLICY doesn't silently disable caching.
+			humanKey, _, _, keyErr := b.cacheKey(cache.Key)
+			if keyErr != nil || humanKey == "" {
+				humanKey = cache.Key
+			}
+			return nil, fmt.Errorf("unknown cache policy %s for %s", policy, humanKey)
 		}
 
 		sources, warnings, err := b.buildCacheSources(cache)
@@ -316,8 +324,10 @@ func (b *builder) buildCacheArchive() ([]stages.CacheArchive, error) {
 		policy := spec.CachePolicy(b.variables.ExpandValue(string(cache.Policy)))
 		switch policy {
 		case spec.CachePolicyUndefined, spec.CachePolicyPullPush, spec.CachePolicyPush:
-		default:
+		case spec.CachePolicyPull:
 			continue
+		default:
+			return nil, fmt.Errorf("unknown cache policy %s for %s", policy, humanKey)
 		}
 
 		if cache.When == "" {
