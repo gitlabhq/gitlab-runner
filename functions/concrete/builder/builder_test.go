@@ -403,6 +403,14 @@ func TestBuild_Timeouts(t *testing.T) {
 			varName: "RUNNER_AFTER_SCRIPT_TIMEOUT", varValue: "bad",
 			check: func(t *testing.T, c run.Config) { assert.Equal(t, 5*time.Minute, c.AfterScriptTimeout) },
 		},
+		"script timeout negative falls back to default": {
+			varName: "RUNNER_SCRIPT_TIMEOUT", varValue: "-1m",
+			check: func(t *testing.T, c run.Config) { assert.Equal(t, time.Duration(0), c.ScriptTimeout) },
+		},
+		"after script timeout negative falls back to default": {
+			varName: "RUNNER_AFTER_SCRIPT_TIMEOUT", varValue: "-30s",
+			check: func(t *testing.T, c run.Config) { assert.Equal(t, 5*time.Minute, c.AfterScriptTimeout) },
+		},
 	}
 
 	for name, tc := range tests {

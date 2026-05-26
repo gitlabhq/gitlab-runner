@@ -439,21 +439,26 @@ func (b *builder) buildSteps() []stages.Step {
 // buildScriptTimeout returns the script-phase timeout.
 // Zero means "use the job-level timeout" (Config.Timeout).
 func (b *builder) buildScriptTimeout() time.Duration {
-	if v := b.variables.Get("RUNNER_SCRIPT_TIMEOUT"); v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			return d
-		}
-	}
-	return 0
+	return parseStageTimeout(b.variables.Get("RUNNER_SCRIPT_TIMEOUT"), 0)
 }
 
 func (b *builder) buildAfterScriptTimeout() time.Duration {
-	if v := b.variables.Get("RUNNER_AFTER_SCRIPT_TIMEOUT"); v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			return d
-		}
+	return parseStageTimeout(b.variables.Get("RUNNER_AFTER_SCRIPT_TIMEOUT"), 5*time.Minute)
+}
+
+// parseStageTimeout parses a stage timeout string, falling back to the given default for empty, unparseable, or negative values.
+func parseStageTimeout(raw string, fallback time.Duration) time.Duration {
+	if raw == "" {
+		return fallback
 	}
-	return 5 * time.Minute
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		return fallback
+	}
+	if d < 0 {
+		return fallback
+	}
+	return d
 }
 
 func (b *builder) buildArtifactUploads() []stages.ArtifactUpload {
