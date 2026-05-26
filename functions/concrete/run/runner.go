@@ -157,7 +157,9 @@ func (r *Runner) prepare(ctx context.Context) error {
 		return fmt.Errorf("fetching sources: %w", err)
 	}
 
+	// Reload so KEY=VALUE entries appended by pre_clone_script / post_clone_script flow into downstream stages.
 	if hasCacheSources(r.config.CacheExtract) {
+		r.loadGitlabEnv()
 		_ = r.section(ctx, "restore_cache", func(ctx context.Context, e *env.Env) error {
 			for _, cache := range r.config.CacheExtract {
 				if len(cache.Sources) == 0 {
@@ -172,6 +174,7 @@ func (r *Runner) prepare(ctx context.Context) error {
 	}
 
 	if len(r.config.ArtifactExtract) > 0 {
+		r.loadGitlabEnv()
 		_ = r.section(ctx, "download_artifacts", func(ctx context.Context, e *env.Env) error {
 			for _, artifact := range r.config.ArtifactExtract {
 				if err := artifact.Run(ctx, e); err != nil {

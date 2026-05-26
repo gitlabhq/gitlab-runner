@@ -821,6 +821,37 @@ func TestPrepare_NonFatalFailures(t *testing.T) {
 	}
 }
 
+func TestPrepare_ReloadsGitlabEnvBetweenStages(t *testing.T) {
+	cases := map[string]Config{
+		"restore_cache": {
+			GetSources: stages.GetSources{GitStrategy: "none", MaxAttempts: 1},
+			CacheExtract: []stages.CacheExtract{
+				{Sources: []stages.CacheSource{{Key: "bad"}}},
+			},
+		},
+		"download_artifacts": {
+			GetSources: stages.GetSources{GitStrategy: "none", MaxAttempts: 1},
+			ArtifactExtract: []stages.ArtifactDownload{
+				{ArtifactName: "bad", Filename: "bad.zip", DownloadAttempts: 1},
+			},
+		},
+	}
+
+	for name, cfg := range cases {
+		t.Run(name, func(t *testing.T) {
+			r := testRunner(t, &cfg)
+			require.NoError(t, r.setupGitlabEnv())
+
+			require.NoError(t, os.WriteFile(r.env.GitLabEnvFile, []byte("FOO=bar\n"), 0o600))
+			_, exists := r.env.GitLabEnv["FOO"]
+			require.False(t, exists)
+
+			assert.NoError(t, r.prepare(t.Context()))
+			assert.Equal(t, "bar", r.env.GitLabEnv["FOO"])
+		})
+	}
+}
+
 func TestRun_StrategyNone(t *testing.T) {
 	tests := []struct {
 		name    string
