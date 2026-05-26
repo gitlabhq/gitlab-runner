@@ -145,7 +145,8 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
           "name": "foobar"
         }
       ],
-      "timeout": 10
+      "timeout": 10,
+      "use_exponential_backoff_stage_retry": true
     }
   ],
   "cleanup": {
@@ -194,6 +195,7 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
     "sha": "69b18e5ed3610cf646119c3e38f462c64ec462b7",
     "submodule_strategy": "none",
     "use_bundled_uris": true,
+    "use_exponential_backoff_stage_retry": true,
     "user_agent": "%s %s %s/%s"
   },
   "id": 123456789,

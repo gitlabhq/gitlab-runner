@@ -112,20 +112,21 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 	}
 
 	return stages.GetSources{
-		AllowGitFetch:     b.meta.AllowGitFetch,
-		Checkout:          variables.DefaultBool(b.variables, "GIT_CHECKOUT", true),
-		MaxAttempts:       variables.DefaultIntClamp(b.variables, "GET_SOURCES_ATTEMPTS", 1, 1, 10),
-		SubmoduleStrategy: variables.Default(b.variables, "GIT_SUBMODULE_STRATEGY", "none", "none", "normal", "recursive"),
-		LFSDisabled:       variables.DefaultBool(b.variables, "GIT_LFS_SKIP_SMUDGE", false),
-		Depth:             b.meta.GitInfo.Depth,
-		RepoURL:           b.meta.GitInfo.RepoURL,
-		Refspecs:          b.meta.GitInfo.Refspecs,
-		SHA:               b.meta.GitInfo.Sha,
-		Ref:               b.meta.GitInfo.Ref,
-		GitStrategy:       variables.Default(b.variables, "GIT_STRATEGY", defaultGitStrategy, "empty", "none", "fetch", "clone"),
-		GitCloneFlags:     b.splitVarFlagsDefault("GIT_CLONE_EXTRA_FLAGS", nil),
-		GitFetchFlags:     b.splitVarFlagsDefault("GIT_FETCH_EXTRA_FLAGS", gitFetchFlagsDefault),
-		GitCleanFlags:     b.splitVarFlagsDefault("GIT_CLEAN_FLAGS", gitCleanFlagsDefault),
+		AllowGitFetch:                   b.meta.AllowGitFetch,
+		Checkout:                        variables.DefaultBool(b.variables, "GIT_CHECKOUT", true),
+		MaxAttempts:                     variables.DefaultIntClamp(b.variables, "GET_SOURCES_ATTEMPTS", 1, 1, 10),
+		UseExponentialBackoffStageRetry: b.isFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry),
+		SubmoduleStrategy:               variables.Default(b.variables, "GIT_SUBMODULE_STRATEGY", "none", "none", "normal", "recursive"),
+		LFSDisabled:                     variables.DefaultBool(b.variables, "GIT_LFS_SKIP_SMUDGE", false),
+		Depth:                           b.meta.GitInfo.Depth,
+		RepoURL:                         b.meta.GitInfo.RepoURL,
+		Refspecs:                        b.meta.GitInfo.Refspecs,
+		SHA:                             b.meta.GitInfo.Sha,
+		Ref:                             b.meta.GitInfo.Ref,
+		GitStrategy:                     variables.Default(b.variables, "GIT_STRATEGY", defaultGitStrategy, "empty", "none", "fetch", "clone"),
+		GitCloneFlags:                   b.splitVarFlagsDefault("GIT_CLONE_EXTRA_FLAGS", nil),
+		GitFetchFlags:                   b.splitVarFlagsDefault("GIT_FETCH_EXTRA_FLAGS", gitFetchFlagsDefault),
+		GitCleanFlags:                   b.splitVarFlagsDefault("GIT_CLEAN_FLAGS", gitCleanFlagsDefault),
 		ObjectFormat: func() string {
 			if b.meta.GitInfo.RepoObjectFormat != "" {
 				return b.meta.GitInfo.RepoObjectFormat
@@ -193,12 +194,13 @@ func (b *builder) buildCacheExtract() ([]stages.CacheExtract, error) {
 		}
 
 		extracts = append(extracts, stages.CacheExtract{
-			Sources:     sources,
-			Warnings:    warnings,
-			Timeout:     variables.DefaultIntClamp(b.variables, "CACHE_REQUEST_TIMEOUT", 10, 1, 120),
-			Concurrency: variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
-			Paths:       cache.Paths,
-			MaxAttempts: variables.DefaultIntClamp(b.variables, "RESTORE_CACHE_ATTEMPTS", 1, 1, 10),
+			Sources:                         sources,
+			Warnings:                        warnings,
+			Timeout:                         variables.DefaultIntClamp(b.variables, "CACHE_REQUEST_TIMEOUT", 10, 1, 120),
+			Concurrency:                     variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
+			Paths:                           cache.Paths,
+			MaxAttempts:                     variables.DefaultIntClamp(b.variables, "RESTORE_CACHE_ATTEMPTS", 1, 1, 10),
+			UseExponentialBackoffStageRetry: b.isFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry),
 		})
 	}
 
@@ -370,12 +372,13 @@ func (b *builder) buildArtifactDownloads() []stages.ArtifactDownload {
 		}
 
 		downloads = append(downloads, stages.ArtifactDownload{
-			ID:               dep.ID,
-			Token:            dep.Token,
-			ArtifactName:     dep.Name,
-			Filename:         dep.ArtifactsFile.Filename,
-			DownloadAttempts: variables.DefaultIntClamp(b.variables, "ARTIFACT_DOWNLOAD_ATTEMPTS", 1, 1, 10),
-			Concurrency:      variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
+			ID:                              dep.ID,
+			Token:                           dep.Token,
+			ArtifactName:                    dep.Name,
+			Filename:                        dep.ArtifactsFile.Filename,
+			DownloadAttempts:                variables.DefaultIntClamp(b.variables, "ARTIFACT_DOWNLOAD_ATTEMPTS", 1, 1, 10),
+			Concurrency:                     variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
+			UseExponentialBackoffStageRetry: b.isFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry),
 		})
 	}
 

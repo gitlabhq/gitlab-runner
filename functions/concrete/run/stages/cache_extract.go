@@ -7,6 +7,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/cacheprovider"
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/env"
+	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/stages/internal/retry"
 )
 
 type CacheSource struct {
@@ -27,6 +28,8 @@ type CacheExtract struct {
 	MaxAttempts int           `json:"max_attempts,omitempty"`
 	Paths       []string      `json:"paths,omitempty"`
 	Warnings    []string      `json:"warnings,omitempty"`
+	// UseExponentialBackoffStageRetry gates exponential sleep between retry attempts; when false retries run back-to-back.
+	UseExponentialBackoffStageRetry bool `json:"use_exponential_backoff_stage_retry,omitempty"`
 }
 
 //nolint:gocognit
@@ -41,9 +44,13 @@ func (s CacheExtract) Run(ctx context.Context, e *env.Env) error {
 	}
 
 	attempts := max(1, s.MaxAttempts)
+	backoff := retry.NewBackoff()
 
 	for attempt := 1; attempt <= attempts; attempt++ {
 		if attempt > 1 {
+			if s.UseExponentialBackoffStageRetry {
+				retry.SleepWithNotice(e, backoff.Duration())
+			}
 			e.Warningf("Retrying cache extraction (attempt %d/%d)...", attempt, attempts)
 		}
 

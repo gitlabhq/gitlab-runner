@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/env"
+	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/stages/internal/retry"
 )
 
 const (
@@ -75,6 +76,9 @@ type GetSources struct {
 	InsteadOfs       [][2]string `json:"instead_ofs,omitempty"`
 	CleanGitConfig   bool        `json:"clean_git_config,omitempty"`
 	UseProactiveAuth bool        `json:"use_proactive_auth,omitempty"`
+
+	// UseExponentialBackoffStageRetry gates exponential sleep between retry attempts; when false retries run back-to-back.
+	UseExponentialBackoffStageRetry bool `json:"use_exponential_backoff_stage_retry,omitempty"`
 }
 
 func (s GetSources) hasSubmodules() bool {
@@ -122,9 +126,13 @@ func (s GetSources) Run(ctx context.Context, e *env.Env) error {
 
 	s.cleanupGitState(e)
 
+	backoff := retry.NewBackoff()
 	var err error
 	for attempt := 1; attempt <= s.MaxAttempts; attempt++ {
 		if attempt > 1 {
+			if s.UseExponentialBackoffStageRetry {
+				retry.SleepWithNotice(e, backoff.Duration())
+			}
 			e.Warningf("Retrying git fetch (attempt %d/%d)...", attempt, s.MaxAttempts)
 			if s.ClearWorktreeOnRetry && attempt == 2 {
 				if clearErr := s.clearWorktree(ctx, e); clearErr != nil {

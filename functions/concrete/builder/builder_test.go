@@ -1394,6 +1394,39 @@ func TestBuild_FeatureFlags(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("UseExponentialBackoffStageRetry threads to retry-doing stages", func(t *testing.T) {
+		tests := map[string]bool{
+			"FF on":  true,
+			"FF off": false,
+		}
+		for name, enabled := range tests {
+			t.Run(name, func(t *testing.T) {
+				job := baseJob()
+				job.Cache = []spec.Cache{
+					{Key: "k", Paths: []string{"build/"}, Policy: spec.CachePolicyPull},
+				}
+				job.Dependencies = []spec.Dependency{
+					{ID: 1, Token: "t", Name: "a", ArtifactsFile: spec.DependencyArtifactsFile{Filename: "a.zip"}},
+				}
+				vars := newTestVars(t, nil, expandValues(map[string]string{"k": "k"}))
+				ff := func(f string) bool {
+					return f == featureflags.UseExponentialBackoffStageRetry && enabled
+				}
+
+				config := buildConfig(t, job, vars, WithFeatureFlagProvider(ff))
+
+				assert.Equal(t, enabled, config.GetSources.UseExponentialBackoffStageRetry,
+					"GetSources must follow FF")
+				require.Len(t, config.CacheExtract, 1)
+				assert.Equal(t, enabled, config.CacheExtract[0].UseExponentialBackoffStageRetry,
+					"CacheExtract must follow FF")
+				require.Len(t, config.ArtifactExtract, 1)
+				assert.Equal(t, enabled, config.ArtifactExtract[0].UseExponentialBackoffStageRetry,
+					"ArtifactDownload must follow FF")
+			})
+		}
+	})
 }
 
 func TestBuild_OptionsWiring(t *testing.T) {
