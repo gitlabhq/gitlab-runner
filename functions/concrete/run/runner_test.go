@@ -388,6 +388,26 @@ func TestAfterScript_ErrorHandling(t *testing.T) {
 	}
 }
 
+// TestAfterScript_StatusReflectsPromotedError verifies that finalize's
+// cache/artifact routing reflects the post-after_script status when
+// AFTER_SCRIPT_IGNORE_ERRORS=false promotes a nil error.
+func TestAfterScript_StatusReflectsPromotedError(t *testing.T) {
+	r := testRunner(t, &Config{
+		AfterScriptIgnoreErrors: false,
+		Steps: []stages.Step{
+			{Step: afterScriptStepName, Script: []string{"exit 1"}, OnSuccess: true, OnFailure: true},
+		},
+	})
+
+	// executeSteps drives the full main-script + after_script flow.
+	// Main script is empty (no non-after_script entries), so it
+	// succeeds — the error promotion comes from the failing after_script.
+	err := r.executeSteps(t.Context())
+
+	require.Error(t, err, "after_script's exit 1 must propagate when AFTER_SCRIPT_IGNORE_ERRORS=false")
+	assert.False(t, r.env.IsSuccessful())
+}
+
 func TestAfterScript_SetsScriptCancelNil(t *testing.T) {
 	tests := []struct {
 		name  string

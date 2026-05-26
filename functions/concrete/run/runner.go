@@ -240,9 +240,17 @@ func (r *Runner) executeSteps(jobCtx context.Context) error {
 		}
 		err = r.runScriptSteps(jobCtx, scriptSteps)
 	}
+	// Set the pre-after_script status so after_script steps see the
+	// correct CI_JOB_STATUS during their execution.
 	r.env.SetStatus(statusFromError(err))
 
-	return r.runAfterScriptSteps(jobCtx, afterSteps, err)
+	err = r.runAfterScriptSteps(jobCtx, afterSteps, err)
+
+	// Refresh: after_script may have promoted the err (AFTER_SCRIPT_IGNORE_ERRORS=false),
+	// and finalize reads e.IsSuccessful() to route cache/artifact uploads.
+	r.env.SetStatus(statusFromError(err))
+
+	return err
 }
 
 // runRunSteps dispatches the user's `run:` keyword via the hosting step-runner
