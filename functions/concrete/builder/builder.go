@@ -135,7 +135,7 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 		}(),
 
 		SubmoduleDepth:       variables.DefaultIntClamp(b.variables, "GIT_SUBMODULE_DEPTH", b.meta.GitInfo.Depth, 0, 10000),
-		SubmoduleUpdateFlags: b.splitVarFlags("GIT_SUBMODULE_UPDATE_FLAGS"),
+		SubmoduleUpdateFlags: b.splitVarFlagsDefault("GIT_SUBMODULE_UPDATE_FLAGS", nil),
 		SubmodulePaths:       b.splitVarFlags("GIT_SUBMODULE_PATHS"),
 
 		PreCloneStep: stages.Step{

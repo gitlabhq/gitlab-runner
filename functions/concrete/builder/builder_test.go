@@ -217,6 +217,20 @@ func TestBuild_GetSources(t *testing.T) {
 		assert.Equal(t, []string{"sub1", "sub2"}, config.GetSources.SubmodulePaths)
 	})
 
+	t.Run("GIT_SUBMODULE_UPDATE_FLAGS=none clears flags", func(t *testing.T) {
+		// Match common/build_settings.go validate[cmdFlags]: the literal
+		// "none" opts out of any extra flags rather than being passed
+		// through as a positional arg to `git submodule update`. Without
+		// this, the literal "none" reaches git and fails the submodule
+		// stage.
+		vars := newTestVars(t, map[string]string{
+			"GIT_SUBMODULE_STRATEGY":     "recursive",
+			"GIT_SUBMODULE_UPDATE_FLAGS": "none",
+		})
+		config := buildConfig(t, baseJob(), vars)
+		assert.Empty(t, config.GetSources.SubmoduleUpdateFlags)
+	})
+
 	t.Run("feature flags", func(t *testing.T) {
 		ff := func(name string) bool {
 			switch name {
