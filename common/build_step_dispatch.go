@@ -163,7 +163,12 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 				return build.GetGitStrategy() != GitNone
 			}
 		}()),
-		builder.WithGitalyCorrelationID(build.JobRequestCorrelationID),
+		builder.WithGitalyCorrelationID(func() string {
+			if !build.IsFeatureFlagOn(featureflags.UseGitalyCorrelationId) {
+				return ""
+			}
+			return build.JobRequestCorrelationID
+		}()),
 		builder.WithUserAgent(fmt.Sprintf("%s %s %s/%s", AppVersion.Name, AppVersion.Version, AppVersion.OS, AppVersion.Architecture)),
 	)
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 func TestBuildConcreteKitchenSink(t *testing.T) {
@@ -291,6 +292,50 @@ func TestCleanGitConfig_DefaultsMatchAbstractShell(t *testing.T) {
 			}
 			require.NoError(t, json.Unmarshal([]byte(schema[0].Inputs["config"].(string)), &cfg))
 			require.Equal(t, tc.wantCleanGitConf, cfg.Cleanup.CleanGitConfig)
+		})
+	}
+}
+
+// TestGitalyCorrelationID_GatedOnFeatureFlag verifies that the
+// X-Gitaly-Correlation-ID header is only forwarded when
+// FF_USE_GITALY_CORRELATION_ID is on.
+func TestGitalyCorrelationID_GatedOnFeatureFlag(t *testing.T) {
+	cases := []struct {
+		name       string
+		ffOn       bool
+		corrID     string
+		wantCorrID string
+	}{
+		{"FF on (default) + corrID set forwards", true, "abc-corr-id", "abc-corr-id"},
+		{"FF off + corrID set drops", false, "abc-corr-id", ""},
+		{"FF on + empty corrID stays empty", true, "", ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			build := buildForCleanGitConfig(t, "docker", GitFetch, nil)
+			build.Job.JobRequestCorrelationID = tc.corrID
+			if !tc.ffOn {
+				build.Job.Variables = append(build.Job.Variables,
+					spec.Variable{Key: featureflags.UseGitalyCorrelationId, Value: "false"})
+			}
+
+			executor := NewMockExecutor(t)
+			executor.EXPECT().Shell().RunAndReturn(func() *ShellScriptInfo {
+				return &ShellScriptInfo{Shell: "bash", Build: build, Type: NormalShell}
+			})
+
+			schema, err := stagesToConcreteStep(t.Context(), executor)
+			require.NoError(t, err)
+			require.Len(t, schema, 1)
+
+			var cfg struct {
+				GetSources struct {
+					GitalyCorrelationID string `json:"gitaly_correlation_id"`
+				} `json:"get_sources"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(schema[0].Inputs["config"].(string)), &cfg))
+			require.Equal(t, tc.wantCorrID, cfg.GetSources.GitalyCorrelationID)
 		})
 	}
 }
