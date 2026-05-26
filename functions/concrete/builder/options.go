@@ -7,31 +7,33 @@ import (
 )
 
 type options struct {
-	debug                         bool
-	cacheDir                      string
-	archiverStagingDir            string
-	cloneURL                      string
-	shell                         string
-	loginShell                    bool
-	artifactUploadTimeout         time.Duration
-	artifactResponseHeaderTimeout time.Duration
-	cacheArchiveFormat            string
-	cacheMaxUploadArchiveSize     int64
-	cacheUploadDescriptor         func(string) (cacheprovider.Descriptor, error)
-	cacheDownloadDescriptor       func(string) (cacheprovider.Descriptor, error)
-	preCloneScript                []string
-	postCloneScript               []string
-	preBuildScript                []string
-	postBuildScript               []string
-	safeDirectoryCheckout         bool
-	isFeatureFlagOn               func(name string) bool
-	gitCleanConfig                bool
-	isSharedEnv                   bool
-	userAgent                     string
-	gitalyCorrelationID           string
-	executorName                  string
-	runnerName                    string
-	startedAt                     time.Time
+	debug                            bool
+	cacheDir                         string
+	archiverStagingDir               string
+	cloneURL                         string
+	shell                            string
+	loginShell                       bool
+	artifactUploadTimeout            time.Duration
+	artifactResponseHeaderTimeout    time.Duration
+	cacheArchiveFormat               string
+	cacheMaxUploadArchiveSize        int64
+	cacheUploadDescriptor            func(string) (cacheprovider.Descriptor, error)
+	cacheDownloadDescriptor          func(string) (cacheprovider.Descriptor, error)
+	alternateCacheUploadDescriptor   func(string) (cacheprovider.Descriptor, error)
+	alternateCacheDownloadDescriptor func(string) (cacheprovider.Descriptor, error)
+	preCloneScript                   []string
+	postCloneScript                  []string
+	preBuildScript                   []string
+	postBuildScript                  []string
+	safeDirectoryCheckout            bool
+	isFeatureFlagOn                  func(name string) bool
+	gitCleanConfig                   bool
+	isSharedEnv                      bool
+	userAgent                        string
+	gitalyCorrelationID              string
+	executorName                     string
+	runnerName                       string
+	startedAt                        time.Time
 }
 
 type Option func(*options) error
@@ -118,6 +120,29 @@ func WithCacheUploadDescriptor(fn func(string) (cacheprovider.Descriptor, error)
 func WithCacheDownloadDescriptor(fn func(string) (cacheprovider.Descriptor, error)) Option {
 	return func(o *options) error {
 		o.cacheDownloadDescriptor = fn
+		return nil
+	}
+}
+
+// WithAlternateCacheUploadDescriptor sets the upload descriptor resolver
+// for the FF-opposite cache key form. The concrete builder uses this in
+// CacheArchive to pass --alternate-file / --check-url so cache-archiver
+// can rename or skip-upload across FF_HASH_CACHE_KEYS toggles.
+func WithAlternateCacheUploadDescriptor(fn func(string) (cacheprovider.Descriptor, error)) Option {
+	return func(o *options) error {
+		o.alternateCacheUploadDescriptor = fn
+		return nil
+	}
+}
+
+// WithAlternateCacheDownloadDescriptor sets the download descriptor
+// resolver for the FF-opposite cache key form. The concrete builder uses
+// this to populate CacheSource.AlternateDescriptor so cache-extractor
+// can pass --alternate-url / --alternate-head-url and pick the newer of
+// primary / alternate via selectPresignedURL in a single invocation.
+func WithAlternateCacheDownloadDescriptor(fn func(string) (cacheprovider.Descriptor, error)) Option {
+	return func(o *options) error {
+		o.alternateCacheDownloadDescriptor = fn
 		return nil
 	}
 }

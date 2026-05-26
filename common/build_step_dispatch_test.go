@@ -120,6 +120,7 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
   ],
   "cache_archive": [
     {
+      "alternate_key": "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2",
       "compression_level": "default",
       "descriptor": {},
       "key": "foobar",
@@ -136,6 +137,8 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
       "paths": ["cache_me_if_you_can"],
       "sources": [
         {
+          "alternate_descriptor": {},
+          "alternate_key": "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2",
           "descriptor": {},
           "key": "foobar",
           "name": "foobar"

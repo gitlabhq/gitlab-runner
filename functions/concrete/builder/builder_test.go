@@ -3,7 +3,9 @@
 package builder
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -417,9 +419,13 @@ func TestBuild_CacheExtract(t *testing.T) {
 		config := buildConfig(t, job, vars)
 
 		require.Len(t, config.CacheExtract, 1)
+		// One primary source carrying its own alternate-key form — see
+		// "alternate key form for FF_HASH_CACHE_KEYS migration".
 		require.Len(t, config.CacheExtract[0].Sources, 1)
-		assert.Equal(t, "test-key", config.CacheExtract[0].Sources[0].Name)
-		assert.Equal(t, "test-key", config.CacheExtract[0].Sources[0].Key)
+		src := config.CacheExtract[0].Sources[0]
+		assert.Equal(t, "test-key", src.Name)
+		assert.Equal(t, "test-key", src.Key)
+		assert.Equal(t, fmt.Sprintf("%x", sha256.Sum256([]byte("test-key"))), src.AlternateKey)
 		assert.Equal(t, []string{"vendor/", ".cache/"}, config.CacheExtract[0].Paths)
 	})
 
@@ -461,18 +467,76 @@ func TestBuild_CacheExtract(t *testing.T) {
 
 		vars := newTestVars(t, nil, expandValues(map[string]string{"my-cache": "my-cache"}))
 
+		alternateKey := fmt.Sprintf("%x", sha256.Sum256([]byte("my-cache")))
 		desc := cacheprovider.Descriptor{URL: "https://storage.example.com/cache", GoCloudURL: true}
+		altDesc := cacheprovider.Descriptor{URL: "https://storage.example.com/cache-alt", GoCloudURL: true}
 
 		config := buildConfig(t, job, vars,
 			WithCacheDownloadDescriptor(func(key string) (cacheprovider.Descriptor, error) {
 				assert.Equal(t, "my-cache", key)
 				return desc, nil
 			}),
+			WithAlternateCacheDownloadDescriptor(func(key string) (cacheprovider.Descriptor, error) {
+				assert.Equal(t, alternateKey, key)
+				return altDesc, nil
+			}),
 		)
 
 		require.Len(t, config.CacheExtract, 1)
-		assert.Equal(t, desc.URL, config.CacheExtract[0].Sources[0].Descriptor.URL)
-		assert.True(t, config.CacheExtract[0].Sources[0].Descriptor.GoCloudURL)
+		require.Len(t, config.CacheExtract[0].Sources, 1)
+		src := config.CacheExtract[0].Sources[0]
+		assert.Equal(t, desc.URL, src.Descriptor.URL)
+		assert.True(t, src.Descriptor.GoCloudURL)
+		assert.Equal(t, alternateKey, src.AlternateKey)
+		assert.Equal(t, altDesc.URL, src.AlternateDescriptor.URL)
+		assert.True(t, src.AlternateDescriptor.GoCloudURL)
+	})
+
+	t.Run("alternate key form for FF_HASH_CACHE_KEYS migration", func(t *testing.T) {
+		// FF ON  → primary is sha256(humanKey), alternate is humanKey
+		// FF OFF → primary is humanKey,         alternate is sha256(humanKey)
+		cases := []struct {
+			name             string
+			hashEnabled      bool
+			wantPrimaryKey   func(human, hashed string) string
+			wantAlternateKey func(human, hashed string) string
+		}{
+			{
+				name:             "FF on -> primary hashed, alternate unhashed",
+				hashEnabled:      true,
+				wantPrimaryKey:   func(human, hashed string) string { return hashed },
+				wantAlternateKey: func(human, hashed string) string { return human },
+			},
+			{
+				name:             "FF off -> primary unhashed, alternate hashed",
+				hashEnabled:      false,
+				wantPrimaryKey:   func(human, hashed string) string { return human },
+				wantAlternateKey: func(human, hashed string) string { return hashed },
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				job := baseJob()
+				job.Cache = []spec.Cache{
+					{Key: "my-cache", Paths: []string{"build/"}, Policy: spec.CachePolicyPullPush},
+				}
+				vars := newTestVars(t, nil, expandValues(map[string]string{"my-cache": "my-cache"}))
+				ff := func(name string) bool { return tc.hashEnabled && name == featureflags.HashCacheKeys }
+
+				config := buildConfig(t, job, vars, WithFeatureFlagProvider(ff))
+
+				require.Len(t, config.CacheExtract, 1)
+				require.Len(t, config.CacheExtract[0].Sources, 1)
+				src := config.CacheExtract[0].Sources[0]
+
+				humanKey := "my-cache"
+				hashedKey := fmt.Sprintf("%x", sha256.Sum256([]byte(humanKey)))
+
+				assert.Equal(t, tc.wantPrimaryKey(humanKey, hashedKey), src.Key, "primary key form")
+				assert.Equal(t, tc.wantAlternateKey(humanKey, hashedKey), src.AlternateKey, "alternate key form (opposite of FF setting)")
+			})
+		}
 	})
 
 	t.Run("fallback keys", func(t *testing.T) {
@@ -490,8 +554,11 @@ func TestBuild_CacheExtract(t *testing.T) {
 		config := buildConfig(t, job, vars)
 
 		require.Len(t, config.CacheExtract, 1)
+		// primary (with alternate-on-primary) + fb-1 + fb-2
 		require.Len(t, config.CacheExtract[0].Sources, 3)
 		assert.Equal(t, "primary", config.CacheExtract[0].Sources[0].Name)
+		assert.Equal(t, "primary", config.CacheExtract[0].Sources[0].Key)
+		assert.Equal(t, fmt.Sprintf("%x", sha256.Sum256([]byte("primary"))), config.CacheExtract[0].Sources[0].AlternateKey)
 		assert.Equal(t, "fb-1", config.CacheExtract[0].Sources[1].Name)
 		assert.Equal(t, "fb-2", config.CacheExtract[0].Sources[2].Name)
 	})
@@ -512,7 +579,9 @@ func TestBuild_CacheExtract(t *testing.T) {
 		config := buildConfig(t, job, vars)
 
 		require.Len(t, config.CacheExtract, 1)
+		// primary (with alternate-on-primary) + env-fallback
 		require.Len(t, config.CacheExtract[0].Sources, 2)
+		assert.Equal(t, "primary", config.CacheExtract[0].Sources[0].Name)
 		assert.Equal(t, "env-fallback", config.CacheExtract[0].Sources[1].Name)
 	})
 
@@ -587,6 +656,46 @@ func TestBuild_CacheExtract(t *testing.T) {
 		assert.Equal(t, expectedKey, config.CacheArchive[0].Name)
 	})
 
+	t.Run("empty key default normalizes traversal and leading slashes", func(t *testing.T) {
+		cases := []struct {
+			name    string
+			jobName string
+			ref     string
+			want    string
+		}{
+			{"clean inputs", "test-job", "main", "test-job/main"},
+			{"job name with traversal", "..", "main", "main"},
+			{"ref with traversal", "test-job", "../main", "main"},
+			{"job name with leading slash", "/abs/job", "main", "abs/job/main"},
+			{"job name with dot segment", "./test-job", "main", "test-job/main"},
+			{"empty job name", "", "main", "main"},
+		}
+
+		// HashCacheKeys ON exposes the divergence: in that mode the
+		// humanKey is the raw key without sanitation (resolved key is
+		// sha256(humanKey)). Under FF off the cachekey.Sanitize call
+		// downstream normalizes either form, so the bug is invisible.
+		ff := func(name string) bool { return name == featureflags.HashCacheKeys }
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				job := baseJob()
+				job.JobInfo.Name = tc.jobName
+				job.GitInfo.Ref = tc.ref
+				job.Cache = []spec.Cache{
+					{Key: "", Paths: []string{"build/"}, Policy: spec.CachePolicyPullPush},
+				}
+
+				vars := newTestVars(t, nil)
+				config := buildConfig(t, job, vars, WithFeatureFlagProvider(ff))
+
+				require.Len(t, config.CacheExtract, 1)
+				require.NotEmpty(t, config.CacheExtract[0].Sources)
+				assert.Equal(t, tc.want, config.CacheExtract[0].Sources[0].Name)
+			})
+		}
+	})
+
 	t.Run("download descriptor receives resolved key not raw key", func(t *testing.T) {
 		job := baseJob()
 		job.Cache = []spec.Cache{
@@ -596,21 +705,32 @@ func TestBuild_CacheExtract(t *testing.T) {
 		vars := newTestVars(t, nil, expandValues(map[string]string{"my-cache": "my-cache"}))
 		ff := func(f string) bool { return f == featureflags.HashCacheKeys }
 
-		var receivedKey string
+		// HashCacheKeys is on, so primary is hashed and the alternate
+		// is the unhashed form. The primary descriptor receives the
+		// hashed key; the alternate descriptor receives the unhashed.
+		var primaryKey, alternateKey string
 		config := buildConfig(t, job, vars,
 			WithFeatureFlagProvider(ff),
 			WithCacheDownloadDescriptor(func(key string) (cacheprovider.Descriptor, error) {
-				receivedKey = key
+				primaryKey = key
+				return cacheprovider.Descriptor{}, nil
+			}),
+			WithAlternateCacheDownloadDescriptor(func(key string) (cacheprovider.Descriptor, error) {
+				alternateKey = key
 				return cacheprovider.Descriptor{}, nil
 			}),
 		)
 
 		require.Len(t, config.CacheExtract, 1)
+		require.Len(t, config.CacheExtract[0].Sources, 1)
 		src := config.CacheExtract[0].Sources[0]
-		assert.Equal(t, src.Key, receivedKey,
-			"download descriptor should receive the resolved (hashed) key, not the raw cache key")
-		assert.NotEqual(t, "my-cache", receivedKey)
-		assert.Len(t, receivedKey, 64)
+
+		assert.NotEqual(t, "my-cache", src.Key)
+		assert.Len(t, src.Key, 64, "primary key under FF on should be sha256 hex")
+		assert.Equal(t, "my-cache", src.AlternateKey, "alternate under FF on should be the unhashed key")
+
+		assert.Equal(t, src.Key, primaryKey, "primary descriptor should receive the resolved (hashed) key")
+		assert.Equal(t, src.AlternateKey, alternateKey, "alternate descriptor should receive the unhashed key")
 	})
 
 	t.Run("sanitized key produces warning", func(t *testing.T) {
@@ -659,6 +779,8 @@ func TestBuild_CacheExtract_ProtectedFallbackKey(t *testing.T) {
 			config := buildConfig(t, job, vars)
 
 			require.Len(t, config.CacheExtract, 1)
+			// Primary carries its own alternate-key form; user fallbacks
+			// remain as separate sources, so blocked/allowed differ by 1.
 			if tc.expectBlocked {
 				assert.Len(t, config.CacheExtract[0].Sources, 1)
 				assert.NotEmpty(t, config.CacheExtract[0].Warnings)

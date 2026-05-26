@@ -204,16 +204,10 @@ func (b *builder) buildCacheSources(cache spec.Cache) ([]stages.CacheSource, []s
 	var sources []stages.CacheSource
 	var warnings []string
 
-	addSource := func(key string) error {
-		humanKey, resolvedKey, keyWarnings, err := b.cacheKey(key)
-		if err != nil {
-			warnings = append(warnings, keyWarnings...)
-			warnings = append(warnings, fmt.Sprintf("Skipping cache extraction due to %v", err))
-			return nil // non-fatal: skip this source
-		}
-
+	addSourceWithKey := func(humanKey, resolvedKey string, keyWarnings []string) error {
 		var desc cacheprovider.Descriptor
 		if b.opts.cacheDownloadDescriptor != nil {
+			var err error
 			desc, err = b.opts.cacheDownloadDescriptor(resolvedKey)
 			if err != nil {
 				return err
@@ -229,8 +223,56 @@ func (b *builder) buildCacheSources(cache spec.Cache) ([]stages.CacheSource, []s
 		return nil
 	}
 
-	if err := addSource(cache.Key); err != nil {
-		return nil, nil, err
+	addSource := func(key string) error {
+		humanKey, resolvedKey, keyWarnings, err := b.cacheKey(key)
+		if err != nil {
+			warnings = append(warnings, keyWarnings...)
+			warnings = append(warnings, fmt.Sprintf("Skipping cache extraction due to %v", err))
+			return nil // non-fatal: skip this source
+		}
+		return addSourceWithKey(humanKey, resolvedKey, keyWarnings)
+	}
+
+	primaryHuman, primaryResolved, primaryWarnings, err := b.cacheKey(cache.Key)
+	if err != nil {
+		warnings = append(warnings, primaryWarnings...)
+		warnings = append(warnings, fmt.Sprintf("Skipping cache extraction due to %v", err))
+		// fall through: still try fallback keys below
+	} else {
+		var desc cacheprovider.Descriptor
+		if b.opts.cacheDownloadDescriptor != nil {
+			desc, err = b.opts.cacheDownloadDescriptor(primaryResolved)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		// Alternate key is the FF_HASH_CACHE_KEYS-opposite form so toggling the flag doesn't silently drop existing caches.
+		alternateResolved := primaryHuman
+		if !b.isFeatureFlagOn(featureflags.HashCacheKeys) {
+			alternateResolved = fmt.Sprintf("%x", sha256.Sum256([]byte(primaryHuman)))
+		}
+
+		var altDesc cacheprovider.Descriptor
+		var altKey string
+		if alternateResolved != primaryResolved {
+			altKey = alternateResolved
+			if b.opts.alternateCacheDownloadDescriptor != nil {
+				altDesc, err = b.opts.alternateCacheDownloadDescriptor(alternateResolved)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+		}
+
+		sources = append(sources, stages.CacheSource{
+			Name:                primaryHuman,
+			Key:                 primaryResolved,
+			Descriptor:          desc,
+			AlternateKey:        altKey,
+			AlternateDescriptor: altDesc,
+			Warnings:            primaryWarnings,
+		})
 	}
 
 	for _, fk := range cache.FallbackKeys {
@@ -275,9 +317,21 @@ func (b *builder) buildCacheArchive() ([]stages.CacheArchive, error) {
 			cache.When = spec.CacheWhenOnSuccess
 		}
 
+		// AlternateKey is the FF-opposite local cache path so
+		// cache-archiver can rename the previous-FF archive into the
+		// current-FF path (commands/helpers/cache_archiver.go:251).
+		alternateResolved := humanKey
+		if !b.isFeatureFlagOn(featureflags.HashCacheKeys) {
+			alternateResolved = fmt.Sprintf("%x", sha256.Sum256([]byte(humanKey)))
+		}
+		if alternateResolved == resolvedKey {
+			alternateResolved = ""
+		}
+
 		archive := stages.CacheArchive{
 			Name:                   humanKey,
 			Key:                    resolvedKey,
+			AlternateKey:           alternateResolved,
 			Warnings:               warnings,
 			Untracked:              cache.Untracked,
 			Paths:                  cache.Paths,
@@ -331,6 +385,7 @@ func (b *builder) buildSteps() []stages.Step {
 		step.BashExitCodeCheck = b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck)
 		step.Debug = b.opts.debug
 		step.ScriptSections = b.isFeatureFlagOn(featureflags.ScriptSections) && b.meta.Features.TraceSections
+		step.UseNewEvalStrategy = b.isFeatureFlagOn(featureflags.UseNewEvalStrategy)
 		return step
 	}
 
@@ -471,7 +526,9 @@ func (b *builder) buildCleanup(getSources stages.GetSources) stages.Cleanup {
 }
 
 func (b *builder) cacheKey(name string) (string, string, []string, error) {
-	rawKey := path.Join(b.meta.JobInfo.Name, b.meta.GitInfo.Ref)
+	// Virtual-root prefix prevents a leading / or .. in JobName/Ref from producing an unexpected key,
+	// especially under FF_HASH_CACHE_KEYS=on where humanKey is used unsanitized.
+	rawKey := path.Join("/", b.meta.JobInfo.Name, b.meta.GitInfo.Ref)[1:]
 	if name != "" {
 		rawKey = b.variables.ExpandValue(name)
 	}
