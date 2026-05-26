@@ -163,6 +163,31 @@ func TestBuild_GetSources(t *testing.T) {
 		assert.Equal(t, 50, config.GetSources.Depth)
 	})
 
+	t.Run("object format reads from GitInfo.RepoObjectFormat", func(t *testing.T) {
+		t.Run("sha256 repo", func(t *testing.T) {
+			job := baseJob()
+			job.GitInfo.RepoObjectFormat = "sha256"
+			config := buildConfig(t, job, newTestVars(t, nil))
+			assert.Equal(t, "sha256", config.GetSources.ObjectFormat)
+		})
+
+		t.Run("empty defaults to sha1", func(t *testing.T) {
+			job := baseJob()
+			job.GitInfo.RepoObjectFormat = ""
+			config := buildConfig(t, job, newTestVars(t, nil))
+			assert.Equal(t, "sha1", config.GetSources.ObjectFormat)
+		})
+
+		t.Run("GIT_OBJECT_FORMAT CI variable is ignored", func(t *testing.T) {
+			job := baseJob()
+			job.GitInfo.RepoObjectFormat = ""
+			vars := newTestVars(t, map[string]string{"GIT_OBJECT_FORMAT": "sha256"})
+			config := buildConfig(t, job, vars)
+			assert.Equal(t, "sha1", config.GetSources.ObjectFormat,
+				"GIT_OBJECT_FORMAT CI variable must not override GitInfo")
+		})
+	})
+
 	t.Run("flags", func(t *testing.T) {
 		vars := newTestVars(t, map[string]string{
 			"GIT_CLONE_EXTRA_FLAGS": "--no-tags --single-branch",

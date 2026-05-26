@@ -126,7 +126,12 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 		GitCloneFlags:     b.splitVarFlagsDefault("GIT_CLONE_EXTRA_FLAGS", nil),
 		GitFetchFlags:     b.splitVarFlagsDefault("GIT_FETCH_EXTRA_FLAGS", gitFetchFlagsDefault),
 		GitCleanFlags:     b.splitVarFlagsDefault("GIT_CLEAN_FLAGS", gitCleanFlagsDefault),
-		ObjectFormat:      variables.Default(b.variables, "GIT_OBJECT_FORMAT", "sha1"),
+		ObjectFormat: func() string {
+			if b.meta.GitInfo.RepoObjectFormat != "" {
+				return b.meta.GitInfo.RepoObjectFormat
+			}
+			return "sha1"
+		}(),
 
 		SubmoduleDepth:       variables.DefaultIntClamp(b.variables, "GIT_SUBMODULE_DEPTH", b.meta.GitInfo.Depth, 0, 10000),
 		SubmoduleUpdateFlags: b.splitVarFlags("GIT_SUBMODULE_UPDATE_FLAGS"),
