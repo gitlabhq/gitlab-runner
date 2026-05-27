@@ -284,7 +284,7 @@ func (i *Inputs) Expand(text string) (string, error) {
 
 func ExpandInputs(inputs *Inputs, v any) error {
 	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
 	if rv.Kind() != reflect.Struct {
