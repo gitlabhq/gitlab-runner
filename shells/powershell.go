@@ -226,8 +226,11 @@ func psReplaceSpecialChars(text string) string {
 	return text
 }
 
+// psSingleQuote wraps text in a PowerShell single-quoted (verbatim) string.
+// Embedded single quotes are escaped by doubling them, per
+// https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_quoting_rules
 func psSingleQuote(text string) string {
-	return singleQuote(text)
+	return "'" + strings.ReplaceAll(text, "'", "''") + "'"
 }
 
 // github.com/PowerShell/PowerShell/blob/v7.3.1/src/System.Management.Automation/engine/parser/CharTraits.cs#L276-L282
@@ -330,6 +333,41 @@ func (p *PsWriter) lines(texts ...string) {
 	}
 
 	p.Line(strings.Join(lines, p.EOL))
+}
+
+func (p *PsWriter) CommandWithStdin(stdin, command string, arguments ...string) {
+	// This mimics something like `echo "foobar" | blipp.exe` for pwsh/powershell, passing in stdin _as is_ to the
+	// command. It does not mess with the encoding, BOM, ...
+	// The unfortunate side-effect is, that we use a temporary file for this.
+	// A trailing newline is appended to stdin to mirror bash's `echo`, which adds one too. This keeps
+	// the cross-shell contract symmetric for consumers that rely on a final newline (e.g. `git credential fill`).
+
+	mainCommand := `$CommandWithStdin = Start-Process -NoNewWindow -RedirectStandardInput $tmpFile -PassThru -Wait -FilePath ` + psSingleQuote(command)
+	if len(arguments) > 0 {
+		quoted := make([]string, len(arguments))
+		for i, arg := range arguments {
+			quoted[i] = psSingleQuote(arg)
+		}
+		mainCommand += " -ArgumentList " + strings.Join(quoted, ",")
+	}
+
+	// The body is wrapped in `& { ... }` so that `$tmpFile` and `$CommandWithStdin` are scoped to this block
+	// and do not leak into the surrounding script (mirrors `SetupGitCredHelper`).
+	block := strings.Join([]string{
+		`& {`,
+		`try {`,
+		`$tmpFile = Get-Item ([System.IO.Path]::GetTempFilename())`,
+		fmt.Sprintf(`[System.IO.File]::WriteAllText($tmpFile, %s)`, psSingleQuote(stdin+"\n")),
+		mainCommand,
+		`if ($CommandWithStdin.ExitCode -ne 0) { Exit $CommandWithStdin.ExitCode }`,
+		`} finally {`,
+		`if ($tmpFile) { Remove-Item -Force -Path $tmpFile }`,
+		`}`,
+		`}`,
+	}, p.EOL)
+
+	p.Line(block)
+	p.CheckForErrors()
 }
 
 func (p *PsWriter) CommandArgExpand(command string, arguments ...string) {
