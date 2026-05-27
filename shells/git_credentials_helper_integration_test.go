@@ -64,8 +64,6 @@ func TestGitCredHelper(t *testing.T) {
 		},
 	}
 
-	const credReqFile = "credReq.tmp"
-
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
@@ -76,27 +74,18 @@ func TestGitCredHelper(t *testing.T) {
 
 				tmpDir := t.TempDir()
 
+				w.Command("git", "init", "--quiet")
+				conf := filepath.Join(tmpDir, ".git", "config")
+
+				w.SetupGitCredHelper(conf, "credential", defaultUser)
+				w.Command("git", "config", "--local", "--list")
+
+				w.CommandWithStdin(tc.credRequest, "git", "credential", "fill")
+
 				env := testEnv()
 				if jt := tc.jobToken; jt != "" {
 					env = append(env, "CI_JOB_TOKEN="+jt)
 				}
-
-				// dump the credential request into a file for later use
-				err := os.WriteFile(filepath.Join(tmpDir, credReqFile), []byte(tc.credRequest), 0644)
-				require.NoError(t, err, "write cred request file")
-
-				w.Command("git", "init", "--quiet")
-				conf := filepath.Join(tmpDir, ".git", "config")
-
-				// set up the cred helper
-				w.SetupGitCredHelper(conf, "credential", defaultUser)
-				// dump the whole local config
-				w.Command("git", "config", "--local", "--list")
-				// run cred fill in a shell agnostic way:
-				//	- run it through a git alias, thus using git's POSIX shell
-				//	- consume the cred request from a file in the current working directory
-				// so that we don't have to care about encoding, BOM, ...
-				w.Command("git", "-c", `alias.fillCreds=!f(){ git credential fill < `+credReqFile+` ; }; f`, "fillCreds")
 
 				output := runShell(t, shellName, tmpDir, w, env)
 

@@ -24,6 +24,19 @@ import (
 )
 
 func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter, env []string) string {
+	output, err := execShell(t, shell, cwd, writer, env)
+	require.NoError(t, err, "output: %s", output)
+	return output
+}
+
+// runShellExpectFailure is the counterpart of runShell that asserts the script terminates with a non-zero exit code.
+func runShellExpectFailure(t *testing.T, shell, cwd string, writer shells.ShellWriter, env []string) string {
+	output, err := execShell(t, shell, cwd, writer, env)
+	require.Error(t, err, "script was expected to exit non-zero, output: %s", output)
+	return output
+}
+
+func execShell(t *testing.T, shell, cwd string, writer shells.ShellWriter, env []string) (string, error) {
 	var extension string
 	var cmdArgs []string
 
@@ -56,9 +69,7 @@ func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter, env []
 	cmd.Dir = cwd
 
 	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, "output: %s", string(output))
-
-	return string(output)
+	return string(output), err
 }
 
 func TestMkDir(t *testing.T) {
@@ -312,6 +323,74 @@ func TestCommandArgumentExpansion(t *testing.T) {
 			testFn(t, w)
 		}
 	})
+}
+
+func TestCommandWithStdin(t *testing.T) {
+	// We need a command which is available across OSs, behaves identical across OSs, consumes input from stdin, and gives
+	// us a way to assert if the input made it to the command correctly.
+	// "git credential fill" is one such command, but it could be any other command which has above mentioned properties.
+
+	// Password used in the "shell metacharacters" case: single quote, backslash, dollar-prefixed token,
+	// backtick, double quote.
+	const metaPassword = `p'a\ss"$VAR` + "`x"
+
+	tests := []struct {
+		name           string
+		stdin          string
+		expectedOutput string
+		expectFailure  bool
+	}{
+		{
+			name:  "url-form input",
+			stdin: "url=https://some-user:some-pass@some-host/repo",
+			expectedOutput: `protocol=https
+host=some-host
+path=repo
+username=some-user
+password=some-pass
+`,
+		},
+		{
+			name:  "embedded newlines",
+			stdin: "protocol=https\nhost=some-host\nusername=some-user\npassword=some-pass",
+			expectedOutput: `protocol=https
+host=some-host
+username=some-user
+password=some-pass
+`,
+		},
+		{
+			name:  "shell metacharacters",
+			stdin: "protocol=https\nhost=some-host\nusername=some-user\npassword=" + metaPassword,
+			expectedOutput: `protocol=https
+host=some-host
+username=some-user
+password=` + metaPassword + "\n",
+		},
+		{
+			name:          "non-zero child exit propagates",
+			stdin:         "not-a-valid-credential-request",
+			expectFailure: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, w shells.ShellWriter) {
+				tmpDir := t.TempDir()
+
+				w.CommandWithStdin(tc.stdin, "git", "credential", "fill")
+
+				if tc.expectFailure {
+					runShellExpectFailure(t, shell, tmpDir, w, os.Environ())
+					return
+				}
+
+				output := runShell(t, shell, tmpDir, w, os.Environ())
+				assert.Equal(t, tc.expectedOutput, output)
+			})
+		})
+	}
 }
 
 type testFileTree map[string]string

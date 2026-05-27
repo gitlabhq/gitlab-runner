@@ -64,10 +64,6 @@ var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
 
 type stringQuoter func(string) string
 
-func singleQuote(s string) string {
-	return fmt.Sprintf(`'%s'`, s)
-}
-
 func doubleQuote(s string) string {
 	return `"` + s + `"`
 }

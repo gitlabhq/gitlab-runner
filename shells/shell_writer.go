@@ -9,6 +9,9 @@ type ShellWriter interface {
 	DotEnvVariables(baseFilename string, variables map[string]string) string
 	SourceEnv(pathname string)
 	Command(command string, arguments ...string)
+	// CommandWithStdin runs command with arguments and feeds stdin to its standard input.
+	// The child's exit code must propagate as the script's exit code on failure.
+	CommandWithStdin(stdin, command string, arguments ...string)
 	CommandArgExpand(command string, arguments ...string)
 	Line(text string)
 	CheckForErrors()
