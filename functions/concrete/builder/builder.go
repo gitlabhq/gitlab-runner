@@ -447,9 +447,8 @@ func (b *builder) buildSteps() []stages.Step {
 			continue
 		}
 
-		// Match abstract shell semantics: pre_build_script and post_build_script
-		// run inside the user step's shell, so shell-only state (exports, set
-		// options, function definitions, cd) carries over to the user script.
+		// pre_build_script and post_build_script run inside the user step's shell so
+		// shell-only state (exports, set options, function defs, cd) carries over.
 		s.Script = slices.Concat(b.opts.preBuildScript, s.Script, b.opts.postBuildScript)
 
 		steps = append(steps, s)

@@ -297,9 +297,6 @@ func TestBuild_Steps(t *testing.T) {
 			WithPostBuildScript([]string{"echo post-build"}),
 		)
 
-		// pre/post build are folded into each user step rather than emitted as
-		// their own steps; this matches abstract shell semantics where they
-		// share a shell process with the user script.
 		require.Len(t, config.Steps, 2)
 
 		assert.Equal(t, "build", config.Steps[0].Step)

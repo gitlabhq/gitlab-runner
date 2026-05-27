@@ -111,9 +111,7 @@ func (s CacheExtract) extract(ctx context.Context, e *env.Env, src CacheSource) 
 		}
 	}
 
-	// cache-extractor doesn't accept --header (only cache-archiver does),
-	// so drop them. Matches abstract shell, which also doesn't forward
-	// headers on the download path.
+	// --header is upload-only; cache-extractor doesn't accept it.
 	_ = desc.Headers
 
 	// Primary wins on key collision: cache-extractor sees a single env

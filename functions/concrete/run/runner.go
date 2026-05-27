@@ -197,8 +197,7 @@ func hasCacheSources(extracts []stages.CacheExtract) bool {
 	return false
 }
 
-// statusFromError mirrors build.go's runtimeStateAndError classification,
-// mapping the script error into the appropriate CI_JOB_STATUS value.
+// statusFromError maps an execution error to the appropriate CI_JOB_STATUS value.
 func statusFromError(err error) env.JobStatus {
 	switch {
 	case err == nil:
@@ -367,9 +366,8 @@ func (r *Runner) finalize(ctx context.Context) (cacheErr, artifactErr error) {
 		})
 	}
 
-	// Mirror abstract's writeUploadArtifacts ErrSkipBuildStage guard: with
-	// no server URL there is nowhere to upload to, so skip the section
-	// entirely rather than invoking artifacts-uploader with --url "".
+	// With no server URL there is nowhere to upload to; skip the section
+	// rather than invoking artifacts-uploader with --url "".
 	if len(r.config.ArtifactsArchive) > 0 && r.env.BaseURL != "" {
 		_ = r.section(ctx, uploadSection, func(ctx context.Context, e *env.Env) error {
 			for _, artifact := range r.config.ArtifactsArchive {

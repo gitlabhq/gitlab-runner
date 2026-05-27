@@ -144,14 +144,6 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 			return s
 		}()),
 		builder.WithGitCleanConfig(func() bool {
-			// It's by default disabled for the shell executor or when the git
-			// strategy is "none", and enabled otherwise; explicit
-			// configuration however always has precedence. Mirrors the
-			// abstract shell's writeGitCleanupAllConfigs at
-			// shells/abstract.go:1051; previously this only checked the
-			// executor, so a docker / kubernetes job with GIT_STRATEGY=none
-			// and no explicit override would wipe .git/config and
-			// .git/hooks where the abstract path preserves them.
 			if build.Runner.CleanGitConfig != nil {
 				return *build.Runner.CleanGitConfig
 			}

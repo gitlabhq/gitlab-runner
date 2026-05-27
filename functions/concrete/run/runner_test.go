@@ -460,12 +460,9 @@ func TestSection_OutputFormat(t *testing.T) {
 	assert.Contains(t, out, "section_end:")
 }
 
-// TestSectionNames_MatchAbstractShell verifies the runner emits section
-// names matching the abstract shell's BuildStage values (see
-// common/build.go's BuildStage constants and StepToBuildStage), so UI and
-// log tooling that keys off section names continues to work after the
-// script-to-step migration. Each section should appear exactly once,
-// regardless of how many cache/artifact items the loop processes.
+// TestSectionNames verifies the runner emits the expected stage section
+// names. Each section should appear exactly once regardless of how many
+// cache/artifact items the loop processes.
 func TestSectionNames_MatchAbstractShell(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("script execution; skip on windows")
@@ -550,11 +547,9 @@ func TestFinalize_FailurePathSectionNames(t *testing.T) {
 		"must not emit success-path upload section name on failure path")
 }
 
-// TestFinalize_EmptyBaseURLSkipsArtifactUpload mirrors abstract.go's
-// writeUploadArtifacts ErrSkipBuildStage guard: when there is no server
-// URL to upload to, the upload section must not be emitted at all rather
-// than invoking artifacts-uploader with --url "". The cache-archive
-// section is independent of BaseURL and should still emit.
+// TestFinalize_EmptyBaseURLSkipsArtifactUpload verifies that the upload
+// section is skipped entirely when BaseURL is empty, while cache-archive
+// still runs.
 func TestFinalize_EmptyBaseURLSkipsArtifactUpload(t *testing.T) {
 	r := testRunner(t, &Config{
 		TraceSections: true,
@@ -724,12 +719,8 @@ func TestJobTimeout_DuringAfterScript_SuppressesPerStageWarning(t *testing.T) {
 		},
 	})
 
-	// Run() may return nil here: the script succeeded, and the after-script
-	// error triggered by the jobCtx deadline is intentionally swallowed by
-	// the early break in runAfterScriptSteps (matching legacy semantics in
-	// common/build.go:905-919, where parent-ctx DeadlineExceeded suppresses
-	// the after-script error). The job-level timeout is reported by the
-	// harness layer above, not by Runner.Run.
+	// parent-ctx DeadlineExceeded suppresses the after-script error;
+	// the job-level timeout is reported by the harness layer above.
 	_ = r.Run(t.Context())
 
 	stderr := runnerStderr(r)
@@ -1018,13 +1009,9 @@ func TestExecuteSteps_CIJobStatus(t *testing.T) {
 	}
 }
 
-// TestStep_LinesShareShellState verifies the contract the builder relies on
-// when it folds pre_build_script and post_build_script into each user step:
-// every line of a single stages.Step.Script runs inside the same shell
-// process, so shell-only state (exports, cd, set options, function
-// definitions) defined earlier in the script is visible later. This matches
-// the abstract shell's writeUserScript behaviour, where pre_build_script,
-// the user script and post_build_script all run as one shell invocation.
+// TestStep_LinesShareShellState verifies that all lines within a single
+// stages.Step.Script run in one shell process, so shell state set earlier
+// (exports, cd, set options) is visible to later lines.
 func TestStep_LinesShareShellState(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("bash export semantics; skip on windows")
