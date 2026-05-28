@@ -490,6 +490,8 @@ type DockerMachine struct {
 
 	MachineOptionsWithName []string `long:"machine-options-with-name" json:",omitempty" env:"MACHINE_OPTIONS_WITH_NAME" description:"Template for additional options that may reference the machine name (need to include %s)"`
 
+	MaxRemovalAttempts int `toml:"MaxRemovalAttempts,omitzero" long:"max-removal-attempts" env:"MACHINE_MAX_REMOVAL_ATTEMPTS" description:"Maximum attempts at removing a machine before giving up (defaults to 30)"`
+
 	OffPeakPeriods   []string `toml:"OffPeakPeriods,omitempty" json:",omitempty" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`              // DEPRECATED
 	OffPeakTimezone  string   `toml:"OffPeakTimezone,omitempty" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                 // DEPRECATED
 	OffPeakIdleCount int      `toml:"OffPeakIdleCount,omitzero" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                      // DEPRECATED
