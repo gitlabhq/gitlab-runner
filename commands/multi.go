@@ -25,6 +25,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/process_state"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -155,6 +156,8 @@ type RunCommand struct {
 	runnerWorkersFeedFailures     *prometheus.CounterVec
 	runnerWorkerSlotOperations    *prometheus.CounterVec
 	runnerWorkerProcessingFailure *prometheus.CounterVec
+
+	processStateTracker *process_state.Tracker
 }
 
 func NewRunCommand(n common.Network, apiRequestsCollector prometheus.Collector, executorProviders executors.Providers) cli.Command {
@@ -171,6 +174,7 @@ func NewRunCommand(n common.Network, apiRequestsCollector prometheus.Collector, 
 		buildsHelper:           newBuildsHelper(),
 		runAt:                  runAt,
 		reloadConfigInterval:   common.ReloadConfigInterval,
+		processStateTracker:    process_state.NewTracker(),
 	}
 
 	return common.NewCommand("run", "run multi runner service", cmd)
@@ -548,6 +552,8 @@ func (mr *RunCommand) run() {
 
 	workerIndex := 0
 
+	mr.processStateTracker.SetRunning()
+
 	// Update number of workers and reload configuration.
 	// Exits when mr.runInterruptSignal receives a signal.
 	for mr.stopSignal == nil {
@@ -687,6 +693,8 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	registry.MustRegister(mr.failuresCollector)
 	// Metrics about catched errors
 	registry.MustRegister(&mr.prometheusLogHook)
+	// Metric providing info about current state of the GitLab Runner process
+	registry.MustRegister(mr.processStateTracker)
 	// Metrics about the program's build version.
 	registry.MustRegister(common.AppVersion.NewMetricsCollector())
 	// Go-specific metrics about the process (GC stats, goroutines, etc.).
@@ -722,6 +730,11 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 
 func (mr *RunCommand) serveDebugData(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/jobs/list", mr.buildsHelper.ListJobsHandler)
+	mux.HandleFunc("/debug/process/state", func(rw http.ResponseWriter, _ *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+		rw.Header().Set("Content-Type", "text/plain")
+		_, _ = fmt.Fprintln(rw, mr.processStateTracker.CurrentState())
+	})
 }
 
 func (mr *RunCommand) servePprof(mux *http.ServeMux) {
@@ -1398,6 +1411,8 @@ func (mr *RunCommand) interruptRun() {
 func (mr *RunCommand) handleGracefulShutdown() error {
 	// We wait till we have a SIGQUIT
 	for mr.stopSignal == syscall.SIGQUIT {
+		mr.processStateTracker.SetGracefulShutdown()
+
 		mr.log().
 			WithField("StopSignal", mr.stopSignal).
 			Warning("Starting graceful shutdown, waiting for builds to finish")
@@ -1436,6 +1451,8 @@ func (mr *RunCommand) handleGracefulShutdown() error {
 // `github.com/kardianos/service` service mechanism will finish
 // process execution.
 func (mr *RunCommand) handleForcefulShutdown() error {
+	mr.processStateTracker.SetForcefulShutdown()
+
 	mr.log().
 		WithField("shutdown-timeout", mr.configfile.Config().GetShutdownTimeout()).
 		WithField("StopSignal", mr.stopSignal).
