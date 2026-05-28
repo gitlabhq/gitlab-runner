@@ -99,6 +99,8 @@ type testMachine struct {
 	Removed chan bool
 	Stopped chan bool
 
+	forceRemoveCalls int
+
 	mutex sync.Mutex
 }
 
@@ -157,6 +159,9 @@ func (m *testMachine) Remove(ctx context.Context, name string) error {
 }
 
 func (m *testMachine) ForceRemove(ctx context.Context, name string) error {
+	m.mutex.Lock()
+	m.forceRemoveCalls++
+	m.mutex.Unlock()
 	return m.Remove(ctx, name)
 }
 
@@ -897,4 +902,42 @@ func TestMachineOptionsWithNameEmpty(t *testing.T) {
 
 	expectedOpts := []string{"--option1=value1"}
 	assert.Equal(t, expectedOpts, capturedOpts)
+}
+
+func TestFinalizeRemoval_StopsAfterMaxAttempts(t *testing.T) {
+	origInterval := removeRetryInterval
+	removeRetryInterval = time.Millisecond
+	defer func() {
+		removeRetryInterval = origInterval
+	}()
+
+	p, tm := testMachineProvider("remove-fail")
+	const name = "remove-fail"
+
+	p.lock.Lock()
+	p.details = map[string]*machineDetails{
+		name: {Name: name, State: machineStateRemoving, maxRemovalAttempts: 3},
+	}
+	p.lock.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		p.finalizeRemoval(p.details[name])
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("finalizeRemoval did not return within the bound")
+	}
+
+	p.lock.Lock()
+	_, stillPresent := p.details[name]
+	p.lock.Unlock()
+	assert.False(t, stillPresent, "local state must be cleared on give-up so the IdleCount slot is freed")
+
+	tm.mutex.Lock()
+	defer tm.mutex.Unlock()
+	assert.Equal(t, 1, tm.forceRemoveCalls, "ForceRemove must run once on give-up to purge the local store JSON")
 }

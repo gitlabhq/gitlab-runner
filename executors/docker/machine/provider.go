@@ -174,6 +174,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	details.UsedCount = 0
 	details.RetryCount = 0
 	details.LastSeen = time.Now()
+	details.maxRemovalAttempts = config.Machine.MaxRemovalAttempts
 	// details.targets is populated post-Create via Inspect (see
 	// createWithGrowthCapacity); we don't seed it from config.
 	details.Unlock()
@@ -427,10 +428,35 @@ func runHistogramCountedOperation(histogram prometheus.Histogram, operation func
 }
 
 func (m *machineProvider) finalizeRemoval(details *machineDetails) {
-	for {
-		err := m.removeMachine(details)
-		if err == nil {
+	max := details.maxRemovalAttempts
+	if max <= 0 {
+		max = defaultMaxRemovalAttempts
+	}
+
+	var (
+		lastErr  error
+		attempts int
+	)
+	for attempts = 1; attempts <= max; attempts++ {
+		lastErr = m.removeMachine(details)
+		if lastErr == nil {
 			break
+		}
+	}
+	gaveUp := lastErr != nil
+	if gaveUp {
+		details.logger().
+			WithError(lastErr).
+			WithField("attempts", attempts-1).
+			Warningln("Giving up on machine removal. The remote VM may be orphaned.")
+
+		// docker-machine rm -y leaves the local store on disk when Driver.Remove
+		// returns an error. Without rm -f the JSON under ~/.docker/machine/machines/
+		// accumulates across give-ups and drifts away from GCP state.
+		forceCtx, forceCancel := context.WithTimeout(context.Background(), machineRemoveCommandTimeout)
+		defer forceCancel()
+		if err := m.machine.ForceRemove(forceCtx, details.Name); err != nil {
+			details.logger().WithError(err).Warningln("ForceRemove on give-up failed")
 		}
 	}
 
@@ -442,10 +468,14 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 	retryCount := details.RetryCount
 	details.Unlock()
 
-	details.logger().
+	logEntry := details.logger().
 		WithField("now", time.Now()).
-		WithField("retries", retryCount).
-		Infoln("Machine removed")
+		WithField("retries", retryCount)
+	if gaveUp {
+		logEntry.Warningln("Machine state cleared after give-up")
+	} else {
+		logEntry.Infoln("Machine removed")
+	}
 
 	m.totalActions.WithLabelValues(actionLabels("removed", details.targets)...).Inc()
 }

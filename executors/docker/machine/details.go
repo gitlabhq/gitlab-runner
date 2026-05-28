@@ -28,6 +28,13 @@ type machineDetails struct {
 	// mutations like regional MIG's zone discovery).
 	targets targetLabels `yaml:"-"`
 
+	// maxRemovalAttempts copies config.Machine.MaxRemovalAttempts at create
+	// time so finalizeRemoval doesn't need the runner config plumbed in.
+	// Zero means the field wasn't set (e.g. machine recovered from on-disk
+	// state across a runner-manager restart); finalizeRemoval falls back to
+	// defaultMaxRemovalAttempts in that case.
+	maxRemovalAttempts int `yaml:"-"`
+
 	lock sync.Mutex
 }
 
