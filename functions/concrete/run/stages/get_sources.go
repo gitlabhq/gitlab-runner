@@ -184,7 +184,7 @@ func (s GetSources) getSourcesOnce(ctx context.Context, e *env.Env, gitEnv map[s
 
 	remoteURL := s.remoteURLWithoutCreds()
 
-	if s.GitStrategy == gitStrategyClone && s.UseNativeClone && gitVersionAtLeast(ctx, gitMinVersionCloneWithRef) {
+	if s.GitStrategy == gitStrategyClone && s.UseNativeClone && gitVersionAtLeast(ctx, e, gitMinVersionCloneWithRef) {
 		if err := s.gitClone(ctx, e, templateDir, remoteURL, gitEnv); err != nil {
 			return err
 		}
@@ -748,8 +748,8 @@ func deduplicateInsteadOfs(insteadOfs [][2]string) [][2]string {
 	return result
 }
 
-func gitVersionAtLeast(ctx context.Context, minVersion string) bool {
-	cmd := exec.CommandContext(ctx, "git", "--version")
+func gitVersionAtLeast(ctx context.Context, e *env.Env, minVersion string) bool {
+	cmd := exec.CommandContext(ctx, e.BundledGit(), "--version")
 	out, err := cmd.Output()
 	if err != nil {
 		return false
