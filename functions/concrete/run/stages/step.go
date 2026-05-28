@@ -40,10 +40,9 @@ func (s Step) Run(ctx context.Context, e *env.Env) error {
 
 	script := sw.Build(s.Script)
 	if err := shell(ctx, e, script, s.Step); err != nil {
-		if s.AllowFailure {
-			e.Warningf("Step %s failed (allow_failure): %v", s.Step, err)
-			return nil
-		}
+		// AllowFailure is intentionally not honored: abstract shell
+		// ignores it on script steps too, and the runner core has no
+		// way to record a non-zero exit while clearing failure_reason.
 		return fmt.Errorf("step %s: %w", s.Step, err)
 	}
 
