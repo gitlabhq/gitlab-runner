@@ -1188,8 +1188,9 @@ func TestGitCleanFlags(t *testing.T) {
 
 func TestGitProactiveAuthCheckout(t *testing.T) {
 	const (
-		dummySha = "01234567abcdef"
-		dummyRef = "main"
+		dummySha     = "01234567abcdef"
+		dummyRef     = "main"
+		dummyRepoUrl = "https://gitlab.com/my/repo.git"
 	)
 
 	tests := map[string]struct {
@@ -1219,7 +1220,7 @@ func TestGitProactiveAuthCheckout(t *testing.T) {
 					},
 				},
 				Job: spec.Job{
-					GitInfo: spec.GitInfo{Sha: dummySha, Ref: dummyRef},
+					GitInfo: spec.GitInfo{Sha: dummySha, Ref: dummyRef, RepoURL: dummyRepoUrl},
 				},
 			}
 
@@ -1227,7 +1228,7 @@ func TestGitProactiveAuthCheckout(t *testing.T) {
 			mockWriter.On("Noticef", "Checking out %s as detached HEAD (ref is %s)...", dummySha[0:8], dummyRef).Once()
 
 			if test.expectProactiveAuth {
-				mockWriter.On("Command", "git", "-c", "submodule.recurse=false", "-c", "http.proactiveAuth=basic", "checkout", "-f", "-q", dummySha).Once()
+				mockWriter.On("Command", "git", "-c", "submodule.recurse=false", "-c", "http.https://gitlab.com.proactiveAuth=basic", "checkout", "-f", "-q", dummySha).Once()
 			} else {
 				mockWriter.On("Command", "git", "-c", "submodule.recurse=false", "checkout", "-f", "-q", dummySha).Once()
 			}
@@ -1236,6 +1237,81 @@ func TestGitProactiveAuthCheckout(t *testing.T) {
 			mockWriter.On("Command", "git", "clean", "-ffdx").Once()
 
 			shell.writeCheckoutCmd(mockWriter, build)
+		})
+	}
+}
+
+func TestProactiveAuthArgs(t *testing.T) {
+	const dummySha = "01234567abcdef"
+
+	tests := map[string]struct {
+		proactiveAuthEnabled bool
+		repoURL              string
+		expected             []string
+		// warningArgs is the expected argument list passed to Warningf.
+		// nil means no warning expected. The first element matches the
+		// format string; the rest match the variadic arguments. Use
+		// mock.Anything to match any value at that position.
+		warningArgs []interface{}
+	}{
+		"disabled returns nil": {
+			proactiveAuthEnabled: false,
+			repoURL:              "https://gitlab.com/my/repo.git",
+			expected:             nil,
+		},
+		"enabled with valid URL returns scoped config": {
+			proactiveAuthEnabled: true,
+			repoURL:              "https://gitlab.com/my/repo.git",
+			expected:             []string{"-c", "http.https://gitlab.com.proactiveAuth=basic"},
+		},
+		"enabled with URL including port returns scoped config": {
+			proactiveAuthEnabled: true,
+			repoURL:              "https://gitlab.example.com:8443/my/repo.git",
+			expected:             []string{"-c", "http.https://gitlab.example.com:8443.proactiveAuth=basic"},
+		},
+		"enabled with invalid URL falls back to unscoped config and warns": {
+			proactiveAuthEnabled: true,
+			repoURL:              "https://gitlab.com/%ZZ",
+			expected:             []string{"-c", "http.proactiveAuth=basic"},
+			warningArgs: []interface{}{
+				"proactive auth: can't get repository host, using unscoped config. %v",
+				mock.Anything,
+			},
+		},
+		"enabled with empty URL falls back to unscoped config and warns": {
+			proactiveAuthEnabled: true,
+			repoURL:              "",
+			expected:             []string{"-c", "http.proactiveAuth=basic"},
+			warningArgs: []interface{}{
+				"proactive auth: repository host is empty, using unscoped config",
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+
+			build := &common.Build{
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						FeatureFlags: map[string]bool{
+							featureflags.UseGitProactiveAuth: test.proactiveAuthEnabled,
+						},
+					},
+				},
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{Sha: dummySha, RepoURL: test.repoURL},
+				},
+			}
+
+			mockWriter := NewMockShellWriter(t)
+			if test.warningArgs != nil {
+				mockWriter.On("Warningf", test.warningArgs...).Once()
+			}
+
+			args := shell.proactiveAuthArgs(mockWriter, build)
+			assert.Equal(t, test.expected, args)
 		})
 	}
 }
@@ -1375,7 +1451,7 @@ func TestGitProactiveAuth(t *testing.T) {
 
 			command := []interface{}{"-c", userAgent, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
 			if test.expectProactiveAuth {
-				command = []interface{}{"-c", userAgent, "-c", "http.proactiveAuth=basic", "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
+				command = []interface{}{"-c", userAgent, "-c", "http.https://gitlab.com.proactiveAuth=basic", "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
 			}
 
 			mockWriter.EXPECT().Cd(mock.Anything).Once()

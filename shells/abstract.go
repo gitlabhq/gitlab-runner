@@ -632,6 +632,38 @@ func (b *AbstractShell) getRemoteHost(build *common.Build) (string, error) {
 	return url_helpers.OnlySchemeAndHost(remoteURL).String(), nil
 }
 
+// proactiveAuthArgs returns `-c http.<remoteHost>.proactiveAuth=basic` when the
+// FF_USE_GIT_PROACTIVE_AUTH feature flag is enabled. The config is URL-scoped
+// to the remote host so it does not propagate (via GIT_CONFIG_PARAMETERS) to
+// child processes that fetch bundle URIs from signed third-party URLs, which
+// would otherwise fail with "insufficient capabilities" because the runner
+// also sets credential.interactive=never.
+//
+// If the remote host can't be determined, we fall back to the unscoped form so
+// proactive auth still works (matching the behavior prior to
+// https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39471). That
+// re-introduces the bundle-URI failure mode for that edge case, but keeps auth
+// working for public projects -- the original motivation for the feature flag.
+// This also matches the fallback in functions/concrete/run/stages/get_sources.go.
+func (b *AbstractShell) proactiveAuthArgs(w ShellWriter, build *common.Build) []string {
+	if !build.IsFeatureFlagOn(featureflags.UseGitProactiveAuth) {
+		return nil
+	}
+
+	arg := "http.proactiveAuth=basic"
+	host, err := b.getRemoteHost(build)
+	switch {
+	case err != nil:
+		w.Warningf("proactive auth: can't get repository host, using unscoped config. %v", err)
+	case host == "":
+		w.Warningf("proactive auth: repository host is empty, using unscoped config")
+	default:
+		arg = fmt.Sprintf("http.%s.proactiveAuth=basic", host)
+	}
+
+	return []string{"-c", arg}
+}
+
 func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) error {
 	build := info.Build
 
@@ -866,9 +898,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	fetchArgs := []string{"-c", userAgent}
 	// Force Git to send credentials proactively instead of waiting for a 401.
 	// This ensures the username is propagated to Gitaly for public projects.
-	if build.IsFeatureFlagOn(featureflags.UseGitProactiveAuth) {
-		fetchArgs = append(fetchArgs, "-c", "http.proactiveAuth=basic")
-	}
+	fetchArgs = append(fetchArgs, b.proactiveAuthArgs(w, build)...)
 	fetchArgs = append(fetchArgs, "fetch", "origin", "--no-recurse-submodules")
 	fetchArgs = append(fetchArgs, build.GitInfo.Refspecs...)
 	if depth > 0 {
@@ -929,9 +959,7 @@ func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellSc
 	cloneArgs := []string{"-c", userAgent}
 	// Force Git to send credentials proactively instead of waiting for a 401.
 	// This ensures the username is propagated to Gitaly for public projects.
-	if build.IsFeatureFlagOn(featureflags.UseGitProactiveAuth) {
-		cloneArgs = append(cloneArgs, "-c", "http.proactiveAuth=basic")
-	}
+	cloneArgs = append(cloneArgs, b.proactiveAuthArgs(w, build)...)
 	cloneArgs = append(cloneArgs, "clone", "--no-checkout", remoteURL, projectDir, "--template", templateDir)
 
 	if depth > 0 {
@@ -1075,9 +1103,7 @@ func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	// Force Git to send credentials proactively instead of waiting for a 401.
 	// This is needed because git checkout in partial-clone repositories can
 	// trigger lazy fetches from the promisor remote to retrieve missing objects.
-	if build.IsFeatureFlagOn(featureflags.UseGitProactiveAuth) {
-		checkoutArgs = append(checkoutArgs, "-c", "http.proactiveAuth=basic")
-	}
+	checkoutArgs = append(checkoutArgs, b.proactiveAuthArgs(w, build)...)
 	checkoutArgs = append(checkoutArgs, "checkout", "-f", "-q", build.GitInfo.Sha)
 	w.Command("git", checkoutArgs...)
 

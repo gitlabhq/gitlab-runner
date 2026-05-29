@@ -690,7 +690,15 @@ func (s GetSources) configArgs() []string {
 		args = append(args, "-c", "http.userAgent="+s.UserAgent)
 	}
 	if s.UseProactiveAuth {
-		args = append(args, "-c", "http.proactiveAuth=basic")
+		// Scope proactive auth to the remote host so the config is not propagated
+		// (via GIT_CONFIG_PARAMETERS) to bundle URI downloads or other child HTTP
+		// requests to unrelated hosts. See
+		// https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39471.
+		arg := "http.proactiveAuth=basic"
+		if s.RemoteHost != "" {
+			arg = fmt.Sprintf("http.%s.proactiveAuth=basic", s.RemoteHost)
+		}
+		args = append(args, "-c", arg)
 	}
 	return args
 }

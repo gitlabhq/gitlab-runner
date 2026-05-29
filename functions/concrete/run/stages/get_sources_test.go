@@ -610,6 +610,45 @@ func TestGetSources_UserAgentArgs(t *testing.T) {
 	}
 }
 
+func TestGetSources_ProactiveAuthArgs(t *testing.T) {
+	tests := map[string]struct {
+		useProactiveAuth bool
+		remoteHost       string
+		expected         []string
+	}{
+		"disabled": {
+			useProactiveAuth: false,
+			remoteHost:       "https://gitlab.com",
+			expected:         nil,
+		},
+		"enabled with remote host is URL-scoped": {
+			useProactiveAuth: true,
+			remoteHost:       "https://gitlab.com",
+			expected:         []string{"-c", "http.https://gitlab.com.proactiveAuth=basic"},
+		},
+		"enabled with remote host including port": {
+			useProactiveAuth: true,
+			remoteHost:       "https://gitlab.example.com:8443",
+			expected:         []string{"-c", "http.https://gitlab.example.com:8443.proactiveAuth=basic"},
+		},
+		"enabled without remote host falls back to global": {
+			useProactiveAuth: true,
+			remoteHost:       "",
+			expected:         []string{"-c", "http.proactiveAuth=basic"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			gs := GetSources{
+				UseProactiveAuth: tc.useProactiveAuth,
+				RemoteHost:       tc.remoteHost,
+			}
+			assert.Equal(t, tc.expected, gs.configArgs())
+		})
+	}
+}
+
 func TestGetSources_SubmodulePathArgs(t *testing.T) {
 	tests := map[string]struct {
 		paths    []string
