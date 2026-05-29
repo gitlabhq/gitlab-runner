@@ -1,3 +1,9 @@
+## v19.0.1 (2026-05-29)
+
+### Bug fixes
+
+- Update to go 1.26.3 [backport to 19.0] [!6788](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6788)
+
 ## v19.0.0 (2026-05-28)
 
 ### Bug fixes
