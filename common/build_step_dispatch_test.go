@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 func TestBuildConcreteKitchenSink(t *testing.T) {
@@ -120,6 +121,7 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
   ],
   "cache_archive": [
     {
+      "alternate_key": "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2",
       "compression_level": "default",
       "descriptor": {},
       "key": "foobar",
@@ -136,12 +138,15 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
       "paths": ["cache_me_if_you_can"],
       "sources": [
         {
+          "alternate_descriptor": {},
+          "alternate_key": "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2",
           "descriptor": {},
           "key": "foobar",
           "name": "foobar"
         }
       ],
-      "timeout": 10
+      "timeout": 10,
+      "use_exponential_backoff_stage_retry": true
     }
   ],
   "cleanup": {
@@ -190,6 +195,7 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
     "sha": "69b18e5ed3610cf646119c3e38f462c64ec462b7",
     "submodule_strategy": "none",
     "use_bundled_uris": true,
+    "use_exponential_backoff_stage_retry": true,
     "user_agent": "%s %s %s/%s"
   },
   "id": 123456789,
@@ -235,4 +241,128 @@ func TestBuildConcreteKitchenSink(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(schema[0].Inputs["config"].(string)), &b))
 	msg, _ := json.MarshalIndent(b, "", " ")
 	require.Equal(t, a, b, string(msg))
+}
+
+// TestCleanGitConfig_Defaults verifies the cleanGitConfig dispatch logic:
+// disabled for shell executors or GIT_STRATEGY=none, enabled otherwise,
+// with explicit Runner.CleanGitConfig always taking precedence.
+func TestCleanGitConfig_DefaultsMatchAbstractShell(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
+
+	cases := []struct {
+		name             string
+		executor         string
+		gitStrategy      GitStrategy
+		runnerOverride   *bool
+		wantCleanGitConf bool
+	}{
+		{"docker + fetch + no override -> clean", "docker", GitFetch, nil, true},
+		{"docker + clone + no override -> clean", "docker", GitClone, nil, true},
+		{"docker + none + no override -> preserve", "docker", GitNone, nil, false},
+		{"docker + empty + no override -> clean", "docker", GitEmpty, nil, true},
+
+		{"k8s + none + no override -> preserve", "kubernetes", GitNone, nil, false},
+		{"k8s + fetch + no override -> clean", "kubernetes", GitFetch, nil, true},
+
+		{"shell + fetch + no override -> preserve", "shell", GitFetch, nil, false},
+		{"shell-integration-test + fetch + no override -> preserve", "shell-integration-test", GitFetch, nil, false},
+
+		// Explicit override always wins, including overriding the
+		// preserve-when-strategy-none default.
+		{"docker + none + override=true -> clean", "docker", GitNone, boolPtr(true), true},
+		{"shell + fetch + override=true -> clean", "shell", GitFetch, boolPtr(true), true},
+		{"docker + fetch + override=false -> preserve", "docker", GitFetch, boolPtr(false), false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			build := buildForCleanGitConfig(t, tc.executor, tc.gitStrategy, tc.runnerOverride)
+
+			executor := NewMockExecutor(t)
+			executor.EXPECT().Shell().RunAndReturn(func() *ShellScriptInfo {
+				return &ShellScriptInfo{Shell: "bash", Build: build, Type: NormalShell}
+			})
+
+			schema, err := stagesToConcreteStep(t.Context(), executor)
+			require.NoError(t, err)
+			require.Len(t, schema, 1)
+
+			var cfg struct {
+				Cleanup struct {
+					CleanGitConfig bool `json:"clean_git_config"`
+				} `json:"cleanup"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(schema[0].Inputs["config"].(string)), &cfg))
+			require.Equal(t, tc.wantCleanGitConf, cfg.Cleanup.CleanGitConfig)
+		})
+	}
+}
+
+// TestGitalyCorrelationID_GatedOnFeatureFlag verifies that the
+// X-Gitaly-Correlation-ID header is only forwarded when
+// FF_USE_GITALY_CORRELATION_ID is on.
+func TestGitalyCorrelationID_GatedOnFeatureFlag(t *testing.T) {
+	cases := []struct {
+		name       string
+		ffOn       bool
+		corrID     string
+		wantCorrID string
+	}{
+		{"FF on (default) + corrID set forwards", true, "abc-corr-id", "abc-corr-id"},
+		{"FF off + corrID set drops", false, "abc-corr-id", ""},
+		{"FF on + empty corrID stays empty", true, "", ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			build := buildForCleanGitConfig(t, "docker", GitFetch, nil)
+			build.Job.JobRequestCorrelationID = tc.corrID
+			if !tc.ffOn {
+				build.Job.Variables = append(build.Job.Variables,
+					spec.Variable{Key: featureflags.UseGitalyCorrelationId, Value: "false"})
+			}
+
+			executor := NewMockExecutor(t)
+			executor.EXPECT().Shell().RunAndReturn(func() *ShellScriptInfo {
+				return &ShellScriptInfo{Shell: "bash", Build: build, Type: NormalShell}
+			})
+
+			schema, err := stagesToConcreteStep(t.Context(), executor)
+			require.NoError(t, err)
+			require.Len(t, schema, 1)
+
+			var cfg struct {
+				GetSources struct {
+					GitalyCorrelationID string `json:"gitaly_correlation_id"`
+				} `json:"get_sources"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(schema[0].Inputs["config"].(string)), &cfg))
+			require.Equal(t, tc.wantCorrID, cfg.GetSources.GitalyCorrelationID)
+		})
+	}
+}
+
+func buildForCleanGitConfig(t *testing.T, executor string, strategy GitStrategy, override *bool) *Build {
+	t.Helper()
+	build := &Build{
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor:       executor,
+				CleanGitConfig: override,
+			},
+		},
+		Job: spec.Job{
+			ID:    1,
+			Token: "t",
+			Variables: spec.Variables{
+				{Key: "GIT_STRATEGY", Value: string(strategy)},
+			},
+			GitInfo: GetGitInfo(repoRemoteURL),
+			Steps: spec.Steps{
+				{Name: spec.StepNameScript, Script: []string{"true"}, When: spec.StepWhenOnSuccess},
+			},
+			RunnerInfo: spec.RunnerInfo{Timeout: DefaultTimeout},
+		},
+	}
+	return build
 }

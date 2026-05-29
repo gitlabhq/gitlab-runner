@@ -388,6 +388,26 @@ func TestAfterScript_ErrorHandling(t *testing.T) {
 	}
 }
 
+// TestAfterScript_StatusReflectsPromotedError verifies that finalize's
+// cache/artifact routing reflects the post-after_script status when
+// AFTER_SCRIPT_IGNORE_ERRORS=false promotes a nil error.
+func TestAfterScript_StatusReflectsPromotedError(t *testing.T) {
+	r := testRunner(t, &Config{
+		AfterScriptIgnoreErrors: false,
+		Steps: []stages.Step{
+			{Step: afterScriptStepName, Script: []string{"exit 1"}, OnSuccess: true, OnFailure: true},
+		},
+	})
+
+	// executeSteps drives the full main-script + after_script flow.
+	// Main script is empty (no non-after_script entries), so it
+	// succeeds — the error promotion comes from the failing after_script.
+	err := r.executeSteps(t.Context())
+
+	require.Error(t, err, "after_script's exit 1 must propagate when AFTER_SCRIPT_IGNORE_ERRORS=false")
+	assert.False(t, r.env.IsSuccessful())
+}
+
 func TestAfterScript_SetsScriptCancelNil(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -440,12 +460,9 @@ func TestSection_OutputFormat(t *testing.T) {
 	assert.Contains(t, out, "section_end:")
 }
 
-// TestSectionNames_MatchAbstractShell verifies the runner emits section
-// names matching the abstract shell's BuildStage values (see
-// common/build.go's BuildStage constants and StepToBuildStage), so UI and
-// log tooling that keys off section names continues to work after the
-// script-to-step migration. Each section should appear exactly once,
-// regardless of how many cache/artifact items the loop processes.
+// TestSectionNames verifies the runner emits the expected stage section
+// names. Each section should appear exactly once regardless of how many
+// cache/artifact items the loop processes.
 func TestSectionNames_MatchAbstractShell(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("script execution; skip on windows")
@@ -530,11 +547,9 @@ func TestFinalize_FailurePathSectionNames(t *testing.T) {
 		"must not emit success-path upload section name on failure path")
 }
 
-// TestFinalize_EmptyBaseURLSkipsArtifactUpload mirrors abstract.go's
-// writeUploadArtifacts ErrSkipBuildStage guard: when there is no server
-// URL to upload to, the upload section must not be emitted at all rather
-// than invoking artifacts-uploader with --url "". The cache-archive
-// section is independent of BaseURL and should still emit.
+// TestFinalize_EmptyBaseURLSkipsArtifactUpload verifies that the upload
+// section is skipped entirely when BaseURL is empty, while cache-archive
+// still runs.
 func TestFinalize_EmptyBaseURLSkipsArtifactUpload(t *testing.T) {
 	r := testRunner(t, &Config{
 		TraceSections: true,
@@ -704,12 +719,8 @@ func TestJobTimeout_DuringAfterScript_SuppressesPerStageWarning(t *testing.T) {
 		},
 	})
 
-	// Run() may return nil here: the script succeeded, and the after-script
-	// error triggered by the jobCtx deadline is intentionally swallowed by
-	// the early break in runAfterScriptSteps (matching legacy semantics in
-	// common/build.go:905-919, where parent-ctx DeadlineExceeded suppresses
-	// the after-script error). The job-level timeout is reported by the
-	// harness layer above, not by Runner.Run.
+	// parent-ctx DeadlineExceeded suppresses the after-script error;
+	// the job-level timeout is reported by the harness layer above.
 	_ = r.Run(t.Context())
 
 	stderr := runnerStderr(r)
@@ -797,6 +808,37 @@ func TestPrepare_NonFatalFailures(t *testing.T) {
 			r := testRunner(t, &tt.cfg)
 			err := r.prepare(t.Context())
 			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestPrepare_ReloadsGitlabEnvBetweenStages(t *testing.T) {
+	cases := map[string]Config{
+		"restore_cache": {
+			GetSources: stages.GetSources{GitStrategy: "none", MaxAttempts: 1},
+			CacheExtract: []stages.CacheExtract{
+				{Sources: []stages.CacheSource{{Key: "bad"}}},
+			},
+		},
+		"download_artifacts": {
+			GetSources: stages.GetSources{GitStrategy: "none", MaxAttempts: 1},
+			ArtifactExtract: []stages.ArtifactDownload{
+				{ArtifactName: "bad", Filename: "bad.zip", DownloadAttempts: 1},
+			},
+		},
+	}
+
+	for name, cfg := range cases {
+		t.Run(name, func(t *testing.T) {
+			r := testRunner(t, &cfg)
+			require.NoError(t, r.setupGitlabEnv())
+
+			require.NoError(t, os.WriteFile(r.env.GitLabEnvFile, []byte("FOO=bar\n"), 0o600))
+			_, exists := r.env.GitLabEnv["FOO"]
+			require.False(t, exists)
+
+			assert.NoError(t, r.prepare(t.Context()))
+			assert.Equal(t, "bar", r.env.GitLabEnv["FOO"])
 		})
 	}
 }
@@ -967,13 +1009,9 @@ func TestExecuteSteps_CIJobStatus(t *testing.T) {
 	}
 }
 
-// TestStep_LinesShareShellState verifies the contract the builder relies on
-// when it folds pre_build_script and post_build_script into each user step:
-// every line of a single stages.Step.Script runs inside the same shell
-// process, so shell-only state (exports, cd, set options, function
-// definitions) defined earlier in the script is visible later. This matches
-// the abstract shell's writeUserScript behaviour, where pre_build_script,
-// the user script and post_build_script all run as one shell invocation.
+// TestStep_LinesShareShellState verifies that all lines within a single
+// stages.Step.Script run in one shell process, so shell state set earlier
+// (exports, cd, set options) is visible to later lines.
 func TestStep_LinesShareShellState(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("bash export semantics; skip on windows")

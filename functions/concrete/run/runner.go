@@ -157,7 +157,9 @@ func (r *Runner) prepare(ctx context.Context) error {
 		return fmt.Errorf("fetching sources: %w", err)
 	}
 
+	// Reload so KEY=VALUE entries appended by pre_clone_script / post_clone_script flow into downstream stages.
 	if hasCacheSources(r.config.CacheExtract) {
+		r.loadGitlabEnv()
 		_ = r.section(ctx, "restore_cache", func(ctx context.Context, e *env.Env) error {
 			for _, cache := range r.config.CacheExtract {
 				if len(cache.Sources) == 0 {
@@ -172,6 +174,7 @@ func (r *Runner) prepare(ctx context.Context) error {
 	}
 
 	if len(r.config.ArtifactExtract) > 0 {
+		r.loadGitlabEnv()
 		_ = r.section(ctx, "download_artifacts", func(ctx context.Context, e *env.Env) error {
 			for _, artifact := range r.config.ArtifactExtract {
 				if err := artifact.Run(ctx, e); err != nil {
@@ -194,8 +197,7 @@ func hasCacheSources(extracts []stages.CacheExtract) bool {
 	return false
 }
 
-// statusFromError mirrors build.go's runtimeStateAndError classification,
-// mapping the script error into the appropriate CI_JOB_STATUS value.
+// statusFromError maps an execution error to the appropriate CI_JOB_STATUS value.
 func statusFromError(err error) env.JobStatus {
 	switch {
 	case err == nil:
@@ -240,9 +242,17 @@ func (r *Runner) executeSteps(jobCtx context.Context) error {
 		}
 		err = r.runScriptSteps(jobCtx, scriptSteps)
 	}
+	// Set the pre-after_script status so after_script steps see the
+	// correct CI_JOB_STATUS during their execution.
 	r.env.SetStatus(statusFromError(err))
 
-	return r.runAfterScriptSteps(jobCtx, afterSteps, err)
+	err = r.runAfterScriptSteps(jobCtx, afterSteps, err)
+
+	// Refresh: after_script may have promoted the err (AFTER_SCRIPT_IGNORE_ERRORS=false),
+	// and finalize reads e.IsSuccessful() to route cache/artifact uploads.
+	r.env.SetStatus(statusFromError(err))
+
+	return err
 }
 
 // runRunSteps dispatches the user's `run:` keyword via the hosting step-runner
@@ -356,9 +366,8 @@ func (r *Runner) finalize(ctx context.Context) (cacheErr, artifactErr error) {
 		})
 	}
 
-	// Mirror abstract's writeUploadArtifacts ErrSkipBuildStage guard: with
-	// no server URL there is nowhere to upload to, so skip the section
-	// entirely rather than invoking artifacts-uploader with --url "".
+	// With no server URL there is nowhere to upload to; skip the section
+	// rather than invoking artifacts-uploader with --url "".
 	if len(r.config.ArtifactsArchive) > 0 && r.env.BaseURL != "" {
 		_ = r.section(ctx, uploadSection, func(ctx context.Context, e *env.Env) error {
 			for _, artifact := range r.config.ArtifactsArchive {

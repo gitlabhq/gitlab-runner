@@ -3,7 +3,10 @@
 package builder
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -161,6 +164,31 @@ func TestBuild_GetSources(t *testing.T) {
 		assert.Equal(t, 50, config.GetSources.Depth)
 	})
 
+	t.Run("object format reads from GitInfo.RepoObjectFormat", func(t *testing.T) {
+		t.Run("sha256 repo", func(t *testing.T) {
+			job := baseJob()
+			job.GitInfo.RepoObjectFormat = "sha256"
+			config := buildConfig(t, job, newTestVars(t, nil))
+			assert.Equal(t, "sha256", config.GetSources.ObjectFormat)
+		})
+
+		t.Run("empty defaults to sha1", func(t *testing.T) {
+			job := baseJob()
+			job.GitInfo.RepoObjectFormat = ""
+			config := buildConfig(t, job, newTestVars(t, nil))
+			assert.Equal(t, "sha1", config.GetSources.ObjectFormat)
+		})
+
+		t.Run("GIT_OBJECT_FORMAT CI variable is ignored", func(t *testing.T) {
+			job := baseJob()
+			job.GitInfo.RepoObjectFormat = ""
+			vars := newTestVars(t, map[string]string{"GIT_OBJECT_FORMAT": "sha256"})
+			config := buildConfig(t, job, vars)
+			assert.Equal(t, "sha1", config.GetSources.ObjectFormat,
+				"GIT_OBJECT_FORMAT CI variable must not override GitInfo")
+		})
+	})
+
 	t.Run("flags", func(t *testing.T) {
 		vars := newTestVars(t, map[string]string{
 			"GIT_CLONE_EXTRA_FLAGS": "--no-tags --single-branch",
@@ -189,6 +217,20 @@ func TestBuild_GetSources(t *testing.T) {
 		assert.Equal(t, []string{"sub1", "sub2"}, config.GetSources.SubmodulePaths)
 	})
 
+	t.Run("GIT_SUBMODULE_UPDATE_FLAGS=none clears flags", func(t *testing.T) {
+		// Match common/build_settings.go validate[cmdFlags]: the literal
+		// "none" opts out of any extra flags rather than being passed
+		// through as a positional arg to `git submodule update`. Without
+		// this, the literal "none" reaches git and fails the submodule
+		// stage.
+		vars := newTestVars(t, map[string]string{
+			"GIT_SUBMODULE_STRATEGY":     "recursive",
+			"GIT_SUBMODULE_UPDATE_FLAGS": "none",
+		})
+		config := buildConfig(t, baseJob(), vars)
+		assert.Empty(t, config.GetSources.SubmoduleUpdateFlags)
+	})
+
 	t.Run("feature flags", func(t *testing.T) {
 		ff := func(name string) bool {
 			switch name {
@@ -207,18 +249,22 @@ func TestBuild_GetSources(t *testing.T) {
 	})
 
 	t.Run("pre/post clone scripts", func(t *testing.T) {
+		ff := func(name string) bool { return name == featureflags.UseNewEvalStrategy }
 		config := buildConfig(t, baseJob(), newTestVars(t, nil),
 			WithPreCloneScript([]string{"echo pre"}),
 			WithPostCloneScript([]string{"echo post"}),
+			WithFeatureFlagProvider(ff),
 		)
 
 		assert.Equal(t, "pre_clone_script", config.GetSources.PreCloneStep.Step)
 		assert.Equal(t, []string{"echo pre"}, config.GetSources.PreCloneStep.Script)
 		assert.True(t, config.GetSources.PreCloneStep.OnSuccess)
+		assert.True(t, config.GetSources.PreCloneStep.UseNewEvalStrategy)
 
 		assert.Equal(t, "post_clone_script", config.GetSources.PostCloneStep.Step)
 		assert.Equal(t, []string{"echo post"}, config.GetSources.PostCloneStep.Script)
 		assert.True(t, config.GetSources.PostCloneStep.OnSuccess)
+		assert.True(t, config.GetSources.PostCloneStep.UseNewEvalStrategy)
 	})
 
 	t.Run("options", func(t *testing.T) {
@@ -251,9 +297,6 @@ func TestBuild_Steps(t *testing.T) {
 			WithPostBuildScript([]string{"echo post-build"}),
 		)
 
-		// pre/post build are folded into each user step rather than emitted as
-		// their own steps; this matches abstract shell semantics where they
-		// share a shell process with the user script.
 		require.Len(t, config.Steps, 2)
 
 		assert.Equal(t, "build", config.Steps[0].Step)
@@ -376,6 +419,14 @@ func TestBuild_Timeouts(t *testing.T) {
 			varName: "RUNNER_AFTER_SCRIPT_TIMEOUT", varValue: "bad",
 			check: func(t *testing.T, c run.Config) { assert.Equal(t, 5*time.Minute, c.AfterScriptTimeout) },
 		},
+		"script timeout negative falls back to default": {
+			varName: "RUNNER_SCRIPT_TIMEOUT", varValue: "-1m",
+			check: func(t *testing.T, c run.Config) { assert.Equal(t, time.Duration(0), c.ScriptTimeout) },
+		},
+		"after script timeout negative falls back to default": {
+			varName: "RUNNER_AFTER_SCRIPT_TIMEOUT", varValue: "-30s",
+			check: func(t *testing.T, c run.Config) { assert.Equal(t, 5*time.Minute, c.AfterScriptTimeout) },
+		},
 	}
 
 	for name, tc := range tests {
@@ -417,9 +468,13 @@ func TestBuild_CacheExtract(t *testing.T) {
 		config := buildConfig(t, job, vars)
 
 		require.Len(t, config.CacheExtract, 1)
+		// One primary source carrying its own alternate-key form — see
+		// "alternate key form for FF_HASH_CACHE_KEYS migration".
 		require.Len(t, config.CacheExtract[0].Sources, 1)
-		assert.Equal(t, "test-key", config.CacheExtract[0].Sources[0].Name)
-		assert.Equal(t, "test-key", config.CacheExtract[0].Sources[0].Key)
+		src := config.CacheExtract[0].Sources[0]
+		assert.Equal(t, "test-key", src.Name)
+		assert.Equal(t, "test-key", src.Key)
+		assert.Equal(t, fmt.Sprintf("%x", sha256.Sum256([]byte("test-key"))), src.AlternateKey)
 		assert.Equal(t, []string{"vendor/", ".cache/"}, config.CacheExtract[0].Paths)
 	})
 
@@ -453,6 +508,33 @@ func TestBuild_CacheExtract(t *testing.T) {
 		}
 	})
 
+	t.Run("unknown policy rejected", func(t *testing.T) {
+		cases := map[string]struct {
+			key            string
+			policy         string
+			policyResolved string
+		}{
+			"extract (via $VAR)": {"test-cache-key", "$CACHE_POLICY", "blah"},
+			"archive (literal)":  {"archive-key", "nonsense", "nonsense"},
+		}
+		for name, tc := range cases {
+			t.Run(name, func(t *testing.T) {
+				job := baseJob()
+				job.Cache = []spec.Cache{
+					{Key: tc.key, Paths: []string{"build/"}, Policy: spec.CachePolicy(tc.policy)},
+				}
+				vars := newTestVars(t, nil, expandValues(map[string]string{
+					tc.policy: tc.policyResolved,
+					tc.key:    tc.key,
+				}))
+				_, err := Build(job, vars)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unknown cache policy "+tc.policyResolved)
+				assert.Contains(t, err.Error(), tc.key)
+			})
+		}
+	})
+
 	t.Run("with descriptor", func(t *testing.T) {
 		job := baseJob()
 		job.Cache = []spec.Cache{
@@ -461,18 +543,76 @@ func TestBuild_CacheExtract(t *testing.T) {
 
 		vars := newTestVars(t, nil, expandValues(map[string]string{"my-cache": "my-cache"}))
 
+		alternateKey := fmt.Sprintf("%x", sha256.Sum256([]byte("my-cache")))
 		desc := cacheprovider.Descriptor{URL: "https://storage.example.com/cache", GoCloudURL: true}
+		altDesc := cacheprovider.Descriptor{URL: "https://storage.example.com/cache-alt", GoCloudURL: true}
 
 		config := buildConfig(t, job, vars,
 			WithCacheDownloadDescriptor(func(key string) (cacheprovider.Descriptor, error) {
 				assert.Equal(t, "my-cache", key)
 				return desc, nil
 			}),
+			WithAlternateCacheDownloadDescriptor(func(key string) (cacheprovider.Descriptor, error) {
+				assert.Equal(t, alternateKey, key)
+				return altDesc, nil
+			}),
 		)
 
 		require.Len(t, config.CacheExtract, 1)
-		assert.Equal(t, desc.URL, config.CacheExtract[0].Sources[0].Descriptor.URL)
-		assert.True(t, config.CacheExtract[0].Sources[0].Descriptor.GoCloudURL)
+		require.Len(t, config.CacheExtract[0].Sources, 1)
+		src := config.CacheExtract[0].Sources[0]
+		assert.Equal(t, desc.URL, src.Descriptor.URL)
+		assert.True(t, src.Descriptor.GoCloudURL)
+		assert.Equal(t, alternateKey, src.AlternateKey)
+		assert.Equal(t, altDesc.URL, src.AlternateDescriptor.URL)
+		assert.True(t, src.AlternateDescriptor.GoCloudURL)
+	})
+
+	t.Run("alternate key form for FF_HASH_CACHE_KEYS migration", func(t *testing.T) {
+		// FF ON  → primary is sha256(humanKey), alternate is humanKey
+		// FF OFF → primary is humanKey,         alternate is sha256(humanKey)
+		cases := []struct {
+			name             string
+			hashEnabled      bool
+			wantPrimaryKey   func(human, hashed string) string
+			wantAlternateKey func(human, hashed string) string
+		}{
+			{
+				name:             "FF on -> primary hashed, alternate unhashed",
+				hashEnabled:      true,
+				wantPrimaryKey:   func(human, hashed string) string { return hashed },
+				wantAlternateKey: func(human, hashed string) string { return human },
+			},
+			{
+				name:             "FF off -> primary unhashed, alternate hashed",
+				hashEnabled:      false,
+				wantPrimaryKey:   func(human, hashed string) string { return human },
+				wantAlternateKey: func(human, hashed string) string { return hashed },
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				job := baseJob()
+				job.Cache = []spec.Cache{
+					{Key: "my-cache", Paths: []string{"build/"}, Policy: spec.CachePolicyPullPush},
+				}
+				vars := newTestVars(t, nil, expandValues(map[string]string{"my-cache": "my-cache"}))
+				ff := func(name string) bool { return tc.hashEnabled && name == featureflags.HashCacheKeys }
+
+				config := buildConfig(t, job, vars, WithFeatureFlagProvider(ff))
+
+				require.Len(t, config.CacheExtract, 1)
+				require.Len(t, config.CacheExtract[0].Sources, 1)
+				src := config.CacheExtract[0].Sources[0]
+
+				humanKey := "my-cache"
+				hashedKey := fmt.Sprintf("%x", sha256.Sum256([]byte(humanKey)))
+
+				assert.Equal(t, tc.wantPrimaryKey(humanKey, hashedKey), src.Key, "primary key form")
+				assert.Equal(t, tc.wantAlternateKey(humanKey, hashedKey), src.AlternateKey, "alternate key form (opposite of FF setting)")
+			})
+		}
 	})
 
 	t.Run("fallback keys", func(t *testing.T) {
@@ -490,8 +630,11 @@ func TestBuild_CacheExtract(t *testing.T) {
 		config := buildConfig(t, job, vars)
 
 		require.Len(t, config.CacheExtract, 1)
+		// primary (with alternate-on-primary) + fb-1 + fb-2
 		require.Len(t, config.CacheExtract[0].Sources, 3)
 		assert.Equal(t, "primary", config.CacheExtract[0].Sources[0].Name)
+		assert.Equal(t, "primary", config.CacheExtract[0].Sources[0].Key)
+		assert.Equal(t, fmt.Sprintf("%x", sha256.Sum256([]byte("primary"))), config.CacheExtract[0].Sources[0].AlternateKey)
 		assert.Equal(t, "fb-1", config.CacheExtract[0].Sources[1].Name)
 		assert.Equal(t, "fb-2", config.CacheExtract[0].Sources[2].Name)
 	})
@@ -512,7 +655,9 @@ func TestBuild_CacheExtract(t *testing.T) {
 		config := buildConfig(t, job, vars)
 
 		require.Len(t, config.CacheExtract, 1)
+		// primary (with alternate-on-primary) + env-fallback
 		require.Len(t, config.CacheExtract[0].Sources, 2)
+		assert.Equal(t, "primary", config.CacheExtract[0].Sources[0].Name)
 		assert.Equal(t, "env-fallback", config.CacheExtract[0].Sources[1].Name)
 	})
 
@@ -587,6 +732,46 @@ func TestBuild_CacheExtract(t *testing.T) {
 		assert.Equal(t, expectedKey, config.CacheArchive[0].Name)
 	})
 
+	t.Run("empty key default normalizes traversal and leading slashes", func(t *testing.T) {
+		cases := []struct {
+			name    string
+			jobName string
+			ref     string
+			want    string
+		}{
+			{"clean inputs", "test-job", "main", "test-job/main"},
+			{"job name with traversal", "..", "main", "main"},
+			{"ref with traversal", "test-job", "../main", "main"},
+			{"job name with leading slash", "/abs/job", "main", "abs/job/main"},
+			{"job name with dot segment", "./test-job", "main", "test-job/main"},
+			{"empty job name", "", "main", "main"},
+		}
+
+		// HashCacheKeys ON exposes the divergence: in that mode the
+		// humanKey is the raw key without sanitation (resolved key is
+		// sha256(humanKey)). Under FF off the cachekey.Sanitize call
+		// downstream normalizes either form, so the bug is invisible.
+		ff := func(name string) bool { return name == featureflags.HashCacheKeys }
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				job := baseJob()
+				job.JobInfo.Name = tc.jobName
+				job.GitInfo.Ref = tc.ref
+				job.Cache = []spec.Cache{
+					{Key: "", Paths: []string{"build/"}, Policy: spec.CachePolicyPullPush},
+				}
+
+				vars := newTestVars(t, nil)
+				config := buildConfig(t, job, vars, WithFeatureFlagProvider(ff))
+
+				require.Len(t, config.CacheExtract, 1)
+				require.NotEmpty(t, config.CacheExtract[0].Sources)
+				assert.Equal(t, tc.want, config.CacheExtract[0].Sources[0].Name)
+			})
+		}
+	})
+
 	t.Run("download descriptor receives resolved key not raw key", func(t *testing.T) {
 		job := baseJob()
 		job.Cache = []spec.Cache{
@@ -596,21 +781,32 @@ func TestBuild_CacheExtract(t *testing.T) {
 		vars := newTestVars(t, nil, expandValues(map[string]string{"my-cache": "my-cache"}))
 		ff := func(f string) bool { return f == featureflags.HashCacheKeys }
 
-		var receivedKey string
+		// HashCacheKeys is on, so primary is hashed and the alternate
+		// is the unhashed form. The primary descriptor receives the
+		// hashed key; the alternate descriptor receives the unhashed.
+		var primaryKey, alternateKey string
 		config := buildConfig(t, job, vars,
 			WithFeatureFlagProvider(ff),
 			WithCacheDownloadDescriptor(func(key string) (cacheprovider.Descriptor, error) {
-				receivedKey = key
+				primaryKey = key
+				return cacheprovider.Descriptor{}, nil
+			}),
+			WithAlternateCacheDownloadDescriptor(func(key string) (cacheprovider.Descriptor, error) {
+				alternateKey = key
 				return cacheprovider.Descriptor{}, nil
 			}),
 		)
 
 		require.Len(t, config.CacheExtract, 1)
+		require.Len(t, config.CacheExtract[0].Sources, 1)
 		src := config.CacheExtract[0].Sources[0]
-		assert.Equal(t, src.Key, receivedKey,
-			"download descriptor should receive the resolved (hashed) key, not the raw cache key")
-		assert.NotEqual(t, "my-cache", receivedKey)
-		assert.Len(t, receivedKey, 64)
+
+		assert.NotEqual(t, "my-cache", src.Key)
+		assert.Len(t, src.Key, 64, "primary key under FF on should be sha256 hex")
+		assert.Equal(t, "my-cache", src.AlternateKey, "alternate under FF on should be the unhashed key")
+
+		assert.Equal(t, src.Key, primaryKey, "primary descriptor should receive the resolved (hashed) key")
+		assert.Equal(t, src.AlternateKey, alternateKey, "alternate descriptor should receive the unhashed key")
 	})
 
 	t.Run("sanitized key produces warning", func(t *testing.T) {
@@ -634,11 +830,22 @@ func TestBuild_CacheExtract(t *testing.T) {
 func TestBuild_CacheExtract_ProtectedFallbackKey(t *testing.T) {
 	tests := map[string]struct {
 		fallbackKey   string
+		expandedValue string // empty -> identity expansion
 		expectBlocked bool
 	}{
 		"blocked":           {fallbackKey: "some-key-protected", expectBlocked: true},
 		"blocked with dots": {fallbackKey: "some-key-protected. ", expectBlocked: true},
 		"allowed":           {fallbackKey: "some-key-safe", expectBlocked: false},
+		"blocked via variable expansion": {
+			fallbackKey:   "$EVIL_VAR",
+			expandedValue: "some-key-protected",
+			expectBlocked: true,
+		},
+		"allowed via variable expansion": {
+			fallbackKey:   "$SAFE_VAR",
+			expandedValue: "some-key-safe",
+			expectBlocked: false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -648,9 +855,13 @@ func TestBuild_CacheExtract_ProtectedFallbackKey(t *testing.T) {
 				{Key: "primary", Paths: []string{"build/"}, Policy: spec.CachePolicyPullPush},
 			}
 
-			expands := map[string]string{"primary": "primary"}
-			if !tc.expectBlocked {
-				expands[tc.fallbackKey] = tc.fallbackKey
+			expanded := tc.expandedValue
+			if expanded == "" {
+				expanded = tc.fallbackKey
+			}
+			expands := map[string]string{
+				"primary":      "primary",
+				tc.fallbackKey: expanded,
 			}
 
 			vars := newTestVars(t, map[string]string{"CACHE_FALLBACK_KEY": tc.fallbackKey},
@@ -659,6 +870,8 @@ func TestBuild_CacheExtract_ProtectedFallbackKey(t *testing.T) {
 			config := buildConfig(t, job, vars)
 
 			require.Len(t, config.CacheExtract, 1)
+			// Primary carries its own alternate-key form; user fallbacks
+			// remain as separate sources, so blocked/allowed differ by 1.
 			if tc.expectBlocked {
 				assert.Len(t, config.CacheExtract[0].Sources, 1)
 				assert.NotEmpty(t, config.CacheExtract[0].Warnings)
@@ -667,6 +880,32 @@ func TestBuild_CacheExtract_ProtectedFallbackKey(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("blocked key does not surface sanitization warnings", func(t *testing.T) {
+		// A fallback key that both sanitizes (backslash -> slash) and ends
+		// in -protected. The block is the actual reason for the drop, so
+		// only the block warning should appear -- a sanitization warning
+		// would misleadingly suggest the sanitized key was attempted.
+		job := baseJob()
+		job.Cache = []spec.Cache{
+			{Key: "primary", Paths: []string{"build/"}, Policy: spec.CachePolicyPullPush},
+		}
+		vars := newTestVars(t, map[string]string{"CACHE_FALLBACK_KEY": `foo\bar-protected`},
+			expandValues(map[string]string{
+				"primary":           "primary",
+				`foo\bar-protected`: `foo\bar-protected`,
+			}),
+		)
+		config := buildConfig(t, job, vars)
+
+		require.Len(t, config.CacheExtract, 1)
+		assert.Len(t, config.CacheExtract[0].Sources, 1)
+		for _, w := range config.CacheExtract[0].Warnings {
+			assert.NotContains(t, w, "sanitized to",
+				"blocked fallback key must not surface sanitization warnings")
+		}
+		assert.Contains(t, strings.Join(config.CacheExtract[0].Warnings, "\n"), "not allowed to end in")
+	})
 }
 
 func TestBuild_CacheArchive(t *testing.T) {
@@ -956,6 +1195,30 @@ func TestBuild_ArtifactMetadata(t *testing.T) {
 		assert.Nil(t, config.ArtifactsArchive[0].Metadata)
 	})
 
+	t.Run("repo url strips userinfo credentials", func(t *testing.T) {
+		// The test URL MUST embed userinfo for the NotContains asserts
+		// below to mean anything -- with a credential-free URL the
+		// asserts pass trivially whether or not the sanitisation runs.
+		job := baseJob()
+		job.GitInfo.RepoURL = "https://gitlab-ci-token:test-leak-token@gitlab.example.com/group/project.git"
+		job.Artifacts = []spec.Artifact{
+			{Paths: []string{"dist/"}, Format: spec.ArtifactFormatZip, When: spec.ArtifactWhenOnSuccess},
+		}
+
+		vars := newTestVars(t, map[string]string{"RUNNER_GENERATE_ARTIFACTS_METADATA": "true"})
+		config := buildConfig(t, job, vars)
+
+		require.Len(t, config.ArtifactsArchive, 1)
+		meta := config.ArtifactsArchive[0].Metadata
+		require.NotNil(t, meta)
+		assert.NotContains(t, meta.RepoURL, "test-leak-token",
+			"the userinfo segment of GitInfo.RepoURL must not reach the SLSA artifact metadata")
+		assert.NotContains(t, meta.RepoURL, "gitlab-ci-token:",
+			"any userinfo prefix from GitInfo.RepoURL must be stripped")
+		assert.Equal(t, "https://gitlab.example.com/group/project", meta.RepoURL,
+			"sanitized URL should retain scheme, host, and path with `.git` suffix removed")
+	})
+
 	t.Run("not generated when flag off", func(t *testing.T) {
 		job := baseJob()
 		job.Artifacts = []spec.Artifact{
@@ -1220,6 +1483,39 @@ func TestBuild_FeatureFlags(t *testing.T) {
 				ff := func(f string) bool { return f == featureflags.GitURLsWithoutTokens && tc.enabled }
 				config := buildConfig(t, baseJob(), newTestVars(t, nil), WithFeatureFlagProvider(ff))
 				assert.Equal(t, tc.expected, config.GetSources.UseCredentialHelper)
+			})
+		}
+	})
+
+	t.Run("UseExponentialBackoffStageRetry threads to retry-doing stages", func(t *testing.T) {
+		tests := map[string]bool{
+			"FF on":  true,
+			"FF off": false,
+		}
+		for name, enabled := range tests {
+			t.Run(name, func(t *testing.T) {
+				job := baseJob()
+				job.Cache = []spec.Cache{
+					{Key: "k", Paths: []string{"build/"}, Policy: spec.CachePolicyPull},
+				}
+				job.Dependencies = []spec.Dependency{
+					{ID: 1, Token: "t", Name: "a", ArtifactsFile: spec.DependencyArtifactsFile{Filename: "a.zip"}},
+				}
+				vars := newTestVars(t, nil, expandValues(map[string]string{"k": "k"}))
+				ff := func(f string) bool {
+					return f == featureflags.UseExponentialBackoffStageRetry && enabled
+				}
+
+				config := buildConfig(t, job, vars, WithFeatureFlagProvider(ff))
+
+				assert.Equal(t, enabled, config.GetSources.UseExponentialBackoffStageRetry,
+					"GetSources must follow FF")
+				require.Len(t, config.CacheExtract, 1)
+				assert.Equal(t, enabled, config.CacheExtract[0].UseExponentialBackoffStageRetry,
+					"CacheExtract must follow FF")
+				require.Len(t, config.ArtifactExtract, 1)
+				assert.Equal(t, enabled, config.ArtifactExtract[0].UseExponentialBackoffStageRetry,
+					"ArtifactDownload must follow FF")
 			})
 		}
 	})

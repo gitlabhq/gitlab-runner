@@ -35,6 +35,9 @@ type Builder struct {
 	DebugTrace     bool
 	ExitCodeCheck  bool
 	ScriptSections bool
+	// UseNewEvalStrategy wraps eval in an explicit subshell for exit-code and
+	// trap propagation; when false the bare `: | eval ...` form is used.
+	UseNewEvalStrategy bool
 }
 
 // New creates a Builder for the given step name and shell.
@@ -108,7 +111,11 @@ func (b *Builder) buildBashScript(lines []string) string {
 	}
 	buf.WriteString("if set -o | grep pipefail > /dev/null; then set -o pipefail; fi; set -o errexit\n")
 	buf.WriteString("set +o noclobber\n")
-	buf.WriteString(": | (eval " + shellEscape(body.String()) + ")\n")
+	if b.UseNewEvalStrategy {
+		buf.WriteString(": | (eval " + shellEscape(body.String()) + ")\n")
+	} else {
+		buf.WriteString(": | eval " + shellEscape(body.String()) + "\n")
+	}
 	buf.WriteString("exit 0\n")
 
 	return buf.String()

@@ -112,39 +112,49 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 	}
 
 	return stages.GetSources{
-		AllowGitFetch:     b.meta.AllowGitFetch,
-		Checkout:          variables.DefaultBool(b.variables, "GIT_CHECKOUT", true),
-		MaxAttempts:       variables.DefaultIntClamp(b.variables, "GET_SOURCES_ATTEMPTS", 1, 1, 10),
-		SubmoduleStrategy: variables.Default(b.variables, "GIT_SUBMODULE_STRATEGY", "none", "none", "normal", "recursive"),
-		LFSDisabled:       variables.DefaultBool(b.variables, "GIT_LFS_SKIP_SMUDGE", false),
-		Depth:             b.meta.GitInfo.Depth,
-		RepoURL:           b.meta.GitInfo.RepoURL,
-		Refspecs:          b.meta.GitInfo.Refspecs,
-		SHA:               b.meta.GitInfo.Sha,
-		Ref:               b.meta.GitInfo.Ref,
-		GitStrategy:       variables.Default(b.variables, "GIT_STRATEGY", defaultGitStrategy, "empty", "none", "fetch", "clone"),
-		GitCloneFlags:     b.splitVarFlagsDefault("GIT_CLONE_EXTRA_FLAGS", nil),
-		GitFetchFlags:     b.splitVarFlagsDefault("GIT_FETCH_EXTRA_FLAGS", gitFetchFlagsDefault),
-		GitCleanFlags:     b.splitVarFlagsDefault("GIT_CLEAN_FLAGS", gitCleanFlagsDefault),
-		ObjectFormat:      variables.Default(b.variables, "GIT_OBJECT_FORMAT", "sha1"),
+		AllowGitFetch:                   b.meta.AllowGitFetch,
+		Checkout:                        variables.DefaultBool(b.variables, "GIT_CHECKOUT", true),
+		MaxAttempts:                     variables.DefaultIntClamp(b.variables, "GET_SOURCES_ATTEMPTS", 1, 1, 10),
+		UseExponentialBackoffStageRetry: b.isFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry),
+		SubmoduleStrategy:               variables.Default(b.variables, "GIT_SUBMODULE_STRATEGY", "none", "none", "normal", "recursive"),
+		LFSDisabled:                     variables.DefaultBool(b.variables, "GIT_LFS_SKIP_SMUDGE", false),
+		Depth:                           b.meta.GitInfo.Depth,
+		RepoURL:                         b.meta.GitInfo.RepoURL,
+		Refspecs:                        b.meta.GitInfo.Refspecs,
+		SHA:                             b.meta.GitInfo.Sha,
+		Ref:                             b.meta.GitInfo.Ref,
+		GitStrategy:                     variables.Default(b.variables, "GIT_STRATEGY", defaultGitStrategy, "empty", "none", "fetch", "clone"),
+		GitCloneFlags:                   b.splitVarFlagsDefault("GIT_CLONE_EXTRA_FLAGS", nil),
+		GitFetchFlags:                   b.splitVarFlagsDefault("GIT_FETCH_EXTRA_FLAGS", gitFetchFlagsDefault),
+		GitCleanFlags:                   b.splitVarFlagsDefault("GIT_CLEAN_FLAGS", gitCleanFlagsDefault),
+		ObjectFormat: func() string {
+			if b.meta.GitInfo.RepoObjectFormat != "" {
+				return b.meta.GitInfo.RepoObjectFormat
+			}
+			return "sha1"
+		}(),
 
 		SubmoduleDepth:       variables.DefaultIntClamp(b.variables, "GIT_SUBMODULE_DEPTH", b.meta.GitInfo.Depth, 0, 10000),
-		SubmoduleUpdateFlags: b.splitVarFlags("GIT_SUBMODULE_UPDATE_FLAGS"),
+		SubmoduleUpdateFlags: b.splitVarFlagsDefault("GIT_SUBMODULE_UPDATE_FLAGS", nil),
 		SubmodulePaths:       b.splitVarFlags("GIT_SUBMODULE_PATHS"),
 
 		PreCloneStep: stages.Step{
-			Step:              "pre_clone_script",
-			Script:            b.opts.preCloneScript,
-			OnSuccess:         true,
-			BashExitCodeCheck: b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
-			Debug:             b.opts.debug,
+			Step:               "pre_clone_script",
+			Script:             b.opts.preCloneScript,
+			OnSuccess:          true,
+			BashExitCodeCheck:  b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
+			Debug:              b.opts.debug,
+			ScriptSections:     b.isFeatureFlagOn(featureflags.ScriptSections) && b.meta.Features.TraceSections,
+			UseNewEvalStrategy: b.isFeatureFlagOn(featureflags.UseNewEvalStrategy),
 		},
 		PostCloneStep: stages.Step{
-			Step:              "post_clone_script",
-			Script:            b.opts.postCloneScript,
-			OnSuccess:         true,
-			BashExitCodeCheck: b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
-			Debug:             b.opts.debug,
+			Step:               "post_clone_script",
+			Script:             b.opts.postCloneScript,
+			OnSuccess:          true,
+			BashExitCodeCheck:  b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
+			Debug:              b.opts.debug,
+			ScriptSections:     b.isFeatureFlagOn(featureflags.ScriptSections) && b.meta.Features.TraceSections,
+			UseNewEvalStrategy: b.isFeatureFlagOn(featureflags.UseNewEvalStrategy),
 		},
 
 		ClearWorktreeOnRetry:  true,
@@ -175,8 +185,16 @@ func (b *builder) buildCacheExtract() ([]stages.CacheExtract, error) {
 		policy := spec.CachePolicy(b.variables.ExpandValue(string(cache.Policy)))
 		switch policy {
 		case spec.CachePolicyUndefined, spec.CachePolicyPullPush, spec.CachePolicyPull:
-		default:
+		case spec.CachePolicyPush:
 			continue
+		default:
+			// Surface unknown policy values as a hard error so a typo in
+			// $CACHE_POLICY doesn't silently disable caching.
+			humanKey, _, _, keyErr := b.cacheKey(cache.Key)
+			if keyErr != nil || humanKey == "" {
+				humanKey = cache.Key
+			}
+			return nil, fmt.Errorf("unknown cache policy %s for %s", policy, humanKey)
 		}
 
 		sources, warnings, err := b.buildCacheSources(cache)
@@ -188,32 +206,28 @@ func (b *builder) buildCacheExtract() ([]stages.CacheExtract, error) {
 		}
 
 		extracts = append(extracts, stages.CacheExtract{
-			Sources:     sources,
-			Warnings:    warnings,
-			Timeout:     variables.DefaultIntClamp(b.variables, "CACHE_REQUEST_TIMEOUT", 10, 1, 120),
-			Concurrency: variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
-			Paths:       cache.Paths,
-			MaxAttempts: variables.DefaultIntClamp(b.variables, "RESTORE_CACHE_ATTEMPTS", 1, 1, 10),
+			Sources:                         sources,
+			Warnings:                        warnings,
+			Timeout:                         variables.DefaultIntClamp(b.variables, "CACHE_REQUEST_TIMEOUT", 10, 1, 120),
+			Concurrency:                     variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
+			Paths:                           cache.Paths,
+			MaxAttempts:                     variables.DefaultIntClamp(b.variables, "RESTORE_CACHE_ATTEMPTS", 1, 1, 10),
+			UseExponentialBackoffStageRetry: b.isFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry),
 		})
 	}
 
 	return extracts, nil
 }
 
+//nolint:gocognit,nestif
 func (b *builder) buildCacheSources(cache spec.Cache) ([]stages.CacheSource, []string, error) {
 	var sources []stages.CacheSource
 	var warnings []string
 
-	addSource := func(key string) error {
-		humanKey, resolvedKey, keyWarnings, err := b.cacheKey(key)
-		if err != nil {
-			warnings = append(warnings, keyWarnings...)
-			warnings = append(warnings, fmt.Sprintf("Skipping cache extraction due to %v", err))
-			return nil // non-fatal: skip this source
-		}
-
+	addSourceWithKey := func(humanKey, resolvedKey string, keyWarnings []string) error {
 		var desc cacheprovider.Descriptor
 		if b.opts.cacheDownloadDescriptor != nil {
+			var err error
 			desc, err = b.opts.cacheDownloadDescriptor(resolvedKey)
 			if err != nil {
 				return err
@@ -229,8 +243,61 @@ func (b *builder) buildCacheSources(cache spec.Cache) ([]stages.CacheSource, []s
 		return nil
 	}
 
-	if err := addSource(cache.Key); err != nil {
-		return nil, nil, err
+	addSource := func(key string, checks ...func(humanKey string) bool) error {
+		humanKey, resolvedKey, keyWarnings, err := b.cacheKey(key)
+		if err != nil {
+			warnings = append(warnings, keyWarnings...)
+			warnings = append(warnings, fmt.Sprintf("Skipping cache extraction due to %v", err))
+			return nil // non-fatal: skip this source
+		}
+		for _, check := range checks {
+			if !check(humanKey) {
+				return nil
+			}
+		}
+		return addSourceWithKey(humanKey, resolvedKey, keyWarnings)
+	}
+
+	primaryHuman, primaryResolved, primaryWarnings, err := b.cacheKey(cache.Key)
+	if err != nil {
+		warnings = append(warnings, primaryWarnings...)
+		warnings = append(warnings, fmt.Sprintf("Skipping cache extraction due to %v", err))
+		// fall through: still try fallback keys below
+	} else {
+		var desc cacheprovider.Descriptor
+		if b.opts.cacheDownloadDescriptor != nil {
+			desc, err = b.opts.cacheDownloadDescriptor(primaryResolved)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		// Alternate key is the FF_HASH_CACHE_KEYS-opposite form so toggling the flag doesn't silently drop existing caches.
+		alternateResolved := primaryHuman
+		if !b.isFeatureFlagOn(featureflags.HashCacheKeys) {
+			alternateResolved = fmt.Sprintf("%x", sha256.Sum256([]byte(primaryHuman)))
+		}
+
+		var altDesc cacheprovider.Descriptor
+		var altKey string
+		if alternateResolved != primaryResolved {
+			altKey = alternateResolved
+			if b.opts.alternateCacheDownloadDescriptor != nil {
+				altDesc, err = b.opts.alternateCacheDownloadDescriptor(alternateResolved)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+		}
+
+		sources = append(sources, stages.CacheSource{
+			Name:                primaryHuman,
+			Key:                 primaryResolved,
+			Descriptor:          desc,
+			AlternateKey:        altKey,
+			AlternateDescriptor: altDesc,
+			Warnings:            primaryWarnings,
+		})
 	}
 
 	for _, fk := range cache.FallbackKeys {
@@ -238,13 +305,17 @@ func (b *builder) buildCacheSources(cache spec.Cache) ([]stages.CacheSource, []s
 	}
 
 	if fk := b.variables.Get("CACHE_FALLBACK_KEY"); fk != "" {
-		if strings.HasSuffix(strings.TrimRight(fk, ". "), "-protected") {
-			warnings = append(warnings,
-				fmt.Sprintf("CACHE_FALLBACK_KEY %q not allowed to end in %q", fk, "-protected"),
-			)
-		} else {
-			_ = addSource(fk)
-		}
+		// Check against humanKey (post-expansion), not the raw value, to prevent bypass via CACHE_FALLBACK_KEY=$VAR.
+		_ = addSource(fk, func(humanKey string) bool {
+			const blockedSuffix = "-protected"
+			if strings.HasSuffix(strings.TrimRight(humanKey, ". "), blockedSuffix) {
+				warnings = append(warnings,
+					fmt.Sprintf("CACHE_FALLBACK_KEY %q not allowed to end in %q", humanKey, blockedSuffix),
+				)
+				return false
+			}
+			return true
+		})
 	}
 
 	return sources, warnings, nil
@@ -267,17 +338,31 @@ func (b *builder) buildCacheArchive() ([]stages.CacheArchive, error) {
 		policy := spec.CachePolicy(b.variables.ExpandValue(string(cache.Policy)))
 		switch policy {
 		case spec.CachePolicyUndefined, spec.CachePolicyPullPush, spec.CachePolicyPush:
-		default:
+		case spec.CachePolicyPull:
 			continue
+		default:
+			return nil, fmt.Errorf("unknown cache policy %s for %s", policy, humanKey)
 		}
 
 		if cache.When == "" {
 			cache.When = spec.CacheWhenOnSuccess
 		}
 
+		// AlternateKey is the FF-opposite local cache path so
+		// cache-archiver can rename the previous-FF archive into the
+		// current-FF path (commands/helpers/cache_archiver.go:251).
+		alternateResolved := humanKey
+		if !b.isFeatureFlagOn(featureflags.HashCacheKeys) {
+			alternateResolved = fmt.Sprintf("%x", sha256.Sum256([]byte(humanKey)))
+		}
+		if alternateResolved == resolvedKey {
+			alternateResolved = ""
+		}
+
 		archive := stages.CacheArchive{
 			Name:                   humanKey,
 			Key:                    resolvedKey,
+			AlternateKey:           alternateResolved,
 			Warnings:               warnings,
 			Untracked:              cache.Untracked,
 			Paths:                  cache.Paths,
@@ -311,12 +396,13 @@ func (b *builder) buildArtifactDownloads() []stages.ArtifactDownload {
 		}
 
 		downloads = append(downloads, stages.ArtifactDownload{
-			ID:               dep.ID,
-			Token:            dep.Token,
-			ArtifactName:     dep.Name,
-			Filename:         dep.ArtifactsFile.Filename,
-			DownloadAttempts: variables.DefaultIntClamp(b.variables, "ARTIFACT_DOWNLOAD_ATTEMPTS", 1, 1, 10),
-			Concurrency:      variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
+			ID:                              dep.ID,
+			Token:                           dep.Token,
+			ArtifactName:                    dep.Name,
+			Filename:                        dep.ArtifactsFile.Filename,
+			DownloadAttempts:                variables.DefaultIntClamp(b.variables, "ARTIFACT_DOWNLOAD_ATTEMPTS", 1, 1, 10),
+			Concurrency:                     variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
+			UseExponentialBackoffStageRetry: b.isFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry),
 		})
 	}
 
@@ -331,6 +417,7 @@ func (b *builder) buildSteps() []stages.Step {
 		step.BashExitCodeCheck = b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck)
 		step.Debug = b.opts.debug
 		step.ScriptSections = b.isFeatureFlagOn(featureflags.ScriptSections) && b.meta.Features.TraceSections
+		step.UseNewEvalStrategy = b.isFeatureFlagOn(featureflags.UseNewEvalStrategy)
 		return step
 	}
 
@@ -360,9 +447,8 @@ func (b *builder) buildSteps() []stages.Step {
 			continue
 		}
 
-		// Match abstract shell semantics: pre_build_script and post_build_script
-		// run inside the user step's shell, so shell-only state (exports, set
-		// options, function definitions, cd) carries over to the user script.
+		// pre_build_script and post_build_script run inside the user step's shell so
+		// shell-only state (exports, set options, function defs, cd) carries over.
 		s.Script = slices.Concat(b.opts.preBuildScript, s.Script, b.opts.postBuildScript)
 
 		steps = append(steps, s)
@@ -376,21 +462,26 @@ func (b *builder) buildSteps() []stages.Step {
 // buildScriptTimeout returns the script-phase timeout.
 // Zero means "use the job-level timeout" (Config.Timeout).
 func (b *builder) buildScriptTimeout() time.Duration {
-	if v := b.variables.Get("RUNNER_SCRIPT_TIMEOUT"); v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			return d
-		}
-	}
-	return 0
+	return parseStageTimeout(b.variables.Get("RUNNER_SCRIPT_TIMEOUT"), 0)
 }
 
 func (b *builder) buildAfterScriptTimeout() time.Duration {
-	if v := b.variables.Get("RUNNER_AFTER_SCRIPT_TIMEOUT"); v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			return d
-		}
+	return parseStageTimeout(b.variables.Get("RUNNER_AFTER_SCRIPT_TIMEOUT"), 5*time.Minute)
+}
+
+// parseStageTimeout parses a stage timeout string, falling back to the given default for empty, unparseable, or negative values.
+func parseStageTimeout(raw string, fallback time.Duration) time.Duration {
+	if raw == "" {
+		return fallback
 	}
-	return 5 * time.Minute
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		return fallback
+	}
+	if d < 0 {
+		return fallback
+	}
+	return d
 }
 
 func (b *builder) buildArtifactUploads() []stages.ArtifactUpload {
@@ -442,8 +533,9 @@ func (b *builder) buildArtifactMetadata() *stages.ArtifactMetadata {
 	schemaVersion := variables.Default(b.variables, "SLSA_PROVENANCE_SCHEMA_VERSION", "unknown")
 
 	meta := &stages.ArtifactMetadata{
-		RunnerID:      b.variables.Get("CI_RUNNER_ID"),
-		RepoURL:       strings.TrimSuffix(b.meta.GitInfo.RepoURL, ".git"),
+		RunnerID: b.variables.Get("CI_RUNNER_ID"),
+		// Strip userinfo (gitlab-ci-token) before the URL flows into SLSA provenance JSON.
+		RepoURL:       strings.TrimSuffix(b.meta.RepoCleanURL(), ".git"),
 		RepoDigest:    b.meta.GitInfo.Sha,
 		JobName:       b.meta.JobInfo.Name,
 		ExecutorName:  b.opts.executorName,
@@ -470,7 +562,9 @@ func (b *builder) buildCleanup(getSources stages.GetSources) stages.Cleanup {
 }
 
 func (b *builder) cacheKey(name string) (string, string, []string, error) {
-	rawKey := path.Join(b.meta.JobInfo.Name, b.meta.GitInfo.Ref)
+	// Virtual-root prefix prevents a leading / or .. in JobName/Ref from producing an unexpected key,
+	// especially under FF_HASH_CACHE_KEYS=on where humanKey is used unsanitized.
+	rawKey := path.Join("/", b.meta.JobInfo.Name, b.meta.GitInfo.Ref)[1:]
 	if name != "" {
 		rawKey = b.variables.ExpandValue(name)
 	}

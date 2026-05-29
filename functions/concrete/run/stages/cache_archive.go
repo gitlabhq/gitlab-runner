@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/cacheprovider"
@@ -24,6 +24,8 @@ type CacheArchive struct {
 	OnSuccess              bool                     `json:"on_success,omitempty"`
 	OnFailure              bool                     `json:"on_failure,omitempty"`
 	Warnings               []string                 `json:"warnings,omitempty"`
+	// AlternateKey is the FF_HASH_CACHE_KEYS-opposite local archive path key, used during migration.
+	AlternateKey string `json:"alternate_key,omitempty"`
 }
 
 func (s CacheArchive) Run(ctx context.Context, e *env.Env) error {
@@ -40,12 +42,16 @@ func (s CacheArchive) Run(ctx context.Context, e *env.Env) error {
 
 	e.Noticef("Creating cache %s...", s.Key)
 
-	archiveFile := path.Join(e.CacheDir, s.Key, "cache.zip")
+	archiveFile := s.archivePath(e)
 
 	args := []string{
 		"cache-archiver",
 		"--file", archiveFile,
 		"--timeout", strconv.Itoa(s.Timeout),
+	}
+
+	if s.AlternateKey != "" && s.AlternateKey != s.Key {
+		args = append(args, "--alternate-file", s.alternateArchivePath(e))
 	}
 
 	if s.MaxUploadedArchiveSize > 0 {
@@ -94,6 +100,24 @@ func (s CacheArchive) shouldRun(e *env.Env) bool {
 		return s.OnSuccess
 	}
 	return s.OnFailure
+}
+
+// archivePath mirrors CacheExtract.archivePath — see that doc comment.
+func (s CacheArchive) archivePath(e *env.Env) string {
+	return cacheArchivePath(e, s.Key)
+}
+
+func (s CacheArchive) alternateArchivePath(e *env.Env) string {
+	return cacheArchivePath(e, s.AlternateKey)
+}
+
+func cacheArchivePath(e *env.Env, key string) string {
+	absPath := filepath.Join(e.CacheDir, key, "cache.zip")
+	rel, err := filepath.Rel(e.WorkingDir, absPath)
+	if err != nil {
+		return absPath
+	}
+	return rel
 }
 
 func (s CacheArchive) archiverArgs() []string {

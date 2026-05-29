@@ -144,9 +144,6 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 			return s
 		}()),
 		builder.WithGitCleanConfig(func() bool {
-			// It's by default disabled for the shell executor or when the git
-			// strategy is "none", and enabled otherwise; explicit
-			// configuration however always has precedence.
 			if build.Runner.CleanGitConfig != nil {
 				return *build.Runner.CleanGitConfig
 			}
@@ -155,69 +152,25 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 			case "shell", "shell-integration-test":
 				return false
 			default:
-				return true
+				return build.GetGitStrategy() != GitNone
 			}
 		}()),
-		builder.WithGitalyCorrelationID(build.JobRequestCorrelationID),
+		builder.WithGitalyCorrelationID(func() string {
+			if !build.IsFeatureFlagOn(featureflags.UseGitalyCorrelationId) {
+				return ""
+			}
+			return build.JobRequestCorrelationID
+		}()),
 		builder.WithUserAgent(fmt.Sprintf("%s %s %s/%s", AppVersion.Name, AppVersion.Version, AppVersion.OS, AppVersion.Architecture)),
 	)
 
 	//nolint:nestif
 	if build.Runner.Cache != nil {
 		opts = append(opts, builder.WithCacheMaxArchiveSize(build.Runner.Cache.MaxUploadedArchiveSize),
-			builder.WithCacheDownloadDescriptor(func(cacheKey string) (cacheprovider.Descriptor, error) {
-				adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey, build.IsFeatureFlagOn(featureflags.HashCacheKeys))
-
-				goCloudURL, err := adapter.GetGoCloudURL(ctx, false)
-				if goCloudURL.URL != nil {
-					return cacheprovider.Descriptor{
-						GoCloudURL: true,
-						URL:        goCloudURL.URL.String(),
-						Env:        goCloudURL.Environment,
-					}, err
-				}
-
-				if url := adapter.GetDownloadURL(ctx); url.URL != nil {
-					return cacheprovider.Descriptor{
-						URL:     url.URL.String(),
-						Headers: url.Headers,
-					}, nil
-				}
-
-				return cacheprovider.Descriptor{}, nil
-			}),
-			builder.WithCacheUploadDescriptor(func(cacheKey string) (cacheprovider.Descriptor, error) {
-				adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey, build.IsFeatureFlagOn(featureflags.HashCacheKeys))
-
-				goCloudURL, err := adapter.GetGoCloudURL(ctx, true)
-				if err != nil {
-					return cacheprovider.Descriptor{}, err
-				}
-
-				if goCloudURL.URL != nil {
-					return cacheprovider.Descriptor{
-						GoCloudURL: true,
-						URL:        goCloudURL.URL.String(),
-						Env:        goCloudURL.Environment,
-					}, err
-				}
-
-				url := adapter.GetUploadURL(ctx)
-				if url.URL == nil {
-					return cacheprovider.Descriptor{}, err
-				}
-
-				desc := cacheprovider.Descriptor{
-					URL:     url.URL.String(),
-					Headers: url.Headers,
-				}
-
-				if headURL := adapter.GetHeadURL(ctx); headURL.URL != nil {
-					desc.HeadURL = headURL.URL.String()
-				}
-
-				return desc, nil
-			}),
+			builder.WithCacheDownloadDescriptor(cacheDownloadDescriptor(ctx, build, build.IsFeatureFlagOn(featureflags.HashCacheKeys))),
+			builder.WithAlternateCacheDownloadDescriptor(cacheDownloadDescriptor(ctx, build, !build.IsFeatureFlagOn(featureflags.HashCacheKeys))),
+			builder.WithCacheUploadDescriptor(cacheUploadDescriptor(ctx, build, build.IsFeatureFlagOn(featureflags.HashCacheKeys))),
+			builder.WithAlternateCacheUploadDescriptor(cacheUploadDescriptor(ctx, build, !build.IsFeatureFlagOn(featureflags.HashCacheKeys))),
 		)
 	}
 
@@ -235,4 +188,73 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 			},
 		},
 	}, nil
+}
+
+// cacheDownloadDescriptor returns a Descriptor resolver for a given cache key.
+// sharded controls the FF_HASH_CACHE_KEYS state used when addressing the cache object.
+func cacheDownloadDescriptor(ctx context.Context, build *Build, sharded bool) func(string) (cacheprovider.Descriptor, error) {
+	return func(cacheKey string) (cacheprovider.Descriptor, error) {
+		adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey, sharded)
+
+		goCloudURL, err := adapter.GetGoCloudURL(ctx, false)
+		if goCloudURL.URL != nil {
+			return cacheprovider.Descriptor{
+				GoCloudURL: true,
+				URL:        goCloudURL.URL.String(),
+				Env:        goCloudURL.Environment,
+			}, err
+		}
+
+		url := adapter.GetDownloadURL(ctx)
+		if url.URL == nil {
+			return cacheprovider.Descriptor{}, nil
+		}
+
+		desc := cacheprovider.Descriptor{
+			URL:     url.URL.String(),
+			Headers: url.Headers,
+		}
+
+		if headURL := adapter.GetHeadURL(ctx); headURL.URL != nil {
+			desc.HeadURL = headURL.URL.String()
+		}
+
+		return desc, nil
+	}
+}
+
+// cacheUploadDescriptor returns a Descriptor resolver for cache upload.
+func cacheUploadDescriptor(ctx context.Context, build *Build, sharded bool) func(string) (cacheprovider.Descriptor, error) {
+	return func(cacheKey string) (cacheprovider.Descriptor, error) {
+		adapter := cache.GetAdapter(build.Runner.Cache, build.GetBuildTimeout(), build.Runner.ShortDescription(), fmt.Sprintf("%d", build.JobInfo.ProjectID), cacheKey, sharded)
+
+		goCloudURL, err := adapter.GetGoCloudURL(ctx, true)
+		if err != nil {
+			return cacheprovider.Descriptor{}, err
+		}
+
+		if goCloudURL.URL != nil {
+			return cacheprovider.Descriptor{
+				GoCloudURL: true,
+				URL:        goCloudURL.URL.String(),
+				Env:        goCloudURL.Environment,
+			}, err
+		}
+
+		url := adapter.GetUploadURL(ctx)
+		if url.URL == nil {
+			return cacheprovider.Descriptor{}, err
+		}
+
+		desc := cacheprovider.Descriptor{
+			URL:     url.URL.String(),
+			Headers: url.Headers,
+		}
+
+		if headURL := adapter.GetHeadURL(ctx); headURL.URL != nil {
+			desc.HeadURL = headURL.URL.String()
+		}
+
+		return desc, nil
+	}
 }

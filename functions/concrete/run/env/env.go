@@ -57,12 +57,21 @@ type Env struct {
 }
 
 // ExpandValue expands $VAR / ${VAR} against Env + GitLabEnv overlay.
-// Used for fields the helper subprocess does not expand itself.
+// Used for fields the helper subprocess does not expand itself. `$$`
+// resolves to a literal `$` (per GitLab CI's documented escape) and the
+// shell-special params `$*`, `$#`, `$@`, `$!`, `$?`, `$-`, `$0`..`$9`
+// resolve to empty rather than leaking same-named env entries.
 func (e *Env) ExpandValue(s string) string {
 	if s == "" {
 		return s
 	}
 	return os.Expand(s, func(key string) string {
+		switch key {
+		case "$":
+			return "$"
+		case "*", "#", "@", "!", "?", "-", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+			return ""
+		}
 		if v, ok := e.GitLabEnv[key]; ok {
 			return v
 		}
