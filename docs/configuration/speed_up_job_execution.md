@@ -186,7 +186,7 @@ Each cache backend has its own `config.toml` section. Optimize for your backend:
   Use `RoleARN` for archives larger than 5 GB to [enable multipart uploads](advanced-configuration.md#enable-multipart-transfers-with-rolearn).
   Use the default S3 v2 adapter (do not set `FF_USE_LEGACY_S3_CACHE_ADAPTER=true`). Optionally enable `Accelerate = true` for
   [AWS S3 Transfer Acceleration](https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html) when runners are far
-  from the bucket region. An [S3 VPC endpoint](https://docs.aws.amazon.com/AmazonS3/latest/userguide/creating-s3-vpc-endpoint.html)
+  from the bucket region. An [S3 VPC endpoint](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html)
   in the same region can reduce latency and cost.
 - [Google Cloud Storage configuration](advanced-configuration.md#the-runnerscachegcs-section)): Use a bucket in the same or nearest region to your runners.
 - [Azure Blob configuration](advanced-configuration.md#the-runnerscacheazure-section)): Use a storage account in the same or nearest region to your runners.
@@ -194,7 +194,7 @@ Each cache backend has its own `config.toml` section. Optimize for your backend:
 #### Cache compression
 
 Use faster compression to speed up cache archiving and download. This creates larger archives.
-Set compression options in your job or in [CI/CD variables](https://docs.gitlab.com/ee/ci/variables/):
+Set compression options in your job or in [CI/CD variables](https://docs.gitlab.com/ci/variables/):
 
 | Variable | Recommended for speed | Description |
 |----------|------------------------|-------------|
@@ -212,7 +212,7 @@ variables:
 #### Cache request timeout
 
 If large caches hit timeouts, increase the limit (in minutes) with the `CACHE_REQUEST_TIMEOUT`
-[CI/CD variable](https://docs.gitlab.com/ee/ci/variables/). Default is `10`. This setting does
+[CI/CD variable](https://docs.gitlab.com/ci/variables/). Default is `10`. This setting does
 not speed up transfers but prevents failures on slow or large uploads and downloads.
 
 #### Cache transfer buffer size (throughput)
@@ -220,7 +220,7 @@ not speed up transfers but prevents failures on slow or large uploads and downlo
 Cache download and upload use a single streaming buffer. A larger buffer reduces system calls and often increases throughput,
 especially if you see transfers cap around 20 to 30 MB/s.
 
-Set `CACHE_TRANSFER_BUFFER_SIZE` (in bytes) in the job environment or in [CI/CD variables](https://docs.gitlab.com/ee/ci/variables/).
+Set `CACHE_TRANSFER_BUFFER_SIZE` (in bytes) in the job environment or in [CI/CD variables](https://docs.gitlab.com/ci/variables/).
 Default is 4 MiB (4194304).
 
 Example configuration for 8 MiB:

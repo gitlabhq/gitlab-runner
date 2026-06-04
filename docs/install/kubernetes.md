@@ -60,7 +60,7 @@ Prerequisites:
 - Your GitLab server's API is reachable from the cluster.
 - Kubernetes 1.4 or later, with beta APIs enabled.
 - The `kubectl` CLI is installed locally, and authenticated for the cluster.
-- The [Helm client](https://helm.sh/docs/using_helm/#installing-the-helm-client) is installed locally on your machine.
+- The [Helm CLI](https://helm.sh/docs/intro/install/) is installed locally on your machine.
 - You've set all [required values in `values.yaml`](#configure-gitlab-runner-with-the-helm-chart).
 
 To install GitLab Runner from the Helm chart:

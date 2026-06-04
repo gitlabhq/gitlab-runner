@@ -242,7 +242,7 @@ POST requests from the build environment to the GitLab instance.
 By default, the artifact uploader logs the upload URL and the HTTP status code
 of the upload response. This information is not enough to understand which system
 caused an error or blocked artifact uploads. To troubleshoot artifact upload issues,
-[enable debug logging](https://docs.gitlab.com/ci/variables/#enable-debug-logging)
+[enable debug logging](https://docs.gitlab.com/ci/variables/variables_troubleshooting/#enable-debug-logging)
 for upload attempts to see upload response's headers and body.
 
 > [!note]

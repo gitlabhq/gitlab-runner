@@ -447,7 +447,7 @@ var flags = []FeatureFlag{
 		Name:         EnableJobInputsInterpolation,
 		DefaultValue: true,
 		Deprecated:   false,
-		Description:  "When enabled, job inputs are interpolated. For more information, see [&17833](https://gitlab.com/groups/gitlab-org/-/epics/17833).",
+		Description:  "When enabled, job inputs are interpolated. For more information, see [&17833](https://gitlab.com/groups/gitlab-org/-/work_items/17833).",
 	},
 	{
 		Name:         UseJobRouter,
