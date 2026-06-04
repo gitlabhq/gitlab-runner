@@ -953,10 +953,13 @@ func newTestEnv(t *testing.T, shell string) *env.Env {
 	baseDir := t.TempDir()
 	workingDir := filepath.Join(baseDir, "project")
 	require.NoError(t, os.MkdirAll(workingDir, 0o755))
-	require.NoError(t, os.MkdirAll(workingDir+".tmp", 0o755))
+	tmpDir := workingDir + ".tmp"
+	require.NoError(t, os.MkdirAll(tmpDir, 0o755))
 
 	return &env.Env{
 		WorkingDir: workingDir,
+		TmpDir:     tmpDir,
+		StagingDir: tmpDir,
 		Shell:      shell,
 		Env:        map[string]string{},
 		GitLabEnv:  map[string]string{},
