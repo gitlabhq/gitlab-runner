@@ -74,7 +74,7 @@ These configurations are **not** supported:
 
 > [!note]
 > GitLab Runner uses Docker Engine API
-> [v1.25](https://docs.docker.com/reference/api/engine/version/v1.25/) to talk to the Docker
+> [v1.25](https://docs.docker.com/reference/api/engine/version-history/#v125-api-changes) to talk to the Docker
 > Engine. This means the
 > [minimum supported version](https://docs.docker.com/reference/api/engine/#api-version-matrix)
 > of Docker on a Linux server is `1.13.0`.
@@ -313,7 +313,7 @@ The GitLab Runner emulated link behavior differs slightly from [legacy container
 - Disabling `icc` disables inter-container communication and containers cannot communicate with each other.
 - Environment variables for the linked containers are no longer present (`<name>_PORT_<port>_<protocol>`).
 
-To configure the network, specify the [networking mode](https://docs.docker.com/engine/containers/run/#network-settings) in the `config.toml` file:
+To configure the network, specify the [networking mode](https://docs.docker.com/engine/network/drivers/) in the `config.toml` file:
 
 - `bridge`: Use the bridge network. Default.
 - `host`: Use the host's network stack inside the container.
@@ -826,7 +826,7 @@ see [Security risks for Docker executors](../security/_index.md#usage-of-docker-
 
 ## Configure a Docker ENTRYPOINT
 
-By default, the Docker executor doesn't override the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/containers/run/#entrypoint-default-command-to-execute-at-runtime). It passes `sh` or `bash` as [`COMMAND`](https://docs.docker.com/engine/containers/run/#cmd-default-command-or-options) to start a container that runs the job script.
+By default, the Docker executor doesn't override the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/containers/run/#default-entrypoint). It passes `sh` or `bash` as [`COMMAND`](https://docs.docker.com/engine/containers/run/#commands-and-arguments) to start a container that runs the job script.
 
 To ensure a job can run, its Docker image must:
 
@@ -1415,7 +1415,7 @@ Docker executor:
 
 {{< /history >}}
 
-The Docker executor supports running the [CI/CD steps](https://docs.gitlab.com/ci/steps/) natively by using the
+The Docker executor supports running the [GitLab Functions](https://docs.gitlab.com/ci/functions/) natively by using the
 `gRPC` API provided by [`step-runner`](https://gitlab.com/gitlab-org/step-runner).
 
 To enable this mode of execution, you must specify CI/CD jobs using the `run` keyword instead of the legacy `script`

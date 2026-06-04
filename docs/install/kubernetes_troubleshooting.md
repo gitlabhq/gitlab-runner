@@ -33,7 +33,7 @@ runners:
         helper_cpu_limit = "250m"
 ```
 
-For more information, see [issue 28393](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28393#note_722733798).
+For more information, see [issue 28393](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/28393#note_722733798).
 
 ## Error: `PANIC: creating directory: mkdir /nonexistent: permission denied`
 

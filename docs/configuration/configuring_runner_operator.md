@@ -327,7 +327,7 @@ appears.
   maximumTimeout: 0
 ```
 
-For more information, see [issue 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/472#note_1483346437).
+For more information, see [issue 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/work_items/472#note_1483346437).
 
 #### Watch out for security context constraints
 

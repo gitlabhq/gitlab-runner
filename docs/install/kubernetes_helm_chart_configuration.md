@@ -417,7 +417,7 @@ targeting the GitLab server.
 
 You can't use environment variables as pod labels in the `values.yaml` file.
 For more information, see [Can't set environment variable key as pod label](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173).
-Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173#note_351057890) as a temporary solution.
+Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/work_items/173#note_351057890) as a temporary solution.
 
 ## Switch to the Ubuntu-based `gitlab-runner` Docker image
 

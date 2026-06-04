@@ -267,7 +267,7 @@ wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest
 ## Additional resources
 
 - [Docker executor documentation](../executors/docker.md)
-- [Install Docker](https://docs.docker.com/engine/install/centos/#install-docker-ce)
+- [Install Docker](https://docs.docker.com/engine/install/centos/)
 - [Download other GitLab Runner versions](bleeding-edge.md#download-any-other-tagged-release)
 - [FIPS compliant GitLab Runner information](requirements.md#fips-compliant-gitlab-runner)
 - [GitLab Runner FAQ](../faq/_index.md)

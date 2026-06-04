@@ -423,7 +423,7 @@ Each `[[runners]]` section defines one runner.
 | `pre_build_script`                    | Commands to be executed on the runner before executing the job. Runs in the same shell context as `before_script`, `script`, and `post_build_script`. If `pre_build_script` fails, the remaining commands in that context are skipped, but `after_script` still runs. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                               |
 | `post_build_script`                   | Commands to be executed on the runner after executing the job. Runs in the same shell context as `pre_build_script`, `before_script`, and `script`. If any of those fail, `post_build_script` is skipped. `after_script` runs in a separate shell context and is not affected by `post_build_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.               |
 | `clone_url`                           | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL.                                                                                                                                                                                                                                                                                                         |
-| `debug_trace_disabled`                | Disables [debug tracing](https://docs.gitlab.com/ci/variables/#enable-debug-logging). When set to `true`, the debug log (trace) remains disabled even if `CI_DEBUG_TRACE` is set to `true`.                                                                                                                                                                                                                 |
+| `debug_trace_disabled`                | Disables [debug tracing](https://docs.gitlab.com/ci/variables/variables_troubleshooting/#enable-debug-logging). When set to `true`, the debug log (trace) remains disabled even if `CI_DEBUG_TRACE` is set to `true`.                                                                                                                                                                                                                 |
 | `clean_git_config`                    | Cleans the Git configuration. For more information, see [Cleaning Git configuration](#cleaning-git-configuration).                                                                                                                                                                                                                                                                                          |
 | `referees`                            | Extra job monitoring workers that pass their results as job artifacts to GitLab.                                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_requests_limit`            | The number of `unhealthy` responses to new job requests after which a runner worker is disabled.                                                                                                                                                                                                                                                                                                            |
@@ -892,7 +892,7 @@ such as `max-size`, `max-file`, or `compress`, the job fails immediately with a 
 
 The log options apply to the main job container and any service containers defined in your CI/CD configuration.
 
-For more information about Docker logging, see the [Docker `json-file` log driver documentation](https://docs.docker.com/config/containers/logging/json-file/).
+For more information about Docker logging, see the [Docker `json-file` log driver documentation](https://docs.docker.com/engine/logging/drivers/json-file/).
 
 ### Use a private container registry
 
@@ -1444,7 +1444,7 @@ job:
 
 ### Parallel artifact downloads (direct download)
 
-By default, when [`direct_download`](https://docs.gitlab.com/ci/jobs/job_artifacts/#download-artifacts-from-a-job)
+By default, when [`direct_download`](https://docs.gitlab.com/ci/jobs/job_artifacts/#download-job-artifacts)
 returns a redirect to object storage, the runner downloads artifacts with a single HTTP GET stream.
 
 Enable the `FF_USE_PARALLEL_ARTIFACT_TRANSFER` [feature flag](feature-flags.md) to allow parallel HTTP Range GETs when the
@@ -1879,7 +1879,7 @@ To use IAM roles for service accounts, an IAM OIDC provider [must exist for your
 {{< /history >}}
 
 > [!note]
-> [S3 Express One Zone directory buckets do not work with `RoleARN`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38484#note_2313111840) because the runner manager cannot restrict access to one specific object.
+> [S3 Express One Zone directory buckets do not work with `RoleARN`](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/38484#note_2313111840) because the runner manager cannot restrict access to one specific object.
 
 1. Set up an S3 Express One Zone bucket by following the [Amazon tutorial](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-getting-started.html).
 1. Configure `config.toml` with `BucketName` and `BucketLocation`.
@@ -1900,7 +1900,7 @@ Example `config.toml`:
 
 The following parameters define native support for Google Cloud Storage. For more information
 about these values, see the
-[Google Cloud Storage (GCS) authentication documentation](https://docs.cloud.google.com/storage/docs/authentication#service_accounts).
+[Google Cloud Storage (GCS) authentication documentation](https://docs.cloud.google.com/storage/docs/authentication).
 
 | Parameter         | Type   | Description |
 |-------------------|--------|-------------|
