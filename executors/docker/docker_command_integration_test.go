@@ -2445,6 +2445,98 @@ func testDockerBuildContainerGracefulShutdown(t *testing.T, useInit bool) {
 	}
 }
 
+// Test_FF_USE_NATIVE_CONTAINER_STOP verifies that when FF_USE_NATIVE_CONTAINER_STOP
+// is enabled, the runner does NOT exec the SIGTERM kill script into the build
+// container. Instead, ContainerStop sends SIGTERM directly to PID 1, allowing
+// PID 1 to orchestrate its own graceful shutdown.
+//
+// The script traps SIGTERM on the shell process and prints a marker before
+// exiting. With --init (tini as PID 1), tini forwards SIGTERM to the shell.
+// Without --init, the shell IS PID 1 and receives SIGTERM directly from
+// ContainerStop.
+//
+// Tests cover: user cancellation, job abort, and script timeout paths,
+// each with FF_USE_INIT_WITH_DOCKER_EXECUTOR enabled and disabled.
+func Test_FF_USE_NATIVE_CONTAINER_STOP(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	initModes := map[string]bool{
+		"with init":    true,
+		"without init": false,
+	}
+
+	triggers := map[string]func(*testing.T, *common.Build, *common.Trace) func(){
+		"job cancelled": func(t *testing.T, build *common.Build, tr *common.Trace) func() {
+			return buildtest.OnStage(build, "step_", func() {
+				time.Sleep(2 * time.Second)
+				assert.True(t, tr.Cancel())
+			})
+		},
+		"job aborted": func(t *testing.T, build *common.Build, tr *common.Trace) func() {
+			return buildtest.OnStage(build, "step_", func() {
+				time.Sleep(2 * time.Second)
+				assert.True(t, tr.Abort())
+			})
+		},
+		"RUNNER_SCRIPT_TIMEOUT exceeded": func(_ *testing.T, build *common.Build, _ *common.Trace) func() {
+			build.Variables = append(build.Variables, spec.Variable{
+				Key:   "RUNNER_SCRIPT_TIMEOUT",
+				Value: "2s",
+			})
+			return func() {}
+		},
+	}
+
+	for initName, useInit := range initModes {
+		for triggerName, setupTrigger := range triggers {
+			t.Run(initName+"/"+triggerName, func(t *testing.T) {
+				// The script traps SIGTERM, prints a marker, and exits.
+				// `sleep 30 & wait` keeps the shell alive and interruptible.
+				successfulBuild, err := common.GetRemoteBuildResponse(
+					`trap 'echo PID1_SIGTERM_RECEIVED; exit 0' TERM; sleep 30 & wait`,
+				)
+				require.NoError(t, err)
+
+				build := &common.Build{
+					Job: successfulBuild,
+					Runner: &common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Executor: "docker",
+							Docker: &common.DockerConfig{
+								Image:      common.TestAlpineImage,
+								PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+							},
+						},
+					},
+					ExecutorProvider: docker_executor.NewProvider(),
+				}
+
+				build.Variables = append(build.Variables,
+					spec.Variable{Key: featureflags.UseNativeContainerStop, Value: "true"},
+				)
+				if useInit {
+					build.Variables = append(build.Variables,
+						spec.Variable{Key: featureflags.UseInitWithDockerExecutor, Value: "true"},
+					)
+				}
+
+				out := bytes.NewBuffer(nil)
+				trace := common.Trace{Writer: out}
+
+				defer setupTrigger(t, build, &trace)()
+
+				err = build.Run(&common.Config{}, &trace)
+				assert.Error(t, err)
+
+				assert.EventuallyWithT(t, func(t *assert.CollectT) {
+					assert.Contains(t, out.String(), "PID1_SIGTERM_RECEIVED")
+				}, 5*time.Second, 500*time.Millisecond)
+			})
+		}
+	}
+}
+
 func Test_FF_USE_INIT_WITH_DOCKER_EXECUTOR(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")

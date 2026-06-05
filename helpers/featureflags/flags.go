@@ -59,6 +59,7 @@ const (
 	UseParallelArtifactTransfer          string = "FF_USE_PARALLEL_ARTIFACT_TRANSFER"
 	UseConcrete                          string = "FF_CONCRETE"
 	SuspendableEnvironments              string = "FF_SUSPENDABLE_ENVIRONMENTS"
+	UseNativeContainerStop               string = "FF_USE_NATIVE_CONTAINER_STOP"
 )
 
 type FeatureFlag struct {
@@ -486,6 +487,19 @@ var flags = []FeatureFlag{
 		Name:         SuspendableEnvironments,
 		DefaultValue: false,
 		Description:  "When enabled, you can suspend or resume job environments.",
+	},
+	{
+		Name:         UseNativeContainerStop,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, the container engine's native shutdown mechanism is used to terminate " +
+			"the build container on job cancellation. SIGTERM is delivered to PID 1 only. PID 1 must " +
+			"gracefully and correctly terminate the rest of the process tree. Enable this flag only when" +
+			"PID 1 is known to handle SIGTERM and propagate shutdown to its descendants (like an init " +
+			"process that forwards signals or an application designed to coordinate its own teardown). " +
+			"When disabled (the default), the runner applies its own graceful termination mechanism," +
+			"which signals descendant processes directly. Direct signaling is necessary when the process" +
+			"tree contains shells or other processes that do not propagate SIGTERM to their children.",
 	},
 }
 

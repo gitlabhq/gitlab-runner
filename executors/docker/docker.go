@@ -1146,8 +1146,13 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 	}
 
 	var gracefulExitFunc wait.GracefulExitFunc
-	if id == e.buildContainerID && e.helperImageInfo.OSType != helperimage.OSTypeWindows {
-		// send SIGTERM to all processes in the build container.
+	if id == e.buildContainerID && e.helperImageInfo.OSType != helperimage.OSTypeWindows &&
+		!e.Build.IsFeatureFlagOn(featureflags.UseNativeContainerStop) {
+		// Send SIGTERM to all processes in the build container. This is
+		// necessary because most shells do not propagate signals to child
+		// processes. When FF_USE_NATIVE_CONTAINER_STOP is enabled, we skip
+		// this and rely on ContainerStop sending SIGTERM to PID 1, which
+		// allows PID 1 to orchestrate its own graceful shutdown.
 		gracefulExitFunc = e.sendSIGTERMToContainerProcs
 	}
 

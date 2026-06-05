@@ -51,15 +51,28 @@ func (d *dockerWaiter) Wait(ctx context.Context, containerID string) error {
 func (d *dockerWaiter) StopKillWait(ctx context.Context, containerID string, timeout *int,
 	graceGracefulExitFunc GracefulExitFunc,
 ) error {
-	// if the job timed out or was cancelled, the ctx will already have expired, so just use context.Background()
-	if graceGracefulExitFunc != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
+	// If the job timed out or was cancelled, ctx will already have expired.
+	// Both the graceful-exit func and ContainerStop must use a fresh context
+	// derived from context.Background() so they are not skipped when the build
+	// context is cancelled before StopKillWait is called.
+	//
+	// Without this, retryWait's `ctx.Err() == nil` loop condition exits
+	// immediately, ContainerStop is never issued, and PID 1 never receives
+	// SIGTERM — it only gets SIGKILL after the network is already disconnected.
+	//
+	// A single 30-second context covers both the graceful-exit func and the
+	// ContainerStop/retryWait loop. This is generous: Docker's own
+	// SIGTERM→SIGKILL grace period is controlled by the `timeout` parameter
+	// passed to ContainerStop.
+	stopCtx, stopCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer stopCancel()
 
-		_ = graceGracefulExitFunc(ctx, containerID)
+	if graceGracefulExitFunc != nil {
+		_ = graceGracefulExitFunc(stopCtx, containerID)
 	}
-	return d.retryWait(ctx, containerID, func() {
-		_ = d.client.ContainerStop(ctx, containerID, container.StopOptions{Timeout: timeout})
+
+	return d.retryWait(stopCtx, containerID, func() {
+		_ = d.client.ContainerStop(stopCtx, containerID, container.StopOptions{Timeout: timeout})
 	})
 }
 
