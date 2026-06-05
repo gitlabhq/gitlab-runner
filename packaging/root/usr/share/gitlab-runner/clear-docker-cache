@@ -68,9 +68,12 @@ case "$COMMAND" in
       else
         "$CONTAINER_ENGINE" system prune -af --filter "$FILTER_FLAG"
       fi
-    else
+    elif [ "$CONTAINER_ENGINE" = "podman" ]; then
       # podman supports the modern prune syntax natively
       "$CONTAINER_ENGINE" system prune -af --filter "$FILTER_FLAG"
+    else
+      echo -e "ERROR: unsupported container engine: ${CONTAINER_ENGINE}"
+      exit 1
     fi
 
     exit 0
@@ -119,10 +122,18 @@ case "$COMMAND" in
         "$CONTAINER_ENGINE" system prune -af --filter "$FILTER_FLAG"
         "$CONTAINER_ENGINE" volume prune -af --filter "$FILTER_FLAG"
       fi
-    else
-      # podman supports the modern prune syntax natively
+    elif [ "$CONTAINER_ENGINE" = "podman" ]; then
       "$CONTAINER_ENGINE" system prune -af --filter "$FILTER_FLAG"
-      "$CONTAINER_ENGINE" volume prune -af --filter "$FILTER_FLAG"
+      # Released podman (through 5.8) has no -a/--all on `volume prune`; it
+      # already removes all unused volumes, so -f is the complete equivalent of
+      # docker's --all (docker only grew `volume prune --all` in 23.0).
+      # TODO: podman's unreleased docker-matching change adds --all and makes
+      # the default anonymous-only. Once that ships, add --all here so named
+      # volumes are also pruned. https://gitlab.com/gitlab-org/gitlab-runner/-/issues/36934
+      "$CONTAINER_ENGINE" volume prune -f --filter "$FILTER_FLAG"
+    else
+      echo -e "ERROR: unsupported container engine: ${CONTAINER_ENGINE}"
+      exit 1
     fi
 
     exit 0
