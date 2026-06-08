@@ -249,7 +249,7 @@ func TestBuild_GetSources(t *testing.T) {
 	})
 
 	t.Run("pre/post clone scripts", func(t *testing.T) {
-		ff := func(name string) bool { return name == featureflags.UseNewEvalStrategy }
+		ff := func(name string) bool { return name == featureflags.UseLegacyBashEval }
 		config := buildConfig(t, baseJob(), newTestVars(t, nil),
 			WithPreCloneScript([]string{"echo pre"}),
 			WithPostCloneScript([]string{"echo post"}),
@@ -259,12 +259,12 @@ func TestBuild_GetSources(t *testing.T) {
 		assert.Equal(t, "pre_clone_script", config.GetSources.PreCloneStep.Step)
 		assert.Equal(t, []string{"echo pre"}, config.GetSources.PreCloneStep.Script)
 		assert.True(t, config.GetSources.PreCloneStep.OnSuccess)
-		assert.True(t, config.GetSources.PreCloneStep.UseNewEvalStrategy)
+		assert.True(t, config.GetSources.PreCloneStep.UseLegacyBashEval)
 
 		assert.Equal(t, "post_clone_script", config.GetSources.PostCloneStep.Step)
 		assert.Equal(t, []string{"echo post"}, config.GetSources.PostCloneStep.Script)
 		assert.True(t, config.GetSources.PostCloneStep.OnSuccess)
-		assert.True(t, config.GetSources.PostCloneStep.UseNewEvalStrategy)
+		assert.True(t, config.GetSources.PostCloneStep.UseLegacyBashEval)
 	})
 
 	t.Run("options", func(t *testing.T) {
