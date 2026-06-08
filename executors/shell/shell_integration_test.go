@@ -398,6 +398,14 @@ func TestBuildMasking(t *testing.T) {
 	})
 }
 
+func TestBuildWithStdinClosed(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build := newBuild(t, spec.Job{}, shell)
+
+		buildtest.RunBuildWithStdinClosed(t, build.Runner, copyExecProvider(build))
+	})
+}
+
 func TestBuildMaskingProxyExec(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 

@@ -35,10 +35,10 @@ func newBuilder(shell string, opts ...func(*Builder)) *Builder {
 	return b
 }
 
-func withExitCodeCheck(b *Builder)      { b.ExitCodeCheck = true }
-func withDebugTrace(b *Builder)         { b.DebugTrace = true }
-func withScriptSections(b *Builder)     { b.ScriptSections = true }
-func withUseNewEvalStrategy(b *Builder) { b.UseNewEvalStrategy = true }
+func withExitCodeCheck(b *Builder)     { b.ExitCodeCheck = true }
+func withDebugTrace(b *Builder)        { b.DebugTrace = true }
+func withScriptSections(b *Builder)    { b.ScriptSections = true }
+func withUseLegacyBashEval(b *Builder) { b.UseLegacyBashEval = true }
 
 func TestBashScript(t *testing.T) {
 	requireShell(t, ShellBash)
@@ -52,7 +52,7 @@ func TestBashScript(t *testing.T) {
 			lines: []string{"echo hello"},
 			assert: func(t *testing.T, s string) {
 				assert.True(t, strings.HasPrefix(s, "#!"))
-				for _, want := range []string{"set -o errexit", "set +o noclobber", "trap exit 1 TERM", "eval", "exit 0"} {
+				for _, want := range []string{"set -o errexit", "set +o noclobber", "trap 'exit 1' TERM", "eval", "exit 0"} {
 					assert.Contains(t, s, want)
 				}
 			},
@@ -83,19 +83,21 @@ func TestBashScript(t *testing.T) {
 				assert.NotContains(t, s, "set -o xtrace")
 			},
 		},
-		"new eval strategy disabled (default) uses bare eval pipeline": {
+		"default wraps eval in a trapped subshell with stdin from /dev/null": {
 			lines: []string{"echo a"},
 			assert: func(t *testing.T, s string) {
-				assert.Regexp(t, `:\s*\|\s*eval `, s)
-				assert.NotRegexp(t, `:\s*\|\s*\(eval `, s,
-					"FF off: must not wrap eval in an explicit subshell")
+				assert.Contains(t, s, "(trap 'exit 1' TERM; eval ")
+				assert.Contains(t, s, ") < /dev/null")
+				assert.NotRegexp(t, `:\s*\|\s*eval `, s,
+					"default must not use the legacy pipeline form")
 			},
 		},
-		"new eval strategy enabled uses subshell-wrapped eval": {
+		"FF_USE_LEGACY_BASH_EVAL uses the bare eval pipeline": {
 			lines: []string{"echo a"},
-			opts:  []func(*Builder){withUseNewEvalStrategy},
+			opts:  []func(*Builder){withUseLegacyBashEval},
 			assert: func(t *testing.T, s string) {
-				assert.Regexp(t, `:\s*\|\s*\(eval `, s)
+				assert.Regexp(t, `:\s*\|\s*eval `, s)
+				assert.NotContains(t, s, "< /dev/null")
 			},
 		},
 		"echoes commands": {

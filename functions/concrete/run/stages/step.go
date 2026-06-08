@@ -16,10 +16,10 @@ type Step struct {
 	OnSuccess    bool     `json:"on_success,omitempty"`
 	OnFailure    bool     `json:"on_failure,omitempty"`
 
-	Debug              bool `json:"debug,omitempty"`
-	BashExitCodeCheck  bool `json:"bash_exit_code_check,omitempty"`
-	ScriptSections     bool `json:"script_sections,omitempty"`
-	UseNewEvalStrategy bool `json:"use_new_eval_strategy,omitempty"`
+	Debug             bool `json:"debug,omitempty"`
+	BashExitCodeCheck bool `json:"bash_exit_code_check,omitempty"`
+	ScriptSections    bool `json:"script_sections,omitempty"`
+	UseLegacyBashEval bool `json:"use_legacy_bash_eval,omitempty"`
 }
 
 func (s Step) Run(ctx context.Context, e *env.Env) error {
@@ -36,7 +36,7 @@ func (s Step) Run(ctx context.Context, e *env.Env) error {
 	sw.DebugTrace = s.Debug
 	sw.ExitCodeCheck = s.BashExitCodeCheck
 	sw.ScriptSections = s.ScriptSections
-	sw.UseNewEvalStrategy = s.UseNewEvalStrategy
+	sw.UseLegacyBashEval = s.UseLegacyBashEval
 
 	script := sw.Build(s.Script)
 	if err := shell(ctx, e, script, s.Step); err != nil {

@@ -631,6 +631,17 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	buildtest.RunBuildWithCancel(t, getRunnerConfigForOS(t), setupExecutor)
 }
 
+func TestDockerCommandNoScriptBodyLeakOnCancel(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	// Pin an affected bash version so the test has teeth: on bash >= 5.3 the
+	// unfixed pipeline form dumps the eval body to the log on the cancellation
+	// SIGTERM. With the fix it stays silent. See issue #39005 / !6784.
+	config := getRunnerConfigForOS(t)
+	config.Docker.Image = "bash:5.3"
+	buildtest.RunBuildWithScriptBodyLeakOnCancel(t, config, setupExecutor)
+}
+
 func TestBuildMasking(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 

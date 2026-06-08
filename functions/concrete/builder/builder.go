@@ -139,22 +139,22 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 		SubmodulePaths:       b.splitVarFlags("GIT_SUBMODULE_PATHS"),
 
 		PreCloneStep: stages.Step{
-			Step:               "pre_clone_script",
-			Script:             b.opts.preCloneScript,
-			OnSuccess:          true,
-			BashExitCodeCheck:  b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
-			Debug:              b.opts.debug,
-			ScriptSections:     b.isFeatureFlagOn(featureflags.ScriptSections) && b.meta.Features.TraceSections,
-			UseNewEvalStrategy: b.isFeatureFlagOn(featureflags.UseNewEvalStrategy),
+			Step:              "pre_clone_script",
+			Script:            b.opts.preCloneScript,
+			OnSuccess:         true,
+			BashExitCodeCheck: b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
+			Debug:             b.opts.debug,
+			ScriptSections:    b.isFeatureFlagOn(featureflags.ScriptSections) && b.meta.Features.TraceSections,
+			UseLegacyBashEval: b.isFeatureFlagOn(featureflags.UseLegacyBashEval),
 		},
 		PostCloneStep: stages.Step{
-			Step:               "post_clone_script",
-			Script:             b.opts.postCloneScript,
-			OnSuccess:          true,
-			BashExitCodeCheck:  b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
-			Debug:              b.opts.debug,
-			ScriptSections:     b.isFeatureFlagOn(featureflags.ScriptSections) && b.meta.Features.TraceSections,
-			UseNewEvalStrategy: b.isFeatureFlagOn(featureflags.UseNewEvalStrategy),
+			Step:              "post_clone_script",
+			Script:            b.opts.postCloneScript,
+			OnSuccess:         true,
+			BashExitCodeCheck: b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
+			Debug:             b.opts.debug,
+			ScriptSections:    b.isFeatureFlagOn(featureflags.ScriptSections) && b.meta.Features.TraceSections,
+			UseLegacyBashEval: b.isFeatureFlagOn(featureflags.UseLegacyBashEval),
 		},
 
 		ClearWorktreeOnRetry:  true,
@@ -417,7 +417,7 @@ func (b *builder) buildSteps() []stages.Step {
 		step.BashExitCodeCheck = b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck)
 		step.Debug = b.opts.debug
 		step.ScriptSections = b.isFeatureFlagOn(featureflags.ScriptSections) && b.meta.Features.TraceSections
-		step.UseNewEvalStrategy = b.isFeatureFlagOn(featureflags.UseNewEvalStrategy)
+		step.UseLegacyBashEval = b.isFeatureFlagOn(featureflags.UseLegacyBashEval)
 		return step
 	}
 
