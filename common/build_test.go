@@ -3484,6 +3484,51 @@ func Test_logUsedImages(t *testing.T) {
 	}
 }
 
+// Test_logUsedImages_expandsVariablesInBuildRun ensures that when Build.Run
+// emits the FF_LOG_IMAGES_CONFIGURED_FOR_JOB log line, image_name reflects the
+// fully-expanded value. This locks in the ordering of logUsedImages relative
+// to expandContainerOptions inside Build.Run.
+func Test_logUsedImages_expandsVariablesInBuildRun(t *testing.T) {
+	// Hook the standard logger: NewBuild deep-copies RunnerConfig via JSON,
+	// which cannot serialize a custom logger's func-typed hooks.
+	hook := test.NewGlobal()
+	t.Cleanup(hook.Reset)
+
+	p := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error {
+		return options.Build.StartBuild("/root/dir", "/cache/dir", false, false, false)
+	})
+
+	rc := &RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			FeatureFlags: map[string]bool{
+				featureflags.LogImagesConfiguredForJob: true,
+			},
+		},
+	}
+	build := registerExecutorWithSuccessfulBuild(t, p, rc)
+	build.Variables = append(build.Variables,
+		spec.Variable{Key: "JOB_IMAGE", Value: "registry.example.com/job:latest", Public: true},
+		spec.Variable{Key: "SERVICE_IMAGE", Value: "registry.example.com/service:v1", Public: true},
+	)
+	build.Image = spec.Image{Name: "$JOB_IMAGE"}
+	build.Services = spec.Services{{Name: "$SERVICE_IMAGE"}}
+
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+
+	var loggedImages []string
+	for _, entry := range hook.AllEntries() {
+		if image, ok := entry.Data["image_name"]; ok {
+			loggedImages = append(loggedImages, image.(string))
+		}
+	}
+
+	assert.ElementsMatch(t, []string{
+		"registry.example.com/job:latest",
+		"registry.example.com/service:v1",
+	}, loggedImages, "image_name fields should be expanded before being logged")
+}
+
 func TestBuildStageMetrics(t *testing.T) {
 	p := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
 
