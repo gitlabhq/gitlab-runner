@@ -1482,7 +1482,6 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		return &BuildError{FailureReason: ConfigurationError, Inner: err}
 	}
 
-	b.logUsedImages()
 	b.printRunningWithHeader(trace)
 
 	err = b.resolveSecrets(trace)
@@ -1491,6 +1490,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	}
 
 	b.expandContainerOptions()
+	b.logUsedImages()
 
 	b.logger = b.getNewLogger(trace, b.Log(), false)
 	defer b.logger.Close()
