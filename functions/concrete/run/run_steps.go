@@ -36,29 +36,9 @@ const stepsPreamble = "{}\n---\n"
 // the outer concrete step's surrounding stages (cache/artifacts/cleanup)
 // continue to run.
 func (r *Runner) runUserSteps(ctx context.Context, steps []schema.Step) error {
-	stepsYAML, err := buildStepsYAML(steps)
+	req, err := r.buildRunRequest(steps)
 	if err != nil {
-		return fmt.Errorf("marshalling user steps: %w", err)
-	}
-
-	tenantID := strconv.FormatInt(r.config.ID, 10) + "-run"
-
-	// Merge Env and GitLabEnv with the same precedence as env.Command, so
-	// the nested job sees $GITLAB_ENV (and any KEY=VALUE lines written by
-	// earlier stages) just like a local stage would.
-	mergedEnv := maps.Clone(r.env.Env)
-	maps.Copy(mergedEnv, r.env.GitLabEnv)
-
-	req := &client.RunRequest{
-		Id:       tenantID,
-		WorkDir:  r.env.WorkingDir,
-		BuildDir: r.env.WorkingDir,
-		Env:      mergedEnv,
-		Steps:    stepsYAML,
-	}
-	if r.config.ScriptTimeout > 0 {
-		t := r.config.ScriptTimeout
-		req.Timeout = &t
+		return err
 	}
 
 	dialer := unixSocketDialer(socketPath())
@@ -77,6 +57,43 @@ func (r *Runner) runUserSteps(ctx context.Context, steps []schema.Step) error {
 	flushErr := splitter.Flush()
 
 	return interpretRunResult(status, err, flushErr)
+}
+
+// buildRunRequest assembles the nested run: dispatch. It forwards the job
+// variables as RunRequest.Variables so the nested job resolves ${{ vars.* }} /
+// ${{ job.* }} (including step references) the same way a non-nested job does;
+// Env alone does not populate that scope. Masked values are still masked by the
+// outer concrete job's log pipeline, which the nested output flows through.
+func (r *Runner) buildRunRequest(steps []schema.Step) (*client.RunRequest, error) {
+	stepsYAML, err := buildStepsYAML(steps)
+	if err != nil {
+		return nil, fmt.Errorf("marshalling user steps: %w", err)
+	}
+
+	// Merge Env and GitLabEnv with the same precedence as env.Command, so the
+	// nested job sees $GITLAB_ENV (and any KEY=VALUE lines written by earlier
+	// stages) just like a local stage would.
+	mergedEnv := maps.Clone(r.env.Env)
+	maps.Copy(mergedEnv, r.env.GitLabEnv)
+
+	variables := make([]client.Variable, 0, len(r.env.JobVars))
+	for key, value := range r.env.JobVars {
+		variables = append(variables, client.Variable{Key: key, Value: value.GetStringValue()})
+	}
+
+	req := &client.RunRequest{
+		Id:        strconv.FormatInt(r.config.ID, 10) + "-run",
+		WorkDir:   r.env.WorkingDir,
+		BuildDir:  r.env.WorkingDir,
+		Env:       mergedEnv,
+		Variables: variables,
+		Steps:     stepsYAML,
+	}
+	if r.config.ScriptTimeout > 0 {
+		t := r.config.ScriptTimeout
+		req.Timeout = &t
+	}
+	return req, nil
 }
 
 // interpretRunResult collapses the (status, runErr, flushErr) triple from a
