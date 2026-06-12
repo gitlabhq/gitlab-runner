@@ -100,9 +100,9 @@ warning messages. Common solutions include:
 - Increase the `concurrent` setting to exceed the number of runners.
 - Set the `request_concurrency` value for high-volume runners to a value higher than 1 (default is 1).
   Consider turning on [runner monitoring](../monitoring/_index.md) to understand the state of your system and find the best
-  value for the setting. Consider using the `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` feature flag to automatically
-  adjust `request_concurrency` based on workload. For information about adaptive concurrency,
-  see the [feature flags documentation](feature-flags.md).
+  value for the setting. The `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` feature flag automatically
+  adjusts `request_concurrency` based on workload and is turned on by default. If you turned it off, consider turning it back on.
+  For information about adaptive concurrency, see the [feature flags documentation](feature-flags.md).
 - Balance `limit` settings with expected job volume.
 
 ##### Example problematic configurations
