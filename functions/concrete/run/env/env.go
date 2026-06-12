@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/runner/gracefulexitcmd"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type JobStatus string
@@ -42,6 +43,12 @@ type Env struct {
 	GracefulExitDelay time.Duration
 
 	Env map[string]string
+
+	// JobVars are the job's CI variables, retained so the nested run: dispatch
+	// can forward them as RunRequest.Variables. The nested job resolves
+	// ${{ vars.* }} / ${{ job.* }} (including step references) against these;
+	// Env alone does not populate that scope.
+	JobVars map[string]*structpb.Value
 
 	GitLabEnvFile string
 	GitLabEnv     map[string]string

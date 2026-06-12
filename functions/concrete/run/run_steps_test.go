@@ -9,7 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/structpb"
 
+	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/env"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
 )
@@ -112,4 +114,34 @@ func TestBuildStepsYAML_Preamble(t *testing.T) {
 
 	assert.True(t, strings.HasPrefix(out, "{}\n---\n"),
 		"step-runner's parser requires an empty front-matter document; missing preamble silently breaks dispatch.\ngot: %q", out)
+}
+
+// TestBuildRunRequest_ForwardsJobVars guards the fix for nested run: steps
+// failing with "attribute not found". The nested job resolves ${{ vars.* }} /
+// ${{ job.* }} (including step/func references) from RunRequest.Variables, not
+// Env, so the dispatch must forward the job variables.
+func TestBuildRunRequest_ForwardsJobVars(t *testing.T) {
+	name, script := "step", "true"
+	r := &Runner{
+		config: &Config{ID: 42},
+		env: &env.Env{
+			WorkingDir: "/work",
+			Env:        map[string]string{"PATH": "/usr/bin"},
+			JobVars: map[string]*structpb.Value{
+				"CHANGELOG_FUNC_IMG": structpb.NewStringValue("registry.example/changelog:1"),
+				"CI_COMMIT_REF_NAME": structpb.NewStringValue("main"),
+			},
+		},
+	}
+
+	req, err := r.buildRunRequest([]schema.Step{{Name: &name, Script: &script}})
+	require.NoError(t, err)
+
+	got := map[string]string{}
+	for _, v := range req.Variables {
+		got[v.Key] = v.Value
+	}
+	assert.Equal(t, "registry.example/changelog:1", got["CHANGELOG_FUNC_IMG"],
+		"job variables must be forwarded as RunRequest.Variables for vars.*/job.* to resolve")
+	assert.Equal(t, "main", got["CI_COMMIT_REF_NAME"])
 }

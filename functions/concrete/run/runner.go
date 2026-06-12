@@ -73,8 +73,9 @@ type Config struct {
 }
 
 func New(config Config, builtinCtx runner.BuiltinContext, options ...Option) (*Runner, error) {
+	jobVars := builtinCtx.GetJobVars()
 	stepEnv := builtinCtx.GetEnvs()
-	for key, value := range builtinCtx.GetJobVars() {
+	for key, value := range jobVars {
 		stepEnv[key] = value.GetStringValue()
 	}
 
@@ -93,6 +94,7 @@ func New(config Config, builtinCtx runner.BuiltinContext, options ...Option) (*R
 		GracefulExitDelay: builtinCtx.GracefulExitDelay(),
 		GitLabEnv:         make(map[string]string),
 		Env:               stepEnv,
+		JobVars:           jobVars,
 		Stdout:            stdout,
 		Stderr:            stderr,
 	}
