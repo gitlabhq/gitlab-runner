@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,8 +24,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/router/rpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -151,6 +154,75 @@ func TestRequestJob_NoRouter(t *testing.T) {
 	assert.EqualValues(t, 1223, job.ID)
 }
 
+func TestRequestJob_JobRouterDisabled_FallsBackAndRediscovers(t *testing.T) {
+	routerSrv := &mockRouterServer{t: t, disabled: true}
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { l.Close() })
+	r := grpc.NewServer()
+	rpc.RegisterJobRouterServer(r, routerSrv)
+	go func() { assert.NoError(t, r.Serve(l)) }()
+	t.Cleanup(r.GracefulStop)
+
+	discoveryJSON, err := json.Marshal(&common.RouterDiscovery{
+		ServerURL: fmt.Sprintf("grpc://%s", l.Addr()),
+	})
+	require.NoError(t, err)
+
+	var discoveryCalls atomic.Int32
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v4/runners/router/discovery", func(w http.ResponseWriter, req *http.Request) {
+		// First discovery hands out the router; once it is disabled, discovery returns 501.
+		if discoveryCalls.Add(1) == 1 {
+			w.Header().Set("Content-Type", "application/json")
+			_, writeErr := w.Write(discoveryJSON)
+			assert.NoError(t, writeErr)
+			return
+		}
+		w.WriteHeader(http.StatusNotImplemented)
+	})
+	mux.HandleFunc("POST /api/v4/jobs/request", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, writeErr := w.Write([]byte(fakeJobResponse))
+		assert.NoError(t, writeErr)
+	})
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Failf(t, "unexpected call", "%s %s", req.Method, req.URL)
+		w.WriteHeader(http.StatusNotImplemented)
+	}))
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	certDir := t.TempDir()
+	rc := NewClient(
+		network.NewGitLabClient(network.WithCertificateDirectory(certDir)),
+		certDir,
+		"runner-test",
+	)
+	t.Cleanup(rc.Shutdown)
+	config := newConfig(server.URL)
+	sessionInfo := &common.SessionInfo{}
+
+	// Request 1: routes through the router, gets Unimplemented, and falls back to a direct job request.
+	job, healthy := rc.RequestJob(t.Context(), config, sessionInfo)
+	require.True(t, healthy)
+	require.NotNil(t, job)
+	assert.EqualValues(t, 1223, job.ID)
+	assert.EqualValues(t, 1, routerSrv.calls.Load())
+	// The discovery cache was invalidated, so the next request will re-discover.
+	assert.True(t, rc.discoExpiresAt.IsZero())
+
+	// Request 2: re-discovers, finds the router gone (501), and polls GitLab directly.
+	job, healthy = rc.RequestJob(t.Context(), config, sessionInfo)
+	require.True(t, healthy)
+	require.NotNil(t, job)
+	assert.EqualValues(t, 1223, job.ID)
+	// The router was not used again.
+	assert.EqualValues(t, 1, routerSrv.calls.Load())
+	assert.EqualValues(t, 2, discoveryCalls.Load())
+}
+
 func setupWithRouter(t *testing.T, withTLS bool) (*Client, string) {
 	certDir := ""
 	var l net.Listener
@@ -236,10 +308,18 @@ func newConfig(serverURL string) common.RunnerConfig {
 
 type mockRouterServer struct {
 	rpc.UnsafeJobRouterServer
-	t *testing.T
+	t        *testing.T
+	disabled bool // when true, reports the Job Router as disabled, mirroring KAS when the job_router flag is off
+	calls    atomic.Int32
 }
 
 func (s *mockRouterServer) GetJob(ctx context.Context, req *rpc.GetJobRequest) (*rpc.GetJobResponse, error) {
+	s.calls.Add(1)
+
+	if s.disabled {
+		return nil, status.Error(codes.Unimplemented, "Job Router is not available. Please contact your administrator.")
+	}
+
 	assert.NotEmpty(s.t, metadata.ValueFromIncomingContext(ctx, requestIDMetadataKey))
 	assert.NoError(s.t, grpc.SetHeader(ctx, metadata.Pairs(
 		requestIDMetadataKey, responseRequestID,

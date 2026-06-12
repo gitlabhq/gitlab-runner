@@ -84,11 +84,16 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 		grpc.Header(&responseMD),
 	)
 	if err != nil {
-		config.Log().WithError(err).Error("Error requesting a job")
 		switch status.Code(err) {
 		case codes.DeadlineExceeded, codes.Canceled, codes.Unavailable:
+			config.Log().WithError(err).Error("Error requesting a job")
 			return nil, true
+		case codes.Unimplemented:
+			config.Log().Info("Job router is disabled, falling back to direct job requests")
+			c.invalidateRouterDiscovery()
+			return c.delegate.RequestJob(ctx, config, sessionInfo)
 		default:
+			config.Log().WithError(err).Error("Error requesting a job")
 			return nil, false
 		}
 	}
@@ -141,4 +146,11 @@ func (c *Client) getRouterDiscovery(ctx context.Context, config common.RunnerCon
 		config.Log().Info("Using job router at " + c.disco.ServerURL)
 	}
 	return c.disco
+}
+
+func (c *Client) invalidateRouterDiscovery() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.disco = nil
+	c.discoExpiresAt = time.Time{}
 }
