@@ -159,7 +159,6 @@ target "windows" {
     BASE_IMAGE = "${RUNNER_IMAGES_REGISTRY}/runner-helper:${RUNNER_IMAGES_VERSION}-${replace(item.version, ":", "-")}"
     SRC_SUFFIX = ".exe"
     DST_SUFFIX = ".exe"
-    TARGETARCH = "amd64"  # Force override of TARGETARCH because arm64 runner-helper is not yet available; amd64 version of runner-helper works on arm64 Windows via emulation.
     DST_DIR    = "/Program Files/gitlab-runner-helper"
   }
 

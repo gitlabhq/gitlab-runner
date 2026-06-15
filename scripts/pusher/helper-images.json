@@ -115,7 +115,7 @@
             "x86_64-%-servercore24H2"
         ],
         "windows-servercore-ltsc2025-arm64": [
-            "x86_64-binary-arm64-platform-%-servercore24H2"
+            "arm64-%-servercore24H2"
         ],
         "concrete-arm64": [
             "concrete-arm64-%"
