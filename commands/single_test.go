@@ -209,7 +209,10 @@ func TestRunSingleCommand_processBuild_HandlesCancelRequested(t *testing.T) {
 	network := common.NewMockNetwork(t)
 	mockTrace := common.NewMockJobTrace(t)
 	mockTrace.On("SetDebugModeEnabled", false).Return()
-	mockTrace.On("Finish").Return()
+	mockTrace.On("Fail",
+		common.ErrJobCanceled,
+		common.JobFailureData{Reason: common.JobCanceled},
+	).Return(nil)
 
 	// Mock RequestJob to return a job
 	network.On("RequestJob", mock.Anything, *runner, mock.Anything).Return(jobData, true)
@@ -228,6 +231,84 @@ func TestRunSingleCommand_processBuild_HandlesCancelRequested(t *testing.T) {
 
 	// When UpdateJob has CancelRequested=true, processBuild should return nil (no error)
 	assert.Nil(t, err, "Should return no error when job is being canceled")
+
+	network.AssertExpectations(t)
+	mockTrace.AssertExpectations(t)
+}
+
+func TestRunSingleCommand_processBuild_CancelRequestedReportsFinalState(t *testing.T) {
+	runner := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "test-token",
+		},
+	}
+
+	jobData := &spec.Job{
+		ID:    123,
+		Token: "job-token",
+	}
+
+	p := common.NewMockExecutorProvider(t)
+	network := common.NewMockNetwork(t)
+	mockTrace := common.NewMockJobTrace(t)
+	mockTrace.On("SetDebugModeEnabled", false).Return()
+
+	// The crucial expectation: Fail must be called with JobCanceled, NOT Finish.
+	mockTrace.On("Fail",
+		common.ErrJobCanceled,
+		common.JobFailureData{Reason: common.JobCanceled},
+	).Return(nil).Once()
+
+	network.On("RequestJob", mock.Anything, *runner, mock.Anything).Return(jobData, true)
+	network.On("ProcessJob", *runner, mock.AnythingOfType("*common.JobCredentials")).Return(mockTrace, nil)
+	network.On("UpdateJob", *runner, mock.AnythingOfType("*common.JobCredentials"), mock.AnythingOfType("common.UpdateJobInfo")).
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded, CancelRequested: true})
+
+	cmd := &RunSingleCommand{
+		RunnerConfig: *runner,
+		network:      network,
+	}
+
+	err := cmd.processBuild(common.NewMockExecutorData(t), make(chan os.Signal), p)
+
+	assert.Nil(t, err, "Should return no error when cancel was requested")
+
+	network.AssertExpectations(t)
+	mockTrace.AssertExpectations(t)
+}
+
+func TestRunSingleCommand_processBuild_UpdateAbortStillFinishesWithoutFinalState(t *testing.T) {
+	runner := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "test-token",
+		},
+	}
+
+	jobData := &spec.Job{
+		ID:    123,
+		Token: "job-token",
+	}
+
+	p := common.NewMockExecutorProvider(t)
+	network := common.NewMockNetwork(t)
+	mockTrace := common.NewMockJobTrace(t)
+	mockTrace.On("SetDebugModeEnabled", false).Return()
+	// The crucial expectation: Finish is called, NOT Fail.
+	mockTrace.On("Finish").Return().Once()
+
+	network.On("RequestJob", mock.Anything, *runner, mock.Anything).Return(jobData, true)
+	network.On("ProcessJob", *runner, mock.AnythingOfType("*common.JobCredentials")).Return(mockTrace, nil)
+	network.On("UpdateJob", *runner, mock.AnythingOfType("*common.JobCredentials"), mock.AnythingOfType("common.UpdateJobInfo")).
+		Return(common.UpdateJobResult{State: common.UpdateAbort})
+
+	cmd := &RunSingleCommand{
+		RunnerConfig: *runner,
+		network:      network,
+	}
+
+	err := cmd.processBuild(common.NewMockExecutorData(t), make(chan os.Signal), p)
+
+	assert.Nil(t, err, "Should return no error when update is aborted")
 
 	network.AssertExpectations(t)
 	mockTrace.AssertExpectations(t)
