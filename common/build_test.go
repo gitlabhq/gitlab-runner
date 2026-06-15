@@ -194,6 +194,102 @@ func TestGetPrepareTimeout(t *testing.T) {
 	}
 }
 
+func TestGetGetSourcesTimeout(t *testing.T) {
+	tests := map[string]struct {
+		runnerConfig    *RunnerConfig
+		jobTimeout      int // in seconds, matching RunnerInfo.Timeout
+		expectedTimeout time.Duration
+	}{
+		"nil runner config": {
+			runnerConfig:    nil,
+			jobTimeout:      600,
+			expectedTimeout: 600 * time.Second,
+		},
+		"nil get_sources_timeout": {
+			runnerConfig:    &RunnerConfig{},
+			jobTimeout:      600,
+			expectedTimeout: 600 * time.Second,
+		},
+		"get_sources_timeout is valid": {
+			runnerConfig: &RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					GetSourcesTimeout: func() *time.Duration { d := 300 * time.Second; return &d }(),
+				},
+			},
+			jobTimeout:      600,
+			expectedTimeout: 300 * time.Second,
+		},
+		"get_sources_timeout equals job timeout": {
+			runnerConfig: &RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					GetSourcesTimeout: func() *time.Duration { d := 600 * time.Second; return &d }(),
+				},
+			},
+			jobTimeout:      600,
+			expectedTimeout: 600 * time.Second,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: tt.runnerConfig,
+			}
+			build.RunnerInfo.Timeout = tt.jobTimeout
+
+			assert.Equal(t, tt.expectedTimeout, build.GetGetSourcesTimeout())
+		})
+	}
+
+	warningTests := map[string]struct {
+		getSourcesTimeout time.Duration
+		jobTimeout        int // in seconds, matching RunnerInfo.Timeout
+		expectedTimeout   time.Duration
+		expectedWarning   string
+	}{
+		"get_sources_timeout is zero": {
+			getSourcesTimeout: 0,
+			jobTimeout:        600,
+			expectedTimeout:   600 * time.Second,
+			expectedWarning:   "get_sources_timeout (0s) must be greater than 0; using job timeout (10m0s)",
+		},
+		"get_sources_timeout is negative": {
+			getSourcesTimeout: -1 * time.Second,
+			jobTimeout:        600,
+			expectedTimeout:   600 * time.Second,
+			expectedWarning:   "get_sources_timeout (-1s) must be greater than 0; using job timeout (10m0s)",
+		},
+		"get_sources_timeout exceeds job timeout": {
+			getSourcesTimeout: 601 * time.Second,
+			jobTimeout:        600,
+			expectedTimeout:   600 * time.Second,
+			expectedWarning:   "get_sources_timeout (10m1s) exceeds job timeout (10m0s); using job timeout",
+		},
+	}
+
+	for name, tt := range warningTests {
+		t.Run(name, func(t *testing.T) {
+			logger, hook := test.NewNullLogger()
+
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Logger: logger,
+					},
+					RunnerSettings: RunnerSettings{
+						GetSourcesTimeout: &tt.getSourcesTimeout,
+					},
+				},
+			}
+			build.RunnerInfo.Timeout = tt.jobTimeout
+
+			assert.Equal(t, tt.expectedTimeout, build.GetGetSourcesTimeout())
+			require.NotNil(t, hook.LastEntry())
+			assert.Equal(t, tt.expectedWarning, hook.LastEntry().Message)
+		})
+	}
+}
+
 func matchBuildStage(buildStage BuildStage) interface{} {
 	return mock.MatchedBy(func(cmd ExecutorCommand) bool {
 		return cmd.Stage == buildStage
@@ -530,6 +626,74 @@ func TestBuildPrepareErrorNotMistakenForTimeout(t *testing.T) {
 
 	assert.ErrorIs(t, err, prepareErr)
 	assert.NotErrorIs(t, err, ErrJobPrepareTimeout)
+}
+
+func TestBuildGetSourcesTimeout(t *testing.T) {
+	executor, provider := setupMockExecutorAndProvider(t)
+	executor.On("Prepare", mock.Anything).Return(nil).Once()
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(func(cmd ExecutorCommand) error {
+		<-cmd.Context.Done()
+		return cmd.Context.Err()
+	}).Once()
+	executor.On("Finish", mock.Anything).Once()
+	executor.On("Cleanup").Once()
+
+	cfg := &RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			Executor: t.Name(),
+			// 50ms: long enough for setup to complete so the timeout fires inside executor.Run,
+			// rather than at executeStage's context check
+			GetSourcesTimeout: new(50 * time.Millisecond),
+		},
+	}
+
+	res, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+	build, err := NewBuild(res, cfg, nil, nil, provider)
+	require.NoError(t, err)
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+
+	var buildErr *BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, JobExecutionTimeout, buildErr.FailureReason)
+	assert.ErrorIs(t, err, ErrJobGetSourcesTimeout)
+	assert.Contains(t, err.Error(), "exceeded timeout of 50ms")
+}
+
+func TestBuildGetSourcesErrorNotMistakenForTimeout(t *testing.T) {
+	executor, provider := setupMockExecutorAndProvider(t)
+	executor.On("Prepare", mock.Anything).Return(nil).Once()
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+
+	getSourcesErr := errors.New("get sources failed")
+	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(getSourcesErr).Once()
+
+	// On non-timeout failure, executePrepareScripts returns cont=true so cleanup stages run.
+	executor.On("Run", mock.Anything).Return(nil).Maybe()
+
+	executor.On("Finish", mock.Anything).Once()
+	executor.On("Cleanup").Once()
+
+	cfg := &RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			Executor:          t.Name(),
+			GetSourcesTimeout: new(5 * time.Second),
+		},
+	}
+
+	res, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+	build, err := NewBuild(res, cfg, nil, nil, provider)
+	require.NoError(t, err)
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+
+	assert.ErrorIs(t, err, getSourcesErr)
+	assert.NotErrorIs(t, err, ErrJobGetSourcesTimeout)
 }
 
 func TestPrepareEnvironmentFailure(t *testing.T) {

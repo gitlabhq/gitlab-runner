@@ -130,9 +130,10 @@ var staticBuildStages = []BuildStage{
 }
 
 var (
-	ErrJobCanceled       = errors.New("canceled")
-	ErrJobScriptTimeout  = errors.New("script timeout")
-	ErrJobPrepareTimeout = errors.New("prepare timeout")
+	ErrJobCanceled          = errors.New("canceled")
+	ErrJobScriptTimeout     = errors.New("script timeout")
+	ErrJobPrepareTimeout    = errors.New("prepare timeout")
+	ErrJobGetSourcesTimeout = errors.New("get sources timeout")
 )
 
 const (
@@ -882,16 +883,27 @@ func (b *Build) executePrepareScripts(ctx, prepareCtx context.Context, executor 
 		), false
 	}
 
-	err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts(), func(attempt int) error {
+	getSourcesTimeout := b.GetGetSourcesTimeout()
+	getSourcesCause := fmt.Errorf("%w: exceeded timeout of %s", ErrJobGetSourcesTimeout, getSourcesTimeout)
+	getSourcesCtx, getSourcesCancel := context.WithTimeoutCause(ctx, getSourcesTimeout, getSourcesCause)
+	defer getSourcesCancel()
+
+	err = b.attemptExecuteStage(getSourcesCtx, BuildStageGetSources, executor, b.GetGetSourcesAttempts(), func(attempt int) error {
 		if attempt == 1 {
 			// If GetSources fails we delete all tracked and untracked files. This is
 			// because Git's submodule support has various bugs that cause fetches to
 			// fail if submodules have changed.
-			return b.executeStage(ctx, BuildStageClearWorktree, executor)
+			return b.executeStage(getSourcesCtx, BuildStageClearWorktree, executor)
 		}
 
 		return nil
 	})
+	if err != nil {
+		if cause := context.Cause(getSourcesCtx); errors.Is(cause, ErrJobGetSourcesTimeout) {
+			return &BuildError{Inner: cause, FailureReason: JobExecutionTimeout}, false
+		}
+		// Non-timeout error: let it propagate via the final return so cleanup stages can run.
+	}
 
 	if err == nil {
 		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts(), nil)
@@ -1142,6 +1154,32 @@ func (b *Build) GetPrepareTimeout() time.Duration {
 	}
 
 	return prepareTimeout
+}
+
+// GetGetSourcesTimeout returns the timeout for the get_sources stage.
+// If get_sources_timeout is not set or invalid, it defaults to the build timeout.
+func (b *Build) GetGetSourcesTimeout() time.Duration {
+	buildTimeout := b.GetBuildTimeout()
+
+	if b.Runner == nil || b.Runner.GetSourcesTimeout == nil {
+		return buildTimeout
+	}
+
+	getSourcesTimeout := *b.Runner.GetSourcesTimeout
+
+	if getSourcesTimeout <= 0 {
+		b.Log().Warningf("get_sources_timeout (%s) must be greater than 0; using job timeout (%s)",
+			getSourcesTimeout, buildTimeout)
+		return buildTimeout
+	}
+
+	if getSourcesTimeout > buildTimeout {
+		b.Log().Warningf("get_sources_timeout (%s) exceeds job timeout (%s); using job timeout",
+			getSourcesTimeout, buildTimeout)
+		return buildTimeout
+	}
+
+	return getSourcesTimeout
 }
 
 func (b *Build) handleError(err error) error {
