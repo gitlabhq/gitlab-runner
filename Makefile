@@ -62,8 +62,7 @@ PROTOC_GEN_GO_GRPC_VERSION := v1.6.1
 SPLITIC = splitic
 MAGE = $(localBin)/mage
 
-GOLANGLINT_VERSION ?= 2.12.1
-GOLANGLINT ?= $(localBin)/golangci-lint
+GOLANGLINT ?= golangci-lint
 GOLANGLINT_GOARGS ?= $(localBin)/goargs.so
 # Labkit validate-log-fields version
 LABKIT_VALIDATE_VERSION     := v2.0.0-20260331132242-b6ef9bf35f1d
@@ -134,13 +133,13 @@ version:
 deps: $(DEVELOPMENT_TOOLS)
 
 .PHONY: format
-format: $(GOLANGLINT)
+format:
 	@$(GOLANGLINT) run --fix --output.text.path=stdout --output.text.colors=true ./...
 
 .PHONY: lint
 lint: OUT_FORMAT ?= --output.text.path=stdout --output.text.colors=true
 lint: LINT_FLAGS ?=
-lint: $(GOLANGLINT)
+lint:
 	@$(GOLANGLINT) version
 	@$(MAKE) check_test_directives >/dev/stderr
 	@$(GOLANGLINT) run $(OUT_FORMAT) $(LINT_FLAGS) ./...
@@ -416,22 +415,6 @@ $(MAGE): .tmp
 	GOPATH=$(local) go clean -modcache
 	rm -rf .tmp/mage .tmp/pkg
 
-ifneq ($(GOLANGLINT_VERSION),)
-$(GOLANGLINT): CHECKOUT_REF := -b v"$(GOLANGLINT_VERSION)"
-endif
-$(GOLANGLINT): TOOL_BUILD_DIR := .tmp/build/golangci-lint
-$(GOLANGLINT): $(GOLANGLINT_GOARGS)
-$(GOLANGLINT):
-	rm -rf $(TOOL_BUILD_DIR)
-	git clone https://github.com/golangci/golangci-lint.git --no-tags --depth 1 $(CHECKOUT_REF) $(TOOL_BUILD_DIR)
-	cd $(TOOL_BUILD_DIR) && \
-	export COMMIT=$(shell git rev-parse --short HEAD) && \
-	export DATE=$(shell date -u '+%FT%TZ') && \
-	CGO_ENABLED=1 go build --trimpath -o $(GOLANGLINT) \
-		-ldflags "-s -w -X main.version=v$(GOLANGLINT_VERSION) -X main.commit=$${COMMIT} -X main.date=$${DATE}" \
-		./cmd/golangci-lint/
-	$(GOLANGLINT) --version
-	rm -rf $(TOOL_BUILD_DIR)
 
 $(GOLANGLINT_GOARGS): TOOL_BUILD_DIR := .tmp/build/goargs
 $(GOLANGLINT_GOARGS):
@@ -508,7 +491,7 @@ print_image_tags:
 	echo "$$tags"
 
 .PHONY: tools # Install dev tool and dependency binaries for local development.
-tools: $(GITLAB_CHANGELOG) $(GOCOVER_COBERTURA) $(GOLANGLINT) $(GOLANGLINT_GOARGS) $(MAGE) $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(RELEASE_INDEX_GENERATOR)
+tools: $(GITLAB_CHANGELOG) $(GOCOVER_COBERTURA) $(GOLANGLINT_GOARGS) $(MAGE) $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(RELEASE_INDEX_GENERATOR)
 
 .PHONY: sync-updated-go-version # Sync the go version in CI files to development docs and scripts
 sync-updated-go-version:

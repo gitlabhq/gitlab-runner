@@ -70,8 +70,6 @@ go:lint:
     - !reference [.go-cache, before_script]
     # Ensure the goargs linter plugin is available at .tmp/bin/goargs.so to suit .golangci.yml
     - mkdir -p .tmp/bin && ln -s /usr/lib/goargs.so .tmp/bin/goargs.so
-    # Copy the Docker image's golangci-lint to the location expected by `make lint` so that it is not built
-    - cp $(which golangci-lint) .tmp/bin/golangci-lint
   script:
     - make --silent lint
   timeout: 20 minutes
