@@ -1434,6 +1434,7 @@ type RunnerSettings struct {
 	PostBuildScript string `toml:"post_build_script,omitempty" json:"post_build_script" long:"post-build-script" env:"RUNNER_POST_BUILD_SCRIPT" description:"Runner-specific command script executed just after build executes"`
 
 	PrepareTimeout     *time.Duration `toml:"prepare_timeout,omitempty" json:"prepare_timeout,omitempty" long:"prepare-timeout" env:"RUNNER_PREPARE_TIMEOUT" description:"Timeout for the prepare stage of a job. Accepts duration strings like \"30s\" and \"1h30m\". If unset, zero, or greater than the job timeout, defaults to the job timeout."`
+	GetSourcesTimeout  *time.Duration `toml:"get_sources_timeout,omitempty" json:"get_sources_timeout,omitempty" long:"get-sources-timeout" env:"RUNNER_GET_SOURCES_TIMEOUT" description:"Timeout for the get_sources stage of a job. Accepts duration strings like \"30s\" and \"1h30m\". If unset, zero, or greater than the job timeout, defaults to the job timeout."`
 	DebugTraceDisabled bool           `toml:"debug_trace_disabled,omitempty" json:"debug_trace_disabled" long:"debug-trace-disabled" env:"RUNNER_DEBUG_TRACE_DISABLED" description:"When set to true Runner will disable the possibility of using the CI_DEBUG_TRACE feature"`
 
 	SafeDirectoryCheckout *bool `toml:"safe_directory_checkout,omitempty" json:"safe_directory_checkout,omitempty" long:"safe-directory-checkout" env:"RUNNER_SAFE_DIRECTORY_CHECKOUT" description:"When set to true, Git global configuration will get a safe.directory directive pointing the job's working directory'"`

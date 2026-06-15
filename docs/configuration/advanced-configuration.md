@@ -430,6 +430,7 @@ Each `[[runners]]` section defines one runner.
 | `unhealthy_interval`                  | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like `3600 s`, `1 h 30 min`, and similar.                                                                                                                                                                                                                                                      |
 | `job_status_final_update_retry_limit` | The maximum number of times GitLab Runner can retry to push the final job status to the GitLab instance.                                                                                                                                                                                                                                                                                                    |
 | `prepare_timeout`                     | Maximum duration allowed for the `prepare` stage (executor initialization and shell environment setup). Accepts a duration string such as `30s` or `1h30m`. If unset, zero, or greater than the job timeout, defaults to the job timeout. For more information, see [prepare stage timeout](#prepare-stage-timeout).                                                                                        |
+| `get_sources_timeout`                 | Maximum duration allowed for the `get_sources` stage (cloning or fetching the project repository, including submodules). Accepts a duration string such as `30s` or `1h30m`. If unset, zero, or greater than the job timeout, defaults to the job timeout. For more information, see [get sources timeout](#get-sources-timeout).                                                                          |
 
 Example:
 
@@ -620,6 +621,53 @@ entire job timeout before any job work begins. Common scenarios include:
   executor = "docker"
   prepare_timeout = "5m"
 ```
+
+For equivalent control over the source-fetching stage, see [`get_sources_timeout`](#get-sources-timeout).
+
+### Get sources timeout
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39426) in GitLab Runner 19.1.0.
+
+{{< /history >}}
+
+The `get_sources_timeout` setting limits how long the runner spends in the `get_sources` stage,
+which clones or fetches the project repository (including submodules).
+
+If the `get_sources` stage exceeds `get_sources_timeout`, the job fails immediately. Subsequent
+stages (`restore_cache`, `download_artifacts`, `script`) are not bounded by
+`get_sources_timeout`. They use the overall job timeout instead.
+
+**Default behavior**: If `get_sources_timeout` is not set, is `0`, or exceeds
+the job timeout, the runner uses the job timeout for the `get_sources` stage.
+
+#### When to set `get_sources_timeout`
+
+Set `get_sources_timeout` when slow or unresponsive network conditions might consume the entire
+job timeout before the repository fetch completes. Common scenarios include:
+
+- **Hung Git clones over flaky networks**: If a remote or its intermediate network becomes slow or
+  unreachable during a clone or fetch, the operation can hang for the full job timeout. On busy
+  runners, stalled jobs fill all available slots and prevent new jobs from starting.
+  `get_sources_timeout` fails these jobs quickly to free runner capacity.
+- **Hung submodule fetches**: Submodules often reference repositories on other hosts (different
+  domains, third-party services). When one of those hosts is slow or unreachable, the
+  `get_sources` stage stalls. A bounded timeout prevents a single bad submodule
+  host from holding a runner slot for the full job timeout.
+
+#### Example configuration
+
+```toml
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "TOKEN"
+  executor = "docker"
+  get_sources_timeout = "5m"
+```
+
+For equivalent control over the executor preparation stage, see also [`prepare_timeout`](#prepare-stage-timeout).
 
 ## The executors
 
