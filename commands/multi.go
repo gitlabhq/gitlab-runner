@@ -1184,8 +1184,14 @@ func (mr *RunCommand) requestJob(
 		State: common.Running,
 	})
 
-	if updateResult.State == common.UpdateAbort || updateResult.CancelRequested {
+	if updateResult.State == common.UpdateAbort {
 		trace.Finish()
+		return nil, nil, retried, nil
+	}
+
+	if updateResult.CancelRequested {
+		err := trace.Fail(common.ErrJobCanceled, common.JobFailureData{Reason: common.JobCanceled})
+		logTerminationError(mr.log(), "Fail", err)
 		return nil, nil, retried, nil
 	}
 

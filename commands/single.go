@@ -123,8 +123,14 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		State: common.Running,
 	})
 
-	if updateResult.State == common.UpdateAbort || updateResult.CancelRequested {
+	if updateResult.State == common.UpdateAbort {
 		trace.Finish()
+		return nil
+	}
+
+	if updateResult.CancelRequested {
+		err := trace.Fail(common.ErrJobCanceled, common.JobFailureData{Reason: common.JobCanceled})
+		logTerminationError(logrus.StandardLogger(), "Fail", err)
 		return nil
 	}
 
