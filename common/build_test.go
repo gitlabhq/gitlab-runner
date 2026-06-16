@@ -5783,3 +5783,120 @@ func TestBuild_EnvironmentKey(t *testing.T) {
 		})
 	}
 }
+
+func TestRun_ShouldSuspend_SetsEnvironmentKeyOnTrace(t *testing.T) {
+	exec := &mockSuspendableExecutor{
+		MockExecutor:            NewMockExecutor(t),
+		MockSuspendableExecutor: NewMockSuspendableExecutor(t),
+	}
+	provider := NewMockExecutorProvider(t)
+	provider.On("GetFeatures", mock.Anything).Return(nil).Once()
+	provider.On("Create").Return(exec).Once()
+
+	exec.MockSuspendableExecutor.On("Suspend", mock.Anything).
+		Return(url.Values{"namespace": []string{"gitlab-runner"}, "pvc": []string{"gl-runner-env-abc123"}}, nil).Once()
+
+	exec.MockExecutor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	exec.MockExecutor.On("Cleanup").Once()
+	exec.MockExecutor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage("step_script")).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+	exec.MockExecutor.On("Finish", nil).Once()
+
+	successfulBuild, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+	build := &Build{
+		Job: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerCredentials: RunnerCredentials{ID: 7},
+			SystemID:          "sys-1",
+			RunnerSettings: RunnerSettings{
+				Executor:     "build-run-suspend-sets-key",
+				FeatureFlags: map[string]bool{featureflags.SuspendableEnvironments: true},
+			},
+		},
+		ExecutorProvider: provider,
+	}
+	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnSuccess: true}
+
+	trace := NewMockLightJobTrace(t)
+	trace.On("IsStdout").Return(false)
+	trace.On("SetCancelFunc", mock.Anything).Maybe()
+	trace.On("SetAbortFunc", mock.Anything).Maybe()
+	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Maybe()
+	trace.On("SetDebugModeEnabled", mock.Anything).Maybe()
+	trace.On("SetFailuresCollector", mock.Anything).Maybe()
+	trace.On("SetEnvironmentKey", "7/sys-1/namespace=gitlab-runner&pvc=gl-runner-env-abc123").Once()
+	trace.On("Success").Return(nil).Once()
+
+	err = build.Run(&Config{}, trace)
+	assert.NoError(t, err)
+}
+
+func TestRun_ShouldSuspend_SuspendError_DoesNotSetEnvironmentKey(t *testing.T) {
+	exec := &mockSuspendableExecutor{
+		MockExecutor:            NewMockExecutor(t),
+		MockSuspendableExecutor: NewMockSuspendableExecutor(t),
+	}
+	provider := NewMockExecutorProvider(t)
+	provider.On("GetFeatures", mock.Anything).Return(nil).Once()
+	provider.On("Create").Return(exec).Once()
+
+	suspErr := errors.New("pod delete failed")
+	exec.MockSuspendableExecutor.On("Suspend", mock.Anything).Return(nil, suspErr).Once()
+
+	exec.MockExecutor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	exec.MockExecutor.On("Cleanup").Once()
+	exec.MockExecutor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage("step_script")).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
+	exec.MockExecutor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+	exec.MockExecutor.On("Finish", mock.MatchedBy(func(err error) bool {
+		var buildErr *BuildError
+		return errors.As(err, &buildErr) && buildErr.FailureReason == RunnerSystemFailure && errors.Is(err, suspErr)
+	})).Once()
+
+	successfulBuild, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+	build := &Build{
+		Job: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerCredentials: RunnerCredentials{ID: 7},
+			SystemID:          "sys-1",
+			RunnerSettings: RunnerSettings{
+				Executor:     "build-run-suspend-err-no-key",
+				FeatureFlags: map[string]bool{featureflags.SuspendableEnvironments: true},
+			},
+		},
+		ExecutorProvider: provider,
+	}
+	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnSuccess: true}
+
+	trace := NewMockLightJobTrace(t)
+	trace.On("IsStdout").Return(false)
+	trace.On("SetCancelFunc", mock.Anything).Maybe()
+	trace.On("SetAbortFunc", mock.Anything).Maybe()
+	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Maybe()
+	trace.On("SetDebugModeEnabled", mock.Anything).Maybe()
+	trace.On("SetFailuresCollector", mock.Anything).Maybe()
+	trace.On("Fail", mock.Anything, mock.Anything).Return(nil).Once()
+
+	err = build.Run(&Config{}, trace)
+	require.Error(t, err)
+	var buildErr *BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, RunnerSystemFailure, buildErr.FailureReason)
+}

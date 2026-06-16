@@ -1584,8 +1584,9 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 			// environment they expected to resume from.
 			err = &BuildError{Inner: suspErr, FailureReason: RunnerSystemFailure}
 		}
-		// TODO: persist envKey as an artifact.
-		_ = envKey
+		if envKey != "" {
+			trace.SetEnvironmentKey(envKey)
+		}
 	}
 	executor.Finish(err)
 

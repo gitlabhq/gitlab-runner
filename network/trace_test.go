@@ -86,6 +86,68 @@ func TestIgnoreStatusChange(t *testing.T) {
 	assert.NoError(t, b.Fail(errors.New("test"), common.JobFailureData{Reason: "script_failure"}))
 }
 
+func TestClientJobTrace_EnvironmentKey_InFinalUpdate(t *testing.T) {
+	tests := map[string]struct {
+		envKey     string
+		wantEnvKey string
+	}{
+		"included when set": {
+			envKey:     "27/sys-1/namespace=gitlab-runner&pvc=gl-runner-env-abc123",
+			wantEnvKey: "27/sys-1/namespace=gitlab-runner&pvc=gl-runner-env-abc123",
+		},
+		"omitted when not set": {
+			envKey:     "",
+			wantEnvKey: "",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			finalMatcher := mock.MatchedBy(func(jobInfo common.UpdateJobInfo) bool {
+				return jobInfo.State == common.Success && jobInfo.EnvironmentKey == tt.wantEnvKey
+			})
+
+			mockNetwork := common.NewMockNetwork(t)
+			ignoreOptionalTouchJob(mockNetwork)
+			mockNetwork.On("UpdateJob", jobConfig, jobCredentials, finalMatcher).
+				Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
+
+			trace, err := newTestJobTrace(mockNetwork, jobConfig)
+			require.NoError(t, err)
+
+			trace.start()
+			if tt.envKey != "" {
+				trace.SetEnvironmentKey(tt.envKey)
+			}
+			assert.NoError(t, trace.Success())
+		})
+	}
+}
+
+func TestClientJobTrace_SetEnvironmentKey_AbsentFromTouchJob(t *testing.T) {
+	envKey := "27/sys-1/namespace=ns&pvc=gl-runner-env-abc"
+
+	touchMatcher := mock.MatchedBy(func(jobInfo common.UpdateJobInfo) bool {
+		return jobInfo.State == common.Running && jobInfo.EnvironmentKey == ""
+	})
+
+	mockNetwork := common.NewMockNetwork(t)
+	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, touchMatcher).
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
+
+	trace, err := newTestJobTrace(mockNetwork, jobConfig)
+	require.NoError(t, err)
+
+	trace.SetEnvironmentKey(envKey)
+
+	trace.lock.Lock()
+	trace.sentTime = time.Time{}
+	trace.lock.Unlock()
+
+	result := trace.touchJob()
+	assert.Equal(t, common.UpdateSucceeded, result.State)
+}
+
 func TestTouchJobAbort(t *testing.T) {
 	abortCtx, abort := context.WithCancel(t.Context())
 	defer abort()

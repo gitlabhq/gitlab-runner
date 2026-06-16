@@ -6651,6 +6651,7 @@ func (f FakeBuildTrace) Abort() bool                                            
 func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)                           {}
 func (f FakeBuildTrace) SetSupportedFailureReasonMapper(filter common.SupportedFailureReasonMapper) {}
 func (f FakeBuildTrace) SetDebugModeEnabled(isEnabled bool)                                         {}
+func (f FakeBuildTrace) SetEnvironmentKey(_ string)                                                 {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
 }
