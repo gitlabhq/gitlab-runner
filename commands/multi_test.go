@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -128,6 +129,175 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	}
 
 	assert.Equal(t, 1, limitMetCount)
+}
+
+func TestFeedRunner_EmptyToken(t *testing.T) {
+	tests := map[string]struct {
+		token string
+	}{
+		"empty string":     {token: ""},
+		"single space":     {token: " "},
+		"multiple spaces":  {token: "   "},
+		"tab character":    {token: "\t"},
+		"newline":          {token: "\n"},
+		"mixed whitespace": {token: " \t\n "},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			hook, cleanup := test.NewHook()
+			defer cleanup()
+
+			origLevel := logrus.GetLevel()
+			origOut := logrus.StandardLogger().Out
+			logrus.SetLevel(logrus.WarnLevel)
+			logrus.SetOutput(io.Discard)
+			t.Cleanup(func() {
+				logrus.SetLevel(origLevel)
+				logrus.SetOutput(origOut)
+			})
+
+			cfg := common.RunnerConfig{
+				Name: "empty-token-runner",
+				RunnerCredentials: common.RunnerCredentials{
+					URL:   "https://gitlab.example.com/",
+					Token: tc.token,
+				},
+				RunnerSettings: common.RunnerSettings{
+					Executor: "shell",
+				},
+			}
+
+			cmd := RunCommand{
+				healthHelper: newHealthHelper(),
+				buildsHelper: newBuildsHelper(),
+				configfile: configfile.New("", configfile.WithExistingConfig(
+					&common.Config{},
+				)),
+			}
+			cmd.setupInternalMetrics()
+
+			// Use a buffered channel; feedRunner must not send to it when the token is invalid.
+			runners := make(chan *common.RunnerConfig, 1)
+
+			cmd.feedRunner(&cfg, runners)
+
+			// The runner must not have been sent to the channel.
+			assert.Empty(t, runners)
+
+			// feedRunner must be silent — the warning is emitted once per config load,
+			// not on every feed cycle.
+			assert.Empty(t, hook.AllEntries(), "feedRunner must not log anything for an empty-token runner")
+
+			// The runner must be counted as a feed failure.
+			assert.EqualValues(t, 1, testutil.ToFloat64(
+				cmd.runnerWorkersFeedFailures.WithLabelValues(cfg.ShortDescription(), cfg.Name, cfg.GetSystemID())),
+				"feedRunner must increment runnerWorkersFeedFailures for an empty-token runner")
+		})
+	}
+}
+
+func TestReloadConfig_EmptyTokenWarning(t *testing.T) {
+	tests := map[string]struct {
+		toml  string // config.toml content
+		wantN int    // expected number of empty-token warnings
+	}{
+		"no runners": {
+			toml:  `concurrent = 1` + "\n",
+			wantN: 0,
+		},
+		"one valid runner": {
+			toml: `concurrent = 1
+[[runners]]
+  name = "valid"
+  url = "https://gitlab.example.com/"
+  token = "abc123"
+  executor = "shell"
+`,
+			wantN: 0,
+		},
+		"one empty-token runner": {
+			toml: `concurrent = 1
+[[runners]]
+  name = "bad"
+  url = "https://gitlab.example.com/"
+  token = ""
+  executor = "shell"
+`,
+			wantN: 1,
+		},
+		"two empty-token runners": {
+			toml: `concurrent = 1
+[[runners]]
+  name = "bad1"
+  url = "https://gitlab.example.com/"
+  token = ""
+  executor = "shell"
+[[runners]]
+  name = "bad2"
+  url = "https://gitlab.example.com/"
+  token = "   "
+  executor = "shell"
+`,
+			wantN: 2,
+		},
+		"mixed valid and invalid runners": {
+			toml: `concurrent = 1
+[[runners]]
+  name = "good"
+  url = "https://gitlab.example.com/"
+  token = "tok"
+  executor = "shell"
+[[runners]]
+  name = "bad"
+  url = "https://gitlab.example.com/"
+  token = ""
+  executor = "shell"
+`,
+			wantN: 1,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			hook, cleanup := test.NewHook()
+			defer cleanup()
+
+			origLevel := logrus.GetLevel()
+			origOut := logrus.StandardLogger().Out
+			logrus.SetLevel(logrus.WarnLevel)
+			logrus.SetOutput(io.Discard)
+			t.Cleanup(func() {
+				logrus.SetLevel(origLevel)
+				logrus.SetOutput(origOut)
+			})
+
+			// Write the config to a temp file so configfile.Load() can read it.
+			cfgPath := filepath.Join(t.TempDir(), "config.toml")
+			require.NoError(t, os.WriteFile(cfgPath, []byte(tc.toml), 0o600))
+
+			cf := configfile.New(cfgPath, configfile.WithSystemID(common.UnknownSystemID))
+
+			cmd := RunCommand{
+				healthHelper:   newHealthHelper(),
+				buildsHelper:   newBuildsHelper(),
+				configfile:     cf,
+				configReloaded: make(chan int, 1),
+			}
+
+			err := cmd.reloadConfig()
+			require.NoError(t, err)
+
+			var warnCount int
+			for _, entry := range hook.AllEntries() {
+				if strings.Contains(entry.Message, "token is empty or whitespace") {
+					warnCount++
+				}
+			}
+			assert.Equal(t, tc.wantN, warnCount,
+				"expected exactly %d empty-token warning(s), got %d", tc.wantN, warnCount)
+		})
+	}
 }
 
 func TestRunCommand_doJobRequest(t *testing.T) {
