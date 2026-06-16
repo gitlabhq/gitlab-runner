@@ -293,13 +293,14 @@ type SessionInfo struct {
 }
 
 type UpdateJobRequest struct {
-	Info          Info                  `json:"info,omitempty"`
-	Token         string                `json:"token,omitempty"`
-	State         JobState              `json:"state,omitempty"`
-	FailureReason spec.JobFailureReason `json:"failure_reason,omitempty"`
-	Checksum      string                `json:"checksum,omitempty"` // deprecated
-	Output        JobTraceOutput        `json:"output,omitempty"`
-	ExitCode      int                   `json:"exit_code,omitempty"`
+	Info           Info                  `json:"info,omitempty"`
+	Token          string                `json:"token,omitempty"`
+	State          JobState              `json:"state,omitempty"`
+	FailureReason  spec.JobFailureReason `json:"failure_reason,omitempty"`
+	Checksum       string                `json:"checksum,omitempty"` // deprecated
+	Output         JobTraceOutput        `json:"output,omitempty"`
+	ExitCode       int                   `json:"exit_code,omitempty"`
+	EnvironmentKey string                `json:"environment_key,omitempty"`
 }
 
 type JobTraceOutput struct {
@@ -337,11 +338,12 @@ func (j *JobCredentials) GetToken() string {
 }
 
 type UpdateJobInfo struct {
-	ID            int64
-	State         JobState
-	FailureReason spec.JobFailureReason
-	Output        JobTraceOutput
-	ExitCode      int
+	ID             int64
+	State          JobState
+	FailureReason  spec.JobFailureReason
+	Output         JobTraceOutput
+	ExitCode       int
+	EnvironmentKey string
 }
 
 type RouterDiscovery struct {
@@ -370,6 +372,7 @@ type JobTrace interface {
 	SetSupportedFailureReasonMapper(f SupportedFailureReasonMapper)
 	SetDebugModeEnabled(isEnabled bool)
 	IsStdout() bool
+	SetEnvironmentKey(key string)
 }
 
 type UpdateJobResult struct {

@@ -51,6 +51,8 @@ type clientJobTrace struct {
 	failuresCollector common.FailuresCollector
 	exitCode          int
 
+	environmentKey string
+
 	finalUpdateRetryLimit int
 }
 
@@ -411,6 +413,7 @@ func (c *clientJobTrace) touchJob() common.UpdateJobResult {
 func (c *clientJobTrace) sendUpdate() common.UpdateState {
 	c.lock.RLock()
 	state := c.state
+	environmentKey := c.environmentKey
 	c.lock.RUnlock()
 
 	jobInfo := common.UpdateJobInfo{
@@ -421,7 +424,8 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 			Checksum: c.checksum(),
 			Bytesize: c.bytesize(),
 		},
-		ExitCode: c.exitCode,
+		ExitCode:       c.exitCode,
+		EnvironmentKey: environmentKey,
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
@@ -477,6 +481,12 @@ func (c *clientJobTrace) setupLogLimit() {
 
 func (c *clientJobTrace) SetDebugModeEnabled(isEnabled bool) {
 	c.debugModeEnabled = isEnabled
+}
+
+func (c *clientJobTrace) SetEnvironmentKey(key string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.environmentKey = key
 }
 
 func newJobTrace(

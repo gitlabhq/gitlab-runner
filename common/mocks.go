@@ -2105,6 +2105,46 @@ func (_c *MockJobTrace_SetDebugModeEnabled_Call) RunAndReturn(run func(isEnabled
 	return _c
 }
 
+// SetEnvironmentKey provides a mock function for the type MockJobTrace
+func (_mock *MockJobTrace) SetEnvironmentKey(key string) {
+	_mock.Called(key)
+	return
+}
+
+// MockJobTrace_SetEnvironmentKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetEnvironmentKey'
+type MockJobTrace_SetEnvironmentKey_Call struct {
+	*mock.Call
+}
+
+// SetEnvironmentKey is a helper method to define mock.On call
+//   - key string
+func (_e *MockJobTrace_Expecter) SetEnvironmentKey(key interface{}) *MockJobTrace_SetEnvironmentKey_Call {
+	return &MockJobTrace_SetEnvironmentKey_Call{Call: _e.mock.On("SetEnvironmentKey", key)}
+}
+
+func (_c *MockJobTrace_SetEnvironmentKey_Call) Run(run func(key string)) *MockJobTrace_SetEnvironmentKey_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockJobTrace_SetEnvironmentKey_Call) Return() *MockJobTrace_SetEnvironmentKey_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockJobTrace_SetEnvironmentKey_Call) RunAndReturn(run func(key string)) *MockJobTrace_SetEnvironmentKey_Call {
+	_c.Run(run)
+	return _c
+}
+
 // SetFailuresCollector provides a mock function for the type MockJobTrace
 func (_mock *MockJobTrace) SetFailuresCollector(fc FailuresCollector) {
 	_mock.Called(fc)

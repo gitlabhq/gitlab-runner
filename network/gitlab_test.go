@@ -3395,3 +3395,51 @@ func TestGitLabClient_getFeatures_JobInputs(t *testing.T) {
 	// Test that JobInputs is set to true by the network client
 	assert.True(t, features.JobInputs, "JobInputs should be set to true by getFeatures")
 }
+
+func TestUpdateJob_EnvironmentKey(t *testing.T) {
+	envKey := "27/sys-1/namespace=gitlab-runner&pvc=gl-runner-env-abc"
+
+	tests := map[string]struct {
+		jobInfo    UpdateJobInfo
+		wantInBody bool
+		wantValue  string
+	}{
+		"environment_key sent when set": {
+			jobInfo:    UpdateJobInfo{ID: 200, State: Success, EnvironmentKey: envKey},
+			wantInBody: true,
+			wantValue:  envKey,
+		},
+		"environment_key absent when empty (omitempty)": {
+			jobInfo:    UpdateJobInfo{ID: 200, State: Success},
+			wantInBody: false,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			var capturedBody []byte
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				body, err := io.ReadAll(r.Body)
+				require.NoError(t, err)
+				capturedBody = body
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer s.Close()
+
+			config := RunnerConfig{RunnerCredentials: RunnerCredentials{URL: s.URL}, SystemID: testSystemID}
+			creds := &JobCredentials{ID: 200, Token: "token"}
+
+			c := NewGitLabClient()
+			c.UpdateJob(config, creds, tt.jobInfo)
+
+			var req map[string]interface{}
+			require.NoError(t, json.Unmarshal(capturedBody, &req))
+
+			if tt.wantInBody {
+				assert.Equal(t, tt.wantValue, req["environment_key"])
+			} else {
+				assert.NotContains(t, req, "environment_key")
+			}
+		})
+	}
+}

@@ -93,6 +93,8 @@ func (s *Trace) SetFailuresCollector(fc FailuresCollector) {}
 
 func (s *Trace) SetSupportedFailureReasonMapper(f SupportedFailureReasonMapper) {}
 
+func (s *Trace) SetEnvironmentKey(_ string) {}
+
 func (s *Trace) IsStdout() bool {
 	return true
 }
