@@ -64,13 +64,16 @@ see [GitLab-hosted runners](https://docs.gitlab.com/ci/runners/).
 
 ## FIPS-compliant GitLab Runner
 
-A GitLab Runner binary compliant with FIPS 140-2 is available for
-Red Hat Enterprise Linux (RHEL) distributions and the AMD64 architecture.
-Support for other distributions and architectures is proposed in
-[issue 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814).
+A FIPS 140-2 compliant GitLab Runner is available for the AMD64
+architecture. GitLab tests and officially supports this binary on Red Hat
+Enterprise Linux (RHEL), where it runs against a FIPS 140-2 validated
+cryptographic library.
 
-This binary is built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux)
-and calls into a FIPS 140-2 validated cryptographic library.
+The binary can also run on other distributions, but FIPS compliance depends on
+the OpenSSL module provided by the host operating system. On non-RHEL
+distributions, GitLab does not validate the cryptographic module.
+Verify that your operating system provides a FIPS-validated OpenSSL module.
+
 A [UBI-8 minimal image](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#con_understanding-the-ubi-minimal-images_assembly_types-of-container-images) is used as the base for creating the GitLab Runner FIPS image.
 
 For more information about using FIPS-compliant GitLab Runner in RHEL, see
