@@ -51,7 +51,7 @@ MOCKERY_VERSION ?= 3.6.4
 MOCKERY = mockery
 
 PROTOC := $(localBin)/protoc
-PROTOC_VERSION := 28.2
+PROTOC_VERSION := 28.3
 
 PROTOC_GEN_GO := protoc-gen-go
 PROTOC_GEN_GO_VERSION := v1.36.11
