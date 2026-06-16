@@ -200,7 +200,7 @@ concurrent = 50
 Prerequisites:
 
 - An Apple Silicon AMI with [nesting](https://gitlab.com/gitlab-org/fleeting/nesting)
-  and [Tart](https://github.com/cirruslabs/tart) installed.
+  and [Tart](https://github.com/openai/tart) installed.
 - The Tart VM images that the runner uses. The VM images are specified by the `image` keyword
   of the job. The VM images should have at least `git` and GitLab Runner installed.
 - An AWS Autoscaling group. For the scaling policy use `none`, because runner handles the scaling.

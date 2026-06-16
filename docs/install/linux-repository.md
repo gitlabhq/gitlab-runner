@@ -13,7 +13,7 @@ title: Install GitLab Runner using the official GitLab repositories
 
 {{< /details >}}
 
-To install GitLab Runner, you can use a package from [the GitLab repository](https://packages.gitlab.com/runner/gitlab-runner).
+To install GitLab Runner, you can use a package from [the GitLab repository](https://packages.gitlab.com/runner/gitlab-runner/).
 
 ## Supported distributions
 
