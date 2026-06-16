@@ -931,9 +931,9 @@ Prerequisites:
    doesn't go around [`pam_systemd`](https://www.freedesktop.org/software/systemd/man/latest/pam_systemd.html).
    You can use SSH with the correct user. This ensures you can run `systemctl` as this user.
 1. Make sure that your system fulfills the prerequisites for
-   [a rootless Podman setup](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md).
+   [a rootless Podman setup](https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/rootless_tutorial.md).
    Specifically, make sure your user has
-   [correct entries in `/etc/subuid` and `/etc/subgid`](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md#etcsubuid-and-etcsubgid-configuration).
+   [correct entries in `/etc/subuid` and `/etc/subgid`](https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/rootless_tutorial.md#etcsubuid-and-etcsubgid-configuration).
 1. On the Linux host, [install Podman](https://podman.io/getting-started/installation).
 1. Enable and start the Podman socket:
 
