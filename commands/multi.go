@@ -404,9 +404,18 @@ func (mr *RunCommand) reloadConfig() error {
 	mr.healthHelper.healthy = nil
 	mr.log().Println("Configuration loaded")
 
-	// Warn about legacy /ci URL suffix in runner configurations
+	// Warn about legacy /ci URL suffix in runner configurations, and about
+	// runners with an empty or whitespace-only token that will be silently
+	// skipped during job polling.
 	for _, runner := range config.Runners {
 		runner.WarnOnLegacyCIURL()
+		if !runner.HasToken() {
+			mr.log().WithFields(logrus.Fields{
+				"runner":      runner.ShortDescription(),
+				"runner_name": runner.Name,
+			}).Warningln("Runner token is empty or whitespace; this runner will be skipped during job polling. " +
+				"Check the 'token' field in your config.toml for this runner.")
+		}
 	}
 
 	mr.checkConfigConcurrency(config)
@@ -839,6 +848,11 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
+	if !runner.HasToken() {
+		mr.runnerWorkersFeedFailures.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).Inc()
+		return
+	}
+
 	if !mr.healthHelper.isHealthy(runner) {
 		mr.runnerWorkersFeedFailures.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).Inc()
 		return

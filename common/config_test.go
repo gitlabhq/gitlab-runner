@@ -3942,6 +3942,29 @@ func TestInvalidParseVariable(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestRunnerCredentials_HasToken(t *testing.T) {
+	tests := map[string]struct {
+		token string
+		want  bool
+	}{
+		"valid token":      {token: "abc123", want: true},
+		"empty string":     {token: "", want: false},
+		"single space":     {token: " ", want: false},
+		"multiple spaces":  {token: "   ", want: false},
+		"tab character":    {token: "\t", want: false},
+		"newline":          {token: "\n", want: false},
+		"mixed whitespace": {token: " \t\n ", want: false},
+		"surrounded token": {token: "  abc  ", want: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := &RunnerCredentials{Token: tc.token}
+			assert.Equal(t, tc.want, c.HasToken())
+		})
+	}
+}
+
 func TestRunnerCredentials_SameAs(t *testing.T) {
 	tests := map[string]struct {
 		c      *RunnerCredentials

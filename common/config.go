@@ -2242,6 +2242,12 @@ func (c *RunnerCredentials) ShortDescription() string {
 	return helpers.ShortenToken(c.Token)
 }
 
+// HasToken reports whether the runner has a usable token, i.e. one that is not
+// empty or whitespace-only.
+func (c *RunnerCredentials) HasToken() bool {
+	return strings.TrimSpace(c.Token) != ""
+}
+
 func (c *RunnerCredentials) UniqueID() string {
 	// Shorten the token to ensure that it won't be exposed in logged messages.
 	token := helpers.ShortenToken(c.Token)
