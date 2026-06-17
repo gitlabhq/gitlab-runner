@@ -209,6 +209,10 @@ simple-test:
 mage-test:
 	go test -ldflags "$(GO_LDFLAGS)" -v ./magefiles/...
 
+.PHONY: pusher-test
+pusher-test:
+	go test -C ./scripts/pusher/ ./...
+
 cobertura_report: $(GOCOVER_COBERTURA) $(SPLITIC)
 	mkdir -p out/cobertura
 	mkdir -p out/coverage

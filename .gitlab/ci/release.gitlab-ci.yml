@@ -135,7 +135,7 @@ development docker images:
     - tags=$(make print_image_tags)
     # dev gitlab registry images
     - (cd scripts/pusher && ./pusher runner-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-dev" $tags)
-    - (cd scripts/pusher && ./pusher helper-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-helper-dev" $tags)
+    - (cd scripts/pusher && ./pusher -gen-indexes helper-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-helper-dev" $tags)
 
 bleeding edge docker images:
   stage: release
@@ -160,10 +160,10 @@ bleeding edge docker images:
     - tags=$(make print_image_tags)
     # bleeding gitlab registry images
     - (cd scripts/pusher && ./pusher runner-images.json "${CI_REGISTRY_IMAGE}" $tags)
-    - (cd scripts/pusher && ./pusher helper-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-helper" $tags)
+    - (cd scripts/pusher && ./pusher -gen-indexes helper-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-helper" $tags)
     # bleeding docker hub registry images
     - (cd scripts/pusher && ./pusher runner-images.json "registry.hub.docker.com/gitlab/gitlab-runner" $tags)
-    - (cd scripts/pusher && ./pusher helper-images.json "registry.hub.docker.com/gitlab/gitlab-runner-helper" $tags)
+    - (cd scripts/pusher && ./pusher -gen-indexes helper-images.json "registry.hub.docker.com/gitlab/gitlab-runner-helper" $tags)
 
 stable docker images:
   stage: release
@@ -195,10 +195,10 @@ stable docker images:
     - tags=$(make print_image_tags)
     # stable gitlab registry images
     - (cd scripts/pusher && ./pusher runner-images.json "${CI_REGISTRY_IMAGE}" $tags)
-    - (cd scripts/pusher && ./pusher helper-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-helper" $tags)
+    - (cd scripts/pusher && ./pusher -gen-indexes helper-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-helper" $tags)
     # stable docker hub registry images
     - (cd scripts/pusher && ./pusher runner-images.json "registry.hub.docker.com/gitlab/gitlab-runner" $tags)
-    - (cd scripts/pusher && ./pusher helper-images.json "registry.hub.docker.com/gitlab/gitlab-runner-helper" $tags)
+    - (cd scripts/pusher && ./pusher -gen-indexes helper-images.json "registry.hub.docker.com/gitlab/gitlab-runner-helper" $tags)
     # stable aws registry images
     - (cd scripts/pusher && ./pusher runner-images.json "public.ecr.aws/gitlab/gitlab-runner" $tags)
-    - (cd scripts/pusher && ./pusher helper-images.json "public.ecr.aws/gitlab/gitlab-runner-helper" $tags)
+    - (cd scripts/pusher && ./pusher -gen-indexes helper-images.json "public.ecr.aws/gitlab/gitlab-runner-helper" $tags)
