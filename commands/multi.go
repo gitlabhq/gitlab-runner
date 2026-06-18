@@ -40,6 +40,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log/logrotate"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
+	"gitlab.com/gitlab-org/gitlab-runner/router"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
@@ -698,6 +699,10 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	registry.MustRegister(mr.inputsMetricsCollector)
 	// Metrics about API connections
 	registry.MustRegister(mr.apiRequestsCollector)
+	// Metrics about the Job Router circuit breaker
+	if rc, ok := mr.network.(*router.Client); ok {
+		registry.MustRegister(rc)
+	}
 	// Metrics about jobs failures
 	registry.MustRegister(mr.failuresCollector)
 	// Metrics about catched errors
