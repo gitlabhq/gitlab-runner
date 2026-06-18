@@ -329,7 +329,7 @@ The metrics collection is executor-independent and available across all runner f
 To modify dashboards for your environment:
 
 1. Edit the `.dashboard.jsonnet` files in the `dashboards/ci-runners/` directory.
-1. Use [Grafonnet library](https://grafana.github.io/grafonnet-lib/) syntax (built on `jsonnet`).
+1. Use [Grafonnet library](https://grafana.github.io/grafonnet/index.html) syntax (built on `jsonnet`).
 1. Test the changes using the playground:
 
    ```shell
