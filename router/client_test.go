@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/circuitbreaker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/router/rpc"
@@ -223,6 +224,231 @@ func TestRequestJob_JobRouterDisabled_FallsBackAndRediscovers(t *testing.T) {
 	assert.EqualValues(t, 2, discoveryCalls.Load())
 }
 
+// installTestBreaker replaces the client's breaker with one matching production
+// (threshold, open timeout, failure grace) but driven by a controllable clock,
+// so tests can advance time to cross the grace and cooldown windows.
+func installTestBreaker(rc *Client, now *time.Time) {
+	rc.breaker = circuitbreaker.New(
+		routerBreakerFailureThreshold,
+		routerBreakerOpenTimeout,
+		circuitbreaker.WithFailureGrace(routerBreakerFailureGrace),
+		circuitbreaker.WithClock(func() time.Time { return *now }),
+	)
+}
+
+func TestRequestJob_SustainedRouterFailure_TripsAndFallsBack(t *testing.T) {
+	rc, config, routerSrv, railsCalls := setupRouterWithRailsFallback(t)
+	now := time.Now()
+	installTestBreaker(rc, &now)
+	routerSrv.failCode.Store(int32(codes.Unavailable))
+	sessionInfo := &common.SessionInfo{}
+
+	// Failures within the grace window are transient: the runner stays healthy,
+	// keeps polling the router, and does not fall back to Rails - even once the
+	// failure count has passed the threshold.
+	for i := 0; i < routerBreakerFailureThreshold+1; i++ {
+		job, healthy := rc.RequestJob(t.Context(), config, sessionInfo)
+		assert.Nil(t, job)
+		assert.True(t, healthy)
+	}
+	assert.EqualValues(t, 0, railsCalls.Load(), "no fallback within the grace window")
+
+	// Once the failures span the grace window, the next poll trips and falls back.
+	now = now.Add(routerBreakerFailureGrace + time.Second)
+	job, healthy := rc.RequestJob(t.Context(), config, sessionInfo)
+	require.True(t, healthy)
+	require.NotNil(t, job)
+	assert.EqualValues(t, 1223, job.ID)
+	assert.EqualValues(t, 1, railsCalls.Load())
+
+	// While open, further polls go straight to Rails without contacting the router.
+	callsWhileOpen := routerSrv.calls.Load()
+	job, healthy = rc.RequestJob(t.Context(), config, sessionInfo)
+	require.True(t, healthy)
+	require.NotNil(t, job)
+	assert.EqualValues(t, callsWhileOpen, routerSrv.calls.Load(), "the router is not contacted while the breaker is open")
+	assert.EqualValues(t, 2, railsCalls.Load())
+}
+
+func TestRequestJob_CircuitBreakerRecoversAfterCooldown(t *testing.T) {
+	rc, config, routerSrv, railsCalls := setupRouterWithRailsFallback(t)
+	now := time.Now()
+	installTestBreaker(rc, &now)
+	routerSrv.failCode.Store(int32(codes.Unavailable))
+	sessionInfo := &common.SessionInfo{}
+
+	// Trip the breaker: drive failures past the grace window.
+	for i := 0; i < routerBreakerFailureThreshold; i++ {
+		rc.RequestJob(t.Context(), config, sessionInfo)
+	}
+	now = now.Add(routerBreakerFailureGrace + time.Second)
+	rc.RequestJob(t.Context(), config, sessionInfo)
+	routerCallsAtTrip := routerSrv.calls.Load()
+
+	// Open: the next poll serves from Rails and leaves the router alone.
+	rc.RequestJob(t.Context(), config, sessionInfo)
+	assert.EqualValues(t, routerCallsAtTrip, routerSrv.calls.Load())
+
+	// the router recovers and the open timeout elapses, so the next poll probes the router.
+	routerSrv.failCode.Store(int32(codes.OK))
+	now = now.Add(routerBreakerOpenTimeout + time.Second)
+	railsBefore := railsCalls.Load()
+
+	job, healthy := rc.RequestJob(t.Context(), config, sessionInfo)
+	require.True(t, healthy)
+	require.NotNil(t, job)
+	assert.EqualValues(t, 1223, job.ID)
+	assert.EqualValues(t, routerCallsAtTrip+1, routerSrv.calls.Load(), "the half-open probe reaches the router")
+	assert.EqualValues(t, railsBefore, railsCalls.Load(), "a successful probe is served by the router, not Rails")
+
+	// The breaker is closed again, so subsequent polls route through the router.
+	rc.RequestJob(t.Context(), config, sessionInfo)
+	assert.EqualValues(t, routerCallsAtTrip+2, routerSrv.calls.Load())
+}
+
+func TestRequestJob_CircuitBreakerRecoversDespiteEmptyDiscovery(t *testing.T) {
+	routerSrv := &mockRouterServer{t: t}
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { l.Close() })
+	r := grpc.NewServer()
+	rpc.RegisterJobRouterServer(r, routerSrv)
+	go func() { assert.NoError(t, r.Serve(l)) }()
+	t.Cleanup(r.GracefulStop)
+
+	discoveryJSON, err := json.Marshal(&common.RouterDiscovery{ServerURL: fmt.Sprintf("grpc://%s", l.Addr())})
+	require.NoError(t, err)
+
+	var routerAvailable atomic.Bool
+	routerAvailable.Store(true)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v4/runners/router/discovery", func(w http.ResponseWriter, req *http.Request) {
+		if !routerAvailable.Load() {
+			w.WriteHeader(http.StatusNotImplemented)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, writeErr := w.Write(discoveryJSON)
+		assert.NoError(t, writeErr)
+	})
+	mux.HandleFunc("POST /api/v4/jobs/request", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, writeErr := w.Write([]byte(fakeJobResponse))
+		assert.NoError(t, writeErr)
+	})
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Failf(t, "unexpected call", "%s %s", req.Method, req.URL)
+		w.WriteHeader(http.StatusNotImplemented)
+	}))
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	certDir := t.TempDir()
+	rc := NewClient(network.NewGitLabClient(network.WithCertificateDirectory(certDir)), certDir, "runner-test")
+	t.Cleanup(rc.Shutdown)
+	now := time.Now()
+	installTestBreaker(rc, &now)
+	config := newConfig(server.URL)
+	sessionInfo := &common.SessionInfo{}
+
+	// Trip the breaker: drive failures past the grace window.
+	routerSrv.failCode.Store(int32(codes.Unavailable))
+	for i := 0; i < routerBreakerFailureThreshold; i++ {
+		rc.RequestJob(t.Context(), config, sessionInfo)
+	}
+	now = now.Add(routerBreakerFailureGrace + time.Second)
+	rc.RequestJob(t.Context(), config, sessionInfo)
+	callsAfterTrip := routerSrv.calls.Load()
+
+	// Cooldown elapses, but discovery now returns no router for the recovery poll.
+	now = now.Add(routerBreakerOpenTimeout + time.Second)
+	rc.invalidateRouterDiscovery()
+	routerAvailable.Store(false)
+	job, healthy := rc.RequestJob(t.Context(), config, sessionInfo)
+	require.True(t, healthy)
+	require.NotNil(t, job) // served from Rails
+	assert.EqualValues(t, callsAfterTrip, routerSrv.calls.Load(), "the router is not dialed when discovery is empty")
+
+	// Router and discovery recover: the breaker must still be able to probe and
+	// resume routing (it would be stuck half-open if the empty-discovery poll had
+	// consumed the trial request).
+	routerAvailable.Store(true)
+	routerSrv.failCode.Store(int32(codes.OK))
+	rc.invalidateRouterDiscovery()
+	job, healthy = rc.RequestJob(t.Context(), config, sessionInfo)
+	require.True(t, healthy)
+	require.NotNil(t, job)
+	assert.EqualValues(t, callsAfterTrip+1, routerSrv.calls.Load(), "breaker recovered and routed through the router")
+}
+
+func TestIsRouterFailure(t *testing.T) {
+	failures := []codes.Code{
+		codes.Unavailable, codes.DeadlineExceeded, codes.Canceled,
+	}
+	for _, c := range failures {
+		assert.True(t, isRouterFailure(c), c.String())
+	}
+	// Server-side and request-level errors are not breaker failures.
+	ignored := []codes.Code{
+		codes.OK, codes.Unimplemented, codes.Internal, codes.Unknown,
+		codes.ResourceExhausted, codes.InvalidArgument, codes.NotFound,
+		codes.PermissionDenied,
+	}
+	for _, c := range ignored {
+		assert.False(t, isRouterFailure(c), c.String())
+	}
+}
+
+// setupRouterWithRailsFallback starts a gRPC router server and a Rails server
+// that serves both discovery and direct job requests, so tests can exercise the
+// fallback path. The returned counter tracks direct Rails job requests.
+func setupRouterWithRailsFallback(t *testing.T) (*Client, common.RunnerConfig, *mockRouterServer, *atomic.Int32) {
+	routerSrv := &mockRouterServer{t: t}
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { l.Close() })
+	r := grpc.NewServer()
+	rpc.RegisterJobRouterServer(r, routerSrv)
+	go func() { assert.NoError(t, r.Serve(l)) }()
+	t.Cleanup(r.GracefulStop)
+
+	discoveryJSON, err := json.Marshal(&common.RouterDiscovery{
+		ServerURL: fmt.Sprintf("grpc://%s", l.Addr()),
+	})
+	require.NoError(t, err)
+
+	var railsCalls atomic.Int32
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v4/runners/router/discovery", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, writeErr := w.Write(discoveryJSON)
+		assert.NoError(t, writeErr)
+	})
+	mux.HandleFunc("POST /api/v4/jobs/request", func(w http.ResponseWriter, req *http.Request) {
+		railsCalls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, writeErr := w.Write([]byte(fakeJobResponse))
+		assert.NoError(t, writeErr)
+	})
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Failf(t, "unexpected call", "%s %s", req.Method, req.URL)
+		w.WriteHeader(http.StatusNotImplemented)
+	}))
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	certDir := t.TempDir()
+	rc := NewClient(
+		network.NewGitLabClient(network.WithCertificateDirectory(certDir)),
+		certDir,
+		"runner-test",
+	)
+	t.Cleanup(rc.Shutdown)
+	return rc, newConfig(server.URL), routerSrv, &railsCalls
+}
+
 func setupWithRouter(t *testing.T, withTLS bool) (*Client, string) {
 	certDir := ""
 	var l net.Listener
@@ -309,7 +535,8 @@ func newConfig(serverURL string) common.RunnerConfig {
 type mockRouterServer struct {
 	rpc.UnsafeJobRouterServer
 	t        *testing.T
-	disabled bool // when true, reports the Job Router as disabled, mirroring KAS when the job_router flag is off
+	disabled bool         // when true, reports the Job Router as disabled, mirroring the router when the job_router flag is off
+	failCode atomic.Int32 // when non-zero, every GetJob fails with this gRPC code, simulating a router outage
 	calls    atomic.Int32
 }
 
@@ -318,6 +545,10 @@ func (s *mockRouterServer) GetJob(ctx context.Context, req *rpc.GetJobRequest) (
 
 	if s.disabled {
 		return nil, status.Error(codes.Unimplemented, "Job Router is not available. Please contact your administrator.")
+	}
+
+	if code := codes.Code(s.failCode.Load()); code != codes.OK {
+		return nil, status.Error(code, "simulated router failure")
 	}
 
 	assert.NotEmpty(s.t, metadata.ValueFromIncomingContext(ctx, requestIDMetadataKey))
