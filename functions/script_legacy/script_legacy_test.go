@@ -158,6 +158,34 @@ run:
 		require.NotContains(t, logs, "after error")
 	})
 
+	t.Run("backgrounded child holding the pipe past WaitDelay does not fail a clean exit", func(t *testing.T) {
+		// A backgrounded process inherits the step's stdout pipe and
+		// outlives the foreground script, so the copy goroutines never see
+		// EOF and gracefulexitcmd's WaitDelay fires, returning
+		// exec.ErrWaitDelay. The foreground script exited 0, so the step
+		// must still succeed. This blocks for the full gracefulExitDelay
+		// (~5s) by design.
+		stepYml := `
+spec:
+---
+run:
+  - name: test_bg_pipe_holder
+    step: builtin://script_legacy
+    inputs:
+      script:
+        - echo "foreground start"
+        - sleep 30 &
+        - echo "foreground done"
+`
+		res, logs, err := testutil.StepRunner(t).
+			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			Run(stepYml)
+		require.NoError(t, err)
+		assert.Equal(t, proto.StepResult_success, res.Status)
+		require.Contains(t, logs, "foreground start")
+		require.Contains(t, logs, "foreground done")
+	})
+
 	t.Run("empty script array fails", func(t *testing.T) {
 		stepYml := `
 spec:
