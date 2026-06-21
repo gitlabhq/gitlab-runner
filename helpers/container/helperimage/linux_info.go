@@ -7,16 +7,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
-const (
-	platformAmd64   = "amd64"
-	platformArm6vl  = "armv6l"
-	platformArmv7l  = "armv7l"
-	platformAarch64 = "aarch64"
-	archX8664       = "x86_64"
-	archArm         = "arm"
-	archArm64       = "arm64"
-)
-
 var bashCmd = []string{"gitlab-runner-build"}
 
 type linuxInfo struct{}
