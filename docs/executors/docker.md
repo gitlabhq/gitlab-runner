@@ -1301,6 +1301,7 @@ You can use various Windows base images, including `Server Core`, `Nano Server`,
 
 - `mcr.microsoft.com/windows/servercore:ltsc2025`
 - `mcr.microsoft.com/windows/servercore:ltsc2025-amd64`
+- `mcr.microsoft.com/windows/servercore:ltsc2025-arm64`
 - `mcr.microsoft.com/windows/servercore:ltsc2022`
 - `mcr.microsoft.com/windows/servercore:ltsc2022-amd64`
 - `mcr.microsoft.com/windows/servercore:1809`
@@ -1350,16 +1351,26 @@ section.
 
 ### Windows helper images
 
-GitLab Runner provides several helper images tailored for different Windows versions and PowerShell requirements.
+GitLab Runner provides several helper images tailored for different Windows versions, CPU architectures, and PowerShell requirements.
 Available variants:
 
-- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver21H2`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore24H2`
+- `gitlab/gitlab-runner-helper:arm64-vXYZ-servercore24H2`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver24H2`
+- `gitlab/gitlab-runner-helper:arm64-vXYZ-nanoserver24H2`
 - `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore21H2`
-- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver1809`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver21H2`
 - `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore1809`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver1809`
+
+GitLab Runner automatically selects the helper image that matches the host's Windows version and CPU
+architecture, so you don't usually need to set `helper_image` manually. For example, on a Windows
+Server 2025 (24H2) ARM64 host, the runner selects the `arm64-vXYZ-servercore24H2` image.
 
 > [!note]
-> Due to Windows container backward compatibility, Windows Server 2025 (24H2) can use the 21H2 (Windows Server 2022) helper images.
+> ARM64 helper images are only available for Windows Server 2025 (24H2). Microsoft does not publish ARM64
+> base images for Windows Server 2019 (1809) or 2022 (21H2). On those versions, the runner falls back to
+> the x86_64 helper image.
 
 Choose your helper image based on your shell requirements. The `servercore` image is the default and supports both `PowerShell` and `Pwsh`. For containers that only use `pwsh`, use the lighter `nanoserver` image.
 
