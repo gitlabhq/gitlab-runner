@@ -157,7 +157,7 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 	_ = os.Setenv(EnvSocketPath, sockPath)
 
 	service, err := di.NewContainer(
-		di.WithStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run),
+		di.WithBuiltinFunc("script_legacy", script_legacy.New()),
 		di.WithBuiltinFunc("concrete", concrete.New()),
 	).StepRunnerService()
 	if err != nil {
