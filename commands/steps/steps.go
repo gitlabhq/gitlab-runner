@@ -158,9 +158,8 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 
 	service, err := di.NewContainer(
 		di.WithStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run),
-		di.WithStepFunc("concrete", concrete.Spec(), concrete.Run),
+		di.WithBuiltinFunc("concrete", concrete.New()),
 	).StepRunnerService()
-
 	if err != nil {
 		return fmt.Errorf("initializing step-runner: %w", err)
 	}

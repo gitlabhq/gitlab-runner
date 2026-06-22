@@ -49,7 +49,11 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-func Spec() *proto.Spec {
+type builtinFunc struct{}
+
+func New() runner.BuiltinFunction { return &builtinFunc{} }
+
+func (*builtinFunc) Spec() *proto.Spec {
 	return &proto.Spec{
 		Spec: &proto.Spec_Content{
 			Inputs: map[string]*proto.Spec_Content_Input{
@@ -61,7 +65,7 @@ func Spec() *proto.Spec {
 	}
 }
 
-func Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
+func (*builtinFunc) Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
 	configRaw, err := builtinCtx.GetInput("config", runner.KindString)
 	if err != nil {
 		return err
