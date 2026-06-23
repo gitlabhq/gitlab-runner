@@ -1,6 +1,7 @@
 package snowplow
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	labkitsnowplow "gitlab.com/gitlab-org/labkit/v2/events/snowplow"
 	"gitlab.com/gitlab-org/labkit/v2/events/snowplow/oidc"
 )
@@ -35,17 +36,22 @@ type options struct {
 
 	// callback is called after each send loop with aggregated results.
 	callback labkitsnowplow.SendCallback
+
+	promRegistry *prometheus.Registry
+
+	batchDeliveryDurationBuckets []float64
 }
 
 type Option func(*options)
 
 func setupOptions(collectorURI string, o ...Option) options {
 	opts := options{
-		collectorURI:   collectorURI,
-		appID:          "gitlab-runner",
-		category:       "runner_compute_usage",
-		realm:          "SM",
-		deploymentType: "self-managed",
+		collectorURI:                 collectorURI,
+		appID:                        "gitlab-runner",
+		category:                     "runner_compute_usage",
+		realm:                        "SM",
+		deploymentType:               "self-managed",
+		batchDeliveryDurationBuckets: []float64{0.1, 0.5, 1, 2.5, 5, 10, 30, 60},
 	}
 
 	for _, opt := range o {
@@ -108,5 +114,17 @@ func WithCallback(cb labkitsnowplow.SendCallback) Option {
 func WithSkipFailureReason(reason string) Option {
 	return func(o *options) {
 		o.skipFailureReason = reason
+	}
+}
+
+func WithPrometheusRegistry(r *prometheus.Registry) Option {
+	return func(o *options) {
+		o.promRegistry = r
+	}
+}
+
+func WithBatchDeliveryDurationBuckets(buckets []float64) Option {
+	return func(o *options) {
+		o.batchDeliveryDurationBuckets = buckets
 	}
 }

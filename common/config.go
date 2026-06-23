@@ -1582,6 +1582,8 @@ type SnowplowConfig struct {
 	Metadata       map[string]string `toml:"metadata,omitempty" json:"metadata,omitempty"`
 	EnableOIDC     bool              `toml:"enable_oidc,omitempty" json:"enable_oidc,omitempty"`
 
+	BatchDeliveryDurationBuckets []float64 `toml:"batch_delivery_duration_buckets,omitempty" json:"batch_delivery_duration_buckets,omitempty"`
+
 	// SkipOIDCIfUnsupportedCloud allows the emitter to run even when not
 	// on a supported cloud provider (AWS/GCP). The OIDC token source will
 	// silently skip auth header injection instead of failing.
