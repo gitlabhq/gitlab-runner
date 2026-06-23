@@ -67,5 +67,5 @@ func (e *Executor) Execute(ctx context.Context, script string) error {
 	cmd.Env = e.config.Env
 	cmd.Dir = e.config.WorkDir
 
-	return cmd.Run()
+	return normalizeExitError(cmd.Run(), cmd.ProcessState)
 }
