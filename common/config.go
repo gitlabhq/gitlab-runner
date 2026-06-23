@@ -1542,11 +1542,59 @@ type Experimental struct {
 }
 
 type UsageLogger struct {
-	Enabled        bool              `toml:"enabled" json:"enabled"`
+	Enabled   bool            `toml:"enabled" json:"enabled"`
+	Writers   []string        `toml:"writers,omitempty" json:"writers,omitempty"` // logrotate, snowplow_billing
+	Logrotate LogrotateConfig `toml:"logrotate,omitempty" json:"logrotate,omitempty"`
+	Snowplow  SnowplowConfig  `toml:"snowplow_billing,omitempty" json:"snowplow_billing,omitempty"`
+
+	// Deprecated: Use Logrotate.LogDir instead
+	LogDir string `toml:"log_dir,omitempty" json:"log_dir,omitempty"`
+	// Deprecated: Use Logrotate.MaxBackupFiles instead
+	MaxBackupFiles *int64 `toml:"max_backup_files,omitempty" json:"max_backup_files,omitempty"`
+	// Deprecated: Use Logrotate.MaxRotationAge instead
+	MaxRotationAge *time.Duration `toml:"max_rotation_age,omitempty" json:"max_rotation_age,omitempty"`
+	// Deprecated: Use Logrotate.Labels instead
+	Labels map[string]string `toml:"labels,omitempty" json:"labels,omitempty"`
+}
+
+// GetWriters returns the list of configured writers.
+// Defaults to ["logrotate"] when none are specified.
+func (ul UsageLogger) GetWriters() []string {
+	if len(ul.Writers) > 0 {
+		return ul.Writers
+	}
+	return []string{"logrotate"}
+}
+
+type LogrotateConfig struct {
 	LogDir         string            `toml:"log_dir,omitempty" json:"log_dir,omitempty"`
 	MaxBackupFiles *int64            `toml:"max_backup_files,omitempty" json:"max_backup_files,omitempty"`
 	MaxRotationAge *time.Duration    `toml:"max_rotation_age,omitempty" json:"max_rotation_age,omitempty"`
 	Labels         map[string]string `toml:"labels,omitempty" json:"labels,omitempty"`
+}
+
+type SnowplowConfig struct {
+	CollectorURI   string            `toml:"collector_uri,omitempty" json:"collector_uri,omitempty"`
+	AppID          string            `toml:"app_id,omitempty" json:"app_id,omitempty"`
+	Category       string            `toml:"category,omitempty" json:"category,omitempty"`
+	Realm          string            `toml:"realm,omitempty" json:"realm,omitempty"`                     // SaaS, Dedicated, or SM
+	DeploymentType string            `toml:"deployment_type,omitempty" json:"deployment_type,omitempty"` // dedicated, .com, or self-managed
+	Metadata       map[string]string `toml:"metadata,omitempty" json:"metadata,omitempty"`
+	EnableOIDC     bool              `toml:"enable_oidc,omitempty" json:"enable_oidc,omitempty"`
+
+	// SkipOIDCIfUnsupportedCloud allows the emitter to run even when not
+	// on a supported cloud provider (AWS/GCP). The OIDC token source will
+	// silently skip auth header injection instead of failing.
+	SkipOIDCIfUnsupportedCloud *bool `toml:"skip_oidc_if_unsupported_cloud,omitempty" json:"skip_oidc_if_unsupported_cloud,omitempty"`
+
+	// SkipRunnerSystemFailure controls whether jobs that failed due to a
+	// runner system failure are emitted to the billing platform.
+	//
+	// Defaults to true: runner_system_failure jobs are not billable, so the
+	// runner filters them out before sending. Once the billing platform
+	// implements equivalent filtering this can be set to false to forward
+	// every job and let the consumer decide.
+	SkipRunnerSystemFailure *bool `toml:"skip_runner_system_failure,omitempty" json:"skip_runner_system_failure,omitempty"`
 }
 
 type ConfigSaver interface {

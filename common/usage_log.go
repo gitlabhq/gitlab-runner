@@ -1,10 +1,14 @@
 package common
 
 import (
+	"time"
+
+	"github.com/google/uuid"
+
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log"
 )
 
-func UsageLogRecordFrom(runner *RunnerConfig, build *Build) usage_log.Record {
+func UsageLogRecordFrom(runner *RunnerConfig, build *Build) (usage_log.Record, error) {
 	record := usage_log.Record{
 		Runner: usage_log.Runner{
 			ID:       runner.ShortDescription(),
@@ -13,13 +17,15 @@ func UsageLogRecordFrom(runner *RunnerConfig, build *Build) usage_log.Record {
 			Executor: runner.Executor,
 		},
 		Job: usage_log.Job{
+			ID:              build.ID,
+			PipelineID:      build.JobInfo.PipelineID,
+			Ref:             build.GitInfo.Ref,
 			URL:             build.JobURL(),
 			DurationSeconds: build.FinalDuration().Seconds(),
 			Status:          build.CurrentState().String(),
 			FailureReason:   build.FailureReason().String(),
 			StartedAt:       build.StartedAt().UTC(),
 			FinishedAt:      build.FinishedAt().UTC(),
-			PipelineID:      build.JobInfo.PipelineID,
 			Project: usage_log.Project{
 				ID:       build.JobInfo.ProjectID,
 				Name:     build.JobInfo.ProjectName,
@@ -49,5 +55,13 @@ func UsageLogRecordFrom(runner *RunnerConfig, build *Build) usage_log.Record {
 		record.Job.ScopedUser.ID = *build.JobInfo.ScopedUserID
 	}
 
-	return record
+	uid, err := uuid.NewV7()
+	if err != nil {
+		return record, err
+	}
+
+	record.UUID = uid.String()
+	record.Timestamp = time.Now().UTC()
+
+	return record, nil
 }

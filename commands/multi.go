@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"gitlab.com/gitlab-org/labkit/v2/events/snowplow/oidc"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
@@ -38,6 +40,7 @@ import (
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log/logrotate"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log/snowplow"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/router"
@@ -122,7 +125,7 @@ type RunCommand struct {
 
 	sessionServer *session.Server
 
-	usageLogger *usage_log.Storage
+	usageLogger atomic.Value // stores usageLoggerHolder
 
 	// abortBuilds is used to abort running builds
 	abortBuilds chan os.Signal
@@ -486,53 +489,173 @@ func (mr *RunCommand) updateLoggingConfiguration() error {
 	return nil
 }
 
+// usageLoggerHolder wraps usage_log.Storage so we can store nil
+// in atomic.Value (which panics on bare nil interface values).
+type usageLoggerHolder struct{ s usage_log.Storage }
+
+func (mr *RunCommand) loadUsageLogger() usage_log.Storage {
+	h, _ := mr.usageLogger.Load().(usageLoggerHolder)
+	return h.s
+}
+
+func (mr *RunCommand) storeUsageLogger(s usage_log.Storage) {
+	mr.usageLogger.Store(usageLoggerHolder{s})
+}
+
 func (mr *RunCommand) reloadUsageLogger() {
-	if mr.usageLogger != nil {
-		mr.log().Debug("Closing existing usage logger storage")
-		err := mr.usageLogger.Close()
-		if err != nil {
-			mr.log().WithError(err).Error("Failed to close existing usage logger storage")
-		}
-	}
+	mr.usageLoggerClose()
 
 	config := mr.configfile.Config()
 	if config.Experimental == nil || !config.Experimental.UsageLogger.Enabled {
-		mr.usageLogger = nil
 		mr.log().Info("Usage logger disabled")
-
 		return
 	}
 
 	ulConfig := config.Experimental.UsageLogger
-	logDir := ulConfig.LogDir
+	writerNames := ulConfig.GetWriters()
+
+	mr.log().WithField("writers", writerNames).Info("Usage logger enabled")
+
+	availableWriters := map[string]func(conf common.UsageLogger) usage_log.Storage{
+		"logrotate":        mr.createLogrotateWriter,
+		"snowplow_billing": mr.createSnowplowBillingWriter,
+	}
+
+	var writers []usage_log.Storage
+	for _, name := range writerNames {
+		wf, ok := availableWriters[name]
+		if !ok {
+			mr.log().WithField("writer", name).Error("Unknown usage logger writer, skipping")
+			continue
+		}
+
+		if w := wf(ulConfig); w != nil {
+			writers = append(writers, w)
+		}
+	}
+
+	if logger := usage_log.NewLogger(writers...); logger != nil {
+		mr.storeUsageLogger(logger)
+	}
+}
+
+func (mr *RunCommand) createLogrotateWriter(ulConfig common.UsageLogger) usage_log.Storage {
+	// Support both new and old (deprecated) config format
+	logDir := ulConfig.Logrotate.LogDir
+	if logDir == "" {
+		logDir = ulConfig.LogDir //nolint:staticcheck // Fallback to deprecated field
+	}
 	if logDir == "" {
 		logDir = filepath.Join(filepath.Dir(mr.ConfigFile), "usage-log")
+	}
+
+	maxBackupFiles := ulConfig.Logrotate.MaxBackupFiles
+	if maxBackupFiles == nil {
+		maxBackupFiles = ulConfig.MaxBackupFiles //nolint:staticcheck // Fallback to deprecated field
+	}
+
+	maxRotationAge := ulConfig.Logrotate.MaxRotationAge
+	if maxRotationAge == nil {
+		maxRotationAge = ulConfig.MaxRotationAge //nolint:staticcheck // Fallback to deprecated field
+	}
+
+	labels := ulConfig.Logrotate.Labels
+	if len(labels) == 0 {
+		labels = ulConfig.Labels //nolint:staticcheck // Fallback to deprecated field
 	}
 
 	options := []logrotate.Option{
 		logrotate.WithLogDirectory(logDir),
 	}
 
-	storageOptions := []usage_log.Option{
-		usage_log.WithLabels(ulConfig.Labels),
-	}
-
 	logFields := logrus.Fields{
 		"log_dir": logDir,
 	}
 
-	if ulConfig.MaxBackupFiles != nil && *ulConfig.MaxBackupFiles > 0 {
-		options = append(options, logrotate.WithMaxBackupFiles(*ulConfig.MaxBackupFiles))
-		logFields["max_backup_files"] = *ulConfig.MaxBackupFiles
+	if maxBackupFiles != nil && *maxBackupFiles > 0 {
+		options = append(options, logrotate.WithMaxBackupFiles(*maxBackupFiles))
+		logFields["max_backup_files"] = *maxBackupFiles
 	}
 
-	if ulConfig.MaxRotationAge != nil && ulConfig.MaxRotationAge.Nanoseconds() > 0 {
-		options = append(options, logrotate.WithMaxRotationAge(*ulConfig.MaxRotationAge))
-		logFields["max_rotation_age"] = *ulConfig.MaxRotationAge
+	if maxRotationAge != nil && maxRotationAge.Nanoseconds() > 0 {
+		options = append(options, logrotate.WithMaxRotationAge(*maxRotationAge))
+		logFields["max_rotation_age"] = *maxRotationAge
 	}
 
-	mr.log().WithFields(logFields).Info("Usage logger enabled")
-	mr.usageLogger = usage_log.NewStorage(logrotate.New(options...), storageOptions...)
+	if len(labels) > 0 {
+		options = append(options, logrotate.WithLabels(labels))
+	}
+
+	mr.log().WithFields(logFields).Debug("Logrotate configuration loaded")
+	return logrotate.New(options...)
+}
+
+// resolveSkipOIDCIfUnsupportedCloud defaults to true when unset (nil) so OIDC is skipped
+// on unsupported clouds, but honours an explicit false. The value must be passed to
+// snowplow.WithOIDC unconditionally: an empty option set makes the writer default it back
+// to true, silently discarding an explicit false.
+func resolveSkipOIDCIfUnsupportedCloud(cfg *bool) bool {
+	return cfg == nil || *cfg
+}
+
+func (mr *RunCommand) createSnowplowBillingWriter(ulConfig common.UsageLogger) usage_log.Storage {
+	collectorURI := ulConfig.Snowplow.CollectorURI
+	if collectorURI == "" {
+		mr.log().Error("Snowplow collector_uri not configured, snowplow_billing writer not enabled for usage logger")
+		return nil
+	}
+
+	logFields := logrus.Fields{
+		"collector_uri": collectorURI,
+	}
+
+	var options []snowplow.Option
+
+	if ulConfig.Snowplow.AppID != "" {
+		options = append(options, snowplow.WithAppID(ulConfig.Snowplow.AppID))
+		logFields["app_id"] = ulConfig.Snowplow.AppID
+	}
+	if ulConfig.Snowplow.Category != "" {
+		options = append(options, snowplow.WithCategory(ulConfig.Snowplow.Category))
+		logFields["category"] = ulConfig.Snowplow.Category
+	}
+	if ulConfig.Snowplow.Realm != "" {
+		options = append(options, snowplow.WithRealm(ulConfig.Snowplow.Realm))
+		logFields["realm"] = ulConfig.Snowplow.Realm
+	}
+	if ulConfig.Snowplow.DeploymentType != "" {
+		options = append(options, snowplow.WithDeploymentType(ulConfig.Snowplow.DeploymentType))
+		logFields["deployment_type"] = ulConfig.Snowplow.DeploymentType
+	}
+	if len(ulConfig.Snowplow.Metadata) > 0 {
+		options = append(options, snowplow.WithMetadata(ulConfig.Snowplow.Metadata))
+	}
+	if ulConfig.Snowplow.EnableOIDC {
+		// Pass the resolved value unconditionally so an explicit
+		// skip_oidc_if_unsupported_cloud = false is honoured instead of being
+		// overridden by the writer's empty-options default.
+		skipIfUnsupported := resolveSkipOIDCIfUnsupportedCloud(ulConfig.Snowplow.SkipOIDCIfUnsupportedCloud)
+		options = append(options, snowplow.WithOIDC(oidc.WithSkipIfUnsupportedCloud(skipIfUnsupported)))
+		logFields["oidc_enabled"] = true
+		logFields["skip_oidc_if_unsupported_cloud"] = skipIfUnsupported
+	}
+	// Default to true: runner_system_failure jobs are not billable.
+	// The reason is passed in to avoid an import cycle
+	// (helpers/usage_log/snowplow -> common -> helpers/usage_log).
+	if ulConfig.Snowplow.SkipRunnerSystemFailure == nil || *ulConfig.Snowplow.SkipRunnerSystemFailure {
+		options = append(options, snowplow.WithSkipFailureReason(string(common.RunnerSystemFailure)))
+		logFields["skip_runner_system_failure"] = true
+	}
+
+	mr.log().WithFields(logFields).Debug("snowplow_billing configuration loaded")
+
+	writer, err := snowplow.New(mr.log().WithFields(logFields), collectorURI, options...)
+	if err != nil {
+		mr.log().WithError(err).Error("Failed to create snowplow_billing writer, snowplow_billing writer not enabled for usage logger")
+		return nil
+	}
+
+	return writer
 }
 
 // run is the main method of RunCommand. It's started asynchronously by services support
@@ -1062,12 +1185,7 @@ func (mr *RunCommand) processBuildOnRunner(
 	}
 
 	mr.log().WithFields(fields).Infoln("Added job to processing list")
-	defer func() {
-		if mr.buildsHelper.removeBuild(build) {
-			mr.log().WithFields(fields).Infoln("Removed job from processing list")
-			mr.usageLoggerStore(common.UsageLogRecordFrom(runner, build))
-		}
-	}()
+	defer mr.finishBuild(runner, build, fields)
 	if !runner.GetStrictCheckInterval() {
 		// Process the same runner by different worker again
 		// to speed up taking the builds
@@ -1099,15 +1217,37 @@ func logTerminationError(logger logrus.FieldLogger, name string, err error) {
 	}
 }
 
+// finishBuild is invoked via defer from processBuildOnRunner when a build
+// finishes. It removes the build from the active list and forwards a usage
+// log record to all configured writers. Per-writer filtering (e.g. dropping
+// runner_system_failure jobs from billing events) is handled inside the
+// individual writers.
+func (mr *RunCommand) finishBuild(runner *common.RunnerConfig, build *common.Build, fields logrus.Fields) {
+	if !mr.buildsHelper.removeBuild(build) {
+		return
+	}
+
+	mr.log().WithFields(fields).Infoln("Removed job from processing list")
+
+	record, err := common.UsageLogRecordFrom(runner, build)
+	if err != nil {
+		mr.log().WithError(err).Error("Failed to create usage log record")
+		return
+	}
+
+	mr.usageLoggerStore(record)
+}
+
 func (mr *RunCommand) usageLoggerStore(record usage_log.Record) {
-	if mr.usageLogger == nil {
+	logger := mr.loadUsageLogger()
+	if logger == nil {
 		return
 	}
 
 	l := mr.log().WithField("job_url", record.Job.URL)
 	l.Info("Storing usage log information")
 
-	err := mr.usageLogger.Store(record)
+	err := logger.Store(record)
 	if err != nil {
 		l.WithError(err).Error("Failed to store usage log information")
 	}
@@ -1371,6 +1511,8 @@ func (mr *RunCommand) Stop(_ service.Service) error {
 
 	go mr.interruptRun()
 
+	defer mr.usageLoggerClose()
+
 	defer func() {
 		if mr.sessionServer != nil {
 			mr.sessionServer.Close()
@@ -1409,8 +1551,6 @@ func (mr *RunCommand) Stop(_ service.Service) error {
 	mr.log().
 		WithError(err).
 		Warning("Forceful shutdown not finished properly")
-
-	mr.usageLoggerClose()
 
 	return err
 }
@@ -1514,10 +1654,11 @@ func (mr *RunCommand) abortAllBuilds() {
 }
 
 func (mr *RunCommand) usageLoggerClose() {
-	if mr.usageLogger != nil {
-		err := mr.usageLogger.Close()
-		mr.usageLogger = nil
-		mr.log().WithError(err).Error("Closing usage logger")
+	if prev := mr.loadUsageLogger(); prev != nil {
+		mr.storeUsageLogger(nil)
+		if err := prev.Close(); err != nil {
+			mr.log().WithError(err).Error("Closing usage logger")
+		}
 	}
 }
 
