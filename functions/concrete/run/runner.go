@@ -81,13 +81,21 @@ func New(config Config, builtinCtx runner.BuiltinContext, options ...Option) (*R
 
 	stdout, stderr := builtinCtx.Pipe()
 
+	workDir := builtinCtx.WorkDir()
+	tmpDir := workDir + ".tmp"
+	stagingDir := config.ArchiverStagingDir
+	if stagingDir == "" {
+		stagingDir = tmpDir
+	}
+
 	e := &env.Env{
 		ID:                config.ID,
 		Token:             config.Token,
 		BaseURL:           config.BaseURL,
-		WorkingDir:        builtinCtx.WorkDir(),
+		WorkingDir:        workDir,
 		CacheDir:          config.CacheDir,
-		StagingDir:        config.ArchiverStagingDir,
+		TmpDir:            tmpDir,
+		StagingDir:        stagingDir,
 		Shell:             config.Shell,
 		Timeout:           config.Timeout,
 		LoginShell:        config.LoginShell,
@@ -97,6 +105,10 @@ func New(config Config, builtinCtx runner.BuiltinContext, options ...Option) (*R
 		JobVars:           jobVars,
 		Stdout:            stdout,
 		Stderr:            stderr,
+	}
+
+	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
+		return nil, fmt.Errorf("creating runner tmp dir %q: %w", tmpDir, err)
 	}
 
 	e.Env["CI_JOB_STATUS"] = string(env.Running)

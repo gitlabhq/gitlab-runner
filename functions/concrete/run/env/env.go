@@ -33,6 +33,11 @@ type Env struct {
 
 	WorkingDir string
 	CacheDir   string
+	// TmpDir mirrors abstract shell's Build.TmpProjectDir(): a sibling
+	// of the build directory. Used in place of os.TempDir() so scratch
+	// shares the build directory's lifetime, cleanup, and writable space,
+	// regardless of the executor's TMPDIR.
+	TmpDir     string
 	StagingDir string
 	Shell      string
 	Timeout    time.Duration
@@ -233,6 +238,17 @@ func (e *Env) HelperEnvs(existing map[string]string) map[string]string {
 			env["PATH"] = gitBinDir + ":" + path
 		} else {
 			env["PATH"] = gitBinDir + ":" + os.Getenv("PATH")
+		}
+	}
+
+	// Helper subprocess scratch follows the runner's, not the
+	// process-level TMPDIR / ARCHIVER_STAGING_DIR.
+	if e.TmpDir != "" {
+		if _, ok := env["TMPDIR"]; !ok {
+			env["TMPDIR"] = e.TmpDir
+		}
+		if _, ok := env["ARCHIVER_STAGING_DIR"]; !ok {
+			env["ARCHIVER_STAGING_DIR"] = e.TmpDir
 		}
 	}
 

@@ -64,7 +64,7 @@ func shell(ctx context.Context, e *env.Env, script, stepName string) error {
 		ext = ".ps1"
 	}
 
-	f, err := os.CreateTemp("", "runner-script-*"+ext)
+	f, err := os.CreateTemp(e.TmpDir, "runner-script-*"+ext)
 	if err != nil {
 		return fmt.Errorf("creating script file: %w", err)
 	}
