@@ -516,6 +516,13 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`  Remove-Item -Force "$CurrentDirectory/.tmp/.gitlab-runner.ext.conf"` + eol +
 		`}` + eol +
 		`` + eol +
+		`$CurrentDirectory = (Resolve-Path ./).Path` + eol +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/.glr.gconf" -PathType Leaf) ) {` + eol +
+		`  Remove-Item2 -Force "$CurrentDirectory/.tmp/.glr.gconf"` + eol +
+		`} elseif(Test-Path "$CurrentDirectory/.tmp/.glr.gconf") {` + eol +
+		`  Remove-Item -Force "$CurrentDirectory/.tmp/.glr.gconf"` + eol +
+		`}` + eol +
+		`` + eol +
 		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/index.lock" -PathType Leaf) ) {` + eol +
 		`  Remove-Item2 -Force ".git/index.lock"` + eol +
 		`} elseif(Test-Path ".git/index.lock") {` + eol +
@@ -1078,4 +1085,20 @@ func TestPowershell_ExportRaw(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestPowershell_ExportRaw_PreservesRuntimePath guards why GIT_CONFIG_GLOBAL is
+// exported via ExportRaw(TmpFile(...)): for a relative builds dir TmpFile injects
+// a runtime "$CurrentDirectory", and ExportRaw must keep the "$" unescaped.
+// Variable() would escape it to "`$" (see "tmp file var, relative path" in
+// Test_PsWriter_Variable), yielding a literal git could not resolve.
+func TestPowershell_ExportRaw_PreservesRuntimePath(t *testing.T) {
+	writer := &PsWriter{TemporaryPath: "builds/proj.tmp", Shell: SNPwsh, EOL: "\n"}
+
+	writer.ExportRaw("GIT_CONFIG_GLOBAL", writer.TmpFile(globalGitConfigSeedFile))
+
+	got := writer.String()
+	assert.Contains(t, got, "$CurrentDirectory", "the runtime path-resolution expression must be present")
+	assert.NotContains(t, got, "`$", "the '$' must not be escaped, or PowerShell would render a literal $CurrentDirectory")
+	assert.Contains(t, got, globalGitConfigSeedFile, "the exported value must point at the seed file")
 }

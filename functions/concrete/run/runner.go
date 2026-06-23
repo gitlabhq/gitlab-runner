@@ -149,6 +149,10 @@ func (r *Runner) Run(ctx context.Context) error {
 		return fmt.Errorf("setting up GITLAB_ENV: %w", err)
 	}
 
+	if err := r.config.GetSources.SetupJobGitConfig(jobCtx, r.env); err != nil {
+		return fmt.Errorf("setting up job git config: %w", err)
+	}
+
 	if err := r.prepare(jobCtx); err != nil {
 		return err
 	}
@@ -533,4 +537,6 @@ func (r *Runner) cleanup() {
 	if r.env.GitLabEnvFile != "" {
 		os.Remove(r.env.GitLabEnvFile)
 	}
+
+	r.config.GetSources.TeardownJobGitConfig(r.env)
 }

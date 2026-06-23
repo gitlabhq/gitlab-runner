@@ -49,6 +49,14 @@ const (
 	//	- support alternative URL formats (git+ssh, ...) for repo
 	externalGitConfigFile = ".gitlab-runner.ext.conf"
 
+	// globalGitConfigSeedFile is the base name of the file GIT_CONFIG_GLOBAL
+	// points at when FF_GIT_URLS_WITHOUT_TOKENS=true, so externalGitConfigFile
+	// reaches every git invocation in the job, not just those inside the
+	// project dir. Seeded with includes for the user's global config and
+	// externalGitConfigFile; the job's "git config --global" writes also land
+	// here. Never holds credentials.
+	globalGitConfigSeedFile = ".glr.gconf"
+
 	// credHelperCommand is the command to use as a git credential helper to pull credentials from the environment.
 	// git always comes (or depends) on a POSIX shell, so any helper can rely on that, regardless of the OS, git distribution, ...
 	credHelperCommand = `!f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
@@ -499,6 +507,10 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 	w.Variable(spec.Variable{Key: "GIT_TERMINAL_PROMPT", Value: "0"})
 	w.Variable(spec.Variable{Key: "GCM_INTERACTIVE", Value: "Never"})
 
+	if err := b.setupTokenlessGitConfig(w, info.Build); err != nil {
+		return err
+	}
+
 	if !info.Build.IsSharedEnv() {
 		b.writeGitSSLConfig(w, info.Build, []string{"--global"})
 	}
@@ -591,6 +603,14 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 	})
 
 	w.SourceEnv(gitlabEnvFile)
+
+	// Re-exported every stage (git reads the env var live) so the seed file
+	// applies to every git invocation regardless of CWD. ExportRaw + TmpFile
+	// resolves the path at script-runtime without the variable-quoting path
+	// mangling it; emitted after SourceEnv so the job can't shadow it.
+	if info.Build.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
+		w.ExportRaw("GIT_CONFIG_GLOBAL", w.TmpFile(globalGitConfigSeedFile))
+	}
 }
 
 func (b *AbstractShell) writeCacheExports(w ShellWriter, variables map[string]string) string {
@@ -1033,6 +1053,60 @@ func (b *AbstractShell) setupTemplateDir(w ShellWriter, build *common.Build, pro
 	includeExternalGitConfig(w, templateFile, extConfigFile)
 
 	return templateDir, remoteURL, nil
+}
+
+// setupGlobalGitConfigSeed writes the file GIT_CONFIG_GLOBAL points at,
+// include-chaining the per-job extConfigFile so its credential helper reaches
+// git everywhere (GIT_STRATEGY=none, clones outside the project tree, etc.),
+// which the .git/config include cannot.
+//
+// Setting GIT_CONFIG_GLOBAL makes git ignore the user's usual global config
+// ($HOME/.gitconfig and the default XDG $HOME/.config/git/config), so both are
+// chained back in. A non-default $XDG_CONFIG_HOME isn't covered: it can't be
+// referenced portably across bash and PowerShell ($HOME can). CommandArgExpand
+// expands $HOME at script-runtime (the executor's env, not the runner host's).
+func setupGlobalGitConfigSeed(w ShellWriter, extConfigFile string) {
+	seedFile := w.TmpFile(globalGitConfigSeedFile)
+	w.RmFile(seedFile)
+	w.CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.gitconfig")
+	w.CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.config/git/config")
+	w.CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", extConfigFile)
+}
+
+// setupTokenlessGitConfig writes the GIT_CONFIG_GLOBAL seed file when the
+// feature flag is on, and additionally bootstraps a minimal extConfigFile
+// (credential helper only) when GIT_STRATEGY is none or empty - those
+// strategies bypass setupTemplateDir, which would otherwise write the full
+// extConfigFile referenced by the seed file's include chain.
+func (b *AbstractShell) setupTokenlessGitConfig(w ShellWriter, build *common.Build) error {
+	if !build.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
+		return nil
+	}
+
+	extConfigFile := w.TmpFile(externalGitConfigFile)
+	setupGlobalGitConfigSeed(w, extConfigFile)
+
+	strategy := build.GetGitStrategy()
+	if strategy == common.GitNone || strategy == common.GitEmpty {
+		return b.setupCredHelperOnly(w, build, extConfigFile)
+	}
+	return nil
+}
+
+// setupCredHelperOnly writes a minimal extConfigFile containing only the
+// credential helper. Used when GIT_STRATEGY is none or empty, where the full
+// setupExternalGitConfig path (insteadOf rewrites, Gitaly correlation header,
+// bundleURI, SSL) does not apply because no git checkout is performed, but
+// user-script git commands still need the helper reachable via the seed file's
+// include chain.
+func (b *AbstractShell) setupCredHelperOnly(w ShellWriter, build *common.Build, extConfigFile string) error {
+	w.RmFile(extConfigFile)
+	remoteHost, err := b.getRemoteHost(build)
+	if err != nil {
+		return err
+	}
+	w.SetupGitCredHelper(extConfigFile, "credential."+remoteHost, "gitlab-ci-token")
+	return nil
 }
 
 func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
@@ -1761,6 +1835,7 @@ func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, inf
 	w.RmFile(w.TmpFile(gitlabEnvFileName))
 	w.RmFile(w.TmpFile("masking.db"))
 	w.RmFile(w.TmpFile(externalGitConfigFile))
+	w.RmFile(w.TmpFile(globalGitConfigSeedFile))
 
 	for _, variable := range info.Build.GetAllVariables() {
 		if !variable.File {

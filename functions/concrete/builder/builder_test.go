@@ -1519,6 +1519,29 @@ func TestBuild_FeatureFlags(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("GetSources.RepoURL is always tokenless", func(t *testing.T) {
+		// RepoURL is the URL git stores as origin and must be tokenless
+		// regardless of the feature flag state. The API-supplied URL
+		// may embed the job token, but the builder strips any user
+		// info before publishing. Otherwise stages/get_sources.go would
+		// install an insteadOf rule rewriting the tokenless URL back to
+		// a token-bearing one, leaking the token into `git remote -v`
+		// output, and the token would also be serialized into the
+		// step-runner config JSON.
+		job := baseJob()
+		job.GitInfo.RepoURL = "https://gitlab-ci-token:test-token@gitlab.example.com/group/project.git"
+
+		const expected = "https://gitlab.example.com/group/project.git"
+
+		for _, enabled := range []bool{true, false} {
+			t.Run(map[bool]string{true: "on", false: "off"}[enabled], func(t *testing.T) {
+				ff := func(f string) bool { return f == featureflags.GitURLsWithoutTokens && enabled }
+				config := buildConfig(t, job, newTestVars(t, nil), WithFeatureFlagProvider(ff))
+				assert.Equal(t, expected, config.GetSources.RepoURL)
+			})
+		}
+	})
 }
 
 func TestBuild_OptionsWiring(t *testing.T) {

@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -433,6 +435,239 @@ func TestGetSources_SetupExternalGitConfig_Cleanup(t *testing.T) {
 
 	cleanup()
 	assert.NoFileExists(t, configFile)
+}
+
+func TestSetupJobGitConfig(t *testing.T) {
+	t.Run("creates seed and ext config files when credential helper is enabled", func(t *testing.T) {
+		e := newTestEnv(t, "bash")
+		gs := GetSources{
+			UseCredentialHelper: true,
+			RemoteHost:          "https://example.com",
+			GitStrategy:         "none",
+		}
+
+		require.NoError(t, gs.SetupJobGitConfig(t.Context(), e))
+
+		tmpDir := e.WorkingDir + ".tmp"
+		seed := filepath.Join(tmpDir, globalGitConfigSeedFile)
+		ext := filepath.Join(tmpDir, externalGitConfigFile)
+		absExt, err := filepath.Abs(ext)
+		require.NoError(t, err)
+
+		assert.Equal(t, seed, e.Env["GIT_CONFIG_GLOBAL"],
+			"GIT_CONFIG_GLOBAL should point at the seed file")
+
+		seedContent, err := os.ReadFile(seed)
+		require.NoError(t, err, "seed file should exist on disk")
+		assert.Contains(t, string(seedContent), "[include]",
+			"seed file should contain at least one [include] directive")
+		assert.Contains(t, string(seedContent), filepath.ToSlash(absExt),
+			"seed file should include the ext config file")
+
+		_, err = os.Stat(ext)
+		require.NoError(t, err, "ext config file should exist on disk")
+	})
+
+	// Both short-circuit strategies share writeCredentialHelperConfig, so
+	// they also share the same INI-escape invariant: the helper command
+	// must round-trip through `git config --get-all` byte-identically
+	// with credHelperCommand. Parameterizing keeps both paths covered at
+	// the same depth so a future divergence cannot regress one without
+	// the other.
+	for _, strategy := range []string{"none", "empty"} {
+		t.Run("writes credential helper into ext file when GIT_STRATEGY is "+strategy, func(t *testing.T) {
+			e := newTestEnv(t, "bash")
+			gs := GetSources{
+				UseCredentialHelper: true,
+				RemoteHost:          "https://example.com",
+				GitStrategy:         strategy,
+			}
+
+			require.NoError(t, gs.SetupJobGitConfig(t.Context(), e))
+
+			ext := filepath.Join(e.WorkingDir+".tmp", externalGitConfigFile)
+			extContent, err := os.ReadFile(ext)
+			require.NoError(t, err)
+			assert.Contains(t, string(extContent), `[credential "https://example.com"]`,
+				"ext file should contain a credential section for the remote host")
+			assert.Contains(t, string(extContent), "username = gitlab-ci-token",
+				"ext file should pin the credential username")
+
+			// Round-trip the file through `git config --get-all` to assert
+			// the helper value parses back to the exact shell command. A
+			// substring check on the raw INI is not enough; the value must
+			// survive INI escaping (semicolons inside the value would be
+			// silently truncated as comments without proper quoting).
+			out, err := exec.CommandContext(t.Context(), "git", "config", "-f", ext,
+				"--get-all", "credential.https://example.com.helper").Output()
+			require.NoError(t, err)
+			helpers := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
+			assert.Equal(t, []string{"", credHelperCommand}, helpers,
+				"git should parse two helper entries: empty (reset) and our command")
+		})
+	}
+
+	t.Run("leaves ext file empty when GIT_STRATEGY is fetch", func(t *testing.T) {
+		// For fetch and clone, setupExternalGitConfig installs the
+		// credential helper via writeCredentialHelperConfig during the
+		// get_sources stage; pre-seeding here would duplicate keys.
+		e := newTestEnv(t, "bash")
+		gs := GetSources{
+			UseCredentialHelper: true,
+			RemoteHost:          "https://example.com",
+			GitStrategy:         "fetch",
+		}
+
+		require.NoError(t, gs.SetupJobGitConfig(t.Context(), e))
+
+		extContent, err := os.ReadFile(filepath.Join(e.WorkingDir+".tmp", externalGitConfigFile))
+		require.NoError(t, err)
+		assert.Empty(t, string(extContent), "ext file should be empty for fetch strategy")
+	})
+
+	t.Run("no-op when UseCredentialHelper is false", func(t *testing.T) {
+		e := newTestEnv(t, "bash")
+		gs := GetSources{
+			UseCredentialHelper: false,
+			RemoteHost:          "https://example.com",
+			GitStrategy:         "none",
+		}
+
+		require.NoError(t, gs.SetupJobGitConfig(t.Context(), e))
+
+		_, present := e.Env["GIT_CONFIG_GLOBAL"]
+		assert.False(t, present, "GIT_CONFIG_GLOBAL should not be set")
+		assert.NoFileExists(t, filepath.Join(e.WorkingDir+".tmp", globalGitConfigSeedFile))
+		assert.NoFileExists(t, filepath.Join(e.WorkingDir+".tmp", externalGitConfigFile))
+	})
+
+	t.Run("no-op when RemoteHost is empty", func(t *testing.T) {
+		e := newTestEnv(t, "bash")
+		gs := GetSources{
+			UseCredentialHelper: true,
+			RemoteHost:          "",
+			GitStrategy:         "none",
+		}
+
+		require.NoError(t, gs.SetupJobGitConfig(t.Context(), e))
+
+		_, present := e.Env["GIT_CONFIG_GLOBAL"]
+		assert.False(t, present, "GIT_CONFIG_GLOBAL should not be set")
+		assert.NoFileExists(t, filepath.Join(e.WorkingDir+".tmp", globalGitConfigSeedFile))
+		assert.NoFileExists(t, filepath.Join(e.WorkingDir+".tmp", externalGitConfigFile))
+	})
+}
+
+func TestTeardownJobGitConfig(t *testing.T) {
+	t.Run("removes seed and ext files created by Setup", func(t *testing.T) {
+		e := newTestEnv(t, "bash")
+		gs := GetSources{
+			UseCredentialHelper: true,
+			RemoteHost:          "https://example.com",
+			GitStrategy:         "none",
+		}
+		require.NoError(t, gs.SetupJobGitConfig(t.Context(), e))
+
+		gs.TeardownJobGitConfig(e)
+
+		assert.NoFileExists(t, filepath.Join(e.WorkingDir+".tmp", globalGitConfigSeedFile))
+		assert.NoFileExists(t, filepath.Join(e.WorkingDir+".tmp", externalGitConfigFile))
+	})
+
+	t.Run("safe to call when Setup never ran", func(t *testing.T) {
+		e := newTestEnv(t, "bash")
+		gs := GetSources{
+			UseCredentialHelper: true,
+			RemoteHost:          "https://example.com",
+			GitStrategy:         "none",
+		}
+		assert.NotPanics(t, func() { gs.TeardownJobGitConfig(e) })
+	})
+
+	t.Run("no-op when UseCredentialHelper is false", func(t *testing.T) {
+		// Mirrors Setup's gate: the pair must not touch the filesystem
+		// at all in the non-credential-helper path. A foreign file at
+		// the same name (left by an unrelated stage or a previous job
+		// with different config) must survive Teardown.
+		e := newTestEnv(t, "bash")
+		tmpDir := e.WorkingDir + ".tmp"
+		require.NoError(t, os.MkdirAll(tmpDir, 0o755))
+		foreign := filepath.Join(tmpDir, globalGitConfigSeedFile)
+		require.NoError(t, os.WriteFile(foreign, []byte("foreign"), 0o600))
+
+		gs := GetSources{UseCredentialHelper: false}
+		gs.TeardownJobGitConfig(e)
+
+		assert.FileExists(t, foreign, "Teardown must not delete files when gate is off")
+	})
+}
+
+// TestJobGitConfigSeedContent covers the pure seed-content builder
+// directly, without going through SetupJobGitConfig's filesystem
+// round-trip. Each row varies HOME state and which of ~/.gitconfig and
+// ~/.config/git/config (XDG default) exists, then asserts the include
+// chain reflects exactly those present, with the per-job ext config
+// always appended last.
+func TestJobGitConfigSeedContent(t *testing.T) {
+	const extFile = "/abs/path/to/ext.conf"
+	extInclude := "[include]\n\tpath = " + filepath.ToSlash(extFile) + "\n"
+
+	tests := map[string]struct {
+		homeSet   bool
+		gitconfig bool
+		xdgConfig bool
+	}{
+		"HOME unset":                  {homeSet: false},
+		"HOME set, no configs":        {homeSet: true},
+		"HOME set, only ~/.gitconfig": {homeSet: true, gitconfig: true},
+		"HOME set, only XDG":          {homeSet: true, xdgConfig: true},
+		"HOME set, both configs":      {homeSet: true, gitconfig: true, xdgConfig: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			home := t.TempDir()
+			if tc.homeSet {
+				t.Setenv("HOME", home)
+				if tc.gitconfig {
+					require.NoError(t, os.WriteFile(filepath.Join(home, ".gitconfig"), nil, 0o600))
+				}
+				if tc.xdgConfig {
+					require.NoError(t, os.MkdirAll(filepath.Join(home, ".config", "git"), 0o755))
+					require.NoError(t, os.WriteFile(filepath.Join(home, ".config", "git", "config"), nil, 0o600))
+				}
+			} else {
+				t.Setenv("HOME", "")
+			}
+
+			got := jobGitConfigSeedContent(extFile)
+
+			// ext config is always the trailing include.
+			assert.True(t, strings.HasSuffix(got, extInclude),
+				"ext config include must be last; got %q", got)
+
+			if tc.homeSet && tc.gitconfig {
+				gitconfigInclude := "[include]\n\tpath = " + filepath.ToSlash(filepath.Join(home, ".gitconfig")) + "\n"
+				assert.Contains(t, got, gitconfigInclude)
+				assert.Less(t, strings.Index(got, gitconfigInclude), strings.Index(got, extInclude))
+			} else {
+				assert.NotContains(t, got, filepath.ToSlash(filepath.Join(home, ".gitconfig")))
+			}
+
+			if tc.homeSet && tc.xdgConfig {
+				xdgInclude := "[include]\n\tpath = " + filepath.ToSlash(filepath.Join(home, ".config", "git", "config")) + "\n"
+				assert.Contains(t, got, xdgInclude)
+				assert.Less(t, strings.Index(got, xdgInclude), strings.Index(got, extInclude))
+				if tc.gitconfig {
+					gitconfigInclude := "[include]\n\tpath = " + filepath.ToSlash(filepath.Join(home, ".gitconfig")) + "\n"
+					assert.Less(t, strings.Index(got, gitconfigInclude), strings.Index(got, xdgInclude),
+						"~/.gitconfig include must come before XDG include")
+				}
+			} else {
+				assert.NotContains(t, got, filepath.ToSlash(filepath.Join(home, ".config", "git", "config")))
+			}
+		})
+	}
 }
 
 func TestGetSources_SetupExternalGitConfig_BadURL(t *testing.T) {
