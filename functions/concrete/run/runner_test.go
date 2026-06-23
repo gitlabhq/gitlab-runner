@@ -879,6 +879,32 @@ func TestRun_StrategyNone(t *testing.T) {
 	}
 }
 
+func TestRun_CleansUpJobGitConfigFiles(t *testing.T) {
+	r := testRunner(t, &Config{
+		GetSources: stages.GetSources{
+			UseCredentialHelper: true,
+			RemoteHost:          "https://example.com",
+			GitStrategy:         "none",
+			MaxAttempts:         1,
+		},
+		Steps: []stages.Step{
+			{Step: "script", Script: []string{}, OnSuccess: true},
+		},
+	})
+
+	require.NoError(t, r.Run(t.Context()))
+
+	// Filenames intentionally hardcoded: they mirror the package-private
+	// globalGitConfigSeedFile / externalGitConfigFile constants in
+	// functions/concrete/run/stages. If those constants change, this
+	// integration test must change too.
+	tmpDir := r.env.WorkingDir + ".tmp"
+	assert.NoFileExists(t, filepath.Join(tmpDir, ".glr.gconf"),
+		"seed file should be removed by Runner.cleanup")
+	assert.NoFileExists(t, filepath.Join(tmpDir, ".gitlab-runner.ext.conf"),
+		"ext config file should be removed by Runner.cleanup")
+}
+
 func TestStatusFromError(t *testing.T) {
 	tests := []struct {
 		name string

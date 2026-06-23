@@ -17,7 +17,26 @@ import (
 )
 
 const (
-	credHelperCommand         = `!f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
+	// credHelperCommand is the inline credential helper written into the
+	// per-job external git config so user-script git can authenticate
+	// without a token in the URL. Used by both writers in this package:
+	// setupExternalGitConfig (for fetch / clone) and SetupJobGitConfig
+	// (for the none / empty short-circuit, via writeCredentialHelperConfig).
+	credHelperCommand = `!f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
+
+	// externalGitConfigFile is the basename of the per-job external git
+	// config file referenced from the GIT_CONFIG_GLOBAL seed file's
+	// [include] chain. SetupJobGitConfig creates it; setupExternalGitConfig
+	// (when this stage runs) writes credential, SSL, and insteadOf
+	// stanzas into the same file.
+	externalGitConfigFile = ".gitlab-runner.ext.conf"
+
+	// globalGitConfigSeedFile is the basename of the per-job seed file
+	// that GIT_CONFIG_GLOBAL points at on the concrete path. Convention
+	// matches shells/abstract.go's same-named const for the legacy
+	// path; the two files live in different tmpDirs.
+	globalGitConfigSeedFile = ".glr.gconf"
+
 	gitMinVersionCloneWithRef = "2.49"
 	templateDirName           = "git-template"
 
@@ -212,11 +231,25 @@ func (s GetSources) getSourcesOnce(ctx context.Context, e *env.Env, gitEnv map[s
 }
 
 func (s GetSources) setupGlobalGitConfig(ctx context.Context, e *env.Env, gitEnv map[string]string) (func(), error) {
+	noopCleanup := func() {}
 	tmpDir := e.WorkingDir + ".tmp"
+
+	// When the credential helper is in use, SetupJobGitConfig has
+	// already created the seed file at job scope; reuse the same path
+	// so the seed survives past this stage and reaches user-script
+	// git. Cleanup is a no-op because Runner owns that file's lifecycle.
+	if s.UseCredentialHelper && s.RemoteHost != "" {
+		gitEnv["GIT_CONFIG_GLOBAL"] = filepath.Join(tmpDir, globalGitConfigSeedFile)
+		if err := s.configureSafeDirectory(ctx, e, gitEnv); err != nil {
+			return noopCleanup, err
+		}
+		return noopCleanup, nil
+	}
+
 	globalConfigFile := filepath.Join(tmpDir, ".gitconfig")
 
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
-		return func() {}, fmt.Errorf("creating tmp dir: %w", err)
+		return noopCleanup, fmt.Errorf("creating tmp dir: %w", err)
 	}
 
 	// Seed with an include of the original global config if one exists.
@@ -229,7 +262,7 @@ func (s GetSources) setupGlobalGitConfig(ctx context.Context, e *env.Env, gitEnv
 	}
 
 	if err := os.WriteFile(globalConfigFile, []byte(content), 0o600); err != nil {
-		return func() {}, fmt.Errorf("creating global config: %w", err)
+		return noopCleanup, fmt.Errorf("creating global config: %w", err)
 	}
 
 	cleanup := func() { _ = os.Remove(globalConfigFile) }
@@ -237,30 +270,151 @@ func (s GetSources) setupGlobalGitConfig(ctx context.Context, e *env.Env, gitEnv
 	// Point git at our writable global config.
 	gitEnv["GIT_CONFIG_GLOBAL"] = globalConfigFile
 
-	// safe.directory must be global — git ignores it at repo level.
-	if s.SafeDirectoryCheckout {
-		if err := git(ctx, e, gitEnv, "config", "--global", "--add", "safe.directory", e.WorkingDir); err != nil {
-			return cleanup, fmt.Errorf("adding safe.directory: %w", err)
+	if err := s.configureSafeDirectory(ctx, e, gitEnv); err != nil {
+		return cleanup, err
+	}
+	return cleanup, nil
+}
+
+// configureSafeDirectory adds a safe.directory entry to whichever global
+// config gitEnv["GIT_CONFIG_GLOBAL"] points at. safe.directory must be
+// set at global scope; git ignores it at repo level. No-ops when
+// SafeDirectoryCheckout is unset.
+func (s GetSources) configureSafeDirectory(ctx context.Context, e *env.Env, gitEnv map[string]string) error {
+	if !s.SafeDirectoryCheckout {
+		return nil
+	}
+	if err := git(ctx, e, gitEnv, "config", "--global", "--add", "safe.directory", e.WorkingDir); err != nil {
+		return fmt.Errorf("adding safe.directory: %w", err)
+	}
+	return nil
+}
+
+// SetupJobGitConfig creates the per-job seed file and external git
+// config under WorkingDir+".tmp" when the credential helper is in use,
+// sets GIT_CONFIG_GLOBAL on e.Env, and seeds the credential helper for
+// strategies that short-circuit get_sources (none / empty). Paths are
+// derived from package-private constants so TeardownJobGitConfig can
+// rebuild them without state. No-op when UseCredentialHelper is off or
+// RemoteHost is empty.
+func (s GetSources) SetupJobGitConfig(ctx context.Context, e *env.Env) error {
+	if !s.UseCredentialHelper || s.RemoteHost == "" {
+		return nil
+	}
+
+	tmpDir := e.WorkingDir + ".tmp"
+	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
+		return fmt.Errorf("creating tmp dir: %w", err)
+	}
+
+	seedFile := filepath.Join(tmpDir, globalGitConfigSeedFile)
+	extFile := filepath.Join(tmpDir, externalGitConfigFile)
+
+	absExtFile, err := filepath.Abs(extFile)
+	if err != nil {
+		return fmt.Errorf("resolving ext config path: %w", err)
+	}
+
+	if err := os.WriteFile(seedFile, []byte(jobGitConfigSeedContent(absExtFile)), 0o600); err != nil {
+		return fmt.Errorf("writing seed gitconfig: %w", err)
+	}
+	if err := os.WriteFile(extFile, nil, 0o600); err != nil {
+		_ = os.Remove(seedFile)
+		return fmt.Errorf("creating ext config file: %w", err)
+	}
+
+	// none / empty short-circuit get_sources before setupExternalGitConfig
+	// writes the credential helper, so seed it here.
+	if s.GitStrategy == gitStrategyNone || s.GitStrategy == gitStrategyEmpty {
+		if err := s.writeCredentialHelperConfig(ctx, e, nil, extFile); err != nil {
+			_ = os.Remove(seedFile)
+			_ = os.Remove(extFile)
+			return fmt.Errorf("writing credential helper: %w", err)
 		}
 	}
 
-	return cleanup, nil
+	// e.Env is the shared map env.Env.Command composes into the final
+	// environ, so this single mutation reaches before_script onward.
+	e.Env["GIT_CONFIG_GLOBAL"] = seedFile
+
+	return nil
+}
+
+// TeardownJobGitConfig removes the seed and external git config files
+// SetupJobGitConfig created under WorkingDir+".tmp". Safe to call
+// regardless of whether Setup ran: missing files are ignored. No-op
+// when UseCredentialHelper is off or RemoteHost is empty, mirroring
+// Setup's gate so the pair never touches the filesystem at all in the
+// non-credential-helper path.
+func (s GetSources) TeardownJobGitConfig(e *env.Env) {
+	if !s.UseCredentialHelper || s.RemoteHost == "" {
+		return
+	}
+	tmpDir := e.WorkingDir + ".tmp"
+	_ = os.Remove(filepath.Join(tmpDir, globalGitConfigSeedFile))
+	_ = os.Remove(filepath.Join(tmpDir, externalGitConfigFile))
+}
+
+// jobGitConfigSeedContent returns the content of the per-job seed file:
+// [include] directives chaining the runner user's ~/.gitconfig and
+// ~/.config/git/config (XDG default) when present, followed by the
+// per-job external config absExtFile. Mirrors shells/abstract.go's
+// seed setup on the legacy path.
+func jobGitConfigSeedContent(absExtFile string) string {
+	var content strings.Builder
+	if home := os.Getenv("HOME"); home != "" {
+		for _, rel := range []string{".gitconfig", ".config/git/config"} {
+			existing := filepath.Join(home, rel)
+			if _, err := os.Stat(existing); err == nil {
+				fmt.Fprintf(&content, "[include]\n\tpath = %s\n", filepath.ToSlash(existing))
+			}
+		}
+	}
+	fmt.Fprintf(&content, "[include]\n\tpath = %s\n", filepath.ToSlash(absExtFile))
+	return content.String()
+}
+
+// writeCredentialHelperConfig writes the credential helper section for
+// s.RemoteHost into extConfigFile via three `git config -f extConfigFile`
+// invocations: reset the helper chain, append the inline helper command,
+// and pin the username. Shared between setupExternalGitConfig (the
+// fetch / clone path) and SetupJobGitConfig (the none / empty
+// short-circuit).
+func (s GetSources) writeCredentialHelperConfig(ctx context.Context, e *env.Env, gitEnv map[string]string, extConfigFile string) error {
+	credKey := "credential." + s.RemoteHost
+	if err := git(ctx, e, gitEnv, "config", "-f", extConfigFile, "--replace-all", credKey+".helper", "", ".*"); err != nil {
+		return fmt.Errorf("resetting credential helper: %w", err)
+	}
+	if err := git(ctx, e, gitEnv, "config", "-f", extConfigFile, "--add", credKey+".helper", credHelperCommand); err != nil {
+		return fmt.Errorf("adding credential helper command: %w", err)
+	}
+	if err := git(ctx, e, gitEnv, "config", "-f", extConfigFile, credKey+".username", "gitlab-ci-token"); err != nil {
+		return fmt.Errorf("setting credential username: %w", err)
+	}
+	return nil
 }
 
 //nolint:gocognit
 func (s GetSources) setupExternalGitConfig(ctx context.Context, e *env.Env, gitEnv map[string]string) (string, func(), error) {
 	tmpDir := e.WorkingDir + ".tmp"
-	extConfigFile := filepath.Join(tmpDir, ".gitlab-runner.ext.conf")
+	extConfigFile := filepath.Join(tmpDir, externalGitConfigFile)
 	noop := func() {}
 
-	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
-		return "", noop, fmt.Errorf("creating tmp dir: %w", err)
-	}
-	if err := os.WriteFile(extConfigFile, nil, 0o600); err != nil {
-		return "", noop, fmt.Errorf("creating ext config file: %w", err)
-	}
+	cleanup := noop
 
-	cleanup := func() { _ = os.Remove(extConfigFile) }
+	// When the credential helper is in use, SetupJobGitConfig has
+	// already created the ext config file at job scope and owns its
+	// teardown via Runner.cleanup. Skip the create + cleanup install.
+	if !(s.UseCredentialHelper && s.RemoteHost != "") {
+		if err := os.MkdirAll(tmpDir, 0o755); err != nil {
+			return "", noop, fmt.Errorf("creating tmp dir: %w", err)
+		}
+		if err := os.WriteFile(extConfigFile, nil, 0o600); err != nil {
+			return "", noop, fmt.Errorf("creating ext config file: %w", err)
+		}
+
+		cleanup = func() { _ = os.Remove(extConfigFile) }
+	}
 
 	// Helper to set a config key in the external config file.
 	setConfig := func(key, value, description string) error {
@@ -275,13 +429,6 @@ func (s GetSources) setupExternalGitConfig(ctx context.Context, e *env.Env, gitE
 		}
 		return nil
 	}
-	addConfig := func(key, value, description string) error {
-		if err := git(ctx, e, gitEnv, "config", "-f", extConfigFile, "--add", key, value); err != nil {
-			return fmt.Errorf("adding %s: %w", description, err)
-		}
-		return nil
-	}
-
 	if s.GitalyCorrelationID != "" {
 		if err := setConfig("http.extraHeader", "X-Gitaly-Correlation-ID: "+s.GitalyCorrelationID, "gitaly correlation ID"); err != nil {
 			return "", cleanup, err
@@ -327,20 +474,8 @@ func (s GetSources) setupExternalGitConfig(ctx context.Context, e *env.Env, gitE
 		}
 	}
 
-	// Set up the credential helper matching the bash implementation:
-	//   1. --replace-all helper to "" (resets the helper chain, ignoring higher-scope helpers)
-	//   2. --add helper with the actual credential command
-	//   3. set the username
 	if s.UseCredentialHelper && s.RemoteHost != "" {
-		credKey := "credential." + s.RemoteHost
-
-		if err := setConfigAll(credKey+".helper", "", ".*", "credential helper reset"); err != nil {
-			return "", cleanup, err
-		}
-		if err := addConfig(credKey+".helper", credHelperCommand, "credential helper command"); err != nil {
-			return "", cleanup, err
-		}
-		if err := setConfig(credKey+".username", "gitlab-ci-token", "credential username"); err != nil {
+		if err := s.writeCredentialHelperConfig(ctx, e, gitEnv, extConfigFile); err != nil {
 			return "", cleanup, err
 		}
 	}

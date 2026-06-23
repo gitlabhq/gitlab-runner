@@ -802,6 +802,14 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 						msw.EXPECT().Variable(mock.Anything)
 						msw.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
 						msw.EXPECT().SourceEnv("path/to/env/file").Once()
+						if useJobTokenFromEnv {
+							extConfig := path.Join("git-temp-dir", "some-gitlab-runner.external.conf")
+							seedConfig := path.Join("git-temp-dir", "some-glr.gconf")
+							expectExportGitConfigGlobal(msw, seedConfig)
+							msw.EXPECT().TmpFile(externalGitConfigFile).Return(extConfig).Once()
+							expectSetupGlobalGitConfigSeed(msw, seedConfig, extConfig)
+							expectSetupCredHelperOnly(msw, extConfig, "https://repo-url")
+						}
 						msw.EXPECT().Noticef("Skipping Git repository setup").Once()
 						msw.EXPECT().MkDir("build-dir").Once()
 						msw.EXPECT().Noticef("Skipping Git checkout").Once()
@@ -821,6 +829,14 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 						msw.EXPECT().Variable(mock.Anything)
 						msw.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
 						msw.EXPECT().SourceEnv("path/to/env/file").Once()
+						if useJobTokenFromEnv {
+							extConfig := path.Join("git-temp-dir", "some-gitlab-runner.external.conf")
+							seedConfig := path.Join("git-temp-dir", "some-glr.gconf")
+							expectExportGitConfigGlobal(msw, seedConfig)
+							msw.EXPECT().TmpFile(externalGitConfigFile).Return(extConfig).Once()
+							expectSetupGlobalGitConfigSeed(msw, seedConfig, extConfig)
+							expectSetupCredHelperOnly(msw, extConfig, "https://repo-url")
+						}
 						msw.EXPECT().Noticef("Skipping Git repository setup and creating an empty build directory").Once()
 						msw.EXPECT().RmDir("build-dir").Once()
 						msw.EXPECT().MkDir("build-dir").Once()
@@ -841,6 +857,13 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 						msw.EXPECT().Variable(mock.Anything)
 						msw.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
 						msw.EXPECT().SourceEnv("path/to/env/file").Once()
+						if useJobTokenFromEnv {
+							extConfig := path.Join("git-temp-dir", "some-gitlab-runner.external.conf")
+							seedConfig := path.Join("git-temp-dir", "some-glr.gconf")
+							expectExportGitConfigGlobal(msw, seedConfig)
+							msw.EXPECT().TmpFile(externalGitConfigFile).Return(extConfig).Once()
+							expectSetupGlobalGitConfigSeed(msw, seedConfig, extConfig)
+						}
 						msw.EXPECT().Noticef("$ %s", "config pre_get_sources").Once()
 						msw.EXPECT().Line("config pre_get_sources").Once()
 						msw.EXPECT().Noticef("$ %s", "job payload").Once()
@@ -900,6 +923,13 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 						msw.EXPECT().Variable(mock.Anything)
 						msw.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
 						msw.EXPECT().SourceEnv("path/to/env/file").Once()
+						if useJobTokenFromEnv {
+							extConfig := path.Join("git-temp-dir", "some-gitlab-runner.external.conf")
+							seedConfig := path.Join("git-temp-dir", "some-glr.gconf")
+							expectExportGitConfigGlobal(msw, seedConfig)
+							msw.EXPECT().TmpFile(externalGitConfigFile).Return(extConfig).Once()
+							expectSetupGlobalGitConfigSeed(msw, seedConfig, extConfig)
+						}
 						msw.EXPECT().Noticef("$ %s", "config pre_get_sources").Once()
 						msw.EXPECT().Line("config pre_get_sources").Once()
 						msw.EXPECT().Noticef("$ %s", "job payload").Once()
@@ -3559,6 +3589,9 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 					mockShellWriter.On("TmpFile", externalGitConfigFile).Return("some-ext-conf").Once()
 					mockShellWriter.On("RmFile", "some-ext-conf").Once()
 
+					mockShellWriter.On("TmpFile", globalGitConfigSeedFile).Return("some-global-seed").Once()
+					mockShellWriter.On("RmFile", "some-global-seed").Once()
+
 					mockShellWriter.On("TmpFile", testVar1).Return(testPath1).Once()
 					mockShellWriter.On("RmFile", testPath1).Once()
 					mockShellWriter.On("TmpFile", testVar3).Return(testPath3).Once()
@@ -3874,6 +3907,34 @@ func expectSetupTemplate(shellWriter *MockShellWriter, dir string, withCredHelpe
 	return templateDir, calls
 }
 
+// expectSetupGlobalGitConfigSeed pins the seed file writes: a fresh file
+// chaining the user's global config ($HOME/.gitconfig and default XDG) and the
+// per-job extConfigFile.
+func expectSetupGlobalGitConfigSeed(w *MockShellWriter, seedFile, extConfigFile string) {
+	w.EXPECT().TmpFile(globalGitConfigSeedFile).Return(seedFile).Once()
+	w.EXPECT().RmFile(seedFile).Once()
+	w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.gitconfig").Once()
+	w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.config/git/config").Once()
+	w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", extConfigFile).Once()
+}
+
+// expectExportGitConfigGlobal pins the per-stage GIT_CONFIG_GLOBAL export
+// emitted by writeExports when FF_GIT_URLS_WITHOUT_TOKENS=true.
+func expectExportGitConfigGlobal(w *MockShellWriter, seedFile string) {
+	w.EXPECT().TmpFile(globalGitConfigSeedFile).Return(seedFile).Once()
+	w.EXPECT().ExportRaw("GIT_CONFIG_GLOBAL", seedFile).Once()
+}
+
+// expectSetupCredHelperOnly pins the minimal extConfigFile write performed
+// when GIT_STRATEGY is none or empty under FF_GIT_URLS_WITHOUT_TOKENS=true.
+// The full setupExternalGitConfig path is skipped in that case, but the
+// credential helper must still exist so the seed file's include chain has
+// something to resolve.
+func expectSetupCredHelperOnly(w *MockShellWriter, extConfigFile, host string) {
+	w.EXPECT().RmFile(extConfigFile).Once()
+	w.EXPECT().SetupGitCredHelper(extConfigFile, "credential."+host, "gitlab-ci-token").Once()
+}
+
 func expectIncludeExternalGitConfig(w *MockShellWriter, target, toInclude string) []*mock.Call {
 	pattern := regexp.QuoteMeta(filepath.Base(filepath.ToSlash(toInclude))) + "$"
 	calls := []*mock.Call{
@@ -4053,6 +4114,9 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 
 								sw.EXPECT().TmpFile(externalGitConfigFile).Return("some-ext-conf").Once()
 								sw.EXPECT().RmFile("some-ext-conf").Once()
+
+								sw.EXPECT().TmpFile(globalGitConfigSeedFile).Return("some-global-seed").Once()
+								sw.EXPECT().RmFile("some-global-seed").Once()
 
 								sw.EXPECT().TmpFile("gitlab_runner_env").Return("someRunnerEnv").Once()
 								sw.EXPECT().RmFile("someRunnerEnv").Once()
@@ -4506,6 +4570,64 @@ func TestSetupExternalConfigFile(t *testing.T) {
 					}
 				})
 			}
+		})
+	}
+}
+
+// TestSetupGlobalGitConfigSeed pins the seed writes: a fresh file (RmFile
+// first) chaining the user's global config ($HOME/.gitconfig and default XDG,
+// $HOME expanded at script-runtime via CommandArgExpand) and extConfigFile.
+func TestSetupGlobalGitConfigSeed(t *testing.T) {
+	w := NewMockShellWriter(t)
+	const extConfigFile = "/tmp/job/.gitlab-runner.ext.conf"
+	const seedFile = "/tmp/job/.glr.gconf"
+
+	mock.InOrder(
+		w.EXPECT().TmpFile(globalGitConfigSeedFile).Return(seedFile).Once(),
+		w.EXPECT().RmFile(seedFile).Once(),
+		w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.gitconfig").Once(),
+		w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.config/git/config").Once(),
+		w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", extConfigFile).Once(),
+	)
+
+	setupGlobalGitConfigSeed(w, extConfigFile)
+}
+
+// TestAbstractShell_writeExports_GitConfigGlobal pins that writeExports exports
+// GIT_CONFIG_GLOBAL exactly when FF_GIT_URLS_WITHOUT_TOKENS is on. writeExports
+// runs at the top of every stage, so this is what keeps the helper reachable
+// in every stage, not just checkout.
+func TestAbstractShell_writeExports_GitConfigGlobal(t *testing.T) {
+	for _, ffOn := range []bool{true, false} {
+		t.Run(fmt.Sprintf("%s=%t", featureflags.GitURLsWithoutTokens, ffOn), func(t *testing.T) {
+			info := common.ShellScriptInfo{
+				Build: &common.Build{
+					Job: spec.Job{
+						GitInfo: spec.GitInfo{RepoURL: "https://repo-url/some/repo"},
+					},
+					Runner: &common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{
+								featureflags.GitURLsWithoutTokens: ffOn,
+							},
+						},
+					},
+					BuildDir: "build-dir",
+				},
+			}
+
+			msw := NewMockShellWriter(t)
+			msw.EXPECT().Variable(mock.Anything)
+			msw.EXPECT().TmpFile(gitlabEnvFileName).Return("env-file").Once()
+			msw.EXPECT().SourceEnv("env-file").Once()
+			// FF off: leaving these unexpected makes the mock fail if emitted.
+			if ffOn {
+				msw.EXPECT().TmpFile(globalGitConfigSeedFile).Return("seed-file").Once()
+				msw.EXPECT().ExportRaw("GIT_CONFIG_GLOBAL", "seed-file").Once()
+			}
+
+			shell := new(AbstractShell)
+			shell.writeExports(msw, info)
 		})
 	}
 }

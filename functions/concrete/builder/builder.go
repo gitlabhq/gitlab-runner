@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"path"
 	"slices"
 	"strings"
@@ -106,6 +107,19 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 		return stages.GetSources{}, err
 	}
 
+	// Strip user info: the API-supplied URL may embed the job token,
+	// which would leak via stages/get_sources.go's insteadOf rewrite
+	// into `git remote -v` and into the serialized config. Auth comes
+	// from helper InsteadOfs + the per-job credential helper. Fail
+	// loud on a parse error rather than silently fall through with the
+	// raw URL, which would defeat the strip.
+	parsedRepo, err := url.Parse(b.meta.GitInfo.RepoURL)
+	if err != nil {
+		return stages.GetSources{}, fmt.Errorf("parsing repo URL: %w", err)
+	}
+	parsedRepo.User = nil
+	repoURL := parsedRepo.String()
+
 	defaultGitStrategy := "clone"
 	if b.meta.AllowGitFetch {
 		defaultGitStrategy = "fetch"
@@ -119,7 +133,7 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 		SubmoduleStrategy:               variables.Default(b.variables, "GIT_SUBMODULE_STRATEGY", "none", "none", "normal", "recursive"),
 		LFSDisabled:                     variables.DefaultBool(b.variables, "GIT_LFS_SKIP_SMUDGE", false),
 		Depth:                           b.meta.GitInfo.Depth,
-		RepoURL:                         b.meta.GitInfo.RepoURL,
+		RepoURL:                         repoURL,
 		Refspecs:                        b.meta.GitInfo.Refspecs,
 		SHA:                             b.meta.GitInfo.Sha,
 		Ref:                             b.meta.GitInfo.Ref,
