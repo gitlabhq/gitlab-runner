@@ -1,6 +1,7 @@
 package logrotate
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log"
 )
 
 const (
@@ -20,6 +23,7 @@ const (
 var (
 	ErrCreationFailure = errors.New("creating log file")
 	ErrRotationFailure = errors.New("rotating log file")
+	ErrEncodingJSON    = errors.New("encoding json")
 
 	fileNameFormat = fileNamePrefix + fileNameTimeFormat + fileNameExt
 )
@@ -35,7 +39,8 @@ type Writer struct {
 	f  *os.File
 	ts time.Time
 
-	mu sync.RWMutex
+	mu     sync.Mutex
+	closed bool
 
 	runCleanup chan struct{}
 }
@@ -49,30 +54,56 @@ func New(o ...Option) *Writer {
 	return w
 }
 
-func (w *Writer) Write(p []byte) (int, error) {
+func (w *Writer) Store(record usage_log.Record) error {
+	if len(w.options.Labels) > 0 {
+		if record.Labels == nil {
+			record.Labels = make(map[string]string, len(w.options.Labels))
+		}
+		for k, v := range w.options.Labels {
+			record.Labels[k] = v
+		}
+	}
+
+	data, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrEncodingJSON, err)
+	}
+
+	data = append(data, '\n')
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if w.closed {
+		return usage_log.ErrStorageIsClosed
+	}
 
 	if w.f == nil {
 		err := w.reCreateFile()
 		if err != nil {
-			return 0, fmt.Errorf("%w: %w", ErrCreationFailure, err)
+			return fmt.Errorf("%w: %w", ErrCreationFailure, err)
 		}
 	} else {
 		err := w.rotate()
 		if err != nil {
-			return 0, fmt.Errorf("%w: %w", ErrRotationFailure, err)
+			return fmt.Errorf("%w: %w", ErrRotationFailure, err)
 		}
 	}
 
-	wrote, err := w.f.Write(p)
+	defer func() {
+		go w.cleanup()
+	}()
+
+	n, err := w.f.Write(data)
 	if err != nil {
-		err = fmt.Errorf("writing log: %w", err)
+		return fmt.Errorf("%w: %w", usage_log.ErrStoringLog, err)
 	}
 
-	go w.cleanup()
+	if n != len(data) {
+		return fmt.Errorf("%w: record partially written: expected %d bytes, wrote %d bytes", usage_log.ErrStoringLog, len(data), n)
+	}
 
-	return wrote, err
+	return nil
 }
 
 func (w *Writer) reCreateFile() error {
@@ -116,17 +147,15 @@ func (w *Writer) rotate() error {
 }
 
 func (w *Writer) cleanup() {
-	w.mu.RLock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	select {
 	case <-w.runCleanup:
-		w.mu.RUnlock()
 		return
 	default:
 	}
-	w.mu.RUnlock()
 
-	w.mu.Lock()
-	defer w.mu.Unlock()
 	close(w.runCleanup)
 
 	defer func() {
@@ -198,6 +227,12 @@ func (w *Writer) timesortLogFiles(files []logfileInfo) {
 func (w *Writer) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if w.closed {
+		return nil
+	}
+
+	w.closed = true
 
 	if w.f == nil {
 		return nil

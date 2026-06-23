@@ -21,6 +21,9 @@ type options struct {
 	// MaxRotationAge duration after which the file should be force rotated.
 	// Default is 24 hours
 	MaxRotationAge time.Duration
+
+	// Labels are extra key-value pairs merged into every record.
+	Labels map[string]string
 }
 
 type Option func(*options)
@@ -54,5 +57,11 @@ func WithMaxBackupFiles(maxBackupFiles int64) Option {
 func WithMaxRotationAge(maxRotationAge time.Duration) Option {
 	return func(o *options) {
 		o.MaxRotationAge = maxRotationAge
+	}
+}
+
+func WithLabels(labels map[string]string) Option {
+	return func(o *options) {
+		o.Labels = labels
 	}
 }

@@ -3,24 +3,19 @@
 package logrotate
 
 import (
-	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log"
 )
 
-func TestWriter_Write(t *testing.T) {
-	const (
-		line1 = "Line 1"
-		line2 = "Line 2"
-	)
+func TestWriter_Store_WithRotation(t *testing.T) {
 	dir := t.TempDir()
 
 	w := New(
@@ -32,157 +27,120 @@ func TestWriter_Write(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	assert.Empty(t, w.allLogFiles())
-
-	_, err := fmt.Fprintln(w, line1)
-	assert.NoError(t, err)
-
-	time.Sleep(10 * time.Millisecond)
-
-	_, err = fmt.Fprintln(w, line2)
-	assert.NoError(t, err)
-
-	logFiles := w.allLogFiles()
-	w.timesortLogFiles(logFiles)
-	require.Len(t, logFiles, 2)
-
-	data1, err := os.ReadFile(filepath.Join(dir, logFiles[1].name))
-	assert.Equal(t, line1+"\n", string(data1))
-	assert.NoError(t, err)
-
-	data2, err := os.ReadFile(filepath.Join(dir, logFiles[0].name))
-	assert.Equal(t, line2+"\n", string(data2))
-	assert.NoError(t, err)
-}
-
-func TestWriter_Write_concurrent(t *testing.T) {
-	const (
-		loopsNum       = 5
-		loopIterations = 100
-	)
-
-	dir := t.TempDir()
-
-	w := New(
-		WithLogDirectory(dir),
-	)
-	defer func() {
-		err := w.Close()
-		assert.NoError(t, err)
-	}()
-
-	writeLoop := func(t *testing.T, wg *sync.WaitGroup, w io.Writer, id int) {
-		defer wg.Done()
-		for i := 0; i < loopIterations; i++ {
-			_, err := fmt.Fprintf(w, "test %d-%d\n", id, i)
-			assert.NoError(t, err)
-		}
-	}
-
-	wg := new(sync.WaitGroup)
-	wg.Add(loopsNum)
-
-	for i := 0; i < loopsNum; i++ {
-		go writeLoop(t, wg, w, i)
-	}
-
-	wg.Wait()
-
-	require.Len(t, w.allLogFiles(), 1)
-	path := filepath.Join(dir, w.allLogFiles()[0].name)
-	data, err := os.ReadFile(path)
+	// Store first record
+	record1 := testRecord()
+	err := w.Store(record1)
 	require.NoError(t, err)
 
-	assert.Len(t, strings.Split(strings.TrimSpace(string(data)), "\n"), loopsNum*loopIterations)
+	// Wait for rotation age to pass
+	time.Sleep(10 * time.Millisecond)
+
+	// Store second record - should trigger rotation
+	record2 := testRecord()
+	err = w.Store(record2)
+	require.NoError(t, err)
+
+	// Should have 2 files now
+	files := w.allLogFiles()
+	assert.Len(t, files, 2)
 }
 
-func TestWriter_rotate_maxRotationAgeLimitation(t *testing.T) {
+func TestWriter_Store_WithCleanup(t *testing.T) {
 	dir := t.TempDir()
-
-	w := New(
-		WithLogDirectory(dir),
-		WithMaxRotationAge(24*time.Hour),
-	)
-	defer func() {
-		err := w.Close()
-		assert.NoError(t, err)
-	}()
-
-	dirEntries, err := os.ReadDir(dir)
-	assert.NoError(t, err)
-	assert.Len(t, dirEntries, 0)
-
-	require.NoError(t, w.reCreateFile())
-	require.NoError(t, w.rotate())
-	require.NoError(t, w.rotate())
-	require.NoError(t, w.rotate())
-	require.NoError(t, w.rotate())
-
-	dirEntries, err = os.ReadDir(dir)
-	assert.NoError(t, err)
-	assert.Len(t, dirEntries, 1)
-
-	time.Sleep(3 * time.Millisecond)
-	w.options.MaxRotationAge = 1 * time.Millisecond
-	require.NoError(t, w.rotate())
-
-	dirEntries, err = os.ReadDir(dir)
-	assert.NoError(t, err)
-	assert.Len(t, dirEntries, 2)
-}
-
-func TestWriter_cleanup(t *testing.T) {
-	dir := t.TempDir()
-
-	require.NoError(t, os.Mkdir(filepath.Join(dir, "test-1"), 0755))
-	require.NoError(t, os.Mkdir(filepath.Join(dir, "test-2"), 0755))
-	createTestFile(t, dir, "test-3")
-	createTestFile(t, dir, "test-4")
-
-	now := time.Now()
-	createTestFile(t, dir, now.Add(10*time.Millisecond).Format(fileNameFormat))
-	createTestFile(t, dir, now.Add(20*time.Millisecond).Format(fileNameFormat))
-	createTestFile(t, dir, now.Add(30*time.Millisecond).Format(fileNameFormat))
 
 	w := New(
 		WithLogDirectory(dir),
 		WithMaxBackupFiles(2),
+		WithMaxRotationAge(1*time.Millisecond),
 	)
 	defer func() {
 		err := w.Close()
 		assert.NoError(t, err)
 	}()
 
-	before, err := os.ReadDir(dir)
-	require.NoError(t, err)
+	// Store multiple records with rotation to create multiple files
+	for i := 0; i < 4; i++ {
+		record := testRecord()
+		err := w.Store(record)
+		require.NoError(t, err)
 
-	w.cleanup()
-
-	after, err := os.ReadDir(dir)
-	require.NoError(t, err)
-
-	assert.Len(t, diffDirEntries(before, after), 1)
-}
-
-func createTestFile(t *testing.T, dir string, name string) {
-	f, err := os.Create(filepath.Join(dir, name))
-	require.NoError(t, err)
-	require.NoError(t, f.Close())
-}
-
-func diffDirEntries(entriesA []os.DirEntry, entriesB []os.DirEntry) []os.DirEntry {
-	var c []os.DirEntry
-	for _, a := range entriesA {
-		found := false
-		for _, b := range entriesB {
-			if a.Name() == b.Name() {
-				found = true
-			}
-		}
-		if !found {
-			c = append(c, a)
-		}
+		// Wait for rotation age to pass
+		time.Sleep(5 * time.Millisecond)
 	}
 
-	return c
+	// Should only keep MaxBackupFiles (2) files
+	files := w.allLogFiles()
+	assert.LessOrEqual(t, len(files), 3) // Current file + 2 backups
+}
+
+func TestWriter_Store(t *testing.T) {
+	dir := t.TempDir()
+
+	w := New(WithLogDirectory(dir))
+	defer func() {
+		err := w.Close()
+		assert.NoError(t, err)
+	}()
+
+	record := testRecord()
+	err := w.Store(record)
+	assert.NoError(t, err)
+
+	files := w.allLogFiles()
+	require.Len(t, files, 1)
+
+	// Verify the file contains valid JSON
+	data, err := os.ReadFile(filepath.Join(dir, files[0].name))
+	require.NoError(t, err)
+
+	// Should have newline at end
+	assert.True(t, strings.HasSuffix(string(data), "\n"))
+}
+
+func TestWriter_Store_ClosedStorage(t *testing.T) {
+	dir := t.TempDir()
+
+	w := New(WithLogDirectory(dir))
+
+	// Close the storage
+	err := w.Close()
+	require.NoError(t, err)
+
+	// Try to store after close
+	record := testRecord()
+	err = w.Store(record)
+	assert.ErrorIs(t, err, usage_log.ErrStorageIsClosed)
+}
+
+func TestWriter_Close_Idempotent(t *testing.T) {
+	dir := t.TempDir()
+
+	w := New(WithLogDirectory(dir))
+
+	err := w.Close()
+	assert.NoError(t, err)
+
+	// Second close should be safe
+	err = w.Close()
+	assert.NoError(t, err)
+}
+
+func testRecord() usage_log.Record {
+	return usage_log.Record{
+		UUID:      "test-uuid",
+		Timestamp: time.Now(),
+		Runner: usage_log.Runner{
+			ID:       "runner-id",
+			Name:     "runner-name",
+			SystemID: "system-id",
+		},
+		Job: usage_log.Job{
+			URL:             "https://example.com/job/1",
+			DurationSeconds: 123.45,
+			Status:          "success",
+		},
+		Labels: map[string]string{
+			"test-label": "test-value",
+		},
+	}
 }

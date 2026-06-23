@@ -20,14 +20,15 @@ type Runner struct {
 }
 
 type Job struct {
+	ID              int64     `json:"id"`
+	PipelineID      int64     `json:"pipeline_id"`
+	Ref             string    `json:"ref"`
 	URL             string    `json:"url"`
 	DurationSeconds float64   `json:"duration_seconds"`
 	Status          string    `json:"status"`
 	FailureReason   string    `json:"failure_reason"`
 	StartedAt       time.Time `json:"started_at"`
 	FinishedAt      time.Time `json:"finished_at"`
-
-	PipelineID int64 `json:"pipeline_id"`
 
 	Project       Project      `json:"project"`
 	Namespace     Namespace    `json:"namespace"`

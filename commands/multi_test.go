@@ -25,6 +25,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	helper_test "gitlab.com/gitlab-org/gitlab-runner/helpers/test"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
@@ -1734,6 +1735,55 @@ func TestRunCommand_requestJob_ReturnsNilWhenNoJob(t *testing.T) {
 	assert.Nil(t, err, "Should return nil error when no job available")
 
 	network.AssertExpectations(t)
+}
+
+func TestResolveSkipOIDCIfUnsupportedCloud(t *testing.T) {
+	trueVal, falseVal := true, false
+
+	tests := map[string]struct {
+		cfg      *bool
+		expected bool
+	}{
+		"unset defaults to skip":     {cfg: nil, expected: true},
+		"explicit true keeps skip":   {cfg: &trueVal, expected: true},
+		"explicit false is honoured": {cfg: &falseVal, expected: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, resolveSkipOIDCIfUnsupportedCloud(tt.cfg))
+		})
+	}
+}
+
+type mockUsageStorage struct{}
+
+func (m *mockUsageStorage) Store(_ usage_log.Record) error { return nil }
+func (m *mockUsageStorage) Close() error                   { return nil }
+
+func TestUsageLoggerStoreLoadNil(t *testing.T) {
+	mr := &RunCommand{}
+
+	// Load from empty value should return nil without panic.
+	assert.Nil(t, mr.loadUsageLogger())
+
+	// Store nil should not panic.
+	assert.NotPanics(t, func() {
+		mr.storeUsageLogger(nil)
+	})
+
+	// Load after storing nil should return nil.
+	assert.Nil(t, mr.loadUsageLogger())
+
+	// Store a real writer, then nil again (simulates reload/close).
+	mock := &mockUsageStorage{}
+	mr.storeUsageLogger(mock)
+	assert.Equal(t, mock, mr.loadUsageLogger())
+
+	assert.NotPanics(t, func() {
+		mr.storeUsageLogger(nil)
+	})
+	assert.Nil(t, mr.loadUsageLogger())
 }
 
 func TestRunCommand_requestJob_CancelRequestedReportsFinalState(t *testing.T) {
