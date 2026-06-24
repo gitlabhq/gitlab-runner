@@ -35,6 +35,18 @@ type machineDetails struct {
 	// defaultMaxRemovalAttempts in that case.
 	maxRemovalAttempts int `yaml:"-"`
 
+	// inFlight is closed when the async create/remove goroutine mutating
+	// this machine finishes. create() and remove() set it before spawning
+	// the goroutine. A new operation replaces it and it is never reset to
+	// nil, so a waiter must re-read it after each wake to follow a
+	// create-then-remove handoff.
+	inFlight chan struct{}
+
+	// removalGaveUp is set when finalizeRemoval exhausts its retries and
+	// leaves the remote VM possibly orphaned. A concurrent drain reads it
+	// to tell an abandoned removal apart from a successful one.
+	removalGaveUp bool `yaml:"-"`
+
 	lock sync.Mutex
 }
 

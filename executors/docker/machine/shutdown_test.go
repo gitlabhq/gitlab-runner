@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -18,6 +19,25 @@ import (
 	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
+
+const drainWaitingMsg = "Waiting for in-flight operation to settle"
+
+// awaitDrainParked blocks until drain logs drainWaitingMsg, i.e. it has
+// parked on the in-flight channel. It uses t.Errorf, never t.FailNow,
+// so simulation goroutines can call it.
+func awaitDrainParked(t *testing.T, hook *logrustest.Hook) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		for _, e := range hook.AllEntries() {
+			if strings.Contains(e.Message, drainWaitingMsg) {
+				return
+			}
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	t.Errorf("timed out waiting for drain to park (log %q)", drainWaitingMsg)
+}
 
 func TestMachineProvider_Shutdown_NoDrainConfig(t *testing.T) {
 	p := newMachineProvider(docker_executor.NewProvider())
@@ -297,13 +317,12 @@ func TestMachineProvider_Shutdown_DrainsAllMachineStates(t *testing.T) {
 		State:   machineStateUsed,
 		Created: time.Now(),
 	}
-	p.details["creating-machine"] = &machineDetails{
-		Name:    "creating-machine",
-		State:   machineStateCreating,
+	p.details["acquired-machine"] = &machineDetails{
+		Name:    "acquired-machine",
+		State:   machineStateAcquired,
 		Created: time.Now(),
 	}
 
-	// All machines should be removed regardless of state
 	machine.EXPECT().Exist(mock.Anything, mock.Anything).Return(true).Times(3)
 	machine.EXPECT().ForceRemove(mock.Anything, mock.Anything).Return(nil).Times(3)
 
@@ -313,6 +332,417 @@ func TestMachineProvider_Shutdown_DrainsAllMachineStates(t *testing.T) {
 	p.Shutdown(ctx, config)
 
 	assert.Empty(t, p.details)
+}
+
+func TestMachineProvider_Shutdown_WaitsForInFlightRemoval(t *testing.T) {
+	// state=Removing means another path already called m.remove and
+	// finalizeRemoval is running in a goroutine. Drain must wait for it
+	// to clear the entry, not skip and count it as success.
+	machine := newMockMachine(t)
+	p := newMachineProvider(docker_executor.NewProvider())
+	p.machine = machine
+
+	hook, removeHook := test.NewHook()
+	defer removeHook()
+	logrus.AddHook(hook)
+
+	config := &common.Config{
+		Machine: &common.MachineConfig{
+			ShutdownDrain: &common.DockerMachineShutdownDrain{
+				Enabled:      true,
+				Concurrency:  3,
+				MaxRetries:   3,
+				RetryBackoff: 10 * time.Millisecond,
+			},
+		},
+	}
+
+	p.details["idle-machine"] = &machineDetails{
+		Name:    "idle-machine",
+		State:   machineStateIdle,
+		Created: time.Now(),
+	}
+	removalDone := make(chan struct{})
+	p.details["in-flight-removal"] = &machineDetails{
+		Name:     "in-flight-removal",
+		State:    machineStateRemoving,
+		Created:  time.Now(),
+		inFlight: removalDone,
+	}
+
+	machine.EXPECT().Exist(mock.Anything, "idle-machine").Return(true).Once()
+	machine.EXPECT().ForceRemove(mock.Anything, "idle-machine").Return(nil).Once()
+	// in-flight-removal must not hit ForceRemove. Drain waits for the
+	// simulated finalizeRemoval to delete the entry.
+
+	// Simulate finalizeRemoval: once drain parks, delete the entry then
+	// close the channel (the production order).
+	go func() {
+		awaitDrainParked(t, hook)
+		p.lock.Lock()
+		delete(p.details, "in-flight-removal")
+		p.lock.Unlock()
+		close(removalDone)
+	}()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	p.Shutdown(ctx, config)
+
+	assert.Empty(t, p.details, "idle drained directly, in-flight-removal drained by waiting")
+}
+
+func TestMachineProvider_Shutdown_WaitsForInFlightCreate(t *testing.T) {
+	// state=Creating means docker-machine create is mid-flight and the
+	// on-disk Driver state is incomplete (e.g. ResolvedZone not yet
+	// written for regional MIG creates). Removing now would build a
+	// delete with stale coordinates that GCP rejects, so drain must wait
+	// for the create to finish.
+	machine := newMockMachine(t)
+	p := newMachineProvider(docker_executor.NewProvider())
+	p.machine = machine
+
+	hook, removeHook := test.NewHook()
+	defer removeHook()
+	logrus.AddHook(hook)
+
+	config := &common.Config{
+		Machine: &common.MachineConfig{
+			ShutdownDrain: &common.DockerMachineShutdownDrain{
+				Enabled:      true,
+				Concurrency:  1,
+				MaxRetries:   3,
+				RetryBackoff: 10 * time.Millisecond,
+			},
+		},
+	}
+
+	createDone := make(chan struct{})
+	d := &machineDetails{
+		Name:     "creating-then-idle",
+		State:    machineStateCreating,
+		Created:  time.Now(),
+		inFlight: createDone,
+	}
+	p.details["creating-then-idle"] = d
+
+	// Create completes once drain parks: state goes to Idle and the
+	// deferred close fires. Drain then takes the normal path.
+	go func() {
+		awaitDrainParked(t, hook)
+		d.Lock()
+		d.State = machineStateIdle
+		d.Unlock()
+		close(createDone)
+	}()
+
+	machine.EXPECT().Exist(mock.Anything, "creating-then-idle").Return(true).Once()
+	machine.EXPECT().ForceRemove(mock.Anything, "creating-then-idle").Return(nil).Once()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	p.Shutdown(ctx, config)
+
+	assert.Empty(t, p.details, "entry drained after create completed")
+}
+
+func TestMachineProvider_Shutdown_TransientStateTimeout(t *testing.T) {
+	// When the in-flight operation never completes (cloud API hung,
+	// runner exits before the goroutine finished), drain must report a
+	// failure instead of counting it as success.
+	for _, tc := range []struct {
+		name  string
+		state machineState
+	}{
+		{"creating never settles", machineStateCreating},
+		{"removing never settles", machineStateRemoving},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			machine := newMockMachine(t)
+			p := newMachineProvider(docker_executor.NewProvider())
+			p.machine = machine
+
+			hook, removeHook := test.NewHook()
+			defer removeHook()
+			logrus.AddHook(hook)
+
+			config := &common.Config{
+				Machine: &common.MachineConfig{
+					ShutdownDrain: &common.DockerMachineShutdownDrain{
+						Enabled:      true,
+						Concurrency:  1,
+						MaxRetries:   0,
+						RetryBackoff: 10 * time.Millisecond,
+					},
+				},
+			}
+			// inFlight set but never closed: the goroutine hangs forever,
+			// so drain must time out on ctx.Done().
+			p.details["stuck"] = &machineDetails{
+				Name:     "stuck",
+				State:    tc.state,
+				Created:  time.Now(),
+				inFlight: make(chan struct{}),
+			}
+			// No Exist / ForceRemove: drain should be waiting, not removing.
+
+			ctx, cancel := context.WithTimeout(t.Context(), 400*time.Millisecond)
+			defer cancel()
+			p.Shutdown(ctx, config)
+
+			assert.Len(t, p.details, 1, "stuck entry remains; drain reports failure rather than removing")
+
+			var sawTimeoutWarning, sawFailureSummary bool
+			for _, e := range hook.AllEntries() {
+				if strings.Contains(e.Message, "did not settle before shutdown timeout") {
+					sawTimeoutWarning = true
+				}
+				if strings.Contains(e.Message, "drain completed") && e.Data["failed"] != nil && fmt.Sprint(e.Data["failed"]) != "0" {
+					sawFailureSummary = true
+				}
+			}
+			assert.True(t, sawTimeoutWarning, "should log a timeout warning")
+			assert.True(t, sawFailureSummary, "drain summary should count it as failed")
+		})
+	}
+}
+
+func TestMachineProvider_Shutdown_TransientStateWithoutSignal(t *testing.T) {
+	// A transient-state entry with no inFlight channel, e.g. loaded from
+	// disk before any goroutine attached. Drain must not block on a nil
+	// channel. It falls through to the normal path and logs a warning.
+	machine := newMockMachine(t)
+	p := newMachineProvider(docker_executor.NewProvider())
+	p.machine = machine
+
+	hook, removeHook := test.NewHook()
+	defer removeHook()
+	logrus.AddHook(hook)
+
+	config := &common.Config{
+		Machine: &common.MachineConfig{
+			ShutdownDrain: &common.DockerMachineShutdownDrain{
+				Enabled:      true,
+				Concurrency:  1,
+				MaxRetries:   0,
+				RetryBackoff: 10 * time.Millisecond,
+			},
+		},
+	}
+	p.details["orphan-creating"] = &machineDetails{
+		Name:    "orphan-creating",
+		State:   machineStateCreating,
+		Created: time.Now(),
+		// inFlight: nil
+	}
+
+	machine.EXPECT().Exist(mock.Anything, "orphan-creating").Return(true).Once()
+	machine.EXPECT().ForceRemove(mock.Anything, "orphan-creating").Return(nil).Once()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	p.Shutdown(ctx, config)
+
+	assert.Empty(t, p.details)
+
+	var sawFallbackWarning bool
+	for _, e := range hook.AllEntries() {
+		if strings.Contains(e.Message, "Transient state without completion signal") {
+			sawFallbackWarning = true
+		}
+	}
+	assert.True(t, sawFallbackWarning, "should warn that the entry had no completion signal")
+}
+
+func TestMachineProvider_Shutdown_WaitsForCreateThenRemoveHandoff(t *testing.T) {
+	// Create-failure path: createWithGrowthCapacity fails and calls
+	// m.remove in the same goroutine, replacing the inFlight channel
+	// before the create goroutine's deferred close fires. Drain captured
+	// the original channel, wakes on its close, re-reads, sees Removing
+	// with the new channel, and waits on that.
+	machine := newMockMachine(t)
+	p := newMachineProvider(docker_executor.NewProvider())
+	p.machine = machine
+
+	hook, removeHook := test.NewHook()
+	defer removeHook()
+	logrus.AddHook(hook)
+
+	config := &common.Config{
+		Machine: &common.MachineConfig{
+			ShutdownDrain: &common.DockerMachineShutdownDrain{
+				Enabled:      true,
+				Concurrency:  1,
+				MaxRetries:   0,
+				RetryBackoff: 10 * time.Millisecond,
+			},
+		},
+	}
+
+	createDone := make(chan struct{})
+	removalDone := make(chan struct{})
+	d := &machineDetails{
+		Name:     "create-then-remove",
+		State:    machineStateCreating,
+		Created:  time.Now(),
+		inFlight: createDone,
+	}
+	p.details["create-then-remove"] = d
+
+	// Once drain parks: create "fails", so swap to Removing and install
+	// the removal channel before closing createDone (production order:
+	// remove runs before the create goroutine's deferred close). Then
+	// the removal finishes: delete the entry and close removalDone.
+	go func() {
+		awaitDrainParked(t, hook)
+		d.Lock()
+		d.State = machineStateRemoving
+		d.inFlight = removalDone
+		d.Unlock()
+		close(createDone)
+
+		p.lock.Lock()
+		delete(p.details, "create-then-remove")
+		p.lock.Unlock()
+		close(removalDone)
+	}()
+
+	// Drain never calls ForceRemove: the in-flight removal handles it.
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	p.Shutdown(ctx, config)
+
+	assert.Empty(t, p.details, "removal goroutine cleared the entry; drain detected via map check")
+}
+
+func TestMachineProvider_Shutdown_TransientStateClosedSignalDoesNotSpin(t *testing.T) {
+	// An entry stuck in a transient state whose inFlight channel is
+	// already closed and never replaced (e.g. a create that errored
+	// before its goroutine could transition state). A closed channel is
+	// always ready, so re-selecting on it would busy-spin until the
+	// deadline. waitForDrainableState must notice the channel is
+	// unchanged, warn, and fall through to the normal drain.
+	machine := newMockMachine(t)
+	p := newMachineProvider(docker_executor.NewProvider())
+	p.machine = machine
+
+	hook, removeHook := test.NewHook()
+	defer removeHook()
+	logrus.AddHook(hook)
+
+	config := &common.Config{
+		Machine: &common.MachineConfig{
+			ShutdownDrain: &common.DockerMachineShutdownDrain{
+				Enabled:      true,
+				Concurrency:  1,
+				MaxRetries:   0,
+				RetryBackoff: 10 * time.Millisecond,
+			},
+		},
+	}
+
+	closed := make(chan struct{})
+	close(closed)
+	p.details["stuck-closed"] = &machineDetails{
+		Name:     "stuck-closed",
+		State:    machineStateCreating,
+		Created:  time.Now(),
+		inFlight: closed, // already closed, state never changes
+	}
+
+	machine.EXPECT().Exist(mock.Anything, "stuck-closed").Return(true).Once()
+	machine.EXPECT().ForceRemove(mock.Anything, "stuck-closed").Return(nil).Once()
+
+	// ctx is generous: the test asserts drain returns via ForceRemove,
+	// not by hitting the deadline. The watchdog below bounds it.
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		p.Shutdown(ctx, config)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Shutdown did not return promptly; waitForDrainableState likely spun on the closed channel")
+	}
+
+	assert.Empty(t, p.details)
+	var sawSpinGuardWarning bool
+	for _, e := range hook.AllEntries() {
+		if strings.Contains(e.Message, "left machine in a transient state") {
+			sawSpinGuardWarning = true
+		}
+	}
+	assert.True(t, sawSpinGuardWarning, "should warn that the signal fired but state stayed transient")
+}
+
+func TestMachineProvider_Shutdown_InFlightRemovalGaveUp(t *testing.T) {
+	// state=Removing with a finalizeRemoval that exhausts its retries:
+	// it sets removalGaveUp, drops the entry, and closes its channel.
+	// Drain must count this as a failed drain (VM may be orphaned), not
+	// read the cleared map and report success.
+	machine := newMockMachine(t)
+	p := newMachineProvider(docker_executor.NewProvider())
+	p.machine = machine
+
+	hook, removeHook := test.NewHook()
+	defer removeHook()
+	logrus.AddHook(hook)
+
+	config := &common.Config{
+		Machine: &common.MachineConfig{
+			ShutdownDrain: &common.DockerMachineShutdownDrain{
+				Enabled:      true,
+				Concurrency:  1,
+				MaxRetries:   0,
+				RetryBackoff: 10 * time.Millisecond,
+			},
+		},
+	}
+
+	removalDone := make(chan struct{})
+	d := &machineDetails{
+		Name:     "gave-up-removal",
+		State:    machineStateRemoving,
+		Created:  time.Now(),
+		inFlight: removalDone,
+	}
+	p.details["gave-up-removal"] = d
+
+	// Simulate finalizeRemoval giving up: set removalGaveUp before the
+	// delete (production order, so drain observes both), then close.
+	// Drain never ForceRemoves it.
+	go func() {
+		awaitDrainParked(t, hook)
+		d.Lock()
+		d.removalGaveUp = true
+		d.Unlock()
+		p.lock.Lock()
+		delete(p.details, "gave-up-removal")
+		p.lock.Unlock()
+		close(removalDone)
+	}()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	p.Shutdown(ctx, config)
+
+	assert.Empty(t, p.details)
+
+	var sawGaveUpWarning, sawFailureSummary bool
+	for _, e := range hook.AllEntries() {
+		if strings.Contains(e.Message, "In-flight removal gave up") {
+			sawGaveUpWarning = true
+		}
+		if strings.Contains(e.Message, "drain completed") && fmt.Sprint(e.Data["failed"]) == "1" {
+			sawFailureSummary = true
+		}
+	}
+	assert.True(t, sawGaveUpWarning, "should warn that the in-flight removal gave up")
+	assert.True(t, sawFailureSummary, "give-up must be counted as a failed drain, not a success")
 }
 
 func TestMachineProvider_CollectAllMachines(t *testing.T) {
