@@ -122,12 +122,10 @@ development docker images:
     - .docker
     - .go-cache
     - .rules:release:development:merge-requests
+    - .release_artifacts
   needs:
     - "helper images"
     - "runner images"
-  artifacts:
-    paths:
-      - out/release_artifacts/*
   script:
     - *overwrite_security_docker_variables
     - echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
@@ -143,15 +141,13 @@ bleeding edge docker images:
     - .docker
     - .go-cache
     - .rules:release:bleeding-edge
+    - .release_artifacts
   environment:
     name: bleeding_edge/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
   needs:
     - "helper images"
     - "runner images"
-  artifacts:
-    paths:
-      - out/release_artifacts/*
   script:
     - *overwrite_security_docker_variables
     - echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
@@ -177,15 +173,13 @@ stable docker images:
     - .docker
     - .go-cache
     - .rules:release:stable:branch
+    - .release_artifacts
   environment:
     name: stable/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
   dependencies:
     - "helper images"
     - "runner images"
-  artifacts:
-    paths:
-      - out/release_artifacts/*
   script:
     - *overwrite_security_docker_variables
     - echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
