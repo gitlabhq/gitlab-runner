@@ -107,21 +107,6 @@
 .if-not-gitlab-runner-community-path: &if-not-gitlab-runner-community-path
   if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != null && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH !~ /^gitlab-org($|\/)/
 
-########################
-# Default branch rules #
-########################
-
-.rules:default-branch-only:no_docs:
-  rules:
-    - <<: *if-runner-or-security-runner-default-branch
-      changes: *code-backstage-patterns
-
-.rules:default-branch-only:no_docs:always:
-  rules:
-    - <<: *if-runner-or-security-runner-default-branch
-      changes: *code-backstage-patterns
-      when: always
-
 #######################
 # Merge Request rules #
 #######################
@@ -298,14 +283,6 @@
 # Release rules #
 #################
 
-.rules:release:all:
-  rules:
-    - <<: *if-not-canonical-namespace
-      when: never
-    - <<: *if-default-branch
-    - <<: *if-release-candidate-tag
-    - <<: *if-stable-release-tag
-
 .rules:release:bleeding-edge:
   rules:
     - <<: *if-not-gitlab-runner-community-path
@@ -313,19 +290,6 @@
     - <<: *if-runner-default-branch
       changes: *code-backstage-patterns
     - <<: *if-runner-bleeding-edge-release-ref
-      changes: *code-backstage-patterns
-    - <<: *if-runner-or-security-runner-stable-ref
-      changes: *code-backstage-patterns
-    - <<: *if-runner-or-security-runner-feature-ref
-      changes: *code-backstage-patterns
-
-.rules:release-or-security:bleeding-edge-or-stable:
-  rules:
-    - <<: *if-not-gitlab-runner-community-path
-      when: never
-    - <<: *if-runner-or-security-runner-default-branch
-      changes: *code-backstage-patterns
-    - <<: *if-runner-or-security-bleeding-edge-release-ref
       changes: *code-backstage-patterns
     - <<: *if-runner-or-security-runner-stable-ref
       changes: *code-backstage-patterns
@@ -348,22 +312,8 @@
     - <<: *if-security-runner-release-ref
       changes: *code-backstage-patterns
 
-.rules:release:stable:branch:ignore-changes:
-  rules:
-    - <<: *if-runner-stable-release-ref
-    - <<: *if-security-runner-release-ref
-
 .rules:release:development:merge-requests:
   rules:
-    - <<: *if-runner-merge-request-pipeline
-      changes: *code-backstage-patterns
-    - <<: *if-runner-security-merge-request-pipeline
-      changes: *code-backstage-patterns
-
-.rules:release:development:merge-requests:no-community-mr:
-  rules:
-    - <<: *if-not-canonical-namespace
-      when: never
     - <<: *if-runner-merge-request-pipeline
       changes: *code-backstage-patterns
     - <<: *if-runner-security-merge-request-pipeline
@@ -380,19 +330,9 @@
       changes:
         - tests/dockerfiles/*
 
-.rules:prepare:test-ci-scripts:merge-requests:
-  rules:
-    - <<: *if-runner-merge-request-pipeline
-
 ##############
 # Docs rules #
 ##############
-
-.rules:docs:skip:
-  rules:
-    - changes: *docs-patterns
-      when: never
-    - when: on_success
 
 .rules:docs:review:
   rules:
