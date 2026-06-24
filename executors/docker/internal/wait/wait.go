@@ -13,6 +13,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
+// ErrStopKillWaitTimeout indicates the bounded cleanup window elapsed
+// before the container reached a stopped state.
+var ErrStopKillWaitTimeout = errors.New("container stop-kill wait timed out")
+
 type GracefulExitFunc func(ctx context.Context, containerID string) error
 
 type Waiter interface {
@@ -46,10 +50,10 @@ func (d *dockerWaiter) Wait(ctx context.Context, containerID string) error {
 // Timeout is the timeout (in seconds) to wait for the container to stop
 // gracefully before forcibly terminating it with SIGKILL.
 //
-// A nil timeout uses the daemon's or containers default timeout, -1 will wait
+// A nil timeout uses the daemon's or container's default timeout, -1 will wait
 // indefinitely. Use 0 to not wait at all.
 func (d *dockerWaiter) StopKillWait(ctx context.Context, containerID string, timeout *int,
-	graceGracefulExitFunc GracefulExitFunc,
+	gracefulExitFunc GracefulExitFunc,
 ) error {
 	// If the job timed out or was cancelled, ctx will already have expired.
 	// Both the graceful-exit func and ContainerStop must use a fresh context
@@ -60,20 +64,33 @@ func (d *dockerWaiter) StopKillWait(ctx context.Context, containerID string, tim
 	// immediately, ContainerStop is never issued, and PID 1 never receives
 	// SIGTERM — it only gets SIGKILL after the network is already disconnected.
 	//
-	// A single 30-second context covers both the graceful-exit func and the
-	// ContainerStop/retryWait loop. This is generous: Docker's own
-	// SIGTERM→SIGKILL grace period is controlled by the `timeout` parameter
-	// passed to ContainerStop.
-	stopCtx, stopCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// A single context covers both the graceful-exit func and the
+	// ContainerStop/retryWait loop. Docker's own SIGTERM→SIGKILL grace period
+	// is controlled by the `timeout` parameter passed to ContainerStop.
+	stopKillTimeout := 2 * time.Minute
+	stopCause := fmt.Errorf("%w after %s", ErrStopKillWaitTimeout, stopKillTimeout)
+	stopCtx, stopCancel := context.WithTimeoutCause(context.Background(), stopKillTimeout, stopCause)
 	defer stopCancel()
 
-	if graceGracefulExitFunc != nil {
-		_ = graceGracefulExitFunc(stopCtx, containerID)
+	if gracefulExitFunc != nil {
+		_ = gracefulExitFunc(stopCtx, containerID)
 	}
 
-	return d.retryWait(stopCtx, containerID, func() {
+	err := d.retryWait(stopCtx, containerID, func() {
 		_ = d.client.ContainerStop(stopCtx, containerID, container.StopOptions{Timeout: timeout})
 	})
+
+	// wrap as timeout only if the stop-kill timeout fired and the error isn't a script exit
+	if cause := context.Cause(stopCtx); err != nil && errors.Is(cause, ErrStopKillWaitTimeout) {
+		if _, ok := errors.AsType[*common.BuildError](err); !ok {
+			return &common.BuildError{
+				Inner:         cause,
+				FailureReason: common.RunnerSystemFailure,
+			}
+		}
+	}
+
+	return err
 }
 
 func (d *dockerWaiter) retryWait(ctx context.Context, containerID string, stopFn func()) error {
