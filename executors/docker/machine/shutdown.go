@@ -115,12 +115,28 @@ func (m *machineProvider) drainMachineWithRetry(
 	machineLogger := logger.WithField("machine", details.Name)
 	maxRetries := config.GetMaxRetries()
 
-	details.Lock()
-	if details.State == machineStateRemoving {
+	// Wait for any in-flight create/remove to finish first. Removing
+	// against incomplete Driver state leaks the cloud VM.
+	if !m.waitForDrainableState(ctx, details, machineLogger) {
+		return false
+	}
+
+	m.lock.RLock()
+	_, stillTracked := m.details[details.Name]
+	m.lock.RUnlock()
+	if !stillTracked {
+		details.Lock()
+		gaveUp := details.removalGaveUp
 		details.Unlock()
-		machineLogger.Debug("Machine already being removed, skipping")
+		if gaveUp {
+			machineLogger.Warn("In-flight removal gave up; cloud VM may still exist")
+			return false
+		}
+		machineLogger.Info("Machine drained by in-flight operation")
 		return true
 	}
+
+	details.Lock()
 	details.State = machineStateRemoving
 	details.Reason = "shutdown drain"
 	details.Unlock()
@@ -151,6 +167,73 @@ func (m *machineProvider) drainMachineWithRetry(
 
 	machineLogger.Error("Failed to drain machine after all retries")
 	return false
+}
+
+// waitForDrainableState blocks until details is in a state drain can
+// safely act on (not Creating, not Removing), or until ctx expires. It
+// re-reads details.inFlight after each wake so a create that fails and
+// then starts a remove (replacing the channel) is followed through.
+// Returns false on timeout, which drain counts as a failed machine.
+func (m *machineProvider) waitForDrainableState(
+	ctx context.Context,
+	details *machineDetails,
+	logger *logrus.Entry,
+) bool {
+	isTransient := func(s machineState) bool {
+		return s == machineStateCreating || s == machineStateRemoving
+	}
+
+	logged := false
+	var waited chan struct{} // the channel we last blocked on
+	for {
+		m.lock.RLock()
+		_, stillTracked := m.details[details.Name]
+		m.lock.RUnlock()
+		if !stillTracked {
+			return true
+		}
+
+		details.Lock()
+		state := details.State
+		done := details.inFlight
+		details.Unlock()
+
+		if !isTransient(state) {
+			return true
+		}
+
+		// Channel closed but the entry is still transient and nothing
+		// replaced it. Re-selecting would busy-spin, since a closed
+		// channel is always ready, so fall through to drain.
+		if done != nil && done == waited {
+			logger.WithField("state", state).
+				Warn("In-flight operation signalled completion but left machine in a transient state, proceeding with drain")
+			return true
+		}
+
+		if !logged {
+			logger.WithField("state", state).
+				Info("Waiting for in-flight operation to settle before draining machine")
+			logged = true
+		}
+
+		// No completion channel (recovered from disk, or set by an older
+		// code path). Fall through rather than block forever.
+		if done == nil {
+			logger.WithField("state", state).
+				Warn("Transient state without completion signal; proceeding with drain")
+			return true
+		}
+
+		select {
+		case <-done:
+			waited = done
+		case <-ctx.Done():
+			logger.WithField("state", state).
+				Warn("In-flight operation did not settle before shutdown timeout; cloud VM may still exist")
+			return false
+		}
+	}
 }
 
 func (m *machineProvider) removeMachineForDrain(ctx context.Context, details *machineDetails) error {

@@ -169,6 +169,7 @@ func (m *machineProvider) runnerMachinesCoordinator(config *common.RunnerConfig)
 func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
 	name := newMachineName(config)
 	details := m.machineDetails(name, true)
+	done := make(chan struct{})
 	details.Lock()
 	details.State = machineStateCreating
 	details.UsedCount = 0
@@ -177,17 +178,20 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	details.maxRemovalAttempts = config.Machine.MaxRemovalAttempts
 	// details.targets is populated post-Create via Inspect (see
 	// createWithGrowthCapacity); we don't seed it from config.
+	details.inFlight = done
 	details.Unlock()
 	errCh := make(chan error, 1)
 
 	// Create machine with the required configuration asynchronously
 	coordinator, err := m.runnerMachinesCoordinator(config)
 	if err != nil {
+		close(done)
 		errCh <- err
 		return nil, errCh
 	}
 
 	go coordinator.waitForGrowthCapacity(config.Machine.MaxGrowthRate, func() {
+		defer close(done)
 		m.createWithGrowthCapacity(coordinator, config, details, state, errCh)
 	})
 
@@ -458,6 +462,12 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 		if err := m.machine.ForceRemove(forceCtx, details.Name); err != nil {
 			details.logger().WithError(err).Warningln("ForceRemove on give-up failed")
 		}
+
+		// Set before the entry is dropped so a concurrent drain sees the
+		// give-up instead of the cleared map.
+		details.Lock()
+		details.removalGaveUp = true
+		details.Unlock()
 	}
 
 	m.lock.Lock()
@@ -490,11 +500,13 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 	}
 
 	now := time.Now()
+	done := make(chan struct{})
 
 	details.Lock()
 	details.Reason = fmt.Sprint(reason...)
 	details.State = machineStateRemoving
 	details.RetryCount = 0
+	details.inFlight = done
 
 	details.logger().
 		WithField("now", now).
@@ -504,7 +516,10 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 	details.writeDebugInformation()
 	details.Unlock()
 
-	go m.finalizeRemoval(details)
+	go func() {
+		defer close(done)
+		m.finalizeRemoval(details)
+	}()
 	return nil
 }
 
