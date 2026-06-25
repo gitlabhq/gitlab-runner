@@ -2,6 +2,7 @@ package pull
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -236,11 +237,48 @@ func (m *manager) pullDockerImage(imageName string, options spec.ImageDockerOpti
 	}
 
 	if err := m.client.ImagePullBlocking(m.context, ref, opts); err != nil {
+		if cancelErr := contextCancellationBuildError(m.context); cancelErr != nil {
+			return nil, cancelErr
+		}
 		return nil, &common.BuildError{Inner: err, FailureReason: common.ClassifyImagePullFailure(err.Error())}
 	}
 
 	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName)
-	return &image, err
+	if err != nil {
+		if cancelErr := contextCancellationBuildError(m.context); cancelErr != nil {
+			return nil, cancelErr
+		}
+		return nil, &common.BuildError{
+			Inner:         fmt.Errorf("inspecting image %q after pull: %w", imageName, err),
+			FailureReason: common.ClassifyImagePullFailure(err.Error()),
+		}
+	}
+	return &image, nil
+}
+
+// contextCancellationBuildError returns a BuildError describing the cancellation
+// if ctx has been canceled or its deadline exceeded; otherwise it returns nil.
+// This mirrors the semantics of (*Build).runtimeStateAndError so deep call sites
+// don't misclassify cancellations as image-pull or system failures.
+//
+// Both ctx.Err() and context.Cause(ctx) are checked for DeadlineExceeded so
+// that a deadline created with context.WithDeadlineCause is still classified
+// as a timeout even when its custom cause does not wrap context.DeadlineExceeded.
+func contextCancellationBuildError(ctx context.Context) error {
+	if ctx.Err() == nil {
+		return nil
+	}
+	cause := context.Cause(ctx)
+	if errors.Is(cause, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return &common.BuildError{
+			Inner:         cause,
+			FailureReason: common.JobExecutionTimeout,
+		}
+	}
+	return &common.BuildError{
+		Inner:         common.ErrJobCanceled,
+		FailureReason: common.JobCanceled,
+	}
 }
 
 // getPullPolicies selects the pull_policy configurations originating from

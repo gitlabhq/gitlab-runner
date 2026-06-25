@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/errdefs"
@@ -223,6 +224,127 @@ func TestDockerForExistingImage(t *testing.T) {
 	image, err := m.pullDockerImage("existing", dockerOptions, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
+}
+
+func TestDockerInspectAfterPullFailure(t *testing.T) {
+	dockerConfig := &common.DockerConfig{}
+	dockerOptions := spec.ImageDockerOptions{}
+
+	tests := map[string]struct {
+		inspectErr            error
+		expectedFailureReason spec.JobFailureReason
+	}{
+		"network-shaped error maps to RunnerExternalDependencyFailure": {
+			inspectErr:            errors.New("dial tcp: lookup registry: no such host"),
+			expectedFailureReason: common.RunnerExternalDependencyFailure,
+		},
+		"default error maps to ImagePullFailure": {
+			inspectErr:            errors.New("daemon unavailable"),
+			expectedFailureReason: common.ImagePullFailure,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+			m := newDefaultTestManager(t, c, dockerConfig)
+
+			c.On("ImagePullBlocking", m.context, "post-pull-inspect:latest", mock.AnythingOfType("image.PullOptions")).
+				Return(nil).
+				Once()
+			c.On("ImageInspectWithRaw", m.context, "post-pull-inspect").
+				Return(image.InspectResponse{}, nil, tc.inspectErr).
+				Once()
+
+			img, err := m.pullDockerImage("post-pull-inspect", dockerOptions, nil)
+			assert.Nil(t, img)
+			assert.Error(t, err)
+
+			var buildError *common.BuildError
+			require.ErrorAs(t, err, &buildError)
+			assert.Equal(t, tc.expectedFailureReason, buildError.FailureReason)
+		})
+	}
+}
+
+func TestDockerPullContextCancellation(t *testing.T) {
+	dockerConfig := &common.DockerConfig{}
+	dockerOptions := spec.ImageDockerOptions{}
+
+	tests := map[string]struct {
+		setupContext          func(t *testing.T) context.Context
+		expectedFailureReason spec.JobFailureReason
+	}{
+		"canceled context produces JobCanceled": {
+			setupContext: func(t *testing.T) context.Context {
+				ctx, cancel := context.WithCancel(t.Context())
+				cancel()
+				return ctx
+			},
+			expectedFailureReason: common.JobCanceled,
+		},
+		"deadline-exceeded context produces JobExecutionTimeout": {
+			setupContext: func(t *testing.T) context.Context {
+				ctx, cancel := context.WithDeadline(t.Context(), time.Unix(0, 0))
+				t.Cleanup(cancel)
+				return ctx
+			},
+			expectedFailureReason: common.JobExecutionTimeout,
+		},
+		"WithDeadlineCause + non-DeadlineExceeded custom cause still maps to JobExecutionTimeout": {
+			setupContext: func(t *testing.T) context.Context {
+				ctx, cancel := context.WithDeadlineCause(
+					t.Context(),
+					time.Unix(0, 0),
+					errors.New("custom timeout cause that does not wrap context.DeadlineExceeded"),
+				)
+				t.Cleanup(cancel)
+				return ctx
+			},
+			expectedFailureReason: common.JobExecutionTimeout,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run("pull fails: "+tn, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+			m := newDefaultTestManager(t, c, dockerConfig)
+			m.context = tc.setupContext(t)
+
+			c.On("ImagePullBlocking", m.context, "canceled-pull:latest", mock.AnythingOfType("image.PullOptions")).
+				Return(context.Canceled).
+				Once()
+
+			img, err := m.pullDockerImage("canceled-pull", dockerOptions, nil)
+			assert.Nil(t, img)
+			assert.Error(t, err)
+
+			var buildError *common.BuildError
+			require.ErrorAs(t, err, &buildError)
+			assert.Equal(t, tc.expectedFailureReason, buildError.FailureReason)
+		})
+
+		t.Run("inspect fails: "+tn, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+			m := newDefaultTestManager(t, c, dockerConfig)
+			m.context = tc.setupContext(t)
+
+			c.On("ImagePullBlocking", m.context, "canceled-inspect:latest", mock.AnythingOfType("image.PullOptions")).
+				Return(nil).
+				Once()
+			c.On("ImageInspectWithRaw", m.context, "canceled-inspect").
+				Return(image.InspectResponse{}, nil, context.Canceled).
+				Once()
+
+			img, err := m.pullDockerImage("canceled-inspect", dockerOptions, nil)
+			assert.Nil(t, img)
+			assert.Error(t, err)
+
+			var buildError *common.BuildError
+			require.ErrorAs(t, err, &buildError)
+			assert.Equal(t, tc.expectedFailureReason, buildError.FailureReason)
+		})
+	}
 }
 
 func TestDockerGetImageById(t *testing.T) {
