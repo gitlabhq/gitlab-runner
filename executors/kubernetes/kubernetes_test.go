@@ -1255,8 +1255,9 @@ func TestPrepare(t *testing.T) {
 	}
 
 	tests := []struct {
-		Name    string
-		ErrorRE *regexp.Regexp
+		Name                  string
+		ErrorRE               *regexp.Regexp
+		ExpectedFailureReason spec.JobFailureReason
 
 		// if Precondition is set and returns false, the test-case is skipped with the message provided
 		Precondition func() (bool, string)
@@ -2478,6 +2479,7 @@ func TestPrepare(t *testing.T) {
 			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
 				`prepare helper image: unsupported OSType "unknown"`,
 			)),
+			ExpectedFailureReason: common.ConfigurationError,
 		},
 		{
 			Name: "helper image from node selector overrides (linux+amd overwritten to linux+arm)",
@@ -2965,6 +2967,7 @@ func TestPrepare(t *testing.T) {
 			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
 				`prepare helper image: detecting base image: unsupported Windows version: unsupported-kernel-version`,
 			)),
+			ExpectedFailureReason: common.ConfigurationError,
 		},
 		{
 			Name: "autoset helper arch and os on non windows does not need windows kernel version",
@@ -3040,6 +3043,11 @@ func TestPrepare(t *testing.T) {
 			if test.ErrorRE != nil {
 				assert.Error(t, err)
 				assert.Regexp(t, test.ErrorRE, err.Error())
+				if test.ExpectedFailureReason != "" {
+					var buildError *common.BuildError
+					require.ErrorAs(t, err, &buildError)
+					assert.Equal(t, test.ExpectedFailureReason, buildError.FailureReason)
+				}
 				return
 			}
 			require.NoError(t, err)

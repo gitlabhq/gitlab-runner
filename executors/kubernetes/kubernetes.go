@@ -391,7 +391,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	s.helperImageInfo, err = s.prepareHelperImage()
 	if err != nil {
-		return fmt.Errorf("prepare helper image: %w", err)
+		return &common.BuildError{
+			Inner:         fmt.Errorf("prepare helper image: %w", err),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	// setup default executor options based on OS type
