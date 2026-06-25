@@ -1,3 +1,9 @@
+## v19.1.1 (2026-06-25)
+
+### Bug fixes
+
+- Increase Docker stop timeout to 2m and improve error messaging [!6868](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6868)
+
 ## v19.1.0 (2026-06-16)
 
 ### New features
