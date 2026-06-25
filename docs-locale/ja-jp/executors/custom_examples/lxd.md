@@ -1,8 +1,8 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-title: カスタムexecutorでLXDを使用する
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
+title: Custom executorでLXDを使用する
 ---
 
 {{< details >}}
@@ -12,13 +12,13 @@ title: カスタムexecutorでLXDを使用する
 
 {{< /details >}}
 
-この例では、LXDを使用してビルドごとにコンテナを作成し、後でそれを削除します。
+この例では、LXDを使用して、ビルドごとにコンテナを作成し、後でクリーンアップします。
 
-この例では、各ステージングにbashスクリプトを使用します。独自のイメージを指定できます。これは[CI_JOB_IMAGE](https://docs.gitlab.com/ci/variables/predefined_variables/)として公開されます。この例では、簡単にするために`ubuntu:22.04`イメージを使用します。複数のイメージをサポートする場合は、executorを変更する必要があります。
+この例では、各ステージにbashスクリプトを使用します。独自のイメージを指定でき、これは[CI_JOB_IMAGE](https://docs.gitlab.com/ci/variables/predefined_variables/)として公開されます。この例では、簡潔にするために`ubuntu:22.04`イメージを使用しています。複数のイメージをサポートする場合は、executorを変更する必要があります。
 
-これらのスクリプトには、次の依存関係があります:
+これらのスクリプトには、次の前提条件があります:
 
-- [LXD](https://ubuntu.com/lxd)
+- [LXD](https://canonical.com/lxd)
 - [GitLab Runner](../../install/linux-manually.md)
 
 ## 設定 {#configuration}
@@ -37,11 +37,11 @@ title: カスタムexecutorでLXDを使用する
     cleanup_exec = "/opt/lxd-driver/cleanup.sh" # Path to bash script to delete container.
 ```
 
-## ベース {#base}
+## Base {#base}
 
-各ステージングの[prepare](#prepare) 、[run](#run) 、[cleanup](#cleanup)では、このスクリプトを使用して、スクリプト全体で使用される変数を生成します。
+各ステージ ([prepare](#prepare)、[run](#run)、[cleanup](#cleanup)) は、このスクリプトを使用して、スクリプト全体で使用される変数を生成します。
 
-このスクリプトは、他のスクリプトと同じディレクトリ（この場合は`/opt/lxd-driver/`）に配置されていることが重要です。
+このスクリプトが他のスクリプトと同じディレクトリにあることが重要です。この場合、`/opt/lxd-driver/`です。
 
 ```shell
 #!/usr/bin/env bash
@@ -51,13 +51,13 @@ title: カスタムexecutorでLXDを使用する
 CONTAINER_ID="runner-$CUSTOM_ENV_CI_RUNNER_ID-project-$CUSTOM_ENV_CI_PROJECT_ID-concurrent-$CUSTOM_ENV_CI_CONCURRENT_PROJECT_ID-$CUSTOM_ENV_CI_JOB_ID"
 ```
 
-## 準備 {#prepare}
+## Prepare {#prepare}
 
-prepareスクリプトは、次の処理を実行します:
+準備スクリプトは次のことを行います:
 
-- 同じ名前のコンテナが実行中の場合、そのコンテナを削除します。
+- 同じ名前のコンテナが実行中の場合は、そのコンテナを削除します。
 - コンテナを起動し、起動するまで待ちます。
-- [前提となる依存関係](../custom.md#prerequisite-software-for-running-a-job)をインストールします。
+- [前提条件となる依存関係](../custom.md#prerequisite-software-for-running-a-job)をインストールします。
 
 ```shell
 #!/usr/bin/env bash
@@ -122,9 +122,9 @@ start_container
 install_dependencies
 ```
 
-## 実行 {#run}
+## Run {#run}
 
-これにより、GitLab Runnerによって生成されたスクリプトのコンテンツを`STDIN`経由でコンテナに送信することにより、スクリプトが実行されます。
+これは、スクリプトの内容を`STDIN`経由でコンテナに送信することにより、GitLab Runnerによって生成されたスクリプトを実行します。
 
 ```shell
 #!/usr/bin/env bash
@@ -142,9 +142,9 @@ if [ $? -ne 0 ]; then
 fi
 ```
 
-## クリーンアップ {#cleanup}
+## Cleanup {#cleanup}
 
-ビルドが完了したので、コンテナを削除します。
+ビルドが完了したため、コンテナを削除します。
 
 ```shell
 #!/usr/bin/env bash

@@ -1,38 +1,29 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
 title: Kubernetes上のGitLab RunnerでPodmanを使用する
 ---
 
-Podmanは、オープンソースの[Open Container Initiative](https://opencontainers.org/)（OCI）ツールで、コンテナを開発、管理、実行するために使用されます。
+Podmanは、オープンソースの[Open Container Initiative](https://opencontainers.org/) (OCI) ツールで、コンテナの開発、管理、実行に使用されます。
 
-Podmanは、ルートユーザーやホストでの[特権](../../security/_index.md#usage-of-docker-executor)エスカレーションなしに、CIジョブでコンテナイメージをビルドできる設定を提供します。
+Podmanは、rootユーザーやホスト上での[特権](../../security/_index.md#usage-of-docker-executor)昇格なしに、CIジョブ内でコンテナイメージをビルドすることができる設定を提供します。
 
-このドキュメントでは、OpenShiftおよび非OpenShift KubernetesクラスターでGitLab Runnerで使用するためにPodmanを設定する方法について説明します。この設定は、ルートおよび非ルートユーザーとして設定されたコンテナイメージに適用されます。
+このドキュメントでは、OpenShiftおよび非OpenShift KubernetesクラスターでPodmanをGitLab Runnerとともに使用するための設定方法に関する情報を説明します。この設定は、rootユーザーおよび非rootユーザーとして設定されたコンテナイメージに適用されます。
 
-## 非OpenShift KubernetesクラスターでのPodmanの実行 {#run-podman-on-non-openshift-kubernetes-cluster}
+## 非OpenShift KubernetesクラスターでPodmanを実行する {#run-podman-on-non-openshift-kubernetes-cluster}
 
-### `--privileged`フラグを`true`に設定した状態で、非ルートユーザーとしてPodmanを実行します {#run-podman-as-a-non-root-user-with-the---privileged-flag-set-to-true}
+### 非rootユーザーとしてPodmanを`--privileged`フラグを`true`に設定して実行する {#run-podman-as-a-non-root-user-with-the---privileged-flag-set-to-true}
 
-{{< alert type="warning" >}}
+> [!warning]
+> Podmanを`--privileged`フラグを`true`に設定して実行すると、コンテナエンジンは、追加のセキュリティ制御の有無にかかわらず、コンテナを起動します。
 
-`--privileged`フラグを`true`に設定してPodmanを実行すると、コンテナエンジンは追加のセキュリティ制御の有無にかかわらずコンテナを起動します。
+非rootユーザーとしてPodmanを非rootコンテナプロセスで実行するには:
 
-{{< /alert >}}
-
-非ルートコンテナプロセスを持つ非ルートユーザーとしてPodmanを実行するには:
-
-1. `.gitlab-ci.yml`ファイルで次のサンプルコードを使用して、Podmanでコンテナイメージを作成します:
+1. `.gitlab-ci.yml`ファイルに以下のサンプルコードを使用して、Podmanでコンテナイメージを作成します:
 
    ```yaml
    variables:
-     FF_USE_POWERSHELL_PATH_RESOLVER: "true"
-     FF_RETRIEVE_POD_WARNING_EVENTS: "true"
-     FF_PRINT_POD_EVENTS: "true"
-     FF_SCRIPT_SECTIONS: "true"
-     CI_DEBUG_SERVICES: "true"
-     GIT_DEPTH: 5
      HOME: /my_custom_dir
      DOCKER_HOST: tcp://docker:2375
 
@@ -45,7 +36,9 @@ Podmanは、ルートユーザーやホストでの[特権](../../security/_inde
        - podman build . -t playground-bis:testing
    ```
 
-1. 次の設定を`config.toml`ファイルに追加して、デフォルトの`user_id`を`1000`に設定します:
+   機能フラグを有効にして、環境に合わせてRunnerの動作を調整することもできます。詳細については、[利用可能な機能フラグ](../../configuration/feature-flags.md#available-feature-flags)を参照してください。
+
+1. `config.toml`ファイルに以下の設定を追加して、デフォルトの`user_id`を`1000`に設定します:
 
    ```ini
        [runners.kubernetes.pod_security_context]
@@ -54,7 +47,7 @@ Podmanは、ルートユーザーやホストでの[特権](../../security/_inde
          run_as_user = 1000
    ```
 
-1. 次のRunnerの設定を`config.toml`ファイルに追加します:
+1. `config.toml`ファイルに以下のRunnerの設定を追加します:
 
    ```toml
    listen_address = ":9252"
@@ -72,9 +65,6 @@ Podmanは、ルートユーザーやホストでの[特権](../../security/_inde
      name = "investigation"
      limit = 50
      url = "https://gitlab.com/"
-     id = 0
-     token = "glrt-REDACTED"
-     token_obtained_at = 2024-09-30T14:38:04.623237Z
      executor = "kubernetes"
      builds_dir = "/my_custom_dir"
      shell = "bash"
@@ -91,8 +81,6 @@ Podmanは、ルートユーザーやホストでの[特権](../../security/_inde
        pod_labels_overwrite_allowed = ""
        service_account_overwrite_allowed = ""
        pod_annotations_overwrite_allowed = ""
-       [runners.kubernetes.pod_labels]
-         user = "ratchade"
        [runners.kubernetes.volumes]
          [[runners.kubernetes.volumes.empty_dir]]
            name = "repo"
@@ -101,12 +89,9 @@ Podmanは、ルートユーザーやホストでの[特権](../../security/_inde
          run_as_user = 1000
        [runners.kubernetes.build_container_security_context]
          run_as_user = 1000
-       [[runners.kubernetes.services]]
-         name = ""
-       [runners.kubernetes.dns_config]
    ```
 
-ジョブが期待どおりに合格した場合、ジョブログは次の例のようになります:
+ジョブが期待どおりに成功した場合、ジョブログは次の例のようになります:
 
 ```shell
 ...
@@ -209,21 +194,21 @@ Cleaning up project directory and file based variables
 Job succeeded
 ```
 
-### `--privileged`フラグを`false`に設定した状態で、ルートユーザーとしてPodmanを実行します {#run-podman-as-a-root-user-with-the---privileged-flag-set-to-false}
+### rootユーザーとしてPodmanを`--privileged`フラグを`false`に設定して実行する {#run-podman-as-a-root-user-with-the---privileged-flag-set-to-false}
 
-前提要件:
+前提条件: 
 
-- コンテナ内で`fuse-overlayfs`を使用する権限。
+- コンテナ内で`fuse-overlayfs`を使用するための権限。
 
-以下の手順は、[Kubernetes内でのPodmanの使用方法](https://www.redhat.com/en/blog/podman-inside-kubernetes)の「特権フラグなしのルートレスPodman」セクションから引用したものです。
+以下の手順は、[How to use Podman inside of Kubernetes](https://www.redhat.com/en/blog/podman-inside-kubernetes)の「Rootless Podman without the privileged flag」セクションから着想を得ています。
 
-ルートレスPodmanを実行する場合、システムの設定をいくつか調整することで、特権フラグを削除できます。コンテナは、コンテナ内で`fuse-overlayfs`を使用するために`/dev/fuse`へのアクセスが必要です。
+rootless Podmanを実行する場合、システム設定をいくつか調整することで特権フラグを削除できます。コンテナ内で`fuse-overlayfs`を使用するには、コンテナが`/dev/fuse`へのアクセスを必要とします。
 
-Kubernetesクラスターを実行しているホストでSELinuxも無効にする必要があります。SELinuxは、コンテナ化されたプロセスが、コンテナ内の必要なファイルシステムをマウントできないようにします。
+Kubernetesクラスターを実行しているホスト上でSELinuxを無効にする必要もあります。SELinuxは、コンテナ内で必要なファイルシステムをマウントするコンテナ化されたプロセスを妨げます。
 
-これを実現するには、次のようにします:
+これを実現するには:
 
-1. たとえば、ジョブポッドで使用できるデバイスプラグインを作成します:
+1. ジョブPodで使用できるデバイスプラグインを作成します。例:
 
    ```yaml
    apiVersion: apps/v1
@@ -259,7 +244,7 @@ Kubernetesクラスターを実行しているホストでSELinuxも無効にす
 
 1. クラスターにGitLab Runnerをインストールするように`config.toml`を設定します。
 
-   - `--privileged`フラグを`false`に設定した状態で、`root`ユーザーとして実行するようにジョブポッドを設定します:
+   - ジョブPodを`root`ユーザーとして実行し、`--privileged`フラグを`false`に設定します:
 
      ```toml
      allow_privilege_escalation = false
@@ -270,7 +255,7 @@ Kubernetesクラスターを実行しているホストでSELinuxも無効にす
        run_as_group = 0
      ```
 
-   - [`pod_spec`機能](_index.md#overwrite-generated-pod-specifications)を使用して、ジョブポッドにリソース制限を設定します。`pod_spec`を使用するには、`FF_USE_ADVANCED_POD_SPEC_CONFIGURATION`機能フラグを`true`に設定します。
+   - [`pod_spec`機能](_index.md#overwrite-generated-pod-specifications)を使用して、ジョブPodにリソース制限を設定します。`pod_spec`を使用するには、`FF_USE_ADVANCED_POD_SPEC_CONFIGURATION`機能フラグを`true`に設定します。
 
      ```toml
      [[runners.kubernetes.pod_spec]]
@@ -305,9 +290,6 @@ Kubernetesクラスターを実行しているホストでSELinuxも無効にす
        [runners.kubernetes.build_container_security_context]
          run_as_user = 0
          run_as_group = 0
-       [[runners.kubernetes.services]]
-       [runners.kubernetes.dns_config]
-       [runners.kubernetes.pod_labels]
        [[runners.kubernetes.pod_spec]]
          name = "device-fuse"
          patch_type = "strategic"
@@ -320,16 +302,10 @@ Kubernetesクラスターを実行しているホストでSELinuxも無効にす
          '''
    ```
 
-1. ジョブを実行して、Podmanでイメージをビルドします。
+1. Podmanでビルドするためのジョブを実行します。
 
    ```yaml
    variables:
-     FF_USE_POWERSHELL_PATH_RESOLVER: "true"
-     FF_RETRIEVE_POD_WARNING_EVENTS: "true"
-     FF_PRINT_POD_EVENTS: "true"
-     FF_SCRIPT_SECTIONS: "true"
-     CI_DEBUG_SERVICES: "true"
-     GIT_DEPTH: 5
      FF_USE_ADVANCED_POD_SPEC_CONFIGURATION: "true"
 
    podman-privileged-test:
@@ -341,7 +317,9 @@ Kubernetesクラスターを実行しているホストでSELinuxも無効にす
        - podman build . -t playground-bis:testing
    ```
 
-このジョブは`podman build`を実行し、正常に完了するはずです。
+   機能フラグを有効にして、環境に合わせてRunnerの動作を調整することもできます。詳細については、[利用可能な機能フラグ](../../configuration/feature-flags.md#available-feature-flags)を参照してください。
+
+ジョブは`podman build`を実行し、これは正常に完了するはずです。
 
 ```shell
 ...
@@ -446,15 +424,15 @@ Cleaning up project directory and file based variables
 Job succeeded
 ```
 
-## OpenShiftで非ルートユーザーとしてPodmanを実行する {#run-podman-as-a-non-root-user-on-openshift}
+## OpenShiftでPodmanを非rootユーザーとして実行する {#run-podman-as-a-non-root-user-on-openshift}
 
-特権コンテナなしでルートレスPodmanを実行するには、RedHatの記事[GitLab RunnerとしてPodmanを使用してOpenShiftでコンテナイメージをビルドする](https://developers.redhat.com/articles/2024/10/01/build-container-images-openshift-using-podman-gitlab-runner)の手順に従ってください。
+特権のないコンテナでrootless Podmanを実行するには、RedHatの記事「[Build container images in OpenShift using Podman as a GitLab Runner](https://developers.redhat.com/articles/2024/10/01/build-container-images-openshift-using-podman-gitlab-runner)」の手順に従ってください。
 
 ## トラブルシューティング {#troubleshooting}
 
-### 非ルートユーザーとしてジョブを実行すると、`git`が`/.gitconfig`に設定を保存できません {#git-cannot-save-the-configuration-in-gitconfig-when-you-run-the-job-as-a-non-root-user}
+### 非rootユーザーとしてジョブを実行すると、`git`は`/.gitconfig`に設定を保存できません {#git-cannot-save-the-configuration-in-gitconfig-when-you-run-the-job-as-a-non-root-user}
 
-ジョブをルートとして実行していないため、`git`は`/.gitconfig`に設定を保存できません。その結果、次のエラーが発生する可能性があります:
+rootとしてジョブを実行していないため、`git`は`/.gitconfig`に設定を保存できません。その結果、次のエラーが発生する可能性があります:
 
 ```shell
 Getting source from Git repository
@@ -464,5 +442,5 @@ error: could not lock config file //.gitconfig: Permission denied
 
 このエラーを防ぐには:
 
-1. `emptyDir`ボリュームを`/my_custom_dir`にマウントします。
+1. `/my_custom_dir`に`emptyDir`ボリュームをマウントします。
 1. `HOME`環境変数を`/my_custom_dir`パスに設定します。
