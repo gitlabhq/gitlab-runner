@@ -9,7 +9,15 @@
       when: never
     - if: $CI_PROJECT_PATH != "gitlab-org/gitlab-runner"
       when: never
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"
+      changes: !reference [.code-backstage-patterns]
+      variables:
+        UPSTREAM_CI_COMMIT_REF: "refs/merge-requests/${CI_MERGE_REQUEST_IID}/train"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_EVENT_TYPE == "detached"
+      changes: !reference [.code-backstage-patterns]
+      variables:
+        UPSTREAM_CI_COMMIT_REF: "refs/merge-requests/${CI_MERGE_REQUEST_IID}/head"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_EVENT_TYPE == "merged_result"
       changes: !reference [.code-backstage-patterns]
       variables:
         UPSTREAM_CI_COMMIT_REF: "refs/merge-requests/${CI_MERGE_REQUEST_IID}/merge"
