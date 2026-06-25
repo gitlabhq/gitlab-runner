@@ -62,6 +62,23 @@ linters:
         - yodaStyleExpr
     gocyclo:
       min-complexity: 10
+    modernize:
+      # analyzers will be enabled as issues are resolved
+      disable:
+        - any
+        - atomictypes
+        - forvar
+        - mapsloop
+        - minmax
+        - newexpr
+        - omitzero
+        - rangeint
+        - slicesbackward
+        - slicescontains
+        - stringsbuilder
+        - stringscut
+        - stringsseq
+        - waitgroupgo
     revive:
       rules:
         - name: unused-parameter
