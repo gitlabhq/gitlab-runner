@@ -17,6 +17,7 @@ linters:
     - govet
     - ineffassign
     - misspell
+    - modernize
     - nakedret
     - nestif
     - revive
@@ -67,9 +68,9 @@ linters:
       disable:
         - any
         - atomictypes
+        - fmtappendf
         - forvar
         - mapsloop
-        - minmax
         - newexpr
         - omitzero
         - rangeint
