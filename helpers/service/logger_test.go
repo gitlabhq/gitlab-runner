@@ -32,13 +32,6 @@ func (tw *truncateWriter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
-func min(a, b int) int {
-	if a <= b {
-		return a
-	}
-	return b
-}
-
 func TestTruncateWriter(t *testing.T) {
 	buf := bytes.Buffer{}
 

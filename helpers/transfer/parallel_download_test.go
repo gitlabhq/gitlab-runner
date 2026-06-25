@@ -20,10 +20,7 @@ func TestParallelRangeDownload_WriteAt(t *testing.T) {
 	payload := bytes.Repeat([]byte("x"), int(total))
 
 	fetchChunk := func(offset, length int64) (io.ReadCloser, error) {
-		end := offset + length
-		if end > total {
-			end = total
-		}
+		end := min(offset+length, total)
 		return io.NopCloser(bytes.NewReader(payload[offset:end])), nil
 	}
 
