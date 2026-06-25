@@ -1,8 +1,8 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-title: Custom executorでlibvirtを使用する
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
+title: カスタムexecutorでlibvirtを使用する
 ---
 
 {{< details >}}
@@ -12,11 +12,11 @@ title: Custom executorでlibvirtを使用する
 
 {{< /details >}}
 
-[libvirt](https://libvirt.org/)を使用すると、Custom executorドライバーは、実行するジョブごとに新しいディスクとVMを作成し、その後、ディスクとVMは削除されます。
+[libvirt](https://libvirt.org/)を使用すると、カスタムexecutorドライバーは、実行するジョブごとに新しいディスクとVMを作成し、その後、ディスクとVMは削除されます。
 
 このドキュメントでは、libvirtのセットアップ方法については、スコープ外であるため説明しません。ただし、このドライバーは[GCPネストされた](https://docs.cloud.google.com/compute/docs/instances/nested-virtualization/overview)仮想化を使用してテストされており、ブリッジネットワーキングで[libvirtをセットアップする方法の詳細](https://docs.cloud.google.com/compute/docs/instances/nested-virtualization/overview#starting_a_private_bridge_between_the_host_and_nested_vms)も記載されています。この例では、libvirtのインストール時に付属する`default`ネットワークを使用するため、実行されていることを確認してください。
 
-このドライバーはブリッジネットワーキングを必要とします。これは、各VMが専用のIPアドレスを持っている必要があるため、GitLab RunnerがSSH内部でコマンドを実行できるためです。SSHキーは、[次のコマンドを使用して](https://docs.gitlab.com/user/ssh/#generate-an-ssh-key-pair)生成できます。
+このドライバーでは、各VMに専用のIPアドレスを割り当てる必要があるため、ブリッジネットワークの使用が必須です。これは、GitLab Runnerが各VMにSSHで接続し、コマンドを実行できるようにするためです。SSHキーは、[次のコマンドを使用して](https://docs.gitlab.com/user/ssh/#generate-an-ssh-key-pair)生成できます。
 
 依存関係がすべてのビルドでダウンロードされないように、ベースディスクVMイメージが作成されます。次の例では、ディスクVMイメージを作成するために[virt-builder](https://libguestfs.org/virt-builder.1.html)が使用されています。
 
@@ -42,7 +42,7 @@ virt-builder debian-12 \
     --run-command "echo 'iface eth0 inet dhcp' >> /etc/network/interfaces"
 ```
 
-上記のコマンドは、[前提条件](../custom.md#prerequisite-software-for-running-a-job)以前に指定されたすべてをインストールします。
+上記のコマンドを実行すると、先に説明した[前提条件](../custom.md#prerequisite-software-for-running-a-job)がすべてインストールされます。
 
 `virt-builder`は、最後に印刷されるルートパスワードを自動的に設定します。パスワードを自分で指定する場合は、[`--root-password password:$SOME_PASSWORD`](https://libguestfs.org/virt-builder.1.html#setting-the-root-password)を渡します。
 
@@ -74,9 +74,9 @@ check_interval = 0
     cleanup_exec = "/opt/libvirt-driver/cleanup.sh" # Path to a bash script to delete VM and disks.
 ```
 
-## Base {#base}
+## ベース {#base}
 
-各ステージ（[prepare](#prepare) 、[run](#run) 、および[cleanup](#cleanup)）は、他のスクリプト全体で使用される変数を生成するために、以下のベーススクリプトを使用します。
+各ステージ（[準備](#prepare) 、[実行](#run) 、および[クリーンアップ](#cleanup)）は、他のスクリプト全体で使用される変数を生成するために、以下のベーススクリプトを使用します。
 
 このスクリプトが他のスクリプトと同じディレクトリにあることが重要です。この場合、`/opt/libvirt-driver/`です。
 
@@ -97,7 +97,7 @@ _get_vm_ip() {
 
 ## Prepare {#prepare}
 
-準備スクリプト:
+Prepareスクリプトは以下を行います:
 
 - ディスクを新しいパスにコピーします。
 - コピーされたディスクから新しいVMをインストールします。
@@ -173,7 +173,7 @@ done
 
 ## Run {#run}
 
-これにより、SSHを介して`STDIN`経由でスクリプトのコンテンツをVMに送信することにより、GitLab Runnerによって生成されたスクリプトが実行されます。
+これにより、GitLab Runnerが生成したスクリプトの内容をSSH経由で`STDIN`を通じてVMに送信し、そのスクリプトを実行します。
 
 ```shell
 #!/usr/bin/env bash

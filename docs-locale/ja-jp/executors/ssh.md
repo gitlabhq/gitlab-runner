@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
 title: SSH
 ---
 
@@ -12,23 +12,22 @@ title: SSH
 
 {{< /details >}}
 
-{{< alert type="note" >}}
+> [!note]
+> このexecutorはメンテナンスモードです。重要なセキュリティアップデートは受け取りますが、新しい機能は予定されていません。新しいプロジェクトには、[積極的に開発されているexecutor](_index.md#selecting-the-executor)の使用を検討してください。
 
-SSH executorは、Bashで生成されたスクリプトのみをサポートしており、キャッシュ機能はサポートされていません。
+SSH executorは完全性のために含まれていますが、サポートされているexecutorの中で最も少ないものの1つです。GitLab Runnerは外部サーバーに接続し、SSHを介してそこでビルドを実行します。一部の組織はこのexecutorをうまく使用していますが、一般的には別のexecutorタイプを使用する方が良いでしょう。
 
-{{< /alert >}}
+> [!note]
+> SSH executorはBashで生成されたスクリプトのみをサポートしており、キャッシュ機能はサポートされていません。
 
 このexecutorでは、SSH経由でコマンドを実行して、リモートマシンでビルドを実行できます。
 
-{{< alert type="note" >}}
-
-GitLab RunnerがSSH executorを使用するすべてのリモートシステムで、[一般的な前提要件](_index.md#prerequisites-for-non-docker-executors)を満たしていることを確認してください。
-
-{{< /alert >}}
+> [!note]
+> GitLab RunnerがSSH executorを使用するリモートシステムで、[一般的な前提条件](_index.md#git-requirements-for-non-docker-executors)を満たしていることを確認してください。
 
 ## SSH executorを使用する {#use-the-ssh-executor}
 
-SSH executorを使用するには、[`[runners.ssh]`](../configuration/advanced-configuration.md#the-runnersssh-section)セクションで`executor = "ssh"`を指定します。次に例を示します:
+SSH executorを使用するには、[`[runners.ssh]`](../configuration/advanced-configuration.md#the-runnersssh-section)セクションで`executor = "ssh"`を指定します。例: 
 
 ```toml
 [[runners]]
@@ -45,10 +44,10 @@ SSH executorを使用するには、[`[runners.ssh]`](../configuration/advanced-
 
 プロジェクトのソースは`~/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`にチェックアウトされます。
 
-各要素の内容は次のとおりです:
+各要素の内容は次のとおりです。
 
 - `<short-token>`は、Runnerのトークンの短縮バージョンです（最初の8文字）。
-- `<concurrent-id>`は、プロジェクトのコンテキストで特定のrunner上のローカルジョブIDを識別する一意の番号です。
+- `<concurrent-id>`は、同じプロジェクトのビルドを同時に実行するすべてのrunnerのリストからのインデックスです（`CI_CONCURRENT_PROJECT_ID`の[事前定義変数](https://docs.gitlab.com/ci/variables/predefined_variables/)を介してアクセス可能）。
 - `<namespace>`は、GitLabでプロジェクトが保存されているネームスペースです。
 - `<project-name>`は、GitLabに保存されているプロジェクトの名前です。
 
@@ -58,4 +57,4 @@ SSH executorを使用するには、[`[runners.ssh]`](../configuration/advanced-
 
 ## 厳密なホストキーチェックを設定する {#configure-strict-host-key-checking}
 
-SSH `StrictHostKeyChecking`は、[デフォルトで有効になっています。](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192)`StrictHostKeyChecking`のSSHを無効にするには、`[runners.ssh.disable_strict_host_key_checking]`を`true`に設定します。現在のデフォルト値は`false`です。
+SSH `StrictHostKeyChecking`はデフォルトで[有効](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192)です。SSH `StrictHostKeyChecking`を無効にするには、`[runners.ssh.disable_strict_host_key_checking]`を`true`に設定します。現在のデフォルト値は`false`です。
