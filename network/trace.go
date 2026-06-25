@@ -364,10 +364,7 @@ func (c *clientJobTrace) setUpdateInterval(newUpdateInterval time.Duration) {
 		newUpdateInterval, common.MaxUpdateInterval)
 
 	if c.config.IsFeatureFlagOn(featureflags.UseDynamicTraceForceSendInterval) {
-		c.forceSendInterval = max(c.updateInterval*common.TraceForceSendUpdateIntervalMultiplier, common.MinTraceForceSendInterval)
-		if c.forceSendInterval > common.MaxTraceForceSendInterval {
-			c.forceSendInterval = common.MaxTraceForceSendInterval
-		}
+		c.forceSendInterval = min(max(c.updateInterval*common.TraceForceSendUpdateIntervalMultiplier, common.MinTraceForceSendInterval), common.MaxTraceForceSendInterval)
 	}
 }
 
