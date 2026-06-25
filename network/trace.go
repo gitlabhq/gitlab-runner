@@ -358,13 +358,13 @@ func (c *clientJobTrace) setUpdateInterval(newUpdateInterval time.Duration) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.updateInterval = min(
-		// Let's hope that this never happens,
-		// but if server behaves bogus do not have too long interval
-		newUpdateInterval, common.MaxUpdateInterval)
+	// Let's hope that this never happens, but if the server behaves bogus
+	// do not have too long an interval.
+	c.updateInterval = min(newUpdateInterval, common.MaxUpdateInterval)
 
 	if c.config.IsFeatureFlagOn(featureflags.UseDynamicTraceForceSendInterval) {
-		c.forceSendInterval = min(max(c.updateInterval*common.TraceForceSendUpdateIntervalMultiplier, common.MinTraceForceSendInterval), common.MaxTraceForceSendInterval)
+		forceSend := c.updateInterval * common.TraceForceSendUpdateIntervalMultiplier
+		c.forceSendInterval = min(max(forceSend, common.MinTraceForceSendInterval), common.MaxTraceForceSendInterval)
 	}
 }
 
