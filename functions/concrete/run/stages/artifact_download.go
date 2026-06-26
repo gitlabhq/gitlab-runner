@@ -35,10 +35,7 @@ func (s ArtifactDownload) Run(ctx context.Context, e *env.Env) error {
 		"--id", strconv.FormatInt(s.ID, 10),
 	}
 
-	attempts := s.DownloadAttempts
-	if attempts < 1 {
-		attempts = 1
-	}
+	attempts := max(s.DownloadAttempts, 1)
 
 	backoff := retry.NewBackoff()
 	var err error

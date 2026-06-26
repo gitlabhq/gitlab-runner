@@ -1,6 +1,9 @@
 version: "2"
 run:
   concurrency: 8
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
 linters:
   default: none
   enable:
@@ -14,6 +17,7 @@ linters:
     - govet
     - ineffassign
     - misspell
+    - modernize
     - nakedret
     - nestif
     - revive
@@ -59,6 +63,23 @@ linters:
         - yodaStyleExpr
     gocyclo:
       min-complexity: 10
+    modernize:
+      # analyzers will be enabled as issues are resolved
+      disable:
+        - any
+        - atomictypes
+        - fmtappendf
+        - forvar
+        - mapsloop
+        - newexpr
+        - omitzero
+        - rangeint
+        - slicesbackward
+        - slicescontains
+        - stringsbuilder
+        - stringscut
+        - stringsseq
+        - waitgroupgo
     revive:
       rules:
         - name: unused-parameter

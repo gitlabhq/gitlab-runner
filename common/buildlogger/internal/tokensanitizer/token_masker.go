@@ -75,12 +75,9 @@ func New(w io.WriteCloser, prefixes [][]byte) *TokenSanitizer {
 	m := &TokenSanitizer{}
 	m.next = w
 
-	max := len(prefixes)
-	if max > 15 {
-		max = 15
-	}
+	count := min(len(prefixes), 15)
 
-	for i := 0; i < max; i++ {
+	for i := 0; i < count; i++ {
 		m.next = &tokenSanitizer{next: m.next, prefix: prefixes[i]}
 	}
 

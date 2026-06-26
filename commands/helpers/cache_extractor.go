@@ -536,10 +536,7 @@ func (c *CacheExtractorCommand) downloadParallel(contentLength int64, modTime ti
 	// writer.Close() closes the underlying file; we must not call file.Close() and we close writer only once (on each exit path below)
 
 	chunkSize := int64(c.effectiveParallelChunkSize())
-	concurrency := c.Concurrency
-	if concurrency < 1 {
-		concurrency = 1
-	}
+	concurrency := max(c.Concurrency, 1)
 
 	destAt, ok := writer.(io.WriterAt)
 	if !ok {
