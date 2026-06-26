@@ -199,6 +199,12 @@ func TestBuildMasking(t *testing.T) {
 	})
 }
 
+func TestBuildWithStdinClosed(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		buildtest.RunBuildWithStdinClosed(t, newRunnerConfig(t, shell), setupAcquireBuild)
+	})
+}
+
 func TestBuildExpandedFileVariable(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		buildtest.RunBuildWithExpandedFileVariable(t, newRunnerConfig(t, shell), setupAcquireBuild)
