@@ -3086,6 +3086,59 @@ func TestLoadConfig_ExpandsEnvironmentVariables(t *testing.T) {
 	assert.Equal(t, "glrt-literal-token", cfg.Runners[2].Token)
 }
 
+func TestLoadConfig_SentryDSNFromEnv(t *testing.T) {
+	writeConfig := func(t *testing.T, content string) string {
+		tempFile, err := os.CreateTemp(t.TempDir(), "test_config")
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = tempFile.Close() })
+
+		_, err = tempFile.WriteString(content)
+		require.NoError(t, err)
+
+		return tempFile.Name()
+	}
+
+	t.Run("uses SENTRY_DSN when not set in config", func(t *testing.T) {
+		t.Setenv("SENTRY_DSN", "https://from-env@sentry.example.com/1")
+
+		cfg := NewConfig()
+		require.NoError(t, cfg.LoadConfig(writeConfig(t, "concurrent = 1\n")))
+
+		require.NotNil(t, cfg.SentryDSN)
+		assert.Equal(t, "https://from-env@sentry.example.com/1", *cfg.SentryDSN)
+	})
+
+	t.Run("config value takes precedence over SENTRY_DSN", func(t *testing.T) {
+		t.Setenv("SENTRY_DSN", "https://from-env@sentry.example.com/1")
+
+		cfg := NewConfig()
+		require.NoError(t, cfg.LoadConfig(writeConfig(t,
+			`sentry_dsn = "https://from-config@sentry.example.com/2"`+"\n")))
+
+		require.NotNil(t, cfg.SentryDSN)
+		assert.Equal(t, "https://from-config@sentry.example.com/2", *cfg.SentryDSN)
+	})
+
+	t.Run("empty SENTRY_DSN still overrides unset config", func(t *testing.T) {
+		t.Setenv("SENTRY_DSN", "")
+
+		cfg := NewConfig()
+		require.NoError(t, cfg.LoadConfig(writeConfig(t, "concurrent = 1\n")))
+
+		require.NotNil(t, cfg.SentryDSN)
+		assert.Equal(t, "", *cfg.SentryDSN)
+	})
+
+	t.Run("unset SENTRY_DSN leaves config nil", func(t *testing.T) {
+		os.Unsetenv("SENTRY_DSN")
+
+		cfg := NewConfig()
+		require.NoError(t, cfg.LoadConfig(writeConfig(t, "concurrent = 1\n")))
+
+		assert.Nil(t, cfg.SentryDSN)
+	})
+}
+
 func Test_CommandLineFlags(t *testing.T) {
 	tests := map[string]struct {
 		args          []string

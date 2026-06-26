@@ -2531,6 +2531,14 @@ func (c *Config) LoadConfig(configFile string) error {
 		return fmt.Errorf("decoding configuration file: %w", err)
 	}
 
+	// Fall back to the SENTRY_DSN environment variable when sentry_dsn is not
+	// set in the config file. The config file value takes precedence.
+	if c.SentryDSN == nil {
+		if dsn, ok := os.LookupEnv("SENTRY_DSN"); ok {
+			c.SentryDSN = &dsn
+		}
+	}
+
 	for _, r := range c.Runners {
 		err := r.loadConfig(c)
 		if err != nil {
