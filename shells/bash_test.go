@@ -444,6 +444,39 @@ func TestBash_CommandArgExpand(t *testing.T) {
 	}
 }
 
+func TestBash_Finish_EvalForm(t *testing.T) {
+	tests := map[string]struct {
+		useLegacyBashEval bool
+		wantSubstr        string
+		notWantSubstr     string
+	}{
+		"default emits trapped subshell with stdin from /dev/null": {
+			useLegacyBashEval: false,
+			wantSubstr:        `(trap 'exit 1' TERM; eval $'echo hi\n') < /dev/null`,
+			notWantSubstr:     ": | eval",
+		},
+		"FF_USE_LEGACY_BASH_EVAL=true emits legacy pipeline form": {
+			useLegacyBashEval: true,
+			wantSubstr:        `: | eval $'echo hi\n'`,
+			notWantSubstr:     "< /dev/null",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			w := &BashWriter{Shell: "bash", useLegacyBashEval: tc.useLegacyBashEval}
+			w.Line("echo hi")
+
+			out := w.Finish(false)
+
+			assert.Contains(t, out, tc.wantSubstr,
+				"generated script should contain expected eval form")
+			assert.NotContains(t, out, tc.notWantSubstr,
+				"generated script should not contain the other eval form")
+		})
+	}
+}
+
 func TestBash_InteractiveShellHasNoEffectIn(t *testing.T) {
 	tests := map[string]struct {
 		shellType common.ShellType

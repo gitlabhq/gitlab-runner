@@ -138,6 +138,7 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 			OnSuccess:         true,
 			BashExitCodeCheck: b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
 			Debug:             b.opts.debug,
+			UseLegacyBashEval: b.isFeatureFlagOn(featureflags.UseLegacyBashEval),
 		},
 		PostCloneStep: stages.Step{
 			Step:              "post_clone_script",
@@ -145,6 +146,7 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 			OnSuccess:         true,
 			BashExitCodeCheck: b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
 			Debug:             b.opts.debug,
+			UseLegacyBashEval: b.isFeatureFlagOn(featureflags.UseLegacyBashEval),
 		},
 
 		ClearWorktreeOnRetry:  true,
@@ -331,6 +333,7 @@ func (b *builder) buildSteps() []stages.Step {
 		step.BashExitCodeCheck = b.isFeatureFlagOn(featureflags.EnableBashExitCodeCheck)
 		step.Debug = b.opts.debug
 		step.ScriptSections = b.isFeatureFlagOn(featureflags.ScriptSections) && b.meta.Features.TraceSections
+		step.UseLegacyBashEval = b.isFeatureFlagOn(featureflags.UseLegacyBashEval)
 		return step
 	}
 

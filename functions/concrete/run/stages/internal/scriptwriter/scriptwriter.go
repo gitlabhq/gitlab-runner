@@ -35,6 +35,11 @@ type Builder struct {
 	DebugTrace     bool
 	ExitCodeCheck  bool
 	ScriptSections bool
+	// UseLegacyBashEval restores the legacy `: | eval ...` pipeline form.
+	// When false (the default), eval runs in a trapped subshell with stdin
+	// closed via `< /dev/null` to suppress the script-body leak on
+	// cancellation (see issue 39005).
+	UseLegacyBashEval bool
 }
 
 // New creates a Builder for the given step name and shell.
@@ -102,13 +107,23 @@ func (b *Builder) buildBashScript(lines []string) string {
 
 	var buf strings.Builder
 	buf.WriteString("#!" + shPath + "\n\n")
-	buf.WriteString("trap exit 1 TERM\n\n")
+	buf.WriteString("trap 'exit 1' TERM\n\n")
 	if b.DebugTrace {
 		buf.WriteString("set -o xtrace\n")
 	}
 	buf.WriteString("if set -o | grep pipefail > /dev/null; then set -o pipefail; fi; set -o errexit\n")
 	buf.WriteString("set +o noclobber\n")
-	buf.WriteString(": | (eval " + shellEscape(body.String()) + ")\n")
+	// Run the user script in an explicit subshell with stdin closed via
+	// `< /dev/null`. The TERM trap is re-installed inside this subshell so that
+	// SIGTERM causes a clean exit instead of a signal-induced death that would
+	// dump the eval body — including expanded secrets — to the job log on
+	// cancellation (issue 39005). FF_USE_LEGACY_BASH_EVAL restores the prior
+	// `: | eval ...` pipeline form as an escape hatch.
+	if b.UseLegacyBashEval {
+		buf.WriteString(": | eval " + shellEscape(body.String()) + "\n")
+	} else {
+		buf.WriteString("(trap 'exit 1' TERM; eval " + shellEscape(body.String()) + ") < /dev/null\n")
+	}
 	buf.WriteString("exit 0\n")
 
 	return buf.String()
