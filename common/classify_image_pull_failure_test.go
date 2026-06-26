@@ -43,9 +43,45 @@ func TestClassifyImagePullFailure(t *testing.T) {
 			msg:            `manifest unknown: manifest unknown`,
 			expectedReason: ConfigurationError,
 		},
-		"auth failure": {
+		"pull access denied": {
 			msg:            `pull access denied for private/image, repository does not exist or may require 'docker login'`,
-			expectedReason: ImagePullFailure,
+			expectedReason: ConfigurationError,
+		},
+		"daemon pull access denied with denied suffix": {
+			msg:            `Error response from daemon: pull access denied for appvance/nike, repository does not exist or may require 'docker login': denied: requested access to the resource is denied`,
+			expectedReason: ConfigurationError,
+		},
+		"gitlab registry pull access denied": {
+			msg:            `failed to pull image "registry.gitlab.com/group/project/image:latest" with specified policies [always]: Error response from daemon: pull access denied for registry.gitlab.com/group/project/image, repository does not exist or may require 'docker login': denied: requested access to the resource is denied`,
+			expectedReason: ConfigurationError,
+		},
+		"no basic auth credentials": {
+			msg:            `Get "https://registry.example.com/v2/": no basic auth credentials`,
+			expectedReason: ConfigurationError,
+		},
+		"pull access denied only": {
+			msg:            `pull access denied for some/image`,
+			expectedReason: ConfigurationError,
+		},
+		"access to the resource is denied only": {
+			msg:            `denied: requested access to the resource is denied`,
+			expectedReason: ConfigurationError,
+		},
+		"repository does not exist or may require only": {
+			msg:            `repository does not exist or may require authorization`,
+			expectedReason: ConfigurationError,
+		},
+		"unauthorized authentication required": {
+			msg:            `Error response from daemon: unauthorized: authentication required`,
+			expectedReason: ConfigurationError,
+		},
+		"unauthorized only": {
+			msg:            `Get "https://registry.example.com/v2/": 401 unauthorized`,
+			expectedReason: ConfigurationError,
+		},
+		"authentication required only": {
+			msg:            `registry returned: authentication required to access this resource`,
+			expectedReason: ConfigurationError,
 		},
 		"generic error": {
 			msg:            `this is a test`,

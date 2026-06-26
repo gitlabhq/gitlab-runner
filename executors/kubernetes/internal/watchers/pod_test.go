@@ -68,6 +68,13 @@ func TestPodWatcher(t *testing.T) {
 			expectedErrMsg:        "image pull failed",
 			expectedFailureReason: common.RunnerExternalDependencyFailure,
 		},
+		"pull error - access denied": {
+			pod: withContainerWaiting(defaultPod(),
+				`rpc error: code = Unknown desc = failed to pull and unpack image "registry.example.com/private/image:latest": failed to resolve reference "registry.example.com/private/image:latest": pull access denied, repository does not exist or may require authorization: server message: insufficient_scope: authorization failed`,
+				"ErrImagePull"),
+			expectedErrMsg:        "image pull failed",
+			expectedFailureReason: common.ConfigurationError,
+		},
 		"pull error - image not found": {
 			pod: withContainerWaiting(defaultPod(),
 				`failed to pull and unpack image: failed to resolve reference: unexpected status code 404 not found`,
