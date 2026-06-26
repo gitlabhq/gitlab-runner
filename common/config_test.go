@@ -3130,6 +3130,9 @@ func TestLoadConfig_SentryDSNFromEnv(t *testing.T) {
 	})
 
 	t.Run("unset SENTRY_DSN leaves config nil", func(t *testing.T) {
+		if original, ok := os.LookupEnv("SENTRY_DSN"); ok {
+			t.Cleanup(func() { os.Setenv("SENTRY_DSN", original) })
+		}
 		os.Unsetenv("SENTRY_DSN")
 
 		cfg := NewConfig()
