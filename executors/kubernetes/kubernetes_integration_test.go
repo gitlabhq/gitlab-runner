@@ -3105,6 +3105,19 @@ func TestKubernetesAllowedServices(t *testing.T) {
 	}
 }
 
+func TestKubernetesBuildWithStdinClosed(t *testing.T) {
+	t.Parallel()
+
+	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, func() (spec.Job, error) {
+		return spec.Job{}, nil
+	})
+	buildtest.RunBuildWithStdinClosed(t, build.Runner, func(_ *testing.T, b *common.Build) {
+		b.ExecutorProvider = kubernetes.NewProvider()
+	})
+}
+
 func TestCleanupProjectGitClone(t *testing.T) {
 	t.Parallel()
 
