@@ -16,6 +16,7 @@ const (
 	EnableBashExitCodeCheck              string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
 	UseWindowsLegacyProcessStrategy      string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
 	UseNewEvalStrategy                   string = "FF_USE_NEW_BASH_EVAL_STRATEGY"
+	UseLegacyBashEval                    string = "FF_USE_LEGACY_BASH_EVAL"
 	UsePowershellPathResolver            string = "FF_USE_POWERSHELL_PATH_RESOLVER"
 	UseDynamicTraceForceSendInterval     string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
 	ScriptSections                       string = "FF_SCRIPT_SECTIONS"
@@ -159,10 +160,27 @@ var flags = []FeatureFlag{
 	{
 		Name:            UseNewEvalStrategy,
 		DefaultValue:    false,
+		Deprecated:      true,
+		ToBeRemovedWith: "",
+		Description: "No-op and deprecated. The Bash `eval` call runs in a subshell. This action subsumes the " +
+			"original protection and prevents the script-body leak " +
+			"on cancellation. For more information, see " +
+			"[issue 39005](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39005). " +
+			"To opt out and use the legacy pipeline invocation form (the behavior when this flag was set " +
+			"to `false`), use the new `FF_USE_LEGACY_BASH_EVAL` flag instead. " +
+			"This flag will be removed in a future release.",
+	},
+	{
+		Name:            UseLegacyBashEval,
+		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description: "When set to `true`, the Bash `eval` call is executed in a subshell to help with proper exit " +
-			"code detection of the script executed.",
+		Description: "When set to `true`, the Bash `eval` call uses the legacy pipeline invocation form " +
+			"(the same behavior as the deprecated `FF_USE_NEW_BASH_EVAL_STRATEGY=false`). " +
+			"The default (`false`) wraps `eval` in a trapped subshell to prevent the script-body leaks on " +
+			"cancellation in Bash versions before 4.4 and Bash 5.3 and later. For more information, see " +
+			"[issue 39005](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39005). " +
+			"Use this flag if the default behavior causes issues.",
 	},
 	{
 		Name:            UsePowershellPathResolver,

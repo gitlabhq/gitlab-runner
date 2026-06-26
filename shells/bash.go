@@ -71,11 +71,22 @@ done
 trap runner_script_trap EXIT
 `
 
-	// When the job is cancelled through the UI, GitLab Runner sends SIGTERM to
-	// all PIDs related to the stage script.
-	// On Bash version 4, the procession termination dumps the executed script in the job logs.
-	// To prevent this behaviour the TERM signals are trapped and cause the script to exit 1.
-	bashExitOnScriptTerminationSignal = `trap exit 1 TERM`
+	// Two separate bash code paths can dump the executed script body to
+	// the job log when the cancellation kill loop signals a stage script:
+	//
+	//   - bash <4.4: a process killed by SIGTERM with no trap prints its
+	//     current command before terminating (suppressed upstream in
+	//     bash 4.4 by the DONT_REPORT_SIGTERM define).
+	//   - bash 5.3+: the parent shell, on reaping a child that was killed
+	//     by a signal, prints the failed pipeline's text — see the new
+	//     print_pipeline call inside notify_of_job_status.
+	//
+	// With this trap installed both in the outer shell AND inside the
+	// eval-subshell (traps reset to defaults across the subshell
+	// boundary), SIGTERM in either context triggers a clean `exit 1`
+	// instead of a signal-induced death, so neither code path fires. See
+	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39005.
+	bashExitOnScriptTerminationSignal = `trap 'exit 1' TERM`
 
 	bashJSONInitializationScript = `start_json="{\"script\": \"$0\"}"
 echo "$start_json"
@@ -94,7 +105,7 @@ type BashWriter struct {
 	indent        int
 
 	checkForErrors                   bool
-	useNewEval                       bool
+	useLegacyBashEval                bool
 	usePosixEscape                   bool
 	useJSONInitializationTermination bool
 
@@ -103,11 +114,11 @@ type BashWriter struct {
 
 func NewBashWriter(build *common.Build, shell string) *BashWriter {
 	return &BashWriter{
-		TemporaryPath:  build.TmpProjectDir(),
-		Shell:          shell,
-		checkForErrors: build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
-		useNewEval:     build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
-		usePosixEscape: build.IsFeatureFlagOn(featureflags.PosixlyCorrectEscapes),
+		TemporaryPath:     build.TmpProjectDir(),
+		Shell:             shell,
+		checkForErrors:    build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
+		useLegacyBashEval: build.IsFeatureFlagOn(featureflags.UseLegacyBashEval),
+		usePosixEscape:    build.IsFeatureFlagOn(featureflags.PosixlyCorrectEscapes),
 		// useJSONInitializationTermination is only used for kubernetes executor when
 		// the feature flag FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY is set to false
 		useJSONInitializationTermination: build.Runner.Executor == common.ExecutorKubernetes &&
@@ -407,10 +418,17 @@ func (b *BashWriter) Finish(trace bool) string {
 	buf.WriteString("if set -o | grep pipefail > /dev/null; then set -o pipefail; fi; set -o errexit\n")
 	buf.WriteString("set +o noclobber\n")
 
-	if b.useNewEval {
-		buf.WriteString(": | (eval " + b.escape(b.String()) + ")\n")
-	} else {
+	// Run the user script in an explicit subshell with stdin closed via
+	// `< /dev/null`. The TERM trap is re-installed inside this subshell so
+	// that SIGTERM causes a clean exit instead of a signal-induced death —
+	// see the comment on bashExitOnScriptTerminationSignal for details.
+	//
+	// FF_USE_LEGACY_BASH_EVAL restores the prior `: | eval '...'` pipeline
+	// form as an escape hatch for environments where the new form misbehaves.
+	if b.useLegacyBashEval {
 		buf.WriteString(": | eval " + b.escape(b.String()) + "\n")
+	} else {
+		buf.WriteString("(" + bashExitOnScriptTerminationSignal + "; eval " + b.escape(b.String()) + ") < /dev/null\n")
 	}
 
 	buf.WriteString("exit 0\n")

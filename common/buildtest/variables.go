@@ -60,7 +60,7 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 	formatter := shellFormatter(config.Shell)
 
 	steps := []string{formatter.PipeVar("hello=world") + formatter.EnvName("GITLAB_ENV")}
-	if config.Shell == "bash" {
+	if config.Shell == "bash" { //nolint:goconst
 		steps = append(steps, `echo 'executed=$(echo "yes")' >> $GITLAB_ENV`)
 	}
 
