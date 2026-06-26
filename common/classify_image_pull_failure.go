@@ -12,7 +12,10 @@ import (
 //
 //   - Network-level failures (DNS, TCP, TLS, I/O timeout) → RunnerExternalDependencyFailure
 //   - Image or tag does not exist → ConfigurationError
-//   - Everything else (auth, access denied, …) → ImagePullFailure
+//   - Access denied / authentication required (missing credentials, expired
+//     tokens, no access to a private image, wrong image path, etc.) →
+//     ConfigurationError
+//   - Everything else → ImagePullFailure
 func ClassifyImagePullFailure(msg string) spec.JobFailureReason {
 	lower := strings.ToLower(msg)
 
@@ -26,6 +29,20 @@ func ClassifyImagePullFailure(msg string) spec.JobFailureReason {
 
 	case strings.Contains(lower, "not found"),
 		strings.Contains(lower, "manifest unknown"):
+		return ConfigurationError
+
+	// Authentication / access-denied errors are job/config problems: the job
+	// provided no credentials, provided ones that are invalid/expired, or
+	// referenced a private image it has no access to. A registry-side
+	// authentication hiccup that surfaces as 401 here is misattributed to
+	// config in the rare case it occurs, but those incidents are detected
+	// separately by the registry's own monitoring.
+	case strings.Contains(lower, "pull access denied"),
+		strings.Contains(lower, "access to the resource is denied"),
+		strings.Contains(lower, "no basic auth credentials"),
+		strings.Contains(lower, "repository does not exist or may require"),
+		strings.Contains(lower, "unauthorized"),
+		strings.Contains(lower, "authentication required"):
 		return ConfigurationError
 
 	default:
