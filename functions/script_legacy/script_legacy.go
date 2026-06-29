@@ -19,6 +19,10 @@ import (
 // the pipe write-ends.
 const gracefulExitDelay = 5 * time.Second
 
+type builtinFunc struct{}
+
+func New() runner.BuiltinFunction { return &builtinFunc{} }
+
 // Spec returns the step specification defining inputs for scriptv2.
 //
 // Inputs:
@@ -43,7 +47,7 @@ const gracefulExitDelay = 5 * time.Second
 //     When enabled, creates collapsible sections in GitLab CI logs for multi-line commands.
 //     Uses GitLab trace section markers (section_start/section_end) with timestamps.
 //     Matches GitLab Runner's FF_SCRIPT_SECTIONS feature flag behavior.
-func Spec() *proto.Spec {
+func (*builtinFunc) Spec() *proto.Spec {
 	return &proto.Spec{
 		Spec: &proto.Spec_Content{
 			Inputs: map[string]*proto.Spec_Content_Input{
@@ -83,7 +87,7 @@ func Spec() *proto.Spec {
 }
 
 // Run executes the scriptv2 step, generating and running a shell script from the command array.
-func Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
+func (b *builtinFunc) Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
 	// Detect shell early - used by both generator (for shebang) and executor (for execution)
 	shellPath, err := internal.DetectShell()
 	if err != nil {
@@ -104,7 +108,7 @@ func Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
 		return fmt.Errorf("script input is empty")
 	}
 
-	spec := Spec()
+	spec := b.Spec()
 	debugTraceInput, err := builtinCtx.GetInputWithDefault("debug_trace", runner.KindBool, spec.GetSpec().GetInputs())
 	if err != nil {
 		return fmt.Errorf("getting debug_trace input: %w", err)

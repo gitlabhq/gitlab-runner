@@ -36,7 +36,7 @@ run:
         - echo "Second command"
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -58,7 +58,7 @@ run:
         - 'echo "Project: $PROJECT_NAME"'
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			WithEnvKeyVal("CUSTOM_VAR", "test_value").
 			WithEnvKeyVal("PROJECT_NAME", "my-project").
 			Run(stepYml)
@@ -83,7 +83,7 @@ run:
         - pwd
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -104,7 +104,7 @@ run:
         - echo "test command"
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -126,7 +126,7 @@ run:
       debug_trace: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -149,7 +149,7 @@ run:
         - echo "after error"
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.Error(t, err)
 		assert.Equal(t, proto.StepResult_failure, res.Status)
@@ -178,7 +178,7 @@ run:
         - echo "foreground done"
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -197,7 +197,7 @@ run:
       script: []
 `
 		res, _, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.Error(t, err)
 		assert.Equal(t, proto.StepResult_failure, res.Status)
@@ -220,7 +220,7 @@ run:
         - echo "done"
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			WithEnvKeyVal("USER", "testuser").
 			Run(stepYml)
 		require.NoError(t, err)
@@ -241,7 +241,7 @@ run:
         - echo "${{ env.BASE_MSG }} from expressions"
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			WithEnvKeyVal("BASE_MSG", "Hello").
 			Run(stepYml)
 		require.NoError(t, err)
@@ -266,7 +266,7 @@ run:
         - echo "Second step"
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -290,7 +290,7 @@ run:
         - 'echo "Spaces: $VAR_WITH_SPACES"'
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			WithEnvKeyVal("VAR_WITH_QUOTES", `value with "quotes"`).
 			WithEnvKeyVal("VAR_WITH_SPACES", "hello world").
 			Run(stepYml)
@@ -314,7 +314,7 @@ run:
         - echo "after"
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -339,7 +339,7 @@ run:
       check_for_errors: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.Error(t, err)
 		assert.Equal(t, proto.StepResult_failure, res.Status)
@@ -362,7 +362,7 @@ run:
       check_for_errors: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -383,7 +383,7 @@ run:
         - echo "test command"
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -404,7 +404,7 @@ run:
       posix_escape: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -427,7 +427,7 @@ run:
       posix_escape: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -449,7 +449,7 @@ run:
           echo "line 2"
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -477,7 +477,7 @@ run:
       trace_sections: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -508,7 +508,7 @@ run:
       trace_sections: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -538,7 +538,7 @@ run:
       check_for_errors: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -565,7 +565,7 @@ run:
       trace_sections: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -590,7 +590,7 @@ run:
       posix_escape: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -621,7 +621,7 @@ run:
       trace_sections: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -651,7 +651,7 @@ run:
         - 'echo "path: $GITLAB_ENV"'
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			WithJobKeyVal("RUNNER_TEMP_PROJECT_DIR", tmpDir).
 			Run(stepYml)
 		require.NoError(t, err)
@@ -682,7 +682,7 @@ run:
         - 'echo "hellovalue=$hello"'
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			WithJobKeyVal("RUNNER_TEMP_PROJECT_DIR", tmpDir).
 			Run(stepYml)
 		require.NoError(t, err)
@@ -702,7 +702,7 @@ run:
         - 'echo "GITLAB_ENV: $GITLAB_ENV"'
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.NoError(t, err)
 		assert.Equal(t, proto.StepResult_success, res.Status)
@@ -726,7 +726,7 @@ run:
       trace_sections: true
 `
 		res, logs, err := testutil.StepRunner(t).
-			RegisterStepFunc("script_legacy", script_legacy.Spec(), script_legacy.Run).
+			RegisterBuiltin("script_legacy", script_legacy.New()).
 			Run(stepYml)
 		require.Error(t, err)
 		assert.Equal(t, proto.StepResult_failure, res.Status)
