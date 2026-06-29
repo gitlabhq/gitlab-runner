@@ -71,6 +71,16 @@
 - Update docker-machine version [!6800](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6800)
 - Add a few more flaky tests to .flaky-tests [!6780](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6780)
 
+## v19.0.2 (2026-06-29)
+
+### Bug fixes
+
+- Fix Bash script body leak on job cancellation [!6870](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6870)
+
+### Maintenance
+
+- Disable TestKubernetesBuildPodResources [!6879](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6879)
+
 ## v19.0.1 (2026-05-29)
 
 ### Bug fixes
