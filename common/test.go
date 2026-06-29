@@ -26,6 +26,16 @@ func (c *TestRunnerConfig) WithToken(token string) *TestRunnerConfig {
 	return c
 }
 
+func (c *TestRunnerConfig) WithID(id int64) *TestRunnerConfig {
+	c.RunnerConfig.RunnerCredentials.ID = id
+	return c
+}
+
+func (c *TestRunnerConfig) WithURL(url string) *TestRunnerConfig {
+	c.RunnerConfig.RunnerCredentials.URL = url
+	return c
+}
+
 type TestAutoscalerConfig struct {
 	AutoscalerConfig *AutoscalerConfig
 }

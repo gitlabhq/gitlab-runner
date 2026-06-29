@@ -113,7 +113,7 @@ func TestPrepare(t *testing.T) {
 			p.fleetingRunPlugin = mockFleetingRunPlugin(false)
 
 			p.scalers = map[string]scaler{
-				runnerToken: {internal: ts, shutdown: func(_ context.Context) {}},
+				runnerScalerKey(runnerCfg): {internal: ts, shutdown: func(_ context.Context) {}},
 			}
 
 			tc.assertFn(t, ts, me)
@@ -250,15 +250,16 @@ func setupResumeTest(t *testing.T, runnerToken, newKey, suspendedKey string) (
 	p := New(ep, Config{}).(*provider)
 	p.taskscalerNew = mockTaskscalerNew(ts, false)
 	p.fleetingRunPlugin = mockFleetingRunPlugin(false)
-	p.scalers = map[string]scaler{
-		runnerToken: {internal: ts, shutdown: func(_ context.Context) {}},
-	}
 
 	build := newSuspendableBuild(spec.SuspendOptions{EnvironmentKey: envKeyValue})
 	runnerCfg := build.Runner
 	runnerCfg.Token = runnerToken
 	runnerCfg.ID = runnerID
 	runnerCfg.SystemID = systemID
+
+	p.scalers = map[string]scaler{
+		runnerScalerKey(runnerCfg): {internal: ts, shutdown: func(_ context.Context) {}},
+	}
 	build.ExecutorData = &acquisitionRef{key: newKey}
 
 	e := &executor{

@@ -122,7 +122,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	s, ok := p.scalers[config.GetToken()]
+	s, ok := p.scalers[runnerScalerKey(config)]
 	if ok {
 		// detect if the config has been reloaded
 		refresh := s.configLoadedAt != config.ConfigLoadedAt
@@ -255,7 +255,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		configLoadedAt: config.ConfigLoadedAt,
 	}
 
-	p.scalers[config.GetToken()] = s
+	p.scalers[runnerScalerKey(config)] = s
 
 	return s.internal, true, nil
 }
@@ -340,7 +340,21 @@ func (p *provider) getRunnerTaskscaler(config *common.RunnerConfig) taskscaler.T
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	return p.scalers[config.GetToken()].internal
+	return p.scalers[runnerScalerKey(config)].internal
+}
+
+// runnerScalerKey returns a stable key for the scalers map. The runner ID
+// survives token rotation, so keying by URL+ID keeps a rotated token pointing at
+// the existing scaler instead of spinning up a second one that prunes the
+// still-running instances.
+func runnerScalerKey(config *common.RunnerConfig) string {
+	if config.ID == 0 {
+		// Legacy/pre-v15.3.0 configs have no ID; URL+0 would collide distinct
+		// runners onto one scaler, so fallback to the token.
+		return config.GetToken()
+	}
+
+	return fmt.Sprintf("%s|%d", config.URL, config.ID)
 }
 
 func (p *provider) Describe(ch chan<- *prometheus.Desc) {
