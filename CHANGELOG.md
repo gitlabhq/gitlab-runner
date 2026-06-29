@@ -1,3 +1,13 @@
+## v18.11.4 (2026-06-29)
+
+### Bug fixes
+
+- Fix Bash script body leak on job cancellation [!6861](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6861)
+
+### Maintenance
+
+- Disable TestKubernetesBuildPodResources [!6878](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6878)
+
 ## v18.11.3 (2026-05-11)
 
 ### Bug fixes
