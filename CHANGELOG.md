@@ -14,17 +14,11 @@
 
 - Update to go 1.26.3 [backport to 19.0] [!6788](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6788)
 
-## v19.0.0 (2026-06-29)
+## v19.0.0 (2026-05-28)
 
 ### Bug fixes
 
-- Fix Bash script body leak on job cancellation [!6870](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6870)
 - Update to go 1.26.3 [backport to 19.0] [!6788](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6788)
-
-### Maintenance
-
-- Disable TestKubernetesBuildPodResources [!6879](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6879)
-- Update base images version to pick up CVE fixes (19.0 backport) [!6776](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6776)
 
 ## v18.11.3 (2026-05-11)
 
