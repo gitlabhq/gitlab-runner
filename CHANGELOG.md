@@ -5,12 +5,19 @@
 - Merge branch 'sh-fix-role-arn-injection' into '18-11-stable' [!6715](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6715)
 - Update the parallels executor to work with Windows guests [!105](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/105) (Chris Rose @cdrx)
 
-## v18.11.2 (2026-05-02)
+## v18.11.2 (2026-06-29)
 
 ### Bug fixes
 
+- Update the parallels executor to work with Windows guests [!105](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/105) (Chris Rose @cdrx)
 - Add HEAD method support to S3v2 presign URL [!6682](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6682) (Sepehr Heydari @sepehrheydari72)
 - Fix S3 cache broken on third-party providers by SDK checksum defaults [!6691](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6691)
+- Fix Bash script body leak on job cancellation [!6861](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6861)
+- Merge branch 'sh-fix-role-arn-injection' into '18-11-stable' [!6715](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6715)
+
+### Maintenance
+
+- Disable TestKubernetesBuildPodResources [!6878](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6878)
 
 ## v18.11.1 (2026-05-02)
 
