@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
 title: インスタンスexecutor
 ---
 
@@ -13,72 +13,69 @@ title: インスタンスexecutor
 
 {{< /history >}}
 
-インスタンスexecutorは、Runnerマネージャーが処理するジョブの予期されるボリュームに対応するために、オンデマンドでインスタンスを作成するオートスケール対応のexecutorです。
+インスタンスexecutorは、オートスケールが有効なexecutorで、Runnerマネージャーが処理するジョブの予想される量に対応するために、オンデマンドでインスタンスを作成します。
 
-ジョブがホストインスタンス、オペレーティングシステム、および接続デバイスへのフルアクセスを必要とする場合は、インスタンスexecutorを使用できます。インスタンスエグゼキューターは、さまざまなレベルの分離とセキュリティを備えたシングルテナントおよびマルチテナントジョブに対応するように構成することもできます。
+ジョブがホストインスタンス、オペレーティングシステム、および接続されたデバイスへのフルアクセスを必要とする場合、インスタンスexecutorを使用できます。インスタンスexecutorは、さまざまなレベルの分離とセキュリティを備えたシングルテナントおよびマルチテナントのジョブに対応するように設定することもできます。
 
 ## ネストされた仮想化 {#nested-virtualization}
 
-インスタンスエグゼキューターは、GitLabが開発した[ネスティングデーモン](https://gitlab.com/gitlab-org/fleeting/nesting)を使用したネストされた仮想化をサポートしています。ネスティングデーモンを使用すると、ジョブのように、分離された短期間のワークロードに使用されるホストシステム上で、事前構成された仮想マシンの作成と削除ができます。ネストは、Apple Siliconインスタンスでのみサポートされています。
+インスタンスexecutorは、GitLabが開発した[ネストされたデーモン](https://gitlab.com/gitlab-org/fleeting/nesting)によるネストされた仮想化をサポートします。ネストされたデーモンは、ジョブのような分離された短期間のワークロードに使用されるホストシステム上で、事前設定された仮想マシンの作成と削除を可能にします。ネストはApple Siliconインスタンスでのみサポートされています。
 
-## オートスケールの環境を準備します {#prepare-the-environment-for-autoscaling}
+## オートスケールのために環境を準備する {#prepare-the-environment-for-autoscaling}
 
-オートスケールの環境を準備するには、次のようにします:
+オートスケールのために環境を準備するには:
 
-1. Runnerマネージャーがインストールおよび構成されているターゲットプラットフォーム用の[Fleetingプラグインをインストール](../fleet_scaling/fleeting.md#install-a-fleeting-plugin)します。
-1. 使用しているプラットフォームのVMイメージを作成します。イメージには以下を含める必要があります:
+1. [Fleetingプラグインをインストール](../fleet_scaling/fleeting.md#install-a-fleeting-plugin)して、Runnerマネージャーがインストールされ、設定されているターゲットプラットフォームで利用できるようにします。
+1. 使用しているプラットフォーム用のVMイメージを作成します。イメージには以下を含める必要があります:
    - Git
-   - GitLab Runnerバイナリ
+   - Runnerバイナリ
 
-    {{< alert type="note" >}}
-
-    ジョブのアーティファクトとキャッシュを処理するには、仮想マシンにGitLab Runnerバイナリをインストールし、Runner実行可能ファイルをデフォルトのパスに保持します。VMイメージでは、GitLab Runnerをインストールする必要はありません。VMイメージを使用して起動されたインスタンスを、GitLabにRunnerとして登録しないようにしてください。
-
-    {{< /alert >}}
+     > [!note]
+     > ジョブアーティファクトキャッシュを処理するには、Runnerバイナリを仮想マシンにインストールし、Runner実行可能ファイルをデフォルトのパスに保持します。VMイメージはRunnerの実行を必要としません。VMイメージを使用して起動されたインスタンスを、GitLabにRunnerとして登録しないようにしてください。
 
    - 実行する予定のジョブに必要な依存関係
 
-## オートスケールするようにエグゼキューターを構成します {#configure-the-executor-to-autoscale}
+## executorをオートスケールするように設定する {#configure-the-executor-to-autoscale}
 
-前提要件:
+前提条件: 
 
 - 管理者である必要があります。
 
-オートスケールを行うようにインスタンスエグゼキューターを構成するには、`config.toml`の次のセクションを更新します:
+インスタンスexecutorをオートスケールのために設定するには、`config.toml`で次のセクションを更新します:
 
 - [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 - [`[runners.instance]`](../configuration/advanced-configuration.md#the-runnersinstance-section)
 
 ## プリエンプティブモード {#preemptive-mode}
 
-FleetingとTaskscalerを使用する場合:
+fleetingとtaskscalerを使用すると:
 
-- オンにすると、Runnerマネージャーは、アイドル状態のインスタンスが使用可能になるまで、新しいCI/CDジョブをリクエストしません。このモードでは、CI/CDジョブはほぼすぐに実行されます。
-- プリエンプティブモードがオフになっている場合、Runnerマネージャーは、アイドル状態のインスタンスがそれらのジョブを実行できるかどうかに関係なく、新しいCI/CDジョブをリクエストします。ジョブの数は、`max_instances`と`capacity_per_instance`に基づいています。このモードでは、CI/CDジョブの開始時間が遅くなります。新しいインスタンスをプロビジョニングできない場合があり、CI/CDジョブが実行されない可能性があります。
+- オンにすると、Runnerマネージャーはアイドルインスタンスが利用可能になるまで新しいCI/CDジョブをリクエストしません。このモードでは、CI/CDジョブはほぼ即座に実行されます。
+- プリエンプティブモードがオフの場合、Runnerマネージャーは、アイドルインスタンスがこれらのジョブを実行できるかどうかに関わらず、新しいCI/CDジョブをリクエストします。ジョブの数は`max_instances`と`capacity_per_instance`に基づいています。このモードでは、CI/CDジョブの開始時間が遅くなります。新しいインスタンスをプロビジョニングすることができず、CI/CDジョブが実行されない可能性があります。
 
-## AWSオートスケールグループ構成の例 {#aws-autoscaling-group-configuration-examples}
+## AWSオートスケールグループの設定例 {#aws-autoscaling-group-configuration-examples}
 
-### インスタンスごとのジョブ数1 {#one-job-per-instance}
+### 1インスタンスあたり1ジョブ {#one-job-per-instance}
 
-前提要件:
+前提条件: 
 
-- 少なくとも`git`とGitLab RunnerがインストールされたAMI。
+- 少なくとも`git`とRunnerがインストールされたAMI。
 - AWS Auto Scalingグループ。スケールポリシーには`none`を使用します。Runnerがスケーリングを処理します。
-- [適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)が設定されたIAMポリシー。
+- IAMポリシーと[適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)。
 
 この設定では以下がサポートされています:
 
-- 各インスタンスの`1`の容量。
-- 使用回数: `1`。
-- アイドルスケール: `5`。
-- アイドル時間: 20分。
-- インスタンスの最大数: `10`。
+- 各インスタンスの容量は`1`です。
+- 使用回数は`1`です。
+- アイドルスケールは`5`です。
+- アイドル時間は20分です。
+- 最大インスタンス数は`10`です。
 
-キャパシティと使用回数が両方とも`1`に設定されている場合、各ジョブに、他のジョブの影響を受けない安全な一時的なインスタンスが与えられます。ジョブが完了すると、ジョブが実行されたインスタンスが直ちに削除されます。
+容量と使用回数を`1`に設定すると、各ジョブには他のジョブの影響を受けない安全な一時的なインスタンスが与えられます。ジョブが完了すると、実行されたインスタンスはすぐに削除されます。
 
-各インスタンスの容量が`1`で、アイドルスケールが`5`の場合、Runnerは将来の需要に備えて5つのインスタンス全体を保持します。これらのインスタンスは、少なくとも20分間は残ります。
+各インスタンスの容量が`1`で、アイドルスケールが`5`の場合、Runnerは将来の需要に備えて5つのインスタンス全体を保持します。これらのインスタンスは少なくとも20分間維持されます。
 
-Runnerの`concurrent`フィールドは10（インスタンスの最大数*インスタンスあたりのキャパシティ）に設定されます。
+Runnerの`concurrent`フィールドは10に設定されています（最大インスタンス数 * 1インスタンスあたりの容量）。
 
 ```toml
 concurrent = 10
@@ -117,29 +114,29 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-### 無制限の用途でインスタンスあたり5つのジョブ {#five-jobs-per-instance-with-unlimited-uses}
+### 無制限の使用回数で1インスタンスあたり5つのジョブ {#five-jobs-per-instance-with-unlimited-uses}
 
-前提要件:
+前提条件: 
 
-- 少なくとも`git`とGitLab RunnerがインストールされたAMI。
-- スケールポリシーが`none`に設定されたAWSオートスケールグループ。Runnerがスケーリングを処理します。
-- [適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)が設定されたIAMポリシー。
+- 少なくとも`git`とRunnerがインストールされたAMI。
+- AWSオートスケールグループのスケールポリシーは`none`に設定されています。Runnerがスケーリングを処理します。
+- IAMポリシーと[適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)。
 
 この設定では以下がサポートされています:
 
-- 各インスタンスの`5`の容量。
+- 各インスタンスの容量は`5`です。
 - 無制限の使用回数。
-- アイドルスケール: `5`。
-- アイドル時間: 20分。
-- インスタンスの最大数: `10`。
+- アイドルスケールは`5`です。
+- アイドル時間は20分です。
+- 最大インスタンス数は`10`です。
 
-インスタンスあたりの容量を`5`に設定し、使用回数を無制限にすると、各インスタンスはインスタンスのライフタイム全体で5つのジョブを同時に実行します。
+1インスタンスあたりの容量を`5`に設定し、使用回数を無制限にすると、各インスタンスはインスタンスのライフタイム全体で5つのジョブを同時に実行します。
 
-アイドルスケールが`5`で、インスタンスのアイドル容量が`5`の場合、使用中の容量が5を下回ると、アイドルインスタンスが1つ作成されます。アイドルインスタンスは、少なくとも20分間は残ります。
+アイドルスケールが`5`で、インスタンスのアイドル容量が`5`の場合、使用中の容量が5を下回るたびに1つのアイドルインスタンスが作成されます。アイドルインスタンスは少なくとも20分間維持されます。
 
-これらの環境で実行されるジョブは、**信頼**されている必要があります。それらの間にはほとんど分離がなく、各ジョブが別のジョブのパフォーマンスに影響を与える可能性があるためです。
+これらの環境で実行されるジョブは、それらの間にほとんど分離がなく、各ジョブが他のジョブのパフォーマンスに影響を与える可能性があるため、**信頼できるもの**である必要があります。
 
-Runnerの`concurrent`フィールドは50（インスタンスの最大数*インスタンスあたりのキャパシティ）に設定されます。
+Runnerの`concurrent`フィールドは50に設定されています（最大インスタンス数 * 1インスタンスあたりの容量）。
 
 ```toml
 concurrent = 50
@@ -179,31 +176,31 @@ concurrent = 50
       idle_time = "20m0s"
 ```
 
-### インスタンスあたり2つのジョブ、無制限の使用、EC2 Macインスタンスでのネストされた仮想化 {#two-jobs-per-instance-unlimited-uses-nested-virtualization-on-ec2-mac-instances}
+### 1インスタンスあたり2ジョブ、無制限の使用、EC2 Macインスタンスでのネストされた仮想化 {#two-jobs-per-instance-unlimited-uses-nested-virtualization-on-ec2-mac-instances}
 
-前提要件:
+前提条件: 
 
-- [ネスティング](https://gitlab.com/gitlab-org/fleeting/nesting)と[Tart](https://github.com/cirruslabs/tart)がインストールされたApple Silicon AMI。
-- Runnerが使用するTart VMイメージ。VMイメージは、ジョブの`image`キーワードで指定されます。VMイメージには、少なくとも`git`とGitLab Runnerがインストールされている必要があります。
-- AWS Auto Scalingグループ。Runnerがスケールを処理するため、スケーリングポリシーには`none`を使用します。MacOSのASGを設定する方法については、[EC2 Macインスタンスのオートスケールの実装](https://aws.amazon.com/blogs/compute/implementing-autoscaling-for-ec2-mac-instances/)を参照してください。
+- [ネスト](https://gitlab.com/gitlab-org/fleeting/nesting)と[Tart](https://github.com/openai/tart)がインストールされたApple Silicon AMI。
+- Runnerが使用するTart VMイメージ。VMイメージは、ジョブの`image`キーワードで指定されます。VMイメージには、少なくとも`git`とRunnerがインストールされている必要があります。
+- AWS Auto Scalingグループ。スケールポリシーには`none`を使用します。これはRunnerがスケールを処理するためです。MacOS用のASGを設定する方法については、[EC2 Macインスタンス向けオートスケールの実装](https://aws.amazon.com/blogs/compute/implementing-autoscaling-for-ec2-mac-instances/)を参照してください。
 - [適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)が設定されたIAMポリシー。
 
 この設定では以下がサポートされています:
 
-- 各インスタンスの`2`の容量。
+- 各インスタンスの容量は`2`です。
 - 無制限の使用回数。
-- 分離されたジョブをサポートするためのネストされた仮想化。ネストされた仮想化は、[ネスティング](https://gitlab.com/gitlab-org/fleeting/nesting)がインストールされたAppleシリコンインスタンスでのみ使用できます。
-- アイドルスケール: `5`。
-- アイドル時間: 20分。
-- インスタンスの最大数: `10`。
+- 分離されたジョブをサポートするためのネストされた仮想化。ネストされた仮想化は、[ネスト](https://gitlab.com/gitlab-org/fleeting/nesting)がインストールされたApple Siliconインスタンスでのみ利用可能です。
+- アイドルスケールは`5`です。
+- アイドル時間は20分です。
+- 最大インスタンス数は`10`です。
 
-各インスタンスの容量が`2`で、使用回数が無制限の場合、各インスタンスはインスタンスのライフタイムの間、2つのジョブを同時に実行します。
+各インスタンスの容量が`2`で、使用回数が無制限の場合、各インスタンスはインスタンスのライフタイム全体で2つのジョブを同時に実行します。
 
-アイドルスケールが`2`の場合、使用中の容量が`2`を下回ると、アイドルインスタンスが1つ作成されます。アイドルインスタンスは、少なくとも24時間は残ります。この時間枠は、AWS MacOSインスタンスホストの24時間の最小割り当て期間によるものです。
+アイドルスケールが`2`の場合、使用中の容量が`2`を下回るたびに1つのアイドルインスタンスが作成されます。アイドルインスタンスは少なくとも24時間維持されます。この期間は、AWS MacOSインスタンスホストの24時間最小割り当て期間によるものです。
 
-この環境で実行されるジョブは、[ネスティング](https://gitlab.com/gitlab-org/fleeting/nesting)が各ジョブのネストされた仮想化に使用されるため、信頼する必要はありません。これは、Apple Siliconインスタンスでのみ機能します。
+この環境で実行されるジョブは、各ジョブのネストされた仮想化に[ネスト](https://gitlab.com/gitlab-org/fleeting/nesting)が使用されているため、信頼する必要はありません。これはApple siliconインスタンスでのみ機能します。
 
-Runnerの`concurrent`フィールドは8（インスタンスの最大数*インスタンスあたりのキャパシティ）に設定されます。
+Runnerの`concurrent`フィールドは8に設定されています（最大インスタンス数 * 1インスタンスあたりの容量）。
 
 ```toml
 concurrent = 8
@@ -250,13 +247,13 @@ concurrent = 8
       timeout  = "20m"
 ```
 
-## Google Cloudインスタンスグループ構成の例 {#google-cloud-instance-group-configuration-examples}
+## Google Cloudインスタンスグループの設定例 {#google-cloud-instance-group-configuration-examples}
 
-### Google Cloudインスタンスグループを使用したインスタンスあたりのジョブ数1 {#one-job-per-instance-using-a-google-cloud-instance-group}
+### Google Cloudインスタンスグループを使用した1インスタンスあたり1ジョブ {#one-job-per-instance-using-a-google-cloud-instance-group}
 
-前提要件:
+前提条件: 
 
-- 少なくとも`git`とGitLab Runnerがインストールされたカスタムイメージ。
+- 少なくとも`git`とRunnerがインストールされたカスタムイメージ。
 - オートスケールモードが`do not autoscale`に設定されているGoogle Cloudインスタンスグループ。Runnerがスケーリングを処理します。
 - [適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions)が設定されたIAMポリシー。GKEクラスターにRunnerをデプロイする場合は、KubernetesサービスアカウントとGCPサービスアカウントの間にIAMバインディングを追加できます。`credentials_file`でキーファイルを使用する代わりに、`iam.workloadIdentityUser`ロールでこのバインディングを追加し、GCPに対して認証できます。
 
@@ -311,29 +308,29 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-### Google Cloudインスタンスグループを使用した、インスタンスあたり5つのジョブ、無制限の使用 {#five-jobs-per-instance-unlimited-uses-using-google-cloud-instance-group}
+### Google Cloudインスタンスグループを使用した、1インスタンスあたり5ジョブ、無制限の使用 {#five-jobs-per-instance-unlimited-uses-using-google-cloud-instance-group}
 
-前提要件:
+前提条件: 
 
-- 少なくとも`git`とGitLab Runnerがインストールされたカスタムイメージ。
-- インスタンスグループ。Runnerがスケールを処理するため、「オートスケールモード」では「オートスケールしない」を選択します。
-- [適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions)が設定されたIAMポリシー。
+- 少なくとも`git`とRunnerがインストールされたカスタムイメージ。
+- インスタンスグループ。「オートスケールモード」には「オートスケールしない」を選択してください。これはRunnerがスケールを処理するためです。
+- IAMポリシーと[適切な権限](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions)。
 
 この設定では以下がサポートされています:
 
-- インスタンスあたりのキャパシティ: 5。
+- 1インスタンスあたりの容量は5です。
 - 無制限の使用回数
 - アイドルスケール: 5
 - アイドル時間: 20分
 - インスタンスの最大数: 10
 
-容量が`5`に設定され、使用回数が無制限の場合、各インスタンスはインスタンスのライフタイムの間、5つのジョブを同時に実行します。
+容量を`5`に設定し、使用回数を無制限にすると、各インスタンスはインスタンスのライフタイム全体で5つのジョブを同時に実行します。
 
-これらの環境で実行されるジョブは、**信頼**されている必要があります。それらの間にはほとんど分離がなく、各ジョブが別のジョブのパフォーマンスに影響を与える可能性があるためです。
+これらの環境で実行されるジョブは、それらの間にほとんど分離がなく、各ジョブが他のジョブのパフォーマンスに影響を与える可能性があるため、**信頼できるもの**である必要があります。
 
-アイドルスケールが`5`の場合、使用中の容量が`5`を下回ると、アイドルインスタンスが1つ作成されます。これらのインスタンスは少なくとも20分間維持されます。
+アイドルスケールが`5`の場合、使用中の容量が`5`を下回るたびに1つのアイドルインスタンスが作成されます。アイドルインスタンスは少なくとも20分間維持されます。
 
-Runnerの`concurrent`フィールドは50（インスタンスの最大数*インスタンスあたりのキャパシティ）に設定されます。
+Runnerの`concurrent`フィールドは50に設定されています（最大インスタンス数 * 1インスタンスあたりの容量）。
 
 ```toml
 concurrent = 50
@@ -373,14 +370,14 @@ concurrent = 50
       idle_time = "20m0s"
 ```
 
-## Azureスケールセット構成の例 {#azure-scale-set-configuration-examples}
+## Azureスケールセットの設定例 {#azure-scale-set-configuration-examples}
 
-### Azureスケールセットを使用したインスタンスごとのジョブ数1 {#one-job-per-instance-using-an-azure-scale-set}
+### Azureスケールセットを使用した1インスタンスあたり1ジョブ {#one-job-per-instance-using-an-azure-scale-set}
 
-前提要件:
+前提条件: 
 
-- 少なくとも`git`とGitLab Runnerがインストールされたカスタムイメージ。
-- オートスケールモードが`manual`に設定され、オーバープロビジョニングがオフになっているAzureスケールセット。Runnerがスケーリングを処理します。
+- 少なくとも`git`とRunnerがインストールされたカスタムイメージ。
+- オートスケールモードが`manual`に設定されており、オーバープロビジョニングがオフになっているAzureスケールセット。Runnerがスケーリングを処理します。
 
 この設定では以下がサポートされています:
 
@@ -435,28 +432,28 @@ concurrent = 10
       idle_time  = "20m0s"
 ```
 
-### Azureスケールセットを使用した、インスタンスあたり5つのジョブ、無制限の使用 {#five-jobs-per-instance-unlimited-uses-using-an-azure-scale-set}
+### Azureスケールセットを使用した、1インスタンスあたり5ジョブ、無制限の使用 {#five-jobs-per-instance-unlimited-uses-using-an-azure-scale-set}
 
-前提要件:
+前提条件: 
 
-- 少なくとも`git`とGitLab Runnerがインストールされたカスタムイメージ。
-- オートスケールモードが`manual`に設定され、オーバープロビジョニングがオフになっているAzureスケールセット。Runnerがスケーリングを処理します。
+- 少なくとも`git`とRunnerがインストールされたカスタムイメージ。
+- オートスケールモードが`manual`に設定されており、オーバープロビジョニングがオフになっているAzureスケールセット。Runnerがスケーリングを処理します。
 
 この設定では以下がサポートされています:
 
-- インスタンスあたりのキャパシティ: 5。
+- 1インスタンスあたりの容量は5です。
 - 無制限の使用回数
 - アイドルスケール: 5
 - アイドル時間: 20分
 - インスタンスの最大数: 10
 
-容量が`5`に設定され、使用回数が無制限の場合、各インスタンスはインスタンスのライフタイムの間、5つのジョブを同時に実行します。
+容量を`5`に設定し、使用回数を無制限にすると、各インスタンスはインスタンスのライフタイム全体で5つのジョブを同時に実行します。
 
-これらの環境で実行されるジョブは、**信頼**されている必要があります。それらの間にはほとんど分離がなく、各ジョブが別のジョブのパフォーマンスに影響を与える可能性があるためです。
+これらの環境で実行されるジョブは、それらの間にほとんど分離がなく、各ジョブが他のジョブのパフォーマンスに影響を与える可能性があるため、**信頼できるもの**である必要があります。
 
-アイドルスケールが`2`の場合、使用中の容量が`5`を下回ると、アイドルインスタンスが1つ作成されます。これらのインスタンスは少なくとも20分間維持されます。
+アイドルスケールが`2`の場合、使用中の容量が`5`を下回るたびに1つのアイドルインスタンスが作成されます。アイドルインスタンスは少なくとも20分間維持されます。
 
-Runnerの`concurrent`フィールドは50（インスタンスの最大数*インスタンスあたりのキャパシティ）に設定されます。
+Runnerの`concurrent`フィールドは50に設定されています（最大インスタンス数 * 1インスタンスあたりの容量）。
 
 ```toml
 concurrent = 50
@@ -497,10 +494,22 @@ concurrent = 50
       idle_time = "20m0s"
 ```
 
+## スロットベースのcgroupのサポート {#slot-based-cgroup-support}
+
+インスタンスexecutorは、同時実行ジョブ間のリソース分離を改善するために、スロットベースのcgroupをサポートしています。有効にすると、`GITLAB_RUNNER_SLOT_CGROUP`環境変数がジョブに自動的に提供され、スロット固有のcgroupでプロセスを実行できるようになります。
+
+スロットベースのcgroupに関する詳細情報（利点、前提条件、設定、セットアップ手順を含む）については、[スロットベースのcgroupサポート](../configuration/slot_based_cgroups.md)を参照してください。
+
+### Runnerスロットcgroup環境変数の使用 {#using-the-gitlab-runner-slot-cgroup-environment-variable}
+
+インスタンスexecutorは、`GITLAB_RUNNER_SLOT_CGROUP`環境変数をジョブに提供します。この変数を`systemd-run`や`cgexec`のようなツールと組み合わせて使用し、スロット固有のcgroupでプロセスを実行します。
+
+使用例とトラブルシューティングについては、スロットベースcgroupドキュメントの[インスタンスexecutorセクション](../configuration/slot_based_cgroups.md#instance-executor)を参照してください。
+
 ## トラブルシューティング {#troubleshooting}
 
-インスタンスexecutorを使用するときに次の問題が発生する可能性があります:
+インスタンスexecutorを使用する際、次の問題が発生する可能性があります:
 
 ### `sh: 1: eval: Running on ip-x.x.x.x via runner-host...n: not found` {#sh-1-eval-running-on-ip-xxxx-via-runner-hostn-not-found}
 
-このエラーは通常、準備ステップの`eval`コマンドが失敗した場合に発生します。このエラーを解決するには、`bash`シェルに切り替え、[機能フラグ](../configuration/feature-flags.md) `FF_USE_NEW_BASH_EVAL_STRATEGY`を有効にします。
+このエラーは通常、準備ステップの`eval`コマンドが失敗したときに発生します。このエラーを解決するには、`bash` Shellに切り替えて、[機能フラグ](../configuration/feature-flags.md) `FF_USE_NEW_BASH_EVAL_STRATEGY`を有効にします。

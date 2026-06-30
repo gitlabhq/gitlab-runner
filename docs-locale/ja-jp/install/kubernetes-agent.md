@@ -1,8 +1,9 @@
 ---
-stage: Deploy
-group: Environments
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-title: エージェントを使用してGitLab Runnerをインストールします
+stage: Verify
+group: Runner Core
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
+description: Kubernetes向けGitLabエージェントを使用してGitLab Runnerをインストールします。
+title: エージェントを使用してGitLab Runnerをインストールする
 ---
 
 {{< details >}}
@@ -12,18 +13,15 @@ title: エージェントを使用してGitLab Runnerをインストールしま
 
 {{< /details >}}
 
-[Kubernetes向けGitLabエージェント](https://docs.gitlab.com/user/clusters/agent/)をインストールして設定すると、エージェントを使用してクラスターにGitLab Runnerをインストールできます。
+[Kubernetes向けGitLabエージェント](https://docs.gitlab.com/user/clusters/agent/)をインストールして構成したら、エージェントを使用してクラスターにGitLab Runnerをインストールできます。
 
-この[GitOpsワークフロー](https://docs.gitlab.com/user/clusters/agent/gitops/)を使用すると、リポジトリにGitLab Runnerの設定ファイルが含まれ、クラスターが自動的に更新されます。
+この[GitOpsワークフロー](https://docs.gitlab.com/user/clusters/agent/gitops/)では、リポジトリにGitLab Runner設定ファイルが含まれ、クラスターが自動的に更新されます。
 
-{{< alert type="warning" >}}
+> [!warning]
+> GitLab Runnerシークレットを`runner-manifest.yaml`に暗号化せずに加えると、リポジトリファイルでシークレットが公開される可能性があります。GitOpsワークフローでKubernetes Secretsを安全に管理するには、[Sealed Secrets](https://fluxcd.io/flux/guides/sealed-secrets/)または[SOPS](https://fluxcd.io/flux/guides/mozilla-sops/)を使用します。
 
-暗号化されていないGitLab Runnerのシークレットを`runner-manifest.yaml`に追加すると、リポジトリファイル内のシークレットが公開される可能性があります。GitOpsワークフローでKubernetes Secretsを安全に管理するには、[Sealed Secrets](https://fluxcd.io/flux/guides/sealed-secrets/)または[SOPS](https://fluxcd.io/flux/guides/mozilla-sops/)を使用します。
-
-{{< /alert >}}
-
-1. [GitLab Runner](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml)のHelmチャートの値を確認します。
-1. `runner-chart-values.yaml`ファイルを作成します。次に例を示します: 
+1. [GitLab Runner](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml)のHelmチャート値を確認してください。
+1. `runner-chart-values.yaml`ファイルを作成します。例: 
 
    ```yaml
    # The GitLab Server URL (with protocol) that you want to register the runner against
@@ -49,15 +47,15 @@ title: エージェントを使用してGitLab Runnerをインストールしま
        privileged: true
    ```
 
-1. 単一のマニフェストファイルを作成して、GitLab Runnerチャートをクラスターエージェントと共にインストールします:
+1. クラスターエージェントでGitLab Runnerチャートをインストールするための単一のマニフェストファイルを作成します:
 
    ```shell
    helm template --namespace GITLAB-NAMESPACE gitlab-runner -f runner-chart-values.yaml gitlab/gitlab-runner > runner-manifest.yaml
    ```
 
-   `GITLAB-NAMESPACE`をネームスペースに置き換えます。[例を表示](#example-runner-manifest)。
+   `GITLAB-NAMESPACE`をお使いのネームスペースに置き換えてください。[例を見る](#example-runner-manifest)。
 
-1. `runner-manifest.yaml`ファイルを編集して、`ServiceAccount`の`namespace`を含めます。`helm template`の出力には、生成されたリソースに`ServiceAccount`ネームスペースが含まれていません。
+1. `runner-manifest.yaml`ファイルを編集して、`ServiceAccount`の`namespace`を含めます。`helm template`の出力には、生成されたリソースに`ServiceAccount`ネームスペースは含まれていません。
 
    ```yaml
    ---
@@ -72,8 +70,8 @@ title: エージェントを使用してGitLab Runnerをインストールしま
    ...
    ```
 
-1. `runner-manifest.yaml`をKubernetesマニフェストを保持するリポジトリにプッシュします。
-1. [GitOps](https://docs.gitlab.com/user/clusters/agent/gitops/)を使用してRunnerマニフェストを同期するようにエージェントを設定します。次に例を示します: 
+1. Kubernetesマニフェストを保持しているリポジトリに`runner-manifest.yaml`をプッシュします。
+1. [GitOps](https://docs.gitlab.com/user/clusters/agent/gitops/)を使用してエージェントを設定し、Runnerマニフェストを同期します。例: 
 
    ```yaml
    gitops:
@@ -83,11 +81,11 @@ title: エージェントを使用してGitLab Runnerをインストールしま
        - glob: 'path/to/runner-manifest.yaml'
    ```
 
-これで、エージェントがマニフェストの更新についてリポジトリを確認するたびに、クラスターが更新されてGitLab Runnerが含まれるようになります。
+エージェントがリポジトリでマニフェストの更新をチェックするたびに、クラスターが更新されてGitLab Runnerが含まれるようになります。
 
 ## Runnerマニフェストの例 {#example-runner-manifest}
 
-この例は、サンプルRunnerマニフェストファイルを示しています。プロジェクトのニーズに合わせて、独自の`manifest.yaml`ファイルを作成します。
+この例はサンプルRunnerマニフェストファイルを示しています。プロジェクトのニーズに合わせて独自の`manifest.yaml`ファイルを作成してください。
 
 ```yaml
 ---
@@ -489,12 +487,12 @@ spec:
 
 ## トラブルシューティング {#troubleshooting}
 
-### エラー: `associative list with keys has an element that omits key field "protocol"`（コンポーネントビルドエラー: specは有効なJSONスキーマである必要があります） {#error-associative-list-with-keys-has-an-element-that-omits-key-field-protocol}
+### エラー: `associative list with keys has an element that omits key field "protocol"` {#error-associative-list-with-keys-has-an-element-that-omits-key-field-protocol}
 
-[Kubernetes v1.19のバグ](https://github.com/kubernetes-sigs/structured-merge-diff/issues/130)により、Kubernetes向けGitLabエージェントを使用してGitLab Runnerまたはその他のアプリケーションをインストールする際に、このエラーが表示される場合があります。これを修正するには、次のいずれかの方法があります:
+[Kubernetes v1.19のバグ](https://github.com/kubernetes-sigs/structured-merge-diff/issues/130)のため、GitLab RunnerまたはKubernetes向けGitLabエージェントを使用したその他のアプリケーションのインストール時にこのエラーが表示される場合があります。これを修正するには、次のいずれかを実行します:
 
-- Kubernetesクラスターをv1.20以降にアップグレードします。
-- `containers.ports`サブセクションに`protocol: TCP`を追加します:
+- Kubernetesクラスターをv1.20またはそれ以降にアップグレードします。
+- `protocol: TCP`を`containers.ports`サブセクションに追加します:
 
   ```yaml
   ...

@@ -1,8 +1,9 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-title: FreeBSDにGitLab Runnerをインストールする
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
+description: FreeBSDシステムにGitLab Runnerをインストールします。
+title: FreeBSDにGitLab Runnerをインストール
 ---
 
 {{< details >}}
@@ -12,15 +13,12 @@ title: FreeBSDにGitLab Runnerをインストールする
 
 {{< /details >}}
 
-{{< alert type="note" >}}
-
-FreeBSDバージョンも[bleeding edge](bleeding-edge.md)リリースとして利用できます。[FAQ](../faq/_index.md)セクションを参照してください。このセクションでは、GitLab Runnerに関する最も一般的な問題について説明しています。
-
-{{< /alert >}}
+> [!note]
+> FreeBSDのバージョンは、[bleeding edge](bleeding-edge.md)リリースとしても利用できます。[FAQ](../faq/_index.md)セクションを参照してください。このセクションでは、GitLab Runnerに関する最も一般的な問題について説明しています。
 
 ## GitLab Runnerのインストール {#installing-gitlab-runner}
 
-FreeBSDにGitLab Runnerをインストールして構成する手順は次のとおりです:
+以下は、FreeBSDでGitLab Runnerをインストールして設定する手順です:
 
 1. `gitlab-runner`ユーザーとグループを作成します:
 
@@ -31,7 +29,7 @@ FreeBSDにGitLab Runnerをインストールして構成する手順は次のと
    sudo chown gitlab-runner:gitlab-runner /home/gitlab-runner
    ```
 
-1. ご使用のシステムに対応するバイナリをダウンロードします:
+1. ご使用のシステムに対応するバイナリをダウンロードします。
 
    ```shell
    # For amd64
@@ -43,13 +41,13 @@ FreeBSDにGitLab Runnerをインストールして構成する手順は次のと
 
    [Bleeding Edge - その他のタグ付きリリースをダウンロードする](bleeding-edge.md#download-any-other-tagged-release)の説明に従って、利用可能なすべてのバージョンのバイナリをダウンロードできます。
 
-1. 実行権限を付与します:
+1. 実行権限を付与します。
 
    ```shell
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
-1. 正しい権限で空のログファイルを作成します:
+1. 適切な権限を持つ空のログファイルを作成します:
 
    ```shell
    sudo touch /var/log/gitlab_runner.log && sudo chown gitlab-runner:gitlab-runner /var/log/gitlab_runner.log
@@ -63,7 +61,7 @@ FreeBSDにGitLab Runnerをインストールして構成する手順は次のと
 
 1. `rc.d`内に`gitlab_runner`スクリプトを作成します:
 
-   Bashユーザーは以下を実行できます:
+   Bashユーザーは以下の操作を実行できます:
 
    ```shell
    sudo bash -c 'cat > /usr/local/etc/rc.d/gitlab_runner' << "EOF"
@@ -101,7 +99,7 @@ FreeBSDにGitLab Runnerをインストールして構成する手順は次のと
    EOF
    ```
 
-   bashを使用していない場合は、`/usr/local/etc/rc.d/gitlab_runner`という名前のファイルを作成し、次のコンテンツを含めます:
+   bashを使用していない場合は、`/usr/local/etc/rc.d/gitlab_runner`という名前のファイルを作成し、以下の内容を含めます:
 
    ```shell
    #!/bin/sh
@@ -151,7 +149,7 @@ FreeBSDにGitLab Runnerをインストールして構成する手順は次のと
    sudo service gitlab_runner start
    ```
 
-   再起動後に`gitlab-runner`サービスを起動したくない場合は、次を使用します:
+   再起動後に`gitlab-runner`サービスを有効にしない場合は、以下を使用します:
 
    ```shell
    sudo service gitlab_runner onestart
