@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
 description: Prometheusメトリクス。
 title: GitLab Runnerの使用状況をモニタリングする
 ---
@@ -17,9 +17,9 @@ title: GitLab Runnerの使用状況をモニタリングする
 
 ## 埋め込みPrometheusメトリクス {#embedded-prometheus-metrics}
 
-GitLab RunnerにはネイティブのPrometheusメトリクスが含まれており、`/metrics`パス上の埋め込みHTTPサーバーを使用して公開できます。このサーバーが有効になっている場合、Prometheusモニタリングシステムによりスクレイピングしたり、他のHTTPクライアントでアクセスしたりできます。
+GitLab RunnerにはネイティブのPrometheusメトリクスが含まれており、`/metrics`パス上の組み込みHTTPサーバーを使用して公開できます。このサーバーが有効になっている場合、Prometheusモニタリングシステムによりスクレイピングしたり、他のHTTPクライアントでアクセスしたりできます。
 
-公開される情報には以下のものが含まれます:
+公開される情報には以下のものが含まれます。
 
 - Runnerのビジネスロジックメトリクス（現時点で実行中のジョブの数など）
 - Go固有のプロセスメトリクス（ガベージコレクションの統計、goroutine、memstatなど）
@@ -36,7 +36,7 @@ GitLab RunnerにはネイティブのPrometheusメトリクスが含まれてお
 
 ## 利用可能なメトリクス {#available-metrics}
 
-利用可能なすべてのメトリクスのリストを確認するには、メトリクスエンドポイントを設定して有効にした後に、メトリクスエンドポイントに対して`curl`を実行します。たとえば、リッスンポート`9252`を使用して設定されているローカルRunnerの場合は次のようになります:
+利用可能なすべてのメトリクスのリストを確認するには、メトリクスエンドポイントを設定して有効にした後に、メトリクスエンドポイントに対して`curl`を実行します。たとえば、リッスンポート`9252`を使用して設定されているローカルRunnerの場合は次のようになります。
 
 ```shell
 $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
@@ -65,19 +65,16 @@ $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 
 ## メトリクスHTTPサーバーの設定 {#configuration-of-the-metrics-http-server}
 
-{{< alert type="note" >}}
+> [!note]
+> そのメトリクスサーバーはGitLab Runnerプロセスの内部状態に関するデータをエクスポートするため、公開すべきではありません！
 
-メトリクスサーバーは、GitLab Runnerプロセスの内部状態に関するデータをエクスポートするため、一般に公開すべきではありません。
-
-{{< /alert >}}
-
-次のいずれかの方法を使用して、メトリクスHTTPサーバーを設定します:
+次のいずれかの方法を使用して、メトリクスHTTPサーバーを設定します。
 
 - `config.toml`ファイルで`listen_address`グローバル設定オプションを使用します。
 - `run`コマンドの`--listen-address`コマンドラインオプションを使用します。
-- Helm Chartを使用するRunnerの場合は、`values.yaml`で次の手順に従います:
+- Helm Chartを使用するRunnerの場合は、`values.yaml`で次の手順に従います。
 
-  1. `metrics`オプションを設定します:
+  1. `metrics`オプションを設定します。
 
      ```yaml
      ## Configure integrated Prometheus metrics exporter
@@ -104,7 +101,7 @@ $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
          ...
      ```
 
-  1. 設定されている`metrics`を取得するように`service`モニターを設定します:
+  1. 設定されている`metrics`を取得するように`service`モニターを設定します。
 
      ```yaml
      ## Configure a service resource to allow scraping metrics by using
@@ -125,7 +122,7 @@ $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 
 `config.toml`ファイルにアドレスを追加する場合は、メトリクスHTTPサーバーを起動するために、Runnerプロセスを再起動する必要があります。
 
-どちらの場合も、オプションは`[host]:<port>`形式の文字列を受け入れます。各要素の意味は次のとおりです:
+どちらの場合も、オプションは`[host]:<port>`形式の文字列を受け入れます。各要素の意味は次のとおりです。
 
 - `host`には、IPアドレスまたはホスト名を使用できます。
 - `port`は、有効なTCPポートまたはシンボリックサービス名（`http`など）です。すでに[Prometheusに割り当てられている](https://github.com/prometheus/prometheus/wiki/Default-port-allocations)ポート`9252`を使用する必要があります。
@@ -135,24 +132,24 @@ $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 アドレスの例:
 
 - `:9252`は、ポート`9252`のすべてのインターフェースでリッスンします。
-- `localhost:9252`は、ポート`9252`のループバックインターフェースでリッスンします。
+- `localhost:9252`は、インターフェースのループバックでポート`9252`をリッスンします。
 - `[2001:db8::1]:http`は、HTTPポート`80`のIPv6アドレス`[2001:db8::1]`でリッスンします。
 
-少なくともLinux/Unixシステムでは、`1024`より下のポートでリッスンするには、root/管理者権限が必要であることに注意してください。
+ポート`1024`未満でリッスンする場合、特にLinux/Unixシステムでは、root/管理者権限が必要となることに注意してください。
 
-HTTPサーバーは、選択されている`host:port`で**認証なしで**開きます。メトリクスサーバーをパブリックインターフェースにバインドする場合は、ファイアウォールを使用してアクセス制御を制限するか、認可とアクセス制御のためにHTTPプロキシを追加します。
+HTTPサーバーは、選択されている`host:port`で**認証なしで**開きます。メトリクスサーバーを公開インターフェースにバインドする場合は、ファイアウォールを使用してアクセス制御を制限するか、HTTPプロキシを追加して認可とアクセス制御を行ってください。
 
-## GitLab Runner Operatorによって管理されるGitLab Runnerをモニタリングします {#monitor-operator-managed-gitlab-runners}
+## Operatorによって管理されるGitLab Runnerのモニタリング {#monitor-operator-managed-gitlab-runners}
 
-GitLab Runner Operatorによって管理されるGitLab Runnerは、スタンドアロンのGitLab Runnerインスタンスと同じ埋め込みPrometheusメトリクスサーバーを使用します。メトリクスサーバーは、`listenAddr`が`[::]:9252`に設定されており、ポート`9252`上のすべてのIPv6およびIPv4インターフェースでリッスンするように事前設定されています。
+GitLab Runner Operatorによって管理されるGitLab Runnerは、スタンドアロンのGitLab Runnerインスタンスと同様に、組み込みのPrometheusメトリクスサーバーを使用します。メトリクスサーバーは、`listenAddr`が`[::]:9252`に設定されており、ポート`9252`ですべてのIPv6およびIPv4インターフェースをリッスンします。
 
-### メトリクスポートを公開する {#expose-metrics-port}
+### メトリクスポートの公開 {#expose-metrics-port}
 
-GitLab Runner Operatorによって管理されるGitLab Runnerのモニタリングとメトリクス収集を有効にするには、[Operatorが管理するGitLab Runnerをモニタリングする](#monitor-operator-managed-gitlab-runners)を参照してください。
+GitLab Runner Operatorによって管理されるGitLab Runnerのモニタリングとメトリクス集計を有効にするには、[Operatorによって管理されるGitLab Runnerのモニタリング](#monitor-operator-managed-gitlab-runners)を参照してください。
 
-#### メトリクスポートを設定する {#configure-the-metrics-port}
+#### メトリクスポートの設定 {#configure-the-metrics-port}
 
-次のパッチをRunner設定の`podSpec`フィールドに追加します:
+Runnerの設定で、`podSpec`フィールドに次のパッチを追加します:
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2
@@ -185,14 +182,14 @@ spec:
 
 この設定では:
 
-- `name`: 識別用のカスタム`PodSpec`に名前を割り当てます。
+- `name`: 識別のために、カスタムの`PodSpec`に名前を割り当てます。
 - `patch`: `PodSpec`に適用するJSONパッチを定義し、Runnerコンテナ上のポート`9252`を公開します。
-- `patchType`: パッチを適用するために、`strategic`マージ戦略（デフォルト）を使用します。
-- `port`: Kubernetesサービスで簡単に識別できるように、`metrics`として名前が付けられています。
+- `patchType`: `strategic`マージ戦略（デフォルト）を使用してパッチを適用します。
+- `port`: Kubernetesサービスでの識別のために`metrics`という名前が付けられています。
 
-#### Prometheusのスクレイピングを設定する {#configure-prometheus-scraping}
+#### Prometheusのスクレイプを設定する {#configure-prometheus-scraping}
 
-Prometheus Operatorを使用する環境の場合は、Runnerポッドからメトリクスを直接スクレイプするための`PodMonitor`リソースを作成します:
+Prometheus Operatorを使用する環境では、Runnerポッドからメトリクスを直接スクレイプするために、`PodMonitor`リソースを作成します:
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
@@ -215,21 +212,21 @@ spec:
       path: /metrics
 ```
 
-`PodMonitor`構成を適用します:
+`PodMonitor`の設定を適用します:
 
 ```shell
 kubectl apply -f gitlab-runner-podmonitor.yaml
 ```
 
-`PodMonitor`構成:
+`PodMonitor`の設定は次のとおりです:
 
-- `selector`: `app.kubernetes.io/component: runner`ラベルが付いたポッドと一致します。
-- `namespaceSelector`: スクレイピングを`gitlab-runner-system`ネームスペースに制限します。
-- `podMetricsEndpoints`: メトリクスポート、スクレイプ間隔、パスを定義します。
+- `selector`: `app.kubernetes.io/component: runner`ラベルを持つポッドに一致します。
+- `namespaceSelector`: `gitlab-runner-system`ネームスペースへのスクレイプを制限します。
+- `podMetricsEndpoints`: メトリクスポート、スクレイプ間隔、およびパスを定義します。
 
-#### Runnerの識別をメトリクスに追加する {#add-runner-identification-to-metrics}
+#### メトリクスへのRunner識別子の追加 {#add-runner-identification-to-metrics}
 
-すべてのエクスポートされたメトリクスにRunnerの識別を追加するには、`PodMonitor`にrelabel設定を含めます:
+すべてのエクスポートされたメトリクスにRunner識別子を追加するには、`PodMonitor`にリラベル設定を含めます:
 
 ```yaml
 podMetricsEndpoints:
@@ -241,13 +238,13 @@ podMetricsEndpoints:
         targetLabel: runner_name
 ```
 
-relabel設定:
+リラベル設定は次のとおりです:
 
 - 各Runnerポッドから`app.kubernetes.io/name`ラベルを抽出します（GitLab Runner Operatorによって自動的に設定されます）。
-- そのポッドからのすべてのメトリクスに、`runner_name`ラベルとして追加します。
-- 特定のRunnerインスタンスによるフィルターと集計メトリクスを有効にします。
+- それを`runner_name`ラベルとして、そのポッドからのすべてのメトリクスに追加します。
+- 特定のRunnerインスタンスによるフィルターおよび集計メトリクスを有効にします。
 
-次に示すのは、Runnerの識別情報を含むメトリクスの例です:
+次に、Runner識別子を含むメトリクスの例を示します:
 
 ```prometheus
 gitlab_runner_concurrent{runner_name="my-gitlab-runner"} 10
@@ -256,7 +253,7 @@ gitlab_runner_jobs_running_total{runner_name="my-gitlab-runner"} 3
 
 #### Prometheusの直接スクレイプ設定 {#direct-prometheus-scrape-configuration}
 
-Prometheus Operatorを使用していない場合は、Prometheusスクレイプ設定でrelabel設定を直接追加できます:
+Prometheus Operatorを使用していない場合は、リラベル設定をPrometheusスクレイプ設定に直接追加できます:
 
 ```yaml
 scrape_configs:
@@ -275,16 +272,16 @@ scrape_configs:
 
 この設定では:
 
-- Kubernetesサービスディスカバリを使用して、`gitlab-runner-system`ネームスペース内のポッドを検索します。
-- `app.kubernetes.io/name`ラベルを抽出し、メトリクスに`runner_name`として追加します。
+- Kubernetesのサービスディスカバリを使用して、`gitlab-runner-system`ネームスペース内のポッドを検索します。
+- `app.kubernetes.io/name`ラベルを抽出し、それを`runner_name`としてメトリクスに追加します。
 
 ## Kubernetes以外のexecutorを使用するGitLab Runnerをモニタリングする {#monitor-gitlab-runner-with-executors-other-than-kubernetes}
 
-Kubernetes以外のexecutorを使用するGitLab Runnerデプロイメントの場合、Prometheus設定で外部ラベルを介してRunnerの識別を追加できます。
+Kubernetes以外のexecutorを持つGitLab Runnerのデプロイでは、Prometheusの設定で外部ラベルを介してRunner識別子を追加できます。
 
-### 外部ラベルを使用した静的な設定 {#static-configuration-with-external-labels}
+### 外部ラベルを含む静的設定 {#static-configuration-with-external-labels}
 
-GitLab Runnerインスタンスをスクレイプし、識別ラベルを追加するようにPrometheusを設定します:
+Prometheusを設定して、GitLab Runnerインスタンスをスクレイプし、識別ラベルを追加します:
 
 ```yaml
 scrape_configs:
@@ -300,7 +297,7 @@ scrape_configs:
     scrape_interval: 30s
 ```
 
-この設定により、メトリクスにRunnerの識別が追加されます:
+この設定により、Runner識別子がメトリクスに追加されます:
 
 ```prometheus
 gitlab_runner_concurrent{runner_name="production-runner-1"} 10
@@ -309,13 +306,13 @@ gitlab_runner_jobs_running_total{runner_name="staging-runner-1"} 3
 
 この設定により、次のことが可能になります:
 
-- 特定のRunnerインスタンスでメトリクスをフィルターします。
+- 特定のRunnerインスタンスでメトリクスをフィルタリングします。
 - Runner固有のダッシュボードとアラートを作成します。
-- さまざまなRunnerデプロイメント全体のパフォーマンスを追跡する。
+- さまざまなRunnerのデプロイ全体のパフォーマンスを追跡します。
 
-### Operatorが管理するGitLab Runnerで利用可能なメトリクス {#available-metrics-for-operator-managed-gitlab-runners}
+### Operatorによって管理されるGitLab Runnerで利用可能なメトリクス {#available-metrics-for-operator-managed-gitlab-runners}
 
-GitLab Runner Operatorによって管理されるGitLab Runnerは、スタンドアロンのGitLab Runnerデプロイメントと同じメトリクスを公開します。利用可能なすべてのメトリクスを表示するには、`kubectl`を使用してメトリクスエンドポイントにアクセスします:
+GitLab Runner Operatorによって管理されるGitLab Runnerは、スタンドアロンのGitLab Runnerデプロイと同じメトリクスを公開します。利用可能なすべてのメトリクスを表示するには、`kubectl`を使用してメトリクスエンドポイントにアクセスします:
 
 ```shell
 kubectl port-forward pod/<gitlab-runner-pod-name> 9252:9252
@@ -324,20 +321,20 @@ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 
 利用可能なメトリクスの完全なリストについては、[利用可能なメトリクス](#available-metrics)を参照してください。
 
-### Operatorが管理するGitLab Runnerのセキュリティに関する考慮事項 {#security-considerations-for-operator-managed-gitlab-runners}
+### Operatorによって管理されるGitLab Runnerのセキュリティに関する考慮事項 {#security-considerations-for-operator-managed-gitlab-runners}
 
-GitLab Runner Operatorによって管理されるGitLab Runnerのメトリクス収集を設定する場合:
+GitLab Runner Operatorによって管理されるGitLab Runnerのメトリクス集計を設定する場合:
 
-- Kubernetes `NetworkPolicies`を使用して、承認されたモニタリングシステムへのアクセスを制限します。
-- 本番環境でのメトリクススクレイピングには、`mutal` TLS暗号化の使用を検討してください。
+- Kubernetes `NetworkPolicies`を使用して、認可されたモニタリングシステムへのアクセスを制限します。
+- 本番環境でのメトリクススクレイプには、`mutal` TLS暗号化の使用を検討してください。
 
-### Operatorが管理するGitLab Runnerモニタリングのトラブルシューティング {#troubleshooting-operator-managed-gitlab-runner-monitoring}
+### Operatorによって管理されるGitLab Runnerのモニタリングのトラブルシューティング {#troubleshooting-operator-managed-gitlab-runner-monitoring}
 
-#### メトリクスエンドポイントにアクセスできません {#metrics-endpoint-not-accessible}
+#### メトリクスエンドポイントにアクセスできない {#metrics-endpoint-not-accessible}
 
 メトリクスエンドポイントにアクセスできない場合:
 
-1. ポッドの仕様にメトリクスポート設定が含まれていることを検証する。
+1. ポッドの仕様にメトリクスポートの設定が含まれていることを確認します。
 1. Runnerポッドが実行中で正常であることを確認します:
 
    ```shell
@@ -352,13 +349,13 @@ GitLab Runner Operatorによって管理されるGitLab Runnerのメトリクス
    curl "http://localhost:9252/metrics"
    ```
 
-#### Prometheusにメトリクスが表示されない {#missing-metrics-in-prometheus}
+#### Prometheusでメトリクスが見つからない {#missing-metrics-in-prometheus}
 
-Prometheusにメトリクスが表示されない場合:
+メトリクスがPrometheusに表示されない場合:
 
-1. `PodMonitor`が正しく設定され、適用されていることを検証する。
-1. ネームスペースとラベルセレクターがRunnerポッドと一致することを確認します。
-1. スクレイピングエラーのPrometheusログをレビューします。
+1. `PodMonitor`が正しく設定され、適用されていることを確認します。
+1. ネームスペースおよびラベルセレクタがRunnerポッドに一致していることを確認します。
+1. スクレイプエラーがないかPrometheusログを確認します。
 1. `PodMonitor`がPrometheus Operatorによって検出可能であることを検証します:
 
    ```shell

@@ -28,7 +28,7 @@ GitLab provides packages for the following supported versions of Linux distribut
 | Debian | Duke, Forky, Trixie, Bookworm, Bullseye |
 | LinuxMint | Xia, Wilma, Virginia, Victoria, Vera, Vanessa |
 | Raspbian | Duke, Forky, Trixie, Bookworm, Bullseye |
-| Ubuntu | Questing, Noble, Jammy, Focal, Bionic |
+| Ubuntu | Resolute, Questing, Noble, Jammy, Focal, Bionic |
 
 ### Rpm-based Distributions
 

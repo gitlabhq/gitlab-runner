@@ -1,8 +1,8 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-description: Config.toml、証明書、オートスケール、プロキシ設定
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
+description: 設定、証明書、オートスケール、プロキシのセットアップ。
 title: GitLab Runnerを設定する
 ---
 
@@ -27,6 +27,6 @@ GitLab Runnerの設定方法について説明します。
 - [Runnerのモニタリング](../monitoring/_index.md): Runnerの動作をモニタリングします。
 - [Dockerキャッシュを自動的にクリーンアップする](../executors/docker.md#clear-the-docker-cache): ディスク容量が少なくなっている場合は、cronジョブを使用して古いコンテナとボリュームをクリーンアップします。
 - [プロキシの背後で実行するようにGitLab Runnerを設定する](proxy.md): Linuxプロキシをセットアップし、GitLab Runnerを設定します。このセットアップは、Docker executorと適切に連携します。
-- [Oracle Cloud Infrastructure ( OCI ) 用のGitLab Runnerを設定する](oracle_cloud_performance.md): OCIでGitLab Runnerのパフォーマンスを最適化します。
+- [Oracle Cloud Infrastructure (OCI) 用のGitLab Runnerを設定する](oracle_cloud_performance.md): OCIでのGitLab Runnerのパフォーマンスを最適化します。
 - [レート制限されたリクエストを処理する](proxy.md#handling-rate-limited-requests)。
 - [GitLab Runner Operatorを設定する](configuring_runner_operator.md)。

@@ -88,6 +88,42 @@ func TestInit(t *testing.T) {
 			wantTaskscaler: tokenTaskscaler,
 			wantCreated:    false,
 		},
+		"scaler lookup is keyed by URL+ID not token": {
+			// The scaler is seeded under URL+ID. A config carrying a different
+			// token still resolves to it, proving the key ignores the token.
+			// (Rotation over time is covered by TestInitReusesScalerOnTokenRotation.)
+			config: common.NewTestRunnerConfig().
+				WithAutoscalerConfig(
+					common.NewTestAutoscalerConfig().AutoscalerConfig,
+				).
+				WithURL("https://gitlab.example.com").
+				WithID(42).
+				WithToken("some-token").
+				RunnerConfig,
+			scalers: map[string]taskscaler.Taskscaler{
+				"https://gitlab.example.com|42": tokenTaskscaler,
+			},
+			wantTaskscaler: tokenTaskscaler,
+			wantCreated:    false,
+		},
+		"scaler lookup falls back to token when ID is unset": {
+			// Legacy/hand-written configs (pre-v15.3.0, before the id field
+			// existed) default to with ID==0. Token rotation never backfills
+			// the ID, so the key falls back to the token, preserving pre-fix
+			// behavior rather than colliding every zero-ID runner under URL|0.
+			config: common.NewTestRunnerConfig().
+				WithAutoscalerConfig(
+					common.NewTestAutoscalerConfig().AutoscalerConfig,
+				).
+				WithURL("https://gitlab.example.com").
+				WithToken("some-token").
+				RunnerConfig,
+			scalers: map[string]taskscaler.Taskscaler{
+				"some-token": tokenTaskscaler,
+			},
+			wantTaskscaler: tokenTaskscaler,
+			wantCreated:    false,
+		},
 		"detect refresh on config change": {
 			config: common.NewTestRunnerConfig().
 				WithAutoscalerConfig(
@@ -138,6 +174,52 @@ func TestInit(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestInitReusesScalerOnTokenRotation models the bug from issue #39380: a single runner is
+// initialized, then its authentication token is rotated in place (as
+// resetOneRunnerToken does), and init is called again. The existing scaler must
+// be reused rather than a second one created for the same instance group, since
+// a second scaler would discover the running instances as pre-existing and prune
+// them mid-job.
+func TestInitReusesScalerOnTokenRotation(t *testing.T) {
+	ts := mocks.NewTaskscaler(t)
+	ep := common.NewMockExecutorProvider(t)
+
+	p := New(ep, Config{}).(*provider)
+	p.fleetingRunPlugin = mockFleetingRunPlugin(false)
+
+	// Count how many taskscalers get created across both init calls.
+	var created int
+	newTaskscaler := mockTaskscalerNew(ts, false)
+	p.taskscalerNew = func(ctx context.Context, ig fleetingprovider.InstanceGroup, opts ...taskscaler.Option) (taskscaler.Taskscaler, error) {
+		created++
+		return newTaskscaler(ctx, ig, opts...)
+	}
+
+	config := common.NewTestRunnerConfig().
+		WithAutoscalerConfig(common.NewTestAutoscalerConfig().AutoscalerConfig).
+		WithURL("https://gitlab.example.com").
+		WithID(42).
+		WithToken("token-before-rotation").
+		RunnerConfig
+
+	// First init: scaler is created.
+	got, wasCreated, err := p.init(config)
+	assert.NoError(t, err)
+	assert.True(t, wasCreated)
+	assert.Same(t, ts, got)
+	assert.Equal(t, 1, created)
+
+	// Rotate the token in place, exactly as resetOneRunnerToken mutates it.
+	config.Token = "token-after-rotation"
+
+	// Second init: the same scaler is reused, none created.
+	got, wasCreated, err = p.init(config)
+	assert.NoError(t, err)
+	assert.False(t, wasCreated)
+	assert.Same(t, ts, got)
+	assert.Equal(t, 1, created)
 }
 
 func TestAcquire(t *testing.T) {
