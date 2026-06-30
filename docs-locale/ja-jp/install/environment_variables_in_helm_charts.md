@@ -1,8 +1,8 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
-title: GitLab Runner Helmチャートで環境変数を設定する
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
+title: GitLab Runner Helmチャートで環境変数を設定
 ---
 
 {{< details >}}
@@ -12,16 +12,16 @@ title: GitLab Runner Helmチャートで環境変数を設定する
 
 {{< /details >}}
 
-環境変数は、アプリケーションがランタイム時の動作を調整するために使用できる情報を含むキー/バリューペアです。これらの変数は、コンテナの環境に挿入されます。これらの変数を使用して、アプリケーションに必要な設定データ、シークレット、またはその他の動的情報を渡すことができます。
+環境変数は、アプリケーションがランタイム時にその動作を調整するために使用できる情報を含むキー/バリューペアです。これらの変数は、コンテナの環境に注入されます。これらの変数を使用して、設定データ、シークレット、またはアプリケーションが必要とするその他の動的な情報を渡すことができます。
 
-GitLab Runner Helmチャートで環境変数を設定するには、次のものを使用します:
+GitLab Runner Helmチャートで環境変数を設定するには、以下を使用します:
 
 - [`runners.config`プロパティ](#use-the-runnersconfig-property)
 - [`values.yaml`のプロパティ](#use-valuesyaml-properties)
 
-## `runners.config`プロパティを使用してください。 {#use-the-runnersconfig-property}
+## `runners.config`プロパティを使用する {#use-the-runnersconfig-property}
 
-`config.toml`ファイルで行うのと同様に、`runners.config`プロパティを使用して環境変数を設定できます:
+環境変数は、`runners.config`プロパティを通じて設定できます。これは、`config.toml`ファイルで行うのと同様です:
 
 ```yaml
 runners:
@@ -33,11 +33,11 @@ runners:
         environment = ["FF_USE_ADVANCED_POD_SPEC_CONFIGURATION=true"]
 ```
 
-この方法で定義された変数は、ジョブPodとGitLab Runner Managerコンテナの両方に適用されます。上記の例では、`FF_USE_ADVANCED_POD_SPEC_CONFIGURATION`機能フラグが環境変数として設定されており、GitLab Runner Managerがその動作を変更するために使用します。
+この方法で定義された変数は、ジョブのポッドとGitLab Runnerマネージャーのコンテナの両方に適用されます。上記の例では、`FF_USE_ADVANCED_POD_SPEC_CONFIGURATION`機能フラグが環境変数として設定されており、GitLab Runnerマネージャーがその動作を変更するために使用します。
 
-## `values.yaml`プロパティの使用 {#use-valuesyaml-properties}
+## `values.yaml`プロパティを使用する {#use-valuesyaml-properties}
 
-`values.yaml`の次のプロパティを使用して環境変数を設定することもできます。これらの変数は、GitLab Runner Managerコンテナにのみ影響します。
+`values.yaml`の以下のプロパティを使用して、環境変数を設定することもできます。これらの変数は、GitLab Runnerマネージャーのコンテナにのみ影響します。
 
 - `envVars`
 
@@ -60,7 +60,7 @@ runners:
 - `extraEnvFrom`
 
   ```yaml
-  extraEnvFrom: {}
+  extraEnvFrom:
     CACHE_S3_ACCESS_KEY:
       secretKeyRef:
         name: s3access
