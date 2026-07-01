@@ -98,6 +98,9 @@ type executor struct {
 	buildContainerID string
 	suspended        bool // When true, Cleanup preserves containers/volumes/network on the VM
 
+	buildContainer  *container.InspectResponse
+	helperContainer *container.InspectResponse
+
 	services []*serviceInfo
 
 	// links used to use docker 'links' feature, which tied containers together
@@ -1420,10 +1423,13 @@ func (e *executor) resumeDependencies() error {
 		return fmt.Errorf("build container %s not found: %w", fields.buildContainerID, err)
 	}
 	e.buildContainerID = buildInspect.ID
+	e.buildContainer = &buildInspect
 
-	if _, err := e.dockerConn.ContainerInspect(e.Context, fields.helperContainerID); err != nil {
+	helperInspect, err := e.dockerConn.ContainerInspect(e.Context, fields.helperContainerID)
+	if err != nil {
 		return fmt.Errorf("helper container %s not found: %w", fields.helperContainerID, err)
 	}
+	e.helperContainer = &helperInspect
 
 	if err := e.createLabeler(); err != nil {
 		return err

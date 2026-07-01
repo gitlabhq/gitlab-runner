@@ -31,8 +31,6 @@ const (
 
 type commandExecutor struct {
 	executor
-	helperContainer                 *container.InspectResponse
-	buildContainer                  *container.InspectResponse
 	lock                            sync.Mutex
 	terminalWaitForContainerTimeout time.Duration
 }
@@ -291,26 +289,9 @@ func (s *commandExecutor) Suspend(ctx context.Context) (url.Values, error) {
 	}.toValues(), nil
 }
 
-func (s *commandExecutor) Resume(ctx context.Context, fields url.Values) error {
-	parsed, err := parseEnvKeyFields(fields)
-	if err != nil {
-		return err
-	}
-
-	buildInspect, err := s.dockerConn.ContainerInspect(ctx, parsed.buildContainerID)
-	if err != nil {
-		return fmt.Errorf("build container %s not found: %w", parsed.buildContainerID, err)
-	}
-	s.lock.Lock()
-	s.buildContainer = &buildInspect
-	s.lock.Unlock()
-
-	helperInspect, err := s.dockerConn.ContainerInspect(ctx, parsed.helperContainerID)
-	if err != nil {
-		return fmt.Errorf("helper container %s not found: %w", parsed.helperContainerID, err)
-	}
-	s.helperContainer = &helperInspect
-
+// Resume is a no-op: by the time it runs, Prepare has already resumed the
+// environment and cached the build and helper container inspects on the executor.
+func (s *commandExecutor) Resume(_ context.Context, _ url.Values) error {
 	return nil
 }
 

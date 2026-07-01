@@ -156,10 +156,10 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 						},
 					},
 					dockerConn: &dockerConnection{Client: c},
-				},
-				buildContainer: &container.InspectResponse{
-					ContainerJSONBase: &container.ContainerJSONBase{
-						ID: "1234",
+					buildContainer: &container.InspectResponse{
+						ContainerJSONBase: &container.ContainerJSONBase{
+							ID: "1234",
+						},
 					},
 				},
 			}
@@ -263,10 +263,10 @@ func TestTerminalConn_Start(t *testing.T) {
 			},
 			dockerConn: &dockerConnection{Client: c},
 			waiter:     wait.NewDockerKillWaiter(c),
-		},
-		buildContainer: &container.InspectResponse{
-			ContainerJSONBase: &container.ContainerJSONBase{
-				ID: "1234",
+			buildContainer: &container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
+					ID: "1234",
+				},
 			},
 		},
 	}

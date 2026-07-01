@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -3550,83 +3549,6 @@ func TestCleanup_skipsRemovalWhenSuspended(t *testing.T) {
 	// Test will fail if any of them fires.
 }
 
-func TestResume_invalidEnvKeyFields(t *testing.T) {
-	c := docker.NewMockClient(t)
-	s := &commandExecutor{executor: *executorWithMockClient(c)}
-
-	err := s.Resume(t.Context(), url.Values{})
-
-	require.EqualError(t, err, "build-container-id is required")
-}
-
-func TestResume_buildContainerNotFound(t *testing.T) {
-	c := docker.NewMockClient(t)
-	s := &commandExecutor{executor: *executorWithMockClient(c)}
-	require.NoError(t, s.executor.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, &s.executor))
-
-	fields := envKeyFields{
-		buildContainerID:  "missing-cid",
-		helperContainerID: "helper-cid",
-	}
-
-	c.On("ContainerInspect", mock.Anything, "missing-cid").
-		Return(container.InspectResponse{}, errors.New("No such container: missing-cid")).Once()
-
-	err := s.Resume(t.Context(), fields.toValues())
-
-	require.EqualError(t, err, "build container missing-cid not found: No such container: missing-cid")
-}
-
-func TestResume_helperContainerNotFound(t *testing.T) {
-	c := docker.NewMockClient(t)
-	s := &commandExecutor{executor: *executorWithMockClient(c)}
-	require.NoError(t, s.executor.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, &s.executor))
-
-	fields := envKeyFields{
-		buildContainerID:  "build-cid",
-		helperContainerID: "missing-helper",
-	}
-
-	c.On("ContainerInspect", mock.Anything, "build-cid").
-		Return(container.InspectResponse{
-			ContainerJSONBase: &container.ContainerJSONBase{ID: "build-cid"},
-		}, nil).Once()
-	c.On("ContainerInspect", mock.Anything, "missing-helper").
-		Return(container.InspectResponse{}, errors.New("No such container: missing-helper")).Once()
-
-	err := s.Resume(t.Context(), fields.toValues())
-
-	require.EqualError(t, err, "helper container missing-helper not found: No such container: missing-helper")
-}
-
-func TestResume(t *testing.T) {
-	c := docker.NewMockClient(t)
-	s := &commandExecutor{executor: *executorWithMockClient(c)}
-	require.NoError(t, s.executor.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, &s.executor))
-
-	fields := envKeyFields{
-		buildContainerID:  "build-cid",
-		helperContainerID: "helper-cid",
-	}
-
-	c.On("ContainerInspect", mock.Anything, "build-cid").
-		Return(container.InspectResponse{
-			ContainerJSONBase: &container.ContainerJSONBase{ID: "build-cid", Name: "/build-cont"},
-		}, nil).Once()
-	c.On("ContainerInspect", mock.Anything, "helper-cid").
-		Return(container.InspectResponse{
-			ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid", Name: "/helper-cont"},
-		}, nil).Once()
-
-	err := s.Resume(t.Context(), fields.toValues())
-	assert.NoError(t, err)
-
-	assert.NotNil(t, s.buildContainer)
-	assert.Equal(t, "build-cid", s.buildContainer.ID)
-	assert.NotNil(t, s.helperContainer)
-	assert.Equal(t, "helper-cid", s.helperContainer.ID)
-}
-
 func TestResumeDependencies(t *testing.T) {
 	c := docker.NewMockClient(t)
 	e := executorWithMockClient(c)
@@ -3677,6 +3599,10 @@ func TestResumeDependencies(t *testing.T) {
 
 	require.NoError(t, e.resumeDependencies())
 	assert.Equal(t, "build-cid", e.buildContainerID)
+	require.NotNil(t, e.buildContainer)
+	assert.Equal(t, "build-cid", e.buildContainer.ID)
+	require.NotNil(t, e.helperContainer)
+	assert.Equal(t, "helper-cid", e.helperContainer.ID)
 	assert.Contains(t, e.temporary, "build-cid")
 	assert.Contains(t, e.temporary, "svc-a")
 	assert.Contains(t, e.temporary, "helper-cid")
