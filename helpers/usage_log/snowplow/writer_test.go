@@ -113,7 +113,7 @@ func TestWriter_Store(t *testing.T) {
 	assert.Equal(t, "seconds", billingData["unit_of_measure"])
 	assert.Equal(t, "SM", billingData["realm"])
 	assert.Equal(t, float64(123.45), billingData["quantity"])
-	assert.Equal(t, "0", billingData["subject"])
+	assert.Equal(t, "runner-uuid", billingData["subject"])
 	assert.Equal(t, "dedicated-instance-abc123", billingData["instance_id"])
 	assert.Equal(t, "unique-dedicated-instance-abc123", billingData["unique_instance_id"])
 	assert.Equal(t, float64(42), billingData["project_id"])
@@ -240,42 +240,77 @@ func TestWriter_Close_Idempotent(t *testing.T) {
 }
 
 func TestWriter_BuildBillingInputs(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
+	assertDefaults := func(t *testing.T, required labkitsnowplow.BillingEventRequiredInput, optional labkitsnowplow.BillingEventOptionalInput) {
+		// Verify required fields
+		assert.Equal(t, "runner_compute_usage", required.Category)
+		assert.Equal(t, "runner_compute_usage", required.EventType)
+		assert.Equal(t, "SM", required.Realm)
+		assert.Equal(t, "seconds", required.UnitOfMeasure)
+		assert.Equal(t, 123.45, required.Quantity)
 
-	w := newTestWriter(t, server.URL)
-	defer func() {
-		assert.NoError(t, w.Close())
-	}()
+		// Verify optional fields
+		assert.Equal(t, "dedicated-instance-abc123", optional.InstanceID)
+		assert.Equal(t, "unique-dedicated-instance-abc123", optional.UniqueInstanceID)
+		assert.Equal(t, int64(42), optional.ProjectID)
+		assert.Equal(t, int64(123), optional.NamespaceID)
+		assert.Equal(t, int64(100), optional.RootNamespaceID)
+		assert.Equal(t, int64(1), optional.OrganizationID)
 
-	record := testRecord()
-	required, optional := w.buildBillingInputs(record)
+		// Verify metadata built by snowplow writer from record fields
+		require.NotNil(t, optional.Metadata)
+		assert.Equal(t, "success", optional.Metadata["job_status"])
+		assert.Equal(t, "", optional.Metadata["job_failure_reason"])
+		assert.Equal(t, "docker", optional.Metadata["executor"])
+		assert.NotEmpty(t, optional.Metadata["started_at"])
+		assert.NotEmpty(t, optional.Metadata["finished_at"])
+	}
 
-	// Verify required fields
-	assert.Equal(t, "runner_compute_usage", required.Category)
-	assert.Equal(t, "runner_compute_usage", required.EventType)
-	assert.Equal(t, "SM", required.Realm)
-	assert.Equal(t, "seconds", required.UnitOfMeasure)
-	assert.Equal(t, 123.45, required.Quantity)
+	tests := map[string]struct {
+		mockRecord func() usage_log.Record
+		assert     func(t *testing.T, required labkitsnowplow.BillingEventRequiredInput, optional labkitsnowplow.BillingEventOptionalInput)
+	}{
+		"runner UUID is provided": {
+			mockRecord: testRecord,
+			assert: func(t *testing.T, required labkitsnowplow.BillingEventRequiredInput, optional labkitsnowplow.BillingEventOptionalInput) {
+				assertDefaults(t, required, optional)
+				assert.Equal(t, "runner-uuid", optional.Subject)
+			},
+		},
+		"runner UUID is not provided": {
+			mockRecord: func() usage_log.Record {
+				r := testRecord()
+				r.Runner.UUID = ""
 
-	// Verify optional fields
-	assert.Equal(t, "0", optional.Subject)
-	assert.Equal(t, "dedicated-instance-abc123", optional.InstanceID)
-	assert.Equal(t, "unique-dedicated-instance-abc123", optional.UniqueInstanceID)
-	assert.Equal(t, int64(42), optional.ProjectID)
-	assert.Equal(t, int64(123), optional.NamespaceID)
-	assert.Equal(t, int64(100), optional.RootNamespaceID)
-	assert.Equal(t, int64(1), optional.OrganizationID)
+				return r
+			},
+			assert: func(t *testing.T, required labkitsnowplow.BillingEventRequiredInput, optional labkitsnowplow.BillingEventOptionalInput) {
+				assertDefaults(t, required, optional)
+				assert.Equal(t, "0", optional.Subject)
+			},
+		},
+	}
 
-	// Verify metadata built by snowplow writer from record fields
-	require.NotNil(t, optional.Metadata)
-	assert.Equal(t, "success", optional.Metadata["job_status"])
-	assert.Equal(t, "", optional.Metadata["job_failure_reason"])
-	assert.Equal(t, "docker", optional.Metadata["executor"])
-	assert.NotEmpty(t, optional.Metadata["started_at"])
-	assert.NotEmpty(t, optional.Metadata["finished_at"])
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
+
+			w := newTestWriter(t, server.URL)
+			defer func() {
+				assert.NoError(t, w.Close())
+			}()
+
+			require.NotNil(t, tt.mockRecord)
+			record := tt.mockRecord()
+
+			required, optional := w.buildBillingInputs(record)
+
+			require.NotNil(t, tt.assert)
+			tt.assert(t, required, optional)
+		})
+	}
 }
 
 func TestWriter_Store_Concurrent(t *testing.T) {
@@ -420,6 +455,7 @@ func testRecord() usage_log.Record {
 		UUID:      "test-uuid",
 		Timestamp: time.Date(2024, 9, 23, 14, 30, 45, 123000000, time.UTC),
 		Runner: usage_log.Runner{
+			UUID:     "runner-uuid",
 			ID:       "runner-id",
 			Name:     "runner-name",
 			SystemID: "system-id",

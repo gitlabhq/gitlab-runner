@@ -1173,6 +1173,7 @@ func (mr *RunCommand) processBuildOnRunner(
 	mr.buildsHelper.addBuild(build)
 
 	fields := logrus.Fields{
+		"runner_uuid":           build.RunnerInfo.UUID,
 		"runner":                runner.ShortDescription(),
 		"runner_name":           runner.Name,
 		"job":                   build.ID,
