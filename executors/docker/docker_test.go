@@ -3723,6 +3723,99 @@ func TestResumeDependencies_serviceStartFails(t *testing.T) {
 	require.EqualError(t, err, "service container svc-broken failed to start: daemon error: cannot start")
 }
 
+func TestDisconnectNetwork(t *testing.T) {
+	tests := map[string]struct {
+		containerID       string
+		networkContainers map[string]network.EndpointResource
+		expectDisconnect  bool
+	}{
+		"match by container ID": {
+			containerID: "abc123",
+			networkContainers: map[string]network.EndpointResource{
+				"abc123": {Name: "my-container"},
+			},
+			expectDisconnect: true,
+		},
+		"match by container name": {
+			containerID: "my-container",
+			networkContainers: map[string]network.EndpointResource{
+				"abc123": {Name: "my-container"},
+			},
+			expectDisconnect: true,
+		},
+		"no match": {
+			containerID: "xyz789",
+			networkContainers: map[string]network.EndpointResource{
+				"abc123": {Name: "my-container"},
+			},
+			expectDisconnect: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+			e := executorWithMockClient(c)
+			require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
+			e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+
+			netList := []network.Summary{
+				{
+					ID:         "net-123",
+					Name:       "test-network",
+					Containers: tc.networkContainers,
+				},
+			}
+
+			c.On("NetworkList", mock.Anything, network.ListOptions{}).
+				Return(netList, nil).Once()
+
+			if tc.expectDisconnect {
+				c.On("NetworkDisconnect", mock.Anything, "net-123", tc.containerID, true).
+					Return(nil).Once()
+			}
+
+			e.disconnectNetwork(t.Context(), tc.containerID)
+		})
+	}
+}
+
+func TestDisconnectNetwork_ListError(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := executorWithMockClient(c)
+	require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
+	e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+
+	c.On("NetworkList", mock.Anything, network.ListOptions{}).
+		Return(nil, errors.New("network list failed")).Once()
+
+	e.disconnectNetwork(t.Context(), "any-container")
+}
+
+func TestDisconnectNetwork_DisconnectError(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := executorWithMockClient(c)
+	require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
+	e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+
+	netList := []network.Summary{
+		{
+			ID:   "net-123",
+			Name: "test-network",
+			Containers: map[string]network.EndpointResource{
+				"abc123": {Name: "my-container"},
+			},
+		},
+	}
+
+	c.On("NetworkList", mock.Anything, network.ListOptions{}).
+		Return(netList, nil).Once()
+	c.On("NetworkDisconnect", mock.Anything, "net-123", "abc123", true).
+		Return(errors.New("disconnect failed")).Once()
+
+	e.disconnectNetwork(t.Context(), "abc123")
+}
+
 func TestIsContainerNotRunning(t *testing.T) {
 	tests := map[string]struct {
 		err  error
