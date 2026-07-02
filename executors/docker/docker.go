@@ -1202,8 +1202,8 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	}
 
 	for _, network := range netList {
-		for _, pluggedContainer := range network.Containers {
-			if id == pluggedContainer.Name {
+		for containerID, pluggedContainer := range network.Containers {
+			if id == containerID || id == pluggedContainer.Name {
 				err = e.dockerConn.NetworkDisconnect(ctx, network.ID, id, true)
 				if err != nil {
 					e.BuildLogger.Warningln(
