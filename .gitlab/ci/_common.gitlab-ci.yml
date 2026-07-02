@@ -84,26 +84,26 @@ default:
 .go-cache:
   variables:
     GODEBUG: gocachetest=1
-    GOCACHE: $CI_PROJECT_DIR/.gocache-$CI_COMMIT_REF_PROTECTED
+    GOCACHE: $CI_PROJECT_DIR/.gocache
   before_script:
     - mkdir -p "$GOCACHE"
     - ./ci/touch_git
   cache:
     paths:
-      - $CI_PROJECT_DIR/.gocache-false/
+      - $CI_PROJECT_DIR/.gocache/
     key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
 
 .go-cache-windows:
   variables:
     GODEBUG: gocachetest=1
-    GOCACHE: $CI_PROJECT_DIR\.gocache-$CI_COMMIT_REF_PROTECTED
+    GOCACHE: $CI_PROJECT_DIR\.gocache
   before_script:
     - New-Item -Path "$Env:GOCACHE" -Type Directory -Force
     - $env:GOCACHE = (Resolve-Path $env:GOCACHE).Path
     - ./ci/touch_git.ps1
   cache:
     paths:
-      - $CI_PROJECT_DIR\.gocache-false\
+      - $CI_PROJECT_DIR\.gocache\
     key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
 
 .windows1809_variables:
