@@ -827,7 +827,12 @@ func (b *PowerShell) generateSaveScript(w *PsWriter, info common.ShellScriptInfo
 	var buf strings.Builder
 	w.Line(fmt.Sprintf(`$in =%s`, psQuoteVariable(base64.StdEncoding.EncodeToString([]byte(script)))))
 	w.Line("$customEncoding = New-Object System.Text.UTF8Encoding $True")
-	w.Line(fmt.Sprintf("$sw = [System.IO.StreamWriter]::new(\"%s\", $customEncoding)", scriptPath))
+	// Use the 3-arg constructor (path, append, encoding). There is no StreamWriter(String,
+	// Encoding) overload, so ::new(path, $customEncoding) coerces the non-null Encoding to
+	// $True and binds to StreamWriter(String, Boolean) (append), writing UTF-8 without a BOM.
+	// A BOM-less file is misread on Windows-1252 systems, corrupting multibyte characters
+	// such as the em dash (U+2014) and breaking the PowerShell parser.
+	w.Line(fmt.Sprintf("$sw = [System.IO.StreamWriter]::new(\"%s\", $False, $customEncoding)", scriptPath))
 	w.Line("$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))")
 	w.Line("$sw.Flush()")
 	w.Line("$sw.Close()")

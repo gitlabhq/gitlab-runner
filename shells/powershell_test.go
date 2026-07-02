@@ -732,7 +732,7 @@ func TestPowershell_GenerateSaveScript(t *testing.T) {
 			expectedScript: "& {" + eol + eol +
 				"$in =\"JnsgZWNobyAiRGlzcGxheSBzcGVjaWFsIGNoYXJhY3RlcnMgKCkge30gPD4gW10gXCB8IDsifQ==\"" + eol +
 				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + eol +
-				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + eol +
+				"$sw = [System.IO.StreamWriter]::new(\"path\", $False, $customEncoding)" + eol +
 				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + eol +
 				"$sw.Flush()" + eol + "$sw.Close()" + eol + eol + eol +
 				"}" + eol + eol,
@@ -743,7 +743,7 @@ func TestPowershell_GenerateSaveScript(t *testing.T) {
 			expectedScript: "& {" + eol + eol +
 				"$in =\"ZWNobyAiYOKAnCBg4oCcIGDigJ0gYOKAnSBg4oCeIOKAmCDigJkg4oCaIOKAmyDigJgg4oCZ4oCe\"" + eol +
 				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + eol +
-				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + eol +
+				"$sw = [System.IO.StreamWriter]::new(\"path\", $False, $customEncoding)" + eol +
 				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + eol +
 				"$sw.Flush()" + eol + "$sw.Close()" + eol + eol + eol +
 				"}" + eol + eol,
@@ -754,7 +754,7 @@ func TestPowershell_GenerateSaveScript(t *testing.T) {
 			expectedScript: "& {" + eol + eol +
 				"$in =\"ZWNobyBub3JtYWwgc3RyaW5n\"" + eol +
 				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + eol +
-				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + eol +
+				"$sw = [System.IO.StreamWriter]::new(\"path\", $False, $customEncoding)" + eol +
 				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + eol +
 				"$sw.Flush()" + eol + "$sw.Close()" + eol + eol + eol +
 				"}" + eol + eol,
