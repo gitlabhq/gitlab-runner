@@ -68,6 +68,7 @@ type Client struct {
 	delegate       Delegate
 	factory        *ClientConnFactory
 	breaker        *circuitbreaker.Breaker
+	metrics        *clientMetrics
 	mu             sync.Mutex
 	disco          *common.RouterDiscovery
 	discoExpiresAt time.Time
@@ -78,18 +79,21 @@ func NewClient(delegate Delegate, certDirectory, userAgent string) *Client {
 		Network:  delegate,
 		delegate: delegate,
 		factory:  NewClientConnFactory(certDirectory, userAgent),
+		metrics:  newClientMetrics(),
 		breaker: circuitbreaker.New(routerBreakerFailureThreshold, routerBreakerOpenTimeout,
 			circuitbreaker.WithFailureGrace(routerBreakerFailureGrace),
-			circuitbreaker.WithMetrics("gitlab_runner", "job_router_circuit_breaker")),
+			circuitbreaker.WithMetrics(metricsNamespace, metricsSubsystem+"_circuit_breaker")),
 	}
 }
 
 func (c *Client) Describe(ch chan<- *prometheus.Desc) {
 	c.breaker.Describe(ch)
+	c.metrics.Describe(ch)
 }
 
 func (c *Client) Collect(ch chan<- prometheus.Metric) {
 	c.breaker.Collect(ch)
+	c.metrics.Collect(ch)
 }
 
 func (c *Client) Shutdown() {
@@ -106,11 +110,11 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 	// trial: record an outcome once the router is reached, or Abort if we bail.
 	disco := c.getRouterDiscovery(ctx, config)
 	if disco == nil {
-		return c.delegate.RequestJob(ctx, config, sessionInfo)
+		return c.fallback(ctx, config, sessionInfo, fallbackNoDiscovery)
 	}
 
 	if !c.breaker.Allow() {
-		return c.delegate.RequestJob(ctx, config, sessionInfo)
+		return c.fallback(ctx, config, sessionInfo, fallbackBreakerOpen)
 	}
 
 	jobRequest := c.delegate.PrepareJobRequest(config, sessionInfo)
@@ -138,12 +142,13 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 			config.Log().WithError(err).WithField("job_router_url", disco.ServerURL).
 				Warn("Job router dial failed, falling back to direct job requests")
 		}
-		return c.delegate.RequestJob(ctx, config, sessionInfo)
+		return c.fallback(ctx, config, sessionInfo, fallbackDialFailed)
 	}
 	defer client.Done()
 
 	var responseMD metadata.MD
 	requestCorrelationID := network.NewCorrelationID()
+	getJobStart := time.Now()
 	job, err := rpc.NewJobRouterClient(client).GetJob(
 		metadata.NewOutgoingContext(ctx, metadata.Pairs(
 			requestIDMetadataKey, requestCorrelationID,
@@ -153,10 +158,11 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 		},
 		grpc.Header(&responseMD),
 	)
+	c.metrics.observeGetJob(time.Since(getJobStart).Seconds())
 	if err != nil {
-		healthy, fallback := c.handleRouterError(err, disco, config)
-		if fallback {
-			return c.delegate.RequestJob(ctx, config, sessionInfo)
+		healthy, reason := c.handleRouterError(err, disco, config)
+		if reason != fallbackNone {
+			return c.fallback(ctx, config, sessionInfo, reason)
 		}
 		return nil, healthy
 	}
@@ -169,10 +175,21 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 	return parseJobResponse(job, responseMD, disco, requestCorrelationID, config)
 }
 
-// handleRouterError records a breaker outcome for a failed GetJob and reports how
-// the caller should respond: fallback=true means serve the request from Rails,
-// otherwise return (nil, healthy).
-func (c *Client) handleRouterError(err error, disco *common.RouterDiscovery, config common.RunnerConfig) (healthy, fallback bool) {
+// fallback records the fallback in metrics and serves the job request directly
+// from GitLab. Every path in RequestJob that bypasses the router routes through
+// here so the fallbacks_total counter stays in sync with the actual behaviour.
+func (c *Client) fallback(ctx context.Context, config common.RunnerConfig, sessionInfo *common.SessionInfo, reason fallbackReason) (*spec.Job, bool) {
+	c.metrics.recordFallback(reason)
+	return c.delegate.RequestJob(ctx, config, sessionInfo)
+}
+
+// handleRouterError records a breaker outcome for a failed GetJob and tells the
+// caller what to do next via two mutually exclusive outputs:
+//   - reason != fallbackNone: bypass the router and poll GitLab directly; reason
+//     is also the label for the fallbacks metric. healthy is unused.
+//   - reason == fallbackNone: no job this poll; return (nil, healthy), where healthy
+//     reports whether the runner should stay healthy and keep polling the router.
+func (c *Client) handleRouterError(err error, disco *common.RouterDiscovery, config common.RunnerConfig) (healthy bool, reason fallbackReason) {
 	switch code := status.Code(err); {
 	case code == codes.Unimplemented:
 		// Job router deliberately disabled. The router answered, so the breaker is
@@ -180,23 +197,23 @@ func (c *Client) handleRouterError(err error, disco *common.RouterDiscovery, con
 		c.breaker.RecordSuccess()
 		c.invalidateRouterDiscovery()
 		config.Log().Info("Job router is disabled, falling back to direct job requests")
-		return false, true
+		return false, fallbackRouterDisabled
 	case isRouterFailure(code):
 		// The router is unreachable: count it toward the breaker. On trip, fall back;
 		// below the threshold, treat it as transient and keep polling the router.
 		if c.breaker.RecordFailure() {
 			config.Log().WithError(err).WithField("job_router_url", disco.ServerURL).
 				Warn("Job router circuit breaker tripped, falling back to direct job requests")
-			return false, true
+			return false, fallbackBreakerTripped
 		}
 		config.Log().WithError(err).Error("Error requesting a job")
-		return true, false
+		return true, fallbackNone
 	default:
 		// The router responded (it is reachable), so the breaker is satisfied even
 		// though the request itself failed.
 		c.breaker.RecordSuccess()
 		config.Log().WithError(err).Error("Error requesting a job")
-		return false, false
+		return false, fallbackNone
 	}
 }
 
@@ -223,8 +240,10 @@ func (c *Client) getRouterDiscovery(ctx context.Context, config common.RunnerCon
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.discoExpiresAt.After(time.Now()) {
+		c.metrics.recordCacheEvent(cacheHit)
 		return c.disco
 	}
+	c.metrics.recordCacheEvent(cacheMiss)
 	c.disco = c.delegate.GetRouterDiscovery(ctx, config)
 	c.discoExpiresAt = time.Now().Add(discoveryTTL)
 	if c.disco != nil {
