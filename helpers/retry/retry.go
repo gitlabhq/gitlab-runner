@@ -142,6 +142,15 @@ func (r *Retry) WithBackoff(min, max time.Duration) *Retry {
 	return r
 }
 
+// WithBackoffJitter randomizes the backoff schedule so that concurrent retriers
+// don't synchronize their attempts against a struggling dependency.
+func (r *Retry) WithBackoffJitter() *Retry {
+	if r.backoff != nil {
+		r.backoff.Jitter = true
+	}
+	return r
+}
+
 func (r *Retry) WithLogrus(log *logrus.Entry) *Retry {
 	return r.wrapCheck(func(tries int, err error, shouldRetry bool) bool {
 		if shouldRetry {

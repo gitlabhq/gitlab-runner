@@ -35,6 +35,18 @@ func TestClassifyImagePullFailure(t *testing.T) {
 			msg:            `Get "https://registry.example.com/v2/": tls handshake timeout`,
 			expectedReason: RunnerExternalDependencyFailure,
 		},
+		"http client timeout awaiting headers": {
+			msg:            `Get "https://gitlab.com/jwt/auth?...": context deadline exceeded (Client.Timeout exceeded while awaiting headers)`,
+			expectedReason: RunnerExternalDependencyFailure,
+		},
+		"bare context deadline exceeded is not transient": {
+			msg:            `Head "https://registry.gitlab.com/v2/...": context deadline exceeded`,
+			expectedReason: ImagePullFailure,
+		},
+		"request canceled while waiting for connection": {
+			msg:            `Get "https://registry.example.com/v2/": net/http: request canceled while waiting for connection`,
+			expectedReason: RunnerExternalDependencyFailure,
+		},
 		"manifest not found": {
 			msg:            `manifest for nginx:nonexistent not found: manifest unknown: manifest unknown`,
 			expectedReason: ConfigurationError,
