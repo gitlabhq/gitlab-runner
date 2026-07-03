@@ -3,6 +3,7 @@
 package docker_test
 
 import (
+	"context"
 	"os"
 	"runtime"
 	"testing"
@@ -94,7 +95,7 @@ func TestDockerLogOptions(t *testing.T) {
 				spec.Variable{Key: "GIT_STRATEGY", Value: "none"},
 			)
 
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 
 			if test.expectedErrRE == "" {
 				assert.NoError(t, err)

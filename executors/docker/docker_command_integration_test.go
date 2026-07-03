@@ -146,7 +146,7 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 			build := getBuildForOS(t, tt.buildGetter)
 
 			var buf bytes.Buffer
-			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 
 			out := buf.String()
 			for _, output := range tt.expectedOutput {
@@ -388,7 +388,7 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -416,7 +416,7 @@ func TestDockerCommandEntrypointWithStderrOutput(t *testing.T) {
 		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -450,7 +450,7 @@ func TestDockerCommandOwnershipOverflow(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, trace)
+	err = build.Run(context.Background(), &common.Config{}, trace)
 	assert.Error(t, err)
 
 	// error is only canceled if it timed out, something that will only happen
@@ -489,7 +489,7 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -553,7 +553,7 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 			}
 
 			var buffer bytes.Buffer
-			err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+			err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 			assert.NoError(t, err)
 			out := buffer.String()
 			if test.disabled {
@@ -576,7 +576,7 @@ func TestDockerCommandMissingImage(t *testing.T) {
 	build := getBuildForOS(t, common.GetSuccessfulBuild)
 	build.Runner.Docker.Image = "some/non-existing/image"
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 	assert.Regexp(t, regexp.MustCompile("not found|repository does not exist|invalid repository name"), err.Error())
@@ -588,7 +588,7 @@ func TestDockerCommandMissingTag(t *testing.T) {
 	build := getBuildForOS(t, common.GetSuccessfulBuild)
 	build.Runner.Docker.Image = "docker:missing-tag"
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 	assert.Contains(t, err.Error(), "not found")
@@ -604,7 +604,7 @@ func TestDockerCommandMissingServiceImage(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 	assert.Regexp(t, regexp.MustCompile("not found|repository does not exist|invalid repository name"), err.Error())
@@ -619,7 +619,7 @@ func TestDockerCommandPullingImageNoHost(t *testing.T) {
 	build.Runner.RunnerSettings.Docker.Image = "docker.repo.example.com/docker:23-dind"
 
 	var buildError *common.BuildError
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.ErrorAs(t, err, &buildError)
 
 	assert.Equal(t, common.RunnerExternalDependencyFailure, buildError.FailureReason, "expected runner external dependency failure")
@@ -708,7 +708,7 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 			var buffer bytes.Buffer
 
 			build.Variables = tt.variables
-			err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+			err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 			assert.NoError(t, err)
 			str := buffer.String()
 
@@ -769,7 +769,7 @@ func TestDockerCommandServiceNameEmpty(t *testing.T) {
 			var buffer bytes.Buffer
 
 			build.Variables = tt.variables
-			err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+			err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 
 			str := buffer.String()
 
@@ -803,7 +803,7 @@ func TestDockerCommandOutput(t *testing.T) {
 
 	var buffer bytes.Buffer
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 
 	pattern := regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+\S+\s+Initialized empty Git repository in /builds/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test/.git/`)
@@ -847,7 +847,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 			Key: "GIT_STRATEGY", Value: strategy,
 		})
 
-		err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+		err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 		assert.NoError(t, err)
 	}
 }
@@ -933,7 +933,7 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 			build.Services = example.services
 			build.Variables = append(build.Variables, example.variables...)
 
-			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 			assert.NoError(t, err)
 		})
 	}
@@ -1446,7 +1446,7 @@ func testDockerVersion(t *testing.T, version string) {
 		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -1517,7 +1517,7 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 
 	var buffer bytes.Buffer
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 	out := buffer.String()
 	assert.Contains(t, out, "Created fresh repository")
@@ -1551,7 +1551,7 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 	}
 
 	var buffer bytes.Buffer
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 	out := buffer.String()
 	assert.Contains(
@@ -1643,7 +1643,7 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -1678,7 +1678,7 @@ func TestDockerCommandRunAttempts(t *testing.T) {
 
 	runFinished := make(chan struct{})
 	go func() {
-		err := build.Run(&common.Config{}, &common.Trace{Writer: io.MultiWriter(trace, os.Stdout)})
+		err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: io.MultiWriter(trace, os.Stdout)})
 		// Only make sure that the build failed. Docker can return different
 		// kind of errors when a container is removed for example exit code 137,
 		// there is no guarantee on what failure is returned.
@@ -1772,7 +1772,7 @@ func TestDockerCommandRunAttempts_InvalidAttempts(t *testing.T) {
 	})
 
 	buf := new(bytes.Buffer)
-	err := build.Run(&common.Config{}, &common.Trace{Writer: buf})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: buf})
 	require.NoError(t, err)
 	require.Contains(t, buf.String(), "WARNING: EXECUTOR_JOB_SECTION_ATTEMPTS: number of attempts out of the range [1, 10], clamping to: 10")
 }
@@ -2048,7 +2048,7 @@ func TestDockerCommandServiceVariables(t *testing.T) {
 	}
 
 	var buffer bytes.Buffer
-	err := build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 	out := buffer.String()
 	assert.Contains(t, out, "SERVICE_VAR=SERVICE_VAR_VALUE")
@@ -2114,7 +2114,7 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 			build.Runner.RunnerSettings.Docker.PullPolicy = test.pullPolicy
 			build.Runner.RunnerSettings.Docker.AllowedPullPolicies = test.allowedPullPolicies
 
-			gotErr := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			gotErr := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 
 			require.Error(t, gotErr)
 			assert.Regexp(t, regexp.MustCompile(test.wantErrRegex), gotErr.Error())
@@ -2364,7 +2364,7 @@ func TestDockerCommandWithRunnerServiceEnvironmentVariables(t *testing.T) {
 	}
 
 	out := bytes.NewBuffer(nil)
-	err = build.Run(&common.Config{}, &common.Trace{Writer: out})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: out})
 	assert.NoError(t, err)
 	assert.Contains(t, out.String(), "FOO = value from [[runners.docker.services]]")
 	assert.Contains(t, out.String(), "EXPANDED = my_global_var_value")
@@ -2443,7 +2443,7 @@ func testDockerBuildContainerGracefulShutdown(t *testing.T, useInit bool) {
 
 			defer testSetup(build, &trace)()
 
-			err = build.Run(&common.Config{}, &trace)
+			err = build.Run(context.Background(), &common.Config{}, &trace)
 
 			assert.Error(t, err)
 
@@ -2537,7 +2537,7 @@ func Test_FF_USE_NATIVE_CONTAINER_STOP(t *testing.T) {
 
 				defer setupTrigger(t, build, &trace)()
 
-				err = build.Run(&common.Config{}, &trace)
+				err = build.Run(context.Background(), &common.Config{}, &trace)
 				assert.Error(t, err)
 
 				assert.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -2584,7 +2584,7 @@ func Test_FF_USE_INIT_WITH_DOCKER_EXECUTOR(t *testing.T) {
 			}
 
 			out := bytes.NewBuffer(nil)
-			assert.NoError(t, build.Run(&common.Config{}, &common.Trace{Writer: out}))
+			assert.NoError(t, build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: out}))
 
 			if useInit {
 				assert.Regexp(t, "1 root      0:00 /sbin/docker-init --", out.String())
@@ -2669,7 +2669,7 @@ func TestPidMode(t *testing.T) {
 			}
 
 			out := bytes.NewBuffer(nil)
-			err = build.Run(&common.Config{}, &common.Trace{Writer: out})
+			err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: out})
 
 			if !tt.privileged {
 				assert.Error(t, err)
@@ -2772,7 +2772,7 @@ func Test_ServiceLabels(t *testing.T) {
 		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 
 	wg.Wait()
@@ -2860,7 +2860,7 @@ func TestDockerCommandWithPlatform(t *testing.T) {
 		ExecutorProvider: docker_executor.NewProvider(),
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &bytes.Buffer{}})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &bytes.Buffer{}})
 	require.NoError(t, err)
 
 	images := map[string]string{
@@ -2905,7 +2905,7 @@ func TestDockerCommandWithUser(t *testing.T) {
 	}
 
 	var buffer bytes.Buffer
-	require.NoError(t, build.Run(&common.Config{}, &common.Trace{Writer: &buffer}))
+	require.NoError(t, build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer}))
 
 	assert.Regexp(t, "whoami.*\n.*squid", buffer.String())
 }
@@ -3195,7 +3195,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 			go func(t *testing.T, tc testCase) {
 				defer wg.Done()
 				// run the build...
-				err := build.Run(&common.Config{}, &common.Trace{Writer: &bytes.Buffer{}})
+				err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &bytes.Buffer{}})
 
 				if tc.expectedRunErr {
 					assert.Error(t, err, "running build")

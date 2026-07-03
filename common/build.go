@@ -159,6 +159,10 @@ type Build struct {
 
 	SafeDirectoryCheckout bool `json:"-" yaml:"-"`
 
+	// Synthetic marks a runner-created build (the boot-verify canary) with no
+	// GitLab job behind it. It must never be billed or reported as a real job.
+	Synthetic bool `json:"-" yaml:"-"`
+
 	// Unique ID for all running builds on this runner
 	RunnerID int `json:"runner_id"`
 
@@ -1497,7 +1501,7 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 }
 
 //nolint:gocognit
-func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
+func (b *Build) Run(ctx context.Context, globalConfig *Config, trace JobTrace) (err error) {
 	b.setCurrentState(BuildRunStatePending)
 
 	// These defers are ordered because runBuild could panic and the recover needs to handle that panic.
@@ -1533,7 +1537,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.logger = b.getNewLogger(trace, b.Log(), false)
 	defer b.logger.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
+	ctx, cancel := context.WithTimeout(ctx, b.GetBuildTimeout())
 	defer cancel()
 
 	b.configureTrace(trace, cancel)

@@ -48,7 +48,7 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 		require.NoError(t, err)
 		defer buf.Close()
 
-		err = build.Run(&common.Config{}, &common.Trace{Writer: buf})
+		err = build.Run(t.Context(), &common.Config{}, &common.Trace{Writer: buf})
 		assert.Error(t, err)
 
 		buf.Finish()
@@ -119,7 +119,7 @@ func testBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup Build
 	require.NoError(t, err)
 	defer buf.Close()
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: buf})
+	err = build.Run(t.Context(), &common.Config{}, &common.Trace{Writer: buf})
 	assert.NoError(t, err)
 
 	buf.Finish()

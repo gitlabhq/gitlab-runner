@@ -1756,10 +1756,55 @@ func TestResolveSkipOIDCIfUnsupportedCloud(t *testing.T) {
 	}
 }
 
-type mockUsageStorage struct{}
+type mockUsageStorage struct{ storeCalls int }
 
-func (m *mockUsageStorage) Store(_ usage_log.Record) error { return nil }
+func (m *mockUsageStorage) Store(_ usage_log.Record) error { m.storeCalls++; return nil }
 func (m *mockUsageStorage) Close() error                   { return nil }
+
+func TestFinishBuildSkipsSyntheticBuilds(t *testing.T) {
+	runner := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{Token: "tok"},
+	}
+
+	newCmd := func() (*RunCommand, *mockUsageStorage) {
+		mr := &RunCommand{
+			buildsHelper: newBuildsHelper(),
+			configfile: configfile.New("", configfile.WithExistingConfig(
+				&common.Config{},
+			), configfile.WithSystemID(common.UnknownSystemID)),
+		}
+		store := &mockUsageStorage{}
+		mr.storeUsageLogger(store)
+		return mr, store
+	}
+
+	newBuild := func(t *testing.T, synthetic bool) *common.Build {
+		b, err := common.NewBuild(spec.Job{ID: 1}, runner, nil, nil, nil)
+		require.NoError(t, err)
+		b.Synthetic = synthetic
+		return b
+	}
+
+	t.Run("synthetic build is not billed", func(t *testing.T) {
+		mr, store := newCmd()
+		b := newBuild(t, true)
+		mr.buildsHelper.addBuild(b)
+
+		mr.finishBuild(runner, b, logrus.Fields{})
+
+		assert.Zero(t, store.storeCalls)
+	})
+
+	t.Run("real build is billed", func(t *testing.T) {
+		mr, store := newCmd()
+		b := newBuild(t, false)
+		mr.buildsHelper.addBuild(b)
+
+		mr.finishBuild(runner, b, logrus.Fields{})
+
+		assert.Equal(t, 1, store.storeCalls)
+	})
+}
 
 func TestUsageLoggerStoreLoadNil(t *testing.T) {
 	mr := &RunCommand{}

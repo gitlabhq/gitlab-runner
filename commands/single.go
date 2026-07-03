@@ -155,9 +155,8 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		span.SetAttributes(spanAttrJobStatus.String(newBuild.CurrentState().String()))
 	}()
 	setJobSpanAttributes(span, newBuild, &r.RunnerConfig)
-	_ = ctx // we'll need it later
 
-	err = newBuild.Run(config, trace)
+	err = newBuild.Run(ctx, config, trace)
 
 	r.postBuild()
 
