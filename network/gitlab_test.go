@@ -2600,19 +2600,19 @@ func uploadArtifacts(
 	artifactType string,
 	artifactFormat spec.ArtifactFormat,
 	logResponseDetails bool,
-) (UploadState, string) {
+) (UploadState, string, error) {
 	file, err := os.Open(artifactsFile)
 	if err != nil {
-		return UploadFailed, ""
+		return UploadFailed, "", err
 	}
 	defer file.Close()
 
 	fi, err := file.Stat()
 	if err != nil {
-		return UploadFailed, ""
+		return UploadFailed, "", err
 	}
 	if fi.IsDir() {
-		return UploadFailed, ""
+		return UploadFailed, "", nil
 	}
 
 	bodyProvider := StreamProvider{
@@ -2837,7 +2837,7 @@ func TestArtifactsUpload(t *testing.T) {
 
 					filename := cmp.Or(test.overwriteFileName, tempFile.Name())
 
-					state, location := uploadArtifacts(c, config, filename, test.artifactType, test.artifactFormat, withRespDetails)
+					state, location, _ := uploadArtifacts(c, config, filename, test.artifactType, test.artifactFormat, withRespDetails)
 					assert.Equal(t, test.expectedUploadState, state, "wrong upload state")
 					assert.Equal(t, test.expectedLocation, location, "wrong location")
 

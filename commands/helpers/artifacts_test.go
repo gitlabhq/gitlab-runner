@@ -30,6 +30,7 @@ type testNetwork struct {
 	downloadCalled       int
 	directDownloadCalled int
 	uploadState          common.UploadState
+	uploadErr            error
 	uploadCalled         int
 	uploadFormat         spec.ArtifactFormat
 	uploadName           string
@@ -125,16 +126,20 @@ func (m *testNetwork) UploadRawArtifacts(
 	config common.JobCredentials,
 	bodyProvider common.ContentProvider,
 	options common.ArtifactsOptions,
-) (common.UploadState, string) {
+) (common.UploadState, string, error) {
 	m.uploadCalled++
 
+	if m.uploadErr != nil {
+		return m.uploadState, "", m.uploadErr
+	}
+
 	if bodyProvider == nil {
-		return m.uploadState, ""
+		return m.uploadState, "", nil
 	}
 
 	reader, err := bodyProvider.GetReader()
 	if err != nil {
-		return common.UploadFailed, err.Error()
+		return common.UploadFailed, err.Error(), err
 	}
 
 	if m.uploadState == common.UploadSucceeded {
@@ -143,20 +148,20 @@ func (m *testNetwork) UploadRawArtifacts(
 
 		switch options.Format {
 		case spec.ArtifactFormatZip, spec.ArtifactFormatDefault:
-			return m.consumeZipUpload(reader), ""
+			return m.consumeZipUpload(reader), "", nil
 
 		case spec.ArtifactFormatGzip:
-			return m.consumeGzipUpload(reader), ""
+			return m.consumeGzipUpload(reader), "", nil
 
 		case spec.ArtifactFormatRaw:
-			return m.consumeRawUpload(reader), ""
+			return m.consumeRawUpload(reader), "", nil
 
 		default:
-			return common.UploadForbidden, ""
+			return common.UploadForbidden, "", nil
 		}
 	}
 
-	return m.uploadState, ""
+	return m.uploadState, "", nil
 }
 
 func writeTestFile(t *testing.T, fileName string) {

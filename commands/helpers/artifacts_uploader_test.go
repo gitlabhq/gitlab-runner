@@ -372,6 +372,33 @@ func TestFileArchiverCompressionLevel(t *testing.T) {
 	}
 }
 
+func TestArtifactsUploaderFailedWithError(t *testing.T) {
+	testErr := errors.New("open /path/to/artifact: permission denied")
+	testNet := &testNetwork{
+		uploadState: common.UploadFailed,
+		uploadErr:   testErr,
+	}
+	cmd := ArtifactsUploaderCommand{
+		JobCredentials: UploaderCredentials,
+		newNetwork:     createTestNewNetwork(testNet),
+		fileArchiver: fileArchiver{
+			Paths: []string{artifactsTestArchivedFile},
+		},
+	}
+
+	writeTestFile(t, artifactsTestArchivedFile)
+	defer os.Remove(artifactsTestArchivedFile)
+
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
+
+	assert.Panics(t, func() {
+		cmd.Execute(nil)
+	})
+
+	assert.Equal(t, defaultTries, testNet.uploadCalled)
+}
+
 func TestArtifactUploaderCommandShouldRetry(t *testing.T) {
 	tests := map[string]struct {
 		err   error

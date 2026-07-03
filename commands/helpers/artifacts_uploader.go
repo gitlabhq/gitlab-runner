@@ -155,7 +155,7 @@ func (c *ArtifactsUploaderCommand) Run() error {
 	}
 
 	// Upload the data
-	resp, location := c.newNetwork().UploadRawArtifacts(c.JobCredentials, bodyProvider, options)
+	resp, location, err := c.newNetwork().UploadRawArtifacts(c.JobCredentials, bodyProvider, options)
 	switch resp {
 	case common.UploadSucceeded:
 		return nil
@@ -166,10 +166,16 @@ func (c *ArtifactsUploaderCommand) Run() error {
 	case common.UploadTooLarge:
 		return errTooLarge
 	case common.UploadFailed:
-		return retryableError{err: os.ErrInvalid}
+		if err != nil {
+			return retryableError{err: err}
+		}
+		return retryableError{err: fmt.Errorf("upload failed with no response from coordinator")}
 	case common.UploadServiceUnavailable:
 		return retryableError{err: errServiceUnavailable}
 	default:
+		if err != nil {
+			return retryableError{err: err}
+		}
 		return os.ErrInvalid
 	}
 }
