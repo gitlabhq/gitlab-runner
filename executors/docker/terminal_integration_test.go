@@ -3,6 +3,7 @@
 package docker_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -49,7 +50,7 @@ func TestInteractiveTerminal(t *testing.T) {
 
 	// Start build
 	go func() {
-		_ = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+		_ = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	}()
 
 	srv := httptest.NewServer(build.Session.Handler())

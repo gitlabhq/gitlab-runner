@@ -1492,12 +1492,67 @@ type RunnerConfig struct {
 	UnhealthyInterval              *time.Duration `toml:"unhealthy_interval,omitzero" json:",omitempty" long:"unhealthy-interval" ENV:"RUNNER_UNHEALTHY_INTERVAL" description:"Duration that the runner worker is turned off after it exceeds the unhealthy requests limit. Supports syntax like '3600s' and '1h30min'."`
 	JobStatusFinalUpdateRetryLimit int            `toml:"job_status_final_update_retry_limit,omitzero" json:"job_status_final_update_retry_limit,omitzero" long:"job-status-final-update-retry-limit" env:"RUNNER_job_status_final_update_retry_limit" description:"The maximum number of times GitLab Runner can retry to push the final job status to the GitLab instance."`
 
+	Experimental *RunnerExperimental `toml:"experimental,omitempty" json:"experimental,omitempty" description:"Experimental per-runner features. These settings carry no compatibility guarantee and may change or be removed in any release."`
+
 	SystemID       string    `toml:"-" json:",omitempty"`
 	ConfigLoadedAt time.Time `toml:"-" json:",omitempty"`
 	ConfigDir      string    `toml:"-" json:",omitempty"`
 
 	RunnerCredentials
 	RunnerSettings
+}
+
+// RunnerExperimental holds per-runner features that carry no compatibility
+// guarantee: they may change or be removed in any release. Features graduate
+// out of this section once they stabilize.
+type RunnerExperimental struct {
+	BootVerify *BootVerify `toml:"boot_verify,omitempty" json:"boot_verify,omitempty" description:"(Experimental) Startup canary configuration. When enabled, the runner runs a synthetic job at process startup and gates /health/ready on it. The docker and kubernetes executors use the runner's default image, which must be configured."`
+}
+
+// GetBootVerify returns the runner's boot-verify configuration, or nil when
+// the experimental section or the boot_verify subsection is absent. The
+// BootVerify accessors are nil-safe, so the result can be used directly.
+func (c *RunnerConfig) GetBootVerify() *BootVerify {
+	if c.Experimental == nil {
+		return nil
+	}
+	return c.Experimental.BootVerify
+}
+
+const (
+	defaultBootVerifyTimeout           = 5 * time.Minute
+	defaultBootVerifyAcquireMinBackoff = time.Second
+	defaultBootVerifyAcquireMaxBackoff = 10 * time.Second
+)
+
+// BootVerify configures the startup canary. With enabled set, the runner runs
+// one synthetic job before reporting /health/ready and exits non-zero on failure.
+type BootVerify struct {
+	Enabled           bool          `toml:"enabled,omitempty" json:"enabled,omitempty" description:"(Experimental) Run the startup canary for this runner."`
+	Timeout           time.Duration `toml:"timeout,omitempty" json:"timeout,omitempty" description:"(Experimental) Deadline for the canary. Supports values like '5m' or '90s'. Default: 5m."`
+	AcquireMinBackoff time.Duration `toml:"acquire_min_backoff,omitempty" json:"acquire_min_backoff,omitempty" description:"(Experimental) Minimum backoff between acquire retries. Default: 1s."`
+	AcquireMaxBackoff time.Duration `toml:"acquire_max_backoff,omitempty" json:"acquire_max_backoff,omitempty" description:"(Experimental) Maximum backoff between acquire retries. Default: 10s."`
+}
+
+func (b *BootVerify) GetTimeout() time.Duration {
+	if b == nil || b.Timeout <= 0 {
+		return defaultBootVerifyTimeout
+	}
+	return b.Timeout
+}
+
+func (b *BootVerify) GetAcquireMinBackoff() time.Duration {
+	if b == nil || b.AcquireMinBackoff <= 0 {
+		return defaultBootVerifyAcquireMinBackoff
+	}
+	return b.AcquireMinBackoff
+}
+
+func (b *BootVerify) GetAcquireMaxBackoff() time.Duration {
+	if b == nil || b.AcquireMaxBackoff <= 0 {
+		return defaultBootVerifyAcquireMaxBackoff
+	}
+	return b.AcquireMaxBackoff
 }
 
 type SessionServer struct {

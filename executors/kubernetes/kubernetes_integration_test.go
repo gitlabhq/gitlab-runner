@@ -213,7 +213,7 @@ func testKubernetesSuccessRunFeatureFlag(t *testing.T, featureFlagName string, f
 	build.Image.Name = common.TestDockerGitImage
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -296,7 +296,7 @@ func testKubernetesDumbInitSuccessRun(t *testing.T, featureFlagName string, feat
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 	buildtest.SetBuildFeatureFlag(build, featureflags.UseDumbInitWithKubernetesExecutor, true)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -496,7 +496,7 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			buildtest.SetBuildFeatureFlag(build, "FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR", tc.disableUmask)
 
 			var buf bytes.Buffer
-			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 			assert.NoError(t, err)
 
 			tc.verifyFn(t, buf.String())
@@ -518,7 +518,7 @@ func testKubernetesNoAdditionalNewLines(t *testing.T, featureFlagName string, fe
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 	var buf bytes.Buffer
-	err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 	assert.NoError(t, err)
 	assert.Contains(t, buf.String(), "........................................................................................................................")
 }
@@ -708,7 +708,7 @@ func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string,
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 			var buf bytes.Buffer
-			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 
 			out := buf.String()
 			for _, output := range tt.expectedOutput {
@@ -737,7 +737,7 @@ func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, f
 	build.RunnerInfo.Timeout = 10 // seconds
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	var buildError *common.BuildError
 	assert.ErrorAs(t, err, &buildError)
@@ -793,7 +793,7 @@ func testKubernetesLongLogsFeatureFlag(t *testing.T, featureFlagName string, fea
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 			outBuffer := new(bytes.Buffer)
-			err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: outBuffer})
 			require.NoError(t, err)
 
 			assert.GreaterOrEqual(t, tc.expectedCount, countWord(t, timestampPattern.ReplaceAllString(outBuffer.String(), ""), tc.word))
@@ -984,7 +984,7 @@ My nested nested here-string
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 			outBuffer := new(bytes.Buffer)
-			err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: outBuffer})
 			require.NoError(t, err)
 
 			if !featureFlagValue {
@@ -1111,7 +1111,7 @@ containers:
 				deletedPodNameCh <- pod.Name
 			})()
 
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 			assert.Error(t, err)
 
 			<-deletedPodNameCh
@@ -1151,7 +1151,7 @@ func testKubernetesFailingBuildForBashAndPwshFeatureFlag(t *testing.T, featureFl
 			build.Job.Image.Name = tc.image
 
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 			require.Error(t, err)
 		})
 	}
@@ -1164,7 +1164,7 @@ func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, fe
 	build.Image.Name = common.TestDockerGitImage
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	var buildError *common.BuildError
 	require.ErrorAs(t, err, &buildError)
@@ -1284,7 +1284,7 @@ func testKubernetesNoRootImageFeatureFlag(t *testing.T, featureFlagName string, 
 	build.Image.Name = common.TestAlpineNoRootImage
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -1295,7 +1295,7 @@ func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string,
 	build.Image.Name = "some/non-existing/image"
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 	assert.Contains(t, err.Error(), "image pull failed")
@@ -1308,7 +1308,7 @@ func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, f
 	build.Image.Name = "docker:missing-tag"
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 	assert.Contains(t, err.Error(), "image pull failed")
@@ -1381,7 +1381,7 @@ func testOverwriteNamespaceNotMatchFeatureFlag(t *testing.T, featureFlagName str
 	build.Image.Name = common.TestDockerGitImage
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not match")
 }
@@ -1407,7 +1407,7 @@ func testOverwriteServiceAccountNotMatchFeatureFlag(t *testing.T, featureFlagNam
 	build.Image.Name = common.TestDockerGitImage
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not match")
 }
@@ -1441,6 +1441,7 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 
 	go func() {
 		err = build.Run(
+			context.Background(),
 			&common.Config{
 				SessionServer: common.SessionServer{
 					SessionTimeout: 2,
@@ -1503,7 +1504,7 @@ func testKubernetesReplaceMissingEnvVarFeatureFlag(t *testing.T, featureFlagName
 	build.Image.Name = "alpine:$NOT_EXISTING_VARIABLE"
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "image pull failed: Failed to apply default image tag \"alpine:\"")
 }
@@ -1516,7 +1517,7 @@ func testBuildsDirDefaultVolumeFeatureFlag(t *testing.T, featureFlagName string,
 	build.Runner.BuildsDir = "/path/to/builds/dir"
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 
 	assert.Equal(t, "/path/to/builds/dir/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test", build.BuildDir)
@@ -1578,7 +1579,7 @@ func testBuildsDirVolumeMountEmptyDirFeatureFlag(t *testing.T, featureFlagName s
 			}
 
 			outBuffer := bytes.NewBuffer(nil)
-			err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: outBuffer})
 			assert.NoError(t, err)
 
 			if tc.hasWarning {
@@ -1606,7 +1607,7 @@ func testBuildsDirVolumeMountHostPathFeatureFlag(t *testing.T, featureFlagName s
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 
 	allVariables := build.GetAllVariables()
@@ -2866,7 +2867,7 @@ func runMultiPullPolicyBuild(t *testing.T, build *common.Build) error {
 
 	outBuffer := bytes.NewBuffer(nil)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: outBuffer})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 
@@ -2995,7 +2996,7 @@ func TestKubernetesBuildPodResources(t *testing.T) {
 				test.verifyFn(t, pod)
 			})()
 
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 			assert.NoError(t, err)
 		})
 	}
@@ -3039,7 +3040,7 @@ func TestKubernetesAllowedImages(t *testing.T) {
 			build.Runner.Kubernetes.AllowedImages = test.AllowedImages
 			build.Image.Name = test.Image
 
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 			test.VerifyFn(t, err)
 		})
 	}
@@ -3086,7 +3087,7 @@ func TestKubernetesAllowedServices(t *testing.T) {
 			build.Runner.Kubernetes.AllowedServices = test.AllowedServices
 			build.Services = test.Services
 
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 			test.VerifyFn(t, err)
 		})
 	}
@@ -3355,7 +3356,7 @@ func TestConflictingPullPolicies(t *testing.T) {
 			build.Runner.RunnerSettings.Kubernetes.PullPolicy = test.pullPolicy
 			build.Runner.RunnerSettings.Kubernetes.AllowedPullPolicies = test.allowedPullPolicies
 
-			gotErr := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			gotErr := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 
 			require.Error(t, gotErr)
 			assert.Regexp(t, regexp.MustCompile(test.wantErrRegexp), gotErr.Error())
@@ -3785,7 +3786,7 @@ func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, f
 				deletedPodNameCh <- pod.Name
 			})()
 
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 			require.Error(t, err)
 
 			select {
@@ -3860,7 +3861,7 @@ func testKubernetesOptionsUserAndGroup(t *testing.T, featureFlagName string, fea
 			buildtest.SetBuildFeatureFlag(build, featureflags.PrintPodEvents, true)
 
 			var buf bytes.Buffer
-			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 			require.NoError(t, err)
 
 			if tc.verifyFn != nil {
@@ -4062,7 +4063,7 @@ func TestKubernetesScriptsBaseDir(t *testing.T) {
 			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			var buf bytes.Buffer
-			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 			assert.NoError(t, err)
 
 			tc.verifyFn(t, buf.String())
@@ -4126,7 +4127,7 @@ func TestKubernetesLogsBaseDir(t *testing.T) {
 			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			var buf bytes.Buffer
-			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 			assert.NoError(t, err)
 
 			tc.verifyFn(t, buf.String())
@@ -4180,7 +4181,7 @@ func testJobAgainstServiceContainerBehaviour(t *testing.T, featureFlagName strin
 			build.Job.Services = append(build.Job.Services, tc.services...)
 			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 			tc.verifyFn(t, err)
 		})
 	}
@@ -4274,7 +4275,7 @@ func TestKubernetesUserAndGroupConstraints(t *testing.T) {
 			}
 
 			var buffer bytes.Buffer
-			err := build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 
 			if test.expectError != "" {
 				assert.Error(t, err, "Expected build to fail but it succeeded")
@@ -4334,7 +4335,7 @@ allocate_memory
 			build.Runner.Kubernetes.MemoryRequest = tc.memoryLimit
 
 			var buf bytes.Buffer
-			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 			tc.verifyFn(t, buf.String(), err)
 		})
 	}

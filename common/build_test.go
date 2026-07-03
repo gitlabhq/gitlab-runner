@@ -398,7 +398,7 @@ func TestBuildPanic(t *testing.T) {
 			build, err := NewBuild(res, cfg, nil, nil, provider)
 			require.NoError(t, err)
 			var out bytes.Buffer
-			err = build.Run(&Config{}, &Trace{Writer: &out})
+			err = build.Run(t.Context(), &Config{}, &Trace{Writer: &out})
 			assert.EqualError(t, err, "panic: panic message")
 			assert.Contains(t, out.String(), "panic: panic message")
 		})
@@ -472,7 +472,7 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 	}
 	build := registerExecutorWithSuccessfulBuild(t, p, rc)
 
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 	assert.Equal(t, expectHostAddr, rc.Docker.Credentials.Host)
 }
@@ -499,7 +499,7 @@ func TestRetryPrepare(t *testing.T) {
 	e.On("Finish", nil).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, p, new(RunnerConfig))
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -518,7 +518,7 @@ func TestPrepareFailure(t *testing.T) {
 	e.On("Cleanup").Times(3)
 
 	build := registerExecutorWithSuccessfulBuild(t, p, new(RunnerConfig))
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "prepare failed")
 }
 
@@ -529,7 +529,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	executor.On("Cleanup").Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 
 	expectedErr := new(BuildError)
 	assert.ErrorIs(t, err, expectedErr)
@@ -555,7 +555,7 @@ func TestBuildPrepareExecutorTimeout(t *testing.T) {
 	build, err := NewBuild(res, cfg, nil, nil, provider)
 	require.NoError(t, err)
 
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 
 	var buildErr *BuildError
 	require.ErrorAs(t, err, &buildErr)
@@ -589,7 +589,7 @@ func TestBuildPrepareScriptTimeout(t *testing.T) {
 	build, err := NewBuild(res, cfg, nil, nil, provider)
 	require.NoError(t, err)
 
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 
 	var buildErr *BuildError
 	require.ErrorAs(t, err, &buildErr)
@@ -622,7 +622,7 @@ func TestBuildPrepareErrorNotMistakenForTimeout(t *testing.T) {
 	build, err := NewBuild(res, cfg, nil, nil, p)
 	require.NoError(t, err)
 
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 
 	assert.ErrorIs(t, err, prepareErr)
 	assert.NotErrorIs(t, err, ErrJobPrepareTimeout)
@@ -654,7 +654,7 @@ func TestBuildGetSourcesTimeout(t *testing.T) {
 	build, err := NewBuild(res, cfg, nil, nil, provider)
 	require.NoError(t, err)
 
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 
 	var buildErr *BuildError
 	require.ErrorAs(t, err, &buildErr)
@@ -690,7 +690,7 @@ func TestBuildGetSourcesErrorNotMistakenForTimeout(t *testing.T) {
 	build, err := NewBuild(res, cfg, nil, nil, provider)
 	require.NoError(t, err)
 
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 
 	assert.ErrorIs(t, err, getSourcesErr)
 	assert.NotErrorIs(t, err, ErrJobGetSourcesTimeout)
@@ -723,7 +723,7 @@ func TestPrepareEnvironmentFailure(t *testing.T) {
 		ExecutorProvider: p,
 	}
 
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.ErrorIs(t, err, testErr)
 }
 
@@ -760,7 +760,7 @@ func TestJobFailure(t *testing.T) {
 	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Once()
 	trace.On("Fail", thrownErr, JobFailureData{Reason: "", ExitCode: 1, Mode: JobExecutionModeTraditional}).Return(nil).Once()
 
-	err = build.Run(&Config{}, trace)
+	err = build.Run(t.Context(), &Config{}, trace)
 
 	expectedErr := new(BuildError)
 	assert.ErrorIs(t, err, expectedErr)
@@ -792,7 +792,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 		assert.Error(t, arguments.Get(0).(error))
 	}).Return(nil).Once()
 
-	err := build.Run(&Config{}, trace)
+	err := build.Run(t.Context(), &Config{}, trace)
 
 	expectedErr := &BuildError{FailureReason: JobExecutionTimeout}
 	assert.ErrorIs(t, err, expectedErr)
@@ -828,7 +828,7 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 		},
 		ExecutorProvider: provider,
 	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
 
@@ -854,7 +854,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
 
@@ -889,7 +889,7 @@ func TestExecutePrepareScripts_SkipsGetSourcesOnResume(t *testing.T) {
 	build := registerExecutorWithSuccessfulBuild(t, provider, rc)
 	build.Job.SuspendOptions = spec.SuspendOptions{EnvironmentKey: "1/sys-1/acquisition-key=abc"}
 
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -912,7 +912,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, spec.Variable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
 
@@ -944,7 +944,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 		Paths:     spec.ArtifactPaths{"cached/*"},
 		When:      spec.ArtifactWhenAlways,
 	}
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "upload fail")
 }
 
@@ -968,7 +968,7 @@ func TestArchiveCacheOnScriptFailure(t *testing.T) {
 	executor.On("Finish", errors.New("script failure")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "script failure")
 }
 
@@ -992,7 +992,7 @@ func TestUploadArtifactsOnArchiveCacheFailure(t *testing.T) {
 	executor.On("Finish", errors.New("cache failure")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "cache failure")
 }
 
@@ -1014,7 +1014,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, spec.Variable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
 
@@ -1037,7 +1037,7 @@ func TestRunWrongAttempts(t *testing.T) {
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "number of attempts out of the range [1, 10] for stage: get_sources")
 }
 
@@ -1065,7 +1065,7 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 	assert.Equal(t, 2, getSourcesRunAttempts)
 }
@@ -2853,7 +2853,7 @@ func TestSecretsResolvingWithRetry(t *testing.T) {
 			build.initSettings()
 			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
 
-			err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+			err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 
 			if tt.expectedError {
 				assert.Error(t, err, "Expected error when final attempt fails")
@@ -2976,7 +2976,7 @@ func runSuccessfulMockBuild(t *testing.T, prepareFn func(options ExecutorPrepare
 	p := setupSuccessfulMockExecutor(t, prepareFn)
 
 	build := registerExecutorWithSuccessfulBuild(t, p, new(RunnerConfig))
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 
 	return build
@@ -3072,7 +3072,7 @@ func TestSecretsResolving(t *testing.T) {
 				return secretsResolverMock, tt.resolverCreationError
 			}
 
-			err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+			err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 
 			assert.Equal(t, tt.expectedVariables, build.secretsVariables)
 
@@ -3677,7 +3677,7 @@ func Test_logUsedImages_expandsVariablesInBuildRun(t *testing.T) {
 	build.Image = spec.Image{Name: "$JOB_IMAGE"}
 	build.Services = spec.Services{{Name: "$SERVICE_IMAGE"}}
 
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 
 	var loggedImages []string
@@ -3710,7 +3710,7 @@ func TestBuildStageMetrics(t *testing.T) {
 	build.OnBuildStageStartFn = stageFn
 	build.OnBuildStageEndFn = stageFn
 
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 
 	expectedStages := []BuildStage{
@@ -3788,7 +3788,7 @@ func TestBuildStageMetricsFailBuild(t *testing.T) {
 	build.OnBuildStageStartFn = stageFn
 	build.OnBuildStageEndFn = stageFn
 
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	expectedErr := new(BuildError)
 	assert.ErrorIs(t, err, expectedErr)
 
@@ -3918,7 +3918,7 @@ func TestBuild_RunCallsEnsureFinishedAt(t *testing.T) {
 			lh := test.NewLocal(l)
 			build.Runner.RunnerCredentials.Logger = l
 
-			err = build.Run(&Config{}, trace)
+			err = build.Run(t.Context(), &Config{}, trace)
 			if tt.assertError != nil {
 				tt.assertError(t, err)
 			} else {
@@ -4039,7 +4039,7 @@ func TestExpandingInputs(t *testing.T) {
 			p,
 		)
 		require.NoError(t, err)
-		err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+		err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 		require.NoError(t, err)
 
 		return build
@@ -4070,7 +4070,7 @@ func TestExpandingInputs(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+		err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 
 		et := &BuildError{}
 		require.ErrorAs(t, err, &et)
@@ -5517,7 +5517,7 @@ func TestRun_ShouldSuspend_TriggersExecutorSuspendAndLogs(t *testing.T) {
 	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnFailure: true}
 
 	var traceBuf bytes.Buffer
-	err = build.Run(&Config{}, &Trace{Writer: &traceBuf})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: &traceBuf})
 	require.Error(t, err)
 	assert.Contains(t, traceBuf.String(), "Job environment suspended: 7/sys-1/x=val")
 }
@@ -5552,7 +5552,7 @@ func TestRun_ShouldSuspend_FF_Off_NoSuspend(t *testing.T) {
 	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnFailure: true}
 
 	var traceBuf bytes.Buffer
-	err = build.Run(&Config{}, &Trace{Writer: &traceBuf})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: &traceBuf})
 	require.Error(t, err)
 	// Strict mock would fail if Suspend were called; no expectation registered.
 	assert.NotContains(t, traceBuf.String(), "Job environment suspended")
@@ -5596,7 +5596,7 @@ func TestRun_ShouldSuspend_NotImplemented_FailsBuild(t *testing.T) {
 	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnSuccess: true}
 
 	var traceBuf bytes.Buffer
-	err = build.Run(&Config{}, &Trace{Writer: &traceBuf})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: &traceBuf})
 	require.Error(t, err)
 	var buildErr *BuildError
 	require.ErrorAs(t, err, &buildErr)
@@ -5653,7 +5653,7 @@ func TestRun_ShouldSuspend_SuspendErrorFailsBuild(t *testing.T) {
 	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnSuccess: true}
 
 	var traceBuf bytes.Buffer
-	err = build.Run(&Config{}, &Trace{Writer: &traceBuf})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: &traceBuf})
 	require.Error(t, err)
 	var buildErr *BuildError
 	require.ErrorAs(t, err, &buildErr)
@@ -5703,7 +5703,7 @@ func TestRun_ShouldSuspend_ScriptFailureWinsOverSuspendFailure(t *testing.T) {
 	build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnFailure: true}
 
 	var traceBuf bytes.Buffer
-	err = build.Run(&Config{}, &Trace{Writer: &traceBuf})
+	err = build.Run(t.Context(), &Config{}, &Trace{Writer: &traceBuf})
 	require.Error(t, err)
 	// Script error has priority over the suspend error.
 	assert.ErrorIs(t, err, scriptErr)
@@ -5836,7 +5836,7 @@ func TestRun_ShouldSuspend_SetsEnvironmentKeyOnTrace(t *testing.T) {
 	trace.On("SetEnvironmentKey", "7/sys-1/namespace=gitlab-runner&pvc=gl-runner-env-abc123").Once()
 	trace.On("Success").Return(nil).Once()
 
-	err = build.Run(&Config{}, trace)
+	err = build.Run(t.Context(), &Config{}, trace)
 	assert.NoError(t, err)
 }
 
@@ -5894,7 +5894,7 @@ func TestRun_ShouldSuspend_SuspendError_DoesNotSetEnvironmentKey(t *testing.T) {
 	trace.On("SetFailuresCollector", mock.Anything).Maybe()
 	trace.On("Fail", mock.Anything, mock.Anything).Return(nil).Once()
 
-	err = build.Run(&Config{}, trace)
+	err = build.Run(t.Context(), &Config{}, trace)
 	require.Error(t, err)
 	var buildErr *BuildError
 	require.ErrorAs(t, err, &buildErr)

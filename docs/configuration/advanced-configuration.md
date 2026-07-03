@@ -669,6 +669,48 @@ job timeout before the repository fetch completes. Common scenarios include:
 
 For equivalent control over the executor preparation stage, see also [`prepare_timeout`](#prepare-stage-timeout).
 
+### The `[runners.experimental.boot_verify]` section
+
+{{< details >}}
+
+- Status: Experiment
+
+{{< /details >}}
+
+The `boot_verify` section runs a synthetic job through the runner at process
+startup, before the runner reports `/health/ready`. If the job fails, the runner
+exits non-zero so the orchestrator restarts it. This behavior catches a runner that can
+authenticate but cannot provision or dispatch work, which the default liveness
+and readiness probes miss. The check runs once per process start and is not
+re-run on config reload.
+
+| Parameter             | Type     | Description |
+|-----------------------|----------|-------------|
+| `enabled`             | boolean  | Run the startup canary for this runner. Default: `false`. |
+| `timeout`             | duration | Deadline for the canary. Supports values like `5m` or `90s`. Default: `5m`. |
+| `acquire_min_backoff` | duration | Minimum backoff between executor acquire retries. Default: `1s`. |
+| `acquire_max_backoff` | duration | Maximum backoff between executor acquire retries. Default: `10s`. |
+
+> [!note]
+> The synthetic job runs on the runner's default image, so the `docker` and
+> `kubernetes` executors must have a default image configured.
+
+Example:
+
+```toml
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "TOKEN"
+  executor = "kubernetes"
+
+  [runners.experimental.boot_verify]
+    enabled = true
+    timeout = "5m"
+    acquire_min_backoff = "1s"
+    acquire_max_backoff = "10s"
+```
+
 ## The executors
 
 The following executors are available.

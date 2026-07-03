@@ -39,7 +39,7 @@ func RunBuildWithOptions(t *testing.T, build *common.Build, trace *common.Trace,
 	})
 	defer timeoutTimer.Stop()
 
-	return build.Run(config, trace)
+	return build.Run(t.Context(), config, trace)
 }
 
 func RunBuild(t *testing.T, build *common.Build) error {

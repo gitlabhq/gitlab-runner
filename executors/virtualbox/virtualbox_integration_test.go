@@ -3,6 +3,7 @@
 package virtualbox_test
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -47,7 +48,7 @@ func TestVirtualBoxSuccessRun(t *testing.T) {
 		ExecutorProvider: virtualbox.NewProvider(),
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err, "Make sure that you have done 'make development_setup'")
 }
 
@@ -136,7 +137,7 @@ func TestVirtualBoxBuildFail(t *testing.T) {
 		ExecutorProvider: virtualbox.NewProvider(),
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	var buildError *common.BuildError
 	assert.ErrorAs(t, err, &buildError)
@@ -161,7 +162,7 @@ func TestVirtualBoxMissingImage(t *testing.T) {
 		ExecutorProvider: virtualbox.NewProvider(),
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Could not find a registered machine named")
 }
@@ -182,7 +183,7 @@ func TestVirtualBoxMissingSSHCredentials(t *testing.T) {
 		ExecutorProvider: virtualbox.NewProvider(),
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "missing SSH config")
 }

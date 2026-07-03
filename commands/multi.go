@@ -164,6 +164,19 @@ type RunCommand struct {
 	runnerWorkerProcessingFailure *prometheus.CounterVec
 
 	processStateTracker *process_state.Tracker
+
+	// bootVerifyReady gates the /health/ready endpoint. Set once the
+	// boot-verify canary succeeds.
+	bootVerifyReady atomic.Bool
+
+	// runError holds a fatal error from the run goroutine so Execute can
+	// exit non-zero. Set on boot-verify failure, read after svc.Run() returns.
+	runError atomic.Pointer[error]
+
+	// abortRun is cancelled when run() terminates the process itself, such as
+	// a boot-verify failure, so runWait stops waiting for a stop signal.
+	abortRun       context.Context
+	abortRunCancel context.CancelFunc
 }
 
 func NewRunCommand(n common.Network, apiRequestsCollector prometheus.Collector, executorProviders executors.Providers) cli.Command {
@@ -211,6 +224,7 @@ func (mr *RunCommand) Start(_ service.Service) error {
 	mr.configReloaded = make(chan int, 1)
 	mr.runFinished = make(chan bool, 1)
 	mr.stopSignals = make(chan os.Signal)
+	mr.abortRun, mr.abortRunCancel = context.WithCancel(context.Background())
 
 	mr.log().Info("Starting multi-runner from ", mr.ConfigFile, "...")
 
@@ -683,10 +697,23 @@ func (mr *RunCommand) run() {
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)
 
-	mr.initUsedExecutorProviders()
-
 	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
+
+	mr.initUsedExecutorProviders()
+
+	// Boot-verify gates /health/ready. On failure, drain providers, record the
+	// error for a non-zero exit, then cancel abortRun so runWait returns and
+	// the service framework shuts the process down.
+	if err := mr.runBootVerify(); err != nil {
+		mr.log().WithError(err).Error("Boot-verify canary failed, draining and exiting")
+		mr.runError.Store(&err)
+		mr.shutdownUsedExecutorProviders()
+		close(mr.runFinished)
+		mr.abortRunCancel()
+		return
+	}
+	mr.bootVerifyReady.Store(true)
 
 	startWorker := make(chan int)
 	stopWorker := make(chan bool)
@@ -881,6 +908,17 @@ func (mr *RunCommand) serveDebugData(mux *http.ServeMux) {
 		rw.Header().Set("Content-Type", "text/plain")
 		_, _ = fmt.Fprintln(rw, mr.processStateTracker.CurrentState())
 	})
+	mux.HandleFunc("/health/ready", mr.serveHealthReady)
+}
+
+func (mr *RunCommand) serveHealthReady(w http.ResponseWriter, _ *http.Request) {
+	if mr.bootVerifyReady.Load() {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ready\n"))
+		return
+	}
+	w.WriteHeader(http.StatusServiceUnavailable)
+	_, _ = w.Write([]byte("boot-verify pending\n"))
 }
 
 func (mr *RunCommand) servePprof(mux *http.ServeMux) {
@@ -1167,7 +1205,6 @@ func (mr *RunCommand) processBuildOnRunner(
 		span.SetAttributes(spanAttrJobStatus.String(build.CurrentState().String()))
 	}()
 	setJobSpanAttributes(span, build, runner)
-	_ = ctx // we'll need it later
 
 	// Add build to list of builds to assign numbers
 	mr.buildsHelper.addBuild(build)
@@ -1201,7 +1238,7 @@ func (mr *RunCommand) processBuildOnRunner(
 		mr.requeueRunner(runner, runners)
 	}
 	// Process a build
-	return build.Run(mr.configfile.Config(), trace)
+	return build.Run(ctx, mr.configfile.Config(), trace)
 }
 
 func (mr *RunCommand) traceOutcome(trace common.JobTrace, err error) {
@@ -1237,6 +1274,12 @@ func (mr *RunCommand) finishBuild(runner *common.RunnerConfig, build *common.Bui
 	}
 
 	mr.log().WithFields(fields).Infoln("Removed job from processing list")
+
+	// Synthetic builds (the boot-verify canary) have no GitLab job behind them
+	// and must never produce billing or usage-log records.
+	if build.Synthetic {
+		return
+	}
 
 	record, err := common.UsageLogRecordFrom(runner, build)
 	if err != nil {
@@ -1710,6 +1753,10 @@ func (mr *RunCommand) Execute(_ *cli.Context) {
 		logrus.WithError(err).
 			Fatal("Service run failed")
 	}
+	if runErr := mr.runError.Load(); runErr != nil && *runErr != nil {
+		logrus.WithError(*runErr).Error("Exiting non-zero after run failure")
+		os.Exit(1)
+	}
 }
 
 // runWait is the blocking mechanism for `github.com/kardianos/service`
@@ -1720,10 +1767,16 @@ func (mr *RunCommand) Execute(_ *cli.Context) {
 func (mr *RunCommand) runWait() {
 	mr.log().Debugln("Waiting for stop signal")
 
-	// Save the stop signal and exit to execute Stop()
-	stopSignal := <-mr.stopSignals
-	mr.stopSignal = stopSignal
-	mr.log().WithField("stop-signal", stopSignal).Warning("[runWait] received stop signal")
+	// Exit to execute Stop() on either an external stop signal or run()
+	// aborting the process itself (boot-verify failure).
+	select {
+	case stopSignal := <-mr.stopSignals:
+		mr.stopSignal = stopSignal
+		mr.log().WithField("stop-signal", stopSignal).Warning("[runWait] received stop signal")
+	case <-mr.abortRun.Done():
+		mr.stopSignal = os.Interrupt
+		mr.log().Warning("[runWait] run aborted, shutting down")
+	}
 }
 
 // Describe implements prometheus.Collector.
