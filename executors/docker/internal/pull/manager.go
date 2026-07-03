@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	cli "github.com/docker/cli/cli/config/types"
 	"github.com/docker/docker/api/types/image"
@@ -15,6 +16,17 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/pull_policies"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
+)
+
+const (
+	// defaultPullMaxAttempts bounds how many times a single pull-policy attempt
+	// retries the underlying docker pull when it fails with a transient
+	// (network/registry) error. Non-transient failures (missing image, auth
+	// denied) are not retried.
+	defaultPullMaxAttempts     = 3
+	defaultPullRetryMinBackoff = 2 * time.Second
+	defaultPullRetryMaxBackoff = 10 * time.Second
 )
 
 type Manager interface {
@@ -45,6 +57,10 @@ type manager struct {
 	client              docker.Client
 	onPullImageHookFunc func()
 
+	pullMaxAttempts     int
+	pullRetryMinBackoff time.Duration
+	pullRetryMaxBackoff time.Duration
+
 	logger pullLogger
 }
 
@@ -61,6 +77,9 @@ func NewManager(
 		config:              config,
 		logger:              logger,
 		onPullImageHookFunc: onPullImageHookFunc,
+		pullMaxAttempts:     defaultPullMaxAttempts,
+		pullRetryMinBackoff: defaultPullRetryMinBackoff,
+		pullRetryMaxBackoff: defaultPullRetryMaxBackoff,
 	}
 }
 
@@ -236,11 +255,25 @@ func (m *manager) pullDockerImage(imageName string, options spec.ImageDockerOpti
 		return nil, &common.BuildError{Inner: err, FailureReason: common.RunnerSystemFailure}
 	}
 
-	if err := m.client.ImagePullBlocking(m.context, ref, opts); err != nil {
-		if cancelErr := contextCancellationBuildError(m.context); cancelErr != nil {
-			return nil, cancelErr
-		}
-		return nil, &common.BuildError{Inner: err, FailureReason: common.ClassifyImagePullFailure(err.Error())}
+	// Retry the pull on transient (network/registry) failures such as HTTP
+	// client timeouts talking to the registry auth endpoint. Non-transient
+	// failures (missing image, auth denied) are returned immediately so they
+	// still fail fast and fall through to the next configured pull policy. A
+	// cancelled or timed-out build context is classified inside the run func
+	// below and is never retried, so the loop stops on cancellation.
+	pullErr := retry.NewNoValue(
+		retry.New().
+			WithBackoff(m.pullRetryMinBackoff, m.pullRetryMaxBackoff).
+			WithBackoffJitter().
+			WithCheck(func(tries int, err error) bool {
+				return m.shouldRetryImagePull(imageName, tries, err)
+			}),
+		func() error {
+			return m.imagePullOnce(ref, opts)
+		},
+	).Run()
+	if pullErr != nil {
+		return nil, pullErr
 	}
 
 	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName)
@@ -254,6 +287,36 @@ func (m *manager) pullDockerImage(imageName string, options spec.ImageDockerOpti
 		}
 	}
 	return &image, nil
+}
+
+// shouldRetryImagePull decides whether a failed pull attempt should be retried.
+// Only transient (network/registry) failures are retried, and only up to
+// pullMaxAttempts; missing-image, auth-denied and cancellation failures are not.
+func (m *manager) shouldRetryImagePull(imageName string, tries int, err error) bool {
+	var buildErr *common.BuildError
+	if tries >= m.pullMaxAttempts ||
+		!errors.As(err, &buildErr) ||
+		buildErr.FailureReason != common.RunnerExternalDependencyFailure {
+		return false
+	}
+
+	m.logger.Warningln(fmt.Sprintf(
+		"Failed to pull image %q (attempt #%d), retrying: %v", imageName, tries, err))
+	return true
+}
+
+// imagePullOnce performs a single docker pull and classifies any failure. A
+// cancelled or timed-out build context must not be misclassified as an
+// image-pull failure (and must not be retried), so surface the cancellation
+// reason directly.
+func (m *manager) imagePullOnce(ref string, opts image.PullOptions) error {
+	if err := m.client.ImagePullBlocking(m.context, ref, opts); err != nil {
+		if cancelErr := contextCancellationBuildError(m.context); cancelErr != nil {
+			return cancelErr
+		}
+		return &common.BuildError{Inner: err, FailureReason: common.ClassifyImagePullFailure(err.Error())}
+	}
+	return nil
 }
 
 // contextCancellationBuildError returns a BuildError describing the cancellation

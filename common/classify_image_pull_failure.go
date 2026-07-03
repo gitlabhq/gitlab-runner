@@ -10,7 +10,8 @@ import (
 // pull (Docker daemon, Kubernetes container waiting reason, etc.) and returns
 // the most specific failure reason possible.
 //
-//   - Network-level failures (DNS, TCP, TLS, I/O timeout) → RunnerExternalDependencyFailure
+//   - Network-level failures (DNS, TCP, TLS, I/O timeout, HTTP client
+//     timeout) → RunnerExternalDependencyFailure
 //   - Image or tag does not exist → ConfigurationError
 //   - Access denied / authentication required (missing credentials, expired
 //     tokens, no access to a private image, wrong image path, etc.) →
@@ -24,7 +25,15 @@ func ClassifyImagePullFailure(msg string) spec.JobFailureReason {
 		strings.Contains(lower, "connection refused"),
 		strings.Contains(lower, "no such host"),
 		strings.Contains(lower, "i/o timeout"),
-		strings.Contains(lower, "tls handshake"):
+		strings.Contains(lower, "tls handshake"),
+		// HTTP client timeouts from the daemon talking to the registry/auth
+		// endpoint, e.g. `context deadline exceeded (Client.Timeout exceeded
+		// while awaiting headers)` or `request canceled while waiting for
+		// connection`. These are transient and safe to retry. A bare `context
+		// deadline exceeded` is intentionally not matched: it also fires on the
+		// build's own job timeout, which is not an external dependency failure.
+		strings.Contains(lower, "client.timeout exceeded"),
+		strings.Contains(lower, "request canceled"):
 		return RunnerExternalDependencyFailure
 
 	case strings.Contains(lower, "not found"),

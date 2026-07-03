@@ -126,7 +126,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 				assert.Equal(t, buildError.FailureReason, common.ImagePullFailure)
 			},
 		},
-		"ImagePullBlocking wrapped request timeout failure": {
+		"ImagePullBlocking wrapped transient failure is retried then fails": {
 			imageName: "wrapped-request-timeout:failure",
 			initMock: func(c *docker.MockClient, imageName string) {
 				c.On("ImagePullBlocking", m.context, imageName, mock.AnythingOfType("image.PullOptions")).
@@ -134,7 +134,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 						"wrapped error: %w", errdefs.System(errors.New(
 							"request canceled while waiting for connection",
 						)))).
-					Once()
+					Times(defaultPullMaxAttempts)
 			},
 			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
@@ -142,10 +142,10 @@ func TestDockerForImagePullFailures(t *testing.T) {
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.ImagePullFailure)
+				assert.Equal(t, buildError.FailureReason, common.RunnerExternalDependencyFailure)
 			},
 		},
-		"ImagePullBlocking two level wrapped request timeout failure": {
+		"ImagePullBlocking two level wrapped transient failure is retried then fails": {
 			imageName: "lwo-level-wrapped-request-timeout:failure",
 			initMock: func(c *docker.MockClient, imageName string) {
 				c.On("ImagePullBlocking", m.context, imageName, mock.AnythingOfType("image.PullOptions")).
@@ -154,7 +154,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 							"wrapped error: %w", errdefs.System(errors.New(
 								"request canceled while waiting for connection",
 							))))).
-					Once()
+					Times(defaultPullMaxAttempts)
 			},
 			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
@@ -162,7 +162,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.ImagePullFailure)
+				assert.Equal(t, buildError.FailureReason, common.RunnerExternalDependencyFailure)
 			},
 		},
 		"ImagePullBlocking unwrapped script failure": {
@@ -205,6 +205,84 @@ func TestDockerForImagePullFailures(t *testing.T) {
 			tc.assert(t, m, tc.imageName)
 		})
 	}
+}
+
+func TestDockerPullRetriesTransientFailureThenSucceeds(t *testing.T) {
+	c := docker.NewMockClient(t)
+
+	dockerConfig := &common.DockerConfig{}
+	dockerOptions := spec.ImageDockerOptions{}
+	m := newDefaultTestManager(t, c, dockerConfig)
+
+	// First pull fails with a transient registry/auth timeout, second succeeds.
+	c.On("ImagePullBlocking", m.context, "flaky:latest", mock.AnythingOfType("image.PullOptions")).
+		Return(errors.New(
+			`Get "https://gitlab.com/jwt/auth": context deadline exceeded ` +
+				`(Client.Timeout exceeded while awaiting headers)`,
+		)).
+		Once()
+	c.On("ImagePullBlocking", m.context, "flaky:latest", mock.AnythingOfType("image.PullOptions")).
+		Return(nil).
+		Once()
+	c.On("ImageInspectWithRaw", m.context, "flaky").
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
+		Once()
+
+	img, err := m.pullDockerImage("flaky", dockerOptions, nil)
+	assert.NoError(t, err)
+	require.NotNil(t, img)
+	assert.Equal(t, "image-id", img.ID)
+}
+
+func TestDockerPullDoesNotRetryNonTransientFailure(t *testing.T) {
+	c := docker.NewMockClient(t)
+
+	dockerConfig := &common.DockerConfig{}
+	dockerOptions := spec.ImageDockerOptions{}
+	m := newDefaultTestManager(t, c, dockerConfig)
+
+	// Auth-denied is not transient and must not be retried (single call only).
+	c.On("ImagePullBlocking", m.context, "denied:latest", mock.AnythingOfType("image.PullOptions")).
+		Return(errors.New("pull access denied, repository does not exist or may require authorization")).
+		Once()
+
+	var buildError *common.BuildError
+	img, err := m.pullDockerImage("denied", dockerOptions, nil)
+	assert.Nil(t, img)
+	require.ErrorAs(t, err, &buildError)
+	assert.Equal(t, common.ConfigurationError, buildError.FailureReason)
+}
+
+func TestDockerPullStopsRetryingWhenContextCancelled(t *testing.T) {
+	c := docker.NewMockClient(t)
+
+	dockerConfig := &common.DockerConfig{}
+	dockerOptions := spec.ImageDockerOptions{}
+	m := newDefaultTestManager(t, c, dockerConfig)
+
+	ctx, cancel := context.WithCancel(m.context)
+	m.context = ctx
+
+	// A transient failure would normally be retried. Cancelling the build
+	// context during the first attempt must stop the loop. The Once() is the
+	// assertion: a second pull means cancellation was ignored.
+	c.On("ImagePullBlocking", m.context, "flaky:latest", mock.AnythingOfType("image.PullOptions")).
+		Run(func(mock.Arguments) { cancel() }).
+		Return(errors.New(
+			`Get "https://gitlab.com/jwt/auth": context deadline exceeded ` +
+				`(Client.Timeout exceeded while awaiting headers)`,
+		)).
+		Once()
+
+	img, err := m.pullDockerImage("flaky", dockerOptions, nil)
+	assert.Nil(t, img)
+
+	// Cancellation during a pull attempt is classified as JobCanceled (not an
+	// image-pull failure) and a JobCanceled reason is never retried, so the
+	// loop stops after the single attempt asserted by Once() above.
+	var buildError *common.BuildError
+	require.ErrorAs(t, err, &buildError)
+	assert.Equal(t, common.JobCanceled, buildError.FailureReason)
 }
 
 func TestDockerForExistingImage(t *testing.T) {
@@ -834,6 +912,11 @@ func newDefaultTestManager(t *testing.T, client *docker.MockClient, dockerConfig
 			DockerConfig: dockerConfig,
 		},
 		client: client,
+		// Mirror the production retry behaviour but with a negligible backoff so
+		// retry-exercising tests don't sleep.
+		pullMaxAttempts:     defaultPullMaxAttempts,
+		pullRetryMinBackoff: time.Millisecond,
+		pullRetryMaxBackoff: time.Millisecond,
 	}
 }
 
