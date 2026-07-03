@@ -77,7 +77,8 @@ type Variable struct {
 
 // RunnerInfo contains runner-specific metadata sent as part of the job payload.
 type RunnerInfo struct {
-	Timeout int `json:"timeout"`
+	UUID    string `json:"uuid"`
+	Timeout int    `json:"timeout"`
 }
 
 type StepScript []string

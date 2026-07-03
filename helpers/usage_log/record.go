@@ -13,6 +13,7 @@ type Record struct {
 }
 
 type Runner struct {
+	UUID     string `json:"uuid"`
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	SystemID string `json:"system_id"`

@@ -91,6 +91,7 @@ func (w *Writer) Store(record usage_log.Record) error {
 			"job_id":         record.Job.ID,
 			"job_url":        record.Job.URL,
 			"failure_reason": record.Job.FailureReason,
+			"runner_uuid":    record.Runner.UUID,
 		}).Debug("Skipping billing event")
 		return nil
 	}
@@ -127,12 +128,13 @@ func (w *Writer) buildBillingInputs(record usage_log.Record) (labkitsnowplow.Bil
 	metadata["finished_at"] = record.Job.FinishedAt.Format(time.RFC3339Nano)
 	metadata["executor"] = record.Runner.Executor
 
+	subject := "0"
+	if record.Runner.UUID != "" {
+		subject = record.Runner.UUID
+	}
+
 	optional := labkitsnowplow.BillingEventOptionalInput{
-		// TODO: subject should be a globally unique runner identifier (UUID)
-		// provided by Rails. Using the short runner token for now.
-		// See: https://gitlab.com/gitlab-org/customers-gitlab-com/-/work_items/15803
-		// and https://gitlab.com/gitlab-org/gitlab/-/work_items/594605
-		Subject:        "0",
+		Subject:        subject,
 		DeploymentType: w.options.deploymentType,
 		Metadata:       metadata,
 	}

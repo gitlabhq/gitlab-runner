@@ -11,6 +11,7 @@ import (
 func UsageLogRecordFrom(runner *RunnerConfig, build *Build) (usage_log.Record, error) {
 	record := usage_log.Record{
 		Runner: usage_log.Runner{
+			UUID:     build.RunnerInfo.UUID,
 			ID:       runner.ShortDescription(),
 			Name:     runner.Name,
 			SystemID: runner.GetSystemID(),
