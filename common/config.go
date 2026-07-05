@@ -266,6 +266,19 @@ func (p *StringOrArray) UnmarshalTOML(data interface{}) error {
 	return nil
 }
 
+func (p *StringOrArray) UnmarshalFlag(value string) error {
+	if value == "" {
+		*p = StringOrArray{}
+		return nil
+	}
+	result := StringOrArray{}
+	for _, item := range strings.Split(value, ",") {
+		result = append(result, strings.TrimSpace(item))
+	}
+	*p = result
+	return nil
+}
+
 type DockerConfig struct {
 	docker.Credentials
 	Hostname                   string              `toml:"hostname,omitempty" json:"hostname" long:"hostname" env:"DOCKER_HOSTNAME" description:"Custom container hostname"`
