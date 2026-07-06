@@ -42,6 +42,7 @@ The integration tests run through the following GitLab CI/CD stages:
    - `integration kubernetes`: Standard integration tests
    - `integration kubernetes exec legacy`: Tests with legacy execution strategy
    - `integration kubernetes attach`: Tests with attach execution strategy
+   - `integration kubernetes concrete`: Tests with Concrete-mode (`FF_CONCRETE`) native-steps dispatch
 
 1. Cleanup (`destroy integration kubernetes`):
    - Destroys test-specific resources
@@ -104,6 +105,14 @@ Key parameters:
 - Filter: Only runs `TestRunIntegrationTestsWithFeatureFlag`
 - Purpose: Tests the newer attach-based execution strategy
 
+### Concrete-mode tests
+
+- Job: `integration kubernetes concrete`
+- Feature flag: `FF_CONCRETE=true`
+- Filter: Only runs `TestRunIntegrationTestsWithFeatureFlag`
+- Purpose: Validates native-steps dispatch routed through `steps.Connector`
+  (`Build.UseNativeSteps()` returns true under this flag).
+
 ## RBAC and permissions
 
 ### Dynamic permission provisioning
@@ -156,6 +165,7 @@ Tests use resource groups to prevent conflicts:
 - `"$CI_COMMIT_REF_SLUG-k8s-integration"`
 - `"$CI_COMMIT_REF_SLUG-k8s-integration-exec-legacy"`
 - `"$CI_COMMIT_REF_SLUG-k8s-integration-attach"`
+- `"$CI_COMMIT_REF_SLUG-k8s-integration-concrete"`
 
 ## Monitoring and observability
 
@@ -201,14 +211,58 @@ sections in the infrastructure repository.
 
 ## Running tests locally
 
-Integration tests are designed to run in the CI/CD environment with the dedicated infrastructure.
-Local execution requires:
+Integration tests can run against any reachable Kubernetes cluster
+(`kubectl cluster-info` must succeed). Tests skip silently when the
+cluster is unreachable, so a missing cluster is a no-op rather than a
+hard error.
 
-1. Access to the GKE cluster.
-1. Appropriate RBAC permissions.
-1. Environment variables that match the CI/CD configuration.
+For most local development, use unit tests or a local cluster
+(`kind`, `minikube`, Rancher Desktop) with appropriate RBAC setup.
+For full parity with the dedicated CI/CD cluster, access to the GKE
+cluster, matching RBAC permissions, and CI/CD environment variables are
+required.
 
-For local development, use unit tests or a local Kubernetes cluster (`kind/minikube`) with appropriate setup.
+### Selecting a matrix mode
+
+`TestRunIntegrationTestsWithFeatureFlag` is the same test suite that
+runs once per matrix CI/CD job, parameterized by two environment variables. To
+reproduce a specific mode locally:
+
+```shell
+CI_RUNNER_TEST_FEATURE_FLAG=FF_CONCRETE \
+CI_RUNNER_TEST_FEATURE_FLAG_VALUE=true \
+go test -tags=integration,kubernetes -timeout=30m -v \
+  -run TestRunIntegrationTestsWithFeatureFlag \
+  ./executors/kubernetes/...
+```
+
+Substitute `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` (with `true`
+or `false`) to reproduce the `integration kubernetes exec legacy` or
+`integration kubernetes attach` jobs respectively.
+
+### Overriding the helper image
+
+By default, the fixture pins the helper image (through
+`withDevHelperImage` in `getTestBuild`) to the one built by the
+`(development|bleeding|stable) docker images` jobs of the current
+pipeline. Locally, when `CI_PROJECT_DIR` is unset, the fixture falls
+back to the runner's compiled-in default helper image.
+
+To run against a specific helper image (a published bleeding tag, a
+locally-built image, or a debugging variant), set:
+
+```shell
+CI_RUNNER_TEST_HELPER_IMAGE=registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:bleeding
+```
+
+This override takes precedence over both the artifact lookup and the
+compiled-in default. It enables an iterative loop for helper-side
+changes: build the helper image locally, push it to any registry the
+test cluster can pull from, and point `CI_RUNNER_TEST_HELPER_IMAGE`
+at that pushed tag. No CI/CD pipeline required.
+
+Required for `FF_CONCRETE` runs when the default helper image lacks
+the `steps` subcommand.
 
 ## Related topics
 

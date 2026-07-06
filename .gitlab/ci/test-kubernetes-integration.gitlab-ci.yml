@@ -59,6 +59,15 @@ integration kubernetes attach:
     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "false"
     EXTRA_GO_TEST_FLAGS: "-run=TestRunIntegrationTestsWithFeatureFlag"
 
+integration kubernetes concrete:
+  extends:
+    - .integration kubernetes
+  resource_group: "$CI_COMMIT_REF_SLUG-k8s-integration-concrete"
+  variables:
+    CI_RUNNER_TEST_FEATURE_FLAG: "FF_CONCRETE"
+    CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "true"
+    EXTRA_GO_TEST_FLAGS: "-run=TestRunIntegrationTestsWithFeatureFlag"
+
 integration kubernetes:
   extends:
     - .integration kubernetes
@@ -75,6 +84,8 @@ destroy integration kubernetes:
     - job: "integration kubernetes exec legacy"
       optional: true
     - job: "integration kubernetes attach"
+      optional: true
+    - job: "integration kubernetes concrete"
       optional: true
   variables:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-provisioner"

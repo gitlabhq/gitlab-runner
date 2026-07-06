@@ -443,6 +443,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("starting pod watcher: %w", err)
 	}
 
+	if s.Build.UseNativeSteps() {
+		return s.stepsWaitForServices(options.Context)
+	}
+
 	return s.waitForServices(options.Context)
 }
 
@@ -456,6 +460,16 @@ func (s *executor) preparePullManager() (pull.Manager, error) {
 		buildContainerName:          s.options.Image.PullPolicies,
 		helperContainerName:         s.options.Image.PullPolicies,
 		initPermissionContainerName: s.options.Image.PullPolicies,
+	}
+	// Concrete's container set differs from legacy: it has an
+	// init-steps-bootstrap init container (running the helper image) and no
+	// helper container. The pull manager keys its retry cursor per container
+	// name, so the bootstrap container must be registered here for pull-retry
+	// to cover helper-image pull failures. This is neutral pull-policy
+	// plumbing, not script-execution logic, so the conditional is retained
+	// deliberately rather than forked into a separate builder.
+	if s.Build.UseNativeSteps() {
+		dockerPullPoliciesPerContainer[stepsBootstrapInitContainerName] = s.options.Image.PullPolicies
 	}
 	for containerName, service := range s.options.Services {
 		dockerPullPoliciesPerContainer[containerName] = service.PullPolicies
@@ -569,19 +583,26 @@ func (s *executor) retrieveHelperImageConfig() helperimage.Config {
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
-	for attempt := 1; ; attempt++ {
-		var err error
-
+	return s.withPullRetry(cmd.Context, func() error {
 		if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 			s.BuildLogger.Debugln("Starting Kubernetes command...")
-			err = s.runWithExecLegacy(cmd)
-		} else {
-			s.BuildLogger.Debugln("Starting Kubernetes command with attach...")
-			err = s.runWithAttach(cmd)
+			return s.runWithExecLegacy(cmd)
 		}
+		s.BuildLogger.Debugln("Starting Kubernetes command with attach...")
+		return s.runWithAttach(cmd)
+	})
+}
 
+// withPullRetry runs dispatch and retries on *pull.ImagePullError,
+// cycling pull policies via pullManager. Used by both classic dispatch
+// (executor.Run) and Concrete dispatch (Connect).
+func (s *executor) withPullRetry(ctx context.Context, dispatch func() error) error {
+	for attempt := 1; ; attempt++ {
+		err := dispatch()
+
+		// Safe per-attempt: podEventState.seen dedupes across calls.
 		if err != nil && s.Config.Kubernetes.GetPrintPodWarningEvents() {
-			s.logPodWarningEvents(cmd.Context, k8sEventWarningType)
+			s.logPodWarningEvents(ctx, k8sEventWarningType)
 		}
 
 		var imagePullErr *pull.ImagePullError
@@ -1665,6 +1686,11 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 		// becomes root, regardless of SecurityContext or Image settings changing the user ID of the container.
 		// This causes builds to stop working in environments such as OpenShift where there's no root access
 		// resulting in an inability to modify anything inside the parent volume.
+		//
+		// In Concrete (native steps) mode the logs emptyDir is not created (stepsVolumes
+		// omits it because there is no helper container to consume it), so service
+		// containers — which go through this shared getVolumeMounts path — must not
+		// reference it either, or kube rejects the pod spec with an unknown-volume error.
 		mounts = append(
 			mounts,
 			api.VolumeMount{
@@ -2296,8 +2322,26 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 		return podConfigPrepareOpts{}, err
 	}
 
-	labels := s.buildLabels()
+	imagePullSecrets := s.prepareImagePullSecrets()
+	hostAliases, err := s.getHostAliases()
+	if err != nil {
+		return podConfigPrepareOpts{}, err
+	}
 
+	return podConfigPrepareOpts{
+		labels:           s.buildLabels(),
+		annotations:      s.buildPodAnnotations(),
+		services:         podServices,
+		imagePullSecrets: imagePullSecrets,
+		hostAliases:      hostAliases,
+		initContainers:   initContainers,
+	}, nil
+}
+
+// buildPodAnnotations returns the job/project metadata annotations applied
+// to every runner-created pod. It is mode-neutral plumbing shared by the
+// legacy and Concrete pod-assembly paths.
+func (s *executor) buildPodAnnotations() map[string]string {
 	annotations := map[string]string{
 		"job." + runnerLabelNamespace + "/id":         strconv.FormatInt(s.Build.ID, 10),
 		"job." + runnerLabelNamespace + "/url":        s.Build.JobURL(),
@@ -2312,20 +2356,7 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 		annotations[key] = s.Build.Variables.ExpandValue(val)
 	}
 
-	imagePullSecrets := s.prepareImagePullSecrets()
-	hostAliases, err := s.getHostAliases()
-	if err != nil {
-		return podConfigPrepareOpts{}, err
-	}
-
-	return podConfigPrepareOpts{
-		labels:           labels,
-		annotations:      annotations,
-		services:         podServices,
-		imagePullSecrets: imagePullSecrets,
-		hostAliases:      hostAliases,
-		initContainers:   initContainers,
-	}, nil
+	return annotations
 }
 
 func (s *executor) isWindowsJob() bool {
@@ -3543,7 +3574,9 @@ func (s *executor) waitForServices(ctx context.Context) error {
 	if portArgs == "" {
 		return nil
 	}
-	command := "gitlab-runner-helper health-check " + portArgs
+
+	healthCheckContainer := helperContainerName
+	command := helperBinaryName + " health-check " + portArgs
 
 	var err error
 	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
@@ -3562,7 +3595,7 @@ func (s *executor) waitForServices(ctx context.Context) error {
 	defer stderr.Close()
 
 	select {
-	case err := <-s.runInContainerWithExec(ctx, helperContainerName, s.BuildShell.DockerCommand, command, stdout, stderr):
+	case err := <-s.runInContainerWithExec(ctx, healthCheckContainer, s.BuildShell.DockerCommand, command, stdout, stderr):
 		s.BuildLogger.Debugln(fmt.Sprintf("Container helper exited with error: %v", err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
@@ -3661,6 +3694,7 @@ func featuresFn(features *common.FeaturesInfo) {
 	features.Session = true
 	features.Terminal = true
 	features.Variables = true
+	features.NativeStepsIntegration = true
 }
 
 func NewProvider() common.ExecutorProvider {
