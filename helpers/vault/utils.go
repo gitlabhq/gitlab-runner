@@ -24,6 +24,13 @@ func (e *unwrappedAPIResponseError) Error() string {
 	return fmt.Sprintf("api error: status code %d: %s", e.statusCode, e.apiErrors)
 }
 
+// StatusCode returns the HTTP status code returned by the Vault API. It
+// allows callers to classify API failures (e.g. authorization problems
+// vs server-side failures) without depending on this package's error type.
+func (e *unwrappedAPIResponseError) StatusCode() int {
+	return e.statusCode
+}
+
 func (e *unwrappedAPIResponseError) Is(err error) bool {
 	eerr, ok := err.(*unwrappedAPIResponseError)
 	if !ok {

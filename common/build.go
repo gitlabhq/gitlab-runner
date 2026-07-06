@@ -26,6 +26,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
@@ -1528,7 +1529,7 @@ func (b *Build) Run(ctx context.Context, globalConfig *Config, trace JobTrace) (
 
 	err = b.resolveSecrets(trace)
 	if err != nil {
-		return err
+		return wrapSecretResolvingError(err)
 	}
 
 	b.expandContainerOptions()
@@ -1681,6 +1682,38 @@ func (b *Build) resolveSecrets(trace JobTrace) error {
 	b.Secrets.ExpandVariables(b.GetAllVariables())
 
 	return b.attemptResolveSecrets(trace, b.GetSecretsRetrievalAttempts())
+}
+
+// wrapSecretResolvingError converts a classified secret-resolution failure
+// into a BuildError with a failure reason matching the cause of the failure.
+// Historically all secret-resolution failures were reported as
+// RunnerSystemFailure (the default for untagged errors), even when the
+// failure was caused by the job's configuration — for example a secrets
+// provider denying access to the requested path. Resolvers can classify
+// their failures with the semantic error types from helpers/secrets:
+//
+//   - secrets.ResolvingConfigurationError → ConfigurationError
+//   - secrets.ResolvingExternalDependencyError → RunnerExternalDependencyFailure
+//
+// Unclassified failures keep the previous classification and are reported
+// as RunnerSystemFailure.
+func wrapSecretResolvingError(err error) error {
+	var buildErr *BuildError
+	if errors.As(err, &buildErr) {
+		return err
+	}
+
+	var configurationErr *secrets.ResolvingConfigurationError
+	if errors.As(err, &configurationErr) {
+		return &BuildError{FailureReason: ConfigurationError, Inner: err}
+	}
+
+	var externalDependencyErr *secrets.ResolvingExternalDependencyError
+	if errors.As(err, &externalDependencyErr) {
+		return &BuildError{FailureReason: RunnerExternalDependencyFailure, Inner: err}
+	}
+
+	return &BuildError{FailureReason: RunnerSystemFailure, Inner: err}
 }
 
 func (b *Build) GetSecretsRetrievalAttempts() int {

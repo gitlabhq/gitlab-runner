@@ -46,6 +46,11 @@ func TestUnwrappedAPIResponseError_Error(t *testing.T) {
 	assert.Equal(t, "api error: status code -1: test1, test2", err.Error())
 }
 
+func TestUnwrappedAPIResponseError_StatusCode(t *testing.T) {
+	err := newUnwrappedAPIResponseError(403, []string{"permission denied"})
+	assert.Equal(t, 403, err.StatusCode())
+}
+
 func TestUnwrappedAPIResponseError_Is(t *testing.T) {
 	assert.ErrorIs(
 		t,
