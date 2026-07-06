@@ -28,6 +28,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	helpers_secrets "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
@@ -2763,6 +2764,41 @@ func TestBuild_GetSecretsRetrievalAttempts(t *testing.T) {
 				assert.NotEmpty(t, build.Settings().Errors)
 			}
 			assert.Equal(t, tt.expectedAttempts, attempts)
+		})
+	}
+}
+
+func TestWrapSecretResolvingError(t *testing.T) {
+	tests := map[string]struct {
+		err                   error
+		expectedFailureReason spec.JobFailureReason
+	}{
+		"configuration error becomes ConfigurationError build error": {
+			err:                   fmt.Errorf("resolving secrets: %w", helpers_secrets.NewResolvingConfigurationError(assert.AnError)),
+			expectedFailureReason: ConfigurationError,
+		},
+		"external dependency error becomes RunnerExternalDependencyFailure build error": {
+			err:                   fmt.Errorf("resolving secrets: %w", helpers_secrets.NewResolvingExternalDependencyError(assert.AnError)),
+			expectedFailureReason: RunnerExternalDependencyFailure,
+		},
+		"existing build error is preserved": {
+			err:                   &BuildError{FailureReason: JobCanceled, Inner: assert.AnError},
+			expectedFailureReason: JobCanceled,
+		},
+		"unclassified error becomes RunnerSystemFailure build error": {
+			err:                   assert.AnError,
+			expectedFailureReason: RunnerSystemFailure,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			result := wrapSecretResolvingError(tt.err)
+
+			var buildErr *BuildError
+			require.ErrorAs(t, result, &buildErr)
+			assert.Equal(t, tt.expectedFailureReason, buildErr.FailureReason)
+			assert.ErrorIs(t, result, tt.err, "wrapped error must preserve the original error chain")
 		})
 	}
 }

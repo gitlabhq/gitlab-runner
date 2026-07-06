@@ -3,6 +3,9 @@
 package vault
 
 import (
+	"errors"
+	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -118,6 +121,86 @@ func TestResolver_Resolve(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedValue, value)
+		})
+	}
+}
+
+type testStatusCodeError struct {
+	statusCode int
+}
+
+func (e *testStatusCodeError) Error() string {
+	return fmt.Sprintf("api error: status code %d", e.statusCode)
+}
+
+func (e *testStatusCodeError) StatusCode() int {
+	return e.statusCode
+}
+
+func TestClassifyError(t *testing.T) {
+	tests := map[string]struct {
+		err                         error
+		expectConfigurationError    bool
+		expectExternalDependency    bool
+		expectUnmodifiedPassThrough bool
+	}{
+		"nil error": {
+			err: nil,
+		},
+		"permission denied (403) is a configuration error": {
+			err:                      fmt.Errorf("reading secret: %w", &testStatusCodeError{statusCode: http.StatusForbidden}),
+			expectConfigurationError: true,
+		},
+		"missing role (400) is a configuration error": {
+			err:                      fmt.Errorf("authenticating Vault client: %w", &testStatusCodeError{statusCode: http.StatusBadRequest}),
+			expectConfigurationError: true,
+		},
+		"unauthorized (401) is a configuration error": {
+			err:                      fmt.Errorf("reading secret: %w", &testStatusCodeError{statusCode: http.StatusUnauthorized}),
+			expectConfigurationError: true,
+		},
+		"unknown path (404) is a configuration error": {
+			err:                      fmt.Errorf("reading secret: %w", &testStatusCodeError{statusCode: http.StatusNotFound}),
+			expectConfigurationError: true,
+		},
+		"server error (500) is an external dependency error": {
+			err:                      fmt.Errorf("reading secret: %w", &testStatusCodeError{statusCode: http.StatusInternalServerError}),
+			expectExternalDependency: true,
+		},
+		"service unavailable (503) is an external dependency error": {
+			err:                      fmt.Errorf("reading secret: %w", &testStatusCodeError{statusCode: http.StatusServiceUnavailable}),
+			expectExternalDependency: true,
+		},
+		"rate limited (429) keeps default classification": {
+			err:                         fmt.Errorf("reading secret: %w", &testStatusCodeError{statusCode: http.StatusTooManyRequests}),
+			expectUnmodifiedPassThrough: true,
+		},
+		"error without status code keeps default classification": {
+			err:                         assert.AnError,
+			expectUnmodifiedPassThrough: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			result := classifyError(tt.err)
+
+			if tt.err == nil {
+				assert.NoError(t, result)
+				return
+			}
+
+			var configurationErr *secrets.ResolvingConfigurationError
+			var externalDependencyErr *secrets.ResolvingExternalDependencyError
+
+			assert.Equal(t, tt.expectConfigurationError, errors.As(result, &configurationErr), "configuration error classification")
+			assert.Equal(t, tt.expectExternalDependency, errors.As(result, &externalDependencyErr), "external dependency classification")
+
+			if tt.expectUnmodifiedPassThrough {
+				assert.Equal(t, tt.err, result)
+			} else {
+				assert.ErrorIs(t, result, tt.err, "classified error must wrap the original")
+			}
 		})
 	}
 }
