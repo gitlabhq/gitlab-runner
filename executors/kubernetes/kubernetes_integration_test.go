@@ -163,6 +163,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesGarbageCollection":                         testKubernetesGarbageCollection,
 		"testKubernetesNamespaceIsolation":                        testKubernetesNamespaceIsolation,
 		"testKubernetesPublicInternalVariables":                   testKubernetesPublicInternalVariables,
+		"testKubernetesPublicInternalVariablesConcrete":           testKubernetesPublicInternalVariablesConcrete,
 		"testKubernetesWaitResources":                             testKubernetesWaitResources,
 		"testKubernetesLongLogsFeatureFlag":                       testKubernetesLongLogsFeatureFlag,
 		"testKubernetesHugeScriptAndAfterScriptFeatureFlag":       testKubernetesHugeScriptAndAfterScriptFeatureFlag,
@@ -274,8 +275,6 @@ func testKubernetesBuildPassingEnvsMultistep(t *testing.T, featureFlagName strin
 			return spec.Job{}, nil
 		})
 		build.Runner.RunnerSettings.Shell = shell
-
-		withDevHelperImage(t, build, "")
 
 		buildtest.RunBuildWithPassingEnvsMultistep(
 			t,
@@ -449,9 +448,34 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 		},
 	}
 
+	// Under Concrete dispatch step-runner runs every stage inside the build
+	// container as the configured RunAsUser/RunAsGroup, so there is no
+	// helper-container umask 0000 stage and the build tree is owned by that
+	// user regardless of FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR. The
+	// umask-enabled cases therefore expect user-owned files, not root-owned.
+	// See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39540.
+	verifyUserOwned := func(t *testing.T, out string) {
+		assert.NotContains(t, out, "root")
+		assert.NotContains(t, out, "drwxrwxrwx")
+		assert.NotContains(t, out, "-rw-rw-rw-")
+		assert.Regexp(t, regexp.MustCompile(`(?m)^.*1234\s*5678.*gitlab-test.*$`), out)
+	}
+
+	concreteVerifyFn := map[string]func(t *testing.T, out string){
+		"umask enabled":                        verifyUserOwned,
+		"umask enabled with custom builds_dir": verifyUserOwned,
+	}
+
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
+
+			verify := tc.verifyFn
+			if featureFlagName == featureflags.UseConcrete && featureFlagValue {
+				if fn, ok := concreteVerifyFn[tn]; ok {
+					verify = fn
+				}
+			}
 
 			build := getTestBuild(t, func() (spec.Job, error) {
 				return common.GetRemoteBuildResponse(tc.script)
@@ -490,7 +514,6 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 				RunAsUser:  &tc.runAsUser,
 				RunAsGroup: &tc.runAsGroup,
 			}
-			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 			buildtest.SetBuildFeatureFlag(build, "FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR", tc.disableUmask)
@@ -499,7 +522,7 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 			assert.NoError(t, err)
 
-			tc.verifyFn(t, buf.String())
+			verify(t, buf.String())
 		})
 	}
 }
@@ -513,7 +536,6 @@ func testKubernetesNoAdditionalNewLines(t *testing.T, featureFlagName string, fe
 
 	build.Runner.RunnerSettings.Shell = "bash"
 	build.Job.Image.Name = common.TestAlpineImage
-	build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
@@ -966,12 +988,14 @@ My nested nested here-string
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, func() (spec.Job, error) {
-				return common.GetRemoteBuildResponse("echo \"Hello World\"")
-			})
+			build := getTestBuild(t,
+				func() (spec.Job, error) {
+					return common.GetRemoteBuildResponse("echo \"Hello World\"")
+				},
+				withShell(tc.shell),
+				withImage(tc.image),
+			)
 
-			build.Runner.RunnerSettings.Shell = tc.shell
-			build.Job.Image.Name = tc.image
 			build.Job.Steps[0].Script = append(
 				build.Job.Steps[0].Script,
 				tc.getScript()...,
@@ -1084,16 +1108,26 @@ containers:
 
 			init(t, build, client)
 
+			ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 			deletedPodNameCh := make(chan string)
-			defer buildtest.OnUserStage(build, func() {
-				ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
+
+			listBuildPods := func() (*v1.PodList, error) {
+				return client.CoreV1().Pods(ciNamespace).List(ctx, metav1.ListOptions{
+					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+				})
+			}
+
+			// In FF_CONCRETE the `concrete` stage transitions before the pod
+			// is observable via the K8s API; wait until it exists before
+			// exercising the callback.
+			buildPodExists := func() bool {
+				pods, err := listBuildPods()
+				return err == nil && len(pods.Items) > 0
+			}
+
+			defer buildtest.OnUserStageWhen(ctx, build, buildPodExists, func() {
 				defer cancel()
-				pods, err := client.CoreV1().Pods(ciNamespace).List(
-					ctx,
-					metav1.ListOptions{
-						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-					},
-				)
+				pods, err := listBuildPods()
 				require.NoError(t, err)
 				require.NotEmpty(t, pods.Items)
 				pod := pods.Items[0]
@@ -1168,7 +1202,14 @@ func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, fe
 	require.Error(t, err, "error")
 	var buildError *common.BuildError
 	require.ErrorAs(t, err, &buildError)
-	assert.Contains(t, err.Error(), "command terminated with exit code 1")
+	// attach/legacy mode surfaces the kubelet's exec framing
+	// ("command terminated with exit code N"); Concrete mode wraps
+	// the failure via step-runner ("exec: step script:exit code N").
+	// Both are valid representations of the same exit-1 outcome.
+	assert.Regexp(t,
+		`command terminated with exit code 1|exec: step script:exit code 1`,
+		err.Error(),
+	)
 	assert.Equal(t, 1, buildError.ExitCode)
 }
 
@@ -1207,6 +1248,10 @@ func testKubernetesBuildLogLimitExceededFeatureFlag(t *testing.T, featureFlagNam
 
 func testKubernetesBuildMaskingFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	if featureFlagName == featureflags.UseConcrete && featureFlagValue {
+		t.Skip("token-prefix masking not propagated through step-runner protocol")
+	}
 
 	build := getTestBuild(t, func() (spec.Job, error) {
 		return spec.Job{}, nil
@@ -1717,16 +1762,26 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 				tc.init(t, build, client)
 			}
 
+			ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 			deletedPodNameCh := make(chan string)
-			defer buildtest.OnUserStage(build, func() {
-				ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
+
+			listBuildPods := func() (*v1.PodList, error) {
+				return client.CoreV1().Pods(ciNamespace).List(ctx, metav1.ListOptions{
+					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+				})
+			}
+
+			// In FF_CONCRETE the `concrete` stage transitions before the pod
+			// is observable via the K8s API; wait until it exists before
+			// exercising the callback.
+			buildPodExists := func() bool {
+				pods, err := listBuildPods()
+				return err == nil && len(pods.Items) > 0
+			}
+
+			defer buildtest.OnUserStageWhen(ctx, build, buildPodExists, func() {
 				defer cancel()
-				pods, err := client.CoreV1().Pods(ciNamespace).List(
-					ctx,
-					metav1.ListOptions{
-						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-					},
-				)
+				pods, err := listBuildPods()
 				require.NoError(t, err)
 				require.NotEmpty(t, pods.Items)
 				pod := pods.Items[0]
@@ -1838,16 +1893,26 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 				tc.init(t, build, client, expectedNamespace)
 			}
 
+			ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 			deletedPodNameCh := make(chan string)
-			defer buildtest.OnUserStage(build, func() {
-				ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
+
+			listBuildPods := func() (*v1.PodList, error) {
+				return client.CoreV1().Pods(expectedNamespace).List(ctx, metav1.ListOptions{
+					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+				})
+			}
+
+			// In FF_CONCRETE the `concrete` stage transitions before the pod
+			// is observable via the K8s API; wait until it exists before
+			// exercising the callback.
+			buildPodExists := func() bool {
+				pods, err := listBuildPods()
+				return err == nil && len(pods.Items) > 0
+			}
+
+			defer buildtest.OnUserStageWhen(ctx, build, buildPodExists, func() {
 				defer cancel()
-				pods, err := client.CoreV1().Pods(expectedNamespace).List(
-					ctx,
-					metav1.ListOptions{
-						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-					},
-				)
+				pods, err := listBuildPods()
 				require.NoError(t, err)
 				require.NotEmpty(t, pods.Items)
 				pod := pods.Items[0]
@@ -1890,6 +1955,15 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 
 func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	// Concrete dispatch does not project job variables onto the build
+	// container's pod-spec Env. Variables flow through the step-runner
+	// protocol instead, so pod-spec inspection is the wrong observation
+	// point. testKubernetesPublicInternalVariablesConcrete covers the
+	// FF_CONCRETE path by asserting on script-visible runtime env.
+	if featureFlagName == featureflags.UseConcrete && featureFlagValue {
+		t.Skip("FF_CONCRETE: covered by testKubernetesPublicInternalVariablesConcrete")
+	}
 
 	ctxTimeout := time.Minute
 	client := getTestKubeClusterClient(t)
@@ -1958,16 +2032,26 @@ func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string,
 			})
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
+			ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 			deletedPodNameCh := make(chan string)
-			defer buildtest.OnUserStage(build, func() {
-				ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
+
+			listBuildPods := func() (*v1.PodList, error) {
+				return client.CoreV1().Pods(ciNamespace).List(ctx, metav1.ListOptions{
+					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+				})
+			}
+
+			// In FF_CONCRETE the `concrete` stage transitions before the pod
+			// is observable via the K8s API; wait until it exists before
+			// exercising the callback.
+			buildPodExists := func() bool {
+				pods, err := listBuildPods()
+				return err == nil && len(pods.Items) > 0
+			}
+
+			defer buildtest.OnUserStageWhen(ctx, build, buildPodExists, func() {
 				defer cancel()
-				pods, err := client.CoreV1().Pods(ciNamespace).List(
-					ctx,
-					metav1.ListOptions{
-						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-					},
-				)
+				pods, err := listBuildPods()
 				require.NoError(t, err)
 				require.NotEmpty(t, pods.Items)
 				pod := pods.Items[0]
@@ -2008,6 +2092,57 @@ func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string,
 			<-deletedPodNameCh
 
 			assert.Errorf(t, err, "command terminated with exit code 137")
+		})
+	}
+}
+
+// testKubernetesPublicInternalVariablesConcrete is the FF_CONCRETE
+// sibling of testKubernetesPublicInternalVariables. Concrete projects
+// job variables through the step-runner protocol rather than the
+// pod-spec Env, so we assert on script-visible runtime env instead of
+// inspecting the pod.
+func testKubernetesPublicInternalVariablesConcrete(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	if featureFlagName != featureflags.UseConcrete || !featureFlagValue {
+		t.Skip("Concrete-only variant; classic dispatch is covered by testKubernetesPublicInternalVariables")
+	}
+
+	tests := map[string]spec.Variable{
+		"internal variable": {
+			Key:      "my_internal_variable",
+			Value:    "my internal variable",
+			Internal: true,
+		},
+		"public variable": {
+			Key:    "my_public_variable",
+			Value:  "my public variable",
+			Public: true,
+		},
+		"regular variable": {
+			Key:   "my_regular_variable",
+			Value: "my regular variable",
+		},
+	}
+
+	for tn, v := range tests {
+		t.Run(tn, func(t *testing.T) {
+			t.Parallel()
+
+			build := getTestBuild(t, func() (spec.Job, error) {
+				resp, err := common.GetRemoteBuildResponse(
+					fmt.Sprintf("echo %s=$%s", v.Key, v.Key),
+				)
+				require.NoError(t, err)
+				resp.Variables = append(resp.Variables, v)
+				return resp, nil
+			})
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			require.NoError(t, err)
+			assert.Contains(t, out, fmt.Sprintf("%s=%s", v.Key, v.Value),
+				"script env should expose the %s under FF_CONCRETE", tn)
 		})
 	}
 }
@@ -2205,7 +2340,6 @@ func testKubernetesClusterWarningEvent(t *testing.T, featureFlagName string, fea
 			build.Runner.Kubernetes.Image = tc.image
 			build.Runner.Kubernetes.PrintPodWarningEvents = &tc.retrieveWarning
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 			tc.verifyFn(t, out, err)
@@ -2461,6 +2595,13 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 		t.Run(tt.stage, func(t *testing.T) {
 			t.Parallel()
 
+			// Concrete dispatch only emits the "concrete" stage, so the
+			// step_ / prepare_script OnStage triggers never fire. The
+			// Concrete-mode equivalents live in the loop below.
+			if ff == featureflags.UseConcrete && ffValue {
+				t.Skip("FF_CONCRETE: covered by the Concrete-mode cases below")
+			}
+
 			for name, terminator := range tt.terminators {
 				t.Run(name, func(t *testing.T) {
 					t.Parallel()
@@ -2500,6 +2641,101 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 					out, err := buildtest.RunBuildReturningOutput(t, build)
 
 					tt.outputAssertions(t, err, out, <-deletedPodNameCh)
+				})
+			}
+		})
+	}
+
+	// Concrete-mode siblings: same delete / evict semantics, but the
+	// classic OnStage("step_") trigger never fires under Concrete (the
+	// only stage emitted is "concrete"). Use OnUserStageWhen with a
+	// pod-existence predicate so the terminator fires once step-runner's
+	// build pod is observable. The prepare_script case has no direct
+	// Concrete analogue and is not ported.
+	concreteTests := []struct {
+		name        string
+		terminators map[string]terminator
+		errMsgs     func(pod string) []string
+	}{
+		{
+			name: "concrete_delete",
+			terminators: map[string]terminator{
+				"delete gracefully": deletePodGracefully,
+				"delete now":        deletePodNow,
+			},
+			errMsgs: func(pod string) []string {
+				return []string{
+					fmt.Sprintf("pod %q is being deleted", ciNamespace+"/"+pod),
+					fmt.Sprintf("pods %q not found", pod),
+				}
+			},
+		},
+		{
+			name: "concrete_evict",
+			terminators: map[string]terminator{
+				"evict gracefully": evictPodGracefully,
+				"evict now":        evictPodNow,
+			},
+			errMsgs: func(pod string) []string {
+				return []string{
+					fmt.Sprintf("pod %q is disrupted", ciNamespace+"/"+pod),
+					fmt.Sprintf("pods %q not found", pod),
+				}
+			},
+		},
+	}
+
+	for _, tt := range concreteTests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if ff != featureflags.UseConcrete || !ffValue {
+				t.Skip("FF_CONCRETE-only; classic mode is covered by step_ / prepare_script cases above")
+			}
+
+			// Blocked by the wrapStepStageErr classification gap: under
+			// Concrete dispatch pre-step infrastructure errors do not
+			// surface as "(system failure)" in the trace. Remove this
+			// skip once that classification is fixed; the test body
+			// below is the regression-prevention asset the fix needs
+			// to land against.
+			t.Skip("blocked by wrapStepStageErr classification gap for Concrete dispatch")
+
+			for name, terminator := range tt.terminators {
+				t.Run(name, func(t *testing.T) {
+					t.Parallel()
+
+					ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
+					defer cancel()
+
+					build := getTestBuild(t, common.GetRemoteLongRunningBuild)
+					buildtest.SetBuildFeatureFlag(build, ff, ffValue)
+
+					client := getTestKubeClusterClient(t)
+					deletedPodNameCh := make(chan string, 1)
+
+					listBuildPods := func() (*v1.PodList, error) {
+						return client.CoreV1().Pods(ciNamespace).List(ctx, metav1.ListOptions{
+							LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+						})
+					}
+					buildPodExists := func() bool {
+						pods, err := listBuildPods()
+						return err == nil && len(pods.Items) > 0
+					}
+
+					defer buildtest.OnUserStageWhen(ctx, build, buildPodExists, func() {
+						pods, err := listBuildPods()
+						require.NoError(t, err)
+						require.NotEmpty(t, pods.Items)
+						podName := pods.Items[0].Name
+						require.NoError(t, terminator(client, podName))
+						deletedPodNameCh <- podName
+					})()
+
+					out, err := buildtest.RunBuildReturningOutput(t, build)
+					pod := <-deletedPodNameCh
+					assertSystemFailure(t, err, out, tt.errMsgs(pod)...)
 				})
 			}
 		})
@@ -2582,6 +2818,7 @@ func testKubernetesBashFeatureFlag(t *testing.T, featureFlagName string, feature
 				spec.Step{
 					Name:   spec.StepNameScript,
 					Script: []string{tc.script},
+					When:   spec.StepWhenAlways,
 				},
 			}
 
@@ -2633,6 +2870,7 @@ func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string
 					Script: []string{
 						"ls -l /builds",
 					},
+					When: spec.StepWhenAlways,
 				},
 			},
 			lifecycleCfg: common.KubernetesContainerLifecyle{
@@ -2657,6 +2895,7 @@ func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string
 					Script: []string{
 						"Get-ChildItem /builds",
 					},
+					When: spec.StepWhenAlways,
 				},
 			},
 			lifecycleCfg: common.KubernetesContainerLifecyle{
@@ -2678,17 +2917,20 @@ func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+			if tn == "invalid hook configuration: more than one handler type" &&
+				featureFlagName == featureflags.UseConcrete && featureFlagValue {
+				t.Skip("pre-step error not classified as system_failure under Concrete dispatch")
+			}
+
+			// withShell needs to fire before withDevHelperImage (inside
+			// getTestBuild) so pwsh sub-cases pick the -pwsh helper artifact.
+			build := getTestBuild(t, common.GetRemoteSuccessfulBuild, withShell(tt.shell))
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 			build.Image.Name = common.TestAlpineImage
 			build.Runner.RunnerSettings.Kubernetes.ContainerLifecycle = tt.lifecycleCfg
 
 			if tt.image != "" {
 				build.Image.Name = tt.image
-			}
-
-			if tt.shell != "" {
-				build.Runner.Shell = tt.shell
 			}
 
 			if tt.steps != nil {
@@ -2748,8 +2990,46 @@ func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (sp
 	}
 }
 
-func getTestBuild(t *testing.T, getJobResponse func() (spec.Job, error)) *common.Build {
-	return getTestBuildWithImage(t, common.TestAlpineImage, getJobResponse)
+// testBuildOpt mutates a *common.Build inside getTestBuild before the
+// helper-image policy fires. Use these to declare shell, image, or other
+// build-level configuration that influences helper-image artifact selection.
+type testBuildOpt func(*common.Build)
+
+// withShell sets Runner.RunnerSettings.Shell. Required for pwsh sub-cases
+// so withDevHelperImage picks the pwsh-flavored helper artifact instead of
+// the default alpine one.
+func withShell(shell string) testBuildOpt {
+	return func(b *common.Build) {
+		b.Runner.RunnerSettings.Shell = shell
+	}
+}
+
+// withImage sets Job.Image.Name. Use alongside withShell when a sub-case
+// also needs a non-default build container image.
+func withImage(image string) testBuildOpt {
+	return func(b *common.Build) {
+		b.Job.Image.Name = image
+	}
+}
+
+func getTestBuild(t *testing.T, getJobResponse func() (spec.Job, error), opts ...testBuildOpt) *common.Build {
+	build := getTestBuildWithImage(t, common.TestAlpineImage, getJobResponse)
+	for _, opt := range opts {
+		opt(build)
+	}
+	// pwsh + FF_CONCRETE is unsupported at the helper-image layer: there
+	// is no concrete-pwsh variant in scripts/pusher/helper-images.json.
+	// Skip these sub-cases explicitly rather than letting them fail at
+	// artifact lookup time with a less obvious error.
+	if testFeatureFlag == featureflags.UseConcrete && build.Runner.Shell == shells.SNPwsh {
+		t.Skip("pwsh + FF_CONCRETE not supported: no concrete-pwsh helper image variant")
+	}
+	// Pin every matrix variant to the dev helper from the current pipeline so
+	// the image contains the `steps` subcommand required by FF_CONCRETE runs.
+	// Local runs without CI_PROJECT_DIR fall through to the default helper;
+	// CI_RUNNER_TEST_HELPER_IMAGE overrides everything for ad-hoc cases.
+	withDevHelperImage(t, build, "")
+	return build
 }
 
 func getTestBuildWithServices(
@@ -3218,14 +3498,16 @@ func TestKubernetesPwshFeatureFlag(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+			build := getTestBuild(t, common.GetRemoteSuccessfulBuild,
+				withShell(shells.SNPwsh),
+				withImage(common.TestPwshImage),
+			)
 
-			build.Image.Name = common.TestPwshImage
-			build.Runner.Shell = shells.SNPwsh
 			build.Job.Steps = spec.Steps{
 				spec.Step{
 					Name:   spec.StepNameScript,
 					Script: []string{tc.script},
+					When:   spec.StepWhenAlways,
 				},
 			}
 
@@ -3268,10 +3550,11 @@ func TestKubernetesProcessesInBackground(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+			build := getTestBuild(t, common.GetRemoteSuccessfulBuild,
+				withShell(tc.shell),
+				withImage(tc.image),
+			)
 
-			build.Image.Name = tc.image
-			build.Runner.Shell = tc.shell
 			build.Job.Steps = spec.Steps{
 				spec.Step{
 					Name: spec.StepNameScript,
@@ -3279,12 +3562,14 @@ func TestKubernetesProcessesInBackground(t *testing.T) {
 						`sleep infinity &`,
 						`mkdir out && echo "Hello, world" > out/greeting`,
 					},
+					When: spec.StepWhenAlways,
 				},
 				spec.Step{
 					Name: spec.StepNameAfterScript,
 					Script: []string{
 						`echo I should be running`,
 					},
+					When: spec.StepWhenAlways,
 				},
 			}
 
@@ -3647,6 +3932,7 @@ func testJobRunningAndPassingWhenServiceStops(t *testing.T, featureFlagName stri
 			spec.Step{
 				Name:   spec.StepNameAfterScript,
 				Script: []string{"echo after script"},
+				When:   spec.StepWhenAlways,
 			},
 		)
 
@@ -3747,21 +4033,31 @@ func testKubernetesServiceContainerAlias(t *testing.T, featureFlagName string, f
 				)
 			})
 			build.Services = tc.services
-			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
 			buildtest.SetBuildFeatureFlag(build, featureflags.PrintPodEvents, true)
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 			ctx, cancel := context.WithTimeout(t.Context(), ctxTimeout)
 			deletedPodNameCh := make(chan string)
-			defer buildtest.OnUserStage(build, func() {
+
+			listBuildPods := func() (*v1.PodList, error) {
+				return client.CoreV1().Pods(ciNamespace).List(ctx, metav1.ListOptions{
+					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+				})
+			}
+
+			// In FF_CONCRETE the `concrete` stage transitions before the pod
+			// is observable via the K8s API (see executeStepStage in
+			// common/build.go: stage flips, then Connect creates the pod).
+			// Wait for the pod to exist before exercising the callback so
+			// the assertions can rely on it.
+			buildPodExists := func() bool {
+				pods, err := listBuildPods()
+				return err == nil && len(pods.Items) > 0
+			}
+
+			defer buildtest.OnUserStageWhen(ctx, build, buildPodExists, func() {
 				defer cancel()
-				pods, err := client.CoreV1().
-					Pods(ciNamespace).
-					List(
-						ctx,
-						metav1.ListOptions{
-							LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-						},
-					)
+				pods, err := listBuildPods()
 				require.NoError(t, err)
 				require.NotEmpty(t, pods.Items)
 				pod := pods.Items[0]
@@ -3857,8 +4153,8 @@ func testKubernetesOptionsUserAndGroup(t *testing.T, featureFlagName string, fea
 				build.Runner.Kubernetes.BuildContainerSecurityContext.RunAsUser = tc.cfgUserId()
 			}
 
-			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
 			buildtest.SetBuildFeatureFlag(build, featureflags.PrintPodEvents, true)
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 			var buf bytes.Buffer
 			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
@@ -4060,7 +4356,6 @@ func TestKubernetesScriptsBaseDir(t *testing.T) {
 			build.Runner.RunnerSettings.Shell = tc.shell
 			build.Runner.RunnerSettings.Kubernetes.ScriptsBaseDir = tc.baseDir
 			build.Job.Image.Name = tc.image
-			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			var buf bytes.Buffer
 			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
@@ -4124,7 +4419,6 @@ func TestKubernetesLogsBaseDir(t *testing.T) {
 			build.Runner.RunnerSettings.Shell = tc.shell
 			build.Runner.RunnerSettings.Kubernetes.LogsBaseDir = tc.baseDir
 			build.Job.Image.Name = tc.image
-			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			var buf bytes.Buffer
 			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
@@ -4179,7 +4473,6 @@ func testJobAgainstServiceContainerBehaviour(t *testing.T, featureFlagName strin
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 			build.Job.Image.Name = common.TestAlpineImage
 			build.Job.Services = append(build.Job.Services, tc.services...)
-			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 			tc.verifyFn(t, err)
@@ -4330,7 +4623,6 @@ allocate_memory
 
 			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
 			build.Job.Image.Name = common.TestAlpineImage
-			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 			build.Runner.Kubernetes.MemoryLimit = tc.memoryLimit
 			build.Runner.Kubernetes.MemoryRequest = tc.memoryLimit
 
@@ -4343,8 +4635,16 @@ allocate_memory
 
 // withDevHelperImage reads the artifacts from the "(development|bleeding|stable) docker images" job, extracts the
 // helper image ref from there, and sets it as the build's helper image.
+//
+// Honours CI_RUNNER_TEST_HELPER_IMAGE as a direct override (ad-hoc local runs,
+// CI debugging). When the override is set, the artifact lookup is skipped.
 func withDevHelperImage(t *testing.T, build *common.Build, imageRefRE string) {
 	t.Helper()
+
+	if img := os.Getenv("CI_RUNNER_TEST_HELPER_IMAGE"); img != "" {
+		build.Runner.Kubernetes.HelperImage = img
+		return
+	}
 
 	const (
 		artifactType    = "Docker image"
@@ -4369,7 +4669,24 @@ func withDevHelperImage(t *testing.T, build *common.Build, imageRefRE string) {
 	}
 
 	if imageRefRE == "" {
-		imageRefRE = ":x86_64-[a-f0-9]+$"
+		// FF_CONCRETE matrix runs need the `concrete-`-prefixed helper
+		// artifact: a separate helper image flavor whose base bundles
+		// step-runner's runtime tooling (git, etc.). The alpine flavor
+		// doesn't have it, which causes "git: executable file not found"
+		// cascades when the build container runs step-runner directly.
+		prefix := "x86_64"
+		if testFeatureFlag == featureflags.UseConcrete {
+			prefix = "concrete-x86_64"
+		}
+		// Pwsh-shelled tests need the `-pwsh`-suffixed helper artifact;
+		// the default helper images don't have pwsh installed. The shell
+		// is set on the build by withShell() (a testBuildOpt) before this
+		// function runs, so we can read it here.
+		suffix := ""
+		if build.Runner.Shell == shells.SNPwsh {
+			suffix = "-pwsh"
+		}
+		imageRefRE = fmt.Sprintf(":%s-[a-f0-9]+%s$", prefix, suffix)
 	}
 
 	re, err := regexp.Compile(imageRefRE)

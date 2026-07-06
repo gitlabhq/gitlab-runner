@@ -2,6 +2,7 @@ package buildtest
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -48,15 +49,27 @@ func RunBuild(t *testing.T, build *common.Build) error {
 	return err
 }
 
-// OnStage executes the provided function when the provided stage is entered.
-func OnStage(build *common.Build, stage string, fn func()) func() {
+// OnStage executes the provided function when CurrentStage() enters a stage
+// whose name starts with the provided prefix. Thin wrapper over onAnyStage
+// for the single-prefix case.
+func OnStage(build *common.Build, prefix string, fn func()) func() {
+	return onAnyStage(build, []string{prefix}, fn)
+}
+
+// onAnyStage executes the provided function when CurrentStage() enters a
+// stage whose name starts with any of the provided prefixes. Polling-based;
+// returns a cleanup function the caller must invoke (typically via defer)
+// to stop the polling goroutine if the matching stage is never reached.
+func onAnyStage(build *common.Build, prefixes []string, fn func()) func() {
 	exit := make(chan struct{})
 
 	inStage := func() bool {
 		currentStage := string(build.CurrentStage())
-		if strings.HasPrefix(currentStage, stage) {
-			fn()
-			return true
+		for _, p := range prefixes {
+			if strings.HasPrefix(currentStage, p) {
+				fn()
+				return true
+			}
 		}
 		return false
 	}
@@ -84,9 +97,70 @@ func OnStage(build *common.Build, stage string, fn func()) func() {
 }
 
 // OnUserStage executes the provided function when the CurrentStage() enters
-// a non-predefined stage.
+// a non-predefined stage. Matches both the classic `step_<name>` stages
+// emitted by the legacy/attach executors and the `concrete` stage emitted
+// by native-steps dispatch (see common/build.go:executeStepStage).
 func OnUserStage(build *common.Build, fn func()) func() {
-	return OnStage(build, "step_", fn)
+	return onAnyStage(build, []string{"step_", "concrete"}, fn)
+}
+
+// onAnyStageWhen is onAnyStage with an additional readiness predicate.
+// Fires fn only when CurrentStage() matches one of the prefixes AND
+// readyFn returns true. Polling continues until both conditions are met
+// or ctx is cancelled; if ctx expires first, fn does not run.
+//
+// Useful when the stage transition is observable before the resources
+// the callback needs are observable (e.g., FF_CONCRETE dispatch sets the
+// `concrete` stage before the build pod has been created in K8s).
+func onAnyStageWhen(
+	ctx context.Context,
+	build *common.Build,
+	prefixes []string,
+	readyFn func() bool,
+	fn func(),
+) func() {
+	exit := make(chan struct{})
+
+	stageMatches := func() bool {
+		currentStage := string(build.CurrentStage())
+		for _, p := range prefixes {
+			if strings.HasPrefix(currentStage, p) {
+				return true
+			}
+		}
+		return false
+	}
+
+	ticker := time.NewTicker(time.Millisecond * 200)
+
+	go func() {
+		defer ticker.Stop()
+
+		for {
+			if stageMatches() && readyFn() {
+				fn()
+				return
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			case <-exit:
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+
+	return func() {
+		close(exit)
+	}
+}
+
+// OnUserStageWhen is OnUserStage with an additional readiness predicate
+// and context-driven timeout. See onAnyStageWhen for semantics.
+func OnUserStageWhen(ctx context.Context, build *common.Build, readyFn func() bool, fn func()) func() {
+	return onAnyStageWhen(ctx, build, []string{"step_", "concrete"}, readyFn, fn)
 }
 
 func SetBuildFeatureFlag(build *common.Build, flag string, value bool) {
