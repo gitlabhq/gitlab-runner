@@ -36,14 +36,34 @@ To prepare the environment for autoscaling:
 1. Create a VM image for the platform you're using. The image must include:
    - Git
    - GitLab Runner binary
-
-     > [!note]
-     > To process job artifacts and cache, install the GitLab Runner binary on the virtual machine and keep the
-     > runner executable in the default path.
-     > The VM image does not require GitLab Runner to run. The instances launched using the VM image must not register
-     > themselves as runners in GitLab.
+ 
+     To process job artifacts and cache, install the GitLab Runner binary on the virtual machine and keep the
+     runner executable in the default path.
 
    - Dependencies required by the jobs you plan to run
+  
+   > [!note]
+   > The VM image does not require GitLab Runner to run. The instances launched using the VM image must not register
+   > themselves as runners in GitLab.
+
+### GitLab Runner binary for native steps
+
+On instance executors, jobs with the `run` keyword run as [native steps](https://docs.gitlab.com/ci/steps/)
+automatically and do require the `gitlab-runner` binary. Unlike the
+[Docker executor](docker.md#native-step-runner-integration), no feature flag is needed.
+Native steps are not supported on Windows instances.
+
+If you plan to use native steps:
+
+- The `gitlab-runner` binary must be on the instance `PATH`.
+- Keep the binary at the same version as the runner manager (a mismatch logs a warning but does not fail the job).
+
+**SSH session limits:**
+
+Each `native-steps` job opens two concurrent SSH sessions to the instance (one for the `step-runner` server and one
+for the proxy connection). If you set `capacity_per_instance` greater than 1, set `MaxSessions` in `sshd_config` to
+at least `2 * capacity_per_instance`. Otherwise, jobs can fail with an opaque connection error when OpenSSH default
+limit (10) is reached.
 
 ## Configure the executor to autoscale
 

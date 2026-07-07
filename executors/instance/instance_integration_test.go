@@ -11,11 +11,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/instance"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
@@ -209,4 +211,69 @@ func TestBuildExpandedFileVariable(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		buildtest.RunBuildWithExpandedFileVariable(t, newRunnerConfig(t, shell), setupAcquireBuild)
 	})
+}
+
+func TestStepsIntegration(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("native steps are not supported on windows")
+	}
+
+	tests := map[string]struct {
+		steps     string
+		variables spec.Variables
+		wantOut   []string
+		wantErr   bool
+	}{
+		"script": {
+			steps: `- name: echo
+  script: echo foo bar baz
+- name: env
+  script: env`,
+			wantOut: []string{"foo bar baz"},
+		},
+		"file variable": {
+			steps: `- name: cat
+  script: cat ${{ job.A_FILE_VAR }}`,
+			variables: spec.Variables{{Key: "A_FILE_VAR", Value: "oh this is soo secret", File: true}},
+			wantOut:   []string{"oh this is soo secret"},
+		},
+		"job variables should not appear in environment": {
+			steps: `- name: echo
+  script: echo ${{ env.FLIN_FLAN_FLON }}`,
+			variables: spec.Variables{{Key: "FLIN_FLAN_FLON", Value: "flin, flan, flon"}},
+			wantOut: []string{
+				"ERROR: Job failed:",
+				`evaluating expression failed at ".FLIN_FLAN_FLON": attribute not found`,
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			job, err := common.GetRemoteStepsBuildResponse(tt.steps)
+			require.NoError(t, err)
+
+			job.Variables = append(job.Variables, tt.variables...)
+
+			build := &common.Build{
+				Job:    job,
+				Runner: newRunnerConfig(t, "bash"),
+			}
+			setupAcquireBuild(t, build)
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			wantOut := tt.wantOut
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				wantOut = append(wantOut, "Job succeeded")
+			}
+
+			for _, want := range wantOut {
+				assert.Contains(t, out, want)
+			}
+		})
+	}
 }
