@@ -130,6 +130,7 @@ func NewProvider(runnerCommandPath string) common.ExecutorProvider {
 	featuresUpdater := func(features *common.FeaturesInfo) {
 		features.Variables = true
 		features.Shared = true
+		features.NativeStepsIntegration = true
 	}
 
 	return autoscaler.New(executors.DefaultExecutorProvider{

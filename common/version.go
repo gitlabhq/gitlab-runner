@@ -11,6 +11,11 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
 
+// DevelopmentVersion is the value AppVersion.Version is set to when the binary
+// is built without version information (e.g. a local `go build`). Consumers can
+// compare against it to detect a development build.
+const DevelopmentVersion = "development version"
+
 var (
 	NAME     = "gitlab-runner"
 	VERSION  = ""
@@ -129,7 +134,7 @@ func init() {
 	}
 
 	if AppVersion.Version == "" || AppVersion.Version == "(devel)" {
-		AppVersion.Version = "development version"
+		AppVersion.Version = DevelopmentVersion
 	}
 
 	if AppVersion.Revision == "" {
