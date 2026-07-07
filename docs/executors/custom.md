@@ -436,13 +436,13 @@ of the following conditions:
 
 When a timeout is reached, a `SIGTERM` is sent to the executable, and
 the countdown for
-[`exec_terminate_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)
+[`graceful_kill_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)
 starts. The executable should listen to this signal to make sure it
-cleans up any resources. If `exec_terminate_timeout` passes and the
+cleans up any resources. If `graceful_kill_timeout` passes and the
 process is still running, a `SIGKILL` is sent to kill the process and
-[`exec_force_kill_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)
+[`force_kill_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)
 starts. If the process is still running after
-`exec_force_kill_timeout` has finished, GitLab Runner abandons the
+`force_kill_timeout` has finished, GitLab Runner abandons the
 process and doesn't try to stop or kill anymore. If both these timeouts
 are reached during `config_exec`, `prepare_exec` or `run_exec` the build
 is marked as failed.
