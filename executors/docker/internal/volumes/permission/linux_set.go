@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/client"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
@@ -50,7 +51,7 @@ func (d *dockerLinuxSetter) Set(ctx context.Context, volumeName string, labels m
 	}
 
 	defer func() {
-		removeErr := d.client.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: true})
+		removeErr := d.client.ContainerRemove(ctx, containerID, client.ContainerRemoveOptions{Force: true})
 		if removeErr != nil {
 			d.logger.WithError(removeErr).
 				WithField("container_id", containerID).
@@ -102,7 +103,7 @@ func (d *dockerLinuxSetter) createContainer(
 }
 
 func (d *dockerLinuxSetter) runContainer(ctx context.Context, containerID string) error {
-	err := d.client.ContainerStart(ctx, containerID, container.StartOptions{})
+	err := d.client.ContainerStart(ctx, containerID, client.ContainerStartOptions{})
 	if err != nil {
 		return fmt.Errorf("starting permission container: %w", err)
 	}

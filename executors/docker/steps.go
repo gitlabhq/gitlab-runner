@@ -8,10 +8,10 @@ import (
 	"path"
 	"strings"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/omitwriter"
@@ -22,7 +22,7 @@ import (
 const bootstrappedBinary = "/opt/gitlab-runner/gitlab-runner-helper"
 
 type conn struct {
-	resp    types.HijackedResponse
+	resp    client.HijackedResponse
 	reader  *io.PipeReader
 	cleanup func()
 }
@@ -63,7 +63,7 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 	stderr := s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stderr)
 	defer stderr.Close()
 
-	hijacked, err := s.dockerConn.ContainerAttach(initCtx, ctr.ID, container.AttachOptions{
+	hijacked, err := s.dockerConn.ContainerAttach(initCtx, ctr.ID, client.ContainerAttachOptions{
 		Stream: true,
 		Stdout: true,
 		Stderr: true,
@@ -75,7 +75,7 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 
 	okCh, errCh := s.dockerConn.ContainerWait(initCtx, ctr.ID, container.WaitConditionNextExit)
 
-	if err := s.dockerConn.ContainerStart(initCtx, ctr.ID, container.StartOptions{}); err != nil {
+	if err := s.dockerConn.ContainerStart(initCtx, ctr.ID, client.ContainerStartOptions{}); err != nil {
 		return nil, fmt.Errorf("connect container start: %w", err)
 	}
 
@@ -132,7 +132,7 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 	}
 
 	return func() (io.ReadWriteCloser, error) {
-		resp, err := s.dockerConn.ContainerExecCreate(ctx, ctr.ID, container.ExecOptions{
+		resp, err := s.dockerConn.ContainerExecCreate(ctx, ctr.ID, client.ExecCreateOptions{
 			Cmd:          []string{bootstrappedBinary, "steps", "proxy", "--socket", socketPath},
 			AttachStdin:  true,
 			AttachStderr: true,
@@ -142,7 +142,7 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 			return nil, err
 		}
 
-		hijacked, err := s.dockerConn.ContainerExecAttach(ctx, resp.ID, container.ExecAttachOptions{})
+		hijacked, err := s.dockerConn.ContainerExecAttach(ctx, resp.ID, client.ExecAttachOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 			resp:   hijacked,
 			reader: r,
 			cleanup: func() {
-				if err := s.dockerConn.ContainerStop(s.Context, ctr.ID, container.StopOptions{}); err != nil {
+				if err := s.dockerConn.ContainerStop(s.Context, ctr.ID, client.ContainerStopOptions{}); err != nil {
 					s.BuildLogger.Errorln("Stopping steps container", err)
 				}
 			},
@@ -215,13 +215,13 @@ func (e *executor) bootstrap() error {
 		return fmt.Errorf("bootstrap container create: %w", err)
 	}
 	defer func() {
-		_ = e.dockerConn.ContainerRemove(ctx, bootstrapContainer.ID, container.RemoveOptions{
+		_ = e.dockerConn.ContainerRemove(ctx, bootstrapContainer.ID, client.ContainerRemoveOptions{
 			RemoveVolumes: true,
 			Force:         true,
 		})
 	}()
 
-	hijacked, err := e.dockerConn.ContainerAttach(ctx, bootstrapContainer.ID, container.AttachOptions{
+	hijacked, err := e.dockerConn.ContainerAttach(ctx, bootstrapContainer.ID, client.ContainerAttachOptions{
 		Stream: true,
 		Stdout: true,
 		Stderr: true,
@@ -233,7 +233,7 @@ func (e *executor) bootstrap() error {
 
 	okCh, errCh := e.dockerConn.ContainerWait(ctx, bootstrapContainer.ID, container.WaitConditionNextExit)
 
-	if err := e.dockerConn.ContainerStart(ctx, bootstrapContainer.ID, container.StartOptions{}); err != nil {
+	if err := e.dockerConn.ContainerStart(ctx, bootstrapContainer.ID, client.ContainerStartOptions{}); err != nil {
 		return fmt.Errorf("bootstrap container start: %w", err)
 	}
 

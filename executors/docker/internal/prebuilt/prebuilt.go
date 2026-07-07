@@ -11,7 +11,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/docker/docker/api/types/image"
+	"github.com/moby/moby/api/types/image"
+	mobyclient "github.com/moby/moby/client"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
@@ -62,7 +63,7 @@ func Get(ctx context.Context, client docker.Client, info helperimage.Info) (*ima
 		return nil, err
 	}
 
-	image, _, err := client.ImageInspectWithRaw(ctx, info.String())
+	image, _, err := client.ImageInspectWithRaw(ctx, info.String(), nil)
 	if err == nil {
 		return &image, nil
 	}
@@ -123,15 +124,15 @@ func imageLoad(ctx context.Context, client docker.Client, path, ref, tag string)
 	if err != nil {
 		return fmt.Errorf("failed to load image: %w", err)
 	}
-	defer resp.Body.Close()
-	defer func() { _, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1024)) }()
+	defer resp.Close()
+	defer func() { _, _ = io.Copy(io.Discard, io.LimitReader(resp, 1024)) }()
 
 	// image load makes it unnecessarily difficult to get the image ref
 	var event struct {
 		Stream string `json:"stream"`
 	}
 
-	decoder := json.NewDecoder(resp.Body)
+	decoder := json.NewDecoder(resp)
 
 	var imageID string
 	for decoder.More() {
@@ -169,11 +170,11 @@ func imageImport(ctx context.Context, client docker.Client, path, ref, tag strin
 	}
 	defer func() { _ = file.Close() }()
 
-	source := image.ImportSource{
+	source := mobyclient.ImageImportSource{
 		Source:     file,
 		SourceName: "-",
 	}
-	options := image.ImportOptions{
+	options := mobyclient.ImageImportOptions{
 		Tag: tag,
 	}
 

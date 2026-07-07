@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/docker/client"
 	"github.com/hashicorp/go-version"
+	"github.com/moby/moby/client"
 )
 
 const (
@@ -78,13 +78,13 @@ func IsDockerDaemonAPIVersionAtLeast(version string) (bool, error) {
 
 func getDockerDaemonAPIVersion() (string, error) {
 	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	cli, err := client.New(client.FromEnv)
 	if err != nil {
 		return "", err
 	}
 	defer cli.Close()
 
-	ver, err := cli.ServerVersion(ctx)
+	ver, err := cli.ServerVersion(ctx, client.ServerVersionOptions{})
 	if err != nil {
 		return "", err
 	}

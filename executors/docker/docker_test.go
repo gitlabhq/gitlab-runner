@@ -4,11 +4,13 @@ package docker
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -17,16 +19,15 @@ import (
 	"testing"
 
 	"github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/api/types/volume"
-	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
 	"github.com/hashicorp/go-version"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/api/types/volume"
+	"github.com/moby/moby/client"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
@@ -709,7 +710,7 @@ func TestCreateDependencies(t *testing.T) {
 				return assert.Equal(t, []string{"/volume", "/builds"}, conf.Binds)
 			})
 
-			c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
+			c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest", mock.Anything).
 				Return(image.InspectResponse{}, nil, nil).
 				Once()
 			c.On("NetworkList", mock.Anything, mock.Anything).
@@ -813,7 +814,7 @@ func prepareTestDockerConfiguration(
 ) (*dockerConfigurationTestFakeDockerClient, *executor) {
 	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	c.On("ImageInspectWithRaw", mock.Anything, expectedInspectImage).
+	c.On("ImageInspectWithRaw", mock.Anything, expectedInspectImage, mock.Anything).
 		Return(image.InspectResponse{ID: "123"}, []byte{}, nil).Twice()
 	c.On("ImagePullBlocking", mock.Anything, expectedPullImage, mock.Anything).
 		Return(nil).Once()
@@ -2076,7 +2077,7 @@ func TestLocalHelperImage(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					helperimage.GitLabRegistryName,
-					image.ImportOptions{
+					client.ImageImportOptions{
 						Tag: "x86_64-latest",
 						Changes: []string{
 							`ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`,
@@ -2094,6 +2095,7 @@ func TestLocalHelperImage(t *testing.T) {
 					"ImageInspectWithRaw",
 					mock.Anything,
 					imageName("", ""),
+					mock.Anything,
 				).Return(imageInspect, []byte{}, nil)
 			},
 			expectedImage: &image.InspectResponse{
@@ -2136,6 +2138,7 @@ func TestLocalHelperImage(t *testing.T) {
 					"ImageInspectWithRaw",
 					mock.Anything,
 					mock.Anything,
+					mock.Anything,
 				).Return(image.InspectResponse{}, []byte{}, errors.New("error"))
 			},
 			expectedImage: nil,
@@ -2150,7 +2153,7 @@ func TestLocalHelperImage(t *testing.T) {
 				c.On(
 					"ImageImportBlocking",
 					mock.Anything,
-					mock.MatchedBy(func(source image.ImportSource) bool {
+					mock.MatchedBy(func(source client.ImageImportSource) bool {
 						return assert.IsType(t, new(os.File), source.Source) &&
 							assert.Equal(
 								t,
@@ -2172,6 +2175,7 @@ func TestLocalHelperImage(t *testing.T) {
 					"ImageInspectWithRaw",
 					mock.Anything,
 					imageName("", "-pwsh"),
+					mock.Anything,
 				).Return(imageInspect, []byte{}, nil)
 			},
 			expectedImage: &image.InspectResponse{
@@ -2191,7 +2195,7 @@ func TestLocalHelperImage(t *testing.T) {
 				c.On(
 					"ImageImportBlocking",
 					mock.Anything,
-					mock.MatchedBy(func(source image.ImportSource) bool {
+					mock.MatchedBy(func(source client.ImageImportSource) bool {
 						return assert.IsType(t, new(os.File), source.Source) &&
 							assert.Equal(
 								t,
@@ -2213,6 +2217,7 @@ func TestLocalHelperImage(t *testing.T) {
 					"ImageInspectWithRaw",
 					mock.Anything,
 					imageName("ubuntu-", "-pwsh"),
+					mock.Anything,
 				).Return(imageInspect, []byte{}, nil)
 			},
 			expectedImage: &image.InspectResponse{
@@ -2233,7 +2238,7 @@ func TestLocalHelperImage(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					true,
-				).Return(image.LoadResponse{JSON: true, Body: io.NopCloser(strings.NewReader(`{"stream": "Loaded image ID: 1234"}`))}, nil)
+				).Return(io.NopCloser(strings.NewReader(`{"stream": "Loaded image ID: 1234"}`)), nil)
 
 				c.On(
 					"ImageTag",
@@ -2252,6 +2257,7 @@ func TestLocalHelperImage(t *testing.T) {
 					"ImageInspectWithRaw",
 					mock.Anything,
 					imageName("ubuntu-", ""),
+					mock.Anything,
 				).Return(imageInspect, []byte{}, nil)
 			},
 			expectedImage: &image.InspectResponse{
@@ -2479,6 +2485,40 @@ func TestDockerImageWithVariablePlatform(t *testing.T) {
 	}
 }
 
+func TestImageReferenceForCreate(t *testing.T) {
+	tests := map[string]struct {
+		image    image.InspectResponse
+		expected string
+	}{
+		"repo digest present, prefer it over the (possibly platform-specific) ID": {
+			image: image.InspectResponse{
+				ID:          "sha256:child-manifest-digest",
+				RepoDigests: []string{"postgres@sha256:index-digest"},
+			},
+			expected: "postgres@sha256:index-digest",
+		},
+		"multiple repo digests, use the first": {
+			image: image.InspectResponse{
+				ID:          "sha256:child-manifest-digest",
+				RepoDigests: []string{"postgres@sha256:index-digest", "docker.io/library/postgres@sha256:index-digest"},
+			},
+			expected: "postgres@sha256:index-digest",
+		},
+		"no repo digest, fall back to ID": {
+			image: image.InspectResponse{
+				ID: "sha256:locally-built-image-id",
+			},
+			expected: "sha256:locally-built-image-id",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, imageReferenceForCreate(&tc.image))
+		})
+	}
+}
+
 func TestExpandingVolumeDestination(t *testing.T) {
 	dockerClient := docker.NewMockClient(t)
 	executor := executorWithMockClient(dockerClient)
@@ -2532,7 +2572,7 @@ func TestExpandingVolumeDestination(t *testing.T) {
 	assert.NoError(t, err, "creating volumes manager")
 
 	// for the cache volume we expect a volume creation call
-	expectedVolume := func(co volume.CreateOptions) bool {
+	expectedVolume := func(co client.VolumeCreateOptions) bool {
 		// name build from hashed runner/build stuff & the md5sum of the (expanded) destination ("/new/cache/vol-1-2-3-foo")
 		isExpected := assert.Equal(t, "runner-cb27ac1df55ad5c5857ef343b03639cf-cache-bffb7fe32becf1f1e4d6c9604d09f9d7", co.Name)
 
@@ -2615,7 +2655,7 @@ func TestDockerImageWithUser(t *testing.T) {
 			}
 
 			c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
-			c.On("ImageInspectWithRaw", mock.Anything, mock.Anything).
+			c.On("ImageInspectWithRaw", mock.Anything, mock.Anything, mock.Anything).
 				Return(image.InspectResponse{ID: "123"}, []byte{}, nil).Maybe()
 			c.On("ImagePullBlocking", mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
@@ -2750,7 +2790,7 @@ func mockExecutorPrepareInteraction(t *testing.T, c *docker.MockClient) {
 	}()
 
 	c.EXPECT().
-		ImageInspectWithRaw(mock.Anything, mock.Anything).
+		ImageInspectWithRaw(mock.Anything, mock.Anything, mock.Anything).
 		Return(image.InspectResponse{}, []byte{}, nil).
 		Once()
 	c.EXPECT().
@@ -2911,7 +2951,7 @@ func Test_bootstrap(t *testing.T) {
 					name := "blablabla"
 					b.Job.Run = []schema.Step{{Name: &name}}
 
-					c.EXPECT().ImageInspectWithRaw(mock.Anything, mock.Anything).Return(image.InspectResponse{
+					c.EXPECT().ImageInspectWithRaw(mock.Anything, mock.Anything, mock.Anything).Return(image.InspectResponse{
 						ID: "helper-id",
 					}, nil, nil)
 					c.EXPECT().ContainerCreate(mock.Anything, &container.Config{
@@ -2926,7 +2966,7 @@ func Test_bootstrap(t *testing.T) {
 						NetworkDisabled: true,
 					}, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(container.CreateResponse{ID: "container-id"}, nil)
 
-					c.EXPECT().ContainerAttach(mock.Anything, "container-id", mock.Anything).Return(types.HijackedResponse{
+					c.EXPECT().ContainerAttach(mock.Anything, "container-id", mock.Anything).Return(client.HijackedResponse{
 						Reader: bufio.NewReader(strings.NewReader("")),
 						Conn:   &net.UnixConn{},
 					}, nil)
@@ -3307,7 +3347,7 @@ func TestRemoveContainerVolumeKeep(t *testing.T) {
 			c.On("NetworkList", mock.Anything, mock.Anything).
 				Return([]network.Summary{}, nil).Once()
 
-			expectedOptions := container.RemoveOptions{
+			expectedOptions := client.ContainerRemoveOptions{
 				RemoveVolumes: tc.expectedRemoveVolumes,
 				Force:         true,
 			}
@@ -3481,20 +3521,20 @@ func TestSuspend(t *testing.T) {
 	require.NoError(t, s.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, &s.executor))
 	s.buildContainerID = "build-cid"
 	s.helperContainer = &container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid"},
+		ID: "helper-cid",
 	}
 	s.services = []*serviceInfo{
 		{ID: "svc-a"},
 		{ID: "svc-b"},
 	}
 
-	c.On("ContainerStop", mock.Anything, "build-cid", container.StopOptions{}).
+	c.On("ContainerStop", mock.Anything, "build-cid", client.ContainerStopOptions{}).
 		Return(nil).Once()
-	c.On("ContainerStop", mock.Anything, "helper-cid", container.StopOptions{}).
+	c.On("ContainerStop", mock.Anything, "helper-cid", client.ContainerStopOptions{}).
 		Return(nil).Once()
-	c.On("ContainerStop", mock.Anything, "svc-a", container.StopOptions{}).
+	c.On("ContainerStop", mock.Anything, "svc-a", client.ContainerStopOptions{}).
 		Return(nil).Once()
-	c.On("ContainerStop", mock.Anything, "svc-b", container.StopOptions{}).
+	c.On("ContainerStop", mock.Anything, "svc-b", client.ContainerStopOptions{}).
 		Return(nil).Once()
 
 	fields, err := s.Suspend(t.Context())
@@ -3514,12 +3554,12 @@ func TestSuspend_containerStopFails(t *testing.T) {
 	require.NoError(t, s.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, &s.executor))
 	s.buildContainerID = "build-cid"
 	s.helperContainer = &container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid"},
+		ID: "helper-cid",
 	}
 
-	c.On("ContainerStop", mock.Anything, "build-cid", container.StopOptions{}).
+	c.On("ContainerStop", mock.Anything, "build-cid", client.ContainerStopOptions{}).
 		Return(errors.New("dockerd boom")).Once()
-	c.On("ContainerStop", mock.Anything, "helper-cid", container.StopOptions{}).
+	c.On("ContainerStop", mock.Anything, "helper-cid", client.ContainerStopOptions{}).
 		Return(nil).Maybe()
 
 	fields, err := s.Suspend(t.Context())
@@ -3567,35 +3607,33 @@ func TestResumeDependencies(t *testing.T) {
 		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-a"
 
 	buildInspect := container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{
-			ID:         "build-cid",
-			HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
-		},
+		ID:         "build-cid",
+		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
 		Mounts: []container.MountPoint{
 			{Type: mount.TypeVolume, Name: "vol-x", Source: "/var/lib/docker/volumes/vol-x/_data", Destination: "/builds"},
 		},
 	}
 	svcInspect := container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{
-			ID:    "svc-a",
-			Name:  "/svc-a",
-			State: &container.State{Status: "running"},
-		},
+		ID:    "svc-a",
+		Name:  "/svc-a",
+		State: &container.State{Status: "running"},
 		NetworkSettings: &container.NetworkSettings{
-			DefaultNetworkSettings: container.DefaultNetworkSettings{IPAddress: "172.17.0.4"}, //nolint:staticcheck
+			Networks: map[string]*network.EndpointSettings{
+				"bridge": {IPAddress: netip.MustParseAddr("172.17.0.4")},
+			},
 		},
 		Config: &container.Config{
-			ExposedPorts: map[nat.Port]struct{}{"80/tcp": {}},
+			ExposedPorts: network.PortSet{network.MustParsePort("80/tcp"): {}},
 		},
 	}
 
 	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid"},
+		ID: "helper-cid",
 	}, nil).Once()
 	c.On("VolumeInspect", mock.Anything, "vol-x").Return(volume.Volume{Name: "vol-x"}, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "svc-a").Return(svcInspect, nil)
-	c.On("ContainerStart", mock.Anything, "svc-a", container.StartOptions{}).Return(nil).Once()
+	c.On("ContainerStart", mock.Anything, "svc-a", client.ContainerStartOptions{}).Return(nil).Once()
 
 	require.NoError(t, e.resumeDependencies())
 	assert.Equal(t, "build-cid", e.buildContainerID)
@@ -3646,10 +3684,8 @@ func TestResumeDependencies_helperNotFound(t *testing.T) {
 		"1/system-id/build-container-id=build-cid&helper-id=missing-helper"
 
 	buildInspect := container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{
-			ID:         "build-cid",
-			HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
-		},
+		ID:         "build-cid",
+		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
 	}
 	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "missing-helper").
@@ -3673,14 +3709,12 @@ func TestResumeDependencies_serviceNotFound(t *testing.T) {
 		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-missing"
 
 	buildInspect := container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{
-			ID:         "build-cid",
-			HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
-		},
+		ID:         "build-cid",
+		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
 	}
 	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid"},
+		ID: "helper-cid",
 	}, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "svc-missing").
 		Return(container.InspectResponse{}, errdefs.ErrNotFound).Once()
@@ -3703,20 +3737,18 @@ func TestResumeDependencies_serviceStartFails(t *testing.T) {
 		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-broken"
 
 	buildInspect := container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{
-			ID:         "build-cid",
-			HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
-		},
+		ID:         "build-cid",
+		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
 	}
 	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{ID: "helper-cid"},
+		ID: "helper-cid",
 	}, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "svc-broken").
 		Return(container.InspectResponse{
-			ContainerJSONBase: &container.ContainerJSONBase{ID: "svc-broken"},
+			ID: "svc-broken",
 		}, nil).Once()
-	c.On("ContainerStart", mock.Anything, "svc-broken", container.StartOptions{}).
+	c.On("ContainerStart", mock.Anything, "svc-broken", client.ContainerStartOptions{}).
 		Return(errors.New("daemon error: cannot start")).Once()
 
 	err := e.resumeDependencies()
@@ -3760,15 +3792,16 @@ func TestDisconnectNetwork(t *testing.T) {
 			e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
 			netList := []network.Summary{
-				{
-					ID:         "net-123",
-					Name:       "test-network",
-					Containers: tc.networkContainers,
-				},
+				{Network: network.Network{ID: "net-123", Name: "test-network"}},
 			}
 
-			c.On("NetworkList", mock.Anything, network.ListOptions{}).
+			c.On("NetworkList", mock.Anything, client.NetworkListOptions{}).
 				Return(netList, nil).Once()
+			c.On("NetworkInspect", mock.Anything, "net-123").
+				Return(network.Inspect{
+					Network:    network.Network{ID: "net-123", Name: "test-network"},
+					Containers: tc.networkContainers,
+				}, nil).Once()
 
 			if tc.expectDisconnect {
 				c.On("NetworkDisconnect", mock.Anything, "net-123", tc.containerID, true).
@@ -3786,7 +3819,7 @@ func TestDisconnectNetwork_ListError(t *testing.T) {
 	require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
 	e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
-	c.On("NetworkList", mock.Anything, network.ListOptions{}).
+	c.On("NetworkList", mock.Anything, client.NetworkListOptions{}).
 		Return(nil, errors.New("network list failed")).Once()
 
 	e.disconnectNetwork(t.Context(), "any-container")
@@ -3799,21 +3832,105 @@ func TestDisconnectNetwork_DisconnectError(t *testing.T) {
 	e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
 	netList := []network.Summary{
-		{
-			ID:   "net-123",
-			Name: "test-network",
+		{Network: network.Network{ID: "net-123", Name: "test-network"}},
+	}
+
+	c.On("NetworkList", mock.Anything, client.NetworkListOptions{}).
+		Return(netList, nil).Once()
+	c.On("NetworkInspect", mock.Anything, "net-123").
+		Return(network.Inspect{
+			Network: network.Network{ID: "net-123", Name: "test-network"},
 			Containers: map[string]network.EndpointResource{
 				"abc123": {Name: "my-container"},
 			},
-		},
-	}
-
-	c.On("NetworkList", mock.Anything, network.ListOptions{}).
-		Return(netList, nil).Once()
+		}, nil).Once()
 	c.On("NetworkDisconnect", mock.Anything, "net-123", "abc123", true).
 		Return(errors.New("disconnect failed")).Once()
 
 	e.disconnectNetwork(t.Context(), "abc123")
+}
+
+func TestDNSServerAddrs(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		addrs, err := dnsServerAddrs([]string{"2001:db8::1", "192.0.2.1"})
+		require.NoError(t, err)
+		assert.Equal(t, []netip.Addr{
+			netip.MustParseAddr("2001:db8::1"),
+			netip.MustParseAddr("192.0.2.1"),
+		}, addrs)
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		addrs, err := dnsServerAddrs(nil)
+		require.NoError(t, err)
+		assert.Nil(t, addrs)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		_, err := dnsServerAddrs([]string{"192.0.2.1", "not-an-ip"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid DNS server address")
+	})
+}
+
+func TestParseMACAddress(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		mac, err := parseMACAddress("92:d0:c6:0a:29:33")
+		require.NoError(t, err)
+		assert.Equal(t, "92:d0:c6:0a:29:33", mac.String())
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		mac, err := parseMACAddress("")
+		require.NoError(t, err)
+		assert.Nil(t, mac)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		_, err := parseMACAddress("not-a-mac")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid MAC address")
+	})
+}
+
+func TestNetworkConfigLegacyMacAddressWarning(t *testing.T) {
+	newExecutorWithMacAddress := func(t *testing.T, apiVersion, macAddress string) (*executor, *bytes.Buffer) {
+		buffer := new(bytes.Buffer)
+		logger, _ := logrustest.NewNullLogger()
+
+		e := &executor{}
+		e.serverAPIVersion = version.Must(version.NewVersion(apiVersion))
+		e.AbstractExecutor.BuildLogger = buildlogger.New(
+			&common.Trace{Writer: buffer}, logger.WithField("test", t.Name()), buildlogger.Options{},
+		)
+		e.Config.Docker = &common.DockerConfig{MacAddress: macAddress}
+
+		return e, buffer
+	}
+
+	t.Run("pre-1.44 with mac_address configured warns", func(t *testing.T) {
+		e, buffer := newExecutorWithMacAddress(t, "1.43", "92:d0:c6:0a:29:33")
+
+		_, err := e.networkConfig(nil)
+		require.NoError(t, err)
+		assert.Contains(t, buffer.String(), "mac_address is configured")
+	})
+
+	t.Run("pre-1.44 without mac_address does not warn", func(t *testing.T) {
+		e, buffer := newExecutorWithMacAddress(t, "1.43", "")
+
+		_, err := e.networkConfig(nil)
+		require.NoError(t, err)
+		assert.NotContains(t, buffer.String(), "mac_address is configured")
+	})
+
+	t.Run("1.44 and later with mac_address does not warn since it is applied", func(t *testing.T) {
+		e, buffer := newExecutorWithMacAddress(t, "1.44", "92:d0:c6:0a:29:33")
+
+		_, err := e.networkConfig(nil)
+		require.NoError(t, err)
+		assert.NotContains(t, buffer.String(), "mac_address is configured")
+	})
 }
 
 func TestIsContainerNotRunning(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"io"
 	"net"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
@@ -69,7 +69,7 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IO
 	defer hijacked.Close()
 
 	d.logger.Debugln("Starting container", containerID, "...")
-	err = d.c.ContainerStart(ctx, containerID, container.StartOptions{})
+	err = d.c.ContainerStart(ctx, containerID, client.ContainerStartOptions{})
 	if err != nil {
 		return err
 	}
@@ -126,8 +126,8 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IO
 	return d.waiter.StopKillWait(d.ctx, containerID, nil, gracefulExitFunc)
 }
 
-func attachOptions() container.AttachOptions {
-	return container.AttachOptions{
+func attachOptions() client.ContainerAttachOptions {
+	return client.ContainerAttachOptions{
 		Stream: true,
 		Stdin:  true,
 		Stdout: true,

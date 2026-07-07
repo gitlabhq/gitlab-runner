@@ -9,10 +9,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
+	mobyclient "github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -147,18 +144,18 @@ func TestBuildTimeout(t *testing.T) {
 		require.NoError(t, err, "creating docker client")
 		defer client.Close()
 
-		nameFilter := filters.Arg("name", "-"+strconv.Itoa(runnerID)+"-")
+		nameFilter := mobyclient.Filters{}.Add("name", "-"+strconv.Itoa(runnerID)+"-")
 
 		// ensure no build/predefine containers for this job were left behind
-		containers, err := client.ContainerList(context.Background(), container.ListOptions{
-			Filters: filters.NewArgs(nameFilter),
+		containers, err := client.ContainerList(context.Background(), mobyclient.ContainerListOptions{
+			Filters: nameFilter,
 		})
 		require.NoError(t, err)
 		assert.Empty(t, containers)
 
 		// ensure no networks for this job were left behind
-		networks, err := client.NetworkList(context.Background(), network.ListOptions{
-			Filters: filters.NewArgs(nameFilter),
+		networks, err := client.NetworkList(context.Background(), mobyclient.NetworkListOptions{
+			Filters: nameFilter,
 		})
 		require.NoError(t, err)
 		assert.Empty(t, networks)
@@ -183,7 +180,7 @@ func TestBuildSuccessUsingDockerHost(t *testing.T) {
 		if host := os.Getenv("DOCKER_HOST"); host != "" {
 			build.Runner.Docker.Host = host
 		} else {
-			build.Runner.Docker.Host = client.DefaultDockerHost
+			build.Runner.Docker.Host = mobyclient.DefaultDockerHost
 		}
 
 		setupAcquireBuild(t, build)

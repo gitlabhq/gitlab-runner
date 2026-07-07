@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
+	"github.com/moby/moby/api/types/container"
+	mobyclient "github.com/moby/moby/client"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,10 +56,10 @@ func TestDockerLinuxSetter(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		_ = client.ContainerRemove(context.Background(), testContainer.ID, container.RemoveOptions{Force: true})
+		_ = client.ContainerRemove(context.Background(), testContainer.ID, mobyclient.ContainerRemoveOptions{Force: true})
 	}()
 
-	err = client.ContainerStart(context.Background(), testContainer.ID, container.StartOptions{})
+	err = client.ContainerStart(context.Background(), testContainer.ID, mobyclient.ContainerStartOptions{})
 	require.NoError(t, err)
 
 	waiter := wait.NewDockerKillWaiter(client)
@@ -77,11 +77,11 @@ func setupTestDockerLinuxSetter(t *testing.T) (string, permission.Setter, docker
 	err = client.ImagePullBlocking(
 		context.Background(),
 		helperImageRef,
-		image.PullOptions{},
+		mobyclient.ImagePullOptions{},
 	)
 	require.NoError(t, err)
 
-	imageInfo, _, err := client.ImageInspectWithRaw(context.Background(), helperImageRef)
+	imageInfo, _, err := client.ImageInspectWithRaw(context.Background(), helperImageRef, nil)
 	require.NoError(t, err)
 
 	debugLogger := logrus.New()
@@ -91,7 +91,7 @@ func setupTestDockerLinuxSetter(t *testing.T) (string, permission.Setter, docker
 	err = client.ImagePullBlocking(
 		context.Background(),
 		common.TestAlpineNoRootImage,
-		image.PullOptions{},
+		mobyclient.ImagePullOptions{},
 	)
 	require.NoError(t, err)
 

@@ -7,8 +7,8 @@ package networks
 import (
 	"context"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -70,7 +70,18 @@ func (_e *MockManager_Expecter) Adopt(ctx interface{}, networkMode interface{}) 
 
 func (_c *MockManager_Adopt_Call) Run(run func(ctx context.Context, networkMode container.NetworkMode)) *MockManager_Adopt_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(container.NetworkMode))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 container.NetworkMode
+		if args[1] != nil {
+			arg1 = args[1].(container.NetworkMode)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

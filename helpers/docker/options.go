@@ -2,14 +2,16 @@ package docker
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net"
 	"net/http"
 	"path/filepath"
 	"time"
 
-	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/sockets"
+	"github.com/docker/go-connections/tlsconfig"
+	"github.com/moby/moby/client"
 )
 
 const (
@@ -29,59 +31,44 @@ var (
 	}
 )
 
-func WithCustomTLSClientConfig(c Credentials) client.Opt {
-	return func(cli *client.Client) error {
-		var cacertPath, certPath, keyPath string
-		if c.CertPath != "" {
-			cacertPath = filepath.Join(c.CertPath, "ca.pem")
-			certPath = filepath.Join(c.CertPath, "cert.pem")
-			keyPath = filepath.Join(c.CertPath, "key.pem")
-		}
-
-		if c.TLSVerify {
-			return client.WithTLSClientConfig(
-				cacertPath,
-				certPath,
-				keyPath,
-			)(cli)
-		}
-
-		return nil
+// newCustomHTTPClient builds the *http.Client the SDK client uses from an
+// already-configured transport (see configureTransport) and disallows
+// redirects to prevent redirection to malicious docker daemons.
+//
+// The transport is configured up-front and handed to the SDK as a fully-formed
+// client, so the cached transport remains authoritative for tests that inspect
+// it (client.WithHTTPClient clones the transport it is given).
+func newCustomHTTPClient(transport *http.Transport) *http.Client {
+	return &http.Client{
+		Transport: transport,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return ErrRedirectNotAllowed
+		},
 	}
 }
 
-func WithCustomHTTPClient(transport *http.Transport) client.Opt {
-	return func(c *client.Client) error {
-		url, err := client.ParseHostURL(c.DaemonHost())
-		if err != nil {
-			return err
-		}
+// configureTransport builds the transport for the docker client's
+// *http.Client (see newCustomHTTPClient). client.Opt operates on an
+// unexported config, so callers can't reach these settings through it;
+// we set sockets, timeouts, the dialer, and TLS on our own transport instead.
+func configureTransport(transport *http.Transport, c Credentials) error {
+	url, err := client.ParseHostURL(c.Host)
+	if err != nil {
+		return err
+	}
 
-		err = sockets.ConfigureTransport(transport, url.Scheme, url.Host)
-		if err != nil {
-			return err
-		}
+	if err := sockets.ConfigureTransport(transport, url.Scheme, url.Host); err != nil {
+		return err
+	}
 
-		// customize http client
-		if err := client.WithHTTPClient(&http.Client{
-			Transport: transport,
-			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
-				return ErrRedirectNotAllowed
-			},
-		})(c); err != nil {
-			return err
-		}
-
-		switch url.Scheme {
-		case "tcp", "http", "https":
-			// only set timeouts for remote schemes
-			transport.TLSHandshakeTimeout = defaultTLSHandshakeTimeout
-			transport.ResponseHeaderTimeout = defaultResponseHeaderTimeout
-			transport.ExpectContinueTimeout = defaultExpectContinueTimeout
-			transport.IdleConnTimeout = defaultIdleConnTimeout
-		default:
-			return nil
-		}
+	switch url.Scheme {
+	case "tcp", "http", "https":
+		// only set timeouts and a dialer for remote schemes; for unix/npipe
+		// sockets.ConfigureTransport already installs the appropriate dialer.
+		transport.TLSHandshakeTimeout = defaultTLSHandshakeTimeout
+		transport.ResponseHeaderTimeout = defaultResponseHeaderTimeout
+		transport.ExpectContinueTimeout = defaultExpectContinueTimeout
+		transport.IdleConnTimeout = defaultIdleConnTimeout
 
 		dialer := &net.Dialer{
 			Timeout:   defaultTimeout,
@@ -95,7 +82,29 @@ func WithCustomHTTPClient(transport *http.Transport) client.Opt {
 			// our client setup works in the expected order
 			transport.DialContext = testDialerFunc
 		}
-
-		return nil
 	}
+
+	if c.TLSVerify {
+		var cacertPath, certPath, keyPath string
+		if c.CertPath != "" {
+			cacertPath = filepath.Join(c.CertPath, "ca.pem")
+			certPath = filepath.Join(c.CertPath, "cert.pem")
+			keyPath = filepath.Join(c.CertPath, "key.pem")
+		}
+
+		tlsConfig, err := tlsconfig.Client(tlsconfig.Options{
+			CAFile:             cacertPath,
+			CertFile:           certPath,
+			KeyFile:            keyPath,
+			ExclusiveRootPools: true,
+			MinVersion:         tls.VersionTLS12,
+		})
+		if err != nil {
+			return err
+		}
+
+		transport.TLSClientConfig = tlsConfig
+	}
+
+	return nil
 }

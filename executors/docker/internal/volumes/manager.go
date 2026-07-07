@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/volume"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/client"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
@@ -217,7 +217,7 @@ func (m *manager) createCacheVolume(
 	// true. In fact, we already create way longer names, and would catch those issues in various integration tests.
 	volumeName := m.withProtected(fmt.Sprintf("%s-cache-%s", name, hashedDestination))
 
-	vBody := volume.CreateOptions{
+	vBody := client.VolumeCreateOptions{
 		Name:       volumeName,
 		Driver:     m.config.Driver,
 		DriverOpts: m.config.DriverOpts,

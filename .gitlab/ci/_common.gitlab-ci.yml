@@ -17,7 +17,7 @@ variables:
   FF_TIMESTAMPS: "true"
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
-  DOCKER_VERSION: 27.5.1
+  DOCKER_VERSION: 29.1.4
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
   # We're overriding rules for the jobs that we want to run.

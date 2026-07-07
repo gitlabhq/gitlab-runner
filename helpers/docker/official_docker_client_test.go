@@ -10,9 +10,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/moby/moby/api/types/jsonstream"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +31,7 @@ func prepareDockerClientAndFakeServer(t *testing.T, handler http.HandlerFunc) (C
 }
 
 func TestEventStreamError(t *testing.T) {
-	client, server := prepareDockerClientAndFakeServer(t, func(w http.ResponseWriter, r *http.Request) {
+	cli, server := prepareDockerClientAndFakeServer(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{
 			"errorDetail": {
 				"code": 0,
@@ -45,10 +44,10 @@ func TestEventStreamError(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	err := client.ImagePullBlocking(ctx, "test", image.PullOptions{})
+	err := cli.ImagePullBlocking(ctx, "test", client.ImagePullOptions{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "stream error")
-	assert.ErrorAs(t, new(jsonmessage.JSONError), &err)
+	assert.ErrorAs(t, new(jsonstream.Error), &err)
 }
 
 func TestWrapError(t *testing.T) {

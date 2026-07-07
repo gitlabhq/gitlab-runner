@@ -10,9 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/client"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -108,7 +109,7 @@ func (e *executor) resumeServices(serviceIDs []string) error {
 		if err != nil {
 			return fmt.Errorf("service container %s not found: %w", svcID, err)
 		}
-		if err := e.dockerConn.ContainerStart(e.Context, svcInspect.ID, container.StartOptions{}); err != nil {
+		if err := e.dockerConn.ContainerStart(e.Context, svcInspect.ID, client.ContainerStartOptions{}); err != nil {
 			return fmt.Errorf("service container %s failed to start: %w", svcInspect.ID, err)
 		}
 		ip, ports, err := e.getContainerIPAndExposedPorts(svcInspect.ID)
@@ -244,7 +245,7 @@ func (e *executor) runServiceHealthCheckContainer(service *serviceInfo, timeout 
 	defer func() { _ = e.removeContainer(e.Context, resp.ID) }()
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Starting service healthcheck container %s (%s)...", containerName, resp.ID))
-	err = e.dockerConn.ContainerStart(e.Context, resp.ID, container.StartOptions{})
+	err = e.dockerConn.ContainerStart(e.Context, resp.ID, client.ContainerStartOptions{})
 	if err != nil {
 		return fmt.Errorf("start service container: %w", err)
 	}
@@ -372,7 +373,7 @@ func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[strin
 // and written when we disconnect from the container (or it is stopped). The
 // specified sink is closed when the source is completely drained.
 func (e *executor) captureContainerLogs(ctx context.Context, cid, containerName string, sink io.WriteCloser) error {
-	source, err := e.dockerConn.ContainerLogs(ctx, cid, container.LogsOptions{
+	source, err := e.dockerConn.ContainerLogs(ctx, cid, client.ContainerLogsOptions{
 		ShowStderr: true,
 		ShowStdout: true,
 		Timestamps: true,
