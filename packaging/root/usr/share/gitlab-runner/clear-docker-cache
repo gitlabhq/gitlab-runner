@@ -3,7 +3,7 @@
 
 #########################################################################################
 #  SCRIPT: clear-docker-cache.sh
-#  Description: Used to cleanup unused docker/podman containers and volumes
+#  Description: Used to cleanup unused docker/podman containers, images, and volumes
 ######################################################################################
 IFS=$'\n\t'
 set -euo pipefail
@@ -25,14 +25,35 @@ fi
 
 ENGINE_API_VERSION=$("$CONTAINER_ENGINE" version --format '{{.Client.APIVersion}}')
 ENGINE_CLIENT_VERSION=$("$CONTAINER_ENGINE" version --format '{{.Client.Version}}')
-ENGINE_CLIENT_VERSION="${ENGINE_CLIENT_VERSION%%-*}" # strip -whatever, so 23.0.0-rd becomes 23.0.0
+ENGINE_CLIENT_VERSION="${ENGINE_CLIENT_VERSION%%-*}"
 REQUIRED_DOCKER_API_VERSION=1.25
-FILTER_FLAG="${FILTER_FLAG:-label=com.gitlab.gitlab-runner.managed=true}"
+
+# Per-type filter flags for granular control (comma-separated values).
+# Default: only filter managed containers and volumes; prune all unused images.
+# Backward compatibility: FILTER_FLAG sets CONTAINER_FILTER_FLAGS as a fallback.
+CONTAINER_FILTER_FLAGS="${CONTAINER_FILTER_FLAGS:-${FILTER_FLAG:-label=com.gitlab.gitlab-runner.managed=true}}"
+IMAGE_FILTER_FLAGS="${IMAGE_FILTER_FLAGS:-}"
+VOLUME_FILTER_FLAGS="${VOLUME_FILTER_FLAGS:-label=com.gitlab.gitlab-runner.managed=true}"
+
+# Build filter flag arrays from comma-separated values.
+# Using mapfile avoids IFS word-splitting issues at call sites.
+build_filters() {
+  local flags="$1"
+  [ -z "$flags" ] && return 0
+  local IFS=,
+  # Intentional word splitting on IFS=, to emit one --filter per flag
+  # shellcheck disable=SC2086
+  printf -- '--filter=%s\n' $flags
+}
+
+mapfile -t CONTAINER_FILTERS < <(build_filters "$CONTAINER_FILTER_FLAGS")
+mapfile -t IMAGE_FILTERS < <(build_filters "$IMAGE_FILTER_FLAGS")
+mapfile -t VOLUME_FILTERS < <(build_filters "$VOLUME_FILTER_FLAGS")
 
 usage() {
   echo -e "\nUsage: $0 prune-volumes|prune|space|help\n"
-  echo -e "\tprune-volumes    Remove all unused containers (both dangling and unreferenced) and volumes"
-  echo -e "\tprune            Remove all unused containers (both dangling and unreferenced)"
+  echo -e "\tprune-volumes    Remove all unused containers, images, and volumes"
+  echo -e "\tprune            Remove all unused containers and images"
   echo -e "\tspace            Show docker/podman disk usage"
   echo -e "\thelp             Show usage"
   exit 1
@@ -56,21 +77,24 @@ case "$COMMAND" in
 
     if [ "$CONTAINER_ENGINE" = "docker" ]; then
       if awk "BEGIN {exit !(\"$ENGINE_CLIENT_VERSION\" < \"17.06.1\")}"; then
-        # The docker system prune command without pruning volumes does not exist before 17.06.1, so we need to use docker rm
+        # docker system prune does not exist before 17.06.1, fall back to docker rm
         CONTAINERS=$("$CONTAINER_ENGINE" ps -a -q \
                     --filter=status=exited \
                     --filter=status=dead \
-                    --filter="$FILTER_FLAG")
+                    "${CONTAINER_FILTERS[@]}")
 
         if [ -n "${CONTAINERS}" ]; then
           "$CONTAINER_ENGINE" rm "${CONTAINERS}"
         fi
       else
-        "$CONTAINER_ENGINE" system prune -af --filter "$FILTER_FLAG"
+        "$CONTAINER_ENGINE" container prune -f "${CONTAINER_FILTERS[@]}"
+        "$CONTAINER_ENGINE" image prune -af "${IMAGE_FILTERS[@]}"
+        "$CONTAINER_ENGINE" network prune -f
       fi
     elif [ "$CONTAINER_ENGINE" = "podman" ]; then
-      # podman supports the modern prune syntax natively
-      "$CONTAINER_ENGINE" system prune -af --filter "$FILTER_FLAG"
+      "$CONTAINER_ENGINE" container prune -f "${CONTAINER_FILTERS[@]}"
+      "$CONTAINER_ENGINE" image prune -af "${IMAGE_FILTERS[@]}"
+      "$CONTAINER_ENGINE" network prune -f
     else
       echo -e "ERROR: unsupported container engine: ${CONTAINER_ENGINE}"
       exit 1
@@ -100,37 +124,40 @@ case "$COMMAND" in
 
     if [ "$CONTAINER_ENGINE" = "docker" ]; then
       if awk "BEGIN {exit !(\"$ENGINE_CLIENT_VERSION\" < \"17.04.0\")}"; then
-        # Prior to 17.04, there was no filter flag for `docker system prune`, so we fallback to `docker rm`
+        # Prior to 17.04, use docker rm -v as fallback
         CONTAINERS=$("$CONTAINER_ENGINE" ps -a -q \
                     --filter=status=exited \
                     --filter=status=dead \
-                    --filter="$FILTER_FLAG")
+                    "${CONTAINER_FILTERS[@]}")
 
         if [ -n "${CONTAINERS}" ]; then
           "$CONTAINER_ENGINE" rm -v "${CONTAINERS}"
         fi
 
         exit 0
-      elif awk "BEGIN {exit !(\"$ENGINE_CLIENT_VERSION\" < \"17.05.0\")}"; then
-        # Prior to 17.05, `docker system prune` would also cleanup volumes
-        "$CONTAINER_ENGINE" system prune -af --filter "$FILTER_FLAG"
       elif awk "BEGIN {exit !(\"$ENGINE_CLIENT_VERSION\" < \"23.0.0\")}"; then
-        # Prior to 23.0, `docker volume prune` didn't support --all
-        "$CONTAINER_ENGINE" system prune -af --filter "$FILTER_FLAG"
-        "$CONTAINER_ENGINE" volume prune -f --filter "$FILTER_FLAG"
+        # Prior to 23.0, docker volume prune didn't support --all
+        "$CONTAINER_ENGINE" container prune -f "${CONTAINER_FILTERS[@]}"
+        "$CONTAINER_ENGINE" image prune -af "${IMAGE_FILTERS[@]}"
+        "$CONTAINER_ENGINE" volume prune -f "${VOLUME_FILTERS[@]}"
+        "$CONTAINER_ENGINE" network prune -f
       else
-        "$CONTAINER_ENGINE" system prune -af --filter "$FILTER_FLAG"
-        "$CONTAINER_ENGINE" volume prune -af --filter "$FILTER_FLAG"
+        "$CONTAINER_ENGINE" container prune -f "${CONTAINER_FILTERS[@]}"
+        "$CONTAINER_ENGINE" image prune -af "${IMAGE_FILTERS[@]}"
+        "$CONTAINER_ENGINE" volume prune -af "${VOLUME_FILTERS[@]}"
+        "$CONTAINER_ENGINE" network prune -f
       fi
     elif [ "$CONTAINER_ENGINE" = "podman" ]; then
-      "$CONTAINER_ENGINE" system prune -af --filter "$FILTER_FLAG"
+      "$CONTAINER_ENGINE" container prune -f "${CONTAINER_FILTERS[@]}"
+      "$CONTAINER_ENGINE" image prune -af "${IMAGE_FILTERS[@]}"
       # Released podman (through 5.8) has no -a/--all on `volume prune`; it
       # already removes all unused volumes, so -f is the complete equivalent of
       # docker's --all (docker only grew `volume prune --all` in 23.0).
       # TODO: podman's unreleased docker-matching change adds --all and makes
       # the default anonymous-only. Once that ships, add --all here so named
       # volumes are also pruned. https://gitlab.com/gitlab-org/gitlab-runner/-/issues/36934
-      "$CONTAINER_ENGINE" volume prune -f --filter "$FILTER_FLAG"
+      "$CONTAINER_ENGINE" volume prune -f "${VOLUME_FILTERS[@]}"
+      "$CONTAINER_ENGINE" network prune -f
     else
       echo -e "ERROR: unsupported container engine: ${CONTAINER_ENGINE}"
       exit 1
