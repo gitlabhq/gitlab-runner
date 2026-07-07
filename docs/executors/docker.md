@@ -628,8 +628,23 @@ To manage cache storage efficiently, you should:
 - Maintain some recent containers in the cache for performance while you
   reclaim disk space.
 
-The `FILTER_FLAG` environment variable controls which objects are pruned. For example usage, see the
+The `CONTAINER_FILTER_FLAGS`, `IMAGE_FILTER_FLAGS`, and `VOLUME_FILTER_FLAGS`
+environment variables control which objects are pruned for each resource type.
+Values are comma-separated and converted to multiple `--filter` flags. For example:
+
+```shell
+CONTAINER_FILTER_FLAGS="label=com.gitlab.gitlab-runner.managed=true"
+IMAGE_FILTER_FLAGS="label=keep,label!=provider=Acme"
+VOLUME_FILTER_FLAGS="label=com.gitlab.gitlab-runner.managed=true"
+```
+
+`FILTER_FLAG` is also supported for backward compatibility. When set, it is
+used as the default for `CONTAINER_FILTER_FLAGS` if that variable is not set.
+For example usage, see the
 [Docker image prune](https://docs.docker.com/reference/cli/docker/image/prune/#filter) documentation.
+
+Filter values that contain a literal comma cannot be expressed because the
+comma is used as the separator.
 
 ## Clear Docker build images
 
