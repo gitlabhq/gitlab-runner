@@ -18,6 +18,11 @@ title: Install GitLab Runner on FreeBSD
 > release. Make sure that you read the [FAQ](../faq/_index.md) section which
 > describes some of the most common problems with GitLab Runner.
 
+## Supported versions
+
+GitLab Runner supports [Production and Legacy versions of FreeBSD](https://www.freebsd.org/releases/).
+End-of-life FreeBSD versions are not supported.
+
 ## Installing GitLab Runner
 
 Here are the steps to install and configure GitLab Runner under FreeBSD:
