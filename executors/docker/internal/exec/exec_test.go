@@ -6,15 +6,15 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"sync"
 	"testing"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -47,7 +47,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 		conn.On("Close").Return(nil).Maybe()
 		conn.On("Write", mock.Anything).Return(0, nil).Maybe()
 
-		hijacked := types.HijackedResponse{
+		hijacked := client.HijackedResponse{
 			Conn:   conn,
 			Reader: bufio.NewReader(reader),
 		}
@@ -55,7 +55,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 		clientMock.On("ContainerAttach", expectedCtx, id, attachOptions()).
 			Return(hijacked, nil).
 			Once()
-		clientMock.On("ContainerStart", expectedCtx, id, container.StartOptions{}).
+		clientMock.On("ContainerStart", expectedCtx, id, client.ContainerStartOptions{}).
 			Return(nil).
 			Once()
 	}
@@ -74,7 +74,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			cancelContext: false,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
 				clientMock.On("ContainerAttach", expectedCtx, id, attachOptions()).
-					Return(types.HijackedResponse{}, assert.AnError).
+					Return(client.HijackedResponse{}, assert.AnError).
 					Once()
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {},
@@ -87,14 +87,14 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				conn := newMockConn(t)
 				conn.On("Close").Return(nil).Once()
 
-				hijacked := types.HijackedResponse{
+				hijacked := client.HijackedResponse{
 					Conn: conn,
 				}
 
 				clientMock.On("ContainerAttach", expectedCtx, id, attachOptions()).
 					Return(hijacked, nil).
 					Once()
-				clientMock.On("ContainerStart", expectedCtx, id, container.StartOptions{}).
+				clientMock.On("ContainerStart", expectedCtx, id, client.ContainerStartOptions{}).
 					Return(assert.AnError).
 					Once()
 			},
@@ -179,8 +179,8 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
 				pr, pw := io.Pipe()
 
-				outWriter := stdcopy.NewStdWriter(pw, stdcopy.Stdout)
-				errWriter := stdcopy.NewStdWriter(pw, stdcopy.Stderr)
+				outWriter := newStdWriter(pw, stdcopy.Stdout)
+				errWriter := newStdWriter(pw, stdcopy.Stderr)
 
 				var wg sync.WaitGroup
 				t.Cleanup(wg.Wait)
@@ -266,4 +266,25 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			assert.Equal(t, tt.expectedStdErr, errBuf.String())
 		})
 	}
+}
+
+// newStdWriter returns an io.Writer that frames writes using the docker
+// stdcopy multiplexing format.
+func newStdWriter(w io.Writer, t stdcopy.StdType) io.Writer {
+	return &stdWriter{Writer: w, prefix: byte(t)}
+}
+
+type stdWriter struct {
+	io.Writer
+	prefix byte
+}
+
+func (w *stdWriter) Write(p []byte) (int, error) {
+	var header [8]byte
+	header[0] = w.prefix
+	binary.BigEndian.PutUint32(header[4:], uint32(len(p)))
+	if _, err := w.Writer.Write(header[:]); err != nil {
+		return 0, err
+	}
+	return w.Writer.Write(p)
 }

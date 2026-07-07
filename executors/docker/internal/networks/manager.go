@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/docker/docker/api/types/container"
-	network "github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/api/types/container"
+	network "github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
@@ -70,7 +71,7 @@ func (m *manager) Create(ctx context.Context, networkMode string, enableIPv6 boo
 	networkResponse, err := m.client.NetworkCreate(
 		ctx,
 		networkName,
-		network.CreateOptions{
+		client.NetworkCreateOptions{
 			Labels:     m.labeler.Labels(map[string]string{}),
 			EnableIPv6: &enableIPv6,
 			Options:    networkOptionsFromConfig(m.build.Runner.Docker),

@@ -10,7 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
@@ -246,14 +247,14 @@ func (s *commandExecutor) Suspend(ctx context.Context) (url.Values, error) {
 	g, gctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		if err := s.dockerConn.ContainerStop(gctx, s.buildContainerID, container.StopOptions{}); err != nil {
+		if err := s.dockerConn.ContainerStop(gctx, s.buildContainerID, client.ContainerStopOptions{}); err != nil {
 			return fmt.Errorf("stopping build container %s: %w", s.buildContainerID, err)
 		}
 		return nil
 	})
 
 	g.Go(func() error {
-		if err := s.dockerConn.ContainerStop(gctx, s.helperContainer.ID, container.StopOptions{}); err != nil {
+		if err := s.dockerConn.ContainerStop(gctx, s.helperContainer.ID, client.ContainerStopOptions{}); err != nil {
 			return fmt.Errorf("stopping helper container %s: %w", s.helperContainer.ID, err)
 		}
 		return nil
@@ -262,7 +263,7 @@ func (s *commandExecutor) Suspend(ctx context.Context) (url.Values, error) {
 	for _, svc := range s.services {
 		svcID := svc.ID
 		g.Go(func() error {
-			if err := s.dockerConn.ContainerStop(gctx, svcID, container.StopOptions{}); err != nil {
+			if err := s.dockerConn.ContainerStop(gctx, svcID, client.ContainerStopOptions{}); err != nil {
 				return fmt.Errorf("stopping service container %s: %w", svcID, err)
 			}
 			return nil

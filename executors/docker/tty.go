@@ -1,15 +1,15 @@
 package docker
 
-import "github.com/docker/docker/api/types"
+import "github.com/moby/moby/client"
 
-func newDockerTTY(hijackedResp *types.HijackedResponse) *dockerTTY {
+func newDockerTTY(hijackedResp *client.HijackedResponse) *dockerTTY {
 	return &dockerTTY{
 		hijackedResp: hijackedResp,
 	}
 }
 
 type dockerTTY struct {
-	hijackedResp *types.HijackedResponse
+	hijackedResp *client.HijackedResponse
 }
 
 func (d *dockerTTY) Read(p []byte) (int, error) {

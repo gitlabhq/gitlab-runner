@@ -21,8 +21,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/BurntSushi/toml"
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-units"
+	"github.com/moby/moby/api/types/container"
 	"github.com/sirupsen/logrus"
 
 	api "k8s.io/api/core/v1"

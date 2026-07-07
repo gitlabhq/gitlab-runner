@@ -5,7 +5,7 @@
 package pull
 
 import (
-	"github.com/docker/docker/api/types/image"
+	"github.com/moby/moby/api/types/image"
 	mock "github.com/stretchr/testify/mock"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"

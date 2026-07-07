@@ -8,8 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/containerd/platforms"
 	cli "github.com/docker/cli/cli/config/types"
-	"github.com/docker/docker/api/types/image"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/client"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -162,12 +165,35 @@ func (m *manager) markImageAsUsed(imageName string, image *image.InspectResponse
 	}
 }
 
+// parsePlatform converts the user-provided platform string (e.g. "linux/arm64")
+// into an OCI platform spec, or returns nil if none was specified. This lets
+// image pull/inspect calls disambiguate between platform variants stored
+// under the same image reference.
+func parsePlatform(rawPlatform string) (*ocispec.Platform, error) {
+	if rawPlatform == "" {
+		return nil, nil
+	}
+
+	platform, err := platforms.Parse(rawPlatform)
+	if err != nil {
+		return nil, err
+	}
+
+	return &platform, nil
+}
+
 func (m *manager) getImageUsingPullPolicy(
 	imageName string, options spec.ImageDockerOptions,
 	pullPolicy common.DockerPullPolicy,
 ) (*image.InspectResponse, error) {
 	m.logger.Debugln("Looking for image", imageName, "...")
-	existingImage, _, err := m.client.ImageInspectWithRaw(m.context, imageName)
+
+	platform, err := parsePlatform(options.Platform)
+	if err != nil {
+		return nil, &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
+	}
+
+	existingImage, _, err := m.client.ImageInspectWithRaw(m.context, imageName, platform)
 
 	// Return early if we already used that image
 	if err == nil && m.wasImageUsed(imageName, existingImage.ID) {
@@ -197,7 +223,7 @@ func (m *manager) getImageUsingPullPolicy(
 		return nil, err
 	}
 
-	return m.pullDockerImage(imageName, options, authConfig)
+	return m.pullDockerImage(imageName, options, authConfig, platform)
 }
 
 func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, error) {
@@ -228,7 +254,9 @@ func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, 
 	return authConfig, nil
 }
 
-func (m *manager) pullDockerImage(imageName string, options spec.ImageDockerOptions, ac *cli.AuthConfig) (*image.InspectResponse, error) {
+func (m *manager) pullDockerImage(
+	imageName string, options spec.ImageDockerOptions, ac *cli.AuthConfig, platform *ocispec.Platform,
+) (*image.InspectResponse, error) {
 	if m.onPullImageHookFunc != nil {
 		m.onPullImageHookFunc()
 	}
@@ -246,11 +274,13 @@ func (m *manager) pullDockerImage(imageName string, options spec.ImageDockerOpti
 		ref += ":latest"
 	}
 
-	opts := image.PullOptions{
-		Platform: options.Platform,
+	opts := client.ImagePullOptions{}
+	if platform != nil {
+		opts.Platforms = []ocispec.Platform{*platform}
 	}
 
 	var err error
+
 	if opts.RegistryAuth, err = auth.EncodeConfig(ac); err != nil {
 		return nil, &common.BuildError{Inner: err, FailureReason: common.RunnerSystemFailure}
 	}
@@ -276,7 +306,7 @@ func (m *manager) pullDockerImage(imageName string, options spec.ImageDockerOpti
 		return nil, pullErr
 	}
 
-	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName)
+	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName, platform)
 	if err != nil {
 		if cancelErr := contextCancellationBuildError(m.context); cancelErr != nil {
 			return nil, cancelErr
@@ -309,7 +339,7 @@ func (m *manager) shouldRetryImagePull(imageName string, tries int, err error) b
 // cancelled or timed-out build context must not be misclassified as an
 // image-pull failure (and must not be retried), so surface the cancellation
 // reason directly.
-func (m *manager) imagePullOnce(ref string, opts image.PullOptions) error {
+func (m *manager) imagePullOnce(ref string, opts client.ImagePullOptions) error {
 	if err := m.client.ImagePullBlocking(m.context, ref, opts); err != nil {
 		if cancelErr := contextCancellationBuildError(m.context); cancelErr != nil {
 			return cancelErr

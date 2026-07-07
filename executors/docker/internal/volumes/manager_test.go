@@ -7,9 +7,10 @@ import (
 	"testing"
 
 	"github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/volume"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/volume"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -159,7 +160,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 		temporaryName string
 		protected     bool
 
-		expectedVolumeCreateOpts *volume.CreateOptions
+		expectedVolumeCreateOpts *client.VolumeCreateOptions
 		expectedBindings         []string
 		expectedTemporary        []string
 		expectedError            error
@@ -413,7 +414,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 		uniqueName string
 		protected  bool
 
-		expectedVolumeCreateOpts *volume.CreateOptions
+		expectedVolumeCreateOpts *client.VolumeCreateOptions
 		expectedBindings         []string
 		expectedError            error
 	}{
@@ -634,7 +635,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 		volumeCreateErr error
 		protected       bool
 
-		expectedVolumeCreateOpts *volume.CreateOptions
+		expectedVolumeCreateOpts *client.VolumeCreateOptions
 		expectedBindings         []string
 		expectedTemporary        []string
 		expectedError            error
@@ -784,7 +785,7 @@ func TestDefaultManager_Binds(t *testing.T) {
 	assert.Equal(t, expectedElements, m.Binds())
 }
 
-func testVolumeCreatOpts(name string, additionalLabels map[string]string) *volume.CreateOptions {
+func testVolumeCreatOpts(name string, additionalLabels map[string]string) *client.VolumeCreateOptions {
 	const pre = "com.gitlab.gitlab-runner"
 	labels := map[string]string{
 		pre + ".type":              "cache",
@@ -810,7 +811,7 @@ func testVolumeCreatOpts(name string, additionalLabels map[string]string) *volum
 		labels[pre+"."+k] = v
 	}
 
-	return &volume.CreateOptions{
+	return &client.VolumeCreateOptions{
 		Name:   name,
 		Labels: labels,
 	}

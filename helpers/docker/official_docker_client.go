@@ -12,14 +12,13 @@ import (
 	"time"
 
 	"github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/network"
-	system "github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/network"
+	system "github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/api/types/volume"
+	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/jsonmessage"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -38,7 +37,7 @@ func IsErrNotFound(err error) bool {
 	return errdefs.IsNotFound(err)
 }
 
-// type officialDockerClient wraps a "github.com/docker/docker/client".Client,
+// type officialDockerClient wraps a "github.com/moby/moby/client".Client,
 // giving it the methods it needs to satisfy the docker.Client interface
 type officialDockerClient struct {
 	client    *client.Client
@@ -46,28 +45,25 @@ type officialDockerClient struct {
 }
 
 func newOfficialDockerClient(c Credentials, opts ...client.Opt) (*officialDockerClient, error) {
-	options := []client.Opt{
-		client.WithAPIVersionNegotiation(),
-		client.WithVersionFromEnv(),
-	}
-
-	// create the http.Transport instance here so we can cache it. In docker SKD >= v25 the http.Client's Transport
-	// instance is overwritten with an otelhttp.Transport, which does not expose its TSLCientConfig. Some tests need to
-	// access the TSLCientConfig to assert TSL was configured correctly.
+	// create the http.Transport instance here so we can cache it. In docker SDK >= v25 the http.Client's Transport
+	// instance is overwritten with an otelhttp.Transport, which does not expose its TLSClientConfig. Some tests need to
+	// access the TLSClientConfig to assert TLS was configured correctly.
 	transport := http.Transport{}
 
-	// options acting upon the client and transport need to be done in a
-	// specific order.
-	options = append(
-		options,
+	if err := configureTransport(&transport, c); err != nil {
+		logrus.Errorln("Error configuring Docker client transport:", err)
+		return nil, err
+	}
+
+	options := []client.Opt{
+		client.WithAPIVersionFromEnv(),
 		client.WithHost(c.Host),
-		WithCustomHTTPClient(&transport),
-		WithCustomTLSClientConfig(c),
-	)
+		client.WithHTTPClient(newCustomHTTPClient(&transport)),
+	}
 
 	options = append(options, opts...)
 
-	dockerClient, err := client.NewClientWithOpts(options...)
+	dockerClient, err := client.New(options...)
 	if err != nil {
 		logrus.Errorln("Error creating Docker client:", err)
 		return nil, err
@@ -97,28 +93,32 @@ func (c *officialDockerClient) ClientVersion() string {
 	return c.client.ClientVersion()
 }
 
-func (c *officialDockerClient) ServerVersion(ctx context.Context) (types.Version, error) {
-	return c.client.ServerVersion(ctx)
+func (c *officialDockerClient) ServerVersion(ctx context.Context) (client.ServerVersionResult, error) {
+	return c.client.ServerVersion(ctx, client.ServerVersionOptions{})
 }
 
 func (c *officialDockerClient) ImageInspectWithRaw(
 	ctx context.Context,
 	imageID string,
+	platform *v1.Platform,
 ) (image.InspectResponse, []byte, error) {
 	started := time.Now()
 	raw := &bytes.Buffer{}
-	inspectOpts := client.ImageInspectWithRawResponse(raw)
-	image, err := c.client.ImageInspect(ctx, imageID, inspectOpts)
-	return image, raw.Bytes(), wrapError("ImageInspectWithRaw", err, started)
+	inspectOpts := []client.ImageInspectOption{client.ImageInspectWithRawResponse(raw)}
+	if platform != nil {
+		inspectOpts = append(inspectOpts, client.ImageInspectWithPlatform(platform))
+	}
+	res, err := c.client.ImageInspect(ctx, imageID, inspectOpts...)
+	return res.InspectResponse, raw.Bytes(), wrapError("ImageInspectWithRaw", err, started)
 }
 
 func (c *officialDockerClient) ContainerList(
 	ctx context.Context,
-	options container.ListOptions,
+	options client.ContainerListOptions,
 ) ([]container.Summary, error) {
 	started := time.Now()
-	containers, err := c.client.ContainerList(ctx, options)
-	return containers, wrapError("ContainerList", err, started)
+	res, err := c.client.ContainerList(ctx, options)
+	return res.Items, wrapError("ContainerList", err, started)
 }
 
 func (c *officialDockerClient) ContainerCreate(
@@ -130,59 +130,65 @@ func (c *officialDockerClient) ContainerCreate(
 	containerName string,
 ) (container.CreateResponse, error) {
 	started := time.Now()
-	container, err := c.client.ContainerCreate(ctx, config, hostConfig, networkingConfig, platform, containerName)
-	return container, wrapError("ContainerCreate", err, started)
+	res, err := c.client.ContainerCreate(ctx, client.ContainerCreateOptions{
+		Config:           config,
+		HostConfig:       hostConfig,
+		NetworkingConfig: networkingConfig,
+		Platform:         platform,
+		Name:             containerName,
+	})
+	return container.CreateResponse{ID: res.ID, Warnings: res.Warnings}, wrapError("ContainerCreate", err, started)
 }
 
 func (c *officialDockerClient) ContainerStart(
 	ctx context.Context,
 	containerID string,
-	options container.StartOptions,
+	options client.ContainerStartOptions,
 ) error {
 	started := time.Now()
-	err := c.client.ContainerStart(ctx, containerID, options)
-	return wrapError("ContainerCreate", err, started)
+	_, err := c.client.ContainerStart(ctx, containerID, options)
+	return wrapError("ContainerStart", err, started)
 }
 
 func (c *officialDockerClient) ContainerKill(ctx context.Context, containerID string, signal string) error {
 	started := time.Now()
-	err := c.client.ContainerKill(ctx, containerID, signal)
+	_, err := c.client.ContainerKill(ctx, containerID, client.ContainerKillOptions{Signal: signal})
 	return wrapError("ContainerKill", err, started)
 }
 
 func (c *officialDockerClient) ContainerStop(
 	ctx context.Context,
 	containerID string,
-	options container.StopOptions,
+	options client.ContainerStopOptions,
 ) error {
 	started := time.Now()
-	err := c.client.ContainerStop(ctx, containerID, options)
+	_, err := c.client.ContainerStop(ctx, containerID, options)
 	return wrapError("ContainerStop", err, started)
 }
 
 func (c *officialDockerClient) ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error) {
 	started := time.Now()
-	data, err := c.client.ContainerInspect(ctx, containerID)
-	return data, wrapError("ContainerInspect", err, started)
+	res, err := c.client.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
+	return res.Container, wrapError("ContainerInspect", err, started)
 }
 
 func (c *officialDockerClient) ContainerAttach(
 	ctx context.Context,
-	container string,
-	options container.AttachOptions,
-) (types.HijackedResponse, error) {
+	containerID string,
+	options client.ContainerAttachOptions,
+) (client.HijackedResponse, error) {
 	started := time.Now()
-	response, err := c.client.ContainerAttach(ctx, container, options)
-	return response, wrapError("ContainerAttach", err, started)
+	res, err := c.client.ContainerAttach(ctx, containerID, options)
+	return res.HijackedResponse, wrapError("ContainerAttach", err, started)
 }
 
 func (c *officialDockerClient) ContainerRemove(
 	ctx context.Context,
 	containerID string,
-	options container.RemoveOptions,
+	options client.ContainerRemoveOptions,
 ) error {
 	started := time.Now()
-	err := c.client.ContainerRemove(ctx, containerID, options)
+	_, err := c.client.ContainerRemove(ctx, containerID, options)
 	return wrapError("ContainerRemove", err, started)
 }
 
@@ -191,110 +197,114 @@ func (c *officialDockerClient) ContainerWait(
 	containerID string,
 	condition container.WaitCondition,
 ) (<-chan container.WaitResponse, <-chan error) {
-	return c.client.ContainerWait(ctx, containerID, condition)
+	res := c.client.ContainerWait(ctx, containerID, client.ContainerWaitOptions{Condition: condition})
+	return res.Result, res.Error
 }
 
 func (c *officialDockerClient) ContainerLogs(
 	ctx context.Context,
-	container string,
-	options container.LogsOptions,
+	containerID string,
+	options client.ContainerLogsOptions,
 ) (io.ReadCloser, error) {
 	started := time.Now()
-	rc, err := c.client.ContainerLogs(ctx, container, options)
+	rc, err := c.client.ContainerLogs(ctx, containerID, options)
 	return rc, wrapError("ContainerLogs", err, started)
 }
 
 func (c *officialDockerClient) ContainerExecCreate(
 	ctx context.Context,
-	container string,
-	config container.ExecOptions,
+	containerID string,
+	config client.ExecCreateOptions,
 ) (container.ExecCreateResponse, error) {
 	started := time.Now()
-	resp, err := c.client.ContainerExecCreate(ctx, container, config)
-	return resp, wrapError("ContainerExecCreate", err, started)
+	res, err := c.client.ExecCreate(ctx, containerID, config)
+	return container.ExecCreateResponse{ID: res.ID}, wrapError("ContainerExecCreate", err, started)
 }
 
 func (c *officialDockerClient) ContainerExecAttach(
 	ctx context.Context,
 	execID string,
-	config container.ExecStartOptions,
-) (types.HijackedResponse, error) {
+	config client.ExecAttachOptions,
+) (client.HijackedResponse, error) {
 	started := time.Now()
-	resp, err := c.client.ContainerExecAttach(ctx, execID, config)
-	return resp, wrapError("ContainerExecAttach", err, started)
+	res, err := c.client.ExecAttach(ctx, execID, config)
+	return res.HijackedResponse, wrapError("ContainerExecAttach", err, started)
 }
 
 func (c *officialDockerClient) NetworkCreate(
 	ctx context.Context,
 	networkName string,
-	options network.CreateOptions,
-) (network.CreateResponse, error) {
+	options client.NetworkCreateOptions,
+) (client.NetworkCreateResult, error) {
 	started := time.Now()
-	response, err := c.client.NetworkCreate(ctx, networkName, options)
-	return response, wrapError("NetworkCreate", err, started)
+	res, err := c.client.NetworkCreate(ctx, networkName, options)
+	return res, wrapError("NetworkCreate", err, started)
 }
 
 func (c *officialDockerClient) NetworkRemove(ctx context.Context, networkID string) error {
 	started := time.Now()
-	err := c.client.NetworkRemove(ctx, networkID)
+	_, err := c.client.NetworkRemove(ctx, networkID, client.NetworkRemoveOptions{})
 	return wrapError("NetworkRemove", err, started)
 }
 
 func (c *officialDockerClient) NetworkDisconnect(ctx context.Context, networkID, containerID string, force bool) error {
 	started := time.Now()
-	err := c.client.NetworkDisconnect(ctx, networkID, containerID, force)
+	_, err := c.client.NetworkDisconnect(ctx, networkID, client.NetworkDisconnectOptions{
+		Container: containerID,
+		Force:     force,
+	})
 	return wrapError("NetworkDisconnect", err, started)
 }
 
 func (c *officialDockerClient) NetworkList(
 	ctx context.Context,
-	options network.ListOptions,
+	options client.NetworkListOptions,
 ) ([]network.Summary, error) {
 	started := time.Now()
-	networks, err := c.client.NetworkList(ctx, options)
-	return networks, wrapError("NetworkList", err, started)
+	res, err := c.client.NetworkList(ctx, options)
+	return res.Items, wrapError("NetworkList", err, started)
 }
 
 func (c *officialDockerClient) NetworkInspect(ctx context.Context, networkID string) (network.Inspect, error) {
 	started := time.Now()
-	resource, err := c.client.NetworkInspect(ctx, networkID, network.InspectOptions{})
-	return resource, wrapError("NetworkInspect", err, started)
+	res, err := c.client.NetworkInspect(ctx, networkID, client.NetworkInspectOptions{})
+	return res.Network, wrapError("NetworkInspect", err, started)
 }
 
 func (c *officialDockerClient) VolumeCreate(
 	ctx context.Context,
-	options volume.CreateOptions,
+	options client.VolumeCreateOptions,
 ) (volume.Volume, error) {
 	started := time.Now()
-	v, err := c.client.VolumeCreate(ctx, options)
-	return v, wrapError("VolumeCreate", err, started)
+	res, err := c.client.VolumeCreate(ctx, options)
+	return res.Volume, wrapError("VolumeCreate", err, started)
 }
 
 func (c *officialDockerClient) VolumeRemove(ctx context.Context, volumeID string, force bool) error {
 	started := time.Now()
-	err := c.client.VolumeRemove(ctx, volumeID, force)
+	_, err := c.client.VolumeRemove(ctx, volumeID, client.VolumeRemoveOptions{Force: force})
 	return wrapError("VolumeRemove", err, started)
 }
 
 func (c *officialDockerClient) VolumeInspect(ctx context.Context, volumeID string) (volume.Volume, error) {
 	started := time.Now()
-	v, err := c.client.VolumeInspect(ctx, volumeID)
-	return v, wrapError("VolumeInspect", err, started)
+	res, err := c.client.VolumeInspect(ctx, volumeID, client.VolumeInspectOptions{})
+	return res.Volume, wrapError("VolumeInspect", err, started)
 }
 
-func (c *officialDockerClient) VolumeList(ctx context.Context, options volume.ListOptions) (volume.ListResponse, error) {
+func (c *officialDockerClient) VolumeList(ctx context.Context, options client.VolumeListOptions) (client.VolumeListResult, error) {
 	started := time.Now()
-	v, err := c.client.VolumeList(ctx, options)
-	return v, wrapError("VolumeList", err, started)
+	res, err := c.client.VolumeList(ctx, options)
+	return res, wrapError("VolumeList", err, started)
 }
 
 func (c *officialDockerClient) Info(ctx context.Context) (system.Info, error) {
 	started := time.Now()
-	info, err := c.client.Info(ctx)
-	return info, wrapError("Info", err, started)
+	res, err := c.client.Info(ctx, client.InfoOptions{})
+	return res.Info, wrapError("Info", err, started)
 }
 
-func (c *officialDockerClient) ImageLoad(ctx context.Context, input io.Reader, quiet bool) (image.LoadResponse, error) {
+func (c *officialDockerClient) ImageLoad(ctx context.Context, input io.Reader, quiet bool) (io.ReadCloser, error) {
 	started := time.Now()
 	resp, err := c.client.ImageLoad(ctx, input, client.ImageLoadWithQuiet(quiet))
 	return resp, wrapError("ImageLoad", err, started)
@@ -302,14 +312,15 @@ func (c *officialDockerClient) ImageLoad(ctx context.Context, input io.Reader, q
 
 func (c *officialDockerClient) ImageTag(ctx context.Context, source string, target string) error {
 	started := time.Now()
-	return wrapError("ImageTag", c.client.ImageTag(ctx, source, target), started)
+	_, err := c.client.ImageTag(ctx, client.ImageTagOptions{Source: source, Target: target})
+	return wrapError("ImageTag", err, started)
 }
 
 func (c *officialDockerClient) ImageImportBlocking(
 	ctx context.Context,
-	source image.ImportSource,
+	source client.ImageImportSource,
 	ref string,
-	options image.ImportOptions,
+	options client.ImageImportOptions,
 ) error {
 	started := time.Now()
 	rc, err := c.client.ImageImport(ctx, source, ref, options)
@@ -323,7 +334,7 @@ func (c *officialDockerClient) ImageImportBlocking(
 func (c *officialDockerClient) ImagePullBlocking(
 	ctx context.Context,
 	ref string,
-	options image.PullOptions,
+	options client.ImagePullOptions,
 ) error {
 	started := time.Now()
 	rc, err := c.client.ImagePull(ctx, ref, options)

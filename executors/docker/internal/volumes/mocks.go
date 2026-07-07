@@ -7,7 +7,7 @@ package volumes
 import (
 	"context"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -69,7 +69,18 @@ func (_e *MockManager_Expecter) Adopt(ctx interface{}, mounts interface{}) *Mock
 
 func (_c *MockManager_Adopt_Call) Run(run func(ctx context.Context, mounts []container.MountPoint)) *MockManager_Adopt_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].([]container.MountPoint))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []container.MountPoint
+		if args[1] != nil {
+			arg1 = args[1].([]container.MountPoint)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

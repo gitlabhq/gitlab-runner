@@ -22,12 +22,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/strslice"
-	"github.com/docker/docker/api/types/volume"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/strslice"
+	mobyclient "github.com/moby/moby/client"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -1557,7 +1555,7 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 	assert.Contains(
 		t,
 		out,
-		"Using docker image sha256:be0a1939d88dbce6f18b0885662080a6aabc49d7e5e51c6021f36ce327614b13 for "+
+		"Using docker image sha256:24432bb8b93507e7bc4b87327c24317029f1ea0315abf1bc7f71148f2555d681 for "+
 			"gitlab/gitlab-runner-helper:x86_64-v16.9.1 with digest "+
 			"gitlab/gitlab-runner-helper@sha256:24432bb8b93507e7bc4b87327c24317029f1ea0315abf1bc7f71148f2555d681 ...",
 	)
@@ -1739,20 +1737,20 @@ func removeBuildContainer(t *testing.T) <-chan string {
 	require.NoError(t, err, "creating docker client")
 	defer client.Close()
 
-	var list []types.Container
+	var list []container.Summary
 	// Keep checking containers until we get the container that we want.
 	for len(list) == 0 {
 		time.Sleep(time.Second)
-		nameFilter := filters.Arg("name", "misscont")
-		containerList := container.ListOptions{
-			Filters: filters.NewArgs(nameFilter),
+		nameFilter := mobyclient.Filters{}.Add("name", "misscont")
+		containerList := mobyclient.ContainerListOptions{
+			Filters: nameFilter,
 		}
 		list, err = client.ContainerList(context.Background(), containerList)
 		require.NoError(t, err)
 	}
 
 	for _, ctr := range list {
-		err := client.ContainerRemove(context.Background(), ctr.ID, container.RemoveOptions{Force: true})
+		err := client.ContainerRemove(context.Background(), ctr.ID, mobyclient.ContainerRemoveOptions{Force: true})
 		require.NoError(t, err)
 	}
 
@@ -2607,7 +2605,7 @@ func TestPidMode(t *testing.T) {
 	require.NoError(t, err, "creating docker client")
 	defer client.Close()
 
-	err = client.ImagePullBlocking(context.Background(), common.TestAlpineImage, image.PullOptions{})
+	err = client.ImagePullBlocking(context.Background(), common.TestAlpineImage, mobyclient.ImagePullOptions{})
 	require.NoError(t, err, "pulling alpine:latest")
 
 	resp, err := client.ContainerCreate(
@@ -2623,12 +2621,12 @@ func TestPidMode(t *testing.T) {
 	)
 	require.NoError(t, err, "creating external container")
 	defer func() {
-		err := client.ContainerRemove(context.Background(), resp.ID, container.RemoveOptions{Force: true})
+		err := client.ContainerRemove(context.Background(), resp.ID, mobyclient.ContainerRemoveOptions{Force: true})
 		if err != nil {
 			t.Logf("failed to clear external container: %v", err)
 		}
 	}()
-	err = client.ContainerStart(context.Background(), resp.ID, container.StartOptions{})
+	err = client.ContainerStart(context.Background(), resp.ID, mobyclient.ContainerStartOptions{})
 	require.NoError(t, err, "starting external container")
 
 	tests := []struct {
@@ -2730,8 +2728,8 @@ func Test_ServiceLabels(t *testing.T) {
 		defer wg.Done()
 
 		// wait for service container to appear and get its name
-		nameFilter := filters.NewArgs(filters.Arg("name", "redis-0"))
-		containerList := container.ListOptions{Filters: nameFilter}
+		nameFilter := mobyclient.Filters{}.Add("name", "redis-0")
+		containerList := mobyclient.ContainerListOptions{Filters: nameFilter}
 		var container string
 
 		require.Eventually(t, func() bool {
@@ -2874,9 +2872,19 @@ func TestDockerCommandWithPlatform(t *testing.T) {
 	require.NoError(t, err)
 	defer client.Close()
 	for img, arch := range images {
-		info, _, err := client.ImageInspectWithRaw(context.Background(), img)
+		// Both redis:7.0 and postgres:14.4 are pulled twice under the same tag,
+		// once per requested platform, so the platform must be specified here to
+		// disambiguate which variant's info to return.
+		info, _, err := client.ImageInspectWithRaw(context.Background(), img, &v1.Platform{OS: "linux", Architecture: arch})
 		require.NoError(t, err)
-		assert.Equal(t, arch, info.Architecture)
+		// Docker 29+ with the containerd image store may return an empty
+		// Architecture field in the top-level inspect response and instead
+		// populate it via the OCI Descriptor's Platform field.
+		gotArch := info.Architecture
+		if gotArch == "" && info.Descriptor != nil && info.Descriptor.Platform != nil {
+			gotArch = info.Descriptor.Platform.Architecture
+		}
+		assert.Equal(t, arch, gotArch)
 	}
 }
 
@@ -3083,56 +3091,50 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 		networkMode     string
 		networkPerBuild bool
 		expectedRunErr  bool
-		validate        func(*testing.T, types.ContainerJSON)
+		validate        func(*testing.T, container.InspectResponse)
 	}
 
 	tests := map[string]testCase{
-		"empty (user defined), network per build enabled": {networkMode: "", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, "", info.NetworkSettings.MacAddress, "net settings")
+		"empty (user defined), network per build enabled": {networkMode: "", networkPerBuild: true, validate: func(t *testing.T, info container.InspectResponse) {
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
 				assert.Contains(t, k, "runner-")
-				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+				assert.Equal(t, macAddress, v.MacAddress.String(), k+" network")
 			}
 		}},
-		"empty (user defined), network per build disabled": {networkMode: "", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
+		"empty (user defined), network per build disabled": {networkMode: "", networkPerBuild: false, validate: func(t *testing.T, info container.InspectResponse) {
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
 				assert.Equal(t, "bridge", k)
-				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+				assert.Equal(t, macAddress, v.MacAddress.String(), k+" network")
 			}
 		}},
-		"default, network per build enabled": {networkMode: "default", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
+		"default, network per build enabled": {networkMode: "default", networkPerBuild: true, validate: func(t *testing.T, info container.InspectResponse) {
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
 				assert.Equal(t, "bridge", k)
-				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+				assert.Equal(t, macAddress, v.MacAddress.String(), k+" network")
 			}
 		}},
-		"default, network per build disabled": {networkMode: "default", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
+		"default, network per build disabled": {networkMode: "default", networkPerBuild: false, validate: func(t *testing.T, info container.InspectResponse) {
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
 				assert.Equal(t, "bridge", k)
-				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+				assert.Equal(t, macAddress, v.MacAddress.String(), k+" network")
 			}
 		}},
-		"bridge, network per build enabled": {networkMode: "bridge", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
+		"bridge, network per build enabled": {networkMode: "bridge", networkPerBuild: true, validate: func(t *testing.T, info container.InspectResponse) {
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
 				assert.Equal(t, "bridge", k)
-				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+				assert.Equal(t, macAddress, v.MacAddress.String(), k+" network")
 			}
 		}},
-		"bridge, network per build disabled": {networkMode: "bridge", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
+		"bridge, network per build disabled": {networkMode: "bridge", networkPerBuild: false, validate: func(t *testing.T, info container.InspectResponse) {
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
 				assert.Equal(t, "bridge", k)
-				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+				assert.Equal(t, macAddress, v.MacAddress.String(), k+" network")
 			}
 		}},
 		// the cases below fail with "exit code 1" when run in a CI pipeline, and "conflicting options: mac-address and
@@ -3142,23 +3144,21 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 
 		"host, network per build enabled": {
 			networkMode: "host", networkPerBuild: true, expectedRunErr: !apiVersionAtLeast1_44,
-			validate: func(t *testing.T, info types.ContainerJSON) {
-				assert.Equal(t, "", info.NetworkSettings.MacAddress, "net settings")
+			validate: func(t *testing.T, info container.InspectResponse) {
 				assert.Len(t, info.NetworkSettings.Networks, 1)
 				for k, v := range info.NetworkSettings.Networks {
 					assert.Equal(t, "host", k)
-					assert.Equal(t, macAddress, v.MacAddress, k+" network")
+					assert.Equal(t, macAddress, v.MacAddress.String(), k+" network")
 				}
 			},
 		},
 		"host, network per build disabled": {
 			networkMode: "host", networkPerBuild: false, expectedRunErr: !apiVersionAtLeast1_44,
-			validate: func(t *testing.T, info types.ContainerJSON) {
-				assert.Equal(t, "", info.NetworkSettings.MacAddress, "net settings")
+			validate: func(t *testing.T, info container.InspectResponse) {
 				assert.Len(t, info.NetworkSettings.Networks, 1)
 				for k, v := range info.NetworkSettings.Networks {
 					assert.Equal(t, "host", k)
-					assert.Equal(t, macAddress, v.MacAddress, k+" network")
+					assert.Equal(t, macAddress, v.MacAddress.String(), k+" network")
 				}
 			},
 		},
@@ -3210,10 +3210,10 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 			}
 
 			re := regexp.MustCompile("runner-.*-project-0-concurrent-" + strconv.Itoa(runnerID) + "-.*-build")
-			var ctr types.Container
+			var ctr container.Summary
 			// wait for the build container to be created...
 			require.Eventually(t, func() bool {
-				list, err := client.ContainerList(ctx, container.ListOptions{})
+				list, err := client.ContainerList(ctx, mobyclient.ContainerListOptions{})
 				assert.NoError(t, err, "listing containers")
 
 				for _, l := range list {
@@ -3292,12 +3292,12 @@ func Test_CacheVolumeProtected(t *testing.T) {
 			defer client.Close()
 
 			// Inspect the created cache volume
-			vols, err := client.VolumeList(context.Background(), volume.ListOptions{
-				Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: build.ProjectRealUniqueName()}),
+			vols, err := client.VolumeList(context.Background(), mobyclient.VolumeListOptions{
+				Filters: mobyclient.Filters{}.Add("name", build.ProjectRealUniqueName()),
 			})
 			require.NoError(t, err)
-			assert.Len(t, vols.Volumes, 1)
-			vol := vols.Volumes[0]
+			assert.Len(t, vols.Items, 1)
+			vol := vols.Items[0]
 
 			assert.Equal(t, vol.Labels["com.gitlab.gitlab-runner.type"], "cache", "volume label 'com.gitlab.gitlab-runner.type' should be 'cache'")
 			assert.Equal(t, vol.Labels["com.gitlab.gitlab-runner.destination"], "/cache", "volume label 'com.gitlab.gitlab-runner.destination' should be '/cache'")

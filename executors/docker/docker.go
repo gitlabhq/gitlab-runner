@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/netip"
 	"os"
 	"sort"
 	"strconv"
@@ -20,13 +21,13 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/containerd/errdefs"
 	"github.com/docker/cli/opts"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/hashicorp/go-version"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/client"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 
@@ -307,7 +308,7 @@ func (e *executor) getHelperImage() (*image.InspectResponse, error) {
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
-	image, _, err := e.dockerConn.ImageInspectWithRaw(e.Context, e.helperImageInfo.String())
+	image, _, err := e.dockerConn.ImageInspectWithRaw(e.Context, e.helperImageInfo.String(), nil)
 	if err == nil {
 		return &image, nil
 	}
@@ -480,7 +481,7 @@ func (e *executor) createService(
 	// this will fail potentially some builds if there's name collision
 	_ = e.removeContainer(e.Context, containerName)
 
-	config := e.createServiceContainerConfig(service, version, serviceImage.ID, definition)
+	config := e.createServiceContainerConfig(service, version, imageReferenceForCreate(serviceImage), definition)
 
 	devices, err := e.getServicesDevices(image)
 	if err != nil {
@@ -498,7 +499,10 @@ func (e *executor) createService(
 	}
 
 	platform := platformForImage(serviceImage, definition.ExecutorOptions)
-	networkConfig := e.networkConfig(linkNames)
+	networkConfig, err := e.networkConfig(linkNames)
+	if err != nil {
+		return nil, err
+	}
 
 	e.BuildLogger.Debugln("Creating service container", containerName, "...")
 	resp, err := e.dockerConn.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
@@ -507,7 +511,7 @@ func (e *executor) createService(
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Starting service container %s (%s)...", containerName, resp.ID))
-	err = e.dockerConn.ContainerStart(e.Context, resp.ID, container.StartOptions{})
+	err = e.dockerConn.ContainerStart(e.Context, resp.ID, client.ContainerStartOptions{})
 	if err != nil {
 		e.temporary = append(e.temporary, resp.ID)
 		return nil, err
@@ -526,6 +530,35 @@ func (e *executor) createService(
 	}, nil
 }
 
+// dnsServerAddrs converts the configured DNS server strings into the
+// []netip.Addr type expected by container.HostConfig.DNS.
+func dnsServerAddrs(dns []string) ([]netip.Addr, error) {
+	var addrs []netip.Addr
+	for _, s := range dns {
+		addr, err := netip.ParseAddr(s)
+		if err != nil {
+			return nil, fmt.Errorf("invalid DNS server address %q: %w", s, err)
+		}
+		addrs = append(addrs, addr)
+	}
+	return addrs, nil
+}
+
+// parseMACAddress converts a MAC address string into the network.HardwareAddr
+// type expected by network.EndpointSettings. An empty value yields a nil
+// address (no MAC set).
+func parseMACAddress(mac string) (network.HardwareAddr, error) {
+	if mac == "" {
+		return nil, nil
+	}
+
+	hw, err := net.ParseMAC(mac)
+	if err != nil {
+		return nil, fmt.Errorf("invalid MAC address %q: %w", mac, err)
+	}
+	return network.HardwareAddr(hw), nil
+}
+
 func platformForImage(image *image.InspectResponse, opts spec.ImageExecutorOptions) *v1.Platform {
 	if image == nil || opts.Docker.Platform == "" {
 		return nil
@@ -537,6 +570,20 @@ func platformForImage(image *image.InspectResponse, opts spec.ImageExecutorOptio
 		OSVersion:    image.OsVersion,
 		Variant:      image.Variant,
 	}
+}
+
+// imageReferenceForCreate returns the reference to use as a container's
+// Image field. When the same tag has been pulled locally for more than one
+// platform, image.ID is the ID of that specific platform's manifest, which
+// the daemon can't resolve on its own for container creation - only the
+// image's repo digest (or its tag) can. Fall back to the ID when there's no
+// repo digest (for example, a locally built image that was never pushed).
+func imageReferenceForCreate(image *image.InspectResponse) string {
+	if len(image.RepoDigests) > 0 {
+		return image.RepoDigests[0]
+	}
+
+	return image.ID
 }
 
 // processSecurityOpt processes security options and converts seccomp profile paths to inline JSON
@@ -598,6 +645,11 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 		return nil, fmt.Errorf("processing services security options: %w", err)
 	}
 
+	dns, err := dnsServerAddrs(e.Config.Docker.DNS)
+	if err != nil {
+		return nil, err
+	}
+
 	return &container.HostConfig{
 		Resources: container.Resources{
 			Memory:            e.Config.Docker.GetServiceMemory(),
@@ -610,7 +662,7 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 			Devices:           devices,
 			DeviceRequests:    deviceRequests,
 		},
-		DNS:           e.Config.Docker.DNS,
+		DNS:           dns,
 		DNSSearch:     e.Config.Docker.DNSSearch,
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
@@ -689,10 +741,15 @@ func (e *executor) getServicesDeviceRequests() ([]container.DeviceRequest, error
 	return e.bindContainerDeviceRequests(e.Config.Docker.ServiceGpus)
 }
 
-func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
+func (e *executor) networkConfig(aliases []string) (*network.NetworkingConfig, error) {
 	// setting a container's mac-address changed in API version 1.44
 	if e.serverAPIVersion.LessThan(version1_44) {
-		return e.networkConfigLegacy(aliases)
+		return e.networkConfigLegacy(aliases), nil
+	}
+
+	mac, err := parseMACAddress(e.Config.Docker.MacAddress)
+	if err != nil {
+		return nil, err
 	}
 
 	nm := string(e.networkMode)
@@ -701,25 +758,34 @@ func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
 	if nm == "" {
 		// docker defaults to using "bridge" network driver if none was specified.
 		nc.EndpointsConfig = map[string]*network.EndpointSettings{
-			network.NetworkDefault: {MacAddress: e.Config.Docker.MacAddress},
+			network.NetworkDefault: {MacAddress: mac},
 		}
-		return &nc
+		return &nc, nil
 	}
 
 	nc.EndpointsConfig = map[string]*network.EndpointSettings{
-		nm: {MacAddress: e.Config.Docker.MacAddress},
+		nm: {MacAddress: mac},
 	}
 
 	if e.networkMode.IsUserDefined() {
 		nc.EndpointsConfig[nm].Aliases = aliases
 	}
 
-	return &nc
+	return &nc, nil
 }
 
 // Setting a container's mac-address changed in API version 1.44. This is the original/legacy/pre-1.44 way to set
 // mac-address.
+//
+// There is no equivalent of the pre-1.44 top-level container.Config.MacAddress field in this API version, so a
+// configured mac_address cannot be applied here and is silently unavailable unless we warn about it explicitly.
 func (e *executor) networkConfigLegacy(aliases []string) *network.NetworkingConfig {
+	if e.Config.Docker.MacAddress != "" {
+		e.BuildLogger.Warningln(
+			"mac_address is configured, but the Docker daemon's API version is older than 1.44; " +
+				"it cannot be applied to this container")
+	}
+
 	if e.networkMode.UserDefined() == "" {
 		return &network.NetworkingConfig{}
 	}
@@ -800,7 +866,7 @@ func (e *executor) isInPrivilegedImageList(imageDefinition spec.Image) bool {
 type containerConfigurator interface {
 	ContainerConfig(image *image.InspectResponse) (*container.Config, error)
 	HostConfig() (*container.HostConfig, error)
-	NetworkConfig(aliases []string) *network.NetworkingConfig
+	NetworkConfig(aliases []string) (*network.NetworkingConfig, error)
 }
 
 type defaultContainerConfigurator struct {
@@ -851,7 +917,7 @@ func (c *defaultContainerConfigurator) HostConfig() (*container.HostConfig, erro
 	)
 }
 
-func (c *defaultContainerConfigurator) NetworkConfig(aliases []string) *network.NetworkingConfig {
+func (c *defaultContainerConfigurator) NetworkConfig(aliases []string) (*network.NetworkingConfig, error) {
 	return c.e.networkConfig(aliases)
 }
 
@@ -887,7 +953,10 @@ func (e *executor) createContainer(
 		return nil, err
 	}
 
-	networkConfig := cfgTor.NetworkConfig([]string{"build", containerName})
+	networkConfig, err := cfgTor.NetworkConfig([]string{"build", containerName})
+	if err != nil {
+		return nil, err
+	}
 
 	var platform *v1.Platform
 	// predefined/helper container always uses native platform
@@ -928,7 +997,7 @@ func (e *executor) createContainerConfig(
 	}
 
 	config := &container.Config{
-		Image:        image.ID,
+		Image:        imageReferenceForCreate(image),
 		Hostname:     hostname,
 		Cmd:          cmd,
 		Labels:       labels,
@@ -965,12 +1034,6 @@ func (e *executor) createContainerConfig(
 		} else {
 			config.User = user
 		}
-	}
-
-	// setting a container's mac-address changed in API version 1.44
-	if e.serverAPIVersion.LessThan(version1_44) {
-		//nolint:staticcheck
-		config.MacAddress = e.Config.Docker.MacAddress
 	}
 
 	return config, nil
@@ -1089,6 +1152,11 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 		return nil, fmt.Errorf("processing security options: %w", err)
 	}
 
+	dns, err := dnsServerAddrs(e.Config.Docker.DNS)
+	if err != nil {
+		return nil, err
+	}
+
 	return &container.HostConfig{
 		Resources: container.Resources{
 			Memory:            e.Config.Docker.GetMemory(),
@@ -1105,7 +1173,7 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 			DeviceCgroupRules: e.Config.Docker.DeviceCgroupRules,
 			Ulimits:           ulimits,
 		},
-		DNS:           e.Config.Docker.DNS,
+		DNS:           dns,
 		DNSSearch:     e.Config.Docker.DNSSearch,
 		Runtime:       e.Config.Docker.Runtime,
 		Privileged:    e.Config.Docker.Privileged && imageIsPrivileged,
@@ -1177,7 +1245,7 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 
 	e.disconnectNetwork(ctx, id)
 
-	options := container.RemoveOptions{
+	options := client.ContainerRemoveOptions{
 		RemoveVolumes: !e.Config.Docker.VolumeKeep,
 		Force:         true,
 	}
@@ -1198,22 +1266,29 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	e.BuildLogger.Debugln("Disconnecting container", id, "from networks")
 
-	netList, err := e.dockerConn.NetworkList(ctx, network.ListOptions{})
+	netList, err := e.dockerConn.NetworkList(ctx, client.NetworkListOptions{})
 	if err != nil {
 		e.BuildLogger.Debugln("Can't get network list. ListNetworks exited with", err)
 		return
 	}
 
-	for _, network := range netList {
-		for containerID, pluggedContainer := range network.Containers {
+	for _, netSummary := range netList {
+		// The attached container list is only available via NetworkInspect, so
+		// inspect each network to find plugged containers.
+		inspected, err := e.dockerConn.NetworkInspect(ctx, netSummary.ID)
+		if err != nil {
+			continue
+		}
+
+		for containerID, pluggedContainer := range inspected.Containers {
 			if id == containerID || id == pluggedContainer.Name {
-				err = e.dockerConn.NetworkDisconnect(ctx, network.ID, id, true)
+				err = e.dockerConn.NetworkDisconnect(ctx, netSummary.ID, id, true)
 				if err != nil {
 					e.BuildLogger.Warningln(
 						"Can't disconnect possibly zombie container",
 						pluggedContainer.Name,
 						"from network",
-						network.Name,
+						netSummary.Name,
 						"->",
 						err,
 					)
@@ -1222,7 +1297,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 						"Possibly zombie container",
 						pluggedContainer.Name,
 						"is disconnected from network",
-						network.Name,
+						netSummary.Name,
 					)
 				}
 				break
@@ -1754,8 +1829,8 @@ func shouldIgnoreDockerError(err error, isFuncs ...func(error) bool) bool {
 
 func (e *executor) execScriptOnContainer(ctx context.Context, containerID string, script ...string) (err error) {
 	action := ""
-	execConfig := container.ExecOptions{
-		Tty:          false,
+	execConfig := client.ExecCreateOptions{
+		TTY:          false,
 		AttachStderr: true,
 		AttachStdout: true,
 		Cmd:          append([]string{"sh", "-c"}, script...),
@@ -1773,7 +1848,7 @@ func (e *executor) execScriptOnContainer(ctx context.Context, containerID string
 		return err
 	}
 
-	resp, err := e.dockerConn.ContainerExecAttach(ctx, exec.ID, container.ExecStartOptions{})
+	resp, err := e.dockerConn.ContainerExecAttach(ctx, exec.ID, client.ExecAttachOptions{})
 	if err != nil {
 		action = "Failed to exec attach to container:"
 		return err
@@ -1885,12 +1960,18 @@ func (e *executor) getContainerIPAndExposedPorts(id string) ([]string, []int, er
 		time.Sleep(time.Second)
 	}
 
+	// Per-network addresses live under NetworkSettings.Networks.
 	var ip []string
-	if inspect.NetworkSettings.IPAddress != "" { //nolint:staticcheck
-		ip = append(ip, inspect.NetworkSettings.IPAddress) //nolint:staticcheck
-	}
-	if inspect.NetworkSettings.GlobalIPv6Address != "" { //nolint:staticcheck
-		ip = append(ip, inspect.NetworkSettings.GlobalIPv6Address) //nolint:staticcheck
+	for _, netCfg := range inspect.NetworkSettings.Networks {
+		if netCfg == nil {
+			continue
+		}
+		if netCfg.IPAddress.IsValid() {
+			ip = append(ip, netCfg.IPAddress.String())
+		}
+		if netCfg.GlobalIPv6Address.IsValid() {
+			ip = append(ip, netCfg.GlobalIPv6Address.String())
+		}
 	}
 
 	for _, env := range inspect.Config.Env {
@@ -1915,15 +1996,17 @@ func (e *executor) getContainerIPAndExposedPorts(id string) ([]string, []int, er
 
 	var ports []int
 	for port := range inspect.Config.ExposedPorts {
-		start, end, err := port.Range()
-		if err == nil && port.Proto() == "tcp" {
-			for i := start; i <= end && len(ports) < maxPortsCheck; i++ {
-				ports = append(ports, i)
-			}
+		if port.Proto() == "tcp" {
+			ports = append(ports, int(port.Num()))
 		}
 	}
 
+	// Exposed ports are individual entries in an unordered map, so sort before
+	// applying the cap to deterministically keep the lowest-numbered ports.
 	sort.Ints(ports)
+	if len(ports) > maxPortsCheck {
+		ports = ports[:maxPortsCheck]
+	}
 
 	return ip, ports, nil
 }
@@ -1931,7 +2014,7 @@ func (e *executor) getContainerIPAndExposedPorts(id string) ([]string, []int, er
 func (e *executor) readContainerLogs(containerID string) string {
 	var buf bytes.Buffer
 
-	options := container.LogsOptions{
+	options := client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
 	"github.com/gorilla/websocket"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -88,16 +88,12 @@ func TestCommandExecutor_Connect(t *testing.T) {
 
 			if test.hasBuildContainer {
 				s.buildContainer = &container.InspectResponse{
-					ContainerJSONBase: &container.ContainerJSONBase{
-						ID: "1234",
-					},
+					ID: "1234",
 				}
 
 				c.On("ContainerInspect", s.Context, "1234").Return(container.InspectResponse{
-					ContainerJSONBase: &container.ContainerJSONBase{
-						State: &container.State{
-							Running: test.buildContainerRunning,
-						},
+					State: &container.State{
+						Running: test.buildContainerRunning,
 					},
 				}, test.containerInspectErr)
 			}
@@ -157,18 +153,14 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 					},
 					dockerConn: &dockerConnection{Client: c},
 					buildContainer: &container.InspectResponse{
-						ContainerJSONBase: &container.ContainerJSONBase{
-							ID: "1234",
-						},
+						ID: "1234",
 					},
 				},
 			}
 
 			c.On("ContainerInspect", mock.Anything, mock.Anything).Return(container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
-					State: &container.State{
-						Running: true,
-					},
+				State: &container.State{
+					Running: true,
 				},
 			}, nil)
 
@@ -179,7 +171,7 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 
 			if test.containerExecCreateErr == nil {
 				c.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(
-					types.HijackedResponse{},
+					client.HijackedResponse{},
 					test.containerExecAttachErr,
 				).Once()
 			}
@@ -264,18 +256,14 @@ func TestTerminalConn_Start(t *testing.T) {
 			dockerConn: &dockerConnection{Client: c},
 			waiter:     wait.NewDockerKillWaiter(c),
 			buildContainer: &container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
-					ID: "1234",
-				},
+				ID: "1234",
 			},
 		},
 	}
 
 	c.On("ContainerInspect", mock.Anything, "1234").Return(container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{
-			State: &container.State{
-				Running: true,
-			},
+		State: &container.State{
+			Running: true,
 		},
 	}, nil).Once()
 
@@ -283,7 +271,7 @@ func TestTerminalConn_Start(t *testing.T) {
 		ID: "4321",
 	}, nil).Once()
 
-	c.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(types.HijackedResponse{
+	c.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(client.HijackedResponse{
 		Conn:   nopConn{},
 		Reader: bufio.NewReader(&nopReader{}),
 	}, nil).Once()

@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -77,7 +78,7 @@ func (d *dockerWaiter) StopKillWait(ctx context.Context, containerID string, tim
 	}
 
 	err := d.retryWait(stopCtx, containerID, func() {
-		_ = d.client.ContainerStop(stopCtx, containerID, container.StopOptions{Timeout: timeout})
+		_ = d.client.ContainerStop(stopCtx, containerID, client.ContainerStopOptions{Timeout: timeout})
 	})
 
 	// wrap as timeout only if the stop-kill timeout fired and the error isn't a script exit

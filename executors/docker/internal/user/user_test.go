@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/docker/docker/api/types/image"
 	dockerspec "github.com/moby/docker-image-spec/specs-go/v1"
+	"github.com/moby/moby/api/types/image"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -30,7 +30,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 	}{
 		"ImageInspectWithRaw error": {
 			setupDockerClientMock: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID).
+				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID, mock.Anything).
 					Return(image.InspectResponse{}, nil, assert.AnError).
 					Once()
 			},
@@ -39,7 +39,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 		},
 		"empty Config": {
 			setupDockerClientMock: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID).
+				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID, mock.Anything).
 					Return(image.InspectResponse{}, nil, nil).
 					Once()
 			},
@@ -48,7 +48,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 		},
 		"empty user entry in Config": {
 			setupDockerClientMock: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID).
+				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID, mock.Anything).
 					Return(image.InspectResponse{Config: &dockerspec.DockerOCIImageConfig{ImageConfig: ocispec.ImageConfig{User: ""}}}, nil, nil).
 					Once()
 			},
@@ -57,7 +57,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 		},
 		"user entry in Config set to root": {
 			setupDockerClientMock: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID).
+				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID, mock.Anything).
 					Return(image.InspectResponse{Config: &dockerspec.DockerOCIImageConfig{ImageConfig: ocispec.ImageConfig{User: "root"}}}, nil, nil).
 					Once()
 			},
@@ -66,7 +66,7 @@ func TestDefaultInspect_IsRoot(t *testing.T) {
 		},
 		"user entry in Config set to non-root": {
 			setupDockerClientMock: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID).
+				clientMock.On("ImageInspectWithRaw", expectedCtx, containerID, mock.Anything).
 					Return(image.InspectResponse{Config: &dockerspec.DockerOCIImageConfig{ImageConfig: ocispec.ImageConfig{User: "non-root"}}}, nil, nil).
 					Once()
 			},

@@ -8,17 +8,18 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/netip"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/system"
-	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-version"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/client"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -90,7 +91,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		"ContainerRemove",
 		e.Context,
 		containerNameMatcher,
-		container.RemoveOptions{RemoveVolumes: true, Force: true},
+		client.ContainerRemoveOptions{RemoveVolumes: true, Force: true},
 	).
 		Return(nil).
 		Once()
@@ -99,8 +100,17 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		"1": {Name: realServiceContainerName},
 	}
 
-	c.On("NetworkList", e.Context, network.ListOptions{}).
-		Return([]network.Summary{{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
+	c.On("NetworkList", e.Context, client.NetworkListOptions{}).
+		Return([]network.Summary{{Network: network.Network{ID: networkID, Name: "network-name"}}}, nil).
+		Once()
+
+	// disconnectNetwork inspects each listed network to find attached
+	// containers.
+	c.On("NetworkInspect", e.Context, networkID).
+		Return(network.Inspect{
+			Network:    network.Network{ID: networkID, Name: "network-name"},
+			Containers: networkContainersMap,
+		}, nil).
 		Once()
 
 	c.On("NetworkDisconnect", e.Context, networkID, containerNameMatcher, true).
@@ -117,9 +127,9 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 
 	c.On("ContainerInspect", e.Context, mock.Anything).
 		Return(container.InspectResponse{
-			NetworkSettings:   &container.NetworkSettings{},
-			Config:            &container.Config{},
-			ContainerJSONBase: &container.ContainerJSONBase{ID: realServiceContainerName, State: &container.State{Status: container.StateRunning}},
+			NetworkSettings: &container.NetworkSettings{},
+			Config:          &container.Config{},
+			ID:              realServiceContainerName, State: &container.State{Status: container.StateRunning},
 		}, nil)
 
 	err = e.createVolumesManager()
@@ -187,9 +197,9 @@ func testDockerConfigurationWithServiceContainer(
 
 	c.On("ContainerInspect", e.Context, "abc").
 		Return(container.InspectResponse{
-			NetworkSettings:   &container.NetworkSettings{},
-			Config:            &container.Config{},
-			ContainerJSONBase: &container.ContainerJSONBase{ID: "abc", State: &container.State{Status: container.StateRunning}},
+			NetworkSettings: &container.NetworkSettings{},
+			Config:          &container.Config{},
+			ID:              "abc", State: &container.State{Status: container.StateRunning},
 		}, nil)
 
 	err := e.createVolumesManager()
@@ -229,7 +239,10 @@ func TestDockerServicesDNSSetting(t *testing.T) {
 	}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
-		require.Equal(t, dockerConfig.DNS, hostConfig.DNS)
+		require.Equal(t, []netip.Addr{
+			netip.MustParseAddr("2001:db8::1"),
+			netip.MustParseAddr("192.0.2.1"),
+		}, hostConfig.DNS)
 	}
 
 	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
@@ -364,9 +377,9 @@ func TestDockerWithNoDockerConfigAndWithServiceImagePullPolicyAlways(t *testing.
 
 	c.On("ContainerInspect", e.Context, "abc").
 		Return(container.InspectResponse{
-			NetworkSettings:   &container.NetworkSettings{},
-			Config:            &container.Config{},
-			ContainerJSONBase: &container.ContainerJSONBase{ID: "abc", State: &container.State{Status: container.StateRunning}},
+			NetworkSettings: &container.NetworkSettings{},
+			Config:          &container.Config{},
+			ID:              "abc", State: &container.State{Status: container.StateRunning},
 		}, nil)
 
 	err := e.createVolumesManager()
@@ -400,7 +413,7 @@ func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolic
 
 	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
+	c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest", mock.Anything).
 		Return(image.InspectResponse{ID: "123"}, []byte{}, nil).Once()
 	c.On("NetworkList", mock.Anything, mock.Anything).
 		Return([]network.Summary{}, nil).Once()
@@ -410,9 +423,9 @@ func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolic
 		Return(nil).Once()
 	c.On("ContainerInspect", e.Context, "abc").
 		Return(container.InspectResponse{
-			NetworkSettings:   &container.NetworkSettings{},
-			Config:            &container.Config{},
-			ContainerJSONBase: &container.ContainerJSONBase{ID: "abc", State: &container.State{Status: container.StateRunning}},
+			NetworkSettings: &container.NetworkSettings{},
+			Config:          &container.Config{},
+			ID:              "abc", State: &container.State{Status: container.StateRunning},
 		}, nil)
 
 	err := e.createVolumesManager()
@@ -697,12 +710,10 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(container.InspectResponse{
-						NetworkSettings:   &container.NetworkSettings{},
-						ContainerJSONBase: &container.ContainerJSONBase{ID: "default", State: &container.State{Status: container.StateRunning}},
+						NetworkSettings: &container.NetworkSettings{},
+						ID:              "default", State: &container.State{Status: container.StateRunning},
 						Config: &container.Config{
-							ExposedPorts: nat.PortSet{
-								"1000/tcp": {},
-							},
+							ExposedPorts: network.PortSet{network.MustParsePort("1000/tcp"): {}},
 						},
 					}, nil).
 					Once()
@@ -717,17 +728,14 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(container.InspectResponse{
-						NetworkSettings:   &container.NetworkSettings{},
-						ContainerJSONBase: &container.ContainerJSONBase{ID: "default", State: &container.State{Status: container.StateRunning}},
+						NetworkSettings: &container.NetworkSettings{},
+						ID:              "default", State: &container.State{Status: container.StateRunning},
 						Config: &container.Config{
-							ExposedPorts: nat.PortSet{
-								"1000/tcp":  {},
-								"500/udp":   {},
-								"600/tcp":   {},
-								"1500/tcp":  {},
-								"1600-1601": {},
-								"1700-1705": {},
-							},
+							ExposedPorts: exposedPortSet(
+								"1000/tcp", "500/udp", "600/tcp", "1500/tcp",
+								"1600/tcp", "1601/tcp",
+								"1700/tcp", "1701/tcp", "1702/tcp", "1703/tcp", "1704/tcp", "1705/tcp",
+							),
 						},
 					}, nil).
 					Once()
@@ -752,12 +760,10 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(container.InspectResponse{
-						NetworkSettings:   &container.NetworkSettings{},
-						ContainerJSONBase: &container.ContainerJSONBase{ID: "default", State: &container.State{Status: container.StateRunning}},
+						NetworkSettings: &container.NetworkSettings{},
+						ID:              "default", State: &container.State{Status: container.StateRunning},
 						Config: &container.Config{
-							ExposedPorts: nat.PortSet{
-								"1000-1100": {},
-							},
+							ExposedPorts: exposedPortRange(1000, 1100),
 						},
 					}, nil).
 					Once()
@@ -791,12 +797,10 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(container.InspectResponse{
-						NetworkSettings:   &container.NetworkSettings{},
-						ContainerJSONBase: &container.ContainerJSONBase{ID: "default", State: &container.State{Status: container.StateRunning}},
+						NetworkSettings: &container.NetworkSettings{},
+						ID:              "default", State: &container.State{Status: container.StateRunning},
 						Config: &container.Config{
-							ExposedPorts: nat.PortSet{
-								"1000/tcp": {},
-							},
+							ExposedPorts: network.PortSet{network.MustParsePort("1000/tcp"): {}},
 							Env: []string{
 								"HEALTHCHECK_TCP_PORT=2000",
 							},
@@ -814,12 +818,10 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(container.InspectResponse{
-						NetworkSettings:   &container.NetworkSettings{},
-						ContainerJSONBase: &container.ContainerJSONBase{ID: "default", State: &container.State{Status: container.StateRunning}},
+						NetworkSettings: &container.NetworkSettings{},
+						ID:              "default", State: &container.State{Status: container.StateRunning},
 						Config: &container.Config{
-							ExposedPorts: nat.PortSet{
-								"1000/tcp": {},
-							},
+							ExposedPorts: network.PortSet{network.MustParsePort("1000/tcp"): {}},
 							Env: []string{
 								"healthcheck_TCP_PORT=2000",
 							},
@@ -837,12 +839,10 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(container.InspectResponse{
-						NetworkSettings:   &container.NetworkSettings{},
-						ContainerJSONBase: &container.ContainerJSONBase{ID: "default", State: &container.State{Status: container.StateRunning}},
+						NetworkSettings: &container.NetworkSettings{},
+						ID:              "default", State: &container.State{Status: container.StateRunning},
 						Config: &container.Config{
-							ExposedPorts: nat.PortSet{
-								"1000/tcp": {},
-							},
+							ExposedPorts: network.PortSet{network.MustParsePort("1000/tcp"): {}},
 							Env: []string{
 								"HEALTHCHECK_TCP_PORT=hello",
 							},
@@ -857,10 +857,10 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(container.InspectResponse{
-						NetworkSettings:   &container.NetworkSettings{},
-						ContainerJSONBase: &container.ContainerJSONBase{ID: "default", State: &container.State{Status: container.StateRunning}},
+						NetworkSettings: &container.NetworkSettings{},
+						ID:              "default", State: &container.State{Status: container.StateRunning},
 						Config: &container.Config{
-							ExposedPorts: nat.PortSet{},
+							ExposedPorts: network.PortSet{},
 						},
 					}, nil).
 					Once()
@@ -937,7 +937,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 			wantLog: msg,
 		},
 		"read error": {
-			wantLog: "error streaming logs for container some container: Unrecognized input header:",
+			wantLog: "error streaming logs for container some container: unrecognized stream:",
 		},
 		"connect error": {
 			wantErr: errors.New("blammo"),
@@ -1028,7 +1028,7 @@ func TestCreateService(t *testing.T) {
 
 	const freshID = "fresh-service-container-id"
 
-	c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
+	c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest", mock.Anything).
 		Return(image.InspectResponse{ID: "some-image-id"}, []byte{}, nil).Twice()
 	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
 		Return(nil).Once()
@@ -1041,14 +1041,14 @@ func TestCreateService(t *testing.T) {
 	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.CreateResponse{ID: freshID}, nil).Once()
 
-	c.On("ContainerStart", e.Context, freshID, container.StartOptions{}).
+	c.On("ContainerStart", e.Context, freshID, client.ContainerStartOptions{}).
 		Return(nil).Once()
 
 	c.On("ContainerInspect", e.Context, freshID).
 		Return(container.InspectResponse{
-			NetworkSettings:   &container.NetworkSettings{},
-			Config:            &container.Config{},
-			ContainerJSONBase: &container.ContainerJSONBase{ID: freshID, State: &container.State{Status: container.StateRunning}},
+			NetworkSettings: &container.NetworkSettings{},
+			Config:          &container.Config{},
+			ID:              freshID, State: &container.State{Status: container.StateRunning},
 		}, nil).Once()
 
 	require.NoError(t, e.createVolumesManager())
@@ -1067,21 +1067,21 @@ func TestResumeServices(t *testing.T) {
 	e.Config.Docker.WaitForServicesTimeout = -1
 
 	svcInspect := container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{
-			ID:    "svc-a",
-			Name:  "/svc-a",
-			State: &container.State{Status: "running"},
-		},
+		ID:    "svc-a",
+		Name:  "/svc-a",
+		State: &container.State{Status: "running"},
 		NetworkSettings: &container.NetworkSettings{
-			DefaultNetworkSettings: container.DefaultNetworkSettings{IPAddress: "172.17.0.4"}, //nolint:staticcheck
+			Networks: map[string]*network.EndpointSettings{
+				"bridge": {IPAddress: netip.MustParseAddr("172.17.0.4")},
+			},
 		},
 		Config: &container.Config{
-			ExposedPorts: map[nat.Port]struct{}{"80/tcp": {}},
+			ExposedPorts: network.PortSet{network.MustParsePort("80/tcp"): {}},
 		},
 	}
 
 	c.On("ContainerInspect", mock.Anything, "svc-a").Return(svcInspect, nil)
-	c.On("ContainerStart", mock.Anything, "svc-a", container.StartOptions{}).Return(nil).Once()
+	c.On("ContainerStart", mock.Anything, "svc-a", client.ContainerStartOptions{}).Return(nil).Once()
 
 	require.NoError(t, e.resumeServices([]string{"svc-a"}))
 
@@ -1110,9 +1110,9 @@ func TestResumeServices_startFails(t *testing.T) {
 
 	c.On("ContainerInspect", mock.Anything, "svc-broken").
 		Return(container.InspectResponse{
-			ContainerJSONBase: &container.ContainerJSONBase{ID: "svc-broken"},
+			ID: "svc-broken",
 		}, nil).Once()
-	c.On("ContainerStart", mock.Anything, "svc-broken", container.StartOptions{}).
+	c.On("ContainerStart", mock.Anything, "svc-broken", client.ContainerStartOptions{}).
 		Return(errors.New("daemon error")).Once()
 
 	err := e.resumeServices([]string{"svc-broken"})
@@ -1198,4 +1198,27 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 			tt.assert(t)
 		})
 	}
+}
+
+// exposedPortSet builds a network.PortSet from port specs (e.g. "80/tcp").
+// A network.Port is a single port, so ranges must be expressed as individual
+// ports.
+func exposedPortSet(specs ...string) network.PortSet {
+	set := network.PortSet{}
+	for _, s := range specs {
+		set[network.MustParsePort(s)] = struct{}{}
+	}
+	return set
+}
+
+// exposedPortRange builds a network.PortSet covering the inclusive tcp port
+// range [start, end], mirroring how the daemon expands exposed ranges.
+func exposedPortRange(start, end uint16) network.PortSet {
+	set := network.PortSet{}
+	// p is int, not uint16, so this doesn't infinite-loop when end == 65535
+	// (uint16's max value would otherwise wrap p back to 0 after p++).
+	for p := int(start); p <= int(end); p++ {
+		set[network.MustParsePort(fmt.Sprintf("%d/tcp", p))] = struct{}{}
+	}
+	return set
 }
