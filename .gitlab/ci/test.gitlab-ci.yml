@@ -190,7 +190,7 @@ fuzz variable mask:
     - go version
     - echo $env:GOCACHE
     - go env GOCACHE
-    - go install gitlab.com/ajwalker/splitic@latest
+    - go install gitlab.com/gitlab-org/ci-cd/runner-tools/splitic@latest
     - $env:Path += ";$(go env GOPATH)/bin"
   artifacts:
     paths:
