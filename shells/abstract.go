@@ -1254,10 +1254,10 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	if len(build.GetGitCleanFlags()) > 0 {
 		cleanFlags = build.GetGitCleanFlags()
 	}
-	cleanCommand := []string{"git clean " + strings.Join(cleanFlags, " ")}
+	cleanCommand := append([]string{"git", "clean"}, cleanFlags...)
 
 	w.Command("git", append(foreachArgs, cleanCommand...)...)
-	w.Command("git", append(foreachArgs, "git reset --hard")...)
+	w.Command("git", append(foreachArgs, "git", "reset", "--hard")...)
 
 	// Some submodule operations need creds configured, but don't pick up config from the main repo. For those, we
 	// explicitly "include.path" the externalized git config. For the "include.path" value, we use an env var, thus we
@@ -1287,15 +1287,15 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 		// We only do this as a fallback / on retry *and* when the `--remote` update flag is used, so that we don't
 		// unnecessarily pull in a ton of remote heads.
 		// This renders a command similar to:
-		//	git submodule foreach 'git fetch origin +refs/heads/*:refs/remotes/origin/*'
+		//	git submodule foreach git fetch origin +refs/heads/*:refs/remotes/origin/*
 		w.CommandArgExpand("git", withExplicitSubmoduleCreds(slices.Concat(
-			foreachArgs, []string{"git fetch origin +refs/heads/*:refs/remotes/origin/*"},
+			foreachArgs, []string{"git", "fetch", "origin", "+refs/heads/*:refs/remotes/origin/*"},
 		))...)
 	}
 
 	w.Command("git", syncArgs...)
 	w.CommandArgExpand("git", withExplicitSubmoduleCreds(updateArgs)...)
-	w.Command("git", append(foreachArgs, "git reset --hard")...)
+	w.Command("git", append(foreachArgs, "git", "reset", "--hard")...)
 	w.EndIf()
 
 	w.Command("git", append(foreachArgs, cleanCommand...)...)
@@ -1311,7 +1311,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	if !build.IsLFSSmudgeDisabled() {
 		w.IfCmd("git", "lfs", "version")
 		w.Noticef("Pulling LFS files...")
-		w.CommandArgExpand("git", withExplicitSubmoduleCreds(append(foreachArgs, "git lfs pull"))...)
+		w.CommandArgExpand("git", withExplicitSubmoduleCreds(append(foreachArgs, "git", "lfs", "pull"))...)
 		w.EndIf()
 	}
 
@@ -1335,16 +1335,13 @@ func (b *AbstractShell) writeSubmoduleUpdateNoticeMsg(w ShellWriter, recursive b
 // from the parent repository. This allows git operations inside submodule directories
 // (e.g., cd patches && git pull) to authenticate properly using the parent repo's credentials.
 func (b *AbstractShell) configureSubmoduleCredentials(w ShellWriter, foreachArgs []string, recursive bool) {
-	// Use the GLR_EXT_GIT_CONFIG_PATH environment variable that was set earlier.
-	// We need to quote the variable expansion to handle paths with spaces.
-	cmd := fmt.Sprintf(`git config --replace-all include.path '%s'`, w.EnvVariableKey(envVarExternalGitConfigFile))
-	args := foreachArgs
+	args := slices.Clip(foreachArgs)
 	// Even if `GIT_SUBMODULE_STRATEGY: normal` is used, we should set up the credentials
 	// for all the Git submodules to preserve existing workflows.
 	if !recursive {
 		args = append(args, "--recursive")
 	}
-	args = append(args, cmd)
+	args = append(args, "git", "config", "--replace-all", "include.path", w.EnvVariableKey(envVarExternalGitConfigFile))
 	w.CommandArgExpand("git", args...)
 }
 

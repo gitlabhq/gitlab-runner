@@ -749,19 +749,20 @@ func (s GetSources) doSubmoduleUpdate(ctx context.Context, e *env.Env, extConfig
 		foreachArgs = append(foreachArgs, "--recursive")
 	}
 
-	// foreach runs a shell command via git submodule foreach.
-	foreach := func(cmd string) error {
-		return git(ctx, e, extraEnv, append(foreachArgs, cmd)...)
+	// foreach runs argv tokens via git submodule foreach. Variadic is
+	// load-bearing: joining into one string would re-enter sh -c.
+	foreach := func(cmd ...string) error {
+		return git(ctx, e, extraEnv, append(foreachArgs, cmd...)...)
 	}
 
 	cleanFlags := s.GitCleanFlags
 	if len(cleanFlags) == 0 {
 		cleanFlags = []string{"-ffdx"}
 	}
-	cleanCmd := "git clean " + strings.Join(cleanFlags, " ")
+	cleanArgs := append([]string{"git", "clean"}, cleanFlags...)
 
-	_ = foreach(cleanCmd)
-	_ = foreach("git reset --hard")
+	_ = foreach(cleanArgs...)
+	_ = foreach("git", "reset", "--hard")
 
 	absExtConfig, _ := filepath.Abs(extConfigFile)
 	withCreds := func(args []string) []string {
@@ -782,30 +783,29 @@ func (s GetSources) doSubmoduleUpdate(ctx context.Context, e *env.Env, extConfig
 		e.Warningf("Updating submodules failed. Retrying...")
 
 		if s.hasRemoteFlag() {
-			_ = git(ctx, e, extraEnv, withCreds(append(foreachArgs, "git fetch origin +refs/heads/*:refs/remotes/origin/*"))...)
+			_ = git(ctx, e, extraEnv, withCreds(append(foreachArgs, "git", "fetch", "origin", "+refs/heads/*:refs/remotes/origin/*"))...)
 		}
 
 		_ = git(ctx, e, extraEnv, syncArgs...)
 		if err := git(ctx, e, extraEnv, withCreds(updateArgs)...); err != nil {
 			return fmt.Errorf("submodule update (retry): %w", err)
 		}
-		_ = foreach("git reset --hard")
+		_ = foreach("git", "reset", "--hard")
 	} else {
 		e.Noticef("Updated submodules")
 		_ = git(ctx, e, extraEnv, syncArgs...)
 	}
 
-	_ = foreach(cleanCmd)
+	_ = foreach(cleanArgs...)
 
 	// Configure all submodules (always recursive) to include the external git
 	// config so that git operations in submodule dirs authenticate properly.
 	e.Noticef("Configuring submodules to use parent git credentials...")
-	credCmd := fmt.Sprintf("git config --replace-all include.path '%s'", absExtConfig)
-	_ = git(ctx, e, extraEnv, "submodule", "foreach", "--recursive", credCmd)
+	_ = git(ctx, e, extraEnv, "submodule", "foreach", "--recursive", "git", "config", "--replace-all", "include.path", absExtConfig)
 
 	if !s.LFSDisabled && hasCommand(ctx, "git", "lfs", "version") {
 		e.Noticef("Pulling LFS files for submodules...")
-		_ = git(ctx, e, extraEnv, withCreds(append(foreachArgs, "git lfs pull"))...)
+		_ = git(ctx, e, extraEnv, withCreds(append(foreachArgs, "git", "lfs", "pull"))...)
 	}
 
 	return nil

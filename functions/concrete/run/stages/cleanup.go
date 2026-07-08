@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
+	"slices"
 
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/env"
 )
@@ -46,14 +46,14 @@ func (s Cleanup) cleanBuildDirectory(ctx context.Context, e *env.Env) {
 			if s.SubmoduleStrategy == submoduleStrategyRecursive {
 				foreachArgs = append(foreachArgs, "--recursive")
 			}
+			foreachArgs = slices.Clip(foreachArgs)
 
 			if len(s.GitCleanFlags) > 0 {
-				cleanCmd := "git clean " + strings.Join(s.GitCleanFlags, " ")
-				_ = git(ctx, e, nil, append(foreachArgs, cleanCmd)...)
+				cleanArgs := append([]string{"git", "clean"}, s.GitCleanFlags...)
+				_ = git(ctx, e, nil, append(foreachArgs, cleanArgs...)...)
 			}
 
-			resetCmd := "git reset --hard"
-			_ = git(ctx, e, nil, append(foreachArgs, resetCmd)...)
+			_ = git(ctx, e, nil, append(foreachArgs, "git", "reset", "--hard")...)
 		}
 
 	case gitStrategyNone:
