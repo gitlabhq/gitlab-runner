@@ -455,6 +455,31 @@ func TestGetSourcesGit_Submodules(t *testing.T) {
 	}
 }
 
+// The `-e <pattern>` payload is required: the top-level `git clean` runs
+// before the submodule step and would reject any unrecognised flag, short-
+// circuiting the test before reaching the path under test.
+func TestGetSourcesGit_SubmoduleCleanFlagsArePassedAsSeparateArgs(t *testing.T) {
+	repoURL, sha, ref := testRepoWithSubmodule(t)
+	e := gitEnv(t, "bash")
+	canary := filepath.Join(t.TempDir(), "should-not-exist")
+
+	gs := stages.GetSources{
+		GitStrategy:       "fetch",
+		Checkout:          true,
+		RepoURL:           repoURL,
+		SHA:               sha,
+		Ref:               ref,
+		Refspecs:          []string{"+refs/heads/*:refs/remotes/origin/*"},
+		SubmoduleStrategy: "normal",
+		GitCleanFlags:     []string{"-f", "-e", "x;touch " + canary},
+		MaxAttempts:       1,
+	}
+
+	require.NoError(t, gs.Run(context.Background(), e), "stderr: %s", e.Stderr.(*bytes.Buffer).String())
+
+	assert.NoFileExists(t, canary)
+}
+
 func TestGetSourcesGit_Options(t *testing.T) {
 	tests := map[string]struct {
 		mutate func(gs *stages.GetSources)

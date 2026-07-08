@@ -1691,6 +1691,13 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 			ExpectedGitForEachFlags: []any{"--recursive"},
 			ExpectedGitCleanFlags:   []string{"-ffdx"},
 		},
+		"with git clean flags containing shell metacharacters": {
+			Recursive:             false,
+			Depth:                 0,
+			ExpectedNoticeArgs:    []any{"Updating/initializing submodules..."},
+			GitCleanFlags:         "-ffdx a;b c&&d $(e) `f` |g",
+			ExpectedGitCleanFlags: []string{"-ffdx", "a;b", "c&&d", "$(e)", "`f`", "|g"},
+		},
 	}
 
 	for _, useJobTokenFromEnv := range []bool{true, false} {
@@ -1716,7 +1723,11 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					}
 
 					expectSubmoduleCleanCommand := func() {
-						mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git clean "+strings.Join(tc.ExpectedGitCleanFlags, " "))...).Once()
+						args := append(expectedGitForEachArgsFn(), "git", "clean")
+						for _, f := range tc.ExpectedGitCleanFlags {
+							args = append(args, f)
+						}
+						mockWriter.EXPECT().Command("git", args...).Once()
 					}
 					expectSubmoduleSyncCommand := func() {
 						mockWriter.EXPECT().Command("git", append([]any{"submodule", "sync"}, tc.ExpectedGitForEachFlags...)...).Once()
@@ -1732,7 +1743,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					expectSubmoduleSyncCommand()
 
 					expectSubmoduleCleanCommand()
-					mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git reset --hard")...).Once()
+					mockWriter.EXPECT().Command("git", slices.Concat(expectedGitForEachArgsFn(), []any{"git", "reset", "--hard"})...).Once()
 
 					mockWriter.EXPECT().IfCmdWithOutputArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), []any{"submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags)...).Once()
 					{ //nolint:gocritic
@@ -1745,11 +1756,11 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 						// else branch ...
 						mockWriter.EXPECT().Warningf("Updating submodules failed. Retrying...").Once()
 						if strings.Contains(tc.GitSubmoduleUpdateFlags, "--remote") {
-							mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), []any{"submodule", "foreach"}, tc.ExpectedGitForEachFlags, []any{"git fetch origin +refs/heads/*:refs/remotes/origin/*"})...).Once()
+							mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), []any{"submodule", "foreach"}, tc.ExpectedGitForEachFlags, []any{"git", "fetch", "origin", "+refs/heads/*:refs/remotes/origin/*"})...).Once()
 						}
 						expectSubmoduleSyncCommand()
 						mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), []any{"submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags)...).Once()
-						mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git reset --hard")...).Once()
+						mockWriter.EXPECT().Command("git", slices.Concat(expectedGitForEachArgsFn(), []any{"git", "reset", "--hard"})...).Once()
 					}
 					mockWriter.EXPECT().EndIf().Once()
 
@@ -1757,11 +1768,11 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 
 					mockWriter.EXPECT().Noticef("Configuring submodules to use parent git credentials...").Once()
 					mockWriter.EXPECT().EnvVariableKey("GLR_EXT_GIT_CONFIG_PATH").Return("$GLR_EXT_GIT_CONFIG_PATH").Once()
-					mockWriter.EXPECT().CommandArgExpand("git", append(expectedGitSubmoduleForEachArgsFn(), `git config --replace-all include.path '$GLR_EXT_GIT_CONFIG_PATH'`)...).Once()
+					mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(expectedGitSubmoduleForEachArgsFn(), []any{"git", "config", "--replace-all", "include.path", "$GLR_EXT_GIT_CONFIG_PATH"})...).Once()
 
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
 					mockWriter.EXPECT().Noticef("Pulling LFS files...").Once()
-					mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), expectedGitForEachArgsFn(), []any{"git lfs pull"})...).Once()
+					mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), expectedGitForEachArgsFn(), []any{"git", "lfs", "pull"})...).Once()
 					mockWriter.EXPECT().EndIf().Once()
 
 					err := shell.writeSubmoduleUpdateCmd(
@@ -2960,18 +2971,18 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 
 					mockWriter.EXPECT().EndIf().Once()
 
-					cleanCmd := mockWriter.EXPECT().Command("git", "submodule", "foreach", "git clean -ffdx").Once()
-					mockWriter.EXPECT().Command("git", "submodule", "foreach", "git reset --hard").Run(func(command string, arguments ...string) {
+					cleanCmd := mockWriter.EXPECT().Command("git", "submodule", "foreach", "git", "clean", "-ffdx").Once()
+					mockWriter.EXPECT().Command("git", "submodule", "foreach", "git", "reset", "--hard").Run(func(command string, arguments ...string) {
 						cleanCmd.Once()
 					}).Twice()
 
 					mockWriter.EXPECT().Noticef("Configuring submodules to use parent git credentials...").Once()
 					mockWriter.EXPECT().EnvVariableKey("GLR_EXT_GIT_CONFIG_PATH").Return("$GLR_EXT_GIT_CONFIG_PATH").Once()
-					mockWriter.EXPECT().CommandArgExpand("git", "submodule", "foreach", "--recursive", `git config --replace-all include.path '$GLR_EXT_GIT_CONFIG_PATH'`).Once()
+					mockWriter.EXPECT().CommandArgExpand("git", "submodule", "foreach", "--recursive", "git", "config", "--replace-all", "include.path", "$GLR_EXT_GIT_CONFIG_PATH").Once()
 
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
 					mockWriter.EXPECT().Noticef("Pulling LFS files...").Once()
-					mockWriter.EXPECT().CommandArgExpand("git", withExplicitSubmoduleCreds([]any{"submodule", "foreach", "git lfs pull"})...).Once()
+					mockWriter.EXPECT().CommandArgExpand("git", withExplicitSubmoduleCreds([]any{"submodule", "foreach", "git", "lfs", "pull"})...).Once()
 					mockWriter.EXPECT().EndIf().Once()
 
 					build := &common.Build{
