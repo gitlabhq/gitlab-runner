@@ -236,3 +236,18 @@ func TestClientConfiguration(t *testing.T) {
 		})
 	}
 }
+
+// TestTLSFailsClosedOnMissingCerts guards against silently falling back to an
+// insecure/unverified connection when TLSVerify is requested but the
+// configured cert directory doesn't contain the expected ca.pem/cert.pem/key.pem
+// files -- client construction itself must fail rather than the daemon
+// connection later succeeding without real verification.
+func TestTLSFailsClosedOnMissingCerts(t *testing.T) {
+	_, err := New(Credentials{
+		Host:      "tcp://example.org:2376",
+		TLSVerify: true,
+		CertPath:  t.TempDir(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "could not read CA certificate")
+}
