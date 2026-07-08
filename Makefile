@@ -65,7 +65,7 @@ MAGE = $(localBin)/mage
 GOLANGLINT ?= golangci-lint
 GOLANGLINT_GOARGS ?= $(localBin)/goargs.so
 # Labkit validate-log-fields version
-LABKIT_VALIDATE_VERSION     := v2.0.0-20260331132242-b6ef9bf35f1d
+LABKIT_VALIDATE_VERSION     := v2.26.1
 
 GENERATED_FILES_TOOLS = $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
 DEVELOPMENT_TOOLS = $(MOCKERY) $(MAGE)
