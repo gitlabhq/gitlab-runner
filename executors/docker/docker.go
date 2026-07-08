@@ -647,7 +647,7 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 
 	dns, err := dnsServerAddrs(e.Config.Docker.DNS)
 	if err != nil {
-		return nil, err
+		return nil, &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
 	}
 
 	return &container.HostConfig{
@@ -749,7 +749,7 @@ func (e *executor) networkConfig(aliases []string) (*network.NetworkingConfig, e
 
 	mac, err := parseMACAddress(e.Config.Docker.MacAddress)
 	if err != nil {
-		return nil, err
+		return nil, &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
 	}
 
 	nm := string(e.networkMode)
@@ -1154,7 +1154,7 @@ func (e *executor) createHostConfig(isBuildContainer, imageIsPrivileged bool) (*
 
 	dns, err := dnsServerAddrs(e.Config.Docker.DNS)
 	if err != nil {
-		return nil, err
+		return nil, &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
 	}
 
 	return &container.HostConfig{

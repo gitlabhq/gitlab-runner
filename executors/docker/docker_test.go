@@ -1002,6 +1002,57 @@ func TestDockerIsolationWithIncorrectValue(t *testing.T) {
 	assert.Contains(t, err.Error(), `the isolation value "someIncorrectValue" is not valid`)
 }
 
+func TestDockerCreateHostConfigWithInvalidDNS(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		DNS: []string{"not-an-ip"},
+	}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+	}
+	_, executor := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
+
+	_, err := executor.createHostConfig(false, false)
+
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr, "expected error to be a *common.BuildError")
+	assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+	assert.Contains(t, err.Error(), "invalid DNS server address")
+}
+
+func TestDockerCreateHostConfigForServiceWithInvalidDNS(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		DNS: []string{"not-an-ip"},
+	}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+	}
+	_, executor := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
+
+	_, err := executor.createHostConfigForService(false, nil, nil)
+
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr, "expected error to be a *common.BuildError")
+	assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+	assert.Contains(t, err.Error(), "invalid DNS server address")
+}
+
+func TestDockerNetworkConfigWithInvalidMAC(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		MacAddress: "not-a-mac",
+	}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+	}
+	_, executor := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
+	// MAC address handling via parseMACAddress only applies from API version 1.44 onwards;
+	// below that, networkConfig falls back to networkConfigLegacy which never sets a MAC.
+	executor.serverAPIVersion = version.Must(version.NewVersion("1.44"))
+
+	_, err := executor.networkConfig(nil)
+
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr, "expected error to be a *common.BuildError")
+	assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+	assert.Contains(t, err.Error(), "invalid MAC address")
+}
+
 func TestDockerServiceContainerConfigIncludesDockerLabels(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		HelperImage:     "gitlab/gitlab-runner:${CI_RUNNER_REVISION}",
