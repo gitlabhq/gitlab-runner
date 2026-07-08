@@ -1552,12 +1552,16 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 	out := buffer.String()
-	assert.Contains(
+	// The exact image ID/digest for a mutable Docker Hub tag can change whenever the
+	// upstream image is republished, so only assert on the structural shape rather than
+	// pinning specific hashes.
+	assert.Regexp(
 		t,
+		regexp.MustCompile(
+			`Using docker image sha256:[0-9a-f]{64} for gitlab/gitlab-runner-helper:x86_64-v16\.9\.1 `+
+				`with digest gitlab/gitlab-runner-helper@sha256:[0-9a-f]{64} \.\.\.`,
+		),
 		out,
-		"Using docker image sha256:24432bb8b93507e7bc4b87327c24317029f1ea0315abf1bc7f71148f2555d681 for "+
-			"gitlab/gitlab-runner-helper:x86_64-v16.9.1 with digest "+
-			"gitlab/gitlab-runner-helper@sha256:24432bb8b93507e7bc4b87327c24317029f1ea0315abf1bc7f71148f2555d681 ...",
 	)
 }
 
