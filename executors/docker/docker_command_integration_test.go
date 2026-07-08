@@ -3240,6 +3240,122 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 	}
 }
 
+func TestDockerCommand_DNSConfig(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	build := getBuildForOS(t, func() (spec.Job, error) {
+		return common.GetRemoteBuildResponse("cat /etc/resolv.conf")
+	})
+	build.Runner.Docker.DNS = []string{"1.1.1.1", "8.8.8.8"}
+
+	out, err := buildtest.RunBuildReturningOutput(t, &build)
+	assert.NoError(t, err)
+	assert.Contains(t, out, "nameserver 1.1.1.1")
+	assert.Contains(t, out, "nameserver 8.8.8.8")
+}
+
+// buildManyExposedPortsFixtureImage builds the tests/dockerfiles/many-exposed-ports
+// fixture (an image declaring 25 EXPOSEd tcp ports) and returns its local image
+// tag. The image is only tagged locally -- it is never pushed -- so the caller
+// must use PullPolicyIfNotPresent.
+func buildManyExposedPortsFixtureImage(t *testing.T) string {
+	const tag = "gitlab-runner-test/many-exposed-ports:latest"
+
+	cmd := exec.Command("docker", "build", "-t", tag, "../../tests/dockerfiles/many-exposed-ports")
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "building many-exposed-ports fixture image: %s", out)
+
+	return tag
+}
+
+// TestDockerServiceManyExposedPorts exercises getContainerIPAndExposedPorts
+// against a real container inspect response for an image that EXPOSEs more
+// than maxPortsCheck (20) tcp ports. This is a regression test for the moby
+// v29 SDK migration: ExposedPorts moved from a range-keyed nat.PortSet to a
+// map keyed by individual network.Port values, so this validates that the
+// real daemon's response still parses correctly and the build doesn't
+// error/panic when a service declares many ports. The lowest-20-ports
+// sort+cap logic itself is already covered by a unit test
+// (docker_test.go's TestGetContainerIPAndExposedPorts-style cases).
+func TestDockerServiceManyExposedPorts(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	image := buildManyExposedPortsFixtureImage(t)
+
+	client, err := docker.New(docker.Credentials{})
+	require.NoError(t, err)
+	defer client.Close()
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		// The name filter also matches the "-wait-for-service" healthcheck
+		// sidecar container the runner spins up alongside the service, so
+		// filter that out explicitly rather than relying on len(list) == 1.
+		nameFilter := mobyclient.Filters{}.Add("name", "many-exposed-ports-0")
+		containerList := mobyclient.ContainerListOptions{Filters: nameFilter}
+
+		// require.NoError/require.Eventually call t.FailNow(), which only
+		// unwinds the calling goroutine via runtime.Goexit() rather than
+		// failing the test from the parent goroutine's perspective -- use
+		// assert here so a failure is recorded on t without silently
+		// swallowing it.
+		var containerID string
+		assert.Eventually(t, func() bool {
+			list, err := client.ContainerList(context.Background(), containerList)
+			assert.NoError(t, err)
+			if err != nil {
+				return false
+			}
+			for _, c := range list {
+				for _, n := range c.Names {
+					if strings.HasSuffix(n, "many-exposed-ports-0") {
+						containerID = c.ID
+						return true
+					}
+				}
+			}
+			return false
+		}, time.Second*10, time.Millisecond*500)
+
+		// Inspect while the build (sleep 3) is still running -- the service
+		// container is removed as part of the build's own cleanup, which
+		// happens synchronously before build.Run returns below.
+		info, err := client.ContainerInspect(context.Background(), containerID)
+		assert.NoError(t, err)
+		assert.Len(t, info.Config.ExposedPorts, 25,
+			"the real daemon should report all 25 declared ports on the container, "+
+				"independent of the runner's own 20-port healthcheck cap")
+	}()
+
+	successfulBuild, err := common.GetRemoteBuildResponse("sleep 3")
+	require.NoError(t, err)
+	successfulBuild.Services = spec.Services{{Name: image, Alias: "service-1"}}
+
+	build := &common.Build{
+		Job: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image:      common.TestAlpineImage,
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+				},
+			},
+		},
+		ExecutorProvider: docker_executor.NewProvider(),
+	}
+
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err, "build should succeed even though the service exposes more than 20 ports")
+
+	wg.Wait()
+}
+
 func Test_CacheVolumeProtected(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
