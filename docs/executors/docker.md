@@ -989,6 +989,32 @@ Prerequisites:
    > Set `privileged = false` for standard Podman usage. Set `privileged = true` only if you need to run
    > [Docker-in-Docker services](#use-docker-in-docker-with-privileged-mode) within your jobs.
 
+> [!warning]
+> Do not mount the Podman socket (for example
+> `/run/user/<uid>/podman/podman.sock`) into job containers through `volumes`.
+> The socket controls the host Podman service, so exposing it to a job returns
+> the privilege that rootless Podman exists to remove. The runner reaches the
+> socket through the `host` setting in `[runners.docker]`. Jobs do not need it.
+> For jobs that genuinely need root, isolate them in a disposable, single-use
+> environment instead of a shared, long-lived host. For more information, see
+> [security risks for Docker executors](../security/_index.md#usage-of-docker-executor).
+
+### Enforce container resource limits
+
+Rootless Podman enforces container resource limits set in the `[runners.docker]`
+section (for example, `memory`, `memory_swap`, and `cpus`) only under the cgroups v2
+hierarchy with the `systemd` cgroup manager. The v2 hierarchy is the default on RHEL,
+CentOS, and AlmaLinux 9 and later, and on current Debian and Ubuntu
+releases. On a host still using the legacy cgroups v1 hierarchy, rootless Podman
+silently ignores these limits and the job runs unconstrained, so one job can
+exhaust host memory or CPU.
+
+If you rely on resource limits, confirm the host uses cgroups v2:
+
+```shell
+stat -fc %T /sys/fs/cgroup   # cgroup2fs = v2; tmpfs = v1
+```
+
 ### Use Podman to build container images from a Dockerfile
 
 The following example uses Podman to build a container image and push the image to the GitLab Container registry.
