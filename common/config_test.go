@@ -1428,6 +1428,39 @@ func TestStringOrArray_UnmarshalTOML(t *testing.T) {
 	}
 }
 
+func TestStringOrArray_UnmarshalFlag(t *testing.T) {
+	tests := map[string]struct {
+		value          string
+		expectedResult StringOrArray
+	}{
+		"empty string": {
+			value:          "",
+			expectedResult: StringOrArray{},
+		},
+		"single value": {
+			value:          "if-not-present",
+			expectedResult: StringOrArray{"if-not-present"},
+		},
+		"comma separated values": {
+			value:          "if-not-present,always",
+			expectedResult: StringOrArray{"if-not-present", "always"},
+		},
+		"value with leading and trailing spaces": {
+			value:          "  if-not-present , always ",
+			expectedResult: StringOrArray{"if-not-present", "always"},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			var s StringOrArray
+			err := s.UnmarshalFlag(tt.value)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, s)
+		})
+	}
+}
+
 func TestKubernetesNFS_UnmarshalTOML(t *testing.T) {
 	tests := map[string]struct {
 		toml           string

@@ -151,6 +151,7 @@ sudo gitlab-runner register \
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -165,6 +166,7 @@ gitlab-runner register \
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -179,6 +181,7 @@ gitlab-runner register \
   --token "$RUNNER_TOKEN" \
   --executor "docker-windows" \
   --docker-image mcr.microsoft.com/windows/servercore:1809_amd64 \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -193,6 +196,7 @@ sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -207,6 +211,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -327,6 +332,7 @@ sudo gitlab-runner register \
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -346,6 +352,7 @@ gitlab-runner register \
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -365,6 +372,7 @@ gitlab-runner register \
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker-windows" \
   --docker-image mcr.microsoft.com/windows/servercore:1809_amd64 \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -384,6 +392,7 @@ sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -403,6 +412,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
