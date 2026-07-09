@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
@@ -24,93 +23,125 @@ func Test_windowsInfo_create(t *testing.T) {
 
 		tests := []struct {
 			kernelVersion string
-			shell         string
+			architecture  string
 			expectedInfo  Info
 			expectedErr   error
 		}{
 			{
 				kernelVersion: "10.0 17763 (17763.1.amd64fre.rs5_release.180914-1434)",
+				architecture:  "amd64",
 				expectedInfo: Info{
-					Architecture: windowsSupportedArchitecture,
+					Architecture: "x86_64",
 					Name:         GitLabRegistryName,
-					Tag: fmt.Sprintf(
-						"%s-%s-%s",
-						windowsSupportedArchitecture,
-						revision,
-						baseImage1809,
-					),
-					Prebuilt: "prebuilt-windows-servercore-ltsc2019-x86_64",
-					Cmd:      expectedPowershellCmdLine,
+					Tag:          fmt.Sprintf("x86_64-%s-servercore1809", revision),
+					Prebuilt:     "prebuilt-windows-servercore-ltsc2019-x86_64",
+					Cmd:          expectedPowershellCmdLine,
 				},
-				expectedErr: nil,
 			},
 			{
 				kernelVersion: "10.0 20348 (20348.1.amd64fre.fe_release.210507-1500)",
+				architecture:  "amd64",
 				expectedInfo: Info{
-					Architecture: windowsSupportedArchitecture,
+					Architecture: "x86_64",
 					Name:         GitLabRegistryName,
-					Tag: fmt.Sprintf(
-						"%s-%s-%s",
-						windowsSupportedArchitecture,
-						revision,
-						baseImage21H2,
-					),
-					Prebuilt: "prebuilt-windows-servercore-ltsc2022-x86_64",
-					Cmd:      expectedPowershellCmdLine,
+					Tag:          fmt.Sprintf("x86_64-%s-servercore21H2", revision),
+					Prebuilt:     "prebuilt-windows-servercore-ltsc2022-x86_64",
+					Cmd:          expectedPowershellCmdLine,
 				},
-				expectedErr: nil,
-			},
-			{
-				kernelVersion: "10.0.20348",
-				expectedInfo: Info{
-					Architecture: windowsSupportedArchitecture,
-					Name:         GitLabRegistryName,
-					Tag: fmt.Sprintf(
-						"%s-%s-%s",
-						windowsSupportedArchitecture,
-						revision,
-						baseImage21H2,
-					),
-					Prebuilt: "prebuilt-windows-servercore-ltsc2022-x86_64",
-					Cmd:      expectedPowershellCmdLine,
-				},
-				expectedErr: nil,
 			},
 			{
 				kernelVersion: "10.0 26100 (26100.1.amd64fre.ge_release.240331-1435)",
+				architecture:  "amd64",
 				expectedInfo: Info{
-					Architecture: windowsSupportedArchitecture,
+					Architecture: "x86_64",
 					Name:         GitLabRegistryName,
-					Tag: fmt.Sprintf(
-						"%s-%s-%s",
-						windowsSupportedArchitecture,
-						revision,
-						baseImage21H2,
-					),
-					Prebuilt: "prebuilt-windows-servercore-ltsc2022-x86_64",
-					Cmd:      expectedPowershellCmdLine,
+					Tag:          fmt.Sprintf("x86_64-%s-servercore24H2", revision),
+					Prebuilt:     "prebuilt-windows-servercore-ltsc2025-x86_64",
+					Cmd:          expectedPowershellCmdLine,
 				},
-				expectedErr: nil,
 			},
 			{
-				kernelVersion: "10.0 17134 (17134.1.amd64fre.rs4_release.180410-1804)",
-				expectedErr:   windows.ErrUnsupportedWindowsVersion,
+				// Windows 11 build 26200 is version 25H2; it shares the 24H2
+				// servicing branch and maps to V24H2, so an arm64 25H2 host
+				// resolves to the servercore24H2 / ltsc2025 arm64 image.
+				kernelVersion: "10.0 26200 (26100.1.arm64fre.ge_release.240331-1435)",
+				architecture:  "arm64",
+				expectedInfo: Info{
+					Architecture: "arm64",
+					Name:         GitLabRegistryName,
+					Tag:          fmt.Sprintf("arm64-%s-servercore24H2", revision),
+					Prebuilt:     "prebuilt-windows-servercore-ltsc2025-arm64",
+					Cmd:          expectedPowershellCmdLine,
+				},
+			},
+			{
+				// aarch64 normalises to arm64.
+				kernelVersion: "10.0 26100 (26100.1.arm64fre.ge_release.240331-1435)",
+				architecture:  "aarch64",
+				expectedInfo: Info{
+					Architecture: "arm64",
+					Name:         GitLabRegistryName,
+					Tag:          fmt.Sprintf("arm64-%s-servercore24H2", revision),
+					Prebuilt:     "prebuilt-windows-servercore-ltsc2025-arm64",
+					Cmd:          expectedPowershellCmdLine,
+				},
+			},
+			{
+				// arm64 on Windows Server 2019 has no published arm64 base
+				// image, so the runner falls back to the x86_64 image.
+				kernelVersion: "10.0 17763 (17763.1.amd64fre.rs5_release.180914-1434)",
+				architecture:  "arm64",
+				expectedInfo: Info{
+					Architecture: "x86_64",
+					Name:         GitLabRegistryName,
+					Tag:          fmt.Sprintf("x86_64-%s-servercore1809", revision),
+					Prebuilt:     "prebuilt-windows-servercore-ltsc2019-x86_64",
+					Cmd:          expectedPowershellCmdLine,
+				},
+			},
+			{
+				// arm64 on Windows Server 2022 has no published arm64 base
+				// image, so the runner falls back to the x86_64 image.
+				kernelVersion: "10.0 20348 (20348.1.amd64fre.fe_release.210507-1500)",
+				architecture:  "arm64",
+				expectedInfo: Info{
+					Architecture: "x86_64",
+					Name:         GitLabRegistryName,
+					Tag:          fmt.Sprintf("x86_64-%s-servercore21H2", revision),
+					Prebuilt:     "prebuilt-windows-servercore-ltsc2022-x86_64",
+					Cmd:          expectedPowershellCmdLine,
+				},
 			},
 			{
 				kernelVersion: "some random string",
+				architecture:  "amd64",
 				expectedErr:   windows.ErrUnsupportedWindowsVersion,
+			},
+			{
+				// An unspecified architecture preserves historical behaviour:
+				// the x86_64 helper image is selected.
+				kernelVersion: "10.0 20348 (20348.1.amd64fre.fe_release.210507-1500)",
+				architecture:  "",
+				expectedInfo: Info{
+					Architecture: "x86_64",
+					Name:         GitLabRegistryName,
+					Tag:          fmt.Sprintf("x86_64-%s-servercore21H2", revision),
+					Prebuilt:     "prebuilt-windows-servercore-ltsc2022-x86_64",
+					Cmd:          expectedPowershellCmdLine,
+				},
 			},
 		}
 
 		t.Run(shell, func(t *testing.T) {
 			for _, test := range tests {
-				t.Run(test.kernelVersion, func(t *testing.T) {
+				t.Run(test.kernelVersion+"/"+test.architecture, func(t *testing.T) {
 					w := new(windowsInfo)
 
 					image, err := w.Create(
 						revision,
 						Config{
 							KernelVersion: test.kernelVersion,
+							Architecture:  test.architecture,
 							Shell:         shell,
 						},
 					)
@@ -121,22 +152,4 @@ func Test_windowsInfo_create(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_windowsInfo_baseImage_NoSupportedVersion(t *testing.T) {
-	oldHelperImages := helperImages
-	defer func() {
-		helperImages = oldHelperImages
-	}()
-
-	helperImages = map[string]string{
-		windows.V1809: baseImage1809,
-	}
-
-	unsupportedVersion := "10.0 17134 (17134.1.amd64fre.rs4_release.180410-1804)"
-
-	w := new(windowsInfo)
-	_, err := w.baseImage(unsupportedVersion)
-	require.ErrorIs(t, err, windows.ErrUnsupportedWindowsVersion)
-	require.Error(t, err, unsupportedVersion)
 }

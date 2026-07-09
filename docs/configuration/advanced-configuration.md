@@ -2275,6 +2275,16 @@ in your [configuration file](../executors/kubernetes/_index.md#configuration-set
   helper_image = "my.registry.local/gitlab/gitlab-runner-helper:arm64-v${CI_RUNNER_VERSION}"
 ```
 
+### Windows helper image selection
+
+On Windows, GitLab Runner automatically selects the helper image that matches the host's Windows
+version and CPU architecture (`x86_64` or `arm64`).
+
+> [!note]
+> ARM64 helper images are currently only available on Windows Server 2025 (24H2).
+
+For the list of available images, see [Windows helper images](../executors/docker.md#windows-helper-images).
+
 ### Runner images that use an old version of Alpine Linux
 
 {{< history >}}

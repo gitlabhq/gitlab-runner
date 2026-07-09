@@ -31,6 +31,20 @@ const (
 	latestImageVersion = "latest"
 )
 
+// Architecture name tokens shared by the per-OS image builders. The platform*
+// values are architecture spellings that may be reported by the host (Docker
+// daemon, runtime.GOARCH, or configuration); the arch* values are the canonical
+// tokens used in helper image names and tags.
+const (
+	platformAmd64   = "amd64"
+	platformArm6vl  = "armv6l"
+	platformArmv7l  = "armv7l"
+	platformAarch64 = "aarch64"
+	archX8664       = "x86_64"
+	archArm         = "arm"
+	archArm64       = "arm64"
+)
+
 type Info struct {
 	OSType       string
 	Architecture string

@@ -28,10 +28,19 @@ Windows versions can run older helper images (backward compatibility),
 or might require a newly built helper image. For compatibility details, see
 [Windows container version compatibility](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility)
 
-To support a new host OS environment or helper image, update the
-[windows-containers](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers) repository to build a base image.
-The [autoscaler](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/autoscaler) uses the
-base image to build the GitLab Runner helper image.
+The GitLab Runner helper image is built from a base image published by the
+[runner-tools/base-images](https://gitlab.com/gitlab-org/ci-cd/runner-tools/base-images) project.
+The `windows` target in `dockerfiles/runner-helper/docker-bake.hcl` defines the build configuration.
+
+To support a new Windows version or architecture, that project must first publish the matching
+`runner-helper:<version>-servercore-ltsc<year>[-<arch>]` base image. For example,
+[merge request 88](https://gitlab.com/gitlab-org/ci-cd/runner-tools/base-images/-/merge_requests/88)
+added the `ltsc2025`, `ltsc2025-arm64`, `servercore`, and `nanoserver` base images.
+
+The [`windows-containers`](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers) 
+repository builds the GCP host VM images for the shared Windows runner fleet. 
+The [autoscaler](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/autoscaler) 
+provisions them.
 
 For example, when adding support for Windows Server 2025,
 backward compatibility allowed reuse of the existing 2022 helper images.
@@ -51,7 +60,7 @@ We recommend testing the image generated in the `dev` step. It is likely to be n
 
 To test the image, the following steps can be followed:
 
-1. Add support for the new windows server version in [`GitLab Runner project`](https://gitlab.com/gitlab-org/gitlab-runner) and generate the `gitlab-runner-helper.x86_64-windows.exe` binary.
+1. Add support for the new windows server version in [`GitLab Runner project`](https://gitlab.com/gitlab-org/gitlab-runner) and generate the `gitlab-runner-helper.x86_64-windows.exe` binary (or `gitlab-runner-helper.arm64-windows.exe` for ARM64 hosts).
 1. Create a VM using the disk image generated during the `dev` step.
    When adding support for `windows server ltsc2022`, the disk image name was
    [`runners-windows-21h1-core-containers-dev-40-mr`](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/jobs/2333691567#L697)
@@ -160,23 +169,38 @@ allow the new Windows version.
 
 We should update the following:
 
-1. [List of support versions](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/v13.4.1/helpers/container/windows/version.go#L38-42), and tests surrounding it.
-1. [List of base images](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/v13.4.1/helpers/container/helperimage/windows_info.go#L10-21), and tests surrounding it.
-1. [Update GitLab CI to run tests on the default branch](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/v13.4.1/.gitlab/ci/test.gitlab-ci.yml#L176-180).
-1. [Update the `release` stage](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/v13.4.1/.gitlab-ci.yml#L8).
+1. **Windows version detection**: Add the kernel build number and version constant to
+   `supportedWindowsBuilds` in `helpers/container/windows/version.go`, and update the surrounding tests.
+1. **Version-to-image mapping**: Add the version to the `ltsc` map in
+   `helpers/container/helperimage/windows_info.go`, and update the surrounding tests. The image tag,
+   prebuilt bundle name, and host architecture are all derived from this mapping.
+1. **Helper image build**: Add the new `servercore:ltsc<year>` entry (and, for a new architecture,
+   the `-arch` variant) to the `windows` target in `dockerfiles/runner-helper/docker-bake.hcl`.
+1. **Publish mapping**: Map the built artifact to its published registry tag in
+   `scripts/pusher/helper-images.json`.
+1. **CI jobs**: Add or update the following:
 
-For example, if we want to add support for `Windows Server Core 2004` in
-the 13.7 milestone we can see the following
-[merge request](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2459),
-where we update the following files:
+   - Prebuilt helper image job in `.gitlab/ci/build.gitlab-ci.yml`
+   - `WINDOWS_VERSION` or `WINDOWS_PREBUILT` variables in `.gitlab/ci/_common.gitlab-ci.yml` (to run tests on the new version)
+   - Test jobs in `.gitlab/ci/test.gitlab-ci.yml` and `.gitlab/ci/coverage.gitlab-ci.yml`
+   - Quarantine file `ci/.test-failures.servercore<version>.txt`
+1. **Documentation**: Update the supported versions and helper image list in `docs/executors/docker.md`.
 
-1. `helpers/container/helperimage/windows_info.go`
-1. `helpers/container/helperimage/windows_info_test.go`
-1. `helpers/container/windows/version.go`
-1. `helpers/container/windows/version_test.go`
-1. `.gitlab/ci/test.gitlab-ci.yml`
-1. `.gitlab/ci/coverage.gitlab-ci.yml`
-1. `.gitlab/ci/_common.gitlab-ci.yml`
-1. `.gitlab/ci/release.gitlab-ci.yml`
-1. `ci/.test-failures.servercore2004.txt`
-1. `docs/executors/docker.md`
+Example: Windows Server 2025 (LTSC2025) helper image support, including the `arm64`
+variant, was implemented across several merge requests (parent
+[issue 39182](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39182)):
+
+- [Merge request 88](https://gitlab.com/gitlab-org/ci-cd/runner-tools/base-images/-/merge_requests/88):
+  Added the `ltsc2025` and `ltsc2025-arm64` base images (prerequisite in the `runner-tools/base-images` project).
+- [Merge request 6033](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6033): Built
+  `servercore:ltsc2025` and `servercore:ltsc2025-arm64` helper images from
+  `dockerfiles/runner-helper/docker-bake.hcl`, `scripts/pusher/helper-images.json`,
+  `.gitlab/ci/build.gitlab-ci.yml` base images. At this stage, the ARM64 image bundled the AMD64 helper
+  binary under Windows emulation.
+- [Merge request 6697](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6697): Added a native ARM64
+  `gitlab-runner-helper.exe` build target (`Makefile.runner_helper.mk`, `ci/release_dir`).
+- [Merge request 6716](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6716): Bundled the native
+  ARM64 helper binary into the `servercore:ltsc2025-arm64` image instead of the emulated AMD64 binary
+  (`dockerfiles/runner-helper/docker-bake.hcl`, `scripts/pusher/helper-images.json`).
+- [Merge request 6717](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6717): Built 
+  `nanoserver:ltsc2025` and `nanoserver:ltsc2025-arm64` helper images.
