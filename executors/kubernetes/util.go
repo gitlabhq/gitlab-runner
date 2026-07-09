@@ -278,10 +278,12 @@ func waitForPodRunning(
 ) (api.PodPhase, error) {
 	pollInterval := config.GetPollInterval()
 	pollAttempts := config.GetPollAttempts()
+	var lastPhase api.PodPhase
 	for i := 0; i <= pollAttempts; i++ {
 		select {
 		case r := <-triggerPodPhaseCheck(ctx, c, pod, out, containers...):
 			if !r.done {
+				lastPhase = r.phase
 				time.Sleep(time.Duration(pollInterval) * time.Second)
 				continue
 			}
@@ -290,7 +292,10 @@ func waitForPodRunning(
 			return api.PodUnknown, ctx.Err()
 		}
 	}
-	return api.PodUnknown, errors.New("timed out waiting for pod to start")
+	if lastPhase == "" {
+		lastPhase = api.PodUnknown
+	}
+	return api.PodUnknown, fmt.Errorf("timed out waiting for pod to start (last phase: %s)", lastPhase)
 }
 
 func getPodLog(ctx context.Context, client kubernetes.Interface, pod *api.Pod) error {
