@@ -191,27 +191,48 @@ func checkTerminalPodErrors(pod *v1.Pod) error {
 
 // CheckTerminalContainerErrors checks individual container statuses for errors we can't recover from.
 func CheckTerminalContainerErrors(containerStatuses []v1.ContainerStatus) error {
-	for _, containerStatus := range containerStatuses {
-		if containerStatus.Ready {
-			continue
-		}
-
-		waiting := containerStatus.State.Waiting
-		if waiting == nil {
+	for _, status := range containerStatuses {
+		waiting := status.State.Waiting
+		if status.Ready || waiting == nil {
 			continue
 		}
 
 		switch waiting.Reason {
 		case "InvalidImageName":
-			return &common.BuildError{Inner: fmt.Errorf("image pull failed: %s", waiting.Message), FailureReason: common.ConfigurationError}
+			return &common.BuildError{
+				Inner:         fmt.Errorf("image pull failed: %s", waiting.Message),
+				FailureReason: common.ConfigurationError,
+			}
 		case "ErrImagePull", "ImagePullBackOff":
 			msg := fmt.Sprintf("image pull failed: %s", waiting.Message)
-			imagePullErr := &pull.ImagePullError{Message: msg, Container: containerStatus.Name, Image: containerStatus.Image}
-			return &common.BuildError{Inner: imagePullErr, FailureReason: common.ClassifyImagePullFailure(waiting.Message)}
+			imagePullErr := &pull.ImagePullError{Message: msg, Container: status.Name, Image: status.Image}
+			return &common.BuildError{
+				Inner:         imagePullErr,
+				FailureReason: common.ClassifyImagePullFailure(waiting.Message),
+			}
+		case "CrashLoopBackOff":
+			return &common.BuildError{
+				Inner:         fmt.Errorf("container %q is in CrashLoopBackOff: %s", status.Name, crashLoopMessage(status)),
+				FailureReason: common.ConfigurationError,
+			}
 		}
 	}
 
 	return nil
+}
+
+// crashLoopMessage combines the waiting message with the last termination message
+// (e.g. "exec format error" for a wrong-architecture image), if present.
+func crashLoopMessage(status v1.ContainerStatus) string {
+	msg := status.State.Waiting.Message
+	lastTerm := status.LastTerminationState.Terminated
+	if lastTerm == nil || lastTerm.Message == "" {
+		return msg
+	}
+	if msg == "" {
+		return lastTerm.Message
+	}
+	return fmt.Sprintf("%s: %s", msg, lastTerm.Message)
 }
 
 func getPodCondition(pod *v1.Pod, condition v1.PodConditionType) *v1.PodCondition {

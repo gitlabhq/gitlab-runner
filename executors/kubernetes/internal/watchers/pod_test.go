@@ -82,6 +82,16 @@ func TestPodWatcher(t *testing.T) {
 			expectedErrMsg:        "image pull failed",
 			expectedFailureReason: common.ConfigurationError,
 		},
+		"crash loop backoff": {
+			pod:                   withContainerWaiting(defaultPod(), "back-off 10s", "CrashLoopBackOff"),
+			expectedErrMsg:        `container "some-container" is in CrashLoopBackOff: back-off 10s`,
+			expectedFailureReason: common.ConfigurationError,
+		},
+		"crash loop backoff with last termination": {
+			pod:                   withContainerWaitingAndLastTermination(defaultPod(), "some-container", "back-off 10s", "CrashLoopBackOff", "exec format error"),
+			expectedErrMsg:        `container "some-container" is in CrashLoopBackOff: back-off 10s: exec format error`,
+			expectedFailureReason: common.ConfigurationError,
+		},
 		"healthy pod": {
 			pod: defaultPod(),
 		},
@@ -292,6 +302,27 @@ func withContainerWaiting(pod *v1.Pod, msg, reason string) *v1.Pod {
 			Waiting: &v1.ContainerStateWaiting{
 				Reason:  reason,
 				Message: msg,
+			},
+		},
+	})
+	return p
+}
+
+func withContainerWaitingAndLastTermination(pod *v1.Pod, containerName, msg, reason, lastTermMsg string) *v1.Pod {
+	p := pod.DeepCopy()
+	p.Status.ContainerStatuses = append(p.Status.ContainerStatuses, v1.ContainerStatus{
+		Name: containerName,
+		State: v1.ContainerState{
+			Waiting: &v1.ContainerStateWaiting{
+				Reason:  reason,
+				Message: msg,
+			},
+		},
+		LastTerminationState: v1.ContainerState{
+			Terminated: &v1.ContainerStateTerminated{
+				ExitCode: 1,
+				Reason:   "Error",
+				Message:  lastTermMsg,
 			},
 		},
 	})
