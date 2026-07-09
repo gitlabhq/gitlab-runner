@@ -773,7 +773,7 @@ The following settings define the Docker container parameters. These settings ar
 | `device_cgroup_rules`              |                                                  | Custom device `cgroup` rules (available in Docker 1.28 or later). |
 | `disable_cache`                    |                                                  | The Docker executor has two levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
 | `disable_entrypoint_overwrite`     |                                                  | Disable the image entrypoint overwriting. |
-| `dns`                              | `["8.8.8.8"]`                                    | A list of DNS servers for the container to use. |
+| `dns`                              | `["8.8.8.8"]`                                    | A list of DNS servers for the container to use. Must be valid IP addresses. Invalid values fail the job during the prepare stage. Validation [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6947) in GitLab 19.2.|
 | `dns_search`                       |                                                  | A list of DNS search domains. |
 | `extra_hosts`                      | `["other-host:127.0.0.1"]`                       | Hosts that should be defined in container environment. |
 | `gpus`                             |                                                  | GPU devices for Docker container. Uses the same format as the `docker` CLI. View details in the [Docker documentation](https://docs.docker.com/engine/containers/resource_constraints/#gpu). Requires [configuration to enable GPUs](gpus.md#docker-executor). |
@@ -790,7 +790,7 @@ The following settings define the Docker container parameters. These settings ar
 | `memory_swap`                      | `"256m"`                                         | The total memory limit. A string. |
 | `memory_reservation`               | `"64m"`                                          | The memory soft limit. A string. |
 | `network_mode`                     |                                                  | Add container to a custom network. |
-| `mac_address`                      | `92:d0:c6:0a:29:33`                              | Container MAC address |
+| `mac_address`                      | `92:d0:c6:0a:29:33`                              | Container MAC address. Must be a valid MAC address. An invalid value fails the job during the prepare stage. Validation [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6947) in GitLab 19.2. |
 | `oom_kill_disable`                 |                                                  | If an out-of-memory (`OOM`) error occurs, do not terminate processes in a container. |
 | `oom_score_adjust`                 |                                                  | `OOM` score adjustment. Positive means terminate the processes earlier. |
 | `privileged`                       | `false`                                          | Make the container run in privileged mode. Insecure. |
