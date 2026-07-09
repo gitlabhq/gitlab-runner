@@ -29,10 +29,15 @@ it's own dedicated IP address so GitLab Runner can SSH inside of it to
 run commands. An SSH key can be generated
 [using the following commands](https://docs.gitlab.com/user/ssh/#generate-an-ssh-key-pair).
 
+## Build the base image
+
 A base disk VM image is created so that dependencies are not downloaded
-every build. In the following example,
-[virt-builder](https://libguestfs.org/virt-builder.1.html) is used to
-create a disk VM image.
+every build. Build it for the guest operating system family you run.
+
+### Debian and Ubuntu (`virt-builder`)
+
+[`virt-builder`](https://libguestfs.org/virt-builder.1.html) creates the base
+image directly from a template:
 
 ```shell
 virt-builder debian-12 \
@@ -56,13 +61,66 @@ virt-builder debian-12 \
     --run-command "echo 'iface eth0 inet dhcp' >> /etc/network/interfaces"
 ```
 
-The command above will install all the
+The previous command installs all the
 [prerequisites](../custom.md#prerequisite-software-for-running-a-job) specified
 earlier.
 
-`virt-builder` will set a root password automatically which is printed
-at the end. If you want to specify a password yourself, pass
+`virt-builder` sets a root password automatically and prints it at the end.
+To set your own, pass
 [`--root-password password:$SOME_PASSWORD`](https://libguestfs.org/virt-builder.1.html#setting-the-root-password).
+
+### RHEL, CentOS, and AlmaLinux (`virt-customize`)
+
+`virt-builder` ships no licensed RHEL guest template. Download the
+distribution's GenericCloud `qcow2` and customize it offline with
+[`virt-customize`](https://libguestfs.org/virt-customize.1.html). This example
+uses the AlmaLinux 9 `x86_64` image; substitute the RHEL or CentOS Stream 9
+image, or a different architecture, as needed.
+
+```shell
+IMAGES=/var/lib/libvirt/images
+BASE="$IMAGES/gitlab-runner-base.qcow2"
+
+curl -fL "https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2" -o "$BASE"
+qemu-img resize "$BASE" 12G
+
+virt-customize -a "$BASE" \
+    --run-command 'curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | bash' \
+    --run-command 'curl -L "https://packagecloud.io/install/repositories/github/git-lfs/script.rpm.sh" | bash' \
+    --install gitlab-runner,git,git-lfs,openssh-server \
+    --run-command 'git lfs install --skip-repo' \
+    --run-command 'id gitlab-runner >/dev/null 2>&1 || useradd -m -s /bin/bash gitlab-runner' \
+    --ssh-inject gitlab-runner:file:/root/.ssh/id_rsa.pub \
+    --run-command 'echo "gitlab-runner ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gitlab-runner' \
+    --run-command 'systemctl enable sshd' \
+    --selinux-relabel
+```
+
+RHEL-family specifics:
+
+- Use the `.rpm.sh` package repository scripts and `dnf`. The tools that provide
+  `virt-customize` and `virt-install` are in the `guestfs-tools` package.
+- Install whatever runtime your jobs need into the base image. This example
+  installs `gitlab-runner`, `git`, `git-lfs`, and `openssh-server`. Add a
+  container engine such as `podman` if jobs build images inside the VM.
+- Pass `--selinux-relabel` so the guest boots clean under enforcing SELinux, and
+  keep images under `/var/lib/libvirt/images/` so they carry the `virt_image_t`
+  SELinux label.
+- Unlike the Debian recipe, the GenericCloud image doesn't need `net.ifnames` or
+  `/etc/network/interfaces`. It boots with `cloud-init` and `NetworkManager`.
+  If you do change the kernel command line, regenerate GRUB with `grub2-mkconfig`.
+- Start a libvirt daemon and confirm nested virtualization with
+  `virt-host-validate`. libvirt 9 and later ship the modular daemons
+  (`virtqemud` and companions). The monolithic `libvirtd` compatibility unit also
+  works and might already be socket-activated. Enable whichever your
+  installation provides and confirm it is active.
+- The Custom executor scripts must talk to the system libvirt instance, where
+  these VMs live. The [base](#base) script sets
+  `export LIBVIRT_DEFAULT_URI="qemu:///system"` for this connection.
+- In the [prepare](#prepare) script, set `--os-variant` to an ID your `osinfo-db`
+  recognizes. This example uses `rhel9.0`. `almalinux9` or `centos-stream9` also
+  work if `osinfo-db` includes them. List available IDs with
+  `osinfo-query os`.
 
 ## Configuration
 
@@ -111,6 +169,10 @@ BASE_VM_IMAGE="$VM_IMAGES_PATH/gitlab-runner-base.qcow2"
 VM_ID="runner-$CUSTOM_ENV_CI_RUNNER_ID-project-$CUSTOM_ENV_CI_PROJECT_ID-concurrent-$CUSTOM_ENV_CI_CONCURRENT_PROJECT_ID-job-$CUSTOM_ENV_CI_JOB_ID"
 VM_IMAGE="$VM_IMAGES_PATH/$VM_ID.qcow2"
 
+# Talk to the system libvirt instance, where these VMs live, rather than the
+# per-user session instance.
+export LIBVIRT_DEFAULT_URI="qemu:///system"
+
 _get_vm_ip() {
     virsh -q domifaddr "$VM_ID" | awk '{print $4}' | sed -E 's|/([0-9]+)?$||'
 }
@@ -145,7 +207,7 @@ qemu-img create -f qcow2 -b "$BASE_VM_IMAGE" "$VM_IMAGE" -F qcow2
 # To boot VM in UEFI mode, add: --boot uefi
 virt-install \
     --name "$VM_ID" \
-    --os-variant debian11 \
+    --os-variant debian12 \
     --disk "$VM_IMAGE" \
     --import \
     --vcpus=2 \
