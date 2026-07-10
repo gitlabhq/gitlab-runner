@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -284,6 +285,55 @@ func TestS3ClientCaching_BuildErrorEvicted(t *testing.T) {
 	c, err := newS3Client(s3Config)
 	require.NoError(t, err)
 	require.NotNil(t, c)
+}
+
+func fillNonZero(t *testing.T, v reflect.Value) {
+	t.Helper()
+
+	switch v.Kind() {
+	case reflect.String:
+		v.SetString("nonzero")
+	case reflect.Bool:
+		v.SetBool(true)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v.SetInt(1)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v.SetUint(1)
+	case reflect.Float32, reflect.Float64:
+		v.SetFloat(1)
+	case reflect.Pointer:
+		value := reflect.New(v.Type().Elem())
+		fillNonZero(t, value.Elem())
+		v.Set(value)
+	case reflect.Struct:
+		for i := range v.NumField() {
+			fillNonZero(t, v.Field(i))
+		}
+	default:
+		t.Fatalf("fillNonZero: unsupported kind %s for type %s", v.Kind(), v.Type())
+	}
+}
+
+// TestS3ClientCacheKey_StableAcrossDeepCopy ensures every CacheS3Config field
+// remains value-keyed when RunnerConfig creates its per-build JSON deep copy.
+func TestS3ClientCacheKey_StableAcrossDeepCopy(t *testing.T) {
+	var original cacheconfig.CacheS3Config
+	fillNonZero(t, reflect.ValueOf(&original).Elem())
+
+	originalValue := reflect.ValueOf(original)
+	for i := range originalValue.NumField() {
+		require.Falsef(t, originalValue.Field(i).IsZero(),
+			"field %s was not populated", originalValue.Type().Field(i).Name)
+	}
+
+	data, err := json.Marshal(&original)
+	require.NoError(t, err)
+
+	var copied cacheconfig.CacheS3Config
+	require.NoError(t, json.Unmarshal(data, &copied))
+
+	assert.True(t, newS3ClientCacheKey(&original) == newS3ClientCacheKey(&copied),
+		"cache key must remain stable across a JSON deep copy; a new pointer field may need flattening")
 }
 
 func TestNewS3ClientOptions(t *testing.T) {
