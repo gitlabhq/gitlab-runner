@@ -362,13 +362,19 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	s.AbstractExecutor.PrepareConfiguration(options)
 
 	if err = s.prepareOverwrites(options.Build.GetAllVariables()); err != nil {
-		return fmt.Errorf("couldn't prepare overwrites: %w", err)
+		return &common.BuildError{
+			Inner:         fmt.Errorf("couldn't prepare overwrites: %w", err),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	s.prepareOptions(options.Build)
 
 	if err = s.prepareServiceOverwrites(s.options.Services); err != nil {
-		return fmt.Errorf("couldn't prepare explicit service overwrites: %w", err)
+		return &common.BuildError{
+			Inner:         fmt.Errorf("couldn't prepare explicit service overwrites: %w", err),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	// Dynamically configure use of shared build dir allowing
@@ -376,17 +382,26 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	s.SharedBuildsDir = s.isSharedBuildsDirRequired()
 
 	if err = s.checkDefaults(); err != nil {
-		return fmt.Errorf("check defaults error: %w", err)
+		return &common.BuildError{
+			Inner:         fmt.Errorf("check defaults error: %w", err),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	s.kubeConfig, err = s.getKubeConfig(s.Config.Kubernetes, s.configurationOverwrites)
 	if err != nil {
-		return fmt.Errorf("getting Kubernetes config: %w", err)
+		return &common.BuildError{
+			Inner:         fmt.Errorf("getting Kubernetes config: %w", err),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	s.kubeClient, err = s.newKubeClient(s.kubeConfig)
 	if err != nil {
-		return fmt.Errorf("connecting to Kubernetes: %w", err)
+		return &common.BuildError{
+			Inner:         fmt.Errorf("creating Kubernetes client: %w", err),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	s.helperImageInfo, err = s.prepareHelperImage()
@@ -422,11 +437,17 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	if err = s.AbstractExecutor.PrepareBuildAndShell(); err != nil {
-		return fmt.Errorf("prepare build and shell: %w", err)
+		return &common.BuildError{
+			Inner:         fmt.Errorf("prepare build and shell: %w", err),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	if s.BuildShell.PassFile {
-		return fmt.Errorf("kubernetes doesn't support shells that require script file")
+		return &common.BuildError{
+			Inner:         fmt.Errorf("kubernetes doesn't support shells that require script file"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	s.podWatcher = s.newPodWatcher(podWatcherConfig{
@@ -453,7 +474,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 func (s *executor) preparePullManager() (pull.Manager, error) {
 	allowedPullPolicies, err := s.Config.Kubernetes.GetAllowedPullPolicies()
 	if err != nil {
-		return nil, err
+		return nil, &common.BuildError{
+			Inner:         fmt.Errorf("getting allowed pull policies: %w", err),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	dockerPullPoliciesPerContainer := map[string][]common.DockerPullPolicy{
@@ -479,7 +503,10 @@ func (s *executor) preparePullManager() (pull.Manager, error) {
 	for containerName, pullPolicies := range dockerPullPoliciesPerContainer {
 		k8sPullPolicies, err := s.getPullPolicies(pullPolicies)
 		if err != nil {
-			return nil, fmt.Errorf("converting pull policy for container %q: %w", containerName, err)
+			return nil, &common.BuildError{
+				Inner:         fmt.Errorf("converting pull policy for container %q: %w", containerName, err),
+				FailureReason: common.ConfigurationError,
+			}
 		}
 
 		k8sPullPolicies, err = pull_policies.ComputeEffectivePullPolicies(
