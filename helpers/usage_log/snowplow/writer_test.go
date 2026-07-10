@@ -124,6 +124,7 @@ func TestWriter_Store(t *testing.T) {
 	// Verify metadata
 	metadata, ok := billingData["metadata"].(map[string]interface{})
 	require.True(t, ok, "Expected metadata object")
+	assert.Equal(t, "runner_compute_usage", metadata["feature_qualified_name"])
 	assert.Equal(t, "success", metadata["job_status"])
 	assert.Equal(t, "", metadata["job_failure_reason"])
 	assert.Equal(t, "docker", metadata["executor"])
@@ -263,6 +264,7 @@ func TestWriter_BuildBillingInputs(t *testing.T) {
 		assert.Equal(t, "docker", optional.Metadata["executor"])
 		assert.NotEmpty(t, optional.Metadata["started_at"])
 		assert.NotEmpty(t, optional.Metadata["finished_at"])
+		assert.Equal(t, "runner_compute_usage", optional.Metadata["feature_qualified_name"])
 	}
 
 	tests := map[string]struct {
