@@ -94,7 +94,7 @@ Le tableau ci-dessous présente les informations clés pour chaque exécuteur, a
 1. Lorsque l'accès au système de fichiers d'un runner n'est pas protégé, les jobs peuvent accéder à l'ensemble du système, y compris le token du runner ainsi que le cache et le code des autres jobs. Les exécuteurs marqués ✓ n'autorisent pas le runner à accéder au système de fichiers par défaut. Cependant, des failles de sécurité ou certaines configurations pourraient permettre aux jobs de sortir de leur conteneur et d'accéder au système de fichiers hébergeant le runner.
 1. Si les builds utilisent des services installés sur la machine de build, la sélection d'exécuteurs est possible mais problématique.
 1. Nécessite une installation manuelle des dépendances.
-1. Par exemple, en utilisant la [documentation Vagrant ](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "pour VirtualBox").
+1. Par exemple, en utilisant la [documentation Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "pour VirtualBox").
 
 ### Exécuteur Docker {#docker-executor}
 
