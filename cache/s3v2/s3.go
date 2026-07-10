@@ -553,14 +553,63 @@ func detectBucketLocation(s3Config *cacheconfig.CacheS3Config, optFuncs ...func(
 }
 
 // clientInit holds a lazily-built s3Client. sync.Once ensures that concurrent
-// callers for the same s3Config pointer share a single buildS3Client call.
+// callers for the same cache key share a single buildS3Client call.
 type clientInit struct {
 	once   sync.Once
 	client s3Presigner
 	err    error
 }
 
-// s3ClientCache maps *cacheconfig.CacheS3Config → *clientInit.
+type s3ClientCacheKey struct {
+	config       cacheconfig.CacheS3Config
+	dualStackSet bool
+	dualStack    bool
+	pathStyleSet bool
+	pathStyle    bool
+}
+
+// Compile-time guard: s3ClientCacheKey must stay comparable to be usable as a
+// sync.Map key. Adding a slice, map, or function field to CacheS3Config would
+// otherwise only fail at runtime with a panic in LoadOrStore.
+var _ = map[s3ClientCacheKey]struct{}{}
+
+// newS3ClientCacheKey derives a canonical, comparable cache key from an
+// effective S3 configuration. Pointer-valued options (DualStack, PathStyle)
+// are flattened into set/value pairs so JSON deep copies of the same
+// configuration produce equal keys. A nil pointer and an explicitly set
+// pointer are deliberately distinct keys, even when the enabled-state they
+// resolve to is the same: being conservative here only costs one extra cached
+// client, whereas collapsing them would risk sharing a client across configs
+// that resolve differently (PathStyleEnabled auto-detection).
+//
+// Every CacheS3Config field must remain operator-controlled (config.toml).
+// If a field ever becomes job-influenced, value keying would reintroduce
+// unbounded cache growth.
+//
+// config must not be nil; newS3Client enforces this before calling.
+func newS3ClientCacheKey(config *cacheconfig.CacheS3Config) s3ClientCacheKey {
+	key := s3ClientCacheKey{config: *config}
+	key.config.DualStack = nil
+	key.config.PathStyle = nil
+
+	if config.DualStack != nil {
+		key.dualStackSet = true
+		key.dualStack = *config.DualStack
+	}
+	if config.PathStyle != nil {
+		key.pathStyleSet = true
+		key.pathStyle = *config.PathStyle
+	}
+
+	return key
+}
+
+// s3ClientCache maps CacheS3Config values to lazily initialized clients.
+//
+// RunnerConfig is deep-copied for every build, so pointers to otherwise identical
+// CacheS3Config values are not stable across jobs. Keying by value allows those
+// per-build copies to share a client while still creating a new client whenever
+// the effective S3 configuration changes.
 var s3ClientCache sync.Map
 
 // buildS3Client constructs a new s3Client without any caching.
@@ -568,6 +617,20 @@ func buildS3Client(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOptio
 	cfg, client, err := newRawS3Client(s3Config)
 	if err != nil {
 		return nil, err
+	}
+
+	// Store a private copy of the config, including pointer-valued fields.
+	// Cached clients are shared across callers holding different (but
+	// equal-valued) config pointers, so the client must not alias a caller's
+	// mutable struct or its pointed-to values.
+	configCopy := *s3Config
+	if s3Config.DualStack != nil {
+		dualStack := *s3Config.DualStack
+		configCopy.DualStack = &dualStack
+	}
+	if s3Config.PathStyle != nil {
+		pathStyle := *s3Config.PathStyle
+		configCopy.PathStyle = &pathStyle
 	}
 
 	presignClient := s3.NewPresignClient(client)
@@ -583,7 +646,7 @@ func buildS3Client(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOptio
 	}
 
 	c := &s3Client{
-		s3Config:         s3Config,
+		s3Config:         &configCopy,
 		awsConfig:        cfg,
 		client:           client,
 		presignClient:    presignClient,
@@ -600,10 +663,19 @@ func buildS3Client(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOptio
 
 // newS3Client returns a cached s3Client for the given config when possible.
 //
-// The s3Config pointer is used as the cache key. Each config load allocates a
-// fresh CacheS3Config (TOML unmarshal creates new objects), so pointer identity
-// naturally captures both "which runner" and "which load": after a config
-// reload the pointer changes and the old entry is never matched again.
+// The effective CacheS3Config value is used as the cache key. Pointer-valued
+// options are normalized to their set/value states so deep-copied configurations
+// compare equally. Otherwise, RunnerConfig's per-build deep copy would create and
+// retain a new AWS client for every cache-using job.
+//
+// A config reload that leaves the S3 configuration values unchanged reuses the
+// cached client. Ambient process state read once at construction time — the
+// AWS_RESPONSE_CHECKSUM_VALIDATION and AWS_REQUEST_CHECKSUM_CALCULATION
+// environment variables, and the credential source selection made by
+// config.LoadDefaultConfig (AWS_PROFILE, shared config/credentials files,
+// IMDS) — therefore requires a process restart to take effect. Credentials
+// themselves are refreshed internally by the SDK's provider chain, so
+// IAM-role credential rotation works without a restart.
 //
 // Caching is skipped when options are provided (options such as withSTSEndpoint
 // mutate the client and must not be shared across callers).
@@ -612,12 +684,28 @@ func buildS3Client(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOptio
 // s3Config pointer issue only one newRawS3Client call (and therefore one IMDS
 // request) even during the initial population or after a reload.
 var newS3Client = func(s3Config *cacheconfig.CacheS3Config, options ...s3ClientOption) (s3Presigner, error) {
+	if s3Config == nil {
+		return nil, fmt.Errorf("missing S3 configuration")
+	}
+
+	// Configs without an explicit BucketLocation trigger bucket-region
+	// auto-detection inside newRawS3Client, which silently falls back to
+	// us-east-1 on transient errors. Caching would pin that fallback client
+	// for the process lifetime, so such configs must never touch
+	// s3ClientCache, regardless of options. This matches the effective
+	// pre-fix behavior: pointer keys never produced cross-job reuse, and
+	// per-call detection lets a transient failure self-heal.
+	if s3Config.BucketLocation == "" {
+		return buildS3Client(s3Config, options...)
+	}
+
 	if len(options) > 0 {
 		return buildS3Client(s3Config, options...)
 	}
 
+	key := newS3ClientCacheKey(s3Config)
 	init := &clientInit{}
-	actual, _ := s3ClientCache.LoadOrStore(s3Config, init)
+	actual, _ := s3ClientCache.LoadOrStore(key, init)
 	ci, ok := actual.(*clientInit)
 	if !ok {
 		return buildS3Client(s3Config)
@@ -625,7 +713,7 @@ var newS3Client = func(s3Config *cacheconfig.CacheS3Config, options ...s3ClientO
 	ci.once.Do(func() {
 		ci.client, ci.err = buildS3Client(s3Config)
 		if ci.err != nil {
-			s3ClientCache.CompareAndDelete(s3Config, ci)
+			s3ClientCache.CompareAndDelete(key, ci)
 		}
 	})
 	return ci.client, ci.err
