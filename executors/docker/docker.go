@@ -507,7 +507,7 @@ func (e *executor) createService(
 	e.BuildLogger.Debugln("Creating service container", containerName, "...")
 	resp, err := e.dockerConn.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
 	if err != nil {
-		return nil, err
+		return nil, classifyContainerCreateError(err)
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Starting service container %s (%s)...", containerName, resp.ID))
@@ -976,11 +976,29 @@ func (e *executor) createContainer(
 		}
 	}
 	if err != nil {
-		return nil, err
+		return nil, classifyContainerCreateError(err)
 	}
 
 	inspect, err := e.dockerConn.ContainerInspect(e.Context, resp.ID)
 	return &inspect, err
+}
+
+// classifyContainerCreateError maps a container-create failure to a job failure
+// reason. The daemon returns HTTP 400 (errdefs.InvalidArgument) when the create
+// request is malformed — typically a user-configuration problem such as a
+// malformed environment variable exported by the job's shell profile
+// (`invalid environment variable: =/builds/...`). Report those as a
+// configuration error so they are not counted as a runner system failure.
+//
+// Everything else (daemon 5xx, connectivity issues, etc.) is returned unchanged
+// and keeps the default RunnerSystemFailure classification: unlike an opt-in
+// external service, the Docker daemon is the runner's own execution substrate,
+// so a daemon-side failure is a genuine system failure.
+func classifyContainerCreateError(err error) error {
+	if errdefs.IsInvalidArgument(err) {
+		return &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
+	}
+	return err
 }
 
 func (e *executor) createContainerConfig(

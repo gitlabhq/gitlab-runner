@@ -744,6 +744,43 @@ func TestCreateDependencies(t *testing.T) {
 	assert.Equal(t, testError, err)
 }
 
+func TestClassifyContainerCreateError(t *testing.T) {
+	tests := map[string]struct {
+		err              error
+		expectBuildError bool
+		expectedReason   spec.JobFailureReason
+	}{
+		"invalid argument (daemon 400) becomes ConfigurationError": {
+			err:              fmt.Errorf("create container: %w", errdefs.ErrInvalidArgument.WithMessage("invalid environment variable: =/builds/gold-trial1/test.tmp")),
+			expectBuildError: true,
+			expectedReason:   common.ConfigurationError,
+		},
+		"daemon internal error (5xx) is left unchanged": {
+			err: fmt.Errorf("create container: %w", errdefs.ErrInternal.WithMessage("something broke on the daemon")),
+		},
+		"generic error is left unchanged": {
+			err: errors.New("dial unix /var/run/docker.sock: connect: connection refused"),
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			result := classifyContainerCreateError(tt.err)
+
+			var buildErr *common.BuildError
+			if !tt.expectBuildError {
+				assert.False(t, errors.As(result, &buildErr), "expected error to be left unchanged")
+				assert.Equal(t, tt.err, result)
+				return
+			}
+
+			require.ErrorAs(t, result, &buildErr)
+			assert.Equal(t, tt.expectedReason, buildErr.FailureReason)
+			assert.ErrorIs(t, result, tt.err, "must preserve the original error chain")
+		})
+	}
+}
+
 type containerConfigExpectations func(*testing.T, *container.Config, *container.HostConfig, *network.NetworkingConfig)
 
 type dockerConfigurationTestFakeDockerClient struct {
