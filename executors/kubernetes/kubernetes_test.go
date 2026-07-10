@@ -1262,6 +1262,10 @@ func TestPrepare(t *testing.T) {
 		// if Precondition is set and returns false, the test-case is skipped with the message provided
 		Precondition func() (bool, string)
 
+		// Setup is an optional hook to customize the executor before Prepare()
+		// runs (e.g. to inject mocked function fields).
+		Setup func(t *testing.T, e *executor)
+
 		// Note: this RunnerConfig will be added to the Build before we run the test, there are not 2 different
 		// RunnerConfigs at play, this split is there to ease the preparation of the test cases.
 		RunnerConfig               *common.RunnerConfig
@@ -1404,6 +1408,7 @@ func TestPrepare(t *testing.T) {
 			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
 				`couldn't prepare overwrites: provided value "not-default" does not match "allowed-.*"`,
 			)),
+			ExpectedFailureReason: common.ConfigurationError,
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2713,6 +2718,7 @@ func TestPrepare(t *testing.T) {
 				`invalid pull policy for container "(build|helper|init-permissions)": pull_policy ` +
 					regexp.QuoteMeta("([IfNotPresent]) defined in Runner config is not one of the allowed_pull_policies ([Always Never])"),
 			),
+			ExpectedFailureReason: common.ConfigurationError,
 		},
 		{
 			Name: "image pull policy is one of allowed pull policies",
@@ -2777,6 +2783,7 @@ func TestPrepare(t *testing.T) {
 				`invalid pull policy for container "(build|helper|init-permissions)": pull_policy ` +
 					regexp.QuoteMeta("([IfNotPresent]) defined in GitLab pipeline config is not one of the allowed_pull_policies ([Always Never])"),
 			),
+			ExpectedFailureReason: common.ConfigurationError,
 		},
 		{
 			Name: "both runner and image pull policies are defined",
@@ -2848,6 +2855,7 @@ func TestPrepare(t *testing.T) {
 			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
 				`allowed_pull_policies config: unsupported pull policy: "invalid"`,
 			)),
+			ExpectedFailureReason: common.ConfigurationError,
 		},
 		{
 			Name: "one of config pull policies is invalid",
@@ -2881,6 +2889,7 @@ func TestPrepare(t *testing.T) {
 			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
 				`pull_policy config: unsupported pull policy: "invalid"`,
 			)),
+			ExpectedFailureReason: common.ConfigurationError,
 		},
 		{
 			Name: "one of image pull policies is invalid",
@@ -2918,6 +2927,7 @@ func TestPrepare(t *testing.T) {
 			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
 				`conversion to Kubernetes policy: unsupported pull policy: "invalid"`,
 			)),
+			ExpectedFailureReason: common.ConfigurationError,
 		},
 		{
 			Name: "autoset helper arch and os",
@@ -3000,6 +3010,138 @@ func TestPrepare(t *testing.T) {
 				helperImageInfo:         defaultHelperImage,
 			},
 		},
+		{
+			Name: "no image specified",
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				Job: spec.Job{Image: spec.Image{}},
+			},
+			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
+				`check defaults error: no image specified and no default set in config`,
+			)),
+			ExpectedFailureReason: common.ConfigurationError,
+		},
+		{
+			Name: "invalid explicit service CPU limit overwrite",
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:                               "test-server",
+						ServiceCPULimit:                    "500m",
+						ServiceCPULimitOverwriteMaxAllowed: "500m",
+					},
+				},
+			},
+			Build: &common.Build{
+				Job: spec.Job{
+					Image: spec.Image{Name: "test-image"},
+					Services: spec.Services{
+						{
+							Name: "test-service",
+							Variables: spec.Variables{
+								{Key: "KUBERNETES_SERVICE_CPU_LIMIT", Value: "1000m"},
+							},
+						},
+					},
+				},
+			},
+			ErrorRE: regexp.MustCompile(
+				`couldn't prepare explicit service overwrites:`,
+			),
+			ExpectedFailureReason: common.ConfigurationError,
+		},
+		{
+			Name: "unknown shell",
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Shell: "nonexistent-shell",
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				Job: spec.Job{Image: spec.Image{Name: "test-image"}},
+			},
+			ErrorRE: regexp.MustCompile(
+				`prepare build and shell: shell nonexistent-shell not found`,
+			),
+			ExpectedFailureReason: common.ConfigurationError,
+		},
+		{
+			Name: "getKubeConfig fails",
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				Job: spec.Job{Image: spec.Image{Name: "test-image"}},
+			},
+			Setup: func(_ *testing.T, e *executor) {
+				e.getKubeConfig = func(*common.KubernetesConfig, *overwrites) (*restclient.Config, error) {
+					return nil, errors.New("simulated kubeconfig error")
+				}
+			},
+			ErrorRE: regexp.MustCompile(
+				`getting Kubernetes config: simulated kubeconfig error`,
+			),
+			ExpectedFailureReason: common.ConfigurationError,
+		},
+		{
+			Name: "newKubeClient fails",
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				Job: spec.Job{Image: spec.Image{Name: "test-image"}},
+			},
+			Setup: func(_ *testing.T, e *executor) {
+				e.newKubeClient = func(*restclient.Config) (kubernetes.Interface, error) {
+					return nil, errors.New("simulated client error")
+				}
+			},
+			ErrorRE: regexp.MustCompile(
+				`creating Kubernetes client: simulated client error`,
+			),
+			ExpectedFailureReason: common.ConfigurationError,
+		},
+		{
+			// A shell whose ShellConfiguration.PassFile is true triggers the
+			// "kubernetes doesn't support shells that require script file" check.
+			// powershell's passAsFile() returns true when Runner.Executor is
+			// "custom"; we abuse that here to reach the check from within the
+			// kubernetes executor without adding a dedicated test shell.
+			Name: "shell requires script file",
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Executor: "custom",
+					Shell:    shells.SNPwsh,
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				Job: spec.Job{Image: spec.Image{Name: "test-image"}},
+			},
+			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
+				`kubernetes doesn't support shells that require script file`,
+			)),
+			ExpectedFailureReason: common.ConfigurationError,
+		},
 	}
 
 	for _, test := range tests {
@@ -3023,6 +3165,10 @@ func TestPrepare(t *testing.T) {
 				return mockPodWatcher
 			}
 			e.windowsKernelVersion = test.WindowsKernelVersionGetter
+
+			if test.Setup != nil {
+				test.Setup(t, e)
+			}
 
 			mockTrace := buildlogger.NewMockTrace(t)
 			mockTrace.EXPECT().IsStdout().Return(true).Once()
