@@ -5,13 +5,16 @@ import (
 	"errors"
 	"io"
 	"net"
+	"time"
 
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/client"
 	"github.com/sirupsen/logrus"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/labkit/fields"
 )
 
 // conn is an interface wrapper used to generate mocks that are next used for tests
@@ -123,7 +126,30 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IO
 	// It's very likely that at this point, the context passed to Exec has
 	// been cancelled, so is unable to be used. Instead, we use the context
 	// passed to NewDocker.
-	return d.waiter.StopKillWait(d.ctx, containerID, nil, gracefulExitFunc)
+	//
+	// Time the stop-kill and log its duration. cancellation teardowns may
+	// be legitimately slower, so record whether the job was already ending;
+	// a long duration otherwise points to daemon-side degradation.
+	start := time.Now()
+	jobCanceled := d.ctx.Err() != nil
+	err = d.waiter.StopKillWait(d.ctx, containerID, nil, gracefulExitFunc)
+
+	entry := d.logger.WithFields(logrus.Fields{
+		"container_id":   containerID,
+		fields.DurationS: time.Since(start).Seconds(),
+		"job_canceled":   jobCanceled,
+	})
+
+	// Only genuine teardown/daemon errors change the message; a non-zero exit
+	// (*common.BuildError) and a not-found container are normal outcomes.
+	var buildErr *common.BuildError
+	if err != nil && !errors.As(err, &buildErr) && !docker.IsErrNotFound(err) {
+		entry.WithError(err).Debug("Container stop-kill wait ended with error")
+	} else {
+		entry.Debug("Container stop-kill wait completed")
+	}
+
+	return err
 }
 
 func attachOptions() client.ContainerAttachOptions {

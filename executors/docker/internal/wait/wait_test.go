@@ -105,10 +105,11 @@ func TestDockerWaiter_StopKillWait(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestDockerWaiter_StopKillWait_CancelledContext verifies that ContainerStop is
-// still called even when the build context is already cancelled before
-// StopKillWait is invoked. This is the race that occurs when Abort() fires and
-// cancels the build context before the cleanup path reaches StopKillWait.
+// TestDockerWaiter_StopKillWait_CancelledContext verifies that, even when the
+// build context is already cancelled before StopKillWait is invoked (the race
+// when Abort() fires before the cleanup path reaches StopKillWait), both the
+// graceful-exit func and ContainerStop still run, and the graceful-exit func
+// receives a live (detached) context rather than the cancelled one.
 func TestDockerWaiter_StopKillWait_CancelledContext(t *testing.T) {
 	mClient := docker.NewMockClient(t)
 
@@ -127,6 +128,15 @@ func TestDockerWaiter_StopKillWait_CancelledContext(t *testing.T) {
 		Return(nil).
 		Twice()
 
+	// The graceful-exit func must run despite the cancelled build context, and
+	// must receive a live (non-cancelled) context so it can do its work.
+	var gracefulCalled bool
+	graceful := func(ctx context.Context, _ string) error {
+		gracefulCalled = true
+		assert.NoError(t, ctx.Err(), "graceful-exit must receive a live, detached context")
+		return nil
+	}
+
 	waiter := NewDockerKillWaiter(mClient)
 
 	go func() {
@@ -138,9 +148,10 @@ func TestDockerWaiter_StopKillWait_CancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	err := waiter.StopKillWait(ctx, "id", nil, nil)
+	err := waiter.StopKillWait(ctx, "id", nil, graceful)
 	assert.NoError(t, err)
-	// ContainerStop must have been called despite the cancelled context.
+	// Both the graceful-exit func and ContainerStop must run despite cancellation.
+	assert.True(t, gracefulCalled, "graceful-exit must have been called")
 	mClient.AssertExpectations(t)
 }
 
@@ -223,6 +234,49 @@ func TestDockerWaiter_StopKillWait_GracefulExitFuncNotCalledWhenNil(t *testing.T
 	mClient.AssertNotCalled(t, "ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything)
 	// ContainerStop must have been called at least once.
 	mClient.AssertCalled(t, "ContainerStop", mock.Anything, mock.Anything, mock.Anything)
+}
+
+// TestDockerWaiter_StopKillWait_GracefulExitBoundedBeforeStop verifies that
+// gracefulExitFunc completes before ContainerStop is issued, and that it
+// receives a bounded context so a stuck exec cannot block teardown.
+func TestDockerWaiter_StopKillWait_GracefulExitBoundedBeforeStop(t *testing.T) {
+	mClient := docker.NewMockClient(t)
+
+	bodyCh := make(chan container.WaitResponse)
+	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+		Return((<-chan container.WaitResponse)(bodyCh), nil).
+		Once()
+
+	var gracefulDone bool
+	graceful := func(ctx context.Context, _ string) error {
+		_, hasDeadline := ctx.Deadline()
+		assert.True(t, hasDeadline, "graceful-exit must receive a bounded context")
+		gracefulDone = true
+		return nil
+	}
+
+	stopCalled := make(chan struct{}, 1)
+	mClient.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(mock.Arguments) {
+			// graceful-exit runs synchronously before the first ContainerStop.
+			assert.True(t, gracefulDone, "ContainerStop must not run before graceful-exit completes")
+			select {
+			case stopCalled <- struct{}{}:
+			default:
+			}
+		}).
+		Return(nil)
+
+	waiter := NewDockerKillWaiter(mClient)
+
+	go func() {
+		<-stopCalled
+		bodyCh <- container.WaitResponse{StatusCode: 0}
+	}()
+
+	err := waiter.StopKillWait(t.Context(), "id", nil, graceful)
+	assert.NoError(t, err)
+	assert.True(t, gracefulDone, "graceful-exit must have been called")
 }
 
 func TestDockerWaiter_WaitContextCanceled(t *testing.T) {
