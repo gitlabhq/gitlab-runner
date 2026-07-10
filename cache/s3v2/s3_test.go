@@ -177,18 +177,22 @@ func TestS3ClientCaching_ConcurrentAccess(t *testing.T) {
 
 	const goroutines = 16
 	clients := make([]s3Presigner, goroutines)
+	errs := make([]error, goroutines)
 	var wg sync.WaitGroup
 	for i := range goroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			cfg := baseConfig
-			client, err := newS3Client(&cfg)
-			assert.NoError(t, err)
-			clients[i] = client
+			clients[i], errs[i] = newS3Client(&cfg)
 		}()
 	}
 	wg.Wait()
+
+	for i := range goroutines {
+		require.NoError(t, errs[i])
+		require.NotNil(t, clients[i])
+	}
 
 	for i := 1; i < goroutines; i++ {
 		assert.Same(t, clients[0].(*s3Client), clients[i].(*s3Client))
