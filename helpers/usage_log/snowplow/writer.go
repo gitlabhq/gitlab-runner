@@ -115,10 +115,11 @@ func (w *Writer) buildBillingInputs(record usage_log.Record) (labkitsnowplow.Bil
 	}
 
 	// Build metadata: config metadata (static), then per-job fields.
-	metadata := make(map[string]any, len(w.options.metadata)+8)
+	metadata := make(map[string]any, len(w.options.metadata)+9)
 	for k, v := range w.options.metadata {
 		metadata[k] = v
 	}
+	metadata["feature_qualified_name"] = eventType
 	metadata["job_id"] = record.Job.ID
 	metadata["pipeline_id"] = record.Job.PipelineID
 	metadata["job_status"] = record.Job.Status
