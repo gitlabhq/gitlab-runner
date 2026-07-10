@@ -306,8 +306,8 @@ func fillNonZero(t *testing.T, v reflect.Value) {
 		fillNonZero(t, value.Elem())
 		v.Set(value)
 	case reflect.Struct:
-		for i := range v.NumField() {
-			fillNonZero(t, v.Field(i))
+		for _, field := range v.Fields() {
+			fillNonZero(t, field)
 		}
 	default:
 		t.Fatalf("fillNonZero: unsupported kind %s for type %s", v.Kind(), v.Type())
