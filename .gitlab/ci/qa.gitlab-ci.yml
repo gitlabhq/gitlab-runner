@@ -161,8 +161,30 @@ docs:lint i18n markdown:
   script:
     # Makefiles in this project expect Go to be available
     - apk add --quiet go
-    # Lint i18n content and Markdown, and check links
+    # Lint i18n content and Markdown
     - make lint-i18n-docs VALE_MIN_ALERT_LEVEL=error
+
+# Reports on broken links in the localized docs (docs-locale). The localization
+# team is building up translations incrementally, so many crosslinks point to
+# pages that are not translated yet. This job is therefore a report rather than
+# a lint check: it is a manual job that writes the lychee output to an artifact
+# that can be reviewed when needed.
+docs:report i18n links:
+  image: $DOCS_LINT_IMAGE
+  stage: qa
+  extends:
+    - .rules:merge_request_pipelines:docs-i18n
+    - .no_cache_and_dependencies
+  needs: []
+  when: manual
+  script:
+    # Check Markdown links
+    - lychee --offline --include-fragments --exclude '\.(png|jpg|gif|svg)$' --exclude '(ja-jp|ko-kr|fr-fr)/development.*#' docs-locale | tee docs-i18n-links-report.txt
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    paths:
+      - docs-i18n-links-report.txt
 
 # Verify localized documentation files have corresponding English versions
 docs:lint i18n paths:
