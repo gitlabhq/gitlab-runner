@@ -8,6 +8,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestStepWhen_OnSuccessOnFailure(t *testing.T) {
+	tests := map[string]struct {
+		when      StepWhen
+		onSuccess bool
+		onFailure bool
+	}{
+		"empty defaults to on_success": {when: "", onSuccess: true, onFailure: false},
+		"on_success":                   {when: StepWhenOnSuccess, onSuccess: true, onFailure: false},
+		"on_failure":                   {when: StepWhenOnFailure, onSuccess: false, onFailure: true},
+		"always":                       {when: StepWhenAlways, onSuccess: true, onFailure: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.onSuccess, tc.when.OnSuccess())
+			require.Equal(t, tc.onFailure, tc.when.OnFailure())
+		})
+	}
+}
+
 func Test_Image_ExecutorOptions_GetUIDGID(t *testing.T) {
 	tests := map[string]struct {
 		kubernetesOptions func() *ImageKubernetesOptions

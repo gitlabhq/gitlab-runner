@@ -358,10 +358,6 @@ func (b *builder) buildCacheArchive() ([]stages.CacheArchive, error) {
 			return nil, fmt.Errorf("unknown cache policy %s for %s", policy, humanKey)
 		}
 
-		if cache.When == "" {
-			cache.When = spec.CacheWhenOnSuccess
-		}
-
 		// AlternateKey is the FF-opposite local cache path so
 		// cache-archiver can rename the previous-FF archive into the
 		// current-FF path (commands/helpers/cache_archiver.go:251).
@@ -384,8 +380,8 @@ func (b *builder) buildCacheArchive() ([]stages.CacheArchive, error) {
 			CompressionLevel:       variables.Default(b.variables, "CACHE_COMPRESSION_LEVEL", "default"),
 			Timeout:                variables.DefaultIntClamp(b.variables, "CACHE_REQUEST_TIMEOUT", 10, 1, 120),
 			MaxUploadedArchiveSize: b.opts.cacheMaxUploadArchiveSize,
-			OnSuccess:              cache.When == spec.CacheWhenAlways || cache.When == spec.CacheWhenOnSuccess,
-			OnFailure:              cache.When == spec.CacheWhenAlways || cache.When == spec.CacheWhenOnFailure,
+			OnSuccess:              cache.When.OnSuccess(),
+			OnFailure:              cache.When.OnFailure(),
 		}
 
 		if b.opts.cacheUploadDescriptor != nil {
@@ -450,8 +446,8 @@ func (b *builder) buildSteps() []stages.Step {
 			Step:         string(step.Name),
 			Script:       script,
 			AllowFailure: step.AllowFailure,
-			OnSuccess:    step.When == spec.StepWhenAlways || step.When == spec.StepWhenOnSuccess,
-			OnFailure:    step.When == spec.StepWhenAlways || step.When == spec.StepWhenOnFailure,
+			OnSuccess:    step.When.OnSuccess(),
+			OnFailure:    step.When.OnFailure(),
 		})
 
 		if step.Name == spec.StepNameAfterScript {
@@ -506,10 +502,6 @@ func (b *builder) buildArtifactUploads() []stages.ArtifactUpload {
 			continue
 		}
 
-		if artifact.When == "" {
-			artifact.When = spec.ArtifactWhenOnSuccess
-		}
-
 		upload := stages.ArtifactUpload{
 			Untracked:             artifact.Untracked,
 			Paths:                 artifact.Paths,
@@ -521,8 +513,8 @@ func (b *builder) buildArtifactUploads() []stages.ArtifactUpload {
 			Type:                  artifact.Type,
 			Timeout:               b.opts.artifactUploadTimeout,
 			ResponseHeaderTimeout: b.opts.artifactResponseHeaderTimeout,
-			OnSuccess:             artifact.When == spec.ArtifactWhenAlways || artifact.When == spec.ArtifactWhenOnSuccess,
-			OnFailure:             artifact.When == spec.ArtifactWhenAlways || artifact.When == spec.ArtifactWhenOnFailure,
+			OnSuccess:             artifact.When.OnSuccess(),
+			OnFailure:             artifact.When.OnFailure(),
 		}
 
 		if b.shouldGenerateArtifactMetadata(artifact) {
