@@ -99,6 +99,14 @@ const (
 	StepWhenAlways    StepWhen = "always"
 )
 
+func (when StepWhen) OnSuccess() bool {
+	return when == "" || when == StepWhenOnSuccess || when == StepWhenAlways
+}
+
+func (when StepWhen) OnFailure() bool {
+	return when == StepWhenOnFailure || when == StepWhenAlways
+}
+
 type CachePolicy string
 
 const (

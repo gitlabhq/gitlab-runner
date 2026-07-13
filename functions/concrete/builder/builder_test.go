@@ -314,6 +314,33 @@ func TestBuild_Steps(t *testing.T) {
 			config.Steps[1].Script)
 	})
 
+	t.Run("when mapping to OnSuccess/OnFailure", func(t *testing.T) {
+		cases := map[string]struct {
+			when                 spec.StepWhen
+			onSuccess, onFailure bool
+		}{
+			"on_success":                   {when: spec.StepWhenOnSuccess, onSuccess: true, onFailure: false},
+			"on_failure":                   {when: spec.StepWhenOnFailure, onSuccess: false, onFailure: true},
+			"always":                       {when: spec.StepWhenAlways, onSuccess: true, onFailure: true},
+			"empty defaults to on_success": {when: "", onSuccess: true, onFailure: false},
+		}
+
+		for name, tc := range cases {
+			t.Run(name, func(t *testing.T) {
+				job := baseJob()
+				job.Steps = []spec.Step{
+					{Name: "build", Script: []string{"make"}, When: tc.when},
+				}
+
+				config := buildConfig(t, job, newTestVars(t, nil))
+
+				require.Len(t, config.Steps, 1)
+				assert.Equal(t, tc.onSuccess, config.Steps[0].OnSuccess)
+				assert.Equal(t, tc.onFailure, config.Steps[0].OnFailure)
+			})
+		}
+	})
+
 	t.Run("after_script is not wrapped with pre/post build", func(t *testing.T) {
 		job := baseJob()
 		job.Steps = []spec.Step{
@@ -962,9 +989,10 @@ func TestBuild_CacheArchive(t *testing.T) {
 			onSuccess bool
 			onFailure bool
 		}{
-			"on_success": {when: spec.CacheWhenOnSuccess, onSuccess: true, onFailure: false},
-			"on_failure": {when: spec.CacheWhenOnFailure, onSuccess: false, onFailure: true},
-			"always":     {when: spec.CacheWhenAlways, onSuccess: true, onFailure: true},
+			"on_success":                   {when: spec.CacheWhenOnSuccess, onSuccess: true, onFailure: false},
+			"on_failure":                   {when: spec.CacheWhenOnFailure, onSuccess: false, onFailure: true},
+			"always":                       {when: spec.CacheWhenAlways, onSuccess: true, onFailure: true},
+			"empty defaults to on_success": {when: "", onSuccess: true, onFailure: false},
 		}
 
 		for name, tc := range tests {
