@@ -30,12 +30,6 @@ Before you register a runner:
 
 ## Register with a runner authentication token
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613) in GitLab 15.10.
-
-{{< /history >}}
-
 Prerequisites:
 
 - Obtain a runner authentication token. You can either:
