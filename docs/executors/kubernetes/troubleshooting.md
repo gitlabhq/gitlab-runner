@@ -369,6 +369,42 @@ runners:
 > Because all files that are not explicitly handled and stored as build
 > artifacts are usually ephemeral, `emptyDir` works for most cases.
 
+## Error: `failed to share mount point: /: permission denied`
+
+Rootless container tools that use [rootlesskit](https://github.com/rootless-containers/rootlesskit)
+(such as rootless BuildKit, Podman, or Docker) can fail on a Kubernetes runner with an error like:
+
+```plaintext
+[rootlesskit:child ] error: failed to share mount point: /: permission denied
+```
+
+This issue occurs when AppArmor blocks the mount system call that rootlesskit requires to set up
+the rootless environment.
+
+To resolve this issue, configure the [AppArmor profile](_index.md#set-seccomp-and-apparmor-profiles)
+for the build container. In GitLab Runner 18.11 and later, use the `app_armor_profile` setting
+under `build_container_security_context` instead of the deprecated
+`container.apparmor.security.beta.kubernetes.io` annotation:
+
+```toml
+[[runners]]
+  [runners.kubernetes.build_container_security_context]
+    [runners.kubernetes.build_container_security_context.app_armor_profile]
+      type = "Unconfined"
+```
+
+> [!warning]
+> `Unconfined` disables AppArmor confinement for the build container and reduces isolation.
+
+Where your security policy requires confinement, use a `Localhost` profile that permits only
+the operations rootlesskit requires instead:
+
+```toml
+[runners.kubernetes.build_container_security_context.app_armor_profile]
+  type = "Localhost"
+  localhost_profile = "my-rootlesskit-profile"
+```
+
 ## AWS EKS: Error cleaning up pod: pods "runner-**" not found or status is "Failed"
 
 The Amazon EKS zone rebalancing feature balances the availability zones in an autoscaling group. This feature might stop a node in one availability zone and create it in another.
