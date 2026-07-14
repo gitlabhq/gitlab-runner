@@ -30,12 +30,6 @@ GitLab Runner also reloads the configuration in response to the `SIGHUP` signal.
 
 ## Configuration validation
 
-{{< history >}}
-
-- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924) in GitLab Runner 15.10
-
-{{< /history >}}
-
 Configuration validation is a process that checks the structure of the `config.toml` file. The output from the configuration
 validator provides only `info` level messages.
 

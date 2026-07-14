@@ -10,6 +10,7 @@ variables:
   RUNNER_IMAGES_VERSION: "0.0.47"
   RUNNER_IMAGES_WINDOWS_GO_URL: https://gitlab.com/api/v4/projects/gitlab-org%2fci-cd%2frunner-tools%2fbase-images/packages/generic/runner-images/v${RUNNER_IMAGES_VERSION}/golang-windows-amd64.zip
   CI_IMAGE: "${RUNNER_IMAGES_REGISTRY}/ci:${RUNNER_IMAGES_VERSION}"
+  DOCS_HUGO_IMAGE: registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/docs-gitlab-com-builder:hugo-0.154.5
   DOCS_LINT_IMAGE: registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/lint-markdown:alpine-3.23-vale-3.14.1-markdownlint2-0.22.1-lychee-0.24.2
   # Feature flags
   FF_SCRIPT_SECTIONS: "true"
