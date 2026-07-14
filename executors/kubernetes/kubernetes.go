@@ -3722,6 +3722,10 @@ func featuresFn(features *common.FeaturesInfo) {
 	features.Terminal = true
 	features.Variables = true
 	features.NativeStepsIntegration = true
+	// Kubernetes runs native steps only via the concrete whole-job path, so
+	// run: without FF_CONCRETE is rejected in Build.executeScript before any
+	// stage runs (Connect keeps its own check as defense-in-depth).
+	features.NativeStepsViaConcreteOnly = true
 }
 
 func NewProvider() common.ExecutorProvider {

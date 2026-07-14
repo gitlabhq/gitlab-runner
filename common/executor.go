@@ -104,6 +104,11 @@ type SuspendableExecutor interface {
 
 var ExecutorStepRunnerConnectNotSupported = fmt.Errorf("executor does not support step-runner connect")
 
+// ErrNativeStepsRequireConcrete is returned when a job needs native step
+// execution (e.g. the `run:` keyword) on an executor that supports it only via
+// the concrete whole-job path, but FF_CONCRETE is not enabled.
+var ErrNativeStepsRequireConcrete = fmt.Errorf("native step execution (e.g. the `run:` keyword) on this executor requires the FF_CONCRETE feature flag to be enabled")
+
 type ManagedExecutorProvider interface {
 	// Init initializes the executor provider.
 	//

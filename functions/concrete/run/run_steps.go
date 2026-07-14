@@ -7,6 +7,7 @@ import (
 	"maps"
 	"os"
 	"strconv"
+	"sync/atomic"
 
 	"go.yaml.in/yaml/v3"
 	"google.golang.org/grpc"
@@ -23,7 +24,21 @@ import (
 // path under, so in-process builtins (this one) can dial back in to dispatch
 // nested jobs. The serving side (commands/steps.Serve) reads this constant
 // when setting the env var, so the two sides are kept in sync by the compiler.
+//
+// In-process hosts should prefer SetSocketPath, which takes precedence over
+// the env var without mutating the process environment.
 const EnvSocketPath = "STEP_RUNNER_SOCKET"
+
+// socketPathOverride takes precedence over EnvSocketPath, so long-lived hosts
+// (e.g. the shell executor's shared server) don't mutate the process
+// environment, which child processes such as shell job scripts would inherit.
+var socketPathOverride atomic.Value
+
+// SetSocketPath registers the hosting step-runner's socket path for nested
+// run: dispatch, overriding EnvSocketPath. The last registration wins.
+func SetSocketPath(path string) {
+	socketPathOverride.Store(path)
+}
 
 // stepsPreamble is required by step-runner's YAML parser: an empty front
 // matter document followed by the actual step list.
@@ -142,6 +157,9 @@ func buildStepsYAML(steps []schema.Step) (string, error) {
 }
 
 func socketPath() string {
+	if p, _ := socketPathOverride.Load().(string); p != "" {
+		return p
+	}
 	if p, ok := os.LookupEnv(EnvSocketPath); ok && p != "" {
 		return p
 	}

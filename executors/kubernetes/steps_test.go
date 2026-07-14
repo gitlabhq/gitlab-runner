@@ -6,8 +6,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,23 +35,26 @@ func TestFeaturesFn_AdvertisesNativeStepsIntegration(t *testing.T) {
 	assert.True(t, features.NativeStepsIntegration,
 		"K8s executor must advertise NativeStepsIntegration so that "+
 			"Build.UseNativeSteps() can return true for K8s jobs")
+	assert.True(t, features.NativeStepsViaConcreteOnly,
+		"K8s executor runs native steps only via concrete, so it must "+
+			"declare NativeStepsViaConcreteOnly for the early build-level gate")
 	// Spot-check that the existing fields are unaffected.
 	assert.True(t, features.Session,
 		"existing feature flags must remain set")
 }
 
 // With the executor's feature advertisement, the UseNativeSteps
-// predicate in common/steps.go must evaluate to true for a Linux
-// runner host running a `run:`-using job.
+// predicate in common/steps.go must evaluate to true for a
+// `run:`-using job. This holds on Windows runner hosts too: the
+// Windows exclusion only applies to the hybrid per-stage path, and
+// K8s declares NativeStepsViaConcreteOnly.
 func TestBuildUseNativeSteps_TrueWhenK8sAdvertisesAndJobRunSet(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("UseNativeSteps returns false on Windows by design")
-	}
-
 	build := &common.Build{
 		Runner: &common.RunnerConfig{},
+		// Mirror featuresFn's advertisement.
 		ExecutorFeatures: common.FeaturesInfo{
-			NativeStepsIntegration: true,
+			NativeStepsIntegration:     true,
+			NativeStepsViaConcreteOnly: true,
 		},
 	}
 	// Job.Run is non-empty → one of the three predicate triggers fires.
@@ -77,10 +78,9 @@ func TestConnect_RejectsWhenFFConcreteDisabled(t *testing.T) {
 
 	require.Error(t, err, "Connect must fail without FF_CONCRETE")
 	assert.Nil(t, dialer, "no dialer returned on the FF_CONCRETE rejection")
-	assert.True(t, errors.Is(err, errFFConcreteRequired) ||
-		strings.Contains(err.Error(),
-			"native steps on kubernetes requires FF_CONCRETE"),
-		"error must surface the FF_CONCRETE requirement, got: %v", err)
+	assert.ErrorIs(t, err, common.ErrNativeStepsRequireConcrete,
+		"error must surface the FF_CONCRETE requirement with the shared "+
+			"build-level sentinel")
 
 	// The rejection must happen BEFORE any pod is created — s.pod stays nil.
 	assert.Nil(t, ex.pod,

@@ -22,6 +22,10 @@ var newCommander = process.NewOSCmd
 
 type executor struct {
 	executors.AbstractExecutor
+
+	// stepRunner is the provider-owned in-process step-runner shared across
+	// every shell build; Connect dials it (see steps.go).
+	stepRunner *stepRunnerServer
 }
 
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -169,11 +173,16 @@ func NewProvider(runnerCommandPath string) common.ExecutorProvider {
 		ShowHostname: false,
 	}
 
+	// Shared by every shell build for the life of the runner; the server
+	// itself starts lazily on first use.
+	stepRunner := newStepRunnerServer()
+
 	creator := func() common.Executor {
 		return &executor{
 			AbstractExecutor: executors.AbstractExecutor{
 				ExecutorOptions: options,
 			},
+			stepRunner: stepRunner,
 		}
 	}
 
@@ -185,11 +194,19 @@ func NewProvider(runnerCommandPath string) common.ExecutorProvider {
 			features.Session = true
 			features.Terminal = true
 		}
+
+		// Shell runs native steps only via the concrete whole-job path;
+		// run: without FF_CONCRETE is rejected in Build.executeScript.
+		features.NativeStepsIntegration = true
+		features.NativeStepsViaConcreteOnly = true
 	}
 
-	return executors.DefaultExecutorProvider{
-		Creator:          creator,
-		FeaturesUpdater:  featuresUpdater,
-		DefaultShellName: options.Shell.Shell,
+	return &provider{
+		DefaultExecutorProvider: executors.DefaultExecutorProvider{
+			Creator:          creator,
+			FeaturesUpdater:  featuresUpdater,
+			DefaultShellName: options.Shell.Shell,
+		},
+		stepRunner: stepRunner,
 	}
 }
