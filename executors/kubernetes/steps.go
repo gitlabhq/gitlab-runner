@@ -20,13 +20,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
-// errFFConcreteRequired is the error returned by Connect when native steps
-// dispatch reaches the Kubernetes executor without FF_CONCRETE enabled.
-// Surfacing it as a sentinel makes the gate testable and lets reviewers
-// pattern-match the failure mode.
-var errFFConcreteRequired = errors.New(
-	"native steps on kubernetes requires FF_CONCRETE")
-
 // helperTooOldStderrSubstring is the substring the bootstrap init
 // container emits to stderr when the helper image predates the `steps`
 // subcommand. Kubernetes copies the trailing stderr into
@@ -76,8 +69,8 @@ func (c *stepsConn) Close() error {
 // build container of a Concrete-mode pod.
 //
 // The flow is:
-//  1. Require FF_CONCRETE; otherwise return errFFConcreteRequired before
-//     any pod is created.
+//  1. Require FF_CONCRETE (defense-in-depth; the build-level gate in
+//     Build.executeScript rejects such jobs first).
 //  2. Ensure the Concrete pod exists (idempotent on s.pod).
 //  3. Open a follow stream against the build container's logs and wrap
 //     it with readywriter so the ready marker is extracted from stderr.
@@ -87,7 +80,7 @@ func (c *stepsConn) Close() error {
 //  6. On any failure: cancel the log stream and return the error.
 func (s *executor) Connect(ctx context.Context) (func() (io.ReadWriteCloser, error), error) {
 	if !s.Build.IsFeatureFlagOn(featureflags.UseConcrete) {
-		return nil, errFFConcreteRequired
+		return nil, common.ErrNativeStepsRequireConcrete
 	}
 
 	// Match classic dispatch: retry pod creation on pull-policy failures.

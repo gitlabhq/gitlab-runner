@@ -206,6 +206,13 @@ type FeaturesInfo struct {
 	NativeStepsIntegration  bool `json:"native_steps_integration"`
 	TwoPhaseJobCommit       bool `json:"two_phase_job_commit"`
 	JobInputs               bool `json:"job_inputs"`
+
+	// NativeStepsViaConcreteOnly marks executors that run native steps solely
+	// through the concrete whole-job path, so a native-steps job without
+	// FF_CONCRETE is rejected up front (see Build.executeScript). Not sent to
+	// GitLab: FF_CONCRETE is a per-job feature flag the server cannot know
+	// when routing jobs.
+	NativeStepsViaConcreteOnly bool `json:"-"`
 }
 
 type ConfigInfo struct {

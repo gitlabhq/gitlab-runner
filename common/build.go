@@ -806,39 +806,20 @@ func (b *Build) executeScript(ctx, prepareCtx context.Context, trace JobTrace, e
 	startTime := time.Now()
 	b.createReferees(executor)
 
-	_, hasStepRunnerConnector := executor.(steps.Connector)
+	connector, hasStepRunnerConnector := executor.(steps.Connector)
 
 	if b.IsFeatureFlagOn(featureflags.UseConcrete) && hasStepRunnerConnector {
-		concreteSteps, err := stagesToConcreteStep(ctx, executor)
-		if err != nil {
-			return err
+		return b.executeConcreteJob(ctx, trace, executor, connector, startTime)
+	}
+
+	// Concrete-only executors (e.g. shell, kubernetes) can only run native
+	// steps via the concrete path above; reject before any stage runs. A
+	// configuration error, so not retried as a system failure.
+	if b.nativeStepsBlockedWithoutConcrete() {
+		return &BuildError{
+			Inner:         ErrNativeStepsRequireConcrete,
+			FailureReason: ConfigurationError,
 		}
-
-		// Concrete dispatches the whole job through step-runner; record it
-		// as the "steps" execution mode so jobs flowing through this path
-		// show up in the gitlab_runner_job_execution_mode_total counter
-		// and in trace.Fail data sent to GitLab.
-		b.markStepDispatchedInScript()
-		defer b.recordDispatchedExecutionMode()
-
-		// Route user cancellation through step-runner's Cancel API so the
-		// concrete step's post-cancel phases (e.g. cache/artifact upload)
-		// can run. This intentionally replaces the build-ctx cancel
-		// configureTrace installed: we want step-runner to drive the
-		// graceful shutdown, and the resulting cancelled status maps to
-		// JobCanceled via wrapStepStageErr.
-		//nolint:errcheck
-		err = b.executeStepStage(ctx, executor.(steps.Connector), "concrete", concreteSteps, trace.SetCancelFunc)
-
-		// Whole-job dispatch: stage breakdown isn't visible to the user, so
-		// attribute the timeout to "Job" rather than a build stage.
-		if err != nil {
-			b.warnTimeoutExceeded(ctx, "Job")
-		}
-
-		b.executeUploadReferees(ctx, startTime, time.Now())
-
-		return err
 	}
 
 	err, cont := b.executePrepareScripts(ctx, prepareCtx, executor)
@@ -871,6 +852,44 @@ func (b *Build) executeScript(ctx, prepareCtx context.Context, trace JobTrace, e
 	// track job end and execute referees
 	b.executeUploadReferees(ctx, startTime, time.Now())
 	b.removeFileBasedVariables(ctx, executor)
+
+	return err
+}
+
+// executeConcreteJob dispatches the whole job through step-runner as a single
+// builtin://concrete step. startTime is the job start recorded by
+// executeScript, bounding the referee upload window.
+func (b *Build) executeConcreteJob(
+	ctx context.Context, trace JobTrace, executor Executor, connector steps.Connector, startTime time.Time,
+) error {
+	concreteSteps, err := stagesToConcreteStep(ctx, executor)
+	if err != nil {
+		return err
+	}
+
+	// Concrete dispatches the whole job through step-runner; record it
+	// as the "steps" execution mode so jobs flowing through this path
+	// show up in the gitlab_runner_job_execution_mode_total counter
+	// and in trace.Fail data sent to GitLab.
+	b.markStepDispatchedInScript()
+	defer b.recordDispatchedExecutionMode()
+
+	// Route user cancellation through step-runner's Cancel API so the
+	// concrete step's post-cancel phases (e.g. cache/artifact upload)
+	// can run. This intentionally replaces the build-ctx cancel
+	// configureTrace installed: we want step-runner to drive the
+	// graceful shutdown, and the resulting cancelled status maps to
+	// JobCanceled via wrapStepStageErr.
+	//nolint:errcheck
+	err = b.executeStepStage(ctx, connector, "concrete", concreteSteps, trace.SetCancelFunc)
+
+	// Whole-job dispatch: stage breakdown isn't visible to the user, so
+	// attribute the timeout to "Job" rather than a build stage.
+	if err != nil {
+		b.warnTimeoutExceeded(ctx, "Job")
+	}
+
+	b.executeUploadReferees(ctx, startTime, time.Now())
 
 	return err
 }
