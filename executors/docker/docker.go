@@ -1618,7 +1618,10 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	e.SetCurrentStage(ExecutorStagePrepare)
 
 	if options.Config.Docker == nil {
-		return errors.New("missing docker configuration")
+		return &common.BuildError{
+			Inner:         errors.New("missing docker configuration"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	e.AbstractExecutor.PrepareConfiguration(options)
@@ -1656,7 +1659,10 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	if e.BuildShell.PassFile {
-		return errors.New("docker doesn't support shells that require script file")
+		return &common.BuildError{
+			Inner:         errors.New("docker doesn't support shells that require script file"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	imageName, err := e.expandImageName(e.Build.Image.Name, []string{})

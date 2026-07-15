@@ -2776,6 +2776,25 @@ func TestDockerImageWithUser(t *testing.T) {
 	}
 }
 
+func TestPrepareMissingDockerConfig(t *testing.T) {
+	e := &executor{}
+	build := &common.Build{
+		Runner: &common.RunnerConfig{},
+	}
+
+	err := e.Prepare(common.ExecutorPrepareOptions{
+		Context:     t.Context(),
+		Build:       build,
+		BuildLogger: buildlogger.New(&common.Trace{Writer: io.Discard}, logrus.WithField("test", t.Name()), buildlogger.Options{}),
+		Config:      build.Runner,
+	})
+
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+	assert.EqualError(t, err, "missing docker configuration")
+}
+
 func TestDockerConfigGetLogConfig(t *testing.T) {
 	tests := []struct {
 		name           string

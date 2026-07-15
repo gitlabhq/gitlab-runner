@@ -38,7 +38,10 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	if e.BuildShell.PassFile {
-		return errors.New("the instance executor doesn't support shells that require a script file")
+		return &common.BuildError{
+			Inner:         errors.New("the instance executor doesn't support shells that require a script file"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	// Validate if the image defined in a job is allowed

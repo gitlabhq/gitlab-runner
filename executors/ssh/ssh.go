@@ -23,11 +23,17 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	s.BuildLogger.Println("Using SSH executor...")
 	if s.BuildShell.PassFile {
-		return errors.New("SSH doesn't support shells that require script file")
+		return &common.BuildError{
+			Inner:         errors.New("SSH doesn't support shells that require script file"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	if s.Config.SSH == nil {
-		return errors.New("missing SSH configuration")
+		return &common.BuildError{
+			Inner:         errors.New("missing SSH configuration"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	s.BuildLogger.Debugln("Starting SSH command...")

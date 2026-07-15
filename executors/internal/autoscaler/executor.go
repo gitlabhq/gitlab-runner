@@ -90,7 +90,10 @@ func (e *executor) prepareResume(ctx context.Context, scaler taskscaler.Taskscal
 	}
 
 	if !scaler.HasCapability(fleetingprovider.CapabilitySuspendResume) {
-		return errors.New("cloud plugin does not support suspend/resume")
+		return &common.BuildError{
+			Inner:         errors.New("cloud plugin does not support suspend/resume"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	acq, err := scaler.Resume(ctx, acqKey)
