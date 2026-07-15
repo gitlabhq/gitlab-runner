@@ -54,7 +54,10 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.BuildLogger.Debugln("Starting Docker command...")
 
 	if len(s.BuildShell.DockerCommand) == 0 {
-		return errors.New("script is not compatible with Docker")
+		return &common.BuildError{
+			Inner:         errors.New("script is not compatible with Docker"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	if s.Build.EnvironmentKey() == "" {

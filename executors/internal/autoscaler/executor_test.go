@@ -576,4 +576,8 @@ func TestExecutor_Resume_NoSuspendResumeCapability(t *testing.T) {
 	err := e.Prepare(opts)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "cloud plugin does not support suspend/resume")
+
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
 }

@@ -108,6 +108,35 @@ func TestPrepare(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestPrepareMissingSSHConfig(t *testing.T) {
+	runnerConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: "ssh",
+		},
+	}
+	build := &common.Build{
+		Job:    spec.Job{GitInfo: spec.GitInfo{Sha: "1234567890"}},
+		Runner: &common.RunnerConfig{},
+	}
+
+	e := &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			ExecutorOptions: executorOptions,
+		},
+	}
+
+	err := e.Prepare(common.ExecutorPrepareOptions{
+		Config:  runnerConfig,
+		Build:   build,
+		Context: t.Context(),
+	})
+
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+	assert.EqualError(t, err, "missing SSH configuration")
+}
+
 func TestSharedEnv(t *testing.T) {
 	provider := NewProvider()
 	features := &common.FeaturesInfo{}
