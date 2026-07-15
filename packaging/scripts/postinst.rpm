@@ -1,5 +1,7 @@
 #!/bin/sh
 set -e
 /usr/share/gitlab-runner/post-install
-/usr/share/gitlab-runner/clear-docker-cache prune || :
+if [ -z "${NO_DOCKER_PRUNE}" ]; then
+  /usr/share/gitlab-runner/clear-docker-cache prune || :
+fi
 exit 0
