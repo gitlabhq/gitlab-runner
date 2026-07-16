@@ -1619,8 +1619,16 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 	// It will fail if: cannot be removed, or no containers is found
 	// It is assuming that name of each runner created container starts
 	// with `runner-doprune-`
+	//
+	// The container's transition to the "exited" state isn't necessarily visible
+	// via the shared docker socket the instant the earlier build stage's container
+	// stops, so poll for it for a few seconds instead of checking once, to avoid
+	// failing on that race.
 	successfulBuild.Steps[0].Script = spec.StepScript{
-		"docker ps -a -f status=exited | grep runner-doprune-",
+		"found=0",
+		"i=1",
+		"while [ \"$i\" -le 10 ]; do docker ps -a -f status=exited | grep runner-doprune- && found=1 && break; sleep 1; i=$((i + 1)); done",
+		"[ \"$found\" -eq 1 ]",
 		"docker rm $(docker ps -a -f status=exited | grep runner-doprune- | awk '{print $1}')",
 	}
 
