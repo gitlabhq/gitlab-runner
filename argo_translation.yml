@@ -14,3 +14,5 @@ components:
     ignored_paths:
       - "docs/.*/**"
       - 'docs/development/**'
+      - 'docs/CLAUDE.md'
+      - 'docs/SKILLS.md'
