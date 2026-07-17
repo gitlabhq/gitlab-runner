@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -64,15 +65,19 @@ func setupMockS3Server(t *testing.T) *cacheconfig.CacheS3Config {
 }
 
 func TestS3ClientCaching(t *testing.T) {
+	dualStack := false
+	pathStyle := true
 	s3Config := &cacheconfig.CacheS3Config{
 		AccessKey:      "test-access-key",
 		SecretKey:      "test-secret-key",
 		BucketName:     "test-bucket",
 		BucketLocation: "us-west-2",
+		DualStack:      &dualStack,
+		PathStyle:      &pathStyle,
 	}
 
 	t.Cleanup(func() {
-		s3ClientCache.Delete(s3Config)
+		s3ClientCache.Delete(newS3ClientCacheKey(s3Config))
 	})
 
 	c1, err := newS3Client(s3Config)
@@ -83,19 +88,252 @@ func TestS3ClientCaching(t *testing.T) {
 	require.NoError(t, err)
 	assert.Same(t, c1.(*s3Client), c2.(*s3Client))
 
-	// A different pointer (simulating a config reload) returns a new instance.
-	reloadedConfig := *s3Config
+	// RunnerConfig is deep-copied through JSON for every build. Equivalent
+	// configs, including pointer-valued options, must still share one client.
+	for range 1000 {
+		data, err := json.Marshal(s3Config)
+		require.NoError(t, err)
+
+		var copiedConfig cacheconfig.CacheS3Config
+		require.NoError(t, json.Unmarshal(data, &copiedConfig))
+		require.NotSame(t, s3Config.DualStack, copiedConfig.DualStack)
+		require.NotSame(t, s3Config.PathStyle, copiedConfig.PathStyle)
+
+		copiedClient, err := newS3Client(&copiedConfig)
+		require.NoError(t, err)
+		assert.Same(t, c1.(*s3Client), copiedClient.(*s3Client))
+	}
+
+	// A changed config gets a different client.
+	changedConfig := *s3Config
+	changedConfig.BucketName = "other-bucket"
 	t.Cleanup(func() {
-		s3ClientCache.Delete(&reloadedConfig)
+		s3ClientCache.Delete(newS3ClientCacheKey(&changedConfig))
 	})
-	c3, err := newS3Client(&reloadedConfig)
+	changedClient, err := newS3Client(&changedConfig)
 	require.NoError(t, err)
-	assert.NotSame(t, c1.(*s3Client), c3.(*s3Client))
+	assert.NotSame(t, c1.(*s3Client), changedClient.(*s3Client))
 
 	// Options bypass the cache entirely.
-	c4, err := newS3Client(s3Config, withSTSEndpoint("http://sts.example.com"))
+	optionClient, err := newS3Client(s3Config, withSTSEndpoint("http://sts.example.com"))
 	require.NoError(t, err)
-	assert.NotSame(t, c1.(*s3Client), c4.(*s3Client))
+	assert.NotSame(t, c1.(*s3Client), optionClient.(*s3Client))
+}
+
+// TestS3ClientCaching_NilPointerOptions verifies that configs leaving
+// DualStack and PathStyle unset (nil) still share one client across JSON
+// deep copies, and that nil and explicitly-set pointers are distinct keys.
+func TestS3ClientCaching_NilPointerOptions(t *testing.T) {
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:      "test-access-key",
+		SecretKey:      "test-secret-key",
+		BucketName:     "test-bucket",
+		BucketLocation: "us-west-2",
+	}
+
+	t.Cleanup(func() {
+		s3ClientCache.Delete(newS3ClientCacheKey(s3Config))
+	})
+
+	c1, err := newS3Client(s3Config)
+	require.NoError(t, err)
+
+	data, err := json.Marshal(s3Config)
+	require.NoError(t, err)
+	var copiedConfig cacheconfig.CacheS3Config
+	require.NoError(t, json.Unmarshal(data, &copiedConfig))
+	require.Nil(t, copiedConfig.DualStack)
+	require.Nil(t, copiedConfig.PathStyle)
+
+	copiedClient, err := newS3Client(&copiedConfig)
+	require.NoError(t, err)
+	assert.Same(t, c1.(*s3Client), copiedClient.(*s3Client))
+
+	// nil and an explicitly-set pointer must not share a key, even when the
+	// resolved enabled-state is identical.
+	dualStack := true
+	explicitConfig := *s3Config
+	explicitConfig.DualStack = &dualStack
+	t.Cleanup(func() {
+		s3ClientCache.Delete(newS3ClientCacheKey(&explicitConfig))
+	})
+	explicitClient, err := newS3Client(&explicitConfig)
+	require.NoError(t, err)
+	assert.NotSame(t, c1.(*s3Client), explicitClient.(*s3Client))
+}
+
+// TestS3ClientCaching_ConcurrentAccess verifies that concurrent callers with
+// equal-valued but distinct config pointers all receive the same client.
+func TestS3ClientCaching_ConcurrentAccess(t *testing.T) {
+	baseConfig := cacheconfig.CacheS3Config{
+		AccessKey:      "test-access-key",
+		SecretKey:      "test-secret-key",
+		BucketName:     "concurrent-test-bucket",
+		BucketLocation: "us-west-2",
+	}
+
+	t.Cleanup(func() {
+		s3ClientCache.Delete(newS3ClientCacheKey(&baseConfig))
+	})
+
+	const goroutines = 16
+	clients := make([]s3Presigner, goroutines)
+	errs := make([]error, goroutines)
+	var wg sync.WaitGroup
+	for i := range goroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			cfg := baseConfig
+			clients[i], errs[i] = newS3Client(&cfg)
+		}()
+	}
+	wg.Wait()
+
+	for i := range goroutines {
+		require.NoError(t, errs[i])
+		require.NotNil(t, clients[i])
+	}
+
+	for i := 1; i < goroutines; i++ {
+		assert.Same(t, clients[0].(*s3Client), clients[i].(*s3Client))
+	}
+}
+
+// TestS3ClientCaching_EmptyBucketLocationBypassesCache verifies that configs
+// relying on bucket-region auto-detection are not cached: a transient
+// detection failure must not pin a fallback-region client for the process
+// lifetime.
+func TestS3ClientCaching_EmptyBucketLocationBypassesCache(t *testing.T) {
+	s3Config := setupMockS3Server(t)
+	s3Config.BucketLocation = ""
+
+	key := newS3ClientCacheKey(s3Config)
+	t.Cleanup(func() {
+		s3ClientCache.Delete(key)
+	})
+
+	c1, err := newS3Client(s3Config)
+	require.NoError(t, err)
+
+	_, cached := s3ClientCache.Load(key)
+	assert.False(t, cached, "auto-detected-region config must not be cached")
+
+	c2, err := newS3Client(s3Config)
+	require.NoError(t, err)
+	assert.NotSame(t, c1.(*s3Client), c2.(*s3Client))
+}
+
+// TestS3ClientCaching_NoAliasing verifies that a cached client holds a
+// private copy of the configuration: mutating the caller's struct or its
+// pointed-to option values after construction must not affect the client.
+func TestS3ClientCaching_NoAliasing(t *testing.T) {
+	pathStyle := true
+	s3Config := &cacheconfig.CacheS3Config{
+		AccessKey:            "test-access-key",
+		SecretKey:            "test-secret-key",
+		BucketName:           "aliasing-test-bucket",
+		BucketLocation:       "us-west-2",
+		ServerSideEncryption: "S3",
+		PathStyle:            &pathStyle,
+	}
+
+	t.Cleanup(func() {
+		s3ClientCache.Delete(newS3ClientCacheKey(s3Config))
+	})
+
+	client, err := newS3Client(s3Config)
+	require.NoError(t, err)
+
+	s3Config.ServerSideEncryption = "KMS"
+	pathStyle = false
+
+	stored := client.(*s3Client).s3Config
+	assert.Equal(t, "S3", stored.ServerSideEncryption)
+	require.NotNil(t, stored.PathStyle)
+	assert.True(t, *stored.PathStyle)
+}
+
+// TestS3ClientCaching_BuildErrorEvicted verifies that a failed client build
+// is not cached: the failing entry is evicted so a later call retries and
+// can succeed.
+func TestS3ClientCaching_BuildErrorEvicted(t *testing.T) {
+	// Force config.LoadDefaultConfig to fail by pointing the SDK at a
+	// nonexistent shared-config profile.
+	t.Setenv("AWS_PROFILE", "nonexistent-profile-for-test")
+	t.Setenv("AWS_CONFIG_FILE", "/nonexistent/aws/config")
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", "/nonexistent/aws/credentials")
+
+	s3Config := &cacheconfig.CacheS3Config{
+		BucketName:     "error-test-bucket",
+		BucketLocation: "us-west-2",
+	}
+
+	key := newS3ClientCacheKey(s3Config)
+	t.Cleanup(func() {
+		s3ClientCache.Delete(key)
+	})
+
+	_, err := newS3Client(s3Config)
+	require.Error(t, err)
+
+	_, cached := s3ClientCache.Load(key)
+	assert.False(t, cached, "failed build must be evicted from the cache")
+
+	// With the failure cause removed, the same config must retry and succeed.
+	t.Setenv("AWS_PROFILE", "")
+	c, err := newS3Client(s3Config)
+	require.NoError(t, err)
+	require.NotNil(t, c)
+}
+
+func fillNonZero(t *testing.T, v reflect.Value) {
+	t.Helper()
+
+	switch v.Kind() {
+	case reflect.String:
+		v.SetString("nonzero")
+	case reflect.Bool:
+		v.SetBool(true)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v.SetInt(1)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v.SetUint(1)
+	case reflect.Float32, reflect.Float64:
+		v.SetFloat(1)
+	case reflect.Pointer:
+		value := reflect.New(v.Type().Elem())
+		fillNonZero(t, value.Elem())
+		v.Set(value)
+	case reflect.Struct:
+		for _, field := range v.Fields() {
+			fillNonZero(t, field)
+		}
+	default:
+		t.Fatalf("fillNonZero: unsupported kind %s for type %s", v.Kind(), v.Type())
+	}
+}
+
+// TestS3ClientCacheKey_StableAcrossDeepCopy ensures every CacheS3Config field
+// remains value-keyed when RunnerConfig creates its per-build JSON deep copy.
+func TestS3ClientCacheKey_StableAcrossDeepCopy(t *testing.T) {
+	var original cacheconfig.CacheS3Config
+	fillNonZero(t, reflect.ValueOf(&original).Elem())
+
+	originalValue := reflect.ValueOf(original)
+	for i := range originalValue.NumField() {
+		require.Falsef(t, originalValue.Field(i).IsZero(),
+			"field %s was not populated", originalValue.Type().Field(i).Name)
+	}
+
+	data, err := json.Marshal(&original)
+	require.NoError(t, err)
+
+	var copied cacheconfig.CacheS3Config
+	require.NoError(t, json.Unmarshal(data, &copied))
+
+	assert.True(t, newS3ClientCacheKey(&original) == newS3ClientCacheKey(&copied),
+		"cache key must remain stable across a JSON deep copy; a new pointer field may need flattening")
 }
 
 func TestNewS3ClientOptions(t *testing.T) {
@@ -256,6 +494,10 @@ func TestNewS3ClientOptions(t *testing.T) {
 
 	for testName, tt := range tests {
 		t.Run(testName, func(t *testing.T) {
+			t.Cleanup(func() {
+				s3ClientCache.Delete(newS3ClientCacheKey(&tt.s3Config))
+			})
+
 			client, err := newS3Client(&tt.s3Config)
 			require.NoError(t, err)
 
@@ -331,12 +573,19 @@ func TestS3Client_PresignURL(t *testing.T) {
 
 	for testName, tt := range tests {
 		t.Run(testName, func(t *testing.T) {
-			s3Config.ServerSideEncryption = tt.encryptionType
-			s3Config.ServerSideEncryptionKeyID = tt.encryptionKeyID
-			s3Config.AccessKey = tt.accessKey
-			s3Config.SecretKey = tt.secretKey
+			cfg := *s3Config
+			cfg.ServerSideEncryption = tt.encryptionType
+			cfg.ServerSideEncryptionKeyID = tt.encryptionKeyID
+			cfg.AccessKey = tt.accessKey
+			cfg.SecretKey = tt.secretKey
 
-			s3Client, err := newS3Client(s3Config)
+			key := newS3ClientCacheKey(&cfg)
+			s3ClientCache.Delete(key)
+			t.Cleanup(func() {
+				s3ClientCache.Delete(key)
+			})
+
+			s3Client, err := newS3Client(&cfg)
 			require.NoError(t, err)
 
 			// Presign a PUT request to upload an object
@@ -429,6 +678,10 @@ func TestGenerateSessionPolicy_JSONInjection(t *testing.T) {
 
 func TestS3Client_PresignURL_UnknownMethodError(t *testing.T) {
 	s3Config := setupMockS3Server(t)
+
+	t.Cleanup(func() {
+		s3ClientCache.Delete(newS3ClientCacheKey(s3Config))
+	})
 
 	s3Client, err := newS3Client(s3Config)
 	require.NoError(t, err)
