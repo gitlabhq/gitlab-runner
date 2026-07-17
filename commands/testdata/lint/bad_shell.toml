@@ -1,0 +1,9 @@
+concurrent = 4
+check_interval = 0
+
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.com/"
+  token = "TOKEN"
+  executor = "shell"
+  shell = "fish"

@@ -103,6 +103,7 @@ func main() {
 func newCommands(n common.Network, apiRequestsCollector *network.APIRequestsCollector, executorProviders executors.Providers) []cli.Command {
 	cmds := []cli.Command{
 		commands.NewListCommand(),
+		commands.NewLintCommand(),
 		commands.NewRegisterCommand(n, executorProviders),
 		commands.NewResetTokenCommand(n),
 		commands.NewRunCommand(n, apiRequestsCollector, executorProviders),

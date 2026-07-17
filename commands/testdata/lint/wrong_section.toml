@@ -1,0 +1,13 @@
+concurrent = 4
+check_interval = 0
+
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.com/"
+  token = "TOKEN"
+  executor = "kubernetes"
+
+# Wrong: should be [[runners.kubernetes.volumes.pvc]]
+[[runner.kubernetes.volumes.pvc]]
+  name = "my-pvc"
+  mount_path = "/mnt/data"

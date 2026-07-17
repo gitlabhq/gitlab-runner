@@ -61,7 +61,7 @@ func (cf *ConfigFile) Load(opts ...LoadOption) error {
 	}
 
 	// config validation is best-effort
-	if err := validate(config); err != nil {
+	if err := Validate(config); err != nil {
 		logrus.Infof(
 			"There might be a problem with your config based on "+
 				"jsonschema annotations in common/config.go "+

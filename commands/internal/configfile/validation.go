@@ -39,7 +39,7 @@ func init() {
 	configSchema = c.MustCompile("config_schema.json")
 }
 
-func validate(config *common.Config) error {
+func Validate(config *common.Config) error {
 	defer func() {
 		if r := recover(); r != nil {
 			// Config validation is best-effort
