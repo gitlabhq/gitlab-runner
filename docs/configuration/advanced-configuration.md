@@ -1478,10 +1478,15 @@ You can use the following environment variables to configure cache compression:
 
 | Variable                   | Description                           | Default   | Values                                          |
 |----------------------------|---------------------------------------|-----------|-------------------------------------------------|
-| `CACHE_COMPRESSION_FORMAT` | Compression format for cache archives | `zip`     | `zip`, `tarzstd`                                |
+| `CACHE_COMPRESSION_FORMAT` | Compression format for cache archives | `zip`     | `zip`, `tarzstd`, `zipzstd`                     |
 | `CACHE_COMPRESSION_LEVEL`  | Compression level for cache archives  | `default` | `fastest`, `fast`, `default`, `slow`, `slowest` |
 
 The `tarzstd` format uses TAR with Zstandard compression, which provides better compression ratios than `zip`.
+
+The `zipzstd` format uses ZIP with Zstandard compression on each file. It compresses files in parallel, so it
+is faster to create on multi-core runners than `tarzstd`. Archives are slightly larger because each file is
+compressed independently. To extract `zipzstd` caches in parallel, enable the `FF_USE_FASTZIP` feature flag.
+Otherwise, extraction is single-threaded.
 The compression levels range from `fastest` (minimal compression for maximum speed) to `slowest` (maximum compression for smallest file size).
 The `default` level provides a balanced trade-off between compression ratio and speed.
 

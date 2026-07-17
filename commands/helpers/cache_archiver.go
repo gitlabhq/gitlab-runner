@@ -45,7 +45,7 @@ type CacheArchiverCommand struct {
 	Headers                []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
 	Metadata               metadata `long:"metadata" env:"CACHE_METADATA" description:"Metadata for the cache artifact (JSON encoded key-value-pairs, e.g. '{\"foo\":\"bar\",\"blerp\":\"blip\"}')"`
 	CompressionLevel       string   `long:"compression-level" env:"CACHE_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
-	CompressionFormat      string   `long:"compression-format" env:"CACHE_COMPRESSION_FORMAT" description:"Compression format (zip, tarzstd)"`
+	CompressionFormat      string   `long:"compression-format" env:"CACHE_COMPRESSION_FORMAT" description:"Compression format (zip, tarzstd, zipzstd)"`
 	MaxUploadedArchiveSize int64    `long:"max-uploaded-archive-size" env:"CACHE_MAX_UPLOADED_ARCHIVE_SIZE" description:"Limit the size of the cache archive being uploaded to cloud storage, in bytes."`
 	EnvFile                string   `long:"env-file" description:"Filename containing environment variables to read"`
 
@@ -220,6 +220,8 @@ func (c *CacheArchiverCommand) createZipFile(filename string) (int64, error) {
 	switch strings.ToLower(c.CompressionFormat) {
 	case string(spec.ArtifactFormatTarZstd):
 		c.CompressionFormat = string(spec.ArtifactFormatTarZstd)
+	case string(spec.ArtifactFormatZipZstd):
+		c.CompressionFormat = string(spec.ArtifactFormatZipZstd)
 	default:
 		c.CompressionFormat = string(spec.ArtifactFormatZip)
 	}
