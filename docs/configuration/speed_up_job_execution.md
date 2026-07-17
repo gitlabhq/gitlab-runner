@@ -199,7 +199,7 @@ Set compression options in your job or in [CI/CD variables](https://docs.gitlab.
 | Variable | Recommended for speed | Description |
 |----------|------------------------|-------------|
 | `CACHE_COMPRESSION_LEVEL` | `fastest` or `fast` | Less CPU and faster upload or download. Archives are larger. Default is `default`. |
-| `CACHE_COMPRESSION_FORMAT` | `zip` | `zip` is often faster to create. `tarzstd` gives better compression ratio but can be slower. |
+| `CACHE_COMPRESSION_FORMAT` | `zip` (small caches) or `zipzstd` (large caches, multi-core) | `zipzstd` compresses in parallel and is faster than `zip` on multi-core runners with large caches. However, Zstandard overhead can make it slower on single-core runners or small caches. Parallel `zipzstd` extraction requires the `FF_USE_FASTZIP` feature flag (compression is always parallel). Without the flag, extraction is single-threaded. `tarzstd` gives the best compression ratio but can be slower. |
 
 Example configuration in `.gitlab-ci.yml`:
 
