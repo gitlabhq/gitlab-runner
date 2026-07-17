@@ -1,0 +1,5 @@
+concurrent = 4
+check_interval = 0
+
+[[runners
+  name = "missing closing bracket"

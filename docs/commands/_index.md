@@ -296,6 +296,27 @@ Additional options can be configured during runner registration by using the
 This command lists all runners saved in the
 [configuration file](#configuration-file).
 
+### `gitlab-runner lint`
+
+This command validates a [configuration file](#configuration-file) without
+starting the runner. It reports:
+
+- TOML syntax errors.
+- Semantic errors detected by the built-in JSON schema validation.
+- Unknown or misspelled keys (for example, `buids_dir` instead of `builds_dir`,
+  or `[[runner.kubernetes...]]` instead of `[[runners.kubernetes...]]`), which
+  the TOML decoder otherwise silently ignores.
+
+The command exits with a non-zero status if it finds any of the problems mentioned previously, or if
+the configuration file does not exist. Unlike `run` and `register`, `lint`
+treats a missing configuration file as a hard error.
+
+Use `lint` to validate a configuration before restarting the runner, or in CI:
+
+```shell
+gitlab-runner lint --config /etc/gitlab-runner/config.toml
+```
+
 ### `gitlab-runner verify`
 
 This command verifies that the registered runners can connect to GitLab. But, it

@@ -1,0 +1,12 @@
+concurrent = 4
+check_interval = 0
+
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.com/"
+  token = "TOKEN"
+  executor = "docker"
+
+  [runners.docker]
+    image = "ruby:2.7"
+    privileged = false
