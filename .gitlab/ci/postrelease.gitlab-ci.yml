@@ -120,6 +120,9 @@ verify bleeding edge resources:
   extends:
     - .verify-resources
     - .rules:release:bleeding-edge
+  environment:
+    name: bleeding_edge/docker_images/linux
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
   needs:
     - job: "bleeding edge docker images"
       artifacts: true
@@ -128,6 +131,9 @@ verify stable resources:
   extends:
     - .verify-resources
     - .rules:release:stable:branch
+  environment:
+    name: stable/docker_images/linux
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
   needs:
     - job: "stable docker images"
       artifacts: true
