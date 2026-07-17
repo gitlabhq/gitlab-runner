@@ -125,6 +125,31 @@ integration test (docker, concrete, steps):
   when: manual
   allow_failure: true
 
+integration test (docker, network-faults):
+  extends:
+    - integration test
+  script:
+    - docker import out/helper-images/prebuilt-alpine-latest-x86_64.tar.xz registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest
+    - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest
+    - make splitic
+    - >
+      .tmp/bin/splitic test \
+        -flaky .flaky-tests.txt \
+        -junit-report .splitic/junit_${CI_NODE_INDEX}_docker_network_faults.xml \
+        -cover-report .splitic/cover_${CI_NODE_INDEX}_docker_network_faults.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
+        -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
+        -tags integration,network_faults \
+        ./executors/docker \
+        -- -ldflags "$(make print_test_ldflags)" -timeout 15m
+  parallel: 1
+  # This job exercises real network-fault/timing-sensitive scenarios (e.g.
+  # image-pull retry against a registry that's deliberately unavailable for
+  # part of the run). It's kept out of the main "integration test" job's
+  # -tags integration build (see the "network_faults" build tag) and allowed
+  # to fail on its own so its inherent timing sensitivity can't destabilize
+  # the main integration suite everyone's MRs depend on.
+  allow_failure: true
+
 integration test with race:
   extends:
     - integration test
