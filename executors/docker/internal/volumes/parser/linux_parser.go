@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	linuxDir        = `/(?:[^\\/:*?"<>|\r\n ]+/?)*`
+	linuxDir        = `/(?:[^\\/:*?"<>|\r\n]+/?)*`
 	linuxVolumeName = `[^\\/:*?"<>|\r\n]+`
 
 	linuxSource = `((?P<source>((` + linuxDir + `)|(` + linuxVolumeName + `))):)?`

@@ -83,6 +83,22 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 			volumeSpec:    ":/destination",
 			expectedError: NewInvalidVolumeSpecErr(":/destination"),
 		},
+		"source with spaces": {
+			volumeSpec:    "/source with spaces:/destination",
+			expectedParts: &Volume{Source: "/source with spaces", Destination: "/destination"},
+		},
+		"destination with spaces": {
+			volumeSpec:    "/source:/destination with spaces",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination with spaces"},
+		},
+		"both paths with spaces and mode": {
+			volumeSpec:    "/my host path:/container path:rw",
+			expectedParts: &Volume{Source: "/my host path", Destination: "/container path", Mode: "rw"},
+		},
+		"multi-level source with spaces": {
+			volumeSpec:    "/path/with spaces/in the/middle:/dest",
+			expectedParts: &Volume{Source: "/path/with spaces/in the/middle", Destination: "/dest"},
+		},
 		"named source": {
 			volumeSpec:    "volume_name:/destination",
 			expectedParts: &Volume{Source: "volume_name", Destination: "/destination"},
