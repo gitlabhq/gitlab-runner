@@ -85,7 +85,7 @@ func dockerInspectArgs(image string) []string {
 		if user, pass := os.Getenv("CI_REGISTRY_USER"), os.Getenv("CI_REGISTRY_PASSWORD"); user != "" && pass != "" {
 			args = append(args, "--username", user, "--password", pass)
 		}
-	case strings.HasPrefix(lower, "registry.hub.docker.com"):
+	case strings.HasPrefix(lower, "registry.hub.docker.com"), strings.HasPrefix(lower, "docker.io/"):
 		// Docker Hub's anonymous pull limit (100/6h per IP) is easily
 		// exceeded by checking the full release tag matrix unauthenticated.
 		// Reuse the credentials the release jobs already use to push these
