@@ -65,6 +65,40 @@ func TestDockerInspectArgs(t *testing.T) {
 				"--username", "dockerhub-user", "--password", "dockerhub-pass",
 			},
 		},
+		"docker.io image uses docker hub creds, never gitlab.com creds": {
+			image: "docker.io/gitlab/gitlab-runner-helper:bleeding",
+
+			ciRegistryUser:     "gitlab-user",
+			ciRegistryPassword: "gitlab-pass",
+			dockerHubUser:      "dockerhub-user",
+			dockerHubPassword:  "dockerhub-pass",
+
+			expectArgs: []string{
+				"inspect", "--raw", "--no-tags",
+				"--username", "dockerhub-user", "--password", "dockerhub-pass",
+			},
+		},
+		"docker.io image is matched case-insensitively": {
+			image: "Docker.IO/gitlab/gitlab-runner-helper:bleeding",
+
+			dockerHubUser:     "dockerhub-user",
+			dockerHubPassword: "dockerhub-pass",
+
+			expectArgs: []string{
+				"inspect", "--raw", "--no-tags",
+				"--username", "dockerhub-user", "--password", "dockerhub-pass",
+			},
+		},
+		"lookalike hostname without docker.io slash never gets docker hub creds": {
+			image: "docker.io.attacker.gitlab.com/gitlab/gitlab-runner-helper:bleeding",
+
+			ciRegistryUser:     "gitlab-user",
+			ciRegistryPassword: "gitlab-pass",
+			dockerHubUser:      "dockerhub-user",
+			dockerHubPassword:  "dockerhub-pass",
+
+			expectArgs: []string{"inspect", "--raw", "--no-tags"},
+		},
 		"third party registry never gets any creds": {
 			image: "quay.io/skopeo/stable:v1.12.0",
 
