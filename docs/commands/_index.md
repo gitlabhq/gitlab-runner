@@ -430,7 +430,7 @@ gitlab-runner reset-token --url "https://gitlab.example.com/" --id 12345 --pat P
 #### All runners
 
 ```shell
-gitlab-runners reset-token --all-runners
+gitlab-runner reset-token --all-runners
 ```
 
 ## Service-related commands
