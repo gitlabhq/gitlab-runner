@@ -135,7 +135,7 @@ like Google Cloud, AWS, and Azure. This executor particularly suits environments
 The Instance executor is an autoscale-enabled executor that creates instances on demand to accommodate
 the expected volume of jobs that the runner manager processes.
 
-This executor and the related Docker Autoscale executor are the new autoscaling executors that works in conjunction with the GitLab Runner Fleeting and Taskscaler technologies.
+This executor and the related Docker Autoscale executor are the new autoscaling executors that work in conjunction with the GitLab Runner Fleeting and Taskscaler technologies.
 
 The Instance executor also uses [fleeting plugins](https://gitlab.com/gitlab-org/fleeting/fleeting) to autoscale.
 
