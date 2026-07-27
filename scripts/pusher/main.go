@@ -1,3 +1,27 @@
+// Pusher is a utility to push saved image archives to an image registry, based
+// on directives given in a json configuration file.
+//
+// The configuration file contains a list of component container archives,
+// each of which is associated to a list of tags it should have in the target
+// container registry.
+//
+// For example:
+//
+//	"alpine3.21-x86_64": [
+//	    "alpine3.21-x86_64-%",
+//	    "x86_64-%"
+//	],
+//
+// This says the archive identified by alpine3.21-x86_64 should be pushed to the
+// container registry with tags alpine3.21-x86_64-% and x86_64-%. The % is used
+// as a wildcard to be replaced at runtime with a tag fragment (passed as a
+// command line parameter) shared across all images being pushed. In the CI/CD
+// pipeline, these fragments are used to insert "bleeding", "latest", or the
+// sha for the commit as part of the tag being pushed.
+//
+// Additionally, the -gen-indexes command line parameter can be passed to request
+// that image indexes are auto-created based on the tag data for the images being
+// pushed. For more information, see [generateIndexes].
 package main
 
 import (
@@ -84,7 +108,7 @@ func main() {
 	}
 
 	if printIndexes {
-		indexes := generateIndexes(&m)
+		indexes := generateIndexes(&m, os.Stderr)
 		output, err := json.MarshalIndent(indexes, "", "    ")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error marshaling output: %v\n", err)
@@ -143,7 +167,7 @@ func readManifest(manifestPath string, genIndexes bool) (Manifest, error) {
 	// If requested, generate indexes from the Default map rather than using
 	// those in the config file.
 	if genIndexes {
-		m.Indexes = generateIndexes(&m)
+		m.Indexes = generateIndexes(&m, os.Stderr)
 	}
 	return m, nil
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"slices"
 	"strings"
 )
@@ -16,8 +18,21 @@ type ImageIndex struct {
 // ImageIndex composite values.
 type IndexMap map[string]*ImageIndex
 
-// Known architectures for stripping arch info from tags.
-var knownArchs = []string{"arm64", "arm", "ppc64le", "riscv64", "s390x", "x86_64"}
+// Known tag components for stripping component tags down to index tags.
+// If a new architecture, flavor, windows version, or suffix is added to the build via
+// dockerfiles/runner-helper/docker-bake.hcl and scripts/pusher/helper-images.json, it'll
+// have to be added here in order to be included in a helper image index. Tags referenced
+// in scripts/pusher/helper-images.json that violate these expectations will cause a test
+// failure. Additionally, knownWinVersions should track the Windows version constants in
+// helpers/container/windows/version.go and helpers/container/helperimage/windows_info.go.
+// See: https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39597.
+var (
+	knownArchs         = []string{"arm", "arm64", "ppc64le", "riscv64", "s390x", "x86_64"}
+	knownLinuxFlavors  = []string{"alpine-edge", "alpine-latest", "alpine3.21", "concrete", "ubi-fips", "ubuntu"}
+	knownLinuxSuffixes = []string{"pwsh"}
+	knownWinFlavors    = []string{"servercore", "nanoserver"}
+	knownWinVersions   = []string{"1809", "21H2", "24H2"}
+)
 
 // crossOsRule identifies a tag template that should be handled as a cross-OS tag,
 // and a component name fragment (e.g. "nanoserver") that identifies components that
@@ -56,7 +71,7 @@ func (r *CrossOsRules) tagFor(componentName string, compTagTemplates []string) s
 		if slices.Contains(compTagTemplates, rule.tagTemplate) {
 			return rule.tagTemplate
 		}
-		if strings.Contains(componentName, rule.windowsFlavor) {
+		if len(compTagTemplates) > 0 && strings.Contains(componentName, rule.windowsFlavor) {
 			return rule.tagTemplate
 		}
 	}
@@ -65,10 +80,13 @@ func (r *CrossOsRules) tagFor(componentName string, compTagTemplates []string) s
 
 // stripTag removes the architecture and windows os.version info from tag templates
 // Makes the following assumptions:
-//  1. No tag ends with an architecture identifier.
-//  2. Windows tags all mention either nanoserver or servercore
-//  3. Any text _after_ nanoserver or servercore is a version identifier
-//     for the windows tag, and should be excluded from the index tag
+// 1. Linux tags follow the format: [flavor-]{arch}-%[-{suffix}]
+// 2. Windows tags follow the format: {arch}-%-{winFlavor}{winVersion}
+//
+// Any tags which do not follow one of these formats will generate an error.
+//
+// For tags that do follow the pattern, we strip the {arch} and {winVersion} components to make
+// the final index tag.
 //
 // Examples:
 //
@@ -76,36 +94,60 @@ func (r *CrossOsRules) tagFor(componentName string, compTagTemplates []string) s
 //	"alpine3.21-x86_64-%" -> "alpine3.21-%"
 //	"x86_64-%-pwsh" -> "%-pwsh"
 //	"x86_64-%-servercore1809" -> "%-servercore"
-func stripTag(tag string) string {
+func stripTag(tag string) (string, error) {
 	for _, arch := range knownArchs {
 		archSegment := arch + "-"
-		if strings.Contains(tag, archSegment) {
-			stripped := strings.Replace(tag, archSegment, "", 1)
-
-			for _, winVariant := range []string{"servercore", "nanoserver"} {
-				if idx := strings.Index(stripped, winVariant); idx != -1 {
-					// If we found the variant, trim the stripped content
-					// to everything up until the end of the variant name
-					stripped = stripped[:idx+len(winVariant)]
-				}
+		if before, after, found := strings.Cut(tag, archSegment); found {
+			if matchingTag := matchesLinuxTagFormat(before, after); matchingTag != "" {
+				return matchingTag, nil
+			} else if matchingTag := matchesWindowsTagFormat(before, after); matchingTag != "" {
+				return matchingTag, nil
 			}
-
-			return stripped
 		}
 	}
 
-	return tag
+	return "", fmt.Errorf("cannot strip tag %s", tag)
+}
+
+func matchesLinuxTagFormat(prefix, suffix string) string {
+	if (prefix == "" || slices.Contains(knownLinuxFlavors, strings.TrimSuffix(prefix, "-"))) &&
+		(suffix == "%" || slices.Contains(knownLinuxSuffixes, strings.TrimPrefix(suffix, "%-"))) {
+		return prefix + suffix
+	}
+	return ""
+}
+
+func matchesWindowsTagFormat(prefix, suffix string) string {
+	if prefix != "" {
+		// all known windows tags currently have no prefix
+		return ""
+	}
+	for _, winFlavor := range knownWinFlavors {
+		winFlavorTag := "%-" + winFlavor
+		for _, winVersion := range knownWinVersions {
+			if suffix == winFlavorTag+winVersion {
+				return winFlavorTag
+			}
+		}
+	}
+	return ""
 }
 
 // stripTags runs stripTag on the given tags and returns the collected result.
-func stripTags(tags []string) []string {
+func stripTags(tags []string) ([]string, []string) {
 	var result []string
+	var rejectedTags []string
 
 	for _, tag := range tags {
-		result = append(result, stripTag(tag))
+		strippedTag, err := stripTag(tag)
+		if err != nil {
+			rejectedTags = append(rejectedTags, tag)
+		} else {
+			result = append(result, strippedTag)
+		}
 	}
 
-	return result
+	return result, rejectedTags
 }
 
 // tagsKey creates a unique grouping key from an ordered tag set.
@@ -135,7 +177,7 @@ func (indexes IndexMap) add(tags []string, archiveName string) {
 // Group the component/tag data in the config file into a map of appropriate
 // indexes, with map key based on the set of stripped tags associated with
 // the component.
-func collectIndexes(m *Manifest) IndexMap {
+func collectIndexes(m *Manifest) (IndexMap, []string) {
 	indexes := make(IndexMap)
 	crossOs := CrossOsRules{}
 
@@ -148,8 +190,10 @@ func collectIndexes(m *Manifest) IndexMap {
 	// tag fragments given on the command line, via the m.match(tagFragment) function.
 	// This feature doesn't appear to be used in the current config file, and is entirely
 	// ignored here.
+	var tagsRejected []string
 	for componentName, tags := range m.Default {
-		strippedTags := stripTags(tags)
+		strippedTags, rejects := stripTags(tags)
+		tagsRejected = append(tagsRejected, rejects...)
 
 		// Filter out cross-OS tags from the simple tags, as cross-OS tags are handled
 		// separately, below.
@@ -171,16 +215,39 @@ func collectIndexes(m *Manifest) IndexMap {
 			indexes.add([]string{crossOsTag}, componentName)
 		}
 	}
-
-	return indexes
+	return indexes, tagsRejected
 }
 
 // generateIndexes creates configuration for image indexes.
+//
 // To reduce configuration burden when adding/updating component images to push,
 // simple rules are followed to combine pushed component images into a set of
 // reasonable image indexes.
-func generateIndexes(m *Manifest) []ImageIndex {
-	indexMap := collectIndexes(m)
+//
+// To automatically combine those component images into an appropriate set of image
+// indexes, we make a few assumptions:
+//
+//  1. Every supported linux tag is of the format [flavor-]{arch}-%[-{suffix}], e.g.
+//     alpine-latest-x86_64-%, or ubuntu-arm64-%-pwsh.
+//  2. Every supported windows tag is of the format {arch}-%-{winFlavor}{winVersion},
+//     e.g. x86_64-%-servercore21H2 or x86_64-%-nanoserver1809.
+//
+// With those assumptions in place, our baseline rule is fairly simple: Tags that
+// differ only on architecture or Windows version should be placed in an image index
+// together, with a tag name derived by simply omitting architecture and Windows
+// version specifiers. For example ubuntu-%-pwsh or %-servercore.
+//
+// If the target image index tag is simply % or %-pwsh, it is handled as a cross-OS
+// index, including both the linux image that was to be pushed as well as servercore
+// images for % and nanoserver images for %-pwsh.
+//
+// Any component tag found in the manifest which does not match the expected conventions
+// is written as a warning to w.
+func generateIndexes(m *Manifest, w io.Writer) []ImageIndex {
+	indexMap, rejectedTags := collectIndexes(m)
+	if len(rejectedTags) > 0 {
+		fmt.Fprintf(w, "warning: ignoring unrecognized tag(s): %v\n", rejectedTags)
+	}
 	var indexes []ImageIndex
 	for _, index := range indexMap {
 		// We sort the components to ensure deterministic ordering in the resulting image index
