@@ -205,7 +205,7 @@ type podPhaseResponse struct {
 	err   error
 }
 
-func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod, out io.Writer, containers ...string) (pf podPhaseResponse) {
+func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod, out io.Writer, printPodWarningEvents bool, containers ...string) (pf podPhaseResponse) {
 	// kubeAPI: pods, get
 	pod, err := client.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 	if err != nil {
@@ -233,28 +233,30 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 		pod.Status.Phase,
 	)
 
-	for _, condition := range pod.Status.Conditions {
-		// skip conditions with no reason, these are typically expected pod conditions
-		if condition.Reason == "" {
-			continue
-		}
+	if printPodWarningEvents {
+		for _, condition := range pod.Status.Conditions {
+			// skip conditions with no reason, these are typically expected pod conditions
+			if condition.Reason == "" {
+				continue
+			}
 
-		_, _ = fmt.Fprintf(
-			out,
-			"\t%s: %q\n",
-			condition.Reason,
-			condition.Message,
-		)
+			_, _ = fmt.Fprintf(
+				out,
+				"\t%s: %q\n",
+				condition.Reason,
+				condition.Message,
+			)
+		}
 	}
 
 	return podPhaseResponse{false, pod.Status.Phase, nil}
 }
 
-func triggerPodPhaseCheck(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out io.Writer, containers ...string) <-chan podPhaseResponse {
+func triggerPodPhaseCheck(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out io.Writer, printPodWarningEvents bool, containers ...string) <-chan podPhaseResponse {
 	errc := make(chan podPhaseResponse)
 	go func() {
 		defer close(errc)
-		errc <- getPodPhase(ctx, c, pod, out, containers...)
+		errc <- getPodPhase(ctx, c, pod, out, printPodWarningEvents, containers...)
 	}()
 	return errc
 }
@@ -281,7 +283,7 @@ func waitForPodRunning(
 	var lastPhase api.PodPhase
 	for i := 0; i <= pollAttempts; i++ {
 		select {
-		case r := <-triggerPodPhaseCheck(ctx, c, pod, out, containers...):
+		case r := <-triggerPodPhaseCheck(ctx, c, pod, out, config.GetPrintPodWarningEvents(), containers...):
 			if !r.done {
 				lastPhase = r.phase
 				time.Sleep(time.Duration(pollInterval) * time.Second)

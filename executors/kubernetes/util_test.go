@@ -177,14 +177,16 @@ func TestWaitForPodRunning(t *testing.T) {
 	retries := 0
 
 	tests := []struct {
-		Name         string
-		Pod          *api.Pod
-		Config       *common.KubernetesConfig
-		ClientFunc   func(*http.Request) (*http.Response, error)
-		PodEndPhase  api.PodPhase
-		Retries      int
-		Error        bool
-		ExactRetries bool
+		Name              string
+		Pod               *api.Pod
+		Config            *common.KubernetesConfig
+		ClientFunc        func(*http.Request) (*http.Response, error)
+		PodEndPhase       api.PodPhase
+		Retries           int
+		Error             bool
+		ExactRetries      bool
+		ExpectContains    []string
+		ExpectNotContains []string
 	}{
 		{
 			Name: "ensure function retries until ready",
@@ -332,6 +334,114 @@ func TestWaitForPodRunning(t *testing.T) {
 			Error:        true,
 			ExactRetries: true,
 		},
+		{
+			Name: "ensure pod condition warnings are printed when print_pod_warning_events is enabled by default",
+			Pod: &api.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "test-ns",
+				},
+			},
+			Config: &common.KubernetesConfig{},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
+					pod := &api.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-pod",
+							Namespace: "test-ns",
+						},
+						Status: api.PodStatus{
+							Phase: api.PodPending,
+							Conditions: []api.PodCondition{
+								{
+									Reason:  "Unschedulable",
+									Message: "0/3 nodes are available: 3 Insufficient cpu.",
+								},
+							},
+						},
+					}
+
+					if retries > 0 {
+						pod.Status.Phase = api.PodRunning
+						pod.Status.Conditions = nil
+						pod.Status.ContainerStatuses = []api.ContainerStatus{
+							{Ready: true},
+						}
+					}
+
+					retries++
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, pod),
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, fmt.Errorf("unexpected request")
+				}
+			},
+			PodEndPhase: api.PodRunning,
+			Retries:     1,
+			ExpectContains: []string{
+				`Unschedulable: "0/3 nodes are available: 3 Insufficient cpu."`,
+			},
+		},
+		{
+			Name: "ensure pod condition warnings are suppressed when print_pod_warning_events is disabled",
+			Pod: &api.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "test-ns",
+				},
+			},
+			Config: &common.KubernetesConfig{
+				PrintPodWarningEvents: new(bool),
+			},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
+					pod := &api.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-pod",
+							Namespace: "test-ns",
+						},
+						Status: api.PodStatus{
+							Phase: api.PodPending,
+							Conditions: []api.PodCondition{
+								{
+									Reason:  "Unschedulable",
+									Message: "0/3 nodes are available: 3 Insufficient cpu.",
+								},
+							},
+						},
+					}
+
+					if retries > 0 {
+						pod.Status.Phase = api.PodRunning
+						pod.Status.Conditions = nil
+						pod.Status.ContainerStatuses = []api.ContainerStatus{
+							{Ready: true},
+						}
+					}
+
+					retries++
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, pod),
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, fmt.Errorf("unexpected request")
+				}
+			},
+			PodEndPhase: api.PodRunning,
+			Retries:     1,
+			ExpectNotContains: []string{
+				"Unschedulable",
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -339,8 +449,10 @@ func TestWaitForPodRunning(t *testing.T) {
 			retries = 0
 			c := testKubernetesClient(version, fake.CreateHTTPClient(test.ClientFunc))
 
+			var output strings.Builder
 			fw := testWriter{
 				call: func(b []byte) (int, error) {
+					output.Write(b)
 					if retries < test.Retries {
 						if !strings.Contains(string(b), "Waiting for pod") {
 							t.Errorf("[%s] Expected to continue waiting for pod. Got: '%s'", test.Name, string(b))
@@ -364,6 +476,17 @@ func TestWaitForPodRunning(t *testing.T) {
 			if test.ExactRetries && retries < test.Retries {
 				t.Errorf("[%s] Not enough retries. Expected: %d, got: %d", test.Name, test.Retries, retries)
 				return
+			}
+
+			for _, s := range test.ExpectContains {
+				if !strings.Contains(output.String(), s) {
+					t.Errorf("[%s] Expected output to contain %q. Got: %s", test.Name, s, output.String())
+				}
+			}
+			for _, s := range test.ExpectNotContains {
+				if strings.Contains(output.String(), s) {
+					t.Errorf("[%s] Expected output not to contain %q. Got: %s", test.Name, s, output.String())
+				}
 			}
 		})
 	}
