@@ -39,7 +39,7 @@ fi
 
 `
 
-	// This script is indented to be run in docker or kubernetes containers only to ensure graceful shutdown of build,
+	// This script is intended to be run in docker or kubernetes containers only to ensure graceful shutdown of build,
 	// service and potentially other containers. It sends SIGTERM to all PIDs excluding itself and 1, in decreasing numeric
 	// order, positing that the higher PIDs are likely the processes blocking and thus preventing the container from
 	// shutting down cleanly. The inner while loop waits for up to 5 seconds for the last killed PID to exit before moving
