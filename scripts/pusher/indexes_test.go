@@ -1,10 +1,62 @@
 package main
 
 import (
+	"io"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+func TestStripTag(t *testing.T) {
+	tests := []struct {
+		componentTag string
+		indexTag     string
+	}{
+		{
+			componentTag: "alpine3.21-arm64-%",
+			indexTag:     "alpine3.21-%",
+		},
+		{
+			componentTag: "arm-%",
+			indexTag:     "%",
+		},
+		{
+			componentTag: "riscv64-%-pwsh",
+			indexTag:     "%-pwsh",
+		},
+		{
+			componentTag: "concrete-s390x-%",
+			indexTag:     "concrete-%",
+		},
+		{
+			componentTag: "alpine-edge-ppc64le-%",
+			indexTag:     "alpine-edge-%",
+		},
+		{
+			componentTag: "x86_64-%-nanoserver1809",
+			indexTag:     "%-nanoserver",
+		},
+		{
+			componentTag: "x86_64-%-servercore21H2",
+			indexTag:     "%-servercore",
+		},
+		{
+			componentTag: "arm64-%-servercore24H2",
+			indexTag:     "%-servercore",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.componentTag, func(t *testing.T) {
+			tag, err := stripTag(tt.componentTag)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tag != tt.indexTag {
+				t.Errorf("stripTag() = %q, want %q", tag, tt.indexTag)
+			}
+		})
+	}
+}
 
 func TestCollectIndexes(t *testing.T) {
 	tests := []struct {
@@ -196,8 +248,8 @@ func TestCollectIndexes(t *testing.T) {
 			name: "windows-nanoserver images",
 			manifest: Manifest{
 				Default: map[string][]string{
-					"windows-nanoserver-ltsc2019-x86_64": {"x86_64-%-nanoserver2019"},
-					"windows-nanoserver-ltsc2022-x86_64": {"x86_64-%-nanoserver2022"},
+					"windows-nanoserver-ltsc2019-x86_64": {"x86_64-%-nanoserver1809"},
+					"windows-nanoserver-ltsc2022-x86_64": {"x86_64-%-nanoserver21H2"},
 				},
 			},
 			wantGroups: []ImageIndex{
@@ -220,8 +272,8 @@ func TestCollectIndexes(t *testing.T) {
 			name: "windows-servercore images",
 			manifest: Manifest{
 				Default: map[string][]string{
-					"windows-servercore-ltsc2019-x86_64": {"x86_64-%-servercore2019"},
-					"windows-servercore-ltsc2022-x86_64": {"x86_64-%-servercore2022"},
+					"windows-servercore-ltsc2019-x86_64": {"x86_64-%-servercore1809"},
+					"windows-servercore-ltsc2022-x86_64": {"x86_64-%-servercore21H2"},
 				},
 			},
 			wantGroups: []ImageIndex{
@@ -256,15 +308,67 @@ func TestCollectIndexes(t *testing.T) {
 				},
 			},
 		},
+		{
+			// Verifies that a component with no tags passing validation is not added
+			// to the default tag
+			name: "invalid windows tags ignored in cross-os images",
+			manifest: Manifest{
+				Default: map[string][]string{
+					"invalid-servercore":      {"x86_64-binary-arm64-os-%-servercore24H2"},
+					"valid-servercore":        {"arm64-%-servercore24H2"},
+					"invalid-nanoserver":      {"x86_64-binary-arm64-os-%-nanoserver24H2"},
+					"valid-nanoserver":        {"arm64-%-nanoserver24H2"},
+				},
+			},
+			wantGroups: []ImageIndex{
+				{
+					Tags:       []string{"%"},
+					Components: []string{"valid-servercore"},
+				},
+				{
+					Tags:       []string{"%-nanoserver"},
+					Components: []string{"valid-nanoserver"},
+				},
+				{
+					Tags:       []string{"%-pwsh"},
+					Components: []string{"valid-nanoserver"},
+				},
+				{
+					Tags:       []string{"%-servercore"},
+					Components: []string{"valid-servercore"},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotIndexes := generateIndexes(&tt.manifest)
+			gotIndexes := generateIndexes(&tt.manifest, io.Discard)
 
 			if diff := cmp.Diff(tt.wantGroups, gotIndexes); diff != "" {
 				t.Errorf("collectIndexes() mismatch (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+// Protect against component tags being added to helper-images.json which inadvertently do not
+// match the conventions used for generating image indexes for the helper images. If a component
+// tag is intentionally added which is expected to be rejected by the validation (and therefore
+// not expected to be added to any helper image index), it should be added to acceptedRejects to
+// fix this test.
+func TestHelperImagesRejectedTags(t *testing.T) {
+	m, err := readManifest("helper-images.json", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// placeholder for tags we expect to find in helper-images.json that
+	// will be rejected, and not added to any helper image index
+	var acceptedRejects []string
+
+	_, gotRejects := collectIndexes(&m)
+	if diff := cmp.Diff(acceptedRejects, gotRejects); diff != "" {
+		t.Errorf("Unexpected error reading helper-images.json (-want +got):\n%s", diff)
 	}
 }
