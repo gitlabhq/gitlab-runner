@@ -67,6 +67,12 @@ const (
 	detectShellScriptName         = "detect_shell_script"
 	pwshJSONTerminationScriptName = "terminate_with_json_script"
 
+	// fallbackExitStatusMarkerFmt mirrors the JSON marker printed by the trap inside
+	// the stage script itself (see bashJSONTerminationScript), for the case where the
+	// detect shell can't even open that script. See the comment above its use in
+	// getContainerInfo for why this fallback exists.
+	fallbackExitStatusMarkerFmt = `'((%s %s; ec=$?; if [ $ec -ne 0 ]; then echo; echo "{\"command_exit_code\": $ec, \"script\": \"%s\"}"; fi) %s) &'`
+
 	waitLogFileTimeout = time.Minute
 
 	outputLogFileNotExistsExitCode = 100
@@ -1167,8 +1173,20 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 			// explaining why in a comment fails the code quality check of
 			// function length not exceeding 60 lines, so `git blame` this instead.
 			"-c",
-			fmt.Sprintf("'(%s %s %s) &'",
+			// The exit-status JSON marker that forwardLogLine/remoteProcessTerminated waits
+			// for is normally printed by a trap *inside* the stage script itself (see
+			// bashJSONTerminationScript). If the detect shell can't even open that script
+			// (e.g. it's missing from the emptyDir), the trap never installs and no marker
+			// is ever produced, so the runner would wait forever. Capture the exit code of
+			// the detect-shell invocation from outside and print a fallback marker whenever
+			// it comes back non-zero - the trap always exits 0 when it did get to run, so
+			// the two cases can't collide. The fallback marker includes the same "script"
+			// field the trap would have printed so StageCommandStatus.BuildStage() can still
+			// identify the stage - otherwise a concurrent network error on the attach call
+			// would make checkScriptExecution fail to match this stage and retry needlessly.
+			fmt.Sprintf(fallbackExitStatusMarkerFmt,
 				s.scriptPath(detectShellScriptName),
+				s.scriptPath(cmd.Stage),
 				s.scriptPath(cmd.Stage),
 				s.buildRedirectionCmd(shell),
 			),

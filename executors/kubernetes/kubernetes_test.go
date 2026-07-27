@@ -12,6 +12,8 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
+	osexec "os/exec"
 	"regexp"
 	"runtime"
 	"slices"
@@ -56,6 +58,7 @@ import (
 	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
@@ -7018,8 +7021,9 @@ func TestGetContainerInfo(t *testing.T) {
 				return []string{
 					"sh",
 					"-c",
-					fmt.Sprintf("'(%s %s %s) &'",
+					fmt.Sprintf(fallbackExitStatusMarkerFmt,
 						e.scriptPath(detectShellScriptName),
+						e.scriptPath(cmd.Stage),
 						e.scriptPath(cmd.Stage),
 						e.buildRedirectionCmd("bash"),
 					),
@@ -7078,6 +7082,130 @@ func TestGetContainerInfo(t *testing.T) {
 			containerName, containerCommand := tt.executor.getContainerInfo(tt.command)
 			assert.Equal(t, tt.expectedContainerName, containerName)
 			assert.Equal(t, tt.getExpectedCommand(tt.executor, tt.command), containerCommand)
+		})
+	}
+}
+
+// TestGetContainerInfoReportsExitStatusWhenStageScriptMissing runs the actual
+// command produced by getContainerInfo through a real shell (the same way
+// AttachOptions.Run feeds it to the container's persistent shell over stdin,
+// see exec.go) to prove the wrapper reports a fallback exit status when the
+// stage script can't be found - historically nothing did, so the runner
+// waited forever for a JSON marker that could never be written (the trap
+// that writes it lives inside the very script that failed to load). This
+// test covers the build container (non-predefined stage) scenario only; the
+// equivalent for the helper container (predefined stages) is not covered by
+// this fix. See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39354.
+func TestGetContainerInfoReportsExitStatusWhenStageScriptMissing(t *testing.T) {
+	// The generated container command relies on bash-specific pipe/backgrounding
+	// semantics (see the comment above), and is run here through a real bash, which
+	// isn't available on Windows CI runners.
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
+	// Mirrors the unexported shells.bashJSONTerminationScript: a real generated
+	// stage script always has this trap prepended, so it's what actually emits
+	// the exit-status marker on the "script present" paths below. Duplicated
+	// literally here (rather than lowering the visibility boundary) so this test
+	// exercises the same trap text the shell package hands the executor.
+	const jsonTerminationTrap = `runner_script_trap() {
+	exit_code=$?
+	out_json="{\"command_exit_code\": $exit_code, \"script\": \"$0\"}"
+
+	echo ""
+	echo "$out_json"
+	exit 0
+}
+
+trap runner_script_trap EXIT
+`
+
+	successfulResponse, err := common.GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		writeStageScript bool
+		scriptContent    string
+		wantMarker       bool
+		wantExitCode     int
+	}{
+		"stage script missing on disk": {
+			writeStageScript: false,
+			wantMarker:       true,
+			wantExitCode:     127,
+		},
+		"stage script present and succeeds": {
+			writeStageScript: true,
+			scriptContent:    "echo stage ran\n",
+			wantMarker:       false,
+		},
+		"stage script present and fails": {
+			// The trap fires and reports the real exit code regardless of whether
+			// the script succeeds or fails - only a script that can't be opened at
+			// all skips the trap. This proves the wrapper's own fallback marker
+			// (added for the "missing" case) doesn't also fire here and produce a
+			// second, colliding marker for the same invocation.
+			writeStageScript: true,
+			scriptContent:    jsonTerminationTrap + "exit 1\n",
+			wantMarker:       true,
+			wantExitCode:     1,
+		},
+		"stage script present with trap and succeeds": {
+			// Real generated stage scripts always carry the trap, unlike the plain
+			// "echo stage ran" case above. Proves the wrapper stays silent and lets
+			// the trap's own marker through unmodified on the success path too, not
+			// just when the trap is absent entirely.
+			writeStageScript: true,
+			scriptContent:    jsonTerminationTrap + "echo stage ran\n",
+			wantMarker:       true,
+			wantExitCode:     0,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			tmp := t.TempDir()
+
+			e := setupExecutor("bash", successfulResponse)
+			e.Config.RunnerSettings.Kubernetes.ScriptsBaseDir = tmp
+			e.Config.RunnerSettings.Kubernetes.LogsBaseDir = tmp
+
+			cmd := common.ExecutorCommand{Stage: common.BuildStagePrepare, Predefined: false}
+
+			require.NoError(t, os.MkdirAll(e.scriptsDir(), 0o755))
+			require.NoError(t, os.MkdirAll(e.logsDir(), 0o755))
+			require.NoError(t, os.WriteFile(e.scriptPath(detectShellScriptName), []byte(shells.BashDetectShellScript), 0o755))
+
+			if tt.writeStageScript {
+				require.NoError(t, os.WriteFile(e.scriptPath(cmd.Stage), []byte(tt.scriptContent), 0o755))
+			}
+
+			_, containerCommand := e.getContainerInfo(cmd)
+
+			// containerCommand is exactly the line AttachOptions.Run writes to the
+			// container's persistent shell's stdin (strings.Join(Command, " ")+"\n",
+			// see exec.go). Reproduce that here with a real shell instead of just
+			// asserting on the generated string, since the bug is about runtime
+			// shell/pipe behaviour (exit-status propagation through "cmd | tee &"),
+			// not the string shape.
+			line := strings.Join(containerCommand, " ")
+			out, err := osexec.Command("bash", "-c", line).CombinedOutput()
+			require.NoError(t, err, "output: %s", out)
+
+			var logContent []byte
+			require.Eventually(t, func() bool {
+				logContent, err = os.ReadFile(e.logFile())
+				return err == nil && len(logContent) > 0
+			}, 2*time.Second, 10*time.Millisecond, "backgrounded stage never wrote to the log file")
+
+			markerCount := strings.Count(string(logContent), `"command_exit_code"`)
+			if tt.wantMarker {
+				assert.Equal(t, 1, markerCount, "expected exactly one exit-status marker, got %d (double-report would confuse forwardLogLine): %s", markerCount, logContent)
+				assert.Contains(t, string(logContent), fmt.Sprintf(`"command_exit_code": %d`, tt.wantExitCode))
+				assert.Contains(t, string(logContent), fmt.Sprintf(`"script": "%s"`, e.scriptPath(cmd.Stage)))
+			} else {
+				assert.Equal(t, 0, markerCount, "unexpected exit-status marker for a successfully executed script: %s", logContent)
+				assert.Contains(t, string(logContent), "stage ran")
+			}
 		})
 	}
 }
