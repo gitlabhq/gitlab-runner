@@ -1,7 +1,8 @@
-## v19.0.2 (2026-06-29)
+## v19.0.2 (2026-07-28)
 
 ### Bug fixes
 
+- [19.0] Key S3 client cache by config value, not pointer [!6983](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6983)
 - Fix Bash script body leak on job cancellation [!6870](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6870)
 
 ### Maintenance
