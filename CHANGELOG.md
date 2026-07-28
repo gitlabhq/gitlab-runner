@@ -1,3 +1,9 @@
+## v19.1.2 (2026-07-28)
+
+### Bug fixes
+
+- [19.1] Key S3 client cache by config value, not pointer [!6982](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6982)
+
 ## v19.1.1 (2026-06-25)
 
 ### Bug fixes
