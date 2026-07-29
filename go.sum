@@ -584,8 +584,8 @@ gitlab.com/gitlab-org/go/reopen v1.0.0 h1:6BujZ0lkkjGIejTUJdNO1w56mN1SI10qcVQyQl
 gitlab.com/gitlab-org/go/reopen v1.0.0/go.mod h1:D6OID8YJDzEVZNYW02R/Pkj0v8gYFSIhXFTArAsBQw8=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e h1:Aw1nDGdZEm1Jv3jwKbT0hKTAxTpP4yVRGCI21MYRHBc=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e/go.mod h1:pKFT8nwdU5KuJYosKMGgMATMrV4AP6p9jRu4HobZaBA=
-gitlab.com/gitlab-org/labkit v1.62.0 h1:eYYMcu5ZpNtVpp1TNqdHLLmFHGP3Thv1j5k+vf+roeg=
-gitlab.com/gitlab-org/labkit v1.62.0/go.mod h1:7q5/Qxsbebgy8OIyIcsUGK92bPRfOiL8Ft1+TTykUdU=
+gitlab.com/gitlab-org/labkit v1.64.8 h1:YyYvCGf1Drkf4V+9b5hjLtOM2pOxnwDueOgR1g2/mfs=
+gitlab.com/gitlab-org/labkit v1.64.8/go.mod h1:ARZnzZ49zdjPQfoyaW8sEpZz2EDFXN4NKNblste8nhc=
 gitlab.com/gitlab-org/labkit/v2 v2.26.1 h1:F1Q/6/Q2hFAVUKL0qrnLHdJyD3mH2vFM95/WPSQ9wyQ=
 gitlab.com/gitlab-org/labkit/v2 v2.26.1/go.mod h1:UZNkMHIK7AhXFZg1s1c5dS88o279tXq7O4QusZ6s3wA=
 gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7 h1:ZeO7PIjerXTEaZPvR2fBkB/8fTAFrVjUFgC1B8x64fM=
