@@ -590,8 +590,8 @@ gitlab.com/gitlab-org/labkit/v2 v2.26.1 h1:F1Q/6/Q2hFAVUKL0qrnLHdJyD3mH2vFM95/WP
 gitlab.com/gitlab-org/labkit/v2 v2.26.1/go.mod h1:UZNkMHIK7AhXFZg1s1c5dS88o279tXq7O4QusZ6s3wA=
 gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7 h1:ZeO7PIjerXTEaZPvR2fBkB/8fTAFrVjUFgC1B8x64fM=
 gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7/go.mod h1:024490ksS75/Bi9UoJTu59qY44JuFBAfi5bzGsLIhtY=
-gitlab.com/gitlab-org/step-runner v0.39.0 h1:KEf8takX94JLgpGso0Az8yd0bCYnBFHgomNS2Mtczew=
-gitlab.com/gitlab-org/step-runner v0.39.0/go.mod h1:s+vTghtzaaXgkIT622NTQdbtx5wIeatHhELT6hR7Oac=
+gitlab.com/gitlab-org/step-runner v0.41.0 h1:VifIGxK12hXKE9qjOEV3E3TYzHiqmBFxV1GByU3E5D0=
+gitlab.com/gitlab-org/step-runner v0.41.0/go.mod h1:0u+ZKF2hmZGKr6EmIQmvMZvcOlhkZX4k9Qhy7j+6Odo=
 go.etcd.io/bbolt v1.3.5 h1:XAzx9gjCb0Rxj7EoqcClPD1d5ZBxZJk0jbuoPHenBt0=
 go.etcd.io/bbolt v1.3.5/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
 go.mozilla.org/pkcs7 v0.9.0 h1:yM4/HS9dYv7ri2biPtxt8ikvB37a980dg69/pKmS+eI=
