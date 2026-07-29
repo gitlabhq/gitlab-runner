@@ -4,7 +4,7 @@ go 1.26.3
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0
-	cloud.google.com/go/iam v1.11.0
+	cloud.google.com/go/iam v1.12.0
 	cloud.google.com/go/secretmanager v1.21.0
 	cloud.google.com/go/storage v1.64.0
 	dario.cat/mergo v1.0.2
