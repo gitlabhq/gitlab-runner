@@ -49,7 +49,7 @@ require (
 	github.com/johannesboyne/gofakes3 v0.0.0-20260208201424-4c385a1f6a73
 	github.com/joho/godotenv v1.5.1
 	github.com/jpillora/backoff v1.0.0
-	github.com/kardianos/service v1.2.4
+	github.com/kardianos/service v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.18.6
 	github.com/klauspost/pgzip v1.2.6
