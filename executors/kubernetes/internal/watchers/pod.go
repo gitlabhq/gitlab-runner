@@ -215,6 +215,11 @@ func CheckTerminalContainerErrors(containerStatuses []v1.ContainerStatus) error 
 				Inner:         fmt.Errorf("container %q is in CrashLoopBackOff: %s", status.Name, crashLoopMessage(status)),
 				FailureReason: common.ConfigurationError,
 			}
+		case "CreateContainerConfigError":
+			return &common.BuildError{
+				Inner:         fmt.Errorf("container configuration error: %s", waiting.Message),
+				FailureReason: common.ConfigurationError,
+			}
 		}
 	}
 
