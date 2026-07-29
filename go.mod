@@ -31,7 +31,7 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/fatih/color v1.18.0
-	github.com/getsentry/sentry-go v0.45.0
+	github.com/getsentry/sentry-go v0.48.0
 	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
