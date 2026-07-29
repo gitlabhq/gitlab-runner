@@ -63,7 +63,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.67.5
-	github.com/prometheus/procfs v0.19.2
+	github.com/prometheus/procfs v0.21.1
 	github.com/samber/lo v1.52.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/saracen/fastzip v0.2.0
