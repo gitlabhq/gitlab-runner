@@ -280,6 +280,7 @@ func (_c *MockShellWriter_CommandArgExpand_Call) RunAndReturn(run func(command s
 
 // CommandWithStdin provides a mock function for the type MockShellWriter
 func (_mock *MockShellWriter) CommandWithStdin(stdin string, command string, arguments ...string) {
+	// string
 	_va := make([]interface{}, len(arguments))
 	for _i := range arguments {
 		_va[_i] = arguments[_i]
@@ -288,6 +289,7 @@ func (_mock *MockShellWriter) CommandWithStdin(stdin string, command string, arg
 	_ca = append(_ca, stdin, command)
 	_ca = append(_ca, _va...)
 	_mock.Called(_ca...)
+	return
 }
 
 // MockShellWriter_CommandWithStdin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CommandWithStdin'
@@ -306,13 +308,27 @@ func (_e *MockShellWriter_Expecter) CommandWithStdin(stdin interface{}, command 
 
 func (_c *MockShellWriter_CommandWithStdin_Call) Run(run func(stdin string, command string, arguments ...string)) *MockShellWriter_CommandWithStdin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []string
 		variadicArgs := make([]string, len(args)-2)
 		for i, a := range args[2:] {
 			if a != nil {
 				variadicArgs[i] = a.(string)
 			}
 		}
-		run(args[0].(string), args[1].(string), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -322,7 +338,7 @@ func (_c *MockShellWriter_CommandWithStdin_Call) Return() *MockShellWriter_Comma
 	return _c
 }
 
-func (_c *MockShellWriter_CommandWithStdin_Call) RunAndReturn(run func(string, string, ...string)) *MockShellWriter_CommandWithStdin_Call {
+func (_c *MockShellWriter_CommandWithStdin_Call) RunAndReturn(run func(stdin string, command string, arguments ...string)) *MockShellWriter_CommandWithStdin_Call {
 	_c.Run(run)
 	return _c
 }
