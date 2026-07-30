@@ -162,6 +162,53 @@ func TestBuildSuccess(t *testing.T) {
 	})
 }
 
+// TestConcreteElseBranchErrexit is an end-to-end regression test for
+// https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39610.
+//
+// An if/else authored as separate script lines, with the else branch taken, must
+// run to completion under both the legacy path and FF_CONCRETE. It used to pass
+// with FF_CONCRETE off and fail with it on: the concrete scriptwriter re-raised
+// the failed if-condition's exit status as a standalone "(exit 1)" at the top of
+// the else branch, which tripped "set -o errexit" and aborted the job before the
+// else body ran. Running both flag values is the point of this test - it pins the
+// two paths to the same observable behaviour.
+func TestConcreteElseBranchErrexit(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "bash")
+
+	// The bug was specific to the bash scriptwriter; TAKE_THEN is unset, so the
+	// else branch is taken.
+	job, err := common.GetRemoteBuildResponse(
+		`if [ "$TAKE_THEN" = "true" ]; then`,
+		`echo THEN_RAN`,
+		`else`,
+		`echo ELSE_RAN`,
+		`fi`,
+		`echo AFTER_FI`,
+	)
+	require.NoError(t, err)
+
+	for _, concrete := range []bool{false, true} {
+		t.Run(fmt.Sprintf("FF_CONCRETE=%v", concrete), func(t *testing.T) {
+			build := newBuild(t, job, "bash")
+			buildtest.SetBuildFeatureFlag(build, featureflags.UseConcrete, concrete)
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+
+			// Read after the build: settings are resolved and cached on first use,
+			// so this reflects the value the build actually ran with. A flag named
+			// in RUNNER_TEST_FEATURE_FLAGS is forced to the negation of its default
+			// and the job variable set above is ignored entirely, which would
+			// collapse this off-vs-on pair into on-vs-on while still passing.
+			require.Equal(t, concrete, build.IsFeatureFlagOn(featureflags.UseConcrete),
+				"FF_CONCRETE was overridden (RUNNER_TEST_FEATURE_FLAGS?); this subtest is not testing what its name claims")
+
+			assert.NoError(t, err)
+			assert.Contains(t, out, "ELSE_RAN", "the else-branch body must execute")
+			assert.Contains(t, out, "AFTER_FI", "execution must continue past the if/else")
+		})
+	}
+}
+
 func TestBuildPassingEnvsMultistep(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)

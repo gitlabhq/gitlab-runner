@@ -3,7 +3,10 @@
 package scriptwriter
 
 import (
+	"errors"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -155,11 +158,34 @@ func TestBashScript(t *testing.T) {
 				assert.Contains(t, s, "test_step_1")
 			},
 		},
-		"preserves exit code": {
+		// Regression guard for gitlab-runner#39610: the bash generator must NOT
+		// emit a standalone "(exit $_runner_exit_code)" restore before user
+		// commands. Such a restore aborts under "set -o errexit" at the top of
+		// an else branch, where $? holds the failed if-condition's status.
+		//
+		// The body is shell-escaped, so `$` reaches the script as `\$` and a
+		// literal "(exit $_runner_exit_code)" never appears. Match on "(exit "
+		// so the guard actually fails if the restore is reintroduced.
+		"does not emit errexit-tripping exit-code restore": {
 			lines: []string{"echo hello"},
 			assert: func(t *testing.T, s string) {
-				assert.Contains(t, s, "_runner_exit_code=")
-				assert.Contains(t, s, "(exit ")
+				assert.NotContains(t, s, "(exit ")
+			},
+		},
+		"does not emit errexit-tripping exit-code restore with sections": {
+			lines: []string{"echo first\necho second"},
+			opts:  []func(*Builder){withScriptSections},
+			assert: func(t *testing.T, s string) {
+				assert.NotContains(t, s, "(exit ")
+			},
+		},
+		// The post-command check is a different mechanism and must survive: it
+		// reads $? after the user command rather than re-raising it before.
+		"exit code check still captures the status after the command": {
+			lines: []string{"echo hello"},
+			opts:  []func(*Builder){withExitCodeCheck},
+			assert: func(t *testing.T, s string) {
+				assert.Contains(t, s, `_runner_exit_code=\$?; if [ \$_runner_exit_code -ne 0 ]; then exit \$_runner_exit_code; fi`)
 			},
 		},
 		"empty lines": {
@@ -183,6 +209,165 @@ func TestBashScript(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			b := newBuilder(ShellBash, tc.opts...)
 			tc.assert(t, b.Build(tc.lines))
+		})
+	}
+}
+
+// runBash writes script to a temp file, executes it with bash, and returns the
+// combined output and the process exit code.
+func runBash(t *testing.T, script string) (string, int) {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "script.sh")
+	require.NoError(t, os.WriteFile(path, []byte(script), 0o700))
+
+	// resolveBash, not a hardcoded "bash": requireShell gates on resolveBash,
+	// which falls back to sh, so a host without bash in PATH would admit the
+	// test and then fail to exec.
+	shell, err := resolveBash()
+	require.NoError(t, err)
+
+	out, err := exec.Command(shell, path).CombinedOutput()
+	if err == nil {
+		return string(out), 0
+	}
+
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
+		return string(out), exitErr.ExitCode()
+	}
+	t.Fatalf("executing generated script: %v", err)
+	return "", -1
+}
+
+// TestBashScript_Execute runs generated scripts through a real shell.
+//
+// Regression coverage for
+// https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39610.
+//
+// When a conditional was authored as separate script lines, the generator used
+// to emit a per-line "(exit $_runner_exit_code)" status-restore. It captured the
+// failed condition's exit status and re-raised it as a standalone "(exit 1)",
+// which under "set -o errexit" aborted the whole script before the branch body
+// ran. The restore is gone; these cases keep it gone.
+//
+// This was the concrete-only path: the legacy shells/bash.go generator never
+// emitted such a restore, so the same scripts succeeded there (see the
+// FF_CONCRETE off-vs-on integration test in executors/shell).
+//
+// The negative cases guard the other direction: removing the restore must not
+// weaken failure propagation.
+func TestBashScript_Execute(t *testing.T) {
+	requireShell(t, ShellBash)
+
+	// elseLines and negationLines are the two shapes that tripped the removed
+	// restore. Both are re-run with ExitCodeCheck below, where they still fail.
+	elseLines := []string{
+		// TAKE_THEN is unset, so the else branch is taken.
+		`if [ "$TAKE_THEN" = "true" ]; then`,
+		`echo THEN_RAN`,
+		`else`,
+		`echo ELSE_RAN`,
+		`fi`,
+		`echo AFTER_FI`,
+	}
+	negationLines := []string{
+		`! true`,
+		`echo AFTER_NEGATION`,
+	}
+
+	tests := map[string]struct {
+		lines    []string
+		opts     []func(*Builder)
+		wantCode int
+		contains []string
+		excludes []string
+		skip     string
+	}{
+		"else branch runs to completion": {
+			lines:    elseLines,
+			contains: []string{"ELSE_RAN", "AFTER_FI"},
+			excludes: []string{"THEN_RAN"},
+		},
+		// The post-command exit-code check reads $? at the top of the else branch
+		// for exactly the same reason the removed restore did, so it re-raises the
+		// failed if-condition's status and aborts before the else body runs. That
+		// is a pre-existing defect shared with the legacy generators
+		// (shells/bash.go CheckForErrors, driven per script line by
+		// shells/abstract.go writeCommands, and functions/script_legacy), not
+		// something this change introduced, and FF_ENABLE_BASH_EXIT_CODE_CHECK is
+		// off by default. Recorded here so the gap is visible rather than merely
+		// uncovered; un-skip these when gitlab-runner#39634 is fixed.
+		"else branch runs to completion with exit code check": {
+			lines:    elseLines,
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"ELSE_RAN", "AFTER_FI"},
+			excludes: []string{"THEN_RAN"},
+			skip:     "known gap gitlab-runner#39634: FF_ENABLE_BASH_EXIT_CODE_CHECK re-raises the failed if-condition's status at the top of the else branch",
+		},
+		"elif branch runs to completion": {
+			lines: []string{
+				`if [ a = b ]; then`,
+				`echo FIRST_RAN`,
+				`elif [ c = c ]; then`,
+				`echo SECOND_RAN`,
+				`fi`,
+				`echo AFTER_FI`,
+			},
+			contains: []string{"SECOND_RAN", "AFTER_FI"},
+			excludes: []string{"FIRST_RAN"},
+		},
+		// A trailing "! cmd" leaves $? non-zero for the same reason an else
+		// branch does, and aborted identically before the fix.
+		"negated command does not abort the script": {
+			lines:    negationLines,
+			contains: []string{"AFTER_NEGATION"},
+		},
+		"negated command does not abort the script with exit code check": {
+			lines:    negationLines,
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_NEGATION"},
+			skip:     "known gap gitlab-runner#39634: FF_ENABLE_BASH_EXIT_CODE_CHECK re-raises the negated command's non-zero status",
+		},
+		// errexit must still propagate a plain failing command...
+		"failing command still aborts the script": {
+			lines:    []string{`false`, `echo NEVER_RAN`},
+			wantCode: 1,
+			excludes: []string{"NEVER_RAN"},
+		},
+		// ...and an explicit exit must keep its own status rather than becoming 0.
+		"explicit exit preserves its status": {
+			lines:    []string{`exit 7`, `echo NEVER_RAN`},
+			wantCode: 7,
+			excludes: []string{"NEVER_RAN"},
+		},
+		"failing command with exit code check still aborts the script": {
+			lines:    []string{`false`, `echo NEVER_RAN`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			wantCode: 1,
+			excludes: []string{"NEVER_RAN"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.skip != "" {
+				t.Skip(tc.skip)
+			}
+
+			script := newBuilder(ShellBash, tc.opts...).Build(tc.lines)
+			out, code := runBash(t, script)
+
+			assert.Equalf(t, tc.wantCode, code,
+				"unexpected exit code\n--- script ---\n%s\n--- output ---\n%s", script, out)
+			for _, want := range tc.contains {
+				assert.Contains(t, out, want, "script:\n%s", script)
+			}
+			// Safe as a plain substring check: the echoed "$ <cmd>" header for
+			// each excluded command sits inside the branch that is not taken,
+			// so it is not printed either.
+			for _, notWant := range tc.excludes {
+				assert.NotContains(t, out, notWant, "script:\n%s", script)
+			}
 		})
 	}
 }
