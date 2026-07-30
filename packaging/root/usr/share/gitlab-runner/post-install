@@ -5,10 +5,11 @@ set -e
 # Check if service management is available by testing gitlab-runner status.
 # This will fail if neither systemctl nor service commands are available.
 check_service_management() {
-  set +e
-  error_output=$(gitlab-runner status 2>&1)
-  status_exit_code=$?
-  set -e
+  if error_output=$(gitlab-runner status 2>&1); then
+    status_exit_code=0
+  else
+    status_exit_code=$?
+  fi
 
   # Check the error message to see if it's a service management issue
   if [ $status_exit_code -eq 0 ]; then
