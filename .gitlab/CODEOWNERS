@@ -24,7 +24,7 @@ helpers/secrets/ @gitlab-com/pipeline-security-group/backend
 .markdownlint.yml @gitlab-com/runner-docs-maintainers
 /docs/ @gitlab-com/runner-docs-maintainers
 
-## Localization
+[Localization]
 /docs-locale/ @gitlab-com/localization/maintainers/tech-docs
 /docs-locale/ja-jp @gitlab-com/localization/maintainers/tech-docs @gitlab-com/localization/maintainers/japanese
 /docs-locale/fr-fr @gitlab-com/localization/maintainers/tech-docs @gitlab-com/localization/maintainers/french
