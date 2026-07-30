@@ -46,7 +46,7 @@ require (
 	github.com/in-toto/in-toto-golang v0.11.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/jedib0t/go-pretty/v6 v6.8.3
-	github.com/johannesboyne/gofakes3 v0.0.0-20260208201424-4c385a1f6a73
+	github.com/johannesboyne/gofakes3 v1.2.0
 	github.com/joho/godotenv v1.5.1
 	github.com/jpillora/backoff v1.0.0
 	github.com/kardianos/service v1.3.0
