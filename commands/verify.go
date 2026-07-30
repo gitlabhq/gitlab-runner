@@ -11,11 +11,17 @@ import (
 )
 
 type VerifyCommand struct {
-	common.RunnerCredentials
 	network common.Network
 
-	ConfigFile        string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
-	Name              string `toml:"name" json:"name" short:"n" long:"name" description:"Name of the runner you wish to verify"`
+	ConfigFile string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
+	Name       string `toml:"name" json:"name" short:"n" long:"name" description:"Name of the runner you wish to verify"`
+	// URL and Token intentionally have no `env` tag: unlike register/run/unregister,
+	// verify must not be silently filtered by a leftover or unrelated CI_SERVER_URL/
+	// CI_SERVER_TOKEN in the process environment (e.g. injected by a Kubernetes
+	// secrets sidecar) - only an explicit --url/--token should select a subset of
+	// runners. See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/577.
+	URL               string `short:"u" long:"url" description:"GitLab instance URL"`
+	Token             string `short:"t" long:"token" description:"Runner token"`
 	DeleteNonExisting bool   `long:"delete" description:"Delete no longer existing runners?"`
 }
 
@@ -31,8 +37,10 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 	userModeWarning(true)
 
 	var hasSelector = c.Name != "" ||
-		c.RunnerCredentials.URL != "" ||
-		c.RunnerCredentials.Token != ""
+		c.URL != "" ||
+		c.Token != ""
+
+	selector := &common.RunnerCredentials{URL: c.URL, Token: c.Token}
 
 	cfg := configfile.New(c.ConfigFile)
 
@@ -41,7 +49,7 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		var ok []*common.RunnerConfig
 		var verified int
 		for _, runner := range cfg.Runners {
-			if !hasSelector || runner.Name == c.Name || runner.RunnerCredentials.SameAs(&c.RunnerCredentials) {
+			if !hasSelector || runner.Name == c.Name || runner.RunnerCredentials.SameAs(selector) {
 				verified++
 				if c.network.VerifyRunner(*runner, runner.SystemID) == nil {
 					unverified++
