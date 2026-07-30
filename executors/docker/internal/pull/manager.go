@@ -67,14 +67,31 @@ type manager struct {
 	logger pullLogger
 }
 
+// ManagerOption customizes a Manager built by NewManager. There is
+// currently no production caller that needs one; it exists as a test seam
+// so tests can override retry timing without depending on the unexported
+// manager type or the production defaults below.
+type ManagerOption func(*manager)
+
+// WithPullRetryConfig overrides the image-pull retry attempt count and
+// jittered backoff window that shouldRetryImagePull and pullDockerImage use.
+func WithPullRetryConfig(maxAttempts int, minBackoff, maxBackoff time.Duration) ManagerOption {
+	return func(m *manager) {
+		m.pullMaxAttempts = maxAttempts
+		m.pullRetryMinBackoff = minBackoff
+		m.pullRetryMaxBackoff = maxBackoff
+	}
+}
+
 func NewManager(
 	ctx context.Context,
 	logger pullLogger,
 	config ManagerConfig,
 	client docker.Client,
 	onPullImageHookFunc func(),
+	opts ...ManagerOption,
 ) Manager {
-	return &manager{
+	m := &manager{
 		context:             ctx,
 		client:              client,
 		config:              config,
@@ -84,6 +101,12 @@ func NewManager(
 		pullRetryMinBackoff: defaultPullRetryMinBackoff,
 		pullRetryMaxBackoff: defaultPullRetryMaxBackoff,
 	}
+
+	for _, opt := range opts {
+		opt(m)
+	}
+
+	return m
 }
 
 func (m *manager) GetDockerImage(

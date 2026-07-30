@@ -20,6 +20,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
@@ -104,9 +105,9 @@ func startAndSeedRegistry(t *testing.T, client docker.Client, port int, testImag
 
 // TestDockerCommandPullRetriesTransientRegistryFailure exercises the real
 // image-pull retry path (executors/docker/internal/pull/manager.go's
-// shouldRetryImagePull/defaultPullMaxAttempts) end to end: the target
-// registry is deliberately not listening when the build starts (so early
-// pull attempts fail with a genuine "connection refused", which
+// shouldRetryImagePull) end to end: the target registry is deliberately not
+// listening when the build starts (so early pull attempts fail with a
+// genuine "connection refused", which
 // common/classify_image_pull_failure.go classifies as
 // RunnerExternalDependencyFailure and is therefore retried), then a real
 // registry:2 container is started -- on the same docker daemon the runner
@@ -114,14 +115,18 @@ func startAndSeedRegistry(t *testing.T, client docker.Client, port int, testImag
 // point of view -- partway through the retry backoff window, and the build
 // is asserted to succeed once it does.
 //
-// This is inherently timing-sensitive: it waits through part of the retry
-// backoff (defaultPullMaxAttempts=3, 2-10s jittered backoff between
-// attempts) before the registry becomes available. The delay below is
-// chosen to comfortably land after attempt 1 (which fails immediately) and
-// before attempt 3 is exhausted, but is not a hard real-time guarantee.
+// This is inherently timing-sensitive, so rather than racing production's
+// real 2-10s jittered backoff over only defaultPullMaxAttempts=3 attempts,
+// it uses docker_executor.SetPullRetryConfigForTesting to give the retry
+// loop a much larger attempt budget and a much shorter backoff. That keeps
+// this fast while leaving wide margin for the registry restart (below) to
+// land inside the retry window, even under CI scheduling jitter.
 func TestDockerCommandPullRetriesTransientRegistryFailure(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	restore := docker_executor.SetPullRetryConfigForTesting(40, 100*time.Millisecond, 300*time.Millisecond)
+	defer restore()
 
 	client, err := docker.New(docker.Credentials{})
 	require.NoError(t, err)
@@ -145,9 +150,11 @@ func TestDockerCommandPullRetriesTransientRegistryFailure(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// Land comfortably inside the retry backoff window (attempt 1 fails
-		// immediately; backoff before attempt 2 is 2-10s jittered).
-		time.Sleep(3 * time.Second)
+		// Land inside the retry backoff window (attempt 1 fails immediately;
+		// backoff before subsequent attempts is 100-300ms jittered, with 40
+		// attempts available), well before the ~4-12s total retry budget is
+		// exhausted.
+		time.Sleep(500 * time.Millisecond)
 		startErr := client.ContainerStart(context.Background(), registryContainerID, mobyclient.ContainerStartOptions{})
 		assert.NoError(t, startErr, "restarting seeded registry container")
 	}()
