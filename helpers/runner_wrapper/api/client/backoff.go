@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/cenkalti/backoff/v5"
 )
 
-var (
-	ErrRetryTimeoutExceeded = errors.New("retry timeout exceeded")
-)
+var ErrRetryTimeoutExceeded = errors.New("retry timeout exceeded")
 
 func RetryWithBackoff(ctx context.Context, timeout time.Duration, fn func() error) error {
 	b := backoff.NewExponentialBackOff()
@@ -42,4 +40,3 @@ func RetryWithBackoff(ctx context.Context, timeout time.Duration, fn func() erro
 		}
 	}
 }
-
