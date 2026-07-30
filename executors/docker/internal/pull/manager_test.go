@@ -30,6 +30,44 @@ func TestNewDefaultManager(t *testing.T) {
 	assert.IsType(t, &manager{}, m)
 }
 
+// TestNewManagerWithPullRetryConfigOption proves WithPullRetryConfig is
+// actually wired into the retry loop NewManager builds, rather than only
+// setting fields nothing reads: with the default 3-attempt budget this pull
+// would exhaust its retries and fail, but overriding it to 5 attempts lets
+// it succeed on the 5th. Unlike the other tests in this file, which reach
+// into the unexported manager type directly, this one only uses the
+// exported constructor and options.
+func TestNewManagerWithPullRetryConfigOption(t *testing.T) {
+	c := docker.NewMockClient(t)
+	ctx := t.Context()
+
+	mgr := NewManager(ctx, newLoggerMock(t), ManagerConfig{}, c, nil,
+		WithPullRetryConfig(5, time.Millisecond, time.Millisecond))
+	m, ok := mgr.(*manager)
+	require.True(t, ok)
+
+	// 4 failures then a success needs 5 attempts, which exceeds the
+	// production default of 3 -- so this only passes if WithPullRetryConfig
+	// actually reached the retry loop rather than being ignored.
+	transientErr := errors.New(
+		`Get "https://gitlab.com/jwt/auth": context deadline exceeded (Client.Timeout exceeded while awaiting headers)`,
+	)
+	c.On("ImagePullBlocking", m.context, "flaky:latest", mock.AnythingOfType("client.ImagePullOptions")).
+		Return(transientErr).
+		Times(4)
+	c.On("ImagePullBlocking", m.context, "flaky:latest", mock.AnythingOfType("client.ImagePullOptions")).
+		Return(nil).
+		Once()
+	c.On("ImageInspectWithRaw", m.context, "flaky", mock.Anything).
+		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
+		Once()
+
+	img, err := m.pullDockerImage("flaky", spec.ImageDockerOptions{}, nil, nil)
+	require.NoError(t, err)
+	require.NotNil(t, img)
+	assert.Equal(t, "image-id", img.ID)
+}
+
 func TestDockerForNamedImage(t *testing.T) {
 	c := docker.NewMockClient(t)
 	validSHA := "real@sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"

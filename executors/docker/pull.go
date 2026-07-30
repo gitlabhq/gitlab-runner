@@ -4,15 +4,17 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
 )
 
-var createPullManager = func(e *executor) (pull.Manager, error) {
-	config := pull.ManagerConfig{
+func newPullManagerConfig(e *executor) pull.ManagerConfig {
+	return pull.ManagerConfig{
 		DockerConfig: e.Config.Docker,
 		AuthConfig:   e.Build.GetDockerAuthConfig(),
 		ShellUser:    e.Shell().User,
 		Credentials:  e.Build.Credentials,
 	}
+}
 
-	pullManager := pull.NewManager(e.Context, &e.BuildLogger, config, e.dockerConn, func() {
+var createPullManager = func(e *executor) (pull.Manager, error) {
+	pullManager := pull.NewManager(e.Context, &e.BuildLogger, newPullManagerConfig(e), e.dockerConn, func() {
 		e.SetCurrentStage(ExecutorStagePullingImage)
 	})
 
