@@ -330,6 +330,18 @@ Verifying runner... is alive                        runner=826f687f
 Verifying runner... is alive                        runner=32773c0f
 ```
 
+Use the `--token` flag to verify a single runner instead of all registered runners.
+Combine `--token` with `--url` to also match the runner's GitLab instance URL:
+
+```shell
+gitlab-runner verify --url "https://gitlab.example.com" --token my-authentication-token
+```
+
+> [!note]
+> Unlike other GitLab Runner commands, the `--url` and `--token` flags for
+> `verify` do not read the `CI_SERVER_URL` and `CI_SERVER_TOKEN` environment
+> variables. Set these flags on the command line to select a runner.
+
 To remove the old runners that have been removed from GitLab, execute the following
 command.
 
