@@ -57,6 +57,23 @@ func (b *Builder) Build(lines []string) string {
 	}
 }
 
+// buildBashScript renders lines into a bash script. Each line emits, in order:
+// the echoed "$ ..." trace header, the line itself, and - when ExitCodeCheck is
+// set - the post-command exit-code check.
+//
+// Deliberately absent is any restore of the previous command's $? for the user
+// command to observe (the echoed header resets it to 0). This used to emit
+// "(exit $_runner_exit_code)" before each line, but under "set -o errexit" a
+// standalone "(exit N)" with N != 0 aborts the script, which is exactly what
+// happens at the top of an else branch - where $? carries the failed
+// if-condition's status - and after a trailing "! cmd". User commands therefore
+// see $?=0, matching the legacy generators (shells/abstract.go writeCommands and
+// functions/script_legacy), which never emitted such a restore either.
+// See gitlab-runner#39610.
+//
+// This differs from buildPwshScript, which does still carry $LASTEXITCODE across
+// the header. That is safe there because an assignment, unlike bash's "(exit N)",
+// is not a command that can fail and so cannot trip $ErrorActionPreference.
 func (b *Builder) buildBashScript(lines []string) string {
 	shPath, err := shellPath(b.shell)
 	if err != nil {
@@ -76,8 +93,6 @@ func (b *Builder) buildBashScript(lines []string) string {
 			continue
 		}
 
-		body.WriteString("_runner_exit_code=$?\n")
-
 		nlIdx := strings.Index(line, "\n")
 		if nlIdx != -1 && b.ScriptSections {
 			sectionName := fmt.Sprintf("%s_%d", b.stepName, i)
@@ -90,7 +105,6 @@ func (b *Builder) buildBashScript(lines []string) string {
 				`printf "section_end:%%s:%s\r\033[0K" "$(date +%%s)"`,
 				sectionName,
 			) + "\n")
-			body.WriteString("(exit $_runner_exit_code)\n")
 			body.WriteString(line + checkErr + "\n")
 			continue
 		}
@@ -101,7 +115,6 @@ func (b *Builder) buildBashScript(lines []string) string {
 			body.WriteString("echo " + shellEscape("\033[32;1m$ "+line+"\033[0m") + "\n")
 		}
 
-		body.WriteString("(exit $_runner_exit_code)\n")
 		body.WriteString(line + checkErr + "\n")
 	}
 

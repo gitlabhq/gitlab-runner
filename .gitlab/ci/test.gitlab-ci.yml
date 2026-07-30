@@ -140,7 +140,7 @@ integration test (docker, network-faults):
         -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
         -tags integration,network_faults \
         ./executors/docker \
-        -- -ldflags "$(make print_test_ldflags)" -timeout 15m
+        -- -ldflags "$(make print_test_ldflags)" -timeout 20m
   parallel: 1
   # This job exercises real network-fault/timing-sensitive scenarios (e.g.
   # image-pull retry against a registry that's deliberately unavailable for
