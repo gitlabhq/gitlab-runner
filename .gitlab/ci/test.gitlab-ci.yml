@@ -9,12 +9,12 @@ include:
 # we need to replace the rules with our own, the same
 # as in `.merge_request_pipelines` template.
 dependency-scanning:
-  rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
+  rules: !reference [".rules:merge_request_pipelines:no_docs:no-community-mr", rules]
   variables:
     FF_SCRIPT_TO_STEP_MIGRATION: "false" # Disable the FF because it breaks the component
 
 gitlab-advanced-sast:
-  rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
+  rules: !reference [".rules:merge_request_pipelines:no_docs:no-community-mr", rules]
 
 .linux test:
   extends:
