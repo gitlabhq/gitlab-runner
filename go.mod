@@ -85,7 +85,7 @@ require (
 	gitlab.com/gitlab-org/labkit/v2 v2.26.1
 	gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7
 	gitlab.com/gitlab-org/step-runner v0.41.0
-	go.mozilla.org/pkcs7 v0.9.0
+	go.mozilla.org/pkcs7 v0.10.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.44.0
