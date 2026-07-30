@@ -83,6 +83,12 @@
 - Product Docs AI Translation: GITTECHA-836 #1 [!6867](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6867)
 - Classify image-pull access-denied errors as ConfigurationError [!6850](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6850)
 
+## v19.1.2 (2026-07-28)
+
+### Bug fixes
+
+- [19.1] Key S3 client cache by config value, not pointer [!6982](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6982)
+
 ## v19.1.1 (2026-06-25)
 
 ### Bug fixes
