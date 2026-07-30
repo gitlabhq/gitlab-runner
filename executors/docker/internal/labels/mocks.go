@@ -35,6 +35,57 @@ func (_m *MockLabeler) EXPECT() *MockLabeler_Expecter {
 	return &MockLabeler_Expecter{mock: &_m.Mock}
 }
 
+// LabelKey provides a mock function for the type MockLabeler
+func (_mock *MockLabeler) LabelKey(name string) string {
+	ret := _mock.Called(name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LabelKey")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func(string) string); ok {
+		r0 = returnFunc(name)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// MockLabeler_LabelKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LabelKey'
+type MockLabeler_LabelKey_Call struct {
+	*mock.Call
+}
+
+// LabelKey is a helper method to define mock.On call
+//   - name string
+func (_e *MockLabeler_Expecter) LabelKey(name interface{}) *MockLabeler_LabelKey_Call {
+	return &MockLabeler_LabelKey_Call{Call: _e.mock.On("LabelKey", name)}
+}
+
+func (_c *MockLabeler_LabelKey_Call) Run(run func(name string)) *MockLabeler_LabelKey_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockLabeler_LabelKey_Call) Return(s string) *MockLabeler_LabelKey_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *MockLabeler_LabelKey_Call) RunAndReturn(run func(name string) string) *MockLabeler_LabelKey_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Labels provides a mock function for the type MockLabeler
 func (_mock *MockLabeler) Labels(otherLabels map[string]string) map[string]string {
 	ret := _mock.Called(otherLabels)

@@ -156,7 +156,7 @@ func (_c *mockContainerConfigurator_HostConfig_Call) RunAndReturn(run func() (*c
 }
 
 // NetworkConfig provides a mock function for the type mockContainerConfigurator
-func (_mock *mockContainerConfigurator) NetworkConfig(aliases []string) *network.NetworkingConfig {
+func (_mock *mockContainerConfigurator) NetworkConfig(aliases []string) (*network.NetworkingConfig, error) {
 	ret := _mock.Called(aliases)
 
 	if len(ret) == 0 {
@@ -164,6 +164,10 @@ func (_mock *mockContainerConfigurator) NetworkConfig(aliases []string) *network
 	}
 
 	var r0 *network.NetworkingConfig
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func([]string) (*network.NetworkingConfig, error)); ok {
+		return returnFunc(aliases)
+	}
 	if returnFunc, ok := ret.Get(0).(func([]string) *network.NetworkingConfig); ok {
 		r0 = returnFunc(aliases)
 	} else {
@@ -171,7 +175,12 @@ func (_mock *mockContainerConfigurator) NetworkConfig(aliases []string) *network
 			r0 = ret.Get(0).(*network.NetworkingConfig)
 		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func([]string) error); ok {
+		r1 = returnFunc(aliases)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // mockContainerConfigurator_NetworkConfig_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'NetworkConfig'
@@ -198,12 +207,12 @@ func (_c *mockContainerConfigurator_NetworkConfig_Call) Run(run func(aliases []s
 	return _c
 }
 
-func (_c *mockContainerConfigurator_NetworkConfig_Call) Return(networkingConfig *network.NetworkingConfig) *mockContainerConfigurator_NetworkConfig_Call {
-	_c.Call.Return(networkingConfig)
+func (_c *mockContainerConfigurator_NetworkConfig_Call) Return(networkingConfig *network.NetworkingConfig, err error) *mockContainerConfigurator_NetworkConfig_Call {
+	_c.Call.Return(networkingConfig, err)
 	return _c
 }
 
-func (_c *mockContainerConfigurator_NetworkConfig_Call) RunAndReturn(run func(aliases []string) *network.NetworkingConfig) *mockContainerConfigurator_NetworkConfig_Call {
+func (_c *mockContainerConfigurator_NetworkConfig_Call) RunAndReturn(run func(aliases []string) (*network.NetworkingConfig, error)) *mockContainerConfigurator_NetworkConfig_Call {
 	_c.Call.Return(run)
 	return _c
 }
