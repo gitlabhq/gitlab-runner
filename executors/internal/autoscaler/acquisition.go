@@ -125,10 +125,7 @@ func (ref *acquisitionRef) Prepare(
 	}
 
 	logger.Println(fmt.Sprintf("Dialing instance %s...", strings.Join(ident, ", ")))
-	fleetingDialer, err := ref.dialAcquisitionInstance(dialCtx, info, fleetingDialOpts)
-	if cause := context.Cause(dialCtx); cause != nil {
-		return nil, buildErrorFromContextCause(cause)
-	}
+	fleetingDialer, err := dialWithCancelCheck(dialCtx, ref.dialAcquisitionInstance, info, fleetingDialOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -282,8 +279,23 @@ func (ref *acquisitionRef) createTunneledDialer(
 	ctx, cancel := ref.acq.WithContext(ctx)
 	defer cancel()
 
-	client, err := ref.dialTunnel(ctx, info, options)
+	return dialWithCancelCheck(ctx, ref.dialTunnel, info, options)
+}
+
+// dialWithCancelCheck maps context cancellation to a BuildError with an
+// accurate failure reason. The dial can succeed concurrently with
+// cancellation, in which case the client must be closed, not dropped.
+func dialWithCancelCheck(
+	ctx context.Context,
+	dial connector.DialFn,
+	info fleetingprovider.ConnectInfo,
+	options connector.DialOptions,
+) (connector.Client, error) {
+	client, err := dial(ctx, info, options)
 	if cause := context.Cause(ctx); cause != nil {
+		if client != nil {
+			client.Close()
+		}
 		return nil, buildErrorFromContextCause(cause)
 	}
 

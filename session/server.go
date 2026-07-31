@@ -69,6 +69,11 @@ func NewServer(
 		MinVersion:   tls.VersionTLS12,
 	}
 
+	err = server.setAdvertiseAddress()
+	if err != nil {
+		return nil, err
+	}
+
 	// We separate out the listener creation here so that we can return an error
 	// if the provided address is invalid or there is some other listener error.
 	listener, err := net.Listen("tcp", server.config.ListenAddress)
@@ -77,11 +82,6 @@ func NewServer(
 	}
 
 	server.tlsListener = tls.NewListener(listener, &tlsConfig)
-
-	err = server.setAdvertiseAddress()
-	if err != nil {
-		return nil, err
-	}
 
 	server.CertificatePublicKey = publicKey
 	server.httpServer.Handler = http.HandlerFunc(server.handleSessionRequest)
