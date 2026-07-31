@@ -73,7 +73,7 @@ func extractZipFile(file *zip.File) (err error) {
 		err = extractZipSymlinkEntry(file)
 
 	case os.ModeNamedPipe, os.ModeSocket, os.ModeDevice:
-		// Ignore the files that of these types
+		// Ignore files of these types
 		logrus.Warningf("File ignored: %q", file.Name)
 
 	default:
