@@ -5,6 +5,7 @@ package watchers
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,7 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
+	ktesting "k8s.io/client-go/testing"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -113,7 +116,7 @@ func TestPodWatcher(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			fakeKubeClient := fake.NewClientset()
+			fakeKubeClient, waitForWatchStart := newFakeKubeClientWithSyncedWatch("pods")
 			fakeLogger := newMockLogger(t)
 
 			podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels, 0)
@@ -121,6 +124,7 @@ func TestPodWatcher(t *testing.T) {
 
 			err := podWatcher.Start()
 			assert.NoError(t, err, "starting pod watcher")
+			waitForWatchStart(t)
 
 			factory := podWatcher.factory
 
@@ -169,13 +173,14 @@ func TestPodWatcherNoConsumer(t *testing.T) {
 	defer cancel()
 
 	podWithErr := withDeletionTimestamp(defaultPod())
-	fakeKubeClient := fake.NewClientset()
+	fakeKubeClient, waitForWatchStart := newFakeKubeClientWithSyncedWatch("pods")
 	fakeLogger := newMockLogger(t)
 
 	podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels, 0)
 
 	err := podWatcher.Start()
 	assert.NoError(t, err, "starting pod watcher")
+	waitForWatchStart(t)
 
 	podWatcher.UpdatePodName(podWithErr.GetName())
 
@@ -248,6 +253,39 @@ func waitForError(ch <-chan error) error {
 	case err := <-ch:
 		return err
 	}
+}
+
+// newFakeKubeClientWithSyncedWatch returns a fake Kubernetes clientset for use with an informer, together with a
+// function that blocks until the client's watch for the given resource has actually been established.
+//
+// This works around a race in client-go's fake clientset: cache.WaitForCacheSync only waits for an informer's
+// initial List to be processed, not for its subsequent Watch call to be registered with the fake tracker. A test
+// that creates/deletes objects immediately after WaitForCacheSync returns can race past that registration: the
+// fake tracker has no watcher yet to notify, and does not replay missed events once one is registered, so the
+// events are dropped permanently rather than merely delayed. That caused the flaky TestPodWatcher/deleted
+// (https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39640): no amount of widening waitForError's timeout
+// could fix it, since the event genuinely never arrives.
+func newFakeKubeClientWithSyncedWatch(resource string) (*fake.Clientset, func(t *testing.T)) {
+	fakeKubeClient := fake.NewClientset()
+
+	watchStarted := make(chan struct{})
+	var once sync.Once
+	fakeKubeClient.PrependWatchReactor(resource, func(action ktesting.Action) (bool, watch.Interface, error) {
+		w, err := fakeKubeClient.Tracker().Watch(action.GetResource(), action.GetNamespace())
+		once.Do(func() { close(watchStarted) })
+		return true, w, err
+	})
+
+	waitForWatchStart := func(t *testing.T) {
+		t.Helper()
+		select {
+		case <-watchStarted:
+		case <-time.After(5 * time.Second):
+			t.Fatal("timed out waiting for the fake client's watch to start")
+		}
+	}
+
+	return fakeKubeClient, waitForWatchStart
 }
 
 func defaultPod() *v1.Pod {
