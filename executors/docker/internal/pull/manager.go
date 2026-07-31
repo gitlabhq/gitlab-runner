@@ -192,7 +192,7 @@ func (m *manager) markImageAsUsed(imageName string, image *image.InspectResponse
 // into an OCI platform spec, or returns nil if none was specified. This lets
 // image pull/inspect calls disambiguate between platform variants stored
 // under the same image reference.
-func parsePlatform(rawPlatform string) (*ocispec.Platform, error) {
+func parsePlatform(rawPlatform string, logger pullLogger) (*ocispec.Platform, error) {
 	if rawPlatform == "" {
 		return nil, nil
 	}
@@ -202,7 +202,31 @@ func parsePlatform(rawPlatform string) (*ocispec.Platform, error) {
 		return nil, err
 	}
 
+	if normalized := normalizeContainerOS(platform.OS); normalized != platform.OS {
+		logger.Warningln(fmt.Sprintf(
+			"Platform OS %q in %q is not a valid container OS; using %q instead",
+			platform.OS, rawPlatform, normalized,
+		))
+		platform.OS = normalized
+	}
+
 	return &platform, nil
+}
+
+// normalizeContainerOS corrects a quirk of platforms.Parse: given a bare,
+// unqualified architecture string (e.g. "arm64", with no "linux/" or
+// "windows/" prefix), it fills in the missing OS component using the host
+// machine's own OS (runtime.GOOS) rather than a container OS. That's right
+// for a Linux or Windows runner host, since those are also valid container
+// OSes, but wrong anywhere else -- most notably macOS, which GitLab Runner
+// officially supports as a host but which never runs native containers.
+// Only linux and windows container images exist, so anything else must
+// have leaked in from a non-container host OS and should target linux.
+func normalizeContainerOS(os string) string {
+	if os != "linux" && os != "windows" {
+		return "linux"
+	}
+	return os
 }
 
 func (m *manager) getImageUsingPullPolicy(
@@ -211,7 +235,7 @@ func (m *manager) getImageUsingPullPolicy(
 ) (*image.InspectResponse, error) {
 	m.logger.Debugln("Looking for image", imageName, "...")
 
-	platform, err := parsePlatform(options.Platform)
+	platform, err := parsePlatform(options.Platform, m.logger)
 	if err != nil {
 		return nil, &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
 	}

@@ -68,6 +68,62 @@ func TestNewManagerWithPullRetryConfigOption(t *testing.T) {
 	assert.Equal(t, "image-id", img.ID)
 }
 
+// TestNormalizeContainerOS guards against platforms.Parse resolving a bare
+// architecture specifier (e.g. "arm64") to the runner host's own OS.
+// Deliberately tested in isolation from runtime.GOOS/parsePlatform, so it
+// fails deterministically on any machine regardless of which OS actually
+// runs it -- unlike testing via parsePlatform("arm64") directly, whose
+// result depends on the host OS the test happens to run on.
+func TestNormalizeContainerOS(t *testing.T) {
+	tests := map[string]string{
+		"linux":   "linux",
+		"windows": "windows",
+		"darwin":  "linux",
+		"freebsd": "linux",
+		"":        "linux",
+	}
+
+	for os, expected := range tests {
+		t.Run(os, func(t *testing.T) {
+			assert.Equal(t, expected, normalizeContainerOS(os))
+		})
+	}
+}
+
+func TestParsePlatformNeverReturnsDarwin(t *testing.T) {
+	// platforms.Parse fills in a bare architecture string's missing OS from
+	// the host's own runtime.GOOS, so this legitimately resolves to "linux"
+	// on a Linux CI host and "windows" on a Windows one -- both are valid
+	// container OSes and normalizeContainerOS leaves them alone. What must
+	// never happen, on any host, is falling through to something like
+	// "darwin" that isn't a real container OS at all.
+	platform, err := parsePlatform("arm64", newLoggerMock(t))
+	require.NoError(t, err)
+	require.NotNil(t, platform)
+	assert.Contains(t, []string{"linux", "windows"}, platform.OS)
+}
+
+func TestParsePlatformWarnsWhenNormalized(t *testing.T) {
+	// "darwin/arm64" is fully-qualified, so normalization here is
+	// deterministic regardless of the host OS running the test.
+	logger := newMockPullLogger(t)
+	logger.On("Warningln", mock.AnythingOfType("string")).Once()
+
+	platform, err := parsePlatform("darwin/arm64", logger)
+	require.NoError(t, err)
+	require.NotNil(t, platform)
+	assert.Equal(t, "linux", platform.OS)
+}
+
+func TestParsePlatformDoesNotWarnWhenNotNormalized(t *testing.T) {
+	logger := newMockPullLogger(t)
+
+	platform, err := parsePlatform("linux/amd64", logger)
+	require.NoError(t, err)
+	require.NotNil(t, platform)
+	assert.Equal(t, "linux", platform.OS)
+}
+
 func TestDockerForNamedImage(t *testing.T) {
 	c := docker.NewMockClient(t)
 	validSHA := "real@sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
@@ -1074,7 +1130,7 @@ func TestDockerGetImagePlatformSuccess(t *testing.T) {
 	dockerOptions := spec.ImageDockerOptions{}
 	dockerOptions.Platform = "arm64/v8"
 
-	platform, err := parsePlatform(dockerOptions.Platform)
+	platform, err := parsePlatform(dockerOptions.Platform, newLoggerMock(t))
 	require.NoError(t, err)
 
 	m := newDefaultTestManager(t, c, dockerConfig)
