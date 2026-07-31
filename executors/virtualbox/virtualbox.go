@@ -212,20 +212,32 @@ func (s *executor) printVersion() error {
 }
 
 func (s *executor) validateConfig() error {
+	if s.Config.VirtualBox == nil {
+		return &common.BuildError{
+			Inner:         errors.New("missing VirtualBox configuration"),
+			FailureReason: common.ConfigurationError,
+		}
+	}
+
 	if s.Config.VirtualBox.BaseName == "" {
-		return errors.New("missing BaseName setting from VirtualBox configuration")
+		return &common.BuildError{
+			Inner:         errors.New("missing BaseName setting from VirtualBox configuration"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	if s.BuildShell.PassFile {
-		return errors.New("virtualbox doesn't support shells that require script file")
+		return &common.BuildError{
+			Inner:         errors.New("virtualbox doesn't support shells that require script file"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	if s.Config.SSH == nil {
-		return errors.New("missing SSH config")
-	}
-
-	if s.Config.VirtualBox == nil {
-		return errors.New("missing VirtualBox configuration")
+		return &common.BuildError{
+			Inner:         errors.New("missing SSH config"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	return s.ValidateAllowedImages(s.Config.VirtualBox.AllowedImages)
