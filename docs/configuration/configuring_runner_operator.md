@@ -283,12 +283,32 @@ from the `subjects` and `roleRef` defined in the role binding.
 If both role bindings exist, `gitlab-runner-app-rolebinding` takes precedence over
 `gitlab-runner-rolebinding`.
 
+## Using FIPS Compliant GitLab Runner
+
+> [!note]
+> For Operator, you can change only the helper image. You can't change the GitLab Runner image yet.
+> [Issue 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) tracks this feature.
+
+To use a [FIPS compliant GitLab Runner helper](../install/requirements.md#fips-compliant-gitlab-runner), change the helper image as follows:
+
+```yaml
+apiVersion: apps.gitlab.com/v1beta2
+kind: Runner
+metadata:
+  name: dev
+spec:
+  gitlabUrl: https://gitlab.example.com
+  token: gitlab-runner-secret
+  helperImage: gitlab/gitlab-runner-helper:ubi-fips
+  concurrent: 2
+```
+
 ## Troubleshooting
 
 ### Root vs non-root
 
 The GitLab Runner Operator and the GitLab Runner pod run as non-root users.
-As a result, the build image used in the job must run as a non-root user to be able to complete successfully.
+As a result, by default the build image used in the job must run as a non-root user to be able to complete successfully.
 This ensures that jobs can run successfully with the least permission.
 
 To make this work, make sure that the build image used for CI/CD jobs:
@@ -303,7 +323,7 @@ Most container filesystems on an OpenShift cluster are read-only, except:
 - `/tmp`
 - Other volumes mounted on root filesystems as `tmpfs`
 
-#### Overriding the `HOME` environment variable
+### Overriding the `HOME` environment variable
 
 If creating a custom build image or [overriding environment variables](#configure-a-proxy-environment), ensure that the `HOME` environment variables is not set to `/` which would be read-only.
 Especially if your jobs would need to write files to the home directory.
@@ -329,14 +349,14 @@ appears.
 
 For more information, see [issue 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/work_items/472#note_1483346437).
 
-#### Watch out for security context constraints
+### Watch out for security context constraints
 
 By default, when installed in a new OpenShift project, the GitLab Runner Operator runs as non-root.
 Some projects, like the `default` project, are exceptions where all service accounts have `anyuid` access.
 In that case, the user of the image is `root`. You can check this by running the `whoami` inside any container shell, for example, a job.
 Read more about security context constraints in [Red Hat Container Platform documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/managing-pod-security-policies).
 
-#### Run as `anyuid` security context constraints
+### Run as `anyuid` security context constraints
 
 > [!warning]
 > Running jobs as root or writing to root filesystems can expose your system to security risks.
@@ -390,21 +410,22 @@ roleRef:
 EOF
 ```
 
-#### Matching helper container and build container user ID and group ID
+### Mismatching user ID and group ID for helper container and build container
 
 GitLab Runner Operator deployments use `registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp` as the default helper image.
 This image runs with user ID and group ID of `1001:1001` unless explicitly modified by a security context.
 
-When the user ID in your build container differs from the user ID in the helper image, permission-related errors can occur during your build.
-The following is a common error message:
+When the user ID in your build container differs from the user ID in the helper image, permission-related
+errors can occur during your build, because files created by the helper container (the cloned repository
+and the restored cache) are owned by `1001:1001`. This mismatch causes two common problems:
 
-```shell
-fatal: detected dubious ownership in repository at '/builds/gitlab-org/gitlab-runner'
-```
+- [Git `dubious ownership` errors](#git-dubious-ownership-errors)
+- [Cache permission errors](#cache-permission-errors)
 
-This error indicates that the repository was cloned by user ID `1001` (helper container), but a different user ID in the build container is attempting to access it.
+#### Match the helper container and build container user IDs
 
-Solution: configure your build container's security context to match the helper container's user ID and group ID:
+A solution for both problems is to configure your build container's security context to match
+the helper container's user ID and group ID:
 
 ```toml
 [runners.kubernetes.build_container_security_context]
@@ -418,7 +439,77 @@ Additional notes:
 - If you've customized your helper image with different user ID or group IDs, adjust these values accordingly.
 - For OpenShift deployments, verify that these security context settings comply with your cluster's security context constraints (SCCs).
 
-#### Configure SETFCAP
+If you cannot change the build container user ID (for example, when using third-party images with a
+fixed user ID, or when using a shared runner where you cannot modify `build_container_security_context`),
+use the workarounds described for each problem instead.
+
+#### Git `dubious ownership` errors
+
+When the build container accesses the repository that the helper container cloned, Git reports:
+
+```shell
+fatal: detected dubious ownership in repository at '/builds/gitlab-org/gitlab-runner'
+```
+
+This error indicates that the repository was cloned by user ID `1001` (helper container), but a different user ID in the build container is attempting to access it.
+
+To resolve this error, either:
+
+- [Match the helper container and build container user IDs](#match-the-helper-container-and-build-container-user-ids).
+- Configure Git to trust the repository directory despite the ownership mismatch by using Git's
+  [`safe.directory`](https://git-scm.com/docs/git-config#Documentation/git-config.txt-safedirectory) setting.
+  Because [the `HOME` environment variable must point to a writable directory](#overriding-the-home-environment-variable),
+  you can set it in `before_script`:
+
+  ```yaml
+  my_job:
+    before_script:
+      - git config --global --add safe.directory $CI_PROJECT_DIR
+  ```
+
+The `safe.directory` setting resolves only the `dubious ownership` error. The repository files remain
+owned by the helper container's user ID, so jobs that write to the repository directory might still
+encounter permission errors.
+
+#### Cache permission errors
+
+The user ID mismatch also affects the [CI/CD cache](https://docs.gitlab.com/ci/caching/).
+This issue affects non-root build containers whose user ID does not match the helper image's user ID.
+Build containers running as root are not affected.
+
+The [OCP helper image](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/main/helper/OCP.Dockerfile)
+archives and extracts cache files as user ID `1001`. When the build container runs as
+a different user ID, it cannot write to the restored cache directory because the files
+are owned by `1001:1001`.
+
+Symptoms include:
+
+- Cache restores successfully, but the application cannot write new cache entries.
+- `Permission denied` errors occur when writing to the cache directory.
+- `chown` in `before_script` fails because the build container does not own the files.
+
+To resolve these errors, either:
+
+- [Match the helper container and build container user IDs](#match-the-helper-container-and-build-container-user-ids).
+- Make cached files world-writable in `after_script`, before the helper archives them. On subsequent
+  restores, the `777` permissions are preserved in the `tar` archive, allowing any user ID
+  to read and write:
+
+  ```yaml
+  my_job:
+    after_script:
+      - chmod -R 777 my-cache-dir/ 2>/dev/null || true
+    cache:
+      key: my-cache-key
+      paths:
+        - my-cache-dir/
+  ```
+
+  After adding this workaround, clear the existing cache so the first run writes
+  fresh files with `777` permissions that persist through subsequent archive and restore
+  cycles.
+
+### Configure SETFCAP
 
 If you use Red Hat OpenShift Container Platform (RHOCP) 4.11 or later, you may get the following error message:
 
@@ -459,27 +550,7 @@ Some jobs (for example, `buildah`) need the `SETFCAP` capability granted to run 
 
 For more information, see the [Red Hat documentation](https://access.redhat.com/solutions/7016013).
 
-### Using FIPS Compliant GitLab Runner
-
-> [!note]
-> For Operator, you can change only the helper image. You can't change the GitLab Runner image yet.
-> [Issue 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) tracks this feature.
-
-To use a [FIPS compliant GitLab Runner helper](../install/requirements.md#fips-compliant-gitlab-runner), change the helper image as follows:
-
-```yaml
-apiVersion: apps.gitlab.com/v1beta2
-kind: Runner
-metadata:
-  name: dev
-spec:
-  gitlabUrl: https://gitlab.example.com
-  token: gitlab-runner-secret
-  helperImage: gitlab/gitlab-runner-helper:ubi-fips
-  concurrent: 2
-```
-
-#### Register GitLab Runner by using a self-signed certificate
+### Register GitLab Runner by using a self-signed certificate
 
 To use self-signed certificate with GitLab Self-Managed, create a secret that
 contains the CA certificate you used to sign the private certificates.
@@ -503,7 +574,7 @@ The secret can be created using the following command:
 oc create secret generic mySecret --from-file=tls.crt=myCert.pem -o yaml
 ```
 
-#### Register GitLab Runner with an external URL that points to an IP address
+### Register GitLab Runner with an external URL that points to an IP address
 
 If the runner cannot match the self-signed certificate with the hostname, you might get an error message.
 This issue occurs when you configure GitLab Self-Managed to use an IP address (like `###.##.##.##`) instead of a hostname:
@@ -536,7 +607,12 @@ To fix this issue:
 
 1. Use this new certificate to generate a new secret.
 
-## Patch structure
+## Patching
+
+Use specification patches, set through the `podSpec` and `deploymentSpec` [Operator properties](#operator-properties),
+to customize the Kubernetes resources that the Operator generates.
+
+### Patch structure
 
 Each specification patch consists of the following properties:
 
@@ -549,7 +625,7 @@ Each specification patch consists of the following properties:
 
 You cannot set both `patchFile` and `patch` in the same specification configuration.
 
-## Patching the runner pod template
+### Patching the runner pod template
 
 [Pod specification](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-template-v1/#PodTemplateSpec)
 patching lets you customize how GitLab Runner is deployed by applying patches to the operator-generated Kubernetes deployment.
@@ -565,7 +641,7 @@ You can control pod-level settings such as:
 - Tolerations
 - Hostname and DNS configuration
 
-## Patching the runner deployment template
+### Patching the runner deployment template
 
 [Deployment specification](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/#Deployment)
 patching lets you customize how GitLab Runner is deployed by applying patches to the operator-generated Kubernetes deployment.
@@ -579,13 +655,13 @@ You can control deployment-level settings such as:
 - Progress deadline seconds
 - Labels and annotations
 
-## Patch order
+### Patch order
 
 Deployment specification patches are applied before pod specification patches. This means that if both deployment and pod specifications modify the same field, the pod specification takes precedence.
 
-## Examples
+### Examples
 
-### Pod specification patching example
+#### Pod specification patching example
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2
@@ -611,7 +687,7 @@ spec:
       patchType: "strategic"
 ```
 
-### Deployment specification patching example
+#### Deployment specification patching example
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2
@@ -640,7 +716,7 @@ spec:
       patchType: "json"
 ```
 
-## Best practices
+### Best practices
 
 - Test patches in a non-production environment before applying them to production deployments.
 - Use deployment-level patches for settings that affect the deployment behavior rather than individual pod settings.
