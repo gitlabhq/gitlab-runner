@@ -752,7 +752,16 @@ func TestBuildWithGitStrategyFetchWithLFS(t *testing.T) {
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(
+			build.Variables,
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+			// GetRemoteSuccessfulBuild clones from a real remote over the
+			// network, which the default GET_SOURCES_ATTEMPTS=1 gives no
+			// retry budget for. 3 matches defaultPullMaxAttempts in the
+			// image-pull retry manager, the existing convention elsewhere
+			// in this codebase for a transient external-dependency failure.
+			spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"},
+		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -906,6 +915,12 @@ func TestBuildWithGitStrategyCloneWithUserDisabledLFS(t *testing.T) {
 			build.Variables,
 			spec.Variable{Key: "GIT_STRATEGY", Value: "clone"},
 			spec.Variable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
+			// GetRemoteSuccessfulLFSBuild clones from a real remote over the
+			// network, which the default GET_SOURCES_ATTEMPTS=1 gives no
+			// retry budget for. 3 matches defaultPullMaxAttempts in the
+			// image-pull retry manager, the existing convention elsewhere
+			// in this codebase for a transient external-dependency failure.
+			spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"},
 		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1672,7 +1687,16 @@ func TestBuildWithUntrackedDirFromPreviousBuild(t *testing.T) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
 		build := newBuild(t, successfulBuild, shell)
-		build.Variables = append(build.Variables, spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(
+			build.Variables,
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+			// GetRemoteSuccessfulBuild clones from a real remote over the
+			// network, which the default GET_SOURCES_ATTEMPTS=1 gives no
+			// retry budget for. 3 matches defaultPullMaxAttempts in the
+			// image-pull retry manager, the existing convention elsewhere
+			// in this codebase for a transient external-dependency failure.
+			spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"},
+		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -2854,6 +2878,15 @@ func TestGitIncludePaths(t *testing.T) {
 								// {Key: "GIT_TRACE", Value: "2"},
 								// {Key: "CI_DEBUG_TRACE", Value: "true"},
 								{Key: "GIT_STRATEGY", Value: "fetch"},
+								// Clones a submodule from a real remote over
+								// the network, which the default
+								// GET_SOURCES_ATTEMPTS=1 gives no retry
+								// budget for. 3 matches
+								// defaultPullMaxAttempts in the image-pull
+								// retry manager, the existing convention
+								// elsewhere in this codebase for a
+								// transient external-dependency failure.
+								{Key: "GET_SOURCES_ATTEMPTS", Value: "3"},
 							}...)
 							setupForSubmoduleClone(build, "gitlab.com", submodules)
 

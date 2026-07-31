@@ -107,6 +107,17 @@ func testBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup Build
 
 		spec.Variable{Key: "TOKEN_REVEALS", Value: "glpat-abcdef mytoken:ghijklmno foobar-pqrstuvwxyz"},
 
+		// GetRemoteSuccessfulBuildPrintVars clones from a real remote over
+		// the network, which the default GET_SOURCES_ATTEMPTS=1 gives no
+		// retry budget for. This helper backs every executor package's
+		// TestBuildMasking, so this covers all of them (observed failing
+		// via both a Docker Hub image pull reset and a gitlab.com
+		// git-fetch 502, on unrelated MRs). 3 matches defaultPullMaxAttempts
+		// in the image-pull retry manager, the existing convention
+		// elsewhere in this codebase for a transient external-dependency
+		// failure.
+		spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"},
+
 		// proxy exec masking
 		spec.Variable{Key: "ADD_MASK_SECRET", Value: "ADD_MASK_SECRET_VALUE"},
 	)

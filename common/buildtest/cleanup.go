@@ -67,6 +67,14 @@ func RunBuildWithCleanupRecursiveSubmoduleStrategy(
 		spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
 		spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
 		spec.Variable{Key: "FF_ENABLE_JOB_CLEANUP", Value: "true"},
+		// Clones submodules from a real remote over the network, which the
+		// default GET_SOURCES_ATTEMPTS=1 gives no retry budget for. This
+		// helper backs every executor package's
+		// TestCleanupProjectGitSubmoduleRecursive. 3 matches
+		// defaultPullMaxAttempts in the image-pull retry manager, the
+		// existing convention elsewhere in this codebase for a transient
+		// external-dependency failure.
+		spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"},
 	)
 
 	out, err := RunBuildReturningOutput(t, build)

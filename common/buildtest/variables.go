@@ -34,6 +34,12 @@ func RunBuildWithExpandedFileVariable(t *testing.T, config *common.RunnerConfig,
 		build.Variables,
 		spec.Variable{Key: "MY_FILE_VARIABLE", Value: "FILE_CONTENTS", File: true},
 		spec.Variable{Key: "MY_EXPANDED_FILE_VARIABLE", Value: "${MY_FILE_VARIABLE}_FOOBAR"},
+		// GetRemoteSuccessfulBuildPrintVars clones from a real remote over
+		// the network, which the default GET_SOURCES_ATTEMPTS=1 gives no
+		// retry budget for. 3 matches defaultPullMaxAttempts in the
+		// image-pull retry manager, the existing convention elsewhere in
+		// this codebase for a transient external-dependency failure.
+		spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"},
 	)
 
 	if setup != nil {
