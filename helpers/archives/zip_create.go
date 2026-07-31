@@ -73,7 +73,7 @@ func createZipEntry(archive *zip.Writer, fileName string) error {
 		return createZipSymlinkEntry(archive, fh)
 
 	case os.ModeNamedPipe, os.ModeSocket, os.ModeDevice:
-		// Ignore the files that of these types
+		// Ignore files of these types
 		logrus.Warningln("File ignored:", fileName)
 		return nil
 
