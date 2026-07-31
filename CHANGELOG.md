@@ -162,6 +162,12 @@
 - Update docker-machine version [!6800](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6800)
 - Add a few more flaky tests to .flaky-tests [!6780](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6780)
 
+## v19.0.3 (2026-07-28)
+
+### Bug fixes
+
+- [19.0] Key S3 client cache by config value, not pointer [!6983](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6983)
+
 ## v19.0.2 (2026-06-29)
 
 ### Bug fixes
