@@ -578,6 +578,36 @@ func TestAcquisitionRef_Prepare_SlotCgroupEnvironmentVariable(t *testing.T) {
 	}
 }
 
+func TestAcquisitionRef_PrepareClosesClientOnCancelledDial(t *testing.T) {
+	dialCtx, cancelDial := context.WithCancelCause(t.Context())
+
+	acq := mocks.NewAcquisition(t)
+	acq.EXPECT().WithContext(mock.Anything).Return(dialCtx, func() {}).Once()
+	acq.EXPECT().InstanceConnectInfo(mock.Anything).Return(fleetingprovider.ConnectInfo{}, nil).Once()
+
+	fleetingDialer := fleetingmocks.NewClient(t)
+	fleetingDialer.EXPECT().Close().Return(nil).Once()
+
+	ref := newAcquisitionRef("test-key", false)
+	ref.acq = acq
+	ref.dialAcquisitionInstance = func(_ context.Context, _ fleetingprovider.ConnectInfo, _ connector.DialOptions) (connector.Client, error) {
+		// the acquisition is cancelled whilst the dial is in flight, but the
+		// dial still succeeds and returns a connected client
+		cancelDial(context.Canceled)
+		return fleetingDialer, nil
+	}
+
+	logger, _ := test.NewNullLogger()
+	bl := buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{})
+
+	c, err := ref.Prepare(t.Context(), bl, executorPrepareOptions("", "", "", ""))
+
+	assert.Nil(t, c)
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, common.JobCanceled, buildErr.FailureReason)
+}
+
 func TestBuildErrorFromContextCause(t *testing.T) {
 	tests := map[string]struct {
 		cause          error

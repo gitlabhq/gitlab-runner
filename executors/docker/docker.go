@@ -174,6 +174,7 @@ func newDockerTunnel(
 		// its own dialer).
 		scheme, dialer, err := environmentDialContext(ctx, tc, creds.Host, build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio))
 		if err != nil {
+			_ = tc.Close()
 			return nil, fmt.Errorf("creating env dialer: %w", err)
 		}
 
@@ -226,12 +227,16 @@ func (dc *dockerConnection) Close() error {
 // embedded in the dockerTunnel instance returned by the factory function. If we're connecting to the local docker
 // daemon, the executor.Client instance will be nil (and that's OK).
 func newDockerConnection(dockerTunnel *dockerTunnel, cancel func()) (*dockerConnection, error) {
+	conn := &dockerConnection{tunnelClient: dockerTunnel.client, cancel: cancel}
+
 	dockerClient, err := docker.New(dockerTunnel.creds, dockerTunnel.opts...)
 	if err != nil {
+		_ = conn.Close()
 		return nil, fmt.Errorf("creating docker client: %w", err)
 	}
 
-	return &dockerConnection{Client: dockerClient, tunnelClient: dockerTunnel.client, cancel: cancel}, nil
+	conn.Client = dockerClient
+	return conn, nil
 }
 
 // createDockerConnection creates a connection to a potentially remote docker daemon. The connection is encapsulated in
@@ -1372,13 +1377,19 @@ func (e *executor) overwriteEntrypoint(image *spec.Image) []string {
 	return nil
 }
 
-func connectDocker(ctx context.Context, options common.ExecutorPrepareOptions, e *executor) error {
+func connectDocker(ctx context.Context, options common.ExecutorPrepareOptions, e *executor) (err error) {
 	_ = e.dockerConn.Close()
 
 	dockerConnection, err := createDockerConnection(ctx, options, e)
 	if err != nil {
 		return fmt.Errorf("creating docker connection: %w", err)
 	}
+	// the connection may wrap an SSH tunnel that would otherwise leak
+	defer func() {
+		if err != nil {
+			_ = dockerConnection.Close()
+		}
+	}()
 
 	info, err := dockerConnection.Info(ctx)
 	if err != nil {
