@@ -141,6 +141,16 @@ func TestInstanceReadyCommand(t *testing.T) {
 					Job:    successfulBuild,
 					Runner: cfg,
 				}
+				// GetRemoteSuccessfulBuild clones from a real remote over
+				// the network, which the default GET_SOURCES_ATTEMPTS=1
+				// gives no retry budget for. 3 matches
+				// defaultPullMaxAttempts in the image-pull retry manager,
+				// the existing convention elsewhere in this codebase for a
+				// transient external-dependency failure.
+				build.Variables = append(build.Variables, spec.Variable{
+					Key:   "GET_SOURCES_ATTEMPTS",
+					Value: "3",
+				})
 				setupAcquireBuild(t, build)
 
 				err = buildtest.RunBuild(t, build)
