@@ -261,20 +261,32 @@ func (s *executor) printVersion() error {
 }
 
 func (s *executor) validateConfig() error {
+	if s.Config.Parallels == nil {
+		return &common.BuildError{
+			Inner:         errors.New("missing Parallels configuration"),
+			FailureReason: common.ConfigurationError,
+		}
+	}
+
 	if s.Config.Parallels.BaseName == "" {
-		return errors.New("missing BaseName setting from Parallels configuration")
+		return &common.BuildError{
+			Inner:         errors.New("missing BaseName setting from Parallels configuration"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	if s.BuildShell.PassFile {
-		return errors.New("parallels doesn't support shells that require script file")
+		return &common.BuildError{
+			Inner:         errors.New("parallels doesn't support shells that require script file"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	if s.Config.SSH == nil {
-		return errors.New("missing SSH configuration")
-	}
-
-	if s.Config.Parallels == nil {
-		return errors.New("missing Parallels configuration")
+		return &common.BuildError{
+			Inner:         errors.New("missing SSH configuration"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	return s.ValidateAllowedImages(s.Config.Parallels.AllowedImages)
