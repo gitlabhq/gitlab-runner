@@ -33,7 +33,12 @@ func ClassifyImagePullFailure(msg string) spec.JobFailureReason {
 		// deadline exceeded` is intentionally not matched: it also fires on the
 		// build's own job timeout, which is not an external dependency failure.
 		strings.Contains(lower, "client.timeout exceeded"),
-		strings.Contains(lower, "request canceled"):
+		strings.Contains(lower, "request canceled"),
+		// A TCP connection reset mid-read/write against the registry or its
+		// auth endpoint (e.g. `read tcp ...: read: connection reset by peer`
+		// while fetching an anonymous auth token) is just as transient as a
+		// failed dial or timeout, so it's retried the same way.
+		strings.Contains(lower, "connection reset"):
 		return RunnerExternalDependencyFailure
 
 	case strings.Contains(lower, "not found"),

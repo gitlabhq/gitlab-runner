@@ -47,6 +47,14 @@ func TestClassifyImagePullFailure(t *testing.T) {
 			msg:            `Get "https://registry.example.com/v2/": net/http: request canceled while waiting for connection`,
 			expectedReason: RunnerExternalDependencyFailure,
 		},
+		"connection reset by peer while reading response": {
+			msg:            `failed to authorize: failed to fetch anonymous token: Get "https://auth.docker.io/token?scope=repository%3Alibrary%2Falpine%3Apull&service=registry.docker.io": read tcp 172.17.0.2:33222->172.64.144.78:443: read: connection reset by peer`,
+			expectedReason: RunnerExternalDependencyFailure,
+		},
+		"connection reset by peer while writing request": {
+			msg:            `Get "https://registry.example.com/v2/": write tcp 10.0.0.1:5000->1.2.3.4:443: write: connection reset by peer`,
+			expectedReason: RunnerExternalDependencyFailure,
+		},
 		"manifest not found": {
 			msg:            `manifest for nginx:nonexistent not found: manifest unknown: manifest unknown`,
 			expectedReason: ConfigurationError,
