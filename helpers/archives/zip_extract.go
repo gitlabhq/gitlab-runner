@@ -12,7 +12,7 @@ import (
 func extractZipDirectoryEntry(file *zip.File) (err error) {
 	err = os.Mkdir(file.Name, file.Mode().Perm())
 
-	// The error that directory does exists is not a error for us
+	// The "directory does exist" error is not an error for us
 	if os.IsExist(err) {
 		err = nil
 	}
