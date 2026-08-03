@@ -57,7 +57,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/moby/docker-image-spec v1.3.1
 	github.com/moby/moby/api v1.55.0
-	github.com/moby/moby/client v0.5.0
+	github.com/moby/moby/client v0.5.1
 	github.com/openbao/openbao/api/v2 v2.6.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.23.2
