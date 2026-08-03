@@ -6,6 +6,7 @@ package localserver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -144,7 +145,7 @@ func serve(ctx context.Context, sockPath string, opts Options) error {
 		srv.GracefulStop()
 	}()
 
-	if err := srv.Serve(listener); err != nil {
+	if err := srv.Serve(listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 		return fmt.Errorf("step-runner server: %w", err)
 	}
 	return nil
