@@ -26,12 +26,6 @@ GitLab Runnerは、設定の変更を3秒ごとに確認し、必要に応じて
 
 ## 設定検証 {#configuration-validation}
 
-{{< history >}}
-
-- GitLab Runner 15.10で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924)されました。
-
-{{< /history >}}
-
 設定検証は、`config.toml`ファイルの構造をチェックするプロセスです。設定バリデーターからの出力は、`info`レベルのメッセージのみを示します。
 
 設定検証プロセスは、情報提供のみを目的としています。この出力から、Runner設定に関する潜在的な問題を特定できます。ただし、設定検証では、起こり得るすべての問題を検出できるとは限りません。また、メッセージがないからといって、`config.toml`ファイルに欠陥がないことが保証されるわけではありません。
@@ -46,7 +40,7 @@ GitLab Runnerは、設定の変更を3秒ごとに確認し、必要に応じて
 | `log_level`          | ログレベルを定義します。オプションには、`debug`、`info`、`warn`、`error`、`fatal`、`panic`があります。この設定は、コマンドライン引数の`--debug`、`-l`、または`--log-level`で設定されるレベルよりも優先度が低くなります。 |
 | `log_format`         | ログ形式を指定します。オプションには、`runner`、`text`、`json`があります。この設定は、コマンドライン引数の`--log-format`で設定される形式よりも優先度が低くなります。デフォルト値は`runner`で、色分けのためのANSIエスケープコードが含まれています。 |
 | `check_interval`     | Runnerが新しいジョブを確認する間隔を秒単位で定義します。デフォルト値は`3`です。`0`以下に設定すると、デフォルト値が使用されます。 |
-| `sentry_dsn`         | Sentryへのすべてのシステムレベルのエラーの追跡を有効にします。 |
+| `sentry_dsn`         | Sentryへのすべてのシステムレベルのエラーの追跡を有効にします。設定されていない場合、`SENTRY_DSN`環境変数にフォールバックします。`config.toml`の値は、環境変数よりも優先されます。環境変数は展開されずにそのまま使用されるため、`$OTHER_VAR`のような参照は補間されません。 |
 | `connection_max_age` | GitLabサーバーへのTLSキープアライブ接続を再接続するまでの最大時間を指定します。デフォルト値は`15m`（15分）です。`0`以下に設定すると、接続は可能な限り持続します。 |
 | `listen_address`     | Prometheusメトリクス用HTTPサーバーがリッスンするアドレス（`<host>:<port>`）を定義します。 |
 | `shutdown_timeout`   | [強制シャットダウン操作](../commands/_index.md#signals)がタイムアウトになりプロセスが終了するまでの秒数を示します。デフォルト値は`30`です。`0`以下に設定すると、デフォルト値が使用されます。 |
@@ -57,7 +51,7 @@ GitLab Runnerは、設定の変更を3秒ごとに確認し、必要に応じて
 
 GitLab Runnerは、GitLab Workhorseを通じてロングポーリングが有効になっている場合、いくつかの設定パターンでロングポーリングに関する問題が発生することがあります。これらの問題は、設定内容によってはパフォーマンスのボトルネックから深刻な処理遅延までさまざまです。特に、GitLab Runnerワーカーがロングポーリングのリクエストに長時間（GitLab Workhorseの設定`-apiCiLongPollingDuration`に従い、デフォルトでは50秒）固まってしまい、他のジョブがすぐに処理されないことがあります。
 
-この問題は、GitLab CI/CDのロングポーリング機能に関連しています。この機能はGitLab Workhorse の設定`-apiCiLongPollingDuration`によって制御されています。有効にすると、ジョブが利用可能になるのを待つ間、ジョブリクエストが設定された時間までブロックされることがあります。
+この問題は、GitLab CI/CDのロングポーリング機能に関連しています。この機能はGitLab Workhorseの設定`-apiCiLongPollingDuration`によって制御されています。有効にすると、ジョブが利用可能になるのを待つ間、ジョブリクエストが設定された時間までブロックされることがあります。
 
 GitLab Workhorseのロングポーリング設定値のデフォルトは50秒で、最近のGitLabバージョンではこの機能が標準で有効になっています。
 
@@ -87,7 +81,7 @@ GitLab Workhorseのロングポーリング設定値のデフォルトは50秒�
 GitLab Runnerは、問題のシナリオを自動的に検出し、警告メッセージ内でそれぞれに応じた解決策を提示します。一般的な解決策は次のとおりです:
 
 - Runnerの数を超えるように`concurrent`設定を増やします。
-- 高負荷のRunnerでは、`request_concurrency`の値をデフォルト値（1）より大きい値に設定してください。また、システムの状態を把握して最適な設定値を見つけるために、[Runnerのモニタリング](../monitoring/_index.md)を有効にすることを検討してください。ワークロードに基づいて`request_concurrency`を自動的に調整するには、`FF_USE_ADAPTIVE_REQUEST_CONCURRENCY`機能フラグの使用を検討します。適応的な並行処理については、[機能フラグ](feature-flags.md)のドキュメントを参照してください。
+- 処理量の多いRunnerでは、`request_concurrency`の値を1より大きい値に設定してください（デフォルトは1です）。また、システムの状態を把握して最適な設定値を見つけるために、[Runnerのモニタリング](../monitoring/_index.md)を有効にすることを検討してください。`FF_USE_ADAPTIVE_REQUEST_CONCURRENCY`機能フラグは、ワークロードに基づいて`request_concurrency`を自動的に調整し、デフォルトで有効になっています。無効にした場合は、再度有効にすることを検討してください。適応的な並行処理については、[機能フラグ](feature-flags.md)のドキュメントを参照してください。
 - `limit`設定と予想されるジョブボリュームのバランスを取ります。
 
 ##### 問題のある設定例 {#example-problematic-configurations}
@@ -233,7 +227,8 @@ INFO[0000] [session_server].listen_address not defined, session endpoints disabl
    1. `5s`（5秒間）スリープします。
    1. `runner-2`のジョブをリクエストします。
    1. `5s`（5秒間）スリープします。
-   1. 繰り返します。
+
+デフォルトでは、Runnerがジョブを受信すると、利用可能なジョブがなくなるか、実行中のジョブの数が`concurrent`または`limit`に達するまで、すぐに他のジョブのポーリングを再開します。この動作を変更するには、`strict_check_interval`を`true`に設定します。有効にすると、Runnerはチェック間隔を厳密に尊重し、ジョブを受信したかどうかに関わらず、`check_interval`秒ごとに1つのリクエストを送信します（この例では5秒）。この設定を有効にすると、Runnerフリート全体でのジョブの分散が向上し、1つのRunnerがほとんどのジョブを処理する一方で他のRunnerがアイドル状態になることを防ぎます。ただし、ジョブはキューで長く待機する可能性があります。
 
 `check_interval`設定例:
 
@@ -349,7 +344,7 @@ check_interval = 3 # Value in seconds
 セッションサーバーとターミナルサポートを無効にするには、`[session_server]`セクションを削除します。
 
 > [!note]
-> Runnerインスタンスがすでに実行中の場合、`[session_server]`セクションでの変更を有効にするために`gitlab-runner restart`を実行する必要があるかもしれません。
+> Runnerインスタンスがすでに実行中の場合は、`[session_server]`セクションの変更を有効にするために`gitlab-runner restart`を実行する必要がある場合があります。
 
 GitLab Runner Dockerイメージを使用している場合は、[`docker run`コマンド](../install/docker.md)に`-p 8093:8093`を追加して、ポート`8093`を公開する必要があります。
 
@@ -358,7 +353,7 @@ GitLab Runner Dockerイメージを使用している場合は、[`docker run`�
 各`[[runners]]`セクションは1つのRunnerを定義します。
 
 | 設定                               | 説明                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------- |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `name`                                | Runnerの説明（情報提供のみを目的としています）。                                                                                                                                                                                                                                                                                                                                                               |
 | `url`                                 | GitLabインスタンスのURL。環境変数の展開（例: `$GITLAB_URL`または`${GITLAB_URL}`）をサポートします。                                                                                                                                                                                                                                                                                               |
 | `token`                               | Runner認証トークン。Runnerの登録中に取得されます。[登録トークンとは異なります](https://docs.gitlab.com/api/runners/#registration-and-authentication-tokens)。環境変数の展開（例: `$RUNNER_TOKEN`または`${RUNNER_TOKEN}`）をサポートします。                                                                                                        |
@@ -372,19 +367,21 @@ GitLab Runner Dockerイメージを使用している場合は、[`docker run`�
 | `cache_dir`                           | 選択したexecutorのコンテキストでビルドキャッシュが保存されるディレクトリの絶対パス。たとえば、ローカル、Docker、またはSSH環境で使用します。`docker` executorが使用されている場合、このディレクトリを`volumes`パラメータに含める必要があります。                                                                                                                                                                         |
 | `environment`                         | 環境変数を追加または上書きします。                                                                                                                                                                                                                                                                                                                                                                  |
 | `request_concurrency`                 | GitLabからの新しいジョブに対する同時リクエスト数を制限します。デフォルトは`1`です。ジョブフローを制御するために`concurrency`、`limit`、および`request_concurrency`がどのように相互作用するかについて詳しくは、[GitLab Runnerの並行処理チューニングに関するKB記事](https://support.gitlab.com/hc/en-us/articles/21324350882076-GitLab-Runner-Concurrency-Tuning-Understanding-request-concurrency)をご覧ください。                     |
-| `strict_check_interval`               | 通常の操作では、Runnerがジョブをポーリングしてジョブを受信すると、処理中のジョブの数が`concurrent`または`limit`に一致するか、利用可能なジョブがなくなるまで、すぐにジョブを再ポーリングします。`strict_check_interval`を有効にすると、Runnerはこの`check_interval`よりも速い再ポーリングループを無効にし、`check_interval`を厳密に順守します。デフォルトは`false`です。                    |
+| `strict_check_interval`               | 通常の操作では、Runnerがジョブをポーリングしてジョブを受信すると、処理中のジョブの数が`concurrent`または`limit`に一致するか、利用可能なジョブがなくなるまで、すぐにジョブを再ポーリングします。`strict_check_interval`を有効にすると、Runnerはこの`check_interval`よりも速い再ポーリングループを無効にし、`check_interval`を厳密に順守します。デフォルトは`false`です。             |
 | `output_limit`                        | ビルドログの最大サイズ（KB単位）。デフォルトは`4096`（4 MB）です。                                                                                                                                                                                                                                                                                                                                              |
 | `pre_get_sources_script`              | Gitリポジトリの更新とサブモジュールの更新の前にRunnerで実行されるコマンド。たとえば、最初にGitクライアントの設定を調整するために使用します。複数のコマンドを挿入するには、（三重引用符で囲まれた）複数行の文字列または`\n`文字を使用します。                                                                                                                                                 |
 | `post_get_sources_script`             | Gitリポジトリの更新とサブモジュールの更新の後にRunnerで実行されるコマンド。複数のコマンドを挿入するには、（三重引用符で囲まれた）複数行の文字列または`\n`文字を使用します。                                                                                                                                                                                                                    |
-| `pre_build_script`                    | ジョブの実行前にRunnerで実行されるコマンド。`before_script`、`script`、および`post_build_script`と同じShellコンテキストで実行されます。もし`pre_build_script`が失敗した場合、そのコンテキスト内の残りのコマンドはスキップされますが、`after_script`は引き続き実行されます。複数のコマンドを挿入するには、（三重引用符で囲まれた）複数行の文字列または`\n`文字を使用します。 |
-| `post_build_script`                   | ジョブ実行後にRunnerで実行されるコマンド。`pre_build_script`、`before_script`、および`script`と同じShellコンテキストで実行されます。これらのいずれかが失敗した場合、`post_build_script`はスキップされます。`after_script`は別のShellコンテキストで実行され、`post_build_script`の影響を受けません。複数のコマンドを挿入するには、（三重引用符で囲まれた）複数行の文字列または`\n`文字を使用します。 |
+| `pre_build_script`                    | ジョブの実行前にRunnerで実行されるコマンド。`before_script`、`script`、および`post_build_script`と同じShellコンテキストで実行されます。もし`pre_build_script`が失敗した場合、そのコンテキスト内の残りのコマンドはスキップされますが、`after_script`は引き続き実行されます。複数のコマンドを挿入するには、（三重引用符で囲まれた）複数行の文字列または`\n`文字を使用します。                                               |
+| `post_build_script`                   | ジョブ実行後にRunnerで実行されるコマンド。`pre_build_script`、`before_script`、および`script`と同じShellコンテキストで実行されます。これらのいずれかが失敗した場合、`post_build_script`はスキップされます。`after_script`は別のShellコンテキストで実行され、`post_build_script`の影響を受けません。複数のコマンドを挿入するには、（三重引用符で囲まれた）複数行の文字列または`\n`文字を使用します。               |
 | `clone_url`                           | GitLabインスタンスのURLを上書きします。RunnerがGitlab URLに接続できない場合にのみ使用されます。                                                                                                                                                                                                                                                                                                         |
-| `debug_trace_disabled`                | [デバッグトレーシング](https://docs.gitlab.com/ci/variables/#enable-debug-logging)を無効にします。`true`に設定すると、`CI_DEBUG_TRACE`が`true`に設定されていても、デバッグログ（トレース）は無効のままになります。                                                                                                                                                                                                                 |
+| `debug_trace_disabled`                | [デバッグトレーシング](https://docs.gitlab.com/ci/variables/variables_troubleshooting/#enable-debug-logging)を無効にします。`true`に設定すると、`CI_DEBUG_TRACE`が`true`に設定されていても、デバッグログ（トレース）は無効のままになります。                                                                                                                                                                                                                 |
 | `clean_git_config`                    | Git設定をクリーンアップします。詳しくは、[Git設定をクリーンアップする](#cleaning-git-configuration)を参照してください。                                                                                                                                                                                                                                                                                          |
 | `referees`                            | 結果をジョブアーティファクトとしてGitLabに渡す追加のジョブモニタリングワーカー。                                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_requests_limit`            | 新規ジョブリクエストの`unhealthy`応答の数。この数を超えると、Runnerワーカーは無効になります。                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_interval`                  | 異常なリクエストの制限を超えた後に、Runnerワーカーが無効になる期間。`3600 s`、`1 h 30 min`などの構文をサポートしています。                                                                                                                                                                                                                                                      |
 | `job_status_final_update_retry_limit` | GitLab Runnerが最終的なジョブステータスをGitLabインスタンスにプッシュする操作を再試行できる最大回数。                                                                                                                                                                                                                                                                                                    |
+| `prepare_timeout`                     | `prepare`ステージ（executorの初期化とShell環境設定）に許容される最大時間。`30s`や`1h30m`のような期間文字列を受け入れます。設定されていない、ゼロである、またはジョブのタイムアウトよりも大きい場合は、ジョブのタイムアウトがデフォルトとして使用されます。詳細については、[prepareステージタイムアウト](#prepare-stage-timeout)を参照してください。                                                                                        |
+| `get_sources_timeout`                 | `get_sources`ステージ（サブモジュールを含むプロジェクトリポジトリのクローンまたはフェッチ）に許容される最大時間。`30s`や`1h30m`のような期間文字列を受け入れます。設定されていない、ゼロである、またはジョブのタイムアウトよりも大きい場合は、ジョブのタイムアウトがデフォルトとして使用されます。詳細については、[ソース取得タイムアウト](#get-sources-timeout)を参照してください。                                                                          |
 
 例: 
 
@@ -482,7 +479,7 @@ Runnerが使用できないURLでGitLabインスタンスが利用可能な場�
 `clone_url`が設定されると、Runnerは`http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`の形式でクローンURLを作成します。
 
 > [!note]
-> `clone_url`は、Git LFSエンドポイント、またはアーティファクトのアップロードやダウンロードには影響しません。
+> `clone_url`はGit LFSエンドポイント、またはアーティファクトのアップロードやダウンロードには影響しません。
 
 #### Git LFSエンドポイントを変更する {#modify-git-lfs-endpoints}
 
@@ -512,6 +509,113 @@ Runnerがアイドル状態になる期間を増減するには、`unhealthy_int
 
 RunnerのGitLabサーバーへの接続試行回数を変更し、アイドル状態になる前に異常なスリープを受信するには、`unhealthy_requests_limit`設定を変更します。詳細については、[`check_interval`の仕組み](advanced-configuration.md#how-check_interval-works)を参照してください。
 
+### Prepareステージタイムアウト {#prepare-stage-timeout}
+
+{{< history >}}
+
+- GitLab Runner 19.0.0で[導入されました](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/26583)。
+
+{{< /history >}}
+
+`prepare_timeout`設定は、Runnerがジョブスクリプトを実行する前に、実行環境の準備に費やす時間を制限します。prepareステージは2つのフェーズをカバーします:
+
+1. **executorの初期化**（`prepare_executor`）: Runnerは、Dockerコンテナの起動、Kubernetesポッドのスケジューリング、またはSSH経由での接続など、実行環境を設定します。
+1. **Shell環境のセットアップ**（`prepare_script`）: Runnerは、後続のジョブのステージに必要なShell環境（PATH、作業ディレクトリ、Shell関数など）を初期化するためのスクリプトを生成して実行します。
+
+prepareステージが`prepare_timeout`を超過すると、ジョブは直ちに失敗します。後続のステージ（`get_sources`、`restore_cache`、`script`など）は、`prepare_timeout`によっては制限されません。それらは代わりに全体のジョブのタイムアウトを使用します。
+
+**デフォルトの動作**: `prepare_timeout`が設定されていない、`0`である、またはジョブのタイムアウトを超過する場合、Runnerはprepareステージにジョブのタイムアウトを使用します。
+
+#### `prepare_timeout`を設定するタイミング {#when-to-set-prepare_timeout}
+
+`prepare_timeout`は、環境の初期化が遅い、または応答しないために、ジョブの作業が開始される前にジョブのタイムアウト全体を消費してしまう可能性がある場合に設定します。一般的なシナリオは次のとおりです:
+
+- **Docker image pulls**: コンテナレジストリが遅い、または到達不可能な場合、イメージのプルはジョブのタイムアウト全体にわたってハングする可能性があります。ビジーなRunnerでは、停止したプルが利用可能なすべてのジョブスロットを占有し、新しいジョブの開始を妨げます。`prepare_timeout`はこれらのジョブを迅速に失敗させ、Runnerの容量を解放します。
+- **Custom or HPC executors**: executorが外部のリソーススケジューラがキャパシティを割り当てるのを待つ必要がある場合（HPCジョブキューなど）、起動は予測不可能で、非常に長くなる可能性があります。`prepare_timeout`がない場合、停止したジョブはRunnerスロットをジョブのタイムアウト全体にわたって保持します。
+
+#### 設定例 {#example-configuration}
+
+```toml
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "TOKEN"
+  executor = "docker"
+  prepare_timeout = "5m"
+```
+
+ソースフェッチングステージの同等の制御については、[`get_sources_timeout`](#get-sources-timeout)を参照してください。
+
+### ソース取得タイムアウト {#get-sources-timeout}
+
+{{< history >}}
+
+- GitLab Runner 19.1.0で[導入されました](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39426)。
+
+{{< /history >}}
+
+`get_sources_timeout`設定は、Runnerが`get_sources`ステージ（サブモジュールを含むプロジェクトリポジトリのクローンまたはフェッチ）に費やす時間を制限します。
+
+`get_sources`ステージが`get_sources_timeout`を超過すると、ジョブは直ちに失敗します。後続のステージ（`restore_cache`、`download_artifacts`、`script`）は、`get_sources_timeout`によっては制限されません。それらは代わりに全体のジョブのタイムアウトを使用します。
+
+**デフォルトの動作**: `get_sources_timeout`が設定されていない、`0`である、またはジョブのタイムアウトを超過する場合、Runnerは`get_sources`ステージにジョブのタイムアウトを使用します。
+
+#### `get_sources_timeout`を設定するタイミング {#when-to-set-get_sources_timeout}
+
+`get_sources_timeout`は、ネットワークの状態が遅い、または応答しないために、リポジトリのフェッチが完了する前にジョブのタイムアウト全体を消費してしまう可能性がある場合に設定します。一般的なシナリオは次のとおりです:
+
+- **Hung Git clones over flaky networks**: リモートまたはその中間ネットワークがクローンまたはフェッチ中に遅くなるか到達不能になった場合、操作はジョブのタイムアウト全体にわたってハングする可能性があります。ビジーなRunnerでは、停止したジョブが利用可能なすべてのスロットを占有し、新しいジョブの開始を妨げます。`get_sources_timeout`はこれらのジョブを迅速に失敗させ、Runnerの容量を解放します。
+- **Hung submodule fetches**: サブモジュールはしばしば他のホスト（異なるドメイン、サードパーティサービス）上のリポジトリを参照します。それらのホストの1つが遅いか到達不能な場合、`get_sources`ステージは停止します。制限されたタイムアウトにより、単一の不良サブモジュールホストがRunnerスロットをジョブのタイムアウト全体にわたって保持することを防ぎます。
+
+#### 設定例 {#example-configuration-1}
+
+```toml
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "TOKEN"
+  executor = "docker"
+  get_sources_timeout = "5m"
+```
+
+executorの準備ステージの同等の制御については、[`prepare_timeout`](#prepare-stage-timeout)も参照してください。
+
+### `[runners.experimental.boot_verify]`セクション {#the-runnersexperimentalboot_verify-section}
+
+{{< details >}}
+
+- ステータス: 実験的機能
+
+{{< /details >}}
+
+`boot_verify`セクションは、Runnerが`/health/ready`をレポートする前に、プロセス起動時にRunnerを介して合成ジョブを実行します。ジョブが失敗した場合、Runnerは非ゼロで終了するため、オーケストレーターがそれを再起動します。この動作は、認証することはできるが、プロビジョニングすることも作業をディスパッチすることもできないRunnerを捕捉します。デフォルトの活性プローブと準備プローブではこれを見逃します。このチェックはプロセス起動ごとに1回実行され、設定のリロードでは再実行されません。
+
+| パラメータ             | 型     | 説明 |
+|-----------------------|----------|-------------|
+| `enabled`             | ブール値  | このRunnerのスタートアップカナリアを実行します。デフォルトは`false`です。 |
+| `timeout`             | 期間 | カナリアの期限。`5m`や`90s`のような値をサポートします。デフォルトは`5m`です。 |
+| `acquire_min_backoff` | 期間 | executor取得再試行間の最小バックオフ。デフォルトは`1s`です。 |
+| `acquire_max_backoff` | 期間 | executor取得再試行間の最大バックオフ。デフォルトは`10s`です。 |
+
+> [!note]
+> 合成ジョブはRunnerのデフォルトイメージで実行されるため、`docker`および`kubernetes` executorはデフォルトイメージが設定されている必要があります。
+
+例: 
+
+```toml
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "TOKEN"
+  executor = "kubernetes"
+
+  [runners.experimental.boot_verify]
+    enabled = true
+    timeout = "5m"
+    acquire_min_backoff = "1s"
+    acquire_max_backoff = "10s"
+```
+
 ## executor {#the-executors}
 
 次のexecutorを使用できます。
@@ -537,14 +641,14 @@ Shell executorを使用するように設定されている場合、CI/CDジョ�
 |--------------|-------------|
 | `bash`       | Bash（Bourne-shell）スクリプトを生成します。すべてのコマンドはBashコンテキストで実行されます。すべてのUnixシステムのデフォルトです。 |
 | `sh`         | Sh（Bourne-shell）スクリプトを生成します。すべてのコマンドはShコンテキストで実行されます。すべてのUnixシステムで`bash`のフォールバックとして使用されます。 |
-| `powershell` | PowerShellスクリプトを生成します。すべてのコマンドはPowerShell Desktopのコンテキストで実行されます。 |
-| `pwsh`       | PowerShellスクリプトを生成します。すべてのコマンドはPowerShell Coreのコンテキストで実行されます。これは、WindowsのデフォルトShellです。 |
+| `powershell` | PowerShellスクリプトを生成します。すべてのコマンドはPowerShell Desktopのコンテキストで実行されます。Windows上で`kubernetes`および`docker-windows` executorを使用するジョブのデフォルトShell。 |
+| `pwsh`       | PowerShellスクリプトを生成します。すべてのコマンドはPowerShell Coreのコンテキストで実行されます。Windowsでの新しいRunner登録、および`shell` executorを使用するジョブのデフォルトShell。 |
 
 `shell`オプションが`bash`または`sh`に設定されている場合、Bashの[ANSI-C引用符の処理方法](https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html)を使用して、ジョブスクリプトがShellエスケープされます。
 
 ### POSIX準拠のShellを使用する {#use-a-posix-compliant-shell}
 
-GitLab Runner 14.9以降では、`dash`などのPOSIX準拠のShellを使用するには、`FF_POSIXLY_CORRECT_ESCAPES`[機能フラグを有効にします](feature-flags.md)。有効にすると、POSIX準拠のShellエスケープメカニズムである[二重引用符](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02)が使用されます。
+GitLab Runner 14.9以降では、`dash`などのPOSIX準拠のShellを使用するには、`FF_POSIXLY_CORRECT_ESCAPES`[機能フラグを有効にします](feature-flags.md)。有効にすると、POSIX準拠のShellエスケープメカニズムである[「二重引用符」](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02)が使用されます。
 
 ## `[runners.docker]`セクション {#the-runnersdocker-section}
 
@@ -570,7 +674,7 @@ GitLab Runner 14.9以降では、`dash`などのPOSIX準拠のShellを使用す�
 | `device_cgroup_rules`              |                                                  | カスタムデバイスの`cgroup`ルール（Docker 1.28以降で利用可能）。 |
 | `disable_cache`                    |                                                  | Docker executorには、グローバルキャッシュ（他のexecutorと同様）とDockerボリュームに基づくローカルキャッシュという2つのレベルのキャッシュがあります。この設定フラグは、自動的に作成された（ホストディレクトリにマップされていない）キャッシュボリュームの使用を無効にするローカルキャッシュでのみ機能します。つまり、ビルドの一時ファイルを保持するコンテナの作成を防ぐだけであり、Runnerが[分散キャッシュモード](autoscale.md#distributed-runners-caching)で設定されている場合は、キャッシュを無効にしません。 |
 | `disable_entrypoint_overwrite`     |                                                  | イメージエントリポイントの上書きを無効にします。 |
-| `dns`                              | `["8.8.8.8"]`                                    | コンテナが使用するDNSサーバーのリスト。 |
+| `dns`                              | `["8.8.8.8"]`                                    | コンテナが使用するDNSサーバーのリスト。有効なIPアドレスである必要があります。無効な値は、prepareステージ中にジョブを失敗させます。検証はGitLab 19.2で[導入されました](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6947)。|
 | `dns_search`                       |                                                  | DNS検索ドメインのリスト。 |
 | `extra_hosts`                      | `["other-host:127.0.0.1"]`                       | コンテナ環境で定義する必要があるホスト。 |
 | `gpus`                             |                                                  | Dockerコンテナ用のGPUデバイス。`docker` CLIと同じ形式を使用します。詳細については、[Dockerのドキュメント](https://docs.docker.com/engine/containers/resource_constraints/#gpu)を参照してください。[GPUを有効にするための設定](gpus.md#docker-executor)が必要です。 |
@@ -587,7 +691,7 @@ GitLab Runner 14.9以降では、`dash`などのPOSIX準拠のShellを使用す�
 | `memory_swap`                      | `"256m"`                                         | 合計メモリ制限。文字列です。 |
 | `memory_reservation`               | `"64m"`                                          | メモリのソフト制限。文字列です。 |
 | `network_mode`                     |                                                  | コンテナをカスタムネットワークに追加します。 |
-| `mac_address`                      | `92:d0:c6:0a:29:33`                              | コンテナのMACアドレス。 |
+| `mac_address`                      | `92:d0:c6:0a:29:33`                              | コンテナのMACアドレス。有効なMACアドレスである必要があります。無効な値は、prepareステージ中にジョブを失敗させます。検証はGitLab 19.2で[導入されました](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6947)。 |
 | `oom_kill_disable`                 |                                                  | メモリ不足（`OOM`）エラーが発生した場合に、コンテナ内のプロセスを終了しません。 |
 | `oom_score_adjust`                 |                                                  | `OOM`スコアの調整。正の値は、プロセスを早期に終了することを意味します。 |
 | `privileged`                       | `false`                                          | コンテナを特権モードで実行します。安全ではありません。 |
@@ -769,7 +873,7 @@ GitLab Runnerは、executorの準備中にログオプションを検証しま�
 
 ログオプションは、メインのジョブコンテナと、CI/CD設定で定義されているすべてのサービスコンテナに適用されます。
 
-Dockerのログ記録の詳細については、[Docker`json-file`ログドライバーのドキュメント](https://docs.docker.com/config/containers/logging/json-file/)を参照してください。
+Dockerロギングの詳細については、[Docker `json-file`ログドライバーのドキュメント](https://docs.docker.com/engine/logging/drivers/json-file/)を参照してください。
 
 ### プライベートコンテナレジストリを使用する {#use-a-private-container-registry}
 
@@ -1017,7 +1121,7 @@ Parallels executorとVirtualBox executorの両方で、`base_name`で指定さ�
 `instance_ready_command`がアイドル状態のスケールルールで頻繁に失敗する場合、Runnerがジョブを受け入れるよりも速くインスタンスが削除および作成される可能性があります。スケールスロットリングをサポートするため、[GitLab 17.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37497)で指数バックオフが追加されました。
 
 > [!note]
-> オートスケーラーの設定オプションは、設定変更で再ロードされません。ただしGitLab 17.5.0以降では、`[[runners.autoscaler.policy]]`エントリは設定が変更されると再読み込みされます。
+> オートスケーラーの設定オプションは、設定の変更によってリロードされません。ただしGitLab 17.5.0以降では、`[[runners.autoscaler.policy]]`エントリは設定が変更されると再読み込みされます。
 
 ## `[runners.autoscaler.plugin_config]`セクション {#the-runnersautoscalerplugin_config-section}
 
@@ -1219,10 +1323,12 @@ VM分離は[`nesting`](../executors/instance.md#nested-virtualization)を使用�
 
 | 変数                   | 説明                           | デフォルト   | 値                                          |
 |----------------------------|---------------------------------------|-----------|-------------------------------------------------|
-| `CACHE_COMPRESSION_FORMAT` | キャッシュアーカイブの圧縮形式 | `zip`     | `zip`、`tarzstd`                                |
+| `CACHE_COMPRESSION_FORMAT` | キャッシュアーカイブの圧縮形式 | `zip`     | `zip`、`tarzstd`、`zipzstd`                     |
 | `CACHE_COMPRESSION_LEVEL`  | キャッシュアーカイブの圧縮レベル  | `default` | `fastest`、`fast`、`default`、`slow`、`slowest` |
 
-`tarzstd`形式はTARにZstandard圧縮を組み合わせたもので、`zip`よりも高い圧縮率を実現します。圧縮レベルは`fastest`（最小圧縮で最大速度）から`slowest`（最大圧縮で最小ファイルサイズ）までの範囲で指定できます。`default`レベルは、圧縮率と速度のバランスが取れた設定です。
+`tarzstd`形式はTARにZstandard圧縮を組み合わせたもので、`zip`よりも高い圧縮率を実現します。
+
+`zipzstd`形式は、各ファイルにZstandard圧縮を使用したZIPを使用します。これはファイルを並行して圧縮するため、マルチコアRunner上で`tarzstd`よりも高速に作成できます。各ファイルが個別に圧縮されるため、アーカイブはわずかに大きくなります。`zipzstd`キャッシュを並行して展開するには、`FF_USE_FASTZIP`機能フラグを有効にしてください。それ以外の場合、展開はシングルスレッドで実行されます。圧縮レベルは`fastest`（最小圧縮で最大速度）から`slowest`（最大圧縮で最小ファイルサイズ）までの範囲で指定できます。`default`レベルは、圧縮率と速度のバランスが取れた設定です。
 
 例: 
 
@@ -1231,6 +1337,47 @@ job:
   variables:
     CACHE_COMPRESSION_FORMAT: tarzstd
     CACHE_COMPRESSION_LEVEL: fast
+```
+
+### 並列キャッシュオブジェクトストレージ転送 {#parallel-cache-object-storage-transfers}
+
+デフォルトでは、キャッシュのダウンロードは単一のHTTP GETまたはGoCloud読み取りストリームを使用し、GoCloudパス（例えばS3と`RoleARN`を使用）を使用するキャッシュのアップロードは、一度に1つの並行マルチパート部分を使用します。
+
+`FF_USE_PARALLEL_CACHE_TRANSFER` [機能フラグ](feature-flags.md)を使用すると、オブジェクトストレージへの高速リンクでより高いスループットを有効にできます。有効にすると:
+
+- **ダウンロード**は、複数の同時範囲GET（署名済みURL。S3のようなGET専用署名済みURLではしばしば失敗するHEADの代わりに、小さい初期範囲リクエストが使用されます）または同時GoCloud範囲読み取りを使用する場合があります。これは、バックエンドが範囲をサポートし、キャッシュオブジェクトが1つのチャンクよりも大きい場合に適用されます。
+- GoCloudパスでの**アップロード**は、同時マルチパートアップロードを使用します。
+
+機能フラグが無効の場合、以下の変数に関わらず動作は変更されません。これらのジョブ環境変数（`cache-extractor`および`cache-archiver`ヘルパーによって読み取られます）で並行処理を調整できます:
+
+| 変数                     | 説明                                                                 | デフォルト |
+|------------------------------|-----------------------------------------------------------------------------|---------|
+| `CACHE_CHUNK_SIZE`           | 並列範囲ダウンロード用のチャンクサイズ（バイト）およびGoCloudアップロード用のマルチパート部分サイズ | `16777216`（16 MiB） |
+| `CACHE_CONCURRENCY`          | 同時範囲ダウンロードまたは同時アップロード部分（GoCloud）の数。順次ダウンロードには`0`または`1`を使用します。 | `16` |
+| `CACHE_TRANSFER_BUFFER_SIZE` | アーカイブファイルとのストリーミング時のバッファサイズ（バイト）           | `4194304`（4 MiB） |
+
+例: 
+
+```yaml
+job:
+  variables:
+    FF_USE_PARALLEL_CACHE_TRANSFER: "true"
+    CACHE_CONCURRENCY: "8"
+    CACHE_CHUNK_SIZE: "16777216"
+```
+
+### 並列アーティファクトダウンロード（直接ダウンロード） {#parallel-artifact-downloads-direct-download}
+
+デフォルトでは、[`direct_download`](https://docs.gitlab.com/ci/jobs/job_artifacts/#download-job-artifacts)がオブジェクトストレージへのリダイレクトを返すと、Runnerは単一のHTTP GETストリームでアーティファクトをダウンロードします。
+
+オブジェクトストレージのバックエンドが`206 Partial Content`と`Content-Range`の合計をサポートしている場合、`FF_USE_PARALLEL_ARTIFACT_TRANSFER` [機能フラグ](feature-flags.md)を有効にすることで、並列HTTP Range GETを許可します。チャンクサイズと並行処理はRunner内で固定されており（`CACHE_*`変数ではありません）。このフラグは`FF_USE_PARALLEL_CACHE_TRANSFER`とは独立しています。
+
+例: 
+
+```yaml
+job:
+  variables:
+    FF_USE_PARALLEL_ARTIFACT_TRANSFER: "true"
 ```
 
 キャッシュメカニズムは、事前署名付きURLを使用してキャッシュをアップロードおよびダウンロードします。GitLab Runnerがそれ自体のインスタンスでURLに署名します。ジョブのスクリプト（キャッシュのアップロード/ダウンロードスクリプトを含む）がローカルマシンまたは外部マシンで実行されるかどうかは関係ありません。たとえば、`shell` executorや`docker` executorは、GitLab Runnerプロセスが実行されているマシンでスクリプトを実行します。一方で`virtualbox`や`docker+machine`は、別のVMに接続してスクリプトを実行します。このプロセスは、キャッシュアダプターの認証情報が漏洩する可能性を最小限に抑えるというセキュリティ上の理由によるものです。
@@ -1275,7 +1422,8 @@ job:
 
 {{< history >}}
 
-- GitLab Runner v18.4.0で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5751)されました。
+- GitLab Runner 18.4.0で[導入されました](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5751)。
+- 分散キャッシュ内のオブジェクトパスは、GitLab Runner 19.0で[変更され](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6628)、`FF_HASH_CACHE_KEYS`が有効な場合にシャードプレフィックスを含むようになりました。
 
 {{< /history >}}
 
@@ -1283,7 +1431,7 @@ GitLab Runner 18.4.0以降では、`FF_HASH_CACHE_KEYS` [機能フラグ](featur
 
 `FF_HASH_CACHE_KEYS`がオフになっている場合（デフォルト）、GitLab Runnerはキャッシュキーをサニタイズしてから、ローカルのキャッシュファイルとストレージバケット内のオブジェクトの両方のパスをビルドするために使用します。サニタイズによってキャッシュキーが変更された場合、GitLab Runnerはこの変更をログに記録します。GitLab Runnerがキャッシュキーをサニタイズできない場合、これもログに記録し、この特定のキャッシュは使用しません。
 
-この機能フラグをオンにすると、GitLab Runnerはキャッシュキーにハッシュを付けてから、ローカルのキャッシュアーティファクトとリモートストレージバケット内のオブジェクトのパスをビルドするために使用します。GitLab Runnerは、キャッシュキーをサニタイズしません。特定のキャッシュアーティファクトがどのキャッシュキーによって作成されたのかを確認できるように、GitLab Runnerはアーティファクトにメタデータを付加します:
+この機能フラグを有効にすると、GitLab Runnerは、ローカルキャッシュアーティファクトとリモートストレージバケット内のオブジェクトのパスを構築するために、キャッシュキーを（SHA-256で）ハッシュ化します。GitLab Runnerは、キャッシュキーをサニタイズしません。特定のキャッシュアーティファクトがどのキャッシュキーによって作成されたのかを確認できるように、GitLab Runnerはアーティファクトにメタデータを付加します:
 
 - ローカルのキャッシュアーティファクトの場合、GitLab Runnerは、キャッシュアーティファクト`cache.zip`の横に`metadata.json`ファイルを配置し、次のコンテンツを含めます:
 
@@ -1292,6 +1440,27 @@ GitLab Runner 18.4.0以降では、`FF_HASH_CACHE_KEYS` [機能フラグ](featur
   ```
 
 - 分散キャッシュのキャッシュアーティファクトの場合、GitLab Runnerはメタデータをストレージオブジェクトblobに直接添付し、キー`cachekey`を付与します。クラウドプロバイダーのメカニズムを使用してクエリできます。例については、AWS S3の[ユーザー定義オブジェクトメタデータ](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#UserMetadata)を参照してください。
+
+#### `FF_HASH_CACHE_KEYS`を使用した分散キャッシュオブジェクトパス {#distributed-cache-object-path-with-ff_hash_cache_keys}
+
+GitLab Runner 19.0以降では、`FF_HASH_CACHE_KEYS`が有効になっている場合、GitLab RunnerはSHA-256ハッシュの最初の2つの16進文字を、分散キャッシュオブジェクトパスのシャードプレフィックスとして挿入します:
+
+```plaintext
+[path/][runner/<token>/]project/<project_id>/<shard>/<hash>/cache.zip
+```
+
+下記は例です: 
+
+```plaintext
+runner/abc123/project/42/d0/d03a852ba491ba611e907b1ef60ad5c4516a05b8f3aae6abb77f42bc60325aed/cache.zip
+```
+
+これにより、キャッシュオブジェクトがプロジェクトごとに256個の異なるオブジェクトプレフィックスに分散され、多数の並列ジョブが高リクエストレートでキャッシュにアクセスする場合に、[Amazon S3の503（Slow Down）レスポンス](https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html)が発生するのを防ぎます。
+
+> [!warning]
+> GitLab Runner 19.0へのアップグレードは、`FF_HASH_CACHE_KEYS`を使用している場合に破壊的変更となります。`FF_HASH_CACHE_KEYS`をすでに有効にしており、GitLab Runner 19.0以降にアップグレードすると、シャードプレフィックスにより、分散ストレージ内のすべてのキャッシュアーティファクトのオブジェクトパスが変更されます。古いパス（`.../<hash>/cache.zip`）に保存されている既存のオブジェクトは到達不能になります。アップグレード後の最初のジョブ実行時に、キャッシュミスとキャッシュアーティファクトの再ビルドが発生することを想定してください。
+
+#### キャッシュキー処理の動作の概要 {#cache-key-handling-behavior-summary}
 
 `FF_HASH_CACHE_KEYS`を変更すると、ハッシュでキャッシュキーによってキャッシュアーティファクトの名前と場所が変更されるため、GitLab Runnerは既存のキャッシュアーティファクトを無視します。この変更は、`FF_HASH_CACHE_KEYS=true`から`FF_HASH_CACHE_KEYS=false`、およびその逆に、両方向に適用されます。
 
@@ -1303,8 +1472,10 @@ GitLab Runner 18.4.0以降では、`FF_HASH_CACHE_KEYS` [機能フラグ](featur
 
 - `FF_HASH_CACHE_KEYS`を変更した後、キャッシュミス、キャッシュアーティファクトの再ビルド、および最初のジョブの実行時間が長くなることを想定しておきます。
 
+- GitLab Runnerがプライマリと代替のキャッシュの両方の場所をチェックする移行期間中は、追加のネットワークリクエストが発生することを想定してください。
+
 > [!warning]
-> `FF_HASH_CACHE_KEYS`をオンにしても、古いバイナリのヘルパー（たとえば、ヘルパーイメージを古いバージョンに固定したため）を実行している場合、キャッシュキーのハッシュ化とキャッシュのアップロードまたはダウンロードは引き続き機能します。ただし、GitLab Runnerはキャッシュアーティファクトのメタデータを保持しません。
+> `FF_HASH_CACHE_KEYS`を有効にしていても、古いバイナリのヘルパー（例えば、ヘルパーイメージを古いバージョンに固定しているため）を実行している場合でも、キャッシュキーのハッシュ化とキャッシュのアップロードまたはダウンロードは機能します。ただし、GitLab Runnerはキャッシュアーティファクトのメタデータを保持しません。
 
 ### `[runners.cache.s3]`セクション {#the-runnerscaches3-section}
 
@@ -1355,15 +1526,15 @@ GitLab Runnerは、設定に基づいてS3に異なる認証方法を使用し�
 
 Runnerは、次の場合に静的アクセスキー認証を使用します:
 
-- `ServerAddress`、`AccessKey`、および`SecretKey`パラメータが仕様されていますが、`AuthenticationType`は提供されていません。
-- `AuthenticationType = "access-key"`が明示的に設定されています。
+- `ServerAddress`、`AccessKey`、および`SecretKey`パラメータが指定されているが、`AuthenticationType`は指定されていない。
+- `AuthenticationType = "access-key"`が明示的に設定されている。
 
 ### AWS SDKのデフォルト認証情報チェーン {#aws-sdk-default-credential-chain}
 
 Runnerは、次の場合に[AWS SDKのデフォルト認証情報チェーン](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials)を使用します:
 
-- `ServerAddress`、`AccessKey`、または`SecretKey`のいずれかが省略され、`AuthenticationType`が提供されていません。
-- `AuthenticationType = "iam"`が明示的に設定されています。
+- `ServerAddress`、`AccessKey`、`SecretKey`のいずれかが省略され、`AuthenticationType`が指定されていない。
+- `AuthenticationType = "iam"`が明示的に設定されている。
 
 この認証情報チェーンは、次の順序で認証を試みます:
 
@@ -1510,9 +1681,10 @@ aws sts assume-role --role-arn arn:aws:iam::1234567890123:role/my-upload-role --
 | `gitlab_runner_cache_s3_assume_role_requests_in_flight` | ゲージ | AWS STSへの`AssumeRole`リクエストの進行中の数。 |
 | `gitlab_runner_cache_s3_assume_role_wait_seconds` | ヒストグラム | `AssumeRole`リクエストを発行する前に並行処理スロットを獲得するための待機時間。 |
 | `gitlab_runner_cache_s3_assume_role_duration_seconds` | ヒストグラム | AWS STSへの`AssumeRole` APIコールの期間。 |
-| `gitlab_runner_cache_s3_assume_role_cache_hits_total` | カウンター | `AssumeRole`認証情報キャッシュヒット数（STSコールが回避された回数）。 |
-| `gitlab_runner_cache_s3_assume_role_cache_misses_total` | カウンター | `AssumeRole`認証情報キャッシュミス数（STSコールが行われた回数）。 |
+| `gitlab_runner_cache_s3_assume_role_cache_hits_total` | カウンター | `AssumeRole`認証情報のキャッシュヒット数（STS呼び出しを回避）。 |
+| `gitlab_runner_cache_s3_assume_role_cache_misses_total` | カウンター | `AssumeRole`認証情報のキャッシュミス数（STS呼び出しを実行）。 |
 | `gitlab_runner_cache_s3_assume_role_cached_credentials` | ゲージ | インメモリLRUキャッシュに保持されている`AssumeRole`認証情報の数。 |
+| `gitlab_runner_cache_s3_assume_role_failures_total` | カウンター | `AssumeRole`リクエストの失敗数。 |
 
 #### Kubernetes ServiceAccountリソース用のIAMロールを有効にする {#enable-iam-roles-for-kubernetes-serviceaccount-resources}
 
@@ -1538,7 +1710,7 @@ aws sts assume-role --role-arn arn:aws:iam::1234567890123:role/my-upload-role --
 {{< /history >}}
 
 > [!note]
-> [S3 Express One Zoneディレクトリバケットは`RoleARN`では機能しません](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38484#note_2313111840)。Runnerマネージャーが特定のオブジェクトへのアクセスを制限できないためです。
+> [S3 Express One Zoneディレクトリバケットは`RoleARN`では機能しません](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/38484#note_2313111840)。これは、Runnerマネージャーが特定のオブジェクトへのアクセスを制限できないためです。
 
 1. [Amazonのチュートリアル](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-getting-started.html)に従って、S3 Express One Zoneバケットを設定します。
 1. `BucketName`と`BucketLocation`を使用して`config.toml`を設定します。
@@ -1557,7 +1729,7 @@ aws sts assume-role --role-arn arn:aws:iam::1234567890123:role/my-upload-role --
 
 ### `[runners.cache.gcs]`セクション {#the-runnerscachegcs-section}
 
-次のパラメータは、Google Cloud Storageのネイティブサポートを定義します。これらの値の詳細については、[Google Cloud Storage（GCS）の認証に関するドキュメント](https://docs.cloud.google.com/storage/docs/authentication#service_accounts)を参照してください。
+次のパラメータは、Google Cloud Storageのネイティブサポートを定義します。これらの値の詳細については、[Google Cloud Storage（GCS）の認証に関するドキュメント](https://docs.cloud.google.com/storage/docs/authentication)を参照してください。
 
 | パラメータ         | 型   | 説明 |
 |-------------------|--------|-------------|
@@ -1714,6 +1886,31 @@ podLabels:
 
 詳細については、[イシュー38330](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38330)を参照してください。
 
+## `[runners.artifact]`セクション {#the-runnersartifact-section}
+
+{{< history >}}
+
+- GitLab Runner 18.10で[導入](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5900)されました。
+
+{{< /history >}}
+
+以下のパラメータは、Runnerがジョブアーティファクトをアップロードする際に使用されるHTTPタイムアウトを制御します。ネットワークが遅い、アーティファクトが大きい、または高レイテンシーのストレージバックエンドを持つ環境では、デフォルトの1時間アップロードタイムアウトでは不十分な場合があります。失敗を早めるために、それを短縮することを検討してください。
+
+`upload_timeout`を、予想される最大のアーティファクトサイズと利用可能な帯域幅に適した値に設定します。
+
+| パラメータ                 | 型     | 説明 |
+|---------------------------|----------|-------------|
+| `upload_timeout`          | 期間 | オプション。アーティファクトアップロード操作全体の最大時間。デフォルトは`1h`です。 |
+| `response_header_timeout` | 期間 | オプション。アップロード本文送信後にサーバー応答ヘッダーを待機する最大時間。デフォルトは`10m`です。 |
+
+例: 
+
+```toml
+[runners.artifact]
+  upload_timeout = "2h"
+  response_header_timeout = "15m"
+```
+
 ## `[runners.kubernetes]`セクション {#the-runnerskubernetes-section}
 
 次の表に、Kubernetes executorで使用できる設定パラメータを示します。その他のパラメータについては、[Kubernetes executorのドキュメント](../executors/kubernetes/_index.md)を参照してください。
@@ -1788,6 +1985,15 @@ GitLab Runnerの手動インストールと`kubernetes` executorは異なる動�
   helper_image = "my.registry.local/gitlab/gitlab-runner-helper:arm64-v${CI_RUNNER_VERSION}"
 ```
 
+### Windowsヘルパーイメージの選択 {#windows-helper-image-selection}
+
+Windowsでは、GitLab RunnerはホストのWindowsバージョンとCPUアーキテクチャ（`x86_64`または`arm64`）に一致するヘルパーイメージを自動的に選択します。
+
+> [!note]
+> ARM64ヘルパーイメージは現在、Windows Server 2025（24H2）でのみ利用可能です。
+
+利用可能なイメージのリストについては、[Windowsヘルパーイメージ](../executors/docker.md#windows-helper-images)を参照してください。
+
 ### 古いバージョンのAlpine Linuxを使用するRunnerイメージ {#runner-images-that-use-an-old-version-of-alpine-linux}
 
 {{< history >}}
@@ -1808,7 +2014,7 @@ docker pull gitlab/gitlab-runner:alpine3.19-v16.1.0
 
 ### Alpine `pwsh`イメージ {#alpine-pwsh-images}
 
-GitLab Runner 16.1以降、すべての`alpine`ヘルパーイメージには`pwsh`バリアントがあります。唯一の例外は`alpine-latest`です。これは、GitLab Runnerヘルパーイメージのベースとなる[`powershell` Dockerイメージ](https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-in-docker?view=powershell-7.4)が`alpine:latest`をサポートしていないためです。
+GitLab Runner 16.1以降では、固定されたalpineフレーバー（`alpine3.18`、`alpine3.19`、および`alpine3.21`）には`pwsh`バリアントがあります。GitLab Runner 17.8以降では、`alpine-latest`フレーバーにも`pwsh`バリアントがあります。これらのイメージは、alpineベースイメージの上にPowerShell `linux-musl`ビルドをインストールするため、任意のalpineバージョンをサポートします。
 
 例: 
 
@@ -1913,7 +2119,7 @@ GitLab Runnerは、_ビルドディレクトリ_と呼ばれるベースパス�
 使用される_ビルドディレクトリ_は、ユーザーが[`builds_dir`](#the-runners-section)設定で明示的に定義できます。
 
 > [!note]
-> カスタムディレクトリにクローンしたい場合、以下のガイドラインが適用されない場合は、[`GIT_CLONE_PATH`](https://docs.gitlab.com/ci/runners/configure_runners/#custom-build-directories)を指定することもできます。
+> カスタムディレクトリにクローンしたい場合は[`GIT_CLONE_PATH`](https://docs.gitlab.com/ci/runners/configure_runners/#custom-build-directories)も指定できます。その場合、以下のガイドラインは適用されません。
 
 GitLab Runnerは、実行するすべてのジョブに_ビルドディレクトリ_を使用しますが、特定のパターン`{builds_dir}/$RUNNER_TOKEN_KEY/$CONCURRENT_PROJECT_ID/$NAMESPACE/$PROJECT_NAME`を使用してそれらをネストします。例: `/builds/2mn-ncv-/0/user/playground`。
 
