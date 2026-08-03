@@ -502,6 +502,17 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 						build.Variables,
 						spec.Variable{Key: "ErrorActionPreference", Value: "Stop"},
 						spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+						// This test runs get_sources multiple times against
+						// a real remote with no retry budget (the default
+						// GET_SOURCES_ATTEMPTS=1). Observed failing on both
+						// Windows and Linux CI with get_sources exiting 1
+						// with no captured output at all - a transient
+						// execution failure, not a test-logic bug. 3
+						// matches defaultPullMaxAttempts in the image-pull
+						// retry manager, the existing convention elsewhere
+						// in this codebase for retrying a transient
+						// external-dependency failure.
+						spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"},
 					)
 					build.Runner.RunnerSettings.CleanGitConfig = test.cleanGitConfig
 
