@@ -23,6 +23,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"gitlab.com/gitlab-org/labkit/fields"
+	labkitsnowplow "gitlab.com/gitlab-org/labkit/v2/events/snowplow"
 	"gitlab.com/gitlab-org/labkit/v2/events/snowplow/oidc"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
@@ -670,7 +672,27 @@ func (mr *RunCommand) createSnowplowBillingWriter(ulConfig common.UsageLogger) u
 		options = append(options, snowplow.WithBatchDeliveryDurationBuckets(ulConfig.Snowplow.BatchDeliveryDurationBuckets))
 	}
 
-	mr.log().WithFields(logFields).Debug("snowplow_billing configuration loaded")
+	splog := mr.log().WithFields(logFields)
+
+	options = append(options, snowplow.WithCallback(func(successes []labkitsnowplow.SendResult, failures []labkitsnowplow.SendResult) {
+		for _, s := range successes {
+			splog.WithFields(logrus.Fields{
+				"events_count": s.EventCount,
+			}).Info("snowplow_billing usage events successfully sent")
+		}
+
+		for _, f := range failures {
+			splog.
+				WithFields(logrus.Fields{
+					"events_count":        f.EventCount,
+					fields.HTTPStatusCode: f.StatusCode,
+				}).
+				WithError(f.Err).
+				Error("Failed to send snowplow_billing usage events")
+		}
+	}))
+
+	splog.Debug("snowplow_billing configuration loaded")
 
 	writer, err := snowplow.New(mr.log().WithFields(logFields), collectorURI, options...)
 	if err != nil {
