@@ -2257,6 +2257,19 @@ func TestBuildCacheHelper(t *testing.T) {
 
 				build := newBuild(t, successfulBuild, shell)
 
+				// GetRemoteSuccessfulBuild clones from a real remote over the
+				// network, which the default GET_SOURCES_ATTEMPTS=1 gives no
+				// retry budget for. This test has been observed to fail
+				// intermittently on a transient "connection reset by peer"
+				// from the git fetch alone. 3 matches defaultPullMaxAttempts
+				// in the image-pull retry manager, the existing convention
+				// elsewhere in this codebase for a transient
+				// external-dependency failure.
+				build.Variables = append(
+					build.Variables,
+					spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"},
+				)
+
 				dir := t.TempDir()
 				build.Runner.RunnerSettings.BuildsDir = filepath.Join(dir, "build")
 				build.Runner.RunnerSettings.CacheDir = filepath.Join(dir, "cache")
