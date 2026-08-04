@@ -87,16 +87,16 @@ func (*builtinFunc) Spec() *proto.Spec {
 }
 
 // Run executes the scriptv2 step, generating and running a shell script from the command array.
-func (b *builtinFunc) Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
+func (b *builtinFunc) Run(ctx context.Context, builtinCtx runner.BuiltinContext) (runner.BuiltinResult, error) {
 	// Detect shell early - used by both generator (for shebang) and executor (for execution)
 	shellPath, err := internal.DetectShell()
 	if err != nil {
-		return fmt.Errorf("detecting shell: %w", err)
+		return runner.BuiltinResult{}, fmt.Errorf("detecting shell: %w", err)
 	}
 
 	scriptInput, err := builtinCtx.GetInput("script", runner.KindList)
 	if err != nil {
-		return fmt.Errorf("getting script input: %w", err)
+		return runner.BuiltinResult{}, fmt.Errorf("getting script input: %w", err)
 	}
 
 	var commands []string
@@ -105,31 +105,31 @@ func (b *builtinFunc) Run(ctx context.Context, builtinCtx runner.BuiltinContext)
 	}
 
 	if len(commands) == 0 {
-		return fmt.Errorf("script input is empty")
+		return runner.BuiltinResult{}, fmt.Errorf("script input is empty")
 	}
 
 	spec := b.Spec()
 	debugTraceInput, err := builtinCtx.GetInputWithDefault("debug_trace", runner.KindBool, spec.GetSpec().GetInputs())
 	if err != nil {
-		return fmt.Errorf("getting debug_trace input: %w", err)
+		return runner.BuiltinResult{}, fmt.Errorf("getting debug_trace input: %w", err)
 	}
 	debugTrace := debugTraceInput.GetBoolValue()
 
 	checkForErrorsInput, err := builtinCtx.GetInputWithDefault("check_for_errors", runner.KindBool, spec.GetSpec().GetInputs())
 	if err != nil {
-		return fmt.Errorf("getting check_for_errors input: %w", err)
+		return runner.BuiltinResult{}, fmt.Errorf("getting check_for_errors input: %w", err)
 	}
 	checkForErrors := checkForErrorsInput.GetBoolValue()
 
 	posixEscapeInput, err := builtinCtx.GetInputWithDefault("posix_escape", runner.KindBool, spec.GetSpec().GetInputs())
 	if err != nil {
-		return fmt.Errorf("getting posix_escape input: %w", err)
+		return runner.BuiltinResult{}, fmt.Errorf("getting posix_escape input: %w", err)
 	}
 	posixEscape := posixEscapeInput.GetBoolValue()
 
 	traceSectionsInput, err := builtinCtx.GetInputWithDefault("trace_sections", runner.KindBool, spec.GetSpec().GetInputs())
 	if err != nil {
-		return fmt.Errorf("getting trace_sections input: %w", err)
+		return runner.BuiltinResult{}, fmt.Errorf("getting trace_sections input: %w", err)
 	}
 	traceSections := traceSectionsInput.GetBoolValue()
 
@@ -175,8 +175,8 @@ func (b *builtinFunc) Run(ctx context.Context, builtinCtx runner.BuiltinContext)
 	}
 	executor := internal.NewExecutor(executorConfig)
 	if err := executor.Execute(ctx, script); err != nil {
-		return fmt.Errorf("executing script: %w", err)
+		return runner.BuiltinResult{}, fmt.Errorf("executing script: %w", err)
 	}
 
-	return nil
+	return runner.BuiltinResult{}, nil
 }
