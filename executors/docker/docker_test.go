@@ -1039,6 +1039,58 @@ func TestDockerIsolationWithIncorrectValue(t *testing.T) {
 	assert.Contains(t, err.Error(), `the isolation value "someIncorrectValue" is not valid`)
 }
 
+func TestDockerServiceIsolationWithCorrectValues(t *testing.T) {
+	isolations := []string{"default", ""}
+	if runtime.GOOS == helperimage.OSTypeWindows {
+		isolations = append(isolations, "hyperv", "process")
+	}
+
+	for _, isolation := range isolations {
+		t.Run(isolation, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+
+			vm := volumes.NewMockManager(t)
+			vm.On("Binds").Return([]string{})
+
+			e := new(executor)
+			e.dockerConn = &dockerConnection{Client: c}
+			e.Config = common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Docker: &common.DockerConfig{
+						Isolation: isolation,
+					},
+				},
+			}
+			e.Build = &common.Build{}
+			e.volumesManager = vm
+
+			hostConfig, err := e.createHostConfigForService(false, nil, nil)
+			require.NoError(t, err)
+			assert.Equal(t, container.Isolation(isolation), hostConfig.Isolation)
+		})
+	}
+}
+
+func TestDockerServiceIsolationWithIncorrectValue(t *testing.T) {
+	c := docker.NewMockClient(t)
+
+	e := new(executor)
+	e.dockerConn = &dockerConnection{Client: c}
+	e.Config = common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Docker: &common.DockerConfig{
+				Isolation: "someIncorrectValue",
+			},
+		},
+	}
+	e.Build = &common.Build{}
+	e.volumesManager = volumes.NewMockManager(t)
+
+	_, err := e.createHostConfigForService(false, nil, nil)
+
+	assert.Contains(t, err.Error(), `the isolation value "someIncorrectValue" is not valid`)
+}
+
 func TestDockerCreateHostConfigWithInvalidDNS(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		DNS: []string{"not-an-ip"},

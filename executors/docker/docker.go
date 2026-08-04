@@ -633,6 +633,12 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 	}
 	privileged = privileged && imageIsPrivileged
 
+	isolation := container.Isolation(e.Config.Docker.Isolation)
+	if !isolation.IsValid() {
+		return nil, fmt.Errorf("the isolation value %q is not valid. "+
+			"the valid values are: 'process', 'hyperv', 'default' and an empty string", isolation)
+	}
+
 	var useInit *bool
 	if e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
 		yes := true
@@ -666,6 +672,7 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 		DNSSearch:     e.Config.Docker.DNSSearch,
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
+		Isolation:     isolation,
 		Privileged:    privileged,
 		SecurityOpt:   servicesSecurityOpt,
 		Runtime:       e.Config.Docker.Runtime,
