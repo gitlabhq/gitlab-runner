@@ -110,7 +110,7 @@ func (c *command) waitForCommand() {
 		case exitCode == BuildFailureExitCode:
 			err = c.parseBuildFailure(eerr)
 		case exitCode != SystemFailureExitCode:
-			err = &ErrUnknownFailure{Inner: eerr, ExitCode: exitCode}
+			err = &UnknownFailureError{Inner: eerr, ExitCode: exitCode}
 		}
 	}
 
@@ -136,7 +136,7 @@ func (c *command) parseBuildFailure(eerr *exec.ExitError) error {
 
 	bErrCode, err := strconv.Atoi(codeStr)
 	if err != nil {
-		return &ErrUnknownFailure{Inner: eerr, ExitCode: SystemFailureExitCode}
+		return &UnknownFailureError{Inner: eerr, ExitCode: SystemFailureExitCode}
 	}
 
 	// We want to modify the exit code found in the error message to reflect the

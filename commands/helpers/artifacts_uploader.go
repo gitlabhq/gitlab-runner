@@ -166,9 +166,9 @@ func (c *ArtifactsUploaderCommand) Run() error {
 	case common.UploadTooLarge:
 		return errTooLarge
 	case common.UploadFailed:
-		return retryableErr{err: os.ErrInvalid}
+		return retryableError{err: os.ErrInvalid}
 	case common.UploadServiceUnavailable:
-		return retryableErr{err: errServiceUnavailable}
+		return retryableError{err: errServiceUnavailable}
 	default:
 		return os.ErrInvalid
 	}
@@ -177,7 +177,7 @@ func (c *ArtifactsUploaderCommand) Run() error {
 func (c *ArtifactsUploaderCommand) handleRedirect(location string) error {
 	newURL, err := url.Parse(location)
 	if err != nil {
-		return retryableErr{err: fmt.Errorf("parsing new location URL: %w", err)}
+		return retryableError{err: fmt.Errorf("parsing new location URL: %w", err)}
 	}
 
 	newURL.RawQuery = ""
@@ -189,11 +189,11 @@ func (c *ArtifactsUploaderCommand) handleRedirect(location string) error {
 		WithField("new-url", c.JobCredentials.URL).
 		Info("Upload request redirected")
 
-	return retryableErr{err: fmt.Errorf("request redirected")}
+	return retryableError{err: fmt.Errorf("request redirected")}
 }
 
 func (c *ArtifactsUploaderCommand) shouldRetry(tries int, err error) bool {
-	var errAs retryableErr
+	var errAs retryableError
 	if !errors.As(err, &errAs) {
 		return false
 	}

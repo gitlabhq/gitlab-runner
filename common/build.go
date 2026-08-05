@@ -834,7 +834,7 @@ func (b *Build) executeScript(ctx, prepareCtx context.Context, trace JobTrace, e
 
 		if b.UseNativeSteps() && len(b.Job.Run) > 0 {
 			if !hasStepRunnerConnector {
-				return ExecutorStepRunnerConnectNotSupported
+				return ErrExecutorStepRunnerConnectNotSupported
 			}
 			err = b.executeStage(ctx, stepRunBuildStage, executor)
 		} else {

@@ -102,7 +102,7 @@ type SuspendableExecutor interface {
 	Resume(ctx context.Context, fields url.Values) error
 }
 
-var ExecutorStepRunnerConnectNotSupported = fmt.Errorf("executor does not support step-runner connect")
+var ErrExecutorStepRunnerConnectNotSupported = fmt.Errorf("executor does not support step-runner connect")
 
 // ErrNativeStepsRequireConcrete is returned when a job needs native step
 // execution (e.g. the `run:` keyword) on an executor that supports it only via

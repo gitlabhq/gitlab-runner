@@ -392,37 +392,37 @@ func TestArtifactUploaderCommandShouldRetry(t *testing.T) {
 			expectedShouldRetry: false,
 		},
 		"retryable error, first try": {
-			err:   retryableErr{},
+			err:   retryableError{},
 			tries: 1,
 
 			expectedShouldRetry: true,
 		},
 		"retryable error, max tries": {
-			err:   retryableErr{},
+			err:   retryableError{},
 			tries: defaultTries,
 
 			expectedShouldRetry: false,
 		},
 		"retryable error, over max tries limit": {
-			err:   retryableErr{},
+			err:   retryableError{},
 			tries: defaultTries + 10,
 
 			expectedShouldRetry: false,
 		},
 		"retryable error, before reaching service unavailable tries": {
-			err:   retryableErr{err: errServiceUnavailable},
+			err:   retryableError{err: errServiceUnavailable},
 			tries: serviceUnavailableTries - 1,
 
 			expectedShouldRetry: true,
 		},
 		"retryable error service unavailable, max tries": {
-			err:   retryableErr{err: errServiceUnavailable},
+			err:   retryableError{err: errServiceUnavailable},
 			tries: serviceUnavailableTries,
 
 			expectedShouldRetry: false,
 		},
 		"retryable error service unavailable, over max errors limit": {
-			err:   retryableErr{err: errServiceUnavailable},
+			err:   retryableError{err: errServiceUnavailable},
 			tries: serviceUnavailableTries + 10,
 
 			expectedShouldRetry: false,

@@ -232,7 +232,7 @@ func TestBuildUnknownFailure(t *testing.T) {
 
 		err = buildtest.RunBuild(t, build)
 		assert.Error(t, err)
-		var errUnknownFailure *command.ErrUnknownFailure
+		var errUnknownFailure *command.UnknownFailureError
 		assert.ErrorAs(t, err, &errUnknownFailure)
 		assert.Equal(t, 255, errUnknownFailure.ExitCode)
 	})

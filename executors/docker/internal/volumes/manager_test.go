@@ -24,7 +24,7 @@ import (
 )
 
 func TestErrVolumeAlreadyDefined(t *testing.T) {
-	err := NewErrVolumeAlreadyDefined("test-path")
+	err := NewVolumeAlreadyDefinedError("test-path")
 	assert.EqualError(t, err, `volume for container path "test-path" is already defined`)
 }
 
@@ -105,7 +105,7 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 			volume:          "/host/new:/duplicated",
 			parsedVolume:    &parser.Volume{Source: "/host/new", Destination: "/duplicated"},
 			expectedBinding: []string{existingBinding},
-			expectedError:   NewErrVolumeAlreadyDefined("/duplicated"),
+			expectedError:   NewVolumeAlreadyDefinedError("/duplicated"),
 		},
 		"volume with mode specified": {
 			volume:          "/host/new:/my/path:ro",
@@ -230,7 +230,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 			basePath:         "",
 			temporaryName:    "temporary",
 			expectedBindings: []string{existingBinding},
-			expectedError:    NewErrVolumeAlreadyDefined("/duplicated"),
+			expectedError:    NewVolumeAlreadyDefinedError("/duplicated"),
 		},
 		"volume is root": {
 			volume:           "/",
@@ -354,7 +354,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 			volume:          "/duplicated",
 			uniqueName:      "uniq",
 			expectedBinding: []string{existingBinding},
-			expectedError:   NewErrVolumeAlreadyDefined("/duplicated"),
+			expectedError:   NewVolumeAlreadyDefinedError("/duplicated"),
 		},
 		"volume is root": {
 			volume:          "/",
@@ -453,7 +453,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 		"duplicated volume definition": {
 			volume:        "/duplicated",
 			uniqueName:    "uniq",
-			expectedError: NewErrVolumeAlreadyDefined("/duplicated"),
+			expectedError: NewVolumeAlreadyDefinedError("/duplicated"),
 		},
 		"protected": {
 			volume:     "some/volume",
@@ -664,7 +664,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 		},
 		"duplicated volume definition": {
 			volume:        "/duplicated",
-			expectedError: &ErrVolumeAlreadyDefined{},
+			expectedError: &VolumeAlreadyDefinedError{},
 		},
 		"protected": {
 			volume:    "some/volume",

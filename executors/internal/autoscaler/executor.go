@@ -176,7 +176,7 @@ func (e *executor) Connect(ctx context.Context) (func() (io.ReadWriteCloser, err
 		return connector.Connect(ctx)
 	}
 
-	return nil, common.ExecutorStepRunnerConnectNotSupported
+	return nil, common.ErrExecutorStepRunnerConnectNotSupported
 }
 
 func (e *executor) TerminalConnect() (terminal.Conn, error) {

@@ -22,13 +22,13 @@ const (
 	pemCertBlockType = "CERTIFICATE"
 )
 
-type ErrorInvalidCertificate struct {
+type InvalidCertificateError struct {
 	inner            error
 	nonCertBlockType bool
 	nilBlock         bool
 }
 
-func (e *ErrorInvalidCertificate) Error() string {
+func (e *InvalidCertificateError) Error() string {
 	msg := []string{"invalid certificate"}
 
 	switch {
@@ -47,10 +47,10 @@ func decodeCertificate(data []byte) (*x509.Certificate, error) {
 	if isPEM(data) {
 		block, _ := pem.Decode(data)
 		if block == nil {
-			return nil, &ErrorInvalidCertificate{nilBlock: true}
+			return nil, &InvalidCertificateError{nilBlock: true}
 		}
 		if block.Type != pemCertBlockType {
-			return nil, &ErrorInvalidCertificate{nonCertBlockType: true}
+			return nil, &InvalidCertificateError{nonCertBlockType: true}
 		}
 
 		data = block.Bytes
@@ -71,7 +71,7 @@ func decodeCertificate(data []byte) (*x509.Certificate, error) {
 		return p.Certificates[0], nil
 	}
 
-	return nil, &ErrorInvalidCertificate{inner: err}
+	return nil, &InvalidCertificateError{inner: err}
 }
 
 func isPEM(data []byte) bool {

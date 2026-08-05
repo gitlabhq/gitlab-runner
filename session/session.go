@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"reflect"
 	"strings"
@@ -16,11 +17,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
-type connectionInUseError struct{}
-
-func (connectionInUseError) Error() string {
-	return "Connection already in use"
-}
+var errConnectionInUse = errors.New("Connection already in use")
 
 type Session struct {
 	Endpoint string
@@ -173,7 +170,7 @@ func (s *Session) execHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	terminalConn, err := s.newTerminalConn()
-	if _, ok := err.(connectionInUseError); ok {
+	if errors.Is(err, errConnectionInUse) {
 		logger.Warn("Terminal already connected, revoking connection")
 		http.Error(w, http.StatusText(http.StatusLocked), http.StatusLocked)
 		return
@@ -202,7 +199,7 @@ func (s *Session) newTerminalConn() (terminal.Conn, error) {
 	defer s.lock.Unlock()
 
 	if s.terminalConn != nil {
-		return nil, connectionInUseError{}
+		return nil, errConnectionInUse
 	}
 
 	conn, err := s.interactiveTerminal.TerminalConnect()

@@ -61,13 +61,13 @@ func (b *Buffer) Size() int {
 	return int(b.lw.written)
 }
 
-type ErrInvalidOffset struct {
+type InvalidOffsetError struct {
 	Written int64
 	Offset  int
 	N       int
 }
 
-func (e *ErrInvalidOffset) Error() string {
+func (e *InvalidOffsetError) Error() string {
 	return fmt.Sprintf("invalid offset information: offset=%d, written=%d n=%d", e.Offset, e.Written, e.N)
 }
 
@@ -92,7 +92,7 @@ func (b *Buffer) Bytes(offset, n int) ([]byte, error) {
 	}
 
 	if n < 0 {
-		return nil, &ErrInvalidOffset{Written: b.lw.written, Offset: offset, N: n}
+		return nil, &InvalidOffsetError{Written: b.lw.written, Offset: offset, N: n}
 	}
 
 	buf := make([]byte, n)

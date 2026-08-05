@@ -175,7 +175,7 @@ func (s *machineExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 		return connector.Connect(ctx)
 	}
 
-	return nil, common.ExecutorStepRunnerConnectNotSupported
+	return nil, common.ErrExecutorStepRunnerConnectNotSupported
 }
 
 func (e *machineExecutor) TerminalConnect() (terminal.Conn, error) {

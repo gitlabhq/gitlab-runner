@@ -79,7 +79,7 @@ func (c *ArtifactsDownloaderCommand) download(file string, retry int) error {
 	case common.DownloadForbidden, common.DownloadUnauthorized:
 		return os.ErrPermission
 	case common.DownloadFailed:
-		return retryableErr{err: os.ErrInvalid}
+		return retryableError{err: os.ErrInvalid}
 	default:
 		return os.ErrInvalid
 	}

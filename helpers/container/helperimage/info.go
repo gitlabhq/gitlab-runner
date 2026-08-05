@@ -85,7 +85,7 @@ var supportedOsTypesFactories = map[string]creator{
 func Get(version string, cfg Config) (Info, error) {
 	factory, ok := supportedOsTypesFactories[cfg.OSType]
 	if !ok {
-		return Info{}, errors.NewErrOSNotSupported(cfg.OSType)
+		return Info{}, errors.NewOSNotSupportedError(cfg.OSType)
 	}
 
 	info, err := factory.Create(Version(version), cfg)

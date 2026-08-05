@@ -248,7 +248,7 @@ func TestReferenceBiggerOffsetThanWritten(t *testing.T) {
 
 	assert.Empty(t, bytes)
 
-	var eerr *ErrInvalidOffset
+	var eerr *InvalidOffsetError
 	if assert.ErrorAs(t, err, &eerr) {
 		assert.Equal(t, n*2, eerr.Offset)
 		assert.Equal(t, int64(n), eerr.Written)

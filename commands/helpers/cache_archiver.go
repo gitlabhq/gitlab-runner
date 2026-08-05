@@ -125,7 +125,7 @@ func (c *CacheArchiverCommand) handlePresignedURL(fi os.FileInfo, file io.ReadCl
 	}{bufio.NewReaderSize(file, c.TransferBufferSize), file}
 	req, err := http.NewRequest(http.MethodPut, c.URL, body)
 	if err != nil {
-		return retryableErr{err: err}
+		return retryableError{err: err}
 	}
 
 	c.setHeaders(req, fi)
@@ -133,7 +133,7 @@ func (c *CacheArchiverCommand) handlePresignedURL(fi os.FileInfo, file io.ReadCl
 
 	resp, err := c.getClient().Do(req)
 	if err != nil {
-		return retryableErr{err: err}
+		return retryableError{err: err}
 	}
 	defer func() { _ = resp.Body.Close() }()
 

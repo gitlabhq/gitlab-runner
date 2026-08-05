@@ -20,12 +20,12 @@ func TestDoRetry(t *testing.T) {
 		expectedCount int
 	}{
 		{
-			name:          "Error is of type retryableErr",
-			err:           retryableErr{err: errors.New("error")},
+			name:          "Error is of type retryableError",
+			err:           retryableError{err: errors.New("error")},
 			expectedCount: 4,
 		},
 		{
-			name:          "Error is not type of retryableErr",
+			name:          "Error is not type of retryableError",
 			err:           errors.New("error"),
 			expectedCount: 1,
 		},
