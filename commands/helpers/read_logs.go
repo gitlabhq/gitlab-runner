@@ -65,7 +65,7 @@ func (p *fileLogStreamProvider) Open() (readSeekCloser, error) {
 		return nil, errNoAttemptsToOpenFile
 	}
 
-	for i := 0; i < attempts; i++ {
+	for range attempts {
 		f, err := os.Open(p.path)
 		if os.IsNotExist(err) {
 			time.Sleep(defaultCheckFileExistsInterval)

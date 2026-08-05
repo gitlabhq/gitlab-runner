@@ -282,7 +282,7 @@ func TestJobOutputLimit(t *testing.T) {
 
 	b.start()
 	// Write 5k to the buffer
-	for i := 0; i < traceMessageSize; i++ {
+	for range traceMessageSize {
 		fmt.Fprint(b, traceMessage)
 	}
 	assert.NoError(t, b.Success())

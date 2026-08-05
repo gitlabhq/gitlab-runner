@@ -246,7 +246,7 @@ func TestRequestJob_SustainedRouterFailure_TripsAndFallsBack(t *testing.T) {
 	// Failures within the grace window are transient: the runner stays healthy,
 	// keeps polling the router, and does not fall back to Rails - even once the
 	// failure count has passed the threshold.
-	for i := 0; i < routerBreakerFailureThreshold+1; i++ {
+	for range routerBreakerFailureThreshold + 1 {
 		job, healthy := rc.RequestJob(t.Context(), config, sessionInfo)
 		assert.Nil(t, job)
 		assert.True(t, healthy)
@@ -278,7 +278,7 @@ func TestRequestJob_CircuitBreakerRecoversAfterCooldown(t *testing.T) {
 	sessionInfo := &common.SessionInfo{}
 
 	// Trip the breaker: drive failures past the grace window.
-	for i := 0; i < routerBreakerFailureThreshold; i++ {
+	for range routerBreakerFailureThreshold {
 		rc.RequestJob(t.Context(), config, sessionInfo)
 	}
 	now = now.Add(routerBreakerFailureGrace + time.Second)
@@ -354,7 +354,7 @@ func TestRequestJob_CircuitBreakerRecoversDespiteEmptyDiscovery(t *testing.T) {
 
 	// Trip the breaker: drive failures past the grace window.
 	routerSrv.failCode.Store(int32(codes.Unavailable))
-	for i := 0; i < routerBreakerFailureThreshold; i++ {
+	for range routerBreakerFailureThreshold {
 		rc.RequestJob(t.Context(), config, sessionInfo)
 	}
 	now = now.Add(routerBreakerFailureGrace + time.Second)

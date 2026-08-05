@@ -255,7 +255,7 @@ func TestMultipleUsageOfAKey(t *testing.T) {
 
 	for name, testCase := range tests {
 		t.Run(name, func(t *testing.T) {
-			for i := 0; i < 100; i++ {
+			for range 100 {
 				require.Equal(t, testCase.expectedValue, testCase.variables.Get("key"))
 			}
 		})

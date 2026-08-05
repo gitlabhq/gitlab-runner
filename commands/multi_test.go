@@ -105,7 +105,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	// Start concurrent jobs
 	wg := sync.WaitGroup{}
 	wg.Add(3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		go func(i int) {
 			defer wg.Done()
 

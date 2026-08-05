@@ -362,7 +362,7 @@ func (m *machineProvider) tryAcquireMachineDetails(details *machineDetails) *mac
 
 func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
 	// Try to find a machine
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		details, err = m.useMachine(config)
 		if err == nil {
 			break

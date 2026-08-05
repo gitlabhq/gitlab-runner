@@ -570,13 +570,13 @@ func TestVerifyRunnerBinary_concurrentStdoutStderrWrites(t *testing.T) {
 			wg.Add(2)
 			go func() {
 				defer wg.Done()
-				for i := 0; i < 100; i++ {
+				for range 100 {
 					_, _ = io.WriteString(opts.Stdout, versionOutput(common.AppVersion.Version))
 				}
 			}()
 			go func() {
 				defer wg.Done()
-				for i := 0; i < 100; i++ {
+				for range 100 {
 					_, _ = io.WriteString(opts.Stderr, "some stderr noise\n")
 				}
 			}()

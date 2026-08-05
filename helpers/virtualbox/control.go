@@ -301,7 +301,7 @@ func Status(ctx context.Context, vmName string) (StatusType, error) {
 func WaitForStatus(ctx context.Context, vmName string, vmStatus StatusType, seconds int) error {
 	var status StatusType
 	var err error
-	for i := 0; i < seconds; i++ {
+	for range seconds {
 		status, err = Status(ctx, vmName)
 		if err != nil {
 			return err

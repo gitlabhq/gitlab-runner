@@ -210,7 +210,7 @@ func TestServerCertificateChange(t *testing.T) {
 
 	//
 	var cachedCA []byte
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		statusCode, statusText, resp := c.doJSON(
 			t.Context(),
 			"test/ok",

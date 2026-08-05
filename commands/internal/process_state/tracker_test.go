@@ -132,20 +132,20 @@ func TestTracker_SetStateRace(t *testing.T) {
 
 	tracker := NewTracker()
 
-	for i := 0; i < writers; i++ {
+	for i := range writers {
 		wg.Go(func() {
 			setter := setters[i%len(setters)]
 			<-start
-			for j := 0; j < iterations; j++ {
+			for range iterations {
 				setter(tracker)
 			}
 		})
 	}
 
-	for i := 0; i < readers; i++ {
+	for range readers {
 		wg.Go(func() {
 			<-start
-			for j := 0; j < readerRepeats; j++ {
+			for range readerRepeats {
 				tracker.CurrentState()
 			}
 		})

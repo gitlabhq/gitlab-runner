@@ -71,7 +71,6 @@ linters:
         - fmtappendf
         - mapsloop
         - omitzero
-        - rangeint
         - slicesbackward
         - stringsbuilder
         - stringsseq

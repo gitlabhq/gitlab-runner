@@ -21,7 +21,7 @@ func TestTraceLimit(t *testing.T) {
 	buffer.SetLimit(10)
 	assert.Equal(t, 0, buffer.Size())
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		n, err := buffer.Write([]byte(traceMessage))
 		require.NoError(t, err)
 		require.Greater(t, n, 0)
@@ -114,7 +114,7 @@ func TestTraceLimitEnsureValidUTF8(t *testing.T) {
 			buffer.SetLimit(tc.limit)
 			assert.Equal(t, 0, buffer.Size())
 
-			for i := 0; i < 100; i++ {
+			for range 100 {
 				n, err := buffer.Write([]byte(tc.traceMessage))
 				require.NoError(t, err)
 				require.Greater(t, n, 0)
@@ -179,7 +179,7 @@ func TestTraceRace(t *testing.T) {
 		go func(fn func()) {
 			defer wg.Done()
 
-			for i := 0; i < 100; i++ {
+			for range 100 {
 				fn()
 			}
 		}(fn)

@@ -24,7 +24,7 @@ func gaugeState(b *Breaker) State {
 
 func TestBreaker_TripsAfterThreshold(t *testing.T) {
 	b := New(testThreshold, testOpenTimeout, WithMetrics("test", "cb"))
-	for i := 0; i < testThreshold-1; i++ {
+	for range testThreshold - 1 {
 		assert.False(t, b.RecordFailure(), "stays closed before the threshold")
 		assert.True(t, b.Allow(), "closed breaker allows requests")
 	}
@@ -39,12 +39,12 @@ func TestBreaker_TripsAfterThreshold(t *testing.T) {
 
 func TestBreaker_SuccessResetsFailureCount(t *testing.T) {
 	b := New(testThreshold, testOpenTimeout, WithMetrics("test", "cb"))
-	for i := 0; i < testThreshold-1; i++ {
+	for range testThreshold - 1 {
 		b.RecordFailure()
 	}
 	b.RecordSuccess()
 	// A reset counter means it takes another full threshold to trip.
-	for i := 0; i < testThreshold-1; i++ {
+	for range testThreshold - 1 {
 		assert.False(t, b.RecordFailure())
 	}
 	assert.Zero(t, testutil.ToFloat64(b.metrics.trips), "no trip yet, the reset deferred it")
@@ -60,7 +60,7 @@ func TestBreaker_FailureGraceIgnoresInstantBurst(t *testing.T) {
 
 	// A burst of well over the threshold at one instant stays closed: the
 	// failures don't span the grace window.
-	for i := 0; i < testThreshold+2; i++ {
+	for range testThreshold + 2 {
 		assert.False(t, b.RecordFailure(), "instantaneous burst stays within the grace window")
 	}
 	assert.True(t, b.Allow(), "breaker is still closed")
@@ -69,7 +69,7 @@ func TestBreaker_FailureGraceIgnoresInstantBurst(t *testing.T) {
 	b.RecordSuccess()
 
 	// Failures that persist past the grace window trip.
-	for i := 0; i < testThreshold; i++ {
+	for range testThreshold {
 		assert.False(t, b.RecordFailure(), "within the grace window")
 	}
 	now = now.Add(testGrace + time.Second)
@@ -81,7 +81,7 @@ func TestBreaker_AbortReleasesTrialWithoutVerdict(t *testing.T) {
 	b := New(testThreshold, testOpenTimeout,
 		WithClock(func() time.Time { return now }),
 		WithMetrics("test", "cb"))
-	for i := 0; i < testThreshold; i++ {
+	for range testThreshold {
 		b.RecordFailure()
 	}
 	now = now.Add(testOpenTimeout + time.Second)
@@ -99,7 +99,7 @@ func TestBreaker_AbortReleasesTrialWithoutVerdict(t *testing.T) {
 func TestBreaker_HalfOpenTrialAfterTimeout(t *testing.T) {
 	now := time.Now()
 	b := New(testThreshold, testOpenTimeout, WithClock(func() time.Time { return now }), WithMetrics("test", "cb"))
-	for i := 0; i < testThreshold; i++ {
+	for range testThreshold {
 		b.RecordFailure()
 	}
 	assert.EqualValues(t, 1, testutil.ToFloat64(b.metrics.trips))
@@ -115,7 +115,7 @@ func TestBreaker_HalfOpenTrialAfterTimeout(t *testing.T) {
 func TestBreaker_HalfOpenTrialSuccessCloses(t *testing.T) {
 	now := time.Now()
 	b := New(testThreshold, testOpenTimeout, WithClock(func() time.Time { return now }), WithMetrics("test", "cb"))
-	for i := 0; i < testThreshold; i++ {
+	for range testThreshold {
 		b.RecordFailure()
 	}
 	now = now.Add(testOpenTimeout + time.Second)
@@ -134,7 +134,7 @@ func TestBreaker_HalfOpenTrialSuccessCloses(t *testing.T) {
 func TestBreaker_HalfOpenTrialFailureReopens(t *testing.T) {
 	now := time.Now()
 	b := New(testThreshold, testOpenTimeout, WithClock(func() time.Time { return now }), WithMetrics("test", "cb"))
-	for i := 0; i < testThreshold; i++ {
+	for range testThreshold {
 		b.RecordFailure()
 	}
 	now = now.Add(testOpenTimeout + time.Second)

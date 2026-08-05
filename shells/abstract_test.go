@@ -2930,7 +2930,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 		subpaths := strings.Fields(paths)
 		if len(subpaths) != 0 {
 			command = append(command, "--")
-			for i := 0; i < len(subpaths); i++ {
+			for i := range subpaths {
 				command = append(command, subpaths[i])
 			}
 		}

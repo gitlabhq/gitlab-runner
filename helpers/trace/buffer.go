@@ -237,7 +237,7 @@ func newLogFile() (*os.File, error) {
 // truncateSafeUTF8 truncates a job log at the capacity but avoids
 // breaking up a multi-byte UTF-8 character.
 func truncateSafeUTF8(p []byte, capacity int64) []byte {
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		r, s := utf8.DecodeLastRune(p[:capacity])
 		if r == utf8.RuneError && s == 1 {
 			capacity--

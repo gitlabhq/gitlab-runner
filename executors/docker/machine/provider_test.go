@@ -214,7 +214,7 @@ func countIdleMachines(p *machineProvider) (count int) {
 
 func assertIdleMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...any) {
 	var idle int
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		idle = countIdleMachines(p)
 
 		if expected == idle {
@@ -242,7 +242,7 @@ func countTotalMachines(p *machineProvider) (count int) {
 
 func assertTotalMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...any) {
 	var total int
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		total = countTotalMachines(p)
 
 		if expected == total {
@@ -471,7 +471,7 @@ func TestMachineReuseWithContention(t *testing.T) {
 	wg.Add(N)
 
 	startCh := make(chan struct{})
-	for i := 0; i < N; i++ {
+	for range N {
 		go func() {
 			defer wg.Done()
 			<-startCh
@@ -614,7 +614,7 @@ func TestMachineOnDemandModeWithLimit(t *testing.T) {
 	limit := 2
 	config := createMachineConfigWithLimit(t, 0, 1, limit)
 
-	for i := 0; i < limit; i++ {
+	for range limit {
 		data, err := p.Acquire(config)
 		assert.NoError(t, err)
 		assert.Nil(t, data)

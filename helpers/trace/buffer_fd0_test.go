@@ -55,7 +55,7 @@ func TestBufferHandlingWithExceededFDIssue(t *testing.T) {
 
 	filesToCreate := additionalFDs - 2
 	t.Log("files to create", filesToCreate)
-	for i := 0; i < filesToCreate; i++ {
+	for i := range filesToCreate {
 		t.Log("loop: ", i+1)
 		f, err := createNewLogFile(t)
 		require.NoError(t, err, "try %d", i)
@@ -88,7 +88,7 @@ func TestBufferHandlingWithExceededFDIssue(t *testing.T) {
 
 	maxAllowedFilesToCreate := additionalFDs
 	t.Log("max allowed files to create:", maxAllowedFilesToCreate)
-	for j := 0; j < maxAllowedFilesToCreate; j++ {
+	for j := range maxAllowedFilesToCreate {
 		t.Log("loop: ", j+1)
 		file2, err := createNewLogFile(t)
 		closeAtFinish = append(closeAtFinish, file2)

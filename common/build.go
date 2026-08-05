@@ -1333,7 +1333,7 @@ func (b *Build) retryCreateExecutor(
 ) (Executor, error) {
 	var err error
 
-	for tries := 0; tries < PreparationRetries; tries++ {
+	for range PreparationRetries {
 		executor := provider.Create()
 		if executor == nil {
 			return nil, errors.New("failed to create executor")
