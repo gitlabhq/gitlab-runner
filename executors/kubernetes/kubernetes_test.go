@@ -1085,7 +1085,7 @@ func TestCleanup(t *testing.T) {
 		{
 			Name: "Pod cleanup specifies GracePeriodSeconds with CleanupGracePeriodSeconds set",
 			Config: &common.KubernetesConfig{
-				CleanupGracePeriodSeconds: common.Int64Ptr(10),
+				CleanupGracePeriodSeconds: new(int64(10)),
 			},
 			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
@@ -1102,7 +1102,7 @@ func TestCleanup(t *testing.T) {
 						return nil, err
 					}
 
-					assert.EqualValues(t, common.Int64Ptr(10), opts.GracePeriodSeconds)
+					assert.EqualValues(t, new(int64(10)), opts.GracePeriodSeconds)
 					return fakeKubeDeleteResponse(http.StatusOK), nil
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
@@ -5907,7 +5907,7 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						PodTerminationGracePeriodSeconds: common.Int64Ptr(10),
+						PodTerminationGracePeriodSeconds: new(int64(10)),
 					},
 				},
 			},
@@ -7666,8 +7666,8 @@ func TestInitBuildUidGidCollectorSecurityContext(t *testing.T) {
 					Drop: []api.Capability{"NET_RAW"},
 				},
 				Privileged:               nil,
-				RunAsUser:                common.Int64Ptr(1500),
-				RunAsGroup:               common.Int64Ptr(1600),
+				RunAsUser:                new(int64(1500)),
+				RunAsGroup:               new(int64(1600)),
 				RunAsNonRoot:             nil,
 				ReadOnlyRootFilesystem:   nil,
 				AllowPrivilegeEscalation: nil,
@@ -7749,16 +7749,16 @@ func TestInitBuildUidGidCollectorSecurityContext(t *testing.T) {
 			allowedUsers:  []string{"1000"},
 			allowedGroups: []string{"1000"},
 			getConfig: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(0),
-				RunAsGroup: common.Int64Ptr(0),
+				RunAsUser:  new(int64(0)),
+				RunAsGroup: new(int64(0)),
 			},
 			getSecurityContext: &api.SecurityContext{
 				Capabilities: &api.Capabilities{
 					Drop: []api.Capability{"NET_RAW"},
 				},
 				Privileged:               nil,
-				RunAsUser:                common.Int64Ptr(0),
-				RunAsGroup:               common.Int64Ptr(0),
+				RunAsUser:                new(int64(0)),
+				RunAsGroup:               new(int64(0)),
 				RunAsNonRoot:             nil,
 				ReadOnlyRootFilesystem:   nil,
 				AllowPrivilegeEscalation: nil,
@@ -7775,7 +7775,7 @@ func TestInitBuildUidGidCollectorSecurityContext(t *testing.T) {
 				},
 				Privileged:               nil,
 				RunAsUser:                &uid,
-				RunAsGroup:               common.Int64Ptr(1600),
+				RunAsGroup:               new(int64(1600)),
 				RunAsNonRoot:             nil,
 				ReadOnlyRootFilesystem:   nil,
 				AllowPrivilegeEscalation: nil,
@@ -7791,7 +7791,7 @@ func TestInitBuildUidGidCollectorSecurityContext(t *testing.T) {
 					Drop: []api.Capability{"NET_RAW"},
 				},
 				Privileged:               nil,
-				RunAsUser:                common.Int64Ptr(1500),
+				RunAsUser:                new(int64(1500)),
 				RunAsGroup:               &gid,
 				RunAsNonRoot:             nil,
 				ReadOnlyRootFilesystem:   nil,
@@ -8676,8 +8676,8 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "security context overrides job user",
 			jobUser: "1000:1001",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectedUID: 2000,
 			expectedGID: 2001,
@@ -8686,7 +8686,7 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "security context user not validated against allowlist",
 			jobUser: "1000:1001",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(2000),
+				RunAsUser: new(int64(2000)),
 			},
 			allowedUsers: []string{"1000"},
 			expectedUID:  2000,
@@ -8696,7 +8696,7 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "security context root allowed (admin override)",
 			jobUser: "1000:1001",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(0),
+				RunAsUser: new(int64(0)),
 			},
 			allowedUsers: []string{"1000", "65534"},
 			expectedUID:  0,
@@ -8706,7 +8706,7 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "security context partial override - user only",
 			jobUser: "1000:1001",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(2000),
+				RunAsUser: new(int64(2000)),
 			},
 			expectedUID: 2000,
 			expectedGID: 1001,
@@ -8715,7 +8715,7 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "security context partial override - group only",
 			jobUser: "1000:1001",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectedUID: 1000,
 			expectedGID: 2001,
@@ -8776,8 +8776,8 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "backwards compatibility - non-root security context without allowed_users",
 			jobUser: "1000:1001",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(1000),
-				RunAsGroup: common.Int64Ptr(1000),
+				RunAsUser:  new(int64(1000)),
+				RunAsGroup: new(int64(1000)),
 			},
 			expectedUID: 1000,
 			expectedGID: 1000,
@@ -8786,7 +8786,7 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "security context bypasses user allowlist completely",
 			jobUser: "1000:1001",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(9999),
+				RunAsUser: new(int64(9999)),
 			},
 			allowedUsers: []string{"1000", "2000"},
 			expectedUID:  9999,
@@ -8796,7 +8796,7 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "security context bypasses group allowlist completely",
 			jobUser: "1000:1001",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsGroup: common.Int64Ptr(9999),
+				RunAsGroup: new(int64(9999)),
 			},
 			allowedGroups: []string{"1001", "2001"},
 			expectedUID:   1000,
@@ -8806,8 +8806,8 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "security context can set both root uid and gid despite empty allowlists",
 			jobUser: "",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(0),
-				RunAsGroup: common.Int64Ptr(0),
+				RunAsUser:  new(int64(0)),
+				RunAsGroup: new(int64(0)),
 			},
 			expectedUID: 0,
 			expectedGID: 0,
@@ -8843,7 +8843,7 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "invalid job user format with container security context warns and continues",
 			jobUser: "invalid:1000",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(2000),
+				RunAsUser: new(int64(2000)),
 			},
 			expectedUID:   2000,
 			expectedGID:   1000,
@@ -8853,7 +8853,7 @@ func TestGetContainerUidGid(t *testing.T) {
 			name:    "invalid job group format with container security context warns and continues",
 			jobUser: "1000:invalid",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsGroup: common.Int64Ptr(2000),
+				RunAsGroup: new(int64(2000)),
 			},
 			expectedUID:   1000,
 			expectedGID:   2000,
@@ -8909,8 +8909,8 @@ func TestGetContainerUIDGIDWithPodSecurityContext(t *testing.T) {
 			name:    "pod security context provides defaults when job and container have no values",
 			jobUser: "",
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectedUID: 2000,
 			expectedGID: 2001,
@@ -8919,12 +8919,12 @@ func TestGetContainerUIDGIDWithPodSecurityContext(t *testing.T) {
 			name:    "container security context overrides pod security context",
 			jobUser: "",
 			containerSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(3000),
-				RunAsGroup: common.Int64Ptr(3001),
+				RunAsUser:  new(int64(3000)),
+				RunAsGroup: new(int64(3001)),
 			},
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectedUID: 3000,
 			expectedGID: 3001,
@@ -8933,8 +8933,8 @@ func TestGetContainerUIDGIDWithPodSecurityContext(t *testing.T) {
 			name:    "pod security context overrides job configuration",
 			jobUser: "1000:1001",
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectedUID: 2000,
 			expectedGID: 2001,
@@ -8943,12 +8943,12 @@ func TestGetContainerUIDGIDWithPodSecurityContext(t *testing.T) {
 			name:    "container security context overrides both pod and job",
 			jobUser: "1000:1001",
 			containerSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(3000),
-				RunAsGroup: common.Int64Ptr(3001),
+				RunAsUser:  new(int64(3000)),
+				RunAsGroup: new(int64(3001)),
 			},
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectedUID: 3000,
 			expectedGID: 3001,
@@ -8957,11 +8957,11 @@ func TestGetContainerUIDGIDWithPodSecurityContext(t *testing.T) {
 			name:    "partial container override - user only, pod provides group",
 			jobUser: "1000:1001",
 			containerSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(3000),
+				RunAsUser: new(int64(3000)),
 			},
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectedUID: 3000,
 			expectedGID: 2001,
@@ -8970,7 +8970,7 @@ func TestGetContainerUIDGIDWithPodSecurityContext(t *testing.T) {
 			name:    "partial pod override - group only, job provides user",
 			jobUser: "1000:1001",
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectedUID: 1000,
 			expectedGID: 2001,
@@ -8979,8 +8979,8 @@ func TestGetContainerUIDGIDWithPodSecurityContext(t *testing.T) {
 			name:    "pod security context bypasses job user allowlist validation",
 			jobUser: "1000:1001",
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(9999),
-				RunAsGroup: common.Int64Ptr(9998),
+				RunAsUser:  new(int64(9999)),
+				RunAsGroup: new(int64(9998)),
 			},
 			allowedUsers:  []string{"1000", "2000"},
 			allowedGroups: []string{"1001", "2001"},
@@ -8991,11 +8991,11 @@ func TestGetContainerUIDGIDWithPodSecurityContext(t *testing.T) {
 			name:    "container security context bypasses validation while pod provides fallback",
 			jobUser: "",
 			containerSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(0), // root - normally blocked
+				RunAsUser: new(int64(0)), // root - normally blocked
 			},
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
 			allowedUsers: []string{"1000", "65534"}, // root not allowed
 			expectedUID:  0,                         // container overrides and bypasses validation
@@ -9013,8 +9013,8 @@ func TestGetContainerUIDGIDWithPodSecurityContext(t *testing.T) {
 			name:    "pod allows root despite default blocking (admin override)",
 			jobUser: "",
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(0),
-				RunAsGroup: common.Int64Ptr(0),
+				RunAsUser:  new(int64(0)),
+				RunAsGroup: new(int64(0)),
 			},
 			expectedUID: 0,
 			expectedGID: 0,
@@ -9023,11 +9023,11 @@ func TestGetContainerUIDGIDWithPodSecurityContext(t *testing.T) {
 			name:    "precedence test: all three sources provided",
 			jobUser: "1000:1001",
 			containerSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsGroup: common.Int64Ptr(3001), // only group at container level
+				RunAsGroup: new(int64(3001)), // only group at container level
 			},
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectedUID: 2000, // pod user (container doesn't provide)
 			expectedGID: 3001, // container group (overrides pod)
@@ -9081,8 +9081,8 @@ func TestGetContainerUIDGIDLogging(t *testing.T) {
 			jobUser:       "1000:1001",
 			containerName: "build",
 			containerSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectedLogPattern: `Overriding user for container "build" to "1000" is not allowed: user is set to 2000 in container security context` + "\n" +
 				`Overriding group for container "build" to "1001" is not allowed: group is set to 2001 in container security context`,
@@ -9092,8 +9092,8 @@ func TestGetContainerUIDGIDLogging(t *testing.T) {
 			jobUser:       "1000:1001",
 			containerName: "helper",
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(3000),
-				RunAsGroup: common.Int64Ptr(3001),
+				RunAsUser:  new(int64(3000)),
+				RunAsGroup: new(int64(3001)),
 			},
 			expectedLogPattern: `Overriding user for container "helper" to "1000" is not allowed: user is set to 3000 in pod security context` + "\n" +
 				`Overriding group for container "helper" to "1001" is not allowed: group is set to 3001 in pod security context`,
@@ -9103,7 +9103,7 @@ func TestGetContainerUIDGIDLogging(t *testing.T) {
 			jobUser:       "1000:1001",
 			containerName: "service-0",
 			containerSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(2000),
+				RunAsUser: new(int64(2000)),
 				// No group override
 			},
 			expectedLogPattern: `Overriding user for container "service-0" to "1000" is not allowed: user is set to 2000 in container security context` + "\n",
@@ -9113,7 +9113,7 @@ func TestGetContainerUIDGIDLogging(t *testing.T) {
 			jobUser:       "1000:1001",
 			containerName: "service-1",
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsGroup: common.Int64Ptr(3001),
+				RunAsGroup: new(int64(3001)),
 				// No user override
 			},
 			expectedLogPattern: `Overriding group for container "service-1" to "1001" is not allowed: group is set to 3001 in pod security context`,
@@ -9123,8 +9123,8 @@ func TestGetContainerUIDGIDLogging(t *testing.T) {
 			jobUser:       "",
 			containerName: "build",
 			containerSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
 			expectNoLog: true,
 		},
@@ -9140,12 +9140,12 @@ func TestGetContainerUIDGIDLogging(t *testing.T) {
 			jobUser:       "1000:1001",
 			containerName: "build",
 			containerSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(4000),
-				RunAsGroup: common.Int64Ptr(4001),
+				RunAsUser:  new(int64(4000)),
+				RunAsGroup: new(int64(4001)),
 			},
 			podSecurityContext: common.KubernetesPodSecurityContext{
-				RunAsUser:  common.Int64Ptr(3000),
-				RunAsGroup: common.Int64Ptr(3001),
+				RunAsUser:  new(int64(3000)),
+				RunAsGroup: new(int64(3001)),
 			},
 			expectedLogPattern: `Overriding user for container "build" to "1000" is not allowed: user is set to 4000 in container security context` + "\n" +
 				`Overriding group for container "build" to "1001" is not allowed: group is set to 4001 in container security context`,
@@ -9199,8 +9199,8 @@ func TestPickSecurityContextID(t *testing.T) {
 	}{
 		{
 			name:           "container value takes precedence",
-			containerRunAs: common.Int64Ptr(1000),
-			podRunAs:       common.Int64Ptr(2000),
+			containerRunAs: new(int64(1000)),
+			podRunAs:       new(int64(2000)),
 			jobRunAs: func() int64 {
 				return 3000
 			},
@@ -9209,7 +9209,7 @@ func TestPickSecurityContextID(t *testing.T) {
 		},
 		{
 			name:     "pod value used when container is nil",
-			podRunAs: common.Int64Ptr(2000),
+			podRunAs: new(int64(2000)),
 			jobRunAs: func() int64 {
 				return 3000
 			},
@@ -9236,7 +9236,7 @@ func TestPickSecurityContextID(t *testing.T) {
 		},
 		{
 			name:           "container value bypasses job parsing failure",
-			containerRunAs: common.Int64Ptr(1000),
+			containerRunAs: new(int64(1000)),
 			jobRunAs: func() int64 {
 				// This would normally fail parsing, but container value takes precedence
 				return 0
@@ -9246,7 +9246,7 @@ func TestPickSecurityContextID(t *testing.T) {
 		},
 		{
 			name:     "pod value bypasses job parsing failure",
-			podRunAs: common.Int64Ptr(2000),
+			podRunAs: new(int64(2000)),
 			jobRunAs: func() int64 {
 				// This would normally fail parsing, but pod value takes precedence
 				return 0
@@ -9285,46 +9285,46 @@ func TestHelperContainerDoesNotInheritJobUser(t *testing.T) {
 		{
 			name: "helper container uses its own security context",
 			helperSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
-			expectedRunAsUser:  common.Int64Ptr(2000),
-			expectedRunAsGroup: common.Int64Ptr(2001),
+			expectedRunAsUser:  new(int64(2000)),
+			expectedRunAsGroup: new(int64(2001)),
 		},
 		{
 			name:         "helper container can run as root via security context despite allowlist",
 			allowedUsers: []string{"1000", "1001"},
 			helperSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(0),
-				RunAsGroup: common.Int64Ptr(0),
+				RunAsUser:  new(int64(0)),
+				RunAsGroup: new(int64(0)),
 			},
-			expectedRunAsUser:  common.Int64Ptr(0),
-			expectedRunAsGroup: common.Int64Ptr(0),
+			expectedRunAsUser:  new(int64(0)),
+			expectedRunAsGroup: new(int64(0)),
 		},
 		{
 			name:          "helper container bypasses both user and group allowlists",
 			allowedUsers:  []string{"1000"},
 			allowedGroups: []string{"1001"},
 			helperSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(9999),
-				RunAsGroup: common.Int64Ptr(8888),
+				RunAsUser:  new(int64(9999)),
+				RunAsGroup: new(int64(8888)),
 			},
-			expectedRunAsUser:  common.Int64Ptr(9999),
-			expectedRunAsGroup: common.Int64Ptr(8888),
+			expectedRunAsUser:  new(int64(9999)),
+			expectedRunAsGroup: new(int64(8888)),
 		},
 		{
 			name: "helper container with only user in security context",
 			helperSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(5000),
+				RunAsUser: new(int64(5000)),
 			},
-			expectedRunAsUser: common.Int64Ptr(5000),
+			expectedRunAsUser: new(int64(5000)),
 		},
 		{
 			name: "helper container with only group in security context",
 			helperSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsGroup: common.Int64Ptr(5001),
+				RunAsGroup: new(int64(5001)),
 			},
-			expectedRunAsGroup: common.Int64Ptr(5001),
+			expectedRunAsGroup: new(int64(5001)),
 		},
 	}
 
@@ -9365,33 +9365,33 @@ func TestServiceContainerSecurityContext(t *testing.T) {
 		{
 			name:               "service container inherits job user when no security context",
 			jobUser:            "1000:1001",
-			expectedRunAsUser:  common.Int64Ptr(1000),
-			expectedRunAsGroup: common.Int64Ptr(1001),
+			expectedRunAsUser:  new(int64(1000)),
+			expectedRunAsGroup: new(int64(1001)),
 		},
 		{
 			name:    "service container security context overrides job user",
 			jobUser: "1000:1001",
 			serviceSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(3000),
-				RunAsGroup: common.Int64Ptr(3001),
+				RunAsUser:  new(int64(3000)),
+				RunAsGroup: new(int64(3001)),
 			},
-			expectedRunAsUser:  common.Int64Ptr(3000),
-			expectedRunAsGroup: common.Int64Ptr(3001),
+			expectedRunAsUser:  new(int64(3000)),
+			expectedRunAsGroup: new(int64(3001)),
 		},
 		{
 			name:         "service container bypasses allowlist with security context",
 			allowedUsers: []string{"1000"},
 			serviceSecurityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(9999),
+				RunAsUser: new(int64(9999)),
 			},
-			expectedRunAsUser: common.Int64Ptr(9999),
+			expectedRunAsUser: new(int64(9999)),
 		},
 		{
 			name:               "service container job user blocked by allowlist",
 			jobUser:            "2000:2001",
 			allowedUsers:       []string{"1000"},
-			expectedRunAsUser:  nil,                   // Validation failure returns -1, which doesn't get set
-			expectedRunAsGroup: common.Int64Ptr(2001), // Group validation succeeds (no allowedGroups restriction)
+			expectedRunAsUser:  nil,              // Validation failure returns -1, which doesn't get set
+			expectedRunAsGroup: new(int64(2001)), // Group validation succeeds (no allowedGroups restriction)
 			expectWarning:      "user \"2000\" is not in the allowed list:",
 		},
 	}
@@ -9459,18 +9459,18 @@ func TestGetSecurityContextWithUidGid(t *testing.T) {
 		{
 			name:               "job user applied to security context",
 			jobUser:            "1000:1001",
-			expectedRunAsUser:  common.Int64Ptr(1000),
-			expectedRunAsGroup: common.Int64Ptr(1001),
+			expectedRunAsUser:  new(int64(1000)),
+			expectedRunAsGroup: new(int64(1001)),
 		},
 		{
 			name:    "security context overrides job user",
 			jobUser: "1000:1001",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(2000),
-				RunAsGroup: common.Int64Ptr(2001),
+				RunAsUser:  new(int64(2000)),
+				RunAsGroup: new(int64(2001)),
 			},
-			expectedRunAsUser:  common.Int64Ptr(2000),
-			expectedRunAsGroup: common.Int64Ptr(2001),
+			expectedRunAsUser:  new(int64(2000)),
+			expectedRunAsGroup: new(int64(2001)),
 		},
 		{
 			name:               "user validation error propagated",
@@ -9491,50 +9491,50 @@ func TestGetSecurityContextWithUidGid(t *testing.T) {
 		{
 			name:               "backwards compatibility - non-root allowed without allowed_users",
 			jobUser:            "1000:1000",
-			expectedRunAsUser:  common.Int64Ptr(1000),
-			expectedRunAsGroup: common.Int64Ptr(1000),
+			expectedRunAsUser:  new(int64(1000)),
+			expectedRunAsGroup: new(int64(1000)),
 		},
 		{
 			name:         "security context can set any UID despite restrictive allowlist",
 			allowedUsers: []string{"1000"},
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(9999),
+				RunAsUser: new(int64(9999)),
 			},
-			expectedRunAsUser: common.Int64Ptr(9999),
+			expectedRunAsUser: new(int64(9999)),
 		},
 		{
 			name:          "security context can set any GID despite restrictive allowlist",
 			allowedGroups: []string{"1001"},
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsGroup: common.Int64Ptr(8888),
+				RunAsGroup: new(int64(8888)),
 			},
-			expectedRunAsGroup: common.Int64Ptr(8888),
+			expectedRunAsGroup: new(int64(8888)),
 		},
 		{
 			name: "security context root bypasses empty allowlist",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser:  common.Int64Ptr(0),
-				RunAsGroup: common.Int64Ptr(0),
+				RunAsUser:  new(int64(0)),
+				RunAsGroup: new(int64(0)),
 			},
-			expectedRunAsUser:  common.Int64Ptr(0),
-			expectedRunAsGroup: common.Int64Ptr(0),
+			expectedRunAsUser:  new(int64(0)),
+			expectedRunAsGroup: new(int64(0)),
 		},
 		{
 			name:    "partial security context with job user fallback",
 			jobUser: "1000:1001",
 			securityContext: common.KubernetesContainerSecurityContext{
-				RunAsUser: common.Int64Ptr(5000),
+				RunAsUser: new(int64(5000)),
 			},
-			expectedRunAsUser:  common.Int64Ptr(5000),
-			expectedRunAsGroup: common.Int64Ptr(1001),
+			expectedRunAsUser:  new(int64(5000)),
+			expectedRunAsGroup: new(int64(1001)),
 		},
 		{
 			name:               "job group validation with restrictive allowlist",
 			jobUser:            "1000:2000",
 			allowedUsers:       []string{"1000"},
 			allowedGroups:      []string{"3000"},
-			expectedRunAsUser:  common.Int64Ptr(1000), // User validation succeeds
-			expectedRunAsGroup: nil,                   // Group validation failure returns -1, which doesn't get set
+			expectedRunAsUser:  new(int64(1000)), // User validation succeeds
+			expectedRunAsGroup: nil,              // Group validation failure returns -1, which doesn't get set
 			expectWarning:      "group \"2000\" is not in the allowed list:",
 		},
 	}

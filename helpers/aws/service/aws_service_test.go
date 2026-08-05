@@ -11,11 +11,6 @@ import (
 	mock "github.com/stretchr/testify/mock"
 )
 
-// Helper function to create a string pointer
-func stringPtr(s string) *string {
-	return &s
-}
-
 func TestAWSSecretsManager_GetSecretString(t *testing.T) {
 	tests := map[string]struct {
 		mockResponse  *secretsmanager.GetSecretValueOutput
@@ -26,7 +21,7 @@ func TestAWSSecretsManager_GetSecretString(t *testing.T) {
 	}{
 		"Success": {
 			mockResponse: &secretsmanager.GetSecretValueOutput{
-				SecretString: stringPtr("my-secret"),
+				SecretString: new("my-secret"),
 			},
 			mockError:     nil,
 			expectedValue: "my-secret",

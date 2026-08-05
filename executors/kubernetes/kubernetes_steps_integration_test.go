@@ -37,7 +37,7 @@ func TestKubernetesSteps_HappyPath_RunJobCompletes(t *testing.T) {
 	build.Job.Run = spec.Run{
 		schema.Step{
 			Name:   &stepName,
-			Script: stringPtr("exit 0"),
+			Script: new("exit 0"),
 		},
 	}
 
@@ -78,7 +78,7 @@ func TestKubernetesSteps_ConcreteWithService_PortHealthCheckSucceeds(t *testing.
 	// Minimal `run:` to keep dispatch on the Concrete code path.
 	stepName := "concrete_with_service"
 	build.Job.Run = spec.Run{
-		schema.Step{Name: &stepName, Script: stringPtr("exit 0")},
+		schema.Step{Name: &stepName, Script: new("exit 0")},
 	}
 
 	err := build.Run(t.Context(), &common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -111,7 +111,7 @@ func TestKubernetesSteps_HelperImageTooOld_SurfacesUpgradeMessage(t *testing.T) 
 
 	stepName := "helper_too_old"
 	build.Job.Run = spec.Run{
-		schema.Step{Name: &stepName, Script: stringPtr("exit 0")},
+		schema.Step{Name: &stepName, Script: new("exit 0")},
 	}
 
 	var buf strings.Builder
@@ -127,5 +127,3 @@ func TestKubernetesSteps_HelperImageTooOld_SurfacesUpgradeMessage(t *testing.T) 
 		"failure must surface the friendly upgrade message — got: %s",
 		combined)
 }
-
-func stringPtr(s string) *string { return &s }

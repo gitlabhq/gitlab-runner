@@ -1565,16 +1565,16 @@ func TestAutoscalerPolicyConfig_PreemptiveModeEnabled(t *testing.T) {
 		expectedValue bool
 	}{
 		"should return enabled when flag is true": {
-			internalValue: ptr(true),
+			internalValue: new(true),
 			expectedValue: true,
 		},
 		"should return turned off when flag is false": {
-			internalValue: ptr(false),
+			internalValue: new(false),
 			expectedValue: false,
 		},
 		"should return turned off when flag is false and idle count is greater than zero": {
 			idleCount:     10,
-			internalValue: ptr(false),
+			internalValue: new(false),
 			expectedValue: false,
 		},
 		"should return turned off when value is not set and the idle count is zero": {
@@ -1701,7 +1701,7 @@ func TestContainerSecurityContext(t *testing.T) {
 		"run as user - container security context": {
 			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
 				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
-					RunAsUser: Int64Ptr(1000),
+					RunAsUser: new(int64(1000)),
 				})
 			},
 			getExpectedContainerSecurityContext: func() *api.SecurityContext {
@@ -1714,27 +1714,27 @@ func TestContainerSecurityContext(t *testing.T) {
 		"privileged - container security context": {
 			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
 				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
-					Privileged: ptr(true),
+					Privileged: new(true),
 				})
 			},
 			getExpectedContainerSecurityContext: func() *api.SecurityContext {
 				return &api.SecurityContext{
-					Privileged: ptr(true),
+					Privileged: new(true),
 				}
 			},
 		},
 		"container privileged override - container security context": {
 			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
-				c.Privileged = ptr(true)
+				c.Privileged = new(true)
 				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
-					Privileged: ptr(false),
-					RunAsUser:  Int64Ptr(65535),
+					Privileged: new(false),
+					RunAsUser:  new(int64(65535)),
 				})
 			},
 			getExpectedContainerSecurityContext: func() *api.SecurityContext {
 				runAsUser := int64(65535)
 				return &api.SecurityContext{
-					Privileged: ptr(false),
+					Privileged: new(false),
 					RunAsUser:  &runAsUser,
 				}
 			},
@@ -1742,25 +1742,25 @@ func TestContainerSecurityContext(t *testing.T) {
 		"allow privilege escalation - not set on container security context": {
 			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
 				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
-					AllowPrivilegeEscalation: ptr(true),
+					AllowPrivilegeEscalation: new(true),
 				})
 			},
 			getExpectedContainerSecurityContext: func() *api.SecurityContext {
 				return &api.SecurityContext{
-					AllowPrivilegeEscalation: ptr(true),
+					AllowPrivilegeEscalation: new(true),
 				}
 			},
 		},
 		"allow privilege escalation - set on container security context": {
 			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
-				c.AllowPrivilegeEscalation = ptr(true)
+				c.AllowPrivilegeEscalation = new(true)
 				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
-					AllowPrivilegeEscalation: ptr(false),
+					AllowPrivilegeEscalation: new(false),
 				})
 			},
 			getExpectedContainerSecurityContext: func() *api.SecurityContext {
 				return &api.SecurityContext{
-					AllowPrivilegeEscalation: ptr(false),
+					AllowPrivilegeEscalation: new(false),
 				}
 			},
 		},
@@ -2344,11 +2344,11 @@ func TestKubernetesTerminationPeriod(t *testing.T) {
 		},
 		"all specified": {
 			cfg: KubernetesConfig{
-				PodTerminationGracePeriodSeconds: Int64Ptr(3),
-				CleanupGracePeriodSeconds:        Int64Ptr(5),
+				PodTerminationGracePeriodSeconds: new(int64(3)),
+				CleanupGracePeriodSeconds:        new(int64(5)),
 			},
-			expectedPodTerminationGracePeriodSeconds: Int64Ptr(3),
-			expectedCleanupGracePeriodSeconds:        Int64Ptr(5),
+			expectedPodTerminationGracePeriodSeconds: new(int64(3)),
+			expectedCleanupGracePeriodSeconds:        new(int64(5)),
 		},
 	}
 
@@ -3242,11 +3242,11 @@ func TestConfig_SaveConfig_CustomBuildDir(t *testing.T) {
 			notExpectedTomlRE: "custom_build_dir",
 		},
 		"explicitly enabled": {
-			customBuildDir: CustomBuildDir{Enabled: ptr(true)},
+			customBuildDir: CustomBuildDir{Enabled: new(true)},
 			expectedTomlRE: `(?m)\[runners\.custom_build_dir\]\n\s+enabled = true\n`,
 		},
 		"explicitly disabled": {
-			customBuildDir: CustomBuildDir{Enabled: ptr(false)},
+			customBuildDir: CustomBuildDir{Enabled: new(false)},
 			expectedTomlRE: `(?m)\[runners\.custom_build_dir\]\n\s+enabled = false\n`,
 		},
 	}
@@ -3281,10 +3281,6 @@ func TestConfig_SaveConfig_CustomBuildDir(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-}
-
-func ptr[T any](v T) *T {
-	return &v
 }
 
 func TestRunnerByName(t *testing.T) {

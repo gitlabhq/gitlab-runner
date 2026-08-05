@@ -487,7 +487,7 @@ func (m *PausePodManager) buildDeployment(replicas int) *appsv1.Deployment {
 							},
 						},
 					},
-					TerminationGracePeriodSeconds: int64Ptr(0),
+					TerminationGracePeriodSeconds: new(int64(0)),
 					NodeSelector:                  m.config.NodeSelector,
 					Tolerations:                   m.config.Tolerations,
 					ServiceAccountName:            m.config.ServiceAccountName,
@@ -522,10 +522,6 @@ func BuildResourceRequests(cpuRequest, memoryRequest string) api.ResourceList {
 	}
 
 	return resources
-}
-
-func int64Ptr(i int64) *int64 {
-	return &i
 }
 
 // CleanupOrphanedDeployments removes pause pod deployments that haven't received

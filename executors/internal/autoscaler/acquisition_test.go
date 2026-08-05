@@ -219,7 +219,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 				}
 
 				if tc.mockNestingClientCreate {
-					nestingClient.EXPECT().Create(mock.Anything, tc.expectedNestingImage, int32Ref(int32(testSlot))).Return(testVM, stringRef("stomped"), tc.nestingCreateErr).Once()
+					nestingClient.EXPECT().Create(mock.Anything, tc.expectedNestingImage, new(int32(testSlot))).Return(testVM, new("stomped"), tc.nestingCreateErr).Once()
 				}
 
 				if tc.tunnelDialErr != nil || tc.mockNestingClientDelete {
@@ -412,14 +412,6 @@ func (vm *dummyVM) GetId() string { return vm.id }
 
 func (vm *dummyVM) GetName() string { return vm.name }
 func (vm *dummyVM) GetAddr() string { return vm.addr }
-
-func int32Ref(i int32) *int32 {
-	return &i
-}
-
-func stringRef(s string) *string {
-	return &s
-}
 
 func TestAcquisitionRef_AcquisitionSlot(t *testing.T) {
 	tests := []struct {

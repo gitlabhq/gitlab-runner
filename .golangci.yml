@@ -71,7 +71,6 @@ linters:
         - fmtappendf
         - forvar
         - mapsloop
-        - newexpr
         - omitzero
         - rangeint
         - slicesbackward

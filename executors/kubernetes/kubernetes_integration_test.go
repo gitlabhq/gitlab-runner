@@ -2499,7 +2499,7 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 		return deletePod(client, podName, metav1.DeleteOptions{})
 	}
 	deletePodNow := func(client k8s.Interface, podName string) error {
-		return deletePod(client, podName, metav1.DeleteOptions{GracePeriodSeconds: common.Int64Ptr(0)})
+		return deletePod(client, podName, metav1.DeleteOptions{GracePeriodSeconds: new(int64(0))})
 	}
 	evictPod := func(client k8s.Interface, podName string, delOpts metav1.DeleteOptions) error {
 		return client.CoreV1().Pods(ciNamespace).EvictV1(t.Context(), &policyv1.Eviction{
@@ -2513,7 +2513,7 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 		return evictPod(client, podName, metav1.DeleteOptions{})
 	}
 	evictPodNow := func(client k8s.Interface, podName string) error {
-		return evictPod(client, podName, metav1.DeleteOptions{GracePeriodSeconds: common.Int64Ptr(0)})
+		return evictPod(client, podName, metav1.DeleteOptions{GracePeriodSeconds: new(int64(0))})
 	}
 
 	containsOneOf := func(heystack string, needles ...string) bool {
@@ -2973,8 +2973,8 @@ func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (sp
 						"test.k8s.gitlab.com/test-name": dns.MakeRFC1123Compatible(strings.Join(tt, ".")),
 					},
 					Namespace:                        ciNamespace,
-					CleanupGracePeriodSeconds:        common.Int64Ptr(5),
-					PodTerminationGracePeriodSeconds: common.Int64Ptr(5),
+					CleanupGracePeriodSeconds:        new(int64(5)),
+					PodTerminationGracePeriodSeconds: new(int64(5)),
 					PollTimeout:                      int((time.Minute * 10).Seconds()),
 					NodeSelector:                     nodeSelector,
 					NodeTolerations:                  nodeTolerations,
@@ -4526,8 +4526,8 @@ func TestKubernetesUserAndGroupConstraints(t *testing.T) {
 		},
 		{
 			name:          "runner user takes precedence - should succeed",
-			runnerUID:     common.Int64Ptr(2000),
-			runnerGID:     common.Int64Ptr(2000),
+			runnerUID:     new(int64(2000)),
+			runnerGID:     new(int64(2000)),
 			allowedUsers:  []string{"2000"},
 			allowedGroups: []string{"2000"},
 			imageUser:     "1000:1000",
@@ -4535,8 +4535,8 @@ func TestKubernetesUserAndGroupConstraints(t *testing.T) {
 		},
 		{
 			name:          "runner user takes precedence - bypasses allowlist validation",
-			runnerUID:     common.Int64Ptr(2000),
-			runnerGID:     common.Int64Ptr(2000),
+			runnerUID:     new(int64(2000)),
+			runnerGID:     new(int64(2000)),
 			allowedUsers:  []string{"1000"},
 			allowedGroups: []string{"1000"},
 			imageUser:     "1000:1000",
