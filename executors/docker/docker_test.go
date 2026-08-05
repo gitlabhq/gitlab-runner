@@ -494,11 +494,11 @@ func TestCreateVolumes(t *testing.T) {
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
 				vm.On("Create", mock.Anything, "/volume").
-					Return(volumes.NewErrVolumeAlreadyDefined("/volume")).
+					Return(volumes.NewVolumeAlreadyDefinedError("/volume")).
 					Once()
 			},
 			createVolumeManager: true,
-			expectedError:       volumes.NewErrVolumeAlreadyDefined("/volume"),
+			expectedError:       volumes.NewVolumeAlreadyDefinedError("/volume"),
 		},
 		"volumes defined, empty buildsDir, clone strategy, other error on user volume": {
 			volumes:     []string{"/volume"},
@@ -540,7 +540,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
 				vm.On("CreateTemporary", mock.Anything, volumesTestsDefaultBuildsDir).
-					Return(volumes.NewErrVolumeAlreadyDefined(volumesTestsDefaultBuildsDir)).
+					Return(volumes.NewVolumeAlreadyDefinedError(volumesTestsDefaultBuildsDir)).
 					Once()
 			},
 			createVolumeManager: true,
@@ -570,7 +570,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
 				vm.On("CreateTemporary", mock.Anything, "/builds").
-					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
+					Return(volumes.NewVolumeAlreadyDefinedError("/builds")).
 					Once()
 			},
 			createVolumeManager: true,
@@ -599,7 +599,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			gitStrategy: "fetch",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
 				vm.On("Create", mock.Anything, volumesTestsDefaultBuildsDir).
-					Return(volumes.NewErrVolumeAlreadyDefined(volumesTestsDefaultBuildsDir)).
+					Return(volumes.NewVolumeAlreadyDefinedError(volumesTestsDefaultBuildsDir)).
 					Once()
 			},
 			createVolumeManager: true,
@@ -629,7 +629,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
 				vm.On("Create", mock.Anything, "/builds").
-					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
+					Return(volumes.NewVolumeAlreadyDefinedError("/builds")).
 					Once()
 			},
 			createVolumeManager: true,
@@ -639,7 +639,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
 				vm.On("Create", mock.Anything, "/builds").
-					Return(fmt.Errorf("wrap: %w", volumes.NewErrVolumeAlreadyDefined("/builds"))).
+					Return(fmt.Errorf("wrap: %w", volumes.NewVolumeAlreadyDefinedError("/builds"))).
 					Once()
 			},
 			createVolumeManager: true,

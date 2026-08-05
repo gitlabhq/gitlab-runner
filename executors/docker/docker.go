@@ -1623,7 +1623,7 @@ func (e *executor) createBuildVolume() error {
 	}
 
 	if err != nil {
-		var volDefinedErr *volumes.ErrVolumeAlreadyDefined
+		var volDefinedErr *volumes.VolumeAlreadyDefinedError
 		if !errors.As(err, &volDefinedErr) {
 			return err
 		}

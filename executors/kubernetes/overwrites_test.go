@@ -656,7 +656,7 @@ func Test_overwriteTooHighError_Is(t *testing.T) {
 			expectedIs: false,
 		},
 		{
-			err:        new(emptyTestError),
+			err:        assert.AnError,
 			expectedIs: false,
 		},
 		{
@@ -1164,10 +1164,4 @@ func Test_overwrites_getServiceResourceRequests(t *testing.T) {
 			assert.Equal(t, tt.want, o.getServiceResourceRequests(fmt.Sprintf("%s%d", serviceContainerPrefix, tt.serviceIndex)))
 		})
 	}
-}
-
-type emptyTestError struct{}
-
-func (e *emptyTestError) Error() string {
-	return ""
 }

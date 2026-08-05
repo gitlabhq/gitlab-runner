@@ -88,7 +88,7 @@ func TestCommand_Run(t *testing.T) {
 			getExitCode: func(err *exec.ExitError) int { return 255 },
 			expectedError: "unknown Custom executor executable exit code 255; " +
 				"executable execution terminated with: exit status 0",
-			expectedErrorType: &ErrUnknownFailure{},
+			expectedErrorType: &UnknownFailureError{},
 		},
 		"command times out": {
 			contextClosed: true,
@@ -100,7 +100,7 @@ func TestCommand_Run(t *testing.T) {
 			getExitCode: func(err *exec.ExitError) int { return BuildFailureExitCode },
 			expectedError: "unknown Custom executor executable exit code 2; " +
 				"executable execution terminated with: exit status 0",
-			expectedErrorType: &ErrUnknownFailure{},
+			expectedErrorType: &UnknownFailureError{},
 			options: func() Options {
 				filename := t.TempDir() + "/invalid"
 				err := os.WriteFile(filename, []byte("invalid"), 0o600)

@@ -44,7 +44,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_Windows(t *tes
 		"duplicate pipe name volume specified": {
 			volume:        `\\.\pipe\duplicated`,
 			uniqueName:    "uniq",
-			expectedError: NewErrVolumeAlreadyDefined(`\\.\pipe\duplicated`),
+			expectedError: NewVolumeAlreadyDefinedError(`\\.\pipe\duplicated`),
 		},
 		"protected": {
 			volume:     `\\.\pipe\docker_engine`,

@@ -192,7 +192,7 @@ func (c *CacheExtractorCommand) download(_ int) error {
 func (c *CacheExtractorCommand) getCache(rawURL string) (*http.Response, error) {
 	resp, err := c.getClient().Get(rawURL)
 	if err != nil {
-		return nil, retryableErr{err: err}
+		return nil, retryableError{err: err}
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
@@ -547,7 +547,7 @@ func (c *CacheExtractorCommand) downloadParallel(contentLength int64, modTime ti
 	err = transfer.ParallelRangeDownload(contentLength, chunkSize, concurrency, destAt, fetchChunk)
 	if err != nil {
 		_ = writer.Close()
-		return retryableErr{err: err}
+		return retryableError{err: err}
 	}
 
 	if err := writer.Close(); err != nil {
@@ -595,7 +595,7 @@ func (c *CacheExtractorCommand) downloadAndSaveCache(reader io.Reader, date time
 	_, err = io.CopyBuffer(writer, reader, buf)
 	if err != nil {
 		_ = writer.Close()
-		return retryableErr{err: err}
+		return retryableError{err: err}
 	}
 
 	err = os.Chtimes(tmpName, time.Now(), date)

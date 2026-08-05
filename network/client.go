@@ -275,15 +275,15 @@ func (n *client) do(
 	return res, nil
 }
 
-// ErrorResponse is an error type that is returned when there is an issue
+// ResponseError is an error type that is returned when there is an issue
 // calling the remote server. It contains the http.Response responsible for
 // the error and the error payload provided by the server.
-type ErrorResponse struct {
+type ResponseError struct {
 	Response *http.Response       `json:"-"`
 	Message  ErrorResponseMessage `json:"message"`
 }
 
-// XMLErrorResponse is an error type that is returned when there is an issue
+// XMLResponseError is an error type that is returned when there is an issue
 // from an object storage provider that returns XML. It contains the
 // http.Response responsible for the error and the error payload provided by
 // the server.
@@ -291,7 +291,7 @@ type ErrorResponse struct {
 // Google: https://cloud.google.com/storage/docs/xml-api/reference-status
 // Amazon: https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html
 // Azure: https://docs.microsoft.com/en-us/rest/api/storageservices/status-and-error-codes2
-type XMLErrorResponse struct {
+type XMLResponseError struct {
 	Response *http.Response `xml:"-"`
 	XMLName  xml.Name       `xml:"Error"`
 	Code     string         `xml:"Code"`
@@ -300,7 +300,7 @@ type XMLErrorResponse struct {
 
 type ErrorResponseMessage string
 
-func (r *ErrorResponse) Error() string {
+func (r *ResponseError) Error() string {
 	statusCodeMsg := fmt.Sprintf("%d %s", r.Response.StatusCode, http.StatusText(r.Response.StatusCode))
 	reqURL := url_helpers.CleanURL(r.Response.Request.URL.String())
 	errMessage := fmt.Sprintf("%v %s: %s", r.Response.Request.Method, reqURL, statusCodeMsg)
@@ -313,7 +313,7 @@ func (r *ErrorResponse) Error() string {
 	return fmt.Sprintf("%s (%s)", errMessage, r.Message)
 }
 
-func (r *XMLErrorResponse) Error() string {
+func (r *XMLResponseError) Error() string {
 	statusCodeMsg := fmt.Sprintf("%d %s", r.Response.StatusCode, http.StatusText(r.Response.StatusCode))
 
 	if r.Code == "" {
@@ -430,7 +430,7 @@ func getMimeAndContentType(res *http.Response) (mimeType, contentType string, er
 }
 
 func decodeJSONResponse(res *http.Response) (string, error) {
-	errResp := ErrorResponse{Response: res}
+	errResp := ResponseError{Response: res}
 	err := json.NewDecoder(res.Body).Decode(&errResp)
 	if err == nil {
 		return errResp.Error(), nil
@@ -440,7 +440,7 @@ func decodeJSONResponse(res *http.Response) (string, error) {
 }
 
 func decodeXMLResponse(res *http.Response) (string, error) {
-	xmlResp := XMLErrorResponse{Response: res}
+	xmlResp := XMLResponseError{Response: res}
 	err := xml.NewDecoder(res.Body).Decode(&xmlResp)
 	if err == nil {
 		return xmlResp.Error(), nil

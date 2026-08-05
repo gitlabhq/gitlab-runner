@@ -15,14 +15,10 @@ import (
 	terminal "gitlab.com/gitlab-org/gitlab-terminal"
 )
 
-// buildContainerTerminalTimeout is the error used when the build container is
+// errBuildContainerTerminalTimeout is the error used when the build container is
 // not running yet and we have a terminal request waiting for the container to
 // start and a certain amount of time is exceeded.
-type buildContainerTerminalTimeout struct{}
-
-func (buildContainerTerminalTimeout) Error() string {
-	return "timeout for waiting for build container"
-}
+var errBuildContainerTerminalTimeout = errors.New("timeout for waiting for build container")
 
 func (s *commandExecutor) watchForRunningBuildContainer(deadline time.Time) (string, error) {
 	for time.Since(deadline) < 0 {
@@ -43,7 +39,7 @@ func (s *commandExecutor) watchForRunningBuildContainer(deadline time.Time) (str
 		}
 	}
 
-	return "", buildContainerTerminalTimeout{}
+	return "", errBuildContainerTerminalTimeout
 }
 
 func (s *commandExecutor) TerminalConnect() (terminalsession.Conn, error) {

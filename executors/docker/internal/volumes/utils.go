@@ -48,21 +48,21 @@ func hashPath(path string) string {
 	return fmt.Sprintf("%x", md5.Sum([]byte(path)))
 }
 
-type ErrVolumeAlreadyDefined struct {
+type VolumeAlreadyDefinedError struct {
 	containerPath string
 }
 
-func (e *ErrVolumeAlreadyDefined) Error() string {
+func (e *VolumeAlreadyDefinedError) Error() string {
 	return fmt.Sprintf("volume for container path %q is already defined", e.containerPath)
 }
 
-func (e *ErrVolumeAlreadyDefined) Is(err error) bool {
-	_, ok := err.(*ErrVolumeAlreadyDefined)
+func (e *VolumeAlreadyDefinedError) Is(err error) bool {
+	_, ok := err.(*VolumeAlreadyDefinedError)
 	return ok
 }
 
-func NewErrVolumeAlreadyDefined(containerPath string) *ErrVolumeAlreadyDefined {
-	return &ErrVolumeAlreadyDefined{
+func NewVolumeAlreadyDefinedError(containerPath string) *VolumeAlreadyDefinedError {
+	return &VolumeAlreadyDefinedError{
 		containerPath: containerPath,
 	}
 }
@@ -72,7 +72,7 @@ type pathList map[string]bool
 func (m pathList) Add(path string) error {
 	path = filepath.Clean(path)
 	if m[path] {
-		return NewErrVolumeAlreadyDefined(path)
+		return NewVolumeAlreadyDefinedError(path)
 	}
 
 	m[path] = true

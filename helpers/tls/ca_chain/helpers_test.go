@@ -20,32 +20,32 @@ func loadCertificate(t *testing.T, dump string) *x509.Certificate {
 	return cert
 }
 
-func TestErrorInvalidCertificate_Error(t *testing.T) {
+func TestInvalidCertificateError_Error(t *testing.T) {
 	testError := errors.New("test-error")
 
 	tests := map[string]struct {
-		err            *ErrorInvalidCertificate
+		err            *InvalidCertificateError
 		expectedOutput string
 	}{
 		"no details provided": {
-			err:            new(ErrorInvalidCertificate),
+			err:            new(InvalidCertificateError),
 			expectedOutput: "invalid certificate",
 		},
 		"inner specified": {
-			err: &ErrorInvalidCertificate{
+			err: &InvalidCertificateError{
 				inner: testError,
 			},
 			expectedOutput: "invalid certificate: test-error",
 		},
 		"marked with nonCertBlockType": {
-			err: &ErrorInvalidCertificate{
+			err: &InvalidCertificateError{
 				inner:            testError,
 				nonCertBlockType: true,
 			},
 			expectedOutput: "invalid certificate: non-certificate PEM block",
 		},
 		"marked with nilBlock": {
-			err: &ErrorInvalidCertificate{
+			err: &InvalidCertificateError{
 				inner:            testError,
 				nonCertBlockType: true,
 				nilBlock:         true,

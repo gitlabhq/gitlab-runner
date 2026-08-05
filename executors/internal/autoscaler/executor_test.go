@@ -179,7 +179,7 @@ func TestMachineExecutor_WithoutConnector(t *testing.T) {
 	}
 
 	conn, err := e.Connect(t.Context())
-	assert.ErrorIs(t, err, common.ExecutorStepRunnerConnectNotSupported)
+	assert.ErrorIs(t, err, common.ErrExecutorStepRunnerConnectNotSupported)
 	assert.Nil(t, conn)
 }
 

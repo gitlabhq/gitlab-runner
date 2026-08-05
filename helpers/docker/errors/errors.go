@@ -4,25 +4,25 @@ import (
 	"fmt"
 )
 
-// ErrOSNotSupported is used when docker does not support the detected OSType.
-// NewErrOSNotSupported is used to initialize this type.
-type ErrOSNotSupported struct {
+// OSNotSupportedError is used when docker does not support the detected OSType.
+// NewOSNotSupportedError is used to initialize this type.
+type OSNotSupportedError struct {
 	detectedOSType string
 }
 
-func (e *ErrOSNotSupported) Error() string {
+func (e *OSNotSupportedError) Error() string {
 	return fmt.Sprintf("unsupported OSType %q", e.detectedOSType)
 }
 
-func (e *ErrOSNotSupported) Is(err error) bool {
-	_, ok := err.(*ErrOSNotSupported)
+func (e *OSNotSupportedError) Is(err error) bool {
+	_, ok := err.(*OSNotSupportedError)
 
 	return ok
 }
 
-// NewErrOSNotSupported creates a ErrOSNotSupported for the specified OSType.
-func NewErrOSNotSupported(osType string) *ErrOSNotSupported {
-	return &ErrOSNotSupported{
+// NewOSNotSupportedError creates an OSNotSupportedError for the specified OSType.
+func NewOSNotSupportedError(osType string) *OSNotSupportedError {
+	return &OSNotSupportedError{
 		detectedOSType: osType,
 	}
 }

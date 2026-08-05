@@ -25,7 +25,7 @@ func TestGetInfo(t *testing.T) {
 			version:       unsupportedVersion,
 			expectedError: windows.ErrUnsupportedWindowsVersion,
 		},
-		{osType: "unsupported", expectedError: errors.NewErrOSNotSupported("unsupported")},
+		{osType: "unsupported", expectedError: errors.NewOSNotSupportedError("unsupported")},
 	}
 
 	for _, test := range tests {

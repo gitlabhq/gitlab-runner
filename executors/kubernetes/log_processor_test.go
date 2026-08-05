@@ -37,11 +37,7 @@ func (l log) String() string {
 	return fmt.Sprintf("%d %s", l.offset, l.line)
 }
 
-type brokenReaderError struct{}
-
-func (e *brokenReaderError) Error() string {
-	return "broken"
-}
+var errBrokenReader = errors.New("broken")
 
 type brokenReader struct {
 	err error
@@ -141,9 +137,9 @@ func TestReadLogsBrokenReader(t *testing.T) {
 	proc.logger = logger
 
 	output := make(chan string)
-	err := proc.readLogs(t.Context(), newBrokenReader(new(brokenReaderError)), output)
+	err := proc.readLogs(t.Context(), newBrokenReader(errBrokenReader), output)
 
-	assert.ErrorIs(t, err, new(brokenReaderError))
+	assert.ErrorIs(t, err, errBrokenReader)
 }
 
 func TestProcessedOffsetSet(t *testing.T) {
@@ -458,7 +454,7 @@ func TestAttachCorrectOffset(t *testing.T) {
 		Run(func(mock.Arguments) {
 			cancel()
 		}).
-		Return(new(brokenReaderError)).
+		Return(errBrokenReader).
 		Once()
 
 	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).

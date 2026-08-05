@@ -10,6 +10,7 @@ linters:
     - bodyclose
     - dogsled
     - errcheck
+    - errname
     - errorlint
     - gocognit
     - gocritic

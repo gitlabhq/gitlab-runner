@@ -320,7 +320,7 @@ func (c *clientJobTrace) sendPatch() common.PatchTraceResult {
 
 	if err != nil {
 		fields := make(logrus.Fields)
-		var eerr *trace.ErrInvalidOffset
+		var eerr *trace.InvalidOffsetError
 		if errors.As(err, &eerr) {
 			fields["offset"] = eerr.Offset
 			fields["written"] = eerr.Written

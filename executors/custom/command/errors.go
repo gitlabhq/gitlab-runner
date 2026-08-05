@@ -4,12 +4,12 @@ import (
 	"fmt"
 )
 
-type ErrUnknownFailure struct {
+type UnknownFailureError struct {
 	Inner    error
 	ExitCode int
 }
 
-func (e *ErrUnknownFailure) Error() string {
+func (e *UnknownFailureError) Error() string {
 	return fmt.Sprintf(
 		"unknown Custom executor executable exit code %d; executable execution terminated with: %v",
 		e.ExitCode,

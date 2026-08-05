@@ -38,7 +38,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 			name:                  "Connect Timeout",
 			buildContainerRunning: false,
 			hasBuildContainer:     true,
-			expectedErr:           buildContainerTerminalTimeout{},
+			expectedErr:           errBuildContainerTerminalTimeout,
 		},
 		{
 			name:                  "Successful connect",
@@ -57,7 +57,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 			name:                  "No build container",
 			buildContainerRunning: false,
 			hasBuildContainer:     false,
-			expectedErr:           buildContainerTerminalTimeout{},
+			expectedErr:           errBuildContainerTerminalTimeout,
 		},
 	}
 
