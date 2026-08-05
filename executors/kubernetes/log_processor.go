@@ -277,10 +277,7 @@ func (l *kubernetesLogProcessor) scan(ctx context.Context, logs io.Reader) (*log
 	}
 
 	linesCh := make(chan string)
-	l.wg.Add(1)
-
-	go func() {
-		defer l.wg.Done()
+	l.wg.Go(func() {
 		defer close(linesCh)
 
 		// This goroutine will exit when the calling method closes the logs stream or the context is cancelled
@@ -297,7 +294,7 @@ func (l *kubernetesLogProcessor) scan(ctx context.Context, logs io.Reader) (*log
 			case linesCh <- data:
 			}
 		}
-	}()
+	})
 
 	return logsScanner, linesCh
 }

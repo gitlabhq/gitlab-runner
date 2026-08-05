@@ -24,15 +24,11 @@ func TestAPIRequestsCollector_Collect(t *testing.T) {
 	ch := make(chan prometheus.Metric)
 
 	wg := new(sync.WaitGroup)
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		for metric := range ch {
 			metrics = append(metrics, metric)
 		}
-	}()
+	})
 
 	c := newAPIRequestCollectorWithBuckets([]float64{0.1, 1, 10})
 
@@ -248,15 +244,11 @@ func TestAPIRequestsCollector_Describe(t *testing.T) {
 	ch := make(chan *prometheus.Desc)
 
 	wg := new(sync.WaitGroup)
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		for desc := range ch {
 			descriptions = append(descriptions, desc)
 		}
-	}()
+	})
 
 	c := NewAPIRequestsCollector()
 	c.Describe(ch)

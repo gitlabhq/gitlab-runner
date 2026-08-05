@@ -639,11 +639,9 @@ func (c *resetRunnerTokenTestController) handleResetTokenRequest(t *testing.T, r
 // of a WaitGroup. This allows use to organise the test case flow to be executed
 // in the expected order
 func (c *resetRunnerTokenTestController) pushToWaitGroup(callback func()) {
-	c.waitGroup.Add(1)
-	go func() {
+	c.waitGroup.Go(func() {
 		callback()
-		c.waitGroup.Done()
-	}()
+	})
 }
 
 // stop simulates RunCommand interruption - the moment when run() is finished

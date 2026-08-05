@@ -559,8 +559,7 @@ func TestMachineAcquireGrowthCapacity(t *testing.T) {
 
 			signal := make(chan struct{})
 			for i := 0; i < tt.concurrency; i++ {
-				wg.Add(1)
-				go func() {
+				wg.Go(func() {
 					<-signal
 					_, errCh := p.create(&common.RunnerConfig{
 						Limit:             tt.concurrency,
@@ -575,8 +574,7 @@ func TestMachineAcquireGrowthCapacity(t *testing.T) {
 					}, machineStateIdle)
 
 					<-errCh
-					wg.Done()
-				}()
+				})
 			}
 
 			// wait for all goroutines to fire up and line up for the signal in order to have a fair race

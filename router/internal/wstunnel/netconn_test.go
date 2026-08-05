@@ -45,9 +45,7 @@ func TestNetConnVariousBufferSizes(t *testing.T) {
 
 			var wg sync.WaitGroup
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				data := make([]byte, dataSize)
 				for range numWrites {
 					_, _ = rand.Read(data)
@@ -56,14 +54,12 @@ func TestNetConnVariousBufferSizes(t *testing.T) {
 					_, writeErr = c.Write(data)
 					assert.NoError(t, writeErr)
 				}
-			}()
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			})
+			wg.Go(func() {
 				toRead := int64(dataSize * numWrites)
 				_, readErr := io.Copy(readHash, io.LimitReader(c, toRead))
 				assert.NoError(t, readErr)
-			}()
+			})
 			wg.Wait()
 
 			assert.Equal(t, writeHash.Sum(nil), readHash.Sum(nil))
