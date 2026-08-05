@@ -69,7 +69,6 @@ linters:
       disable:
         - atomictypes
         - fmtappendf
-        - forvar
         - mapsloop
         - omitzero
         - rangeint
