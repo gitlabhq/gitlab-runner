@@ -181,12 +181,10 @@ func TestS3ClientCaching_ConcurrentAccess(t *testing.T) {
 	errs := make([]error, goroutines)
 	var wg sync.WaitGroup
 	for i := range goroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			cfg := baseConfig
 			clients[i], errs[i] = newS3Client(&cfg)
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -1040,11 +1038,9 @@ func TestFetchCredentialsForRole_ConcurrencyLimit(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for range numRequests {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, _ = client.FetchCredentialsForRole(t.Context(), "arn:aws:iam::123456789012:role/TestRole", bucketName, objectName, true, 0)
-		}()
+		})
 	}
 
 	// Wait for exactly semSize requests to be in-flight inside the handler.

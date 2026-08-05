@@ -1800,13 +1800,11 @@ func (e *executor) Cleanup() {
 	defer cancel()
 
 	remove := func(id string) {
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			if err := e.removeContainer(ctx, id); err != nil {
 				e.BuildLogger.WithFields(logrus.Fields{"error": err}).Errorln("Failed to remove container", id)
 			}
-			wg.Done()
-		}()
+		})
 	}
 
 	for _, temporaryID := range e.temporary {

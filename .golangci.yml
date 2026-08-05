@@ -77,7 +77,6 @@ linters:
         - slicescontains
         - stringsbuilder
         - stringsseq
-        - waitgroupgo
     revive:
       rules:
         - name: unused-parameter

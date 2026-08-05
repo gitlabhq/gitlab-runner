@@ -184,10 +184,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 
 				var wg sync.WaitGroup
 				t.Cleanup(wg.Wait)
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-
+				wg.Go(func() {
 					var err error
 					_, err = fmt.Fprintln(outWriter, "out line 1")
 					require.NoError(t, err)
@@ -199,7 +196,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 					require.NoError(t, err)
 					err = pw.Close()
 					require.NoError(t, err)
-				}()
+				})
 
 				mockWorkingClient(t, clientMock, pr, expectedCtx)
 			},
