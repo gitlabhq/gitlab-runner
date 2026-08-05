@@ -330,7 +330,7 @@ func (e *ErrorResponseMessage) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	var complex map[string][]interface{}
+	var complex map[string][]any
 	err = json.Unmarshal(data, &complex)
 	if err != nil {
 		// explicitly ignore error, we can't decode this type
@@ -355,8 +355,8 @@ func (n *client) doJSON(
 	uri, method string,
 	statusCode int,
 	headers http.Header,
-	request interface{},
-	response interface{},
+	request any,
+	response any,
 ) (int, string, *http.Response) {
 	var bytesProvider common.ContentProvider
 

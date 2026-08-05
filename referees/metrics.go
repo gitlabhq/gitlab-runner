@@ -131,7 +131,7 @@ func (mr *MetricsReferee) queryMetrics(
 	return matrix[0].Values
 }
 
-func newMetricsReferee(executor interface{}, config *Config, log logrus.FieldLogger) Referee {
+func newMetricsReferee(executor any, config *Config, log logrus.FieldLogger) Referee {
 	logger := log.WithField("referee", "metrics")
 	if config.Metrics == nil {
 		return nil

@@ -10,8 +10,8 @@ import (
 )
 
 type logger interface {
-	Println(args ...interface{})
-	Warningln(args ...interface{})
+	Println(args ...any)
+	Warningln(args ...any)
 }
 
 type SecretsResolver interface {

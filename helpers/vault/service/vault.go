@@ -28,8 +28,8 @@ type Secret interface {
 }
 
 type Vault interface {
-	GetField(engineDetails Engine, secretDetails Secret) (interface{}, error)
-	Put(engineDetails Engine, secretDetails Secret, data map[string]interface{}) error
+	GetField(engineDetails Engine, secretDetails Secret) (any, error)
+	Put(engineDetails Engine, secretDetails Secret, data map[string]any) error
 	Delete(engineDetails Engine, secretDetails Secret) error
 }
 
@@ -94,7 +94,7 @@ func (v *defaultVault) prepareAuthMethodAdapter(authDetails Auth) (vault.AuthMet
 	return auth, nil
 }
 
-func (v *defaultVault) GetField(engineDetails Engine, secretDetails Secret) (interface{}, error) {
+func (v *defaultVault) GetField(engineDetails Engine, secretDetails Secret) (any, error) {
 	engine, err := v.getSecretEngine(engineDetails)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (v *defaultVault) getSecretEngine(engineDetails Engine) (vault.SecretEngine
 	return engine, nil
 }
 
-func (v *defaultVault) Put(engineDetails Engine, secretDetails Secret, data map[string]interface{}) error {
+func (v *defaultVault) Put(engineDetails Engine, secretDetails Secret, data map[string]any) error {
 	engine, err := v.getSecretEngine(engineDetails)
 	if err != nil {
 		return err

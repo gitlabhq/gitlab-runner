@@ -499,7 +499,7 @@ type resetTokenRequest struct {
 
 type resetRunnerTokenTestController struct {
 	runCommand RunCommand
-	eventChan  chan interface{}
+	eventChan  chan any
 	waitGroup  sync.WaitGroup
 
 	networkMock     *common.MockNetwork
@@ -531,7 +531,7 @@ func newResetRunnerTokenTestController(t *testing.T) *resetRunnerTokenTestContro
 			configReloaded: make(chan int),
 			network:        networkMock,
 		},
-		eventChan:       make(chan interface{}),
+		eventChan:       make(chan any),
 		networkMock:     networkMock,
 		configSaverMock: configSaverMock,
 	}

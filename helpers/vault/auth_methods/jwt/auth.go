@@ -28,7 +28,7 @@ var (
 
 type method struct {
 	path string
-	data map[string]interface{}
+	data map[string]any
 
 	token string
 }

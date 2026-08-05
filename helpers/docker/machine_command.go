@@ -27,7 +27,7 @@ const (
 var dockerMachineExecutable = defaultDockerMachineExecutable
 
 type logWriter struct {
-	log    func(args ...interface{})
+	log    func(args ...any)
 	reader *bufio.Reader
 }
 
@@ -57,7 +57,7 @@ func (l *logWriter) watch() {
 	}
 }
 
-func newLogWriter(logFunction func(args ...interface{}), reader io.Reader) {
+func newLogWriter(logFunction func(args ...any), reader io.Reader) {
 	writer := &logWriter{
 		log:    logFunction,
 		reader: bufio.NewReader(reader),

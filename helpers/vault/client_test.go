@@ -44,7 +44,7 @@ func mockServerWithAPIError(tb testing.TB) func(w http.ResponseWriter, r *http.R
 	tb.Helper()
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
-		require.NoError(tb, json.NewEncoder(w).Encode(map[string]interface{}{
+		require.NoError(tb, json.NewEncoder(w).Encode(map[string]any{
 			"errors": []string{"permission denied"},
 		}))
 	}
@@ -185,7 +185,7 @@ func TestNewClient_WithInlineAuth(t *testing.T) {
 			jwtDecoded, err := base64.RawURLEncoding.DecodeString(jwtHeader[0])
 			require.NoError(t, err)
 
-			var jwtData map[string]interface{}
+			var jwtData map[string]any
 			err = json.Unmarshal(jwtDecoded, &jwtData)
 			require.NoError(t, err)
 			assert.Equal(t, "jwt", jwtData["key"])
@@ -198,7 +198,7 @@ func TestNewClient_WithInlineAuth(t *testing.T) {
 			roleDecoded, err := base64.RawURLEncoding.DecodeString(roleHeader[0])
 			require.NoError(t, err)
 
-			var roleData map[string]interface{}
+			var roleData map[string]any
 			err = json.Unmarshal(roleDecoded, &roleData)
 			require.NoError(t, err)
 			assert.Equal(t, "role", roleData["key"])
@@ -275,8 +275,8 @@ func TestDefaultClient_Authenticate(t *testing.T) {
 }
 
 func TestDefaultClient_Write(t *testing.T) {
-	secretData := map[string]interface{}{"key1": "value1"}
-	data := map[string]interface{}{"key": "value"}
+	secretData := map[string]any{"key1": "value1"}
+	data := map[string]any{"key": "value"}
 
 	tests := map[string]struct {
 		mockHandler func(w http.ResponseWriter, r *http.Request)
@@ -298,7 +298,7 @@ func TestDefaultClient_Write(t *testing.T) {
 		},
 		"successful writing": {
 			mockHandler: mockOperationServer(t, "path/to/write", func(w http.ResponseWriter, r *http.Request) {
-				require.NoError(t, json.NewEncoder(w).Encode(map[string]interface{}{
+				require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
 					"data": secretData,
 				}))
 			}),
@@ -329,7 +329,7 @@ func TestDefaultClient_Write(t *testing.T) {
 }
 
 func TestDefaultClient_Read(t *testing.T) {
-	secretData := map[string]interface{}{"key1": "value1"}
+	secretData := map[string]any{"key1": "value1"}
 
 	tests := map[string]struct {
 		mockHandler func(w http.ResponseWriter, r *http.Request)
@@ -351,7 +351,7 @@ func TestDefaultClient_Read(t *testing.T) {
 		},
 		"successful reading": {
 			mockHandler: mockOperationServer(t, "path/to/read", func(w http.ResponseWriter, r *http.Request) {
-				require.NoError(t, json.NewEncoder(w).Encode(map[string]interface{}{
+				require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
 					"data": secretData,
 				}))
 			}),

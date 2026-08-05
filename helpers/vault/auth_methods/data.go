@@ -27,7 +27,7 @@ func (e *MissingRequiredConfigurationKeyError) Is(err error) bool {
 	return eerr.key == e.key
 }
 
-type Data map[string]interface{}
+type Data map[string]any
 
 func (d Data) Filter(requiredFields []string, allowedFields []string) (Data, error) {
 	for _, required := range requiredFields {

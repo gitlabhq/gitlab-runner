@@ -19,13 +19,13 @@ func TestEngine_Get(t *testing.T) {
 	enginePath := "engine/"
 	path := "/secret/"
 	expectedPath := "engine/data/secret"
-	missingData := map[string]interface{}{
+	missingData := map[string]any{
 		"test": "test",
 	}
-	expectedData := map[string]interface{}{
+	expectedData := map[string]any{
 		"test": "testData",
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"test": "test",
 		"data": expectedData,
 	}
@@ -33,7 +33,7 @@ func TestEngine_Get(t *testing.T) {
 	tests := map[string]struct {
 		setupClientMock func(*testing.T, *vault.MockClient)
 		expectedError   error
-		expectedData    map[string]interface{}
+		expectedData    map[string]any
 	}{
 		"client read error": {
 			setupClientMock: func(t *testing.T, c *vault.MockClient) {
@@ -66,7 +66,7 @@ func TestEngine_Get(t *testing.T) {
 		},
 		"client read succeeded with nil data": {
 			setupClientMock: func(t *testing.T, c *vault.MockClient) {
-				nilData := map[string]interface{}{
+				nilData := map[string]any{
 					"test": "test",
 					"data": nil,
 				}
@@ -83,7 +83,7 @@ func TestEngine_Get(t *testing.T) {
 		},
 		"client read succeeded with bogus data": {
 			setupClientMock: func(t *testing.T, c *vault.MockClient) {
-				nilData := map[string]interface{}{
+				nilData := map[string]any{
 					"test": "test",
 					"data": "sdfhgskldfhkljshdfljkgh",
 				}
@@ -147,10 +147,10 @@ func TestEngine_Put(t *testing.T) {
 	enginePath := "engine/"
 	path := "/secret/"
 	expectedPath := "engine/data/secret"
-	data := map[string]interface{}{
+	data := map[string]any{
 		"test": "testData",
 	}
-	expectedData := map[string]interface{}{
+	expectedData := map[string]any{
 		"data": data,
 	}
 

@@ -14,31 +14,31 @@ import (
 
 func TestNewMethod(t *testing.T) {
 	tests := map[string]struct {
-		providedData  map[string]interface{}
-		expectedData  map[string]interface{}
+		providedData  map[string]any
+		expectedData  map[string]any
 		expectedError error
 	}{
 		"missing required key": {
-			providedData: map[string]interface{}{
+			providedData: map[string]any{
 				roleKey: "role",
 			},
 			expectedError: new(auth_methods.MissingRequiredConfigurationKeyError),
 		},
 		"unexpected key provided": {
-			providedData: map[string]interface{}{
+			providedData: map[string]any{
 				jwtKey:        "jwt",
 				"unknown-key": "role",
 			},
-			expectedData: map[string]interface{}{
+			expectedData: map[string]any{
 				jwtKey: "jwt",
 			},
 		},
 		"proper configuration": {
-			providedData: map[string]interface{}{
+			providedData: map[string]any{
 				jwtKey:  "jwt",
 				roleKey: "role",
 			},
-			expectedData: map[string]interface{}{
+			expectedData: map[string]any{
 				jwtKey:  "jwt",
 				roleKey: "role",
 			},
@@ -74,7 +74,7 @@ func TestJWTAuth_Authenticate_Token(t *testing.T) {
 
 	jwt := "some.jwt.token"
 	testRole := "test_role"
-	expectedPayload := map[string]interface{}{
+	expectedPayload := map[string]any{
 		"jwt":  jwt,
 		"role": testRole,
 	}
@@ -128,7 +128,7 @@ func TestJWTAuth_Authenticate_Token(t *testing.T) {
 
 			tt.setupClientMock(t, clientMock)
 
-			data := map[string]interface{}{
+			data := map[string]any{
 				jwtKey:  jwt,
 				roleKey: testRole,
 			}

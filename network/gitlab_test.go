@@ -361,7 +361,7 @@ func mockUnregisterRunnerHandler(tb testing.TB, w http.ResponseWriter, r *http.R
 	body, err := io.ReadAll(r.Body)
 	assert.NoError(tb, err)
 
-	var req map[string]interface{}
+	var req map[string]any
 	err = json.Unmarshal(body, &req)
 	assert.NoError(tb, err)
 
@@ -454,7 +454,7 @@ func mockUnregisterRunnerManagerHandler(tb testing.TB, w http.ResponseWriter, r 
 	body, err := io.ReadAll(r.Body)
 	assert.NoError(tb, err)
 
-	var req map[string]interface{}
+	var req map[string]any
 	err = json.Unmarshal(body, &req)
 	assert.NoError(tb, err)
 
@@ -554,11 +554,11 @@ func mockVerifyRunnerHandler(tb testing.TB, w http.ResponseWriter, r *http.Reque
 	body, err := io.ReadAll(r.Body)
 	assert.NoError(tb, err)
 
-	var req map[string]interface{}
+	var req map[string]any
 	err = json.Unmarshal(body, &req)
 	assert.NoError(tb, err)
 
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 
 	token := req["token"].(string)
 	require.NotEmpty(tb, r.Header.Get(RunnerToken), "runner-token header is required")
@@ -782,11 +782,11 @@ func testResetTokenHandler(tb testing.TB, w http.ResponseWriter, r *http.Request
 	body, err := io.ReadAll(r.Body)
 	require.NoError(tb, err)
 
-	var req map[string]interface{}
+	var req map[string]any
 	err = json.Unmarshal(body, &req)
 	require.NoError(tb, err)
 
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 
 	switch req["token"].(string) {
 	case validToken:
@@ -927,7 +927,7 @@ func mockResetTokenWithPATHandler(tb testing.TB, w http.ResponseWriter, r *http.
 		return
 	}
 
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 
 	switch id {
 	case "12345":
@@ -1223,7 +1223,7 @@ func mockRequestJobHandler(tb testing.TB, w http.ResponseWriter, r *http.Request
 	body, err := io.ReadAll(r.Body)
 	assert.NoError(tb, err)
 
-	var req map[string]interface{}
+	var req map[string]any
 	err = json.Unmarshal(body, &req)
 	assert.NoError(tb, err)
 
@@ -1442,7 +1442,7 @@ func assertOnJobResponse(tb testing.TB, res *spec.Job, assertUnsupportedOpts boo
 	}
 }
 
-func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]interface{}) {
+func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]any) {
 	switch req["state"].(string) {
 	case statusRunning, statusCanceling:
 		w.WriteHeader(http.StatusOK)
@@ -1487,7 +1487,7 @@ func testUpdateJobHandler(tb testing.TB, w http.ResponseWriter, r *http.Request)
 	body, err := io.ReadAll(r.Body)
 	assert.NoError(tb, err)
 
-	var req map[string]interface{}
+	var req map[string]any
 	err = json.Unmarshal(body, &req)
 	assert.NoError(tb, err)
 
@@ -1630,7 +1630,7 @@ func testUpdateJobKeepAliveHandler(tb testing.TB, w http.ResponseWriter, r *http
 	body, err := io.ReadAll(r.Body)
 	assert.NoError(tb, err)
 
-	var req map[string]interface{}
+	var req map[string]any
 	err = json.Unmarshal(body, &req)
 	assert.NoError(tb, err)
 
@@ -3432,7 +3432,7 @@ func TestUpdateJob_EnvironmentKey(t *testing.T) {
 			c := NewGitLabClient()
 			c.UpdateJob(config, creds, tt.jobInfo)
 
-			var req map[string]interface{}
+			var req map[string]any
 			require.NoError(t, json.Unmarshal(capturedBody, &req))
 
 			if tt.wantInBody {

@@ -26,7 +26,7 @@ func (e *engine) EngineName() string {
 	return engineName
 }
 
-func (e *engine) Get(path string) (map[string]interface{}, error) {
+func (e *engine) Get(path string) (map[string]any, error) {
 	secret, err := e.client.Read(e.dataPath(path))
 	if err != nil {
 		return nil, fmt.Errorf("reading from Vault: %w", err)
@@ -45,7 +45,7 @@ func (e *engine) Get(path string) (map[string]interface{}, error) {
 		return nil, nil
 	}
 
-	result, ok := data["data"].(map[string]interface{})
+	result, ok := data["data"].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("data for key %s cannot be coerced to 'map[string]any'", path)
 	}
@@ -56,8 +56,8 @@ func (e *engine) dataPath(p string) string {
 	return path.Join(e.path, "data", p)
 }
 
-func (e *engine) Put(path string, data map[string]interface{}) error {
-	dataWrapper := map[string]interface{}{
+func (e *engine) Put(path string, data map[string]any) error {
+	dataWrapper := map[string]any{
 		"data": data,
 	}
 

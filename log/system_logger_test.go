@@ -56,7 +56,7 @@ func TestServiceLogHook(t *testing.T) {
 				assert.Contains(t, msg, fmt.Sprintf("msg=%q %s=%s", testMessage, key, value))
 			})
 
-			levels := map[logrus.Level]func(args ...interface{}){
+			levels := map[logrus.Level]func(args ...any){
 				logrus.PanicLevel: logger.WithField(key, value).Panic,
 				logrus.ErrorLevel: logger.WithField(key, value).Error,
 				logrus.WarnLevel:  logger.WithField(key, value).Warning,

@@ -58,15 +58,15 @@ test:
     - make test
 `
 
-	config := make(map[string]interface{})
+	config := make(map[string]any)
 	err := yaml.Unmarshal([]byte(data), config)
 	if err != nil {
 		t.Error("Error parsing test YAML data")
 	}
 
-	expectedCacheConfig := map[string]interface{}{
+	expectedCacheConfig := map[string]any{
 		"untracked": true,
-		"paths":     []interface{}{"vendor/", "foo"},
+		"paths":     []any{"vendor/", "foo"},
 	}
 	cacheConfig, ok := ToConfigMap(config["cache"])
 
@@ -91,7 +91,7 @@ test:
             - foo
 `
 
-	config1 := make(map[string]interface{})
+	config1 := make(map[string]any)
 	require.NoError(t, yaml.Unmarshal([]byte(data), config1))
 
 	value, ok := GetMapKey(config1, "test", "cache", "untracked")

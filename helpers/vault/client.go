@@ -9,7 +9,7 @@ import (
 
 type Client interface {
 	Authenticate(auth AuthMethod) error
-	Write(path string, data map[string]interface{}) (Result, error)
+	Write(path string, data map[string]any) (Result, error)
 	Read(path string) (Result, error)
 	Delete(path string) error
 }
@@ -47,7 +47,7 @@ func WithInlineAuth(auth *InlineAuth) ClientOption {
 			return nil, fmt.Errorf("configuring inline auth: %w", errs)
 		}
 
-		data := map[string]interface{}{
+		data := map[string]any{
 			"jwt":  auth.JWT,
 			"role": auth.Role,
 		}
@@ -93,7 +93,7 @@ func (c *defaultClient) Authenticate(auth AuthMethod) error {
 	return nil
 }
 
-func (c *defaultClient) Write(path string, data map[string]interface{}) (Result, error) {
+func (c *defaultClient) Write(path string, data map[string]any) (Result, error) {
 	secret, err := c.internal.Logical().Write(path, data)
 	return newResult(secret), unwrapAPIResponseError(err)
 }

@@ -257,7 +257,7 @@ func (p *PsWriter) Line(text string) {
 	p.WriteString(strings.Repeat("  ", p.indent) + text + p.EOL)
 }
 
-func (p *PsWriter) Linef(format string, arguments ...interface{}) {
+func (p *PsWriter) Linef(format string, arguments ...any) {
 	p.Line(fmt.Sprintf(format, arguments...))
 }
 
@@ -611,22 +611,22 @@ func (p *PsWriter) RmDirsRecursive(path string, name string) {
 	p.EndIf()
 }
 
-func (p *PsWriter) Printf(format string, arguments ...interface{}) {
+func (p *PsWriter) Printf(format string, arguments ...any) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...)
 	p.Line("echo " + psQuoteVariable(coloredText))
 }
 
-func (p *PsWriter) Noticef(format string, arguments ...interface{}) {
+func (p *PsWriter) Noticef(format string, arguments ...any) {
 	coloredText := helpers.ANSI_BOLD_GREEN + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	p.Line("echo " + psQuoteVariable(coloredText))
 }
 
-func (p *PsWriter) Warningf(format string, arguments ...interface{}) {
+func (p *PsWriter) Warningf(format string, arguments ...any) {
 	coloredText := helpers.ANSI_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	p.Line("echo " + psQuoteVariable(coloredText))
 }
 
-func (p *PsWriter) Errorf(format string, arguments ...interface{}) {
+func (p *PsWriter) Errorf(format string, arguments ...any) {
 	coloredText := helpers.ANSI_BOLD_RED + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	p.Line("echo " + psQuoteVariable(coloredText))
 }

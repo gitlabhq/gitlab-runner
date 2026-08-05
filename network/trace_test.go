@@ -46,7 +46,7 @@ func matchJobState(
 }
 
 // nolint:unparam
-func generateJobInfoMatcher(id int64, state common.JobState, failureReason spec.JobFailureReason) interface{} {
+func generateJobInfoMatcher(id int64, state common.JobState, failureReason spec.JobFailureReason) any {
 	return mock.MatchedBy(func(jobInfo common.UpdateJobInfo) bool {
 		return matchJobState(jobInfo, id, state, failureReason)
 	})

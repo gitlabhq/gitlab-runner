@@ -10,18 +10,18 @@ import (
 )
 
 func Test_CreateReferees(t *testing.T) {
-	fakeMockMetricsExecutor := func(t *testing.T) interface{} {
+	fakeMockMetricsExecutor := func(t *testing.T) any {
 		return struct{}{}
 	}
 
-	mockMetricsExecutor := func(t *testing.T) interface{} {
+	mockMetricsExecutor := func(t *testing.T) any {
 		m := NewMockMetricsExecutor(t)
 		m.On("GetMetricsSelector").Return(`name="value"`).Maybe()
 		return m
 	}
 
 	testCases := map[string]struct {
-		mockExecutor     func(t *testing.T) interface{}
+		mockExecutor     func(t *testing.T) any
 		config           *Config
 		expectedReferees []Referee
 	}{

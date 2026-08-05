@@ -6,5 +6,5 @@ import (
 
 type Logger interface {
 	WithFields(fields logrus.Fields) Logger
-	Warn(args ...interface{})
+	Warn(args ...any)
 }

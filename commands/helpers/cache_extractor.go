@@ -663,7 +663,7 @@ func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
 	}
 }
 
-func warningln(args interface{}) {
+func warningln(args any) {
 	logrus.Warningln(args)
 	logrus.Exit(1)
 }

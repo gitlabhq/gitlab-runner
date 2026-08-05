@@ -59,16 +59,16 @@ func TestWriter_Store(t *testing.T) {
 		t.Fatal("Expected a request body")
 	}
 
-	var payload map[string]interface{}
+	var payload map[string]any
 	err = json.Unmarshal([]byte(body), &payload)
 	require.NoError(t, err)
 
 	// The payload should have a "data" array with our event
-	data, ok := payload["data"].([]interface{})
+	data, ok := payload["data"].([]any)
 	require.True(t, ok, "Expected 'data' array in payload")
 	require.Greater(t, len(data), 0, "Expected at least one event in data array")
 
-	event := data[0].(map[string]interface{})
+	event := data[0].(map[string]any)
 
 	// Verify this is a structured event (billing events use "se" type)
 	assert.Equal(t, "se", event["e"], "Expected structured event type")
@@ -89,7 +89,7 @@ func TestWriter_Store(t *testing.T) {
 	cxBytes, err := base64.StdEncoding.DecodeString(cx)
 	require.NoError(t, err)
 
-	var contextsWrapper map[string]interface{}
+	var contextsWrapper map[string]any
 	err = json.Unmarshal(cxBytes, &contextsWrapper)
 	require.NoError(t, err)
 
@@ -97,15 +97,15 @@ func TestWriter_Store(t *testing.T) {
 	assert.Equal(t, "iglu:com.snowplowanalytics.snowplow/contexts/jsonschema/1-0-1", contextsWrapper["schema"])
 
 	// Get billing context from array
-	contextData, ok := contextsWrapper["data"].([]interface{})
+	contextData, ok := contextsWrapper["data"].([]any)
 	require.True(t, ok, "Expected contexts data array")
 	require.Greater(t, len(contextData), 0)
 
-	billingCtxWrapper, ok := contextData[0].(map[string]interface{})
+	billingCtxWrapper, ok := contextData[0].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "iglu:com.gitlab/billable_usage/jsonschema/1-0-2", billingCtxWrapper["schema"])
 
-	billingData, ok := billingCtxWrapper["data"].(map[string]interface{})
+	billingData, ok := billingCtxWrapper["data"].(map[string]any)
 	require.True(t, ok, "Expected billing event data")
 
 	// Verify billing fields
@@ -122,7 +122,7 @@ func TestWriter_Store(t *testing.T) {
 	assert.Equal(t, float64(1), billingData["organization_id"])
 
 	// Verify metadata
-	metadata, ok := billingData["metadata"].(map[string]interface{})
+	metadata, ok := billingData["metadata"].(map[string]any)
 	require.True(t, ok, "Expected metadata object")
 	assert.Equal(t, "runner_compute_usage", metadata["feature_qualified_name"])
 	assert.Equal(t, "success", metadata["job_status"])

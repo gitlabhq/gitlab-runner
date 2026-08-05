@@ -19,7 +19,7 @@ type Referee interface {
 	ArtifactFormat() string
 }
 
-type refereeFactory func(executor interface{}, config *Config, log logrus.FieldLogger) Referee
+type refereeFactory func(executor any, config *Config, log logrus.FieldLogger) Referee
 
 type Config struct {
 	Metrics *MetricsRefereeConfig `toml:"metrics,omitempty" json:"metrics" namespace:"metrics"`
@@ -29,7 +29,7 @@ var refereeFactories = []refereeFactory{
 	newMetricsReferee,
 }
 
-func CreateReferees(executor interface{}, config *Config, log logrus.FieldLogger) []Referee {
+func CreateReferees(executor any, config *Config, log logrus.FieldLogger) []Referee {
 	if config == nil {
 		log.Debug("No referees configured")
 		return nil

@@ -235,8 +235,8 @@ type doJSONParams struct {
 	uri         string
 	statusCode  int
 	headers     http.Header
-	request     interface{}
-	response    interface{}
+	request     any
+	response    any
 }
 
 // doMeasuredJSON is a decorator that adds metrics measurements through
@@ -331,8 +331,8 @@ func (n *GitLabClient) doJSON(
 	method, uri string,
 	statusCode int,
 	headers http.Header,
-	request interface{},
-	response interface{},
+	request any,
+	response any,
 ) (int, string, *http.Response) {
 	c, err := n.getClient(credentials)
 	if err != nil {

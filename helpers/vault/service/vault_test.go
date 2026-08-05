@@ -126,7 +126,7 @@ func TestDefaultVault_GetField(t *testing.T) {
 	secretPath := "path"
 	secretField := "field_1"
 	secretValue := 1
-	secretData := map[string]interface{}{
+	secretData := map[string]any{
 		secretField: secretValue,
 		"field_2":   "test",
 	}
@@ -136,7 +136,7 @@ func TestDefaultVault_GetField(t *testing.T) {
 		assertSecretMock       func(s *MockSecret)
 		assertSecretEngineMock func(e *vault.MockSecretEngine)
 		expectedError          error
-		expectedResult         interface{}
+		expectedResult         any
 	}{
 		"unknown engine factory": {
 			assertEngineMock: func(_ string, e *MockEngine) {
@@ -228,7 +228,7 @@ func TestDefaultVault_Put(t *testing.T) {
 	}
 
 	secretPath := "path"
-	secretData := map[string]interface{}{
+	secretData := map[string]any{
 		"field_1": 1,
 		"field_2": "test",
 	}

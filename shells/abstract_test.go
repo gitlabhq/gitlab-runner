@@ -1161,22 +1161,22 @@ func TestGitCleanFlags(t *testing.T) {
 		value string
 
 		expectedGitClean      bool
-		expectedGitCleanFlags []interface{}
+		expectedGitCleanFlags []any
 	}{
 		"empty clean flags": {
 			value:                 "",
 			expectedGitClean:      true,
-			expectedGitCleanFlags: []interface{}{"-ffdx"},
+			expectedGitCleanFlags: []any{"-ffdx"},
 		},
 		"use custom flags": {
 			value:                 "custom-flags",
 			expectedGitClean:      true,
-			expectedGitCleanFlags: []interface{}{"custom-flags"},
+			expectedGitCleanFlags: []any{"custom-flags"},
 		},
 		"use custom flags with multiple arguments": {
 			value:                 "-ffdx -e cache/",
 			expectedGitClean:      true,
-			expectedGitCleanFlags: []interface{}{"-ffdx", "-e", "cache/"},
+			expectedGitCleanFlags: []any{"-ffdx", "-e", "cache/"},
 		},
 		"disabled": {
 			value:            "none",
@@ -1206,7 +1206,7 @@ func TestGitCleanFlags(t *testing.T) {
 			mockWriter.On("Command", "git", "-c", "submodule.recurse=false", "checkout", "-f", "-q", dummySha).Once()
 
 			if test.expectedGitClean {
-				command := []interface{}{"git", "clean"}
+				command := []any{"git", "clean"}
 				command = append(command, test.expectedGitCleanFlags...)
 				mockWriter.On("Command", command...).Once()
 			}
@@ -1282,7 +1282,7 @@ func TestProactiveAuthArgs(t *testing.T) {
 		// nil means no warning expected. The first element matches the
 		// format string; the rest match the variadic arguments. Use
 		// mock.Anything to match any value at that position.
-		warningArgs []interface{}
+		warningArgs []any
 	}{
 		"disabled returns nil": {
 			proactiveAuthEnabled: false,
@@ -1303,7 +1303,7 @@ func TestProactiveAuthArgs(t *testing.T) {
 			proactiveAuthEnabled: true,
 			repoURL:              "https://gitlab.com/%ZZ",
 			expected:             []string{"-c", "http.proactiveAuth=basic"},
-			warningArgs: []interface{}{
+			warningArgs: []any{
 				"proactive auth: can't get repository host, using unscoped config. %v",
 				mock.Anything,
 			},
@@ -1312,7 +1312,7 @@ func TestProactiveAuthArgs(t *testing.T) {
 			proactiveAuthEnabled: true,
 			repoURL:              "",
 			expected:             []string{"-c", "http.proactiveAuth=basic"},
-			warningArgs: []interface{}{
+			warningArgs: []any{
 				"proactive auth: repository host is empty, using unscoped config",
 			},
 		},
@@ -1358,22 +1358,22 @@ func TestGitCloneFlags(t *testing.T) {
 	tests := map[string]struct {
 		value                 string
 		depth                 int
-		expectedGitCloneFlags []interface{}
+		expectedGitCloneFlags []any
 	}{
 		"empty clone flags": {
 			value:                 "",
 			depth:                 0,
-			expectedGitCloneFlags: []interface{}{},
+			expectedGitCloneFlags: []any{},
 		},
 		"use custom flags": {
 			value:                 "custom-flags",
 			depth:                 1,
-			expectedGitCloneFlags: []interface{}{"custom-flags"},
+			expectedGitCloneFlags: []any{"custom-flags"},
 		},
 		"use custom flags with multiple arguments": {
 			value:                 "--no-tags --filter=blob:none",
 			depth:                 2,
-			expectedGitCloneFlags: []interface{}{"--no-tags", "--filter=blob:none"},
+			expectedGitCloneFlags: []any{"--no-tags", "--filter=blob:none"},
 		},
 		"disabled": {
 			value: "none",
@@ -1410,7 +1410,7 @@ func TestGitCloneFlags(t *testing.T) {
 
 			v := common.AppVersion
 			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
-			command := []interface{}{"-c", userAgent, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir}
+			command := []any{"-c", userAgent, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir}
 
 			if test.depth > 0 {
 				command = append(command, "--depth", strconv.Itoa(test.depth))
@@ -1479,9 +1479,9 @@ func TestGitProactiveAuth(t *testing.T) {
 			v := common.AppVersion
 			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
 
-			command := []interface{}{"-c", userAgent, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
+			command := []any{"-c", userAgent, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
 			if test.expectProactiveAuth {
-				command = []interface{}{"-c", userAgent, "-c", "http.https://gitlab.com.proactiveAuth=basic", "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
+				command = []any{"-c", userAgent, "-c", "http.https://gitlab.com.proactiveAuth=basic", "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
 			}
 
 			mockWriter.EXPECT().Cd(mock.Anything).Once()
@@ -1504,25 +1504,25 @@ func TestGitFetchFlags(t *testing.T) {
 		depth        int
 		objectFormat string
 
-		expectedGitFetchFlags []interface{}
+		expectedGitFetchFlags []any
 	}{
 		"empty fetch flags": {
 			value:                 "",
-			expectedGitFetchFlags: []interface{}{"--prune", "--quiet"},
+			expectedGitFetchFlags: []any{"--prune", "--quiet"},
 		},
 		"use custom flags": {
 			value:                 "--prune",
-			expectedGitFetchFlags: []interface{}{"--prune"},
+			expectedGitFetchFlags: []any{"--prune"},
 		},
 		"depth non zero": {
 			depth:                 1,
 			value:                 "--quiet",
-			expectedGitFetchFlags: []interface{}{"--depth", "1", "--quiet"},
+			expectedGitFetchFlags: []any{"--depth", "1", "--quiet"},
 		},
 		"object format SHA256": {
 			value:                 "",
 			objectFormat:          "sha256",
-			expectedGitFetchFlags: []interface{}{"--prune", "--quiet"},
+			expectedGitFetchFlags: []any{"--prune", "--quiet"},
 		},
 		"disabled": {
 			value: "none",
@@ -1581,7 +1581,7 @@ func TestGitFetchFlags(t *testing.T) {
 
 			v := common.AppVersion
 			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
-			command := []interface{}{"-c", userAgent, "fetch", "origin", "--no-recurse-submodules"}
+			command := []any{"-c", userAgent, "fetch", "origin", "--no-recurse-submodules"}
 			command = append(command, test.expectedGitFetchFlags...)
 
 			if test.depth == 0 {
@@ -2920,8 +2920,8 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 		},
 	}
 
-	submoduleCommand := func(paths string, args ...string) []interface{} {
-		var command []interface{}
+	submoduleCommand := func(paths string, args ...string) []any {
+		var command []any
 
 		for _, a := range args {
 			command = append(command, a)
@@ -3627,7 +3627,7 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 	}
 }
 
-func testGenerateArtifactsMetadataData() (common.ShellScriptInfo, []interface{}) {
+func testGenerateArtifactsMetadataData() (common.ShellScriptInfo, []any) {
 	info := common.ShellScriptInfo{
 		Build: &common.Build{
 			Job: spec.Job{
@@ -3658,7 +3658,7 @@ func testGenerateArtifactsMetadataData() (common.ShellScriptInfo, []interface{})
 		return err == nil
 	}
 
-	expected := []interface{}{
+	expected := []any{
 		"--generate-artifacts-metadata",
 		"--runner-id",
 		"1000",
@@ -3703,7 +3703,7 @@ func TestWriteUploadArtifactIncludesGenerateArtifactsMetadataArgs(t *testing.T) 
 		spec.Variable{Key: common.GenerateArtifactsMetadataVariable, Value: "true"},
 	)
 
-	uploaderArgs := []interface{}{
+	uploaderArgs := []any{
 		"artifacts-uploader",
 		"--url",
 		"testurl",
@@ -3724,7 +3724,7 @@ func TestWriteUploadArtifactIncludesGenerateArtifactsMetadataArgs(t *testing.T) 
 		spec.ArtifactFormatDefault,
 	} {
 		t.Run(string(f), func(t *testing.T) {
-			args := []interface{}{"testcommand"}
+			args := []any{"testcommand"}
 			args = append(args, uploaderArgs...)
 
 			if f == spec.ArtifactFormatZip {

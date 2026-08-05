@@ -46,7 +46,7 @@ func (t *Tee) WriterLevel(level logrus.Level) *io.PipeWriter {
 	return t.entry.WriterLevel(level)
 }
 
-func (t *Tee) log(level logrus.Level, logPrefix string, args ...interface{}) {
+func (t *Tee) log(level logrus.Level, logPrefix string, args ...any) {
 	if t.entry == nil {
 		return
 	}
@@ -73,29 +73,29 @@ func (t *Tee) log(level logrus.Level, logPrefix string, args ...interface{}) {
 	t.entry.Logln(level, args...)
 }
 
-func (t *Tee) Debugln(args ...interface{}) {
+func (t *Tee) Debugln(args ...any) {
 	if t.entry == nil {
 		return
 	}
 	t.entry.Debugln(args...)
 }
 
-func (t *Tee) Println(args ...interface{}) {
+func (t *Tee) Println(args ...any) {
 	t.log(logrus.DebugLevel, helpers.ANSI_CLEAR, args...)
 }
 
-func (t *Tee) Infoln(args ...interface{}) {
+func (t *Tee) Infoln(args ...any) {
 	t.log(logrus.InfoLevel, helpers.ANSI_BOLD_GREEN, args...)
 }
 
-func (t *Tee) Warningln(args ...interface{}) {
+func (t *Tee) Warningln(args ...any) {
 	t.log(logrus.WarnLevel, helpers.ANSI_YELLOW+"WARNING: ", args...)
 }
 
-func (t *Tee) SoftErrorln(args ...interface{}) {
+func (t *Tee) SoftErrorln(args ...any) {
 	t.log(logrus.WarnLevel, helpers.ANSI_BOLD_RED+"ERROR: ", args...)
 }
 
-func (t *Tee) Errorln(args ...interface{}) {
+func (t *Tee) Errorln(args ...any) {
 	t.log(logrus.ErrorLevel, helpers.ANSI_BOLD_RED+"ERROR: ", args...)
 }

@@ -22,6 +22,6 @@ func (l *ProcessLoggerAdapter) WithFields(fields logrus.Fields) process.Logger {
 	return l
 }
 
-func (l *ProcessLoggerAdapter) Warn(args ...interface{}) {
+func (l *ProcessLoggerAdapter) Warn(args ...any) {
 	l.buildLogger.Warningln(args...)
 }

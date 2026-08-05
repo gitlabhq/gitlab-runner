@@ -60,7 +60,7 @@ func TestCommand_Run(t *testing.T) {
 		contextClosed         bool
 		process               *os.Process
 		expectedError         string
-		expectedErrorType     interface{}
+		expectedErrorType     any
 		expectedExitCode      int
 		expectedFailureReason spec.JobFailureReason
 		options               Options

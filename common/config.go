@@ -243,11 +243,11 @@ func (c KubernetesConfig) IsGroupAllowed(group string) error {
 // StringOrArray implements UnmarshalTOML to unmarshal either a string or array of strings.
 type StringOrArray []string
 
-func (p *StringOrArray) UnmarshalTOML(data interface{}) error {
+func (p *StringOrArray) UnmarshalTOML(data any) error {
 	switch v := data.(type) {
 	case string:
 		*p = StringOrArray{v}
-	case []interface{}:
+	case []any:
 		for _, vv := range v {
 			switch item := vv.(type) {
 			case string:
@@ -466,7 +466,7 @@ type ConnectorConfig struct {
 	UseExternalAddr      bool          `toml:"use_external_addr,omitempty"`
 }
 
-type AutoscalerSettingsMap map[string]interface{}
+type AutoscalerSettingsMap map[string]any
 
 func (settings AutoscalerSettingsMap) JSON() ([]byte, error) {
 	return json.Marshal(settings)
@@ -950,7 +950,7 @@ type KubernetesNFS struct {
 }
 
 func (n *KubernetesNFS) UnmarshalTOML(data any) error {
-	m, ok := data.(map[string]interface{})
+	m, ok := data.(map[string]any)
 	if !ok {
 		return fmt.Errorf("nfs volume: expected a table, got %T", data)
 	}

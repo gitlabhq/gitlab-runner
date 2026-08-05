@@ -20,8 +20,8 @@ type Manager interface {
 }
 
 type pullLogger interface {
-	Infoln(args ...interface{})
-	Warningln(args ...interface{})
+	Infoln(args ...any)
+	Warningln(args ...any)
 }
 
 type manager struct {

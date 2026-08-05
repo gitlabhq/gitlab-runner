@@ -29,7 +29,7 @@ func TestPrepare(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		executorData interface{}
+		executorData any
 		retry        bool
 		setupFn      func(t *testing.T, cfg *common.RunnerConfig)
 		assertFn     func(t *testing.T, ts *mocks.Taskscaler, me *common.MockExecutor)

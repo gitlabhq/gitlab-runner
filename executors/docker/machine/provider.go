@@ -490,7 +490,7 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 	m.totalActions.WithLabelValues(actionLabels("removed", details.targets)...).Inc()
 }
 
-func (m *machineProvider) remove(machineName string, reason ...interface{}) error {
+func (m *machineProvider) remove(machineName string, reason ...any) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 

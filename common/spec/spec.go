@@ -795,7 +795,7 @@ type VaultAuth struct {
 	Data VaultAuthData `json:"data"`
 }
 
-type VaultAuthData map[string]interface{}
+type VaultAuthData map[string]any
 
 type VaultEngine struct {
 	Name string `json:"name"`

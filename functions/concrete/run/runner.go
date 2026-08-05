@@ -459,7 +459,7 @@ func (r *Runner) section(ctx context.Context, name string, fn func(context.Conte
 	return fn(ctx, r.env)
 }
 
-func (r *Runner) logWarningf(format string, args ...interface{}) {
+func (r *Runner) logWarningf(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintf(r.env.Stderr, " %s\033[0m\n", msg)
 }
