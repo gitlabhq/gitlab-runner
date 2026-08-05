@@ -76,7 +76,6 @@ linters:
         - slicesbackward
         - slicescontains
         - stringsbuilder
-        - stringscut
         - stringsseq
         - waitgroupgo
     revive:

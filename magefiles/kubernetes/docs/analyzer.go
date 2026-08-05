@@ -136,12 +136,11 @@ var knownAPIGroups = []string{
 // For known API groups (e.g., "apps"), "apps/deployments" is parsed as apiGroup=apps, resource=deployments.
 // For unknown prefixes (e.g., "pods/exec"), it's treated as a core API subresource.
 func ParseResourceKey(s string) ResourceKey {
-	if idx := strings.Index(s, "/"); idx != -1 {
-		prefix := s[:idx]
+	if prefix, resource, ok := strings.Cut(s, "/"); ok {
 		if slices.Contains(knownAPIGroups, prefix) {
 			return ResourceKey{
 				APIGroup: prefix,
-				Resource: s[idx+1:],
+				Resource: resource,
 			}
 		}
 	}

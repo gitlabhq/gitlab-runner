@@ -93,8 +93,8 @@ func (b *Builder) buildBashScript(lines []string) string {
 			continue
 		}
 
-		nlIdx := strings.Index(line, "\n")
-		if nlIdx != -1 && b.ScriptSections {
+		firstLine, _, multiline := strings.Cut(line, "\n")
+		if multiline && b.ScriptSections {
 			sectionName := fmt.Sprintf("%s_%d", b.stepName, i)
 			body.WriteString(fmt.Sprintf(
 				`printf "section_start:%%s:%s[hide_duration=true,collapsed=true]\r\033[0K" "$(date +%%s)"`,
@@ -109,8 +109,8 @@ func (b *Builder) buildBashScript(lines []string) string {
 			continue
 		}
 
-		if nlIdx != -1 {
-			body.WriteString("echo " + shellEscape("\033[32;1m$ "+line[:nlIdx]+" # collapsed multi-line command\033[0m") + "\n")
+		if multiline {
+			body.WriteString("echo " + shellEscape("\033[32;1m$ "+firstLine+" # collapsed multi-line command\033[0m") + "\n")
 		} else {
 			body.WriteString("echo " + shellEscape("\033[32;1m$ "+line+"\033[0m") + "\n")
 		}
@@ -165,8 +165,8 @@ func (b *Builder) buildPwshScript(lines []string) string {
 
 		body.WriteString("$_runner_exit_code = $LASTEXITCODE" + eol)
 
-		nlIdx := strings.Index(line, "\n")
-		if nlIdx != -1 && b.ScriptSections {
+		firstLine, _, multiline := strings.Cut(line, "\n")
+		if multiline && b.ScriptSections {
 			sectionName := fmt.Sprintf("%s_%d", b.stepName, i)
 			body.WriteString(fmt.Sprintf(
 				`Write-Host -NoNewline "section_start:$([DateTimeOffset]::Now.ToUnixTimeSeconds()):%s[hide_duration=true,collapsed=true]`+"`r"+`"`,
@@ -183,8 +183,8 @@ func (b *Builder) buildPwshScript(lines []string) string {
 		}
 
 		displayLine := line
-		if nlIdx != -1 {
-			displayLine = line[:nlIdx] + " # collapsed multi-line command"
+		if multiline {
+			displayLine = firstLine + " # collapsed multi-line command"
 		}
 		body.WriteString("echo " + psQuoteVariable("\033[32;1m$ "+displayLine+"\033[0m") + eol)
 

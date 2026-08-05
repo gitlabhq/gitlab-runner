@@ -117,12 +117,10 @@ func GetDefaultSnapshot(vmName string) (string, error) {
 
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
-		pos := strings.Index(line, " *")
-		if pos >= 0 {
-			snapshot := line[pos+2:]
-			snapshot = strings.TrimSpace(snapshot)
-			if snapshot != "" { // It uses UUID so it should be 38
-				return snapshot, nil
+		if _, rawSnapshotID, isDefault := strings.Cut(line, " *"); isDefault {
+			snapshotID := strings.TrimSpace(rawSnapshotID)
+			if snapshotID != "" { // It uses UUID so it should be 38
+				return snapshotID, nil
 			}
 		}
 	}

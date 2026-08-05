@@ -616,13 +616,13 @@ func parseBytesRangeHeader(h string) (start, end int64, ok bool) {
 		return 0, 0, false
 	}
 	h = h[len(prefix):]
-	i := strings.IndexByte(h, '-')
-	if i < 0 {
+	startStr, endStr, found := strings.Cut(h, "-")
+	if !found {
 		return 0, 0, false
 	}
-	start, err1 := strconv.ParseInt(h[:i], 10, 64)
-	end, err2 := strconv.ParseInt(h[i+1:], 10, 64)
-	if err1 != nil || err2 != nil {
+	start, startErr := strconv.ParseInt(startStr, 10, 64)
+	end, endErr := strconv.ParseInt(endStr, 10, 64)
+	if startErr != nil || endErr != nil {
 		return 0, 0, false
 	}
 	return start, end, true
