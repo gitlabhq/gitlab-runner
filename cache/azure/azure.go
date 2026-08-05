@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
@@ -241,8 +240,8 @@ func (s *userDelegationKeySigner) retrieveUserCredentials(ctx context.Context, o
 	start := time.Now().UTC()
 	expiry := start.Add(o.Timeout)
 	info := service.KeyInfo{
-		Start:  to.Ptr(start.UTC().Format(sas.TimeFormat)),
-		Expiry: to.Ptr(expiry.UTC().Format(sas.TimeFormat)),
+		Start:  new(start.UTC().Format(sas.TimeFormat)),
+		Expiry: new(expiry.UTC().Format(sas.TimeFormat)),
 	}
 
 	clientOptions := &service.ClientOptions{}

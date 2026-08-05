@@ -164,7 +164,7 @@ func TestStepsBootstrapPullPolicy_CyclesAcrossRetries(t *testing.T) {
 	// UseNativeSteps must be true so preparePullManager registers the
 	// bootstrap init container under stepsBootstrapInitContainerName.
 	ex.Build.ExecutorFeatures.NativeStepsIntegration = true
-	ex.Build.Job.Run = spec.Run{schema.Step{Name: stringPtr("step1")}}
+	ex.Build.Job.Run = spec.Run{schema.Step{Name: new("step1")}}
 	require.True(t, ex.Build.UseNativeSteps())
 
 	// Three distinct policies so the cursor has somewhere to advance. The
@@ -459,8 +459,6 @@ func TestStepsWaitForServices_NoProbeWhenNoHealthCheckPort(t *testing.T) {
 		"with no HEALTHCHECK_TCP_PORT the Concrete probe must return nil early")
 }
 
-func stringPtr(s string) *string { return &s }
-
 func containerNames(cs []api.Container) []string {
 	out := make([]string, 0, len(cs))
 	for _, c := range cs {
@@ -595,7 +593,7 @@ func TestGetVolumeMounts_PresenceAndPaths(t *testing.T) {
 			if tc.useNativeSteps {
 				ex.Build.ExecutorFeatures.NativeStepsIntegration = true
 				ex.Build.Job.Run = spec.Run{
-					schema.Step{Name: stringPtr("trigger-use-native-steps")},
+					schema.Step{Name: new("trigger-use-native-steps")},
 				}
 			}
 			buildtest.SetBuildFeatureFlag(ex.Build,

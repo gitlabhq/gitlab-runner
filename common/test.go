@@ -2,10 +2,6 @@ package common
 
 import "testing"
 
-func Int64Ptr(v int64) *int64 {
-	return &v
-}
-
 type TestRunnerConfig struct {
 	RunnerConfig *RunnerConfig
 }
