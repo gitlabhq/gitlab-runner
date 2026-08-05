@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -169,12 +170,7 @@ func (m *testMachine) Exist(ctx context.Context, name string) bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	for _, machine := range m.machines {
-		if machine == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(m.machines, name)
 }
 
 func (m *testMachine) List() (machines []string, err error) {

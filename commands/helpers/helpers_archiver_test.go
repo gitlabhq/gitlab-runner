@@ -3,6 +3,7 @@
 package helpers
 
 import (
+	"slices"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
@@ -80,10 +81,5 @@ func hasArchiver(name string, include []string) bool {
 		return true
 	}
 
-	for _, inc := range include {
-		if inc == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(include, name)
 }

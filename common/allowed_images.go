@@ -3,6 +3,7 @@ package common
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
@@ -25,10 +26,8 @@ func VerifyAllowedImage(options VerifyAllowedImageOptions, logger buildlogger.Lo
 		}
 	}
 
-	for _, internalImage := range options.InternalImages {
-		if internalImage == options.Image {
-			return nil
-		}
+	if slices.Contains(options.InternalImages, options.Image) {
+		return nil
 	}
 
 	if len(options.AllowedImages) != 0 {

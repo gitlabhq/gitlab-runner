@@ -75,7 +75,6 @@ linters:
         - omitzero
         - rangeint
         - slicesbackward
-        - slicescontains
         - stringsbuilder
         - stringscut
         - stringsseq

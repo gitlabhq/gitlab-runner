@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -2223,10 +2224,8 @@ func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 // GetSubmodulePaths https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-ltpathgt82308203
 func (b *Build) GetSubmodulePaths() ([]string, error) {
 	toks := b.Settings().GitSubmodulePaths
-	for _, tok := range toks {
-		if tok == ":(exclude)" {
-			return nil, fmt.Errorf("GIT_SUBMODULE_PATHS: invalid submodule pathspec %q", toks)
-		}
+	if slices.Contains(toks, ":(exclude)") {
+		return nil, fmt.Errorf("GIT_SUBMODULE_PATHS: invalid submodule pathspec %q", toks)
 	}
 	return toks, nil
 }

@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+	"slices"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
@@ -63,10 +64,8 @@ func (f *failureReasonMapper) Map(reason spec.JobFailureReason) spec.JobFailureR
 }
 
 func (f *failureReasonMapper) findSupported(reason spec.JobFailureReason) (spec.JobFailureReason, bool) {
-	for _, supported := range f.supportedByGitLab {
-		if reason == supported {
-			return reason, true
-		}
+	if slices.Contains(f.supportedByGitLab, reason) {
+		return reason, true
 	}
 
 	return UnknownFailure, false

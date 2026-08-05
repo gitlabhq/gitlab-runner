@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -592,11 +593,5 @@ func accessLevelValid(levels []AccessLevel, givenLevel AccessLevel) bool {
 		return true
 	}
 
-	for _, level := range levels {
-		if givenLevel == level {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(levels, givenLevel)
 }
