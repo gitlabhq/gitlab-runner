@@ -2029,6 +2029,13 @@ func TestDockerCommandServiceVariables(t *testing.T) {
 			Value:  "BUILD_VAR_VALUE",
 			Public: true,
 		},
+		// GitLab reports variables sourced from dotenv artifacts as non-public. They are
+		// not exposed to the service container, but must still be usable as an expansion
+		// source for the service's own variables.
+		spec.Variable{
+			Key:   "DOTENV_VAR",
+			Value: "DOTENV_VAR_VALUE",
+		},
 	)
 
 	shell := "sh"
@@ -2052,8 +2059,17 @@ func TestDockerCommandServiceVariables(t *testing.T) {
 					Key:   "SERVICE_VAR_REF_BUILD_VAR",
 					Value: "$BUILD_VAR",
 				},
+				{
+					Key:   "SERVICE_VAR_REF_PRIVATE",
+					Value: "$DOTENV_VAR",
+				},
 			},
-			Entrypoint: append([]string{shell, "-c"}, "echo SERVICE_VAR=$SERVICE_VAR SERVICE_VAR_REF_BUILD_VAR=$SERVICE_VAR_REF_BUILD_VAR"),
+			// DOTENV_VAR is echoed as well, so that the assertion below would catch it
+			// being injected into the service container.
+			Entrypoint: append([]string{shell, "-c"}, "echo SERVICE_VAR=$SERVICE_VAR"+
+				" SERVICE_VAR_REF_BUILD_VAR=$SERVICE_VAR_REF_BUILD_VAR"+
+				" SERVICE_VAR_REF_PRIVATE=$SERVICE_VAR_REF_PRIVATE"+
+				" DOTENV_VAR=$DOTENV_VAR"),
 		},
 	}
 
@@ -2063,6 +2079,9 @@ func TestDockerCommandServiceVariables(t *testing.T) {
 	out := buffer.String()
 	assert.Contains(t, out, "SERVICE_VAR=SERVICE_VAR_VALUE")
 	assert.Contains(t, out, "SERVICE_VAR_REF_BUILD_VAR=BUILD_VAR_VALUE")
+	assert.Contains(t, out, "SERVICE_VAR_REF_PRIVATE=DOTENV_VAR_VALUE")
+	// the non-public variable itself is still not exposed to the service container
+	assert.NotContains(t, out, "DOTENV_VAR=DOTENV_VAR_VALUE")
 }
 
 func TestDockerCommandConflictingPullPolicies(t *testing.T) {

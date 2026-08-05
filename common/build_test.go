@@ -5936,3 +5936,105 @@ func TestRun_ShouldSuspend_SuspendError_DoesNotSetEnvironmentKey(t *testing.T) {
 	require.ErrorAs(t, err, &buildErr)
 	assert.Equal(t, RunnerSystemFailure, buildErr.FailureReason)
 }
+
+func TestGetServiceVariables(t *testing.T) {
+	tests := map[string]struct {
+		jobVariables spec.Variables
+		service      spec.Image
+		expected     spec.Variables
+		notExpected  []string
+	}{
+		"public job variables are passed to the service": {
+			jobVariables: spec.Variables{
+				{Key: "PUBLIC", Value: "public-value", Public: true},
+			},
+			expected: spec.Variables{{Key: "PUBLIC", Value: "public-value"}},
+		},
+		"non-public job variables are not passed to the service": {
+			jobVariables: spec.Variables{
+				{Key: "SECRET", Value: "secret-value"},
+			},
+			notExpected: []string{"SECRET"},
+		},
+		"service variables referencing public job variables are expanded": {
+			jobVariables: spec.Variables{
+				{Key: "GLOBAL", Value: "from-global", Public: true},
+			},
+			service: spec.Image{
+				Variables: spec.Variables{{Key: "SERV_GLOBAL", Value: "$GLOBAL"}},
+			},
+			expected: spec.Variables{{Key: "SERV_GLOBAL", Value: "from-global"}},
+		},
+		// https://gitlab.com/gitlab-org/gitlab/-/issues/562249: variables sourced from
+		// dotenv artifacts are reported as non-public by GitLab, but must still be usable
+		// as an expansion source for the service's own variables.
+		"service variables referencing non-public job variables are expanded": {
+			jobVariables: spec.Variables{
+				{Key: "DOTENV", Value: "from-dotenv"},
+			},
+			service: spec.Image{
+				Variables: spec.Variables{{Key: "SERV_DOTENV", Value: "$DOTENV"}},
+			},
+			expected:    spec.Variables{{Key: "SERV_DOTENV", Value: "from-dotenv"}},
+			notExpected: []string{"DOTENV"},
+		},
+		"raw service variables are not expanded": {
+			jobVariables: spec.Variables{
+				{Key: "DOTENV", Value: "from-dotenv"},
+			},
+			service: spec.Image{
+				Variables: spec.Variables{{Key: "SERV_RAW", Value: "$DOTENV", Raw: true}},
+			},
+			expected: spec.Variables{{Key: "SERV_RAW", Value: "$DOTENV"}},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				Job:    spec.Job{Variables: tt.jobVariables},
+			}
+
+			variables := build.GetServiceVariables(tt.service)
+
+			keys := make([]string, 0, len(variables))
+			for _, v := range variables {
+				keys = append(keys, v.Key)
+			}
+
+			for _, v := range tt.expected {
+				assert.Contains(t, variables.StringList(), v.String())
+			}
+			for _, key := range tt.notExpected {
+				assert.NotContains(t, keys, key)
+			}
+		})
+	}
+}
+
+// A non-public variable must not reach the service container by way of a public variable
+// that references it. Only variables declared under `services:variables` are expanded
+// against the full set of job variables - that is the explicit, per-variable opt-in. The
+// job's own variables are passed through exactly as the build container sees them.
+func TestGetServiceVariablesDoesNotExposeNonPublicViaChain(t *testing.T) {
+	build := &Build{
+		Runner: &RunnerConfig{},
+		Job: spec.Job{Variables: spec.Variables{
+			// project CI/CD variable: masked, not exposed to the service container
+			{Key: "DB_PASSWORD", Value: "secret", Masked: true},
+			// project CI/CD variable referencing the secret: also not exposed
+			{Key: "DB_URL", Value: "postgres://user:$DB_PASSWORD@host/db"},
+			// .gitlab-ci.yml variable: public, so this one *is* exposed
+			{Key: "CONN", Value: "$DB_URL", Public: true},
+		}},
+	}
+
+	// no services:variables at all, so nothing was opted into
+	variables := build.GetServiceVariables(spec.Image{})
+
+	assert.NotContains(t, variables.Get("CONN"), "secret",
+		"a secret must not reach the service container through a public variable the user did not opt into")
+	assert.Equal(t, build.GetAllVariables().Get("CONN"), variables.Get("CONN"),
+		"job variables must reach the service container with the same value the build container gets")
+}

@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -2073,6 +2074,25 @@ func (b *Build) GetAllVariables() spec.Variables {
 	b.allVariables = variables.Expand()
 
 	return b.allVariables
+}
+
+// GetServiceVariables returns the variables to set on a service container: the job's
+// public and internal variables, plus the variables the service itself declares.
+//
+// Only the variables the service declares are expanded here, and they are expanded
+// against all of the job's variables, so that they can reference a variable which is not
+// itself exposed to the service container - e.g. one coming from a dotenv artifact. That
+// is an explicit, per-variable opt-in by whoever wrote `services:variables`.
+//
+// The job's own variables are passed through as GetAllVariables() already resolved them,
+// so a service container sees the same values as the build container. They must not be
+// re-expanded here: a public variable referencing a non-public one would then resolve
+// that reference and carry a value into the service container which nobody opted into.
+func (b *Build) GetServiceVariables(service spec.Image) spec.Variables {
+	allVariables := b.GetAllVariables()
+	source := append(slices.Clone(allVariables), service.Variables...)
+
+	return append(allVariables.PublicOrInternal(), service.Variables.ExpandWith(source)...)
 }
 
 // IsProtected states if the git ref this build is for is protected.

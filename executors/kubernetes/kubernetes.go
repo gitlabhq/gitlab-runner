@@ -1550,7 +1550,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 	var envVars []spec.Variable
 
 	if opts.isServiceContainer {
-		envVars = s.getServiceVariables(opts.imageDefinition)
+		envVars = s.Build.GetServiceVariables(opts.imageDefinition)
 	} else if opts.name == buildContainerName {
 		envVars = s.Build.GetAllVariables().PublicOrInternal()
 	}
@@ -3445,13 +3445,6 @@ func (s *executor) prepareLifecycleHooks() *api.Lifecycle {
 	}
 
 	return lifecycle
-}
-
-func (s *executor) getServiceVariables(serviceDefinition spec.Image) spec.Variables {
-	variables := s.Build.GetAllVariables().PublicOrInternal()
-	variables = append(variables, serviceDefinition.Variables...)
-
-	return variables.Expand()
 }
 
 // checkDefaults Defines the configuration for the Pod on Kubernetes
