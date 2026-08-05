@@ -285,7 +285,7 @@ func (s *executor) stepsPreparePodConfig(opts podConfigPrepareOpts) (api.Pod, er
 // Env is set to nil because step-runner injects environment variables
 // into the user's command process tree over the bidirectional stdin/stdout
 // protocol. This has no effect on service containers, which get their env
-// from getServiceVariables via buildContainer(..., isServiceContainer: true).
+// from Build.GetServiceVariables via buildContainer(..., isServiceContainer: true).
 func (s *executor) stepsBuildContainer() (api.Container, error) {
 	kubernetesOptions := s.options.Image.ExecutorOptions.Kubernetes.Expand(
 		s.Build.GetAllVariables())
@@ -429,7 +429,7 @@ func (s *executor) stepsServiceContainer(
 		ImagePullPolicy: pullPolicy,
 		Command:         command,
 		Args:            args,
-		Env:             buildVariables(s.getServiceVariables(service)),
+		Env:             buildVariables(s.Build.GetServiceVariables(service)),
 		Resources: api.ResourceRequirements{
 			Limits:   s.configurationOverwrites.getServiceResourceLimits(name),
 			Requests: s.configurationOverwrites.getServiceResourceRequests(name),

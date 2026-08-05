@@ -94,6 +94,26 @@ func TestVariablesExpansion(t *testing.T) {
 	assert.Equal(t, "value_of_ value_of_value_of_$undefined", expanded.ExpandValue("${public} ${private}"))
 }
 
+func TestVariablesExpansionWithSource(t *testing.T) {
+	source := Variables{
+		{Key: "public", Value: "public_value", Public: true},
+		{Key: "private", Value: "private_value"},
+	}
+
+	expanded := Variables{
+		{Key: "a", Value: "$public"},
+		{Key: "b", Value: "${private}"},
+		{Key: "c", Value: "$undefined"},
+		{Key: "d", Value: "$private", Raw: true},
+	}.ExpandWith(source)
+
+	assert.Len(t, expanded, 4)
+	assert.Equal(t, "public_value", expanded.Get("a"))
+	assert.Equal(t, "private_value", expanded.Get("b"))
+	assert.Empty(t, expanded.Get("c"))
+	assert.Equal(t, "$private", expanded.Get("d"))
+}
+
 func TestFileVariablesExpansion(t *testing.T) {
 	all := Variables{
 		{Key: "a_file_var", Value: "some top secret stuff", File: true},

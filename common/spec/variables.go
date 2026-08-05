@@ -155,10 +155,17 @@ func (b Variables) ExpandValue(value string) string {
 }
 
 func (b Variables) Expand() Variables {
+	return b.ExpandWith(b)
+}
+
+// ExpandWith is like Expand, but resolves the references in the variables' values against
+// source instead of against the variables themselves. This allows expanding a subset of
+// variables without narrowing down what they are allowed to reference.
+func (b Variables) ExpandWith(source Variables) Variables {
 	var variables Variables
 	for _, variable := range b {
 		if !variable.Raw {
-			variable.Value = b.ExpandValue(variable.Value)
+			variable.Value = source.ExpandValue(variable.Value)
 		}
 
 		variables = append(variables, variable)

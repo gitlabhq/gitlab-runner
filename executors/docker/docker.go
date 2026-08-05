@@ -271,13 +271,6 @@ func createDockerConnection(ctx context.Context, opts common.ExecutorPrepareOpti
 
 var version1_44 = version.Must(version.NewVersion("1.44"))
 
-func (e *executor) getServiceVariables(serviceDefinition spec.Image) []string {
-	variables := e.Build.GetAllVariables().PublicOrInternal()
-	variables = append(variables, serviceDefinition.Variables...)
-
-	return variables.Expand().StringList()
-}
-
 func (e *executor) expandAndGetDockerImage(
 	imageName string,
 	allowedImages []string,
@@ -715,7 +708,7 @@ func (e *executor) createServiceContainerConfig(
 	config := &container.Config{
 		Image:  serviceImageID,
 		Labels: labels,
-		Env:    e.getServiceVariables(definition),
+		Env:    e.Build.GetServiceVariables(definition).StringList(),
 	}
 
 	if len(definition.Command) > 0 {
