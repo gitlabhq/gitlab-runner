@@ -21,14 +21,14 @@ func TestEngine_Get(t *testing.T) {
 	enginePath := "engine/"
 	path := "/secret/"
 	expectedPath := "engine/secret"
-	expectedData := map[string]interface{}{
+	expectedData := map[string]any{
 		"test": "testData",
 	}
 
 	tests := map[string]struct {
 		setupClientMock func(*testing.T, *vault.MockClient)
 		expectedError   error
-		expectedData    map[string]interface{}
+		expectedData    map[string]any
 	}{
 		"client read error": {
 			setupClientMock: func(t *testing.T, c *vault.MockClient) {
@@ -87,7 +87,7 @@ func TestEngine_Put(t *testing.T) {
 	enginePath := "engine/"
 	path := "/secret/"
 	expectedPath := "engine/secret"
-	data := map[string]interface{}{
+	data := map[string]any{
 		"test": "testData",
 	}
 

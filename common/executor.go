@@ -12,7 +12,7 @@ import (
 
 // ExecutorData is an empty interface representing free-form data
 // executor will use. Meant to be casted, e.g. virtual machine details.
-type ExecutorData interface{}
+type ExecutorData any
 
 // ExecutorDataLogger is an optional interface that ExecutorData implementations
 // can implement to provide executor-specific fields for structured logging.

@@ -135,7 +135,7 @@ func (b *BashWriter) Line(text string) {
 	b.WriteString(strings.Repeat("  ", b.indent) + text + "\n")
 }
 
-func (b *BashWriter) Linef(format string, arguments ...interface{}) {
+func (b *BashWriter) Linef(format string, arguments ...any) {
 	b.Line(fmt.Sprintf(format, arguments...))
 }
 
@@ -369,22 +369,22 @@ func (b *BashWriter) Join(elem ...string) string {
 	return path.Join(elem...)
 }
 
-func (b *BashWriter) Printf(format string, arguments ...interface{}) {
+func (b *BashWriter) Printf(format string, arguments ...any) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...)
 	b.Line("echo " + b.escape(coloredText))
 }
 
-func (b *BashWriter) Noticef(format string, arguments ...interface{}) {
+func (b *BashWriter) Noticef(format string, arguments ...any) {
 	coloredText := helpers.ANSI_BOLD_GREEN + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + b.escape(coloredText))
 }
 
-func (b *BashWriter) Warningf(format string, arguments ...interface{}) {
+func (b *BashWriter) Warningf(format string, arguments ...any) {
 	coloredText := helpers.ANSI_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + b.escape(coloredText))
 }
 
-func (b *BashWriter) Errorf(format string, arguments ...interface{}) {
+func (b *BashWriter) Errorf(format string, arguments ...any) {
 	coloredText := helpers.ANSI_BOLD_RED + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + b.escape(coloredText))
 }

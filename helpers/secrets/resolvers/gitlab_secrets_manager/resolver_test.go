@@ -55,12 +55,12 @@ func TestResolver_Resolve(t *testing.T) {
 				Sealed:      false,
 			}))
 		case "/v1/test_path/data/test_path":
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]interface{}{
-				"data": map[string]interface{}{
-					"data": map[string]interface{}{
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"data": map[string]any{
 						"test_field": "test_value",
 					},
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"version": 1,
 					},
 				},

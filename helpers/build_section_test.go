@@ -17,7 +17,7 @@ type testBuffer struct {
 	Error error
 }
 
-func (b *testBuffer) SendRawLog(args ...interface{}) {
+func (b *testBuffer) SendRawLog(args ...any) {
 	if b.Error != nil {
 		return
 	}

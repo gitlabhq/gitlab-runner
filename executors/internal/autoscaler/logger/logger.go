@@ -70,7 +70,7 @@ func (l *Logger) fields(args []any) logrus.Fields {
 	return fields
 }
 
-func (l *Logger) Log(level hclog.Level, msg string, args ...interface{}) {
+func (l *Logger) Log(level hclog.Level, msg string, args ...any) {
 	entry := l.entry
 	if len(args) > 0 {
 		entry = entry.WithFields(l.fields(args))
@@ -79,23 +79,23 @@ func (l *Logger) Log(level hclog.Level, msg string, args ...interface{}) {
 	entry.Log(l.level(level), msg)
 }
 
-func (l *Logger) Trace(msg string, args ...interface{}) {
+func (l *Logger) Trace(msg string, args ...any) {
 	l.Log(hclog.Trace, msg, args...)
 }
 
-func (l *Logger) Debug(msg string, args ...interface{}) {
+func (l *Logger) Debug(msg string, args ...any) {
 	l.Log(hclog.Debug, msg, args...)
 }
 
-func (l *Logger) Info(msg string, args ...interface{}) {
+func (l *Logger) Info(msg string, args ...any) {
 	l.Log(hclog.Info, msg, args...)
 }
 
-func (l *Logger) Warn(msg string, args ...interface{}) {
+func (l *Logger) Warn(msg string, args ...any) {
 	l.Log(hclog.Warn, msg, args...)
 }
 
-func (l *Logger) Error(msg string, args ...interface{}) {
+func (l *Logger) Error(msg string, args ...any) {
 	l.Log(hclog.Error, msg, args...)
 }
 
@@ -132,7 +132,7 @@ func (l *Logger) ImpliedArgs() []any {
 	return fields
 }
 
-func (l *Logger) With(args ...interface{}) hclog.Logger {
+func (l *Logger) With(args ...any) hclog.Logger {
 	if len(args) == 0 {
 		return l
 	}

@@ -10,13 +10,13 @@ import (
 )
 
 func TestSecretResult_Data(t *testing.T) {
-	expectedData := map[string]interface{}{
+	expectedData := map[string]any{
 		"test": "test",
 	}
 
 	tests := map[string]struct {
 		secret       *api.Secret
-		expectedData map[string]interface{}
+		expectedData map[string]any
 	}{
 		"nil api.Secret": {
 			secret:       nil,
@@ -48,7 +48,7 @@ func TestSecretResult_TokenID(t *testing.T) {
 			expectedError: ErrNoResult,
 		},
 		"non-nil api.Secret": {
-			secret: &api.Secret{Data: map[string]interface{}{
+			secret: &api.Secret{Data: map[string]any{
 				"id": "token",
 			}},
 			expectedToken: "token",

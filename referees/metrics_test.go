@@ -181,29 +181,29 @@ func TestMetricsRefereeExecuteQueryRangeResultEmpty(t *testing.T) {
 func TestMetricsRefereeExecute(t *testing.T) {
 	startTime := time.Unix(1405544146, 0)
 	endTime := time.Unix(1405544246, 0)
-	response := map[string]interface{}{
+	response := map[string]any{
 		"status": "success",
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"resultType": "matrix",
-			"result": []interface{}{
-				map[string]interface{}{
+			"result": []any{
+				map[string]any{
 					"metric": map[string]string{
 						"__name__": "metric1",
 						"job":      "prometheus",
 						"instance": "localhost:9090",
 					},
-					"values": []interface{}{
-						[]interface{}{1435781430.781, "1"},
+					"values": []any{
+						[]any{1435781430.781, "1"},
 					},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"metric": map[string]string{
 						"__name__": "metric2",
 						"job":      "prometheus",
 						"instance": "localhost:9090",
 					},
-					"values": []interface{}{
-						[]interface{}{1435781430.781, "1"},
+					"values": []any{
+						[]any{1435781430.781, "1"},
 					},
 				},
 			},
@@ -260,7 +260,7 @@ func TestMetricsRefereeExecute(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(reader)
 	require.NoError(t, err)
-	var metrics interface{}
+	var metrics any
 	err = json.Unmarshal(buf.Bytes(), &metrics)
 	require.NoError(t, err)
 

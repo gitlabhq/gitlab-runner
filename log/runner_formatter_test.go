@@ -81,7 +81,7 @@ func TestRunnerTextFormatter_ColorsAndPrefixes(t *testing.T) {
 
 				defer testOutputColoringAndPrefix(t, key, value, testCase, colored, hook)
 
-				levels := map[logrus.Level]func(args ...interface{}){
+				levels := map[logrus.Level]func(args ...any){
 					logrus.PanicLevel: logger.WithFields(fields).Panic,
 					logrus.ErrorLevel: logger.WithFields(fields).Error,
 					logrus.WarnLevel:  logger.WithFields(fields).Warning,

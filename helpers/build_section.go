@@ -6,7 +6,7 @@ import (
 )
 
 type RawLogger interface {
-	SendRawLog(args ...interface{})
+	SendRawLog(args ...any)
 }
 
 type BuildSection struct {

@@ -13,7 +13,7 @@ import (
 )
 
 type AzureKeyVault interface {
-	GetSecret(name string, version string) (interface{}, error)
+	GetSecret(name string, version string) (any, error)
 }
 
 type defaultAzureKeyVault struct {
@@ -49,7 +49,7 @@ func NewAzureKeyVault(server spec.AzureKeyVaultServer) (AzureKeyVault, error) {
 	return v, err
 }
 
-func (v *defaultAzureKeyVault) GetSecret(name string, version string) (interface{}, error) {
+func (v *defaultAzureKeyVault) GetSecret(name string, version string) (any, error) {
 	resp, err := v.client.GetSecret(context.Background(), name, version, nil)
 	if err != nil {
 		return nil, fmt.Errorf("getting secret failed: %w", err)

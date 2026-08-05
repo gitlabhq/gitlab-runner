@@ -45,10 +45,10 @@ type ManagerConfig struct {
 }
 
 type pullLogger interface {
-	Debugln(args ...interface{})
-	Infoln(args ...interface{})
-	Warningln(args ...interface{})
-	Println(args ...interface{})
+	Debugln(args ...any)
+	Infoln(args ...any)
+	Warningln(args ...any)
+	Println(args ...any)
 }
 
 type manager struct {

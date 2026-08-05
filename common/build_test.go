@@ -291,7 +291,7 @@ func TestGetGetSourcesTimeout(t *testing.T) {
 	}
 }
 
-func matchBuildStage(buildStage BuildStage) interface{} {
+func matchBuildStage(buildStage BuildStage) any {
 	return mock.MatchedBy(func(cmd ExecutorCommand) bool {
 		return cmd.Stage == buildStage
 	})

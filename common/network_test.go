@@ -103,7 +103,7 @@ func TestSecrets_expandVariables(t *testing.T) {
 		{Key: "CI_VAULT_FIELD", Value: testField},
 	}
 
-	assertValue := func(t *testing.T, prefix string, variableValue string, testedValue interface{}) {
+	assertValue := func(t *testing.T, prefix string, variableValue string, testedValue any) {
 		assert.Equal(
 			t,
 			fmt.Sprintf("%s %s", prefix, variableValue),
@@ -147,7 +147,7 @@ func TestSecrets_expandVariables(t *testing.T) {
 					Vault: &spec.VaultSecret{
 						Server: spec.VaultServer{
 							Auth: spec.VaultAuth{
-								Data: map[string]interface{}{
+								Data: map[string]any{
 									"role": testAuthRole,
 								},
 							},
@@ -170,7 +170,7 @@ func TestSecrets_expandVariables(t *testing.T) {
 							Auth: spec.VaultAuth{
 								Name: "name ${CI_VAULT_AUTH_NAME}",
 								Path: "path ${CI_VAULT_AUTH_PATH}",
-								Data: map[string]interface{}{
+								Data: map[string]any{
 									"jwt":     "jwt ${CI_VAULT_AUTH_JWT}",
 									"role":    "role ${CI_VAULT_AUTH_ROLE}",
 									"unknown": "unknown ${CI_VAULT_AUTH_UNKNOWN_DATA}",
@@ -324,7 +324,7 @@ func TestAzureKeyVaultSecrets_expandVariables(t *testing.T) {
 		{Key: "CI_AZURE_KEY_VAULT_AUTH_JWT", Value: testAuthJWT},
 	}
 
-	assertValue := func(t *testing.T, prefix string, variableValue string, testedValue interface{}) {
+	assertValue := func(t *testing.T, prefix string, variableValue string, testedValue any) {
 		assert.Equal(
 			t,
 			fmt.Sprintf("%s %s", prefix, variableValue),

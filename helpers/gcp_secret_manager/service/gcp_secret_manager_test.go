@@ -114,7 +114,7 @@ func TestClient_GetSecret(t *testing.T) {
 					assert.Equal(t, 0, callCount)
 				}
 			},
-			assertError: func(t assert.TestingT, err error, msgAndArgs ...interface{}) bool {
+			assertError: func(t assert.TestingT, err error, msgAndArgs ...any) bool {
 				assert.ErrorContains(t, err, "failed getToken")
 				return false
 			},
@@ -143,7 +143,7 @@ func TestClient_GetSecret(t *testing.T) {
 					assert.Equal(t, 1, callCount)
 				}
 			},
-			assertError: func(t assert.TestingT, err error, msgAndArgs ...interface{}) bool {
+			assertError: func(t assert.TestingT, err error, msgAndArgs ...any) bool {
 				assert.ErrorContains(t, err, "failed to get secret")
 				return false
 			},
@@ -182,7 +182,7 @@ func TestClient_GetSecret(t *testing.T) {
 					assert.Equal(t, 1, callCount)
 				}
 			},
-			assertError: func(t assert.TestingT, err error, msgAndArgs ...interface{}) bool {
+			assertError: func(t assert.TestingT, err error, msgAndArgs ...any) bool {
 				assert.ErrorContains(t, err, "data corruption detected")
 				return false
 			},

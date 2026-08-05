@@ -216,7 +216,7 @@ func countIdleMachines(p *machineProvider) (count int) {
 	return
 }
 
-func assertIdleMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...interface{}) {
+func assertIdleMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...any) {
 	var idle int
 	for i := 0; i < 10; i++ {
 		idle = countIdleMachines(p)
@@ -244,7 +244,7 @@ func countTotalMachines(p *machineProvider) (count int) {
 	return
 }
 
-func assertTotalMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...interface{}) {
+func assertTotalMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...any) {
 	var total int
 	for i := 0; i < 10; i++ {
 		total = countTotalMachines(p)

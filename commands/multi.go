@@ -1111,7 +1111,7 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 	<-stopWorker
 }
 
-func loggerAndFailureTypeFromError(logger logrus.FieldLogger, err error) (func(args ...interface{}), string) {
+func loggerAndFailureTypeFromError(logger logrus.FieldLogger, err error) (func(args ...any), string) {
 	var NoFreeExecutorError *common.NoFreeExecutorError
 	if errors.As(err, &NoFreeExecutorError) {
 		return logger.Debug, workerProcessingFailureNoFreeExecutor

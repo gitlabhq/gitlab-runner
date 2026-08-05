@@ -3288,7 +3288,7 @@ func (m *mockAutoscalerExecutorData) AcquisitionSlot() int {
 func testDockerConfigurationWithSlotCgroups(
 	t *testing.T,
 	runnerConfig *common.RunnerConfig,
-	executorData interface{},
+	executorData any,
 	cce containerConfigExpectations,
 ) {
 	c, e := prepareTestDockerConfiguration(t, runnerConfig.Docker, cce, "alpine", "alpine:latest")
@@ -3316,7 +3316,7 @@ func testDockerConfigurationWithSlotCgroups(
 func testDockerServiceContainerCgroup(
 	t *testing.T,
 	runnerConfig *common.RunnerConfig,
-	executorData interface{},
+	executorData any,
 	expectedCgroup string,
 ) {
 	// Create mock docker client

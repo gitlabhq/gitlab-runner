@@ -55,16 +55,16 @@ func (e *FactoryNotRegisteredError) Is(err error) bool {
 }
 
 type Registry interface {
-	Register(factoryName string, factory interface{}) error
-	Get(factoryName string) (interface{}, error)
+	Register(factoryName string, factory any) error
+	Get(factoryName string) (any, error)
 }
 
 type factoryRegistry struct {
 	factoryType string
-	store       map[string]interface{}
+	store       map[string]any
 }
 
-func (r factoryRegistry) Register(factoryName string, factory interface{}) error {
+func (r factoryRegistry) Register(factoryName string, factory any) error {
 	_, ok := r.store[factoryName]
 	if ok {
 		return NewFactoryAlreadyRegisteredError(r.factoryType, factoryName)
@@ -75,7 +75,7 @@ func (r factoryRegistry) Register(factoryName string, factory interface{}) error
 	return nil
 }
 
-func (r factoryRegistry) Get(factoryName string) (interface{}, error) {
+func (r factoryRegistry) Get(factoryName string) (any, error) {
 	factory, ok := r.store[factoryName]
 	if !ok {
 		return nil, NewFactoryNotRegisteredError(r.factoryType, factoryName)
@@ -87,6 +87,6 @@ func (r factoryRegistry) Get(factoryName string) (interface{}, error) {
 func New(factoryType string) Registry {
 	return &factoryRegistry{
 		factoryType: factoryType,
-		store:       make(map[string]interface{}),
+		store:       make(map[string]any),
 	}
 }

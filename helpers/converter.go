@@ -9,7 +9,7 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-func ToYAML(src interface{}) string {
+func ToYAML(src any) string {
 	data, err := yaml.Marshal(src)
 	if err == nil {
 		return string(data)
@@ -17,7 +17,7 @@ func ToYAML(src interface{}) string {
 	return ""
 }
 
-func ToTOML(src interface{}) string {
+func ToTOML(src any) string {
 	var data bytes.Buffer
 	buffer := bufio.NewWriter(&data)
 
@@ -32,18 +32,18 @@ func ToTOML(src interface{}) string {
 	return data.String()
 }
 
-func ToConfigMap(list interface{}) (map[string]interface{}, bool) {
-	x, ok := list.(map[string]interface{})
+func ToConfigMap(list any) (map[string]any, bool) {
+	x, ok := list.(map[string]any)
 	if ok {
 		return x, ok
 	}
 
-	y, ok := list.(map[interface{}]interface{})
+	y, ok := list.(map[any]any)
 	if !ok {
 		return nil, false
 	}
 
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 	for k, v := range y {
 		key, ok := k.(string)
 		if !ok {
@@ -55,16 +55,16 @@ func ToConfigMap(list interface{}) (map[string]interface{}, bool) {
 	return result, true
 }
 
-func GetMapKey(value map[string]interface{}, keys ...string) (result interface{}, ok bool) {
+func GetMapKey(value map[string]any, keys ...string) (result any, ok bool) {
 	result = value
 
 	for _, key := range keys {
 		switch t := result.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			if result, ok = t[key]; ok {
 				continue
 			}
-		case map[interface{}]interface{}:
+		case map[any]any:
 			if result, ok = t[key]; ok {
 				continue
 			}

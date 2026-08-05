@@ -19,14 +19,14 @@ func TestService_GetSecret(t *testing.T) {
 		mse := vault.NewMockSecretEngine(t)
 		mse.On("Get", mock.MatchedBy(func(path string) bool {
 			return true
-		})).Return(func(path string) (map[string]interface{}, error) {
+		})).Return(func(path string) (map[string]any, error) {
 			switch path {
 			case "error":
 				return nil, errors.New("computer said no")
 			case "missing_data":
 				return nil, nil
 			default:
-				return map[string]interface{}{
+				return map[string]any{
 					"test_field":    "test_value",
 					"empty_field":   "",
 					"numeric_field": 1234,

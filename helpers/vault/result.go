@@ -7,7 +7,7 @@ import (
 )
 
 type Result interface {
-	Data() map[string]interface{}
+	Data() map[string]any
 	TokenID() (string, error)
 }
 
@@ -23,7 +23,7 @@ func newResult(secret *api.Secret) Result {
 	}
 }
 
-func (r *secretResult) Data() map[string]interface{} {
+func (r *secretResult) Data() map[string]any {
 	if r.inner == nil {
 		return nil
 	}

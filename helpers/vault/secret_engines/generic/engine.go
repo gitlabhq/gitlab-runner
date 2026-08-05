@@ -28,7 +28,7 @@ func (e *engine) EngineName() string {
 	return e.name
 }
 
-func (e *engine) Get(path string) (map[string]interface{}, error) {
+func (e *engine) Get(path string) (map[string]any, error) {
 	secret, err := e.client.Read(e.fullPath(path))
 	if err != nil {
 		return nil, fmt.Errorf("reading from Vault: %w", err)
@@ -41,7 +41,7 @@ func (e *engine) fullPath(p string) string {
 	return path.Join(e.path, p)
 }
 
-func (e *engine) Put(path string, data map[string]interface{}) error {
+func (e *engine) Put(path string, data map[string]any) error {
 	_, err := e.client.Write(e.fullPath(path), data)
 	if err != nil {
 		return fmt.Errorf("writing to Vault: %w", err)

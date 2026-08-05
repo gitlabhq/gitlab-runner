@@ -15,7 +15,7 @@ var (
 )
 
 type debugLogger interface {
-	Debugln(args ...interface{})
+	Debugln(args ...any)
 }
 
 func IsHostMountedVolume(volumeParser parser.Parser, dir string, volumes ...string) (bool, error) {

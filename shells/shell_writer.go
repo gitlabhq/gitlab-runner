@@ -51,10 +51,10 @@ type ShellWriter interface {
 
 	MkTmpDir(name string) string
 
-	Printf(fmt string, arguments ...interface{})
-	Noticef(fmt string, arguments ...interface{})
-	Warningf(fmt string, arguments ...interface{})
-	Errorf(fmt string, arguments ...interface{})
+	Printf(fmt string, arguments ...any)
+	Noticef(fmt string, arguments ...any)
+	Warningf(fmt string, arguments ...any)
+	Errorf(fmt string, arguments ...any)
 	EmptyLine()
 
 	SectionStart(id, command string, options []string)
