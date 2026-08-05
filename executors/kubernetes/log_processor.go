@@ -311,17 +311,15 @@ func (l *kubernetesLogProcessor) parseLogLine(line string) (int64, string) {
 		return -1, ""
 	}
 
-	offsetIndex := strings.Index(line, " ")
-	if offsetIndex == -1 {
+	offset, logLine, ok := strings.Cut(line, " ")
+	if !ok {
 		return -1, line
 	}
 
-	offset := line[:offsetIndex]
 	parsedOffset, err := strconv.ParseInt(offset, 10, 64)
 	if err != nil {
 		return -1, line
 	}
 
-	logLine := line[offsetIndex+1:]
 	return parsedOffset, logLine
 }

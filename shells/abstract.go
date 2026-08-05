@@ -1382,8 +1382,8 @@ func (b *AbstractShell) writeCommands(w ShellWriter, info common.ShellScriptInfo
 			return
 		}
 
-		nlIndex := strings.Index(command, "\n")
-		if nlIndex == -1 {
+		firstLine, _, multiline := strings.Cut(command, "\n")
+		if !multiline {
 			w.Noticef("$ %s", command)
 			return
 		}
@@ -1392,7 +1392,7 @@ func (b *AbstractShell) writeCommands(w ShellWriter, info common.ShellScriptInfo
 			info.Build.Job.Features.TraceSections {
 			b.writeMultilineCommand(w, fmt.Sprintf("%s_%d", prefix, i), command)
 		} else {
-			w.Noticef("$ %s # collapsed multi-line command", command[:nlIndex])
+			w.Noticef("$ %s # collapsed multi-line command", firstLine)
 		}
 	}
 
