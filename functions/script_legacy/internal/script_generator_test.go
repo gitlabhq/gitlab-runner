@@ -3,6 +3,7 @@
 package internal
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -30,13 +31,7 @@ func TestGenerateScript_EmptyLines(t *testing.T) {
 	script := gen.GenerateScript(commands)
 
 	lines := strings.Split(script, "\n")
-	foundEmptyEcho := false
-	for _, line := range lines {
-		if line == "echo" {
-			foundEmptyEcho = true
-			break
-		}
-	}
+	foundEmptyEcho := slices.Contains(lines, "echo")
 
 	assert.True(t, foundEmptyEcho, "Script should contain 'echo' for empty command")
 }

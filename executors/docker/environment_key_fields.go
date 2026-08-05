@@ -3,6 +3,7 @@ package docker
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -42,10 +43,8 @@ func parseEnvKeyFields(fields url.Values) (envKeyFields, error) {
 	}
 	if raw := fields.Get(envKeyServiceIDsField); raw != "" {
 		k.serviceContainerIDs = strings.Split(raw, ",")
-		for _, id := range k.serviceContainerIDs {
-			if id == "" {
-				return envKeyFields{}, fmt.Errorf("%s contains an empty ID", envKeyServiceIDsField)
-			}
+		if slices.Contains(k.serviceContainerIDs, "") {
+			return envKeyFields{}, fmt.Errorf("%s contains an empty ID", envKeyServiceIDsField)
 		}
 	}
 	return k, nil

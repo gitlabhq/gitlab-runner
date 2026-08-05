@@ -1,6 +1,9 @@
 package variables
 
-import "strconv"
+import (
+	"slices"
+	"strconv"
+)
 
 type Provider interface {
 	Get(string) string
@@ -14,10 +17,8 @@ func Default(v Provider, key, defaultValue string, allowedValues ...string) stri
 		if len(allowedValues) == 0 {
 			return s
 		}
-		for _, allowed := range allowedValues {
-			if s == allowed {
-				return s
-			}
+		if slices.Contains(allowedValues, s) {
+			return s
 		}
 	}
 	return defaultValue

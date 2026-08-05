@@ -3,6 +3,7 @@
 package internal
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -257,13 +258,7 @@ func TestCommandProcessor_Integration(t *testing.T) {
 	assert.Contains(t, result, "section_start", "Expected trace section for multi-line")
 
 	lines := strings.Split(result, "\n")
-	hasEchoOnly := false
-	for _, line := range lines {
-		if line == "echo" {
-			hasEchoOnly = true
-			break
-		}
-	}
+	hasEchoOnly := slices.Contains(lines, "echo")
 	assert.True(t, hasEchoOnly, "Expected 'echo' for empty command")
 	assert.Contains(t, result, "echo end", "Expected last command")
 }
