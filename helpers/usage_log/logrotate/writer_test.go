@@ -59,7 +59,7 @@ func TestWriter_Store_WithCleanup(t *testing.T) {
 	}()
 
 	// Store multiple records with rotation to create multiple files
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		record := testRecord()
 		err := w.Store(record)
 		require.NoError(t, err)

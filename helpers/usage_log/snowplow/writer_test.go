@@ -355,7 +355,7 @@ func TestWriter_Store_Concurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numRecords)
 
-	for i := 0; i < numRecords; i++ {
+	for i := range numRecords {
 		go func(idx int) {
 			defer wg.Done()
 			record := testRecord()

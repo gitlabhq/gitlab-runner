@@ -842,7 +842,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	// Fail a build script
 	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	for attempt := 0; attempt < 10; attempt++ {
+	for attempt := range 10 {
 		if attempt == 0 {
 			executor.On("Run", matchBuildStage(BuildStageClearWorktree)).Return(nil)
 		}

@@ -211,7 +211,7 @@ func TestInlineServiceLogWriter_Err(t *testing.T) {
 func BenchmarkServiceLog(b *testing.B) {
 	var payloads [][]byte
 	var size int
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		payloads = append(payloads, append(bytes.Repeat([]byte{'a' + byte(i%26)}, i*1024), '\n'))
 		size += i*1024 + 1
 	}

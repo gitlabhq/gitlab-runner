@@ -40,7 +40,7 @@ func (s *executor) waitForIPAddress(vmName string, seconds int) (string, error) 
 	}
 
 	s.BuildLogger.Debugln("Requesting IP address...")
-	for i := 0; i < seconds; i++ {
+	for range seconds {
 		var ipAddr string
 		var err error
 		if s.isAppleSilicon() {

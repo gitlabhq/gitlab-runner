@@ -110,7 +110,7 @@ func TestBuildsHelper_ReleaseRequest_AdaptiveGrowsOnCleanSuccess(t *testing.T) {
 
 	b := newBuildsHelper()
 	// 1.1^n reaches 10 at n≈25; 50 iterations is comfortably past the clamp.
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		require.True(t, b.acquireRequest(&runner))
 		b.releaseRequest(&runner, true, false)
 	}
@@ -130,7 +130,7 @@ func TestBuildsHelper_ReleaseRequest_RetriedDoesNotGrowAdaptive(t *testing.T) {
 	}
 
 	b := newBuildsHelper()
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		require.True(t, b.acquireRequest(&runner))
 		b.releaseRequest(&runner, true, true)
 	}
@@ -150,7 +150,7 @@ func TestBuildsHelper_ReleaseRequest_RetriedAfterWarmupShrinksAdaptiveFast(t *te
 	}
 
 	b := newBuildsHelper()
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		require.True(t, b.acquireRequest(&runner))
 		b.releaseRequest(&runner, true, false)
 	}
@@ -158,7 +158,7 @@ func TestBuildsHelper_ReleaseRequest_RetriedAfterWarmupShrinksAdaptiveFast(t *te
 	require.NotNil(t, counter)
 	require.InDelta(t, 20.0, counter.adaptiveConcurrencyLimit, 0.01, "warmup should reach max")
 
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		require.True(t, b.acquireRequest(&runner))
 		b.releaseRequest(&runner, true, true)
 	}
@@ -178,7 +178,7 @@ func TestBuildsHelper_ReleaseRequest_RetriedDecreasesFasterThanEmptyResponse(t *
 	}
 
 	warmTo20 := func(b *buildsHelper, runner *common.RunnerConfig) {
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			require.True(t, b.acquireRequest(runner))
 			b.releaseRequest(runner, true, false)
 		}
@@ -193,7 +193,7 @@ func TestBuildsHelper_ReleaseRequest_RetriedDecreasesFasterThanEmptyResponse(t *
 	rEmpty := makeRunner()
 	warmTo20(&bEmpty, rEmpty)
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		require.True(t, bRetried.acquireRequest(rRetried))
 		bRetried.releaseRequest(rRetried, true, true)
 

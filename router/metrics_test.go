@@ -91,7 +91,7 @@ func TestMetrics_Fallback_BreakerTrippedAndOpen(t *testing.T) {
 	sessionInfo := &common.SessionInfo{}
 
 	// Failures within the grace window are transient: no fallback yet.
-	for i := 0; i < routerBreakerFailureThreshold+1; i++ {
+	for range routerBreakerFailureThreshold + 1 {
 		rc.RequestJob(t.Context(), config, sessionInfo)
 	}
 	assert.Zero(t, fallbackCount(rc, fallbackBreakerTripped))

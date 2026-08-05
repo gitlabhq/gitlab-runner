@@ -11,7 +11,7 @@ import (
 )
 
 func callFireConcurrent(lh *LogHook, repeats int, finish chan bool) {
-	for i := 0; i < repeats; i++ {
+	for range repeats {
 		_ = lh.Fire(&logrus.Entry{
 			Level: logrus.ErrorLevel,
 		})
@@ -27,7 +27,7 @@ func TestConcurrentFireCall(t *testing.T) {
 	repeats := 100
 	total := times * repeats
 
-	for i := 0; i < times; i++ {
+	for range times {
 		go callFireConcurrent(&lh, repeats, finish)
 	}
 
@@ -41,7 +41,7 @@ func TestConcurrentFireCall(t *testing.T) {
 }
 
 func callCollectConcurrent(lh *LogHook, repeats int, ch chan<- prometheus.Metric, finish chan bool) {
-	for i := 0; i < repeats; i++ {
+	for range repeats {
 		lh.Collect(ch)
 		finish <- true
 	}
@@ -62,7 +62,7 @@ func TestCouncurrentFireCallWithCollect(t *testing.T) {
 		}
 	}()
 
-	for i := 0; i < times; i++ {
+	for range times {
 		go callFireConcurrent(&lh, repeats, finish)
 		go callCollectConcurrent(&lh, repeats, ch, finish)
 	}

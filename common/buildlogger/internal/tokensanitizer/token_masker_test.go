@@ -191,7 +191,7 @@ func generateParagraph(numberOfWords int, token, wordPool []string) string {
 		words = append(words, fmt.Sprintf("%slorem", tok))
 	}
 
-	for i := 0; i < numberOfWords; i++ {
+	for i := range numberOfWords {
 		if i > 0 {
 			sb.WriteString(" ")
 		}

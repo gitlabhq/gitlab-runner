@@ -35,7 +35,7 @@ func writeLines(w io.Writer) {
 	w.Write([]byte("line\n"))
 	w.Write([]byte("PREFIX Progress bar: "))
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		w.Write([]byte(".\r"))
 	}
 
@@ -268,7 +268,7 @@ func BenchmarkWithTimestamps(b *testing.B) {
 	b.SetBytes(int64((headerSize + len(line)) * 200))
 
 	for b.Loop() {
-		for j := 0; j < 200; j++ {
+		for range 200 {
 			_, _ = w.Write(line)
 		}
 	}

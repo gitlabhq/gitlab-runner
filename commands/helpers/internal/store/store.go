@@ -168,7 +168,7 @@ func deriveEncryptionKey(f *os.File, keyPath string) ([]byte, error) {
 		return nil, fmt.Errorf("key1 and key2 not the same size")
 	}
 
-	for i := 0; i < len(key1); i++ {
+	for i := range len(key1) {
 		key1[i] ^= key2[i]
 	}
 

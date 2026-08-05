@@ -149,7 +149,7 @@ func Status(vmName string) (StatusType, error) {
 func WaitForStatus(vmName string, vmStatus StatusType, seconds int) error {
 	var status StatusType
 	var err error
-	for i := 0; i < seconds; i++ {
+	for range seconds {
 		status, err = Status(vmName)
 		if err != nil {
 			return err
@@ -164,7 +164,7 @@ func WaitForStatus(vmName string, vmStatus StatusType, seconds int) error {
 
 func TryExec(vmName string, seconds int, cmd ...string) error {
 	var err error
-	for i := 0; i < seconds; i++ {
+	for range seconds {
 		_, err = Exec(vmName, cmd...)
 		if err == nil {
 			return nil

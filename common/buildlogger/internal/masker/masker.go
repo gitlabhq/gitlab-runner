@@ -29,7 +29,7 @@ func New(w io.WriteCloser, phrases [][]byte) *Masker {
 	m.next = w
 
 	// Create a masker for each unique phrase
-	for i := 0; i < len(phrases); i++ {
+	for i := range phrases {
 		m.next = &masker{next: m.next, phrase: phrases[i]}
 	}
 
