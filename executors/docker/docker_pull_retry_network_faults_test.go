@@ -1,11 +1,13 @@
-//go:build integration && network_faults
+//go:build !integration && network_faults
 
 package docker_test
 
 import (
 	"context"
+	"crypto/md5"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"sync"
 	"testing"
@@ -17,14 +19,32 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/prebuilt"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 )
+
+// TestMain mirrors docker_command_integration_test.go's TestMain. This file
+// is deliberately gated on "!integration && network_faults" rather than
+// "integration && network_faults" (see the CI job comment in
+// .gitlab/ci/test.gitlab-ci.yml for why) and, per
+// scripts/check-test-directives, isn't named "*integration*_test.go" so that
+// convention doesn't force an "integration" build tag back onto it. Since it
+// never builds alongside docker_command_integration_test.go (that file
+// requires "integration"; this one requires "!integration"), it can't share
+// that file's TestMain or any other unexported helper -- Go only allows one
+// TestMain per package build.
+func TestMain(m *testing.M) {
+	prebuilt.PrebuiltImagesPaths = []string{"../../out/helper-images/"}
+
+	os.Exit(m.Run())
+}
 
 // pickFreePort finds an ephemeral local port by briefly binding to port 0 and
 // closing the listener. There's an inherent (tiny) race between closing this
@@ -140,7 +160,7 @@ func TestDockerCommandPullRetriesTransientRegistryFailure(t *testing.T) {
 
 	imageRef := fmt.Sprintf("localhost:%d/pull-retry-test:latest", port)
 
-	build := getBuildForOS(t, func() (spec.Job, error) {
+	build := getPullRetryTestBuild(t, func() (spec.Job, error) {
 		return common.GetRemoteBuildResponse("echo done")
 	})
 	build.Runner.Docker.Image = imageRef
@@ -164,4 +184,35 @@ func TestDockerCommandPullRetriesTransientRegistryFailure(t *testing.T) {
 	assert.NoError(t, err, "build should eventually succeed once the registry becomes reachable")
 	assert.Regexp(t, `(?i)retr(y|ying)`, out,
 		"trace should show evidence that at least one retry actually happened, not just an immediate success")
+}
+
+// getPullRetryTestBuild builds a minimal Linux docker-executor Build config.
+// docker_command_integration_test.go's getBuildForOS/getRunnerConfigForOS
+// also resolve a Windows image, but this test is Linux-only by construction
+// (startAndSeedRegistry's registry:2 container has to share a daemon with
+// the build, per the dind-topology note above), and that file isn't
+// available to this one anyway -- see the TestMain comment at the top of
+// this file.
+func getPullRetryTestBuild(t *testing.T, getJobResp func() (spec.Job, error)) common.Build {
+	jobResp, err := getJobResp()
+	require.NoError(t, err)
+
+	return common.Build{
+		Job: jobResp,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Shell:    "bash",
+				Docker: &common.DockerConfig{
+					Image:      common.TestAlpineImage,
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+				},
+				Cache: &cacheconfig.Config{},
+			},
+			RunnerCredentials: common.RunnerCredentials{
+				Token: fmt.Sprintf("%x", md5.Sum([]byte(t.Name()))),
+			},
+		},
+		ExecutorProvider: docker_executor.NewProvider(),
+	}
 }

@@ -138,7 +138,7 @@ integration test (docker, network-faults):
         -junit-report .splitic/junit_${CI_NODE_INDEX}_docker_network_faults.xml \
         -cover-report .splitic/cover_${CI_NODE_INDEX}_docker_network_faults.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
         -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
-        -tags integration,network_faults \
+        -tags network_faults \
         ./executors/docker \
         -- -ldflags "$(make print_test_ldflags)" -timeout 20m
   parallel: 1
@@ -148,6 +148,24 @@ integration test (docker, network-faults):
   # -tags integration build (see the "network_faults" build tag) and allowed
   # to fail on its own so its inherent timing sensitivity can't destabilize
   # the main integration suite everyone's MRs depend on.
+  #
+  # -tags is "network_faults" only (not "integration,network_faults").
+  # splitic discovers tests by scanning source for whatever build tags are
+  # active, not via "go test -run" -- it always appends its own -run built
+  # from every test it discovers, after any -run passed here, so a manual
+  # -run can't narrow this job's test list; it's silently overridden.
+  # Passing "integration" too would make splitic also discover the
+  # package's other ~76 "integration"-only tests, eating almost the entire
+  # 15m budget and starving this job's own test of the time it needs.
+  #
+  # Every "network_faults"-tagged test file must therefore be gated
+  # "!integration && network_faults" (not "integration && network_faults")
+  # so it's excluded here when "integration" alone is active, and it must
+  # build standalone -- no shared helpers/TestMain from the
+  # "integration"-only files, since the two tag sets never build together.
+  # Per scripts/check-test-directives, such a file also can't be named
+  # "*integration*_test.go", since that naming convention requires a
+  # positive "integration" build tag.
   allow_failure: true
 
 integration test with race:
