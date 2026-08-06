@@ -26,6 +26,7 @@ linters:
     - unconvert
     - unparam
     - usetesting
+    - wastedassign
     - whitespace
   settings:
     errcheck:

@@ -1412,7 +1412,7 @@ func getExitCode(err error) int {
 func (s *executor) setupTrappingScripts(ctx context.Context) error {
 	s.BuildLogger.Debugln("Setting up trapping scripts on emptyDir ...")
 
-	scriptName, script := "", ""
+	var scriptName, script string
 	shellName := s.Shell().Shell
 	switch shellName {
 	case shells.SNPwsh, shells.SNPowershell:
@@ -3381,7 +3381,8 @@ func (s *executor) prepareOptions(build *common.Build) {
 			continue
 		}
 
-		serviceName, service := "", svc.ToImageDefinition()
+		var serviceName string
+		service := svc.ToImageDefinition()
 		index, serviceName = s.getServiceDefinition(&service, usedAliases, index)
 		s.options.Services[serviceName] = &service
 	}
@@ -3391,7 +3392,7 @@ func (s *executor) prepareOptions(build *common.Build) {
 			continue
 		}
 
-		serviceName := ""
+		var serviceName string
 		index, serviceName = s.getServiceDefinition(&service, usedAliases, index)
 		s.options.Services[serviceName] = &service
 	}
