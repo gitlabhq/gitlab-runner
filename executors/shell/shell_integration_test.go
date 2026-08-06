@@ -2491,7 +2491,7 @@ func TestCredSetup(t *testing.T) {
 						anyLineMatches(t, lines, m+` username=`+regexp.QuoteMeta(username)+` password=\[MASKED\]`, "per-build helper should return the masked CI token for any username")
 					}
 				}
-				assert.Contains(t, string(content), fmt.Sprintf("%s://gitlab-ci-token:fake_password@%s", remoteSchemeHost.Scheme, remoteSchemeHost.Host), "after cleanup, gitlab-ci-token is removed from credential helpers")
+				assert.Contains(t, string(content), fmt.Sprintf("%s://gitlab-ci-token:fake_password@%s", remoteSchemeHost.Scheme, remoteSchemeHost.Host), "gitlab-ci-token credentials that existed before the job should still be present after the job")
 				assert.Contains(t, string(content), fmt.Sprintf("%s://%s:fake_password@%s", remoteSchemeHost.Scheme, myTokenUsername, remoteSchemeHost.Host), "after cleanup, previously stored creds should be available")
 
 				anyLineMatches(t, lines, `\sgit submodule update OK$`, "'git submodule update' should be OK")
@@ -2526,7 +2526,7 @@ func TestCredSetup(t *testing.T) {
 				content, err := os.ReadFile(cachedGitCreds)
 				require.NoError(t, err)
 
-				assert.Contains(t, string(content), fmt.Sprintf("%s://gitlab-ci-token:%s@%s", remoteSchemeHost.Scheme, token, remoteSchemeHost.Host), "after cleanup, gitlab-ci-token is present in credential helpers")
+				assert.NotContains(t, string(content), fmt.Sprintf("%s://gitlab-ci-token:", remoteSchemeHost.Scheme), "after cleanup, gitlab-ci-token should have been removed from credential helpers")
 				assert.Contains(t, string(content), fmt.Sprintf("%s://%s:fake_password@%s", remoteSchemeHost.Scheme, myTokenUsername, remoteSchemeHost.Host), "after cleanup, previously stored creds should be available")
 
 				anyLineMatches(t, lines, `\sgit submodule update OK$`, "'git submodule update' should be OK with the include.path workaround")

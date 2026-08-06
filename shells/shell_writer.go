@@ -10,8 +10,11 @@ type ShellWriter interface {
 	SourceEnv(pathname string)
 	Command(command string, arguments ...string)
 	// CommandWithStdin runs command with arguments and feeds stdin to its standard input.
-	// The child's exit code must propagate as the script's exit code on failure.
-	CommandWithStdin(stdin, command string, arguments ...string)
+	// A trailing newline is appended to stdin.
+	// The child's exit code must propagate as the script's exit code on failure. When
+	// bestEffort is set, neither a non-zero exit code nor a failure to even start the command
+	// may fail the script, and no error check may be emitted after it.
+	CommandWithStdin(bestEffort bool, stdin string, command string, arguments ...string)
 	CommandArgExpand(command string, arguments ...string)
 	Line(text string)
 	CheckForErrors()

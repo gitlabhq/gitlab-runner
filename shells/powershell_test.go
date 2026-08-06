@@ -484,6 +484,24 @@ func TestPowershellPathResolveOperations(t *testing.T) {
 	}
 }
 
+func pwshExports(t *testing.T, shellInfo common.ShellScriptInfo) string {
+	t.Helper()
+
+	var ps *PowerShell
+	switch v := common.GetShell("pwsh").(type) {
+	case *PowerShell:
+		ps = v
+	case *ProxyExecShell:
+		ps = v.Shell.(*PowerShell)
+	default:
+		t.Fatalf("unexpected pwsh shell type %T", v)
+	}
+
+	w := NewPsWriter(ps, shellInfo)
+	(&AbstractShell{}).writeExports(w, shellInfo)
+	return w.String()
+}
+
 func TestPowershell_GenerateScript(t *testing.T) {
 	pwshShell := common.GetShell("pwsh")
 	eol := "\n"
@@ -590,6 +608,20 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`  Remove-Item -Force ".gitlab-build-uid-gid"` + eol +
 		`}`
 
+	clearGitCredentials := `` +
+		`& {` + eol +
+		`  try {` + eol +
+		`    $tmpFile = Get-Item ([System.IO.Path]::GetTempFilename())` + eol +
+		`    [System.IO.File]::WriteAllText($tmpFile, 'url=https://test-hostname` + eol +
+		`username=gitlab-ci-token` + eol +
+		`')` + eol +
+		`    $CommandWithStdin = Start-Process -NoNewWindow -RedirectStandardInput $tmpFile -PassThru -Wait -FilePath 'git' -ArgumentList 'credential','reject'` + eol +
+		`  } catch {` + eol +
+		`  } finally {` + eol +
+		`    if ($tmpFile) { Remove-Item -Force -ErrorAction SilentlyContinue -Path $tmpFile }` + eol +
+		`  }` + eol +
+		`}` + eol
+
 	if eol == "\n" {
 		shebang = "#!/usr/bin/env pwsh\n"
 	} else {
@@ -632,6 +664,8 @@ func TestPowershell_GenerateScript(t *testing.T) {
 					fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
 					eol + eol +
 					`$ErrorActionPreference = "Stop"` + eol +
+					pwshExports(t, shellInfo) +
+					clearGitCredentials +
 					rmGitLabEnvScript +
 					eol + eol +
 					cleanGitFiles +
@@ -649,6 +683,8 @@ func TestPowershell_GenerateScript(t *testing.T) {
 					fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
 					eol + eol +
 					`$ErrorActionPreference = "Stop"` + eol +
+					pwshExports(t, shellInfo) +
+					clearGitCredentials +
 					rmGitLabEnvScript +
 					eol + eol +
 					cleanGitFiles +
@@ -675,6 +711,7 @@ func TestPowershell_GenerateScript(t *testing.T) {
 					Runner: &common.RunnerConfig{
 						RunnerSettings: common.RunnerSettings{
 							Executor: "kubernetes",
+							CloneURL: "https://test-hostname",
 						},
 					},
 					Hostname: "Test Hostname",

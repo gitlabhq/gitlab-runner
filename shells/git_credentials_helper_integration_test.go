@@ -80,7 +80,7 @@ func TestGitCredHelper(t *testing.T) {
 				w.SetupGitCredHelper(conf, "credential", defaultUser)
 				w.Command("git", "config", "--local", "--list")
 
-				w.CommandWithStdin(tc.credRequest, "git", "credential", "fill")
+				w.CommandWithStdin(false, tc.credRequest, "git", "credential", "fill")
 
 				env := testEnv()
 				if jt := tc.jobToken; jt != "" {
