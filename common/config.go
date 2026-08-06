@@ -272,7 +272,7 @@ func (p *StringOrArray) UnmarshalFlag(value string) error {
 		return nil
 	}
 	result := StringOrArray{}
-	for _, item := range strings.Split(value, ",") {
+	for item := range strings.SplitSeq(value, ",") {
 		result = append(result, strings.TrimSpace(item))
 	}
 	*p = result

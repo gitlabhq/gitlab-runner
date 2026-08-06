@@ -73,7 +73,6 @@ linters:
         - mapsloop
         - omitzero
         - stringsbuilder
-        - stringsseq
     revive:
       rules:
         - name: unused-parameter

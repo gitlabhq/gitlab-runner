@@ -89,8 +89,8 @@ func TestTokenMasking(t *testing.T) {
 
 			m := New(internal.NewNopCloser(buf), internal.Unique(append(tc.prefixes, DefaultTokenPrefixes(true)...)))
 
-			parts := bytes.Split([]byte(tc.input), []byte{'|'})
-			for _, part := range parts {
+			parts := bytes.SplitSeq([]byte(tc.input), []byte{'|'})
+			for part := range parts {
 				n, err := m.Write(part)
 				require.NoError(t, err)
 

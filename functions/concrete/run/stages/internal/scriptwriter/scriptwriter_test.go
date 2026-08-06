@@ -460,7 +460,7 @@ func TestPwshScript(t *testing.T) {
 			lines: []string{"echo hello"},
 			assert: func(t *testing.T, s string) {
 				if runtime.GOOS != "windows" {
-					for _, line := range strings.Split(s, "\n") {
+					for line := range strings.SplitSeq(s, "\n") {
 						assert.False(t, strings.HasSuffix(line, "\r"), "unexpected \\r in line: %q", line)
 					}
 				}

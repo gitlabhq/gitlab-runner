@@ -115,8 +115,7 @@ func GetDefaultSnapshot(vmName string) (string, error) {
 		return "", err
 	}
 
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
+	for line := range strings.SplitSeq(output, "\n") {
 		if _, rawSnapshotID, isDefault := strings.Cut(line, " *"); isDefault {
 			snapshotID := strings.TrimSpace(rawSnapshotID)
 			if snapshotID != "" { // It uses UUID so it should be 38
