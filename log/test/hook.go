@@ -1,6 +1,8 @@
 package test
 
 import (
+	"maps"
+
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 )
@@ -22,9 +24,7 @@ import (
 func NewHook() (*test.Hook, func()) {
 	// Copy all the previous hooks so we revert back to that state.
 	oldHooks := logrus.LevelHooks{}
-	for level, hooks := range logrus.StandardLogger().Hooks {
-		oldHooks[level] = hooks
-	}
+	maps.Copy(oldHooks, logrus.StandardLogger().Hooks)
 
 	newHook := test.NewGlobal()
 	return newHook, func() {

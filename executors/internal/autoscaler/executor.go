@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"time"
 
@@ -148,9 +149,7 @@ func (e *executor) Suspend(ctx context.Context) (url.Values, error) {
 	}
 
 	af := envKeyFields{acqKey: acqRef.key}.toFields()
-	for k, v := range af {
-		fields[k] = v
-	}
+	maps.Copy(fields, af)
 	return fields, nil
 }
 

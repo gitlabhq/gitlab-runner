@@ -4,6 +4,7 @@ package stages
 
 import (
 	"bytes"
+	"maps"
 	"os/exec"
 	"testing"
 
@@ -92,12 +93,8 @@ func TestStep_ScriptOutput(t *testing.T) {
 				t.Run(shell, func(t *testing.T) {
 					e := newTestEnv(t, shell)
 
-					for k, v := range tc.envVars {
-						e.Env[k] = v
-					}
-					for k, v := range tc.gitLabEnv {
-						e.GitLabEnv[k] = v
-					}
+					maps.Copy(e.Env, tc.envVars)
+					maps.Copy(e.GitLabEnv, tc.gitLabEnv)
 
 					lines := tc.lines
 					if perShell, ok := tc.shellCmd[shell]; ok {
