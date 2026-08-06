@@ -99,6 +99,66 @@ func TestAbstractShell_guardGetSourcesScriptHooks(t *testing.T) {
 	}
 }
 
+func TestAbstractShell_writeClearGitCredentials(t *testing.T) {
+	tests := map[string]struct {
+		repoURL string
+		// empty when no `git credential reject` is expected at all
+		expectedRemoteHost string
+	}{
+		"https URL": {
+			repoURL:            "https://gitlab-ci-token:xxx@example.com:3443/project/repo.git",
+			expectedRemoteHost: "https://example.com:3443",
+		},
+		"http URL": {
+			repoURL:            "http://example.com/project/repo.git",
+			expectedRemoteHost: "http://example.com",
+		},
+		// The local repository the integration tests clone from is built with path.Clean, so
+		// it reaches the runner with forward slashes.
+		"windows path parses as a scheme without a host": {
+			repoURL: "C:/builds/group/project",
+		},
+		"windows path with backslashes": {
+			repoURL: `C:\builds\group\project`,
+		},
+		"unix path parses as neither scheme nor host": {
+			repoURL: "/builds/group/project",
+		},
+		"file URL has no host": {
+			repoURL: "file:///builds/group/project",
+		},
+		// A host alone is not enough: git has no credentials to erase for this scheme.
+		"git URL has a host but an unhandled scheme": {
+			repoURL: "git://example.com/group/project.git",
+		},
+		"ssh URL": {
+			repoURL:            "ssh://git@example.com/group/project.git",
+			expectedRemoteHost: "ssh://example.com",
+		},
+		"no URL": {
+			repoURL: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &common.Build{
+				Runner: &common.RunnerConfig{},
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{RepoURL: tc.repoURL},
+				},
+			}
+
+			mockWriter := NewMockShellWriter(t)
+			if tc.expectedRemoteHost != "" {
+				expectClearGitCredentials(mockWriter, tc.expectedRemoteHost)
+			}
+
+			new(AbstractShell).writeClearGitCredentials(mockWriter, build)
+		})
+	}
+}
+
 func TestWriteGitSSLConfig(t *testing.T) {
 	expectedURL := "https://example.com:3443"
 
@@ -818,6 +878,7 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 							msw.EXPECT().IfFile("/.gitlab-build-uid-gid").Once()
 							msw.EXPECT().EndIf().Once()
 						}
+						expectClearGitCredentials(msw, "https://repo-url")
 						return msw
 					},
 				},
@@ -846,6 +907,7 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 							msw.EXPECT().IfFile("/.gitlab-build-uid-gid").Once()
 							msw.EXPECT().EndIf().Once()
 						}
+						expectClearGitCredentials(msw, "https://repo-url")
 						return msw
 					},
 				},
@@ -912,6 +974,7 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 							msw.EXPECT().IfFile("/.gitlab-build-uid-gid").Once()
 							msw.EXPECT().EndIf().Once()
 						}
+						expectClearGitCredentials(msw, "https://repo-url")
 						return msw
 					},
 				},
@@ -974,6 +1037,7 @@ func TestAbstractShell_writeGetSourcesScript(t *testing.T) {
 							msw.EXPECT().IfFile("/.gitlab-build-uid-gid").Once()
 							msw.EXPECT().EndIf().Once()
 						}
+						expectClearGitCredentials(msw, "https://repo-url")
 						return msw
 					},
 				},
@@ -3528,9 +3592,11 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 	type executorName = string
 
 	tests := map[executorName]map[string]struct {
-		cleanGitConfig       *bool
-		gitStrategy          string
-		shouldCleanGitConfig bool
+		cleanGitConfig         *bool
+		gitStrategy            string
+		cloneURL               string
+		shouldCleanGitConfig   bool
+		shouldClearCredentials bool
 	}{
 		"shell": {
 			"no clean-git-config set": {
@@ -3543,6 +3609,10 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 			"clean-git-config explicitly disabled": {
 				cleanGitConfig:       &someFalse,
 				shouldCleanGitConfig: false,
+			},
+			"with clone URL": {
+				cloneURL:               "https://test-hostname",
+				shouldClearCredentials: true,
 			},
 		},
 		"not-shell": {
@@ -3561,6 +3631,11 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 			"clean-git-config explicitly disabled": {
 				cleanGitConfig:       &someFalse,
 				shouldCleanGitConfig: false,
+			},
+			"with clone URL": {
+				cloneURL:               "https://test-hostname",
+				shouldCleanGitConfig:   true,
+				shouldClearCredentials: true,
 			},
 		},
 	}
@@ -3583,6 +3658,7 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 								RunnerSettings: common.RunnerSettings{
 									CleanGitConfig: test.cleanGitConfig,
 									Executor:       executorName,
+									CloneURL:       test.cloneURL,
 									Environment:    []string{"GIT_STRATEGY=" + test.gitStrategy},
 								},
 							},
@@ -3591,7 +3667,16 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 
 					mockShellWriter := NewMockShellWriter(t)
 
-					mockShellWriter.On("TmpFile", "gitlab_runner_env").Return("temp_env").Once()
+					// writeCleanupScript starts by re-exporting the job environment.
+					mockShellWriter.On("Variable", mock.Anything)
+					mockShellWriter.On("SourceEnv", "temp_env").Once()
+
+					if test.shouldClearCredentials {
+						expectClearGitCredentials(mockShellWriter, test.cloneURL)
+					}
+
+					// TmpFile("gitlab_runner_env") is called by writeExports and again for the RmFile.
+					mockShellWriter.On("TmpFile", "gitlab_runner_env").Return("temp_env")
 					mockShellWriter.On("RmFile", "temp_env").Once()
 
 					mockShellWriter.On("TmpFile", "masking.db").Return("masking.db").Once()
@@ -3603,9 +3688,10 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 					mockShellWriter.On("TmpFile", globalGitConfigSeedFile).Return("some-global-seed").Once()
 					mockShellWriter.On("RmFile", "some-global-seed").Once()
 
-					mockShellWriter.On("TmpFile", testVar1).Return(testPath1).Once()
+					// TmpFile(<file var>) is called by writeEnvExports (KEY=<path> export) and again for the RmFile.
+					mockShellWriter.On("TmpFile", testVar1).Return(testPath1)
 					mockShellWriter.On("RmFile", testPath1).Once()
-					mockShellWriter.On("TmpFile", testVar3).Return(testPath3).Once()
+					mockShellWriter.On("TmpFile", testVar3).Return(testPath3)
 					mockShellWriter.On("RmFile", testPath3).Once()
 
 					expectFileCleanup(mockShellWriter, ".git", false)
@@ -4012,6 +4098,14 @@ func expectFileCleanup(shellWriter *MockShellWriter, dir string, withSubmodules 
 	shellWriter.EXPECT().RmFilesRecursive(dir+"/refs", "*.lock").Once()
 }
 
+func expectClearGitCredentials(shellWriter *MockShellWriter, remoteHost string) {
+	shellWriter.EXPECT().CommandWithStdin(
+		true,
+		"url="+remoteHost+"\nusername=gitlab-ci-token",
+		"git", "credential", "reject",
+	).Once()
+}
+
 func TestAbstractShell_writeGitCleanup(t *testing.T) {
 	v := common.AppVersion
 	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
@@ -4120,16 +4214,24 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 							t.Run("writeCleanupScript", func(t *testing.T) {
 								sw := NewMockShellWriter(t)
 
+								// writeCleanupScript re-exports the job env, then emits the credential erase.
+								sw.EXPECT().Variable(mock.Anything)
+								sw.EXPECT().SourceEnv("someRunnerEnv").Once()
+								if gitURLsWithoutTokens {
+									sw.EXPECT().ExportRaw("GIT_CONFIG_GLOBAL", "some-global-seed").Once()
+								}
+								expectClearGitCredentials(sw, "https://repo-url")
+
 								sw.EXPECT().TmpFile("masking.db").Return("masking.db").Once()
 								sw.EXPECT().RmFile("masking.db").Once()
 
 								sw.EXPECT().TmpFile(externalGitConfigFile).Return("some-ext-conf").Once()
 								sw.EXPECT().RmFile("some-ext-conf").Once()
 
-								sw.EXPECT().TmpFile(globalGitConfigSeedFile).Return("some-global-seed").Once()
+								sw.EXPECT().TmpFile(globalGitConfigSeedFile).Return("some-global-seed")
 								sw.EXPECT().RmFile("some-global-seed").Once()
 
-								sw.EXPECT().TmpFile("gitlab_runner_env").Return("someRunnerEnv").Once()
+								sw.EXPECT().TmpFile("gitlab_runner_env").Return("someRunnerEnv")
 								sw.EXPECT().RmFile("someRunnerEnv").Once()
 
 								expectFileCleanup(sw, ".git", expectSubmoduleCleanupCalls)

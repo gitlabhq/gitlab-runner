@@ -183,11 +183,19 @@ func (b *BashWriter) SetupGitCredHelper(confFile, section, user string) {
 	b.CheckForErrors()
 }
 
-func (b *BashWriter) CommandWithStdin(stdin, command string, arguments ...string) {
+func (b *BashWriter) CommandWithStdin(bestEffort bool, stdin string, command string, arguments ...string) {
 	producer := b.buildCommand(b.escape, "echo", stdin)
 	consumer := b.buildCommand(b.escape, command, arguments...)
 
-	b.Line(fmt.Sprintf("%s | %s", producer, consumer))
+	line := fmt.Sprintf("%s | %s", producer, consumer)
+
+	if bestEffort {
+		// The script runs under errexit and pipefail, which would otherwise abort it.
+		b.Line(line + " || true")
+		return
+	}
+
+	b.Line(line)
 	b.CheckForErrors()
 }
 

@@ -335,7 +335,7 @@ func (p *PsWriter) lines(texts ...string) {
 	p.Line(strings.Join(lines, p.EOL))
 }
 
-func (p *PsWriter) CommandWithStdin(stdin, command string, arguments ...string) {
+func (p *PsWriter) CommandWithStdin(bestEffort bool, stdin string, command string, arguments ...string) {
 	// This mimics something like `echo "foobar" | blipp.exe` for pwsh/powershell, passing in stdin _as is_ to the
 	// command. It does not mess with the encoding, BOM, ...
 	// The unfortunate side-effect is, that we use a temporary file for this.
@@ -353,21 +353,37 @@ func (p *PsWriter) CommandWithStdin(stdin, command string, arguments ...string) 
 
 	// The body is wrapped in `& { ... }` so that `$tmpFile` and `$CommandWithStdin` are scoped to this block
 	// and do not leak into the surrounding script (mirrors `SetupGitCredHelper`).
-	block := strings.Join([]string{
+	body := []string{
 		`& {`,
-		`try {`,
-		`$tmpFile = Get-Item ([System.IO.Path]::GetTempFilename())`,
-		fmt.Sprintf(`[System.IO.File]::WriteAllText($tmpFile, %s)`, psSingleQuote(stdin+"\n")),
-		mainCommand,
-		`if ($CommandWithStdin.ExitCode -ne 0) { Exit $CommandWithStdin.ExitCode }`,
-		`} finally {`,
-		`if ($tmpFile) { Remove-Item -Force -Path $tmpFile }`,
-		`}`,
-		`}`,
-	}, p.EOL)
+		`  try {`,
+		`    $tmpFile = Get-Item ([System.IO.Path]::GetTempFilename())`,
+		`    ` + fmt.Sprintf(`[System.IO.File]::WriteAllText($tmpFile, %s)`, psSingleQuote(stdin+"\n")),
+		`    ` + mainCommand,
+	}
 
-	p.Line(block)
-	p.CheckForErrors()
+	if bestEffort {
+		// $ErrorActionPreference is Stop on pwsh, so a command which cannot even be started
+		// would otherwise abort the script.
+		body = append(body, `  } catch {`)
+	} else {
+		body = append(body, `    if ($CommandWithStdin.ExitCode -ne 0) { Exit $CommandWithStdin.ExitCode }`)
+	}
+
+	body = append(
+		body,
+		`  } finally {`,
+		// The finally block is not covered by the catch above, so a failure to remove the
+		// temporary file would otherwise be terminating and abort the script.
+		`    if ($tmpFile) { Remove-Item -Force -ErrorAction SilentlyContinue -Path $tmpFile }`,
+		`  }`,
+		`}`,
+	)
+
+	p.lines(body...)
+
+	if !bestEffort {
+		p.CheckForErrors()
+	}
 }
 
 func (p *PsWriter) CommandArgExpand(command string, arguments ...string) {

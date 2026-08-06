@@ -379,7 +379,7 @@ password=` + metaPassword + "\n",
 			shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, w shells.ShellWriter) {
 				tmpDir := t.TempDir()
 
-				w.CommandWithStdin(tc.stdin, "git", "credential", "fill")
+				w.CommandWithStdin(false, tc.stdin, "git", "credential", "fill")
 
 				if tc.expectFailure {
 					runShellExpectFailure(t, shell, tmpDir, w, os.Environ())
@@ -388,6 +388,55 @@ password=` + metaPassword + "\n",
 
 				output := runShell(t, shell, tmpDir, w, os.Environ())
 				assert.Equal(t, tc.expectedOutput, output)
+			})
+		})
+	}
+}
+
+func TestCommandWithStdinBestEffort(t *testing.T) {
+	const marker = "the-script-carried-on"
+
+	tests := []struct {
+		name      string
+		stdin     string
+		command   string
+		arguments []string
+		// asserted on the script's output, to prove the command was really run
+		expectedOutput string
+	}{
+		{
+			name:           "successful command",
+			stdin:          "url=https://some-user:some-pass@some-host/repo",
+			command:        "git",
+			arguments:      []string{"credential", "fill"},
+			expectedOutput: "password=some-pass",
+		},
+		{
+			name:      "failing command does not fail the script",
+			stdin:     "not-a-valid-credential-request",
+			command:   "git",
+			arguments: []string{"credential", "fill"},
+		},
+		{
+			name:    "command which cannot be started does not fail the script",
+			stdin:   "some input",
+			command: "definitely-not-an-existing-command",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, w shells.ShellWriter) {
+				tmpDir := t.TempDir()
+
+				w.CommandWithStdin(true, tc.stdin, tc.command, tc.arguments...)
+				w.Command("echo", marker)
+
+				output := runShell(t, shell, tmpDir, w, os.Environ())
+				assert.Contains(t, output, marker, "the script must carry on past the command")
+				if tc.expectedOutput != "" {
+					assert.Contains(t, output, tc.expectedOutput, "the command must have run")
+				}
 			})
 		})
 	}

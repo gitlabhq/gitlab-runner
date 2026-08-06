@@ -555,7 +555,32 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 
 	b.changeFilesOwnership(w, info, info.Build.RootDir)
 
+	b.writeClearGitCredentials(w, info.Build)
+
 	return nil
+}
+
+// writeClearGitCredentials emits a `git credential reject` for the remote host so that any
+// user-supplied credential helper (e.g. credential.helper=store) erases the gitlab-ci-token
+// it cached during the job.
+//
+// The erase is best-effort: git refusing the URL, or git not being installed at all, must fail
+// neither the job nor the rest of the cleanup.
+func (b *AbstractShell) writeClearGitCredentials(w ShellWriter, build *common.Build) {
+	remoteURL, err := build.GetRemoteURL()
+	if err != nil {
+		return
+	}
+
+	// Only remotes git can turn into a credential request: a repository reached through a
+	// local path parses as a scheme without a host (`c:` on Windows), which git refuses.
+	remote := url_helpers.OnlySchemeAndHost(remoteURL)
+	if remote.Host == "" ||
+		(remote.Scheme != "http" && remote.Scheme != "https" && remote.Scheme != "ssh") {
+		return
+	}
+
+	w.CommandWithStdin(true, "url="+remote.String()+"\nusername=gitlab-ci-token", "git", "credential", "reject")
 }
 
 func (b *AbstractShell) writeClearWorktreeScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
@@ -591,7 +616,23 @@ func (b *AbstractShell) guardGetSourcesScriptHooks(
 }
 
 func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo) {
+	b.exportVariables(w, info, false)
+}
+
+func (b *AbstractShell) writeEnvExports(w ShellWriter, info common.ShellScriptInfo) {
+	b.exportVariables(w, info, true)
+}
+
+// exportVariables exports the job environment. With envOnly, file-variable
+// contents are not re-written to disk; their files were already written by
+// the earlier stages of the same build, so file variables only get
+// KEY=<path> exported.
+func (b *AbstractShell) exportVariables(w ShellWriter, info common.ShellScriptInfo, envOnly bool) {
 	for _, variable := range info.Build.GetAllVariables() {
+		if envOnly && variable.File {
+			w.Variable(spec.Variable{Key: variable.Key, Value: w.TmpFile(variable.Key)})
+			continue
+		}
 		w.Variable(variable)
 	}
 
@@ -1829,6 +1870,9 @@ func (b *AbstractShell) writeArchiveCacheOnFailureScript(
 }
 
 func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
+	b.writeEnvExports(w, info)
+	b.writeClearGitCredentials(w, info.Build)
+
 	w.RmFile(w.TmpFile(gitlabEnvFileName))
 	w.RmFile(w.TmpFile("masking.db"))
 	w.RmFile(w.TmpFile(externalGitConfigFile))

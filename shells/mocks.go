@@ -279,14 +279,14 @@ func (_c *MockShellWriter_CommandArgExpand_Call) RunAndReturn(run func(command s
 }
 
 // CommandWithStdin provides a mock function for the type MockShellWriter
-func (_mock *MockShellWriter) CommandWithStdin(stdin string, command string, arguments ...string) {
+func (_mock *MockShellWriter) CommandWithStdin(bestEffort bool, stdin string, command string, arguments ...string) {
 	// string
 	_va := make([]interface{}, len(arguments))
 	for _i := range arguments {
 		_va[_i] = arguments[_i]
 	}
 	var _ca []interface{}
-	_ca = append(_ca, stdin, command)
+	_ca = append(_ca, bestEffort, stdin, command)
 	_ca = append(_ca, _va...)
 	_mock.Called(_ca...)
 	return
@@ -298,36 +298,42 @@ type MockShellWriter_CommandWithStdin_Call struct {
 }
 
 // CommandWithStdin is a helper method to define mock.On call
+//   - bestEffort bool
 //   - stdin string
 //   - command string
 //   - arguments ...string
-func (_e *MockShellWriter_Expecter) CommandWithStdin(stdin interface{}, command interface{}, arguments ...interface{}) *MockShellWriter_CommandWithStdin_Call {
+func (_e *MockShellWriter_Expecter) CommandWithStdin(bestEffort interface{}, stdin interface{}, command interface{}, arguments ...interface{}) *MockShellWriter_CommandWithStdin_Call {
 	return &MockShellWriter_CommandWithStdin_Call{Call: _e.mock.On("CommandWithStdin",
-		append([]interface{}{stdin, command}, arguments...)...)}
+		append([]interface{}{bestEffort, stdin, command}, arguments...)...)}
 }
 
-func (_c *MockShellWriter_CommandWithStdin_Call) Run(run func(stdin string, command string, arguments ...string)) *MockShellWriter_CommandWithStdin_Call {
+func (_c *MockShellWriter_CommandWithStdin_Call) Run(run func(bestEffort bool, stdin string, command string, arguments ...string)) *MockShellWriter_CommandWithStdin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 bool
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(bool)
 		}
 		var arg1 string
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 []string
-		variadicArgs := make([]string, len(args)-2)
-		for i, a := range args[2:] {
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []string
+		variadicArgs := make([]string, len(args)-3)
+		for i, a := range args[3:] {
 			if a != nil {
 				variadicArgs[i] = a.(string)
 			}
 		}
-		arg2 = variadicArgs
+		arg3 = variadicArgs
 		run(
 			arg0,
 			arg1,
-			arg2...,
+			arg2,
+			arg3...,
 		)
 	})
 	return _c
@@ -338,7 +344,7 @@ func (_c *MockShellWriter_CommandWithStdin_Call) Return() *MockShellWriter_Comma
 	return _c
 }
 
-func (_c *MockShellWriter_CommandWithStdin_Call) RunAndReturn(run func(stdin string, command string, arguments ...string)) *MockShellWriter_CommandWithStdin_Call {
+func (_c *MockShellWriter_CommandWithStdin_Call) RunAndReturn(run func(bestEffort bool, stdin string, command string, arguments ...string)) *MockShellWriter_CommandWithStdin_Call {
 	_c.Run(run)
 	return _c
 }
