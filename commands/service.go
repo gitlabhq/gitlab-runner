@@ -58,7 +58,7 @@ func runServiceInstall(s service.Service, c *cli.Context) error {
 func runServiceStatus(displayName string, s service.Service) {
 	status, err := s.Status()
 
-	description := ""
+	var description string
 	switch status {
 	case service.StatusRunning:
 		description = "Service is running"

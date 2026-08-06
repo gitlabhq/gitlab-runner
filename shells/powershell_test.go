@@ -957,13 +957,12 @@ KEY2="TEST"
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			tt.writer.DotEnvVariables("test", tt.variables)
-			expected := ""
 
+			expected := fmt.Sprintf(templateLinux, tt.want)
 			if runtime.GOOS == OSWindows {
 				expected = fmt.Sprintf(templateWindows, tt.want)
-			} else {
-				expected = fmt.Sprintf(templateLinux, tt.want)
 			}
+
 			assert.Equal(t, expected, tt.writer.String())
 		})
 	}
