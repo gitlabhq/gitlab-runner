@@ -111,12 +111,12 @@ func (b Variables) value(key string, pathnames bool) string {
 	case "*", "#", "@", "!", "?", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
 		return ""
 	}
-	for i := len(b) - 1; i >= 0; i-- {
-		if b[i].Key == key {
-			if b[i].File && pathnames {
-				return b.tmpFile(b[i].Key)
+	for _, v := range slices.Backward(b) {
+		if v.Key == key {
+			if v.File && pathnames {
+				return b.tmpFile(v.Key)
 			}
-			return b[i].Value
+			return v.Value
 		}
 	}
 	return ""

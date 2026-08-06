@@ -3,6 +3,7 @@ package monitoring
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/timeperiod"
@@ -24,9 +25,9 @@ func (d JobQueuingDurations) Compile() error {
 }
 
 func (d JobQueuingDurations) GetActiveConfiguration() *JobQueuingDuration {
-	for i := len(d) - 1; i >= 0; i-- {
-		if d[i].InPeriod() {
-			return d[i]
+	for _, q := range slices.Backward(d) {
+		if q.InPeriod() {
+			return q
 		}
 	}
 
