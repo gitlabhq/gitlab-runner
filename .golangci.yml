@@ -70,7 +70,6 @@ linters:
       disable:
         - atomictypes
         - fmtappendf
-        - mapsloop
         - omitzero
         - stringsbuilder
     revive:

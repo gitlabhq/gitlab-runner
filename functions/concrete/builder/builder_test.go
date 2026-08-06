@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 	"time"
@@ -36,9 +37,7 @@ func newTestVars(t *testing.T, overrides map[string]string, setup ...func(*varia
 		"CI_RUNNER_ID":             "42",
 	}
 
-	for k, v := range overrides {
-		defaults[k] = v
-	}
+	maps.Copy(defaults, overrides)
 
 	for k, v := range defaults {
 		m.EXPECT().Get(k).Maybe().Return(v)

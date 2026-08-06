@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -216,9 +217,7 @@ func (e *Env) HelperEnvs(existing map[string]string) map[string]string {
 	e.resolveBundle()
 
 	env := make(map[string]string)
-	for k, v := range existing {
-		env[k] = v
-	}
+	maps.Copy(env, existing)
 
 	if e.bundledCACerts != "" {
 		if _, ok := env["SSL_CERT_FILE"]; !ok {

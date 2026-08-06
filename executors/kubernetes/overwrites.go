@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"strings"
 
@@ -671,9 +672,7 @@ func (o *overwrites) evaluateMapOverwrite(
 	}
 
 	finalValues := make(map[string]string)
-	for k, v := range values {
-		finalValues[k] = v
-	}
+	maps.Copy(finalValues, values)
 
 	for _, variable := range variables {
 		if !strings.HasPrefix(variable.Key, variablesSelector) {

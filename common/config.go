@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -1696,13 +1697,9 @@ type CustomBuildDir struct {
 func (r *RunnerSettings) ComputeLabels(globalDefaults Labels) {
 	r.labels = make(Labels)
 
-	for k, v := range globalDefaults {
-		r.labels[k] = v
-	}
+	maps.Copy(r.labels, globalDefaults)
 
-	for k, v := range r.Labels {
-		r.labels[k] = v
-	}
+	maps.Copy(r.labels, r.Labels)
 }
 
 func (r *RunnerSettings) ComputedLabels() Labels {

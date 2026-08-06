@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -59,9 +60,7 @@ func (w *Writer) Store(record usage_log.Record) error {
 		if record.Labels == nil {
 			record.Labels = make(map[string]string, len(w.options.Labels))
 		}
-		for k, v := range w.options.Labels {
-			record.Labels[k] = v
-		}
+		maps.Copy(record.Labels, w.options.Labels)
 	}
 
 	data, err := json.Marshal(record)
