@@ -250,7 +250,7 @@ func (e *executor) verifyRunnerBinary(ctx context.Context, runnerCommand string)
 // --version` output (see common.AppVersionInfo.Extended). Either value may be
 // empty if not found.
 func parseRunnerVersion(output string) (version, osArch string) {
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		if v, ok := strings.CutPrefix(line, "Version:"); ok {
 			version = strings.TrimSpace(v)
 		}

@@ -136,7 +136,7 @@ func TestSanitizeInvariants(t *testing.T) {
 			assert.False(t, strings.HasSuffix(key, "/"), "must not end with /")
 
 			// No segment should be "." or ".."
-			for _, seg := range strings.Split(key, "/") {
+			for seg := range strings.SplitSeq(key, "/") {
 				assert.NotEqual(t, ".", seg, "must not contain '.' segment")
 				assert.NotEqual(t, "..", seg, "must not contain '..' segment")
 			}
