@@ -1,6 +1,7 @@
 package autoscaler
 
 import (
+	"slices"
 	"time"
 
 	"gitlab.com/gitlab-org/fleeting/taskscaler/cron"
@@ -81,9 +82,9 @@ func (pl PolicyList) ParseAll() error {
 // If no policy is active, returns the DefaultPolicy.
 // If multiple policies are active, the last one wins.
 func (pl PolicyList) Active(t time.Time) Policy {
-	for i := len(pl) - 1; i >= 0; i-- {
-		if pl[i].IsActive(t) {
-			return pl[i]
+	for _, p := range slices.Backward(pl) {
+		if p.IsActive(t) {
+			return p
 		}
 	}
 	return DefaultPolicy
