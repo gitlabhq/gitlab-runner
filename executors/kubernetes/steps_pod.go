@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"strings"
 
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -485,16 +486,16 @@ func (s *executor) stepsVolumes() []api.Volume {
 // self-contained fork of the legacy path so removing legacy later is a
 // deletion rather than conditional surgery.
 func (s *executor) stepsWaitForServices(ctx context.Context) error {
-	portArgs := ""
+	var portArgs strings.Builder
 	for _, name := range s.options.getSortedServiceNames() {
 		service := s.options.Services[name]
 		port := service.Variables.Get("HEALTHCHECK_TCP_PORT")
 		if port == "" {
 			continue
 		}
-		portArgs += fmt.Sprintf("--port '%s' ", port)
+		fmt.Fprintf(&portArgs, "--port '%s' ", port)
 	}
-	if portArgs == "" {
+	if portArgs.Len() == 0 {
 		return nil
 	}
 
@@ -502,7 +503,7 @@ func (s *executor) stepsWaitForServices(ctx context.Context) error {
 		return err
 	}
 
-	command := s.stepsRunnerBinaryPath() + " health-check " + portArgs
+	command := s.stepsRunnerBinaryPath() + " health-check " + portArgs.String()
 
 	podStatusCh := s.watchPodStatus(ctx, &podContainerStatusChecker{})
 

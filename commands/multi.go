@@ -1887,20 +1887,21 @@ func (mr *RunCommand) checkConfigConcurrency(config *common.Config) {
 	}
 
 	if len(warnings) > 0 {
-		warningMsg := "CONFIGURATION: Long polling issues detected.\n"
-		warningMsg += "Issues found:\n"
+		var warningMsg strings.Builder
+		warningMsg.WriteString("CONFIGURATION: Long polling issues detected.\n")
+		warningMsg.WriteString("Issues found:\n")
 		for _, warning := range warnings {
-			warningMsg += "  - " + warning + "\n"
+			warningMsg.WriteString("  - " + warning + "\n")
 		}
-		warningMsg += "This can cause job delays matching your GitLab instance's long polling timeout.\n"
-		warningMsg += "Recommended solutions:\n"
+		warningMsg.WriteString("This can cause job delays matching your GitLab instance's long polling timeout.\n")
+		warningMsg.WriteString("Recommended solutions:\n")
 		for i, solution := range solutions {
-			warningMsg += fmt.Sprintf("  %d. %s\n", i+1, solution)
+			fmt.Fprintf(&warningMsg, "  %d. %s\n", i+1, solution)
 		}
-		warningMsg += "Note: The 'FF_USE_ADAPTIVE_REQUEST_CONCURRENCY' feature flag can help automatically adjust request_concurrency based on workload.\n"
-		warningMsg += "This message will be printed each time the configuration is reloaded if the issues persist.\n"
-		warningMsg += "See documentation: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#long-polling-issues"
+		warningMsg.WriteString("Note: The 'FF_USE_ADAPTIVE_REQUEST_CONCURRENCY' feature flag can help automatically adjust request_concurrency based on workload.\n")
+		warningMsg.WriteString("This message will be printed each time the configuration is reloaded if the issues persist.\n")
+		warningMsg.WriteString("See documentation: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#long-polling-issues")
 
-		mr.log().Warning(warningMsg)
+		mr.log().Warning(warningMsg.String())
 	}
 }

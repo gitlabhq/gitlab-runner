@@ -3601,21 +3601,21 @@ func IsKubernetesPodContainerError(err error) bool {
 
 // Use 'gitlab-runner check-health' to wait until any/all configured services are healthy.
 func (s *executor) waitForServices(ctx context.Context) error {
-	portArgs := ""
+	var portArgs strings.Builder
 	for _, name := range s.options.getSortedServiceNames() {
 		service := s.options.Services[name]
 		port := service.Variables.Get("HEALTHCHECK_TCP_PORT")
 		if port == "" {
 			continue
 		}
-		portArgs += fmt.Sprintf("--port '%s' ", port)
+		fmt.Fprintf(&portArgs, "--port '%s' ", port)
 	}
-	if portArgs == "" {
+	if portArgs.Len() == 0 {
 		return nil
 	}
 
 	healthCheckContainer := helperContainerName
-	command := helperBinaryName + " health-check " + portArgs
+	command := helperBinaryName + " health-check " + portArgs.String()
 
 	var err error
 	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {

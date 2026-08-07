@@ -71,7 +71,6 @@ linters:
         - atomictypes
         - fmtappendf
         - omitzero
-        - stringsbuilder
     revive:
       rules:
         - name: unused-parameter
