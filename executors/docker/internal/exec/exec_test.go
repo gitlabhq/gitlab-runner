@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"testing"
 
@@ -243,14 +244,14 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			dockerExec := NewDocker(executorCtx, clientMock, waiterMock, logger)
 			err := dockerExec.Exec(ctx, id, streams, nil)
 
-			logOutput := ""
+			var logOutput strings.Builder
 			for _, entry := range hook.AllEntries() {
 				line, e := entry.String()
 				require.NoError(t, e)
-				logOutput += line
+				logOutput.WriteString(line)
 			}
 
-			tt.assertLogOutput(t, logOutput)
+			tt.assertLogOutput(t, logOutput.String())
 
 			if tt.expectedError != nil {
 				assert.ErrorIs(t, err, tt.expectedError)
