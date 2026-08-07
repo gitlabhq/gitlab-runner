@@ -1305,21 +1305,23 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 
 		for containerID, pluggedContainer := range inspected.Containers {
 			if id == containerID || id == pluggedContainer.Name {
+				// Docker container names include a leading "/", strip it for cleaner logs
+				containerName := strings.TrimPrefix(pluggedContainer.Name, "/")
 				err = e.dockerConn.NetworkDisconnect(ctx, netSummary.ID, id, true)
 				if err != nil {
 					e.BuildLogger.Warningln(
-						"Can't disconnect possibly zombie container",
-						pluggedContainer.Name,
+						"Can't disconnect container",
+						containerName,
 						"from network",
 						netSummary.Name,
 						"->",
 						err,
 					)
 				} else {
-					e.BuildLogger.Warningln(
-						"Possibly zombie container",
-						pluggedContainer.Name,
-						"is disconnected from network",
+					e.BuildLogger.Infoln(
+						"Container",
+						containerName,
+						"disconnected from network",
 						netSummary.Name,
 					)
 				}
