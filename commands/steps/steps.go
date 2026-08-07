@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -159,6 +160,7 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 	service, err := di.NewContainer(
 		di.WithBuiltinFunc("script_legacy", script_legacy.New()),
 		di.WithBuiltinFunc("concrete", concrete.New()),
+		di.WithOperatorLogger(slog.New(slog.DiscardHandler)),
 	).StepRunnerService()
 	if err != nil {
 		return fmt.Errorf("initializing step-runner: %w", err)
