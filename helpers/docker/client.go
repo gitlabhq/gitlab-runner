@@ -22,7 +22,11 @@ type Client interface {
 	ClientVersion() string
 	ServerVersion(context.Context) (client.ServerVersionResult, error)
 
-	ImageInspectWithRaw(ctx context.Context, imageID string, platform *v1.Platform) (image.InspectResponse, []byte, error)
+	ImageInspectWithRaw(
+		ctx context.Context,
+		imageID string,
+		opts ...client.ImageInspectOption,
+	) (image.InspectResponse, []byte, error)
 
 	ImagePullBlocking(ctx context.Context, ref string, options client.ImagePullOptions) error
 	ImageImportBlocking(

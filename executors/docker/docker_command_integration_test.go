@@ -2917,7 +2917,9 @@ func TestDockerCommandWithPlatform(t *testing.T) {
 		// Both redis:7.0 and postgres:14.4 are pulled twice under the same tag,
 		// once per requested platform, so the platform must be specified here to
 		// disambiguate which variant's info to return.
-		info, _, err := client.ImageInspectWithRaw(context.Background(), img, &v1.Platform{OS: "linux", Architecture: arch})
+		info, _, err := client.ImageInspectWithRaw(
+			context.Background(), img, mobyclient.ImageInspectWithPlatform(&v1.Platform{OS: "linux", Architecture: arch}),
+		)
 		require.NoError(t, err)
 		// Docker 29+ with the containerd image store may return an empty
 		// Architecture field in the top-level inspect response and instead

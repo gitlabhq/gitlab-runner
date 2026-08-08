@@ -6,12 +6,14 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"runtime"
 	"testing"
 
 	"github.com/moby/moby/api/types/jsonstream"
 	"github.com/moby/moby/client"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,6 +52,27 @@ func TestEventStreamError(t *testing.T) {
 	assert.ErrorAs(t, new(jsonstream.Error), &err)
 }
 
+// TestImageInspectWithRawPassesThroughOptions: ImageInspectWithRaw is a thin
+// pass-through to the SDK, with no version gating of its own (that's
+// pull.manager.inspectOptions' job).
+func TestImageInspectWithRawPassesThroughOptions(t *testing.T) {
+	var gotQuery url.Values
+
+	cli, server := prepareDockerClientAndFakeServer(t, func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.Query()
+		_, _ = w.Write([]byte(`{"Id": "sha256:test"}`))
+	})
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	res, _, err := cli.ImageInspectWithRaw(ctx, "test", client.ImageInspectWithPlatform(&v1.Platform{Architecture: "amd64", OS: "linux"}))
+	require.NoError(t, err)
+	assert.Equal(t, "sha256:test", res.ID)
+	assert.Contains(t, gotQuery, "platform")
+}
+
 func TestWrapError(t *testing.T) {
 	client, server := prepareDockerClientAndFakeServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
@@ -61,7 +84,7 @@ func TestWrapError(t *testing.T) {
 
 	_, err := client.Info(ctx)
 	require.Error(t, err, "The request should respond with an error")
-	assert.Regexp(t, "\\(official_docker_client_test.go:\\d\\d:\\d+s\\)", err.Error())
+	assert.Regexp(t, "\\(official_docker_client_test.go:\\d+:\\d+s\\)", err.Error())
 }
 
 func TestRedirectsNotAllowed(t *testing.T) {

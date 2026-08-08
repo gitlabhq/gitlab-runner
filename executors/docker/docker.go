@@ -306,7 +306,7 @@ func (e *executor) getHelperImage() (*image.InspectResponse, error) {
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
-	image, _, err := e.dockerConn.ImageInspectWithRaw(e.Context, e.helperImageInfo.String(), nil)
+	image, _, err := e.dockerConn.ImageInspectWithRaw(e.Context, e.helperImageInfo.String())
 	if err == nil {
 		return &image, nil
 	}

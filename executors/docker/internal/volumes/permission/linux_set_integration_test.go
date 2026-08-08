@@ -81,7 +81,7 @@ func setupTestDockerLinuxSetter(t *testing.T) (string, permission.Setter, docker
 	)
 	require.NoError(t, err)
 
-	imageInfo, _, err := client.ImageInspectWithRaw(context.Background(), helperImageRef, nil)
+	imageInfo, _, err := client.ImageInspectWithRaw(context.Background(), helperImageRef)
 	require.NoError(t, err)
 
 	debugLogger := logrus.New()

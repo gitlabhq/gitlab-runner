@@ -39,7 +39,7 @@ type defaultInspect struct {
 }
 
 func (i *defaultInspect) IsRoot(ctx context.Context, imageID string) (bool, error) {
-	img, _, err := i.c.ImageInspectWithRaw(ctx, imageID, nil)
+	img, _, err := i.c.ImageInspectWithRaw(ctx, imageID)
 	if err != nil {
 		return true, fmt.Errorf("inspecting container %q image: %w", imageID, err)
 	}

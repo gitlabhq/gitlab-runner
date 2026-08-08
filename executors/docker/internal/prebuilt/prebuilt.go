@@ -63,7 +63,7 @@ func Get(ctx context.Context, client docker.Client, info helperimage.Info) (*ima
 		return nil, err
 	}
 
-	image, _, err := client.ImageInspectWithRaw(ctx, info.String(), nil)
+	image, _, err := client.ImageInspectWithRaw(ctx, info.String())
 	if err == nil {
 		return &image, nil
 	}

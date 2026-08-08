@@ -10,6 +10,7 @@ import (
 
 	"github.com/containerd/platforms"
 	cli "github.com/docker/cli/cli/config/types"
+	"github.com/hashicorp/go-version"
 	"github.com/moby/moby/api/types/image"
 	"github.com/moby/moby/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -32,6 +33,11 @@ const (
 	defaultPullRetryMaxBackoff = 10 * time.Second
 )
 
+// minPlatformAwareInspectAPIVersion is the moby/moby SDK's own version gate for
+// the image-inspect "platform" parameter; daemons below it reject the
+// request outright (e.g. Podman, which tops out at 1.41).
+var minPlatformAwareInspectAPIVersion = version.Must(version.NewVersion("1.49"))
+
 type Manager interface {
 	GetDockerImage(imageName string, options spec.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy,
 	) (*image.InspectResponse, error)
@@ -42,6 +48,10 @@ type ManagerConfig struct {
 	AuthConfig   string
 	ShellUser    string
 	Credentials  []spec.Credentials
+
+	// APIVersion is the Docker daemon's API version, already known to the
+	// executor from connecting.
+	APIVersion *version.Version
 }
 
 type pullLogger interface {
@@ -229,6 +239,25 @@ func normalizeContainerOS(os string) string {
 	return os
 }
 
+// inspectOptions requests a platform-aware inspect, falling back to a
+// platform-agnostic one below minPlatformAwareInspectAPIVersion.
+func (m *manager) inspectOptions(imageName string, platform *ocispec.Platform) []client.ImageInspectOption {
+	if platform == nil {
+		return nil
+	}
+
+	if m.config.APIVersion != nil && m.config.APIVersion.LessThan(minPlatformAwareInspectAPIVersion) {
+		m.logger.Debugln(fmt.Sprintf(
+			"Docker daemon API version %s does not support platform-aware image inspection "+
+				"(requires %s or later); falling back to inspecting %q without a platform filter",
+			m.config.APIVersion, minPlatformAwareInspectAPIVersion, imageName,
+		))
+		return nil
+	}
+
+	return []client.ImageInspectOption{client.ImageInspectWithPlatform(platform)}
+}
+
 func (m *manager) getImageUsingPullPolicy(
 	imageName string, options spec.ImageDockerOptions,
 	pullPolicy common.DockerPullPolicy,
@@ -240,7 +269,7 @@ func (m *manager) getImageUsingPullPolicy(
 		return nil, &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
 	}
 
-	existingImage, _, err := m.client.ImageInspectWithRaw(m.context, imageName, platform)
+	existingImage, _, err := m.client.ImageInspectWithRaw(m.context, imageName, m.inspectOptions(imageName, platform)...)
 
 	// Return early if we already used that image
 	if err == nil && m.wasImageUsed(imageName, existingImage.ID) {
@@ -353,7 +382,7 @@ func (m *manager) pullDockerImage(
 		return nil, pullErr
 	}
 
-	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName, platform)
+	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName, m.inspectOptions(imageName, platform)...)
 	if err != nil {
 		if cancelErr := contextCancellationBuildError(m.context); cancelErr != nil {
 			return nil, cancelErr
