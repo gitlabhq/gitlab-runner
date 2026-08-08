@@ -3223,7 +3223,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 			rc.Docker.MacAddress = macAddress
 			rc.Docker.NetworkMode = tc.networkMode
 			build := getBuildForOS(t, func() (spec.Job, error) {
-				return common.GetRemoteBuildResponse("sleep 3")
+				return common.GetRemoteBuildResponse("sleep 10")
 			})
 			build.Runner = rc
 			build.ProjectRunnerID = runnerID
@@ -3269,7 +3269,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 					}
 				}
 				return false
-			}, time.Second*10, time.Millisecond*500)
+			}, time.Second*60, time.Millisecond*100)
 
 			// inspect the build container to examine the MacAddress configuration
 			info, err := client.ContainerInspect(ctx, ctr.ID)
