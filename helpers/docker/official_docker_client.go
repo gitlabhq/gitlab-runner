@@ -100,14 +100,12 @@ func (c *officialDockerClient) ServerVersion(ctx context.Context) (client.Server
 func (c *officialDockerClient) ImageInspectWithRaw(
 	ctx context.Context,
 	imageID string,
-	platform *v1.Platform,
+	opts ...client.ImageInspectOption,
 ) (image.InspectResponse, []byte, error) {
 	started := time.Now()
 	raw := &bytes.Buffer{}
-	inspectOpts := []client.ImageInspectOption{client.ImageInspectWithRawResponse(raw)}
-	if platform != nil {
-		inspectOpts = append(inspectOpts, client.ImageInspectWithPlatform(platform))
-	}
+	inspectOpts := append([]client.ImageInspectOption{client.ImageInspectWithRawResponse(raw)}, opts...)
+
 	res, err := c.client.ImageInspect(ctx, imageID, inspectOpts...)
 	return res.InspectResponse, raw.Bytes(), wrapError("ImageInspectWithRaw", err, started)
 }

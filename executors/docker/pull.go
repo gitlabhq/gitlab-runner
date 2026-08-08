@@ -10,6 +10,7 @@ func newPullManagerConfig(e *executor) pull.ManagerConfig {
 		AuthConfig:   e.Build.GetDockerAuthConfig(),
 		ShellUser:    e.Shell().User,
 		Credentials:  e.Build.Credentials,
+		APIVersion:   e.serverAPIVersion,
 	}
 }
 

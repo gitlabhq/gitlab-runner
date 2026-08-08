@@ -1045,8 +1045,16 @@ func (_c *MockClient_ImageImportBlocking_Call) RunAndReturn(run func(ctx context
 }
 
 // ImageInspectWithRaw provides a mock function for the type MockClient
-func (_mock *MockClient) ImageInspectWithRaw(ctx context.Context, imageID string, platform *v1.Platform) (image.InspectResponse, []byte, error) {
-	ret := _mock.Called(ctx, imageID, platform)
+func (_mock *MockClient) ImageInspectWithRaw(ctx context.Context, imageID string, opts ...client.ImageInspectOption) (image.InspectResponse, []byte, error) {
+	// client.ImageInspectOption
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, imageID)
+	_ca = append(_ca, _va...)
+	ret := _mock.Called(_ca...)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ImageInspectWithRaw")
@@ -1055,23 +1063,23 @@ func (_mock *MockClient) ImageInspectWithRaw(ctx context.Context, imageID string
 	var r0 image.InspectResponse
 	var r1 []byte
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *v1.Platform) (image.InspectResponse, []byte, error)); ok {
-		return returnFunc(ctx, imageID, platform)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...client.ImageInspectOption) (image.InspectResponse, []byte, error)); ok {
+		return returnFunc(ctx, imageID, opts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *v1.Platform) image.InspectResponse); ok {
-		r0 = returnFunc(ctx, imageID, platform)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...client.ImageInspectOption) image.InspectResponse); ok {
+		r0 = returnFunc(ctx, imageID, opts...)
 	} else {
 		r0 = ret.Get(0).(image.InspectResponse)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, *v1.Platform) []byte); ok {
-		r1 = returnFunc(ctx, imageID, platform)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, ...client.ImageInspectOption) []byte); ok {
+		r1 = returnFunc(ctx, imageID, opts...)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]byte)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, string, *v1.Platform) error); ok {
-		r2 = returnFunc(ctx, imageID, platform)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string, ...client.ImageInspectOption) error); ok {
+		r2 = returnFunc(ctx, imageID, opts...)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -1086,12 +1094,13 @@ type MockClient_ImageInspectWithRaw_Call struct {
 // ImageInspectWithRaw is a helper method to define mock.On call
 //   - ctx context.Context
 //   - imageID string
-//   - platform *v1.Platform
-func (_e *MockClient_Expecter) ImageInspectWithRaw(ctx interface{}, imageID interface{}, platform interface{}) *MockClient_ImageInspectWithRaw_Call {
-	return &MockClient_ImageInspectWithRaw_Call{Call: _e.mock.On("ImageInspectWithRaw", ctx, imageID, platform)}
+//   - opts ...client.ImageInspectOption
+func (_e *MockClient_Expecter) ImageInspectWithRaw(ctx interface{}, imageID interface{}, opts ...interface{}) *MockClient_ImageInspectWithRaw_Call {
+	return &MockClient_ImageInspectWithRaw_Call{Call: _e.mock.On("ImageInspectWithRaw",
+		append([]interface{}{ctx, imageID}, opts...)...)}
 }
 
-func (_c *MockClient_ImageInspectWithRaw_Call) Run(run func(ctx context.Context, imageID string, platform *v1.Platform)) *MockClient_ImageInspectWithRaw_Call {
+func (_c *MockClient_ImageInspectWithRaw_Call) Run(run func(ctx context.Context, imageID string, opts ...client.ImageInspectOption)) *MockClient_ImageInspectWithRaw_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1101,14 +1110,18 @@ func (_c *MockClient_ImageInspectWithRaw_Call) Run(run func(ctx context.Context,
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 *v1.Platform
-		if args[2] != nil {
-			arg2 = args[2].(*v1.Platform)
+		var arg2 []client.ImageInspectOption
+		variadicArgs := make([]client.ImageInspectOption, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(client.ImageInspectOption)
+			}
 		}
+		arg2 = variadicArgs
 		run(
 			arg0,
 			arg1,
-			arg2,
+			arg2...,
 		)
 	})
 	return _c
@@ -1119,7 +1132,7 @@ func (_c *MockClient_ImageInspectWithRaw_Call) Return(inspectResponse image.Insp
 	return _c
 }
 
-func (_c *MockClient_ImageInspectWithRaw_Call) RunAndReturn(run func(ctx context.Context, imageID string, platform *v1.Platform) (image.InspectResponse, []byte, error)) *MockClient_ImageInspectWithRaw_Call {
+func (_c *MockClient_ImageInspectWithRaw_Call) RunAndReturn(run func(ctx context.Context, imageID string, opts ...client.ImageInspectOption) (image.InspectResponse, []byte, error)) *MockClient_ImageInspectWithRaw_Call {
 	_c.Call.Return(run)
 	return _c
 }

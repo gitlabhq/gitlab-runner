@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-version"
 	"github.com/moby/moby/api/types/image"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -313,7 +314,7 @@ func TestDockerPullRetriesTransientFailureThenSucceeds(t *testing.T) {
 	c.On("ImagePullBlocking", m.context, "flaky:latest", mock.AnythingOfType("client.ImagePullOptions")).
 		Return(nil).
 		Once()
-	c.On("ImageInspectWithRaw", m.context, "flaky", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "flaky").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -384,7 +385,7 @@ func TestDockerForExistingImage(t *testing.T) {
 		Return(nil).
 		Once()
 
-	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "existing").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -419,7 +420,7 @@ func TestDockerInspectAfterPullFailure(t *testing.T) {
 			c.On("ImagePullBlocking", m.context, "post-pull-inspect:latest", mock.AnythingOfType("client.ImagePullOptions")).
 				Return(nil).
 				Once()
-			c.On("ImageInspectWithRaw", m.context, "post-pull-inspect", mock.Anything).
+			c.On("ImageInspectWithRaw", m.context, "post-pull-inspect").
 				Return(image.InspectResponse{}, nil, tc.inspectErr).
 				Once()
 
@@ -499,7 +500,7 @@ func TestDockerPullContextCancellation(t *testing.T) {
 			c.On("ImagePullBlocking", m.context, "canceled-inspect:latest", mock.AnythingOfType("client.ImagePullOptions")).
 				Return(nil).
 				Once()
-			c.On("ImageInspectWithRaw", m.context, "canceled-inspect", mock.Anything).
+			c.On("ImageInspectWithRaw", m.context, "canceled-inspect").
 				Return(image.InspectResponse{}, nil, context.Canceled).
 				Once()
 
@@ -523,7 +524,7 @@ func TestDockerGetImageById(t *testing.T) {
 	m := newDefaultTestManager(t, c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
-	c.On("ImageInspectWithRaw", m.context, "ID", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "ID").
 		Return(image.InspectResponse{ID: "ID"}, nil, nil).
 		Once()
 
@@ -552,11 +553,11 @@ func TestDockerPolicyModeNever(t *testing.T) {
 	m := newDefaultTestManager(t, c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
-	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "existing").
 		Return(image.InspectResponse{ID: "existing"}, nil, nil).
 		Once()
 
-	c.On("ImageInspectWithRaw", m.context, "not-existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "not-existing").
 		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
@@ -576,7 +577,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 	m := newDefaultTestManager(t, c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
-	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "existing").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -595,7 +596,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	pullImageHookCalled := false
 	m.onPullImageHookFunc = func() { pullImageHookCalled = true }
 
-	c.On("ImageInspectWithRaw", m.context, "not-existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "not-existing").
 		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
@@ -603,7 +604,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 		Return(nil).
 		Once()
 
-	c.On("ImageInspectWithRaw", m.context, "not-existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "not-existing").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -612,7 +613,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	assert.NotNil(t, img)
 	assert.True(t, pullImageHookCalled)
 
-	c.On("ImageInspectWithRaw", m.context, "not-existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "not-existing").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -632,7 +633,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	pullImageHookCalled := false
 	m.onPullImageHookFunc = func() { pullImageHookCalled = true }
 
-	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "existing").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -640,7 +641,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 		Return(nil).
 		Once()
 
-	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "existing").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -660,7 +661,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 	pullImageHookCalled := false
 	m.onPullImageHookFunc = func() { pullImageHookCalled = true }
 
-	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "existing").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -681,7 +682,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	dockerOptions := spec.ImageDockerOptions{}
 	m := newDefaultTestManager(t, c, dockerConfig)
 
-	c.On("ImageInspectWithRaw", m.context, "to-pull", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "to-pull").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -693,7 +694,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, img, "Forces to authorize pulling")
 
-	c.On("ImageInspectWithRaw", m.context, "not-existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "not-existing").
 		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
@@ -718,7 +719,7 @@ func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testi
 	m := newDefaultTestManager(t, c, dockerConfig)
 	m.logger = &buildLogger
 
-	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "existing").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -726,7 +727,7 @@ func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testi
 		Return(errors.New("received unexpected HTTP status: 502 Bad Gateway")).
 		Once()
 
-	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "existing").
 		Return(image.InspectResponse{ID: "local-image-id"}, nil, nil).
 		Once()
 
@@ -747,7 +748,7 @@ func TestCombinedDockerPolicyModeAlwaysAndIfNotPresentForNonExistingImage(t *tes
 	dockerOptions := spec.ImageDockerOptions{}
 	m := newDefaultTestManager(t, c, dockerConfig)
 
-	c.On("ImageInspectWithRaw", m.context, "not-existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "not-existing").
 		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
@@ -755,7 +756,7 @@ func TestCombinedDockerPolicyModeAlwaysAndIfNotPresentForNonExistingImage(t *tes
 		Return(os.ErrNotExist).
 		Twice()
 
-	c.On("ImageInspectWithRaw", m.context, "not-existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "not-existing").
 		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
@@ -802,7 +803,7 @@ func TestPullPolicyPassedAsIfNotPresentForExistingAndConfigAlways(t *testing.T) 
 	m := newDefaultTestManager(t, c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
-	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "existing").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -825,7 +826,7 @@ func TestPullPolicyPassedAsIfNotPresentForNonExistingAndConfigAlways(t *testing.
 	pullImageHookCalled := false
 	m.onPullImageHookFunc = func() { pullImageHookCalled = true }
 
-	c.On("ImageInspectWithRaw", m.context, "not-existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "not-existing").
 		Return(image.InspectResponse{}, nil, os.ErrNotExist).
 		Once()
 
@@ -833,7 +834,7 @@ func TestPullPolicyPassedAsIfNotPresentForNonExistingAndConfigAlways(t *testing.
 		Return(nil).
 		Once()
 
-	c.On("ImageInspectWithRaw", m.context, "not-existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "not-existing").
 		Return(image.InspectResponse{ID: "image-id"}, nil, nil).
 		Once()
 
@@ -913,7 +914,7 @@ func TestPullPolicyWhenConfigIsAllowed(t *testing.T) {
 	m := newDefaultTestManager(t, c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
-	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+	c.On("ImageInspectWithRaw", m.context, "existing").
 		Return(image.InspectResponse{ID: "existing"}, nil, nil).
 		Once()
 
@@ -962,6 +963,7 @@ func TestPullPolicyWhenConfigAllowedPullPoliciesIsInvalid(t *testing.T) {
 
 func newLoggerMock(t *testing.T) *mockPullLogger {
 	loggerMock := newMockPullLogger(t)
+	loggerMock.On("Debugln", mock.AnythingOfType("string")).Maybe()
 	loggerMock.On(
 		"Debugln",
 		mock.AnythingOfType("string"),
@@ -1049,12 +1051,28 @@ func testDeniesDockerImage(
 }
 
 func addFindsLocalImageExpectations(c *docker.MockClient, imageName string) {
-	c.On("ImageInspectWithRaw", mock.Anything, imageName, mock.Anything).
+	c.On("ImageInspectWithRaw", mock.Anything, imageName).
 		Return(image.InspectResponse{ID: "this-image"}, nil, nil).
 		Once()
 }
 
 func addPullsRemoteImageExpectations(c *docker.MockClient, imageName string) {
+	c.On("ImageInspectWithRaw", mock.Anything, imageName).
+		Return(image.InspectResponse{ID: "not-this-image"}, nil, nil).
+		Once()
+
+	c.On("ImagePullBlocking", mock.Anything, imageName, mock.AnythingOfType("client.ImagePullOptions")).
+		Return(nil).
+		Once()
+
+	c.On("ImageInspectWithRaw", mock.Anything, imageName).
+		Return(image.InspectResponse{ID: "this-image"}, nil, nil).
+		Once()
+}
+
+// addPullsRemoteImageExpectationsWithPlatform is addPullsRemoteImageExpectations
+// for callers expecting an extra inspect option argument.
+func addPullsRemoteImageExpectationsWithPlatform(c *docker.MockClient, imageName string) {
 	c.On("ImageInspectWithRaw", mock.Anything, imageName, mock.Anything).
 		Return(image.InspectResponse{ID: "not-this-image"}, nil, nil).
 		Once()
@@ -1069,7 +1087,7 @@ func addPullsRemoteImageExpectations(c *docker.MockClient, imageName string) {
 }
 
 func addDeniesPullExpectations(c *docker.MockClient, imageName string) {
-	c.On("ImageInspectWithRaw", mock.Anything, imageName, mock.Anything).
+	c.On("ImageInspectWithRaw", mock.Anything, imageName).
 		Return(image.InspectResponse{ID: "image"}, nil, nil).
 		Once()
 
@@ -1156,7 +1174,51 @@ func TestGetDockerImageWithPlatform(t *testing.T) {
 	dockerOptions := spec.ImageDockerOptions{Platform: "foo/bar"}
 	m := newDefaultTestManager(t, nil, dockerConfig)
 
-	testGetDockerImage(t, m, remoteImage, dockerOptions, addPullsRemoteImageExpectations)
+	testGetDockerImage(t, m, remoteImage, dockerOptions, addPullsRemoteImageExpectationsWithPlatform)
+}
+
+func TestInspectOptionsNoPlatformRequested(t *testing.T) {
+	m := &manager{logger: newLoggerMock(t)}
+	assert.Nil(t, m.inspectOptions("test-image", nil))
+}
+
+// TestInspectOptionsUnknownAPIVersionAssumesSupport: a nil APIVersion (not
+// yet known) still passes the platform through.
+func TestInspectOptionsUnknownAPIVersionAssumesSupport(t *testing.T) {
+	m := &manager{logger: newLoggerMock(t)}
+
+	platform, err := parsePlatform("linux/amd64", m.logger)
+	require.NoError(t, err)
+
+	assert.Len(t, m.inspectOptions("test-image", platform), 1)
+}
+
+// TestInspectOptionsSkipsPlatformBelowMinAPIVersion covers
+// https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39608.
+func TestInspectOptionsSkipsPlatformBelowMinAPIVersion(t *testing.T) {
+	loggerMock := newLoggerMock(t)
+
+	m := &manager{
+		logger: loggerMock,
+		config: ManagerConfig{APIVersion: version.Must(version.NewVersion("1.41"))},
+	}
+
+	platform, err := parsePlatform("linux/amd64", m.logger)
+	require.NoError(t, err)
+
+	assert.Empty(t, m.inspectOptions("test-image", platform))
+}
+
+func TestInspectOptionsIncludesPlatformAtOrAboveMinAPIVersion(t *testing.T) {
+	m := &manager{
+		logger: newLoggerMock(t),
+		config: ManagerConfig{APIVersion: version.Must(version.NewVersion("1.49"))},
+	}
+
+	platform, err := parsePlatform("linux/amd64", m.logger)
+	require.NoError(t, err)
+
+	assert.Len(t, m.inspectOptions("test-image", platform), 1)
 }
 
 func TestResolveAuthConfigForImageErrorsOnPathTraversal(t *testing.T) {
