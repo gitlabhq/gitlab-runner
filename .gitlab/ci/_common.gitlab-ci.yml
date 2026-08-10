@@ -1,7 +1,5 @@
 variables:
   # renovate: datasource=docker depName=golang allowedVersions=/1\.26\..+/
-  # When updating GO_VERSION, update Go versions in docs/development/_index.md
-  # or the 'docs:check development docs Go version' job will fail
   RUBY_VERSION: "4.0.6"
   GO_VERSION: "1.26.5"
   GOLANGLINT_VERSION: "2.12.2"
