@@ -31,8 +31,14 @@ var (
 	knownLinuxFlavors  = []string{"alpine-edge", "alpine-latest", "alpine3.21", "concrete", "ubi-fips", "ubuntu"}
 	knownLinuxSuffixes = []string{"pwsh"}
 	knownWinFlavors    = []string{"servercore", "nanoserver"}
-	knownWinVersions   = []string{"1809", "21H2", "24H2"}
+	knownWinVersions   = []string{"24H2", "21H2", "1809"} // Newest first; latestOsVersion takes the head.
 )
+
+// Windows os.version resolution within a single index appears unreliable
+// (see https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39551), so we bless
+// the newest os.version into the crossOs images and tie the servercore and nanoserver
+// indexes to a specific os.version.
+var latestOsVersion = knownWinVersions[0]
 
 // crossOsRule identifies a tag template that should be handled as a cross-OS tag,
 // and a component name fragment (e.g. "nanoserver") that identifies components that
@@ -71,21 +77,24 @@ func (r *CrossOsRules) tagFor(componentName string, compTagTemplates []string) s
 		if slices.Contains(compTagTemplates, rule.tagTemplate) {
 			return rule.tagTemplate
 		}
-		if len(compTagTemplates) > 0 && strings.Contains(componentName, rule.windowsFlavor) {
+		if strings.Contains(componentName, rule.windowsFlavor) &&
+			slices.ContainsFunc(compTagTemplates, func(tag string) bool {
+				return strings.HasSuffix(tag, latestOsVersion)
+			}) {
 			return rule.tagTemplate
 		}
 	}
 	return ""
 }
 
-// stripTag removes the architecture and windows os.version info from tag templates
+// stripTag removes the architecture info from tag templates
 // Makes the following assumptions:
 // 1. Linux tags follow the format: [flavor-]{arch}-%[-{suffix}]
 // 2. Windows tags follow the format: {arch}-%-{winFlavor}{winVersion}
 //
 // Any tags which do not follow one of these formats will generate an error.
 //
-// For tags that do follow the pattern, we strip the {arch} and {winVersion} components to make
+// For tags that do follow the pattern, we strip the {arch} component to make
 // the final index tag.
 //
 // Examples:
@@ -93,7 +102,7 @@ func (r *CrossOsRules) tagFor(componentName string, compTagTemplates []string) s
 //	"x86_64-%" -> "%"
 //	"alpine3.21-x86_64-%" -> "alpine3.21-%"
 //	"x86_64-%-pwsh" -> "%-pwsh"
-//	"x86_64-%-servercore1809" -> "%-servercore"
+//	"x86_64-%-servercore1809" -> "%-servercore1809"
 func stripTag(tag string) (string, error) {
 	for _, arch := range knownArchs {
 		archSegment := arch + "-"
@@ -126,7 +135,7 @@ func matchesWindowsTagFormat(prefix, suffix string) string {
 		winFlavorTag := "%-" + winFlavor
 		for _, winVersion := range knownWinVersions {
 			if suffix == winFlavorTag+winVersion {
-				return winFlavorTag
+				return suffix
 			}
 		}
 	}
@@ -233,13 +242,15 @@ func collectIndexes(m *Manifest) (IndexMap, []string) {
 //     e.g. x86_64-%-servercore21H2 or x86_64-%-nanoserver1809.
 //
 // With those assumptions in place, our baseline rule is fairly simple: Tags that
-// differ only on architecture or Windows version should be placed in an image index
-// together, with a tag name derived by simply omitting architecture and Windows
-// version specifiers. For example ubuntu-%-pwsh or %-servercore.
+// differ only on architecture should be placed in an image index together, with a
+// tag name derived by omitting the architecture specifier. For example
+// ubuntu-%-pwsh or %-servercore24H2. The Windows os.version specifier is retained,
+// so each os.version gets its own index, due to index resolution issues on Windows.
 //
-// If the target image index tag is simply % or %-pwsh, it is handled as a cross-OS
-// index, including both the linux image that was to be pushed as well as servercore
-// images for % and nanoserver images for %-pwsh.
+// If the target image index tag is % or %-pwsh, it is handled as a cross-OS index,
+// including both the linux image that was to be pushed as well as servercore
+// images for % and nanoserver images for %-pwsh. Only Windows images built for the
+// newest known os.version join those cross-OS indexes (see latestOsVersion).
 //
 // Any component tag found in the manifest which does not match the expected conventions
 // is written as a warning to w.

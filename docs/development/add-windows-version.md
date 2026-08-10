@@ -178,6 +178,12 @@ We should update the following:
    the `-arch` variant) to the `windows` target in `dockerfiles/runner-helper/docker-bake.hcl`.
 1. **Publish mapping**: Map the built artifact to its published registry tag in
    `scripts/pusher/helper-images.json`.
+1. **Index generation**: Add the new Windows version to `knownWinVersions` in
+   `scripts/pusher/indexes.go`. The list is ordered newest first, so add the new version to the
+   front. The first entry selects the version used for the cross-OS `%` and `%-pwsh` image
+   indexes. For a new Windows flavor, also add an entry to `knownWinFlavors`. The
+   `TestHelperImagesRejectedTags` test fails if a version is missing, but not if a version is in
+   the wrong position. To verify, run `make pusher-test`.
 1. **CI jobs**: Add or update the following:
 
    - Prebuilt helper image job in `.gitlab/ci/build.gitlab-ci.yml`
