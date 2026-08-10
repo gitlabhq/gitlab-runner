@@ -1864,44 +1864,23 @@ func TestTmpProjectDir(t *testing.T) {
 	}
 }
 
-func TestSkipBuildStageFeatureFlag(t *testing.T) {
-	featureFlagValues := []string{
-		"true",
-		"false",
-	}
-
+func TestSkipNoOpBuildStage(t *testing.T) {
 	s := NewMockShell(t)
 
 	s.On("GetName").Return("skip-build-stage-shell")
 	s.On("IsDefault").Return(false).Maybe()
 	RegisterShell(s)
 
-	for _, value := range featureFlagValues {
-		t.Run(value, func(t *testing.T) {
-			build := &Build{
-				Runner: &RunnerConfig{},
-				Job: spec.Job{
-					Variables: spec.Variables{
-						{
-							Key:   featureflags.SkipNoOpBuildStages,
-							Value: "false",
-						},
-					},
-				},
-			}
-
-			e := NewMockExecutor(t)
-			s.On("GenerateScript", mock.Anything, mock.Anything, mock.Anything).Return("script", ErrSkipBuildStage)
-			e.On("Shell").Return(&ShellScriptInfo{Shell: "skip-build-stage-shell"})
-
-			if !build.IsFeatureFlagOn(featureflags.SkipNoOpBuildStages) {
-				e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
-			}
-
-			err := build.executeStage(t.Context(), BuildStageAfterScript, e)
-			assert.NoError(t, err)
-		})
+	build := &Build{
+		Runner: &RunnerConfig{},
 	}
+
+	e := NewMockExecutor(t)
+	s.On("GenerateScript", mock.Anything, mock.Anything, mock.Anything).Return("script", ErrSkipBuildStage)
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "skip-build-stage-shell"})
+
+	err := build.executeStage(t.Context(), BuildStageAfterScript, e)
+	assert.NoError(t, err)
 }
 
 func TestWaitForTerminal(t *testing.T) {

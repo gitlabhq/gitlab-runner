@@ -331,31 +331,25 @@ func TestBashEntrypointCommand(t *testing.T) {
 
 func TestBash_RmDir(t *testing.T) {
 	tests := map[string]struct {
-		setPermissionsBeforeCleanup bool
-		path                        string
-		expected                    string
+		path     string
+		expected string
 	}{
-		"without permissions cleanup": {
-			setPermissionsBeforeCleanup: false,
-			path:                        "/path/to/dir",
-			expected:                    "rm \"-r\" \"-f\" \"/path/to/dir\"\n",
-		},
-		"with permissions cleanup": {
-			setPermissionsBeforeCleanup: true,
-			path:                        "/path/to/dir",
+		"simple path": {
+			path: "/path/to/dir",
 			expected: "if [ -d \"/path/to/dir\" ]; then\n" +
 				"  chmod \"-R\" \"u+rwX\" \"/path/to/dir\"\n" +
 				"fi\n" +
 				"rm \"-r\" \"-f\" \"/path/to/dir\"\n",
 		},
 		"path with spaces": {
-			setPermissionsBeforeCleanup: false,
-			path:                        "/path/with spaces/dir",
-			expected:                    "rm \"-r\" \"-f\" \"/path/with spaces/dir\"\n",
+			path: "/path/with spaces/dir",
+			expected: "if [ -d \"/path/with spaces/dir\" ]; then\n" +
+				"  chmod \"-R\" \"u+rwX\" \"/path/with spaces/dir\"\n" +
+				"fi\n" +
+				"rm \"-r\" \"-f\" \"/path/with spaces/dir\"\n",
 		},
 		"path with special characters": {
-			setPermissionsBeforeCleanup: true,
-			path:                        "/path/$VAR/dir",
+			path: "/path/$VAR/dir",
 			expected: "if [ -d \"/path/$VAR/dir\" ]; then\n" +
 				"  chmod \"-R\" \"u+rwX\" \"/path/$VAR/dir\"\n" +
 				"fi\n" +
@@ -365,7 +359,7 @@ func TestBash_RmDir(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			writer := &BashWriter{setPermissionsBeforeCleanup: tc.setPermissionsBeforeCleanup}
+			writer := &BashWriter{}
 			writer.RmDir(tc.path)
 
 			assert.Equal(t, tc.expected, writer.String())
