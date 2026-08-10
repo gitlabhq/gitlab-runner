@@ -34,15 +34,15 @@ func TestStripTag(t *testing.T) {
 		},
 		{
 			componentTag: "x86_64-%-nanoserver1809",
-			indexTag:     "%-nanoserver",
+			indexTag:     "%-nanoserver1809",
 		},
 		{
 			componentTag: "x86_64-%-servercore21H2",
-			indexTag:     "%-servercore",
+			indexTag:     "%-servercore21H2",
 		},
 		{
 			componentTag: "arm64-%-servercore24H2",
-			indexTag:     "%-servercore",
+			indexTag:     "%-servercore24H2",
 		},
 	}
 	for _, tt := range tests {
@@ -114,8 +114,11 @@ func TestCollectIndexes(t *testing.T) {
 					"alpine-latest-ppc64le":              {"alpine-latest-ppc64le-%"},
 					"windows-servercore-ltsc2019-x86_64": {"x86_64-%-servercore1809"},
 					"windows-servercore-ltsc2022-x86_64": {"x86_64-%-servercore21H2"},
+					"windows-servercore-ltsc2025-arm64":  {"arm64-%-servercore24H2"},
+					"windows-servercore-ltsc2025-x86_64": {"x86_64-%-servercore24H2"},
 					"windows-nanoserver-ltsc2019-x86_64": {"x86_64-%-nanoserver1809"},
 					"windows-nanoserver-ltsc2022-x86_64": {"x86_64-%-nanoserver21H2"},
+					"windows-nanoserver-ltsc2025-x86_64": {"x86_64-%-nanoserver24H2"},
 				},
 			},
 			wantGroups: []ImageIndex{
@@ -127,29 +130,51 @@ func TestCollectIndexes(t *testing.T) {
 						"alpine3.21-arm64",
 						"alpine3.21-ppc64le",
 						"alpine3.21-x86_64",
-						"windows-servercore-ltsc2019-x86_64",
-						"windows-servercore-ltsc2022-x86_64",
+						"windows-servercore-ltsc2025-arm64",
+						"windows-servercore-ltsc2025-x86_64",
 					},
 				},
 				{
-					Tags: []string{"%-nanoserver"},
+					Tags: []string{"%-nanoserver1809"},
 					Components: []string{
 						"windows-nanoserver-ltsc2019-x86_64",
+					},
+				},
+				{
+					Tags: []string{"%-nanoserver21H2"},
+					Components: []string{
 						"windows-nanoserver-ltsc2022-x86_64",
+					},
+				},
+				{
+					Tags: []string{"%-nanoserver24H2"},
+					Components: []string{
+						"windows-nanoserver-ltsc2025-x86_64",
 					},
 				},
 				{
 					Tags: []string{"%-pwsh"},
 					Components: []string{
-						"windows-nanoserver-ltsc2019-x86_64",
-						"windows-nanoserver-ltsc2022-x86_64",
+						"windows-nanoserver-ltsc2025-x86_64",
 					},
 				},
 				{
-					Tags: []string{"%-servercore"},
+					Tags: []string{"%-servercore1809"},
 					Components: []string{
 						"windows-servercore-ltsc2019-x86_64",
+					},
+				},
+				{
+					Tags: []string{"%-servercore21H2"},
+					Components: []string{
 						"windows-servercore-ltsc2022-x86_64",
+					},
+				},
+				{
+					Tags: []string{"%-servercore24H2"},
+					Components: []string{
+						"windows-servercore-ltsc2025-arm64",
+						"windows-servercore-ltsc2025-x86_64",
 					},
 				},
 				{
@@ -201,22 +226,33 @@ func TestCollectIndexes(t *testing.T) {
 					"alpine3.21-x86_64-pwsh":             {"alpine3.21-x86_64-%-pwsh", "x86_64-%-pwsh"},
 					"windows-nanoserver-ltsc2019-x86_64": {"x86_64-%-nanoserver1809"},
 					"windows-nanoserver-ltsc2022-x86_64": {"x86_64-%-nanoserver21H2"},
+					"windows-nanoserver-ltsc2025-x86_64": {"x86_64-%-nanoserver24H2"},
 				},
 			},
 			wantGroups: []ImageIndex{
 				{
-					Tags: []string{"%-nanoserver"},
+					Tags: []string{"%-nanoserver1809"},
 					Components: []string{
 						"windows-nanoserver-ltsc2019-x86_64",
+					},
+				},
+				{
+					Tags: []string{"%-nanoserver21H2"},
+					Components: []string{
 						"windows-nanoserver-ltsc2022-x86_64",
+					},
+				},
+				{
+					Tags: []string{"%-nanoserver24H2"},
+					Components: []string{
+						"windows-nanoserver-ltsc2025-x86_64",
 					},
 				},
 				{
 					Tags: []string{"%-pwsh"},
 					Components: []string{
 						"alpine3.21-x86_64-pwsh",
-						"windows-nanoserver-ltsc2019-x86_64",
-						"windows-nanoserver-ltsc2022-x86_64",
+						"windows-nanoserver-ltsc2025-x86_64",
 					},
 				},
 				{
@@ -243,47 +279,66 @@ func TestCollectIndexes(t *testing.T) {
 			},
 		},
 		{
-			// Verifies handling of nanoserver images, where the tag name strips
-			// not just architecture, but also the windows version component.
+			// Verifies handling of nanoserver images. Since the current logic deems
+			// nanoserver the pwsh windows variant, this config would also push a
+			// "%-pwsh" tag with the newest os.version components.
 			name: "windows-nanoserver images",
 			manifest: Manifest{
 				Default: map[string][]string{
 					"windows-nanoserver-ltsc2019-x86_64": {"x86_64-%-nanoserver1809"},
 					"windows-nanoserver-ltsc2022-x86_64": {"x86_64-%-nanoserver21H2"},
+					"windows-nanoserver-ltsc2025-arm64":  {"arm64-%-nanoserver24H2"},
+					"windows-nanoserver-ltsc2025-x86_64": {"x86_64-%-nanoserver24H2"},
 				},
 			},
 			wantGroups: []ImageIndex{
 				{
-					Tags:       []string{"%-nanoserver"},
-					Components: []string{"windows-nanoserver-ltsc2019-x86_64", "windows-nanoserver-ltsc2022-x86_64"},
+					Tags:       []string{"%-nanoserver1809"},
+					Components: []string{"windows-nanoserver-ltsc2019-x86_64"},
+				},
+				{
+					Tags:       []string{"%-nanoserver21H2"},
+					Components: []string{"windows-nanoserver-ltsc2022-x86_64"},
+				},
+				{
+					Tags:       []string{"%-nanoserver24H2"},
+					Components: []string{"windows-nanoserver-ltsc2025-arm64", "windows-nanoserver-ltsc2025-x86_64"},
 				},
 				{
 					Tags:       []string{"%-pwsh"},
-					Components: []string{"windows-nanoserver-ltsc2019-x86_64", "windows-nanoserver-ltsc2022-x86_64"},
+					Components: []string{"windows-nanoserver-ltsc2025-arm64", "windows-nanoserver-ltsc2025-x86_64"},
 				},
 			},
 		},
 		{
-			// Verifies handling of servercore images, where the tag name strips
-			// not just architecture, but also the windows version component.
-			// Additionally, since the current logic deems servercore the "default"
-			// windows variant, this  config would also push a "%" tag with the same
-			// components.
+			// Verifies handling of servercore images. Since the current logic deems servercore
+			// the "default" windows variant, this config would also push a "%" tag with the same
+			// components newest os.version components.
 			name: "windows-servercore images",
 			manifest: Manifest{
 				Default: map[string][]string{
 					"windows-servercore-ltsc2019-x86_64": {"x86_64-%-servercore1809"},
 					"windows-servercore-ltsc2022-x86_64": {"x86_64-%-servercore21H2"},
+					"windows-servercore-ltsc2025-arm64":  {"arm64-%-servercore24H2"},
+					"windows-servercore-ltsc2025-x86_64": {"x86_64-%-servercore24H2"},
 				},
 			},
 			wantGroups: []ImageIndex{
 				{
 					Tags:       []string{"%"},
-					Components: []string{"windows-servercore-ltsc2019-x86_64", "windows-servercore-ltsc2022-x86_64"},
+					Components: []string{"windows-servercore-ltsc2025-arm64", "windows-servercore-ltsc2025-x86_64"},
 				},
 				{
-					Tags:       []string{"%-servercore"},
-					Components: []string{"windows-servercore-ltsc2019-x86_64", "windows-servercore-ltsc2022-x86_64"},
+					Tags:       []string{"%-servercore1809"},
+					Components: []string{"windows-servercore-ltsc2019-x86_64"},
+				},
+				{
+					Tags:       []string{"%-servercore21H2"},
+					Components: []string{"windows-servercore-ltsc2022-x86_64"},
+				},
+				{
+					Tags:       []string{"%-servercore24H2"},
+					Components: []string{"windows-servercore-ltsc2025-arm64", "windows-servercore-ltsc2025-x86_64"},
 				},
 			},
 		},
@@ -314,10 +369,10 @@ func TestCollectIndexes(t *testing.T) {
 			name: "invalid windows tags ignored in cross-os images",
 			manifest: Manifest{
 				Default: map[string][]string{
-					"invalid-servercore":      {"x86_64-binary-arm64-os-%-servercore24H2"},
-					"valid-servercore":        {"arm64-%-servercore24H2"},
-					"invalid-nanoserver":      {"x86_64-binary-arm64-os-%-nanoserver24H2"},
-					"valid-nanoserver":        {"arm64-%-nanoserver24H2"},
+					"invalid-servercore": {"x86_64-binary-arm64-os-%-servercore24H2"},
+					"valid-servercore":   {"arm64-%-servercore24H2"},
+					"invalid-nanoserver": {"x86_64-binary-arm64-os-%-nanoserver24H2"},
+					"valid-nanoserver":   {"arm64-%-nanoserver24H2"},
 				},
 			},
 			wantGroups: []ImageIndex{
@@ -326,7 +381,7 @@ func TestCollectIndexes(t *testing.T) {
 					Components: []string{"valid-servercore"},
 				},
 				{
-					Tags:       []string{"%-nanoserver"},
+					Tags:       []string{"%-nanoserver24H2"},
 					Components: []string{"valid-nanoserver"},
 				},
 				{
@@ -334,7 +389,7 @@ func TestCollectIndexes(t *testing.T) {
 					Components: []string{"valid-nanoserver"},
 				},
 				{
-					Tags:       []string{"%-servercore"},
+					Tags:       []string{"%-servercore24H2"},
 					Components: []string{"valid-servercore"},
 				},
 			},
