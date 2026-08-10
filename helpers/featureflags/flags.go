@@ -10,12 +10,10 @@ const (
 	NetworkPerBuild                      string = "FF_NETWORK_PER_BUILD"
 	UseLegacyKubernetesExecutionStrategy string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
 	UseDirectDownload                    string = "FF_USE_DIRECT_DOWNLOAD"
-	SkipNoOpBuildStages                  string = "FF_SKIP_NOOP_BUILD_STAGES"
 	UseFastzip                           string = "FF_USE_FASTZIP"
 	DisableUmaskForDockerExecutor        string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
 	EnableBashExitCodeCheck              string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
 	UseWindowsLegacyProcessStrategy      string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
-	UseNewEvalStrategy                   string = "FF_USE_NEW_BASH_EVAL_STRATEGY"
 	UseLegacyBashEval                    string = "FF_USE_LEGACY_BASH_EVAL"
 	UsePowershellPathResolver            string = "FF_USE_POWERSHELL_PATH_RESOLVER"
 	UseDynamicTraceForceSendInterval     string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
@@ -27,7 +25,6 @@ const (
 	DisablePowershellStdin               string = "FF_DISABLE_POWERSHELL_STDIN"
 	UsePodActiveDeadlineSeconds          string = "FF_USE_POD_ACTIVE_DEADLINE_SECONDS"
 	UseAdvancedPodSpecConfiguration      string = "FF_USE_ADVANCED_POD_SPEC_CONFIGURATION"
-	SetPermissionsBeforeCleanup          string = "FF_SET_PERMISSIONS_BEFORE_CLEANUP"
 	EnableSecretResolvingFailsIfMissing  string = "FF_SECRET_RESOLVING_FAILS_IF_MISSING"
 	PrintPodEvents                       string = "FF_PRINT_POD_EVENTS"
 	UseGitBundleURIs                     string = "FF_USE_GIT_BUNDLE_URIS"
@@ -114,13 +111,6 @@ var flags = []FeatureFlag{
 			"See [Self-signed certificates or custom Certification Authorities](tls-self-signed.md)",
 	},
 	{
-		Name:            SkipNoOpBuildStages,
-		DefaultValue:    true,
-		Deprecated:      false,
-		ToBeRemovedWith: "",
-		Description:     "When set to `false` all build stages are executed even if running them has no effect",
-	},
-	{
 		Name:            UseFastzip,
 		DefaultValue:    false,
 		Deprecated:      false,
@@ -159,25 +149,11 @@ var flags = []FeatureFlag{
 			"be set to `false`.",
 	},
 	{
-		Name:            UseNewEvalStrategy,
-		DefaultValue:    false,
-		Deprecated:      true,
-		ToBeRemovedWith: "",
-		Description: "No-op and deprecated. The Bash `eval` call runs in a subshell. This action subsumes the " +
-			"original protection and prevents the script-body leak " +
-			"on cancellation. For more information, see " +
-			"[issue 39005](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39005). " +
-			"To opt out and use the legacy pipeline invocation form (the behavior when this flag was set " +
-			"to `false`), use the new `FF_USE_LEGACY_BASH_EVAL` flag instead. " +
-			"This flag will be removed in a future release.",
-	},
-	{
 		Name:            UseLegacyBashEval,
 		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description: "When set to `true`, the Bash `eval` call uses the legacy pipeline invocation form " +
-			"(the same behavior as the deprecated `FF_USE_NEW_BASH_EVAL_STRATEGY=false`). " +
+		Description: "When set to `true`, the Bash `eval` call uses the legacy pipeline invocation form. " +
 			"The default (`false`) wraps `eval` in a trapped subshell to prevent the script-body leaks on " +
 			"cancellation in Bash versions before 4.4 and Bash 5.3 and later. For more information, see " +
 			"[issue 39005](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39005). " +
@@ -279,13 +255,6 @@ var flags = []FeatureFlag{
 		Description: "When enabled, the user can set an entire whole pod specification in the `config.toml` file. " +
 			"For more information, see [Overwrite generated pod specifications (Experiment)]" +
 			"(../executors/kubernetes/_index.md#overwrite-generated-pod-specifications).",
-	},
-	{
-		Name:         SetPermissionsBeforeCleanup,
-		DefaultValue: true,
-		Deprecated:   false,
-		Description: "When enabled, permissions on directories and files in the project directory are " +
-			"set first, to ensure that deletions during cleanup are successful.",
 	},
 	{
 		Name:         EnableSecretResolvingFailsIfMissing,
