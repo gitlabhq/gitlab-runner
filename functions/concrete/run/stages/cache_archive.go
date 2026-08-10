@@ -19,7 +19,7 @@ type CacheArchive struct {
 	ArchiverFormat         string                   `json:"archiver_format,omitempty"`
 	CompressionLevel       string                   `json:"compression_level,omitempty"`
 	Timeout                int                      `json:"timeout,omitempty"`
-	Descriptor             cacheprovider.Descriptor `json:"descriptor,omitempty"`
+	Descriptor             cacheprovider.Descriptor `json:"descriptor"`
 	MaxUploadedArchiveSize int64                    `json:"max_uploaded_archive_size,omitempty"`
 	OnSuccess              bool                     `json:"on_success,omitempty"`
 	OnFailure              bool                     `json:"on_failure,omitempty"`

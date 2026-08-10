@@ -208,8 +208,8 @@ type (
 	}
 	ImageExecutorOptions struct {
 		executorOptions
-		Docker     ImageDockerOptions     `json:"docker,omitempty" inputs:"expand"`
-		Kubernetes ImageKubernetesOptions `json:"kubernetes,omitempty" inputs:"expand"`
+		Docker     ImageDockerOptions     `json:"docker" inputs:"expand"`
+		Kubernetes ImageKubernetesOptions `json:"kubernetes" inputs:"expand"`
 	}
 )
 
@@ -330,7 +330,7 @@ type Image struct {
 	Ports           []Port               `json:"ports,omitempty"`
 	Variables       Variables            `json:"variables,omitempty"`
 	PullPolicies    []PullPolicy         `json:"pull_policy,omitempty" inputs:"expand"`
-	ExecutorOptions ImageExecutorOptions `json:"executor_opts,omitempty" inputs:"expand"`
+	ExecutorOptions ImageExecutorOptions `json:"executor_opts" inputs:"expand"`
 }
 
 func (i *Image) Aliases() []string { return strings.Fields(strings.ReplaceAll(i.Alias, ",", " ")) }
@@ -559,8 +559,8 @@ type Job struct {
 	Secrets        Secrets        `json:"secrets,omitempty"`
 	Hooks          Hooks          `json:"hooks,omitempty"`
 	Run            Run            `json:"run,omitempty"`
-	PolicyOptions  PolicyOptions  `json:"policy_options,omitempty"`
-	SuspendOptions SuspendOptions `json:"suspend_options,omitempty"`
+	PolicyOptions  PolicyOptions  `json:"policy_options"`
+	SuspendOptions SuspendOptions `json:"suspend_options"`
 
 	TLSData TLSData `json:"-"`
 
@@ -704,7 +704,7 @@ type AWSSecret struct {
 	Region          string    `json:"region,omitempty"`
 	RoleARN         string    `json:"role_arn,omitempty"`
 	RoleSessionName string    `json:"role_session_name,omitempty"`
-	Server          AWSServer `json:"server,omitempty"`
+	Server          AWSServer `json:"server"`
 }
 
 type AWSServer struct {

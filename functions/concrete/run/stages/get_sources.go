@@ -75,8 +75,8 @@ type GetSources struct {
 	SubmoduleUpdateFlags []string `json:"submodule_update_flags,omitempty"`
 	SubmodulePaths       []string `json:"submodule_paths,omitempty"`
 
-	PreCloneStep  Step `json:"pre_clone_step,omitempty"`
-	PostCloneStep Step `json:"post_clone_step,omitempty"`
+	PreCloneStep  Step `json:"pre_clone_step"`
+	PostCloneStep Step `json:"post_clone_step"`
 
 	ClearWorktreeOnRetry bool `json:"clear_worktree_on_retry,omitempty"`
 
