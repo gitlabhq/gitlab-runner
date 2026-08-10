@@ -505,9 +505,9 @@ To resolve these errors, either:
         - my-cache-dir/
   ```
 
-  After adding this workaround, clear the existing cache so the first run writes
-  fresh files with `777` permissions that persist through subsequent archive and restore
-  cycles.
+  After adding this workaround, [clear the existing cache](https://docs.gitlab.com/ci/caching/#clearing-the-cache)
+  so the first run writes fresh files with `777` permissions that persist through
+  subsequent archive and restore cycles.
 
 ### Configure SETFCAP
 
