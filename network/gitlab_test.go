@@ -1408,6 +1408,25 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 	}
 }
 
+func TestSetLastUpdate(t *testing.T) {
+	glc := NewGitLabClient()
+	config := RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL:   "https://gitlab.example.com/",
+			Token: "test-token",
+		},
+	}
+
+	assert.Empty(t, glc.getLastUpdate(&config.RunnerCredentials), "nothing stored yet")
+
+	glc.SetLastUpdate(config, "queue-v1")
+
+	assert.Equal(t, "queue-v1", glc.getLastUpdate(&config.RunnerCredentials))
+	// The stored token is echoed as last_update on the next request, which is what
+	// the Job Router path relies on to enable Workhorse long-poll coalescing.
+	assert.Equal(t, "queue-v1", glc.PrepareJobRequest(config, nil).LastUpdate)
+}
+
 func assertOnJobResponse(tb testing.TB, res *spec.Job, assertUnsupportedOpts bool) {
 	tb.Helper()
 	assert.NotNil(tb, res)

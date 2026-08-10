@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -79,6 +80,61 @@ func TestRequestJob_HappyPath(t *testing.T) {
 	t.Run("TLS", func(t *testing.T) {
 		doTest(t, true)
 	})
+}
+
+func TestRequestJob_StoresAndEchoesLastUpdate(t *testing.T) {
+	routerSrv := &mockRouterServer{t: t, lastUpdateToReturn: "queue-v1"}
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { l.Close() })
+	r := grpc.NewServer()
+	rpc.RegisterJobRouterServer(r, routerSrv)
+	go func() { assert.NoError(t, r.Serve(l)) }()
+	t.Cleanup(r.GracefulStop)
+
+	discoveryJSON, err := json.Marshal(&common.RouterDiscovery{
+		ServerURL: fmt.Sprintf("grpc://%s", l.Addr()),
+	})
+	require.NoError(t, err)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v4/runners/router/discovery", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, writeErr := w.Write(discoveryJSON)
+		assert.NoError(t, writeErr)
+	})
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Failf(t, "unexpected call", "%s %s", req.Method, req.URL)
+		w.WriteHeader(http.StatusNotImplemented)
+	}))
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	certDir := t.TempDir()
+	rc := NewClient(network.NewGitLabClient(network.WithCertificateDirectory(certDir)), certDir, "runner-test")
+	t.Cleanup(rc.Shutdown)
+	config := newConfig(server.URL)
+	sessionInfo := &common.SessionInfo{}
+
+	// Request 1: the router hands back a last_update token via response metadata.
+	_, healthy := rc.RequestJob(t.Context(), config, sessionInfo)
+	require.True(t, healthy)
+
+	// Request 2: the runner must echo that token as last_update in the request body,
+	// which is what lets Workhorse coalesce the long-poll.
+	_, healthy = rc.RequestJob(t.Context(), config, sessionInfo)
+	require.True(t, healthy)
+
+	routerSrv.mu.Lock()
+	defer routerSrv.mu.Unlock()
+	require.Len(t, routerSrv.gotBodies, 2)
+	// The first request has no last_update yet (nothing stored).
+	var body1 map[string]any
+	require.NoError(t, json.Unmarshal(routerSrv.gotBodies[0], &body1))
+	assert.NotContains(t, body1, "last_update")
+	// The second request echoes the token returned by the first response.
+	var body2 map[string]any
+	require.NoError(t, json.Unmarshal(routerSrv.gotBodies[1], &body2))
+	assert.Equal(t, "queue-v1", body2["last_update"])
 }
 
 func TestRequestJob_FeatureFlagOff(t *testing.T) {
@@ -538,6 +594,11 @@ type mockRouterServer struct {
 	disabled bool         // when true, reports the Job Router as disabled, mirroring the router when the job_router flag is off
 	failCode atomic.Int32 // when non-zero, every GetJob fails with this gRPC code, simulating a router outage
 	calls    atomic.Int32
+
+	lastUpdateToReturn string // when set, returned to the runner as the x-gitlab-last-update response metadata
+
+	mu        sync.Mutex
+	gotBodies [][]byte // request bodies received, in order, for assertions
 }
 
 func (s *mockRouterServer) GetJob(ctx context.Context, req *rpc.GetJobRequest) (*rpc.GetJobResponse, error) {
@@ -551,10 +612,16 @@ func (s *mockRouterServer) GetJob(ctx context.Context, req *rpc.GetJobRequest) (
 		return nil, status.Error(code, "simulated router failure")
 	}
 
+	s.mu.Lock()
+	s.gotBodies = append(s.gotBodies, append([]byte(nil), req.JobRequest...))
+	s.mu.Unlock()
+
 	assert.NotEmpty(s.t, metadata.ValueFromIncomingContext(ctx, requestIDMetadataKey))
-	assert.NoError(s.t, grpc.SetHeader(ctx, metadata.Pairs(
-		requestIDMetadataKey, responseRequestID,
-	)))
+	md := metadata.Pairs(requestIDMetadataKey, responseRequestID)
+	if s.lastUpdateToReturn != "" {
+		md.Append(lastUpdateMetadataKey, s.lastUpdateToReturn)
+	}
+	assert.NoError(s.t, grpc.SetHeader(ctx, md))
 	return &rpc.GetJobResponse{
 		JobResponse: []byte(fakeJobResponse),
 	}, nil

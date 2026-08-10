@@ -661,6 +661,52 @@ func (_c *MockDelegate_SetConnectionMaxAge_Call) RunAndReturn(run func(duration 
 	return _c
 }
 
+// SetLastUpdate provides a mock function for the type MockDelegate
+func (_mock *MockDelegate) SetLastUpdate(config common.RunnerConfig, lastUpdate string) {
+	_mock.Called(config, lastUpdate)
+	return
+}
+
+// MockDelegate_SetLastUpdate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetLastUpdate'
+type MockDelegate_SetLastUpdate_Call struct {
+	*mock.Call
+}
+
+// SetLastUpdate is a helper method to define mock.On call
+//   - config common.RunnerConfig
+//   - lastUpdate string
+func (_e *MockDelegate_Expecter) SetLastUpdate(config interface{}, lastUpdate interface{}) *MockDelegate_SetLastUpdate_Call {
+	return &MockDelegate_SetLastUpdate_Call{Call: _e.mock.On("SetLastUpdate", config, lastUpdate)}
+}
+
+func (_c *MockDelegate_SetLastUpdate_Call) Run(run func(config common.RunnerConfig, lastUpdate string)) *MockDelegate_SetLastUpdate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 common.RunnerConfig
+		if args[0] != nil {
+			arg0 = args[0].(common.RunnerConfig)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDelegate_SetLastUpdate_Call) Return() *MockDelegate_SetLastUpdate_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockDelegate_SetLastUpdate_Call) RunAndReturn(run func(config common.RunnerConfig, lastUpdate string)) *MockDelegate_SetLastUpdate_Call {
+	_c.Run(run)
+	return _c
+}
+
 // UnregisterRunner provides a mock function for the type MockDelegate
 func (_mock *MockDelegate) UnregisterRunner(config common.RunnerConfig) bool {
 	ret := _mock.Called(config)
