@@ -26,10 +26,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/fips"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/router"
-	"gitlab.com/gitlab-org/labkit/fips"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/azure"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/gcs"

@@ -23,9 +23,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"gitlab.com/gitlab-org/labkit/fields"
 	labkitsnowplow "gitlab.com/gitlab-org/labkit/v2/events/snowplow"
 	"gitlab.com/gitlab-org/labkit/v2/events/snowplow/oidc"
+	"gitlab.com/gitlab-org/labkit/v2/fields"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
