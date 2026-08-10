@@ -27,7 +27,11 @@ var (
 
 const (
 	requestIDMetadataKey = "x-request-id" // lowercase version of X-Request-ID
-	discoveryTTL         = time.Hour
+	// lastUpdateMetadataKey carries the queue-version token KAS relays back from
+	// Rails. Echoing it as `last_update` on the next request is what lets Workhorse
+	// coalesce Job Router long-polls. Lowercase form of X-GitLab-Last-Update.
+	lastUpdateMetadataKey = "x-gitlab-last-update"
+	discoveryTTL          = time.Hour
 
 	// routerBreakerFailureThreshold is the number of consecutive router failures
 	// that trips the breaker; fewer are treated as transient.
@@ -61,6 +65,7 @@ type Delegate interface {
 	common.Network
 	PrepareJobRequest(config common.RunnerConfig, sessionInfo *common.SessionInfo) common.JobRequest
 	GetRouterDiscovery(ctx context.Context, config common.RunnerConfig) *common.RouterDiscovery
+	SetLastUpdate(config common.RunnerConfig, lastUpdate string)
 }
 
 type Client struct {
@@ -170,6 +175,12 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 	if c.breaker.RecordSuccess() {
 		config.Log().WithField("job_router_url", disco.ServerURL).
 			Info("Job router recovered, resuming routing")
+	}
+
+	// Feed the queue-version token back so the next PrepareJobRequest echoes it as
+	// `last_update`, enabling Workhorse to coalesce the long-poll on this endpoint.
+	if lu := responseMD[lastUpdateMetadataKey]; len(lu) > 0 {
+		c.delegate.SetLastUpdate(config, lu[0])
 	}
 
 	return parseJobResponse(job, responseMD, disco, requestCorrelationID, config)
