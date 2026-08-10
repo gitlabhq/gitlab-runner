@@ -40,6 +40,13 @@
   - "*dockerfile*"
   - "Makefile*" # the Dockerfile linting target is defined here
 
+.go-version-consistency-patterns: &go-version-consistency-patterns
+  - ".gitlab/ci/_common.gitlab-ci.yml"
+  - ".gitlab/duo/agent-config.yml"
+  - "docs/development/_index.md"
+  - "go.mod"
+  - "mise.toml"
+
 ##############
 # Conditions #
 ##############
@@ -149,6 +156,21 @@
       changes: *docs-patterns
     - <<: *if-security-runner-release-ref
       changes: *docs-patterns
+
+.rules:merge_request_pipelines:go-version-consistency:
+  rules:
+    - <<: *if-merge-request-pipeline
+      changes: *go-version-consistency-patterns
+    - <<: *if-runner-or-security-runner-default-branch
+      changes: *go-version-consistency-patterns
+    - <<: *if-runner-or-security-runner-stable-ref
+      changes: *go-version-consistency-patterns
+    - <<: *if-runner-or-security-runner-feature-ref
+      changes: *go-version-consistency-patterns
+    - <<: *if-runner-release-ref
+      changes: *go-version-consistency-patterns
+    - <<: *if-security-runner-release-ref
+      changes: *go-version-consistency-patterns
 
 .rules:merge_request_pipelines:docs-i18n:
   rules:

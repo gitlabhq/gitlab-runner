@@ -219,18 +219,15 @@ docs:check feature flags:
         exit 1
       )
 
-docs:check development docs Go version:
+check Go version consistency:
   extends:
-    - .rules:merge_request_pipelines:docs
+    - .rules:merge_request_pipelines:go-version-consistency
     - .no_cache_and_dependencies
     - .kubernetes runner
   needs: []
   stage: qa
   script:
-    - export GO_VERSION=$(cat .gitlab/ci/_common.gitlab-ci.yml | yq '.variables.GO_VERSION')
-    - export EXIT_CODE=0
-    - grep $GO_VERSION docs/development/_index.md || EXIT_CODE=$?
-    - if [ $EXIT_CODE -ne 0 ]; then echo "Make sure to update all Go versions in docs/development/_index.md to $GO_VERSION"; exit 1; fi
+    - scripts/check-go-version-consistency
 
 docs:check Kubernetes API docs:
   extends:
