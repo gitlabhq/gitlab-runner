@@ -89,6 +89,19 @@ Do not treat pre-existing infrastructure-dependent failures as blockers.
 - Commit message: `fix: imperative description (closes #{IID})`
 - MR description must explain root cause and the fix, not just what changed
 
+## Merge request conventions
+
+- Templates are not applied automatically to MRs created through the API, so
+  before creating any MR, read `.gitlab/merge_request_templates/` and use the
+  matching template:
+  - `Documentation.md` — only when every changed file is under `docs/`.
+  - `Security Release.md` — only for MRs prepared as part of the security
+    release process. Agents must not create these; security fixes require
+    human review (see "Bug triage — when to stop").
+  - `Default.md` — all other MRs.
+- Fill in the template's sections and keep its quick actions (`/label`,
+  `/assign`, etc.) intact at the end of the description.
+
 ## Bug triage — when to stop
 
 Stop and log reasoning without creating an MR when:
