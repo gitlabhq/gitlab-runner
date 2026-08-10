@@ -232,14 +232,14 @@ type RegisterRunnerParameters struct {
 
 type RegisterRunnerRequest struct {
 	RegisterRunnerParameters
-	Info  Info   `json:"info,omitempty"`
+	Info  Info   `json:"info"`
 	Token string `json:"token,omitempty"`
 }
 
 type RegisterRunnerResponse struct {
 	ID             int64     `json:"id,omitempty"`
 	Token          string    `json:"token,omitempty"`
-	TokenExpiresAt time.Time `json:"token_expires_at,omitempty"`
+	TokenExpiresAt time.Time `json:"token_expires_at"`
 }
 
 type VerifyRunnerRequest struct {
@@ -250,7 +250,7 @@ type VerifyRunnerRequest struct {
 type VerifyRunnerResponse struct {
 	ID             int64     `json:"id,omitempty"`
 	Token          string    `json:"token,omitempty"`
-	TokenExpiresAt time.Time `json:"token_expires_at,omitempty"`
+	TokenExpiresAt time.Time `json:"token_expires_at"`
 }
 
 type UnregisterRunnerRequest struct {
@@ -269,7 +269,7 @@ type ResetTokenRequest struct {
 type ResetTokenResponse struct {
 	Token           string `json:"token,omitempty"`
 	TokenObtainedAt time.Time
-	TokenExpiresAt  time.Time `json:"token_expires_at,omitempty"`
+	TokenExpiresAt  time.Time `json:"token_expires_at"`
 }
 
 type Info struct {
@@ -281,12 +281,12 @@ type Info struct {
 	Executor     string       `json:"executor,omitempty"`
 	Shell        string       `json:"shell,omitempty"`
 	Features     FeaturesInfo `json:"features"`
-	Config       ConfigInfo   `json:"config,omitempty"`
+	Config       ConfigInfo   `json:"config"`
 	Labels       Labels       `json:"labels,omitempty"`
 }
 
 type JobRequest struct {
-	Info       Info         `json:"info,omitempty"`
+	Info       Info         `json:"info"`
 	Token      string       `json:"token,omitempty"`
 	SystemID   string       `json:"system_id,omitempty"`
 	LastUpdate string       `json:"last_update,omitempty"`
@@ -300,12 +300,12 @@ type SessionInfo struct {
 }
 
 type UpdateJobRequest struct {
-	Info           Info                  `json:"info,omitempty"`
+	Info           Info                  `json:"info"`
 	Token          string                `json:"token,omitempty"`
 	State          JobState              `json:"state,omitempty"`
 	FailureReason  spec.JobFailureReason `json:"failure_reason,omitempty"`
 	Checksum       string                `json:"checksum,omitempty"` // deprecated
-	Output         JobTraceOutput        `json:"output,omitempty"`
+	Output         JobTraceOutput        `json:"output"`
 	ExitCode       int                   `json:"exit_code,omitempty"`
 	EnvironmentKey string                `json:"environment_key,omitempty"`
 }

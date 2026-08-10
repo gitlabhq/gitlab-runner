@@ -13,11 +13,11 @@ import (
 type CacheSource struct {
 	Name       string                   `json:"name,omitempty"`
 	Key        string                   `json:"key,omitempty"`
-	Descriptor cacheprovider.Descriptor `json:"descriptor,omitempty"`
+	Descriptor cacheprovider.Descriptor `json:"descriptor"`
 	// AlternateKey / AlternateDescriptor carry the FF_HASH_CACHE_KEYS-opposite form so
 	// cache-extractor can pick whichever URL has the newer Last-Modified timestamp.
 	AlternateKey        string                   `json:"alternate_key,omitempty"`
-	AlternateDescriptor cacheprovider.Descriptor `json:"alternate_descriptor,omitempty"`
+	AlternateDescriptor cacheprovider.Descriptor `json:"alternate_descriptor"`
 	Warnings            []string                 `json:"warnings,omitempty"`
 }
 

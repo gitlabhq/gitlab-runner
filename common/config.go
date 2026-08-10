@@ -379,7 +379,7 @@ type AutoscalerConfig struct {
 	ShutdownDeletionInterval    time.Duration           `toml:"shutdown_deletion_interval,omitempty" json:",omitempty"`
 	ShutdownDeletionRetries     int                     `toml:"shutdown_deletion_retries,omitempty" json:",omitempty"`
 	FailureThreshold            int                     `toml:"failure_threshold,omitempty" json:",omitempty"`
-	ScaleThrottle               AutoscalerScaleThrottle `toml:"scale_throttle,omitempty" json:",omitempty"`
+	ScaleThrottle               AutoscalerScaleThrottle `toml:"scale_throttle,omitempty"`
 	ReservationThrottling       *bool                   `toml:"reservation_throttling,omitempty" json:",omitempty"`
 
 	LogInternalIP bool `toml:"log_internal_ip,omitempty" json:",omitempty"`
@@ -389,7 +389,7 @@ type AutoscalerConfig struct {
 
 	VMIsolation VMIsolation `toml:"vm_isolation,omitempty"`
 
-	StateStorage AutoscalerStateStorage `toml:"state_storage,omitempty" json:",omitempty"`
+	StateStorage AutoscalerStateStorage `toml:"state_storage,omitempty"`
 
 	// instance_operation_time_buckets was introduced some time ago, so we can't just delete it.
 	// Someone can already depend on that setting.
@@ -776,7 +776,7 @@ type KubernetesConfig struct {
 	CapDrop                                           []string                           `toml:"cap_drop" json:"cap_drop,omitempty" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
 	DNSPolicy                                         KubernetesDNSPolicy                `toml:"dns_policy,omitempty" json:"dns_policy" long:"dns-policy" env:"KUBERNETES_DNS_POLICY" description:"How Kubernetes should try to resolve DNS from the created pods. If unset, Kubernetes will use the default 'ClusterFirst'. Valid values are: none, default, cluster-first, cluster-first-with-host-net"`
 	DNSConfig                                         KubernetesDNSConfig                `toml:"dns_config" json:"dns_config" description:"Pod DNS config"`
-	ContainerLifecycle                                KubernetesContainerLifecyle        `toml:"container_lifecycle,omitempty" json:"container_lifecycle,omitempty" description:"Actions that the management system should take in response to container lifecycle events"`
+	ContainerLifecycle                                KubernetesContainerLifecyle        `toml:"container_lifecycle,omitempty" json:"container_lifecycle" description:"Actions that the management system should take in response to container lifecycle events"`
 	PriorityClassName                                 string                             `toml:"priority_class_name,omitempty" json:"priority_class_name" long:"priority_class_name" env:"KUBERNETES_PRIORITY_CLASS_NAME" description:"If set, the Kubernetes Priority Class to be set to the Pods"`
 	PodSpec                                           []KubernetesPodSpec                `toml:"pod_spec" json:",omitempty"`
 	LogsBaseDir                                       string                             `toml:"logs_base_dir,omitempty" json:"logs_base_dir" long:"logs-base-dir" env:"KUBERNETES_LOGS_BASE_DIR" description:"Base directory for the path where build logs are stored. This directory is prepended to the final generated path. For example, <logs_base_dir>/logs-<project_id>-<job_id>."`
@@ -1455,10 +1455,10 @@ type RunnerSettings struct {
 	CleanGitConfig        *bool `toml:"clean_git_config,omitempty" json:"clean_git_config,omitempty" long:"clean-git-config" env:"RUNNER_CLEAN_GIT_CONFIG" description:"Clean git configuration before and after the build. Defaults to true, except the shell executor is used or the git strategy is \"none\""`
 
 	Shell          string              `toml:"shell,omitempty" json:"shell" long:"shell" env:"RUNNER_SHELL" description:"Select bash, sh, cmd, pwsh or powershell" jsonschema:"enum=bash,enum=sh,enum=cmd,enum=pwsh,enum=powershell,enum="`
-	CustomBuildDir CustomBuildDir      `toml:"custom_build_dir,omitempty" json:"custom_build_dir,omitempty" group:"custom build dir configuration" namespace:"custom_build_dir"`
+	CustomBuildDir CustomBuildDir      `toml:"custom_build_dir,omitempty" json:"custom_build_dir" group:"custom build dir configuration" namespace:"custom_build_dir"`
 	Referees       *referees.Config    `toml:"referees,omitempty" json:"referees,omitempty" group:"referees configuration" namespace:"referees"`
 	Cache          *cacheconfig.Config `toml:"cache,omitempty" json:"cache,omitempty" group:"cache configuration" namespace:"cache"`
-	Artifact       ArtifactConfig      `toml:"artifact,omitempty" json:"artifact,omitempty"`
+	Artifact       ArtifactConfig      `toml:"artifact,omitempty" json:"artifact"`
 
 	// GracefulKillTimeout and ForceKillTimeout aren't exposed to the users yet
 	// because not every executor supports it. We also have to keep in mind that
@@ -1509,7 +1509,7 @@ type RunnerConfig struct {
 	Experimental *RunnerExperimental `toml:"experimental,omitempty" json:"experimental,omitempty" description:"Experimental per-runner features. These settings carry no compatibility guarantee and may change or be removed in any release."`
 
 	SystemID       string    `toml:"-" json:",omitempty"`
-	ConfigLoadedAt time.Time `toml:"-" json:",omitempty"`
+	ConfigLoadedAt time.Time `toml:"-"`
 	ConfigDir      string    `toml:"-" json:",omitempty"`
 
 	RunnerCredentials
@@ -1607,14 +1607,14 @@ type MachineConfig struct {
 }
 
 type Experimental struct {
-	UsageLogger UsageLogger `toml:"usage_logger" json:"usage_logger,omitempty"`
+	UsageLogger UsageLogger `toml:"usage_logger" json:"usage_logger"`
 }
 
 type UsageLogger struct {
 	Enabled   bool            `toml:"enabled" json:"enabled"`
 	Writers   []string        `toml:"writers,omitempty" json:"writers,omitempty"` // logrotate, snowplow_billing
-	Logrotate LogrotateConfig `toml:"logrotate,omitempty" json:"logrotate,omitempty"`
-	Snowplow  SnowplowConfig  `toml:"snowplow_billing,omitempty" json:"snowplow_billing,omitempty"`
+	Logrotate LogrotateConfig `toml:"logrotate,omitempty" json:"logrotate"`
+	Snowplow  SnowplowConfig  `toml:"snowplow_billing,omitempty" json:"snowplow_billing"`
 
 	// Deprecated: Use Logrotate.LogDir instead
 	LogDir string `toml:"log_dir,omitempty" json:"log_dir,omitempty"`

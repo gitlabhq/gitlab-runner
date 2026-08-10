@@ -56,13 +56,13 @@ type Config struct {
 	Token                   string        `json:"token,omitempty"`
 	BaseURL                 string        `json:"base_url,omitempty"`
 
-	GetSources       stages.GetSources         `json:"get_sources,omitempty"`
+	GetSources       stages.GetSources         `json:"get_sources"`
 	CacheExtract     []stages.CacheExtract     `json:"cache_extract,omitempty"`
 	ArtifactExtract  []stages.ArtifactDownload `json:"artifact_extract,omitempty"`
 	Steps            []stages.Step             `json:"steps,omitempty"`
 	CacheArchive     []stages.CacheArchive     `json:"cache_archive,omitempty"`
 	ArtifactsArchive []stages.ArtifactUpload   `json:"artifacts_archive,omitempty"`
-	Cleanup          stages.Cleanup            `json:"cleanup,omitempty"`
+	Cleanup          stages.Cleanup            `json:"cleanup"`
 
 	// RunSteps holds the user's `run:` keyword. When set, it is dispatched
 	// as a nested job through the step-runner that is hosting this concrete
