@@ -71,22 +71,36 @@ func newDockerImageChecker(image string) *dockerImageChecker {
 	return &dockerImageChecker{image: image}
 }
 
-func (d *dockerImageChecker) Exists() error {
-	// the results of this function can be cached but there's no need atm
+// dockerInspectArgs builds the skopeo/docker inspect arguments for image,
+// attaching registry credentials only when they match the image's own
+// registry. Each case must only read its own registry's credentials -
+// crossing them (eg. sending GitLab.com credentials to Docker Hub) causes
+// every check against the other registry to fail authentication.
+func dockerInspectArgs(image string) []string {
 	args := []string{"inspect", "--raw", "--no-tags"}
 
-	// This is mostly for the security fork, to be able to query images from the security repos
-	if strings.HasPrefix(strings.ToLower(d.image), "registry.gitlab.com") {
+	switch lower := strings.ToLower(image); {
+	case strings.HasPrefix(lower, "registry.gitlab.com"):
+		// This is mostly for the security fork, to be able to query images from the security repos
 		if user, pass := os.Getenv("CI_REGISTRY_USER"), os.Getenv("CI_REGISTRY_PASSWORD"); user != "" && pass != "" {
-			args = append(
-				args,
-				"--username", user,
-				"--password", pass,
-			)
+			args = append(args, "--username", user, "--password", pass)
+		}
+	case strings.HasPrefix(lower, "registry.hub.docker.com"):
+		// Docker Hub's anonymous pull limit (100/6h per IP) is easily
+		// exceeded by checking the full release tag matrix unauthenticated.
+		// Reuse the credentials the release jobs already use to push these
+		// same images.
+		if user, pass := os.Getenv("DOCKER_HUB_USER"), os.Getenv("DOCKER_HUB_PASSWORD"); user != "" && pass != "" {
+			args = append(args, "--username", user, "--password", pass)
 		}
 	}
 
-	args = append(args, "docker://"+d.image)
+	return args
+}
+
+func (d *dockerImageChecker) Exists() error {
+	// the results of this function can be cached but there's no need atm
+	args := append(dockerInspectArgs(d.image), "docker://"+d.image)
 	command := "skopeo"
 	_, err := exec.LookPath(command)
 	if err != nil {
