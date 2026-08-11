@@ -18,7 +18,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/labkit/fields"
+	"gitlab.com/gitlab-org/labkit/v2/fields"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"

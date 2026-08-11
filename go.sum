@@ -307,8 +307,6 @@ github.com/gorilla/sessions v1.2.1 h1:DHd3rPN5lE3Ts3D8rKkQ8x/0kqfeNmBAaiSi+o7Fsg
 github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/zI+bUmuGM=
 github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 h1:JeSE6pjso5THxAzdVpqr6/geYxZytqFMBCOtn/ujyeo=
 github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674/go.mod h1:r4w70xmWCQKmi1ONH4KIaBptdivuRPyosB9RmPlGEwA=
-github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3 h1:B+8ClL/kCQkRiU82d9xajRPKYMrB7E0MbtzWVi1K4ns=
-github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3/go.mod h1:NbCUVmiS4foBGBHOYlCT25+YmGpJ32dZPi75pGEUpj4=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 h1:5VipnvEpbqr2gA2VbM+nYVbkIF28c5ZQfqCBQ5g2xfk=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0/go.mod h1:Hyl3n6Twe1hvtd9XUXDec4pTvgMSEixRuQKPTMH2bNs=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
@@ -449,8 +447,6 @@ github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f h1:KUppIJq7/+
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/oklog/run v1.2.0 h1:O8x3yXwah4A73hJdlrwo/2X6J62gE5qTMusH0dvz60E=
 github.com/oklog/run v1.2.0/go.mod h1:mgDbKRSwPhJfesJ4PntqFUbKQRZ50NgmZTSPlFA0YFk=
-github.com/oklog/ulid/v2 v2.1.1 h1:suPZ4ARWLOJLegGFiZZ1dFAkqzhMjL3J1TzI+5wHz8s=
-github.com/oklog/ulid/v2 v2.1.1/go.mod h1:rcEKHmBBKfef9DhnvX7y1HZBYxjXb0cP5ExxNsTT1QQ=
 github.com/onsi/gomega v1.34.1 h1:EUMJIKUjM8sKjYbtxQI9A4z2o+rruxnzNvpknOXie6k=
 github.com/onsi/gomega v1.34.1/go.mod h1:kU1QgUvBDLXBJq618Xvm2LUX6rSAfRaFRTcdOeDLwwY=
 github.com/openbao/openbao/api/v2 v2.6.0 h1:KvfspAaL9bab9hI8jFYkV2cgtSrwWtaG+k9AUTHWU4M=
@@ -463,7 +459,6 @@ github.com/pb33f/ordered-map/v2 v2.3.1 h1:5319HDO0aw4DA4gzi+zv4FXU9UlSs3xGZ40wcP
 github.com/pb33f/ordered-map/v2 v2.3.1/go.mod h1:qxFQgd0PkVUtOMCkTapqotNgzRhMPL7VvaHKbd1HnmQ=
 github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 h1:onHthvaw9LFnH4t2DcNVpwGmV9E1BkGknEliJkfwQj0=
 github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58/go.mod h1:DXv8WO4yhMYhSNPKjeNKa5WY9YCIEBRbNzFFPJbWO6Y=
-github.com/pborman/getopt v0.0.0-20170112200414-7148bc3a4c30/go.mod h1:85jBQOZwpVEaDAr341tbn15RS4fCAsIst0qp7i8ex1o=
 github.com/philhofer/fwd v1.2.0 h1:e6DnBTl7vGY+Gz322/ASL4Gyp1FspeMvx1RNDoToZuM=
 github.com/philhofer/fwd v1.2.0/go.mod h1:RqIHx9QI14HlwKwm98g9Re5prTQ6LdeRQn+gXJFxsJM=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
@@ -508,8 +503,6 @@ github.com/saracen/fastzip v0.2.0 h1:896eirt4TCjUQj/mMKIvh/HoJkUXDRljMmv1SYeuUNE
 github.com/saracen/fastzip v0.2.0/go.mod h1:s0X80kMEaqaZsYrsT4aUz7fTHBTVyS9lU8AzLJ/yC3U=
 github.com/saracen/zipextra v0.0.0-20250129175152-f1aa42d25216 h1:8zyjtFyKi5NJySVOJRiHmSN1vl6qugQ5n9C4X7WyY3U=
 github.com/saracen/zipextra v0.0.0-20250129175152-f1aa42d25216/go.mod h1:hnzuad9d2wdd3z8fC6UouHQK5qZxqv3F/E6MMzXc7q0=
-github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a h1:iLcLb5Fwwz7g/DLK89F+uQBDeAhHhwdzB5fSlVdhGcM=
-github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a/go.mod h1:wozgYq9WEBQBaIJe4YZ0qTSFAMxmcwBhQH0fO0R34Z0=
 github.com/secure-systems-lab/go-securesystemslib v0.10.0 h1:l+H5ErcW0PAehBNrBxoGv1jjNpGYdZ9RcheFkB2WI14=
 github.com/secure-systems-lab/go-securesystemslib v0.10.0/go.mod h1:MRKONWmRoFzPNQ9USRF9i1mc7MvAVvF1LlW8X5VWDvk=
 github.com/sergi/go-diff v1.4.0 h1:n/SP9D5ad1fORl+llWyN+D6qoUETXNZARKjyY2/KVCw=
@@ -578,12 +571,8 @@ gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-202607281724
 gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20260728172440-10442aeb915a/go.mod h1:FAyvIzqOT2RasMLuSfM1/xC9lfbi2elolOtNVqzmkLQ=
 gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c h1:Rok2xcn1GeA8o0oMbzk3e4Fp9FWc+T4TvowjzeGGct4=
 gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c/go.mod h1:5VrTOPrC1shLgKmF0BsX+SWOXiOdQcu0ZyAHSbYGUyQ=
-gitlab.com/gitlab-org/go/reopen v1.0.0 h1:6BujZ0lkkjGIejTUJdNO1w56mN1SI10qcVQyQlOPM+8=
-gitlab.com/gitlab-org/go/reopen v1.0.0/go.mod h1:D6OID8YJDzEVZNYW02R/Pkj0v8gYFSIhXFTArAsBQw8=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e h1:Aw1nDGdZEm1Jv3jwKbT0hKTAxTpP4yVRGCI21MYRHBc=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e/go.mod h1:pKFT8nwdU5KuJYosKMGgMATMrV4AP6p9jRu4HobZaBA=
-gitlab.com/gitlab-org/labkit v1.64.8 h1:YyYvCGf1Drkf4V+9b5hjLtOM2pOxnwDueOgR1g2/mfs=
-gitlab.com/gitlab-org/labkit v1.64.8/go.mod h1:ARZnzZ49zdjPQfoyaW8sEpZz2EDFXN4NKNblste8nhc=
 gitlab.com/gitlab-org/labkit/v2 v2.26.1 h1:F1Q/6/Q2hFAVUKL0qrnLHdJyD3mH2vFM95/WPSQ9wyQ=
 gitlab.com/gitlab-org/labkit/v2 v2.26.1/go.mod h1:UZNkMHIK7AhXFZg1s1c5dS88o279tXq7O4QusZ6s3wA=
 gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7 h1:ZeO7PIjerXTEaZPvR2fBkB/8fTAFrVjUFgC1B8x64fM=

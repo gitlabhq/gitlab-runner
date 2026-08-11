@@ -20,9 +20,9 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/fips"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
-	"gitlab.com/gitlab-org/labkit/fips"
 )
 
 type configTemplate struct {

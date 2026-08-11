@@ -14,7 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-	"gitlab.com/gitlab-org/labkit/fields"
+	"gitlab.com/gitlab-org/labkit/v2/fields"
 )
 
 // conn is an interface wrapper used to generate mocks that are next used for tests

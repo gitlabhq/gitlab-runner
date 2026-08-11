@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/jpillora/backoff"
-	"gitlab.com/gitlab-org/labkit/fields"
+	"gitlab.com/gitlab-org/labkit/v2/fields"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
