@@ -14,7 +14,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.8.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/KimMachineGun/automemlimit v0.7.5
-	github.com/aws/aws-sdk-go-v2 v1.43.3
+	github.com/aws/aws-sdk-go-v2 v1.43.5
 	github.com/aws/aws-sdk-go-v2/config v1.32.25
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.31
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.106.0
@@ -140,7 +140,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/signin v1.5.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.33.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.38.1 // indirect
-	github.com/aws/smithy-go v1.27.6 // indirect
+	github.com/aws/smithy-go v1.27.7 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bodgit/ntlmssp v0.0.0-20240506230425-31973bb52d9b // indirect
