@@ -1,8 +1,12 @@
-## v19.2.1 (2026-07-28)
+## v19.2.1 (2026-08-12)
 
 ### Bug fixes
 
 - [19.2] Key S3 client cache by config value, not pointer [!6981](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6981)
+
+### Maintenance
+
+- Verify resources: authenticate Docker Hub image checks [!7162](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7162)
 
 ## v19.2.0 (2026-07-28)
 
