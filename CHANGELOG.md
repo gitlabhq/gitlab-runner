@@ -1,3 +1,9 @@
+## v19.2.2 (2026-08-12)
+
+### Maintenance
+
+- Verify resources: authenticate Docker Hub image checks [!7162](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7162)
+
 ## v19.2.1 (2026-08-12)
 
 ### Bug fixes
