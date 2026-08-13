@@ -546,9 +546,9 @@ func (b *BashShell) GenerateSaveScript(info common.ShellScriptInfo, scriptPath, 
 }
 
 func (b *BashShell) generateSaveScript(w *BashWriter, scriptPath, script string) (string, error) {
-	w.Line(fmt.Sprintf("touch %s", scriptPath))
-	w.Line(fmt.Sprintf("chmod 777 %s", scriptPath))
-	w.Line(fmt.Sprintf("echo %s > %s", w.escape(script), scriptPath))
+	w.Line(fmt.Sprintf("echo %s > %s.tmp", w.escape(script), scriptPath))
+	w.Line(fmt.Sprintf("chmod 777 %s.tmp", scriptPath))
+	w.Line(fmt.Sprintf("mv %s.tmp %s", scriptPath, scriptPath))
 
 	return w.String(), nil
 }
