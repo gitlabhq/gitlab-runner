@@ -52,6 +52,17 @@ func TestBash_IfCmdShellEscapes(t *testing.T) {
 	assert.Equal(t, "if foo $'x&(y)' >/dev/null 2>&1 ; then\n", writer.String())
 }
 
+func TestBash_GenerateSaveScript(t *testing.T) {
+	info := common.ShellScriptInfo{
+		Shell: "bash",
+		Build: &common.Build{Runner: &common.RunnerConfig{}},
+	}
+
+	script, err := common.GetShell("bash").GenerateSaveScript(info, "path", "echo hi")
+	require.NoError(t, err)
+	assert.Equal(t, "echo $'echo hi' > path.tmp\nchmod 777 path.tmp\nmv path.tmp path\n", script)
+}
+
 func TestBash_CheckForErrors(t *testing.T) {
 	tests := map[string]struct {
 		checkForErrors bool
