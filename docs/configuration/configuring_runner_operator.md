@@ -477,7 +477,7 @@ The user ID mismatch also affects the [CI/CD cache](https://docs.gitlab.com/ci/c
 This issue affects non-root build containers whose user ID does not match the helper image's user ID.
 Build containers running as root are not affected.
 
-The [OCP helper image](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/main/helper/OCP.Dockerfile)
+The [OCP helper image](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/07e737e0cbe551b36fb8060d4d2cc03cd0939091/helper/OCP.Dockerfile)
 archives and extracts cache files as user ID `1001`. When the build container runs as
 a different user ID, it cannot write to the restored cache directory because the files
 are owned by `1001:1001`.
