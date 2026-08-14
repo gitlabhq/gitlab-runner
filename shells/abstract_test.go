@@ -4004,15 +4004,21 @@ func expectSetupTemplate(shellWriter *MockShellWriter, dir string, withCredHelpe
 	return templateDir, calls
 }
 
-// expectSetupGlobalGitConfigSeed pins the seed file writes: a fresh file
-// chaining the user's global config ($HOME/.gitconfig and default XDG) and the
-// per-job extConfigFile.
+// expectSetupGlobalGitConfigSeed pins the seed file writes: a fresh file, the
+// user's global config ($HOME/.gitconfig and default XDG) each chained behind
+// a readability guard, and the per-job extConfigFile unconditionally.
 func expectSetupGlobalGitConfigSeed(w *MockShellWriter, seedFile, extConfigFile string) {
 	w.EXPECT().TmpFile(globalGitConfigSeedFile).Return(seedFile).Once()
 	w.EXPECT().RmFile(seedFile).Once()
-	w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.gitconfig").Once()
-	w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.config/git/config").Once()
-	w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", extConfigFile).Once()
+	mock.InOrder(
+		w.EXPECT().IfFileReadable("$HOME/.gitconfig").Once(),
+		w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.gitconfig").Once(),
+		w.EXPECT().EndIf().Once(),
+		w.EXPECT().IfFileReadable("$HOME/.config/git/config").Once(),
+		w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.config/git/config").Once(),
+		w.EXPECT().EndIf().Once(),
+		w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", extConfigFile).Once(),
+	)
 }
 
 // expectExportGitConfigGlobal pins the per-stage GIT_CONFIG_GLOBAL export
@@ -4688,8 +4694,10 @@ func TestSetupExternalConfigFile(t *testing.T) {
 }
 
 // TestSetupGlobalGitConfigSeed pins the seed writes: a fresh file (RmFile
-// first) chaining the user's global config ($HOME/.gitconfig and default XDG,
-// $HOME expanded at script-runtime via CommandArgExpand) and extConfigFile.
+// first), the user's global config ($HOME/.gitconfig and default XDG, $HOME
+// expanded at script-runtime via CommandArgExpand) each chained behind a
+// readability guard so an unreadable HOME skips the include the same way git
+// skips an unreadable global config, then extConfigFile unconditionally.
 func TestSetupGlobalGitConfigSeed(t *testing.T) {
 	w := NewMockShellWriter(t)
 	const extConfigFile = "/tmp/job/.gitlab-runner.ext.conf"
@@ -4698,8 +4706,12 @@ func TestSetupGlobalGitConfigSeed(t *testing.T) {
 	mock.InOrder(
 		w.EXPECT().TmpFile(globalGitConfigSeedFile).Return(seedFile).Once(),
 		w.EXPECT().RmFile(seedFile).Once(),
+		w.EXPECT().IfFileReadable("$HOME/.gitconfig").Once(),
 		w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.gitconfig").Once(),
+		w.EXPECT().EndIf().Once(),
+		w.EXPECT().IfFileReadable("$HOME/.config/git/config").Once(),
 		w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.config/git/config").Once(),
+		w.EXPECT().EndIf().Once(),
 		w.EXPECT().CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", extConfigFile).Once(),
 	)
 

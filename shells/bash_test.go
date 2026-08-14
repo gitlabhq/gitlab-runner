@@ -63,6 +63,35 @@ func TestBash_GenerateSaveScript(t *testing.T) {
 	assert.Equal(t, "echo $'echo hi' > path.tmp\nchmod 777 path.tmp\nmv path.tmp path\n", script)
 }
 
+// TestBashWriter_IfFileReadable pins the guard emitted around optional git
+// config includes: [ -r ] is exactly the access(R_OK) probe git itself
+// uses for optional config files, and %q quoting must keep a runtime $HOME
+// reference unescaped so it expands in the executor's environment.
+func TestBashWriter_IfFileReadable(t *testing.T) {
+	tests := map[string]struct {
+		path     string
+		expected string
+	}{
+		"runtime HOME reference": {
+			path:     "$HOME/.gitconfig",
+			expected: `if [ -r "$HOME/.gitconfig" ]; then` + "\n",
+		},
+		"path with spaces": {
+			path:     "/home/user name/.gitconfig",
+			expected: `if [ -r "/home/user name/.gitconfig" ]; then` + "\n",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			writer := &BashWriter{}
+			writer.IfFileReadable(tc.path)
+
+			assert.Equal(t, tc.expected, writer.String())
+		})
+	}
+}
+
 func TestBash_CheckForErrors(t *testing.T) {
 	tests := map[string]struct {
 		checkForErrors bool

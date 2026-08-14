@@ -30,6 +30,7 @@ type ShellWriter interface {
 
 	IfDirectory(path string)
 	IfFile(file string)
+	IfFileReadable(file string)
 	IfCmd(cmd string, arguments ...string)
 	IfCmdWithOutput(cmd string, arguments ...string)
 	IfCmdWithOutputArgExpand(cmd string, arguments ...string)

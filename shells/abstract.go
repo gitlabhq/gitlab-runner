@@ -1103,14 +1103,26 @@ func (b *AbstractShell) setupTemplateDir(w ShellWriter, build *common.Build, pro
 //
 // Setting GIT_CONFIG_GLOBAL makes git ignore the user's usual global config
 // ($HOME/.gitconfig and the default XDG $HOME/.config/git/config), so both are
-// chained back in. A non-default $XDG_CONFIG_HOME isn't covered: it can't be
-// referenced portably across bash and PowerShell ($HOME can). CommandArgExpand
-// expands $HOME at script-runtime (the executor's env, not the runner host's).
+// chained back in, each behind a readability guard. git skips an unreadable
+// global config silently (ACCESS_EACCES_OK, since v1.8.3.1) but dies on an
+// unreadable include.path target, so an unguarded include turns a supported
+// environment, such as HOME=/root in a non-root container, into "fatal:
+// unable to access '/root/.gitconfig'" on every git invocation, including
+// the very next seed write below. The guard reproduces git's own probe at
+// emission time. Trade-off: a global config file created mid-job by writing
+// it directly is not picked up, the include set is frozen here.
+//
+// A non-default $XDG_CONFIG_HOME isn't covered: it can't be referenced
+// portably across bash and PowerShell ($HOME can). CommandArgExpand expands
+// $HOME at script-runtime (the executor's env, not the runner host's).
 func setupGlobalGitConfigSeed(w ShellWriter, extConfigFile string) {
 	seedFile := w.TmpFile(globalGitConfigSeedFile)
 	w.RmFile(seedFile)
-	w.CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.gitconfig")
-	w.CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", "$HOME/.config/git/config")
+	for _, userConfig := range []string{"$HOME/.gitconfig", "$HOME/.config/git/config"} {
+		w.IfFileReadable(userConfig)
+		w.CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", userConfig)
+		w.EndIf()
+	}
 	w.CommandArgExpand("git", "config", "--file", seedFile, "--add", "include.path", extConfigFile)
 }
 

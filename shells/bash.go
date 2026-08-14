@@ -278,6 +278,11 @@ func (b *BashWriter) IfFile(path string) {
 	b.Indent()
 }
 
+func (b *BashWriter) IfFileReadable(path string) {
+	b.Linef("if [ -r %q ]; then", path)
+	b.Indent()
+}
+
 func (b *BashWriter) IfCmd(cmd string, arguments ...string) {
 	b.ifCmd(b.buildCommand(b.escape, cmd, arguments...) + " >/dev/null 2>&1")
 }
