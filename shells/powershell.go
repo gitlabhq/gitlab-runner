@@ -508,6 +508,11 @@ func (p *PsWriter) IfFile(path string) {
 	p.Indent()
 }
 
+func (p *PsWriter) IfFileReadable(path string) {
+	p.Linef("if($(try { [System.IO.File]::OpenRead(%s).Dispose(); $true } catch { $false })) {", p.resolvePath(path))
+	p.Indent()
+}
+
 func (p *PsWriter) IfCmd(cmd string, arguments ...string) {
 	p.ifInTryCatch(p.buildCommand(psSingleQuote, cmd, arguments...) + " 2>$null")
 }

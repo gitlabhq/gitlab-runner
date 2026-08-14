@@ -369,6 +369,28 @@ runners:
 > Because all files that are not explicitly handled and stored as build
 > artifacts are usually ephemeral, `emptyDir` works for most cases.
 
+## Error: `could not lock config file` or `unable to access '~/.gitconfig'`
+
+Jobs that use a non-root image can fail when `HOME` points to a directory the build user cannot access,
+for example `/root` or `/`. The specific error depends on the Git operation and your GitLab Runner version:
+
+- `error: could not lock config file /root/.gitconfig: Permission denied` occurs when Git writes global
+  configuration, for example `git config --global` in a job script or the `safe.directory` setting.
+- `fatal: unable to access '/root/.gitconfig': Permission denied` occurs on any Git command in
+  GitLab Runner 19.2 with the [`FF_GIT_URLS_WITHOUT_TOKENS` feature flag](../../configuration/feature-flags.md)
+  enabled.
+
+Kubernetes does not derive `HOME` from the user in the security context, so a non-root
+image without an explicit `HOME` keeps the value defined in the image.
+
+To fix the problem, give the build user a writable home directory:
+
+- Mount a volume and point `HOME` to it, as shown in
+  [the read-only root file system section](#for-the-build-pod).
+- Set `HOME` in the image, for example `ENV HOME=/home/user`.
+- Export `HOME` in a `pre_build_script`, for example `export HOME="$(mktemp -d)"`.
+  This covers Git commands in the job script only, not the source fetch.
+
 ## Error: `failed to share mount point: /: permission denied`
 
 Rootless container tools that use [rootlesskit](https://github.com/rootless-containers/rootlesskit)

@@ -5,6 +5,7 @@ package shells
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -1137,4 +1138,57 @@ func TestPowershell_ExportRaw_PreservesRuntimePath(t *testing.T) {
 	assert.Contains(t, got, "$CurrentDirectory", "the runtime path-resolution expression must be present")
 	assert.NotContains(t, got, "`$", "the '$' must not be escaped, or PowerShell would render a literal $CurrentDirectory")
 	assert.Contains(t, got, globalGitConfigSeedFile, "the exported value must point at the seed file")
+}
+
+// TestPowershell_IfFileReadable pins the guard emitted around optional git
+// config includes. The OpenRead attempt probes actual readability where
+// Test-Path only proves existence (a deny-read ACL passes Test-Path and
+// then kills git at read time), and the try/catch keeps the probe silent
+// under the pwsh $ErrorActionPreference = "Stop" prologue, including the
+// "Cannot find drive" error of the runtime-resolver branch. The path goes
+// through resolvePath like IfFile and IfDirectory, so the non-resolver
+// expectations are filepath.FromSlash dependent, and a runtime $HOME must
+// stay unescaped in both modes. .NET path APIs take wildcard characters
+// literally, so bracketed paths need no special casing. Mixed separators
+// are the shape $HOME/.gitconfig actually takes once the shell expands
+// $HOME on Windows, and both branches must leave them alone rather than
+// mangle the value.
+func TestPowershell_IfFileReadable(t *testing.T) {
+	tests := map[string]struct {
+		resolvePaths bool
+		path         string
+		expected     string
+	}{
+		"runtime HOME reference": {
+			path:     "$HOME/.gitconfig",
+			expected: `if($(try { [System.IO.File]::OpenRead("` + filepath.FromSlash("$HOME/.gitconfig") + `").Dispose(); $true } catch { $false })) {` + "\n",
+		},
+		"wildcard characters stay literal": {
+			path:     "C:/Users/brack[1]/.gitconfig",
+			expected: `if($(try { [System.IO.File]::OpenRead("` + filepath.FromSlash("C:/Users/brack[1]/.gitconfig") + `").Dispose(); $true } catch { $false })) {` + "\n",
+		},
+		"mixed separators": {
+			path:     `C:\Users\someone/.gitconfig`,
+			expected: `if($(try { [System.IO.File]::OpenRead("` + filepath.FromSlash(`C:\Users\someone/.gitconfig`) + `").Dispose(); $true } catch { $false })) {` + "\n",
+		},
+		"runtime path resolver": {
+			resolvePaths: true,
+			path:         "$HOME/.gitconfig",
+			expected:     `if($(try { [System.IO.File]::OpenRead($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath("$HOME/.gitconfig")).Dispose(); $true } catch { $false })) {` + "\n",
+		},
+		"mixed separators with the runtime path resolver": {
+			resolvePaths: true,
+			path:         `C:\Users\someone/.gitconfig`,
+			expected:     `if($(try { [System.IO.File]::OpenRead($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath("C:\Users\someone/.gitconfig")).Dispose(); $true } catch { $false })) {` + "\n",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			writer := &PsWriter{Shell: SNPwsh, EOL: "\n", resolvePaths: tc.resolvePaths}
+			writer.IfFileReadable(tc.path)
+
+			assert.Equal(t, tc.expected, writer.String())
+		})
+	}
 }

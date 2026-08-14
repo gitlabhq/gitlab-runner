@@ -964,6 +964,46 @@ func (_c *MockShellWriter_IfFile_Call) RunAndReturn(run func(file string)) *Mock
 	return _c
 }
 
+// IfFileReadable provides a mock function for the type MockShellWriter
+func (_mock *MockShellWriter) IfFileReadable(file string) {
+	_mock.Called(file)
+	return
+}
+
+// MockShellWriter_IfFileReadable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IfFileReadable'
+type MockShellWriter_IfFileReadable_Call struct {
+	*mock.Call
+}
+
+// IfFileReadable is a helper method to define mock.On call
+//   - file string
+func (_e *MockShellWriter_Expecter) IfFileReadable(file interface{}) *MockShellWriter_IfFileReadable_Call {
+	return &MockShellWriter_IfFileReadable_Call{Call: _e.mock.On("IfFileReadable", file)}
+}
+
+func (_c *MockShellWriter_IfFileReadable_Call) Run(run func(file string)) *MockShellWriter_IfFileReadable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockShellWriter_IfFileReadable_Call) Return() *MockShellWriter_IfFileReadable_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockShellWriter_IfFileReadable_Call) RunAndReturn(run func(file string)) *MockShellWriter_IfFileReadable_Call {
+	_c.Run(run)
+	return _c
+}
+
 // IfGitVersionIsAtLeast provides a mock function for the type MockShellWriter
 func (_mock *MockShellWriter) IfGitVersionIsAtLeast(version string) {
 	_mock.Called(version)
