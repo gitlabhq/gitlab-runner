@@ -1467,6 +1467,7 @@ func TestBuildGitFetchStrategyFallback(t *testing.T) {
 		err = buildtest.RunBuild(t, build)
 		require.NoError(t, err)
 		require.Contains(t, out, "Deleting tracked and untracked files...")
+		require.NotContains(t, out, "rm '", "git rm should run quietly and not log a line per removed file")
 
 		// Double check that the submodule was successfully checked out and `test.txt` is gone.
 		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "README.md"))
