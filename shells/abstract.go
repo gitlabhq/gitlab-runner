@@ -594,8 +594,8 @@ func (b *AbstractShell) writeClearWorktreeScript(_ context.Context, w ShellWrite
 
 	w.IfDirectory(projectDir)
 	w.Cd(projectDir)
-	w.Command("git", "rm", "-rf", "--ignore-unmatch", ".")
-	w.Command("git", "clean", "-ffdx")
+	w.Command("git", "rm", "-rf", "--ignore-unmatch", "--quiet", ".")
+	w.Command("git", "clean", "-ffdx", "-q")
 	w.EndIf()
 
 	return nil

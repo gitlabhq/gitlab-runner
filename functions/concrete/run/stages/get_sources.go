@@ -854,11 +854,11 @@ func (s GetSources) clearWorktree(ctx context.Context, e *env.Env) error {
 		return nil
 	}
 
-	if err := git(ctx, e, nil, "rm", "-rf", "--ignore-unmatch", "."); err != nil {
+	if err := git(ctx, e, nil, "rm", "-rf", "--ignore-unmatch", "--quiet", "."); err != nil {
 		return err
 	}
 
-	return git(ctx, e, nil, "clean", "-ffdx")
+	return git(ctx, e, nil, "clean", "-ffdx", "-q")
 }
 
 // --- helpers ---

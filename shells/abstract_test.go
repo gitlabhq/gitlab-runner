@@ -1220,6 +1220,30 @@ func TestAbstractShell_writeCleanupBuildDirectoryScript(t *testing.T) {
 	}
 }
 
+func TestAbstractShell_writeClearWorktreeScript(t *testing.T) {
+	info := common.ShellScriptInfo{
+		Build: &common.Build{
+			BuildDir: "build/dir",
+			Job: spec.Job{
+				GitInfo: spec.GitInfo{
+					RepoURL: "https://repo-url/some/repo",
+				},
+			},
+		},
+	}
+
+	mockShellWriter := NewMockShellWriter(t)
+	mockShellWriter.On("Noticef", "Deleting tracked and untracked files...").Once()
+	mockShellWriter.On("IfDirectory", "build/dir").Return(true).Once()
+	mockShellWriter.On("Cd", "build/dir").Once()
+	mockShellWriter.On("Command", "git", "rm", "-rf", "--ignore-unmatch", "--quiet", ".").Once()
+	mockShellWriter.On("Command", "git", "clean", "-ffdx", "-q").Once()
+	mockShellWriter.On("EndIf").Once()
+
+	shell := AbstractShell{}
+	assert.NoError(t, shell.writeClearWorktreeScript(t.Context(), mockShellWriter, info))
+}
+
 func TestGitCleanFlags(t *testing.T) {
 	tests := map[string]struct {
 		value string

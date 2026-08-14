@@ -560,4 +560,7 @@ func TestGetSourcesGit_ClearWorktreeOnRetry(t *testing.T) {
 
 	stderr := e.Stderr.(*bytes.Buffer).String()
 	assert.Contains(t, stderr, "Deleting tracked and untracked files")
+
+	stdout := e.Stdout.(*bytes.Buffer).String()
+	assert.NotContains(t, stdout, "rm 'hello.txt'", "git rm should run quietly and not log a line per removed file")
 }
