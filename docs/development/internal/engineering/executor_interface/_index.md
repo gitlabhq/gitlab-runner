@@ -322,7 +322,7 @@ and `GetDefaultShell()`.
 
 `Create()` is very simple as its returns the `machineExecutor` (implementation of the `Executor` interface)
 with access to itself, so that steps like `Prepare()` or `Cleanup()` can use it to maintain the autoscaled
-VMs (more about that will be described bellow).
+VMs (more about that will be described below).
 
 This provider is also the one that finally takes the usage of `Acquire()` and `Release()` methods
 of the `Executor Provider` interface.
