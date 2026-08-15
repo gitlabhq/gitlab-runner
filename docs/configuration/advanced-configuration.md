@@ -1831,7 +1831,7 @@ For files larger than 5 GB, you must use the multipart upload API.
 Multipart transfers are only supported with AWS S3 and not for other S3
 providers. Because the runner manager handles jobs for different
 projects, the runner manager cannot pass around S3 credentials that have
-bucket-wide permissions. Instead, the runner manger uses time-limited
+bucket-wide permissions. Instead, the runner manager uses time-limited
 pre-signed URLs and narrowly-scoped credentials to restrict access to one
 specific object.
 
