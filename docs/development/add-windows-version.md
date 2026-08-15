@@ -37,9 +37,9 @@ To support a new Windows version or architecture, that project must first publis
 [merge request 88](https://gitlab.com/gitlab-org/ci-cd/runner-tools/base-images/-/merge_requests/88)
 added the `ltsc2025`, `ltsc2025-arm64`, `servercore`, and `nanoserver` base images.
 
-The [`windows-containers`](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers) 
-repository builds the GCP host VM images for the shared Windows runner fleet. 
-The [autoscaler](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/autoscaler) 
+The [`windows-containers`](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers)
+repository builds the GCP host VM images for the shared Windows runner fleet.
+The [autoscaler](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/autoscaler)
 provisions them.
 
 For example, when adding support for Windows Server 2025,
@@ -208,5 +208,5 @@ variant, was implemented across several merge requests (parent
 - [Merge request 6716](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6716): Bundled the native
   ARM64 helper binary into the `servercore:ltsc2025-arm64` image instead of the emulated AMD64 binary
   (`dockerfiles/runner-helper/docker-bake.hcl`, `scripts/pusher/helper-images.json`).
-- [Merge request 6717](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6717): Built 
+- [Merge request 6717](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6717): Built
   `nanoserver:ltsc2025` and `nanoserver:ltsc2025-arm64` helper images.
