@@ -2300,6 +2300,81 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
+			Name: "helper image with concrete flavour when FF_CONCRETE is enabled",
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				Job: spec.Job{
+					Image: spec.Image{
+						Name: "test-image",
+					},
+					Variables: spec.Variables{
+						{Key: "FF_CONCRETE", Value: "true"},
+					},
+				},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: spec.Image{
+						Name: "test-image",
+					},
+					Services: map[string]*spec.Image{},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo: helperimage.Info{
+					OSType:       helperimage.OSTypeLinux,
+					Architecture: "x86_64",
+					Name:         helperimage.GitLabRegistryName,
+					Tag:          fmt.Sprintf("concrete-x86_64-%s", helperImageTag),
+					Prebuilt:     "prebuilt-concrete-x86_64",
+					Cmd:          []string{},
+				},
+			},
+		},
+		{
+			Name: "explicit helper image flavour takes precedence over FF_CONCRETE",
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:              "test-server",
+						HelperImageFlavor: "ubuntu",
+					},
+				},
+			},
+			Build: &common.Build{
+				Job: spec.Job{
+					Image: spec.Image{
+						Name: "test-image",
+					},
+					Variables: spec.Variables{
+						{Key: "FF_CONCRETE", Value: "true"},
+					},
+				},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: spec.Image{
+						Name: "test-image",
+					},
+					Services: map[string]*spec.Image{},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo: helperimage.Info{
+					OSType:       helperimage.OSTypeLinux,
+					Architecture: "x86_64",
+					Name:         helperimage.GitLabRegistryName,
+					Tag:          fmt.Sprintf("ubuntu-x86_64-%s", helperImageTag),
+					Prebuilt:     "prebuilt-ubuntu-x86_64",
+					Cmd:          []string{},
+				},
+			},
+		},
+		{
 			Name: "helper image with ubuntu flavour default registry",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
