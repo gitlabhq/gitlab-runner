@@ -196,7 +196,7 @@ type Build struct {
 	finishedAt time.Time
 
 	Referees         []referees.Referee
-	ArtifactUploader func(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string)
+	ArtifactUploader func(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string, error)
 
 	urlHelper *url_helpers.GitAuthHelper
 
@@ -1077,7 +1077,7 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 		}
 
 		// referee ran successfully, upload its results to GitLab as an artifact
-		b.ArtifactUploader(jobCredentials, bodyProvider, ArtifactsOptions{
+		_, _, _ = b.ArtifactUploader(jobCredentials, bodyProvider, ArtifactsOptions{
 			BaseName: referee.ArtifactBaseName(),
 			Type:     referee.ArtifactType(),
 			Format:   spec.ArtifactFormat(referee.ArtifactFormat()),

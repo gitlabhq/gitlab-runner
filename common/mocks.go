@@ -3031,7 +3031,7 @@ func (_c *MockNetwork_UpdateJob_Call) RunAndReturn(run func(config RunnerConfig,
 }
 
 // UploadRawArtifacts provides a mock function for the type MockNetwork
-func (_mock *MockNetwork) UploadRawArtifacts(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string) {
+func (_mock *MockNetwork) UploadRawArtifacts(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string, error) {
 	ret := _mock.Called(config, bodyProvider, options)
 
 	if len(ret) == 0 {
@@ -3040,7 +3040,8 @@ func (_mock *MockNetwork) UploadRawArtifacts(config JobCredentials, bodyProvider
 
 	var r0 UploadState
 	var r1 string
-	if returnFunc, ok := ret.Get(0).(func(JobCredentials, ContentProvider, ArtifactsOptions) (UploadState, string)); ok {
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(JobCredentials, ContentProvider, ArtifactsOptions) (UploadState, string, error)); ok {
 		return returnFunc(config, bodyProvider, options)
 	}
 	if returnFunc, ok := ret.Get(0).(func(JobCredentials, ContentProvider, ArtifactsOptions) UploadState); ok {
@@ -3053,7 +3054,14 @@ func (_mock *MockNetwork) UploadRawArtifacts(config JobCredentials, bodyProvider
 	} else {
 		r1 = ret.Get(1).(string)
 	}
-	return r0, r1
+	if returnFunc, ok := ret.Get(2).(func(JobCredentials, ContentProvider, ArtifactsOptions) error); ok {
+		r2 = returnFunc(config, bodyProvider, options)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).(error)
+		}
+	}
+	return r0, r1, r2
 }
 
 // MockNetwork_UploadRawArtifacts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UploadRawArtifacts'
@@ -3092,12 +3100,12 @@ func (_c *MockNetwork_UploadRawArtifacts_Call) Run(run func(config JobCredential
 	return _c
 }
 
-func (_c *MockNetwork_UploadRawArtifacts_Call) Return(uploadState UploadState, s string) *MockNetwork_UploadRawArtifacts_Call {
-	_c.Call.Return(uploadState, s)
+func (_c *MockNetwork_UploadRawArtifacts_Call) Return(uploadState UploadState, s string, err error) *MockNetwork_UploadRawArtifacts_Call {
+	_c.Call.Return(uploadState, s, err)
 	return _c
 }
 
-func (_c *MockNetwork_UploadRawArtifacts_Call) RunAndReturn(run func(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string)) *MockNetwork_UploadRawArtifacts_Call {
+func (_c *MockNetwork_UploadRawArtifacts_Call) RunAndReturn(run func(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string, error)) *MockNetwork_UploadRawArtifacts_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -879,7 +879,7 @@ func (_c *MockDelegate_UpdateJob_Call) RunAndReturn(run func(config common.Runne
 }
 
 // UploadRawArtifacts provides a mock function for the type MockDelegate
-func (_mock *MockDelegate) UploadRawArtifacts(config common.JobCredentials, bodyProvider common.ContentProvider, options common.ArtifactsOptions) (common.UploadState, string) {
+func (_mock *MockDelegate) UploadRawArtifacts(config common.JobCredentials, bodyProvider common.ContentProvider, options common.ArtifactsOptions) (common.UploadState, string, error) {
 	ret := _mock.Called(config, bodyProvider, options)
 
 	if len(ret) == 0 {
@@ -888,7 +888,8 @@ func (_mock *MockDelegate) UploadRawArtifacts(config common.JobCredentials, body
 
 	var r0 common.UploadState
 	var r1 string
-	if returnFunc, ok := ret.Get(0).(func(common.JobCredentials, common.ContentProvider, common.ArtifactsOptions) (common.UploadState, string)); ok {
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(common.JobCredentials, common.ContentProvider, common.ArtifactsOptions) (common.UploadState, string, error)); ok {
 		return returnFunc(config, bodyProvider, options)
 	}
 	if returnFunc, ok := ret.Get(0).(func(common.JobCredentials, common.ContentProvider, common.ArtifactsOptions) common.UploadState); ok {
@@ -901,7 +902,14 @@ func (_mock *MockDelegate) UploadRawArtifacts(config common.JobCredentials, body
 	} else {
 		r1 = ret.Get(1).(string)
 	}
-	return r0, r1
+	if returnFunc, ok := ret.Get(2).(func(common.JobCredentials, common.ContentProvider, common.ArtifactsOptions) error); ok {
+		r2 = returnFunc(config, bodyProvider, options)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).(error)
+		}
+	}
+	return r0, r1, r2
 }
 
 // MockDelegate_UploadRawArtifacts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UploadRawArtifacts'
@@ -940,12 +948,12 @@ func (_c *MockDelegate_UploadRawArtifacts_Call) Run(run func(config common.JobCr
 	return _c
 }
 
-func (_c *MockDelegate_UploadRawArtifacts_Call) Return(uploadState common.UploadState, s string) *MockDelegate_UploadRawArtifacts_Call {
-	_c.Call.Return(uploadState, s)
+func (_c *MockDelegate_UploadRawArtifacts_Call) Return(uploadState common.UploadState, s string, err error) *MockDelegate_UploadRawArtifacts_Call {
+	_c.Call.Return(uploadState, s, err)
 	return _c
 }
 
-func (_c *MockDelegate_UploadRawArtifacts_Call) RunAndReturn(run func(config common.JobCredentials, bodyProvider common.ContentProvider, options common.ArtifactsOptions) (common.UploadState, string)) *MockDelegate_UploadRawArtifacts_Call {
+func (_c *MockDelegate_UploadRawArtifacts_Call) RunAndReturn(run func(config common.JobCredentials, bodyProvider common.ContentProvider, options common.ArtifactsOptions) (common.UploadState, string, error)) *MockDelegate_UploadRawArtifacts_Call {
 	_c.Call.Return(run)
 	return _c
 }

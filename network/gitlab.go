@@ -1071,7 +1071,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 	config common.JobCredentials,
 	originalContentProvider common.ContentProvider,
 	options common.ArtifactsOptions,
-) (common.UploadState, string) {
+) (common.UploadState, string, error) {
 	bodyProvider, contentType := n.createArtifactsContentProvider(originalContentProvider, options.BaseName)
 
 	query := uploadRawArtifactsQuery(options)
@@ -1111,10 +1111,11 @@ func (n *GitLabClient) UploadRawArtifacts(
 
 	if err != nil {
 		log.WithError(err).Errorln(messagePrefix, "error")
-		return common.UploadFailed, ""
+		return common.UploadFailed, "", err
 	}
 
-	return n.determineUploadState(res, log, messagePrefix)
+	state, location := n.determineUploadState(res, log, messagePrefix)
+	return state, location, nil
 }
 
 func logResponseDetails(logger *logrus.Entry, res *http.Response, withBody bool) {
