@@ -600,6 +600,11 @@ func (s *executor) retrieveHelperImageConfig() helperimage.Config {
 		Flavor:       s.ExpandValue(s.Config.Kubernetes.HelperImageFlavor),
 		ProxyExec:    s.Config.IsProxyExec(),
 		DisableUmask: s.Build.IsFeatureFlagOn(featureflags.DisableUmaskForKubernetesExecutor),
+		// The concrete flavor bundles git and CA certificates, which the
+		// steps bootstrap copies into the scripts emptyDir so get_sources
+		// does not depend on the user's build image. Mirrors the docker
+		// executor (executors/docker/docker.go).
+		Concrete: s.Build.IsFeatureFlagOn(featureflags.UseConcrete),
 	}
 
 	if !s.Config.Kubernetes.HelperImageAutosetArchAndOS {
