@@ -243,6 +243,7 @@ type RegisterRunnerResponse struct {
 }
 
 type VerifyRunnerRequest struct {
+	Info     Info   `json:"info"`
 	Token    string `json:"token,omitempty"`
 	SystemID string `json:"system_id,omitempty"`
 }

@@ -416,7 +416,13 @@ func (n *GitLabClient) RegisterRunner(
 }
 
 func (n *GitLabClient) VerifyRunner(runner common.RunnerConfig, systemID string) *common.VerifyRunnerResponse {
+	// Rails creates the runner manager record from the first authenticated
+	// request it sees, then persists that record's details at most once per
+	// 40-55 minutes. Omitting info here leaves runtime_features empty for that
+	// whole window, which Rails reads as cancel_gracefully=false and so cancels
+	// jobs without running after_script.
 	request := common.VerifyRunnerRequest{
+		Info:     n.getRunnerInfo(runner),
 		Token:    runner.Token,
 		SystemID: systemID,
 	}
