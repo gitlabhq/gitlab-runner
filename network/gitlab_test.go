@@ -3354,6 +3354,57 @@ func TestGitLabClient_RegisterRunner_TransmitsTwoPhaseJobCommit(t *testing.T) {
 	assert.Equal(t, validToken, response.Token)
 }
 
+func TestGitLabClient_VerifyRunner_TransmitsRunnerInfo(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v4/runners/verify" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		var req VerifyRunnerRequest
+		err = json.Unmarshal(body, &req)
+		require.NoError(t, err)
+
+		// Verify creates the runner manager record when it is the first request a
+		// fresh runner makes, so the capabilities have to travel on it
+		assert.True(t, req.Info.Features.CancelGracefully, "cancel_gracefully feature should be transmitted in verify request")
+		assert.Equal(t, "shell", req.Info.Executor, "executor should be transmitted in verify request")
+		assert.Equal(t, "s_some_system_id", req.SystemID)
+
+		w.Header().Set(ContentType, "application/json")
+		w.WriteHeader(http.StatusOK)
+		output, _ := json.Marshal(VerifyRunnerResponse{ID: 12345, Token: validToken})
+		_, _ = w.Write(output)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(handler))
+	defer server.Close()
+
+	config := RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL:   server.URL,
+			Token: validToken,
+		},
+		RunnerSettings: RunnerSettings{
+			Executor: "shell",
+		},
+	}
+
+	client := NewGitLabClient()
+	response := client.VerifyRunner(config, "s_some_system_id")
+
+	require.NotNil(t, response, "Verification should succeed")
+	assert.Equal(t, int64(12345), response.ID)
+}
+
 func TestGitLabClient_UpdateJob_TransmitsTwoPhaseJobCommit(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/api/v4/jobs/") {
