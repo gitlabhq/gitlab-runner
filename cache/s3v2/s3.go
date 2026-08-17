@@ -499,7 +499,7 @@ func newRawS3Client(s3Config *cacheconfig.CacheS3Config) (*aws.Config, *s3.Clien
 }
 
 func detectBucketLocation(s3Config *cacheconfig.CacheS3Config, optFuncs ...func(*config.LoadOptions) error) string {
-	// The 30 seconds timeout here is arbritrary
+	// The 30 seconds timeout here is arbitrary
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
