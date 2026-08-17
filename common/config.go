@@ -534,7 +534,7 @@ type DockerMachineAutoscaling struct {
 type ParallelsConfig struct {
 	BaseName         string   `toml:"base_name" json:"base_name" long:"base-name" env:"PARALLELS_BASE_NAME" description:"VM name to be used"`
 	TemplateName     string   `toml:"template_name,omitempty" json:"template_name" long:"template-name" env:"PARALLELS_TEMPLATE_NAME" description:"VM template to be created"`
-	DisableSnapshots bool     `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"PARALLELS_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
+	DisableSnapshots bool     `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"PARALLELS_DISABLE_SNAPSHOTS" description:"Disable snapshotting to speedup VM creation"`
 	TimeServer       string   `toml:"time_server,omitempty" json:"time_server" long:"time-server" env:"PARALLELS_TIME_SERVER" description:"Timeserver to sync the guests time from. Defaults to time.apple.com"`
 	AllowedImages    []string `toml:"allowed_images,omitempty" json:"allowed_images,omitempty" long:"allowed-images" env:"PARALLELS_ALLOWED_IMAGES" description:"Image (base_name) allowlist"`
 }
@@ -543,7 +543,7 @@ type VirtualBoxConfig struct {
 	BaseName         string   `toml:"base_name" json:"base_name" long:"base-name" env:"VIRTUALBOX_BASE_NAME" description:"VM name to be used"`
 	BaseSnapshot     string   `toml:"base_snapshot,omitempty" json:"base_snapshot" long:"base-snapshot" env:"VIRTUALBOX_BASE_SNAPSHOT" description:"Name or UUID of a specific VM snapshot to clone"`
 	BaseFolder       string   `toml:"base_folder" json:"base_folder" long:"base-folder" env:"VIRTUALBOX_BASE_FOLDER" description:"Folder in which to save the new VM. If empty, uses VirtualBox default"`
-	DisableSnapshots bool     `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"VIRTUALBOX_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
+	DisableSnapshots bool     `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"VIRTUALBOX_DISABLE_SNAPSHOTS" description:"Disable snapshotting to speedup VM creation"`
 	AllowedImages    []string `toml:"allowed_images,omitempty" json:"allowed_images,omitempty" long:"allowed-images" env:"VIRTUALBOX_ALLOWED_IMAGES" description:"Image allowlist"`
 	StartType        string   `toml:"start_type" json:"start_type" long:"start-type" env:"VIRTUALBOX_START_TYPE" description:"Graphical front-end type"`
 }
@@ -1290,7 +1290,7 @@ type KubernetesLifecycleTCPSocket struct {
 }
 
 // ToKubernetesLifecycleHandler converts our lifecycle structs to the ones from the Kubernetes API.
-// We can't use them directly since they don't suppor toml.
+// We can't use them directly since they don't support TOML.
 func (h *KubernetesLifecycleHandler) ToKubernetesLifecycleHandler() *api.LifecycleHandler {
 	kubeHandler := &api.LifecycleHandler{}
 
@@ -2607,7 +2607,7 @@ func (c *Config) LoadConfig(configFile string) error {
 	for _, r := range c.Runners {
 		err := r.loadConfig(c)
 		if err != nil {
-			return fmt.Errorf("loading coniguration for %s runner: %w", r.Name, err)
+			return fmt.Errorf("loading configuration for %s runner: %w", r.Name, err)
 		}
 	}
 
