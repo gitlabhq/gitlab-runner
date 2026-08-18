@@ -138,34 +138,24 @@ integration test (docker, network-faults):
         -junit-report .splitic/junit_${CI_NODE_INDEX}_docker_network_faults.xml \
         -cover-report .splitic/cover_${CI_NODE_INDEX}_docker_network_faults.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
         -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
-        -tags network_faults \
-        ./executors/docker \
+        -tags integration,network_faults \
+        ./executors/docker/networkfaults \
         -- -ldflags "$(make print_test_ldflags)" -timeout 20m
   parallel: 1
   # This job exercises real network-fault/timing-sensitive scenarios (e.g.
   # image-pull retry against a registry that's deliberately unavailable for
-  # part of the run). It's kept out of the main "integration test" job's
-  # -tags integration build (see the "network_faults" build tag) and allowed
-  # to fail on its own so its inherent timing sensitivity can't destabilize
-  # the main integration suite everyone's MRs depend on.
+  # part of the run), and is allowed to fail on its own so its inherent
+  # timing sensitivity can't destabilize the main integration suite
+  # everyone's MRs depend on.
   #
-  # -tags is "network_faults" only (not "integration,network_faults").
   # splitic discovers tests by scanning source for whatever build tags are
-  # active, not via "go test -run" -- it always appends its own -run built
-  # from every test it discovers, after any -run passed here, so a manual
-  # -run can't narrow this job's test list; it's silently overridden.
-  # Passing "integration" too would make splitic also discover the
-  # package's other ~76 "integration"-only tests, eating almost the entire
-  # 15m budget and starving this job's own test of the time it needs.
-  #
-  # Every "network_faults"-tagged test file must therefore be gated
-  # "!integration && network_faults" (not "integration && network_faults")
-  # so it's excluded here when "integration" alone is active, and it must
-  # build standalone -- no shared helpers/TestMain from the
-  # "integration"-only files, since the two tag sets never build together.
-  # Per scripts/check-test-directives, such a file also can't be named
-  # "*integration*_test.go", since that naming convention requires a
-  # positive "integration" build tag.
+  # active in the given package, not via "go test -run" -- it always
+  # appends its own -run built from every test it discovers, after any -run
+  # passed here, so a manual -run can't narrow a job's test list. The only
+  # way to scope this job to just its own test is therefore to point it at
+  # a package (./executors/docker/networkfaults) that contains nothing
+  # else, rather than relying on build tags alone against the much larger
+  # ./executors/docker package.
   allow_failure: true
 
 integration test with race:
