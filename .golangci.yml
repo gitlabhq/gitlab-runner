@@ -1,6 +1,8 @@
 version: "2"
 run:
   concurrency: 8
+  build-tags:
+    - network_faults
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

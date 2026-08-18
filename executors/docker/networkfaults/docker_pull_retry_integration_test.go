@@ -1,6 +1,6 @@
-//go:build !integration && network_faults
+//go:build integration && network_faults
 
-package docker_test
+package networkfaults_test
 
 import (
 	"context"
@@ -31,17 +31,14 @@ import (
 )
 
 // TestMain mirrors docker_command_integration_test.go's TestMain. This file
-// is deliberately gated on "!integration && network_faults" rather than
-// "integration && network_faults" (see the CI job comment in
-// .gitlab/ci/test.gitlab-ci.yml for why) and, per
-// scripts/check-test-directives, isn't named "*integration*_test.go" so that
-// convention doesn't force an "integration" build tag back onto it. Since it
-// never builds alongside docker_command_integration_test.go (that file
-// requires "integration"; this one requires "!integration"), it can't share
-// that file's TestMain or any other unexported helper -- Go only allows one
-// TestMain per package build.
+// lives in its own package (executors/docker/networkfaults) rather than
+// alongside docker_command_integration_test.go, so the CI job that runs it
+// can target this package directly and only ever discover this one test,
+// regardless of build tags -- it can't share that file's TestMain or any
+// other unexported helper either way, since Go only allows one TestMain per
+// package build.
 func TestMain(m *testing.M) {
-	prebuilt.PrebuiltImagesPaths = []string{"../../out/helper-images/"}
+	prebuilt.PrebuiltImagesPaths = []string{"../../../out/helper-images/"}
 
 	os.Exit(m.Run())
 }
@@ -73,6 +70,11 @@ func startAndSeedRegistry(t *testing.T, client docker.Client, port int, testImag
 	err := client.ImagePullBlocking(ctx, "registry:2", mobyclient.ImagePullOptions{})
 	require.NoError(t, err, "pulling registry:2")
 
+	// `docker tag` requires the source image to already exist on the
+	// daemon, and nothing else in this package pulls testImage first.
+	err = client.ImagePullBlocking(ctx, testImage, mobyclient.ImagePullOptions{})
+	require.NoError(t, err, "pulling test image %s", testImage)
+
 	config := &container.Config{
 		Image: "registry:2",
 		ExposedPorts: network.PortSet{
@@ -102,6 +104,7 @@ func startAndSeedRegistry(t *testing.T, client docker.Client, port int, testImag
 	// dind run as separate containers.
 	registryAddr := fmt.Sprintf("localhost:%d", port)
 	targetRef := registryAddr + "/pull-retry-test:latest"
+
 	out, err := exec.Command("docker", "tag", testImage, targetRef).CombinedOutput()
 	require.NoError(t, err, "tagging test image: %s", out)
 
