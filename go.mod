@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/secretmanager v1.21.0
 	cloud.google.com/go/storage v1.64.0
 	dario.cat/mergo v1.0.2
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.22.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.14.0
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.5.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.8.0
