@@ -428,7 +428,7 @@ func TestPowershellPathResolveOperations(t *testing.T) {
 			op: func(path string, w *PsWriter) {
 				w.RmDir(path)
 			},
-			template: "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -PathType Container) ) {\n  Remove-Item2 -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)) {\n  Remove-Item -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)\n}\n\n",
+			template: "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -PathType Container) ) {\n  Remove-Item2 -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)) {\n  $item = Get-Item -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)\n  if ($item.LinkType -or -not $item.PSIsContainer) {\n    Remove-Item -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -ErrorAction Stop\n  } else {\n    Get-ChildItem -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -Force -Recurse -ErrorAction Stop | Sort-Object { $_.FullName.Length } -Descending | Remove-Item -Force -ErrorAction Stop\n    Remove-Item -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -ErrorAction Stop\n  }\n}\n\n",
 			expected: map[string]func(string) string{
 				`path/name`:    templateReplacer(`"path/name"`),
 				`\\unc\file`:   templateReplacer(`"\\unc\file"`),
@@ -586,7 +586,13 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/git-template/hooks" -PathType Container) ) {` + eol +
 		`  Remove-Item2 -Force -Recurse "$CurrentDirectory/.tmp/git-template/hooks"` + eol +
 		`} elseif(Test-Path "$CurrentDirectory/.tmp/git-template/hooks") {` + eol +
-		`  Remove-Item -Force -Recurse "$CurrentDirectory/.tmp/git-template/hooks"` + eol +
+		`  $item = Get-Item -Force "$CurrentDirectory/.tmp/git-template/hooks"` + eol +
+		`  if ($item.LinkType -or -not $item.PSIsContainer) {` + eol +
+		`    Remove-Item -Force "$CurrentDirectory/.tmp/git-template/hooks" -ErrorAction Stop` + eol +
+		`  } else {` + eol +
+		`    Get-ChildItem -Path "$CurrentDirectory/.tmp/git-template/hooks" -Force -Recurse -ErrorAction Stop | Sort-Object { $_.FullName.Length } -Descending | Remove-Item -Force -ErrorAction Stop` + eol +
+		`    Remove-Item -Force "$CurrentDirectory/.tmp/git-template/hooks" -ErrorAction Stop` + eol +
+		`  }` + eol +
 		`}` + eol +
 		`` + eol +
 		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/config" -PathType Leaf) ) {` + eol +
@@ -598,7 +604,13 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path ".git/hooks" -PathType Container) ) {` + eol +
 		`  Remove-Item2 -Force -Recurse ".git/hooks"` + eol +
 		`} elseif(Test-Path ".git/hooks") {` + eol +
-		`  Remove-Item -Force -Recurse ".git/hooks"` + eol +
+		`  $item = Get-Item -Force ".git/hooks"` + eol +
+		`  if ($item.LinkType -or -not $item.PSIsContainer) {` + eol +
+		`    Remove-Item -Force ".git/hooks" -ErrorAction Stop` + eol +
+		`  } else {` + eol +
+		`    Get-ChildItem -Path ".git/hooks" -Force -Recurse -ErrorAction Stop | Sort-Object { $_.FullName.Length } -Descending | Remove-Item -Force -ErrorAction Stop` + eol +
+		`    Remove-Item -Force ".git/hooks" -ErrorAction Stop` + eol +
+		`  }` + eol +
 		`}`
 
 	cleanUidGidFiles := `` +
