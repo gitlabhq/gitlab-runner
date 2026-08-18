@@ -113,7 +113,7 @@ passing the filename to the following command:
 The following is an example PowerShell script:
 
 ```powershell
-$ErrorActionPreference = "Continue" # This will be set to 'Stop' when targetting PowerShell Core
+$ErrorActionPreference = "Continue" # This will be set to 'Stop' when targeting PowerShell Core
 
 echo "Running on $([Environment]::MachineName)..."
 
