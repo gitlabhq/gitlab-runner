@@ -158,7 +158,13 @@ echo "Running on $([Environment]::MachineName)..."
   if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "C:\GitLab-Runner\builds\0\project-1" -PathType Container) ) {
     Remove-Item2 -Force -Recurse "C:\GitLab-Runner\builds\0\project-1"
   } elseif(Test-Path "C:\GitLab-Runner\builds\0\project-1") {
-    Remove-Item -Force -Recurse "C:\GitLab-Runner\builds\0\project-1"
+    $item = Get-Item -Force "C:\GitLab-Runner\builds\0\project-1"
+    if ($item.LinkType -or -not $item.PSIsContainer) {
+      Remove-Item -Force "C:\GitLab-Runner\builds\0\project-1" -ErrorAction Stop
+    } else {
+      Get-ChildItem -Path "C:\GitLab-Runner\builds\0\project-1" -Force -Recurse -ErrorAction Stop | Sort-Object { $_.FullName.Length } -Descending | Remove-Item -Force -ErrorAction Stop
+      Remove-Item -Force "C:\GitLab-Runner\builds\0\project-1" -ErrorAction Stop
+    }
   }
 
   & "git" "clone" "https://gitlab.com/group/project.git" "Z:\Gitlab\tests\test\builds\0\project-1"

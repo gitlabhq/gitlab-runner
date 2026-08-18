@@ -586,7 +586,29 @@ func (p *PsWriter) RmDir(path string) {
 	p.Unindent()
 	p.Linef("} elseif(Test-Path %s) {", path)
 	p.Indent()
-	p.Line("Remove-Item -Force -Recurse " + path)
+	// `Remove-Item -Recurse` has a known issue (see Example 4 in
+	// https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/remove-item):
+	// deletion order is not guaranteed to be children-first, which can fail
+	// with "The directory is not empty". Delete contents deepest-first, then
+	// remove the (now empty) directory itself without -Recurse.
+	// Symlinks, junctions, and plain files are removed directly so a link
+	// target's contents are never traversed and deleted. -ErrorAction Stop
+	// keeps Windows PowerShell 5.1 from continuing past pipeline errors into
+	// an interactive confirmation prompt.
+	p.Linef("$item = Get-Item -Force %s", path)
+	p.Line("if ($item.LinkType -or -not $item.PSIsContainer) {")
+	p.Indent()
+	p.Linef("Remove-Item -Force %s -ErrorAction Stop", path)
+	p.Unindent()
+	p.Line("} else {")
+	p.Indent()
+	p.Line(
+		"Get-ChildItem -Path " + path + " -Force -Recurse -ErrorAction Stop | " +
+			"Sort-Object { $_.FullName.Length } -Descending | Remove-Item -Force -ErrorAction Stop",
+	)
+	p.Linef("Remove-Item -Force %s -ErrorAction Stop", path)
+	p.Unindent()
+	p.Line("}")
 	p.Unindent()
 	p.Line("}")
 	p.Line("")
