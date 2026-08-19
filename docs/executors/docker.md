@@ -62,7 +62,7 @@ For known issues and additional requirements of Windows configurations, see [Use
 | Linux                   | `docker`         | Linux                 |
 | macOS                   | `docker`         | Linux                 |
 
-These configurations are **not** supported:
+These configurations are not supported:
 
 | Runner is installed on: | Executor is:     | Container is running: |
 |-------------------------|------------------|-----------------------|
@@ -334,7 +334,7 @@ Docker network, which the build container connects to.
 
 During name resolution, Docker updates the `/etc/hosts` file in the
 container with the service container hostname and alias. However,
-the service container is **not** able to resolve the container
+the service container is not able to resolve the container
 name. To resolve the container name, you must create a network for each job.
 
 Linked containers share their environment variables.

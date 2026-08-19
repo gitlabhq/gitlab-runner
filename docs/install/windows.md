@@ -250,7 +250,7 @@ The web interface for GitLab CI emulates a UNIX ANSI terminal (at least partiall
 directly to the web interface. That means that any ANSI color codes that are present are honored.
 
 Older versions of Windows' command prompt terminal (before Windows 10, version 1511) do not support
-ANSI color codes. They use win32 ([`ANSI.SYS`](https://en.wikipedia.org/wiki/ANSI.SYS)) calls instead which are **not** present in
+ANSI color codes. They use win32 ([`ANSI.SYS`](https://en.wikipedia.org/wiki/ANSI.SYS)) calls instead which are not present in
 the string to be displayed. When writing cross-platform programs, developers typically use ANSI color codes by default. These codes are converted
 to win32 calls when running on a Windows system, for example, [Colorama](https://pypi.org/project/colorama/).
 
