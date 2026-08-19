@@ -203,7 +203,7 @@ and successfully run Docker commands, for example `docker info`.
 
 ## Adding an AWS Instance Profile to your autoscaled runners
 
-After you create an AWS IAM Role, in your IAM console, the role has a **Role ARN** and a **Instance Profile ARNs**. You must use the **Instance Profile** name, **not** the **Role Name**.
+After you create an AWS IAM Role, in your IAM console, the role has a **Role ARN** and a **Instance Profile ARNs**. You must use the **Instance Profile** name, not the **Role Name**.
 
 Add the following value to your `[runners.machine]` section:
 `"amazonec2-iam-instance-profile=<instance-profile-name>",`

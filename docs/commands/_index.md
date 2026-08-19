@@ -135,7 +135,7 @@ sudo kill -SIGQUIT <main_runner_pid>
 ```
 
 > [!warning]
-> Do **not** use `killall` or `pkill` for graceful shutdowns if you are using `shell`
+> Do not use `killall` or `pkill` for graceful shutdowns if you are using `shell`
 > or `docker` executors. This can cause improper handling of the signals due to sub-processes
 > being killed as well. Use it only on the main process handling the jobs.
 
