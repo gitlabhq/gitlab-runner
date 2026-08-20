@@ -161,9 +161,16 @@ func parsePermissions(path string, filter func(fileInfo fs.DirEntry) bool) (Perm
 	positions := map[simplePosition]token.Pos{}
 	permissions := PermissionsGroup{}
 
+	// The parser resolves *ast.Ident.Obj only within the file being parsed, so
+	// a method receiver's struct type declared in a different file (e.g. a
+	// method in suspend.go on the *executor type declared in kubernetes.go)
+	// cannot be resolved through Obj alone. Build a name -> struct type map
+	// across all files so getTypeRoot can look up such cross-file types.
+	crossFileTypes := buildCrossFileTypeMap(parsedFiles)
+
 	for _, f := range parsedFiles {
 		ast.Inspect(f, func(node ast.Node) bool {
-			inspectNode(fset, positions, node)
+			inspectNode(fset, positions, crossFileTypes, node)
 			return true
 		})
 
@@ -208,11 +215,48 @@ func parseDirRecursive(dir string, fset *token.FileSet, fileFilter func(fs.DirEn
 
 func filterTestFiles(fileInfo fs.DirEntry) bool {
 	baseName := fileInfo.Name()
-	return !strings.HasSuffix(baseName, "_test.go") && !strings.HasPrefix(baseName, "mock_")
+	// Filter *to* .go files rather than blacklisting non-Go extensions one at
+	// a time — any non-Go file in this tree (docs, notes, scratch files)
+	// would otherwise reach the Go parser and fail the whole walk.
+	return strings.HasSuffix(baseName, ".go") && !strings.HasSuffix(baseName, "_test.go") && !strings.HasPrefix(baseName, "mock_")
+}
+
+// buildCrossFileTypeMap collects all named struct type declarations from the
+// given files and returns a map of type name -> *ast.StructType. This allows
+// getTypeRoot to resolve struct field types even when the struct is defined
+// in a different file from the call site.
+func buildCrossFileTypeMap(files []*ast.File) map[string]*ast.StructType {
+	types := make(map[string]*ast.StructType)
+	for _, f := range files {
+		for _, decl := range f.Decls {
+			addStructTypesFromDecl(decl, types)
+		}
+	}
+	return types
+}
+
+// addStructTypesFromDecl adds every named struct type declared in decl (a
+// top-level "type ( ... )" or "type Foo struct{...}" declaration) to types.
+func addStructTypesFromDecl(decl ast.Decl, types map[string]*ast.StructType) {
+	genDecl, ok := decl.(*ast.GenDecl)
+	if !ok || genDecl.Tok != token.TYPE {
+		return
+	}
+	for _, spec := range genDecl.Specs {
+		typeSpec, ok := spec.(*ast.TypeSpec)
+		if !ok {
+			continue
+		}
+		structType, ok := typeSpec.Type.(*ast.StructType)
+		if !ok {
+			continue
+		}
+		types[typeSpec.Name.Name] = structType
+	}
 }
 
 //nolint:gocognit,nestif
-func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, node ast.Node) {
+func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, crossFileTypes map[string]*ast.StructType, node ast.Node) {
 	expr, ok := node.(*ast.CallExpr)
 	if !ok {
 		return
@@ -223,7 +267,7 @@ func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, no
 		return
 	}
 
-	root := getTypeRoot(sel.X)
+	root := getTypeRoot(sel.X, crossFileTypes)
 	if root == nil {
 		return
 	}
@@ -292,33 +336,43 @@ type typeRoot struct {
 }
 
 //nolint:gocognit,staticcheck
-func getTypeRoot(expr any) *typeRoot {
+func getTypeRoot(expr any, crossFileTypes map[string]*ast.StructType) *typeRoot {
 	if expr == nil || reflect.ValueOf(expr).IsNil() {
 		return nil
 	}
 
 	switch exp := expr.(type) {
 	case *ast.Ident:
-		return getTypeRoot(exp.Obj)
+		if exp.Obj == nil {
+			// The identifier is not resolved within this file (cross-file
+			// reference). Look it up in the cross-file struct type map so
+			// that method receivers whose struct is defined in another file
+			// can still be traced to their kubernetes.Interface field.
+			if structType, ok := crossFileTypes[exp.Name]; ok {
+				return &typeRoot{structType: structType}
+			}
+			return nil
+		}
+		return getTypeRoot(exp.Obj, crossFileTypes)
 	case *ast.SelectorExpr:
 		ident, ok := exp.X.(*ast.Ident)
 		if !ok || ident.Obj != nil {
-			return getTypeRoot(exp.X)
+			return getTypeRoot(exp.X, crossFileTypes)
 		}
 
 		return &typeRoot{
 			valueType: fmt.Sprintf("%s.%s", ident.Name, exp.Sel.Name),
 		}
 	case *ast.Object:
-		return getTypeRoot(exp.Decl)
+		return getTypeRoot(exp.Decl, crossFileTypes)
 	case *ast.Field:
-		return getTypeRoot(exp.Type)
+		return getTypeRoot(exp.Type, crossFileTypes)
 	case *ast.TypeSpec:
-		return getTypeRoot(exp.Type)
+		return getTypeRoot(exp.Type, crossFileTypes)
 	case *ast.StarExpr:
-		return getTypeRoot(exp.X)
+		return getTypeRoot(exp.X, crossFileTypes)
 	case *ast.AssignStmt:
-		return getTypeRoot(exp.Rhs[0])
+		return getTypeRoot(exp.Rhs[0], crossFileTypes)
 	case *ast.ValueSpec:
 		selectorExpr, ok := exp.Type.(*ast.SelectorExpr)
 		if !ok {
@@ -384,11 +438,20 @@ func groupPermissions(comment *ast.Comment, permissions PermissionsGroup) {
 		})
 
 		if verbIndex != -1 {
-			permissions[resource][verbIndex].ConfigFlags = append(permissions[resource][verbIndex].ConfigFlags, featureFlags...)
-			// Dedupe config flags
-			permissions[resource][verbIndex].ConfigFlags = lo.UniqBy(permissions[resource][verbIndex].ConfigFlags, func(cf configFlag) string {
-				return cf.String()
-			})
+			existing := permissions[resource][verbIndex]
+			// An unconditional contributor (empty ConfigFlags on either side)
+			// wins: appending flags here would wrongly imply the verb is only
+			// needed when those flags are set, when at least one call site
+			// needs it unconditionally.
+			if len(existing.ConfigFlags) == 0 || len(featureFlags) == 0 {
+				permissions[resource][verbIndex].ConfigFlags = nil
+			} else {
+				permissions[resource][verbIndex].ConfigFlags = append(permissions[resource][verbIndex].ConfigFlags, featureFlags...)
+				// Dedupe config flags
+				permissions[resource][verbIndex].ConfigFlags = lo.UniqBy(permissions[resource][verbIndex].ConfigFlags, func(cf configFlag) string {
+					return cf.String()
+				})
+			}
 		} else {
 			permissions[resource] = append(permissions[resource], verb{
 				Verb:        v,

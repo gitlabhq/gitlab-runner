@@ -1164,6 +1164,599 @@ func TestCleanup(t *testing.T) {
 	}
 }
 
+// --- preparePodServices wiring ---
+
+func newSuspendableExecutorWithServices(t *testing.T, services []common.Service) *executor {
+	t.Helper()
+	cfg := &common.KubernetesConfig{
+		Image:    "test-image",
+		Services: services,
+	}
+	e := newTestExecutorWithKubeClient(t, cfg)
+	// Mirror production so RootDir() resolves to /builds; the builds-collision
+	// skip in preparePodServices compares the service data path against RootDir().
+	e.DefaultBuildsDir = "/builds"
+	e.Build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnSuccess: true}
+	e.Build.Job.Variables = append(e.Build.Job.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+	)
+	e.suspendRootfsPVCName = "gl-runner-env-test"
+
+	// populate options + suspendServiceDataPaths mirroring prepareOptions logic
+	e.suspendServiceDataPaths = make(map[string]string)
+	e.options = &kubernetesOptions{Services: make(map[string]*spec.Image)}
+	usedAliases := map[string]struct{}{}
+	idx := 0
+	for i := range services {
+		img := services[i].ToImageDefinition()
+		var name string
+		idx, name = e.getServiceDefinition(&img, usedAliases, idx)
+		imgCopy := img
+		e.options.Services[name] = &imgCopy
+		if services[i].SuspendDataPath != "" {
+			e.suspendServiceDataPaths[name] = services[i].SuspendDataPath
+		}
+	}
+
+	// buildContainer calls pullManager — mock it for every service name
+	mockPM := pull.NewMockManager(t)
+	for name := range e.options.Services {
+		mockPM.On("GetPullPolicyFor", name).Return(api.PullAlways, nil).Maybe()
+	}
+	e.pullManager = mockPM
+	return e
+}
+
+func TestPreparePodServices_SuspendableJob_AddsDataMount(t *testing.T) {
+	e := newSuspendableExecutorWithServices(t, []common.Service{
+		{Name: "redis:7", SuspendDataPath: "/data"},
+	})
+
+	containers, err := e.preparePodServices()
+	require.NoError(t, err)
+	require.Len(t, containers, 1)
+
+	var found *api.VolumeMount
+	for i, m := range containers[0].VolumeMounts {
+		if m.MountPath == "/data" {
+			found = &containers[0].VolumeMounts[i]
+			break
+		}
+	}
+	require.NotNil(t, found, "expected a VolumeMount at /data")
+	assert.Equal(t, suspendPVCVolName, found.Name)
+	assert.Equal(t, "services/svc-0/data", found.SubPath, "canonical name for redis:7 (no alias) is svc-0")
+	assert.Empty(t, found.SubPathExpr)
+}
+
+func TestPreparePodServices_NonSuspendableJob_NoDataMount(t *testing.T) {
+	cfg := &common.KubernetesConfig{
+		Image:    "test-image",
+		Services: []common.Service{{Name: "redis:7", SuspendDataPath: "/data"}},
+	}
+	e := newTestExecutorWithKubeClient(t, cfg)
+	// FF off — not suspendable
+	e.suspendServiceDataPaths = map[string]string{"redis": "/data"}
+	e.options = &kubernetesOptions{Services: make(map[string]*spec.Image)}
+	img := cfg.Services[0].ToImageDefinition()
+	imgCopy := img
+	e.options.Services["redis"] = &imgCopy
+	mockPM := pull.NewMockManager(t)
+	mockPM.On("GetPullPolicyFor", "redis").Return(api.PullAlways, nil).Maybe()
+	e.pullManager = mockPM
+
+	containers, err := e.preparePodServices()
+	require.NoError(t, err)
+	require.Len(t, containers, 1)
+
+	for _, m := range containers[0].VolumeMounts {
+		assert.NotEqual(t, "/data", m.MountPath, "non-suspendable job must not add service data mounts")
+	}
+}
+
+func TestPreparePodServices_EmptySuspendDataPath_NoMount(t *testing.T) {
+	e := newSuspendableExecutorWithServices(t, []common.Service{
+		{Name: "redis:7", SuspendDataPath: ""},
+	})
+
+	containers, err := e.preparePodServices()
+	require.NoError(t, err)
+	require.Len(t, containers, 1)
+
+	for _, m := range containers[0].VolumeMounts {
+		assert.NotEqual(t, suspendPVCVolName, m.Name, "empty SuspendDataPath must not add a suspend mount")
+	}
+}
+
+const suspendBuildsVolumeMount = "/builds"
+
+func TestPreparePodServices_SuspendDataPathEqualsBuildsDir_StillMounted(t *testing.T) {
+	e := newSuspendableExecutorWithServices(t, []common.Service{
+		{Name: "redis:7", SuspendDataPath: suspendBuildsVolumeMount},
+	})
+
+	containers, err := e.preparePodServices()
+	require.NoError(t, err)
+	require.Len(t, containers, 1)
+
+	var mount *api.VolumeMount
+	for i, m := range containers[0].VolumeMounts {
+		if m.Name == suspendPVCVolName && m.MountPath == suspendBuildsVolumeMount {
+			mount = &containers[0].VolumeMounts[i]
+		}
+	}
+
+	require.NotNil(t, mount, "suspend_data_path == builds_dir must still be mounted: separate container, separate SubPath, no real collision")
+	assert.Equal(t, "services/svc-0/data", mount.SubPath, "service data mount must use its own SubPath, never the builds SubPath")
+}
+
+func TestPreparePodServices_SuspendDataPathEqualsCustomBuildsDir_StillMounted(t *testing.T) {
+	const customBuildsDir = "/custom-builds"
+
+	e := newSuspendableExecutorWithServices(t, []common.Service{
+		{Name: "redis:7", SuspendDataPath: customBuildsDir},
+	})
+	e.Config.BuildsDir = customBuildsDir
+
+	containers, err := e.preparePodServices()
+	require.NoError(t, err)
+	require.Len(t, containers, 1)
+
+	var mount *api.VolumeMount
+	for i, m := range containers[0].VolumeMounts {
+		if m.Name == suspendPVCVolName && m.MountPath == customBuildsDir {
+			mount = &containers[0].VolumeMounts[i]
+		}
+	}
+
+	require.NotNil(t, mount, "suspend_data_path == custom builds_dir must still be mounted, tracking s.RootDir() dynamically")
+	assert.Equal(t, "services/svc-0/data", mount.SubPath, "service data mount must use its own SubPath, never the builds SubPath")
+}
+
+func TestPreparePodServices_SuspendDataPathAndEntrypoint_OnlyOverlayMounted(t *testing.T) {
+	e := newSuspendableExecutorWithServices(t, []common.Service{
+		{Name: "redis:7", SuspendDataPath: "/data", Entrypoint: []string{"/bin/redis-server"}},
+	})
+
+	containers, err := e.preparePodServices()
+	require.NoError(t, err)
+	require.Len(t, containers, 1)
+
+	var dataMount, overlayMount *api.VolumeMount
+	for i, m := range containers[0].VolumeMounts {
+		if m.Name != suspendPVCVolName {
+			continue
+		}
+		switch m.MountPath {
+		case "/data":
+			dataMount = &containers[0].VolumeMounts[i]
+		case suspendPVCMountPath:
+			overlayMount = &containers[0].VolumeMounts[i]
+		}
+	}
+
+	assert.Nil(t, dataMount, "no dedicated data VolumeMount expected: the whole-root overlay already captures /data")
+
+	require.NotNil(t, overlayMount, "expected an overlay VolumeMount at "+suspendPVCMountPath)
+	assert.Equal(t, "services/svc-0/overlay", overlayMount.SubPath)
+}
+
+func newTestExecutorWithKubeClient(t *testing.T, cfg *common.KubernetesConfig) *executor {
+	t.Helper()
+
+	if cfg == nil {
+		cfg = &common.KubernetesConfig{}
+	}
+
+	mockTrace := buildlogger.NewMockTrace(t)
+	mockTrace.EXPECT().IsStdout().Return(false).Maybe()
+	mockTrace.EXPECT().Write(mock.Anything).Return(0, nil).Maybe()
+
+	return &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Build: &common.Build{
+				Job:    spec.Job{ID: 42},
+				Runner: &common.RunnerConfig{},
+			},
+			BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
+			Config: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: cfg,
+				},
+			},
+		},
+		kubeClient:              testclient.NewClientset(),
+		configurationOverwrites: &overwrites{namespace: "test-ns"},
+	}
+}
+
+func hasDelete(c *testclient.Clientset, resource string) bool {
+	for _, a := range c.Actions() {
+		if a.GetVerb() == "delete" && a.GetResource().Resource == resource {
+			return true
+		}
+	}
+	return false
+}
+
+func newSuspendablePrepareExecutor(t *testing.T, cfg *common.KubernetesConfig) (*executor, buildlogger.Logger) {
+	t.Helper()
+
+	fakeClient := testclient.NewClientset()
+	e := newExecutor()
+	e.newKubeClient = func(_ *restclient.Config) (kubernetes.Interface, error) {
+		return fakeClient, nil
+	}
+	e.getKubeConfig = func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
+		return nil, nil
+	}
+	e.AbstractExecutor.Config = common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Kubernetes: cfg,
+		},
+	}
+
+	mockTrace := buildlogger.NewMockTrace(t)
+	mockTrace.EXPECT().IsStdout().Return(true).Once()
+	mockTrace.EXPECT().Write(mock.Anything).Return(0, nil).Maybe()
+
+	logger := buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+	return e, logger
+}
+
+// --- prepareConnections wiring ---
+
+func TestPrepareConnections_InitializesKubeClient(t *testing.T) {
+	cfg := &common.KubernetesConfig{
+		Image: "test-image",
+	}
+	e, logger := newSuspendablePrepareExecutor(t, cfg)
+
+	build := &common.Build{
+		Job: spec.Job{
+			ID: 42,
+		},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Kubernetes: cfg,
+			},
+		},
+	}
+	options := common.ExecutorPrepareOptions{
+		Context:     t.Context(),
+		Config:      build.Runner,
+		Build:       build,
+		BuildLogger: logger,
+	}
+
+	err := e.prepareConnections(options)
+	require.NoError(t, err)
+	assert.NotNil(t, e.kubeClient, "kubeClient must be initialized after prepareConnections()")
+}
+
+func newSuspendableExecutor(t *testing.T) *executor {
+	t.Helper()
+	e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{SuspendPVCSize: "10Gi"})
+	e.Build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnSuccess: true}
+	e.Build.Job.Variables = append(e.Build.Job.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+	)
+	return e
+}
+
+func markSuspendableFFOn(e *executor) {
+	e.Build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnSuccess: true}
+	e.Build.Job.Variables = append(e.Build.Job.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+	)
+}
+
+func TestCleanup_PVCLifecycle(t *testing.T) {
+	tests := []struct {
+		name           string
+		suspended      bool
+		isResume       bool
+		pod            *api.Pod
+		wantPVCDeleted bool
+	}{
+		{
+			name:           "PVC is not deleted when job suspends",
+			suspended:      true,
+			pod:            nil,
+			wantPVCDeleted: false,
+		},
+		{
+			name:           "PVC is deleted on non-suspendable jobs",
+			suspended:      false,
+			isResume:       false,
+			pod:            nil,
+			wantPVCDeleted: true,
+		},
+		{
+			name:           "PVC is not deleted on a failed resume job that failed to start",
+			suspended:      false,
+			isResume:       true,
+			pod:            nil,
+			wantPVCDeleted: false,
+		},
+		{
+			name:           "PVC is deleted for non-suspendable resumed job",
+			suspended:      false,
+			isResume:       true,
+			pod:            &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
+			wantPVCDeleted: true,
+		},
+		{
+			name:           "PVC is not deleted for a suspendable resumed job",
+			suspended:      true,
+			isResume:       true,
+			pod:            &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
+			wantPVCDeleted: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{})
+			e.suspended = tc.suspended
+			e.isResume = tc.isResume
+			e.pod = tc.pod
+			e.suspendRootfsPVCName = "gl-runner-env-abc"
+
+			e.Cleanup()
+
+			assert.Equal(t, tc.wantPVCDeleted,
+				hasDelete(e.kubeClient.(*testclient.Clientset), "persistentvolumeclaims"))
+		})
+	}
+}
+
+func TestCleanup_ConfigMapLifecycle(t *testing.T) {
+	tests := []struct {
+		name                 string
+		suspendable          bool
+		suspended            bool
+		wantConfigMapDeleted bool
+	}{
+		{name: "suspendable job deletes ConfigMap", suspendable: true, wantConfigMapDeleted: true},
+		{name: "non-suspendable job does not delete ConfigMap", suspendable: false, wantConfigMapDeleted: false},
+		{name: "suspended job deletes ConfigMap", suspendable: true, suspended: true, wantConfigMapDeleted: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{})
+			if tc.suspendable {
+				markSuspendableFFOn(e)
+			}
+			e.suspended = tc.suspended
+			if tc.suspended {
+				e.suspendRootfsPVCName = "gl-runner-env-abc"
+			}
+
+			e.Cleanup()
+
+			assert.Equal(t, tc.wantConfigMapDeleted,
+				hasDelete(e.kubeClient.(*testclient.Clientset), "configmaps"))
+		})
+	}
+}
+
+func TestCleanup_Suspended_DeletesCredentialsSecret(t *testing.T) {
+	e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{})
+	e.suspended = true
+	e.suspendRootfsPVCName = "gl-runner-env-test"
+	e.credentials = &api.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "gl-creds-test", Namespace: "test-ns"},
+	}
+
+	e.Cleanup()
+
+	assert.True(t,
+		hasDelete(e.kubeClient.(*testclient.Clientset), "secrets"),
+		"suspended job must still delete credentials secret — it holds a live CI token",
+	)
+}
+
+func TestIsSharedBuildsDirRequired_SuspendableJob(t *testing.T) {
+	e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{})
+	e.Build.Job.Variables = append(e.Build.Job.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"})
+	e.Build.Job.SuspendOptions = spec.SuspendOptions{SuspendOnSuccess: true}
+	require.True(t, e.usesSuspendResume())
+
+	assert.False(t, e.isSharedBuildsDirRequired())
+}
+
+func newSuspendableContainerExecutor(t *testing.T, imageName string) *executor {
+	t.Helper()
+
+	job := spec.Job{
+		ID:      1,
+		JobInfo: spec.JobInfo{ProjectID: 0},
+		Variables: spec.Variables{
+			{Key: "CI_PROJECT_ID", Value: "0"},
+			{Key: featureflags.SuspendableEnvironments, Value: "true"},
+		},
+		SuspendOptions: spec.SuspendOptions{SuspendOnSuccess: true},
+	}
+
+	cfg := common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Kubernetes: &common.KubernetesConfig{
+				HelperImage: "test-helper:latest",
+			},
+		},
+	}
+
+	mockPullManager := pull.NewMockManager(t)
+	mockPullManager.On("GetPullPolicyFor", buildContainerName).Return(api.PullAlways, nil).Maybe()
+	mockPullManager.On("GetPullPolicyFor", helperContainerName).Return(api.PullAlways, nil).Maybe()
+
+	return &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Build:      &common.Build{Job: job, Runner: &cfg},
+			Config:     cfg,
+			BuildShell: &common.ShellConfiguration{DockerCommand: []string{"bash"}},
+			// Mirror production: RootDir() falls back to DefaultBuildsDir when
+			// Config.BuildsDir is unset (set in executorOptions, kubernetes.go).
+			ExecutorOptions: executors.ExecutorOptions{DefaultBuildsDir: "/builds"},
+		},
+		options: &kubernetesOptions{
+			Image:    spec.Image{Name: imageName},
+			Services: map[string]*spec.Image{},
+		},
+		configurationOverwrites: &overwrites{
+			buildRequests:  api.ResourceList{},
+			buildLimits:    api.ResourceList{},
+			helperRequests: api.ResourceList{},
+			helperLimits:   api.ResourceList{},
+		},
+		helperImageInfo: helperimage.Info{
+			OSType: helperimage.OSTypeLinux,
+			Name:   "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper",
+			Tag:    "test-tag",
+			Cmd:    []string{"gitlab-runner-build"},
+		},
+		pullManager: mockPullManager,
+	}
+}
+
+func TestCreateBuildAndHelperContainers_SuspendableJob_CommandIsOverlayScript(t *testing.T) {
+	const imageName = "test-image:v1.2.3"
+	e := newSuspendableContainerExecutor(t, imageName)
+
+	buildContainer, _, err := e.createBuildAndHelperContainers()
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"/bin/sh", overlayScriptPath}, buildContainer.Command)
+	assert.NotEmpty(t, buildContainer.Args)
+
+	var found bool
+	for _, env := range buildContainer.Env {
+		if env.Name == "CI_SUSPEND_IMAGE_TAG" {
+			found = true
+			assert.Equal(t, imageName, env.Value)
+			break
+		}
+	}
+	assert.True(t, found, "CI_SUSPEND_IMAGE_TAG env var must be set")
+}
+
+func TestCreateBuildAndHelperContainers_SuspendableJob_BuildContainerHasSuspendMounts(t *testing.T) {
+	e := newSuspendableContainerExecutor(t, "test-image:latest")
+	e.suspendRootfsPVCName = "gl-runner-env-abc"
+
+	buildContainer, helperContainer, err := e.createBuildAndHelperContainers()
+	require.NoError(t, err)
+
+	buildMountPaths := make([]string, len(buildContainer.VolumeMounts))
+	for i, m := range buildContainer.VolumeMounts {
+		buildMountPaths[i] = m.MountPath
+	}
+	assert.Contains(t, buildMountPaths, suspendPVCMountPath)
+	assert.Contains(t, buildMountPaths, overlayScriptDir)
+	assert.Contains(t, buildMountPaths, suspendBuildsVolumeMount)
+
+	helperMountPaths := make([]string, len(helperContainer.VolumeMounts))
+	for i, m := range helperContainer.VolumeMounts {
+		helperMountPaths[i] = m.MountPath
+	}
+	assert.Contains(t, helperMountPaths, suspendBuildsVolumeMount)
+}
+
+// suspendBuildsMount returns the suspend PVC builds-subPath mount from a
+// container, or false if absent.
+func suspendBuildsMount(t *testing.T, c api.Container) (api.VolumeMount, bool) {
+	t.Helper()
+	for _, m := range c.VolumeMounts {
+		if m.Name == suspendPVCVolName && m.SubPath == suspendBuildsSubPath {
+			return m, true
+		}
+	}
+	return api.VolumeMount{}, false
+}
+
+func TestCreateBuildAndHelperContainers_CustomBuildsDir_MountUsesRootDir(t *testing.T) {
+	e := newSuspendableContainerExecutor(t, "test-image:latest")
+	e.Config.BuildsDir = "/mnt/builds"
+	e.suspendRootfsPVCName = "gl-runner-env-abc"
+
+	buildContainer, helperContainer, err := e.createBuildAndHelperContainers()
+	require.NoError(t, err)
+
+	buildMount, ok := suspendBuildsMount(t, buildContainer)
+	require.True(t, ok, "build container must have the suspend builds mount")
+	assert.Equal(t, "/mnt/builds", buildMount.MountPath, "build mount must track custom builds_dir")
+
+	helperMount, ok := suspendBuildsMount(t, helperContainer)
+	require.True(t, ok, "helper container must have the suspend builds mount")
+	assert.Equal(t, "/mnt/builds", helperMount.MountPath, "helper mount must track custom builds_dir")
+}
+
+func TestCreateBuildAndHelperContainers_DefaultBuildsDir_MountIsBuilds(t *testing.T) {
+	// No BuildsDir set: RootDir() falls back to DefaultBuildsDir ("/builds").
+	e := newSuspendableContainerExecutor(t, "test-image:latest")
+
+	buildContainer, _, err := e.createBuildAndHelperContainers()
+	require.NoError(t, err)
+
+	buildMount, ok := suspendBuildsMount(t, buildContainer)
+	require.True(t, ok)
+	assert.Equal(t, suspendBuildsVolumeMount, buildMount.MountPath)
+}
+
+func TestCreateBuildAndHelperContainers_SuspendableJob_SetsSuspendPathEnvVars(t *testing.T) {
+	e := newSuspendableContainerExecutor(t, "test-image:latest")
+	e.Config.BuildsDir = "/mnt/builds"
+	e.Config.Kubernetes.ScriptsBaseDir = "/custom-scripts"
+	e.Config.Kubernetes.LogsBaseDir = "/custom-logs"
+
+	buildContainer, _, err := e.createBuildAndHelperContainers()
+	require.NoError(t, err)
+
+	env := make(map[string]string, len(buildContainer.Env))
+	for _, ev := range buildContainer.Env {
+		env[ev.Name] = ev.Value
+	}
+
+	rebindPaths := strings.Split(env["CI_SUSPEND_REBIND_PATHS"], "\n")
+	assert.Contains(t, rebindPaths, "/mnt/builds")
+	assert.Contains(t, rebindPaths, e.scriptsDir())
+	assert.Contains(t, rebindPaths, e.logsDir())
+	// scriptsDir/logsDir embed the custom base dir + project/job IDs.
+	assert.Contains(t, env["CI_SUSPEND_REBIND_PATHS"], "/custom-scripts")
+	assert.Contains(t, env["CI_SUSPEND_REBIND_PATHS"], "/custom-logs")
+}
+
+func TestCreateBuildAndHelperContainers_BothFlags_EntrypointThreadedIntoArgs(t *testing.T) {
+	e := newSuspendableContainerExecutor(t, "test-image:latest")
+	e.options.Image.Entrypoint = []string{"/custom-entrypoint.sh", "--init"}
+	e.Build.Job.Variables = append(e.Build.Job.Variables,
+		spec.Variable{Key: featureflags.KubernetesHonorEntrypoint, Value: "true"},
+	)
+
+	buildContainer, _, err := e.createBuildAndHelperContainers()
+	require.NoError(t, err)
+
+	require.GreaterOrEqual(t, len(buildContainer.Args), 3)
+	assert.Equal(t, "/custom-entrypoint.sh", buildContainer.Args[0])
+	assert.Equal(t, "--init", buildContainer.Args[1])
+	assert.Equal(t, "bash", buildContainer.Args[2])
+	assert.Equal(t, []string{"/bin/sh", overlayScriptPath}, buildContainer.Command)
+}
+
+func TestCreateBuildAndHelperContainers_BothFlags_NoCustomEntrypoint_ArgsAreRunnerShell(t *testing.T) {
+	e := newSuspendableContainerExecutor(t, "test-image:latest")
+	e.Build.Job.Variables = append(e.Build.Job.Variables,
+		spec.Variable{Key: featureflags.KubernetesHonorEntrypoint, Value: "true"},
+	)
+
+	buildContainer, _, err := e.createBuildAndHelperContainers()
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"bash"}, buildContainer.Args)
+	assert.Equal(t, []string{"/bin/sh", overlayScriptPath}, buildContainer.Command)
+}
+
 // TestPrepare tests the prepare step.
 // They do so by running the Prepare step and then run certain assertions against the internal state of the executor,
 // most prominently comparing it to a artificially created, expected executor. To make this work, before we do that
@@ -3303,6 +3896,7 @@ func TestPrepare(t *testing.T) {
 			e.options.Image.PullPolicies = nil
 			e.newPodWatcher = nil
 			e.podWatcher = nil
+			e.suspendServiceDataPaths = nil
 
 			if test.Expected.Config.IsProxyExec() {
 				test.Expected.helperImageInfo.Cmd = append(
@@ -6885,7 +7479,7 @@ func (f FakeBuildTrace) Abort() bool                                            
 func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)                           {}
 func (f FakeBuildTrace) SetSupportedFailureReasonMapper(filter common.SupportedFailureReasonMapper) {}
 func (f FakeBuildTrace) SetDebugModeEnabled(isEnabled bool)                                         {}
-func (f FakeBuildTrace) SetEnvironmentKey(_ string)                                                 {}
+func (f FakeBuildTrace) SetRuntimeEnvironmentKey(_ string)                                          {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
 }
@@ -6994,6 +7588,38 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 			assert.Len(t, c.Command, 3)
 		})
 	}
+}
+
+func TestExecutor_buildPermissionsInitContainer_SuspendResume(t *testing.T) {
+	e := newSuspendableContainerExecutor(t, "test-image:latest")
+
+	c, err := e.buildPermissionsInitContainer(helperimage.OSTypeLinux)
+	require.NoError(t, err)
+
+	assert.Contains(t, c.VolumeMounts, api.VolumeMount{Name: suspendPVCVolName, MountPath: suspendPVCMountPath})
+
+	require.NotNil(t, c.SecurityContext.RunAsUser)
+	assert.EqualValues(t, 0, *c.SecurityContext.RunAsUser)
+	require.NotNil(t, c.SecurityContext.RunAsNonRoot)
+	assert.False(t, *c.SecurityContext.RunAsNonRoot)
+
+	require.Len(t, c.Command, 3)
+	buildsPath := suspendPVCMountPath + "/" + suspendBuildsSubPath
+	assert.Contains(t, c.Command[2], fmt.Sprintf("mkdir -p %[1]s && chmod 0777 %[1]s", buildsPath))
+}
+
+func TestExecutor_buildPermissionsInitContainer_NoSuspendResume_Unaffected(t *testing.T) {
+	e := newSuspendableContainerExecutor(t, "test-image:latest")
+	e.Build.Job.SuspendOptions = spec.SuspendOptions{}
+
+	c, err := e.buildPermissionsInitContainer(helperimage.OSTypeLinux)
+	require.NoError(t, err)
+
+	for _, m := range c.VolumeMounts {
+		assert.NotEqual(t, suspendPVCVolName, m.Name, "suspend PVC must not be mounted outside suspend/resume")
+	}
+	assert.Nil(t, c.SecurityContext.RunAsUser)
+	assert.Nil(t, c.SecurityContext.RunAsNonRoot)
 }
 
 func TestExecutor_buildPermissionsInitContainer_FailPullPolicy(t *testing.T) {

@@ -94,7 +94,7 @@ type Executor interface {
 // workload state across job boundaries.
 type SuspendableExecutor interface {
 	// Suspend persists the workload state and returns the fields needed to
-	// restore it. These fields are carried in the EnvironmentKey to a future
+	// restore it. These fields are carried in the RuntimeEnvironmentKey to a future
 	// resuming job.
 	Suspend(ctx context.Context) (url.Values, error)
 	// Resume rebuilds the workload state from the fields produced by a prior

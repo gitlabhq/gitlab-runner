@@ -407,9 +407,9 @@ type PolicyOptions struct {
 }
 
 type SuspendOptions struct {
-	SuspendOnSuccess bool   `json:"suspend_on_success,omitempty"`
-	SuspendOnFailure bool   `json:"suspend_on_failure,omitempty"`
-	EnvironmentKey   string `json:"environment_key,omitempty"`
+	SuspendOnSuccess      bool   `json:"suspend_on_success,omitempty"`
+	SuspendOnFailure      bool   `json:"suspend_on_failure,omitempty"`
+	RuntimeEnvironmentKey string `json:"runtime_environment_key,omitempty"`
 }
 
 type Cache struct {

@@ -5,6 +5,7 @@ package kubernetes
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -181,12 +182,14 @@ func TestWaitForPodRunning(t *testing.T) {
 		Pod               *api.Pod
 		Config            *common.KubernetesConfig
 		ClientFunc        func(*http.Request) (*http.Response, error)
+		Events            *api.EventList
 		PodEndPhase       api.PodPhase
 		Retries           int
 		Error             bool
 		ExactRetries      bool
 		ExpectContains    []string
 		ExpectNotContains []string
+		VerifyError       func(t *testing.T, err error)
 	}{
 		{
 			Name: "ensure function retries until ready",
@@ -442,12 +445,133 @@ func TestWaitForPodRunning(t *testing.T) {
 				"Unschedulable",
 			},
 		},
+		{
+			Name: "ensure fast-fail when runtime does not support user namespaces",
+			Pod: &api.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "test-ns",
+				},
+			},
+			Config: &common.KubernetesConfig{},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
+					pod := &api.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-pod",
+							Namespace: "test-ns",
+						},
+						Status: api.PodStatus{
+							Phase: api.PodPending,
+						},
+					}
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, pod),
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, fmt.Errorf("unexpected request")
+				}
+			},
+			Events: &api.EventList{
+				Items: []api.Event{
+					{
+						Reason:  "FailedCreatePodSandBox",
+						Message: "Failed to create pod sandbox: can't set `spec.hostUsers: false`, RuntimeClass handler \"kata-qemu\" does not support user namespaces",
+					},
+				},
+			},
+			PodEndPhase: api.PodUnknown,
+			Error:       true,
+			VerifyError: func(t *testing.T, err error) {
+				var buildErr *common.BuildError
+				if !errors.As(err, &buildErr) {
+					t.Fatalf("expected a *common.BuildError, got: %T (%v)", err, err)
+				}
+				if buildErr.FailureReason != common.ConfigurationError {
+					t.Errorf("expected FailureReason %q, got %q", common.ConfigurationError, buildErr.FailureReason)
+				}
+				if !strings.Contains(err.Error(), "does not support user namespaces") {
+					t.Errorf("expected error to mention user namespaces, got: %s", err.Error())
+				}
+			},
+		},
+		{
+			Name: "ensure no fast-fail on unrelated or transient FailedCreatePodSandBox events",
+			Pod: &api.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "test-ns",
+				},
+			},
+			Config: &common.KubernetesConfig{},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
+					pod := &api.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-pod",
+							Namespace: "test-ns",
+						},
+						Status: api.PodStatus{
+							Phase: api.PodPending,
+						},
+					}
+
+					if retries > 0 {
+						pod.Status.Phase = api.PodRunning
+						pod.Status.ContainerStatuses = []api.ContainerStatus{
+							{Ready: true},
+						}
+					}
+
+					retries++
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, pod),
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, fmt.Errorf("unexpected request")
+				}
+			},
+			// Same Reason as the fast-fail case, but a transient-CNI-style message
+			// that kubelet is expected to retry and recover from on its own.
+			Events: &api.EventList{
+				Items: []api.Event{
+					{
+						Reason:  "FailedCreatePodSandBox",
+						Message: "Failed to create pod sandbox: no IP addresses available in range",
+					},
+				},
+			},
+			PodEndPhase: api.PodRunning,
+			Retries:     1,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			retries = 0
-			c := testKubernetesClient(version, fake.CreateHTTPClient(test.ClientFunc))
+			clientFunc := func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet && strings.HasSuffix(req.URL.Path, "/events") {
+					events := test.Events
+					if events == nil {
+						events = &api.EventList{}
+					}
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, events),
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
+					}, nil
+				}
+				return test.ClientFunc(req)
+			}
+			c := testKubernetesClient(version, fake.CreateHTTPClient(clientFunc))
 
 			var output strings.Builder
 			fw := testWriter{
@@ -487,6 +611,10 @@ func TestWaitForPodRunning(t *testing.T) {
 				if strings.Contains(output.String(), s) {
 					t.Errorf("[%s] Expected output not to contain %q. Got: %s", test.Name, s, output.String())
 				}
+			}
+
+			if test.VerifyError != nil {
+				test.VerifyError(t, err)
 			}
 		})
 	}
@@ -623,6 +751,8 @@ func testVersionAndCodec() (version string, codec runtime.Codec) {
 		&api.Pod{},
 		&api.ServiceAccount{},
 		&api.Secret{},
+		&api.Event{},
+		&api.EventList{},
 		&metav1.Status{},
 	)
 

@@ -114,6 +114,8 @@ func (s *executor) Connect(ctx context.Context) (func() (io.ReadWriteCloser, err
 		buildlogger.StreamWorkLevel, buildlogger.Stdout)
 	rw, readyCh := readywriter.New(logCtx, stdout)
 
+	//nolint:gocritic // kubeAPI annotation, not commented-out code
+	// kubeAPI: pods/log, get, FF_CONCRETE=true
 	logs, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).
 		GetLogs(s.pod.Name, &api.PodLogOptions{
 			Container: buildContainerName,
@@ -241,6 +243,8 @@ func (s *executor) execStepsProxy(
 ) (io.ReadWriteCloser, error) {
 	streamCtx, streamCancel := context.WithCancel(ctx)
 
+	//nolint:gocritic // kubeAPI annotation, not commented-out code
+	// kubeAPI: pods/exec, get, create, patch, delete, FF_CONCRETE=true
 	req := s.kubeClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(s.pod.Name).
@@ -318,6 +322,8 @@ func (s *executor) helperImageUpgradeMessage(ctx context.Context) string {
 	}
 	pod := s.pod
 	if s.kubeClient != nil {
+		//nolint:gocritic // kubeAPI annotation, not commented-out code
+		// kubeAPI: pods, get, FF_CONCRETE=true
 		fresh, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).
 			Get(ctx, s.pod.Name, metav1.GetOptions{})
 		if err == nil {

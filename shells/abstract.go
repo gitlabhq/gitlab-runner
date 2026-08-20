@@ -1207,6 +1207,10 @@ func (b *AbstractShell) writeGitCleanupAllConfigs(sw ShellWriter, build *common.
 		return
 	}
 
+	if build.WillSuspend() {
+		return
+	}
+
 	projectDir := build.FullProjectDir()
 
 	// clean out configs in the main git dir and in the template dir

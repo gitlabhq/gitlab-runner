@@ -774,6 +774,8 @@ type KubernetesConfig struct {
 	Services                                          []Service                          `toml:"services,omitempty" json:"services,omitempty" description:"Add service that is started with container"`
 	CapAdd                                            []string                           `toml:"cap_add" json:"cap_add,omitempty" long:"cap-add" env:"KUBERNETES_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                                           []string                           `toml:"cap_drop" json:"cap_drop,omitempty" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
+	SuspendPVCSize                                    string                             `toml:"suspend_pvc_size,omitempty" json:"suspend_pvc_size,omitempty" long:"suspend-pvc-size" env:"KUBERNETES_SUSPEND_PVC_SIZE" description:"Size of the single PVC created for suspendable job environments; covers both the overlay upper layer and the builds directory (default: 20Gi)"`
+	SuspendPVCStorageClass                            string                             `toml:"suspend_pvc_storage_class,omitempty" json:"suspend_pvc_storage_class,omitempty" long:"suspend-pvc-storage-class" env:"KUBERNETES_SUSPEND_PVC_STORAGE_CLASS" description:"StorageClass for suspend PVCs; empty uses the cluster default"`
 	DNSPolicy                                         KubernetesDNSPolicy                `toml:"dns_policy,omitempty" json:"dns_policy" long:"dns-policy" env:"KUBERNETES_DNS_POLICY" description:"How Kubernetes should try to resolve DNS from the created pods. If unset, Kubernetes will use the default 'ClusterFirst'. Valid values are: none, default, cluster-first, cluster-first-with-host-net"`
 	DNSConfig                                         KubernetesDNSConfig                `toml:"dns_config" json:"dns_config" description:"Pod DNS config"`
 	ContainerLifecycle                                KubernetesContainerLifecyle        `toml:"container_lifecycle,omitempty" json:"container_lifecycle" description:"Actions that the management system should take in response to container lifecycle events"`
@@ -1367,11 +1369,12 @@ type LabelSelector struct {
 }
 
 type Service struct {
-	Name        string   `toml:"name" long:"name" description:"The image path for the service"`
-	Alias       string   `toml:"alias,omitempty" long:"alias" description:"Space or comma-separated aliases of the service."`
-	Command     []string `toml:"command" json:",omitempty" long:"command" description:"Command or script that should be used as the container’s command. Syntax is similar to https://docs.docker.com/engine/reference/builder/#cmd"`
-	Entrypoint  []string `toml:"entrypoint" json:",omitempty" long:"entrypoint" description:"Command or script that should be executed as the container’s entrypoint. syntax is similar to https://docs.docker.com/engine/reference/builder/#entrypoint"`
-	Environment []string `toml:"environment,omitempty" json:"environment,omitempty" long:"env" description:"Custom environment variables injected to service environment"`
+	Name            string   `toml:"name" long:"name" description:"The image path for the service"`
+	Alias           string   `toml:"alias,omitempty" long:"alias" description:"Space or comma-separated aliases of the service."`
+	Command         []string `toml:"command" json:",omitempty" long:"command" description:"Command or script that should be used as the container’s command. Syntax is similar to https://docs.docker.com/engine/reference/builder/#cmd"`
+	Entrypoint      []string `toml:"entrypoint" json:",omitempty" long:"entrypoint" description:"Command or script that should be executed as the container’s entrypoint. syntax is similar to https://docs.docker.com/engine/reference/builder/#entrypoint"`
+	Environment     []string `toml:"environment,omitempty" json:"environment,omitempty" long:"env" description:"Custom environment variables injected to service environment"`
+	SuspendDataPath string   `toml:"suspend_data_path,omitempty" json:"suspend_data_path,omitempty" long:"suspend-data-path" description:"Path inside the service container where persistent data is written (e.g. /data for Redis). When set on a suspendable Kubernetes job, this path is mounted from the suspend PVC so the service data survives suspend and resume cycles. This field is only required and used when command and entrypoint are not specified."`
 }
 
 func (s *Service) Aliases() []string { return strings.Fields(strings.ReplaceAll(s.Alias, ",", " ")) }

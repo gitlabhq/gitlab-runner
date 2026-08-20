@@ -117,28 +117,30 @@ You can either:
 - Specify a service account `serviceAccount.name: <service_account_name>` with the following
   permissions in the `values.yml` file.
 
-<!-- `k8s_api_permissions_list_start` -->
+<!-- k8s_api_permissions_list_start -->
 
 | Resource | Verb (Optional Feature/Config Flags) |
 |----------|-------------------------------|
 | apps/deployments | create (`kubernetes.autoscaler`), delete (`kubernetes.autoscaler`), get (`kubernetes.autoscaler`), list (`kubernetes.autoscaler`), update (`kubernetes.autoscaler`) |
+| configmaps | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), update (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
 | events | list (`print_pod_warning_events=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
-| namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`) |
-| poddisruptionbudgets | create (`pod_disruption_budget=true`), get (`pod_disruption_budget=true`) |
+| namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
+| persistentvolumeclaims | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
 | pods | create, delete, get, list ([using Informers](#informers)), watch ([using Informers](#informers), `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/attach | create (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), delete (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), patch (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/exec | create, delete, get, patch |
-| pods/log | get (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods/log | get (`FF_CONCRETE=true`, `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| policy/poddisruptionbudgets | create (`pod_disruption_budget=true`), get (`pod_disruption_budget=true`) |
 | scheduling.k8s.io/priorityclasses | create (`kubernetes.autoscaler`), get (`kubernetes.autoscaler`) |
 | secrets | create, delete, get, update |
 | serviceaccounts | get |
 | services | create, get |
 
-<!-- `k8s_api_permissions_list_end` -->
+<!-- k8s_api_permissions_list_end -->
 
 You can use the following YAML role definition to create a role with the required permissions.
 
-<!-- `k8s_api_permissions_role_yaml_start` -->
+<!-- k8s_api_permissions_role_yaml_start -->
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -156,6 +158,13 @@ rules:
   - "list" # Required when `kubernetes.autoscaler`
   - "update" # Required when `kubernetes.autoscaler`
 - apiGroups: [""]
+  resources: ["configmaps"]
+  verbs:
+  - "create" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "delete" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "update" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+- apiGroups: [""]
   resources: ["events"]
   verbs:
   - "list" # Required when `print_pod_warning_events=true`
@@ -165,11 +174,12 @@ rules:
   verbs:
   - "create" # Required when `kubernetes.NamespacePerJob=true`
   - "delete" # Required when `kubernetes.NamespacePerJob=true`
-- apiGroups: ["policy"]
-  resources: ["poddisruptionbudgets"]
+  - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
   verbs:
-  - "create" # Required when `pod_disruption_budget=true`
-  - "get" # Required when `pod_disruption_budget=true`
+  - "create" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "delete" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
 - apiGroups: [""]
   resources: ["pods"]
   verbs:
@@ -195,8 +205,13 @@ rules:
 - apiGroups: [""]
   resources: ["pods/log"]
   verbs:
-  - "get" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`
+  - "get" # Required when `FF_CONCRETE=true`, `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`
   - "list" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs:
+  - "create" # Required when `pod_disruption_budget=true`
+  - "get" # Required when `pod_disruption_budget=true`
 - apiGroups: ["scheduling.k8s.io"]
   resources: ["priorityclasses"]
   verbs:
@@ -220,7 +235,7 @@ rules:
   - "get"
 ```
 
-<!-- `k8s_api_permissions_role_yaml_end` -->
+<!-- k8s_api_permissions_role_yaml_end -->
 
 Additional details:
 
@@ -393,6 +408,8 @@ This approach allows developers to optimize resource usage per job while maintai
 | `service_account_overwrite_allowed`           | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature. |
 | `services`                                    | List of [services](https://docs.gitlab.com/ci/services/) attached to the build container using the [sidecar pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#define-a-list-of-services). |
 | `use_service_account_image_pull_secrets`      | When enabled, the pod created by the executor lacks `imagePullSecrets`. This causes the pod to be created using the [`imagePullSecrets` from the service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-image-pull-secret-to-service-account), if set. |
+| `suspend_pvc_size`                            | Size of the PVC created for suspendable job environments. The PVC stores the overlayfs upper layer, the builds directory, and any service container data directories configured with `suspend_data_path`. Defaults to `20Gi`. |
+| `suspend_pvc_storage_class`                   | `StorageClass` name for the PVC created by `suspend_pvc_size`. When empty, the PVC uses the cluster's default `StorageClass`. |
 | `terminationGracePeriodSeconds`               | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. [Deprecated in favour of `cleanup_grace_period_seconds` and `pod_termination_grace_period_seconds`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165). |
 | `volumes`                                     | Configured through the configuration file, the list of volumes that is mounted in the build container. [Read more about using volumes](#configure-volume-types). |
 | `pod_spec`                                    | This setting is an experiment. Overwrites the pod specification generated by the runner manager with a list of configurations set on the pod used to run the CI Job. All the properties listed `Kubernetes Pod Specification` can be set. For more information, see [Overwrite generated pod specifications (experiment)](#overwrite-generated-pod-specifications). |
@@ -1556,7 +1573,31 @@ check_interval = 30
       entrypoint = ["entrypoint.sh"]
       command = ["executable","param1","param2"]
       environment = ["ENV=value1", "ENV2=value2"]
+    [[runners.kubernetes.services]]
+      name = "redis:7"
+      alias = "cache"
+      suspend_data_path = "/data"  # persists Redis data across suspend/resume cycles
 ```
+
+Each `[[runners.kubernetes.services]]` entry supports the following fields:
+
+| Field | Description |
+|---|---|
+| `name` | Image path for the service (required). |
+| `alias` | Space or comma-separated aliases used as the container and DNS name. |
+| `entrypoint` | Override the image entrypoint. |
+| `command` | Override the image command. |
+| `environment` | List of `KEY=value` environment variables injected into the service container. |
+| `suspend_data_path` | Path inside the service container where persistent data is written (for example, `/data` for Redis or `/var/lib/postgresql/data` for PostgreSQL). |
+
+The `suspend_data_path` behavior depends on your configuration:
+
+- On a suspendable job (`FF_SUSPENDABLE_ENVIRONMENTS` enabled) with no `command` or `entrypoint` set,
+  the runner mounts a subdirectory of the suspend PVC at this path so the data survives suspend and
+  resume cycles.
+- If `command` or `entrypoint` is set, the runner persists the entire service container instead,
+  so this setting has no effect.
+- When empty with no `command` or `entrypoint` is set, the service container has no persistent storage.
 
 If the service environment includes `HEALTHCHECK_TCP_PORT`, GitLab Runner waits until the service
 responds on that port before starting user CI scripts. You can also configure the `HEALTHCHECK_TCP_PORT`

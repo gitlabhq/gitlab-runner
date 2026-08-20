@@ -167,7 +167,7 @@ func closeKubeClient(client kubernetes.Interface) bool {
 	}
 	// kubeAPI: ignore
 	rest, ok := client.CoreV1().RESTClient().(*restclient.RESTClient)
-	if !ok || rest.Client == nil || rest.Client.Transport == nil {
+	if !ok || rest == nil || rest.Client == nil || rest.Client.Transport == nil {
 		return false
 	}
 	if transport, ok := rest.Client.Transport.(*http.Transport); ok {
@@ -222,6 +222,12 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 		return podPhaseResponse{true, api.PodUnknown, err}
 	}
 
+	if printPodWarningEvents {
+		if err := checkPodSandboxUserNamespaceFailure(ctx, client, pod); err != nil {
+			return podPhaseResponse{true, api.PodUnknown, err}
+		}
+	}
+
 	nodeName := cmp.Or(pod.Spec.NodeName, "<unknown>")
 
 	_, _ = fmt.Fprintf(
@@ -250,6 +256,30 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 	}
 
 	return podPhaseResponse{false, pod.Status.Phase, nil}
+}
+
+// checkPodSandboxUserNamespaceFailure detects a runtime that rejected
+// `spec.hostUsers: false` because it doesn't support Linux user namespaces.
+func checkPodSandboxUserNamespaceFailure(ctx context.Context, client kubernetes.Interface, pod *api.Pod) error {
+	//nolint:gocritic
+	// kubeAPI: events, list, print_pod_warning_events=true
+	events, err := client.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("involvedObject.name=%s,type=%s", pod.Name, k8sEventWarningType),
+	})
+	if err != nil {
+		return nil
+	}
+
+	for _, event := range events.Items {
+		if event.Reason == "FailedCreatePodSandBox" && strings.Contains(event.Message, "does not support user namespaces") {
+			return &common.BuildError{
+				Inner:         fmt.Errorf("pod sandbox creation failed: %s", event.Message),
+				FailureReason: common.ConfigurationError,
+			}
+		}
+	}
+
+	return nil
 }
 
 func triggerPodPhaseCheck(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out io.Writer, printPodWarningEvents bool, containers ...string) <-chan podPhaseResponse {

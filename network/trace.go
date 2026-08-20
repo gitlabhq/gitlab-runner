@@ -414,8 +414,8 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 			Checksum: c.checksum(),
 			Bytesize: c.bytesize(),
 		},
-		ExitCode:       c.exitCode,
-		EnvironmentKey: environmentKey,
+		ExitCode:              c.exitCode,
+		RuntimeEnvironmentKey: environmentKey,
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
@@ -473,7 +473,7 @@ func (c *clientJobTrace) SetDebugModeEnabled(isEnabled bool) {
 	c.debugModeEnabled = isEnabled
 }
 
-func (c *clientJobTrace) SetEnvironmentKey(key string) {
+func (c *clientJobTrace) SetRuntimeEnvironmentKey(key string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.environmentKey = key

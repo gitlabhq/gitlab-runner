@@ -888,7 +888,7 @@ func TestExecutePrepareScripts_SkipsGetSourcesOnResume(t *testing.T) {
 		},
 	}
 	build := registerExecutorWithSuccessfulBuild(t, provider, rc)
-	build.Job.SuspendOptions = spec.SuspendOptions{EnvironmentKey: "1/sys-1/acquisition-key=abc"}
+	build.Job.SuspendOptions = spec.SuspendOptions{RuntimeEnvironmentKey: "1/sys-1/acquisition-key=abc"}
 
 	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
@@ -5767,7 +5767,7 @@ func TestBuild_ShouldSuspend(t *testing.T) {
 	}
 }
 
-func TestBuild_EnvironmentKey(t *testing.T) {
+func TestBuild_RuntimeEnvironmentKey(t *testing.T) {
 	const envKeyValue = "1/sys-1/acquisition-key=abc"
 
 	tests := []struct {
@@ -5792,14 +5792,14 @@ func TestBuild_EnvironmentKey(t *testing.T) {
 					},
 				},
 			}
-			b.Job.SuspendOptions = spec.SuspendOptions{EnvironmentKey: tc.envKey}
+			b.Job.SuspendOptions = spec.SuspendOptions{RuntimeEnvironmentKey: tc.envKey}
 
-			assert.Equal(t, tc.wantEnvKey, b.EnvironmentKey())
+			assert.Equal(t, tc.wantEnvKey, b.RuntimeEnvironmentKey())
 		})
 	}
 }
 
-func TestRun_ShouldSuspend_SetsEnvironmentKeyOnTrace(t *testing.T) {
+func TestRun_ShouldSuspend_SetsRuntimeEnvironmentKeyOnTrace(t *testing.T) {
 	exec := &mockSuspendableExecutor{
 		MockExecutor:            NewMockExecutor(t),
 		MockSuspendableExecutor: NewMockSuspendableExecutor(t),
@@ -5848,14 +5848,14 @@ func TestRun_ShouldSuspend_SetsEnvironmentKeyOnTrace(t *testing.T) {
 	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Maybe()
 	trace.On("SetDebugModeEnabled", mock.Anything).Maybe()
 	trace.On("SetFailuresCollector", mock.Anything).Maybe()
-	trace.On("SetEnvironmentKey", "7/sys-1/namespace=gitlab-runner&pvc=gl-runner-env-abc123").Once()
+	trace.On("SetRuntimeEnvironmentKey", "7/sys-1/namespace=gitlab-runner&pvc=gl-runner-env-abc123").Once()
 	trace.On("Success").Return(nil).Once()
 
 	err = build.Run(t.Context(), &Config{}, trace)
 	assert.NoError(t, err)
 }
 
-func TestRun_ShouldSuspend_SuspendError_DoesNotSetEnvironmentKey(t *testing.T) {
+func TestRun_ShouldSuspend_SuspendError_DoesNotSetRuntimeEnvironmentKey(t *testing.T) {
 	exec := &mockSuspendableExecutor{
 		MockExecutor:            NewMockExecutor(t),
 		MockSuspendableExecutor: NewMockSuspendableExecutor(t),

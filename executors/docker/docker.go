@@ -1515,7 +1515,7 @@ func (e *executor) createDependencies() error {
 }
 
 func (e *executor) resumeDependencies() error {
-	envKey, err := common.ParseEnvironmentKey(e.Build.EnvironmentKey())
+	envKey, err := common.ParseRuntimeEnvironmentKey(e.Build.RuntimeEnvironmentKey())
 	if err != nil {
 		return err
 	}
@@ -1683,7 +1683,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	if e.Build.EnvironmentKey() != "" {
+	if e.Build.RuntimeEnvironmentKey() != "" {
 		e.BuildLogger.Println("Resuming Docker executor...")
 		err = e.resumeDependencies()
 	} else {

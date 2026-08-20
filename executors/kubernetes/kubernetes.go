@@ -114,6 +114,8 @@ const (
 	//   For 100k entries, worst‑case RAM ≈ 10 MB.
 	podEventLRUCapacity = 100000
 	podEventStateTTL    = 2 * time.Hour
+
+	suspendBuildsSubPath = "builds"
 )
 
 var (
@@ -272,14 +274,15 @@ func (kOpts kubernetesOptions) getSortedServiceNames() []string {
 }
 
 type containerBuildOpts struct {
-	name               string
-	image              string
-	imageDefinition    spec.Image
-	isServiceContainer bool
-	requests           api.ResourceList
-	limits             api.ResourceList
-	securityContext    *api.SecurityContext
-	command            []string
+	name                   string
+	image                  string
+	imageDefinition        spec.Image
+	isServiceContainer     bool
+	requests               api.ResourceList
+	limits                 api.ResourceList
+	securityContext        *api.SecurityContext
+	command                []string
+	additionalVolumeMounts []api.VolumeMount
 }
 
 type podConfigPrepareOpts struct {
@@ -333,6 +336,19 @@ type executor struct {
 	newPodWatcher func(podWatcherConfig) podWatcher
 
 	podEventState *podEventState
+
+	// suspendRootfsPVCName is the name of the PVC used for suspending environment
+	// only used when FF_SUSPENDABLE_ENVIRONMENTS is enabled
+	suspendRootfsPVCName string
+
+	// suspended is true if the job has suspended an environment
+	// only used when FF_SUSPENDABLE_ENVIRONMENTS is enabled
+	suspended bool
+
+	// isResume is true if the job is a resumed job from a suspended environment
+	// only used when FF_SUSPENDABLE_ENVIRONMENTS is enabled
+	isResume                bool
+	suspendServiceDataPaths map[string]string // canonical service name → SuspendDataPath from runner config
 }
 
 type podEventState struct {
@@ -364,10 +380,10 @@ type serviceCreateResponse struct {
 	err     error
 }
 
-func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
+func (s *executor) prepareConnections(options common.ExecutorPrepareOptions) error {
 	s.AbstractExecutor.PrepareConfiguration(options)
 
-	if err = s.prepareOverwrites(options.Build.GetAllVariables()); err != nil {
+	if err := s.prepareOverwrites(options.Build.GetAllVariables()); err != nil {
 		return &common.BuildError{
 			Inner:         fmt.Errorf("couldn't prepare overwrites: %w", err),
 			FailureReason: common.ConfigurationError,
@@ -376,7 +392,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	s.prepareOptions(options.Build)
 
-	if err = s.prepareServiceOverwrites(s.options.Services); err != nil {
+	if err := s.prepareServiceOverwrites(s.options.Services); err != nil {
 		return &common.BuildError{
 			Inner:         fmt.Errorf("couldn't prepare explicit service overwrites: %w", err),
 			FailureReason: common.ConfigurationError,
@@ -387,13 +403,14 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	// for static build dir when isolated volume is in use.
 	s.SharedBuildsDir = s.isSharedBuildsDirRequired()
 
-	if err = s.checkDefaults(); err != nil {
+	if err := s.checkDefaults(); err != nil {
 		return &common.BuildError{
 			Inner:         fmt.Errorf("check defaults error: %w", err),
 			FailureReason: common.ConfigurationError,
 		}
 	}
 
+	var err error
 	s.kubeConfig, err = s.getKubeConfig(s.Config.Kubernetes, s.configurationOverwrites)
 	if err != nil {
 		return &common.BuildError{
@@ -410,6 +427,15 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		}
 	}
 
+	return nil
+}
+
+func (s *executor) prepareInfrastructure(ctx context.Context) error {
+	if err := s.guardSuspendCompatibility(); err != nil {
+		return err
+	}
+
+	var err error
 	s.helperImageInfo, err = s.prepareHelperImage()
 	if err != nil {
 		return &common.BuildError{
@@ -457,7 +483,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	s.podWatcher = s.newPodWatcher(podWatcherConfig{
-		ctx:             options.Context,
+		ctx:             ctx,
 		logger:          &s.BuildLogger,
 		kubeClient:      s.kubeClient,
 		featureChecker:  s.featureChecker,
@@ -471,10 +497,23 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	if s.Build.UseNativeSteps() {
-		return s.stepsWaitForServices(options.Context)
+		return s.stepsWaitForServices(ctx)
 	}
 
-	return s.waitForServices(options.Context)
+	return s.waitForServices(ctx)
+}
+
+func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
+	if err := s.prepareConnections(options); err != nil {
+		return err
+	}
+	if err := s.prepareResume(options); err != nil {
+		return err
+	}
+
+	s.BuildLogger.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)
+
+	return s.prepareInfrastructure(options.Context)
 }
 
 func (s *executor) preparePullManager() (pull.Manager, error) {
@@ -646,7 +685,10 @@ func (s *executor) withPullRetry(ctx context.Context, dispatch func() error) err
 		var imagePullErr *pull.ImagePullError
 		if errors.As(err, &imagePullErr) {
 			if s.pullManager.UpdatePolicyForContainer(attempt, imagePullErr) {
-				s.cleanupResources()
+				cleanupCtx, cancel := context.WithTimeout(
+					context.Background(), s.Config.Kubernetes.GetCleanupResourcesTimeout())
+				s.cleanupResources(cleanupCtx)
+				cancel()
 				s.pod = nil
 				continue
 			}
@@ -1052,6 +1094,10 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("setting up credentials: %w", err)
 	}
 
+	if err := s.ensureSuspendResources(ctx); err != nil {
+		return err
+	}
+
 	initContainers, err := s.buildInitContainers()
 	if err != nil {
 		return err
@@ -1240,17 +1286,33 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 		return api.Container{}, fmt.Errorf("getting pull policy for permissions init container: %w", err)
 	}
 
+	volumeMounts := s.getVolumeMounts()
+	securityContext := s.Config.Kubernetes.GetContainerSecurityContext(
+		s.Config.Kubernetes.InitPermissionsContainerSecurityContext,
+		s.defaultCapDrop()...,
+	)
+
+	// Under suspendable environments, the builds dir is a PVC subPath that kubelet
+	// creates as root:root 0755 on first use, unlike an emptyDir, which it
+	// creates world-writable. A non-root helper container then can't write to
+	// it which is why running as root is required here.
+	var suspendChmodCmd string
+	if s.usesSuspendResume() {
+		volumeMounts = append(volumeMounts, api.VolumeMount{Name: suspendPVCVolName, MountPath: suspendPVCMountPath})
+		securityContext.RunAsUser = new(int64(0))
+		securityContext.RunAsNonRoot = new(false)
+		buildsPath := suspendPVCMountPath + "/" + suspendBuildsSubPath
+		suspendChmodCmd = fmt.Sprintf("mkdir -p %[1]s && chmod 0777 %[1]s", buildsPath)
+	}
+
 	container := api.Container{
 		Name:            initPermissionContainerName,
 		Image:           s.getHelperImage(),
-		VolumeMounts:    s.getVolumeMounts(),
+		VolumeMounts:    volumeMounts,
 		ImagePullPolicy: pullPolicy,
 		// let's use build container resources
-		Resources: s.initContainerResources(),
-		SecurityContext: s.Config.Kubernetes.GetContainerSecurityContext(
-			s.Config.Kubernetes.InitPermissionsContainerSecurityContext,
-			s.defaultCapDrop()...,
-		),
+		Resources:       s.initContainerResources(),
+		SecurityContext: securityContext,
 	}
 
 	// The kubernetes executor uses both a helper container (for predefined stages) and a build
@@ -1283,6 +1345,9 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 		var initCommand []string
 		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 			initCommand = append(initCommand, fmt.Sprintf("touch %[1]s && (chmod 777 %[1]s || exit 0)", s.logFile()))
+		}
+		if suspendChmodCmd != "" {
+			initCommand = append(initCommand, suspendChmodCmd)
 		}
 		if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
 			initCommand = append(initCommand, fmt.Sprintf("cp /usr/bin/dumb-init %s", s.scriptsDir()))
@@ -1498,7 +1563,22 @@ func (s *executor) Cleanup() {
 		s.eventsStream.Stop()
 	}
 
-	s.cleanupResources()
+	if s.suspended {
+		s.BuildLogger.Infoln("Job environment suspended; retaining PVC",
+			s.suspendRootfsPVCName)
+	}
+
+	ctx, cancel := context.WithTimeout(
+		context.Background(), s.Config.Kubernetes.GetCleanupResourcesTimeout())
+	defer cancel()
+
+	s.cleanupResources(ctx)
+	s.deleteSuspendRootfsPVC(ctx)
+
+	if s.usesSuspendResume() {
+		s.deleteOverlayConfigMap(ctx)
+	}
+
 	closeKubeClient(s.kubeClient)
 	s.AbstractExecutor.Cleanup()
 }
@@ -1508,13 +1588,7 @@ func (s *executor) Cleanup() {
 // We therefore explicitly delete the resources if no ownerReference is found on it
 // This does not apply for services as they are created with the owner from the start
 // thus deletion of the pod automatically means deletion of the services if any
-func (s *executor) cleanupResources() {
-	// Here we don't use the build context as its timeout will prevent a successful cleanup of the resources.
-	// The solution used here is inspired from the one used for the docker executor.
-	// We give a configurable timeout to complete the resources cleanup.
-	ctx, cancel := context.WithTimeout(context.Background(), s.Config.Kubernetes.GetCleanupResourcesTimeout())
-	defer cancel()
-
+func (s *executor) cleanupResources(ctx context.Context) {
 	if s.pod != nil {
 		kubeRequest := retry.WithFn(s, func() error {
 			// kubeAPI: pods, delete
@@ -1545,9 +1619,11 @@ func (s *executor) cleanupResources() {
 		}
 	}
 
-	err := s.teardownBuildNamespace(ctx)
-	if err != nil {
-		s.BuildLogger.Errorln(fmt.Sprintf("Error tearing down namespace: %s", err.Error()))
+	if !s.suspended {
+		err := s.teardownBuildNamespace(ctx)
+		if err != nil {
+			s.BuildLogger.Errorln(fmt.Sprintf("Error tearing down namespace: %s", err.Error()))
+		}
 	}
 }
 
@@ -1604,7 +1680,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		Env:             buildVariables(envVars),
 		Resources:       api.ResourceRequirements{Limits: opts.limits, Requests: opts.requests},
 		Ports:           containerPorts,
-		VolumeMounts:    s.getVolumeMounts(),
+		VolumeMounts:    append(s.getVolumeMounts(), opts.additionalVolumeMounts...),
 		SecurityContext: opts.securityContext,
 		Lifecycle:       s.prepareLifecycleHooks(),
 		Stdin:           true,
@@ -1870,6 +1946,10 @@ func (s *executor) getVolumes() []api.Volume {
 			},
 		})
 
+	if s.usesSuspendResume() {
+		volumes = append(volumes, s.suspendVolumes()...)
+	}
+
 	return volumes
 }
 
@@ -2059,6 +2139,11 @@ func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
 		return *s.requireDefaultBuildsDirVolume
 	}
 
+	if s.usesSuspendResume() {
+		s.requireDefaultBuildsDirVolume = new(false)
+		return false
+	}
+
 	required := true
 	for _, mount := range s.getVolumeMountsForConfig() {
 		if mount.MountPath == s.AbstractExecutor.RootDir() {
@@ -2073,6 +2158,9 @@ func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
 }
 
 func (s *executor) isSharedBuildsDirRequired() bool {
+	if s.usesSuspendResume() {
+		return false
+	}
 	// Return quickly when default builds dir is used as job is
 	// isolated to pod, so no need for SharedBuildsDir behavior
 	if s.isDefaultBuildsDirVolumeRequired() {
@@ -2191,13 +2279,19 @@ func (s *executor) setupBuildNamespace(ctx context.Context) error {
 		},
 	}
 
+	// Jobs which are resuming from an environment have their
+	// namespaces created by the previous jobs already
+	if s.isResume {
+		return nil
+	}
+
 	//nolint:gocritic
 	// kubeAPI: namespaces, create, kubernetes.NamespacePerJob=true
 	_, err := s.kubeClient.CoreV1().Namespaces().Create(ctx, &nsconfig, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create namespace: %w", err)
 	}
-	return err
+	return nil
 }
 
 func (s *executor) teardownBuildNamespace(ctx context.Context) error {
@@ -2455,18 +2549,33 @@ func (s *executor) preparePodServices() ([]api.Container, error) {
 			s.Config.Kubernetes.ServiceContainerSecurityContext,
 		)
 
+		// Skipped once the overlay is active: it already captures writes to
+		// this path for free, so a dedicated mount would be redundant.
+		hasOverlay := len(service.Entrypoint) > 0 || len(service.Command) > 0
+		var additionalMounts []api.VolumeMount
+		if s.usesSuspendResume() && !hasOverlay {
+			if dataPath := s.suspendServiceDataPaths[name]; dataPath != "" {
+				additionalMounts = []api.VolumeMount{suspendServiceDataMount(name, dataPath)}
+			}
+		}
+
 		var err error
 		podServices[i], err = s.buildContainer(containerBuildOpts{
-			name:               name,
-			image:              service.Name,
-			imageDefinition:    *service,
-			isServiceContainer: true,
-			requests:           s.configurationOverwrites.getServiceResourceRequests(name),
-			limits:             s.configurationOverwrites.getServiceResourceLimits(name),
-			securityContext:    securityContext,
+			name:                   name,
+			image:                  service.Name,
+			imageDefinition:        *service,
+			isServiceContainer:     true,
+			requests:               s.configurationOverwrites.getServiceResourceRequests(name),
+			limits:                 s.configurationOverwrites.getServiceResourceLimits(name),
+			securityContext:        securityContext,
+			additionalVolumeMounts: additionalMounts,
 		})
 		if err != nil {
 			return nil, err
+		}
+
+		if s.usesSuspendResume() && hasOverlay {
+			s.overlayServiceContainer(&podServices[i], name, service)
 		}
 	}
 
@@ -2510,6 +2619,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 			RuntimeClassName:              s.Config.Kubernetes.RuntimeClassName,
 			PriorityClassName:             s.Config.Kubernetes.PriorityClassName,
 			Resources:                     s.podResourcesReference(),
+			HostUsers:                     s.isHostUserEnabled(),
 		},
 	}
 
@@ -2572,6 +2682,35 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 		return api.Container{}, api.Container{}, err
 	}
 
+	var buildContainerArgs []string
+	var additionalBuildMounts []api.VolumeMount
+	if s.usesSuspendResume() {
+		buildContainerArgs = buildCmd
+		buildCmd = []string{"/bin/sh", overlayScriptPath}
+		// The builds directory mount tracks the configured builds_dir
+		// (RootDir()), not the hardcoded /builds, so a custom builds_dir
+		// persists across suspend/resume instead of silently losing data.
+		additionalBuildMounts = []api.VolumeMount{
+			{Name: suspendPVCVolName, MountPath: suspendPVCMountPath},
+			{Name: suspendCMVolName, MountPath: overlayScriptDir},
+			{Name: suspendPVCVolName, MountPath: s.RootDir(), SubPath: suspendBuildsSubPath},
+		}
+
+		// When KubernetesHonorEntrypoint is also on, prepend the image's
+		// YAML-configured entrypoint to args so the overlay script runs it
+		// after pivot_root: exec image_entrypoint runner_shell.
+		// Only the entrypoint set via image.entrypoint in .gitlab-ci.yml is
+		// used here — the runner has no access to the registry-baked ENTRYPOINT
+		// from the image manifest at pod-creation time.
+		if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) &&
+			len(s.options.Image.Entrypoint) > 0 {
+			combined := make([]string, 0, len(s.options.Image.Entrypoint)+len(buildContainerArgs))
+			combined = append(combined, s.options.Image.Entrypoint...)
+			combined = append(combined, buildContainerArgs...)
+			buildContainerArgs = combined
+		}
+	}
+
 	kubernetesOptions := s.options.Image.ExecutorOptions.Kubernetes.Expand(s.Build.GetAllVariables())
 	securityContext := s.getSecurityContextWithUIDGID(
 		string(kubernetesOptions.User),
@@ -2580,16 +2719,36 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 	)
 
 	buildContainer, err := s.buildContainer(containerBuildOpts{
-		name:            buildContainerName,
-		image:           s.options.Image.Name,
-		imageDefinition: s.options.Image,
-		requests:        s.configurationOverwrites.buildRequests,
-		limits:          s.configurationOverwrites.buildLimits,
-		securityContext: securityContext,
-		command:         buildCmd,
+		name:                   buildContainerName,
+		image:                  s.options.Image.Name,
+		imageDefinition:        s.options.Image,
+		requests:               s.configurationOverwrites.buildRequests,
+		limits:                 s.configurationOverwrites.buildLimits,
+		securityContext:        securityContext,
+		command:                buildCmd,
+		additionalVolumeMounts: additionalBuildMounts,
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building build container: %w", err)
+	}
+
+	if s.usesSuspendResume() {
+		// With suspend, the overlay script must always be Command regardless of
+		// KubernetesHonorEntrypoint. getCommandAndArgs may have returned Command=[]
+		// (deferring to the image ENTRYPOINT) — re-assign here to ensure the
+		// overlay script runs first. buildContainerArgs already has the image
+		// entrypoint prepended (if KubernetesHonorEntrypoint is set and the image
+		// has a YAML entrypoint) so the chain is:
+		// pivot_root → exec image_entrypoint runner_shell.
+		buildContainer.Command = buildCmd
+		buildContainer.Args = buildContainerArgs
+		injectSuspendCap(&buildContainer)
+		buildContainer.Env = append(buildContainer.Env,
+			buildVariables([]spec.Variable{
+				{Key: "CI_SUSPEND_IMAGE_TAG", Value: s.options.Image.Name},
+				{Key: "CI_SUSPEND_PERSIST_DIR", Value: suspendPVCMountPath},
+				{Key: "CI_SUSPEND_REBIND_PATHS", Value: s.suspendRebindPaths(s.RootDir(), s.scriptsDir(), s.logsDir())},
+			})...)
 	}
 
 	helperCmd, err := s.getContainerCommand(helperContainerName)
@@ -2602,13 +2761,21 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 		s.Config.Kubernetes.HelperContainerSecurityContext,
 	)
 
+	var additionalHelperMounts []api.VolumeMount
+	if s.usesSuspendResume() {
+		additionalHelperMounts = []api.VolumeMount{
+			{Name: suspendPVCVolName, MountPath: s.RootDir(), SubPath: suspendBuildsSubPath},
+		}
+	}
+
 	helperContainer, err := s.buildContainer(containerBuildOpts{
-		name:            helperContainerName,
-		image:           s.getHelperImage(),
-		requests:        s.configurationOverwrites.helperRequests,
-		limits:          s.configurationOverwrites.helperLimits,
-		securityContext: helperSecurityContext,
-		command:         helperCmd,
+		name:                   helperContainerName,
+		image:                  s.getHelperImage(),
+		requests:               s.configurationOverwrites.helperRequests,
+		limits:                 s.configurationOverwrites.helperLimits,
+		securityContext:        helperSecurityContext,
+		command:                helperCmd,
+		additionalVolumeMounts: additionalHelperMounts,
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building helper container: %w", err)
@@ -3381,6 +3548,7 @@ func (s *executor) prepareOptions(build *common.Build) {
 		Image:    build.Image,
 		Services: make(map[string]*spec.Image),
 	}
+	s.suspendServiceDataPaths = make(map[string]string)
 
 	for _, svc := range s.Config.Kubernetes.GetExpandedServices(s.Build.GetAllVariables()) {
 		if svc.Name == "" {
@@ -3391,6 +3559,9 @@ func (s *executor) prepareOptions(build *common.Build) {
 		service := svc.ToImageDefinition()
 		index, serviceName = s.getServiceDefinition(&service, usedAliases, index)
 		s.options.Services[serviceName] = &service
+		if svc.SuspendDataPath != "" {
+			s.suspendServiceDataPaths[serviceName] = svc.SuspendDataPath
+		}
 	}
 
 	for _, service := range build.Services {
@@ -3482,8 +3653,6 @@ func (s *executor) checkDefaults() error {
 		)
 		s.configurationOverwrites.namespace = DefaultResourceIdentifier
 	}
-
-	s.BuildLogger.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)
 
 	return nil
 }
