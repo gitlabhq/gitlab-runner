@@ -67,7 +67,7 @@ require (
 	github.com/samber/lo v1.53.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/saracen/fastzip v0.2.0
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.12.0
 	github.com/urfave/cli v1.22.17
