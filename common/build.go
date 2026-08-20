@@ -333,6 +333,7 @@ func (b *Build) Log() *logrus.Entry {
 			"root_namespace_id": b.JobInfo.RootNamespaceID,
 			"organization_id":   b.JobInfo.OrganizationID,
 			"gitlab_user_id":    b.JobInfo.UserID,
+			"runner_uuid":       b.RunnerInfo.UUID,
 		})
 
 	if b.JobInfo.ScopedUserID != nil {
@@ -2396,6 +2397,13 @@ func (b *Build) printRunningWithHeader(trace JobTrace) {
 			b.Runner.SystemID,
 		))
 	}
+
+	runnerUUID := "not supported with this GitLab version"
+	if b.Job.RunnerInfo.UUID != "" {
+		runnerUUID = b.Job.RunnerInfo.UUID
+	}
+	logger.Println(fmt.Sprintf("  UUID: %s", runnerUUID))
+
 	if featureInfo := b.getFeatureFlagInfo(); featureInfo != "" {
 		logger.Println("  feature flags:", featureInfo)
 	}
