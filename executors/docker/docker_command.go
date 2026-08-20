@@ -60,7 +60,7 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 		}
 	}
 
-	if s.Build.EnvironmentKey() == "" {
+	if s.Build.RuntimeEnvironmentKey() == "" {
 		_, err = s.getHelperImage()
 		if err != nil {
 			return err

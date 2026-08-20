@@ -86,7 +86,7 @@ func TestIgnoreStatusChange(t *testing.T) {
 	assert.NoError(t, b.Fail(errors.New("test"), common.JobFailureData{Reason: "script_failure"}))
 }
 
-func TestClientJobTrace_EnvironmentKey_InFinalUpdate(t *testing.T) {
+func TestClientJobTrace_RuntimeEnvironmentKey_InFinalUpdate(t *testing.T) {
 	tests := map[string]struct {
 		envKey     string
 		wantEnvKey string
@@ -104,7 +104,7 @@ func TestClientJobTrace_EnvironmentKey_InFinalUpdate(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			finalMatcher := mock.MatchedBy(func(jobInfo common.UpdateJobInfo) bool {
-				return jobInfo.State == common.Success && jobInfo.EnvironmentKey == tt.wantEnvKey
+				return jobInfo.State == common.Success && jobInfo.RuntimeEnvironmentKey == tt.wantEnvKey
 			})
 
 			mockNetwork := common.NewMockNetwork(t)
@@ -117,18 +117,18 @@ func TestClientJobTrace_EnvironmentKey_InFinalUpdate(t *testing.T) {
 
 			trace.start()
 			if tt.envKey != "" {
-				trace.SetEnvironmentKey(tt.envKey)
+				trace.SetRuntimeEnvironmentKey(tt.envKey)
 			}
 			assert.NoError(t, trace.Success())
 		})
 	}
 }
 
-func TestClientJobTrace_SetEnvironmentKey_AbsentFromTouchJob(t *testing.T) {
+func TestClientJobTrace_SetRuntimeEnvironmentKey_AbsentFromTouchJob(t *testing.T) {
 	envKey := "27/sys-1/namespace=ns&pvc=gl-runner-env-abc"
 
 	touchMatcher := mock.MatchedBy(func(jobInfo common.UpdateJobInfo) bool {
-		return jobInfo.State == common.Running && jobInfo.EnvironmentKey == ""
+		return jobInfo.State == common.Running && jobInfo.RuntimeEnvironmentKey == ""
 	})
 
 	mockNetwork := common.NewMockNetwork(t)
@@ -138,7 +138,7 @@ func TestClientJobTrace_SetEnvironmentKey_AbsentFromTouchJob(t *testing.T) {
 	trace, err := newTestJobTrace(mockNetwork, jobConfig)
 	require.NoError(t, err)
 
-	trace.SetEnvironmentKey(envKey)
+	trace.SetRuntimeEnvironmentKey(envKey)
 
 	trace.lock.Lock()
 	trace.sentTime = time.Time{}

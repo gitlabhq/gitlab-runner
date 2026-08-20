@@ -229,7 +229,7 @@ func newSuspendableBuild(opts spec.SuspendOptions) *common.Build {
 }
 
 // setupResumeTest wires a provider, mocked Taskscaler, SuspendableExecutor inner,
-// and a build whose EnvironmentKey triggers the resume branch in Prepare.
+// and a build whose RuntimeEnvironmentKey triggers the resume branch in Prepare.
 // runnerToken/newKey must be unique per test (they key into the scalers map).
 func setupResumeTest(t *testing.T, runnerToken, newKey, suspendedKey string) (
 	*executor, *mocks.Taskscaler, *mockSuspendableExecutor, common.ExecutorPrepareOptions,
@@ -251,7 +251,7 @@ func setupResumeTest(t *testing.T, runnerToken, newKey, suspendedKey string) (
 	p.taskscalerNew = mockTaskscalerNew(ts, false)
 	p.fleetingRunPlugin = mockFleetingRunPlugin(false)
 
-	build := newSuspendableBuild(spec.SuspendOptions{EnvironmentKey: envKeyValue})
+	build := newSuspendableBuild(spec.SuspendOptions{RuntimeEnvironmentKey: envKeyValue})
 	runnerCfg := build.Runner
 	runnerCfg.Token = runnerToken
 	runnerCfg.ID = runnerID
@@ -553,7 +553,7 @@ func TestExecutor_Resume_ValidateEnvKeyRejections(t *testing.T) {
 			// Build a rig and override the env-key for this case. No
 			// HasCapability/Resume expectations: validation must short-circuit.
 			e, _, _, opts := setupResumeTest(t, tc.runnerToken, newKey, "ignored")
-			opts.Build.Job.SuspendOptions.EnvironmentKey = tc.envKey
+			opts.Build.Job.SuspendOptions.RuntimeEnvironmentKey = tc.envKey
 
 			err := e.Prepare(opts)
 			require.Error(t, err)

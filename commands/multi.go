@@ -439,6 +439,18 @@ func (mr *RunCommand) reloadConfig() error {
 			}).Warningln("Runner token is empty or whitespace; this runner will be skipped during job polling. " +
 				"Check the 'token' field in your config.toml for this runner.")
 		}
+
+		// runner ID is a mandatory field for Suspendable Environments feature
+		if runner.ID <= 0 && runner.IsFeatureFlagOn(featureflags.SuspendableEnvironments) {
+			mr.log().WithFields(logrus.Fields{
+				"runner":      runner.ShortDescription(),
+				"runner_name": runner.Name,
+			}).Warningln("Runner has FF_SUSPENDABLE_ENVIRONMENTS enabled but no id set (or id = 0); " +
+				"suspend/resume jobs routed to this runner will fail when resumed. Run " +
+				"`gitlab-runner register` to register this runner and populate id in config.toml, or " +
+				"add the id GitLab assigned to this runner (visible on the runner's details page) to " +
+				"the [[runners]] section manually if it's already registered.")
+		}
 	}
 
 	mr.checkConfigConcurrency(config)

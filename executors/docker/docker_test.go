@@ -3762,7 +3762,7 @@ func TestResumeDependencies(t *testing.T) {
 	e.Build.Variables = append(e.Build.Variables,
 		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
 	)
-	e.Build.Job.SuspendOptions.EnvironmentKey =
+	e.Build.Job.SuspendOptions.RuntimeEnvironmentKey =
 		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-a"
 
 	buildInspect := container.InspectResponse{
@@ -3819,7 +3819,7 @@ func TestResumeDependencies_buildContainerNotFound(t *testing.T) {
 	e.Build.Variables = append(e.Build.Variables,
 		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
 	)
-	e.Build.Job.SuspendOptions.EnvironmentKey =
+	e.Build.Job.SuspendOptions.RuntimeEnvironmentKey =
 		"1/system-id/build-container-id=missing-cid&helper-id=helper-cid"
 
 	c.On("ContainerInspect", mock.Anything, "missing-cid").
@@ -3839,7 +3839,7 @@ func TestResumeDependencies_helperNotFound(t *testing.T) {
 	e.Build.Variables = append(e.Build.Variables,
 		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
 	)
-	e.Build.Job.SuspendOptions.EnvironmentKey =
+	e.Build.Job.SuspendOptions.RuntimeEnvironmentKey =
 		"1/system-id/build-container-id=build-cid&helper-id=missing-helper"
 
 	buildInspect := container.InspectResponse{
@@ -3864,7 +3864,7 @@ func TestResumeDependencies_serviceNotFound(t *testing.T) {
 	e.Build.Variables = append(e.Build.Variables,
 		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
 	)
-	e.Build.Job.SuspendOptions.EnvironmentKey =
+	e.Build.Job.SuspendOptions.RuntimeEnvironmentKey =
 		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-missing"
 
 	buildInspect := container.InspectResponse{
@@ -3892,7 +3892,7 @@ func TestResumeDependencies_serviceStartFails(t *testing.T) {
 	e.Build.Variables = append(e.Build.Variables,
 		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
 	)
-	e.Build.Job.SuspendOptions.EnvironmentKey =
+	e.Build.Job.SuspendOptions.RuntimeEnvironmentKey =
 		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-broken"
 
 	buildInspect := container.InspectResponse{

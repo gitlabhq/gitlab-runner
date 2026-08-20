@@ -276,7 +276,7 @@ func (t *noopTrace) SetSupportedFailureReasonMapper(common.SupportedFailureReaso
 
 func (t *noopTrace) SetDebugModeEnabled(bool) {}
 
-func (t *noopTrace) SetEnvironmentKey(_ string) {}
+func (t *noopTrace) SetRuntimeEnvironmentKey(_ string) {}
 
 func (t *noopTrace) IsStdout() bool {
 	return false

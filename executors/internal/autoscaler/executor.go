@@ -57,7 +57,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	scaler := e.provider.getRunnerTaskscaler(options.Config)
 
 	// Check for resume path
-	envKey := options.Build.EnvironmentKey()
+	envKey := options.Build.RuntimeEnvironmentKey()
 	if envKey != "" {
 		return e.prepareResume(ctx, scaler, options, acqRef, envKey)
 	}
@@ -157,7 +157,7 @@ func (e *executor) Suspend(ctx context.Context) (url.Values, error) {
 // common.SuspendableExecutor interface but is not a complete resume of the
 // autoscaler-managed environment - it does not touch the taskscaler slot,
 // run inner Prepare, or update the acquisition ref. The full resume flow is
-// driven from (*executor).Prepare when the build supplies an EnvironmentKey;
+// driven from (*executor).Prepare when the build supplies an RuntimeEnvironmentKey;
 // do not call this method directly from outside that flow.
 func (e *executor) Resume(ctx context.Context, fields url.Values) error {
 	if se, ok := e.Executor.(common.SuspendableExecutor); ok {
@@ -187,7 +187,7 @@ func (e *executor) TerminalConnect() (terminal.Conn, error) {
 }
 
 func validateEnvKey(envKey string, runnerID int64, systemID string) (string, url.Values, error) {
-	key, err := common.ParseEnvironmentKey(envKey)
+	key, err := common.ParseRuntimeEnvironmentKey(envKey)
 	if err != nil {
 		return "", nil, err
 	}

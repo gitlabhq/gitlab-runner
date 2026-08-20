@@ -198,6 +198,139 @@ func TestFeedRunner_EmptyToken(t *testing.T) {
 	}
 }
 
+func TestReloadConfig_MissingRunnerIDWarning(t *testing.T) {
+	tests := map[string]struct {
+		toml  string // config.toml content
+		wantN int    // expected number of missing-runner-id warnings
+	}{
+		"no runners": {
+			toml:  `concurrent = 1` + "\n",
+			wantN: 0,
+		},
+		"FF enabled via feature_flags table, id set": {
+			toml: `concurrent = 1
+[[runners]]
+  name = "good"
+  url = "https://gitlab.example.com/"
+  token = "abc123"
+  executor = "kubernetes"
+  id = 59
+  [runners.feature_flags]
+    FF_SUSPENDABLE_ENVIRONMENTS = true
+`,
+			wantN: 0,
+		},
+		"FF enabled via feature_flags table, id unset": {
+			toml: `concurrent = 1
+[[runners]]
+  name = "bad"
+  url = "https://gitlab.example.com/"
+  token = "abc123"
+  executor = "kubernetes"
+  [runners.feature_flags]
+    FF_SUSPENDABLE_ENVIRONMENTS = true
+`,
+			wantN: 1,
+		},
+		"FF enabled via feature_flags table, id explicitly zero": {
+			toml: `concurrent = 1
+[[runners]]
+  name = "bad"
+  url = "https://gitlab.example.com/"
+  token = "abc123"
+  executor = "kubernetes"
+  id = 0
+  [runners.feature_flags]
+    FF_SUSPENDABLE_ENVIRONMENTS = true
+`,
+			wantN: 1,
+		},
+		"FF enabled on shell executor, id unset, still warns": {
+			toml: `concurrent = 1
+[[runners]]
+  name = "shell-runner"
+  url = "https://gitlab.example.com/"
+  token = "abc123"
+  executor = "shell"
+  [runners.feature_flags]
+    FF_SUSPENDABLE_ENVIRONMENTS = true
+`,
+			wantN: 1,
+		},
+		"FF absent, id unset, no warning": {
+			toml: `concurrent = 1
+[[runners]]
+  name = "no-ff"
+  url = "https://gitlab.example.com/"
+  token = "abc123"
+  executor = "kubernetes"
+`,
+			wantN: 0,
+		},
+		"mixed runners, one FF-enabled without id, one FF-enabled with id": {
+			toml: `concurrent = 1
+[[runners]]
+  name = "good"
+  url = "https://gitlab.example.com/"
+  token = "abc123"
+  executor = "kubernetes"
+  id = 59
+  [runners.feature_flags]
+    FF_SUSPENDABLE_ENVIRONMENTS = true
+[[runners]]
+  name = "bad"
+  url = "https://gitlab.example.com/"
+  token = "abc123"
+  executor = "kubernetes"
+  [runners.feature_flags]
+    FF_SUSPENDABLE_ENVIRONMENTS = true
+`,
+			wantN: 1,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			hook, cleanup := test.NewHook()
+			defer cleanup()
+
+			origLevel := logrus.GetLevel()
+			origOut := logrus.StandardLogger().Out
+			logrus.SetLevel(logrus.WarnLevel)
+			logrus.SetOutput(io.Discard)
+			t.Cleanup(func() {
+				logrus.SetLevel(origLevel)
+				logrus.SetOutput(origOut)
+			})
+
+			// Write the config to a temp file so configfile.Load() can read it.
+			cfgPath := filepath.Join(t.TempDir(), "config.toml")
+			require.NoError(t, os.WriteFile(cfgPath, []byte(tc.toml), 0o600))
+
+			cf := configfile.New(cfgPath, configfile.WithSystemID(common.UnknownSystemID))
+
+			cmd := RunCommand{
+				healthHelper:   newHealthHelper(),
+				buildsHelper:   newBuildsHelper(),
+				configfile:     cf,
+				configReloaded: make(chan int, 1),
+			}
+
+			err := cmd.reloadConfig()
+			require.NoError(t, err)
+
+			var warnCount int
+			for _, entry := range hook.AllEntries() {
+				if strings.Contains(entry.Message, "no id set (or id = 0)") {
+					warnCount++
+				}
+			}
+			assert.Equal(t, tc.wantN, warnCount,
+				"expected exactly %d missing-runner-id warning(s), got %d", tc.wantN, warnCount)
+		})
+	}
+}
+
 func TestReloadConfig_EmptyTokenWarning(t *testing.T) {
 	tests := map[string]struct {
 		toml  string // config.toml content

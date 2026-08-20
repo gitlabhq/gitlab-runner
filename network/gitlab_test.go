@@ -3466,7 +3466,7 @@ func TestGitLabClient_getFeatures_JobInputs(t *testing.T) {
 	assert.True(t, features.JobInputs, "JobInputs should be set to true by getFeatures")
 }
 
-func TestUpdateJob_EnvironmentKey(t *testing.T) {
+func TestUpdateJob_RuntimeEnvironmentKey(t *testing.T) {
 	envKey := "27/sys-1/namespace=gitlab-runner&pvc=gl-runner-env-abc"
 
 	tests := map[string]struct {
@@ -3474,12 +3474,12 @@ func TestUpdateJob_EnvironmentKey(t *testing.T) {
 		wantInBody bool
 		wantValue  string
 	}{
-		"environment_key sent when set": {
-			jobInfo:    UpdateJobInfo{ID: 200, State: Success, EnvironmentKey: envKey},
+		"runtime_environment_key sent when set": {
+			jobInfo:    UpdateJobInfo{ID: 200, State: Success, RuntimeEnvironmentKey: envKey},
 			wantInBody: true,
 			wantValue:  envKey,
 		},
-		"environment_key absent when empty (omitempty)": {
+		"runtime_environment_key absent when empty (omitempty)": {
 			jobInfo:    UpdateJobInfo{ID: 200, State: Success},
 			wantInBody: false,
 		},
@@ -3506,9 +3506,9 @@ func TestUpdateJob_EnvironmentKey(t *testing.T) {
 			require.NoError(t, json.Unmarshal(capturedBody, &req))
 
 			if tt.wantInBody {
-				assert.Equal(t, tt.wantValue, req["environment_key"])
+				assert.Equal(t, tt.wantValue, req["runtime_environment_key"])
 			} else {
-				assert.NotContains(t, req, "environment_key")
+				assert.NotContains(t, req, "runtime_environment_key")
 			}
 		})
 	}

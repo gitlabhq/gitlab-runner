@@ -10,15 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEnvironmentKey_String(t *testing.T) {
+func TestRuntimeEnvironmentKey_String(t *testing.T) {
 	tests := []struct {
 		name string
-		key  EnvironmentKey
+		key  RuntimeEnvironmentKey
 		want string
 	}{
 		{
 			name: "simple key with single field",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{"acquisition-key": []string{"abc-123"}},
@@ -27,7 +27,7 @@ func TestEnvironmentKey_String(t *testing.T) {
 		},
 		{
 			name: "multiple fields are sorted alphabetically by key",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields: url.Values{
@@ -40,7 +40,7 @@ func TestEnvironmentKey_String(t *testing.T) {
 		},
 		{
 			name: "empty fields produce trailing slash",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{},
@@ -49,7 +49,7 @@ func TestEnvironmentKey_String(t *testing.T) {
 		},
 		{
 			name: "slash in SystemID is percent-encoded as %2F",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys/with/slashes",
 				Fields:   url.Values{"k": []string{"v"}},
@@ -58,7 +58,7 @@ func TestEnvironmentKey_String(t *testing.T) {
 		},
 		{
 			name: "ampersand in field value is percent-encoded",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{"k": []string{"a&b"}},
@@ -73,13 +73,13 @@ func TestEnvironmentKey_String(t *testing.T) {
 	}
 }
 
-func TestEnvironmentKey_String_DeterministicAcrossInsertionOrder(t *testing.T) {
-	k1 := EnvironmentKey{RunnerID: 1, SystemID: "sys-1", Fields: url.Values{}}
+func TestRuntimeEnvironmentKey_String_DeterministicAcrossInsertionOrder(t *testing.T) {
+	k1 := RuntimeEnvironmentKey{RunnerID: 1, SystemID: "sys-1", Fields: url.Values{}}
 	k1.Fields.Set("zebra", "z-val")
 	k1.Fields.Set("alpha", "a-val")
 	k1.Fields.Set("mid", "m-val")
 
-	k2 := EnvironmentKey{RunnerID: 1, SystemID: "sys-1", Fields: url.Values{}}
+	k2 := RuntimeEnvironmentKey{RunnerID: 1, SystemID: "sys-1", Fields: url.Values{}}
 	k2.Fields.Set("alpha", "a-val")
 	k2.Fields.Set("mid", "m-val")
 	k2.Fields.Set("zebra", "z-val")
@@ -87,14 +87,14 @@ func TestEnvironmentKey_String_DeterministicAcrossInsertionOrder(t *testing.T) {
 	assert.Equal(t, k1.String(), k2.String())
 }
 
-func TestEnvironmentKey_RoundTrip(t *testing.T) {
+func TestRuntimeEnvironmentKey_RoundTrip(t *testing.T) {
 	tests := []struct {
 		name string
-		key  EnvironmentKey
+		key  RuntimeEnvironmentKey
 	}{
 		{
 			name: "simple key with single field",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{"acquisition-key": []string{"abc-123"}},
@@ -102,7 +102,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "multiple fields",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 42,
 				SystemID: "machine-abc",
 				Fields: url.Values{
@@ -113,7 +113,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "empty fields",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{},
@@ -121,7 +121,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "multi-value field",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{"tags": []string{"alpha", "beta", "gamma"}},
@@ -129,7 +129,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "slash in SystemID",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys/with/slashes",
 				Fields:   url.Values{"k": []string{"v"}},
@@ -137,7 +137,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "question mark in SystemID",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys?question",
 				Fields:   url.Values{"k": []string{"v"}},
@@ -145,7 +145,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "hash in SystemID",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys#hash",
 				Fields:   url.Values{"k": []string{"v"}},
@@ -153,7 +153,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "percent in SystemID",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys%percent",
 				Fields:   url.Values{"k": []string{"v"}},
@@ -161,7 +161,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "space in SystemID",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys with space",
 				Fields:   url.Values{"k": []string{"v"}},
@@ -169,7 +169,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "unicode in SystemID",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-é-unicode",
 				Fields:   url.Values{"k": []string{"v"}},
@@ -177,7 +177,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "quotes in field value",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{"key-with-quotes": []string{`value with "quotes"`}},
@@ -185,7 +185,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "backslash in field value",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields: url.Values{
@@ -196,7 +196,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "commas in field value",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{"key-with-commas": []string{"value,with,commas"}},
@@ -204,7 +204,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "ampersand in field value",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{"key-with-amp": []string{"a&b=c"}},
@@ -212,7 +212,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "equals in field value",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{"key-with-equals": []string{"k=v=w"}},
@@ -220,7 +220,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "empty field value",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{"key": []string{""}},
@@ -228,7 +228,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "unicode in field value",
-			key: EnvironmentKey{
+			key: RuntimeEnvironmentKey{
 				RunnerID: 1,
 				SystemID: "sys-1",
 				Fields:   url.Values{"greeting": []string{"héllo-世界"}},
@@ -237,7 +237,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsed, err := ParseEnvironmentKey(tt.key.String())
+			parsed, err := ParseRuntimeEnvironmentKey(tt.key.String())
 			require.NoError(t, err)
 			assert.Equal(t, tt.key.RunnerID, parsed.RunnerID)
 			assert.Equal(t, tt.key.SystemID, parsed.SystemID)
@@ -246,7 +246,7 @@ func TestEnvironmentKey_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestParseEnvironmentKey_Errors(t *testing.T) {
+func TestParseRuntimeEnvironmentKey_Errors(t *testing.T) {
 	tests := []struct {
 		name          string
 		input         string
@@ -305,7 +305,7 @@ func TestParseEnvironmentKey_Errors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseEnvironmentKey(tt.input)
+			_, err := ParseRuntimeEnvironmentKey(tt.input)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "environment key:")
 			assert.Contains(t, err.Error(), tt.wantErrSubstr)

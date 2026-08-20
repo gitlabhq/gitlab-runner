@@ -267,7 +267,7 @@ func (b *Build) CurrentState() BuildRuntimeState {
 }
 
 func (b *Build) ShouldSuspend() bool {
-	if !b.IsFeatureFlagOn(featureflags.SuspendableEnvironments) {
+	if !b.WillSuspend() {
 		return false
 	}
 	switch b.CurrentState() {
@@ -280,11 +280,21 @@ func (b *Build) ShouldSuspend() bool {
 	}
 }
 
-func (b *Build) EnvironmentKey() string {
+// WillSuspend reports whether the build is a candidate for suspension at
+// all, independent of outcome (unlike ShouldSuspend, which also requires
+// the outcome to be known). Used where the outcome isn't known yet.
+func (b *Build) WillSuspend() bool {
+	if !b.IsFeatureFlagOn(featureflags.SuspendableEnvironments) {
+		return false
+	}
+	return b.Job.SuspendOptions.SuspendOnSuccess || b.Job.SuspendOptions.SuspendOnFailure
+}
+
+func (b *Build) RuntimeEnvironmentKey() string {
 	if !b.IsFeatureFlagOn(featureflags.SuspendableEnvironments) {
 		return ""
 	}
-	return b.Job.SuspendOptions.EnvironmentKey
+	return b.Job.SuspendOptions.RuntimeEnvironmentKey
 }
 
 func (b *Build) suspendEnvironment(ctx context.Context, executor Executor) (string, error) {
@@ -298,7 +308,7 @@ func (b *Build) suspendEnvironment(ctx context.Context, executor Executor) (stri
 		b.logger.Warningln("Job environment suspension failed:", err.Error())
 		return "", fmt.Errorf("suspending environment: %w", err)
 	}
-	envKey := EnvironmentKey{
+	envKey := RuntimeEnvironmentKey{
 		RunnerID: b.Runner.ID,
 		SystemID: b.Runner.GetSystemID(),
 		Fields:   fields,
@@ -655,7 +665,7 @@ func wrapStepStageErr(err error) error {
 
 //nolint:gocognit
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
-	if b.EnvironmentKey() != "" && buildStage == BuildStageGetSources {
+	if b.RuntimeEnvironmentKey() != "" && buildStage == BuildStageGetSources {
 		b.Log().Infof("Skipping stage %s: resuming suspended environment", buildStage)
 		return nil
 	}
@@ -1606,7 +1616,7 @@ func (b *Build) Run(ctx context.Context, globalConfig *Config, trace JobTrace) (
 			err = &BuildError{Inner: suspErr, FailureReason: RunnerSystemFailure}
 		}
 		if envKey != "" {
-			trace.SetEnvironmentKey(envKey)
+			trace.SetRuntimeEnvironmentKey(envKey)
 		}
 	}
 	executor.Finish(err)

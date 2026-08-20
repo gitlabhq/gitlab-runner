@@ -733,14 +733,14 @@ func (n *GitLabClient) UpdateJob(
 	jobInfo common.UpdateJobInfo,
 ) common.UpdateJobResult {
 	request := common.UpdateJobRequest{
-		Info:           n.getRunnerInfo(config),
-		Token:          jobCredentials.Token,
-		State:          jobInfo.State,
-		FailureReason:  jobInfo.FailureReason,
-		Checksum:       jobInfo.Output.Checksum, // deprecated
-		Output:         jobInfo.Output,
-		ExitCode:       jobInfo.ExitCode,
-		EnvironmentKey: jobInfo.EnvironmentKey,
+		Info:                  n.getRunnerInfo(config),
+		Token:                 jobCredentials.Token,
+		State:                 jobInfo.State,
+		FailureReason:         jobInfo.FailureReason,
+		Checksum:              jobInfo.Output.Checksum, // deprecated
+		Output:                jobInfo.Output,
+		ExitCode:              jobInfo.ExitCode,
+		RuntimeEnvironmentKey: jobInfo.RuntimeEnvironmentKey,
 	}
 
 	headers, correlationID := addCorrelationID(JobTokenHeader(jobCredentials.Token))
