@@ -3,6 +3,8 @@
   variables:
     UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_BRANCH
     UPSTREAM_CI_COMMIT_SHORT_SHA: $CI_COMMIT_SHORT_SHA
+    UPSTREAM_RUNNER_IMAGE_REPO: $CI_REGISTRY_IMAGE
+    UPSTREAM_RUNNER_HELPER_IMAGE_REPO: $CI_REGISTRY_IMAGE/gitlab-runner-helper
   rules:
     # copy of .rules:merge_request_pipelines:no_docs:only_canonical, slightly modified for variables
     - if: '$CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/'
@@ -13,14 +15,20 @@
       changes: !reference [.code-backstage-patterns]
       variables:
         UPSTREAM_CI_COMMIT_REF: "refs/merge-requests/${CI_MERGE_REQUEST_IID}/train"
+        UPSTREAM_RUNNER_IMAGE_REPO: $CI_REGISTRY_IMAGE/gitlab-runner-dev
+        UPSTREAM_RUNNER_HELPER_IMAGE_REPO: $CI_REGISTRY_IMAGE/gitlab-runner-helper-dev
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_EVENT_TYPE == "detached"
       changes: !reference [.code-backstage-patterns]
       variables:
         UPSTREAM_CI_COMMIT_REF: "refs/merge-requests/${CI_MERGE_REQUEST_IID}/head"
+        UPSTREAM_RUNNER_IMAGE_REPO: $CI_REGISTRY_IMAGE/gitlab-runner-dev
+        UPSTREAM_RUNNER_HELPER_IMAGE_REPO: $CI_REGISTRY_IMAGE/gitlab-runner-helper-dev
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_EVENT_TYPE == "merged_result"
       changes: !reference [.code-backstage-patterns]
       variables:
         UPSTREAM_CI_COMMIT_REF: "refs/merge-requests/${CI_MERGE_REQUEST_IID}/merge"
+        UPSTREAM_RUNNER_IMAGE_REPO: $CI_REGISTRY_IMAGE/gitlab-runner-dev
+        UPSTREAM_RUNNER_HELPER_IMAGE_REPO: $CI_REGISTRY_IMAGE/gitlab-runner-helper-dev
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes: !reference [.code-backstage-patterns]
       variables:
