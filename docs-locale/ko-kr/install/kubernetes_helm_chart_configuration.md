@@ -7,8 +7,8 @@ title: GitLab 러너 Helm 차트 구성
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -167,7 +167,7 @@ Helm 차트 캐싱에 대한 자세한 내용은 [`values.yaml`](https://gitlab.
 1. [PVC를 생성](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims)하고 작업 포드가 실행될 네임스페이스에서 생성합니다.
 
    > [!note]
-   > 여러 작업 포드가 동일한 캐시 PVC에 액세스하려는 경우 `ReadWriteMany` 액세스 모드가 있어야 합니다.
+여러 작업 포드가 동일한 캐시 PVC에 액세스하려는 경우 `ReadWriteMany` 액세스 모드가 있어야 합니다.
 
 1. PVC를 `/cache` 디렉터리에 마운트합니다:
 
@@ -309,7 +309,7 @@ runners:
    ```
 
 > [!note]
-> `imagePullSecrets`의 값은 Kubernetes 리소스의 규칙과 같이 `name` 태그로 접두사가 붙지 않습니다. 이 값은 하나의 레지스트리 자격 증명만 사용하더라도 하나 이상의 시크릿 이름 배열이 필요합니다.
+`imagePullSecrets`의 값은 Kubernetes 리소스의 규칙과 같이 `name` 태그로 접두사가 붙지 않습니다. 이 값은 하나의 레지스트리 자격 증명만 사용하더라도 하나 이상의 시크릿 이름 배열이 필요합니다.
 
 `imagePullSecrets`을 생성하는 방법에 대한 자세한 내용은 Kubernetes 설명서에서 [개인 레지스트리에서 이미지 가져오기](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)를 참조하세요.
 
@@ -376,7 +376,7 @@ certsSecretName: <SECRET NAME>
 
 ## Pod 레이블을 CI 환경 변수 키로 설정 {#set-pod-labels-to-ci-environment-variable-keys}
 
-`values.yaml` 파일에서 환경 변수를 Pod 레이블로 사용할 수 없습니다. 자세한 내용은 [Pod 레이블로 환경 변수 키를 설정할 수 없음](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173)을 참조하세요. [이슈에 설명된 해결 방법](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173#note_351057890)을 임시 솔루션으로 사용합니다.
+`values.yaml` 파일에서 환경 변수를 Pod 레이블로 사용할 수 없습니다. 자세한 내용은 [Pod 레이블로 환경 변수 키를 설정할 수 없음](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173)을 참조하세요. [이슈에 설명된 해결 방법](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/work_items/173#note_351057890)을 임시 솔루션으로 사용합니다.
 
 ## Ubuntu 기반 `gitlab-runner` Docker 이미지로 전환 {#switch-to-the-ubuntu-based-gitlab-runner-docker-image}
 

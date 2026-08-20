@@ -7,8 +7,8 @@ title: 작업 실행 속도 높이기
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -146,13 +146,13 @@ Azure Blob Storage를 분산 캐시로 사용하려면 [러너의 `config.toml` 
 
 각 캐시 백엔드에는 자체 `config.toml` 섹션이 있습니다. 백엔드에 맞게 최적화합니다:
 
-- [S3 구성](advanced-configuration.md#the-runnerscaches3-section)):  `BucketLocation`를 러너와 같은 리전으로 설정합니다. 5GB보다 큰 아카이브의 경우 `RoleARN`를 사용하여 [멀티파트 업로드 활성화](advanced-configuration.md#enable-multipart-transfers-with-rolearn)합니다. 기본 S3 v2 어댑터를 사용합니다(`FF_USE_LEGACY_S3_CACHE_ADAPTER=true`를 설정하지 마세요). 러너가 버킷 리전에서 멀리 떨어져 있을 때 `Accelerate = true`을 선택적으로 활성화하여 [AWS S3 전송 가속화](https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html)를 사용합니다. 동일한 리전의 [S3 VPC 엔드포인트](https://docs.aws.amazon.com/AmazonS3/latest/userguide/creating-s3-vpc-endpoint.html)는 지연 시간과 비용을 줄일 수 있습니다.
+- [S3 구성](advanced-configuration.md#the-runnerscaches3-section)):  `BucketLocation`를 러너와 같은 리전으로 설정합니다. 5GB보다 큰 아카이브의 경우 `RoleARN`를 사용하여 [멀티파트 업로드 활성화](advanced-configuration.md#enable-multipart-transfers-with-rolearn)합니다. 기본 S3 v2 어댑터를 사용합니다(`FF_USE_LEGACY_S3_CACHE_ADAPTER=true`를 설정하지 마세요). 러너가 버킷 리전에서 멀리 떨어져 있을 때 `Accelerate = true`을 선택적으로 활성화하여 [AWS S3 전송 가속화](https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html)를 사용합니다. 같은 리전의 [S3 VPC 엔드포인트](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html)는 레이턴시와 비용을 줄일 수 있습니다.
 - [Google Cloud Storage 구성](advanced-configuration.md#the-runnerscachegcs-section)):  러너와 같은 또는 가장 가까운 리전의 버킷을 사용합니다.
 - [Azure Blob 구성](advanced-configuration.md#the-runnerscacheazure-section)):  러너와 같은 또는 가장 가까운 리전의 스토리지 계정을 사용합니다.
 
 #### 캐시 압축 {#cache-compression}
 
-더 빠른 압축을 사용하여 캐시 아카이빙 및 다운로드 속도를 높입니다. 이렇게 하면 더 큰 아카이브가 생성됩니다. [CI/CD 변수](https://docs.gitlab.com/ee/ci/variables/)에서 작업 또는 압축 옵션을 설정합니다:
+더 빠른 압축을 사용하여 캐시 아카이빙 및 다운로드 속도를 높입니다. 이렇게 하면 더 큰 아카이브가 생성됩니다. 작업이나 [CI/CD 변수](https://docs.gitlab.com/ci/variables/)에서 압축 옵션을 설정합니다:
 
 | 변수 | 속도 권장 | 설명 |
 |----------|------------------------|-------------|
@@ -169,13 +169,13 @@ variables:
 
 #### 캐시 요청 타임아웃 {#cache-request-timeout}
 
-대용량 캐시가 타임아웃되면 `CACHE_REQUEST_TIMEOUT` [CI/CD 변수](https://docs.gitlab.com/ee/ci/variables/)를 사용하여 제한값(분)을 늘립니다. 기본값은 `10`입니다. 이 설정은 전송 속도를 높이지 않지만 느리거나 대용량 업로드 및 다운로드 실패를 방지합니다.
+큰 캐시가 타임아웃되면 `CACHE_REQUEST_TIMEOUT`[CI/CD 변수](https://docs.gitlab.com/ci/variables/)로 제한을 증가시킵니다. 기본값은 `10`입니다. 이 설정은 전송 속도를 높이지 않지만 느리거나 대용량 업로드 및 다운로드 실패를 방지합니다.
 
 #### 캐시 전송 버퍼 크기(처리량) {#cache-transfer-buffer-size-throughput}
 
 캐시 다운로드 및 업로드는 단일 스트리밍 버퍼를 사용합니다. 더 큰 버퍼는 시스템 호출을 줄이고 처리량을 증가시키며, 특히 전송이 20~30MB/s 정도로 제한되는 경우 그렇습니다.
 
-작업 환경 또는 [CI/CD 변수](https://docs.gitlab.com/ee/ci/variables/)에서 `CACHE_TRANSFER_BUFFER_SIZE`을(를) (바이트 단위로) 설정합니다. 기본값은 4MiB(4194304)입니다.
+`CACHE_TRANSFER_BUFFER_SIZE`(바이트 단위)를 작업 환경이나 [CI/CD 변수](https://docs.gitlab.com/ci/variables/)에 설정합니다. 기본값은 4MiB(4194304)입니다.
 
 8MiB에 대한 예제 구성:
 

@@ -31,7 +31,7 @@ runners:
         helper_cpu_limit = "250m"
 ```
 
-자세한 내용은 [이슈 28393](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28393#note_722733798)을 참조하세요.
+더 많은 정보는 [이슈 28393](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/28393#note_722733798)을(를) 참조하세요.
 
 ## 오류: `PANIC: creating directory: mkdir /nonexistent: permission denied` {#error-panic-creating-directory-mkdir-nonexistent-permission-denied}
 

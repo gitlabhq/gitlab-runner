@@ -29,11 +29,26 @@ title: 인스턴스 실행기
 1. 사용 중인 플랫폼에 대한 VM 이미지를 생성합니다. 이미지에는 다음이 포함되어야 합니다:
    - Git
    - GitLab Runner 바이너리
-
-     > [!note]
-     > 작업 아티팩트 및 캐시를 처리하려면 가상 머신에 GitLab Runner 바이너리를 설치하고 러너 실행 파일을 기본 경로에 유지합니다. VM 이미지는 GitLab Runner를 실행하기 위해 필요하지 않습니다. VM 이미지를 사용하여 시작된 인스턴스는 GitLab에서 자신을 러너로 등록해서는 안 됩니다.
+ 
+     작업 아티팩트와 캐시를 처리하려면 가상 머신에 러너 바이너리를 설치하고 러너 실행 파일을 기본 경로에 유지합니다.
 
    - 실행할 계획 중인 작업에 필요한 종속성
+  
+     > [!note]
+     > VM 이미지는 러너를 실행할 필요가 없습니다. VM 이미지를 사용하여 시작된 인스턴스는 GitLab에서 자신을 러너로 등록해서는 안 됩니다.
+
+### 네이티브 단계용 러너 바이너리 {#gitlab-runner-binary-for-native-steps}
+
+실행기 인스턴스에서 `run` 키워드를 사용하는 작업은 [네이티브 단계](https://docs.gitlab.com/ci/steps/)로 자동 실행되며 `gitlab-runner` 바이너리가 필요합니다. [Docker 실행기](docker.md#native-step-runner-integration)와 달리 기능 플래그가 필요하지 않습니다. 네이티브 단계는 Windows 인스턴스에서 지원되지 않습니다.
+
+네이티브 단계를 사용하려면:
+
+- `gitlab-runner` 바이너리는 인스턴스 `PATH`에 있어야 합니다.
+- 바이너리를 러너 관리자와 동일한 버전으로 유지합니다. 버전 불일치는 경고를 기록하지만 작업을 실패시키지 않습니다.
+
+**SSH session limits:**
+
+각 `native-steps` 작업은 인스턴스에 두 개의 동시 SSH 세션을 열고, 하나는 `step-runner` 서버용이고 다른 하나는 프록시 연결용입니다. `capacity_per_instance`을 1보다 크게 설정하면 `sshd_config`에서 `MaxSessions`을 최소한 `2 * capacity_per_instance`로 설정합니다. 그렇지 않으면 OpenSSH 기본 한도(10)에 도달할 때 작업이 불명확한 연결 오류로 실패할 수 있습니다.
 
 ## 실행기를 자동 크기 조정하도록 구성 {#configure-the-executor-to-autoscale}
 
@@ -180,7 +195,7 @@ concurrent = 50
 
 전제 조건:
 
-- [nesting](https://gitlab.com/gitlab-org/fleeting/nesting) 및 [Tart](https://github.com/cirruslabs/tart)가 설치된 Apple Silicon AMI.
+- [nesting](https://gitlab.com/gitlab-org/fleeting/nesting)과 [Tart](https://github.com/openai/tart)가 설치된 Apple Silicon AMI입니다.
 - 러너가 사용하는 Tart VM 이미지. VM 이미지는 작업의 `image` 키워드로 지정됩니다. VM 이미지에는 최소한 `git` 및 GitLab Runner가 설치되어야 합니다.
 - AWS 자동 크기 조정 그룹. 크기 조정 정책으로 `none`을(를) 사용합니다. 러너가 크기 조정을 처리하기 때문입니다. MacOS용 ASG를 설정하는 방법에 대한 자세한 내용은 [EC2 Mac 인스턴스에 대한 자동 크기 조정 구현](https://aws.amazon.com/blogs/compute/implementing-autoscaling-for-ec2-mac-instances/)을(를) 참조하세요.
 - [올바른 권한](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)이 있는 IAM 정책.

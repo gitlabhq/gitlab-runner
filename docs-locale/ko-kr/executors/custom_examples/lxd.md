@@ -7,8 +7,8 @@ title: Custom 실행기와 함께 LXD 사용하기
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -18,7 +18,7 @@ title: Custom 실행기와 함께 LXD 사용하기
 
 이 스크립트들의 전제 조건은 다음과 같습니다:
 
-- [LXD](https://ubuntu.com/lxd)
+- [LXD](https://canonical.com/lxd)
 - [러너](../../install/linux-manually.md)
 
 ## 구성 {#configuration}

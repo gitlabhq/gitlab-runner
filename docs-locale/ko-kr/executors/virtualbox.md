@@ -7,18 +7,18 @@ title: VirtualBox
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
 > [!note]
-> Parallels 실행기는 VirtualBox 실행기와 동일하게 작동합니다. 로컬 캐시는 지원되지 않습니다. [분산 캐시](../configuration/speed_up_job_execution.md)는 지원됩니다.
+Parallels 실행기는 VirtualBox 실행기와 동일하게 작동합니다. 로컬 캐시는 지원되지 않습니다. [분산 캐시](../configuration/speed_up_job_execution.md)는 지원됩니다.
 
 VirtualBox를 통해 VirtualBox의 가상화를 사용하여 매 빌드마다 깨끗한 빌드 환경을 제공할 수 있습니다. 이 실행기는 VirtualBox에서 실행할 수 있는 모든 시스템을 지원합니다. 유일한 요구 사항은 가상 머신이 SSH 서버를 노출하고 Bash 또는 PowerShell과 호환되는 셸을 제공하는 것입니다.
 
 > [!note]
-> GitLab 러너가 VirtualBox 실행기를 사용하는 모든 가상 머신에서 [공통 필수 조건](_index.md#git-requirements-for-non-docker-executors)을 충족하는지 확인하세요.
+GitLab 러너가 VirtualBox 실행기를 사용하는 모든 가상 머신에서 [공통 필수 조건](_index.md#git-requirements-for-non-docker-executors)을 충족하는지 확인하세요.
 
 ## 개요 {#overview}
 
@@ -88,7 +88,7 @@ VirtualBox를 Windows와 함께 사용하려면 Cygwin 또는 PowerShell을 설�
 ### 기본 OpenSSH 및 PowerShell 사용 {#use-native-openssh-and-powershell}
 
 - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-windows?view=powershell-7.4)을 설치합니다
-- [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=powershell#install-openssh-for-windows)를 설치하고 구성합니다
+- [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=powershell&pivots=windows-server-2025#install-openssh-for-windows) 설치 및 구성
 - [Git for Windows](https://git-scm.com/)를 설치합니다
 - [`pwsh`을 기본 셸로 구성합니다](https://learn.microsoft.com/en-us/windows-server/administration/OpenSSH/openssh-server-configuration#configuring-the-default-shell-for-openssh-in-windows). 올바른 전체 경로로 예제를 업데이트합니다:
 

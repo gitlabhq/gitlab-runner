@@ -7,8 +7,8 @@ title: Kubernetes 실행기
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -247,7 +247,7 @@ informer는 `list` 및 `watch` 권한이 `pods`에 필요합니다. 실행기가
 | `pod_cpu_request_overwrite_max_allowed`     | 빌드 포드에 대해 CPU 할당 요청을 쓸 수 있는 최대 양입니다. 비어 있으면 CPU 요청 덮어쓰기 기능을 비활성화합니다. |
 
 > [!note]
-> Pod 수준의 리소스 사양이 [Kubernetes v1.32](https://v1-32.docs.kubernetes.io/blog/2024/12/11/kubernetes-v1-32-release/#pod-level-resource-specifications) 에서 알파 기능으로 도입되었으며 [Kubernetes v1.34](https://kubernetes.io/blog/2025/09/22/kubernetes-v1-34-pod-level-resources/)에서 베타로 졸업했습니다.
+Pod 수준의 리소스 사양이 [Kubernetes v1.32](https://v1-32.docs.kubernetes.io/blog/2024/12/11/kubernetes-v1-32-release/#pod-level-resource-specifications) 에서 알파 기능으로 도입되었으며 [Kubernetes v1.34](https://kubernetes.io/blog/2025/09/22/kubernetes-v1-34-pod-level-resources/)에서 베타로 졸업했습니다.
 
 ### 메모리 요청 및 제한 {#memory-requests-and-limits}
 
@@ -341,7 +341,7 @@ job_with_higher_helper_memory_limit:
 | `dns_config`                                  | 포드를 구성할 때 사용해야 하는 DNS 구성을 지정합니다. [포드의 DNS 구성 사용에 대해 자세히 알아보기](#configure-pod-dns-settings). |
 | `helper_container_security_context`           | 도우미 컨테이너에 대한 컨테이너 보안 컨텍스트를 설정합니다. [보안 컨텍스트에 대해 자세히 알아보기](#set-a-security-policy-for-the-pod). |
 | `helper_image`                                | (고급) [기본 도우미 이미지 덮어쓰기](../../configuration/advanced-configuration.md#helper-image) 리포지토리를 복제하고 아티팩트를 업로드하는 데 사용됩니다. |
-| `helper_image_flavor`                         | 도우미 이미지 강조 (`alpine`, `alpine3.21` 또는 `ubuntu`)를 설정합니다. `alpine`로 기본값 설정합니다. `alpine` 사용은 `alpine3.21`과(와) 동일합니다. |
+| `helper_image_flavor`                         | 도우미 이미지 플레이버를 설정합니다(`alpine`, `alpine3.21`, `alpine-latest` 또는 `ubuntu`). `alpine`로 기본 설정됩니다. `alpine`을 사용하는 것은 `alpine-latest`과 동일합니다. |
 | `host_aliases`                                | 모든 컨테이너에 추가되는 추가 호스트 이름 별칭 목록입니다. [추가 호스트 별칭 사용에 대해 자세히 알아보기](#add-extra-host-aliases). |
 | `image_pull_secrets`                          | 프라이빗 레지스트리에서 Docker 이미지를 끌어오는 인증에 사용되는 Kubernetes `docker-registry` 서비스 계정 이름을 포함하는 항목 배열입니다. |
 | `init_permissions_container_security_context` | init-permissions 컨테이너에 대한 컨테이너 보안 컨텍스트를 설정합니다. [보안 컨텍스트에 대해 자세히 알아보기](#set-a-security-policy-for-the-pod). |
@@ -468,7 +468,7 @@ Kubernetes 실행기를 구성하여 클러스터 용량을 사전 준비하는 
 | 설정 | 설명 |
 |---------|-------------|
 | `max_pause_pods` | 생성할 최대 일시 중지 포드 수입니다. 무제한으로 `0`로 설정합니다. |
-| `pause_pod_image` | 일시 중지 포드의 이미지입니다. `registry.k8s.io/pause:3.10`로 기본값 설정합니다. |
+| `pause_pod_image` | 일시 중지 포드의 이미지입니다. `registry.k8s.io/pause:3.10`로 기본 설정됩니다. |
 | `pause_pod_priority_class_name` | 일시 중지 포드의 Priority Class입니다. `gitlab-runner-idle-capacity` (우선순위 `-1`로 자동 생성)로 기본값 설정합니다. 지정된 경우 자동 생성을 건너뜁니다. |
 
 ### 선점을 위한 Priority 클래스 {#priority-classes-for-preemption}
@@ -492,8 +492,8 @@ Kubernetes 실행기를 구성하여 클러스터 용량을 사전 준비하는 
 |---------|-------------|
 | `periods` | 이 정책이 활성화되는 시점을 정의하는 cron 표현식의 배열입니다. `* * * * *` (항상)로 기본값 설정합니다. |
 | `timezone` | cron 표현식 평가를 위한 시간대입니다. 시스템 현지 시간으로 기본값 설정합니다. |
-| `idle_count` | 유지할 일시 중지 포드의 대상 개수입니다. `0`로 기본값 설정합니다. |
-| `idle_time` | 스케일 다운 쿨다운입니다. 원하는 용량이 감소하면 이 대기 시간 후에 일시 중지 포드가 제거됩니다. `scale_factor`을(를) 사용할 때 thrashing을 방지합니다. `5m`로 기본값 설정합니다. |
+| `idle_count` | 유지할 일시 중지 포드의 대상 개수입니다. `0`로 기본 설정됩니다. |
+| `idle_time` | 스케일 다운 쿨다운입니다. 원하는 용량이 감소하면 이 대기 시간 후에 일시 중지 포드가 제거됩니다. `scale_factor`을(를) 사용할 때 thrashing을 방지합니다. `5m`로 기본 설정됩니다. |
 | `scale_factor` | 활성 작업 기반 일시 중지 포드 스케일: `max(idle_count, active_jobs * scale_factor)`. `0` (비활성화)로 기본값 설정합니다. |
 | `scale_factor_limit` | `scale_factor`을(를) 사용할 때 최대 일시 중지 포드입니다. `0` (제한 없음)로 기본값 설정합니다. |
 
@@ -546,7 +546,7 @@ description: "Low priority class for runner pause pods"
 ```
 
 > [!note]
-> `PriorityClass`은(는) 클러스터 범위의 리소스입니다. 네임스페이스 `Role` 및 `RoleBinding`는 `scheduling.k8s.io/priorityclasses` 권한을 부여할 수 없습니다. 대신 `ClusterRole` 및 `ClusterRoleBinding`을(를) 사용합니다.
+`PriorityClass`은(는) 클러스터 범위의 리소스입니다. 네임스페이스 `Role` 및 `RoleBinding`는 `scheduling.k8s.io/priorityclasses` 권한을 부여할 수 없습니다. 대신 `ClusterRole` 및 `ClusterRoleBinding`을(를) 사용합니다.
 
 ## 실행기 서비스 계정 구성 {#configure-the-executor-service-account}
 
@@ -559,7 +559,7 @@ description: "Low priority class for runner pause pods"
 ### 작업 포드에 대한 기본 레이블 {#default-labels-for-job-pods}
 
 > [!warning]
-> 러너 구성 또는 `.gitlab-ci.yml` 파일을 통해 이 레이블을 재정의할 수 없습니다. `runner.gitlab.com` 네임스페이스의 레이블을 설정하거나 수정하려는 모든 시도는 무시되며 디버그 메시지로 기록됩니다.
+러너 구성 또는 `.gitlab-ci.yml` 파일을 통해 이 레이블을 재정의할 수 없습니다. `runner.gitlab.com` 네임스페이스의 레이블을 설정하거나 수정하려는 모든 시도는 무시되며 디버그 메시지로 기록됩니다.
 
 | 키                                        | 설명 |
 |--------------------------------------------|-------------|
@@ -597,7 +597,7 @@ description: "Low priority class for runner pause pods"
 - [`FF_USE_POD_ACTIVE_DEADLINE_SECONDS` 기능 플래그 활성화](../../configuration/feature-flags.md)입니다. 활성화되고 작업 시간 초과 시 CI/CD 작업 포드가 실패로 표시되고 연결된 모든 컨테이너가 종료됩니다. 작업이 먼저 GitLab에서 시간 초과되도록 하려면 `activeDeadlineSeconds`을 `configured timeout + 1 second`로 설정합니다.
 
 > [!note]
-> `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` 기능 플래그를 활성화하고 `pod_termination_grace_period_seconds`을 0이 아닌 값으로 설정하면 CI/CD 작업 포드가 즉시 종료되지 않습니다. 포드 `terminationGracePeriods`은 포드가 만료될 때만 종료되도록 합니다.
+`FF_USE_POD_ACTIVE_DEADLINE_SECONDS` 기능 플래그를 활성화하고 `pod_termination_grace_period_seconds`을 0이 아닌 값으로 설정하면 CI/CD 작업 포드가 즉시 종료되지 않습니다. 포드 `terminationGracePeriods`은 포드가 만료될 때만 종료되도록 합니다.
 
 ### 제거로부터 작업 포드 보호 {#protect-job-pods-from-eviction}
 
@@ -623,7 +623,7 @@ description: "Low priority class for runner pause pods"
 - 추가 RBAC 권한이 필요합니다. 자세한 내용은 [러너 API 권한 구성](#configure-runner-api-permissions)을 참조하세요.
 
 > [!warning]
-> `PodDisruptionBudget`을 켜면 작업이 실행 중인 경우 노드 드레인이 중단될 수 있습니다. 클러스터 업그레이드 전략이 잠재적 노드 드레인 지연을 고려하거나 작업 시간 제한을 사용하여 작업이 실행될 수 있는 기간을 제한합니다.
+`PodDisruptionBudget`을 켜면 작업이 실행 중인 경우 노드 드레인이 중단될 수 있습니다. 클러스터 업그레이드 전략이 잠재적 노드 드레인 지연을 고려하거나 작업 시간 제한을 사용하여 작업이 실행될 수 있는 기간을 제한합니다.
 
 ### 포드 toleration 덮어쓰기 {#overwrite-pod-tolerations}
 
@@ -666,7 +666,7 @@ Kubernetes 포드 toleration을 덮어쓰려면:
     ```
 
 > [!warning]
-> `runner.gitlab.com` 네임스페이스의 레이블은 읽기 전용입니다. GitLab은 이러한 GitLab 내부 레이블을 추가, 수정 또는 제거하려는 모든 시도를 무시합니다.
+`runner.gitlab.com` 네임스페이스의 레이블은 읽기 전용입니다. GitLab은 이러한 GitLab 내부 레이블을 추가, 수정 또는 제거하려는 모든 시도를 무시합니다.
 
 ### 포드 annotation 덮어쓰기 {#overwrite-pod-annotations}
 
@@ -998,7 +998,7 @@ check_interval = 30
 
 때때로 이전 러너 포드가 정리되지 않습니다. 러너 매니저가 잘못 종료될 때 발생할 수 있습니다.
 
-이 상황을 처리하기 위해 GitLab Runner Pod Cleanup 애플리케이션을 사용하여 이전 포드의 정리를 예약할 수 있습니다. 자세한 정보는 다음을 참조하세요:
+이 상황을 처리하기 위해 GitLab Runner Pod Cleanup 애플리케이션을 사용하여 이전 포드의 정리를 예약할 수 있습니다. 자세한 정보는 다음을 참조하세요.
 
 - GitLab Runner Pod Cleanup 프로젝트 [README](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pod-cleanup/-/blob/main/readme.md).
 - GitLab Runner Pod Cleanup [문서](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pod-cleanup/-/blob/main/docs/README.md).
@@ -1187,7 +1187,7 @@ check_interval = 30
 Kubernetes 보안 컨텍스트 구성으로 컨테이너에서 실행하는 사용자 및 그룹을 구성합니다. 관리자는 컨테이너 보안을 제어하고 특정 컨테이너 유형에 대해 사용자를 지정하도록 작업을 허용할 수 있습니다.
 
 > [!note]
-> Windows의 작업 정의에서 `runAsUser`, `runAsGroup` 또는 `image:user`를 설정하는 것은 지원되지 않습니다. 대신 [FF_USE_ADVANCED_POD_SPEC_CONFIGURATION](#overwrite-generated-pod-specifications) 을 통해 [runAsUserName](https://kubernetes.io/docs/tasks/configure-pod-container/configure-runasusername/)을 설정하는 것이 권장됩니다.
+Windows의 작업 정의에서 `runAsUser`, `runAsGroup` 또는 `image:user`를 설정하는 것은 지원되지 않습니다. 대신 [FF_USE_ADVANCED_POD_SPEC_CONFIGURATION](#overwrite-generated-pod-specifications) 을 통해 [runAsUserName](https://kubernetes.io/docs/tasks/configure-pod-container/configure-runasusername/)을 설정하는 것이 권장됩니다.
 
 #### 구성 우선 순위 {#configuration-precedence}
 
@@ -1370,7 +1370,7 @@ job:
 
 ##### 오류: `failed to parse UID` 또는 `failed to parse GID` {#error-failed-to-parse-uid-or-failed-to-parse-gid}
 
-- 사용자 ID가 숫자인지 확인하세요: `"1000"` `"user"` 아님
+- 사용자 ID가 숫자인지 확인: `"1000"` `"user"` 아님
 - 형식 확인: 사용자 및 그룹의 경우 `"1000:1001"`
 - 음수 값은 허용되지 않습니다
 
@@ -1754,7 +1754,7 @@ job:
 빌드 시간에 포드 사양에 추가할 [노드 친화성](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) 목록을 정의합니다.
 
 > [!note]
-> `node_affinities`는 빌드가 실행되어야 하는 운영 체제를 결정하지 않으며 `node_selectors`만 결정합니다. 자세한 내용은 [운영 체제, 아키텍처 및 Windows 커널 버전](#operating-system-architecture-and-windows-kernel-version)을 참조하세요. `config.toml`의 예 구성:
+`node_affinities`는 빌드가 실행되어야 하는 운영 체제를 결정하지 않으며 `node_selectors`만 결정합니다. 자세한 내용은 [운영 체제, 아키텍처 및 Windows 커널 버전](#operating-system-architecture-and-windows-kernel-version)을 참조하세요. `config.toml`의 예 구성:
 
 ```toml
 concurrent = 1
@@ -1816,6 +1816,8 @@ concurrent = 1
         [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution]]
           topology_key = "failure-domain.beta.kubernetes.io/zone"
           namespaces = ["namespace_1", "namespace_2"]
+          match_label_keys = ["pod-template-hash"]
+          mismatch_label_keys = ["tenant"]
           [runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector]
             [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
               key = "security"
@@ -1859,6 +1861,9 @@ concurrent = 1
                 operator = "In"
                 values = ["S2"]
 ```
+
+> [!note]
+> `match_label_keys` 및 `mismatch_label_keys`에는 Kubernetes 1.31 이상이 필요합니다. 이전 알파 또는 베타 클러스터에서는 `MatchLabelKeysInPodAffinity` 기능 게이트를 활성화하세요. 기능 게이트를 지원하지 않는 클러스터에서는 API 서버가 이 필드를 무시하고 제약 조건이 적용되지 않습니다.
 
 ## 네트워킹 {#networking}
 
@@ -2110,7 +2115,7 @@ concurrent = 4
 | `mount_path`        | 문자열  | 예      | 컨테이너에서 볼륨이 탑재되는 경로입니다. |
 | `sub_path`          | 문자열  | 아니요       | 루트 대신 탑재된 볼륨 내 [하위 경로](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath)입니다. |
 | `host_path`         | 문자열  | 아니요       | 볼륨으로 탑재되는 호스트의 경로입니다. 값을 지정하지 않으면 `mount_path`과 동일한 경로로 기본값이 설정됩니다. |
-| `read_only`         | 부울 | 아니요       | 볼륨을 읽기 전용 모드로 설정합니다. `false`로 기본값 설정합니다. |
+| `read_only`         | 부울 | 아니요       | 볼륨을 읽기 전용 모드로 설정합니다. `false`로 기본 설정됩니다. |
 | `mount_propagation` | 문자열  | 아니요       | 컨테이너 간에 탑재된 볼륨을 공유합니다. 자세한 내용은 [마운트 전파](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation)를 참조하세요. |
 
 #### `persistentVolumeClaim` 볼륨 {#persistentvolumeclaim-volume}
@@ -2150,7 +2155,7 @@ Kubernetes가 Kubernetes 클러스터에 정의된 [`configMap`](https://kuberne
 기본 키 및 값 저장소를 변경하려면 `items` 옵션을 사용합니다. `items` 옵션을 사용하면 **only specified keys** 볼륨에 추가되고 다른 모든 키는 건너뜁니다.
 
 > [!note]
-> 존재하지 않는 키를 사용하면 작업이 Pod 생성 단계에서 실패합니다.
+존재하지 않는 키를 사용하면 작업이 Pod 생성 단계에서 실패합니다.
 
 #### `secret` 볼륨 {#secret-volume}
 
@@ -2175,7 +2180,7 @@ Kubernetes가 Kubernetes 클러스터에 정의된 [`configMap`](https://kuberne
 기본 키 및 값 저장소를 변경하려면 `items` 옵션을 사용합니다. `items` 옵션을 사용하면 **only specified keys** 볼륨에 추가되고 다른 모든 키는 건너뜁니다.
 
 > [!note]
-> 존재하지 않는 키를 사용하면 작업이 Pod 생성 단계에서 실패합니다.
+존재하지 않는 키를 사용하면 작업이 Pod 생성 단계에서 실패합니다.
 
 #### `emptyDir` 볼륨 {#emptydir-volume}
 
@@ -2275,7 +2280,7 @@ concurrent = 4
 보안 정책을 설정한 후 [보조 이미지](../../configuration/advanced-configuration.md#helper-image)는 정책을 준수해야 합니다. 이미지는 루트 그룹으로부터 권한을 받지 않으므로 사용자 ID가 루트 그룹의 일부인지 확인해야 합니다.
 
 > [!note]
-> `nonroot` 환경만 필요한 경우 보조 이미지 대신 [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) OpenShift Container Platform 이미지를 사용할 수 있습니다. [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433) OpenShift Container Platform 이미지도 사용할 수 있습니다.
+`nonroot` 환경만 필요한 경우 보조 이미지 대신 [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) OpenShift Container Platform 이미지를 사용할 수 있습니다. [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433) OpenShift Container Platform 이미지도 사용할 수 있습니다.
 
 다음 예제는 `nonroot`이라는 사용자 및 그룹을 만들고 보조 이미지를 해당 사용자로 실행하도록 설정합니다.
 
@@ -2424,7 +2429,7 @@ GitLab Runner는 기본적으로 `kube attach` 대신 `kube exec`를 사용합�
 ### 컨테이너 진입점 알려진 문제 {#container-entrypoint-known-issues}
 
 > [!note]
-> GitLab 15.1 이상에서는 `FF_KUBERNETES_HONOR_ENTRYPOINT`가 설정되었을 때 Docker 이미지에 정의된 진입점이 Kubernetes 실행기에서 사용됩니다.
+GitLab 15.1 이상에서는 `FF_KUBERNETES_HONOR_ENTRYPOINT`가 설정되었을 때 Docker 이미지에 정의된 진입점이 Kubernetes 실행기에서 사용됩니다.
 
 컨테이너 진입점에는 다음과 같은 알려진 문제가 있습니다:
 
@@ -2507,7 +2512,7 @@ variables:
 ```
 
 > [!note]
-> 이 변수는 클러스터에 네임스페이스를 생성하지 않습니다. 작업을 실행하기 전에 네임스페이스가 존재하는지 확인합니다.
+이 변수는 클러스터에 네임스페이스를 생성하지 않습니다. 작업을 실행하기 전에 네임스페이스가 존재하는지 확인합니다.
 
 CI 실행 중에 지정된 네임스페이스만 사용하려면 `config.toml` 파일에서 `namespace_overwrite_allowed`에 대한 정규식을 정의합니다:
 

@@ -15,7 +15,7 @@ Kubernetes 실행기를 사용할 때 일반적으로 발생하는 오류는 다
 
 ## `context deadline exceeded` {#context-deadline-exceeded}
 
-`context deadline exceeded` 오류는 일반적으로 Kubernetes API 클라이언트가 지정된 클러스터 API 요청에 대해 타임아웃되었음을 나타냅니다.
+작업 로그의 `context deadline exceeded` 오류는 일반적으로 Kubernetes API 클라이언트가 지정된 클러스터 API 요청에 대해 타임아웃되었음을 나타냅니다.
 
 [`kube-apiserver` 클러스터 구성 요소의 메트릭](https://kubernetes.io/docs/concepts/cluster-administration/system-metrics/)을 확인하여 다음 징후가 있는지 확인하세요:
 
@@ -320,7 +320,37 @@ runners:
 ```
 
 > [!note]
-> `emptyDir` 대신 [지원되는 볼륨 유형](_index.md#configure-volume-types)을 사용할 수 있습니다. 명시적으로 처리되지 않고 빌드 아티팩트로 저장되는 모든 파일이 일반적으로 일시적이므로 `emptyDir`은 대부분의 경우에 작동합니다.
+`emptyDir` 대신 [지원되는 볼륨 유형](_index.md#configure-volume-types)을 사용할 수 있습니다. 명시적으로 처리되지 않고 빌드 아티팩트로 저장되는 모든 파일이 일반적으로 일시적이므로 `emptyDir`은 대부분의 경우에 작동합니다.
+
+## 오류: `failed to share mount point: /: permission denied` {#error-failed-to-share-mount-point--permission-denied}
+
+[rootlesskit](https://github.com/rootless-containers/rootlesskit)를 사용하는 rootless 컨테이너 도구(예: rootless BuildKit, Podman 또는 Docker)는 Kubernetes 러너에서 다음과 같은 오류로 실패할 수 있습니다:
+
+```plaintext
+[rootlesskit:child ] error: failed to share mount point: /: permission denied
+```
+
+AppArmor이 rootlesskit이 rootless 환경을 설정하는 데 필요한 마운트 시스템 호출을 차단할 때 이 문제가 발생합니다.
+
+이 문제를 해결하려면 빌드 컨테이너의 [AppArmor 프로필](_index.md#set-seccomp-and-apparmor-profiles)을 구성하세요. GitLab 러너 18.11 이상에서는 지원이 중단된 `container.apparmor.security.beta.kubernetes.io` 주석 대신 `build_container_security_context` 아래의 `app_armor_profile` 설정을 사용하세요:
+
+```toml
+[[runners]]
+  [runners.kubernetes.build_container_security_context]
+    [runners.kubernetes.build_container_security_context.app_armor_profile]
+      type = "Unconfined"
+```
+
+> [!warning]
+`Unconfined`는 빌드 컨테이너의 AppArmor 격리를 비활성화하고 격리를 줄입니다.
+
+보안 정책에서 격리가 필요한 경우 rootlesskit이 필요로 하는 작업만 허용하는 `Localhost` 프로필을 사용하세요:
+
+```toml
+[runners.kubernetes.build_container_security_context.app_armor_profile]
+  type = "Localhost"
+  localhost_profile = "my-rootlesskit-profile"
+```
 
 ## AWS EKS: 포드 정리 오류: 포드 "runner-\*\*"를 찾을 수 없거나 상태가 "Failed" {#aws-eks-error-cleaning-up-pod-pods-runner--not-found-or-status-is-failed}
 
