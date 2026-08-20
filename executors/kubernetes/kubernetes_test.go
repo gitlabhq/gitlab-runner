@@ -4369,6 +4369,7 @@ func TestSetupBuildPod(t *testing.T) {
 			PrepareFn: func(t *testing.T, _ setupBuildPodTestDef, e *executor) {
 				e.Build.JobInfo.ProjectName = "some-project-name"
 				e.Build.JobInfo.ProjectID = 42
+				e.Build.JobInfo.RootNamespaceID = 43
 			},
 			Variables: []spec.Variable{
 				{Key: "CI_PROJECT_NAMESPACE_ID", Value: "123"},
@@ -4377,11 +4378,12 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyFn: func(t *testing.T, _ setupBuildPodTestDef, pod *api.Pod) {
 				expectedLabels := map[string]string{
-					"project.runner.gitlab.com/id":             "42",
-					"project.runner.gitlab.com/namespace-id":   "123",
-					"project.runner.gitlab.com/name":           "some-project-name",
-					"project.runner.gitlab.com/namespace":      "some-namespace",
-					"project.runner.gitlab.com/root-namespace": "some-root-namespace",
+					"project.runner.gitlab.com/id":                "42",
+					"project.runner.gitlab.com/namespace-id":      "123",
+					"project.runner.gitlab.com/name":              "some-project-name",
+					"project.runner.gitlab.com/namespace":         "some-namespace",
+					"project.runner.gitlab.com/root-namespace":    "some-root-namespace",
+					"project.runner.gitlab.com/root-namespace-id": "43",
 
 					"manager.runner.gitlab.com/name":     "some-runner-name",
 					"manager.runner.gitlab.com/id-short": "aaa_cccbb",
