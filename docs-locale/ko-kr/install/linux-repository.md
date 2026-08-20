@@ -8,12 +8,12 @@ title: 공식 GitLab 리포지토리를 사용하여 GitLab 러너 설치
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
-GitLab 러너를 설치하려면 [GitLab 리포지토리](https://packages.gitlab.com/runner/gitlab-runner)의 패키지를 사용할 수 있습니다.
+러너를 설치하려면 [GitLab 리포지토리](https://packages.gitlab.com/runner/gitlab-runner/)의 패키지를 사용할 수 있습니다.
 
 ## 지원되는 배포판 {#supported-distributions}
 
@@ -28,7 +28,7 @@ GitLab은 다음 지원되는 Linux 배포판 버전에 대한 패키지를 제�
 | Debian | Duke, Forky, Trixie, Bookworm, Bullseye |
 | LinuxMint | Xia, Wilma, Virginia, Victoria, Vera, Vanessa |
 | Raspbian | Duke, Forky, Trixie, Bookworm, Bullseye |
-| Ubuntu | Questing, Noble, Jammy, Focal, Bionic |
+| Ubuntu | Resolute, Questing, Noble, Jammy, Focal, Bionic |
 
 ### RPM 기반 배포판 {#rpm-based-distributions}
 
@@ -46,7 +46,7 @@ GitLab은 다음 지원되는 Linux 배포판 버전에 대한 패키지를 제�
 설정에 따라 다른 Debian 또는 RPM 기반 배포판도 지원될 수 있습니다. 지원되는 GitLab 러너 배포판의 파생 배포판이고 호환되는 패키지 리포지토리를 가진 배포판을 의미합니다. 예를 들어 Deepin은 Debian 파생 배포판입니다. 따라서 러너 `deb` 패키지를 Deepin에서 설치하고 실행할 수 있습니다. 다른 Linux 배포판에서 [GitLab 러너를 바이너리로 설치](linux-manually.md#using-binary-file)할 수도 있습니다.
 
 > [!note]
-> 목록에 없는 배포판의 패키지는 패키지 리포지토리에서 사용할 수 없습니다. S3 버킷에서 RPM 또는 DEB 패키지를 다운로드하여 수동으로 [설치](linux-manually.md#using-debrpm-package)할 수 있습니다.
+목록에 없는 배포판의 패키지는 패키지 리포지토리에서 사용할 수 없습니다. S3 버킷에서 RPM 또는 DEB 패키지를 다운로드하여 수동으로 [설치](linux-manually.md#using-debrpm-package)할 수 있습니다.
 
 ## GitLab Runner 설치 {#install-gitlab-runner}
 
@@ -105,7 +105,7 @@ GitLab Runner를 설치하려면:
 1. GitLab 러너의 최신 버전을 설치하거나 다음 단계로 건너뛰어 특정 버전을 설치합니다:
 
    > [!note]
-   > `skel` 디렉토리 사용은 기본적으로 비활성화되어 [`No such file or directory` 작업 오류](#error-no-such-file-or-directory-job-failures)를 방지합니다.
+`skel` 디렉토리 사용은 기본적으로 비활성화되어 [`No such file or directory` 작업 오류](#error-no-such-file-or-directory-job-failures)를 방지합니다.
 
    {{< tabs >}}
 
@@ -132,7 +132,7 @@ GitLab Runner를 설치하려면:
    {{< /tabs >}}
 
    > [!note]
-   > RHEL 배포판용 FIPS 140-2 호환 GitLab 러너 버전을 사용할 수 있습니다. `gitlab-runner-fips`를 패키지 이름으로 사용하여 이 버전을 설치할 수 있습니다. `gitlab-runner` 대신에 사용합니다.
+RHEL 배포판용 FIPS 140-2 호환 GitLab 러너 버전을 사용할 수 있습니다. `gitlab-runner-fips`를 패키지 이름으로 사용하여 이 버전을 설치할 수 있습니다. `gitlab-runner` 대신에 사용합니다.
 
 1. GitLab 러너의 특정 버전을 설치하려면:
 
@@ -141,7 +141,7 @@ GitLab Runner를 설치하려면:
    {{< tab title="Debian/Ubuntu/Mint" >}}
 
    > [!note]
-   > `gitlab-runner` 버전 `v17.7.1`부터 `gitlab-runner`의 특정 버전을 설치할 때 해당 버전에 필요한 `gitlab-runner-helper-packages`를 명시적으로 설치해야 합니다. 이 요구 사항은 `apt`/`apt-get` 제한으로 인해 존재합니다.
+`gitlab-runner` 버전 `v17.7.1`부터 `gitlab-runner`의 특정 버전을 설치할 때 해당 버전에 필요한 `gitlab-runner-helper-packages`를 명시적으로 설치해야 합니다. 이 요구 사항은 `apt`/`apt-get` 제한으로 인해 존재합니다.
 
    ```shell
    apt-cache madison gitlab-runner
@@ -177,6 +177,56 @@ GitLab Runner를 설치하려면:
 
 GitLab 러너와 관련된 가장 일반적인 문제를 설명하는 [FAQ](../faq/_index.md) 섹션을 읽어야 합니다.
 
+## GitLab Runner 업그레이드 {#upgrade-gitlab-runner}
+
+GitLab 러너의 최신 버전을 설치하려면:
+
+{{< tabs >}}
+
+{{< tab title="Debian/Ubuntu/Mint" >}}
+
+```shell
+sudo apt update
+sudo apt install gitlab-runner
+```
+
+{{< /tab >}}
+
+{{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
+
+```shell
+sudo yum update
+sudo yum install gitlab-runner
+```
+
+{{< /tab >}}
+
+{{< /tabs >}}
+
+패키지 설치 또는 업그레이드 중에 러너는 사용하지 않는 Docker 이미지와 컨테이너를 자동으로 정리합니다. 이 동작을 건너뛰려면 `NO_DOCKER_PRUNE` 환경 변수를 설정하세요:
+
+{{< tabs >}}
+
+{{< tab title="Debian/Ubuntu/Mint" >}}
+
+```shell
+sudo apt update
+NO_DOCKER_PRUNE=1 sudo apt install gitlab-runner
+```
+
+{{< /tab >}}
+
+{{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
+
+```shell
+sudo yum update
+NO_DOCKER_PRUNE=1 sudo yum install gitlab-runner
+```
+
+{{< /tab >}}
+
+{{< /tabs >}}
+
 ## 보조 이미지 패키지 {#helper-images-package}
 
 `gitlab-runner-helper-images` 패키지는 GitLab 러너가 작업 실행 중에 사용하는 미리 빌드된 보조 컨테이너 이미지를 포함합니다. 이러한 이미지는 리포지토리를 복제하고 아티팩트를 업로드하고 캐시를 관리하는 데 필요한 도구와 유틸리티를 제공합니다.
@@ -204,32 +254,6 @@ Ubuntu 기반 이미지 (24.04):
 ### 자동 보조 이미지 다운로드 {#automatic-helper-image-download}
 
 특정 운영 체제 및 아키텍처 조합에 대한 보조 이미지를 호스트 시스템에서 사용할 수 없으면 GitLab 러너가 필요할 때 필요한 이미지를 자동으로 다운로드합니다. `gitlab-runner-helper-images package`에 포함되지 않은 아키텍처에는 수동 설치가 필요하지 않습니다. 이 자동 다운로드는 러너가 수동 개입이나 별도의 패키지 설치 없이 추가 아키텍처(예: `loong64`)를 지원할 수 있도록 합니다.
-
-## GitLab Runner 업그레이드 {#upgrade-gitlab-runner}
-
-GitLab 러너의 최신 버전을 설치하려면:
-
-{{< tabs >}}
-
-{{< tab title="Debian/Ubuntu/Mint" >}}
-
-```shell
-sudo apt update
-sudo apt install gitlab-runner
-```
-
-{{< /tab >}}
-
-{{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
-
-```shell
-sudo yum update
-sudo yum install gitlab-runner
-```
-
-{{< /tab >}}
-
-{{< /tabs >}}
 
 ## 패키지 설치를 위한 GPG 서명 {#gpg-signatures-for-package-installation}
 
@@ -323,7 +347,7 @@ RPM 기반 배포판에 대한 패키지 서명 확인을 구성하는 방법에
 | 만료        | `2026-04-28` |
 
 > [!note]
-> GitLab 러너 프로젝트는 `<https://gitlab-runner-downloads.s3.dualstack.us-east-1.amazonaws.com>` 버킷에서 사용 가능한 S3 릴리스를 위해 `release.sha256` 파일에 서명하는 데 동일한 키를 사용합니다.
+GitLab 러너 프로젝트는 `<https://gitlab-runner-downloads.s3.dualstack.us-east-1.amazonaws.com>` 버킷에서 사용 가능한 S3 릴리스를 위해 `release.sha256` 파일에 서명하는 데 동일한 키를 사용합니다.
 
 #### 이전 GPG 공개 키 {#previous-gpg-public-keys}
 

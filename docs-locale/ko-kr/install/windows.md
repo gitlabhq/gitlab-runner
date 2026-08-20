@@ -8,8 +8,8 @@ title: Windows에 GitLab 러너 설치
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -24,12 +24,12 @@ Windows에서 GitLab 러너를 설치하고 실행하려면 다음이 필요합�
 1. 시스템의 어딘가에 폴더를 생성합니다. 예를 들어 `C:\GitLab-Runner`입니다.
 1. [x86 64비트](https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-windows-amd64.exe) , [ARM 64비트](https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-windows-arm64.exe) 또는 [x86 32비트](https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-windows-386.exe) 바이너리를 다운로드하여 생성한 폴더에 넣습니다. 다음은 바이너리의 이름을 `gitlab-runner.exe`로 변경했다고 가정합니다(선택 사항). [출시 버전 다운로드 - 다른 태그가 지정된 릴리스 다운로드](bleeding-edge.md#download-any-other-tagged-release)에 설명된 대로 사용 가능한 모든 버전의 바이너리를 다운로드할 수 있습니다.
 1. GitLab 러너 디렉터리 및 실행 파일에서 `Write` 권한을 제한해야 합니다. 이러한 권한을 설정하지 않으면 일반 사용자가 실행 파일을 자신의 파일로 바꾸고 상승된 권한으로 임의의 코드를 실행할 수 있습니다.
-1. [관리자 권한 명령 프롬프트](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator)를 실행합니다:
+1. [관리자 권한 명령 프롬프트](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#run-with-administrative-privileges)를 실행합니다:
 1. [러너 등록](../register/_index.md)합니다.
 1. GitLab 러너를 서비스로 설치하고 시작합니다. 기본 제공 시스템 계정(권장) 또는 사용자 계정을 사용하여 서비스를 실행할 수 있습니다.
 
    > [!note]
-   > Windows 서비스는 대화형 데스크톱 세션을 제공하지 않습니다. GUI 또는 데스크톱 자동화 테스트를 실행하려면 [GUI 테스트 및 대화형 데스크톱 세션](#gui-tests-and-interactive-desktop-sessions)을 참조하세요.
+Windows 서비스는 대화형 데스크톱 세션을 제공하지 않습니다. GUI 또는 데스크톱 자동화 테스트를 실행하려면 [GUI 테스트 및 대화형 데스크톱 세션](#gui-tests-and-interactive-desktop-sessions)을 참조하세요.
 
    **Run service using Built-in System Account** (1단계에서 생성된 예제 디렉터리 아래, `C:\GitLab-Runner`)
 
@@ -57,7 +57,7 @@ Windows에서 GitLab 러너를 설치하고 실행하려면 다음이 필요합�
 
 ## 업그레이드 {#upgrade}
 
-1. 서비스를 중지합니다([관리자 권한 명령 프롬프트](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator)가 필요함):
+1. 서비스를 중지합니다(이전처럼 [관리자 권한 명령 프롬프트](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#run-with-administrative-privileges)가 필요함):
 
    ```powershell
    cd C:\GitLab-Runner
@@ -74,7 +74,7 @@ Windows에서 GitLab 러너를 설치하고 실행하려면 다음이 필요합�
 
 ## 제거 {#uninstall}
 
-[관리자 권한 명령 프롬프트](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator)에서:
+[관리자 권한 명령 프롬프트](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#run-with-administrative-privileges)에서:
 
 ```powershell
 cd C:\GitLab-Runner

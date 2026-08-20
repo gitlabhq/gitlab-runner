@@ -8,8 +8,8 @@ title: GNU/Linux에서 GitLab 러너를 수동으로 설치
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -157,7 +157,7 @@ dnf install -y gitlab-runner-helper-images.rpm gitlab-runner_<arch>.rpm
    `/usr/local/bin/`이 root용 `$PATH`에 있는지 확인하세요. 그렇지 않으면 `command not found` 오류가 발생할 수 있습니다. 또는 `gitlab-runner`을 `/usr/bin/`과 같은 다른 위치에 설치할 수 있습니다.
 
 > [!note]
-> `gitlab-runner`을 서비스로 설치하고 실행하면 root로 실행되지만 `install` 명령으로 지정된 사용자로 작업을 실행합니다. 이는 캐시 및 아티팩트와 같은 일부 작업 함수가 `/usr/local/bin/gitlab-runner` 명령을 실행해야 함을 의미합니다. 따라서 작업을 실행하는 사용자는 실행 파일에 대한 액세스 권한이 있어야 합니다.
+`gitlab-runner`을 서비스로 설치하고 실행하면 root로 실행되지만 `install` 명령으로 지정된 사용자로 작업을 실행합니다. 이는 캐시 및 아티팩트와 같은 일부 작업 함수가 `/usr/local/bin/gitlab-runner` 명령을 실행해야 함을 의미합니다. 따라서 작업을 실행하는 사용자는 실행 파일에 대한 액세스 권한이 있어야 합니다.
 
 ### 업그레이드 {#upgrade-1}
 
@@ -256,7 +256,7 @@ wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest
 ## 추가 리소스 {#additional-resources}
 
 - [Docker 실행기 설명서](../executors/docker.md)
-- [Docker 설치](https://docs.docker.com/engine/install/centos/#install-docker-ce)
+- [Docker 설치](https://docs.docker.com/engine/install/centos/)
 - [기타 GitLab 러너 버전 다운로드](bleeding-edge.md#download-any-other-tagged-release)
 - [FIPS 준수 GitLab 러너 정보](requirements.md#fips-compliant-gitlab-runner)
 - [GitLab 러너 FAQ](../faq/_index.md)

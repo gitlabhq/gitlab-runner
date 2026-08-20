@@ -8,8 +8,8 @@ title: GitLab Helm 차트
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -22,7 +22,7 @@ title: GitLab Helm 차트
 
 GitLab 러너 구성 변경사항을 `values.yaml`에 저장합니다. 이 파일을 구성하는 데 도움이 되는 정보는 다음을 참조하세요:
 
-- 차트 저장소의 기본값 [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml) 구성입니다.
+- 차트 리포지토리의 기본값 [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml) 구성입니다.
 - [Values Files](https://helm.sh/docs/chart_template_guide/values_files/)에 대한 Helm 문서이며, values 파일이 기본값을 재정의하는 방법을 설명합니다.
 
 러너가 제대로 작동하려면 구성 파일에서 이러한 값을 설정해야 합니다:
@@ -54,12 +54,12 @@ GitLab 러너 구성 변경사항을 `values.yaml`에 저장합니다. 이 파�
 - GitLab 서버의 API는 클러스터에서 연결할 수 있습니다.
 - Kubernetes 1.4 이상(베타 API 활성화).
 - `kubectl` CLI는 로컬에 설치되어 있으며 클러스터에 인증되어 있습니다.
-- [Helm 클라이언트](https://helm.sh/docs/using_helm/#installing-the-helm-client)가 머신에 로컬로 설치되어 있습니다.
+- [Helm CLI](https://helm.sh/docs/intro/install/)가 로컬 머신에 설치되어 있습니다.
 - [`values.yaml`에 필수 값](#configure-gitlab-runner-with-the-helm-chart)을 모두 설정했습니다.
 
 Helm 차트에서 러너를 설치하려면:
 
-1. GitLab Helm 저장소를 추가합니다:
+1. GitLab Helm 리포지토리를 추가합니다:
 
    ```shell
    helm repo add gitlab https://charts.gitlab.io
