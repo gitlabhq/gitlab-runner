@@ -2335,11 +2335,12 @@ func (s *executor) buildLabels() map[string]string {
 		// Retained for backwards compatibility, may be removed in future release!
 		"pod": sanitizeLabel(s.Build.ProjectUniqueName()),
 
-		"project." + runnerLabelNamespace + "/id":             strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
-		"project." + runnerLabelNamespace + "/namespace-id":   sanitizeLabel(s.Build.Variables.Value("CI_PROJECT_NAMESPACE_ID")),
-		"project." + runnerLabelNamespace + "/name":           sanitizeLabel(s.Build.JobInfo.ProjectName),
-		"project." + runnerLabelNamespace + "/namespace":      sanitizeLabel(s.Build.Variables.Value("CI_PROJECT_NAMESPACE")),
-		"project." + runnerLabelNamespace + "/root-namespace": sanitizeLabel(s.Build.Variables.Value("CI_PROJECT_ROOT_NAMESPACE")),
+		"project." + runnerLabelNamespace + "/id":                strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
+		"project." + runnerLabelNamespace + "/namespace-id":      sanitizeLabel(s.Build.Variables.Value("CI_PROJECT_NAMESPACE_ID")),
+		"project." + runnerLabelNamespace + "/name":              sanitizeLabel(s.Build.JobInfo.ProjectName),
+		"project." + runnerLabelNamespace + "/namespace":         sanitizeLabel(s.Build.Variables.Value("CI_PROJECT_NAMESPACE")),
+		"project." + runnerLabelNamespace + "/root-namespace":    sanitizeLabel(s.Build.Variables.Value("CI_PROJECT_ROOT_NAMESPACE")),
+		"project." + runnerLabelNamespace + "/root-namespace-id": strconv.FormatInt(s.Build.JobInfo.RootNamespaceID, 10),
 
 		// Used for setting up services for the build pod
 		"job." + runnerLabelNamespace + "/pod": sanitizeLabel(s.Build.ProjectUniqueName()),

@@ -607,7 +607,8 @@ You can configure pods and containers to control how jobs are executed.
 | `project.runner.gitlab.com/name`           | The name of the project. |
 | `project.runner.gitlab.com/namespace-id`   | The ID of the project's namespace. |
 | `project.runner.gitlab.com/namespace`      | The name of the project's namespace. |
-| `project.runner.gitlab.com/root-namespace` | The ID of the project's root namespace. For example, `/gitlab-org/group-a/subgroup-a/project`, where the root namespace is `gitlab-org` |
+| `project.runner.gitlab.com/root-namespace` | The name of the project's root namespace. For example, `/gitlab-org/group-a/subgroup-a/project`, where the root namespace is `gitlab-org` |
+| `project.runner.gitlab.com/root-namespace-id` | The ID of the project's root namespace. |
 | `manager.runner.gitlab.com/name`           | The name of the runner configuration that launched this job. |
 | `manager.runner.gitlab.com/id-short`       | The ID of the runner configuration that launched the job. |
 | `job.runner.gitlab.com/pod`                | Internal label used by the Kubernetes executor. |
