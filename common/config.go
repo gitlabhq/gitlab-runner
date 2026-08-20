@@ -367,7 +367,7 @@ type AutoscalerConfig struct {
 	MaxUseCount         int                      `toml:"max_use_count,omitempty"`
 	MaxInstances        int                      `toml:"max_instances,omitempty"`
 	Plugin              string                   `toml:"plugin,omitempty"`
-	PluginConfig        AutoscalerSettingsMap    `toml:"plugin_config,omitempty"`
+	PluginConfig        AutoscalerSettingsMap    `toml:"plugin_config,omitempty" json:"plugin_config,omitempty"`
 	ConnectorConfig     ConnectorConfig          `toml:"connector_config,omitempty"`
 	Policy              []AutoscalerPolicyConfig `toml:"policy,omitempty" json:",omitempty"`
 
@@ -480,7 +480,7 @@ type AutoscalerPolicyConfig struct {
 	IdleTime         time.Duration `toml:"idle_time,omitempty" json:",omitempty" jsonschema:"minimum=1000000000"`
 	ScaleFactor      float64       `toml:"scale_factor,omitempty"`
 	ScaleFactorLimit int           `toml:"scale_factor_limit,omitempty"`
-	PreemptiveMode   *bool         `toml:"preemptive_mode,omitempty"`
+	PreemptiveMode   *bool         `toml:"preemptive_mode,omitempty" json:"preemptive_mode,omitempty"`
 }
 
 func (policy *AutoscalerPolicyConfig) PreemptiveModeEnabled() bool {
@@ -876,7 +876,7 @@ type KubernetesDNSConfig struct {
 
 type KubernetesDNSConfigOption struct {
 	Name  string  `toml:"name"`
-	Value *string `toml:"value,omitempty"`
+	Value *string `toml:"value,omitempty" json:"value,omitempty"`
 }
 
 type KubernetesVolumes struct {
@@ -903,7 +903,7 @@ type KubernetesHostPath struct {
 	SubPath          string  `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	ReadOnly         bool    `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	HostPath         string  `toml:"host_path,omitempty" description:"Path from the host that should be mounted as a volume"`
-	MountPropagation *string `toml:"mount_propagation,omitempty" description:"Mount propagation mode for the volume"`
+	MountPropagation *string `toml:"mount_propagation,omitempty" json:"mount_propagation,omitempty" description:"Mount propagation mode for the volume"`
 }
 
 type KubernetesPVC struct {
@@ -911,7 +911,7 @@ type KubernetesPVC struct {
 	MountPath        string  `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
 	SubPath          string  `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	ReadOnly         bool    `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
-	MountPropagation *string `toml:"mount_propagation,omitempty" description:"Mount propagation mode for the volume"`
+	MountPropagation *string `toml:"mount_propagation,omitempty" json:"mount_propagation,omitempty" description:"Mount propagation mode for the volume"`
 }
 
 type KubernetesSecret struct {
@@ -928,7 +928,7 @@ type KubernetesEmptyDir struct {
 	SubPath          string  `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	Medium           string  `toml:"medium,omitempty" description:"Set to 'Memory' to have a tmpfs"`
 	SizeLimit        string  `toml:"size_limit,omitempty" description:"Total amount of local storage required."`
-	MountPropagation *string `toml:"mount_propagation,omitempty" description:"Mount propagation mode for the volume"`
+	MountPropagation *string `toml:"mount_propagation,omitempty" json:"mount_propagation,omitempty" description:"Mount propagation mode for the volume"`
 }
 
 type KubernetesCSI struct {
