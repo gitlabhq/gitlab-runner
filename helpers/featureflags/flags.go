@@ -1,6 +1,7 @@
 package featureflags
 
 import (
+	"os"
 	"strconv"
 
 	"github.com/sirupsen/logrus"
@@ -112,10 +113,13 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:            UseFastzip,
-		DefaultValue:    false,
-		Deprecated:      false,
-		ToBeRemovedWith: "",
-		Description:     "Fastzip is a performant archiver for cache/artifact archiving and extraction",
+		DefaultValue:    true,
+		Deprecated:      true,
+		ToBeRemovedWith: "19.7",
+		Description: "Fastzip is a performant archiver for cache/artifact archiving and extraction. " +
+			"Enabled by default. Set to `false` to use the legacy zip implementation. " +
+			"Deprecated: The legacy zip implementation and this flag are removed in GitLab Runner 19.7, " +
+			"after which fastzip is always used.",
 	},
 	{
 		Name:            DisableUmaskForDockerExecutor,
@@ -494,6 +498,13 @@ func GetAll() []FeatureFlag {
 	return flags
 }
 
+// Structured log keys for feature flag resolution (snake_case). These describe
+// the runner's feature flags, so they are not defined in labkit/fields.
+const (
+	logFieldFeatureFlag        = "feature_flag"
+	logFieldFeatureFlagDefault = "feature_flag_default"
+)
+
 func IsOn(logger logrus.FieldLogger, value string) bool {
 	if value == "" {
 		return false
@@ -506,6 +517,39 @@ func IsOn(logger logrus.FieldLogger, value string) bool {
 			Error("Error while parsing the value of feature flag")
 
 		return false
+	}
+
+	return on
+}
+
+// IsOnFromEnv returns whether the named feature flag is enabled, reading the
+// value from the environment. When the environment variable is unset, empty,
+// or set to a value that cannot be parsed as a bool, the flag's declared
+// default value is used instead (an unparseable value is also logged as an
+// error).
+func IsOnFromEnv(logger logrus.FieldLogger, name string) bool {
+	defaultValue := false
+	for _, ff := range flags {
+		if ff.Name == name {
+			defaultValue = ff.DefaultValue
+			break
+		}
+	}
+
+	value := os.Getenv(name)
+	if value == "" {
+		return defaultValue
+	}
+
+	on, err := strconv.ParseBool(value)
+	if err != nil {
+		logger.WithError(err).
+			WithField("value", value).
+			WithField(logFieldFeatureFlag, name).
+			WithField(logFieldFeatureFlagDefault, defaultValue).
+			Error("Error while parsing the value of feature flag, using declared default")
+
+		return defaultValue
 	}
 
 	return on
