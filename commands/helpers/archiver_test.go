@@ -9,10 +9,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 func TestCompressionLevel(t *testing.T) {
@@ -128,4 +130,24 @@ func TestZipArchiveExtract(t *testing.T) {
 			assert.Equal(t, large, largeEq)
 		}, "fastzip")
 	}, "fastzip")
+}
+
+func TestRegisterArchivers(t *testing.T) {
+	tests := map[string]struct {
+		env         string
+		wantFastzip bool
+	}{
+		"unset uses the declared default": {"", true},
+		"explicitly enabled":              {"true", true},
+		"explicitly disabled":             {"false", false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(featureflags.UseFastzip, tc.env)
+
+			logger, _ := logrustest.NewNullLogger()
+			assert.Equal(t, tc.wantFastzip, registerArchivers(logger))
+		})
+	}
 }
