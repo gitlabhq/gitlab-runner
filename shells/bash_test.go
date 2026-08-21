@@ -545,3 +545,44 @@ func TestBash_InteractiveShellHasNoEffectIn(t *testing.T) {
 		})
 	}
 }
+
+func Test_BashWriter_IfGitVersionIsAtLeast(t *testing.T) {
+	tests := map[string]struct {
+		version string
+		// nolint:lll
+		want string
+	}{
+		"version 2.49": {
+			version: "2.49",
+			want: `current_ver="$(git version|cut -d ' ' -f 3)"
+required_ver="2.49"
+minimum_ver="$(printf '%s\n%s' "$required_ver" "$current_ver" | sort -t '.' -k 1,1n -k 2,2n -k 3,3n | sed -n '1p')"
+if [ "$minimum_ver" = "$required_ver" ]; then
+echo $'\x1b[0;mGit version at least "2.49"'
+`,
+		},
+		"version 2.0": {
+			version: "2.0",
+			want: `current_ver="$(git version|cut -d ' ' -f 3)"
+required_ver="2.0"
+minimum_ver="$(printf '%s\n%s' "$required_ver" "$current_ver" | sort -t '.' -k 1,1n -k 2,2n -k 3,3n | sed -n '1p')"
+if [ "$minimum_ver" = "$required_ver" ]; then
+echo $'\x1b[0;mGit version at least "2.0"'
+`,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			writer := &BashWriter{}
+			writer.IfGitVersionIsAtLeast(tt.version)
+
+			assert.Equal(t, tt.want, writer.String())
+			// Ensure the generated script does not use `head -n1`, which causes
+			// SIGPIPE under `set -o pipefail` + `set -o errexit` and silently
+			// aborts the get_sources script. See:
+			// https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39680
+			assert.NotContains(t, writer.String(), "head -n1")
+		})
+	}
+}
