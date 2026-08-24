@@ -1,3 +1,9 @@
+## v19.3.1 (2026-08-24)
+
+### Bug fixes
+
+- Merge branch 'revert-c46014f5' into 'main' [!7232](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7232)
+
 ## v19.3.0 (2026-08-19)
 
 ### New features
