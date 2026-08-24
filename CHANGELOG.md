@@ -10,11 +10,12 @@
 
 - Verify resources: authenticate Docker Hub image checks [!7162](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7162)
 
-## v19.2.1 (2026-08-12)
+## v19.2.1 (2026-08-24)
 
 ### Bug fixes
 
 - [19.2] Key S3 client cache by config value, not pointer [!6981](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6981)
+- Restore IMAGE_FILTER_FLAGS default to label filter (backport to 19-2-stable, closes #39621) [!7217](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7217) (Ashmit Sharma @4shm1td06)
 
 ### Maintenance
 
