@@ -3,10 +3,13 @@ package aws
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
+	"github.com/aws/smithy-go"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -107,12 +110,12 @@ func (v *resolver) Resolve() (string, error) {
 
 	s, err := newAWSSecretsManagerService(ctx, region, identity)
 	if err != nil {
-		return "", err
+		return "", classifyError(err)
 	}
 
 	data, err := s.GetSecretString(ctx, secret.SecretId, v.getVersionId(), v.getVersionStage())
 	if err != nil {
-		return "", err
+		return "", classifyError(err)
 	}
 
 	if secret.Field != "" {
@@ -158,6 +161,42 @@ func extractFlatJSONField(jsonStr, field, secretId string) (string, error) {
 	default:
 		return "", fmt.Errorf("key '%s' in aws secrets manager response for secret '%s' is not a string, number or boolean", field, secretId)
 	}
+}
+
+// accessDeniedExceptionCode is distinct from "AccessDenied" (no "Exception"
+// suffix), which STS returns when the runner's own role/trust setup fails to
+// authenticate at all, and is left unclassified as a runner/admin problem.
+const accessDeniedExceptionCode = "AccessDeniedException"
+
+// classifyError reports IAM/lookup failures on the requested secret as a
+// configuration error and server-side failures as an external dependency
+// error, so the caller can report an accurate job failure reason instead of
+// a generic runner system failure. Anything else, including authentication
+// failures, keeps the existing classification.
+func classifyError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var notFound *types.ResourceNotFoundException
+	if errors.As(err, &notFound) {
+		return secrets.NewResolvingConfigurationError(err)
+	}
+
+	var apiErr smithy.APIError
+	if !errors.As(err, &apiErr) {
+		return err
+	}
+
+	if apiErr.ErrorCode() == accessDeniedExceptionCode {
+		return secrets.NewResolvingConfigurationError(err)
+	}
+
+	if apiErr.ErrorFault() == smithy.FaultServer {
+		return secrets.NewResolvingExternalDependencyError(err)
+	}
+
+	return err
 }
 
 func init() {

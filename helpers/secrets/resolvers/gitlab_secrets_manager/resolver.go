@@ -1,7 +1,9 @@
 package gitlab_secrets_manager
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"path"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -62,15 +64,49 @@ func (r *resolver) Resolve() (string, error) {
 		),
 	)
 	if err != nil {
-		return "", fmt.Errorf("creating vault client: %w", err)
+		return "", classifyError(fmt.Errorf("creating vault client: %w", err))
 	}
 
 	value, err := service.NewGitlabSecretsManager(client).GetSecret(gsmSecret)
 	if err != nil {
-		return "", fmt.Errorf("getting secret: %w", err)
+		return "", classifyError(fmt.Errorf("getting secret: %w", err))
 	}
 
 	return value, nil
+}
+
+// apiStatusCoder is implemented by the Vault API errors that back this
+// resolver, carrying the HTTP status code of the API response.
+type apiStatusCoder interface {
+	StatusCode() int
+}
+
+// classifyError mirrors the Vault resolver's classification, since the auth
+// role and secret path here are configured directly by the job: 4xx becomes
+// a configuration error, 5xx an external dependency error, so the caller can
+// report an accurate job failure reason instead of a generic runner system
+// failure. Any other failure is returned unmodified.
+func classifyError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var apiErr apiStatusCoder
+	if !errors.As(err, &apiErr) {
+		return err
+	}
+
+	switch code := apiErr.StatusCode(); {
+	case code == http.StatusBadRequest,
+		code == http.StatusUnauthorized,
+		code == http.StatusForbidden,
+		code == http.StatusNotFound:
+		return secrets.NewResolvingConfigurationError(err)
+	case code >= 500:
+		return secrets.NewResolvingExternalDependencyError(err)
+	default:
+		return err
+	}
 }
 
 func init() {

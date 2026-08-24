@@ -4,10 +4,14 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
+	"github.com/aws/smithy-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -344,6 +348,66 @@ func TestResolver_Resolve(t *testing.T) {
 			if tt.expectedRoleSessionName != "" {
 				capturedRoleSessionName = r.(*resolver).getRoleSessionName()
 				assert.Equal(t, tt.expectedRoleSessionName, capturedRoleSessionName, "should use correct role session name")
+			}
+		})
+	}
+}
+
+func TestClassifyError(t *testing.T) {
+	tests := map[string]struct {
+		err                         error
+		expectConfigurationError    bool
+		expectExternalDependency    bool
+		expectUnmodifiedPassThrough bool
+	}{
+		"nil error": {
+			err: nil,
+		},
+		"unknown secret is a configuration error": {
+			err:                      fmt.Errorf("getting secret: %w", &types.ResourceNotFoundException{Message: aws.String("secret not found")}),
+			expectConfigurationError: true,
+		},
+		"access denied to this secret is a configuration error": {
+			err:                      fmt.Errorf("getting secret: %w", &smithy.GenericAPIError{Code: "AccessDeniedException", Message: "not authorized"}),
+			expectConfigurationError: true,
+		},
+		"internal service error is an external dependency error": {
+			err:                      fmt.Errorf("getting secret: %w", &types.InternalServiceError{Message: aws.String("internal error")}),
+			expectExternalDependency: true,
+		},
+		"role assumption denial keeps default classification": {
+			err:                         fmt.Errorf("getting secret: %w", &smithy.GenericAPIError{Code: "AccessDenied", Message: "not authorized to assume role"}),
+			expectUnmodifiedPassThrough: true,
+		},
+		"throttling keeps default classification": {
+			err:                         fmt.Errorf("getting secret: %w", &smithy.GenericAPIError{Code: "ThrottlingException", Message: "rate exceeded"}),
+			expectUnmodifiedPassThrough: true,
+		},
+		"error without an API error keeps default classification": {
+			err:                         assert.AnError,
+			expectUnmodifiedPassThrough: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			result := classifyError(tt.err)
+
+			if tt.err == nil {
+				assert.NoError(t, result)
+				return
+			}
+
+			var configurationErr *secrets.ResolvingConfigurationError
+			var externalDependencyErr *secrets.ResolvingExternalDependencyError
+
+			assert.Equal(t, tt.expectConfigurationError, errors.As(result, &configurationErr), "configuration error classification")
+			assert.Equal(t, tt.expectExternalDependency, errors.As(result, &externalDependencyErr), "external dependency classification")
+
+			if tt.expectUnmodifiedPassThrough {
+				assert.Equal(t, tt.err, result)
+			} else {
+				assert.ErrorIs(t, result, tt.err, "classified error must wrap the original")
 			}
 		})
 	}
