@@ -50,7 +50,7 @@ require (
 	github.com/johannesboyne/gofakes3 v1.2.0
 	github.com/joho/godotenv v1.5.1
 	github.com/jpillora/backoff v1.0.0
-	github.com/kardianos/service v1.3.0
+	github.com/kardianos/service v1.2.4
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.19.2
 	github.com/klauspost/pgzip v1.2.6
