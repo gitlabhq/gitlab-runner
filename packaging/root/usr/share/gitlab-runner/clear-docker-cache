@@ -32,7 +32,7 @@ REQUIRED_DOCKER_API_VERSION=1.25
 # Default: only filter managed containers and volumes; prune all unused images.
 # Backward compatibility: FILTER_FLAG sets CONTAINER_FILTER_FLAGS as a fallback.
 CONTAINER_FILTER_FLAGS="${CONTAINER_FILTER_FLAGS:-${FILTER_FLAG:-label=com.gitlab.gitlab-runner.managed=true}}"
-IMAGE_FILTER_FLAGS="${IMAGE_FILTER_FLAGS:-}"
+IMAGE_FILTER_FLAGS="${IMAGE_FILTER_FLAGS:-label=com.gitlab.gitlab-runner.managed=true}"
 VOLUME_FILTER_FLAGS="${VOLUME_FILTER_FLAGS:-label=com.gitlab.gitlab-runner.managed=true}"
 
 # Build filter flag arrays from comma-separated values.
