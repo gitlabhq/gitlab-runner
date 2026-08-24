@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kuberuntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
@@ -10518,4 +10519,50 @@ func TestExecutor_logNewPodEvents(t *testing.T) {
 		assert.True(t, executor.podEventState.seen.Contains(eventKey(later)))
 		assert.Equal(t, eventLastOccurredTimestamp(later), executor.podEventState.lastFetched)
 	})
+}
+
+func TestIsConflict(t *testing.T) {
+	podResource := schema.GroupResource{Group: "", Resource: "pods"}
+
+	tests := map[string]struct {
+		err      error
+		expected bool
+	}{
+		"generateName collision": {
+			err:      kubeerrors.NewGenerateNameConflict(podResource, "runner-abc123", 1),
+			expected: true,
+		},
+		"fixed name create retried against a pod still being deleted": {
+			err: &kubeerrors.StatusError{ErrStatus: metav1.Status{
+				Status:  metav1.StatusFailure,
+				Code:    http.StatusConflict,
+				Reason:  metav1.StatusReasonAlreadyExists,
+				Message: `object is being deleted: pods "runner-project-0-concurrent-0-abc123" already exists`,
+			}},
+			expected: true,
+		},
+		"unrelated conflict": {
+			err: &kubeerrors.StatusError{ErrStatus: metav1.Status{
+				Status:  metav1.StatusFailure,
+				Code:    http.StatusConflict,
+				Reason:  metav1.StatusReasonConflict,
+				Message: "the object has been modified",
+			}},
+			expected: false,
+		},
+		"not a status error": {
+			err:      errors.New("some other error"),
+			expected: false,
+		},
+		"nil error": {
+			err:      nil,
+			expected: false,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, isConflict(tt.err))
+		})
+	}
 }
