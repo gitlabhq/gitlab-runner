@@ -1,3 +1,9 @@
+## v19.2.3 (2026-08-24)
+
+### Bug fixes
+
+- fix: restore IMAGE_FILTER_FLAGS default to label filter (backport to 19-2-stable, closes #39621) [!7217](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7217) (Ashmit Sharma @4shm1td06)
+
 ## v19.2.2 (2026-08-12)
 
 ### Maintenance
