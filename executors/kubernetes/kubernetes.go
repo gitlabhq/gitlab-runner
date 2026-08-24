@@ -103,12 +103,6 @@ const (
 
 	k8sEventWarningType = "Warning"
 
-	// errorAlreadyExistsMessage is an error message that is encountered when
-	// we fail to create a resource because it already exists.
-	// Because of a connectivity issue, an attempt to create a resource can fail while the request itself
-	// was successfully executed. We then monitor the conflict error message to retrieve the already create resource
-	errorAlreadyExistsMessage = "the server was not able to generate a unique name for the object"
-
 	// Memory usage estimate per cache entry:
 	//   key (UID:count) ≈ 40 B + string header 16 B + time.Time 24 B + LRU links 16 B ≈ 96 B
 	//   For 100k entries, worst‑case RAM ≈ 10 MB.
@@ -3572,12 +3566,18 @@ func generateNameForK8sResources(pattern string) string {
 // When calling the k8s API request, it can happen that despite the failure of the request,
 // the resource was actually created. When it comes to POST method, the following retries will get
 // a 409 status code (conflits because of the name that must be unique)
-// When such status code is received, we stop the retries
+// When such status code is received, we stop the retries.
+//
+// This covers both the server-side generateName collision (message:
+// "the server was not able to generate a unique name for the object") and a
+// fixed-Name create retried while the previous same-named resource is still
+// terminating (message: "object is being deleted: ... already exists").
+// Both surface as a 409 with Reason AlreadyExists.
 func isConflict(err error) bool {
 	var statusError *kubeerrors.StatusError
 	return errors.As(err, &statusError) &&
 		statusError.ErrStatus.Code == http.StatusConflict &&
-		strings.Contains(statusError.ErrStatus.Message, errorAlreadyExistsMessage)
+		kubeerrors.IsAlreadyExists(err)
 }
 
 func IsKubernetesPodNotFoundError(err error) bool {
