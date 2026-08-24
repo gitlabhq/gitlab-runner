@@ -3,8 +3,12 @@
 package azure_key_vault
 
 import (
+	"errors"
+	"fmt"
+	"net/http"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -119,6 +123,70 @@ func TestResolver_Resolve(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedValue, value)
+		})
+	}
+}
+
+func TestClassifyError(t *testing.T) {
+	tests := map[string]struct {
+		err                         error
+		expectConfigurationError    bool
+		expectExternalDependency    bool
+		expectUnmodifiedPassThrough bool
+	}{
+		"nil error": {
+			err: nil,
+		},
+		"permission denied (403) is a configuration error": {
+			err:                      fmt.Errorf("getting secret failed: %w", &azcore.ResponseError{StatusCode: http.StatusForbidden}),
+			expectConfigurationError: true,
+		},
+		"unknown secret (404) is a configuration error": {
+			err:                      fmt.Errorf("getting secret failed: %w", &azcore.ResponseError{StatusCode: http.StatusNotFound}),
+			expectConfigurationError: true,
+		},
+		"server error (500) is an external dependency error": {
+			err:                      fmt.Errorf("getting secret failed: %w", &azcore.ResponseError{StatusCode: http.StatusInternalServerError}),
+			expectExternalDependency: true,
+		},
+		"service unavailable (503) is an external dependency error": {
+			err:                      fmt.Errorf("getting secret failed: %w", &azcore.ResponseError{StatusCode: http.StatusServiceUnavailable}),
+			expectExternalDependency: true,
+		},
+		"unauthorized (401) keeps default classification": {
+			err:                         fmt.Errorf("getting secret failed: %w", &azcore.ResponseError{StatusCode: http.StatusUnauthorized}),
+			expectUnmodifiedPassThrough: true,
+		},
+		"rate limited (429) keeps default classification": {
+			err:                         fmt.Errorf("getting secret failed: %w", &azcore.ResponseError{StatusCode: http.StatusTooManyRequests}),
+			expectUnmodifiedPassThrough: true,
+		},
+		"error without a response error keeps default classification": {
+			err:                         assert.AnError,
+			expectUnmodifiedPassThrough: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			result := classifyError(tt.err)
+
+			if tt.err == nil {
+				assert.NoError(t, result)
+				return
+			}
+
+			var configurationErr *secrets.ResolvingConfigurationError
+			var externalDependencyErr *secrets.ResolvingExternalDependencyError
+
+			assert.Equal(t, tt.expectConfigurationError, errors.As(result, &configurationErr), "configuration error classification")
+			assert.Equal(t, tt.expectExternalDependency, errors.As(result, &externalDependencyErr), "external dependency classification")
+
+			if tt.expectUnmodifiedPassThrough {
+				assert.Equal(t, tt.err, result)
+			} else {
+				assert.ErrorIs(t, result, tt.err, "classified error must wrap the original")
+			}
 		})
 	}
 }

@@ -4,6 +4,7 @@ package gitlab_secrets_manager
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines/kv_v2"
 )
 
@@ -65,6 +67,16 @@ func TestResolver_Resolve(t *testing.T) {
 					},
 				},
 			}))
+		case "/v1/forbidden_path/data/forbidden_path":
+			w.WriteHeader(http.StatusForbidden)
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"errors": []string{"permission denied"},
+			}))
+		case "/v1/unavailable_path/data/unavailable_path":
+			w.WriteHeader(http.StatusServiceUnavailable)
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"errors": []string{"service unavailable"},
+			}))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -72,10 +84,12 @@ func TestResolver_Resolve(t *testing.T) {
 	defer server.Close()
 
 	testCases := []struct {
-		name          string
-		secret        spec.Secret
-		expectedErr   string
-		expectedValue string
+		name                          string
+		secret                        spec.Secret
+		expectedErr                   string
+		expectedValue                 string
+		expectConfigurationError      bool
+		expectExternalDependencyError bool
 	}{
 		{
 			name:        "unsupported",
@@ -164,6 +178,52 @@ func TestResolver_Resolve(t *testing.T) {
 			},
 			expectedValue: "test_value",
 		},
+		{
+			name: "permission denied is a configuration error",
+			secret: spec.Secret{
+				GitLabSecretsManager: &spec.GitLabSecretsManagerSecret{
+					Server: spec.GitLabSecretsManagerServer{
+						URL: server.URL,
+						InlineAuth: spec.GitLabSecretsManagerServerInlineAuth{
+							AuthMount: "jwt",
+							JWT:       "test-jwt",
+							Role:      "test-role",
+						},
+					},
+					Engine: spec.GitLabSecretsManagerEngine{
+						Name: "kv-v2",
+						Path: "forbidden_path",
+					},
+					Path:  "forbidden_path",
+					Field: "test_field",
+				},
+			},
+			expectedErr:              "getting secret",
+			expectConfigurationError: true,
+		},
+		{
+			name: "service unavailable is an external dependency error",
+			secret: spec.Secret{
+				GitLabSecretsManager: &spec.GitLabSecretsManagerSecret{
+					Server: spec.GitLabSecretsManagerServer{
+						URL: server.URL,
+						InlineAuth: spec.GitLabSecretsManagerServerInlineAuth{
+							AuthMount: "jwt",
+							JWT:       "test-jwt",
+							Role:      "test-role",
+						},
+					},
+					Engine: spec.GitLabSecretsManagerEngine{
+						Name: "kv-v2",
+						Path: "unavailable_path",
+					},
+					Path:  "unavailable_path",
+					Field: "test_field",
+				},
+			},
+			expectedErr:                   "getting secret",
+			expectExternalDependencyError: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -175,6 +235,11 @@ func TestResolver_Resolve(t *testing.T) {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tc.expectedErr)
 				assert.Empty(t, value)
+
+				var configurationErr *secrets.ResolvingConfigurationError
+				var externalDependencyErr *secrets.ResolvingExternalDependencyError
+				assert.Equal(t, tc.expectConfigurationError, errors.As(err, &configurationErr), "configuration error classification")
+				assert.Equal(t, tc.expectExternalDependencyError, errors.As(err, &externalDependencyErr), "external dependency classification")
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.expectedValue, value)
