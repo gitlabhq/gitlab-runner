@@ -77,7 +77,7 @@ require (
 	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260806052839-61cd53f4cb21
 	gitlab.com/gitlab-org/fleeting/nesting v0.5.0
-	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20260805120041-8295dd4d1775
+	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20260818142736-20266983167b
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20260805120041-8295dd4d1775
 	gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api v0.1.1
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c
