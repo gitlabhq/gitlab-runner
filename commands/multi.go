@@ -898,7 +898,7 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	}
 	// Metrics about jobs failures
 	mr.prometheusRegistry.MustRegister(mr.failuresCollector)
-	// Metrics about catched errors
+	// Metrics about caught errors
 	mr.prometheusRegistry.MustRegister(&mr.prometheusLogHook)
 	// Metric providing info about current state of the GitLab Runner process
 	mr.prometheusRegistry.MustRegister(mr.processStateTracker)

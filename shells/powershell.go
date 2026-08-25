@@ -36,7 +36,7 @@ echo "$start_json"
 
 	// Before executing a script, powershell parses it.
 	// A `ParserError` can then be thrown if a parsing error is found.
-	// Those errors are not catched by the powershell_trap_script thus causing the job to hang
+	// Those errors are not caught by the powershell_trap_script thus causing the job to hang
 	// To avoid this problem, the PwshValidationScript is used to validate the given script and eventually to cause
 	// the job to fail if a `ParserError` is thrown
 	// As $Path already refers to the script being executed, the script name will be extracted from there in this context
