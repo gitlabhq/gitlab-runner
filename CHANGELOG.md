@@ -202,6 +202,12 @@
 - Go: Update module github.com/moby/moby/client to v0.5.1 [!7105](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7105)
 - Go: Update module github.com/in-toto/attestation to v1.2.0 [!7049](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7049)
 
+## v19.2.3 (2026-08-24)
+
+### Bug fixes
+
+- fix: restore IMAGE_FILTER_FLAGS default to label filter (backport to 19-2-stable, closes #39621) [!7217](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7217) (Ashmit Sharma @4shm1td06)
+
 ## v19.2.2 (2026-08-12)
 
 ### Maintenance
