@@ -9,5 +9,5 @@ markdownlint-cli2 = "0.23.2"
 mockery = "2.53.3"
 nodejs = "24.19.0" # provides npm for markdownlint-cli2
 shellcheck = "0.11.0"
-vale = "3.14.1"
+vale = "3.18.0"
 yq = "4.53.3"
