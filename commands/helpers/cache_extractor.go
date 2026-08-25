@@ -49,6 +49,8 @@ type CacheExtractorCommand struct {
 	ChunkSize   int `long:"chunk-size" env:"CACHE_CHUNK_SIZE" description:"Chunk size in bytes for parallel cache download when FF_USE_PARALLEL_CACHE_TRANSFER is enabled (default 16 MiB; 0 falls back to default)"`
 	Concurrency int `long:"concurrency" env:"CACHE_CONCURRENCY" description:"Concurrent chunks for parallel cache transfer when FF_USE_PARALLEL_CACHE_TRANSFER is enabled (default 16; 0 or 1 = sequential for download)"`
 
+	RedactURL bool `long:"redact-url" description:"Redact cache URL from job logs"`
+
 	client *CacheClient
 	mux    *blob.URLMux
 }
@@ -137,8 +139,8 @@ func (c *CacheExtractorCommand) selectPresignedURL() string {
 	alternateTime, alternateErr := c.fetchPresignedTimestamp(alternateHeadURL)
 
 	log := logrus.WithFields(logrus.Fields{
-		"primary_url":        url_helpers.CleanURL(c.URL),
-		"alternate_url":      url_helpers.CleanURL(c.AlternateURL),
+		"primary_url":        url_helpers.RedactIfEnabled(url_helpers.CleanURL(c.URL), c.RedactURL),
+		"alternate_url":      url_helpers.RedactIfEnabled(url_helpers.CleanURL(c.AlternateURL), c.RedactURL),
 		"primary_modified":   primaryTime,
 		"alternate_modified": alternateTime,
 	})
@@ -421,8 +423,8 @@ func (c *CacheExtractorCommand) selectGoCloudSource(
 	alternateAttrs, alternateErr := alternateBucket.Attributes(ctx, alternateObject)
 
 	log := logrus.WithFields(logrus.Fields{
-		"primary_object":   primaryObject,
-		"alternate_object": alternateObject,
+		"primary_object":   url_helpers.RedactIfEnabled(primaryObject, c.RedactURL),
+		"alternate_object": url_helpers.RedactIfEnabled(alternateObject, c.RedactURL),
 	})
 
 	switch {
@@ -523,9 +525,9 @@ func (c *CacheExtractorCommand) downloadParallel(contentLength int64, modTime ti
 
 	name := strings.TrimSuffix(filepath.Base(c.File), filepath.Ext(c.File))
 	if etag != "" {
-		logrus.WithField(logFieldHTTPETag, etag).Infoln("Downloading", name, "from", cleanedURL, "(parallel)")
+		logrus.WithField(logFieldHTTPETag, etag).Infoln("Downloading", name, "from", url_helpers.RedactIfEnabled(cleanedURL, c.RedactURL), "(parallel)")
 	} else {
-		logrus.Infoln("Downloading", name, "from", cleanedURL, "(parallel)")
+		logrus.Infoln("Downloading", name, "from", url_helpers.RedactIfEnabled(cleanedURL, c.RedactURL), "(parallel)")
 	}
 
 	writer := meter.NewWriter(
@@ -579,9 +581,9 @@ func (c *CacheExtractorCommand) downloadAndSaveCache(reader io.Reader, date time
 	name := strings.TrimSuffix(filepath.Base(c.File), filepath.Ext(c.File))
 
 	if etag != "" {
-		logrus.WithField(logFieldHTTPETag, etag).Infoln("Downloading", name, "from", cleanedURL)
+		logrus.WithField(logFieldHTTPETag, etag).Infoln("Downloading", name, "from", url_helpers.RedactIfEnabled(cleanedURL, c.RedactURL))
 	} else {
-		logrus.Infoln("Downloading", name, "from", cleanedURL)
+		logrus.Infoln("Downloading", name, "from", url_helpers.RedactIfEnabled(cleanedURL, c.RedactURL))
 	}
 
 	writer := meter.NewWriter(

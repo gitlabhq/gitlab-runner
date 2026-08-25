@@ -842,3 +842,71 @@ func TestUseParallelCacheTransferEnv(t *testing.T) {
 		assert.True(t, featureflags.IsOn(logger, os.Getenv(featureflags.UseParallelCacheTransfer)))
 	})
 }
+
+func makeTestZipArchive(t *testing.T) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	w, err := zw.Create("file.txt")
+	require.NoError(t, err)
+	_, err = w.Write([]byte("data"))
+	require.NoError(t, err)
+	require.NoError(t, zw.Close())
+	return buf.Bytes()
+}
+
+func TestCacheExtractor_RedactURL_SuppressesURLInLog(t *testing.T) {
+	cdTempDir(t)
+	archive := makeTestZipArchive(t)
+
+	future := time.Now().Add(time.Hour)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeContent(w, r, "cache.zip", future, bytes.NewReader(archive))
+	}))
+	defer srv.Close()
+
+	var buf bytes.Buffer
+	orig := logrus.StandardLogger().Out
+	logrus.SetOutput(&buf)
+	defer logrus.SetOutput(orig)
+
+	cmd := &CacheExtractorCommand{
+		File:               cacheExtractorArchive,
+		URL:                srv.URL,
+		RedactURL:          true,
+		TransferBufferSize: defaultCacheTransferBufferSize,
+	}
+	err := cmd.downloadPresignedSequential()
+	require.NoError(t, err)
+
+	logged := buf.String()
+	assert.NotContains(t, logged, srv.URL, "URL must not appear in logs when RedactURL is true")
+	assert.Contains(t, logged, "remote storage", "generic placeholder must appear when RedactURL is true")
+}
+
+func TestCacheExtractor_NoRedact_ShowsURLInLog(t *testing.T) {
+	cdTempDir(t)
+	archive := makeTestZipArchive(t)
+
+	future := time.Now().Add(time.Hour)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeContent(w, r, "cache.zip", future, bytes.NewReader(archive))
+	}))
+	defer srv.Close()
+
+	var buf bytes.Buffer
+	orig := logrus.StandardLogger().Out
+	logrus.SetOutput(&buf)
+	defer logrus.SetOutput(orig)
+
+	cmd := &CacheExtractorCommand{
+		File:               cacheExtractorArchive,
+		URL:                srv.URL,
+		RedactURL:          false,
+		TransferBufferSize: defaultCacheTransferBufferSize,
+	}
+	err := cmd.downloadPresignedSequential()
+	require.NoError(t, err)
+
+	assert.Contains(t, buf.String(), srv.URL, "URL must appear in logs when RedactURL is false")
+}

@@ -24,6 +24,7 @@ type CacheArchive struct {
 	OnSuccess              bool                     `json:"on_success,omitempty"`
 	OnFailure              bool                     `json:"on_failure,omitempty"`
 	Warnings               []string                 `json:"warnings,omitempty"`
+	RedactURL              bool                     `json:"redact_url,omitempty"`
 	// AlternateKey is the FF_HASH_CACHE_KEYS-opposite local archive path key, used during migration.
 	AlternateKey string `json:"alternate_key,omitempty"`
 }
@@ -129,6 +130,10 @@ func (s CacheArchive) archiverArgs() []string {
 
 	if s.Untracked {
 		args = append(args, "--untracked")
+	}
+
+	if s.RedactURL {
+		args = append(args, "--redact-url")
 	}
 
 	return args

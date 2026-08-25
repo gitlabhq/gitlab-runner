@@ -9,9 +9,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/klauspost/compress/zstd"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -262,4 +264,65 @@ func TestCacheArchiverZipZstdProducesZstdZip(t *testing.T) {
 			"entry %q should use the zstd method (%d), got %d", f.Name, uint16(zstd.ZipMethodWinZip), f.Method)
 	}
 	require.Positive(t, checked, "expected at least one file entry in the archive")
+}
+
+func TestCacheArchiver_RedactURL_SuppressesURLInLog(t *testing.T) {
+	const bucketURL = "https://storage.googleapis.com/my-bucket/runner/cache.zip"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	f, err := os.CreateTemp(t.TempDir(), "cache-*.zip")
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	var buf bytes.Buffer
+	orig := logrus.StandardLogger().Out
+	logrus.SetOutput(&buf)
+	defer logrus.SetOutput(orig)
+
+	cmd := &CacheArchiverCommand{
+		File:      f.Name(),
+		URL:       srv.URL,
+		RedactURL: true,
+	}
+	_ = cmd.handlePresignedURL(mustStat(t, f.Name()), os.Stdin)
+
+	logged := buf.String()
+	assert.NotContains(t, logged, bucketURL, "URL must not appear in logs when RedactURL is true")
+	assert.Contains(t, logged, "remote storage", "generic placeholder must appear in logs when RedactURL is true")
+}
+
+func TestCacheArchiver_NoRedact_ShowsURLInLog(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	f, err := os.CreateTemp(t.TempDir(), "cache-*.zip")
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	var buf bytes.Buffer
+	orig := logrus.StandardLogger().Out
+	logrus.SetOutput(&buf)
+	defer logrus.SetOutput(orig)
+
+	cmd := &CacheArchiverCommand{
+		File:      f.Name(),
+		URL:       srv.URL,
+		RedactURL: false,
+	}
+	_ = cmd.handlePresignedURL(mustStat(t, f.Name()), os.Stdin)
+
+	assert.True(t, strings.Contains(buf.String(), srv.URL), "URL must appear in logs when RedactURL is false")
+}
+
+func mustStat(t *testing.T, path string) os.FileInfo {
+	t.Helper()
+	fi, err := os.Stat(path)
+	require.NoError(t, err)
+	return fi
 }

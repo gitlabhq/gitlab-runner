@@ -226,6 +226,7 @@ func (b *builder) buildCacheExtract() ([]stages.CacheExtract, error) {
 			Concurrency:                     variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
 			Paths:                           cache.Paths,
 			MaxAttempts:                     variables.DefaultIntClamp(b.variables, "RESTORE_CACHE_ATTEMPTS", 1, 1, 10),
+			RedactURL:                       b.opts.cacheRedactURL,
 			UseExponentialBackoffStageRetry: b.isFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry),
 		})
 	}
@@ -380,6 +381,7 @@ func (b *builder) buildCacheArchive() ([]stages.CacheArchive, error) {
 			CompressionLevel:       variables.Default(b.variables, "CACHE_COMPRESSION_LEVEL", "default"),
 			Timeout:                variables.DefaultIntClamp(b.variables, "CACHE_REQUEST_TIMEOUT", 10, 1, 120),
 			MaxUploadedArchiveSize: b.opts.cacheMaxUploadArchiveSize,
+			RedactURL:              b.opts.cacheRedactURL,
 			OnSuccess:              cache.When.OnSuccess(),
 			OnFailure:              cache.When.OnFailure(),
 		}
