@@ -27,10 +27,12 @@ The following plugins are community maintained:
 | Cloud provider | OCI Reference | Notes |
 |----------------|---------------|-------|
 | [VMware vSphere](https://gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere) | `registry.gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere:latest` | Uses VMware vSphere to create and manage virtual machines by cloning from an existing template. Tested with [`govmomi vcsim`](https://github.com/vmware/govmomi/tree/main/vcsim) simulator and validated by community members against basic use cases. It might have limitations with restricted vSphere permissions. You can create related issues in the [Fleeting Plugin VMware vSphere project](https://gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere).|
+| [DigitalOcean](https://gitlab.com/alexqrid/fleeting-plugin-digitalocean) | `registry.gitlab.com/alexqrid/fleeting-plugin-digitalocean:latest` | Creates and deletes [DigitalOcean droplets](https://docs.digitalocean.com/products/droplets/) that share a tag. Suspend and resume are not supported because DigitalOcean bills a powered-off droplet at the full rate. Supported on a best-effort basis by the Maintainer. For documentation, see the [project README](https://gitlab.com/alexqrid/fleeting-plugin-digitalocean/-/blob/main/README.md). You can create related issues in the [Fleeting Plugin DigitalOcean project](https://gitlab.com/alexqrid/fleeting-plugin-digitalocean/-/issues). |
 
 Community maintained plugins are owned, built, hosted, and maintained by contributors outside of GitLab (the community).
 GitLab owns and maintains the Fleeting library and API to provide static code review.
 GitLab cannot test community plugins because we don't have access to all the necessary computing environments.
+Review each plugin's README before use, because behavior and caveats (for example, how a plugin identifies or scopes its instances) can differ between plugins.
 Community members should build, test, and publish plugins to an OCI repository and provide the reference on this page through merge requests.
 The OCI reference should be accompanied by notes on the where to report issues, the support and stability level of the plugin, and where to find documentation.
 
