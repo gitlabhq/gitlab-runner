@@ -644,6 +644,125 @@ func TestWriteWritingArchiveCache(t *testing.T) {
 	}
 }
 
+func TestWriteArchiveCache_RedactURL(t *testing.T) {
+	shell := AbstractShell{}
+
+	info := common.ShellScriptInfo{
+		RunnerCommand: "gitlab-runner-helper",
+		Build: &common.Build{
+			CacheDir: "cache_dir",
+			Job:      getJobResponseWithCachePaths(),
+			Runner: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Cache: &cacheconfig.Config{
+						Type:      "test",
+						Shared:    true,
+						RedactURL: true,
+					},
+				},
+				RunnerCredentials: common.RunnerCredentials{
+					URL: "https://example.com",
+				},
+			},
+		},
+	}
+
+	redactSeen := false
+	checkRedact := func(args mock.Arguments) {
+		for _, a := range args {
+			if s, ok := a.(string); ok && s == "--redact-url" {
+				redactSeen = true
+			}
+		}
+	}
+
+	mockWriter := NewMockShellWriter(t)
+	mockWriter.On("Variable", mock.Anything).Maybe()
+	mockWriter.On("TmpFile", mock.Anything).Return("path/to/env/file").Maybe()
+	mockWriter.On("SourceEnv", mock.Anything).Maybe()
+	mockWriter.On("Cd", mock.Anything).Maybe()
+	mockWriter.On("IfCmd", mock.Anything, mock.Anything).Maybe()
+	mockWriter.On("Noticef", mock.Anything, mock.Anything).Maybe()
+	mockWriter.On("Noticef", mock.Anything).Maybe()
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockWriter.On("Warningf", mock.Anything, mock.Anything).Maybe()
+	mockWriter.On("Else").Maybe()
+	mockWriter.On("EndIf").Maybe()
+	mockWriter.On("DotEnvVariables", mock.Anything, mock.Anything).Return("/env-file").Maybe()
+	mockWriter.On("RmFile", mock.Anything).Maybe()
+	mockWriter.On("IfCmdWithOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything,
+	).Maybe().Run(checkRedact)
+
+	err := shell.writeScript(t.Context(), mockWriter, common.BuildStageArchiveOnSuccessCache, info)
+	require.NoError(t, err)
+	assert.True(t, redactSeen, "--redact-url flag missing from cache-archiver args")
+}
+
+func TestExtractCache_RedactURL(t *testing.T) {
+	shell := AbstractShell{}
+
+	build := &common.Build{
+		BuildDir: "/builds",
+		CacheDir: "/cache",
+		Job: spec.Job{
+			JobInfo: spec.JobInfo{ProjectID: 1},
+			Cache: spec.Caches{
+				{Key: "mykey", Policy: spec.CachePolicyPull, Paths: []string{"vendor/"}},
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Cache: &cacheconfig.Config{
+					Type:      "test",
+					Shared:    true,
+					RedactURL: true,
+				},
+			},
+			RunnerCredentials: common.RunnerCredentials{
+				URL: "https://example.com",
+			},
+		},
+	}
+
+	info := common.ShellScriptInfo{
+		RunnerCommand: "runner-command",
+		Build:         build,
+	}
+
+	redactSeen := false
+	checkRedact := func(args mock.Arguments) {
+		for _, a := range args {
+			if s, ok := a.(string); ok && s == "--redact-url" {
+				redactSeen = true
+			}
+		}
+	}
+
+	mockWriter := NewMockShellWriter(t)
+	mockWriter.On("Noticef", mock.Anything, mock.Anything).Maybe()
+	mockWriter.On("Noticef", mock.Anything).Maybe()
+	mockWriter.On("Warningf", mock.Anything, mock.Anything).Maybe()
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockWriter.On("Else").Maybe()
+	mockWriter.On("EndIf").Maybe()
+	mockWriter.On("IfCmd", mock.Anything, mock.Anything).Maybe()
+	mockWriter.On("IfDirectory", mock.Anything).Return(true).Maybe()
+	mockWriter.On("IfFile", mock.Anything).Return(true).Maybe()
+	mockWriter.On("Line", mock.Anything).Return("").Maybe()
+	mockWriter.On("IfCmdWithOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+	).Maybe().Run(checkRedact)
+
+	err := shell.cacheExtractor(t.Context(), mockWriter, info)
+	require.NoError(t, err)
+	assert.True(t, redactSeen, "--redact-url flag missing from cache-extractor args")
+}
+
 func TestAbstractShell_handleGetSourcesStrategy(t *testing.T) {
 	const (
 		// The jobResponse is always a http(s) URL. If it were a `git@example.com/...` URL, go's url.Parse() would fail. To

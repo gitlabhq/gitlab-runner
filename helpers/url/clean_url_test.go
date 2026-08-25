@@ -19,6 +19,14 @@ func TestInvalidURL(t *testing.T) {
 	assert.Empty(t, CleanURL("://invalid URL"))
 }
 
+func TestRedactIfEnabled(t *testing.T) {
+	const cleaned = "https://storage.googleapis.com/my-bucket/runner/cache.zip"
+
+	assert.Equal(t, cleaned, RedactIfEnabled(cleaned, false))
+	assert.Equal(t, "remote storage", RedactIfEnabled(cleaned, true))
+	assert.Equal(t, "remote storage", RedactIfEnabled("", true))
+}
+
 func TestOnlySchemeAndHost(t *testing.T) {
 	tests := map[string]string{
 		"":                                 "",

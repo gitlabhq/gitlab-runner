@@ -17,6 +17,7 @@ type options struct {
 	artifactResponseHeaderTimeout    time.Duration
 	cacheArchiveFormat               string
 	cacheMaxUploadArchiveSize        int64
+	cacheRedactURL                   bool
 	cacheUploadDescriptor            func(string) (cacheprovider.Descriptor, error)
 	cacheDownloadDescriptor          func(string) (cacheprovider.Descriptor, error)
 	alternateCacheUploadDescriptor   func(string) (cacheprovider.Descriptor, error)
@@ -106,6 +107,16 @@ func WithLoginShell(loginShell bool) Option {
 func WithCacheMaxArchiveSize(size int64) Option {
 	return func(o *options) error {
 		o.cacheMaxUploadArchiveSize = size
+		return nil
+	}
+}
+
+// WithCacheRedactURL controls whether cache upload and download URLs are
+// suppressed from job log output. When redact is true, URL-bearing log fields
+// and messages are replaced with the generic string "remote storage".
+func WithCacheRedactURL(redact bool) Option {
+	return func(o *options) error {
+		o.cacheRedactURL = redact
 		return nil
 	}
 }

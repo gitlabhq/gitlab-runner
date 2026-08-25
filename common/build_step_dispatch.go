@@ -167,6 +167,7 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 	//nolint:nestif
 	if build.Runner.Cache != nil {
 		opts = append(opts, builder.WithCacheMaxArchiveSize(build.Runner.Cache.MaxUploadedArchiveSize),
+			builder.WithCacheRedactURL(build.Runner.Cache.RedactURL),
 			builder.WithCacheDownloadDescriptor(cacheDownloadDescriptor(ctx, build, build.IsFeatureFlagOn(featureflags.HashCacheKeys))),
 			builder.WithAlternateCacheDownloadDescriptor(cacheDownloadDescriptor(ctx, build, !build.IsFeatureFlagOn(featureflags.HashCacheKeys))),
 			builder.WithCacheUploadDescriptor(cacheUploadDescriptor(ctx, build, build.IsFeatureFlagOn(featureflags.HashCacheKeys))),

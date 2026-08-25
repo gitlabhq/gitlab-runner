@@ -349,6 +349,10 @@ func (b *AbstractShell) addExtractCacheCommand(
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
+	if info.Build.Runner.Cache != nil && info.Build.Runner.Cache.RedactURL {
+		args = append(args, "--redact-url")
+	}
+
 	w.Noticef("Checking cache for %s...", cacheConfig.HumanKey)
 
 	extraArgs, env, err := getCacheDownloadURLAndEnv(ctx, info.Build, cacheConfig.HashedKey)
@@ -1606,6 +1610,10 @@ func (b *AbstractShell) addCacheUploadCommand(
 		"--file", cacheConfig.ArchiveFile,
 		"--alternate-file", cacheConfig.AlternateArchiveFile,
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
+	}
+
+	if info.Build.Runner.Cache != nil && info.Build.Runner.Cache.RedactURL {
+		args = append(args, "--redact-url")
 	}
 
 	metadata := map[string]string{

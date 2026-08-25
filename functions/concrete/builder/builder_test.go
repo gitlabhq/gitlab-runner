@@ -504,6 +504,19 @@ func TestBuild_CacheExtract(t *testing.T) {
 		assert.Equal(t, []string{"vendor/", ".cache/"}, config.CacheExtract[0].Paths)
 	})
 
+	t.Run("redact URL forwarded to extract stage", func(t *testing.T) {
+		job := baseJob()
+		job.Cache = []spec.Cache{
+			{Key: "test-key", Paths: []string{"vendor/"}, Policy: spec.CachePolicyPullPush},
+		}
+
+		vars := newTestVars(t, nil, expandValues(map[string]string{"test-key": "test-key"}))
+		config := buildConfig(t, job, vars, WithCacheRedactURL(true))
+
+		require.Len(t, config.CacheExtract, 1)
+		assert.True(t, config.CacheExtract[0].RedactURL)
+	})
+
 	t.Run("policy filtering", func(t *testing.T) {
 		tests := map[string]struct {
 			policy        spec.CachePolicy
@@ -1084,6 +1097,19 @@ func TestBuild_CacheArchive(t *testing.T) {
 
 		require.Len(t, config.CacheArchive, 1)
 		assert.Equal(t, int64(100*1024*1024), config.CacheArchive[0].MaxUploadedArchiveSize)
+	})
+
+	t.Run("redact URL", func(t *testing.T) {
+		job := baseJob()
+		job.Cache = []spec.Cache{
+			{Key: "mykey", Paths: []string{"build/"}, Policy: spec.CachePolicyPush, When: spec.CacheWhenOnSuccess},
+		}
+
+		vars := newTestVars(t, nil, expandValues(map[string]string{"mykey": "mykey"}))
+		config := buildConfig(t, job, vars, WithCacheRedactURL(true))
+
+		require.Len(t, config.CacheArchive, 1)
+		assert.True(t, config.CacheArchive[0].RedactURL)
 	})
 
 	t.Run("sanitized key produces warning", func(t *testing.T) {

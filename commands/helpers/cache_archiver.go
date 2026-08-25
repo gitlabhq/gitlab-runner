@@ -48,6 +48,7 @@ type CacheArchiverCommand struct {
 	CompressionFormat      string   `long:"compression-format" env:"CACHE_COMPRESSION_FORMAT" description:"Compression format (zip, tarzstd, zipzstd)"`
 	MaxUploadedArchiveSize int64    `long:"max-uploaded-archive-size" env:"CACHE_MAX_UPLOADED_ARCHIVE_SIZE" description:"Limit the size of the cache archive being uploaded to cloud storage, in bytes."`
 	EnvFile                string   `long:"env-file" description:"Filename containing environment variables to read"`
+	RedactURL              bool     `long:"redact-url" description:"Redact cache URL from job logs"`
 
 	// Transfer options (all backends: presigned S3, GoCloud S3/Azure/GCS).
 	TransferBufferSize int `long:"transfer-buffer-size" env:"CACHE_TRANSFER_BUFFER_SIZE" description:"Buffer size in bytes for streaming cache upload/download (default 4 MiB)"`
@@ -116,7 +117,7 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 }
 
 func (c *CacheArchiverCommand) handlePresignedURL(fi os.FileInfo, file io.ReadCloser) error {
-	logrus.Infoln("Uploading", filepath.Base(c.File), "to", url_helpers.CleanURL(c.URL))
+	logrus.Infoln("Uploading", filepath.Base(c.File), "to", url_helpers.RedactIfEnabled(url_helpers.CleanURL(c.URL), c.RedactURL))
 
 	// Use a buffered body so the HTTP client reads in larger chunks (improves S3 upload throughput).
 	body := struct {
@@ -141,7 +142,7 @@ func (c *CacheArchiverCommand) handlePresignedURL(fi os.FileInfo, file io.ReadCl
 }
 
 func (c *CacheArchiverCommand) handleGoCloudURL(file io.Reader) error {
-	logrus.Infoln("Uploading", filepath.Base(c.File), "to", url_helpers.CleanURL(c.GoCloudURL))
+	logrus.Infoln("Uploading", filepath.Base(c.File), "to", url_helpers.RedactIfEnabled(url_helpers.CleanURL(c.GoCloudURL), c.RedactURL))
 
 	if c.mux == nil {
 		c.mux = blob.DefaultURLMux()

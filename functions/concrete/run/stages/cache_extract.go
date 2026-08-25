@@ -28,6 +28,7 @@ type CacheExtract struct {
 	MaxAttempts int           `json:"max_attempts,omitempty"`
 	Paths       []string      `json:"paths,omitempty"`
 	Warnings    []string      `json:"warnings,omitempty"`
+	RedactURL   bool          `json:"redact_url,omitempty"`
 	// UseExponentialBackoffStageRetry gates exponential sleep between retry attempts; when false retries run back-to-back.
 	UseExponentialBackoffStageRetry bool `json:"use_exponential_backoff_stage_retry,omitempty"`
 }
@@ -85,6 +86,10 @@ func (s CacheExtract) extract(ctx context.Context, e *env.Env, src CacheSource) 
 		"cache-extractor",
 		"--file", archiveFile,
 		"--timeout", strconv.Itoa(s.Timeout),
+	}
+
+	if s.RedactURL {
+		args = append(args, "--redact-url")
 	}
 
 	desc := src.Descriptor

@@ -15,6 +15,7 @@ type Config struct {
 	Path                   string `toml:"Path,omitempty" long:"path" env:"CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
 	Shared                 bool   `toml:"Shared,omitempty" long:"shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
 	MaxUploadedArchiveSize int64  `toml:"MaxUploadedArchiveSize,omitempty" long:"max_uploaded_archive_size" env:"CACHE_MAXIMUM_UPLOADED_ARCHIVE_SIZE" description:"Limit the size of the cache archive being uploaded to cloud storage, in bytes."`
+	RedactURL              bool   `toml:"RedactURL,omitempty" long:"redact-url" env:"CACHE_REDACT_URL" description:"Redact cache upload/download URLs from job logs"`
 
 	S3    *CacheS3Config    `toml:"s3,omitempty" json:"s3,omitempty" namespace:"s3"`
 	GCS   *CacheGCSConfig   `toml:"gcs,omitempty" json:"gcs,omitempty" namespace:"gcs"`
