@@ -8,12 +8,12 @@ title: "Installer GitLab Runner à l'aide des dépôts officiels GitLab"
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
-Pour installer GitLab Runner, vous pouvez utiliser un paquet provenant du [dépôt GitLab](https://packages.gitlab.com/runner/gitlab-runner).
+Pour installer GitLab Runner, vous pouvez utiliser un package provenant du [dépôt GitLab](https://packages.gitlab.com/runner/gitlab-runner/).
 
 ## Distributions prises en charge {#supported-distributions}
 
@@ -28,7 +28,7 @@ GitLab fournit des paquets pour les versions suivantes des distributions Linux. 
 | Debian | Duke, Forky, Trixie, Bookworm, Bullseye |
 | LinuxMint | Xia, Wilma, Virginia, Victoria, Vera, Vanessa |
 | Raspbian | Duke, Forky, Trixie, Bookworm, Bullseye |
-| Ubuntu | Questing, Noble, Jammy, Focal, Bionic |
+| Ubuntu | Resolute, Questing, Noble, Jammy, Focal, Bionic |
 
 ### Distributions basées sur Rpm {#rpm-based-distributions}
 
@@ -177,6 +177,56 @@ Une fois les étapes ci-dessus effectuées, un runner peut être démarré et ut
 
 Assurez-vous de lire la section [FAQ](../faq/_index.md) qui décrit certains des problèmes les plus courants avec GitLab Runner.
 
+## Mettre à niveau GitLab Runner {#upgrade-gitlab-runner}
+
+Pour installer la dernière version de GitLab Runner :
+
+{{< tabs >}}
+
+{{< tab title="Debian/Ubuntu/Mint" >}}
+
+```shell
+sudo apt update
+sudo apt install gitlab-runner
+```
+
+{{< /tab >}}
+
+{{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
+
+```shell
+sudo yum update
+sudo yum install gitlab-runner
+```
+
+{{< /tab >}}
+
+{{< /tabs >}}
+
+Lors de l'installation ou de la mise à niveau d'un package, GitLab Runner supprime automatiquement les images et conteneurs Docker inutilisés. Pour ignorer ce comportement, définissez la variable d'environnement `NO_DOCKER_PRUNE` :
+
+{{< tabs >}}
+
+{{< tab title="Debian/Ubuntu/Mint" >}}
+
+```shell
+sudo apt update
+NO_DOCKER_PRUNE=1 sudo apt install gitlab-runner
+```
+
+{{< /tab >}}
+
+{{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
+
+```shell
+sudo yum update
+NO_DOCKER_PRUNE=1 sudo yum install gitlab-runner
+```
+
+{{< /tab >}}
+
+{{< /tabs >}}
+
 ## Paquet d'images d'aide {#helper-images-package}
 
 Le paquet `gitlab-runner-helper-images` contient des images de conteneurs d'aide pré-construites que GitLab Runner utilise lors de l'exécution des jobs. Ces images fournissent les outils et utilitaires nécessaires pour cloner des dépôts, téléverser des artefacts et gérer les caches.
@@ -204,32 +254,6 @@ Images basées sur Ubuntu (24.04) :
 ### Téléchargement automatique des images d'aide {#automatic-helper-image-download}
 
 Si une image d'aide pour une combinaison spécifique de système d'exploitation et d'architecture n'est pas disponible sur le système hôte, GitLab Runner télécharge automatiquement l'image requise lorsque nécessaire. L'installation manuelle n'est pas requise pour les architectures qui ne sont pas incluses dans le `gitlab-runner-helper-images package`. Ce téléchargement automatique garantit que le runner peut prendre en charge des architectures supplémentaires (telles que `loong64`) sans nécessiter d'intervention manuelle ni d'installations de paquets séparées.
-
-## Mettre à niveau GitLab Runner {#upgrade-gitlab-runner}
-
-Pour installer la dernière version de GitLab Runner :
-
-{{< tabs >}}
-
-{{< tab title="Debian/Ubuntu/Mint" >}}
-
-```shell
-sudo apt update
-sudo apt install gitlab-runner
-```
-
-{{< /tab >}}
-
-{{< tab title="RHEL/CentOS/Fedora/Amazon Linux" >}}
-
-```shell
-sudo yum update
-sudo yum install gitlab-runner
-```
-
-{{< /tab >}}
-
-{{< /tabs >}}
 
 ## Signatures GPG pour l'installation de paquets {#gpg-signatures-for-package-installation}
 

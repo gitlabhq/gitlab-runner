@@ -7,7 +7,7 @@ title: "Utilisation de LXD avec l'exécuteur personnalisé"
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -18,7 +18,7 @@ Cet exemple utilise un script bash pour chaque étape. Vous pouvez spécifier vo
 
 Ces scripts ont les prérequis suivants :
 
-- [LXD](https://ubuntu.com/lxd)
+- [LXD](https://canonical.com/lxd)
 - [GitLab Runner](../../install/linux-manually.md)
 
 ## Configuration {#configuration}
