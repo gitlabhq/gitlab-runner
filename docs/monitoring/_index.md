@@ -57,8 +57,10 @@ To find a full list of all available metrics, `curl` the metrics endpoint after 
 $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 
 # HELP gitlab_runner_api_request_statuses_total The total number of api requests, partitioned by runner, endpoint and status.
+# HELP gitlab_runner_autoscaling_idle_target The number of available machines the autoscaler currently aims to keep, after applying IdleScaleFactor and IdleCountMin.
 # HELP gitlab_runner_autoscaling_machine_creation_duration_seconds Histogram of machine creation time.
 # HELP gitlab_runner_autoscaling_machine_states The current number of machines per state in this provider.
+# HELP gitlab_runner_autoscaling_max_growth_rate The configured maximum number of machines that can be in creation state at once (0 = unlimited).
 # HELP gitlab_runner_concurrent The current value of concurrent setting
 # HELP gitlab_runner_errors_total The number of caught errors.
 # HELP gitlab_runner_limit The current value of limit setting

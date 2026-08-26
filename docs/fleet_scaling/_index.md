@@ -223,8 +223,10 @@ To view those metrics on a runner, execute the command as noted in [available me
 | Metric name                                                    | Description |
 |----------------------------------------------------------------|-------------|
 | `gitlab_runner_api_request_statuses_total`                     | The total number of API requests, partitioned by runner, endpoint, and status. |
+| `gitlab_runner_autoscaling_idle_target`                        | The number of available machines the autoscaler currently aims to keep, after applying `IdleScaleFactor` and `IdleCountMin`. |
 | `gitlab_runner_autoscaling_machine_creation_duration_seconds`  | Histogram of machine creation time. |
 | `gitlab_runner_autoscaling_machine_states`                     | The number of machines per state in this provider. |
+| `gitlab_runner_autoscaling_max_growth_rate`                    | The configured maximum number of machines that can be in creation state at once (0 = unlimited). |
 | `gitlab_runner_concurrent`                                     | The value of concurrent setting. |
 | `gitlab_runner_errors_total`                                   | The number of caught errors. This metric is a counter that tracks log lines. The metric includes the label `level`. The possible values are `warning` and `error`. If you plan to include this metric, then use `rate()` or `increase()` when observing. In other words, if you notice that the rate of warnings or errors is increasing, then this could suggest an issue that needs further investigation. |
 | `gitlab_runner_jobs`                                           | This shows how many jobs are being executed (with different scopes in the labels). |

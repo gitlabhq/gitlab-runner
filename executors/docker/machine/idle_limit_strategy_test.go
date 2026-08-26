@@ -413,3 +413,45 @@ func TestShouldRemoveIdle(t *testing.T) {
 		})
 	}
 }
+
+func TestEffectiveIdleTarget(t *testing.T) {
+	tests := map[string]struct {
+		config   ilsRunnerConfig
+		data     ilsMachinesData
+		expected int
+	}{
+		"no scale factor returns IdleCount": {
+			config:   ilsRunnerConfig{idleCount: 50},
+			data:     ilsMachinesData{used: 100},
+			expected: 50,
+		},
+		"scale factor follows in-use machines": {
+			config:   ilsRunnerConfig{idleCount: 50, idleCountMin: 5, idleScaleFactor: 0.5},
+			data:     ilsMachinesData{used: 40},
+			expected: 20,
+		},
+		"scale factor clamped to IdleCount": {
+			config:   ilsRunnerConfig{idleCount: 50, idleCountMin: 5, idleScaleFactor: 0.9},
+			data:     ilsMachinesData{used: 100},
+			expected: 50,
+		},
+		"scale factor clamped to IdleCountMin": {
+			config:   ilsRunnerConfig{idleCount: 50, idleCountMin: 5, idleScaleFactor: 0.9},
+			data:     ilsMachinesData{used: 2},
+			expected: 5,
+		},
+		"zero IdleCountMin forced to one with scale factor": {
+			config:   ilsRunnerConfig{idleCount: 50, idleScaleFactor: 0.9},
+			data:     ilsMachinesData{used: 0},
+			expected: 1,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			config := ilsNewRunnerConfig(test.config)
+			data := ilsNewMachinesData(test.data)
+			assert.Equal(t, test.expected, effectiveIdleTarget(config, data))
+		})
+	}
+}

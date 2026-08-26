@@ -102,6 +102,8 @@ type machineProvider struct {
 	stoppingHistogram       prometheus.Histogram
 	removalHistogram        prometheus.Histogram
 	failedCreationHistogram prometheus.Histogram
+	maxGrowthRateGauge      *prometheus.GaugeVec
+	idleTargetGauge         *prometheus.GaugeVec
 }
 
 func (m *machineProvider) machineDetails(name string, acquire bool) *machineDetails {
@@ -639,6 +641,8 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 	// Pre-create machines
 	m.createMachines(config, &machinesData)
 
+	m.updateConfigMetrics(config, &machinesData)
+
 	logger := logrus.WithFields(machinesData.Fields()).
 		WithField("runner", config.ShortDescription()).
 		WithField("idleCountMin", config.Machine.GetIdleCountMin()).
@@ -758,6 +762,15 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 	}
 }
 
+// updateConfigMetrics publishes the autoscaling limits in effect for this
+// config, so saturation can be computed from metrics without knowing the
+// fleet configuration.
+func (m *machineProvider) updateConfigMetrics(config *common.RunnerConfig, data *machinesData) {
+	runner := config.ShortDescription()
+	m.maxGrowthRateGauge.WithLabelValues(runner).Set(float64(config.Machine.MaxGrowthRate))
+	m.idleTargetGauge.WithLabelValues(runner).Set(float64(effectiveIdleTarget(config, data)))
+}
+
 func (m *machineProvider) signalRelease(config *common.RunnerConfig) error {
 	coordinator, err := m.runnerMachinesCoordinator(config)
 	if err != nil && err != errNoConfig {
@@ -819,6 +832,26 @@ func newMachineProvider(provider common.ExecutorProvider) *machineProvider {
 			prometheus.Labels{
 				"executor": name,
 			},
+		),
+		maxGrowthRateGauge: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "gitlab_runner_autoscaling_max_growth_rate",
+				Help: "The configured maximum number of machines that can be in creation state at once (0 = unlimited).",
+				ConstLabels: prometheus.Labels{
+					"executor": name,
+				},
+			},
+			[]string{"runner"},
+		),
+		idleTargetGauge: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "gitlab_runner_autoscaling_idle_target",
+				Help: "The number of available machines the autoscaler currently aims to keep, after applying IdleScaleFactor and IdleCountMin.",
+				ConstLabels: prometheus.Labels{
+					"executor": name,
+				},
+			},
+			[]string{"runner"},
 		),
 		creationHistogram: prometheus.NewHistogram(
 			prometheus.HistogramOpts{

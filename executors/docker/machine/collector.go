@@ -43,6 +43,8 @@ func (m *machineProvider) Describe(ch chan<- *prometheus.Desc) {
 	m.stoppingHistogram.Describe(ch)
 	m.removalHistogram.Describe(ch)
 	m.failedCreationHistogram.Describe(ch)
+	m.maxGrowthRateGauge.Describe(ch)
+	m.idleTargetGauge.Describe(ch)
 	ch <- m.currentStatesDesc
 }
 
@@ -78,4 +80,6 @@ func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 	m.stoppingHistogram.Collect(ch)
 	m.removalHistogram.Collect(ch)
 	m.failedCreationHistogram.Collect(ch)
+	m.maxGrowthRateGauge.Collect(ch)
+	m.idleTargetGauge.Collect(ch)
 }

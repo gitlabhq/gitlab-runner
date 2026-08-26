@@ -88,6 +88,31 @@ func (ils *idleLimitStrategy) shouldRemove() removeIdleReason {
 	return dontRemoveIdleMachine
 }
 
+// effectiveIdleTarget returns the number of available machines the creation
+// loop currently aims for: IdleCount, or with an IdleScaleFactor a multiple
+// of the in-use count clamped between the effective IdleCountMin and IdleCount.
+func effectiveIdleTarget(config *common.RunnerConfig, data *machinesData) int {
+	idleCount := config.Machine.GetIdleCount()
+	factor := config.Machine.GetIdleScaleFactor()
+	if factor <= 0 {
+		return idleCount
+	}
+
+	min := config.Machine.GetIdleCountMin()
+	if min < 1 {
+		min = 1
+	}
+
+	target := int(float64(data.InUse()) * factor)
+	if target < min {
+		target = min
+	}
+	if target > idleCount {
+		target = idleCount
+	}
+	return target
+}
+
 // machinesGrowthExceeded checks whether runner reached the maximum number
 // of machines that can be in creation state at one moment.
 // This behavior is optional and depends on the MaxGrowthRate setting.

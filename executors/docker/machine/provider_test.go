@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -934,4 +935,23 @@ func TestFinalizeRemoval_StopsAfterMaxAttempts(t *testing.T) {
 	tm.mutex.Lock()
 	defer tm.mutex.Unlock()
 	assert.Equal(t, 1, tm.forceRemoveCalls, "ForceRemove must run once on give-up to purge the local store JSON")
+}
+
+func TestUpdateConfigMetrics(t *testing.T) {
+	provider := newMachineProvider(nil)
+	config := &common.RunnerConfig{}
+	config.Token = "test-token-1234567890"
+	config.Machine = &common.DockerMachine{
+		IdleCount:       40,
+		IdleCountMin:    5,
+		IdleScaleFactor: 0.5,
+		MaxGrowthRate:   30,
+	}
+	data := &machinesData{Used: 20}
+
+	provider.updateConfigMetrics(config, data)
+
+	runner := config.ShortDescription()
+	assert.Equal(t, float64(30), testutil.ToFloat64(provider.maxGrowthRateGauge.WithLabelValues(runner)))
+	assert.Equal(t, float64(10), testutil.ToFloat64(provider.idleTargetGauge.WithLabelValues(runner)))
 }
