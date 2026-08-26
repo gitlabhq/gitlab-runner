@@ -98,19 +98,9 @@ func effectiveIdleTarget(config *common.RunnerConfig, data *machinesData) int {
 		return idleCount
 	}
 
-	min := config.Machine.GetIdleCountMin()
-	if min < 1 {
-		min = 1
-	}
-
+	idleCountMin := max(config.Machine.GetIdleCountMin(), 1)
 	target := int(float64(data.InUse()) * factor)
-	if target < min {
-		target = min
-	}
-	if target > idleCount {
-		target = idleCount
-	}
-	return target
+	return min(max(target, idleCountMin), idleCount)
 }
 
 // machinesGrowthExceeded checks whether runner reached the maximum number

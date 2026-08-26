@@ -102,9 +102,26 @@ type machineProvider struct {
 	stoppingHistogram       prometheus.Histogram
 	removalHistogram        prometheus.Histogram
 	failedCreationHistogram prometheus.Histogram
-	maxGrowthRateGauge      *prometheus.GaugeVec
-	idleTargetGauge         *prometheus.GaugeVec
+	maxGrowthRateDesc       *prometheus.Desc
+	idleTargetDesc          *prometheus.Desc
+	configMetricsLock       sync.Mutex
+	configMetrics           map[string]configMetricsEntry
 }
+
+// configMetricsEntry is the last observed autoscaling limits for one runner
+// config. Entries carry their update time so Collect can drop series for
+// configs that disappeared on a config reload instead of exporting stale
+// limits forever.
+type configMetricsEntry struct {
+	maxGrowthRate float64
+	idleTarget    float64
+	updatedAt     time.Time
+}
+
+// configMetricsTTL is how long after the last Acquire a runner config's
+// limit gauges are still exported. Acquire runs every check interval for
+// active configs, so anything older than this is gone from the config.
+const configMetricsTTL = 10 * time.Minute
 
 func (m *machineProvider) machineDetails(name string, acquire bool) *machineDetails {
 	details := m.ensureDetails(name)
@@ -766,9 +783,14 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 // config, so saturation can be computed from metrics without knowing the
 // fleet configuration.
 func (m *machineProvider) updateConfigMetrics(config *common.RunnerConfig, data *machinesData) {
-	runner := config.ShortDescription()
-	m.maxGrowthRateGauge.WithLabelValues(runner).Set(float64(config.Machine.MaxGrowthRate))
-	m.idleTargetGauge.WithLabelValues(runner).Set(float64(effectiveIdleTarget(config, data)))
+	m.configMetricsLock.Lock()
+	defer m.configMetricsLock.Unlock()
+
+	m.configMetrics[config.ShortDescription()] = configMetricsEntry{
+		maxGrowthRate: float64(config.Machine.MaxGrowthRate),
+		idleTarget:    float64(effectiveIdleTarget(config, data)),
+		updatedAt:     time.Now(),
+	}
 }
 
 func (m *machineProvider) signalRelease(config *common.RunnerConfig) error {
@@ -833,26 +855,23 @@ func newMachineProvider(provider common.ExecutorProvider) *machineProvider {
 				"executor": name,
 			},
 		),
-		maxGrowthRateGauge: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: "gitlab_runner_autoscaling_max_growth_rate",
-				Help: "The configured maximum number of machines that can be in creation state at once (0 = unlimited).",
-				ConstLabels: prometheus.Labels{
-					"executor": name,
-				},
-			},
+		maxGrowthRateDesc: prometheus.NewDesc(
+			"gitlab_runner_autoscaling_max_growth_rate",
+			"The configured maximum number of machines that can be in creation state at once (0 = unlimited).",
 			[]string{"runner"},
-		),
-		idleTargetGauge: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: "gitlab_runner_autoscaling_idle_target",
-				Help: "The number of available machines the autoscaler currently aims to keep, after applying IdleScaleFactor and IdleCountMin.",
-				ConstLabels: prometheus.Labels{
-					"executor": name,
-				},
+			prometheus.Labels{
+				"executor": name,
 			},
-			[]string{"runner"},
 		),
+		idleTargetDesc: prometheus.NewDesc(
+			"gitlab_runner_autoscaling_idle_target",
+			"The number of available machines the autoscaler currently aims to keep, after applying IdleScaleFactor and IdleCountMin.",
+			[]string{"runner"},
+			prometheus.Labels{
+				"executor": name,
+			},
+		),
+		configMetrics: make(map[string]configMetricsEntry),
 		creationHistogram: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    "gitlab_runner_autoscaling_machine_creation_duration_seconds",

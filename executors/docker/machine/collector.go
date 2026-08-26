@@ -1,6 +1,8 @@
 package machine
 
 import (
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -43,8 +45,8 @@ func (m *machineProvider) Describe(ch chan<- *prometheus.Desc) {
 	m.stoppingHistogram.Describe(ch)
 	m.removalHistogram.Describe(ch)
 	m.failedCreationHistogram.Describe(ch)
-	m.maxGrowthRateGauge.Describe(ch)
-	m.idleTargetGauge.Describe(ch)
+	ch <- m.maxGrowthRateDesc
+	ch <- m.idleTargetDesc
 	ch <- m.currentStatesDesc
 }
 
@@ -80,6 +82,15 @@ func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 	m.stoppingHistogram.Collect(ch)
 	m.removalHistogram.Collect(ch)
 	m.failedCreationHistogram.Collect(ch)
-	m.maxGrowthRateGauge.Collect(ch)
-	m.idleTargetGauge.Collect(ch)
+
+	m.configMetricsLock.Lock()
+	for runner, entry := range m.configMetrics {
+		if time.Since(entry.updatedAt) > configMetricsTTL {
+			delete(m.configMetrics, runner)
+			continue
+		}
+		ch <- prometheus.MustNewConstMetric(m.maxGrowthRateDesc, prometheus.GaugeValue, entry.maxGrowthRate, runner)
+		ch <- prometheus.MustNewConstMetric(m.idleTargetDesc, prometheus.GaugeValue, entry.idleTarget, runner)
+	}
+	m.configMetricsLock.Unlock()
 }

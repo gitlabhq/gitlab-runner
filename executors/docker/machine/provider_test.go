@@ -947,11 +947,33 @@ func TestUpdateConfigMetrics(t *testing.T) {
 		IdleScaleFactor: 0.5,
 		MaxGrowthRate:   30,
 	}
-	data := &machinesData{Used: 20}
 
-	provider.updateConfigMetrics(config, data)
+	provider.updateConfigMetrics(config, &machinesData{Used: 20})
 
 	runner := config.ShortDescription()
-	assert.Equal(t, float64(30), testutil.ToFloat64(provider.maxGrowthRateGauge.WithLabelValues(runner)))
-	assert.Equal(t, float64(10), testutil.ToFloat64(provider.idleTargetGauge.WithLabelValues(runner)))
+	expected := fmt.Sprintf(`
+# HELP gitlab_runner_autoscaling_idle_target The number of available machines the autoscaler currently aims to keep, after applying IdleScaleFactor and IdleCountMin.
+# TYPE gitlab_runner_autoscaling_idle_target gauge
+gitlab_runner_autoscaling_idle_target{executor="docker+machine",runner="%[1]s"} 10
+# HELP gitlab_runner_autoscaling_max_growth_rate The configured maximum number of machines that can be in creation state at once (0 = unlimited).
+# TYPE gitlab_runner_autoscaling_max_growth_rate gauge
+gitlab_runner_autoscaling_max_growth_rate{executor="docker+machine",runner="%[1]s"} 30
+`, runner)
+	err := testutil.CollectAndCompare(provider, strings.NewReader(expected),
+		"gitlab_runner_autoscaling_max_growth_rate", "gitlab_runner_autoscaling_idle_target")
+	assert.NoError(t, err)
+}
+
+func TestUpdateConfigMetrics_StaleConfigDropped(t *testing.T) {
+	provider := newMachineProvider(nil)
+	provider.configMetrics["gone"] = configMetricsEntry{
+		maxGrowthRate: 30,
+		idleTarget:    10,
+		updatedAt:     time.Now().Add(-configMetricsTTL - time.Minute),
+	}
+
+	err := testutil.CollectAndCompare(provider, strings.NewReader(""),
+		"gitlab_runner_autoscaling_max_growth_rate", "gitlab_runner_autoscaling_idle_target")
+	assert.NoError(t, err)
+	assert.NotContains(t, provider.configMetrics, "gone")
 }
