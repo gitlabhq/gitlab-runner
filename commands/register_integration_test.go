@@ -492,7 +492,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 				"--locked=false",
 			),
 			validate: func(s *commands.RegisterCommand) {
-				assertExecutorOverridenValues(t, executor, s)
+				assertExecutorOverriddenValues(t, executor, s)
 			},
 			expectedParams: func(p common.RegisterRunnerParameters) bool {
 				return p == common.RegisterRunnerParameters{
@@ -652,7 +652,7 @@ func assertDefaultSSHServer(t *testing.T, sshCfg *common.SshConfig) {
 	assert.Equal(t, "22", sshCfg.Port)
 }
 
-func assertExecutorOverridenValues(t *testing.T, executor string, s *commands.RegisterCommand) {
+func assertExecutorOverriddenValues(t *testing.T, executor string, s *commands.RegisterCommand) {
 	assert.Equal(t, "http://gitlab.example.com/", s.URL)
 	assert.Equal(t, "test-runner-token", s.Token)
 	assert.Equal(t, executor, s.RunnerSettings.Executor)
@@ -678,14 +678,14 @@ func assertExecutorOverridenValues(t *testing.T, executor string, s *commands.Re
 		require.NotNil(t, s.RunnerSettings.Docker)
 		assert.Equal(t, "nginx:latest", s.RunnerSettings.Docker.Image)
 	case "ssh":
-		assertOverridenSSHLogin(t, s.RunnerSettings.SSH)
-		assertOverridenSSHServer(t, s.RunnerSettings.SSH)
+		assertOverriddenSSHLogin(t, s.RunnerSettings.SSH)
+		assertOverriddenSSHServer(t, s.RunnerSettings.SSH)
 	case "parallels":
-		assertOverridenSSHServer(t, s.RunnerSettings.SSH)
+		assertOverriddenSSHServer(t, s.RunnerSettings.SSH)
 		require.NotNil(t, s.RunnerSettings.Parallels)
 		assert.Equal(t, "override-"+executor+"-vm-name", s.RunnerSettings.Parallels.BaseName)
 	case "virtualbox":
-		assertOverridenSSHLogin(t, s.RunnerSettings.SSH)
+		assertOverriddenSSHLogin(t, s.RunnerSettings.SSH)
 		require.NotNil(t, s.RunnerSettings.VirtualBox)
 		assert.Equal(t, "override-"+executor+"-vm-name", s.RunnerSettings.VirtualBox.BaseName)
 	default:
@@ -693,14 +693,14 @@ func assertExecutorOverridenValues(t *testing.T, executor string, s *commands.Re
 	}
 }
 
-func assertOverridenSSHLogin(t *testing.T, sshCfg *common.SshConfig) {
+func assertOverriddenSSHLogin(t *testing.T, sshCfg *common.SshConfig) {
 	require.NotNil(t, sshCfg)
 	assert.Equal(t, "root", sshCfg.User)
 	assert.Equal(t, "admin", sshCfg.Password)
 	assert.Equal(t, "/root/.ssh/id_rsa", sshCfg.IdentityFile)
 }
 
-func assertOverridenSSHServer(t *testing.T, sshCfg *common.SshConfig) {
+func assertOverriddenSSHServer(t *testing.T, sshCfg *common.SshConfig) {
 	require.NotNil(t, sshCfg)
 	assert.Equal(t, "ssh.gitlab.example.com", sshCfg.Host)
 	assert.Equal(t, "8822", sshCfg.Port)
