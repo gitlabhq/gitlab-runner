@@ -7,7 +7,7 @@ title: Configurer le chart Helm GitLab Runner
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -376,7 +376,7 @@ Pour plus d'informations, consultez les [options prises en charge pour les certi
 
 ## Définir des labels de pod sur des clés de variables d'environnement CI {#set-pod-labels-to-ci-environment-variable-keys}
 
-Vous ne pouvez pas utiliser des variables d'environnement comme labels de pod dans le fichier `values.yaml`. Pour plus d'informations, consultez [Impossible de définir une clé de variable d'environnement comme label de pod](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173). Utilisez [la solution de contournement décrite dans le ticket](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173#note_351057890) comme solution temporaire.
+Vous ne pouvez pas utiliser des variables d'environnement comme labels de pod dans le fichier `values.yaml`. Pour plus d'informations, consultez [Impossible de définir une clé de variable d'environnement comme label de pod](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173). Utilisez [la solution de contournement décrite dans le ticket](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/work_items/173#note_351057890) comme solution temporaire.
 
 ## Passer à l'image Docker `gitlab-runner` basée sur Ubuntu {#switch-to-the-ubuntu-based-gitlab-runner-docker-image}
 

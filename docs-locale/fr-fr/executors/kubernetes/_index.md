@@ -7,7 +7,7 @@ title: Exécuteur Kubernetes
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -274,7 +274,7 @@ Utilisez les paramètres suivants dans le fichier `config.toml` pour configurer 
 
 Pour des performances optimales, définissez les limites de mémoire du conteneur helper en fonction de vos besoins en charge de travail :
 
-- **Charges de travail avec mise en cache et génération d’artefacts** :  Minimum 250 Mio
+- **Charges de travail avec mise en cache et génération d'artefacts** :  Minimum 250 Mio
 - **Charges de travail basiques sans mise en cache/artefacts** :  Peut fonctionner avec des limites plus basses (128-200 Mio)
 
 **Exemple de configuration basique :**
@@ -341,7 +341,7 @@ Cette approche permet aux développeurs d'optimiser l'utilisation des ressources
 | `dns_config`                                  | Spécifier la configuration DNS à utiliser lors de la construction du pod. [En savoir plus sur l'utilisation de la configuration DNS du pod](#configure-pod-dns-settings). |
 | `helper_container_security_context`           | Définit un contexte de sécurité de conteneur pour le conteneur helper. [En savoir plus sur le contexte de sécurité](#set-a-security-policy-for-the-pod). |
 | `helper_image`                                | (Avancé) [Remplacer l'image helper par défaut](../../configuration/advanced-configuration.md#helper-image) utilisée pour cloner les dépôts et charger les artefacts. |
-| `helper_image_flavor`                         | Définit la variante de l'image helper (`alpine`, `alpine3.21` ou `ubuntu`). La valeur par défaut est `alpine`. Utiliser `alpine` est identique à `alpine3.21`. |
+| `helper_image_flavor`                         | Définit la variante de l'image d'aide (`alpine`, `alpine3.21`, `alpine-latest` ou `ubuntu`). La valeur par défaut est `alpine`. Utiliser `alpine` est identique à `alpine-latest`. |
 | `host_aliases`                                | Liste d'alias de noms d'hôte supplémentaires ajoutés à tous les conteneurs. [En savoir plus sur l'utilisation d'alias d'hôtes supplémentaires](#add-extra-host-aliases). |
 | `image_pull_secrets`                          | Un tableau d'éléments contenant les noms de secrets Kubernetes `docker-registry` utilisés pour authentifier le tirage d'images Docker depuis des registres privés. |
 | `init_permissions_container_security_context` | Définit un contexte de sécurité de conteneur pour le conteneur init-permissions. [En savoir plus sur le contexte de sécurité](#set-a-security-policy-for-the-pod). |
@@ -1816,6 +1816,8 @@ concurrent = 1
         [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution]]
           topology_key = "failure-domain.beta.kubernetes.io/zone"
           namespaces = ["namespace_1", "namespace_2"]
+          match_label_keys = ["pod-template-hash"]
+          mismatch_label_keys = ["tenant"]
           [runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector]
             [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
               key = "security"
@@ -1859,6 +1861,9 @@ concurrent = 1
                 operator = "In"
                 values = ["S2"]
 ```
+
+> [!note]
+> `match_label_keys` et `mismatch_label_keys` nécessitent Kubernetes 1.31 ou version ultérieure. Sur les clusters alpha ou version bêta antérieurs, activez la feature gate `MatchLabelKeysInPodAffinity`. Sur les clusters qui ne prennent pas en charge la feature gate, le serveur API ignore ces champs et la contrainte ne s'applique pas.
 
 ## Réseau {#networking}
 

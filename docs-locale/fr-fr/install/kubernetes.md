@@ -8,7 +8,7 @@ title: Chart Helm GitLab Runner
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -54,7 +54,7 @@ Prérequis :
 - L'API de votre serveur GitLab est accessible depuis le cluster.
 - Kubernetes 1.4 ou version ultérieure, avec les API bêta activées.
 - L'interface CLI `kubectl` est installée localement et authentifiée pour le cluster.
-- Le [client Helm](https://helm.sh/docs/using_helm/#installing-the-helm-client) est installé localement sur votre machine.
+- Le [Helm CLI](https://helm.sh/docs/intro/install/) est installé localement sur votre machine.
 - Vous avez défini toutes les [valeurs requises dans `values.yaml`](#configure-gitlab-runner-with-the-helm-chart).
 
 Pour installer GitLab Runner à partir du chart Helm :

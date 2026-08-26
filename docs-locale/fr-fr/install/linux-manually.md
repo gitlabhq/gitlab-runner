@@ -8,7 +8,7 @@ title: Installer GitLab Runner manuellement sur GNU/Linux
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -256,7 +256,7 @@ wget https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest
 ## Ressources supplémentaires {#additional-resources}
 
 - [Documentation de l'exécuteur Docker](../executors/docker.md)
-- [Installer Docker](https://docs.docker.com/engine/install/centos/#install-docker-ce)
+- [Installer Docker](https://docs.docker.com/engine/install/centos/)
 - [Télécharger d'autres versions de GitLab Runner](bleeding-edge.md#download-any-other-tagged-release)
 - [Informations sur GitLab Runner conforme FIPS](requirements.md#fips-compliant-gitlab-runner)
 - [FAQ GitLab Runner](../faq/_index.md)

@@ -29,11 +29,26 @@ Pour préparer l'environnement à la mise à l'échelle automatique :
 1. Créez une image de VM pour la plateforme que vous utilisez. L'image doit inclure :
    - Git
    - Binaire GitLab Runner
-
-     > [!note]
-     > Pour traiter les artefacts de job et le cache, installez le binaire GitLab Runner sur la machine virtuelle et conservez l'exécutable du runner dans le chemin par défaut. L'image de VM ne nécessite pas l'exécution de GitLab Runner. Les instances lancées à l'aide de l'image de VM ne doivent pas s'enregistrer elles-mêmes en tant que runners dans GitLab.
+ 
+     Pour traiter les artefacts de job et le cache, installez le binaire GitLab Runner sur la machine virtuelle et conservez l'exécutable du runner dans le chemin par défaut.
 
    - Dépendances requises par les jobs que vous prévoyez d'exécuter
+  
+   > [!note]
+   > L'image VM ne nécessite pas l'exécution de GitLab Runner. Les instances lancées à l'aide de l'image de VM ne doivent pas s'enregistrer elles-mêmes en tant que runners dans GitLab.
+
+### Binaire GitLab Runner pour les étapes natives {#gitlab-runner-binary-for-native-steps}
+
+Sur les exécuteurs d'instance, les jobs utilisant le mot-clé `run` s'exécutent automatiquement en tant que [étapes natives](https://docs.gitlab.com/ci/steps/) et nécessitent le binaire `gitlab-runner`. Contrairement à l'[exécuteur Docker](docker.md#native-step-runner-integration), aucun feature flag n'est nécessaire. Les étapes natives ne sont pas prises en charge sur les instances Windows.
+
+Si vous envisagez d'utiliser des étapes natives :
+
+- Le binaire `gitlab-runner` doit se trouver dans le `PATH` de l'instance.
+- Conservez le binaire à la même version que le gestionnaire de runner (une incompatibilité enregistre un avertissement mais ne fait pas échouer le job).
+
+**SSH session limits :**
+
+Chaque job `native-steps` ouvre deux sessions SSH simultanées vers l'instance (une pour le serveur `step-runner` et une pour la connexion proxy). Si vous définissez `capacity_per_instance` sur une valeur supérieure à 1, définissez `MaxSessions` dans `sshd_config` sur au moins `2 * capacity_per_instance`. Sinon, les jobs peuvent échouer avec une erreur de connexion opaque lorsque la limite par défaut d'OpenSSH (10) est atteinte.
 
 ## Configurer l'exécuteur pour la mise à l'échelle automatique {#configure-the-executor-to-autoscale}
 
@@ -180,7 +195,7 @@ concurrent = 50
 
 Prérequis :
 
-- Une AMI Apple Silicon avec [nesting](https://gitlab.com/gitlab-org/fleeting/nesting) et [Tart](https://github.com/cirruslabs/tart) installés.
+- Une AMI Apple Silicon avec [nesting](https://gitlab.com/gitlab-org/fleeting/nesting) et [Tart](https://github.com/openai/tart) installés.
 - Les images de VM Tart que le runner utilise. Les images de VM sont spécifiées par le mot-clé `image` du job. Les images de VM doivent avoir au moins `git` et GitLab Runner installés.
 - Un groupe de mise à l'échelle automatique AWS. Pour la politique de mise à l'échelle, utilisez `none`, car le runner gère la mise à l'échelle. Pour plus d'informations sur la configuration d'un ASG pour MacOS, consultez [Implementing autoscaling for EC2 Mac instances](https://aws.amazon.com/blogs/compute/implementing-autoscaling-for-ec2-mac-instances/).
 - Une politique IAM avec les [autorisations correctes](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy).

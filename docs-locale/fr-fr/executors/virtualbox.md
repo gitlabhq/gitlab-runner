@@ -7,7 +7,7 @@ title: VirtualBox
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -88,7 +88,7 @@ Pour utiliser VirtualBox avec Windows, vous pouvez installer Cygwin ou PowerShel
 ### Utiliser OpenSSH natif et PowerShell {#use-native-openssh-and-powershell}
 
 - Installez [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-windows?view=powershell-7.4)
-- Installez et configurez [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=powershell#install-openssh-for-windows)
+- Installez et configurez [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=powershell&pivots=windows-server-2025#install-openssh-for-windows)
 - Installez [Git for Windows](https://git-scm.com/)
 - Configurez le [shell par défaut en tant que `pwsh`](https://learn.microsoft.com/en-us/windows-server/administration/OpenSSH/openssh-server-configuration#configuring-the-default-shell-for-openssh-in-windows). Mettez à jour l'exemple avec le chemin complet correct :
 

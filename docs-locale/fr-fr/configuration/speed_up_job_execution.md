@@ -146,13 +146,13 @@ Vous pouvez améliorer les performances de chargement et de téléchargement du 
 
 Chaque backend de cache possède sa propre section `config.toml`. Optimisez selon votre backend :
 
-- [Configuration S3](advanced-configuration.md#the-runnerscaches3-section)) :  Définissez `BucketLocation` sur la même région que vos runners. Utilisez `RoleARN` pour les archives de plus de 5 Go afin d'[activer les chargements en plusieurs parties](advanced-configuration.md#enable-multipart-transfers-with-rolearn). Utilisez l'adaptateur S3 v2 par défaut (ne définissez pas `FF_USE_LEGACY_S3_CACHE_ADAPTER=true`). Activez éventuellement `Accelerate = true` pour l'[accélération de transfert AWS S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html) lorsque les runners sont éloignés de la région du bucket. Un [point de terminaison S3 VPC](https://docs.aws.amazon.com/AmazonS3/latest/userguide/creating-s3-vpc-endpoint.html) dans la même région peut réduire la latence et les coûts.
+- [Configuration S3](advanced-configuration.md#the-runnerscaches3-section)) :  Définissez `BucketLocation` sur la même région que vos runners. Utilisez `RoleARN` pour les archives de plus de 5 Go afin d'[activer les chargements en plusieurs parties](advanced-configuration.md#enable-multipart-transfers-with-rolearn). Utilisez l'adaptateur S3 v2 par défaut (ne définissez pas `FF_USE_LEGACY_S3_CACHE_ADAPTER=true`). Activez éventuellement `Accelerate = true` pour l'[accélération de transfert AWS S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html) lorsque les runners sont éloignés de la région du bucket. Un [point de terminaison S3 VPC](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html) dans la même région peut réduire la latence et les coûts.
 - [Configuration Google Cloud Storage](advanced-configuration.md#the-runnerscachegcs-section)) : Utilisez un bucket dans la même région que vos runners ou la plus proche.
 - [Configuration Azure Blob](advanced-configuration.md#the-runnerscacheazure-section)) : Utilisez un compte de stockage dans la même région que vos runners ou la plus proche.
 
 #### Compression du cache {#cache-compression}
 
-Utilisez une compression plus rapide pour accélérer l'archivage et le téléchargement du cache. Cela crée des archives plus volumineuses. Définissez les options de compression dans votre job ou dans les [variables CI/CD](https://docs.gitlab.com/ee/ci/variables/) :
+Utilisez une compression plus rapide pour accélérer l'archivage et le téléchargement du cache. Cela crée des archives plus volumineuses. Définissez les options de compression dans votre job ou dans les [variables CI/CD](https://docs.gitlab.com/ci/variables/) :
 
 | Variable | Recommandé pour la vitesse | Description |
 |----------|------------------------|-------------|
@@ -169,13 +169,13 @@ variables:
 
 #### Délai d'expiration des requêtes de cache {#cache-request-timeout}
 
-Si les caches volumineux atteignent des délais d'expiration, augmentez la limite (en minutes) avec la variable CI/CD `CACHE_REQUEST_TIMEOUT` [CI/CD variable](https://docs.gitlab.com/ee/ci/variables/). La valeur par défaut est `10`. Ce paramètre n'accélère pas les transferts, mais empêche les échecs lors de chargements et de téléchargements lents ou volumineux.
+Si des caches volumineux atteignent des délais d'expiration, augmentez la limite (en minutes) avec la [variable CI/CD](https://docs.gitlab.com/ci/variables/) `CACHE_REQUEST_TIMEOUT`. La valeur par défaut est `10`. Ce paramètre n'accélère pas les transferts, mais empêche les échecs lors de chargements et de téléchargements lents ou volumineux.
 
 #### Taille du tampon de transfert de cache (débit) {#cache-transfer-buffer-size-throughput}
 
 Le téléchargement et le chargement du cache utilisent un seul tampon de streaming. Un tampon plus grand réduit les appels système et augmente souvent le débit, surtout si vous constatez que les transferts plafonnent autour de 20 à 30 Mo/s.
 
-Définissez `CACHE_TRANSFER_BUFFER_SIZE` (en octets) dans l'environnement du job ou dans les [variables CI/CD](https://docs.gitlab.com/ee/ci/variables/). La valeur par défaut est 4 Mio (4194304).
+Définissez `CACHE_TRANSFER_BUFFER_SIZE` (en octets) dans l'environnement du job ou dans les [variables CI/CD](https://docs.gitlab.com/ci/variables/). La valeur par défaut est 4 Mio (4194304).
 
 Exemple de configuration pour 8 Mio :
 

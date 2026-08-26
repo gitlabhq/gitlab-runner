@@ -8,7 +8,7 @@ title: Installer GitLab Runner sur Windows
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -24,7 +24,7 @@ Pour installer et exécuter GitLab Runner sur Windows, vous avez besoin :
 1. Créez un dossier quelque part sur votre système, par exemple `C:\GitLab-Runner`.
 1. Téléchargez le binaire pour [x86 64 bits](https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-windows-amd64.exe), [ARM 64 bits](https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-windows-arm64.exe) ou [x86 32 bits](https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-windows-386.exe) et placez-le dans le dossier que vous avez créé. La procédure suivante suppose que vous avez renommé le binaire en `gitlab-runner.exe` (facultatif). Vous pouvez télécharger un binaire pour chaque version disponible comme décrit dans [Bleeding Edge - télécharger n'importe quelle autre version taguée](bleeding-edge.md#download-any-other-tagged-release).
 1. Veillez à restreindre les permissions `Write` sur le répertoire et l'exécutable GitLab Runner. Si vous ne définissez pas ces permissions, les utilisateurs ordinaires peuvent remplacer l'exécutable par le leur et exécuter du code arbitraire avec des privilèges élevés.
-1. Exécutez une [invite de commandes élevée](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator) :
+1. Exécutez une [invite de commandes élevée](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#run-with-administrative-privileges) :
 1. [Enregistrez un runner](../register/_index.md).
 1. Installez GitLab Runner en tant que service et démarrez-le. Vous pouvez exécuter le service en utilisant le compte système intégré (Built-in System Account) (recommandé) ou en utilisant un compte utilisateur.
 
@@ -57,7 +57,7 @@ Voilà ! Le runner est installé, en cours d'exécution, et redémarre après ch
 
 ## Mise à niveau {#upgrade}
 
-1. Arrêtez le service (vous avez besoin d'une [invite de commandes élevée](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator) comme précédemment) :
+1. Arrêtez le service (vous avez besoin d'une [invite de commandes élevée](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#run-with-administrative-privileges) comme précédemment) :
 
    ```powershell
    cd C:\GitLab-Runner
@@ -74,7 +74,7 @@ Voilà ! Le runner est installé, en cours d'exécution, et redémarre après ch
 
 ## Désinstallation {#uninstall}
 
-Depuis une [invite de commandes élevée](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#with-administrative-privileges-run-as-administrator) :
+Depuis une [invite de commandes élevée](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.4#run-with-administrative-privileges) :
 
 ```powershell
 cd C:\GitLab-Runner
@@ -230,7 +230,7 @@ FATA[0000] Failed to start GitLab Runner: The service did not start due to a log
 
 Cette erreur peut se produire lorsque l'utilisateur utilisé pour exécuter le service ne dispose pas de la permission `SeServiceLogonRight`. Dans ce cas, vous devez ajouter cette permission pour l'utilisateur choisi, puis essayer de redémarrer le service.
 
-1. Accédez à **Panneau de configuration > Système et sécurité > Outils d’administration**.
+1. Accédez à **Panneau de configuration > Système et sécurité > Outils d'administration**.
 1. Ouvrez l'outil **Stratégie de sécurité locale**.
 1. Sélectionnez **Paramètres de sécurité > Stratégies locales > Attribution des droits aux utilisateurs** dans la liste à gauche.
 1. Ouvrez **Ouvrir une session comme un service** dans la liste à droite.

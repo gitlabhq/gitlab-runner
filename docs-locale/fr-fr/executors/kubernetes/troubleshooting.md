@@ -322,6 +322,36 @@ runners:
 > [!note]
 > À la place de `emptyDir`, vous pouvez utiliser n'importe quel autre [type de volume pris en charge](_index.md#configure-volume-types). Étant donné que tous les fichiers qui ne sont pas explicitement gérés et stockés en tant qu'artefacts de build sont généralement éphémères, `emptyDir` convient à la plupart des cas.
 
+## Erreur : `failed to share mount point: /: permission denied` {#error-failed-to-share-mount-point--permission-denied}
+
+Les outils de conteneurs rootless qui utilisent [rootlesskit](https://github.com/rootless-containers/rootlesskit) (tels que rootless BuildKit, Podman ou Docker) peuvent échouer sur un runner Kubernetes avec une erreur telle que :
+
+```plaintext
+[rootlesskit:child ] error: failed to share mount point: /: permission denied
+```
+
+Ce problème survient lorsqu'AppArmor bloque l'appel système de montage que rootlesskit requiert pour configurer l'environnement rootless.
+
+Pour résoudre ce problème, configurez le [profil AppArmor](_index.md#set-seccomp-and-apparmor-profiles) pour le conteneur de build. Dans GitLab Runner 18.11 et versions ultérieures, utilisez le paramètre `app_armor_profile` sous `build_container_security_context` à la place de l'annotation dépréciée `container.apparmor.security.beta.kubernetes.io` :
+
+```toml
+[[runners]]
+  [runners.kubernetes.build_container_security_context]
+    [runners.kubernetes.build_container_security_context.app_armor_profile]
+      type = "Unconfined"
+```
+
+> [!warning]
+> `Unconfined` désactive le confinement AppArmor pour le conteneur de build et réduit l'isolation.
+
+Lorsque votre politique de sécurité exige un confinement, utilisez plutôt un profil `Localhost` qui n'autorise que les opérations requises par rootlesskit :
+
+```toml
+[runners.kubernetes.build_container_security_context.app_armor_profile]
+  type = "Localhost"
+  localhost_profile = "my-rootlesskit-profile"
+```
+
 ## AWS EKS :  Erreur lors du nettoyage du pod : pods "runner-\*\*" introuvables ou le statut est "Failed" {#aws-eks-error-cleaning-up-pod-pods-runner--not-found-or-status-is-failed}
 
 La fonctionnalité de rééquilibrage de zones Amazon EKS équilibre les zones de disponibilité dans un groupe de mise à l'échelle automatique. Cette fonctionnalité peut arrêter un nœud dans une zone de disponibilité et en créer un dans une autre.
