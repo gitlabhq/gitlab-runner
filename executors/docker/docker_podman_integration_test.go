@@ -5,11 +5,13 @@ package docker_test
 import (
 	"bytes"
 	"context"
+	"net"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,11 +37,10 @@ import (
 // executor and the real helpers/docker.Client, not a mock, regardless of
 // whatever DOCKER_HOST is (or isn't) set to in the environment.
 //
-// This does not close 31043 -- it covers 3 of its ~4 test-matrix cells
-// (rootless Podman, root and non-root container user) plus a regression
+// This covers all four of 31043's test-matrix cells (rootful and
+// rootless Podman, root and non-root container user) plus a regression
 // test for https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39608.
-// It doesn't touch rootful Podman, services with FF_NETWORK_PER_BUILD, or
-// the doc-update checklist item from 31043.
+// It doesn't touch services with FF_NETWORK_PER_BUILD.
 
 // podmanHost finds the Docker-compatible API socket of a locally reachable
 // Podman installation, trying the two ways Podman commonly exposes it:
@@ -99,6 +100,39 @@ func podmanNativeHost(podmanPath string) (string, bool) {
 	}
 
 	return "unix://" + path, true
+}
+
+// rootfulPodmanSocket is the conventional path of a Linux system-wide
+// (rootful) Podman API socket.
+const rootfulPodmanSocket = "/run/podman/podman.sock"
+
+// podmanRootfulHost finds a reachable rootful Podman socket. Rootful only
+// exists on Linux, and reaching its root-owned socket requires running as
+// root, so this skips otherwise rather than failing. Run locally with:
+//
+//	sudo -E go test -tags integration ./executors/docker/... -run TestPodmanRootful -v
+func podmanRootfulHost(t *testing.T) string {
+	t.Helper()
+
+	if runtime.GOOS != "linux" {
+		t.Skip("rootful Podman only exists as a concept on Linux -- on macOS/Windows, " +
+			"`podman machine` always runs a rootless daemon inside its VM, skipping Podman rootful integration test")
+	}
+
+	if os.Geteuid() != 0 {
+		t.Skip("reaching the root-owned rootful Podman socket requires the test binary to run as root; " +
+			"rerun as e.g. `sudo -E go test -tags integration ./executors/docker/... -run TestPodmanRootful -v`, " +
+			"skipping Podman rootful integration test")
+	}
+
+	conn, err := net.DialTimeout("unix", rootfulPodmanSocket, time.Second)
+	if err != nil {
+		t.Skip("no reachable rootful Podman API socket found at " + rootfulPodmanSocket + "; " +
+			"start one with `sudo systemctl start podman.socket` or `sudo podman system service`, then retry")
+	}
+	conn.Close()
+
+	return "unix://" + rootfulPodmanSocket
 }
 
 func podmanRunnerConfig(host string) *common.RunnerConfig {
@@ -188,4 +222,42 @@ func TestPodmanCommandWithPlatformKey(t *testing.T) {
 	var buf bytes.Buffer
 	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 	require.NoError(t, err, buf.String())
+}
+
+func TestPodmanRootfulCommandBasicRun(t *testing.T) {
+	host := podmanRootfulHost(t)
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	require.NoError(t, err)
+	successfulBuild.Image.Name = common.TestAlpineImage
+
+	build := &common.Build{
+		Job:              successfulBuild,
+		Runner:           podmanRunnerConfig(host),
+		ExecutorProvider: docker_executor.NewProvider(),
+	}
+
+	var buf bytes.Buffer
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
+	require.NoError(t, err, buf.String())
+}
+
+func TestPodmanRootfulCommandWithNonRootUser(t *testing.T) {
+	host := podmanRootfulHost(t)
+
+	successfulBuild, err := common.GetRemoteBuildResponse("whoami")
+	require.NoError(t, err)
+
+	successfulBuild.Image.Name = common.TestAlpineImage
+	successfulBuild.Image.ExecutorOptions.Docker.User = "squid"
+
+	build := &common.Build{
+		Job:              successfulBuild,
+		Runner:           podmanRunnerConfig(host),
+		ExecutorProvider: docker_executor.NewProvider(),
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf}))
+	assert.Regexp(t, "whoami.*\n.*squid", buf.String())
 }
