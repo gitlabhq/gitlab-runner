@@ -585,6 +585,7 @@ func newConfig(serverURL string) common.RunnerConfig {
 				featureflags.UseJobRouter: true,
 			},
 		},
+		SystemID: "s_c2d22f638c25",
 	}
 }
 
@@ -593,6 +594,7 @@ type mockRouterServer struct {
 	t        *testing.T
 	disabled bool         // when true, reports the Job Router as disabled, mirroring the router when the job_router flag is off
 	failCode atomic.Int32 // when non-zero, every GetJob fails with this gRPC code, simulating a router outage
+	noJob    atomic.Bool  // when true, every GetJob succeeds with an empty payload, simulating a long-poll with no job
 	calls    atomic.Int32
 
 	lastUpdateToReturn string // when set, returned to the runner as the x-gitlab-last-update response metadata
@@ -622,6 +624,9 @@ func (s *mockRouterServer) GetJob(ctx context.Context, req *rpc.GetJobRequest) (
 		md.Append(lastUpdateMetadataKey, s.lastUpdateToReturn)
 	}
 	assert.NoError(s.t, grpc.SetHeader(ctx, md))
+	if s.noJob.Load() {
+		return &rpc.GetJobResponse{}, nil
+	}
 	return &rpc.GetJobResponse{
 		JobResponse: []byte(fakeJobResponse),
 	}, nil

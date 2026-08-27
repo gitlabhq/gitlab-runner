@@ -27,7 +27,7 @@ var (
 
 const (
 	requestIDMetadataKey = "x-request-id" // lowercase version of X-Request-ID
-	// lastUpdateMetadataKey carries the queue-version token KAS relays back from
+	// lastUpdateMetadataKey carries the queue-version token Relay relays back from
 	// Rails. Echoing it as `last_update` on the next request is what lets Workhorse
 	// coalesce Job Router long-polls. Lowercase form of X-GitLab-Last-Update.
 	lastUpdateMetadataKey = "x-gitlab-last-update"
@@ -163,7 +163,16 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 		},
 		grpc.Header(&responseMD),
 	)
-	c.metrics.observeGetJob(time.Since(getJobStart).Seconds())
+	// Observed before the response is decoded, so the duration covers the RPC only
+	// and stays comparable with the Relay-side histogram. The result label therefore
+	// classifies the RPC outcome, not the decode: a payload that later fails to
+	// unmarshal still counts as a job.
+	c.metrics.observeGetJob(
+		config.RunnerCredentials.ShortDescription(),
+		config.SystemID,
+		classifyGetJob(job, err),
+		time.Since(getJobStart).Seconds(),
+	)
 	if err != nil {
 		healthy, reason := c.handleRouterError(err, disco, config)
 		if reason != fallbackNone {
@@ -184,6 +193,20 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 	}
 
 	return parseJobResponse(job, responseMD, disco, requestCorrelationID, config)
+}
+
+// classifyGetJob maps a GetJob RPC outcome onto the result label. An empty payload
+// is the router saying "no job available", which is the common long-poll outcome
+// rather than an error.
+func classifyGetJob(job *rpc.GetJobResponse, err error) getJobResult {
+	switch {
+	case err != nil:
+		return getJobResultError
+	case len(job.JobResponse) == 0:
+		return getJobResultNoJob
+	default:
+		return getJobResultJob
+	}
 }
 
 // fallback records the fallback in metrics and serves the job request directly
