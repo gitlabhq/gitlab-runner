@@ -23,12 +23,55 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/router/rpc"
 )
 
-// histogramSampleCount returns the number of observations recorded in a Histogram.
-func histogramSampleCount(t *testing.T, h prometheus.Histogram) uint64 {
+const getJobDurationMetricName = "gitlab_runner_job_router_get_job_duration_seconds"
+
+// gatherMetric returns every series a collector emits for the named metric.
+// Going through a registry exercises the collector's Describe/Collect wiring
+// instead of reading the metric vectors directly.
+func gatherMetric(t *testing.T, c prometheus.Collector, metricName string) []*dto.Metric {
 	t.Helper()
-	var m dto.Metric
-	require.NoError(t, h.(prometheus.Metric).Write(&m))
-	return m.GetHistogram().GetSampleCount()
+
+	reg := prometheus.NewPedanticRegistry()
+	require.NoError(t, reg.Register(c))
+	families, err := reg.Gather()
+	require.NoError(t, err)
+
+	for _, mf := range families {
+		if mf.GetName() == metricName {
+			return mf.GetMetric()
+		}
+	}
+	return nil
+}
+
+// labelsOf returns a series' labels as a map.
+func labelsOf(m *dto.Metric) map[string]string {
+	labels := map[string]string{}
+	for _, lp := range m.GetLabel() {
+		labels[lp.GetName()] = lp.GetValue()
+	}
+	return labels
+}
+
+// getJobSeries returns the GetJob observation counts keyed by
+// "<runner>/<system_id>/<result>", so tests assert on the label values and not
+// just on the number of observations.
+func getJobSeries(t *testing.T, rc *Client) map[string]uint64 {
+	t.Helper()
+
+	series := map[string]uint64{}
+	for _, m := range gatherMetric(t, rc, getJobDurationMetricName) {
+		labels := labelsOf(m)
+		require.Len(t, labels, 3, "unexpected labels on %s: %v", getJobDurationMetricName, labels)
+		key := labels["runner"] + "/" + labels["system_id"] + "/" + labels["result"]
+		series[key] = m.GetHistogram().GetSampleCount()
+	}
+	return series
+}
+
+// getJobKey is the getJobSeries key a config emits for the given result.
+func getJobKey(config common.RunnerConfig, result getJobResult) string {
+	return config.RunnerCredentials.ShortDescription() + "/" + config.SystemID + "/" + string(result)
 }
 
 func fallbackCount(rc *Client, reason fallbackReason) float64 {
@@ -65,12 +108,13 @@ func TestMetrics_GetJobDurationObserved(t *testing.T) {
 	config := newConfig(gitLabURL)
 	sessionInfo := &common.SessionInfo{}
 
-	assert.Zero(t, histogramSampleCount(t, rc.metrics.getJobDuration))
+	assert.Empty(t, getJobSeries(t, rc))
 
-	// Each request that reaches the router records one GetJob observation.
+	// Each request that reaches the router records one GetJob observation,
+	// attributed to the runner that issued it.
 	rc.RequestJob(t.Context(), config, sessionInfo)
 	rc.RequestJob(t.Context(), config, sessionInfo)
-	assert.EqualValues(t, 2, histogramSampleCount(t, rc.metrics.getJobDuration))
+	assert.Equal(t, map[string]uint64{getJobKey(config, getJobResultJob): 2}, getJobSeries(t, rc))
 }
 
 func TestMetrics_GetJobDurationObservedOnFailure(t *testing.T) {
@@ -80,7 +124,57 @@ func TestMetrics_GetJobDurationObservedOnFailure(t *testing.T) {
 
 	// The router is reached but fails; the duration is still observed.
 	rc.RequestJob(t.Context(), config, sessionInfo)
-	assert.EqualValues(t, 1, histogramSampleCount(t, rc.metrics.getJobDuration))
+	assert.Equal(t, map[string]uint64{getJobKey(config, getJobResultError): 1}, getJobSeries(t, rc))
+}
+
+func TestMetrics_GetJobDurationPartitionedByRunner(t *testing.T) {
+	rc, gitLabURL := setupWithRouter(t, false)
+	sessionInfo := &common.SessionInfo{}
+
+	first := newConfig(gitLabURL)
+	second := newConfig(gitLabURL)
+	second.Token = "glrt-456456456"
+	second.SystemID = "s_second_system_id"
+
+	rc.RequestJob(t.Context(), first, sessionInfo)
+	rc.RequestJob(t.Context(), second, sessionInfo)
+	rc.RequestJob(t.Context(), second, sessionInfo)
+
+	// Each configured runner entry gets its own series, so latency can be broken
+	// down per shard instead of collapsing into one series per runner process.
+	assert.Equal(t, map[string]uint64{
+		getJobKey(first, getJobResultJob):  1,
+		getJobKey(second, getJobResultJob): 2,
+	}, getJobSeries(t, rc))
+}
+
+// TestMetrics_GetJobDurationPartitionedByResult covers the label that keeps the
+// histogram interpretable: a no-job long-poll waits out GitLab's CI polling window
+// and would otherwise dominate the latency tail of every other outcome.
+func TestMetrics_GetJobDurationPartitionedByResult(t *testing.T) {
+	rc, config, routerSrv, railsCalls := setupRouterWithRailsFallback(t)
+	sessionInfo := &common.SessionInfo{}
+
+	// A poll that returns a job.
+	rc.RequestJob(t.Context(), config, sessionInfo)
+
+	// Polls that return no job.
+	routerSrv.noJob.Store(true)
+	rc.RequestJob(t.Context(), config, sessionInfo)
+	rc.RequestJob(t.Context(), config, sessionInfo)
+
+	// A poll whose RPC fails. One failure stays under the breaker threshold, so the
+	// request is not retried against Rails and the observation is not duplicated.
+	routerSrv.noJob.Store(false)
+	routerSrv.failCode.Store(int32(codes.Unavailable))
+	rc.RequestJob(t.Context(), config, sessionInfo)
+
+	assert.Equal(t, map[string]uint64{
+		getJobKey(config, getJobResultJob):   1,
+		getJobKey(config, getJobResultNoJob): 2,
+		getJobKey(config, getJobResultError): 1,
+	}, getJobSeries(t, rc))
+	assert.Zero(t, railsCalls.Load(), "no fallback expected")
 }
 
 func TestMetrics_Fallback_BreakerTrippedAndOpen(t *testing.T) {

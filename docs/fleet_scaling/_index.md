@@ -238,7 +238,7 @@ To view those metrics on a runner, execute the command as noted in [available me
 | `gitlab_runner_job_router_circuit_breaker_trips_total`         | The number of times the Job Router circuit breaker has tripped open. |
 | `gitlab_runner_job_router_discovery_cache_events_total`        | The number of Job Router discovery cache lookups, partitioned by `result` (`hit` or `miss`). |
 | `gitlab_runner_job_router_fallbacks_total`                     | The number of job requests that fell back from the Job Router to direct GitLab polling, partitioned by `reason` (`no_discovery`, `breaker_open`, `dial_failed`, `breaker_tripped`, or `router_disabled`). |
-| `gitlab_runner_job_router_get_job_duration_seconds`            | Histogram of runner-side Job Router `GetJob` request durations. |
+| `gitlab_runner_job_router_get_job_duration_seconds`            | Histogram of runner-side Job Router `GetJob` request durations, partitioned by `runner`, `system_id`, and `result` (`job`, `no_job`, or `error`). |
 | `gitlab_runner_limit`                                          | The current value of the limit setting. |
 | `gitlab_runner_request_concurrency`                            | The current number of concurrent requests for a new job. |
 | `gitlab_runner_request_concurrency_exceeded_total`             | Count of excess requests above the configured `request_concurrency` limit. |

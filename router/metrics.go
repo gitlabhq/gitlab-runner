@@ -26,13 +26,25 @@ const (
 	fallbackRouterDisabled fallbackReason = "router_disabled" // router answered Unimplemented (deliberately disabled)
 )
 
+// getJobResult records the outcome of a router GetJob RPC. It is the value of the
+// "result" label on the get_job_duration_seconds histogram, and mirrors the values
+// Relay records on its own job_router_get_job_duration_seconds so the runner-side and
+// server-side histograms can be broken down the same way.
+type getJobResult string
+
+const (
+	getJobResultJob   getJobResult = "job"    // the router returned a job
+	getJobResultNoJob getJobResult = "no_job" // the router returned no job, the usual long-poll outcome
+	getJobResultError getJobResult = "error"  // the GetJob RPC failed
+)
+
 // clientMetrics holds the Prometheus metrics for the router Client's own
 // behaviour (the circuit breaker owns its metrics separately). It implements
 // prometheus.Collector so the Client can delegate to it.
 type clientMetrics struct {
 	discoveryCacheEvents *prometheus.CounterVec
 	fallbacks            *prometheus.CounterVec
-	getJobDuration       prometheus.Histogram
+	getJobDuration       *prometheus.HistogramVec
 }
 
 func newClientMetrics() *clientMetrics {
@@ -49,18 +61,24 @@ func newClientMetrics() *clientMetrics {
 			Name:      "fallbacks_total",
 			Help:      "Total number of job requests that fell back from the job router to direct GitLab polling, partitioned by reason.",
 		}, []string{"reason"}),
-		getJobDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
+		// runner/system_id attribute the latency to the runner entry that polled, and
+		// result matches the Relay-side histogram so the two break down the same way.
+		// Without result, no-job long-polls - which wait out GitLab's CI polling window
+		// - swamp the latency tail of every other outcome. Cardinality stays bounded by
+		// the [[runners]] entries on a host: 39 series each, being 3 results x
+		// (11 buckets + _sum + _count).
+		getJobDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: metricsNamespace,
 			Subsystem: metricsSubsystem,
 			Name:      "get_job_duration_seconds",
-			Help:      "Latency histogram of runner-side job router GetJob requests, regardless of outcome.",
+			Help:      "Latency histogram of runner-side job router GetJob requests, partitioned by runner, system_id and result (job, no_job or error).",
 			// Covers the latency range of a router GetJob request, mirroring the
 			// buckets used for direct GitLab API requests (see the network package)
 			// so the two are comparable when diagnosing degradation. The range
 			// extends past the gRPC deadline so tail latencies are not all collapsed
 			// into +Inf.
 			Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60},
-		}),
+		}, []string{"runner", "system_id", "result"}),
 	}
 }
 
@@ -74,9 +92,10 @@ func (m *clientMetrics) recordFallback(reason fallbackReason) {
 	m.fallbacks.WithLabelValues(string(reason)).Inc()
 }
 
-// observeGetJob records the duration of a router GetJob request.
-func (m *clientMetrics) observeGetJob(seconds float64) {
-	m.getJobDuration.Observe(seconds)
+// observeGetJob records the duration and outcome of a router GetJob request for
+// the runner that issued it.
+func (m *clientMetrics) observeGetJob(runnerID, systemID string, result getJobResult, seconds float64) {
+	m.getJobDuration.WithLabelValues(runnerID, systemID, string(result)).Observe(seconds)
 }
 
 // Describe implements prometheus.Collector.
