@@ -202,7 +202,7 @@ func (p Package) Prepare() error {
 // When on the `main` branch it's allowed to be only ever set to `1`. Only in stable branches
 // and tags it is allowed to be changed.
 // This restriction exists to prevent stable branches to be created from `main` when the iteration
-// is not set to `1`. Preventing us from releasing a package with an iteration with no preceeding packages.
+// is not set to `1`. Preventing us from releasing a package with an iteration with no preceding packages.
 func (Package) VerifyIterationVariable() error {
 	return packages.VerifyIterationVariable()
 }
