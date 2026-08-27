@@ -7,8 +7,8 @@ title: GitLab 러너 문제 해결
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -204,7 +204,7 @@ NGINX를 최신 버전으로 업그레이드합니다. 자세한 내용은 이 �
 
 아티팩트 업로드를 활성화하려면 업로드 경로의 모든 구성 요소가 빌드 환경에서 GitLab 인스턴스로의 POST 요청을 허용하는지 확인합니다.
 
-기본적으로 아티팩트 업로더는 업로드 URL과 업로드 응답의 HTTP 상태 코드를 기록합니다. 이 정보는 어떤 시스템이 오류를 야기했는지 또는 아티팩트 업로드를 차단했는지 이해하기에 충분하지 않습니다. 아티팩트 업로드 문제를 해결하려면 [디버그 로깅 활성화](https://docs.gitlab.com/ci/variables/#enable-debug-logging)를 사용하여 업로드 시도를 통해 업로드 응답의 헤더와 본문을 확인합니다.
+기본적으로 아티팩트 업로더는 업로드 URL과 업로드 응답의 HTTP 상태 코드를 기록합니다. 이 정보는 어떤 시스템이 오류를 야기했는지 또는 아티팩트 업로드를 차단했는지 이해하기에 충분하지 않습니다. 아티팩트 업로드 문제를 해결하려면 업로드 시도에 대해 [디버그 로깅 활성화](https://docs.gitlab.com/ci/variables/variables_troubleshooting/#enable-debug-logging)를 통해 업로드 응답의 헤더와 본문을 확인합니다.
 
 > [!note]
 > 아티팩트 업로드 디버그 로깅의 응답 본문 길이는 512바이트로 제한됩니다. 민감한 데이터가 로그에 노출될 수 있으므로 디버깅 목적으로만 로깅을 활성화합니다.

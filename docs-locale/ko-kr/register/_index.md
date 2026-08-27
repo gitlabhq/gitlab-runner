@@ -7,8 +7,8 @@ title: 러너 등록
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -29,16 +29,10 @@ title: 러너 등록
 
 ## 러너 인증 토큰으로 등록 {#register-with-a-runner-authentication-token}
 
-{{< history >}}
-
-- [GitLab 15.10에서 도입됨](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613).
-
-{{< /history >}}
-
 전제 조건:
 
 - 러너 인증 토큰을 획득합니다. 다음 중 하나를 수행할 수 있습니다:
-  - 인스턴스, 그룹 또는 프로젝트 러너를 생성합니다. 지침은 [러너 관리](https://docs.gitlab.com/ci/runners/runners_scope)를 참조하세요.
+  - 인스턴스, 그룹 또는 프로젝트 러너를 생성합니다. 자세한 내용은 [러너 관리](https://docs.gitlab.com/ci/runners/runners_scope/)를 참조하세요.
   - `config.toml` 파일에서 러너 인증 토큰을 찾습니다. 러너 인증 토큰에는 `glrt-` 접두사가 있습니다.
 
 러너를 등록한 후 구성이 `config.toml`에 저장됩니다.
@@ -145,6 +139,7 @@ sudo gitlab-runner register \
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -159,6 +154,7 @@ gitlab-runner register \
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -173,6 +169,7 @@ gitlab-runner register \
   --token "$RUNNER_TOKEN" \
   --executor "docker-windows" \
   --docker-image mcr.microsoft.com/windows/servercore:1809_amd64 \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -187,6 +184,7 @@ sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -201,6 +199,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -211,12 +210,12 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 ## 러너 등록 토큰으로 등록(더 이상 사용되지 않음) {#register-with-a-runner-registration-token-deprecated}
 
 > [!warning]
-> 러너 등록 토큰 및 여러 러너 구성 인수는 [더 이상 사용되지 않습니다](https://gitlab.com/gitlab-org/gitlab/-/issues/380872). GitLab 20.0에서 제거하도록 예정되어 있습니다. 대신 러너 인증 토큰을 사용합니다. 자세한 내용은 [새로운 러너 등록 워크플로우로 마이그레이션](https://docs.gitlab.com/ci/runners/new_creation_workflow/)을 참조하세요.
+> 러너 등록 토큰과 여러 러너 구성 인수가 [더 이상 지원되지 않습니다](https://gitlab.com/gitlab-org/gitlab/-/work_items/380872). GitLab 20.0에서 제거하도록 예정되어 있습니다. 대신 러너 인증 토큰을 사용합니다. 자세한 내용은 [새로운 러너 등록 워크플로우로 마이그레이션](https://docs.gitlab.com/ci/runners/new_creation_workflow/)을 참조하세요.
 
 전제 조건:
 
 - 러너 등록 토큰은 관리자 영역에서 [활성화](https://docs.gitlab.com/administration/settings/continuous_integration/#control-runner-registration)되어야 합니다.
-- 원하는 인스턴스, 그룹 또는 프로젝트에서 러너 등록 토큰을 획득합니다. 지침은 [러너 관리](https://docs.gitlab.com/ci/runners/runners_scope)를 참조하세요.
+- 원하는 인스턴스, 그룹 또는 프로젝트에서 러너 등록 토큰을 획득합니다. 자세한 내용은 [러너 관리](https://docs.gitlab.com/ci/runners/runners_scope/)를 참조하세요.
 
 러너를 등록한 후 구성이 `config.toml`에 저장됩니다.
 
@@ -313,6 +312,7 @@ sudo gitlab-runner register \
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -332,6 +332,7 @@ gitlab-runner register \
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -351,6 +352,7 @@ gitlab-runner register \
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker-windows" \
   --docker-image mcr.microsoft.com/windows/servercore:1809_amd64 \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -370,6 +372,7 @@ sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -389,6 +392,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -414,7 +418,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 {{< /history >}}
 
-러너 등록 토큰 및 여러 러너 구성 인수는 [더 이상 사용되지 않습니다](https://gitlab.com/gitlab-org/gitlab/-/issues/379743). GitLab 20.0에서 제거하도록 예정되어 있습니다. 자동화 워크플로우의 최소 중단을 보장하기 위해 `legacy-compatible registration process`은 러너 인증 토큰이 레거시 매개 변수 `--registration-token`에 지정된 경우 트리거됩니다.
+러너 등록 토큰과 여러 러너 구성 인수가 [더 이상 지원되지 않습니다](https://gitlab.com/gitlab-org/gitlab/-/work_items/379743). GitLab 20.0에서 제거하도록 예정되어 있습니다. 자동화 워크플로우의 최소 중단을 보장하기 위해 `legacy-compatible registration process`은 러너 인증 토큰이 레거시 매개 변수 `--registration-token`에 지정된 경우 트리거됩니다.
 
 레거시 호환 등록 프로세스는 다음 명령줄 매개 변수를 무시합니다. 이 매개 변수는 UI 또는 API를 사용하여 러너를 생성할 때만 구성할 수 있습니다.
 
@@ -435,9 +439,9 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 - 템플릿 파일 위치의 볼륨을 GitLab Runner 컨테이너에 마운트해야 합니다.
 - 러너 인증 또는 등록 토큰:
   - 러너 인증 토큰을 획득합니다(권장). 다음 중 하나를 수행할 수 있습니다:
-    - 원하는 인스턴스, 그룹 또는 프로젝트에서 러너 인증 토큰을 획득합니다. 지침은 [러너 관리](https://docs.gitlab.com/ci/runners/runners_scope)를 참조하세요.
+    - 원하는 인스턴스, 그룹 또는 프로젝트에서 러너 인증 토큰을 획득합니다. 자세한 내용은 [러너 관리](https://docs.gitlab.com/ci/runners/runners_scope/)를 참조하세요.
     - `config.toml` 파일에서 러너 인증 토큰을 찾습니다. 러너 인증 토큰에는 `glrt-` 접두사가 있습니다.
-  - 인스턴스, 그룹 또는 프로젝트에 대해 러너 등록 토큰(더 이상 사용되지 않음)을 획득합니다. 지침은 [러너 관리](https://docs.gitlab.com/ci/runners/runners_scope)를 참조하세요.
+  - 인스턴스, 그룹 또는 프로젝트에 대해 러너 등록 토큰(더 이상 사용되지 않음)을 획득합니다. 자세한 내용은 [러너 관리](https://docs.gitlab.com/ci/runners/runners_scope/)를 참조하세요.
 
 구성 템플릿은 다음과 같은 이유로 `register` 명령의 일부 인수를 지원하지 않는 자동화된 환경에 사용할 수 있습니다:
 

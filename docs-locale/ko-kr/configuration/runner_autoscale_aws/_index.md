@@ -7,8 +7,8 @@ title: AWS EC2에서 러너 Docker Machine 자동 크기 조정 구성
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -42,7 +42,7 @@ EC2를 확장하고 캐시를 업데이트(S3를 통해)할 수 있는 권한이
 
 작업을 실행하기 위해 새 EC2 인스턴스를 프로비저닝하려면 이 인스턴스 프로필을 러너 관리자 EC2 인스턴스에 연결합니다. 러너 머신이 인스턴스 프로필을 사용하는 경우 러너 관리자의 인스턴스 프로필에 `iam:PassRole` 작업을 포함합니다.
 
-예시:
+예제:
 
 ```json
 {
@@ -97,7 +97,7 @@ GitLab 러너를 구성하기 전에 먼저 등록하여 GitLab 인스턴스와 
 
 `check_interval` 옵션은 러너가 새 작업에 대해 GitLab를 확인하는 빈도를 정의합니다(초 단위).
 
-예시:
+예제:
 
 ```toml
 concurrent = 10
@@ -112,7 +112,7 @@ check_interval = 0
 
 `limit`은 이 러너가 생성할 머신의 최대 개수(실행 중 및 유휴)를 설정합니다. 자세한 내용은 [`limit`, `concurrent` 및 `IdleCount` 간의 관계](../autoscale.md#how-concurrent-limit-and-idlecount-generate-the-upper-limit-of-running-machines)를 확인하세요.
 
-예시:
+예제:
 
 ```toml
 [[runners]]
@@ -131,7 +131,7 @@ check_interval = 0
 
 다음으로 `disable_cache = true`을 사용하여 Docker 실행기의 내부 캐시 메커니즘을 비활성화합니다. 다음 섹션에서 설명하는 분산 캐시 모드를 사용할 것이기 때문입니다.
 
-예시:
+예제:
 
 ```toml
   [runners.docker]
@@ -237,7 +237,7 @@ Docker Machine 드라이버는 `amazonec2`로 설정되고 머신 이름은 표�
 참고:
 
 - `MachineOptions` 아래에서 [AWS Docker Machine 드라이버](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#options)가 지원하는 모든 항목을 추가할 수 있습니다. 인프라 설정이 다양한 옵션을 적용할 수 있으므로 Docker 설명서를 읽어보시기를 권장합니다.
-- `amazonec2-ami`을 설정하여 다른 AMI ID를 선택하지 않으면 자식 인스턴스는 기본적으로 Ubuntu 16.04를 사용합니다. [Docker Machine에서 지원하는 기본 운영 체제](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/os-base)만 설정합니다.
+- `amazonec2-ami`을 설정하여 다른 AMI ID를 선택하지 않으면 자식 인스턴스는 기본적으로 Ubuntu 16.04를 사용합니다. Docker Machine에서 지원하는 기본 운영 체제만 설정합니다.
 - 머신 옵션 중 하나로 `amazonec2-private-address-only=true`을 지정하면 EC2 인스턴스에 공용 IP가 할당되지 않습니다. VPC가 인터넷 게이트웨이(IGW)로 올바르게 구성되고 라우팅이 정상인 경우 괜찮지만, 더 복잡한 구성이 있는 경우 고려할 사항입니다. [VPC 연결에 대한 Docker 설명서](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#vpc-connectivity)에서 자세히 알아보세요.
 
 `[runners.machine]` 아래의 [기타 옵션](../advanced-configuration.md#the-runnersmachine-section)도 사용할 수 있습니다.

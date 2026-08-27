@@ -7,8 +7,8 @@ title: OpenShift에서 GitLab 러너 구성
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -310,7 +310,7 @@ OpenShift 클러스터의 대부분 컨테이너 파일 시스템은 다음을 �
   maximumTimeout: 0
 ```
 
-자세한 내용은 [이슈 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/472#note_1483346437)를 참조하세요.
+자세한 내용은 [이슈 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/work_items/472#note_1483346437)를 참조하세요.
 
 #### 보안 컨텍스트 제약 주의 {#watch-out-for-security-context-constraints}
 

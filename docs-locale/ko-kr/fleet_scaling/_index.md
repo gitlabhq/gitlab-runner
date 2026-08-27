@@ -45,7 +45,7 @@ title: 러너 플릿을 계획하고 운영하기
 - 자동 크기 조정이 아닌 러너의 경우 `limit`는 호스트 시스템의 러너 용량을 정의합니다.
 - 자동 크기 조정 러너의 경우 `limit`는 총 실행할 러너의 수입니다.
 
-`concurrency`, `limit`, `request_concurrency`이 작업 흐름을 제어하는 방법에 대한 자세한 정보는 [GitLab Runner 동시성 튜닝에 대한 KB 문서](https://support.gitlab.com/hc/en-us/articles/21324350882076-GitLab-Runner-Concurrency-Tuning-Understanding-request-concurrency)를 참조하세요.
+`concurrency`, `limit`, 및 `request_concurrency`가 작업 플로우를 제어하는 방법에 대한 자세한 내용은 [GitLab Runner 동시성 조정에 대한 KB 문서](https://support.gitlab.com/hc/en-us/articles/21324350882076-GitLab-Runner-Concurrency-Tuning-Understanding-request-concurrency)를 참조하세요.
 
 ### 기본 구성: 한 개의 러너 관리자, 한 개의 러너 {#basic-configuration-one-runner-manager-one-runner}
 
@@ -187,6 +187,11 @@ CI/CD 워크로드를 실행하기 시작하고 시간에 따라 성능을 분�
 | `gitlab_runner_job_stage_duration_seconds`                     | 각 스테이지별 작업 기간을 나타내는 히스토그램입니다. 이 메트릭은 **high cardinality metric**입니다. 자세한 정보는 [높은 카디널리티 메트릭 섹션](#high-cardinality-metrics)을 참조하세요. |
 | `gitlab_runner_jobs_total`                                     | 이것은 실행된 총 작업을 표시합니다. |
 | `gitlab_runner_job_execution_mode_total`                       | 이것은 모드(`steps` 또는 `traditional`) 및 실행기별로 실행된 총 작업을 표시합니다. |
+| `gitlab_runner_job_router_circuit_breaker_state`               | Job Router 회로 차단기 상태(`0` = 닫음, `1` = 열림, `2` = 반개)입니다. |
+| `gitlab_runner_job_router_circuit_breaker_trips_total`         | Job Router 회로 차단기가 열린 횟수입니다. |
+| `gitlab_runner_job_router_discovery_cache_events_total`        | Job Router 검색 캐시 조회 수이며, `result`(`hit` 또는 `miss`)로 분할됩니다. |
+| `gitlab_runner_job_router_fallbacks_total`                     | Job Router에서 GitLab 직접 폴링으로 폴백된 작업 요청 수이며, `reason`(`no_discovery`, `breaker_open`, `dial_failed`, `breaker_tripped`, 또는 `router_disabled`)로 분할됩니다. |
+| `gitlab_runner_job_router_get_job_duration_seconds`            | 러너 측 Job Router `GetJob` 요청 지속 시간의 히스토그램입니다. |
 | `gitlab_runner_limit`                                          | 제한 설정의 현재 값입니다. |
 | `gitlab_runner_request_concurrency`                            | 새 작업에 대한 현재 동시 요청 수입니다. |
 | `gitlab_runner_request_concurrency_exceeded_total`             | 구성된 `request_concurrency` 제한 이상의 초과 요청 수입니다. |
@@ -201,7 +206,7 @@ CI/CD 워크로드를 실행하기 시작하고 시간에 따라 성능을 분�
 
 ### Grafana 대시보드 구성 팁 {#grafana-dashboard-configuration-tips}
 
-이 [공개 저장소](https://gitlab.com/gitlab-com/runbooks/-/tree/master/dashboards/ci-runners)에서 GitLab.com의 러너 플릿을 운영하는 데 사용하는 Grafana 대시보드의 소스 코드를 찾을 수 있습니다.
+이 [공개 리포지토리](https://gitlab.com/gitlab-com/runbooks/-/tree/master/dashboards/ci-runners)에서 GitLab.com의 러너 플릿을 운영하는 데 사용하는 Grafana 대시보드의 소스 코드를 찾을 수 있습니다.
 
 GitLab.com에 대해 많은 메트릭을 추적합니다. 클라우드 기반 CI/CD의 대규모 제공자이므로 문제를 디버깅할 수 있도록 시스템의 다양한 보기가 필요합니다. 대부분의 경우 자체 관리 러너 플릿은 GitLab.com으로 추적하는 메트릭의 양을 추적할 필요가 없습니다.
 
@@ -209,7 +214,7 @@ GitLab.com에 대해 많은 메트릭을 추적합니다. 클라우드 기반 CI
 
 Grafana는 JSON 형식만 허용하므로 `jsonnet` 파일을 JSON으로 변환해야 합니다.
 
-[런북 저장소](https://gitlab.com/gitlab-com/runbooks/-/tree/master/dashboards)는 GitLab 인프라 전용 자동화된 스크립트를 포함합니다. 사용자 환경에 대해 이 대시보드를 생성하려면:
+[런북 리포지토리](https://gitlab.com/gitlab-com/runbooks/-/tree/master/dashboards)는 GitLab 인프라 전용 자동화된 스크립트를 포함합니다. 사용자 환경에 대해 이 대시보드를 생성하려면:
 
 1. `jsonnet` 구성 언어를 사용하여 대시보드를 생성합니다(`.dashboard.jsonnet` 파일).
 1. `jsonnet` 파일을 `jsonnet` 라이브러리로 처리하여 JSON 출력을 생성합니다.
@@ -255,7 +260,7 @@ Grafana는 JSON 형식만 허용하므로 `jsonnet` 파일을 JSON으로 변환�
 - 환경:  예: `production`, `staging`, `development`.
 - 스테이지:  예: `main`, `canary`.
 - 유형:  예: `ci`, `verify`. 사용 사례에 따라 다릅니다.
-- 샤드:  선택사항입니다. 분산 러너 배포의 경우입니다.
+- 샤드:  선택사항. 분산 러너 배포의 경우입니다.
 
 이 대시보드를 구현하는 조직은 이 변수를 자신의 환경 구조와 일치하도록 조정해야 합니다. 가져온 후 Grafana 대시보드 설정에서 이 변수를 업데이트하세요.
 
@@ -275,7 +280,7 @@ Grafana는 JSON 형식만 허용하므로 `jsonnet` 파일을 JSON으로 변환�
 환경의 대시보드를 수정하려면:
 
 1. `.dashboard.jsonnet` 파일을 `dashboards/ci-runners/` 디렉터리에서 편집합니다.
-1. [Grafonnet 라이브러리](https://grafana.github.io/grafonnet-lib/) 구문을 사용합니다(`jsonnet`에 기반).
+1. [Grafonnet library](https://grafana.github.io/grafonnet/index.html) 구문을 사용합니다(`jsonnet`을 기반으로).
 1. 플레이그라운드를 사용하여 변경 사항을 테스트합니다:
 
    ```shell

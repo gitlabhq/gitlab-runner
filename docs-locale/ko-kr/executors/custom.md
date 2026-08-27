@@ -7,8 +7,8 @@ title: 사용자 정의 실행기
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -90,7 +90,7 @@ CI/CD 환경 변수와 사전 정의 변수는 모두 시스템 환경 변수와
 
 [서비스](https://docs.gitlab.com/ci/services/)는 JSON 배열로 `CUSTOM_ENV_CI_JOB_SERVICES`로 노출됩니다.
 
-예:
+예제:
 
 ```yaml
 custom:
@@ -154,7 +154,7 @@ EOS
 
 JSON 문자열 내의 추가 키는 무시됩니다. 유효한 JSON 문자열이 아닌 경우 스테이지가 실패하고 2회 더 재시도합니다.
 
-| 매개 변수              | 유형    | 필수 | 허용되는 빈 값  | 설명 |
+| 매개변수              | 유형    | 필수 | 허용되는 빈 값  | 설명 |
 |------------------------|---------|----------|----------------|-------------|
 | `builds_dir`           | 문자열  | ✗        | ✗              | 작업의 작업 디렉토리가 생성되는 기본 디렉토리입니다. |
 | `cache_dir`            | 문자열  | ✗        | ✗              | 로컬 캐시가 저장되는 기본 디렉토리입니다. |
@@ -343,7 +343,7 @@ GitLab 러너는 다음 조건 중 하나에서 실행 파일을 정상적으로
 - 작업이 [초과됩니다](https://docs.gitlab.com/ci/pipelines/settings/#set-a-limit-for-how-long-jobs-can-run).
 - 작업이 취소됩니다.
 
-타임아웃에 도달하면 `SIGTERM`가 실행 파일로 전송되고 [`exec_terminate_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)의 카운트다운이 시작됩니다. 실행 파일은 이 신호를 수신하여 리소스를 정리하는지 확인해야 합니다. `exec_terminate_timeout`가 지나고 프로세스가 여전히 실행 중이면 `SIGKILL`가 프로세스를 강제 종료하도록 전송되고 [`exec_force_kill_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)이 시작됩니다. `exec_force_kill_timeout`이 완료된 후 프로세스가 여전히 실행 중이면 GitLab 러너는 프로세스를 중단하고 더 이상 중지하거나 강제 종료하려고 시도하지 않습니다. 이 두 타임아웃이 `config_exec`, `prepare_exec` 또는 `run_exec` 중에 도달하면 빌드가 실패로 표시됩니다.
+타임아웃에 도달하면 `SIGTERM`이 실행 파일로 전송되고 [`graceful_kill_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)의 카운트다운이 시작됩니다. 실행 파일은 이 신호를 수신하여 리소스를 정리하는지 확인해야 합니다. `graceful_kill_timeout`가 경과했는데도 프로세스가 계속 실행 중이면 `SIGKILL`이 전송되어 프로세스를 종료하고 [`force_kill_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section)가 시작됩니다. `force_kill_timeout`이 완료된 후에도 프로세스가 계속 실행 중이면 러너는 프로세스를 중단하고 더 이상 중지하거나 종료하려고 시도하지 않습니다. 이 두 타임아웃이 `config_exec`, `prepare_exec` 또는 `run_exec` 중에 도달하면 빌드가 실패로 표시됩니다.
 
 드라이버에서 생성된 모든 자식 프로세스도 UNIX 기반 시스템에서 위에 설명된 정상적인 종료 프로세스를 수신합니다. 이는 주 프로세스를 [프로세스 그룹](https://man7.org/linux/man-pages/man2/setpgid.2.html)으로 설정하여 모든 자식 프로세스가 속해 있도록 함으로써 달성됩니다.
 

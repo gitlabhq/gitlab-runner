@@ -7,8 +7,8 @@ title: Docker Machine을 사용하여 자동 크기 조정을 위해 GitLab 러�
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -92,10 +92,10 @@ Docker는 [Docker Machine을 더 이상 사용하지 않습니다](https://gitla
 
 ### 설치 {#install}
 
-1. [적절한 `docker-machine` 바이너리](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases)를 다운로드합니다. 바이너리를 `PATH`에 액세스 가능한 위치에 복사하고 실행 가능하게 만듭니다. 예를 들어 `v0.16.2-gitlab.46`를 다운로드 및 설치하려면:
+1. [적절한 `docker-machine` 바이너리](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases)를 다운로드합니다. 바이너리를 `PATH`에 액세스 가능한 위치에 복사하고 실행 가능하게 만듭니다. 예를 들어 `v0.16.2-gitlab.48`을(를) 다운로드하고 설치하려면:
 
    ```shell
-   curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.46/docker-machine-Linux-x86_64"
+   curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.48/docker-machine-Linux-x86_64"
    cp docker-machine-Linux-x86_64 /usr/local/bin/docker-machine
    chmod +x /usr/local/bin/docker-machine
    ```

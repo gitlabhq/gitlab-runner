@@ -26,7 +26,7 @@ GitLab은 이러한 공식 플러그인을 유지합니다:
 
 | 클라우드 공급자 | OCI 참조 | 참고 |
 |----------------|---------------|-------|
-| [VMware vSphere](https://gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere) | `registry.gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere:latest` | 기존 템플릿을 복제하여 가상 머신을 생성하고 관리하는 데 VMware vSphere를 사용합니다. [`govmomi vcsim`](https://github.com/vmware/govmomi/tree/main/vcsim) 시뮬레이터로 테스트하고 커뮤니티 멤버에 의해 기본 사용 사례에 대해 검증했습니다. 제한된 vSphere 권한으로 인한 제한 사항이 있을 수 있습니다. [Fleeting Plugin VMware vSphere 프로젝트](https://gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere/-/issues)에서 관련 이슈를 생성할 수 있습니다.|
+| [VMware vSphere](https://gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere) | `registry.gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere:latest` | 기존 템플릿을 복제하여 가상 머신을 생성하고 관리하는 데 VMware vSphere를 사용합니다. [`govmomi vcsim`](https://github.com/vmware/govmomi/tree/main/vcsim) 시뮬레이터로 테스트하고 커뮤니티 멤버에 의해 기본 사용 사례에 대해 검증했습니다. 제한된 vSphere 권한으로 인한 제한 사항이 있을 수 있습니다. [Fleeting Plugin VMware vSphere 프로젝트](https://gitlab.com/santhanuv/fleeting-plugin-vmware-vsphere)에서 관련 이슈를 만들 수 있습니다.|
 
 커뮤니티 유지 관리 플러그인은 GitLab 외부(커뮤니티)의 기여자가 소유, 빌드, 호스트 및 유지 관리합니다. GitLab은 Fleeting 라이브러리 및 API를 소유하고 유지 관리하여 정적 코드 검토를 제공합니다. GitLab은 모든 필요한 컴퓨팅 환경에 액세스할 수 없기 때문에 커뮤니티 플러그인을 테스트할 수 없습니다. 커뮤니티 멤버는 플러그인을 빌드하고 테스트한 후 OCI 리포지토리에 게시하고 머지 리퀘스트를 통해 이 페이지에서 참조를 제공해야 합니다. OCI 참조에는 이슈를 보고할 위치, 플러그인의 지원 및 안정성 수준, 그리고 설명서를 찾을 위치에 대한 참고 사항이 포함되어야 합니다.
 

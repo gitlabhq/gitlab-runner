@@ -49,7 +49,7 @@ Docker Autoscaler를 구성하려면 `config.toml`에서 다음을 수행하세�
 
 Docker Autoscaler는 클라우드 공급자의 자동 크기 조정 리소스와 동기화되어야 하는 인스턴스 상태를 추적합니다. 여러 시스템이 동일한 자동 크기 조정 리소스를 관리하려고 하면 충돌하는 크기 조정 명령을 발생시킬 수 있으며, 이는 예측 불가능한 동작, 작업 실패, 잠재적으로 더 높은 비용을 초래할 수 있습니다.
 
-### 예시:  인스턴스당 1개 작업에 대한 AWS 자동 크기 조정 {#example-aws-autoscaling-for-1-job-per-instance}
+### 예제: 인스턴스당 1개 작업에 대한 AWS 자동 크기 조정 {#example-aws-autoscaling-for-1-job-per-instance}
 
 전제 조건:
 
@@ -119,7 +119,7 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-### 예시:  인스턴스당 1개 작업에 대한 Google Cloud 인스턴스 그룹 {#example-google-cloud-instance-group-for-1-job-per-instance}
+### 예제: 인스턴스당 1개 작업에 대한 Google Cloud 인스턴스 그룹 {#example-google-cloud-instance-group-for-1-job-per-instance}
 
 전제 조건:
 
@@ -193,7 +193,7 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-### 예시:  인스턴스당 1개 작업에 대한 Azure 스케일 세트 {#example-azure-scale-set-for-1-job-per-instance}
+### 예제: 인스턴스당 1개 작업에 대한 Azure 스케일 세트 {#example-azure-scale-set-for-1-job-per-instance}
 
 전제 조건:
 
