@@ -7,8 +7,8 @@ title: 고급 구성
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -26,12 +26,6 @@ GitLab Runner는 3초마다 구성 수정 사항을 확인하고 필요하면 �
 
 ## 구성 유효성 검사 {#configuration-validation}
 
-{{< history >}}
-
-- [GitLab Runner 15.10에서 도입됨](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924)
-
-{{< /history >}}
-
 구성 유효성 검사는 `config.toml` 파일의 구조를 확인하는 프로세스입니다. 구성 유효성 검사기의 출력은 `info` 수준 메시지만 제공합니다.
 
 구성 유효성 검사 프로세스는 정보 제공 목적으로만 사용됩니다. 러너 구성의 잠재적 문제를 식별하기 위해 출력을 사용할 수 있습니다. 구성 유효성 검사는 모든 가능한 문제를 포착하지 못할 수 있으며, 메시지가 없다고 해서 `config.toml` 파일이 완벽하다는 보장은 없습니다.
@@ -46,7 +40,7 @@ GitLab Runner는 3초마다 구성 수정 사항을 확인하고 필요하면 �
 | `log_level`          | 로그 수준을 정의합니다. 옵션은 `debug`, `info`, `warn`, `error`, `fatal`, 및 `panic`입니다. 이 설정은 `--debug`, `-l`, 또는 `--log-level` 명령줄 인수로 설정된 수준보다 우선순위가 낮습니다. |
 | `log_format`         | 로그 형식을 지정합니다. 옵션은 `runner`, `text`, 및 `json`입니다. 이 설정은 `--log-format` 명령줄 인수로 설정된 형식보다 우선순위가 낮습니다. 기본값은 `runner`이며, 색상 지정을 위한 ANSI 이스케이프 코드를 포함합니다. |
 | `check_interval`     | 러너가 새로운 작업을 확인할 때까지의 간격(초)을 정의합니다. 기본값은 `3`입니다. `0` 이하로 설정하면 기본값이 사용됩니다. |
-| `sentry_dsn`         | Sentry에 대한 모든 시스템 수준 오류의 추적을 활성화합니다. |
+| `sentry_dsn`         | Sentry에 대한 모든 시스템 수준 오류의 추적을 활성화합니다. 설정되지 않은 경우 러너는 `SENTRY_DSN` 환경 변수로 폴백됩니다. `config.toml`의 값이 환경 변수보다 우선합니다. 환경 변수는 확장 없이 그대로 사용되므로 `$OTHER_VAR`과 같은 참조는 보간되지 않습니다. |
 | `connection_max_age` | GitLab 서버로의 TLS �ープ얼라이브 연결이 다시 연결되기 전에 열려 있어야 하는 최대 기간입니다. 기본값은 `15m`입니다(15분). `0` 이하로 설정하면 연결이 최대한 오래 유지됩니다. |
 | `listen_address`     | Prometheus 메트릭 HTTP 서버가 수신 대기해야 할 주소(`<host>:<port>`)를 정의합니다. |
 | `shutdown_timeout`   | [강제 종료 작업](../commands/_index.md#signals)이 시간 초과되어 프로세스를 종료할 때까지의 초 단위 시간입니다. 기본값은 `30`입니다. `0` 이하로 설정하면 기본값이 사용됩니다. |
@@ -67,7 +61,7 @@ GitLab Runner는 GitLab Workhorse를 통해 GitLab 장시간 폴링이 켜져 �
 - Helm 차트:  `gitlab.webservice.workhorse.extraArgs` 설정을 사용합니다.
 - CLI: `gitlab-workhorse -apiCiLongPollingDuration 50s`
 
-자세한 정보는 다음을 참조하세요:
+자세한 정보는 다음을 참조하세요.
 
 - [러너를 위한 장시간 폴링](https://docs.gitlab.com/ci/runners/long_polling/)
 - [Workhorse 구성](https://docs.gitlab.com/development/workhorse/configuration/)
@@ -87,7 +81,7 @@ GitLab Runner는 GitLab Workhorse를 통해 GitLab 장시간 폴링이 켜져 �
 GitLab Runner는 문제 시나리오를 자동으로 감지하고 경고 메시지에서 맞춤형 솔루션을 제공합니다. 일반적인 솔루션은 다음과 같습니다:
 
 - `concurrent` 설정을 증가시켜 러너 수를 초과하도록 합니다.
-- 높은 볼륨 러너의 `request_concurrency` 값을 1보다 높은 값으로 설정합니다(기본값은 1). [러너 모니터링](../monitoring/_index.md)을 활성화하여 시스템 상태를 파악하고 설정에 최적의 값을 찾습니다. `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` 기능 플래그를 사용하여 워크로드에 따라 `request_concurrency`를 자동으로 조정하는 것을 고려합니다. 적응형 동시성에 대한 자세한 내용은 [기능 플래그 설명서](feature-flags.md)를 참조하세요.
+- 높은 볼륨 러너의 `request_concurrency` 값을 1보다 높은 값으로 설정합니다(기본값은 1). [러너 모니터링](../monitoring/_index.md)을 활성화하여 시스템 상태를 파악하고 설정에 최적의 값을 찾습니다. `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` 기능 플래그는 워크로드를 기반으로 `request_concurrency`를 자동으로 조정하며 기본적으로 활성화됩니다. 비활성화한 경우 다시 활성화하는 것을 고려하세요. 적응형 동시성에 대한 자세한 내용은 [기능 플래그 설명서](feature-flags.md)를 참조하세요.
 - `limit` 설정을 예상 작업 볼륨과 균형을 맞춥니다.
 
 ##### 문제가 있는 구성 예제 {#example-problematic-configurations}
@@ -372,7 +366,7 @@ GitLab Runner Docker 이미지를 사용 중인 경우, [`docker run` 명령](..
 | `builds_dir`                          | 선택한 실행기의 컨텍스트에서 빌드가 저장되는 디렉터리의 절대 경로입니다. 예를 들어, 로컬, Docker, 또는 SSH입니다.                                                                                                                                                                                                                                                                         |
 | `cache_dir`                           | 선택한 실행기의 컨텍스트에서 빌드 캐시가 저장되는 디렉터리의 절대 경로입니다. 예를 들어, 로컬, Docker, 또는 SSH입니다. `docker` 실행기를 사용하는 경우, 이 디렉터리는 `volumes` 매개변수에 포함되어야 합니다.                                                                                                                                                                         |
 | `environment`                         | 환경 변수를 추가하거나 덮어씁니다.                                                                                                                                                                                                                                                                                                                                                                  |
-| `request_concurrency`                 | GitLab의 새로운 작업에 대한 동시 요청 수를 제한합니다. 기본값은 `1`입니다. `concurrency`, `limit`, 및 `request_concurrency`가 작업 흐름을 제어하는 방법에 대한 자세한 내용은 [GitLab Runner 동시성 조정에 대한 KB 문서](https://support.gitlab.com/hc/en-us/articles/21324350882076-GitLab-Runner-Concurrency-Tuning-Understanding-request-concurrency)를 참조하세요.                     |
+| `request_concurrency`                 | GitLab의 새로운 작업에 대한 동시 요청 수를 제한합니다. 기본값은 `1`입니다. `concurrency`, `limit`, 및 `request_concurrency`가 작업 플로우를 제어하는 방법에 대한 자세한 내용은 [GitLab Runner 동시성 조정에 대한 KB 문서](https://support.gitlab.com/hc/en-us/articles/21324350882076-GitLab-Runner-Concurrency-Tuning-Understanding-request-concurrency)를 참조하세요.                     |
 | `strict_check_interval`               | 정상 작동 중에 러너가 작업을 폴링하고 작업을 수신하면, 작업 수가 `concurrent` 또는 `limit`와 일치하거나 작업이 없을 때까지 작업에 대해 즉시 다시 폴링합니다. `strict_check_interval`을 켜면 러너는 `check_interval` 빠른 다시 폴링 루프를 비활성화하고 `check_interval`를 엄격히 준수합니다. 기본값은 `false`입니다.             |
 | `output_limit`                        | 최대 빌드 로그 크기(킬로바이트)입니다. 기본값은 `4096`입니다(4MB).                                                                                                                                                                                                                                                                                                                                              |
 | `pre_get_sources_script`              | Git 리포지토리를 업데이트하고 서브모듈을 업데이트하기 전에 러너에서 실행할 명령입니다. 먼저 Git 클라이언트 구성을 조정하는 데 사용합니다. 여러 명령을 삽입하려면 (삼중 인용) 다중 행 문자열 또는 `\n` 문자를 사용합니다.                                                                                                                                                 |
@@ -380,13 +374,14 @@ GitLab Runner Docker 이미지를 사용 중인 경우, [`docker run` 명령](..
 | `pre_build_script`                    | 작업을 실행하기 전에 러너에서 실행할 명령입니다. `before_script`, `script`, 및 `post_build_script`과 동일한 셸 컨텍스트에서 실행합니다. `pre_build_script`가 실패하면 해당 컨텍스트의 나머지 명령을 건너뛰지만 `after_script`는 계속 실행됩니다. 여러 명령을 삽입하려면 (삼중 인용) 다중 행 문자열 또는 `\n` 문자를 사용합니다.                                               |
 | `post_build_script`                   | 작업을 실행한 후에 러너에서 실행할 명령입니다. `pre_build_script`, `before_script`, 및 `script`과 동일한 셸 컨텍스트에서 실행합니다. 이들 중 하나라도 실패하면 `post_build_script`를 건너뜁니다. `after_script`는 별도의 셸 컨텍스트에서 실행되고 `post_build_script`의 영향을 받지 않습니다. 여러 명령을 삽입하려면 (삼중 인용) 다중 행 문자열 또는 `\n` 문자를 사용합니다.               |
 | `clone_url`                           | GitLab 인스턴스의 URL을 덮어씁니다. 러너가 GitLab URL에 연결할 수 없는 경우에만 사용됩니다.                                                                                                                                                                                                                                                                                                         |
-| `debug_trace_disabled`                | [디버그 추적](https://docs.gitlab.com/ci/variables/#enable-debug-logging)을 비활성화합니다. `true`로 설정하면 `CI_DEBUG_TRACE`이 `true`로 설정되어 있어도 디버그 로그(추적)가 비활성화된 상태로 유지됩니다.                                                                                                                                                                                                                 |
+| `debug_trace_disabled`                | [디버그 추적](https://docs.gitlab.com/ci/variables/variables_troubleshooting/#enable-debug-logging)을 비활성화합니다. `true`로 설정하면 `CI_DEBUG_TRACE`이 `true`로 설정되어 있어도 디버그 로그(추적)가 비활성화된 상태로 유지됩니다.                                                                                                                                                                                                                 |
 | `clean_git_config`                    | Git 구성을 정리합니다. 자세한 내용은 [Git 구성 정리](#cleaning-git-configuration)를 참조하세요.                                                                                                                                                                                                                                                                                          |
 | `referees`                            | GitLab에 작업 아티팩트로 결과를 전달하는 추가 작업 모니터링 워커입니다.                                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_requests_limit`            | 그 후 러너 워커가 비활성화되는 새로운 작업 요청에 대한 `unhealthy` 응답 수입니다.                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_interval`                  | 러너 워커가 건강하지 않은 요청 제한을 초과한 후 비활성화되는 기간입니다. `3600 s`, `1 h 30 min`, 및 유사한 구문을 지원합니다.                                                                                                                                                                                                                                                      |
 | `job_status_final_update_retry_limit` | GitLab Runner가 최종 작업 상태를 GitLab 인스턴스로 푸시하기 위해 재시도할 수 있는 최대 횟수입니다.                                                                                                                                                                                                                                                                                                    |
 | `prepare_timeout`                     | `prepare` 스테이지에 허용되는 최대 기간입니다(실행기 초기화 및 셸 환경 설정). `30s` 또는 `1h30m`과 같은 기간 문자열을 허용합니다. 설정되지 않았거나, 0이거나, 작업 시간 초과보다 크면 작업 시간 초과로 기본 설정됩니다. 자세한 내용은 [준비 스테이지 시간 초과](#prepare-stage-timeout)를 참조하세요.                                                                                        |
+| `get_sources_timeout`                 | `get_sources` 단계(프로젝트 리포지토리 복제 또는 페칭, 서브모듈 포함)에 허용되는 최대 기간입니다. `30s` 또는 `1h30m`과 같은 기간 문자열을 허용합니다. 설정되지 않았거나, 0이거나, 작업 시간 초과보다 크면 작업 시간 초과로 기본 설정됩니다. 자세한 내용은 [get sources 타임아웃](#get-sources-timeout)을 참조하세요.                                                                          |
 
 예제:
 
@@ -549,6 +544,78 @@ GitLab 인스턴스를 오래 사용할 수 없을 때(예: 버전 업그레이�
   prepare_timeout = "5m"
 ```
 
+소스 페칭 단계를 동등하게 제어하려면 [`get_sources_timeout`](#get-sources-timeout)을(를) 참조하세요.
+
+### Get sources 타임아웃 {#get-sources-timeout}
+
+{{< history >}}
+
+- GitLab 러너 19.1.0에서 [도입](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39426)되었습니다.
+
+{{< /history >}}
+
+`get_sources_timeout` 설정은 `get_sources` 단계(프로젝트 리포지토리 복제 또는 페칭, 서브모듈 포함)에서 러너가 소비하는 시간을 제한합니다.
+
+`get_sources` 단계가 `get_sources_timeout`를 초과하면 작업이 즉시 실패합니다. 후속 단계(`restore_cache`, `download_artifacts`, `script`)는 `get_sources_timeout`로 제한되지 않습니다. 대신 전체 작업 시간 초과를 사용합니다.
+
+**Default behavior**:  `get_sources_timeout`가 설정되지 않았거나, `0`이거나, 작업 타임아웃을 초과하면 러너는 `get_sources` 단계에 작업 타임아웃을 사용합니다.
+
+#### `get_sources_timeout` 설정 시기 {#when-to-set-get_sources_timeout}
+
+`get_sources_timeout`은 느리거나 응답이 없는 네트워크 조건이 리포지토리 페칭이 완료되기 전에 전체 작업 타임아웃을 소비할 수 있을 때 설정하세요. 일반적인 시나리오는 다음과 같습니다:
+
+- **Hung Git clones over flaky networks**: 원격 또는 중간 네트워크가 클론 또는 페칭 중에 느려지거나 도달 불가능해지면 작업이 전체 작업 타임아웃 동안 중단될 수 있습니다. 바쁜 러너에서는 중단된 작업이 모든 사용 가능한 슬롯을 채우고 새 작업이 시작되지 않도록 방지합니다. `get_sources_timeout`은 이러한 작업을 빠르게 실패하여 러너 용량을 확보합니다.
+- **Hung submodule fetches**: 서브모듈은 종종 다른 호스트(다른 도메인, 타사 서비스)의 리포지토리를 참조합니다. 이러한 호스트 중 하나가 느리거나 도달 불가능하면 `get_sources` 단계가 중단됩니다. 제한된 타임아웃은 단일 부실 서브모듈 호스트가 전체 작업 타임아웃 동안 러너 슬롯을 차지하는 것을 방지합니다.
+
+#### 예제 구성 {#example-configuration-1}
+
+```toml
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "TOKEN"
+  executor = "docker"
+  get_sources_timeout = "5m"
+```
+
+실행기 준비 단계를 동등하게 제어하려면 [`prepare_timeout`](#prepare-stage-timeout)도 참조하세요.
+
+### `[runners.experimental.boot_verify]` 섹션 {#the-runnersexperimentalboot_verify-section}
+
+{{< details >}}
+
+- 상태:  실험적 기능
+
+{{< /details >}}
+
+`boot_verify` 섹션은 러너가 `/health/ready`을 보고하기 전에 프로세스 시작 시 러너를 통해 합성 작업을 실행합니다. 작업이 실패하면 러너는 0이 아닌 값으로 종료되므로 오케스트레이터가 이를 다시 시작합니다. 이 동작은 인증은 가능하지만 작업을 프로비저닝하거나 디스패치할 수 없는 러너를 포착하며, 기본 liveness 및 readiness 프로브가 놓치는 경우입니다. 검사는 프로세스 시작당 한 번 실행되며 구성 리로드 시 다시 실행되지 않습니다.
+
+| 매개변수             | 유형     | 설명 |
+|-----------------------|----------|-------------|
+| `enabled`             | 부울  | 이 러너에 대해 시작 카나리를 실행하세요. 기본값: `false`. |
+| `timeout`             | 기간 | 카나리의 기한입니다. `5m` 또는 `90s`와 같은 값을 지원합니다. 기본값: `5m`. |
+| `acquire_min_backoff` | 기간 | 실행기 획득 재시도 간의 최소 백오프입니다. 기본값: `1s`. |
+| `acquire_max_backoff` | 기간 | 실행기 획득 재시도 간의 최대 백오프입니다. 기본값: `10s`. |
+
+> [!note]
+> 합성 작업은 러너의 기본 이미지에서 실행되므로 `docker` 및 `kubernetes` 실행기에 기본 이미지가 구성되어 있어야 합니다.
+
+예제:
+
+```toml
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "TOKEN"
+  executor = "kubernetes"
+
+  [runners.experimental.boot_verify]
+    enabled = true
+    timeout = "5m"
+    acquire_min_backoff = "1s"
+    acquire_max_backoff = "10s"
+```
+
 ## 실행기 {#the-executors}
 
 다음 실행기를 사용할 수 있습니다.
@@ -607,7 +674,7 @@ GitLab Runner 14.9 이상에서, [기능 플래그를 활성화](feature-flags.m
 | `device_cgroup_rules`              |                                                  | 사용자 정의 장치 `cgroup` 규칙입니다(Docker 1.28 이상에서 사용 가능). |
 | `disable_cache`                    |                                                  | Docker 실행기에는 2가지 수준의 캐싱이 있습니다. 다른 실행기와 같은 전역 캐싱과 Docker 볼륨 기반 로컬 캐싱입니다. 이 구성 플래그는 로컬 캐싱에만 작동하며 자동으로 생성된(호스트 디렉터리에 매핑되지 않은) 캐시 볼륨의 사용을 비활성화합니다. 즉, 빌드의 임시 파일을 보유하는 컨테이너 생성만 방지하고, 러너가 [분산 캐시 모드](autoscale.md#distributed-runners-caching)로 구성된 경우 캐시를 비활성화하지 않습니다. |
 | `disable_entrypoint_overwrite`     |                                                  | 이미지 진입점 덮어쓰기를 비활성화합니다. |
-| `dns`                              | `["8.8.8.8"]`                                    | 컨테이너가 사용할 DNS 서버 목록입니다. |
+| `dns`                              | `["8.8.8.8"]`                                    | 컨테이너가 사용할 DNS 서버 목록입니다. 유효한 IP 주소여야 합니다. 잘못된 값은 준비 단계 중에 작업을 실패시킵니다. 유효성 검사는 GitLab 19.2에서 [도입](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6947)되었습니다.|
 | `dns_search`                       |                                                  | DNS 검색 도메인 목록입니다. |
 | `extra_hosts`                      | `["other-host:127.0.0.1"]`                       | 컨테이너 환경에 정의되어야 하는 호스트입니다. |
 | `gpus`                             |                                                  | Docker 컨테이너의 GPU 장치입니다. `docker` CLI과 동일한 형식을 사용합니다. [Docker 설명서](https://docs.docker.com/engine/containers/resource_constraints/#gpu)에서 자세한 내용을 확인하세요. [GPU를 활성화하도록 구성](gpus.md#docker-executor)해야 합니다. |
@@ -624,7 +691,7 @@ GitLab Runner 14.9 이상에서, [기능 플래그를 활성화](feature-flags.m
 | `memory_swap`                      | `"256m"`                                         | 전체 메모리 제한입니다. 문자열입니다. |
 | `memory_reservation`               | `"64m"`                                          | 메모리 소프트 제한입니다. 문자열입니다. |
 | `network_mode`                     |                                                  | 컨테이너를 사용자 정의 네트워크에 추가합니다. |
-| `mac_address`                      | `92:d0:c6:0a:29:33`                              | 컨테이너 MAC 주소 |
+| `mac_address`                      | `92:d0:c6:0a:29:33`                              | 컨테이너 MAC 주소입니다. 유효한 MAC 주소여야 합니다. 잘못된 값은 준비 단계 중에 작업을 실패시킵니다. 유효성 검사는 GitLab 19.2에서 [도입](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6947)되었습니다. |
 | `oom_kill_disable`                 |                                                  | 메모리 부족(`OOM`) 오류가 발생하면 컨테이너의 프로세스를 종료하지 마세요. |
 | `oom_score_adjust`                 |                                                  | `OOM` 점수 조정입니다. 양수는 프로세스를 더 빨리 종료함을 의미합니다. |
 | `privileged`                       | `false`                                          | 컨테이너를 권한 있는 모드에서 실행합니다. 안전하지 않습니다. |
@@ -806,7 +873,7 @@ GitLab Runner는 실행기 준비 중에 로그 옵션을 검증합니다. `max-
 
 로그 옵션은 주 작업 컨테이너와 CI/CD 구성에 정의된 모든 서비스 컨테이너에 적용됩니다.
 
-Docker 로깅에 대한 자세한 정보는 [Docker `json-file` 로그 드라이버 설명서](https://docs.docker.com/config/containers/logging/json-file/)를 참조하세요.
+Docker 로깅에 대한 자세한 내용은 [Docker `json-file` 로그 드라이버 문서](https://docs.docker.com/engine/logging/drivers/json-file/)를 참조하세요.
 
 ### 개인 컨테이너 레지스트리 사용 {#use-a-private-container-registry}
 
@@ -853,7 +920,7 @@ GitLab은 작업의 데이터와 함께 통합 레지스트리에 대한 자격 
 | 매개변수           | 설명 |
 |---------------------|-------------|
 | `base_name`         | 복제되는 Parallels VM의 이름입니다. |
-| `template_name`     | Parallels VM 링크된 템플릿의 사용자 정의 이름입니다. 선택적입니다. |
+| `template_name`     | Parallels VM 링크된 템플릿의 사용자 정의 이름입니다. 선택사항. |
 | `disable_snapshots` | 비활성화하면 작업이 완료될 때 VM이 제거됩니다. |
 | `allowed_images`    | 허용된 `image`/`base_name` 값의 목록(정규식으로 표현됨). [기본 VM 이미지 재정의](#overriding-the-base-vm-image) 섹션을 참조하세요. |
 
@@ -1166,7 +1233,7 @@ Parallels 및 VirtualBox 실행기 모두에서 `base_name`로 지정된 기본 
 
 여러 정책을 정의할 수 있습니다. 마지막으로 일치하는 정책이 사용됩니다.
 
-다음 예에서는 유휴 수 `1`이 월요일부터 금요일까지 오전 8시부터 오후 3시 59분(15:59)까지 사용됩니다. 그 외에는 유휴 수가 0입니다.
+다음 예에서는 유휴 수 `1`이 월요일부터 금요일까지 오전 8시 00분부터 오후 3시 59분(15:59)까지 사용됩니다. 그 외에는 유휴 수가 0입니다.
 
 ```toml
 [[runners.autoscaler.policy]]
@@ -1299,7 +1366,7 @@ job:
 
 ### 병렬 아티팩트 다운로드(직접 다운로드) {#parallel-artifact-downloads-direct-download}
 
-기본적으로 [`direct_download`](https://docs.gitlab.com/ci/jobs/job_artifacts/#download-artifacts-from-a-job)이 객체 저장소에 리디렉션을 반환하면 러너는 단일 HTTP GET 스트림으로 아티팩트를 다운로드합니다.
+기본적으로 [`direct_download`](https://docs.gitlab.com/ci/jobs/job_artifacts/#download-job-artifacts)가 객체 스토리지로의 리다이렉트를 반환하면 러너는 단일 HTTP GET 스트림으로 작업 아티팩트를 다운로드합니다.
 
 `FF_USE_PARALLEL_ARTIFACT_TRANSFER` [기능 플래그](feature-flags.md)를 활성화하여 객체 저장소 백엔드에서 `206 Partial Content`과(와) `Content-Range` 합계를 지원할 때 병렬 HTTP 범위 GET을 허용합니다. 청크 크기 및 동시성은 러너에서 고정됩니다(`CACHE_*` 변수 아님). 이 플래그는 `FF_USE_PARALLEL_CACHE_TRANSFER`과 독립적입니다.
 
@@ -1498,7 +1565,7 @@ Amazon EKS의 러너의 경우 서비스 계정에 할당할 IAM 역할을 지�
 - `kms:GenerateDataKey*`
 - `kms:DescribeKey`
 
-`ServerSideEncryption`의 `SSE-C` 유형은 지원되지 않습니다. `SSE-C`은 다운로드 요청을 위해 미리 서명된 URL 외에도 사용자가 제공한 키가 포함된 헤더를 제공해야 합니다. 이는 키 자료를 작업에 전달하는 것을 의미하며, 여기서 키를 안전하게 유지할 수 없습니다. 이로 인해 암호 해독 키가 유출될 가능성이 있습니다. 이 문제에 대한 논의는 [이 병합 요청](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3295)에 있습니다.
+`ServerSideEncryption`의 `SSE-C` 유형은 지원되지 않습니다. `SSE-C`은 다운로드 요청을 위해 미리 서명된 URL 외에도 사용자가 제공한 키가 포함된 헤더를 제공해야 합니다. 이는 키 자료를 작업에 전달하는 것을 의미하며, 여기서 키를 안전하게 유지할 수 없습니다. 이로 인해 암호 해독 키가 유출될 가능성이 있습니다. 이 문제에 대한 논의는 [이 머지 리퀘스트](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3295)에 있습니다.
 
 > [!note]
 > AWS S3 캐시에 업로드할 수 있는 단일 파일의 최대 크기는 5GB입니다. 이 동작에 대한 잠재적 해결 방법에 대한 논의는 [이 이슈](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26921)에 있습니다.
@@ -1641,7 +1708,7 @@ aws sts assume-role --role-arn arn:aws:iam::1234567890123:role/my-upload-role --
 {{< /history >}}
 
 > [!note]
-> [S3 Express One Zone 디렉터리 버킷은 `RoleARN`과 작동하지 않습니다](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38484#note_2313111840) 러너 관리자가 특정 개체에 대한 액세스를 제한할 수 없기 때문입니다.
+> [S3 Express One Zone 디렉터리 버킷은 `RoleARN`과 작동하지 않습니다](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/38484#note_2313111840). 왜냐하면 러너 관리자가 특정 객체에 대한 액세스를 제한할 수 없기 때문입니다.
 
 1. [Amazon 튜토리얼](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-getting-started.html)을 따라 S3 Express One Zone 버킷을 설정하세요.
 1. `config.toml`을 `BucketName` 및 `BucketLocation`과 함께 구성하세요.
@@ -1660,7 +1727,7 @@ aws sts assume-role --role-arn arn:aws:iam::1234567890123:role/my-upload-role --
 
 ### `[runners.cache.gcs]` 섹션 {#the-runnerscachegcs-section}
 
-다음 매개변수는 Google Cloud Storage에 대한 기본 지원을 정의합니다. 이러한 값에 대한 자세한 내용은 [Google Cloud Storage(GCS) 인증 설명서](https://docs.cloud.google.com/storage/docs/authentication#service_accounts)를 참조하세요.
+다음 매개변수는 Google Cloud Storage에 대한 기본 지원을 정의합니다. 이러한 값에 대한 자세한 내용은 [Google Cloud Storage(GCS) 인증 문서](https://docs.cloud.google.com/storage/docs/authentication)를 참조하세요.
 
 | 매개변수         | 유형   | 설명 |
 |-------------------|--------|-------------|
@@ -1817,22 +1884,47 @@ podLabels:
 
 자세한 내용은 [이슈 38330](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38330)을 참조하세요.
 
+## `[runners.artifact]` 섹션 {#the-runnersartifact-section}
+
+{{< history >}}
+
+- GitLab 러너 18.10에서 [도입](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5900)되었습니다.
+
+{{< /history >}}
+
+다음 파라미터는 러너가 작업 아티팩트를 업로드할 때 사용되는 HTTP 타임아웃을 제어합니다. 느린 네트워크, 큰 아티팩트 또는 높은 지연 시간의 스토리지 백엔드가 있는 환경에서는 기본 1시간 업로드 타임아웃이 충분하지 않을 수 있습니다. 더 빠르게 실패하도록 이를 줄이고 싶을 수 있습니다.
+
+`upload_timeout`을 가장 큰 예상 아티팩트 크기와 사용 가능한 대역폭에 적절한 값으로 설정하세요.
+
+| 매개변수                 | 유형     | 설명 |
+|---------------------------|----------|-------------|
+| `upload_timeout`          | 기간 | 선택사항. 전체 아티팩트 업로드 작업에 대한 최대 시간입니다. 기본값: `1h`. |
+| `response_header_timeout` | 기간 | 선택사항. 업로드 본문이 전송된 후 서버 응답 헤더를 기다리는 최대 시간입니다. 기본값: `10m`. |
+
+예제:
+
+```toml
+[runners.artifact]
+  upload_timeout = "2h"
+  response_header_timeout = "15m"
+```
+
 ## `[runners.kubernetes]` 섹션 {#the-runnerskubernetes-section}
 
 다음 표는 Kubernetes 실행기에 사용 가능한 구성 매개변수를 나열합니다. 더 많은 매개변수는 [Kubernetes 실행기 설명서](../executors/kubernetes/_index.md)를 참조하세요.
 
 | 매개변수                    | 유형    | 설명 |
 |------------------------------|---------|-------------|
-| `host`                       | 문자열  | 선택적입니다. Kubernetes 호스트 URL입니다. 지정하지 않으면 러너가 자동 검색을 시도합니다. |
-| `cert_file`                  | 문자열  | 선택적입니다. Kubernetes 인증 인증서입니다. |
-| `key_file`                   | 문자열  | 선택적입니다. Kubernetes 인증 개인 키입니다. |
-| `ca_file`                    | 문자열  | 선택적입니다. Kubernetes 인증 ca 인증서입니다. |
+| `host`                       | 문자열  | 선택사항. Kubernetes 호스트 URL입니다. 지정하지 않으면 러너가 자동 검색을 시도합니다. |
+| `cert_file`                  | 문자열  | 선택사항. Kubernetes 인증 인증서입니다. |
+| `key_file`                   | 문자열  | 선택사항. Kubernetes 인증 개인 키입니다. |
+| `ca_file`                    | 문자열  | 선택사항. Kubernetes 인증 ca 인증서입니다. |
 | `image`                      | 문자열  | 지정된 작업이 없을 때 사용할 기본 컨테이너 이미지입니다. |
 | `allowed_images`             | 배열   | `.gitlab-ci.yml`에서 허용되는 컨테이너 이미지의 와일드카드 목록입니다. 없으면 모든 이미지가 허용됩니다 (`["*/*:*"]`과 동일). [Docker](../executors/docker.md#restrict-docker-images-and-services) 또는 [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services) 실행기와 함께 사용합니다. |
 | `allowed_services`           | 배열   | `.gitlab-ci.yml`에서 허용되는 서비스의 와일드카드 목록입니다. 없으면 모든 이미지가 허용됩니다 (`["*/*:*"]`과 동일). [Docker](../executors/docker.md#restrict-docker-images-and-services) 또는 [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services) 실행기와 함께 사용합니다. |
 | `namespace`                  | 문자열  | Kubernetes 작업을 실행할 네임스페이스입니다. |
 | `privileged`                 | 부울 | 권한 있는 플래그가 활성화된 상태에서 모든 컨테이너를 실행합니다. |
-| `allow_privilege_escalation` | 부울 | 선택적입니다. `allowPrivilegeEscalation` 플래그가 활성화된 상태에서 모든 컨테이너를 실행합니다. |
+| `allow_privilege_escalation` | 부울 | 선택사항. `allowPrivilegeEscalation` 플래그가 활성화된 상태에서 모든 컨테이너를 실행합니다. |
 | `node_selector`              | 테이블   | `string=string`의 `key=value` 쌍으로 된 `table`입니다. 모든 `key=value` 쌍과 일치하는 Kubernetes 노드에 대한 포드 생성을 제한합니다. |
 | `image_pull_secrets`         | 배열   | 개인 레지스트리에서 컨테이너 이미지를 풀하기 위해 인증하는 데 사용되는 Kubernetes `docker-registry` 시크릿 이름이 포함된 항목의 배열입니다. |
 | `logs_base_dir`              | 문자열  | 빌드 로그를 저장하기 위해 생성된 경로 앞에 추가할 기본 디렉터리입니다. GitLab Runner 17.2에 [도입되었습니다](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37760). |
@@ -1891,6 +1983,15 @@ GitLab Runner가 `DEB` 또는 `RPM` 패키지에서 설치될 때 지원되는 �
   helper_image = "my.registry.local/gitlab/gitlab-runner-helper:arm64-v${CI_RUNNER_VERSION}"
 ```
 
+### Windows 헬퍼 이미지 선택 {#windows-helper-image-selection}
+
+Windows에서 GitLab 러너는 호스트의 Windows 버전 및 CPU 아키텍처(`x86_64` 또는 `arm64`)와 일치하는 헬퍼 이미지를 자동으로 선택합니다.
+
+> [!note]
+> ARM64 헬퍼 이미지는 현재 Windows Server 2025(24H2)에서만 사용 가능합니다.
+
+사용 가능한 이미지의 목록은 [Windows 헬퍼 이미지](../executors/docker.md#windows-helper-images)를 참조하세요.
+
 ### Alpine Linux의 이전 버전을 사용하는 러너 이미지 {#runner-images-that-use-an-old-version-of-alpine-linux}
 
 {{< history >}}
@@ -1911,7 +2012,7 @@ docker pull gitlab/gitlab-runner:alpine3.19-v16.1.0
 
 ### Alpine `pwsh` 이미지 {#alpine-pwsh-images}
 
-GitLab Runner 16.1 이상의 모든 `alpine` 헬퍼 이미지는 `pwsh` 변형을 가지고 있습니다. 유일한 예외는 `alpine-latest`입니다. GitLab Runner 헬퍼 이미지가 기반하는 [`powershell` Docker 이미지](https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-in-docker?view=powershell-7.4)는 `alpine:latest`을 지원하지 않습니다.
+GitLab 러너 16.1 이상에서는 고정된 Alpine 플레이버(`alpine3.18`, `alpine3.19`, `alpine3.21`)에 `pwsh` 변형이 있습니다. GitLab 러너 17.8 이상에서는 `alpine-latest` 플레이버도 `pwsh` 변형을 가집니다. 이러한 이미지는 Alpine 기본 이미지 위에 PowerShell `linux-musl` 빌드를 설치하므로 모든 Alpine 버전을 지원합니다.
 
 예제:
 
@@ -1923,7 +2024,7 @@ docker pull registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:al
 
 GitLab 15.0 이전에는 Docker Hub의 이미지를 사용하도록 헬퍼 이미지를 구성합니다.
 
-GitLab 15.1 이상에서는 헬퍼 이미지가 GitLab.com의 GitLab 컨테이너 레지스트리에서 `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`로 당겨집니다. GitLab 자체 관리 인스턴스도 기본적으로 GitLab.com의 GitLab Container Registry에서 헬퍼 이미지를 가져옵니다. GitLab.com의 GitLab Container Registry 상태를 확인하려면 [GitLab 시스템 상태](https://status.gitlab.com/)를 참조하세요.
+GitLab 15.1 이상에서는 헬퍼 이미지가 GitLab.com의 GitLab 컨테이너 레지스트리에서 `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`로 당겨집니다. GitLab Self-Managed 인스턴스도 기본적으로 GitLab.com의 GitLab Container Registry에서 헬퍼 이미지를 가져옵니다. GitLab.com의 GitLab Container Registry 상태를 확인하려면 [GitLab 시스템 상태](https://status.gitlab.com/)를 참조하세요.
 
 ### 헬퍼 이미지 재정의 {#override-the-helper-image}
 
@@ -1931,7 +2032,7 @@ GitLab 15.1 이상에서는 헬퍼 이미지가 GitLab.com의 GitLab 컨테이�
 
 1. **Speed up jobs execution**:  인터넷 연결이 느린 환경에서는 동일한 이미지를 여러 번 다운로드하면 작업 실행 시간이 증가할 수 있습니다. `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:XYZ`의 정확한 복사본이 저장되는 로컬 레지스트리에서 헬퍼 이미지를 다운로드하면 속도가 향상될 수 있습니다.
 1. **Security concerns**:  이전에 확인되지 않은 외부 종속성을 다운로드하지 않을 수 있습니다. 검토되어 로컬 레지스트리에 저장된 종속성만 사용하는 비즈니스 규칙이 있을 수 있습니다.
-1. **Build environments without internet access**:  [오프라인 환경에 설치된 Kubernetes 클러스터](../install/operator.md#install-gitlab-runner-operator-on-kubernetes-clusters-in-offline-environments)가 있으면 로컬 이미지 레지스트리 또는 패키지 저장소를 사용하여 CI/CD 작업에 사용되는 이미지를 가져올 수 있습니다.
+1. **Build environments without internet access**:  [오프라인 환경에 설치된 Kubernetes 클러스터](../install/operator.md#install-gitlab-runner-operator-on-kubernetes-clusters-in-offline-environments)가 있으면 로컬 이미지 레지스트리 또는 패키지 리포지토리를 사용하여 CI/CD 작업에 사용되는 이미지를 가져올 수 있습니다.
 1. **Additional software**:  `git+ssh` 대신 `openssh`을 사용하여 서브모듈에 액세스할 수 있도록 헬퍼 이미지에 추가 소프트웨어를 설치할 수 있습니다 (`git+http` 사용).
 
 이러한 경우 `helper_image` 구성 필드를 사용하여 사용자 정의 이미지를 구성할 수 있으며, 이는 `docker`, `docker+machine` 및 `kubernetes` 실행기에서 사용 가능합니다:

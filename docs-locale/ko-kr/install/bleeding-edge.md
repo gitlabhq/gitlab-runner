@@ -8,8 +8,8 @@ title: GitLab 러너 블리딩 엣지 릴리스
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 

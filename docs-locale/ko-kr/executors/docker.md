@@ -7,8 +7,8 @@ title: Docker 실행기
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -65,7 +65,7 @@ Docker 실행기는 다음 구성을 지원합니다.
 | Windows                 | `docker-windows` | Linux                 |
 
 > [!note]
-> GitLab 러너는 Docker Engine API [v1.25](https://docs.docker.com/reference/api/engine/version/v1.25/)를 사용하여 Docker Engine과 통신합니다. 이는 Linux 서버의 Docker의 [최소 지원 버전](https://docs.docker.com/reference/api/engine/#api-version-matrix)이 `1.13.0`임을 의미합니다. Windows Server의 경우 [더 최신 버전이 필요합니다](#supported-docker-versions). Windows Server 버전을 식별하기 위해서 말입니다.
+GitLab 러너는 Docker Engine과 통신하기 위해 Docker Engine API [v1.25](https://docs.docker.com/reference/api/engine/version-history/#v125-api-changes)를 사용합니다. 이는 Linux 서버의 Docker의 [최소 지원 버전](https://docs.docker.com/reference/api/engine/#api-version-matrix)이 `1.13.0`임을 의미합니다. Windows Server의 경우 [더 최신 버전이 필요합니다](#supported-docker-versions). Windows Server 버전을 식별하기 위해서 말입니다.
 
 ## Docker 실행기 사용 {#use-the-docker-executor}
 
@@ -125,7 +125,7 @@ Docker 실행기를 구성하려면 [`.gitlab-ci.yml`](https://docs.gitlab.com/c
 
 모든 작업에 러너가 사용하는 이미지와 빌드 시간 중에 사용할 서비스 목록을 정의합니다.
 
-예:
+예제:
 
 ```yaml
 image: ruby:3.3
@@ -170,7 +170,7 @@ test:3.4:
 
 기본적으로 Docker 실행기는 `.gitlab-ci.yml`에서 정의된 `image`을 사용합니다. `.gitlab-ci.yml`에서 정의하지 않으면 러너는 `config.toml`에서 정의한 이미지를 사용합니다.
 
-예:
+예제:
 
 ```toml
 [runners.docker]
@@ -195,7 +195,7 @@ test:3.4:
 
 비공개 레지스트리에서 이미지를 정의하려면 `.gitlab-ci.yml`에서 레지스트리 이름과 이미지를 제공합니다.
 
-예:
+예제:
 
 ```yaml
 image: my.registry.tld:5000/namespace/image:tag
@@ -222,7 +222,7 @@ image: my.registry.tld:5000/namespace/image:tag
 
 `network_mode`을 설정하지 마세요.
 
-예:
+예제:
 
 ```toml
 [[runners]]
@@ -280,13 +280,13 @@ GitLab 러너 에뮬레이션된 링크 동작은 [레거시 컨테이너 링크
 - `icc`을 비활성화하면 컨테이너 간 통신이 비활성화되고 컨테이너는 서로 통신할 수 없습니다.
 - 연결된 컨테이너의 환경 변수는 더 이상 존재하지 않습니다(`<name>_PORT_<port>_<protocol>`).
 
-네트워크를 구성하려면 `config.toml` 파일에서 [네트워킹 모드](https://docs.docker.com/engine/containers/run/#network-settings)를 지정합니다:
+네트워크를 구성하려면 `config.toml` 파일에서 [networking mode](https://docs.docker.com/engine/network/drivers/)를 지정하세요:
 
 - `bridge`: 브리지 네트워크를 사용합니다. 기본값
 - `host`: 컨테이너 내 호스트의 네트워크 스택을 사용합니다.
 - `none`: 네트워킹 없음 권장되지 않음
 
-예:
+예제:
 
 ```toml
 [[runners]]
@@ -511,7 +511,7 @@ GitLab 러너 호스트의 하드웨어 디바이스를 작업을 실행하는 �
 ```
 
 > [!warning]
-> 이미지 이름 `**/*`는 모든 이미지에 디바이스를 노출할 수 있습니다.
+이미지 이름 `**/*`는 모든 이미지에 디바이스를 노출할 수 있습니다.
 
 ## 컨테이너 빌드 및 캐시의 디렉토리 구성 {#configure-directories-for-the-container-build-and-cache}
 
@@ -528,6 +528,8 @@ GitLab 러너 호스트의 하드웨어 디바이스를 작업을 실행하는 �
 
 [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache)를 사용하여 러너가 생성한 사용하지 않는 컨테이너 및 볼륨을 제거합니다.
 
+이 스크립트는 Podman과도 함께 작동합니다. `docker`가 `PATH` 경로에 없을 때 `podman` 바이너리로 폴백합니다. Rootless Podman은 공유 시스템 위치가 아닌 호출 사용자의 홈 디렉터리 아래에 컨테이너와 이미지를 저장합니다. 스크립트 (그리고 이를 호출하는 모든 `cron` 항목)는 Podman 스토리지를 소유한 사용자로 실행되어야 합니다. 그렇지 않으면 다른 사용자의 빈 스토리지에서 작동합니다.
+
 옵션 목록을 보려면 `help` 옵션으로 스크립트를 실행합니다:
 
 ```shell
@@ -541,7 +543,17 @@ clear-docker-cache help
 - `clear-docker-cache`을 `cron`로 정기적으로(예: 주 1회) 실행합니다.
 - 성능을 위해 캐시에 일부 최근 컨테이너를 유지하면서 디스크 공간을 확보합니다.
 
-`FILTER_FLAG` 환경 변수는 정리할 개체를 제어합니다. 예를 들어 [Docker 이미지 정리](https://docs.docker.com/reference/cli/docker/image/prune/#filter) 설명서를 참조하세요.
+`CONTAINER_FILTER_FLAGS`, `IMAGE_FILTER_FLAGS`, 그리고 `VOLUME_FILTER_FLAGS` 환경 변수는 각 리소스 유형에 대해 어떤 객체를 정리할지 제어합니다. 값은 쉼표로 구분되며 여러 `--filter` 플래그로 변환됩니다. 예를 들어:
+
+```shell
+CONTAINER_FILTER_FLAGS="label=com.gitlab.gitlab-runner.managed=true"
+IMAGE_FILTER_FLAGS="label=keep,label!=provider=Acme"
+VOLUME_FILTER_FLAGS="label=com.gitlab.gitlab-runner.managed=true"
+```
+
+`FILTER_FLAG`는 하위 호환성을 위해 지원됩니다. 설정하면 해당 변수가 설정되지 않은 경우 `CONTAINER_FILTER_FLAGS`에 대한 기본값으로 사용됩니다. 사용 예제는 [Docker image prune](https://docs.docker.com/reference/cli/docker/image/prune/#filter) 설명서를 참고하세요.
+
+쉼표가 구분 기호로 사용되기 때문에 리터럴 쉼표가 포함된 필터 값은 표현할 수 없습니다.
 
 ## Docker 빌드 이미지 삭제 {#clear-docker-build-images}
 
@@ -602,7 +614,7 @@ Docker 실행기는 컨테이너를 실행할 때 영구 저장소를 제공합�
 - 호스트 바운드 저장소의 경우 `<host-path>:<path>[:<mode>]`을 사용합니다. GitLab 러너는 `<path>`를 호스트 시스템의 `<host-path>`에 바인드합니다. 선택적인 `<mode>`는 이 저장소가 읽기 전용인지 읽기-쓰기(기본값)인지 지정합니다.
 
 > [!warning]
-> GitLab 러너 18.4 이상에서 동적 저장소 소스의 명명(위 참조)이 Docker 볼륨 기반 및 호스트 디렉토리 기반 영구 저장소 모두에 대해 변경되었습니다. 18.4.0으로 업그레이드하면 GitLab 러너는 이전 러너 버전의 캐시된 데이터를 무시하고 새 Docker 볼륨 또는 새 호스트 디렉토리를 통해 필요에 따라 새 동적 저장소를 생성합니다.
+GitLab 러너 18.4 이상에서 동적 저장소 소스의 명명(위 참조)이 Docker 볼륨 기반 및 호스트 디렉토리 기반 영구 저장소 모두에 대해 변경되었습니다. 18.4.0으로 업그레이드하면 GitLab 러너는 이전 러너 버전의 캐시된 데이터를 무시하고 새 Docker 볼륨 또는 새 호스트 디렉토리를 통해 필요에 따라 새 동적 저장소를 생성합니다.
 >
 > 호스트 바운드 저장소(`<host-path>` 구성)는 동적 저장소와 달리 영향을 받지 않습니다.
 
@@ -613,13 +625,23 @@ Docker 실행기는 컨테이너를 실행할 때 영구 저장소를 제공합�
 - `<short-token>`은 러너의 토큰의 축약된 버전(처음 8글자)입니다.
 - `<concurrent-id>`은 동일한 작업에 대한 빌드를 동시에 실행하는 모든 러너 목록의 러너 인덱스(`CI_CONCURRENT_PROJECT_ID` [사전 정의된 변수](https://docs.gitlab.com/ci/variables/predefined_variables/)를 통해 접근 가능)입니다.
 
+## PID 모드 {#pid-mode}
+
+Docker 실행기는 컨테이너의 PID 네임스페이스 모드를 설정하도록 지원하며, 이는 `docker run --pid` 플래그에 매핑됩니다. 빌드 컨테이너와 호스트 또는 다른 컨테이너가 프로세스 가시성을 공유해야 할 때 (예: 디버깅 목적) PID 모드를 사용하세요. 자세한 내용은 Docker 설명서의 [PID settings](https://docs.docker.com/reference/cli/docker/container/run/#pid)를 참고하세요.
+
+> [!warning]
+빌드 컨테이너와 다른 컨테이너 또는 호스트 간에 PID 네임스페이스를 공유하는 것은 심각한 보안 영향을 미치는 격리 침해입니다. 이 기능은 권한 있는 모드에서처럼 완전히 신뢰할 수 있는 빌드 컨테이너와만 사용하세요.
+
 ## IPC 모드 {#ipc-mode}
 
-Docker 실행기는 다른 위치와 컨테이너의 IPC 네임스페이스를 공유하는 것을 지원합니다. 이는 `docker run --ipc` 플래그에 매핑됩니다. [Docker 설명서의 IPC 설정](https://docs.docker.com/engine/containers/run/#ipc-settings---ipc)에 대한 자세한 내용
+Docker 실행기는 다른 위치와 컨테이너의 IPC 네임스페이스를 공유하는 것을 지원합니다. 이는 `docker run --ipc` 플래그에 매핑됩니다. 자세한 내용은 [IPC settings in Docker documentation](https://docs.docker.com/reference/cli/docker/container/run/#ipc)를 참고하세요.
 
 ## 권한 있는 모드 {#privileged-mode}
 
 Docker 실행기는 빌드 컨테이너의 미세 조정을 허용하는 여러 옵션을 지원합니다. 이러한 옵션 중 하나는 [`privileged` 모드](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)입니다.
+
+> [!warning]
+권한 있는 모드는 보안 위험이 있습니다. 컨테이너가 권한 있는 모드에서 실행되면 컨테이너 보안 메커니즘이 비활성화되고 호스트가 권한 상승에 노출됩니다. 권한 있는 모드에서 컨테이너를 실행하면 컨테이너 탈출로 이어질 수 있습니다. 자세한 내용은 Docker 설명서의 [runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)를 참고하세요.
 
 ### 권한 있는 모드로 Docker-in-Docker 사용 {#use-docker-in-docker-with-privileged-mode}
 
@@ -646,9 +668,6 @@ build:
   - docker build -t my-image .
   - docker push my-image
 ```
-
-> [!warning]
-> 권한 있는 모드에서 실행되는 컨테이너에는 보안 위험이 있습니다. 컨테이너가 권한 있는 모드에서 실행되면 컨테이너 보안 메커니즘을 비활성화하고 호스트를 권한 에스컬레이션에 노출합니다. 권한 있는 모드에서 컨테이너를 실행하면 컨테이너 탈출로 이어질 수 있습니다. 자세한 내용은 [런타임 권한 및 Linux 기능](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)에 대한 Docker 설명서를 참조하세요.
 
 다음과 같은 오류를 방지하려면 [Docker-in-Docker를 TLS로 구성하거나 TLS를 비활성화](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker)해야 할 수 있습니다:
 
@@ -695,7 +714,7 @@ Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon r
 
 ## Docker ENTRYPOINT 구성 {#configure-a-docker-entrypoint}
 
-기본적으로 Docker 실행기는 Docker 이미지의 [`ENTRYPOINT`](https://docs.docker.com/engine/containers/run/#entrypoint-default-command-to-execute-at-runtime)를 재정의하지 않습니다. `sh` 또는 `bash`를 [`COMMAND`](https://docs.docker.com/engine/containers/run/#cmd-default-command-or-options)로 전달하여 작업 스크립트를 실행하는 컨테이너를 시작합니다.
+기본적으로 Docker 실행기는 Docker 이미지의 [`ENTRYPOINT`](https://docs.docker.com/engine/containers/run/#default-entrypoint)를 재정의하지 않습니다. 작업 스크립트를 실행하는 컨테이너를 시작하기 위해 `sh` 또는 `bash`를 [`COMMAND`](https://docs.docker.com/engine/containers/run/#commands-and-arguments)로 전달합니다.
 
 작업을 실행할 수 있도록 Docker 이미지는 다음을 수행해야 합니다:
 
@@ -779,11 +798,11 @@ Linux에 GitLab 러너가 설치되어 있으면 작업에서 Podman을 사용�
 - 작업 실행기로 Podman을 사용하여 [서비스](#services) 를 실행하려면 [`FF_NETWORK_PER_BUILD` 기능 플래그](#create-a-network-for-each-job)를 활성화합니다. [Docker 컨테이너 링크](https://docs.docker.com/engine/network/links/) 는 레거시이며 [Podman](https://podman.io/)에서 지원되지 않습니다. 네트워크 별칭을 생성하는 서비스의 경우 `podman-plugins` 패키지를 설치해야 합니다.
 
 > [!note]
-> Podman은 `aardvark-dns`를 컨테이너의 DNS 서버로 사용합니다. `aardvark-dns` 버전 1.10.0 이하는 CI/CD 작업에서 산발적인 DNS 확인 실패를 유발합니다. 최신 버전이 설치되어 있는지 확인하세요. 자세한 내용은 [GitHub 문제 389](https://github.com/containers/aardvark-dns/issues/389)를 참조하세요.
+Podman은 `aardvark-dns`를 컨테이너의 DNS 서버로 사용합니다. `aardvark-dns` 버전 1.10.0 이하는 CI/CD 작업에서 산발적인 DNS 확인 실패를 유발합니다. 최신 버전이 설치되어 있는지 확인하세요. 자세한 내용은 [GitHub 문제 389](https://github.com/containers/aardvark-dns/issues/389)를 참조하세요.
 
 1. Linux 호스트에서 GitLab 러너를 설치합니다. 시스템의 패키지 관리자를 사용하여 GitLab 러너를 설치한 경우 `gitlab-runner` 사용자가 자동으로 생성됩니다.
 1. GitLab 러너를 실행하는 사용자로 로그인하세요. [`pam_systemd`](https://www.freedesktop.org/software/systemd/man/latest/pam_systemd.html) 주위를 우회하지 않는 방식으로 이를 수행해야 합니다. 올바른 사용자와 함께 SSH를 사용할 수 있습니다. 이렇게 하면 이 사용자로 `systemctl`을 실행할 수 있습니다.
-1. 시스템이 [루트리스 Podman 설정](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md)의 필수 조건을 충족하는지 확인하세요. 특히 사용자에게 [`/etc/subuid` 및 `/etc/subgid`의 올바른 항목](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md#etcsubuid-and-etcsubgid-configuration)이 있는지 확인하세요.
+1. 시스템이 [a rootless Podman setup](https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/rootless_tutorial.md)의 사전 요구 사항을 충족하는지 확인하세요. 특히 사용자가 [`/etc/subuid` 및 `/etc/subgid`에서 올바른 항목을 가지고 있는지 확인하세요.](https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/rootless_tutorial.md#etcsubuid-and-etcsubgid-configuration)
 1. Linux 호스트에서 [Podman을 설치](https://podman.io/getting-started/installation)합니다.
 1. Podman 소켓을 활성화하고 시작합니다:
 
@@ -820,7 +839,20 @@ Linux에 GitLab 러너가 설치되어 있으면 작업에서 Podman을 사용�
    ```
 
    > [!note]
-   > `privileged = false`을 표준 Podman 사용으로 설정합니다. 작업 내에서 [Docker-in-Docker 서비스](#use-docker-in-docker-with-privileged-mode)를 실행해야 하는 경우에만 `privileged = true`을 설정합니다.
+`privileged = false`을 표준 Podman 사용으로 설정합니다. 작업 내에서 [Docker-in-Docker 서비스](#use-docker-in-docker-with-privileged-mode)를 실행해야 하는 경우에만 `privileged = true`을 설정합니다.
+
+> [!warning]
+Podman 소켓 (예: `/run/user/<uid>/podman/podman.sock`)을 `volumes`를 통해 작업 컨테이너로 마운트하지 마세요. 소켓은 호스트 Podman 서비스를 제어하므로 작업에 노출하면 rootless Podman이 제거하려는 권한이 반환됩니다. 러너는 `[runners.docker]`의 `host` 설정을 통해 소켓에 도달합니다. 작업은 이를 필요로 하지 않습니다. 실제로 root가 필요한 작업의 경우 공유되는 오래 지속되는 호스트 대신 일회용 단일 사용 환경으로 격리하세요. 자세한 내용은 [security risks for Docker executors](../security/_index.md#usage-of-docker-executor)를 참고하세요.
+
+### 컨테이너 리소스 제한 적용 {#enforce-container-resource-limits}
+
+Rootless Podman은 `[runners.docker]` 섹션에 설정된 컨테이너 리소스 제한 (예: `memory`, `memory_swap`, 및 `cpus`)을 `systemd` cgroup manager가 있는 cgroups v2 티어에서만 적용합니다. v2 티어는 RHEL, CentOS 및 AlmaLinux 9 이상, 그리고 현재 Debian 및 Ubuntu 릴리스의 기본값입니다. 레거시 cgroups v1 티어를 여전히 사용 중인 호스트에서는 rootless Podman이 이러한 제한을 조용히 무시하고 작업이 제약 없이 실행되므로 하나의 작업이 호스트 메모리 또는 CPU를 소진할 수 있습니다.
+
+리소스 제한을 신뢰하는 경우 호스트가 cgroups v2를 사용하는지 확인하세요:
+
+```shell
+stat -fc %T /sys/fs/cgroup   # cgroup2fs = v2; tmpfs = v1
+```
 
 ### Dockerfile에서 컨테이너 이미지 빌드용 Podman 사용 {#use-podman-to-build-container-images-from-a-dockerfile}
 
@@ -903,7 +935,7 @@ Podman 러너 문제가 SELinux 관련인지 테스트하려면 일시적으로 
 ```
 
 > [!warning]
-> 이 추가는 컨테이너의 SELinux 적용을 끕니다(Docker의 기본 동작). 보안 의미가 있을 수 있으므로 이 구성을 테스트 목적으로만 사용하고 영구 솔루션으로는 사용하지 마세요.
+이 추가는 컨테이너의 SELinux 적용을 끕니다(Docker의 기본 동작). 보안 의미가 있을 수 있으므로 이 구성을 테스트 목적으로만 사용하고 영구 솔루션으로는 사용하지 마세요.
 
 #### Configure SELinux MCS {#configure-selinux-mcs}
 
@@ -918,7 +950,7 @@ SELinux가 일부 쓰기 작업(예: 기존 Git 리포지토리 재초기화)을
 이 옵션은 SELinux를 비활성화하지 않지만 컨테이너의 MCS 수준을 설정합니다. 이 접근 방식은 `label:disable`을 사용하는 것보다 더 안전합니다.
 
 > [!warning]
-> 동일한 MCS 범주를 사용하는 여러 컨테이너는 해당 범주로 태그가 지정된 동일한 파일에 접근할 수 있습니다.
+동일한 MCS 범주를 사용하는 여러 컨테이너는 해당 범주로 태그가 지정된 동일한 파일에 접근할 수 있습니다.
 
 ## 작업을 실행할 사용자 지정 {#specify-which-user-runs-the-job}
 
@@ -1113,6 +1145,7 @@ Windows 컨테이너는 호스트 OS 및 격리 모드를 기반으로 하는 �
 
 - `mcr.microsoft.com/windows/servercore:ltsc2025`
 - `mcr.microsoft.com/windows/servercore:ltsc2025-amd64`
+- `mcr.microsoft.com/windows/servercore:ltsc2025-arm64`
 - `mcr.microsoft.com/windows/servercore:ltsc2022`
 - `mcr.microsoft.com/windows/servercore:ltsc2022-amd64`
 - `mcr.microsoft.com/windows/servercore:1809`
@@ -1134,7 +1167,7 @@ unsupported Windows Version: Windows Server Datacenter
 ### Windows Docker 실행기 구성 {#configure-a-windows-docker-executor}
 
 > [!note]
-> `c:\\cache`이 소스 디렉토리로 러너가 등록되고 `--docker-volumes` 또는 `DOCKER_VOLUMES` 환경 변수를 전달할 때 [알려진 문제](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312)가 있습니다.
+`c:\\cache`이 소스 디렉토리로 러너가 등록되고 `--docker-volumes` 또는 `DOCKER_VOLUMES` 환경 변수를 전달할 때 [알려진 문제](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312)가 있습니다.
 
 다음은 Windows를 실행하는 Docker 실행기에 대한 구성 예입니다.
 
@@ -1153,15 +1186,21 @@ Docker 실행기의 다른 구성 옵션은 [고급 구성](../configuration/adv
 
 ### Windows 헬퍼 이미지 {#windows-helper-images}
 
-GitLab 러너는 다양한 Windows 버전과 PowerShell 요구 사항에 맞춘 여러 헬퍼 이미지를 제공합니다. 사용 가능한 변형:
+GitLab 러너는 다양한 Windows 버전, CPU 아키텍처 및 PowerShell 요구 사항에 맞춘 여러 도우미 이미지를 제공합니다. 사용 가능한 변형:
 
-- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver21H2`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore24H2`
+- `gitlab/gitlab-runner-helper:arm64-vXYZ-servercore24H2`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver24H2`
+- `gitlab/gitlab-runner-helper:arm64-vXYZ-nanoserver24H2`
 - `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore21H2`
-- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver1809`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver21H2`
 - `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore1809`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver1809`
+
+GitLab 러너는 호스트의 Windows 버전 및 CPU 아키텍처와 일치하는 도우미 이미지를 자동으로 선택하므로 일반적으로 `helper_image`을 수동으로 설정할 필요가 없습니다. 예를 들어 Windows Server 2025 (24H2) ARM64 호스트에서 러너는 `arm64-vXYZ-servercore24H2` 이미지를 선택합니다.
 
 > [!note]
-> Windows 컨테이너 하위 호환성으로 인해 Windows Server 2025 (24H2)는 21H2 (Windows Server 2022) 헬퍼 이미지를 사용할 수 있습니다.
+ARM64 도우미 이미지는 Windows Server 2025 (24H2)에서만 사용 가능합니다. Microsoft는 Windows Server 2019 (1809) 또는 2022 (21H2)용 ARM64 기본 이미지를 게시하지 않습니다. 이러한 버전에서는 러너가 x86_64 도우미 이미지로 폴백합니다.
 
 셸 요구 사항에 따라 헬퍼 이미지를 선택하세요. `servercore` 이미지는 기본값이며 `PowerShell`와 `Pwsh` 모두를 지원합니다. `pwsh`만 사용하는 컨테이너의 경우 더 가벼운 `nanoserver` 이미지를 사용하세요.
 
@@ -1199,7 +1238,7 @@ GitLab 러너는 다양한 Windows 버전과 PowerShell 요구 사항에 맞춘 
 
 {{< /history >}}
 
-Docker 실행기는 [`step-runner`](https://gitlab.com/gitlab-org/step-runner)에서 제공하는 `gRPC` API를 사용하여 [CI/CD 단계](https://docs.gitlab.com/ci/steps/)를 기본적으로 실행할 수 있습니다.
+Docker 실행기는 [`step-runner`](https://gitlab.com/gitlab-org/step-runner)가 제공하는 `gRPC` API를 사용하여 [GitLab Functions](https://docs.gitlab.com/ci/functions/)를 기본적으로 실행하도록 지원합니다.
 
 이 실행 모드를 활성화하려면 레거시 `script` 키워드 대신 `run` 키워드를 사용하여 CI/CD 작업을 지정해야 합니다. 또한 `FF_USE_NATIVE_STEPS` 기능 플래그를 활성화해야 합니다. 이 기능 플래그는 작업 또는 파이프라인 수준에서 활성화할 수 있습니다.
 

@@ -8,13 +8,17 @@ title: FreeBSD에 GitLab Runner 설치
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
 > [!note]
 > FreeBSD 버전은 [bleeding edge](bleeding-edge.md) 릴리스로도 제공됩니다. GitLab Runner와 관련된 가장 일반적인 문제를 설명하는 [FAQ](../faq/_index.md) 섹션을 읽어야 합니다.
+
+## 지원되는 버전 {#supported-versions}
+
+GitLab 러너는 [FreeBSD의 Production 및 Legacy 버전](https://www.freebsd.org/releases/)을 지원합니다. 지원이 종료된 FreeBSD 버전은 지원되지 않습니다.
 
 ## GitLab Runner 설치 {#installing-gitlab-runner}
 

@@ -7,8 +7,8 @@ title: AWS Fargate에서 GitLab CI 자동 크기 조정
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -83,7 +83,7 @@ CI/CD 작업은 ECS 작업에서 정의한 이미지를 사용하며, `image:` �
 1. **Auto-assign Public IP**를 **사용**로 설정합니다.
 1. **IAM role** 아래에서 **Create new IAM role**을 선택합니다. 이 역할은 테스트 목적으로만 사용되며 안전하지 않습니다.
    1. **역할 생성**을 선택합니다.
-   1. **AWS service**를 선택하고 **Common use cases** 아래에서 **EC2**를 선택합니다. 그 다음 **다음: 권한**을 선택합니다.
+   1. **AWS service**를 선택하고 **Common use cases** 아래에서 **EC2**를 선택합니다. 그리고 **다음: 권한**을 선택합니다.
    1. **AmazonECS_FullAccess** 정책의 체크박스를 선택합니다. **다음: 태그**를 선택합니다.
    1. **다음: 검토**를 선택합니다.
    1. IAM 역할의 이름을 입력합니다(예: `fargate-test-instance`). 그리고 **역할 생성**을 선택합니다.
@@ -94,7 +94,7 @@ CI/CD 작업은 ECS 작업에서 정의한 이미지를 사용하며, `image:` �
 1. **Create a new security group**을 선택하고 `fargate-test`라고 지정합니다. 그리고 SSH에 대한 규칙이 정의되어 있는지 확인합니다(`Type: SSH, Protocol: TCP, Port Range: 22`). 인바운드 및 아웃바운드 규칙의 IP 범위를 지정해야 합니다.
 1. **Review and Launch**을 선택합니다.
 1. **Launch**을 선택합니다.
-1. 선택 사항입니다. **Create a new key pair**을 선택하고 `fargate-runner-manager`라고 지정합니다. 그리고 **Download Key Pair**를 선택합니다. SSH의 프라이빗 키가 컴퓨터에 다운로드됩니다(브라우저에서 구성한 디렉터리 확인).
+1. 선택사항. **Create a new key pair**을 선택하고 `fargate-runner-manager`라고 지정합니다. 그리고 **Download Key Pair**를 선택합니다. SSH의 프라이빗 키가 컴퓨터에 다운로드됩니다(브라우저에서 구성한 디렉터리 확인).
 1. **Launch Instances**을 선택합니다.
 1. **View Instances**를 선택합니다.
 1. 인스턴스가 시작될 때까지 기다립니다. `IPv4 Public IP` 주소를 기록합니다.
@@ -363,7 +363,7 @@ AWS Fargate 드라이버에는 ECS 클러스터가 [default capacity provider st
 
 추가 참고 자료:
 
-- 기본 [capacity provider strategy](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-capacity-providers.html)는 각 Amazon ECS 클러스터와 연결됩니다. 다른 capacity provider strategy 또는 실행 유형을 지정하지 않으면 작업이 실행되거나 서비스가 생성될 때 클러스터는 이 전략을 사용합니다.
+- 기본 [용량 제공자 전략](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/capacity-cluster-best-practice.html)이 각 Amazon ECS 클러스터와 연결됩니다. 다른 capacity provider strategy 또는 실행 유형을 지정하지 않으면 작업이 실행되거나 서비스가 생성될 때 클러스터는 이 전략을 사용합니다.
 - [`capacityProviderStrategy`](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RunTask.html#ECS-RunTask-request-capacityProviderStrategy)를 지정하면 `launchType` 매개변수를 생략해야 합니다. `capacityProviderStrategy` 또는 `launchType`를 지정하지 않으면 클러스터의 `defaultCapacityProviderStrategy`이 사용됩니다.
 
 ### 메타데이터 `file does not exist` 오류가 작업 실행 중에 발생 {#metadata-file-does-not-exist-error-when-running-jobs}

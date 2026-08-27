@@ -7,8 +7,8 @@ title: 그래픽 처리 장치(GPU) 사용
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -31,7 +31,7 @@ GitLab Runner는 그래픽 처리 장치(GPU)의 사용을 지원합니다. 다�
 
 전제 조건:
 
-- [NVIDIA Driver](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/index.html)를 설치합니다.
+- [NVIDIA Driver](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/latest/index.html)를 설치합니다.
 - [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)을 설치합니다.
 
 `gpus` 또는 `service_gpus` 구성 옵션을 [`runners.docker` 섹션](advanced-configuration.md#the-runnersdocker-section)에서 사용합니다:

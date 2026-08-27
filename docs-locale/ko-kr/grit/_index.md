@@ -7,16 +7,16 @@ title: GitLab 러너 인프라 도구 키트
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
-- 상태:  실험
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 상태:  실험적 기능
 
 {{< /details >}}
 
 [GitLab 러너 인프라 도구 키트(GRIT)](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit)는 공개 클라우드 공급자에서 많은 일반적인 러너 구성을 만들고 관리하는 데 사용할 수 있는 Terraform 모듈 라이브러리입니다.
 
 > [!note]
-> 이 기능은 [실험](https://docs.gitlab.com/policy/development_stages_support/#experiment) 단계입니다. GRIT 개발 상태에 대한 자세한 정보는 [에픽 1](https://gitlab.com/groups/gitlab-org/ci-cd/runner-tools/-/epics/1)을 참조하세요. 이 기능에 대한 피드백을 제공하려면 [이슈 84](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/issues/84)에 댓글을 남기세요.
+> 이 기능은 [실험](https://docs.gitlab.com/policy/development_stages_support/#experiment) 단계입니다. GRIT 개발 상태에 대한 자세한 정보는 [에픽 1](https://gitlab.com/groups/gitlab-org/ci-cd/runner-tools/-/work_items/1)을 참조하세요. 이 기능에 대한 피드백을 제공하려면 [이슈 84](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/issues/84)에 댓글을 남기세요.
 
 ## GRIT를 사용하여 러너 만들기 {#create-a-runner-with-grit}
 
@@ -195,6 +195,6 @@ GRIT는 품질을 보장하기 위해 여러 테스트 및 린팅 도구를 사�
 GRIT는 GitLab 생태계 내의 다양한 팀과 서비스에서 채택되었습니다:
 
 - **[GitLab Dedicated](https://about.gitlab.com/dedicated/)**:  [GitLab Dedicated를 위한 호스팅 러너](https://docs.gitlab.com/administration/dedicated/hosted_runners/)는 GRIT를 사용하여 러너 인프라를 프로비저닝하고 관리합니다.
-- **GitLab Self-Managed**:  GRIT는 많은 GitLab 자체 관리 고객들 사이에서 매우 요청되고 있습니다. 일부 조직에서는 표준화된 방식으로 러너 배포를 관리하기 위해 GRIT를 채택하기 시작했습니다.
+- **GitLab Self-Managed**:  GRIT는 많은 GitLab Self-Managed 고객들 사이에서 매우 요청되고 있습니다. 일부 조직에서는 표준화된 방식으로 러너 배포를 관리하기 위해 GRIT를 채택하기 시작했습니다.
 
 조직에서 GRIT를 사용하고 있으며 이 섹션에 소개되고 싶다면 머지 리퀘스트를 열어주세요!
