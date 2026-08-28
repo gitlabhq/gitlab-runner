@@ -69,8 +69,9 @@ const (
 
 	// fallbackExitStatusMarkerFmt mirrors the JSON marker printed by the trap inside
 	// the stage script itself (see bashJSONTerminationScript), for the case where the
-	// detect shell can't even open that script. See the comment above its use in
-	// getContainerInfo for why this fallback exists.
+	// detect shell can't even open that script. See getContainerInfo for why this
+	// fallback exists; the predefined-stage case reuses it with "<<<" folded into
+	// the "command" half.
 	fallbackExitStatusMarkerFmt = `'((%s %s; ec=$?; if [ $ec -ne 0 ]; then echo; echo "{\"command_exit_code\": $ec, \"script\": \"%s\"}"; fi) %s) &'`
 
 	waitLogFileTimeout = time.Minute
@@ -1237,15 +1238,21 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 			),
 		}
 		if cmd.Predefined {
-			// We use redirection here since the "gitlab-runner-build" helper doesn't pass input args
-			// to the shell it executes, so we technically pass the script to the stdin of the underlying shell
-			// translates roughly to "gitlab-runner-build <<< /stage/script/path.sh"
-			containerCommand = append( //nolint:gocritic
-				s.helperImageInfo.Cmd,
-				"<<<",
-				s.scriptPath(cmd.Stage),
-				s.buildRedirectionCmd(shell),
-			)
+			// "gitlab-runner-build" feeds the script path via stdin ("<<<") rather
+			// than argv, so a missing script fails the same way as the detect-shell
+			// case above, with no JSON marker. Wrapped the same way, reusing the same
+			// format with "<<<" folded into the "command" half. Runs under bash, not
+			// sh, since "<<<" is a bash extension.
+			containerCommand = []string{
+				"bash",
+				"-c",
+				fmt.Sprintf(fallbackExitStatusMarkerFmt,
+					strings.Join(s.helperImageInfo.Cmd, " ")+" <<<",
+					s.scriptPath(cmd.Stage),
+					s.scriptPath(cmd.Stage),
+					s.buildRedirectionCmd(shell),
+				),
+			}
 		}
 	}
 

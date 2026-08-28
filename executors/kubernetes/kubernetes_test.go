@@ -7742,12 +7742,16 @@ func TestGetContainerInfo(t *testing.T) {
 			},
 			expectedContainerName: helperContainerName,
 			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
-				return append(
-					e.helperImageInfo.Cmd,
-					"<<<",
-					e.scriptPath(cmd.Stage),
-					e.buildRedirectionCmd("bash"),
-				)
+				return []string{
+					"bash",
+					"-c",
+					fmt.Sprintf(fallbackExitStatusMarkerFmt,
+						strings.Join(e.helperImageInfo.Cmd, " ")+" <<<",
+						e.scriptPath(cmd.Stage),
+						e.scriptPath(cmd.Stage),
+						e.buildRedirectionCmd("bash"),
+					),
+				}
 			},
 		},
 		"pwsh container info": {
@@ -7796,10 +7800,11 @@ func TestGetContainerInfo(t *testing.T) {
 // see exec.go) to prove the wrapper reports a fallback exit status when the
 // stage script can't be found - historically nothing did, so the runner
 // waited forever for a JSON marker that could never be written (the trap
-// that writes it lives inside the very script that failed to load). This
-// test covers the build container (non-predefined stage) scenario only; the
-// equivalent for the helper container (predefined stages) is not covered by
-// this fix. See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39354.
+// that writes it lives inside the very script that failed to load). Covers
+// both the build container (detect shell) and helper container (predefined
+// stages, via "gitlab-runner-build") - see
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39354 and
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39606.
 func TestGetContainerInfoReportsExitStatusWhenStageScriptMissing(t *testing.T) {
 	// The generated container command relies on bash-specific pipe/backgrounding
 	// semantics (see the comment above), and is run here through a real bash, which
@@ -7827,6 +7832,7 @@ trap runner_script_trap EXIT
 	require.NoError(t, err)
 
 	tests := map[string]struct {
+		predefined       bool
 		writeStageScript bool
 		scriptContent    string
 		wantMarker       bool
@@ -7863,6 +7869,35 @@ trap runner_script_trap EXIT
 			wantMarker:       true,
 			wantExitCode:     0,
 		},
+		"predefined stage script missing on disk": {
+			predefined:       true,
+			writeStageScript: false,
+			wantMarker:       true,
+			wantExitCode:     127,
+		},
+		"predefined stage script present and succeeds": {
+			predefined:       true,
+			writeStageScript: true,
+			scriptContent:    "echo stage ran\n",
+			wantMarker:       false,
+		},
+		"predefined stage script present with trap and succeeds": {
+			predefined:       true,
+			writeStageScript: true,
+			scriptContent:    jsonTerminationTrap + "echo stage ran\n",
+			wantMarker:       true,
+			wantExitCode:     0,
+		},
+		"predefined stage script present with trap and fails": {
+			// Mirrors "stage script present and fails" above, but through the
+			// "<<<" here-string feed used for predefined stages, to prove that
+			// path doesn't double-report either.
+			predefined:       true,
+			writeStageScript: true,
+			scriptContent:    jsonTerminationTrap + "exit 1\n",
+			wantMarker:       true,
+			wantExitCode:     1,
+		},
 	}
 
 	for tn, tt := range tests {
@@ -7872,12 +7907,18 @@ trap runner_script_trap EXIT
 			e := setupExecutor("bash", successfulResponse)
 			e.Config.RunnerSettings.Kubernetes.ScriptsBaseDir = tmp
 			e.Config.RunnerSettings.Kubernetes.LogsBaseDir = tmp
+			if tt.predefined {
+				// Real entrypoint is `exec /bin/bash`, so bash is equivalent here.
+				e.helperImageInfo.Cmd = []string{"bash"}
+			}
 
-			cmd := common.ExecutorCommand{Stage: common.BuildStagePrepare, Predefined: false}
+			cmd := common.ExecutorCommand{Stage: common.BuildStagePrepare, Predefined: tt.predefined}
 
 			require.NoError(t, os.MkdirAll(e.scriptsDir(), 0o755))
 			require.NoError(t, os.MkdirAll(e.logsDir(), 0o755))
-			require.NoError(t, os.WriteFile(e.scriptPath(detectShellScriptName), []byte(shells.BashDetectShellScript), 0o755))
+			if !tt.predefined {
+				require.NoError(t, os.WriteFile(e.scriptPath(detectShellScriptName), []byte(shells.BashDetectShellScript), 0o755))
+			}
 
 			if tt.writeStageScript {
 				require.NoError(t, os.WriteFile(e.scriptPath(cmd.Stage), []byte(tt.scriptContent), 0o755))
