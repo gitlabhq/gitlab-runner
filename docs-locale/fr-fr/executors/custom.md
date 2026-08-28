@@ -7,7 +7,7 @@ title: "L'exécuteur personnalisé (Custom executor)"
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -343,7 +343,7 @@ GitLab Runner tente de terminer gracieusement un exécutable dans l'une des cond
 - Le job [expire](https://docs.gitlab.com/ci/pipelines/settings/#set-a-limit-for-how-long-jobs-can-run).
 - Le job est annulé.
 
-Lorsqu'un délai est atteint, un `SIGTERM` est envoyé à l'exécutable, et le compte à rebours pour [`exec_terminate_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section) démarre. L'exécutable doit écouter ce signal pour s'assurer qu'il libère toutes les ressources. Si `exec_terminate_timeout` expire et que le processus est toujours en cours d'exécution, un `SIGKILL` est envoyé pour tuer le processus et [`exec_force_kill_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section) démarre. Si le processus est toujours en cours d'exécution après la fin de `exec_force_kill_timeout`, GitLab Runner abandonne le processus et ne tente plus de l'arrêter ou de le tuer. Si ces deux délais sont atteints pendant `config_exec`, `prepare_exec` ou `run_exec`, le build est marqué comme échoué.
+Lorsqu'un délai est atteint, un `SIGTERM` est envoyé à l'exécutable, et le décompte pour [`graceful_kill_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section) commence. L'exécutable doit écouter ce signal pour s'assurer qu'il libère toutes les ressources. Si `graceful_kill_timeout` expire et que le processus est toujours en cours d'exécution, un `SIGKILL` est envoyé pour mettre fin au processus et [`force_kill_timeout`](../configuration/advanced-configuration.md#the-runnerscustom-section) démarre. Si le processus est toujours en cours d'exécution après la fin de `force_kill_timeout`, GitLab Runner abandonne le processus et ne tente plus de l'arrêter ou de le mettre fin. Si ces deux délais sont atteints pendant `config_exec`, `prepare_exec` ou `run_exec`, le build est marqué comme échoué.
 
 Tout processus enfant engendré par le pilote reçoit également le processus de terminaison gracieuse décrit ci-dessus sur les systèmes basés sur UNIX. Cela est réalisé en définissant le processus principal comme un [groupe de processus](https://man7.org/linux/man-pages/man2/setpgid.2.html) auquel appartiennent tous les processus enfants.
 

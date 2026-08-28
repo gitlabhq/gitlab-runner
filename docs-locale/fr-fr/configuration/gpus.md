@@ -7,7 +7,7 @@ title: Utilisation des unités de traitement graphique (GPU)
 
 {{< details >}}
 
-- Niveau : Free, Premium, Ultimate
+- Niveau : Gratuite, GitLab Premium, GitLab Ultimate
 - Offre : GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -31,7 +31,7 @@ Aucune configuration de runner n'est nécessaire.
 
 Prérequis :
 
-- Installez [NVIDIA Driver](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/index.html).
+- Installez [NVIDIA Driver](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/latest/index.html).
 - Installez [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
 Utilisez l'option de configuration `gpus` ou `service_gpus` dans la [section `runners.docker`](advanced-configuration.md#the-runnersdocker-section) :

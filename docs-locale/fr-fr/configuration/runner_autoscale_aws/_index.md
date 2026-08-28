@@ -7,7 +7,7 @@ title: "Configurer la mise à l'échelle automatique Docker Machine du runner su
 
 {{< details >}}
 
-- Niveau : Free, Premium, Ultimate
+- Niveau : Gratuite, GitLab Premium, GitLab Ultimate
 - Offre : GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -237,7 +237,7 @@ Maintenant, selon votre infrastructure AWS, il existe de nombreuses options que 
 Remarques :
 
 - Sous `MachineOptions`, vous pouvez ajouter tout ce que le [pilote AWS Docker Machine prend en charge](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#options). Nous vous encourageons vivement à lire la documentation de Docker, car la configuration de votre infrastructure peut nécessiter l'application d'options différentes.
-- Les instances enfants utiliseront par défaut Ubuntu 16.04, sauf si vous choisissez un ID AMI différent en définissant `amazonec2-ami`. Définissez uniquement les [systèmes d'exploitation de base pris en charge pour Docker Machine](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/os-base).
+- Les instances enfants utiliseront par défaut Ubuntu 16.04, sauf si vous choisissez un ID AMI différent en définissant `amazonec2-ami`. Définissez uniquement les systèmes d'exploitation de base pris en charge pour Docker Machine.
 - Si vous spécifiez `amazonec2-private-address-only=true` comme l'une des options de machine, votre instance EC2 ne se verra pas attribuer d'adresse IP publique. C'est correct si votre VPC est configuré correctement avec une passerelle Internet (IGW) et que le routage fonctionne bien, mais c'est quelque chose à prendre en compte si vous avez une configuration plus complexe. Pour en savoir plus, consultez la [documentation Docker sur la connectivité VPC](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#vpc-connectivity).
 
 [D'autres options](../advanced-configuration.md#the-runnersmachine-section) sous `[runners.machine]` sont également disponibles.

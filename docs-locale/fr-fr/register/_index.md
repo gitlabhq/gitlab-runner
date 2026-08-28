@@ -7,7 +7,7 @@ title: Enregistrement des runners
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -29,16 +29,10 @@ Avant d'enregistrer un runner :
 
 ## Enregistrement avec un token d'authentification de runner {#register-with-a-runner-authentication-token}
 
-{{< history >}}
-
-- [Introduit](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613) dans GitLab 15.10.
-
-{{< /history >}}
-
 Prérequis :
 
 - Obtenez un token d'authentification de runner. Vous pouvez soit :
-  - Créez un runner d'instance, de groupe ou de projet. Pour obtenir des instructions, voir [gérer les runners](https://docs.gitlab.com/ci/runners/runners_scope).
+  - Créez un runner d'instance, de groupe ou de projet. Pour obtenir des instructions, consultez [gérer les runners](https://docs.gitlab.com/ci/runners/runners_scope/).
   - Localisez le token d'authentification du runner dans le fichier `config.toml`. Les tokens d'authentification des runners ont le préfixe `glrt-`.
 
 Une fois le runner enregistré, la configuration est sauvegardée dans `config.toml`.
@@ -145,6 +139,7 @@ sudo gitlab-runner register \
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -159,6 +154,7 @@ gitlab-runner register \
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -173,6 +169,7 @@ gitlab-runner register \
   --token "$RUNNER_TOKEN" \
   --executor "docker-windows" \
   --docker-image mcr.microsoft.com/windows/servercore:1809_amd64 \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -187,6 +184,7 @@ sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -201,6 +199,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --token "$RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner"
 ```
 
@@ -211,12 +210,12 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 ## Enregistrement avec un token d'enregistrement de runner (déprécié) {#register-with-a-runner-registration-token-deprecated}
 
 > [!warning]
-> Les tokens d'enregistrement de runners et plusieurs arguments de configuration de runners ont été [dépréciés](https://gitlab.com/gitlab-org/gitlab/-/issues/380872). Leur suppression est prévue dans GitLab 20.0. Utilisez plutôt des tokens d'authentification de runners. Pour plus d'informations, voir [Migration vers le nouveau workflow d'enregistrement de runners](https://docs.gitlab.com/ci/runners/new_creation_workflow/).
+> Les jetons d'inscription des runners et plusieurs arguments de configuration des runners ont été [dépréciés](https://gitlab.com/gitlab-org/gitlab/-/work_items/380872). Leur suppression est prévue dans GitLab 20.0. Utilisez plutôt des tokens d'authentification de runners. Pour plus d'informations, voir [Migration vers le nouveau workflow d'enregistrement de runners](https://docs.gitlab.com/ci/runners/new_creation_workflow/).
 
 Prérequis :
 
 - Les tokens d'enregistrement de runners doivent être [activés](https://docs.gitlab.com/administration/settings/continuous_integration/#control-runner-registration) dans la zone d'administration.
-- Obtenez un token d'enregistrement de runner pour l'instance, le groupe ou le projet souhaité. Pour obtenir des instructions, voir [gérer les runners](https://docs.gitlab.com/ci/runners/runners_scope).
+- Obtenez un token d'enregistrement de runner pour l'instance, le groupe ou le projet souhaité. Pour obtenir des instructions, consultez [gérer les runners](https://docs.gitlab.com/ci/runners/runners_scope/).
 
 Une fois le runner enregistré, la configuration est sauvegardée dans `config.toml`.
 
@@ -313,6 +312,7 @@ sudo gitlab-runner register \
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -332,6 +332,7 @@ gitlab-runner register \
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -351,6 +352,7 @@ gitlab-runner register \
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker-windows" \
   --docker-image mcr.microsoft.com/windows/servercore:1809_amd64 \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -370,6 +372,7 @@ sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -389,6 +392,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
+  --docker-pull-policy "if-not-present" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -414,7 +418,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 {{< /history >}}
 
-Les tokens d'enregistrement de runners et plusieurs arguments de configuration de runners ont été [dépréciés](https://gitlab.com/gitlab-org/gitlab/-/issues/379743). Leur suppression est prévue dans GitLab 20.0. Pour garantir une perturbation minimale de votre workflow d'automatisation, le `legacy-compatible registration process` se déclenche si un token d'authentification de runner est spécifié dans le paramètre hérité `--registration-token`.
+Les jetons d'inscription des runners et plusieurs arguments de configuration des runners ont été [dépréciés](https://gitlab.com/gitlab-org/gitlab/-/work_items/379743). Leur suppression est prévue dans GitLab 20.0. Pour garantir une perturbation minimale de votre workflow d'automatisation, le `legacy-compatible registration process` se déclenche si un token d'authentification de runner est spécifié dans le paramètre hérité `--registration-token`.
 
 Le processus d'enregistrement compatible avec l'ancienne version ignore les paramètres de ligne de commande suivants. Ces paramètres ne peuvent être configurés que lors de la création d'un runner dans l'interface utilisateur ou via l'API.
 
@@ -435,9 +439,9 @@ Prérequis :
 - Le volume pour l'emplacement du fichier modèle doit être monté sur le conteneur GitLab Runner.
 - Un token d'authentification ou d'enregistrement de runner :
   - Obtenez un token d'authentification de runner (recommandé). Vous pouvez soit :
-    - Obtenez un token d'authentification de runner pour l'instance, le groupe ou le projet souhaité. Pour obtenir des instructions, voir [gérer les runners](https://docs.gitlab.com/ci/runners/runners_scope).
+    - Obtenez un token d'authentification de runner pour l'instance, le groupe ou le projet souhaité. Pour obtenir des instructions, consultez [gérer les runners](https://docs.gitlab.com/ci/runners/runners_scope/).
     - Localisez le token d'authentification du runner dans le fichier `config.toml`. Les tokens d'authentification des runners ont le préfixe `glrt-`.
-  - Obtenez un token d'enregistrement de runner (déprécié) pour une instance, un groupe ou un projet. Pour obtenir des instructions, voir [gérer les runners](https://docs.gitlab.com/ci/runners/runners_scope).
+  - Obtenez un token d'enregistrement de runner (déprécié) pour une instance, un groupe ou un projet. Pour obtenir des instructions, consultez [gérer les runners](https://docs.gitlab.com/ci/runners/runners_scope/).
 
 Le modèle de configuration peut être utilisé pour les environnements automatisés qui ne prennent pas en charge certains arguments de la commande `register` en raison de :
 

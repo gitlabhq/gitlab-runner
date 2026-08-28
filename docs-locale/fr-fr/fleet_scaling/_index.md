@@ -187,6 +187,11 @@ Le tableau suivant inclut un résumé des métriques de GitLab Runner. La liste 
 | `gitlab_runner_job_stage_duration_seconds`                     | Un histogramme représentant la durée des jobs pour chaque étape. Cette métrique est une **high cardinality metric**. Pour plus d'informations, consultez la [section sur les métriques de haute cardinalité](#high-cardinality-metrics). |
 | `gitlab_runner_jobs_total`                                     | Affiche le total des jobs exécutés. |
 | `gitlab_runner_job_execution_mode_total`                       | Affiche le total des jobs exécutés par mode (`steps` ou `traditional`) et par exécuteur. |
+| `gitlab_runner_job_router_circuit_breaker_state`               | État du disjoncteur du Job Router (`0` = fermé, `1` = ouvert, `2` = semi-ouvert). |
+| `gitlab_runner_job_router_circuit_breaker_trips_total`         | Le nombre de fois où le disjoncteur du Job Router s'est déclenché en position ouverte. |
+| `gitlab_runner_job_router_discovery_cache_events_total`        | Le nombre de recherches dans le cache de découverte du Job Router, partitionné par `result` (`hit` ou `miss`). |
+| `gitlab_runner_job_router_fallbacks_total`                     | Le nombre de demandes de job qui ont basculé du Job Router vers l'interrogation directe de GitLab, partitionné par `reason` (`no_discovery`, `breaker_open`, `dial_failed`, `breaker_tripped` ou `router_disabled`). |
+| `gitlab_runner_job_router_get_job_duration_seconds`            | Histogramme des durées des requêtes `GetJob` du Job Router côté runner. |
 | `gitlab_runner_limit`                                          | La valeur actuelle du paramètre de limite. |
 | `gitlab_runner_request_concurrency`                            | Le nombre actuel de requêtes simultanées pour un nouveau job. |
 | `gitlab_runner_request_concurrency_exceeded_total`             | Nombre de requêtes excédentaires au-dessus de la limite `request_concurrency` configurée. |
@@ -275,7 +280,7 @@ La collecte des métriques est indépendante de l'exécuteur et disponible pour 
 Pour modifier les tableaux de bord pour votre environnement :
 
 1. Modifiez les fichiers `.dashboard.jsonnet` dans le répertoire `dashboards/ci-runners/`.
-1. Utilisez la syntaxe de la [bibliothèque Grafonnet](https://grafana.github.io/grafonnet-lib/) (basée sur `jsonnet`).
+1. Utilisez la syntaxe de la [bibliothèque Grafonnet](https://grafana.github.io/grafonnet/index.html) (basée sur `jsonnet`).
 1. Testez les modifications en utilisant le playground :
 
    ```shell

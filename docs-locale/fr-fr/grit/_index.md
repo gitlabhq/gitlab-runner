@@ -7,7 +7,7 @@ title: GitLab Runner Infrastructure Toolkit
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 - Statut :  Expérimentation
 
@@ -16,7 +16,7 @@ title: GitLab Runner Infrastructure Toolkit
 Le [GitLab Runner Infrastructure Toolkit (GRIT)](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit) est une bibliothèque de modules Terraform que vous pouvez utiliser pour créer et gérer de nombreuses configurations de runner courantes sur des fournisseurs de cloud public.
 
 > [!note]
-> Cette fonctionnalité est une [expérimentation](https://docs.gitlab.com/policy/development_stages_support/#experiment). Pour plus d'informations sur l'état du développement de GRIT, consultez l'[epic 1](https://gitlab.com/groups/gitlab-org/ci-cd/runner-tools/-/epics/1). Pour faire part de vos commentaires sur cette fonctionnalité, laissez un commentaire sur le [ticket 84](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/issues/84).
+> Cette fonctionnalité est une [expérimentation](https://docs.gitlab.com/policy/development_stages_support/#experiment). Pour plus d'informations sur l'état du développement de GRIT, consultez l'[epic 1](https://gitlab.com/groups/gitlab-org/ci-cd/runner-tools/-/work_items/1). Pour faire part de vos commentaires sur cette fonctionnalité, laissez un commentaire sur le [ticket 84](https://gitlab.com/gitlab-org/ci-cd/runner-tools/grit/-/issues/84).
 
 ## Créer un runner avec GRIT {#create-a-runner-with-grit}
 

@@ -8,13 +8,17 @@ title: Installer GitLab Runner sur FreeBSD
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
 > [!note]
 > La version FreeBSD est également disponible en tant que [release](bleeding-edge.md) bleeding edge. Assurez-vous de lire la section [FAQ](../faq/_index.md) qui décrit certains des problèmes les plus courants avec GitLab Runner.
+
+## Versions prises en charge {#supported-versions}
+
+GitLab Runner prend en charge [les versions Production et Legacy de FreeBSD](https://www.freebsd.org/releases/). Les versions FreeBSD en fin de vie ne sont pas prises en charge.
 
 ## Installer GitLab Runner {#installing-gitlab-runner}
 
