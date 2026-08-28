@@ -1,12 +1,11 @@
 package docker
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,9 +25,12 @@ const (
 
 var dockerMachineExecutable = defaultDockerMachineExecutable
 
+// logWriter logs command output line by line. Assigned to Stdout/Stderr
+// rather than read from pipes: exec.Cmd waits for the copy, so nothing
+// races process exit or gets lost.
 type logWriter struct {
-	log    func(args ...any)
-	reader *bufio.Reader
+	log func(args ...any)
+	buf bytes.Buffer
 }
 
 func (l *logWriter) write(line string) {
@@ -41,47 +43,45 @@ func (l *logWriter) write(line string) {
 	l.log(line)
 }
 
-func (l *logWriter) watch() {
-	var err error
-	for err != io.EOF {
-		var line string
-		line, err = l.reader.ReadString('\n')
-		if err != nil && err != io.EOF {
-			if !strings.Contains(err.Error(), "bad file descriptor") {
-				logrus.WithError(err).Warn("Problem while reading command output")
-			}
-			return
+func (l *logWriter) Write(p []byte) (int, error) {
+	l.buf.Write(p)
+	for {
+		i := bytes.IndexByte(l.buf.Bytes(), '\n')
+		if i < 0 {
+			break
 		}
+		l.write(string(l.buf.Next(i + 1)))
+	}
+	return len(p), nil
+}
 
-		l.write(line)
+// Flush logs a trailing line that ended without a newline.
+func (l *logWriter) Flush() {
+	if l.buf.Len() > 0 {
+		l.write(l.buf.String())
+		l.buf.Reset()
 	}
 }
 
-func newLogWriter(logFunction func(args ...any), reader io.Reader) {
-	writer := &logWriter{
-		log:    logFunction,
-		reader: bufio.NewReader(reader),
-	}
-
-	go writer.watch()
+func stdoutLogWriter(cmd *exec.Cmd, fields logrus.Fields) *logWriter {
+	writer := &logWriter{log: logrus.WithFields(fields).Infoln}
+	cmd.Stdout = writer
+	return writer
 }
 
-func stdoutLogWriter(cmd *exec.Cmd, fields logrus.Fields) {
-	log := logrus.WithFields(fields)
-	reader, err := cmd.StdoutPipe()
-
-	if err == nil {
-		newLogWriter(log.Infoln, reader)
-	}
+func stderrLogWriter(cmd *exec.Cmd, fields logrus.Fields) *logWriter {
+	writer := &logWriter{log: logrus.WithFields(fields).Errorln}
+	cmd.Stderr = writer
+	return writer
 }
 
-func stderrLogWriter(cmd *exec.Cmd, fields logrus.Fields) {
-	log := logrus.WithFields(fields)
-	reader, err := cmd.StderrPipe()
-
-	if err == nil {
-		newLogWriter(log.Errorln, reader)
-	}
+func runWithLogs(cmd *exec.Cmd, fields logrus.Fields) error {
+	stdout := stdoutLogWriter(cmd, fields)
+	stderr := stderrLogWriter(cmd, fields)
+	err := cmd.Run()
+	stdout.Flush()
+	stderr.Flush()
+	return err
 }
 
 type machineCommand struct {
@@ -112,11 +112,8 @@ func (m *machineCommand) Create(ctx context.Context, driver, name string, opts .
 		"driver":    driver,
 		"name":      name,
 	}
-	stdoutLogWriter(cmd, fields)
-	stderrLogWriter(cmd, fields)
-
 	logrus.Debugln("Executing", cmd.Path, cmd.Args)
-	return cmd.Run()
+	return runWithLogs(cmd, fields)
 }
 
 func (m *machineCommand) Provision(ctx context.Context, name string) error {
@@ -126,10 +123,8 @@ func (m *machineCommand) Provision(ctx context.Context, name string) error {
 		"operation": "provision",
 		"name":      name,
 	}
-	stdoutLogWriter(cmd, fields)
-	stderrLogWriter(cmd, fields)
 
-	return cmd.Run()
+	return runWithLogs(cmd, fields)
 }
 
 func (m *machineCommand) Stop(ctx context.Context, name string) error {
@@ -139,10 +134,8 @@ func (m *machineCommand) Stop(ctx context.Context, name string) error {
 		"operation": "stop",
 		"name":      name,
 	}
-	stdoutLogWriter(cmd, fields)
-	stderrLogWriter(cmd, fields)
 
-	return cmd.Run()
+	return runWithLogs(cmd, fields)
 }
 
 func (m *machineCommand) Remove(ctx context.Context, name string) error {
@@ -152,10 +145,8 @@ func (m *machineCommand) Remove(ctx context.Context, name string) error {
 		"operation": "remove",
 		"name":      name,
 	}
-	stdoutLogWriter(cmd, fields)
-	stderrLogWriter(cmd, fields)
 
-	if err := cmd.Run(); err != nil {
+	if err := runWithLogs(cmd, fields); err != nil {
 		return err
 	}
 
@@ -172,10 +163,8 @@ func (m *machineCommand) ForceRemove(ctx context.Context, name string) error {
 		"operation": "force-remove",
 		"name":      name,
 	}
-	stdoutLogWriter(cmd, fields)
-	stderrLogWriter(cmd, fields)
 
-	if err := cmd.Run(); err != nil {
+	if err := runWithLogs(cmd, fields); err != nil {
 		return err
 	}
 
@@ -260,9 +249,11 @@ func (m *machineCommand) Exist(ctx context.Context, name string) bool {
 		"operation": "exists",
 		"name":      name,
 	}
-	stderrLogWriter(cmd, fields)
+	stderr := stderrLogWriter(cmd, fields)
 
-	return cmd.Run() == nil
+	err = cmd.Run()
+	stderr.Flush()
+	return err == nil
 }
 
 func (m *machineCommand) CanConnect(ctx context.Context, name string, skipCache bool) bool {

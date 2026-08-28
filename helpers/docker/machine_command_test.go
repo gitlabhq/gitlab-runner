@@ -6,12 +6,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -375,4 +378,67 @@ func TestNewDockerMachineCommand(t *testing.T) {
 			assert.NotEmpty(t, cmd.Env)
 		})
 	}
+}
+
+func TestLogWriter(t *testing.T) {
+	collect := func() (*logWriter, *[]string) {
+		var lines []string
+		w := &logWriter{log: func(args ...any) {
+			lines = append(lines, fmt.Sprint(args...))
+		}}
+		return w, &lines
+	}
+
+	t.Run("splits lines across writes", func(t *testing.T) {
+		w, lines := collect()
+		_, err := w.Write([]byte("first li"))
+		require.NoError(t, err)
+		_, err = w.Write([]byte("ne\nsecond line\npartial"))
+		require.NoError(t, err)
+
+		assert.Equal(t, []string{"first line", "second line"}, *lines)
+
+		w.Flush()
+		assert.Equal(t, []string{"first line", "second line", "partial"}, *lines)
+	})
+
+	t.Run("flush without buffered data logs nothing", func(t *testing.T) {
+		w, lines := collect()
+		w.Flush()
+		assert.Empty(t, *lines)
+	})
+
+	t.Run("skips empty lines", func(t *testing.T) {
+		w, lines := collect()
+		_, err := w.Write([]byte("\n\na\n\n"))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"a"}, *lines)
+	})
+}
+
+func TestRunWithLogsDrainsAllOutput(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses sh")
+	}
+
+	hook := test.NewGlobal()
+	defer hook.Reset()
+
+	cmd := exec.Command("sh", "-c",
+		`for i in 1 2 3; do echo "out $i"; echo "err $i" >&2; done; printf "out tail"; printf "err tail" >&2`)
+
+	require.NoError(t, runWithLogs(cmd, logrus.Fields{"operation": "test"}))
+
+	var stdout, stderr []string
+	for _, entry := range hook.AllEntries() {
+		switch entry.Level {
+		case logrus.InfoLevel:
+			stdout = append(stdout, entry.Message)
+		case logrus.ErrorLevel:
+			stderr = append(stderr, entry.Message)
+		}
+	}
+
+	assert.Equal(t, []string{"out 1", "out 2", "out 3", "out tail"}, stdout)
+	assert.Equal(t, []string{"err 1", "err 2", "err 3", "err tail"}, stderr)
 }
