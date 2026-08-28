@@ -824,7 +824,7 @@ func newMachineProvider(provider common.ExecutorProvider) *machineProvider {
 			prometheus.HistogramOpts{
 				Name:    "gitlab_runner_autoscaling_machine_creation_duration_seconds",
 				Help:    "Histogram of machine creation time.",
-				Buckets: prometheus.ExponentialBuckets(30, 1.25, 10),
+				Buckets: prometheus.ExponentialBuckets(30, 1.25, 14),
 				ConstLabels: prometheus.Labels{
 					"executor": name,
 				},
@@ -854,7 +854,7 @@ func newMachineProvider(provider common.ExecutorProvider) *machineProvider {
 			prometheus.HistogramOpts{
 				Name:    "gitlab_runner_autoscaling_machine_failed_creation_duration_seconds",
 				Help:    "Histogram of machine failed creation timings",
-				Buckets: []float64{1, 3, 5, 10, 30, 50, 60, 80, 90, 120},
+				Buckets: []float64{1, 5, 10, 30, 60, 120, 240, 480, 900},
 				ConstLabels: prometheus.Labels{
 					"executor": name,
 				},
