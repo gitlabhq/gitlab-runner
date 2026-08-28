@@ -106,9 +106,23 @@ func (p *PodWatcher) onPodChange(pod *v1.Pod) {
 
 // emitError sends out an error in a non-blocking way, so that the informer is not blocked.
 func (p *PodWatcher) emitError(err error) {
+	// If the channel already holds an error, a consumer will receive it shortly.
+	// Drop the duplicate silently rather than logging a spurious warning: the
+	// informer can fire both an Add and an Update event for the same pod, and
+	// both would call emitError with the same terminal error.
 	select {
 	case p.errors <- err:
 		// nothing to do, we've sent out the pod error
+		return
+	default:
+	}
+
+	// The channel is full. Give the consumer a brief window to drain it and
+	// then retry once. If nobody is listening at all, log and move on so the
+	// informer goroutine is never blocked.
+	select {
+	case p.errors <- err:
+		// consumer drained the channel in time
 	case <-time.After(emitErrorTimeout):
 		p.logger.Debugln(fmt.Sprintf("pod error not consumed in time (%s): %s", emitErrorTimeout, err))
 	}
