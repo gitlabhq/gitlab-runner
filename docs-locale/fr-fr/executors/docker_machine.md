@@ -7,7 +7,7 @@ title: "Installer et enregistrer GitLab Runner pour la mise à l'échelle automa
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -92,10 +92,10 @@ Pour utiliser la fonctionnalité de mise à l'échelle automatique, Docker et Gi
 
 ### Installer {#install}
 
-1. Téléchargez le [binaire `docker-machine` approprié](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases). Copiez le binaire vers un emplacement accessible au `PATH` et rendez-le exécutable. Par exemple, pour télécharger et installer `v0.16.2-gitlab.46` :
+1. Téléchargez le [binaire `docker-machine` approprié](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases). Copiez le binaire vers un emplacement accessible au `PATH` et rendez-le exécutable. Par exemple, pour télécharger et installer `v0.16.2-gitlab.48` :
 
    ```shell
-   curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.46/docker-machine-Linux-x86_64"
+   curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.48/docker-machine-Linux-x86_64"
    cp docker-machine-Linux-x86_64 /usr/local/bin/docker-machine
    chmod +x /usr/local/bin/docker-machine
    ```

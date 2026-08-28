@@ -7,7 +7,7 @@ title: Configurer GitLab Runner sur OpenShift
 
 {{< details >}}
 
-- Niveau : Free, Premium, Ultimate
+- Niveau : Gratuite, GitLab Premium, GitLab Ultimate
 - Offre : GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -310,7 +310,7 @@ Lorsque vous enregistrez un jeton de runner, si vous définissez la variable `lo
   maximumTimeout: 0
 ```
 
-Pour plus d'informations, consultez le [ticket 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/472#note_1483346437).
+Pour plus d'informations, consultez le [ticket 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/work_items/472#note_1483346437).
 
 #### Attention aux contraintes de contexte de sécurité {#watch-out-for-security-context-constraints}
 

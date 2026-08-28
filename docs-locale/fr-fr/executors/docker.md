@@ -7,7 +7,7 @@ title: Exécuteur Docker
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -65,7 +65,7 @@ Ces configurations ne sont **pas** prises en charge :
 | Windows                 | `docker-windows` | Linux                 |
 
 > [!note]
-> GitLab Runner utilise l'API Docker Engine [v1.25](https://docs.docker.com/reference/api/engine/version/v1.25/) pour communiquer avec Docker Engine. Cela signifie que la [version minimale prise en charge](https://docs.docker.com/reference/api/engine/#api-version-matrix) de Docker sur un serveur Linux est `1.13.0`. Sur Windows Server, [une version plus récente est requise](#supported-docker-versions) pour identifier la version de Windows Server.
+> GitLab Runner utilise l'API Docker Engine [v1.25](https://docs.docker.com/reference/api/engine/version-history/#v125-api-changes) pour communiquer avec Docker Engine. Cela signifie que la [version minimale prise en charge](https://docs.docker.com/reference/api/engine/#api-version-matrix) de Docker sur un serveur Linux est `1.13.0`. Sur Windows Server, [une version plus récente est requise](#supported-docker-versions) pour identifier la version de Windows Server.
 
 ## Utiliser l'exécuteur Docker {#use-the-docker-executor}
 
@@ -280,7 +280,7 @@ Le comportement des liens émulés de GitLab Runner diffère légèrement des [l
 - La désactivation de `icc` désactive la communication entre conteneurs et les conteneurs ne peuvent pas communiquer entre eux.
 - Les variables d'environnement pour les conteneurs liés ne sont plus présentes (`<name>_PORT_<port>_<protocol>`).
 
-Pour configurer le réseau, spécifiez le [mode réseau](https://docs.docker.com/engine/containers/run/#network-settings) dans le fichier `config.toml` :
+Pour configurer le réseau, spécifiez le [mode réseau](https://docs.docker.com/engine/network/drivers/) dans le fichier `config.toml` :
 
 - `bridge` :  Utiliser le réseau bridge. Par défaut.
 - `host` :  Utiliser la pile réseau de l'hôte à l'intérieur du conteneur.
@@ -528,6 +528,8 @@ Par défaut, l'exécuteur Docker stocke les builds et les caches dans les réper
 
 Utilisez [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache) pour supprimer les conteneurs et volumes inutilisés créés par le runner.
 
+Le script fonctionne également avec Podman. Il utilise le binaire `podman` en secours lorsque `docker` n'est pas dans `PATH`. Podman rootless stocke les conteneurs et les images dans le répertoire personnel de l'utilisateur appelant plutôt qu'à un emplacement système partagé. Le script (et toute entrée `cron` qui l'invoque) doit s'exécuter en tant qu'utilisateur propriétaire du stockage Podman. Sinon, il opère sur le stockage vide d'un autre utilisateur.
+
 Pour obtenir la liste des options, exécutez le script avec l'option `help` :
 
 ```shell
@@ -541,7 +543,17 @@ Pour gérer efficacement le stockage du cache, vous devez :
 - Exécuter `clear-docker-cache` avec `cron` régulièrement (par exemple, une fois par semaine).
 - Conserver quelques conteneurs récents dans le cache pour les performances tout en récupérant de l'espace disque.
 
-La variable d'environnement `FILTER_FLAG` contrôle les objets qui sont élagués. Pour des exemples d'utilisation, consultez la documentation [Docker image prune](https://docs.docker.com/reference/cli/docker/image/prune/#filter).
+Les variables d'environnement `CONTAINER_FILTER_FLAGS`, `IMAGE_FILTER_FLAGS` et `VOLUME_FILTER_FLAGS` contrôlent les objets purgés pour chaque type de ressource. Les valeurs sont séparées par des virgules et converties en plusieurs indicateurs `--filter`. Par exemple :
+
+```shell
+CONTAINER_FILTER_FLAGS="label=com.gitlab.gitlab-runner.managed=true"
+IMAGE_FILTER_FLAGS="label=keep,label!=provider=Acme"
+VOLUME_FILTER_FLAGS="label=com.gitlab.gitlab-runner.managed=true"
+```
+
+`FILTER_FLAG` est également pris en charge pour la rétrocompatibilité. Lorsqu'elle est définie, elle est utilisée comme valeur par défaut pour `CONTAINER_FILTER_FLAGS` si cette variable n'est pas définie. Pour des exemples d'utilisation, consultez la documentation [Docker image prune](https://docs.docker.com/reference/cli/docker/image/prune/#filter).
+
+Les valeurs de filtre contenant une virgule littérale ne peuvent pas être exprimées car la virgule est utilisée comme séparateur.
 
 ## Vider les images de build Docker {#clear-docker-build-images}
 
@@ -613,13 +625,23 @@ Si vous configurez le répertoire `/builds` en tant que stockage lié à l'hôte
 - `<short-token>` est une version abrégée du token du runner (8 premières lettres).
 - `<concurrent-id>` est l'index du runner dans la liste de tous les runners qui exécutent un build pour le même projet simultanément (accessible via la [variable prédéfinie](https://docs.gitlab.com/ci/variables/predefined_variables/) `CI_CONCURRENT_PROJECT_ID`).
 
+## Mode PID {#pid-mode}
+
+L'exécuteur Docker prend en charge la définition du mode d'espace de noms PID du conteneur, ce qui correspond à l'indicateur `docker run --pid`. Utilisez le mode PID lorsque le conteneur de build et l'hôte ou d'autres conteneurs doivent partager la visibilité des processus (par exemple à des fins de débogage). Pour plus d'informations, consultez [PID settings](https://docs.docker.com/reference/cli/docker/container/run/#pid) dans la documentation Docker.
+
+> [!warning]
+> Le partage de l'espace de noms PID entre le conteneur de build et un autre conteneur ou l'hôte constitue une violation de l'isolation avec de graves implications en matière de sécurité. N'utilisez cette fonctionnalité qu'avec des conteneurs de build entièrement fiables, comme vous le feriez en mode privilégié.
+
 ## Mode IPC {#ipc-mode}
 
-L'exécuteur Docker prend en charge le partage de l'espace de noms IPC des conteneurs avec d'autres emplacements. Cela correspond à l'indicateur `docker run --ipc`. Plus de détails sur les [paramètres IPC dans la documentation Docker](https://docs.docker.com/engine/containers/run/#ipc-settings---ipc)
+L'exécuteur Docker prend en charge le partage de l'espace de noms IPC des conteneurs avec d'autres emplacements. Cela correspond à l'indicateur `docker run --ipc`. Pour plus d'informations, consultez [IPC settings in Docker documentation](https://docs.docker.com/reference/cli/docker/container/run/#ipc).
 
 ## Mode privilégié {#privileged-mode}
 
 L'exécuteur Docker prend en charge plusieurs options qui permettent d'affiner le réglage du conteneur de build. L'une de ces options est le [mode `privileged`](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities).
+
+> [!warning]
+> Le mode privilégié présente des risques de sécurité. Lorsque des conteneurs s'exécutent en mode privilégié, les mécanismes de sécurité des conteneurs sont désactivés et l'hôte est exposé à une élévation de privilèges. L'exécution de conteneurs en mode privilégié peut entraîner une évasion de conteneur. Pour plus d'informations, consultez [runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities) dans la documentation Docker.
 
 ### Utiliser Docker-in-Docker avec le mode privilégié {#use-docker-in-docker-with-privileged-mode}
 
@@ -646,9 +668,6 @@ build:
   - docker build -t my-image .
   - docker push my-image
 ```
-
-> [!warning]
-> Les conteneurs qui s'exécutent en mode privilégié présentent des risques de sécurité. Lorsque vos conteneurs s'exécutent en mode privilégié, vous désactivez les mécanismes de sécurité du conteneur et exposez votre hôte à une élévation de privilèges. L'exécution de conteneurs en mode privilégié peut entraîner une évasion de conteneur. Pour plus d'informations, consultez la documentation Docker sur les [privilèges d'exécution et les capacités Linux](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities).
 
 Vous pourriez avoir besoin de [configurer Docker in Docker avec TLS, ou de désactiver TLS](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker) pour éviter une erreur similaire à la suivante :
 
@@ -695,7 +714,7 @@ Pour plus d'informations sur les problèmes de sécurité, consultez [Risques de
 
 ## Configurer un ENTRYPOINT Docker {#configure-a-docker-entrypoint}
 
-Par défaut, l'exécuteur Docker ne remplace pas le [`ENTRYPOINT` d'une image Docker](https://docs.docker.com/engine/containers/run/#entrypoint-default-command-to-execute-at-runtime). Il transmet `sh` ou `bash` en tant que [`COMMAND`](https://docs.docker.com/engine/containers/run/#cmd-default-command-or-options) pour démarrer un conteneur qui exécute le script du job.
+Par défaut, l'exécuteur Docker ne remplace pas [le `ENTRYPOINT` d'une image Docker](https://docs.docker.com/engine/containers/run/#default-entrypoint). Il passe `sh` ou `bash` en tant que [`COMMAND`](https://docs.docker.com/engine/containers/run/#commands-and-arguments) pour démarrer un conteneur qui exécute le script du job.
 
 Pour s'assurer qu'un job peut s'exécuter, son image Docker doit :
 
@@ -783,7 +802,7 @@ Prérequis :
 
 1. Sur votre hôte Linux, installez GitLab Runner. Si vous avez installé GitLab Runner à l'aide du gestionnaire de paquets de votre système, il crée automatiquement un utilisateur `gitlab-runner`.
 1. Connectez-vous en tant qu'utilisateur qui exécute GitLab Runner. Vous devez le faire d'une manière qui ne contourne pas [`pam_systemd`](https://www.freedesktop.org/software/systemd/man/latest/pam_systemd.html). Vous pouvez utiliser SSH avec l'utilisateur approprié. Cela vous permet d'exécuter `systemctl` en tant que cet utilisateur.
-1. Assurez-vous que votre système remplit les prérequis pour [une configuration Podman rootless](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md). Plus précisément, assurez-vous que votre utilisateur dispose d'[entrées correctes dans `/etc/subuid` et `/etc/subgid`](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md#etcsubuid-and-etcsubgid-configuration).
+1. Assurez-vous que votre système remplit les prérequis pour [une configuration Podman rootless](https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/rootless_tutorial.md). Plus précisément, assurez-vous que votre utilisateur dispose [d'entrées correctes dans `/etc/subuid` et `/etc/subgid`](https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/rootless_tutorial.md#etcsubuid-and-etcsubgid-configuration).
 1. Sur l'hôte Linux, [installez Podman](https://podman.io/getting-started/installation).
 1. Activez et démarrez le socket Podman :
 
@@ -821,6 +840,19 @@ Prérequis :
 
    > [!note]
    > Définissez `privileged = false` pour une utilisation standard de Podman. Définissez `privileged = true` uniquement si vous devez exécuter des [services Docker-in-Docker](#use-docker-in-docker-with-privileged-mode) dans vos jobs.
+
+> [!warning]
+> Ne montez pas le socket Podman (par exemple `/run/user/<uid>/podman/podman.sock`) dans des conteneurs de job via `volumes`. Le socket contrôle le service Podman de l'hôte ; l'exposer à un job restitue les privilèges que Podman rootless existe pour supprimer. Le runner accède au socket via le paramètre `host` dans `[runners.docker]`. Les jobs n'en ont pas besoin. Pour les jobs qui nécessitent véritablement les droits root, isolez-les dans un environnement jetable à usage unique plutôt que dans un hôte partagé de longue durée. Pour plus d'informations, consultez [les risques de sécurité pour les exécuteurs Docker](../security/_index.md#usage-of-docker-executor).
+
+### Appliquer les limites de ressources des conteneurs {#enforce-container-resource-limits}
+
+Podman rootless n'applique les limites de ressources des conteneurs définies dans la section `[runners.docker]` (par exemple, `memory`, `memory_swap` et `cpus`) que sous la hiérarchie cgroups v2 avec le gestionnaire de cgroup `systemd`. La hiérarchie v2 est la valeur par défaut sur RHEL, CentOS et AlmaLinux 9 et versions ultérieures, ainsi que sur les releases actuelles de Debian et Ubuntu. Sur un hôte utilisant encore la hiérarchie cgroups v1 héritée, Podman rootless ignore silencieusement ces limites et le job s'exécute sans contrainte, de sorte qu'un seul job peut épuiser la mémoire ou le CPU de l'hôte.
+
+Si vous dépendez des limites de ressources, confirmez que l'hôte utilise cgroups v2 :
+
+```shell
+stat -fc %T /sys/fs/cgroup   # cgroup2fs = v2; tmpfs = v1
+```
 
 ### Utiliser Podman pour créer des images de conteneurs depuis un Dockerfile {#use-podman-to-build-container-images-from-a-dockerfile}
 
@@ -1113,6 +1145,7 @@ Vous pouvez utiliser diverses images de base Windows, notamment `Server Core`, `
 
 - `mcr.microsoft.com/windows/servercore:ltsc2025`
 - `mcr.microsoft.com/windows/servercore:ltsc2025-amd64`
+- `mcr.microsoft.com/windows/servercore:ltsc2025-arm64`
 - `mcr.microsoft.com/windows/servercore:ltsc2022`
 - `mcr.microsoft.com/windows/servercore:ltsc2022-amd64`
 - `mcr.microsoft.com/windows/servercore:1809`
@@ -1153,15 +1186,21 @@ Pour d'autres options de configuration de l'exécuteur Docker, consultez la sect
 
 ### Images d'aide Windows {#windows-helper-images}
 
-GitLab Runner fournit plusieurs images d'aide adaptées aux différentes versions de Windows et aux exigences de PowerShell. Variantes disponibles :
+GitLab Runner fournit plusieurs images d'aide adaptées aux différentes versions de Windows, architectures CPU et exigences PowerShell. Variantes disponibles :
 
-- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver21H2`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore24H2`
+- `gitlab/gitlab-runner-helper:arm64-vXYZ-servercore24H2`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver24H2`
+- `gitlab/gitlab-runner-helper:arm64-vXYZ-nanoserver24H2`
 - `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore21H2`
-- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver1809`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver21H2`
 - `gitlab/gitlab-runner-helper:x86_64-vXYZ-servercore1809`
+- `gitlab/gitlab-runner-helper:x86_64-vXYZ-nanoserver1809`
+
+GitLab Runner sélectionne automatiquement l'image d'aide correspondant à la version Windows et à l'architecture CPU de l'hôte, de sorte que vous n'avez généralement pas besoin de définir `helper_image` manuellement. Par exemple, sur un hôte Windows Server 2025 (24H2) ARM64, le runner sélectionne l'image `arm64-vXYZ-servercore24H2`.
 
 > [!note]
-> En raison de la compatibilité ascendante des conteneurs Windows, Windows Server 2025 (24H2) peut utiliser les images d'aide 21H2 (Windows Server 2022).
+> Les images d'aide ARM64 sont uniquement disponibles pour Windows Server 2025 (24H2). Microsoft ne publie pas d'images de base ARM64 pour Windows Server 2019 (1809) ni 2022 (21H2). Sur ces versions, le runner utilise l'image d'aide x86_64 en secours.
 
 Choisissez votre image d'aide en fonction de vos besoins en matière de shell. L'image `servercore` est l'image par défaut et prend en charge `PowerShell` et `Pwsh`. Pour les conteneurs qui n'utilisent que `pwsh`, utilisez l'image `nanoserver` plus légère.
 
@@ -1199,7 +1238,7 @@ Voici quelques limitations liées à l'utilisation de conteneurs Windows avec l'
 
 {{< /history >}}
 
-L'exécuteur Docker prend en charge l'exécution native des [étapes CI/CD](https://docs.gitlab.com/ci/steps/) en utilisant l'API `gRPC` fournie par [`step-runner`](https://gitlab.com/gitlab-org/step-runner).
+L'exécuteur Docker prend en charge l'exécution native des [GitLab Functions](https://docs.gitlab.com/ci/functions/) en utilisant l'API `gRPC` fournie par [`step-runner`](https://gitlab.com/gitlab-org/step-runner).
 
 Pour activer ce mode d'exécution, vous devez spécifier les jobs CI/CD en utilisant le mot-clé `run` au lieu du mot-clé hérité `script`. De plus, vous devez activer le feature flag `FF_USE_NATIVE_STEPS`. Vous pouvez activer ce feature flag au niveau du job ou du pipeline.
 

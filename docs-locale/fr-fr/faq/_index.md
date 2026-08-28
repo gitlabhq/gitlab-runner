@@ -7,7 +7,7 @@ title: Dépannage de GitLab Runner
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -204,7 +204,7 @@ Le chemin réseau entre l'environnement de build et l'instance GitLab peut être
 
 Pour permettre le téléversement des artefacts, assurez-vous que tous les composants du chemin de téléversement autorisent les requêtes POST depuis l'environnement de build vers l'instance GitLab.
 
-Par défaut, le téléverseur d'artefacts enregistre l'URL de téléversement et le code de statut HTTP de la réponse de téléversement. Ces informations ne suffisent pas à comprendre quel système a causé une erreur ou bloqué les téléversements d'artefacts. Pour résoudre les problèmes de téléversement d'artefacts, [activez la journalisation de débogage](https://docs.gitlab.com/ci/variables/#enable-debug-logging) pour les tentatives de téléversement afin de voir les en-têtes et le corps de la réponse de téléversement.
+Par défaut, le téléverseur d'artefacts enregistre l'URL de téléversement et le code de statut HTTP de la réponse de téléversement. Ces informations ne suffisent pas à comprendre quel système a causé une erreur ou bloqué les téléversements d'artefacts. Pour résoudre les problèmes de téléversement d'artefacts, [activez la journalisation de débogage](https://docs.gitlab.com/ci/variables/variables_troubleshooting/#enable-debug-logging) pour les tentatives de téléversement afin de consulter les en-têtes et le corps de la réponse au téléversement.
 
 > [!note]
 > La longueur du corps de réponse pour la journalisation de débogage des téléversements d'artefacts est limitée à 512 octets. Activez la journalisation uniquement pour le débogage, car des données sensibles peuvent être exposées dans les journaux.

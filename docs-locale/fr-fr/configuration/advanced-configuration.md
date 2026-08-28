@@ -7,7 +7,7 @@ title: Configuration avancée
 
 {{< details >}}
 
-- Niveau : Free, Premium, Ultimate
+- Niveau : Gratuite, GitLab Premium, GitLab Ultimate
 - Offre : GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -26,12 +26,6 @@ GitLab Runner vérifie les modifications de configuration toutes les 3 secondes 
 
 ## Validation de la configuration {#configuration-validation}
 
-{{< history >}}
-
-- [Introduit](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924) dans GitLab Runner 15.10
-
-{{< /history >}}
-
 La validation de la configuration est un processus qui vérifie la structure du fichier `config.toml`. La sortie du validateur de configuration fournit uniquement des messages de niveau `info`.
 
 Le processus de validation de la configuration est uniquement à titre informatif. Vous pouvez utiliser la sortie pour identifier les problèmes potentiels avec la configuration de votre runner. La validation de la configuration peut ne pas détecter tous les problèmes possibles, et l'absence de messages ne garantit pas que le fichier `config.toml` est irréprochable.
@@ -46,7 +40,7 @@ Ces paramètres sont globaux. Ils s'appliquent à tous les runners.
 | `log_level`          | Définit le niveau de journalisation. Les options sont `debug`, `info`, `warn`, `error`, `fatal` et `panic`. Ce paramètre a une priorité inférieure au niveau défini par les arguments de ligne de commande `--debug`, `-l` ou `--log-level`. |
 | `log_format`         | Spécifie le format des journaux. Les options sont `runner`, `text` et `json`. Ce paramètre a une priorité inférieure au format défini par l'argument de ligne de commande `--log-format`. La valeur par défaut est `runner`, qui contient des codes d'échappement ANSI pour la coloration. |
 | `check_interval`     | Définit la durée de l'intervalle, en secondes, entre les vérifications du runner pour les nouveaux jobs. La valeur par défaut est `3`. Si défini à `0` ou inférieur, la valeur par défaut est utilisée. |
-| `sentry_dsn`         | Active le suivi de toutes les erreurs au niveau système dans Sentry. |
+| `sentry_dsn`         | Active le suivi de toutes les erreurs au niveau système dans Sentry. Si ce paramètre n'est pas défini, le runner utilise par défaut la variable d'environnement `SENTRY_DSN`. La valeur dans `config.toml` est prioritaire sur la variable d'environnement. La variable d'environnement est utilisée telle quelle, sans expansion. Les références comme `$OTHER_VAR` ne sont donc pas interpolées. |
 | `connection_max_age` | La durée maximale pendant laquelle une connexion TLS keepalive au serveur GitLab doit rester ouverte avant de se reconnecter. La valeur par défaut est `15m` pour 15 minutes. Si défini à `0` ou inférieur, la connexion persiste aussi longtemps que possible. |
 | `listen_address`     | Définit une adresse (`<host>:<port>`) sur laquelle le serveur HTTP de métriques Prometheus doit écouter. |
 | `shutdown_timeout`   | Nombre de secondes avant que l'[opération d'arrêt forcé](../commands/_index.md#signals) n'expire et ne quitte le processus. La valeur par défaut est `30`. Si défini à `0` ou inférieur, la valeur par défaut est utilisée. |
@@ -87,7 +81,7 @@ Scénarios problématiques courants :
 GitLab Runner détecte automatiquement les scénarios problématiques et fournit des solutions adaptées dans les messages d'avertissement. Les solutions courantes incluent :
 
 - Augmenter le paramètre `concurrent` pour dépasser le nombre de runners.
-- Définir la valeur `request_concurrency` pour les runners à fort volume à une valeur supérieure à 1 (la valeur par défaut est 1). Envisagez d'activer [la surveillance des runners](../monitoring/_index.md) pour comprendre l'état de votre système et trouver la meilleure valeur pour le paramètre. Envisagez d'utiliser le `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` pour ajuster automatiquement `request_concurrency` en fonction de la charge de travail. Pour des informations sur la concurrence adaptative, consultez la [documentation sur les feature flags](feature-flags.md).
+- Définir la valeur `request_concurrency` pour les runners à fort volume à une valeur supérieure à 1 (la valeur par défaut est 1). Envisagez d'activer [la surveillance des runners](../monitoring/_index.md) pour comprendre l'état de votre système et trouver la meilleure valeur pour le paramètre. Le feature flag `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` ajuste automatiquement `request_concurrency` en fonction de la charge de travail et est activé par défaut. Si vous l'avez désactivé, envisagez de le réactiver. Pour des informations sur la concurrence adaptative, consultez la [documentation sur les feature flags](feature-flags.md).
 - Équilibrer les paramètres `limit` avec le volume de jobs attendu.
 
 ##### Exemples de configurations problématiques {#example-problematic-configurations}
@@ -380,13 +374,14 @@ Chaque section `[[runners]]` définit un runner.
 | `pre_build_script`                    | Commandes à exécuter sur le runner avant d'exécuter le job. S'exécute dans le même contexte shell que `before_script`, `script` et `post_build_script`. Si `pre_build_script` échoue, les commandes restantes dans ce contexte sont ignorées, mais `after_script` s'exécute quand même. Pour insérer plusieurs commandes, utilisez une chaîne multiligne (entre guillemets triples) ou le caractère `\n`.                                               |
 | `post_build_script`                   | Commandes à exécuter sur le runner après l'exécution du job. S'exécute dans le même contexte shell que `pre_build_script`, `before_script` et `script`. Si l'un d'eux échoue, `post_build_script` est ignoré. `after_script` s'exécute dans un contexte shell séparé et n'est pas affecté par `post_build_script`. Pour insérer plusieurs commandes, utilisez une chaîne multiligne (entre guillemets triples) ou le caractère `\n`.               |
 | `clone_url`                           | Remplacer l'URL de l'instance GitLab. Utilisé uniquement si le runner ne peut pas se connecter à l'URL de GitLab.                                                                                                                                                                                                                                                                                                         |
-| `debug_trace_disabled`                | Désactive [le traçage de débogage](https://docs.gitlab.com/ci/variables/#enable-debug-logging). Lorsque défini sur `true`, le journal de débogage (trace) reste désactivé même si `CI_DEBUG_TRACE` est défini sur `true`.                                                                                                                                                                                                                 |
+| `debug_trace_disabled`                | Désactive le [traçage de débogage](https://docs.gitlab.com/ci/variables/variables_troubleshooting/#enable-debug-logging). Lorsque défini sur `true`, le journal de débogage (trace) reste désactivé même si `CI_DEBUG_TRACE` est défini sur `true`.                                                                                                                                                                                                                 |
 | `clean_git_config`                    | Nettoie la configuration Git. Pour plus d'informations, voir [Nettoyage de la configuration Git](#cleaning-git-configuration).                                                                                                                                                                                                                                                                                          |
 | `referees`                            | Workers de surveillance de jobs supplémentaires qui transmettent leurs résultats sous forme d'artefacts de job à GitLab.                                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_requests_limit`            | Le nombre de réponses `unhealthy` aux nouvelles requêtes de jobs après lequel un worker du runner est désactivé.                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_interval`                  | Durée pendant laquelle un worker du runner est désactivé après avoir dépassé la limite des requêtes non saines. Prend en charge la syntaxe telle que `3600 s`, `1 h 30 min` et similaires.                                                                                                                                                                                                                                                      |
 | `job_status_final_update_retry_limit` | Le nombre maximum de fois que GitLab Runner peut réessayer d'envoyer le statut final du job à l'instance GitLab.                                                                                                                                                                                                                                                                                                    |
 | `prepare_timeout`                     | Durée maximale autorisée pour l'étape `prepare` (initialisation de l'exécuteur et configuration de l'environnement shell). Accepte une chaîne de durée telle que `30s` ou `1h30m`. Si non défini, nul ou supérieur au délai d'expiration du job, utilise le délai d'expiration du job par défaut. Pour plus d'informations, voir [le délai d'expiration de l'étape de préparation](#prepare-stage-timeout).                                                                                        |
+| `get_sources_timeout`                 | Durée maximale autorisée pour l'étape `get_sources` (clonage ou récupération du dépôt du projet, y compris les sous-modules). Accepte une chaîne de durée telle que `30s` ou `1h30m`. Si non défini, nul ou supérieur au délai d'expiration du job, utilise le délai d'expiration du job par défaut. Pour plus d'informations, voir [get sources timeout](#get-sources-timeout).                                                                          |
 
 Exemple :
 
@@ -549,6 +544,78 @@ Définissez `prepare_timeout` lorsque l'initialisation lente ou non réactive de
   prepare_timeout = "5m"
 ```
 
+Pour un contrôle équivalent sur l'étape de récupération des sources, voir [`get_sources_timeout`](#get-sources-timeout).
+
+### Get sources timeout {#get-sources-timeout}
+
+{{< history >}}
+
+- [Introduit](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39426) dans GitLab Runner 19.1.0.
+
+{{< /history >}}
+
+Le paramètre `get_sources_timeout` limite la durée que le runner passe dans l'étape `get_sources`, qui clone ou récupère le dépôt du projet (y compris les sous-modules).
+
+Si l'étape `get_sources` dépasse `get_sources_timeout`, le job échoue immédiatement. Les étapes suivantes (`restore_cache`, `download_artifacts`, `script`) ne sont pas limitées par `get_sources_timeout`. Elles utilisent plutôt le délai d'expiration global du job.
+
+**Default behavior** : si `get_sources_timeout` n'est pas défini, vaut `0` ou dépasse le délai d'attente du job, le runner utilise le délai d'attente du job pour l'étape `get_sources`.
+
+#### Quand définir `get_sources_timeout` {#when-to-set-get_sources_timeout}
+
+Définissez `get_sources_timeout` lorsque des conditions réseau lentes ou sans réponse risquent de consommer l'intégralité du délai d'attente du job avant la fin de la récupération du dépôt. Les scénarios courants incluent :
+
+- **Hung Git clones over flaky networks** : si un hôte distant ou son réseau intermédiaire devient lent ou inaccessible pendant un clonage ou une récupération, l'opération peut se bloquer pendant toute la durée du délai d'attente du job. Sur les runners très sollicités, les jobs bloqués occupent tous les emplacements disponibles et empêchent le démarrage de nouveaux jobs. `get_sources_timeout` fait échouer rapidement ces jobs pour libérer la capacité du runner.
+- **Hung submodule fetches** : les sous-modules font souvent référence à des dépôts sur d'autres hôtes (domaines différents, services tiers). Lorsque l'un de ces hôtes est lent ou inaccessible, l'étape `get_sources` se bloque. Un délai d'attente limité empêche un hôte de sous-module défaillant d'occuper un emplacement de runner pendant toute la durée du délai d'attente du job.
+
+#### Exemple de configuration {#example-configuration-1}
+
+```toml
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "TOKEN"
+  executor = "docker"
+  get_sources_timeout = "5m"
+```
+
+Pour un contrôle équivalent sur l'étape de préparation de l'exécuteur, voir également [`prepare_timeout`](#prepare-stage-timeout).
+
+### La section `[runners.experimental.boot_verify]` {#the-runnersexperimentalboot_verify-section}
+
+{{< details >}}
+
+- Statut : version expérimentale
+
+{{< /details >}}
+
+La section `boot_verify` exécute un job synthétique via le runner au démarrage du processus, avant que le runner ne signale `/health/ready`. Si le job échoue, le runner quitte avec un code non nul afin que l'orchestrateur le redémarre. Ce comportement détecte un runner capable de s'authentifier mais incapable de provisionner ou de distribuer du travail, ce que les sondes de vivacité et de disponibilité par défaut ne permettent pas d'identifier. La vérification s'exécute une seule fois par démarrage de processus et n'est pas relancée lors du rechargement de la configuration.
+
+| Paramètre             | Type     | Description |
+|-----------------------|----------|-------------|
+| `enabled`             | booléen  | Exécute le canary de démarrage pour ce runner. Par défaut : `false`. |
+| `timeout`             | durée | Délai limite pour le canary. Prend en charge les valeurs telles que `5m` ou `90s`. Par défaut : `5m`. |
+| `acquire_min_backoff` | durée | Délai de backoff minimal entre les tentatives d'acquisition de l'exécuteur. Par défaut : `1s`. |
+| `acquire_max_backoff` | durée | Délai de backoff maximal entre les tentatives d'acquisition de l'exécuteur. Par défaut : `10s`. |
+
+> [!note]
+> Le job synthétique s'exécute sur l'image par défaut du runner. Les exécuteurs `docker` et `kubernetes` doivent donc avoir une image par défaut configurée.
+
+Exemple :
+
+```toml
+[[runners]]
+  name = "my-runner"
+  url = "https://gitlab.example.com/"
+  token = "TOKEN"
+  executor = "kubernetes"
+
+  [runners.experimental.boot_verify]
+    enabled = true
+    timeout = "5m"
+    acquire_min_backoff = "1s"
+    acquire_max_backoff = "10s"
+```
+
 ## Les exécuteurs {#the-executors}
 
 Les exécuteurs suivants sont disponibles.
@@ -607,7 +674,7 @@ Les paramètres suivants définissent les paramètres du conteneur Docker. Ces p
 | `device_cgroup_rules`              |                                                  | Règles `cgroup` de périphériques personnalisées (disponible dans Docker 1.28 ou ultérieur). |
 | `disable_cache`                    |                                                  | L'exécuteur Docker dispose de deux niveaux de mise en cache : un global (comme tout autre exécuteur) et un cache local basé sur les volumes Docker. Cet indicateur de configuration n'agit que sur le cache local, ce qui désactive l'utilisation de volumes de cache créés automatiquement (non mappés à un répertoire hôte). En d'autres termes, cela empêche uniquement la création d'un conteneur contenant des fichiers temporaires de builds, cela ne désactive pas le cache si le runner est configuré en [mode cache distribué](autoscale.md#distributed-runners-caching). |
 | `disable_entrypoint_overwrite`     |                                                  | Désactiver le remplacement du point d'entrée de l'image. |
-| `dns`                              | `["8.8.8.8"]`                                    | Liste de serveurs DNS que le conteneur doit utiliser. |
+| `dns`                              | `["8.8.8.8"]`                                    | Liste de serveurs DNS que le conteneur doit utiliser. Les valeurs doivent être des adresses IP valides. Les valeurs non valides font échouer le job durant l'étape de préparation. Validation [introduite](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6947) dans GitLab 19.2.|
 | `dns_search`                       |                                                  | Liste de domaines de recherche DNS. |
 | `extra_hosts`                      | `["other-host:127.0.0.1"]`                       | Hôtes devant être définis dans l'environnement du conteneur. |
 | `gpus`                             |                                                  | Périphériques GPU pour le conteneur Docker. Utilise le même format que la CLI `docker`. Voir les détails dans la [documentation Docker](https://docs.docker.com/engine/containers/resource_constraints/#gpu). Nécessite une [configuration pour activer les GPU](gpus.md#docker-executor). |
@@ -624,7 +691,7 @@ Les paramètres suivants définissent les paramètres du conteneur Docker. Ces p
 | `memory_swap`                      | `"256m"`                                         | La limite totale de mémoire. Une chaîne. |
 | `memory_reservation`               | `"64m"`                                          | La limite de mémoire souple. Une chaîne. |
 | `network_mode`                     |                                                  | Ajouter le conteneur à un réseau personnalisé. |
-| `mac_address`                      | `92:d0:c6:0a:29:33`                              | Adresse MAC du conteneur |
+| `mac_address`                      | `92:d0:c6:0a:29:33`                              | Adresse MAC du conteneur. La valeur doit être une adresse MAC valide. Une valeur non valide fait échouer le job durant l'étape de préparation. Validation [introduite](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6947) dans GitLab 19.2. |
 | `oom_kill_disable`                 |                                                  | Si une erreur de dépassement de mémoire (`OOM`) se produit, ne pas terminer les processus dans un conteneur. |
 | `oom_score_adjust`                 |                                                  | Ajustement du score `OOM`. Une valeur positive signifie terminer les processus plus tôt. |
 | `privileged`                       | `false`                                          | Faire fonctionner le conteneur en mode privilégié. Non sécurisé. |
@@ -806,7 +873,7 @@ GitLab Runner valide les options de journalisation lors de la préparation de l'
 
 Les options de journalisation s'appliquent au conteneur de job principal et à tous les conteneurs de service définis dans votre configuration CI/CD.
 
-Pour plus d'informations sur la journalisation Docker, consultez la [documentation du pilote de journalisation `json-file` Docker](https://docs.docker.com/config/containers/logging/json-file/).
+Pour plus d'informations sur la journalisation Docker, consultez la [documentation du pilote de journal `json-file` Docker](https://docs.docker.com/engine/logging/drivers/json-file/).
 
 ### Utiliser un registre de conteneurs privé {#use-a-private-container-registry}
 
@@ -1299,7 +1366,7 @@ job:
 
 ### Téléchargements d'artefacts en parallèle (téléchargement direct) {#parallel-artifact-downloads-direct-download}
 
-Par défaut, lorsque [`direct_download`](https://docs.gitlab.com/ci/jobs/job_artifacts/#download-artifacts-from-a-job) renvoie une redirection vers le stockage d'objets, le runner télécharge les artefacts avec un seul flux HTTP GET.
+Par défaut, lorsque [`direct_download`](https://docs.gitlab.com/ci/jobs/job_artifacts/#download-job-artifacts) renvoie une redirection vers un stockage d'objets, le runner télécharge les artefacts via un seul flux HTTP GET.
 
 Activez le `FF_USE_PARALLEL_ARTIFACT_TRANSFER` [feature flag](feature-flags.md) pour autoriser les requêtes HTTP Range GET parallèles lorsque le backend de stockage d'objets prend en charge `206 Partial Content` avec un total `Content-Range`. La taille des chunks et la simultanéité sont fixées dans le runner (pas les variables `CACHE_*`). Ce flag est indépendant de `FF_USE_PARALLEL_CACHE_TRANSFER`.
 
@@ -1641,7 +1708,7 @@ Pour utiliser les rôles IAM pour les comptes de service, un fournisseur IAM OID
 {{< /history >}}
 
 > [!note]
-> [Les compartiments de répertoire S3 Express One Zone ne fonctionnent pas avec `RoleARN`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38484#note_2313111840) car le gestionnaire de runner ne peut pas restreindre l'accès à un objet spécifique.
+> [Les compartiments de répertoires S3 Express One Zone ne fonctionnent pas avec `RoleARN`](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/38484#note_2313111840), car le gestionnaire de runner ne peut pas restreindre l'accès à un seul objet spécifique.
 
 1. Configurez un compartiment S3 Express One Zone en suivant le [tutoriel Amazon](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-getting-started.html).
 1. Configurez `config.toml` avec `BucketName` et `BucketLocation`.
@@ -1660,7 +1727,7 @@ Exemple de `config.toml` :
 
 ### La section `[runners.cache.gcs]` {#the-runnerscachegcs-section}
 
-Les paramètres suivants définissent la prise en charge native de Google Cloud Storage. Pour plus d'informations sur ces valeurs, consultez la [documentation d'authentification Google Cloud Storage (GCS)](https://docs.cloud.google.com/storage/docs/authentication#service_accounts).
+Les paramètres suivants définissent la prise en charge native de Google Cloud Storage. Pour plus d'informations sur ces valeurs, consultez la [documentation d'authentification de Google Cloud Storage (GCS)](https://docs.cloud.google.com/storage/docs/authentication).
 
 | Paramètre         | Type   | Description |
 |-------------------|--------|-------------|
@@ -1817,6 +1884,31 @@ Le label est nécessaire car les identifiants sont récupérés depuis différen
 
 Pour plus de détails, voir le [ticket 38330](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38330).
 
+## La section `[runners.artifact]` {#the-runnersartifact-section}
+
+{{< history >}}
+
+- [Introduit](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5900) dans GitLab Runner 18.10.
+
+{{< /history >}}
+
+Les paramètres suivants contrôlent les délais d'attente HTTP utilisés lorsque le runner charge des artefacts de job. Dans les environnements avec des réseaux lents, des artefacts volumineux ou des backends de stockage à latence élevée, le délai d'attente de chargement par défaut d'une heure peut être insuffisant. Vous pouvez envisager de le réduire pour détecter les échecs plus rapidement.
+
+Définissez `upload_timeout` à une valeur adaptée à la taille d'artefact la plus grande attendue et à la bande passante disponible.
+
+| Paramètre                 | Type     | Description |
+|---------------------------|----------|-------------|
+| `upload_timeout`          | durée | Facultatif. Durée maximale pour l'ensemble de l'opération de chargement d'artefacts. Par défaut : `1h`. |
+| `response_header_timeout` | durée | Facultatif. Durée maximale d'attente des en-têtes de réponse du serveur après l'envoi du corps du chargement. Par défaut : `10m`. |
+
+Exemple :
+
+```toml
+[runners.artifact]
+  upload_timeout = "2h"
+  response_header_timeout = "15m"
+```
+
 ## La section `[runners.kubernetes]` {#the-runnerskubernetes-section}
 
 Le tableau suivant répertorie les paramètres de configuration disponibles pour l'exécuteur Kubernetes. Pour plus de paramètres, consultez la [documentation relative à l'exécuteur Kubernetes](../executors/kubernetes/_index.md).
@@ -1891,6 +1983,15 @@ Par défaut, la bonne [image d'aide pour votre architecture](../executors/kubern
   helper_image = "my.registry.local/gitlab/gitlab-runner-helper:arm64-v${CI_RUNNER_VERSION}"
 ```
 
+### Sélection de l'image d'aide Windows {#windows-helper-image-selection}
+
+Sur Windows, GitLab Runner sélectionne automatiquement l'image d'aide correspondant à la version Windows de l'hôte et à l'architecture CPU (`x86_64` ou `arm64`).
+
+> [!note]
+> Les images d'aide ARM64 sont actuellement disponibles uniquement sur Windows Server 2025 (24H2).
+
+Pour la liste des images disponibles, voir [les images d'aide Windows](../executors/docker.md#windows-helper-images).
+
 ### Images de runner utilisant une ancienne version d'Alpine Linux {#runner-images-that-use-an-old-version-of-alpine-linux}
 
 {{< history >}}
@@ -1911,7 +2012,7 @@ docker pull gitlab/gitlab-runner:alpine3.19-v16.1.0
 
 ### Images Alpine `pwsh` {#alpine-pwsh-images}
 
-À partir de GitLab Runner 16.1 et versions ultérieures, toutes les images d'aide `alpine` disposent d'une variante `pwsh`. La seule exception est `alpine-latest`, car les [images Docker `powershell`](https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-in-docker?view=powershell-7.4) sur lesquelles les images d'aide de GitLab Runner sont basées ne prennent pas en charge `alpine:latest`.
+Depuis GitLab Runner 16.1 et les versions ultérieures, les variantes Alpine épinglées (`alpine3.18`, `alpine3.19` et `alpine3.21`) disposent d'une variante `pwsh`. Dans GitLab Runner 17.8 et les versions ultérieures, la variante `alpine-latest` dispose également d'une variante `pwsh`. Ces images installent la version `linux-musl` de PowerShell par-dessus l'image de base Alpine, et prennent donc en charge toutes les versions d'Alpine.
 
 Exemple :
 

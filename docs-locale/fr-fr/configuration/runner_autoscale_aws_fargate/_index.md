@@ -363,7 +363,7 @@ Le pilote AWS Fargate nécessite que le cluster ECS soit configuré avec une [st
 
 Pour aller plus loin :
 
-- Une [stratégie de fournisseur de capacité](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-capacity-providers.html) par défaut est associée à chaque cluster Amazon ECS. Si aucune autre stratégie de fournisseur de capacité ou type de lancement n'est spécifié, le cluster utilise cette stratégie lorsqu'une tâche s'exécute ou qu'un service est créé.
+- Une [stratégie de fournisseur de capacité](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/capacity-cluster-best-practice.html) par défaut est associée à chaque cluster Amazon ECS. Si aucune autre stratégie de fournisseur de capacité ou type de lancement n'est spécifié, le cluster utilise cette stratégie lorsqu'une tâche s'exécute ou qu'un service est créé.
 - Si un [`capacityProviderStrategy`](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RunTask.html#ECS-RunTask-request-capacityProviderStrategy) est spécifié, le paramètre `launchType` doit être omis. Si aucun `capacityProviderStrategy` ou `launchType` n'est spécifié, le `defaultCapacityProviderStrategy` du cluster est utilisé.
 
 ### Erreur de métadonnées `file does not exist` lors de l'exécution des jobs {#metadata-file-does-not-exist-error-when-running-jobs}

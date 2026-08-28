@@ -7,7 +7,7 @@ title: Sécurité pour les runners auto-gérés
 
 {{< details >}}
 
-- Niveau :  Free, Premium, Ultimate
+- Niveau :  Gratuite, GitLab Premium, GitLab Ultimate
 - Offre :  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
@@ -38,14 +38,15 @@ Selon l'exécuteur que vous utilisez, vous pouvez être confronté à différent
 
 ### Utilisation de l'exécuteur Docker {#usage-of-docker-executor}
 
-**Docker peut être considéré comme sûr lorsqu’il est utilisé en mode non privilégié**. Pour rendre une telle configuration plus sécurisée, exécutez les jobs en tant qu'utilisateur non root dans des conteneurs Docker avec `sudo` désactivé ou les capacités `SETUID` et `SETGID` supprimées.
+**Docker peut être considéré comme sûr lorsqu'il est utilisé en mode non privilégié**. Pour rendre une telle configuration plus sécurisée, exécutez les jobs en tant qu'utilisateur non root dans des conteneurs Docker avec `sudo` désactivé ou les capacités `SETUID` et `SETGID` supprimées.
 
 Des permissions plus granulaires peuvent être configurées en mode non privilégié via les paramètres `cap_add`/`cap_drop`.
 
 > [!warning]
 > Les conteneurs privilégiés dans Docker disposent de toutes les capacités root de la VM hôte. Pour plus d'informations, consultez la documentation officielle de Docker sur [Runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)
+> De même, l'exécution du conteneur dans l'espace de nommage PID de l'hôte rompt l'isolation du conteneur et n'est pas sûre.
 
-Il est **déconseillé** d'exécuter des conteneurs en mode privilégié.
+Il n'est **pas recommandé** d'exécuter des conteneurs en mode privilégié, ni avec l'indicateur `--pid=host`.
 
 Lorsque le mode privilégié est activé, un utilisateur exécutant un job CI/CD pourrait obtenir un accès root complet au système hôte du runner, l'autorisation de monter et de détacher des volumes, et d'exécuter des conteneurs imbriqués.
 
@@ -63,7 +64,7 @@ Prenons un exemple où la politique de pull est définie sur `if-not-present` :
 1. L'utilisateur A démarre un build sur un runner d'instance :  Le build reçoit les identifiants du registre et extrait l'image après autorisation dans le registre.
 1. L'image est stockée sur l'hôte du runner d'instance.
 1. L'utilisateur B n'a pas accès à l'image privée à l'adresse `registry.example.com/image/name`.
-1. L'utilisateur B démarre un build utilisant cette image sur le même runner d'instance que l'utilisateur A :  Le runner trouve une version locale de l'image et l'utilise **même si l’image n’a pas pu être récupérée pour cause d’absence d’identifiants**.
+1. L'utilisateur B démarre un build utilisant cette image sur le même runner d'instance que l'utilisateur A :  Le runner trouve une version locale de l'image et l'utilise **même si l'image n'a pas pu être récupérée pour cause d'absence d'identifiants**.
 
 Par conséquent, si vous hébergez un runner pouvant être utilisé par différents utilisateurs et différents projets (avec des niveaux d'accès privés et publics mélangés), vous ne devez jamais utiliser `if-not-present` comme valeur de politique de pull, mais utiliser :
 
@@ -80,7 +81,7 @@ Lisez la [documentation sur les politiques de pull](../executors/docker.md#confi
 
 ### Utilisation de l'exécuteur Parallels {#usage-of-parallels-executor}
 
-**L’exécuteur Parallels représente l’option la plus sûre possible** car il utilise une virtualisation complète du système avec des machines VM configurées pour s'exécuter en mode de virtualisation isolée et des machines VM configurées pour s'exécuter en mode isolé. Il bloque l'accès à tous les périphériques et dossiers partagés.
+**L'exécuteur Parallels représente l'option la plus sûre possible** car il utilise une virtualisation complète du système avec des machines VM configurées pour s'exécuter en mode de virtualisation isolée et des machines VM configurées pour s'exécuter en mode isolé. Il bloque l'accès à tous les périphériques et dossiers partagés.
 
 ## Clonage d'un runner {#cloning-a-runner}
 
