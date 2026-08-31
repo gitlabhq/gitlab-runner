@@ -5,6 +5,7 @@ package docker_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -17,6 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
@@ -40,7 +43,6 @@ import (
 // This covers all four of 31043's test-matrix cells (rootful and
 // rootless Podman, root and non-root container user) plus a regression
 // test for https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39608.
-// It doesn't touch services with FF_NETWORK_PER_BUILD.
 
 // podmanHost finds the Docker-compatible API socket of a locally reachable
 // Podman installation, trying the two ways Podman commonly exposes it:
@@ -222,6 +224,83 @@ func TestPodmanCommandWithPlatformKey(t *testing.T) {
 	var buf bytes.Buffer
 	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buf})
 	require.NoError(t, err, buf.String())
+}
+
+// TestPodmanServiceHealthcheckWithNetworkPerBuild covers services under
+// FF_NETWORK_PER_BUILD against Podman. Mirrors the FF_NETWORK_PER_BUILD=true
+// cases of TestDockerServiceHealthcheck.
+func TestPodmanServiceHealthcheckWithNetworkPerBuild(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	host := podmanHost(t)
+
+	tests := map[string]struct {
+		command        []string
+		serviceStarted bool
+		port           int
+		variables      spec.Variables
+	}{
+		"successful service": {
+			command:        []string{"server"},
+			serviceStarted: true,
+		},
+		"successful service explicit port": {
+			command:        []string{"server", "--addr", ":8888"},
+			serviceStarted: true,
+			port:           8888,
+			variables:      []spec.Variable{{Key: "HEALTHCHECK_TCP_PORT", Value: "8888"}},
+		},
+		"failed service": {
+			command:        []string{"server", "--addr", ":8888"},
+			serviceStarted: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if tc.port == 0 {
+				tc.port = 80
+			}
+
+			resp, err := common.GetRemoteBuildResponse(
+				fmt.Sprintf("liveness client db:%d", tc.port),
+				fmt.Sprintf("liveness client registry.gitlab.com__gitlab-org__ci-cd__tests__liveness:%d", tc.port),
+				fmt.Sprintf("liveness client registry.gitlab.com-gitlab-org-ci-cd-tests-liveness:%d", tc.port),
+			)
+			require.NoError(t, err)
+			resp.Image = spec.Image{Name: common.TestLivenessImage, Entrypoint: []string{""}}
+			resp.Services = append(resp.Services, spec.Image{
+				Name:      common.TestLivenessImage,
+				Alias:     "db",
+				Command:   tc.command,
+				Variables: tc.variables,
+			})
+
+			runner := podmanRunnerConfig(host)
+			runner.Docker.WaitForServicesTimeout = 30
+
+			build := common.Build{
+				Job:              resp,
+				Runner:           runner,
+				ExecutorProvider: docker_executor.NewProvider(),
+			}
+			build.Variables = append(build.Variables, spec.Variable{
+				Key:    "FF_NETWORK_PER_BUILD",
+				Value:  "true",
+				Public: true,
+			})
+
+			out, err := buildtest.RunBuildReturningOutput(t, &build)
+			if !tc.serviceStarted {
+				assert.Error(t, err)
+				assert.Contains(t, out, "probably didn't start properly")
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotContains(t, out, "probably didn't start properly")
+		})
+	}
 }
 
 func TestPodmanRootfulCommandBasicRun(t *testing.T) {

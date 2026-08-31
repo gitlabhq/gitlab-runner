@@ -939,6 +939,11 @@ Prerequisites:
 > The `aardvark-dns` versions 1.10.0 and earlier cause sporadic DNS resolution failures in CI/CD jobs.
 > Make sure that you have installed a newer version.
 > For more information, see [GitHub issue 389](https://github.com/containers/aardvark-dns/issues/389).
+> <!-- -->
+> GitLab Runner is validated against Podman 5.8.2 in both rootless and rootful
+> mode, with both a root and a non-root user in the container, including services
+> that run under `FF_NETWORK_PER_BUILD`. For more information,
+> see [issue 31043](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/31043).
 
 1. On your Linux host, install GitLab Runner. If you installed GitLab Runner
    by using your system's package manager, it automatically creates a `gitlab-runner` user.
