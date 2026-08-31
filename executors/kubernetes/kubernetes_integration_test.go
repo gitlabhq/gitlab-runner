@@ -2584,9 +2584,11 @@ func testDeletedPodSystemFailureDuringExecution(t *testing.T, ff string, ffValue
 				"evict now":         evictPodNow,
 			},
 			outputAssertions: func(t *testing.T, err error, out string, pod string) {
-				assert.True(t, kubernetes.IsKubernetesPodNotFoundError(err), "expected err NotFound, but got %T", err)
-				assert.Contains(t, out, "ERROR: Job failed (system failure):")
-				assert.Contains(t, out, fmt.Sprintf("pods %q not found", pod))
+				assertSystemFailure(t, err, out,
+					fmt.Sprintf("pods %q not found", pod),
+					fmt.Sprintf("pod %q is being deleted", ciNamespace+"/"+pod),
+					fmt.Sprintf("pod %q is disrupted", ciNamespace+"/"+pod),
+				)
 			},
 		},
 	}
