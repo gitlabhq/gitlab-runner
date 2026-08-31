@@ -7,8 +7,8 @@ title: Custom 실행기를 사용하는 libvirt
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -18,7 +18,13 @@ title: Custom 실행기를 사용하는 libvirt
 
 이 드라이버는 각 VM이 전용 IP 주소를 갖고 있어야 하므로 GitLab 러너가 SSH를 통해 VM 내부에 접속하여 명령을 실행할 수 있도록 브리지 네트워킹이 필요합니다. SSH 키는 [다음 명령을 사용하여](https://docs.gitlab.com/user/ssh/#generate-an-ssh-key-pair) 생성할 수 있습니다.
 
-기본 디스크 VM 이미지가 생성되므로 의존성을 빌드할 때마다 다운로드할 필요가 없습니다. 다음 예제에서는 [virt-builder](https://libguestfs.org/virt-builder.1.html)를 사용하여 디스크 VM 이미지를 생성합니다.
+## 기본 이미지 빌드 {#build-the-base-image}
+
+기본 디스크 VM 이미지가 생성되므로 의존성을 빌드할 때마다 다운로드할 필요가 없습니다. 실행할 게스트 운영 체제 제품군에 맞게 빌드합니다.
+
+### Debian 및 Ubuntu (`virt-builder`) {#debian-and-ubuntu-virt-builder}
+
+[`virt-builder`](https://libguestfs.org/virt-builder.1.html)는 템플릿에서 직접 기본 이미지를 생성합니다:
 
 ```shell
 virt-builder debian-12 \
@@ -42,9 +48,42 @@ virt-builder debian-12 \
     --run-command "echo 'iface eth0 inet dhcp' >> /etc/network/interfaces"
 ```
 
-위의 명령은 앞서 지정한 모든 [필수 소프트웨어](../custom.md#prerequisite-software-for-running-a-job)를 설치합니다.
+이전 명령은 앞서 지정한 모든 [필수 요소](../custom.md#prerequisite-software-for-running-a-job)를 설치합니다.
 
-`virt-builder`은 루트 비밀번호를 자동으로 설정하며, 이는 끝에 인쇄됩니다. 비밀번호를 직접 지정하려면 [`--root-password password:$SOME_PASSWORD`](https://libguestfs.org/virt-builder.1.html#setting-the-root-password)를 전달하세요.
+`virt-builder`는 루트 비밀번호를 자동으로 설정하고 마지막에 인쇄합니다. 자신의 비밀번호를 설정하려면 [`--root-password password:$SOME_PASSWORD`](https://libguestfs.org/virt-builder.1.html#setting-the-root-password)를 전달합니다.
+
+### RHEL, CentOS 및 AlmaLinux (`virt-customize`) {#rhel-centos-and-almalinux-virt-customize}
+
+`virt-builder`는 라이선스가 있는 RHEL 게스트 템플릿이 없습니다. 배포판의 GenericCloud `qcow2`을 다운로드하고 [`virt-customize`](https://libguestfs.org/virt-customize.1.html)로 오프라인으로 사용자 지정합니다. 이 예제는 AlmaLinux 9 `x86_64` 이미지를 사용합니다. RHEL 또는 CentOS Stream 9 이미지 또는 다른 아키텍처로 필요에 따라 대체합니다.
+
+```shell
+IMAGES=/var/lib/libvirt/images
+BASE="$IMAGES/gitlab-runner-base.qcow2"
+
+curl -fL "https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2" -o "$BASE"
+qemu-img resize "$BASE" 12G
+
+virt-customize -a "$BASE" \
+    --run-command 'curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | bash' \
+    --run-command 'curl -L "https://packagecloud.io/install/repositories/github/git-lfs/script.rpm.sh" | bash' \
+    --install gitlab-runner,git,git-lfs,openssh-server \
+    --run-command 'git lfs install --skip-repo' \
+    --run-command 'id gitlab-runner >/dev/null 2>&1 || useradd -m -s /bin/bash gitlab-runner' \
+    --ssh-inject gitlab-runner:file:/root/.ssh/id_rsa.pub \
+    --run-command 'echo "gitlab-runner ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gitlab-runner' \
+    --run-command 'systemctl enable sshd' \
+    --selinux-relabel
+```
+
+RHEL 계열 세부 사항:
+
+- `.rpm.sh` 패키지 리포지토리 스크립트 및 `dnf`를 사용합니다. `virt-customize` 및 `virt-install`을 제공하는 도구는 `guestfs-tools` 패키지에 있습니다.
+- 기본 이미지에 작업에 필요한 모든 런타임을 설치합니다. 이 예제는 `gitlab-runner`, `git`, `git-lfs` 및 `openssh-server`를 설치합니다. 작업이 VM 내부에 이미지를 빌드하는 경우 `podman`과 같은 컨테이너 엔진을 추가합니다.
+- `--selinux-relabel`을 전달하면 게스트가 SELinux 강제 적용 상태에서 깔끔하게 부팅되고, 이미지를 `/var/lib/libvirt/images/` 아래에 유지하면 `virt_image_t` SELinux 레이블이 적용됩니다.
+- Debian 레시피와 달리 GenericCloud 이미지는 `net.ifnames` 또는 `/etc/network/interfaces`가 필요하지 않습니다. `cloud-init` 및 `NetworkManager`로 부팅됩니다. 커널 명령줄을 변경하는 경우 `grub2-mkconfig`로 GRUB을 재생성합니다.
+- libvirt 데몬을 시작하고 `virt-host-validate`로 중첩 가상화를 확인합니다. libvirt 9 이상은 모듈식 데몬(`virtqemud` 및 동료)을 제공합니다. 단일식 `libvirtd` 호환성 단위도 작동하며 이미 소켓 활성화되었을 수 있습니다. 설치에서 제공하는 것을 활성화하고 활성 상태인지 확인합니다.
+- Custom 실행기 스크립트는 이러한 VM이 있는 시스템 libvirt 인스턴스와 통신해야 합니다. [base](#base) 스크립트는 이 연결을 위해 `export LIBVIRT_DEFAULT_URI="qemu:///system"`을 설정합니다.
+- [prepare](#prepare) 스크립트에서 `--os-variant`을 `osinfo-db`이 인식하는 ID로 설정합니다. 이 예제는 `rhel9.0`를 사용합니다. `almalinux9` 또는 `centos-stream9`도 `osinfo-db`에 포함되어 있으면 작동합니다. `osinfo-query os`로 사용 가능한 ID를 나열합니다.
 
 ## 구성 {#configuration}
 
@@ -90,6 +129,10 @@ BASE_VM_IMAGE="$VM_IMAGES_PATH/gitlab-runner-base.qcow2"
 VM_ID="runner-$CUSTOM_ENV_CI_RUNNER_ID-project-$CUSTOM_ENV_CI_PROJECT_ID-concurrent-$CUSTOM_ENV_CI_CONCURRENT_PROJECT_ID-job-$CUSTOM_ENV_CI_JOB_ID"
 VM_IMAGE="$VM_IMAGES_PATH/$VM_ID.qcow2"
 
+# Talk to the system libvirt instance, where these VMs live, rather than the
+# per-user session instance.
+export LIBVIRT_DEFAULT_URI="qemu:///system"
+
 _get_vm_ip() {
     virsh -q domifaddr "$VM_ID" | awk '{print $4}' | sed -E 's|/([0-9]+)?$||'
 }
@@ -124,7 +167,7 @@ qemu-img create -f qcow2 -b "$BASE_VM_IMAGE" "$VM_IMAGE" -F qcow2
 # To boot VM in UEFI mode, add: --boot uefi
 virt-install \
     --name "$VM_ID" \
-    --os-variant debian11 \
+    --os-variant debian12 \
     --disk "$VM_IMAGE" \
     --import \
     --vcpus=2 \
