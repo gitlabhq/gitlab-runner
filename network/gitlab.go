@@ -107,7 +107,7 @@ func (n *GitLabClient) getLastUpdate(credentials requestCredentials) (lu string)
 
 // SetLastUpdate stores the `last_update` queue-version token for a runner's
 // credentials. The Job Router path uses it to feed back the token that Rails
-// returns via KAS, since those responses do not flow through this client's HTTP
+// returns via GitLab Relay (KAS), since those responses do not flow through this client's HTTP
 // layer where setLastUpdate would otherwise capture it.
 func (n *GitLabClient) SetLastUpdate(config common.RunnerConfig, lastUpdate string) {
 	cli, err := n.getClient(&config.RunnerCredentials)

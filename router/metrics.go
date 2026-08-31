@@ -28,7 +28,7 @@ const (
 
 // getJobResult records the outcome of a router GetJob RPC. It is the value of the
 // "result" label on the get_job_duration_seconds histogram, and mirrors the values
-// Relay records on its own job_router_get_job_duration_seconds so the runner-side and
+// GitLab Relay (KAS) records on its own job_router_get_job_duration_seconds so the runner-side and
 // server-side histograms can be broken down the same way.
 type getJobResult string
 
@@ -62,7 +62,7 @@ func newClientMetrics() *clientMetrics {
 			Help:      "Total number of job requests that fell back from the job router to direct GitLab polling, partitioned by reason.",
 		}, []string{"reason"}),
 		// runner/system_id attribute the latency to the runner entry that polled, and
-		// result matches the Relay-side histogram so the two break down the same way.
+		// result matches the GitLab Relay (KAS)-side histogram so the two break down the same way.
 		// Without result, no-job long-polls - which wait out GitLab's CI polling window
 		// - swamp the latency tail of every other outcome. Cardinality stays bounded by
 		// the [[runners]] entries on a host: 39 series each, being 3 results x

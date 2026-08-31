@@ -30,7 +30,7 @@ const (
 	protocolWS    = "ws"
 	protocolWSS   = "wss"
 
-	webSocketMaxMessageSize = 10 * 1024 * 1024 // matches kas limit
+	webSocketMaxMessageSize = 10 * 1024 * 1024 // matches GitLab Relay (KAS) limit
 	// tunnelWebSocketProtocol is a subprotocol that allows client and server to recognize each other.
 	// See https://datatracker.ietf.org/doc/html/rfc6455#section-11.3.4
 	tunnelWebSocketProtocol = "ws-tunnel"
@@ -201,7 +201,7 @@ func (f *ClientConnFactory) isFileNewerLocked(name string) bool {
 func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 	u, err := url.Parse(target.URL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid kas address: %w", err)
+		return nil, fmt.Errorf("invalid GitLab Relay (KAS) address: %w", err)
 	}
 	var tlsConfig *tls.Config
 	if u.Scheme == protocolWSS || u.Scheme == protocolGRPCS {
@@ -255,7 +255,7 @@ func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 			grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
 		)
 	default:
-		return nil, fmt.Errorf("unsupported scheme in kas address: %q", u.Scheme)
+		return nil, fmt.Errorf("unsupported scheme in GitLab Relay (KAS) address: %q", u.Scheme)
 	}
 	if !secure {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -265,9 +265,9 @@ func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 		// keepalive.ClientParameters must be specified at least as large as what is allowed by the
 		// Server-side grpc.KeepaliveEnforcementPolicy
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			// kas allows min 20 seconds, trying to stay below 60 seconds (typical load-balancer timeout) and
-			// above kas' Server keepalive Time so that kas pings the client sometimes. This helps mitigate
-			// reverse-proxies' enforced Server response timeout.
+			// GitLab Relay (KAS) allows min 20 seconds, trying to stay below 60 seconds (typical load-balancer timeout)
+			// and above GitLab Relay (KAS)'s Server keepalive Time so that GitLab Relay (KAS) pings the client
+			// sometimes. This helps mitigate reverse-proxies' enforced Server response timeout.
 			Time:                55 * time.Second,
 			PermitWithoutStream: true,
 		}),
