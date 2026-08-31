@@ -27,9 +27,9 @@ var (
 
 const (
 	requestIDMetadataKey = "x-request-id" // lowercase version of X-Request-ID
-	// lastUpdateMetadataKey carries the queue-version token Relay relays back from
-	// Rails. Echoing it as `last_update` on the next request is what lets Workhorse
-	// coalesce Job Router long-polls. Lowercase form of X-GitLab-Last-Update.
+	// lastUpdateMetadataKey carries the queue-version token GitLab Relay (KAS) relays
+	// back from Rails. Echoing it as `last_update` on the next request is what lets
+	// Workhorse coalesce Job Router long-polls. Lowercase form of X-GitLab-Last-Update.
 	lastUpdateMetadataKey = "x-gitlab-last-update"
 	discoveryTTL          = time.Hour
 
@@ -164,7 +164,7 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 		grpc.Header(&responseMD),
 	)
 	// Observed before the response is decoded, so the duration covers the RPC only
-	// and stays comparable with the Relay-side histogram. The result label therefore
+	// and stays comparable with the GitLab Relay (KAS)-side histogram. The result label therefore
 	// classifies the RPC outcome, not the decode: a payload that later fails to
 	// unmarshal still counts as a job.
 	c.metrics.observeGetJob(
