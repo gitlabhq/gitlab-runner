@@ -178,9 +178,6 @@ func bootVerifyJobSpec(timeout time.Duration) spec.Job {
 			Stage: "boot-verify",
 		},
 		RunnerInfo: spec.RunnerInfo{
-			// Ceil, or a fractional timeout truncates below the canary's
-			// context deadline, and a sub-second one becomes zero, which
-			// GetBuildTimeout treats as unset.
 			Timeout: int(math.Ceil(timeout.Seconds())),
 		},
 		Variables: spec.Variables{
