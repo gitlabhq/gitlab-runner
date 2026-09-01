@@ -65,6 +65,18 @@ func TestBootVerifyJobSpec(t *testing.T) {
 		job := bootVerifyJobSpec(10 * time.Second)
 		assert.Equal(t, 10, job.Steps[0].Timeout)
 	})
+
+	t.Run("fractional timeouts round up", func(t *testing.T) {
+		job := bootVerifyJobSpec(1500 * time.Millisecond)
+		assert.Equal(t, 2, job.RunnerInfo.Timeout)
+		assert.Equal(t, 2, job.Steps[0].Timeout)
+	})
+
+	t.Run("sub-second timeouts do not become zero", func(t *testing.T) {
+		job := bootVerifyJobSpec(500 * time.Millisecond)
+		assert.Equal(t, 1, job.RunnerInfo.Timeout)
+		assert.Equal(t, 1, job.Steps[0].Timeout)
+	})
 }
 
 func TestAcquireWithRetry(t *testing.T) {

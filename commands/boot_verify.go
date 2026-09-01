@@ -178,7 +178,10 @@ func bootVerifyJobSpec(timeout time.Duration) spec.Job {
 			Stage: "boot-verify",
 		},
 		RunnerInfo: spec.RunnerInfo{
-			Timeout: int(timeout.Seconds()),
+			// Ceil, or a fractional timeout truncates below the canary's
+			// context deadline, and a sub-second one becomes zero, which
+			// GetBuildTimeout treats as unset.
+			Timeout: int(math.Ceil(timeout.Seconds())),
 		},
 		Variables: spec.Variables{
 			{Key: "GIT_STRATEGY", Value: "none", Public: true},
@@ -188,7 +191,7 @@ func bootVerifyJobSpec(timeout time.Duration) spec.Job {
 			{
 				Name:    spec.StepNameScript,
 				Script:  spec.StepScript{bootVerifyScript},
-				Timeout: int(stepTimeout.Seconds()),
+				Timeout: int(math.Ceil(stepTimeout.Seconds())),
 				When:    spec.StepWhenOnSuccess,
 			},
 		},
