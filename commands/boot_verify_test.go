@@ -56,6 +56,7 @@ func TestBootVerifyJobSpec(t *testing.T) {
 
 		require.Len(t, job.Steps, 1)
 		assert.Equal(t, int((5*time.Minute - bootVerifyStepMargin).Seconds()), job.Steps[0].Timeout)
+		assert.Equal(t, int((5 * time.Minute).Seconds()), job.RunnerInfo.Timeout)
 		assert.Equal(t, "none", job.Variables.Value("GIT_STRATEGY"))
 		assert.GreaterOrEqual(t, job.ID, bootVerifyIDBase)
 	})

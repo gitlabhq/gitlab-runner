@@ -177,6 +177,9 @@ func bootVerifyJobSpec(timeout time.Duration) spec.Job {
 			Name:  "boot-verify",
 			Stage: "boot-verify",
 		},
+		RunnerInfo: spec.RunnerInfo{
+			Timeout: int(timeout.Seconds()),
+		},
 		Variables: spec.Variables{
 			{Key: "GIT_STRATEGY", Value: "none", Public: true},
 			{Key: "GIT_CHECKOUT", Value: "false", Public: true},
