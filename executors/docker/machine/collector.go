@@ -1,6 +1,8 @@
 package machine
 
 import (
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -43,6 +45,8 @@ func (m *machineProvider) Describe(ch chan<- *prometheus.Desc) {
 	m.stoppingHistogram.Describe(ch)
 	m.removalHistogram.Describe(ch)
 	m.failedCreationHistogram.Describe(ch)
+	ch <- m.maxGrowthRateDesc
+	ch <- m.idleTargetDesc
 	ch <- m.currentStatesDesc
 }
 
@@ -78,4 +82,19 @@ func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 	m.stoppingHistogram.Collect(ch)
 	m.removalHistogram.Collect(ch)
 	m.failedCreationHistogram.Collect(ch)
+
+	m.autoscalingLimitsLock.Lock()
+	for runner, limits := range m.autoscalingLimits {
+		if time.Since(limits.updatedAt) > autoscalingLimitsTTL {
+			delete(m.autoscalingLimits, runner)
+			continue
+		}
+		ch <- prometheus.MustNewConstMetric(
+			m.maxGrowthRateDesc, prometheus.GaugeValue, limits.maxGrowthRate,
+			runner, limits.runnerName, limits.systemID)
+		ch <- prometheus.MustNewConstMetric(
+			m.idleTargetDesc, prometheus.GaugeValue, limits.idleTarget,
+			runner, limits.runnerName, limits.systemID)
+	}
+	m.autoscalingLimitsLock.Unlock()
 }

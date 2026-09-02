@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -938,4 +939,46 @@ func TestFinalizeRemoval_StopsAfterMaxAttempts(t *testing.T) {
 	tm.mutex.Lock()
 	defer tm.mutex.Unlock()
 	assert.Equal(t, 1, tm.forceRemoveCalls, "ForceRemove must run once on give-up to purge the local store JSON")
+}
+
+func TestUpdateAutoscalingLimits(t *testing.T) {
+	provider := newMachineProvider(nil)
+	config := &common.RunnerConfig{}
+	config.Token = "test-token-1234567890"
+	config.Name = "test-runner"
+	config.SystemID = "s_c2d22f638c25"
+	config.Machine = &common.DockerMachine{
+		IdleCount:       40,
+		IdleCountMin:    5,
+		IdleScaleFactor: 0.5,
+		MaxGrowthRate:   30,
+	}
+
+	provider.updateAutoscalingLimits(config, &machinesData{Used: 20})
+
+	expected := fmt.Sprintf(`
+# HELP gitlab_runner_autoscaling_idle_target The number of available machines the autoscaler aims to keep after applying IdleScaleFactor and IdleCountMin.
+# TYPE gitlab_runner_autoscaling_idle_target gauge
+gitlab_runner_autoscaling_idle_target{executor="docker+machine",runner="%[1]s",runner_name="test-runner",system_id="s_c2d22f638c25"} 10
+# HELP gitlab_runner_autoscaling_max_growth_rate The maximum number of machines that can be in the creation state at once (0 = unlimited).
+# TYPE gitlab_runner_autoscaling_max_growth_rate gauge
+gitlab_runner_autoscaling_max_growth_rate{executor="docker+machine",runner="%[1]s",runner_name="test-runner",system_id="s_c2d22f638c25"} 30
+`, config.ShortDescription())
+	err := testutil.CollectAndCompare(provider, strings.NewReader(expected),
+		"gitlab_runner_autoscaling_max_growth_rate", "gitlab_runner_autoscaling_idle_target")
+	assert.NoError(t, err)
+}
+
+func TestUpdateAutoscalingLimits_StaleConfigDropped(t *testing.T) {
+	provider := newMachineProvider(nil)
+	provider.autoscalingLimits["gone"] = autoscalingLimits{
+		maxGrowthRate: 30,
+		idleTarget:    10,
+		updatedAt:     time.Now().Add(-autoscalingLimitsTTL - time.Minute),
+	}
+
+	err := testutil.CollectAndCompare(provider, strings.NewReader(""),
+		"gitlab_runner_autoscaling_max_growth_rate", "gitlab_runner_autoscaling_idle_target")
+	assert.NoError(t, err)
+	assert.NotContains(t, provider.autoscalingLimits, "gone")
 }
