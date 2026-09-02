@@ -37,7 +37,23 @@ func TestShortenToken(t *testing.T) {
 
 		// old registration token, with and without 7 char decimal-to-hex-encoded rotation date
 		{"GR1348941Z196cJVywzZpx_Ki_Cn2", "Z196cJVyw"},
-		{"GR134894-196cJVywzZpx_Ki_Cn2", "GR134894-"},
+		{"GR134894-196cJVywzZpx_Ki_Cn2", "GR134894r"}, // trailing dash replaced with "r"
+
+		// leading non-alphanumeric after prefix strip: "r" is prepended and the
+		// original leading character is preserved at position 1 (no entropy loss).
+		{"glrt--abcdefghijk", "r-abcdefg"},  // dash after glrt- strip
+		{"glcbt--abcdefghijk", "r-abcdefg"}, // dash after glcbt- strip
+		{"-abcdefghijk", "r-abcdefg"},       // bare leading dash, no prefix
+		{"_abcdefghijk", "r_abcdefg"},       // leading underscore, no prefix
+		{".abcdefghijk", "r.abcdefg"},       // leading dot, no prefix
+
+		// trailing non-alphanumeric: last character replaced with "r".
+		{"abcdefgh-", "abcdefghr"}, // trailing dash
+		{"abcdefgh_", "abcdefghr"}, // trailing underscore
+
+		// short input (fewer than 9 chars): no panic, leading/trailing both fixed.
+		{"_x", "rr"},     // "_x": leading _→r gives "r_", trailing _→r gives "rr"
+		{"-abc", "r-ab"}, // "-abc": leading -→r gives "r-ab", trailing b is alphanumeric
 	}
 
 	for _, test := range tests {
