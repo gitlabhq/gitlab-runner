@@ -1545,10 +1545,14 @@ const (
 // BootVerify configures the startup canary. With enabled set, the runner runs
 // one synthetic job before reporting /health/ready and exits non-zero on failure.
 type BootVerify struct {
-	Enabled           bool          `toml:"enabled,omitempty" json:"enabled,omitempty" description:"(Experimental) Run the startup canary for this runner."`
-	Timeout           time.Duration `toml:"timeout,omitempty" json:"timeout,omitempty" description:"(Experimental) Deadline for the canary. Supports values like '5m' or '90s'. Default: 5m."`
-	AcquireMinBackoff time.Duration `toml:"acquire_min_backoff,omitempty" json:"acquire_min_backoff,omitempty" description:"(Experimental) Minimum backoff between acquire retries. Default: 1s."`
-	AcquireMaxBackoff time.Duration `toml:"acquire_max_backoff,omitempty" json:"acquire_max_backoff,omitempty" description:"(Experimental) Maximum backoff between acquire retries. Default: 10s."`
+	Enabled                 bool          `toml:"enabled,omitempty" json:"enabled,omitempty" description:"(Experimental) Run the startup canary for this runner."`
+	VerifyServerURL         bool          `toml:"verify_server_url,omitempty" json:"verify_server_url,omitempty" description:"(Experimental) During the canary, probe the runner's clone_url (falling back to url) from the job environment. Any HTTP response passes; connection and TLS verification failures fail the canary."`
+	VerifyServerURLInsecure bool          `toml:"verify_server_url_insecure,omitempty" json:"verify_server_url_insecure,omitempty" description:"(Experimental) Skip TLS certificate verification in the server URL probe."`
+	VerifyCache             bool          `toml:"verify_cache,omitempty" json:"verify_cache,omitempty" description:"(Experimental) During the canary, write and read back a canary object in the configured cache from the job environment. Skipped when no cache is configured."`
+	VerifyCommands          []string      `toml:"verify_commands,omitempty" json:"verify_commands,omitempty" description:"(Experimental) Commands appended to the canary job's script, run in the job container. The first failure fails the canary."`
+	Timeout                 time.Duration `toml:"timeout,omitempty" json:"timeout,omitempty" description:"(Experimental) Deadline for the canary. Supports values like '5m' or '90s'. Default: 5m."`
+	AcquireMinBackoff       time.Duration `toml:"acquire_min_backoff,omitempty" json:"acquire_min_backoff,omitempty" description:"(Experimental) Minimum backoff between acquire retries. Default: 1s."`
+	AcquireMaxBackoff       time.Duration `toml:"acquire_max_backoff,omitempty" json:"acquire_max_backoff,omitempty" description:"(Experimental) Maximum backoff between acquire retries. Default: 10s."`
 }
 
 func (b *BootVerify) GetTimeout() time.Duration {

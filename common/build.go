@@ -74,6 +74,7 @@ const (
 	BuildStagePrepare                  BuildStage = "prepare_script"
 	BuildStageGetSources               BuildStage = "get_sources"
 	BuildStageClearWorktree            BuildStage = "clear_worktree"
+	BuildStageBootVerifyProbes         BuildStage = "boot_verify_probes"
 	BuildStageRestoreCache             BuildStage = "restore_cache"
 	BuildStageDownloadArtifacts        BuildStage = "download_artifacts"
 	BuildStageAfterScript              BuildStage = "after_script"
@@ -752,6 +753,7 @@ func getPredefinedEnv(buildStage BuildStage) bool {
 		BuildStagePrepare:                  true,
 		BuildStageGetSources:               true,
 		BuildStageClearWorktree:            true,
+		BuildStageBootVerifyProbes:         true,
 		BuildStageRestoreCache:             true,
 		BuildStageDownloadArtifacts:        true,
 		BuildStageAfterScript:              false,
@@ -775,6 +777,7 @@ func GetStageDescription(stage BuildStage) string {
 		BuildStagePrepare:                  "Preparing environment",
 		BuildStageGetSources:               "Getting source from Git repository",
 		BuildStageClearWorktree:            "Deleting all tracked and untracked files due to source fetch failure",
+		BuildStageBootVerifyProbes:         "Running boot-verify probes",
 		BuildStageRestoreCache:             "Restoring cache",
 		BuildStageDownloadArtifacts:        "Downloading artifacts",
 		BuildStageAfterScript:              "Running after_script",
@@ -937,6 +940,9 @@ func (b *Build) executePrepareScripts(ctx, prepareCtx context.Context, executor 
 		// Non-timeout error: let it propagate via the final return so cleanup stages can run.
 	}
 
+	if err == nil && b.Synthetic {
+		err = b.executeStage(ctx, BuildStageBootVerifyProbes, executor)
+	}
 	if err == nil {
 		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts(), nil)
 	}

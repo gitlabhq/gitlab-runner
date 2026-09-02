@@ -4899,3 +4899,229 @@ func TestAbstractShell_writeExports_GitConfigGlobal(t *testing.T) {
 		})
 	}
 }
+
+func TestAbstractShell_writeBootVerifyProbesScript(t *testing.T) {
+	t.Parallel()
+
+	newBuild := func(synthetic bool, bootVerify *common.BootVerify, mod func(*common.Build)) *common.Build {
+		build := &common.Build{
+			Synthetic: synthetic,
+			BuildDir:  "/builds",
+			CacheDir:  "/cache",
+			Runner:    &common.RunnerConfig{},
+		}
+		build.Runner.Token = "1234567890abcdef"
+		build.Runner.URL = "https://gitlab.example.com/"
+		if bootVerify != nil {
+			build.Runner.Experimental = &common.RunnerExperimental{BootVerify: bootVerify}
+		}
+		if mod != nil {
+			mod(build)
+		}
+		return build
+	}
+
+	bothProbes := &common.BootVerify{Enabled: true, VerifyServerURL: true, VerifyCache: true}
+	shortToken := helpers.ShortenToken("1234567890abcdef")
+
+	tests := map[string]struct {
+		build         *common.Build
+		runnerCommand string
+		wantErr       string
+		wantContains  []string
+		wantMatches   []string
+		wantAbsent    []string
+		wantSkip      bool
+	}{
+		"not synthetic skips the stage": {
+			build:         newBuild(false, bothProbes, nil),
+			runnerCommand: "runner-command",
+			wantSkip:      true,
+		},
+		"no boot verify config skips the stage": {
+			build:         newBuild(true, nil, nil),
+			runnerCommand: "runner-command",
+			wantSkip:      true,
+		},
+		"probes disabled skip the stage": {
+			build:         newBuild(true, &common.BootVerify{Enabled: true}, nil),
+			runnerCommand: "runner-command",
+			wantSkip:      true,
+		},
+		"server url probe prefers clone_url": {
+			build: newBuild(true, &common.BootVerify{Enabled: true, VerifyServerURL: true}, func(b *common.Build) {
+				b.Runner.CloneURL = "https://clone.example.com/"
+			}),
+			runnerCommand: "runner-command",
+			wantContains: []string{
+				"probing server URL https://clone.example.com/boot-verify/this-does-not-exist.git/info/refs?service=git-upload-pack",
+				"probe-url --url $'https://clone.example.com/boot-verify/this-does-not-exist.git/info/refs?service=git-upload-pack' --timeout 15",
+			},
+			wantAbsent: []string{"gitlab.example.com"},
+		},
+		"server url probe falls back to url": {
+			build:         newBuild(true, &common.BootVerify{Enabled: true, VerifyServerURL: true}, nil),
+			runnerCommand: "runner-command",
+			wantContains: []string{
+				"probe-url --url $'https://gitlab.example.com/boot-verify/this-does-not-exist.git/info/refs?service=git-upload-pack' --timeout 15",
+			},
+		},
+		"server url probe uses the build CA chain": {
+			build: newBuild(true, &common.BootVerify{Enabled: true, VerifyServerURL: true}, func(b *common.Build) {
+				b.TLSData.CAChain = "-----BEGIN CERTIFICATE-----"
+			}),
+			runnerCommand: "runner-command",
+			wantContains: []string{
+				"probe-url --url $'https://gitlab.example.com/boot-verify/this-does-not-exist.git/info/refs?service=git-upload-pack' --timeout 15 --ca-file /tmp-dir/CI_SERVER_TLS_CA_FILE",
+			},
+		},
+		"server url probe skips tls verification when configured": {
+			build: newBuild(true, &common.BootVerify{Enabled: true, VerifyServerURL: true, VerifyServerURLInsecure: true}, func(b *common.Build) {
+				b.TLSData.CAChain = "-----BEGIN CERTIFICATE-----"
+			}),
+			runnerCommand: "runner-command",
+			wantContains: []string{
+				"probe-url --url $'https://gitlab.example.com/boot-verify/this-does-not-exist.git/info/refs?service=git-upload-pack' --timeout 15 --insecure",
+			},
+			wantAbsent: []string{"--ca-file"},
+		},
+		"server url probe without any url fails": {
+			build: newBuild(true, &common.BootVerify{Enabled: true, VerifyServerURL: true}, func(b *common.Build) {
+				b.Runner.URL = ""
+			}),
+			runnerCommand: "runner-command",
+			wantErr:       "neither clone_url nor url",
+		},
+		"server url probe without runner command fails": {
+			build:   newBuild(true, &common.BootVerify{Enabled: true, VerifyServerURL: true}, nil),
+			wantErr: "no runner helper binary",
+		},
+		"cache probe skipped without cache config": {
+			build:         newBuild(true, &common.BootVerify{Enabled: true, VerifyCache: true}, nil),
+			runnerCommand: "runner-command",
+			wantContains:  []string{"skipping cache probe"},
+			wantAbsent:    []string{"cache-archiver", "cache-extractor"},
+		},
+		"cache probe without runner command fails": {
+			build: newBuild(true, &common.BootVerify{Enabled: true, VerifyCache: true}, func(b *common.Build) {
+				b.Runner.Cache = &cacheconfig.Config{Type: "test", Shared: true}
+			}),
+			wantErr: "no runner helper binary",
+		},
+		"cache probe with presigned urls": {
+			build: newBuild(true, &common.BootVerify{Enabled: true, VerifyCache: true}, func(b *common.Build) {
+				b.Runner.Cache = &cacheconfig.Config{Type: "test", Shared: true}
+			}),
+			runnerCommand: "runner-command",
+			wantContains: []string{
+				"mkdir -p /tmp-dir/boot-verify",
+				"cat << EOF > /tmp-dir/boot-verify/canary.env\nBOOT_VERIFY=\"1\"\nEOF",
+				"cd /tmp-dir/boot-verify",
+				"cache-archiver --file canary-upload.zip --timeout 1 --path /tmp-dir/boot-verify/canary.env",
+				"--url $'test://upload/project/0/boot-verify/" + shortToken + "/",
+				"cache-extractor --file canary-download.zip --timeout 1",
+				"--url $'test://download/project/0/boot-verify/" + shortToken + "/",
+				"rm \"-f\" \"/tmp-dir/boot-verify/canary.env\"",
+				"if [ -e \"/tmp-dir/boot-verify/canary.env\" ]",
+				"cache canary missing after download",
+			},
+		},
+		"cache probe with gocloud urls": {
+			build: newBuild(true, &common.BootVerify{Enabled: true, VerifyCache: true}, func(b *common.Build) {
+				b.Runner.Cache = &cacheconfig.Config{Type: "goCloudTest", Shared: true}
+			}),
+			runnerCommand: "runner-command",
+			wantContains: []string{
+				"cache-archiver",
+				"--gocloud-url $'gocloud://test/project/0/boot-verify/" + shortToken + "/",
+				"--env-file",
+				"cache-extractor",
+			},
+		},
+		"cache probe with hashed keys": {
+			build: newBuild(true, &common.BootVerify{Enabled: true, VerifyCache: true}, func(b *common.Build) {
+				b.Runner.Cache = &cacheconfig.Config{Type: "test", Shared: true}
+				b.Runner.FeatureFlags = map[string]bool{featureflags.HashCacheKeys: true}
+			}),
+			runnerCommand: "runner-command",
+			wantMatches: []string{
+				`--url \$'test://upload/project/0/[0-9a-f]{2}/[0-9a-f]{64}'`,
+			},
+			wantAbsent: []string{"boot-verify/" + shortToken},
+		},
+		"cache probe with unusable adapter fails": {
+			build: newBuild(true, &common.BootVerify{Enabled: true, VerifyCache: true}, func(b *common.Build) {
+				b.Runner.Cache = &cacheconfig.Config{Type: "no-such-adapter", Shared: true}
+			}),
+			runnerCommand: "runner-command",
+			wantErr:       "no upload URL could be generated",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			writer := &BashWriter{TemporaryPath: "/tmp-dir"}
+			info := common.ShellScriptInfo{
+				Shell:         "bash",
+				RunnerCommand: tc.runnerCommand,
+				Build:         tc.build,
+			}
+			shell := new(AbstractShell)
+
+			err := shell.writeBootVerifyProbesScript(t.Context(), writer, info)
+
+			if tc.wantSkip {
+				assert.ErrorIs(t, err, common.ErrSkipBuildStage)
+				assert.Empty(t, writer.String())
+				return
+			}
+			if tc.wantErr != "" {
+				assert.ErrorContains(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+
+			script := writer.String()
+			for _, want := range tc.wantContains {
+				assert.Contains(t, script, want)
+			}
+			for _, want := range tc.wantMatches {
+				assert.Regexp(t, want, script)
+			}
+			for _, absent := range tc.wantAbsent {
+				assert.NotContains(t, script, absent)
+			}
+		})
+	}
+}
+
+func TestAbstractShell_writeBootVerifyCacheProbe_UniqueKeys(t *testing.T) {
+	t.Parallel()
+
+	build := &common.Build{
+		Synthetic: true,
+		BuildDir:  "/builds",
+		CacheDir:  "/cache",
+		Runner:    &common.RunnerConfig{},
+	}
+	build.Runner.Token = "1234567890abcdef"
+	build.Runner.SystemID = "r_test"
+	build.Runner.Cache = &cacheconfig.Config{Type: "test", Shared: true}
+
+	shell := new(AbstractShell)
+	uploadURL := regexp.MustCompile(`test://upload/\S+`)
+
+	var keys []string
+	for range 2 {
+		writer := &BashWriter{TemporaryPath: "/tmp-dir"}
+		info := common.ShellScriptInfo{Shell: "bash", RunnerCommand: "runner-command", Build: build}
+		require.NoError(t, shell.writeBootVerifyCacheProbe(t.Context(), writer, info))
+		key := uploadURL.FindString(writer.String())
+		require.NotEmpty(t, key)
+		keys = append(keys, key)
+	}
+
+	assert.NotEqual(t, keys[0], keys[1])
+}

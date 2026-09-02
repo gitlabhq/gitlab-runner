@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jpillora/backoff"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/labkit/v2/fields"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -102,17 +103,38 @@ func (mr *RunCommand) bootVerifyOneRunner(ctx context.Context, runner *common.Ru
 	defer provider.Release(runner, executorData)
 
 	// nil SystemInterrupt: the canary is cancelled via the context, not a signal.
-	build, err := common.NewBuild(bootVerifyJobSpec(bootVerify.GetTimeout()), runner, nil, executorData, provider)
+	build, err := common.NewBuild(bootVerifyJobSpec(bootVerify), runner, nil, executorData, provider)
 	if err != nil {
 		return fmt.Errorf("NewBuild: %w", err)
 	}
 	build.Synthetic = true
+
+	// Real jobs get the server CA chain in the job payload. The synthetic job
+	// has none, so load it from tls-ca-file. Only the server URL probe uses
+	// the chain, so a missing or unreadable file must not fail canaries that
+	// never opted in, or ones that opted out of verification.
+	if bootVerify.VerifyServerURL && !bootVerify.VerifyServerURLInsecure {
+		if caFile := runner.TLSCAFile; caFile != "" {
+			chain, err := os.ReadFile(caFile)
+			if err != nil {
+				return fmt.Errorf("reading tls-ca-file: %w", err)
+			}
+			build.TLSData.CAChain = string(chain)
+		}
+	}
 
 	trace := newBootVerifyTrace()
 	defer trace.Finish()
 
 	if err := build.Run(ctx, mr.configfile.Config(), trace); err != nil {
 		return fmt.Errorf("build.Run: %w\n--- build output ---\n%s", err, trace.dump())
+	}
+
+	// The trace is discarded on success, so dump it at debug level.
+	logger := mr.log().WithField("phase", "boot-verify")
+	if logger.Logger.IsLevelEnabled(logrus.DebugLevel) {
+		logger.WithField("runner", runner.ShortDescription()).
+			Debugf("Boot-verify build output:\n%s", trace.dump())
 	}
 	return nil
 }
@@ -164,11 +186,18 @@ func nextBootVerifyJobID() int64 {
 
 // bootVerifyJobSpec builds the synthetic job. It sets no image, so the docker
 // and kubernetes executors run it on their configured default image.
-func bootVerifyJobSpec(timeout time.Duration) spec.Job {
+//
+// verify_commands are appended to the script step, so they run in the job
+// container with the runner's configured devices and volumes, the same way a
+// real job's container is built. The first failure fails the canary.
+func bootVerifyJobSpec(bootVerify *common.BootVerify) spec.Job {
+	timeout := bootVerify.GetTimeout()
 	stepTimeout := timeout - bootVerifyStepMargin
 	if stepTimeout <= 0 {
 		stepTimeout = timeout
 	}
+
+	script := append(spec.StepScript{bootVerifyScript}, bootVerify.VerifyCommands...)
 
 	return spec.Job{
 		ID:    nextBootVerifyJobID(),
@@ -184,7 +213,7 @@ func bootVerifyJobSpec(timeout time.Duration) spec.Job {
 		Steps: spec.Steps{
 			{
 				Name:    spec.StepNameScript,
-				Script:  spec.StepScript{bootVerifyScript},
+				Script:  script,
 				Timeout: int(stepTimeout.Seconds()),
 				When:    spec.StepWhenOnSuccess,
 			},

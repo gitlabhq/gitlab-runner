@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
@@ -52,17 +53,23 @@ func TestNextBootVerifyJobIDWrapsWithinRegion(t *testing.T) {
 
 func TestBootVerifyJobSpec(t *testing.T) {
 	t.Run("step timeout sits below the deadline", func(t *testing.T) {
-		job := bootVerifyJobSpec(5 * time.Minute)
+		job := bootVerifyJobSpec(&common.BootVerify{Timeout: 5 * time.Minute})
 
 		require.Len(t, job.Steps, 1)
 		assert.Equal(t, int((5*time.Minute - bootVerifyStepMargin).Seconds()), job.Steps[0].Timeout)
 		assert.Equal(t, "none", job.Variables.Value("GIT_STRATEGY"))
 		assert.GreaterOrEqual(t, job.ID, bootVerifyIDBase)
+		assert.Equal(t, spec.StepScript{bootVerifyScript}, job.Steps[0].Script)
 	})
 
 	t.Run("timeout below the margin floors to the deadline", func(t *testing.T) {
-		job := bootVerifyJobSpec(10 * time.Second)
+		job := bootVerifyJobSpec(&common.BootVerify{Timeout: 10 * time.Second})
 		assert.Equal(t, 10, job.Steps[0].Timeout)
+	})
+
+	t.Run("verify commands run after the canary echo", func(t *testing.T) {
+		job := bootVerifyJobSpec(&common.BootVerify{VerifyCommands: []string{"nvidia-smi", "true"}})
+		assert.Equal(t, spec.StepScript{bootVerifyScript, "nvidia-smi", "true"}, job.Steps[0].Script)
 	})
 }
 
