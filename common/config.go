@@ -1550,6 +1550,7 @@ const (
 // one synthetic job before reporting /health/ready and exits non-zero on failure.
 type BootVerify struct {
 	Enabled                 bool          `toml:"enabled,omitempty" json:"enabled,omitempty" description:"(Experimental) Run the startup canary for this runner."`
+	VerifyAuth              bool          `toml:"verify_auth,omitempty" json:"verify_auth,omitempty" description:"(Experimental) During the canary, verify from the runner manager that the runner token authenticates against the GitLab server. Any failure fails the canary."`
 	VerifyServerURL         bool          `toml:"verify_server_url,omitempty" json:"verify_server_url,omitempty" description:"(Experimental) During the canary, probe the runner's clone_url (falling back to url) from the job environment. Any HTTP response passes; connection and TLS verification failures fail the canary."`
 	VerifyServerURLInsecure bool          `toml:"verify_server_url_insecure,omitempty" json:"verify_server_url_insecure,omitempty" description:"(Experimental) Skip TLS certificate verification in the server URL probe."`
 	VerifyCache             bool          `toml:"verify_cache,omitempty" json:"verify_cache,omitempty" description:"(Experimental) During the canary, write and read back a canary object in the configured cache from the job environment. Skipped when no cache is configured."`

@@ -705,6 +705,7 @@ re-run on config reload.
 | `timeout`             | duration | Deadline for the canary. Supports values like `5m` or `90s`. Default: `5m`. |
 | `acquire_min_backoff` | duration | Minimum backoff between executor acquire retries. Default: `1s`. |
 | `acquire_max_backoff` | duration | Maximum backoff between executor acquire retries. Default: `10s`. |
+| `verify_auth`         | boolean  | Verify from the runner manager that the runner token authenticates against the GitLab server, before the synthetic job runs. Any failure fails the canary. Default: `false`. |
 | `verify_server_url`   | boolean  | Probe the Git HTTP endpoint under the runner's `clone_url` (falling back to `url`) from the job environment. Any HTTP response passes. Connection and TLS failures fail the canary. Default: `false`. |
 | `verify_server_url_insecure` | boolean | Skip TLS certificate verification in the server URL probe. Default: `false`. |
 | `verify_cache`        | boolean  | Write a canary object to the configured cache and read it back from the job environment. Skipped when no cache is configured. Default: `false`. |
@@ -735,6 +736,7 @@ Example:
     timeout = "5m"
     acquire_min_backoff = "1s"
     acquire_max_backoff = "10s"
+    verify_auth = true
     verify_server_url = true
     verify_cache = true
     verify_commands = ["LD_LIBRARY_PATH=/usr/local/nvidia/lib64 /usr/local/nvidia/bin/nvidia-smi"]

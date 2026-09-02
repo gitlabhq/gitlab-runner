@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
@@ -106,6 +107,39 @@ func TestAcquireWithRetry(t *testing.T) {
 
 		_, err := acquireWithRetry(ctx, p, runner, time.Hour, time.Hour)
 		assert.ErrorIs(t, err, context.Canceled)
+	})
+}
+
+func TestBootVerifyAuth(t *testing.T) {
+	runner := &common.RunnerConfig{RunnerCredentials: common.RunnerCredentials{Token: "t"}}
+
+	t.Run("passes when the server accepts the token", func(t *testing.T) {
+		n := common.NewMockNetwork(t)
+		n.On("VerifyRunner", mock.Anything, *runner, mock.Anything).
+			Return(&common.VerifyRunnerResponse{ID: 1}, nil).Once()
+
+		mr := &RunCommand{network: n}
+		assert.NoError(t, mr.bootVerifyAuth(t.Context(), runner))
+	})
+
+	t.Run("fails when the server rejects the token", func(t *testing.T) {
+		n := common.NewMockNetwork(t)
+		n.On("VerifyRunner", mock.Anything, *runner, mock.Anything).
+			Return(nil, nil).Once()
+
+		mr := &RunCommand{network: n}
+		err := mr.bootVerifyAuth(t.Context(), runner)
+		assert.ErrorContains(t, err, "rejected the runner token")
+	})
+
+	t.Run("fails when the request cannot be completed", func(t *testing.T) {
+		requestErr := errors.New("invalid header field value for \"Runner-Token\"")
+		n := common.NewMockNetwork(t)
+		n.On("VerifyRunner", mock.Anything, *runner, mock.Anything).
+			Return(nil, requestErr).Once()
+
+		mr := &RunCommand{network: n}
+		assert.ErrorIs(t, mr.bootVerifyAuth(t.Context(), runner), requestErr)
 	})
 }
 

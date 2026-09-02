@@ -612,6 +612,7 @@ func TestVerifyRunnerOnLegacyServer(t *testing.T) {
 		token       string
 		url         string
 		expectedNil bool
+		expectedErr bool
 		expectedLog string
 	}{
 		{
@@ -639,12 +640,16 @@ func TestVerifyRunnerOnLegacyServer(t *testing.T) {
 			token: "other",
 			url:   s.URL,
 
+			expectedNil: true,
+			expectedErr: true,
 			expectedLog: `level=error msg="Verifying runner... failed"`,
 		},
 		{
 			name:        "broken credentials",
 			token:       "broken",
 			url:         "broken",
+			expectedNil: true,
+			expectedErr: true,
 			expectedLog: `level=error msg="Verifying runner... client error"`,
 		},
 	}
@@ -656,12 +661,19 @@ func TestVerifyRunnerOnLegacyServer(t *testing.T) {
 			logger, hook := test.NewNullLogger()
 			logger.SetLevel(logrus.InfoLevel)
 
-			res := c.VerifyRunner(
+			res, verifyErr := c.VerifyRunner(
+				t.Context(),
 				RunnerConfig{
 					RunnerCredentials: RunnerCredentials{URL: tc.url, Token: tc.token, Logger: logger},
 				},
 				"",
 			)
+
+			if tc.expectedErr {
+				assert.Error(t, verifyErr)
+			} else {
+				assert.NoError(t, verifyErr)
+			}
 
 			if tc.expectedNil {
 				assert.Nil(t, res)
@@ -689,6 +701,7 @@ func TestVerifyRunner(t *testing.T) {
 		token             string
 		url               string
 		expectedNil       bool
+		expectedErr       bool
 		expectedID        int64
 		expectedExpiresAt time.Time
 		expectedToken     string
@@ -723,12 +736,16 @@ func TestVerifyRunner(t *testing.T) {
 			token: "other",
 			url:   s.URL,
 
+			expectedNil: true,
+			expectedErr: true,
 			expectedLog: `level=error msg="Verifying runner... failed"`,
 		},
 		{
 			name:        "broken credentials",
 			token:       "broken",
 			url:         "broken",
+			expectedNil: true,
+			expectedErr: true,
 			expectedLog: `level=error msg="Verifying runner... client error"`,
 		},
 	}
@@ -740,12 +757,19 @@ func TestVerifyRunner(t *testing.T) {
 			logger, hook := test.NewNullLogger()
 			logger.SetLevel(logrus.InfoLevel)
 
-			res := c.VerifyRunner(
+			res, verifyErr := c.VerifyRunner(
+				t.Context(),
 				RunnerConfig{
 					RunnerCredentials: RunnerCredentials{URL: tc.url, Token: tc.token, Logger: logger},
 				},
 				"",
 			)
+
+			if tc.expectedErr {
+				assert.Error(t, verifyErr)
+			} else {
+				assert.NoError(t, verifyErr)
+			}
 
 			if tc.expectedNil {
 				assert.Nil(t, res)
@@ -3399,8 +3423,9 @@ func TestGitLabClient_VerifyRunner_TransmitsRunnerInfo(t *testing.T) {
 	}
 
 	client := NewGitLabClient()
-	response := client.VerifyRunner(config, "s_some_system_id")
+	response, err := client.VerifyRunner(t.Context(), config, "s_some_system_id")
 
+	require.NoError(t, err)
 	require.NotNil(t, response, "Verification should succeed")
 	assert.Equal(t, int64(12345), response.ID)
 }

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -247,8 +248,8 @@ func (s *RegisterCommand) verifyRunner() {
 	// If a runner authentication token is specified in place of a registration token, let's accept it and process it as
 	// an authentication token. This allows for an easier transition for users by simply replacing the
 	// registration token with the new authentication token.
-	result := s.network.VerifyRunner(s.RunnerConfig, s.SystemID)
-	if result == nil || result.ID == 0 {
+	result, err := s.network.VerifyRunner(context.Background(), s.RunnerConfig, s.SystemID)
+	if err != nil || result == nil || result.ID == 0 {
 		logrus.Panicln("Failed to verify the runner.")
 	}
 	s.ID = result.ID
@@ -263,7 +264,7 @@ func (s *RegisterCommand) askRunner(cfg *common.Config) {
 	if s.Token != "" && !s.tokenIsRunnerToken() {
 		logrus.Infoln("Token specified trying to verify runner...")
 		logrus.Warningln("If you want to register use the '-r' instead of '-t'.")
-		if s.network.VerifyRunner(s.RunnerConfig, s.SystemID) == nil {
+		if result, err := s.network.VerifyRunner(context.Background(), s.RunnerConfig, s.SystemID); err != nil || result == nil {
 			logrus.Panicln("Failed to verify the runner. You may be having network problems.")
 		}
 		return

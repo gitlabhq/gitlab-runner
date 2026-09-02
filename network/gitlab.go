@@ -415,7 +415,7 @@ func (n *GitLabClient) RegisterRunner(
 	}
 }
 
-func (n *GitLabClient) VerifyRunner(runner common.RunnerConfig, systemID string) *common.VerifyRunnerResponse {
+func (n *GitLabClient) VerifyRunner(ctx context.Context, runner common.RunnerConfig, systemID string) (*common.VerifyRunnerResponse, error) {
 	// Rails creates the runner manager record from the first authenticated
 	// request it sees, then persists that record's details at most once per
 	// 40-55 minutes. Omitting info here leaves runtime_features empty for that
@@ -433,7 +433,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerConfig, systemID string)
 	//nolint:bodyclose
 	// body is closed with closeResponseBody function call
 	result, statusText, resp := n.doJSON(
-		context.Background(),
+		ctx,
 		&runner,
 		http.MethodPost,
 		"runners/verify",
@@ -447,7 +447,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerConfig, systemID string)
 		//nolint:bodyclose
 		// body is closed with closeResponseBody function call
 		result, statusText, resp = n.doJSON(
-			context.Background(),
+			ctx,
 			&runner,
 			http.MethodPost,
 			"runners/verify",
@@ -469,20 +469,20 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerConfig, systemID string)
 		} else {
 			logger.Println("Verifying runner...", "is alive")
 		}
-		return &response
+		return &response, nil
 	case http.StatusForbidden:
 		if TokenIsCreatedRunnerToken(runner.Token) {
 			logger.Println("Verifying runner...", "is not valid")
 		} else {
 			logger.WithField("status", statusText).Errorln("Verifying runner...", "is removed")
 		}
-		return nil
+		return nil, nil
 	case clientError:
 		logger.WithField("status", statusText).Errorln("Verifying runner...", "client error")
-		return &response
+		return nil, fmt.Errorf("verifying runner: client error: %s", statusText)
 	default:
 		logger.WithField("status", statusText).Errorln("Verifying runner...", "failed")
-		return &response
+		return nil, fmt.Errorf("verifying runner: %s", statusText)
 	}
 }
 

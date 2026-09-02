@@ -94,6 +94,12 @@ func (mr *RunCommand) bootVerifyOneRunner(ctx context.Context, runner *common.Ru
 		return fmt.Errorf("no executor provider for %q", runner.Executor)
 	}
 
+	if bootVerify.VerifyAuth {
+		if err := mr.bootVerifyAuth(ctx, runner); err != nil {
+			return fmt.Errorf("auth probe: %w", err)
+		}
+	}
+
 	// Acquire returns "no free machines" until the idle pool warms, so retry.
 	executorData, err := acquireWithRetry(ctx, provider, runner,
 		bootVerify.GetAcquireMinBackoff(), bootVerify.GetAcquireMaxBackoff())
@@ -135,6 +141,17 @@ func (mr *RunCommand) bootVerifyOneRunner(ctx context.Context, runner *common.Ru
 	if logger.Logger.IsLevelEnabled(logrus.DebugLevel) {
 		logger.WithField("runner", runner.ShortDescription()).
 			Debugf("Boot-verify build output:\n%s", trace.dump())
+	}
+	return nil
+}
+
+func (mr *RunCommand) bootVerifyAuth(ctx context.Context, runner *common.RunnerConfig) error {
+	response, err := mr.network.VerifyRunner(ctx, *runner, runner.SystemID)
+	if err != nil {
+		return err
+	}
+	if response == nil {
+		return errors.New("GitLab rejected the runner token")
 	}
 	return nil
 }
