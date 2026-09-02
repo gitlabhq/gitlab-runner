@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -125,6 +126,43 @@ func (m *machineCommand) Provision(ctx context.Context, name string) error {
 	}
 
 	return runWithLogs(cmd, fields)
+}
+
+func (m *machineCommand) UpdateLabels(ctx context.Context, name string, labels map[string]string) error {
+	args := []string{"update-labels"}
+	for k, v := range labels {
+		args = append(args, "--label", k+"="+v)
+	}
+	args = append(args, name)
+
+	cmd := newDockerMachineCommand(ctx, args...)
+
+	fields := logrus.Fields{
+		"operation": "update-labels",
+		"name":      name,
+	}
+
+	stdout := stdoutLogWriter(cmd, fields)
+	stderr := stderrLogWriter(cmd, fields)
+
+	// stderr is also captured to recover the unsupported-driver error,
+	// since docker-machine is a subprocess.
+	var captured bytes.Buffer
+	cmd.Stderr = io.MultiWriter(stderr, &captured)
+
+	err := cmd.Run()
+	stdout.Flush()
+	stderr.Flush()
+
+	if err != nil {
+		if strings.Contains(captured.String(), ErrLabelsNotSupported.Error()) {
+			return ErrLabelsNotSupported
+		}
+
+		return fmt.Errorf("update-labels: %w: %s", err, strings.TrimSpace(captured.String()))
+	}
+
+	return nil
 }
 
 func (m *machineCommand) Stop(ctx context.Context, name string) error {

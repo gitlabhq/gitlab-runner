@@ -506,6 +506,8 @@ type DockerMachine struct {
 
 	MaxRemovalAttempts int `toml:"MaxRemovalAttempts,omitzero" long:"max-removal-attempts" env:"MACHINE_MAX_REMOVAL_ATTEMPTS" description:"Maximum attempts at removing a machine before giving up (defaults to 30)"`
 
+	HeartbeatInterval time.Duration `toml:"HeartbeatInterval,omitzero" long:"heartbeat-interval" env:"MACHINE_HEARTBEAT_INTERVAL" description:"How often to refresh a provider-side liveness label on each tracked machine (e.g. '30m'), so external cleanup can tell tracked machines from orphaned ones. 0 disables it (default)"`
+
 	OffPeakPeriods   []string `toml:"OffPeakPeriods,omitempty" json:",omitempty" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`              // DEPRECATED
 	OffPeakTimezone  string   `toml:"OffPeakTimezone,omitempty" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                 // DEPRECATED
 	OffPeakIdleCount int      `toml:"OffPeakIdleCount,omitzero" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                      // DEPRECATED
@@ -1515,6 +1517,8 @@ type RunnerConfig struct {
 	ConfigLoadedAt time.Time `toml:"-"`
 	ConfigDir      string    `toml:"-" json:",omitempty"`
 
+	GlobalMachineConfig *MachineConfig `toml:"-" json:"-"`
+
 	RunnerCredentials
 	RunnerSettings
 }
@@ -1545,10 +1549,14 @@ const (
 // BootVerify configures the startup canary. With enabled set, the runner runs
 // one synthetic job before reporting /health/ready and exits non-zero on failure.
 type BootVerify struct {
-	Enabled           bool          `toml:"enabled,omitempty" json:"enabled,omitempty" description:"(Experimental) Run the startup canary for this runner."`
-	Timeout           time.Duration `toml:"timeout,omitempty" json:"timeout,omitempty" description:"(Experimental) Deadline for the canary. Supports values like '5m' or '90s'. Default: 5m."`
-	AcquireMinBackoff time.Duration `toml:"acquire_min_backoff,omitempty" json:"acquire_min_backoff,omitempty" description:"(Experimental) Minimum backoff between acquire retries. Default: 1s."`
-	AcquireMaxBackoff time.Duration `toml:"acquire_max_backoff,omitempty" json:"acquire_max_backoff,omitempty" description:"(Experimental) Maximum backoff between acquire retries. Default: 10s."`
+	Enabled                 bool          `toml:"enabled,omitempty" json:"enabled,omitempty" description:"(Experimental) Run the startup canary for this runner."`
+	VerifyServerURL         bool          `toml:"verify_server_url,omitempty" json:"verify_server_url,omitempty" description:"(Experimental) During the canary, probe the runner's clone_url (falling back to url) from the job environment. Any HTTP response passes; connection and TLS verification failures fail the canary."`
+	VerifyServerURLInsecure bool          `toml:"verify_server_url_insecure,omitempty" json:"verify_server_url_insecure,omitempty" description:"(Experimental) Skip TLS certificate verification in the server URL probe."`
+	VerifyCache             bool          `toml:"verify_cache,omitempty" json:"verify_cache,omitempty" description:"(Experimental) During the canary, write and read back a canary object in the configured cache from the job environment. Skipped when no cache is configured."`
+	VerifyCommands          []string      `toml:"verify_commands,omitempty" json:"verify_commands,omitempty" description:"(Experimental) Commands appended to the canary job's script, run in the job container. The first failure fails the canary."`
+	Timeout                 time.Duration `toml:"timeout,omitempty" json:"timeout,omitempty" description:"(Experimental) Deadline for the canary. Supports values like '5m' or '90s'. Default: 5m."`
+	AcquireMinBackoff       time.Duration `toml:"acquire_min_backoff,omitempty" json:"acquire_min_backoff,omitempty" description:"(Experimental) Minimum backoff between acquire retries. Default: 1s."`
+	AcquireMaxBackoff       time.Duration `toml:"acquire_max_backoff,omitempty" json:"acquire_max_backoff,omitempty" description:"(Experimental) Maximum backoff between acquire retries. Default: 10s."`
 }
 
 func (b *BootVerify) GetTimeout() time.Duration {
@@ -1607,6 +1615,19 @@ type Config struct {
 // MachineConfig contains global configuration for the docker+machine executor provider.
 type MachineConfig struct {
 	ShutdownDrain *DockerMachineShutdownDrain `toml:"shutdown_drain,omitempty" json:"shutdown_drain,omitempty" description:"Configuration for draining idle machines on shutdown"`
+	Heartbeat     *MachineHeartbeat           `toml:"heartbeat,omitempty" json:"heartbeat,omitempty" description:"Configuration for machine heartbeat labels"`
+}
+
+type MachineHeartbeat struct {
+	Concurrency int `toml:"concurrency,omitempty" json:"concurrency,omitempty" description:"Maximum concurrent label refreshes across all runners (default: 5)"`
+}
+
+func (c *MachineConfig) GetHeartbeatConcurrency() int {
+	if c == nil || c.Heartbeat == nil || c.Heartbeat.Concurrency <= 0 {
+		return defaultHeartbeatConcurrency
+	}
+
+	return c.Heartbeat.Concurrency
 }
 
 type Experimental struct {
@@ -2221,6 +2242,10 @@ func (c *KubernetesConfig) GetPodDisruptionBudget() bool {
 	return *c.PodDisruptionBudget
 }
 
+func (c *DockerMachine) GetHeartbeatInterval() time.Duration {
+	return c.HeartbeatInterval
+}
+
 func (c *DockerMachine) GetIdleCount() int {
 	autoscaling := c.getActiveAutoscalingConfig()
 	if autoscaling != nil {
@@ -2306,6 +2331,7 @@ func (c *DockerMachine) logDeprecationWarning() {
 }
 
 const (
+	defaultHeartbeatConcurrency      = 5
 	defaultShutdownDrainConcurrency  = 3
 	defaultShutdownDrainMaxRetries   = 3
 	defaultShutdownDrainRetryBackoff = 5 * time.Second
@@ -2498,6 +2524,7 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 	r.SystemID = c.SystemID
 	r.ConfigLoadedAt = c.ConfigLoadedAt
 	r.ConfigDir = c.ConfigDir
+	r.GlobalMachineConfig = c.GlobalMachineConfig
 
 	if r.Monitoring != nil {
 		err = r.Monitoring.Compile()

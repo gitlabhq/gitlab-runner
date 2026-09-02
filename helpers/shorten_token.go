@@ -29,5 +29,27 @@ func ShortenToken(in string) string {
 
 	// take the first 9 characters
 	end := math.Min(shortTokenLen, float64(len(in)))
-	return in[:int(end)]
+	result := in[:int(end)]
+
+	// Kubernetes label values must start and end with [A-Za-z0-9].
+	// Fix the leading character: prepend "r" and drop the last character so
+	// the length is preserved and the original leading character is retained
+	// at position 1 (avoiding collisions between tokens differing only in
+	// the first character).
+	if result != "" && !isAlphaNum(result[0]) {
+		result = "r" + result[:len(result)-1]
+	}
+
+	// Fix the trailing character: replace a non-alphanumeric last character
+	// with "r" to satisfy the Kubernetes label value constraint.
+	if result != "" && !isAlphaNum(result[len(result)-1]) {
+		result = result[:len(result)-1] + "r"
+	}
+
+	return result
+}
+
+// isAlphaNum reports whether c is an ASCII letter or digit.
+func isAlphaNum(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }

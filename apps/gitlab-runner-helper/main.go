@@ -63,6 +63,7 @@ func newCommands() []cli.Command {
 		helpers.NewCacheExtractorCommand(),
 		helpers.NewCacheInitCommand(),
 		helpers.NewHealthCheckCommand(),
+		helpers.NewProbeURLCommand(),
 		helpers.NewProxyExecCommand(),
 		helpers.NewReadLogsCommand(),
 		steps.NewCommand(),

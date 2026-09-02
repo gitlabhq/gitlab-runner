@@ -2,7 +2,13 @@ package docker
 
 import (
 	"context"
+	"errors"
 )
+
+// ErrLabelsNotSupported mirrors the docker-machine error for drivers
+// without label support, recovered from the command output since
+// docker-machine is a subprocess.
+var ErrLabelsNotSupported = errors.New("driver does not support labels")
 
 type Machine interface {
 	Create(ctx context.Context, driver, name string, opts ...string) error
@@ -15,6 +21,10 @@ type Machine interface {
 
 	CanConnect(ctx context.Context, name string, skipCache bool) bool
 	Credentials(ctx context.Context, name string) (Credentials, error)
+
+	// UpdateLabels merges provider-side labels into an existing machine.
+	// Returns ErrLabelsNotSupported when the driver has no label concept.
+	UpdateLabels(ctx context.Context, name string, labels map[string]string) error
 
 	// Inspect returns selected fields from the per-machine state file
 	// docker-machine writes during Create. Used to label autoscaling
