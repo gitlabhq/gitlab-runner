@@ -190,11 +190,11 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			network := common.NewMockNetwork(t)
 
-			network.On("VerifyRunner", mock.MatchedBy(tc.expectedParams), mock.MatchedBy(isValidToken)).
+			network.On("VerifyRunner", mock.Anything, mock.MatchedBy(tc.expectedParams), mock.MatchedBy(isValidToken)).
 				Return(&common.VerifyRunnerResponse{
 					ID:    12345,
 					Token: "glrt-testtoken",
-				}).
+				}, nil).
 				Once()
 
 			cmd := commands.NewRegisterCommandForTest(
@@ -239,11 +239,11 @@ func TestAskRunnerUsingRunnerTokenOnRegistrationTokenOverridingForbiddenDefaults
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			network := common.NewMockNetwork(t)
-			network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+			network.On("VerifyRunner", mock.Anything, mock.Anything, mock.MatchedBy(isValidToken)).
 				Return(&common.VerifyRunnerResponse{
 					ID:    1,
 					Token: "glrt-testtoken",
-				}).
+				}, nil).
 				Once()
 
 			answers := make([]string, 4)
@@ -981,11 +981,11 @@ func TestUnregisterOnFailure(t *testing.T) {
 			network := common.NewMockNetwork(t)
 
 			if runnerUICreated {
-				network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+				network.On("VerifyRunner", mock.Anything, mock.Anything, mock.MatchedBy(isValidToken)).
 					Return(&common.VerifyRunnerResponse{
 						ID:    1,
 						Token: testCase.token,
-					}).
+					}, nil).
 					Once()
 			} else {
 				network.On("RegisterRunner", mock.Anything, mock.Anything).
@@ -1062,7 +1062,7 @@ func useTempConfigFile(t *testing.T, arguments []string) ([]string, func()) {
 func TestNameIsNotRequestedOnServerFailureRegisterCommandWithAuthToken(t *testing.T) {
 	network := common.NewMockNetwork(t)
 
-	network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).Return(nil).Once()
+	network.On("VerifyRunner", mock.Anything, mock.Anything, mock.MatchedBy(isValidToken)).Return(nil, nil).Once()
 
 	var arguments []string
 	arguments, cleanTempFile := useTempConfigFile(t, arguments)
@@ -1268,11 +1268,11 @@ func TestRegisterCommand(t *testing.T) {
 			network := common.NewMockNetwork(t)
 
 			if strings.HasPrefix(tc.token, "glrt-") {
-				network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+				network.On("VerifyRunner", mock.Anything, mock.Anything, mock.MatchedBy(isValidToken)).
 					Return(&common.VerifyRunnerResponse{
 						ID:    12345,
 						Token: tc.token,
-					}).
+					}, nil).
 					Once()
 			} else {
 				network.On("RegisterRunner", mock.Anything, mock.Anything).
@@ -1302,11 +1302,11 @@ func TestRegisterWithAuthenticationTokenTwice(t *testing.T) {
 
 	network := common.NewMockNetwork(t)
 
-	network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+	network.On("VerifyRunner", mock.Anything, mock.Anything, mock.MatchedBy(isValidToken)).
 		Return(&common.VerifyRunnerResponse{
 			ID:    12345,
 			Token: token,
-		}).
+		}, nil).
 		Times(2)
 
 	config, output, err := testRegisterCommandRun(t, network, []kv{}, "", arguments...)
@@ -1360,12 +1360,12 @@ func TestRegisterTokenExpiresAt(t *testing.T) {
 			network := common.NewMockNetwork(t)
 
 			if strings.HasPrefix(tc.token, "glrt-") {
-				network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+				network.On("VerifyRunner", mock.Anything, mock.Anything, mock.MatchedBy(isValidToken)).
 					Return(&common.VerifyRunnerResponse{
 						ID:             12345,
 						Token:          tc.token,
 						TokenExpiresAt: tc.expiration,
-					}).
+					}, nil).
 					Once()
 			} else {
 				network.On("RegisterRunner", mock.Anything, mock.Anything).

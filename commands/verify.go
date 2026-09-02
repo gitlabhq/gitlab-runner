@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 
 	"github.com/sirupsen/logrus"
@@ -33,7 +34,7 @@ func NewVerifyCommand(n common.Network) cli.Command {
 }
 
 //nolint:gocognit
-func (c *VerifyCommand) Execute(context *cli.Context) {
+func (c *VerifyCommand) Execute(_ *cli.Context) {
 	userModeWarning(true)
 
 	var hasSelector = c.Name != "" ||
@@ -51,7 +52,7 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		for _, runner := range cfg.Runners {
 			if !hasSelector || runner.Name == c.Name || runner.RunnerCredentials.SameAs(selector) {
 				verified++
-				if c.network.VerifyRunner(*runner, runner.SystemID) == nil {
+				if response, err := c.network.VerifyRunner(context.Background(), *runner, runner.SystemID); response == nil && err == nil {
 					unverified++
 					continue
 				}

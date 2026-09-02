@@ -415,7 +415,7 @@ type ArtifactsOptions struct {
 type Network interface {
 	SetConnectionMaxAge(time.Duration)
 	RegisterRunner(config RunnerConfig, parameters RegisterRunnerParameters) *RegisterRunnerResponse
-	VerifyRunner(config RunnerConfig, systemID string) *VerifyRunnerResponse
+	VerifyRunner(ctx context.Context, config RunnerConfig, systemID string) (*VerifyRunnerResponse, error)
 	UnregisterRunner(config RunnerConfig) bool
 	UnregisterRunnerManager(config RunnerConfig, systemID string) bool
 	ResetToken(runner RunnerConfig, systemID string) *ResetTokenResponse

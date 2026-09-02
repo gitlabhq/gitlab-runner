@@ -3,8 +3,12 @@
 package commands
 
 import (
+	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
@@ -28,7 +32,7 @@ func TestVerifyCommand_Execute(t *testing.T) {
 			name: "no selector verifies all runners",
 			setup: func(t *testing.T) common.Network {
 				mn := common.NewMockNetwork(t)
-				mn.On("VerifyRunner", mock.Anything, mock.Anything).Return(&common.VerifyRunnerResponse{}).Times(3)
+				mn.On("VerifyRunner", mock.Anything, mock.Anything, mock.Anything).Return(&common.VerifyRunnerResponse{}, nil).Times(3)
 				return mn
 			},
 		},
@@ -42,7 +46,7 @@ func TestVerifyCommand_Execute(t *testing.T) {
 			env:  map[string]string{"CI_SERVER_TOKEN": "vault:secret/data/foo#secrets.bar"},
 			setup: func(t *testing.T) common.Network {
 				mn := common.NewMockNetwork(t)
-				mn.On("VerifyRunner", mock.Anything, mock.Anything).Return(&common.VerifyRunnerResponse{}).Times(3)
+				mn.On("VerifyRunner", mock.Anything, mock.Anything, mock.Anything).Return(&common.VerifyRunnerResponse{}, nil).Times(3)
 				return mn
 			},
 		},
@@ -51,7 +55,7 @@ func TestVerifyCommand_Execute(t *testing.T) {
 			env:  map[string]string{"CI_SERVER_URL": "https://not-configured.example.com/"},
 			setup: func(t *testing.T) common.Network {
 				mn := common.NewMockNetwork(t)
-				mn.On("VerifyRunner", mock.Anything, mock.Anything).Return(&common.VerifyRunnerResponse{}).Times(3)
+				mn.On("VerifyRunner", mock.Anything, mock.Anything, mock.Anything).Return(&common.VerifyRunnerResponse{}, nil).Times(3)
 				return mn
 			},
 		},
@@ -62,11 +66,12 @@ func TestVerifyCommand_Execute(t *testing.T) {
 				mn := common.NewMockNetwork(t)
 				mn.On(
 					"VerifyRunner",
+					mock.Anything,
 					mock.MatchedBy(func(cfg common.RunnerConfig) bool {
 						return cfg.Name == "test-shell-runner-1"
 					}),
 					mock.Anything,
-				).Return(&common.VerifyRunnerResponse{}).Once()
+				).Return(&common.VerifyRunnerResponse{}, nil).Once()
 				return mn
 			},
 		},
@@ -77,11 +82,12 @@ func TestVerifyCommand_Execute(t *testing.T) {
 				mn := common.NewMockNetwork(t)
 				mn.On(
 					"VerifyRunner",
+					mock.Anything,
 					mock.MatchedBy(func(cfg common.RunnerConfig) bool {
 						return cfg.Name == "test-shell-runner-1"
 					}),
 					mock.Anything,
-				).Return(&common.VerifyRunnerResponse{}).Once()
+				).Return(&common.VerifyRunnerResponse{}, nil).Once()
 				return mn
 			},
 		},
@@ -100,4 +106,23 @@ func TestVerifyCommand_Execute(t *testing.T) {
 			require.NoError(t, app.Run(args))
 		})
 	}
+}
+
+func TestVerifyCommand_NetworkFailureDoesNotDeleteRunners(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	src, err := os.ReadFile("./testdata/test-config.toml")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(configPath, src, 0o600))
+
+	mn := common.NewMockNetwork(t)
+	mn.On("VerifyRunner", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, errors.New("transient network failure")).Times(3)
+
+	app := cli.NewApp()
+	app.Commands = []cli.Command{NewVerifyCommand(mn)}
+	require.NoError(t, app.Run([]string{"gitlab-runner", "verify", "--config", configPath, "--delete"}))
+
+	after, err := os.ReadFile(configPath)
+	require.NoError(t, err)
+	assert.Equal(t, string(src), string(after))
 }
