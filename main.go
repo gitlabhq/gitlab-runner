@@ -119,6 +119,7 @@ func newCommands(n common.Network, apiRequestsCollector *network.APIRequestsColl
 		helpers.NewCacheInitCommand(),
 		helpers.NewHealthCheckCommand(),
 		helpers.NewProbeURLCommand(),
+		helpers.NewVerifyVersionCommand(),
 		helpers.NewProxyExecCommand(),
 		helpers.NewReadLogsCommand(),
 		steps.NewCommand(),

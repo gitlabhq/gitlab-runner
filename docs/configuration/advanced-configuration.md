@@ -710,6 +710,7 @@ re-run on config reload.
 | `verify_server_url_insecure` | boolean | Skip TLS certificate verification in the server URL probe. Default: `false`. |
 | `verify_cache`        | boolean  | Write a canary object to the configured cache and read it back from the job environment. Skipped when no cache is configured. Default: `false`. |
 | `verify_commands`     | array    | Commands appended to the canary job's script, run in the job container with the runner's configured devices and volumes. The commands must be runnable on the runner's default image. The first failure fails the canary. Default: empty. |
+| `verify_helper_version` | boolean | Check that the helper binary version from the job environment matches the runner's version. Fails the canary on a mismatch, or on helper images too old to carry the check. Default: `false`. |
 
 > [!note]
 > The synthetic job runs on the runner's default image, so the `docker` and
@@ -740,6 +741,7 @@ Example:
     verify_server_url = true
     verify_cache = true
     verify_commands = ["LD_LIBRARY_PATH=/usr/local/nvidia/lib64 /usr/local/nvidia/bin/nvidia-smi"]
+    verify_helper_version = true
 ```
 
 ## The executors

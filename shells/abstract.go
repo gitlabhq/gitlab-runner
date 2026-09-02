@@ -587,11 +587,22 @@ func (b *AbstractShell) writeBootVerifyProbesScript(ctx context.Context, w Shell
 		return common.ErrSkipBuildStage
 	}
 	bootVerify := info.Build.Runner.GetBootVerify()
-	if bootVerify == nil || (!bootVerify.VerifyServerURL && !bootVerify.VerifyCache) {
+	if bootVerify == nil ||
+		(!bootVerify.VerifyHelperVersion && !bootVerify.VerifyServerURL && !bootVerify.VerifyCache) {
 		return common.ErrSkipBuildStage
 	}
 
 	b.writeExports(w, info)
+
+	if bootVerify.VerifyHelperVersion {
+		if info.RunnerCommand == "" {
+			return errors.New("boot-verify helper version check: no runner helper binary available in this executor")
+		}
+		// First: the other probes run through the same binary, and a version
+		// mismatch explains their failures.
+		w.Noticef("boot-verify: verifying helper version matches %s...", common.AppVersion.Version)
+		w.Command(info.RunnerCommand, "verify-version", "--expected", common.AppVersion.Version)
+	}
 
 	if bootVerify.VerifyServerURL {
 		if err := b.writeBootVerifyServerURLProbe(w, info); err != nil {
