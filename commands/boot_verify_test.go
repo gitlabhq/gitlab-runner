@@ -58,6 +58,7 @@ func TestBootVerifyJobSpec(t *testing.T) {
 
 		require.Len(t, job.Steps, 1)
 		assert.Equal(t, int((5*time.Minute - bootVerifyStepMargin).Seconds()), job.Steps[0].Timeout)
+		assert.Equal(t, int((5 * time.Minute).Seconds()), job.RunnerInfo.Timeout)
 		assert.Equal(t, "none", job.Variables.Value("GIT_STRATEGY"))
 		assert.GreaterOrEqual(t, job.ID, bootVerifyIDBase)
 		assert.Equal(t, spec.StepScript{bootVerifyScript}, job.Steps[0].Script)
@@ -71,6 +72,18 @@ func TestBootVerifyJobSpec(t *testing.T) {
 	t.Run("verify commands run after the canary echo", func(t *testing.T) {
 		job := bootVerifyJobSpec(&common.BootVerify{VerifyCommands: []string{"nvidia-smi", "true"}})
 		assert.Equal(t, spec.StepScript{bootVerifyScript, "nvidia-smi", "true"}, job.Steps[0].Script)
+	})
+
+	t.Run("fractional timeouts round up", func(t *testing.T) {
+		job := bootVerifyJobSpec(&common.BootVerify{Timeout: 1500 * time.Millisecond})
+		assert.Equal(t, 2, job.RunnerInfo.Timeout)
+		assert.Equal(t, 2, job.Steps[0].Timeout)
+	})
+
+	t.Run("sub-second timeouts do not become zero", func(t *testing.T) {
+		job := bootVerifyJobSpec(&common.BootVerify{Timeout: 500 * time.Millisecond})
+		assert.Equal(t, 1, job.RunnerInfo.Timeout)
+		assert.Equal(t, 1, job.Steps[0].Timeout)
 	})
 }
 

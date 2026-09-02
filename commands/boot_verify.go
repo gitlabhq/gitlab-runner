@@ -223,6 +223,9 @@ func bootVerifyJobSpec(bootVerify *common.BootVerify) spec.Job {
 			Name:  "boot-verify",
 			Stage: "boot-verify",
 		},
+		RunnerInfo: spec.RunnerInfo{
+			Timeout: int(math.Ceil(timeout.Seconds())),
+		},
 		Variables: spec.Variables{
 			{Key: "GIT_STRATEGY", Value: "none", Public: true},
 			{Key: "GIT_CHECKOUT", Value: "false", Public: true},
@@ -231,7 +234,7 @@ func bootVerifyJobSpec(bootVerify *common.BootVerify) spec.Job {
 			{
 				Name:    spec.StepNameScript,
 				Script:  script,
-				Timeout: int(stepTimeout.Seconds()),
+				Timeout: int(math.Ceil(stepTimeout.Seconds())),
 				When:    spec.StepWhenOnSuccess,
 			},
 		},
