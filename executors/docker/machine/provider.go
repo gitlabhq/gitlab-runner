@@ -106,7 +106,23 @@ type machineProvider struct {
 	stoppingHistogram       prometheus.Histogram
 	removalHistogram        prometheus.Histogram
 	failedCreationHistogram prometheus.Histogram
+	maxGrowthRateDesc       *prometheus.Desc
+	idleTargetDesc          *prometheus.Desc
+	autoscalingLimitsLock   sync.Mutex
+	autoscalingLimits       map[string]autoscalingLimits
 }
+
+type autoscalingLimits struct {
+	runnerName    string
+	systemID      string
+	maxGrowthRate float64
+	idleTarget    float64
+	updatedAt     time.Time
+}
+
+// Entries not refreshed by Acquire within this window were removed from the
+// config. Assumes check_interval (default 3s) stays well below this TTL.
+const autoscalingLimitsTTL = 10 * time.Minute
 
 func (m *machineProvider) machineDetails(name string, acquire bool) *machineDetails {
 	details := m.ensureDetails(name)
@@ -679,6 +695,8 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 	// Pre-create machines
 	m.createMachines(config, &machinesData)
 
+	m.updateAutoscalingLimits(config, &machinesData)
+
 	logger := logrus.WithFields(machinesData.Fields()).
 		WithField("runner", config.ShortDescription()).
 		WithField("idleCountMin", config.Machine.GetIdleCountMin()).
@@ -798,6 +816,19 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 	}
 }
 
+func (m *machineProvider) updateAutoscalingLimits(config *common.RunnerConfig, data *machinesData) {
+	m.autoscalingLimitsLock.Lock()
+	defer m.autoscalingLimitsLock.Unlock()
+
+	m.autoscalingLimits[config.ShortDescription()] = autoscalingLimits{
+		runnerName:    config.Name,
+		systemID:      config.GetSystemID(),
+		maxGrowthRate: float64(max(config.Machine.MaxGrowthRate, 0)),
+		idleTarget:    float64(effectiveIdleTarget(config, data)),
+		updatedAt:     time.Now(),
+	}
+}
+
 func (m *machineProvider) signalRelease(config *common.RunnerConfig) error {
 	coordinator, err := m.runnerMachinesCoordinator(config)
 	if err != nil && err != errNoConfig {
@@ -860,6 +891,23 @@ func newMachineProvider(provider common.ExecutorProvider) *machineProvider {
 				"executor": name,
 			},
 		),
+		maxGrowthRateDesc: prometheus.NewDesc(
+			"gitlab_runner_autoscaling_max_growth_rate",
+			"The maximum number of machines that can be in the creation state at once (0 = unlimited).",
+			[]string{"runner", "runner_name", "system_id"},
+			prometheus.Labels{
+				"executor": name,
+			},
+		),
+		idleTargetDesc: prometheus.NewDesc(
+			"gitlab_runner_autoscaling_idle_target",
+			"The number of available machines the autoscaler aims to keep after applying IdleScaleFactor and IdleCountMin.",
+			[]string{"runner", "runner_name", "system_id"},
+			prometheus.Labels{
+				"executor": name,
+			},
+		),
+		autoscalingLimits: make(map[string]autoscalingLimits),
 		creationHistogram: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    "gitlab_runner_autoscaling_machine_creation_duration_seconds",

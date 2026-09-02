@@ -9,7 +9,7 @@ import (
 type removeIdleReason string
 
 const (
-	dontRemoveIdleMachine               removeIdleReason = "don't remote"
+	dontRemoveIdleMachine               removeIdleReason = "don't remove"
 	removeIdleReasonTooManyBuilds       removeIdleReason = "too many builds"
 	removeIdleReasonTooManyMachines     removeIdleReason = "too many machines"
 	removeIdleReasonTooManyIdleMachines removeIdleReason = "too many idle machines"
@@ -40,6 +40,15 @@ func shouldRemoveIdle(config *common.RunnerConfig, data *machinesData, details m
 	}
 
 	return ils.shouldRemove()
+}
+
+func effectiveIdleTarget(config *common.RunnerConfig, data *machinesData) int {
+	ils := &idleLimitStrategy{
+		config: config,
+		data:   data,
+	}
+
+	return ils.effectiveIdleTarget()
 }
 
 type idleLimitStrategy struct {
@@ -112,57 +121,26 @@ func (ils *idleLimitStrategy) totalMachinesExceeded() bool {
 	return ils.data.Total() >= ils.config.Limit
 }
 
-// composedIdleMachinesExceeded checks several conditions that can evaluate
-// as "number of Idle Machines exceeded".
 func (ils *idleLimitStrategy) composedIdleMachinesExceeded() bool {
-	return ils.idleMachinesExceeded() ||
-		(ils.idleCountMinFulfilled() && ils.idleMachinesScaleFactorExceeded())
+	return ils.data.Available() >= ils.effectiveIdleTarget()
 }
 
-// idleMachinesExceeded checks whether runner reached the defined IdleCount
-// which is the maximum number of Idle machines that can exist.
-func (ils *idleLimitStrategy) idleMachinesExceeded() bool {
-	return ils.data.Available() >= ils.config.Machine.GetIdleCount()
-}
-
-// idleCountMinFulfilled checks if the IdleCountMin setting is fulfilled.
-// Should be used to ensure that the minimal number of Idle machines is created.
-func (ils *idleLimitStrategy) idleCountMinFulfilled() bool {
-	min := ils.config.Machine.GetIdleCountMin()
-
-	// When IdleScaleFactor is in use, there is a risk that with no executed jobs
-	// the desired number of Idle machines to maintain will also evaluate to 0.
-	// This could cause in removing all Idle machines. In that case Runner would
-	// stop asking for new jobs (with IdleCount > 0 Runner doesn't ask for jobs
-	// if there is no Idle machines awaiting to be used). And without new jobs using
-	// some machines, the IdleScaleFactor would be constantly evaluated to 0.
-	// This would lock the Runner in a state where no job can't be started because
-	// no machines are in Idle, and no machines are in Idle because no jobs are started.
-	//
-	// Therefore, in case when IdleScaleFactor is greater than 0 and IdleCountMin
-	// was not defined or intentionally set to 0, it will be forced to be at least
-	// 1. So that there is at least one Idle machine that can handle a job and allow
-	// the IdleScaleFactor to bring more of them later.
-	if ils.config.Machine.GetIdleScaleFactor() > 0 && min < 1 {
-		min = 1
+// effectiveIdleTarget is the number of available machines the creation loop
+// aims for.
+func (ils *idleLimitStrategy) effectiveIdleTarget() int {
+	idleCount := ils.config.Machine.GetIdleCount()
+	factor := ils.config.Machine.GetIdleScaleFactor()
+	if factor <= 0 {
+		return idleCount
 	}
 
-	return ils.data.Available() >= min
-}
+	// With no jobs running the target would evaluate to 0 and all Idle
+	// machines would be removed, but with IdleCount > 0 the Runner only asks
+	// for jobs when an Idle machine is available. Keep at least one.
+	idleCountMin := max(ils.config.Machine.GetIdleCountMin(), 1)
 
-// idleMachinesScaleFactorExceeded checks whether runner reached the number
-// of machines defined as a factor of in-use ones.
-// This behavior is optional and depends on the IdleScaleFactor setting.
-// When it's set to 0 then it's ignored.
-func (ils *idleLimitStrategy) idleMachinesScaleFactorExceeded() bool {
-	idleScaleFactor := ils.config.Machine.GetIdleScaleFactor()
-	if idleScaleFactor <= 0 {
-		return false
-	}
-
-	desiredCapacity := int(float64(ils.data.InUse()) * idleScaleFactor)
-
-	return ils.data.Available() >= desiredCapacity
+	target := int(float64(ils.data.InUse()) * factor)
+	return min(max(target, idleCountMin), idleCount)
 }
 
 // machineUsageCountExceeded checks whether the machine was used more times than
