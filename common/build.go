@@ -30,6 +30,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
+	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
@@ -323,18 +324,18 @@ func (b *Build) FailureReason() spec.JobFailureReason {
 }
 
 func (b *Build) Log() *logrus.Entry {
-	l := b.Runner.Log().
-		WithFields(logrus.Fields{
-			"job":               b.ID,
-			"pipeline_id":       b.JobInfo.PipelineID,
-			"project":           b.JobInfo.ProjectID,
-			"project_full_path": b.JobInfo.ProjectFullPath,
-			"namespace_id":      b.JobInfo.NamespaceID,
-			"root_namespace_id": b.JobInfo.RootNamespaceID,
-			"organization_id":   b.JobInfo.OrganizationID,
-			"gitlab_user_id":    b.JobInfo.UserID,
-			"runner_uuid":       b.RunnerInfo.UUID,
-		})
+	fields := logrus.Fields{
+		"job":               b.ID,
+		"pipeline_id":       b.JobInfo.PipelineID,
+		"project":           b.JobInfo.ProjectID,
+		"project_full_path": b.JobInfo.ProjectFullPath,
+		"namespace_id":      b.JobInfo.NamespaceID,
+		"root_namespace_id": b.JobInfo.RootNamespaceID,
+		"gitlab_user_id":    b.JobInfo.UserID,
+		"runner_uuid":       b.RunnerInfo.UUID,
+	}
+	log.AddDeprecatedField(fields, "organization_id", b.JobInfo.OrganizationID)
+	l := b.Runner.Log().WithFields(fields)
 
 	if b.JobInfo.ScopedUserID != nil {
 		l = l.WithField("gitlab_scoped_user_id", *b.JobInfo.ScopedUserID)
@@ -1470,14 +1471,13 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 			msg = fmt.Sprint("Job failed (system failure): ", err)
 		}
 
-		logger.
-			WithFields(logrus.Fields{
-				"job-status":     "failed",
-				"error":          err,
-				"failure_reason": buildError.FailureReason,
-				"exit_code":      buildError.ExitCode,
-			}).
-			Warningln(msg)
+		failFields := logrus.Fields{
+			"job-status":     "failed",
+			"failure_reason": buildError.FailureReason,
+			"exit_code":      buildError.ExitCode,
+		}
+		log.AddDeprecatedField(failFields, "error", err)
+		logger.WithFields(failFields).Warningln(msg)
 		buildLogger.SoftErrorln(msg)
 
 		trace.SetSupportedFailureReasonMapper(newFailureReasonMapper(b.Features.FailureReasons))
@@ -1491,13 +1491,12 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 		return
 	}
 
-	logger.
-		WithFields(logrus.Fields{
-			"job-status":     "failed",
-			"error":          err,
-			"failure_reason": RunnerSystemFailure,
-		}).
-		Errorln("Job failed (system failure):", err)
+	sysFailFields := logrus.Fields{
+		"job-status":     "failed",
+		"failure_reason": RunnerSystemFailure,
+	}
+	log.AddDeprecatedField(sysFailFields, "error", err)
+	logger.WithFields(sysFailFields).Errorln("Job failed (system failure):", err)
 	buildLogger.Errorln("Job failed (system failure):", err)
 	logTerminationError(buildLogger, "Fail", trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure, Mode: b.DispatchedJobExecutionMode()}))
 }
@@ -1507,7 +1506,7 @@ func logTerminationError(logger buildlogger.Logger, name string, err error) {
 		return
 	}
 
-	logger.WithFields(logrus.Fields{"error": err}).Errorln(fmt.Sprintf("Job trace termination %q failed", name))
+	logger.WithFields(log.DeprecatedField("error", err)).Errorln(fmt.Sprintf("Job trace termination %q failed", name))
 }
 
 func (b *Build) setExecutorStageResolver(resolver func() ExecutorStage) {

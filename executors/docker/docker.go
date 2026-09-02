@@ -50,6 +50,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
+	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
@@ -1785,7 +1786,7 @@ func (e *executor) Cleanup() {
 
 	defer func() {
 		if err := e.dockerConn.Close(); err != nil {
-			e.BuildLogger.WithFields(logrus.Fields{"error": err}).Debugln("Failed to close the client")
+			e.BuildLogger.WithFields(log.DeprecatedField("error", err)).Debugln("Failed to close the client")
 		}
 	}()
 
@@ -1804,7 +1805,7 @@ func (e *executor) Cleanup() {
 	remove := func(id string) {
 		wg.Go(func() {
 			if err := e.removeContainer(ctx, id); err != nil {
-				e.BuildLogger.WithFields(logrus.Fields{"error": err}).Errorln("Failed to remove container", id)
+				e.BuildLogger.WithFields(log.DeprecatedField("error", err)).Errorln("Failed to remove container", id)
 			}
 		})
 	}
@@ -1816,14 +1817,15 @@ func (e *executor) Cleanup() {
 	wg.Wait()
 
 	if err := e.cleanupVolume(ctx); err != nil {
-		e.BuildLogger.WithFields(logrus.Fields{"error": err}).Errorln("Failed to cleanup volumes")
+		e.BuildLogger.WithFields(log.DeprecatedField("error", err)).Errorln("Failed to cleanup volumes")
 	}
 
 	if err := e.cleanupNetwork(ctx); err != nil {
-		e.BuildLogger.WithFields(logrus.Fields{
+		networkFields := logrus.Fields{
 			"network": e.networkMode.NetworkName(),
-			"error":   err,
-		}).Errorln("Failed to remove network for build")
+		}
+		log.AddDeprecatedField(networkFields, "error", err)
+		e.BuildLogger.WithFields(networkFields).Errorln("Failed to remove network for build")
 	}
 
 	e.AbstractExecutor.Cleanup()
@@ -1873,7 +1875,7 @@ func (e *executor) execScriptOnContainer(ctx context.Context, containerID string
 
 	defer func() {
 		if !shouldIgnoreDockerError(err, errdefs.IsConflict, errdefs.IsNotFound, isContainerNotRunning) {
-			e.Config.Log().WithFields(logrus.Fields{"error": err}).Warningln(action, err)
+			e.Config.Log().WithFields(log.DeprecatedField("error", err)).Warningln(action, err)
 		}
 	}()
 

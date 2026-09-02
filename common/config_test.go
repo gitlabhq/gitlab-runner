@@ -4230,3 +4230,114 @@ func TestRunnerCredentials_SameAs(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_ValidateLogFieldSettings(t *testing.T) {
+	tests := map[string]struct {
+		schemaVersion  int
+		dualEmitTarget int
+		unset          bool
+		expectError    string
+	}{
+		"unset (nil pointers)": {
+			unset: true,
+		},
+		"defaults (0, 0)": {
+			schemaVersion:  0,
+			dualEmitTarget: 0,
+		},
+		"schema v1 only": {
+			schemaVersion:  1,
+			dualEmitTarget: 0,
+		},
+		"dual emit enabled (0, 1)": {
+			schemaVersion:  0,
+			dualEmitTarget: 1,
+		},
+		"schema v1 with dual emit v2": {
+			schemaVersion:  1,
+			dualEmitTarget: 2,
+		},
+		"schema v3 only": {
+			schemaVersion:  3,
+			dualEmitTarget: 0,
+		},
+		"negative schema version": {
+			schemaVersion:  -1,
+			dualEmitTarget: 0,
+			expectError:    "log_field_schema_version must be >= 0",
+		},
+		"negative dual emit target": {
+			schemaVersion:  0,
+			dualEmitTarget: -1,
+			expectError:    "log_field_dual_emit_target must be >= 0",
+		},
+		"dual emit equals schema version": {
+			schemaVersion:  1,
+			dualEmitTarget: 1,
+			expectError:    "log_field_dual_emit_target (1) must be strictly greater than log_field_schema_version (1)",
+		},
+		"dual emit less than schema version": {
+			schemaVersion:  2,
+			dualEmitTarget: 1,
+			expectError:    "log_field_dual_emit_target (1) must be strictly greater than log_field_schema_version (2)",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := &Config{}
+			if !tt.unset {
+				schemaVersion := tt.schemaVersion
+				dualEmitTarget := tt.dualEmitTarget
+				c.LogFieldSchemaVersion = &schemaVersion
+				c.LogFieldDualEmitTarget = &dualEmitTarget
+			}
+
+			err := c.Validate()
+			if tt.expectError != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestResolvedLogFieldMapping(t *testing.T) {
+	schemaVersion, dualEmitTarget := 1, 2
+
+	tests := map[string]struct {
+		config                 Config
+		expectedSchemaVersion  int
+		expectedDualEmitTarget int
+	}{
+		"both unset": {
+			config: Config{},
+		},
+		"schema version only": {
+			config:                Config{LogFieldSchemaVersion: &schemaVersion},
+			expectedSchemaVersion: 1,
+		},
+		"dual emit target only": {
+			config:                 Config{LogFieldDualEmitTarget: &dualEmitTarget},
+			expectedDualEmitTarget: 2,
+		},
+		"both set": {
+			config: Config{
+				LogFieldSchemaVersion:  &schemaVersion,
+				LogFieldDualEmitTarget: &dualEmitTarget,
+			},
+			expectedSchemaVersion:  1,
+			expectedDualEmitTarget: 2,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			gotSchemaVersion, gotDualEmitTarget := tt.config.ResolvedLogFieldMapping()
+			assert.Equal(t, tt.expectedSchemaVersion, gotSchemaVersion)
+			assert.Equal(t, tt.expectedDualEmitTarget, gotDualEmitTarget)
+		})
+	}
+}

@@ -573,8 +573,8 @@ gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c h1:Rok2
 gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c/go.mod h1:5VrTOPrC1shLgKmF0BsX+SWOXiOdQcu0ZyAHSbYGUyQ=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e h1:Aw1nDGdZEm1Jv3jwKbT0hKTAxTpP4yVRGCI21MYRHBc=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e/go.mod h1:pKFT8nwdU5KuJYosKMGgMATMrV4AP6p9jRu4HobZaBA=
-gitlab.com/gitlab-org/labkit/v2 v2.26.1 h1:F1Q/6/Q2hFAVUKL0qrnLHdJyD3mH2vFM95/WPSQ9wyQ=
-gitlab.com/gitlab-org/labkit/v2 v2.26.1/go.mod h1:UZNkMHIK7AhXFZg1s1c5dS88o279tXq7O4QusZ6s3wA=
+gitlab.com/gitlab-org/labkit/v2 v2.29.2 h1:Oso+AkWx801najtmZswTa1iWkAWgGLZSZZSGg5foWWI=
+gitlab.com/gitlab-org/labkit/v2 v2.29.2/go.mod h1:dtyHmyLfCa1w80lvAT3MBTiPNP0aZyQJ/LXInJ5WmiQ=
 gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7 h1:ZeO7PIjerXTEaZPvR2fBkB/8fTAFrVjUFgC1B8x64fM=
 gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7/go.mod h1:024490ksS75/Bi9UoJTu59qY44JuFBAfi5bzGsLIhtY=
 gitlab.com/gitlab-org/step-runner v0.44.0 h1:ns3R10z0L1HBW8PLQFT5gDiTFyMnGpzDaltxehcjkM0=
