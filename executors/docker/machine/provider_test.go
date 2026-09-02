@@ -123,6 +123,10 @@ func (m *testMachine) Create(ctx context.Context, driver, name string, opts ...s
 	return nil
 }
 
+func (m *testMachine) UpdateLabels(ctx context.Context, name string, labels map[string]string) error {
+	return nil
+}
+
 func (m *testMachine) Provision(ctx context.Context, name string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()

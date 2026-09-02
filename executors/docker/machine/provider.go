@@ -95,6 +95,10 @@ type machineProvider struct {
 
 	stuckRemoveLock sync.Mutex
 
+	heartbeatersLock sync.Mutex
+	heartbeaters     map[string]*heartbeater
+	heartbeatSem     chan struct{}
+
 	// metrics
 	totalActions            *prometheus.CounterVec
 	currentStatesDesc       *prometheus.Desc
@@ -529,6 +533,7 @@ func (m *machineProvider) updateMachines(
 ) (data machinesData, validMachines []string) {
 	data.Runner = config.ShortDescription()
 	validMachines = make([]string, 0, len(machines))
+	heartbeats := m.heartbeaterFor(config)
 
 	for _, name := range machines {
 		details := m.machineDetails(name, false)
@@ -541,6 +546,9 @@ func (m *machineProvider) updateMachines(
 		reason := shouldRemoveIdle(config, &data, info)
 		if reason == dontRemoveIdleMachine {
 			validMachines = append(validMachines, name)
+			if info.State != machineStateCreating && info.State != machineStateRemoving {
+				heartbeats.beat(name, config.Machine.GetHeartbeatInterval())
+			}
 		} else {
 			_ = m.remove(details.Name, reason)
 		}
@@ -552,11 +560,42 @@ func (m *machineProvider) updateMachines(
 
 		data.Add(info)
 	}
-	return
+	return data, validMachines
 }
 
 // createMachines starts goroutines that are creating the new machines.
 // Limiting strategy is used to ensure the autoscaling parameters are respected.
+// heartbeaterFor returns this runner config's heartbeater, building it
+// on first use. State is per config so one runner's prune cannot touch
+// another runner's machines. The semaphore bounding concurrent label
+// writes is shared across the provider, sized from the global
+// [machine.heartbeat] section.
+func (m *machineProvider) heartbeaterFor(config *common.RunnerConfig) *heartbeater {
+	m.heartbeatersLock.Lock()
+	defer m.heartbeatersLock.Unlock()
+
+	if m.heartbeatSem == nil {
+		m.heartbeatSem = make(chan struct{}, config.GlobalMachineConfig.GetHeartbeatConcurrency())
+	}
+
+	token := config.GetToken()
+	h, ok := m.heartbeaters[token]
+	if !ok {
+		h = newHeartbeater(
+			func(ctx context.Context, name string, value string) error {
+				return m.machine.UpdateLabels(ctx, name, map[string]string{heartbeatLabel: value})
+			},
+			m.heartbeatSem,
+		)
+		if m.heartbeaters == nil {
+			m.heartbeaters = map[string]*heartbeater{}
+		}
+		m.heartbeaters[token] = h
+	}
+
+	return h
+}
+
 func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData) {
 	for {
 		if !canCreateIdle(config, data) {
@@ -635,6 +674,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 
 	// Update a list of currently configured machines
 	machinesData, validMachines := m.updateMachines(machines, config)
+	m.heartbeaterFor(config).prune(machines)
 
 	// Pre-create machines
 	m.createMachines(config, &machinesData)

@@ -87,6 +87,7 @@ func (cf *ConfigFile) Load(opts ...LoadOption) error {
 		runnerCfg.SystemID = cf.systemID
 		runnerCfg.ConfigLoadedAt = time.Now()
 		runnerCfg.ConfigDir = filepath.Dir(cf.pathname)
+		runnerCfg.GlobalMachineConfig = config.Machine
 	}
 
 	for _, mutate := range options.Mutate {

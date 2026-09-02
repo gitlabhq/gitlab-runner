@@ -506,6 +506,8 @@ type DockerMachine struct {
 
 	MaxRemovalAttempts int `toml:"MaxRemovalAttempts,omitzero" long:"max-removal-attempts" env:"MACHINE_MAX_REMOVAL_ATTEMPTS" description:"Maximum attempts at removing a machine before giving up (defaults to 30)"`
 
+	HeartbeatInterval time.Duration `toml:"HeartbeatInterval,omitzero" long:"heartbeat-interval" env:"MACHINE_HEARTBEAT_INTERVAL" description:"How often to refresh a provider-side liveness label on each tracked machine (e.g. '30m'), so external cleanup can tell tracked machines from orphaned ones. 0 disables it (default)"`
+
 	OffPeakPeriods   []string `toml:"OffPeakPeriods,omitempty" json:",omitempty" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`              // DEPRECATED
 	OffPeakTimezone  string   `toml:"OffPeakTimezone,omitempty" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                 // DEPRECATED
 	OffPeakIdleCount int      `toml:"OffPeakIdleCount,omitzero" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                      // DEPRECATED
@@ -1515,6 +1517,8 @@ type RunnerConfig struct {
 	ConfigLoadedAt time.Time `toml:"-"`
 	ConfigDir      string    `toml:"-" json:",omitempty"`
 
+	GlobalMachineConfig *MachineConfig `toml:"-" json:"-"`
+
 	RunnerCredentials
 	RunnerSettings
 }
@@ -1607,6 +1611,19 @@ type Config struct {
 // MachineConfig contains global configuration for the docker+machine executor provider.
 type MachineConfig struct {
 	ShutdownDrain *DockerMachineShutdownDrain `toml:"shutdown_drain,omitempty" json:"shutdown_drain,omitempty" description:"Configuration for draining idle machines on shutdown"`
+	Heartbeat     *MachineHeartbeat           `toml:"heartbeat,omitempty" json:"heartbeat,omitempty" description:"Configuration for machine heartbeat labels"`
+}
+
+type MachineHeartbeat struct {
+	Concurrency int `toml:"concurrency,omitempty" json:"concurrency,omitempty" description:"Maximum concurrent label refreshes across all runners (default: 5)"`
+}
+
+func (c *MachineConfig) GetHeartbeatConcurrency() int {
+	if c == nil || c.Heartbeat == nil || c.Heartbeat.Concurrency <= 0 {
+		return defaultHeartbeatConcurrency
+	}
+
+	return c.Heartbeat.Concurrency
 }
 
 type Experimental struct {
@@ -2221,6 +2238,10 @@ func (c *KubernetesConfig) GetPodDisruptionBudget() bool {
 	return *c.PodDisruptionBudget
 }
 
+func (c *DockerMachine) GetHeartbeatInterval() time.Duration {
+	return c.HeartbeatInterval
+}
+
 func (c *DockerMachine) GetIdleCount() int {
 	autoscaling := c.getActiveAutoscalingConfig()
 	if autoscaling != nil {
@@ -2306,6 +2327,7 @@ func (c *DockerMachine) logDeprecationWarning() {
 }
 
 const (
+	defaultHeartbeatConcurrency      = 5
 	defaultShutdownDrainConcurrency  = 3
 	defaultShutdownDrainMaxRetries   = 3
 	defaultShutdownDrainRetryBackoff = 5 * time.Second
@@ -2498,6 +2520,7 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 	r.SystemID = c.SystemID
 	r.ConfigLoadedAt = c.ConfigLoadedAt
 	r.ConfigDir = c.ConfigDir
+	r.GlobalMachineConfig = c.GlobalMachineConfig
 
 	if r.Monitoring != nil {
 		err = r.Monitoring.Compile()

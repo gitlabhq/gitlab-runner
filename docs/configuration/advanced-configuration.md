@@ -349,6 +349,25 @@ shutdown_timeout = 600  # 10 minutes - required for draining machines
     MachineOptions = ["google-project=my-project", "google-zone=us-central1-a"]
 ```
 
+### The `[machine.heartbeat]` section
+
+Configures the liveness label refreshes turned on by
+[`HeartbeatInterval`](#the-runnersmachine-section). The concurrency bound is
+global because label writes from all runners share the cloud provider's
+API quota.
+
+| Parameter     | Type    | Description |
+|---------------|---------|-------------|
+| `concurrency` | integer | Maximum concurrent label refreshes across all runners. Default: `5`. |
+
+Example:
+
+```toml
+[machine]
+  [machine.heartbeat]
+    concurrency = 5
+```
+
 ## The `[session_server]` section
 
 To interact with jobs, specify the `[session_server]` section
@@ -1149,6 +1168,7 @@ The following parameters define the Docker Machine-based autoscaling feature. Fo
 | `OffPeakIdleCount`                | Deprecated: Like `IdleCount`, but for _Off Peak_ time periods. |
 | `OffPeakIdleTime`                 | Deprecated: Like `IdleTime`, but for _Off Peak_ time periods. |
 | `MaxBuilds`                       | Maximum job (build) count before machine is removed. |
+| `HeartbeatInterval`               | How often to refresh a provider-side liveness label (`runner_manager_heartbeat`) on each tracked machine (duration, for example `"30m"`), so external cleanup can tell tracked machines from orphaned ones. Requires a Docker Machine driver that supports label updates (currently `google`). Default is `0` (disabled). |
 | `MachineName`                     | Name of the machine. It **must** contain `%s`, which is replaced with a unique machine identifier. |
 | `MachineDriver`                   | Docker Machine `driver`. View details in the [Cloud Providers Section in the Docker Machine configuration](autoscale.md#supported-cloud-providers). |
 | `MachineOptions`                  | Docker Machine options for the MachineDriver. For more information, see [Supported Cloud Providers](autoscale.md#supported-cloud-providers). For more information about all options for AWS, see the [AWS](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md) and [GCP](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/gce.md) projects in the Docker Machine repository. |
