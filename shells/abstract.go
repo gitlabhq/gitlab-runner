@@ -2,6 +2,7 @@ package shells
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -560,6 +561,179 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 	b.changeFilesOwnership(w, info, info.Build.RootDir)
 
 	b.writeClearGitCredentials(w, info.Build)
+
+	return nil
+}
+
+const (
+	// Short probe timeouts so a blackholed route fails fast instead of eating
+	// the whole canary window.
+	bootVerifyProbeTimeout        = 15 * time.Second
+	bootVerifyCacheTimeoutMinutes = 1
+
+	// The git HTTP endpoint probed under the server URL. GitLab answers 401
+	// for unauthenticated git requests before any existence check, so no real
+	// project is needed. Probing the git path instead of / catches gateways
+	// that serve / but misroute git traffic.
+	bootVerifyProbePath = "/boot-verify/this-does-not-exist.git/info/refs?service=git-upload-pack"
+)
+
+// writeBootVerifyProbesScript emits the boot-verify network probes. They run
+// as their own build stage in the helper environment, the network location
+// real checkouts and cache transfers use, and a failing command there fails
+// the build.
+func (b *AbstractShell) writeBootVerifyProbesScript(ctx context.Context, w ShellWriter, info common.ShellScriptInfo) error {
+	if !info.Build.Synthetic {
+		return common.ErrSkipBuildStage
+	}
+	bootVerify := info.Build.Runner.GetBootVerify()
+	if bootVerify == nil || (!bootVerify.VerifyServerURL && !bootVerify.VerifyCache) {
+		return common.ErrSkipBuildStage
+	}
+
+	b.writeExports(w, info)
+
+	if bootVerify.VerifyServerURL {
+		if err := b.writeBootVerifyServerURLProbe(w, info); err != nil {
+			return err
+		}
+	}
+
+	if bootVerify.VerifyCache {
+		if err := b.writeBootVerifyCacheProbe(ctx, w, info); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (b *AbstractShell) writeBootVerifyServerURLProbe(w ShellWriter, info common.ShellScriptInfo) error {
+	target := info.Build.Runner.CloneURL
+	if target == "" {
+		target = info.Build.Runner.URL
+	}
+	if target == "" {
+		return errors.New("boot-verify server URL probe: runner has neither clone_url nor url")
+	}
+	if info.RunnerCommand == "" {
+		return errors.New("boot-verify server URL probe: no runner helper binary available in this executor")
+	}
+
+	probeURL := strings.TrimRight(target, "/") + bootVerifyProbePath
+	args := []string{
+		"probe-url",
+		"--url", probeURL,
+		"--timeout", strconv.Itoa(int(bootVerifyProbeTimeout.Seconds())),
+	}
+	switch {
+	case info.Build.Runner.GetBootVerify().VerifyServerURLInsecure:
+		args = append(args, "--insecure")
+	case info.Build.GetCITLSVariables().Get(tls.VariableCAFile) != "":
+		// writeExports wrote the file variable to disk earlier.
+		args = append(args, "--ca-file", w.TmpFile(tls.VariableCAFile))
+	}
+
+	w.Noticef("boot-verify: probing server URL %s...", probeURL)
+	w.Command(info.RunnerCommand, args...)
+
+	return nil
+}
+
+// Unlike the real cache stages, cache probe failures are fatal. The canary
+// key is unique per boot, so the download only succeeds if this canary's
+// upload persisted, and concurrent canaries from manager replicas cannot
+// interfere. The adapters have no delete; retention is left to the bucket's
+// lifecycle policy, and each object is a few hundred bytes.
+func (b *AbstractShell) writeBootVerifyCacheProbe(ctx context.Context, w ShellWriter, info common.ShellScriptInfo) error {
+	build := info.Build
+	if build.Runner.Cache == nil {
+		w.Noticef("boot-verify: no [runners.cache] configured, skipping cache probe")
+		return nil
+	}
+	if info.RunnerCommand == "" {
+		return errors.New("boot-verify cache probe: no runner helper binary available in this executor")
+	}
+
+	random := make([]byte, 8)
+	if _, err := rand.Read(random); err != nil {
+		return fmt.Errorf("boot-verify cache probe: generating canary key: %w", err)
+	}
+	unique := fmt.Sprintf("%d-%x", time.Now().Unix(), random)
+	if id := build.Runner.SystemID; id != "" {
+		unique = id + "-" + unique
+	}
+	key := "boot-verify/" + build.Runner.ShortDescription() + "/" + unique
+	if build.IsFeatureFlagOn(featureflags.HashCacheKeys) {
+		key = fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+	}
+
+	uploadArgs, uploadEnv, err := getCacheUploadURLAndEnv(ctx, build, key, nil)
+	if err != nil {
+		return fmt.Errorf("boot-verify cache probe: generating upload URL: %w", err)
+	}
+	if len(uploadArgs) == 0 {
+		return errors.New("boot-verify cache probe: cache is configured but no upload URL could be generated")
+	}
+
+	downloadArgs, downloadEnv, err := getCacheDownloadURLAndEnv(ctx, build, key)
+	if err != nil {
+		return fmt.Errorf("boot-verify cache probe: generating download URL: %w", err)
+	}
+	if len(downloadArgs) == 0 {
+		return errors.New("boot-verify cache probe: cache is configured but no download URL could be generated")
+	}
+
+	w.Noticef("boot-verify: verifying cache access with key %s...", key)
+
+	probeDir := w.MkTmpDir("boot-verify")
+	canaryFile := w.DotEnvVariables("boot-verify/canary.env", map[string]string{"BOOT_VERIFY": "1"})
+	// cache-archiver rejects paths outside its working directory, and
+	// cache-extractor extracts into it.
+	w.Cd(probeDir)
+
+	timeoutArg := strconv.Itoa(bootVerifyCacheTimeoutMinutes)
+
+	archiverArgs := append([]string{
+		"cache-archiver",
+		"--file", "canary-upload.zip",
+		"--timeout", timeoutArg,
+		"--path", canaryFile,
+	}, uploadArgs...)
+	if len(uploadEnv) > 0 {
+		envFile := b.writeCacheExports(w, uploadEnv)
+		archiverArgs = append(archiverArgs, "--env-file", envFile)
+		defer w.RmFile(envFile)
+	}
+	w.Command(info.RunnerCommand, archiverArgs...)
+
+	// The extractor recreates the canary file from the downloaded archive.
+	// Deleting it first makes the check after extraction prove the round
+	// trip, without depending on how the extractor treats a missing remote
+	// object (today a 404 still exits non-zero, but only via its local
+	// archive fallback).
+	w.RmFile(canaryFile)
+
+	// A different file name forces a real download instead of an up-to-date
+	// check.
+	extractorArgs := append([]string{
+		"cache-extractor",
+		"--file", "canary-download.zip",
+		"--timeout", timeoutArg,
+	}, downloadArgs...)
+	if len(downloadEnv) > 0 {
+		envFile := b.writeCacheExports(w, downloadEnv)
+		extractorArgs = append(extractorArgs, "--env-file", envFile)
+		defer w.RmFile(envFile)
+	}
+	w.Command(info.RunnerCommand, extractorArgs...)
+
+	w.IfFile(canaryFile)
+	w.Noticef("boot-verify: cache canary read back")
+	w.Else()
+	w.Errorf("boot-verify: cache canary missing after download")
+	w.Line("exit 1")
+	w.EndIf()
 
 	return nil
 }
@@ -1974,6 +2148,7 @@ func (b *AbstractShell) writeScript(
 	methods := map[common.BuildStage]func(context.Context, ShellWriter, common.ShellScriptInfo) error{
 		common.BuildStagePrepare:                  b.writePrepareScript,
 		common.BuildStageGetSources:               b.writeGetSourcesScript,
+		common.BuildStageBootVerifyProbes:         b.writeBootVerifyProbesScript,
 		common.BuildStageClearWorktree:            b.writeClearWorktreeScript,
 		common.BuildStageRestoreCache:             b.writeRestoreCacheScript,
 		common.BuildStageDownloadArtifacts:        b.writeDownloadArtifactsScript,

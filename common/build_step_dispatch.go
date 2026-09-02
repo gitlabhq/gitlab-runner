@@ -24,7 +24,7 @@ const stepRunBuildStage = BuildStage("step_" + spec.StepNameRun)
 //nolint:gocognit
 func stepDispatch(build *Build, executor Executor, stage BuildStage) (bool, []schema.Step) {
 	switch stage {
-	case BuildStagePrepare, BuildStageGetSources, BuildStageClearWorktree, BuildStageRestoreCache, BuildStageDownloadArtifacts, BuildStageArchiveOnSuccessCache, BuildStageArchiveOnFailureCache, BuildStageUploadOnFailureArtifacts, BuildStageUploadOnSuccessArtifacts, BuildStageCleanup:
+	case BuildStagePrepare, BuildStageGetSources, BuildStageClearWorktree, BuildStageBootVerifyProbes, BuildStageRestoreCache, BuildStageDownloadArtifacts, BuildStageArchiveOnSuccessCache, BuildStageArchiveOnFailureCache, BuildStageUploadOnFailureArtifacts, BuildStageUploadOnSuccessArtifacts, BuildStageCleanup:
 		// don't handle non-user script stages
 		return false, nil
 
