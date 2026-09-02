@@ -9,6 +9,8 @@ import (
 
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
+
+	"gitlab.com/gitlab-org/gitlab-runner/log"
 )
 
 // NOTE: The functionality of the rate limiting below as well as the constant values
@@ -128,7 +130,7 @@ func signalRetryAttempted(req *http.Request) {
 func (r *retryRequester) waitForRetry(req *http.Request, resp *http.Response, bo *backoff.Backoff, logger *logrus.Entry) error {
 	waitTime := r.calculateWaitTime(resp, bo)
 	logger.
-		WithField("duration", waitTime).
+		WithFields(log.DeprecatedFieldDual("duration", waitTime, waitTime.Seconds())).
 		Infoln("Waiting before making the next call")
 
 	timer := time.NewTimer(waitTime)

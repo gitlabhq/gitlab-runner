@@ -1592,16 +1592,18 @@ type Config struct {
 
 	Labels Labels `toml:"labels,omitempty" json:"labels,omitempty" description:"Default custom labels for all runners."`
 
-	Concurrent       int             `toml:"concurrent" json:"concurrent"`
-	CheckInterval    int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
-	LogLevel         *string         `toml:"log_level" json:"log_level,omitempty" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
-	LogFormat        *string         `toml:"log_format" json:"log_format,omitempty" description:"Define log format (one of: runner, text, json)"`
-	User             string          `toml:"user,omitempty" json:"user"`
-	Runners          []*RunnerConfig `toml:"runners" json:"runners,omitempty"`
-	SentryDSN        *string         `toml:"sentry_dsn" json:",omitempty"`
-	ConnectionMaxAge *time.Duration  `toml:"connection_max_age,omitempty" json:"connection_max_age,omitempty"`
-	ModTime          time.Time       `toml:"-"`
-	Loaded           bool            `toml:"-"`
+	Concurrent             int             `toml:"concurrent" json:"concurrent"`
+	CheckInterval          int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
+	LogLevel               *string         `toml:"log_level" json:"log_level,omitempty" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
+	LogFormat              *string         `toml:"log_format" json:"log_format,omitempty" description:"Define log format (one of: runner, text, json)"`
+	LogFieldSchemaVersion  *int            `toml:"log_field_schema_version,omitempty" json:"log_field_schema_version,omitempty" description:"Logging field schema version (0 = legacy names)"`
+	LogFieldDualEmitTarget *int            `toml:"log_field_dual_emit_target,omitempty" json:"log_field_dual_emit_target,omitempty" description:"When > schema version, emit both legacy and standard field names"`
+	User                   string          `toml:"user,omitempty" json:"user"`
+	Runners                []*RunnerConfig `toml:"runners" json:"runners,omitempty"`
+	SentryDSN              *string         `toml:"sentry_dsn" json:",omitempty"`
+	ConnectionMaxAge       *time.Duration  `toml:"connection_max_age,omitempty" json:"connection_max_age,omitempty"`
+	ModTime                time.Time       `toml:"-"`
+	Loaded                 bool            `toml:"-"`
 
 	Machine *MachineConfig `toml:"machine,omitempty" json:"machine,omitempty"`
 
@@ -2776,7 +2778,8 @@ func (c *Config) RunnerByNameAndToken(name string, token string) (*RunnerConfig,
 
 func (c *Config) Validate() error {
 	for vn, v := range map[string]func() error{
-		"global labels": c.validateLabels,
+		"global labels":      c.validateLabels,
+		"log field settings": c.validateLogFieldSettings,
 	} {
 		err := v()
 		if err != nil {
@@ -2796,6 +2799,37 @@ func (c *Config) Validate() error {
 
 func (c *Config) validateLabels() error {
 	return c.Labels.validatePatterns()
+}
+
+// ResolvedLogFieldMapping returns the log field schema version and dual emit
+// target, defaulting both to 0 when unset.
+func (c *Config) ResolvedLogFieldMapping() (schemaVersion, dualEmitTarget int) {
+	if c.LogFieldSchemaVersion != nil {
+		schemaVersion = *c.LogFieldSchemaVersion
+	}
+	if c.LogFieldDualEmitTarget != nil {
+		dualEmitTarget = *c.LogFieldDualEmitTarget
+	}
+
+	return schemaVersion, dualEmitTarget
+}
+
+func (c *Config) validateLogFieldSettings() error {
+	schemaVersion, dualEmitTarget := c.ResolvedLogFieldMapping()
+
+	if schemaVersion < 0 {
+		return fmt.Errorf("log_field_schema_version must be >= 0, got %d", schemaVersion)
+	}
+	if dualEmitTarget < 0 {
+		return fmt.Errorf("log_field_dual_emit_target must be >= 0, got %d", dualEmitTarget)
+	}
+	if dualEmitTarget > 0 && dualEmitTarget <= schemaVersion {
+		return fmt.Errorf(
+			"log_field_dual_emit_target (%d) must be strictly greater than log_field_schema_version (%d)",
+			dualEmitTarget, schemaVersion,
+		)
+	}
+	return nil
 }
 
 func (c *RunnerConfig) Validate() error {

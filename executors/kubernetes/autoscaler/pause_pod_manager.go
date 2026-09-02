@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	runnerlog "gitlab.com/gitlab-org/gitlab-runner/log"
 	appsv1 "k8s.io/api/apps/v1"
 	api "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
@@ -109,7 +111,7 @@ func NewPausePodManager(client kubernetes.Interface, config PausePodManagerConfi
 	return &PausePodManager{
 		config:  config,
 		client:  client,
-		log:     log.WithField("component", "pause-pod-manager"),
+		log:     log.WithFields(runnerlog.DeprecatedField("component", "pause-pod-manager")),
 		metrics: metrics,
 		stopCh:  make(chan struct{}),
 	}, nil
