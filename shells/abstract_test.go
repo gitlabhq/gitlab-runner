@@ -4992,6 +4992,17 @@ func TestAbstractShell_writeBootVerifyProbesScript(t *testing.T) {
 			runnerCommand: "runner-command",
 			wantErr:       "neither clone_url nor url",
 		},
+		"helper version check emits verify-version with the runner version": {
+			build:         newBuild(true, &common.BootVerify{Enabled: true, VerifyHelperVersion: true}, nil),
+			runnerCommand: "runner-command",
+			wantContains: []string{
+				"runner-command verify-version --expected ",
+			},
+		},
+		"helper version check without runner command fails": {
+			build:   newBuild(true, &common.BootVerify{Enabled: true, VerifyHelperVersion: true}, nil),
+			wantErr: "no runner helper binary",
+		},
 		"server url probe without runner command fails": {
 			build:   newBuild(true, &common.BootVerify{Enabled: true, VerifyServerURL: true}, nil),
 			wantErr: "no runner helper binary",
