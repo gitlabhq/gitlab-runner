@@ -327,6 +327,7 @@ func (b *Build) FailureReason() spec.JobFailureReason {
 func (b *Build) Log() *logrus.Entry {
 	fields := logrus.Fields{
 		"job":               b.ID,
+		"job_name":          b.JobInfo.Name,
 		"pipeline_id":       b.JobInfo.PipelineID,
 		"project":           b.JobInfo.ProjectID,
 		"project_full_path": b.JobInfo.ProjectFullPath,

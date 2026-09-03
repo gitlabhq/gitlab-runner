@@ -697,6 +697,7 @@ func (n *GitLabClient) RequestJob(
 	case http.StatusCreated:
 		logger.WithFields(logrus.Fields{
 			"job":      response.ID,
+			"job_name": response.JobInfo.Name,
 			"repo_url": response.RepoCleanURL(),
 		}).Println("Checking for jobs...", "received")
 

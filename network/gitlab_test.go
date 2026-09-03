@@ -1329,7 +1329,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseOK: true,
 			},
-			expectedLog: `level=info msg="Checking for jobs... received" correlation_id=foobar job=10 repo_url="https://gitlab.example.com/test/test-project.git" runner=valid`,
+			expectedLog: `level=info msg="Checking for jobs... received" correlation_id=foobar job=10 job_name=test-job repo_url="https://gitlab.example.com/test/test-project.git" runner=valid`,
 		},
 		{
 			name:      "no jobs token",
@@ -1366,7 +1366,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseOK: true,
 			},
-			expectedLog: `level=info msg="Checking for jobs... received" correlation_id=foobar job=10 repo_url="https://gitlab.example.com/test/test-project.git" runner=valid`,
+			expectedLog: `level=info msg="Checking for jobs... received" correlation_id=foobar job=10 job_name=test-job repo_url="https://gitlab.example.com/test/test-project.git" runner=valid`,
 		},
 		{
 			name:      "service unavailable",
