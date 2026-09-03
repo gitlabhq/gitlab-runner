@@ -69,9 +69,19 @@ func (mr *RunCommand) runBootVerify() error {
 	errs := make([]error, len(runners))
 	for i, runner := range runners {
 		wg.Go(func() {
-			if err := mr.bootVerifyOneRunner(ctx, runner); err != nil {
+			runnerStart := time.Now()
+			err := mr.bootVerifyOneRunner(ctx, runner)
+
+			runnerLogger := logger.WithFields(bootVerifyRunnerFields(runner)).WithFields(logrus.Fields{
+				"checks":         runner.GetBootVerify().Checks(),
+				fields.DurationS: time.Since(runnerStart).Seconds(),
+			})
+			if err != nil {
+				runnerLogger.WithField("status", "failed").WithError(err).Error("Boot-verify runner finished")
 				errs[i] = fmt.Errorf("runner %q boot-verify failed: %w", runner.Name, err)
+				return
 			}
+			runnerLogger.WithField("status", "passed").Info("Boot-verify runner finished")
 		})
 	}
 	wg.Wait()
@@ -132,17 +142,25 @@ func (mr *RunCommand) bootVerifyOneRunner(ctx context.Context, runner *common.Ru
 	trace := newBootVerifyTrace()
 	defer trace.Finish()
 
+	logger := mr.log().WithField("phase", "boot-verify").WithFields(bootVerifyRunnerFields(runner))
 	if err := build.Run(ctx, mr.configfile.Config(), trace); err != nil {
-		return fmt.Errorf("build.Run: %w\n--- build output ---\n%s", err, trace.dump())
+		logger.Errorf("Boot-verify build output:\n%s", trace.dump())
+		return fmt.Errorf("build.Run: %w", err)
 	}
 
 	// The trace is discarded on success, so dump it at debug level.
-	logger := mr.log().WithField("phase", "boot-verify")
 	if logger.Logger.IsLevelEnabled(logrus.DebugLevel) {
-		logger.WithField("runner", runner.ShortDescription()).
-			Debugf("Boot-verify build output:\n%s", trace.dump())
+		logger.Debugf("Boot-verify build output:\n%s", trace.dump())
 	}
 	return nil
+}
+
+func bootVerifyRunnerFields(runner *common.RunnerConfig) logrus.Fields {
+	return logrus.Fields{
+		"runner":      runner.ShortDescription(),
+		"runner_name": runner.Name,
+		"system_id":   runner.SystemID,
+	}
 }
 
 func (mr *RunCommand) bootVerifyAuth(ctx context.Context, runner *common.RunnerConfig) error {
