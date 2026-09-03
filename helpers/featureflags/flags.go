@@ -217,9 +217,10 @@ var flags = []FeatureFlag{
 			"This should be enabled if the job environment uses a POSIX-compliant shell.",
 	},
 	{
-		Name:         ResolveFullTLSChain,
-		DefaultValue: false,
-		Deprecated:   false,
+		Name:            ResolveFullTLSChain,
+		DefaultValue:    false,
+		Deprecated:      true,
+		ToBeRemovedWith: "20.0",
 		Description: "In GitLab Runner 16.4 and later, the default is `false`. In GitLab Runner 16.3 and earlier, the default is `true`. " +
 			"When enabled, the runner resolves a full TLS " +
 			"chain all the way down to a self-signed root certificate " +
@@ -231,7 +232,9 @@ var flags = []FeatureFlag{
 			"signed with older signature algorithms. " +
 			"If certificate resolution fails, you might need to disable this feature. " +
 			"This feature flag can only be disabled in the " +
-			"[`[runners.feature_flags]` configuration](#enable-feature-flag-in-runner-configuration).",
+			"[`[runners.feature_flags]` configuration](#enable-feature-flag-in-runner-configuration). " +
+			"Deprecated: Full TLS chain resolution and this flag will be removed in GitLab Runner 20.0. " +
+			"Clients that need the resolved chain must supply it through `CI_SERVER_TLS_CA_FILE` directly.",
 	},
 	{
 		Name:         DisablePowershellStdin,

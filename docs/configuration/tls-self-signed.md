@@ -316,8 +316,10 @@ For operating systems other than Ubuntu or Alpine, see your
 operating system's documentation to find appropriate commands to install
 the trusted certificate.
 
-Depending on your version of GitLab Runner and the Docker host environment,
+In GitLab Runner 15.5.1 to 16.3, depending on the Docker host environment,
 you might also have to disable the `FF_RESOLVE_FULL_TLS_CHAIN` feature flag.
+In GitLab Runner 16.4 and later, the flag defaults to `false`. It is deprecated and
+will be removed in GitLab Runner 20.0.
 
 ### `apt-get: not found` errors in jobs
 
