@@ -1561,6 +1561,29 @@ type BootVerify struct {
 	AcquireMaxBackoff       time.Duration `toml:"acquire_max_backoff,omitempty" json:"acquire_max_backoff,omitempty" description:"(Experimental) Maximum backoff between acquire retries. Default: 10s."`
 }
 
+func (b *BootVerify) Checks() []string {
+	if b == nil {
+		return nil
+	}
+
+	checks := []string{}
+	for _, c := range []struct {
+		name    string
+		enabled bool
+	}{
+		{"auth", b.VerifyAuth},
+		{"helper_version", b.VerifyHelperVersion},
+		{"server_url", b.VerifyServerURL},
+		{"cache", b.VerifyCache},
+		{"commands", len(b.VerifyCommands) > 0},
+	} {
+		if c.enabled {
+			checks = append(checks, c.name)
+		}
+	}
+	return checks
+}
+
 func (b *BootVerify) GetTimeout() time.Duration {
 	if b == nil || b.Timeout <= 0 {
 		return defaultBootVerifyTimeout

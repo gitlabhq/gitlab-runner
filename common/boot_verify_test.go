@@ -51,3 +51,32 @@ func TestBootVerifyAccessorsUseConfiguredValues(t *testing.T) {
 	assert.Equal(t, 2*time.Second, b.GetAcquireMinBackoff())
 	assert.Equal(t, 20*time.Second, b.GetAcquireMaxBackoff())
 }
+
+func TestBootVerifyChecks(t *testing.T) {
+	cases := map[string]struct {
+		bv       *BootVerify
+		expected []string
+	}{
+		"nil":     {bv: nil, expected: nil},
+		"enabled": {bv: &BootVerify{Enabled: true}, expected: []string{}},
+		"all": {
+			bv: &BootVerify{
+				VerifyAuth:          true,
+				VerifyHelperVersion: true,
+				VerifyServerURL:     true,
+				VerifyCache:         true,
+				VerifyCommands:      []string{"true"},
+			},
+			expected: []string{"auth", "helper_version", "server_url", "cache", "commands"},
+		},
+		"subset": {
+			bv:       &BootVerify{VerifyServerURL: true, VerifyCommands: []string{"true"}},
+			expected: []string{"server_url", "commands"},
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, tc.bv.Checks())
+		})
+	}
+}
