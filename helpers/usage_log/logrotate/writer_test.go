@@ -3,6 +3,7 @@
 package logrotate
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -95,6 +96,38 @@ func TestWriter_Store(t *testing.T) {
 
 	// Should have newline at end
 	assert.True(t, strings.HasSuffix(string(data), "\n"))
+}
+
+func TestWriter_Store_DoesNotMutateRecordLabels(t *testing.T) {
+	dir := t.TempDir()
+	w := New(
+		WithLogDirectory(dir),
+		WithLabels(map[string]string{
+			"writer-label": "writer-value",
+			"test-label":   "overridden-value",
+		}),
+	)
+	t.Cleanup(func() {
+		require.NoError(t, w.Close())
+	})
+
+	record := testRecord()
+	require.NoError(t, w.Store(record))
+
+	assert.Equal(t, map[string]string{"test-label": "test-value"}, record.Labels)
+
+	files := w.allLogFiles()
+	require.Len(t, files, 1)
+
+	data, err := os.ReadFile(filepath.Join(dir, files[0].name))
+	require.NoError(t, err)
+
+	var storedRecord usage_log.Record
+	require.NoError(t, json.Unmarshal(data, &storedRecord))
+	assert.Equal(t, map[string]string{
+		"test-label":   "overridden-value",
+		"writer-label": "writer-value",
+	}, storedRecord.Labels)
 }
 
 func TestWriter_Store_ClosedStorage(t *testing.T) {
