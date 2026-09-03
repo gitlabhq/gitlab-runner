@@ -57,10 +57,10 @@ func New(o ...Option) *Writer {
 
 func (w *Writer) Store(record usage_log.Record) error {
 	if len(w.options.Labels) > 0 {
-		if record.Labels == nil {
-			record.Labels = make(map[string]string, len(w.options.Labels))
-		}
-		maps.Copy(record.Labels, w.options.Labels)
+		labels := make(map[string]string, len(record.Labels)+len(w.options.Labels))
+		maps.Copy(labels, record.Labels)
+		maps.Copy(labels, w.options.Labels)
+		record.Labels = labels
 	}
 
 	data, err := json.Marshal(record)
