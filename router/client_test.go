@@ -438,6 +438,29 @@ func TestRequestJob_CircuitBreakerRecoversDespiteEmptyDiscovery(t *testing.T) {
 	assert.EqualValues(t, callsAfterTrip+1, routerSrv.calls.Load(), "breaker recovered and routed through the router")
 }
 
+func TestRequestJob_RequestErrorHealth(t *testing.T) {
+	tests := map[codes.Code]bool{
+		codes.FailedPrecondition: true, // 409/422 from Rails
+		codes.ResourceExhausted:  true, // 429
+		codes.Unauthenticated:    true, // 401, healthy on the direct path too
+		codes.Internal:           true,
+		codes.Unknown:            true,
+		codes.PermissionDenied:   false, // 403
+	}
+
+	for code, wantHealthy := range tests {
+		t.Run(code.String(), func(t *testing.T) {
+			rc, config, routerSrv, railsCalls := setupRouterWithRailsFallback(t)
+			routerSrv.failCode.Store(int32(code))
+
+			job, healthy := rc.RequestJob(t.Context(), config, &common.SessionInfo{})
+			assert.Nil(t, job)
+			assert.Equal(t, wantHealthy, healthy)
+			assert.EqualValues(t, 0, railsCalls.Load(), "request errors do not fall back to Rails")
+		})
+	}
+}
+
 func TestIsRouterFailure(t *testing.T) {
 	failures := []codes.Code{
 		codes.Unavailable, codes.DeadlineExceeded, codes.Canceled,
