@@ -247,7 +247,10 @@ func (c *Client) handleRouterError(err error, disco *common.RouterDiscovery, con
 		// though the request itself failed.
 		c.breaker.RecordSuccess()
 		config.Log().WithError(err).Error("Error requesting a job")
-		return false, fallbackNone
+		// Only a forbidden runner is unhealthy, as on the direct path. Rails
+		// answers 409 when another runner took the build; that arrives here
+		// as FailedPrecondition and must not count towards unhealthy_requests_limit.
+		return code != codes.PermissionDenied, fallbackNone
 	}
 }
 
