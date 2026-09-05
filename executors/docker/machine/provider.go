@@ -273,6 +273,9 @@ func (m *machineProvider) createWithGrowthCapacity(
 		m.totalActions.WithLabelValues(actionLabels("created", details.targets)...).Inc()
 		m.creationHistogram.Observe(creationTime.Seconds())
 
+		// Track it now rather than on the next Acquire.
+		m.heartbeaterFor(config).beat(details.Name, config.Machine.GetHeartbeatInterval())
+
 		// Signal that a new machine is available. When there's contention, there's no guarantee between the
 		// ordering of reading from errCh and the availability check.
 		coordinator.addAvailableMachine()
@@ -490,6 +493,8 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 		details.Unlock()
 	}
 
+	m.forgetHeartbeat(details.Name)
+
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	delete(m.details, details.Name)
@@ -610,6 +615,17 @@ func (m *machineProvider) heartbeaterFor(config *common.RunnerConfig) *heartbeat
 	}
 
 	return h
+}
+
+// forgetHeartbeat stops refreshing a machine the manager no longer tracks,
+// whether removal succeeded or gave up on a VM that is still there.
+func (m *machineProvider) forgetHeartbeat(name string) {
+	m.heartbeatersLock.Lock()
+	defer m.heartbeatersLock.Unlock()
+
+	for _, h := range m.heartbeaters {
+		h.forget(name)
+	}
 }
 
 func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData) {
