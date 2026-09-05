@@ -231,3 +231,90 @@ func TestHeartbeaterDisablesOnUnsupportedDriver(t *testing.T) {
 	assert.Equal(t, 1, rec.callCount("m1"))
 	assert.Equal(t, 0, rec.callCount("m2"))
 }
+
+func TestHeartbeaterForget(t *testing.T) {
+	rec := newTouchRecorder()
+	h, clock := newTestHeartbeater(rec.touch)
+	h.tickPeriod = 10 * time.Millisecond
+
+	h.beat("m1", time.Minute)
+	rec.waitForCall(t)
+	require.Equal(t, 1, rec.callCount("m1"))
+
+	h.forget("m1")
+	clock.advance(2 * time.Minute)
+	time.Sleep(50 * time.Millisecond)
+	assert.Equal(t, 1, rec.callCount("m1"))
+
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	assert.NotContains(t, h.lastBeat, "m1")
+}
+
+func TestHeartbeaterForgetDuringBeat(t *testing.T) {
+	release := make(chan struct{})
+	h, _ := newTestHeartbeater(func(context.Context, string, string) error {
+		<-release
+		return nil
+	})
+
+	h.beat("m1", time.Minute)
+	h.forget("m1")
+	close(release)
+
+	assert.Eventually(t, func() bool {
+		h.lock.Lock()
+		defer h.lock.Unlock()
+		_, inFlight := h.inFlight["m1"]
+		_, tracked := h.lastBeat["m1"]
+		return !inFlight && !tracked
+	}, time.Second, 5*time.Millisecond, "a beat finishing after forget must not re-add the machine")
+}
+
+func TestHeartbeaterTickDoesNotReregisterForgotten(t *testing.T) {
+	rec := newTouchRecorder()
+	h, clock := newTestHeartbeater(rec.touch)
+
+	h.beat("m1", time.Minute)
+	rec.waitForCall(t)
+	clock.advance(2 * time.Minute)
+
+	// the ticker snapshotted m1 before forget and refreshes it after
+	h.forget("m1")
+	h.refresh("m1", time.Minute, false)
+
+	assert.Equal(t, 1, rec.callCount("m1"))
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	assert.NotContains(t, h.lastBeat, "m1")
+	assert.Empty(t, h.inFlight)
+}
+
+func TestHeartbeaterForgetCancelsQueuedBeat(t *testing.T) {
+	release := make(chan struct{})
+	var touched sync.Map
+	h, _ := newTestHeartbeater(func(_ context.Context, name string, _ string) error {
+		touched.Store(name, true)
+		if name == "m1" {
+			<-release
+		}
+		return nil
+	})
+
+	// semaphore capacity is one: m1 holds it, m2 queues behind it
+	h.beat("m1", time.Minute)
+	require.Eventually(t, func() bool { _, ok := touched.Load("m1"); return ok }, time.Second, time.Millisecond)
+	h.beat("m2", time.Minute)
+
+	h.forget("m2")
+	close(release)
+
+	require.Eventually(t, func() bool {
+		h.lock.Lock()
+		defer h.lock.Unlock()
+		return len(h.inFlight) == 0
+	}, time.Second, time.Millisecond)
+
+	_, touchedM2 := touched.Load("m2")
+	assert.False(t, touchedM2, "a beat queued on the semaphore must not write after forget")
+}

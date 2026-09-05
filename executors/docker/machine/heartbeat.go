@@ -30,7 +30,7 @@ type heartbeater struct {
 
 	lock        sync.Mutex
 	lastBeat    map[string]time.Time
-	inFlight    map[string]struct{}
+	inFlight    map[string]context.CancelFunc
 	sem         chan struct{}
 	interval    time.Duration
 	unsupported bool
@@ -46,7 +46,7 @@ func newHeartbeater(touch func(ctx context.Context, name string, value string) e
 	return &heartbeater{
 		touch:      touch,
 		lastBeat:   map[string]time.Time{},
-		inFlight:   map[string]struct{}{},
+		inFlight:   map[string]context.CancelFunc{},
 		sem:        sem,
 		tickPeriod: heartbeatTickPeriod,
 		nowFn:      time.Now,
@@ -54,76 +54,103 @@ func newHeartbeater(touch func(ctx context.Context, name string, value string) e
 	}
 }
 
-// beat refreshes the machine's heartbeat label on a background
-// goroutine if it is due. A failed attempt still counts as a beat, so
-// unreachable machines retry next interval instead of hot-looping.
+// beat registers the machine if it is new and refreshes its heartbeat
+// label on a background goroutine if it is due. A failed attempt still
+// counts as a beat, so unreachable machines retry next interval instead
+// of hot-looping.
 func (h *heartbeater) beat(name string, interval time.Duration) {
+	h.refresh(name, interval, true)
+}
+
+func (h *heartbeater) refresh(name string, interval time.Duration, register bool) {
 	if interval <= 0 {
 		return
 	}
 
-	h.lock.Lock()
-	if h.unsupported {
-		h.lock.Unlock()
-		return
-	}
-	h.lock.Unlock()
-
 	h.tickOnce.Do(func() { go h.tick() })
 
+	ctx, due := h.schedule(name, interval, register)
+	if due {
+		go h.write(ctx, name)
+	}
+}
+
+// schedule records the machine as due and returns the context for its
+// write, or false if nothing is to be written now.
+func (h *heartbeater) schedule(name string, interval time.Duration, register bool) (context.Context, bool) {
 	now := h.nowFn()
 
 	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	if h.unsupported {
+		return nil, false
+	}
+
 	h.interval = interval
 	if _, busy := h.inFlight[name]; busy {
-		h.lock.Unlock()
-		return
+		return nil, false
 	}
 
 	last, seen := h.lastBeat[name]
 	if !seen {
+		if !register {
+			// forgotten between the ticker's snapshot and this call
+			return nil, false
+		}
+
 		// random offset, so a manager start doesn't burst one write per machine
 		last = now.Add(-time.Duration(h.randFn(int64(interval))))
 		h.lastBeat[name] = last
 	}
 
 	if now.Sub(last) < interval {
-		h.lock.Unlock()
-		return
+		return nil, false
 	}
 
-	h.inFlight[name] = struct{}{}
+	ctx, cancel := context.WithTimeout(context.Background(), heartbeatTouchTimeout)
+	h.inFlight[name] = cancel
+
+	return ctx, true
+}
+
+func (h *heartbeater) write(ctx context.Context, name string) {
+	select {
+	case h.sem <- struct{}{}:
+		defer func() { <-h.sem }()
+	case <-ctx.Done():
+	}
+
+	var err error
+	if ctx.Err() == nil {
+		err = h.touch(ctx, name, strconv.FormatInt(h.nowFn().Unix(), 10))
+	}
+
+	h.lock.Lock()
+	// a machine forgotten mid-beat stays forgotten
+	if _, tracked := h.lastBeat[name]; tracked {
+		h.lastBeat[name] = h.nowFn()
+	}
+	if cancel, ok := h.inFlight[name]; ok {
+		cancel()
+		delete(h.inFlight, name)
+	}
+
+	if errors.Is(err, docker.ErrLabelsNotSupported) && !h.unsupported {
+		// labeling is optional: disable instead of logging an error
+		// per machine per interval on drivers without label support
+		h.unsupported = true
+		h.lock.Unlock()
+		logrus.Warningln("Machine driver does not support labels, disabling heartbeat labels for this runner")
+
+		return
+	}
 	h.lock.Unlock()
 
-	go func() {
-		h.sem <- struct{}{}
-		defer func() { <-h.sem }()
-
-		ctx, cancel := context.WithTimeout(context.Background(), heartbeatTouchTimeout)
-		defer cancel()
-
-		err := h.touch(ctx, name, strconv.FormatInt(h.nowFn().Unix(), 10))
-
-		h.lock.Lock()
-		h.lastBeat[name] = h.nowFn()
-		delete(h.inFlight, name)
-
-		if errors.Is(err, docker.ErrLabelsNotSupported) && !h.unsupported {
-			// labeling is optional: disable instead of logging an error
-			// per machine per interval on drivers without label support
-			h.unsupported = true
-			h.lock.Unlock()
-			logrus.Warningln("Machine driver does not support labels, disabling heartbeat labels for this runner")
-
-			return
-		}
-		h.lock.Unlock()
-
-		if err != nil {
-			logrus.WithError(err).WithField("name", name).
-				Warningln("Failed to refresh machine heartbeat label")
-		}
-	}()
+	if err != nil && !errors.Is(err, context.Canceled) {
+		logrus.WithError(err).WithField("name", name).
+			Warningln("Failed to refresh machine heartbeat label")
+	}
 }
 
 // tick keeps beating while the acquire path is paused, e.g. when all
@@ -139,14 +166,12 @@ func (h *heartbeater) tick() {
 		h.lock.Unlock()
 
 		for _, name := range names {
-			h.beat(name, interval)
+			h.refresh(name, interval, false)
 		}
 	}
 }
 
-// prune drops state for machines no longer in the store. A beat
-// completing after its machine was pruned re-adds one entry; the next
-// prune removes it.
+// prune drops state for machines no longer in the store.
 func (h *heartbeater) prune(active []string) {
 	keep := make(map[string]struct{}, len(active))
 	for _, name := range active {
@@ -159,5 +184,16 @@ func (h *heartbeater) prune(active []string) {
 		if _, ok := keep[name]; !ok {
 			delete(h.lastBeat, name)
 		}
+	}
+}
+
+// forget drops one machine's state and cancels a beat that is queued or
+// in flight for it, e.g. once the manager stops tracking it.
+func (h *heartbeater) forget(name string) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	delete(h.lastBeat, name)
+	if cancel, ok := h.inFlight[name]; ok {
+		cancel()
 	}
 }

@@ -352,6 +352,77 @@ func TestMachineCreationAndRemoval(t *testing.T) {
 	assert.Equal(t, machineStateRemoving, d3.State)
 }
 
+func TestMachineCreationRegistersHeartbeat(t *testing.T) {
+	provisionRetryInterval = 0
+
+	config := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{Token: "heartbeat-runner"},
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:       "%s",
+				IdleTime:          5,
+				HeartbeatInterval: 30 * time.Minute,
+			},
+		},
+	}
+
+	p, _ := testMachineProvider()
+	d, errCh := p.create(config, machineStateIdle)
+	require.NoError(t, <-errCh)
+
+	h := p.heartbeaterFor(config)
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	assert.Contains(t, h.lastBeat, d.Name, "created machine is tracked without waiting for Acquire")
+}
+
+func TestMachineRemovalForgetsHeartbeat(t *testing.T) {
+	provisionRetryInterval = 0
+	origInterval := removeRetryInterval
+	removeRetryInterval = time.Millisecond
+	defer func() { removeRetryInterval = origInterval }()
+
+	config := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{Token: "heartbeat-runner"},
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:       "%s",
+				IdleTime:          5,
+				HeartbeatInterval: 30 * time.Minute,
+			},
+		},
+	}
+
+	tracked := func(p *machineProvider, name string) bool {
+		h := p.heartbeaterFor(config)
+		h.lock.Lock()
+		defer h.lock.Unlock()
+		_, ok := h.lastBeat[name]
+		return ok
+	}
+
+	t.Run("removed", func(t *testing.T) {
+		p, _ := testMachineProvider()
+		d, errCh := p.create(config, machineStateIdle)
+		require.NoError(t, <-errCh)
+		require.True(t, tracked(p, d.Name))
+
+		require.NoError(t, p.remove(d.Name))
+		<-d.inFlight
+		assert.False(t, tracked(p, d.Name))
+	})
+
+	t.Run("gave up", func(t *testing.T) {
+		p, _ := testMachineProvider("remove-fail")
+		p.heartbeaterFor(config).beat("remove-fail", 30*time.Minute)
+		require.True(t, tracked(p, "remove-fail"))
+
+		d := &machineDetails{Name: "remove-fail", State: machineStateRemoving, maxRemovalAttempts: 2}
+		p.finalizeRemoval(d)
+		assert.False(t, tracked(p, "remove-fail"), "a VM the manager gave up on must not keep looking manager-owned")
+	})
+}
+
 func TestMachineUse(t *testing.T) {
 	provisionRetryInterval = 0
 
