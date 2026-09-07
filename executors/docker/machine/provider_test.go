@@ -21,6 +21,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 var (
@@ -937,6 +938,83 @@ func TestMachineOptionsWithName(t *testing.T) {
 		fmt.Sprintf("--another-name-option=%s-suffix", d.Name),
 	}
 	assert.Equal(t, expectedOpts, capturedOpts)
+}
+
+func TestMachineOptionsExpandEnv(t *testing.T) {
+	provisionRetryInterval = 0
+	t.Setenv("TEST_HOSTNAME", "gitlab-runner-p-s-1-86bfc8b89b-hkh9c")
+	t.Setenv("TEST_NOTE", "100%")
+	t.Setenv("GITLAB_RUNNER_MACHINE_NAME", "from-the-environment")
+
+	options := []string{
+		"google-label=runner_manager_name:$TEST_HOSTNAME",
+		"google-label=runner_manager_zone:${TEST_ZONE_UNSET}",
+		"google-label=runner_manager_deployment:k8s",
+		"google-label=runner_instance_name:${GITLAB_RUNNER_MACHINE_NAME}",
+	}
+	optionsWithName := []string{
+		"google-label=note:${TEST_NOTE},machine:%s",
+	}
+
+	tests := map[string]struct {
+		ff   bool
+		want func(name string) []string
+	}{
+		"expanded when enabled": {
+			ff: true,
+			want: func(name string) []string {
+				return []string{
+					"google-label=runner_manager_name:gitlab-runner-p-s-1-86bfc8b89b-hkh9c",
+					"google-label=runner_manager_zone:",
+					"google-label=runner_manager_deployment:k8s",
+					"google-label=runner_instance_name:" + name,
+					"google-label=note:100%,machine:" + name,
+				}
+			},
+		},
+		"untouched when disabled": {
+			ff: false,
+			want: func(name string) []string {
+				return append(append([]string(nil), options...), "google-label=note:${TEST_NOTE},machine:"+name)
+			},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			p := newMachineProvider(docker_executor.NewProvider())
+			machineMock := newMockMachine(t)
+			p.machine = machineMock
+
+			config := &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Machine: &common.DockerMachine{
+						MachineName:            "test-machine-%s",
+						IdleTime:               5,
+						MachineOptions:         append([]string(nil), options...),
+						MachineOptionsWithName: append([]string(nil), optionsWithName...),
+					},
+					FeatureFlags: map[string]bool{featureflags.MachineOptionsExpandEnv: tt.ff},
+				},
+			}
+
+			var captured []string
+			machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Run(func(args mock.Arguments) {
+					for i := 3; i < len(args); i++ {
+						captured = append(captured, args.String(i))
+					}
+				}).
+				Return(nil).
+				Once()
+
+			d, errCh := p.create(config, machineStateIdle)
+			require.NoError(t, <-errCh)
+
+			assert.Equal(t, tt.want(d.Name), captured)
+			assert.Equal(t, options, config.Machine.MachineOptions, "the config's options are not mutated")
+		})
+	}
 }
 
 func TestMachineOptionsWithNameEmpty(t *testing.T) {

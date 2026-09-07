@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 // targetLabelNames is the fixed schema of dynamic labels attached to the
@@ -218,6 +220,34 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	return details, errCh
 }
 
+// machineNameVariable expands to the machine's name instead of an
+// environment variable.
+const machineNameVariable = "GITLAB_RUNNER_MACHINE_NAME"
+
+func machineOptions(config *common.RunnerConfig, name string) []string {
+	opts := make([]string, 0, len(config.Machine.MachineOptions)+len(config.Machine.MachineOptionsWithName))
+	opts = append(opts, config.Machine.MachineOptions...)
+	for _, tpl := range config.Machine.MachineOptionsWithName {
+		opts = append(opts, fmt.Sprintf(tpl, name))
+	}
+
+	if !config.IsFeatureFlagOn(featureflags.MachineOptionsExpandEnv) {
+		return opts
+	}
+
+	for i, opt := range opts {
+		opts[i] = os.Expand(opt, func(variable string) string {
+			if variable == machineNameVariable {
+				return name
+			}
+
+			return os.Getenv(variable)
+		})
+	}
+
+	return opts
+}
+
 func (m *machineProvider) createWithGrowthCapacity(
 	coordinator *runnerMachinesCoordinator,
 	config *common.RunnerConfig,
@@ -231,10 +261,7 @@ func (m *machineProvider) createWithGrowthCapacity(
 	ctx, ctxCancelFn := context.WithTimeout(context.Background(), machineCreateCommandTimeout)
 	defer ctxCancelFn()
 
-	opts := config.Machine.MachineOptions
-	for _, tpl := range config.Machine.MachineOptionsWithName {
-		opts = append(opts, fmt.Sprintf(tpl, details.Name))
-	}
+	opts := machineOptions(config, details.Name)
 
 	err := m.machine.Create(ctx, config.Machine.MachineDriver, details.Name, opts...)
 

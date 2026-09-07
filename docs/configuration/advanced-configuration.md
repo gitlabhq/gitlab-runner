@@ -1238,6 +1238,48 @@ Example:
     Timezone = "UTC"
 ```
 
+### Environment variables in machine options
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7185) in GitLab Runner 19.4.
+
+{{< /history >}}
+
+When the `FF_MACHINE_OPTIONS_EXPAND_ENV` [feature flag](feature-flags.md) is enabled,
+GitLab Runner replaces `$VAR` and `${VAR}` references in `MachineOptions` and
+`MachineOptionsWithName` with values from the runner's environment when it creates
+a machine. Use this expansion to label machines with values that are only
+known at runtime, such as the name of the runner manager that created them. For
+example, in Kubernetes `HOSTNAME` is the pod name:
+
+```toml
+[[runners]]
+  executor = "docker+machine"
+  [runners.machine]
+    MachineDriver = "google"
+    MachineName = "runner-%s"
+    MachineOptions = [
+      "google-project=GOOGLE-PROJECT-ID",
+      "google-label=runner_manager_name:${HOSTNAME}",
+    ]
+  [runners.feature_flags]
+    FF_MACHINE_OPTIONS_EXPAND_ENV = true
+```
+
+One variable is not read from the environment: `${GITLAB_RUNNER_MACHINE_NAME}` is
+the name of the machine being created. This replaces `MachineOptionsWithName`.
+
+```toml
+    MachineOptions = [
+      "google-label=runner_instance_name:${GITLAB_RUNNER_MACHINE_NAME}",
+    ]
+```
+
+Use this for metadata, not credentials. The Docker Machine drivers read their
+credentials from their own environment variables, which the runner passes
+through, so there is no need to put them in `MachineOptions`.
+
 ### Periods syntax
 
 The `Periods` setting contains an array of string patterns of

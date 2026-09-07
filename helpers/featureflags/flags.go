@@ -59,6 +59,7 @@ const (
 	UseConcrete                          string = "FF_CONCRETE"
 	SuspendableEnvironments              string = "FF_SUSPENDABLE_ENVIRONMENTS"
 	UseNativeContainerStop               string = "FF_USE_NATIVE_CONTAINER_STOP"
+	MachineOptionsExpandEnv              string = "FF_MACHINE_OPTIONS_EXPAND_ENV"
 )
 
 type FeatureFlag struct {
@@ -494,6 +495,14 @@ var flags = []FeatureFlag{
 			"When disabled (the default), the runner applies its own graceful termination mechanism," +
 			"which signals descendant processes directly. Direct signaling is necessary when the process" +
 			"tree contains shells or other processes that do not propagate SIGTERM to their children.",
+	},
+	{
+		Name:         MachineOptionsExpandEnv,
+		DefaultValue: false,
+		Description: "When enabled, `$VAR` and `${VAR}` references in `MachineOptions` and `MachineOptionsWithName` " +
+			"of the `[runners.machine]` section are replaced with values from the runner's environment " +
+			"when a machine is created. `${GITLAB_RUNNER_MACHINE_NAME}` is the name of the machine being " +
+			"created, which replaces `MachineOptionsWithName`.",
 	},
 }
 
