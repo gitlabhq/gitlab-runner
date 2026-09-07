@@ -28,7 +28,7 @@ var allTokenPrefixes = []string{
 	"glptt-", "glft-", "glimt-", "glagent-", "glsoat-", "glffct-", "_gitlab_session=", "gltok-",
 }
 
-// https://docs.gitlab.com/security/token_overview/#token-prefixes
+// https://docs.gitlab.com/security/tokens/#token-prefixes
 func DefaultTokenPrefixes(maskAllDefaultTokens bool) []string {
 	tokenPrefixes := []string{"glpat-"}
 	if maskAllDefaultTokens {

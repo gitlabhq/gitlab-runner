@@ -791,7 +791,7 @@ build:
 ```
 
 You might need to
-[configure Docker in Docker with TLS, or disable TLS](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker)
+[configure Docker in Docker with TLS, or disable TLS](https://docs.gitlab.com/ci/docker/docker_in_docker/#use-with-docker-executor)
 to avoid an error similar to the following:
 
 ```plaintext

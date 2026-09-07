@@ -97,7 +97,7 @@ on behalf of the community member.
 
 Every new feature or change should be shipped with its corresponding documentation
 in accordance with the
-[documentation process](https://docs.gitlab.com/development/documentation/feature-change-workflow/)
+[documentation process](https://docs.gitlab.com/development/documentation/workflow/#documentation-for-a-product-change)
 and [structure](https://docs.gitlab.com/development/documentation/topic_types/) guides.
 Note that a technical writer will review all changes to documentation. This can occur
 in the same MR as the feature code, but [if there is not sufficient time or need,

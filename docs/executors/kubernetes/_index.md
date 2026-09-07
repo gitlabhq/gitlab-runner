@@ -2548,7 +2548,7 @@ In Docker 19.03 and later, TLS is enabled by
 default but you must map certificates to your client.
 You can enable non-TLS connection for Docker-in-Docker or
 mount certificates. For more information, see
-[Use the Docker executor with Docker-in-Docker](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker).
+[Use Docker-in-Docker](https://docs.gitlab.com/ci/docker/docker_in_docker/#use-with-docker-executor).
 
 ### Prevent host kernel exposure
 
@@ -2708,7 +2708,7 @@ The container entry point has the following known issues:
   are not written to disk when the entrypoint is executed. The file is only accessible
   in the job during script execution.
 - The following CI/CD variables are not accessible in the entrypoint. You can use
-  [`before_script`](https://docs.gitlab.com/ci/yaml/#beforescript) to make
+  [`before_script`](https://docs.gitlab.com/ci/yaml/#before_script) to make
   any setup changes before running script commands:
   - [CI/CD variables defined in the settings](https://docs.gitlab.com/ci/variables/#define-a-cicd-variable-in-the-ui).
   - [Masked CI/CD variables](https://docs.gitlab.com/ci/variables/#mask-a-cicd-variable).

@@ -1177,7 +1177,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	mr.log().WithFields(runnerFields).Debug("Acquiring request slot")
 	if !mr.buildsHelper.acquireRequest(runner) {
 		mr.log().WithFields(runnerFields).
-			Debugln("Failed to request job: 'request_concurrency' already reached, see https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section")
+			Debugln("Failed to request job: 'request_concurrency' already reached, see https://docs.gitlab.com/runner/configuration/advanced-configuration/#the-runners-section")
 		return nil
 	}
 
@@ -1503,7 +1503,7 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 
 	if concurrentLimit < 1 {
 		mr.log().Fatalln(fmt.Printf(
-			"Current configuration 'concurrent = %d' means that no jobs will be processed, see https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-global-section",
+			"Current configuration 'concurrent = %d' means that no jobs will be processed, see https://docs.gitlab.com/runner/configuration/advanced-configuration/#the-global-section",
 			concurrentLimit,
 		))
 	}
@@ -1914,7 +1914,7 @@ func (mr *RunCommand) checkConfigConcurrency(config *common.Config) {
 		}
 		warningMsg.WriteString("Note: The 'FF_USE_ADAPTIVE_REQUEST_CONCURRENCY' feature flag can help automatically adjust request_concurrency based on workload.\n")
 		warningMsg.WriteString("This message will be printed each time the configuration is reloaded if the issues persist.\n")
-		warningMsg.WriteString("See documentation: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#long-polling-issues")
+		warningMsg.WriteString("See documentation: https://docs.gitlab.com/runner/configuration/advanced-configuration/#long-polling-issues")
 
 		mr.log().Warning(warningMsg.String())
 	}
