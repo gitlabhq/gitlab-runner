@@ -2445,7 +2445,7 @@ func (c *RunnerConfig) WarnOnLegacyCIURL() {
 			"  This suffix is deprecated and should be removed from the configuration.\n" +
 			"  Git submodules may fail to clone with authentication errors if this suffix is present.\n" +
 			"  Please update the 'url' field in your config.toml to remove the '/ci' suffix.\n" +
-			"  See https://docs.gitlab.com/runner/configuration/advanced-configuration.html#legacy-ci-url-suffix")
+			"  See https://docs.gitlab.com/runner/configuration/advanced-configuration/#legacy-ci-url-suffix")
 	}
 }
 
