@@ -242,15 +242,20 @@ func (c *Client) handleRouterError(err error, disco *common.RouterDiscovery, con
 		}
 		config.Log().WithError(err).Error("Error requesting a job")
 		return true, fallbackNone
-	default:
-		// The router responded (it is reachable), so the breaker is satisfied even
-		// though the request itself failed.
+	case code == codes.PermissionDenied:
+		// The runner is forbidden (403). The router responded, so the breaker is
+		// satisfied, but the runner is unhealthy — same as the direct HTTP path.
 		c.breaker.RecordSuccess()
 		config.Log().WithError(err).Error("Error requesting a job")
-		// Only a forbidden runner is unhealthy, as on the direct path. Rails
-		// answers 409 when another runner took the build; that arrives here
-		// as FailedPrecondition and must not count towards unhealthy_requests_limit.
-		return code != codes.PermissionDenied, fallbackNone
+		return false, fallbackNone
+	default:
+		// The router responded (it is reachable), so the breaker is satisfied even
+		// though the request itself failed. All other errors (e.g. FailedPrecondition
+		// for a 409 when another runner took the build, ResourceExhausted for 429)
+		// are transient and must not count towards unhealthy_requests_limit.
+		c.breaker.RecordSuccess()
+		config.Log().WithError(err).Error("Error requesting a job")
+		return true, fallbackNone
 	}
 }
 
