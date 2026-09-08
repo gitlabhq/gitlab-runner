@@ -24,6 +24,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	helper_test "gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/usage_log"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
@@ -1538,12 +1539,20 @@ func TestListenAddress(t *testing.T) {
 }
 
 func TestRequestBottleneckWarning(t *testing.T) {
+	// The full sentence, not just the flag name: the assertions pin the reworded advice,
+	// which is the user-visible change this MR makes.
+	const adaptiveNote = "Raise 'request_concurrency' above 1 first; " +
+		"'FF_USE_ADAPTIVE_REQUEST_CONCURRENCY' can then tune concurrency within that headroom. " +
+		"Turn it back on to use it."
+
 	tests := []struct {
-		name             string
-		config           *common.Config
-		expectWarning    bool
-		expectedWarnings []string // Specific warning messages to look for
-		description      string
+		name                   string
+		config                 *common.Config
+		expectWarning          bool
+		expectedWarnings       []string // Specific warning messages that must appear
+		expectedAbsentWarnings []string // Warning messages that must NOT appear
+		expectNote             bool     // Whether the adaptive-concurrency advisory note should appear
+		description            string
 	}{
 		{
 			name: "worker_starvation",
@@ -1555,9 +1564,12 @@ func TestRequestBottleneckWarning(t *testing.T) {
 					{RunnerCredentials: common.RunnerCredentials{Token: "runner3"}},
 				},
 			},
-			expectWarning:    true,
-			expectedWarnings: []string{"Worker starvation bottleneck"},
-			description:      "Should warn when concurrent < runners",
+			expectWarning: true,
+			// All three runners leave request_concurrency unset, so GetRequestConcurrency()
+			// returns 1 and the request bottleneck fires too. Limit is 0, so build limit does not.
+			expectedWarnings:       []string{"Worker starvation bottleneck", "Request bottleneck"},
+			expectedAbsentWarnings: []string{"Build limit bottleneck"},
+			description:            "Should warn when concurrent < runners",
 		},
 		{
 			name: "request_bottleneck",
@@ -1568,17 +1580,25 @@ func TestRequestBottleneckWarning(t *testing.T) {
 						RequestConcurrency: 1,
 						Limit:              10,
 						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: false},
+						},
 					},
 					{
 						RequestConcurrency: 1,
 						Limit:              8,
 						RunnerCredentials:  common.RunnerCredentials{Token: "runner2"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: false},
+						},
 					},
 				},
 			},
-			expectWarning:    true,
-			expectedWarnings: []string{"Request bottleneck"},
-			description:      "Should warn about request bottleneck",
+			expectWarning:          true,
+			expectedWarnings:       []string{"Request bottleneck"},
+			expectedAbsentWarnings: []string{"Worker starvation bottleneck", "Build limit bottleneck"},
+			expectNote:             true,
+			description:            "Should warn about request bottleneck when adaptive concurrency is disabled",
 		},
 		{
 			name: "build_limit_saturation",
@@ -1589,17 +1609,25 @@ func TestRequestBottleneckWarning(t *testing.T) {
 						Limit:              2,
 						RequestConcurrency: 1,
 						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: false},
+						},
 					},
 					{
 						Limit:              1,
 						RequestConcurrency: 1,
 						RunnerCredentials:  common.RunnerCredentials{Token: "runner2"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: false},
+						},
 					},
 				},
 			},
-			expectWarning:    true,
-			expectedWarnings: []string{"Build limit bottleneck"},
-			description:      "Should warn about build limit saturation",
+			expectWarning:          true,
+			expectedWarnings:       []string{"Build limit bottleneck", "Request bottleneck"},
+			expectedAbsentWarnings: []string{"Worker starvation bottleneck"},
+			expectNote:             true,
+			description:            "Should warn about build limit saturation when adaptive concurrency is disabled",
 		},
 		{
 			name: "multiple_scenarios",
@@ -1610,22 +1638,127 @@ func TestRequestBottleneckWarning(t *testing.T) {
 						RequestConcurrency: 1,
 						Limit:              2,
 						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: false},
+						},
 					},
 					{
 						RequestConcurrency: 1,
 						Limit:              1,
 						RunnerCredentials:  common.RunnerCredentials{Token: "runner2"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: false},
+						},
 					},
 					{
 						RequestConcurrency: 2,
 						Limit:              5,
 						RunnerCredentials:  common.RunnerCredentials{Token: "runner3"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{featureflags.UseAdaptiveRequestConcurrency: false},
+						},
 					},
 				},
 			},
-			expectWarning:    true,
-			expectedWarnings: []string{"Request bottleneck", "Build limit bottleneck"},
-			description:      "Should warn about multiple issues",
+			expectWarning:          true,
+			expectedWarnings:       []string{"Request bottleneck", "Build limit bottleneck"},
+			expectedAbsentWarnings: []string{"Worker starvation bottleneck"},
+			expectNote:             true,
+			description:            "Should warn about multiple issues when adaptive concurrency is disabled",
+		},
+		{
+			// request_concurrency=1 pins effective concurrency to 1 even with the flag on,
+			// because acquireRequest clamps to min(adaptiveLimit, GetRequestConcurrency()).
+			// The bottleneck warning must still fire; only the advisory note is suppressed.
+			name: "warning_without_note_when_adaptive_concurrency_enabled_request_concurrency_1",
+			config: &common.Config{
+				Concurrent: 4,
+				Runners: []*common.RunnerConfig{
+					{
+						RequestConcurrency: 1,
+						Limit:              10,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{
+								featureflags.UseAdaptiveRequestConcurrency: true,
+							},
+						},
+					},
+				},
+			},
+			expectWarning:          true,
+			expectedWarnings:       []string{"Request bottleneck"},
+			expectedAbsentWarnings: []string{"Worker starvation bottleneck", "Build limit bottleneck"},
+			expectNote:             false,
+			description:            "Should warn about request bottleneck even when adaptive concurrency is enabled",
+		},
+		{
+			// Default config: no FeatureFlags set means FF_USE_ADAPTIVE_REQUEST_CONCURRENCY
+			// defaults to true, but request_concurrency=1 is still a genuine bottleneck.
+			name: "warning_without_note_for_default_config_no_feature_flags_set",
+			config: &common.Config{
+				Concurrent: 4,
+				Runners: []*common.RunnerConfig{
+					{
+						RequestConcurrency: 1,
+						Limit:              10,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+						// No FeatureFlags set - simulates the actual default config
+					},
+				},
+			},
+			expectWarning:          true,
+			expectedWarnings:       []string{"Request bottleneck"},
+			expectedAbsentWarnings: []string{"Worker starvation bottleneck", "Build limit bottleneck"},
+			expectNote:             false,
+			description:            "Should warn for default config because request_concurrency=1 is a bottleneck",
+		},
+		{
+			// Same clamping argument applies to the build-limit bottleneck path.
+			name: "warning_without_note_when_adaptive_concurrency_enabled_build_limit_bottleneck",
+			config: &common.Config{
+				Concurrent: 4,
+				Runners: []*common.RunnerConfig{
+					{
+						RequestConcurrency: 1,
+						Limit:              2,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{
+								featureflags.UseAdaptiveRequestConcurrency: true,
+							},
+						},
+					},
+				},
+			},
+			expectWarning:          true,
+			expectedWarnings:       []string{"Build limit bottleneck", "Request bottleneck"},
+			expectedAbsentWarnings: []string{"Worker starvation bottleneck"},
+			expectNote:             false,
+			description:            "Should warn about build limit bottleneck even when adaptive concurrency is enabled",
+		},
+		{
+			name: "warning_when_adaptive_concurrency_explicitly_disabled",
+			config: &common.Config{
+				Concurrent: 4,
+				Runners: []*common.RunnerConfig{
+					{
+						RequestConcurrency: 1,
+						Limit:              10,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{
+								featureflags.UseAdaptiveRequestConcurrency: false,
+							},
+						},
+					},
+				},
+			},
+			expectWarning:          true,
+			expectedWarnings:       []string{"Request bottleneck"},
+			expectedAbsentWarnings: []string{"Worker starvation bottleneck", "Build limit bottleneck"},
+			expectNote:             true,
+			description:            "Should warn about request bottleneck when adaptive concurrency is explicitly disabled",
 		},
 		{
 			name: "healthy_configuration",
@@ -1671,6 +1804,79 @@ func TestRequestBottleneckWarning(t *testing.T) {
 			expectedWarnings: nil,
 			description:      "Should not warn when concurrent >= runners",
 		},
+		{
+			// Worker starvation only, no request-concurrency bottleneck.
+			// Both runners have request_concurrency=4 and the flag off — neither is a
+			// bottleneck, so the advisory note must NOT fire even though the flag is off.
+			name: "no_note_when_flag_off_but_no_request_concurrency_bottleneck",
+			config: &common.Config{
+				Concurrent: 1,
+				Runners: []*common.RunnerConfig{
+					{
+						RequestConcurrency: 4,
+						Limit:              10,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{
+								featureflags.UseAdaptiveRequestConcurrency: false,
+							},
+						},
+					},
+					{
+						RequestConcurrency: 4,
+						Limit:              10,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner2"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{
+								featureflags.UseAdaptiveRequestConcurrency: false,
+							},
+						},
+					},
+				},
+			},
+			expectWarning:          true,
+			expectedWarnings:       []string{"Worker starvation bottleneck"},
+			expectedAbsentWarnings: []string{"Request bottleneck", "Build limit bottleneck"},
+			expectNote:             false,
+			description:            "Note must not fire when flag is off but request_concurrency is already >1 (not a bottleneck)",
+		},
+		{
+			// Mixed fleet.
+			// runner1 has request_concurrency=1 with the flag ON (the actual bottleneck).
+			// runner2 has request_concurrency=8 with the flag OFF (not a bottleneck).
+			// The note must NOT fire: runner2 is not bottlenecked, and runner1 already has the flag on.
+			name: "no_note_for_non_bottlenecked_runner_with_flag_off_in_mixed_fleet",
+			config: &common.Config{
+				Concurrent: 4,
+				Runners: []*common.RunnerConfig{
+					{
+						RequestConcurrency: 1,
+						Limit:              10,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner1"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{
+								featureflags.UseAdaptiveRequestConcurrency: true,
+							},
+						},
+					},
+					{
+						RequestConcurrency: 8,
+						Limit:              10,
+						RunnerCredentials:  common.RunnerCredentials{Token: "runner2"},
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{
+								featureflags.UseAdaptiveRequestConcurrency: false,
+							},
+						},
+					},
+				},
+			},
+			expectWarning:          true,
+			expectedWarnings:       []string{"Request bottleneck"},
+			expectedAbsentWarnings: []string{"Worker starvation bottleneck", "Build limit bottleneck"},
+			expectNote:             false,
+			description:            "Note must not fire when the only runner with flag off is not a request-concurrency bottleneck",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1688,31 +1894,32 @@ func TestRequestBottleneckWarning(t *testing.T) {
 
 			cmd.checkConfigConcurrency(tt.config)
 
-			foundMainWarning := false
-			for _, entry := range hook.AllEntries() {
-				if strings.Contains(entry.Message, "CONFIGURATION:") &&
-					strings.Contains(entry.Message, "Long polling issues detected") {
-					foundMainWarning = true
-					break
-				}
+			entries := hook.AllEntries()
+			messages := make([]string, 0, len(entries))
+			for _, entry := range entries {
+				messages = append(messages, entry.Message)
 			}
+			logged := strings.Join(messages, "\n")
 
 			if !tt.expectWarning {
-				assert.False(t, foundMainWarning, tt.description)
+				assert.NotContains(t, logged, "Long polling issues detected", tt.description)
 				return
 			}
 
-			assert.True(t, foundMainWarning, tt.description)
+			assert.Contains(t, logged, "CONFIGURATION: Long polling issues detected", tt.description)
 
 			for _, expectedWarning := range tt.expectedWarnings {
-				foundSpecificWarning := false
-				for _, entry := range hook.AllEntries() {
-					if strings.Contains(entry.Message, expectedWarning) {
-						foundSpecificWarning = true
-						break
-					}
-				}
-				assert.True(t, foundSpecificWarning, fmt.Sprintf("Should contain warning: %s", expectedWarning))
+				assert.Contains(t, logged, expectedWarning)
+			}
+
+			for _, absentWarning := range tt.expectedAbsentWarnings {
+				assert.NotContains(t, logged, absentWarning)
+			}
+
+			if tt.expectNote {
+				assert.Contains(t, logged, adaptiveNote)
+			} else {
+				assert.NotContains(t, logged, adaptiveNote)
 			}
 		})
 	}

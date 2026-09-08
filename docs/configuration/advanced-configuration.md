@@ -87,7 +87,7 @@ Symptoms:
 Common problematic scenarios:
 
 - Worker starvation bottleneck: The `concurrent` setting is less than the number of runners (severe bottleneck)
-- Request bottleneck: Runners with `request_concurrency=1` cause job delays during long polling
+- Request bottleneck: Runners with `request_concurrency=1` cause job delays during long polling. This applies regardless of whether `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` is enabled, because the adaptive AIMD algorithm clamps effective concurrency to the configured `request_concurrency` ceiling. At `request_concurrency=1` the ceiling and floor are both 1, so the flag has no effect.
 - Build limit bottleneck: Runners with low `limit` settings (≤2) combined with `request_concurrency=1`
 
 GitLab Runner automatically detects the problem scenarios and provides tailored solutions in the
@@ -96,8 +96,10 @@ warning messages. Common solutions include:
 - Increase the `concurrent` setting to exceed the number of runners.
 - Set the `request_concurrency` value for high-volume runners to a value higher than 1 (default is 1).
   Consider turning on [runner monitoring](../monitoring/_index.md) to understand the state of your system and find the best
-  value for the setting. The `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` feature flag automatically
-  adjusts `request_concurrency` based on workload and is turned on by default. If you turned it off, consider turning it back on.
+  value for the setting. Once `request_concurrency` is above 1, the `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY`
+  feature flag (on by default) tunes the effective concurrency within that ceiling using AIMD.
+  Raising `request_concurrency` above 1 is the prerequisite; the flag cannot raise the ceiling on its own.
+  If you turned the flag off, consider turning it back on.
   For information about adaptive concurrency, see the [feature flags documentation](feature-flags.md).
 - Balance `limit` settings with expected job volume.
 
