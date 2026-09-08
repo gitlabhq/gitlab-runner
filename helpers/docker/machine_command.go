@@ -291,7 +291,20 @@ func (m *machineCommand) Exist(ctx context.Context, name string) bool {
 
 	err = cmd.Run()
 	stderr.Flush()
-	return err == nil
+	if err == nil {
+		return true
+	}
+
+	// Only a completed inspect (exit 1) says the machine is gone. A
+	// timeout, signal, or crash says nothing, and false here skips removal.
+	var exitErr *exec.ExitError
+	if ctx.Err() == nil && errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+		return false
+	}
+
+	logrus.WithFields(fields).WithError(err).
+		Warningln("docker-machine inspect did not complete; assuming the machine exists")
+	return true
 }
 
 func (m *machineCommand) CanConnect(ctx context.Context, name string, skipCache bool) bool {
@@ -352,6 +365,7 @@ func newDockerMachineCommand(ctx context.Context, args ...string) *exec.Cmd {
 
 	cmd := exec.CommandContext(ctx, dockerMachineExecutable, commandArgs...)
 	cmd.Env = os.Environ()
+	setDockerMachineProcessAttributes(cmd)
 
 	return cmd
 }
