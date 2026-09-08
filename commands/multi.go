@@ -1856,6 +1856,31 @@ func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 	mr.runnerWorkerProcessingFailure.Collect(ch)
 }
 
+// countRequestConcurrencyBottlenecks counts runners that are potential long-polling
+// bottlenecks due to request_concurrency=1. All runners are counted regardless of
+// whether FF_USE_ADAPTIVE_REQUEST_CONCURRENCY is enabled: the adaptive AIMD algorithm
+// clamps its effective concurrency to min(adaptiveLimit, GetRequestConcurrency()), so
+// at request_concurrency=1 the ceiling and floor are both 1 and the flag has no effect.
+//
+// adaptiveDisabled is the count of bottlenecked runners (request_concurrency=1) that
+// also have FF_USE_ADAPTIVE_REQUEST_CONCURRENCY explicitly turned off. The advisory note
+// about the flag is only relevant for those runners; emitting it for non-bottlenecked
+// runners with the flag off would be misleading.
+func countRequestConcurrencyBottlenecks(runners []*common.RunnerConfig) (lowConcurrency, restrictive, adaptiveDisabled int) {
+	for _, runner := range runners {
+		if runner.GetRequestConcurrency() == 1 {
+			lowConcurrency++
+			if runner.Limit > 0 && runner.Limit <= 2 {
+				restrictive++
+			}
+			if !runner.IsFeatureFlagOn(featureflags.UseAdaptiveRequestConcurrency) {
+				adaptiveDisabled++
+			}
+		}
+	}
+	return lowConcurrency, restrictive, adaptiveDisabled
+}
+
 func (mr *RunCommand) checkConfigConcurrency(config *common.Config) {
 	var warnings []string
 	var solutions []string
@@ -1869,18 +1894,7 @@ func (mr *RunCommand) checkConfigConcurrency(config *common.Config) {
 			len(config.Runners)+1, config.Concurrent))
 	}
 
-	var lowRequestConcurrencyRunners int
-	var restrictiveRunners int
-
-	for _, runner := range config.Runners {
-		if runner.GetRequestConcurrency() == 1 {
-			lowRequestConcurrencyRunners++
-		}
-
-		if runner.Limit > 0 && runner.Limit <= 2 && runner.GetRequestConcurrency() == 1 {
-			restrictiveRunners++
-		}
-	}
+	lowRequestConcurrencyRunners, restrictiveRunners, adaptiveDisabledBottlenecks := countRequestConcurrencyBottlenecks(config.Runners)
 
 	if lowRequestConcurrencyRunners > 0 {
 		warnings = append(warnings, fmt.Sprintf(
@@ -1912,7 +1926,9 @@ func (mr *RunCommand) checkConfigConcurrency(config *common.Config) {
 		for i, solution := range solutions {
 			fmt.Fprintf(&warningMsg, "  %d. %s\n", i+1, solution)
 		}
-		warningMsg.WriteString("Note: The 'FF_USE_ADAPTIVE_REQUEST_CONCURRENCY' feature flag can help automatically adjust request_concurrency based on workload.\n")
+		if adaptiveDisabledBottlenecks > 0 {
+			warningMsg.WriteString("Note: Raise 'request_concurrency' above 1 first; 'FF_USE_ADAPTIVE_REQUEST_CONCURRENCY' can then tune concurrency within that headroom. Turn it back on to use it.\n")
+		}
 		warningMsg.WriteString("This message will be printed each time the configuration is reloaded if the issues persist.\n")
 		warningMsg.WriteString("See documentation: https://docs.gitlab.com/runner/configuration/advanced-configuration/#long-polling-issues")
 
