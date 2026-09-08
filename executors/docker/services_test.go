@@ -233,6 +233,20 @@ func TestDockerServicesTmpfsSetting(t *testing.T) {
 	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
 }
 
+func TestDockerServicesCapAddCapDropSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		ServicesCapAdd:  []string{"NET_ADMIN", "SYS_TIME"},
+		ServicesCapDrop: []string{"ALL"},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+		assert.EqualValues(t, dockerConfig.ServicesCapAdd, hostConfig.CapAdd)
+		assert.EqualValues(t, dockerConfig.ServicesCapDrop, hostConfig.CapDrop)
+	}
+
+	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+}
+
 func TestDockerServicesDNSSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		DNS: []string{"2001:db8::1", "192.0.2.1"},

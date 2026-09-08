@@ -303,7 +303,9 @@ type DockerConfig struct {
 	GroupAdd                   []string            `toml:"group_add" json:"group_add,omitempty" long:"group-add" env:"DOCKER_GROUP_ADD" description:"Add additional groups to join"`
 	UsernsMode                 string              `toml:"userns_mode,omitempty" json:"userns_mode" long:"userns" env:"DOCKER_USERNS_MODE" description:"User namespace to use"`
 	CapAdd                     []string            `toml:"cap_add" json:"cap_add,omitempty" long:"cap-add" env:"DOCKER_CAP_ADD" description:"Add Linux capabilities"`
+	ServicesCapAdd             []string            `toml:"services_cap_add" json:"services_cap_add,omitempty" long:"services-cap-add" env:"DOCKER_SERVICES_CAP_ADD" description:"Add Linux capabilities to container services"`
 	CapDrop                    []string            `toml:"cap_drop" json:"cap_drop,omitempty" long:"cap-drop" env:"DOCKER_CAP_DROP" description:"Drop Linux capabilities"`
+	ServicesCapDrop            []string            `toml:"services_cap_drop" json:"services_cap_drop,omitempty" long:"services-cap-drop" env:"DOCKER_SERVICES_CAP_DROP" description:"Drop Linux capabilities from container services"`
 	OomKillDisable             bool                `toml:"oom_kill_disable,omitzero" json:"oom_kill_disable" long:"oom-kill-disable" env:"DOCKER_OOM_KILL_DISABLE" description:"Do not kill processes in a container if an out-of-memory (OOM) error occurs"`
 	OomScoreAdjust             int                 `toml:"oom_score_adjust,omitzero" json:"oom_score_adjust" long:"oom-score-adjust" env:"DOCKER_OOM_SCORE_ADJUST" description:"Adjust OOM score"`
 	SecurityOpt                []string            `toml:"security_opt" json:"security_opt,omitempty" long:"security-opt" env:"DOCKER_SECURITY_OPT" description:"Security Options"`
