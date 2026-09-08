@@ -674,6 +674,8 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []
 		Isolation:     isolation,
 		Privileged:    privileged,
 		SecurityOpt:   servicesSecurityOpt,
+		CapAdd:        e.Config.Docker.ServicesCapAdd,
+		CapDrop:       e.Config.Docker.ServicesCapDrop,
 		Runtime:       e.Config.Docker.Runtime,
 		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		NetworkMode:   e.networkMode,
