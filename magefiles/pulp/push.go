@@ -3,19 +3,15 @@ package pulp
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/jpillora/backoff"
@@ -33,7 +29,7 @@ type PushOpts struct {
 	DryRun      bool     // DryRun enables dry-run mode (no actual commands executed).
 }
 
-func Push(ctx context.Context, opts PushOpts) error {
+func Push(opts PushOpts) error {
 	if err := validateInputs(opts.PkgType, opts.Branch); err != nil {
 		return err
 	}
@@ -78,17 +74,11 @@ func Push(ctx context.Context, opts PushOpts) error {
 	base := basePusher{dryrun: opts.DryRun, run: sh.Run, exec: sh.Exec, branch: opts.Branch, concurrency: opts.Concurrency}
 	switch opts.PkgType {
 	case deb:
-		dp := &debPusher{basePusher: base}
-		if !opts.DryRun {
-			if dp.api, err = newAPIClientFromCLIConfig(); err != nil {
-				return err
-			}
-		}
-		p = dp
+		p = &debPusher{basePusher: base}
 	case rpm:
 		p = &rpmPusher{basePusher: base, archs: opts.Archs}
 	}
-	return p.Push(ctx, releases, packages)
+	return p.Push(releases, packages)
 }
 
 type (
@@ -96,7 +86,7 @@ type (
 	shExec = func(map[string]string, io.Writer, io.Writer, string, ...string) (bool, error)
 
 	pusher interface {
-		Push(ctx context.Context, releases, pkgFiles []string) error
+		Push([]string, []string) error
 	}
 
 	basePusher struct {
@@ -111,7 +101,6 @@ type (
 
 	debPusher struct {
 		basePusher
-		api contentAPI
 	}
 	rpmPusher struct {
 		basePusher
@@ -149,232 +138,34 @@ func (p *basePusher) execCmd(out io.Writer, cmd string, args ...string) error {
 	return err
 }
 
-// contentAPI is the part of the Pulp REST API used for deb content units pulp-cli cannot create.
-type contentAPI interface {
-	createContent(ctx context.Context, path string, body any) (string, error)
-	findContent(ctx context.Context, path string, query map[string]string) (string, error)
-}
-
-const (
-	debComponent                = "main"
-	debReleaseArchitecturesPath = "/pulp/api/v3/content/deb/release_architectures/"
-	debPackageReleaseCompsPath  = "/pulp/api/v3/content/deb/package_release_components/"
-)
-
-type debPackage struct {
-	PulpHref     string `json:"pulp_href"`
-	Architecture string `json:"architecture"`
-}
-
 // For deb packages, the pulp repo is configured such that:
-//   - There's a single repo per distribution (e.g. runner-unstable-ubuntu), handling all releases for that distribution.
-//   - A package is visible in a release when the repo contains a package_release_component unit linking
-//     the package to the release's component, plus a release_architecture unit for the package's arch.
-//   - Every new repository version triggers a publish of the whole repo, which is the expensive part.
-//
-// So each file is uploaded once, the link units are created without touching the repo, and everything
-// is added to the repo in a single modify call, giving one version and one publish per repo.
-func (p *debPusher) Push(ctx context.Context, releases, pkgFiles []string) error {
+// * The arch will be auto-detected, so does not need to be specified.
+// * There's a single repo per distribution, handling all releases for that distribution.
+// * Every package must be uploaded once per distro/release/arch.
+// * There's no special handling of the gitlab-runner-helper-images package; its arch is "all".
+func (p *debPusher) Push(releases, pkgFiles []string) error {
 	slog.Debug("Will push the following packages to pulp", "packages", pkgFiles, "releases", releases)
-
-	packages, err := p.uploadPackages(pkgFiles)
-	if err != nil {
-		return err
-	}
-
-	byRepo := map[string][]string{}
-	for _, release := range releases {
-		repo := p.pulpRepo(release)
-		byRepo[repo] = append(byRepo[repo], release)
-	}
-
-	for _, repo := range slices.Sorted(maps.Keys(byRepo)) {
-		if err := p.pushToRepo(ctx, repo, byRepo[repo], packages); err != nil {
-			return fmt.Errorf("pushing to repo %s: %w", repo, err)
-		}
-	}
-	return nil
-}
-
-func (p *debPusher) uploadPackages(pkgFiles []string) ([]debPackage, error) {
-	var mu sync.Mutex
-	packages := make([]debPackage, 0, len(pkgFiles))
-
-	pool := pool.New().WithMaxGoroutines(p.concurrency).WithErrors()
-	for _, pkgFile := range pkgFiles {
-		pool.Go(func() error {
-			pkg, err := p.upload(pkgFile)
-			if err != nil {
-				return fmt.Errorf("uploading %s: %w", pkgFile, err)
-			}
-			mu.Lock()
-			packages = append(packages, pkg)
-			mu.Unlock()
-			return nil
-		})
-	}
-	if err := pool.Wait(); err != nil {
-		return nil, err
-	}
-
-	slices.SortFunc(packages, func(a, b debPackage) int { return strings.Compare(a.PulpHref, b.PulpHref) })
-	return packages, nil
-}
-
-func (p *debPusher) upload(pkgFile string) (debPackage, error) {
-	args := []string{deb, "content", "upload", "--file", pkgFile, "--chunk-size", "10MB"}
-	if p.dryrun {
-		slog.Info("executing", "cmd", "pulp", "args", args)
-		return debPackage{PulpHref: "dry-run:" + pkgFile, Architecture: "dry-run"}, nil
-	}
-
-	out := bytes.Buffer{}
-	if err := p.retryPulpCmd(args, &out); err != nil {
-		return debPackage{}, err
-	}
-
-	pkg := debPackage{}
-	if err := json.NewDecoder(&out).Decode(&pkg); err != nil {
-		return debPackage{}, fmt.Errorf("failed to unmarshal response: %w", err)
-	}
-	if pkg.PulpHref == "" || pkg.Architecture == "" {
-		return debPackage{}, fmt.Errorf("package upload response missing pulp_href or architecture: %+v", pkg)
-	}
-	return pkg, nil
-}
-
-// pushToRepo links every package to every release of the repo, then adds all units in one modify.
-func (p *debPusher) pushToRepo(ctx context.Context, repo string, releases []string, packages []debPackage) error {
-	archs := lo.Uniq(lo.Map(packages, func(pkg debPackage, _ int) string { return pkg.Architecture }))
-	slices.Sort(archs)
-
-	hrefs := lo.Map(packages, func(pkg debPackage, _ int) string { return pkg.PulpHref })
-	var mu sync.Mutex
-
 	pool := pool.New().WithMaxGoroutines(p.concurrency).WithErrors()
 	for _, release := range releases {
-		codename := strings.Split(release, "/")[1]
-		pool.Go(func() error {
-			units, err := p.linkRelease(ctx, codename, archs, packages)
-			if err != nil {
-				return err
-			}
-			mu.Lock()
-			hrefs = append(hrefs, units...)
-			mu.Unlock()
-			return nil
-		})
-	}
-	if err := pool.Wait(); err != nil {
-		return err
-	}
-
-	return p.modify(repo, hrefs)
-}
-
-// linkRelease creates the units that make the packages part of a release: the release component,
-// one release architecture per arch, and one package/release-component link per package.
-func (p *debPusher) linkRelease(ctx context.Context, codename string, archs []string, packages []debPackage) ([]string, error) {
-	componentHref, err := p.createReleaseComponent(codename)
-	if err != nil {
-		return nil, err
-	}
-	units := []string{componentHref}
-
-	for _, arch := range archs {
-		href, err := p.createContent(ctx, debReleaseArchitecturesPath, map[string]string{
-			"distribution": codename,
-			"architecture": arch,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("creating release architecture %s/%s: %w", codename, arch, err)
-		}
-		units = append(units, href)
-	}
-
-	for _, pkg := range packages {
-		href, err := p.findOrCreateContent(ctx, debPackageReleaseCompsPath, map[string]string{
-			"package":           pkg.PulpHref,
-			"release_component": componentHref,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("linking %s to %s: %w", pkg.PulpHref, codename, err)
-		}
-		units = append(units, href)
-	}
-	return units, nil
-}
-
-// Pulp creates a new package_release_component on every POST, unlike release_component and
-// release_architecture which return the existing unit, so look it up first to keep retries idempotent.
-func (p *debPusher) findOrCreateContent(ctx context.Context, path string, body map[string]string) (string, error) {
-	if !p.dryrun {
-		href, err := p.api.findContent(ctx, path, body)
-		if err != nil {
-			return "", err
-		}
-		if href != "" {
-			return href, nil
+		for _, pkgFile := range pkgFiles {
+			pool.Go(func() error {
+				return p.retryPulpCmd(p.pushArgs(release, pkgFile), io.Discard)
+			})
 		}
 	}
-	return p.createContent(ctx, path, body)
+
+	return pool.Wait()
 }
 
-func (p *debPusher) createReleaseComponent(codename string) (string, error) {
-	args := []string{deb, "content", "-t", "release_component", "create", "--distribution", codename, "--component", debComponent}
-	if p.dryrun {
-		slog.Info("executing", "cmd", "pulp", "args", args)
-		return "dry-run:release_component/" + codename, nil
+func (p *debPusher) pushArgs(release, pkg string) []string {
+	pulpRepo := "runner-" + p.branch + "-" + strings.Split(release, "/")[0]
+	return []string{
+		deb, "content", "upload", "--file", pkg,
+		"--distribution", strings.Split(release, "/")[1],
+		"--component", "main",
+		"--repository", pulpRepo,
+		"--chunk-size", "10MB",
 	}
-
-	out := bytes.Buffer{}
-	if err := p.execCmd(&out, "pulp", args...); err != nil {
-		return "", fmt.Errorf("creating release component for %s: %w", codename, err)
-	}
-
-	unit := contentUnit{}
-	if err := json.NewDecoder(&out).Decode(&unit); err != nil {
-		return "", fmt.Errorf("failed to unmarshal response: %w", err)
-	}
-	if unit.PulpHref == "" {
-		return "", fmt.Errorf("release component response had empty 'pulp_href'")
-	}
-	return unit.PulpHref, nil
-}
-
-func (p *debPusher) createContent(ctx context.Context, path string, body map[string]string) (string, error) {
-	if p.dryrun {
-		slog.Info("creating pulp content", "path", path, "body", body)
-		return "dry-run:" + path, nil
-	}
-	return p.api.createContent(ctx, path, body)
-}
-
-func (p *debPusher) modify(repo string, hrefs []string) error {
-	slices.Sort(hrefs)
-	content, err := json.Marshal(lo.Map(hrefs, func(href string, _ int) contentUnit { return contentUnit{PulpHref: href} }))
-	if err != nil {
-		return err
-	}
-
-	f, err := os.CreateTemp("", "pulp-add-content-*.json")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(f.Name())
-	if _, err := f.Write(content); err != nil {
-		return errors.Join(err, f.Close())
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
-
-	slog.Info("adding content to repository", "repository", repo, "units", len(hrefs))
-	return p.runPulpCmd(deb, "repository", "content", "modify", "--repository", repo, "--add-content", "@"+f.Name())
-}
-
-func (p *debPusher) pulpRepo(release string) string {
-	return "runner-" + p.branch + "-" + strings.Split(release, "/")[0]
 }
 
 const (
@@ -388,7 +179,7 @@ const (
 // * We can upload a package/file once, (to any repo), then link it to all the other relevant repos.
 // * All packages/files are handled this way, including the gitlab-runner-helper-images package.
 // * The only difference is that this same file is linked to repos for all archs.
-func (p *rpmPusher) Push(_ context.Context, releases, pkgFiles []string) error {
+func (p *rpmPusher) Push(releases, pkgFiles []string) error {
 	slog.Debug("Will push the following packages to pulp", "packages", pkgFiles, "releases", releases)
 	pool := pool.New().WithMaxGoroutines(p.concurrency).WithErrors()
 	for _, pkgFile := range pkgFiles {

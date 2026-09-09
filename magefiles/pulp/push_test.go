@@ -3,22 +3,14 @@
 package pulp
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/jpillora/backoff"
-	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -453,7 +445,7 @@ Description : GitLab Runner
 			}
 
 			// Call Push method
-			err := pusher.Push(t.Context(), tt.releases, tt.pkgFiles)
+			err := pusher.Push(tt.releases, tt.pkgFiles)
 
 			// Verify results
 			if tt.expectedError {
@@ -466,160 +458,4 @@ Description : GitLab Runner
 			}
 		})
 	}
-}
-
-type fakeContentCreator struct {
-	mu       sync.Mutex
-	calls    []fakeContentCall
-	existing map[string]string // "<package>|<release_component>" -> href of an already existing link
-}
-
-type fakeContentCall struct {
-	path string
-	body map[string]string
-}
-
-func (f *fakeContentCreator) createContent(_ context.Context, path string, body any) (string, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	b := body.(map[string]string)
-	f.calls = append(f.calls, fakeContentCall{path: path, body: b})
-	switch path {
-	case debReleaseArchitecturesPath:
-		return "/arch/" + b["distribution"] + "/" + b["architecture"] + "/", nil
-	case debPackageReleaseCompsPath:
-		return "/prc/" + strings.TrimPrefix(b["release_component"], "/rc/") + strings.TrimPrefix(b["package"], "/pkg"), nil
-	}
-	return "", fmt.Errorf("unexpected path %s", path)
-}
-
-func (f *fakeContentCreator) findContent(_ context.Context, path string, query map[string]string) (string, error) {
-	if path != debPackageReleaseCompsPath {
-		return "", fmt.Errorf("unexpected lookup path %s", path)
-	}
-	return f.existing[query["package"]+"|"+query["release_component"]], nil
-}
-
-func TestDebPusherPush(t *testing.T) {
-	releases := []string{"ubuntu/jammy", "ubuntu/noble", "debian/bookworm"}
-	pkgFiles := []string{
-		"out/deb/gitlab-runner_amd64.deb",
-		"out/deb/gitlab-runner_arm64.deb",
-		"out/deb/gitlab-runner-helper-images.deb",
-	}
-	archOf := map[string]string{
-		"out/deb/gitlab-runner_amd64.deb":         "amd64",
-		"out/deb/gitlab-runner_arm64.deb":         "arm64",
-		"out/deb/gitlab-runner-helper-images.deb": "all",
-	}
-
-	var (
-		mu       sync.Mutex
-		uploads  []string
-		modified = map[string][]string{} // repo -> hrefs added
-	)
-
-	// The mocks run on pool goroutines, so they use assert: require would call FailNow off the test goroutine.
-	execMock := func(_ map[string]string, out io.Writer, _ io.Writer, cmd string, args ...string) (bool, error) {
-		if !assert.Equal(t, "pulp", cmd) {
-			return false, fmt.Errorf("unexpected command %s", cmd)
-		}
-		switch {
-		case len(args) >= 3 && args[0] == deb && args[1] == "content" && args[2] == "upload":
-			assert.NotContains(t, args, "--repository", "upload must not touch the repository")
-			file := args[slices.Index(args, "--file")+1]
-			mu.Lock()
-			uploads = append(uploads, file)
-			mu.Unlock()
-			fmt.Fprintf(out, `{"pulp_href": "/pkg/%s/", "architecture": "%s", "package": "x"}`, filepath.Base(file), archOf[file])
-		case len(args) >= 5 && args[0] == deb && args[1] == "content" && args[2] == "-t" && args[3] == "release_component" && args[4] == "create":
-			fmt.Fprintf(out, `{"pulp_href": "/rc/%s/", "component": "main"}`, args[slices.Index(args, "--distribution")+1])
-		default:
-			return false, fmt.Errorf("unexpected exec: %v", args)
-		}
-		return true, nil
-	}
-
-	runMock := func(cmd string, args ...string) error {
-		if !assert.Equal(t, "pulp", cmd) || !assert.Equal(t, []string{deb, "repository", "content", "modify"}, args[:4]) {
-			return fmt.Errorf("unexpected command %s %v", cmd, args)
-		}
-		repo := args[slices.Index(args, "--repository")+1]
-		content, err := os.ReadFile(strings.TrimPrefix(args[slices.Index(args, "--add-content")+1], "@"))
-		if err != nil {
-			return err
-		}
-		var units []contentUnit
-		if err := json.Unmarshal(content, &units); err != nil {
-			return err
-		}
-		mu.Lock()
-		modified[repo] = lo.Map(units, func(u contentUnit, _ int) string { return u.PulpHref })
-		mu.Unlock()
-		return nil
-	}
-
-	api := &fakeContentCreator{existing: map[string]string{
-		"/pkg/gitlab-runner_amd64.deb/|/rc/jammy/": "/prc/existing/",
-	}}
-	pusher := &debPusher{
-		basePusher: basePusher{branch: "unstable", concurrency: 3, run: runMock, exec: execMock},
-		api:        api,
-	}
-
-	require.NoError(t, pusher.Push(t.Context(), releases, pkgFiles))
-
-	require.ElementsMatch(t, pkgFiles, uploads, "each package is uploaded exactly once")
-
-	require.ElementsMatch(t, []string{
-		"/pkg/gitlab-runner_amd64.deb/", "/pkg/gitlab-runner_arm64.deb/", "/pkg/gitlab-runner-helper-images.deb/",
-		"/rc/jammy/", "/rc/noble/",
-		"/arch/jammy/all/", "/arch/jammy/amd64/", "/arch/jammy/arm64/",
-		"/arch/noble/all/", "/arch/noble/amd64/", "/arch/noble/arm64/",
-		"/prc/existing/", "/prc/jammy//gitlab-runner_arm64.deb/", "/prc/jammy//gitlab-runner-helper-images.deb/",
-		"/prc/noble//gitlab-runner_amd64.deb/", "/prc/noble//gitlab-runner_arm64.deb/", "/prc/noble//gitlab-runner-helper-images.deb/",
-	}, modified["runner-unstable-ubuntu"])
-
-	require.ElementsMatch(t, []string{
-		"/pkg/gitlab-runner_amd64.deb/", "/pkg/gitlab-runner_arm64.deb/", "/pkg/gitlab-runner-helper-images.deb/",
-		"/rc/bookworm/",
-		"/arch/bookworm/all/", "/arch/bookworm/amd64/", "/arch/bookworm/arm64/",
-		"/prc/bookworm//gitlab-runner_amd64.deb/", "/prc/bookworm//gitlab-runner_arm64.deb/", "/prc/bookworm//gitlab-runner-helper-images.deb/",
-	}, modified["runner-unstable-debian"])
-
-	require.Len(t, modified, 2, "one modify per repository")
-	require.Len(t, api.calls, 3*3+3*3-1, "one release_architecture per release/arch and one link per release/package, minus the existing link")
-}
-
-func TestDebPusherPushUploadFailure(t *testing.T) {
-	execMock := func(_ map[string]string, _ io.Writer, stderr io.Writer, _ string, _ ...string) (bool, error) {
-		fmt.Fprint(stderr, "boom")
-		return false, fmt.Errorf("exit status 1")
-	}
-	runCalled := false
-	runMock := func(string, ...string) error { runCalled = true; return nil }
-
-	pusher := &debPusher{
-		basePusher: basePusher{branch: "unstable", concurrency: 1, run: runMock, exec: execMock},
-		api:        &fakeContentCreator{},
-	}
-	err := pusher.Push(t.Context(), []string{"ubuntu/jammy"}, []string{"out/deb/gitlab-runner_amd64.deb"})
-	require.ErrorContains(t, err, "uploading out/deb/gitlab-runner_amd64.deb")
-	require.False(t, runCalled, "repository must not be modified when an upload fails")
-}
-
-func TestDebPusherPushDryRun(t *testing.T) {
-	pusher := &debPusher{
-		basePusher: basePusher{
-			dryrun:      true,
-			branch:      "unstable",
-			concurrency: 1,
-			run:         func(string, ...string) error { t.Error("run must not be called in dry run"); return nil },
-			exec: func(map[string]string, io.Writer, io.Writer, string, ...string) (bool, error) {
-				t.Error("exec must not be called in dry run")
-				return false, nil
-			},
-		},
-	}
-	require.NoError(t, pusher.Push(t.Context(), []string{"ubuntu/jammy", "debian/bookworm"}, []string{"out/deb/gitlab-runner_amd64.deb"}))
 }
