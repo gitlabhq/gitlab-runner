@@ -26,6 +26,8 @@
 
 .release_pulp:
   stage: release
+  variables:
+    RUNNER_MAGE_CONCURRENCY: "4"
   dependencies:
     - "package-deb"
     - "package-rpm"
