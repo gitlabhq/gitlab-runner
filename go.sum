@@ -567,8 +567,8 @@ gitlab.com/gitlab-org/fleeting/nesting v0.5.0 h1:ISS4PeVrsky4ehgLH8hFQhmJVbWT8f6
 gitlab.com/gitlab-org/fleeting/nesting v0.5.0/go.mod h1:rU5uvTqCiihSAp1FxgpckdqDeyKLykat1nn2uHxoI4A=
 gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20260818142736-20266983167b h1:Uwvcff0Y4UDJY0zaRNb5UvFCjAJ2ORaYfLAkJc7Hrqk=
 gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20260818142736-20266983167b/go.mod h1:q6VgPBvKCnZYbDBl8xdZ/hQLPy6Uhyi6625lnjF95e0=
-gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20260805120041-8295dd4d1775 h1:IrshAGrr5w/rPNKjbsgSMwk2ujUM6R1NVcjOV46WRGM=
-gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20260805120041-8295dd4d1775/go.mod h1:FAyvIzqOT2RasMLuSfM1/xC9lfbi2elolOtNVqzmkLQ=
+gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20260908152840-1f87885729aa h1:47jhwm1qZhZGDfXpZJSFDCbnHAbUFyeJ1cYy57Ca96Y=
+gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20260908152840-1f87885729aa/go.mod h1:FAyvIzqOT2RasMLuSfM1/xC9lfbi2elolOtNVqzmkLQ=
 gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c h1:Rok2xcn1GeA8o0oMbzk3e4Fp9FWc+T4TvowjzeGGct4=
 gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c/go.mod h1:5VrTOPrC1shLgKmF0BsX+SWOXiOdQcu0ZyAHSbYGUyQ=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e h1:Aw1nDGdZEm1Jv3jwKbT0hKTAxTpP4yVRGCI21MYRHBc=
