@@ -5,6 +5,7 @@ package docker_test
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -39,7 +40,9 @@ func TestDockerTLSConnection(t *testing.T) {
 	if certPath == "" {
 		certPath = "/certs/client"
 	}
-	if _, err := os.Stat(certPath); err != nil {
+	// certPath also holds the dind unix socket, so the directory exists even on
+	// a dind without TLS; check for the CA cert itself to detect that case.
+	if _, err := os.Stat(filepath.Join(certPath, "ca.pem")); err != nil {
 		t.Skipf("TLS client certs not available at %q: %v", certPath, err)
 	}
 
