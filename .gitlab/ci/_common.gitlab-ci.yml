@@ -61,6 +61,14 @@ default:
       - runner_system_failure
       - runner_interrupted
 
+.retry_flaky_integration:
+  retry:
+    max: 1
+    when:
+      - runner_system_failure
+      - runner_interrupted
+      - script_failure
+
 .no_cache:
   cache: {}
 

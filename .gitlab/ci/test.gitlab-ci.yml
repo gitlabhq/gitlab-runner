@@ -253,6 +253,7 @@ fuzz variable mask:
   needs:
     - "clone test repo"
     - "prepare done"
+  retry: !reference [.retry_flaky_integration, retry]
   script:
     # pre-pull windows images before starting tests
     - choco install -y zstandard --version=$ZSTD_VERSION --checksum64=$ZSTD_CHECKSUM; if ($LASTEXITCODE -ne 0) { Write-Host "choco install exited with code $LASTEXITCODE"; exit $LASTEXITCODE }
