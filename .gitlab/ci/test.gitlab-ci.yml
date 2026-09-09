@@ -125,6 +125,67 @@ integration test (docker, concrete, steps):
   when: manual
   allow_failure: true
 
+integration test (docker, podman):
+  extends:
+    - integration test
+  script:
+    # Installs Podman and starts a Docker-API-compatible socket so the
+    # TestPodman* tests (executors/docker/docker_podman_integration_test.go)
+    # stop self-skipping. No systemd here, so we start
+    # `podman system service` directly with no explicit socket URI, matching
+    # the default path podmanNativeHost() looks for.
+    #
+    # This job runs as root throughout, so podmanNativeHost() resolves to
+    # the same rootful socket as podmanRootfulHost(): every TestPodman* test
+    # here exercises rootful Podman. Genuine rootless coverage only happens
+    # when these tests are run locally as a non-root user.
+    #
+    # Debian bookworm's "podman" apt package is 4.3.1, below the 5.2.5+ that
+    # https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/31043 asks
+    # for; upgrading it is a follow-up once this job proves reliable.
+    - DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq podman
+    - podman system service --time=0 > podman-service.log 2>&1 &
+    # Fail the job if the socket never opens. podmanHost() self-skips on an
+    # unreachable socket, so without this the whole TestPodman* set would
+    # skip and the job would still report success.
+    - >
+      timeout 30 sh -c 'until test -S "$(podman info --format {{.Host.RemoteSocket.Path}} 2>/dev/null)"; do sleep 1; done' ||
+      { echo "Podman socket not ready after 30s"; cat podman-service.log 2>/dev/null || true; exit 1; }
+    # The rest of ./executors/docker runs against the dind daemon, so the
+    # helper image has to be imported into both stores: Podman keeps its own
+    # image store and cannot see anything docker imported.
+    - docker import out/helper-images/prebuilt-alpine-latest-x86_64.tar.xz registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest
+    - podman import out/helper-images/prebuilt-alpine-latest-x86_64.tar.xz registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest
+    - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest
+    - make splitic
+    - >
+      .tmp/bin/splitic test \
+        -flaky .flaky-tests.txt \
+        -junit-report .splitic/junit_${CI_NODE_INDEX}_docker_podman.xml \
+        -cover-report .splitic/cover_${CI_NODE_INDEX}_docker_podman.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
+        -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
+        -tags integration \
+        ./executors/docker \
+        -- -ldflags "$(make print_test_ldflags)" -timeout 1h
+  # Not narrowed with "-run TestPodman": splitic overrides any -run with its
+  # own computed one, so this runs the whole ./executors/docker package
+  # (same as "integration test (docker, steps)" above) -- TestPodman* comes
+  # along for free.
+  parallel: 1
+  # Unproven whether Podman can start a working socket in this container
+  # (nested containers, cgroups, etc), and the job fails hard if it cannot.
+  # Manual + allow_failure until proven reliable.
+  when: manual
+  allow_failure: true
+  artifacts:
+    paths:
+      - .splitic/
+      - podman-service.log
+    when: always
+    expire_in: 7d
+    reports:
+      junit: .splitic/junit_*.xml
+
 integration test (docker, network-faults):
   extends:
     - integration test
