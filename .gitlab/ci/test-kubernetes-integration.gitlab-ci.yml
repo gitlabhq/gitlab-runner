@@ -14,6 +14,7 @@
       optional: true
   variables:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-runner-$CI_PIPELINE_ID"
+  retry: !reference [.retry_flaky_integration, retry]
   before_script:
     - go install gotest.tools/gotestsum@latest
   script:
