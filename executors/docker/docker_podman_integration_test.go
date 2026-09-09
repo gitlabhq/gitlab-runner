@@ -26,14 +26,19 @@ import (
 )
 
 // These are local, opt-in tests for
-// https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/31043, which
-// asks for GitLab Runner to actually be tested against Podman rather than
-// only Docker. There is currently no Podman installation in CI, so these
-// tests skip themselves (via podmanHost, below) whenever a reachable Podman
-// API socket can't be found, and never run in the pipeline. They're meant
-// to be run locally by a contributor who has Podman installed, e.g.:
+// https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/31043 (testing
+// GitLab Runner against Podman, not just Docker). They also run, when
+// manually triggered, via the opt-in, allow_failure
+// "integration test (docker, podman)" CI job in
+// .gitlab/ci/test.gitlab-ci.yml.
+//
+// Run them locally with:
 //
 //	go test -tags integration ./executors/docker/... -run TestPodman -v
+//
+// They skip themselves via podmanHost (below) when no reachable socket is
+// found. That CI job starts a socket before it runs them, and fails if the
+// socket never opens, so a skip there means the job never got that far.
 //
 // Each test points the Docker executor's DockerConfig.Credentials.Host
 // directly at the discovered Podman socket, so it exercises the real
@@ -45,17 +50,9 @@ import (
 // test for https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39608.
 
 // podmanHost finds the Docker-compatible API socket of a locally reachable
-// Podman installation, trying the two ways Podman commonly exposes it:
-//
-//   - a running `podman machine` (used on macOS/Windows, where Podman runs
-//     inside a VM and forwards its socket to a host-side path)
-//   - a native Podman socket (used on Linux, where Podman runs directly on
-//     the host, e.g. via `systemctl --user start podman.socket`)
-//
-// It skips the test, rather than starting anything itself, if neither is
-// available -- this test must never fail a contributor's or CI's run just
-// because Podman happens not to be installed or running. There is
-// currently no Podman installation in CI, so this always skips there.
+// Podman: a running `podman machine` (macOS/Windows) or a native socket
+// (Linux, via `systemctl --user start podman.socket`). Skips the test if
+// neither is available, so a missing/broken Podman never fails a run.
 func podmanHost(t *testing.T) string {
 	t.Helper()
 
@@ -149,9 +146,8 @@ func podmanRunnerConfig(host string) *common.RunnerConfig {
 	}
 }
 
-// TestPodmanCommandBasicRun covers the simplest of the scenarios listed in
-// work item 31043's test matrix: a job runs successfully against a Podman
-// backend at all.
+// TestPodmanCommandBasicRun covers 31043's simplest test-matrix case: a job
+// runs successfully against a Podman backend at all.
 func TestPodmanCommandBasicRun(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	host := podmanHost(t)
@@ -171,9 +167,8 @@ func TestPodmanCommandBasicRun(t *testing.T) {
 	require.NoError(t, err, buf.String())
 }
 
-// TestPodmanCommandWithNonRootUser covers another scenario named explicitly
-// in work item 31043's test matrix: a container process running as a
-// non-root user. Mirrors TestDockerCommandWithUser.
+// TestPodmanCommandWithNonRootUser covers 31043's non-root container user
+// case. Mirrors TestDockerCommandWithUser.
 func TestPodmanCommandWithNonRootUser(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	host := podmanHost(t)
@@ -195,13 +190,10 @@ func TestPodmanCommandWithNonRootUser(t *testing.T) {
 	assert.Regexp(t, "whoami.*\n.*squid", buf.String())
 }
 
-// TestPodmanCommandWithPlatformKey is an end-to-end regression test for
-// https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39608, one level
-// up from the client-layer unit tests in helpers/docker: it runs a full job
-// through the real Docker executor, against a real local Podman daemon,
-// with image:docker:platform: set. Before the fix, this failed on every run
-// with `"platform" requires API version 1.49, but the Docker daemon API
-// version is <podman's version>`.
+// TestPodmanCommandWithPlatformKey guards against
+// https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39608: a
+// "platform requires API version 1.49" error when image:docker:platform
+// is set against a Podman backend.
 func TestPodmanCommandWithPlatformKey(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	host := podmanHost(t)
@@ -209,10 +201,8 @@ func TestPodmanCommandWithPlatformKey(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	require.NoError(t, err)
 	successfulBuild.Image.Name = common.TestAlpineImage
-	// Containers are always linux, regardless of the host OS this test runs
-	// on (e.g. darwin when run locally on macOS against a Podman machine),
-	// so the OS must be specified explicitly rather than left for platform
-	// parsing to default from the host.
+	// Containers are always linux regardless of host OS, so this must be
+	// set explicitly rather than left to default from the host.
 	successfulBuild.Image.ExecutorOptions.Docker.Platform = "linux/" + runtime.GOARCH
 
 	build := &common.Build{
@@ -233,25 +223,35 @@ func TestPodmanServiceHealthcheckWithNetworkPerBuild(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	host := podmanHost(t)
 
+	// FF_NETWORK_PER_BUILD names the build network after
+	// Build.ProjectUniqueShortName(), which is built from the runner token,
+	// the project ID, projectRunnerID and the job ID. Every field is zero
+	// here, so these parallel cases would all ask Podman for the same
+	// network and lose the race with "network already exists".
+	// projectRunnerID keeps each one distinct.
 	tests := map[string]struct {
-		command        []string
-		serviceStarted bool
-		port           int
-		variables      spec.Variables
+		command         []string
+		serviceStarted  bool
+		port            int
+		variables       spec.Variables
+		projectRunnerID int
 	}{
 		"successful service": {
-			command:        []string{"server"},
-			serviceStarted: true,
+			command:         []string{"server"},
+			serviceStarted:  true,
+			projectRunnerID: 1,
 		},
 		"successful service explicit port": {
-			command:        []string{"server", "--addr", ":8888"},
-			serviceStarted: true,
-			port:           8888,
-			variables:      []spec.Variable{{Key: "HEALTHCHECK_TCP_PORT", Value: "8888"}},
+			command:         []string{"server", "--addr", ":8888"},
+			serviceStarted:  true,
+			port:            8888,
+			variables:       []spec.Variable{{Key: "HEALTHCHECK_TCP_PORT", Value: "8888"}},
+			projectRunnerID: 2,
 		},
 		"failed service": {
-			command:        []string{"server", "--addr", ":8888"},
-			serviceStarted: false,
+			command:         []string{"server", "--addr", ":8888"},
+			serviceStarted:  false,
+			projectRunnerID: 3,
 		},
 	}
 
@@ -283,6 +283,7 @@ func TestPodmanServiceHealthcheckWithNetworkPerBuild(t *testing.T) {
 				Job:              resp,
 				Runner:           runner,
 				ExecutorProvider: docker_executor.NewProvider(),
+				ProjectRunnerID:  tc.projectRunnerID,
 			}
 			build.Variables = append(build.Variables, spec.Variable{
 				Key:    "FF_NETWORK_PER_BUILD",
