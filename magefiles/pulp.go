@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -48,9 +49,9 @@ func (p Pulp) CreateConfig() error {
 	)
 }
 
-func (p Pulp) Push(pkgType, branch, distro string) error {
+func (p Pulp) Push(ctx context.Context, pkgType, branch, distro string) error {
 	branch = strings.Split(branch, " ")[0]
-	return pulp.Push(pulp.PushOpts{
+	return pulp.Push(ctx, pulp.PushOpts{
 		Branch:      branch,
 		PkgType:     pkgType,
 		Distro:      distro,
