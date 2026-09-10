@@ -8,10 +8,15 @@
 
 - Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-1-stable) [!7284](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7284)
 
-## v19.1.2 (2026-07-28)
+## v19.1.2 (2026-09-10)
+
+### New features
+
+- [19.1] Gate job-supplied Docker credential helpers behind an allowlist [!7334](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7334)
 
 ### Bug fixes
 
+- Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-1-stable) [!7284](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7284)
 - [19.1] Key S3 client cache by config value, not pointer [!6982](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6982)
 
 ## v19.1.1 (2026-06-25)
