@@ -24,6 +24,8 @@ variables:
   DEPENDENCY_SCANNING_DISABLED: "true"
   TRANSFER_METER_FREQUENCY: "5s"
   CACHE_COMPRESSION_FORMAT: tarzstd
+  # only the default branch pushes the Go cache, see workflow rules
+  GO_CACHE_POLICY: pull
   GO111MODULE: "on"
   # renovate: datasource=docker depName=redhat/ubi9-micro versioning=redhat allowedVersions=/9\.4-[0-9]+/
   PACKAGES_ITERATION: "1"
@@ -89,11 +91,8 @@ default:
     - mkdir -p "$GOCACHE"
     - ./ci/touch_git
   cache:
-    # per-branch key with fallback to default branch (main)
-    # allows main cache to warm caches for non-main branches
-    key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
-    fallback_keys:
-      - "${CI_JOB_NAME}-${CI_DEFAULT_BRANCH}"
+    key: "${CI_JOB_NAME}-${CI_DEFAULT_BRANCH}"
+    policy: $GO_CACHE_POLICY
     paths:
       - $CI_PROJECT_DIR/.gocache/
 
@@ -106,11 +105,8 @@ default:
     - $env:GOCACHE = (Resolve-Path $env:GOCACHE).Path
     - ./ci/touch_git.ps1
   cache:
-    # per-branch key with fallback to default branch (main)
-    # allows main cache to warm caches for non-main branches
-    key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
-    fallback_keys:
-      - "${CI_JOB_NAME}-${CI_DEFAULT_BRANCH}"
+    key: "${CI_JOB_NAME}-${CI_DEFAULT_BRANCH}"
+    policy: $GO_CACHE_POLICY
     paths:
       - $CI_PROJECT_DIR\.gocache\
 
