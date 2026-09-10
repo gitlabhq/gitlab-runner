@@ -339,6 +339,11 @@ When a job Pod is being created, GitLab Runner automatically handles image acces
    It also checks that any manually configured imagePullSecrets actually exist in the cluster.
    For more information about statically defined credentials, credentials stores, or credential helpers, see
    [Access an image from a private container registry](https://docs.gitlab.com/ci/docker/using_docker_images/#access-an-image-from-a-private-container-registry).
+   By default, GitLab Runner does not execute credential helpers or credential stores referenced by a job's
+   `DOCKER_AUTH_CONFIG`. These helpers run as binaries on the host where the runner manager runs. To permit specific
+   helpers for specific registries, configure
+   [`allowed_docker_credential_helpers`](../configuration/advanced-configuration.md#restrict-docker-credential-helpers)
+   in the `[[runners]]` section of the runner `config.toml`, for example in the `runners.config` template.
 1. GitLab Runner creates the job Pod and attaches both types of credentials to it:
    the `imagePullSecrets` and the converted Docker credentials, in that order.
 

@@ -6,10 +6,11 @@ import (
 
 var createPullManager = func(e *executor) (pull.Manager, error) {
 	config := pull.ManagerConfig{
-		DockerConfig: e.Config.Docker,
-		AuthConfig:   e.Build.GetDockerAuthConfig(),
-		ShellUser:    e.Shell().User,
-		Credentials:  e.Build.Credentials,
+		DockerConfig:             e.Config.Docker,
+		AuthConfig:               e.Build.GetDockerAuthConfig(),
+		ShellUser:                e.Shell().User,
+		Credentials:              e.Build.Credentials,
+		AllowedCredentialHelpers: e.Config.AllowedDockerCredentialHelpers,
 	}
 
 	pullManager := pull.NewManager(e.Context, &e.BuildLogger, config, e.dockerConn, func() {
