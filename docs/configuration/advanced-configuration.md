@@ -1091,7 +1091,7 @@ with the `credHelpers` and `credsStore` keys. Configure `allowed_docker_credenti
 
 > [!warning]
 > Credential helpers execute as binaries on the host where the runner manager runs, not in the
-> job environment. The credentials they return come from that host's identity, for example a
+> job environment. The credentials they return come from that host's identity, for example, a
 > cloud instance profile. A job that could execute any `docker-credential-*` binary on the runner
 > manager for any registry could pull images with that identity. On shared runners, every job
 > the runner executes would gain that access.
@@ -1120,13 +1120,14 @@ helpers for specific registries:
   [`doublestar` glob syntax](https://github.com/bmatcuk/doublestar#patterns). The runner matches
   them against the registry key the job specifies in `credHelpers`, or the server URL a
   `credsStore` lists, not against the image name. Before matching, the runner normalizes that name:
+
   - For a name with an `http://` or `https://` scheme, the runner keeps only the host and port, in
     lowercase. The runner maps the Docker Hub host `index.docker.io` to `docker.io`. For example,
     `https://index.docker.io/v1/` becomes `docker.io`, and `https://registry.example.com:5000/v1/`
     becomes `registry.example.com:5000`.
   - Otherwise, the runner removes a trailing `/` and any image tag, and converts the hostname to
-    lowercase. The path keeps its case, for example `registry.example.com:5000` or
-    `registry.example.com/my/repository`.
+    lowercase. The path keeps its case. For example, `Registry.Example.com:5000/My/Repository:v1`
+    becomes `registry.example.com:5000/My/Repository`.
 
   The runner converts only the hostname of a pattern to lowercase and matches the rest as written.
   Write patterns in the normalized form without a scheme or trailing `/`. For Docker Hub, use
@@ -1139,15 +1140,16 @@ helpers for specific registries:
   To match a registry that is an IPv6 literal, escape the square brackets. The glob syntax reads
   `[` and `]` as a character class, so an unescaped IPv6 address matches no registry. Use a TOML
   literal string, because a TOML basic string rejects the `\[` escape. For example, use
-  `'\[2001:db8::1\]:5000'` and not `"[2001:db8::1]:5000"`.
+  `'\[2001:db8::1\]:5000'`, not `"[2001:db8::1]:5000"`.
 
 If a `DOCKER_AUTH_CONFIG` references a credential helper that is not listed, the runner skips
 that entry and logs a warning in the job log. The same applies to a listed helper used for a
 registry that matches none of the helper's patterns. If an unlisted helper's binary is not
 installed on the runner host, the skip is logged only at debug level. Other credentials in the
 same `DOCKER_AUTH_CONFIG`, such as statically defined `auths` or permitted helpers, are still
-used. A job fails only if an image it pulls requires a credential that was skipped. For a
-`credsStore`, the helper must be listed. The runner asks the helper to list the registries it
+used. A job fails only if an image it pulls requires a credential that was skipped.
+
+For a `credsStore`, the helper must be listed. The runner asks the helper to list the registries it
 holds, then requests the secret only for registries that match the helper's patterns. Secrets
 for other registries are never retrieved.
 
