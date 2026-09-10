@@ -6,11 +6,12 @@ import (
 
 func newPullManagerConfig(e *executor) pull.ManagerConfig {
 	return pull.ManagerConfig{
-		DockerConfig: e.Config.Docker,
-		AuthConfig:   e.Build.GetDockerAuthConfig(),
-		ShellUser:    e.Shell().User,
-		Credentials:  e.Build.Credentials,
-		APIVersion:   e.serverAPIVersion,
+		DockerConfig:             e.Config.Docker,
+		AuthConfig:               e.Build.GetDockerAuthConfig(),
+		ShellUser:                e.Shell().User,
+		Credentials:              e.Build.Credentials,
+		AllowedCredentialHelpers: e.Config.AllowedDockerCredentialHelpers,
+		APIVersion:               e.serverAPIVersion,
 	}
 }
 

@@ -68,12 +68,15 @@ var (
 )
 
 func TestGetConfigForImage(t *testing.T) {
+	pinnedHelperName, pinnedHelperPath := getPinnedCredentialHelper(t)
+
 	tests := map[string]struct {
-		configFileContents string
-		dockerAuthValue    string
-		jobCredentials     []spec.Credentials
-		image              string
-		checks             func(*testing.T, *RegistryInfo, error, string, *fakeLogger)
+		configFileContents  string
+		dockerAuthValue     string
+		jobCredentials      []spec.Credentials
+		credHelperAllowlist map[string][]string
+		image               string
+		checks              func(*testing.T, *RegistryInfo, error, string, *fakeLogger)
 	}{
 		"registry1 from file only": {
 			configFileContents: testFileAuthConfigs,
@@ -228,8 +231,9 @@ func TestGetConfigForImage(t *testing.T) {
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credential store": {
-			dockerAuthValue: fmt.Sprintf(`{"credsStore" : "%s"}`, getValidCredentialHelperSuffix(t)),
-			image:           imageRegistryDomain2,
+			dockerAuthValue:     fmt.Sprintf(`{"credsStore" : "%s"}`, getValidCredentialHelperSuffix(t)),
+			credHelperAllowlist: map[string][]string{getValidCredentialHelperSuffix(t): {"*"}},
+			image:               imageRegistryDomain2,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				authConfig := registryScriptConfig
 				authConfig.ServerAddress = "https://registry2.domain.tld:5005/v1/"
@@ -241,6 +245,7 @@ func TestGetConfigForImage(t *testing.T) {
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
+				assert.Empty(t, logger.warningLogs)
 
 				logger.ExpectLogs(t, [][]any{
 					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry2.domain.tld:5005], error = <nil>`},
@@ -248,8 +253,9 @@ func TestGetConfigForImage(t *testing.T) {
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credential helper path": {
-			dockerAuthValue: getDockerAuthForCredentialHelperPathPath(t, imageRegistryDomain2),
-			image:           imageRegistryDomain2,
+			dockerAuthValue:     getDockerAuthForCredentialHelperPathPath(t, imageRegistryDomain2),
+			credHelperAllowlist: map[string][]string{getValidCredentialHelperSuffix(t): {"**"}},
+			image:               imageRegistryDomain2,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				authConfig := registryScriptConfig
 				authConfig.ServerAddress = "registry2.domain.tld:5005/image/name:version"
@@ -260,6 +266,7 @@ func TestGetConfigForImage(t *testing.T) {
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
+				assert.Empty(t, logger.warningLogs)
 
 				logger.ExpectLogs(t, [][]any{
 					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry2.domain.tld:5005/image/name], error = <nil>`},
@@ -308,7 +315,11 @@ func TestGetConfigForImage(t *testing.T) {
 		},
 		"DOCKER_AUTH_CONFIG overrides credentials helper with path traversal entry and another valid entry": {
 			dockerAuthValue: getDockerAuthForCredentialHelperPathWithPathTraversalAndGoodFallback(t),
-			image:           imageRegistryDomain2,
+			// Permit the valid entry so it still executes when iterated first: a
+			// path traversal sibling must stay fatal even when another entry is
+			// permitted and would have resolved.
+			credHelperAllowlist: map[string][]string{getValidCredentialHelperSuffix(t): {"registry2.domain.tld:5005"}},
+			image:               imageRegistryDomain2,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
@@ -317,9 +328,26 @@ func TestGetConfigForImage(t *testing.T) {
 				logger.ExpectLogs(t, nil)
 			},
 		},
-		"DOCKER_AUTH_CONFIG with missing credsStore binary logs warning and continues": {
-			dockerAuthValue: `{"credsStore": "nonexistent-helper"}`,
-			image:           imageRegistryDomain1,
+		"allowed credsStore with a missing binary logs warning and continues": {
+			dockerAuthValue:     `{"credsStore": "nonexistent-helper"}`,
+			credHelperAllowlist: map[string][]string{"nonexistent-helper": {"*"}},
+			image:               imageRegistryDomain1,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				// Helper is permitted, so it is executed; a missing binary must
+				// warn and continue rather than fail the whole resolution.
+				assert.Nil(t, result)
+				assert.NoError(t, err)
+				logger.ExpectLogs(t, nil)
+				require.Len(t, logger.warningLogs, 1)
+				warnMsg := fmt.Sprint(logger.warningLogs[0]...)
+				assert.Contains(t, warnMsg, configSourceNameUserVariable)
+				assert.Contains(t, warnMsg, "nonexistent-helper")
+			},
+		},
+		"allowed credHelpers with a missing binary logs warning and continues": {
+			dockerAuthValue:     fmt.Sprintf(`{"credHelpers": {%q: "nonexistent-helper"}}`, registryDomain1Config.ServerAddress),
+			credHelperAllowlist: map[string][]string{"nonexistent-helper": {"*"}},
+			image:               imageRegistryDomain1,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				assert.Nil(t, result)
 				assert.NoError(t, err)
@@ -330,17 +358,292 @@ func TestGetConfigForImage(t *testing.T) {
 				assert.Contains(t, warnMsg, "nonexistent-helper")
 			},
 		},
-		"DOCKER_AUTH_CONFIG with missing credHelpers binary logs warning and continues": {
+		"job-supplied credHelpers with an uninstalled binary is skipped quietly": {
 			dockerAuthValue: fmt.Sprintf(`{"credHelpers": {%q: "nonexistent-helper"}}`, registryDomain1Config.ServerAddress),
 			image:           imageRegistryDomain1,
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
-				assert.Nil(t, result)
+				// The helper is not permitted, but its binary is not installed
+				// either, so it never worked; skip without a warning to avoid
+				// implying the runner newly broke a working setup.
 				assert.NoError(t, err)
-				logger.ExpectLogs(t, nil)
+				assert.Nil(t, result)
+				assert.Empty(t, logger.warningLogs)
+				logger.ExpectLogs(t, [][]any{
+					{`Ignoring credential helper "nonexistent-helper" from DOCKER_AUTH_CONFIG: it is not permitted by allowed_docker_credential_helpers and its binary "docker-credential-nonexistent-helper" is not installed`},
+				})
+			},
+		},
+		"job-supplied credsStore denied by default is skipped with a warning": {
+			dockerAuthValue: fmt.Sprintf(`{"credsStore": "%s"}`, getValidCredentialHelperSuffix(t)),
+			image:           imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				// The binary is installed, so we are actually blocking something
+				// that would have run: warn, but do not fail the job.
+				assert.NoError(t, err)
+				assert.Nil(t, result)
 				require.Len(t, logger.warningLogs, 1)
 				warnMsg := fmt.Sprint(logger.warningLogs[0]...)
-				assert.Contains(t, warnMsg, configSourceNameUserVariable)
-				assert.Contains(t, warnMsg, "nonexistent-helper")
+				assert.Contains(t, warnMsg, "does not permit")
+				assert.Contains(t, warnMsg, "for all registries")
+				assert.Contains(t, warnMsg, fmt.Sprintf(`%q = ["<registry pattern>"]`, getValidCredentialHelperSuffix(t)))
+			},
+		},
+		"credHelpers entry permitted by allowlist glob pattern": {
+			// The first pattern must not match, and the second's hostname is
+			// lowercased before matching, so this pins both the per-pattern loop
+			// and the pattern normalization.
+			dockerAuthValue:     getDockerAuthForCredentialHelperPathPath(t, "registry2.domain.tld:5005"),
+			credHelperAllowlist: map[string][]string{getValidCredentialHelperSuffix(t): {"registry.other.tld", "*.DOMAIN.tld:5005"}},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				authConfig := registryScriptConfig
+				authConfig.ServerAddress = "registry2.domain.tld:5005"
+				expectedResult := &RegistryInfo{
+					Path:       "registry2.domain.tld:5005",
+					Source:     configSourceNameUserVariable,
+					AuthConfig: authConfig,
+				}
+				assert.NoError(t, err)
+				assert.Equal(t, expectedResult, result)
+				assert.Empty(t, logger.warningLogs)
+
+				logger.ExpectLogs(t, [][]any{
+					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry2.domain.tld:5005], error = <nil>`},
+				})
+			},
+		},
+		"credHelpers helper not in allowlist is skipped with an actionable warning": {
+			dockerAuthValue:     getDockerAuthForCredentialHelperPathPath(t, "https://registry2.domain.tld:5005/v1/"),
+			credHelperAllowlist: map[string][]string{"ecr-login": {"*"}},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+
+				// The warning tells an operator the exact config.toml line to
+				// add, and a non-operator the alternatives.
+				require.Len(t, logger.warningLogs, 1)
+				warnMsg := fmt.Sprint(logger.warningLogs[0]...)
+				assert.Contains(t, warnMsg, "does not permit")
+				assert.Contains(t, warnMsg, fmt.Sprintf(`%q = ["registry2.domain.tld:5005"]`, getValidCredentialHelperSuffix(t)))
+				assert.Contains(t, warnMsg, "config.toml")
+				assert.Contains(t, warnMsg, "ask your runner administrator")
+			},
+		},
+		"credHelpers registry not permitted by allowlist is skipped with a warning": {
+			dockerAuthValue:     getDockerAuthForCredentialHelperPathPath(t, "https://registry2.domain.tld:5005/v1/"),
+			credHelperAllowlist: map[string][]string{getValidCredentialHelperSuffix(t): {"registry.other.tld"}},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+
+				// Helper is listed, so the remedy is to widen the pattern, not
+				// add a new helper entry.
+				require.Len(t, logger.warningLogs, 1)
+				warnMsg := fmt.Sprint(logger.warningLogs[0]...)
+				assert.Contains(t, warnMsg, "permitted, but not for that registry")
+				assert.Contains(t, warnMsg, fmt.Sprintf("add a pattern matching %q to %q", "registry2.domain.tld:5005", getValidCredentialHelperSuffix(t)))
+			},
+		},
+		"disallowed credHelpers entry does not discard static auths in the same config": {
+			dockerAuthValue: fmt.Sprintf(
+				`{"auths": {"registry.domain.tld:5005": {"auth": %q}}, "credHelpers": {"registry2.domain.tld:5005": "%s"}}`,
+				base64.StdEncoding.EncodeToString([]byte("test_user_1:test_password_1")),
+				getValidCredentialHelperSuffix(t),
+			),
+			credHelperAllowlist: map[string][]string{"ecr-login": {"*"}},
+			image:               imageRegistryDomain1,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				// The disallowed helper is skipped, but the static auth for the
+				// image being pulled must still resolve.
+				assert.NoError(t, err)
+				require.NotNil(t, result)
+				assert.Equal(t, "registry.domain.tld:5005", result.Path)
+				assert.Equal(t, "test_user_1", result.AuthConfig.Username)
+				require.Len(t, logger.warningLogs, 1)
+				assert.Contains(t, fmt.Sprint(logger.warningLogs[0]...), "does not permit")
+			},
+		},
+		"home dir credsStore is not gated by the allowlist": {
+			configFileContents:  fmt.Sprintf(`{"credsStore" : "%s"}`, getValidCredentialHelperSuffix(t)),
+			credHelperAllowlist: map[string][]string{},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				authConfig := registryScriptConfig
+				authConfig.ServerAddress = "https://registry2.domain.tld:5005/v1/"
+				expectedResult := &RegistryInfo{
+					Path:       "registry2.domain.tld:5005",
+					Source:     filepath.Join(homeDir, ".dockercfg"),
+					AuthConfig: authConfig,
+				}
+				assert.NoError(t, err)
+				assert.Equal(t, expectedResult, result)
+				assert.Empty(t, logger.warningLogs)
+			},
+		},
+		"home dir credHelpers is not gated by the allowlist": {
+			configFileContents:  fmt.Sprintf(`{"credHelpers": {"registry.domain.tld:5005": "%s"}}`, getValidCredentialHelperSuffix(t)),
+			credHelperAllowlist: map[string][]string{},
+			image:               imageRegistryDomain1,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				authConfig := registryScriptConfig
+				authConfig.ServerAddress = "registry.domain.tld:5005"
+				expectedResult := &RegistryInfo{
+					Path:       "registry.domain.tld:5005",
+					Source:     filepath.Join(homeDir, ".dockercfg"),
+					AuthConfig: authConfig,
+				}
+				assert.NoError(t, err)
+				assert.Equal(t, expectedResult, result)
+				assert.Empty(t, logger.warningLogs)
+			},
+		},
+		"allowlist pins helper to an absolute path outside PATH": {
+			dockerAuthValue:     fmt.Sprintf(`{"credHelpers" : {"registry2.domain.tld:5005" : "%s"}}`, pinnedHelperName),
+			credHelperAllowlist: map[string][]string{pinnedHelperPath: {"registry2.domain.tld:5005"}},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				expectedResult := &RegistryInfo{
+					Path:   "registry2.domain.tld:5005",
+					Source: configSourceNameUserVariable,
+					AuthConfig: types.AuthConfig{
+						Username:      "pinned_user_1",
+						Password:      "pinned_password_1",
+						ServerAddress: "registry2.domain.tld:5005",
+					},
+				}
+				assert.NoError(t, err)
+				assert.Equal(t, expectedResult, result)
+				assert.Empty(t, logger.warningLogs)
+			},
+		},
+		"bare-name allowlist entry resolves via PATH, not the pinned binary": {
+			dockerAuthValue:     fmt.Sprintf(`{"credHelpers" : {"registry2.domain.tld:5005" : "%s"}}`, pinnedHelperName),
+			credHelperAllowlist: map[string][]string{pinnedHelperName: {"registry2.domain.tld:5005"}},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				// A bare name is resolved as docker-credential-<name> on PATH.
+				// The pinned binary lives outside PATH, so this must fail to
+				// find it rather than execute it.
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+
+				require.Len(t, logger.warningLogs, 1)
+				warnMsg := fmt.Sprint(logger.warningLogs[0]...)
+				assert.Contains(t, warnMsg, "executable file not found")
+			},
+		},
+		"allowlist key with a relative path is rejected": {
+			dockerAuthValue:     testDockerAuthConfigs,
+			credHelperAllowlist: map[string][]string{"./docker-credential-evil": {"*"}},
+			image:               imageRegistryDomain1,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				assert.Nil(t, result)
+				assert.ErrorContains(t, err, "allowed_docker_credential_helpers")
+			},
+		},
+		"credHelpers registry with control characters is skipped with a warning": {
+			dockerAuthValue: fmt.Sprintf(
+				`{"credHelpers" : {"registry.domain.tld:5005\n.evil" : "%s"}}`, getValidCredentialHelperSuffix(t)),
+			credHelperAllowlist: map[string][]string{getValidCredentialHelperSuffix(t): {"**"}},
+			image:               imageRegistryDomain1,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				// Even though the helper is allowed, the malformed registry name
+				// is skipped rather than executed, and does not fail the job.
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+				require.Len(t, logger.warningLogs, 1)
+				assert.Contains(t, fmt.Sprint(logger.warningLogs[0]...), "outside the permitted set")
+			},
+		},
+		"credHelpers registry with Unicode whitespace is skipped with a warning": {
+			dockerAuthValue: fmt.Sprintf(
+				`{"credHelpers" : {"registry.domain.tld:5005\u2028.evil" : "%s"}}`, getValidCredentialHelperSuffix(t)),
+			credHelperAllowlist: map[string][]string{getValidCredentialHelperSuffix(t): {"**"}},
+			image:               imageRegistryDomain1,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				// U+2028 is outside ASCII; the helper must still be skipped.
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+				require.Len(t, logger.warningLogs, 1)
+				assert.Contains(t, fmt.Sprint(logger.warningLogs[0]...), "outside the permitted set")
+			},
+		},
+		"credHelpers registry with userinfo is skipped with a warning": {
+			dockerAuthValue: fmt.Sprintf(
+				`{"credHelpers" : {"registry.domain.tld:5005@registry2.domain.tld:5005" : "%s"}}`, getValidCredentialHelperSuffix(t)),
+			credHelperAllowlist: map[string][]string{getValidCredentialHelperSuffix(t): {"registry.domain.tld*"}},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				// The glob accepts the raw key, but helpers and kubelet parse the
+				// host after "@", so the key must be skipped, not handed to the helper.
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+				require.Len(t, logger.warningLogs, 1)
+				assert.Contains(t, fmt.Sprint(logger.warningLogs[0]...), "outside the permitted set")
+			},
+		},
+		"credHelpers entry with an empty registry key is skipped with a warning": {
+			dockerAuthValue: fmt.Sprintf(
+				`{"credHelpers" : {"" : "%s"}}`, credentialHelperSuffix(t, "listonly")),
+			credHelperAllowlist: map[string][]string{credentialHelperSuffix(t, "listonly"): {"registry2.domain.tld:5005"}},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				// listonly fails any "get", so a single empty-registry warning proves
+				// the listed helper was never executed for the "" key.
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+				require.Len(t, logger.warningLogs, 1)
+				assert.Contains(t, fmt.Sprint(logger.warningLogs[0]...), "the registry name is empty")
+			},
+		},
+		"credsStore selective get skips disallowed registries entirely": {
+			dockerAuthValue:     fmt.Sprintf(`{"credsStore" : "%s"}`, credentialHelperSuffix(t, "listonly")),
+			credHelperAllowlist: map[string][]string{credentialHelperSuffix(t, "listonly"): {"registry.other.tld"}},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				// The listonly helper fails any "get" action, so a warning-free
+				// nil result proves "get" was never executed for the listed,
+				// but disallowed, registry.
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+				assert.Empty(t, logger.warningLogs)
+				require.Len(t, logger.debugLogs, 1)
+				assert.Contains(t, fmt.Sprint(logger.debugLogs[0]...), "https://registry2.domain.tld:5005/v1/")
+			},
+		},
+		"credsStore selective get retrieves allowed registries": {
+			dockerAuthValue:     fmt.Sprintf(`{"credsStore" : "%s"}`, credentialHelperSuffix(t, "listonly")),
+			credHelperAllowlist: map[string][]string{credentialHelperSuffix(t, "listonly"): {"registry2.domain.tld:5005"}},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				// The allowed registry is listed, so "get" executes and the
+				// listonly helper's failure surfaces as a resolve warning.
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+				require.Len(t, logger.warningLogs, 1)
+				warnMsg := fmt.Sprint(logger.warningLogs[0]...)
+				assert.Contains(t, warnMsg, "error getting credentials")
+			},
+		},
+		"credential helper identity token is preserved": {
+			dockerAuthValue: fmt.Sprintf(
+				`{"credHelpers" : {"registry2.domain.tld:5005" : "%s"}}`, credentialHelperSuffix(t, "token")),
+			credHelperAllowlist: map[string][]string{credentialHelperSuffix(t, "token"): {"registry2.domain.tld:5005"}},
+			image:               imageRegistryDomain2,
+			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
+				expectedResult := &RegistryInfo{
+					Path:   "registry2.domain.tld:5005",
+					Source: configSourceNameUserVariable,
+					AuthConfig: types.AuthConfig{
+						IdentityToken: "script_token_1",
+						ServerAddress: "registry2.domain.tld:5005",
+					},
+				}
+				assert.NoError(t, err)
+				assert.Equal(t, expectedResult, result)
+				assert.Empty(t, logger.warningLogs)
 			},
 		},
 	}
@@ -355,7 +658,8 @@ func TestGetConfigForImage(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			home := setupTestHomeDirectoryConfig(t, tt.configFileContents)
 			resolver := Resolver{
-				homeDir: func() string { return home },
+				homeDir:                func() string { return home },
+				jobCredHelperAllowlist: tt.credHelperAllowlist,
 			}
 			logger := &fakeLogger{}
 
@@ -363,6 +667,140 @@ func TestGetConfigForImage(t *testing.T) {
 			tt.checks(t, regInfo, err, home, logger)
 		})
 	}
+}
+
+func TestParseAllowlistKey(t *testing.T) {
+	absPrefixed := func(name string) string {
+		p, err := filepath.Abs(name)
+		require.NoError(t, err)
+		return p
+	}
+
+	tests := map[string]struct {
+		key            string
+		expectHelper   string
+		expectProgram  string
+		expectErrorSub string
+	}{
+		"bare name": {
+			key:           "ecr-login",
+			expectHelper:  "ecr-login",
+			expectProgram: "docker-credential-ecr-login",
+		},
+		"absolute path pins the binary": {
+			key:           absPrefixed("docker-credential-ecr-login"),
+			expectHelper:  "ecr-login",
+			expectProgram: absPrefixed("docker-credential-ecr-login"),
+		},
+		"absolute path with .exe derives the extensionless name": {
+			key:           absPrefixed("docker-credential-ecr-login.exe"),
+			expectHelper:  "ecr-login",
+			expectProgram: absPrefixed("docker-credential-ecr-login.exe"),
+		},
+		"absolute path without the docker-credential prefix": {
+			key:            absPrefixed("ecr-login"),
+			expectErrorSub: "must be a binary named docker-credential-",
+		},
+		"relative path": {
+			key:            "./docker-credential-ecr-login",
+			expectErrorSub: "bare helper name or an absolute path",
+		},
+		"empty": {
+			key:            "",
+			expectErrorSub: "must not be empty",
+		},
+		"absolute path with uppercase .EXE derives the extensionless name": {
+			key:           absPrefixed("docker-credential-ecr-login.EXE"),
+			expectHelper:  "ecr-login",
+			expectProgram: absPrefixed("docker-credential-ecr-login.EXE"),
+		},
+		"pinned name empty after .exe trim": {
+			key:            absPrefixed("docker-credential-.exe"),
+			expectErrorSub: "must be a binary named docker-credential-",
+		},
+		"pinned name is exactly the prefix": {
+			key:            absPrefixed("docker-credential-"),
+			expectErrorSub: "must be a binary named docker-credential-",
+		},
+		"pinned path with trailing separator": {
+			key:            absPrefixed("docker-credential-ecr-login") + string(filepath.Separator),
+			expectErrorSub: "must be a binary named docker-credential-",
+		},
+		"bare name carrying the binary prefix": {
+			key:            "docker-credential-ecr-login",
+			expectErrorSub: "not the binary name",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			helper, program, err := parseAllowlistKey(tt.key)
+			if tt.expectErrorSub != "" {
+				assert.ErrorContains(t, err, tt.expectErrorSub)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectHelper, helper)
+			assert.Equal(t, tt.expectProgram, program)
+		})
+	}
+}
+
+func TestValidateAllowedHelpers(t *testing.T) {
+	pinned, err := filepath.Abs("docker-credential-ecr-login")
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		allowlist      map[string][]string
+		expectErrorSub string
+	}{
+		"nil":                 {allowlist: nil},
+		"empty map":           {allowlist: map[string][]string{}},
+		"valid multi-pattern": {allowlist: map[string][]string{"ecr-login": {"*.dkr.ecr.*.amazonaws.com", "**"}}},
+		"invalid glob":        {allowlist: map[string][]string{"ecr-login": {"registry[.example.com"}}, expectErrorSub: "invalid registry pattern"},
+		"empty pattern":       {allowlist: map[string][]string{"ecr-login": {""}}, expectErrorSub: "invalid registry pattern"},
+		"empty pattern list":  {allowlist: map[string][]string{"ecr-login": {}}, expectErrorSub: "at least one registry pattern"},
+		"escaped IPv6 literal pattern": {
+			allowlist: map[string][]string{"ipv6-helper": {`\[2001:db8::1\]:5000`}},
+		},
+		"same helper as bare name and pinned path": {
+			allowlist: map[string][]string{"ecr-login": {"**"}, pinned: {"**"}}, expectErrorSub: "configured more than once",
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ValidateAllowedHelpers(tt.allowlist)
+			if tt.expectErrorSub != "" {
+				assert.ErrorContains(t, err, tt.expectErrorSub)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestCredHelperGateRegistryAllowedFailsClosed(t *testing.T) {
+	// An operator/home-dir source uses ungated, which allows every registry.
+	assert.True(t, ungated{}.registryAllowed("helper", "registry.example.com"))
+
+	// A configured gate with no allowlist denies every registry, rather than
+	// failing open, even though permit already blocks reaching this path.
+	unconfigured, err := newAllowlistGate(nil, &fakeLogger{})
+	require.NoError(t, err)
+	assert.False(t, unconfigured.registryAllowed("helper", "registry.example.com"))
+}
+
+func TestMatchesAllowedRegistryIPv6Literal(t *testing.T) {
+	const registry = "[2001:db8::1]:5000"
+
+	// The glob syntax reads "[" and "]" as a character class, so an operator
+	// must escape them to name an IPv6 registry.
+	assert.True(t, matchesAllowedRegistry([]string{`\[2001:db8::1\]:5000`}, registry))
+	assert.True(t, matchesAllowedRegistry([]string{`\[2001:db8::1\]:5000`}, "https://[2001:db8::1]:5000/v1/"))
+	assert.True(t, matchesAllowedRegistry([]string{`\[2001:db8::1\]:5000/team/**`}, registry+"/team/img"))
+
+	// The escaped pattern is exact: it admits no other name of the same shape.
+	assert.False(t, matchesAllowedRegistry([]string{`\[2001:db8::1\]:5000`}, "d:5000"))
 }
 
 func TestConvertToRegistryPath(t *testing.T) {
@@ -673,15 +1111,35 @@ func getDockerAuthForCredentialHelperPathWithPathTraversalAndGoodFallback(t *tes
 }
 
 func getValidCredentialHelperSuffix(t *testing.T) string {
+	if runtime.GOOS == "windows" {
+		return credentialHelperSuffix(t, "windows")
+	}
+	return credentialHelperSuffix(t, "bin")
+}
+
+// credentialHelperSuffix returns the OS-specific helper name for one of the
+// testdata docker-credential-<name>.{sh,cmd} scripts.
+func credentialHelperSuffix(t *testing.T, name string) string {
 	switch runtime.GOOS {
 	case "windows":
-		return "windows.cmd"
+		return name + ".cmd"
 	case "linux", "darwin":
-		return "bin.sh"
+		return name + ".sh"
 	default:
-		assert.FailNow(t, "credentials helper and credentials store tests are not supported on %q", runtime.GOOS)
+		assert.FailNow(t, "credentials helper and credentials store tests are not supported on "+runtime.GOOS)
 	}
 	return ""
+}
+
+// getPinnedCredentialHelper returns the helper name a job would reference and
+// the absolute path of a helper binary that is not on PATH, so it is only
+// executable when pinned through the allowlist.
+func getPinnedCredentialHelper(t *testing.T) (helperName, absPath string) {
+	dir, err := os.Getwd()
+	require.NoError(t, err)
+
+	helperName = credentialHelperSuffix(t, "pinned")
+	return helperName, filepath.Join(dir, "testdata", "pinned", "docker-credential-"+helperName)
 }
 
 // prependToPath sets a new PATH, prepending paths to the currently set PATH. PATH is set via t.Setenv, thus it's

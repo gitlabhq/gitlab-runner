@@ -1253,6 +1253,9 @@ func TestResolveAuthConfigForImageWarnsMissingCredentialHelper(t *testing.T) {
 		config: ManagerConfig{
 			DockerConfig: &common.DockerConfig{},
 			AuthConfig:   `{"credsStore": "nonexistent-helper"}`,
+			// Permit the helper so it is executed; a missing binary must warn
+			// and continue rather than fail the pull.
+			AllowedCredentialHelpers: map[string][]string{"nonexistent-helper": {"*"}},
 		},
 	}
 

@@ -409,6 +409,7 @@ Each `[[runners]]` section defines one runner.
 | `builds_dir`                          | Absolute path to a directory where builds are stored in the context of the selected executor. For example, locally, Docker, or SSH.                                                                                                                                                                                                                                                                         |
 | `cache_dir`                           | Absolute path to a directory where build caches are stored in context of selected executor. For example, locally, Docker, or SSH. If the `docker` executor is used, this directory needs to be included in its `volumes` parameter.                                                                                                                                                                         |
 | `environment`                         | Append or overwrite environment variables.                                                                                                                                                                                                                                                                                                                                                                  |
+| `allowed_docker_credential_helpers`   | Allowlist of Docker credential helpers that a job-supplied `DOCKER_AUTH_CONFIG` can execute on the runner host. Each helper maps to the registry glob patterns it can serve. By default, the runner runs no job-supplied helper. Applies to the Docker and Kubernetes executors. For more information, see [restrict Docker credential helpers](#restrict-docker-credential-helpers).                   |
 | `request_concurrency`                 | Limit number of concurrent requests for new jobs from GitLab. Default is `1`. For more information about how `concurrency` , `limit`, and `request_concurrency` interact to control job flow, see the [KB article on GitLab Runner concurrency tuning](https://support.gitlab.com/hc/en-us/articles/21324350882076-GitLab-Runner-Concurrency-Tuning-Understanding-request-concurrency).                     |
 | `strict_check_interval`               | Under normal operation, when a runner polls for jobs and receives a job, it immediately re-polls for jobs until the number of jobs being processed matches `concurrent` or `limit`, or until no jobs are available. When you turn on `strict_check_interval`, the runner disables this faster-than-`check_interval` re-polling loop and strictly respects `check_interval`. Default is `false`.             |
 | `output_limit`                        | Maximum build log size in kilobytes. Default is `4096` (4 MB).                                                                                                                                                                                                                                                                                                                                              |
@@ -1031,6 +1032,85 @@ precedence is taken into account:
 The first credentials found for the registry are used. So for example,
 if you add credentials for the integrated registry with the
 `DOCKER_AUTH_CONFIG` variable, then the default credentials are overridden.
+
+#### Restrict Docker credential helpers
+
+{{< history >}}
+
+- Introduced in GitLab Runner 19.4.
+
+{{< /history >}}
+
+A `DOCKER_AUTH_CONFIG` value can reference
+[Docker credential helpers](https://docs.gitlab.com/ci/docker/using_docker_images/#use-credential-helpers)
+with the `credHelpers` and `credsStore` keys. Configure `allowed_docker_credential_helpers` in the
+`[[runners]]` section. The setting applies to the Docker and Kubernetes executors.
+
+> [!warning]
+> Credential helpers execute as binaries on the host where the runner manager runs, not in the
+> job environment. The credentials they return come from that host's identity, for example a
+> cloud instance profile. A job that could execute any `docker-credential-*` binary on the runner
+> manager for any registry could pull images with that identity. On shared runners, every job
+> the runner executes would gain that access.
+
+By default, GitLab Runner does not execute any credential helper referenced by a job-supplied
+`DOCKER_AUTH_CONFIG`. Use the `allowed_docker_credential_helpers` setting to permit specific
+helpers for specific registries:
+
+```toml
+[[runners]]
+  [runners.allowed_docker_credential_helpers]
+    "ecr-login" = ["<aws_account_id>.dkr.ecr.*.amazonaws.com"]
+    "/usr/local/bin/docker-credential-gcloud" = ["europe-docker.pkg.dev/**"]
+    "desktop" = ["docker.io"]
+```
+
+- Each key is a helper name as referenced in `credHelpers` or `credsStore`, or an absolute
+  path to the helper binary. A bare name like `ecr-login` permits the
+  `docker-credential-ecr-login` binary, resolved from the runner host's `PATH`. An absolute
+  path pins the exact binary to execute instead of resolving it from `PATH`. The pinned file
+  name must keep the `docker-credential-` prefix. Jobs reference a pinned helper by the name
+  without the prefix and without any `.exe` extension, for example `ecr-login` for a pinned
+  `docker-credential-ecr-login.exe`.
+- Each value is a list of registry patterns the helper may provide credentials for, and must
+  contain at least one pattern. Patterns use
+  [`doublestar` glob syntax](https://github.com/bmatcuk/doublestar#patterns). The runner matches
+  them against the registry key the job specifies in `credHelpers`, or the server URL a
+  `credsStore` lists, not against the image name. Before matching, the runner normalizes that name:
+  - For a name with an `http://` or `https://` scheme, the runner keeps only the host and port, in
+    lowercase. The runner maps the Docker Hub host `index.docker.io` to `docker.io`. For example,
+    `https://index.docker.io/v1/` becomes `docker.io`, and `https://registry.example.com:5000/v1/`
+    becomes `registry.example.com:5000`.
+  - Otherwise, the runner removes a trailing `/` and any image tag, and converts the hostname to
+    lowercase. The path keeps its case, for example `registry.example.com:5000` or
+    `registry.example.com/my/repository`.
+
+  The runner converts only the hostname of a pattern to lowercase and matches the rest as written.
+  Write patterns in the normalized form without a scheme or trailing `/`. For Docker Hub, use
+  `docker.io`. A path-scoped pattern like `europe-docker.pkg.dev/<your_project>/**` matches only
+  when the job's `credHelpers` key includes that path. The bare hostname key that
+  `gcloud auth configure-docker` writes needs `europe-docker.pkg.dev` or `europe-docker.pkg.dev/**`.
+  Use `"**"` to match any registry. When the runner skips a helper, the warning in the job log
+  shows the normalized name to add.
+
+  To match a registry that is an IPv6 literal, escape the square brackets. The glob syntax reads
+  `[` and `]` as a character class, so an unescaped IPv6 address matches no registry. Use a TOML
+  literal string, because a TOML basic string rejects the `\[` escape. For example, use
+  `'\[2001:db8::1\]:5000'` and not `"[2001:db8::1]:5000"`.
+
+If a `DOCKER_AUTH_CONFIG` references a credential helper that is not listed, the runner skips
+that entry and logs a warning in the job log. The same applies to a listed helper used for a
+registry that matches none of the helper's patterns. If an unlisted helper's binary is not
+installed on the runner host, the skip is logged only at debug level. Other credentials in the
+same `DOCKER_AUTH_CONFIG`, such as statically defined `auths` or permitted helpers, are still
+used. A job fails only if an image it pulls requires a credential that was skipped. For a
+`credsStore`, the helper must be listed. The runner asks the helper to list the registries it
+holds, then requests the secret only for registries that match the helper's patterns. Secrets
+for other registries are never retrieved.
+
+This setting does not affect credential helpers referenced by the runner host's own
+`~/.docker/config.json` or `~/.dockercfg` files. GitLab Runner treats those files as
+operator-owned host configuration.
 
 ## The `[runners.parallels]` section
 
