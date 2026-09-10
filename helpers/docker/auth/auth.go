@@ -9,6 +9,7 @@ import (
 	"io"
 	"maps"
 	"os"
+	"os/exec"
 	"os/user"
 	"path"
 	"path/filepath"
@@ -16,9 +17,11 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/docker/cli/cli/config/configfile"
-	"github.com/docker/cli/cli/config/credentials"
 	"github.com/docker/cli/cli/config/types"
+	"github.com/docker/docker-credential-helpers/client"
+	helpercredentials "github.com/docker/docker-credential-helpers/credentials"
 	dockerHomeDir "github.com/docker/docker/pkg/homedir"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -29,6 +32,16 @@ const (
 	DefaultDockerRegistry        = "docker.io"
 	configSourceNameUserVariable = "$DOCKER_AUTH_CONFIG"
 	configSourceNameJobPayload   = "job payload (GitLab Registry)"
+
+	credHelperAllowlistDocsURL = "https://docs.gitlab.com/runner/configuration/advanced-configuration/#restrict-docker-credential-helpers"
+
+	// credHelperPrefix is docker's naming convention for credential helper
+	// binaries: a helper "foo" executes "docker-credential-foo".
+	credHelperPrefix = "docker-credential-"
+
+	// tokenUsername is the username docker credential helpers return when the
+	// secret is an identity token rather than a password.
+	tokenUsername = "<token>"
 )
 
 var (
@@ -95,6 +108,273 @@ func (hd homeDir) Get() string {
 // Resolver provides mechanisms to get all known registries and their auth, and specific ones for specific images.
 type Resolver struct {
 	homeDir homeDir
+
+	// jobCredHelperAllowlist gates which docker credential helpers a
+	// job-supplied DOCKER_AUTH_CONFIG can execute. See NewResolver.
+	jobCredHelperAllowlist map[string][]string
+}
+
+// NewResolver returns a Resolver which executes a docker credential helper
+// referenced by a job-supplied DOCKER_AUTH_CONFIG only when the allowlist
+// lists the helper's name and one of that name's glob patterns matches the
+// registry. An empty or nil allowlist runs no job-supplied helper. Helpers
+// referenced by the runner host's own docker configuration files are
+// operator-owned and never gated.
+func NewResolver(jobCredHelperAllowlist map[string][]string) Resolver {
+	return Resolver{jobCredHelperAllowlist: jobCredHelperAllowlist}
+}
+
+// allowedHelper is one parsed allowed_docker_credential_helpers entry.
+type allowedHelper struct {
+	key      string // the allowed_docker_credential_helpers key as the operator wrote it
+	program  string // "docker-credential-<helper>" on PATH, or the operator-pinned absolute path
+	patterns []string
+}
+
+// credHelperGate decides whether a credential helper referenced by a config
+// source may run, which program backs it, and which registries a store may
+// serve. Job-controlled sources use an allowlistGate; operator-owned sources
+// (the runner host's own docker config) use ungated, which permits everything.
+type credHelperGate interface {
+	// permit reports whether helper may run for registry, logging any it skips.
+	permit(helper, registry string, isStore bool) bool
+	// program returns the executable backing helper.
+	program(helper string) string
+	// registryAllowed reports whether a permitted store may serve registry.
+	registryAllowed(helper, registry string) bool
+}
+
+// ungated is an operator-owned source: every helper it references runs, backed
+// by docker's PATH-resolved naming convention, for any registry.
+type ungated struct{}
+
+func (ungated) permit(string, string, bool) bool    { return true }
+func (ungated) program(helper string) string        { return credHelperPrefix + helper }
+func (ungated) registryAllowed(string, string) bool { return true }
+
+// allowlistGate gates a job-controlled source against
+// allowed_docker_credential_helpers; a gate built from an empty or unset
+// allowlist permits no job-supplied helper.
+type allowlistGate struct {
+	parsed map[string]allowedHelper
+	logger Logger
+}
+
+func newAllowlistGate(allowlist map[string][]string, logger Logger) (*allowlistGate, error) {
+	g := &allowlistGate{parsed: make(map[string]allowedHelper, len(allowlist)), logger: logger}
+	for key, patterns := range allowlist {
+		helper, program, err := parseAllowlistKey(key)
+		if err != nil {
+			return nil, err
+		}
+		if _, dup := g.parsed[helper]; dup {
+			return nil, fmt.Errorf("helper %q is configured more than once", helper)
+		}
+		if len(patterns) == 0 {
+			return nil, fmt.Errorf("helper %q must list at least one registry pattern", helper)
+		}
+		for _, p := range patterns {
+			// doublestar.ValidatePattern accepts "", which can never match a registry.
+			if p == "" || !doublestar.ValidatePattern(p) {
+				return nil, fmt.Errorf("helper %q has an invalid registry pattern %q", helper, p)
+			}
+		}
+		g.parsed[helper] = allowedHelper{key: key, program: program, patterns: patterns}
+	}
+
+	return g, nil
+}
+
+// ValidateAllowedHelpers returns an error when an allowed_docker_credential_helpers
+// map is malformed, so bad keys or registry patterns are caught when the runner
+// loads its configuration rather than when a job resolves credentials.
+func ValidateAllowedHelpers(allowlist map[string][]string) error {
+	_, err := newAllowlistGate(allowlist, nil)
+	return err
+}
+
+// parseAllowlistKey derives the helper name jobs reference and the program to
+// execute from an allowed_docker_credential_helpers key. A bare name resolves
+// "docker-credential-<name>" on PATH; an absolute path pins the exact binary,
+// and must keep docker's naming convention so the referenced name can be
+// derived from it.
+func parseAllowlistKey(key string) (helper, program string, err error) {
+	base := filepath.Base(key)
+	switch {
+	case key == "" || key == "." || key == "..":
+		return "", "", errors.New("helper name must not be empty")
+	case key == base && strings.HasPrefix(key, credHelperPrefix):
+		// The operator wrote the binary name, but jobs reference the suffix.
+		return "", "", fmt.Errorf("helper %q must be the name jobs reference, %q, not the binary name",
+			key, strings.TrimPrefix(key, credHelperPrefix))
+	case key == base:
+		return key, credHelperPrefix + key, nil
+	case !filepath.IsAbs(key):
+		return "", "", fmt.Errorf("helper %q must be a bare helper name or an absolute path", key)
+	}
+
+	// Jobs reference a helper by the suffix without an executable extension,
+	// so a pinned docker-credential-<name>.exe on Windows must derive <name>.
+	name, ok := strings.CutPrefix(base, credHelperPrefix)
+	if strings.EqualFold(filepath.Ext(name), ".exe") {
+		name = name[:len(name)-len(".exe")]
+	}
+	// filepath.Base drops a trailing separator that exec would still see, so
+	// reject it here instead of failing every job with ENOTDIR.
+	if !ok || name == "" || os.IsPathSeparator(key[len(key)-1]) {
+		return "", "", fmt.Errorf("pinned helper %q must be a binary named %s<helper>", key, credHelperPrefix)
+	}
+	return name, key, nil
+}
+
+// hasUnsafeRegistryChars reports whether a registry name contains any character
+// outside the set registry references legitimately use. It is a positive
+// allowlist, not a denylist: the credential helper protocol is line-oriented
+// over stdin, so whitespace or a control character could smuggle extra input
+// into the helper, and "@" (with its Unicode lookalikes) introduces URL userinfo
+// that helpers and kubelet parse as a different host. A denylist misses format
+// and zero-width runes, so anything outside [A-Za-z0-9._:/[]-] is unsafe.
+func hasUnsafeRegistryChars(registry string) bool {
+	return strings.ContainsFunc(registry, func(r rune) bool {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			return false
+		case r == '.', r == '-', r == '_', r == ':', r == '/', r == '[', r == ']':
+			return false
+		default:
+			return true
+		}
+	})
+}
+
+// permit reports whether a credential helper may be executed for registry, and
+// logs any it skips: a warning, except for an unlisted helper whose binary is
+// not installed, which could never have run and so is logged at debug level.
+// isStore marks a credsStore, which is asked about every registry it holds and
+// carries no registry here; its listed registries are instead narrowed at
+// retrieval by registryAllowed. A skipped helper only drops its own entry, so
+// static credentials and permitted helpers in the same DOCKER_AUTH_CONFIG still
+// apply.
+func (g *allowlistGate) permit(helper, registry string, isStore bool) bool {
+	if !isStore {
+		// A credHelpers key is the registry the helper is asked about; an empty key
+		// would bypass the patterns and an unsafe one (see hasUnsafeRegistryChars) is never run.
+		if registry == "" {
+			g.logger.Warningln(fmt.Sprintf(
+				"Ignoring credential helper %q requested by the job's DOCKER_AUTH_CONFIG: "+
+					"the registry name is empty", helper))
+			return false
+		}
+		if hasUnsafeRegistryChars(registry) {
+			g.logger.Warningln(fmt.Sprintf(
+				"Ignoring credential helper %q requested by the job's DOCKER_AUTH_CONFIG for registry %q: "+
+					"the registry name contains characters outside the permitted set", helper, registry))
+			return false
+		}
+	}
+
+	if h, ok := g.parsed[helper]; ok {
+		if isStore || matchesAllowedRegistry(h.patterns, registry) {
+			return true
+		}
+		// Listed, but not for this registry: the operator configured the
+		// helper, so the mismatch is worth an actionable warning.
+		g.logger.Warningln(notAllowedMessage(helper, h.key, registry))
+		return false
+	}
+
+	// An unlisted helper whose binary is missing never worked, so skip quietly;
+	// warn only when withholding a credential that would have resolved. The
+	// warning's presence reveals whether docker-credential-<name> is installed,
+	// which was already observable before the allowlist and exposes no credential.
+	program := g.program(helper)
+	if _, err := exec.LookPath(program); err != nil {
+		g.logger.Debugln(fmt.Sprintf(
+			"Ignoring credential helper %q from DOCKER_AUTH_CONFIG: it is not permitted by "+
+				"allowed_docker_credential_helpers and its binary %q is not installed", helper, program))
+		return false
+	}
+
+	g.logger.Warningln(notAllowedMessage(helper, "", registry))
+	return false
+}
+
+// notAllowedMessage explains why a credential helper request was skipped and,
+// for whoever administers the runner, the exact config.toml change to permit
+// it. configKey is the operator's allowlist key for a listed helper, or "" when
+// the helper is not listed. The message reaches the job log, which the job
+// author reads rather than the runner operator, so it also states the
+// operator-free alternatives.
+func notAllowedMessage(helper, configKey, registry string) string {
+	const remedy = "If you administer this runner, %s under " +
+		"[runners.allowed_docker_credential_helpers] in config.toml. Otherwise, use statically " +
+		"defined credentials in DOCKER_AUTH_CONFIG, or ask your runner administrator. See %s"
+
+	if configKey != "" {
+		// Listed helper (so registry is non-empty); the remedy is to widen its pattern.
+		add := fmt.Sprintf("add a pattern matching %q to %q", convertToRegistryPath(registry), configKey)
+		return fmt.Sprintf(
+			"Ignoring credential helper %q requested by the job's DOCKER_AUTH_CONFIG for registry %q: "+
+				"it is permitted, but not for that registry. "+remedy,
+			helper, registry, add, credHelperAllowlistDocsURL)
+	}
+
+	// A credsStore (empty registry) is asked about all registries.
+	target, pattern := "all registries", "<registry pattern>"
+	if registry != "" {
+		target = fmt.Sprintf("registry %q", registry)
+		pattern = convertToRegistryPath(registry)
+	}
+	add := fmt.Sprintf("allow it by adding %q = [%q]", helper, pattern)
+	return fmt.Sprintf(
+		"Ignoring credential helper %q requested by the job's DOCKER_AUTH_CONFIG for %s: this runner "+
+			"does not permit it. "+remedy,
+		helper, target, add, credHelperAllowlistDocsURL)
+}
+
+// program returns what to execute for a helper: the operator-pinned path when
+// one is configured, or the conventional PATH-resolved name otherwise.
+func (g *allowlistGate) program(helper string) string {
+	if h, ok := g.parsed[helper]; ok {
+		return h.program
+	}
+
+	return credHelperPrefix + helper
+}
+
+// registryAllowed reports whether a registry listed by a permitted credsStore
+// helper may have its credentials retrieved: the registry must be free of unsafe
+// characters and match one of the helper's patterns, so an unlisted helper (nil
+// patterns) is denied. A skip is logged at debug level, since the name comes
+// from the operator-listed helper's own output rather than from the job.
+func (g *allowlistGate) registryAllowed(helper, registry string) bool {
+	if hasUnsafeRegistryChars(registry) {
+		g.logger.Debugln(fmt.Sprintf(
+			"Not retrieving credentials for registry %q listed by credential store %q: "+
+				"the registry name contains characters outside the permitted set", registry, helper))
+		return false
+	}
+	if !matchesAllowedRegistry(g.parsed[helper].patterns, registry) {
+		g.logger.Debugln(fmt.Sprintf(
+			"Not retrieving credentials for registry %q listed by credential store %q: "+
+				"no allowed pattern for that helper matches it", registry, helper))
+		return false
+	}
+	return true
+}
+
+// matchesAllowedRegistry reports whether the registry, normalized with
+// convertToRegistryPath, matches any of the glob patterns. Patterns are
+// validated when the gate is built, so the match error cannot be a bad pattern.
+func matchesAllowedRegistry(patterns []string, registry string) bool {
+	registryPath := convertToRegistryPath(registry)
+	for _, pattern := range patterns {
+		if ok, _ := doublestar.Match(pathWithLowerCaseHostname(pattern), registryPath); ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 // ConfigForImage returns the auth configuration for a particular image.
@@ -129,9 +409,14 @@ func (r Resolver) AllConfigs(
 	dockerAuthConfig, username string,
 	credentials []spec.Credentials, logger Logger,
 ) (RegistryInfos, error) {
+	gate, err := newAllowlistGate(r.jobCredHelperAllowlist, logger)
+	if err != nil {
+		return nil, fmt.Errorf("allowed_docker_credential_helpers: %w", err)
+	}
+
 	resolvers := []func() (string, []types.AuthConfig, error){
 		func() (string, []types.AuthConfig, error) {
-			return getUserConfiguration(dockerAuthConfig)
+			return getUserConfiguration(dockerAuthConfig, gate)
 		},
 		func() (string, []types.AuthConfig, error) {
 			return r.getHomeDirConfiguration(username)
@@ -185,8 +470,8 @@ func (r Resolver) AllConfigs(
 	return res, nil
 }
 
-func getUserConfiguration(dockerAuthConfig string) (string, []types.AuthConfig, error) {
-	authConfigs, err := readConfigsFromReader(bytes.NewBufferString(dockerAuthConfig))
+func getUserConfiguration(dockerAuthConfig string, gate credHelperGate) (string, []types.AuthConfig, error) {
+	authConfigs, err := readConfigsFromReader(bytes.NewBufferString(dockerAuthConfig), gate)
 	if err != nil {
 		return configSourceNameUserVariable, nil, err
 	}
@@ -316,11 +601,13 @@ func (r Resolver) readDockerConfigsFromHomeDir(userName string) (string, []types
 	}
 	defer f.Close()
 
-	authConfigs, err := readConfigsFromReader(f)
+	// The home directory configuration is owned by the operator of the
+	// runner host, so credential helpers it references are not gated.
+	authConfigs, err := readConfigsFromReader(f, ungated{})
 	return f.Name(), authConfigs, err
 }
 
-func readConfigsFromReader(r io.Reader) ([]types.AuthConfig, error) {
+func readConfigsFromReader(r io.Reader, gate credHelperGate) ([]types.AuthConfig, error) {
 	config := &configfile.ConfigFile{}
 	if err := config.LoadFromReader(r); err != nil {
 		return nil, err
@@ -333,7 +620,7 @@ func readConfigsFromReader(r io.Reader) ([]types.AuthConfig, error) {
 	auths := config.GetAuthConfigs()
 
 	if config.CredentialsStore != "" {
-		authsFromCredentialsStore, err := readConfigsFromCredentialsStore(config)
+		authsFromCredentialsStore, err := readConfigsFromCredentialsStore(config, gate)
 		if err != nil {
 			return nil, err
 		}
@@ -341,7 +628,7 @@ func readConfigsFromReader(r io.Reader) ([]types.AuthConfig, error) {
 	}
 
 	if config.CredentialHelpers != nil {
-		authsFromCredentialsHelpers, err := readConfigsFromCredentialsHelper(config)
+		authsFromCredentialsHelpers, err := readConfigsFromCredentialsHelper(config, gate)
 		if err != nil {
 			return nil, err
 		}
@@ -366,22 +653,49 @@ func withStableOrder(acs map[string]types.AuthConfig) []types.AuthConfig {
 	return res
 }
 
-func readConfigsFromCredentialsStore(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
-	if config.CredentialsStore != filepath.Base(config.CredentialsStore) {
+func readConfigsFromCredentialsStore(
+	config *configfile.ConfigFile, gate credHelperGate,
+) (map[string]types.AuthConfig, error) {
+	helper := config.CredentialsStore
+	if helper != filepath.Base(helper) {
 		// Fail processing if credential store attempting path traversal are detected
 		return nil, errPathTraversal
 	}
 
-	store := credentials.NewNativeStore(config, config.CredentialsStore)
-	newAuths, err := store.GetAll()
+	if !gate.permit(helper, "", true) {
+		return nil, nil
+	}
+
+	program := client.NewShellProgramFunc(gate.program(helper))
+
+	listed, err := client.List(program)
 	if err != nil {
 		return nil, err
 	}
 
-	return newAuths, nil
+	auths := make(map[string]types.AuthConfig, len(listed))
+	for registry := range listed {
+		// Only retrieve secrets for registries the helper is allowed to serve;
+		// the list step above exposes only server URLs and usernames. Those names
+		// come from the operator-listed helper itself, not the job, so they are
+		// checked for unsafe characters and gated by pattern, logging any skip.
+		if !gate.registryAllowed(helper, registry) {
+			continue
+		}
+
+		auth, err := getCredentialsFromProgram(program, registry)
+		if err != nil {
+			return nil, err
+		}
+		auths[registry] = auth
+	}
+
+	return auths, nil
 }
 
-func readConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
+func readConfigsFromCredentialsHelper(
+	config *configfile.ConfigFile, gate credHelperGate,
+) (map[string]types.AuthConfig, error) {
 	helpersAuths := make(map[string]types.AuthConfig)
 
 	for registry, helper := range config.CredentialHelpers {
@@ -390,9 +704,11 @@ func readConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string
 			return nil, errPathTraversal
 		}
 
-		store := credentials.NewNativeStore(config, helper)
+		if !gate.permit(helper, registry, false) {
+			continue
+		}
 
-		newAuths, err := store.Get(registry)
+		newAuths, err := getCredentialsFromProgram(client.NewShellProgramFunc(gate.program(helper)), registry)
 		if err != nil {
 			return nil, err
 		}
@@ -401,6 +717,36 @@ func readConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string
 	}
 
 	return helpersAuths, nil
+}
+
+// getCredentialsFromProgram executes the helper's "get" action for
+// serverAddress, keeping docker/cli's native store semantics for the answer: a
+// not-found response is an empty config rather than an error, and the "<token>"
+// username marks the secret as an identity token. Unlike the native store, the
+// result is not merged with the static auths entry for the same key, so a
+// static RegistryToken alongside a helper entry is not carried over. Callers
+// store the result under the registry key, replacing any static entry there,
+// including with the empty config on not-found.
+func getCredentialsFromProgram(program client.ProgramFunc, serverAddress string) (types.AuthConfig, error) {
+	var ret types.AuthConfig
+
+	creds, err := client.Get(program, serverAddress)
+	if err != nil {
+		if helpercredentials.IsErrCredentialsNotFound(err) {
+			return ret, nil
+		}
+		return ret, err
+	}
+
+	if creds.Username == tokenUsername {
+		ret.IdentityToken = creds.Secret
+	} else {
+		ret.Username = creds.Username
+		ret.Password = creds.Secret
+	}
+	ret.ServerAddress = serverAddress
+
+	return ret, nil
 }
 
 // convert hostname part to lower case.
