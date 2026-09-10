@@ -100,6 +100,24 @@ used by trusted builds and users.
 Read the [pull policies documentation](../executors/docker.md#configure-how-runners-pull-images)
 for more information.
 
+### Usage of Docker credential helpers
+
+Docker credential helpers referenced by a job's `DOCKER_AUTH_CONFIG` variable execute as
+binaries on the runner manager host, not in the job environment. A job that could execute an
+arbitrary `docker-credential-*` binary could pull images with that host's identity. Cloud SDKs
+and Docker Desktop install credential helpers as a side effect, so a helper can be present even
+if you never configured one.
+
+By default, GitLab Runner does not execute any credential helper referenced by a job-supplied
+`DOCKER_AUTH_CONFIG`. To use credential helpers, list the ones you trust and the registries they
+may serve with the
+[`allowed_docker_credential_helpers` setting](../configuration/advanced-configuration.md#restrict-docker-credential-helpers).
+
+This setting does not restrict the runner host's own `~/.docker/config.json` and `~/.dockercfg`
+files. Every credential they provide is available to every job the runner executes. On shared
+runners, do not run `docker login` as the runner user. Do not keep Docker configuration files in
+the runner user's home directory.
+
 ### Usage of SSH executor
 
 **SSH executors are susceptible to MITM attack (man-in-the-middle)**, because of

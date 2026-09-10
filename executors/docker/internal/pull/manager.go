@@ -42,6 +42,11 @@ type ManagerConfig struct {
 	AuthConfig   string
 	ShellUser    string
 	Credentials  []spec.Credentials
+
+	// AllowedCredentialHelpers gates which docker credential helpers the
+	// job-supplied AuthConfig can execute. See
+	// RunnerSettings.AllowedDockerCredentialHelpers.
+	AllowedCredentialHelpers map[string][]string
 }
 
 type pullLogger interface {
@@ -227,7 +232,7 @@ func (m *manager) getImageUsingPullPolicy(
 }
 
 func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, error) {
-	registryInfo, err := auth.Resolver{}.ConfigForImage(
+	registryInfo, err := auth.NewResolver(m.config.AllowedCredentialHelpers).ConfigForImage(
 		imageName,
 		m.config.AuthConfig,
 		m.config.ShellUser,
