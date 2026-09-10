@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"testing"
 	"time"
 
@@ -31,7 +30,7 @@ func newKillerWithLoggerAndCommand(
 	t.Helper()
 
 	loggerMock := process.NewMockLogger(t)
-	sleepBinary := prepareTestBinary(t)
+	sleepBinary := buildTestBinary(t, "sleep")
 
 	args := []string{duration}
 	if skipTerminate {
@@ -84,23 +83,23 @@ func (d *dumbTestLogger) Warn(args ...any) {
 	d.buf.WriteString(fmt.Sprintln(allArgs))
 }
 
-func prepareTestBinary(t *testing.T) string {
+// buildTestBinary compiles testdata/<name>/main.go and returns the path to the
+// binary.
+func buildTestBinary(t *testing.T, name string) string {
 	t.Helper()
 
-	dir := t.TempDir()
-	binaryPath := filepath.Join(dir, strconv.FormatInt(time.Now().UnixNano(), 10))
+	binaryPath := filepath.Join(t.TempDir(), name)
 
 	// Windows can only have executables ending with `.exe`
 	if runtime.GOOS == "windows" {
-		binaryPath = fmt.Sprintf("%s.exe", binaryPath)
+		binaryPath += ".exe"
 	}
 
 	_, currentTestFile, _, _ := runtime.Caller(0) // nolint:dogsled
-	sleepCommandSource := filepath.Clean(filepath.Join(filepath.Dir(currentTestFile), "testdata", "sleep", "main.go"))
+	source := filepath.Clean(filepath.Join(filepath.Dir(currentTestFile), "testdata", name, "main.go"))
 
-	command := exec.Command("go", "build", "-o", binaryPath, sleepCommandSource)
-	err := command.Run()
-	require.NoError(t, err)
+	output, err := exec.Command("go", "build", "-o", binaryPath, source).CombinedOutput()
+	require.NoError(t, err, "building %s: %s", name, output)
 
 	return binaryPath
 }
