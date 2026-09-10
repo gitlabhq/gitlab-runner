@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -2957,6 +2958,11 @@ func Test_Kubernetes_UserIsAllowed(t *testing.T) {
 }
 
 func TestLoadConfig(t *testing.T) {
+	// A pinned helper key must be absolute on the test OS: LoadConfig validates
+	// the allowlist and a POSIX path is not absolute on Windows.
+	pinnedGcloud, err := filepath.Abs("docker-credential-gcloud")
+	require.NoError(t, err)
+
 	tests := map[string]struct {
 		config         string
 		validateConfig func(t *testing.T, config *Config)
@@ -3041,6 +3047,38 @@ concurrent = 1
 					assert.Equal(t, runnerLabels, config.Runners[0].Labels)
 					assert.Equal(t, computedLabels, config.Runners[0].ComputedLabels())
 				}
+			},
+		},
+		"allowed docker credential helpers": {
+			config: fmt.Sprintf(`
+[[runners]]
+  name = "cred-helpers-test"
+  [runners.allowed_docker_credential_helpers]
+    "ecr-login" = ["*.dkr.ecr.*.amazonaws.com"]
+    '%s' = ["europe-docker.pkg.dev/**"]
+    # An IPv6 pattern needs escaped brackets, which a TOML basic string rejects.
+    "ipv6-helper" = ['\[2001:db8::1\]:5000']
+`, pinnedGcloud),
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+				assert.Equal(t, map[string][]string{
+					"ecr-login":   {"*.dkr.ecr.*.amazonaws.com"},
+					pinnedGcloud:  {"europe-docker.pkg.dev/**"},
+					"ipv6-helper": {`\[2001:db8::1\]:5000`},
+				}, config.Runners[0].AllowedDockerCredentialHelpers)
+			},
+		},
+		"IPv6 credential helper pattern in a TOML basic string": {
+			config: `
+[[runners]]
+  name = "cred-helpers-basic-string"
+  [runners.allowed_docker_credential_helpers]
+    "ipv6-helper" = ["\[2001:db8::1\]:5000"]
+`,
+			assertError: func(t *testing.T, err error) {
+				// A basic string has no "\[" escape, so the brackets an IPv6
+				// pattern needs are only expressible in a literal string.
+				assert.ErrorContains(t, err, "invalid escape in string")
 			},
 		},
 	}
@@ -4007,6 +4045,37 @@ func TestRunnerConfig_ValidateMachineOptionsWithName(t *testing.T) {
 			err := config.Validate()
 
 			if tc.expectError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errorMessage)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestRunnerConfig_ValidateAllowedDockerCredentialHelpers(t *testing.T) {
+	tests := map[string]struct {
+		allowlist    map[string][]string
+		errorMessage string
+	}{
+		"nil":         {allowlist: nil},
+		"empty":       {allowlist: map[string][]string{}},
+		"valid":       {allowlist: map[string][]string{"ecr-login": {"*.dkr.ecr.*.amazonaws.com"}}},
+		"invalid key": {allowlist: map[string][]string{"./x": {"*"}}, errorMessage: "validating allowed_docker_credential_helpers:"},
+		"bad pattern": {allowlist: map[string][]string{"ecr-login": {"registry[.example.com"}}, errorMessage: "invalid registry pattern"},
+		"no patterns": {allowlist: map[string][]string{"ecr-login": {}}, errorMessage: "at least one registry pattern"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			config := &RunnerConfig{
+				RunnerSettings: RunnerSettings{AllowedDockerCredentialHelpers: tc.allowlist},
+			}
+
+			err := config.Validate()
+
+			if tc.errorMessage != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tc.errorMessage)
 			} else {
