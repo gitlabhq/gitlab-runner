@@ -3445,6 +3445,45 @@ func TestSetupCredentials(t *testing.T) {
 	}
 }
 
+func TestSetupCredentialsHonoursCredentialHelperAllowlist(t *testing.T) {
+	fakeKubeClient := testclient.NewClientset()
+
+	createCount := 0
+	fakeKubeClient.PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret kuberuntime.Object, err error) {
+		createCount++
+		return true, nil, nil
+	})
+
+	logs := bytes.Buffer{}
+	lentry := logrus.New()
+	lentry.Out = &logs
+
+	ex := newExecutor()
+	ex.kubeClient = fakeKubeClient
+	ex.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry), buildlogger.Options{})
+	ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = "default"
+	// Permit the helper so that only the executor's forwarding of the allowlist
+	// decides whether it runs. Its binary is not installed, so a permitted
+	// helper surfaces as a warning in the job log, whereas an executor that
+	// drops the allowlist skips the unlisted helper at debug level and never
+	// writes that warning.
+	ex.Config.AllowedDockerCredentialHelpers = map[string][]string{"nonexistent-helper": {"*"}}
+	ex.Build = &common.Build{
+		Job: spec.Job{
+			Variables: spec.Variables{{Key: "DOCKER_AUTH_CONFIG", Value: `{"credsStore":"nonexistent-helper"}`}},
+		},
+		Runner: &common.RunnerConfig{},
+	}
+
+	require.NoError(t, ex.prepareOverwrites(nil))
+	require.NoError(t, ex.setupCredentials(t.Context()))
+
+	assert.Equal(t, 0, createCount, "a helper whose binary is missing must not produce a secret")
+	assert.Contains(t, logs.String(), "WARNING:")
+	assert.Contains(t, logs.String(), "Credentials from this source will not be used")
+	assert.Contains(t, logs.String(), "nonexistent-helper")
+}
+
 func TestSetupBuildNamespace(t *testing.T) {
 	version, _ := testVersionAndCodec()
 

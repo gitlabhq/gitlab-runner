@@ -35,6 +35,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	dockerauth "gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/timeperiod"
@@ -1439,6 +1440,8 @@ type RunnerSettings struct {
 
 	Environment []string `toml:"environment,omitempty" json:"environment,omitempty" long:"env" env:"RUNNER_ENV" description:"Custom environment variables injected to build environment"`
 
+	AllowedDockerCredentialHelpers map[string][]string `toml:"allowed_docker_credential_helpers,omitempty" json:"allowed_docker_credential_helpers,omitempty" description:"Allowlist of docker credential helpers that a job-supplied DOCKER_AUTH_CONFIG can execute on the runner host. Maps a helper name (e.g. ecr-login for docker-credential-ecr-login) or an absolute path to the helper binary to the registry glob patterns it may serve. When unset, jobs cannot execute any credential helper referenced by DOCKER_AUTH_CONFIG. Helpers referenced by the runner host's own docker configuration files are not affected."`
+
 	ProxyExec *bool `toml:"proxy_exec,omitempty" json:"proxy_exec,omitempty" long:"proxy-exec" env:"RUNNER_PROXY_EXEC" description:"(Experimental) Proxy execution via helper binary"`
 
 	PreGetSourcesScript  string `toml:"pre_get_sources_script,omitempty" json:"pre_get_sources_script" long:"pre-get-sources-script" env:"RUNNER_PRE_GET_SOURCES_SCRIPT" description:"Runner-specific commands to be executed on the runner before updating the Git repository and updating submodules."`
@@ -2770,10 +2773,11 @@ func (c *Config) validateLabels() error {
 
 func (c *RunnerConfig) Validate() error {
 	for vn, v := range map[string]func() error{
-		"labels":                    c.validateLabels,
-		"computed labels":           c.validateComputedLabels,
-		"slot cgroups":              c.validateSlotCgroups,
-		"machine options with name": c.validateMachineOptionsWithName,
+		"labels":                            c.validateLabels,
+		"computed labels":                   c.validateComputedLabels,
+		"slot cgroups":                      c.validateSlotCgroups,
+		"machine options with name":         c.validateMachineOptionsWithName,
+		"allowed_docker_credential_helpers": c.validateAllowedDockerCredentialHelpers,
 	} {
 		err := v()
 		if err != nil {
@@ -2786,6 +2790,10 @@ func (c *RunnerConfig) Validate() error {
 
 func (c *RunnerConfig) validateLabels() error {
 	return c.Labels.validatePatterns()
+}
+
+func (c *RunnerConfig) validateAllowedDockerCredentialHelpers() error {
+	return dockerauth.ValidateAllowedHelpers(c.AllowedDockerCredentialHelpers)
 }
 
 func (c *RunnerConfig) validateComputedLabels() error {
