@@ -1,3 +1,13 @@
+## v19.2.4 (2026-09-10)
+
+### New features
+
+- [19.2] Gate job-supplied Docker credential helpers behind an allowlist [!7335](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7335)
+
+### Bug fixes
+
+- Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-2-stable) [!7283](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7283)
+
 ## v19.2.3 (2026-08-24)
 
 ### Bug fixes
