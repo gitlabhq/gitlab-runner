@@ -110,7 +110,7 @@ if you never configured one.
 
 By default, GitLab Runner does not execute any credential helper referenced by a job-supplied
 `DOCKER_AUTH_CONFIG`. To use credential helpers, list the ones you trust and the registries they
-may serve with the
+can serve with the
 [`allowed_docker_credential_helpers` setting](../configuration/advanced-configuration.md#restrict-docker-credential-helpers).
 
 This setting does not restrict the runner host's own `~/.docker/config.json` and `~/.dockercfg`
