@@ -15,8 +15,10 @@ import (
 	"runtime"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -249,6 +251,86 @@ func TestServe(t *testing.T) {
 				require.Equal(t, tc.exitCode, exitErr.ExitCode())
 			}
 		})
+	}
+}
+
+// testSignalError mimics the serve command's signal-to-context-cause
+// wiring so the test can trigger the shutdown path without a real signal.
+type testSignalError struct{ s os.Signal }
+
+func (c testSignalError) Error() string     { return c.s.String() }
+func (c testSignalError) Signal() os.Signal { return c.s }
+
+// TestServe_SignalWhileJobRunning covers a job script doing `kill -TERM 1`
+// while step-runner is PID 1 of the build container: the client must still
+// get a status carrying the cause and an exit code, and the server must keep
+// serving until the client has closed the job.
+func TestServe_SignalWhileJobRunning(t *testing.T) {
+	t.Parallel()
+
+	sockPath := filepath.Join(shortTempDir(t), "signal.sock")
+	ioStreams, stdinWriter, _, _ := testIOStreams()
+	defer stdinWriter.Close()
+
+	// A real SIGTERM would kill the test process; drive the same path the
+	// serve command does, by cancelling the context with a signal cause.
+	ctx, cancel := context.WithCancelCause(t.Context())
+	defer cancel(nil)
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- steps.Serve(ctx, sockPath, ioStreams)
+	}()
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.FileExists(c, sockPath)
+	}, waitDeadline, waitTick, "no listening socket found")
+
+	client := stepsClient(t, sockPath)
+
+	// The step is this test binary pausing for a while, so the signal is
+	// guaranteed to arrive while the job is still running.
+	rr := &proto.RunRequest{
+		Id:      "signalled",
+		WorkDir: t.TempDir(),
+		Job:     &proto.Job{},
+		Steps:   fmt.Sprintf("spec: {}\n---\nexec:\n  command: [%q, %q, %q]\n", os.Args[0], externalMode, sleepSomeTime),
+	}
+	_, err := client.Run(t.Context(), rr)
+	require.NoError(t, err)
+
+	cancel(testSignalError{syscall.SIGTERM})
+
+	stream, err := client.FollowLogs(t.Context(), &proto.FollowLogsRequest{Id: rr.Id})
+	require.NoError(t, err)
+	for {
+		if _, err := stream.Recv(); err != nil {
+			require.ErrorIs(t, err, io.EOF)
+			break
+		}
+	}
+
+	status, err := client.Status(t.Context(), &proto.StatusRequest{Id: rr.Id})
+	require.NoError(t, err, "status must be served before the server stops")
+	require.Len(t, status.Jobs, 1)
+	assert.Equal(t, proto.StepResult_failure, status.Jobs[0].Status)
+	require.NotNil(t, status.Jobs[0].Error)
+	assert.Contains(t, status.Jobs[0].Error.Message, "received SIGTERM")
+	assert.True(t, strings.HasSuffix(status.Jobs[0].Error.Message, "exit status 143"),
+		"the runner derives the exit code from that suffix, got %q", status.Jobs[0].Error.Message)
+
+	select {
+	case err := <-serveErr:
+		t.Fatalf("server stopped before the client closed the job: %v", err)
+	default:
+	}
+
+	_, err = client.Close(t.Context(), &proto.CloseRequest{Id: rr.Id})
+	require.NoError(t, err)
+
+	select {
+	case err := <-serveErr:
+		require.NoError(t, err)
+	case <-time.After(waitDeadline):
+		t.Fatal("server did not stop after the job was closed")
 	}
 }
 
