@@ -84,6 +84,7 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 	// stream container log to job
 	go func() {
 		_, _ = stdcopy.StdCopy(stdout, readyWriter, hijacked.Reader)
+		_ = readyWriter.Close()
 	}()
 
 	// Build containers usually have to provide a shell to execute scripts on,

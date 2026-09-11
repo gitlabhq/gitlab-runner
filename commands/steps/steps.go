@@ -26,6 +26,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/proxy"
 	"gitlab.com/gitlab-org/step-runner/pkg/di"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner/gracefulexitcmd"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -140,6 +141,18 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	return os.Chmod(dst, mode)
 }
 
+// builtinOptions registers the runner's own builtins with step-runner. Each
+// wraps an entire job (common/build_step_dispatch.go), so both are
+// Unannounced: announced, step-runner would write "Running step
+// name=concrete" into the job log right after the runner's own stage header,
+// on the rlog stream that no masker covers.
+func builtinOptions() []func(*di.Container) {
+	return []func(*di.Container){
+		di.WithBuiltinFunc("script_legacy", script_legacy.New(), runner.Unannounced()),
+		di.WithBuiltinFunc("concrete", concrete.New(), runner.Unannounced()),
+	}
+}
+
 // EnvSocketPath is the env var the serving process advertises its socket
 // path under, so in-process builtins (e.g. concrete) can dial back into
 // step-runner to dispatch nested jobs. The reading side lives in
@@ -183,11 +196,10 @@ func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs
 	// Advertise the socket path so in-process builtins can dial back in.
 	_ = os.Setenv(EnvSocketPath, sockPath)
 
-	service, err := di.NewContainer(
-		di.WithBuiltinFunc("script_legacy", script_legacy.New()),
-		di.WithBuiltinFunc("concrete", concrete.New()),
+	service, err := di.NewContainer(append(
+		builtinOptions(),
 		di.WithOperatorLogger(slog.New(slog.DiscardHandler)),
-	).StepRunnerService()
+	)...).StepRunnerService()
 	if err != nil {
 		return fmt.Errorf("initializing step-runner: %w", err)
 	}
