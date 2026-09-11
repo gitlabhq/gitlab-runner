@@ -258,6 +258,13 @@ func (c *RuntimeConfig) pushImage(ctx context.Context, componentName string, ima
 	if err != nil {
 		return fmt.Errorf("parsing digest ref to dest: %w", err)
 	}
+
+	if !dry {
+		if err := pushSubjectsFirst(ctx, pusher, digestRef.Context(), index); err != nil {
+			return fmt.Errorf("pushing subject manifests for %v: %w", archive, err)
+		}
+	}
+
 	for _, tag := range tags {
 		ref, err := name.ParseReference(c.repo + ":" + tag)
 		if err != nil {
@@ -280,6 +287,80 @@ func (c *RuntimeConfig) pushImage(ctx context.Context, componentName string, ima
 	imageCh <- ComponentRef{
 		name: componentName,
 		ref:  digestRef,
+	}
+	return nil
+}
+
+// subjectPushJobs matches remote.Pusher's default WithJobs concurrency.
+const subjectPushJobs = 4
+
+// pushSubjectsFirst pushes the image manifests that carry no subject before
+// the index push, because GitLab's registry rejects a manifest whose subject
+// is not in the repository yet (gitlab-org/container-registry#2375) and
+// remote.Pusher pushes index children in no particular order.
+func pushSubjectsFirst(ctx context.Context, pusher *remote.Pusher, repo name.Repository, idx v1.ImageIndex) error {
+	imgs, err := subjectlessManifests(idx)
+	if err != nil {
+		return err
+	}
+
+	wg, ctx := errgroup.WithContext(ctx)
+	wg.SetLimit(subjectPushJobs)
+	for d, img := range imgs {
+		wg.Go(func() error {
+			ref := repo.Digest(d.String())
+			if err := pusher.Push(ctx, ref, img); err != nil {
+				return fmt.Errorf("pushing %s: %w", ref, err)
+			}
+			return nil
+		})
+	}
+	return wg.Wait()
+}
+
+// subjectlessManifests returns every image manifest in idx, at any nesting
+// depth, that has no subject, keyed by digest.
+func subjectlessManifests(idx v1.ImageIndex) (map[v1.Hash]v1.Image, error) {
+	out := map[v1.Hash]v1.Image{}
+	if err := collectSubjectless(idx, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func collectSubjectless(idx v1.ImageIndex, out map[v1.Hash]v1.Image) error {
+	im, err := idx.IndexManifest()
+	if err != nil {
+		return fmt.Errorf("reading index manifest: %w", err)
+	}
+	for _, desc := range im.Manifests {
+		if err := collectSubjectlessChild(idx, desc, out); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func collectSubjectlessChild(idx v1.ImageIndex, desc v1.Descriptor, out map[v1.Hash]v1.Image) error {
+	switch {
+	case desc.MediaType.IsIndex():
+		child, err := idx.ImageIndex(desc.Digest)
+		if err != nil {
+			return fmt.Errorf("reading nested index %s: %w", desc.Digest, err)
+		}
+		return collectSubjectless(child, out)
+	case desc.MediaType.IsImage():
+		img, err := idx.Image(desc.Digest)
+		if err != nil {
+			return fmt.Errorf("reading image %s: %w", desc.Digest, err)
+		}
+		m, err := img.Manifest()
+		if err != nil {
+			return fmt.Errorf("reading manifest %s: %w", desc.Digest, err)
+		}
+		if m.Subject == nil {
+			out[desc.Digest] = img
+		}
 	}
 	return nil
 }
