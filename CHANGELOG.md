@@ -9,7 +9,7 @@
 
 - Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-3-stable) [!7282](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7282)
 
-## v19.3.1 (2026-09-10)
+## v19.3.1 (2026-09-14)
 
 ### New features
 
@@ -20,6 +20,10 @@
 
 - Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-3-stable) [!7282](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7282)
 - Merge branch 'revert-c46014f5' into 'main' [!7232](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7232)
+
+### Maintenance
+
+- [19.3] Raise stable pulp job timeout to 12h [!7366](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7366)
 
 ## v19.3.0 (2026-09-10)
 
