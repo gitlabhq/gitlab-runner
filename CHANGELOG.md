@@ -8,7 +8,7 @@
 
 - Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-1-stable) [!7284](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7284)
 
-## v19.1.2 (2026-09-10)
+## v19.1.2 (2026-09-14)
 
 ### New features
 
@@ -18,6 +18,10 @@
 
 - Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-1-stable) [!7284](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7284)
 - [19.1] Key S3 client cache by config value, not pointer [!6982](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6982)
+
+### Maintenance
+
+- [19.1] Raise stable pulp job timeout to 12h [!7364](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7364)
 
 ## v19.1.1 (2026-06-25)
 
