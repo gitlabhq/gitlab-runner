@@ -31,15 +31,21 @@
 
 - Verify resources: authenticate Docker Hub image checks [!7162](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7162)
 
-## v19.2.1 (2026-08-24)
+## v19.2.1 (2026-09-14)
+
+### New features
+
+- [19.2] Gate job-supplied Docker credential helpers behind an allowlist [!7335](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7335)
 
 ### Bug fixes
 
-- [19.2] Key S3 client cache by config value, not pointer [!6981](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6981)
+- Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-2-stable) [!7283](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7283)
 - Restore IMAGE_FILTER_FLAGS default to label filter (backport to 19-2-stable, closes #39621) [!7217](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7217) (Ashmit Sharma @4shm1td06)
+- [19.2] Key S3 client cache by config value, not pointer [!6981](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6981)
 
 ### Maintenance
 
+- [19.2] Raise stable pulp job timeout to 12h [!7365](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7365)
 - Verify resources: authenticate Docker Hub image checks [!7162](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7162)
 
 ## v19.2.0 (2026-08-14)
