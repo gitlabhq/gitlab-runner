@@ -1,3 +1,9 @@
+## v19.3.3 (2026-09-14)
+
+### Maintenance
+
+- [19.3] Raise stable pulp job timeout to 12h [!7366](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7366)
+
 ## v19.3.2 (2026-09-10)
 
 ### New features
