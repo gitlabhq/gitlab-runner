@@ -88,6 +88,7 @@ stable pulp:
   extends:
     - .release_pulp
     - .rules:release:stable:branch
+  timeout: 12h
   environment:
     name: stable/pulp
     url: https://pulp.gitlab.com/runner/gitlab-runner
