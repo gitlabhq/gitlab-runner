@@ -29,11 +29,22 @@
 
 - [19.1] Raise stable pulp job timeout to 12h [!7364](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7364)
 
-## v19.1.1 (2026-06-25)
+## v19.1.1 (2026-09-15)
+
+### New features
+
+- [19.1] Gate job-supplied Docker credential helpers behind an allowlist [!7334](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7334)
 
 ### Bug fixes
 
+- Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-1-stable) [!7284](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7284)
+- [19.1] Key S3 client cache by config value, not pointer [!6982](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6982)
 - Increase Docker stop timeout to 2m and improve error messaging [!6868](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6868)
+
+### Maintenance
+
+- Use alpine pwsh images in TestPwshGitCredHelper [!7392](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7392)
+- [19.1] Raise stable pulp job timeout to 12h [!7364](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7364)
 
 ## v19.1.0 (2026-07-28)
 
