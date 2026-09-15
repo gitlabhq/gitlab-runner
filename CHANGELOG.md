@@ -219,6 +219,21 @@
 - Go: Update module github.com/moby/moby/client to v0.5.1 [!7105](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7105)
 - Go: Update module github.com/in-toto/attestation to v1.2.0 [!7049](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7049)
 
+## v19.2.4 (2026-09-15)
+
+### New features
+
+- [19.2] Gate job-supplied Docker credential helpers behind an allowlist [!7335](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7335)
+
+### Bug fixes
+
+- Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-2-stable) [!7283](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7283)
+
+### Maintenance
+
+- Use alpine pwsh images in TestPwshGitCredHelper [!7393](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7393)
+- [19.2] Raise stable pulp job timeout to 12h [!7365](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7365)
+
 ## v19.2.3 (2026-08-24)
 
 ### Bug fixes
