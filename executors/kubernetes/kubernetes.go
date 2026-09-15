@@ -680,6 +680,9 @@ func (s *executor) withPullRetry(ctx context.Context, dispatch func() error) err
 		var imagePullErr *pull.ImagePullError
 		if errors.As(err, &imagePullErr) {
 			if s.pullManager.UpdatePolicyForContainer(attempt, imagePullErr) {
+				// Stop watching the failed pod before deleting it, so its deletion
+				// event is not reported against the next attempt's pod.
+				s.podWatcher.UpdatePodName("")
 				cleanupCtx, cancel := context.WithTimeout(
 					context.Background(), s.Config.Kubernetes.GetCleanupResourcesTimeout())
 				s.cleanupResources(cleanupCtx)
