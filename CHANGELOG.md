@@ -4,7 +4,7 @@
 
 - [19.2] Raise stable pulp job timeout to 12h [!7365](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7365)
 
-## v19.2.4 (2026-09-10)
+## v19.2.4 (2026-09-15)
 
 ### New features
 
@@ -13,6 +13,11 @@
 ### Bug fixes
 
 - Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-2-stable) [!7283](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7283)
+
+### Maintenance
+
+- Use alpine pwsh images in TestPwshGitCredHelper [!7393](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7393)
+- [19.2] Raise stable pulp job timeout to 12h [!7365](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7365)
 
 ## v19.2.3 (2026-09-10)
 
