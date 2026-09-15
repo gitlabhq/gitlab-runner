@@ -1,3 +1,9 @@
+## v19.2.6 (2026-09-15)
+
+### Maintenance
+
+- Use alpine pwsh images in TestPwshGitCredHelper [!7393](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7393)
+
 ## v19.2.5 (2026-09-14)
 
 ### Maintenance
