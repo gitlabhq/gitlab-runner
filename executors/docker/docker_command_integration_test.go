@@ -2949,6 +2949,8 @@ func TestGitCredHelper(t *testing.T) {
 // different versions of pwsh, specifically the ones we have special implementation for.
 // We use the plain upstream powershell images. This has the side effect, that we have to install git as part of the
 // build.
+// The linux images are alpine based, because alpine keeps package repositories for EOL releases reachable. The debian
+// based images stopped working when bullseye left LTS and its security repository was removed.
 func TestPwshGitCredHelper(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
@@ -2960,18 +2962,32 @@ func TestPwshGitCredHelper(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		image                string
+		linuxImage           string
+		windowsImage         string
 		withNativeArgPassing bool
 	}{
-		"7.1":                  {image: "mcr.microsoft.com/powershell:7.1.5-%s"},
-		"7.2":                  {image: "mcr.microsoft.com/powershell:7.2-%s"},
-		"7.2-nativeArgPassing": {image: "mcr.microsoft.com/powershell:7.2-%s", withNativeArgPassing: true},
-		"7.3":                  {image: "mcr.microsoft.com/powershell:7.3-%s"},
+		"7.1": {
+			linuxImage:   "mcr.microsoft.com/powershell:7.1.5-alpine-3.13-20211021",
+			windowsImage: "mcr.microsoft.com/powershell:7.1.5-%s",
+		},
+		"7.2": {
+			linuxImage:   "mcr.microsoft.com/powershell:7.2-alpine-3.14",
+			windowsImage: "mcr.microsoft.com/powershell:7.2-%s",
+		},
+		"7.2-nativeArgPassing": {
+			linuxImage:           "mcr.microsoft.com/powershell:7.2-alpine-3.14",
+			windowsImage:         "mcr.microsoft.com/powershell:7.2-%s",
+			withNativeArgPassing: true,
+		},
+		"7.3": {
+			linuxImage:   "mcr.microsoft.com/powershell:7.3-alpine-3.17",
+			windowsImage: "mcr.microsoft.com/powershell:7.3-%s",
+		},
 	}
-	gitInstaller := "&{ apt-get update -y ; apt-get install -y git } | Out-Null"
+	gitInstaller := "&{ apk add --no-cache git } | Out-Null"
 	basePath := `/tmp/foo`
-	imageMapper := func(i string) string {
-		return fmt.Sprintf(i, "debian-11")
+	imageMapper := func(linuxImage, _ string) string {
+		return linuxImage
 	}
 
 	if runtime.GOOS == test.OSWindows {
@@ -2990,8 +3006,8 @@ func TestPwshGitCredHelper(t *testing.T) {
 			`$env:GIT_CONFIG_NOSYSTEM=1; git config --system --unset-all include.path; ` +
 			`}`
 		basePath = `c:\tmp\foo`
-		imageMapper = func(i string) string {
-			return getWindowsImage(t, i, map[string]string{
+		imageMapper = func(_, windowsImage string) string {
+			return getWindowsImage(t, windowsImage, map[string]string{
 				windows.V1809: "nanoserver-1809",
 				windows.V21H2: "windowsservercore-ltsc2022",
 			})
@@ -3035,7 +3051,7 @@ func TestPwshGitCredHelper(t *testing.T) {
 				return common.GetRemoteBuildResponse(cmds...)
 			})
 
-			build.Runner.Docker.Image = imageMapper(tc.image)
+			build.Runner.Docker.Image = imageMapper(tc.linuxImage, tc.windowsImage)
 			build.Runner.Docker.DisableCache = true
 			build.Runner.Shell = shells.SNPwsh
 			build.Variables = append(build.Variables,

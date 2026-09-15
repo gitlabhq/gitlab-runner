@@ -86,7 +86,9 @@ Do not treat pre-existing infrastructure-dependent failures as blockers.
 ## Commit and branch conventions
 
 - Branch name: `fix/issue-{IID}-short-kebab-description`
-- Commit message: `fix: imperative description (closes #{IID})`
+- Commit message: `fix: Imperative description (closes #{IID})`. The word after
+  the `fix:` prefix must be capitalized; Danger fails the MR on a lowercase
+  subject (`fix: use ...` fails, `fix: Use ...` passes).
 - MR description must explain root cause and the fix, not just what changed
 
 ## Bug triage — when to stop
