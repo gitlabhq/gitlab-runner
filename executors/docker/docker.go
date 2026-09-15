@@ -1312,7 +1312,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 				containerName := strings.TrimPrefix(pluggedContainer.Name, "/")
 				err = e.dockerConn.NetworkDisconnect(ctx, netSummary.ID, id, true)
 				if err != nil {
-					e.BuildLogger.Warningln(
+					e.BuildLogger.Debugln(
 						"Can't disconnect container",
 						containerName,
 						"from network",
@@ -1321,7 +1321,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 						err,
 					)
 				} else {
-					e.BuildLogger.Infoln(
+					e.BuildLogger.Debugln(
 						"Container",
 						containerName,
 						"disconnected from network",
