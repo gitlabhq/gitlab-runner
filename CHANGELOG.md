@@ -1,8 +1,9 @@
-## v19.1.4 (2026-09-14)
+## v19.1.4 (2026-09-15)
 
 ### Maintenance
 
 - [19.1] Raise stable pulp job timeout to 12h [!7364](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7364)
+- Use alpine pwsh images in TestPwshGitCredHelper [!7392](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7392)
 
 ## v19.1.3 (2026-09-10)
 
