@@ -1,6 +1,9 @@
 package router
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"github.com/prometheus/client_golang/prometheus"
+	"google.golang.org/grpc/codes"
+)
 
 const (
 	metricsNamespace = "gitlab_runner"
@@ -45,6 +48,7 @@ type clientMetrics struct {
 	discoveryCacheEvents *prometheus.CounterVec
 	fallbacks            *prometheus.CounterVec
 	getJobDuration       *prometheus.HistogramVec
+	getJobRequests       *prometheus.CounterVec
 }
 
 func newClientMetrics() *clientMetrics {
@@ -79,6 +83,12 @@ func newClientMetrics() *clientMetrics {
 			// into +Inf.
 			Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60},
 		}, []string{"runner", "system_id", "result"}),
+		getJobRequests: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: metricsNamespace,
+			Subsystem: metricsSubsystem,
+			Name:      "get_job_requests_total",
+			Help:      "Total number of runner-side job router GetJob requests, partitioned by runner, system_id and gRPC status code.",
+		}, []string{"runner", "system_id", "code"}),
 	}
 }
 
@@ -98,11 +108,16 @@ func (m *clientMetrics) observeGetJob(runnerID, systemID string, result getJobRe
 	m.getJobDuration.WithLabelValues(runnerID, systemID, string(result)).Observe(seconds)
 }
 
+func (m *clientMetrics) recordGetJobRequest(runnerID, systemID string, code codes.Code) {
+	m.getJobRequests.WithLabelValues(runnerID, systemID, code.String()).Inc()
+}
+
 // Describe implements prometheus.Collector.
 func (m *clientMetrics) Describe(ch chan<- *prometheus.Desc) {
 	m.discoveryCacheEvents.Describe(ch)
 	m.fallbacks.Describe(ch)
 	m.getJobDuration.Describe(ch)
+	m.getJobRequests.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
@@ -110,4 +125,5 @@ func (m *clientMetrics) Collect(ch chan<- prometheus.Metric) {
 	m.discoveryCacheEvents.Collect(ch)
 	m.fallbacks.Collect(ch)
 	m.getJobDuration.Collect(ch)
+	m.getJobRequests.Collect(ch)
 }
