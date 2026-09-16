@@ -1080,7 +1080,7 @@ if you add credentials for the integrated registry with the
 
 {{< history >}}
 
-- Introduced in GitLab Runner 19.4.
+- Introduced in GitLab Runner 19.4 and backported to GitLab Runner 19.3.2, 19.2.4, and 19.1.3.
 
 {{< /history >}}
 
