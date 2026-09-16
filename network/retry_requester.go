@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -34,6 +35,21 @@ var retryStatuses = map[int]struct{}{
 	http.StatusBadGateway:          {},
 	http.StatusServiceUnavailable:  {},
 	http.StatusGatewayTimeout:      {},
+}
+
+type rateLimitRetryDisabledKey struct{}
+
+func withoutRateLimitRetry(ctx context.Context) context.Context {
+	return context.WithValue(ctx, rateLimitRetryDisabledKey{}, true)
+}
+
+func rateLimitRetryDisabled(req *http.Request, resp *http.Response) bool {
+	if resp.StatusCode != http.StatusTooManyRequests {
+		return false
+	}
+
+	disabled, _ := req.Context().Value(rateLimitRetryDisabledKey{}).(bool)
+	return disabled
 }
 
 type retryRequester struct {
@@ -101,7 +117,7 @@ func (r *retryRequester) executeRequestWithRetries(req *http.Request, bo *backof
 			signalRetryAttempted(req)
 		}
 
-		if !retriable || attempts >= r.maxAttempts {
+		if !retriable || attempts >= r.maxAttempts || rateLimitRetryDisabled(req, resp) {
 			success = true
 			return resp, attempts, nil
 		}
