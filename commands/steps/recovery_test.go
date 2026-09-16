@@ -29,11 +29,11 @@ func TestRecoverArgv(t *testing.T) {
 		wantArgs    []string
 		wantUnset   bool
 	}{
-		"no recovery when argv has subcommand": {
+		"no recovery when argv has subcommand, var still unset": {
 			initialArgs: []string{"helper", "artifacts-uploader"},
 			envValue:    encode(t, []string{"steps", "serve", "/bin/sh"}),
 			wantArgs:    []string{"helper", "artifacts-uploader"},
-			wantUnset:   false,
+			wantUnset:   true,
 		},
 		"no recovery when env var unset": {
 			initialArgs: []string{"helper"},
@@ -57,19 +57,25 @@ func TestRecoverArgv(t *testing.T) {
 			initialArgs: []string{"helper"},
 			envValue:    "not!valid!base64!",
 			wantArgs:    []string{"helper"},
-			wantUnset:   false,
+			wantUnset:   true,
 		},
 		"malformed json inside valid base64 is ignored": {
 			initialArgs: []string{"helper"},
 			envValue:    base64.StdEncoding.EncodeToString([]byte("{not json")),
 			wantArgs:    []string{"helper"},
-			wantUnset:   false,
+			wantUnset:   true,
 		},
 		"empty argv inside payload is ignored": {
 			initialArgs: []string{"helper"},
 			envValue:    encode(t, []string{}),
 			wantArgs:    []string{"helper"},
-			wantUnset:   false,
+			wantUnset:   true,
+		},
+		"proxy-exec argv recovered": {
+			initialArgs: []string{"helper"},
+			envValue:    encode(t, []string{"proxy-exec", "sh", "-c", "exec bash"}),
+			wantArgs:    []string{"helper", "proxy-exec", "sh", "-c", "exec bash"},
+			wantUnset:   true,
 		},
 	}
 

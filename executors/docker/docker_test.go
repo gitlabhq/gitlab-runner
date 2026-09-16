@@ -1233,6 +1233,76 @@ func TestDockerBuildContainerNativeStepsRecoveryEnv(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// With proxy_exec the build container's Cmd starts with the bootstrapped
+// helper, so an `sh -c` image entrypoint swallows the helper's arguments the
+// same way it does for native steps. The executor must hand the helper its
+// argv through the environment rather than clearing the image entrypoint.
+func TestDockerBuildContainerProxyExecRecoveryEnv(t *testing.T) {
+	proxyCmd := []string{"/builds/project.tmp/gitlab-runner-helper", "proxy-exec", "sh", "-c", "exec bash"}
+	recovery, err := steps.EncodeRecoveryArgv(proxyCmd[1:])
+	require.NoError(t, err)
+	recoveryEnv := steps.RecoveryEnvVar + "=" + recovery
+
+	tests := map[string]struct {
+		proxyExec       bool
+		cmd             []string
+		imageEntrypoint []string
+		wantRecovery    bool
+	}{
+		"proxy_exec sets recovery argv and keeps job env": {
+			proxyExec:    true,
+			cmd:          proxyCmd,
+			wantRecovery: true,
+		},
+		"proxy_exec keeps a job-supplied image entrypoint": {
+			proxyExec:       true,
+			cmd:             proxyCmd,
+			imageEntrypoint: []string{"/bin/sh", "-c"},
+			wantRecovery:    true,
+		},
+		"proxy_exec with nothing after the helper sets no recovery argv": {
+			proxyExec: true,
+			cmd:       proxyCmd[:1],
+		},
+		"no proxy_exec sets no recovery argv": {
+			proxyExec: false,
+			cmd:       []string{"sh", "-c", "exec bash"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cce := func(t *testing.T, config *container.Config, _ *container.HostConfig, _ *network.NetworkingConfig) {
+				assert.Equal(t, tc.imageEntrypoint, config.Entrypoint, "image entrypoint must pass through untouched")
+				assert.Equal(t, tc.cmd, config.Cmd, "cmd must not be rewritten")
+				assert.Contains(t, config.Env, "PROXY_TEST_VAR=value", "job variables must still reach the build container")
+				if tc.wantRecovery {
+					assert.Contains(t, config.Env, recoveryEnv)
+				} else {
+					for _, env := range config.Env {
+						assert.NotContains(t, env, steps.RecoveryEnvVar)
+					}
+				}
+			}
+
+			c, e := prepareTestDockerConfiguration(t, &common.DockerConfig{}, cce, "alpine", "alpine:latest")
+			c.On("ContainerInspect", mock.Anything, "abc").
+				Return(container.InspectResponse{}, nil).Once()
+
+			e.Config.ProxyExec = &tc.proxyExec
+			e.Build.Variables = append(e.Build.Variables, spec.Variable{Key: "PROXY_TEST_VAR", Value: "value"})
+
+			require.NoError(t, e.createVolumesManager())
+			require.NoError(t, e.createPullManager())
+
+			imageConfig := spec.Image{Name: "alpine", Entrypoint: tc.imageEntrypoint}
+			cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, tc.cmd, []string{})
+			_, err := e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestDockerCgroupParentSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		CgroupParent: "test-docker-cgroup",

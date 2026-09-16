@@ -1039,7 +1039,8 @@ func (e *executor) createContainerConfig(
 
 	//nolint:nestif
 	if containerType == buildContainerType {
-		if e.Build.UseNativeSteps() {
+		switch {
+		case e.Build.UseNativeSteps():
 			config.Cmd = append([]string{bootstrappedBinary, "steps", "serve"}, config.Cmd...)
 
 			// Recovery for `sh -c` entrypoints that drop CMD[1:] as positional
@@ -1052,6 +1053,20 @@ func (e *executor) createContainerConfig(
 			// Job env vars are delivered by step-runner; the recovery var is
 			// the only one we set here.
 			config.Env = []string{steps.RecoveryEnvVar + "=" + recoveryArgv}
+
+		case e.Config.IsProxyExec() && len(config.Cmd) > 1:
+			// With proxy_exec, Cmd[0] is the bootstrapped helper and Cmd[1:]
+			// is `proxy-exec <shell...>`. An `sh -c` style image entrypoint
+			// drops Cmd[1:] exactly as above, leaving the helper with no
+			// subcommand: it prints usage, exits 0, and the job passes without
+			// running anything. Hand the helper its argv via the environment
+			// so the image entrypoint can stay in place.
+			recoveryArgv, err := steps.EncodeRecoveryArgv(config.Cmd[1:])
+			if err != nil {
+				return nil, fmt.Errorf("encoding proxy-exec recovery argv: %w", err)
+			}
+
+			config.Env = append(config.Env, steps.RecoveryEnvVar+"="+recoveryArgv)
 		}
 
 		// user config should only be set in build containers
