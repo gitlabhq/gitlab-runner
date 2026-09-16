@@ -484,3 +484,40 @@ func TestNormalizedURI(t *testing.T) {
 		})
 	}
 }
+
+func TestRetryRequester_Do_WithoutRateLimitRetry(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name             string
+		status           int
+		expectedAttempts int
+	}{
+		{name: "429 is returned immediately", status: http.StatusTooManyRequests, expectedAttempts: 1},
+		{name: "503 is still retried", status: http.StatusServiceUnavailable, expectedAttempts: 3},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			mr := newMockRequester(t)
+			mr.On("Do", mock.Anything).Times(tc.expectedAttempts).Return(func(*http.Request) *http.Response {
+				return &http.Response{StatusCode: tc.status, Body: io.NopCloser(strings.NewReader(""))}
+			}, nil)
+
+			rlr := newRetryRequester(mr, NewAPIRequestsCollector())
+			rlr.maxAttempts = 3
+			logger, _ := test.NewNullLogger()
+			rlr.logger = logger
+
+			ctx, retried := WithRetryTracker(withoutRateLimitRetry(t.Context()))
+			req := httptest.NewRequestWithContext(ctx, http.MethodPost, "http://example.com", nil)
+
+			res, err := rlr.Do(req)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.status, res.StatusCode)
+			assert.True(t, retried.Load())
+		})
+	}
+}

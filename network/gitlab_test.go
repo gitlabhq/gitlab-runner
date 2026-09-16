@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1286,6 +1287,7 @@ func mockRequestJobHandler(tb testing.TB, w http.ResponseWriter, r *http.Request
 
 func TestGitLabClient_RequestJob(t *testing.T) {
 	t.Parallel()
+	var tooManyRequests atomic.Int32
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		response := getRequestJobResponse(t, true)
 		if strings.Contains(r.URL.Path, "/unsupported") {
@@ -1300,7 +1302,9 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			return
 		}
 		if strings.Contains(r.URL.Path, "/too-many") {
-			w.Header().Set(retryAfterHeader, "1")
+			tooManyRequests.Add(1)
+			w.Header().Set(retryAfterHeader, "60")
+			w.Header().Set(rateLimitResetTimeHeader, "Wed, 21 Oct 2015 07:28:00 GMT")
 			w.WriteHeader(http.StatusTooManyRequests)
 			return
 		}
@@ -1386,7 +1390,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 				responseOK:  true,
 				responseNil: true,
 			},
-			expectedLog: `level=warning msg="Checking for jobs\.\.\. failed" correlation_id=\S* runner=valid status="429 Too Many Requests"`,
+			expectedLog: `level=warning msg="Checking for jobs\.\.\. rate limited" correlation_id=\S* ratelimit_reset_time="Wed, 21 Oct 2015 07:28:00 GMT" retry_after=60 runner=valid status="429 Too Many Requests"`,
 		},
 	}
 
@@ -1427,6 +1431,10 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 
 			if tc.expectedLog != "" {
 				assert.Regexp(t, tc.expectedLog, outBuffer.String())
+			}
+
+			if strings.HasSuffix(tc.gitlabURL, "/too-many") {
+				assert.Equal(t, int32(1), tooManyRequests.Load(), "a rate limited job request must not be retried")
 			}
 		})
 	}

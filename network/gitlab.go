@@ -674,7 +674,7 @@ func (n *GitLabClient) RequestJob(
 	headers, correlationID := addCorrelationID(RunnerTokenHeader(config.Token))
 	//nolint:bodyclose
 	result, statusText, httpResponse := n.doMeasuredJSON(
-		ctx,
+		withoutRateLimitRetry(ctx),
 		config.Log(),
 		config.RunnerCredentials.ShortDescription(),
 		config.SystemID,
@@ -718,6 +718,13 @@ func (n *GitLabClient) RequestJob(
 		return nil, true
 	case http.StatusServiceUnavailable:
 		logger.WithField("status", statusText).Warningln("Checking for jobs...", "GitLab instance currently unavailable")
+		return nil, true
+	case http.StatusTooManyRequests:
+		logger.WithFields(logrus.Fields{
+			"status":               statusText,
+			"retry_after":          httpResponse.Header.Get(retryAfterHeader),
+			"ratelimit_reset_time": httpResponse.Header.Get(rateLimitResetTimeHeader),
+		}).Warningln("Checking for jobs...", "rate limited")
 		return nil, true
 	case clientError:
 		logger.WithField("status", statusText).Errorln("Checking for jobs...", "client error")
