@@ -173,6 +173,7 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 		classifyGetJob(job, err),
 		time.Since(getJobStart).Seconds(),
 	)
+	c.metrics.recordGetJobRequest(config.RunnerCredentials.ShortDescription(), config.SystemID, status.Code(err))
 	if err != nil {
 		healthy, reason := c.handleRouterError(err, disco, config)
 		if reason != fallbackNone {

@@ -127,6 +127,27 @@ func TestMetrics_GetJobDurationObservedOnFailure(t *testing.T) {
 	assert.Equal(t, map[string]uint64{getJobKey(config, getJobResultError): 1}, getJobSeries(t, rc))
 }
 
+func TestMetrics_GetJobRequestsPartitionedByCode(t *testing.T) {
+	rc, config, routerSrv, _ := setupRouterWithRailsFallback(t)
+	sessionInfo := &common.SessionInfo{}
+
+	rc.RequestJob(t.Context(), config, sessionInfo)
+	routerSrv.failCode.Store(int32(codes.ResourceExhausted))
+	rc.RequestJob(t.Context(), config, sessionInfo)
+	rc.RequestJob(t.Context(), config, sessionInfo)
+	routerSrv.failCode.Store(int32(codes.Internal))
+	rc.RequestJob(t.Context(), config, sessionInfo)
+
+	requests := func(code codes.Code) float64 {
+		return testutil.ToFloat64(rc.metrics.getJobRequests.WithLabelValues(
+			config.RunnerCredentials.ShortDescription(), config.SystemID, code.String()))
+	}
+	assert.EqualValues(t, 1, requests(codes.OK))
+	assert.EqualValues(t, 2, requests(codes.ResourceExhausted))
+	assert.EqualValues(t, 1, requests(codes.Internal))
+	assert.EqualValues(t, 0, requests(codes.Unavailable))
+}
+
 func TestMetrics_GetJobDurationPartitionedByRunner(t *testing.T) {
 	rc, gitLabURL := setupWithRouter(t, false)
 	sessionInfo := &common.SessionInfo{}
