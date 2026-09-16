@@ -173,7 +173,7 @@ to. For example:
 ### Asking for an exception
 
 If you think a merge request should go into an RC or patch even though it does not meet these requirements,
-you can ask for an exception to be made, by opening an isssue and
+you can ask for an exception to be made, by opening an issue and
 tagging the Release Manager.
 
 To find out who the current Release Manager is find the latest release
