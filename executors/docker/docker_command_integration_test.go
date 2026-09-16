@@ -652,6 +652,21 @@ func TestBuildMaskingProxyExec(t *testing.T) {
 	buildtest.RunBuildWithMaskingProxyExec(t, getRunnerConfigForOS(t), setupExecutor)
 }
 
+// An `sh -c` style image entrypoint consumes Cmd[0] (the bootstrapped helper)
+// as its command string and drops the rest as positional parameters. Without
+// argv recovery the helper prints its usage and exits 0, so the job passes
+// having run nothing and the masking assertions below fail.
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39452
+func TestBuildMaskingProxyExecShellEntrypoint(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	buildtest.RunBuildWithMaskingProxyExec(t, getRunnerConfigForOS(t), func(t *testing.T, build *common.Build) {
+		setupExecutor(t, build)
+		build.Image.Entrypoint = []string{"/bin/sh", "-c"}
+	})
+}
+
 func TestBuildExpandedFileVariable(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
