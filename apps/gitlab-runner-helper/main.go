@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	memlimit.SetGoMemLimitWithEnv()
+	_, _ = memlimit.Set()
 }
 
 func main() {
