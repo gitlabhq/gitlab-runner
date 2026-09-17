@@ -28,6 +28,7 @@ import (
 	"gitlab.com/gitlab-org/step-runner/pkg/di"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner"
 	"gitlab.com/gitlab-org/step-runner/pkg/runner/gracefulexitcmd"
+	"gitlab.com/gitlab-org/step-runner/pkg/runner/reaper"
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
@@ -187,6 +188,13 @@ func sigExitCode(sig os.Signal) int {
 // the jobs still running with that signal's exit code before stopping the
 // server, so their clients receive a cause rather than a bare transport error.
 func Serve(ctx context.Context, sockPath string, ioStreams IOStreams, cmdAndArgs ...string) error {
+	// This process is PID 1 of a native-steps build container, so every
+	// daemon or escaped process group a script leaves behind is reparented
+	// here and stays a zombie unless reaped; zombies keep their pid, so a
+	// script waiting for a stopped service to disappear never finishes.
+	// step-runner leaves starting its reaper to the embedder.
+	reaper.StartIfInit()
+
 	listener, err := net.ListenUnix("unix", api.SocketAddr(sockPath))
 	if err != nil {
 		return fmt.Errorf("opening socket: %w", err)
