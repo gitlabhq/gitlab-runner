@@ -84,7 +84,7 @@ require (
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20220124161940-198f30295e7e
 	gitlab.com/gitlab-org/labkit/v2 v2.29.2
-	gitlab.com/gitlab-org/moa v0.0.0-20260828100929-42caf3771ef0
+	gitlab.com/gitlab-org/moa v0.0.0-20260910174042-bac76a5a1e4c
 	gitlab.com/gitlab-org/step-runner v0.44.0
 	go.mozilla.org/pkcs7 v0.10.0
 	go.opentelemetry.io/otel v1.46.0
