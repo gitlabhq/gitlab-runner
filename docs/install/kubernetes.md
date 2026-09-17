@@ -71,7 +71,6 @@ To install GitLab Runner from the Helm chart:
    helm repo add gitlab https://charts.gitlab.io
    ```
 
-1. If you use Helm 2, initialize Helm with `helm init`.
 1. Check which GitLab Runner versions you have access to:
 
    ```shell
@@ -88,10 +87,6 @@ To install GitLab Runner from the Helm chart:
    run this command, changing parameters as needed:
 
    ```shell
-   # For Helm 2
-   helm install --namespace <NAMESPACE> --name gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
-
-   # For Helm 3
    helm install --namespace <NAMESPACE> gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
    ```
 
@@ -105,13 +100,9 @@ To install GitLab Runner from the Helm chart:
 ### Check available GitLab Runner Helm chart versions
 
 Helm charts and GitLab Runner do not follow the same versioning. To see version mappings
-between the two, run the command for your version of Helm:
+between the two, run this command:
 
 ```shell
-# For Helm 2
-helm search -l gitlab/gitlab-runner
-
-# For Helm 3
 helm search repo -l gitlab/gitlab-runner
 ```
 
@@ -127,6 +118,25 @@ gitlab/gitlab-runner  0.61.3        16.8.1      GitLab Runner
 gitlab/gitlab-runner  0.61.2        16.8.0      GitLab Runner
 ...
 ```
+
+### Install GitLab Runner from an OCI registry
+
+Helm chart versions 0.92.2 and later are also available as Open Container Initiative (OCI) artifacts. Use this
+method as an alternative to adding the GitLab Helm repository.
+
+After you [configure GitLab Runner with the Helm chart](#configure-gitlab-runner-with-the-helm-chart) in your
+`values.yaml` file, run this command and change parameters as needed:
+
+```shell
+helm install --namespace <NAMESPACE> gitlab-runner \
+  oci://registry.gitlab.com/charts/charts.gitlab.io/release/gitlab-runner \
+  --version <RUNNER_HELM_CHART_VERSION> \
+  -f <CONFIG_VALUES_FILE>
+```
+
+- `<NAMESPACE>`: The Kubernetes namespace where you want to install GitLab Runner.
+- `<RUNNER_HELM_CHART_VERSION>`: The chart version to install. Use `0.92.2` or later.
+- `<CONFIG_VALUES_FILE>`: The path to values file containing your custom configuration.
 
 ## Upgrade GitLab Runner with the Helm chart
 
