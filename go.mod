@@ -75,7 +75,7 @@ require (
 	github.com/urfave/cli v1.22.17
 	gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260818191615-630980b76a04
-	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20260908171408-c00f7f9fe914
+	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20260911011821-1b7c6957ad1d
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260818191615-630980b76a04
 	gitlab.com/gitlab-org/fleeting/nesting v0.5.0
 	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20260908152840-1f87885729aa
@@ -193,7 +193,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
-	github.com/google/go-containerregistry v0.22.0 // indirect
+	github.com/google/go-containerregistry v0.22.1 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/safearchive v0.0.0-20241025131057-f7ce9d7b6f9c // indirect
 	github.com/google/wire v0.7.0 // indirect
