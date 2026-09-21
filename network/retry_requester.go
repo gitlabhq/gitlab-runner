@@ -11,6 +11,8 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 
+	"gitlab.com/gitlab-org/labkit/v2/fields"
+
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 )
 
@@ -26,6 +28,8 @@ const (
 	// RateLimit-ResetTime: Wed, 21 Oct 2015 07:28:00 GMT
 	rateLimitResetTimeHeader = "RateLimit-ResetTime"
 	retryAfterHeader         = "Retry-After"
+
+	attemptStatusError = "error"
 )
 
 var retryStatuses = map[int]struct{}{
@@ -109,8 +113,11 @@ func (r *retryRequester) executeRequestWithRetries(req *http.Request, bo *backof
 		resp, err = r.client.Do(req)
 		attempts++
 		if err != nil {
+			r.recordFailedAttempt(req, logger)
 			return nil, attempts, fmt.Errorf("couldn't execute %s against %s: %w", req.Method, req.URL, err)
 		}
+
+		r.recordAttempt(req, strconv.Itoa(resp.StatusCode), logger)
 
 		retriable := shouldRetryRequest(resp)
 		if retriable {
@@ -124,7 +131,7 @@ func (r *retryRequester) executeRequestWithRetries(req *http.Request, bo *backof
 
 		closeResponseBody(resp, true)
 
-		if err := r.waitForRetry(req, resp, bo, logger); err != nil {
+		if err := r.waitForRetry(req, resp, attempts, bo, logger); err != nil {
 			return nil, attempts, err
 		}
 
@@ -132,6 +139,20 @@ func (r *retryRequester) executeRequestWithRetries(req *http.Request, bo *backof
 			return nil, attempts, err
 		}
 	}
+}
+
+// A request cancelled by the runner is not a transport failure.
+func (r *retryRequester) recordFailedAttempt(req *http.Request, logger *logrus.Entry) {
+	if req.Context().Err() != nil {
+		return
+	}
+
+	r.recordAttempt(req, attemptStatusError, logger)
+}
+
+func (r *retryRequester) recordAttempt(req *http.Request, status string, logger *logrus.Entry) {
+	labels := apiRequestLabelsFromContext(req.Context(), req.URL.Path)
+	r.apiRequestCollector.AddAttempt(logger, labels, status, req.Method)
 }
 
 // signalRetryAttempted notifies any attached retry tracker that a retriable
@@ -143,11 +164,26 @@ func signalRetryAttempted(req *http.Request) {
 	}
 }
 
-func (r *retryRequester) waitForRetry(req *http.Request, resp *http.Response, bo *backoff.Backoff, logger *logrus.Entry) error {
+func (r *retryRequester) waitForRetry(
+	req *http.Request,
+	resp *http.Response,
+	attempt int,
+	bo *backoff.Backoff,
+	logger *logrus.Entry,
+) error {
 	waitTime := r.calculateWaitTime(resp, bo)
-	logger.
+	entry := logger.
 		WithFields(log.DeprecatedFieldDual("duration", waitTime, waitTime.Seconds())).
-		Infoln("Waiting before making the next call")
+		WithFields(logrus.Fields{
+			fields.HTTPStatusCode:  resp.StatusCode,
+			"attempt":              attempt,
+			"max_attempts":         r.maxAttempts,
+			correlationIDLogField:  getCorrelationID(resp, req.Header.Get(correlationIDHeader)),
+			"retry_after":          resp.Header.Get(retryAfterHeader),
+			"ratelimit_reset_time": resp.Header.Get(rateLimitResetTimeHeader),
+		})
+
+	entry.Infoln("Waiting before making the next call")
 
 	timer := time.NewTimer(waitTime)
 	defer timer.Stop()

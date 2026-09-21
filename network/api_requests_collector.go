@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type apiEndpoint string
@@ -27,10 +30,41 @@ var (
 	requestDurationBuckets = []float64{0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60}
 )
 
+type apiRequestLabelsKey struct{}
+
+type apiRequestLabels struct {
+	runnerID   string
+	runnerName string
+	systemID   string
+	endpoint   apiEndpoint
+}
+
+func runnerRequestLabels(config common.RunnerConfig, endpoint apiEndpoint) apiRequestLabels {
+	return apiRequestLabels{
+		runnerID:   config.RunnerCredentials.ShortDescription(),
+		runnerName: config.Name,
+		systemID:   config.SystemID,
+		endpoint:   endpoint,
+	}
+}
+
+func withAPIRequestLabels(ctx context.Context, labels apiRequestLabels) context.Context {
+	return context.WithValue(ctx, apiRequestLabelsKey{}, labels)
+}
+
+// Requests made outside a runner context get the normalized path as endpoint.
+func apiRequestLabelsFromContext(ctx context.Context, path string) apiRequestLabels {
+	if l, ok := ctx.Value(apiRequestLabelsKey{}).(apiRequestLabels); ok {
+		return l
+	}
+	return apiRequestLabels{endpoint: apiEndpoint(normalizedURI(path))}
+}
+
 type APIRequestsCollector struct {
 	lock sync.RWMutex
 
 	statuses  *prometheus.CounterVec
+	attempts  *prometheus.CounterVec
 	durations *prometheus.HistogramVec
 	retries   *prometheus.CounterVec
 }
@@ -44,22 +78,29 @@ func newAPIRequestCollectorWithBuckets(buckets []float64) *APIRequestsCollector 
 		statuses: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "gitlab_runner_api_request_statuses_total",
-				Help: "The total number of API requests made by GitLab Runner, partitioned by runner, system_id, endpoint, status and method.",
+				Help: "The total number of API requests made by GitLab Runner, partitioned by runner, runner_name, system_id, endpoint, status and method.",
 			},
-			[]string{"runner", "system_id", "endpoint", "status", "method"},
+			[]string{"runner", "runner_name", "system_id", "endpoint", "status", "method"},
+		),
+		attempts: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "gitlab_runner_api_request_attempts_total",
+				Help: "The total number of HTTP attempts made by GitLab Runner while completing API requests, including retried attempts, partitioned by runner, runner_name, system_id, endpoint, status and method. Attempts that got no HTTP response have status=\"error\".",
+			},
+			[]string{"runner", "runner_name", "system_id", "endpoint", "status", "method"},
 		),
 		durations: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name:    "gitlab_runner_api_request_duration_seconds",
-				Help:    "Latency histogram of API requests made by GitLab Runner, partitioned by runner, system_id, endpoint, status_class and method.",
+				Help:    "Latency histogram of API requests made by GitLab Runner, partitioned by runner, runner_name, system_id, endpoint, status_class and method.",
 				Buckets: buckets,
 			},
-			[]string{"runner", "system_id", "endpoint", "status_class", "method"},
+			[]string{"runner", "runner_name", "system_id", "endpoint", "status_class", "method"},
 		),
 		retries: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "gitlab_runner_api_request_retries_total",
-				Help: "The total number of retries made by GitLab Runner in process of completing a request, partitioned by path and method.",
+				Help: "The total number of HTTP attempts (including the first one, not only retries) made by GitLab Runner in process of completing a request, partitioned by path and method. Prefer gitlab_runner_api_request_attempts_total, which also has the status.",
 			},
 			[]string{"path", "method"},
 		),
@@ -68,9 +109,7 @@ func newAPIRequestCollectorWithBuckets(buckets []float64) *APIRequestsCollector 
 
 func (rc *APIRequestsCollector) Observe(
 	logger logrus.FieldLogger,
-	runnerID string,
-	systemID string,
-	endpoint apiEndpoint,
+	labels apiRequestLabels,
 	fn func() (int, string),
 ) {
 	requestStart := time.Now()
@@ -80,53 +119,23 @@ func (rc *APIRequestsCollector) Observe(
 		return
 	}
 
-	err := rc.observe(
-		runnerID,
-		systemID,
-		endpoint,
-		status,
-		method,
-		time.Since(requestStart).Seconds(),
-	)
+	err := rc.observe(labels, status, method, time.Since(requestStart).Seconds())
 	if err != nil {
 		logger.WithError(err).Warning("Updating apiRequestsCollector")
 	}
 }
 
-func (rc *APIRequestsCollector) observe(
-	runnerID string,
-	systemID string,
-	endpoint apiEndpoint,
-	status int,
-	method string,
-	duration float64,
-) error {
+func (rc *APIRequestsCollector) observe(labels apiRequestLabels, status int, method string, duration float64) error {
 	rc.lock.Lock()
 	defer rc.lock.Unlock()
 
-	ep := string(endpoint)
-	st := strconv.Itoa(status)
-	md := strings.ToLower(method)
-
-	statusCounter, err := rc.statuses.GetMetricWith(prometheus.Labels{
-		"runner":    runnerID,
-		"system_id": systemID,
-		"endpoint":  ep,
-		"status":    st,
-		"method":    md,
-	})
+	statusCounter, err := rc.statuses.GetMetricWith(labels.prometheusLabels(strconv.Itoa(status), method, "status"))
 	if err != nil {
 		return fmt.Errorf("requesting status counter: %w", err)
 	}
 	statusCounter.Inc()
 
-	durationHist, err := rc.durations.GetMetricWith(prometheus.Labels{
-		"runner":       runnerID,
-		"system_id":    systemID,
-		"endpoint":     ep,
-		"status_class": statusClass(status),
-		"method":       md,
-	})
+	durationHist, err := rc.durations.GetMetricWith(labels.prometheusLabels(statusClass(status), method, "status_class"))
 	if err != nil {
 		return fmt.Errorf("requesting durations histogram: %w", err)
 	}
@@ -134,6 +143,29 @@ func (rc *APIRequestsCollector) observe(
 	durationHist.Observe(duration)
 
 	return nil
+}
+
+func (rc *APIRequestsCollector) AddAttempt(logger logrus.FieldLogger, labels apiRequestLabels, status string, method string) {
+	rc.lock.Lock()
+	defer rc.lock.Unlock()
+
+	counter, err := rc.attempts.GetMetricWith(labels.prometheusLabels(status, method, "status"))
+	if err != nil {
+		logger.WithError(err).Warning("Updating apiRequestsCollector")
+		return
+	}
+	counter.Inc()
+}
+
+func (l apiRequestLabels) prometheusLabels(status, method, statusLabel string) prometheus.Labels {
+	return prometheus.Labels{
+		"runner":      l.runnerID,
+		"runner_name": l.runnerName,
+		"system_id":   l.systemID,
+		"endpoint":    string(l.endpoint),
+		statusLabel:   status,
+		"method":      strings.ToLower(method),
+	}
 }
 
 // AddRetries adds to the retries counter with the given path
@@ -156,6 +188,7 @@ func (rc *APIRequestsCollector) AddRetries(logger logrus.FieldLogger, path strin
 // Describe implements prometheus.Collector.
 func (rc *APIRequestsCollector) Describe(ch chan<- *prometheus.Desc) {
 	rc.statuses.Describe(ch)
+	rc.attempts.Describe(ch)
 	rc.durations.Describe(ch)
 	rc.retries.Describe(ch)
 }
@@ -166,6 +199,7 @@ func (rc *APIRequestsCollector) Collect(ch chan<- prometheus.Metric) {
 	defer rc.lock.RUnlock()
 
 	rc.statuses.Collect(ch)
+	rc.attempts.Collect(ch)
 	rc.durations.Collect(ch)
 	rc.retries.Collect(ch)
 }

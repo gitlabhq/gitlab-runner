@@ -235,6 +235,12 @@ When GitLab Runner receives a `429 Too Many Requests` response, it follows this 
 
 The runner retries failed requests up to 5 times. If all retries fail, the runner logs the error from the final response.
 
+Each retried response is logged with the `status`, `attempt`, `max_attempts`, `correlation_id`, `retry_after`,
+and `ratelimit_reset_time` fields. Use `correlation_id` to find the matching request in the GitLab API logs.
+Every attempt, including retried ones, is counted in the `gitlab_runner_api_request_attempts_total` metric
+with its HTTP status. Rate limiting is visible as `gitlab_runner_api_request_attempts_total{status="429"}`
+even when the final attempt succeeds.
+
 Job requests (`POST /api/v4/jobs/request`) are the exception. A `429` response to a job request is not retried.
 The runner logs `Checking for jobs... rate limited` at the `warning` level, releases the `request_concurrency` slot,
 and polls again after the usual `check_interval`. Waiting for the `Retry-After` period while holding the slot

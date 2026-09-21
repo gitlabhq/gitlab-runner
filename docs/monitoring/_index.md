@@ -56,7 +56,8 @@ To find a full list of all available metrics, `curl` the metrics endpoint after 
 ```shell
 $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 
-# HELP gitlab_runner_api_request_statuses_total The total number of api requests, partitioned by runner, endpoint and status.
+# HELP gitlab_runner_api_request_attempts_total The total number of HTTP attempts made by GitLab Runner while completing API requests, including retried attempts, partitioned by runner, runner_name, system_id, endpoint, status and method. Attempts that got no HTTP response have status="error".
+# HELP gitlab_runner_api_request_statuses_total The total number of API requests made by GitLab Runner, partitioned by runner, runner_name, system_id, endpoint, status and method.
 # HELP gitlab_runner_autoscaling_idle_target The number of available machines the autoscaler aims to keep after applying IdleScaleFactor and IdleCountMin.
 # HELP gitlab_runner_autoscaling_machine_creation_duration_seconds Histogram of machine creation time.
 # HELP gitlab_runner_autoscaling_machine_states The current number of machines per state in this provider.

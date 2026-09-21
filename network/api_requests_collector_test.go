@@ -32,23 +32,32 @@ func TestAPIRequestsCollector_Collect(t *testing.T) {
 
 	c := newAPIRequestCollectorWithBuckets([]float64{0.1, 1, 10})
 
-	// data for one metric entry
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusOK, http.MethodPost, 0.05))
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusOK, http.MethodPost, 0.05))
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusOK, http.MethodPost, 0.5))
+	runner1UpdateJob := apiRequestLabels{runnerID: "runner1", runnerName: "one", systemID: "system1", endpoint: apiEndpointUpdateJob}
+	runner1RequestJob := apiRequestLabels{runnerID: "runner1", runnerName: "one", systemID: "system1", endpoint: apiEndpointRequestJob}
+	runner2RequestJob := apiRequestLabels{runnerID: "runner2", runnerName: "two", systemID: "system1", endpoint: apiEndpointRequestJob}
 
 	// data for one metric entry
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusNotFound, http.MethodPost, 1.5))
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointUpdateJob, http.StatusNotFound, http.MethodPost, 15))
+	assert.NoError(t, c.observe(runner1UpdateJob, http.StatusOK, http.MethodPost, 0.05))
+	assert.NoError(t, c.observe(runner1UpdateJob, http.StatusOK, http.MethodPost, 0.05))
+	assert.NoError(t, c.observe(runner1UpdateJob, http.StatusOK, http.MethodPost, 0.5))
 
 	// data for one metric entry
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 0.05))
-	assert.NoError(t, c.observe("runner1", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 1.5))
+	assert.NoError(t, c.observe(runner1UpdateJob, http.StatusNotFound, http.MethodPost, 1.5))
+	assert.NoError(t, c.observe(runner1UpdateJob, http.StatusNotFound, http.MethodPost, 15))
 
 	// data for one metric entry
-	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 0.05))
-	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 0.05))
-	assert.NoError(t, c.observe("runner2", "system1", apiEndpointRequestJob, http.StatusOK, http.MethodPost, 1.5))
+	assert.NoError(t, c.observe(runner1RequestJob, http.StatusOK, http.MethodPost, 0.05))
+	assert.NoError(t, c.observe(runner1RequestJob, http.StatusOK, http.MethodPost, 1.5))
+
+	// data for one metric entry
+	assert.NoError(t, c.observe(runner2RequestJob, http.StatusOK, http.MethodPost, 0.05))
+	assert.NoError(t, c.observe(runner2RequestJob, http.StatusOK, http.MethodPost, 0.05))
+	assert.NoError(t, c.observe(runner2RequestJob, http.StatusOK, http.MethodPost, 1.5))
+
+	c.AddAttempt(logrus.StandardLogger(), runner1RequestJob, "429", http.MethodPost)
+	c.AddAttempt(logrus.StandardLogger(), runner1RequestJob, "429", http.MethodPost)
+	c.AddAttempt(logrus.StandardLogger(), runner1RequestJob, "204", http.MethodPost)
+	c.AddAttempt(logrus.StandardLogger(), runner1RequestJob, attemptStatusError, http.MethodPost)
 
 	// data for retry counter
 	c.AddRetries(logrus.StandardLogger(), "test-path", http.MethodGet, 1)
@@ -61,15 +70,16 @@ func TestAPIRequestsCollector_Collect(t *testing.T) {
 
 	wg.Wait()
 
-	require.Len(t, metrics, 10)
+	require.Len(t, metrics, 13)
 
 	assertStatusMetrics(t, metrics)
+	assertAttemptsMetrics(t, metrics)
 	assertDurationMetrics(t, metrics)
 	assertRetriesMetrics(t, metrics)
 }
 
-func assertStatusMetrics(t *testing.T, list []prometheus.Metric) {
-	rx, err := regexp.Compile("fqName: \"gitlab_runner_api_request_statuses_total\"")
+func collectCounterValues(t *testing.T, list []prometheus.Metric, name string) map[string]float64 {
+	rx, err := regexp.Compile(fmt.Sprintf("fqName: %q", name))
 	require.NoError(t, err)
 
 	metrics := make(map[string]float64)
@@ -96,56 +106,40 @@ func assertStatusMetrics(t *testing.T, list []prometheus.Metric) {
 		counter := d.GetCounter()
 		require.NotNil(t, counter)
 
-		metrics[strings.Join(labels, "-")] = d.GetCounter().GetValue()
+		metrics[strings.Join(labels, "-")] = counter.GetValue()
 	}
 
+	return metrics
+}
+
+func assertAttemptsMetrics(t *testing.T, list []prometheus.Metric) {
 	expected := map[string]float64{
-		"endpoint-update_job-method-post-runner-runner1-status-200-system_id-system1":  3,
-		"endpoint-update_job-method-post-runner-runner1-status-404-system_id-system1":  2,
-		"endpoint-request_job-method-post-runner-runner1-status-200-system_id-system1": 2,
-		"endpoint-request_job-method-post-runner-runner2-status-200-system_id-system1": 3,
+		"endpoint-request_job-method-post-runner-runner1-runner_name-one-status-429-system_id-system1":   2,
+		"endpoint-request_job-method-post-runner-runner1-runner_name-one-status-204-system_id-system1":   1,
+		"endpoint-request_job-method-post-runner-runner1-runner_name-one-status-error-system_id-system1": 1,
 	}
 
-	assert.Equal(t, expected, metrics)
+	assert.Equal(t, expected, collectCounterValues(t, list, "gitlab_runner_api_request_attempts_total"))
+}
+
+func assertStatusMetrics(t *testing.T, list []prometheus.Metric) {
+	expected := map[string]float64{
+		"endpoint-update_job-method-post-runner-runner1-runner_name-one-status-200-system_id-system1":  3,
+		"endpoint-update_job-method-post-runner-runner1-runner_name-one-status-404-system_id-system1":  2,
+		"endpoint-request_job-method-post-runner-runner1-runner_name-one-status-200-system_id-system1": 2,
+		"endpoint-request_job-method-post-runner-runner2-runner_name-two-status-200-system_id-system1": 3,
+	}
+
+	assert.Equal(t, expected, collectCounterValues(t, list, "gitlab_runner_api_request_statuses_total"))
 }
 
 func assertRetriesMetrics(t *testing.T, list []prometheus.Metric) {
-	rx, err := regexp.Compile("fqName: \"gitlab_runner_api_request_retries_total\"")
-	require.NoError(t, err)
-
-	metrics := make(map[string]float64)
-	for _, m := range list {
-		desc := m.Desc()
-		require.NotNil(t, desc)
-
-		if !rx.MatchString(desc.String()) {
-			continue
-		}
-
-		var d prometheus_go.Metric
-
-		err := m.Write(&d)
-		require.NoError(t, err)
-
-		var labels []string
-		for _, label := range d.Label {
-			require.NotNil(t, label)
-			labels = append(labels, fmt.Sprintf("%s-%s", label.GetName(), label.GetValue()))
-		}
-		sort.Strings(labels)
-
-		counter := d.GetCounter()
-		require.NotNil(t, counter)
-
-		metrics[strings.Join(labels, "-")] = d.GetCounter().GetValue()
-	}
-
 	expected := map[string]float64{
 		"method-get-path-test-path":  2,
 		"method-post-path-test-path": 2,
 	}
 
-	assert.Equal(t, expected, metrics)
+	assert.Equal(t, expected, collectCounterValues(t, list, "gitlab_runner_api_request_retries_total"))
 }
 
 func assertDurationMetrics(t *testing.T, list []prometheus.Metric) {
@@ -197,7 +191,7 @@ func assertDurationMetrics(t *testing.T, list []prometheus.Metric) {
 	}
 
 	expected := map[string]hMetric{
-		"endpoint-request_job-method-post-runner-runner1-status_class-2xx-system_id-system1": {
+		"endpoint-request_job-method-post-runner-runner1-runner_name-one-status_class-2xx-system_id-system1": {
 			count: 2,
 			sum:   1.55,
 			buckets: map[float64]uint64{
@@ -206,7 +200,7 @@ func assertDurationMetrics(t *testing.T, list []prometheus.Metric) {
 				10:  2,
 			},
 		},
-		"endpoint-update_job-method-post-runner-runner1-status_class-2xx-system_id-system1": {
+		"endpoint-update_job-method-post-runner-runner1-runner_name-one-status_class-2xx-system_id-system1": {
 			count: 3,
 			sum:   0.6,
 			buckets: map[float64]uint64{
@@ -215,7 +209,7 @@ func assertDurationMetrics(t *testing.T, list []prometheus.Metric) {
 				10:  3,
 			},
 		},
-		"endpoint-update_job-method-post-runner-runner1-status_class-4xx-system_id-system1": {
+		"endpoint-update_job-method-post-runner-runner1-runner_name-one-status_class-4xx-system_id-system1": {
 			count: 2,
 			sum:   16.5,
 			buckets: map[float64]uint64{
@@ -224,7 +218,7 @@ func assertDurationMetrics(t *testing.T, list []prometheus.Metric) {
 				10:  1,
 			},
 		},
-		"endpoint-request_job-method-post-runner-runner2-status_class-2xx-system_id-system1": {
+		"endpoint-request_job-method-post-runner-runner2-runner_name-two-status_class-2xx-system_id-system1": {
 			count: 3,
 			sum:   1.6,
 			buckets: map[float64]uint64{
@@ -256,7 +250,7 @@ func TestAPIRequestsCollector_Describe(t *testing.T) {
 
 	wg.Wait()
 
-	require.Len(t, descriptions, 3)
+	require.Len(t, descriptions, 4)
 }
 
 func TestStatusClass(t *testing.T) {

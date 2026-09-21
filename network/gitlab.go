@@ -177,13 +177,13 @@ type doRawParams struct {
 func (n *GitLabClient) doMeasuredRaw(
 	ctx context.Context,
 	log logrus.FieldLogger,
-	runnerID string,
-	systemID string,
-	endpoint apiEndpoint,
+	labels apiRequestLabels,
 	params doRawParams,
 ) (*http.Response, error) {
 	var response *http.Response
 	var err error
+
+	ctx = withAPIRequestLabels(ctx, labels)
 
 	fn := func() (int, string) {
 		// Response body is handled after doMeasuredJSON() decorator call
@@ -205,13 +205,7 @@ func (n *GitLabClient) doMeasuredRaw(
 		return response.StatusCode, params.method
 	}
 
-	n.apiRequestsCollector.Observe(
-		log,
-		runnerID,
-		systemID,
-		endpoint,
-		fn,
-	)
+	n.apiRequestsCollector.Observe(log, labels, fn)
 
 	if err != nil {
 		return nil, fmt.Errorf("measured raw request: %w", err)
@@ -256,14 +250,14 @@ type doJSONParams struct {
 func (n *GitLabClient) doMeasuredJSON(
 	ctx context.Context,
 	log logrus.FieldLogger,
-	runnerID string,
-	systemID string,
-	endpoint apiEndpoint,
+	labels apiRequestLabels,
 	params doJSONParams,
 ) (int, string, *http.Response) {
 	var result int
 	var statusText string
 	var httpResponse *http.Response
+
+	ctx = withAPIRequestLabels(ctx, labels)
 
 	fn := func() (int, string) {
 		// Response body is handled after doMeasuredJSON() decorator call
@@ -283,13 +277,7 @@ func (n *GitLabClient) doMeasuredJSON(
 		return result, params.method
 	}
 
-	n.apiRequestsCollector.Observe(
-		log,
-		runnerID,
-		systemID,
-		endpoint,
-		fn,
-	)
+	n.apiRequestsCollector.Observe(log, labels, fn)
 
 	return result, statusText, httpResponse
 }
@@ -594,9 +582,12 @@ func (n *GitLabClient) resetToken(
 	result, statusText, resp := n.doMeasuredJSON(
 		context.Background(),
 		runner.Log(),
-		runner.ShortDescription(),
-		systemID,
-		apiEndpointResetToken,
+		apiRequestLabels{
+			runnerID:   runner.ShortDescription(),
+			runnerName: runner.Name,
+			systemID:   systemID,
+			endpoint:   apiEndpointResetToken,
+		},
 		doJSONParams{
 			credentials: &runner,
 			method:      http.MethodPost,
@@ -676,9 +667,7 @@ func (n *GitLabClient) RequestJob(
 	result, statusText, httpResponse := n.doMeasuredJSON(
 		withoutRateLimitRetry(ctx),
 		config.Log(),
-		config.RunnerCredentials.ShortDescription(),
-		config.SystemID,
-		apiEndpointRequestJob,
+		runnerRequestLabels(config, apiEndpointRequestJob),
 		doJSONParams{
 			credentials: &config.RunnerCredentials,
 			method:      http.MethodPost,
@@ -766,9 +755,7 @@ func (n *GitLabClient) UpdateJob(
 	statusCode, statusText, response := n.doMeasuredJSON(
 		context.Background(),
 		config.Log(),
-		config.RunnerCredentials.ShortDescription(),
-		config.SystemID,
-		apiEndpointUpdateJob,
+		runnerRequestLabels(config, apiEndpointUpdateJob),
 		doJSONParams{
 			credentials: &config.RunnerCredentials,
 			method:      http.MethodPut,
@@ -863,9 +850,7 @@ func (n *GitLabClient) PatchTrace(
 	response, err := n.doMeasuredRaw(
 		context.Background(),
 		config.Log(),
-		config.RunnerCredentials.ShortDescription(),
-		config.SystemID,
-		apiEndpointPatchTrace,
+		runnerRequestLabels(config, apiEndpointPatchTrace),
 		doRawParams{
 			credentials: &config.RunnerCredentials,
 			method:      "PATCH",
@@ -1025,9 +1010,7 @@ func (n *GitLabClient) GetRouterDiscovery(
 	result, statusText, httpResponse := n.doMeasuredJSON(
 		ctx,
 		config.Log(),
-		config.RunnerCredentials.ShortDescription(),
-		config.SystemID,
-		apiEndpointDiscovery,
+		runnerRequestLabels(config, apiEndpointDiscovery),
 		doJSONParams{
 			credentials: &config.RunnerCredentials,
 			method:      http.MethodGet,
