@@ -799,10 +799,10 @@ The following settings define the Docker container parameters. These settings ar
 | `allowed_services`                 | `["postgres:9", "redis:*", "mysql:*"]`           | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["**"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services) executors. |
 | `allowed_privileged_services`      |                                                  | Wildcard subset of `allowed_services` that is allowed to run in privileged mode, when `privileged` or `services_privileged` is enabled. If not present, all images are allowed (equivalent to `["**"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) executors. |
 | `cache_dir`                        |                                                  | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. |
-| `cap_add`                          | `["NET_ADMIN"]`                                  | Add additional Linux capabilities to the container. |
-| `services_cap_add`                 | `["NET_ADMIN"]`                                  | Add additional Linux capabilities to service containers. If unset (default), services use the Docker default capability set. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7209) in GitLab Runner 19.4. |
-| `cap_drop`                         | `["DAC_OVERRIDE"]`                               | Drop additional Linux capabilities from the container. |
-| `services_cap_drop`                | `["ALL"]`                                        | Drop Linux capabilities from service containers. If unset (default), services use the Docker default capability set. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7209) in GitLab Runner 19.4. |
+| `cap_add`                          | `["NET_ADMIN"]`                                  | Add additional Linux capabilities to the container. Has no effect when the container runs in privileged mode. See [capabilities in privileged mode](#capabilities-in-privileged-mode). |
+| `services_cap_add`                 | `["NET_ADMIN"]`                                  | Add additional Linux capabilities to service containers. If unset (default), services use the Docker default capability set. Has no effect when a service runs in privileged mode. See [capabilities in privileged mode](#capabilities-in-privileged-mode). [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7209) in GitLab Runner 19.4. |
+| `cap_drop`                         | `["DAC_OVERRIDE"]`                               | Drop additional Linux capabilities from the container. Has no effect when the container runs in privileged mode. See [capabilities in privileged mode](#capabilities-in-privileged-mode). |
+| `services_cap_drop`                | `["ALL"]`                                        | Drop Linux capabilities from service containers. If unset (default), services use the Docker default capability set. Has no effect when a service runs in privileged mode. See [capabilities in privileged mode](#capabilities-in-privileged-mode). [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7209) in GitLab Runner 19.4. |
 | `cpuset_cpus`                      | `"0,1"`                                          | The control group's `CpusetCpus`. A string. |
 | `cpuset_mems`                      | `"0,1"`                                          | The control group's `CpusetMems`. A string. |
 | `cpu_shares`                       |                                                  | Number of CPU shares used to set relative CPU usage. Default is `1024`. |
@@ -858,6 +858,22 @@ The following settings define the Docker container parameters. These settings ar
 | `service_memory`                   |                                                  | String value of the memory limit for a service. |
 | `service_memory_swap`              |                                                  | String value of the total memory limit for a service. |
 | `service_memory_reservation`       |                                                  | String value of the memory soft limit for a service. |
+
+### Capabilities in privileged mode
+
+Docker grants all Linux capabilities to a privileged container. The `cap_add`, `cap_drop`,
+`services_cap_add`, and `services_cap_drop` settings do not change the capabilities of a container
+that runs in privileged mode.
+
+A build container runs in privileged mode when `privileged` is `true` and the image matches
+`allowed_privileged_images`. A service container runs in privileged mode when the image matches
+`allowed_privileged_services`, and either `services_privileged` is `true`, or `services_privileged`
+is unset and `privileged` is `true`.
+
+> [!note]
+> To drop capabilities from a container, first make sure the container does not run in privileged
+> mode. For example, `services_cap_drop = ["ALL"]` does not harden a service that still runs in
+> privileged mode.
 
 ### The `[[runners.docker.services]]` section
 
