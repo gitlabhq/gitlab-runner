@@ -2141,14 +2141,14 @@ func (_c *MockMachine_CanConnect_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // Create provides a mock function for the type MockMachine
-func (_mock *MockMachine) Create(ctx context.Context, driver string, name string, opts ...string) error {
+func (_mock *MockMachine) Create(ctx context.Context, driver string, name string, output MachineOutput, opts ...string) error {
 	// string
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
 	}
 	var _ca []interface{}
-	_ca = append(_ca, ctx, driver, name)
+	_ca = append(_ca, ctx, driver, name, output)
 	_ca = append(_ca, _va...)
 	ret := _mock.Called(_ca...)
 
@@ -2157,8 +2157,8 @@ func (_mock *MockMachine) Create(ctx context.Context, driver string, name string
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...string) error); ok {
-		r0 = returnFunc(ctx, driver, name, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, MachineOutput, ...string) error); ok {
+		r0 = returnFunc(ctx, driver, name, output, opts...)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -2174,13 +2174,14 @@ type MockMachine_Create_Call struct {
 //   - ctx context.Context
 //   - driver string
 //   - name string
+//   - output MachineOutput
 //   - opts ...string
-func (_e *MockMachine_Expecter) Create(ctx interface{}, driver interface{}, name interface{}, opts ...interface{}) *MockMachine_Create_Call {
+func (_e *MockMachine_Expecter) Create(ctx interface{}, driver interface{}, name interface{}, output interface{}, opts ...interface{}) *MockMachine_Create_Call {
 	return &MockMachine_Create_Call{Call: _e.mock.On("Create",
-		append([]interface{}{ctx, driver, name}, opts...)...)}
+		append([]interface{}{ctx, driver, name, output}, opts...)...)}
 }
 
-func (_c *MockMachine_Create_Call) Run(run func(ctx context.Context, driver string, name string, opts ...string)) *MockMachine_Create_Call {
+func (_c *MockMachine_Create_Call) Run(run func(ctx context.Context, driver string, name string, output MachineOutput, opts ...string)) *MockMachine_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -2194,19 +2195,24 @@ func (_c *MockMachine_Create_Call) Run(run func(ctx context.Context, driver stri
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 []string
-		variadicArgs := make([]string, len(args)-3)
-		for i, a := range args[3:] {
+		var arg3 MachineOutput
+		if args[3] != nil {
+			arg3 = args[3].(MachineOutput)
+		}
+		var arg4 []string
+		variadicArgs := make([]string, len(args)-4)
+		for i, a := range args[4:] {
 			if a != nil {
 				variadicArgs[i] = a.(string)
 			}
 		}
-		arg3 = variadicArgs
+		arg4 = variadicArgs
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3...,
+			arg3,
+			arg4...,
 		)
 	})
 	return _c
@@ -2217,7 +2223,7 @@ func (_c *MockMachine_Create_Call) Return(err error) *MockMachine_Create_Call {
 	return _c
 }
 
-func (_c *MockMachine_Create_Call) RunAndReturn(run func(ctx context.Context, driver string, name string, opts ...string) error) *MockMachine_Create_Call {
+func (_c *MockMachine_Create_Call) RunAndReturn(run func(ctx context.Context, driver string, name string, output MachineOutput, opts ...string) error) *MockMachine_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }

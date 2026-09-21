@@ -60,7 +60,7 @@ func (p *Provider) Collect(ch chan<- prometheus.Metric) {
 }
 
 // Init implements ManagedExecutorProvider.
-func (p *Provider) Init() {}
+func (p *Provider) Init(_ *common.Config) {}
 
 // Shutdown implements ManagedExecutorProvider.
 func (p *Provider) Shutdown(ctx context.Context, _ *common.Config) {

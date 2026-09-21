@@ -24,6 +24,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/docker/go-units"
 	"github.com/moby/moby/api/types/container"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	api "k8s.io/api/core/v1"
@@ -1648,6 +1649,47 @@ type Config struct {
 type MachineConfig struct {
 	ShutdownDrain *DockerMachineShutdownDrain `toml:"shutdown_drain,omitempty" json:"shutdown_drain,omitempty" description:"Configuration for draining idle machines on shutdown"`
 	Heartbeat     *MachineHeartbeat           `toml:"heartbeat,omitempty" json:"heartbeat,omitempty" description:"Configuration for machine heartbeat labels"`
+
+	CreationDurationSecondsBuckets      []float64 `toml:"creation_duration_seconds_buckets,omitempty" json:"creation_duration_seconds_buckets,omitempty" description:"Histogram buckets for gitlab_runner_autoscaling_machine_creation_duration_seconds"`
+	CreationPhaseDurationSecondsBuckets []float64 `toml:"creation_phase_duration_seconds_buckets,omitempty" json:"creation_phase_duration_seconds_buckets,omitempty" description:"Histogram buckets for gitlab_runner_autoscaling_machine_creation_phase_duration_seconds"`
+	DisableCreationPhaseMetrics         bool      `toml:"disable_creation_phase_metrics,omitempty" json:"disable_creation_phase_metrics,omitempty" description:"Do not record gitlab_runner_autoscaling_machine_creation_phase_duration_seconds"`
+}
+
+func (c *MachineConfig) GetCreationDurationSecondsBuckets() []float64 {
+	if c != nil && len(c.CreationDurationSecondsBuckets) > 0 {
+		return c.CreationDurationSecondsBuckets
+	}
+	return prometheus.ExponentialBuckets(30, 1.25, 14)
+}
+
+func (c *MachineConfig) GetCreationPhaseDurationSecondsBuckets() []float64 {
+	if c != nil && len(c.CreationPhaseDurationSecondsBuckets) > 0 {
+		return c.CreationPhaseDurationSecondsBuckets
+	}
+	return []float64{1, 2, 5, 10, 20, 40, 80, 160, 320, 640}
+}
+
+func (c *MachineConfig) CreationPhaseMetricsEnabled() bool {
+	return c == nil || !c.DisableCreationPhaseMetrics
+}
+
+// Prometheus only checks bucket order when a histogram vec's first label set
+// is used, which for these happens in the machine creation goroutine.
+func (c *MachineConfig) validate() error {
+	if c == nil {
+		return nil
+	}
+	for name, buckets := range map[string][]float64{
+		"creation_duration_seconds_buckets":       c.CreationDurationSecondsBuckets,
+		"creation_phase_duration_seconds_buckets": c.CreationPhaseDurationSecondsBuckets,
+	} {
+		for i := 1; i < len(buckets); i++ {
+			if buckets[i] <= buckets[i-1] {
+				return fmt.Errorf("%s must be strictly increasing, got %v", name, buckets)
+			}
+		}
+	}
+	return nil
 }
 
 type MachineHeartbeat struct {
@@ -2810,6 +2852,7 @@ func (c *Config) Validate() error {
 	for vn, v := range map[string]func() error{
 		"global labels":      c.validateLabels,
 		"log field settings": c.validateLogFieldSettings,
+		"machine settings":   c.Machine.validate,
 	} {
 		err := v()
 		if err != nil {

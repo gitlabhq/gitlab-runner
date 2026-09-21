@@ -10,8 +10,14 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-func (m *machineProvider) Init() {
+// The provider is constructed before the config is loaded; Init runs before
+// collector registration and before any machine is created.
+func (m *machineProvider) Init(config *common.Config) {
 	logrus.WithField("executor", m.name).Debug("Initializing docker+machine executor provider")
+
+	if config != nil {
+		m.machineMetrics = newMachineMetrics(m.name, config.Machine)
+	}
 }
 
 // minRecommendedDrainTimeout is the minimum recommended shutdown_timeout when drain is enabled.

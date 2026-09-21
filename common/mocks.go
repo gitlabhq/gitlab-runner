@@ -1000,8 +1000,8 @@ func (_m *MockManagedExecutorProvider) EXPECT() *MockManagedExecutorProvider_Exp
 }
 
 // Init provides a mock function for the type MockManagedExecutorProvider
-func (_mock *MockManagedExecutorProvider) Init() {
-	_mock.Called()
+func (_mock *MockManagedExecutorProvider) Init(config *Config) {
+	_mock.Called(config)
 	return
 }
 
@@ -1011,13 +1011,20 @@ type MockManagedExecutorProvider_Init_Call struct {
 }
 
 // Init is a helper method to define mock.On call
-func (_e *MockManagedExecutorProvider_Expecter) Init() *MockManagedExecutorProvider_Init_Call {
-	return &MockManagedExecutorProvider_Init_Call{Call: _e.mock.On("Init")}
+//   - config *Config
+func (_e *MockManagedExecutorProvider_Expecter) Init(config interface{}) *MockManagedExecutorProvider_Init_Call {
+	return &MockManagedExecutorProvider_Init_Call{Call: _e.mock.On("Init", config)}
 }
 
-func (_c *MockManagedExecutorProvider_Init_Call) Run(run func()) *MockManagedExecutorProvider_Init_Call {
+func (_c *MockManagedExecutorProvider_Init_Call) Run(run func(config *Config)) *MockManagedExecutorProvider_Init_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 *Config
+		if args[0] != nil {
+			arg0 = args[0].(*Config)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -1027,7 +1034,7 @@ func (_c *MockManagedExecutorProvider_Init_Call) Return() *MockManagedExecutorPr
 	return _c
 }
 
-func (_c *MockManagedExecutorProvider_Init_Call) RunAndReturn(run func()) *MockManagedExecutorProvider_Init_Call {
+func (_c *MockManagedExecutorProvider_Init_Call) RunAndReturn(run func(config *Config)) *MockManagedExecutorProvider_Init_Call {
 	_c.Run(run)
 	return _c
 }

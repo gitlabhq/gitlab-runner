@@ -5,11 +5,13 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -366,8 +368,7 @@ func TestInspect(t *testing.T) {
 func TestNewDockerMachineCommand(t *testing.T) {
 	for tn, tc := range dockerMachineCommandTests {
 		t.Run(tn, func(t *testing.T) {
-			err := os.Setenv("MACHINE_BUGSNAG_API_TOKEN", tc.tokenEnvValue)
-			require.NoError(t, err)
+			t.Setenv("MACHINE_BUGSNAG_API_TOKEN", tc.tokenEnvValue)
 
 			ctx, ctxCancelFn := context.WithTimeout(t.Context(), 1*time.Hour)
 			defer ctxCancelFn()
@@ -383,9 +384,15 @@ func TestNewDockerMachineCommand(t *testing.T) {
 func TestLogWriter(t *testing.T) {
 	collect := func() (*logWriter, *[]string) {
 		var lines []string
-		w := &logWriter{log: func(args ...any) {
-			lines = append(lines, fmt.Sprint(args...))
-		}}
+		logger := logrus.New()
+		logger.Out = io.Discard
+		w := &logWriter{
+			logger: logrus.NewEntry(logger),
+			level:  logrus.InfoLevel,
+			output: MachineOutput{OnEntry: func(e LogEntry) {
+				lines = append(lines, e.Msg)
+			}},
+		}
 		return w, &lines
 	}
 
@@ -427,7 +434,10 @@ func TestRunWithLogsDrainsAllOutput(t *testing.T) {
 	cmd := exec.Command("sh", "-c",
 		`for i in 1 2 3; do echo "out $i"; echo "err $i" >&2; done; printf "out tail"; printf "err tail" >&2`)
 
-	require.NoError(t, runWithLogs(cmd, logrus.Fields{"operation": "test"}))
+	var observed atomic.Int32
+	require.NoError(t, runWithLogs(cmd, logrus.Fields{"operation": "test"}, MachineOutput{OnEntry: func(LogEntry) {
+		observed.Add(1)
+	}}))
 
 	var stdout, stderr []string
 	for _, entry := range hook.AllEntries() {
@@ -441,4 +451,121 @@ func TestRunWithLogsDrainsAllOutput(t *testing.T) {
 
 	assert.Equal(t, []string{"out 1", "out 2", "out 3", "out tail"}, stdout)
 	assert.Equal(t, []string{"err 1", "err 2", "err 3", "err tail"}, stderr)
+	assert.EqualValues(t, 8, observed.Load())
+}
+
+func TestParseLogLine(t *testing.T) {
+	jsonLine := `{"time":"2026-09-08T14:38:52.864Z","level":"warn","msg":"Waiting for SSH to be available...","phase":"wait_ssh"}`
+	ts := time.Date(2026, 9, 8, 14, 38, 52, 864000000, time.UTC)
+
+	tests := map[string]struct {
+		line     string
+		fallback logrus.Level
+		wantErr  bool
+		want     func(t *testing.T, e LogEntry)
+	}{
+		"parses fields": {
+			line: jsonLine, fallback: logrus.InfoLevel,
+			want: func(t *testing.T, e LogEntry) {
+				assert.Equal(t, "Waiting for SSH to be available...", e.Msg)
+				assert.Equal(t, logrus.WarnLevel, e.Level)
+				assert.True(t, ts.Equal(e.Time), e.Time)
+				assert.Equal(t, map[string]any{"phase": "wait_ssh"}, e.Fields)
+			},
+		},
+		"non-json line falls back to text": {
+			line: "panic: something", fallback: logrus.ErrorLevel, wantErr: true,
+			want: func(t *testing.T, e LogEntry) {
+				assert.Equal(t, "panic: something", e.Msg)
+				assert.Equal(t, logrus.ErrorLevel, e.Level)
+				assert.Nil(t, e.Fields)
+			},
+		},
+		"invalid json falls back to text": {
+			line: `{"msg":`, fallback: logrus.InfoLevel, wantErr: true,
+			want: func(t *testing.T, e LogEntry) {
+				assert.Equal(t, `{"msg":`, e.Msg)
+				assert.Nil(t, e.Fields)
+			},
+		},
+		"json without msg falls back to text": {
+			line: `{"foo":1}`, fallback: logrus.InfoLevel, wantErr: true,
+			want: func(t *testing.T, e LogEntry) {
+				assert.Equal(t, `{"foo":1}`, e.Msg)
+				assert.Nil(t, e.Fields)
+			},
+		},
+		"unknown level keeps fallback and reports": {
+			line: `{"level":"loud","msg":"m"}`, fallback: logrus.InfoLevel, wantErr: true,
+			want: func(t *testing.T, e LogEntry) {
+				assert.Equal(t, "m", e.Msg)
+				assert.Equal(t, logrus.InfoLevel, e.Level)
+				assert.Empty(t, e.Fields)
+			},
+		},
+		"bad time keeps arrival time and reports": {
+			line: `{"time":"yesterday","msg":"m"}`, fallback: logrus.InfoLevel, wantErr: true,
+			want: func(t *testing.T, e LogEntry) {
+				assert.Equal(t, "m", e.Msg)
+				assert.WithinDuration(t, time.Now(), e.Time, time.Minute)
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			e, err := parseLogLine(tc.line, tc.fallback)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			tc.want(t, e)
+		})
+	}
+}
+
+func TestLogWriterJSONOutput(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	logger.Out = io.Discard
+	hook := test.NewLocal(logger)
+
+	w := &logWriter{logger: logger.WithField("operation", "create"), level: logrus.InfoLevel, output: MachineOutput{JSONLogFormat: true}}
+	_, err := w.Write([]byte(`{"level":"error","msg":"boom","phase":"wait_ssh"}` + "\nplain\nsecond plain\n"))
+	require.NoError(t, err)
+
+	entries := hook.AllEntries()
+	require.Len(t, entries, 5)
+	assert.Equal(t, logrus.ErrorLevel, entries[0].Level)
+	assert.Equal(t, "boom", entries[0].Message)
+	assert.Equal(t, "create", entries[0].Data["operation"])
+	assert.Equal(t, map[string]any{"phase": "wait_ssh"}, entries[0].Data["docker_machine"])
+
+	assert.Equal(t, logrus.WarnLevel, entries[1].Level)
+	assert.Equal(t, "Could not parse docker-machine JSON output", entries[1].Message)
+	assert.Equal(t, "plain", entries[1].Data["line"])
+
+	assert.Equal(t, logrus.InfoLevel, entries[2].Level)
+	assert.Equal(t, "plain", entries[2].Message)
+	_, hasFields := entries[2].Data["docker_machine"]
+	assert.False(t, hasFields)
+
+	assert.Equal(t, logrus.DebugLevel, entries[3].Level, "later parse failures are debug")
+	assert.Equal(t, "second plain", entries[4].Message)
+}
+
+func TestLogWriterTextOutputLeavesJSONAlone(t *testing.T) {
+	hook := test.NewGlobal()
+	defer hook.Reset()
+
+	line := `{"level":"error","msg":"boom"}`
+	w := &logWriter{logger: logrus.NewEntry(logrus.StandardLogger()), level: logrus.InfoLevel}
+	_, err := w.Write([]byte(line + "\n"))
+	require.NoError(t, err)
+
+	entries := hook.AllEntries()
+	require.Len(t, entries, 1)
+	assert.Equal(t, logrus.InfoLevel, entries[0].Level)
+	assert.Equal(t, line, entries[0].Message)
 }

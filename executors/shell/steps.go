@@ -32,7 +32,7 @@ type provider struct {
 }
 
 // Init is a no-op; the step-runner starts lazily on first Connect.
-func (p *provider) Init() {}
+func (p *provider) Init(_ *common.Config) {}
 
 func (p *provider) Shutdown(ctx context.Context, _ *common.Config) {
 	p.stepRunner.shutdown(ctx)

@@ -3,17 +3,22 @@
 package machine
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 // idleCount sums the Idle counters across every target bucket. The
@@ -159,4 +164,113 @@ func TestCollectEmitsZeroSamplesWithoutMachines(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 6, count, "expected one zero sample per state")
+}
+
+func TestCreationMetrics(t *testing.T) {
+	machineConfig := &common.MachineConfig{
+		CreationDurationSecondsBuckets:      []float64{1, 10},
+		CreationPhaseDurationSecondsBuckets: []float64{1, 10},
+	}
+
+	provider := newMachineProvider(docker_executor.NewProvider())
+	provider.Init(&common.Config{Machine: machineConfig})
+	reg := prometheus.NewPedanticRegistry()
+	require.NoError(t, reg.Register(provider))
+	assert.Equal(t, 0, testutil.CollectAndCount(provider.creationHistogram))
+
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Machine:      &common.DockerMachine{MachineName: "phase-test-%s", IdleTime: 5, MachineDriver: "google"},
+			FeatureFlags: map[string]bool{featureflags.DockerMachineJSONOutput: true},
+		},
+		GlobalMachineConfig: machineConfig,
+	}
+
+	machineMock := docker.NewMockMachine(t)
+	provider.machine = machineMock
+	machineMock.On("Inspect", mock.Anything).Return(docker.MachineInfo{
+		DriverName: "google", Zone: "us-east1-d", Project: "p1", MachineType: "n2d-standard-2",
+	}, nil)
+
+	t0 := time.Now()
+	machineMock.On("Create", mock.Anything, "google", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			onOutput := args.Get(3).(docker.MachineOutput).OnEntry
+			onOutput(phaseEntry(t0, "driver_create"))
+			onOutput(phaseEntry(t0.Add(15*time.Second), "wait_ssh"))
+			onOutput(phaseEntry(t0.Add(20*time.Second), "provision"))
+		}).
+		Return(nil).Once()
+	machineMock.On("Create", mock.Anything, "google", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			args.Get(3).(docker.MachineOutput).OnEntry(phaseEntry(t0, "wait_ssh"))
+		}).
+		Return(errors.New("timeout")).Once()
+	machineMock.On("Exist", mock.Anything, mock.Anything).Return(false).Maybe()
+	machineMock.On("Remove", mock.Anything, mock.Anything).Return(nil).Maybe()
+	machineMock.On("Stop", mock.Anything, mock.Anything).Return(nil).Maybe()
+
+	_, errCh := provider.create(config, machineStateIdle)
+	require.NoError(t, <-errCh)
+	_, errCh = provider.create(config, machineStateIdle)
+	require.Error(t, <-errCh)
+
+	_, err := reg.Gather()
+	require.NoError(t, err)
+
+	targets := []string{"us-east1-d", "us-east1", "p1", "n2d-standard-2"}
+	histogram := func(vec *prometheus.HistogramVec, labels ...string) *dto.Histogram {
+		var pb dto.Metric
+		require.NoError(t, vec.WithLabelValues(labels...).(prometheus.Metric).Write(&pb))
+		return pb.Histogram
+	}
+	phase := func(name, result string) *dto.Histogram {
+		return histogram(provider.creationPhaseHistogram, append([]string{name, result}, targets...)...)
+	}
+
+	creation := histogram(provider.creationHistogram, targets...)
+	assert.EqualValues(t, 1, creation.GetSampleCount())
+	assert.Len(t, creation.Bucket, 2, "configured buckets are used")
+	assert.Equal(t, 1, testutil.CollectAndCount(provider.creationHistogram))
+
+	assert.EqualValues(t, 1, histogram(provider.failedCreationHistogram, targets...).GetSampleCount())
+
+	assert.InDelta(t, 15, phase("driver_create", "success").GetSampleSum(), 0.01)
+	assert.InDelta(t, 5, phase("wait_ssh", "success").GetSampleSum(), 0.01)
+	assert.EqualValues(t, 1, phase("provision", "success").GetSampleCount())
+	assert.EqualValues(t, 1, phase("wait_ssh", "failure").GetSampleCount())
+	assert.Equal(t, 4, testutil.CollectAndCount(provider.creationPhaseHistogram))
+}
+
+func TestCreationPhaseMetricsDisabled(t *testing.T) {
+	provider := newMachineProvider(docker_executor.NewProvider())
+	provider.Init(&common.Config{Machine: &common.MachineConfig{DisableCreationPhaseMetrics: true}})
+	reg := prometheus.NewPedanticRegistry()
+	require.NoError(t, reg.Register(provider))
+	assert.Nil(t, provider.creationPhaseHistogram)
+
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Machine:      &common.DockerMachine{MachineName: "phase-off-%s", IdleTime: 5, MachineDriver: "google"},
+			FeatureFlags: map[string]bool{featureflags.DockerMachineJSONOutput: true},
+		},
+		GlobalMachineConfig: &common.MachineConfig{DisableCreationPhaseMetrics: true},
+	}
+
+	machineMock := newMockMachine(t)
+	provider.machine = machineMock
+	machineMock.On("Create", mock.Anything, "google", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			args.Get(3).(docker.MachineOutput).OnEntry(phaseEntry(time.Now(), "wait_ssh"))
+		}).
+		Return(nil).Once()
+
+	_, errCh := provider.create(config, machineStateIdle)
+	require.NoError(t, <-errCh)
+
+	families, err := reg.Gather()
+	require.NoError(t, err)
+	for _, f := range families {
+		assert.NotEqual(t, "gitlab_runner_autoscaling_machine_creation_phase_duration_seconds", f.GetName())
+	}
 }

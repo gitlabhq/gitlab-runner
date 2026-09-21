@@ -118,7 +118,9 @@ type ManagedExecutorProvider interface {
 	// Init method is a hook allowing to add such behavior.
 	//
 	// Init MUST BE NON-BLOCKING!
-	Init()
+	//
+	// The argument receives the global configuration, which may be nil.
+	Init(config *Config)
 
 	// Shutdown terminates the executor provider.
 	//

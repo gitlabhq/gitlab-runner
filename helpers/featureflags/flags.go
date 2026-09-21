@@ -60,6 +60,7 @@ const (
 	SuspendableEnvironments              string = "FF_SUSPENDABLE_ENVIRONMENTS"
 	UseNativeContainerStop               string = "FF_USE_NATIVE_CONTAINER_STOP"
 	MachineOptionsExpandEnv              string = "FF_MACHINE_OPTIONS_EXPAND_ENV"
+	DockerMachineJSONOutput              string = "FF_DOCKER_MACHINE_JSON_OUTPUT"
 )
 
 type FeatureFlag struct {
@@ -505,6 +506,14 @@ var flags = []FeatureFlag{
 			"of the `[runners.machine]` section are replaced with values from the runner's environment " +
 			"when a machine is created. `${GITLAB_RUNNER_MACHINE_NAME}` is the name of the machine being " +
 			"created, which replaces `MachineOptionsWithName`.",
+	},
+	{
+		Name:         DockerMachineJSONOutput,
+		DefaultValue: false,
+		Description: "When enabled, `docker-machine create` runs with `--log-format=json` (requires Docker Machine " +
+			"`0.16.2-gitlab.55` or later). The runner logs Docker Machine's fields as structured fields under " +
+			"`docker_machine` and records creation timings for each phase in " +
+			"`gitlab_runner_autoscaling_machine_creation_phase_duration_seconds`.",
 	},
 }
 

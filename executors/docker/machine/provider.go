@@ -101,17 +101,9 @@ type machineProvider struct {
 	heartbeaters     map[string]*heartbeater
 	heartbeatSem     chan struct{}
 
-	// metrics
-	totalActions            *prometheus.CounterVec
-	currentStatesDesc       *prometheus.Desc
-	creationHistogram       prometheus.Histogram
-	stoppingHistogram       prometheus.Histogram
-	removalHistogram        prometheus.Histogram
-	failedCreationHistogram prometheus.Histogram
-	maxGrowthRateDesc       *prometheus.Desc
-	idleTargetDesc          *prometheus.Desc
-	autoscalingLimitsLock   sync.Mutex
-	autoscalingLimits       map[string]autoscalingLimits
+	machineMetrics
+	autoscalingLimitsLock sync.Mutex
+	autoscalingLimits     map[string]autoscalingLimits
 }
 
 type autoscalingLimits struct {
@@ -262,8 +254,15 @@ func (m *machineProvider) createWithGrowthCapacity(
 	defer ctxCancelFn()
 
 	opts := machineOptions(config, details.Name)
+	phases := newPhaseTracker()
 
-	err := m.machine.Create(ctx, config.Machine.MachineDriver, details.Name, opts...)
+	var output docker.MachineOutput
+	if config.IsFeatureFlagOn(featureflags.DockerMachineJSONOutput) {
+		output = docker.MachineOutput{JSONLogFormat: true, OnEntry: phases.observe}
+	}
+
+	err := m.machine.Create(ctx, config.Machine.MachineDriver, details.Name, output, opts...)
+	phaseDurations := phases.finish(time.Now())
 
 	// Inspect post-Create regardless of outcome. libmachine saves state
 	// both pre-create and on failure, so creation-failed counters get
@@ -277,12 +276,28 @@ func (m *machineProvider) createWithGrowthCapacity(
 			Warnln("Could not inspect docker-machine state; emitting metric with empty target labels")
 	}
 
+	result := "success"
+	if err != nil {
+		result = "failure"
+	}
+	if m.creationPhaseHistogram != nil {
+		targets := details.targets.values()
+		for phase, seconds := range phaseDurations {
+			m.creationPhaseHistogram.
+				WithLabelValues(append([]string{phase, result}, targets...)...).
+				Observe(seconds)
+		}
+	}
+	if len(phaseDurations) > 0 {
+		logger = logger.WithField("phases", phaseDurations)
+	}
+
 	if err != nil {
 		logger.WithField("time", time.Since(started)).
 			WithError(err).
 			Errorln("Machine creation failed")
 		m.totalActions.WithLabelValues(actionLabels("creation-failed", details.targets)...).Inc()
-		m.failedCreationHistogram.Observe(time.Since(started).Seconds())
+		m.failedCreationHistogram.WithLabelValues(details.targets.values()...).Observe(time.Since(started).Seconds())
 		_ = m.remove(details.Name, "Failed to create")
 	} else {
 		details.Lock()
@@ -298,7 +313,7 @@ func (m *machineProvider) createWithGrowthCapacity(
 			Infoln("Machine created")
 
 		m.totalActions.WithLabelValues(actionLabels("created", details.targets)...).Inc()
-		m.creationHistogram.Observe(creationTime.Seconds())
+		m.creationHistogram.WithLabelValues(details.targets.values()...).Observe(creationTime.Seconds())
 
 		// Track it now rather than on the next Acquire.
 		m.heartbeaterFor(config).beat(details.Name, config.Machine.GetHeartbeatInterval())
@@ -911,85 +926,12 @@ func newMachineProvider(provider common.ExecutorProvider) *machineProvider {
 	name := "docker+machine"
 
 	return &machineProvider{
-		name:     name,
-		details:  make(machinesDetails),
-		runners:  make(runnersDetails),
-		machine:  docker.NewMachineCommand(),
-		provider: provider,
-		totalActions: prometheus.NewCounterVec(
-			prometheus.CounterOpts{
-				Name: "gitlab_runner_autoscaling_actions_total",
-				Help: "The total number of actions executed by the provider.",
-				ConstLabels: prometheus.Labels{
-					"executor": name,
-				},
-			},
-			append([]string{"action"}, targetLabelNames...),
-		),
-		currentStatesDesc: prometheus.NewDesc(
-			"gitlab_runner_autoscaling_machine_states",
-			"The current number of machines per state in this provider.",
-			append([]string{"state"}, targetLabelNames...),
-			prometheus.Labels{
-				"executor": name,
-			},
-		),
-		maxGrowthRateDesc: prometheus.NewDesc(
-			"gitlab_runner_autoscaling_max_growth_rate",
-			"The maximum number of machines that can be in the creation state at once (0 = unlimited).",
-			[]string{"runner", "runner_name", "system_id"},
-			prometheus.Labels{
-				"executor": name,
-			},
-		),
-		idleTargetDesc: prometheus.NewDesc(
-			"gitlab_runner_autoscaling_idle_target",
-			"The number of available machines the autoscaler aims to keep after applying IdleScaleFactor and IdleCountMin.",
-			[]string{"runner", "runner_name", "system_id"},
-			prometheus.Labels{
-				"executor": name,
-			},
-		),
+		name:              name,
+		details:           make(machinesDetails),
+		runners:           make(runnersDetails),
+		machine:           docker.NewMachineCommand(),
+		provider:          provider,
+		machineMetrics:    newMachineMetrics(name, nil),
 		autoscalingLimits: make(map[string]autoscalingLimits),
-		creationHistogram: prometheus.NewHistogram(
-			prometheus.HistogramOpts{
-				Name:    "gitlab_runner_autoscaling_machine_creation_duration_seconds",
-				Help:    "Histogram of machine creation time.",
-				Buckets: prometheus.ExponentialBuckets(30, 1.25, 14),
-				ConstLabels: prometheus.Labels{
-					"executor": name,
-				},
-			},
-		),
-		stoppingHistogram: prometheus.NewHistogram(
-			prometheus.HistogramOpts{
-				Name:    "gitlab_runner_autoscaling_machine_stopping_duration_seconds",
-				Help:    "Histogram of machine stopping time.",
-				Buckets: []float64{1, 3, 5, 10, 30, 50, 60, 80, 90, 120},
-				ConstLabels: prometheus.Labels{
-					"executor": name,
-				},
-			},
-		),
-		removalHistogram: prometheus.NewHistogram(
-			prometheus.HistogramOpts{
-				Name:    "gitlab_runner_autoscaling_machine_removal_duration_seconds",
-				Help:    "Histogram of machine removal time.",
-				Buckets: []float64{1, 3, 5, 10, 30, 50, 60, 80, 90, 120},
-				ConstLabels: prometheus.Labels{
-					"executor": name,
-				},
-			},
-		),
-		failedCreationHistogram: prometheus.NewHistogram(
-			prometheus.HistogramOpts{
-				Name:    "gitlab_runner_autoscaling_machine_failed_creation_duration_seconds",
-				Help:    "Histogram of machine failed creation timings",
-				Buckets: []float64{1, 5, 10, 30, 60, 120, 240, 480, 900},
-				ConstLabels: prometheus.Labels{
-					"executor": name,
-				},
-			},
-		),
 	}
 }

@@ -107,7 +107,7 @@ type testMachine struct {
 	mutex sync.Mutex
 }
 
-func (m *testMachine) Create(ctx context.Context, driver, name string, opts ...string) error {
+func (m *testMachine) Create(ctx context.Context, driver, name string, _ docker.MachineOutput, opts ...string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -469,11 +469,11 @@ func TestMachineReuse(t *testing.T) {
 
 	var createdMachineDetails *machineDetails
 
-	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything).
+	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).
 		Once()
 
-	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything).
+	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			// Free the previously created machine after the useMachine call has already happened.
 			// The useMachine call tries to create a new machine at first because a free one doesn't exist
@@ -526,7 +526,7 @@ func TestMachineReuseWithContention(t *testing.T) {
 	list := make([]string, 0)
 
 	listCall := machineMock.On("List").Return([]string{}, nil)
-	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything).
+	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			name := args.String(2)
 
@@ -613,7 +613,7 @@ func TestMachineAcquireGrowthCapacity(t *testing.T) {
 			var concurrentCalls, maxConcurrentCalls int32
 			var maxConcurrentCallsLock sync.Mutex
 
-			machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything).
+			machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Run(func(mock.Arguments) {
 					defer atomic.AddInt32(&concurrentCalls, -1)
 					cc := atomic.AddInt32(&concurrentCalls, 1)
@@ -918,9 +918,9 @@ func TestMachineOptionsWithName(t *testing.T) {
 	}
 
 	var capturedOpts []string
-	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
-			for i := 3; i < len(args); i++ {
+			for i := 4; i < len(args); i++ {
 				capturedOpts = append(capturedOpts, args.String(i))
 			}
 		}).
@@ -999,9 +999,9 @@ func TestMachineOptionsExpandEnv(t *testing.T) {
 			}
 
 			var captured []string
-			machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Run(func(args mock.Arguments) {
-					for i := 3; i < len(args); i++ {
+					for i := 4; i < len(args); i++ {
 						captured = append(captured, args.String(i))
 					}
 				}).
@@ -1035,9 +1035,9 @@ func TestMachineOptionsWithNameEmpty(t *testing.T) {
 	}
 
 	var capturedOpts []string
-	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	machineMock.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
-			for i := 3; i < len(args); i++ {
+			for i := 4; i < len(args); i++ {
 				capturedOpts = append(capturedOpts, args.String(i))
 			}
 		}).

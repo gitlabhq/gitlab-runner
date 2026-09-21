@@ -212,7 +212,7 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 
 	managedProvider, ok := executorProvider.(common.ManagedExecutorProvider)
 	if ok {
-		managedProvider.Init()
+		managedProvider.Init(nil)
 	}
 
 	if r.RunnerConfig.SystemID == "" {
