@@ -222,7 +222,9 @@ To view those metrics on a runner, execute the command as noted in [available me
 
 | Metric name                                                    | Description |
 |----------------------------------------------------------------|-------------|
-| `gitlab_runner_api_request_statuses_total`                     | The total number of API requests, partitioned by runner, endpoint, and status. |
+| `gitlab_runner_api_request_attempts_total`                     | The total number of HTTP attempts made while completing API requests, partitioned by `runner`, `runner_name`, `system_id`, `endpoint`, `status`, and `method`. `gitlab_runner_api_request_statuses_total` records only the final response of each request. This counter includes every attempt, so `429` and `5xx` responses that were retried are visible here. Attempts that got no HTTP response, such as connection or TLS failures, have `status="error"`. Requests made outside a runner context (register, verify, unregister, artifacts) have the normalized API path as `endpoint` and empty runner labels. |
+| `gitlab_runner_api_request_retries_total`                      | The total number of HTTP attempts made while completing API requests, partitioned by `path` and `method`. Despite the name, this counts all attempts including the first one. Prefer `gitlab_runner_api_request_attempts_total`, which also has the status. |
+| `gitlab_runner_api_request_statuses_total`                     | The total number of API requests, partitioned by `runner`, `runner_name`, `system_id`, `endpoint`, `status`, and `method`. |
 | `gitlab_runner_autoscaling_idle_target`                        | The number of available machines the autoscaler aims to keep after applying `IdleScaleFactor` and `IdleCountMin`. |
 | `gitlab_runner_autoscaling_machine_creation_duration_seconds`  | Histogram of machine creation time. |
 | `gitlab_runner_autoscaling_machine_states`                     | The number of machines per state in this provider. |

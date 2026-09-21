@@ -14,9 +14,12 @@ import (
 	"time"
 
 	"github.com/jpillora/backoff"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewRetryRequester(t *testing.T) {
@@ -483,6 +486,145 @@ func TestNormalizedURI(t *testing.T) {
 			assert.Equal(t, tc.expect, res)
 		})
 	}
+}
+
+var testRequestJobLabels = apiRequestLabels{
+	runnerID:   "runner1",
+	runnerName: "runner-one",
+	systemID:   "system1",
+	endpoint:   apiEndpointRequestJob,
+}
+
+func TestRetryRequester_Do_RecordsEveryAttempt(t *testing.T) {
+	t.Parallel()
+
+	mr := newMockRequester(t)
+	throttled := func(*http.Request) *http.Response {
+		res := &http.Response{
+			StatusCode: http.StatusTooManyRequests,
+			Header:     http.Header{},
+			Body:       io.NopCloser(strings.NewReader("")),
+		}
+		res.Header.Set(correlationIDHeader, "corr-123")
+		return res
+	}
+	call1 := mr.On("Do", mock.Anything).Twice().Return(throttled, nil)
+	mr.On("Do", mock.Anything).Once().Return(&http.Response{StatusCode: http.StatusNoContent}, nil).NotBefore(call1)
+
+	collector := NewAPIRequestsCollector()
+	rlr := newRetryRequester(mr, collector)
+	rlr.maxAttempts = 3
+	logger, hook := test.NewNullLogger()
+	rlr.logger = logger
+
+	ctx := withAPIRequestLabels(t.Context(), testRequestJobLabels)
+	req := httptest.NewRequestWithContext(ctx, http.MethodPost, "http://example.com/api/v4/jobs/request", nil)
+
+	res, err := rlr.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, res.StatusCode)
+
+	assert.Equal(t, float64(2), attemptsFor(t, collector, testRequestJobLabels, "429"))
+	assert.Equal(t, float64(1), attemptsFor(t, collector, testRequestJobLabels, "204"))
+
+	var retryLogs []*logrus.Entry
+	for _, e := range hook.AllEntries() {
+		if e.Message == "Waiting before making the next call" {
+			retryLogs = append(retryLogs, e)
+		}
+	}
+	require.Len(t, retryLogs, 2)
+	assert.Equal(t, logrus.InfoLevel, retryLogs[0].Level)
+	assert.Equal(t, http.StatusTooManyRequests, retryLogs[0].Data["status"])
+	assert.Equal(t, 1, retryLogs[0].Data["attempt"])
+	assert.Equal(t, 2, retryLogs[1].Data["attempt"])
+	assert.Equal(t, 3, retryLogs[0].Data["max_attempts"])
+	assert.Equal(t, "corr-123", retryLogs[0].Data["correlation_id"])
+}
+
+func TestRetryRequester_Do_LogsRequestCorrelationIDWhenNotEchoed(t *testing.T) {
+	t.Parallel()
+
+	mr := newMockRequester(t)
+	res := &http.Response{StatusCode: http.StatusTooManyRequests, Body: io.NopCloser(strings.NewReader(""))}
+	mr.On("Do", mock.Anything).Twice().Return(res, nil)
+
+	rlr := newRetryRequester(mr, NewAPIRequestsCollector())
+	rlr.maxAttempts = 2
+	logger, hook := test.NewNullLogger()
+	rlr.logger = logger
+
+	req := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+	req.Header.Set(correlationIDHeader, "runner-generated")
+
+	_, err := rlr.Do(req)
+	assert.NoError(t, err)
+	require.Len(t, hook.AllEntries(), 1)
+	assert.Equal(t, "runner-generated", hook.AllEntries()[0].Data["correlation_id"])
+}
+
+func attemptsFor(t *testing.T, collector *APIRequestsCollector, labels apiRequestLabels, status string) float64 {
+	counter, err := collector.attempts.GetMetricWith(labels.prometheusLabels(status, http.MethodPost, "status"))
+	require.NoError(t, err)
+	return testutil.ToFloat64(counter)
+}
+
+func TestRetryRequester_Do_RecordsTransportErrorAttempt(t *testing.T) {
+	t.Parallel()
+
+	mr := newMockRequester(t)
+	mr.On("Do", mock.Anything).Once().Return(nil, errors.New("dial tcp: connection refused"))
+
+	collector := NewAPIRequestsCollector()
+	rlr := newRetryRequester(mr, collector)
+	logger, _ := test.NewNullLogger()
+	rlr.logger = logger
+
+	ctx := withAPIRequestLabels(t.Context(), testRequestJobLabels)
+	req := httptest.NewRequestWithContext(ctx, http.MethodPost, "http://example.com/api/v4/jobs/request", nil)
+
+	_, err := rlr.Do(req)
+	assert.Error(t, err)
+	assert.Equal(t, float64(1), attemptsFor(t, collector, testRequestJobLabels, attemptStatusError))
+}
+
+func TestRetryRequester_Do_DoesNotCountCancelledRequest(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(withAPIRequestLabels(t.Context(), testRequestJobLabels))
+	cancel()
+
+	mr := newMockRequester(t)
+	mr.On("Do", mock.Anything).Once().Return(nil, context.Canceled)
+
+	collector := NewAPIRequestsCollector()
+	rlr := newRetryRequester(mr, collector)
+	logger, _ := test.NewNullLogger()
+	rlr.logger = logger
+
+	req := httptest.NewRequestWithContext(ctx, http.MethodPost, "http://example.com/api/v4/jobs/request", nil)
+
+	_, err := rlr.Do(req)
+	assert.Error(t, err)
+	assert.Equal(t, 0, testutil.CollectAndCount(collector.attempts))
+}
+
+func TestRetryRequester_Do_RecordsAttemptWithoutRunnerContext(t *testing.T) {
+	t.Parallel()
+
+	mr := newMockRequester(t)
+	mr.On("Do", mock.Anything).Once().Return(&http.Response{StatusCode: http.StatusOK}, nil)
+
+	collector := NewAPIRequestsCollector()
+	rlr := newRetryRequester(mr, collector)
+	logger, _ := test.NewNullLogger()
+	rlr.logger = logger
+
+	_, err := rlr.Do(httptest.NewRequest(http.MethodPost, "http://example.com/api/v4/runners/verify", nil))
+	assert.NoError(t, err)
+
+	labels := apiRequestLabels{endpoint: "/api/v4/runners/verify"}
+	assert.Equal(t, float64(1), attemptsFor(t, collector, labels, "200"))
 }
 
 func TestRetryRequester_Do_WithoutRateLimitRetry(t *testing.T) {
