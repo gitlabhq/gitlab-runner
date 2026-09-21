@@ -725,6 +725,9 @@ func (mr *RunCommand) createSnowplowBillingWriter(ulConfig common.UsageLogger) u
 // channel, which is the signal that the command was properly terminated (this is the only
 // valid, properly terminated exit flow for `gitlab-runner run`).
 func (mr *RunCommand) run() {
+	// Before setupMetricsAndDebugServer: providers build metrics from the config in Init.
+	mr.initUsedExecutorProviders()
+
 	mr.setupMetricsAndDebugServer()
 	mr.setupSessionServer()
 
@@ -735,8 +738,6 @@ func (mr *RunCommand) run() {
 
 	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
-
-	mr.initUsedExecutorProviders()
 
 	// Boot-verify gates /health/ready. On failure, drain providers, record the
 	// error for a non-zero exit, then cancel abortRun so runWait returns and
@@ -788,10 +789,11 @@ func (mr *RunCommand) run() {
 func (mr *RunCommand) initUsedExecutorProviders() {
 	mr.log().Info("Initializing executor providers")
 
+	config := mr.configfile.Config()
 	for _, provider := range mr.executorProviders.All() {
 		managedProvider, ok := provider.(common.ManagedExecutorProvider)
 		if ok {
-			managedProvider.Init()
+			managedProvider.Init(config)
 		}
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -123,4 +125,57 @@ func TestExistWithoutStoreEntry(t *testing.T) {
 
 	m := &machineCommand{}
 	assert.False(t, m.Exist(t.Context(), "machine-1"))
+}
+
+func TestCreateOutputHandling(t *testing.T) {
+	useFakeDockerMachine(t, `echo "$@" > "$FAKE_ARGS_FILE"
+echo '{"level":"info","msg":"Creating machine...","phase":"driver_create"}'
+echo 'not json'`)
+
+	tests := map[string]struct {
+		json         bool
+		wantArgs     string
+		wantFields   map[string]any
+		wantMessages []string
+	}{
+		"text": {
+			wantArgs:     "--bugsnag-api-token=no-report create --driver google --opt=1 name",
+			wantMessages: []string{`{"level":"info","msg":"Creating machine...","phase":"driver_create"}`, "not json"},
+		},
+		"json": {
+			json:         true,
+			wantArgs:     "--bugsnag-api-token=no-report --log-format=json create --driver google --opt=1 name",
+			wantFields:   map[string]any{"phase": "driver_create"},
+			wantMessages: []string{"Creating machine...", "not json"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			argsFile := path.Join(t.TempDir(), "args")
+			t.Setenv("FAKE_ARGS_FILE", argsFile)
+			t.Setenv("MACHINE_BUGSNAG_API_TOKEN", "")
+
+			var entries []LogEntry
+			var mu sync.Mutex
+			output := MachineOutput{JSONLogFormat: tc.json, OnEntry: func(e LogEntry) {
+				mu.Lock()
+				defer mu.Unlock()
+				entries = append(entries, e)
+			}}
+
+			m := NewMachineCommand()
+			require.NoError(t, m.Create(t.Context(), "google", "name", output, "opt=1"))
+
+			args, err := os.ReadFile(argsFile)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantArgs, strings.TrimSpace(string(args)))
+
+			require.Len(t, entries, 2)
+			assert.Equal(t, tc.wantMessages[0], entries[0].Msg)
+			assert.Equal(t, tc.wantFields, entries[0].Fields)
+			assert.Equal(t, tc.wantMessages[1], entries[1].Msg)
+			assert.Nil(t, entries[1].Fields)
+		})
+	}
 }

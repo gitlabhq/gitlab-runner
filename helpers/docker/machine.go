@@ -3,6 +3,9 @@ package docker
 import (
 	"context"
 	"errors"
+	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ErrLabelsNotSupported mirrors the docker-machine error for drivers
@@ -10,8 +13,21 @@ import (
 // docker-machine is a subprocess.
 var ErrLabelsNotSupported = errors.New("driver does not support labels")
 
+type LogEntry struct {
+	Time   time.Time
+	Level  logrus.Level
+	Msg    string
+	Fields map[string]any
+}
+
+// JSONLogFormat needs Docker Machine 0.16.2-gitlab.55 or later.
+type MachineOutput struct {
+	JSONLogFormat bool
+	OnEntry       func(LogEntry)
+}
+
 type Machine interface {
-	Create(ctx context.Context, driver, name string, opts ...string) error
+	Create(ctx context.Context, driver, name string, output MachineOutput, opts ...string) error
 	Provision(ctx context.Context, name string) error
 	Remove(ctx context.Context, name string) error
 	ForceRemove(ctx context.Context, name string) error

@@ -4410,3 +4410,38 @@ func TestResolvedLogFieldMapping(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_ValidateMachineBuckets(t *testing.T) {
+	tests := map[string]struct {
+		machine     *MachineConfig
+		expectError string
+	}{
+		"no machine section": {},
+		"unset buckets":      {machine: &MachineConfig{}},
+		"increasing": {
+			machine: &MachineConfig{
+				CreationDurationSecondsBuckets:      []float64{10, 20, 40},
+				CreationPhaseDurationSecondsBuckets: []float64{0.5, 1},
+			},
+		},
+		"decreasing": {
+			machine:     &MachineConfig{CreationDurationSecondsBuckets: []float64{10, 5}},
+			expectError: "creation_duration_seconds_buckets must be strictly increasing",
+		},
+		"duplicate": {
+			machine:     &MachineConfig{CreationPhaseDurationSecondsBuckets: []float64{1, 1, 2}},
+			expectError: "creation_phase_duration_seconds_buckets must be strictly increasing",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := (&Config{Machine: tc.machine}).Validate()
+			if tc.expectError == "" {
+				assert.NoError(t, err)
+				return
+			}
+			assert.ErrorContains(t, err, tc.expectError)
+		})
+	}
+}

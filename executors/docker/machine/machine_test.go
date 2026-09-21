@@ -5,7 +5,6 @@ package machine
 import (
 	"testing"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -111,15 +110,9 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 
 		e := &machineExecutor{
 			provider: &machineProvider{
-				machine:  machine,
-				provider: executorProvider,
-				totalActions: prometheus.NewCounterVec(
-					prometheus.CounterOpts{
-						Name: "actions_total",
-						Help: "actions_total",
-					},
-					append([]string{"action"}, targetLabelNames...),
-				),
+				machine:        machine,
+				provider:       executorProvider,
+				machineMetrics: newMachineMetrics("test", nil),
 			},
 		}
 		err := e.Prepare(options)

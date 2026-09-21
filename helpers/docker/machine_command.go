@@ -26,12 +26,62 @@ const (
 
 var dockerMachineExecutable = defaultDockerMachineExecutable
 
+const logFormatJSONOption = "--log-format=json"
+
+var errNotJSON = errors.New("line is not a JSON object")
+
+// The returned entry is always usable; on error it holds the raw line at the
+// fallback level.
+func parseLogLine(line string, fallback logrus.Level) (LogEntry, error) {
+	entry := LogEntry{Time: time.Now(), Level: fallback, Msg: line}
+	if !strings.HasPrefix(line, "{") {
+		return entry, errNotJSON
+	}
+
+	var raw map[string]any
+	if err := json.Unmarshal([]byte(line), &raw); err != nil {
+		return entry, err
+	}
+	msg, ok := raw["msg"].(string)
+	if !ok {
+		return entry, errors.New("missing msg field")
+	}
+	entry.Msg = msg
+	delete(raw, "msg")
+
+	var errs []error
+	if lvl, ok := raw["level"].(string); ok {
+		if parsed, err := logrus.ParseLevel(lvl); err == nil {
+			entry.Level = parsed
+		} else {
+			errs = append(errs, err)
+		}
+		delete(raw, "level")
+	}
+	if ts, ok := raw["time"].(string); ok {
+		if t, err := time.Parse(time.RFC3339Nano, ts); err == nil {
+			entry.Time = t
+		} else {
+			errs = append(errs, err)
+		}
+		delete(raw, "time")
+	}
+	entry.Fields = raw
+	return entry, errors.Join(errs...)
+}
+
 // logWriter logs command output line by line. Assigned to Stdout/Stderr
 // rather than read from pipes: exec.Cmd waits for the copy, so nothing
 // races process exit or gets lost.
 type logWriter struct {
-	log func(args ...any)
-	buf bytes.Buffer
+	logger *logrus.Entry
+	level  logrus.Level
+	output MachineOutput
+	buf    bytes.Buffer
+
+	// A stack trace is many lines; the first parse failure is a warning,
+	// the rest are debug.
+	parseFailures int
 }
 
 func (l *logWriter) write(line string) {
@@ -41,7 +91,29 @@ func (l *logWriter) write(line string) {
 		return
 	}
 
-	l.log(line)
+	entry := LogEntry{Time: time.Now(), Level: l.level, Msg: line}
+	if l.output.JSONLogFormat {
+		var err error
+		entry, err = parseLogLine(line, l.level)
+		if err != nil {
+			level := logrus.DebugLevel
+			if l.parseFailures == 0 {
+				level = logrus.WarnLevel
+			}
+			l.parseFailures++
+			l.logger.WithError(err).WithField("line", line).Log(level, "Could not parse docker-machine JSON output")
+		}
+	}
+
+	logger := l.logger
+	if len(entry.Fields) > 0 {
+		logger = logger.WithField("docker_machine", entry.Fields)
+	}
+	logger.Log(entry.Level, entry.Msg)
+
+	if l.output.OnEntry != nil {
+		l.output.OnEntry(entry)
+	}
 }
 
 func (l *logWriter) Write(p []byte) (int, error) {
@@ -64,21 +136,29 @@ func (l *logWriter) Flush() {
 	}
 }
 
-func stdoutLogWriter(cmd *exec.Cmd, fields logrus.Fields) *logWriter {
-	writer := &logWriter{log: logrus.WithFields(fields).Infoln}
+func newLogWriter(fields logrus.Fields, level logrus.Level, output MachineOutput) *logWriter {
+	return &logWriter{
+		logger: logrus.WithFields(fields),
+		level:  level,
+		output: output,
+	}
+}
+
+func stdoutLogWriter(cmd *exec.Cmd, fields logrus.Fields, output MachineOutput) *logWriter {
+	writer := newLogWriter(fields, logrus.InfoLevel, output)
 	cmd.Stdout = writer
 	return writer
 }
 
-func stderrLogWriter(cmd *exec.Cmd, fields logrus.Fields) *logWriter {
-	writer := &logWriter{log: logrus.WithFields(fields).Errorln}
+func stderrLogWriter(cmd *exec.Cmd, fields logrus.Fields, output MachineOutput) *logWriter {
+	writer := newLogWriter(fields, logrus.ErrorLevel, output)
 	cmd.Stderr = writer
 	return writer
 }
 
-func runWithLogs(cmd *exec.Cmd, fields logrus.Fields) error {
-	stdout := stdoutLogWriter(cmd, fields)
-	stderr := stderrLogWriter(cmd, fields)
+func runWithLogs(cmd *exec.Cmd, fields logrus.Fields, output MachineOutput) error {
+	stdout := stdoutLogWriter(cmd, fields, output)
+	stderr := stderrLogWriter(cmd, fields, output)
 	err := cmd.Run()
 	stdout.Flush()
 	stderr.Flush()
@@ -96,11 +176,17 @@ type machineInfo struct {
 	canConnect bool
 }
 
-func (m *machineCommand) Create(ctx context.Context, driver, name string, opts ...string) error {
-	args := []string{
-		"create",
-		"--driver", driver,
+func (m *machineCommand) Create(
+	ctx context.Context,
+	driver, name string,
+	output MachineOutput,
+	opts ...string,
+) error {
+	var args []string
+	if output.JSONLogFormat {
+		args = append(args, logFormatJSONOption)
 	}
+	args = append(args, "create", "--driver", driver)
 	for _, opt := range opts {
 		args = append(args, "--"+opt)
 	}
@@ -114,7 +200,7 @@ func (m *machineCommand) Create(ctx context.Context, driver, name string, opts .
 		"name":      name,
 	}
 	logrus.Debugln("Executing", cmd.Path, cmd.Args)
-	return runWithLogs(cmd, fields)
+	return runWithLogs(cmd, fields, output)
 }
 
 func (m *machineCommand) Provision(ctx context.Context, name string) error {
@@ -125,7 +211,7 @@ func (m *machineCommand) Provision(ctx context.Context, name string) error {
 		"name":      name,
 	}
 
-	return runWithLogs(cmd, fields)
+	return runWithLogs(cmd, fields, MachineOutput{})
 }
 
 func (m *machineCommand) UpdateLabels(ctx context.Context, name string, labels map[string]string) error {
@@ -142,8 +228,8 @@ func (m *machineCommand) UpdateLabels(ctx context.Context, name string, labels m
 		"name":      name,
 	}
 
-	stdout := stdoutLogWriter(cmd, fields)
-	stderr := stderrLogWriter(cmd, fields)
+	stdout := stdoutLogWriter(cmd, fields, MachineOutput{})
+	stderr := stderrLogWriter(cmd, fields, MachineOutput{})
 
 	// stderr is also captured to recover the unsupported-driver error,
 	// since docker-machine is a subprocess.
@@ -173,7 +259,7 @@ func (m *machineCommand) Stop(ctx context.Context, name string) error {
 		"name":      name,
 	}
 
-	return runWithLogs(cmd, fields)
+	return runWithLogs(cmd, fields, MachineOutput{})
 }
 
 func (m *machineCommand) Remove(ctx context.Context, name string) error {
@@ -184,7 +270,7 @@ func (m *machineCommand) Remove(ctx context.Context, name string) error {
 		"name":      name,
 	}
 
-	if err := runWithLogs(cmd, fields); err != nil {
+	if err := runWithLogs(cmd, fields, MachineOutput{}); err != nil {
 		return err
 	}
 
@@ -202,7 +288,7 @@ func (m *machineCommand) ForceRemove(ctx context.Context, name string) error {
 		"name":      name,
 	}
 
-	if err := runWithLogs(cmd, fields); err != nil {
+	if err := runWithLogs(cmd, fields, MachineOutput{}); err != nil {
 		return err
 	}
 
@@ -287,7 +373,7 @@ func (m *machineCommand) Exist(ctx context.Context, name string) bool {
 		"operation": "exists",
 		"name":      name,
 	}
-	stderr := stderrLogWriter(cmd, fields)
+	stderr := stderrLogWriter(cmd, fields, MachineOutput{})
 
 	err = cmd.Run()
 	stderr.Flush()

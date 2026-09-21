@@ -304,6 +304,34 @@ repeated after all requests for the other runners and their sleep periods are ca
 The `[machine]` section configures global settings for the `docker+machine` executor provider.
 These settings apply to all runners that use the `docker+machine` executor.
 
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `creation_duration_seconds_buckets` | array of floats | Histogram buckets for `gitlab_runner_autoscaling_machine_creation_duration_seconds`. Default: `[30, 37.5, 46.9, 58.6, 73.2, 91.6, 114.4, 143.1, 178.8, 223.5, 279.4, 349.2, 436.6, 545.7]`. |
+| `creation_phase_duration_seconds_buckets` | array of floats | Histogram buckets for `gitlab_runner_autoscaling_machine_creation_phase_duration_seconds`. Default: `[1, 2, 5, 10, 20, 40, 80, 160, 320, 640]`. |
+| `disable_creation_phase_metrics` | boolean | Do not record `gitlab_runner_autoscaling_machine_creation_phase_duration_seconds`. Phase durations are still logged. Default: `false`. |
+
+`gitlab_runner_autoscaling_machine_creation_phase_duration_seconds` breaks machine creation down
+by Docker Machine phase (`bootstrap`, `pre_create`, `driver_create`, `wait_running`, `wait_ssh`, `detect_os`,
+`provision`, `docker_check`). It requires the `FF_DOCKER_MACHINE_JSON_OUTPUT` [feature flag](feature-flags.md)
+and Docker Machine `0.16.2-gitlab.55` or later. With the flag enabled, the runner runs `docker-machine create`
+with `--log-format=json`, logs Docker Machine's fields under `docker_machine`, and records the phase timings.
+Without it, the runner logs Docker Machine output as plain text as before and the phase histogram has no
+samples.
+
+The `result` label is `success` or `failure` and reflects the outcome of the whole `docker-machine create`,
+not of the individual phase. When a create times out waiting for SSH, the phases that completed before it
+are recorded with `result="failure"` as well.
+
+The histograms are built when the runner starts. Changes to these settings take effect after a restart,
+not on configuration reload.
+
+Example:
+
+```toml
+[machine]
+  creation_duration_seconds_buckets = [10, 12.5, 15.6, 19.5, 24.4, 30.5, 38.1, 47.7, 59.6, 74.5, 93.1, 116.4, 145.5, 181.9, 227.4, 284.2, 355.3, 444.1, 555.1]
+```
+
 ### The `[machine.shutdown_drain]` section
 
 When the runner process shuts down, idle machines in the pool are typically left to run.

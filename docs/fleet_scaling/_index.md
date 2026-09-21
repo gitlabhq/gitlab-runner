@@ -226,7 +226,9 @@ To view those metrics on a runner, execute the command as noted in [available me
 | `gitlab_runner_api_request_retries_total`                      | The total number of HTTP attempts made while completing API requests, partitioned by `path` and `method`. Despite the name, this counts all attempts including the first one. Prefer `gitlab_runner_api_request_attempts_total`, which also has the status. |
 | `gitlab_runner_api_request_statuses_total`                     | The total number of API requests, partitioned by `runner`, `runner_name`, `system_id`, `endpoint`, `status`, and `method`. |
 | `gitlab_runner_autoscaling_idle_target`                        | The number of available machines the autoscaler aims to keep after applying `IdleScaleFactor` and `IdleCountMin`. |
-| `gitlab_runner_autoscaling_machine_creation_duration_seconds`  | Histogram of machine creation time. |
+| `gitlab_runner_autoscaling_machine_creation_duration_seconds`  | Histogram of machine creation time, partitioned by `target_zone`, `target_region`, `target_project`, and `target_machine_type`. |
+| `gitlab_runner_autoscaling_machine_failed_creation_duration_seconds` | Histogram of failed machine creation time, with the same labels as `gitlab_runner_autoscaling_machine_creation_duration_seconds`. |
+| `gitlab_runner_autoscaling_machine_creation_phase_duration_seconds` | Histogram of machine creation time for each Docker Machine phase. Requires the `FF_DOCKER_MACHINE_JSON_OUTPUT` feature flag. For more information, see [the `[machine]` section](../configuration/advanced-configuration.md#the-machine-section). |
 | `gitlab_runner_autoscaling_machine_states`                     | The number of machines per state in this provider. |
 | `gitlab_runner_autoscaling_max_growth_rate`                    | The maximum number of machines that can be in the creation state at once (0 = unlimited). |
 | `gitlab_runner_concurrent`                                     | The value of concurrent setting. |
@@ -255,6 +257,14 @@ To view those metrics on a runner, execute the command as noted in [available me
 | `process_start_time_seconds`                                   | Start time of the process, measured in seconds from the Unix epoch. |
 | `process_virtual_memory_bytes`                                 | Virtual memory size in bytes. |
 | `process_virtual_memory_max_bytes`                             | Maximum amount of virtual memory available in bytes. |
+
+> [!note]
+> In GitLab Runner 19.4 and later, `gitlab_runner_autoscaling_machine_creation_duration_seconds` and
+> `gitlab_runner_autoscaling_machine_failed_creation_duration_seconds` have `target_zone`, `target_region`,
+> `target_project`, and `target_machine_type` labels. Queries that treated these histograms as a single
+> series must aggregate first, for example
+> `histogram_quantile(0.95, sum by (le) (rate(gitlab_runner_autoscaling_machine_creation_duration_seconds_bucket[5m])))`.
+> Machines whose Docker Machine state could not be read have empty label values.
 
 ### Grafana dashboard configuration tips
 
