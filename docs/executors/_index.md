@@ -87,28 +87,26 @@ you decide which executor to use:
 > SSH, Shell, VirtualBox, Parallels, and Custom executors are in maintenance mode.
 > They receive critical security updates but no new features are planned.
 
-| Executor                                         | Docker | Docker Autoscaler |                 Instance |   Kubernetes   | SSH  |     Shell      |   VirtualBox   |   Parallels    |          Custom          |
-|:-------------------------------------------------|:------:|:-----------------:|-------------------------:|:--------------:|:----:|:--------------:|:--------------:|:--------------:|:------------------------:|
-| Clean build environment for every build          |   ✓    |         ✓         | conditional <sup>1</sup> |       ✓        |  ✗   |       ✗        |       ✓        |       ✓        | conditional <sup>1</sup> |
-| Reuse previous clone if it exists                |   ✓    |         ✓         | conditional <sup>1</sup> | ✓ <sup>2</sup> |  ✓   |       ✓        |       ✗        |       ✗        | conditional <sup>1</sup> |
-| Runner file system access protected <sup>3</sup> |   ✓    |         ✓         |                        ✗ |       ✓        |  ✓   |       ✗        |       ✓        |       ✓        |       conditional        |
-| Migrate runner machine                           |   ✓    |         ✓         |                        ✓ |       ✓        |  ✗   |       ✗        |    partial     |    partial     |            ✓             |
-| Zero-configuration support for concurrent builds |   ✓    |         ✓         |                        ✓ |       ✓        |  ✗   | ✗ <sup>4</sup> |       ✓        |       ✓        | conditional <sup>1</sup> |
-| Complicated build environments                   |   ✓    |         ✓         |           ✗ <sup>5</sup> |       ✓        |  ✗   | ✗ <sup>5</sup> | ✓ <sup>6</sup> | ✓ <sup>6</sup> |            ✓             |
-| Debugging build problems                         | medium |      medium       |                   medium |     medium     | easy |      easy      |      hard      |      hard      |          medium          |
+| Executor                                             | Docker | Docker Autoscaler |                   Instance |       Kubernetes       | SSH  |       Shell       | VirtualBox  |  Parallels  |           Custom           |
+|:-----------------------------------------------------|:------:|:-----------------:|---------------------------:|:----------------------:|:----:|:-----------------:|:-----------:|:-----------:|:--------------------------:|
+| Clean build environment for every build              |   ✓    |         ✓         | conditional[^provisioning] |           ✓            |  ✗   |         ✗         |      ✓      |      ✓      | conditional[^provisioning] |
+| Reuse previous clone if it exists                    |   ✓    |         ✓         | conditional[^provisioning] | ✓[^persistent-volumes] |  ✓   |         ✓         |      ✗      |      ✗      | conditional[^provisioning] |
+| Runner file system access protected[^unprotected-fs] |   ✓    |         ✓         |                          ✗ |           ✓            |  ✓   |         ✗         |      ✓      |      ✓      |        conditional         |
+| Migrate runner machine                               |   ✓    |         ✓         |                          ✓ |           ✓            |  ✗   |         ✗         |   partial   |   partial   |             ✓              |
+| Zero-configuration support for concurrent builds     |   ✓    |         ✓         |                          ✓ |           ✓            |  ✗   | ✗[^host-services] |      ✓      |      ✓      | conditional[^provisioning] |
+| Complicated build environments                       |   ✓    |         ✓         |            ✗[^manual-deps] |           ✓            |  ✗   |  ✗[^manual-deps]  | ✓[^vagrant] | ✓[^vagrant] |             ✓              |
+| Debugging build problems                             | medium |      medium       |                     medium |         medium         | easy |       easy        |    hard     |    hard     |           medium           |
 
-**Footnotes**:
-
-1. Depends on the environment you are provisioning. Can be completely isolated or shared between builds.
-1. Requires [persistent per-concurrency build volumes](kubernetes/_index.md#persistent-per-concurrency-build-volumes) configuration.
-1. When a runner's file system access is not protected, jobs can access the entire system,
-   including the runner's token and other jobs' cache and code.
-   Executors marked ✓ don't allow the runner to access the file system by default.
-   However, security flaws or certain configurations could allow jobs
-   to break out of their container and access the file system hosting the runner.
-1. If the builds use services installed on the build machine, selecting executors is possible but problematic.
-1. Requires manual dependency installation.
-1. For example, using [Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "Vagrant documentation for VirtualBox").
+[^provisioning]: Depends on the environment you are provisioning. Can be completely isolated or shared between builds.
+[^persistent-volumes]: Requires [persistent per-concurrency build volumes](kubernetes/_index.md#persistent-per-concurrency-build-volumes) configuration.
+[^unprotected-fs]: When a runner's file system access is not protected, jobs can access the entire system,
+    including the runner's token and other jobs' cache and code.
+    Executors marked ✓ don't allow the runner to access the file system by default.
+    However, security flaws or certain configurations could allow jobs
+    to break out of their container and access the file system hosting the runner.
+[^host-services]: If the builds use services installed on the build machine, selecting executors is possible but problematic.
+[^manual-deps]: Requires manual dependency installation.
+[^vagrant]: For example, using [Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "Vagrant documentation for VirtualBox").
 
 ### Docker executor
 
@@ -167,38 +165,34 @@ Supported features by different executors.
 > SSH, Shell, VirtualBox, Parallels, and Custom executors are in maintenance mode.
 > They receive critical security updates but no new features are planned.
 
-| Executor                                     | Docker | Docker Autoscaler |    Instance    | Kubernetes |      SSH       |     Shell      |    VirtualBox    |    Parallels     |                           Custom                            |
-|:---------------------------------------------|:------:|:-----------------:|:--------------:|:----------:|:--------------:|:--------------:|:----------------:|:----------------:|:-----------------------------------------------------------:|
-| Secure Variables                             |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |        ✓         |        ✓         |                              ✓                              |
-| `.gitlab-ci.yml`: image                      |   ✓    |         ✓         |       ✗        |     ✓      |       ✗        |       ✗        | ✓ <sup>(1)</sup> | ✓ <sup>(1)</sup> | ✓ (by using [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)) |
-| `.gitlab-ci.yml`: services                   |   ✓    |         ✓         |       ✗        |     ✓      |       ✗        |       ✗        |        ✗         |        ✗         |                              ✓                              |
-| `.gitlab-ci.yml`: cache                      |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |        ✓         |        ✓         |                              ✓                              |
-| `.gitlab-ci.yml`: artifacts                  |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |        ✓         |        ✓         |                              ✓                              |
-| Passing artifacts between stages             |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |        ✓         |        ✓         |                              ✓                              |
-| Use GitLab Container Registry private images |   ✓    |         ✓         | not applicable |     ✓      | not applicable | not applicable |  not applicable  |  not applicable  |                       not applicable                        |
-| Interactive Web terminal                     |   ✓    |         ✗         |       ✗        |     ✓      |       ✗        |       ✓        |        ✗         |        ✗         |                              ✗                              |
+| Executor                                     | Docker | Docker Autoscaler |    Instance    | Kubernetes |      SSH       |     Shell      |     VirtualBox     |     Parallels      |                           Custom                            |
+|:---------------------------------------------|:------:|:-----------------:|:--------------:|:----------:|:--------------:|:--------------:|:------------------:|:------------------:|:-----------------------------------------------------------:|
+| Secure Variables                             |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |         ✓          |         ✓          |                              ✓                              |
+| `.gitlab-ci.yml`: image                      |   ✓    |         ✓         |       ✗        |     ✓      |       ✗        |       ✗        | ✓[^image-override] | ✓[^image-override] | ✓ (by using [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)) |
+| `.gitlab-ci.yml`: services                   |   ✓    |         ✓         |       ✗        |     ✓      |       ✗        |       ✗        |         ✗          |         ✗          |                              ✓                              |
+| `.gitlab-ci.yml`: cache                      |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |         ✓          |         ✓          |                              ✓                              |
+| `.gitlab-ci.yml`: artifacts                  |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |         ✓          |         ✓          |                              ✓                              |
+| Passing artifacts between stages             |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |         ✓          |         ✓          |                              ✓                              |
+| Use GitLab Container Registry private images |   ✓    |         ✓         | not applicable |     ✓      | not applicable | not applicable |   not applicable   |   not applicable   |                       not applicable                        |
+| Interactive Web terminal                     |   ✓    |         ✗         |       ✗        |     ✓      |       ✗        |       ✓        |         ✗          |         ✗          |                              ✗                              |
 
-**Footnotes**:
-
-1. Support [added](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1257) in GitLab Runner 14.2.
-   Refer to the [Overriding the base VM image](../configuration/advanced-configuration.md#overriding-the-base-vm-image) section for further details.
+[^image-override]: Support [added](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1257) in GitLab Runner 14.2.
+    Refer to the [Overriding the base VM image](../configuration/advanced-configuration.md#overriding-the-base-vm-image) section for further details.
 
 Supported systems by different shells:
 
-| Shells   |      Bash      | PowerShell Desktop  | PowerShell Core   |  sh  |
-| :------: | :------------: | :-----------------: | :---------------: | :--: |
-| Linux    | ✓ <sup>1</sup> |         ✗           |        ✓          |  ✓   |
-| macOS    | ✓ <sup>1</sup> |         ✗           |        ✓          |  ✓   |
-| FreeBSD  | ✓ <sup>1</sup> |         ✗           |        ✗          |  ✓   |
-| Windows  | ✗ <sup>3</sup> |   ✓ <sup>4</sup>    | ✓ <sup>2,5</sup>  |  ✗   |
+| Shells  |          Bash          |     PowerShell Desktop     |                 PowerShell Core                 | sh  |
+| :-----: | :--------------------: | :------------------------: | :---------------------------------------------: | :-: |
+|  Linux  |   ✓[^default-shell]    |             ✗              |                        ✓                        |  ✓  |
+|  macOS  |   ✓[^default-shell]    |             ✗              |                        ✓                        |  ✓  |
+| FreeBSD |   ✓[^default-shell]    |             ✗              |                        ✗                        |  ✓  |
+| Windows | ✗[^no-bash-on-windows] | ✓[^default-container-jobs] | ✓[^registration-shell], [^default-shell-executor] |  ✗  |
 
-**Footnotes:**
-
-1. Default shell
-1. Default shell for runner registration and for jobs with the `shell` executor.
-1. Bash shell is not supported on Windows.
-1. Default shell for jobs with the `docker-windows` and `kubernetes` executors.
-1. Default shell for jobs with the `shell` executor.
+[^default-shell]: Default shell
+[^registration-shell]: Default shell for runner registration and for jobs with the `shell` executor.
+[^no-bash-on-windows]: Bash shell is not supported on Windows.
+[^default-container-jobs]: Default shell for jobs with the `docker-windows` and `kubernetes` executors.
+[^default-shell-executor]: Default shell for jobs with the `shell` executor.
 
 Supported systems for interactive web terminals by different shells:
 
