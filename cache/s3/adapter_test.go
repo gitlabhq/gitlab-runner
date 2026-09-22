@@ -157,12 +157,16 @@ func TestCacheOperation(t *testing.T) {
 		"presigned-url": {
 			presignedURL: URL,
 			expectedURL:  URL,
+			expectedUploadHeaders: http.Header{
+				"Content-Type": []string{"application/octet-stream"},
+			},
 		},
 		"presigned-url-with-metadata": {
 			presignedURL: URL,
 			expectedURL:  URL,
 			metadata:     map[string]string{"foo": "some foo"},
 			expectedUploadHeaders: http.Header{
+				"Content-Type":   []string{"application/octet-stream"},
 				"X-Amz-Meta-Foo": []string{"some foo"},
 			},
 		},
@@ -199,6 +203,7 @@ func TestCacheOperationEncryptionAES(t *testing.T) {
 	URL, err := url.Parse("https://s3.example.com")
 	require.NoError(t, err)
 	headers := http.Header{}
+	headers.Add("Content-Type", "application/octet-stream")
 	headers.Add("X-Amz-Server-Side-Encryption", "AES256")
 
 	tests := map[string]cacheOperationTest{
@@ -260,6 +265,7 @@ func TestCacheOperationEncryptionKMS(t *testing.T) {
 	URL, err := url.Parse("https://s3.example.com")
 	require.NoError(t, err)
 	headers := http.Header{}
+	headers.Add("Content-Type", "application/octet-stream")
 	headers.Add("X-Amz-Server-Side-Encryption", "aws:kms")
 	headers.Add("X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id", "alias/my-key")
 

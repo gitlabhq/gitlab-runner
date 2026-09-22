@@ -85,7 +85,11 @@ func (a *s3Adapter) GetUploadHeaders() http.Header {
 		return nil
 	}
 
+	// The cache archiver always sends a Content-Type on the upload, so it must be signed:
+	// SigV4-strict servers (for example Ceph RGW >= 19.2.6 / 20.2.4) reject an unsigned one.
+	// See https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39701.
 	headers := http.Header{}
+	headers.Set("Content-Type", cache.UploadContentType)
 
 	if ss != nil {
 		ss.Marshal(headers)
