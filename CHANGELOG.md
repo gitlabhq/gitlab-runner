@@ -2,7 +2,7 @@
 
 ### New features
 
-- Merge branch 'docker-auth-credential-helper-allowlist' into 'main' [!7320](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7320)
+- Gate job-supplied Docker credential helpers behind an allowlist [!7320](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7320)
 - Export autoscaling limits as gauges from the machine provider [!7249](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7249)
 - Feat(kubernetes): add suspend/resume support via single-PVC overlayfs [!6781](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6781)
 - Add root-namespace-id pod label to Kubernetes executor [!7195](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7195) (Clement @clement87)
@@ -120,7 +120,6 @@
 ### New features
 
 - [19.3] Gate job-supplied Docker credential helpers behind an allowlist [!7333](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7333)
-- Merge branch 'docker-auth-credential-helper-allowlist' into 'main' [!7320](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7320)
 
 ### Bug fixes
 
