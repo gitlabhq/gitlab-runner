@@ -23,3 +23,13 @@ func retryTrackerFromContext(ctx context.Context) *atomic.Bool {
 	f, _ := ctx.Value(retryTrackerKey{}).(*atomic.Bool)
 	return f
 }
+
+// MarkRetryAttempted sets the retry tracker flag carried by ctx, if any, to record
+// that the server pushed back (429, 5xx) during the request. The HTTP retry layer
+// calls it for every retriable response; the job router client calls it when
+// GitLab Relay reports a rate limited job request.
+func MarkRetryAttempted(ctx context.Context) {
+	if t := retryTrackerFromContext(ctx); t != nil {
+		t.Store(true)
+	}
+}

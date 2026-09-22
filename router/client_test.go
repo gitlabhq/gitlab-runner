@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -25,6 +26,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/router/rpc"
+	"gitlab.com/gitlab-org/labkit/v2/fields"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -439,25 +441,66 @@ func TestRequestJob_CircuitBreakerRecoversDespiteEmptyDiscovery(t *testing.T) {
 }
 
 func TestRequestJob_RequestErrorHealth(t *testing.T) {
-	tests := map[codes.Code]bool{
-		codes.FailedPrecondition: true, // 409/422 from Rails
-		codes.ResourceExhausted:  true, // 429
-		codes.Unauthenticated:    true, // 401, healthy on the direct path too
-		codes.Internal:           true,
-		codes.Unknown:            true,
-		codes.PermissionDenied:   false, // 403
+	tests := map[codes.Code]struct {
+		healthy bool
+		retried bool // adaptive request concurrency signal; only a 429 is server push-back
+	}{
+		codes.FailedPrecondition: {healthy: true},                // 409/422 from Rails
+		codes.ResourceExhausted:  {healthy: true, retried: true}, // 429
+		codes.Unauthenticated:    {healthy: true},                // 401, healthy on the direct path too
+		codes.Internal:           {healthy: true},
+		codes.Unknown:            {healthy: true},
+		codes.PermissionDenied:   {healthy: false}, // 403
 	}
 
-	for code, wantHealthy := range tests {
+	for code, want := range tests {
 		t.Run(code.String(), func(t *testing.T) {
 			rc, config, routerSrv, railsCalls := setupRouterWithRailsFallback(t)
 			routerSrv.failCode.Store(int32(code))
 
-			job, healthy := rc.RequestJob(t.Context(), config, &common.SessionInfo{})
+			ctx, retried := network.WithRetryTracker(t.Context())
+			job, healthy := rc.RequestJob(ctx, config, &common.SessionInfo{})
 			assert.Nil(t, job)
-			assert.Equal(t, wantHealthy, healthy)
+			assert.Equal(t, want.healthy, healthy)
+			assert.Equal(t, want.retried, retried.Load())
 			assert.EqualValues(t, 0, railsCalls.Load(), "request errors do not fall back to Rails")
 		})
+	}
+}
+
+// A rate limited job request is handled like a 429 on the direct path: one warning
+// with the forwarded Retry-After, no job, runner healthy, no retry or fallback.
+func TestRequestJob_RateLimited(t *testing.T) {
+	rc, config, routerSrv, railsCalls := setupRouterWithRailsFallback(t)
+	routerSrv.failCode.Store(int32(codes.ResourceExhausted))
+	routerSrv.retryAfterToReturn = "60"
+
+	logger, hook := logrustest.NewNullLogger()
+	config.Logger = logger
+
+	ctx, retried := network.WithRetryTracker(t.Context())
+	job, healthy := rc.RequestJob(ctx, config, &common.SessionInfo{})
+
+	assert.Nil(t, job)
+	assert.True(t, healthy)
+	assert.True(t, retried.Load(), "a 429 must feed adaptive request concurrency as on the direct path")
+	assert.EqualValues(t, 1, routerSrv.calls.Load(), "a rate limited job request is not retried in place")
+	assert.EqualValues(t, 0, railsCalls.Load(), "a rate limited job request does not fall back to Rails")
+
+	var rateLimited []*logrus.Entry
+	for _, entry := range hook.AllEntries() {
+		if entry.Message == "Checking for jobs... rate limited" {
+			rateLimited = append(rateLimited, entry)
+		}
+	}
+	require.Len(t, rateLimited, 1)
+	entry := rateLimited[0]
+	assert.Equal(t, logrus.WarnLevel, entry.Level)
+	assert.Equal(t, codes.ResourceExhausted.String(), entry.Data[grpcCodeLogField])
+	assert.Equal(t, "60", entry.Data["retry_after"])
+	assert.Equal(t, responseRequestID, entry.Data[fields.CorrelationID])
+	for _, other := range hook.AllEntries() {
+		assert.NotEqual(t, "Error requesting a job", other.Message, "a 429 is not an error on the direct path either")
 	}
 }
 
@@ -621,6 +664,7 @@ type mockRouterServer struct {
 	calls    atomic.Int32
 
 	lastUpdateToReturn string // when set, returned to the runner as the x-gitlab-last-update response metadata
+	retryAfterToReturn string // when set with failCode ResourceExhausted, returned as the retry-after response metadata
 
 	mu        sync.Mutex
 	gotBodies [][]byte // request bodies received, in order, for assertions
@@ -634,6 +678,11 @@ func (s *mockRouterServer) GetJob(ctx context.Context, req *rpc.GetJobRequest) (
 	}
 
 	if code := codes.Code(s.failCode.Load()); code != codes.OK {
+		if code == codes.ResourceExhausted && s.retryAfterToReturn != "" {
+			// As GitLab Relay does: the response metadata is set before the error is returned.
+			md := metadata.Pairs(requestIDMetadataKey, responseRequestID, retryAfterMetadataKey, s.retryAfterToReturn)
+			assert.NoError(s.t, grpc.SetHeader(ctx, md))
+		}
 		return nil, status.Error(code, "simulated router failure")
 	}
 

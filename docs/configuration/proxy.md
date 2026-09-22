@@ -246,6 +246,11 @@ The runner logs `Checking for jobs... rate limited` at the `warning` level, rele
 and polls again after the usual `check_interval`. Waiting for the `Retry-After` period while holding the slot
 would reduce the job pickup rate of the whole runner manager for the duration of the rate limit.
 
+The same applies when the runner requests jobs through the Job Router (`FF_USE_JOB_ROUTER`).
+GitLab Relay (KAS) returns a rate limited job request to the runner immediately, together with the `Retry-After` value,
+and the runner logs the same `Checking for jobs... rate limited` line. The request is counted in
+`gitlab_runner_job_router_get_job_requests_total` with `code="ResourceExhausted"`.
+
 ### Supported header formats
 
 | Header                | Format              | Example                         |

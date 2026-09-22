@@ -121,7 +121,9 @@ func (r *retryRequester) executeRequestWithRetries(req *http.Request, bo *backof
 
 		retriable := shouldRetryRequest(resp)
 		if retriable {
-			signalRetryAttempted(req)
+			// Before the maxAttempts check, so the signal fires even when no further
+			// retry is performed.
+			MarkRetryAttempted(req.Context())
 		}
 
 		if !retriable || attempts >= r.maxAttempts || rateLimitRetryDisabled(req, resp) {
@@ -153,15 +155,6 @@ func (r *retryRequester) recordFailedAttempt(req *http.Request, logger *logrus.E
 func (r *retryRequester) recordAttempt(req *http.Request, status string, logger *logrus.Entry) {
 	labels := apiRequestLabelsFromContext(req.Context(), req.URL.Path)
 	r.apiRequestCollector.AddAttempt(logger, labels, status, req.Method)
-}
-
-// signalRetryAttempted notifies any attached retry tracker that a retriable
-// response was observed. Called before the maxAttempts check so the signal
-// fires even if no further retry is actually performed.
-func signalRetryAttempted(req *http.Request) {
-	if t := retryTrackerFromContext(req.Context()); t != nil {
-		t.Store(true)
-	}
 }
 
 func (r *retryRequester) waitForRetry(
