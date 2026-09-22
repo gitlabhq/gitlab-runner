@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/labkit/v2/fields"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -31,7 +33,13 @@ const (
 	// back from Rails. Echoing it as `last_update` on the next request is what lets
 	// Workhorse coalesce Job Router long-polls. Lowercase form of X-GitLab-Last-Update.
 	lastUpdateMetadataKey = "x-gitlab-last-update"
-	discoveryTTL          = time.Hour
+	// retryAfterMetadataKey carries GitLab's Retry-After header, relayed by GitLab
+	// Relay (KAS) when the job request was rate limited. Lowercase form of Retry-After.
+	retryAfterMetadataKey = "retry-after"
+	// grpcCodeLogField carries the gRPC status code of a failed GetJob. Same key
+	// GitLab Relay (KAS) logs it under; LabKit has no standard field for it.
+	grpcCodeLogField = "grpc_code"
+	discoveryTTL     = time.Hour
 
 	// routerBreakerFailureThreshold is the number of consecutive router failures
 	// that trips the breaker; fewer are treated as transient.
@@ -175,7 +183,7 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 	)
 	c.metrics.recordGetJobRequest(config.RunnerCredentials.ShortDescription(), config.SystemID, status.Code(err))
 	if err != nil {
-		healthy, reason := c.handleRouterError(err, disco, config)
+		healthy, reason := c.handleRouterError(ctx, err, responseMD, requestCorrelationID, disco, config)
 		if reason != fallbackNone {
 			return c.fallback(ctx, config, sessionInfo, reason)
 		}
@@ -224,38 +232,59 @@ func (c *Client) fallback(ctx context.Context, config common.RunnerConfig, sessi
 //     is also the label for the fallbacks metric. healthy is unused.
 //   - reason == fallbackNone: no job this poll; return (nil, healthy), where healthy
 //     reports whether the runner should stay healthy and keep polling the router.
-func (c *Client) handleRouterError(err error, disco *common.RouterDiscovery, config common.RunnerConfig) (healthy bool, reason fallbackReason) {
+func (c *Client) handleRouterError(
+	ctx context.Context,
+	err error,
+	responseMD metadata.MD,
+	requestCorrelationID string,
+	disco *common.RouterDiscovery,
+	config common.RunnerConfig,
+) (healthy bool, reason fallbackReason) {
+	logger := config.Log().WithField(fields.CorrelationID, metadataValue(responseMD, requestIDMetadataKey, requestCorrelationID))
+
 	switch code := status.Code(err); {
 	case code == codes.Unimplemented:
 		// Job router deliberately disabled. The router answered, so the breaker is
 		// fine; drop the cached router to force re-discovery, then fall back to Rails.
 		c.breaker.RecordSuccess()
 		c.invalidateRouterDiscovery()
-		config.Log().Info("Job router is disabled, falling back to direct job requests")
+		logger.Info("Job router is disabled, falling back to direct job requests")
 		return false, fallbackRouterDisabled
 	case isRouterFailure(code):
 		// The router is unreachable: count it toward the breaker. On trip, fall back;
 		// below the threshold, treat it as transient and keep polling the router.
 		if c.breaker.RecordFailure() {
-			config.Log().WithError(err).WithField("job_router_url", disco.ServerURL).
+			logger.WithError(err).WithField("job_router_url", disco.ServerURL).
 				Warn("Job router circuit breaker tripped, falling back to direct job requests")
 			return false, fallbackBreakerTripped
 		}
-		config.Log().WithError(err).Error("Error requesting a job")
+		logger.WithError(err).Error("Error requesting a job")
 		return true, fallbackNone
 	case code == codes.PermissionDenied:
 		// The runner is forbidden (403). The router responded, so the breaker is
 		// satisfied, but the runner is unhealthy — same as the direct HTTP path.
 		c.breaker.RecordSuccess()
-		config.Log().WithError(err).Error("Error requesting a job")
+		logger.WithError(err).Error("Error requesting a job")
 		return false, fallbackNone
+	case code == codes.ResourceExhausted:
+		// GitLab rate limited the job request (429). Same as the direct HTTP path:
+		// warn with the Retry-After GitLab Relay (KAS) forwards, report no job with the
+		// runner healthy so its request_concurrency slot is released, and flag the
+		// push-back for adaptive request concurrency as the HTTP retry layer does.
+		c.breaker.RecordSuccess()
+		network.MarkRetryAttempted(ctx)
+		logger.WithFields(logrus.Fields{
+			grpcCodeLogField: code.String(),
+			"retry_after":    metadataValue(responseMD, retryAfterMetadataKey, ""),
+		}).Warningln("Checking for jobs...", "rate limited")
+		return true, fallbackNone
 	default:
 		// The router responded (it is reachable), so the breaker is satisfied even
 		// though the request itself failed. All other errors (e.g. FailedPrecondition
-		// for a 409 when another runner took the build, ResourceExhausted for 429)
-		// are transient and must not count towards unhealthy_requests_limit.
+		// for a 409 when another runner took the build) are transient and must not
+		// count towards unhealthy_requests_limit.
 		c.breaker.RecordSuccess()
-		config.Log().WithError(err).Error("Error requesting a job")
+		logger.WithError(err).Error("Error requesting a job")
 		return true, fallbackNone
 	}
 }
@@ -272,11 +301,16 @@ func parseJobResponse(job *rpc.GetJobResponse, responseMD metadata.MD, disco *co
 		return nil, false
 	}
 	response.TLSData = disco.TLSData
-	if correlationIDs := responseMD[requestIDMetadataKey]; len(correlationIDs) > 0 {
-		requestCorrelationID = correlationIDs[0]
-	}
-	response.JobRequestCorrelationID = requestCorrelationID
+	response.JobRequestCorrelationID = metadataValue(responseMD, requestIDMetadataKey, requestCorrelationID)
 	return &response, true
+}
+
+// metadataValue returns the first value for key in md, or fallback if there is none.
+func metadataValue(md metadata.MD, key, fallback string) string {
+	if values := md[key]; len(values) > 0 {
+		return values[0]
+	}
+	return fallback
 }
 
 func (c *Client) getRouterDiscovery(ctx context.Context, config common.RunnerConfig) *common.RouterDiscovery {

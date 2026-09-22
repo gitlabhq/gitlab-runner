@@ -108,3 +108,23 @@ func TestWithRetryTracker(t *testing.T) {
 		})
 	}
 }
+
+func TestMarkRetryAttempted(t *testing.T) {
+	t.Parallel()
+
+	t.Run("sets the tracker flag", func(t *testing.T) {
+		t.Parallel()
+
+		ctx, retried := WithRetryTracker(t.Context())
+		require.False(t, retried.Load())
+
+		MarkRetryAttempted(ctx)
+		assert.True(t, retried.Load())
+	})
+
+	t.Run("no tracker installed is a no-op", func(t *testing.T) {
+		t.Parallel()
+
+		MarkRetryAttempted(t.Context())
+	})
+}
