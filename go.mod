@@ -74,7 +74,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/urfave/cli v1.22.17
 	gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260818191615-630980b76a04
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260915191451-6ed75a33d303
 	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20260911011821-1b7c6957ad1d
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260818191615-630980b76a04
 	gitlab.com/gitlab-org/fleeting/nesting v0.5.0

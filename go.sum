@@ -564,8 +564,8 @@ gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452 h1:ZIGEFZTBq
 gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452/go.mod h1:VavCDRKaiqpuBytdiBVNw0+y7j3dw8Trt+96cj1A6uw=
 gitlab.com/functions/docker/auth v0.0.1 h1:JARR58cd/4OFIrcMQpdJ7WpHXExYPaJ7lQa5irArv0k=
 gitlab.com/functions/docker/auth v0.0.1/go.mod h1:BSPGMsyooZ5PIHUUAUuwVk2QCbxdpocQjBteF6iFbCA=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260818191615-630980b76a04 h1:5xwwxhHYgcBo2FLoNCVdY+Jt2udKnLyKuif+CppnZzQ=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260818191615-630980b76a04/go.mod h1:WNAPNB2qWOMMduFNK+fSntV8kCiZVfiC2NGYa2/5utA=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260915191451-6ed75a33d303 h1:CeuOXrq6GOajzVdPs1PTY5T17DPpUoIDx+940kWlZ5k=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260915191451-6ed75a33d303/go.mod h1:XwiXz/S76ZWNngnFb+uIVmx2Xdgp3iNX9x5MBoQazEk=
 gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20260911011821-1b7c6957ad1d h1:e1TLOGJi4rRIkPUm+EdvMPugHkA7WSru2Cyci91mFE4=
 gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20260911011821-1b7c6957ad1d/go.mod h1:xIZhToh5lGkgVN3mpiFx+9/imf8xe2+sg2MzKgy2xyI=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260818191615-630980b76a04 h1:vZkZv+IGfgoG3fUsUuXjjgv+z0qZBMOd+qpv03BAk8E=
