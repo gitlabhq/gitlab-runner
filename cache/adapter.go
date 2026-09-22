@@ -35,6 +35,10 @@ type Adapter interface {
 	GetGoCloudURL(ctx context.Context, upload bool) (GoCloudURL, error)
 }
 
+// UploadContentType is the Content-Type the cache archiver sends on the upload PUT.
+// Adapters that presign the upload have to sign this exact value.
+const UploadContentType = "application/octet-stream"
+
 type Factory func(config *cacheconfig.Config, timeout time.Duration, objectName string) (Adapter, error)
 
 type FactoriesMap struct {

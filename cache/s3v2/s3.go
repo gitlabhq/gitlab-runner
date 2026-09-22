@@ -23,6 +23,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
@@ -154,6 +156,28 @@ func withAssumeRoleSem(sem chan struct{}) s3ClientOption {
 	}
 }
 
+// signCacheContentType re-adds the Content-Type header that PresignPutObject's own
+// awshttp.RemoveContentTypeHeader strips (it drops the header whenever the request has a
+// zero ContentLength, which a body-less presign always does). The cache archiver always
+// sends a Content-Type on that upload (setHeaders in cache_archiver.go), so it has to be
+// inside the signature too. See https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39701.
+//
+// It registers into the Build step at middleware.After, after the SDK's remover, so it runs
+// once the header has been dropped and before Finalize signs the request.
+func signCacheContentType(stack *middleware.Stack) error {
+	return stack.Build.Add(middleware.BuildMiddlewareFunc(
+		"SignCacheContentType",
+		func(ctx context.Context, in middleware.BuildInput, next middleware.BuildHandler) (
+			middleware.BuildOutput, middleware.Metadata, error,
+		) {
+			if req, ok := in.Request.(*smithyhttp.Request); ok {
+				req.Header.Set("Content-Type", cache.UploadContentType)
+			}
+			return next.HandleBuild(ctx, in)
+		},
+	), middleware.After)
+}
+
 func (c *s3Client) PresignURL(ctx context.Context,
 	method string,
 	bucketName string,
@@ -194,7 +218,11 @@ func (c *s3Client) PresignURL(ctx context.Context,
 			putObjectInput.ServerSideEncryption = types.ServerSideEncryptionAwsKmsDsse
 			putObjectInput.SSEKMSKeyId = aws.String(c.s3Config.ServerSideEncryptionKeyID)
 		}
-		presignedReq, err = c.presignClient.PresignPutObject(ctx, putObjectInput, s3.WithPresignExpires(expires))
+		presignedReq, err = c.presignClient.PresignPutObject(ctx, putObjectInput,
+			s3.WithPresignExpires(expires),
+			s3.WithPresignClientFromClientOptions(func(o *s3.Options) {
+				o.APIOptions = append(o.APIOptions, signCacheContentType)
+			}))
 	default:
 		return cache.PresignedURL{}, fmt.Errorf("unsupported method: %s", method)
 	}
