@@ -453,7 +453,9 @@ func (r *Runner) withTimeout(parent context.Context, d time.Duration) (context.C
 func (r *Runner) section(ctx context.Context, name string, fn func(context.Context, *env.Env) error) error {
 	if r.config.TraceSections {
 		fmt.Fprintf(r.env.Stdout, "section_start:%d:%s\r\033[0K", time.Now().Unix(), name)
-		defer fmt.Fprintf(r.env.Stdout, "section_end:%d:%s\r\033[0K", time.Now().Unix(), name)
+		defer func() {
+			fmt.Fprintf(r.env.Stdout, "section_end:%d:%s\r\033[0K", time.Now().Unix(), name)
+		}()
 	}
 
 	return fn(ctx, r.env)

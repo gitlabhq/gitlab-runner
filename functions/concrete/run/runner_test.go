@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -458,6 +460,22 @@ func TestSection_OutputFormat(t *testing.T) {
 	assert.Contains(t, out, "section_start:")
 	assert.Contains(t, out, "test_section")
 	assert.Contains(t, out, "section_end:")
+}
+
+func TestSection_EndTimestampAfterBody(t *testing.T) {
+	r := testRunner(t, &Config{TraceSections: true})
+
+	err := r.section(t.Context(), "slow", func(_ context.Context, _ *env.Env) error {
+		time.Sleep(1100 * time.Millisecond)
+		return nil
+	})
+	require.NoError(t, err)
+
+	markers := regexp.MustCompile(`section_(start|end):(\d+):slow`).FindAllStringSubmatch(runnerStdout(r), -1)
+	require.Len(t, markers, 2)
+	start, _ := strconv.Atoi(markers[0][2])
+	end, _ := strconv.Atoi(markers[1][2])
+	assert.Greater(t, end, start)
 }
 
 // TestSectionNames verifies the runner emits the expected stage section
