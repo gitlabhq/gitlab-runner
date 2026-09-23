@@ -7,6 +7,10 @@
 .gitattributes  @gitlab-com/runner-group @gitlab-com/runner-maintainers
 .gitignore      @gitlab-com/runner-group @gitlab-com/runner-maintainers
 
+# Excluded from the * rule above. The Argo translation MR template is owned by the
+# [Localization] section below.
+!/.gitlab/.argo/
+
 [Hosted Runners] @gitlab-org/production-engineering/runners-platform
 .gitlab/ci/hosted-runners-bridge.gitlab-ci.yml
 magefiles/hosted_runners.go
@@ -30,3 +34,4 @@ helpers/secrets/ @gitlab-com/pipeline-security-group/backend
 /docs-locale/fr-fr @gitlab-com/localization/maintainers/tech-docs @gitlab-com/localization/maintainers/french
 /docs-locale/ko-kr @gitlab-com/localization/maintainers/tech-docs @gitlab-com/localization/maintainers/korean
 /argo_translation.yml @gitlab-com/localization/maintainers/tech-docs
+/.gitlab/.argo/ @gitlab-com/localization/maintainers/tech-docs
