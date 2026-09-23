@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -222,7 +223,7 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 		return podPhaseResponse{true, api.PodUnknown, err}
 	}
 
-	if printPodWarningEvents {
+	if podUsesUserNamespaces(pod) {
 		if err := checkPodSandboxUserNamespaceFailure(ctx, client, pod); err != nil {
 			return podPhaseResponse{true, api.PodUnknown, err}
 		}
@@ -258,15 +259,24 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 	return podPhaseResponse{false, pod.Status.Phase, nil}
 }
 
+// podUsesUserNamespaces reports whether the pod opted into a private Linux user
+// namespace via `spec.hostUsers: false`.
+func podUsesUserNamespaces(pod *api.Pod) bool {
+	return pod.Spec.HostUsers != nil && !*pod.Spec.HostUsers
+}
+
 // checkPodSandboxUserNamespaceFailure detects a runtime that rejected
 // `spec.hostUsers: false` because it doesn't support Linux user namespaces.
 func checkPodSandboxUserNamespaceFailure(ctx context.Context, client kubernetes.Interface, pod *api.Pod) error {
 	//nolint:gocritic
-	// kubeAPI: events, list, print_pod_warning_events=true
+	// kubeAPI: events, list, hostUsers=false
 	events, err := client.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("involvedObject.name=%s,type=%s", pod.Name, k8sEventWarningType),
 	})
 	if err != nil {
+		logrus.WithError(err).
+			WithField("pod", pod.Namespace+"/"+pod.Name).
+			Debugln("Error retrieving events list for the pod sandbox check")
 		return nil
 	}
 

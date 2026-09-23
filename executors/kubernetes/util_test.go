@@ -190,6 +190,12 @@ func TestWaitForPodRunning(t *testing.T) {
 		ExpectContains    []string
 		ExpectNotContains []string
 		VerifyError       func(t *testing.T, err error)
+		// ExpectNoEventsList asserts the namespace-wide events LIST was never
+		// issued. That scan filters on an unindexed field, so the API server
+		// reads the namespace's entire events collection for it; not issuing it
+		// is the behaviour under test, and no assertion on phase or error can
+		// detect it firing.
+		ExpectNoEventsList bool
 	}{
 		{
 			Name: "ensure function retries until ready",
@@ -462,6 +468,12 @@ func TestWaitForPodRunning(t *testing.T) {
 							Name:      "test-pod",
 							Namespace: "test-ns",
 						},
+						// The sandbox check only runs for a pod that opted into a
+						// private user namespace, which is the only pod a runtime
+						// can reject for lacking user namespace support.
+						Spec: api.PodSpec{
+							HostUsers: new(false),
+						},
 						Status: api.PodStatus{
 							Phase: api.PodPending,
 						},
@@ -500,6 +512,122 @@ func TestWaitForPodRunning(t *testing.T) {
 			},
 		},
 		{
+			// The sandbox check is gated on the pod's `hostUsers: false`, not on
+			// print_pod_warning_events. Without this case, restoring the old
+			// `printPodWarningEvents &&` guard would not fail any test.
+			Name: "ensure fast-fail on user namespaces when print_pod_warning_events is disabled",
+			Pod: &api.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "test-ns",
+				},
+			},
+			Config: &common.KubernetesConfig{
+				PrintPodWarningEvents: new(bool),
+			},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
+					pod := &api.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-pod",
+							Namespace: "test-ns",
+						},
+						Spec: api.PodSpec{
+							HostUsers: new(false),
+						},
+						Status: api.PodStatus{
+							Phase: api.PodPending,
+						},
+					}
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, pod),
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, fmt.Errorf("unexpected request")
+				}
+			},
+			Events: &api.EventList{
+				Items: []api.Event{
+					{
+						Reason:  "FailedCreatePodSandBox",
+						Message: "Failed to create pod sandbox: can't set `spec.hostUsers: false`, RuntimeClass handler \"kata-qemu\" does not support user namespaces",
+					},
+				},
+			},
+			PodEndPhase: api.PodUnknown,
+			Error:       true,
+			VerifyError: func(t *testing.T, err error) {
+				var buildErr *common.BuildError
+				if !errors.As(err, &buildErr) {
+					t.Fatalf("expected a *common.BuildError, got: %T (%v)", err, err)
+				}
+				if buildErr.FailureReason != common.ConfigurationError {
+					t.Errorf("expected FailureReason %q, got %q", common.ConfigurationError, buildErr.FailureReason)
+				}
+				if !strings.Contains(err.Error(), "does not support user namespaces") {
+					t.Errorf("expected error to mention user namespaces, got: %s", err.Error())
+				}
+			},
+		},
+		{
+			Name: "ensure no events LIST for a pod that does not use user namespaces",
+			Pod: &api.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "test-ns",
+				},
+			},
+			Config: &common.KubernetesConfig{},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
+					pod := &api.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-pod",
+							Namespace: "test-ns",
+						},
+						// HostUsers deliberately unset.
+						Status: api.PodStatus{
+							Phase: api.PodPending,
+						},
+					}
+
+					if retries > 0 {
+						pod.Status.Phase = api.PodRunning
+						pod.Status.ContainerStatuses = []api.ContainerStatus{
+							{Ready: true},
+						}
+					}
+
+					retries++
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, pod),
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, fmt.Errorf("unexpected request")
+				}
+			},
+			// Seeded, and must still never be fetched.
+			Events: &api.EventList{
+				Items: []api.Event{
+					{
+						Reason:  "FailedCreatePodSandBox",
+						Message: "Failed to create pod sandbox: can't set `spec.hostUsers: false`, RuntimeClass handler \"kata-qemu\" does not support user namespaces",
+					},
+				},
+			},
+			PodEndPhase:        api.PodRunning,
+			Retries:            1,
+			ExpectNoEventsList: true,
+		},
+		{
 			Name: "ensure no fast-fail on unrelated or transient FailedCreatePodSandBox events",
 			Pod: &api.Pod{
 				ObjectMeta: metav1.ObjectMeta{
@@ -515,6 +643,9 @@ func TestWaitForPodRunning(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
 							Namespace: "test-ns",
+						},
+						Spec: api.PodSpec{
+							HostUsers: new(false),
 						},
 						Status: api.PodStatus{
 							Phase: api.PodPending,
@@ -557,8 +688,10 @@ func TestWaitForPodRunning(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			retries = 0
+			eventsLists := 0
 			clientFunc := func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet && strings.HasSuffix(req.URL.Path, "/events") {
+					eventsLists++
 					events := test.Events
 					if events == nil {
 						events = &api.EventList{}
@@ -611,6 +744,10 @@ func TestWaitForPodRunning(t *testing.T) {
 				if strings.Contains(output.String(), s) {
 					t.Errorf("[%s] Expected output not to contain %q. Got: %s", test.Name, s, output.String())
 				}
+			}
+
+			if test.ExpectNoEventsList {
+				assert.Zero(t, eventsLists, "[%s] Expected no events LIST to be issued", test.Name)
 			}
 
 			if test.VerifyError != nil {
