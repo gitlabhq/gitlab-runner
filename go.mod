@@ -3,7 +3,7 @@ module gitlab.com/gitlab-org/gitlab-runner
 go 1.26.5
 
 require (
-	cloud.google.com/go/compute/metadata v0.9.0
+	cloud.google.com/go/compute/metadata v0.9.1
 	cloud.google.com/go/iam v1.13.0
 	cloud.google.com/go/secretmanager v1.21.0
 	cloud.google.com/go/storage v1.68.0
