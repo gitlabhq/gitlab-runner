@@ -1,3 +1,9 @@
+## v19.4.1 (2026-09-24)
+
+### Maintenance
+
+- Merge branch 'fix/issue-39848-gate-pod-sandbox-events-list' into '19-4-stable' [!7458](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7458)
+
 ## v19.4.0 (2026-09-17)
 
 ### New features
