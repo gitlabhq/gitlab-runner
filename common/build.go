@@ -2195,11 +2195,11 @@ func (b *Build) getStageTimeoutContexts(parent context.Context, timeouts ...stag
 			// no relative durations for now...
 			b.logger.Warningln(fmt.Sprintf("Ignoring relative %s timeout: %v", timeout.configName, rawTimeout))
 
-		case hasDeadline && duration > jobTimeout:
-			// clamping timeouts to the job timeout happens automatically in `context.WithParent()`, mention it here
-			b.logger.Warningln(fmt.Sprintf("%s timeout: %v is longer than job timeout. Setting to job timeout", timeout.configName, rawTimeout))
-
-		case duration != 0:
+		case duration > 0:
+			if hasDeadline && duration > jobTimeout {
+				// context.WithTimeout uses the earlier parent deadline.
+				b.logger.Warningln(fmt.Sprintf("%s timeout: %v is longer than job timeout. Setting to job timeout", timeout.configName, rawTimeout))
+			}
 			stack[idx] = duration
 		}
 	}
