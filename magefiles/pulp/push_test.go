@@ -3,10 +3,13 @@
 package pulp
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -257,7 +260,7 @@ func TestRetryCommandRun(t *testing.T) {
 				regexp.MustCompile(`Artifact with checksum of '.*' already exists\.`),
 			},
 			expectedError:   true,
-			errorContains:   "failed after 5 retries",
+			errorContains:   "failed after 5 attempts",
 			expectedAttempt: 5,
 		},
 		"multiple retryable error patterns": {
@@ -310,6 +313,71 @@ func TestRetryCommandRun(t *testing.T) {
 			errorContains:   "execution of command",
 			expectedAttempt: 1,
 		},
+		"pulp: retries when cloudflare returns a 5xx error page": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt == 1 {
+					return false, cloudflareErrorPage(502, "Bad gateway"), fmt.Errorf("exit status 1")
+				}
+				return true, "", nil
+			},
+			retryableErrs:   pulpRetryErrors,
+			expectedError:   false,
+			expectedAttempt: 2,
+		},
+		"pulp: retries when the origin returns an unknown error through cloudflare": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt == 1 {
+					return false, cloudflareErrorPage(520, "Web server is returning an unknown error"), fmt.Errorf("exit status 1")
+				}
+				return true, "", nil
+			},
+			retryableErrs:   pulpRetryErrors,
+			expectedError:   false,
+			expectedAttempt: 2,
+		},
+		"pulp: retries when the worker running the task goes missing": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt == 1 {
+					return false, "....Upload complete.\nStarted background task /pulp/api/v3/tasks/01a0ce20-ea71-7ad9-8791-cef28888e5fe/\n" +
+						".....Error: Task /pulp/api/v3/tasks/01a0ce20-ea71-7ad9-8791-cef28888e5fe/ failed: 'Worker has gone missing.'\n", fmt.Errorf("exit status 1")
+				}
+				return true, "", nil
+			},
+			retryableErrs:   pulpRetryErrors,
+			expectedError:   false,
+			expectedAttempt: 2,
+		},
+		"pulp: retries when the connection to the API fails": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt == 1 {
+					return false, "Error: HTTPSConnectionPool(host='pulp.gitlab.com', port=443): Read timed out. (read timeout=120)", fmt.Errorf("exit status 1")
+				}
+				return true, "", nil
+			},
+			retryableErrs:   pulpRetryErrors,
+			expectedError:   false,
+			expectedAttempt: 2,
+		},
+		"pulp: retries when the artifact already exists": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt == 1 {
+					return false, `Error: {"non_field_errors":["Artifact with sha256 checksum of '97095ba5' already exists."]}`, fmt.Errorf("exit status 1")
+				}
+				return true, "", nil
+			},
+			retryableErrs:   pulpRetryErrors,
+			expectedError:   false,
+			expectedAttempt: 2,
+		},
+		"pulp: does not retry a client error": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				return false, `Error: {"non_field_errors":["Destination upload repository was not provided."]}`, fmt.Errorf("exit status 1")
+			},
+			retryableErrs:   pulpRetryErrors,
+			expectedError:   true,
+			errorContains:   "Destination upload repository was not provided",
+			expectedAttempt: 1,
+		},
 	}
 
 	for tn, tt := range tests {
@@ -334,7 +402,7 @@ func TestRetryCommandRun(t *testing.T) {
 			cmd.backoff = backoff.Backoff{Min: 10 * time.Millisecond, Max: 50 * time.Millisecond}
 
 			// Run the command
-			err := cmd.run()
+			err := cmd.run(t.Context())
 
 			// Verify results
 			if tt.expectedError {
@@ -351,12 +419,138 @@ func TestRetryCommandRun(t *testing.T) {
 	}
 }
 
+// cloudflareErrorPage mimics the HTML page Cloudflare serves for an error from the origin, as it
+// ends up on the pulp CLI's stderr.
+func cloudflareErrorPage(code int, title string) string {
+	return fmt.Sprintf(`....Error: <!DOCTYPE html>
+<html>
+<head>
+  <title>500 Error - GitLab</title>
+</head>
+<body>
+    <div class="cf-error-details cf-error-%[1]d">
+  <h1>%[2]s</h1>
+  <ul>
+    <li>Ray ID: a3f8715ac8ceed82</li>
+    <li>Error reference number: %[1]d</li>
+    <li>Cloudflare Location: Atlanta</li>
+  </ul>
+</div>
+</body>
+</html>
+`, code, title)
+}
+
+func TestRetryCommandRunAbandonedWhenContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	attempts := 0
+	execMock := func(env map[string]string, out io.Writer, stderr io.Writer, cmd string, args ...string) (bool, error) {
+		attempts++
+		// the push is aborted while this command is failing with a retryable error
+		cancel()
+		_, _ = io.WriteString(stderr, cloudflareErrorPage(502, "Bad gateway"))
+		return false, fmt.Errorf("exit status 1")
+	}
+
+	cmd := newRetryCommand("test-cmd", []string{"arg1"}, pulpRetryErrors, io.Discard, execMock)
+	cmd.backoff = backoff.Backoff{Min: 500 * time.Millisecond, Max: 500 * time.Millisecond}
+
+	err := cmd.run(ctx)
+
+	require.ErrorIs(t, err, context.Canceled)
+	require.ErrorContains(t, err, "abandoned after attempt 1")
+	require.Equal(t, 1, attempts, "no further attempt must be made once the push is aborted")
+}
+
+func TestDebPusherPush(t *testing.T) {
+	pkgFiles := []string{"out/deb/gitlab-runner_amd64.deb", "out/deb/gitlab-runner-helper-images.deb"}
+
+	tests := map[string]struct {
+		releases        []string
+		autopublish     bool
+		failOnUpload    int // 1-based index of the upload that fails for good, 0 for none
+		expectedError   string
+		expectedUploads int
+		expectedPublish []string // repositories a publication is created for, in order
+	}{
+		"uploads every package to every release, then publishes each repository once": {
+			releases:        []string{"debian/bookworm", "debian/trixie", "ubuntu/noble"},
+			expectedUploads: 3 * len(pkgFiles),
+			expectedPublish: []string{"runner-unstable-debian", "runner-unstable-ubuntu"},
+		},
+		"leaves publishing to a repository that autopublishes": {
+			releases:        []string{"debian/bookworm", "debian/trixie"},
+			autopublish:     true,
+			expectedUploads: 2 * len(pkgFiles),
+		},
+		"stops starting uploads once one has failed for good, and does not publish": {
+			releases:        []string{"debian/bookworm", "debian/trixie"},
+			failOnUpload:    2,
+			expectedError:   "Destination upload repository was not provided",
+			expectedUploads: 2,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			var uploads atomic.Int32
+			var published []string
+
+			execMock := func(env map[string]string, out io.Writer, stderr io.Writer, cmd string, args ...string) (bool, error) {
+				require.Equal(t, "pulp", cmd)
+				repo := args[len(args)-1]
+				if i := slices.Index(args, "--repository"); i >= 0 {
+					repo = args[i+1]
+				}
+
+				switch strings.Join(args[:3], " ") {
+				case "deb content upload":
+					require.Contains(t, []string{"runner-unstable-debian", "runner-unstable-ubuntu"}, repo)
+					if int(uploads.Add(1)) == tt.failOnUpload {
+						_, _ = io.WriteString(stderr, `Error: {"non_field_errors":["Destination upload repository was not provided."]}`)
+						return false, fmt.Errorf("exit status 1")
+					}
+				case "deb repository show":
+					require.EqualValues(t, tt.expectedUploads, uploads.Load(), "publishing must wait for all uploads")
+					fmt.Fprintf(out, `{"name": %q, "autopublish": %t}`, repo, tt.autopublish)
+				case "deb publication create":
+					published = append(published, repo)
+				default:
+					require.Failf(t, "unexpected command", "pulp %s", strings.Join(args, " "))
+				}
+				return true, nil
+			}
+
+			pusher := &debPusher{
+				basePusher: basePusher{
+					branch:      "unstable",
+					concurrency: 1,
+					exec:        execMock,
+				},
+			}
+
+			err := pusher.Push(tt.releases, pkgFiles)
+
+			if tt.expectedError != "" {
+				require.ErrorContains(t, err, tt.expectedError)
+			} else {
+				require.NoError(t, err)
+			}
+			require.EqualValues(t, tt.expectedUploads, uploads.Load())
+			require.Equal(t, tt.expectedPublish, published)
+		})
+	}
+}
+
 func TestRpmPusherPush(t *testing.T) {
 	tests := map[string]struct {
 		releases      []string
 		pkgFiles      []string
 		expectedError bool
 		errorContains string
+		expectedLinks int
 	}{
 		"successful push with helper images": {
 			releases: []string{"fedora/43"},
@@ -365,6 +559,8 @@ func TestRpmPusherPush(t *testing.T) {
 				"out/rpm/gitlab-runner-helper-images.rpm",
 			},
 			expectedError: false,
+			// the runner package is linked for its own arch, the helper images package for every arch
+			expectedLinks: 1 + 2,
 		},
 		"successful push without helper images": {
 			releases: []string{"fedora/43", "fedora/44"},
@@ -372,6 +568,7 @@ func TestRpmPusherPush(t *testing.T) {
 				"out/rpm/gitlab-runner_18.8.0_x86_64.rpm",
 			},
 			expectedError: false,
+			expectedLinks: 2,
 		},
 	}
 
@@ -379,12 +576,7 @@ func TestRpmPusherPush(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			// Track which package files are being processed
 			var lastPkgFile string
-
-			// Create mock for run function
-			runMock := func(cmd string, args ...string) error {
-				// Mock successful execution for pulp commands
-				return nil
-			}
+			var links atomic.Int32
 
 			// Create mock for exec function
 			execMock := func(env map[string]string, out io.Writer, stderr io.Writer, cmd string, args ...string) (bool, error) {
@@ -429,6 +621,12 @@ Description : GitLab Runner
 					return true, nil
 				}
 
+				// Detect pulp rpm repository content modify command, linking the package to a repo
+				if cmd == "pulp" && len(args) >= 5 && args[0] == rpm && args[1] == "repository" && args[3] == "modify" {
+					links.Add(1)
+					return true, nil
+				}
+
 				return true, nil
 			}
 
@@ -438,7 +636,6 @@ Description : GitLab Runner
 					dryrun:      false,
 					branch:      "main",
 					concurrency: 1,
-					run:         runMock,
 					exec:        execMock,
 				},
 				archs: []string{"x86_64", "aarch64"},
@@ -456,6 +653,7 @@ Description : GitLab Runner
 			} else {
 				require.NoError(t, err)
 			}
+			require.EqualValues(t, tt.expectedLinks, links.Load())
 		})
 	}
 }
