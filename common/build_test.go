@@ -3483,6 +3483,17 @@ func TestGetStageTimeoutContexts(t *testing.T) {
 			contains:   []string{"RUNNER_SCRIPT_TIMEOUT timeout: 60m is longer than job timeout."},
 			jobTimeout: 40 * time.Minute,
 		},
+		"after_script timeout longer than job timeout": {
+			variables: map[string]string{
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": "60m",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       40 * time.Minute,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 40 * time.Minute,
+			},
+			contains:   []string{"RUNNER_AFTER_SCRIPT_TIMEOUT timeout: 60m is longer than job timeout."},
+			jobTimeout: 40 * time.Minute,
+		},
 	}
 
 	for name, tc := range tests {
