@@ -28,55 +28,60 @@ func TestExecutor_Run(t *testing.T) {
 	var exitErr = &exec.ExitError{}
 
 	tests := map[string]struct {
-		commanderAssertions     func(*process.MockCommander, chan time.Time)
-		processKillerAssertions func(*process.MockKillWaiter, chan time.Time)
+		commanderAssertions     func(*process.MockCommander, chan struct{})
+		processKillerAssertions func(*process.MockKillWaiter, chan struct{})
 		cancelJob               bool
 		expectedErr             error
 	}{
 		"canceled job uses new process termination": {
-			commanderAssertions: func(mCmd *process.MockCommander, waitCalled chan time.Time) {
+			commanderAssertions: func(mCmd *process.MockCommander, killCalled chan struct{}) {
 				mCmd.On("Start").Return(nil).Once()
+				// Like a real process, Wait only returns once it has been
+				// killed. If it returned straight away, the result would be
+				// on waitCh by the time Run selects on it and, with the
+				// context already cancelled, select would pick either case
+				// at random, sometimes skipping KillAndWait.
 				mCmd.On("Wait").Run(func(args mock.Arguments) {
-					close(waitCalled)
+					<-killCalled
 				}).Return(nil).Once()
 			},
-			processKillerAssertions: func(mProcessKillWaiter *process.MockKillWaiter, waitCalled chan time.Time) {
+			processKillerAssertions: func(mProcessKillWaiter *process.MockKillWaiter, killCalled chan struct{}) {
 				mProcessKillWaiter.
 					On("KillAndWait", mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						close(killCalled)
+						// Drain waitCh like the real KillAndWait, so Wait
+						// has been called before Run returns.
+						<-args.Get(1).(chan error)
+					}).
 					Return(nil).
-					WaitUntil(waitCalled)
+					Once()
 			},
 			cancelJob:   true,
 			expectedErr: nil,
 		},
 		"cmd fails to start": {
-			commanderAssertions: func(mCmd *process.MockCommander, _ chan time.Time) {
+			commanderAssertions: func(mCmd *process.MockCommander, _ chan struct{}) {
 				mCmd.On("Start").Return(testErr).Once()
 			},
-			processKillerAssertions: func(_ *process.MockKillWaiter, _ chan time.Time) {
-
-			},
-			expectedErr: testErr,
+			processKillerAssertions: func(_ *process.MockKillWaiter, _ chan struct{}) {},
+			expectedErr:             testErr,
 		},
 		"wait returns error": {
-			commanderAssertions: func(mCmd *process.MockCommander, waitCalled chan time.Time) {
+			commanderAssertions: func(mCmd *process.MockCommander, _ chan struct{}) {
 				mCmd.On("Start").Return(nil).Once()
-				mCmd.On("Wait").Run(func(args mock.Arguments) {
-					close(waitCalled)
-				}).Return(testErr).Once()
+				mCmd.On("Wait").Return(testErr).Once()
 			},
-			processKillerAssertions: func(mProcessKillWaiter *process.MockKillWaiter, waitCalled chan time.Time) {},
+			processKillerAssertions: func(_ *process.MockKillWaiter, _ chan struct{}) {},
 			cancelJob:               false,
 			expectedErr:             testErr,
 		},
 		"wait returns exit error": {
-			commanderAssertions: func(mCmd *process.MockCommander, waitCalled chan time.Time) {
+			commanderAssertions: func(mCmd *process.MockCommander, _ chan struct{}) {
 				mCmd.On("Start").Return(nil).Once()
-				mCmd.On("Wait").Run(func(args mock.Arguments) {
-					close(waitCalled)
-				}).Return(exitErr).Once()
+				mCmd.On("Wait").Return(exitErr).Once()
 			},
-			processKillerAssertions: func(mProcessKillWaiter *process.MockKillWaiter, waitCalled chan time.Time) {},
+			processKillerAssertions: func(_ *process.MockKillWaiter, _ chan struct{}) {},
 			cancelJob:               false,
 			expectedErr:             &common.BuildError{FailureReason: common.ScriptFailure},
 		},
@@ -88,9 +93,9 @@ func TestExecutor_Run(t *testing.T) {
 				mProcessKillWaiter, mCmd, cleanup := setupProcessMocks(t)
 				defer cleanup()
 
-				waitCalled := make(chan time.Time)
-				tt.commanderAssertions(mCmd, waitCalled)
-				tt.processKillerAssertions(mProcessKillWaiter, waitCalled)
+				killCalled := make(chan struct{})
+				tt.commanderAssertions(mCmd, killCalled)
+				tt.processKillerAssertions(mProcessKillWaiter, killCalled)
 
 				executor := executor{
 					AbstractExecutor: executors.AbstractExecutor{
