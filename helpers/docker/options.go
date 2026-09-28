@@ -102,6 +102,7 @@ func configureTransport(transport *http.Transport, c Credentials) error {
 		if err != nil {
 			return err
 		}
+		tlsConfig.ServerName = c.TLSServerName
 
 		transport.TLSClientConfig = tlsConfig
 	}

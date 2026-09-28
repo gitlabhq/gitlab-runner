@@ -569,3 +569,44 @@ func TestLogWriterTextOutputLeavesJSONAlone(t *testing.T) {
 	assert.Equal(t, logrus.InfoLevel, entries[0].Level)
 	assert.Equal(t, line, entries[0].Message)
 }
+
+func TestParseMachineAuthOptions(t *testing.T) {
+	tests := map[string]struct {
+		out      string
+		expected machineAuthOptions
+		errMsg   string
+	}{
+		"machine provisioned over SSH": {
+			out:      `{"CertDir":"/root/.docker/machine/certs","StorePath":"/root/.docker/machine/machines/m1","ServerCertSANs":[]}`,
+			expected: machineAuthOptions{StorePath: "/root/.docker/machine/machines/m1"},
+		},
+		"machine with a certificate for its name": {
+			out:      `{"StorePath":"/root/.docker/machine/machines/m1","ServerName":"m1"}`,
+			expected: machineAuthOptions{StorePath: "/root/.docker/machine/machines/m1", ServerName: "m1"},
+		},
+		"older docker-machine without the ServerName field": {
+			out:      `{"StorePath":"/root/.docker/machine/machines/m1","BootstrapLock":true}`,
+			expected: machineAuthOptions{StorePath: "/root/.docker/machine/machines/m1"},
+		},
+		"no store path": {
+			out:    `{"ServerName":"m1"}`,
+			errMsg: "no StorePath",
+		},
+		"not json": {
+			out:    `/root/.docker/machine/machines/m1`,
+			errMsg: "parsing docker-machine auth options",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			opts, err := parseMachineAuthOptions(tc.out)
+			if tc.errMsg != "" {
+				require.ErrorContains(t, err, tc.errMsg)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, opts)
+		})
+	}
+}

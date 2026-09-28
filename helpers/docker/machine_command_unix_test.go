@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -176,6 +177,66 @@ echo 'not json'`)
 			assert.Equal(t, tc.wantFields, entries[0].Fields)
 			assert.Equal(t, tc.wantMessages[1], entries[1].Msg)
 			assert.Nil(t, entries[1].Fields)
+		})
+	}
+}
+
+func TestCredentials(t *testing.T) {
+	fake := func(configExit int, url, authOptions string) string {
+		return `case "$2" in
+  config) exit ` + strconv.Itoa(configExit) + ` ;;
+  url) echo "` + url + `" ;;
+  inspect) echo '` + authOptions + `' ;;
+esac`
+	}
+
+	tests := map[string]struct {
+		script   string
+		expected Credentials
+		errMsg   string
+	}{
+		"machine with a certificate for its name": {
+			script: fake(0, "tcp://10.0.0.7:2376", `{"StorePath":"/m/machines/m1","ServerName":"m1"}`),
+			expected: Credentials{
+				Host:          "tcp://10.0.0.7:2376",
+				CertPath:      "/m/machines/m1",
+				TLSVerify:     true,
+				TLSServerName: "m1",
+			},
+		},
+		"machine provisioned over SSH": {
+			script: fake(0, "tcp://10.0.0.7:2376", `{"StorePath":"/m/machines/m1"}`),
+			expected: Credentials{
+				Host:      "tcp://10.0.0.7:2376",
+				CertPath:  "/m/machines/m1",
+				TLSVerify: true,
+			},
+		},
+		"cannot connect": {
+			script: fake(1, "tcp://10.0.0.7:2376", `{"StorePath":"/m/machines/m1"}`),
+			errMsg: "can't connect",
+		},
+		"no url": {
+			script: fake(0, "", `{"StorePath":"/m/machines/m1"}`),
+			errMsg: "failed to get [url m1]",
+		},
+		"auth options without a store path": {
+			script: fake(0, "tcp://10.0.0.7:2376", `{"ServerName":"m1"}`),
+			errMsg: "no StorePath",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			useFakeDockerMachine(t, tc.script)
+
+			dc, err := NewMachineCommand().Credentials(t.Context(), "m1")
+			if tc.errMsg != "" {
+				require.ErrorContains(t, err, tc.errMsg)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, dc)
 		})
 	}
 }

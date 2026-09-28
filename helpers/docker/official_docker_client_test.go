@@ -187,6 +187,17 @@ func TestCredentialsConfigEnvOverride(t *testing.T) {
 			assert: func(t *testing.T, c *officialDockerClient) {
 				assert.Equal(t, "http://credprovided", c.client.DaemonHost())
 				assert.False(t, c.transport.TLSClientConfig.InsecureSkipVerify)
+				assert.Empty(t, c.transport.TLSClientConfig.ServerName)
+			},
+		},
+		"credentials tls server name": {
+			credentials: Credentials{
+				Host:          "tcp://10.0.0.7:2376",
+				TLSVerify:     true,
+				TLSServerName: "runner-m1",
+			},
+			assert: func(t *testing.T, c *officialDockerClient) {
+				assert.Equal(t, "runner-m1", c.transport.TLSClientConfig.ServerName)
 			},
 		},
 	}
