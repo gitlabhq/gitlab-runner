@@ -352,8 +352,30 @@ func (m *machineCommand) URL(ctx context.Context, name string) (string, error) {
 	return m.get(ctx, "url", name)
 }
 
-func (m *machineCommand) CertPath(ctx context.Context, name string) (string, error) {
-	return m.get(ctx, "inspect", name, "-f", "{{.HostOptions.AuthOptions.StorePath}}")
+// machineAuthOptions is the part of docker-machine's AuthOptions the runner
+// needs. ServerName is empty for machines provisioned over SSH.
+type machineAuthOptions struct {
+	StorePath  string
+	ServerName string
+}
+
+func (m *machineCommand) authOptions(ctx context.Context, name string) (machineAuthOptions, error) {
+	out, err := m.get(ctx, "inspect", name, "-f", "{{json .HostOptions.AuthOptions}}")
+	if err != nil {
+		return machineAuthOptions{}, err
+	}
+	return parseMachineAuthOptions(out)
+}
+
+func parseMachineAuthOptions(out string) (machineAuthOptions, error) {
+	var opts machineAuthOptions
+	if err := json.Unmarshal([]byte(out), &opts); err != nil {
+		return machineAuthOptions{}, fmt.Errorf("parsing docker-machine auth options: %w", err)
+	}
+	if opts.StorePath == "" {
+		return machineAuthOptions{}, errors.New("docker-machine auth options have no StorePath")
+	}
+	return opts, nil
 }
 
 func (m *machineCommand) Status(ctx context.Context, name string) (string, error) {
@@ -432,9 +454,16 @@ func (m *machineCommand) Credentials(ctx context.Context, name string) (dc Crede
 
 	dc.TLSVerify = true
 	dc.Host, err = m.URL(ctx, name)
-	if err == nil {
-		dc.CertPath, err = m.CertPath(ctx, name)
+	if err != nil {
+		return
 	}
+
+	auth, err := m.authOptions(ctx, name)
+	if err != nil {
+		return
+	}
+	dc.CertPath = auth.StorePath
+	dc.TLSServerName = auth.ServerName
 	return
 }
 
