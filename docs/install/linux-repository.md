@@ -36,7 +36,7 @@ GitLab provides packages for the following supported versions of Linux distribut
 |--------------|--------------------|
 | Amazon Linux | 2025, 2023, 2 |
 | Red Hat Enterprise Linux | 10, 9, 8, 7 |
-| Fedora | 43, 42 |
+| Fedora | 44, 43 |
 | Oracle Linux | 10, 9, 8, 7 |
 | openSUSE | 16.0, 15.6 |
 | SUSE Linux Enterprise Server | 15.7, 15.6, 15.5, 15.4, 12.5 |
