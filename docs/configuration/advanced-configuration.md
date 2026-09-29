@@ -473,7 +473,7 @@ Each `[[runners]]` section defines one runner.
 | `clean_git_config`                    | Cleans the Git configuration. For more information, see [Cleaning Git configuration](#cleaning-git-configuration).                                                                                                                                                                                                                                                                                          |
 | `referees`                            | Extra job monitoring workers that pass their results as job artifacts to GitLab.                                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_requests_limit`            | The number of `unhealthy` responses to new job requests after which a runner worker is disabled.                                                                                                                                                                                                                                                                                                            |
-| `unhealthy_interval`                  | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like `3600 s`, `1 h 30 min`, and similar.                                                                                                                                                                                                                                                      |
+| `unhealthy_interval`                  | Maximum duration that a runner worker is disabled after it exceeds the unhealthy requests limit. The first disable lasts 30 seconds and grows with jitter on each failed re-check, up to this value. `0` never disables the worker. Supports syntax like `3600 s` and `1 h 30 min`.                                                                                                                                                                                                                                                      |
 | `job_status_final_update_retry_limit` | The maximum number of times GitLab Runner can retry to push the final job status to the GitLab instance.                                                                                                                                                                                                                                                                                                    |
 | `prepare_timeout`                     | Maximum duration allowed for the `prepare` stage (executor initialization and shell environment setup). Accepts a duration string such as `30s` or `1h30m`. If unset, zero, or greater than the job timeout, defaults to the job timeout. For more information, see [prepare stage timeout](#prepare-stage-timeout).                                                                                        |
 | `get_sources_timeout`                 | Maximum duration allowed for the `get_sources` stage (cloning or fetching the project repository, including submodules). Accepts a duration string such as `30s` or `1h30m`. If unset, zero, or greater than the job timeout, defaults to the job timeout. For more information, see [get sources timeout](#get-sources-timeout).                                                                          |
@@ -610,15 +610,27 @@ To modify [Git LFS](https://docs.gitlab.com/topics/git/lfs/) endpoints, set `pre
 
 ### How `unhealthy_requests_limit` and `unhealthy_interval` works
 
-When a GitLab instance is unavailable for a long time (for example, during a
-version upgrade), its runners become idle. The runners
-do not resume job processing for 30-60 minutes after
-the GitLab instance is available again.
+When the GitLab instance rejects a job request with a `403` `unhealthy_requests_limit`
+times in a row (for example, an expired token or authentication failing during a version
+upgrade), the runner worker stops requesting jobs. Running jobs are not affected.
+Connection errors do not count. The runner keeps requesting at `check_interval`
+and resumes as soon as the instance is reachable.
 
-To increase or decrease the duration that runners are idle, change the `unhealthy_interval` setting.
+The worker is disabled for 30 seconds, then sends one request. If that request
+fails, the worker is disabled again for a random duration between 30 seconds and
+twice the previous maximum, up to `unhealthy_interval`.
+A successful request enables the worker and resets the backoff. After a short
+failure the next request is 30 seconds away. After a long one the wait has grown
+towards `unhealthy_interval`, so with the default of one hour the worker resumes
+job processing at most one hour after the instance accepts requests again.
+Set `unhealthy_interval` to `0` to never disable the worker.
 
-To change runner's number of connection attempts to the GitLab server and
-receive an unhealthy sleep before becoming idle, change the `unhealthy_requests_limit` setting.
+While a worker is disabled, the `gitlab_runner_worker_healthy` metric is `0`.
+
+To change the longest time a runner can stay idle, change the `unhealthy_interval` setting.
+
+To change the number of failed requests before the worker is disabled, change the
+`unhealthy_requests_limit` setting.
 For more information, see [How `check_interval` works](advanced-configuration.md#how-check_interval-works).
 
 ### Prepare stage timeout

@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jpillora/backoff"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
@@ -11,8 +12,9 @@ import (
 )
 
 type healthData struct {
-	failures  int
-	lastCheck time.Time
+	failures      int
+	backoff       *backoff.Backoff
+	disabledUntil time.Time
 }
 
 type healthHelper struct {
@@ -20,10 +22,14 @@ type healthHelper struct {
 	healthyLock sync.Mutex
 
 	healthCheckFailures *prometheus.CounterVec
+	healthyGauge        *prometheus.GaugeVec
+
+	now func() time.Time
 }
 
 func newHealthHelper() healthHelper {
 	return healthHelper{
+		now: time.Now,
 		healthCheckFailures: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "gitlab_runner_worker_health_check_failures_total",
@@ -31,18 +37,31 @@ func newHealthHelper() healthHelper {
 			},
 			[]string{"runner", "runner_name", "system_id"},
 		),
+		healthyGauge: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "gitlab_runner_worker_healthy",
+				Help: "1 while the runner worker is healthy, 0 from exceeding unhealthy_requests_limit until a job request succeeds",
+			},
+			[]string{"runner", "runner_name", "system_id"},
+		),
 	}
 }
 
-func (mr *healthHelper) getHealth(id string) *healthData {
+func (mr *healthHelper) getHealth(runner *common.RunnerConfig) *healthData {
 	if mr.healthy == nil {
 		mr.healthy = map[string]*healthData{}
 	}
 
+	id := runner.UniqueID()
 	health := mr.healthy[id]
 	if health == nil {
 		health = &healthData{
-			lastCheck: time.Now(),
+			backoff: &backoff.Backoff{
+				Min:    common.DefaultUnhealthyBackoffInitial,
+				Max:    runner.GetUnhealthyInterval(),
+				Factor: 2,
+				Jitter: true,
+			},
 		}
 		mr.healthy[id] = health
 	}
@@ -57,28 +76,34 @@ func (mr *healthHelper) isHealthy(runner *common.RunnerConfig) bool {
 	mr.runnerHealthCheckFailures(runner).Add(0)
 
 	id := runner.UniqueID()
-	health := mr.getHealth(id)
-	if health.failures < runner.GetUnhealthyRequestsLimit() {
+	health := mr.getHealth(runner)
+	limit := runner.GetUnhealthyRequestsLimit()
+	if health.failures < limit || runner.GetUnhealthyInterval() <= 0 {
+		mr.runnerHealthy(runner).Set(1)
 		return true
 	}
 
-	if time.Since(health.lastCheck) > runner.GetUnhealthyInterval() {
-		logrus.WithFields(logrus.Fields{
-			"unhealthy_requests":       health.failures,
-			"unhealthy_requests_limit": runner.GetUnhealthyRequestsLimit(),
-			"unhealthy_interval":       runner.GetUnhealthyInterval(),
-		}).Warningf("Runner %q is not healthy, but check for a new job will be forced!", id)
-
-		health.failures = 0
-		health.lastCheck = time.Now()
-		return true
+	if mr.now().Before(health.disabledUntil) {
+		return false
 	}
 
-	return false
+	logrus.WithFields(logrus.Fields{
+		"unhealthy_requests":       health.failures,
+		"unhealthy_requests_limit": limit,
+		"unhealthy_attempt":        health.backoff.Attempt(),
+	}).Warningf("Runner %q is not healthy, but check for a new job will be forced!", id)
+
+	// one more failure re-disables with a longer backoff
+	health.failures = limit - 1
+	return true
 }
 
 func (mr *healthHelper) runnerHealthCheckFailures(runner *common.RunnerConfig) prometheus.Counter {
 	return mr.healthCheckFailures.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID())
+}
+
+func (mr *healthHelper) runnerHealthy(runner *common.RunnerConfig) prometheus.Gauge {
+	return mr.healthyGauge.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID())
 }
 
 func (mr *healthHelper) markHealth(runner *common.RunnerConfig, healthy bool) {
@@ -87,32 +112,45 @@ func (mr *healthHelper) markHealth(runner *common.RunnerConfig, healthy bool) {
 
 	id := runner.UniqueID()
 
-	health := mr.getHealth(id)
+	health := mr.getHealth(runner)
 	if healthy {
 		health.failures = 0
-		health.lastCheck = time.Now()
+		health.backoff.Reset()
+		health.disabledUntil = time.Time{}
 		return
 	}
 
 	mr.runnerHealthCheckFailures(runner).Inc()
 
 	health.failures++
-	if health.failures >= runner.GetUnhealthyRequestsLimit() {
-		logrus.WithFields(logrus.Fields{
-			"unhealthy_requests":       health.failures,
-			"unhealthy_requests_limit": runner.GetUnhealthyRequestsLimit(),
-		}).Errorf(
-			"Runner %q is unhealthy and will be disabled for %s seconds!",
-			id,
-			runner.GetUnhealthyInterval(),
-		)
+	limit := runner.GetUnhealthyRequestsLimit()
+	if health.failures < limit || mr.now().Before(health.disabledUntil) {
+		return
 	}
+
+	// unhealthy_interval = 0 opts out of disabling, as before the backoff
+	if runner.GetUnhealthyInterval() <= 0 {
+		return
+	}
+
+	disabledFor := health.backoff.Duration()
+	health.disabledUntil = mr.now().Add(disabledFor)
+	mr.runnerHealthy(runner).Set(0)
+
+	logrus.WithFields(logrus.Fields{
+		"unhealthy_requests":       health.failures,
+		"unhealthy_requests_limit": limit,
+		"unhealthy_backoff":        disabledFor,
+		"unhealthy_interval":       runner.GetUnhealthyInterval(),
+	}).Errorf("Runner %q is unhealthy and will be disabled for %s!", id, disabledFor)
 }
 
 func (mr *healthHelper) Describe(ch chan<- *prometheus.Desc) {
 	mr.healthCheckFailures.Describe(ch)
+	mr.healthyGauge.Describe(ch)
 }
 
 func (mr *healthHelper) Collect(ch chan<- prometheus.Metric) {
 	mr.healthCheckFailures.Collect(ch)
+	mr.healthyGauge.Collect(ch)
 }

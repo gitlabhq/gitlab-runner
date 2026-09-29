@@ -14,6 +14,7 @@ const NotHealthyCheckInterval = 300
 const ReloadConfigInterval = 3 * time.Second
 const DefaultUnhealthyRequestsLimit = 3
 const DefaultUnhealthyInterval = 60 * time.Minute
+const DefaultUnhealthyBackoffInitial = 30 * time.Second
 const DefaultfinalUpdateBackoffMax = 60 * time.Minute
 const DefaultFinalUpdateRetryLimit = 10
 const DefaultWaitForServicesTimeout = 30
