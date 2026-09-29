@@ -1866,6 +1866,14 @@ func TestChownAndUmaskUsage(t *testing.T) {
 		assert.Regexp(t, `-rwxr-xr-x\s+[0-9]+\s+alpine\s+alpine\s+[0-9a-zA-Z: ]+\s+executable-file`, output, "executable-file permissions not changed by umask, user alpine")
 		assert.Regexp(t, `-rw-r--r--\s+[0-9]+\s+alpine\s+alpine\s+[0-9a-zA-Z: ]+\s+regular-file`, output, "regular-file permissions not changed by umask, user alpine")
 	}
+	umaskNotUsedUserChangedOnBuildsDir := func(t *testing.T, output string) {
+		umaskNotUsedUserChanged(t, output)
+		assert.Contains(t, output, `Changing ownership of files at "/builds" to`, "ownership change covers the whole builds directory")
+	}
+	umaskNotUsedUserChangedOnProjectDirOnly := func(t *testing.T, output string) {
+		umaskNotUsedUserChanged(t, output)
+		assert.NotContains(t, output, `Changing ownership of files at "/builds" to`, "ownership change must not cover a shared builds directory")
+	}
 
 	gitInfo := spec.GitInfo{
 		RepoURL:   "https://gitlab.com/gitlab-org/ci-cd/tests/file-permissions.git",
@@ -1877,9 +1885,11 @@ func TestChownAndUmaskUsage(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		ffValue      string
-		testImage    string
-		assertOutput func(t *testing.T, output string)
+		ffValue       string
+		testImage     string
+		buildsVolume  string
+		extraCommands []string
+		assertOutput  func(t *testing.T, output string)
 	}{
 		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR not set on root image": {
 			ffValue:      "",
@@ -1907,15 +1917,25 @@ func TestChownAndUmaskUsage(t *testing.T) {
 			assertOutput: umaskUsedUserNotChanged,
 		},
 		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR set to true on non-root image": {
+			ffValue:   "true",
+			testImage: common.TestAlpineNoRootImage,
+			extraCommands: []string{
+				`test -w "$CI_BUILDS_DIR"`,
+				"touch ../file-in-workspace",
+			},
+			assertOutput: umaskNotUsedUserChangedOnBuildsDir,
+		},
+		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR set to true on non-root image with shared builds directory": {
 			ffValue:      "true",
 			testImage:    common.TestAlpineNoRootImage,
-			assertOutput: umaskNotUsedUserChanged,
+			buildsVolume: "/tmp/gitlab-runner-test-shared-builds:/builds",
+			assertOutput: umaskNotUsedUserChangedOnProjectDirOnly,
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			jobResponse, err := common.GetRemoteBuildResponse("ls -l")
+			jobResponse, err := common.GetRemoteBuildResponse(append([]string{"ls -l"}, tt.extraCommands...)...)
 			require.NoError(t, err)
 
 			jobResponse.GitInfo = gitInfo
@@ -1923,6 +1943,11 @@ func TestChownAndUmaskUsage(t *testing.T) {
 				Key:   featureflags.DisableUmaskForDockerExecutor,
 				Value: tt.ffValue,
 			})
+
+			var volumes []string
+			if tt.buildsVolume != "" {
+				volumes = []string{tt.buildsVolume}
+			}
 
 			build := &common.Build{
 				Job: jobResponse,
@@ -1932,6 +1957,7 @@ func TestChownAndUmaskUsage(t *testing.T) {
 						Docker: &common.DockerConfig{
 							Image:      tt.testImage,
 							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+							Volumes:    volumes,
 						},
 					},
 				},

@@ -20,6 +20,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/exec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/user"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
@@ -373,17 +374,23 @@ func (s *commandExecutor) executeChown(dockerExec exec.Docker, uid int, gid int)
 		return fmt.Errorf("requesting new predefined container: %w", err)
 	}
 
+	// The builds directory is normally backed by a volume unique to this
+	// runner, project and concurrency slot, so changing ownership of all of
+	// it gives the build user a writable workspace around the checkout
+	// without affecting anything else. A shared builds directory can contain
+	// trees belonging to other projects and to concurrently running jobs,
+	// potentially using different UIDs, so there the ownership changes are
+	// limited to the directories set aside for use by this job alone.
+	if !s.SharedBuildsDir {
+		return s.executeChownOnDir(c, dockerExec, uid, gid, helpers.ToSlash(s.Build.RootDir))
+	}
+
 	err = s.executeChownOnDir(c, dockerExec, uid, gid, s.Build.FullProjectDir())
 	if err != nil {
 		return err
 	}
 
-	err = s.executeChownOnDir(c, dockerExec, uid, gid, s.Build.TmpProjectDir())
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.executeChownOnDir(c, dockerExec, uid, gid, s.Build.TmpProjectDir())
 }
 
 func (s *commandExecutor) executeChownOnDir(
