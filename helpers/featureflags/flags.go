@@ -128,12 +128,13 @@ var flags = []FeatureFlag{
 		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description: "If enabled will remove the usage of `umask 0000` call for jobs executed with `docker` " +
-			"executor. Instead Runner will try to discover the UID and GID of the user configured for the image used " +
-			"by the build container and will change the ownership of the working directory and files by running the " +
-			"`chmod` command in the predefined container (after updating sources, restoring cache and " +
-			"downloading artifacts). POSIX utility `id` must be installed and operational in the build image " +
-			"for this feature flag. Runner will execute `id` with options `-u` and `-g` to retrieve the UID and GID.",
+		Description: "When enabled, removes the usage of `umask 0000` call for jobs executed with `docker` executor. " +
+			"Instead, the runner discovers the UID and GID of the user configured for the build container image. " +
+			"The runner then changes the ownership of the build directory and its files by running the `chmod` " +
+			"command in the predefined container (after updating sources, restoring cache and downloading artifacts). " +
+			"When the build directory is on a mounted volume (potentially shared), only the ownership of the checkout " +
+			"and temporary files is changed. The POSIX utility `id` must be installed and operational in the build " +
+			"image. The runner runs `id` with the `-u` and `-g` options to retrieve the UID and GID.",
 	},
 	{
 		Name:            EnableBashExitCodeCheck,
