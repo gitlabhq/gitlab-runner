@@ -88,14 +88,18 @@ content:
 
 ```toml
 [Service]
+KillMode=mixed
 TimeoutStopSec=7200
 KillSignal=SIGQUIT
 ```
 
-After adding these two settings to the systemd unit configuration, you can
-stop the runner. After the runner stops, systemd uses `SIGQUIT` as the kill signal to stop the
-process. Additionally, a two-hour timeout is set for the stop command. If any jobs don't terminate gracefully
-before this timeout, systemd kills the process by using `SIGKILL`.
+After adding these settings to the systemd unit configuration, you can
+stop the runner. Systemd sends `SIGQUIT` to the GitLab Runner process and
+waits up to two hours for it to stop. With `KillMode=mixed`, child processes
+from running jobs, such as VirtualBox, Parallels, and local SSH processes,
+do not receive the initial graceful shutdown signal. If the runner exits or
+the timeout expires while processes remain, systemd kills the remaining
+processes in the unit control group by using `SIGKILL`.
 
 ### Overriding Upstart
 
