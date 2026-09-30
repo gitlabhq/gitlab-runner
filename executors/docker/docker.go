@@ -498,7 +498,7 @@ func (e *executor) createService(
 	}
 
 	platform := platformForImage(serviceImage, definition.ExecutorOptions)
-	networkConfig, err := e.networkConfig(linkNames)
+	networkConfig, err := e.networkConfig(linkNames, "")
 	if err != nil {
 		return nil, err
 	}
@@ -749,13 +749,13 @@ func (e *executor) getServicesDeviceRequests() ([]container.DeviceRequest, error
 	return e.bindContainerDeviceRequests(e.Config.Docker.ServiceGpus)
 }
 
-func (e *executor) networkConfig(aliases []string) (*network.NetworkingConfig, error) {
+func (e *executor) networkConfig(aliases []string, macAddress string) (*network.NetworkingConfig, error) {
 	// setting a container's mac-address changed in API version 1.44
 	if e.serverAPIVersion.LessThan(version1_44) {
-		return e.networkConfigLegacy(aliases), nil
+		return e.networkConfigLegacy(aliases, macAddress), nil
 	}
 
-	mac, err := parseMACAddress(e.Config.Docker.MacAddress)
+	mac, err := parseMACAddress(macAddress)
 	if err != nil {
 		return nil, &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
 	}
@@ -787,8 +787,8 @@ func (e *executor) networkConfig(aliases []string) (*network.NetworkingConfig, e
 //
 // There is no equivalent of the pre-1.44 top-level container.Config.MacAddress field in this API version, so a
 // configured mac_address cannot be applied here and is silently unavailable unless we warn about it explicitly.
-func (e *executor) networkConfigLegacy(aliases []string) *network.NetworkingConfig {
-	if e.Config.Docker.MacAddress != "" {
+func (e *executor) networkConfigLegacy(aliases []string, macAddress string) *network.NetworkingConfig {
+	if macAddress != "" {
 		e.BuildLogger.Warningln(
 			"mac_address is configured, but the Docker daemon's API version is older than 1.44; " +
 				"it cannot be applied to this container")
@@ -926,7 +926,7 @@ func (c *defaultContainerConfigurator) HostConfig() (*container.HostConfig, erro
 }
 
 func (c *defaultContainerConfigurator) NetworkConfig(aliases []string) (*network.NetworkingConfig, error) {
-	return c.e.networkConfig(aliases)
+	return c.e.networkConfig(aliases, c.e.Config.Docker.MacAddress)
 }
 
 func (e *executor) createContainer(

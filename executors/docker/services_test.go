@@ -219,6 +219,39 @@ func testDockerConfigurationWithServiceContainer(
 	assert.NoError(t, err, "Should create service container without errors")
 }
 
+func TestDockerServiceDoesNotUseMacAddress(t *testing.T) {
+	dockerConfig := &common.DockerConfig{MacAddress: "92:d0:c6:0a:29:33"}
+	cce := func(t *testing.T, _ *container.Config, _ *container.HostConfig, netConfig *network.NetworkingConfig) {
+		require.NotEmpty(t, netConfig.EndpointsConfig)
+		for _, endpoint := range netConfig.EndpointsConfig {
+			assert.Empty(t, endpoint.MacAddress)
+		}
+	}
+
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine:latest", "alpine:latest")
+	e.serverAPIVersion = version.Must(version.NewVersion("1.44"))
+	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).Return(nil).Once()
+	c.On("ContainerInspect", e.Context, "abc").Return(container.InspectResponse{
+		NetworkSettings: &container.NetworkSettings{},
+		Config:          &container.Config{},
+		ID:              "abc",
+		State:           &container.State{Status: container.StateRunning},
+	}, nil)
+
+	require.NoError(t, e.createVolumesManager())
+	require.NoError(t, e.createPullManager())
+
+	_, err := e.createService(
+		0,
+		"alpine",
+		"latest",
+		"alpine:latest",
+		spec.Image{Name: "alpine", Command: []string{"/bin/sh"}},
+		nil,
+	)
+	require.NoError(t, err)
+}
+
 func TestDockerServicesTmpfsSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		ServicesTmpfs: map[string]string{
