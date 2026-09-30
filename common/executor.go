@@ -138,6 +138,20 @@ type ManagedExecutorProvider interface {
 	Shutdown(ctx context.Context, config *Config)
 }
 
+// ShutdownAwareExecutorProvider can release resources while jobs are still running.
+type ShutdownAwareExecutorProvider interface {
+	ManagedExecutorProvider
+
+	// BeginShutdown is called when the runner stops requesting jobs and starts
+	// waiting for the running ones. Acquire calls already in progress complete;
+	// Release and Shutdown are still called afterwards.
+	//
+	// BeginShutdown MUST BE NON-BLOCKING.
+	//
+	// The argument receives the global configuration, which may be nil.
+	BeginShutdown(config *Config)
+}
+
 // ExecutorProvider is responsible for managing the lifetime of executors, acquiring resources,
 // retrieving executor metadata, etc.
 type ExecutorProvider interface {

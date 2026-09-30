@@ -5,6 +5,7 @@ import "time"
 var provisionRetryInterval = time.Second
 var removeRetryInterval = 30 * time.Second
 var removeRetryTries = 3
+var shutdownDrainPollInterval = 10 * time.Second
 
 var defaultMaxRemovalAttempts = 30
 var machineCanConnectCommandTimeout = 1 * time.Hour
