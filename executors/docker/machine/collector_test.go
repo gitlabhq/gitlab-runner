@@ -41,15 +41,15 @@ func TestIfMachineProviderExposesCollectInterface(t *testing.T) {
 	assert.NotNil(t, collector)
 }
 
-func TestMachineProviderDeadInterval(t *testing.T) {
+func TestCollectDetailsIgnoresLastSeenAge(t *testing.T) {
 	provider := newMachineProvider(docker_executor.NewProvider())
 	assert.Equal(t, 0, idleCount(provider.collectDetails()))
 
 	details := provider.machineDetails("test", false)
 	assert.Equal(t, 1, idleCount(provider.collectDetails()))
 
-	details.LastSeen = time.Now().Add(-(machineDeadInterval * time.Second))
-	assert.Equal(t, 0, idleCount(provider.collectDetails()))
+	details.LastSeen = time.Now().Add(-3 * time.Hour)
+	assert.Equal(t, 1, idleCount(provider.collectDetails()))
 }
 
 // TestCollectBucketsByTarget verifies that the machine-states gauge

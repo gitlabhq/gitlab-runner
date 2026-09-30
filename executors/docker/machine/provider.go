@@ -189,6 +189,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	details.UsedCount = 0
 	details.RetryCount = 0
 	details.LastSeen = time.Now()
+	details.missedListings = 0
 	details.maxRemovalAttempts = config.Machine.MaxRemovalAttempts
 	// details.targets is populated post-Create via Inspect (see
 	// createWithGrowthCapacity); we don't seed it from config.
@@ -603,6 +604,7 @@ func (m *machineProvider) updateMachines(
 
 		details.Lock()
 		details.LastSeen = time.Now()
+		details.missedListings = 0
 		info := details.info()
 		details.Unlock()
 
@@ -624,6 +626,46 @@ func (m *machineProvider) updateMachines(
 		data.Add(info)
 	}
 	return data, validMachines
+}
+
+func (m *machineProvider) pruneVanished(listed []string, config *common.RunnerConfig) {
+	listedSet := make(map[string]struct{}, len(listed))
+	for _, name := range listed {
+		listedSet[name] = struct{}{}
+	}
+	filter := machineFilter(config)
+
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	for name, details := range m.details {
+		if _, ok := listedSet[name]; ok || !details.match(filter) {
+			continue
+		}
+
+		details.Lock()
+		if details.State != machineStateIdle {
+			details.Unlock()
+			continue
+		}
+		details.missedListings++
+		misses := details.missedListings
+		lastSeen := details.LastSeen
+		targets := details.targets
+		logger := details.logger()
+		details.Unlock()
+
+		if misses < vanishedAfterMisses {
+			continue
+		}
+
+		delete(m.details, name)
+		logger.
+			WithField("misses", misses).
+			WithField("lastListed", time.Since(lastSeen)).
+			Warningln("Machine vanished from the docker-machine store, dropping it")
+		m.totalActions.WithLabelValues(actionLabels("vanished", targets)...).Inc()
+	}
 }
 
 // createMachines starts goroutines that are creating the new machines.
@@ -748,6 +790,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 
 	// Update a list of currently configured machines
 	machinesData, validMachines := m.updateMachines(machines, config)
+	m.pruneVanished(machines, config)
 	m.heartbeaterFor(config).prune(machines)
 
 	// Pre-create machines

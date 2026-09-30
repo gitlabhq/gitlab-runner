@@ -47,6 +47,8 @@ type machineDetails struct {
 	// to tell an abandoned removal apart from a successful one.
 	removalGaveUp bool `yaml:"-"`
 
+	missedListings int `yaml:"-"`
+
 	lock sync.Mutex
 }
 
@@ -96,11 +98,6 @@ func (m *machineDetails) isUsed() bool {
 
 func (m machineInfo) isStuckOnRemove() bool {
 	return m.State == machineStateRemoving && m.RetryCount >= removeRetryTries
-}
-
-func (m machineInfo) isDead() bool {
-	return m.State == machineStateIdle &&
-		time.Since(m.LastSeen) > machineDeadInterval
 }
 
 func (m *machineDetails) canBeUsed() bool {
