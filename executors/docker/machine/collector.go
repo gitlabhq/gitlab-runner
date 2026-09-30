@@ -27,9 +27,6 @@ func (m *machineProvider) collectDetails() map[targetLabels]*machinesData {
 		targets := details.targets
 		details.Unlock()
 
-		if info.isDead() {
-			continue
-		}
 		bucket, ok := out[targets]
 		if !ok {
 			bucket = &machinesData{}

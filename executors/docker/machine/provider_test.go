@@ -876,6 +876,99 @@ func TestMachineCreationIfFailedToConnect(t *testing.T) {
 	assert.Nil(t, nd)
 }
 
+func vanishedCount(p *machineProvider) float64 {
+	return testutil.ToFloat64(p.totalActions.WithLabelValues(actionLabels("vanished", targetLabels{})...))
+}
+
+func TestAcquirePrunesVanishedIdleMachine(t *testing.T) {
+	p, _ := testMachineProvider()
+	config := createMachineConfig(t, 0, 3600)
+	name := newMachineName(config)
+	p.machineDetails(name, false)
+
+	for range vanishedAfterMisses - 1 {
+		_, err := p.Acquire(config)
+		require.NoError(t, err)
+		assert.Equal(t, 1, idleCount(p.collectDetails()))
+	}
+
+	_, err := p.Acquire(config)
+	require.NoError(t, err)
+	assert.Equal(t, 0, idleCount(p.collectDetails()))
+	assert.NotContains(t, p.details, name)
+	assert.Equal(t, float64(1), vanishedCount(p))
+}
+
+func TestAcquireKeepsIdleMachineListedAgain(t *testing.T) {
+	p, m := testMachineProvider()
+	config := createMachineConfig(t, 0, 3600)
+	name := newMachineName(config)
+	d := p.machineDetails(name, false)
+	d.LastSeen = time.Now().Add(-time.Hour)
+
+	for range vanishedAfterMisses - 1 {
+		_, err := p.Acquire(config)
+		require.NoError(t, err)
+	}
+	assert.Equal(t, vanishedAfterMisses-1, d.missedListings)
+
+	m.machines = []string{name}
+	data, err := p.Acquire(config)
+	require.NoError(t, err)
+	assert.Equal(t, d, data)
+	assert.Equal(t, 0, d.missedListings)
+	assert.WithinDuration(t, time.Now(), d.LastSeen, time.Minute)
+	p.Release(config, data)
+
+	m.machines = nil
+	for range vanishedAfterMisses - 1 {
+		_, err := p.Acquire(config)
+		require.NoError(t, err)
+	}
+	assert.Contains(t, p.details, name)
+	assert.Equal(t, float64(0), vanishedCount(p))
+}
+
+func TestAcquireOnlyPrunesIdleMachines(t *testing.T) {
+	for _, state := range []machineState{machineStateCreating, machineStateAcquired, machineStateUsed, machineStateRemoving} {
+		t.Run(state.String(), func(t *testing.T) {
+			p, _ := testMachineProvider()
+			config := createMachineConfig(t, 0, 3600)
+			name := newMachineName(config)
+			p.details[name] = &machineDetails{Name: name, State: state}
+
+			for range vanishedAfterMisses + 1 {
+				_, err := p.Acquire(config)
+				require.NoError(t, err)
+			}
+			require.Contains(t, p.details, name)
+			assert.Equal(t, 0, p.details[name].missedListings)
+		})
+	}
+}
+
+func TestAcquireDoesNotPruneOtherRunnersMachines(t *testing.T) {
+	p, _ := testMachineProvider()
+	config := createMachineConfig(t, 0, 3600)
+	other := createMachineConfig(t, 0, 3600)
+	other.Machine.MachineName = "other-%s"
+	p.machineDetails(newMachineName(other), false)
+
+	for range vanishedAfterMisses + 1 {
+		_, err := p.Acquire(config)
+		require.NoError(t, err)
+	}
+	assert.Equal(t, 1, idleCount(p.collectDetails()))
+	assert.Equal(t, float64(0), vanishedCount(p))
+
+	for range vanishedAfterMisses {
+		_, err := p.Acquire(other)
+		require.NoError(t, err)
+	}
+	assert.Equal(t, 0, idleCount(p.collectDetails()))
+	assert.Equal(t, float64(1), vanishedCount(p))
+}
+
 func TestIntermediateMachineList(t *testing.T) {
 	p, _ := testMachineProvider()
 	p.details = machinesDetails{
