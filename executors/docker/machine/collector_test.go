@@ -210,9 +210,9 @@ func TestCreationMetrics(t *testing.T) {
 	machineMock.On("Remove", mock.Anything, mock.Anything).Return(nil).Maybe()
 	machineMock.On("Stop", mock.Anything, mock.Anything).Return(nil).Maybe()
 
-	_, errCh := provider.create(config, machineStateIdle)
+	_, errCh := provider.create(config, machineStateIdle, false)
 	require.NoError(t, <-errCh)
-	_, errCh = provider.create(config, machineStateIdle)
+	_, errCh = provider.create(config, machineStateIdle, false)
 	require.Error(t, <-errCh)
 
 	_, err := reg.Gather()
@@ -265,7 +265,7 @@ func TestCreationPhaseMetricsDisabled(t *testing.T) {
 		}).
 		Return(nil).Once()
 
-	_, errCh := provider.create(config, machineStateIdle)
+	_, errCh := provider.create(config, machineStateIdle, false)
 	require.NoError(t, <-errCh)
 
 	families, err := reg.Gather()

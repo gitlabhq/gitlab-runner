@@ -774,6 +774,9 @@ func (mr *RunCommand) run() {
 		}
 	}
 
+	// Workers exit when their current job is done; providers need not wait for that.
+	mr.beginShutdownOfExecutorProviders()
+
 	// Wait for workers to shut down
 	mr.stopWorkers(stopWorker)
 	mr.log().Info("All workers stopped.")
@@ -794,6 +797,15 @@ func (mr *RunCommand) initUsedExecutorProviders() {
 		managedProvider, ok := provider.(common.ManagedExecutorProvider)
 		if ok {
 			managedProvider.Init(config)
+		}
+	}
+}
+
+func (mr *RunCommand) beginShutdownOfExecutorProviders() {
+	config := mr.configfile.Config()
+	for _, provider := range mr.executorProviders.All() {
+		if p, ok := provider.(common.ShutdownAwareExecutorProvider); ok {
+			p.BeginShutdown(config)
 		}
 	}
 }

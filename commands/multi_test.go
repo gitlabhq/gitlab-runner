@@ -2252,3 +2252,34 @@ func TestRunCommand_requestJob_UpdateAbortStillFinishesWithoutFinalState(t *test
 	network.AssertExpectations(t)
 	mockTrace.AssertExpectations(t)
 }
+
+func TestRunCommand_beginShutdownOfExecutorProviders(t *testing.T) {
+	config := &common.Config{User: "git"}
+
+	aware := common.NewMockShutdownAwareExecutorProvider(t)
+	aware.EXPECT().BeginShutdown(config).Once()
+
+	// Managed and plain providers are not asked; an unexpected call fails the mock.
+	managed := common.NewMockManagedExecutorProvider(t)
+	plain := common.NewMockExecutorProvider(t)
+
+	type awareProvider struct {
+		common.ExecutorProvider
+		*common.MockShutdownAwareExecutorProvider
+	}
+	type managedProvider struct {
+		common.ExecutorProvider
+		*common.MockManagedExecutorProvider
+	}
+
+	cmd := RunCommand{
+		executorProviders: executors.NewProviderRegistry(map[string]common.ExecutorProvider{
+			"aware":   awareProvider{plain, aware},
+			"managed": managedProvider{plain, managed},
+			"plain":   plain,
+		}),
+		configfile: configfile.New("", configfile.WithExistingConfig(config), configfile.WithSystemID(common.UnknownSystemID)),
+	}
+
+	cmd.beginShutdownOfExecutorProviders()
+}

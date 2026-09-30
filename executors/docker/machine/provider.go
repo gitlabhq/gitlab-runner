@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -104,6 +105,11 @@ type machineProvider struct {
 	machineMetrics
 	autoscalingLimitsLock sync.Mutex
 	autoscalingLimits     map[string]autoscalingLimits
+
+	// Acquire refuses once set, so a worker that raced the stop signal does not refill the pool.
+	shuttingDown atomic.Bool
+	drainLock    sync.Mutex
+	drain        *shutdownDrain
 }
 
 type autoscalingLimits struct {
@@ -180,21 +186,23 @@ func (m *machineProvider) runnerMachinesCoordinator(config *common.RunnerConfig)
 	return details, nil
 }
 
-func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
+func (m *machineProvider) create(config *common.RunnerConfig, state machineState, pendingUse bool) (*machineDetails, chan error) {
 	name := newMachineName(config)
-	details := m.machineDetails(name, true)
 	done := make(chan struct{})
-	details.Lock()
-	details.State = machineStateCreating
-	details.UsedCount = 0
-	details.RetryCount = 0
-	details.LastSeen = time.Now()
-	details.missedListings = 0
-	details.maxRemovalAttempts = config.Machine.MaxRemovalAttempts
-	// details.targets is populated post-Create via Inspect (see
-	// createWithGrowthCapacity); we don't seed it from config.
-	details.inFlight = done
-	details.Unlock()
+	now := time.Now()
+	details := &machineDetails{
+		Name:               name,
+		Created:            now,
+		Used:               now,
+		LastSeen:           now,
+		State:              machineStateCreating,
+		pendingUse:         pendingUse,
+		maxRemovalAttempts: config.Machine.MaxRemovalAttempts,
+		inFlight:           done,
+	}
+	m.lock.Lock()
+	m.details[name] = details
+	m.lock.Unlock()
 	errCh := make(chan error, 1)
 
 	// Create machine with the required configuration asynchronously
@@ -374,7 +382,15 @@ func (m *machineProvider) createAndAcquireMachine(config *common.RunnerConfig) (
 		return nil, err
 	}
 
-	newDetails, errCh := m.create(config, machineStateIdle)
+	// Idle between creation and tryAcquireMachineDetails below; the shutdown drain must not take it.
+	newDetails, errCh := m.create(config, machineStateIdle, true)
+	defer func() {
+		if newDetails != nil {
+			newDetails.Lock()
+			newDetails.pendingUse = false
+			newDetails.Unlock()
+		}
+	}()
 	// Use either a free machine, or the created machine; whichever comes first. There's no guarantee that the created
 	// machine can be used by us because between the time the machine is created, and the acquisition of the machine,
 	// another goroutine may have found it via findFreeMachine and acquired it.
@@ -714,12 +730,12 @@ func (m *machineProvider) forgetHeartbeat(name string) {
 
 func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData) {
 	for {
-		if !canCreateIdle(config, data) {
+		if !canCreateIdle(config, data) || m.shuttingDown.Load() {
 			return
 		}
 
 		// Create a new machine and mark it as Idle
-		m.create(config, machineStateIdle)
+		m.create(config, machineStateIdle, false)
 		data.Creating++
 	}
 }
@@ -777,6 +793,10 @@ func (m *machineProvider) loadMachines(config *common.RunnerConfig) (machines []
 func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorData, error) {
 	if config.Machine == nil || config.Machine.MachineName == "" {
 		return nil, fmt.Errorf("missing Machine options")
+	}
+
+	if m.shuttingDown.Load() {
+		return nil, &common.NoFreeExecutorError{Message: "executor provider is shutting down"}
 	}
 
 	// Lock updating machines, because two Acquires can be run at the same time

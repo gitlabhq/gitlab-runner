@@ -338,9 +338,16 @@ When the runner process shuts down, idle machines in the pool are typically left
 You must clean them up externally (for example, through a `systemd` post-stop hook).
 The `shutdown_drain` section configures the runner to automatically remove idle machines during shutdown.
 
+By default the drain runs after the last job has finished. With `early = true`, it
+starts as soon as the runner stops requesting jobs. During a
+[graceful shutdown](../commands/_index.md#signals), idle machines are removed while
+the remaining jobs run, and machines released by finishing jobs are removed as well.
+Machines still in use are removed after the last job finishes, within `shutdown_timeout`.
+
 | Parameter       | Type     | Description |
 |-----------------|----------|-------------|
 | `enabled`       | boolean  | Turn on automatic removal of idle machines on shutdown. Default: `false`. |
+| `early`         | boolean  | Start removing idle machines as soon as the runner stops requesting jobs, instead of after the last job finishes. Default: `false`. |
 | `concurrency`   | integer  | Number of machines to remove concurrently. Default: `3`. |
 | `max_retries`   | integer  | Maximum retry attempts per machine. Default: `3`. |
 | `retry_backoff` | duration | Base backoff duration between retries (multiplied by attempt number). Default: `5s`. |

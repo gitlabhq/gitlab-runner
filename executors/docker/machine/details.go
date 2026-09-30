@@ -47,7 +47,9 @@ type machineDetails struct {
 	// to tell an abandoned removal apart from a successful one.
 	removalGaveUp bool `yaml:"-"`
 
-	missedListings int `yaml:"-"`
+	// pendingUse: created by createAndAcquireMachine, which has not yet taken or given up on it.
+	pendingUse     bool `yaml:"-"`
+	missedListings int  `yaml:"-"`
 
 	lock sync.Mutex
 }

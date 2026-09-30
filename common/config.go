@@ -522,6 +522,7 @@ type DockerMachine struct {
 
 type DockerMachineShutdownDrain struct {
 	Enabled      bool          `toml:"enabled,omitempty" json:"enabled,omitempty" description:"Enable draining idle machines on shutdown (default: false)"`
+	Early        bool          `toml:"early,omitempty" json:"early,omitempty" description:"Start removing idle machines as soon as the runner stops requesting jobs, instead of after the last job finishes (default: false)"`
 	Concurrency  int           `toml:"concurrency,omitempty" json:"concurrency,omitempty" description:"Number of concurrent machines to remove during shutdown drain (default: 3)"`
 	MaxRetries   int           `toml:"max_retries,omitempty" json:"max_retries,omitempty" description:"Maximum number of retries for removing a machine during drain (default: 3)"`
 	RetryBackoff time.Duration `toml:"retry_backoff,omitempty" json:"retry_backoff,omitempty" description:"Base backoff duration between retries during drain (default: 5s)"`

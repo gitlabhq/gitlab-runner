@@ -25,8 +25,9 @@ import (
 )
 
 var (
-	_ common.ExecutorProvider        = (*machineProvider)(nil)
-	_ common.ManagedExecutorProvider = (*machineProvider)(nil)
+	_ common.ExecutorProvider              = (*machineProvider)(nil)
+	_ common.ManagedExecutorProvider       = (*machineProvider)(nil)
+	_ common.ShutdownAwareExecutorProvider = (*machineProvider)(nil)
 )
 
 var machineDefaultConfig = &common.RunnerConfig{
@@ -331,7 +332,7 @@ func TestMachineCreationAndRemoval(t *testing.T) {
 	provisionRetryInterval = 0
 
 	p, _ := testMachineProvider()
-	d, errCh := p.create(machineDefaultConfig, machineStateUsed)
+	d, errCh := p.create(machineDefaultConfig, machineStateUsed, false)
 	assert.NotNil(t, d)
 	assert.NoError(t, <-errCh)
 	assert.Equal(t, machineStateUsed, d.State)
@@ -342,12 +343,12 @@ func TestMachineCreationAndRemoval(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, machineStateRemoving, d.State)
 
-	d2, errCh := p.create(machineProvisionFail, machineStateUsed)
+	d2, errCh := p.create(machineProvisionFail, machineStateUsed, false)
 	assert.NotNil(t, d2)
 	assert.Error(t, <-errCh, "Fails, because it fails to provision machine")
 	assert.Equal(t, machineStateRemoving, d2.State)
 
-	d3, errCh := p.create(machineCreateFail, machineStateUsed)
+	d3, errCh := p.create(machineCreateFail, machineStateUsed, false)
 	assert.NotNil(t, d3)
 	assert.Error(t, <-errCh)
 	assert.Equal(t, machineStateRemoving, d3.State)
@@ -368,7 +369,7 @@ func TestMachineCreationRegistersHeartbeat(t *testing.T) {
 	}
 
 	p, _ := testMachineProvider()
-	d, errCh := p.create(config, machineStateIdle)
+	d, errCh := p.create(config, machineStateIdle, false)
 	require.NoError(t, <-errCh)
 
 	h := p.heartbeaterFor(config)
@@ -404,7 +405,7 @@ func TestMachineRemovalForgetsHeartbeat(t *testing.T) {
 
 	t.Run("removed", func(t *testing.T) {
 		p, _ := testMachineProvider()
-		d, errCh := p.create(config, machineStateIdle)
+		d, errCh := p.create(config, machineStateIdle, false)
 		require.NoError(t, <-errCh)
 		require.True(t, tracked(p, d.Name))
 
@@ -492,7 +493,7 @@ func TestMachineReuse(t *testing.T) {
 		Return(true).
 		Once()
 
-	createdMachineDetails, errCh := p.create(machineGrowthConfig, machineStateUsed)
+	createdMachineDetails, errCh := p.create(machineGrowthConfig, machineStateUsed, false)
 	require.NotNil(t, createdMachineDetails)
 	require.NoError(t, <-errCh)
 
@@ -644,7 +645,7 @@ func TestMachineAcquireGrowthCapacity(t *testing.T) {
 								MaxGrowthRate: tt.maxGrowthCapacity,
 							},
 						},
-					}, machineStateIdle)
+					}, machineStateIdle, false)
 
 					<-errCh
 				})
@@ -808,7 +809,7 @@ func TestMachineIdleLimits(t *testing.T) {
 	p, _ := testMachineProvider()
 
 	config := createMachineConfig(t, 2, 1)
-	d, errCh := p.create(config, machineStateIdle)
+	d, errCh := p.create(config, machineStateIdle, false)
 	assert.NoError(t, <-errCh, "machine creation should not fail")
 
 	time.Sleep(time.Second)
@@ -1020,7 +1021,7 @@ func TestMachineOptionsWithName(t *testing.T) {
 		Return(nil).
 		Once()
 
-	d, errCh := p.create(config, machineStateIdle)
+	d, errCh := p.create(config, machineStateIdle, false)
 	require.NotNil(t, d)
 	require.NoError(t, <-errCh)
 
@@ -1101,7 +1102,7 @@ func TestMachineOptionsExpandEnv(t *testing.T) {
 				Return(nil).
 				Once()
 
-			d, errCh := p.create(config, machineStateIdle)
+			d, errCh := p.create(config, machineStateIdle, false)
 			require.NoError(t, <-errCh)
 
 			assert.Equal(t, tt.want(d.Name), captured)
@@ -1137,7 +1138,7 @@ func TestMachineOptionsWithNameEmpty(t *testing.T) {
 		Return(nil).
 		Once()
 
-	d, errCh := p.create(config, machineStateIdle)
+	d, errCh := p.create(config, machineStateIdle, false)
 	require.NotNil(t, d)
 	require.NoError(t, <-errCh)
 
