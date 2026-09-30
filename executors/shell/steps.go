@@ -95,7 +95,6 @@ func (m *stepRunnerServer) ensureStarted() (string, error) {
 		select {
 		case err := <-m.srv.Done():
 			m.logger.WithError(err).Warn("shared step-runner exited unexpectedly; respawning")
-			m.srv.RemoveSocketDir()
 			m.srv = nil
 		default:
 			return m.srv.SockPath, nil
@@ -113,8 +112,9 @@ func (m *stepRunnerServer) ensureStarted() (string, error) {
 	return srv.SockPath, nil
 }
 
-// shutdown gracefully stops the server (if running) and removes its socket
-// directory, bounded by ctx.
+// shutdown gracefully stops the server (if running), bounded by ctx. The
+// server removes its own socket directory as it exits, so a drain that
+// outruns ctx still cleans up rather than leaving the directory behind.
 func (m *stepRunnerServer) shutdown(ctx context.Context) {
 	m.mu.Lock()
 	srv := m.srv
@@ -136,6 +136,4 @@ func (m *stepRunnerServer) shutdown(ctx context.Context) {
 	case <-ctx.Done():
 		m.logger.Warn("timed out waiting for step-runner to drain on shutdown")
 	}
-
-	srv.RemoveSocketDir()
 }

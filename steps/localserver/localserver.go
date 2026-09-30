@@ -23,8 +23,9 @@ import (
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
-// startTimeout bounds how long Start waits for the server to accept
-// connections before giving up.
+// startTimeout bounds how long Start waits for the server to become ready to
+// serve RPCs before giving up. It covers the whole of serve's setup: bind,
+// step-runner construction and service registration.
 const startTimeout = 30 * time.Second
 
 // dirPrefix names the generated temp directory that holds the socket. A
@@ -52,12 +53,11 @@ type Server struct {
 	// SockPath is the unix socket the server accepts connections on.
 	SockPath string
 
-	dir    string
 	cancel context.CancelFunc
 	done   chan error
 }
 
-// Start launches the server and blocks until it accepts connections. The
+// Start launches the server and blocks until it is ready to serve RPCs. The
 // server's lifetime is bound to Stop, not any caller context: it may outlive
 // the build that started it.
 func Start(opts Options) (*Server, error) {
@@ -81,12 +81,15 @@ func Start(opts Options) (*Server, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	ready := make(chan struct{})
 	done := make(chan error, 1)
-	go func() { done <- serve(ctx, sockPath, opts) }()
+	go func() { done <- serve(ctx, dir, sockPath, ready, opts) }()
 
-	if err := waitForListening(sockPath, done); err != nil {
+	if err := waitForReady(sockPath, ready, done); err != nil {
+		// serve owns dir and removes it on every exit path, including the
+		// one this cancel triggers. Removing it here too would race serve's
+		// own use of the directory when the timeout fires mid-setup.
 		cancel()
-		_ = os.RemoveAll(dir)
 		return nil, err
 	}
 
@@ -97,7 +100,7 @@ func Start(opts Options) (*Server, error) {
 	// single active server per process that callers maintain.
 	concreterun.SetSocketPath(sockPath)
 
-	return &Server{SockPath: sockPath, dir: dir, cancel: cancel, done: done}, nil
+	return &Server{SockPath: sockPath, cancel: cancel, done: done}, nil
 }
 
 // Stop begins a graceful stop (in-flight jobs drain). It does not wait; the
@@ -106,19 +109,19 @@ func (s *Server) Stop() {
 	s.cancel()
 }
 
-// Done receives the serve result exactly once, when the server exits.
+// Done receives the serve result exactly once, when the server exits. The
+// generated socket directory is already removed by then.
 func (s *Server) Done() <-chan error {
 	return s.done
 }
 
-// RemoveSocketDir deletes the generated socket directory. Call it only after
-// the server has exited.
-func (s *Server) RemoveSocketDir() {
-	_ = os.RemoveAll(s.dir)
-}
+// serve runs the step-runner gRPC server on sockPath until ctx is cancelled,
+// closing ready once it is about to accept RPCs. It owns dir: sole ownership
+// keeps cleanup off Start's timeout path, which would otherwise remove the
+// directory out from under a serve still setting up in it.
+func serve(ctx context.Context, dir, sockPath string, ready chan<- struct{}, opts Options) error {
+	defer os.RemoveAll(dir)
 
-// serve runs the step-runner gRPC server on sockPath until ctx is cancelled.
-func serve(ctx context.Context, sockPath string, opts Options) error {
 	listener, err := net.ListenUnix("unix", api.SocketAddr(sockPath))
 	if err != nil {
 		return fmt.Errorf("opening step-runner socket: %w", err)
@@ -145,33 +148,31 @@ func serve(ctx context.Context, sockPath string, opts Options) error {
 		srv.GracefulStop()
 	}()
 
+	// Ready means "about to accept RPCs", not merely "socket bound": the
+	// kernel accepts connections into the listen backlog from the moment of
+	// bind, so a dial succeeding says nothing about the service being
+	// registered. Signal it here, once bind, construction and registration
+	// have all succeeded, and Start's wait is exact rather than a poll.
+	close(ready)
+
 	if err := srv.Serve(listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 		return fmt.Errorf("step-runner server: %w", err)
 	}
 	return nil
 }
 
-// waitForListening polls the socket until the server accepts a connection,
+// waitForReady blocks until the server signals it is about to accept RPCs,
 // the server exits, or the start timeout elapses.
-func waitForListening(sockPath string, done <-chan error) error {
+func waitForReady(sockPath string, ready <-chan struct{}, done <-chan error) error {
 	deadline := time.NewTimer(startTimeout)
 	defer deadline.Stop()
 
-	ticker := time.NewTicker(50 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		if conn, derr := net.Dial("unix", sockPath); derr == nil {
-			_ = conn.Close()
-			return nil
-		}
-
-		select {
-		case err := <-done:
-			return fmt.Errorf("step-runner serve exited during startup: %w", err)
-		case <-deadline.C:
-			return fmt.Errorf("timed out waiting for step-runner to listen on %s", sockPath)
-		case <-ticker.C:
-		}
+	select {
+	case <-ready:
+		return nil
+	case err := <-done:
+		return fmt.Errorf("step-runner serve exited during startup: %w", err)
+	case <-deadline.C:
+		return fmt.Errorf("timed out waiting for step-runner to serve on %s", sockPath)
 	}
 }
