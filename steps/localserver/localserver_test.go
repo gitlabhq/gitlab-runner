@@ -3,6 +3,7 @@
 package localserver
 
 import (
+	"context"
 	"net"
 	"os"
 	"path/filepath"
@@ -12,6 +13,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	"gitlab.com/gitlab-org/step-runner/proto"
 )
 
 // dialable reports whether the unix socket at path currently accepts a
@@ -26,7 +31,30 @@ func dialable(t *testing.T, path string) bool {
 	return true
 }
 
-func TestStartStopRemove(t *testing.T) {
+// Start must not return until the service is registered and serving: a bound
+// socket alone accepts connections into the listen backlog, so an RPC issued
+// the instant Start returns would otherwise hang or fail Unimplemented.
+func TestStartReturnsOnlyOnceServingRPCs(t *testing.T) {
+	srv, err := Start(Options{})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		srv.Stop()
+		<-srv.Done()
+	})
+
+	conn, err := grpc.NewClient("unix://"+srv.SockPath,
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	_, err = proto.NewStepRunnerClient(conn).Status(ctx, &proto.StatusRequest{})
+	require.NoError(t, err, "the service must answer RPCs as soon as Start returns")
+}
+
+func TestStartStopRemovesSocketDir(t *testing.T) {
 	srv, err := Start(Options{})
 	require.NoError(t, err)
 
@@ -47,7 +75,8 @@ func TestStartStopRemove(t *testing.T) {
 		t.Fatal("server did not exit after Stop")
 	}
 
-	srv.RemoveSocketDir()
+	// serve owns the directory and removes it on the way out, so it is gone
+	// by the time its result lands on Done.
 	require.NoDirExists(t, dir)
 	require.False(t, dialable(t, srv.SockPath),
 		"server should no longer accept connections after Stop")
@@ -66,7 +95,6 @@ func TestStartFallsBackWhenTempDirTooLongForSocket(t *testing.T) {
 	t.Cleanup(func() {
 		srv.Stop()
 		<-srv.Done()
-		srv.RemoveSocketDir()
 	})
 
 	assert.LessOrEqual(t, len(srv.SockPath), maxSockPathLen)
