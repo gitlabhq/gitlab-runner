@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete"
 	concreterun "gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run"
@@ -101,6 +102,21 @@ func Start(opts Options) (*Server, error) {
 	concreterun.SetSocketPath(sockPath)
 
 	return &Server{SockPath: sockPath, cancel: cancel, done: done}, nil
+}
+
+// Dial opens a gRPC client connection to the server. It uses a context dialer
+// so that gRPC never parses SockPath as a URI — on Windows, absolute paths
+// contain a drive-letter colon (e.g. C:\...) that confuses gRPC's URI parser
+// and produces "too many colons in address". The dummy target is never
+// resolved; all connections go through the dialer.
+func (s *Server) Dial() (*grpc.ClientConn, error) {
+	sockPath := s.SockPath
+	return grpc.NewClient("passthrough:///localserver",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "unix", sockPath)
+		}),
+	)
 }
 
 // Stop begins a graceful stop (in-flight jobs drain). It does not wait; the

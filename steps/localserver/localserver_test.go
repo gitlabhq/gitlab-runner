@@ -13,8 +13,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"gitlab.com/gitlab-org/step-runner/proto"
 )
@@ -42,8 +40,7 @@ func TestStartReturnsOnlyOnceServingRPCs(t *testing.T) {
 		<-srv.Done()
 	})
 
-	conn, err := grpc.NewClient("unix://"+srv.SockPath,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := srv.Dial()
 	require.NoError(t, err)
 	defer conn.Close()
 
