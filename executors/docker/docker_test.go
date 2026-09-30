@@ -1134,7 +1134,7 @@ func TestDockerNetworkConfigWithInvalidMAC(t *testing.T) {
 	// below that, networkConfig falls back to networkConfigLegacy which never sets a MAC.
 	executor.serverAPIVersion = version.Must(version.NewVersion("1.44"))
 
-	_, err := executor.networkConfig(nil)
+	_, err := executor.networkConfig(nil, dockerConfig.MacAddress)
 
 	var buildErr *common.BuildError
 	require.ErrorAs(t, err, &buildErr, "expected error to be a *common.BuildError")
@@ -1188,12 +1188,23 @@ func TestDockerMacAddress(t *testing.T) {
 	}
 
 	cce := func(t *testing.T, _ *container.Config, _ *container.HostConfig, netConfig *network.NetworkingConfig) {
+		require.NotEmpty(t, netConfig.EndpointsConfig)
 		for _, ec := range netConfig.EndpointsConfig {
-			assert.Equal(t, "92:d0:c6:0a:29:33", ec.MacAddress)
+			assert.Equal(t, "92:d0:c6:0a:29:33", ec.MacAddress.String())
 		}
 	}
 
-	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine", "alpine:latest")
+	e.serverAPIVersion = version.Must(version.NewVersion("1.44"))
+	c.On("ContainerInspect", mock.Anything, "abc").Return(container.InspectResponse{}, nil).Once()
+
+	require.NoError(t, e.createVolumesManager())
+	require.NoError(t, e.createPullManager())
+
+	imageConfig := spec.Image{Name: "alpine"}
+	cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, nil)
+	_, err := e.createContainer(buildContainerType, imageConfig, nil, cfgTor)
+	require.NoError(t, err)
 }
 
 func TestDockerBuildContainerNativeStepsRecoveryEnv(t *testing.T) {
@@ -4140,7 +4151,7 @@ func TestNetworkConfigLegacyMacAddressWarning(t *testing.T) {
 	t.Run("pre-1.44 with mac_address configured warns", func(t *testing.T) {
 		e, buffer := newExecutorWithMacAddress(t, "1.43", "92:d0:c6:0a:29:33")
 
-		_, err := e.networkConfig(nil)
+		_, err := e.networkConfig(nil, e.Config.Docker.MacAddress)
 		require.NoError(t, err)
 		assert.Contains(t, buffer.String(), "mac_address is configured")
 	})
@@ -4148,7 +4159,15 @@ func TestNetworkConfigLegacyMacAddressWarning(t *testing.T) {
 	t.Run("pre-1.44 without mac_address does not warn", func(t *testing.T) {
 		e, buffer := newExecutorWithMacAddress(t, "1.43", "")
 
-		_, err := e.networkConfig(nil)
+		_, err := e.networkConfig(nil, e.Config.Docker.MacAddress)
+		require.NoError(t, err)
+		assert.NotContains(t, buffer.String(), "mac_address is configured")
+	})
+
+	t.Run("pre-1.44 service does not warn", func(t *testing.T) {
+		e, buffer := newExecutorWithMacAddress(t, "1.43", "92:d0:c6:0a:29:33")
+
+		_, err := e.networkConfig(nil, "")
 		require.NoError(t, err)
 		assert.NotContains(t, buffer.String(), "mac_address is configured")
 	})
@@ -4156,7 +4175,7 @@ func TestNetworkConfigLegacyMacAddressWarning(t *testing.T) {
 	t.Run("1.44 and later with mac_address does not warn since it is applied", func(t *testing.T) {
 		e, buffer := newExecutorWithMacAddress(t, "1.44", "92:d0:c6:0a:29:33")
 
-		_, err := e.networkConfig(nil)
+		_, err := e.networkConfig(nil, e.Config.Docker.MacAddress)
 		require.NoError(t, err)
 		assert.NotContains(t, buffer.String(), "mac_address is configured")
 	})
