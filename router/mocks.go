@@ -68,7 +68,7 @@ type MockDelegate_DownloadArtifacts_Call struct {
 //   - config common.JobCredentials
 //   - artifactsFile io.WriteCloser
 //   - directDownload *bool
-func (_e *MockDelegate_Expecter) DownloadArtifacts(config interface{}, artifactsFile interface{}, directDownload interface{}) *MockDelegate_DownloadArtifacts_Call {
+func (_e *MockDelegate_Expecter) DownloadArtifacts(config any, artifactsFile any, directDownload any) *MockDelegate_DownloadArtifacts_Call {
 	return &MockDelegate_DownloadArtifacts_Call{Call: _e.mock.On("DownloadArtifacts", config, artifactsFile, directDownload)}
 }
 
@@ -132,7 +132,7 @@ type MockDelegate_GetRouterDiscovery_Call struct {
 // GetRouterDiscovery is a helper method to define mock.On call
 //   - ctx context.Context
 //   - config common.RunnerConfig
-func (_e *MockDelegate_Expecter) GetRouterDiscovery(ctx interface{}, config interface{}) *MockDelegate_GetRouterDiscovery_Call {
+func (_e *MockDelegate_Expecter) GetRouterDiscovery(ctx any, config any) *MockDelegate_GetRouterDiscovery_Call {
 	return &MockDelegate_GetRouterDiscovery_Call{Call: _e.mock.On("GetRouterDiscovery", ctx, config)}
 }
 
@@ -192,7 +192,7 @@ type MockDelegate_PatchTrace_Call struct {
 //   - content []byte
 //   - startOffset int
 //   - debugModeEnabled bool
-func (_e *MockDelegate_Expecter) PatchTrace(config interface{}, jobCredentials interface{}, content interface{}, startOffset interface{}, debugModeEnabled interface{}) *MockDelegate_PatchTrace_Call {
+func (_e *MockDelegate_Expecter) PatchTrace(config any, jobCredentials any, content any, startOffset any, debugModeEnabled any) *MockDelegate_PatchTrace_Call {
 	return &MockDelegate_PatchTrace_Call{Call: _e.mock.On("PatchTrace", config, jobCredentials, content, startOffset, debugModeEnabled)}
 }
 
@@ -264,7 +264,7 @@ type MockDelegate_PrepareJobRequest_Call struct {
 // PrepareJobRequest is a helper method to define mock.On call
 //   - config common.RunnerConfig
 //   - sessionInfo *common.SessionInfo
-func (_e *MockDelegate_Expecter) PrepareJobRequest(config interface{}, sessionInfo interface{}) *MockDelegate_PrepareJobRequest_Call {
+func (_e *MockDelegate_Expecter) PrepareJobRequest(config any, sessionInfo any) *MockDelegate_PrepareJobRequest_Call {
 	return &MockDelegate_PrepareJobRequest_Call{Call: _e.mock.On("PrepareJobRequest", config, sessionInfo)}
 }
 
@@ -332,7 +332,7 @@ type MockDelegate_ProcessJob_Call struct {
 // ProcessJob is a helper method to define mock.On call
 //   - config common.RunnerConfig
 //   - buildCredentials *common.JobCredentials
-func (_e *MockDelegate_Expecter) ProcessJob(config interface{}, buildCredentials interface{}) *MockDelegate_ProcessJob_Call {
+func (_e *MockDelegate_Expecter) ProcessJob(config any, buildCredentials any) *MockDelegate_ProcessJob_Call {
 	return &MockDelegate_ProcessJob_Call{Call: _e.mock.On("ProcessJob", config, buildCredentials)}
 }
 
@@ -391,7 +391,7 @@ type MockDelegate_RegisterRunner_Call struct {
 // RegisterRunner is a helper method to define mock.On call
 //   - config common.RunnerConfig
 //   - parameters common.RegisterRunnerParameters
-func (_e *MockDelegate_Expecter) RegisterRunner(config interface{}, parameters interface{}) *MockDelegate_RegisterRunner_Call {
+func (_e *MockDelegate_Expecter) RegisterRunner(config any, parameters any) *MockDelegate_RegisterRunner_Call {
 	return &MockDelegate_RegisterRunner_Call{Call: _e.mock.On("RegisterRunner", config, parameters)}
 }
 
@@ -460,7 +460,7 @@ type MockDelegate_RequestJob_Call struct {
 //   - ctx context.Context
 //   - config common.RunnerConfig
 //   - sessionInfo *common.SessionInfo
-func (_e *MockDelegate_Expecter) RequestJob(ctx interface{}, config interface{}, sessionInfo interface{}) *MockDelegate_RequestJob_Call {
+func (_e *MockDelegate_Expecter) RequestJob(ctx any, config any, sessionInfo any) *MockDelegate_RequestJob_Call {
 	return &MockDelegate_RequestJob_Call{Call: _e.mock.On("RequestJob", ctx, config, sessionInfo)}
 }
 
@@ -524,7 +524,7 @@ type MockDelegate_ResetToken_Call struct {
 // ResetToken is a helper method to define mock.On call
 //   - runner common.RunnerConfig
 //   - systemID string
-func (_e *MockDelegate_Expecter) ResetToken(runner interface{}, systemID interface{}) *MockDelegate_ResetToken_Call {
+func (_e *MockDelegate_Expecter) ResetToken(runner any, systemID any) *MockDelegate_ResetToken_Call {
 	return &MockDelegate_ResetToken_Call{Call: _e.mock.On("ResetToken", runner, systemID)}
 }
 
@@ -584,7 +584,7 @@ type MockDelegate_ResetTokenWithPAT_Call struct {
 //   - runner common.RunnerConfig
 //   - systemID string
 //   - pat string
-func (_e *MockDelegate_Expecter) ResetTokenWithPAT(runner interface{}, systemID interface{}, pat interface{}) *MockDelegate_ResetTokenWithPAT_Call {
+func (_e *MockDelegate_Expecter) ResetTokenWithPAT(runner any, systemID any, pat any) *MockDelegate_ResetTokenWithPAT_Call {
 	return &MockDelegate_ResetTokenWithPAT_Call{Call: _e.mock.On("ResetTokenWithPAT", runner, systemID, pat)}
 }
 
@@ -634,7 +634,7 @@ type MockDelegate_SetConnectionMaxAge_Call struct {
 
 // SetConnectionMaxAge is a helper method to define mock.On call
 //   - duration time.Duration
-func (_e *MockDelegate_Expecter) SetConnectionMaxAge(duration interface{}) *MockDelegate_SetConnectionMaxAge_Call {
+func (_e *MockDelegate_Expecter) SetConnectionMaxAge(duration any) *MockDelegate_SetConnectionMaxAge_Call {
 	return &MockDelegate_SetConnectionMaxAge_Call{Call: _e.mock.On("SetConnectionMaxAge", duration)}
 }
 
@@ -675,7 +675,7 @@ type MockDelegate_SetLastUpdate_Call struct {
 // SetLastUpdate is a helper method to define mock.On call
 //   - config common.RunnerConfig
 //   - lastUpdate string
-func (_e *MockDelegate_Expecter) SetLastUpdate(config interface{}, lastUpdate interface{}) *MockDelegate_SetLastUpdate_Call {
+func (_e *MockDelegate_Expecter) SetLastUpdate(config any, lastUpdate any) *MockDelegate_SetLastUpdate_Call {
 	return &MockDelegate_SetLastUpdate_Call{Call: _e.mock.On("SetLastUpdate", config, lastUpdate)}
 }
 
@@ -731,7 +731,7 @@ type MockDelegate_UnregisterRunner_Call struct {
 
 // UnregisterRunner is a helper method to define mock.On call
 //   - config common.RunnerConfig
-func (_e *MockDelegate_Expecter) UnregisterRunner(config interface{}) *MockDelegate_UnregisterRunner_Call {
+func (_e *MockDelegate_Expecter) UnregisterRunner(config any) *MockDelegate_UnregisterRunner_Call {
 	return &MockDelegate_UnregisterRunner_Call{Call: _e.mock.On("UnregisterRunner", config)}
 }
 
@@ -783,7 +783,7 @@ type MockDelegate_UnregisterRunnerManager_Call struct {
 // UnregisterRunnerManager is a helper method to define mock.On call
 //   - config common.RunnerConfig
 //   - systemID string
-func (_e *MockDelegate_Expecter) UnregisterRunnerManager(config interface{}, systemID interface{}) *MockDelegate_UnregisterRunnerManager_Call {
+func (_e *MockDelegate_Expecter) UnregisterRunnerManager(config any, systemID any) *MockDelegate_UnregisterRunnerManager_Call {
 	return &MockDelegate_UnregisterRunnerManager_Call{Call: _e.mock.On("UnregisterRunnerManager", config, systemID)}
 }
 
@@ -841,7 +841,7 @@ type MockDelegate_UpdateJob_Call struct {
 //   - config common.RunnerConfig
 //   - jobCredentials *common.JobCredentials
 //   - jobInfo common.UpdateJobInfo
-func (_e *MockDelegate_Expecter) UpdateJob(config interface{}, jobCredentials interface{}, jobInfo interface{}) *MockDelegate_UpdateJob_Call {
+func (_e *MockDelegate_Expecter) UpdateJob(config any, jobCredentials any, jobInfo any) *MockDelegate_UpdateJob_Call {
 	return &MockDelegate_UpdateJob_Call{Call: _e.mock.On("UpdateJob", config, jobCredentials, jobInfo)}
 }
 
@@ -905,9 +905,7 @@ func (_mock *MockDelegate) UploadRawArtifacts(config common.JobCredentials, body
 	if returnFunc, ok := ret.Get(2).(func(common.JobCredentials, common.ContentProvider, common.ArtifactsOptions) error); ok {
 		r2 = returnFunc(config, bodyProvider, options)
 	} else {
-		if ret.Get(2) != nil {
-			r2 = ret.Get(2).(error)
-		}
+		r2 = ret.Error(2)
 	}
 	return r0, r1, r2
 }
@@ -921,7 +919,7 @@ type MockDelegate_UploadRawArtifacts_Call struct {
 //   - config common.JobCredentials
 //   - bodyProvider common.ContentProvider
 //   - options common.ArtifactsOptions
-func (_e *MockDelegate_Expecter) UploadRawArtifacts(config interface{}, bodyProvider interface{}, options interface{}) *MockDelegate_UploadRawArtifacts_Call {
+func (_e *MockDelegate_Expecter) UploadRawArtifacts(config any, bodyProvider any, options any) *MockDelegate_UploadRawArtifacts_Call {
 	return &MockDelegate_UploadRawArtifacts_Call{Call: _e.mock.On("UploadRawArtifacts", config, bodyProvider, options)}
 }
 
@@ -959,22 +957,31 @@ func (_c *MockDelegate_UploadRawArtifacts_Call) RunAndReturn(run func(config com
 }
 
 // VerifyRunner provides a mock function for the type MockDelegate
-func (_mock *MockDelegate) VerifyRunner(config common.RunnerConfig, systemID string) *common.VerifyRunnerResponse {
-	ret := _mock.Called(config, systemID)
+func (_mock *MockDelegate) VerifyRunner(ctx context.Context, config common.RunnerConfig, systemID string) (*common.VerifyRunnerResponse, error) {
+	ret := _mock.Called(ctx, config, systemID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VerifyRunner")
 	}
 
 	var r0 *common.VerifyRunnerResponse
-	if returnFunc, ok := ret.Get(0).(func(common.RunnerConfig, string) *common.VerifyRunnerResponse); ok {
-		r0 = returnFunc(config, systemID)
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, common.RunnerConfig, string) (*common.VerifyRunnerResponse, error)); ok {
+		return returnFunc(ctx, config, systemID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, common.RunnerConfig, string) *common.VerifyRunnerResponse); ok {
+		r0 = returnFunc(ctx, config, systemID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*common.VerifyRunnerResponse)
 		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, common.RunnerConfig, string) error); ok {
+		r1 = returnFunc(ctx, config, systemID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockDelegate_VerifyRunner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyRunner'
@@ -983,36 +990,42 @@ type MockDelegate_VerifyRunner_Call struct {
 }
 
 // VerifyRunner is a helper method to define mock.On call
+//   - ctx context.Context
 //   - config common.RunnerConfig
 //   - systemID string
-func (_e *MockDelegate_Expecter) VerifyRunner(config interface{}, systemID interface{}) *MockDelegate_VerifyRunner_Call {
-	return &MockDelegate_VerifyRunner_Call{Call: _e.mock.On("VerifyRunner", config, systemID)}
+func (_e *MockDelegate_Expecter) VerifyRunner(ctx any, config any, systemID any) *MockDelegate_VerifyRunner_Call {
+	return &MockDelegate_VerifyRunner_Call{Call: _e.mock.On("VerifyRunner", ctx, config, systemID)}
 }
 
-func (_c *MockDelegate_VerifyRunner_Call) Run(run func(config common.RunnerConfig, systemID string)) *MockDelegate_VerifyRunner_Call {
+func (_c *MockDelegate_VerifyRunner_Call) Run(run func(ctx context.Context, config common.RunnerConfig, systemID string)) *MockDelegate_VerifyRunner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 common.RunnerConfig
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(common.RunnerConfig)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 common.RunnerConfig
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(common.RunnerConfig)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockDelegate_VerifyRunner_Call) Return(verifyRunnerResponse *common.VerifyRunnerResponse) *MockDelegate_VerifyRunner_Call {
-	_c.Call.Return(verifyRunnerResponse)
+func (_c *MockDelegate_VerifyRunner_Call) Return(verifyRunnerResponse *common.VerifyRunnerResponse, err error) *MockDelegate_VerifyRunner_Call {
+	_c.Call.Return(verifyRunnerResponse, err)
 	return _c
 }
 
-func (_c *MockDelegate_VerifyRunner_Call) RunAndReturn(run func(config common.RunnerConfig, systemID string) *common.VerifyRunnerResponse) *MockDelegate_VerifyRunner_Call {
+func (_c *MockDelegate_VerifyRunner_Call) RunAndReturn(run func(ctx context.Context, config common.RunnerConfig, systemID string) (*common.VerifyRunnerResponse, error)) *MockDelegate_VerifyRunner_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1080,11 +1093,11 @@ func (_c *MockClientConn_Done_Call) RunAndReturn(run func()) *MockClientConn_Don
 // Invoke provides a mock function for the type MockClientConn
 func (_mock *MockClientConn) Invoke(ctx context.Context, method string, args any, reply any, opts ...grpc.CallOption) error {
 	// grpc.CallOption
-	_va := make([]interface{}, len(opts))
+	_va := make([]any, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
 	}
-	var _ca []interface{}
+	var _ca []any
 	_ca = append(_ca, ctx, method, args, reply)
 	_ca = append(_ca, _va...)
 	ret := _mock.Called(_ca...)
@@ -1113,9 +1126,9 @@ type MockClientConn_Invoke_Call struct {
 //   - args any
 //   - reply any
 //   - opts ...grpc.CallOption
-func (_e *MockClientConn_Expecter) Invoke(ctx interface{}, method interface{}, args interface{}, reply interface{}, opts ...interface{}) *MockClientConn_Invoke_Call {
+func (_e *MockClientConn_Expecter) Invoke(ctx any, method any, args any, reply any, opts ...any) *MockClientConn_Invoke_Call {
 	return &MockClientConn_Invoke_Call{Call: _e.mock.On("Invoke",
-		append([]interface{}{ctx, method, args, reply}, opts...)...)}
+		append([]any{ctx, method, args, reply}, opts...)...)}
 }
 
 func (_c *MockClientConn_Invoke_Call) Run(run func(ctx context.Context, method string, args any, reply any, opts ...grpc.CallOption)) *MockClientConn_Invoke_Call {
@@ -1168,11 +1181,11 @@ func (_c *MockClientConn_Invoke_Call) RunAndReturn(run func(ctx context.Context,
 // NewStream provides a mock function for the type MockClientConn
 func (_mock *MockClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 	// grpc.CallOption
-	_va := make([]interface{}, len(opts))
+	_va := make([]any, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
 	}
-	var _ca []interface{}
+	var _ca []any
 	_ca = append(_ca, ctx, desc, method)
 	_ca = append(_ca, _va...)
 	ret := _mock.Called(_ca...)
@@ -1211,9 +1224,9 @@ type MockClientConn_NewStream_Call struct {
 //   - desc *grpc.StreamDesc
 //   - method string
 //   - opts ...grpc.CallOption
-func (_e *MockClientConn_Expecter) NewStream(ctx interface{}, desc interface{}, method interface{}, opts ...interface{}) *MockClientConn_NewStream_Call {
+func (_e *MockClientConn_Expecter) NewStream(ctx any, desc any, method any, opts ...any) *MockClientConn_NewStream_Call {
 	return &MockClientConn_NewStream_Call{Call: _e.mock.On("NewStream",
-		append([]interface{}{ctx, desc, method}, opts...)...)}
+		append([]any{ctx, desc, method}, opts...)...)}
 }
 
 func (_c *MockClientConn_NewStream_Call) Run(run func(ctx context.Context, desc *grpc.StreamDesc, method string, opts ...grpc.CallOption)) *MockClientConn_NewStream_Call {

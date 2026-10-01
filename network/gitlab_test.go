@@ -2991,7 +2991,13 @@ func (wc *nopWriteCloser) Close() error {
 }
 
 func TestArtifactsDownload(t *testing.T) {
+	var gotDownloadModes []string
+	var gotDirectDownloadQueries []string
 	handler := func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/direct-download" {
+			gotDownloadModes = append(gotDownloadModes, r.URL.Query().Get("download_mode"))
+			gotDirectDownloadQueries = append(gotDirectDownloadQueries, r.URL.Query().Get("direct_download"))
+		}
 		testArtifactsDownloadHandler(w, r)
 	}
 
@@ -3043,62 +3049,99 @@ func TestArtifactsDownload(t *testing.T) {
 	falseValue := false
 
 	testCases := map[string]struct {
-		credentials      JobCredentials
-		directDownload   *bool
-		expectedState    DownloadState
-		expectedArtifact string
+		credentials                   JobCredentials
+		directDownload                *bool
+		expectedState                 DownloadState
+		expectedArtifact              string
+		expectedDownloadModes         []string
+		expectedDirectDownloadQueries []string
 	}{
 		"successful download": {
-			credentials:      validCredentials,
-			expectedState:    DownloadSucceeded,
-			expectedArtifact: "Artifact: direct_download=missing",
+			credentials:                   validCredentials,
+			expectedState:                 DownloadSucceeded,
+			expectedArtifact:              "Artifact: direct_download=missing",
+			expectedDownloadModes:         []string{""},
+			expectedDirectDownloadQueries: []string{""},
 		},
 		"properly handles direct_download=false": {
-			credentials:      validCredentials,
-			directDownload:   &falseValue,
-			expectedState:    DownloadSucceeded,
-			expectedArtifact: "Artifact: direct_download=false",
+			credentials:                   validCredentials,
+			directDownload:                &falseValue,
+			expectedState:                 DownloadSucceeded,
+			expectedArtifact:              "Artifact: direct_download=false",
+			expectedDownloadModes:         []string{""},
+			expectedDirectDownloadQueries: []string{"false"},
 		},
 		"properly handles direct_download=true": {
-			credentials:      validCredentials,
-			directDownload:   &trueValue,
-			expectedState:    DownloadSucceeded,
-			expectedArtifact: "Artifact: direct_download=true",
+			credentials:                   validCredentials,
+			directDownload:                &trueValue,
+			expectedState:                 DownloadSucceeded,
+			expectedArtifact:              "Artifact: direct_download=true",
+			expectedDownloadModes:         []string{"direct", "direct"},
+			expectedDirectDownloadQueries: []string{"true", "true"},
+		},
+		"standard download does not override direct_download=false": {
+			credentials:                   validCredentials,
+			directDownload:                &falseValue,
+			expectedState:                 DownloadSucceeded,
+			expectedArtifact:              "Artifact: direct_download=false",
+			expectedDownloadModes:         []string{""},
+			expectedDirectDownloadQueries: []string{"false"},
+		},
+		"retry request uses configured download mode": {
+			credentials:                   validCredentials,
+			expectedState:                 DownloadSucceeded,
+			expectedArtifact:              "Artifact: direct_download=missing",
+			expectedDownloadModes:         []string{""},
+			expectedDirectDownloadQueries: []string{""},
 		},
 		"forbidden should be generated for invalid credentials": {
-			credentials:    invalidTokenCredentials,
-			directDownload: &trueValue,
-			expectedState:  DownloadForbidden,
+			credentials:                   invalidTokenCredentials,
+			directDownload:                &trueValue,
+			expectedState:                 DownloadForbidden,
+			expectedDownloadModes:         []string{"direct"},
+			expectedDirectDownloadQueries: []string{"true"},
 		},
 		"unauthorized should be generated for unauthorized credentials": {
-			credentials:    unauthorizedTokenCredentials,
-			directDownload: &trueValue,
-			expectedState:  DownloadUnauthorized,
+			credentials:                   unauthorizedTokenCredentials,
+			directDownload:                &trueValue,
+			expectedState:                 DownloadUnauthorized,
+			expectedDownloadModes:         []string{"direct"},
+			expectedDirectDownloadQueries: []string{"true"},
 		},
 		"file should not be downloaded if not existing": {
-			credentials:    fileNotFoundTokenCredentials,
-			directDownload: &trueValue,
-			expectedState:  DownloadNotFound,
+			credentials:                   fileNotFoundTokenCredentials,
+			directDownload:                &trueValue,
+			expectedState:                 DownloadNotFound,
+			expectedDownloadModes:         []string{"direct"},
+			expectedDirectDownloadQueries: []string{"true"},
 		},
 		"forbidden should be generated for object storage forbidden error": {
-			credentials:    objectStorageForbiddenCredentials,
-			directDownload: &falseValue,
-			expectedState:  DownloadForbidden,
+			credentials:                   objectStorageForbiddenCredentials,
+			directDownload:                &falseValue,
+			expectedState:                 DownloadForbidden,
+			expectedDownloadModes:         []string{""},
+			expectedDirectDownloadQueries: []string{"false"},
 		},
 		"forbidden should be generated for object storage forbidden with bad JSON error": {
-			credentials:    objectStorageForbiddenJSONCredentials,
-			directDownload: &falseValue,
-			expectedState:  DownloadForbidden,
+			credentials:                   objectStorageForbiddenJSONCredentials,
+			directDownload:                &falseValue,
+			expectedState:                 DownloadForbidden,
+			expectedDownloadModes:         []string{""},
+			expectedDirectDownloadQueries: []string{"false"},
 		},
 		"forbidden should be generated for object storage forbidden with bad XML error": {
-			credentials:    objectStorageForbiddenBadXMLCredentials,
-			directDownload: &falseValue,
-			expectedState:  DownloadForbidden,
+			credentials:                   objectStorageForbiddenBadXMLCredentials,
+			directDownload:                &falseValue,
+			expectedState:                 DownloadForbidden,
+			expectedDownloadModes:         []string{""},
+			expectedDirectDownloadQueries: []string{"false"},
 		},
 		"forbidden should be generated for object storage forbidden with no error code in XML": {
-			credentials:    objectStorageForbiddenNoCodeInXMLCredentials,
-			directDownload: &falseValue,
-			expectedState:  DownloadForbidden,
+			credentials:                   objectStorageForbiddenNoCodeInXMLCredentials,
+			directDownload:                &falseValue,
+			expectedState:                 DownloadForbidden,
+			expectedDownloadModes:         []string{""},
+			expectedDirectDownloadQueries: []string{"false"},
 		},
 	}
 
@@ -3115,8 +3158,12 @@ func TestArtifactsDownload(t *testing.T) {
 
 			buf := bufio.NewWriter(file)
 
+			gotDownloadModes = nil
+			gotDirectDownloadQueries = nil
 			state := c.DownloadArtifacts(tc.credentials, &nopWriteCloser{w: buf}, tc.directDownload)
 			require.Equal(t, tc.expectedState, state)
+			assert.Equal(t, tc.expectedDownloadModes, gotDownloadModes)
+			assert.Equal(t, tc.expectedDirectDownloadQueries, gotDirectDownloadQueries)
 
 			if tc.expectedArtifact == "" {
 				return
