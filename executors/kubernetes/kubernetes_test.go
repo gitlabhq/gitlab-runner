@@ -10646,3 +10646,61 @@ func TestIsConflict(t *testing.T) {
 		})
 	}
 }
+
+func TestPodResourcesReference(t *testing.T) {
+	tests := map[string]struct {
+		overwrites *overwrites
+		expected   *api.ResourceRequirements
+	}{
+		"nil overwrites": {
+			overwrites: nil,
+			expected:   nil,
+		},
+		"empty pod limits and requests": {
+			overwrites: &overwrites{
+				podLimits:   api.ResourceList{},
+				podRequests: api.ResourceList{},
+			},
+			expected: nil,
+		},
+		"only pod limits set": {
+			overwrites: &overwrites{
+				podLimits:   mustCreateResourceList(t, "1.8", "5Gi", ""),
+				podRequests: api.ResourceList{},
+			},
+			expected: &api.ResourceRequirements{
+				Limits:   mustCreateResourceList(t, "1.8", "5Gi", ""),
+				Requests: api.ResourceList{},
+			},
+		},
+		"only pod requests set": {
+			overwrites: &overwrites{
+				podLimits:   api.ResourceList{},
+				podRequests: mustCreateResourceList(t, "1.5", "2Gi", ""),
+			},
+			expected: &api.ResourceRequirements{
+				Limits:   api.ResourceList{},
+				Requests: mustCreateResourceList(t, "1.5", "2Gi", ""),
+			},
+		},
+		"both pod limits and requests set": {
+			overwrites: &overwrites{
+				podLimits:   mustCreateResourceList(t, "2.0", "6Gi", ""),
+				podRequests: mustCreateResourceList(t, "1.0", "3Gi", ""),
+			},
+			expected: &api.ResourceRequirements{
+				Limits:   mustCreateResourceList(t, "2.0", "6Gi", ""),
+				Requests: mustCreateResourceList(t, "1.0", "3Gi", ""),
+			},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := &executor{
+				configurationOverwrites: tt.overwrites,
+			}
+			assert.Equal(t, tt.expected, e.podResourcesReference())
+		})
+	}
+}

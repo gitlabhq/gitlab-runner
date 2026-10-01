@@ -445,6 +445,34 @@ func TestStepsPreparePodConfig_ServiceEnvUntouched(t *testing.T) {
 		"service container Env must be unchanged by Concrete pod assembly")
 }
 
+func TestStepsPreparePodConfig_PodResources(t *testing.T) {
+	t.Run("nil when no pod resources defined", func(t *testing.T) {
+		ex := newStepsTestExecutor(t)
+		ex.configurationOverwrites = &overwrites{
+			podLimits:   api.ResourceList{},
+			podRequests: api.ResourceList{},
+		}
+
+		pod, err := ex.stepsPreparePodConfig(podConfigPrepareOpts{})
+		require.NoError(t, err)
+		assert.Nil(t, pod.Spec.Resources, "pod.Spec.Resources must be nil when empty")
+	})
+
+	t.Run("set when pod resources defined", func(t *testing.T) {
+		ex := newStepsTestExecutor(t)
+		ex.configurationOverwrites = &overwrites{
+			podLimits:   mustCreateResourceList(t, "2.0", "4Gi", ""),
+			podRequests: mustCreateResourceList(t, "1.0", "2Gi", ""),
+		}
+
+		pod, err := ex.stepsPreparePodConfig(podConfigPrepareOpts{})
+		require.NoError(t, err)
+		require.NotNil(t, pod.Spec.Resources, "pod.Spec.Resources must not be nil when configured")
+		assert.Equal(t, mustCreateResourceList(t, "2.0", "4Gi", ""), pod.Spec.Resources.Limits)
+		assert.Equal(t, mustCreateResourceList(t, "1.0", "2Gi", ""), pod.Spec.Resources.Requests)
+	})
+}
+
 // stepsWaitForServices is the Concrete-owned service-health-check path. It
 // must short-circuit (no pod setup, no probe exec) when no service declares
 // a HEALTHCHECK_TCP_PORT, matching the legacy waitForServices early return.
