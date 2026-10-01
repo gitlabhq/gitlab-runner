@@ -749,6 +749,14 @@ authenticate but cannot provision or dispatch work, which the default liveness
 and readiness probes miss. The check runs once per process start and is not
 re-run on config reload.
 
+For `docker+machine` runners with [warm-up](#warm-up) enabled,
+`/health/ready` also waits until the warm-up pool is built. The response body
+says what the endpoint is waiting on (`boot-verify pending` or
+`warm-up: booted 61/120 (<runner>)`). The endpoint reports ready when
+`WarmupDuration` has passed even if the pool is short, so a startup probe does
+not restart the container over a slow cloud provider. Once ready, the endpoint
+does not go back to `503`.
+
 | Parameter             | Type     | Description |
 |-----------------------|----------|-------------|
 | `enabled`             | boolean  | Run the startup canary for this runner. Default: `false`. |
@@ -1338,6 +1346,9 @@ The following parameters define the Docker Machine-based autoscaling feature. Fo
 | `OffPeakIdleTime`                 | Deprecated: Like `IdleTime`, but for _Off Peak_ time periods. |
 | `MaxBuilds`                       | Maximum job (build) count before machine is removed. |
 | `HeartbeatInterval`               | How often to refresh a provider-side liveness label (`runner_manager_heartbeat`) on each tracked machine (duration, for example `"30m"`), so external cleanup can tell tracked machines from orphaned ones. Requires a Docker Machine driver that supports label updates (currently `google`). Default is `0` (disabled). |
+| `WarmupIdleFraction`              | Experiment. Fraction of `IdleCount` to build as the idle target during warm-up, regardless of how many machines are in use. Follows the active `[[runners.machine.autoscaling]]` period. Must be a float between `0` and `1`. Default is `0.0` (warm-up disabled). See [warm-up](#warm-up). |
+| `WarmupDuration`                  | Experiment. How long warm-up lasts from the runner's first machine acquisition (duration, for example, `"10m"`). Default is `10m`. You should not need to set this. |
+| `WarmupReadyFraction`             | Experiment. Fraction of the warm-up idle target (`WarmupIdleFraction × IdleCount`), not of `IdleCount`, that must be booted before `/health/ready` reports ready. Must be a float between `0` and `1`. Default is `0.8`, which `0` also selects. You should not need to set this. |
 | `MachineName`                     | Name of the machine. It **must** contain `%s`, which is replaced with a unique machine identifier. |
 | `MachineDriver`                   | Docker Machine `driver`. View details in the [Cloud Providers Section in the Docker Machine configuration](autoscale.md#supported-cloud-providers). |
 | `MachineOptions`                  | Docker Machine options for the MachineDriver. For more information, see [Supported Cloud Providers](autoscale.md#supported-cloud-providers). For more information about all options for AWS, see the [AWS](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md) and [GCP](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/gce.md) projects in the Docker Machine repository. |
@@ -1385,6 +1396,57 @@ Example:
     IdleCount = 5
     IdleTime = 60
     Timezone = "UTC"
+```
+
+### Warm-up
+
+{{< details >}}
+
+- Status: Experiment
+
+{{< /details >}}
+
+With `IdleScaleFactor`, a freshly started runner manager has no machines in
+use, so its idle target is `IdleCountMin`. It only asks for more machines as
+jobs arrive. When many runner managers restart at once, for example, on a
+rolling restart of a Kubernetes deployment, all of them scale up one
+`IdleScaleFactor` step at a time while the previous pool is already gone.
+
+`WarmupIdleFraction` makes the runner manager build a fraction of `IdleCount`
+first. For `WarmupDuration` (default 10 minutes) after the runner's first
+machine acquisition:
+
+- The idle target is at least `WarmupIdleFraction * IdleCount`, using the
+  `IdleCount` of the active `[[runners.machine.autoscaling]]` period.
+- Machines are created with an in-flight cap of the warm-up target instead of
+  `MaxGrowthRate`, so the target arrives in one or two boots. The first
+  creation error during warm-up drops the cap back to `MaxGrowthRate` for
+  the rest of it. `Limit` still caps the total.
+- `/health/ready` reports ready only when `WarmupReadyFraction` (default 80%)
+  of the warm-up target is booted, whether idle or running a job, or when
+  `WarmupDuration` has passed.
+
+Ready and the idle target are separate. The runner manager reports ready as
+soon as enough machines are booted, but keeps the warm-up idle target until
+`WarmupDuration` has passed. Reaching the target or receiving the first job
+does not end warm-up. During a rolling restart, the previous runner managers
+keep taking jobs for some minutes after the new one is ready, so the new one
+has almost nothing in use. If the target dropped back to the `IdleScaleFactor`
+value at that point, it would be `IdleCountMin`, and `IdleTime` would remove
+the machines just built before the jobs arrive. After `WarmupDuration`, the
+`IdleScaleFactor` target applies again and `IdleTime` removes the surplus.
+
+Warm-up happens once per process start. A runner whose first machine
+acquisition comes more than `WarmupDuration` after the process started, for
+example one added by a configuration reload, does not warm up.
+
+```toml
+[runners.machine]
+  IdleCount = 200
+  IdleCountMin = 16
+  IdleScaleFactor = 0.9
+  MaxGrowthRate = 90
+  WarmupIdleFraction = 0.75   # build 150 machines, ready once 80% of them are booted
 ```
 
 ### Environment variables in machine options

@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -2251,6 +2253,100 @@ func TestRunCommand_requestJob_UpdateAbortStillFinishesWithoutFinalState(t *test
 
 	network.AssertExpectations(t)
 	mockTrace.AssertExpectations(t)
+}
+
+type warmupTestProvider struct {
+	*common.MockExecutorProvider
+	ready   bool
+	pending string
+	served  []*common.RunnerConfig
+}
+
+func (p *warmupTestProvider) WarmupReady(runners []*common.RunnerConfig) (bool, string) {
+	p.served = runners
+	return p.ready, p.pending
+}
+
+func TestServeHealthReady(t *testing.T) {
+	machineRunner := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{Token: "machine-token"},
+		RunnerSettings:    common.RunnerSettings{Executor: "docker+machine"},
+	}
+	shellRunner := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{Token: "shell-token"},
+		RunnerSettings:    common.RunnerSettings{Executor: "shell"},
+	}
+
+	newCmd := func(t *testing.T, provider common.ExecutorProvider) *RunCommand {
+		return &RunCommand{
+			executorProviders: executors.NewProviderRegistry(map[string]common.ExecutorProvider{
+				"docker+machine": provider,
+				"shell":          common.NewMockExecutorProvider(t),
+			}),
+			configfile: configfile.New("", configfile.WithExistingConfig(
+				&common.Config{Runners: []*common.RunnerConfig{machineRunner, shellRunner}},
+			), configfile.WithSystemID(common.UnknownSystemID)),
+		}
+	}
+
+	probe := func(mr *RunCommand) (int, string) {
+		rec := httptest.NewRecorder()
+		mr.serveHealthReady(rec, httptest.NewRequest(http.MethodGet, "/health/ready", nil))
+		return rec.Code, rec.Body.String()
+	}
+
+	t.Run("503 while boot-verify is pending", func(t *testing.T) {
+		provider := &warmupTestProvider{MockExecutorProvider: common.NewMockExecutorProvider(t), ready: true}
+		mr := newCmd(t, provider)
+
+		code, body := probe(mr)
+		assert.Equal(t, http.StatusServiceUnavailable, code)
+		assert.Equal(t, "boot-verify pending\n", body)
+		assert.Nil(t, provider.served)
+	})
+
+	t.Run("200 when the provider has no warm-up", func(t *testing.T) {
+		mr := newCmd(t, common.NewMockExecutorProvider(t))
+		mr.bootVerifyReady.Store(true)
+
+		code, body := probe(mr)
+		assert.Equal(t, http.StatusOK, code)
+		assert.Equal(t, "ready\n", body)
+	})
+
+	t.Run("503 with the warm-up body while the pool is short", func(t *testing.T) {
+		provider := &warmupTestProvider{
+			MockExecutorProvider: common.NewMockExecutorProvider(t),
+			pending:              "warm-up: booted 61/120 (machine-t)",
+		}
+		mr := newCmd(t, provider)
+		mr.bootVerifyReady.Store(true)
+
+		code, body := probe(mr)
+		assert.Equal(t, http.StatusServiceUnavailable, code)
+		assert.Equal(t, "warm-up: booted 61/120 (machine-t)\n", body)
+		assert.Equal(t, []*common.RunnerConfig{machineRunner}, provider.served)
+	})
+
+	t.Run("200 once warm-up reports ready and after it stops reporting ready", func(t *testing.T) {
+		provider := &warmupTestProvider{MockExecutorProvider: common.NewMockExecutorProvider(t), pending: "warm-up: booted 0/120 (machine-t)"}
+		mr := newCmd(t, provider)
+		mr.bootVerifyReady.Store(true)
+
+		code, _ := probe(mr)
+		assert.Equal(t, http.StatusServiceUnavailable, code)
+
+		provider.ready = true
+		code, body := probe(mr)
+		assert.Equal(t, http.StatusOK, code)
+		assert.Equal(t, "ready\n", body)
+
+		provider.ready = false
+		provider.served = nil
+		code, _ = probe(mr)
+		assert.Equal(t, http.StatusOK, code)
+		assert.Nil(t, provider.served)
+	})
 }
 
 func TestRunCommand_beginShutdownOfExecutorProviders(t *testing.T) {

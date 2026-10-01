@@ -63,6 +63,9 @@ $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 # HELP gitlab_runner_autoscaling_machine_creation_phase_duration_seconds Histogram of machine creation time for each Docker Machine phase.
 # HELP gitlab_runner_autoscaling_machine_states The current number of machines per state in this provider.
 # HELP gitlab_runner_autoscaling_max_growth_rate The maximum number of machines that can be in the creation state at once (0 = unlimited).
+# HELP gitlab_runner_autoscaling_warmup 1 while the runner is in warm-up, 0 otherwise.
+# HELP gitlab_runner_autoscaling_warmup_ready_seconds Seconds from the start of warm-up until the pool reached the ready threshold. Absent until it does.
+# HELP gitlab_runner_autoscaling_warmup_timed_out 1 if warm-up ended before the pool reached the ready threshold, 0 otherwise.
 # HELP gitlab_runner_concurrent The current value of concurrent setting
 # HELP gitlab_runner_errors_total The number of caught errors.
 # HELP gitlab_runner_limit The current value of limit setting

@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/sirupsen/logrus"
+	logrus_test "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -22,12 +24,14 @@ import (
 	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
 var (
 	_ common.ExecutorProvider              = (*machineProvider)(nil)
 	_ common.ManagedExecutorProvider       = (*machineProvider)(nil)
 	_ common.ShutdownAwareExecutorProvider = (*machineProvider)(nil)
+	_ common.WarmupReporter                = (*machineProvider)(nil)
 )
 
 var machineDefaultConfig = &common.RunnerConfig{
@@ -332,7 +336,7 @@ func TestMachineCreationAndRemoval(t *testing.T) {
 	provisionRetryInterval = 0
 
 	p, _ := testMachineProvider()
-	d, errCh := p.create(machineDefaultConfig, machineStateUsed, false)
+	d, errCh := p.create(machineDefaultConfig, machineStateUsed, false, nil)
 	assert.NotNil(t, d)
 	assert.NoError(t, <-errCh)
 	assert.Equal(t, machineStateUsed, d.State)
@@ -343,12 +347,12 @@ func TestMachineCreationAndRemoval(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, machineStateRemoving, d.State)
 
-	d2, errCh := p.create(machineProvisionFail, machineStateUsed, false)
+	d2, errCh := p.create(machineProvisionFail, machineStateUsed, false, nil)
 	assert.NotNil(t, d2)
 	assert.Error(t, <-errCh, "Fails, because it fails to provision machine")
 	assert.Equal(t, machineStateRemoving, d2.State)
 
-	d3, errCh := p.create(machineCreateFail, machineStateUsed, false)
+	d3, errCh := p.create(machineCreateFail, machineStateUsed, false, nil)
 	assert.NotNil(t, d3)
 	assert.Error(t, <-errCh)
 	assert.Equal(t, machineStateRemoving, d3.State)
@@ -369,7 +373,7 @@ func TestMachineCreationRegistersHeartbeat(t *testing.T) {
 	}
 
 	p, _ := testMachineProvider()
-	d, errCh := p.create(config, machineStateIdle, false)
+	d, errCh := p.create(config, machineStateIdle, false, nil)
 	require.NoError(t, <-errCh)
 
 	h := p.heartbeaterFor(config)
@@ -405,7 +409,7 @@ func TestMachineRemovalForgetsHeartbeat(t *testing.T) {
 
 	t.Run("removed", func(t *testing.T) {
 		p, _ := testMachineProvider()
-		d, errCh := p.create(config, machineStateIdle, false)
+		d, errCh := p.create(config, machineStateIdle, false, nil)
 		require.NoError(t, <-errCh)
 		require.True(t, tracked(p, d.Name))
 
@@ -493,7 +497,7 @@ func TestMachineReuse(t *testing.T) {
 		Return(true).
 		Once()
 
-	createdMachineDetails, errCh := p.create(machineGrowthConfig, machineStateUsed, false)
+	createdMachineDetails, errCh := p.create(machineGrowthConfig, machineStateUsed, false, nil)
 	require.NotNil(t, createdMachineDetails)
 	require.NoError(t, <-errCh)
 
@@ -645,7 +649,7 @@ func TestMachineAcquireGrowthCapacity(t *testing.T) {
 								MaxGrowthRate: tt.maxGrowthCapacity,
 							},
 						},
-					}, machineStateIdle, false)
+					}, machineStateIdle, false, nil)
 
 					<-errCh
 				})
@@ -809,7 +813,7 @@ func TestMachineIdleLimits(t *testing.T) {
 	p, _ := testMachineProvider()
 
 	config := createMachineConfig(t, 2, 1)
-	d, errCh := p.create(config, machineStateIdle, false)
+	d, errCh := p.create(config, machineStateIdle, false, nil)
 	assert.NoError(t, <-errCh, "machine creation should not fail")
 
 	time.Sleep(time.Second)
@@ -1021,7 +1025,7 @@ func TestMachineOptionsWithName(t *testing.T) {
 		Return(nil).
 		Once()
 
-	d, errCh := p.create(config, machineStateIdle, false)
+	d, errCh := p.create(config, machineStateIdle, false, nil)
 	require.NotNil(t, d)
 	require.NoError(t, <-errCh)
 
@@ -1102,7 +1106,7 @@ func TestMachineOptionsExpandEnv(t *testing.T) {
 				Return(nil).
 				Once()
 
-			d, errCh := p.create(config, machineStateIdle, false)
+			d, errCh := p.create(config, machineStateIdle, false, nil)
 			require.NoError(t, <-errCh)
 
 			assert.Equal(t, tt.want(d.Name), captured)
@@ -1138,7 +1142,7 @@ func TestMachineOptionsWithNameEmpty(t *testing.T) {
 		Return(nil).
 		Once()
 
-	d, errCh := p.create(config, machineStateIdle, false)
+	d, errCh := p.create(config, machineStateIdle, false, nil)
 	require.NotNil(t, d)
 	require.NoError(t, <-errCh)
 
@@ -1197,7 +1201,7 @@ func TestUpdateAutoscalingLimits(t *testing.T) {
 		MaxGrowthRate:   30,
 	}
 
-	provider.updateAutoscalingLimits(config, &machinesData{Used: 20})
+	provider.updateAutoscalingLimits(config, &machinesData{Used: 20}, nil)
 
 	expected := fmt.Sprintf(`
 # HELP gitlab_runner_autoscaling_idle_target The number of available machines the autoscaler aims to keep after applying IdleScaleFactor and IdleCountMin.
@@ -1224,4 +1228,531 @@ func TestUpdateAutoscalingLimits_StaleConfigDropped(t *testing.T) {
 		"gitlab_runner_autoscaling_max_growth_rate", "gitlab_runner_autoscaling_idle_target")
 	assert.NoError(t, err)
 	assert.NotContains(t, provider.autoscalingLimits, "gone")
+}
+
+func warmupMachineConfig(t *testing.T, token, namePrefix string) *common.RunnerConfig {
+	config := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{Token: token},
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:        namePrefix + "-%s",
+				IdleCount:          4,
+				IdleCountMin:       1,
+				IdleScaleFactor:    0.9,
+				IdleTime:           600,
+				MaxGrowthRate:      1,
+				WarmupIdleFraction: 0.5,
+			},
+		},
+	}
+	require.NoError(t, config.Machine.CompilePeriods())
+	return config
+}
+
+func warmupStateFor(p *machineProvider, config *common.RunnerConfig) *warmupState {
+	p.warmupLock.Lock()
+	defer p.warmupLock.Unlock()
+	return p.warmups[config.ShortDescription()]
+}
+
+func TestMachineWarmupPerRunner(t *testing.T) {
+	p, m := testMachineProvider()
+	runnerA := warmupMachineConfig(t, "token-a-1234567890", "warm-a")
+	runnerB := warmupMachineConfig(t, "token-b-1234567890", "warm-b")
+	runners := []*common.RunnerConfig{runnerA, runnerB}
+
+	assert.Empty(t, p.warmups)
+	ready, pending := p.WarmupReady(runners)
+	assert.False(t, ready)
+	assert.Equal(t, "warm-up: not started (token-a-1), not started (token-b-1)", pending)
+
+	before := time.Now()
+	_, err := p.Acquire(runnerA)
+	assert.Error(t, err)
+
+	stateA := warmupStateFor(p, runnerA)
+	require.NotNil(t, stateA)
+	assert.False(t, stateA.startedAt.Before(before))
+	assert.True(t, stateA.burst)
+	assert.Nil(t, warmupStateFor(p, runnerB))
+
+	ready, pending = p.WarmupReady(runners)
+	assert.False(t, ready)
+	assert.Equal(t, "warm-up: booted 0/2 (token-a-1), not started (token-b-1)", pending)
+
+	<-m.Created
+	<-m.Created
+	assertIdleMachines(t, p, 2)
+
+	d, err := p.Acquire(runnerA)
+	require.NoError(t, err)
+	p.Release(runnerA, d)
+
+	ready, pending = p.WarmupReady([]*common.RunnerConfig{runnerA})
+	assert.True(t, ready, pending)
+	ready, pending = p.WarmupReady(runners)
+	assert.False(t, ready)
+	assert.Equal(t, "warm-up: not started (token-b-1)", pending)
+
+	_, err = p.Acquire(runnerB)
+	assert.Error(t, err)
+	require.NotNil(t, warmupStateFor(p, runnerB))
+	assert.True(t, warmupStateFor(p, runnerA).ready)
+
+	expected := fmt.Sprintf(`
+# HELP gitlab_runner_autoscaling_idle_target The number of available machines the autoscaler aims to keep after applying IdleScaleFactor and IdleCountMin.
+# TYPE gitlab_runner_autoscaling_idle_target gauge
+gitlab_runner_autoscaling_idle_target{executor="docker+machine",runner="%[1]s",runner_name="",system_id="unknown"} 2
+gitlab_runner_autoscaling_idle_target{executor="docker+machine",runner="%[2]s",runner_name="",system_id="unknown"} 2
+# HELP gitlab_runner_autoscaling_max_growth_rate The maximum number of machines that can be in the creation state at once (0 = unlimited).
+# TYPE gitlab_runner_autoscaling_max_growth_rate gauge
+gitlab_runner_autoscaling_max_growth_rate{executor="docker+machine",runner="%[1]s",runner_name="",system_id="unknown"} 2
+gitlab_runner_autoscaling_max_growth_rate{executor="docker+machine",runner="%[2]s",runner_name="",system_id="unknown"} 2
+# HELP gitlab_runner_autoscaling_warmup 1 while the runner is in warm-up, 0 otherwise.
+# TYPE gitlab_runner_autoscaling_warmup gauge
+gitlab_runner_autoscaling_warmup{executor="docker+machine",runner="%[1]s",runner_name="",system_id="unknown"} 1
+gitlab_runner_autoscaling_warmup{executor="docker+machine",runner="%[2]s",runner_name="",system_id="unknown"} 1
+`, runnerA.ShortDescription(), runnerB.ShortDescription())
+	err = testutil.CollectAndCompare(p, strings.NewReader(expected),
+		"gitlab_runner_autoscaling_max_growth_rate", "gitlab_runner_autoscaling_idle_target", "gitlab_runner_autoscaling_warmup")
+	assert.NoError(t, err)
+}
+
+func warmupLogEntries(hook *logrus_test.Hook, message string) []*logrus.Entry {
+	var out []*logrus.Entry
+	for _, e := range hook.AllEntries() {
+		if e.Message == message {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+func warmupGaugesExpected(config *common.RunnerConfig, idleTarget, maxGrowthRate, warmup, timedOut, readySeconds int) string {
+	out := fmt.Sprintf(`
+# HELP gitlab_runner_autoscaling_idle_target The number of available machines the autoscaler aims to keep after applying IdleScaleFactor and IdleCountMin.
+# TYPE gitlab_runner_autoscaling_idle_target gauge
+gitlab_runner_autoscaling_idle_target{executor="docker+machine",runner="%[1]s",runner_name="",system_id="unknown"} %[2]d
+# HELP gitlab_runner_autoscaling_max_growth_rate The maximum number of machines that can be in the creation state at once (0 = unlimited).
+# TYPE gitlab_runner_autoscaling_max_growth_rate gauge
+gitlab_runner_autoscaling_max_growth_rate{executor="docker+machine",runner="%[1]s",runner_name="",system_id="unknown"} %[3]d
+# HELP gitlab_runner_autoscaling_warmup 1 while the runner is in warm-up, 0 otherwise.
+# TYPE gitlab_runner_autoscaling_warmup gauge
+gitlab_runner_autoscaling_warmup{executor="docker+machine",runner="%[1]s",runner_name="",system_id="unknown"} %[4]d
+# HELP gitlab_runner_autoscaling_warmup_timed_out 1 if warm-up ended before the pool reached the ready threshold, 0 otherwise.
+# TYPE gitlab_runner_autoscaling_warmup_timed_out gauge
+gitlab_runner_autoscaling_warmup_timed_out{executor="docker+machine",runner="%[1]s",runner_name="",system_id="unknown"} %[5]d
+`, config.ShortDescription(), idleTarget, maxGrowthRate, warmup, timedOut)
+	if readySeconds > 0 {
+		out += fmt.Sprintf(`
+# HELP gitlab_runner_autoscaling_warmup_ready_seconds Seconds from the start of warm-up until the pool reached the ready threshold. Absent until it does.
+# TYPE gitlab_runner_autoscaling_warmup_ready_seconds gauge
+gitlab_runner_autoscaling_warmup_ready_seconds{executor="docker+machine",runner="%[1]s",runner_name="",system_id="unknown"} %[2]d
+`, config.ShortDescription(), readySeconds)
+	}
+	return out
+}
+
+var warmupGaugeNames = []string{
+	"gitlab_runner_autoscaling_max_growth_rate", "gitlab_runner_autoscaling_idle_target",
+	"gitlab_runner_autoscaling_warmup", "gitlab_runner_autoscaling_warmup_timed_out",
+	"gitlab_runner_autoscaling_warmup_ready_seconds",
+}
+
+func TestMachineWarmupEndsAfterReady(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	p, m := testMachineProvider()
+	config := warmupMachineConfig(t, "token-a-1234567890", "warm-a")
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+	<-m.Created
+	<-m.Created
+	assertIdleMachines(t, p, 2)
+
+	d1, err := p.Acquire(config)
+	require.NoError(t, err)
+	defer p.Release(config, d1)
+
+	state := warmupStateFor(p, config)
+	assert.True(t, state.ready)
+
+	p.warmupLock.Lock()
+	state.deadline = time.Now()
+	state.readyAfter = 90 * time.Second
+	p.warmupLock.Unlock()
+
+	d2, err := p.Acquire(config)
+	require.NoError(t, err)
+	defer p.Release(config, d2)
+
+	assert.True(t, state.ended)
+	assert.False(t, state.timedOut)
+	ended := warmupLogEntries(hook, "Warm-up ended")
+	require.Len(t, ended, 1)
+	assert.Equal(t, logrus.InfoLevel, ended[0].Level)
+
+	assert.NoError(t, testutil.CollectAndCompare(p, strings.NewReader(warmupGaugesExpected(config, 1, 1, 0, 0, 90)), warmupGaugeNames...))
+}
+
+func TestMachineWarmupTimesOut(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	p, m := testMachineProvider()
+	config := warmupMachineConfig(t, "token-a-1234567890", "warm-a")
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+
+	state := warmupStateFor(p, config)
+	p.warmupLock.Lock()
+	state.deadline = time.Now()
+	p.warmupLock.Unlock()
+
+	d, _ := p.Acquire(config)
+	if d != nil {
+		defer p.Release(config, d)
+	}
+
+	assert.True(t, state.ended)
+	assert.True(t, state.timedOut)
+	ready, pending := p.WarmupReady([]*common.RunnerConfig{config})
+	assert.True(t, ready, pending)
+
+	ended := warmupLogEntries(hook, "Warm-up ended before the pool reached the ready threshold")
+	require.Len(t, ended, 1)
+	assert.Equal(t, logrus.WarnLevel, ended[0].Level)
+	assert.Equal(t, 0, ended[0].Data["booted"])
+	assert.Equal(t, 2, ended[0].Data["readyMachines"])
+
+	assert.NoError(t, testutil.CollectAndCompare(p, strings.NewReader(warmupGaugesExpected(config, 1, 1, 0, 1, 0)), warmupGaugeNames...))
+
+	<-m.Created
+	<-m.Created
+}
+
+func TestMachineWarmupProgressLog(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	p, m := testMachineProvider()
+	config := warmupMachineConfig(t, "token-a-1234567890", "warm-a")
+
+	acquireAndRelease := func() {
+		d, _ := p.Acquire(config)
+		if d != nil {
+			p.Release(config, d)
+		}
+	}
+
+	acquireAndRelease()
+	acquireAndRelease()
+	assert.Empty(t, warmupLogEntries(hook, "Warm-up in progress"))
+
+	state := warmupStateFor(p, config)
+	p.warmupLock.Lock()
+	state.startedAt = time.Now().Add(-2 * time.Minute)
+	state.deadline = state.startedAt.Add(config.Machine.GetWarmupDuration())
+	state.lastProgressLog = state.startedAt
+	p.warmupLock.Unlock()
+
+	<-m.Created
+	<-m.Created
+	assertIdleMachines(t, p, 2)
+
+	acquireAndRelease()
+	acquireAndRelease()
+
+	progress := warmupLogEntries(hook, "Warm-up in progress")
+	require.Len(t, progress, 1)
+	assert.Equal(t, 2, progress[0].Data["booted"])
+	assert.Equal(t, 2, progress[0].Data["idle"])
+	assert.Equal(t, 2, progress[0].Data["readyMachines"])
+	assert.Equal(t, 2, progress[0].Data["idleTarget"])
+	assert.Equal(t, true, progress[0].Data["ready"])
+	assert.Equal(t, true, progress[0].Data["burst"])
+	assert.Equal(t, 2*time.Minute, progress[0].Data["elapsed"])
+	assert.Equal(t, 8*time.Minute, progress[0].Data["remaining"])
+}
+
+func TestMachineWarmupReadyIsMonotonic(t *testing.T) {
+	p, m := testMachineProvider()
+	config := warmupMachineConfig(t, "token-a-1234567890", "warm-a")
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+	<-m.Created
+	<-m.Created
+	assertIdleMachines(t, p, 2)
+
+	d1, err := p.Acquire(config)
+	require.NoError(t, err)
+	assert.True(t, warmupStateFor(p, config).ready)
+
+	d2, err := p.Acquire(config)
+	require.NoError(t, err)
+	_, err = p.Acquire(config)
+	assert.Error(t, err)
+
+	ready, pending := p.WarmupReady([]*common.RunnerConfig{config})
+	assert.True(t, ready, pending)
+
+	p.Release(config, d1)
+	p.Release(config, d2)
+}
+
+func TestMachineWarmupReadyCountsMachinesInUse(t *testing.T) {
+	p, m := testMachineProvider()
+	config := warmupMachineConfig(t, "token-a-1234567890", "warm-a")
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+	<-m.Created
+	<-m.Created
+	assertIdleMachines(t, p, 2)
+
+	d1, err := p.Acquire(config)
+	require.NoError(t, err)
+	d2, err := p.Acquire(config)
+	require.NoError(t, err)
+	defer p.Release(config, d1)
+	defer p.Release(config, d2)
+
+	state := warmupStateFor(p, config)
+	p.warmupLock.Lock()
+	state.ready = false
+	p.warmupLock.Unlock()
+
+	_, err = p.Acquire(config)
+	assert.Error(t, err)
+	assert.Equal(t, 2, state.booted)
+	assert.True(t, state.ready)
+}
+
+func TestMachineWarmupCreationErrorDropsBurst(t *testing.T) {
+	p, _ := testMachineProvider()
+	config := warmupMachineConfig(t, "token-a-1234567890", "create-fail")
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+
+	state := warmupStateFor(p, config)
+	require.NotNil(t, state)
+	require.Eventually(t, func() bool {
+		p.warmupLock.Lock()
+		defer p.warmupLock.Unlock()
+		return !state.burst
+	}, 5*time.Second, 10*time.Millisecond)
+
+	assert.Equal(t, &warmupLimits{burst: false}, p.warmupLimitsFor(config, time.Now()))
+	assert.Equal(t, config.Machine.MaxGrowthRate, maxGrowthRate(config, p.warmupLimitsFor(config, time.Now())))
+}
+
+func TestMachineWarmupDisabledByDefault(t *testing.T) {
+	p, m := testMachineProvider()
+	config := createMachineConfig(t, 1, 5)
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+	<-m.Created
+
+	assert.Empty(t, p.warmups)
+	assert.Nil(t, p.warmupLimitsFor(config, time.Now()))
+	ready, pending := p.WarmupReady([]*common.RunnerConfig{config})
+	assert.True(t, ready)
+	assert.Empty(t, pending)
+}
+
+func TestMachineWarmupLimitBelowTarget(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	p, m := testMachineProvider()
+	config := warmupMachineConfig(t, "token-a-1234567890", "warm-a")
+	config.Machine.WarmupIdleFraction = 1 // target 4, threshold 4
+	config.Limit = 2
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+
+	warnings := warmupLogEntries(hook, "Warm-up idle target is above the runner limit; the ready threshold is capped at the limit")
+	require.Len(t, warnings, 1)
+	assert.Equal(t, logrus.WarnLevel, warnings[0].Level)
+	assert.Equal(t, 2, warnings[0].Data["limit"])
+	assert.Equal(t, 4, warnings[0].Data["idleTarget"])
+	assert.Equal(t, 2, warnings[0].Data["readyMachines"])
+
+	<-m.Created
+	<-m.Created
+	assertIdleMachines(t, p, 2)
+
+	d, err := p.Acquire(config)
+	require.NoError(t, err)
+	defer p.Release(config, d)
+
+	ready, pending := p.WarmupReady([]*common.RunnerConfig{config})
+	assert.True(t, ready, pending)
+}
+
+func TestMachineWarmupUnacquiredRunnerReadyAfterDuration(t *testing.T) {
+	p, _ := testMachineProvider()
+	config := warmupMachineConfig(t, "", "warm-a")
+	config.Machine.WarmupDuration = 20 * time.Millisecond
+
+	ready, pending := p.WarmupReady([]*common.RunnerConfig{config})
+	assert.False(t, ready)
+	assert.Equal(t, "warm-up: not started ()", pending)
+
+	time.Sleep(100 * time.Millisecond)
+
+	ready, pending = p.WarmupReady([]*common.RunnerConfig{config})
+	assert.True(t, ready, pending)
+}
+
+func TestMachineWarmupReadyEndsWarmupWithoutAcquire(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	p, m := testMachineProvider()
+	config := warmupMachineConfig(t, "token-a-1234567890", "warm-a")
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+
+	state := warmupStateFor(p, config)
+	p.warmupLock.Lock()
+	state.deadline = time.Now()
+	p.warmupLock.Unlock()
+
+	ready, pending := p.WarmupReady([]*common.RunnerConfig{config})
+	assert.True(t, ready, pending)
+	assert.True(t, state.ended)
+	assert.True(t, state.timedOut)
+	require.Len(t, warmupLogEntries(hook, "Warm-up ended before the pool reached the ready threshold"), 1)
+
+	<-m.Created
+	<-m.Created
+}
+
+func TestMachineWarmupCreationErrorIgnoredWhenGrowthUnlimited(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	p, _ := testMachineProvider()
+	config := warmupMachineConfig(t, "token-a-1234567890", "create-fail")
+	config.Machine.MaxGrowthRate = 0
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+
+	state := warmupStateFor(p, config)
+	require.NotNil(t, state)
+	time.Sleep(50 * time.Millisecond)
+	assert.True(t, state.burst)
+	assert.Empty(t, warmupLogEntries(hook, "Machine creation failed during warm-up, dropping the creation burst"))
+}
+
+func TestMachineWarmupPrunesStaleRunners(t *testing.T) {
+	p, m := testMachineProvider()
+	gone := warmupMachineConfig(t, "token-gone-1234567890", "warm-gone")
+	config := warmupMachineConfig(t, "token-a-1234567890", "warm-a")
+
+	_, _ = p.Acquire(gone)
+	state := warmupStateFor(p, gone)
+	p.warmupLock.Lock()
+	state.ended = true
+	state.lastAcquire = time.Now().Add(-autoscalingLimitsTTL - time.Minute)
+	p.warmupLock.Unlock()
+
+	_, _ = p.Acquire(config)
+	assert.Nil(t, warmupStateFor(p, gone))
+	assert.NotNil(t, warmupStateFor(p, config))
+
+	for range 4 {
+		<-m.Created
+	}
+}
+
+func TestMachineWarmupGaugesOnlyWhenEnabled(t *testing.T) {
+	p, m := testMachineProvider()
+	config := createMachineConfig(t, 1, 5)
+	config.Token = "token-a-1234567890"
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+	<-m.Created
+
+	err = testutil.CollectAndCompare(p, strings.NewReader(""),
+		"gitlab_runner_autoscaling_warmup", "gitlab_runner_autoscaling_warmup_timed_out", "gitlab_runner_autoscaling_warmup_ready_seconds")
+	assert.NoError(t, err)
+}
+
+func TestMachineWarmupGaugesFollowReadyWithoutAcquire(t *testing.T) {
+	p, m := testMachineProvider()
+	config := warmupMachineConfig(t, "token-a-1234567890", "warm-a")
+
+	_, err := p.Acquire(config)
+	assert.Error(t, err)
+	<-m.Created
+	<-m.Created
+
+	state := warmupStateFor(p, config)
+	p.warmupLock.Lock()
+	state.ready = false
+	state.deadline = time.Now()
+	p.warmupLock.Unlock()
+
+	ready, _ := p.WarmupReady([]*common.RunnerConfig{config})
+	require.True(t, ready)
+
+	assert.NoError(t, testutil.CollectAndCompare(p, strings.NewReader(`
+# HELP gitlab_runner_autoscaling_warmup 1 while the runner is in warm-up, 0 otherwise.
+# TYPE gitlab_runner_autoscaling_warmup gauge
+gitlab_runner_autoscaling_warmup{executor="docker+machine",runner="token-a-1",runner_name="",system_id="unknown"} 0
+# HELP gitlab_runner_autoscaling_warmup_timed_out 1 if warm-up ended before the pool reached the ready threshold, 0 otherwise.
+# TYPE gitlab_runner_autoscaling_warmup_timed_out gauge
+gitlab_runner_autoscaling_warmup_timed_out{executor="docker+machine",runner="token-a-1",runner_name="",system_id="unknown"} 1
+`), "gitlab_runner_autoscaling_warmup", "gitlab_runner_autoscaling_warmup_timed_out"))
+}
+
+func TestMachineWarmupPrunedRunnerDoesNotRestartWarmup(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	p, m := testMachineProvider()
+	busy := warmupMachineConfig(t, "token-busy-1234567890", "warm-busy")
+	other := warmupMachineConfig(t, "token-other-1234567890", "warm-other")
+
+	_, _ = p.Acquire(busy)
+	_, _ = p.Acquire(other)
+
+	state := warmupStateFor(p, busy)
+	p.warmupLock.Lock()
+	state.deadline = time.Now().Add(-time.Second)
+	p.warmupLock.Unlock()
+	_, _ = p.Acquire(busy)
+	require.True(t, state.ended)
+	p.warmupLock.Lock()
+	state.lastAcquire = time.Now().Add(-autoscalingLimitsTTL - time.Minute)
+	p.warmupLock.Unlock()
+	p.startedAt = time.Now().Add(-30 * time.Minute)
+
+	_, _ = p.Acquire(other)
+	_, _ = p.Acquire(busy)
+
+	assert.Nil(t, p.warmupLimitsFor(busy, time.Now()))
+	started := 0
+	for _, e := range warmupLogEntries(hook, "Warm-up started") {
+		if e.Data["runner"] == busy.ShortDescription() {
+			started++
+		}
+	}
+	assert.Equal(t, 1, started)
+
+	for range 4 {
+		<-m.Created
+	}
 }

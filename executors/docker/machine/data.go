@@ -26,6 +26,11 @@ func (d *machinesData) Available() int {
 	return d.Acquired + d.Creating + d.Idle
 }
 
+// Booted counts machines whose VM is up, whether or not a job has them.
+func (d *machinesData) Booted() int {
+	return d.Acquired + d.Idle + d.Used
+}
+
 func (d *machinesData) Total() int {
 	return d.Acquired + d.Creating + d.Idle + d.Used + d.Removing + d.StuckOnRemoving
 }

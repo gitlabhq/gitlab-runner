@@ -106,6 +106,10 @@ type machineProvider struct {
 	autoscalingLimitsLock sync.Mutex
 	autoscalingLimits     map[string]autoscalingLimits
 
+	startedAt  time.Time
+	warmupLock sync.Mutex
+	warmups    map[string]*warmupState
+
 	// Acquire refuses once set, so a worker that raced the stop signal does not refill the pool.
 	shuttingDown atomic.Bool
 	drainLock    sync.Mutex
@@ -117,6 +121,7 @@ type autoscalingLimits struct {
 	systemID      string
 	maxGrowthRate float64
 	idleTarget    float64
+	warmupEnabled bool
 	updatedAt     time.Time
 }
 
@@ -186,7 +191,12 @@ func (m *machineProvider) runnerMachinesCoordinator(config *common.RunnerConfig)
 	return details, nil
 }
 
-func (m *machineProvider) create(config *common.RunnerConfig, state machineState, pendingUse bool) (*machineDetails, chan error) {
+func (m *machineProvider) create(
+	config *common.RunnerConfig,
+	state machineState,
+	pendingUse bool,
+	warmup *warmupLimits,
+) (*machineDetails, chan error) {
 	name := newMachineName(config)
 	done := make(chan struct{})
 	now := time.Now()
@@ -213,7 +223,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 		return nil, errCh
 	}
 
-	go coordinator.waitForGrowthCapacity(config.Machine.MaxGrowthRate, func() {
+	go coordinator.waitForGrowthCapacity(maxGrowthRate(config, warmup), func() {
 		defer close(done)
 		m.createWithGrowthCapacity(coordinator, config, details, state, errCh)
 	})
@@ -307,6 +317,7 @@ func (m *machineProvider) createWithGrowthCapacity(
 			Errorln("Machine creation failed")
 		m.totalActions.WithLabelValues(actionLabels("creation-failed", details.targets)...).Inc()
 		m.failedCreationHistogram.WithLabelValues(details.targets.values()...).Observe(time.Since(started).Seconds())
+		m.warmupCreationFailed(config, err)
 		_ = m.remove(details.Name, "Failed to create")
 	} else {
 		details.Lock()
@@ -383,7 +394,7 @@ func (m *machineProvider) createAndAcquireMachine(config *common.RunnerConfig) (
 	}
 
 	// Idle between creation and tryAcquireMachineDetails below; the shutdown drain must not take it.
-	newDetails, errCh := m.create(config, machineStateIdle, true)
+	newDetails, errCh := m.create(config, machineStateIdle, true, m.warmupLimitsFor(config, time.Now()))
 	defer func() {
 		if newDetails != nil {
 			newDetails.Lock()
@@ -610,6 +621,7 @@ func (m *machineProvider) remove(machineName string, reason ...any) error {
 func (m *machineProvider) updateMachines(
 	machines []string,
 	config *common.RunnerConfig,
+	warmup *warmupLimits,
 ) (data machinesData, validMachines []string) {
 	data.Runner = config.ShortDescription()
 	validMachines = make([]string, 0, len(machines))
@@ -624,7 +636,7 @@ func (m *machineProvider) updateMachines(
 		info := details.info()
 		details.Unlock()
 
-		reason := shouldRemoveIdle(config, &data, info)
+		reason := shouldRemoveIdle(config, &data, warmup, info)
 		if reason == dontRemoveIdleMachine {
 			validMachines = append(validMachines, name)
 			if info.State != machineStateCreating && info.State != machineStateRemoving {
@@ -728,14 +740,14 @@ func (m *machineProvider) forgetHeartbeat(name string) {
 	}
 }
 
-func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData) {
+func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData, warmup *warmupLimits) {
 	for {
-		if !canCreateIdle(config, data) || m.shuttingDown.Load() {
+		if !canCreateIdle(config, data, warmup) || m.shuttingDown.Load() {
 			return
 		}
 
 		// Create a new machine and mark it as Idle
-		m.create(config, machineStateIdle, false)
+		m.create(config, machineStateIdle, false, warmup)
 		data.Creating++
 	}
 }
@@ -803,20 +815,26 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 	m.acquireLock.Lock()
 	defer m.acquireLock.Unlock()
 
+	// Before loadMachines, so a failing `docker-machine ls` still starts the
+	// clock and /health/ready is not 503 for longer than WarmupDuration.
+	now := time.Now()
+	warmup := m.warmupAcquire(config, now)
+
 	machines, err := m.loadMachines(config)
 	if err != nil {
 		return nil, err
 	}
 
 	// Update a list of currently configured machines
-	machinesData, validMachines := m.updateMachines(machines, config)
+	machinesData, validMachines := m.updateMachines(machines, config, warmup)
 	m.pruneVanished(machines, config)
 	m.heartbeaterFor(config).prune(machines)
 
 	// Pre-create machines
-	m.createMachines(config, &machinesData)
+	m.createMachines(config, &machinesData, warmup)
 
-	m.updateAutoscalingLimits(config, &machinesData)
+	m.observeWarmup(config, &machinesData, now)
+	m.updateAutoscalingLimits(config, &machinesData, warmup)
 
 	logger := logrus.WithFields(machinesData.Fields()).
 		WithField("runner", config.ShortDescription()).
@@ -835,7 +853,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 		return details, nil
 	}
 
-	if config.Machine.GetIdleCount() == 0 && canCreateOnDemand(config, &machinesData) {
+	if config.Machine.GetIdleCount() == 0 && canCreateOnDemand(config, &machinesData, warmup) {
 		logger.Debug("IdleCount is set to 0 so the machine will be created on demand in job context")
 	} else if machinesData.Idle == 0 {
 		return nil, &common.NoFreeExecutorError{Message: "no free machines that can process builds"}
@@ -937,15 +955,16 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 	}
 }
 
-func (m *machineProvider) updateAutoscalingLimits(config *common.RunnerConfig, data *machinesData) {
+func (m *machineProvider) updateAutoscalingLimits(config *common.RunnerConfig, data *machinesData, warmup *warmupLimits) {
 	m.autoscalingLimitsLock.Lock()
 	defer m.autoscalingLimitsLock.Unlock()
 
 	m.autoscalingLimits[config.ShortDescription()] = autoscalingLimits{
 		runnerName:    config.Name,
 		systemID:      config.GetSystemID(),
-		maxGrowthRate: float64(max(config.Machine.MaxGrowthRate, 0)),
-		idleTarget:    float64(effectiveIdleTarget(config, data)),
+		maxGrowthRate: float64(maxGrowthRate(config, warmup)),
+		idleTarget:    float64(effectiveIdleTarget(config, data, warmup)),
+		warmupEnabled: config.Machine.WarmupEnabled(),
 		updatedAt:     time.Now(),
 	}
 }
@@ -996,5 +1015,7 @@ func newMachineProvider(provider common.ExecutorProvider) *machineProvider {
 		provider:          provider,
 		machineMetrics:    newMachineMetrics(name, nil),
 		autoscalingLimits: make(map[string]autoscalingLimits),
+		warmups:           make(map[string]*warmupState),
+		startedAt:         time.Now(),
 	}
 }

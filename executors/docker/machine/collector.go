@@ -47,6 +47,9 @@ type machineMetrics struct {
 	removalHistogram        prometheus.Histogram
 	maxGrowthRateDesc       *prometheus.Desc
 	idleTargetDesc          *prometheus.Desc
+	warmupDesc              *prometheus.Desc
+	warmupTimedOutDesc      *prometheus.Desc
+	warmupReadyDesc         *prometheus.Desc
 }
 
 func newMachineMetrics(name string, config *common.MachineConfig) machineMetrics {
@@ -114,6 +117,24 @@ func newMachineMetrics(name string, config *common.MachineConfig) machineMetrics
 			runnerLabels,
 			constLabels,
 		),
+		warmupDesc: prometheus.NewDesc(
+			"gitlab_runner_autoscaling_warmup",
+			"1 while the runner is in warm-up, 0 otherwise.",
+			runnerLabels,
+			constLabels,
+		),
+		warmupTimedOutDesc: prometheus.NewDesc(
+			"gitlab_runner_autoscaling_warmup_timed_out",
+			"1 if warm-up ended before the pool reached the ready threshold, 0 otherwise.",
+			runnerLabels,
+			constLabels,
+		),
+		warmupReadyDesc: prometheus.NewDesc(
+			"gitlab_runner_autoscaling_warmup_ready_seconds",
+			"Seconds from the start of warm-up until the pool reached the ready threshold. Absent until it does.",
+			runnerLabels,
+			constLabels,
+		),
 	}
 
 	if config.CreationPhaseMetricsEnabled() {
@@ -154,6 +175,9 @@ func (m *machineProvider) Describe(ch chan<- *prometheus.Desc) {
 	ch <- m.currentStatesDesc
 	ch <- m.maxGrowthRateDesc
 	ch <- m.idleTargetDesc
+	ch <- m.warmupDesc
+	ch <- m.warmupTimedOutDesc
+	ch <- m.warmupReadyDesc
 }
 
 // Collect implements prometheus.Collector.
@@ -187,9 +211,10 @@ func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 		c.Collect(ch)
 	}
 
+	now := time.Now()
 	m.autoscalingLimitsLock.Lock()
 	for runner, limits := range m.autoscalingLimits {
-		if time.Since(limits.updatedAt) > autoscalingLimitsTTL {
+		if now.Sub(limits.updatedAt) > autoscalingLimitsTTL {
 			delete(m.autoscalingLimits, runner)
 			continue
 		}
@@ -199,6 +224,28 @@ func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(
 			m.idleTargetDesc, prometheus.GaugeValue, limits.idleTarget,
 			runner, limits.runnerName, limits.systemID)
+		if !limits.warmupEnabled {
+			continue
+		}
+		g := m.warmupGaugesFor(runner, now)
+		ch <- prometheus.MustNewConstMetric(
+			m.warmupDesc, prometheus.GaugeValue, boolToFloat(g.active),
+			runner, limits.runnerName, limits.systemID)
+		ch <- prometheus.MustNewConstMetric(
+			m.warmupTimedOutDesc, prometheus.GaugeValue, boolToFloat(g.timedOut),
+			runner, limits.runnerName, limits.systemID)
+		if g.reached {
+			ch <- prometheus.MustNewConstMetric(
+				m.warmupReadyDesc, prometheus.GaugeValue, g.readyS,
+				runner, limits.runnerName, limits.systemID)
+		}
 	}
 	m.autoscalingLimitsLock.Unlock()
+}
+
+func boolToFloat(b bool) float64 {
+	if b {
+		return 1
+	}
+	return 0
 }
