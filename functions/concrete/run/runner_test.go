@@ -42,6 +42,8 @@ func testRunner(t *testing.T, cfg *Config) *Runner {
 	e := &env.Env{
 		WorkingDir: workDir,
 		Shell:      shell,
+		// A zero delay lets cmd.Wait() block forever on Windows if CTRL_BREAK_EVENT is missed.
+		GracefulExitDelay: 500 * time.Millisecond,
 		Env: map[string]string{
 			"CI_JOB_STATUS": string(env.Running),
 		},
