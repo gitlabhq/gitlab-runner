@@ -785,6 +785,108 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 	assert.NotEmpty(t, tlsData.KeyFile)
 }
 
+func TestClientAPIURLJobTLSData(t *testing.T) {
+	const jobURL = "https://gitlab.example.com"
+
+	s := httptest.NewTLSServer(http.HandlerFunc(clientHandler))
+	defer s.Close()
+
+	serverURL, err := url.Parse(s.URL)
+	require.NoError(t, err)
+	apiHost, _, err := net.SplitHostPort(serverURL.Host)
+	require.NoError(t, err)
+
+	request := func(t *testing.T, c *client) ResponseTLSData {
+		statusCode, statusText, resp := c.doJSON(t.Context(), "test/ok", http.MethodGet, http.StatusOK, nil, nil, nil)
+		require.Equal(t, http.StatusOK, statusCode, statusText)
+		require.NotNil(t, resp.TLS)
+
+		tlsData, err := c.getResponseTLSData(resp.TLS, true)
+		require.NoError(t, err)
+		return tlsData
+	}
+
+	t.Run("api host certificate is discovered, nothing is passed to the job", func(t *testing.T) {
+		certDir := t.TempDir()
+		require.NoError(t, writeTLSCertificate(s, filepath.Join(certDir, apiHost+".crt")))
+
+		c, err := newClient(&RunnerCredentials{URL: jobURL, APIURL: s.URL}, NewAPIRequestsCollector(), withCertificateDirectory(certDir))
+		require.NoError(t, err)
+		assert.Equal(t, serverURL.Host, c.url.Host)
+
+		assert.Equal(t, ResponseTLSData{}, request(t, c))
+	})
+
+	t.Run("url host certificate from the certificate directory is passed to the job", func(t *testing.T) {
+		certDir := t.TempDir()
+		require.NoError(t, writeTLSCertificate(s, filepath.Join(certDir, apiHost+".crt")))
+		require.NoError(t, os.WriteFile(filepath.Join(certDir, "gitlab.example.com.crt"), []byte("job ca"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(certDir, "gitlab.example.com.auth.crt"), []byte("job cert"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(certDir, "gitlab.example.com.auth.key"), []byte("job key"), 0o600))
+
+		c, err := newClient(&RunnerCredentials{URL: jobURL, APIURL: s.URL}, NewAPIRequestsCollector(), withCertificateDirectory(certDir))
+		require.NoError(t, err)
+
+		assert.Equal(t, ResponseTLSData{
+			CAChain:  "job ca",
+			CertFile: filepath.Join(certDir, "gitlab.example.com.auth.crt"),
+			KeyFile:  filepath.Join(certDir, "gitlab.example.com.auth.key"),
+		}, request(t, c))
+	})
+
+	t.Run("tls-ca-file is used for both the manager and the job", func(t *testing.T) {
+		caFile := filepath.Join(t.TempDir(), "ca.crt")
+		require.NoError(t, writeTLSCertificate(s, caFile))
+		caData, err := os.ReadFile(caFile)
+		require.NoError(t, err)
+
+		c, err := newClient(&RunnerCredentials{URL: jobURL, APIURL: s.URL, TLSCAFile: caFile}, NewAPIRequestsCollector())
+		require.NoError(t, err)
+
+		assert.Equal(t, ResponseTLSData{CAChain: string(caData)}, request(t, c))
+	})
+
+	t.Run("api_url on the same server keeps the connection chain", func(t *testing.T) {
+		certDir := t.TempDir()
+		require.NoError(t, writeTLSCertificate(s, filepath.Join(certDir, apiHost+".crt")))
+
+		c, err := newClient(&RunnerCredentials{URL: s.URL, APIURL: s.URL + "/"}, NewAPIRequestsCollector(), withCertificateDirectory(certDir))
+		require.NoError(t, err)
+		assert.Nil(t, c.jobTLSFiles)
+
+		assert.NotEmpty(t, request(t, c).CAChain)
+
+		c, err = newClient(&RunnerCredentials{URL: s.URL, APIURL: s.URL + "/proxy"}, NewAPIRequestsCollector(), withCertificateDirectory(certDir))
+		require.NoError(t, err)
+		assert.Nil(t, c.jobTLSFiles)
+	})
+}
+
+func TestSameServer(t *testing.T) {
+	tests := map[string]struct {
+		a, b string
+		same bool
+	}{
+		"identical":                {"https://gitlab.com", "https://gitlab.com", true},
+		"different path":           {"https://gitlab.com", "https://gitlab.com/proxy", true},
+		"default port spelled out": {"https://gitlab.com", "https://gitlab.com:443", true},
+		"http default port":        {"http://gitlab.com", "http://gitlab.com:80", true},
+		"different port":           {"https://gitlab.com", "https://gitlab.com:8443", false},
+		"different scheme":         {"http://gitlab.com", "https://gitlab.com", false},
+		"different host":           {"https://gitlab.com", "https://api.internal", false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			a, err := parseGitLabURL(tt.a)
+			require.NoError(t, err)
+			b, err := parseGitLabURL(tt.b)
+			require.NoError(t, err)
+			assert.Equal(t, tt.same, sameServer(a, b))
+		})
+	}
+}
+
 func TestUrlFixing(t *testing.T) {
 	assert.Equal(t, "https://gitlab.example.com", fixCIURL("https://gitlab.example.com/ci///"))
 	assert.Equal(t, "https://gitlab.example.com", fixCIURL("https://gitlab.example.com/ci/"))

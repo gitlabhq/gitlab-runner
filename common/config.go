@@ -1411,6 +1411,7 @@ func (s *Service) ToImageDefinition() spec.Image {
 
 type RunnerCredentials struct {
 	URL             string    `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"GitLab instance URL" jsonschema:"minLength=1"`
+	APIURL          string    `toml:"api_url,omitempty" json:"api_url,omitempty" long:"api-url" env:"CI_SERVER_API_URL" description:"URL the runner manager uses for GitLab API requests. Defaults to url"`
 	ID              int64     `toml:"id" json:"id" description:"Runner ID"`
 	Token           string    `toml:"token" json:"token" short:"t" long:"token" env:"CI_SERVER_TOKEN" required:"true" description:"Runner token" jsonschema:"minLength=1"`
 	TokenObtainedAt time.Time `toml:"token_obtained_at" json:"token_obtained_at" description:"When the runner authentication token was obtained"`
@@ -2476,6 +2477,14 @@ func (c *RunnerCredentials) GetURL() string {
 	return c.URL
 }
 
+func (c *RunnerCredentials) GetAPIURL() string {
+	if c.APIURL != "" {
+		return c.APIURL
+	}
+
+	return c.URL
+}
+
 func (c *RunnerCredentials) GetTLSCAFile() string {
 	return c.TLSCAFile
 }
@@ -2773,6 +2782,12 @@ func (c *RunnerConfig) loadConfig(globalCfg *Config) error {
 	// Expand environment variables in credentials
 	c.Token = os.ExpandEnv(c.Token)
 	c.URL = os.ExpandEnv(c.URL)
+	if c.APIURL != "" {
+		c.APIURL = os.ExpandEnv(c.APIURL)
+		if c.APIURL == "" {
+			c.Log().Warning("api_url expanded to an empty string; falling back to url for API requests")
+		}
+	}
 
 	if c.Machine != nil {
 		err := c.Machine.CompilePeriods()

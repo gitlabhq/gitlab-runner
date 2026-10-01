@@ -33,6 +33,7 @@ const (
 
 type requestCredentials interface {
 	GetURL() string
+	GetAPIURL() string
 	GetToken() string
 	GetTLSCAFile() string
 	GetTLSCertFile() string
@@ -54,6 +55,7 @@ type client struct {
 	certFile          string
 	keyFile           string
 	caData            []byte
+	jobTLSFiles       *jobTLSFiles
 	updateTime        time.Time
 	lastIdleRefresh   time.Time
 	lastUpdate        string
@@ -66,6 +68,14 @@ type ResponseTLSData struct {
 	CAChain  string
 	CertFile string
 	KeyFile  string
+}
+
+// TLS files for the job when api_url is set: the job connects to url, so it
+// must not get the chain of the manager's connection to api_url.
+type jobTLSFiles struct {
+	caFile   string
+	certFile string
+	keyFile  string
 }
 
 func (n *client) getLastUpdate() string {
@@ -483,6 +493,10 @@ func getMessageFromJSONOrXMLResponse(res *http.Response) string {
 }
 
 func (n *client) getResponseTLSData(tls *tls.ConnectionState, resolveFullChain bool) (ResponseTLSData, error) {
+	if n.jobTLSFiles != nil {
+		return n.jobTLSFiles.responseTLSData()
+	}
+
 	TLSData := ResponseTLSData{
 		CertFile: n.certFile,
 		KeyFile:  n.keyFile,
@@ -494,6 +508,25 @@ func (n *client) getResponseTLSData(tls *tls.ConnectionState, resolveFullChain b
 	}
 
 	TLSData.CAChain = caChain
+
+	return TLSData, nil
+}
+
+func (f *jobTLSFiles) responseTLSData() (ResponseTLSData, error) {
+	TLSData := ResponseTLSData{
+		CertFile: f.certFile,
+		KeyFile:  f.keyFile,
+	}
+
+	if f.caFile == "" {
+		return TLSData, nil
+	}
+
+	data, err := os.ReadFile(f.caFile)
+	if err != nil {
+		return TLSData, fmt.Errorf("reading CA file for the job: %w", err)
+	}
+	TLSData.CAChain = string(data)
 
 	return TLSData, nil
 }
@@ -563,17 +596,13 @@ func withHttpClientOptions(opts HttpClientOptions) option {
 }
 
 func newClient(requestCredentials requestCredentials, collector *APIRequestsCollector, options ...option) (*client, error) {
-	url, err := url.Parse(fixCIURL(requestCredentials.GetURL()) + "/api/v4/")
+	apiURL, err := parseGitLabURL(requestCredentials.GetAPIURL())
 	if err != nil {
-		return nil, fmt.Errorf("parse URL: %w", err)
-	}
-
-	if url.Scheme != "http" && url.Scheme != "https" {
-		return nil, errors.New("only http or https scheme supported")
+		return nil, err
 	}
 
 	c := &client{
-		url:      url,
+		url:      apiURL,
 		caFile:   requestCredentials.GetTLSCAFile(),
 		certFile: requestCredentials.GetTLSCertFile(),
 		keyFile:  requestCredentials.GetTLSKeyFile(),
@@ -584,12 +613,59 @@ func newClient(requestCredentials requestCredentials, collector *APIRequestsColl
 		o(c)
 	}
 
-	if c.certDirectory != "" {
-		host := strings.Split(url.Host, ":")[0]
-		c.findCertificate(&c.caFile, host+".crt")
-		c.findCertificate(&c.certFile, host+".auth.crt")
-		c.findCertificate(&c.keyFile, host+".auth.key")
+	jobURL, err := parseGitLabURL(requestCredentials.GetURL())
+	if err != nil {
+		return nil, err
 	}
 
+	if !sameServer(apiURL, jobURL) {
+		c.jobTLSFiles = &jobTLSFiles{
+			caFile:   c.caFile,
+			certFile: c.certFile,
+			keyFile:  c.keyFile,
+		}
+		c.discoverCertificates(jobURL, &c.jobTLSFiles.caFile, &c.jobTLSFiles.certFile, &c.jobTLSFiles.keyFile)
+	}
+
+	c.discoverCertificates(apiURL, &c.caFile, &c.certFile, &c.keyFile)
+
 	return c, nil
+}
+
+func parseGitLabURL(base string) (*url.URL, error) {
+	u, err := url.Parse(fixCIURL(base) + "/api/v4/")
+	if err != nil {
+		return nil, fmt.Errorf("parse URL: %w", err)
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return nil, errors.New("only http or https scheme supported")
+	}
+
+	return u, nil
+}
+
+func sameServer(a, b *url.URL) bool {
+	return a.Scheme == b.Scheme && a.Hostname() == b.Hostname() && portOrDefault(a) == portOrDefault(b)
+}
+
+func portOrDefault(u *url.URL) string {
+	if port := u.Port(); port != "" {
+		return port
+	}
+	if u.Scheme == "https" {
+		return "443"
+	}
+	return "80"
+}
+
+func (n *client) discoverCertificates(u *url.URL, caFile, certFile, keyFile *string) {
+	if n.certDirectory == "" {
+		return
+	}
+
+	host := u.Hostname()
+	n.findCertificate(caFile, host+".crt")
+	n.findCertificate(certFile, host+".auth.crt")
+	n.findCertificate(keyFile, host+".auth.key")
 }

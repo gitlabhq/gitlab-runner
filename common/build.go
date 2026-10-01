@@ -1072,9 +1072,12 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 	}
 
 	jobCredentials := JobCredentials{
-		ID:    b.Job.ID,
-		Token: b.Job.Token,
-		URL:   b.Runner.RunnerCredentials.URL,
+		ID:          b.Job.ID,
+		Token:       b.Job.Token,
+		URL:         b.Runner.RunnerCredentials.GetAPIURL(),
+		TLSCAFile:   b.Runner.RunnerCredentials.TLSCAFile,
+		TLSCertFile: b.Runner.RunnerCredentials.TLSCertFile,
+		TLSKeyFile:  b.Runner.RunnerCredentials.TLSKeyFile,
 	}
 
 	// execute and upload the results of each referee

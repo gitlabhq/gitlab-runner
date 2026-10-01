@@ -37,6 +37,50 @@ func (_m *mockRequestCredentials) EXPECT() *mockRequestCredentials_Expecter {
 	return &mockRequestCredentials_Expecter{mock: &_m.Mock}
 }
 
+// GetAPIURL provides a mock function for the type mockRequestCredentials
+func (_mock *mockRequestCredentials) GetAPIURL() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAPIURL")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// mockRequestCredentials_GetAPIURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAPIURL'
+type mockRequestCredentials_GetAPIURL_Call struct {
+	*mock.Call
+}
+
+// GetAPIURL is a helper method to define mock.On call
+func (_e *mockRequestCredentials_Expecter) GetAPIURL() *mockRequestCredentials_GetAPIURL_Call {
+	return &mockRequestCredentials_GetAPIURL_Call{Call: _e.mock.On("GetAPIURL")}
+}
+
+func (_c *mockRequestCredentials_GetAPIURL_Call) Run(run func()) *mockRequestCredentials_GetAPIURL_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *mockRequestCredentials_GetAPIURL_Call) Return(s string) *mockRequestCredentials_GetAPIURL_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *mockRequestCredentials_GetAPIURL_Call) RunAndReturn(run func() string) *mockRequestCredentials_GetAPIURL_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetTLSCAFile provides a mock function for the type mockRequestCredentials
 func (_mock *mockRequestCredentials) GetTLSCAFile() string {
 	ret := _mock.Called()

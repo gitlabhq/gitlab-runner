@@ -79,7 +79,14 @@ func TestClients(t *testing.T) {
 		TLSKeyFile:  "key_file2",
 	})
 	c8, c8err := c.getClient(&brokenCredentials)
+	c9, c9err := c.getClient(&RunnerCredentials{
+		URL:    "http://test/",
+		APIURL: "http://api-test/",
+	})
 	assert.NotEqual(t, c1, c2)
+	assert.NotEqual(t, c1, c9)
+	require.NoError(t, c9err)
+	assert.Equal(t, "api-test", c9.url.Host)
 	assert.NotEqual(t, c1, c4)
 	assert.Equal(t, c4, c5)
 	assert.NotEqual(t, c5, c6)

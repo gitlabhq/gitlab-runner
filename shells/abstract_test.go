@@ -396,6 +396,64 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestArtifactsHelperCommandsIgnoreAPIURL(t *testing.T) {
+	gitlabURL := "https://example.com:3443"
+
+	shell := AbstractShell{}
+	build := &common.Build{
+		Job: spec.Job{
+			ID:    1000,
+			Token: "token",
+			Artifacts: spec.Artifacts{
+				spec.Artifact{Paths: []string{"default"}},
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				URL:    gitlabURL,
+				APIURL: "https://api.internal.example.com",
+			},
+		},
+	}
+	info := common.ShellScriptInfo{
+		RunnerCommand: "gitlab-runner-helper",
+		Build:         build,
+	}
+
+	mockWriter := NewMockShellWriter(t)
+	mockWriter.On("Variable", mock.Anything)
+	mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+	mockWriter.On("SourceEnv", "path/to/env/file").Once()
+	mockWriter.On("Cd", mock.Anything)
+	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
+	mockWriter.On("Noticef", mock.Anything)
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
+		"--url", gitlabURL,
+		"--token", "token",
+		"--id", "1000",
+		"--timeout", "1h0m0s",
+		"--response-header-timeout", "10m0s",
+		"--path", "default",
+	).Once()
+	mockWriter.On("Else")
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything)
+	mockWriter.On("EndIf")
+
+	err := shell.writeScript(t.Context(), mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
+	require.NoError(t, err)
+
+	mockWriter.On("Noticef", mock.Anything, mock.Anything, mock.Anything)
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-downloader",
+		"--url", gitlabURL,
+		"--token", "dep-token",
+		"--id", "999",
+	).Once()
+
+	shell.downloadArtifacts(mockWriter, spec.Dependency{ID: 999, Name: "build", Token: "dep-token"}, info)
+}
+
 func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	shell := AbstractShell{}
 

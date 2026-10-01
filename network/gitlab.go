@@ -70,8 +70,9 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (*client, error
 		n.clients = make(map[string]*client)
 	}
 	key := fmt.Sprintf(
-		"%s_%s_%s_%s",
+		"%s_%s_%s_%s_%s",
 		credentials.GetURL(),
+		credentials.GetAPIURL(),
 		credentials.GetToken(),
 		credentials.GetTLSCAFile(),
 		credentials.GetTLSCertFile(),

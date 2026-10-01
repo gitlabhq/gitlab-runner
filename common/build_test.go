@@ -29,6 +29,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	helpers_secrets "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
+	"gitlab.com/gitlab-org/gitlab-runner/referees"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
@@ -6027,4 +6028,42 @@ func TestGetServiceVariablesDoesNotExposeNonPublicViaChain(t *testing.T) {
 		"a secret must not reach the service container through a public variable the user did not opt into")
 	assert.Equal(t, build.GetAllVariables().Get("CONN"), variables.Get("CONN"),
 		"job variables must reach the service container with the same value the build container gets")
+}
+
+func TestExecuteUploadReferees_UsesManagerCredentials(t *testing.T) {
+	referee := referees.NewMockReferee(t)
+	referee.On("Execute", mock.Anything, mock.Anything, mock.Anything).Return(bytes.NewReader([]byte("metrics")), nil)
+	referee.On("ArtifactBaseName").Return("metrics.json")
+	referee.On("ArtifactType").Return("metrics_referee")
+	referee.On("ArtifactFormat").Return("gzip")
+
+	var uploaded JobCredentials
+	build := &Build{
+		Job: spec.Job{ID: 42, Token: "job-token"},
+		Runner: &RunnerConfig{
+			RunnerCredentials: RunnerCredentials{
+				URL:         "https://gitlab.example.com",
+				APIURL:      "https://api.internal.example.com",
+				TLSCAFile:   "/etc/ca.pem",
+				TLSCertFile: "/etc/cert.pem",
+				TLSKeyFile:  "/etc/key.pem",
+			},
+		},
+		Referees: []referees.Referee{referee},
+		ArtifactUploader: func(config JobCredentials, _ ContentProvider, _ ArtifactsOptions) (UploadState, string, error) {
+			uploaded = config
+			return UploadSucceeded, "", nil
+		},
+	}
+
+	build.executeUploadReferees(t.Context(), time.Now(), time.Now())
+
+	assert.Equal(t, JobCredentials{
+		ID:          42,
+		Token:       "job-token",
+		URL:         "https://api.internal.example.com",
+		TLSCAFile:   "/etc/ca.pem",
+		TLSCertFile: "/etc/cert.pem",
+		TLSKeyFile:  "/etc/key.pem",
+	}, uploaded)
 }
