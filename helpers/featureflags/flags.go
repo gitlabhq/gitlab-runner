@@ -108,10 +108,15 @@ var flags = []FeatureFlag{
 		DefaultValue:    true,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description: "When set to `true` Runner tries to direct-download all artifacts instead of proxying " +
-			"through GitLab on a first try. Enabling might result in a download failures due to problem validating " +
-			"TLS certificate of Object Storage if it is enabled by GitLab. " +
-			"See [Self-signed certificates or custom Certification Authorities](tls-self-signed.md)",
+		Description: "When set to `true`, Runner sends `direct_download=true` and `download_mode=direct` on the first artifact download attempt. " +
+			"This asks GitLab to redirect artifact downloads to object storage, such as S3, instead of proxying the artifact bytes through GitLab. " +
+			"GitLab honors direct mode only when the administrator allows it; otherwise, GitLab uses the configured `proxy_download` mode. " +
+			"On retries, Runner omits both parameters and uses the configured download mode. " +
+			"If a network error causes a retry, GitLab can proxy the retry when `proxy_download` is enabled. " +
+			"HTTP 401 and 403 responses are not retried. " +
+			"Direct downloads might fail if Runner cannot validate the Object Storage TLS certificate. " +
+			"See [Allow client override for proxy download](https://docs.gitlab.com/administration/object_storage/#allow-client-override-for-proxy-download) " +
+			"and [Self-signed certificates or custom Certification Authorities](tls-self-signed.md).",
 	},
 	{
 		Name:            UseFastzip,

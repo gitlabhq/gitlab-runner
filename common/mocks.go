@@ -79,7 +79,7 @@ type MockWithContext_WithContext_Call struct {
 
 // WithContext is a helper method to define mock.On call
 //   - context1 context.Context
-func (_e *MockWithContext_Expecter) WithContext(context1 interface{}) *MockWithContext_WithContext_Call {
+func (_e *MockWithContext_Expecter) WithContext(context1 any) *MockWithContext_WithContext_Call {
 	return &MockWithContext_WithContext_Call{Call: _e.mock.On("WithContext", context1)}
 }
 
@@ -283,7 +283,7 @@ type MockCommander_Execute_Call struct {
 
 // Execute is a helper method to define mock.On call
 //   - c *cli.Context
-func (_e *MockCommander_Expecter) Execute(c interface{}) *MockCommander_Execute_Call {
+func (_e *MockCommander_Expecter) Execute(c any) *MockCommander_Execute_Call {
 	return &MockCommander_Execute_Call{Call: _e.mock.On("Execute", c)}
 }
 
@@ -362,7 +362,7 @@ type MockConfigSaver_Save_Call struct {
 // Save is a helper method to define mock.On call
 //   - filePath string
 //   - data []byte
-func (_e *MockConfigSaver_Expecter) Save(filePath interface{}, data interface{}) *MockConfigSaver_Save_Call {
+func (_e *MockConfigSaver_Expecter) Save(filePath any, data any) *MockConfigSaver_Save_Call {
 	return &MockConfigSaver_Save_Call{Call: _e.mock.On("Save", filePath, data)}
 }
 
@@ -567,7 +567,7 @@ type MockExecutor_Finish_Call struct {
 
 // Finish is a helper method to define mock.On call
 //   - err error
-func (_e *MockExecutor_Expecter) Finish(err interface{}) *MockExecutor_Finish_Call {
+func (_e *MockExecutor_Expecter) Finish(err any) *MockExecutor_Finish_Call {
 	return &MockExecutor_Finish_Call{Call: _e.mock.On("Finish", err)}
 }
 
@@ -662,7 +662,7 @@ type MockExecutor_Prepare_Call struct {
 
 // Prepare is a helper method to define mock.On call
 //   - options ExecutorPrepareOptions
-func (_e *MockExecutor_Expecter) Prepare(options interface{}) *MockExecutor_Prepare_Call {
+func (_e *MockExecutor_Expecter) Prepare(options any) *MockExecutor_Prepare_Call {
 	return &MockExecutor_Prepare_Call{Call: _e.mock.On("Prepare", options)}
 }
 
@@ -713,7 +713,7 @@ type MockExecutor_Run_Call struct {
 
 // Run is a helper method to define mock.On call
 //   - cmd ExecutorCommand
-func (_e *MockExecutor_Expecter) Run(cmd interface{}) *MockExecutor_Run_Call {
+func (_e *MockExecutor_Expecter) Run(cmd any) *MockExecutor_Run_Call {
 	return &MockExecutor_Run_Call{Call: _e.mock.On("Run", cmd)}
 }
 
@@ -753,7 +753,7 @@ type MockExecutor_SetCurrentStage_Call struct {
 
 // SetCurrentStage is a helper method to define mock.On call
 //   - stage ExecutorStage
-func (_e *MockExecutor_Expecter) SetCurrentStage(stage interface{}) *MockExecutor_SetCurrentStage_Call {
+func (_e *MockExecutor_Expecter) SetCurrentStage(stage any) *MockExecutor_SetCurrentStage_Call {
 	return &MockExecutor_SetCurrentStage_Call{Call: _e.mock.On("SetCurrentStage", stage)}
 }
 
@@ -878,7 +878,7 @@ type MockSuspendableExecutor_Resume_Call struct {
 // Resume is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fields url.Values
-func (_e *MockSuspendableExecutor_Expecter) Resume(ctx interface{}, fields interface{}) *MockSuspendableExecutor_Resume_Call {
+func (_e *MockSuspendableExecutor_Expecter) Resume(ctx any, fields any) *MockSuspendableExecutor_Resume_Call {
 	return &MockSuspendableExecutor_Resume_Call{Call: _e.mock.On("Resume", ctx, fields)}
 }
 
@@ -945,7 +945,7 @@ type MockSuspendableExecutor_Suspend_Call struct {
 
 // Suspend is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockSuspendableExecutor_Expecter) Suspend(ctx interface{}) *MockSuspendableExecutor_Suspend_Call {
+func (_e *MockSuspendableExecutor_Expecter) Suspend(ctx any) *MockSuspendableExecutor_Suspend_Call {
 	return &MockSuspendableExecutor_Suspend_Call{Call: _e.mock.On("Suspend", ctx)}
 }
 
@@ -1053,7 +1053,7 @@ type MockManagedExecutorProvider_Shutdown_Call struct {
 // Shutdown is a helper method to define mock.On call
 //   - ctx context.Context
 //   - config *Config
-func (_e *MockManagedExecutorProvider_Expecter) Shutdown(ctx interface{}, config interface{}) *MockManagedExecutorProvider_Shutdown_Call {
+func (_e *MockManagedExecutorProvider_Expecter) Shutdown(ctx any, config any) *MockManagedExecutorProvider_Shutdown_Call {
 	return &MockManagedExecutorProvider_Shutdown_Call{Call: _e.mock.On("Shutdown", ctx, config)}
 }
 
@@ -1147,7 +1147,7 @@ type MockExecutorProvider_Acquire_Call struct {
 
 // Acquire is a helper method to define mock.On call
 //   - config *RunnerConfig
-func (_e *MockExecutorProvider_Expecter) Acquire(config interface{}) *MockExecutorProvider_Acquire_Call {
+func (_e *MockExecutorProvider_Expecter) Acquire(config any) *MockExecutorProvider_Acquire_Call {
 	return &MockExecutorProvider_Acquire_Call{Call: _e.mock.On("Acquire", config)}
 }
 
@@ -1278,7 +1278,7 @@ type MockExecutorProvider_GetConfigInfo_Call struct {
 // GetConfigInfo is a helper method to define mock.On call
 //   - input *RunnerConfig
 //   - output *ConfigInfo
-func (_e *MockExecutorProvider_Expecter) GetConfigInfo(input interface{}, output interface{}) *MockExecutorProvider_GetConfigInfo_Call {
+func (_e *MockExecutorProvider_Expecter) GetConfigInfo(input any, output any) *MockExecutorProvider_GetConfigInfo_Call {
 	return &MockExecutorProvider_GetConfigInfo_Call{Call: _e.mock.On("GetConfigInfo", input, output)}
 }
 
@@ -1378,7 +1378,7 @@ type MockExecutorProvider_GetFeatures_Call struct {
 
 // GetFeatures is a helper method to define mock.On call
 //   - features *FeaturesInfo
-func (_e *MockExecutorProvider_Expecter) GetFeatures(features interface{}) *MockExecutorProvider_GetFeatures_Call {
+func (_e *MockExecutorProvider_Expecter) GetFeatures(features any) *MockExecutorProvider_GetFeatures_Call {
 	return &MockExecutorProvider_GetFeatures_Call{Call: _e.mock.On("GetFeatures", features)}
 }
 
@@ -1419,7 +1419,7 @@ type MockExecutorProvider_Release_Call struct {
 // Release is a helper method to define mock.On call
 //   - config *RunnerConfig
 //   - data ExecutorData
-func (_e *MockExecutorProvider_Expecter) Release(config interface{}, data interface{}) *MockExecutorProvider_Release_Call {
+func (_e *MockExecutorProvider_Expecter) Release(config any, data any) *MockExecutorProvider_Release_Call {
 	return &MockExecutorProvider_Release_Call{Call: _e.mock.On("Release", config, data)}
 }
 
@@ -1628,7 +1628,7 @@ type MockFailuresCollector_RecordFailure_Call struct {
 //   - reason spec.JobFailureReason
 //   - runnerConfig RunnerConfig
 //   - mode JobExecutionMode
-func (_e *MockFailuresCollector_Expecter) RecordFailure(reason interface{}, runnerConfig interface{}, mode interface{}) *MockFailuresCollector_RecordFailure_Call {
+func (_e *MockFailuresCollector_Expecter) RecordFailure(reason any, runnerConfig any, mode any) *MockFailuresCollector_RecordFailure_Call {
 	return &MockFailuresCollector_RecordFailure_Call{Call: _e.mock.On("RecordFailure", reason, runnerConfig, mode)}
 }
 
@@ -1716,7 +1716,7 @@ type MockSupportedFailureReasonMapper_Map_Call struct {
 
 // Map is a helper method to define mock.On call
 //   - fr spec.JobFailureReason
-func (_e *MockSupportedFailureReasonMapper_Expecter) Map(fr interface{}) *MockSupportedFailureReasonMapper_Map_Call {
+func (_e *MockSupportedFailureReasonMapper_Expecter) Map(fr any) *MockSupportedFailureReasonMapper_Map_Call {
 	return &MockSupportedFailureReasonMapper_Map_Call{Call: _e.mock.On("Map", fr)}
 }
 
@@ -1883,7 +1883,7 @@ type MockJobTrace_Fail_Call struct {
 // Fail is a helper method to define mock.On call
 //   - err error
 //   - failureData JobFailureData
-func (_e *MockJobTrace_Expecter) Fail(err interface{}, failureData interface{}) *MockJobTrace_Fail_Call {
+func (_e *MockJobTrace_Expecter) Fail(err any, failureData any) *MockJobTrace_Fail_Call {
 	return &MockJobTrace_Fail_Call{Call: _e.mock.On("Fail", err, failureData)}
 }
 
@@ -2005,7 +2005,7 @@ type MockJobTrace_SetAbortFunc_Call struct {
 
 // SetAbortFunc is a helper method to define mock.On call
 //   - abortFunc context.CancelFunc
-func (_e *MockJobTrace_Expecter) SetAbortFunc(abortFunc interface{}) *MockJobTrace_SetAbortFunc_Call {
+func (_e *MockJobTrace_Expecter) SetAbortFunc(abortFunc any) *MockJobTrace_SetAbortFunc_Call {
 	return &MockJobTrace_SetAbortFunc_Call{Call: _e.mock.On("SetAbortFunc", abortFunc)}
 }
 
@@ -2045,7 +2045,7 @@ type MockJobTrace_SetCancelFunc_Call struct {
 
 // SetCancelFunc is a helper method to define mock.On call
 //   - cancelFunc context.CancelFunc
-func (_e *MockJobTrace_Expecter) SetCancelFunc(cancelFunc interface{}) *MockJobTrace_SetCancelFunc_Call {
+func (_e *MockJobTrace_Expecter) SetCancelFunc(cancelFunc any) *MockJobTrace_SetCancelFunc_Call {
 	return &MockJobTrace_SetCancelFunc_Call{Call: _e.mock.On("SetCancelFunc", cancelFunc)}
 }
 
@@ -2085,7 +2085,7 @@ type MockJobTrace_SetDebugModeEnabled_Call struct {
 
 // SetDebugModeEnabled is a helper method to define mock.On call
 //   - isEnabled bool
-func (_e *MockJobTrace_Expecter) SetDebugModeEnabled(isEnabled interface{}) *MockJobTrace_SetDebugModeEnabled_Call {
+func (_e *MockJobTrace_Expecter) SetDebugModeEnabled(isEnabled any) *MockJobTrace_SetDebugModeEnabled_Call {
 	return &MockJobTrace_SetDebugModeEnabled_Call{Call: _e.mock.On("SetDebugModeEnabled", isEnabled)}
 }
 
@@ -2125,7 +2125,7 @@ type MockJobTrace_SetFailuresCollector_Call struct {
 
 // SetFailuresCollector is a helper method to define mock.On call
 //   - fc FailuresCollector
-func (_e *MockJobTrace_Expecter) SetFailuresCollector(fc interface{}) *MockJobTrace_SetFailuresCollector_Call {
+func (_e *MockJobTrace_Expecter) SetFailuresCollector(fc any) *MockJobTrace_SetFailuresCollector_Call {
 	return &MockJobTrace_SetFailuresCollector_Call{Call: _e.mock.On("SetFailuresCollector", fc)}
 }
 
@@ -2165,7 +2165,7 @@ type MockJobTrace_SetRuntimeEnvironmentKey_Call struct {
 
 // SetRuntimeEnvironmentKey is a helper method to define mock.On call
 //   - key string
-func (_e *MockJobTrace_Expecter) SetRuntimeEnvironmentKey(key interface{}) *MockJobTrace_SetRuntimeEnvironmentKey_Call {
+func (_e *MockJobTrace_Expecter) SetRuntimeEnvironmentKey(key any) *MockJobTrace_SetRuntimeEnvironmentKey_Call {
 	return &MockJobTrace_SetRuntimeEnvironmentKey_Call{Call: _e.mock.On("SetRuntimeEnvironmentKey", key)}
 }
 
@@ -2205,7 +2205,7 @@ type MockJobTrace_SetSupportedFailureReasonMapper_Call struct {
 
 // SetSupportedFailureReasonMapper is a helper method to define mock.On call
 //   - f SupportedFailureReasonMapper
-func (_e *MockJobTrace_Expecter) SetSupportedFailureReasonMapper(f interface{}) *MockJobTrace_SetSupportedFailureReasonMapper_Call {
+func (_e *MockJobTrace_Expecter) SetSupportedFailureReasonMapper(f any) *MockJobTrace_SetSupportedFailureReasonMapper_Call {
 	return &MockJobTrace_SetSupportedFailureReasonMapper_Call{Call: _e.mock.On("SetSupportedFailureReasonMapper", f)}
 }
 
@@ -2309,7 +2309,7 @@ type MockJobTrace_Write_Call struct {
 
 // Write is a helper method to define mock.On call
 //   - p []byte
-func (_e *MockJobTrace_Expecter) Write(p interface{}) *MockJobTrace_Write_Call {
+func (_e *MockJobTrace_Expecter) Write(p any) *MockJobTrace_Write_Call {
 	return &MockJobTrace_Write_Call{Call: _e.mock.On("Write", p)}
 }
 
@@ -2389,7 +2389,7 @@ type MockNetwork_DownloadArtifacts_Call struct {
 //   - config JobCredentials
 //   - artifactsFile io.WriteCloser
 //   - directDownload *bool
-func (_e *MockNetwork_Expecter) DownloadArtifacts(config interface{}, artifactsFile interface{}, directDownload interface{}) *MockNetwork_DownloadArtifacts_Call {
+func (_e *MockNetwork_Expecter) DownloadArtifacts(config any, artifactsFile any, directDownload any) *MockNetwork_DownloadArtifacts_Call {
 	return &MockNetwork_DownloadArtifacts_Call{Call: _e.mock.On("DownloadArtifacts", config, artifactsFile, directDownload)}
 }
 
@@ -2454,7 +2454,7 @@ type MockNetwork_PatchTrace_Call struct {
 //   - content []byte
 //   - startOffset int
 //   - debugModeEnabled bool
-func (_e *MockNetwork_Expecter) PatchTrace(config interface{}, jobCredentials interface{}, content interface{}, startOffset interface{}, debugModeEnabled interface{}) *MockNetwork_PatchTrace_Call {
+func (_e *MockNetwork_Expecter) PatchTrace(config any, jobCredentials any, content any, startOffset any, debugModeEnabled any) *MockNetwork_PatchTrace_Call {
 	return &MockNetwork_PatchTrace_Call{Call: _e.mock.On("PatchTrace", config, jobCredentials, content, startOffset, debugModeEnabled)}
 }
 
@@ -2537,7 +2537,7 @@ type MockNetwork_ProcessJob_Call struct {
 // ProcessJob is a helper method to define mock.On call
 //   - config RunnerConfig
 //   - buildCredentials *JobCredentials
-func (_e *MockNetwork_Expecter) ProcessJob(config interface{}, buildCredentials interface{}) *MockNetwork_ProcessJob_Call {
+func (_e *MockNetwork_Expecter) ProcessJob(config any, buildCredentials any) *MockNetwork_ProcessJob_Call {
 	return &MockNetwork_ProcessJob_Call{Call: _e.mock.On("ProcessJob", config, buildCredentials)}
 }
 
@@ -2596,7 +2596,7 @@ type MockNetwork_RegisterRunner_Call struct {
 // RegisterRunner is a helper method to define mock.On call
 //   - config RunnerConfig
 //   - parameters RegisterRunnerParameters
-func (_e *MockNetwork_Expecter) RegisterRunner(config interface{}, parameters interface{}) *MockNetwork_RegisterRunner_Call {
+func (_e *MockNetwork_Expecter) RegisterRunner(config any, parameters any) *MockNetwork_RegisterRunner_Call {
 	return &MockNetwork_RegisterRunner_Call{Call: _e.mock.On("RegisterRunner", config, parameters)}
 }
 
@@ -2665,7 +2665,7 @@ type MockNetwork_RequestJob_Call struct {
 //   - ctx context.Context
 //   - config RunnerConfig
 //   - sessionInfo *SessionInfo
-func (_e *MockNetwork_Expecter) RequestJob(ctx interface{}, config interface{}, sessionInfo interface{}) *MockNetwork_RequestJob_Call {
+func (_e *MockNetwork_Expecter) RequestJob(ctx any, config any, sessionInfo any) *MockNetwork_RequestJob_Call {
 	return &MockNetwork_RequestJob_Call{Call: _e.mock.On("RequestJob", ctx, config, sessionInfo)}
 }
 
@@ -2729,7 +2729,7 @@ type MockNetwork_ResetToken_Call struct {
 // ResetToken is a helper method to define mock.On call
 //   - runner RunnerConfig
 //   - systemID string
-func (_e *MockNetwork_Expecter) ResetToken(runner interface{}, systemID interface{}) *MockNetwork_ResetToken_Call {
+func (_e *MockNetwork_Expecter) ResetToken(runner any, systemID any) *MockNetwork_ResetToken_Call {
 	return &MockNetwork_ResetToken_Call{Call: _e.mock.On("ResetToken", runner, systemID)}
 }
 
@@ -2789,7 +2789,7 @@ type MockNetwork_ResetTokenWithPAT_Call struct {
 //   - runner RunnerConfig
 //   - systemID string
 //   - pat string
-func (_e *MockNetwork_Expecter) ResetTokenWithPAT(runner interface{}, systemID interface{}, pat interface{}) *MockNetwork_ResetTokenWithPAT_Call {
+func (_e *MockNetwork_Expecter) ResetTokenWithPAT(runner any, systemID any, pat any) *MockNetwork_ResetTokenWithPAT_Call {
 	return &MockNetwork_ResetTokenWithPAT_Call{Call: _e.mock.On("ResetTokenWithPAT", runner, systemID, pat)}
 }
 
@@ -2839,7 +2839,7 @@ type MockNetwork_SetConnectionMaxAge_Call struct {
 
 // SetConnectionMaxAge is a helper method to define mock.On call
 //   - duration time.Duration
-func (_e *MockNetwork_Expecter) SetConnectionMaxAge(duration interface{}) *MockNetwork_SetConnectionMaxAge_Call {
+func (_e *MockNetwork_Expecter) SetConnectionMaxAge(duration any) *MockNetwork_SetConnectionMaxAge_Call {
 	return &MockNetwork_SetConnectionMaxAge_Call{Call: _e.mock.On("SetConnectionMaxAge", duration)}
 }
 
@@ -2890,7 +2890,7 @@ type MockNetwork_UnregisterRunner_Call struct {
 
 // UnregisterRunner is a helper method to define mock.On call
 //   - config RunnerConfig
-func (_e *MockNetwork_Expecter) UnregisterRunner(config interface{}) *MockNetwork_UnregisterRunner_Call {
+func (_e *MockNetwork_Expecter) UnregisterRunner(config any) *MockNetwork_UnregisterRunner_Call {
 	return &MockNetwork_UnregisterRunner_Call{Call: _e.mock.On("UnregisterRunner", config)}
 }
 
@@ -2942,7 +2942,7 @@ type MockNetwork_UnregisterRunnerManager_Call struct {
 // UnregisterRunnerManager is a helper method to define mock.On call
 //   - config RunnerConfig
 //   - systemID string
-func (_e *MockNetwork_Expecter) UnregisterRunnerManager(config interface{}, systemID interface{}) *MockNetwork_UnregisterRunnerManager_Call {
+func (_e *MockNetwork_Expecter) UnregisterRunnerManager(config any, systemID any) *MockNetwork_UnregisterRunnerManager_Call {
 	return &MockNetwork_UnregisterRunnerManager_Call{Call: _e.mock.On("UnregisterRunnerManager", config, systemID)}
 }
 
@@ -3000,7 +3000,7 @@ type MockNetwork_UpdateJob_Call struct {
 //   - config RunnerConfig
 //   - jobCredentials *JobCredentials
 //   - jobInfo UpdateJobInfo
-func (_e *MockNetwork_Expecter) UpdateJob(config interface{}, jobCredentials interface{}, jobInfo interface{}) *MockNetwork_UpdateJob_Call {
+func (_e *MockNetwork_Expecter) UpdateJob(config any, jobCredentials any, jobInfo any) *MockNetwork_UpdateJob_Call {
 	return &MockNetwork_UpdateJob_Call{Call: _e.mock.On("UpdateJob", config, jobCredentials, jobInfo)}
 }
 
@@ -3064,9 +3064,7 @@ func (_mock *MockNetwork) UploadRawArtifacts(config JobCredentials, bodyProvider
 	if returnFunc, ok := ret.Get(2).(func(JobCredentials, ContentProvider, ArtifactsOptions) error); ok {
 		r2 = returnFunc(config, bodyProvider, options)
 	} else {
-		if ret.Get(2) != nil {
-			r2 = ret.Get(2).(error)
-		}
+		r2 = ret.Error(2)
 	}
 	return r0, r1, r2
 }
@@ -3080,7 +3078,7 @@ type MockNetwork_UploadRawArtifacts_Call struct {
 //   - config JobCredentials
 //   - bodyProvider ContentProvider
 //   - options ArtifactsOptions
-func (_e *MockNetwork_Expecter) UploadRawArtifacts(config interface{}, bodyProvider interface{}, options interface{}) *MockNetwork_UploadRawArtifacts_Call {
+func (_e *MockNetwork_Expecter) UploadRawArtifacts(config any, bodyProvider any, options any) *MockNetwork_UploadRawArtifacts_Call {
 	return &MockNetwork_UploadRawArtifacts_Call{Call: _e.mock.On("UploadRawArtifacts", config, bodyProvider, options)}
 }
 
@@ -3154,7 +3152,7 @@ type MockNetwork_VerifyRunner_Call struct {
 //   - ctx context.Context
 //   - config RunnerConfig
 //   - systemID string
-func (_e *MockNetwork_Expecter) VerifyRunner(ctx interface{}, config interface{}, systemID interface{}) *MockNetwork_VerifyRunner_Call {
+func (_e *MockNetwork_Expecter) VerifyRunner(ctx any, config any, systemID any) *MockNetwork_VerifyRunner_Call {
 	return &MockNetwork_VerifyRunner_Call{Call: _e.mock.On("VerifyRunner", ctx, config, systemID)}
 }
 
@@ -3219,8 +3217,8 @@ func (_m *mockLogger) EXPECT() *mockLogger_Expecter {
 }
 
 // Println provides a mock function for the type mockLogger
-func (_mock *mockLogger) Println(args ...interface{}) {
-	var _ca []interface{}
+func (_mock *mockLogger) Println(args ...any) {
+	var _ca []any
 	_ca = append(_ca, args...)
 	_mock.Called(_ca...)
 	return
@@ -3232,19 +3230,19 @@ type mockLogger_Println_Call struct {
 }
 
 // Println is a helper method to define mock.On call
-//   - args ...interface{}
-func (_e *mockLogger_Expecter) Println(args ...interface{}) *mockLogger_Println_Call {
+//   - args ...any
+func (_e *mockLogger_Expecter) Println(args ...any) *mockLogger_Println_Call {
 	return &mockLogger_Println_Call{Call: _e.mock.On("Println",
-		append([]interface{}{}, args...)...)}
+		append([]any{}, args...)...)}
 }
 
-func (_c *mockLogger_Println_Call) Run(run func(args ...interface{})) *mockLogger_Println_Call {
+func (_c *mockLogger_Println_Call) Run(run func(args ...any)) *mockLogger_Println_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []interface{}
-		variadicArgs := make([]interface{}, len(args)-0)
+		var arg0 []any
+		variadicArgs := make([]any, len(args)-0)
 		for i, a := range args[0:] {
 			if a != nil {
-				variadicArgs[i] = a.(interface{})
+				variadicArgs[i] = a.(any)
 			}
 		}
 		arg0 = variadicArgs
@@ -3260,14 +3258,14 @@ func (_c *mockLogger_Println_Call) Return() *mockLogger_Println_Call {
 	return _c
 }
 
-func (_c *mockLogger_Println_Call) RunAndReturn(run func(args ...interface{})) *mockLogger_Println_Call {
+func (_c *mockLogger_Println_Call) RunAndReturn(run func(args ...any)) *mockLogger_Println_Call {
 	_c.Run(run)
 	return _c
 }
 
 // Warningln provides a mock function for the type mockLogger
-func (_mock *mockLogger) Warningln(args ...interface{}) {
-	var _ca []interface{}
+func (_mock *mockLogger) Warningln(args ...any) {
+	var _ca []any
 	_ca = append(_ca, args...)
 	_mock.Called(_ca...)
 	return
@@ -3279,19 +3277,19 @@ type mockLogger_Warningln_Call struct {
 }
 
 // Warningln is a helper method to define mock.On call
-//   - args ...interface{}
-func (_e *mockLogger_Expecter) Warningln(args ...interface{}) *mockLogger_Warningln_Call {
+//   - args ...any
+func (_e *mockLogger_Expecter) Warningln(args ...any) *mockLogger_Warningln_Call {
 	return &mockLogger_Warningln_Call{Call: _e.mock.On("Warningln",
-		append([]interface{}{}, args...)...)}
+		append([]any{}, args...)...)}
 }
 
-func (_c *mockLogger_Warningln_Call) Run(run func(args ...interface{})) *mockLogger_Warningln_Call {
+func (_c *mockLogger_Warningln_Call) Run(run func(args ...any)) *mockLogger_Warningln_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []interface{}
-		variadicArgs := make([]interface{}, len(args)-0)
+		var arg0 []any
+		variadicArgs := make([]any, len(args)-0)
 		for i, a := range args[0:] {
 			if a != nil {
-				variadicArgs[i] = a.(interface{})
+				variadicArgs[i] = a.(any)
 			}
 		}
 		arg0 = variadicArgs
@@ -3307,7 +3305,7 @@ func (_c *mockLogger_Warningln_Call) Return() *mockLogger_Warningln_Call {
 	return _c
 }
 
-func (_c *mockLogger_Warningln_Call) RunAndReturn(run func(args ...interface{})) *mockLogger_Warningln_Call {
+func (_c *mockLogger_Warningln_Call) RunAndReturn(run func(args ...any)) *mockLogger_Warningln_Call {
 	_c.Run(run)
 	return _c
 }
@@ -3374,7 +3372,7 @@ type MockSecretsResolver_Resolve_Call struct {
 
 // Resolve is a helper method to define mock.On call
 //   - secrets spec.Secrets
-func (_e *MockSecretsResolver_Expecter) Resolve(secrets interface{}) *MockSecretsResolver_Resolve_Call {
+func (_e *MockSecretsResolver_Expecter) Resolve(secrets any) *MockSecretsResolver_Resolve_Call {
 	return &MockSecretsResolver_Resolve_Call{Call: _e.mock.On("Resolve", secrets)}
 }
 
@@ -3463,7 +3461,7 @@ type MockSecretResolverRegistry_GetFor_Call struct {
 
 // GetFor is a helper method to define mock.On call
 //   - secret spec.Secret
-func (_e *MockSecretResolverRegistry_Expecter) GetFor(secret interface{}) *MockSecretResolverRegistry_GetFor_Call {
+func (_e *MockSecretResolverRegistry_Expecter) GetFor(secret any) *MockSecretResolverRegistry_GetFor_Call {
 	return &MockSecretResolverRegistry_GetFor_Call{Call: _e.mock.On("GetFor", secret)}
 }
 
@@ -3503,7 +3501,7 @@ type MockSecretResolverRegistry_Register_Call struct {
 
 // Register is a helper method to define mock.On call
 //   - f secretResolverFactory
-func (_e *MockSecretResolverRegistry_Expecter) Register(f interface{}) *MockSecretResolverRegistry_Register_Call {
+func (_e *MockSecretResolverRegistry_Expecter) Register(f any) *MockSecretResolverRegistry_Register_Call {
 	return &MockSecretResolverRegistry_Register_Call{Call: _e.mock.On("Register", f)}
 }
 
@@ -3760,7 +3758,7 @@ type MockShell_GenerateSaveScript_Call struct {
 //   - info ShellScriptInfo
 //   - scriptPath string
 //   - script string
-func (_e *MockShell_Expecter) GenerateSaveScript(info interface{}, scriptPath interface{}, script interface{}) *MockShell_GenerateSaveScript_Call {
+func (_e *MockShell_Expecter) GenerateSaveScript(info any, scriptPath any, script any) *MockShell_GenerateSaveScript_Call {
 	return &MockShell_GenerateSaveScript_Call{Call: _e.mock.On("GenerateSaveScript", info, scriptPath, script)}
 }
 
@@ -3832,7 +3830,7 @@ type MockShell_GenerateScript_Call struct {
 //   - ctx context.Context
 //   - buildStage BuildStage
 //   - info ShellScriptInfo
-func (_e *MockShell_Expecter) GenerateScript(ctx interface{}, buildStage interface{}, info interface{}) *MockShell_GenerateScript_Call {
+func (_e *MockShell_Expecter) GenerateScript(ctx any, buildStage any, info any) *MockShell_GenerateScript_Call {
 	return &MockShell_GenerateScript_Call{Call: _e.mock.On("GenerateScript", ctx, buildStage, info)}
 }
 
@@ -3904,7 +3902,7 @@ type MockShell_GetConfiguration_Call struct {
 
 // GetConfiguration is a helper method to define mock.On call
 //   - info ShellScriptInfo
-func (_e *MockShell_Expecter) GetConfiguration(info interface{}) *MockShell_GetConfiguration_Call {
+func (_e *MockShell_Expecter) GetConfiguration(info any) *MockShell_GetConfiguration_Call {
 	return &MockShell_GetConfiguration_Call{Call: _e.mock.On("GetConfiguration", info)}
 }
 
@@ -3958,7 +3956,7 @@ type MockShell_GetEntrypointCommand_Call struct {
 // GetEntrypointCommand is a helper method to define mock.On call
 //   - info ShellScriptInfo
 //   - probeFile string
-func (_e *MockShell_Expecter) GetEntrypointCommand(info interface{}, probeFile interface{}) *MockShell_GetEntrypointCommand_Call {
+func (_e *MockShell_Expecter) GetEntrypointCommand(info any, probeFile any) *MockShell_GetEntrypointCommand_Call {
 	return &MockShell_GetEntrypointCommand_Call{Call: _e.mock.On("GetEntrypointCommand", info, probeFile)}
 }
 
@@ -4003,7 +4001,7 @@ type MockShell_GetFeatures_Call struct {
 
 // GetFeatures is a helper method to define mock.On call
 //   - features *FeaturesInfo
-func (_e *MockShell_Expecter) GetFeatures(features interface{}) *MockShell_GetFeatures_Call {
+func (_e *MockShell_Expecter) GetFeatures(features any) *MockShell_GetFeatures_Call {
 	return &MockShell_GetFeatures_Call{Call: _e.mock.On("GetFeatures", features)}
 }
 

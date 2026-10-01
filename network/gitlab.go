@@ -1285,6 +1285,7 @@ func (n *GitLabClient) DownloadArtifacts(
 	if directDownload != nil && *directDownload {
 		query := url.Values{}
 		query.Set("direct_download", "true")
+		query.Set("download_mode", "direct")
 		uri := fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode())
 		headers, correlationID := addCorrelationID(JobTokenHeader(config.Token))
 		cli, err := n.getClient(&config)
@@ -1390,9 +1391,11 @@ func (n *GitLabClient) DownloadArtifacts(
 	}
 
 	// Standard path: single GET (may follow redirect), stream body.
+	// directDownload is guaranteed nil or false here; the true case always returns above.
+	// Retries pass nil; preserve explicit false values for other callers.
 	query := url.Values{}
 	if directDownload != nil {
-		query.Set("direct_download", strconv.FormatBool(*directDownload))
+		query.Set("direct_download", "false")
 	}
 	uri := fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode())
 	headers, correlationID := addCorrelationID(JobTokenHeader(config.Token))

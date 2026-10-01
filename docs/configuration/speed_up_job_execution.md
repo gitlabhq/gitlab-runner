@@ -265,6 +265,8 @@ variables:
 
 #### Artifact downloads from object storage
 
+Because `FF_USE_DIRECT_DOWNLOAD` defaults to `true`, runners with default feature flag settings request direct mode on the first artifact download attempt. GitLab honors the request only when an administrator allows direct mode. The `allowed_download_modes` setting applies to the whole instance. For more information, see [Allow client override for proxy download](https://docs.gitlab.com/administration/object_storage/#allow-client-override-for-proxy-download).
+
 When the coordinator redirects artifact downloads to object storage (`direct_download`), you can enable parallel range downloads
 with the `FF_USE_PARALLEL_ARTIFACT_TRANSFER` [feature flag](feature-flags.md). This is separate from parallel cache transfers
 (`FF_USE_PARALLEL_CACHE_TRANSFER`). See [Parallel artifact downloads (direct download)](advanced-configuration.md#parallel-artifact-downloads-direct-download).
