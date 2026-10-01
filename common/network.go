@@ -329,6 +329,10 @@ func (j *JobCredentials) GetURL() string {
 	return j.URL
 }
 
+func (j *JobCredentials) GetAPIURL() string {
+	return j.URL
+}
+
 func (j *JobCredentials) GetTLSCAFile() string {
 	return j.TLSCAFile
 }

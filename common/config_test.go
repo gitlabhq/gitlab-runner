@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -3162,6 +3164,7 @@ func TestLoadConfig_ExpandsEnvironmentVariables(t *testing.T) {
 	t.Setenv("TEST_RUNNER_URL", "https://gitlab.example.com")
 	t.Setenv("TEST_RUNNER_TOKEN_1", "glrt-token-one")
 	t.Setenv("TEST_RUNNER_TOKEN_2", "glrt-token-two")
+	t.Setenv("TEST_RUNNER_API_URL", "https://api.internal.example.com")
 
 	configContent := `
 [[runners]]
@@ -3178,6 +3181,12 @@ func TestLoadConfig_ExpandsEnvironmentVariables(t *testing.T) {
   name = "runner-literal"
   url = "https://literal.example.com"
   token = "glrt-literal-token"
+
+[[runners]]
+  name = "runner-api-url"
+  url = "https://literal.example.com"
+  api_url = "${TEST_RUNNER_API_URL}"
+  token = "glrt-literal-token"
 `
 
 	tempFile, err := os.CreateTemp(t.TempDir(), "test_config")
@@ -3191,7 +3200,7 @@ func TestLoadConfig_ExpandsEnvironmentVariables(t *testing.T) {
 	err = cfg.LoadConfig(tempFile.Name())
 	require.NoError(t, err)
 
-	require.Len(t, cfg.Runners, 3)
+	require.Len(t, cfg.Runners, 4)
 
 	// runner-1: both $VAR and ${VAR} syntax should work
 	assert.Equal(t, "https://gitlab.example.com", cfg.Runners[0].URL)
@@ -3204,6 +3213,45 @@ func TestLoadConfig_ExpandsEnvironmentVariables(t *testing.T) {
 	// runner-literal: literal values should remain unchanged
 	assert.Equal(t, "https://literal.example.com", cfg.Runners[2].URL)
 	assert.Equal(t, "glrt-literal-token", cfg.Runners[2].Token)
+
+	assert.Equal(t, "https://api.internal.example.com", cfg.Runners[3].APIURL)
+	assert.Equal(t, "https://api.internal.example.com", cfg.Runners[3].GetAPIURL())
+	assert.Equal(t, "https://literal.example.com", cfg.Runners[3].GetURL())
+}
+
+func TestLoadConfig_APIURLExpandsToEmpty(t *testing.T) {
+	t.Setenv("TEST_RUNNER_UNSET_API_URL", "")
+
+	tempFile, err := os.CreateTemp(t.TempDir(), "test_config")
+	require.NoError(t, err)
+	defer tempFile.Close()
+
+	_, err = tempFile.WriteString(`
+[[runners]]
+  name = "runner"
+  url = "https://gitlab.example.com"
+  api_url = "${TEST_RUNNER_UNSET_API_URL}"
+  token = "glrt-token"
+`)
+	require.NoError(t, err)
+
+	hook := logrustest.NewGlobal()
+	t.Cleanup(func() { logrus.StandardLogger().ReplaceHooks(make(logrus.LevelHooks)) })
+
+	cfg := NewConfig()
+	require.NoError(t, cfg.LoadConfig(tempFile.Name()))
+
+	require.Len(t, cfg.Runners, 1)
+	assert.Equal(t, "", cfg.Runners[0].APIURL)
+	assert.Equal(t, "https://gitlab.example.com", cfg.Runners[0].GetAPIURL())
+
+	var warnings []string
+	for _, e := range hook.AllEntries() {
+		if e.Level == logrus.WarnLevel {
+			warnings = append(warnings, e.Message)
+		}
+	}
+	assert.Contains(t, warnings, "api_url expanded to an empty string; falling back to url for API requests")
 }
 
 func TestLoadConfig_SentryDSNFromEnv(t *testing.T) {
@@ -4360,6 +4408,18 @@ func TestRunnerCredentials_SameAs(t *testing.T) {
 			},
 			result: false,
 		},
+		"same token and URL, different api_url": {
+			c: &RunnerCredentials{
+				URL:    "https://gitlab.com",
+				APIURL: "https://api.internal.example.com",
+				Token:  "token123",
+			},
+			other: &RunnerCredentials{
+				URL:   "https://gitlab.com",
+				Token: "token123",
+			},
+			result: true,
+		},
 	}
 
 	for name, tt := range tests {
@@ -4368,6 +4428,36 @@ func TestRunnerCredentials_SameAs(t *testing.T) {
 			assert.Equal(t, tt.result, result, "SameAs should return %v for this case", tt.result)
 		})
 	}
+}
+
+func TestRunnerCredentials_GetAPIURL(t *testing.T) {
+	tests := map[string]struct {
+		c              RunnerCredentials
+		expectedAPIURL string
+	}{
+		"api_url unset": {
+			c:              RunnerCredentials{URL: "https://gitlab.com"},
+			expectedAPIURL: "https://gitlab.com",
+		},
+		"api_url set": {
+			c:              RunnerCredentials{URL: "https://gitlab.com", APIURL: "https://api.internal.example.com"},
+			expectedAPIURL: "https://api.internal.example.com",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expectedAPIURL, tt.c.GetAPIURL())
+			assert.Equal(t, "https://gitlab.com", tt.c.GetURL())
+		})
+	}
+}
+
+func TestRunnerCredentials_UniqueID_IgnoresAPIURL(t *testing.T) {
+	withAPIURL := RunnerCredentials{URL: "https://gitlab.com", APIURL: "https://api.internal.example.com", Token: "token123"}
+	withoutAPIURL := RunnerCredentials{URL: "https://gitlab.com", Token: "token123"}
+
+	assert.Equal(t, withoutAPIURL.UniqueID(), withAPIURL.UniqueID())
 }
 
 func TestConfig_ValidateLogFieldSettings(t *testing.T) {
