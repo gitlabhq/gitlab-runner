@@ -1271,14 +1271,18 @@ func (s *executor) initContainerResources() api.ResourceRequirements {
 }
 
 func (s *executor) podResourcesReference() *api.ResourceRequirements {
-	resources := api.ResourceRequirements{}
-
-	if s.configurationOverwrites != nil {
-		resources.Limits = s.configurationOverwrites.podLimits
-		resources.Requests = s.configurationOverwrites.podRequests
+	if s.configurationOverwrites == nil {
+		return nil
 	}
 
-	return &resources
+	if len(s.configurationOverwrites.podLimits) == 0 && len(s.configurationOverwrites.podRequests) == 0 {
+		return nil
+	}
+
+	return &api.ResourceRequirements{
+		Limits:   s.configurationOverwrites.podLimits,
+		Requests: s.configurationOverwrites.podRequests,
+	}
 }
 
 func (s *executor) buildPermissionsInitContainer(os string) (api.Container, error) {
