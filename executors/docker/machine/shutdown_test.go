@@ -1289,7 +1289,7 @@ func TestMachineProvider_EarlyDrain_DoesNotClaimMachineBeingCreated(t *testing.T
 			var details *machineDetails
 			var errCh chan error
 			require.NotPanics(t, func() {
-				details, errCh = p.create(machineDefaultConfig, machineStateIdle, pendingUse)
+				details, errCh = p.create(machineDefaultConfig, machineStateIdle, pendingUse, nil)
 			})
 			require.NotNil(t, details)
 			require.NoError(t, <-errCh)

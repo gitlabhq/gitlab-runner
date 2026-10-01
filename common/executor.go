@@ -138,6 +138,15 @@ type ManagedExecutorProvider interface {
 	Shutdown(ctx context.Context, config *Config)
 }
 
+// WarmupReporter is an optional interface for executor providers that build
+// capacity at startup. /health/ready waits for it after boot-verify.
+type WarmupReporter interface {
+	// WarmupReady reports whether every runner in runners has enough capacity
+	// or has run out of warm-up time. pending describes what is still being
+	// waited on.
+	WarmupReady(runners []*RunnerConfig) (ready bool, pending string)
+}
+
 // ShutdownAwareExecutorProvider can release resources while jobs are still running.
 type ShutdownAwareExecutorProvider interface {
 	ManagedExecutorProvider

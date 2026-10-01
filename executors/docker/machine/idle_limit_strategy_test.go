@@ -7,18 +7,20 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type ilsRunnerConfig struct {
-	limit           int
-	idleCount       int
-	idleCountMin    int
-	idleScaleFactor float64
-	idleTime        int
-	maxGrowthRate   int
-	maxBuilds       int
+	limit              int
+	idleCount          int
+	idleCountMin       int
+	idleScaleFactor    float64
+	idleTime           int
+	maxGrowthRate      int
+	maxBuilds          int
+	warmupIdleFraction float64
 }
 
 type ilsMachinesData struct {
@@ -38,12 +40,13 @@ func ilsNewRunnerConfig(c ilsRunnerConfig) *common.RunnerConfig {
 		Limit: c.limit,
 	}
 	config.Machine = &common.DockerMachine{
-		IdleCount:       c.idleCount,
-		IdleCountMin:    c.idleCountMin,
-		IdleScaleFactor: c.idleScaleFactor,
-		IdleTime:        c.idleTime,
-		MaxGrowthRate:   c.maxGrowthRate,
-		MaxBuilds:       c.maxBuilds,
+		IdleCount:          c.idleCount,
+		IdleCountMin:       c.idleCountMin,
+		IdleScaleFactor:    c.idleScaleFactor,
+		IdleTime:           c.idleTime,
+		MaxGrowthRate:      c.maxGrowthRate,
+		MaxBuilds:          c.maxBuilds,
+		WarmupIdleFraction: c.warmupIdleFraction,
 	}
 
 	return config
@@ -158,7 +161,7 @@ func TestCanCreateIdle(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			result := canCreateIdle(ilsNewRunnerConfig(tt.config), ilsNewMachinesData(tt.data))
+			result := canCreateIdle(ilsNewRunnerConfig(tt.config), ilsNewMachinesData(tt.data), nil)
 			assert.Equal(t, tt.expectedCanCreate, result)
 		})
 	}
@@ -272,7 +275,7 @@ func TestCanCreateOnDemand(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			result := canCreateOnDemand(ilsNewRunnerConfig(tt.config), ilsNewMachinesData(tt.data))
+			result := canCreateOnDemand(ilsNewRunnerConfig(tt.config), ilsNewMachinesData(tt.data), nil)
 			assert.Equal(t, tt.expectedCanCreate, result)
 		})
 	}
@@ -407,6 +410,7 @@ func TestShouldRemoveIdle(t *testing.T) {
 			result := shouldRemoveIdle(
 				ilsNewRunnerConfig(tt.config),
 				ilsNewMachinesData(tt.data),
+				nil,
 				ilsNewMachineDetails(tt.details).info(),
 			)
 			assert.Equal(t, tt.expectedReason, result)
@@ -456,7 +460,141 @@ func TestEffectiveIdleTarget(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			config := ilsNewRunnerConfig(test.config)
 			data := ilsNewMachinesData(test.data)
-			assert.Equal(t, test.expected, effectiveIdleTarget(config, data))
+			assert.Equal(t, test.expected, effectiveIdleTarget(config, data, nil))
 		})
 	}
+}
+
+func TestEffectiveIdleTargetDuringWarmup(t *testing.T) {
+	tests := map[string]struct {
+		config   ilsRunnerConfig
+		warmup   *warmupLimits
+		data     ilsMachinesData
+		expected int
+	}{
+		"warm-up target replaces the scale factor value": {
+			config:   ilsRunnerConfig{idleCount: 200, idleCountMin: 16, idleScaleFactor: 0.9, warmupIdleFraction: 0.75},
+			warmup:   &warmupLimits{burst: true},
+			data:     ilsMachinesData{used: 0},
+			expected: 150,
+		},
+		"warm-up target capped at IdleCount": {
+			config:   ilsRunnerConfig{idleCount: 200, idleCountMin: 16, idleScaleFactor: 0.9, warmupIdleFraction: 1.5},
+			warmup:   &warmupLimits{burst: true},
+			expected: 200,
+		},
+		"scale factor value wins when higher": {
+			config:   ilsRunnerConfig{idleCount: 200, idleCountMin: 16, idleScaleFactor: 0.9, warmupIdleFraction: 0.75},
+			warmup:   &warmupLimits{burst: true},
+			data:     ilsMachinesData{used: 190},
+			expected: 171,
+		},
+		"disabled when WarmupIdleFraction is 0": {
+			config:   ilsRunnerConfig{idleCount: 200, idleCountMin: 16, idleScaleFactor: 0.9},
+			warmup:   &warmupLimits{burst: true},
+			expected: 16,
+		},
+		"outside the window the scale factor value applies": {
+			config:   ilsRunnerConfig{idleCount: 200, idleCountMin: 16, idleScaleFactor: 0.9, warmupIdleFraction: 0.75},
+			warmup:   nil,
+			data:     ilsMachinesData{used: 20},
+			expected: 18,
+		},
+		"on-demand mode stays at zero": {
+			config:   ilsRunnerConfig{idleCount: 0, warmupIdleFraction: 0.75},
+			warmup:   &warmupLimits{burst: true},
+			expected: 0,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			config := ilsNewRunnerConfig(test.config)
+			data := ilsNewMachinesData(test.data)
+			assert.Equal(t, test.expected, effectiveIdleTarget(config, data, test.warmup))
+		})
+	}
+}
+
+func TestEffectiveIdleTargetDuringWarmupFollowsActivePeriod(t *testing.T) {
+	config := ilsNewRunnerConfig(ilsRunnerConfig{idleCount: 200, idleScaleFactor: 0.9, warmupIdleFraction: 0.5})
+	config.Machine.AutoscalingConfigs = []*common.DockerMachineAutoscaling{{
+		Periods:         []string{"* * * * * * *"},
+		IdleCount:       40,
+		IdleScaleFactor: 0.9,
+		IdleCountMin:    2,
+	}}
+	require.NoError(t, config.Machine.CompilePeriods())
+
+	data := ilsNewMachinesData(ilsMachinesData{})
+	assert.Equal(t, 20, effectiveIdleTarget(config, data, &warmupLimits{burst: true}))
+	assert.Equal(t, 2, effectiveIdleTarget(config, data, nil))
+}
+
+func TestMaxGrowthRateDuringWarmup(t *testing.T) {
+	tests := map[string]struct {
+		config   ilsRunnerConfig
+		warmup   *warmupLimits
+		expected int
+	}{
+		"burst raises the cap to the warm-up target": {
+			config:   ilsRunnerConfig{idleCount: 200, maxGrowthRate: 90, warmupIdleFraction: 0.75},
+			warmup:   &warmupLimits{burst: true},
+			expected: 150,
+		},
+		"MaxGrowthRate wins when higher than the target": {
+			config:   ilsRunnerConfig{idleCount: 200, maxGrowthRate: 300, warmupIdleFraction: 0.75},
+			warmup:   &warmupLimits{burst: true},
+			expected: 300,
+		},
+		"after a creation error MaxGrowthRate applies": {
+			config:   ilsRunnerConfig{idleCount: 200, maxGrowthRate: 90, warmupIdleFraction: 0.75},
+			warmup:   &warmupLimits{burst: false},
+			expected: 90,
+		},
+		"outside the window MaxGrowthRate applies": {
+			config:   ilsRunnerConfig{idleCount: 200, maxGrowthRate: 90, warmupIdleFraction: 0.75},
+			warmup:   nil,
+			expected: 90,
+		},
+		"unlimited stays unlimited": {
+			config:   ilsRunnerConfig{idleCount: 200, maxGrowthRate: 0, warmupIdleFraction: 0.75},
+			warmup:   &warmupLimits{burst: true},
+			expected: 0,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.expected, maxGrowthRate(ilsNewRunnerConfig(test.config), test.warmup))
+		})
+	}
+}
+
+func TestCanCreateIdleDuringWarmup(t *testing.T) {
+	config := ilsNewRunnerConfig(ilsRunnerConfig{idleCount: 200, idleCountMin: 16, idleScaleFactor: 0.9, maxGrowthRate: 90, warmupIdleFraction: 0.75})
+
+	t.Run("burst creates past MaxGrowthRate up to the warm-up target", func(t *testing.T) {
+		assert.True(t, canCreateIdle(config, ilsNewMachinesData(ilsMachinesData{creating: 149}), &warmupLimits{burst: true}))
+		assert.False(t, canCreateIdle(config, ilsNewMachinesData(ilsMachinesData{creating: 150}), &warmupLimits{burst: true}))
+	})
+
+	t.Run("without burst MaxGrowthRate caps creation while the target still applies", func(t *testing.T) {
+		assert.True(t, canCreateIdle(config, ilsNewMachinesData(ilsMachinesData{creating: 89}), &warmupLimits{burst: false}))
+		assert.False(t, canCreateIdle(config, ilsNewMachinesData(ilsMachinesData{creating: 90}), &warmupLimits{burst: false}))
+		assert.False(t, canCreateIdle(config, ilsNewMachinesData(ilsMachinesData{creating: 50, idle: 100}), &warmupLimits{burst: false}))
+	})
+
+	t.Run("outside the window IdleCountMin applies", func(t *testing.T) {
+		assert.False(t, canCreateIdle(config, ilsNewMachinesData(ilsMachinesData{idle: 16}), nil))
+	})
+}
+
+func TestShouldRemoveIdleDuringWarmup(t *testing.T) {
+	config := ilsNewRunnerConfig(ilsRunnerConfig{idleCount: 200, idleCountMin: 16, idleScaleFactor: 0.9, idleTime: 30, warmupIdleFraction: 0.75})
+	data := ilsNewMachinesData(ilsMachinesData{idle: 149})
+	details := ilsNewMachineDetails(ilsMachineDetails{state: machineStateIdle, used: time.Now().Add(-time.Minute)}).info()
+
+	assert.Equal(t, dontRemoveIdleMachine, shouldRemoveIdle(config, data, &warmupLimits{}, details))
+	assert.Equal(t, removeIdleReasonTooManyIdleMachines, shouldRemoveIdle(config, data, nil, details))
 }

@@ -5,6 +5,7 @@ package common
 import (
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -1094,6 +1095,54 @@ func TestDockerMachine(t *testing.T) {
 			assert.Equal(t, tt.expectedIdleTime, tt.config.GetIdleTime())
 		})
 	}
+}
+
+func TestDockerMachine_Warmup(t *testing.T) {
+	t.Run("disabled by default", func(t *testing.T) {
+		config := &DockerMachine{IdleCount: 200}
+		assert.False(t, config.WarmupEnabled())
+		assert.Equal(t, 0, config.GetWarmupIdleTarget())
+		assert.Equal(t, 0, config.GetWarmupReadyMachines())
+	})
+
+	t.Run("defaults", func(t *testing.T) {
+		config := &DockerMachine{IdleCount: 200, WarmupIdleFraction: 0.75}
+		assert.True(t, config.WarmupEnabled())
+		assert.Equal(t, 150, config.GetWarmupIdleTarget())
+		assert.Equal(t, 120, config.GetWarmupReadyMachines())
+		assert.Equal(t, 10*time.Minute, config.GetWarmupDuration())
+	})
+
+	t.Run("explicit values", func(t *testing.T) {
+		config := &DockerMachine{IdleCount: 10, WarmupIdleFraction: 0.5, WarmupReadyFraction: 0.5, WarmupDuration: time.Minute}
+		assert.Equal(t, 5, config.GetWarmupIdleTarget())
+		assert.Equal(t, 3, config.GetWarmupReadyMachines())
+		assert.Equal(t, time.Minute, config.GetWarmupDuration())
+	})
+
+	t.Run("target never exceeds IdleCount", func(t *testing.T) {
+		config := &DockerMachine{IdleCount: 10, WarmupIdleFraction: 2}
+		assert.Equal(t, 10, config.GetWarmupIdleTarget())
+	})
+
+	t.Run("target rounds to nearest", func(t *testing.T) {
+		assert.Equal(t, 63, (&DockerMachine{IdleCount: 90, WarmupIdleFraction: 0.7}).GetWarmupIdleTarget())
+		assert.Equal(t, 29, (&DockerMachine{IdleCount: 100, WarmupIdleFraction: 0.29}).GetWarmupIdleTarget())
+		assert.Equal(t, 3, (&DockerMachine{IdleCount: 5, WarmupIdleFraction: 0.5}).GetWarmupIdleTarget())
+	})
+
+	t.Run("follows the active autoscaling period", func(t *testing.T) {
+		config := &DockerMachine{
+			IdleCount:          200,
+			WarmupIdleFraction: 0.5,
+			AutoscalingConfigs: []*DockerMachineAutoscaling{{
+				Periods:   []string{"* * * * * * *"},
+				IdleCount: 40,
+			}},
+		}
+		require.NoError(t, config.CompilePeriods())
+		assert.Equal(t, 20, config.GetWarmupIdleTarget())
+	})
 }
 
 func TestRunnerSettings_GetGracefulKillTimeout_GetForceKillTimeout(t *testing.T) {
@@ -4052,6 +4101,27 @@ func TestRunnerConfig_ValidateMachineOptionsWithName(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunnerConfig_ValidateMachineWarmup(t *testing.T) {
+	for _, fraction := range []float64{0, 0.5, 1} {
+		config := &RunnerConfig{RunnerSettings: RunnerSettings{Machine: &DockerMachine{WarmupIdleFraction: fraction, WarmupReadyFraction: fraction}}}
+		assert.NoError(t, config.Validate(), "fraction %v", fraction)
+	}
+
+	for name, machine := range map[string]*DockerMachine{
+		"WarmupIdleFraction 1.5":  {WarmupIdleFraction: 1.5},
+		"WarmupIdleFraction -0.1": {WarmupIdleFraction: -0.1},
+		"WarmupReadyFraction 1.2": {WarmupReadyFraction: 1.2},
+		"WarmupReadyFraction -1":  {WarmupReadyFraction: -1},
+		"WarmupReadyFraction NaN": {WarmupReadyFraction: math.NaN()},
+	} {
+		err := (&RunnerConfig{RunnerSettings: RunnerSettings{Machine: machine}}).Validate()
+		require.Error(t, err, name)
+		assert.Contains(t, err.Error(), name+" must be between 0")
+	}
+
+	assert.NoError(t, (&RunnerConfig{}).Validate())
 }
 
 func TestRunnerConfig_ValidateAllowedDockerCredentialHelpers(t *testing.T) {

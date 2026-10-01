@@ -15,45 +15,73 @@ const (
 	removeIdleReasonTooManyIdleMachines removeIdleReason = "too many idle machines"
 )
 
-func canCreateIdle(config *common.RunnerConfig, data *machinesData) bool {
-	return canCreate(config, data, false)
+// warmupLimits is nil when the runner is not in warm-up.
+type warmupLimits struct {
+	// burst raises the in-flight creation cap to the warm-up idle target until
+	// the first creation error.
+	burst bool
 }
 
-func canCreateOnDemand(config *common.RunnerConfig, data *machinesData) bool {
-	return canCreate(config, data, true)
+func canCreateIdle(config *common.RunnerConfig, data *machinesData, warmup *warmupLimits) bool {
+	return canCreate(config, data, warmup, false)
 }
 
-func canCreate(config *common.RunnerConfig, data *machinesData, onDemand bool) bool {
+func canCreateOnDemand(config *common.RunnerConfig, data *machinesData, warmup *warmupLimits) bool {
+	return canCreate(config, data, warmup, true)
+}
+
+func canCreate(config *common.RunnerConfig, data *machinesData, warmup *warmupLimits, onDemand bool) bool {
 	ils := &idleLimitStrategy{
 		config: config,
 		data:   data,
+		warmup: warmup,
 	}
 
 	return ils.canCreate(onDemand)
 }
 
-func shouldRemoveIdle(config *common.RunnerConfig, data *machinesData, details machineInfo) removeIdleReason {
+func shouldRemoveIdle(
+	config *common.RunnerConfig,
+	data *machinesData,
+	warmup *warmupLimits,
+	details machineInfo,
+) removeIdleReason {
 	ils := &idleLimitStrategy{
 		config:  config,
 		data:    data,
+		warmup:  warmup,
 		details: details,
 	}
 
 	return ils.shouldRemove()
 }
 
-func effectiveIdleTarget(config *common.RunnerConfig, data *machinesData) int {
+func effectiveIdleTarget(config *common.RunnerConfig, data *machinesData, warmup *warmupLimits) int {
 	ils := &idleLimitStrategy{
 		config: config,
 		data:   data,
+		warmup: warmup,
 	}
 
 	return ils.effectiveIdleTarget()
 }
 
+// maxGrowthRate is the in-flight creation cap. 0 means unlimited.
+func maxGrowthRate(config *common.RunnerConfig, warmup *warmupLimits) int {
+	rate := config.Machine.MaxGrowthRate
+	if rate <= 0 {
+		return 0
+	}
+	if warmup != nil && warmup.burst {
+		rate = max(rate, config.Machine.GetWarmupIdleTarget())
+	}
+	return rate
+}
+
 type idleLimitStrategy struct {
 	config  *common.RunnerConfig
 	data    *machinesData
+	warmup  *warmupLimits
 	details machineInfo
 }
 
@@ -102,7 +130,7 @@ func (ils *idleLimitStrategy) shouldRemove() removeIdleReason {
 // This behavior is optional and depends on the MaxGrowthRate setting.
 // When it's set to 0 then it's ignored.
 func (ils *idleLimitStrategy) machinesGrowthExceeded() bool {
-	maxGrowthRate := ils.config.Machine.MaxGrowthRate
+	maxGrowthRate := maxGrowthRate(ils.config, ils.warmup)
 	if maxGrowthRate <= 0 {
 		return false
 	}
@@ -128,6 +156,14 @@ func (ils *idleLimitStrategy) composedIdleMachinesExceeded() bool {
 // effectiveIdleTarget is the number of available machines the creation loop
 // aims for.
 func (ils *idleLimitStrategy) effectiveIdleTarget() int {
+	target := ils.scaledIdleTarget()
+	if ils.warmup != nil {
+		target = max(target, ils.config.Machine.GetWarmupIdleTarget())
+	}
+	return target
+}
+
+func (ils *idleLimitStrategy) scaledIdleTarget() int {
 	idleCount := ils.config.Machine.GetIdleCount()
 	factor := ils.config.Machine.GetIdleScaleFactor()
 	if factor <= 0 {

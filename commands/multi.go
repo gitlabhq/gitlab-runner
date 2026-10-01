@@ -171,6 +171,9 @@ type RunCommand struct {
 	// boot-verify canary succeeds.
 	bootVerifyReady atomic.Bool
 
+	// warmupReady is never cleared, so a pool dip later does not make the pod NotReady.
+	warmupReady atomic.Bool
+
 	// runError holds a fatal error from the run goroutine so Execute can
 	// exit non-zero. Set on boot-verify failure, read after svc.Run() returns.
 	runError atomic.Pointer[error]
@@ -962,13 +965,52 @@ func (mr *RunCommand) serveDebugData(mux *http.ServeMux) {
 }
 
 func (mr *RunCommand) serveHealthReady(w http.ResponseWriter, _ *http.Request) {
-	if mr.bootVerifyReady.Load() {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ready\n"))
+	if !mr.bootVerifyReady.Load() {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("boot-verify pending\n"))
 		return
 	}
-	w.WriteHeader(http.StatusServiceUnavailable)
-	_, _ = w.Write([]byte("boot-verify pending\n"))
+
+	if ready, pending := mr.providersWarmupReady(); !ready {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(pending + "\n"))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ready\n"))
+}
+
+func (mr *RunCommand) providersWarmupReady() (bool, string) {
+	if mr.warmupReady.Load() {
+		return true, ""
+	}
+
+	runners := mr.configfile.Config().Runners
+	var pending []string
+	for name, provider := range mr.executorProviders.All() {
+		reporter, ok := provider.(common.WarmupReporter)
+		if !ok {
+			continue
+		}
+
+		var served []*common.RunnerConfig
+		for _, runner := range runners {
+			if runner.Executor == name {
+				served = append(served, runner)
+			}
+		}
+		if ready, msg := reporter.WarmupReady(served); !ready {
+			pending = append(pending, msg)
+		}
+	}
+
+	if len(pending) > 0 {
+		return false, strings.Join(pending, "; ")
+	}
+
+	mr.warmupReady.Store(true)
+	return true, ""
 }
 
 func (mr *RunCommand) servePprof(mux *http.ServeMux) {

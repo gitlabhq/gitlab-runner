@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"math"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -511,6 +512,10 @@ type DockerMachine struct {
 	MaxRemovalAttempts int `toml:"MaxRemovalAttempts,omitzero" long:"max-removal-attempts" env:"MACHINE_MAX_REMOVAL_ATTEMPTS" description:"Maximum attempts at removing a machine before giving up (defaults to 30)"`
 
 	HeartbeatInterval time.Duration `toml:"HeartbeatInterval,omitzero" long:"heartbeat-interval" env:"MACHINE_HEARTBEAT_INTERVAL" description:"How often to refresh a provider-side liveness label on each tracked machine (e.g. '30m'), so external cleanup can tell tracked machines from orphaned ones. 0 disables it (default)"`
+
+	WarmupIdleFraction  float64       `toml:"WarmupIdleFraction,omitzero" long:"warmup-idle-fraction" env:"MACHINE_WARMUP_IDLE_FRACTION" description:"(Experimental) Fraction of IdleCount to build as the idle target during warm-up, regardless of IdleScaleFactor. Between 0 and 1; 0 disables warm-up (default)"`
+	WarmupDuration      time.Duration `toml:"WarmupDuration,omitzero" long:"warmup-duration" env:"MACHINE_WARMUP_DURATION" description:"(Experimental) How long warm-up lasts from the runner's first machine acquisition (defaults to 10m)"`
+	WarmupReadyFraction float64       `toml:"WarmupReadyFraction,omitzero" long:"warmup-ready-fraction" env:"MACHINE_WARMUP_READY_FRACTION" description:"(Experimental) Fraction of the warm-up idle target (WarmupIdleFraction x IdleCount), not of IdleCount, that must be booted before /health/ready reports ready. Between 0 and 1; 0 selects the default 0.8"`
 
 	OffPeakPeriods   []string `toml:"OffPeakPeriods,omitempty" json:",omitempty" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`              // DEPRECATED
 	OffPeakTimezone  string   `toml:"OffPeakTimezone,omitempty" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                 // DEPRECATED
@@ -2357,6 +2362,36 @@ func (c *DockerMachine) GetIdleTime() int {
 	return c.IdleTime
 }
 
+const (
+	defaultMachineWarmupDuration      = 10 * time.Minute
+	defaultMachineWarmupReadyFraction = 0.8
+)
+
+func (c *DockerMachine) WarmupEnabled() bool {
+	return c.WarmupIdleFraction > 0
+}
+
+func (c *DockerMachine) GetWarmupIdleTarget() int {
+	idleCount := c.GetIdleCount()
+	return min(int(math.Round(c.WarmupIdleFraction*float64(idleCount))), idleCount)
+}
+
+func (c *DockerMachine) GetWarmupDuration() time.Duration {
+	if c.WarmupDuration <= 0 {
+		return defaultMachineWarmupDuration
+	}
+	return c.WarmupDuration
+}
+
+// GetWarmupReadyMachines is the number of booted machines /health/ready waits for.
+func (c *DockerMachine) GetWarmupReadyMachines() int {
+	fraction := c.WarmupReadyFraction
+	if fraction <= 0 {
+		fraction = defaultMachineWarmupReadyFraction
+	}
+	return int(math.Ceil(fraction * float64(c.GetWarmupIdleTarget())))
+}
+
 // getActiveAutoscalingConfig returns the autoscaling config matching the current time.
 // It goes through the [[docker.machine.autoscaling]] entries and returns the last one to match.
 // Returns nil on no matching entries.
@@ -2912,6 +2947,7 @@ func (c *RunnerConfig) Validate() error {
 		"computed labels":                   c.validateComputedLabels,
 		"slot cgroups":                      c.validateSlotCgroups,
 		"machine options with name":         c.validateMachineOptionsWithName,
+		"machine warm-up":                   c.validateMachineWarmup,
 		"allowed_docker_credential_helpers": c.validateAllowedDockerCredentialHelpers,
 	} {
 		err := v()
@@ -2952,6 +2988,22 @@ func (c *RunnerConfig) validateSlotCgroups() error {
 		validateSlotCgroupTemplate(c.Docker.ServiceSlotCgroupTemplate, "service_slot_cgroup_template")
 	}
 
+	return nil
+}
+
+func (c *RunnerConfig) validateMachineWarmup() error {
+	if c.Machine == nil {
+		return nil
+	}
+	idle := c.Machine.WarmupIdleFraction
+	if math.IsNaN(idle) || idle < 0 || idle > 1 {
+		return fmt.Errorf("WarmupIdleFraction %v must be between 0 and 1", idle)
+	}
+	// 0 is "unset" for the ready fraction (omitzero), so it cannot mean "any machine".
+	ready := c.Machine.WarmupReadyFraction
+	if math.IsNaN(ready) || ready < 0 || ready > 1 {
+		return fmt.Errorf("WarmupReadyFraction %v must be between 0 (unset) and 1", ready)
+	}
 	return nil
 }
 
