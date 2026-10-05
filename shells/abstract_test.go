@@ -3908,6 +3908,8 @@ func TestAbstractShell_writeCleanupScript(t *testing.T) {
 
 					err := shell.writeCleanupScript(t.Context(), mockShellWriter, info)
 					assert.NoError(t, err)
+					mockShellWriter.AssertCalled(t, "Variable", spec.Variable{Key: "GIT_TERMINAL_PROMPT", Value: "0"})
+					mockShellWriter.AssertCalled(t, "Variable", spec.Variable{Key: "GCM_INTERACTIVE", Value: "Never"})
 				})
 			}
 		})
@@ -4309,7 +4311,7 @@ func expectClearGitCredentials(shellWriter *MockShellWriter, remoteHost string) 
 	shellWriter.EXPECT().CommandWithStdin(
 		true,
 		"url="+remoteHost+"\nusername=gitlab-ci-token",
-		"git", "credential", "reject",
+		"git", "-c", "credential.interactive=never", "credential", "reject",
 	).Once()
 }
 
