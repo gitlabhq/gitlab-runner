@@ -50,8 +50,8 @@ func (w *warmupState) end(config *common.RunnerConfig, now time.Time) {
 	w.ended = true
 	logger := warmupLogger(config).WithFields(logrus.Fields{
 		"booted":         w.booted,
-		"readyMachines":  warmupReadyMachines(config),
-		"idleTarget":     config.Machine.GetWarmupIdleTarget(),
+		"ready_machines": warmupReadyMachines(config),
+		"idle_target":    config.Machine.GetWarmupIdleTarget(),
 		fields.DurationS: now.Sub(w.startedAt).Seconds(),
 	})
 	if w.ready {
@@ -120,10 +120,10 @@ func (m *machineProvider) warmupAcquire(config *common.RunnerConfig, now time.Ti
 
 		idleTarget := config.Machine.GetWarmupIdleTarget()
 		logger := warmupLogger(config).WithFields(logrus.Fields{
-			"idleTarget":       idleTarget,
-			"readyMachines":    warmupReadyMachines(config),
-			"maxMachineCreate": maxGrowthRate(config, state.limits()),
-			"warmupDuration":   config.Machine.GetWarmupDuration(),
+			"idle_target":       idleTarget,
+			"ready_machines":    warmupReadyMachines(config),
+			"max_growth_rate":   maxGrowthRate(config, state.limits()),
+			"warmup_duration_s": config.Machine.GetWarmupDuration().Seconds(),
 		})
 		logger.Info("Warm-up started")
 		if config.Limit > 0 && config.Limit < idleTarget {
@@ -196,8 +196,8 @@ func (m *machineProvider) observeWarmup(config *common.RunnerConfig, data *machi
 			state.readyAfter = now.Sub(state.startedAt)
 			warmupLogger(config).WithFields(logrus.Fields{
 				"booted":         state.booted,
-				"readyMachines":  readyMachines,
-				"idleTarget":     idleTarget,
+				"ready_machines": readyMachines,
+				"idle_target":    idleTarget,
 				fields.DurationS: state.readyAfter.Seconds(),
 			}).Info("Warm-up ready")
 		}
@@ -207,16 +207,16 @@ func (m *machineProvider) observeWarmup(config *common.RunnerConfig, data *machi
 		}
 		state.lastProgressLog = now
 		warmupLogger(config).WithFields(logrus.Fields{
-			"booted":        state.booted,
-			"idle":          data.Idle,
-			"used":          data.Used,
-			"creating":      data.Creating,
-			"readyMachines": readyMachines,
-			"idleTarget":    idleTarget,
-			"ready":         state.ready,
-			"burst":         state.burst,
-			"elapsed":       now.Sub(state.startedAt).Round(time.Second),
-			"remaining":     max(state.deadline.Sub(now), 0).Round(time.Second),
+			"booted":         state.booted,
+			"idle":           data.Idle,
+			"used":           data.Used,
+			"creating":       data.Creating,
+			"ready_machines": readyMachines,
+			"idle_target":    idleTarget,
+			"ready":          state.ready,
+			"burst":          state.burst,
+			"elapsed_s":      now.Sub(state.startedAt).Round(time.Second).Seconds(),
+			"remaining_s":    max(state.deadline.Sub(now), 0).Round(time.Second).Seconds(),
 		}).Info("Warm-up in progress")
 	})
 }
@@ -233,7 +233,7 @@ func (m *machineProvider) warmupCreationFailed(config *common.RunnerConfig, err 
 		}
 		state.burst = false
 		warmupLogger(config).WithField(fields.ErrorMessage, err.Error()).
-			WithField("maxMachineCreate", config.Machine.MaxGrowthRate).
+			WithField("max_growth_rate", config.Machine.MaxGrowthRate).
 			Warning("Machine creation failed during warm-up, dropping the creation burst")
 	})
 }
