@@ -261,6 +261,7 @@ func (s *executor) stepsPreparePodConfig(opts podConfigPrepareOpts) (api.Pod, er
 			SchedulerName:                 s.Config.Kubernetes.SchedulerName,
 			ServiceAccountName:            s.configurationOverwrites.serviceAccount,
 			AutomountServiceAccountToken:  s.Config.Kubernetes.AutomountServiceAccountToken,
+			EnableServiceLinks:            s.Config.Kubernetes.EnableServiceLinks,
 			RestartPolicy:                 api.RestartPolicyNever,
 			NodeSelector:                  s.configurationOverwrites.nodeSelector,
 			Tolerations:                   s.getPodTolerations(),

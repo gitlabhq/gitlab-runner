@@ -377,6 +377,7 @@ This approach allows developers to optimize resource usage per job while maintai
 | `context`                                      | Kubernetes context name to use from `kubectl` configuration (when `host` is not specified). |
 | `dns_policy`                                  | Specify the DNS policy that should be used when constructing the pod: `none`, `default`, `cluster-first`, `cluster-first-with-host-net`. The Kubernetes default (`cluster-first`) is used if not set. |
 | `dns_config`                                  | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#configure-pod-dns-settings). |
+| `enable_service_links`                        | Boolean to control whether the build pod injects service-related environment variables, using Docker links syntax. Kubernetes enables this setting by default. Set to `false` to prevent unwanted variables in the build environment. |
 | `helper_container_security_context`           | Sets a container security context for the helper container. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `helper_image`                                | (Advanced) [Override the default helper image](../../configuration/advanced-configuration.md#helper-image) used to clone repositories and upload artifacts. |
 | `helper_image_flavor`                         | Sets the helper image flavor (`alpine`, `alpine3.21`, `alpine-latest`, or `ubuntu`). Defaults to `alpine`. Using `alpine` is the same as `alpine-latest`. |

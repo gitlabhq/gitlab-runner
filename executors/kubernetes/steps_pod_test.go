@@ -369,6 +369,29 @@ func TestStepsPreparePodConfig_InitContainersFromOptsOnly(t *testing.T) {
 		"Concrete pod has exactly one init container: init-steps-bootstrap")
 }
 
+// stepsPreparePodConfig must propagate EnableServiceLinks from
+// s.Config.Kubernetes.EnableServiceLinks onto the Concrete pod's spec,
+// the same way preparePodConfig does for the non-steps pod builder.
+func TestStepsPreparePodConfig_EnableServiceLinks(t *testing.T) {
+	tests := map[string]*bool{
+		"unset by default":       nil,
+		"propagates true value":  func(b bool) *bool { return &b }(true),
+		"propagates false value": func(b bool) *bool { return &b }(false),
+	}
+
+	for name, value := range tests {
+		t.Run(name, func(t *testing.T) {
+			ex := newStepsTestExecutor(t)
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.EnableServiceLinks = value
+
+			pod, err := ex.stepsPreparePodConfig(podConfigPrepareOpts{})
+			require.NoError(t, err)
+
+			assert.Equal(t, value, pod.Spec.EnableServiceLinks)
+		})
+	}
+}
+
 // The Concrete pod's Volumes must always include the scripts emptyDir
 // and never include the logs emptyDir (the latter only exists to feed
 // the helper container, which is absent in Concrete mode).
