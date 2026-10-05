@@ -9,12 +9,16 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
+	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -341,6 +345,10 @@ func getRemoteCustomTLSBuild(chain string) (spec.Job, error) {
 		return spec.Job{}, err
 	}
 
+	// These fixtures exercise the TLS chain to gitlab.com, so they must not
+	// be redirected to a test git server.
+	job = withoutTestGitServer(job)
+
 	job.TLSData.CAChain = chain
 	job.Variables = append(
 		job.Variables,
@@ -351,11 +359,131 @@ func getRemoteCustomTLSBuild(chain string) (spec.Job, error) {
 	return job, nil
 }
 
+// Fixtures clone from gitlab.com. When RUNNER_TEST_GIT_SERVER_URL names a
+// git-server (base-images, dockerfiles/tests) the job also carries git
+// insteadOf rules that send the mirrored repositories there: the clone,
+// the submodules and LFS. The job otherwise still looks like a gitlab.com
+// job, so URL-derived values such as the job URL are unchanged.
+const TestGitServerEnv = "RUNNER_TEST_GIT_SERVER_URL"
+
+// testGitServerRepos are the repositories the git-server image mirrors.
+// Only these are redirected; tests that use other gitlab.com repositories,
+// such as the submodule fixtures and the private project they reference,
+// keep reaching gitlab.com with the runner's own credential handling.
+var testGitServerRepos = []string{
+	"gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test",
+	"gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-grack",
+	"gitlab-org/ci-cd/gitlab-runner-pipeline-tests/simplegit",
+	"gitlab-org/ci-cd/tests/lfs",
+}
+
+var (
+	testGitServerOnce sync.Once
+	testGitServerBase string
+	errTestGitServer  error
+)
+
+// testGitServerBaseURL returns the configured server URL with a trailing
+// slash, or "" when none is configured. The host is pinned to an address
+// once: jobs may run in containers that cannot resolve the CI service alias.
+// A configured server that cannot be resolved fails every fixture, not just
+// the first, so the redirect never drops out silently.
+func testGitServerBaseURL() string {
+	testGitServerOnce.Do(func() {
+		raw := os.Getenv(TestGitServerEnv)
+		if raw == "" {
+			return
+		}
+
+		testGitServerBase, errTestGitServer = resolveTestGitServer(raw)
+	})
+	if errTestGitServer != nil {
+		panic(fmt.Sprintf("%s: %v", TestGitServerEnv, errTestGitServer))
+	}
+
+	return testGitServerBase
+}
+
+// resolveTestGitServer normalises the server URL to "scheme://addr[:port]/"
+// with the host replaced by its first IPv4 address when it is a name.
+func resolveTestGitServer(raw string) (string, error) {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.Scheme == "" {
+		return "", fmt.Errorf("%q is not a URL", raw)
+	}
+
+	host, port := u.Hostname(), u.Port()
+	if net.ParseIP(host) == nil {
+		ips, err := net.LookupIP(host)
+		if err != nil {
+			return "", fmt.Errorf("resolving %q: %w", host, err)
+		}
+		for _, ip := range ips {
+			if ip4 := ip.To4(); ip4 != nil {
+				host = ip4.String()
+				break
+			}
+		}
+	}
+	u.Host = host
+	if port != "" {
+		u.Host = net.JoinHostPort(host, port)
+	}
+	u.Path, u.RawQuery, u.Fragment = strings.TrimSuffix(u.Path, "/")+"/", "", ""
+
+	return u.String(), nil
+}
+
+// testGitServerVariables returns the job variables that redirect git to the
+// configured test git server, or nil when none is configured.
+func testGitServerVariables() spec.Variables {
+	base := testGitServerBaseURL()
+	if base == "" {
+		return nil
+	}
+
+	return testGitServerRules(base)
+}
+
+// testGitServerRules builds the redirect for a server base URL of the form
+// "scheme://addr[:port]/". GIT_CONFIG_* is read by every git invocation in
+// the job, which is what makes the redirect reach submodules and LFS as well
+// as the clone. One rule per mirrored repository, each longer than the
+// runner's own credential rule for https://gitlab.com/, so git prefers it
+// for exactly those URLs.
+func testGitServerRules(base string) spec.Variables {
+	vars := spec.Variables{
+		spec.Variable{Key: "GIT_CONFIG_COUNT", Value: strconv.Itoa(len(testGitServerRepos))},
+	}
+	for i, repo := range testGitServerRepos {
+		vars = append(vars,
+			spec.Variable{Key: fmt.Sprintf("GIT_CONFIG_KEY_%d", i), Value: "url." + base + repo + ".git.insteadOf"},
+			spec.Variable{Key: fmt.Sprintf("GIT_CONFIG_VALUE_%d", i), Value: "https://gitlab.com/" + repo + ".git"},
+		)
+	}
+
+	return vars
+}
+
+// withoutTestGitServer strips the redirect from a job that must reach
+// gitlab.com itself, such as the TLS fixtures.
+func withoutTestGitServer(job spec.Job) spec.Job {
+	kept := job.Variables[:0:0]
+	for _, v := range job.Variables {
+		if !strings.HasPrefix(v.Key, "GIT_CONFIG_") {
+			kept = append(kept, v)
+		}
+	}
+	job.Variables = kept
+
+	return job
+}
+
 func getBuildResponse(repoURL string, commands []string) spec.Job {
 	return spec.Job{
-		Variables: spec.Variables{
+		Variables: append(spec.Variables{
 			spec.Variable{Key: "CI_JOB_TOKEN", Value: "test-job-token"},
-		},
+		}, testGitServerVariables()...),
 		GitInfo: GetGitInfo(repoURL),
 		Steps: spec.Steps{
 			spec.Step{
@@ -378,9 +506,10 @@ func getStepsBuildResponse(repoURL, stepsYAML string) (spec.Job, error) {
 	}
 
 	return spec.Job{
-		GitInfo: GetStepsGitInfo(repoURL),
-		Run:     steps,
-		Steps:   spec.Steps{spec.Step{Name: spec.StepNameRun}},
+		Variables: testGitServerVariables(),
+		GitInfo:   GetStepsGitInfo(repoURL),
+		Run:       steps,
+		Steps:     spec.Steps{spec.Step{Name: spec.StepNameRun}},
 		RunnerInfo: spec.RunnerInfo{
 			Timeout: DefaultTimeout,
 		},

@@ -51,6 +51,16 @@ unit test:
 .linux integration test:
   extends:
     - .docker
+  services:
+    - docker:${DOCKER_VERSION}-dind
+    # Serves the fixture repositories (see base-images, dockerfiles/tests) so
+    # jobs clone locally instead of from gitlab.com. The fixtures pin the
+    # alias to an address because containers started inside dind cannot
+    # resolve it.
+    - name: ${RUNNER_IMAGES_REGISTRY}/git-server:${RUNNER_IMAGES_VERSION}
+      alias: git-server
+  variables:
+    RUNNER_TEST_GIT_SERVER_URL: "http://git-server:8080"
 
 .with outer token:
   variables:
