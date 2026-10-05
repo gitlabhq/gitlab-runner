@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -18,14 +19,16 @@ import (
 )
 
 func TestNewReadLogsCommandFileNotExist(t *testing.T) {
-	cmd := newReadLogsCommand()
-	cmd.logStreamProvider = &fileLogStreamProvider{
-		waitFileTimeout: 2 * time.Second,
-		path:            "not_exists",
-	}
+	synctest.Test(t, func(t *testing.T) {
+		cmd := newReadLogsCommand()
+		cmd.logStreamProvider = &fileLogStreamProvider{
+			waitFileTimeout: 2 * time.Second,
+			path:            "not_exists",
+		}
 
-	err := cmd.readLogs()
-	assert.ErrorIs(t, err, errWaitingFileTimeout)
+		err := cmd.readLogs()
+		assert.ErrorIs(t, err, errWaitingFileTimeout)
+	})
 }
 
 func TestNewReadLogsCommandNoAttempts(t *testing.T) {
@@ -63,20 +66,22 @@ func setupTestFile(t *testing.T) (*os.File, func()) {
 }
 
 func TestNewReadLogsCommandFileLogStreamProviderCorrect(t *testing.T) {
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	synctest.Test(t, func(t *testing.T) {
+		test.SkipIfGitLabCIOn(t, test.OSWindows)
 
-	cmd := newReadLogsCommand()
-	cmd.WaitFileTimeout = 10 * time.Second
-	f, cleanup := setupTestFile(t)
-	time.AfterFunc(time.Second, cleanup)
-	cmd.Path = f.Name()
+		cmd := newReadLogsCommand()
+		cmd.WaitFileTimeout = 10 * time.Second
+		f, cleanup := setupTestFile(t)
+		time.AfterFunc(time.Second, cleanup)
+		cmd.Path = f.Name()
 
-	err := cmd.execute()
-	assert.True(t, os.IsNotExist(err), "expected err %T, but got %T", os.ErrNotExist, err)
-	assert.Equal(t, &fileLogStreamProvider{
-		waitFileTimeout: cmd.WaitFileTimeout,
-		path:            cmd.Path,
-	}, cmd.logStreamProvider)
+		err := cmd.execute()
+		assert.True(t, os.IsNotExist(err), "expected err %T, but got %T", os.ErrNotExist, err)
+		assert.Equal(t, &fileLogStreamProvider{
+			waitFileTimeout: cmd.WaitFileTimeout,
+			path:            cmd.Path,
+		}, cmd.logStreamProvider)
+	})
 }
 
 func TestNewReadLogsCommandLines(t *testing.T) {
@@ -133,38 +138,40 @@ func setupMockLogOutputWriterFromLines(lw *mockLogOutputWriter, lines []string, 
 }
 
 func TestNewReadLogsCommandWriteLinesWithDelay(t *testing.T) {
-	lines1 := []string{"1", "2", "3"}
-	lines2 := []string{"4", "5", "6"}
+	synctest.Test(t, func(t *testing.T) {
+		lines1 := []string{"1", "2", "3"}
+		lines2 := []string{"4", "5", "6"}
 
-	f, cleanup := setupTestFile(t)
-	defer cleanup()
-	appendToFile(t, f, lines1)
+		f, cleanup := setupTestFile(t)
+		defer cleanup()
+		appendToFile(t, f, lines1)
 
-	cmd := newReadLogsCommand()
+		cmd := newReadLogsCommand()
 
-	mockLogOutputWriter := newMockLogOutputWriter(t)
-	offset, wg := setupMockLogOutputWriterFromLines(mockLogOutputWriter, lines1, 0)
-	cmd.logOutputWriter = mockLogOutputWriter
+		mockLogOutputWriter := newMockLogOutputWriter(t)
+		offset, wg := setupMockLogOutputWriterFromLines(mockLogOutputWriter, lines1, 0)
+		cmd.logOutputWriter = mockLogOutputWriter
 
-	mockLogStreamProvider := newMockLogStreamProvider(t)
-	mockLogStreamProvider.On("Open").Return(f, nil)
-	cmd.logStreamProvider = mockLogStreamProvider
+		mockLogStreamProvider := newMockLogStreamProvider(t)
+		mockLogStreamProvider.On("Open").Return(f, nil)
+		cmd.logStreamProvider = mockLogStreamProvider
 
-	go func() {
-		wg.Wait()
+		go func() {
+			wg.Wait()
 
-		time.Sleep(5 * time.Second)
-		_, wg = setupMockLogOutputWriterFromLines(mockLogOutputWriter, lines2, offset)
-		appendToFile(t, f, lines2)
+			time.Sleep(5 * time.Second)
+			_, wg = setupMockLogOutputWriterFromLines(mockLogOutputWriter, lines2, offset)
+			appendToFile(t, f, lines2)
 
-		wg.Wait()
+			wg.Wait()
 
-		_ = f.Close()
-	}()
+			_ = f.Close()
+		}()
 
-	err := cmd.readLogs()
-	var expectedErr *os.PathError
-	assert.ErrorAs(t, err, &expectedErr)
+		err := cmd.readLogs()
+		var expectedErr *os.PathError
+		assert.ErrorAs(t, err, &expectedErr)
+	})
 }
 
 func TestSplitLinesAccordingToBufferSize(t *testing.T) {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"testing/synctest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -94,37 +95,39 @@ func TestExecFailedRequest(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			session, err := NewSession(nil)
-			require.NoError(t, err)
-			session.Token = validToken
+			synctest.Test(t, func(t *testing.T) {
+				session, err := NewSession(nil)
+				require.NoError(t, err)
+				session.Token = validToken
 
-			mockTerminalConn := terminal.NewMockConn(t)
-			mockTerminal := terminal.NewMockInteractiveTerminal(t)
+				mockTerminalConn := terminal.NewMockConn(t)
+				mockTerminal := terminal.NewMockInteractiveTerminal(t)
 
-			if c.authorization == validToken && c.isWebsocketUpgrade && c.attachTerminal {
-				mockTerminal.On("TerminalConnect").Return(mockTerminalConn, c.connectionErr).Once()
-			}
+				if c.authorization == validToken && c.isWebsocketUpgrade && c.attachTerminal {
+					mockTerminal.On("TerminalConnect").Return(mockTerminalConn, c.connectionErr).Once()
+				}
 
-			if c.attachTerminal {
-				session.SetInteractiveTerminal(mockTerminal)
-			}
+				if c.attachTerminal {
+					session.SetInteractiveTerminal(mockTerminal)
+				}
 
-			req := httptest.NewRequest(http.MethodPost, session.Endpoint+"/exec", nil)
+				req := httptest.NewRequest(http.MethodPost, session.Endpoint+"/exec", nil)
 
-			if c.isWebsocketUpgrade {
-				req.Header.Add("Connection", "upgrade")
-				req.Header.Add("Upgrade", "websocket")
-			}
-			req.Header.Add("Authorization", c.authorization)
+				if c.isWebsocketUpgrade {
+					req.Header.Add("Connection", "upgrade")
+					req.Header.Add("Upgrade", "websocket")
+				}
+				req.Header.Add("Authorization", c.authorization)
 
-			w := httptest.NewRecorder()
+				w := httptest.NewRecorder()
 
-			session.Handler().ServeHTTP(w, req)
+				session.Handler().ServeHTTP(w, req)
 
-			resp := w.Result()
-			defer resp.Body.Close()
+				resp := w.Result()
+				defer resp.Body.Close()
 
-			assert.Equal(t, c.expectedStatusCode, resp.StatusCode)
+				assert.Equal(t, c.expectedStatusCode, resp.StatusCode)
+			})
 		})
 	}
 }

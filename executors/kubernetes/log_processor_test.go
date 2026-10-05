@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/jpillora/backoff"
@@ -512,20 +513,22 @@ func TestScanHandlesStreamError(t *testing.T) {
 }
 
 func TestScanHandlesCancelledContext(t *testing.T) {
-	processor := new(kubernetesLogProcessor)
+	synctest.Test(t, func(t *testing.T) {
+		processor := new(kubernetesLogProcessor)
 
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-	scanner, ch := processor.scan(ctx, logsToReader(log{}))
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		scanner, ch := processor.scan(ctx, logsToReader(log{}))
 
-	// Block the channel, so there's no consumers
-	time.Sleep(time.Second)
+		// Block the channel, so there's no consumers
+		time.Sleep(time.Second)
 
-	// Assert that the channel is closed
-	line, more := <-ch
-	assert.Empty(t, line)
-	assert.False(t, more)
+		// Assert that the channel is closed
+		line, more := <-ch
+		assert.Empty(t, line)
+		assert.False(t, more)
 
-	// Assert that the scanner had no error
-	assert.Nil(t, scanner.Err())
+		// Assert that the scanner had no error
+		assert.Nil(t, scanner.Err())
+	})
 }
