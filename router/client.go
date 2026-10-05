@@ -318,15 +318,29 @@ func (c *Client) getRouterDiscovery(ctx context.Context, config common.RunnerCon
 	defer c.mu.Unlock()
 	if c.discoExpiresAt.After(time.Now()) {
 		c.metrics.recordCacheEvent(cacheHit)
-		return c.disco
+		return routerTarget(c.disco, config)
 	}
 	c.metrics.recordCacheEvent(cacheMiss)
 	c.disco = c.delegate.GetRouterDiscovery(ctx, config)
 	c.discoExpiresAt = time.Now().Add(discoveryTTL)
-	if c.disco != nil {
-		config.Log().Info("Using job router at " + c.disco.ServerURL)
+	disco := routerTarget(c.disco, config)
+	if disco != nil {
+		config.Log().Info("Using job router at " + disco.ServerURL)
 	}
-	return c.disco
+	return disco
+}
+
+// routerTarget applies job_router_url, if set, on top of the cached discovery.
+// Discovery still decides whether the router is used and supplies the job's
+// TLS data. Applying the override per lookup lets a config reload take effect
+// on the next poll.
+func routerTarget(disco *common.RouterDiscovery, config common.RunnerConfig) *common.RouterDiscovery {
+	if disco == nil || config.JobRouterURL == "" {
+		return disco
+	}
+	target := *disco
+	target.ServerURL = config.JobRouterURL
+	return &target
 }
 
 func (c *Client) invalidateRouterDiscovery() {

@@ -358,6 +358,14 @@ type UpdateJobInfo struct {
 	RuntimeEnvironmentKey string
 }
 
+// Schemes the router client can dial for a Job Router address.
+const (
+	JobRouterSchemeGRPC  = "grpc"
+	JobRouterSchemeGRPCS = "grpcs"
+	JobRouterSchemeWS    = "ws"
+	JobRouterSchemeWSS   = "wss"
+)
+
 type RouterDiscovery struct {
 	ServerURL string       `json:"server_url"`
 	TLSData   spec.TLSData `json:"-"`
