@@ -6745,6 +6745,39 @@ containers:
 				assert.False(t, *pod.Spec.AutomountServiceAccountToken)
 			},
 		},
+		"uses default EnableServiceLinks for pod": {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Nil(
+					t,
+					pod.Spec.EnableServiceLinks,
+					"Pod EnableServiceLinks should be empty",
+				)
+			},
+		},
+		"configures to enable EnableServiceLinks for pod": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						EnableServiceLinks: func(b bool) *bool { return &b }(true),
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.True(t, *pod.Spec.EnableServiceLinks)
+			},
+		},
+		"configures to disable EnableServiceLinks for pod": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						EnableServiceLinks: func(b bool) *bool { return &b }(false),
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.False(t, *pod.Spec.EnableServiceLinks)
+			},
+		},
 		"creates PodDisruptionBudget when enabled": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
