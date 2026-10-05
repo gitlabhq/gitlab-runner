@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -687,72 +688,74 @@ func TestWaitForPodRunning(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			retries = 0
-			eventsLists := 0
-			clientFunc := func(req *http.Request) (*http.Response, error) {
-				if req.Method == http.MethodGet && strings.HasSuffix(req.URL.Path, "/events") {
-					eventsLists++
-					events := test.Events
-					if events == nil {
-						events = &api.EventList{}
-					}
-					return &http.Response{
-						StatusCode: http.StatusOK,
-						Body:       objBody(codec, events),
-						Header:     map[string][]string{common.ContentType: {"application/json"}},
-					}, nil
-				}
-				return test.ClientFunc(req)
-			}
-			c := testKubernetesClient(version, fake.CreateHTTPClient(clientFunc))
-
-			var output strings.Builder
-			fw := testWriter{
-				call: func(b []byte) (int, error) {
-					output.Write(b)
-					if retries < test.Retries {
-						if !strings.Contains(string(b), "Waiting for pod") {
-							t.Errorf("[%s] Expected to continue waiting for pod. Got: '%s'", test.Name, string(b))
+			synctest.Test(t, func(t *testing.T) {
+				retries = 0
+				eventsLists := 0
+				clientFunc := func(req *http.Request) (*http.Response, error) {
+					if req.Method == http.MethodGet && strings.HasSuffix(req.URL.Path, "/events") {
+						eventsLists++
+						events := test.Events
+						if events == nil {
+							events = &api.EventList{}
 						}
+						return &http.Response{
+							StatusCode: http.StatusOK,
+							Body:       objBody(codec, events),
+							Header:     map[string][]string{common.ContentType: {"application/json"}},
+						}, nil
 					}
-					return len(b), nil
-				},
-			}
-			phase, err := waitForPodRunning(t.Context(), c, test.Pod, fw, test.Config)
-
-			if err != nil && !test.Error {
-				t.Errorf("[%s] Expected success. Got: %s", test.Name, err.Error())
-				return
-			}
-
-			if phase != test.PodEndPhase {
-				t.Errorf("[%s] Invalid end state. Expected '%v', got: '%v'", test.Name, test.PodEndPhase, phase)
-				return
-			}
-
-			if test.ExactRetries && retries < test.Retries {
-				t.Errorf("[%s] Not enough retries. Expected: %d, got: %d", test.Name, test.Retries, retries)
-				return
-			}
-
-			for _, s := range test.ExpectContains {
-				if !strings.Contains(output.String(), s) {
-					t.Errorf("[%s] Expected output to contain %q. Got: %s", test.Name, s, output.String())
+					return test.ClientFunc(req)
 				}
-			}
-			for _, s := range test.ExpectNotContains {
-				if strings.Contains(output.String(), s) {
-					t.Errorf("[%s] Expected output not to contain %q. Got: %s", test.Name, s, output.String())
+				c := testKubernetesClient(version, fake.CreateHTTPClient(clientFunc))
+
+				var output strings.Builder
+				fw := testWriter{
+					call: func(b []byte) (int, error) {
+						output.Write(b)
+						if retries < test.Retries {
+							if !strings.Contains(string(b), "Waiting for pod") {
+								t.Errorf("[%s] Expected to continue waiting for pod. Got: '%s'", test.Name, string(b))
+							}
+						}
+						return len(b), nil
+					},
 				}
-			}
+				phase, err := waitForPodRunning(t.Context(), c, test.Pod, fw, test.Config)
 
-			if test.ExpectNoEventsList {
-				assert.Zero(t, eventsLists, "[%s] Expected no events LIST to be issued", test.Name)
-			}
+				if err != nil && !test.Error {
+					t.Errorf("[%s] Expected success. Got: %s", test.Name, err.Error())
+					return
+				}
 
-			if test.VerifyError != nil {
-				test.VerifyError(t, err)
-			}
+				if phase != test.PodEndPhase {
+					t.Errorf("[%s] Invalid end state. Expected '%v', got: '%v'", test.Name, test.PodEndPhase, phase)
+					return
+				}
+
+				if test.ExactRetries && retries < test.Retries {
+					t.Errorf("[%s] Not enough retries. Expected: %d, got: %d", test.Name, test.Retries, retries)
+					return
+				}
+
+				for _, s := range test.ExpectContains {
+					if !strings.Contains(output.String(), s) {
+						t.Errorf("[%s] Expected output to contain %q. Got: %s", test.Name, s, output.String())
+					}
+				}
+				for _, s := range test.ExpectNotContains {
+					if strings.Contains(output.String(), s) {
+						t.Errorf("[%s] Expected output not to contain %q. Got: %s", test.Name, s, output.String())
+					}
+				}
+
+				if test.ExpectNoEventsList {
+					assert.Zero(t, eventsLists, "[%s] Expected no events LIST to be issued", test.Name)
+				}
+
+				if test.VerifyError != nil {
+					test.VerifyError(t, err)
+				}
+			})
 		})
 	}
 }

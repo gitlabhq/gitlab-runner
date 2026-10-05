@@ -23,6 +23,7 @@ import (
 	"sync"
 	"syscall"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/jpillora/backoff"
@@ -4567,34 +4568,36 @@ func TestWaitForResources(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ex := newExecutor()
-			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
-			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = DefaultResourceIdentifier
-			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.ResourceAvailabilityCheckMaxAttempts = 3
+			synctest.Test(t, func(t *testing.T) {
+				ex := newExecutor()
+				ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
+				ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = DefaultResourceIdentifier
+				ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.ResourceAvailabilityCheckMaxAttempts = 3
 
-			var err error
+				var err error
 
-			ctx, cancel := context.WithTimeout(t.Context(), tc.ctxTimeout)
-			defer cancel()
+				ctx, cancel := context.WithTimeout(t.Context(), tc.ctxTimeout)
+				defer cancel()
 
-			err = ex.prepareOverwrites(make(spec.Variables, 0))
-			assert.NoError(t, err)
+				err = ex.prepareOverwrites(make(spec.Variables, 0))
+				assert.NoError(t, err)
 
-			switch tc.resourceType {
-			case resourceTypeServiceAccount:
-				err = ex.waitForResource(ctx, tc.resourceType, tc.serviceAccount, ex.serviceAccountExists())
-			case resourceTypePullSecret:
-				if len(tc.imagePullSecrets) > 0 {
-					err = ex.waitForResource(ctx, tc.resourceType, tc.imagePullSecrets[0], ex.secretExists())
+				switch tc.resourceType {
+				case resourceTypeServiceAccount:
+					err = ex.waitForResource(ctx, tc.resourceType, tc.serviceAccount, ex.serviceAccountExists())
+				case resourceTypePullSecret:
+					if len(tc.imagePullSecrets) > 0 {
+						err = ex.waitForResource(ctx, tc.resourceType, tc.imagePullSecrets[0], ex.secretExists())
+					}
 				}
-			}
 
-			if tc.expectedErr != nil {
-				assert.Error(t, err, tc.expectedErr.Error())
-				return
-			}
+				if tc.expectedErr != nil {
+					assert.Error(t, err, tc.expectedErr.Error())
+					return
+				}
 
-			assert.NoError(t, err)
+				assert.NoError(t, err)
+			})
 		})
 	}
 }
@@ -7383,49 +7386,51 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(t.Context())
-			defer cancel()
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
 
-			i := 0
-			fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-				switch p, m := req.URL.Path, req.Method; {
-				case p == "/api/v1/namespaces/namespace/pods/pod" && m == http.MethodGet:
-					res := tt.responses[i]
-					i++
-					if i == len(tt.responses) {
-						cancel()
-					}
+				i := 0
+				fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+					switch p, m := req.URL.Path, req.Method; {
+					case p == "/api/v1/namespaces/namespace/pods/pod" && m == http.MethodGet:
+						res := tt.responses[i]
+						i++
+						if i == len(tt.responses) {
+							cancel()
+						}
 
-					if res.response == nil {
-						return nil, res.err
-					}
+						if res.response == nil {
+							return nil, res.err
+						}
 
-					res.response.Header = map[string][]string{
-						common.ContentType: {"application/json"},
-					}
-					if res.response.Body == nil {
-						res.response.Body = objBody(codec, execPod())
-					}
+						res.response.Header = map[string][]string{
+							common.ContentType: {"application/json"},
+						}
+						if res.response.Body == nil {
+							res.response.Body = objBody(codec, execPod())
+						}
 
-					return res.response, nil
-				default:
-					return nil, fmt.Errorf("unexpected request")
+						return res.response, nil
+					default:
+						return nil, fmt.Errorf("unexpected request")
+					}
+				})
+
+				client := testKubernetesClient(version, fakeClient)
+
+				e := newExecutor()
+				e.Config.Kubernetes = &common.KubernetesConfig{
+					PollInterval: 1,
+					PollTimeout:  2,
 				}
+				e.kubeClient = client
+				e.pod = &api.Pod{}
+				e.pod.Name = "pod"
+				e.pod.Namespace = "namespace"
+
+				tt.verifyErr(t, e.watchPodStatus(ctx, &podContainerStatusChecker{}))
 			})
-
-			client := testKubernetesClient(version, fakeClient)
-
-			e := newExecutor()
-			e.Config.Kubernetes = &common.KubernetesConfig{
-				PollInterval: 1,
-				PollTimeout:  2,
-			}
-			e.kubeClient = client
-			e.pod = &api.Pod{}
-			e.pod.Name = "pod"
-			e.pod.Namespace = "namespace"
-
-			tt.verifyErr(t, e.watchPodStatus(ctx, &podContainerStatusChecker{}))
 		})
 	}
 }
@@ -9117,25 +9122,27 @@ func TestRetryLimits(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			e := newExecutor()
-			e.Config.Kubernetes = &tt.config
+			synctest.Test(t, func(t *testing.T) {
+				e := newExecutor()
+				e.Config.Kubernetes = &tt.config
 
-			retryBackoffConfig := e.getRetryBackoffConfig()
+				retryBackoffConfig := e.getRetryBackoffConfig()
 
-			backoff := &backoff.Backoff{Min: retryBackoffConfig.min, Max: retryBackoffConfig.max}
+				backoff := &backoff.Backoff{Min: retryBackoffConfig.min, Max: retryBackoffConfig.max}
 
-			var counter int
-			var lastRetryBackoff time.Duration
+				var counter int
+				var lastRetryBackoff time.Duration
 
-			err := retry.WithFn(e, func() error {
-				counter++
-				lastRetryBackoff = backoff.Duration()
-				return tt.err
-			}).Run()
+				err := retry.WithFn(e, func() error {
+					counter++
+					lastRetryBackoff = backoff.Duration()
+					return tt.err
+				}).Run()
 
-			require.Equal(t, err, tt.err)
-			require.Equal(t, tt.expectedRetryCount, counter)
-			require.Equal(t, tt.expectedLastRetryBackoff, lastRetryBackoff)
+				require.Equal(t, err, tt.err)
+				require.Equal(t, tt.expectedRetryCount, counter)
+				require.Equal(t, tt.expectedLastRetryBackoff, lastRetryBackoff)
+			})
 		})
 	}
 }

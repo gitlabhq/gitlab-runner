@@ -141,6 +141,10 @@ func (m *testNetwork) UploadRawArtifacts(
 	if err != nil {
 		return common.UploadFailed, err.Error(), err
 	}
+	// The real client closes the request body whether or not the upload
+	// succeeds; without this the archiver goroutine feeding the pipe never
+	// returns on the failure paths.
+	defer reader.Close()
 
 	if m.uploadState == common.UploadSucceeded {
 		m.uploadType = options.Type

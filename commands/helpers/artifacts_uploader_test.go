@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -96,28 +97,30 @@ func TestArtifactsUploaderForbidden(t *testing.T) {
 
 func TestArtifactsUploaderRetry(t *testing.T) {
 	OnEachZipArchiver(t, func(t *testing.T) {
-		testNet := &testNetwork{
-			uploadState: common.UploadFailed,
-		}
-		cmd := ArtifactsUploaderCommand{
-			JobCredentials: UploaderCredentials,
-			newNetwork:     createTestNewNetwork(testNet),
-			fileArchiver: fileArchiver{
-				Paths: []string{artifactsTestArchivedFile},
-			},
-		}
+		synctest.Test(t, func(t *testing.T) {
+			testNet := &testNetwork{
+				uploadState: common.UploadFailed,
+			}
+			cmd := ArtifactsUploaderCommand{
+				JobCredentials: UploaderCredentials,
+				newNetwork:     createTestNewNetwork(testNet),
+				fileArchiver: fileArchiver{
+					Paths: []string{artifactsTestArchivedFile},
+				},
+			}
 
-		writeTestFile(t, artifactsTestArchivedFile)
-		defer os.Remove(artifactsTestArchivedFile)
+			writeTestFile(t, artifactsTestArchivedFile)
+			defer os.Remove(artifactsTestArchivedFile)
 
-		removeHook := helpers.MakeFatalToPanic()
-		defer removeHook()
+			removeHook := helpers.MakeFatalToPanic()
+			defer removeHook()
 
-		assert.Panics(t, func() {
-			cmd.Execute(nil)
+			assert.Panics(t, func() {
+				cmd.Execute(nil)
+			})
+
+			assert.Equal(t, defaultTries, testNet.uploadCalled)
 		})
-
-		assert.Equal(t, defaultTries, testNet.uploadCalled)
 	})
 }
 
@@ -230,31 +233,33 @@ func TestArtifactsUploaderRawSucceeded(t *testing.T) {
 }
 
 func TestArtifactsUploaderRawDoesNotSendMultipleFiles(t *testing.T) {
-	testNet := &testNetwork{
-		uploadState: common.UploadSucceeded,
-	}
-	cmd := ArtifactsUploaderCommand{
-		JobCredentials: UploaderCredentials,
-		Format:         spec.ArtifactFormatRaw,
-		Name:           "junit.xml",
-		Type:           "junit",
-		newNetwork:     createTestNewNetwork(testNet),
-		fileArchiver: fileArchiver{
-			Paths: []string{artifactsTestArchivedFile, artifactsTestArchivedFile2},
-		},
-	}
+	synctest.Test(t, func(t *testing.T) {
+		testNet := &testNetwork{
+			uploadState: common.UploadSucceeded,
+		}
+		cmd := ArtifactsUploaderCommand{
+			JobCredentials: UploaderCredentials,
+			Format:         spec.ArtifactFormatRaw,
+			Name:           "junit.xml",
+			Type:           "junit",
+			newNetwork:     createTestNewNetwork(testNet),
+			fileArchiver: fileArchiver{
+				Paths: []string{artifactsTestArchivedFile, artifactsTestArchivedFile2},
+			},
+		}
 
-	writeTestFile(t, artifactsTestArchivedFile)
-	defer os.Remove(artifactsTestArchivedFile)
+		writeTestFile(t, artifactsTestArchivedFile)
+		defer os.Remove(artifactsTestArchivedFile)
 
-	writeTestFile(t, artifactsTestArchivedFile2)
-	defer os.Remove(artifactsTestArchivedFile2)
+		writeTestFile(t, artifactsTestArchivedFile2)
+		defer os.Remove(artifactsTestArchivedFile2)
 
-	removeHook := helpers.MakeFatalToPanic()
-	defer removeHook()
+		removeHook := helpers.MakeFatalToPanic()
+		defer removeHook()
 
-	assert.Panics(t, func() {
-		cmd.Execute(nil)
+		assert.Panics(t, func() {
+			cmd.Execute(nil)
+		})
 	})
 }
 
@@ -277,28 +282,30 @@ func TestArtifactsUploaderNoFilesDoNotGenerateError(t *testing.T) {
 }
 
 func TestArtifactsUploaderServiceUnavailable(t *testing.T) {
-	testNet := &testNetwork{
-		uploadState: common.UploadServiceUnavailable,
-	}
-	cmd := ArtifactsUploaderCommand{
-		JobCredentials: UploaderCredentials,
-		newNetwork:     createTestNewNetwork(testNet),
-		fileArchiver: fileArchiver{
-			Paths: []string{artifactsTestArchivedFile},
-		},
-	}
+	synctest.Test(t, func(t *testing.T) {
+		testNet := &testNetwork{
+			uploadState: common.UploadServiceUnavailable,
+		}
+		cmd := ArtifactsUploaderCommand{
+			JobCredentials: UploaderCredentials,
+			newNetwork:     createTestNewNetwork(testNet),
+			fileArchiver: fileArchiver{
+				Paths: []string{artifactsTestArchivedFile},
+			},
+		}
 
-	writeTestFile(t, artifactsTestArchivedFile)
-	defer os.Remove(artifactsTestArchivedFile)
+		writeTestFile(t, artifactsTestArchivedFile)
+		defer os.Remove(artifactsTestArchivedFile)
 
-	removeHook := helpers.MakeFatalToPanic()
-	defer removeHook()
+		removeHook := helpers.MakeFatalToPanic()
+		defer removeHook()
 
-	assert.Panics(t, func() {
-		cmd.Execute(nil)
+		assert.Panics(t, func() {
+			cmd.Execute(nil)
+		})
+
+		assert.Equal(t, serviceUnavailableTries, testNet.uploadCalled)
 	})
-
-	assert.Equal(t, serviceUnavailableTries, testNet.uploadCalled)
 }
 
 func TestArtifactsExcludedPaths(t *testing.T) {
@@ -373,30 +380,32 @@ func TestFileArchiverCompressionLevel(t *testing.T) {
 }
 
 func TestArtifactsUploaderFailedWithError(t *testing.T) {
-	testErr := errors.New("open /path/to/artifact: permission denied")
-	testNet := &testNetwork{
-		uploadState: common.UploadFailed,
-		uploadErr:   testErr,
-	}
-	cmd := ArtifactsUploaderCommand{
-		JobCredentials: UploaderCredentials,
-		newNetwork:     createTestNewNetwork(testNet),
-		fileArchiver: fileArchiver{
-			Paths: []string{artifactsTestArchivedFile},
-		},
-	}
+	synctest.Test(t, func(t *testing.T) {
+		testErr := errors.New("open /path/to/artifact: permission denied")
+		testNet := &testNetwork{
+			uploadState: common.UploadFailed,
+			uploadErr:   testErr,
+		}
+		cmd := ArtifactsUploaderCommand{
+			JobCredentials: UploaderCredentials,
+			newNetwork:     createTestNewNetwork(testNet),
+			fileArchiver: fileArchiver{
+				Paths: []string{artifactsTestArchivedFile},
+			},
+		}
 
-	writeTestFile(t, artifactsTestArchivedFile)
-	defer os.Remove(artifactsTestArchivedFile)
+		writeTestFile(t, artifactsTestArchivedFile)
+		defer os.Remove(artifactsTestArchivedFile)
 
-	removeHook := helpers.MakeFatalToPanic()
-	defer removeHook()
+		removeHook := helpers.MakeFatalToPanic()
+		defer removeHook()
 
-	assert.Panics(t, func() {
-		cmd.Execute(nil)
+		assert.Panics(t, func() {
+			cmd.Execute(nil)
+		})
+
+		assert.Equal(t, defaultTries, testNet.uploadCalled)
 	})
-
-	assert.Equal(t, defaultTries, testNet.uploadCalled)
 }
 
 func TestArtifactUploaderCommandShouldRetry(t *testing.T) {

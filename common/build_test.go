@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -769,35 +770,37 @@ func TestJobFailure(t *testing.T) {
 }
 
 func TestJobFailureOnExecutionTimeout(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider(t)
-	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil).Once()
-	executor.On("Cleanup").Once()
+	synctest.Test(t, func(t *testing.T) {
+		executor, provider := setupMockExecutorAndProvider(t)
+		executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		executor.On("Cleanup").Once()
 
-	// Succeed a build script
-	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	executor.On("Run", matchBuildStage("step_script")).Run(func(mock.Arguments) {
-		time.Sleep(2 * time.Second)
-	}).Return(nil)
-	executor.On("Run", mock.Anything).Return(nil)
-	executor.On("Finish", mock.Anything).Once()
+		// Succeed a build script
+		executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+		executor.On("Run", matchBuildStage("step_script")).Run(func(mock.Arguments) {
+			time.Sleep(2 * time.Second)
+		}).Return(nil)
+		executor.On("Run", mock.Anything).Return(nil)
+		executor.On("Finish", mock.Anything).Once()
 
-	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.Job.RunnerInfo.Timeout = 1
+		build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
+		build.Job.RunnerInfo.Timeout = 1
 
-	trace := NewMockLightJobTrace(t)
-	trace.On("IsStdout").Return(true)
-	trace.On("SetCancelFunc", mock.Anything).Twice()
-	trace.On("SetAbortFunc", mock.Anything).Once()
-	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Once()
-	trace.On("Fail", mock.Anything, JobFailureData{Reason: JobExecutionTimeout, Mode: JobExecutionModeTraditional}).Run(func(arguments mock.Arguments) {
-		assert.Error(t, arguments.Get(0).(error))
-	}).Return(nil).Once()
+		trace := NewMockLightJobTrace(t)
+		trace.On("IsStdout").Return(true)
+		trace.On("SetCancelFunc", mock.Anything).Twice()
+		trace.On("SetAbortFunc", mock.Anything).Once()
+		trace.On("SetSupportedFailureReasonMapper", mock.Anything).Once()
+		trace.On("Fail", mock.Anything, JobFailureData{Reason: JobExecutionTimeout, Mode: JobExecutionModeTraditional}).Run(func(arguments mock.Arguments) {
+			assert.Error(t, arguments.Get(0).(error))
+		}).Return(nil).Once()
 
-	err := build.Run(t.Context(), &Config{}, trace)
+		err := build.Run(t.Context(), &Config{}, trace)
 
-	expectedErr := &BuildError{FailureReason: JobExecutionTimeout}
-	assert.ErrorIs(t, err, expectedErr)
+		expectedErr := &BuildError{FailureReason: JobExecutionTimeout}
+		assert.ErrorIs(t, err, expectedErr)
+	})
 }
 
 func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
@@ -835,29 +838,31 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 }
 
 func TestGetSourcesRunFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider(t)
-	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil).Once()
-	executor.On("Cleanup").Once()
+	synctest.Test(t, func(t *testing.T) {
+		executor, provider := setupMockExecutorAndProvider(t)
+		executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		executor.On("Cleanup").Once()
 
-	// Fail a build script
-	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	for attempt := range 10 {
-		if attempt == 0 {
-			executor.On("Run", matchBuildStage(BuildStageClearWorktree)).Return(nil)
+		// Fail a build script
+		executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+		executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+		for attempt := range 10 {
+			if attempt == 0 {
+				executor.On("Run", matchBuildStage(BuildStageClearWorktree)).Return(nil)
+			}
+			executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(errors.New("build fail"))
 		}
-		executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(errors.New("build fail"))
-	}
-	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
-	executor.On("Finish", errors.New("build fail")).Once()
+		executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+		executor.On("Finish", errors.New("build fail")).Once()
 
-	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
-	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "build fail")
+		build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
+		build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
+		err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
+		assert.EqualError(t, err, "build fail")
+	})
 }
 
 func TestExecutePrepareScripts_SkipsGetSourcesOnResume(t *testing.T) {
@@ -896,26 +901,28 @@ func TestExecutePrepareScripts_SkipsGetSourcesOnResume(t *testing.T) {
 }
 
 func TestArtifactDownloadRunFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider(t)
-	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil).Once()
-	executor.On("Cleanup").Once()
+	synctest.Test(t, func(t *testing.T) {
+		executor, provider := setupMockExecutorAndProvider(t)
+		executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		executor.On("Cleanup").Once()
 
-	// Fail a build script
-	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(errors.New("build fail")).Times(3)
-	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
-	executor.On("Finish", errors.New("build fail")).Once()
+		// Fail a build script
+		executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+		executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(errors.New("build fail")).Times(3)
+		executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+		executor.On("Finish", errors.New("build fail")).Once()
 
-	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.Variables = append(build.Variables, spec.Variable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
-	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "build fail")
+		build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
+		build.Variables = append(build.Variables, spec.Variable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
+		err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
+		assert.EqualError(t, err, "build fail")
+	})
 }
 
 func TestArtifactUploadRunFailure(t *testing.T) {
@@ -999,25 +1006,27 @@ func TestUploadArtifactsOnArchiveCacheFailure(t *testing.T) {
 }
 
 func TestRestoreCacheRunFailure(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider(t)
-	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil).Once()
-	executor.On("Cleanup").Once()
+	synctest.Test(t, func(t *testing.T) {
+		executor, provider := setupMockExecutorAndProvider(t)
+		executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		executor.On("Cleanup").Once()
 
-	// Fail a build script
-	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(errors.New("build fail")).Times(3)
-	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
-	executor.On("Finish", errors.New("build fail")).Once()
+		// Fail a build script
+		executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+		executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(errors.New("build fail")).Times(3)
+		executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+		executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
+		executor.On("Finish", errors.New("build fail")).Once()
 
-	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.Variables = append(build.Variables, spec.Variable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
-	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "build fail")
+		build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
+		build.Variables = append(build.Variables, spec.Variable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
+		err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
+		assert.EqualError(t, err, "build fail")
+	})
 }
 
 func TestRunWrongAttempts(t *testing.T) {
@@ -1044,32 +1053,34 @@ func TestRunWrongAttempts(t *testing.T) {
 }
 
 func TestRunSuccessOnSecondAttempt(t *testing.T) {
-	executor, provider := setupMockExecutorAndProvider(t)
+	synctest.Test(t, func(t *testing.T) {
+		executor, provider := setupMockExecutorAndProvider(t)
 
-	// We run everything once
-	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	executor.On("Finish", mock.Anything).Once()
-	executor.On("Cleanup").Once()
+		// We run everything once
+		executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+		executor.On("Finish", mock.Anything).Once()
+		executor.On("Cleanup").Once()
 
-	// Run script successfully
-	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+		// Run script successfully
+		executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 
-	var getSourcesRunAttempts int
-	executor.On("Run", mock.Anything).Return(func(cmd ExecutorCommand) error {
-		if cmd.Stage == BuildStageGetSources {
-			getSourcesRunAttempts++
-			if getSourcesRunAttempts == 1 {
-				return errors.New("build fail")
+		var getSourcesRunAttempts int
+		executor.On("Run", mock.Anything).Return(func(cmd ExecutorCommand) error {
+			if cmd.Stage == BuildStageGetSources {
+				getSourcesRunAttempts++
+				if getSourcesRunAttempts == 1 {
+					return errors.New("build fail")
+				}
 			}
-		}
-		return nil
-	})
+			return nil
+		})
 
-	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
-	build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
-	err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
-	assert.Equal(t, 2, getSourcesRunAttempts)
+		build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
+		build.Variables = append(build.Variables, spec.Variable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
+		err := build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
+		assert.NoError(t, err)
+		assert.Equal(t, 2, getSourcesRunAttempts)
+	})
 }
 
 func TestDebugTrace(t *testing.T) {
@@ -2822,74 +2833,76 @@ func TestSecretsResolvingWithRetry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			logrusLogger := logrus.New()
-			hook := test.NewLocal(logrusLogger)
+			synctest.Test(t, func(t *testing.T) {
+				logrusLogger := logrus.New()
+				hook := test.NewLocal(logrusLogger)
 
-			// Create a mock executor provider
-			var p *MockExecutorProvider
-			if tt.expectedError {
-				p = NewMockExecutorProvider(t)
-			} else {
-				p = setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
-			}
-
-			secretsResolverMock := NewMockSecretsResolver(t)
-
-			for _, shouldFail := range tt.resolverFailurePattern {
-				if shouldFail {
-					secretsResolverMock.On("Resolve", secrets).
-						Return(nil, errors.New("simulated resolver failure")).Once()
+				// Create a mock executor provider
+				var p *MockExecutorProvider
+				if tt.expectedError {
+					p = NewMockExecutorProvider(t)
 				} else {
-					secretsResolverMock.On("Resolve", secrets).
-						Return(spec.Variables{{Key: "TEST_SECRET", Value: "resolved"}}, nil).Once()
+					p = setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
 				}
-			}
 
-			res, err := GetSuccessfulBuild()
-			require.NoError(t, err)
-			res.Secrets = secrets
+				secretsResolverMock := NewMockSecretsResolver(t)
 
-			rc := new(RunnerConfig)
-			rc.RunnerSettings.Executor = t.Name()
+				for _, shouldFail := range tt.resolverFailurePattern {
+					if shouldFail {
+						secretsResolverMock.On("Resolve", secrets).
+							Return(nil, errors.New("simulated resolver failure")).Once()
+					} else {
+						secretsResolverMock.On("Resolve", secrets).
+							Return(spec.Variables{{Key: "TEST_SECRET", Value: "resolved"}}, nil).Once()
+					}
+				}
 
-			build, err := NewBuild(res, rc, nil, nil, p)
-			assert.NoError(t, err)
+				res, err := GetSuccessfulBuild()
+				require.NoError(t, err)
+				res.Secrets = secrets
 
-			build.logger = buildlogger.New(nil, logrus.NewEntry(logrusLogger), buildlogger.Options{})
+				rc := new(RunnerConfig)
+				rc.RunnerSettings.Executor = t.Name()
 
-			build.Variables = append(build.Variables, spec.Variable{
-				Key:   "SECRETS_RETRIEVAL_ATTEMPTS",
-				Value: tt.attempts,
+				build, err := NewBuild(res, rc, nil, nil, p)
+				assert.NoError(t, err)
+
+				build.logger = buildlogger.New(nil, logrus.NewEntry(logrusLogger), buildlogger.Options{})
+
+				build.Variables = append(build.Variables, spec.Variable{
+					Key:   "SECRETS_RETRIEVAL_ATTEMPTS",
+					Value: tt.attempts,
+				})
+
+				build.secretsResolver = func(_ logger, _ SecretResolverRegistry, _ func(string) bool) (SecretsResolver, error) {
+					return secretsResolverMock, nil
+				}
+
+				build.initSettings()
+				build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
+
+				err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
+
+				if tt.expectedError {
+					assert.Error(t, err, "Expected error when final attempt fails")
+				} else {
+					assert.NoError(t, err, "Expected no error when an attempt succeeds")
+				}
+
+				// Count retry messages in the logs
+				retryMessageCount := 0
+				for _, entry := range hook.AllEntries() {
+					if strings.Contains(entry.Message, "Retrying...") {
+						retryMessageCount++
+					}
+				}
+
+				assert.Equal(t, tt.expectedRetryCount, retryMessageCount,
+					"Expected %d retry messages but found %d", tt.expectedRetryCount, retryMessageCount)
+
+				// Verify all expected calls were made
+				secretsResolverMock.AssertExpectations(t)
 			})
-
-			build.secretsResolver = func(_ logger, _ SecretResolverRegistry, _ func(string) bool) (SecretsResolver, error) {
-				return secretsResolverMock, nil
-			}
-
-			build.initSettings()
-			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
-
-			err = build.Run(t.Context(), &Config{}, &Trace{Writer: os.Stdout})
-
-			if tt.expectedError {
-				assert.Error(t, err, "Expected error when final attempt fails")
-			} else {
-				assert.NoError(t, err, "Expected no error when an attempt succeeds")
-			}
-
-			// Count retry messages in the logs
-			retryMessageCount := 0
-			for _, entry := range hook.AllEntries() {
-				if strings.Contains(entry.Message, "Retrying...") {
-					retryMessageCount++
-				}
-			}
-
-			assert.Equal(t, tt.expectedRetryCount, retryMessageCount,
-				"Expected %d retry messages but found %d", tt.expectedRetryCount, retryMessageCount)
-
-			// Verify all expected calls were made
-			secretsResolverMock.AssertExpectations(t)
 		})
 	}
 }
@@ -4901,76 +4914,78 @@ func TestBuild_attemptExecuteStage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set up logger with test hook to capture log messages
-			logger := logrus.New()
-			hook := test.NewLocal(logger)
+			synctest.Test(t, func(t *testing.T) {
+				// Set up logger with test hook to capture log messages
+				logger := logrus.New()
+				hook := test.NewLocal(logger)
 
-			// Create a mock executor
-			executor := NewMockExecutor(t)
-			executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
+				// Create a mock executor
+				executor := NewMockExecutor(t)
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
 
-			// Set up the executor to fail or succeed based on the pattern
-			for _, shouldFail := range tt.executorFailurePattern {
-				if shouldFail {
-					executor.On("Run", mock.Anything).Return(errors.New("simulated failure")).Once()
-				} else {
-					executor.On("Run", mock.Anything).Return(nil).Once()
+				// Set up the executor to fail or succeed based on the pattern
+				for _, shouldFail := range tt.executorFailurePattern {
+					if shouldFail {
+						executor.On("Run", mock.Anything).Return(errors.New("simulated failure")).Once()
+					} else {
+						executor.On("Run", mock.Anything).Return(nil).Once()
+					}
 				}
-			}
 
-			// Create a build with the specified configuration
-			build := &Build{
-				Runner: &RunnerConfig{
-					RunnerCredentials: RunnerCredentials{
-						Logger: logger,
+				// Create a build with the specified configuration
+				build := &Build{
+					Runner: &RunnerConfig{
+						RunnerCredentials: RunnerCredentials{
+							Logger: logger,
+						},
 					},
-				},
-				Job: spec.Job{
-					Variables: spec.Variables{},
-				},
-				logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
-			}
-
-			// Initialize settings
-			build.initSettings()
-
-			// Set the feature flag
-			if tt.featureFlagEnabled {
-				build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
-			} else {
-				build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = false
-			}
-
-			// Call attemptExecuteStage
-			ctx := t.Context()
-			err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, tt.attempts, nil)
-
-			// Verify the error state
-			if tt.executorFailurePattern[len(tt.executorFailurePattern)-1] {
-				assert.Error(t, err, "Expected error when final attempt fails")
-			} else {
-				assert.NoError(t, err, "Expected no error when an attempt succeeds")
-			}
-
-			// Count retry messages in the logs
-			retryMessageCount := 0
-			for _, entry := range hook.AllEntries() {
-				if strings.Contains(entry.Message, "Retrying...") {
-					retryMessageCount++
+					Job: spec.Job{
+						Variables: spec.Variables{},
+					},
+					logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
 				}
-			}
 
-			// Verify retry message behavior
-			if tt.expectedRetryMessage {
-				assert.Equal(t, tt.expectedRetryCount, retryMessageCount,
-					"Expected %d retry messages but found %d", tt.expectedRetryCount, retryMessageCount)
-			} else {
-				assert.Equal(t, 0, retryMessageCount,
-					"Expected no retry messages but found %d", retryMessageCount)
-			}
+				// Initialize settings
+				build.initSettings()
 
-			// Verify all expected calls were made
-			executor.AssertExpectations(t)
+				// Set the feature flag
+				if tt.featureFlagEnabled {
+					build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
+				} else {
+					build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = false
+				}
+
+				// Call attemptExecuteStage
+				ctx := t.Context()
+				err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, tt.attempts, nil)
+
+				// Verify the error state
+				if tt.executorFailurePattern[len(tt.executorFailurePattern)-1] {
+					assert.Error(t, err, "Expected error when final attempt fails")
+				} else {
+					assert.NoError(t, err, "Expected no error when an attempt succeeds")
+				}
+
+				// Count retry messages in the logs
+				retryMessageCount := 0
+				for _, entry := range hook.AllEntries() {
+					if strings.Contains(entry.Message, "Retrying...") {
+						retryMessageCount++
+					}
+				}
+
+				// Verify retry message behavior
+				if tt.expectedRetryMessage {
+					assert.Equal(t, tt.expectedRetryCount, retryMessageCount,
+						"Expected %d retry messages but found %d", tt.expectedRetryCount, retryMessageCount)
+				} else {
+					assert.Equal(t, 0, retryMessageCount,
+						"Expected no retry messages but found %d", retryMessageCount)
+				}
+
+				// Verify all expected calls were made
+				executor.AssertExpectations(t)
+			})
 		})
 	}
 }
@@ -4998,123 +5013,123 @@ func TestBuild_attemptExecuteStageWithRetryCallback(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set up logger with test hook
-			logger := logrus.New()
-			hook := test.NewLocal(logger)
+			synctest.Test(t, func(t *testing.T) {
+				// Set up logger with test hook
+				logger := logrus.New()
+				hook := test.NewLocal(logger)
 
-			// Create a mock executor
-			executor := NewMockExecutor(t)
-			executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
+				// Create a mock executor
+				executor := NewMockExecutor(t)
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
 
-			// If callback succeeds, executor will be called for all attempts
-			// If callback fails, it only fails after attempt 0, so executor runs once
-			if !tt.retryCallbackError {
-				executor.On("Run", mock.Anything).Return(errors.New("simulated failure")).Times(tt.attempts)
-			} else {
-				executor.On("Run", mock.Anything).Return(errors.New("simulated failure")).Once()
-			}
+				// If callback succeeds, executor will be called for all attempts
+				// If callback fails, it only fails after attempt 0, so executor runs once
+				if !tt.retryCallbackError {
+					executor.On("Run", mock.Anything).Return(errors.New("simulated failure")).Times(tt.attempts)
+				} else {
+					executor.On("Run", mock.Anything).Return(errors.New("simulated failure")).Once()
+				}
 
-			// Create build
-			build := &Build{
-				Runner: &RunnerConfig{
-					RunnerCredentials: RunnerCredentials{
-						Logger: logger,
+				// Create build
+				build := &Build{
+					Runner: &RunnerConfig{
+						RunnerCredentials: RunnerCredentials{
+							Logger: logger,
+						},
 					},
-				},
-				Job: spec.Job{
-					Variables: spec.Variables{},
-				},
-				logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
-			}
-
-			build.initSettings()
-			build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
-
-			// Create retry callback
-			retryCallback := func(attempt int) error {
-				if tt.retryCallbackError && attempt > 0 {
-					return errors.New("retry callback error")
+					Job: spec.Job{
+						Variables: spec.Variables{},
+					},
+					logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
 				}
-				return nil
-			}
 
-			// Call attemptExecuteStage with retry callback
-			ctx := t.Context()
-			err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, tt.attempts, retryCallback)
+				build.initSettings()
+				build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
 
-			// Should always have an error since we're simulating failures
-			assert.Error(t, err)
-
-			// Count retry messages
-			retryMessageCount := 0
-			for _, entry := range hook.AllEntries() {
-				if strings.Contains(entry.Message, "Retrying...") {
-					retryMessageCount++
+				// Create retry callback
+				retryCallback := func(attempt int) error {
+					if tt.retryCallbackError && attempt > 0 {
+						return errors.New("retry callback error")
+					}
+					return nil
 				}
-			}
 
-			if tt.expectedRetryMessage {
-				assert.Greater(t, retryMessageCount, 0, "Expected at least one retry message")
-			} else {
-				assert.Equal(t, 0, retryMessageCount, "Expected no retry messages")
-			}
+				// Call attemptExecuteStage with retry callback
+				ctx := t.Context()
+				err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, tt.attempts, retryCallback)
 
-			executor.AssertExpectations(t)
+				// Should always have an error since we're simulating failures
+				assert.Error(t, err)
+
+				// Count retry messages
+				retryMessageCount := 0
+				for _, entry := range hook.AllEntries() {
+					if strings.Contains(entry.Message, "Retrying...") {
+						retryMessageCount++
+					}
+				}
+
+				if tt.expectedRetryMessage {
+					assert.Greater(t, retryMessageCount, 0, "Expected at least one retry message")
+				} else {
+					assert.Equal(t, 0, retryMessageCount, "Expected no retry messages")
+				}
+
+				executor.AssertExpectations(t)
+			})
 		})
 	}
 }
 
 func TestBuild_attemptExecuteStageExponentialBackoff(t *testing.T) {
-	// Skip this test in short mode as it tests actual timing
-	if testing.Short() {
-		t.Skip("Skipping timing test in short mode")
-	}
+	synctest.Test(t, func(t *testing.T) {
+		// This test verifies that the exponential backoff waits between retries.
+		// The synctest bubble makes the waits instant and the elapsed time exact.
+		logger := logrus.New()
+		hook := test.NewLocal(logger)
 
-	// This test verifies that the exponential backoff actually waits between retries
-	logger := logrus.New()
-	hook := test.NewLocal(logger)
+		executor := NewMockExecutor(t)
+		executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
+		executor.On("Run", mock.Anything).Return(errors.New("failure")).Times(3)
 
-	executor := NewMockExecutor(t)
-	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Maybe()
-	executor.On("Run", mock.Anything).Return(errors.New("failure")).Times(3)
-
-	build := &Build{
-		Runner: &RunnerConfig{
-			RunnerCredentials: RunnerCredentials{
-				Logger: logger,
+		build := &Build{
+			Runner: &RunnerConfig{
+				RunnerCredentials: RunnerCredentials{
+					Logger: logger,
+				},
 			},
-		},
-		Job: spec.Job{
-			Variables: spec.Variables{},
-		},
-		logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
-	}
-
-	build.initSettings()
-	build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
-
-	ctx := t.Context()
-	startTime := time.Now()
-	err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, 3, nil)
-	elapsed := time.Since(startTime)
-
-	require.Error(t, err)
-
-	// With 3 attempts, we should have 2 retries
-	// First retry: ~5s, Second retry: ~7.5s (5 * 1.5)
-	// Total should be at least 10s (allowing for some variance)
-	assert.Greater(t, elapsed, 10*time.Second, "Expected exponential backoff delays")
-
-	// Verify we got 2 retry messages
-	retryMessageCount := 0
-	for _, entry := range hook.AllEntries() {
-		if strings.Contains(entry.Message, "Retrying...") {
-			retryMessageCount++
+			Job: spec.Job{
+				Variables: spec.Variables{},
+			},
+			logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
 		}
-	}
-	assert.Equal(t, 2, retryMessageCount)
 
-	executor.AssertExpectations(t)
+		build.initSettings()
+		build.buildSettings.FeatureFlags[featureflags.UseExponentialBackoffStageRetry] = true
+
+		ctx := t.Context()
+		startTime := time.Now()
+		err := build.attemptExecuteStage(ctx, BuildStageGetSources, executor, 3, nil)
+		elapsed := time.Since(startTime)
+
+		require.Error(t, err)
+
+		// With 3 attempts, we should have 2 retries
+		// First retry: ~5s, Second retry: ~7.5s (5 * 1.5)
+		// Total should be at least 10s (allowing for some variance)
+		assert.Greater(t, elapsed, 10*time.Second, "Expected exponential backoff delays")
+
+		// Verify we got 2 retry messages
+		retryMessageCount := 0
+		for _, entry := range hook.AllEntries() {
+			if strings.Contains(entry.Message, "Retrying...") {
+				retryMessageCount++
+			}
+		}
+		assert.Equal(t, 2, retryMessageCount)
+
+		executor.AssertExpectations(t)
+	})
 }
 
 func TestBuild_attemptExecuteStageInvalidAttempts(t *testing.T) {
