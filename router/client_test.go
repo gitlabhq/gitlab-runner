@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -280,6 +281,136 @@ func TestRequestJob_JobRouterDisabled_FallsBackAndRediscovers(t *testing.T) {
 	// The router was not used again.
 	assert.EqualValues(t, 1, routerSrv.calls.Load())
 	assert.EqualValues(t, 2, discoveryCalls.Load())
+}
+
+// startMockRouter serves srv on a loopback port and returns its grpc:// address.
+func startMockRouter(t *testing.T, srv *mockRouterServer) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { l.Close() })
+	r := grpc.NewServer()
+	rpc.RegisterJobRouterServer(r, srv)
+	go func() { assert.NoError(t, r.Serve(l)) }()
+	t.Cleanup(r.GracefulStop)
+	return fmt.Sprintf("grpc://%s", l.Addr())
+}
+
+// newGitLabStub serves discovery (501 when disabled) and the direct job request.
+func newGitLabStub(t *testing.T, advertisedURL string, disabled bool, discoveryCalls *atomic.Int32) string {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v4/runners/router/discovery", func(w http.ResponseWriter, req *http.Request) {
+		discoveryCalls.Add(1)
+		if disabled {
+			w.WriteHeader(http.StatusNotImplemented)
+			return
+		}
+		discoveryJSON, err := json.Marshal(&common.RouterDiscovery{ServerURL: advertisedURL})
+		require.NoError(t, err)
+		w.Header().Set("Content-Type", "application/json")
+		_, writeErr := w.Write(discoveryJSON)
+		assert.NoError(t, writeErr)
+	})
+	mux.HandleFunc("POST /api/v4/jobs/request", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, writeErr := w.Write([]byte(fakeJobResponse))
+		assert.NoError(t, writeErr)
+	})
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Failf(t, "unexpected call", "%s %s", req.Method, req.URL)
+		w.WriteHeader(http.StatusNotImplemented)
+	}))
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+	return server.URL
+}
+
+// routerURLLogs returns the "Using job router at" messages recorded by hook, in order.
+func routerURLLogs(hook *logrustest.Hook) []string {
+	var msgs []string
+	for _, e := range hook.AllEntries() {
+		if strings.HasPrefix(e.Message, "Using job router at ") {
+			msgs = append(msgs, e.Message)
+		}
+	}
+	return msgs
+}
+
+func TestRequestJob_ConfiguredJobRouterURL(t *testing.T) {
+	newClient := func(t *testing.T) *Client {
+		certDir := t.TempDir()
+		rc := NewClient(network.NewGitLabClient(network.WithCertificateDirectory(certDir)), certDir, "runner-test")
+		t.Cleanup(rc.Shutdown)
+		return rc
+	}
+
+	t.Run("connects to the configured address, not the advertised one", func(t *testing.T) {
+		configured := &mockRouterServer{t: t}
+		configuredURL := startMockRouter(t, configured)
+		var discoveryCalls atomic.Int32
+		// GitLab advertises an address nothing listens on; the configured one must win.
+		gitLabURL := newGitLabStub(t, "grpc://127.0.0.1:1", false, &discoveryCalls)
+
+		rc := newClient(t)
+		config := newConfig(gitLabURL)
+		logger, hook := logrustest.NewNullLogger()
+		config.Logger = logger
+		config.JobRouterURL = configuredURL
+
+		job, healthy := rc.RequestJob(t.Context(), config, &common.SessionInfo{})
+		require.True(t, healthy)
+		require.NotNil(t, job)
+		assert.EqualValues(t, 1223, job.ID)
+		assert.EqualValues(t, 1, configured.calls.Load())
+		assert.EqualValues(t, 1, discoveryCalls.Load(), "discovery is still consulted as the on/off switch")
+		assert.Equal(t, []string{"Using job router at " + configuredURL}, routerURLLogs(hook),
+			"the discovery refresh logs the address in use, not the advertised one")
+	})
+
+	t.Run("discovery still gates the router", func(t *testing.T) {
+		configured := &mockRouterServer{t: t}
+		configuredURL := startMockRouter(t, configured)
+		var discoveryCalls atomic.Int32
+		gitLabURL := newGitLabStub(t, "", true, &discoveryCalls)
+
+		rc := newClient(t)
+		config := newConfig(gitLabURL)
+		config.JobRouterURL = configuredURL
+
+		// Discovery says the router is disabled, so the configured address is not dialed.
+		job, healthy := rc.RequestJob(t.Context(), config, &common.SessionInfo{})
+		require.True(t, healthy)
+		require.NotNil(t, job)
+		assert.EqualValues(t, 1223, job.ID)
+		assert.EqualValues(t, 0, configured.calls.Load())
+		assert.EqualValues(t, 1, discoveryCalls.Load())
+	})
+
+	t.Run("a changed address applies on the next request", func(t *testing.T) {
+		first := &mockRouterServer{t: t}
+		second := &mockRouterServer{t: t}
+		firstURL := startMockRouter(t, first)
+		secondURL := startMockRouter(t, second)
+		var discoveryCalls atomic.Int32
+		gitLabURL := newGitLabStub(t, "grpc://127.0.0.1:1", false, &discoveryCalls)
+
+		rc := newClient(t)
+		config := newConfig(gitLabURL)
+		config.JobRouterURL = firstURL
+		_, healthy := rc.RequestJob(t.Context(), config, &common.SessionInfo{})
+		require.True(t, healthy)
+		assert.EqualValues(t, 1, first.calls.Load())
+
+		// Config reload while the discovery cache is still warm.
+		config.JobRouterURL = secondURL
+		_, healthy = rc.RequestJob(t.Context(), config, &common.SessionInfo{})
+		require.True(t, healthy)
+		assert.EqualValues(t, 1, first.calls.Load())
+		assert.EqualValues(t, 1, second.calls.Load())
+		assert.EqualValues(t, 1, discoveryCalls.Load())
+	})
 }
 
 // installTestBreaker replaces the client's breaker with one matching production

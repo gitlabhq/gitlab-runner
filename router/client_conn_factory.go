@@ -17,6 +17,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/router/internal/wstunnel"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -25,11 +26,6 @@ import (
 )
 
 const (
-	protocolGRPC  = "grpc"
-	protocolGRPCS = "grpcs"
-	protocolWS    = "ws"
-	protocolWSS   = "wss"
-
 	webSocketMaxMessageSize = 10 * 1024 * 1024 // matches GitLab Relay (KAS) limit
 	// tunnelWebSocketProtocol is a subprotocol that allows client and server to recognize each other.
 	// See https://datatracker.ietf.org/doc/html/rfc6455#section-11.3.4
@@ -204,7 +200,7 @@ func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 		return nil, fmt.Errorf("invalid GitLab Relay (KAS) address: %w", err)
 	}
 	var tlsConfig *tls.Config
-	if u.Scheme == protocolWSS || u.Scheme == protocolGRPCS {
+	if u.Scheme == common.JobRouterSchemeWSS || u.Scheme == common.JobRouterSchemeGRPCS {
 		tlsConfig, err = maybeConstructTLSConfig(target.TLSCAFile, target.TLSCertFile, target.TLSKeyFile)
 		if err != nil {
 			return nil, err
@@ -214,9 +210,9 @@ func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 	var addressToDial string
 	// "grpcs" is the only scheme where encryption is done by gRPC.
 	// "wss" is secure too but gRPC cannot know that, so we tell it it's not.
-	secure := u.Scheme == protocolGRPCS
+	secure := u.Scheme == common.JobRouterSchemeGRPCS
 	switch u.Scheme {
-	case protocolWS, protocolWSS:
+	case common.JobRouterSchemeWS, common.JobRouterSchemeWSS:
 		// See https://github.com/grpc/grpc/blob/master/doc/naming.md.
 		addressToDial = "passthrough:" + target.URL
 		dialer := net.Dialer{
@@ -237,7 +233,7 @@ func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 				"User-Agent":    []string{f.userAgent},
 			},
 		)))
-	case protocolGRPC:
+	case common.JobRouterSchemeGRPC:
 		// See https://github.com/grpc/grpc/blob/master/doc/naming.md.
 		addressToDial = "dns:" + hostWithPort(u)
 		opts = append(opts,
@@ -245,7 +241,7 @@ func (f *ClientConnFactory) newConn(target DialTarget) (*connHolder, error) {
 			// See https://github.com/grpc/grpc/blob/master/doc/load-balancing.md.
 			grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
 		)
-	case protocolGRPCS:
+	case common.JobRouterSchemeGRPCS:
 		// See https://github.com/grpc/grpc/blob/master/doc/naming.md.
 		addressToDial = "dns:" + hostWithPort(u)
 		opts = append(opts,
@@ -396,9 +392,9 @@ func hostWithPort(u *url.URL) string {
 		return u.Host
 	}
 	switch u.Scheme {
-	case protocolGRPC:
+	case common.JobRouterSchemeGRPC:
 		return net.JoinHostPort(u.Host, "80")
-	case protocolGRPCS:
+	case common.JobRouterSchemeGRPCS:
 		return net.JoinHostPort(u.Host, "443")
 	default:
 		// Function called with unknown scheme, just return the original host.

@@ -3254,6 +3254,97 @@ func TestLoadConfig_APIURLExpandsToEmpty(t *testing.T) {
 	assert.Contains(t, warnings, "api_url expanded to an empty string; falling back to url for API requests")
 }
 
+func TestLoadConfig_JobRouterURL(t *testing.T) {
+	writeConfig := func(t *testing.T, content string) string {
+		tempFile, err := os.CreateTemp(t.TempDir(), "test_config")
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = tempFile.Close() })
+		_, err = tempFile.WriteString(content)
+		require.NoError(t, err)
+		return tempFile.Name()
+	}
+
+	t.Run("is read, expands environment variables and is logged", func(t *testing.T) {
+		t.Setenv("TEST_RUNNER_JOB_ROUTER_HOST", "kas-internal.example.com")
+		hook := logrustest.NewGlobal()
+		t.Cleanup(func() { logrus.StandardLogger().ReplaceHooks(make(logrus.LevelHooks)) })
+
+		cfg := NewConfig()
+		require.NoError(t, cfg.LoadConfig(writeConfig(t, `
+[[runners]]
+  name = "runner"
+  url = "https://gitlab.example.com"
+  job_router_url = "grpcs://${TEST_RUNNER_JOB_ROUTER_HOST}:8150"
+  token = "glrt-token"
+`)))
+		require.Len(t, cfg.Runners, 1)
+		assert.Equal(t, "grpcs://kas-internal.example.com:8150", cfg.Runners[0].JobRouterURL)
+
+		var logged []string
+		for _, e := range hook.AllEntries() {
+			if e.Level == logrus.InfoLevel && e.Data["job_router_url"] == "grpcs://kas-internal.example.com:8150" {
+				logged = append(logged, e.Message)
+			}
+		}
+		assert.Equal(t, []string{"job_router_url is set; connecting to it instead of the Job Router address GitLab advertises"}, logged)
+	})
+
+	t.Run("warns when it expands to an empty string", func(t *testing.T) {
+		t.Setenv("TEST_RUNNER_UNSET_JOB_ROUTER_URL", "")
+		hook := logrustest.NewGlobal()
+		t.Cleanup(func() { logrus.StandardLogger().ReplaceHooks(make(logrus.LevelHooks)) })
+
+		cfg := NewConfig()
+		require.NoError(t, cfg.LoadConfig(writeConfig(t, `
+[[runners]]
+  name = "runner"
+  url = "https://gitlab.example.com"
+  job_router_url = "${TEST_RUNNER_UNSET_JOB_ROUTER_URL}"
+  token = "glrt-token"
+`)))
+		require.Len(t, cfg.Runners, 1)
+		assert.Equal(t, "", cfg.Runners[0].JobRouterURL)
+
+		var warnings []string
+		for _, e := range hook.AllEntries() {
+			if e.Level == logrus.WarnLevel {
+				warnings = append(warnings, e.Message)
+			}
+		}
+		assert.Contains(t, warnings, "job_router_url expanded to an empty string; using the Job Router URL GitLab advertises")
+	})
+
+	t.Run("rejects a scheme the router client cannot dial", func(t *testing.T) {
+		cfg := NewConfig()
+		err := cfg.LoadConfig(writeConfig(t, `
+[[runners]]
+  name = "runner"
+  url = "https://gitlab.example.com"
+  job_router_url = "https://kas.example.com:8150"
+  token = "glrt-token"
+`))
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "job_router_url")
+		assert.ErrorContains(t, err, `unsupported scheme "https"`)
+	})
+
+	t.Run("rejects a URL without a host", func(t *testing.T) {
+		for _, value := range []string{"grpc://", "grpc://:8150"} {
+			cfg := NewConfig()
+			err := cfg.LoadConfig(writeConfig(t, `
+[[runners]]
+  name = "runner"
+  url = "https://gitlab.example.com"
+  job_router_url = "`+value+`"
+  token = "glrt-token"
+`))
+			require.Error(t, err, value)
+			assert.ErrorContains(t, err, "job_router_url")
+			assert.ErrorContains(t, err, "missing host")
+		}
+	})
+}
+
 func TestLoadConfig_SentryDSNFromEnv(t *testing.T) {
 	writeConfig := func(t *testing.T, content string) string {
 		tempFile, err := os.CreateTemp(t.TempDir(), "test_config")

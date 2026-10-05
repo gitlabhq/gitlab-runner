@@ -9,6 +9,7 @@ import (
 	"maps"
 	"math"
 	"math/big"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -1413,6 +1414,7 @@ func (s *Service) ToImageDefinition() spec.Image {
 type RunnerCredentials struct {
 	URL             string    `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"GitLab instance URL" jsonschema:"minLength=1"`
 	APIURL          string    `toml:"api_url,omitempty" json:"api_url,omitempty" long:"api-url" env:"CI_SERVER_API_URL" description:"URL the runner manager uses for GitLab API requests. Defaults to url"`
+	JobRouterURL    string    `toml:"job_router_url,omitempty" json:"job_router_url,omitempty" long:"job-router-url" env:"CI_SERVER_JOB_ROUTER_URL" description:"(Experimental) URL of the Job Router (GitLab Relay) to request jobs from instead of the one GitLab advertises, for example grpcs://kas.example.com:8150. Requires FF_USE_JOB_ROUTER"`
 	ID              int64     `toml:"id" json:"id" description:"Runner ID"`
 	Token           string    `toml:"token" json:"token" short:"t" long:"token" env:"CI_SERVER_TOKEN" required:"true" description:"Runner token" jsonschema:"minLength=1"`
 	TokenObtainedAt time.Time `toml:"token_obtained_at" json:"token_obtained_at" description:"When the runner authentication token was obtained"`
@@ -2532,6 +2534,22 @@ func (c *RunnerConfig) String() string {
 	return fmt.Sprintf("%v url=%v token=%v executor=%v", c.Name, c.URL, c.Token, c.Executor)
 }
 
+func validateJobRouterURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return err
+	}
+	switch u.Scheme {
+	case JobRouterSchemeGRPC, JobRouterSchemeGRPCS, JobRouterSchemeWS, JobRouterSchemeWSS:
+	default:
+		return fmt.Errorf("unsupported scheme %q in %q; use grpc, grpcs, ws or wss", u.Scheme, raw)
+	}
+	if u.Hostname() == "" {
+		return fmt.Errorf("missing host in %q", raw)
+	}
+	return nil
+}
+
 func (c *RunnerConfig) WarnOnLegacyCIURL() {
 	if strings.HasSuffix(strings.TrimRight(c.URL, "/"), "/ci") {
 		c.Log().Warning("The runner URL contains a legacy '/ci' suffix.\n" +
@@ -2787,6 +2805,18 @@ func (c *RunnerConfig) loadConfig(globalCfg *Config) error {
 		c.APIURL = os.ExpandEnv(c.APIURL)
 		if c.APIURL == "" {
 			c.Log().Warning("api_url expanded to an empty string; falling back to url for API requests")
+		}
+	}
+	if c.JobRouterURL != "" {
+		c.JobRouterURL = os.ExpandEnv(c.JobRouterURL)
+		if c.JobRouterURL == "" {
+			c.Log().Warning("job_router_url expanded to an empty string; using the Job Router URL GitLab advertises")
+		} else {
+			if err := validateJobRouterURL(c.JobRouterURL); err != nil {
+				return fmt.Errorf("job_router_url: %w", err)
+			}
+			c.Log().WithField("job_router_url", c.JobRouterURL).
+				Info("job_router_url is set; connecting to it instead of the Job Router address GitLab advertises")
 		}
 	}
 

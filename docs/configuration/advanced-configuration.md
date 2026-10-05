@@ -477,6 +477,7 @@ Each `[[runners]]` section defines one runner.
 | `post_build_script`                   | Commands to be executed on the runner after executing the job. Runs in the same shell context as `pre_build_script`, `before_script`, and `script`. If any of those fail, `post_build_script` is skipped. `after_script` runs in a separate shell context and is not affected by `post_build_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.               |
 | `clone_url`                           | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL.                                                                                                                                                                                                                                                                                                         |
 | `api_url`                             | URL the runner manager uses for GitLab API requests (job requests, job updates, log patches, token verification). Defaults to `url`. Does not affect Git clones or artifact uploads and downloads in the job. Supports environment variable expansion.                                                                                                                                                      |
+| `job_router_url`                      | (Experiment) URL of the Job Router (GitLab Relay) the runner manager requests jobs from when the `FF_USE_JOB_ROUTER` [feature flag](feature-flags.md) is enabled, for example, `grpcs://kas.example.com:8150`. The runner still asks GitLab whether the Job Router is enabled, but connects to this URL instead of the one GitLab advertises. Supports environment variable expansion.                       |
 | `debug_trace_disabled`                | Disables [debug tracing](https://docs.gitlab.com/ci/variables/variables_troubleshooting/#enable-debug-logging). When set to `true`, the debug log (trace) remains disabled even if `CI_DEBUG_TRACE` is set to `true`.                                                                                                                                                                                                                 |
 | `clean_git_config`                    | Cleans the Git configuration. For more information, see [Cleaning Git configuration](#cleaning-git-configuration).                                                                                                                                                                                                                                                                                          |
 | `referees`                            | Extra job monitoring workers that pass their results as job artifacts to GitLab.                                                                                                                                                                                                                                                                                                                            |
@@ -596,7 +597,7 @@ of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 > [!note]
 > `clone_url` does not affect Git LFS endpoints or artifact uploads or downloads.
 
-The runner uses up to three URLs for a `[[runners]]` entry:
+The runner uses up to four URLs for a `[[runners]]` entry:
 
 - `url`: the GitLab instance URL. Identifies the runner, and the job uses it for
   artifact uploads and downloads and as the fallback when `clone_url` is not set.
@@ -605,8 +606,17 @@ The runner uses up to three URLs for a `[[runners]]` entry:
   updating job status, sending job logs, and uploading [referee](#the-runnersreferees-section) results. Defaults to `url`. Set `api_url` when the manager
   reaches the GitLab API through a different network path than the jobs, for example a private
   endpoint that should not handle Git or artifact traffic.
+- `job_router_url`: used by the runner manager to request jobs through the Job Router (GitLab Relay)
+  when the `FF_USE_JOB_ROUTER` [feature flag](feature-flags.md) is enabled. By default the manager
+  connects to the address GitLab advertises. Set `job_router_url` when the manager should reach the
+  Job Router through a different network path, for example a private endpoint. GitLab still decides
+  whether the Job Router is enabled, and the job's certificate data is unaffected. The runner looks
+  for certificates for the `job_router_url` host in the
+  [certificate directory](tls-self-signed.md#supported-options-for-self-signed-certificates-targeting-the-gitlab-server),
+  as it does for the advertised address; `tls-ca-file`, `tls-cert-file`, and `tls-key-file` take
+  precedence when set. This setting is an experiment and might change or be removed in any release.
 
-The `tls-ca-file`, `tls-cert-file`, and `tls-key-file` settings apply to both `url` and `api_url`.
+The `tls-ca-file`, `tls-cert-file`, and `tls-key-file` settings apply to `url`, `api_url`, and `job_router_url`.
 When `api_url` is not set, the job receives the certificate chain of the server that answered
 the job request in `CI_SERVER_TLS_CA_FILE`, as described in
 [Git cloning](tls-self-signed.md#git-cloning). When `api_url` is set, that chain belongs to the
