@@ -492,6 +492,7 @@ print_image_tags:
 		[ "$(CI_COMMIT_BRANCH)" = "$(CI_DEFAULT_BRANCH)" ] || \
 		echo "$(CI_COMMIT_REF_NAME)" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$$' \
 	) && tags="$$tags bleeding"; \
+	[ "$(CI_PROJECT_PATH)" = "gitlab-org/gitlab-runner" ] && [ "$(CI_COMMIT_BRANCH)" = "$(CI_DEFAULT_BRANCH)" ] && tags="$$tags $(subst ~,-,$(VERSION))"; \
 	echo "$$tags"
 
 .PHONY: tools # Install dev tool and dependency binaries for local development.
