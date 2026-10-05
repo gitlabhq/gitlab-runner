@@ -5,7 +5,6 @@ package docker_test
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -21,6 +20,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 )
@@ -262,13 +262,18 @@ func TestPodmanServiceHealthcheckWithNetworkPerBuild(t *testing.T) {
 				tc.port = 80
 			}
 
-			resp, err := common.GetRemoteBuildResponse(
-				fmt.Sprintf("liveness client db:%d", tc.port),
-				fmt.Sprintf("liveness client registry.gitlab.com__gitlab-org__ci-cd__tests__liveness:%d", tc.port),
-				fmt.Sprintf("liveness client registry.gitlab.com-gitlab-org-ci-cd-tests-liveness:%d", tc.port),
-			)
+			// The service is reachable by its explicit alias and by the
+			// aliases the runner derives from the image name. The job probes
+			// each with the HTTP client its build image already has.
+			aliases := append([]string{"db"}, services.SplitNameAndVersion(common.TestLivenessImage).Aliases...)
+			var commands []string
+			for _, alias := range aliases {
+				commands = append(commands, serviceProbeCommand(alias, tc.port))
+			}
+
+			resp, err := common.GetRemoteBuildResponse(commands...)
 			require.NoError(t, err)
-			resp.Image = spec.Image{Name: common.TestLivenessImage, Entrypoint: []string{""}}
+			resp.Image = spec.Image{Name: common.TestAlpineImage}
 			resp.Services = append(resp.Services, spec.Image{
 				Name:      common.TestLivenessImage,
 				Alias:     "db",

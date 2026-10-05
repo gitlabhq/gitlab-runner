@@ -1,6 +1,7 @@
 package common
 
 import (
+	"os"
 	"time"
 
 	"github.com/go-http-utils/headers"
@@ -81,8 +82,25 @@ const (
 	TestAlpineIDOverflowImage       = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-id-overflow:latest"
 	TestDockerDindImage             = "docker:27-dind"
 	TestDockerGitImage              = "docker:25-git"
-	TestLivenessImage               = "registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0"
 )
+
+// The liveness test service builds in base-images (dockerfiles/tests) and
+// is tagged with that project's release version. CI passes the release it
+// pins as RUNNER_IMAGES_VERSION. Without it, as on a developer machine, the
+// development tag is used, which base-images points at its newest release;
+// CI should never rely on it. The Windows variant takes the nanoserver tag
+// suffix.
+var (
+	TestLivenessImage        = "registry.gitlab.com/gitlab-org/ci-cd/runner-tools/base-images/liveness:" + testImagesVersion(os.Getenv("RUNNER_IMAGES_VERSION"))
+	TestLivenessWindowsImage = TestLivenessImage + "-nanoserver-%s"
+)
+
+func testImagesVersion(fromEnv string) string {
+	if fromEnv == "" {
+		return "development"
+	}
+	return fromEnv
+}
 
 // HTTP related constants
 const (
