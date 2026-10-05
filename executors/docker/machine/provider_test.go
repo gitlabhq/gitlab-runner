@@ -1426,7 +1426,7 @@ func TestMachineWarmupTimesOut(t *testing.T) {
 	require.Len(t, ended, 1)
 	assert.Equal(t, logrus.WarnLevel, ended[0].Level)
 	assert.Equal(t, 0, ended[0].Data["booted"])
-	assert.Equal(t, 2, ended[0].Data["readyMachines"])
+	assert.Equal(t, 2, ended[0].Data["ready_machines"])
 
 	assert.NoError(t, testutil.CollectAndCompare(p, strings.NewReader(warmupGaugesExpected(config, 1, 1, 0, 1, 0)), warmupGaugeNames...))
 
@@ -1470,12 +1470,12 @@ func TestMachineWarmupProgressLog(t *testing.T) {
 	require.Len(t, progress, 1)
 	assert.Equal(t, 2, progress[0].Data["booted"])
 	assert.Equal(t, 2, progress[0].Data["idle"])
-	assert.Equal(t, 2, progress[0].Data["readyMachines"])
-	assert.Equal(t, 2, progress[0].Data["idleTarget"])
+	assert.Equal(t, 2, progress[0].Data["ready_machines"])
+	assert.Equal(t, 2, progress[0].Data["idle_target"])
 	assert.Equal(t, true, progress[0].Data["ready"])
 	assert.Equal(t, true, progress[0].Data["burst"])
-	assert.Equal(t, 2*time.Minute, progress[0].Data["elapsed"])
-	assert.Equal(t, 8*time.Minute, progress[0].Data["remaining"])
+	assert.Equal(t, 120.0, progress[0].Data["elapsed_s"])
+	assert.Equal(t, 480.0, progress[0].Data["remaining_s"])
 }
 
 func TestMachineWarmupReadyIsMonotonic(t *testing.T) {
@@ -1582,8 +1582,8 @@ func TestMachineWarmupLimitBelowTarget(t *testing.T) {
 	require.Len(t, warnings, 1)
 	assert.Equal(t, logrus.WarnLevel, warnings[0].Level)
 	assert.Equal(t, 2, warnings[0].Data["limit"])
-	assert.Equal(t, 4, warnings[0].Data["idleTarget"])
-	assert.Equal(t, 2, warnings[0].Data["readyMachines"])
+	assert.Equal(t, 4, warnings[0].Data["idle_target"])
+	assert.Equal(t, 2, warnings[0].Data["ready_machines"])
 
 	<-m.Created
 	<-m.Created
