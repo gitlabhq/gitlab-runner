@@ -622,13 +622,17 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		`}`
 
 	clearGitCredentials := `` +
+		`${GIT_TERMINAL_PROMPT}="0"` + eol +
+		`${env:GIT_TERMINAL_PROMPT}=${GIT_TERMINAL_PROMPT}` + eol +
+		`${GCM_INTERACTIVE}="Never"` + eol +
+		`${env:GCM_INTERACTIVE}=${GCM_INTERACTIVE}` + eol +
 		`& {` + eol +
 		`  try {` + eol +
 		`    $tmpFile = Get-Item ([System.IO.Path]::GetTempFilename())` + eol +
 		`    [System.IO.File]::WriteAllText($tmpFile, 'url=https://test-hostname` + eol +
 		`username=gitlab-ci-token` + eol +
 		`')` + eol +
-		`    $CommandWithStdin = Start-Process -NoNewWindow -RedirectStandardInput $tmpFile -PassThru -Wait -FilePath 'git' -ArgumentList 'credential','reject'` + eol +
+		`    $CommandWithStdin = Start-Process -NoNewWindow -RedirectStandardInput $tmpFile -PassThru -Wait -FilePath 'git' -ArgumentList '-c','credential.interactive=never','credential','reject'` + eol +
 		`  } catch {` + eol +
 		`  } finally {` + eol +
 		`    if ($tmpFile) { Remove-Item -Force -ErrorAction SilentlyContinue -Path $tmpFile }` + eol +

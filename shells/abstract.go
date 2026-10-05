@@ -769,7 +769,7 @@ func (b *AbstractShell) writeClearGitCredentials(w ShellWriter, build *common.Bu
 		return
 	}
 
-	w.CommandWithStdin(true, "url="+remote.String()+"\nusername=gitlab-ci-token", "git", "credential", "reject")
+	w.CommandWithStdin(true, "url="+remote.String()+"\nusername=gitlab-ci-token", "git", "-c", "credential.interactive=never", "credential", "reject")
 }
 
 func (b *AbstractShell) writeClearWorktreeScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
@@ -2080,6 +2080,10 @@ func (b *AbstractShell) writeArchiveCacheOnFailureScript(
 
 func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	b.writeEnvExports(w, info)
+
+	w.Variable(spec.Variable{Key: "GIT_TERMINAL_PROMPT", Value: "0"})
+	w.Variable(spec.Variable{Key: "GCM_INTERACTIVE", Value: "Never"})
+
 	b.writeClearGitCredentials(w, info.Build)
 
 	w.RmFile(w.TmpFile(gitlabEnvFileName))
