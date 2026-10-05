@@ -25,8 +25,11 @@ helpers/gitlab_secrets_manager/ @gitlab-com/pipeline-security-group/backend
 helpers/secrets/ @gitlab-com/pipeline-security-group/backend
 
 [Documentation]
-.markdownlint.yml @gitlab-com/runner-docs-maintainers
+/.markdownlint-cli2.yaml @gitlab-com/runner-docs-maintainers @gitlab-org/technical-writing/tw-docops @gitlab-org/tw-leadership
 /docs/ @gitlab-com/runner-docs-maintainers
+/docs/.vale/ @gitlab-org/technical-writing/tw-docops @gitlab-org/tw-leadership
+/docs/.markdownlint/ @gitlab-org/technical-writing/tw-docops @gitlab-org/tw-leadership
+/.gitlab/ci/docs.gitlab-ci.yml @gitlab-org/technical-writing/tw-docops @gitlab-org/tw-leadership
 
 [Localization]
 /docs-locale/ @gitlab-com/localization/maintainers/tech-docs
