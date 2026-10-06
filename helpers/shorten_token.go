@@ -13,10 +13,22 @@ import (
 //
 // Any token prefixed added here should probably also be added to allTokenPrefixes in tokensanitizer package.
 
+// instanceTokenPrefixPattern matches the optional instance token prefix GitLab can prepend to glrt- and glcbt-
+// tokens, e.g. "acme-" in "acme-glrt-...". GitLab only allows alphanumeric instance prefixes.
+const instanceTokenPrefixPattern = `([A-Za-z0-9]+-)?`
+
+const createdRunnerTokenPrefix = "glrt-"
+
 var prefixRes = []*regexp.Regexp{
-	regexp.MustCompile(`^glrt-(t[123]_)?|^t[123]_|^glrtr-`), // runner authentication token
-	regexp.MustCompile(`^glcbt-`),                           // job token
-	regexp.MustCompile(`^GR[0-9A-Fa-f]{7}`),                 // runner registration token. These should no longer appear, but just in case...
+	regexp.MustCompile(`^` + instanceTokenPrefixPattern + regexp.QuoteMeta(createdRunnerTokenPrefix) + `(t[123]_)?|^t[123]_|^glrtr-`), // runner authentication token
+	regexp.MustCompile(`^` + instanceTokenPrefixPattern + `glcbt-`),                                                                   // job token
+	regexp.MustCompile(`^GR[0-9A-Fa-f]{7}`),                                                                                           // runner registration token. These should no longer appear, but just in case...
+}
+
+var createdRunnerTokenRe = regexp.MustCompile(`^` + instanceTokenPrefixPattern + regexp.QuoteMeta(createdRunnerTokenPrefix))
+
+func IsCreatedRunnerToken(token string) bool {
+	return createdRunnerTokenRe.MatchString(token)
 }
 
 const shortTokenLen = 9

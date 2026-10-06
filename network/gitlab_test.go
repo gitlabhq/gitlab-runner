@@ -50,6 +50,27 @@ var brokenCredentials = RunnerCredentials{
 	URL: "broken",
 }
 
+func TestTokenIsCreatedRunnerToken(t *testing.T) {
+	tests := map[string]struct {
+		token string
+		want  bool
+	}{
+		"created runner token":                      {token: "glrt-t1_t9Wkyj-HGRkqQ-VWTGAr", want: true},
+		"created runner token with instance prefix": {token: "acme-glrt-t1_t9Wkyj-HGRkqQ-VWTGAr", want: true},
+		"registration-type runner token":            {token: "glrtr-t9Wkyj-HGRkqQ-VWTGAr", want: false},
+		"legacy registration token":                 {token: "GR1348941Z196cJVywzZpx_Ki_Cn2", want: false},
+		"job token with instance prefix":            {token: "acme-glcbt-t9Wkyj-HGRkqQ-VWTGAr", want: false},
+		"non-alphanumeric instance prefix":          {token: "ac_me-glrt-t9Wkyj-HGRkqQ-VWTGAr", want: false},
+		"empty token":                               {token: "", want: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, TokenIsCreatedRunnerToken(tc.token))
+		})
+	}
+}
+
 func TestClients(t *testing.T) {
 	c := NewGitLabClient()
 	c1, _ := c.getClient(&RunnerCredentials{

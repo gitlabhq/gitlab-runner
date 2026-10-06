@@ -29,10 +29,8 @@ import (
 )
 
 const (
-	// createdRunnerTokenPrefix is the token prefix used for GitLab UI-created runner authentication tokens
-	createdRunnerTokenPrefix = "glrt-"
-	clientError              = -100
-	responseBodyPeekMax      = 512
+	clientError         = -100
+	responseBodyPeekMax = 512
 
 	correlationIDHeader   = "X-Request-Id"
 	correlationIDLogField = "correlation_id"
@@ -48,7 +46,7 @@ const (
 )
 
 func TokenIsCreatedRunnerToken(token string) bool {
-	return strings.HasPrefix(token, createdRunnerTokenPrefix)
+	return helpers.IsCreatedRunnerToken(token)
 }
 
 type GitLabClient struct {
