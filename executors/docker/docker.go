@@ -1947,7 +1947,7 @@ func (e *executor) createHostConfigForServiceHealthCheck(service *serviceInfo) *
 	// we only get a service IP from the default network, for other networks, Docker
 	// already provides DNS entries
 	for _, ip := range service.IP {
-		extraHosts = []string{service.ID[:min(12, len(service.ID))] + ":" + ip}
+		extraHosts = append(extraHosts, service.ID[:min(12, len(service.ID))]+":"+ip)
 	}
 
 	return &container.HostConfig{
