@@ -338,12 +338,17 @@ fuzz variable mask:
       }
       7z e -y $zstdZip -o"$zstdDir" zstd.exe -r > $null
       $env:Path = "$zstdDir;$env:Path"
-    - zstd -d out/helper-images/prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar.zst
+    - zstd -d --rm out/helper-images/prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar.zst
     - $output = docker load --input "out/helper-images/prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar" 2>&1
+    # The loaded tarball is several gigabytes; the tests have run out of disk
+    # with it left behind.
+    - Remove-Item -Force "out/helper-images/prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar"
     - $image_id = ($output | Select-String "Loaded image ID:").ToString().Split()[3]
     - docker tag ${image_id} gitlab/gitlab-runner-helper:x86_64-bleeding-${WINDOWS_VERSION}
     - docker tag ${image_id} registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest-${WINDOWS_VERSION}
-    - docker pull registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0
+    # The liveness test service for this Windows version, so the tests do not
+    # pull it one at a time.
+    - docker pull "${RUNNER_IMAGES_REGISTRY}/liveness:${RUNNER_IMAGES_VERSION}-nanoserver-$($env:WINDOWS_PREBUILT -replace '^servercore-','')"
     - docker network create -d "nat" test-network
     - docker network rm test-network
     - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest
