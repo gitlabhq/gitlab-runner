@@ -35,6 +35,16 @@ func TestShortenToken(t *testing.T) {
 		{"glcbt-t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
 		{"glcbt-t2_t9Wkyj-HGRkqQ-VWTGAr", "t2_t9Wkyj"},
 
+		// instance token prefix before glrt and glcbt; GitLab never adds one to glrtr
+		// (see Ci::Runner#prefix_for_new_and_legacy_runner)
+		{"acme-glrt-t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
+		{"acme-glrt-t1_t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
+		{"Acme-glrt-t2_t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
+		{"Acme1-glrt-t3_t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
+		{"acme-glcbt-t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
+		{"123-glrt-t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
+		{"acme-glrtr-t9Wkyj-HGRkqQ-VWTGAr", "acme-glrt"},
+
 		// old registration token, with and without 7 char decimal-to-hex-encoded rotation date
 		{"GR1348941Z196cJVywzZpx_Ki_Cn2", "Z196cJVyw"},
 		{"GR134894-196cJVywzZpx_Ki_Cn2", "GR134894r"}, // trailing dash replaced with "r"
