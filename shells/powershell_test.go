@@ -4,6 +4,8 @@ package shells
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -664,6 +666,7 @@ func TestPowershell_GenerateScript(t *testing.T) {
 					`$ErrorActionPreference = "Stop"` + eol +
 					`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` +
 					eol +
+					strings.ReplaceAll(pwshCPUInfoScript, "\n", eol) + eol +
 					rmGitLabEnvScript +
 					eol + eol + eol +
 					"}" + eol + eol
@@ -1205,6 +1208,75 @@ func TestPowershell_IfFileReadable(t *testing.T) {
 			writer.IfFileReadable(tc.path)
 
 			assert.Equal(t, tc.expected, writer.String())
+		})
+	}
+}
+
+func TestPowershell_CPUInfoMessage(t *testing.T) {
+	pwsh, err := exec.LookPath(SNPwsh)
+	if err != nil {
+		t.Skip("requires pwsh")
+	}
+
+	// The test points the script at fixtures by rewriting these literals. Pointing it at a
+	// missing registry key makes it fall back to the cpuinfo fixture on Windows as well.
+	const (
+		cpuKey      = `'HKLM:\HARDWARE\DESCRIPTION\System\CentralProcessor\0'`
+		missingKey  = `'HKLM:\SOFTWARE\GitLab\gitlab-runner-test\missing'`
+		cpuinfoPath = "'/proc/cpuinfo'"
+	)
+	require.Contains(t, pwshCPUInfoScript, cpuKey)
+	require.Contains(t, pwshCPUInfoScript, cpuinfoPath)
+
+	tests := map[string]struct {
+		windowsOnly bool
+		cpuinfo     string // no cpuinfo file is created when empty
+		expected    string
+	}{
+		"model from cpuinfo": {
+			cpuinfo:  "model name\t: AMD EPYC 7B12\n",
+			expected: "Running on CPU: AMD EPYC 7B12",
+		},
+		"no registry key and no cpuinfo": {
+			expected: "Running on CPU: unknown",
+		},
+		"model from registry": {
+			windowsOnly: true,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			if tc.windowsOnly && runtime.GOOS != OSWindows {
+				t.Skip("the registry exists only on Windows")
+			}
+
+			cpuinfo := filepath.Join(t.TempDir(), "cpuinfo")
+			if tc.cpuinfo != "" {
+				require.NoError(t, os.WriteFile(cpuinfo, []byte(tc.cpuinfo), 0o644))
+			}
+
+			script := strings.Replace(pwshCPUInfoScript, cpuinfoPath, "'"+cpuinfo+"'", 1)
+			if !tc.windowsOnly {
+				script = strings.Replace(script, cpuKey, missingKey, 1)
+			}
+
+			// Run the message the way the job script does: with errors stopping the script.
+			var stderr strings.Builder
+			cmd := exec.Command(pwsh, "-NoProfile", "-NonInteractive", "-Command",
+				`$ErrorActionPreference = "Stop"`+"\n"+script+"\n")
+			cmd.Stderr = &stderr
+			out, err := cmd.Output()
+			require.NoError(t, err)
+			assert.Empty(t, stderr.String(), "the probe must not write to stderr")
+
+			line := strings.TrimRight(string(out), "\r\n")
+			if tc.windowsOnly {
+				assert.NotEqual(t, "Running on CPU: unknown", line)
+				assert.True(t, strings.HasPrefix(line, "Running on CPU: "), "unexpected line: %q", line)
+			} else {
+				assert.Equal(t, tc.expected, line)
+			}
 		})
 	}
 }
