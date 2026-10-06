@@ -34,6 +34,28 @@ echo ""
 echo "$start_json"
 `
 
+	// pwshCPUInfoScript is the PowerShell counterpart of bashCPUInfoScript, kept as a
+	// script for the same reason: it has to run on the machine the job runs on. It prints
+	// the CPU model from the registry on Windows, or from /proc/cpuinfo on Linux. Both
+	// lookups are wrapped in an intentionally empty try/catch, as each is only available
+	// on some platforms, and a failed lookup must never fail the job.
+	pwshCPUInfoScript = `& {
+  $model = $null
+  $cpuKey = 'HKLM:\HARDWARE\DESCRIPTION\System\CentralProcessor\0'
+  try { $model = (Get-ItemProperty -LiteralPath $cpuKey -ErrorAction Stop).ProcessorNameString } catch {}
+  if (-not $model) {
+    try {
+      $match = Select-String -LiteralPath '/proc/cpuinfo' -Pattern '^model name\s*:\s*(.*)$' -ErrorAction Stop |
+        Select-Object -First 1
+      $model = $match.Matches[0].Groups[1].Value
+    } catch {}
+  }
+  # Registry values can carry whitespace, and a failed lookup leaves $null.
+  $model = "$model".Trim()
+  if (-not $model) { $model = 'unknown' }
+  echo "Running on CPU: $model"
+}`
+
 	// Before executing a script, powershell parses it.
 	// A `ParserError` can then be thrown if a parsing error is found.
 	// Those errors are not caught by the powershell_trap_script thus causing the job to hang
@@ -852,6 +874,7 @@ func (b *PowerShell) generateScript(
 	info common.ShellScriptInfo,
 ) (string, error) {
 	b.ensurePrepareStageHostnameMessage(w, buildStage, info)
+	b.ensurePrepareStageCPUInfoMessage(w, buildStage)
 	err := b.writeScript(ctx, w, buildStage, info)
 	if err != nil {
 		return "", err
@@ -908,6 +931,19 @@ func (b *PowerShell) ensurePrepareStageHostnameMessage(
 		} else {
 			w.Line(`echo "Running on $([Environment]::MachineName)..."`)
 		}
+	}
+}
+
+// ensurePrepareStageCPUInfoMessage writes pwshCPUInfoScript into the prepare stage, right
+// after the hostname message. It's separate from ensurePrepareStageHostnameMessage so that
+// method still only does what its name says.
+func (b *PowerShell) ensurePrepareStageCPUInfoMessage(w ShellWriter, buildStage common.BuildStage) {
+	if buildStage != common.BuildStagePrepare {
+		return
+	}
+
+	for line := range strings.SplitSeq(pwshCPUInfoScript, "\n") {
+		w.Line(line)
 	}
 }
 

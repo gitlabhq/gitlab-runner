@@ -91,6 +91,25 @@ trap runner_script_trap EXIT
 	bashJSONInitializationScript = `start_json="{\"script\": \"$0\"}"
 echo "$start_json"
 `
+
+	// bashCPUInfoScript prints the CPU model and the AVX extensions of the machine the job
+	// runs on, to help diagnose failures that only happen on some machine types of a
+	// CPU-heterogeneous fleet. It's a script rather than Go code because Go runs in the
+	// runner process, and with executors like kubernetes, instance or docker-autoscaler
+	// that isn't the machine the job runs on. It's best effort: it runs in a subshell,
+	// prints "unknown" when there's no model name, such as on arm64, and never fails the job.
+	// lscpu prints "Model name: -" on some arm64 VMs, which is treated as no model name.
+	bashCPUInfoScript = `(
+  model=$(awk -F ': *' '/^model name/ { print $2; exit }' /proc/cpuinfo 2>/dev/null)
+  [ -n "$model" ] || model=$(LC_ALL=C lscpu 2>/dev/null | awk -F ': *' '/^Model name/ { print $2; exit }')
+  [ "$model" != "-" ] || model=
+  flags=$(awk '/^flags/ { print; exit }' /proc/cpuinfo 2>/dev/null)
+  isa=
+  for f in avx avx2 avx512f; do
+    case " $flags " in *" $f "*) isa="$isa${isa:+, }$f" ;; esac
+  done
+  echo "Running on CPU: ${model:-unknown}${isa:+ ($isa)}"
+) || true`
 )
 
 type BashShell struct {
@@ -529,6 +548,7 @@ func (b *BashShell) generateScript(
 	info common.ShellScriptInfo,
 ) (string, error) {
 	b.ensurePrepareStageHostnameMessage(w, buildStage, info)
+	b.ensurePrepareStageCPUInfoMessage(w, buildStage)
 	err := b.writeScript(ctx, w, buildStage, info)
 	script := w.Finish(info.Build.IsDebugTraceEnabled())
 	return script, err
@@ -545,6 +565,19 @@ func (b *BashShell) ensurePrepareStageHostnameMessage(
 		} else {
 			w.Line("echo " + strconv.Quote("Running on $(hostname)..."))
 		}
+	}
+}
+
+// ensurePrepareStageCPUInfoMessage writes bashCPUInfoScript into the prepare stage, right
+// after the hostname message. It's separate from ensurePrepareStageHostnameMessage so that
+// method still only does what its name says.
+func (b *BashShell) ensurePrepareStageCPUInfoMessage(w ShellWriter, buildStage common.BuildStage) {
+	if buildStage != common.BuildStagePrepare {
+		return
+	}
+
+	for line := range strings.SplitSeq(bashCPUInfoScript, "\n") {
+		w.Line(line)
 	}
 }
 

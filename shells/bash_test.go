@@ -3,8 +3,12 @@
 package shells
 
 import (
+	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +16,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 func TestBash_CommandShellEscapes(t *testing.T) {
@@ -508,6 +513,150 @@ func TestBash_Finish_EvalForm(t *testing.T) {
 			assert.NotContains(t, out, tc.notWantSubstr,
 				"generated script should not contain the other eval form")
 		})
+	}
+}
+
+func TestBash_PrepareStageCPUInfoMessage(t *testing.T) {
+	tests := map[string]struct {
+		shell      string
+		stage      common.BuildStage
+		wantCPUMsg bool
+	}{
+		"sh prepare stage prints CPU info": {
+			shell:      "sh",
+			stage:      common.BuildStagePrepare,
+			wantCPUMsg: true,
+		},
+		"bash prepare stage prints CPU info": {
+			shell:      "bash",
+			stage:      common.BuildStagePrepare,
+			wantCPUMsg: true,
+		},
+		"bash cleanup stage does not print CPU info": {
+			shell:      "bash",
+			stage:      common.BuildStageCleanup,
+			wantCPUMsg: false,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			info := common.ShellScriptInfo{
+				Shell: tc.shell,
+				Build: &common.Build{Runner: &common.RunnerConfig{}},
+			}
+
+			script, err := common.GetShell(tc.shell).GenerateScript(t.Context(), tc.stage, info)
+			require.NoError(t, err)
+
+			if tc.wantCPUMsg {
+				assert.Contains(t, script, "Running on CPU: ")
+			} else {
+				assert.NotContains(t, script, "Running on CPU: ")
+			}
+		})
+	}
+}
+
+// TestBash_CPUInfoMessage runs the whole prepare stage script, as the writer escapes it, with
+// a real shell. It reads a cpuinfo fixture instead of /proc/cpuinfo, and stubs lscpu and
+// hostname, so the CPU and tools of the host running the test don't affect the result.
+func TestBash_CPUInfoMessage(t *testing.T) {
+	if runtime.GOOS == OSWindows {
+		t.Skip("requires a POSIX shell")
+	}
+
+	const x86CPUInfo = "processor\t: 0\n" +
+		"model name\t: AMD EPYC 9B45\n" +
+		"flags\t\t: fpu sse4_2 avx avx2 avx512f avx512vl\n"
+	const arm64CPUInfo = "processor\t: 0\nFeatures\t: fp asimd\n"
+
+	tests := map[string]struct {
+		cpuinfo  string // no cpuinfo file is created when empty
+		lscpu    string // lscpu fails when empty
+		expected string
+	}{
+		"model and extensions from cpuinfo": {
+			cpuinfo:  x86CPUInfo,
+			lscpu:    "Model name:            Ignored\n",
+			expected: "Running on CPU: AMD EPYC 9B45 (avx, avx2, avx512f)",
+		},
+		"model from lscpu": {
+			cpuinfo:  arm64CPUInfo,
+			lscpu:    "Architecture:          aarch64\nModel name:            Neoverse-N1\n",
+			expected: "Running on CPU: Neoverse-N1",
+		},
+		"lscpu model name is a dash": {
+			cpuinfo:  arm64CPUInfo,
+			lscpu:    "Architecture:          aarch64\nModel name:            -\n",
+			expected: "Running on CPU: unknown",
+		},
+		"no cpuinfo and no lscpu": {
+			expected: "Running on CPU: unknown",
+		},
+	}
+
+	shells := map[string]struct {
+		shell        string
+		path         string
+		posixEscapes bool
+	}{
+		// sh on dash can't run the default $'...' escapes, so it needs POSIX escapes.
+		"sh":   {shell: "sh", path: "/bin/sh", posixEscapes: true},
+		"bash": {shell: "bash", path: "bash"},
+	}
+
+	for sn, sc := range shells {
+		shellPath, err := exec.LookPath(sc.path)
+		if err != nil {
+			t.Logf("skipping %s: %v", sn, err)
+			continue
+		}
+
+		info := common.ShellScriptInfo{
+			Shell: sc.shell,
+			Build: &common.Build{Runner: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					FeatureFlags: map[string]bool{featureflags.PosixlyCorrectEscapes: sc.posixEscapes},
+				},
+			}},
+		}
+		generated, err := common.GetShell(sc.shell).GenerateScript(t.Context(), common.BuildStagePrepare, info)
+		require.NoError(t, err)
+		require.Contains(t, generated, "/proc/cpuinfo")
+
+		for tn, tc := range tests {
+			t.Run(sn+"/"+tn, func(t *testing.T) {
+				dir := t.TempDir()
+				cpuinfo := filepath.Join(dir, "cpuinfo")
+				if tc.cpuinfo != "" {
+					require.NoError(t, os.WriteFile(cpuinfo, []byte(tc.cpuinfo), 0o644))
+				}
+
+				lscpu := "#!/bin/sh\nexit 1\n"
+				if tc.lscpu != "" {
+					lscpu = "#!/bin/sh\nprintf '" + tc.lscpu + "'\n"
+				}
+
+				bin := filepath.Join(dir, "bin")
+				require.NoError(t, os.Mkdir(bin, 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(bin, "lscpu"), []byte(lscpu), 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(bin, "hostname"), []byte("#!/bin/sh\necho test\n"), 0o755))
+
+				script := filepath.Join(dir, "script")
+				require.NoError(t, os.WriteFile(script, []byte(strings.ReplaceAll(generated, "/proc/cpuinfo", cpuinfo)), 0o755))
+
+				var stderr strings.Builder
+				cmd := exec.Command(shellPath, script)
+				cmd.Dir = dir
+				cmd.Env = []string{"PATH=" + bin + string(os.PathListSeparator) + os.Getenv("PATH")}
+				cmd.Stderr = &stderr
+				out, err := cmd.Output()
+				require.NoError(t, err, "stderr: %s", stderr.String())
+				assert.Empty(t, stderr.String(), "the probe must not write to stderr")
+				assert.Equal(t, "Running on test...\n"+tc.expected+"\n", string(out))
+			})
+		}
 	}
 }
 
