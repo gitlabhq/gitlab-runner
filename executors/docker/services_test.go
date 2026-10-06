@@ -966,6 +966,36 @@ func TestAddServiceHealthCheck(t *testing.T) {
 	}
 }
 
+func TestCreateHostConfigForServiceHealthCheck(t *testing.T) {
+	tests := map[string]struct {
+		service  *serviceInfo
+		expected []string
+	}{
+		"no addresses": {
+			service:  &serviceInfo{ID: "abcdef123456789012"},
+			expected: nil,
+		},
+		"single ipv4 address": {
+			service:  &serviceInfo{ID: "abcdef123456789012", IP: []string{"172.21.0.2"}},
+			expected: []string{"abcdef123456:172.21.0.2"},
+		},
+		"ipv4 and ipv6 addresses are both preserved": {
+			service:  &serviceInfo{ID: "abcdef123456789012", IP: []string{"172.21.0.2", "fd00:3993:9::2"}},
+			expected: []string{"abcdef123456:172.21.0.2", "abcdef123456:fd00:3993:9::2"},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := &executor{}
+
+			hostConfig := e.createHostConfigForServiceHealthCheck(tt.service)
+
+			assert.Equal(t, tt.expected, hostConfig.ExtraHosts)
+		})
+	}
+}
+
 func Test_Executor_captureContainerLogs(t *testing.T) {
 	const (
 		cID   = "some container"
