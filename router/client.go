@@ -39,7 +39,10 @@ const (
 	// grpcCodeLogField carries the gRPC status code of a failed GetJob. Same key
 	// GitLab Relay (KAS) logs it under; LabKit has no standard field for it.
 	grpcCodeLogField = "grpc_code"
-	discoveryTTL     = time.Hour
+	// discoveryTTL bounds how long a runner keeps polling GitLab directly after
+	// a "no router" answer or a failed lookup, and how long a changed address
+	// takes to reach it. Turning the router off does not wait for it.
+	discoveryTTL = 5 * time.Minute
 
 	// routerBreakerFailureThreshold is the number of consecutive router failures
 	// that trips the breaker; fewer are treated as transient.
@@ -321,10 +324,11 @@ func (c *Client) getRouterDiscovery(ctx context.Context, config common.RunnerCon
 		return routerTarget(c.disco, config)
 	}
 	c.metrics.recordCacheEvent(cacheMiss)
+	previous := routerTarget(c.disco, config)
 	c.disco = c.delegate.GetRouterDiscovery(ctx, config)
 	c.discoExpiresAt = time.Now().Add(discoveryTTL)
 	disco := routerTarget(c.disco, config)
-	if disco != nil {
+	if disco != nil && (previous == nil || previous.ServerURL != disco.ServerURL) {
 		config.Log().Info("Using job router at " + disco.ServerURL)
 	}
 	return disco
