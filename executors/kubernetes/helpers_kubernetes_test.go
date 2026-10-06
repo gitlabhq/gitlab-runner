@@ -127,13 +127,13 @@ func CreateTestKubernetesResource[T metav1.Object](ctx context.Context, client *
 type FakeClient struct {
 	kubernetes.Interface
 
-	FakeDiscovery discovery.DiscoveryInterface
+	FakeDiscovery discovery.DiscoveryInterfaces
 	FakeCoreV1    corev1.CoreV1Interface
 }
 
 var _ kubernetes.Interface = &FakeClient{}
 
-func (fc *FakeClient) Discovery() discovery.DiscoveryInterface {
+func (fc *FakeClient) Discovery() discovery.DiscoveryInterfaces {
 	if f := fc.FakeDiscovery; f != nil {
 		return f
 	}
@@ -147,15 +147,15 @@ func (fc *FakeClient) CoreV1() corev1.CoreV1Interface {
 	return fc.Interface.CoreV1()
 }
 
-// FakeDiscovery wraps around the DiscoveryInterface, to be able to fake out certain parts of it.
+// FakeDiscovery wraps around the DiscoveryInterfaces, to be able to fake out certain parts of it.
 type FakeDiscovery struct {
-	discovery.DiscoveryInterface
+	discovery.DiscoveryInterfaces
 
 	FakeVersion    *version.Info
 	FakeVersionErr error
 }
 
-var _ discovery.DiscoveryInterface = &FakeDiscovery{}
+var _ discovery.DiscoveryInterfaces = &FakeDiscovery{}
 
 func (fd *FakeDiscovery) ServerVersion() (*version.Info, error) {
 	return fd.FakeVersion, fd.FakeVersionErr
