@@ -182,14 +182,14 @@ You can improve cache and artifact upload and download performance with the foll
 
 Each cache backend has its own `config.toml` section. Optimize for your backend:
 
-- [S3 configuration](advanced-configuration.md#the-runnerscaches3-section)): Set `BucketLocation` to the same region as your runners.
+- [S3 configuration](advanced-configuration.md#the-runnerscaches3-section): Set `BucketLocation` to the same region as your runners.
   Use `RoleARN` for archives larger than 5 GB to [enable multipart uploads](advanced-configuration.md#enable-multipart-transfers-with-rolearn).
   Use the default S3 v2 adapter (do not set `FF_USE_LEGACY_S3_CACHE_ADAPTER=true`). Optionally enable `Accelerate = true` for
   [AWS S3 Transfer Acceleration](https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html) when runners are far
   from the bucket region. An [S3 VPC endpoint](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html)
   in the same region can reduce latency and cost.
-- [Google Cloud Storage configuration](advanced-configuration.md#the-runnerscachegcs-section)): Use a bucket in the same or nearest region to your runners.
-- [Azure Blob configuration](advanced-configuration.md#the-runnerscacheazure-section)): Use a storage account in the same or nearest region to your runners.
+- [Google Cloud Storage configuration](advanced-configuration.md#the-runnerscachegcs-section): Use a bucket in the same or nearest region to your runners.
+- [Azure Blob configuration](advanced-configuration.md#the-runnerscacheazure-section): Use a storage account in the same or nearest region to your runners.
 
 #### Cache compression
 
