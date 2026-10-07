@@ -348,7 +348,7 @@ fuzz variable mask:
     - docker tag ${image_id} registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest-${WINDOWS_VERSION}
     # The liveness test service for this Windows version, so the tests do not
     # pull it one at a time.
-    - docker pull "${RUNNER_IMAGES_REGISTRY}/liveness:${RUNNER_IMAGES_VERSION}-nanoserver-$($env:WINDOWS_PREBUILT -replace '^servercore-','')"
+    - docker pull "${RUNNER_IMAGES_REGISTRY}/liveness:${RUNNER_IMAGES_VERSION}-nanoserver-$($env:WINDOWS_PREBUILT -replace '^(servercore|nanoserver)-','')"
     - docker network create -d "nat" test-network
     - docker network rm test-network
     - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest

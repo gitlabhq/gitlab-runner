@@ -111,15 +111,12 @@ the `config.toml` file since we are going to need these for the [installation](#
 step.
 
 Finally, we'll need to assign the new Runner Managers to the [security](https://gitlab.com/gitlab-org/security/gitlab-runner)
-fork project and to the ['liveness' test support](https://gitlab.com/gitlab-org/ci-cd/tests/liveness) project. So for each of the new Runner Managers:
+fork project. So for each of the new Runner Managers:
 
 1. Go to the Runners section of the [Runner project CI/CD settings page](https://gitlab.com/gitlab-org/gitlab-runner/-/settings/ci_cd);
 1. Unlock the new Runner by editing its properties and unchecking `Lock to current projects`;
 1. For the [security](https://gitlab.com/gitlab-org/security/gitlab-runner) fork project:
    1. Go to the Runners section of the [project's CI/CD settings page](https://gitlab.com/gitlab-org/security/gitlab-runner/-/settings/ci_cd);
-   1. Scroll down to the `Other available runners` section and enable the runner for this project;
-1. For the ['liveness' test support](https://gitlab.com/gitlab-org/ci-cd/tests/liveness) project:
-   1. Go to the Runners section of the [project's CI/CD settings page](https://gitlab.com/gitlab-org/ci-cd/tests/liveness/-/settings/ci_cd);
    1. Scroll down to the `Other available runners` section and enable the runner for this project;
 1. Lock the Runner back again in the [Runner project CI/CD settings page](https://gitlab.com/gitlab-org/gitlab-runner/-/settings/ci_cd).
 
@@ -147,19 +144,20 @@ that they need to [register](#register) 2 new runners and save them
 inside the CI/CD variables with the keys defined in
 `ansible/host_vars`.
 
-## Publish `registry.gitlab.com/gitlab-org/ci-cd/tests/liveness`
+## Publish the liveness test image
 
-The image `registry.gitlab.com/gitlab-org/ci-cd/tests/liveness` is used
-as part of the CI process for [GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner).
-Make sure that an image based on the new Windows version is published.
+The Docker executor integration tests on Windows run the `liveness` test
+service from a Nano Server image that matches the host's Windows version. It
+is built in [base-images](https://gitlab.com/gitlab-org/ci-cd/runner-tools/base-images)
+from `dockerfiles/tests`, and published as
+`registry.gitlab.com/gitlab-org/ci-cd/runner-tools/base-images/liveness:<version>-nanoserver-ltsc<year>`
+on each release.
 
-For example, if we want to add support for `Windows Server Core 2004` in
-the 13.7 milestone we can see the following
-[merge request](https://gitlab.com/gitlab-org/ci-cd/tests/liveness/-/merge_requests/4),
-where we update the following files:
-
-1. `.gitlab-ci.yml`
-1. `Makefile`
+Add the new `nanoserver:ltsc<year>` entry to the `liveness-windows` target in
+`dockerfiles/tests/docker-bake.hcl`, release base-images, and bump
+`RUNNER_IMAGES_VERSION` in `.gitlab/ci/_common.gitlab-ci.yml`. The tests pick
+the tag through the version mapping described in the next section, so no
+further change is needed on the Runner side.
 
 ## Update GitLab Runner to support specific Windows version
 

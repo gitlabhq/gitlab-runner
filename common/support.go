@@ -340,14 +340,9 @@ func GetRemoteGitLabComTLSBuild() (spec.Job, error) {
 }
 
 func getRemoteCustomTLSBuild(chain string) (spec.Job, error) {
-	job, err := GetRemoteBuildResponse("echo Hello World")
-	if err != nil {
-		return spec.Job{}, err
-	}
-
-	// These fixtures exercise the TLS chain to gitlab.com, so they must not
-	// be redirected to a test git server.
-	job = withoutTestGitServer(job)
+	// These fixtures exercise the TLS chain to gitlab.com, so they take no
+	// test git server redirect.
+	job := getBuildResponse(repoRemoteURL, []string{"echo Hello World"})
 
 	job.TLSData.CAChain = chain
 	job.Variables = append(
@@ -359,8 +354,8 @@ func getRemoteCustomTLSBuild(chain string) (spec.Job, error) {
 	return job, nil
 }
 
-// Fixtures clone from gitlab.com. When RUNNER_TEST_GIT_SERVER_URL names a
-// git-server (base-images, dockerfiles/tests) the job also carries git
+// Remote fixtures clone from gitlab.com. When RUNNER_TEST_GIT_SERVER_URL
+// names a git-server (base-images, dockerfiles/tests) they also carry git
 // insteadOf rules that send the mirrored repositories there: the clone,
 // the submodules and LFS. The job otherwise still looks like a gitlab.com
 // job, so URL-derived values such as the job URL are unchanged.
@@ -386,63 +381,74 @@ var (
 // testGitServerBaseURL returns the configured server URL with a trailing
 // slash, or "" when none is configured. The host is pinned to an address
 // once: jobs may run in containers that cannot resolve the CI service alias.
-// A configured server that cannot be resolved fails every fixture, not just
-// the first, so the redirect never drops out silently.
-func testGitServerBaseURL() string {
+// A configured server that cannot be resolved is an error for every fixture,
+// not just the first, so the redirect never drops out silently.
+func testGitServerBaseURL() (string, error) {
 	testGitServerOnce.Do(func() {
 		raw := os.Getenv(TestGitServerEnv)
 		if raw == "" {
 			return
 		}
 
-		testGitServerBase, errTestGitServer = resolveTestGitServer(raw)
+		testGitServerBase, errTestGitServer = resolveTestGitServer(raw, net.LookupIP)
 	})
 	if errTestGitServer != nil {
-		panic(fmt.Sprintf("%s: %v", TestGitServerEnv, errTestGitServer))
+		return "", fmt.Errorf("%s: %w", TestGitServerEnv, errTestGitServer)
 	}
 
-	return testGitServerBase
+	return testGitServerBase, nil
 }
 
-// resolveTestGitServer normalises the server URL to "scheme://addr[:port]/"
-// with the host replaced by its first IPv4 address when it is a name.
-func resolveTestGitServer(raw string) (string, error) {
+// resolveTestGitServer normalises the server URL to "scheme://addr[:port]/".
+// A name is replaced by its first IPv4 address: the job containers have IPv4
+// networking, so a name with only IPv6 addresses is an error rather than a
+// redirect to nowhere. Address literals are kept as written.
+func resolveTestGitServer(raw string, lookupIP func(string) ([]net.IP, error)) (string, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" || u.Scheme == "" {
 		return "", fmt.Errorf("%q is not a URL", raw)
 	}
 
-	host, port := u.Hostname(), u.Port()
-	if net.ParseIP(host) == nil {
-		ips, err := net.LookupIP(host)
+	if host := u.Hostname(); net.ParseIP(host) == nil {
+		ips, err := lookupIP(host)
 		if err != nil {
 			return "", fmt.Errorf("resolving %q: %w", host, err)
 		}
+
+		addr := ""
 		for _, ip := range ips {
 			if ip4 := ip.To4(); ip4 != nil {
-				host = ip4.String()
+				addr = ip4.String()
 				break
 			}
 		}
-	}
-	u.Host = host
-	if port != "" {
-		u.Host = net.JoinHostPort(host, port)
+		if addr == "" {
+			return "", fmt.Errorf("resolving %q: no IPv4 address", host)
+		}
+		if port := u.Port(); port != "" {
+			addr = net.JoinHostPort(addr, port)
+		}
+		u.Host = addr
 	}
 	u.Path, u.RawQuery, u.Fragment = strings.TrimSuffix(u.Path, "/")+"/", "", ""
 
 	return u.String(), nil
 }
 
+// gitServerVariablesFn supplies the redirect variables for a remote fixture.
+// The fixtures take it as a parameter so the tests can drive them without
+// the process-wide environment.
+type gitServerVariablesFn func() (spec.Variables, error)
+
 // testGitServerVariables returns the job variables that redirect git to the
 // configured test git server, or nil when none is configured.
-func testGitServerVariables() spec.Variables {
-	base := testGitServerBaseURL()
-	if base == "" {
-		return nil
+func testGitServerVariables() (spec.Variables, error) {
+	base, err := testGitServerBaseURL()
+	if err != nil || base == "" {
+		return nil, err
 	}
 
-	return testGitServerRules(base)
+	return testGitServerRules(base), nil
 }
 
 // testGitServerRules builds the redirect for a server base URL of the form
@@ -465,25 +471,11 @@ func testGitServerRules(base string) spec.Variables {
 	return vars
 }
 
-// withoutTestGitServer strips the redirect from a job that must reach
-// gitlab.com itself, such as the TLS fixtures.
-func withoutTestGitServer(job spec.Job) spec.Job {
-	kept := job.Variables[:0:0]
-	for _, v := range job.Variables {
-		if !strings.HasPrefix(v.Key, "GIT_CONFIG_") {
-			kept = append(kept, v)
-		}
-	}
-	job.Variables = kept
-
-	return job
-}
-
 func getBuildResponse(repoURL string, commands []string) spec.Job {
 	return spec.Job{
-		Variables: append(spec.Variables{
+		Variables: spec.Variables{
 			spec.Variable{Key: "CI_JOB_TOKEN", Value: "test-job-token"},
-		}, testGitServerVariables()...),
+		},
 		GitInfo: GetGitInfo(repoURL),
 		Steps: spec.Steps{
 			spec.Step{
@@ -506,10 +498,9 @@ func getStepsBuildResponse(repoURL, stepsYAML string) (spec.Job, error) {
 	}
 
 	return spec.Job{
-		Variables: testGitServerVariables(),
-		GitInfo:   GetStepsGitInfo(repoURL),
-		Run:       steps,
-		Steps:     spec.Steps{spec.Step{Name: spec.StepNameRun}},
+		GitInfo: GetStepsGitInfo(repoURL),
+		Run:     steps,
+		Steps:   spec.Steps{spec.Step{Name: spec.StepNameRun}},
 		RunnerInfo: spec.RunnerInfo{
 			Timeout: DefaultTimeout,
 		},
@@ -517,11 +508,35 @@ func getStepsBuildResponse(repoURL, stepsYAML string) (spec.Job, error) {
 }
 
 func GetRemoteStepsBuildResponse(stepsYAML string) (spec.Job, error) {
-	return getStepsBuildResponse(repoRemoteURL, stepsYAML)
+	return remoteStepsBuildResponse(testGitServerVariables, stepsYAML)
+}
+
+func remoteStepsBuildResponse(gitServer gitServerVariablesFn, stepsYAML string) (spec.Job, error) {
+	job, err := getStepsBuildResponse(repoRemoteURL, stepsYAML)
+	if err != nil {
+		return spec.Job{}, err
+	}
+
+	return withTestGitServer(gitServer, job)
 }
 
 func GetRemoteBuildResponse(commands ...string) (spec.Job, error) {
-	return getBuildResponse(repoRemoteURL, commands), nil
+	return remoteBuildResponse(testGitServerVariables, commands)
+}
+
+func remoteBuildResponse(gitServer gitServerVariablesFn, commands []string) (spec.Job, error) {
+	return withTestGitServer(gitServer, getBuildResponse(repoRemoteURL, commands))
+}
+
+// withTestGitServer adds the redirect to a job that clones from gitlab.com.
+func withTestGitServer(gitServer gitServerVariablesFn, job spec.Job) (spec.Job, error) {
+	vars, err := gitServer()
+	if err != nil {
+		return spec.Job{}, err
+	}
+	job.Variables = append(job.Variables, vars...)
+
+	return job, nil
 }
 
 func GetLocalBuildResponse(commands ...string) (spec.Job, error) {
