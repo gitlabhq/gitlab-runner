@@ -73,7 +73,7 @@ func TestTestGitServerRules(t *testing.T) {
 	// Exactly the mirrored repositories are redirected: the other gitlab.com
 	// repositories the tests use must keep reaching gitlab.com.
 	assert.Equal(t, spec.Variables{
-		{Key: "GIT_CONFIG_COUNT", Value: "4"},
+		{Key: "GIT_CONFIG_COUNT", Value: "5"},
 		{Key: "GIT_CONFIG_KEY_0", Value: "url." + base + prt + "gitlab-test.git.insteadOf"},
 		{Key: "GIT_CONFIG_VALUE_0", Value: "https://gitlab.com/" + prt + "gitlab-test.git"},
 		{Key: "GIT_CONFIG_KEY_1", Value: "url." + base + prt + "gitlab-grack.git.insteadOf"},
@@ -82,6 +82,8 @@ func TestTestGitServerRules(t *testing.T) {
 		{Key: "GIT_CONFIG_VALUE_2", Value: "https://gitlab.com/" + prt + "simplegit.git"},
 		{Key: "GIT_CONFIG_KEY_3", Value: "url." + base + "gitlab-org/ci-cd/tests/lfs.git.insteadOf"},
 		{Key: "GIT_CONFIG_VALUE_3", Value: "https://gitlab.com/gitlab-org/ci-cd/tests/lfs.git"},
+		{Key: "GIT_CONFIG_KEY_4", Value: "url." + base + "gitlab-org/ci-cd/tests/file-permissions.git.insteadOf"},
+		{Key: "GIT_CONFIG_VALUE_4", Value: "https://gitlab.com/gitlab-org/ci-cd/tests/file-permissions.git"},
 	}, testGitServerRules(base))
 }
 

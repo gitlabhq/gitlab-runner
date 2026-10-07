@@ -369,6 +369,7 @@ var testGitServerRepos = []string{
 	"gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-grack",
 	"gitlab-org/ci-cd/gitlab-runner-pipeline-tests/simplegit",
 	"gitlab-org/ci-cd/tests/lfs",
+	"gitlab-org/ci-cd/tests/file-permissions",
 }
 
 var (
