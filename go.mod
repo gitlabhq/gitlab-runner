@@ -62,7 +62,7 @@ require (
 	github.com/moby/moby/client v0.6.0
 	github.com/openbao/openbao/api/v2 v2.7.0
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/prometheus/client_golang v1.23.2
+	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.3
 	github.com/prometheus/common v0.71.0
 	github.com/prometheus/procfs v0.22.0
