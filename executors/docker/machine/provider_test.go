@@ -188,7 +188,9 @@ func (m *testMachine) List() (machines []string, err error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	return m.machines, nil
+	// A copy, as docker-machine returns a new list on every call. Callers append to the
+	// result, which would otherwise write into the backing array that Create appends to.
+	return slices.Clone(m.machines), nil
 }
 
 func (m *testMachine) CanConnect(ctx context.Context, name string, skipCache bool) bool {
