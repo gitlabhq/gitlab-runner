@@ -36,6 +36,7 @@ import (
 	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/prebuilt"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -229,6 +230,26 @@ func getDefaultWindowsImage(t *testing.T) string {
 	})
 
 	return defaultWindowsImage
+}
+
+// serviceProbeCommand returns a job script line that fails unless an HTTP
+// server answers at host:port, using what the default build image for the
+// host OS provides: wget on Alpine, Windows PowerShell on servercore.
+func serviceProbeCommand(host string, port int) string {
+	if runtime.GOOS == "windows" {
+		return fmt.Sprintf("Invoke-WebRequest -UseBasicParsing -Uri http://%s:%d | Out-Null", host, port)
+	}
+	return fmt.Sprintf("wget -q --spider http://%s:%d", host, port)
+}
+
+// livenessImage returns the liveness test service image for the host OS; on
+// Windows the tag has to match the host's kernel version, as for the other
+// Windows images.
+func livenessImage(t *testing.T) string {
+	if runtime.GOOS == "windows" {
+		return getWindowsImage(t, common.TestLivenessWindowsImage, windowsDockerImageTagMappings)
+	}
+	return common.TestLivenessImage
 }
 
 func getWindowsImage(t *testing.T, imageRef string, tagMap map[string]string) string {
@@ -1186,11 +1207,17 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 				tc.port = 80
 			}
 
-			resp, err := common.GetRemoteBuildResponse(
-				fmt.Sprintf("liveness client db:%d", tc.port),
-				fmt.Sprintf("liveness client registry.gitlab.com__gitlab-org__ci-cd__tests__liveness:%d", tc.port),
-				fmt.Sprintf("liveness client registry.gitlab.com-gitlab-org-ci-cd-tests-liveness:%d", tc.port),
-			)
+			// The service is reachable by its explicit alias and by the
+			// aliases the runner derives from the image name. The job probes
+			// each with the HTTP client its build image already has.
+			image := livenessImage(t)
+			aliases := append([]string{"db"}, services.SplitNameAndVersion(image).Aliases...)
+			var commands []string
+			for _, alias := range aliases {
+				commands = append(commands, serviceProbeCommand(alias, tc.port))
+			}
+
+			resp, err := common.GetRemoteBuildResponse(commands...)
 			require.NoError(t, err)
 
 			build := common.Build{
@@ -1206,18 +1233,16 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 				ExecutorProvider: docker_executor.NewProvider(),
 			}
 
-			build.Image = spec.Image{
-				Name:       common.TestLivenessImage,
-				Entrypoint: []string{""},
-			}
+			build.Image = spec.Image{Name: common.TestAlpineImage}
 
 			if runtime.GOOS == "windows" {
+				build.Image = spec.Image{Name: getDefaultWindowsImage(t)}
 				build.Runner.Docker.WaitForServicesTimeout = 60
-				build.Runner.RunnerSettings.Shell = shells.SNPwsh
+				build.Runner.RunnerSettings.Shell = shells.SNPowershell
 			}
 
 			build.Services = append(build.Services, spec.Image{
-				Name:      common.TestLivenessImage,
+				Name:      image,
 				Alias:     "db",
 				Command:   tc.command,
 				Variables: tc.variables,
@@ -1258,10 +1283,11 @@ func TestDockerServiceAliases(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	image := livenessImage(t)
 	resp.Image = spec.Image{Name: common.TestAlpineImage}
 	resp.Services = []spec.Image{
 		{
-			Name:    common.TestLivenessImage,
+			Name:    image,
 			Alias:   "my_service",
 			Command: []string{"server", "--addr", ":80"},
 		},
@@ -1282,8 +1308,10 @@ func TestDockerServiceAliases(t *testing.T) {
 
 	out, err := buildtest.RunBuildReturningOutput(t, &build)
 	assert.NoError(t, err)
-	assert.Contains(t, out, "Testing: registry.gitlab.com__gitlab-org__ci-cd__tests__liveness")
-	assert.Contains(t, out, "Testing: registry.gitlab.com-gitlab-org-ci-cd-tests-liveness")
+	// The aliases the runner derives from the image name, plus the explicit one.
+	for _, alias := range services.SplitNameAndVersion(image).Aliases {
+		assert.Contains(t, out, "Testing: "+alias)
+	}
 	assert.Contains(t, out, "Testing: my_service")
 	assert.Regexp(t, `Testing: [0-9a-f]{12}`, out) // service container ID
 }
@@ -2090,7 +2118,7 @@ func TestDockerCommandServiceVariables(t *testing.T) {
 
 	build.Services = spec.Services{
 		spec.Image{
-			Name: common.TestLivenessImage,
+			Name: livenessImage(t),
 			Variables: []spec.Variable{
 				{
 					Key:   "SERVICE_VAR",
