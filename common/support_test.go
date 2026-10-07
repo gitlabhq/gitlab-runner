@@ -5,6 +5,8 @@ package common
 import (
 	"errors"
 	"net"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -83,47 +85,49 @@ func TestTestGitServerRules(t *testing.T) {
 	}, testGitServerRules(base))
 }
 
+// fixedGitServer stands in for testGitServerVariables.
+func fixedGitServer(vars spec.Variables, err error) gitServerVariablesFn {
+	return func() (spec.Variables, error) { return vars, err }
+}
+
+func gitConfigVariables(vars spec.Variables) spec.Variables {
+	var got spec.Variables
+	for _, v := range vars {
+		if strings.HasPrefix(v.Key, "GIT_CONFIG_") {
+			got = append(got, v)
+		}
+	}
+	return got
+}
+
 func TestRemoteFixturesCarryTestGitServerRedirect(t *testing.T) {
 	const stepsYAML = "- name: hello\n  script: echo hello\n"
 
-	fixed := func(vars spec.Variables, err error) gitServerVariablesFn {
-		return func() (spec.Variables, error) { return vars, err }
-	}
 	rules := testGitServerRules("http://10.0.0.5:8080/")
-	configured := fixed(rules, nil)
-	unconfigured := fixed(nil, nil)
-	broken := fixed(nil, errors.New("resolving \"git-server\": no such host"))
-
-	gitConfig := func(vars spec.Variables) spec.Variables {
-		var got spec.Variables
-		for _, v := range vars {
-			if len(v.Key) >= len("GIT_CONFIG_") && v.Key[:len("GIT_CONFIG_")] == "GIT_CONFIG_" {
-				got = append(got, v)
-			}
-		}
-		return got
-	}
+	configured := fixedGitServer(rules, nil)
+	unconfigured := fixedGitServer(nil, nil)
+	broken := fixedGitServer(nil, errors.New("resolving \"git-server\": no such host"))
 
 	t.Run("remote build", func(t *testing.T) {
 		job, err := remoteBuildResponse(configured, []string{"echo"})
 		require.NoError(t, err)
-		assert.Equal(t, rules, gitConfig(job.Variables))
+		assert.Equal(t, rules, gitConfigVariables(job.Variables))
 		assert.Equal(t, repoRemoteURL, job.GitInfo.RepoURL, "the job itself still looks like a gitlab.com job")
 
 		job, err = remoteBuildResponse(unconfigured, []string{"echo"})
 		require.NoError(t, err)
-		assert.Empty(t, gitConfig(job.Variables))
+		assert.Empty(t, gitConfigVariables(job.Variables))
 	})
 
 	t.Run("remote steps build", func(t *testing.T) {
 		job, err := remoteStepsBuildResponse(configured, stepsYAML)
 		require.NoError(t, err)
-		assert.Equal(t, rules, gitConfig(job.Variables))
+		assert.Equal(t, rules, gitConfigVariables(job.Variables))
 		require.Len(t, job.Run, 1)
 
 		job, err = remoteStepsBuildResponse(unconfigured, stepsYAML)
 		require.NoError(t, err)
-		assert.Empty(t, gitConfig(job.Variables))
+		assert.Empty(t, gitConfigVariables(job.Variables))
 	})
 
 	t.Run("resolution error reaches the caller", func(t *testing.T) {
@@ -137,12 +141,47 @@ func TestRemoteFixturesCarryTestGitServerRedirect(t *testing.T) {
 	t.Run("tls build is never redirected", func(t *testing.T) {
 		job, err := getRemoteCustomTLSBuild("not-a-real-chain")
 		require.NoError(t, err)
-		assert.Empty(t, gitConfig(job.Variables))
+		assert.Empty(t, gitConfigVariables(job.Variables))
 		assert.Equal(t, "not-a-real-chain", job.TLSData.CAChain)
 	})
+}
 
-	t.Run("local build is never redirected", func(t *testing.T) {
-		job := getBuildResponse("/tmp/gitlab-test", []string{"echo"})
-		assert.Empty(t, gitConfig(job.Variables))
+func TestLocalFixtureSource(t *testing.T) {
+	const cloneURL = "/src/tmp/gitlab-test/.git"
+
+	rules := testGitServerRules("http://10.0.0.5:8080/")
+	configured := fixedGitServer(rules, nil)
+	unconfigured := fixedGitServer(nil, nil)
+
+	clone := func() (string, error) { return cloneURL, nil }
+	noClone := func() (string, error) { return "", os.ErrNotExist }
+
+	t.Run("git-server when configured", func(t *testing.T) {
+		job, err := localBuildResponse(configured, clone, []string{"echo"})
+		require.NoError(t, err)
+		assert.Equal(t, repoRemoteURL, job.GitInfo.RepoURL)
+		assert.Equal(t, rules, gitConfigVariables(job.Variables))
+	})
+
+	t.Run("local clone without a git-server", func(t *testing.T) {
+		job, err := localBuildResponse(unconfigured, clone, []string{"echo"})
+		require.NoError(t, err)
+		assert.Equal(t, cloneURL, job.GitInfo.RepoURL)
+		assert.Empty(t, gitConfigVariables(job.Variables))
+	})
+
+	t.Run("gitlab.com with neither", func(t *testing.T) {
+		job, err := localBuildResponse(unconfigured, noClone, []string{"echo"})
+		require.NoError(t, err)
+		assert.Equal(t, repoRemoteURL, job.GitInfo.RepoURL)
+		assert.Empty(t, gitConfigVariables(job.Variables))
+	})
+
+	t.Run("errors reach the caller", func(t *testing.T) {
+		_, err := localBuildResponse(fixedGitServer(nil, errors.New("no such host")), clone, nil)
+		assert.ErrorContains(t, err, "no such host")
+
+		_, err = localBuildResponse(unconfigured, func() (string, error) { return "", errors.New("permission denied") }, nil)
+		assert.ErrorContains(t, err, "permission denied")
 	})
 }

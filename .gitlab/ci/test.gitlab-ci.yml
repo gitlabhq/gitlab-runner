@@ -36,7 +36,6 @@ unit test:
     - .unit tests kubernetes limits
   timeout: 60m
   needs:
-    - "clone test repo"
     - "prepare done"
   script:
     - make splitic
@@ -73,7 +72,6 @@ integration test:
     - .linux integration test
     - .with outer token
   needs:
-    - "clone test repo"
     - "prebuilt helper images"
     - "prepare done"
   script:
@@ -310,8 +308,7 @@ fuzz variable mask:
   extends:
     - .windows test
   parallel: 2
-  needs:
-    - "clone test repo"
+  needs: []
   #- 'prepare done'
   script:
     - splitic test -flaky .flaky-tests.txt -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_windows_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 ./... -- -timeout 30m

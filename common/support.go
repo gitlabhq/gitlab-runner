@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path"
 	"runtime"
 	"strconv"
@@ -539,16 +538,40 @@ func withTestGitServer(gitServer gitServerVariablesFn, job spec.Job) (spec.Job, 
 	return job, nil
 }
 
+// GetLocalBuildResponse returns the gitlab-test job for tests that should
+// not depend on gitlab.com: the git-server serves it when one is configured,
+// otherwise the clone `make development_setup` makes under tmp/gitlab-test.
+// With neither it is the remote job, so tests that never run the job, such
+// as unit tests, need no setup.
 func GetLocalBuildResponse(commands ...string) (spec.Job, error) {
-	localRepoURL, err := getLocalRepoURL()
+	return localBuildResponse(testGitServerVariables, getLocalRepoURL, commands)
+}
+
+func localBuildResponse(
+	gitServer gitServerVariablesFn,
+	localRepo func() (string, error),
+	commands []string,
+) (spec.Job, error) {
+	vars, err := gitServer()
 	if err != nil {
-		if os.IsNotExist(err) {
-			panic("Local repo not found, please run `make development_setup`")
-		}
 		return spec.Job{}, err
 	}
+	if len(vars) > 0 {
+		job := getBuildResponse(repoRemoteURL, commands)
+		job.Variables = append(job.Variables, vars...)
 
-	return getBuildResponse(localRepoURL, commands), nil
+		return job, nil
+	}
+
+	localRepoURL, err := localRepo()
+	switch {
+	case err == nil:
+		return getBuildResponse(localRepoURL, commands), nil
+	case os.IsNotExist(err):
+		return getBuildResponse(repoRemoteURL, commands), nil
+	default:
+		return spec.Job{}, err
+	}
 }
 
 func getLocalRepoURL() (string, error) {
@@ -571,18 +594,6 @@ func getLocalRepoURL() (string, error) {
 	}
 
 	return localRepoURL, nil
-}
-
-func RunLocalRepoGitCommand(arguments ...string) error {
-	url, err := getLocalRepoURL()
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command("git", arguments...)
-	cmd.Dir = path.Dir(url)
-
-	return cmd.Run()
 }
 
 func buildSnakeOilCert() (string, error) {

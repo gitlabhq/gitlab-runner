@@ -84,10 +84,16 @@ func prepareExecutorForCleanup(t *testing.T, tt executorTestCase) (*executor, *b
 	return e, out
 }
 
+// projectDir is the path the fixture repository URL maps to under builds_dir
+// and cache_dir.
+const projectDir = "gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test"
+
 func prepareExecutor(t *testing.T, tt executorTestCase) (*executor, common.ExecutorPrepareOptions, *bytes.Buffer) {
 	out := bytes.NewBuffer([]byte{})
 
-	successfulBuild, err := common.GetSuccessfulBuild()
+	// The remote fixture gives the job a repository URL, so the project
+	// directories below do not depend on a local clone being present.
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	require.NoError(t, err)
 
 	successfulBuild.ID = jobID()
@@ -289,8 +295,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				assert.Contains(t, output, "Using Custom executor...")
 			},
 			assertBuild: func(t *testing.T, b *common.Build) {
-				assert.Equal(t, "/builds/project-0", b.BuildDir)
-				assert.Equal(t, "/cache/project-0", b.CacheDir)
+				assert.Equal(t, "/builds/"+projectDir, b.BuildDir)
+				assert.Equal(t, "/cache/"+projectDir, b.CacheDir)
 			},
 			assertExecutor: func(t *testing.T, e *executor) {
 				assert.Nil(t, e.jobEnv)
@@ -405,8 +411,8 @@ func TestExecutor_Prepare(t *testing.T) {
 			},
 			assertBuild: func(t *testing.T, b *common.Build) {
 				assert.Equal(t, "custom-hostname", b.Hostname)
-				assert.Equal(t, "/some/build/directory/RuNnErToK/0/project-0", b.BuildDir)
-				assert.Equal(t, "/some/cache/directory/project-0", b.CacheDir)
+				assert.Equal(t, "/some/build/directory/RuNnErToK/0/"+projectDir, b.BuildDir)
+				assert.Equal(t, "/some/cache/directory/"+projectDir, b.CacheDir)
 			},
 			assertExecutor: func(t *testing.T, e *executor) {
 				assert.Equal(t, "powershell", e.Shell().Shell)
@@ -483,7 +489,7 @@ func TestExecutor_Prepare(t *testing.T) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
 			assertBuild: func(t *testing.T, b *common.Build) {
-				assert.Equal(t, "/some/build/directory/project-0", b.BuildDir)
+				assert.Equal(t, "/some/build/directory/"+projectDir, b.BuildDir)
 			},
 			assertExecutor: func(t *testing.T, e *executor) {
 				assert.Len(t, e.jobEnv, 2)

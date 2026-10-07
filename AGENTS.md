@@ -70,7 +70,7 @@ non-nil zero-value struct where callers expect nil on error can trigger downstre
 
 After making changes, always run these in order before pushing. All must pass:
 - `make tools` — installs golangci-lint and other dev tools into `.tmp/bin/` (required before linting)
-- `make development_setup` — sets up local git repo fixtures needed by some tests (idempotent)
+- `make development_setup` — clones the fixture repository that some integration tests use (idempotent, optional: see "Fixture repositories" in `docs/development/_index.md` for serving the fixtures locally)
 - `go build ./...` — must compile clean
 - `go vet ./...` — must pass clean
 - `go test -race ./... -count=1 -timeout 30m` — fix any failures your changes introduced; `-race` adds ~10× overhead so the timeout must be generous

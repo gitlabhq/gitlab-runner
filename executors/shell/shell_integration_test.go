@@ -2179,10 +2179,19 @@ func TestBuildScriptSections(t *testing.T) {
 func TestCloneBranchExpansion(t *testing.T) {
 	const branch = "$(id)"
 
-	_ = common.RunLocalRepoGitCommand("checkout", "-b", branch)
-	defer func() {
-		_ = common.RunLocalRepoGitCommand("branch", "-D", branch)
-	}()
+	// The shared fixtures are read-only, so the branch lives in a repository
+	// of this test's own.
+	repoDir := t.TempDir()
+	for _, args := range [][]string{
+		{"init", "--quiet"},
+		{"-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "--quiet", "--allow-empty", "--message", "initial"},
+		{"branch", branch},
+	} {
+		_, err := gitInDir(repoDir, args...)
+		require.NoError(t, err, "git %v", args)
+	}
+	sha, err := gitInDir(repoDir, "rev-parse", "HEAD")
+	require.NoError(t, err)
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, spec.Job{}, shell)
@@ -2191,6 +2200,9 @@ func TestCloneBranchExpansion(t *testing.T) {
 		require.NoError(t, err)
 
 		build.Job = successfulBuild
+		build.GitInfo.RepoURL = filepath.ToSlash(filepath.Join(repoDir, ".git"))
+		build.GitInfo.Sha = strings.TrimSpace(string(sha))
+		build.GitInfo.BeforeSha = "0000000000000000000000000000000000000000"
 		build.GitInfo.Ref = branch
 		build.Runner.RunnerSettings.Shell = shell
 
