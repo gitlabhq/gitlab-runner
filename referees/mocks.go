@@ -534,8 +534,74 @@ func (_c *mockPrometheusAPI_Flags_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// FormatQuery provides a mock function for the type mockPrometheusAPI
+func (_mock *mockPrometheusAPI) FormatQuery(ctx context.Context, query string) (string, error) {
+	ret := _mock.Called(ctx, query)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FormatQuery")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (string, error)); ok {
+		return returnFunc(ctx, query)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = returnFunc(ctx, query)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, query)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// mockPrometheusAPI_FormatQuery_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FormatQuery'
+type mockPrometheusAPI_FormatQuery_Call struct {
+	*mock.Call
+}
+
+// FormatQuery is a helper method to define mock.On call
+//   - ctx context.Context
+//   - query string
+func (_e *mockPrometheusAPI_Expecter) FormatQuery(ctx interface{}, query interface{}) *mockPrometheusAPI_FormatQuery_Call {
+	return &mockPrometheusAPI_FormatQuery_Call{Call: _e.mock.On("FormatQuery", ctx, query)}
+}
+
+func (_c *mockPrometheusAPI_FormatQuery_Call) Run(run func(ctx context.Context, query string)) *mockPrometheusAPI_FormatQuery_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *mockPrometheusAPI_FormatQuery_Call) Return(s string, err error) *mockPrometheusAPI_FormatQuery_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *mockPrometheusAPI_FormatQuery_Call) RunAndReturn(run func(ctx context.Context, query string) (string, error)) *mockPrometheusAPI_FormatQuery_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // LabelNames provides a mock function for the type mockPrometheusAPI
-func (_mock *mockPrometheusAPI) LabelNames(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, opts ...v1.Option) ([]string, v1.Warnings, error) {
+func (_mock *mockPrometheusAPI) LabelNames(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, opts ...v1.Option) (model.LabelNames, v1.Warnings, error) {
 	// v1.Option
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
@@ -550,17 +616,17 @@ func (_mock *mockPrometheusAPI) LabelNames(ctx context.Context, matches []string
 		panic("no return value specified for LabelNames")
 	}
 
-	var r0 []string
+	var r0 model.LabelNames
 	var r1 v1.Warnings
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) ([]string, v1.Warnings, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) (model.LabelNames, v1.Warnings, error)); ok {
 		return returnFunc(ctx, matches, startTime, endTime, opts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) []string); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) model.LabelNames); ok {
 		r0 = returnFunc(ctx, matches, startTime, endTime, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
+			r0 = ret.Get(0).(model.LabelNames)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, time.Time, time.Time, ...v1.Option) v1.Warnings); ok {
@@ -631,12 +697,12 @@ func (_c *mockPrometheusAPI_LabelNames_Call) Run(run func(ctx context.Context, m
 	return _c
 }
 
-func (_c *mockPrometheusAPI_LabelNames_Call) Return(strings []string, warnings v1.Warnings, err error) *mockPrometheusAPI_LabelNames_Call {
-	_c.Call.Return(strings, warnings, err)
+func (_c *mockPrometheusAPI_LabelNames_Call) Return(labelNames model.LabelNames, warnings v1.Warnings, err error) *mockPrometheusAPI_LabelNames_Call {
+	_c.Call.Return(labelNames, warnings, err)
 	return _c
 }
 
-func (_c *mockPrometheusAPI_LabelNames_Call) RunAndReturn(run func(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, opts ...v1.Option) ([]string, v1.Warnings, error)) *mockPrometheusAPI_LabelNames_Call {
+func (_c *mockPrometheusAPI_LabelNames_Call) RunAndReturn(run func(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, opts ...v1.Option) (model.LabelNames, v1.Warnings, error)) *mockPrometheusAPI_LabelNames_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1111,8 +1177,8 @@ func (_c *mockPrometheusAPI_QueryRange_Call) RunAndReturn(run func(ctx context.C
 }
 
 // Rules provides a mock function for the type mockPrometheusAPI
-func (_mock *mockPrometheusAPI) Rules(ctx context.Context) (v1.RulesResult, error) {
-	ret := _mock.Called(ctx)
+func (_mock *mockPrometheusAPI) Rules(ctx context.Context, matches []string) (v1.RulesResult, error) {
+	ret := _mock.Called(ctx, matches)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Rules")
@@ -1120,16 +1186,16 @@ func (_mock *mockPrometheusAPI) Rules(ctx context.Context) (v1.RulesResult, erro
 
 	var r0 v1.RulesResult
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (v1.RulesResult, error)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) (v1.RulesResult, error)); ok {
+		return returnFunc(ctx, matches)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) v1.RulesResult); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) v1.RulesResult); ok {
+		r0 = returnFunc(ctx, matches)
 	} else {
 		r0 = ret.Get(0).(v1.RulesResult)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
+		r1 = returnFunc(ctx, matches)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1143,18 +1209,24 @@ type mockPrometheusAPI_Rules_Call struct {
 
 // Rules is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *mockPrometheusAPI_Expecter) Rules(ctx interface{}) *mockPrometheusAPI_Rules_Call {
-	return &mockPrometheusAPI_Rules_Call{Call: _e.mock.On("Rules", ctx)}
+//   - matches []string
+func (_e *mockPrometheusAPI_Expecter) Rules(ctx interface{}, matches interface{}) *mockPrometheusAPI_Rules_Call {
+	return &mockPrometheusAPI_Rules_Call{Call: _e.mock.On("Rules", ctx, matches)}
 }
 
-func (_c *mockPrometheusAPI_Rules_Call) Run(run func(ctx context.Context)) *mockPrometheusAPI_Rules_Call {
+func (_c *mockPrometheusAPI_Rules_Call) Run(run func(ctx context.Context, matches []string)) *mockPrometheusAPI_Rules_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -1165,7 +1237,7 @@ func (_c *mockPrometheusAPI_Rules_Call) Return(rulesResult v1.RulesResult, err e
 	return _c
 }
 
-func (_c *mockPrometheusAPI_Rules_Call) RunAndReturn(run func(ctx context.Context) (v1.RulesResult, error)) *mockPrometheusAPI_Rules_Call {
+func (_c *mockPrometheusAPI_Rules_Call) RunAndReturn(run func(ctx context.Context, matches []string) (v1.RulesResult, error)) *mockPrometheusAPI_Rules_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1478,6 +1550,66 @@ func (_c *mockPrometheusAPI_TSDB_Call) Return(tSDBResult v1.TSDBResult, err erro
 }
 
 func (_c *mockPrometheusAPI_TSDB_Call) RunAndReturn(run func(ctx context.Context, opts ...v1.Option) (v1.TSDBResult, error)) *mockPrometheusAPI_TSDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TSDBBlocks provides a mock function for the type mockPrometheusAPI
+func (_mock *mockPrometheusAPI) TSDBBlocks(ctx context.Context) (v1.TSDBBlocksResult, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TSDBBlocks")
+	}
+
+	var r0 v1.TSDBBlocksResult
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (v1.TSDBBlocksResult, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) v1.TSDBBlocksResult); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(v1.TSDBBlocksResult)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// mockPrometheusAPI_TSDBBlocks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TSDBBlocks'
+type mockPrometheusAPI_TSDBBlocks_Call struct {
+	*mock.Call
+}
+
+// TSDBBlocks is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *mockPrometheusAPI_Expecter) TSDBBlocks(ctx interface{}) *mockPrometheusAPI_TSDBBlocks_Call {
+	return &mockPrometheusAPI_TSDBBlocks_Call{Call: _e.mock.On("TSDBBlocks", ctx)}
+}
+
+func (_c *mockPrometheusAPI_TSDBBlocks_Call) Run(run func(ctx context.Context)) *mockPrometheusAPI_TSDBBlocks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *mockPrometheusAPI_TSDBBlocks_Call) Return(tSDBBlocksResult v1.TSDBBlocksResult, err error) *mockPrometheusAPI_TSDBBlocks_Call {
+	_c.Call.Return(tSDBBlocksResult, err)
+	return _c
+}
+
+func (_c *mockPrometheusAPI_TSDBBlocks_Call) RunAndReturn(run func(ctx context.Context) (v1.TSDBBlocksResult, error)) *mockPrometheusAPI_TSDBBlocks_Call {
 	_c.Call.Return(run)
 	return _c
 }
