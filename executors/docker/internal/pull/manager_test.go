@@ -71,9 +71,9 @@ func TestNewManagerWithPullRetryConfigOption(t *testing.T) {
 
 // TestNormalizeContainerOS guards against platforms.Parse resolving a bare
 // architecture specifier (e.g. "arm64") to the runner host's own OS.
-// Deliberately tested in isolation from runtime.GOOS/parsePlatform, so it
+// Deliberately tested in isolation from runtime.GOOS/ParsePlatform, so it
 // fails deterministically on any machine regardless of which OS actually
-// runs it -- unlike testing via parsePlatform("arm64") directly, whose
+// runs it -- unlike testing via ParsePlatform("arm64") directly, whose
 // result depends on the host OS the test happens to run on.
 func TestNormalizeContainerOS(t *testing.T) {
 	tests := map[string]string{
@@ -98,7 +98,7 @@ func TestParsePlatformNeverReturnsDarwin(t *testing.T) {
 	// container OSes and normalizeContainerOS leaves them alone. What must
 	// never happen, on any host, is falling through to something like
 	// "darwin" that isn't a real container OS at all.
-	platform, err := parsePlatform("arm64", newLoggerMock(t))
+	platform, err := ParsePlatform("arm64", newLoggerMock(t))
 	require.NoError(t, err)
 	require.NotNil(t, platform)
 	assert.Contains(t, []string{"linux", "windows"}, platform.OS)
@@ -110,7 +110,14 @@ func TestParsePlatformWarnsWhenNormalized(t *testing.T) {
 	logger := newMockPullLogger(t)
 	logger.On("Warningln", mock.AnythingOfType("string")).Once()
 
-	platform, err := parsePlatform("darwin/arm64", logger)
+	platform, err := ParsePlatform("darwin/arm64", logger)
+	require.NoError(t, err)
+	require.NotNil(t, platform)
+	assert.Equal(t, "linux", platform.OS)
+}
+
+func TestParsePlatformNormalizesWithNilLogger(t *testing.T) {
+	platform, err := ParsePlatform("darwin/arm64", nil)
 	require.NoError(t, err)
 	require.NotNil(t, platform)
 	assert.Equal(t, "linux", platform.OS)
@@ -119,10 +126,21 @@ func TestParsePlatformWarnsWhenNormalized(t *testing.T) {
 func TestParsePlatformDoesNotWarnWhenNotNormalized(t *testing.T) {
 	logger := newMockPullLogger(t)
 
-	platform, err := parsePlatform("linux/amd64", logger)
+	platform, err := ParsePlatform("linux/amd64", logger)
 	require.NoError(t, err)
 	require.NotNil(t, platform)
 	assert.Equal(t, "linux", platform.OS)
+}
+
+// The docker executor relies on an empty variant meaning "none requested" to
+// accept the image's own variant (e.g. arm/v6 for "linux/arm"), so the
+// default arm variant (v7) must not be filled in here.
+func TestParsePlatformLeavesDefaultArmVariantEmpty(t *testing.T) {
+	platform, err := ParsePlatform("linux/arm", newMockPullLogger(t))
+	require.NoError(t, err)
+	require.NotNil(t, platform)
+	assert.Equal(t, "arm", platform.Architecture)
+	assert.Empty(t, platform.Variant)
 }
 
 func TestDockerForNamedImage(t *testing.T) {
@@ -741,6 +759,47 @@ func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testi
 	assert.Equal(t, "local-image-id", image.ID)
 }
 
+func TestGetDockerImageWarnsAboutNormalizedPlatformOnce(t *testing.T) {
+	c := docker.NewMockClient(t)
+
+	logger, _ := logrustest.NewNullLogger()
+	output := bytes.NewBufferString("")
+	buildLogger := buildlogger.New(&common.Trace{Writer: output}, logger.WithField("test", t.Name()), buildlogger.Options{})
+
+	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyAlways, common.PullPolicyIfNotPresent}}
+	dockerOptions := spec.ImageDockerOptions{Platform: "darwin/arm64"}
+	m := newDefaultTestManager(t, c, dockerConfig)
+	m.logger = &buildLogger
+
+	localImage := image.InspectResponse{ID: "local-image-id", Os: "linux", Architecture: "arm64"}
+	c.On("ImageInspectWithRaw", m.context, "existing", mock.Anything).
+		Return(localImage, nil, nil).
+		Twice()
+	c.On("ImagePullBlocking", m.context, "existing:latest", mock.AnythingOfType("client.ImagePullOptions")).
+		Return(errors.New("pull access denied, repository does not exist or may require authorization")).
+		Once()
+
+	img, err := m.GetDockerImage("existing", dockerOptions, nil)
+	require.NoError(t, err)
+	require.NotNil(t, img)
+	assert.Contains(t, output.String(), `Attempt #2: Trying "if-not-present" pull policy`)
+	assert.Equal(t, 1, strings.Count(output.String(), "is not a valid container OS"))
+}
+
+func TestGetDockerImageFailsOnUnparsablePlatformWithoutInspecting(t *testing.T) {
+	c := docker.NewMockClient(t)
+
+	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyAlways, common.PullPolicyIfNotPresent}}
+	dockerOptions := spec.ImageDockerOptions{Platform: "linux/amd64/v8/extra"}
+	m := newDefaultTestManager(t, c, dockerConfig)
+
+	var buildError *common.BuildError
+	img, err := m.GetDockerImage("existing", dockerOptions, nil)
+	assert.Nil(t, img)
+	require.ErrorAs(t, err, &buildError)
+	assert.Equal(t, common.ConfigurationError, buildError.FailureReason)
+}
+
 func TestCombinedDockerPolicyModeAlwaysAndIfNotPresentForNonExistingImage(t *testing.T) {
 	c := docker.NewMockClient(t)
 
@@ -1148,7 +1207,7 @@ func TestDockerGetImagePlatformSuccess(t *testing.T) {
 	dockerOptions := spec.ImageDockerOptions{}
 	dockerOptions.Platform = "arm64/v8"
 
-	platform, err := parsePlatform(dockerOptions.Platform, newLoggerMock(t))
+	platform, err := ParsePlatform(dockerOptions.Platform, newLoggerMock(t))
 	require.NoError(t, err)
 
 	m := newDefaultTestManager(t, c, dockerConfig)
@@ -1187,7 +1246,7 @@ func TestInspectOptionsNoPlatformRequested(t *testing.T) {
 func TestInspectOptionsUnknownAPIVersionAssumesSupport(t *testing.T) {
 	m := &manager{logger: newLoggerMock(t)}
 
-	platform, err := parsePlatform("linux/amd64", m.logger)
+	platform, err := ParsePlatform("linux/amd64", m.logger)
 	require.NoError(t, err)
 
 	assert.Len(t, m.inspectOptions("test-image", platform), 1)
@@ -1203,7 +1262,7 @@ func TestInspectOptionsSkipsPlatformBelowMinAPIVersion(t *testing.T) {
 		config: ManagerConfig{APIVersion: version.Must(version.NewVersion("1.41"))},
 	}
 
-	platform, err := parsePlatform("linux/amd64", m.logger)
+	platform, err := ParsePlatform("linux/amd64", m.logger)
 	require.NoError(t, err)
 
 	assert.Empty(t, m.inspectOptions("test-image", platform))
@@ -1215,10 +1274,100 @@ func TestInspectOptionsIncludesPlatformAtOrAboveMinAPIVersion(t *testing.T) {
 		config: ManagerConfig{APIVersion: version.Must(version.NewVersion("1.49"))},
 	}
 
-	platform, err := parsePlatform("linux/amd64", m.logger)
+	platform, err := ParsePlatform("linux/amd64", m.logger)
 	require.NoError(t, err)
 
 	assert.Len(t, m.inspectOptions("test-image", platform), 1)
+}
+
+// TestGetDockerImageLocalImagePlatformMismatch: below
+// minPlatformAwareInspectAPIVersion, inspect finds the tag's local image
+// whatever its platform, so it must be checked against the requested one.
+func TestGetDockerImageLocalImagePlatformMismatch(t *testing.T) {
+	const imageName = "alpine"
+
+	amd64Image := image.InspectResponse{ID: "amd64-id", Os: "linux", Architecture: "amd64"}
+	arm64Image := image.InspectResponse{ID: "arm64-id", Os: "linux", Architecture: "arm64"}
+
+	tests := map[string]struct {
+		apiVersion    string
+		pullPolicy    string
+		alreadyUsed   bool
+		localImage    image.InspectResponse
+		expectPull    bool
+		expectedImage string
+	}{
+		"if-not-present, old daemon, local image for another platform: pulls": {
+			apiVersion:    "1.41",
+			pullPolicy:    common.PullPolicyIfNotPresent,
+			localImage:    amd64Image,
+			expectPull:    true,
+			expectedImage: arm64Image.ID,
+		},
+		"if-not-present, old daemon, local image already used for another platform: pulls": {
+			apiVersion:    "1.41",
+			pullPolicy:    common.PullPolicyIfNotPresent,
+			alreadyUsed:   true,
+			localImage:    amd64Image,
+			expectPull:    true,
+			expectedImage: arm64Image.ID,
+		},
+		"if-not-present, old daemon, local image for the requested platform: reuses it": {
+			apiVersion:    "1.41",
+			pullPolicy:    common.PullPolicyIfNotPresent,
+			localImage:    arm64Image,
+			expectedImage: arm64Image.ID,
+		},
+		"if-not-present, platform-aware daemon: trusts the inspect": {
+			apiVersion:    "1.49",
+			pullPolicy:    common.PullPolicyIfNotPresent,
+			localImage:    amd64Image,
+			expectedImage: amd64Image.ID,
+		},
+		"never, old daemon, local image for another platform: reuses it, as it can't pull": {
+			apiVersion:    "1.41",
+			pullPolicy:    common.PullPolicyNever,
+			localImage:    amd64Image,
+			expectedImage: amd64Image.ID,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+
+			dockerConfig := &common.DockerConfig{PullPolicy: []string{tc.pullPolicy}}
+			dockerOptions := spec.ImageDockerOptions{Platform: "linux/arm64"}
+			m := newDefaultTestManager(t, c, dockerConfig)
+			m.config.APIVersion = version.Must(version.NewVersion(tc.apiVersion))
+
+			pulled := false
+			m.onPullImageHookFunc = func() { pulled = true }
+
+			if tc.alreadyUsed {
+				m.markImageAsUsed(imageName, &tc.localImage)
+			}
+
+			c.On("ImageInspectWithRaw", m.context, imageName, mock.Anything).
+				Return(tc.localImage, nil, nil).
+				Once()
+
+			if tc.expectPull {
+				c.On("ImagePullBlocking", m.context, imageName+":latest", mock.AnythingOfType("client.ImagePullOptions")).
+					Return(nil).
+					Once()
+				c.On("ImageInspectWithRaw", m.context, imageName, mock.Anything).
+					Return(arm64Image, nil, nil).
+					Once()
+			}
+
+			img, err := m.GetDockerImage(imageName, dockerOptions, nil)
+			require.NoError(t, err)
+			require.NotNil(t, img)
+			assert.Equal(t, tc.expectedImage, img.ID)
+			assert.Equal(t, tc.expectPull, pulled)
+		})
+	}
 }
 
 func TestResolveAuthConfigForImageErrorsOnPathTraversal(t *testing.T) {

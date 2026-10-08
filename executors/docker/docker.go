@@ -20,6 +20,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/containerd/errdefs"
+	"github.com/containerd/platforms"
 	"github.com/docker/cli/opts"
 	"github.com/hashicorp/go-version"
 	"github.com/moby/moby/api/pkg/stdcopy"
@@ -497,7 +498,7 @@ func (e *executor) createService(
 		return nil, err
 	}
 
-	platform := platformForImage(serviceImage, definition.ExecutorOptions)
+	platform := e.platformForImage(serviceImage, dockerOptions)
 	networkConfig, err := e.networkConfig(linkNames, "")
 	if err != nil {
 		return nil, err
@@ -558,17 +559,40 @@ func parseMACAddress(mac string) (network.HardwareAddr, error) {
 	return network.HardwareAddr(hw), nil
 }
 
-func platformForImage(image *image.InspectResponse, opts spec.ImageExecutorOptions) *v1.Platform {
-	if image == nil || opts.Docker.Platform == "" {
+// platformForImage returns the platform to pass to ContainerCreate, or nil if
+// none was requested. It returns the requested platform itself rather than
+// image's inspect data, since a tag can resolve to the wrong manifest (see
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38514); a mismatch is
+// logged as a warning. dockerOptions must already be expanded, as they were
+// for the pull that returned image.
+func (e *executor) platformForImage(image *image.InspectResponse, dockerOptions spec.ImageDockerOptions) *v1.Platform {
+	if image == nil || dockerOptions.Platform == "" {
 		return nil
 	}
 
-	return &v1.Platform{
-		Architecture: image.Architecture,
-		OS:           image.Os,
-		OSVersion:    image.OsVersion,
-		Variant:      image.Variant,
+	// The pull manager already failed the job on an unparsable platform, and
+	// warned about a normalized one.
+	platform, err := pull.ParsePlatform(dockerOptions.Platform, nil)
+	if err != nil {
+		return nil
 	}
+
+	if pull.PlatformMatchesImage(platform, image) {
+		if platform.OSVersion == "" {
+			platform.OSVersion = image.OsVersion
+		}
+		if platform.Variant == "" {
+			platform.Variant = image.Variant
+		}
+	} else {
+		e.BuildLogger.Warningln(fmt.Sprintf(
+			"Requested platform %q does not match platform %s resolved from image inspection; "+
+				"requesting %s explicitly when creating the container",
+			dockerOptions.Platform, pull.FormatImagePlatform(image), platforms.FormatAll(*platform),
+		))
+	}
+
+	return platform
 }
 
 // imageReferenceForCreate returns the reference to use as a container's
@@ -969,7 +993,8 @@ func (e *executor) createContainer(
 	var platform *v1.Platform
 	// predefined/helper container always uses native platform
 	if containerType == buildContainerType {
-		platform = platformForImage(image, imageDefinition.ExecutorOptions)
+		dockerOptions := imageDefinition.ExecutorOptions.Docker.Expand(e.Build.GetAllVariables())
+		platform = e.platformForImage(image, dockerOptions)
 	}
 
 	// this will fail potentially some builds if there's name collision
